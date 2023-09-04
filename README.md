@@ -101,7 +101,7 @@ Instructions for installing the LSPs are below:
 
     - Create a Javascript project where the .eslintrc file is configured to error on single-quoted strings
 
-    - Write a snippet of Javascript code with double quoted strings. The ESLint LSP should product a diagnostic error due to the double-quoted strings
+    - Write a snippet of Javascript code with double quoted strings. The ESLint LSP should produce a diagnostic error due to the double-quoted strings
 
     - Write the file, you should see the strings be changed to single-quoted due to EslintFixAll being run. But, because prettier is configured for double-quoted strings by default, the automated ALEFix command should then change the strings back to double-quoted
 
@@ -174,7 +174,6 @@ Instructions for installing the LSPs are below:
 - Unzip the file contents to your desired location
 
 - To allow the OmniSharp-Extensions to work, in the same folder as your OmniSharp.dll file, create an omnisharp.json file containing the following:
-
   <code><pre>{
   &nbsp;&nbsp;"RoslynExtensionsOptions": {
   &nbsp;&nbsp;&nbsp;&nbsp;"enableDecompilationSupport": true
@@ -182,11 +181,11 @@ Instructions for installing the LSPs are below:
   }
   </pre></code>
 
-  - The OmniSharp extentens are used for decompiling the .Net libraries. Otherwise, going to definition of built-in .NET libraries is impossible
+  - The OmniSharp extensions are used for decompiling the .Net libraries. Otherwise, going to definition of built-in .NET libraries is impossible
 
 - For this config, create an <code>OmniSharpDLL</code> system environment variable containing the fully-qualified name of your OmniSharp.dll file. If this is not present, OmniSharp will fail to attach
 
-- If the LSP fails to attach, try typing <code>dotnet</code> in your command line without options to make sure it's available
+- If the LSP still fails to attach, try typing <code>dotnet</code> in your command line without options to make sure it's available
 
 ##### rust-analyzer and taplo
 
@@ -222,7 +221,7 @@ Instructions for installing the LSPs are below:
 
 - To be able to install fzf, just install cmake using the Windows binary distribution
 
-- Treesitter requires a C compiler to be installed and defined in path in order to build. If you do not have one, the easiest solution is to download Zig for Windows, which will automatically install and set paths for the necessary files
+- Treesitter requires a C compiler to be installed and defined in path in order to build its parsers. If you do not have one, the easiest solution is to download Zig for Windows and set a path to the directory the files are unzipped to
 
 - Using nvim or configuring Undotree through a symlink can cause inconsistent behavior with whether Undotree names the file history based on the symlink or the absolute file path. Avoiding symlinks with Neovim is recommended if using Undotree
 
@@ -230,7 +229,7 @@ Instructions for installing the LSPs are below:
 
 This config is targeted for Windows Terminal
 
-- Installing through Windows Store is easiest, as the default cmd will be automatically replaced
+- Installing through Windows Store is easiest, as the default cmd will be automatically replaced. Windows Store will also handle automatic updating
 
   - Alternatively, the project's Github repo contains manual installation instructions
 
@@ -258,4 +257,4 @@ This config is targeted for Windows Terminal
 
 - Includes fix for Harpoon tabline not highlighting properly on Windows
 
-- In this config, Undotree's path is configured using the native system path for the user's home directory + Neovim's defaul nvim-data path
+- In this config, Undotree's path is configured using the native system path for the user's home directory + Neovim's default nvim-data path
