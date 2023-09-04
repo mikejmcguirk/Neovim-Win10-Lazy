@@ -1,5 +1,22 @@
 # Windows 10 Neovim Config Using Lazy
 
+- [Windows 10 Neovim Config Using Lazy](#windows-10-neovim-config-using-lazy)
+  - [Objectives](#objectives)
+  - [Environment Variables](#environment-variables)
+  - [General Installation Notes](#general-installation-notes)
+  - [Git Installation Notes](#git-installation-notes)
+  - [LSP Installation and Notes](#lsp-installation-and-notes)
+    - [Node Installation for Javascript and Copilot](#node-installation-for-javascript-and-copilot)
+    - [Install JavaScript LSP Stack](#install-javascript-lsp-stack)
+    - [Lua Language Server](#lua-language-server)
+    - [pylsp](#pylsp)
+    - [OmniSharp](#omnisharp)
+    - [rust-analyzer and taplo](#rust-analyzer-and-taplo)
+    - [Marksman](#marksman)
+  - [Other Setup Notes](#other-setup-notes)
+  - [Windows Terminal Notes](#windows-terminal-notes)
+  - [Config Notes](#config-notes)
+
 ### Objectives
 
 This config aims to accomplish the following:
@@ -42,7 +59,7 @@ Instructions for installing the LSPs are below:
 
 <i><u>Note:</u> If these instructions are out-of-date, the most up-to-date instructions can be found at the <a href="https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md">lspconfigs documentation</a> or at the repos for the LSPs themselves</i>
 
-##### Node.js Installation (for Javascript and Copilot)
+##### Node Installation for Javascript and Copilot
 
 - Perform a clean install of nvm for Windows as described here: https://github.com/coreybutler/nvm-windows
 
@@ -62,7 +79,7 @@ Instructions for installing the LSPs are below:
 
 - For this config, copilot can be disabled by creating an environment variable called <code>DisableCopilot</code> and setting it to <code>true</code>
 
-##### tsserver/ESLint/prettier
+##### Install JavaScript LSP Stack
 
 - This config opts for global installation where possible. This is to ensure a fallback is always present for the eslint LSP if <code>eslint --init</code> has not been run
 
@@ -98,11 +115,11 @@ Instructions for installing the LSPs are below:
 
     - To test that it's properly installed for your project, run <code>npx eslint-config-prettier main.js</code> . If you get an error that the prettier config is missing, eslint-config-prettier is not properly installed
 
-- ALE is used here only for prettier. But by default, ALE will attempt to use any detected plugin on any valid filetype. Therefore, in set.lua, g.ale_linters_explicit is set to 1. Filetypes that use ALEFix on save are then defined either in the LSP config or ftplugin files
+- ALE is used here only for prettier. But by default, ALE will attempt to use any detected plugin on any valid filetype. Therefore, in set.lua, g.ale_linters_explicit is set to 1. Filetypes that use ALEFix on save are then defined either in ftplugin files
 
   - If the .prettierrc file is invalid, ALEFix will not run. If ALEFix does nothing, run prettier from the command line to see if if outputs any config errors
 
-##### lua_ls
+##### Lua Language Server
 
 - Go to the lua_ls releases page and download the latest zipped copy for Windows: https://github.com/LuaLS/lua-language-server/releases
 
@@ -171,7 +188,7 @@ Instructions for installing the LSPs are below:
 
 - If the LSP fails to attach, try typing <code>dotnet</code> in your command line without options to make sure it's available
 
-##### rust-analyzer/taplo
+##### rust-analyzer and taplo
 
 - Download <code>rustup-init.exe</code> from <code>rustup.rs</code>. Run the file to install rustup
 
@@ -190,6 +207,8 @@ Instructions for installing the LSPs are below:
 - Download the latest marksman.exe file from the repo's releases page, placing it in your location of choice: https://github.com/artempyanykh/marksman/releases
 
 - Create a PATH variable pointing to its location
+
+- ALE + prettier is used for formatting Markdown
 
 - For this config, a "MainBrowser" environment variable can be created for Markdown Preview containing the fully-qualified name of the Browser you want to use. If this variable does not exist, Markdown Preview will attempt to use your default browser
 

@@ -111,13 +111,15 @@ Searches
 
 Marks
 
-| Input  | Result                                      |
-| :----- | :------------------------------------------ |
-| m{a-z} | Set mark at cursor position                 |
-| m{A-Z} | Sets a global mark that works between files |
-| `{a-z} | Go to mark exactly                          |
-| '{a-z} | Go to begining of line where mark was set   |
-| :marks | Show all marks                              |
+| Input   | Result                                      |
+| :------ | :------------------------------------------ |
+| m{a-z}  | Set mark at cursor position                 |
+| m{A-Z}  | Sets a global mark that works between files |
+| `{a-z}  | Go to mark exactly                          |
+| '{a-z}  | Go to begining of line where mark was set   |
+| :marks  | Show all marks                              |
+| \<C-o\> | Goto last cursor position in jump list      |
+| \<C-i\> | Goto next cursor position in jump list      |
 
 Scrolling
 
