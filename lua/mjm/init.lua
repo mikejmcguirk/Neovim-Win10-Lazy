@@ -1,10 +1,10 @@
--- Settings first, then Lazy, or else an E21 occurs
--- Even on a fresh install, plugin dependent settings will be picked up
-require("mjm.vim_set")
-require("mjm.plugin_set")
-require("mjm.vim_keymaps")
+-- Variables and vim keymaps are set first so, if there is an issue with Lazy, they are
+-- still usable
+-- Additionally, an E21 can occur if trying to run these after Lazy
+require("mjm.set")
+require("mjm.keymap")
 
 require("mjm.lazy")
 
-require("mjm.plugin_keymaps")
+-- Set here so, if there is an issue with Lazy, autocmds don't interfere with troubleshooting
 require("mjm.autocmd")

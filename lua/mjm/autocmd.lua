@@ -1,12 +1,7 @@
-local augroup = vim.api.nvim_create_augroup
+local yankGroup = vim.api.nvim_create_augroup("HighlightYank", { clear = true })
+local mjmGroup = vim.api.nvim_create_augroup("mjm", { clear = true })
 
-local yankGroup = augroup("HighlightYank", { clear = true })
-local aleGroup = vim.api.nvim_create_augroup("aleGroup", { clear = true })
-local mjmGroup = augroup("mjm", { clear = true })
-
-local autocmd = vim.api.nvim_create_autocmd
-
-autocmd("TextYankPost", {
+vim.api.nvim_create_autocmd("TextYankPost", {
     group = yankGroup,
     pattern = "*",
     callback = function()
@@ -17,37 +12,35 @@ autocmd("TextYankPost", {
     end,
 })
 
-
--- autocmd({"BufWritePre"}, {
---     group = aleGroup,
---     pattern = { "*.md", "*.json"},
---     callback = function()
---         vim.cmd([[ALEFix]])
---     end,
--- })
-
-autocmd({"BufWritePre"}, {
+vim.api.nvim_create_autocmd({ "BufWritePre" }, {
     group = mjmGroup,
     pattern = "*",
     callback = function()
-        -- The winsaveview() code handles edge cases where the view is reset to the top of the file
-        local l = vim.fn.winsaveview()
         vim.cmd([[normal! mz]])
 
-        vim.cmd([[%s/\s\+$//e]]) -- Remove trailing whitespace
+        vim.cmd([[%s/\s\+$//e]])   -- Remove trailing whitespace
         vim.cmd([[%s/\n\+\%$//e]]) -- Remove trailing blank lines
         vim.cmd([[%s/\%^\n\+//e]]) -- Remove leading blank lines
 
         vim.cmd([[silent! normal! `z]])
-        vim.fn.winrestview(l)
     end,
 })
 
--- Removes executed commands and boilerplate status messages from the command line
-autocmd({'TextYankPost', 'BufWritePost', 'TextChanged', 'CmdlineLeave'}, {
+-- Auto-removes boilerplate status messages from the command line
+vim.api.nvim_create_autocmd({ 'TextYankPost', 'BufWritePost', 'TextChanged', }, {
     group = mjmGroup,
     pattern = '*',
     callback = function()
         vim.cmd([[normal! :<esc>]])
+    end,
+})
+
+-- Removes executed commands from the command line
+-- Uses print("") instead of vim.cmd to avoid a bug where <cmd><backspace> exits vim without saving
+vim.api.nvim_create_autocmd({ 'CmdlineLeave' }, {
+    group = mjmGroup,
+    pattern = '*',
+    callback = function()
+        print("")
     end,
 })
