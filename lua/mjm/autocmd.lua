@@ -27,20 +27,20 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
 })
 
 -- Auto-removes boilerplate status messages from the command line
-vim.api.nvim_create_autocmd({ 'TextYankPost', 'BufWritePost', 'TextChanged', }, {
+vim.api.nvim_create_autocmd({ "TextYankPost", "BufWritePost", "TextChanged", }, {
     group = mjmGroup,
-    pattern = '*',
+    pattern = "*",
     callback = function()
         vim.cmd([[normal! :<esc>]])
     end,
 })
 
 -- Removes executed commands from the command line
--- Uses print("") instead of vim.cmd to avoid a bug where <cmd><backspace> exits vim without saving
-vim.api.nvim_create_autocmd({ 'CmdlineLeave' }, {
+-- Uses print() to avoid a bug where <cmd><backspace> exits vim without saving
+vim.api.nvim_create_autocmd({ "CmdlineLeave" }, {
     group = mjmGroup,
-    pattern = '*',
+    pattern = "*",
     callback = function()
-        print("")
+        print(" ")
     end,
 })

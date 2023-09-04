@@ -96,8 +96,7 @@ local themeConfig = function()
 
     vim.cmd.colorscheme "fluoromachine"
 
-    -- Setup for a transluscent terminal with appropriate wallpaper
-    vim.api.nvim_set_hl(0, "Normal", { bg = "none" })
+    -- Still needed even with transparent = true
     vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" })
 
     vim.api.nvim_set_hl(

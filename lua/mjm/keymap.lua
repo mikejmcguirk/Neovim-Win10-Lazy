@@ -69,6 +69,9 @@ vim.keymap.set("n", "<leader>=", "v$hd<cmd>s/\\s\\+$//e<cr>k$a<cr><esc>p==", opt
 vim.keymap.set("n", "H",
     "mz<cmd>let @y = @\"<cr>k_\"zD\"_dd`zA<space><esc>\"zp<cmd>let@\" = @y<cr>`z", opts)
 
+vim.keymap.set("n", "[ ", "mzO<esc>0\"_D`z", opts)
+vim.keymap.set("n", "] ", "mzo<esc>0\"_D`z", opts)
+
 -----------
 -- Other --
 -----------

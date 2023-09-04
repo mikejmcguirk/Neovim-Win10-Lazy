@@ -15,14 +15,12 @@
     - [Marksman](#marksman)
   - [Other Setup Notes](#other-setup-notes)
   - [Windows Terminal Notes](#windows-terminal-notes)
-  - [Config Notes](#config-notes)
 
 ### Objectives
 
-This config aims to accomplish the following:
-
-- Use System Environment variables for configuration on individual machines, allowing the config files themselves to be consistent and Git-controlled from machine to machine
-- Once environment variables and LSPs are configured, the config files can be dropped into the nvim config folder, and Neovim will startup with the proper settings, install plugins, and be ready to go with no tinkering required
+- This config is designed to be Git-controlled on multiple machines
+- System environment variables are used for configs that vary machine to machine
+- Assuming the environment variables are correct and the LSPs installed, the config should function as is on a fresh Neovim install on Windows 10
 - Use Lazy loading to minimize startup time
 
 ### Environment Variables
@@ -30,20 +28,16 @@ This config aims to accomplish the following:
 This config uses user-defined environment variables for the following:
 
 - Pointing to the OmniSharp.dll file (required for OmniSharp to attach)
-- (Optional) Pointing to the Node.exe file used by copilot (default Node installation will be used otherwise)
-- (Optional) Pointing to the browser used by Markdown Preview
+- (Optional) Pointing to the Node.exe file used by copilot (default Node path will be used if missing)
 - (Optional) Disabling copilot
-- (Optional) Setting the colorscheme
+- (Optional) Pointing to the browser used by Markdown Preview (system default browser will be used otherwise)
+- (Optional) Setting the color scheme
 
-If any of these variables are missing, it should still be possible to clone this config and start it without issue. But you will experience problems when trying to use the plugins that depend on those variables.
-
-Information on how to set these variables up is provided below in the relevant sections
-
-<!-- Table of contents here -->
+Information on how to set these variables up is provided below in the relevant sections.
 
 ### General Installation Notes
 
-- Avoid performing any of these steps as Administrator or using an elevated terminal if possible (accepting UAC prompts is still fine). If the nvim-data files have mixed ownership, permissions conflicts might cause plugins to fail
+- If possible, avoid performing these steps as Administrator or using an elevated terminal (accepting UAC prompts is still fine). If the nvim-data files have mixed ownership, permissions conflicts might cause plugins to fail
 
 ### Git Installation Notes
 
@@ -53,37 +47,37 @@ Information on how to set these variables up is provided below in the relevant s
 
 ### LSP Installation and Notes
 
-This config assumes that the LSPs are manually installed rather than using Mason. While the upfront cost of this is higher, it allows for more flexibility in configuration and troubleshooting.
+This config assumes that the LSPs are manually installed rather than using Mason. While the upfront cost is higher, it allows for more flexibility in configuration and troubleshooting.
 
-Instructions for installing the LSPs are below:
+<i><u>Note:</u> The most up-to-date installation instructions can be found at the <a href="https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md">nvim-lspconfig documentation</a> or the LSPs' repos</i>
 
-<i><u>Note:</u> If these instructions are out-of-date, the most up-to-date instructions can be found at the <a href="https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md">lspconfigs documentation</a> or at the repos for the LSPs themselves</i>
+##### Node Installation for JavaScript and Copilot
 
-##### Node Installation for Javascript and Copilot
-
-- Perform a clean install of nvm for Windows as described here: https://github.com/coreybutler/nvm-windows
+- Perform a clean install of NVM for Windows as described here: https://github.com/coreybutler/nvm-windows
 
 - Install Node and npm using <code>nvm install lts</code>
 
 - Type <code>nvm list</code> and find the latest installed LTS node.js version
 
-- Type <code>nvm use [version_number]</code> to point the %NVM_SYMLINK% path to the proper node.js installation
+- Type <code>nvm use [version_number]</code> to point the %NVM_SYMLINK% path to the proper Node installation
 
 - Update npm by typing <code>npm i -g npm</code>
 
-- The highest version of Node.js that copilot is guaranteed to be compatible with is 16.15.0 (see the g:copilot_node_command entry in the copilot readme).
+- The highest version of Node.js that Copilot is guaranteed to be compatible with is 16.15.0 (see the g:copilot_node_command entry in the copilot readme)
 
 - Install it with <code>nvm install 16.15.0</code>
 
-- For this config, create an environment variable called <code>NvimCopilotNode</code> containing the fully-qualified name of your v16.15.0 node.exe file. If this is not set, copilot will look for a default Node path if it exists. Versions above v16.15.0 are not guaranteed to be supported
+- For this config, create an environment variable called <code>NvimCopilotNode</code> containing the fully-qualified name of your v16.15.0 node.exe file
 
-- For this config, copilot can be disabled by creating an environment variable called <code>DisableCopilot</code> and setting it to <code>true</code>
+  - If this is not set, Copilot will look for the default Node path if it exists. Versions above v16.15.0 are not guaranteed to be supported
+
+- For this config, Copilot can be disabled by creating an environment variable called <code>DisableCopilot</code> and setting it to <code>true</code>
 
 ##### Install JavaScript LSP Stack
 
-- This config opts for global installation where possible. This is to ensure a fallback is always present for the eslint LSP if <code>eslint --init</code> has not been run
+- This config opts for global installation where possible. This is to ensure a fallback is always present if <code>eslint --init</code> has not been run
 
-- Run the following installation commands (being sure to include the -g flags) in the order listed:
+- Run these installation commands below in the order listed:
 
   - <code>npm i -g typescript-language-server typescript</code>
 
@@ -93,29 +87,31 @@ Instructions for installing the LSPs are below:
 
   - <code>npm i -g vscode-langservers-extracted</code>
 
-    - Because ESLint is installed globally, the eslint langserver should be able to interface with it once a .eslintrc file is in your directory. It should still work after running eslint --init
+    - Because ESLint is installed globally, the ESLint LSP should be able to interface with it once a .eslintrc file is in your project directory. It should still work after running <code>eslint --init</code>
 
   - <code>npm install -g --save-dev prettier</code>
 
-  - This config uses ALE to interface with Prettier, with the intention of avoiding using ESLint for formatting. To test that the ESLint LSP and prettier are both working:
+  - This config uses ALE to interface with prettier, with the intention of avoiding ESLint for formatting
+
+  - To test that the ESLint LSP and prettier are both working:
 
     - Create a Javascript project where the .eslintrc file is configured to error on single-quoted strings
 
-    - Write a snippet of Javascript code with double quoted strings. The ESLint LSP should produce a diagnostic error due to the double-quoted strings
+    - Write a snippet of Javascript code with double quoted strings. The ESLint LSP should produce a diagnostic error
 
     - Write the file, you should see the strings be changed to single-quoted due to EslintFixAll being run. But, because prettier is configured for double-quoted strings by default, the automated ALEFix command should then change the strings back to double-quoted
 
-    - To troubleshoot, try running eslint and prettier directly from the command line to make sure they respond
+    - If ESLint or prettier have issues in Neovim, check what happens when running them from the command line
 
-  - To handle contradictory rules between eslint and prettier:
+  - To handle contradictory rules between ESLint and prettier:
 
     - In the root directory of your project (global install does not work), run: <code>npm install --save-dev eslint-config-prettier</code>
 
     - The eslint-config-prettier repo describes how to configure and check your .eslintrc files to use it
 
-    - To test that it's properly installed for your project, run <code>npx eslint-config-prettier main.js</code> . If you get an error that the prettier config is missing, eslint-config-prettier is not properly installed
+    - To test that it's properly installed for your project, run <code>npx eslint-config-prettier main.js</code>. If you get an error that the prettier config is missing, eslint-config-prettier is not properly installed
 
-- ALE is used here only for prettier. But by default, ALE will attempt to use any detected plugin on any valid filetype. Therefore, in set.lua, g.ale_linters_explicit is set to 1. Filetypes that use ALEFix on save are then defined either in ftplugin files
+- ALE is only used in this config for prettier. g.ale_linters_explicit is set to 1 in set.lua and filetypes that use ALEFix on save are defined in ftplugin files
 
   - If the .prettierrc file is invalid, ALEFix will not run. If ALEFix does nothing, run prettier from the command line to see if if outputs any config errors
 
@@ -127,11 +123,11 @@ Instructions for installing the LSPs are below:
 
 - The executable is located in the bin folder. Create a PATH variable pointing to it
 
-- This config pulls in all Vim runtime files in all projects. For non-Vim work, the appropriate line in lsp.lua needs to be commented out
+- This config pulls in all Neovim runtime files in all projects. For non-Neovim work, the relevant line in lsp.lua needs to be commented out
 
 ##### pylsp
 
-- Install Python using the installer from the org's official website
+- Install Python using the executable from the org's official website
 
 - Windows might have pre-placed Python files already in C:\Users\\%username%\AppData\Local\Microsoft\WindowsApps. These files and their associated paths can interfere with your Python installation
 
@@ -139,13 +135,15 @@ Instructions for installing the LSPs are below:
 
   - If you see any aliases related to Python or Python 3, de-select them
 
-- Check that pip and wheel are installed by typing <code>pip</code> and <code>wheel</code> into the terminal without options. If either of them are missing:
+- Check that pip and wheel are installed by typing <code>pip</code> and <code>wheel</code> into the terminal without options
 
-  - Place this script into your Python install directory and run it with Python: https://bootstrap.pypa.io/get-pip.py
+- If either of them are missing:
+
+  - Place the following script into your Python install directory and run it: https://bootstrap.pypa.io/get-pip.py
 
   - The script's output should confirm that pip and wheel were installed
 
-  - If the output warns that pip and/or wheel are not added to PATH, manually add them
+  - If the output warns that pip and/or wheel were not added to PATH, manually add them
 
     - It might also be possible that there are conflicting paths to pip and wheel in your environment variables. If those are present, remove the incorrect paths
 
@@ -161,27 +159,29 @@ Instructions for installing the LSPs are below:
       &nbsp;&nbsp;&nbsp;&nbsp;pypi.python.org
       &nbsp;&nbsp;&nbsp;&nbsp;files.pythonhosted.org</pre></code>
 
-- Install pylsp by running <code>pip install python-lsp-server[all]</code> (the [all] syntax will install the various libraries and linters that make pylsp actually functional)
+    - Note that this does not fix the underlying issue of Python being unable to bind property to an SSL utility, and is merely a workaround
 
-- Confirm that pyslp is installed by running <code>pylsp --help</code>
+- Install pylsp by running <code>pip install python-lsp-server[all]</code> (the [all] syntax will install the various libraries and linters that make pylsp function as an LSP would be expected to)
+
+- Confirm that pylsp is installed by running <code>pylsp --help</code>
 
 ##### OmniSharp
 
 - Go to the OmniSharp releases page: https://github.com/OmniSharp/omnisharp-roslyn/releases
 
-- Under the latest version, look for the Windows file targeted for your processor type with a .NET version in the filename. The files without .NET versions do not contain the .dll file that interfaces with Neovim. Do not download a file with http in the name (Neovim uses JSON for its LSP interface)
+- Under the latest version, look for the Windows file targeted for your processor type with a .NET version in the file name. The files without .NET versions do not contain the .dll file that interfaces with Neovim. Do not download a file with http in the name (Neovim uses JSON for its LSP interface)
 
 - Unzip the file contents to your desired location
 
-- To allow the OmniSharp-Extensions to work, in the same folder as your OmniSharp.dll file, create an omnisharp.json file containing the following:
+- By default, Omnisharp cannot decompile .NET's built-in binaries. This is handled using the OmniSharp-Extended LSP plugin
+
+- To configure the OmniSharp-Extended LSP, create an omnisharp.json file in the same folder as your OmniSharp.dll file. Paste in the following:
   <code><pre>{
   &nbsp;&nbsp;"RoslynExtensionsOptions": {
   &nbsp;&nbsp;&nbsp;&nbsp;"enableDecompilationSupport": true
   &nbsp;&nbsp;}
   }
   </pre></code>
-
-  - The OmniSharp extensions are used for decompiling the .Net libraries. Otherwise, going to definition of built-in .NET libraries is impossible
 
 - For this config, create an <code>OmniSharpDLL</code> system environment variable containing the fully-qualified name of your OmniSharp.dll file. If this is not present, OmniSharp will fail to attach
 
@@ -197,7 +197,9 @@ Instructions for installing the LSPs are below:
 
 - To install taplo: <code>cargo install --features lsp --locked taplo-cli</code>
 
-- clippy is configured to run on save. Neovim has a built-in RustFmt function that uses the rust.vim plugin to interact with the installed copy of RustFmt
+- clippy is configured to run on save
+
+- RustFmt is handled using Neovim's built-in command. It uses the rust.vim plugin to interface with the installed copy of RustFmt
 
 - This config has all cargo features enabled for rust-analyzer
 
@@ -207,54 +209,52 @@ Instructions for installing the LSPs are below:
 
 - Create a PATH variable pointing to its location
 
-- ALE + prettier is used for formatting Markdown
-
-- For this config, a "MainBrowser" environment variable can be created for Markdown Preview containing the fully-qualified name of the Browser you want to use. If this variable does not exist, Markdown Preview will attempt to use your default browser
+- ALE + prettier is used for formatting Markdown. Marksman does not contain a built-in formatter
 
 ### Other Setup Notes
 
 - For Telescope, ripgrep is required for certain functions and fd is recommended
 
-  - Their Github repos contain compiled binaries
+  - Their GitHub repos contain compiled binaries
 
   - After placing them on your computer, update your PATH. They should then be recognized by Telescope
 
-- To be able to install fzf, just install cmake using the Windows binary distribution
+- To be able to install the Telescope fzf extension, install CMake using the Windows binary distribution
 
-- Treesitter requires a C compiler to be installed and defined in path in order to build its parsers. If you do not have one, the easiest solution is to download Zig for Windows and set a path to the directory the files are unzipped to
+- Treesitter requires a C compiler to be installed and defined in path in order to build its parsers. If you do not have one, the easiest solution is to download Zig for Windows and set a path to the directory its files are unzipped to
 
-- Using nvim or configuring Undotree through a symlink can cause inconsistent behavior with whether Undotree names the file history based on the symlink or the absolute file path. Avoiding symlinks with Neovim is recommended if using Undotree
+- In this config, Undotree's path is setup using Windows's built-in home directory path + "\\AppData\\local\\nvim\"
+
+- Using Neovim or configuring Undotree through a symlink is not recommended. This can cause inconsistent behavior with whether the undo histories are renamed based on their symlink path or absolute path
+
+- For this config, a "MainBrowser" environment variable can be created containing the fully-qualified name of the Browser you want Markdown Preview to use. If this variable does not exist, Markdown Preview will attempt to use your default browser
+
+- By default, this config uses the Fluoromachine "delta" theme. An "NvimTheme" environment variable can be created and set to "blue" to enable a customized color scheme
 
 ### Windows Terminal Notes
 
 This config is targeted for Windows Terminal
 
-- Installing through Windows Store is easiest, as the default cmd will be automatically replaced. Windows Store will also handle automatic updating
+- Installing through Windows Store is easiest. Windows Terminal will be set to be your default terminal and Windows Store will automatically check for updates
 
-  - Alternatively, the project's Github repo contains manual installation instructions
+  - Alternatively, the project's GitHub repo contains manual installation instructions
 
 - Windows Terminal uses shift to override the mouse settings of the program running in the terminal Window. It does not currently have an option to disable this
 
-- By default, Windows Terminal binds ctrl+v to Paste, overwriting Visual Block Mode. This binding can be removed in Windows Terminal in favor of an alternative like ctrl+shift+v
+  - Otherwise, this config enables the mouse in Neovim then uses keymaps to disable the various controls, limiting mouse functionality only to Windows Terminal overrides
 
-  - Ctrl+q is also bound by default in Neovim as an equivalent of ctrl+v, but this config has that disabled in keymaps
+- By default, Windows Terminal binds ctrl+v to Paste, overwriting Visual Block Mode. This binding can be removed in Windows Terminal's settings in favor of an alternative like ctrl+shift+v
+
+  - By default, Neovim also binds ctrl+q to enter Visual Block Mode. If needed, the keymap to disable this can be removed
 
 - A nerd font is required for viewing symbols (https://www.nerdfonts.com/)
 
 - After installing your font of choice, restart Windows Terminal then go to Settings to select it. Otherwise, the font will show as available but not actually be recognized
 
-- The appearance of Neovim in WinTerm is affected by the font size, the padding, and whether or not the scroll bar is enabled. The easiest way to adjust the Windows terminal settings is to set Windows terminal so the background is transluscent (decrease opacity below 100%) and set Neovim to have a solid background. This way you can see where Neovim ends and WinTerm's padding begins
+- The appearance of Neovim in Windows Terminal is affected by the font size, padding, and if the scroll bar is enabled
 
-- The guicursor style configs work in Windows Terminal. However, any guihighlight settings are overwritten by Windows Terminal's cursor color settings, so no highlight customization is present here
+  - To most easily see the difference between Neovim itself and Windows Terminal's padding, set Windows Terminal and Neovim to have different backgrounds
+
+- The guicursor style configs work in Windows Terminal. However, any highlight settings are overwritten by Windows Terminal's cursor color settings, so no highlight configs are present here
 
 - This config might not work properly in the GUI or a different terminal environment
-
-### Config Notes
-
-- Does not rely on any pre-build distributions
-
-- Mouse is disabled by enabling it in NeoVim then using keymaps to disable all mouse actions. Except for the WinTerm shift override, the mouse should be non-functional
-
-- Includes fix for Harpoon tabline not highlighting properly on Windows
-
-- In this config, Undotree's path is configured using the native system path for the user's home directory + Neovim's default nvim-data path
