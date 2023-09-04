@@ -85,7 +85,7 @@ Instructions for installing the LSPs are below:
 
 - Run the following installation commands (being sure to include the -g flags) in the order listed:
 
-  - <code>npm i -g npm install -g typescript-language-server typescript</code>
+  - <code>npm i -g typescript-language-server typescript</code>
 
     - tsserver should then work with the provided lsp config. It will operate in single file mode unless a jsconfig.json file is present
 
