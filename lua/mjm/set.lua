@@ -118,17 +118,18 @@ vim.g.rustfmt_fail_silently = 1
 
 local copilotNode = os.getenv("NvimCopilotNode")
 
-if copilotNode then
-    vim.g.copilot_node_command = copilotNode
-else
-    print(
-        "NvimCopilotNode system variable not set. " ..
-        "Node 16.15.0 is the highest supported version. " ..
-        "Default Node path will be used if it exists")
-end
 
 if os.getenv("DisableCopilot") == "true" then
     vim.g.copilot_enabled = false
+else
+    if copilotNode then
+        vim.g.copilot_node_command = copilotNode
+    else
+        print(
+            "NvimCopilotNode system variable not set. " ..
+            "Node 16.15.0 is the highest supported version. " ..
+            "Default Node path will be used if it exists")
+    end
 end
 
 ---------------

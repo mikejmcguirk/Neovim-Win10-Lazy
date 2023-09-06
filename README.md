@@ -1,20 +1,21 @@
 # Windows 10 Neovim Config Using Lazy
 
 - [Windows 10 Neovim Config Using Lazy](#windows-10-neovim-config-using-lazy)
-  - [Objectives](#objectives)
-  - [Environment Variables](#environment-variables)
-  - [General Installation Notes](#general-installation-notes)
-  - [Git Installation Notes](#git-installation-notes)
-  - [LSP Installation and Notes](#lsp-installation-and-notes)
-    - [Node Installation for Javascript and Copilot](#node-installation-for-javascript-and-copilot)
-    - [Install JavaScript LSP Stack](#install-javascript-lsp-stack)
-    - [Lua Language Server](#lua-language-server)
-    - [pylsp](#pylsp)
-    - [OmniSharp](#omnisharp)
-    - [rust-analyzer and taplo](#rust-analyzer-and-taplo)
-    - [Marksman](#marksman)
-  - [Other Setup Notes](#other-setup-notes)
-  - [Windows Terminal Notes](#windows-terminal-notes)
+    - [Objectives](#objectives)
+    - [Environment Variables](#environment-variables)
+    - [General Installation Notes](#general-installation-notes)
+    - [Git Installation Notes](#git-installation-notes)
+    - [Visual Studio Build Utils](#visual-studio-build-utils)
+    - [LSP Installation and Notes](#lsp-installation-and-notes)
+        - [Node Installation for JavaScript and Copilot](#node-installation-for-javascript-and-copilot)
+        - [Install JavaScript LSP Stack](#install-javascript-lsp-stack)
+        - [Lua Language Server](#lua-language-server)
+        - [pylsp](#pylsp)
+        - [OmniSharp](#omnisharp)
+        - [rust-analyzer and taplo](#rust-analyzer-and-taplo)
+        - [Marksman](#marksman)
+    - [Other Setup Notes](#other-setup-notes)
+    - [Windows Terminal Notes](#windows-terminal-notes)
 
 ### Objectives
 
@@ -44,6 +45,22 @@ Information on how to set these variables up is provided below in the relevant s
 - When installing Git for Windows, depending on how your computer's environment is configured (e.g. a managed business network), you might need to bind Git to Windows's SSL tools rather than using OpenSSL
 
 - If, when using Git, you see issues with verifying SSL keys, check how Git's SSL is configured first. Git can be switched from OpenSSL to Windows SSL by re-running the installer and changing the installation
+
+### Visual Studio Build Utils
+
+- To install the Telescope fzf extension and rustup, you need the Visual Studio C++ Build Tools installed
+
+- This can be done either by installing Visual Studio or the build tools individually
+
+- To install the build tools individually:
+
+  - Go to: https://visualstudio.microsoft.com/visual-cpp-build-tools/
+
+  - Click the "Download Build Tools" button on the page and open the installer when it's finished downloading
+
+  - In the Visual Studio installer, click "Desktop development with C++". In the right pane of the installer, you should see MSVC, the Windows SDK, and C++ CMake Tools selected for install
+
+  - Click the "Install" button
 
 ### LSP Installation and Notes
 
@@ -220,8 +237,6 @@ This config assumes that the LSPs are manually installed rather than using Mason
   - After placing them on your computer, update your PATH. They should then be recognized by Telescope
 
 - To be able to install the Telescope fzf extension, install CMake using the Windows binary distribution
-
-- Treesitter requires a C compiler to be installed and defined in path in order to build its parsers. If you do not have one, the easiest solution is to download Zig for Windows and set a path to the directory its files are unzipped to
 
 - In this config, Undotree's path is setup using Windows's built-in home directory path + "\\AppData\\local\\nvim\"
 
