@@ -145,7 +145,7 @@ local harpoonConfig = function()
         vim.api.nvim_set_hl(0,
             "HarpoonNumberActive", {
                 fg = "#ffee00",
-                bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg
+                bg = "#30717F"
             }
         )
         vim.api.nvim_set_hl(0,

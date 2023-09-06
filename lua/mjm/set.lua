@@ -118,7 +118,6 @@ vim.g.rustfmt_fail_silently = 1
 
 local copilotNode = os.getenv("NvimCopilotNode")
 
-
 if os.getenv("DisableCopilot") == "true" then
     vim.g.copilot_enabled = false
 else
