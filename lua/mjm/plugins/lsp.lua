@@ -328,21 +328,47 @@ local lspConfig = function()
             defaultAttach(bufnr)
         end,
 
-        settings = {
-            Lua = {
-                workspace = {
-                    -- This imports Neovim"s runtime files for use in the LSP,
-                    -- suppressing the "Undefined global" warning for "vim"
-                    -- But this also makes the LSP think the runtime is available
-                    -- in any other project
-                    library = vim.api.nvim_get_runtime_file("", true),
-                    checkThirdParty = false
-                },
-                telemetry = {
-                    enable = false,
-                },
-            },
-        },
+        on_init = function(client)
+            local path = client.workspace_folders[1].name
+            if not vim.loop.fs_stat(path .. '/.luarc.json')
+                and not vim.loop.fs_stat(path .. '/.luarc.jsonc') then
+                client.config.settings = vim.tbl_deep_extend('force', client.config.settings, {
+                    Lua = {
+                        runtime = {
+                            version = 'LuaJIT' -- Most likely for Neovim
+                        },
+                        workspace = {
+                            checkThirdParty = false,
+                            library = vim.api.nvim_get_runtime_file("", true)
+                        },
+                        settings = {
+                            Lua = {
+                                telemetry = {
+                                    enable = false,
+                                },
+                            },
+                        },
+                    }
+                })
+
+                client.notify(
+                    "workspace/didChangeConfiguration",
+                    { settings = client.config.settings }
+                )
+            else
+                client.config.settings = vim.tbl_deep_extend('force', client.config.settings, {
+                    settings = {
+                        Lua = {
+                            telemetry = {
+                                enable = false,
+                            },
+                        }
+                    }
+                })
+            end
+            return true
+        end,
+
     })
 end
 

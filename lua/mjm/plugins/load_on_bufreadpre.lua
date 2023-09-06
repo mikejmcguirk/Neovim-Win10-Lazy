@@ -118,6 +118,31 @@ return {
         event = "BufReadPre"
     },
     {
+        'tzachar/highlight-undo.nvim',
+        opts = {},
+        event = "BufReadPre",
+        config = function()
+            require('highlight-undo').setup({
+                duration = 200,
+                undo = {
+                    hlgroup = 'HighlightUndo',
+                    mode = 'n',
+                    lhs = 'u',
+                    map = 'undo',
+                    opts = {}
+                },
+                redo = {
+                    hlgroup = 'HighlightUndo',
+                    mode = 'n',
+                    lhs = '<C-r>',
+                    map = 'redo',
+                    opts = {}
+                },
+                highlight_for_count = true,
+            })
+        end
+    },
+    {
         'windwp/nvim-autopairs',
         event = "InsertEnter",
         opts = ({}) -- Blank explicitly specified as per the repo

@@ -123,7 +123,7 @@ This config assumes that the LSPs are manually installed rather than using Mason
 
 - The executable is located in the bin folder. Create a PATH variable pointing to it
 
-- This config pulls in all Neovim runtime files in all projects. For non-Neovim work, the relevant line in lsp.lua needs to be commented out
+- This config uses the nvim-lspconfig boilerplate for checking the project workspace. If neither a .luarc.json nor a .luarc.jsonc file are found, the Neovim runtime files will be loaded
 
 ##### pylsp
 
@@ -133,7 +133,7 @@ This config assumes that the LSPs are manually installed rather than using Mason
 
   - To check for these, search for "app execution aliases" in the task bar and open "Manage app execution aliases"
 
-  - If you see any aliases related to Python or Python 3, de-select them
+  - If you see any aliases related to Python or Python 3, deselect them
 
 - Check that pip and wheel are installed by typing <code>pip</code> and <code>wheel</code> into the terminal without options
 
