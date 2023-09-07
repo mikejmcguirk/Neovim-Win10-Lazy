@@ -1,5 +1,3 @@
-local loudOpts = { noremap = true, silent = false }
-
 local cmpConfig = function()
     local cmp = require("cmp")
     local lspkind = require("lspkind")
@@ -107,11 +105,11 @@ local diagnosticConfig = function()
         }
     })
 
-    vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, loudOpts)
-    vim.keymap.set("n", "]d", vim.diagnostic.goto_next, loudOpts)
-    vim.keymap.set("n", "<leader>vl", vim.diagnostic.open_float, loudOpts)
+    vim.keymap.set("n", "[d", vim.diagnostic.goto_prev)
+    vim.keymap.set("n", "]d", vim.diagnostic.goto_next)
+    vim.keymap.set("n", "<leader>vl", vim.diagnostic.open_float)
     -- Listed for reference only
-    -- vim.keymap.set("n", "<leader>vq", vim.diagnostic.setloclist, loudOpts)
+    -- vim.keymap.set("n", "<leader>vq", vim.diagnostic.setloclist)
 end
 
 local lspConfig = function()
@@ -139,33 +137,33 @@ local lspConfig = function()
     }
 
     local setLSPkeymaps = function()
-        vim.keymap.set("n", "gd", vim.lsp.buf.definition, loudOpts)
-        vim.keymap.set("n", "gD", vim.lsp.buf.declaration, loudOpts)
-        vim.keymap.set("n", "gI", vim.lsp.buf.implementation, loudOpts)
-        vim.keymap.set("n", "gr", vim.lsp.buf.references, loudOpts)
-        vim.keymap.set("n", "gT", vim.lsp.buf.type_definition, loudOpts)
+        vim.keymap.set("n", "gd", vim.lsp.buf.definition)
+        vim.keymap.set("n", "gD", vim.lsp.buf.declaration)
+        vim.keymap.set("n", "gI", vim.lsp.buf.implementation)
+        vim.keymap.set("n", "gr", vim.lsp.buf.references)
+        vim.keymap.set("n", "gT", vim.lsp.buf.type_definition)
 
-        vim.keymap.set("n", "K", vim.lsp.buf.hover, loudOpts)
-        vim.keymap.set("n", "<C-e>", vim.lsp.buf.signature_help, loudOpts)
+        vim.keymap.set("n", "K", vim.lsp.buf.hover)
+        vim.keymap.set("n", "<C-e>", vim.lsp.buf.signature_help)
 
-        vim.keymap.set("n", "<leader>va", vim.lsp.buf.add_workspace_folder, loudOpts)
-        vim.keymap.set("n", "<leader>vd", vim.lsp.buf.remove_workspace_folder, loudOpts)
+        vim.keymap.set("n", "<leader>va", vim.lsp.buf.add_workspace_folder)
+        vim.keymap.set("n", "<leader>vd", vim.lsp.buf.remove_workspace_folder)
 
         -- For reference only
         -- vim.keymap.set("n", "<leader>vf", function()
         --     print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
-        -- end, loudOpts)
+        -- end)
 
         -- For reference only. Can find these in Telescope
-        -- vim.keymap.set("n", "<leader>vs", vim.lsp.buf.workspace_symbol(), loudOpts)
+        -- vim.keymap.set("n", "<leader>vs", vim.lsp.buf.workspace_symbol())
 
-        vim.keymap.set("n", "<leader>vr", vim.lsp.buf.rename, loudOpts)
+        vim.keymap.set("n", "<leader>vr", vim.lsp.buf.rename)
 
-        vim.keymap.set("n", "<leader>vc", vim.lsp.buf.code_action, loudOpts)
+        vim.keymap.set("n", "<leader>vc", vim.lsp.buf.code_action)
 
         vim.keymap.set("n", "<leader>vo", function()
             vim.lsp.buf.format { async = true }
-        end, loudOpts)
+        end)
     end
 
     local defaultAttach = function(bufnr)

@@ -1,5 +1,3 @@
-local loudOpts = { noremap = true, silent = false }
-
 return {
     {
         'dense-analysis/ale',
@@ -21,7 +19,7 @@ return {
             use_diagnostic_signs = true
         },
         config = function()
-            vim.keymap.set("n", "<leader>b", "<cmd>TroubleToggle<cr>", loudOpts)
+            vim.keymap.set("n", "<leader>b", "<cmd>TroubleToggle<cr>")
         end
     },
     {
@@ -30,9 +28,9 @@ return {
         config = function()
             vim.fn["mkdp#util#install"]()
 
-            vim.keymap.set("n", "<leader>me", "<cmd>MarkdownPreview<cr>", loudOpts)
-            vim.keymap.set("n", "<leader>ms", "<cmd>MarkdownPreviewStop<cr>", loudOpts)
-            vim.keymap.set("n", "<leader>mt", "<cmd>MarkdownPreviewToggle<cr>", loudOpts)
+            vim.keymap.set("n", "<leader>me", "<cmd>MarkdownPreview<cr>")
+            vim.keymap.set("n", "<leader>ms", "<cmd>MarkdownPreviewStop<cr>")
+            vim.keymap.set("n", "<leader>mt", "<cmd>MarkdownPreviewToggle<cr>")
         end
     },
     {
@@ -83,10 +81,10 @@ return {
                 buftypes = {},
             }
 
-            vim.keymap.set("n", "<leader>ot", "<cmd>ColorizerToggle<cr>", loudOpts)
-            vim.keymap.set("n", "<leader>oa", "<cmd>ColorizerAttachToBuffer<cr>", loudOpts)
-            vim.keymap.set("n", "<leader>od", "<cmd>ColorizerDetachFromBuffer<cr>", loudOpts)
-            vim.keymap.set("n", "<leader>or", "<cmd>ColorizerReloadAllBuffers<cr>", loudOpts)
+            vim.keymap.set("n", "<leader>ot", "<cmd>ColorizerToggle<cr>")
+            vim.keymap.set("n", "<leader>oa", "<cmd>ColorizerAttachToBuffer<cr>")
+            vim.keymap.set("n", "<leader>od", "<cmd>ColorizerDetachFromBuffer<cr>")
+            vim.keymap.set("n", "<leader>or", "<cmd>ColorizerReloadAllBuffers<cr>")
         end,
     },
     {
@@ -94,8 +92,8 @@ return {
         event = "BufReadPre",
         dependencies = { 'nvim-treesitter' },
         config = function()
-            vim.keymap.set("n", "<leader>it", "<cmd>TSPlaygroundToggle<cr>", loudOpts)
-            vim.keymap.set("n", "<leader>ih", "<cmd>TSHighlightCapturesUnderCursor<cr>", loudOpts)
+            vim.keymap.set("n", "<leader>it", "<cmd>TSPlaygroundToggle<cr>")
+            vim.keymap.set("n", "<leader>ih", "<cmd>TSHighlightCapturesUnderCursor<cr>")
         end
     },
     {
@@ -106,7 +104,7 @@ return {
                 separator = '-'
             })
 
-            vim.keymap.set("n", "<leader>eo", "<cmd>TSContextToggle<cr>", loudOpts)
+            vim.keymap.set("n", "<leader>eo", "<cmd>TSContextToggle<cr>")
         end
     },
     {

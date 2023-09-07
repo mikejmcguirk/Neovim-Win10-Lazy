@@ -1,5 +1,3 @@
-local loudOpts = { noremap = true, silent = false }
-
 local function NvimTreeOnAttach(bufnr)
     local api = require("nvim-tree.api")
 
@@ -14,7 +12,7 @@ return {
         'mbbill/undotree',
         lazy = false,
         config = function()
-            vim.keymap.set("n", "<leader>ut", "<cmd>UndotreeToggle<cr>", loudOpts)
+            vim.keymap.set("n", "<leader>ut", "<cmd>UndotreeToggle<cr>")
         end
     },
     {
@@ -62,23 +60,23 @@ return {
 
             vim.keymap.set('n', '<leader>tb', function()
                 builtin.buffers({ show_all_buffers = true })
-            end, loudOpts)
+            end)
 
-            vim.keymap.set('n', '<leader>to', builtin.command_history, loudOpts)
-            vim.keymap.set('n', '<leader>td', builtin.diagnostics, loudOpts)
+            vim.keymap.set('n', '<leader>to', builtin.command_history)
+            vim.keymap.set('n', '<leader>td', builtin.diagnostics)
 
             vim.keymap.set('n', '<leader>tf', function()
                 builtin.find_files({ hidden = true, no_ignore = true })
-            end, loudOpts)
+            end)
 
-            vim.keymap.set('n', '<leader>tg', builtin.git_files, loudOpts)
+            vim.keymap.set('n', '<leader>tg', builtin.git_files)
 
             vim.keymap.set('n', '<leader>ts', function()
                 builtin.grep_string({ search = vim.fn.input("Grep > ") })
             end)
 
-            vim.keymap.set('n', '<leader>ta', "<cmd>Telescope harpoon marks<cr>", loudOpts)
-            vim.keymap.set('n', '<leader>th', builtin.help_tags, loudOpts)
+            vim.keymap.set('n', '<leader>ta', "<cmd>Telescope harpoon marks<cr>")
+            vim.keymap.set('n', '<leader>th', builtin.help_tags)
 
             vim.keymap.set('n', '<leader>tl', function()
                 builtin.grep_string({
@@ -89,11 +87,11 @@ return {
                 })
             end)
 
-            vim.keymap.set('n', '<leader>tt', builtin.highlights, loudOpts)
-            vim.keymap.set('n', '<leader>te', builtin.live_grep, loudOpts)
-            vim.keymap.set('n', '<leader>tw', builtin.lsp_workspace_symbols, loudOpts)
-            vim.keymap.set('n', '<leader>ti', builtin.registers, loudOpts)
-            vim.keymap.set('n', '<leader>tr', builtin.resume, loudOpts)
+            vim.keymap.set('n', '<leader>tt', builtin.highlights)
+            vim.keymap.set('n', '<leader>te', builtin.live_grep)
+            vim.keymap.set('n', '<leader>tw', builtin.lsp_workspace_symbols)
+            vim.keymap.set('n', '<leader>ti', builtin.registers)
+            vim.keymap.set('n', '<leader>tr', builtin.resume)
         end
     },
     {
@@ -137,7 +135,7 @@ return {
 
                 on_attach = NvimTreeOnAttach,
 
-                vim.keymap.set("n", "<leader>nt", "<cmd>NvimTreeToggle<cr>", loudOpts)
+                vim.keymap.set("n", "<leader>nt", "<cmd>NvimTreeToggle<cr>")
             }
         end,
     },
@@ -186,7 +184,7 @@ return {
     {
         'szw/vim-maximizer',
         config = function()
-            vim.keymap.set("n", "<C-w>m", "<cmd>MaximizerToggle<cr>", loudOpts)
+            vim.keymap.set("n", "<C-w>m", "<cmd>MaximizerToggle<cr>")
         end
     },
     {
