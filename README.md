@@ -1,21 +1,21 @@
 # Windows 10 Neovim Config Using Lazy
 
 - [Windows 10 Neovim Config Using Lazy](#windows-10-neovim-config-using-lazy)
-    - [Objectives](#objectives)
-    - [Environment Variables](#environment-variables)
-    - [General Installation Notes](#general-installation-notes)
-    - [Git Installation Notes](#git-installation-notes)
-    - [Visual Studio Build Utils](#visual-studio-build-utils)
-    - [LSP Installation and Notes](#lsp-installation-and-notes)
-        - [Node Installation for JavaScript and Copilot](#node-installation-for-javascript-and-copilot)
-        - [Install JavaScript LSP Stack](#install-javascript-lsp-stack)
-        - [Lua Language Server](#lua-language-server)
-        - [pylsp](#pylsp)
-        - [OmniSharp](#omnisharp)
-        - [rust-analyzer and taplo](#rust-analyzer-and-taplo)
-        - [Marksman](#marksman)
-    - [Other Setup Notes](#other-setup-notes)
-    - [Windows Terminal Notes](#windows-terminal-notes)
+  - [Objectives](#objectives)
+  - [Environment Variables](#environment-variables)
+  - [General Installation Notes](#general-installation-notes)
+  - [Git Installation Notes](#git-installation-notes)
+  - [Visual Studio Build Utils](#visual-studio-build-utils)
+  - [LSP Installation and Notes](#lsp-installation-and-notes)
+    - [Node Installation for JavaScript and Copilot](#node-installation-for-javascript-and-copilot)
+    - [Install JavaScript LSP Stack](#install-javascript-lsp-stack)
+    - [Lua Language Server](#lua-language-server)
+    - [pylsp](#pylsp)
+    - [OmniSharp](#omnisharp)
+    - [rust-analyzer and taplo](#rust-analyzer-and-taplo)
+    - [Marksman](#marksman)
+  - [Other Setup Notes](#other-setup-notes)
+  - [Windows Terminal Notes](#windows-terminal-notes)
 
 ### Objectives
 
@@ -245,6 +245,16 @@ This config assumes that the LSPs are manually installed rather than using Mason
 - For this config, a "MainBrowser" environment variable can be created containing the fully-qualified name of the Browser you want Markdown Preview to use. If this variable does not exist, Markdown Preview will attempt to use your default browser
 
 - By default, this config uses the Fluoromachine "delta" theme. An "NvimTheme" environment variable can be created and set to "blue" to enable a customized color scheme
+
+- To use Zig as an alternative compiler for Treesitter:
+
+  - Download and unzip Zig to your preferred directory. Create a Windows PATH to the zig.exe
+
+  - Delete any Treesitter parser data already present
+
+  - Set <code>require('nvim-treesitter.install').compilers = { "zig" }</code> above the default <code>require('nvim-treesitter.configs').setup</code> line
+
+  - Restart Neovim and see if the parsers try re-installing
 
 ### Windows Terminal Notes
 
