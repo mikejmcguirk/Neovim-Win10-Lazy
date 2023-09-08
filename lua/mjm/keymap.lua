@@ -160,6 +160,9 @@ vim.keymap.set("i", "<C-s>", "<Nop>", opts)
 vim.keymap.set("n", "ZZ", "<Nop>", opts)
 vim.keymap.set("n", "ZQ", "<Nop>", opts)
 
+vim.keymap.set("n", "<C-6>", "<Nop>", opts)
+vim.keymap.set("n", "<C-^>", "<Nop>", opts)
+
 --Disable Non-Home Row Based Keys
 vim.keymap.set({ "n", "i", "v", "c" }, "<up>", "<Nop>", opts)
 vim.keymap.set({ "n", "i", "v", "c" }, "<down>", "<Nop>", opts)
