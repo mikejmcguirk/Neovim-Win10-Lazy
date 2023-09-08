@@ -253,6 +253,7 @@ Substitution
 | :%&&                          | Repeat on file, keep flags                                                                                                                                                                    |
 | & (as a flag)                 | Must be first. Repeat flags of previous substitution                                                                                                                                          |
 | I                             | Don't ignore case or use smartcase                                                                                                                                                            |
+| :g/MATCH/#\|s/MATCH/REPLACE/g\|# | Print out all substitutions for review
 
 Regex
 Input | Result
