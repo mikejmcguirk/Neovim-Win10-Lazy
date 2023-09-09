@@ -230,6 +230,7 @@ Moving Text
 | \<\< , \>\> | Move one tab level                                                       |
 | .           | Indent to the right the amount of lines specified in the last \> command |
 | ==          | Auto-indent                                                              |
+| 4==         | Indent current line and the next three                                   |
 | =ap         | Auto-indent a whole paragraph                                            |
 | J           | Move previous line to end of current one                                 |
 | gwl         | Wrap text to colored column                                              |
