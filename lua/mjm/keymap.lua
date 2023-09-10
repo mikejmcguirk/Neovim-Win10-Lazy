@@ -28,14 +28,20 @@ vim.keymap.set("n", "n", "nzzzv", opts)
 vim.keymap.set("n", "N", "Nzzzv", opts)
 
 -------------------------------------------------
--- Copy and paste to/from the system clipboard --
+-- Copy/Paste Fixes --
 -------------------------------------------------
 
 vim.keymap.set({ "n", "v" }, "<leader>y", "\"+y", opts)
 vim.keymap.set({ "n", "v" }, "<leader>Y", "\"+Y", opts)
 
-vim.keymap.set({ "n", "v" }, "<leader>p", "\"+p", opts)
-vim.keymap.set({ "n", "v" }, "<leader>P", "\"+P", opts)
+vim.keymap.set("n", "<leader>p", "\"+p", opts)
+vim.keymap.set("n", "<leader>P", "\"+P", opts)
+
+vim.keymap.set("v", "p", "\"_dP", opts)
+vim.keymap.set("v", "P", "\"_dP", opts)
+
+vim.keymap.set("v", "<leader>p", "\"_d\"+P", opts)
+vim.keymap.set("v", "<leader>P", "\"_d\"+P", opts)
 
 ---------------------------------
 -- Delete to the void register --
@@ -43,8 +49,6 @@ vim.keymap.set({ "n", "v" }, "<leader>P", "\"+P", opts)
 
 vim.keymap.set({ "n", "v" }, "<leader>x", "\"_x", opts)
 vim.keymap.set({ "n", "v" }, "<leader>X", "\"_X", opts)
-
-vim.keymap.set("x", "p", "\"_dP", opts)
 
 vim.keymap.set({ "n", "v" }, "<leader>d", "\"_d", opts)
 vim.keymap.set({ "n", "v" }, "<leader>c", "\"_c", opts)
@@ -84,7 +88,7 @@ vim.keymap.set('n', 'k', "v:count == 0 ? 'gk' : 'k'", jkOpts)
 -- In Visual Mode, select the last changed text (includes writes)
 vim.keymap.set("n", "gp", "`[v`]", opts)
 
-vim.keymap.set("n", "<C-c>", "<esc>", opts)
+vim.keymap.set({ "n", "i", "v", "c" }, "<C-c>", "<esc>", opts)
 
 vim.keymap.set("n", "Q", "<nop>", opts)
 
