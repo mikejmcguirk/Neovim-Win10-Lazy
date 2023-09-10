@@ -1,12 +1,3 @@
-local function NvimTreeOnAttach(bufnr)
-    local api = require("nvim-tree.api")
-
-    api.config.mappings.default_on_attach(bufnr)
-
-    vim.keymap.del("n", "<2-LeftMouse>", { buffer = bufnr })
-    vim.keymap.del("n", "<2-RightMouse>", { buffer = bufnr })
-end
-
 return {
     {
         'mbbill/undotree',
@@ -133,7 +124,14 @@ return {
                     enable = true,
                 },
 
-                on_attach = NvimTreeOnAttach,
+                on_attach = function(bufnr)
+                    local api = require("nvim-tree.api")
+
+                    api.config.mappings.default_on_attach(bufnr)
+
+                    vim.keymap.del("n", "<2-LeftMouse>", { buffer = bufnr })
+                    vim.keymap.del("n", "<2-RightMouse>", { buffer = bufnr })
+                end,
 
                 vim.keymap.set("n", "<leader>nt", "<cmd>NvimTreeToggle<cr>")
             }
