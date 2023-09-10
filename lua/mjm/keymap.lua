@@ -159,6 +159,7 @@ vim.keymap.set("i", "<C-s>", "<Nop>", opts)
 
 vim.keymap.set("n", "ZZ", "<Nop>", opts)
 vim.keymap.set("n", "ZQ", "<Nop>", opts)
+vim.keymap.set("c", "<C-j>", "<Nop>", opts)
 
 vim.keymap.set("n", "<C-6>", "<Nop>", opts)
 vim.keymap.set("n", "<C-^>", "<Nop>", opts)
