@@ -90,7 +90,7 @@ vim.keymap.set("i", "<C-l>", "<C-o>l", opts)
 -- In Visual Mode, select the last changed text (includes writes)
 vim.keymap.set("n", "gp", "`[v`]", opts)
 
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-c>", "<esc>", opts)
+-- vim.keymap.set({ "n", "i", "v", "c" }, "<C-c>", "<esc>", opts)
 
 vim.keymap.set("n", "Q", "<nop>", opts)
 
