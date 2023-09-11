@@ -160,6 +160,8 @@ Copypasta
 | [p, [P , ]P | If yanked linewise, past before linewise and maintain current indentation, otherwise normal P |
 | :-10t.      | Copy the line 10 lines above the current line and paste it below the current line             |
 | :+8t.       | Copy the line 8 lines after the current line and paste it below                               |
+| :-10m.      | Copy the line 10 lines above the current line to the one below                                |
+| :+8m.       | Copy the line 8 lines after the current line to the one below                                 |
 
 Deleting
 
@@ -237,24 +239,24 @@ Moving Text
 
 Substitution
 
-| Input                         | Result                                                                                                                                                                                        |
-| :---------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| :<zero-width-space>s/old/new/ | Basic substitution                                                                                                                                                                            |
-| :%s                           | Substitute in whole file                                                                                                                                                                      |
-| g                             | Modifier to go to end of current line (or whole selection in visual mode). Even when substituting the whole file, only the first occurence per line will be replaced unless this is specified |
-| i                             | Modifier to ignore case                                                                                                                                                                       |
-| n                             | Modifier to report number of matches without substituting                                                                                                                                     |
-| c                             | Modifier to ask for confirmation                                                                                                                                                              |
-| e                             | Modifier to suppress errors                                                                                                                                                                   |
-| \\%V                          | In visual mode, insert into text to match to only match within selection                                                                                                                      |
-| & (as part of replace)        | Insert the matched text                                                                                                                                                                       |
-| :&                            | Repeat last substitution but replace flags                                                                                                                                                    |
-| :&&                           | Keep flags                                                                                                                                                                                    |
-| :%&                           | Repeat on file, reset flags                                                                                                                                                                   |
-| :%&&                          | Repeat on file, keep flags                                                                                                                                                                    |
-| & (as a flag)                 | Must be first. Repeat flags of previous substitution                                                                                                                                          |
-| I                             | Don't ignore case or use smartcase                                                                                                                                                            |
-| :g/MATCH/#\|s/MATCH/REPLACE/g\|# | Print out all substitutions for review
+| Input                            | Result                                                                                                                                                                                        |
+| :------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| :<zero-width-space>s/old/new/    | Basic substitution                                                                                                                                                                            |
+| :%s                              | Substitute in whole file                                                                                                                                                                      |
+| g                                | Modifier to go to end of current line (or whole selection in visual mode). Even when substituting the whole file, only the first occurence per line will be replaced unless this is specified |
+| i                                | Modifier to ignore case                                                                                                                                                                       |
+| n                                | Modifier to report number of matches without substituting                                                                                                                                     |
+| c                                | Modifier to ask for confirmation                                                                                                                                                              |
+| e                                | Modifier to suppress errors                                                                                                                                                                   |
+| \\%V                             | In visual mode, insert into text to match to only match within selection                                                                                                                      |
+| & (as part of replace)           | Insert the matched text                                                                                                                                                                       |
+| :&                               | Repeat last substitution but replace flags                                                                                                                                                    |
+| :&&                              | Keep flags                                                                                                                                                                                    |
+| :%&                              | Repeat on file, reset flags                                                                                                                                                                   |
+| :%&&                             | Repeat on file, keep flags                                                                                                                                                                    |
+| & (as a flag)                    | Must be first. Repeat flags of previous substitution                                                                                                                                          |
+| I                                | Don't ignore case or use smartcase                                                                                                                                                            |
+| :g/MATCH/#\|s/MATCH/REPLACE/g\|# | Print out all substitutions for review                                                                                                                                                        |
 
 Regex
 Input | Result
