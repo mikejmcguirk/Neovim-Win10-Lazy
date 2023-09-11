@@ -85,6 +85,8 @@ local jkOpts = { noremap = true, expr = true, silent = true }
 vim.keymap.set('n', 'j', "v:count == 0 ? 'gj' : 'j'", jkOpts)
 vim.keymap.set('n', 'k', "v:count == 0 ? 'gk' : 'k'", jkOpts)
 
+vim.keymap.set("i", "<C-l>", "<C-o>l", opts)
+
 -- In Visual Mode, select the last changed text (includes writes)
 vim.keymap.set("n", "gp", "`[v`]", opts)
 
