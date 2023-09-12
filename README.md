@@ -132,6 +132,17 @@ This config assumes that the LSPs are manually installed rather than using Mason
 
   - If the .prettierrc file is invalid, ALEFix will not run. If ALEFix does nothing, run prettier from the command line to see if if outputs any config errors
 
+##### Docker LSP
+
+- Install the Docker Language server with <code>npm install -g dockerfile-language-server-nodejs</code>
+
+- Run the following in your JS project to add the components:
+  <code><pre>
+  npm install dockerfile-ast
+  npm install dockerfile-language-service
+  npm install dockerfile-utils
+  </pre></code>
+
 ##### Lua Language Server
 
 - Go to the lua_ls releases page and download the latest zipped copy for Windows: https://github.com/LuaLS/lua-language-server/releases

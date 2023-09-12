@@ -234,6 +234,14 @@ local lspConfig = function()
         end,
     })
 
+    lspconfig.dockerls.setup({
+        capabilities = capabilities,
+
+        on_attach = function(client, bufnr)
+            defaultAttach(bufnr)
+        end,
+    })
+
     -- No separate linter installed. Formatting is done using prettier through ALE
     lspconfig.marksman.setup({
         capabilities = capabilities,
