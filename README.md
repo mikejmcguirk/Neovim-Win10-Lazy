@@ -255,7 +255,7 @@ This config assumes that the LSPs are manually installed rather than using Mason
 
 - For this config, a "MainBrowser" environment variable can be created containing the fully-qualified name of the Browser you want Markdown Preview to use. If this variable does not exist, Markdown Preview will attempt to use your default browser
 
-- By default, this config uses the Fluoromachine "delta" theme. An "NvimTheme" environment variable can be created and set to "blue" to enable a customized color scheme
+- By default, this config uses the Fluoromachine "delta" theme. This can be changed by creating an "NvimTheme" environment variable. Set to "blue" to use a custom blue theme or "green" to use zenburn
 
 - To use Zig as an alternative compiler for Treesitter:
 

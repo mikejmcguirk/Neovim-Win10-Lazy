@@ -85,6 +85,12 @@ local themeConfig = function()
 
             overrides = overrides
         }
+
+        vim.cmd.colorscheme "fluoromachine"
+    elseif envTheme == "green" then
+        require("zenburn").setup()
+
+        vim.cmd.colorscheme "zenburn"
     else
         fm.setup {
             glow = false,
@@ -92,11 +98,15 @@ local themeConfig = function()
             theme = "delta",
             transparent = true,
         }
+
+        vim.cmd.colorscheme "fluoromachine"
     end
 
-    vim.cmd.colorscheme "fluoromachine"
 
-    -- Still needed even with transparent = true
+    if envTheme == "green" then
+        vim.api.nvim_set_hl(0, "Normal", { bg = "none" })
+    end
+    -- Still needed even with fluoromachine transparent = true
     vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" })
 
     vim.api.nvim_set_hl(
@@ -152,6 +162,19 @@ local harpoonConfig = function()
             "TabLineFill", {
                 fg = vim.api.nvim_get_hl(0, { name = "CursorLineNr" }).fg,
                 bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg
+            }
+        )
+    elseif envTheme == "green" then
+        vim.api.nvim_set_hl(0,
+            "HarpoonActive", {
+                fg = vim.api.nvim_get_hl(0, { name = "DevIconEditorConfig" }).fg,
+                bg = "#5D6262"
+            }
+        )
+        vim.api.nvim_set_hl(0,
+            "HarpoonNumberActive", {
+                fg = vim.api.nvim_get_hl(0, { name = "DevIconEditorConfig" }).fg,
+                bg = "#5D6262"
             }
         )
     else
@@ -308,6 +331,8 @@ local lualineConfig = function()
         custom_auto.normal.b.fg = old_auto_visual_b_fg
 
         theme = custom_auto
+    elseif envTheme == "green" then
+        theme = "zenburn"
     else
         theme = "fluoromachine"
     end
@@ -344,6 +369,11 @@ return {
         "maxmx03/fluoromachine.nvim",
         lazy = false,    -- Does not work with lazy loading
         priority = 1000, -- Set top priority so highlight groups load
+    },
+    {
+        "phha/zenburn.nvim",
+        lazy = false,
+        priority = 999,
         config = function()
             themeConfig()
         end
@@ -351,7 +381,7 @@ return {
     {
         "ThePrimeagen/harpoon",
         lazy = false,
-        priority = 999,
+        priority = 998,
         dependencies = { "nvim-lua/plenary.nvim" },
         config = function()
             harpoonConfig()
@@ -360,7 +390,7 @@ return {
     {
         "unblevable/quick-scope",
         lazy = false,
-        priority = 998,
+        priority = 997,
         config = function()
             if not envTheme or envTheme == "delta" then
                 vim.api.nvim_set_hl(0, "QuickScopePrimary",
@@ -379,7 +409,7 @@ return {
         'nvim-lualine/lualine.nvim',
         dependencies = { 'nvim-tree/nvim-web-devicons' },
         lazy = false,
-        priority = 997,
+        priority = 996,
         config = function()
             lualineConfig()
         end
