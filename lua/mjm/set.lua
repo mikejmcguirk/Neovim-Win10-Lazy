@@ -208,8 +208,6 @@ local mainBrowser = os.getenv("MainBrowser")
 
 if mainBrowser then
     vim.g.mkdp_browser = mainBrowser
-else
-    print("BrowserPath system variable not set. Default browser will be used if it exists")
 end
 
 vim.g.mkdp_echo_preview_url = 0
