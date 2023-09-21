@@ -150,7 +150,7 @@ return {
                 auto_install = false,
                 ensure_installed = { "c", "lua", "vim", "vimdoc", "query", "elixir", "heex",
                     "javascript", "html", "rust", "sql", "c_sharp", "perl", "python",
-                    "json", "typescript", "dockerfile"
+                    "json", "typescript", "dockerfile", "bash"
                 },
                 sync_install = false,
                 highlight = {

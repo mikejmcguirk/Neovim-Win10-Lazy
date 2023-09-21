@@ -326,6 +326,8 @@ local lspConfig = function()
         analyze_open_documents_only = false,
     })
 
+    lspconfig.bashls.setup {}
+
     -- No additional linter installed
     lspconfig.lua_ls.setup({
         capabilities = capabilities,
