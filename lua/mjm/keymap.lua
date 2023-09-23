@@ -66,7 +66,7 @@ vim.keymap.set("v", "<", "<gv", opts)
 vim.keymap.set("v", ">", ">gv", opts)
 
 -- Take the text from the cursor to the end of the current line and move it to a new line above
-vim.keymap.set("n", "<leader>=", "v$hd<cmd>s/\\s\\+$//e<cr>k$a<cr><esc>p==", opts)
+vim.keymap.set("n", "<leader>=", "v$hd<cmd>s/\\s\\+$//e<cr>O<esc>0\"_Dp==", opts)
 
 -- Same as J but with the line above. Keeps the cursor in the same place
 -- Does not automatically reformat comment syntax
