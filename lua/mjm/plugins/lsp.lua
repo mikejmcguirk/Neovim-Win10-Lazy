@@ -328,6 +328,8 @@ local lspConfig = function()
 
     lspconfig.bashls.setup {}
 
+    lspconfig.html.setup {}
+
     -- No additional linter installed
     lspconfig.lua_ls.setup({
         capabilities = capabilities,
