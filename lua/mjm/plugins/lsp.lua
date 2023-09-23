@@ -326,9 +326,35 @@ local lspConfig = function()
         analyze_open_documents_only = false,
     })
 
-    lspconfig.bashls.setup {}
+    lspconfig.bashls.setup {
+        capabilities = capabilities,
 
-    lspconfig.html.setup {}
+        on_attach = function(client, bufnr)
+            defaultAttach(bufnr)
+        end,
+    }
+
+    -- Use Prettier/ALE for formatting
+    lspconfig.html.setup({
+        capabilities = capabilities,
+
+        on_attach = function(client, bufnr)
+            setLSPkeymaps()
+        end,
+
+        init_options = {
+            provideFormatter = false
+        }
+    })
+
+    -- Use Prettier/ALE for formatting
+    lspconfig.cssls.setup({
+        capabilities = capabilities,
+
+        on_attach = function(client, bufnr)
+            setLSPkeymaps()
+        end,
+    })
 
     -- No additional linter installed
     lspconfig.lua_ls.setup({
