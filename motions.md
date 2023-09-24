@@ -185,6 +185,8 @@ Deleting
 | daW       | Delete inner word spacewise and trailing whitespace                         |
 | dip       | Delete inner paragraph                                                      |
 | dap       | Delete paragraph and surrounding whitespace                                 |
+| dit       | Delete inside matching tags                                                 |
+| dat       | Delete matching tags and contents                                           |
 | x         | Delete character (writes to clipboard)                                      |
 | X         | Delete character before cursor (writes to clipboard)                        |
 
