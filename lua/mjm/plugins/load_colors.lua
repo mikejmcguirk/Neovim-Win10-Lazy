@@ -235,7 +235,6 @@ local harpoonConfig = function()
         return vim.fn.bufadd(filename)
     end
 
-
     local function windows_nav_file(id)
         require("harpoon.dev").log.trace("nav_file(): Navigating to", id)
 
@@ -247,12 +246,20 @@ local harpoonConfig = function()
         end
 
         local mark = marked.get_marked_file(idx)
+        local buf_id
+
         -- The repo's version of nav_file performs a normalize function on the file name
         -- that converts saved hoots to Unix path formatting. On Windows, because the marks
         -- are saved in Windows file format, the mark in the function does not match the
         -- saved mark and therefore is not recognized by the tabline. This implementation
-        -- removes the normalization
-        local buf_id = get_or_create_buffer(mark.filename)
+        -- checks if we are in Windows and does not perform the normalization if we are
+        if vim.fn.has('macunix') == 0 then
+            buf_id = get_or_create_buffer(mark.filename)
+        else
+            local filename = vim.fs.normalize(mark.filename)
+            buf_id = get_or_create_buffer(filename)
+        end
+
         local set_row = not vim.api.nvim_buf_is_loaded(buf_id)
         local old_bufnr = vim.api.nvim_get_current_buf()
 
