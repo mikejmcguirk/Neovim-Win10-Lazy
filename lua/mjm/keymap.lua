@@ -76,6 +76,16 @@ vim.keymap.set("n", "H",
 vim.keymap.set("n", "[ ", "mzO<esc>0\"_D`z", opts)
 vim.keymap.set("n", "] ", "mzo<esc>0\"_D`z", opts)
 
+vim.keymap.set("n", "<M-;>", function()
+    vim.cmd([[s/\s\+$//e]])
+
+    if vim.api.nvim_get_current_line():sub(-1) == ";" then
+        vim.cmd([[silent! normal! mz$"_x`z]])
+    else
+        vim.cmd([[:execute "normal! mzA;" | normal! `z]])
+    end
+end, opts)
+
 -----------
 -- Other --
 -----------
@@ -159,7 +169,7 @@ vim.keymap.set("n", "<C-q>", "<Nop>", opts)
 
 vim.keymap.set("i", "<C-j>", "<Nop>", opts) -- enter
 
-vim.keymap.set("i", "<C-v>", "<Nop>", opts) -- paste from terminal
+vim.keymap.set("i", "<C-v>", "<Nop>", opts)
 vim.keymap.set("i", "<C-q>", "<Nop>", opts) -- paste from terminal
 vim.keymap.set("i", "<C-s>", "<Nop>", opts)
 
