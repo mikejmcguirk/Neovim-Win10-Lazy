@@ -86,7 +86,7 @@ vim.keymap.set("n", "<M-;>", function()
     end
 end, opts)
 
--- This Is An All Uppercase,comment
+-- Title Case Maps
 vim.keymap.set("n", "gllw", ": s/\\v<(.)(\\w*)/\\u\\1\\L\\2/ge<cr><cmd>noh<cr>", opts)
 vim.keymap.set("n", "gllW", ": s/\\v<(.)(\\S*)/\\u\\1\\L\\2/ge<cr><cmd>noh<cr>", opts)
 vim.keymap.set("n", "gliw", "mzguiw~`z", opts)
