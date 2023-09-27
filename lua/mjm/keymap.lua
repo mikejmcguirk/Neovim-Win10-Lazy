@@ -22,17 +22,24 @@ vim.keymap.set("n", "<M-l>", "<cmd>vertical resize +2<CR>", opts)
 -------------------------
 
 vim.keymap.set("n", "J", "mzJ`z", opts)
+
 vim.keymap.set("n", "<C-d>", "<C-d>zz", opts)
 vim.keymap.set("n", "<C-u>", "<C-u>zz", opts)
+
 vim.keymap.set("n", "n", "nzzzv", opts)
 vim.keymap.set("n", "N", "Nzzzv", opts)
+
+vim.keymap.set("v", "y", "mzy`z", opts)
 
 -------------------------------------------------
 -- Copy/Paste Fixes --
 -------------------------------------------------
 
+vim.keymap.set("n", "Y", "y$", opts) -- Just in case
+
 vim.keymap.set({ "n", "v" }, "<leader>y", "\"+y", opts)
-vim.keymap.set({ "n", "v" }, "<leader>Y", "\"+Y", opts)
+vim.keymap.set("n", "<leader>Y", "\"+y$", opts) -- Mapping to "+Y yanks the whole line
+vim.keymap.set("v", "<leader>Y", "\"+Y", opts)
 
 vim.keymap.set("n", "<leader>p", "\"+p", opts)
 vim.keymap.set("n", "<leader>P", "\"+P", opts)
@@ -92,14 +99,107 @@ vim.keymap.set("n", "gllW", ": s/\\v<(.)(\\S*)/\\u\\1\\L\\2/ge<cr><cmd>noh<cr>",
 vim.keymap.set("n", "gliw", "mzguiw~`z", opts)
 vim.keymap.set("n", "gliW", "mzguiW~`z", opts)
 
+-------------------
+-- Quickfix List --
+-------------------
+
+vim.keymap.set("n", "<leader>qt", function()
+    local is_quickfix_open = false
+    local win_info = vim.fn.getwininfo()
+
+    for _, win in ipairs(win_info) do
+        if win.quickfix == 1 then
+            is_quickfix_open = true
+            break
+        end
+    end
+
+    if is_quickfix_open then
+        vim.cmd "cclose"
+    else
+        vim.cmd "copen"
+    end
+end, opts)
+
+vim.keymap.set("n", "<leader>qo", "<cmd>copen<cr>", opts)
+vim.keymap.set("n", "<leader>qc", "<cmd>cclose<cr>", opts)
+
+vim.keymap.set("n", "<leader>qg", function()
+    local pattern = vim.fn.input('Enter pattern: ')
+    if pattern ~= "" then
+        vim.cmd("vimgrep /" .. pattern .. "/ **/*.* | copen")
+
+        -- vim.cmd("wincmd p")
+        -- vim.api.nvim_feedkeys(
+        --     vim.api.nvim_replace_termcodes(
+        --         '<C-O>', true, true, true
+        --     ), 'n', {}
+        -- )
+    end
+end, opts)
+
+vim.keymap.set("n", "<leader>qk", function()
+    local pattern = vim.fn.input('Pattern to keep: ')
+    if pattern ~= "" then
+        vim.cmd("Cfilter " .. pattern)
+    end
+end, opts)
+
+vim.keymap.set("n", "<leader>qr", function()
+    local pattern = vim.fn.input('Pattern to remove: ')
+    if pattern ~= "" then
+        vim.cmd("Cfilter! " .. pattern)
+    end
+end, opts)
+
+vim.keymap.set("n", "<leader>qe", function()
+    vim.fn.setqflist({})
+end, opts)
+
+vim.keymap.set("n", "[q", function()
+    local status, result = pcall(function()
+        vim.cmd("cprev")
+    end)
+
+    if not status then
+        if result and type(result) == "string" and string.find(result, "E553") then
+            vim.cmd("clast")
+            vim.cmd("normal! zz")
+        elseif result and type(result) == "string" and string.find(result, "E42") then
+        elseif result then
+            print(result)
+        end
+    else
+        vim.cmd("normal! zz")
+    end
+end, opts)
+
+vim.keymap.set("n", "]q", function()
+    local status, result = pcall(function()
+        vim.cmd("cnext")
+    end)
+
+    if not status then
+        if result and type(result) == "string" and string.find(result, "E553") then
+            vim.cmd("cfirst")
+            vim.cmd("normal! zz")
+        elseif result and type(result) == "string" and string.find(result, "E42") then
+        elseif result then
+            print(result)
+        end
+    else
+        vim.cmd("normal! zz")
+    end
+end, opts)
+
 -----------
 -- Other --
 -----------
 
 local jkOpts = { noremap = true, expr = true, silent = true }
 
-vim.keymap.set('n', 'j', "v:count == 0 ? 'gj' : 'j'", jkOpts)
-vim.keymap.set('n', 'k', "v:count == 0 ? 'gk' : 'k'", jkOpts)
+vim.keymap.set("n", "j", "v:count == 0 ? 'gj' : 'j'", jkOpts)
+vim.keymap.set("n", "k", "v:count == 0 ? 'gk' : 'k'", jkOpts)
 
 vim.keymap.set("i", "<C-l>", "<C-o>l", opts)
 
@@ -162,13 +262,15 @@ vim.keymap.set({ "n", "v", "i" }, "<C-e>", "<Nop>", opts) -- scroll down one lin
 vim.keymap.set({ "n", "v" }, "<C-y>", "<Nop>", opts)      -- scroll up one line
 
 vim.keymap.set({ "n", "v" }, "-", "<Nop>", opts)          -- cursor up one line (non-blank lines)
-vim.keymap.set({ "n", "v" }, "<C-m>", "<Nop>", opts)      -- cursor down one line (non-blank lines)
+-- cursor down one line (non-blank lines)
+-- Normal mode left active or else <cr> does not work in quickfix list
+vim.keymap.set({ "v" }, "<C-m>", "<Nop>", opts)
 
-vim.keymap.set({ "n", "v" }, "<C-p>", "<Nop>", opts)      -- cursor up one line
-vim.keymap.set({ "n", "v" }, "<C-n>", "<Nop>", opts)      -- cursor down one line
+vim.keymap.set({ "n", "v" }, "<C-p>", "<Nop>", opts) -- cursor up one line
+vim.keymap.set({ "n", "v" }, "<C-n>", "<Nop>", opts) -- cursor down one line
 
-vim.keymap.set({ "n", "v" }, "<C-f>", "<Nop>", opts)      -- scroll down one page
-vim.keymap.set({ "n", "v" }, "<C-b>", "<Nop>", opts)      -- scroll up one page
+vim.keymap.set({ "n", "v" }, "<C-f>", "<Nop>", opts) -- scroll down one page
+vim.keymap.set({ "n", "v" }, "<C-b>", "<Nop>", opts) -- scroll up one page
 
 -- alternate method to enter visual block mode
 vim.keymap.set("n", "<C-q>", "<Nop>", opts)

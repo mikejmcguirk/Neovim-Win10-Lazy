@@ -89,6 +89,8 @@ vim.opt.cindent = true
 
 vim.opt.updatetime = 1000
 
+vim.cmd "packadd cfilter"
+
 -----------------
 -- Quick-scope --
 -----------------
