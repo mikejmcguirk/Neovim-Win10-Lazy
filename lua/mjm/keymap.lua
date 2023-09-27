@@ -124,10 +124,24 @@ end, opts)
 vim.keymap.set("n", "<leader>qo", "<cmd>copen<cr>", opts)
 vim.keymap.set("n", "<leader>qc", "<cmd>cclose<cr>", opts)
 
-vim.keymap.set("n", "<leader>qg", function()
+vim.keymap.set("n", "<leader>qgi", function()
     local pattern = vim.fn.input('Enter pattern: ')
     if pattern ~= "" then
-        vim.cmd("vimgrep /" .. pattern .. "/ **/*.* | copen")
+        vim.cmd("silent! grep -i " .. pattern .. " | copen")
+
+        -- vim.cmd("wincmd p")
+        -- vim.api.nvim_feedkeys(
+        --     vim.api.nvim_replace_termcodes(
+        --         '<C-O>', true, true, true
+        --     ), 'n', {}
+        -- )
+    end
+end, opts)
+
+vim.keymap.set("n", "<leader>qgn", function()
+    local pattern = vim.fn.input('Enter pattern: ')
+    if pattern ~= "" then
+        vim.cmd("silent! grep " .. pattern .. " | copen")
 
         -- vim.cmd("wincmd p")
         -- vim.api.nvim_feedkeys(
