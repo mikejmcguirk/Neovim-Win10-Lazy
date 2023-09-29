@@ -37,9 +37,10 @@ vim.keymap.set("v", "y", "mzy`z", opts)
 
 vim.keymap.set("n", "Y", "y$", opts) -- Just in case
 
-vim.keymap.set({ "n", "v" }, "<leader>y", "\"+y", opts)
+vim.keymap.set("n", "<leader>y", "\"+y", opts)
+vim.keymap.set("v", "<leader>y", "mz\"+y`z", opts)
 vim.keymap.set("n", "<leader>Y", "\"+y$", opts) -- Mapping to "+Y yanks the whole line
-vim.keymap.set("v", "<leader>Y", "\"+Y", opts)
+vim.keymap.set("v", "<leader>Y", "mz\"+Y`z", opts)
 
 vim.keymap.set("n", "<leader>p", "\"+p", opts)
 vim.keymap.set("n", "<leader>P", "\"+P", opts)
