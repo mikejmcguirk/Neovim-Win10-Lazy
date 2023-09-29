@@ -16,6 +16,10 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
     group = mjmGroup,
     pattern = "*",
     callback = function()
+        if vim.bo.filetype == "xml" then -- Controlled through ftplugin file
+            return
+        end
+
         vim.cmd([[normal! mz]])
 
         vim.cmd([[%s/\s\+$//e]])   -- Remove trailing whitespace
