@@ -19,6 +19,8 @@ return {
                         n = {
                             ["<C-h>"] = "which_key",
                             ['<c-d>'] = require('telescope.actions').delete_buffer,
+                            ["<C-c>"] = require('telescope.actions').close,
+                            ['<esc>'] = false,
                             ['<up>'] = false,
                             ['<down>'] = false,
                             ['<left>'] = false,
@@ -31,6 +33,7 @@ return {
                         i = {
                             ["<C-h>"] = "which_key",
                             ['<c-d>'] = require('telescope.actions').delete_buffer,
+                            ['<C-c>'] = false,
                             ['<up>'] = false,
                             ['<down>'] = false,
                             ['<left>'] = false,

@@ -223,6 +223,24 @@ local harpoonConfig = function()
         vim.cmd([[normal! :<esc>]])
     end)
 
+    vim.keymap.set("n", "<leader>ar", function()
+        marked.rm_file()
+
+        local contents = {}
+
+        for idx = 1, marked.get_length() do
+            local file = marked.get_marked_file_name(idx)
+            if file == "" then
+            else
+                table.insert(contents, string.format("%s", file))
+            end
+        end
+
+        marked.set_mark_list(contents)
+
+        vim.cmd([[normal! :<esc>]])
+    end)
+
     vim.keymap.set("n", "<leader>ae", fromUI.toggle_quick_menu, opts)
 
     local function get_or_create_buffer(filename)

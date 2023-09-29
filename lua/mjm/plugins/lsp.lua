@@ -39,10 +39,11 @@ local cmpConfig = function()
             ["<C-d>"] = cmp.mapping.scroll_docs(4),
             ["<C-u>"] = cmp.mapping.scroll_docs(-4),
 
-            ["<C-e>"] = cmp.mapping {
-                i = cmp.mapping.abort(),
-                c = cmp.mapping.close(),
-            },
+            ["<C-e>"] = cmp.mapping.abort(),
+            ["<C-c>"] = function()
+                cmp.mapping.abort()
+                vim.cmd([[stopinsert]])
+            end,
 
             ["<C-p>"] = cmp.mapping.select_prev_item(cmp_select),
             ["<C-n>"] = cmp.mapping.select_next_item(cmp_select),
