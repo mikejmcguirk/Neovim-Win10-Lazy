@@ -21,7 +21,6 @@ vim.g.maplocaleader = " "
 vim.opt.nu = true
 vim.opt.relativenumber = true
 vim.opt.numberwidth = 5
-
 vim.opt.signcolumn = "yes:1"
 
 vim.opt.colorcolumn = "100"
@@ -39,6 +38,7 @@ vim.opt.shiftround = true
 vim.opt.cursorline = true
 
 local cursorLineGroup = vim.api.nvim_create_augroup("CursorLineControl", { clear = true })
+
 local set_cursorline = function(event, value, pattern)
     vim.api.nvim_create_autocmd(event, {
         group = cursorLineGroup,
@@ -58,16 +58,26 @@ set_cursorline("FileType", false, "TelescopePrompt")
 ----------------
 
 vim.opt.termguicolors = true
-
 vim.cmd([[set gcr=n:block-blinkon1,i-c:ver100-blinkon1,v-r:hor100-blinkon1]])
 
-vim.opt.scrolloff = 6
-
-vim.wo.wrap = false
 vim.opt.wrap = false
 
-vim.opt.splitright = true
+local wrap_control = vim.api.nvim_create_augroup("wrap_control", { clear = true })
 
+vim.api.nvim_create_autocmd({ "BufEnter" }, {
+    group = wrap_control,
+    pattern = "*",
+    callback = function()
+        if vim.bo.filetype == "markdown" then
+            vim.wo.wrap = true
+        else
+            vim.wo.wrap = false
+        end
+    end,
+})
+
+vim.opt.scrolloff = 6
+vim.opt.splitright = true
 vim.opt.showmode = false
 
 ------------
@@ -125,15 +135,14 @@ local copilotNode = os.getenv("NvimCopilotNode")
 
 if os.getenv("DisableCopilot") == "true" then
     vim.g.copilot_enabled = false
+elseif copilotNode then
+    vim.g.copilot_node_command = copilotNode
 else
-    if copilotNode then
-        vim.g.copilot_node_command = copilotNode
-    else
-        print(
-            "NvimCopilotNode system variable not set. " ..
-            "Node 16.15.0 is the highest supported version. " ..
-            "Default Node path will be used if it exists")
-    end
+    print(
+        "NvimCopilotNode system variable not set. " ..
+        "Node 16.15.0 is the highest supported version. " ..
+        "Default Node path will be used if it exists"
+    )
 end
 
 ---------------
@@ -155,37 +164,34 @@ local linuxHome = os.getenv("HOME")
 local linuxNvimDataPath = "/.vim/undodir"
 local isLinux = vim.fn.has("unix")
 
+vim.g.undotree_SetFocusWhenToggle = 1
+vim.g.undotree_WindowLayout = 3
+
 if winHome and winNvimDataPath and isWin == 1 then
     vim.opt.swapfile = false
     vim.opt.backup = false
     vim.opt.undofile = true
     vim.opt.undodir = winHome .. winNvimDataPath
-
-    vim.g.undotree_SetFocusWhenToggle = 1
-    vim.g.undotree_WindowLayout = 3
 elseif linuxHome and linuxNvimDataPath and isLinux == 1 then
     vim.opt.swapfile = false
     vim.opt.backup = false
     vim.opt.undofile = true
     vim.opt.undodir = linuxHome .. linuxNvimDataPath
-
-    vim.g.undotree_SetFocusWhenToggle = 1
-    vim.g.undotree_WindowLayout = 3
 else
     print("Could not set undodir for undotree. Using Nvim defaults.")
     print("Debug Information:")
 
     if isWin then
-        print("  USERPROFILE env variable: " .. (winHome or "Not set"))
-        print("  Nvim Data Path: " .. (winNvimDataPath or "Not set"))
-        print("  Is Windows: " .. (isWin == 1 and "True" or "False"))
+        print("USERPROFILE env variable: " .. (winHome or "Not set"))
+        print("Nvim Data Path: " .. (winNvimDataPath or "Not set"))
+        print("Is Windows: " .. (isWin == 1 and "True" or "False"))
     elseif isLinux then
-        print("  HOME env variable: " .. (linuxHome or "Not set"))
-        print("  Nvim Data Path: " .. (linuxNvimDataPath or "Not set"))
-        print("  Is Linux: " .. (isLinux == 1 and "True" or "False"))
+        print("HOME env variable: " .. (linuxHome or "Not set"))
+        print("Nvim Data Path: " .. (linuxNvimDataPath or "Not set"))
+        print("Is Linux: " .. (isLinux == 1 and "True" or "False"))
     else
-        print("  Is Windows: " .. (isWin == 1 and "True" or "False"))
-        print("  Is Linux: " .. (isLinux == 1 and "True" or "False"))
+        print("Is Windows: " .. (isWin == 1 and "True" or "False"))
+        print("Is Linux: " .. (isLinux == 1 and "True" or "False"))
     end
 end
 
@@ -211,6 +217,7 @@ vim.g.mkdp_open_ip = ""
 
 local mainBrowser = os.getenv("MainBrowser")
 
+-- OS's default browser will be used if this is not set
 if mainBrowser then
     vim.g.mkdp_browser = mainBrowser
 end

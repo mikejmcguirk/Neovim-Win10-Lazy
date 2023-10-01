@@ -100,6 +100,12 @@ vim.keymap.set("n", "gllW", ": s/\\v<(.)(\\S*)/\\u\\1\\L\\2/ge<cr><cmd>noh<cr>",
 vim.keymap.set("n", "gliw", "mzguiw~`z", opts)
 vim.keymap.set("n", "gliW", "mzguiW~`z", opts)
 
+-- Create Undo Sequences on Punctuation
+vim.keymap.set("i", ",", ",<C-g>u")
+vim.keymap.set("i", ".", ".<C-g>u")
+vim.keymap.set("i", "!", "!<C-g>u")
+vim.keymap.set("i", "?", "?<C-g>u")
+
 -------------------
 -- Quickfix List --
 -------------------
@@ -219,7 +225,7 @@ local jkOpts = { noremap = true, expr = true, silent = true }
 vim.keymap.set("n", "j", "v:count == 0 ? 'gj' : 'j'", jkOpts)
 vim.keymap.set("n", "k", "v:count == 0 ? 'gk' : 'k'", jkOpts)
 
-vim.keymap.set("i", "<C-l>", "<C-o>l", opts)
+-- vim.keymap.set("i", "<C-l>", "<C-o>l", opts)
 
 -- In Visual Mode, select the last changed text (includes writes)
 vim.keymap.set("n", "gp", "`[v`]", opts)
