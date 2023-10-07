@@ -95,10 +95,22 @@ vim.keymap.set("n", "<M-;>", function()
 end, opts)
 
 -- Title Case Maps
-vim.keymap.set("n", "gllw", ": s/\\v<(.)(\\w*)/\\u\\1\\L\\2/ge<cr><cmd>noh<cr>", opts)
-vim.keymap.set("n", "gllW", ": s/\\v<(.)(\\S*)/\\u\\1\\L\\2/ge<cr><cmd>noh<cr>", opts)
+vim.keymap.set("n", "gllw", "mz<cmd> s/\\v<(.)(\\w*)/\\u\\1\\L\\2/ge<cr><cmd>noh<cr>`z", opts)
+vim.keymap.set("n", "gllW", "mz<cmd> s/\\v<(.)(\\S*)/\\u\\1\\L\\2/ge<cr><cmd>noh<cr>`z", opts)
 vim.keymap.set("n", "gliw", "mzguiw~`z", opts)
 vim.keymap.set("n", "gliW", "mzguiW~`z", opts)
+
+-- gu and gU fixes
+vim.keymap.set("n", "guu", "mzguu`z", opts)
+vim.keymap.set("n", "guiw", "mzguiw`z", opts)
+vim.keymap.set("n", "guiW", "mzguiW`z", opts)
+
+vim.keymap.set("n", "gUU", "mzgUU`z", opts)
+vim.keymap.set("n", "gUiw", "mzgUiw`z", opts)
+vim.keymap.set("n", "gUiW", "mzgUiW`z", opts)
+
+vim.keymap.set("v", "gu", "mzgu`z", opts)
+vim.keymap.set("v", "gU", "mzgU`z", opts)
 
 -- Create Undo Sequences on Punctuation
 vim.keymap.set("i", ",", ",<C-g>u")
