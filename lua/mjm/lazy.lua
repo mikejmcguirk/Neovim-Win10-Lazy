@@ -13,10 +13,6 @@ end
 
 vim.opt.rtp:prepend(lazypath)
 
--- if not os.getenv("OmniSharpDLL") then
---     print("OmniSharpDLL environment variable not set. Omnisharp will be unable to attach")
--- end
-
 require("lazy").setup("mjm.plugins", {
     ui = {
         border = "single"

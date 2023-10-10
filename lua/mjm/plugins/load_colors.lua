@@ -1,11 +1,9 @@
-local envTheme = os.getenv("NvimTheme")
-
 local opts = { noremap = true, silent = true }
 
 local themeConfig = function()
     local fm = require "fluoromachine"
 
-    if envTheme == "blue" then
+    if Env_Theme == "blue" then
         local function overrides(c)
             return {
                 --Keywords (cyan)
@@ -87,7 +85,7 @@ local themeConfig = function()
         }
 
         vim.cmd.colorscheme "fluoromachine"
-    elseif envTheme == "green" then
+    elseif Env_Theme == "green" then
         require("zenburn").setup()
 
         vim.cmd.colorscheme "zenburn"
@@ -103,7 +101,7 @@ local themeConfig = function()
     end
 
 
-    if envTheme == "green" then
+    if Env_Theme == "green" then
         vim.api.nvim_set_hl(0, "Normal", { bg = "none" })
     end
     -- Still needed even with fluoromachine transparent = true
@@ -115,7 +113,7 @@ local themeConfig = function()
         { bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg }
     )
 
-    if envTheme == "blue" then
+    if Env_Theme == "blue" then
         vim.api.nvim_set_hl(0, '@lsp.type.function', {})
         for _, group in ipairs(vim.fn.getcompletion("@lsp", "highlight")) do
             vim.api.nvim_set_hl(0, group, {})
@@ -133,7 +131,7 @@ local harpoonConfig = function()
     })
 
 
-    if envTheme == "blue" then
+    if Env_Theme == "blue" then
         vim.api.nvim_set_hl(0,
             "HarpoonInactive", {
                 fg = vim.api.nvim_get_hl(0, { name = "CursorLineNr" }).fg,
@@ -164,7 +162,7 @@ local harpoonConfig = function()
                 bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg
             }
         )
-    elseif envTheme == "green" then
+    elseif Env_Theme == "green" then
         vim.api.nvim_set_hl(0,
             "HarpoonActive", {
                 fg = vim.api.nvim_get_hl(0, { name = "DevIconEditorConfig" }).fg,
@@ -320,7 +318,7 @@ end
 local lualineConfig = function()
     local theme
 
-    if envTheme == "blue" then
+    if Env_Theme == "blue" then
         local old_auto = require 'lualine.themes.auto'
         local custom_auto = require 'lualine.themes.auto'
 
@@ -356,7 +354,7 @@ local lualineConfig = function()
         custom_auto.normal.b.fg = old_auto_visual_b_fg
 
         theme = custom_auto
-    elseif envTheme == "green" then
+    elseif Env_Theme == "green" then
         theme = "zenburn"
     else
         theme = "fluoromachine"
@@ -417,12 +415,12 @@ return {
         lazy = false,
         priority = 997,
         config = function()
-            if not envTheme or envTheme == "delta" then
+            if not Env_Theme or Env_Theme == "delta" then
                 vim.api.nvim_set_hl(0, "QuickScopePrimary",
                     { bg = "#98FFFB", fg = "#000000", ctermbg = 14, ctermfg = 0 })
                 vim.api.nvim_set_hl(0, "QuickScopeSecondary",
                     { bg = "#FF67D4", fg = "#000000", ctermbg = 207, ctermfg = 0 })
-            elseif envTheme == "blue" then
+            elseif Env_Theme == "blue" then
                 vim.api.nvim_set_hl(0, "QuickScopePrimary",
                     { bg = "#98FFFB", fg = "#000000", ctermbg = 14, ctermfg = 0 })
                 vim.api.nvim_set_hl(0, "QuickScopeSecondary",

@@ -2,7 +2,6 @@
 
 - [Windows 10 Neovim Config Using Lazy](#windows-10-neovim-config-using-lazy)
   - [Objectives](#objectives)
-  - [Environment Variables](#environment-variables)
   - [General Installation Notes](#general-installation-notes)
   - [Git Installation Notes](#git-installation-notes)
   - [Visual Studio Build Utils](#visual-studio-build-utils)
@@ -19,26 +18,13 @@
 
 ### Objectives
 
-- This config is designed to be Git-controlled on multiple machines
-- System environment variables are used for configs that vary machine to machine
-- Assuming the environment variables are correct and the LSPs installed, the config should function as is on a fresh Neovim install on Windows 10
+- Git-Controllable on multiple machines using System environment variables (see the env_variables.lua file) for machine-specific configuration
+- Function on both Windows 10 and Linux systems
 - Use Lazy loading to minimize startup time
-
-### Environment Variables
-
-This config uses user-defined environment variables for the following:
-
-- Pointing to the OmniSharp.dll file (required for OmniSharp to attach)
-- (Optional) Pointing to the Node.exe file used by copilot (default Node path will be used if missing)
-- (Optional) Disabling copilot
-- (Optional) Pointing to the browser used by Markdown Preview (system default browser will be used otherwise)
-- (Optional) Setting the color scheme
-
-Information on how to set these variables up is provided below in the relevant sections.
 
 ### General Installation Notes
 
-- If possible, avoid performing these steps as Administrator or using an elevated terminal (accepting UAC prompts is still fine). If the nvim-data files have mixed ownership, permissions conflicts might cause plugins to fail
+- When installing on Windows, avoid running as Administrator or using an elevated terminal if possible (accepting UAC prompts is still fine). If the nvim-data files have mixed ownership, permissions conflicts might cause plugins to fail
 
 ### Git Installation Notes
 
@@ -110,7 +96,7 @@ This config assumes that the LSPs are manually installed rather than using Mason
 
   - This config uses ALE to interface with prettier, with the intention of avoiding ESLint for formatting
 
-  - To test that the ESLint LSP and prettier are both working:
+  - To test that the ESLint LSP and prettier are both working
 
     - Create a Javascript project where the .eslintrc file is configured to error on single-quoted strings
 

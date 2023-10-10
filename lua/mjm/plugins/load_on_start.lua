@@ -127,6 +127,10 @@ return {
                 diagnostics = {
                     enable = true,
                 },
+                notify = {
+                    threshold = vim.log.levels.WARN,
+                    absolute_path = true
+                },
 
                 on_attach = function(bufnr)
                     local api = require("nvim-tree.api")

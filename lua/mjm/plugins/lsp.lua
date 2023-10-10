@@ -275,13 +275,10 @@ local lspConfig = function()
         }
     })
 
-    local omniSharpDLLenvName = "OmniSharpDLL"
-    local omniSharpDLL = os.getenv(omniSharpDLLenvName)
-
-    if not os.getenv(omniSharpDLLenvName) then
-        print("Warning: " .. omniSharpDLLenvName .. " environment variable not found. " ..
+    if not Env_OmniSharp_DLL then
+        print("Warning: " .. Env_OmniSharp_DLL_Name .. " environment variable not found. " ..
             "Cannot attach OmniSharp")
-        omniSharpDLL = " "
+        Env_OmniSharp_DLL = " "
     end
 
     lspconfig.omnisharp.setup({
@@ -291,7 +288,7 @@ local lspConfig = function()
             defaultAttach(bufnr)
         end,
 
-        cmd = { "dotnet", omniSharpDLL },
+        cmd = { "dotnet", Env_OmniSharp_DLL },
 
         handlers = {
             ["textDocument/definition"] = require("omnisharp_extended").handler,

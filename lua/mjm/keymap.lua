@@ -31,9 +31,20 @@ vim.keymap.set("n", "N", "Nzzzv", opts)
 
 vim.keymap.set("v", "y", "mzy`z", opts)
 
--------------------------------------------------
+vim.keymap.set("n", "guu", "mzguu`z", opts)
+vim.keymap.set("n", "guiw", "mzguiw`z", opts)
+vim.keymap.set("n", "guiW", "mzguiW`z", opts)
+
+vim.keymap.set("n", "gUU", "mzgUU`z", opts)
+vim.keymap.set("n", "gUiw", "mzgUiw`z", opts)
+vim.keymap.set("n", "gUiW", "mzgUiW`z", opts)
+
+vim.keymap.set("v", "gu", "mzgu`z", opts)
+vim.keymap.set("v", "gU", "mzgU`z", opts)
+
+----------------------
 -- Copy/Paste Fixes --
--------------------------------------------------
+----------------------
 
 vim.keymap.set("n", "Y", "y$", opts) -- Just in case
 
@@ -55,8 +66,8 @@ vim.keymap.set("v", "<leader>P", "\"_d\"+P", opts)
 -- Delete to the void register --
 ---------------------------------
 
-vim.keymap.set({ "n", "v" }, "<leader>x", "\"_x", opts)
-vim.keymap.set({ "n", "v" }, "<leader>X", "\"_X", opts)
+vim.keymap.set({ "n", "v" }, "x", "\"_x", opts)
+vim.keymap.set({ "n", "v" }, "X", "\"_X", opts)
 
 vim.keymap.set({ "n", "v" }, "<leader>d", "\"_d", opts)
 vim.keymap.set({ "n", "v" }, "<leader>c", "\"_c", opts)
@@ -99,18 +110,6 @@ vim.keymap.set("n", "gllw", "mz<cmd> s/\\v<(.)(\\w*)/\\u\\1\\L\\2/ge<cr><cmd>noh
 vim.keymap.set("n", "gllW", "mz<cmd> s/\\v<(.)(\\S*)/\\u\\1\\L\\2/ge<cr><cmd>noh<cr>`z", opts)
 vim.keymap.set("n", "gliw", "mzguiw~`z", opts)
 vim.keymap.set("n", "gliW", "mzguiW~`z", opts)
-
--- gu and gU fixes
-vim.keymap.set("n", "guu", "mzguu`z", opts)
-vim.keymap.set("n", "guiw", "mzguiw`z", opts)
-vim.keymap.set("n", "guiW", "mzguiW`z", opts)
-
-vim.keymap.set("n", "gUU", "mzgUU`z", opts)
-vim.keymap.set("n", "gUiw", "mzgUiw`z", opts)
-vim.keymap.set("n", "gUiW", "mzgUiW`z", opts)
-
-vim.keymap.set("v", "gu", "mzgu`z", opts)
-vim.keymap.set("v", "gU", "mzgU`z", opts)
 
 -- Create Undo Sequences on Punctuation
 vim.keymap.set("i", ",", ",<C-g>u")
@@ -169,6 +168,10 @@ vim.keymap.set("n", "<leader>qgn", function()
         --     ), 'n', {}
         -- )
     end
+end, opts)
+
+vim.keymap.set("n", "<leader>qi", function()
+    vim.diagnostic.setqflist()
 end, opts)
 
 vim.keymap.set("n", "<leader>qk", function()

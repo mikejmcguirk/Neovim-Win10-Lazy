@@ -131,12 +131,10 @@ vim.g.rustfmt_fail_silently = 1
 -- Copilot --
 -------------
 
-local copilotNode = os.getenv("NvimCopilotNode")
-
-if os.getenv("DisableCopilot") == "true" then
+if Env_Disable_Copilot == "true" then
     vim.g.copilot_enabled = false
-elseif copilotNode then
-    vim.g.copilot_node_command = copilotNode
+elseif Env_Copilot_Node then
+    vim.g.copilot_node_command = Env_Copilot_Node
 else
     print(
         "NvimCopilotNode system variable not set. " ..
@@ -215,11 +213,9 @@ vim.g.mkdp_open_to_the_world = 0
 -- For more detail: https://github.com/iamcco/markdown-preview.nvim/pull/9
 vim.g.mkdp_open_ip = ""
 
-local mainBrowser = os.getenv("MainBrowser")
-
 -- OS's default browser will be used if this is not set
-if mainBrowser then
-    vim.g.mkdp_browser = mainBrowser
+if Env_Main_Browser then
+    vim.g.mkdp_browser = Env_Main_Browser
 end
 
 vim.g.mkdp_echo_preview_url = 0

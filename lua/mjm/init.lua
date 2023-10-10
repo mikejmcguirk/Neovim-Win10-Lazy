@@ -1,6 +1,5 @@
--- Variables and vim keymaps are set first so, if there is an issue with Lazy, they are
--- still usable
--- Additionally, an E21 can occur if trying to run these after Lazy
+-- An E21 can occur if trying to run these after Lazy
+require("mjm.env_variables")
 require("mjm.set")
 require("mjm.keymap")
 

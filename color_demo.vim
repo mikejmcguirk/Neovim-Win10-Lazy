@@ -1,4 +1,4 @@
-" Requires termguicolors to be disabled to work
+" Requires termguicolors to be disabled
 
 let num = 255
 while num >= 0

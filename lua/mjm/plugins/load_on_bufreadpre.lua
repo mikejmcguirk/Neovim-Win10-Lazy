@@ -4,25 +4,6 @@ return {
         event = "BufReadPre",
     },
     {
-        "folke/trouble.nvim",
-        dependencies = { "nvim-tree/nvim-web-devicons" },
-        event = "BufReadPre",
-        opts = {
-            height = 12,
-            padding = false, -- add an extra new line on top of the list
-            action_keys = {
-                -- jump to the diagnostic or open / close folds
-                -- By default the mouse is enabled here
-                jump = { "<cr>", "<tab>" },
-            },
-            -- enabling this will use the signs defined in your lsp client
-            use_diagnostic_signs = true
-        },
-        config = function()
-            vim.keymap.set("n", "<leader>b", "<cmd>TroubleToggle<cr>")
-        end
-    },
-    {
         'iamcco/markdown-preview.nvim',
         ft = "markdown",
         config = function()
