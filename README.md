@@ -94,17 +94,7 @@ This config assumes that the LSPs are manually installed rather than using Mason
 
   - <code>npm install -g --save-dev prettier</code>
 
-  - This config uses ALE to interface with prettier, with the intention of avoiding ESLint for formatting
-
-  - To test that the ESLint LSP and prettier are both working
-
-    - Create a Javascript project where the .eslintrc file is configured to error on single-quoted strings
-
-    - Write a snippet of Javascript code with double quoted strings. The ESLint LSP should produce a diagnostic error
-
-    - Write the file, you should see the strings be changed to single-quoted due to EslintFixAll being run. But, because prettier is configured for double-quoted strings by default, the automated ALEFix command should then change the strings back to double-quoted
-
-    - If ESLint or prettier have issues in Neovim, check what happens when running them from the command line
+  - This config uses conform.nvim to interface with prettier, with the intention of avoiding ESLint for formatting
 
   - To handle contradictory rules between ESLint and prettier:
 
@@ -113,10 +103,6 @@ This config assumes that the LSPs are manually installed rather than using Mason
     - The eslint-config-prettier repo describes how to configure and check your .eslintrc files to use it
 
     - To test that it's properly installed for your project, run <code>npx eslint-config-prettier main.js</code>. If you get an error that the prettier config is missing, eslint-config-prettier is not properly installed
-
-- ALE is only used in this config for prettier. g.ale_linters_explicit is set to 1 in set.lua and filetypes that use ALEFix on save are defined in ftplugin files
-
-  - If the .prettierrc file is invalid, ALEFix will not run. If ALEFix does nothing, run prettier from the command line to see if if outputs any config errors
 
 ##### Docker LSP
 
@@ -223,7 +209,7 @@ This config assumes that the LSPs are manually installed rather than using Mason
 
 - Create a PATH variable pointing to its location
 
-- ALE + prettier is used for formatting Markdown. Marksman does not contain a built-in formatter
+- conform.nvim + prettier is used for formatting Markdown. Marksman does not contain a built-in formatter
 
 ### Other Setup Notes
 

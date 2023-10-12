@@ -67,7 +67,7 @@ local cmpConfig = function()
             },
             { name = "nvim_lsp_signature_help" },
             {
-                name = 'spell',
+                name = "spell",
                 option = {
                     keep_all_entries = false,
                     enable_in_context = function()
@@ -109,8 +109,6 @@ local diagnosticConfig = function()
     vim.keymap.set("n", "[d", vim.diagnostic.goto_prev)
     vim.keymap.set("n", "]d", vim.diagnostic.goto_next)
     vim.keymap.set("n", "<leader>vl", vim.diagnostic.open_float)
-    -- Listed for reference only
-    -- vim.keymap.set("n", "<leader>vq", vim.diagnostic.setloclist)
 end
 
 local lspConfig = function()
@@ -161,10 +159,6 @@ local lspConfig = function()
         vim.keymap.set("n", "<leader>vr", vim.lsp.buf.rename)
 
         vim.keymap.set("n", "<leader>vc", vim.lsp.buf.code_action)
-
-        vim.keymap.set("n", "<leader>vo", function()
-            vim.lsp.buf.format { async = true }
-        end)
     end
 
     local defaultAttach = function(bufnr)
@@ -211,7 +205,7 @@ local lspConfig = function()
     })
 
     -- Linting is handled below using the ESLint LSP
-    -- Formatting is handled through prettier using ALE
+    -- Formatting handled with Prettier through conform.nvim
     lspconfig.tsserver.setup({
         capabilities = capabilities,
 
@@ -227,14 +221,13 @@ local lspConfig = function()
             vim.api.nvim_create_autocmd("BufWritePre", {
                 buffer = bufnr,
                 callback = function()
-                    vim.cmd([[EslintFixAll]]) -- This will run before :ALEFix
-
-                    setLSPkeymaps()
+                    vim.cmd([[EslintFixAll]])
                 end
             })
         end,
     })
 
+    -- No separate linter installed
     lspconfig.dockerls.setup({
         capabilities = capabilities,
 
@@ -243,7 +236,7 @@ local lspConfig = function()
         end,
     })
 
-    -- No separate linter installed. Formatting is done using prettier through ALE
+    -- No separate linter installed. Formatting handled with Prettier through conform.nvim
     lspconfig.marksman.setup({
         capabilities = capabilities,
 
@@ -281,6 +274,7 @@ local lspConfig = function()
         Env_OmniSharp_DLL = " "
     end
 
+    -- No additional linter installed
     lspconfig.omnisharp.setup({
         capabilities = capabilities,
 
@@ -324,6 +318,7 @@ local lspConfig = function()
         analyze_open_documents_only = false,
     })
 
+    -- No additional linter installed
     lspconfig.bashls.setup {
         capabilities = capabilities,
 
@@ -332,7 +327,7 @@ local lspConfig = function()
         end,
     }
 
-    -- Use Prettier/ALE for formatting
+    -- Use Prettier/conform.nvim for formatting. No linter
     lspconfig.html.setup({
         capabilities = capabilities,
 
@@ -345,7 +340,7 @@ local lspConfig = function()
         }
     })
 
-    -- Use Prettier/ALE for formatting
+    -- Use Prettier/conform.nvim for formatting. No linter
     lspconfig.cssls.setup({
         capabilities = capabilities,
 
@@ -408,7 +403,7 @@ end
 
 return {
     "neovim/nvim-lspconfig",
-    event = "BufReadPre",
+    event = { "BufReadPre", "BufNewFile" },
     config = function()
         cmpConfig()
         diagnosticConfig()
@@ -419,6 +414,7 @@ return {
 
         "hrsh7th/nvim-cmp",                    -- Main cmp Plugin
         "hrsh7th/vim-vsnip",                   -- Snippets engine
+        "rafamadriz/friendly-snippets",        -- Snippets
 
         "hrsh7th/cmp-vsnip",                   -- From vsnip
         "hrsh7th/cmp-nvim-lsp",                -- From LSPs
@@ -431,4 +427,17 @@ return {
 
         'github/copilot.vim',                  -- Uses LSP
     },
+    init = function()
+        if Env_Disable_Copilot == "true" then
+            vim.g.copilot_enabled = false
+        elseif Env_Copilot_Node then
+            vim.g.copilot_node_command = Env_Copilot_Node
+        else
+            print(
+                "NvimCopilotNode system variable not set. " ..
+                "Node 16.15.0 is the highest supported version. " ..
+                "Default Node path will be used if it exists"
+            )
+        end
+    end,
 }

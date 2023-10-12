@@ -7,10 +7,11 @@ local opts = { noremap = true, silent = true }
 vim.keymap.set("n", "<leader>lv", "<cmd>vsplit<cr>", opts)
 vim.keymap.set("n", "<leader>lh", "<cmd>split<cr>", opts)
 
-vim.keymap.set("n", "<C-h>", "<C-w>h", opts)
-vim.keymap.set("n", "<C-j>", "<C-w>j", opts)
-vim.keymap.set("n", "<C-k>", "<C-w>k", opts)
-vim.keymap.set("n", "<C-l>", "<C-w>l", opts)
+-- Controlled through christoomey/vim-tmux-navigator
+-- vim.keymap.set("n", "<C-h>", "<C-w>h", opts)
+-- vim.keymap.set("n", "<C-j>", "<C-w>j", opts)
+-- vim.keymap.set("n", "<C-k>", "<C-w>k", opts)
+-- vim.keymap.set("n", "<C-l>", "<C-w>l", opts)
 
 vim.keymap.set("n", "<M-j>", "<cmd>resize -2<CR>", opts)
 vim.keymap.set("n", "<M-k>", "<cmd>resize +2<CR>", opts)
@@ -56,10 +57,10 @@ vim.keymap.set("v", "<leader>Y", "mz\"+Y`z", opts)
 vim.keymap.set("n", "<leader>p", "\"+p", opts)
 vim.keymap.set("n", "<leader>P", "\"+P", opts)
 
-vim.keymap.set("v", "p", "\"_dP", opts)
+vim.keymap.set("v", "p", "\"_dp", opts)
 vim.keymap.set("v", "P", "\"_dP", opts)
 
-vim.keymap.set("v", "<leader>p", "\"_d\"+P", opts)
+vim.keymap.set("v", "<leader>p", "\"_d\"+p", opts)
 vim.keymap.set("v", "<leader>P", "\"_d\"+P", opts)
 
 ---------------------------------
@@ -299,6 +300,7 @@ vim.keymap.set({ "n", "v", "i" }, "<C-e>", "<Nop>", opts) -- scroll down one lin
 vim.keymap.set({ "n", "v" }, "<C-y>", "<Nop>", opts)      -- scroll up one line
 
 vim.keymap.set({ "n", "v" }, "-", "<Nop>", opts)          -- cursor up one line (non-blank lines)
+
 -- cursor down one line (non-blank lines)
 -- Normal mode left active or else <cr> does not work in quickfix list
 vim.keymap.set({ "v" }, "<C-m>", "<Nop>", opts)
@@ -309,10 +311,9 @@ vim.keymap.set({ "n", "v" }, "<C-n>", "<Nop>", opts) -- cursor down one line
 vim.keymap.set({ "n", "v" }, "<C-f>", "<Nop>", opts) -- scroll down one page
 vim.keymap.set({ "n", "v" }, "<C-b>", "<Nop>", opts) -- scroll up one page
 
--- alternate method to enter visual block mode
-vim.keymap.set("n", "<C-q>", "<Nop>", opts)
+vim.keymap.set("n", "<C-q>", "<Nop>", opts)          -- alternate method to enter visual block mode
 
-vim.keymap.set("i", "<C-j>", "<Nop>", opts) -- enter
+vim.keymap.set("i", "<C-j>", "<Nop>", opts)          -- enter
 
 vim.keymap.set("i", "<C-v>", "<Nop>", opts)
 vim.keymap.set("i", "<C-q>", "<Nop>", opts) -- paste from terminal
