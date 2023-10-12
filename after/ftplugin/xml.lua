@@ -2,7 +2,7 @@ vim.bo.tabstop = 2
 vim.bo.softtabstop = 2
 vim.bo.shiftwidth = 2
 
-local xml_group = vim.api.nvim_create_augroup("xmlGroup", { clear = true })
+-- local xml_group = vim.api.nvim_create_augroup("xmlGroup", { clear = true })
 
 -- Does not work properly
 -- If a carat is present in a property's text, the vim regex will interpret this is the opening
