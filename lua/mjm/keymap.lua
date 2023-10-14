@@ -18,6 +18,8 @@ vim.keymap.set("n", "<M-k>", "<cmd>resize +2<CR>", opts)
 vim.keymap.set("n", "<M-h>", "<cmd>vertical resize -2<CR>", opts)
 vim.keymap.set("n", "<M-l>", "<cmd>vertical resize +2<CR>", opts)
 
+vim.keymap.set("n", "<C-<Space>>", "A", opts)
+
 -------------------------
 -- Visual Improvements --
 -------------------------
@@ -31,6 +33,8 @@ vim.keymap.set("n", "n", "nzzzv", opts)
 vim.keymap.set("n", "N", "Nzzzv", opts)
 
 vim.keymap.set("v", "y", "mzy`z", opts)
+
+vim.keymap.set("n", "~", "mz~`z", opts)
 
 vim.keymap.set("n", "guu", "mzguu`z", opts)
 vim.keymap.set("n", "guiw", "mzguiw`z", opts)
@@ -57,11 +61,11 @@ vim.keymap.set("v", "<leader>Y", "mz\"+Y`z", opts)
 vim.keymap.set("n", "<leader>p", "\"+p", opts)
 vim.keymap.set("n", "<leader>P", "\"+P", opts)
 
-vim.keymap.set("v", "p", "\"_dp", opts)
-vim.keymap.set("v", "P", "\"_dP", opts)
+vim.keymap.set("v", "p", "\"_dP", opts)
+vim.keymap.set("v", "P", "\"_dp", opts)
 
-vim.keymap.set("v", "<leader>p", "\"_d\"+p", opts)
-vim.keymap.set("v", "<leader>P", "\"_d\"+P", opts)
+vim.keymap.set("v", "<leader>p", "\"_d\"+P", opts)
+vim.keymap.set("v", "<leader>P", "\"_d\"+p", opts)
 
 ---------------------------------
 -- Delete to the void register --

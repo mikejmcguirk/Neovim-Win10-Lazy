@@ -12,6 +12,7 @@ return {
                 css = { "prettier" },
                 html = { "prettier" },
                 json = { "prettier" },
+                sh = { "beautysh" },
             },
             format_on_save = {
                 lsp_fallback = true,

@@ -318,12 +318,13 @@ local lspConfig = function()
         analyze_open_documents_only = false,
     })
 
-    -- No additional linter installed
+    -- Use beautysh/conform.nvim for formatting
+    -- ShellCheck used for linting
     lspconfig.bashls.setup {
         capabilities = capabilities,
 
         on_attach = function(client, bufnr)
-            defaultAttach(bufnr)
+            setLSPkeymaps()
         end,
     }
 
