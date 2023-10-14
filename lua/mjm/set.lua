@@ -57,6 +57,7 @@ vim.api.nvim_create_autocmd({ "BufEnter" }, {
 
 vim.opt.scrolloff = 6
 vim.opt.splitright = true
+vim.opt.splitbelow = true
 vim.opt.showmode = false
 
 vim.opt.hlsearch = true
