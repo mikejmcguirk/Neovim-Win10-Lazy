@@ -191,8 +191,6 @@ vim.keymap.set("n", "<leader>qgi", function()
 
         -- vim.cmd("wincmd p")
         -- vim.api.nvim_feedkeys(
-        -- vim.cmd("wincmd p")
-        -- vim.api.nvim_feedkeys(
         --     vim.api.nvim_replace_termcodes(
         --         '<C-O>', true, true, true
         --     ), 'n', {}
