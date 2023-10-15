@@ -66,6 +66,7 @@ vim.keymap.set("v", "p", function()
     local cur_mode = vim.fn.mode()
     if cur_mode == "V" or cur_mode == "Vs" then
         vim.cmd([[:execute "normal! \"_d" | put! \"]])
+        vim.cmd([[:execute "normal! `[=`]`["]])
     else
         vim.cmd("normal! \"_dP")
     end
@@ -75,6 +76,7 @@ vim.keymap.set("v", "P", function()
     local cur_mode = vim.fn.mode()
     if cur_mode == "V" or cur_mode == "Vs" then
         vim.cmd([[:execute "normal! \"_d" | put! \"]])
+        vim.cmd([[:execute "normal! `[=`]`["]])
     else
         vim.cmd("normal! \"_dp")
     end
@@ -84,6 +86,7 @@ vim.keymap.set("v", "<leader>p", function()
     local cur_mode = vim.fn.mode()
     if cur_mode == "V" or cur_mode == "Vs" then
         vim.cmd([[:execute "normal! \"_d" | put! +]])
+        vim.cmd([[:execute "normal! `[=`]`["]])
     else
         vim.cmd("normal! \"_d\"+P")
     end
@@ -93,6 +96,7 @@ vim.keymap.set("v", "<leader>P", function()
     local cur_mode = vim.fn.mode()
     if cur_mode == "V" or cur_mode == "Vs" then
         vim.cmd([[:execute "normal! \"_d" | put! +]])
+        vim.cmd([[:execute "normal! `[=`]`["]])
     else
         vim.cmd("normal! \"_d\"+p")
     end
@@ -183,6 +187,8 @@ vim.keymap.set("n", "<leader>qgi", function()
     if pattern ~= "" then
         vim.cmd("silent! grep -i " .. pattern .. " | copen")
 
+        -- vim.cmd("wincmd p")
+        -- vim.api.nvim_feedkeys(
         -- vim.cmd("wincmd p")
         -- vim.api.nvim_feedkeys(
         --     vim.api.nvim_replace_termcodes(
