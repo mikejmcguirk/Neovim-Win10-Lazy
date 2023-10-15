@@ -51,7 +51,7 @@ vim.keymap.set("v", "gU", "mzgU`z", opts)
 -- Copy/Paste Fixes --
 ----------------------
 
-vim.keymap.set("n", "Y", "y$", opts) -- Just in case
+vim.keymap.set("n", "Y", "y$", opts) -- Avoid inconsistent behavior
 
 vim.keymap.set("n", "<leader>y", "\"+y", opts)
 vim.keymap.set("v", "<leader>y", "mz\"+y`z", opts)
@@ -61,11 +61,42 @@ vim.keymap.set("v", "<leader>Y", "mz\"+Y`z", opts)
 vim.keymap.set("n", "<leader>p", "\"+p", opts)
 vim.keymap.set("n", "<leader>P", "\"+P", opts)
 
-vim.keymap.set("v", "p", "\"_dP", opts)
-vim.keymap.set("v", "P", "\"_dp", opts)
+-- The function logic below ensures that pastes in Visual Line mode are linewise
+vim.keymap.set("v", "p", function()
+    local cur_mode = vim.fn.mode()
+    if cur_mode == "V" or cur_mode == "Vs" then
+        vim.cmd([[:execute "normal! \"_d" | put! \"]])
+    else
+        vim.cmd("normal! \"_dP")
+    end
+end, opts)
 
-vim.keymap.set("v", "<leader>p", "\"_d\"+P", opts)
-vim.keymap.set("v", "<leader>P", "\"_d\"+p", opts)
+vim.keymap.set("v", "P", function()
+    local cur_mode = vim.fn.mode()
+    if cur_mode == "V" or cur_mode == "Vs" then
+        vim.cmd([[:execute "normal! \"_d" | put! \"]])
+    else
+        vim.cmd("normal! \"_dp")
+    end
+end, opts)
+
+vim.keymap.set("v", "<leader>p", function()
+    local cur_mode = vim.fn.mode()
+    if cur_mode == "V" or cur_mode == "Vs" then
+        vim.cmd([[:execute "normal! \"_d" | put! +]])
+    else
+        vim.cmd("normal! \"_d\"+P")
+    end
+end, opts)
+
+vim.keymap.set("v", "<leader>P", function()
+    local cur_mode = vim.fn.mode()
+    if cur_mode == "V" or cur_mode == "Vs" then
+        vim.cmd([[:execute "normal! \"_d" | put! +]])
+    else
+        vim.cmd("normal! \"_d\"+p")
+    end
+end, opts)
 
 ---------------------------------
 -- Delete to the void register --
