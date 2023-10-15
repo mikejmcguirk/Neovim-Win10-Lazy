@@ -237,7 +237,8 @@ end, opts)
 -- Other --
 -----------
 
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-c>", "<esc>", opts)
+-- If <C-c> is rebound to <esc> explicitly, in Wezterm it causes <C-c> to act like <cr>
+vim.keymap.set({ "n", "i", "v" }, "<C-c>", "<esc>", opts)
 vim.keymap.set({ "n", "i", "v", "c" }, "<esc>", "<nop>", opts)
 
 local jkOpts = { noremap = true, expr = true, silent = true }
