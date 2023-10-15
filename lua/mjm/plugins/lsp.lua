@@ -65,6 +65,7 @@ local cmpConfig = function()
                     end
                 }
             },
+            { name = "async_path" },
             { name = "nvim_lsp_signature_help" },
             {
                 name = "spell",
@@ -83,6 +84,7 @@ local cmpConfig = function()
                     buffer = "[Buffer]",
                     nvim_lsp = "[LSP]",
                     vsnip = "[Vsnip]",
+                    async_path = "[Path]",
                     spell = "[Spell]",
                 },
             }),
@@ -423,6 +425,7 @@ return {
         "hrsh7th/cmp-buffer",                  -- From open buffers
         "hrsh7th/cmp-nvim-lsp-signature-help", -- Show current function signature
         "f3fora/cmp-spell",                    -- From Nvim's built-in spell check
+        "FelipeLema/cmp-async-path",           -- From filesystem
 
         "onsails/lspkind.nvim",                -- To configure appearance
 
