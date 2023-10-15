@@ -18,8 +18,6 @@ vim.keymap.set("n", "<M-k>", "<cmd>resize +2<CR>", opts)
 vim.keymap.set("n", "<M-h>", "<cmd>vertical resize -2<CR>", opts)
 vim.keymap.set("n", "<M-l>", "<cmd>vertical resize +2<CR>", opts)
 
-vim.keymap.set("n", "<C-<Space>>", "A", opts)
-
 -------------------------
 -- Visual Improvements --
 -------------------------
@@ -31,6 +29,10 @@ vim.keymap.set("n", "<C-u>", "<C-u>zz", opts)
 
 vim.keymap.set("n", "n", "nzzzv", opts)
 vim.keymap.set("n", "N", "Nzzzv", opts)
+
+---------------------------
+-- Cursor Movement Fixes --
+---------------------------
 
 vim.keymap.set("v", "y", "mzy`z", opts)
 
@@ -212,8 +214,70 @@ vim.keymap.set("n", "<leader>qgn", function()
     end
 end, opts)
 
-vim.keymap.set("n", "<leader>qi", function()
-    vim.diagnostic.setqflist()
+local convert_raw_diagnostic = function(raw_diagnostic)
+    local diag_severity
+    if raw_diagnostic.severity == vim.diagnostic.severity.ERROR then
+        diag_severity = "E"
+    elseif raw_diagnostic.severity == vim.diagnostic.severity.WARN then
+        diag_severity = "W"
+    elseif raw_diagnostic.severity == vim.diagnostic.severity.INFO then
+        diag_severity = "I"
+    elseif raw_diagnostic.severity == vim.diagnostic.severity.HINT then
+        diag_severity = "H"
+    else
+        diag_severity = "U"
+    end
+
+    return {
+        bufnr = raw_diagnostic.bufnr,
+        filename = vim.fn.bufname(raw_diagnostic.bufnr),
+        lnum = raw_diagnostic.lnum,
+        end_lnum = raw_diagnostic.end_lnum,
+        col = raw_diagnostic.col,
+        end_col = raw_diagnostic.end_col,
+        text = raw_diagnostic.source .. ": " .. "[" .. raw_diagnostic.code .. "] " ..
+            raw_diagnostic.message,
+        type = diag_severity,
+    }
+end
+
+local send_diags_to_qflist = function(diagnostics)
+    vim.fn.setqflist(diagnostics, "r")
+
+    local is_quickfix_open = false
+    local win_info = vim.fn.getwininfo()
+    for _, win in ipairs(win_info) do
+        if win.quickfix == 1 then
+            is_quickfix_open = true
+            break
+        end
+    end
+    if not is_quickfix_open then
+        vim.cmd "copen"
+    end
+end
+
+vim.keymap.set("n", "<leader>qiq", function()
+    local raw_diagnostics = vim.diagnostic.get(nil)
+    local diagnostics = {}
+    for _, diagnostic in ipairs(raw_diagnostics) do
+        table.insert(diagnostics, convert_raw_diagnostic(diagnostic))
+    end
+
+    send_diags_to_qflist(diagnostics)
+end, opts)
+
+vim.keymap.set("n", "<leader>qii", function()
+    local raw_diagnostics = vim.diagnostic.get(nil)
+    local diagnostics = {}
+    for _, diagnostic in ipairs(raw_diagnostics) do
+        if diagnostic.severity == vim.diagnostic.severity.ERROR or
+            diagnostic.severity == vim.diagnostic.severity.WARN then
+            table.insert(diagnostics, convert_raw_diagnostic(diagnostic))
+        end
+    end
+
+    send_diags_to_qflist(diagnostics)
 end, opts)
 
 vim.keymap.set("n", "<leader>qk", function()
@@ -274,7 +338,8 @@ end, opts)
 -- Other --
 -----------
 
--- If <C-c> is rebound to <esc> explicitly, in Wezterm it causes <C-c> to act like <cr>
+-- If <C-c> is rebound to <esc> explicitly in command mode,
+-- in Wezterm it causes <C-c> to act like <cr>
 vim.keymap.set({ "n", "i", "v" }, "<C-c>", "<esc>", opts)
 vim.keymap.set({ "n", "i", "v", "c" }, "<esc>", "<nop>", opts)
 
@@ -287,8 +352,6 @@ vim.keymap.set("n", "k", "v:count == 0 ? 'gk' : 'k'", jkOpts)
 
 -- In Visual Mode, select the last changed text (includes writes)
 vim.keymap.set("n", "gp", "`[v`]", opts)
-
-vim.keymap.set("n", "Q", "<nop>", opts)
 
 vim.keymap.set("n", "<leader>/", "<cmd>noh<cr>", opts)
 
@@ -315,6 +378,8 @@ end)
 ----------------------------------
 -- Disable Various Default Maps --
 ----------------------------------
+
+vim.keymap.set("n", "Q", "<nop>", opts)
 
 vim.keymap.set("n", "{", "<Nop>", opts)
 vim.keymap.set("n", "}", "<Nop>", opts)
