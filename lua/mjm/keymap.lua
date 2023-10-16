@@ -239,22 +239,6 @@ local convert_raw_diagnostic = function(raw_diagnostic)
     }
 end
 
-local send_diags_to_qflist = function(diagnostics)
-    vim.fn.setqflist(diagnostics, "r")
-
-    local is_quickfix_open = false
-    local win_info = vim.fn.getwininfo()
-    for _, win in ipairs(win_info) do
-        if win.quickfix == 1 then
-            is_quickfix_open = true
-            break
-        end
-    end
-    if not is_quickfix_open then
-        vim.cmd "copen"
-    end
-end
-
 vim.keymap.set("n", "<leader>qiq", function()
     local raw_diagnostics = vim.diagnostic.get(nil)
     local diagnostics = {}
@@ -262,20 +246,21 @@ vim.keymap.set("n", "<leader>qiq", function()
         table.insert(diagnostics, convert_raw_diagnostic(diagnostic))
     end
 
-    send_diags_to_qflist(diagnostics)
+    vim.fn.setqflist(diagnostics, "r")
+    vim.cmd "copen"
 end, opts)
 
 vim.keymap.set("n", "<leader>qii", function()
     local raw_diagnostics = vim.diagnostic.get(nil)
     local diagnostics = {}
     for _, diagnostic in ipairs(raw_diagnostics) do
-        if diagnostic.severity == vim.diagnostic.severity.ERROR or
-            diagnostic.severity == vim.diagnostic.severity.WARN then
+        if diagnostic.severity <= 2 then --ERROR or WARN
             table.insert(diagnostics, convert_raw_diagnostic(diagnostic))
         end
     end
 
-    send_diags_to_qflist(diagnostics)
+    vim.fn.setqflist(diagnostics, "r")
+    vim.cmd "copen"
 end, opts)
 
 vim.keymap.set("n", "<leader>qk", function()
