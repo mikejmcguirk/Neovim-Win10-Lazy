@@ -33,6 +33,6 @@ return {
     },
     {
         'windwp/nvim-ts-autotag',
-        event = "BufReadPre",
+        event = { "BufReadPre", "BufNewFile" },
     },
 }
