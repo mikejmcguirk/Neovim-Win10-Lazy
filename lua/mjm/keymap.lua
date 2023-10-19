@@ -101,45 +101,40 @@ vim.keymap.set("n", "<leader>yat", "mz\"+yat`z", opts)
 vim.keymap.set("n", "<leader>p", "\"+p", opts)
 vim.keymap.set("n", "<leader>P", "\"+P", opts)
 
--- The function logic below ensures that pastes in Visual Line mode are linewise
-vim.keymap.set("v", "p", function()
+local paste_linewise = function(paste_char, external)
     local cur_mode = vim.fn.mode()
-    if cur_mode == "V" or cur_mode == "Vs" then
-        vim.cmd([[:execute "normal! \"_d" | put! \"]])
+
+    if cur_mode == "V" or cur_mode == "Vs" then -- Ensure that Visual Line Mode pastes are linewise
+        if external then
+            vim.cmd([[:execute "normal! \"_d" | put! +]])
+        else
+            vim.cmd([[:execute "normal! \"_d" | put! \"]])
+        end
+
         vim.cmd([[:execute "normal! `[=`]`["]])
     else
-        vim.cmd("normal! \"_dP")
+        if external then
+            vim.cmd("normal! \"_d\"+" .. paste_char)
+        else
+            vim.cmd("normal! \"_d" .. paste_char)
+        end
     end
+end
+
+vim.keymap.set("v", "p", function()
+    paste_linewise("P", false)
 end, opts)
 
 vim.keymap.set("v", "P", function()
-    local cur_mode = vim.fn.mode()
-    if cur_mode == "V" or cur_mode == "Vs" then
-        vim.cmd([[:execute "normal! \"_d" | put! \"]])
-        vim.cmd([[:execute "normal! `[=`]`["]])
-    else
-        vim.cmd("normal! \"_dp")
-    end
+    paste_linewise("p", false)
 end, opts)
 
 vim.keymap.set("v", "<leader>p", function()
-    local cur_mode = vim.fn.mode()
-    if cur_mode == "V" or cur_mode == "Vs" then
-        vim.cmd([[:execute "normal! \"_d" | put! +]])
-        vim.cmd([[:execute "normal! `[=`]`["]])
-    else
-        vim.cmd("normal! \"_d\"+P")
-    end
+    paste_linewise("P", true)
 end, opts)
 
 vim.keymap.set("v", "<leader>P", function()
-    local cur_mode = vim.fn.mode()
-    if cur_mode == "V" or cur_mode == "Vs" then
-        vim.cmd([[:execute "normal! \"_d" | put! +]])
-        vim.cmd([[:execute "normal! `[=`]`["]])
-    else
-        vim.cmd("normal! \"_d\"+p")
-    end
+    paste_linewise("p", true)
 end, opts)
 
 ---------------------------------
@@ -222,10 +217,11 @@ end, opts)
 vim.keymap.set("n", "<leader>qo", "<cmd>copen<cr>", opts)
 vim.keymap.set("n", "<leader>qc", "<cmd>cclose<cr>", opts)
 
-vim.keymap.set("n", "<leader>qgi", function()
+local grep_function = function(grep_cmd)
     local pattern = vim.fn.input('Enter pattern: ')
+
     if pattern ~= "" then
-        vim.cmd("silent! grep -i " .. pattern .. " | copen")
+        vim.cmd("silent! " .. grep_cmd .. " " .. pattern .. " | copen")
 
         -- vim.cmd("wincmd p")
         -- vim.api.nvim_feedkeys(
@@ -234,24 +230,19 @@ vim.keymap.set("n", "<leader>qgi", function()
         --     ), 'n', {}
         -- )
     end
-end, opts)
+end
 
 vim.keymap.set("n", "<leader>qgn", function()
-    local pattern = vim.fn.input('Enter pattern: ')
-    if pattern ~= "" then
-        vim.cmd("silent! grep " .. pattern .. " | copen")
+    grep_function("grep")
+end, opts)
 
-        -- vim.cmd("wincmd p")
-        -- vim.api.nvim_feedkeys(
-        --     vim.api.nvim_replace_termcodes(
-        --         '<C-O>', true, true, true
-        --     ), 'n', {}
-        -- )
-    end
+vim.keymap.set("n", "<leader>qgi", function()
+    grep_function("grep -i")
 end, opts)
 
 local convert_raw_diagnostic = function(raw_diagnostic)
     local diag_severity
+
     if raw_diagnostic.severity == vim.diagnostic.severity.ERROR then
         diag_severity = "E"
     elseif raw_diagnostic.severity == vim.diagnostic.severity.WARN then
@@ -277,28 +268,32 @@ local convert_raw_diagnostic = function(raw_diagnostic)
     }
 end
 
-vim.keymap.set("n", "<leader>qiq", function()
+local diags_to_qf = function(min_warning)
     local raw_diagnostics = vim.diagnostic.get(nil)
     local diagnostics = {}
-    for _, diagnostic in ipairs(raw_diagnostics) do
-        table.insert(diagnostics, convert_raw_diagnostic(diagnostic))
-    end
 
-    vim.fn.setqflist(diagnostics, "r")
-    vim.cmd "copen"
-end, opts)
-
-vim.keymap.set("n", "<leader>qii", function()
-    local raw_diagnostics = vim.diagnostic.get(nil)
-    local diagnostics = {}
-    for _, diagnostic in ipairs(raw_diagnostics) do
-        if diagnostic.severity <= 2 then --ERROR or WARN
+    if min_warning then
+        for _, diagnostic in ipairs(raw_diagnostics) do
+            if diagnostic.severity <= 2 then --ERROR or WARN
+                table.insert(diagnostics, convert_raw_diagnostic(diagnostic))
+            end
+        end
+    else
+        for _, diagnostic in ipairs(raw_diagnostics) do
             table.insert(diagnostics, convert_raw_diagnostic(diagnostic))
         end
     end
 
     vim.fn.setqflist(diagnostics, "r")
     vim.cmd "copen"
+end
+
+vim.keymap.set("n", "<leader>qiq", function()
+    diags_to_qf(false)
+end, opts)
+
+vim.keymap.set("n", "<leader>qii", function()
+    diags_to_qf(true)
 end, opts)
 
 vim.keymap.set("n", "<leader>qk", function()
@@ -317,16 +312,28 @@ end, opts)
 
 vim.keymap.set("n", "<leader>qe", function()
     vim.fn.setqflist({})
+    vim.cmd("cclose")
 end, opts)
 
-vim.keymap.set("n", "[q", function()
+local qf_scroll = function(direction)
     local status, result = pcall(function()
-        vim.cmd("cprev")
+        vim.cmd("c" .. direction)
     end)
 
     if not status then
+        local backup_direction
+
+        if direction == "prev" then
+            backup_direction = "last"
+        elseif direction == "next" then
+            backup_direction = "first"
+        else
+            print("Invalid direction: " .. direction)
+            return
+        end
+
         if result and type(result) == "string" and string.find(result, "E553") then
-            vim.cmd("clast")
+            vim.cmd("c" .. backup_direction)
             vim.cmd("normal! zz")
         elseif result and type(result) == "string" and string.find(result, "E42") then
         elseif result then
@@ -335,24 +342,14 @@ vim.keymap.set("n", "[q", function()
     else
         vim.cmd("normal! zz")
     end
+end
+
+vim.keymap.set("n", "[q", function()
+    qf_scroll("prev")
 end, opts)
 
 vim.keymap.set("n", "]q", function()
-    local status, result = pcall(function()
-        vim.cmd("cnext")
-    end)
-
-    if not status then
-        if result and type(result) == "string" and string.find(result, "E553") then
-            vim.cmd("cfirst")
-            vim.cmd("normal! zz")
-        elseif result and type(result) == "string" and string.find(result, "E42") then
-        elseif result then
-            print(result)
-        end
-    else
-        vim.cmd("normal! zz")
-    end
+    qf_scroll("next")
 end, opts)
 
 -----------
