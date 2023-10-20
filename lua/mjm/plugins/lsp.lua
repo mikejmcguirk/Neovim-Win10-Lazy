@@ -1,10 +1,9 @@
-local cmpConfig = function()
+local cmp_config = function()
     local cmp = require("cmp")
     local lspkind = require("lspkind")
 
-    local winHighlight = "Normal:Normal,FloatBorder:FloatBorder,CursorLine:Visual,Search:None"
     local cmp_select = { behavior = cmp.SelectBehavior.Select }
-
+    local win_highlight = "Normal:Normal,FloatBorder:FloatBorder,CursorLine:Visual,Search:None"
     vim.opt.completeopt = { "menu", "menuone", "noselect" }
 
     cmp.setup({
@@ -28,11 +27,11 @@ local cmpConfig = function()
         window = {
             completion = {
                 border = "single",
-                winhighlight = winHighlight,
+                winhighlight = win_highlight,
             },
             documentation = {
                 border = "single",
-                winhighlight = winHighlight
+                winhighlight = win_highlight
             }
         },
         mapping = cmp.mapping.preset.insert({
@@ -42,13 +41,13 @@ local cmpConfig = function()
             ["<C-e>"] = cmp.mapping.abort(),
             ["<C-c>"] = function()
                 cmp.mapping.abort()
-                vim.cmd([[stopinsert]])
+                vim.cmd("stopinsert")
             end,
 
             ["<C-p>"] = cmp.mapping.select_prev_item(cmp_select),
             ["<C-n>"] = cmp.mapping.select_next_item(cmp_select),
             ["<C-y>"] = cmp.mapping.confirm({ select = true }),
-            ["<C-Space>"] = cmp.mapping.complete(),
+            -- ["<C-<space>>"] = cmp.mapping.complete(),
 
             ["<Tab>"] = nil,
             ["<S-Tab>"] = nil,
@@ -408,7 +407,7 @@ return {
     "neovim/nvim-lspconfig",
     event = { "BufReadPre", "BufNewFile" },
     config = function()
-        cmpConfig()
+        cmp_config()
         diagnosticConfig()
         lspConfig()
     end,

@@ -296,6 +296,28 @@ vim.keymap.set("n", "<leader>qii", function()
     diags_to_qf(true)
 end, opts)
 
+vim.keymap.set("n", "<leader>ql", function()
+    local clients = vim.lsp.get_active_clients()
+    local for_qf_list = {}
+
+    for _, client in ipairs(clients) do
+        local bufs_for_client = "( "
+
+        for _, buf in ipairs(vim.lsp.get_buffers_by_client_id(client.id)) do
+            bufs_for_client = bufs_for_client .. buf .. " "
+        end
+
+        bufs_for_client = bufs_for_client .. ")"
+        local lsp_entry = "LSP: " .. client.name .. ", ID: " .. client.id .. ", Buffer(s): " ..
+            bufs_for_client
+
+        table.insert(for_qf_list, { text = lsp_entry })
+    end
+
+    vim.fn.setqflist(for_qf_list, "r")
+    vim.cmd("copen")
+end, opts)
+
 vim.keymap.set("n", "<leader>qk", function()
     local pattern = vim.fn.input('Pattern to keep: ')
     if pattern ~= "" then
