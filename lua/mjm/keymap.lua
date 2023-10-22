@@ -87,6 +87,23 @@ vim.keymap.set("n", "yap", "mzyap`z", opts)
 vim.keymap.set("n", "<leader>yip", "mz\"+yip`z", opts)
 vim.keymap.set("n", "<leader>yap", "mz\"+yap`z", opts)
 
+vim.keymap.set("n", "y(", "<nop>", opts)
+vim.keymap.set("n", "y[", "<nop>", opts)
+vim.keymap.set("n", "y{", "<nop>", opts)
+vim.keymap.set("n", "y\"", "<nop>", opts)
+vim.keymap.set("n", "y'", "<nop>", opts)
+vim.keymap.set("n", "y<", "<nop>", opts)
+vim.keymap.set("n", "yt", "<nop>", opts)
+vim.keymap.set("n", "yp", "<nop>", opts)
+vim.keymap.set("n", "<leader>y(", "<nop>", opts)
+vim.keymap.set("n", "<leader>y[", "<nop>", opts)
+vim.keymap.set("n", "<leader>y{", "<nop>", opts)
+vim.keymap.set("n", "<leader>y\"", "<nop>", opts)
+vim.keymap.set("n", "<leader>y'", "<nop>", opts)
+vim.keymap.set("n", "<leader>y<", "<nop>", opts)
+vim.keymap.set("n", "<leader>yt", "<nop>", opts)
+vim.keymap.set("n", "<leader>yp", "<nop>", opts)
+
 -----------------
 -- Paste Fixes --
 -----------------
