@@ -30,48 +30,11 @@ vim.keymap.set("n", "<C-u>", "<C-u>zz", opts)
 vim.keymap.set("n", "n", "nzzzv", opts)
 vim.keymap.set("n", "N", "Nzzzv", opts)
 
----------------------------
--- Cursor Movement Fixes --
----------------------------
-
-vim.keymap.set("n", "yiw", "mzyiw`z", opts)
-vim.keymap.set("n", "yaw", "mzyaw`z", opts)
-vim.keymap.set("n", "yi(", "mzyi(`z", opts)
-vim.keymap.set("n", "ya(", "mzya(`z", opts)
-vim.keymap.set("n", "yi[", "mzyi[`z", opts)
-vim.keymap.set("n", "ya[", "mzya[`z", opts)
-vim.keymap.set("n", "yi{", "mzyi{`z", opts)
-vim.keymap.set("n", "ya{", "mzya{`z", opts)
-vim.keymap.set("n", "yi\"", "mzyi\"`z", opts)
-vim.keymap.set("n", "ya\"", "mzya\"`z", opts)
-vim.keymap.set("n", "yi'", "mzyi'`z", opts)
-vim.keymap.set("n", "ya'", "mzya'`z", opts)
-vim.keymap.set("n", "yi<", "mzyi<`z", opts)
-vim.keymap.set("n", "ya<", "mzya<`z", opts)
-vim.keymap.set("n", "yip", "mzyip`z", opts)
-vim.keymap.set("n", "yap", "mzyap`z", opts)
-vim.keymap.set("n", "yit", "mzyit`z", opts)
-vim.keymap.set("n", "yat", "mzyat`z", opts)
+---------------------
+-- Yank Maps/Fixes --
+---------------------
 
 vim.keymap.set("v", "y", "mzy`z", opts)
-
-vim.keymap.set("n", "~", "mz~`z", opts)
-
-vim.keymap.set("n", "guu", "mzguu`z", opts)
-vim.keymap.set("n", "guiw", "mzguiw`z", opts)
-vim.keymap.set("n", "guiW", "mzguiW`z", opts)
-
-vim.keymap.set("n", "gUU", "mzgUU`z", opts)
-vim.keymap.set("n", "gUiw", "mzgUiw`z", opts)
-vim.keymap.set("n", "gUiW", "mzgUiW`z", opts)
-
-vim.keymap.set("v", "gu", "mzgu`z", opts)
-vim.keymap.set("v", "gU", "mzgU`z", opts)
-
-----------------------
--- Copy/Paste Fixes --
-----------------------
-
 vim.keymap.set("n", "Y", "y$", opts) -- Avoid inconsistent behavior
 
 vim.keymap.set("n", "<leader>y", "\"+y", opts)
@@ -79,24 +42,54 @@ vim.keymap.set("v", "<leader>y", "mz\"+y`z", opts)
 vim.keymap.set("n", "<leader>Y", "\"+y$", opts) -- Mapping to "+Y yanks the whole line
 vim.keymap.set("v", "<leader>Y", "mz\"+Y`z", opts)
 
+vim.keymap.set("n", "yiw", "mzyiw`z", opts)
+vim.keymap.set("n", "yaw", "mzyaw`z", opts)
 vim.keymap.set("n", "<leader>yiw", "mz\"+yiw`z", opts)
 vim.keymap.set("n", "<leader>yaw", "mz\"+yaw`z", opts)
+vim.keymap.set("n", "yiW", "mzyiW`z", opts)
+vim.keymap.set("n", "yaW", "mzyaW`z", opts)
+vim.keymap.set("n", "<leader>yiW", "mz\"+yiW`z", opts)
+vim.keymap.set("n", "<leader>yaW", "mz\"+yaW`z", opts)
+
+vim.keymap.set("n", "yi(", "mzyi(`z", opts)
+vim.keymap.set("n", "ya(", "mzya(`z", opts)
 vim.keymap.set("n", "<leader>yi(", "mz\"+yi(`z", opts)
 vim.keymap.set("n", "<leader>ya(", "mz\"+ya(`z", opts)
+vim.keymap.set("n", "yi[", "mzyi[`z", opts)
+vim.keymap.set("n", "ya[", "mzya[`z", opts)
 vim.keymap.set("n", "<leader>yi[", "mz\"+yi[`z", opts)
 vim.keymap.set("n", "<leader>ya[", "mz\"+ya[`z", opts)
+vim.keymap.set("n", "yi{", "mzyi{`z", opts)
+vim.keymap.set("n", "ya{", "mzya{`z", opts)
 vim.keymap.set("n", "<leader>yi{", "mz\"+yi{`z", opts)
 vim.keymap.set("n", "<leader>ya{", "mz\"+ya{`z", opts)
+
+vim.keymap.set("n", "yi\"", "mzyi\"`z", opts)
+vim.keymap.set("n", "ya\"", "mzya\"`z", opts)
 vim.keymap.set("n", "<leader>yi\"", "mz\"+yi\"`z", opts)
 vim.keymap.set("n", "<leader>ya\"", "mz\"+ya\"`z", opts)
+vim.keymap.set("n", "yi'", "mzyi'`z", opts)
+vim.keymap.set("n", "ya'", "mzya'`z", opts)
 vim.keymap.set("n", "<leader>yi'", "mz\"+yi'`z", opts)
 vim.keymap.set("n", "<leader>ya'", "mz\"+ya'`z", opts)
+
+vim.keymap.set("n", "yi<", "mzyi<`z", opts)
+vim.keymap.set("n", "ya<", "mzya<`z", opts)
 vim.keymap.set("n", "<leader>yi<", "mz\"+yi<`z", opts)
 vim.keymap.set("n", "<leader>ya<", "mz\"+ya<`z", opts)
-vim.keymap.set("n", "<leader>yip", "mz\"+yip`z", opts)
-vim.keymap.set("n", "<leader>yap", "mz\"+yap`z", opts)
+vim.keymap.set("n", "yit", "mzyit`z", opts)
+vim.keymap.set("n", "yat", "mzyat`z", opts)
 vim.keymap.set("n", "<leader>yit", "mz\"+yit`z", opts)
 vim.keymap.set("n", "<leader>yat", "mz\"+yat`z", opts)
+
+vim.keymap.set("n", "yip", "mzyip`z", opts)
+vim.keymap.set("n", "yap", "mzyap`z", opts)
+vim.keymap.set("n", "<leader>yip", "mz\"+yip`z", opts)
+vim.keymap.set("n", "<leader>yap", "mz\"+yap`z", opts)
+
+-----------------
+-- Paste Fixes --
+-----------------
 
 vim.keymap.set("n", "<leader>p", "\"+p", opts)
 vim.keymap.set("n", "<leader>P", "\"+P", opts)
@@ -136,6 +129,23 @@ end, opts)
 vim.keymap.set("v", "<leader>P", function()
     paste_linewise("p", true)
 end, opts)
+
+---------------------------------
+-- Other Cursor Movement Fixes --
+---------------------------------
+
+vim.keymap.set("n", "~", "mz~`z", opts)
+
+vim.keymap.set("n", "guu", "mzguu`z", opts)
+vim.keymap.set("n", "guiw", "mzguiw`z", opts)
+vim.keymap.set("n", "guiW", "mzguiW`z", opts)
+
+vim.keymap.set("n", "gUU", "mzgUU`z", opts)
+vim.keymap.set("n", "gUiw", "mzgUiw`z", opts)
+vim.keymap.set("n", "gUiW", "mzgUiW`z", opts)
+
+vim.keymap.set("v", "gu", "mzgu`z", opts)
+vim.keymap.set("v", "gU", "mzgU`z", opts)
 
 ---------------------------------
 -- Delete to the void register --
