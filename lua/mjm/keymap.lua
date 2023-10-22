@@ -420,6 +420,8 @@ end)
 ----------------------------------
 
 vim.keymap.set("n", "Q", "<nop>", opts)
+vim.keymap.set("n", "gh", "<nop>", opts)
+vim.keymap.set("n", "gH", "<nop>", opts)
 
 vim.keymap.set("n", "{", "<Nop>", opts)
 vim.keymap.set("n", "}", "<Nop>", opts)

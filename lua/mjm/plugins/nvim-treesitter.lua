@@ -10,8 +10,8 @@ return {
             ignore_install = {},
             auto_install = false,
             ensure_installed = { "c", "lua", "vim", "vimdoc", "query", "elixir", "heex",
-                "javascript", "html", "css", "rust", "sql", "c_sharp", "perl", "python",
-                "json", "typescript", "dockerfile", "bash"
+                "javascript", "html", "css", "rust", "sql", "c_sharp", "python",
+                "json", "typescript", "dockerfile", "bash", "perl"
             },
             sync_install = false,
             highlight = {
