@@ -7,20 +7,20 @@ local opts = { noremap = true, silent = true }
 vim.keymap.set("n", "<leader>lv", "<cmd>vsplit<cr>", opts)
 vim.keymap.set("n", "<leader>lh", "<cmd>split<cr>", opts)
 
+vim.keymap.set("n", "<M-j>", "<cmd>resize -2<CR>", opts)
+vim.keymap.set("n", "<M-k>", "<cmd>resize +2<CR>", opts)
+vim.keymap.set("n", "<M-h>", "<cmd>vertical resize -2<CR>", opts)
+vim.keymap.set("n", "<M-l>", "<cmd>vertical resize +2<CR>", opts)
+
 -- Controlled through vim-tmux-navigator
 -- vim.keymap.set("n", "<C-h>", "<C-w>h", opts)
 -- vim.keymap.set("n", "<C-j>", "<C-w>j", opts)
 -- vim.keymap.set("n", "<C-k>", "<C-w>k", opts)
 -- vim.keymap.set("n", "<C-l>", "<C-w>l", opts)
 
-vim.keymap.set("n", "<M-j>", "<cmd>resize -2<CR>", opts)
-vim.keymap.set("n", "<M-k>", "<cmd>resize +2<CR>", opts)
-vim.keymap.set("n", "<M-h>", "<cmd>vertical resize -2<CR>", opts)
-vim.keymap.set("n", "<M-l>", "<cmd>vertical resize +2<CR>", opts)
-
--------------------------
--- Visual Improvements --
--------------------------
+---------------------
+-- Scrolling Fixes --
+---------------------
 
 vim.keymap.set("n", "J", "mzJ`z", opts)
 
@@ -36,73 +36,32 @@ vim.keymap.set("n", "N", "Nzzzv", opts)
 
 vim.keymap.set("v", "y", "mzy`z", opts)
 vim.keymap.set("n", "Y", "y$", opts) -- Avoid inconsistent behavior
+vim.keymap.set("v", "Y", "<nop>", opts)
 
 vim.keymap.set("n", "<leader>y", "\"+y", opts)
 vim.keymap.set("v", "<leader>y", "mz\"+y`z", opts)
 vim.keymap.set("n", "<leader>Y", "\"+y$", opts) -- Mapping to "+Y yanks the whole line
 vim.keymap.set("v", "<leader>Y", "mz\"+Y`z", opts)
 
-vim.keymap.set("n", "yiw", "mzyiw`z", opts)
-vim.keymap.set("n", "yaw", "mzyaw`z", opts)
-vim.keymap.set("n", "<leader>yiw", "mz\"+yiw`z", opts)
-vim.keymap.set("n", "<leader>yaw", "mz\"+yaw`z", opts)
-vim.keymap.set("n", "yiW", "mzyiW`z", opts)
-vim.keymap.set("n", "yaW", "mzyaW`z", opts)
-vim.keymap.set("n", "<leader>yiW", "mz\"+yiW`z", opts)
-vim.keymap.set("n", "<leader>yaW", "mz\"+yaW`z", opts)
+local inner_outer = { "i", "a" }
+local text_objects = { "w", "W", "t", "<", "\"", "'", "`", "(", "[", "{", "p" }
 
-vim.keymap.set("n", "yi(", "mzyi(`z", opts)
-vim.keymap.set("n", "ya(", "mzya(`z", opts)
-vim.keymap.set("n", "<leader>yi(", "mz\"+yi(`z", opts)
-vim.keymap.set("n", "<leader>ya(", "mz\"+ya(`z", opts)
-vim.keymap.set("n", "yi[", "mzyi[`z", opts)
-vim.keymap.set("n", "ya[", "mzya[`z", opts)
-vim.keymap.set("n", "<leader>yi[", "mz\"+yi[`z", opts)
-vim.keymap.set("n", "<leader>ya[", "mz\"+ya[`z", opts)
-vim.keymap.set("n", "yi{", "mzyi{`z", opts)
-vim.keymap.set("n", "ya{", "mzya{`z", opts)
-vim.keymap.set("n", "<leader>yi{", "mz\"+yi{`z", opts)
-vim.keymap.set("n", "<leader>ya{", "mz\"+ya{`z", opts)
+for _, object in pairs(text_objects) do
+    for _, in_out in pairs(inner_outer) do
+        local main_lhs = "y" .. in_out .. object
+        local main_rhs = "mzy" .. in_out .. object .. "`z"
+        vim.keymap.set("n", main_lhs, main_rhs, opts)
 
-vim.keymap.set("n", "yi\"", "mzyi\"`z", opts)
-vim.keymap.set("n", "ya\"", "mzya\"`z", opts)
-vim.keymap.set("n", "<leader>yi\"", "mz\"+yi\"`z", opts)
-vim.keymap.set("n", "<leader>ya\"", "mz\"+ya\"`z", opts)
-vim.keymap.set("n", "yi'", "mzyi'`z", opts)
-vim.keymap.set("n", "ya'", "mzya'`z", opts)
-vim.keymap.set("n", "<leader>yi'", "mz\"+yi'`z", opts)
-vim.keymap.set("n", "<leader>ya'", "mz\"+ya'`z", opts)
+        local ext_lhs = "<leader>y" .. in_out .. object
+        local ext_rhs = "mz\"+y" .. in_out .. object .. "`z"
+        vim.keymap.set("n", ext_lhs, ext_rhs, opts)
+    end
 
-vim.keymap.set("n", "yi<", "mzyi<`z", opts)
-vim.keymap.set("n", "ya<", "mzya<`z", opts)
-vim.keymap.set("n", "<leader>yi<", "mz\"+yi<`z", opts)
-vim.keymap.set("n", "<leader>ya<", "mz\"+ya<`z", opts)
-vim.keymap.set("n", "yit", "mzyit`z", opts)
-vim.keymap.set("n", "yat", "mzyat`z", opts)
-vim.keymap.set("n", "<leader>yit", "mz\"+yit`z", opts)
-vim.keymap.set("n", "<leader>yat", "mz\"+yat`z", opts)
-
-vim.keymap.set("n", "yip", "mzyip`z", opts)
-vim.keymap.set("n", "yap", "mzyap`z", opts)
-vim.keymap.set("n", "<leader>yip", "mz\"+yip`z", opts)
-vim.keymap.set("n", "<leader>yap", "mz\"+yap`z", opts)
-
-vim.keymap.set("n", "y(", "<nop>", opts)
-vim.keymap.set("n", "y[", "<nop>", opts)
-vim.keymap.set("n", "y{", "<nop>", opts)
-vim.keymap.set("n", "y\"", "<nop>", opts)
-vim.keymap.set("n", "y'", "<nop>", opts)
-vim.keymap.set("n", "y<", "<nop>", opts)
-vim.keymap.set("n", "yt", "<nop>", opts)
-vim.keymap.set("n", "yp", "<nop>", opts)
-vim.keymap.set("n", "<leader>y(", "<nop>", opts)
-vim.keymap.set("n", "<leader>y[", "<nop>", opts)
-vim.keymap.set("n", "<leader>y{", "<nop>", opts)
-vim.keymap.set("n", "<leader>y\"", "<nop>", opts)
-vim.keymap.set("n", "<leader>y'", "<nop>", opts)
-vim.keymap.set("n", "<leader>y<", "<nop>", opts)
-vim.keymap.set("n", "<leader>yt", "<nop>", opts)
-vim.keymap.set("n", "<leader>yp", "<nop>", opts)
+    if object ~= "w" and object ~= "W" then
+        vim.keymap.set("n", "y" .. object, "<nop>", opts)
+        vim.keymap.set("n", "<leader>y" .. object, "<nop>", opts)
+    end
+end
 
 -----------------
 -- Paste Fixes --
@@ -111,7 +70,7 @@ vim.keymap.set("n", "<leader>yp", "<nop>", opts)
 vim.keymap.set("n", "<leader>p", "\"+p", opts)
 vim.keymap.set("n", "<leader>P", "\"+P", opts)
 
-local paste_linewise = function(paste_char, external)
+local visual_paste = function(paste_char, external)
     local cur_mode = vim.fn.mode()
 
     if cur_mode == "V" or cur_mode == "Vs" then -- Ensure that Visual Line Mode pastes are linewise
@@ -132,19 +91,19 @@ local paste_linewise = function(paste_char, external)
 end
 
 vim.keymap.set("v", "p", function()
-    paste_linewise("P", false)
+    visual_paste("P", false)
 end, opts)
 
 vim.keymap.set("v", "P", function()
-    paste_linewise("p", false)
+    visual_paste("p", false)
 end, opts)
 
 vim.keymap.set("v", "<leader>p", function()
-    paste_linewise("P", true)
+    visual_paste("P", true)
 end, opts)
 
 vim.keymap.set("v", "<leader>P", function()
-    paste_linewise("p", true)
+    visual_paste("p", true)
 end, opts)
 
 ---------------------------------
@@ -191,8 +150,12 @@ vim.keymap.set("n", "<leader>=", "v$hd<cmd>s/\\s\\+$//e<cr>O<esc>0\"_Dp==", opts
 
 -- Same as J but with the line above. Keeps the cursor in the same place
 -- Does not automatically reformat comment syntax
-vim.keymap.set("n", "H",
-    "mz<cmd>let @y = @\"<cr>k_\"zD\"_dd`zA<space><esc>\"zp<cmd>let@\" = @y<cr>`z", opts)
+vim.keymap.set(
+    "n",
+    "H",
+    "mz<cmd>let @y = @\"<cr>k_\"zD\"_dd`zA<space><esc>\"zp<cmd>let@\" = @y<cr>`z",
+    opts
+)
 
 vim.keymap.set("n", "[ ", "mzO<esc>0\"_D`z", opts)
 vim.keymap.set("n", "] ", "mzo<esc>0\"_D`z", opts)
@@ -263,6 +226,10 @@ vim.keymap.set("n", "<leader>qgn", function()
     grep_function("grep")
 end, opts)
 
+vim.opt.grepformat = "%f:%l:%m"
+vim.opt.grepprg = "rg --line-number"
+
+-- NOTE: This command depends on the grepprg being set to ripgrep
 vim.keymap.set("n", "<leader>qgi", function()
     grep_function("grep -i")
 end, opts)
@@ -344,6 +311,8 @@ vim.keymap.set("n", "<leader>ql", function()
     vim.fn.setqflist(for_qf_list, "r")
     vim.cmd("copen")
 end, opts)
+
+vim.cmd "packadd cfilter"
 
 vim.keymap.set("n", "<leader>qk", function()
     local pattern = vim.fn.input('Pattern to keep: ')
@@ -450,6 +419,8 @@ vim.keymap.set("n", "Q", "<nop>", opts)
 vim.keymap.set("n", "gh", "<nop>", opts)
 vim.keymap.set("n", "gH", "<nop>", opts)
 
+vim.keymap.set("n", "dl", "<nop>", opts)
+
 vim.keymap.set("n", "{", "<Nop>", opts)
 vim.keymap.set("n", "}", "<Nop>", opts)
 vim.keymap.set("n", "[m", "<Nop>", opts)
@@ -457,22 +428,24 @@ vim.keymap.set("n", "]m", "<Nop>", opts)
 vim.keymap.set("n", "[M", "<Nop>", opts)
 vim.keymap.set("n", "]M", "<Nop>", opts)
 
-vim.keymap.set("n", "dib", "<Nop>", opts)
-vim.keymap.set("n", "diB", "<Nop>", opts)
-vim.keymap.set("n", "dab", "<Nop>", opts)
-vim.keymap.set("n", "daB", "<Nop>", opts)
-vim.keymap.set("n", "cib", "<Nop>", opts)
-vim.keymap.set("n", "ciB", "<Nop>", opts)
-vim.keymap.set("n", "cab", "<Nop>", opts)
-vim.keymap.set("n", "caB", "<Nop>", opts)
-vim.keymap.set("n", "yib", "<Nop>", opts)
-vim.keymap.set("n", "yiB", "<Nop>", opts)
-vim.keymap.set("n", "yab", "<Nop>", opts)
-vim.keymap.set("n", "yaB", "<Nop>", opts)
+local commands = { "d", "c", "y" }
+local nop_text_objects = { "b", "B", "s" }
+
+for _, command in pairs(commands) do
+    for _, in_out in pairs(inner_outer) do
+        for _, nop_text_object in pairs(nop_text_objects) do
+            vim.keymap.set("n", command .. in_out .. nop_text_object, "<Nop>", opts)
+        end
+    end
+end
+
+vim.keymap.set("n", "yb", "<Nop>", opts)
+vim.keymap.set("n", "yB", "<Nop>", opts)
+vim.keymap.set("n", "ys", "<Nop>", opts)
 
 -- vim.keymap.set("n", "H", "<Nop>", opts) -- For reference only. Used for a custom mapping
-vim.keymap.set("n", "M", "<Nop>", opts)
-vim.keymap.set("n", "L", "<Nop>", opts)
+vim.keymap.set({ "n", "v" }, "M", "<Nop>", opts)
+vim.keymap.set({ "n", "v" }, "L", "<Nop>", opts)
 
 vim.keymap.set({ "n", "v" }, "s", "<Nop>", opts)
 vim.keymap.set("n", "S", "<Nop>", opts) -- Used in visual mode by vim-surround

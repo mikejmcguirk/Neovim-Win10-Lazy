@@ -1,7 +1,8 @@
 return {
     "nvim-treesitter/nvim-treesitter",
     build = ":TSUpdate",
-    lazy = false,
+    event = { "BufReadPre", "BufNewFile" },
+    dependencies = { "nvim-treesitter/nvim-treesitter-textobjects" },
     config = function()
         local configs = require("nvim-treesitter.configs")
 
@@ -40,6 +41,16 @@ return {
                     show_help = '?',
                 },
             },
+            textobjects = {
+                select = {
+                    enable = true,
+                    lookahead = true,
+                    keymaps = {
+                        ["a,"] = "@parameter.inner",
+                        ["i,"] = "@parameter.inner",
+                    }
+                }
+            }
         })
     end
 }

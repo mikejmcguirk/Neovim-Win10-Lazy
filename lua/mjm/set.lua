@@ -70,8 +70,3 @@ vim.opt.autoindent = true
 vim.opt.cindent = true
 
 vim.opt.updatetime = 1000
-
-vim.cmd "packadd cfilter"
-
-vim.opt.grepformat = "%f:%l:%m"
-vim.opt.grepprg = "rg --line-number"

@@ -64,6 +64,7 @@ local cmp_config = function()
                     end
                 }
             },
+            { name = "treesitter" },
             { name = "async_path" },
             { name = "nvim_lsp_signature_help" },
             {
@@ -81,6 +82,7 @@ local cmp_config = function()
                 mode = "text",
                 menu = {
                     buffer = "[Buffer]",
+                    treesitter = "[Treesitter]",
                     nvim_lsp = "[LSP]",
                     vsnip = "[Vsnip]",
                     async_path = "[Path]",
@@ -173,7 +175,9 @@ local lspConfig = function()
         setLSPkeymaps()
     end
 
-    local capabilities = require("cmp_nvim_lsp").default_capabilities()
+    local capabilities = vim.lsp.protocol.make_client_capabilities()
+    capabilities = require("cmp_nvim_lsp").default_capabilities(capabilities)
+
     local lspconfig = require("lspconfig")
 
     -- No additional linter installed
@@ -422,6 +426,7 @@ return {
         "hrsh7th/cmp-nvim-lsp",                -- From LSPs
 
         "hrsh7th/cmp-buffer",                  -- From open buffers
+        "ray-x/cmp-treesitter",                -- From treesitter
         "hrsh7th/cmp-nvim-lsp-signature-help", -- Show current function signature
         "f3fora/cmp-spell",                    -- From Nvim's built-in spell check
         "FelipeLema/cmp-async-path",           -- From filesystem
