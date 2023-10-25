@@ -1,4 +1,3 @@
--- An E21 can occur if trying to run these after Lazy
 require("mjm.env_variables")
 require("mjm.globals")
 require("mjm.set")

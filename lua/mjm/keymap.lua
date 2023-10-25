@@ -1,5 +1,4 @@
 vim.keymap.set({ "i", "v" }, "<C-c>", "<esc>", Opts)
-vim.keymap.set({ "i", "v", "c" }, "<esc>", "<nop>", Opts)
 
 vim.keymap.set("n", "<C-u>", "<C-u>zz", Opts)
 vim.keymap.set("n", "<C-d>", "<C-d>zz", Opts)
