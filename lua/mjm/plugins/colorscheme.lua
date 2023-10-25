@@ -121,6 +121,8 @@ return {
                 { bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg }
             )
 
+            -- vim.api.nvim_set_hl(0, "Whitespace", "ColorColumn")
+
             if Env_Theme == "blue" then
                 vim.api.nvim_set_hl(0, '@lsp.type.function', {})
                 for _, group in ipairs(vim.fn.getcompletion("@lsp", "highlight")) do

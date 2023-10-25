@@ -44,10 +44,12 @@ return {
             textobjects = {
                 select = {
                     enable = true,
-                    lookahead = true,
+                    lookahead = false,
                     keymaps = {
-                        ["a,"] = "@parameter.inner",
+                        ["a,"] = "@parameter.outer",
                         ["i,"] = "@parameter.inner",
+                        ["af"] = "@function.outer",
+                        ["if"] = "@function.inner",
                     }
                 }
             }

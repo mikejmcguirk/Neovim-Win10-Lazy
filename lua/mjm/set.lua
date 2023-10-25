@@ -2,7 +2,7 @@ vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
 vim.g.loaded_netrwSettings = 1
 
-vim.keymap.set("", "<Space>", "<Nop>", { noremap = true, silent = true })
+vim.keymap.set("", "<Space>", "<Nop>", Opts)
 vim.g.mapleader = " "
 vim.g.maplocaleader = " "
 
@@ -17,6 +17,9 @@ vim.opt.softtabstop = 4
 vim.opt.shiftwidth = 4
 vim.opt.expandtab = true
 vim.opt.shiftround = true
+
+vim.opt.listchars = "tab:<–>,trail:·,precedes:⇠,extends:⇢,nbsp:×"
+vim.opt.list = true
 
 vim.opt.cursorline = true
 
@@ -40,6 +43,7 @@ vim.opt.termguicolors = true
 vim.cmd([[set gcr=n:block-blinkon1,i-c:ver100-blinkon1,v-r:hor100-blinkon1]])
 
 vim.opt.wrap = false
+vim.opt.linebreak = true
 
 local wrap_control = vim.api.nvim_create_augroup("wrap_control", { clear = true })
 

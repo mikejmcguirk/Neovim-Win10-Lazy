@@ -1,7 +1,9 @@
 -- An E21 can occur if trying to run these after Lazy
 require("mjm.env_variables")
+require("mjm.globals")
 require("mjm.set")
 require("mjm.keymap")
+require("mjm.quickfix")
 
 require("mjm.lazy")
 
