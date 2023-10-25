@@ -408,44 +408,52 @@ local lspConfig = function()
 end
 
 return {
-    "neovim/nvim-lspconfig",
-    event = { "BufReadPre", "BufNewFile" },
-    config = function()
-        cmp_config()
-        diagnosticConfig()
-        lspConfig()
-    end,
-    dependencies = {
-        "Hoffs/omnisharp-extended-lsp.nvim",
+    {
+        "neovim/nvim-lspconfig",
+        event = { "BufReadPre", "BufNewFile" },
+        config = function()
+            cmp_config()
+            diagnosticConfig()
+            lspConfig()
+        end,
+        dependencies = {
+            "Hoffs/omnisharp-extended-lsp.nvim",
 
-        "hrsh7th/nvim-cmp",                    -- Main cmp Plugin
-        "hrsh7th/vim-vsnip",                   -- Snippets engine
-        "rafamadriz/friendly-snippets",        -- Snippets
+            "hrsh7th/nvim-cmp",                    -- Main cmp Plugin
+            "hrsh7th/vim-vsnip",                   -- Snippets engine
+            "rafamadriz/friendly-snippets",        -- Snippets
 
-        "hrsh7th/cmp-vsnip",                   -- From vsnip
-        "hrsh7th/cmp-nvim-lsp",                -- From LSPs
+            "hrsh7th/cmp-vsnip",                   -- From vsnip
+            "hrsh7th/cmp-nvim-lsp",                -- From LSPs
 
-        "hrsh7th/cmp-buffer",                  -- From open buffers
-        "ray-x/cmp-treesitter",                -- From treesitter
-        "hrsh7th/cmp-nvim-lsp-signature-help", -- Show current function signature
-        "f3fora/cmp-spell",                    -- From Nvim's built-in spell check
-        "FelipeLema/cmp-async-path",           -- From filesystem
+            "hrsh7th/cmp-buffer",                  -- From open buffers
+            "ray-x/cmp-treesitter",                -- From treesitter
+            "hrsh7th/cmp-nvim-lsp-signature-help", -- Show current function signature
+            "f3fora/cmp-spell",                    -- From Nvim's built-in spell check
+            "FelipeLema/cmp-async-path",           -- From filesystem
 
-        "onsails/lspkind.nvim",                -- To configure appearance
+            "onsails/lspkind.nvim",                -- To configure appearance
 
-        'github/copilot.vim',                  -- Uses LSP
+            'github/copilot.vim',                  -- Uses LSP
+        },
+        init = function()
+            if Env_Disable_Copilot == "true" then
+                vim.g.copilot_enabled = false
+            elseif Env_Copilot_Node then
+                vim.g.copilot_node_command = Env_Copilot_Node
+            else
+                print(
+                    "NvimCopilotNode system variable not set. " ..
+                    "Node 16.15.0 is the highest supported version. " ..
+                    "Default Node path will be used if it exists"
+                )
+            end
+        end,
     },
-    init = function()
-        if Env_Disable_Copilot == "true" then
-            vim.g.copilot_enabled = false
-        elseif Env_Copilot_Node then
-            vim.g.copilot_node_command = Env_Copilot_Node
-        else
-            print(
-                "NvimCopilotNode system variable not set. " ..
-                "Node 16.15.0 is the highest supported version. " ..
-                "Default Node path will be used if it exists"
-            )
-        end
-    end,
+    {
+        "j-hui/fidget.nvim",
+        tag = "legacy",
+        event = "LspAttach",
+        opts = {}
+    }
 }

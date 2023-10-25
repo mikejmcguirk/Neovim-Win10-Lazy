@@ -183,30 +183,19 @@ vim.keymap.set("n", "<M-;>", function()
     end
 end, Opts)
 
-local spell_on = function()
-    vim.opt.spell = true
-    vim.opt.spelllang = "en_us"
-end
-
-local spell_off = function()
-    vim.opt.spell = false
-    vim.opt.spelllang = ""
-end
+vim.opt.spell = false
+vim.opt.spelllang = "en_us"
 
 vim.keymap.set("n", "<leader>st", function()
-    if vim.opt.spell:get() then
-        spell_off()
-    else
-        spell_on()
-    end
+    vim.opt.spell = not vim.opt.spell:get()
 end)
 
 vim.keymap.set("n", "<leader>sn", function()
-    spell_on()
+    vim.opt.spell = true
 end)
 
 vim.keymap.set("n", "<leader>sf", function()
-    spell_off()
+    vim.opt.spell = false
 end)
 
 vim.keymap.set("n", "ZZ", "<Nop>", Opts)
