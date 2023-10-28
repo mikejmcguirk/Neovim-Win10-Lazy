@@ -233,9 +233,6 @@ vim.keymap.set("n", "]m", "<Nop>", Opts)
 vim.keymap.set("n", "[M", "<Nop>", Opts)
 vim.keymap.set("n", "]M", "<Nop>", Opts)
 
-vim.keymap.set("n", "dl", "<nop>", Opts)
-vim.keymap.set("n", "dh", "<nop>", Opts)
-
 vim.opt.mouse = "a"           -- Otherwise, the terminal handles mouse functionality
 vim.opt.mousemodel = "extend" -- Disables terminal right-click paste
 
