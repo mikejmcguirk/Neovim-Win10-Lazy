@@ -427,7 +427,6 @@ return {
             "hrsh7th/cmp-nvim-lsp",                -- From LSPs
 
             "hrsh7th/cmp-buffer",                  -- From open buffers
-            "ray-x/cmp-treesitter",                -- From treesitter
             "hrsh7th/cmp-nvim-lsp-signature-help", -- Show current function signature
             "f3fora/cmp-spell",                    -- From Nvim's built-in spell check
             "FelipeLema/cmp-async-path",           -- From filesystem

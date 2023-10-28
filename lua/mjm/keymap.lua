@@ -224,7 +224,7 @@ vim.keymap.set("n", "Q", "<nop>", Opts)
 
 -- vim.keymap.set("n", "H", "<Nop>", Opts) -- Used for a custom mapping
 vim.keymap.set({ "n", "v" }, "M", "<Nop>", Opts)
-vim.keymap.set({ "n", "v" }, "L", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "t", "<Nop>", Opts)
 
 vim.keymap.set("n", "{", "<Nop>", Opts)
 vim.keymap.set("n", "}", "<Nop>", Opts)
