@@ -15,7 +15,7 @@ return {
         config = function()
             local telescope = require("telescope")
 
-            telescope.setup {
+            telescope.setup({
                 defaults = {
                     mappings = {
                         n = {
@@ -47,7 +47,7 @@ return {
                         }
                     }
                 }
-            }
+            })
 
             telescope.load_extension("fzf")
             telescope.load_extension("harpoon")

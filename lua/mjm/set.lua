@@ -18,8 +18,22 @@ vim.opt.shiftwidth = 4
 vim.opt.expandtab = true
 vim.opt.shiftround = true
 
-vim.opt.listchars = "tab:<–>,trail:·,precedes:⇠,extends:⇢,nbsp:×"
-vim.opt.list = true
+vim.opt.autoindent = true
+vim.opt.cindent = true
+
+vim.opt.termguicolors = true
+vim.cmd([[set gcr=n:block-blinkon1,i-c:ver100-blinkon1,v-r:hor100-blinkon1]])
+
+vim.opt.scrolloff = 6
+vim.opt.splitright = true
+vim.opt.splitbelow = true
+vim.opt.showmode = false
+
+vim.opt.ignorecase = true
+vim.opt.smartcase = true
+
+vim.opt.hlsearch = true
+vim.opt.incsearch = true
 
 vim.opt.cursorline = true
 
@@ -39,9 +53,6 @@ set_cursorline("WinLeave", false)
 set_cursorline("WinEnter", true)
 set_cursorline("FileType", false, "TelescopePrompt")
 
-vim.opt.termguicolors = true
-vim.cmd([[set gcr=n:block-blinkon1,i-c:ver100-blinkon1,v-r:hor100-blinkon1]])
-
 vim.opt.wrap = false
 vim.opt.linebreak = true
 
@@ -59,18 +70,7 @@ vim.api.nvim_create_autocmd({ "BufEnter" }, {
     end,
 })
 
-vim.opt.scrolloff = 6
-vim.opt.splitright = true
-vim.opt.splitbelow = true
-vim.opt.showmode = false
-
-vim.opt.hlsearch = true
-vim.opt.incsearch = true
-
-vim.opt.ignorecase = true
-vim.opt.smartcase = true
-
-vim.opt.autoindent = true
-vim.opt.cindent = true
-
 vim.opt.updatetime = 1000
+
+vim.opt.listchars = "tab:<–>,precedes:⇠,extends:⇢,nbsp:×"
+vim.opt.list = true

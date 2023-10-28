@@ -181,3 +181,6 @@ end, Opts)
 vim.keymap.set("n", "]q", function()
     qf_scroll("next")
 end, Opts)
+
+vim.keymap.set("n", "[Q", "<cmd>cfirst<cr>", Opts)
+vim.keymap.set("n", "]Q", "<cmd>clast<cr>", Opts)
