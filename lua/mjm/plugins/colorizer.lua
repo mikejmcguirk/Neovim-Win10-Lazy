@@ -5,7 +5,7 @@ return {
         require("colorizer").setup {
             filetypes = { "*" },
             user_default_options = {
-                RGB = false,
+                RGB = true,
                 RRGGBB = true,
                 names = false,
                 RRGGBBAA = false,
