@@ -184,3 +184,13 @@ end, Opts)
 
 vim.keymap.set("n", "[Q", "<cmd>cfirst<cr>", Opts)
 vim.keymap.set("n", "]Q", "<cmd>clast<cr>", Opts)
+
+vim.keymap.set("n", "<leader>qo", function()
+    if vim.bo.filetype ~= "qf" then
+        return
+    end
+
+    local cur_line = vim.fn.line(".")
+    vim.cmd("cc " .. tostring(cur_line))
+    vim.cmd("cclose")
+end, Opts)

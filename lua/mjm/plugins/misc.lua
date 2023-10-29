@@ -39,4 +39,20 @@ return {
         'windwp/nvim-ts-autotag',
         event = { "BufReadPre", "BufNewFile" },
     },
+    {
+        'github/copilot.vim',
+        init = function()
+            if Env_Disable_Copilot == "true" then
+                vim.g.copilot_enabled = false
+            elseif Env_Copilot_Node then
+                vim.g.copilot_node_command = Env_Copilot_Node
+            else
+                print(
+                    "NvimCopilotNode system variable not set. " ..
+                    "Node 18.18.0 is the highest supported version. " ..
+                    "Default Node path will be used if it exists"
+                )
+            end
+        end,
+    }
 }

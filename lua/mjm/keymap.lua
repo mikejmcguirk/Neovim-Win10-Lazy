@@ -162,6 +162,7 @@ vim.keymap.set("i", "<S-CR>", "<C-o>o", Opts)
 vim.keymap.set("i", "<C-CR>", "<C-o>O", Opts)
 
 vim.keymap.set("n", "gp", "`[v`]", Opts)
+vim.keymap.set("n", "<leader>V", "_vg_", Opts)
 
 -- Take the text from the cursor to the end of the current line and move it to a new line above
 vim.keymap.set("n", "<leader>=", "v$hd<cmd>s/\\s\\+$//e<cr>O<esc>0\"_Dp==", Opts)

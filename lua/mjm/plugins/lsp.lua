@@ -432,22 +432,7 @@ return {
             "FelipeLema/cmp-async-path",           -- From filesystem
 
             "onsails/lspkind.nvim",                -- To configure appearance
-
-            'github/copilot.vim',                  -- Uses LSP
         },
-        init = function()
-            if Env_Disable_Copilot == "true" then
-                vim.g.copilot_enabled = false
-            elseif Env_Copilot_Node then
-                vim.g.copilot_node_command = Env_Copilot_Node
-            else
-                print(
-                    "NvimCopilotNode system variable not set. " ..
-                    "Node 16.15.0 is the highest supported version. " ..
-                    "Default Node path will be used if it exists"
-                )
-            end
-        end,
     },
     {
         "j-hui/fidget.nvim",
