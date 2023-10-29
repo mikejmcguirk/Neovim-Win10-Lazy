@@ -1,3 +1,5 @@
+local exprOpts = { noremap = true, expr = true, silent = true }
+
 vim.keymap.set({ "i", "v" }, "<C-c>", "<esc>", Opts)
 
 vim.keymap.set("n", "<C-u>", "<C-u>zz", Opts)
@@ -26,15 +28,21 @@ vim.keymap.set("n", "J", "mzJ`z", Opts)
 vim.keymap.set("v", "<", "<gv", Opts)
 vim.keymap.set("v", ">", ">gv", Opts)
 
-local jkOpts = { noremap = true, expr = true, silent = true }
-
-vim.keymap.set("n", "j", "v:count == 0 ? 'gj' : 'j'", jkOpts)
-vim.keymap.set("n", "k", "v:count == 0 ? 'gk' : 'k'", jkOpts)
+vim.keymap.set("n", "j", "v:count == 0 ? 'gj' : 'j'", exprOpts)
+vim.keymap.set("n", "k", "v:count == 0 ? 'gk' : 'k'", exprOpts)
 vim.keymap.set("n", "gj", "<Nop>", Opts)
 vim.keymap.set("n", "gk", "<Nop>", Opts)
 
 vim.keymap.set({ "n", "v" }, "x", "\"_x", Opts)
 vim.keymap.set({ "n", "v" }, "X", "\"_X", Opts)
+
+vim.keymap.set("n", "dd", function()
+    if vim.fn.getline(".") == "" then
+        return "\"_dd"
+    end
+
+    return "dd"
+end, { expr = true })
 
 vim.keymap.set({ "n", "v" }, "<leader>d", "\"_d", Opts)
 vim.keymap.set({ "n", "v" }, "<leader>D", "\"_D", Opts)
@@ -89,22 +97,14 @@ end
 vim.keymap.set("n", "<leader>p", "\"+p", Opts)
 vim.keymap.set("n", "<leader>P", "\"+P", Opts)
 
--- Alternative for the standard '"_dP' Visual Mode Paste fix
--- Avoids non-standard behavior when pasting in Visual Line Mode and
--- when pasting yanked lines from Nvim
+-- Unlike the traditional '"_dP' map, this function does not alter default visual paste behavior
 local visual_paste = function(paste_char)
-    local cur_mode = vim.fn.mode()
+    local paste_cmd = "<esc><cmd>let @z = @\"<cr>gv" .. paste_char .. "<cmd>let @\" = @z<cr>"
 
-    vim.cmd("let @z = @\"")
-    vim.api.nvim_feedkeys(paste_char, "n", true)
-
-    vim.defer_fn(function()
-        vim.cmd("let @\" = @z")
-    end, 0) -- Wait until feedkeys is complete
-
-    -- In this case, however, user input will be held until feedkeys is complete
-    if cur_mode == "V" or cur_mode == "Vs" then
-        vim.api.nvim_feedkeys("=`]", "n", true)
+    if vim.fn.mode() == "V" or vim.fn.mode() == "Vs" then
+        return paste_cmd .. "=`]"
+    else
+        return paste_cmd
     end
 end
 
@@ -112,20 +112,20 @@ local internal_paste = "p"
 local external_paste = "\"+p"
 
 vim.keymap.set("v", "p", function()
-    visual_paste(internal_paste)
-end, Opts)
+    return visual_paste(internal_paste)
+end, exprOpts)
 
 vim.keymap.set("v", "P", function()
-    visual_paste(internal_paste)
-end, Opts)
+    return visual_paste(internal_paste)
+end, exprOpts)
 
 vim.keymap.set("v", "<leader>p", function()
-    visual_paste(external_paste)
-end, Opts)
+    return visual_paste(external_paste)
+end, exprOpts)
 
 vim.keymap.set("v", "<leader>P", function()
-    visual_paste(external_paste)
-end, Opts)
+    return visual_paste(external_paste)
+end, exprOpts)
 
 vim.keymap.set("i", ",", ",<C-g>u", Opts)
 vim.keymap.set("i", ".", ".<C-g>u", Opts)
