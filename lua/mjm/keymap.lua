@@ -158,9 +158,6 @@ vim.keymap.set("n", "] ", "mzo<esc>0\"_D`z", Opts)
 vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv", Opts)
 vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv", Opts)
 
-vim.keymap.set("i", "<S-CR>", "<C-o>o", Opts)
-vim.keymap.set("i", "<C-CR>", "<C-o>O", Opts)
-
 vim.keymap.set("n", "gp", "`[v`]", Opts)
 vim.keymap.set("n", "<leader>V", "_vg_", Opts)
 
