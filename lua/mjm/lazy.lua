@@ -13,13 +13,13 @@ end
 
 vim.opt.rtp:prepend(lazypath)
 
-require("lazy").setup("mjm.plugins", {
+local lazy = require("lazy")
+
+lazy.setup("mjm.plugins", {
     ui = {
         border = "single"
     }
 })
-
-local lazy = require("lazy")
 
 vim.keymap.set("n", "<leader>zc", lazy.check)
 vim.keymap.set("n", "<leader>zx", lazy.clean)
