@@ -143,6 +143,9 @@ vim.keymap.set("n", "gUU", "mzgUU`z", Opts)
 vim.keymap.set("n", "gUiw", "mzgUiw`z", Opts)
 vim.keymap.set("n", "gUiW", "mzgUiW`z", Opts)
 
+vim.keymap.set("n", "g~iw", "mzgUiw`z", Opts)
+vim.keymap.set("n", "g~iW", "mzgUiW`z", Opts)
+
 vim.keymap.set("v", "gu", "mzgu`z", Opts)
 vim.keymap.set("v", "gU", "mzgU`z", Opts)
 
