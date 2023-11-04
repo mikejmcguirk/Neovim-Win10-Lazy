@@ -33,34 +33,34 @@ vim.keymap.set("n", "k", "v:count == 0 ? 'gk' : 'k'", exprOpts)
 vim.keymap.set("n", "gj", "<Nop>", Opts)
 vim.keymap.set("n", "gk", "<Nop>", Opts)
 
-vim.keymap.set({ "n", "v" }, "x", "\"_x", Opts)
-vim.keymap.set({ "n", "v" }, "X", "\"_X", Opts)
+vim.keymap.set({ "n", "v" }, "x", '"_x', Opts)
+vim.keymap.set({ "n", "v" }, "X", '"_X', Opts)
 
 vim.keymap.set("n", "dd", function()
     if vim.fn.getline(".") == "" then
-        return "\"_dd"
+        return '"_dd'
     end
 
     return "dd"
 end, { expr = true })
 
-vim.keymap.set({ "n", "v" }, "<leader>d", "\"_d", Opts)
-vim.keymap.set({ "n", "v" }, "<leader>D", "\"_D", Opts)
+vim.keymap.set({ "n", "v" }, "<leader>d", '"_d', Opts)
+vim.keymap.set({ "n", "v" }, "<leader>D", '"_D', Opts)
 
-vim.keymap.set({ "n", "v" }, "<leader>c", "\"_c", Opts)
-vim.keymap.set({ "n", "v" }, "<leader>C", "\"_C", Opts)
+vim.keymap.set({ "n", "v" }, "<leader>c", '"_c', Opts)
+vim.keymap.set({ "n", "v" }, "<leader>C", '"_C', Opts)
 
 vim.keymap.set("n", "Y", "y$", Opts) -- Avoid inconsistent behavior
 vim.keymap.set("v", "y", "mzy`z", Opts)
 vim.keymap.set("v", "Y", "<nop>", Opts)
 
-vim.keymap.set("n", "<leader>y", "\"+y", Opts)
-vim.keymap.set("n", "<leader>Y", "\"+y$", Opts) -- Mapping to "+Y yanks the whole line
-vim.keymap.set("v", "<leader>y", "mz\"+y`z", Opts)
+vim.keymap.set("n", "<leader>y", '"+y', Opts)
+vim.keymap.set("n", "<leader>Y", '"+y$', Opts) -- Mapping to "+Y yanks the whole line
+vim.keymap.set("v", "<leader>y", 'mz"+y`z', Opts)
 vim.keymap.set("v", "<leader>Y", "<nop>", Opts)
 
 local inner_outer = { "i", "a" }
-local text_objects = { "w", "W", "t", "<", "\"", "'", "`", "(", "[", "{", "p" }
+local text_objects = { "w", "W", "t", "<", '"', "'", "`", "(", "[", "{", "p" }
 
 for _, object in pairs(text_objects) do
     for _, in_out in pairs(inner_outer) do
@@ -69,7 +69,7 @@ for _, object in pairs(text_objects) do
         vim.keymap.set("n", main_lhs, main_rhs, Opts)
 
         local ext_lhs = "<leader>y" .. in_out .. object
-        local ext_rhs = "mz\"+y" .. in_out .. object .. "`z"
+        local ext_rhs = 'mz"+y' .. in_out .. object .. "`z"
         vim.keymap.set("n", ext_lhs, ext_rhs, Opts)
     end
 
@@ -94,12 +94,12 @@ for _, command in pairs(commands) do
     end
 end
 
-vim.keymap.set("n", "<leader>p", "\"+p", Opts)
-vim.keymap.set("n", "<leader>P", "\"+P", Opts)
+vim.keymap.set("n", "<leader>p", '"+p', Opts)
+vim.keymap.set("n", "<leader>P", '"+P', Opts)
 
 -- Unlike the traditional '"_dP' map, this function does not alter default visual paste behavior
 local visual_paste = function(paste_char)
-    local paste_cmd = "<esc><cmd>let @z = @\"<cr>gv" .. paste_char .. "<cmd>let @\" = @z<cr>"
+    local paste_cmd = '<esc><cmd>let @z = @"<cr>gv' .. paste_char .. '<cmd>let @" = @z<cr>'
 
     if vim.fn.mode() == "V" or vim.fn.mode() == "Vs" then
         return paste_cmd .. "=`]"
@@ -109,7 +109,7 @@ local visual_paste = function(paste_char)
 end
 
 local internal_paste = "p"
-local external_paste = "\"+p"
+local external_paste = '"+p'
 
 vim.keymap.set("v", "p", function()
     return visual_paste(internal_paste)
@@ -155,8 +155,8 @@ vim.keymap.set("n", "gllW", "mz<cmd> s/\\v<(.)(\\S*)/\\u\\1\\L\\2/ge<cr><cmd>noh
 vim.keymap.set("n", "gliw", "mzguiw~`z", Opts)
 vim.keymap.set("n", "gliW", "mzguiW~`z", Opts)
 
-vim.keymap.set("n", "[ ", "mzO<esc>0\"_D`z", Opts)
-vim.keymap.set("n", "] ", "mzo<esc>0\"_D`z", Opts)
+vim.keymap.set("n", "[ ", 'mzO<esc>0"_D`z', Opts)
+vim.keymap.set("n", "] ", 'mzo<esc>0"_D`z', Opts)
 
 vim.keymap.set("v", "J", ":m '>+1<CR>gv=gv", Opts)
 vim.keymap.set("v", "K", ":m '<-2<CR>gv=gv", Opts)
@@ -165,14 +165,14 @@ vim.keymap.set("n", "gp", "`[v`]", Opts)
 vim.keymap.set("n", "<leader>V", "_vg_", Opts)
 
 -- Take the text from the cursor to the end of the current line and move it to a new line above
-vim.keymap.set("n", "<leader>=", "v$hd<cmd>s/\\s\\+$//e<cr>O<esc>0\"_Dp==", Opts)
+vim.keymap.set("n", "<leader>=", 'v$hd<cmd>s/\\s\\+$//e<cr>O<esc>0"_Dp==', Opts)
 
 -- Same as J but with the line above. Keeps the cursor in the same place
 -- Does not automatically reformat comment syntax
 vim.keymap.set(
     "n",
     "H",
-    "mz<cmd>let @y = @\"<cr>k_\"zD\"_dd`zA<space><esc>\"zp<cmd>let@\" = @y<cr>`z",
+    'mz<cmd>let @y = @"<cr>k_"zD"_dd`zA<space><esc>"zp<cmd>let@" = @y<cr>`z',
     Opts
 )
 
@@ -234,7 +234,7 @@ vim.keymap.set("n", "]m", "<Nop>", Opts)
 vim.keymap.set("n", "[M", "<Nop>", Opts)
 vim.keymap.set("n", "]M", "<Nop>", Opts)
 
-vim.opt.mouse = "a"           -- Otherwise, the terminal handles mouse functionality
+vim.opt.mouse = "a" -- Otherwise, the terminal handles mouse functionality
 vim.opt.mousemodel = "extend" -- Disables terminal right-click paste
 
 local mouse_maps = {

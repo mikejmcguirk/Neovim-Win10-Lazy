@@ -13,10 +13,10 @@ return {
                 html = { "prettier" },
                 json = { "prettier" },
                 sh = { "beautysh" },
-                sh = { "stylua" },
+                lua = { "stylua" },
             },
             format_on_save = {
-                lsp_fallback = true,
+                lsp_fallback = false,
                 async = false,
                 timeout_ms = 5000,
             }

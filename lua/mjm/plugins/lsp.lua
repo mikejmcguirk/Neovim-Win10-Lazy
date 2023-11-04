@@ -8,7 +8,7 @@ local cmp_config = function()
 
     cmp.setup({
         enabled = function()
-            local context = require "cmp.config.context"
+            local context = require("cmp.config.context")
 
             if vim.api.nvim_get_mode().mode == "c" then
                 return true
@@ -31,8 +31,8 @@ local cmp_config = function()
             },
             documentation = {
                 border = "single",
-                winhighlight = win_highlight
-            }
+                winhighlight = win_highlight,
+            },
         },
         mapping = cmp.mapping.preset.insert({
             ["<C-d>"] = cmp.mapping.scroll_docs(4),
@@ -61,8 +61,8 @@ local cmp_config = function()
                 option = {
                     get_bufnrs = function()
                         return vim.api.nvim_list_bufs()
-                    end
-                }
+                    end,
+                },
             },
             { name = "treesitter" },
             { name = "async_path" },
@@ -89,15 +89,12 @@ local cmp_config = function()
                     spell = "[Spell]",
                 },
             }),
-            fields = { "abbr", "kind", "menu" }
-        }
+            fields = { "abbr", "kind", "menu" },
+        },
     })
 
     local cmp_autopairs = require("nvim-autopairs.completion.cmp")
-    cmp.event:on(
-        "confirm_done",
-        cmp_autopairs.on_confirm_done()
-    )
+    cmp.event:on("confirm_done", cmp_autopairs.on_confirm_done())
 end
 
 local diagnosticConfig = function()
@@ -105,8 +102,8 @@ local diagnosticConfig = function()
         update_in_insert = false,
         float = {
             border = "single",
-            style = "minimal"
-        }
+            style = "minimal",
+        },
     })
 
     vim.keymap.set("n", "[d", vim.diagnostic.goto_prev)
@@ -120,19 +117,15 @@ local lspConfig = function()
     -- LSP windows use floating windows, documented in nvim_open_win
     -- The borders use the "FloatBorder" highlight group
 
-    vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(
-        vim.lsp.handlers.hover, {
-            border = "single",
-            style = "minimal"
-        }
-    )
+    vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
+        border = "single",
+        style = "minimal",
+    })
 
-    vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(
-        vim.lsp.handlers.signature_help, {
-            border = "single",
-            style = "minimal"
-        }
-    )
+    vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, {
+        border = "single",
+        style = "minimal",
+    })
 
     require("lspconfig.ui.windows").default_options = {
         border = "single",
@@ -169,7 +162,7 @@ local lspConfig = function()
             buffer = bufnr,
             callback = function()
                 vim.lsp.buf.format({ async = false })
-            end
+            end,
         })
 
         setLSPkeymaps()
@@ -203,10 +196,10 @@ local lspConfig = function()
                     features = "all",
                 },
                 checkOnSave = {
-                    command = "clippy" --linting
+                    command = "clippy", --linting
                 },
-            }
-        }
+            },
+        },
     })
 
     -- Linting is handled below using the ESLint LSP
@@ -227,7 +220,7 @@ local lspConfig = function()
                 buffer = bufnr,
                 callback = function()
                     vim.cmd([[EslintFixAll]])
-                end
+                end,
             })
         end,
     })
@@ -251,7 +244,7 @@ local lspConfig = function()
     })
 
     -- No specific formatter or linter configured at this time
-    require "lspconfig".pylsp.setup({
+    require("lspconfig").pylsp.setup({
         capabilities = capabilities,
 
         on_attach = function(client, bufnr)
@@ -265,17 +258,21 @@ local lspConfig = function()
                         maxLineLength = 99,
                         ignore = {
                             "E302",
-                            "E305"
-                        }
-                    }
-                }
-            }
-        }
+                            "E305",
+                        },
+                    },
+                },
+            },
+        },
     })
 
     if not Env_OmniSharp_DLL then
-        print("Warning: " .. Env_OmniSharp_DLL_Name .. " environment variable not found. " ..
-            "Cannot attach OmniSharp")
+        print(
+            "Warning: "
+                .. Env_OmniSharp_DLL_Name
+                .. " environment variable not found. "
+                .. "Cannot attach OmniSharp"
+        )
         Env_OmniSharp_DLL = " "
     end
 
@@ -325,13 +322,13 @@ local lspConfig = function()
 
     -- Use beautysh/conform.nvim for formatting
     -- ShellCheck used for linting
-    lspconfig.bashls.setup {
+    lspconfig.bashls.setup({
         capabilities = capabilities,
 
         on_attach = function(client, bufnr)
             setLSPkeymaps()
         end,
-    }
+    })
 
     -- Use Prettier/conform.nvim for formatting. No linter
     lspconfig.html.setup({
@@ -342,8 +339,8 @@ local lspConfig = function()
         end,
 
         init_options = {
-            provideFormatter = false
-        }
+            provideFormatter = false,
+        },
     })
 
     -- Use Prettier/conform.nvim for formatting. No linter
@@ -365,16 +362,18 @@ local lspConfig = function()
 
         on_init = function(client)
             local path = client.workspace_folders[1].name
-            if not vim.loop.fs_stat(path .. '/.luarc.json')
-                and not vim.loop.fs_stat(path .. '/.luarc.jsonc') then
-                client.config.settings = vim.tbl_deep_extend('force', client.config.settings, {
+            if
+                not vim.loop.fs_stat(path .. "/.luarc.json")
+                and not vim.loop.fs_stat(path .. "/.luarc.jsonc")
+            then
+                client.config.settings = vim.tbl_deep_extend("force", client.config.settings, {
                     Lua = {
                         runtime = {
-                            version = 'LuaJIT' -- Most likely for Neovim
+                            version = "LuaJIT", -- Most likely for Neovim
                         },
                         workspace = {
                             checkThirdParty = false,
-                            library = vim.api.nvim_get_runtime_file("", true)
+                            library = vim.api.nvim_get_runtime_file("", true),
                         },
                         settings = {
                             Lua = {
@@ -383,7 +382,7 @@ local lspConfig = function()
                                 },
                             },
                         },
-                    }
+                    },
                 })
 
                 client.notify(
@@ -391,19 +390,18 @@ local lspConfig = function()
                     { settings = client.config.settings }
                 )
             else
-                client.config.settings = vim.tbl_deep_extend('force', client.config.settings, {
+                client.config.settings = vim.tbl_deep_extend("force", client.config.settings, {
                     settings = {
                         Lua = {
                             telemetry = {
                                 enable = false,
                             },
-                        }
-                    }
+                        },
+                    },
                 })
             end
             return true
         end,
-
     })
 end
 
@@ -419,25 +417,25 @@ return {
         dependencies = {
             "Hoffs/omnisharp-extended-lsp.nvim",
 
-            "hrsh7th/nvim-cmp",                    -- Main cmp Plugin
-            "hrsh7th/vim-vsnip",                   -- Snippets engine
-            "rafamadriz/friendly-snippets",        -- Snippets
+            "hrsh7th/nvim-cmp", -- Main cmp Plugin
+            "hrsh7th/vim-vsnip", -- Snippets engine
+            "rafamadriz/friendly-snippets", -- Snippets
 
-            "hrsh7th/cmp-vsnip",                   -- From vsnip
-            "hrsh7th/cmp-nvim-lsp",                -- From LSPs
+            "hrsh7th/cmp-vsnip", -- From vsnip
+            "hrsh7th/cmp-nvim-lsp", -- From LSPs
 
-            "hrsh7th/cmp-buffer",                  -- From open buffers
+            "hrsh7th/cmp-buffer", -- From open buffers
             "hrsh7th/cmp-nvim-lsp-signature-help", -- Show current function signature
-            "f3fora/cmp-spell",                    -- From Nvim's built-in spell check
-            "FelipeLema/cmp-async-path",           -- From filesystem
+            "f3fora/cmp-spell", -- From Nvim's built-in spell check
+            "FelipeLema/cmp-async-path", -- From filesystem
 
-            "onsails/lspkind.nvim",                -- To configure appearance
+            "onsails/lspkind.nvim", -- To configure appearance
         },
     },
     {
         "j-hui/fidget.nvim",
         tag = "legacy",
         event = "LspAttach",
-        opts = {}
-    }
+        opts = {},
+    },
 }

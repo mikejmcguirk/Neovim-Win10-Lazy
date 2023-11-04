@@ -10,9 +10,9 @@ vim.keymap.set("n", "<leader>qt", function()
     end
 
     if is_quickfix_open then
-        vim.cmd "cclose"
+        vim.cmd("cclose")
     else
-        vim.cmd "copen"
+        vim.cmd("copen")
     end
 end, Opts)
 
@@ -23,7 +23,7 @@ vim.opt.grepformat = "%f:%l:%m"
 vim.opt.grepprg = "rg --line-number"
 
 local grep_function = function(grep_cmd)
-    local pattern = vim.fn.input('Enter pattern: ')
+    local pattern = vim.fn.input("Enter pattern: ")
 
     if pattern ~= "" then
         local cur_view = vim.fn.winsaveview()
@@ -31,7 +31,7 @@ local grep_function = function(grep_cmd)
         vim.cmd("silent! " .. grep_cmd .. " " .. pattern .. " | copen")
 
         vim.cmd("wincmd p")
-        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<C-O>', true, true, true), 'n', {})
+        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-O>", true, true, true), "n", {})
 
         vim.defer_fn(function()
             vim.fn.winrestview(cur_view)
@@ -72,18 +72,21 @@ local diags_to_qf = function(severity_cap)
                 end_lnum = diagnostic.end_lnum,
                 col = diagnostic.col,
                 end_col = diagnostic.end_col,
-                text = diagnostic.source .. ": " .. "[" .. diagnostic.code .. "] " ..
-                    diagnostic.message,
+                text = diagnostic.source
+                    .. ": "
+                    .. "["
+                    .. diagnostic.code
+                    .. "] "
+                    .. diagnostic.message,
                 type = severity_map[diagnostic.severity],
             }
-
 
             table.insert(diagnostics, converted_diag)
         end
     end
 
     vim.fn.setqflist(diagnostics, "r")
-    vim.cmd "copen"
+    vim.cmd("copen")
 end
 
 vim.keymap.set("n", "<leader>qiq", function()
@@ -106,8 +109,12 @@ vim.keymap.set("n", "<leader>ql", function()
         end
 
         bufs_for_client = bufs_for_client .. ")"
-        local lsp_entry = "LSP: " .. client.name .. ", ID: " .. client.id .. ", Buffer(s): " ..
-            bufs_for_client
+        local lsp_entry = "LSP: "
+            .. client.name
+            .. ", ID: "
+            .. client.id
+            .. ", Buffer(s): "
+            .. bufs_for_client
 
         table.insert(for_qf_list, { text = lsp_entry })
     end
@@ -116,17 +123,17 @@ vim.keymap.set("n", "<leader>ql", function()
     vim.cmd("copen")
 end, Opts)
 
-vim.cmd "packadd cfilter"
+vim.cmd("packadd cfilter")
 
 vim.keymap.set("n", "<leader>qk", function()
-    local pattern = vim.fn.input('Pattern to keep: ')
+    local pattern = vim.fn.input("Pattern to keep: ")
     if pattern ~= "" then
         vim.cmd("Cfilter " .. pattern)
     end
 end, Opts)
 
 vim.keymap.set("n", "<leader>qr", function()
-    local pattern = vim.fn.input('Pattern to remove: ')
+    local pattern = vim.fn.input("Pattern to remove: ")
     if pattern ~= "" then
         vim.cmd("Cfilter! " .. pattern)
     end
