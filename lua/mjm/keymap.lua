@@ -1,5 +1,3 @@
-local exprOpts = { noremap = true, expr = true, silent = true }
-
 vim.keymap.set({ "i", "v" }, "<C-c>", "<esc>", Opts)
 
 vim.keymap.set("n", "<C-u>", "<C-u>zz", Opts)
@@ -27,6 +25,8 @@ vim.keymap.set("n", "J", "mzJ`z", Opts)
 
 vim.keymap.set("v", "<", "<gv", Opts)
 vim.keymap.set("v", ">", ">gv", Opts)
+
+local exprOpts = { noremap = true, expr = true, silent = true }
 
 vim.keymap.set("n", "j", "v:count == 0 ? 'gj' : 'j'", exprOpts)
 vim.keymap.set("n", "k", "v:count == 0 ? 'gk' : 'k'", exprOpts)
@@ -191,23 +191,23 @@ vim.opt.spelllang = "en_us"
 
 vim.keymap.set("n", "<leader>st", function()
     vim.opt.spell = not vim.opt.spell:get()
-end)
+end, Opts)
 
 vim.keymap.set("n", "<leader>sn", function()
     vim.opt.spell = true
-end)
+end, Opts)
 
 vim.keymap.set("n", "<leader>sf", function()
     vim.opt.spell = false
-end)
+end, Opts)
 
 vim.keymap.set("n", "ZZ", "<Nop>", Opts)
 vim.keymap.set("n", "ZQ", "<Nop>", Opts)
 
-vim.keymap.set({ "n", "i", "v", "c" }, "<up>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<down>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<left>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<right>", "<Nop>", Opts)
+vim.keymap.set({ "n", "i", "v" }, "<up>", "<Nop>", Opts)
+vim.keymap.set({ "n", "i", "v" }, "<down>", "<Nop>", Opts)
+vim.keymap.set({ "n", "i", "v" }, "<left>", "<Nop>", Opts)
+vim.keymap.set({ "n", "i", "v" }, "<right>", "<Nop>", Opts)
 
 vim.keymap.set({ "n", "i", "v", "c" }, "<PageUp>", "<Nop>", Opts)
 vim.keymap.set({ "n", "i", "v", "c" }, "<PageDown>", "<Nop>", Opts)
@@ -237,97 +237,99 @@ vim.keymap.set("n", "]M", "<Nop>", Opts)
 vim.opt.mouse = "a"           -- Otherwise, the terminal handles mouse functionality
 vim.opt.mousemodel = "extend" -- Disables terminal right-click paste
 
-vim.keymap.set({ "n", "i", "v", "c" }, "<LeftMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<2-LeftMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<3-LeftMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<4-LeftMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-LeftMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-2-LeftMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-3-LeftMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-4-LeftMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-LeftMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-2-LeftMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-3-LeftMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-4-LeftMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-LeftMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-2-LeftMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-3-LeftMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-4-LeftMouse>", "<Nop>", Opts)
+local mouse_maps = {
+    "LeftMouse",
+    "2-LeftMouse",
+    "3-LeftMouse",
+    "4-LeftMouse",
+    "C-LeftMouse",
+    "C-2-LeftMouse",
+    "C-3-LeftMouse",
+    "C-4-LeftMouse",
+    "M-LeftMouse",
+    "M-2-LeftMouse",
+    "M-3-LeftMouse",
+    "M-4-LeftMouse",
+    "C-M-LeftMouse",
+    "C-M-2-LeftMouse",
+    "C-M-3-LeftMouse",
+    "C-M-4-LeftMouse",
+    "RightMouse",
+    "2-RightMouse",
+    "3-RightMouse",
+    "4-RightMouse",
+    "A-RightMouse",
+    "S-RightMouse",
+    "C-RightMouse",
+    "C-2-RightMouse",
+    "C-3-RightMouse",
+    "C-4-RightMouse",
+    "C-A-RightMouse",
+    "C-S-RightMouse",
+    "M-RightMouse",
+    "M-2-RightMouse",
+    "M-3-RightMouse",
+    "M-4-RightMouse",
+    "M-A-RightMouse",
+    "M-S-RightMouse",
+    "M-C-RightMouse",
+    "C-M-RightMouse",
+    "C-M-2-RightMouse",
+    "C-M-3-RightMouse",
+    "C-M-4-RightMouse",
+    "C-M-A-RightMouse",
+    "C-M-S-RightMouse",
+    "C-M-C-RightMouse",
+    "LeftDrag",
+    "RightDrag",
+    "LeftRelease",
+    "RightRelease",
+    "C-LeftDrag",
+    "C-RightDrag",
+    "C-LeftRelease",
+    "C-RightRelease",
+    "M-LeftDrag",
+    "M-RightDrag",
+    "M-LeftRelease",
+    "M-RightRelease",
+    "C-M-LeftDrag",
+    "C-M-RightDrag",
+    "C-M-LeftRelease",
+    "C-M-RightRelease",
+    "MiddleMouse",
+    "2-MiddleMouse",
+    "3-MiddleMouse",
+    "4-MiddleMouse",
+    "C-MiddleMouse",
+    "C-2-MiddleMouse",
+    "C-3-MiddleMouse",
+    "C-4-MiddleMouse",
+    "M-MiddleMouse",
+    "M-2-MiddleMouse",
+    "M-3-MiddleMouse",
+    "M-4-MiddleMouse",
+    "C-M-MiddleMouse",
+    "C-M-2-MiddleMouse",
+    "C-M-3-MiddleMouse",
+    "C-M-4-MiddleMouse",
+    "ScrollWheelUp",
+    "S-ScrollWheelUp",
+    "ScrollWheelDown",
+    "S-ScrollWheelDown",
+    "C-ScrollWheelUp",
+    "C-S-ScrollWheelUp",
+    "C-ScrollWheelDown",
+    "C-S-ScrollWheelDown",
+    "M-ScrollWheelUp",
+    "M-S-ScrollWheelUp",
+    "M-ScrollWheelDown",
+    "M-S-ScrollWheelDown",
+    "C-M-ScrollWheelUp",
+    "C-M-S-ScrollWheelUp",
+    "C-M-ScrollWheelDown",
+    "C-M-S-ScrollWheelDown",
+}
 
-vim.keymap.set({ "n", "i", "v", "c" }, "<RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<2-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<3-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<4-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<A-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<S-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-2-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-3-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-4-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-A-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-S-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-2-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-3-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-4-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-A-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-S-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-C-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-2-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-3-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-4-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-A-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-S-RightMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-C-RightMouse>", "<Nop>", Opts)
-
-vim.keymap.set({ "n", "i", "v", "c" }, "<LeftDrag>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<RightDrag>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<LeftRelease>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<RightRelease>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-LeftDrag>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-RightDrag>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-LeftRelease>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-RightRelease>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-LeftDrag>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-RightDrag>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-LeftRelease>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-RightRelease>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-LeftDrag>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-RightDrag>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-LeftRelease>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-RightRelease>", "<Nop>", Opts)
-
-vim.keymap.set({ "n", "i", "v", "c" }, "<MiddleMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<2-MiddleMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<3-MiddleMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<4-MiddleMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-MiddleMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-2-MiddleMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-3-MiddleMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-4-MiddleMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-MiddleMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-2-MiddleMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-3-MiddleMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-4-MiddleMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-MiddleMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-2-MiddleMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-3-MiddleMouse>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-4-MiddleMouse>", "<Nop>", Opts)
-
-vim.keymap.set({ "n", "i", "v", "c" }, "<ScrollWheelUp>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<S-ScrollWheelUp>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<ScrollWheelDown>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<S-ScrollWheelDown>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-ScrollWheelUp>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-S-ScrollWheelUp>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-ScrollWheelDown>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-S-ScrollWheelDown>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-ScrollWheelUp>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-S-ScrollWheelUp>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-ScrollWheelDown>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<M-S-ScrollWheelDown>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-ScrollWheelUp>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-S-ScrollWheelUp>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-ScrollWheelDown>", "<Nop>", Opts)
-vim.keymap.set({ "n", "i", "v", "c" }, "<C-M-S-ScrollWheelDown>", "<Nop>", Opts)
+for _, map in pairs(mouse_maps) do
+    vim.keymap.set({ "n", "i", "v", "c" }, "<" .. map .. ">", "<Nop>", Opts)
+end

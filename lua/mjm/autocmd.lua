@@ -1,8 +1,8 @@
-local yankGroup = vim.api.nvim_create_augroup("HighlightYank", { clear = true })
-local mjmGroup = vim.api.nvim_create_augroup("mjm", { clear = true })
+local yank_group = vim.api.nvim_create_augroup("HighlightYank", { clear = true })
+local mjm_group = vim.api.nvim_create_augroup("mjm", { clear = true })
 
 vim.api.nvim_create_autocmd("TextYankPost", {
-    group = yankGroup,
+    group = yank_group,
     pattern = "*",
     callback = function()
         vim.highlight.on_yank({
@@ -13,7 +13,7 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 })
 
 vim.api.nvim_create_autocmd({ "BufWritePre" }, {
-    group = mjmGroup,
+    group = mjm_group,
     pattern = "*",
     callback = function()
         vim.cmd([[normal! mz]])
@@ -28,7 +28,7 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
 
 -- Auto-removes boilerplate status messages from the command line
 vim.api.nvim_create_autocmd({ "TextYankPost", "BufWritePost", "TextChanged", }, {
-    group = mjmGroup,
+    group = mjm_group,
     pattern = "*",
     callback = function()
         vim.cmd([[normal! :<esc>]])
@@ -38,7 +38,7 @@ vim.api.nvim_create_autocmd({ "TextYankPost", "BufWritePost", "TextChanged", }, 
 -- Removes executed commands from the command line
 -- Uses print() to avoid a bug where <cmd><backspace> exits vim without saving
 vim.api.nvim_create_autocmd({ "CmdlineLeave" }, {
-    group = mjmGroup,
+    group = mjm_group,
     pattern = "*",
     callback = function()
         print(" ")

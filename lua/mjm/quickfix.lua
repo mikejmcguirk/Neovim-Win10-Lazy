@@ -19,18 +19,27 @@ end, Opts)
 vim.keymap.set("n", "<leader>qo", "<cmd>copen<cr>", Opts)
 vim.keymap.set("n", "<leader>qc", "<cmd>cclose<cr>", Opts)
 
+vim.opt.grepformat = "%f:%l:%m"
+vim.opt.grepprg = "rg --line-number"
+
 local grep_function = function(grep_cmd)
     local pattern = vim.fn.input('Enter pattern: ')
 
     if pattern ~= "" then
+        local cur_view = vim.fn.winsaveview()
+
         vim.cmd("silent! " .. grep_cmd .. " " .. pattern .. " | copen")
 
-        -- vim.cmd("wincmd p")
-        -- vim.api.nvim_feedkeys(
-        --     vim.api.nvim_replace_termcodes(
-        --         '<C-O>', true, true, true
-        --     ), 'n', {}
-        -- )
+        vim.cmd("wincmd p")
+        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes('<C-O>', true, true, true), 'n', {})
+
+        vim.defer_fn(function()
+            vim.fn.winrestview(cur_view)
+        end, 0)
+
+        vim.defer_fn(function()
+            vim.cmd("copen")
+        end, 0)
     end
 end
 
@@ -38,55 +47,38 @@ vim.keymap.set("n", "<leader>qgn", function()
     grep_function("grep")
 end, Opts)
 
-vim.opt.grepformat = "%f:%l:%m"
-vim.opt.grepprg = "rg --line-number"
-
--- NOTE: This command depends on the grepprg being set to ripgrep
+-- This command depends on the grepprg being set to ripgrep
 vim.keymap.set("n", "<leader>qgi", function()
     grep_function("grep -i")
 end, Opts)
 
-local convert_raw_diagnostic = function(raw_diagnostic)
-    local diag_severity
-
-    if raw_diagnostic.severity == vim.diagnostic.severity.ERROR then
-        diag_severity = "E"
-    elseif raw_diagnostic.severity == vim.diagnostic.severity.WARN then
-        diag_severity = "W"
-    elseif raw_diagnostic.severity == vim.diagnostic.severity.INFO then
-        diag_severity = "I"
-    elseif raw_diagnostic.severity == vim.diagnostic.severity.HINT then
-        diag_severity = "H"
-    else
-        diag_severity = "U"
-    end
-
-    return {
-        bufnr = raw_diagnostic.bufnr,
-        filename = vim.fn.bufname(raw_diagnostic.bufnr),
-        lnum = raw_diagnostic.lnum,
-        end_lnum = raw_diagnostic.end_lnum,
-        col = raw_diagnostic.col,
-        end_col = raw_diagnostic.end_col,
-        text = raw_diagnostic.source .. ": " .. "[" .. raw_diagnostic.code .. "] " ..
-            raw_diagnostic.message,
-        type = diag_severity,
-    }
-end
-
-local diags_to_qf = function(min_warning)
+local diags_to_qf = function(severity_cap)
     local raw_diagnostics = vim.diagnostic.get(nil)
     local diagnostics = {}
 
-    if min_warning then
-        for _, diagnostic in ipairs(raw_diagnostics) do
-            if diagnostic.severity <= 2 then --ERROR or WARN
-                table.insert(diagnostics, convert_raw_diagnostic(diagnostic))
-            end
-        end
-    else
-        for _, diagnostic in ipairs(raw_diagnostics) do
-            table.insert(diagnostics, convert_raw_diagnostic(diagnostic))
+    for _, diagnostic in ipairs(raw_diagnostics) do
+        if diagnostic.severity <= severity_cap then
+            local severity_map = {
+                [vim.diagnostic.severity.ERROR] = "E",
+                [vim.diagnostic.severity.WARN] = "W",
+                [vim.diagnostic.severity.INFO] = "I",
+                [vim.diagnostic.severity.HINT] = "H",
+            }
+
+            local converted_diag = {
+                bufnr = diagnostic.bufnr,
+                filename = vim.fn.bufname(diagnostic.bufnr),
+                lnum = diagnostic.lnum,
+                end_lnum = diagnostic.end_lnum,
+                col = diagnostic.col,
+                end_col = diagnostic.end_col,
+                text = diagnostic.source .. ": " .. "[" .. diagnostic.code .. "] " ..
+                    diagnostic.message,
+                type = severity_map[diagnostic.severity],
+            }
+
+
+            table.insert(diagnostics, converted_diag)
         end
     end
 
@@ -95,11 +87,11 @@ local diags_to_qf = function(min_warning)
 end
 
 vim.keymap.set("n", "<leader>qiq", function()
-    diags_to_qf(false)
+    diags_to_qf(4)
 end, Opts)
 
 vim.keymap.set("n", "<leader>qii", function()
-    diags_to_qf(true)
+    diags_to_qf(2) -- ERROR or WARN only
 end, Opts)
 
 vim.keymap.set("n", "<leader>ql", function()
@@ -145,28 +137,17 @@ vim.keymap.set("n", "<leader>qe", function()
     vim.cmd("cclose")
 end, Opts)
 
-local qf_scroll = function(direction)
+local qf_scroll = function(direction, backup_direction)
     local status, result = pcall(function()
         vim.cmd("c" .. direction)
     end)
 
-    if not status then
-        local backup_direction
-
-        if direction == "prev" then
-            backup_direction = "last"
-        elseif direction == "next" then
-            backup_direction = "first"
-        else
-            print("Invalid direction: " .. direction)
-            return
-        end
-
-        if result and type(result) == "string" and string.find(result, "E553") then
+    if (not status) and result then
+        if type(result) == "string" and string.find(result, "E553") then
             vim.cmd("c" .. backup_direction)
             vim.cmd("normal! zz")
-        elseif result and type(result) == "string" and string.find(result, "E42") then
-        elseif result then
+        elseif type(result) == "string" and string.find(result, "E42") then
+        else
             print(result)
         end
     else
@@ -175,11 +156,11 @@ local qf_scroll = function(direction)
 end
 
 vim.keymap.set("n", "[q", function()
-    qf_scroll("prev")
+    qf_scroll("prev", "last")
 end, Opts)
 
 vim.keymap.set("n", "]q", function()
-    qf_scroll("next")
+    qf_scroll("next", "first")
 end, Opts)
 
 vim.keymap.set("n", "[Q", "<cmd>cfirst<cr>", Opts)

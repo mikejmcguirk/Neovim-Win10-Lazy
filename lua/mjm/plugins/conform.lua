@@ -13,6 +13,7 @@ return {
                 html = { "prettier" },
                 json = { "prettier" },
                 sh = { "beautysh" },
+                sh = { "stylua" },
             },
             format_on_save = {
                 lsp_fallback = true,

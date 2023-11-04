@@ -355,12 +355,12 @@ local lspConfig = function()
         end,
     })
 
-    -- No additional linter installed
+    -- stylua used for formatting through conform
     lspconfig.lua_ls.setup({
         capabilities = capabilities,
 
         on_attach = function(client, bufnr)
-            defaultAttach(bufnr)
+            setLSPkeymaps()
         end,
 
         on_init = function(client)

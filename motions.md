@@ -96,18 +96,18 @@ Horizontal
 
 Searches
 
-| Input    | Result                                                  |
-| :------- | :------------------------------------------------------ |
-| /pattern | Search forward for a pattern                            |
-| ?pattern | Search backward for a pattern                           |
-| \*       | Searches for word cursor is on                          |
-| \#       | Searches backward for word cursor is on                 |
-| \c       | Add this escape to a search to make it case insensitive |
-| n        | Move forward through search results                     |
-| N        | Move backward through search results                    |
-| :noh     | Clear search                                            |
-| \<C-g\>  | Next result while in search mode                        |
-| \<C-t\>  | Previous result while in search mode                    |
+| Input    | Result                                                              |
+| :------- | :------------------------------------------------------------------ |
+| /pattern | Search forward for a pattern                                        |
+| ?pattern | Search backward for a pattern                                       |
+| \*       | Searches for word cursor is on (Also works in Visual Mode)          |
+| \#       | Searches backward for word cursor is on (Also works in Visual Mode) |
+| \c       | Add this escape to a search to make it case insensitive             |
+| n        | Move forward through search results                                 |
+| N        | Move backward through search results                                |
+| :noh     | Clear search                                                        |
+| \<C-g\>  | Next result while in search mode                                    |
+| \<C-t\>  | Previous result while in search mode                                |
 
 Marks
 
