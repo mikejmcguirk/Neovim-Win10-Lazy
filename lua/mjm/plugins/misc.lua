@@ -1,16 +1,16 @@
 return {
     {
-        'christoomey/vim-tmux-navigator',
+        "christoomey/vim-tmux-navigator",
         lazy = false,
     },
     {
-        'tpope/vim-fugitive',
+        "tpope/vim-fugitive",
     },
     {
-        'numToStr/Comment.nvim',
+        "numToStr/Comment.nvim",
         event = { "BufReadPre", "BufNewFile" },
         config = function()
-            require('Comment').setup()
+            require("Comment").setup()
         end,
     },
     {
@@ -19,28 +19,28 @@ return {
         event = "VeryLazy",
         config = function()
             require("nvim-surround").setup({})
-        end
+        end,
     },
     {
-        'windwp/nvim-autopairs',
+        "windwp/nvim-autopairs",
         event = "InsertEnter",
         config = function()
-            require('nvim-autopairs').setup({
+            require("nvim-autopairs").setup({
                 check_ts = true,
                 ts_config = {
-                    lua = { 'string' }, -- it will not add pair on that treesitter node
-                    javascript = { 'template_string' },
-                    java = false,       -- don't check treesitter on java
-                }
+                    lua = { "string" }, -- it will not add pair on that treesitter node
+                    javascript = { "template_string" },
+                    java = false, -- don't check treesitter on java
+                },
             })
         end,
     },
     {
-        'windwp/nvim-ts-autotag',
+        "windwp/nvim-ts-autotag",
         event = { "BufReadPre", "BufNewFile" },
     },
     {
-        'github/copilot.vim',
+        "github/copilot.vim",
         init = function()
             if Env_Disable_Copilot == "true" then
                 vim.g.copilot_enabled = false
@@ -48,11 +48,11 @@ return {
                 vim.g.copilot_node_command = Env_Copilot_Node
             else
                 print(
-                    "NvimCopilotNode system variable not set. " ..
-                    "Node 18.18.0 is the highest supported version. " ..
-                    "Default Node path will be used if it exists"
+                    "NvimCopilotNode system variable not set. "
+                        .. "Node 18.18.0 is the highest supported version. "
+                        .. "Default Node path will be used if it exists"
                 )
             end
         end,
-    }
+    },
 }

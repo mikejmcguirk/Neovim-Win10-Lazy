@@ -18,7 +18,7 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
     callback = function()
         vim.cmd([[normal! mz]])
 
-        vim.cmd([[%s/\s\+$//e]])   -- Remove trailing whitespace
+        vim.cmd([[%s/\s\+$//e]]) -- Remove trailing whitespace
         vim.cmd([[%s/\n\+\%$//e]]) -- Remove trailing blank lines
         vim.cmd([[%s/\%^\n\+//e]]) -- Remove leading blank lines
 
@@ -27,7 +27,7 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
 })
 
 -- Auto-removes boilerplate status messages from the command line
-vim.api.nvim_create_autocmd({ "TextYankPost", "BufWritePost", "TextChanged", }, {
+vim.api.nvim_create_autocmd({ "TextYankPost", "BufWritePost", "TextChanged" }, {
     group = mjm_group,
     pattern = "*",
     callback = function()

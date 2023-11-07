@@ -22,6 +22,7 @@ vim.keymap.set("n", "<leader>qc", "<cmd>cclose<cr>", Opts)
 vim.opt.grepformat = "%f:%l:%m"
 vim.opt.grepprg = "rg --line-number"
 
+---@param grep_cmd string
 local grep_function = function(grep_cmd)
     local pattern = vim.fn.input("Enter pattern: ")
 
@@ -52,6 +53,7 @@ vim.keymap.set("n", "<leader>qgi", function()
     grep_function("grep -i")
 end, Opts)
 
+---@param severity_cap number
 local diags_to_qf = function(severity_cap)
     local raw_diagnostics = vim.diagnostic.get(nil)
     local diagnostics = {}
@@ -127,6 +129,7 @@ vim.cmd("packadd cfilter")
 
 vim.keymap.set("n", "<leader>qk", function()
     local pattern = vim.fn.input("Pattern to keep: ")
+
     if pattern ~= "" then
         vim.cmd("Cfilter " .. pattern)
     end
@@ -134,6 +137,7 @@ end, Opts)
 
 vim.keymap.set("n", "<leader>qr", function()
     local pattern = vim.fn.input("Pattern to remove: ")
+
     if pattern ~= "" then
         vim.cmd("Cfilter! " .. pattern)
     end
@@ -144,6 +148,8 @@ vim.keymap.set("n", "<leader>qe", function()
     vim.cmd("cclose")
 end, Opts)
 
+---@param direction string
+---@param backup_direction string
 local qf_scroll = function(direction, backup_direction)
     local status, result = pcall(function()
         vim.cmd("c" .. direction)

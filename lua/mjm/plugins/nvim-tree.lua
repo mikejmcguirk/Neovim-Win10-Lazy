@@ -6,7 +6,7 @@ return {
         "nvim-tree/nvim-web-devicons",
     },
     config = function()
-        require("nvim-tree").setup {
+        require("nvim-tree").setup({
             disable_netrw = true,
             hijack_netrw = true,
             hijack_unnamed_buffer_when_opening = false,
@@ -20,14 +20,14 @@ return {
             },
             filters = {
                 git_ignored = false,
-                dotfiles = false
+                dotfiles = false,
             },
             diagnostics = {
                 enable = true,
             },
             notify = {
                 threshold = vim.log.levels.WARN,
-                absolute_path = true
+                absolute_path = true,
             },
             on_attach = function(bufnr)
                 local api = require("nvim-tree.api")
@@ -37,7 +37,7 @@ return {
                 vim.keymap.del("n", "<2-LeftMouse>", { buffer = bufnr })
                 vim.keymap.del("n", "<2-RightMouse>", { buffer = bufnr })
             end,
-        }
+        })
 
         vim.keymap.set("n", "<leader>nt", "<cmd>NvimTreeToggle<cr>")
     end,

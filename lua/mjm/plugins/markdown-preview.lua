@@ -1,5 +1,5 @@
 return {
-    'iamcco/markdown-preview.nvim',
+    "iamcco/markdown-preview.nvim",
     ft = "markdown",
     config = function()
         vim.fn["mkdp#util#install"]()
@@ -44,8 +44,8 @@ return {
             sequence_diagrams = {},
             flowchart_diagrams = {},
             content_editable = false, -- Edit content on preview page?
-            disable_filename = 0,     -- Affects preview page
-            toc = {}
+            disable_filename = 0, -- Affects preview page
+            toc = {},
         }
 
         -- Specify file path for custom markdown CSS
@@ -61,5 +61,5 @@ return {
         vim.g.mkdp_page_title = "「${name}」" -- This setting uses the file name
         vim.g.mkdp_filetypes = { "markdown" }
         vim.g.mkdp_theme = "dark" -- Can be dark or light. Based on system preferences by default
-    end
+    end,
 }

@@ -39,6 +39,9 @@ vim.opt.cursorline = true
 
 local cursorLineGroup = vim.api.nvim_create_augroup("CursorLineControl", { clear = true })
 
+---@param event string
+---@param value boolean
+---@param pattern string
 local set_cursorline = function(event, value, pattern)
     vim.api.nvim_create_autocmd(event, {
         group = cursorLineGroup,
@@ -49,8 +52,8 @@ local set_cursorline = function(event, value, pattern)
     })
 end
 
-set_cursorline("WinLeave", false)
-set_cursorline("WinEnter", true)
+set_cursorline("WinLeave", false, "")
+set_cursorline("WinEnter", true, "")
 set_cursorline("FileType", false, "TelescopePrompt")
 
 vim.opt.wrap = false

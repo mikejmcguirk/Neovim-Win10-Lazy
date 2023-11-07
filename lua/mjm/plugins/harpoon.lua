@@ -12,82 +12,57 @@ return {
                 tabline_suffix = "   ",
             })
 
-
             if Env_Theme == "blue" then
-                vim.api.nvim_set_hl(0,
-                    "HarpoonInactive", {
-                        fg = vim.api.nvim_get_hl(0, { name = "CursorLineNr" }).fg,
-                        bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg
-                    }
-                )
-                vim.api.nvim_set_hl(0,
-                    "HarpoonNumberInactive", {
-                        fg = "#ffee00",
-                        bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg
-                    }
-                )
-                vim.api.nvim_set_hl(0,
-                    "HarpoonActive", {
-                        fg = vim.api.nvim_get_hl(0, { name = "CursorLineNr" }).fg,
-                        bg = "#30717F"
-                    }
-                )
-                vim.api.nvim_set_hl(0,
-                    "HarpoonNumberActive", {
-                        fg = "#ffee00",
-                        bg = "#30717F"
-                    }
-                )
-                vim.api.nvim_set_hl(0,
-                    "TabLineFill", {
-                        fg = vim.api.nvim_get_hl(0, { name = "CursorLineNr" }).fg,
-                        bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg
-                    }
-                )
+                vim.api.nvim_set_hl(0, "HarpoonInactive", {
+                    fg = vim.api.nvim_get_hl(0, { name = "CursorLineNr" }).fg,
+                    bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg,
+                })
+                vim.api.nvim_set_hl(0, "HarpoonNumberInactive", {
+                    fg = "#ffee00",
+                    bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg,
+                })
+                vim.api.nvim_set_hl(0, "HarpoonActive", {
+                    fg = vim.api.nvim_get_hl(0, { name = "CursorLineNr" }).fg,
+                    bg = "#30717F",
+                })
+                vim.api.nvim_set_hl(0, "HarpoonNumberActive", {
+                    fg = "#ffee00",
+                    bg = "#30717F",
+                })
+                vim.api.nvim_set_hl(0, "TabLineFill", {
+                    fg = vim.api.nvim_get_hl(0, { name = "CursorLineNr" }).fg,
+                    bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg,
+                })
             elseif Env_Theme == "green" then
-                vim.api.nvim_set_hl(0,
-                    "HarpoonActive", {
-                        fg = vim.api.nvim_get_hl(0, { name = "DevIconEditorConfig" }).fg,
-                        bg = "#5D6262"
-                    }
-                )
-                vim.api.nvim_set_hl(0,
-                    "HarpoonNumberActive", {
-                        fg = vim.api.nvim_get_hl(0, { name = "DevIconEditorConfig" }).fg,
-                        bg = "#5D6262"
-                    }
-                )
+                vim.api.nvim_set_hl(0, "HarpoonActive", {
+                    fg = vim.api.nvim_get_hl(0, { name = "DevIconEditorConfig" }).fg,
+                    bg = "#5D6262",
+                })
+                vim.api.nvim_set_hl(0, "HarpoonNumberActive", {
+                    fg = vim.api.nvim_get_hl(0, { name = "DevIconEditorConfig" }).fg,
+                    bg = "#5D6262",
+                })
             else
-                vim.api.nvim_set_hl(0,
-                    "HarpoonInactive", {
-                        fg = vim.api.nvim_get_hl(0, { name = "String" }).fg,
-                        bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg
-                    }
-                )
-                vim.api.nvim_set_hl(0,
-                    "HarpoonNumberInactive", {
-                        fg = vim.api.nvim_get_hl(0, { name = "Type" }).fg,
-                        bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg
-                    }
-                )
-                vim.api.nvim_set_hl(0,
-                    "HarpoonActive", {
-                        fg = vim.api.nvim_get_hl(0, { name = "String" }).fg,
-                        bg = "#6A4C7F"
-                    }
-                )
-                vim.api.nvim_set_hl(0,
-                    "HarpoonNumberActive", {
-                        fg = vim.api.nvim_get_hl(0, { name = "Type" }).fg,
-                        bg = "#6A4C7F"
-                    }
-                )
-                vim.api.nvim_set_hl(0,
-                    "TabLineFill", {
-                        fg = vim.api.nvim_get_hl(0, { name = "String" }).fg,
-                        bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg
-                    }
-                )
+                vim.api.nvim_set_hl(0, "HarpoonInactive", {
+                    fg = vim.api.nvim_get_hl(0, { name = "String" }).fg,
+                    bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg,
+                })
+                vim.api.nvim_set_hl(0, "HarpoonNumberInactive", {
+                    fg = vim.api.nvim_get_hl(0, { name = "Type" }).fg,
+                    bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg,
+                })
+                vim.api.nvim_set_hl(0, "HarpoonActive", {
+                    fg = vim.api.nvim_get_hl(0, { name = "String" }).fg,
+                    bg = "#6A4C7F",
+                })
+                vim.api.nvim_set_hl(0, "HarpoonNumberActive", {
+                    fg = vim.api.nvim_get_hl(0, { name = "Type" }).fg,
+                    bg = "#6A4C7F",
+                })
+                vim.api.nvim_set_hl(0, "TabLineFill", {
+                    fg = vim.api.nvim_get_hl(0, { name = "String" }).fg,
+                    bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg,
+                })
             end
 
             local marked = require("harpoon.mark")
@@ -151,7 +126,7 @@ return {
                 -- are saved in Windows file format, the mark in the function does not match the
                 -- saved mark and therefore is not recognized by the tabline. This implementation
                 -- checks if we are in Windows and does not perform the normalization if we are
-                if vim.fn.has('macunix') == 0 then
+                if vim.fn.has("macunix") == 0 then
                     buf_id = get_or_create_buffer(mark.filename)
                 else
                     local filename = vim.fs.normalize(mark.filename)
@@ -195,6 +170,6 @@ return {
                     windows_nav_file(i)
                 end, Opts)
             end
-        end
+        end,
     },
 }
