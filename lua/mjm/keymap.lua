@@ -28,8 +28,24 @@ vim.keymap.set("v", ">", ">gv", Opts)
 
 local exprOpts = { noremap = true, expr = true, silent = true }
 
-vim.keymap.set("n", "j", "v:count == 0 ? 'gj' : 'j'", exprOpts)
-vim.keymap.set("n", "k", "v:count == 0 ? 'gk' : 'k'", exprOpts)
+local vertical_motion = function(single, multiple)
+    local count = vim.v.count
+
+    if count == 0 then
+        return single
+    else
+        return multiple
+    end
+end
+
+vim.keymap.set("n", "j", function()
+    return vertical_motion("gj", "j")
+end, exprOpts)
+
+vim.keymap.set("n", "k", function()
+    return vertical_motion("gk", "k")
+end, exprOpts)
+
 vim.keymap.set("n", "gj", "<Nop>", Opts)
 vim.keymap.set("n", "gk", "<Nop>", Opts)
 
@@ -37,12 +53,12 @@ vim.keymap.set({ "n", "v" }, "x", '"_x', Opts)
 vim.keymap.set({ "n", "v" }, "X", '"_X', Opts)
 
 vim.keymap.set("n", "dd", function()
-    if vim.fn.getline(".") == "" then
-        return '"_dd'
+    if vim.api.nvim_get_current_line() == "" then
+        vim.cmd("delete _")
+    else
+        vim.cmd("delete")
     end
-
-    return "dd"
-end, { expr = true })
+end, Opts)
 
 vim.keymap.set({ "n", "v" }, "<leader>d", '"_d', Opts)
 vim.keymap.set({ "n", "v" }, "<leader>D", '"_D', Opts)
@@ -100,8 +116,9 @@ vim.keymap.set("n", "<leader>P", '"+P', Opts)
 -- Unlike the traditional '"_dP' map, this function does not alter default visual paste behavior
 local visual_paste = function(paste_char)
     local paste_cmd = '<esc><cmd>let @z = @"<cr>gv' .. paste_char .. '<cmd>let @" = @z<cr>'
+    local cur_mode = vim.fn.mode()
 
-    if vim.fn.mode() == "V" or vim.fn.mode() == "Vs" then
+    if cur_mode == "V" or cur_mode == "Vs" then
         return paste_cmd .. "=`]"
     else
         return paste_cmd
@@ -176,14 +193,42 @@ vim.keymap.set(
     Opts
 )
 
-vim.keymap.set("n", "<M-;>", function()
-    vim.cmd([[s/\s\+$//e]])
+---@param chars string
+local function put_at_beginning(chars)
+    local cursor_pos = vim.api.nvim_win_get_cursor(0)
+    local row = cursor_pos[1] - 1
 
-    if vim.api.nvim_get_current_line():sub(-1) == ";" then
-        vim.cmd([[silent! normal! mz$"_x`z]])
+    local current_line = vim.api.nvim_get_current_line()
+    local chars_len = #chars
+    local start_chars = current_line:sub(1, chars_len)
+
+    if start_chars ~= chars then
+        vim.api.nvim_buf_set_text(0, row, 0, row, 0, { chars })
     else
-        vim.cmd([[:execute "normal! mzA;" | normal! `z]])
+        vim.api.nvim_set_current_line(current_line:sub((chars_len + 1), current_line:len()))
     end
+end
+
+---@param chars string
+local function put_at_end(chars)
+    local cursor_pos = vim.api.nvim_win_get_cursor(0)
+    local row = cursor_pos[1] - 1
+    local current_line = vim.api.nvim_get_current_line()
+    local cline_cleaned = current_line:gsub("%s+$", "")
+    local col = #cline_cleaned
+
+    local chars_len = #chars
+    local end_chars = cline_cleaned:sub(-chars_len)
+
+    if end_chars ~= chars then
+        vim.api.nvim_buf_set_text(0, row, col, row, col, { chars })
+    else
+        vim.api.nvim_set_current_line(cline_cleaned:sub(1, cline_cleaned:len() - chars_len))
+    end
+end
+
+vim.keymap.set("n", "<M-;>", function()
+    put_at_end(";")
 end, Opts)
 
 vim.opt.spell = false
@@ -225,7 +270,7 @@ vim.keymap.set("n", "Q", "<nop>", Opts)
 
 -- vim.keymap.set("n", "H", "<Nop>", Opts) -- Used for a custom mapping
 vim.keymap.set({ "n", "v" }, "M", "<Nop>", Opts)
-vim.keymap.set({ "n", "v" }, "t", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "L", "<Nop>", Opts)
 
 vim.keymap.set("n", "{", "<Nop>", Opts)
 vim.keymap.set("n", "}", "<Nop>", Opts)
