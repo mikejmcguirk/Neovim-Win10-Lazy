@@ -5,6 +5,8 @@ local gf = require("mjm.global_funcs")
 local root_start = gf.get_buf_directory(vim.fn.bufnr(""))
 vim.lsp.start(gf.setup_tsserver(root_start))
 
+-- Autofixes are performed with eslint_d through conform
+
 local find_eslint_root_dir = function()
     local eslint_root_files = {
         ".eslintrc",

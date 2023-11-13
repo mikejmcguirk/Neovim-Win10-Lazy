@@ -4,7 +4,7 @@ vim.g.loaded_netrwPlugin = 1
 vim.g.loaded_netrwSettings = 1
 vim.g.netrw_banner = 0
 
-vim.keymap.set("", "<Space>", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "<Space>", "<Nop>", Opts)
 vim.g.mapleader = " "
 vim.g.maplocaleader = " "
 
