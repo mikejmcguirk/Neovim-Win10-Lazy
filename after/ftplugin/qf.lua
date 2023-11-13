@@ -1,3 +1,5 @@
+vim.opt_local.colorcolumn = ""
+
 local function qf_delete_entry()
     local current = vim.fn.line(".")
     local qflist = vim.fn.getqflist()

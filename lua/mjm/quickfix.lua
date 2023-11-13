@@ -1,3 +1,8 @@
+local open_at_bottom = function()
+    vim.cmd("copen")
+    vim.cmd.wincmd("J")
+end
+
 vim.keymap.set("n", "<leader>qt", function()
     local is_quickfix_open = false
     local win_info = vim.fn.getwininfo()
@@ -12,7 +17,7 @@ vim.keymap.set("n", "<leader>qt", function()
     if is_quickfix_open then
         vim.cmd("cclose")
     else
-        vim.cmd("copen")
+        open_at_bottom()
     end
 end, Opts)
 
@@ -39,7 +44,7 @@ local grep_function = function(grep_cmd)
         end, 0)
 
         vim.defer_fn(function()
-            vim.cmd("copen")
+            open_at_bottom()
         end, 0)
     end
 end
@@ -70,16 +75,16 @@ local diags_to_qf = function(severity_cap)
             local converted_diag = {
                 bufnr = diagnostic.bufnr,
                 filename = vim.fn.bufname(diagnostic.bufnr),
-                lnum = diagnostic.lnum,
-                end_lnum = diagnostic.end_lnum,
+                lnum = diagnostic.lnum + 1,
+                end_lnum = diagnostic.end_lnum + 1,
                 col = diagnostic.col,
                 end_col = diagnostic.end_col,
-                text = diagnostic.source
+                text = (diagnostic.source or "")
                     .. ": "
                     .. "["
-                    .. diagnostic.code
+                    .. (diagnostic.code or "")
                     .. "] "
-                    .. diagnostic.message,
+                    .. (diagnostic.message or ""),
                 type = severity_map[diagnostic.severity],
             }
 
@@ -88,7 +93,7 @@ local diags_to_qf = function(severity_cap)
     end
 
     vim.fn.setqflist(diagnostics, "r")
-    vim.cmd("copen")
+    open_at_bottom()
 end
 
 vim.keymap.set("n", "<leader>qiq", function()
@@ -97,32 +102,6 @@ end, Opts)
 
 vim.keymap.set("n", "<leader>qii", function()
     diags_to_qf(2) -- ERROR or WARN only
-end, Opts)
-
-vim.keymap.set("n", "<leader>ql", function()
-    local clients = vim.lsp.get_active_clients()
-    local for_qf_list = {}
-
-    for _, client in ipairs(clients) do
-        local bufs_for_client = "( "
-
-        for _, buf in ipairs(vim.lsp.get_buffers_by_client_id(client.id)) do
-            bufs_for_client = bufs_for_client .. buf .. " "
-        end
-
-        bufs_for_client = bufs_for_client .. ")"
-        local lsp_entry = "LSP: "
-            .. client.name
-            .. ", ID: "
-            .. client.id
-            .. ", Buffer(s): "
-            .. bufs_for_client
-
-        table.insert(for_qf_list, { text = lsp_entry })
-    end
-
-    vim.fn.setqflist(for_qf_list, "r")
-    vim.cmd("copen")
 end, Opts)
 
 vim.cmd("packadd cfilter")
@@ -187,4 +166,72 @@ vim.keymap.set("n", "<leader>qo", function()
     local cur_line = vim.fn.line(".")
     vim.cmd("cc " .. tostring(cur_line))
     vim.cmd("cclose")
+end, Opts)
+
+---@param statuses table{{code: string, description: string}}
+---@param filter boolean
+local get_git_info = function(statuses, filter)
+    local git_status = vim.fn.systemlist("git status --porcelain")
+    local files = {}
+
+    for _, file in ipairs(git_status) do
+        local found = false
+        local file_status = file:sub(1, 2)
+
+        ---@param text string
+        local to_insert = function(text)
+            return {
+                filename = file:sub(4),
+                text = text,
+                lnum = 1,
+                col = 1,
+                type = 1,
+            }
+        end
+
+        for _, status in ipairs(statuses) do
+            if file_status == status.code then
+                table.insert(files, to_insert(file_status .. " : " .. status.description))
+                found = true
+                break
+            end
+        end
+
+        if not found and not filter then
+            table.insert(files, to_insert(file_status .. " : Unknown"))
+        end
+    end
+
+    vim.fn.setqflist(files)
+    open_at_bottom()
+end
+
+local git_all = {
+    { code = " M", description = "Modified" },
+    { code = "A ", description = "Added" },
+    { code = " D", description = "Deleted" },
+    { code = "R ", description = "Renamed" },
+    { code = "C ", description = "Copied" },
+    { code = "U ", description = "Unmerged" },
+    { code = "??", description = "Untracked" },
+    { code = "!!", description = "Ignored" },
+    { code = "AM", description = "Staged and Modified" },
+    { code = "AD", description = "Staged for Deletion but Modified" },
+    { code = "MM", description = "Modified, Staged and Modified Again" },
+}
+
+vim.keymap.set("n", "<leader>qut", function()
+    get_git_info({
+        { code = "??", description = "Untracked File" },
+    }, true)
+end, Opts)
+
+vim.keymap.set("n", "<leader>quu", function()
+    get_git_info({
+        { code = " M", description = "Unstaged Change" },
+    }, true)
+end, Opts)
+
+vim.keymap.set("n", "<leader>qua", function()
+    get_git_info(git_all, false)
 end, Opts)

@@ -1,4 +1,5 @@
--- Make help open to the right
-vim.cmd.wincmd("L")
+vim.opt_local.colorcolumn = ""
 
 vim.keymap.set("n", "q", ":bd<cr>", { buffer = 0 })
+
+vim.cmd.wincmd("L")

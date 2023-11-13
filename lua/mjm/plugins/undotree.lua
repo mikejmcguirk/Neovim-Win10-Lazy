@@ -1,6 +1,7 @@
 return {
-    'mbbill/undotree',
+    "mbbill/undotree",
     lazy = false,
+    event = { "BufReadPre", "BufNewFile" },
     config = function()
         vim.keymap.set("n", "<leader>ut", "<cmd>UndotreeToggle<cr>")
     end,
@@ -43,5 +44,5 @@ return {
                 print("Is Linux: " .. (isLinux == 1 and "True" or "False"))
             end
         end
-    end
+    end,
 }

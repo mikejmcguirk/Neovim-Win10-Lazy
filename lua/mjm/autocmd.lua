@@ -15,7 +15,19 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 vim.api.nvim_create_autocmd({ "BufWritePre" }, {
     group = mjm_group,
     pattern = "*",
-    callback = function()
+    callback = function(ev)
+        if vim.bo.readonly then
+            return
+        end
+
+        local clients = vim.lsp.buf_get_clients(ev.bufnr)
+
+        for _, client in pairs(clients) do
+            if client.name ~= "copilot" then
+                return
+            end
+        end
+
         vim.cmd([[normal! mz]])
 
         vim.cmd([[%s/\s\+$//e]]) -- Remove trailing whitespace
@@ -23,24 +35,5 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
         vim.cmd([[%s/\%^\n\+//e]]) -- Remove leading blank lines
 
         vim.cmd([[silent! normal! `z]])
-    end,
-})
-
--- Auto-removes boilerplate status messages from the command line
-vim.api.nvim_create_autocmd({ "TextYankPost", "BufWritePost", "TextChanged" }, {
-    group = mjm_group,
-    pattern = "*",
-    callback = function()
-        vim.cmd([[normal! :<esc>]])
-    end,
-})
-
--- Removes executed commands from the command line
--- Uses print() to avoid a bug where <cmd><backspace> exits vim without saving
-vim.api.nvim_create_autocmd({ "CmdlineLeave" }, {
-    group = mjm_group,
-    pattern = "*",
-    callback = function()
-        print(" ")
     end,
 })
