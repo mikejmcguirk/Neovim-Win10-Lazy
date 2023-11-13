@@ -2,18 +2,26 @@ return {
     {
         "nvim-telescope/telescope.nvim",
         branch = "0.1.x",
-        dependencies = { "nvim-lua/plenary.nvim",
+        dependencies = {
+            "nvim-lua/plenary.nvim",
             {
                 "nvim-telescope/telescope-fzf-native.nvim",
-                build = "cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build " ..
-                    "--config Release && cmake --install build --prefix build",
+                build = "cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build "
+                    .. "--config Release && cmake --install build --prefix build",
                 cond = function()
                     return vim.fn.executable("cmake") == 1
                 end,
             },
+            {
+                "debugloop/telescope-undo.nvim",
+            },
         },
         config = function()
             local telescope = require("telescope")
+
+            telescope.load_extension("fzf")
+            telescope.load_extension("harpoon")
+            telescope.load_extension("undo")
 
             telescope.setup({
                 defaults = {
@@ -34,7 +42,7 @@ return {
                         },
                         i = {
                             ["<C-h>"] = "which_key",
-                            ['<C-u>'] = false,
+                            ["<C-u>"] = false,
                             ["<c-d>"] = false,
                             ["<C-c>"] = false,
                             ["<up>"] = false,
@@ -45,13 +53,26 @@ return {
                             ["<PageDown>"] = false,
                             ["<Home>"] = false,
                             ["<End>"] = false,
-                        }
-                    }
-                }
+                        },
+                    },
+                },
+                extensions = {
+                    undo = {
+                        mappings = {
+                            i = {
+                                ["<cr>"] = require("telescope-undo.actions").yank_additions,
+                                ["<C-y>"] = require("telescope-undo.actions").yank_deletions,
+                                ["<C-r>"] = require("telescope-undo.actions").restore,
+                            },
+                            n = {
+                                ["y"] = require("telescope-undo.actions").yank_additions,
+                                ["Y"] = require("telescope-undo.actions").yank_deletions,
+                                ["u"] = require("telescope-undo.actions").restore,
+                            },
+                        },
+                    },
+                },
             })
-
-            telescope.load_extension("fzf")
-            telescope.load_extension("harpoon")
 
             local builtin = require("telescope.builtin")
 
@@ -90,6 +111,7 @@ return {
             vim.keymap.set("n", "<leader>tq", builtin.quickfix)
             vim.keymap.set("n", "<leader>ti", builtin.registers)
             vim.keymap.set("n", "<leader>tr", builtin.resume)
-        end
+            vim.keymap.set("n", "<leader>tu", "<cmd>Telescope undo<cr>")
+        end,
     },
 }

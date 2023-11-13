@@ -1,3 +1,3 @@
-vim.bo.tabstop = 2
-vim.bo.softtabstop = 2
-vim.bo.shiftwidth = 2
+local global_funcs = require("mjm.global_funcs")
+
+global_funcs.adjust_tab_width(2)
