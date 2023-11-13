@@ -1,29 +1,23 @@
-# Windows 10 Neovim Config Using Lazy
+# Neovim Config Using Lazy (Windows 10 Compatible)
 
-- [Windows 10 Neovim Config Using Lazy](#windows-10-neovim-config-using-lazy)
-  - [Objectives](#objectives)
-  - [General Installation Notes](#general-installation-notes)
+- [Neovim Config Using Lazy (Windows 10 Compatible)](#neovim-config-using-lazy-windows-10-compatible)
+  - [Notes](#notes)
   - [Git Installation Notes](#git-installation-notes)
-  - [Visual Studio Build Utils](#visual-studio-build-utils)
-  - [LSP Installation and Notes](#lsp-installation-and-notes)
-    - [Node Installation for JavaScript and Copilot](#node-installation-for-javascript-and-copilot)
+  - [Visual Studio Build Utils (Windows Specific)](#visual-studio-build-utils-windows-specific)
+    - [Node Installation for JavaScript and Copilot (Windows Specific)](#node-installation-for-javascript-and-copilot-windows-specific)
     - [Install JavaScript LSP Stack](#install-javascript-lsp-stack)
+    - [Docker LSP](#docker-lsp)
     - [Lua Language Server](#lua-language-server)
-    - [pylsp](#pylsp)
+    - [pylsp (Windows Specific)](#pylsp-windows-specific)
     - [OmniSharp](#omnisharp)
     - [rust-analyzer and taplo](#rust-analyzer-and-taplo)
     - [Marksman](#marksman)
   - [Other Setup Notes](#other-setup-notes)
   - [Windows Terminal Notes](#windows-terminal-notes)
 
-### Objectives
+### Notes
 
-- Git-Controllable on multiple machines using System environment variables (see the env_variables.lua file) for machine-specific configuration
-- Function on both Windows 10 and Linux systems
-- Use Lazy loading to minimize startup time
-
-### General Installation Notes
-
+- Uses system environment variables (see global_env.lua) for machine-specific settings
 - When installing on Windows, avoid running as Administrator or using an elevated terminal if possible (accepting UAC prompts is still fine). If the nvim-data files have mixed ownership, permissions conflicts might cause plugins to fail
 
 ### Git Installation Notes
@@ -32,7 +26,7 @@
 
 - If, when using Git, you see issues with verifying SSL keys, check how Git's SSL is configured first. Git can be switched from OpenSSL to Windows SSL by re-running the installer and changing the installation
 
-### Visual Studio Build Utils
+### Visual Studio Build Utils (Windows Specific)
 
 - To install the Telescope fzf extension and rustup, you need the Visual Studio C++ Build Tools installed
 
@@ -48,13 +42,7 @@
 
   - Click the "Install" button
 
-### LSP Installation and Notes
-
-This config assumes that the LSPs are manually installed rather than using Mason. While the upfront cost is higher, it allows for more flexibility in configuration and troubleshooting.
-
-<i><u>Note:</u> The most up-to-date installation instructions can be found at the <a href="https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md">nvim-lspconfig documentation</a> or the LSPs' repos</i>
-
-##### Node Installation for JavaScript and Copilot
+##### Node Installation for JavaScript and Copilot (Windows Specific)
 
 - Perform a clean install of NVM for Windows as described here: https://github.com/coreybutler/nvm-windows
 
@@ -125,7 +113,7 @@ This config assumes that the LSPs are manually installed rather than using Mason
 
 - This config uses the nvim-lspconfig boilerplate for checking the project workspace. If neither a .luarc.json nor a .luarc.jsonc file are found, the Neovim runtime files will be loaded
 
-##### pylsp
+##### pylsp (Windows Specific)
 
 - Install Python using the executable from the org's official website
 
@@ -240,8 +228,6 @@ This config assumes that the LSPs are manually installed rather than using Mason
   - Restart Neovim and see if the parsers try re-installing
 
 ### Windows Terminal Notes
-
-This config is targeted for Windows Terminal
 
 - Installing through Windows Store is easiest. Windows Terminal will be set to be your default terminal and Windows Store will automatically check for updates
 

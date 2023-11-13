@@ -149,6 +149,7 @@ local add_cap_markers = {
     "g~iW",
     "gu",
     "gU",
+    "g~~",
 }
 
 for _, map in pairs(add_cap_markers) do
