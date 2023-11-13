@@ -1,8 +1,13 @@
--- For the benefit of nvim-tree, which hijacks netrw
-vim.g.loaded_netrw = 1
-vim.g.loaded_netrwPlugin = 1
-vim.g.loaded_netrwSettings = 1
-vim.g.netrw_banner = 0
+-- Because of race conditions at startup, netrw should be disabled at the very beginning of
+-- startup if nvim-tree is installed
+local status, nvim_tree = pcall(require, "nvim-tree")
+
+if status then
+    vim.g.loaded_netrw = 1
+    vim.g.loaded_netrwPlugin = 1
+    vim.g.loaded_netrwSettings = 1
+    vim.g.netrw_banner = 0
+end
 
 vim.keymap.set({ "n", "v" }, "<Space>", "<Nop>", Opts)
 vim.g.mapleader = " "
