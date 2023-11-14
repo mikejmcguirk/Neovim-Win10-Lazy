@@ -4,24 +4,20 @@ local open_at_bottom = function()
 end
 
 vim.keymap.set("n", "<leader>qt", function()
-    local is_quickfix_open = false
     local win_info = vim.fn.getwininfo()
 
     for _, win in ipairs(win_info) do
         if win.quickfix == 1 then
-            is_quickfix_open = true
-            break
+            vim.cmd("cclose")
+
+            return
         end
     end
 
-    if is_quickfix_open then
-        vim.cmd("cclose")
-    else
-        open_at_bottom()
-    end
+    open_at_bottom()
 end, Opts)
 
-vim.keymap.set("n", "<leader>qo", "<cmd>copen<cr>", Opts)
+vim.keymap.set("n", "<leader>qp", "<cmd>copen<cr>", Opts)
 vim.keymap.set("n", "<leader>qc", "<cmd>cclose<cr>", Opts)
 
 vim.opt.grepformat = "%f:%l:%m"
@@ -61,38 +57,38 @@ end, Opts)
 ---@param severity_cap number
 local diags_to_qf = function(severity_cap)
     local raw_diagnostics = vim.diagnostic.get(nil)
-    local diagnostics = {}
+    local diags_for_qf = {}
 
-    for _, diagnostic in ipairs(raw_diagnostics) do
-        if diagnostic.severity <= severity_cap then
-            local severity_map = {
-                [vim.diagnostic.severity.ERROR] = "E",
-                [vim.diagnostic.severity.WARN] = "W",
-                [vim.diagnostic.severity.INFO] = "I",
-                [vim.diagnostic.severity.HINT] = "H",
-            }
+    local severity_map = {
+        [vim.diagnostic.severity.ERROR] = "E",
+        [vim.diagnostic.severity.WARN] = "W",
+        [vim.diagnostic.severity.INFO] = "I",
+        [vim.diagnostic.severity.HINT] = "H",
+    }
 
+    for _, raw_diag in ipairs(raw_diagnostics) do
+        if raw_diag.severity <= severity_cap then
             local converted_diag = {
-                bufnr = diagnostic.bufnr,
-                filename = vim.fn.bufname(diagnostic.bufnr),
-                lnum = diagnostic.lnum + 1,
-                end_lnum = diagnostic.end_lnum + 1,
-                col = diagnostic.col,
-                end_col = diagnostic.end_col,
-                text = (diagnostic.source or "")
+                bufnr = raw_diag.bufnr,
+                filename = vim.fn.bufname(raw_diag.bufnr),
+                lnum = raw_diag.lnum + 1,
+                end_lnum = raw_diag.end_lnum + 1,
+                col = raw_diag.col,
+                end_col = raw_diag.end_col,
+                text = (raw_diag.source or "")
                     .. ": "
                     .. "["
-                    .. (diagnostic.code or "")
+                    .. (raw_diag.code or "")
                     .. "] "
-                    .. (diagnostic.message or ""),
-                type = severity_map[diagnostic.severity],
+                    .. (raw_diag.message or ""),
+                type = severity_map[raw_diag.severity],
             }
 
-            table.insert(diagnostics, converted_diag)
+            table.insert(diags_for_qf, converted_diag)
         end
     end
 
-    vim.fn.setqflist(diagnostics, "r")
+    vim.fn.setqflist(diags_for_qf, "r")
     open_at_bottom()
 end
 
@@ -234,4 +230,42 @@ end, Opts)
 
 vim.keymap.set("n", "<leader>qua", function()
     get_git_info(git_all, false)
+end, Opts)
+
+vim.keymap.set("n", "<leader>ql", function()
+    local clients = vim.lsp.get_active_clients()
+
+    if #clients == 0 then
+        print("No active LSP clients")
+        return
+    end
+
+    local for_qf_list = {}
+
+    for _, client in ipairs(clients) do
+        local bufs_for_client = "( "
+
+        for _, buf in ipairs(vim.lsp.get_buffers_by_client_id(client.id)) do
+            bufs_for_client = bufs_for_client .. buf .. " "
+        end
+
+        bufs_for_client = bufs_for_client .. ")"
+        local lsp_entry = "LSP: "
+            .. client.name
+            .. ", ID: "
+            .. client.id
+            .. ", Buffer(s): "
+            .. bufs_for_client
+            .. ", Root: "
+            .. (client.config.root_dir or "")
+            .. ", Status: "
+            .. (client.config.status or "")
+            .. ", Command: "
+            .. (client.config.cmd[1] or "")
+
+        table.insert(for_qf_list, { text = lsp_entry })
+    end
+
+    vim.fn.setqflist(for_qf_list, "r")
+    open_at_bottom()
 end, Opts)

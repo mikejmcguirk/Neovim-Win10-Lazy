@@ -1,4 +1,4 @@
-local exprOpts = { noremap = true, expr = true, silent = true }
+local exprOpts = { silent = true, expr = true }
 local e21_msg = "E21: Cannot make changes, 'modifiable' is off"
 
 ---------------------

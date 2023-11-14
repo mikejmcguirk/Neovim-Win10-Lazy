@@ -7,17 +7,17 @@ M.adjust_tab_width = function(width)
     vim.bo.shiftwidth = width
 end
 
+local get_home = function()
+    if vim.fn.has("win32") == 1 then
+        return os.getenv("USERPROFILE")
+    else
+        return os.getenv("HOME")
+    end
+end
+
 ---@param patterns string[]
 ---@param path string
 M.find_proj_root = function(patterns, path, backup_dir)
-    local get_home = function()
-        if vim.fn.has("win32") == 1 then
-            return os.getenv("USERPROFILE")
-        else
-            return os.getenv("HOME")
-        end
-    end
-
     local matches = vim.fs.find(patterns, { path = path, upward = true, stop = get_home() })
 
     for _, match in ipairs(matches) do
@@ -35,29 +35,24 @@ M.find_proj_root = function(patterns, path, backup_dir)
     return nil
 end
 
+---@param filename string
+---@param root_start string
+---@param field_name string
 M.find_file_with_field = function(filename, root_start, field_name)
-    local get_home = function()
-        if vim.fn.has("win32") == 1 then
-            return os.getenv("USERPROFILE")
-        else
-            return os.getenv("HOME")
-        end
-    end
-
-    local matches = vim.fs.find(
-        { filename },
-        { path = root_start, upward = true, stop = get_home() }
-    )
+    local matches = vim.fs.find(filename, { path = root_start, upward = true, stop = get_home() })
 
     for _, match in ipairs(matches) do
         local file = io.open(match, "r")
+
         if file then
             for line in file:lines() do
                 if line:find(field_name) then
                     file:close()
+
                     return true
                 end
             end
+
             file:close()
         end
     end
@@ -81,32 +76,27 @@ end
 
 M.get_buf_directory = function(buf_num)
     local buf_name = vim.fn.bufname(buf_num)
+
     return vim.fn.fnamemodify(buf_name, ":p:h")
 end
 
 M.setup_tsserver = function(root_start)
-    local gf = require("mjm.global_funcs")
+    local root_dir = M.find_proj_root({ "tsconfig.json" }, root_start, nil)
 
-    local find_js_root_dir = function(root_input)
-        local tsconfig_dir = gf.find_proj_root({ "tsconfig.json" }, root_input, nil)
+    if not root_dir then
+        local js_root_files = {
+            "package.json",
+            "jsconfig.json",
+            ".git",
+        }
 
-        if tsconfig_dir then
-            return tsconfig_dir
-        else
-            local js_root_files = {
-                "package.json",
-                "jsconfig.json",
-                ".git",
-            }
-
-            return gf.find_proj_root(js_root_files, root_input, root_input)
-        end
+        root_dir = M.find_proj_root(js_root_files, root_start, root_start)
     end
 
     return {
         name = "tsserver",
         cmd = { "typescript-language-server", "--stdio" },
-        root_dir = find_js_root_dir(root_start),
+        root_dir = root_dir,
         single_file_support = true,
         capabilities = Lsp_Capabilities,
         init_options = {

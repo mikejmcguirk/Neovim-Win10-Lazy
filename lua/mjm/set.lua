@@ -1,14 +1,15 @@
--- Because of race conditions at startup, netrw should be disabled at the very beginning of
--- startup if nvim-tree is installed
+-- Because of race conditions at startup, netrw should be disabled at the very beginning
+-- if nvim-tree is installed
 local status, nvim_tree = pcall(require, "nvim-tree")
 
 if status then
     vim.g.loaded_netrw = 1
     vim.g.loaded_netrwPlugin = 1
     vim.g.loaded_netrwSettings = 1
-    vim.g.netrw_banner = 0
 end
 
+-- Leader maps are set based on the definition of leader at the time the mapping is created
+-- Thus, leader is set early to ensure that all leader maps are correct
 vim.keymap.set({ "n", "v" }, "<Space>", "<Nop>", Opts)
 vim.g.mapleader = " "
 vim.g.maplocaleader = " "
@@ -49,6 +50,7 @@ vim.opt.incsearch = true
 vim.opt.modelines = 1
 vim.opt.updatetime = 1000
 
+vim.opt.list = true
 vim.opt.listchars = {
     tab = "<–>",
     extends = "»",
@@ -56,7 +58,8 @@ vim.opt.listchars = {
     nbsp = "×",
 }
 
-vim.opt.list = true
+vim.opt.wrap = false
+vim.opt.linebreak = true
 
 vim.opt.cursorline = true
 
@@ -78,6 +81,3 @@ end
 set_cursorline("WinLeave", false, "")
 set_cursorline("WinEnter", true, "")
 set_cursorline("FileType", false, "TelescopePrompt")
-
-vim.opt.wrap = false
-vim.opt.linebreak = true
