@@ -18,7 +18,7 @@ return {
                     -- highlight = { "@Type" },
                 },
                 whitespace = { highlight = { "Normal" } },
-                debounce = 100,
+                debounce = 200,
             })
         end,
     },
