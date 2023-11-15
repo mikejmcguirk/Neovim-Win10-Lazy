@@ -10,9 +10,26 @@ return {
             modules = {},
             ignore_install = {},
             auto_install = false,
-            ensure_installed = { "c", "lua", "vim", "vimdoc", "query", "elixir", "heex",
-                "javascript", "html", "css", "rust", "sql", "c_sharp", "python",
-                "json", "typescript", "dockerfile", "bash", "perl"
+            ensure_installed = {
+                "c",
+                "lua",
+                "vim",
+                "vimdoc",
+                "query",
+                "elixir",
+                "heex",
+                "javascript",
+                "html",
+                "css",
+                "rust",
+                "sql",
+                "c_sharp",
+                "python",
+                "json",
+                "typescript",
+                "dockerfile",
+                "bash",
+                "perl",
             },
             sync_install = false,
             highlight = {
@@ -29,30 +46,49 @@ return {
                 updatetime = 25,
                 persist_queries = false,
                 keybindings = {
-                    toggle_query_editor = 'o',
-                    toggle_hl_groups = 'i',
-                    toggle_injected_languages = 't',
-                    toggle_anonymous_nodes = 'a',
-                    toggle_language_display = 'I',
-                    focus_language = 'f',
-                    unfocus_language = 'F',
-                    update = 'R',
-                    goto_node = '<cr>',
-                    show_help = '?',
+                    toggle_query_editor = "o",
+                    toggle_hl_groups = "i",
+                    toggle_injected_languages = "t",
+                    toggle_anonymous_nodes = "a",
+                    toggle_language_display = "I",
+                    focus_language = "f",
+                    unfocus_language = "F",
+                    update = "R",
+                    goto_node = "<cr>",
+                    show_help = "?",
                 },
             },
             textobjects = {
                 select = {
                     enable = true,
-                    lookahead = false,
+                    lookahead = true,
                     keymaps = {
                         ["a,"] = "@parameter.outer",
                         ["i,"] = "@parameter.inner",
                         ["af"] = "@function.outer",
                         ["if"] = "@function.inner",
-                    }
-                }
-            }
+                    },
+                },
+                move = {
+                    enable = true,
+                    set_jumps = true,
+                    goto_previous_start = {
+                        ["[,"] = "@parameter.inner",
+                    },
+                    goto_next_start = {
+                        ["],"] = "@parameter.inner",
+                    },
+                },
+                swap = {
+                    enable = true,
+                    swap_previous = {
+                        ["<leader>[,"] = "@parameter.inner",
+                    },
+                    swap_next = {
+                        ["<leader>],"] = "@parameter.inner",
+                    },
+                },
+            },
         })
-    end
+    end,
 }

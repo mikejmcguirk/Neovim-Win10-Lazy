@@ -32,6 +32,8 @@ vim.keymap.set("n", "ZQ", "<Nop>", Opts)
 vim.keymap.set("n", "Q", "<nop>", Opts)
 vim.keymap.set("n", "gQ", "<nop>", Opts)
 
+vim.keymap.set({ "n", "v" }, "<C-z>", "<nop>", Opts)
+
 -----------------------
 -- Window Management --
 -----------------------
