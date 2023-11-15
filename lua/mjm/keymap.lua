@@ -106,9 +106,6 @@ vim.keymap.set("n", "k", function()
     return vertical_motion(vim.v.count, "gk", "k")
 end, exprOpts)
 
-vim.keymap.set("n", "gj", "<Nop>", Opts)
-vim.keymap.set("n", "gk", "<Nop>", Opts)
-
 vim.keymap.set("v", "<", "<gv", Opts)
 vim.keymap.set("v", ">", ">gv", Opts)
 
@@ -140,23 +137,41 @@ vim.keymap.set("n", "J", function()
     vim.fn.winrestview(cur_view)
 end, Opts)
 
-local add_cap_markers = {
-    "~",
+local cap_motions_norm = {
     "guu",
     "guiw",
     "guiW",
     "gUU",
     "gUiw",
     "gUiW",
-    "g~iw",
-    "g~iW",
-    "gu",
-    "gU",
     "g~~",
+    "g~iw",
+    "g~IW",
 }
 
-for _, map in pairs(add_cap_markers) do
+local cap_motions_visual = {
+    "~",
+    "g~",
+    "gu",
+    "gU",
+}
+
+for _, map in pairs(cap_motions_norm) do
     vim.keymap.set("n", map, function()
+        if not vim.api.nvim_buf_get_option(0, "modifiable") then
+            vim.api.nvim_err_writeln(e21_msg)
+
+            return
+        end
+
+        local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
+        vim.cmd("normal! " .. map)
+        vim.api.nvim_win_set_cursor(0, { cur_row, cur_col })
+    end, Opts)
+end
+
+for _, map in pairs(cap_motions_visual) do
+    vim.keymap.set("v", map, function()
         if not vim.api.nvim_buf_get_option(0, "modifiable") then
             vim.api.nvim_err_writeln(e21_msg)
 
@@ -461,8 +476,6 @@ vim.keymap.set({ "n", "i", "v", "c" }, "<PageDown>", "<Nop>", Opts)
 vim.keymap.set({ "n", "i", "v", "c" }, "<Home>", "<Nop>", Opts)
 vim.keymap.set({ "n", "i", "v", "c" }, "<End>", "<Nop>", Opts)
 vim.keymap.set({ "n", "i", "v", "c" }, "<Insert>", "<Nop>", Opts)
-
-vim.keymap.set("i", "<C-l>", "<cmd>Telescope find_files<cr>", Opts)
 
 vim.opt.mouse = "a" -- Otherwise, the terminal handles mouse functionality
 vim.opt.mousemodel = "extend" -- Disables terminal right-click paste
