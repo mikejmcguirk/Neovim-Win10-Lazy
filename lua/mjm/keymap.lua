@@ -1,5 +1,19 @@
-local exprOpts = { silent = true, expr = true }
+local exprOpts = vim.tbl_extend("force", { expr = true }, Opts)
 local e21_msg = "E21: Cannot make changes, 'modifiable' is off"
+
+local add_cursor_fix = function(map)
+    local is_modifiable = vim.api.nvim_buf_get_option(0, "modifiable")
+
+    if not is_modifiable then
+        vim.api.nvim_err_writeln(e21_msg)
+
+        return
+    end
+
+    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
+    vim.cmd("normal! " .. map)
+    vim.api.nvim_win_set_cursor(0, { cur_row, cur_col })
+end
 
 ---------------------
 -- Mode Management --
@@ -114,26 +128,13 @@ vim.keymap.set("n", "<leader>/", "<cmd>noh<cr>", Opts)
 vim.keymap.set("n", "gV", "`[v`]", Opts)
 vim.keymap.set("n", "<leader>V", "_vg_", Opts)
 
-vim.keymap.set({ "n", "v" }, "Q", "<nop>", Opts)
-vim.keymap.set({ "n", "v" }, "gQ", "<nop>", Opts)
-
 ---------------------------
 -- Cursor Movement Fixes --
 ---------------------------
 
 vim.keymap.set("n", "J", function()
-    if not vim.api.nvim_buf_get_option(0, "modifiable") then
-        vim.api.nvim_err_writeln(e21_msg)
-
-        return
-    end
-
     local cur_view = vim.fn.winsaveview()
-    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
-
-    vim.cmd("normal! J")
-
-    vim.api.nvim_win_set_cursor(0, { cur_row, cur_col })
+    add_cursor_fix("J")
     vim.fn.winrestview(cur_view)
 end, Opts)
 
@@ -158,29 +159,14 @@ local cap_motions_visual = {
 
 for _, map in pairs(cap_motions_norm) do
     vim.keymap.set("n", map, function()
-        if not vim.api.nvim_buf_get_option(0, "modifiable") then
-            vim.api.nvim_err_writeln(e21_msg)
-
-            return
-        end
-
-        local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
-        vim.cmd("normal! " .. map)
-        vim.api.nvim_win_set_cursor(0, { cur_row, cur_col })
+        local cmd = vim.v.count .. map
+        add_cursor_fix(cmd)
     end, Opts)
 end
 
 for _, map in pairs(cap_motions_visual) do
     vim.keymap.set("v", map, function()
-        if not vim.api.nvim_buf_get_option(0, "modifiable") then
-            vim.api.nvim_err_writeln(e21_msg)
-
-            return
-        end
-
-        local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
-        vim.cmd("normal! " .. map)
-        vim.api.nvim_win_set_cursor(0, { cur_row, cur_col })
+        add_cursor_fix(map)
     end, Opts)
 end
 
@@ -192,18 +178,15 @@ vim.keymap.set({ "n", "v" }, "x", '"_x', Opts)
 vim.keymap.set({ "n", "v" }, "X", '"_X', Opts)
 
 vim.keymap.set("n", "dd", function()
-    if not vim.api.nvim_buf_get_option(0, "modifiable") then
-        vim.api.nvim_err_writeln(e21_msg)
+    local count = vim.v.count1
+    local cur_line = vim.api.nvim_get_current_line()
 
-        return
-    end
-
-    if vim.api.nvim_get_current_line() == "" then
-        vim.api.nvim_del_current_line()
+    if count <= 1 and cur_line == "" then
+        return '"_dd'
     else
-        vim.cmd("delete")
+        return "dd"
     end
-end, Opts)
+end, exprOpts)
 
 local change_del_fixes = function(lower, upper)
     vim.keymap.set({ "n", "v" }, "<leader>" .. lower, '"_' .. lower, Opts)
@@ -225,7 +208,25 @@ vim.keymap.set("v", "<leader>y", 'mz"+y`z', Opts)
 vim.keymap.set("n", "<leader>Y", '"+y$', Opts) -- Mapping to "+Y yanks the whole line
 vim.keymap.set("v", "Y", "<nop>", Opts)
 
-local text_objects = { "t", "<", '"', "'", "`", "(", "[", "{", "p" }
+local backward_objects = { "b", "B", "ge", "gE" }
+
+for _, object in pairs(backward_objects) do
+    local main_map = "y" .. object
+
+    vim.keymap.set("n", main_map, function()
+        local main_cmd = vim.v.count1 .. main_map
+        add_cursor_fix(main_cmd)
+    end, Opts)
+
+    local ext_map = "<leader>y" .. object
+
+    vim.keymap.set("n", ext_map, function()
+        local ext_cmd = vim.v.count1 .. '"+' .. main_map
+        add_cursor_fix(ext_cmd)
+    end, Opts)
+end
+
+local text_objects = { "<", '"', "'", "`", "(", "[", "{", "p" }
 
 for _, object in pairs(text_objects) do
     vim.keymap.set("n", "y" .. object, "<nop>", Opts)
@@ -234,6 +235,7 @@ end
 
 table.insert(text_objects, "w")
 table.insert(text_objects, "W")
+table.insert(text_objects, "t")
 
 local inner_outer = { "i", "a" }
 
@@ -242,17 +244,14 @@ for _, object in pairs(text_objects) do
         local main_cmd = "y" .. in_out .. object
 
         vim.keymap.set("n", main_cmd, function()
-            local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
-            vim.cmd("normal! " .. main_cmd)
-            vim.api.nvim_win_set_cursor(0, { cur_row, cur_col })
+            add_cursor_fix(main_cmd)
         end, Opts)
 
-        local ext_cmd = "<leader>" .. main_cmd
+        local ext_map = "<leader>y" .. in_out .. object
+        local ext_cmd = '"+' .. main_cmd
 
-        vim.keymap.set("n", ext_cmd, function()
-            local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
-            vim.cmd("normal! " .. ext_cmd)
-            vim.api.nvim_win_set_cursor(0, { cur_row, cur_col })
+        vim.keymap.set("n", ext_map, function()
+            add_cursor_fix(ext_cmd)
         end, Opts)
     end
 end
@@ -268,14 +267,6 @@ for _, command in pairs(commands) do
     end
 end
 
-for _, command in pairs(commands) do
-    for _, nop_text_object in pairs(nop_text_objects) do
-        if nop_text_object ~= "s" then -- vim-surround uses cs, ds, and ys
-            vim.keymap.set("n", command .. nop_text_object, "<Nop>", Opts)
-        end
-    end
-end
-
 vim.keymap.set({ "n", "v" }, "s", "<Nop>", Opts)
 vim.keymap.set("n", "S", "<Nop>", Opts) -- Used in visual mode by vim-surround
 
@@ -283,8 +274,44 @@ vim.keymap.set("n", "S", "<Nop>", Opts) -- Used in visual mode by vim-surround
 -- Paste Fixes --
 -----------------
 
-vim.keymap.set("n", "<leader>p", '"+p', Opts)
-vim.keymap.set("n", "<leader>P", '"+P', Opts)
+vim.keymap.set("n", "p", function()
+    local cur_view = vim.fn.winsaveview()
+
+    local cmd = vim.v.count1 .. "p"
+    add_cursor_fix(cmd)
+
+    vim.fn.winrestview(cur_view)
+end, Opts)
+
+vim.keymap.set("n", "P", function()
+    local cur_view = vim.fn.winsaveview()
+
+    local cmd = vim.v.count1 .. "P"
+    add_cursor_fix(cmd)
+
+    vim.fn.winrestview(cur_view)
+end, Opts)
+
+vim.keymap.set("n", "<leader>p", function()
+    local cur_view = vim.fn.winsaveview()
+
+    local cmd = vim.v.count1 .. '"+p'
+    add_cursor_fix(cmd)
+
+    vim.fn.winrestview(cur_view)
+end, Opts)
+
+vim.keymap.set("n", "<leader>P", function()
+    local cur_view = vim.fn.winsaveview()
+
+    local cmd = vim.v.count1 .. '"+P'
+    add_cursor_fix(cmd)
+
+    vim.fn.winrestview(cur_view)
+end, Opts)
+
+vim.keymap.set("n", "<leader>gp", '"+gp', Opts)
+vim.keymap.set("n", "<leader>gP", '"+gP', Opts)
 
 ---@param paste_char string
 local visual_paste = function(paste_char)
@@ -299,7 +326,7 @@ local visual_paste = function(paste_char)
     if cur_mode == "V" or cur_mode == "Vs" then
         return paste_char .. "=`]"
     else
-        return paste_char
+        return "mz" .. paste_char .. "`z"
     end
 end
 
@@ -421,6 +448,7 @@ vim.keymap.set(
 -- Title Case Maps
 vim.keymap.set("n", "gllw", "mz<cmd> s/\\v<(.)(\\w*)/\\u\\1\\L\\2/ge<cr><cmd>noh<cr>`z", Opts)
 vim.keymap.set("n", "gllW", "mz<cmd> s/\\v<(.)(\\S*)/\\u\\1\\L\\2/ge<cr><cmd>noh<cr>`z", Opts)
+
 vim.keymap.set("n", "gliw", "mzguiw~`z", Opts)
 vim.keymap.set("n", "gliW", "mzguiW~`z", Opts)
 

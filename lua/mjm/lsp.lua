@@ -19,7 +19,7 @@ local handler_border = {
 vim.diagnostic.config({
     update_in_insert = false,
     severity_sort = true,
-    float = { vim.fn.flatten({ handler_border, { source = "always" } }) },
+    float = vim.tbl_extend("force", { source = "always" }, handler_border),
 })
 
 -- LSP windows use floating windows, documented in nvim_open_win
