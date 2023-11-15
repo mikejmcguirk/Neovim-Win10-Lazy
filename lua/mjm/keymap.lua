@@ -88,8 +88,8 @@ vim.keymap.set("i", "!", "!<C-g>u", Opts)
 
 ---@param single string
 ---@param multiple string
-local vertical_motion = function(single, multiple)
-    if vim.v.count == 0 then
+local vertical_motion = function(vcount, single, multiple)
+    if vcount == 0 then
         return single
     else
         return multiple
@@ -97,11 +97,11 @@ local vertical_motion = function(single, multiple)
 end
 
 vim.keymap.set("n", "j", function()
-    return vertical_motion("gj", "j")
+    return vertical_motion(vim.v.count, "gj", "j")
 end, exprOpts)
 
 vim.keymap.set("n", "k", function()
-    return vertical_motion("gk", "k")
+    return vertical_motion(vim.v.count, "gk", "k")
 end, exprOpts)
 
 vim.keymap.set("n", "gj", "<Nop>", Opts)
