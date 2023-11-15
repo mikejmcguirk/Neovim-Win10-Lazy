@@ -80,6 +80,42 @@ M.get_buf_directory = function(buf_num)
     return vim.fn.fnamemodify(buf_name, ":p:h")
 end
 
+-- Alternate publish_diagnostics handler for Typescript
+--- @param err lsp.ResponseError
+-- These params might only work in Neovim .10
+-- @param result lsp.PublishDiagnosticsParams
+-- @param ctx lsp.HandlerContext
+local function diagnostics_handler(err, result, ctx)
+    if err ~= nil then
+        error("Failed to request diagnostics: " .. vim.inspect(err))
+    end
+
+    if result == nil then
+        return
+    end
+
+    local buffer = vim.uri_to_bufnr(result.uri)
+    local namespace = vim.lsp.diagnostic.get_namespace(ctx.client_id)
+
+    local diagnostics = vim.tbl_map(function(diagnostic)
+        local resultLines = vim.split(diagnostic.message, "\n")
+        local output = vim.fn.reverse(resultLines)
+        return {
+            bufnr = buffer,
+            lnum = diagnostic.range.start.line,
+            end_lnum = diagnostic.range["end"].line,
+            col = diagnostic.range.start.character,
+            end_col = diagnostic.range["end"].character,
+            severity = diagnostic.severity,
+            message = table.concat(output, "\n\n"),
+            source = diagnostic.source,
+            code = diagnostic.code,
+        }
+    end, result.diagnostics)
+
+    vim.diagnostic.set(namespace, buffer, diagnostics)
+end
+
 M.setup_tsserver = function(root_start)
     local root_dir = M.find_proj_root({ "tsconfig.json" }, root_start, nil)
 

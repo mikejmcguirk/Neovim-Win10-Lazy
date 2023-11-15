@@ -7,6 +7,22 @@ return {
         "tpope/vim-fugitive",
     },
     {
+        "lukas-reineke/indent-blankline.nvim",
+        event = { "BufReadPre", "BufNewFile" },
+        config = function()
+            require("ibl").setup({
+                indent = { char = "│" },
+                scope = {
+                    show_start = false,
+                    show_end = false,
+                    -- highlight = { "@Type" },
+                },
+                whitespace = { highlight = { "Normal" } },
+                debounce = 100,
+            })
+        end,
+    },
+    {
         "github/copilot.vim",
         event = { "BufReadPre", "BufNewFile" },
         init = function()

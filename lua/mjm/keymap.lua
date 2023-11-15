@@ -30,6 +30,7 @@ vim.keymap.set("n", "ZZ", "<Nop>", Opts)
 vim.keymap.set("n", "ZQ", "<Nop>", Opts)
 
 vim.keymap.set("n", "Q", "<nop>", Opts)
+vim.keymap.set("n", "gQ", "<nop>", Opts)
 
 -----------------------
 -- Window Management --
@@ -198,6 +199,8 @@ change_del_fixes("c", "C")
 
 vim.keymap.set("n", "Y", "y$", Opts) -- Avoid inconsistent behavior
 vim.keymap.set("v", "y", "mzy`z", Opts)
+
+vim.keymap.set("n", "y_", "mz^vg_y`z", Opts)
 
 vim.keymap.set("n", "<leader>y", '"+y', Opts)
 vim.keymap.set("v", "<leader>y", 'mz"+y`z', Opts)
