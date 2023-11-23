@@ -61,6 +61,7 @@ return {
     },
     {
         "triglav/vim-visual-increment",
+        event = { "BufReadPre", "BufNewFile" },
         init = function()
             vim.opt.nrformats = "alpha,octal,hex"
         end,

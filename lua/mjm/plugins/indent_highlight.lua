@@ -20,6 +20,7 @@ return {
             "mason",
             "toggleterm",
             "harpoon",
+            "NvimTree",
         }
 
         local check_status = function(status)
@@ -62,6 +63,11 @@ return {
                 delay = 0,
                 animation = indentscope.gen_animation.none(),
             },
+        })
+
+        vim.api.nvim_set_hl(0, "MiniIndentscopeSymbolOff", {
+            bg = vim.api.nvim_get_hl(0, { name = "MiniIndentscopeSymbol" }).bg,
+            fg = vim.api.nvim_get_hl(0, { name = "MiniIndentscopeSymbol" }).fg,
         })
 
         vim.api.nvim_set_hl(0, "MiniIndentscopeSymbol", {
