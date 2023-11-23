@@ -40,7 +40,8 @@ return {
 
                     -- Actions
                     vim.keymap.set("n", "<leader>gsb", gs.stage_buffer)
-                    vim.keymap.set("n", "<leader>gd", gs.diffthis)
+                    vim.keymap.set("n", "<leader>gi", gs.diffthis)
+                    vim.keymap.set("n", "<leader>gd", gs.toggle_deleted)
 
                     -- Text object
                     vim.keymap.set({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>")
