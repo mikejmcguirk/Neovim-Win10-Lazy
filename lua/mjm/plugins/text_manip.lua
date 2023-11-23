@@ -38,11 +38,6 @@ return {
         end,
     },
     {
-        "windwp/nvim-ts-autotag",
-        event = { "BufReadPre", "BufNewFile" },
-        dependencies = "nvim-treesitter/nvim-treesitter",
-    },
-    {
         "Wansmer/treesj",
         dependencies = { "nvim-treesitter/nvim-treesitter" },
         event = { "BufReadPre", "BufNewFile" },
