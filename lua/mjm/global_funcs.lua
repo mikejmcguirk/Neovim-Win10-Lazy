@@ -120,11 +120,7 @@ M.setup_tsserver = function(root_start)
     local root_dir = M.find_proj_root({ "tsconfig.json" }, root_start, nil)
 
     if not root_dir then
-        local js_root_files = {
-            "package.json",
-            "jsconfig.json",
-            ".git",
-        }
+        local js_root_files = { "package.json", "jsconfig.json", ".git" }
 
         root_dir = M.find_proj_root(js_root_files, root_start, root_start)
     end

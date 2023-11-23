@@ -1,8 +1,5 @@
-local yank_group = vim.api.nvim_create_augroup("HighlightYank", { clear = true })
-local mjm_group = vim.api.nvim_create_augroup("mjm", { clear = true })
-
 vim.api.nvim_create_autocmd("TextYankPost", {
-    group = yank_group,
+    group = vim.api.nvim_create_augroup("HighlightYank", { clear = true }),
     pattern = "*",
     callback = function()
         vim.highlight.on_yank({
@@ -13,7 +10,7 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 })
 
 vim.api.nvim_create_autocmd({ "BufWritePre" }, {
-    group = mjm_group,
+    group = vim.api.nvim_create_augroup("mjm", { clear = true }),
     pattern = "*",
     callback = function(ev)
         if vim.bo.readonly then

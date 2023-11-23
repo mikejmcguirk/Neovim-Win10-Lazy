@@ -409,6 +409,7 @@ local visual_move = function(count, min_count, pos_1, pos_2, fix_num, cmd_start)
         return
     end
 
+    -- '< and '> are not updated until after leaving Visual Mode
     vim.cmd([[execute "normal! \<esc>"]])
 
     local get_to_move = function()

@@ -19,6 +19,7 @@ return {
             "lazy",
             "mason",
             "toggleterm",
+            "harpoon",
         }
 
         local check_status = function(status)

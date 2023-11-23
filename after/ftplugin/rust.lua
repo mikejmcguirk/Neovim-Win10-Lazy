@@ -23,6 +23,7 @@ vim.lsp.start({
 
 local function reload_workspace(bufnr)
     local clients = vim.lsp.get_active_clients({ name = "rust_analyzer", bufnr = bufnr })
+
     for _, client in ipairs(clients) do
         vim.notify("Reloading Cargo Workspace")
         client.request("rust-analyzer/reloadWorkspace", nil, function(err)

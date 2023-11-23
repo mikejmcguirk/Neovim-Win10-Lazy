@@ -63,14 +63,12 @@ vim.opt.linebreak = true
 
 vim.opt.cursorline = true
 
-local cursor_control = vim.api.nvim_create_augroup("cursor_control", { clear = true })
-
 ---@param event string
 ---@param value boolean
 ---@param pattern string
 local set_cursorline = function(event, value, pattern)
     vim.api.nvim_create_autocmd(event, {
-        group = cursor_control,
+        group = vim.api.nvim_create_augroup("cursor_control", { clear = true }),
         pattern = pattern,
         callback = function()
             vim.opt_local.cursorline = value
