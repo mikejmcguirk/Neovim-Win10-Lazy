@@ -12,7 +12,10 @@ return {
         config = function()
             local treesj = require("treesj")
 
-            treesj.setup({})
+            treesj.setup({
+                use_default_keymaps = false,
+                max_join_length = 99,
+            })
 
             vim.keymap.set("n", "<leader>j", function()
                 treesj.toggle({ split = { recursive = true } })
