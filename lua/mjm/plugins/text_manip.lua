@@ -26,11 +26,43 @@ return {
                     java = false, -- don't check treesitter on java
                 },
             })
+
+            local status, cmp = pcall(require, "cmp")
+
+            if not status then
+                return
+            end
+
+            local cmp_autopairs = require("nvim-autopairs.completion.cmp")
+            cmp.event:on("confirm_done", cmp_autopairs.on_confirm_done())
         end,
     },
     {
         "windwp/nvim-ts-autotag",
         event = { "BufReadPre", "BufNewFile" },
         dependencies = "nvim-treesitter/nvim-treesitter",
+    },
+    {
+        "Wansmer/treesj",
+        dependencies = { "nvim-treesitter/nvim-treesitter" },
+        event = { "BufReadPre", "BufNewFile" },
+        config = function()
+            local treesj = require("treesj")
+
+            treesj.setup({
+                use_default_keymaps = false,
+                max_join_length = 99,
+            })
+
+            vim.keymap.set("n", "<leader>j", function()
+                treesj.toggle({ split = { recursive = true } })
+            end, Opts)
+        end,
+    },
+    {
+        "triglav/vim-visual-increment",
+        init = function()
+            vim.opt.nrformats = "alpha,octal,hex"
+        end,
     },
 }

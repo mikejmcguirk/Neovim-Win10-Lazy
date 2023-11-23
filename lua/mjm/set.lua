@@ -1,5 +1,4 @@
--- Because of race conditions at startup, netrw should be disabled at the very beginning
--- if nvim-tree is installed
+-- If nvim-tree is installed, netrw should be disabled right away to avoid startup race conditions
 local status, nvim_tree = pcall(require, "nvim-tree")
 
 if status then
@@ -62,13 +61,14 @@ vim.opt.wrap = false
 vim.opt.linebreak = true
 
 vim.opt.cursorline = true
+local cursor_control = vim.api.nvim_create_augroup("cursor_control", { clear = true })
 
 ---@param event string
 ---@param value boolean
 ---@param pattern string
 local set_cursorline = function(event, value, pattern)
     vim.api.nvim_create_autocmd(event, {
-        group = vim.api.nvim_create_augroup("cursor_control", { clear = true }),
+        group = cursor_control,
         pattern = pattern,
         callback = function()
             vim.opt_local.cursorline = value

@@ -76,12 +76,12 @@ return {
                     set_jumps = true,
                     goto_previous_start = {
                         ["[,"] = "@parameter.inner",
-                        ["[o"] = "@comment.outer",
+                        ["[c"] = "@comment.outer",
                         ["[f"] = "@function.outer",
                     },
                     goto_next_start = {
                         ["],"] = "@parameter.inner",
-                        ["]o"] = "@comment.outer",
+                        ["]c"] = "@comment.outer",
                         ["]f"] = "@function.outer",
                     },
                 },
