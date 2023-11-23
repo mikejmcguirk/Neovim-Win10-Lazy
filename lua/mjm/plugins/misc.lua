@@ -7,19 +7,16 @@ return {
         "tpope/vim-fugitive",
     },
     {
-        "lukas-reineke/indent-blankline.nvim",
-        event = { "BufReadPre", "BufNewFile" },
+        "Wansmer/treesj",
+        dependencies = { "nvim-treesitter/nvim-treesitter" },
         config = function()
-            require("ibl").setup({
-                indent = { char = "│" },
-                scope = {
-                    show_start = false,
-                    show_end = false,
-                    -- highlight = { "@Type" },
-                },
-                whitespace = { highlight = { "Normal" } },
-                debounce = 200,
-            })
+            local treesj = require("treesj")
+
+            treesj.setup({})
+
+            vim.keymap.set("n", "<leader>j", function()
+                treesj.toggle({ split = { recursive = true } })
+            end, Opts)
         end,
     },
     {

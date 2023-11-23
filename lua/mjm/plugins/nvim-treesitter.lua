@@ -67,6 +67,8 @@ return {
                         ["i,"] = "@parameter.inner",
                         ["af"] = "@function.outer",
                         ["if"] = "@function.inner",
+                        ["ao"] = "@comment.outer",
+                        ["io"] = "@comment.inner",
                     },
                 },
                 move = {
@@ -74,9 +76,13 @@ return {
                     set_jumps = true,
                     goto_previous_start = {
                         ["[,"] = "@parameter.inner",
+                        ["[o"] = "@comment.outer",
+                        ["[f"] = "@function.outer",
                     },
                     goto_next_start = {
                         ["],"] = "@parameter.inner",
+                        ["]o"] = "@comment.outer",
+                        ["]f"] = "@function.outer",
                     },
                 },
                 swap = {

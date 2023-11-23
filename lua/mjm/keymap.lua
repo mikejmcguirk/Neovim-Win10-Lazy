@@ -86,27 +86,47 @@ vim.keymap.set("n", "<M-l>", "<cmd>vertical resize +2<CR>", Opts)
 -- Scrolling Fixes --
 ---------------------
 
-vim.keymap.set("n", "<C-u>", "<C-u>zz", Opts)
-vim.keymap.set("n", "<C-d>", "<C-d>zz", Opts)
+vim.keymap.set({ "n", "v" }, "<C-u>", "<C-u>zz", Opts)
+vim.keymap.set({ "n", "v" }, "<C-d>", "<C-d>zz", Opts)
 
-vim.keymap.set("n", "n", "nzzzv", Opts)
-vim.keymap.set("n", "N", "Nzzzv", Opts)
+vim.keymap.set({ "n", "v" }, "n", "nzzzv", Opts)
+vim.keymap.set({ "n", "v" }, "N", "Nzzzv", Opts)
+
+vim.keymap.set({ "n", "v" }, "z+", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "z^", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "z<cr>", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "z.", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "z-", "<Nop>", Opts)
 
 -- vim.keymap.set({ "n", "v" }, "H", "<Nop>", Opts) -- Used for a custom mapping
 vim.keymap.set({ "n", "v" }, "M", "<Nop>", Opts)
 vim.keymap.set({ "n", "v" }, "L", "<Nop>", Opts)
 
-vim.keymap.set("n", "{", "<Nop>", Opts)
-vim.keymap.set("n", "}", "<Nop>", Opts)
-vim.keymap.set("n", "[m", "<Nop>", Opts)
-vim.keymap.set("n", "]m", "<Nop>", Opts)
-vim.keymap.set("n", "[M", "<Nop>", Opts)
-vim.keymap.set("n", "]M", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "{", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "}", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "(", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, ")", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "[m", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "]m", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "[M", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "]M", "<Nop>", Opts)
 
-vim.keymap.set("n", "[[", "<Nop>", Opts)
-vim.keymap.set("n", "]]", "<Nop>", Opts)
-vim.keymap.set("n", "[]", "<Nop>", Opts)
-vim.keymap.set("n", "][", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "[[", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "]]", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "[]", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "][", "<Nop>", Opts)
+
+vim.keymap.set({ "n", "v" }, "gm", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "gM", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "|", "<Nop>", Opts)
+
+vim.keymap.set({ "n", "v" }, "-", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "+", "<Nop>", Opts)
+
+vim.keymap.set({ "n", "v" }, "[*", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "]*", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "[/", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "]/", "<Nop>", Opts)
 
 --------------
 -- QoL Maps --
