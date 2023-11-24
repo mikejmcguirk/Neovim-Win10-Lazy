@@ -1,8 +1,8 @@
 require("mjm.global_vars")
-require("mjm.global_env")
 
 require("mjm.set")
 require("mjm.keymap")
+require("mjm.demap")
 
 require("mjm.quickfix")
 

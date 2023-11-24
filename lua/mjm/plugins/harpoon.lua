@@ -96,7 +96,7 @@ return {
                 vim.cmd([[normal! :<esc>]])
             end)
 
-            vim.keymap.set("n", "<leader>ae", fromUI.toggle_quick_menu, Opts)
+            vim.keymap.set("n", "<leader>ae", fromUI.toggle_quick_menu)
 
             local function get_or_create_buffer(filename)
                 local buf_exists = vim.fn.bufexists(filename) ~= 0
@@ -168,7 +168,7 @@ return {
             for i = 1, 9 do
                 vim.keymap.set("n", string.format("<leader>%s", i), function()
                     windows_nav_file(i)
-                end, Opts)
+                end)
             end
         end,
     },

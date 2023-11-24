@@ -17,8 +17,8 @@ local lazy = require("lazy")
 
 lazy.setup("mjm.plugins", {
     ui = {
-        border = "single"
-    }
+        border = "single",
+    },
 })
 
 vim.keymap.set("n", "<leader>zc", lazy.check)

@@ -27,12 +27,7 @@ return {
                 },
             })
 
-            local status, cmp = pcall(require, "cmp")
-
-            if not status then
-                return
-            end
-
+            local cmp = require("cmp")
             local cmp_autopairs = require("nvim-autopairs.completion.cmp")
             cmp.event:on("confirm_done", cmp_autopairs.on_confirm_done())
         end,
@@ -51,7 +46,7 @@ return {
 
             vim.keymap.set("n", "<leader>j", function()
                 treesj.toggle({ split = { recursive = true } })
-            end, Opts)
+            end)
         end,
     },
     {

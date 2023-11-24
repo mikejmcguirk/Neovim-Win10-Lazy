@@ -1,15 +1,15 @@
-vim.keymap.set("n", "[d", vim.diagnostic.goto_prev, Opts)
-vim.keymap.set("n", "]d", vim.diagnostic.goto_next, Opts)
+vim.keymap.set("n", "[d", vim.diagnostic.goto_prev)
+vim.keymap.set("n", "]d", vim.diagnostic.goto_next)
 
 vim.keymap.set("n", "[D", function()
     vim.diagnostic.goto_prev({ severity = "ERROR" })
-end, Opts)
+end)
 
 vim.keymap.set("n", "]D", function()
     vim.diagnostic.goto_next({ severity = "ERROR" })
-end, Opts)
+end)
 
-vim.keymap.set("n", "<leader>vl", vim.diagnostic.open_float, Opts)
+vim.keymap.set("n", "<leader>vl", vim.diagnostic.open_float)
 
 local handler_border = {
     border = "single",

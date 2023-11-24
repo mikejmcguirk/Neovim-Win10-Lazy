@@ -9,7 +9,7 @@ else
 
     -- https://github.com/OmniSharp/omnisharp-roslyn/issues/909
     local omni_capabilities = vim.deepcopy(Lsp_Capabilities)
-    omni_capabilities = vim.tbl_deep_extend("force", Lsp_Capabilities, {
+    omni_capabilities = vim.tbl_deep_extend("force", omni_capabilities, {
         workspace = {
             workspaceFolders = false,
         },
@@ -58,12 +58,9 @@ else
         analyze_open_documents_only = false,
     }
 
-    local status, omnisharp_extended = pcall(require, "omnisharp_extended")
-
-    if status then
-        omnisharp_start_table.handlers = omnisharp_start_table.handlers or {}
-        omnisharp_start_table.handlers["textDocument/definition"] = omnisharp_extended.handler
-    end
+    local omnisharp_extended = require("omnisharp_extended")
+    omnisharp_start_table.handlers = omnisharp_start_table.handlers or {}
+    omnisharp_start_table.handlers["textDocument/definition"] = omnisharp_extended.handler
 
     vim.lsp.start(omnisharp_start_table)
 end

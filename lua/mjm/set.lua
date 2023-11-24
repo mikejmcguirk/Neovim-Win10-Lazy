@@ -1,15 +1,11 @@
--- If nvim-tree is installed, netrw should be disabled right away to avoid startup race conditions
-local status, nvim_tree = pcall(require, "nvim-tree")
-
-if status then
-    vim.g.loaded_netrw = 1
-    vim.g.loaded_netrwPlugin = 1
-    vim.g.loaded_netrwSettings = 1
-end
+-- For nvim-tree, netrw should be disabled right away to avoid startup race conditions
+vim.g.loaded_netrw = 1
+vim.g.loaded_netrwPlugin = 1
+vim.g.loaded_netrwSettings = 1
 
 -- Leader maps are set based on the definition of leader at the time the mapping is created
 -- Thus, leader is set early to ensure that all leader maps are correct
-vim.keymap.set({ "n", "v" }, "<Space>", "<Nop>", Opts)
+vim.keymap.set({ "n", "v" }, "<Space>", "<Nop>")
 vim.g.mapleader = " "
 vim.g.maplocaleader = " "
 

@@ -37,4 +37,4 @@ end
 
 vim.keymap.set("n", "<leader>vsro", function()
     reload_workspace(vim.fn.bufnr(""))
-end, Opts)
+end)

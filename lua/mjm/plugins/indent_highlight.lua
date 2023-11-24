@@ -23,16 +23,7 @@ return {
             "NvimTree",
         }
 
-        local check_status = function(status)
-            if status then
-                return true
-            else
-                return false
-            end
-        end
-
-        local status, indentscope = pcall(require, "mini.indentscope")
-        local has_indentscope = check_status(status)
+        local has_indentscope, indentscope = pcall(require, "mini.indentscope")
         local show_ibl_scope = not has_indentscope
 
         require("ibl").setup({

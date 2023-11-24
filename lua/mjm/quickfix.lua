@@ -15,10 +15,10 @@ vim.keymap.set("n", "<leader>qt", function()
     end
 
     open_at_bottom()
-end, Opts)
+end)
 
-vim.keymap.set("n", "<leader>qp", "<cmd>copen<cr>", Opts)
-vim.keymap.set("n", "<leader>qc", "<cmd>cclose<cr>", Opts)
+vim.keymap.set("n", "<leader>qp", "<cmd>copen<cr>")
+vim.keymap.set("n", "<leader>qc", "<cmd>cclose<cr>")
 
 vim.opt.grepformat = "%f:%l:%m"
 vim.opt.grepprg = "rg --line-number"
@@ -47,12 +47,12 @@ end
 
 vim.keymap.set("n", "<leader>qgn", function()
     grep_function("grep")
-end, Opts)
+end)
 
 -- This command depends on the grepprg being set to ripgrep
 vim.keymap.set("n", "<leader>qgi", function()
     grep_function("grep -i")
-end, Opts)
+end)
 
 ---@param severity_cap number
 local diags_to_qf = function(severity_cap)
@@ -94,11 +94,11 @@ end
 
 vim.keymap.set("n", "<leader>qiq", function()
     diags_to_qf(4)
-end, Opts)
+end)
 
 vim.keymap.set("n", "<leader>qii", function()
     diags_to_qf(2) -- ERROR or WARN only
-end, Opts)
+end)
 
 vim.cmd("packadd cfilter")
 
@@ -108,7 +108,7 @@ vim.keymap.set("n", "<leader>qk", function()
     if pattern ~= "" then
         vim.cmd("Cfilter " .. pattern)
     end
-end, Opts)
+end)
 
 vim.keymap.set("n", "<leader>qr", function()
     local pattern = vim.fn.input("Pattern to remove: ")
@@ -116,12 +116,12 @@ vim.keymap.set("n", "<leader>qr", function()
     if pattern ~= "" then
         vim.cmd("Cfilter! " .. pattern)
     end
-end, Opts)
+end)
 
 vim.keymap.set("n", "<leader>qe", function()
     vim.fn.setqflist({})
     vim.cmd("cclose")
-end, Opts)
+end)
 
 ---@param direction string
 ---@param backup_direction string
@@ -145,14 +145,14 @@ end
 
 vim.keymap.set("n", "[q", function()
     qf_scroll("prev", "last")
-end, Opts)
+end)
 
 vim.keymap.set("n", "]q", function()
     qf_scroll("next", "first")
-end, Opts)
+end)
 
-vim.keymap.set("n", "[Q", "<cmd>cfirst<cr>", Opts)
-vim.keymap.set("n", "]Q", "<cmd>clast<cr>", Opts)
+vim.keymap.set("n", "[Q", "<cmd>cfirst<cr>")
+vim.keymap.set("n", "]Q", "<cmd>clast<cr>")
 
 vim.keymap.set("n", "<leader>qo", function()
     if vim.bo.filetype ~= "qf" then
@@ -162,7 +162,7 @@ vim.keymap.set("n", "<leader>qo", function()
     local cur_line = vim.fn.line(".")
     vim.cmd("cc " .. tostring(cur_line))
     vim.cmd("cclose")
-end, Opts)
+end)
 
 ---@param statuses table{{code: string, description: string}}
 ---@param filter boolean
@@ -220,17 +220,23 @@ vim.keymap.set("n", "<leader>qut", function()
     get_git_info({
         { code = "??", description = "Untracked File" },
     }, true)
-end, Opts)
+end)
 
 vim.keymap.set("n", "<leader>quu", function()
     get_git_info({
         { code = " M", description = "Unstaged Change" },
     }, true)
-end, Opts)
+end)
+
+vim.keymap.set("n", "<leader>qud", function()
+    get_git_info({
+        { code = " D", description = "Unstaged Change" },
+    }, true)
+end)
 
 vim.keymap.set("n", "<leader>qua", function()
     get_git_info(git_all, false)
-end, Opts)
+end)
 
 vim.keymap.set("n", "<leader>ql", function()
     local clients = vim.lsp.get_active_clients()
@@ -268,4 +274,4 @@ vim.keymap.set("n", "<leader>ql", function()
 
     vim.fn.setqflist(for_qf_list, "r")
     open_at_bottom()
-end, Opts)
+end)
