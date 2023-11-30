@@ -53,7 +53,13 @@ vim.api.nvim_create_autocmd("LspAttach", {
             print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
         end, lsp_opts)
 
-        vim.keymap.set("n", "<leader>vr", vim.lsp.buf.rename, lsp_opts)
+        vim.keymap.set("n", "<leader>vr", function()
+            vim.ui.input({ prompt = "Rename: " }, function(input)
+                if input and #input > 0 then
+                    vim.lsp.buf.rename(input)
+                end
+            end)
+        end, lsp_opts)
 
         vim.keymap.set({ "n", "v" }, "<leader>vc", vim.lsp.buf.code_action, lsp_opts)
     end,

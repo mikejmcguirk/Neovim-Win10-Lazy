@@ -94,6 +94,15 @@ return {
                     swap_previous = { ["<leader>[,"] = "@parameter.inner" },
                     swap_next = { ["<leader>],"] = "@parameter.inner" },
                 },
+                lsp_interop = {
+                    enable = true,
+                    border = "single",
+                    floating_preview_opts = {},
+                    peek_definition_code = {
+                        ["<leader>glf"] = "@function.outer",
+                        ["<leader>glc"] = "@class.outer",
+                    },
+                },
             },
         })
     end,
