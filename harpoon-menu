@@ -1,0 +1,8 @@
+lua/mjm/init.lua
+lua/mjm/set.lua
+lua/mjm/keymap.lua
+lua/mjm/quickfix.lua
+lua/mjm/global_funcs.lua
+lua/mjm/lsp.lua
+lua/mjm/plugins/cmp.lua
+lua/mjm/plugins/misc.lua

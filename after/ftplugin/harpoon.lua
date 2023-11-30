@@ -1,4 +1,4 @@
-local km = require("mjm.keymap_module")
+local km = require("mjm.keymap_mod")
 
 local harpoon_opts = vim.deepcopy(km.opts)
 harpoon_opts.buffer = true

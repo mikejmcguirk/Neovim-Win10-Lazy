@@ -9,13 +9,14 @@ vim.lsp.start(gf.setup_tsserver(root_start))
 
 local find_eslint_root_dir = function()
     local eslint_root_files = {
+        "eslint.config.js",
+        "eslint.config.cjs",
         ".eslintrc",
         ".eslintrc.js",
         ".eslintrc.cjs",
         ".eslintrc.yaml",
         ".eslintrc.yml",
         ".eslintrc.json",
-        "eslint.config.js",
     }
 
     local package_json = "package.json"
@@ -27,10 +28,24 @@ local find_eslint_root_dir = function()
     return gf.find_proj_root(eslint_root_files, root_start, nil)
 end
 
+local eslint_root = find_eslint_root_dir()
+
+local is_flat_config = function(eslint_root)
+    local eslint_config = vim.fn.globpath(eslint_root, "eslint.config.js")
+
+    if #eslint_config == 0 then
+        return false
+    else
+        return true
+    end
+end
+
+local use_flat_config = is_flat_config(eslint_root)
+
 vim.lsp.start({
     name = "eslint",
     cmd = { "vscode-eslint-language-server", "--stdio" },
-    root_dir = find_eslint_root_dir(),
+    root_dir = eslint_root,
     capabilities = Lsp_Capabilities,
     single_file_support = true,
     init_options = {
@@ -38,9 +53,15 @@ vim.lsp.start({
     },
     -- Refer to https://github.com/Microsoft/vscode-eslint#settings-options for documentation
     settings = {
-        useESLintClass = false,
+        -- workspaceFolder = {
+        --     uri = eslint_root,
+        --     name = vim.fn.fnamemodify(eslint_root, ":t"),
+        -- },
+        validate = "on",
+        -- packageManager = nil,
+        -- useESLintClass = false,
         experimental = {
-            useFlatConfig = false,
+            useFlatConfig = use_flat_config,
         },
         codeActionOnSave = {
             enable = false,
@@ -73,7 +94,9 @@ vim.lsp.start({
             if not result then
                 return
             end
+
             local sysname = vim.loop.os_uname().sysname
+
             if sysname:match("Windows") then
                 os.execute(string.format("start %q", result.url))
             elseif sysname:match("Linux") then
@@ -81,20 +104,24 @@ vim.lsp.start({
             else
                 os.execute(string.format("open %q", result.url))
             end
+
             return {}
         end,
         ["eslint/confirmESLintExecution"] = function(_, result)
             if not result then
                 return
             end
+
             return 4
         end,
         ["eslint/probeFailed"] = function()
             vim.notify("[lspconfig] ESLint probe failed.", vim.log.levels.WARN)
+
             return {}
         end,
         ["eslint/noLibrary"] = function()
             vim.notify("[lspconfig] Unable to find ESLint library.", vim.log.levels.WARN)
+
             return {}
         end,
     },

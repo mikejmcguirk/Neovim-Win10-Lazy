@@ -9,8 +9,10 @@ vim.api.nvim_create_autocmd("TextYankPost", {
     end,
 })
 
+local mjm_group = vim.api.nvim_create_augroup("mjm", { clear = true })
+
 vim.api.nvim_create_autocmd({ "BufWritePre" }, {
-    group = vim.api.nvim_create_augroup("mjm", { clear = true }),
+    group = mjm_group,
     pattern = "*",
     callback = function(ev)
         if vim.bo.readonly then
@@ -32,5 +34,13 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
         vim.cmd([[%s/\%^\n\+//e]]) -- Remove leading blank lines
 
         vim.cmd([[silent! normal! `z]])
+    end,
+})
+
+vim.api.nvim_create_autocmd({ "FileType" }, {
+    group = mjm_group,
+    pattern = "*",
+    callback = function()
+        vim.opt.formatoptions:remove("o")
     end,
 })

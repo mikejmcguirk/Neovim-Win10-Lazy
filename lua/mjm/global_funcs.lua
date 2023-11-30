@@ -1,12 +1,14 @@
 local M = {}
 
 ---@param width number
+---@return nil
 M.adjust_tab_width = function(width)
     vim.bo.tabstop = width
     vim.bo.softtabstop = width
     vim.bo.shiftwidth = width
 end
 
+---@return nil
 local get_home = function()
     if vim.fn.has("win32") == 1 then
         return os.getenv("USERPROFILE")
@@ -38,6 +40,7 @@ end
 ---@param filename string
 ---@param root_start string
 ---@param field_name string
+---@return boolean
 M.find_file_with_field = function(filename, root_start, field_name)
     local matches = vim.fs.find(filename, { path = root_start, upward = true, stop = get_home() })
 
@@ -60,6 +63,7 @@ M.find_file_with_field = function(filename, root_start, field_name)
     return false
 end
 
+---@return nil
 M.create_lsp_formatter = function(augroup)
     vim.api.nvim_create_autocmd("BufWritePre", {
         buffer = 0,
@@ -74,6 +78,8 @@ M.create_lsp_formatter = function(augroup)
     })
 end
 
+---@param buf_num number
+---@return string
 M.get_buf_directory = function(buf_num)
     local buf_name = vim.fn.bufname(buf_num)
 
@@ -116,6 +122,8 @@ local function diagnostics_handler(err, result, ctx)
     vim.diagnostic.set(namespace, buffer, diagnostics)
 end
 
+---@param root_start string
+---@return table
 M.setup_tsserver = function(root_start)
     local root_dir = M.find_proj_root({ "tsconfig.json" }, root_start, nil)
 
