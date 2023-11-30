@@ -137,7 +137,7 @@ M.visual_paste = function(paste_char)
         return "<Nop>"
     end
 
-    local cur_mode = vim.fn.mode()
+    local cur_mode = vim.api.nvim_get_mode().mode
     local count = vim.v.count1
 
     if cur_mode == "V" or cur_mode == "Vs" then
