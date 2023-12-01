@@ -128,7 +128,7 @@ vim.keymap.set("n", "<leader>V", "_vg_", km.opts)
 ---------------------------
 
 vim.keymap.set("n", "J", function()
-    km.restorecursor_writeonly_restoreview("J")
+    km.rest_cursor("J", { mod_check = true, rest_view = true })
 end, km.opts)
 
 local cap_motions_norm = {
@@ -153,13 +153,13 @@ local cap_motions_visual = {
 for _, map in pairs(cap_motions_norm) do
     vim.keymap.set("n", map, function()
         local cmd = vim.v.count1 .. map
-        km.restorecursor_writeonly(cmd)
+        km.rest_cursor(cmd, { mod_check = true })
     end, km.opts)
 end
 
 for _, map in pairs(cap_motions_visual) do
     vim.keymap.set("v", map, function()
-        km.restorecursor_writeonly(map)
+        km.rest_cursor(map, { mod_check = true })
     end, km.opts)
 end
 
@@ -178,8 +178,8 @@ vim.keymap.set({ "n", "v" }, "<leader>d", '"_d', km.opts)
 vim.keymap.set("n", "<leader>D", '"_D', km.opts)
 vim.keymap.set("v", "D", "<nop>", km.opts)
 
-vim.keymap.set("n", "d_", "^dg_", km.opts)
-vim.keymap.set("n", "<leader>d_", '^"_dg_', km.opts)
+vim.keymap.set("n", "d^", "^dg_", km.opts)
+vim.keymap.set("n", "<leader>d^", '^"_dg_', km.opts)
 
 ------------
 -- Change --
@@ -189,8 +189,8 @@ vim.keymap.set({ "n", "v" }, "<leader>c", '"_c', km.opts)
 vim.keymap.set("n", "<leader>C", '"_C', km.opts)
 vim.keymap.set("v", "C", "<nop>", km.opts)
 
-vim.keymap.set("n", "c_", "^cg_", km.opts)
-vim.keymap.set("n", "<leader>c_", '^"_cg_', km.opts)
+vim.keymap.set("n", "c^", "^cg_", km.opts)
+vim.keymap.set("n", "<leader>c^", '^"_cg_', km.opts)
 
 vim.keymap.set({ "n", "v" }, "s", "<Nop>", km.opts)
 vim.keymap.set("n", "S", "<Nop>", km.opts) -- Used in visual mode by nvim-surround
@@ -202,24 +202,24 @@ vim.keymap.set("n", "S", "<Nop>", km.opts) -- Used in visual mode by nvim-surrou
 vim.keymap.set("n", "Y", "y$", km.opts) -- Avoid inconsistent behavior
 
 vim.keymap.set("v", "y", function()
-    km.restorecursor("y")
+    km.rest_cursor("y")
 end, km.opts)
 
 vim.keymap.set("n", "<leader>y", '"+y', km.opts)
 
 vim.keymap.set("v", "<leader>y", function()
-    km.restorecursor('"+y')
+    km.rest_cursor('"+y')
 end, km.opts)
 
 vim.keymap.set("n", "<leader>Y", '"+y$', km.opts) -- Mapping to "+Y yanks the whole line
 vim.keymap.set("v", "Y", "<nop>", km.opts)
 
-vim.keymap.set("n", "y_", function()
-    km.restorecursor("^vg_y")
+vim.keymap.set("n", "y^", function()
+    km.rest_cursor("^vg_y")
 end, km.opts)
 
-vim.keymap.set("n", "<leader>y_", function()
-    km.restorecursor('^vg_"+y')
+vim.keymap.set("n", "<leader>y^", function()
+    km.rest_cursor('^vg_"+y')
 end, km.opts)
 
 local backward_objects = { "b", "B", "ge", "gE" }
@@ -248,22 +248,22 @@ km.yank_cursor_fixes(text_objects, ia)
 
 vim.keymap.set("n", "p", function()
     local cmd = vim.v.count1 .. "p"
-    km.restorecursor_writeonly_restoreview(cmd)
+    km.rest_cursor(cmd, { mod_check = true, rest_view = true })
 end, km.opts)
 
 vim.keymap.set("n", "P", function()
     local cmd = vim.v.count1 .. "P"
-    km.restorecursor_writeonly_restoreview(cmd)
+    km.rest_cursor(cmd, { mod_check = true, rest_view = true })
 end, km.opts)
 
 vim.keymap.set("n", "<leader>p", function()
     local cmd = vim.v.count1 .. '"+p'
-    km.restorecursor_writeonly_restoreview(cmd)
+    km.rest_cursor(cmd, { mod_check = true, rest_view = true })
 end, km.opts)
 
 vim.keymap.set("n", "<leader>P", function()
     local cmd = vim.v.count1 .. '"+P'
-    km.restorecursor_writeonly_restoreview(cmd)
+    km.rest_cursor(cmd, { mod_check = true, rest_view = true })
 end, km.opts)
 
 vim.keymap.set("n", "<leader>gp", '"+gp', km.opts)

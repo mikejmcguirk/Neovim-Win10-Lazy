@@ -35,6 +35,7 @@ return {
     },
     {
         "mfussenegger/nvim-lint",
+        event = { "BufWritePre", "BufNewFile" },
         config = function()
             local lint = require("lint")
 

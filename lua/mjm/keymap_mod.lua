@@ -16,26 +16,28 @@ end
 
 ---@param map string
 ---@return nil
-M.restorecursor = function(map)
+M.rest_cursor = function(map, options)
+    local opts = vim.deepcopy(options or {})
+
+    if opts.mod_check then
+        if not M.check_modifiable() then
+            return
+        end
+    end
+
+    local cur_view = nil
+
+    if opts.rest_view then
+        cur_view = vim.fn.winsaveview()
+    end
+
     local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
     vim.cmd("normal! " .. map)
     vim.api.nvim_win_set_cursor(0, { cur_row, cur_col })
-end
 
----@param map string
----@return nil
-M.restorecursor_writeonly = function(map)
-    if M.check_modifiable() then
-        M.restorecursor(map)
+    if cur_view ~= nil then
+        vim.fn.winrestview(cur_view)
     end
-end
-
----@param map string
----@return nil
-M.restorecursor_writeonly_restoreview = function(map)
-    local cur_view = vim.fn.winsaveview()
-    M.restorecursor_writeonly(map)
-    vim.fn.winrestview(cur_view)
 end
 
 ---@param visual string
@@ -61,19 +63,21 @@ end
 ---@param backward_objects string[]
 ---@return nil
 M.fix_backward_yanks = function(backward_objects)
+    local backward_objects = vim.deepcopy(backward_objects)
+
     for _, object in ipairs(backward_objects) do
         local main_map = "y" .. object
 
         vim.keymap.set("n", main_map, function()
             local main_cmd = vim.v.count1 .. main_map
-            M.restorecursor(main_cmd)
+            M.rest_cursor(main_cmd)
         end, M.default_opts)
 
         local ext_map = "<leader>y" .. object
 
         vim.keymap.set("n", ext_map, function()
             local ext_cmd = vim.v.count1 .. '"+' .. main_map
-            M.restorecursor(ext_cmd)
+            M.rest_cursor(ext_cmd)
         end, M.default_opts)
     end
 end
@@ -83,6 +87,10 @@ end
 ---@param inner_outer string[]
 ---@return nil
 M.demap_text_objects_inout = function(motions, text_objects, inner_outer)
+    local motions = vim.deepcopy(motions)
+    local text_objects = vim.deepcopy(text_objects)
+    local inner_outer = vim.deepcopy(inner_outer)
+
     for _, motion in pairs(motions) do
         for _, object in pairs(text_objects) do
             for _, in_out in pairs(inner_outer) do
@@ -100,6 +108,9 @@ end
 ---@param text_objects string[]
 ---@return nil
 M.demap_text_objects = function(motions, text_objects)
+    local motions = vim.deepcopy(motions)
+    local text_objects = vim.deepcopy(text_objects)
+
     for _, motion in pairs(motions) do
         for _, object in pairs(text_objects) do
             vim.keymap.set("n", motion .. object, "<nop>", M.default_opts)
@@ -112,19 +123,22 @@ end
 ---@param inner_outer string[]
 ---@return nil
 M.yank_cursor_fixes = function(text_objects, inner_outer)
+    local text_objects = vim.deepcopy(text_objects)
+    local inner_outer = vim.deepcopy(inner_outer)
+
     for _, object in pairs(text_objects) do
         for _, in_out in pairs(inner_outer) do
             local main_cmd = "y" .. in_out .. object
 
             vim.keymap.set("n", main_cmd, function()
-                M.restorecursor(main_cmd)
+                M.rest_cursor(main_cmd)
             end, M.default_opts)
 
             local ext_map = "<leader>y" .. in_out .. object
             local ext_cmd = '"+' .. main_cmd
 
             vim.keymap.set("n", ext_map, function()
-                M.restorecursor(ext_cmd)
+                M.rest_cursor(ext_cmd)
             end, M.default_opts)
         end
     end
