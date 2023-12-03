@@ -55,7 +55,7 @@ vim.keymap.set("n", "<leader>qgi", function()
 end)
 
 ---@param severity_cap number
-local diags_to_qf = function(severity_cap)
+local diags_to_qf = function(severity_cap, options)
     local raw_diagnostics = vim.diagnostic.get(nil)
     local diags_for_qf = {}
 
@@ -66,25 +66,33 @@ local diags_to_qf = function(severity_cap)
         [vim.diagnostic.severity.HINT] = "H",
     }
 
-    for _, raw_diag in ipairs(raw_diagnostics) do
-        if raw_diag.severity <= severity_cap then
-            local converted_diag = {
-                bufnr = raw_diag.bufnr,
-                filename = vim.fn.bufname(raw_diag.bufnr),
-                lnum = raw_diag.lnum + 1,
-                end_lnum = raw_diag.end_lnum + 1,
-                col = raw_diag.col,
-                end_col = raw_diag.end_col,
-                text = (raw_diag.source or "")
-                    .. ": "
-                    .. "["
-                    .. (raw_diag.code or "")
-                    .. "] "
-                    .. (raw_diag.message or ""),
-                type = severity_map[raw_diag.severity],
-            }
+    local check_buf = options and options.check_bufnr
+    local current_buf = vim.api.nvim_get_current_buf()
 
-            table.insert(diags_for_qf, converted_diag)
+    for _, raw_diag in ipairs(raw_diagnostics) do
+        local raw_diag_bufnr = raw_diag.bufnr
+
+        if check_buf and raw_diag_bufnr ~= current_buf then
+        else
+            if raw_diag.severity <= severity_cap then
+                local converted_diag = {
+                    bufnr = raw_diag.bufnr,
+                    filename = vim.fn.bufname(raw_diag.bufnr),
+                    lnum = raw_diag.lnum + 1,
+                    end_lnum = raw_diag.end_lnum + 1,
+                    col = raw_diag.col,
+                    end_col = raw_diag.end_col,
+                    text = (raw_diag.source or "")
+                        .. ": "
+                        .. "["
+                        .. (raw_diag.code or "")
+                        .. "] "
+                        .. (raw_diag.message or ""),
+                    type = severity_map[raw_diag.severity],
+                }
+
+                table.insert(diags_for_qf, converted_diag)
+            end
         end
     end
 
@@ -94,6 +102,10 @@ end
 
 vim.keymap.set("n", "<leader>qiq", function()
     diags_to_qf(4)
+end)
+
+vim.keymap.set("n", "<leader>qiu", function()
+    diags_to_qf(4, { check_bufnr = true })
 end)
 
 vim.keymap.set("n", "<leader>qii", function()
