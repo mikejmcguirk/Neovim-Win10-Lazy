@@ -103,6 +103,14 @@ vim.keymap.set({ "n", "v" }, "]/", "<Nop>")
 -- QoL Maps --
 --------------
 
+local insert_maps = { "i", "a", "A" }
+
+for _, map in pairs(insert_maps) do
+    vim.keymap.set("n", map, function()
+        return km.enter_insert_fix(map)
+    end, km.expr_opts)
+end
+
 vim.keymap.set("i", ",", ",<C-g>u", km.opts)
 vim.keymap.set("i", ".", ".<C-g>u", km.opts)
 vim.keymap.set("i", ";", ";<C-g>u", km.opts)
@@ -195,7 +203,7 @@ vim.keymap.set("n", "c^", "^cg_", km.opts)
 vim.keymap.set("n", "<leader>c^", '^"_cg_', km.opts)
 
 vim.keymap.set({ "n", "v" }, "s", "<Nop>", km.opts)
-vim.keymap.set("n", "S", "<Nop>", km.opts) -- Used in visual mode by nvim-surround
+-- vim.keymap.set("n", "S", "<Nop>", km.opts) -- Used in visual mode by nvim-surround
 
 ----------
 -- Yank --

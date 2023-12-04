@@ -40,6 +40,16 @@ M.rest_cursor = function(map, options)
     end
 end
 
+---@param map string
+---@return string
+M.enter_insert_fix = function(map)
+    if string.match(vim.api.nvim_get_current_line(), "^%s*$") then
+        return '"_S'
+    else
+        return map
+    end
+end
+
 ---@param visual string
 ---@param linewise string
 ---@return string
