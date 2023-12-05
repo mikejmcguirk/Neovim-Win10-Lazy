@@ -72,6 +72,7 @@ local find_pairs = function()
     -- nvim_win_get_cursor is 0 indexed for columns. Lua is 1 indexed
     local cur_char = cur_line:sub(cur_col, cur_col)
 
+    -- Check if we are in a pair
     local check_pairs = function(char, to_find, to_return)
         for _, pair in ipairs(pairs) do
             if pair[to_find] == char then
@@ -101,6 +102,7 @@ local find_pairs = function()
         return false
     end
 
+    -- Check if we are directly to the right of a pair
     local open_char = check_pairs(cur_char, 2, 1)
 
     if open_char == nil then
@@ -125,22 +127,31 @@ end
 
 ---@return nil
 local backspace_blank_line = function()
+    local row_before = vim.api.nvim_win_get_cursor(0)[1]
     vim.api.nvim_del_current_line()
-
     local cur_row = vim.api.nvim_win_get_cursor(0)[1]
 
-    local set_dest_row = function()
-        if cur_row > 1 then
-            return cur_row - 1
-        else
+    -- nvim_del_current_line() behaves similarly to the dd motion
+    -- It will delete the current line then shift all the text below up a line
+    -- This means the cursor will still be on the same line as the deleted text
+    -- Therefore, the cursor must be moved to the line above
+    ---@return number
+    local set_destination_row = function()
+        -- Edge cases
+        local on_first_row = cur_row == 1
+        local already_moved = cur_row ~= row_before -- If you delete the last line
+
+        if on_first_row or already_moved then
             return cur_row
         end
+
+        local dest_row = cur_row - 1
+        vim.api.nvim_win_set_cursor(0, { dest_row, 0 })
+
+        return dest_row
     end
 
-    local dest_row = set_dest_row()
-
-    vim.api.nvim_win_set_cursor(0, { dest_row, 0 })
-
+    local dest_row = set_destination_row()
     local dest_line = vim.api.nvim_get_current_line()
     local dest_col = #dest_line
 
@@ -152,7 +163,8 @@ local backspace_blank_line = function()
 
     local get_indent = function()
         local dest_line_num = vim.fn.line(".")
-        -- Captures Treesitter indent expressions as well
+        -- If Treesitter indent is enabled, the indentexpr will be set to
+        -- nvim_treesitter#indent(), so that will be captured here
         local indentexpr = vim.bo.indentexpr
 
         if indentexpr ~= "" then
