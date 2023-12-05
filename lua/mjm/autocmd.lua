@@ -37,6 +37,7 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
     end,
 })
 
+-- Does not work if set with other options
 vim.api.nvim_create_autocmd({ "FileType" }, {
     group = mjm_group,
     pattern = "*",

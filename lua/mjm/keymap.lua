@@ -111,6 +111,12 @@ for _, map in pairs(insert_maps) do
     end, km.expr_opts)
 end
 
+vim.keymap.set("i", "<backspace>", function()
+    km.insert_backspace_fix()
+end, km.opts)
+
+vim.keymap.set("i", "<C-h>", "<nop>", km.opts)
+
 vim.keymap.set("i", ",", ",<C-g>u", km.opts)
 vim.keymap.set("i", ".", ".<C-g>u", km.opts)
 vim.keymap.set("i", ";", ";<C-g>u", km.opts)
@@ -308,11 +314,11 @@ vim.keymap.set("n", "] ", function()
 end, km.opts)
 
 vim.keymap.set("v", "J", function()
-    km.visual_move(vim.v.count1, 1, "'>", ".", 0, "'<,'> m '>+")
+    km.visual_move(vim.v.count1, "'>", ".", 0, "'<,'> m '>+")
 end, km.opts)
 
 vim.keymap.set("v", "K", function()
-    km.visual_move(vim.v.count1, 2, ".", "'<", 1, "'<,'> m '<-")
+    km.visual_move(vim.v.count1, ".", "'<", 1, "'<,'> m '<-")
 end, km.opts)
 
 vim.keymap.set("n", "<leader>=", function()

@@ -50,6 +50,162 @@ M.enter_insert_fix = function(map)
     end
 end
 
+---@return boolean
+local find_pairs = function()
+    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
+
+    if cur_col == 0 then
+        return false
+    end
+
+    local pairs = {
+        { "{", "}" },
+        { "[", "]" },
+        { "(", ")" },
+        { "<", ">" },
+        { "'", "'" },
+        { '"', '"' },
+        { "`", "`" },
+    }
+
+    local cur_line = vim.api.nvim_get_current_line()
+    -- nvim_win_get_cursor is 0 indexed for columns. Lua is 1 indexed
+    local cur_char = cur_line:sub(cur_col, cur_col)
+
+    local check_pairs = function(char, to_find, to_return)
+        for _, pair in ipairs(pairs) do
+            if pair[to_find] == char then
+                return pair[to_return]
+            end
+        end
+
+        return nil
+    end
+
+    local close_char = check_pairs(cur_char, 1, 2)
+    local next_char = cur_line:sub(cur_col + 1, cur_col + 1)
+
+    if close_char == next_char then
+        -- buf_set_text is 0 indexed, nvim_win_set_cursor is 1 indexed for rows
+        local line_to_set = cur_row - 1
+        local start_col = cur_col - 1
+        local end_col = cur_col + 1 -- buf_set_text is end-exclusive
+        vim.api.nvim_buf_set_text(0, line_to_set, start_col, line_to_set, end_col, { "" })
+
+        vim.api.nvim_win_set_cursor(0, { cur_row, cur_col - 1 })
+
+        return true
+    end
+
+    if cur_col == 1 then
+        return false
+    end
+
+    local open_char = check_pairs(cur_char, 2, 1)
+
+    if open_char == nil then
+        return false
+    end
+
+    local prev_char = cur_line:sub(cur_col - 1, cur_col - 1)
+
+    if open_char == prev_char then
+        local line_to_set = cur_row - 1
+        local start_col = cur_col - 2
+        local end_col = cur_col
+        vim.api.nvim_buf_set_text(0, line_to_set, start_col, line_to_set, end_col, { "" })
+
+        vim.api.nvim_win_set_cursor(0, { cur_row, cur_col - 2 })
+
+        return true
+    end
+
+    return false
+end
+
+---@return nil
+local backspace_blank_line = function()
+    vim.api.nvim_del_current_line()
+
+    local cur_row = vim.api.nvim_win_get_cursor(0)[1]
+
+    local set_dest_row = function()
+        if cur_row > 1 then
+            return cur_row - 1
+        else
+            return cur_row
+        end
+    end
+
+    local dest_row = set_dest_row()
+
+    vim.api.nvim_win_set_cursor(0, { dest_row, 0 })
+
+    local dest_line = vim.api.nvim_get_current_line()
+    local dest_col = #dest_line
+
+    if dest_col > 0 then
+        vim.api.nvim_win_set_cursor(0, { dest_row, dest_col })
+
+        return
+    end
+
+    local get_indent = function()
+        local dest_line_num = vim.fn.line(".")
+        -- Captures Treesitter indent expressions as well
+        local indentexpr = vim.bo.indentexpr
+
+        if indentexpr ~= "" then
+            -- Most indent expressions in the Nvim runtime do not take an argument
+            --
+            -- However, a few of them do take v:lnum as an argument
+            -- v:lnum is not updated when nvim_exec2 is called, so it must be updated here
+            --
+            -- A couple of the runtime expressions take '.' as an argument
+            -- This is properly updated before nvim_exec2 is called
+            --
+            -- Other indentexpr options are not guaranteed to be handled properly
+            vim.v.lnum = dest_line_num
+            local expr_indent_tbl = vim.api.nvim_exec2("echo " .. indentexpr, { output = true })
+            local expr_indent_str = expr_indent_tbl.output
+            local expr_indent = tonumber(expr_indent_str)
+
+            return expr_indent
+        end
+
+        local prev_nonblank = vim.fn.prevnonblank(dest_line_num - 1)
+        local prev_nonblank_indent = vim.fn.indent(prev_nonblank)
+
+        return prev_nonblank_indent
+    end
+
+    local indent = get_indent()
+    local set_row = dest_row - 1 -- nvim_buf_set_text is 0 indexed
+
+    vim.api.nvim_buf_set_text(0, set_row, 0, set_row, 0, { string.rep(" ", indent) })
+    vim.api.nvim_win_set_cursor(0, { dest_row, indent })
+end
+
+---@return nil
+M.insert_backspace_fix = function()
+    local empty_string = string.match(vim.api.nvim_get_current_line(), "^%s*$")
+
+    if not empty_string then
+        -- windp/autopairs creates its own backspace mapping if map_bs is enabled
+        -- Since map_bs must be disabled there, check for pairs here
+        if find_pairs() then
+            return
+        end
+
+        local key = vim.api.nvim_replace_termcodes("<backspace>", true, false, true)
+        vim.api.nvim_feedkeys(key, "n", true)
+
+        return
+    end
+
+    backspace_blank_line()
+end
+
 ---@param visual string
 ---@param linewise string
 ---@return string
@@ -187,13 +343,12 @@ M.create_blank_line = function(put_cmd)
 end
 
 ---@param vcount1 number
----@param min_count number
 ---@param pos_1 string
 ---@param pos_2 string
 ---@param fix_num number
 ---@param cmd_start string
 ---@return nil
-M.visual_move = function(vcount1, min_count, pos_1, pos_2, fix_num, cmd_start)
+M.visual_move = function(vcount1, pos_1, pos_2, fix_num, cmd_start)
     if not M.check_modifiable() then
         return
     end
@@ -202,9 +357,11 @@ M.visual_move = function(vcount1, min_count, pos_1, pos_2, fix_num, cmd_start)
     -- This also updates vim.v.count1, which is why it's passed as a parameter
     vim.cmd([[execute "normal! \<esc>"]])
 
+    local min_count = 1
+
     local get_to_move = function()
         if vcount1 <= min_count then
-            return min_count
+            return min_count + fix_num
         else
             return vcount1 - (vim.fn.line(pos_1) - vim.fn.line(pos_2)) + fix_num
         end
