@@ -32,7 +32,17 @@ M.rest_cursor = function(map, options)
     end
 
     local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
-    vim.cmd("normal! " .. map)
+
+    local status, result = pcall(function()
+        vim.cmd("normal! " .. map)
+    end)
+
+    if (not status) and result then
+        vim.api.nvim_err_writeln(result)
+
+        return
+    end
+
     vim.api.nvim_win_set_cursor(0, { cur_row, cur_col })
 
     if cur_view ~= nil then
