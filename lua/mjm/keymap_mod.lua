@@ -133,9 +133,55 @@ local find_pairs = function()
     return false
 end
 
+local get_indent = function(line_num)
+    -- If Treesitter indent is enabled, the indentexpr will be set to
+    -- nvim_treesitter#indent(), so that will be captured here
+    local indentexpr = vim.bo.indentexpr
+
+    if indentexpr ~= "" then
+        -- Most indent expressions in the Nvim runtime do not take an argument
+        --
+        -- However, a few of them do take v:lnum as an argument
+        -- v:lnum is not updated when nvim_exec2 is called, so it must be updated here
+        --
+        -- A couple of the runtime expressions take '.' as an argument
+        -- This is already updated before nvim_exec2 is called
+        --
+        -- Other indentexpr options are not guaranteed to be handled properly
+        vim.v.lnum = line_num
+        local expr_indent_tbl = vim.api.nvim_exec2("echo " .. indentexpr, { output = true })
+        local expr_indent_str = expr_indent_tbl.output
+        local expr_indent = tonumber(expr_indent_str)
+
+        return expr_indent
+    end
+
+    -- return 0
+
+    local prev_nonblank = vim.fn.prevnonblank(line_num - 1)
+    local prev_nonblank_indent = vim.fn.indent(prev_nonblank)
+
+    return prev_nonblank_indent
+end
+
 ---@return nil
 local backspace_blank_line = function()
-    local row_before = vim.api.nvim_win_get_cursor(0)[1]
+    -- row is one-indexed, col is 0-indexed
+    local start_row, start_col = unpack(vim.api.nvim_win_get_cursor(0))
+    local start_indent = get_indent(start_row)
+
+    if start_indent > 0 and start_col > start_indent then
+        -- rows in nvim_buf_set_lines are zero indexed
+        vim.api.nvim_buf_set_lines(
+            0,
+            start_row - 1,
+            start_row, -- end-exclusive
+            false,
+            { string.rep(" ", start_indent) }
+        )
+        return
+    end
+
     vim.api.nvim_del_current_line()
     local cur_row = vim.api.nvim_win_get_cursor(0)[1]
 
@@ -147,7 +193,7 @@ local backspace_blank_line = function()
     local set_destination_row = function()
         -- Edge cases
         local on_first_row = cur_row == 1
-        local already_moved = cur_row ~= row_before -- If you delete the last line
+        local already_moved = cur_row ~= start_row -- If you delete the last line
 
         if on_first_row or already_moved then
             return cur_row
@@ -170,39 +216,8 @@ local backspace_blank_line = function()
         return
     end
 
-    local get_indent = function()
-        local dest_line_num = vim.fn.line(".")
-        -- If Treesitter indent is enabled, the indentexpr will be set to
-        -- nvim_treesitter#indent(), so that will be captured here
-        local indentexpr = vim.bo.indentexpr
-
-        if indentexpr ~= "" then
-            -- Most indent expressions in the Nvim runtime do not take an argument
-            --
-            -- However, a few of them do take v:lnum as an argument
-            -- v:lnum is not updated when nvim_exec2 is called, so it must be updated here
-            --
-            -- A couple of the runtime expressions take '.' as an argument
-            -- This is already updated before nvim_exec2 is called
-            --
-            -- Other indentexpr options are not guaranteed to be handled properly
-            vim.v.lnum = dest_line_num
-            local expr_indent_tbl = vim.api.nvim_exec2("echo " .. indentexpr, { output = true })
-            local expr_indent_str = expr_indent_tbl.output
-            local expr_indent = tonumber(expr_indent_str)
-
-            return expr_indent
-        end
-
-        -- return 0
-
-        local prev_nonblank = vim.fn.prevnonblank(dest_line_num - 1)
-        local prev_nonblank_indent = vim.fn.indent(prev_nonblank)
-
-        return prev_nonblank_indent
-    end
-
-    local indent = get_indent()
+    local dest_line_num = vim.fn.line(".")
+    local indent = get_indent(dest_line_num)
 
     if indent == 0 then
         return
