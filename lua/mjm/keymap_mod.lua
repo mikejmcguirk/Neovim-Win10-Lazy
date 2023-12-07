@@ -179,6 +179,7 @@ local backspace_blank_line = function()
             false,
             { string.rep(" ", start_indent) }
         )
+
         return
     end
 
