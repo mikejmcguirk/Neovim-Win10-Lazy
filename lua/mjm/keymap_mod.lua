@@ -162,8 +162,9 @@ local backspace_blank_line = function()
     local dest_row = set_destination_row()
     local dest_line = vim.api.nvim_get_current_line()
     local dest_col = #dest_line
+    local dest_line_is_empty = string.match(dest_line, "^%s*$")
 
-    if dest_col > 0 then
+    if dest_col > 0 and not dest_line_is_empty then
         vim.api.nvim_win_set_cursor(0, { dest_row, dest_col })
 
         return
@@ -208,8 +209,8 @@ local backspace_blank_line = function()
     end
 
     local set_row = dest_row - 1 -- nvim_buf_set_text is 0 indexed
-
-    vim.api.nvim_buf_set_text(0, set_row, 0, set_row, 0, { string.rep(" ", indent) })
+    -- buf_set_text is end-exclusive, so dest_row is still used as range end
+    vim.api.nvim_buf_set_lines(0, set_row, dest_row, false, { string.rep(" ", indent) })
     vim.api.nvim_win_set_cursor(0, { dest_row, indent })
 end
 
