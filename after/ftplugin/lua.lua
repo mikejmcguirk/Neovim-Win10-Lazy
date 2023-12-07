@@ -6,29 +6,14 @@ local root_files = {
     ".luarc.json",
     ".luarc.jsonc",
     ".luacheckrc",
-    -- ".stylua.toml",
+    "stylua.toml",
     "selene.toml",
     "selene.yml",
 }
 
 local root_start = gf.get_buf_directory(vim.fn.bufnr(""))
 
-local check_for_nvim = function()
-    local isLinux = vim.fn.has("unix")
-    local linux_config_dir = vim.fn.expand("~/.config/nvim")
-    local isWin = vim.fn.has("win32")
-    local win_config_dir = vim.fn.expand("~\\AppData\\Local\\nvim-data")
-
-    local check_os = function()
-        if isLinux then
-            return linux_config_dir
-        elseif isWin then
-            return win_config_dir
-        end
-    end
-
-    local config_dir = check_os()
-end
+---@return string
 
 vim.lsp.start({
     name = "lua_ls",
@@ -45,23 +30,26 @@ vim.lsp.start({
             },
         },
     },
-    on_init = function(client) -- For working in NeoVim
-        if client.root_dir == nil then
-            client.config.settings = vim.tbl_deep_extend("force", client.config.settings, {
-                Lua = {
-                    runtime = {
-                        version = "LuaJIT",
-                    },
-                    workspace = {
-                        library = vim.api.nvim_get_runtime_file("", true),
-                    },
-                },
-            })
+    on_init = function(client)
+        local client_root_dir = client.config.root_dir
+        local nvim_config = "nvim"
+        local is_nvim_config = string.find(client_root_dir, nvim_config)
 
-            client.notify(
-                "workspace/didChangeConfiguration",
-                { settings = client.config.settings }
-            )
+        if is_nvim_config == nil then
+            return
         end
+
+        client.config.settings = vim.tbl_deep_extend("force", client.config.settings, {
+            Lua = {
+                runtime = {
+                    version = "LuaJIT",
+                },
+                workspace = {
+                    library = vim.api.nvim_get_runtime_file("", true),
+                },
+            },
+        })
+
+        client.notify("workspace/didChangeConfiguration", { settings = client.config.settings })
     end,
 })

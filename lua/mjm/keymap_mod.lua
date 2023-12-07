@@ -166,33 +166,25 @@ end
 
 ---@return nil
 local backspace_blank_line = function()
-    -- row is one-indexed, col is 0-indexed
     local start_row, start_col = unpack(vim.api.nvim_win_get_cursor(0))
     local start_indent = get_indent(start_row)
 
     if start_indent > 0 and start_col > start_indent then
-        -- rows in nvim_buf_set_lines are zero indexed
-        vim.api.nvim_buf_set_lines(
-            0,
-            start_row - 1,
-            start_row, -- end-exclusive
-            false,
-            { string.rep(" ", start_indent) }
-        )
+        local start_line = vim.api.nvim_get_current_line()
+        local start_line_length = #start_line - 1
+        local set_row = start_row - 1
+        local set_start = start_indent - 1
+
+        vim.api.nvim_buf_set_text(0, set_row, set_start, set_row, start_line_length, { "" })
 
         return
     end
 
     vim.api.nvim_del_current_line()
-    local cur_row = vim.api.nvim_win_get_cursor(0)[1]
+    local cur_row = vim.fn.line(".")
 
-    -- nvim_del_current_line() behaves similarly to the dd motion
-    -- It will delete the current line then shift all the text below up a line
-    -- This means the cursor will still be on the same line as the deleted text
-    -- Therefore, the cursor must be moved to the line above
     ---@return number
     local set_destination_row = function()
-        -- Edge cases
         local on_first_row = cur_row == 1
         local already_moved = cur_row ~= start_row -- If you delete the last line
 
@@ -200,30 +192,30 @@ local backspace_blank_line = function()
             return cur_row
         end
 
-        local dest_row = cur_row - 1
-        vim.api.nvim_win_set_cursor(0, { dest_row, 0 })
-
-        return dest_row
+        return cur_row - 1
     end
 
     local dest_row = set_destination_row()
+    vim.api.nvim_win_set_cursor(0, { dest_row, 0 })
+
     local dest_line = vim.api.nvim_get_current_line()
     local dest_col = #dest_line
     local dest_line_is_empty = string.match(dest_line, "^%s*$")
-    local set_row = dest_row - 1 -- nvim_buf_set_text and set_lines are 0 indexed
+
+    local set_row = dest_row - 1
 
     if dest_col > 0 and not dest_line_is_empty then
-        vim.api.nvim_win_set_cursor(0, { dest_row, dest_col })
-
-        -- check if the line has trailing whitespace
         local trailing_whitespace = string.match(dest_line, "%s+$")
 
         if trailing_whitespace then
-            local dest_line_no_trailing_ws = string.gsub(dest_line, "%s+$", "")
-            -- buf_set_lines is end-exclusive, so dest_row is still used as range end
-            vim.api.nvim_buf_set_lines(0, set_row, dest_row, false, { dest_line_no_trailing_ws })
-            return
+            local last_non_blank, _ = dest_line:find("(%S)%s*$")
+            vim.api.nvim_buf_set_text(0, set_row, last_non_blank, set_row, dest_col, { "" })
+
+            dest_line = vim.api.nvim_get_current_line()
+            dest_col = #dest_line
         end
+
+        vim.api.nvim_win_set_cursor(0, { dest_row, dest_col })
 
         return
     end
