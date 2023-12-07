@@ -30,7 +30,6 @@ vim.keymap.set("n", "ZQ", "<Nop>")
 
 vim.keymap.set("n", "Q", "<nop>")
 vim.keymap.set("n", "gQ", "<nop>")
-vim.keymap.set("n", "q:", "<nop>")
 
 vim.keymap.set({ "n", "v" }, "<C-z>", "<nop>")
 

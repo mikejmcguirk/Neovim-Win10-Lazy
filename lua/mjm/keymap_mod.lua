@@ -210,9 +210,20 @@ local backspace_blank_line = function()
     local dest_line = vim.api.nvim_get_current_line()
     local dest_col = #dest_line
     local dest_line_is_empty = string.match(dest_line, "^%s*$")
+    local set_row = dest_row - 1 -- nvim_buf_set_text and set_lines are 0 indexed
 
     if dest_col > 0 and not dest_line_is_empty then
         vim.api.nvim_win_set_cursor(0, { dest_row, dest_col })
+
+        -- check if the line has trailing whitespace
+        local trailing_whitespace = string.match(dest_line, "%s+$")
+
+        if trailing_whitespace then
+            local dest_line_no_trailing_ws = string.gsub(dest_line, "%s+$", "")
+            -- buf_set_lines is end-exclusive, so dest_row is still used as range end
+            vim.api.nvim_buf_set_lines(0, set_row, dest_row, false, { dest_line_no_trailing_ws })
+            return
+        end
 
         return
     end
@@ -224,8 +235,6 @@ local backspace_blank_line = function()
         return
     end
 
-    local set_row = dest_row - 1 -- nvim_buf_set_text is 0 indexed
-    -- buf_set_text is end-exclusive, so dest_row is still used as range end
     vim.api.nvim_buf_set_lines(0, set_row, dest_row, false, { string.rep(" ", indent) })
     vim.api.nvim_win_set_cursor(0, { dest_row, indent })
 end

@@ -107,6 +107,7 @@ return {
             end)
 
             vim.keymap.set("n", "<leader>tt", builtin.highlights)
+            vim.keymap.set("n", "<leader>tk", builtin.keymaps)
             vim.keymap.set("n", "<leader>te", builtin.live_grep)
             vim.keymap.set("n", "<leader>tw", builtin.lsp_workspace_symbols)
             vim.keymap.set("n", "<leader>tq", builtin.quickfix)

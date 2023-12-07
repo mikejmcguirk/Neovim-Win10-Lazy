@@ -13,6 +13,23 @@ local root_files = {
 
 local root_start = gf.get_buf_directory(vim.fn.bufnr(""))
 
+local check_for_nvim = function()
+    local isLinux = vim.fn.has("unix")
+    local linux_config_dir = vim.fn.expand("~/.config/nvim")
+    local isWin = vim.fn.has("win32")
+    local win_config_dir = vim.fn.expand("~\\AppData\\Local\\nvim-data")
+
+    local check_os = function()
+        if isLinux then
+            return linux_config_dir
+        elseif isWin then
+            return win_config_dir
+        end
+    end
+
+    local config_dir = check_os()
+end
+
 vim.lsp.start({
     name = "lua_ls",
     cmd = { "lua-language-server" },
