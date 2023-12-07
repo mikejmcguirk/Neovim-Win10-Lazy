@@ -19,10 +19,8 @@ end
 M.rest_cursor = function(map, options)
     local opts = vim.deepcopy(options or {})
 
-    if opts.mod_check then
-        if not M.check_modifiable() then
-            return
-        end
+    if opts.mod_check and not M.check_modifiable then
+        return
     end
 
     local cur_view = nil
@@ -184,7 +182,7 @@ local backspace_blank_line = function()
             -- v:lnum is not updated when nvim_exec2 is called, so it must be updated here
             --
             -- A couple of the runtime expressions take '.' as an argument
-            -- This is properly updated before nvim_exec2 is called
+            -- This is already updated before nvim_exec2 is called
             --
             -- Other indentexpr options are not guaranteed to be handled properly
             vim.v.lnum = dest_line_num
@@ -195,6 +193,8 @@ local backspace_blank_line = function()
             return expr_indent
         end
 
+        -- return 0
+
         local prev_nonblank = vim.fn.prevnonblank(dest_line_num - 1)
         local prev_nonblank_indent = vim.fn.indent(prev_nonblank)
 
@@ -202,6 +202,11 @@ local backspace_blank_line = function()
     end
 
     local indent = get_indent()
+
+    if indent == 0 then
+        return
+    end
+
     local set_row = dest_row - 1 -- nvim_buf_set_text is 0 indexed
 
     vim.api.nvim_buf_set_text(0, set_row, 0, set_row, 0, { string.rep(" ", indent) })
