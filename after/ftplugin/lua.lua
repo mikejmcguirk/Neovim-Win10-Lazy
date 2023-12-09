@@ -20,6 +20,7 @@ vim.lsp.start({
     cmd = { "lua-language-server" },
     root_dir = gf.find_proj_root(root_files, root_start, nil),
     capabilities = Lsp_Capabilities,
+    before_init = require("neodev.lsp").before_init,
     settings = {
         Lua = {
             workspace = {
@@ -30,26 +31,26 @@ vim.lsp.start({
             },
         },
     },
-    on_init = function(client)
-        local client_root_dir = client.config.root_dir
-        local nvim_config = "nvim"
-        local is_nvim_config = string.find(client_root_dir, nvim_config)
-
-        if is_nvim_config == nil then
-            return
-        end
-
-        client.config.settings = vim.tbl_deep_extend("force", client.config.settings, {
-            Lua = {
-                runtime = {
-                    version = "LuaJIT",
-                },
-                workspace = {
-                    library = vim.api.nvim_get_runtime_file("", true),
-                },
-            },
-        })
-
-        client.notify("workspace/didChangeConfiguration", { settings = client.config.settings })
-    end,
+    -- on_init = function(client)
+    --     local client_root_dir = client.config.root_dir
+    --     local nvim_config = "nvim"
+    --     local is_nvim_config = string.find(client_root_dir, nvim_config)
+    --
+    --     if is_nvim_config == nil then
+    --         return
+    --     end
+    --
+    --     client.config.settings = vim.tbl_deep_extend("force", client.config.settings, {
+    --         Lua = {
+    --             runtime = {
+    --                 version = "LuaJIT",
+    --             },
+    --             workspace = {
+    --                 library = vim.api.nvim_get_runtime_file("", true),
+    --             },
+    --         },
+    --     })
+    --
+    --     client.notify("workspace/didChangeConfiguration", { settings = client.config.settings })
+    -- end,
 })

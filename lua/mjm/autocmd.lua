@@ -19,10 +19,10 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
             return
         end
 
-        local clients = vim.lsp.buf_get_clients(ev.bufnr)
+        local clients = vim.lsp.get_active_clients({ bufnr = ev.bufnr })
 
         for _, client in pairs(clients) do
-            if client.name ~= "copilot" then
+            if client.name ~= "copilot" and client.name ~= "taplo" then
                 return
             end
         end
