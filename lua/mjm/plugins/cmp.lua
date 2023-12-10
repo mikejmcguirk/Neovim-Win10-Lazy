@@ -104,7 +104,7 @@ end
 return {
     {
         "hrsh7th/nvim-cmp",
-        event = { "BufReadPre", "BufNewFile" },
+        event = { "InsertEnter" },
         config = function()
             cmp_config()
         end,

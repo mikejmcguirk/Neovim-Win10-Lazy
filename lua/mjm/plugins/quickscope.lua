@@ -1,5 +1,6 @@
 return {
     "unblevable/quick-scope",
+    event = { "BufReadPre", "BufNewFile" },
     config = function()
         if Env_Theme == "blue" then
             vim.api.nvim_set_hl(

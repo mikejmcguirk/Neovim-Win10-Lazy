@@ -14,7 +14,7 @@ return {
             },
             {
                 "debugloop/telescope-undo.nvim",
-                event = "BufReadPre",
+                event = { "BufReadPre", "BufNewFile" },
             },
         },
         config = function()
