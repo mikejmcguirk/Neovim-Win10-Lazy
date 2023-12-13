@@ -66,6 +66,9 @@ local find_pairs = function()
         return false
     end
 
+    local cur_line = vim.api.nvim_get_current_line()
+    local cur_char = cur_line:sub(cur_col, cur_col)
+
     local pairs = {
         { "{", "}" },
         { "[", "]" },
@@ -76,11 +79,6 @@ local find_pairs = function()
         { "`", "`" },
     }
 
-    local cur_line = vim.api.nvim_get_current_line()
-    -- nvim_win_get_cursor is 0 indexed for columns. Lua is 1 indexed
-    local cur_char = cur_line:sub(cur_col, cur_col)
-
-    -- Check if we are in a pair
     local check_pairs = function(char, to_find, to_return)
         for _, pair in ipairs(pairs) do
             if pair[to_find] == char then
@@ -91,17 +89,18 @@ local find_pairs = function()
         return nil
     end
 
+    -- Check if we are in a pair
     local close_char = check_pairs(cur_char, 1, 2)
-    local next_char = cur_line:sub(cur_col + 1, cur_col + 1)
+    local next_col = cur_col + 1
+    local next_char = cur_line:sub(next_col, next_col)
 
     if close_char == next_char then
-        -- buf_set_text is 0 indexed, nvim_win_set_cursor is 1 indexed for rows
         local line_to_set = cur_row - 1
         local start_col = cur_col - 1
-        local end_col = cur_col + 1 -- buf_set_text is end-exclusive
+        local end_col = cur_col + 1
         vim.api.nvim_buf_set_text(0, line_to_set, start_col, line_to_set, end_col, { "" })
 
-        vim.api.nvim_win_set_cursor(0, { cur_row, cur_col - 1 })
+        vim.api.nvim_win_set_cursor(0, { cur_row, start_col })
 
         return true
     end
@@ -122,10 +121,9 @@ local find_pairs = function()
     if open_char == prev_char then
         local line_to_set = cur_row - 1
         local start_col = cur_col - 2
-        local end_col = cur_col
-        vim.api.nvim_buf_set_text(0, line_to_set, start_col, line_to_set, end_col, { "" })
+        vim.api.nvim_buf_set_text(0, line_to_set, start_col, line_to_set, cur_col, { "" })
 
-        vim.api.nvim_win_set_cursor(0, { cur_row, cur_col - 2 })
+        vim.api.nvim_win_set_cursor(0, { cur_row, start_col })
 
         return true
     end
@@ -155,8 +153,6 @@ local get_indent = function(line_num)
 
         return expr_indent
     end
-
-    -- return 0
 
     local prev_nonblank = vim.fn.prevnonblank(line_num - 1)
     local prev_nonblank_indent = vim.fn.indent(prev_nonblank)
@@ -200,15 +196,14 @@ local backspace_blank_line = function()
 
     local dest_line = vim.api.nvim_get_current_line()
     local dest_col = #dest_line
-    local dest_line_is_empty = string.match(dest_line, "^%s*$")
+    local last_non_blank, _ = dest_line:find("(%S)%s*$")
 
     local set_row = dest_row - 1
 
-    if dest_col > 0 and not dest_line_is_empty then
+    if dest_col > 0 and last_non_blank ~= nil then
         local trailing_whitespace = string.match(dest_line, "%s+$")
 
         if trailing_whitespace then
-            local last_non_blank, _ = dest_line:find("(%S)%s*$")
             vim.api.nvim_buf_set_text(0, set_row, last_non_blank, set_row, dest_col, { "" })
 
             dest_line = vim.api.nvim_get_current_line()

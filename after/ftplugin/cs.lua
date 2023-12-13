@@ -5,8 +5,6 @@ if not Env_OmniSharp_DLL then
         "Env_OmniSharp_DLL global Neovim variable not found. Cannot start OmniSharp"
     )
 else
-    gf.create_lsp_formatter(LSP_Augroup)
-
     -- https://github.com/OmniSharp/omnisharp-roslyn/issues/909
     local omni_capabilities = vim.deepcopy(Lsp_Capabilities)
     omni_capabilities = vim.tbl_deep_extend("force", omni_capabilities, {
