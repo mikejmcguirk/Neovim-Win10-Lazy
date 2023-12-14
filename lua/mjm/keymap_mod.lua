@@ -398,7 +398,17 @@ M.visual_move = function(vcount1, pos_1, pos_2, fix_num, cmd_start)
     end
 
     local cmd = cmd_start .. get_to_move()
-    vim.cmd(cmd)
+
+    local status, result = pcall(function()
+        vim.cmd(cmd)
+    end)
+
+    if (not status) and result then
+        vim.api.nvim_err_writeln(result)
+        vim.cmd("normal! gv")
+
+        return
+    end
 
     local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
 
