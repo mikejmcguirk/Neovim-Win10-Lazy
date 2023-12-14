@@ -293,10 +293,6 @@ end
 ---@param inner_outer string[]
 ---@return nil
 M.demap_text_objects_inout = function(motions, text_objects, inner_outer)
-    local motions = vim.deepcopy(motions)
-    local text_objects = vim.deepcopy(text_objects)
-    local inner_outer = vim.deepcopy(inner_outer)
-
     for _, motion in pairs(motions) do
         for _, object in pairs(text_objects) do
             for _, in_out in pairs(inner_outer) do
@@ -314,9 +310,6 @@ end
 ---@param text_objects string[]
 ---@return nil
 M.demap_text_objects = function(motions, text_objects)
-    local motions = vim.deepcopy(motions)
-    local text_objects = vim.deepcopy(text_objects)
-
     for _, motion in pairs(motions) do
         for _, object in pairs(text_objects) do
             vim.keymap.set("n", motion .. object, "<nop>", M.default_opts)
@@ -329,9 +322,6 @@ end
 ---@param inner_outer string[]
 ---@return nil
 M.yank_cursor_fixes = function(text_objects, inner_outer)
-    local text_objects = vim.deepcopy(text_objects)
-    local inner_outer = vim.deepcopy(inner_outer)
-
     for _, object in pairs(text_objects) do
         for _, in_out in pairs(inner_outer) do
             local main_cmd = "y" .. in_out .. object

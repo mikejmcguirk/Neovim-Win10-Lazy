@@ -1,5 +1,7 @@
 local gf = require("mjm.global_funcs")
 
+-- Formatting provided by csharpier through conform
+
 if not Env_OmniSharp_DLL then
     vim.api.nvim_err_writeln(
         "Env_OmniSharp_DLL global Neovim variable not found. Cannot start OmniSharp"
@@ -7,11 +9,11 @@ if not Env_OmniSharp_DLL then
 else
     -- https://github.com/OmniSharp/omnisharp-roslyn/issues/909
     local omni_capabilities = vim.deepcopy(Lsp_Capabilities)
-    omni_capabilities = vim.tbl_deep_extend("force", omni_capabilities, {
-        workspace = {
-            workspaceFolders = false,
-        },
-    })
+    omni_capabilities = vim.tbl_deep_extend(
+        "force",
+        omni_capabilities,
+        { workspace = { workspaceFolders = false } }
+    )
 
     local root_start = gf.get_buf_directory(vim.fn.bufnr(""))
 

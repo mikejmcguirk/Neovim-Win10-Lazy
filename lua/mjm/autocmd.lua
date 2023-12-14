@@ -27,6 +27,15 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
             end
         end
 
+        local shiftwidth = vim.api.nvim_buf_get_option(ev.bufnr, "shiftwidth")
+        local expandtab = vim.api.nvim_buf_get_option(ev.bufnr, "expandtab")
+
+        if expandtab then
+            vim.api.nvim_buf_set_option(ev.bufnr, "tabstop", shiftwidth)
+            vim.api.nvim_buf_set_option(ev.bufnr, "softtabstop", shiftwidth)
+            vim.api.nvim_command("retab")
+        end
+
         vim.cmd([[normal! mz]])
 
         vim.cmd([[%s/\s\+$//e]]) -- Remove trailing whitespace
