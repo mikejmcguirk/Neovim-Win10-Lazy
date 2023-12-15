@@ -48,6 +48,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         vim.keymap.set("n", "<leader>va", vim.lsp.buf.add_workspace_folder, lsp_opts)
         vim.keymap.set("n", "<leader>vd", vim.lsp.buf.remove_workspace_folder, lsp_opts)
+        vim.keymap.set("n", "<leader>vh", vim.lsp.buf.document_highlight, lsp_opts)
 
         vim.keymap.set("n", "<leader>vf", function()
             print(vim.inspect(vim.lsp.buf.list_workspace_folders()))

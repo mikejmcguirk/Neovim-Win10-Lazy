@@ -134,7 +134,10 @@ end, km.expr_opts)
 vim.keymap.set("v", "<", "<gv", km.opts)
 vim.keymap.set("v", ">", ">gv", km.opts)
 
-vim.keymap.set("n", "<leader>/", "<cmd>noh<cr>", km.opts)
+vim.keymap.set("n", "<leader>/", function()
+    vim.cmd("noh")
+    vim.lsp.buf.clear_references()
+end, km.opts)
 
 vim.keymap.set("n", "gV", "`[v`]", km.opts)
 vim.keymap.set("n", "<leader>V", "_vg_", km.opts)
