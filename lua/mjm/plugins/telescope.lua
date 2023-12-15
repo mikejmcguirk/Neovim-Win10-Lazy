@@ -114,6 +114,26 @@ return {
             vim.keymap.set("n", "<leader>ti", builtin.registers)
             vim.keymap.set("n", "<leader>tr", builtin.resume)
             vim.keymap.set("n", "<leader>tu", "<cmd>Telescope undo<cr>")
+
+            local actions = require("telescope.actions")
+            local actions_state = require("telescope.actions.state")
+
+            vim.keymap.set("n", "<leader>tv", function()
+                builtin.git_commits({
+                    attach_mappings = function(buffer)
+                        actions.select_default:replace(function()
+                            actions.close(buffer)
+
+                            local commit = actions_state.get_selected_entry().value
+
+                            vim.cmd.Git("diff " .. tostring(commit))
+                            vim.cmd.wincmd("L")
+                        end)
+
+                        return true
+                    end,
+                })
+            end)
         end,
     },
 }
