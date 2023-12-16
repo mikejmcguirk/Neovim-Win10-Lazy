@@ -277,14 +277,14 @@ M.fix_backward_yanks = function(backward_objects)
         vim.keymap.set("n", main_map, function()
             local main_cmd = vim.v.count1 .. main_map
             M.rest_cursor(main_cmd)
-        end, M.default_opts)
+        end, M.opts)
 
         local ext_map = "<leader>y" .. object
 
         vim.keymap.set("n", ext_map, function()
             local ext_cmd = vim.v.count1 .. '"+' .. main_map
             M.rest_cursor(ext_cmd)
-        end, M.default_opts)
+        end, M.opts)
     end
 end
 
@@ -297,10 +297,44 @@ M.demap_text_objects_inout = function(motions, text_objects, inner_outer)
         for _, object in pairs(text_objects) do
             for _, in_out in pairs(inner_outer) do
                 local normal_map = motion .. in_out .. object
-                vim.keymap.set("n", normal_map, "<nop>", M.default_opts)
+                vim.keymap.set("n", normal_map, "<nop>", M.opts)
 
                 local ext_map = "<leader>" .. motion .. in_out .. object
-                vim.keymap.set("n", ext_map, "<nop>", M.default_opts)
+                vim.keymap.set("n", ext_map, "<nop>", M.opts)
+            end
+        end
+    end
+end
+
+---@param motions string[]
+---@param objects string[]
+---@return nil
+M.fix_startline_motions = function(motions, objects)
+    for _, motion in pairs(motions) do
+        for _, object in pairs(objects) do
+            local map = motion .. object
+            local cmd = "v" .. object .. motion
+            local cmd_mark = "mz" .. cmd .. "`z"
+
+            local what_register = function()
+                if motion == "y" then
+                    return '"+'
+                else
+                    return '"_'
+                end
+            end
+
+            local register = what_register()
+            local ext_map = "<leader>" .. map
+            local ext_cmd = "v" .. object .. register .. motion
+            local ext_cmd_mark = "mz" .. ext_cmd .. "`z"
+
+            if motion == "y" then
+                vim.keymap.set("n", map, cmd_mark, M.opts)
+                vim.keymap.set("n", ext_map, ext_cmd_mark, M.opts)
+            else
+                vim.keymap.set("n", map, cmd, M.opts)
+                vim.keymap.set("n", ext_map, ext_cmd, M.opts)
             end
         end
     end
@@ -312,8 +346,8 @@ end
 M.demap_text_objects = function(motions, text_objects)
     for _, motion in pairs(motions) do
         for _, object in pairs(text_objects) do
-            vim.keymap.set("n", motion .. object, "<nop>", M.default_opts)
-            vim.keymap.set("n", "<leader>" .. motion .. object, "<nop>", M.default_opts)
+            vim.keymap.set("n", motion .. object, "<nop>", M.opts)
+            vim.keymap.set("n", "<leader>" .. motion .. object, "<nop>", M.opts)
         end
     end
 end
@@ -328,14 +362,14 @@ M.yank_cursor_fixes = function(text_objects, inner_outer)
 
             vim.keymap.set("n", main_cmd, function()
                 M.rest_cursor(main_cmd)
-            end, M.default_opts)
+            end, M.opts)
 
             local ext_map = "<leader>y" .. in_out .. object
             local ext_cmd = '"+' .. main_cmd
 
             vim.keymap.set("n", ext_map, function()
                 M.rest_cursor(ext_cmd)
-            end, M.default_opts)
+            end, M.opts)
         end
     end
 end

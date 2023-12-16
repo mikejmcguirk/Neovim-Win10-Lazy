@@ -253,6 +253,10 @@ local nop_objects = { "b", "B", "s" } -- S is used by nvim-surround
 local ia = { "i", "a" }
 km.demap_text_objects_inout(motions, nop_objects, ia)
 
+-- vim.keymap.set("n", "<leader>y0", 'mzv0"+y`z', { silent = false })
+local startline_motions = { "0", "_", "g^", "g0" }
+km.fix_startline_motions(motions, startline_motions)
+
 local text_objects = { "<", '"', "'", "`", "(", "[", "{", "p" }
 km.demap_text_objects(motions, text_objects)
 
