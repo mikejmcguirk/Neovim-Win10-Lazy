@@ -33,10 +33,12 @@ local cmp_config = function()
             completion = {
                 border = "single",
                 winhighlight = win_highlight,
+                scrollbar = true,
             },
             documentation = {
                 border = "single",
                 winhighlight = win_highlight,
+                scrollbar = true,
             },
         },
         mapping = cmp.mapping.preset.insert({
@@ -89,6 +91,7 @@ local cmp_config = function()
                     buffer = "[Buffer]",
                     treesitter = "[Treesitter]",
                     nvim_lsp = "[LSP]",
+                    nvim_lsp_signature_help = "[Signature]",
                     vsnip = "[Vsnip]",
                     async_path = "[Path]",
                     spell = "[Spell]",

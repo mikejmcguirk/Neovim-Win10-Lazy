@@ -39,14 +39,15 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
         vim.cmd([[normal! mz]])
 
         vim.cmd([[%s/\s\+$//e]]) -- Remove trailing whitespace
-        vim.cmd([[%s/\n\+\%$//e]]) -- Remove trailing blank lines
         vim.cmd([[%s/\%^\n\+//e]]) -- Remove leading blank lines
+        vim.cmd([[%s/\n\{3,}/\r\r/e]]) -- Turn all instances of three or more newlines into two
+        vim.cmd([[%s/\n\+\%$//e]]) -- Remove trailing blank lines
 
         vim.cmd([[silent! normal! `z]])
     end,
 })
 
--- Does not work if set with other options
+-- Does not work if set a global option
 vim.api.nvim_create_autocmd({ "FileType" }, {
     group = mjm_group,
     pattern = "*",
