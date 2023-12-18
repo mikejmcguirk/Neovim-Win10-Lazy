@@ -63,7 +63,6 @@ local cmp_config = function()
         sources = {
             { name = "nvim_lsp_signature_help" },
             { name = "nvim_lsp" },
-            { name = "vsnip" },
             {
                 name = "buffer",
                 option = {
@@ -83,6 +82,7 @@ local cmp_config = function()
                     end,
                 },
             },
+            { name = "vsnip" },
         },
         formatting = {
             fields = { "abbr", "kind", "menu" },

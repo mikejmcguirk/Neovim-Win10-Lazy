@@ -30,6 +30,6 @@ return {
     end,
     init = function()
         vim.g.qs_highlight_on_keys = { "f", "F", "t", "T" }
-        vim.g.qs_max_chars = 1000
+        vim.g.qs_max_chars = 2000
     end,
 }
