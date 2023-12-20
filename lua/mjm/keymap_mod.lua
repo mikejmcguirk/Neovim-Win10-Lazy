@@ -218,7 +218,7 @@ local backspace_blank_line = function()
     local dest_line_num = vim.fn.line(".")
     local indent = get_indent(dest_line_num)
 
-    if indent == 0 then
+    if indent <= 0 then
         return
     end
 
