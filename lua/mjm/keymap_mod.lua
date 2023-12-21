@@ -98,8 +98,8 @@ local find_pairs = function()
         local line_to_set = cur_row - 1
         local start_col = cur_col - 1
         local end_col = cur_col + 1
-        vim.api.nvim_buf_set_text(0, line_to_set, start_col, line_to_set, end_col, { "" })
 
+        vim.api.nvim_buf_set_text(0, line_to_set, start_col, line_to_set, end_col, { "" })
         vim.api.nvim_win_set_cursor(0, { cur_row, start_col })
 
         return true
@@ -121,8 +121,8 @@ local find_pairs = function()
     if open_char == prev_char then
         local line_to_set = cur_row - 1
         local start_col = cur_col - 2
-        vim.api.nvim_buf_set_text(0, line_to_set, start_col, line_to_set, cur_col, { "" })
 
+        vim.api.nvim_buf_set_text(0, line_to_set, start_col, line_to_set, cur_col, { "" })
         vim.api.nvim_win_set_cursor(0, { cur_row, start_col })
 
         return true
@@ -177,10 +177,11 @@ local backspace_blank_line = function()
     end
 
     vim.api.nvim_del_current_line()
+
     local cur_row = vim.fn.line(".")
 
     ---@return number
-    local set_destination_row = function()
+    local get_destination_row = function()
         local on_first_row = cur_row == 1
         local already_moved = cur_row ~= start_row -- If you delete the last line
 
@@ -191,13 +192,13 @@ local backspace_blank_line = function()
         return cur_row - 1
     end
 
-    local dest_row = set_destination_row()
+    local dest_row = get_destination_row()
+
     vim.api.nvim_win_set_cursor(0, { dest_row, 0 })
 
     local dest_line = vim.api.nvim_get_current_line()
     local dest_col = #dest_line
     local last_non_blank, _ = dest_line:find("(%S)%s*$")
-
     local set_row = dest_row - 1
 
     if dest_col > 0 and last_non_blank ~= nil then
@@ -327,9 +328,10 @@ M.fix_startline_motions = function(motions, objects)
             local register = what_register()
             local ext_map = "<leader>" .. map
             local ext_cmd = "v" .. object .. register .. motion
-            local ext_cmd_mark = "mz" .. ext_cmd .. "`z"
 
             if motion == "y" then
+                local ext_cmd_mark = "mz" .. ext_cmd .. "`z"
+
                 vim.keymap.set("n", map, cmd_mark, M.opts)
                 vim.keymap.set("n", ext_map, ext_cmd_mark, M.opts)
             else
