@@ -161,17 +161,45 @@ local get_indent = function(line_num)
 end
 
 ---@return nil
-local backspace_blank_line = function()
+local backspace_blank_line = function(options)
+    local opts = vim.deepcopy(options or {})
     local start_row, start_col = unpack(vim.api.nvim_win_get_cursor(0))
     local start_indent = get_indent(start_row)
 
-    if start_indent > 0 and start_col > start_indent then
+    local snap_to_indent = start_col > start_indent
+    local reduce_indent = start_col > 0 and opts.allow_blank
+
+    if snap_to_indent or reduce_indent then
+        local set_start
+
+        if snap_to_indent then
+            set_start = start_indent - 1
+        else
+            local shiftwidth = vim.fn.shiftwidth()
+            local extra_spaces = start_col % shiftwidth
+
+            local to_remove
+
+            if extra_spaces == 0 then
+                to_remove = shiftwidth
+            else
+                to_remove = extra_spaces
+            end
+
+            set_start = (start_col - 1) - to_remove
+        end
+
+        if set_start <= 0 then
+            vim.api.nvim_set_current_line("")
+
+            return
+        end
+
         local start_line = vim.api.nvim_get_current_line()
         local start_line_length = #start_line - 1
         local set_row = start_row - 1
-        local set_start = start_indent - 1
 
-        vim.api.nvim_buf_set_text(0, set_row, set_start, set_row, start_line_length, { "" })
+        vim.api.nvim_buf_set_text(0, set_row, set_start, set_row, start_line_length, {})
 
         return
     end
@@ -228,7 +256,7 @@ local backspace_blank_line = function()
 end
 
 ---@return nil
-M.insert_backspace_fix = function()
+M.insert_backspace_fix = function(options)
     local empty_string = string.match(vim.api.nvim_get_current_line(), "^%s*$")
 
     if not empty_string then
@@ -244,7 +272,7 @@ M.insert_backspace_fix = function()
         return
     end
 
-    backspace_blank_line()
+    backspace_blank_line(options)
 end
 
 ---@param visual string
