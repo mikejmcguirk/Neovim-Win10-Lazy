@@ -24,6 +24,8 @@ vim.lsp.start({
                 pycodestyle = {
                     maxLineLength = 99,
                     ignore = {
+                        "E201",
+                        "E202",
                         "E302",
                         "E303",
                         "E305",

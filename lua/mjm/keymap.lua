@@ -122,6 +122,7 @@ vim.keymap.set("i", ".", ".<C-g>u", km.opts)
 vim.keymap.set("i", ";", ";<C-g>u", km.opts)
 vim.keymap.set("i", "?", "?<C-g>u", km.opts)
 vim.keymap.set("i", "!", "!<C-g>u", km.opts)
+vim.keymap.set("i", ":", ":<C-g>u", km.opts)
 
 vim.keymap.set("n", "j", function()
     return km.vertical_motion_fix("gj", "j")

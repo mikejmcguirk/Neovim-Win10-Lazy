@@ -16,11 +16,50 @@ local handler_border = {
     style = "minimal",
 }
 
-vim.diagnostic.config({
-    update_in_insert = false,
+local default_diag_cfg = {
     severity_sort = true,
     float = vim.tbl_extend("force", { source = "always" }, handler_border),
+    virtual_text = true,
+    signs = true,
+}
+
+vim.diagnostic.config(default_diag_cfg)
+
+vim.keymap.set("n", "<leader>vi", function()
+    vim.diagnostic.config(default_diag_cfg)
+end)
+
+local diag_cfg_warn = vim.tbl_deep_extend("force", default_diag_cfg, {
+    virtual_text = {
+        severity = {
+            min = vim.diagnostic.severity.WARN,
+        },
+    },
+    signs = {
+        severity = {
+            min = vim.diagnostic.severity.WARN,
+        },
+    },
 })
+
+vim.keymap.set("n", "<leader>vw", function()
+    vim.diagnostic.config(diag_cfg_warn)
+end)
+
+vim.keymap.set("n", "<leader>vt", function()
+    local cur_diag_cfg = vim.diagnostic.config()
+    local min_diag_level = nil
+
+    if type(cur_diag_cfg.virtual_text) == "table" and cur_diag_cfg.virtual_text.severity then
+        min_diag_level = cur_diag_cfg.virtual_text.severity.min
+    end
+
+    if min_diag_level == nil then
+        vim.diagnostic.config(diag_cfg_warn)
+    else
+        vim.diagnostic.config(default_diag_cfg)
+    end
+end)
 
 -- LSP windows use floating windows, documented in nvim_open_win
 -- The borders use the "FloatBorder" highlight group
