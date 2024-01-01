@@ -1,62 +1,101 @@
 local open_at_bottom = function()
-    vim.cmd("copen")
-    vim.cmd.wincmd("J")
+    vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
 end
 
 vim.keymap.set("n", "<leader>qt", function()
-    local win_info = vim.fn.getwininfo()
-
-    for _, win in ipairs(win_info) do
+    for _, win in ipairs(vim.fn.getwininfo()) do
         if win.quickfix == 1 then
-            vim.cmd("cclose")
+            vim.api.nvim_cmd({ cmd = "cclose" }, {})
 
             return
         end
     end
 
-    open_at_bottom()
+    vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
 end)
 
-vim.keymap.set("n", "<leader>qp", "<cmd>copen<cr>")
+vim.keymap.set("n", "<leader>qp", function()
+    vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
+end)
+
 vim.keymap.set("n", "<leader>qc", "<cmd>cclose<cr>")
 
-vim.opt.grepformat = "%f:%l:%m"
 vim.opt.grepprg = "rg --line-number"
+vim.opt.grepformat = "%f:%l:%m"
 
----@param grep_cmd string
-local grep_function = function(grep_cmd)
+local grep_wrapper = function(options)
     local pattern = vim.fn.input("Enter pattern: ")
 
-    if pattern ~= "" then
-        local cur_view = vim.fn.winsaveview()
+    if pattern == "" or pattern == nil then
+        vim.cmd("echo ''")
 
-        vim.cmd("silent! " .. grep_cmd .. " " .. pattern .. " | copen")
-
-        vim.cmd("wincmd p")
-        vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<C-O>", true, true, true), "n", {})
-
-        vim.defer_fn(function()
-            vim.fn.winrestview(cur_view)
-        end, 0)
-
-        vim.defer_fn(function()
-            open_at_bottom()
-        end, 0)
+        return
     end
+
+    local args = {
+        pattern,
+    }
+
+    local opts = vim.deepcopy(options) or {}
+    local case_insensitive = opts.insensitive or false
+
+    if case_insensitive then
+        table.insert(args, "-i")
+    end
+
+    local grep_cmd = {
+        args = args,
+        bang = "true",
+        cmd = "grep",
+        mods = {
+            emsg_silent = true,
+        },
+    }
+
+    vim.api.nvim_cmd(grep_cmd, {})
+    vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
 end
 
 vim.keymap.set("n", "<leader>qgn", function()
-    grep_function("grep")
+    grep_wrapper()
 end)
 
 -- This command depends on the grepprg being set to ripgrep
 vim.keymap.set("n", "<leader>qgi", function()
-    grep_function("grep -i")
+    grep_wrapper({ insensitive = true })
 end)
 
 ---@param severity_cap number
 local diags_to_qf = function(severity_cap, options)
-    local raw_diagnostics = vim.diagnostic.get(nil)
+    local opts = vim.deepcopy(options) or {}
+    local all_bufs = opts.all_bufs or false
+
+    if not all_bufs then
+        local cur_win = vim.api.nvim_get_current_win()
+        local cur_win_info = vim.fn.getwininfo(cur_win)
+
+        for _, win in ipairs(cur_win_info) do
+            if win.quickfix == 1 then
+                local echo_cmd = {
+                    cmd = "echo",
+                    args = { "'Currently", "in", "quickfix", "window'" },
+                }
+
+                vim.api.nvim_cmd(echo_cmd, {})
+
+                return
+            end
+        end
+    end
+
+    local raw_diagnostics = nil
+
+    if all_bufs then
+        raw_diagnostics = vim.diagnostic.get(nil)
+    else
+        raw_diagnostics = vim.diagnostic.get(0)
+    end
+
     local diags_for_qf = {}
 
     local severity_map = {
@@ -66,50 +105,46 @@ local diags_to_qf = function(severity_cap, options)
         [vim.diagnostic.severity.HINT] = "H",
     }
 
-    local check_buf = options and options.check_bufnr
-    local current_buf = vim.api.nvim_get_current_buf()
-
     for _, raw_diag in ipairs(raw_diagnostics) do
-        local raw_diag_bufnr = raw_diag.bufnr
+        if raw_diag.severity <= severity_cap then
+            local converted_diag = {
+                bufnr = raw_diag.bufnr,
+                filename = vim.fn.bufname(raw_diag.bufnr),
+                lnum = raw_diag.lnum + 1,
+                end_lnum = raw_diag.end_lnum + 1,
+                col = raw_diag.col,
+                end_col = raw_diag.end_col,
+                text = (raw_diag.source or "")
+                    .. ": "
+                    .. "["
+                    .. (raw_diag.code or "")
+                    .. "] "
+                    .. (raw_diag.message or ""),
+                type = severity_map[raw_diag.severity],
+            }
 
-        if check_buf and raw_diag_bufnr ~= current_buf then
-        else
-            if raw_diag.severity <= severity_cap then
-                local converted_diag = {
-                    bufnr = raw_diag.bufnr,
-                    filename = vim.fn.bufname(raw_diag.bufnr),
-                    lnum = raw_diag.lnum + 1,
-                    end_lnum = raw_diag.end_lnum + 1,
-                    col = raw_diag.col,
-                    end_col = raw_diag.end_col,
-                    text = (raw_diag.source or "")
-                        .. ": "
-                        .. "["
-                        .. (raw_diag.code or "")
-                        .. "] "
-                        .. (raw_diag.message or ""),
-                    type = severity_map[raw_diag.severity],
-                }
-
-                table.insert(diags_for_qf, converted_diag)
-            end
+            table.insert(diags_for_qf, converted_diag)
         end
     end
 
     vim.fn.setqflist(diags_for_qf, "r")
-    open_at_bottom()
+    vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
 end
 
 vim.keymap.set("n", "<leader>qiq", function()
-    diags_to_qf(4)
+    diags_to_qf(4, { all_bufs = true })
 end)
 
 vim.keymap.set("n", "<leader>qiu", function()
-    diags_to_qf(4, { check_bufnr = true })
+    diags_to_qf(4)
 end)
 
 vim.keymap.set("n", "<leader>qii", function()
-    diags_to_qf(2) -- ERROR or WARN only
+    diags_to_qf(2, { all_bufs = true })
+end)
+
+vim.keymap.set("n", "<leader>qif", function()
+    diags_to_qf(2)
 end)
 
 vim.cmd("packadd cfilter")
@@ -132,7 +167,7 @@ end)
 
 vim.keymap.set("n", "<leader>qe", function()
     vim.fn.setqflist({})
-    vim.cmd("cclose")
+    vim.api.nvim_cmd({ cmd = "cclose" }, {})
 end)
 
 ---@param direction string

@@ -4,8 +4,8 @@ local km = require("mjm.keymap_mod")
 -- Mode Management --
 ---------------------
 
-vim.keymap.set({ "i", "v" }, "<C-c>", "<esc>", km.opts)
-vim.keymap.set({ "i", "v" }, "<C-C>", "<esc>", km.opts)
+vim.keymap.set({ "i", "v", "c" }, "<C-c>", "<esc>", km.opts)
+vim.keymap.set({ "i", "v", "c" }, "<C-C>", "<esc>", km.opts)
 
 vim.opt.spell = false
 vim.opt.spelllang = "en_us"
@@ -152,6 +152,7 @@ vim.keymap.set("n", "J", function()
 end, km.opts)
 
 local cap_motions_norm = {
+    "~",
     "guu",
     "guiw",
     "guiW",
@@ -163,19 +164,19 @@ local cap_motions_norm = {
     "g~IW",
 }
 
-local cap_motions_visual = {
-    "~",
-    "g~",
-    "gu",
-    "gU",
-}
-
 for _, map in pairs(cap_motions_norm) do
     vim.keymap.set("n", map, function()
         local cmd = vim.v.count1 .. map
         km.rest_cursor(cmd, { mod_check = true })
     end, km.opts)
 end
+
+local cap_motions_visual = {
+    "~",
+    "g~",
+    "gu",
+    "gU",
+}
 
 for _, map in pairs(cap_motions_visual) do
     vim.keymap.set("v", map, function()
