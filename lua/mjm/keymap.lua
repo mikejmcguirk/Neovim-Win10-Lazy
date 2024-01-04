@@ -4,8 +4,9 @@ local km = require("mjm.keymap_mod")
 -- Mode Management --
 ---------------------
 
-vim.keymap.set({ "i", "v", "c" }, "<C-c>", "<esc>", { silent = true })
-vim.keymap.set({ "i", "v", "c" }, "<C-C>", "<esc>", { silent = true })
+-- Do not map in command mode or else <C-c> will accept commands
+vim.keymap.set({ "i", "v" }, "<C-c>", "<esc>", { silent = true })
+vim.keymap.set({ "i", "v" }, "<C-C>", "<esc>", { silent = true })
 
 vim.opt.spell = false
 vim.opt.spelllang = "en_us"

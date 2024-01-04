@@ -63,27 +63,52 @@ vim.keymap.set("n", "<leader>qgi", function()
     grep_wrapper({ insensitive = true })
 end)
 
----@param severity_cap number
-local diags_to_qf = function(severity_cap, options)
-    local opts = vim.deepcopy(options) or {}
-    local all_bufs = opts.all_bufs or false
-    local in_qf_buf = vim.bo.filetype == "qf"
+---@param origin string
+---@return nil
+local diags_to_qf = function(origin, severity_cap)
+    if origin == "c" then
+        local non_diag_fts = {
+            "NvimTree",
+            "qf",
+            "help",
+            "git",
+            "harpoon",
+            "tsplayground",
+        }
 
-    if not all_bufs and in_qf_buf then
-        vim.cmd("echo 'Currently in quickfix buffer'")
+        if vim.tbl_contains(non_diag_fts, vim.bo.filetype) then
+            print("In non-diagnostic producing buffer")
+
+            return
+        end
+    end
+
+    local raw_diags = {}
+
+    if origin == "b" then
+        raw_diags = vim.diagnostic.get(nil)
+    elseif origin == "c" then
+        raw_diags = vim.diagnostic.get(0)
+    elseif origin == "w" then
+        local all_windows = vim.api.nvim_list_wins()
+
+        for _, win in ipairs(all_windows) do
+            local win_buf = vim.api.nvim_win_get_buf(win)
+            local win_diags = vim.diagnostic.get(win_buf)
+
+            for _, diag in ipairs(win_diags) do
+                table.insert(raw_diags, diag)
+            end
+        end
+    else
+        print("Invalid origin")
 
         return
     end
 
-    local raw_diagnostics = nil
-
-    if all_bufs then
-        raw_diagnostics = vim.diagnostic.get(nil)
-    else
-        raw_diagnostics = vim.diagnostic.get(0)
+    if severity_cap == nil then
+        severity_cap = 4
     end
-
-    local diags_for_qf = {}
 
     local severity_map = {
         [vim.diagnostic.severity.ERROR] = "E",
@@ -92,73 +117,94 @@ local diags_to_qf = function(severity_cap, options)
         [vim.diagnostic.severity.HINT] = "H",
     }
 
-    for _, raw_diag in ipairs(raw_diagnostics) do
-        if raw_diag.severity <= severity_cap then
-            local diag_source = raw_diag.source or ""
+    if severity_map[severity_cap] == nil then
+        print("Invalid severity cap")
 
-            if diag_source ~= "" then
-                diag_source = diag_source .. ": "
-            end
-
-            local diag_code = raw_diag.code or ""
-
-            if diag_code ~= "" then
-                diag_code = "[" .. diag_code .. "] "
-            end
-
-            local diag_message = raw_diag.message or ""
-            local diag_text = diag_source .. diag_code .. diag_message
-
-            local converted_diag = {
-                bufnr = raw_diag.bufnr,
-                filename = vim.fn.bufname(raw_diag.bufnr),
-                lnum = raw_diag.lnum + 1,
-                end_lnum = raw_diag.end_lnum + 1,
-                col = raw_diag.col,
-                end_col = raw_diag.end_col,
-                text = diag_text,
-                type = severity_map[raw_diag.severity],
-            }
-
-            table.insert(diags_for_qf, converted_diag)
-        end
+        return
     end
+
+    local filtered_diags = {}
+
+    if severity_cap < 4 then
+        for _, diag in ipairs(raw_diags) do
+            if diag.severity <= severity_cap then
+                table.insert(filtered_diags, diag)
+            end
+        end
+    else
+        filtered_diags = raw_diags
+    end
+
+    if #filtered_diags == 0 then
+        print("No diagnostics")
+
+        return
+    end
+
+    local convert_diag = function(raw_diag)
+        local diag_source = raw_diag.source or ""
+
+        if diag_source ~= "" then
+            diag_source = diag_source .. ": "
+        end
+
+        local diag_code = raw_diag.code or ""
+
+        if diag_code ~= "" then
+            diag_code = "[" .. diag_code .. "] "
+        end
+
+        local diag_message = raw_diag.message or ""
+        local diag_text = diag_source .. diag_code .. diag_message
+
+        local converted_diag = {
+            bufnr = raw_diag.bufnr,
+            filename = vim.fn.bufname(raw_diag.bufnr),
+            lnum = raw_diag.lnum + 1,
+            end_lnum = raw_diag.end_lnum + 1,
+            col = raw_diag.col,
+            end_col = raw_diag.end_col,
+            text = diag_text,
+            type = severity_map[raw_diag.severity],
+        }
+
+        return converted_diag
+    end
+
+    local diags_for_qf = vim.tbl_map(convert_diag, filtered_diags)
 
     vim.fn.setqflist(diags_for_qf, "r")
     vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
 end
 
 vim.keymap.set("n", "<leader>qiq", function()
-    diags_to_qf(4, { all_bufs = true })
+    diags_to_qf("b")
 end)
 
 vim.keymap.set("n", "<leader>qiu", function()
-    diags_to_qf(4)
+    diags_to_qf("c")
+end)
+
+vim.keymap.set("n", "<leader>qio", function()
+    diags_to_qf("w")
 end)
 
 vim.keymap.set("n", "<leader>qii", function()
-    diags_to_qf(2, { all_bufs = true })
+    diags_to_qf("b", 2)
 end)
 
 vim.keymap.set("n", "<leader>qif", function()
-    diags_to_qf(2)
+    diags_to_qf("c", 2)
+end)
+
+vim.keymap.set("n", "<leader>qiw", function()
+    diags_to_qf("w", 2)
 end)
 
 vim.cmd("packadd cfilter")
 
 ---@param type string
 local cfilter_wrapper = function(type)
-    local valid_types = {
-        "k",
-        "r",
-    }
-
-    if not vim.tbl_contains(valid_types, type) then
-        print("Invalid type")
-
-        return
-    end
-
     local qf_open = check_if_qf_open()
 
     if not qf_open then
@@ -176,6 +222,10 @@ local cfilter_wrapper = function(type)
     elseif type == "r" then
         prompt = prompt .. "remove: "
         use_bang = true
+    else
+        print("Invalid type")
+
+        return
     end
 
     local pattern = vim.fn.input(prompt)
@@ -201,7 +251,7 @@ vim.keymap.set("n", "<leader>qr", function()
     cfilter_wrapper("r")
 end)
 
-vim.keymap.set("n", "<leader>qe", function()
+vim.keymap.set("n", "<leader>ql", function()
     vim.fn.setqflist({})
     vim.api.nvim_cmd({ cmd = "cclose" }, {})
 end)
@@ -311,7 +361,7 @@ vim.keymap.set("n", "<leader>qua", function()
     get_git_info(git_all, false)
 end)
 
-vim.keymap.set("n", "<leader>ql", function()
+vim.keymap.set("n", "<leader>qa", function()
     local clients = vim.lsp.get_active_clients()
 
     if #clients == 0 then

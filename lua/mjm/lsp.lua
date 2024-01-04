@@ -96,6 +96,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
             vim.ui.input({ prompt = "Rename: " }, function(input)
                 if input and #input > 0 then
                     vim.lsp.buf.rename(input)
+
+                    vim.cmd("echo ''")
                 end
             end)
         end, lsp_opts)

@@ -168,7 +168,7 @@ return {
             for i = 1, 9 do
                 vim.keymap.set("n", string.format("<leader>%s", i), function()
                     if vim.bo.filetype == "qf" then
-                        print("Current in quickfix list")
+                        print("Currently in quickfix list")
 
                         return
                     end
