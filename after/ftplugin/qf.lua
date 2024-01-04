@@ -12,3 +12,9 @@ end
 vim.keymap.set("n", "dd", qf_delete_entry, { buffer = true })
 
 vim.keymap.set("n", "<leader>qt", vim.cmd.cclose, { buffer = true })
+
+vim.keymap.set("n", "<leader>qo", function()
+    local cur_line = vim.fn.line(".")
+    vim.cmd("cc " .. tostring(cur_line))
+    vim.cmd("cclose")
+end)

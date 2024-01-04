@@ -15,14 +15,15 @@ local cmp_config = function()
         enabled = function()
             local context = require("cmp.config.context")
 
-            if vim.api.nvim_get_mode().mode == "c" then
-                return true
-            elseif vim.api.nvim_buf_get_option(0, "buftype") == "prompt" then
+            local is_comment = context.in_treesitter_capture("comment")
+                or context.in_syntax_group("Comment")
+            local is_prompt = vim.api.nvim_buf_get_option(0, "buftype") == "prompt"
+
+            if is_prompt or is_comment then
                 return false
-            else
-                return not context.in_treesitter_capture("comment")
-                    and not context.in_syntax_group("Comment")
             end
+
+            return true
         end,
         snippet = {
             expand = function(args)

@@ -32,9 +32,7 @@ local grep_wrapper = function(options)
         return
     end
 
-    local args = {
-        pattern,
-    }
+    local args = { pattern }
 
     local opts = vim.deepcopy(options) or {}
     local case_insensitive = opts.insensitive or false
@@ -45,7 +43,7 @@ local grep_wrapper = function(options)
 
     local grep_cmd = {
         args = args,
-        bang = "true",
+        bang = true,
         cmd = "grep",
         mods = {
             emsg_silent = true,
@@ -200,16 +198,6 @@ end)
 
 vim.keymap.set("n", "[Q", "<cmd>cfirst<cr>")
 vim.keymap.set("n", "]Q", "<cmd>clast<cr>")
-
-vim.keymap.set("n", "<leader>qo", function()
-    if vim.bo.filetype ~= "qf" then
-        return
-    end
-
-    local cur_line = vim.fn.line(".")
-    vim.cmd("cc " .. tostring(cur_line))
-    vim.cmd("cclose")
-end)
 
 ---@param statuses table{{code: string, description: string}}
 ---@param filter boolean

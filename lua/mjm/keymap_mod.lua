@@ -1,8 +1,5 @@
 local M = {}
 
-M.opts = { silent = true }
-M.expr_opts = vim.tbl_extend("force", { expr = true }, M.opts)
-
 ---@return boolean
 M.check_modifiable = function()
     if vim.api.nvim_buf_get_option(0, "modifiable") then
