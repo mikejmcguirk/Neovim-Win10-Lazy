@@ -23,6 +23,8 @@ vim.keymap.set("n", "<leader>sf", function()
     vim.opt.spell = false
 end, { silent = true })
 
+vim.api.nvim_create_user_command("We", "w | e", {})
+
 vim.keymap.set("n", "gh", "<nop>")
 vim.keymap.set("n", "gH", "<nop>")
 

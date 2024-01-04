@@ -90,15 +90,13 @@ local diags_to_qf = function(origin, severity_cap)
     elseif origin == "c" then
         raw_diags = vim.diagnostic.get(0)
     elseif origin == "w" then
-        local all_windows = vim.api.nvim_list_wins()
+        local all_wins = vim.api.nvim_list_wins()
 
-        for _, win in ipairs(all_windows) do
+        for _, win in ipairs(all_wins) do
             local win_buf = vim.api.nvim_win_get_buf(win)
             local win_diags = vim.diagnostic.get(win_buf)
 
-            for _, diag in ipairs(win_diags) do
-                table.insert(raw_diags, diag)
-            end
+            vim.list_extend(raw_diags, win_diags)
         end
     else
         print("Invalid origin")
@@ -141,6 +139,8 @@ local diags_to_qf = function(origin, severity_cap)
         return
     end
 
+    ---@param raw_diag table
+    ---@return table
     local convert_diag = function(raw_diag)
         local diag_source = raw_diag.source or ""
 
@@ -172,7 +172,6 @@ local diags_to_qf = function(origin, severity_cap)
     end
 
     local diags_for_qf = vim.tbl_map(convert_diag, filtered_diags)
-
     vim.fn.setqflist(diags_for_qf, "r")
     vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
 end
