@@ -2,7 +2,6 @@ local gf = require("mjm.global_funcs")
 
 gf.adjust_tab_width(2)
 vim.opt_local.wrap = true
-vim.opt_local.textwidth = 10000
 
 vim.opt_local.spell = true
 

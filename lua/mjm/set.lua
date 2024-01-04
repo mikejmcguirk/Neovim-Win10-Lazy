@@ -9,6 +9,8 @@ vim.keymap.set({ "n", "v" }, "<Space>", "<Nop>")
 vim.g.mapleader = " "
 vim.g.maplocaleader = " "
 
+-- On the monitors I use, a centered vsplit will be right on the color coloumn
+-- for files under 10k lines
 vim.opt.nu = true
 vim.opt.relativenumber = true
 vim.opt.numberwidth = 5
@@ -27,7 +29,7 @@ vim.opt.autoindent = true
 vim.opt.cindent = true
 
 vim.opt.termguicolors = true
-vim.cmd([[set gcr=n:block-blinkon1,i-c-ci:ver100-blinkon1,v-r:hor100-blinkon1]])
+vim.cmd("set gcr=n:block-blinkon1,i-c-ci:ver100-blinkon1,v-r:hor100-blinkon1")
 vim.opt.lazyredraw = true
 
 vim.opt.scrolloff = 6
@@ -55,6 +57,8 @@ vim.opt.listchars = {
 
 vim.opt.wrap = false
 vim.opt.linebreak = true
+vim.opt.spell = false
+vim.opt.spelllang = "en_us"
 
 vim.opt.cursorline = true
 local cursor_control = vim.api.nvim_create_augroup("cursor_control", { clear = true })
@@ -62,6 +66,7 @@ local cursor_control = vim.api.nvim_create_augroup("cursor_control", { clear = t
 ---@param event string
 ---@param value boolean
 ---@param pattern string
+---@return nil
 local set_cursorline = function(event, value, pattern)
     vim.api.nvim_create_autocmd(event, {
         group = cursor_control,

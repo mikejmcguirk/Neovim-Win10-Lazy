@@ -1,6 +1,49 @@
------------------------------------
--- Disable Non-Home Row Movement --
------------------------------------
+vim.keymap.set("n", "gh", "<nop>")
+vim.keymap.set("n", "gH", "<nop>")
+
+vim.keymap.set("n", "ZZ", "<Nop>")
+vim.keymap.set("n", "ZQ", "<Nop>")
+
+vim.keymap.set("n", "Q", "<nop>")
+vim.keymap.set("n", "gQ", "<nop>")
+
+vim.keymap.set({ "n", "v" }, "<C-z>", "<nop>")
+
+vim.keymap.set({ "n", "v" }, "H", "<Nop>")
+vim.keymap.set({ "n", "v" }, "M", "<Nop>")
+vim.keymap.set({ "n", "v" }, "L", "<Nop>")
+
+vim.keymap.set({ "n", "v" }, "z+", "<Nop>")
+vim.keymap.set({ "n", "v" }, "z^", "<Nop>")
+vim.keymap.set({ "n", "v" }, "z<cr>", "<Nop>")
+vim.keymap.set({ "n", "v" }, "z.", "<Nop>")
+vim.keymap.set({ "n", "v" }, "z-", "<Nop>")
+
+vim.keymap.set({ "n", "v" }, "{", "<Nop>")
+vim.keymap.set({ "n", "v" }, "}", "<Nop>")
+vim.keymap.set({ "n", "v" }, "(", "<Nop>")
+vim.keymap.set({ "n", "v" }, ")", "<Nop>")
+vim.keymap.set({ "n", "v" }, "[m", "<Nop>")
+vim.keymap.set({ "n", "v" }, "]m", "<Nop>")
+vim.keymap.set({ "n", "v" }, "[M", "<Nop>")
+vim.keymap.set({ "n", "v" }, "]M", "<Nop>")
+
+vim.keymap.set({ "n", "v" }, "[[", "<Nop>")
+vim.keymap.set({ "n", "v" }, "]]", "<Nop>")
+vim.keymap.set({ "n", "v" }, "[]", "<Nop>")
+vim.keymap.set({ "n", "v" }, "][", "<Nop>")
+
+vim.keymap.set({ "n", "v" }, "gm", "<Nop>")
+vim.keymap.set({ "n", "v" }, "gM", "<Nop>")
+vim.keymap.set({ "n", "v" }, "|", "<Nop>")
+
+vim.keymap.set({ "n", "v" }, "-", "<Nop>")
+vim.keymap.set({ "n", "v" }, "+", "<Nop>")
+
+vim.keymap.set({ "n", "v" }, "[*", "<Nop>")
+vim.keymap.set({ "n", "v" }, "]*", "<Nop>")
+vim.keymap.set({ "n", "v" }, "[/", "<Nop>")
+vim.keymap.set({ "n", "v" }, "]/", "<Nop>")
 
 vim.keymap.set({ "n", "i", "v" }, "<up>", "<Nop>")
 vim.keymap.set({ "n", "i", "v" }, "<down>", "<Nop>")

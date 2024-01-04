@@ -29,7 +29,7 @@ M.rest_cursor = function(map, options)
     local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
 
     local status, result = pcall(function()
-        vim.cmd("normal! " .. map)
+        vim.cmd("silent normal! " .. map)
     end)
 
     if (not status) and result then
@@ -42,16 +42,6 @@ M.rest_cursor = function(map, options)
 
     if cur_view ~= nil then
         vim.fn.winrestview(cur_view)
-    end
-end
-
----@param map string
----@return string
-M.enter_insert_fix = function(map)
-    if string.match(vim.api.nvim_get_current_line(), "^%s*$") then
-        return '"_S'
-    else
-        return map
     end
 end
 
@@ -270,26 +260,6 @@ M.insert_backspace_fix = function(options)
     end
 
     backspace_blank_line(options)
-end
-
----@param visual string
----@param linewise string
----@return string
-M.vertical_motion_fix = function(visual, linewise)
-    if vim.v.count == 0 then
-        return visual
-    else
-        return linewise
-    end
-end
-
----@return string
-M.dd_fix = function()
-    if vim.v.count1 <= 1 and vim.api.nvim_get_current_line() == "" then
-        return '"_dd'
-    else
-        return "dd"
-    end
 end
 
 ---@param backward_objects string[]
