@@ -1,24 +1,25 @@
-local open_at_bottom = function()
-    vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
+---@return boolean
+local check_if_qf_open = function()
+    for _, win in ipairs(vim.fn.getwininfo()) do
+        if win.quickfix == 1 then
+            return true
+        end
+    end
+
+    return false
 end
 
 vim.keymap.set("n", "<leader>qt", function()
-    for _, win in ipairs(vim.fn.getwininfo()) do
-        if win.quickfix == 1 then
-            vim.api.nvim_cmd({ cmd = "cclose" }, {})
+    local qf_open = check_if_qf_open()
 
-            return
-        end
+    if qf_open then
+        vim.api.nvim_cmd({ cmd = "cclose" }, {})
+
+        return
     end
 
     vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
 end)
-
-vim.keymap.set("n", "<leader>qp", function()
-    vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
-end)
-
-vim.keymap.set("n", "<leader>qc", "<cmd>cclose<cr>")
 
 vim.opt.grepprg = "rg --line-number"
 vim.opt.grepformat = "%f:%l:%m"
@@ -33,7 +34,6 @@ local grep_wrapper = function(options)
     end
 
     local args = { pattern }
-
     local opts = vim.deepcopy(options) or {}
     local case_insensitive = opts.insensitive or false
 
@@ -67,23 +67,12 @@ end)
 local diags_to_qf = function(severity_cap, options)
     local opts = vim.deepcopy(options) or {}
     local all_bufs = opts.all_bufs or false
+    local in_qf_buf = vim.bo.filetype == "qf"
 
-    if not all_bufs then
-        local cur_win = vim.api.nvim_get_current_win()
-        local cur_win_info = vim.fn.getwininfo(cur_win)
+    if not all_bufs and in_qf_buf then
+        vim.cmd("echo 'Currently in quickfix buffer'")
 
-        for _, win in ipairs(cur_win_info) do
-            if win.quickfix == 1 then
-                local echo_cmd = {
-                    cmd = "echo",
-                    args = { "'Currently", "in", "quickfix", "window'" },
-                }
-
-                vim.api.nvim_cmd(echo_cmd, {})
-
-                return
-            end
-        end
+        return
     end
 
     local raw_diagnostics = nil
@@ -105,6 +94,21 @@ local diags_to_qf = function(severity_cap, options)
 
     for _, raw_diag in ipairs(raw_diagnostics) do
         if raw_diag.severity <= severity_cap then
+            local diag_source = raw_diag.source or ""
+
+            if diag_source ~= "" then
+                diag_source = diag_source .. ": "
+            end
+
+            local diag_code = raw_diag.code or ""
+
+            if diag_code ~= "" then
+                diag_code = "[" .. diag_code .. "] "
+            end
+
+            local diag_message = raw_diag.message or ""
+            local diag_text = diag_source .. diag_code .. diag_message
+
             local converted_diag = {
                 bufnr = raw_diag.bufnr,
                 filename = vim.fn.bufname(raw_diag.bufnr),
@@ -112,12 +116,7 @@ local diags_to_qf = function(severity_cap, options)
                 end_lnum = raw_diag.end_lnum + 1,
                 col = raw_diag.col,
                 end_col = raw_diag.end_col,
-                text = (raw_diag.source or "")
-                    .. ": "
-                    .. "["
-                    .. (raw_diag.code or "")
-                    .. "] "
-                    .. (raw_diag.message or ""),
+                text = diag_text,
                 type = severity_map[raw_diag.severity],
             }
 
@@ -147,20 +146,59 @@ end)
 
 vim.cmd("packadd cfilter")
 
-vim.keymap.set("n", "<leader>qk", function()
-    local pattern = vim.fn.input("Pattern to keep: ")
+---@param type string
+local cfilter_wrapper = function(type)
+    local valid_types = {
+        "k",
+        "r",
+    }
 
-    if pattern ~= "" then
-        vim.cmd("Cfilter " .. pattern)
+    if not vim.tbl_contains(valid_types, type) then
+        print("Invalid type")
+
+        return
     end
+
+    local qf_open = check_if_qf_open()
+
+    if not qf_open then
+        print("Quickfix list not open")
+
+        return
+    end
+
+    local prompt = "Pattern to "
+    local use_bang = nil
+
+    if type == "k" then
+        prompt = prompt .. "keep: "
+        use_bang = false
+    elseif type == "r" then
+        prompt = prompt .. "remove: "
+        use_bang = true
+    end
+
+    local pattern = vim.fn.input(prompt)
+
+    if pattern == "" then
+        return
+    end
+
+    local filter_cmd = {
+        args = { pattern },
+        bang = use_bang,
+        cmd = "Cfilter",
+    }
+
+    vim.api.nvim_cmd(filter_cmd, {})
+end
+
+vim.keymap.set("n", "<leader>qk", function()
+    cfilter_wrapper("k")
 end)
 
 vim.keymap.set("n", "<leader>qr", function()
-    local pattern = vim.fn.input("Pattern to remove: ")
-
-    if pattern ~= "" then
-        vim.cmd("Cfilter! " .. pattern)
-    end
+    cfilter_wrapper("r")
 end)
 
 vim.keymap.set("n", "<leader>qe", function()
@@ -234,7 +272,7 @@ local get_git_info = function(statuses, filter)
     end
 
     vim.fn.setqflist(files)
-    open_at_bottom()
+    vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
 end
 
 local git_all = {
@@ -308,5 +346,5 @@ vim.keymap.set("n", "<leader>ql", function()
     end
 
     vim.fn.setqflist(for_qf_list, "r")
-    open_at_bottom()
+    vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
 end)

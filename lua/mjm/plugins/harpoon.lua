@@ -167,6 +167,12 @@ return {
 
             for i = 1, 9 do
                 vim.keymap.set("n", string.format("<leader>%s", i), function()
+                    if vim.bo.filetype == "qf" then
+                        print("Current in quickfix list")
+
+                        return
+                    end
+
                     windows_nav_file(i)
                 end)
             end
