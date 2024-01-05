@@ -1,3 +1,4 @@
+vim.keymap.set("v", "u", "<Nop>")
 vim.keymap.set("n", "gh", "<nop>")
 vim.keymap.set("n", "gH", "<nop>")
 

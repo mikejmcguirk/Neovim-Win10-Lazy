@@ -18,6 +18,11 @@ vim.keymap.set("n", "u", function()
     vim.cmd(cmd_string)
 end, { silent = true })
 
+vim.keymap.set("n", "<C-r>", function()
+    local cmd_string = 'silent exec "normal! ' .. vim.v.count1 .. '\\<C-r>"'
+    vim.cmd(cmd_string)
+end, { silent = true })
+
 vim.keymap.set("n", "<leader>lv", "<cmd>vsplit<cr>", { silent = true })
 vim.keymap.set("n", "<leader>lh", "<cmd>split<cr>", { silent = true })
 
@@ -140,13 +145,11 @@ end, { silent = true, expr = true })
 vim.keymap.set({ "n", "v" }, "<leader>d", '"_d', { silent = true })
 vim.keymap.set("n", "<leader>D", '"_D', { silent = true })
 vim.keymap.set("v", "D", "<nop>", { silent = true })
-
 vim.keymap.set("n", "d^", '^dg_"_dd', { silent = true })
 
 vim.keymap.set({ "n", "v" }, "<leader>c", '"_c', { silent = true })
 vim.keymap.set("n", "<leader>C", '"_C', { silent = true })
 vim.keymap.set("v", "C", "<nop>", { silent = true })
-
 vim.keymap.set("n", "c^", "^cg_", { silent = true })
 
 vim.keymap.set({ "n", "v" }, "s", "<Nop>", { silent = true })
@@ -183,7 +186,6 @@ local nop_objects = { "b", "B", "s" } -- S is used by nvim-surround
 local ia = { "i", "a" }
 km.demap_text_objects_inout(motions, nop_objects, ia)
 
--- vim.keymap.set("n", "<leader>y0", 'mzv0"+y`z', { silent = false })
 local startline_motions = { "0", "_", "g^", "g0" }
 km.fix_startline_motions(motions, startline_motions)
 
@@ -235,19 +237,19 @@ vim.keymap.set("v", "<leader>P", function()
 end, { silent = true, expr = true })
 
 vim.keymap.set("n", "[ ", function()
-    km.create_blank_line("put!")
+    km.create_blank_line(true)
 end, { silent = true })
 
 vim.keymap.set("n", "] ", function()
-    km.create_blank_line("put")
+    km.create_blank_line(false)
 end, { silent = true })
 
 vim.keymap.set("v", "J", function()
-    km.visual_move(vim.v.count1, "'>", ".", 0, "'<,'> m '>+")
+    km.visual_move(vim.v.count1, "d")
 end, { silent = true })
 
 vim.keymap.set("v", "K", function()
-    km.visual_move(vim.v.count1, ".", "'<", 1, "'<,'> m '<-")
+    km.visual_move(vim.v.count1, "u")
 end, { silent = true })
 
 vim.keymap.set("n", "<leader>=", function()

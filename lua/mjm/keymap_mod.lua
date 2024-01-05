@@ -26,7 +26,7 @@ M.rest_cursor = function(map, options)
         cur_view = vim.fn.winsaveview()
     end
 
-    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
+    local orig_row, orig_col = unpack(vim.api.nvim_win_get_cursor(0))
 
     local status, result = pcall(function()
         vim.cmd("silent normal! " .. map)
@@ -38,7 +38,7 @@ M.rest_cursor = function(map, options)
         return
     end
 
-    vim.api.nvim_win_set_cursor(0, { cur_row, cur_col })
+    vim.api.nvim_win_set_cursor(0, { orig_row, orig_col })
 
     if cur_view ~= nil then
         vim.fn.winrestview(cur_view)
@@ -118,6 +118,8 @@ local find_pairs = function()
     return false
 end
 
+---@param line_num number
+---@return number
 local get_indent = function(line_num)
     -- If Treesitter indent is enabled, the indentexpr will be set to
     -- nvim_treesitter#indent(), so that will be captured here
@@ -136,7 +138,7 @@ local get_indent = function(line_num)
         vim.v.lnum = line_num
         local expr_indent_tbl = vim.api.nvim_exec2("echo " .. indentexpr, { output = true })
         local expr_indent_str = expr_indent_tbl.output
-        local expr_indent = tonumber(expr_indent_str)
+        local expr_indent = tonumber(expr_indent_str) or 0
 
         return expr_indent
     end
@@ -265,22 +267,22 @@ end
 ---@param backward_objects string[]
 ---@return nil
 M.fix_backward_yanks = function(backward_objects)
-    local backward_objects = vim.deepcopy(backward_objects)
+    local back_objs = vim.deepcopy(backward_objects)
 
-    for _, object in ipairs(backward_objects) do
+    for _, object in ipairs(back_objs) do
         local main_map = "y" .. object
 
         vim.keymap.set("n", main_map, function()
             local main_cmd = vim.v.count1 .. main_map
             M.rest_cursor(main_cmd)
-        end, M.opts)
+        end, { silent = true })
 
         local ext_map = "<leader>y" .. object
 
         vim.keymap.set("n", ext_map, function()
             local ext_cmd = vim.v.count1 .. '"+' .. main_map
             M.rest_cursor(ext_cmd)
-        end, M.opts)
+        end, { silent = true })
     end
 end
 
@@ -293,10 +295,10 @@ M.demap_text_objects_inout = function(motions, text_objects, inner_outer)
         for _, object in pairs(text_objects) do
             for _, in_out in pairs(inner_outer) do
                 local normal_map = motion .. in_out .. object
-                vim.keymap.set("n", normal_map, "<nop>", M.opts)
+                vim.keymap.set("n", normal_map, "<nop>")
 
-                local ext_map = "<leader>" .. motion .. in_out .. object
-                vim.keymap.set("n", ext_map, "<nop>", M.opts)
+                local ext_map = "<leader>" .. normal_map
+                vim.keymap.set("n", ext_map, "<nop>")
             end
         end
     end
@@ -308,10 +310,6 @@ end
 M.fix_startline_motions = function(motions, objects)
     for _, motion in pairs(motions) do
         for _, object in pairs(objects) do
-            local map = motion .. object
-            local cmd = "v" .. object .. motion
-            local cmd_mark = "mz" .. cmd .. "`z"
-
             local what_register = function()
                 if motion == "y" then
                     return '"+'
@@ -321,17 +319,22 @@ M.fix_startline_motions = function(motions, objects)
             end
 
             local register = what_register()
+
+            local map = motion .. object
             local ext_map = "<leader>" .. map
+
+            local cmd = "v" .. object .. motion
+            local cmd_mark = "mz" .. cmd .. "`z"
+
             local ext_cmd = "v" .. object .. register .. motion
+            local ext_cmd_mark = "mz" .. ext_cmd .. "`z"
 
             if motion == "y" then
-                local ext_cmd_mark = "mz" .. ext_cmd .. "`z"
-
-                vim.keymap.set("n", map, cmd_mark, M.opts)
-                vim.keymap.set("n", ext_map, ext_cmd_mark, M.opts)
+                vim.keymap.set("n", map, cmd_mark, { silent = true })
+                vim.keymap.set("n", ext_map, ext_cmd_mark, { silent = true })
             else
-                vim.keymap.set("n", map, cmd, M.opts)
-                vim.keymap.set("n", ext_map, ext_cmd, M.opts)
+                vim.keymap.set("n", map, cmd, { silent = true })
+                vim.keymap.set("n", ext_map, ext_cmd, { silent = true })
             end
         end
     end
@@ -343,8 +346,8 @@ end
 M.demap_text_objects = function(motions, text_objects)
     for _, motion in pairs(motions) do
         for _, object in pairs(text_objects) do
-            vim.keymap.set("n", motion .. object, "<nop>", M.opts)
-            vim.keymap.set("n", "<leader>" .. motion .. object, "<nop>", M.opts)
+            vim.keymap.set("n", motion .. object, "<nop>")
+            vim.keymap.set("n", "<leader>" .. motion .. object, "<nop>")
         end
     end
 end
@@ -356,17 +359,16 @@ M.yank_cursor_fixes = function(text_objects, inner_outer)
     for _, object in pairs(text_objects) do
         for _, in_out in pairs(inner_outer) do
             local main_cmd = "y" .. in_out .. object
+            local ext_map = "<leader>" .. main_cmd
+            local ext_cmd = '"+' .. main_cmd
 
             vim.keymap.set("n", main_cmd, function()
                 M.rest_cursor(main_cmd)
-            end, M.opts)
-
-            local ext_map = "<leader>y" .. in_out .. object
-            local ext_cmd = '"+' .. main_cmd
+            end, { silent = true })
 
             vim.keymap.set("n", ext_map, function()
                 M.rest_cursor(ext_cmd)
-            end, M.opts)
+            end, { silent = true })
         end
     end
 end
@@ -388,9 +390,9 @@ M.visual_paste = function(paste_char)
     end
 end
 
----@param put_cmd string
+---@param use_bang boolean
 ---@return nil
-M.create_blank_line = function(put_cmd)
+M.create_blank_line = function(use_bang)
     if not M.check_modifiable() then
         return
     end
@@ -399,65 +401,90 @@ M.create_blank_line = function(put_cmd)
     -- Uses a mark so that the cursor sticks with the text the map is called from
     vim.api.nvim_buf_set_mark(0, "z", cur_row, cur_col, {})
 
-    vim.cmd(put_cmd .. " =repeat(nr2char(10), v:count1)")
+    local put_cmd = "put"
+
+    if use_bang then
+        put_cmd = put_cmd .. "!"
+    end
+
+    put_cmd = put_cmd .. " =repeat(nr2char(10), v:count1)"
+
+    vim.api.nvim_exec2(put_cmd, {})
     vim.cmd("normal! `z")
 end
 
 ---@param vcount1 number
----@param pos_1 string
----@param pos_2 string
----@param fix_num number
----@param cmd_start string
+---@param direction string
 ---@return nil
-M.visual_move = function(vcount1, pos_1, pos_2, fix_num, cmd_start)
+M.visual_move = function(vcount1, direction)
     if not M.check_modifiable() then
         return
     end
 
-    -- '< and '> are not updated until after leaving Visual Mode
-    -- This also updates vim.v.count1, which is why it's passed as a parameter
-    vim.cmd([[execute "normal! \<esc>"]])
-
-    local min_count = 1
-
-    local get_to_move = function()
-        if vcount1 <= min_count then
-            return min_count + fix_num
-        else
-            return vcount1 - (vim.fn.line(pos_1) - vim.fn.line(pos_2)) + fix_num
-        end
-    end
-
-    local cmd = cmd_start .. get_to_move()
-
-    local status, result = pcall(function()
-        vim.cmd(cmd)
-    end)
-
-    if (not status) and result then
-        vim.api.nvim_err_writeln(result)
-        vim.cmd("normal! gv")
+    if not (direction == "u" or direction == "d") then
+        vim.api.nvim_err_writeln("Invalid direction")
 
         return
     end
 
-    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
+    -- We must leave visual mode to update '< and '>
+    -- Because vim.v.count1 is updated when we do this, it is passed as a parameter
+    vim.cmd([[execute "normal! \<esc>"]])
 
-    vim.cmd("normal! `]")
+    local min_count = 1
+    local pos_1 = nil
+    local pos_2 = nil
+    local fix_num = nil
+    local cmd_start = nil
+
+    if direction == "d" then
+        pos_1 = "'>"
+        pos_2 = "."
+        fix_num = 0
+        cmd_start = "'<,'> m '>+"
+    elseif direction == "u" then
+        pos_1 = "."
+        pos_2 = "'<"
+        fix_num = 1
+        cmd_start = "'<,'> m '<-"
+    end
+
+    local to_move = nil
+
+    if vcount1 <= min_count then
+        to_move = min_count + fix_num
+    else
+        local offset = vim.fn.line(pos_1) - vim.fn.line(pos_2)
+        to_move = vcount1 - offset + fix_num
+    end
+
+    local move_cmd = cmd_start .. to_move
+
+    local status, result = pcall(function()
+        vim.api.nvim_exec2(move_cmd, {})
+    end)
+
+    if (not status) and result then
+        vim.api.nvim_err_writeln(result)
+        vim.api.nvim_cmd({ cmd = "normal", bang = true, args = { "gv" } }, {})
+
+        return
+    end
+
+    local dest_row, dest_col = unpack(vim.api.nvim_win_get_cursor(0))
+
+    -- The z mark must be set to ensure the last line of a moved block is properly formatted
+    vim.api.nvim_cmd({ cmd = "normal", bang = true, args = { "`]" } }, {})
     local end_cursor_pos = vim.api.nvim_win_get_cursor(0)
     local end_row = end_cursor_pos[1]
     local end_line = vim.api.nvim_get_current_line()
     local end_col = #end_line
     vim.api.nvim_buf_set_mark(0, "z", end_row, end_col, {})
 
-    vim.cmd("normal! `[")
-    local start_cursor_pos = vim.api.nvim_win_get_cursor(0)
-    local start_row = start_cursor_pos[1]
-    vim.api.nvim_win_set_cursor(0, { start_row, 0 })
-
-    vim.cmd("normal! =`z")
-    vim.api.nvim_win_set_cursor(0, { cur_row, cur_col })
-    vim.cmd("normal! gv")
+    vim.api.nvim_cmd({ cmd = "normal", bang = true, args = { "`[" } }, {})
+    vim.api.nvim_cmd({ cmd = "normal", bang = true, args = { "=`z" } }, {})
+    vim.api.nvim_win_set_cursor(0, { dest_row, dest_col })
+    vim.api.nvim_cmd({ cmd = "normal", bang = true, args = { "gv" } }, {})
 end
 
 ---@return nil
