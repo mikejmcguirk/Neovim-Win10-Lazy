@@ -16,7 +16,7 @@ end
 M.rest_cursor = function(map, options)
     local opts = vim.deepcopy(options or {})
 
-    if opts.mod_check and not M.check_modifiable then
+    if opts.mod_check and not M.check_modifiable() then
         return
     end
 
