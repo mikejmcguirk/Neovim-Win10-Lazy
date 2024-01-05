@@ -29,7 +29,7 @@ M.rest_cursor = function(map, options)
     local orig_row, orig_col = unpack(vim.api.nvim_win_get_cursor(0))
 
     local status, result = pcall(function()
-        vim.cmd("silent normal! " .. map)
+        vim.api.nvim_exec2("silent normal! " .. map, {})
     end)
 
     if (not status) and result then
@@ -410,7 +410,7 @@ M.create_blank_line = function(use_bang)
     put_cmd = put_cmd .. " =repeat(nr2char(10), v:count1)"
 
     vim.api.nvim_exec2(put_cmd, {})
-    vim.cmd("normal! `z")
+    vim.api.nvim_cmd({ cmd = "normal", bang = true, args = { "`z" } }, {})
 end
 
 ---@param vcount1 number
@@ -429,7 +429,7 @@ M.visual_move = function(vcount1, direction)
 
     -- We must leave visual mode to update '< and '>
     -- Because vim.v.count1 is updated when we do this, it is passed as a parameter
-    vim.cmd([[execute "normal! \<esc>"]])
+    vim.api.nvim_exec2('exec "silent normal! \\<esc>"', {})
 
     local min_count = 1
     local pos_1 = nil
@@ -473,18 +473,19 @@ M.visual_move = function(vcount1, direction)
 
     local dest_row, dest_col = unpack(vim.api.nvim_win_get_cursor(0))
 
-    -- The z mark must be set to ensure the last line of a moved block is properly formatted
-    vim.api.nvim_cmd({ cmd = "normal", bang = true, args = { "`]" } }, {})
+    -- After the move cmd, `] will be set to the beginning of the last line of the block
+    -- To properly format the last line, we set the z mark to the end of the line
+    vim.api.nvim_exec2("silent normal! `]", {})
     local end_cursor_pos = vim.api.nvim_win_get_cursor(0)
     local end_row = end_cursor_pos[1]
     local end_line = vim.api.nvim_get_current_line()
     local end_col = #end_line
     vim.api.nvim_buf_set_mark(0, "z", end_row, end_col, {})
 
-    vim.api.nvim_cmd({ cmd = "normal", bang = true, args = { "`[" } }, {})
-    vim.api.nvim_cmd({ cmd = "normal", bang = true, args = { "=`z" } }, {})
+    vim.api.nvim_exec2("silent normal! `[", {})
+    vim.api.nvim_exec2("silent normal! =`z", {})
     vim.api.nvim_win_set_cursor(0, { dest_row, dest_col })
-    vim.api.nvim_cmd({ cmd = "normal", bang = true, args = { "gv" } }, {})
+    vim.api.nvim_exec2("silent normal! gv", {})
 end
 
 ---@return nil
@@ -494,16 +495,38 @@ M.bump_up = function()
     end
 
     local orig_line = vim.api.nvim_get_current_line()
-    local cursor = vim.api.nvim_win_get_cursor(0)
-    local modified_line = orig_line:sub(1, cursor[2]):gsub("%s+$", "")
-    vim.api.nvim_set_current_line(modified_line)
-
+    local orig_row, orig_col = unpack(vim.api.nvim_win_get_cursor(0))
     local orig_line_len = #orig_line
-    local to_move = orig_line:sub(cursor[2] + 1, orig_line_len):gsub("^%s+", ""):gsub("%s+$", "")
-    vim.cmd("put! =''")
-    local row = cursor[1] - 1
-    vim.api.nvim_buf_set_text(0, row, 0, row, 0, { to_move })
-    vim.cmd("normal! ==")
+    local orig_set_row = orig_row - 1
+    local rem_line = orig_line:sub(1, orig_col)
+    local trailing_whitespace = string.match(rem_line, "%s+$")
+
+    if trailing_whitespace then
+        local last_non_blank, _ = rem_line:find("(%S)%s*$")
+
+        if last_non_blank == nil then
+            last_non_blank = 1
+        end
+
+        local set_col = nil
+
+        if last_non_blank >= 1 then
+            set_col = last_non_blank - 1
+        else
+            set_col = 0
+        end
+
+        vim.api.nvim_buf_set_text(0, orig_set_row, set_col, orig_set_row, orig_line_len, {})
+    else
+        vim.api.nvim_buf_set_text(0, orig_set_row, orig_col, orig_set_row, orig_line_len, {})
+    end
+
+    local orig_col_lua = orig_col + 1
+    local to_move = orig_line:sub(orig_col_lua, orig_line_len)
+    local to_move_trim = to_move:gsub("^%s+", ""):gsub("%s+$", "")
+    vim.api.nvim_exec2("put! =''", {})
+    vim.api.nvim_buf_set_text(0, orig_set_row, 0, orig_set_row, 0, { to_move_trim })
+    vim.api.nvim_cmd({ cmd = "normal", bang = true, args = { "==" } }, {})
 end
 
 ---@param chars string

@@ -4,7 +4,7 @@ gf.adjust_tab_width(2)
 
 -- Formatting provided by prettier through conform
 
-local root_start = gf.get_buf_directory(vim.fn.bufnr(""))
+local root_start = gf.get_buf_directory(vim.fn.bufnr())
 
 vim.lsp.start({
     name = "html",

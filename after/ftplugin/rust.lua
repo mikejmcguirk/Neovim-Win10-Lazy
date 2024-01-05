@@ -2,7 +2,7 @@ local gf = require("mjm.global_funcs")
 
 -- Formatting is handled with the built-in RustFmt function + rust.vim plugin
 
-local root_start = gf.get_buf_directory(vim.fn.bufnr(""))
+local root_start = gf.get_buf_directory(vim.fn.bufnr())
 
 vim.lsp.start({
     name = "rust_analyzer",
@@ -36,5 +36,5 @@ local function reload_workspace(bufnr)
 end
 
 vim.keymap.set("n", "<leader>vsro", function()
-    reload_workspace(vim.fn.bufnr(""))
+    reload_workspace(vim.fn.bufnr())
 end)

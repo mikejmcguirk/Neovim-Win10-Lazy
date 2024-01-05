@@ -10,7 +10,7 @@ vim.opt_local.sidescrolloff = 12
 
 -- Formatting handled by prettier through conform
 
-local root_start = gf.get_buf_directory(vim.fn.bufnr(""))
+local root_start = gf.get_buf_directory(vim.fn.bufnr())
 
 vim.lsp.start({
     name = "marksman",

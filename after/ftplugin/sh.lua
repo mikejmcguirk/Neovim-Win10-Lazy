@@ -2,7 +2,7 @@ local gf = require("mjm.global_funcs")
 
 -- Formatting is handled with beautysh through conform
 
-local root_start = gf.get_buf_directory(vim.fn.bufnr(""))
+local root_start = gf.get_buf_directory(vim.fn.bufnr())
 
 vim.lsp.start({
     name = "bashls",

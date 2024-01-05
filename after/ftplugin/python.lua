@@ -10,7 +10,7 @@ local root_files = {
 
 -- Formatting provided by ruff_format and isort through conform
 
-local root_start = gf.get_buf_directory(vim.fn.bufnr(""))
+local root_start = gf.get_buf_directory(vim.fn.bufnr())
 
 vim.lsp.start({
     name = "pylsp",

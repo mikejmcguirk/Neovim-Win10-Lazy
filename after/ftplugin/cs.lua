@@ -15,7 +15,7 @@ else
         { workspace = { workspaceFolders = false } }
     )
 
-    local root_start = gf.get_buf_directory(vim.fn.bufnr(""))
+    local root_start = gf.get_buf_directory(vim.fn.bufnr())
 
     local root_files = {
         "*.sln",

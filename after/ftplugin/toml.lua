@@ -2,7 +2,7 @@ local gf = require("mjm.global_funcs")
 
 gf.create_lsp_formatter(LSP_Augroup)
 
-local root_start = gf.get_buf_directory(vim.fn.bufnr(""))
+local root_start = gf.get_buf_directory(vim.fn.bufnr())
 
 vim.lsp.start({
     name = "taplo",

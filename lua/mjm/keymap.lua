@@ -15,12 +15,12 @@ vim.api.nvim_create_user_command("We", "w | e", {})
 
 vim.keymap.set("n", "u", function()
     local cmd_string = "silent normal! " .. vim.v.count1 .. "u"
-    vim.cmd(cmd_string)
+    vim.api.nvim_exec2(cmd_string, {})
 end, { silent = true })
 
 vim.keymap.set("n", "<C-r>", function()
     local cmd_string = 'silent exec "normal! ' .. vim.v.count1 .. '\\<C-r>"'
-    vim.cmd(cmd_string)
+    vim.api.nvim_exec2(cmd_string, {})
 end, { silent = true })
 
 vim.keymap.set("n", "<leader>lv", "<cmd>vsplit<cr>", { silent = true })

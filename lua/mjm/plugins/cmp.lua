@@ -15,8 +15,9 @@ local cmp_config = function()
         enabled = function()
             local context = require("cmp.config.context")
 
-            local is_comment = context.in_treesitter_capture("comment")
-                or context.in_syntax_group("Comment")
+            local in_ts_capture_comment = context.in_treesitter_capture("comment")
+            local in_comment_syntax = context.in_syntax_group("Comment")
+            local is_comment = in_ts_capture_comment or in_comment_syntax
             local is_prompt = vim.api.nvim_buf_get_option(0, "buftype") == "prompt"
 
             if is_prompt or is_comment then
@@ -49,7 +50,7 @@ local cmp_config = function()
             ["<C-e>"] = cmp.mapping.abort(),
             ["<C-c>"] = function()
                 cmp.mapping.abort()
-                vim.cmd("stopinsert")
+                vim.api.nvim_cmd({ cmd = "stopinsert" }, {})
             end,
 
             ["<C-p>"] = cmp.mapping.select_prev_item(cmp_select),

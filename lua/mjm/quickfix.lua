@@ -25,10 +25,22 @@ vim.opt.grepprg = "rg --line-number"
 vim.opt.grepformat = "%f:%l:%m"
 
 local grep_wrapper = function(options)
-    local pattern = vim.fn.input("Enter pattern: ")
+    local pattern = nil
+
+    local status, result = pcall(function()
+        pattern = vim.fn.input("Enter pattern: ")
+    end)
+
+    if not status then
+        if result then
+            vim.api.nvim_err_writeln(result)
+        end
+
+        return
+    end
 
     if pattern == "" or pattern == nil then
-        vim.cmd("echo ''")
+        vim.api.nvim_cmd({ cmd = "echo", args = { "''" } }, {})
 
         return
     end
@@ -200,7 +212,7 @@ vim.keymap.set("n", "<leader>qiw", function()
     diags_to_qf("w", 2)
 end)
 
-vim.cmd("packadd cfilter")
+vim.api.nvim_cmd({ cmd = "packadd", args = { "cfilter" } }, {})
 
 ---@param type string
 local cfilter_wrapper = function(type)

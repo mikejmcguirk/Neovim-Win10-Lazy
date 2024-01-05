@@ -33,7 +33,7 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
         if expandtab then
             vim.api.nvim_buf_set_option(ev.buf, "tabstop", shiftwidth)
             vim.api.nvim_buf_set_option(ev.buf, "softtabstop", shiftwidth)
-            vim.api.nvim_command("retab")
+            vim.api.nvim_cmd({ cmd = "retab" }, {})
         end
 
         vim.cmd([[normal! mz]])
