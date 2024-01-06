@@ -91,7 +91,27 @@ return {
             vim.keymap.set("n", "<leader>tg", builtin.git_files)
 
             vim.keymap.set("n", "<leader>ts", function()
-                builtin.grep_string({ search = vim.fn.input("Grep > ") })
+                local pattern = nil
+
+                local status, result = pcall(function()
+                    pattern = vim.fn.input("Grep > ")
+                end)
+
+                if not status then
+                    if result then
+                        vim.api.nvim_err_writeln(result)
+                    end
+
+                    return
+                end
+
+                if pattern == "" or pattern == nil then
+                    vim.api.nvim_cmd({ cmd = "echo", args = { "''" } }, {})
+
+                    return
+                end
+
+                builtin.grep_string({ search = pattern })
             end)
 
             vim.keymap.set("n", "<leader>ta", "<cmd>Telescope harpoon marks<cr>")

@@ -531,47 +531,34 @@ end
 
 ---@param chars string
 ---@return nil
-M.put_at_beginning = function(chars)
-    if not M.check_modifiable() then
-        return
-    end
-
-    local cursor_pos = vim.api.nvim_win_get_cursor(0)
-    local row = cursor_pos[1] - 1
-
-    local current_line = vim.api.nvim_get_current_line()
-    local chars_len = #chars
-    local start_chars = current_line:sub(1, chars_len)
-
-    if start_chars ~= chars then
-        vim.api.nvim_buf_set_text(0, row, 0, row, 0, { chars })
-    else
-        local new_line = current_line:sub((chars_len + 1), current_line:len())
-        vim.api.nvim_set_current_line(new_line)
-    end
-end
-
----@param chars string
----@return nil
 M.put_at_end = function(chars)
     if not M.check_modifiable() then
         return
     end
 
-    local cursor_pos = vim.api.nvim_win_get_cursor(0)
-    local row = cursor_pos[1] - 1
-    local current_line = vim.api.nvim_get_current_line()
-    local cline_cleaned = current_line:gsub("%s+$", "")
-    local col = #cline_cleaned
+    local orig_line = vim.api.nvim_get_current_line()
+    local cur_row = vim.api.nvim_win_get_cursor(0)[1]
+    local set_row = cur_row - 1
 
+    if orig_line == "" then
+        vim.api.nvim_buf_set_text(0, set_row, 0, set_row, 0, { chars })
+
+        return
+    end
+
+    local trim_line = orig_line:gsub("%s+$", "")
     local chars_len = #chars
-    local end_chars = cline_cleaned:sub(-chars_len)
+    local end_chars = trim_line:sub(-chars_len)
 
-    if end_chars ~= chars then
-        vim.api.nvim_buf_set_text(0, row, col, row, col, { chars })
+    local orig_len = #orig_line
+    local trim_len = #trim_line
+
+    if end_chars == chars then
+        local set_col = trim_len - chars_len
+        vim.api.nvim_buf_set_text(0, set_row, set_col, set_row, orig_len, {})
     else
-        local new_line = cline_cleaned:sub(1, cline_cleaned:len() - chars_len)
-        vim.api.nvim_set_current_line(new_line)
+        local set_col = trim_len
+        vim.api.nvim_buf_set_text(0, set_row, set_col, set_row, orig_len, { chars })
     end
 end
 

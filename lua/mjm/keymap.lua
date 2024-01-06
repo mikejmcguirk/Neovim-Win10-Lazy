@@ -66,21 +66,8 @@ vim.keymap.set("i", "?", "?<C-g>u", { silent = true })
 vim.keymap.set("i", "!", "!<C-g>u", { silent = true })
 vim.keymap.set("i", ":", ":<C-g>u", { silent = true })
 
-vim.keymap.set("n", "j", function()
-    if vim.v.count == 0 then
-        return "gj"
-    else
-        return "j"
-    end
-end, { silent = true, expr = true })
-
-vim.keymap.set("n", "k", function()
-    if vim.v.count == 0 then
-        return "gk"
-    else
-        return "k"
-    end
-end, { silent = true, expr = true })
+vim.keymap.set("n", "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
+vim.keymap.set("n", "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
 
 vim.keymap.set("v", "<", "<gv", { silent = true })
 vim.keymap.set("v", ">", ">gv", { silent = true })
@@ -256,23 +243,27 @@ vim.keymap.set("n", "<leader>=", function()
     km.bump_up()
 end, { silent = true })
 
+vim.keymap.set("n", "<M-;>", function()
+    km.put_at_end(";")
+end, { silent = true })
+
 vim.keymap.set("n", "gliw", "mzguiw~`z", { silent = true })
 vim.keymap.set("n", "gliW", "mzguiW~`z", { silent = true })
 
-vim.keymap.set(
-    "n",
-    "gllw",
-    "mz<cmd> s/\\v<(.)(\\w*)/\\u\\1\\L\\2/ge<cr><cmd>noh<cr>`z",
-    { silent = true }
-)
+vim.keymap.set("n", "gllw", function()
+    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
+    vim.api.nvim_buf_set_mark(0, "z", cur_row, cur_col, {})
 
-vim.keymap.set(
-    "n",
-    "gllW",
-    "mz<cmd> s/\\v<(.)(\\S*)/\\u\\1\\L\\2/ge<cr><cmd>noh<cr>`z",
-    { silent = true }
-)
+    vim.api.nvim_exec2("s/\\v<(.)(\\w*)/\\u\\1\\L\\2/ge", {})
+    vim.api.nvim_cmd({ cmd = "noh" }, {})
+    vim.api.nvim_cmd({ cmd = "normal!", args = { "`z" } }, {})
+end, { silent = true })
 
-vim.keymap.set("n", "<M-;>", function()
-    km.put_at_end(";")
+vim.keymap.set("n", "gllW", function()
+    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
+    vim.api.nvim_buf_set_mark(0, "z", cur_row, cur_col, {})
+
+    vim.api.nvim_exec2("s/\\v<(.)(\\S*)/\\u\\1\\L\\2/ge", {})
+    vim.api.nvim_cmd({ cmd = "noh" }, {})
+    vim.api.nvim_cmd({ cmd = "normal!", args = { "`z" } }, {})
 end, { silent = true })
