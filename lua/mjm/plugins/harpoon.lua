@@ -70,12 +70,8 @@ return {
 
             vim.keymap.set("n", "<leader>ad", function()
                 marked.add_file()
-                -- After switching to Lazy, the Harpoon tabline does not automatically update when
-                -- a new mark is added. I think this is related to Lazy's lazy execution causing
-                -- Harpoon's emit_changed() function to either not run properly or on a delay
-                -- The below cmd is a hack to deal with this issue. By running an empty command, it
-                -- forces the tabline to redraw
-                vim.api.nvim_exec2("echo ''", {})
+                -- Needs to be redrawn manually for whatever reason
+                vim.api.nvim_exec2("redrawtabline", {})
             end)
 
             vim.keymap.set("n", "<leader>ar", function()
@@ -92,8 +88,7 @@ return {
                 end
 
                 marked.set_mark_list(contents)
-
-                vim.api.nvim_exec2("echo ''", {})
+                vim.api.nvim_exec2("redrawtabline", {})
             end)
 
             vim.keymap.set("n", "<leader>ae", fromUI.toggle_quick_menu)

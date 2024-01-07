@@ -9,7 +9,7 @@ return {
         local isLinux = vim.fn.has("unix")
 
         if not (isWin or isLinux) then
-            print("Neither Windows nor Linux detected. Using Nvim undo defaults")
+            vim.api.nvim_err_writeln("Neither Windows nor Linux detected. Using undo defaults")
 
             return
         end
