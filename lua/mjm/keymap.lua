@@ -13,6 +13,7 @@ vim.keymap.set("n", "<leader>sf", "<cmd>set spell!<cr>", { silent = true })
 
 vim.api.nvim_create_user_command("We", "w | e", {})
 
+-- These maps suppress undo history showing in the cmd line whever an undo/redo is performed
 vim.keymap.set("n", "u", function()
     local cmd_string = "silent normal! " .. vim.v.count1 .. "u"
     vim.api.nvim_exec2(cmd_string, {})
@@ -23,8 +24,23 @@ vim.keymap.set("n", "<C-r>", function()
     vim.api.nvim_exec2(cmd_string, {})
 end, { silent = true })
 
-vim.keymap.set("n", "/", "ms/", { silent = true })
-vim.keymap.set("n", "?", "ms?", { silent = true })
+-- These maps are done with API calls because, if done as simple maps,
+-- the "/" and "?" prompts do not show in the command line
+vim.keymap.set("n", "/", function()
+    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
+    vim.api.nvim_buf_set_mark(0, "s", cur_row, cur_col, {})
+
+    local key = vim.api.nvim_replace_termcodes("/", true, false, true)
+    vim.api.nvim_feedkeys(key, "n", true)
+end, { silent = true })
+
+vim.keymap.set("n", "?", function()
+    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
+    vim.api.nvim_buf_set_mark(0, "s", cur_row, cur_col, {})
+
+    local key = vim.api.nvim_replace_termcodes("?", true, false, true)
+    vim.api.nvim_feedkeys(key, "n", true)
+end, { silent = true })
 
 vim.keymap.set("n", "<leader>lv", "<cmd>rightbelow vsplit<cr>", { silent = true })
 vim.keymap.set("n", "<leader>le", "<cmd>leftabove vsplit<cr>", { silent = true })
