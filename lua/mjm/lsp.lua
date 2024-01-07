@@ -98,7 +98,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
                     vim.lsp.buf.rename(input)
                 end
 
-                vim.api.nvim_cmd({ cmd = "echo", args = { "''" } }, {})
+                vim.api.nvim_exec2("echo ''", {})
             end)
         end, lsp_opts)
 

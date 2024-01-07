@@ -50,7 +50,7 @@ local cmp_config = function()
             ["<C-e>"] = cmp.mapping.abort(),
             ["<C-c>"] = function()
                 cmp.mapping.abort()
-                vim.api.nvim_cmd({ cmd = "stopinsert" }, {})
+                vim.api.nvim_exec2("stopinsert", {})
             end,
 
             ["<C-p>"] = cmp.mapping.select_prev_item(cmp_select),

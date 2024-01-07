@@ -1,5 +1,33 @@
 local M = {}
 
+---@param prompt string
+---@return string
+M.get_user_input = function(prompt)
+    local pattern = nil
+
+    local status, result = pcall(function()
+        pattern = vim.fn.input(prompt)
+    end)
+
+    if not status then
+        if result then
+            vim.api.nvim_err_writeln(result)
+        else
+            vim.api.nvim_err_writeln("Failed to get user input, unknown error")
+        end
+
+        return ""
+    end
+
+    if pattern == "" or pattern == nil then
+        vim.api.nvim_exec2("echo ''", {})
+
+        return ""
+    end
+
+    return pattern
+end
+
 ---@param width number
 ---@return nil
 M.adjust_tab_width = function(width)
@@ -86,42 +114,6 @@ M.get_buf_directory = function(buf_num)
     local buf_name = vim.fn.bufname(buf_num)
 
     return vim.fn.fnamemodify(buf_name, ":p:h")
-end
-
--- Alternate publish_diagnostics handler for Typescript
---- @param err lsp.ResponseError
--- These params might only work in Neovim .10
--- @param result lsp.PublishDiagnosticsParams
--- @param ctx lsp.HandlerContext
-local function diagnostics_handler(err, result, ctx)
-    if err ~= nil then
-        error("Failed to request diagnostics: " .. vim.inspect(err))
-    end
-
-    if result == nil then
-        return
-    end
-
-    local buffer = vim.uri_to_bufnr(result.uri)
-    local namespace = vim.lsp.diagnostic.get_namespace(ctx.client_id)
-
-    local diagnostics = vim.tbl_map(function(diagnostic)
-        local resultLines = vim.split(diagnostic.message, "\n")
-        local output = vim.fn.reverse(resultLines)
-        return {
-            bufnr = buffer,
-            lnum = diagnostic.range.start.line,
-            end_lnum = diagnostic.range["end"].line,
-            col = diagnostic.range.start.character,
-            end_col = diagnostic.range["end"].character,
-            severity = diagnostic.severity,
-            message = table.concat(output, "\n\n"),
-            source = diagnostic.source,
-            code = diagnostic.code,
-        }
-    end, result.diagnostics)
-
-    vim.diagnostic.set(namespace, buffer, diagnostics)
 end
 
 ---@param root_start string

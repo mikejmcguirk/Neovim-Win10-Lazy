@@ -1,3 +1,5 @@
+local gf = require("mjm.global_funcs")
+
 ---@return boolean
 local check_if_qf_open = function()
     for _, win in ipairs(vim.fn.getwininfo()) do
@@ -13,35 +15,21 @@ vim.keymap.set("n", "<leader>qt", function()
     local qf_open = check_if_qf_open()
 
     if qf_open then
-        vim.api.nvim_cmd({ cmd = "cclose" }, {})
+        vim.api.nvim_exec2("cclose", {})
 
         return
     end
 
-    vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
+    vim.api.nvim_exec2("botright copen", {})
 end)
 
 vim.opt.grepprg = "rg --line-number"
 vim.opt.grepformat = "%f:%l:%m"
 
 local grep_wrapper = function(options)
-    local pattern = nil
+    local pattern = gf.get_user_input("Enter Pattern: ")
 
-    local status, result = pcall(function()
-        pattern = vim.fn.input("Enter pattern: ")
-    end)
-
-    if not status then
-        if result then
-            vim.api.nvim_err_writeln(result)
-        end
-
-        return
-    end
-
-    if pattern == "" or pattern == nil then
-        vim.api.nvim_cmd({ cmd = "echo", args = { "''" } }, {})
-
+    if pattern == "" then
         return
     end
 
@@ -63,7 +51,7 @@ local grep_wrapper = function(options)
     }
 
     vim.api.nvim_cmd(grep_cmd, {})
-    vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
+    vim.api.nvim_exec2("botright copen", {})
 end
 
 vim.keymap.set("n", "<leader>qgn", function()
@@ -78,7 +66,11 @@ end)
 ---@param origin string
 ---@return nil
 local diags_to_qf = function(origin, severity_cap)
-    if origin == "c" then
+    local raw_diags = {}
+
+    if origin == "b" then
+        raw_diags = vim.diagnostic.get(nil)
+    elseif origin == "c" then
         local non_diag_fts = {
             "NvimTree",
             "qf",
@@ -93,13 +85,7 @@ local diags_to_qf = function(origin, severity_cap)
 
             return
         end
-    end
 
-    local raw_diags = {}
-
-    if origin == "b" then
-        raw_diags = vim.diagnostic.get(nil)
-    elseif origin == "c" then
         raw_diags = vim.diagnostic.get(0)
     elseif origin == "w" then
         local all_wins = vim.api.nvim_list_wins()
@@ -185,7 +171,7 @@ local diags_to_qf = function(origin, severity_cap)
 
     local diags_for_qf = vim.tbl_map(convert_diag, filtered_diags)
     vim.fn.setqflist(diags_for_qf, "r")
-    vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
+    vim.api.nvim_exec2("botright copen", {})
 end
 
 vim.keymap.set("n", "<leader>qiq", function()
@@ -212,26 +198,24 @@ vim.keymap.set("n", "<leader>qiw", function()
     diags_to_qf("w", 2)
 end)
 
-vim.api.nvim_cmd({ cmd = "packadd", args = { "cfilter" } }, {})
+vim.api.nvim_exec2("packadd cfilter", {})
 
 ---@param type string
 local cfilter_wrapper = function(type)
-    local qf_open = check_if_qf_open()
-
-    if not qf_open then
+    if not check_if_qf_open() then
         print("Quickfix list not open")
 
         return
     end
 
-    local prompt = "Pattern to "
+    local prompt = nil
     local use_bang = nil
 
     if type == "k" then
-        prompt = prompt .. "keep: "
+        prompt = "Pattern to keep: "
         use_bang = false
     elseif type == "r" then
-        prompt = prompt .. "remove: "
+        prompt = "Pattern to remove: "
         use_bang = true
     else
         print("Invalid type")
@@ -239,19 +223,13 @@ local cfilter_wrapper = function(type)
         return
     end
 
-    local pattern = vim.fn.input(prompt)
+    local pattern = gf.get_user_input(prompt)
 
     if pattern == "" then
         return
     end
 
-    local filter_cmd = {
-        args = { pattern },
-        bang = use_bang,
-        cmd = "Cfilter",
-    }
-
-    vim.api.nvim_cmd(filter_cmd, {})
+    vim.api.nvim_cmd({ cmd = "Cfilter", bang = use_bang, args = { pattern } }, {})
 end
 
 vim.keymap.set("n", "<leader>qk", function()
@@ -264,148 +242,57 @@ end)
 
 vim.keymap.set("n", "<leader>ql", function()
     vim.fn.setqflist({})
-    vim.api.nvim_cmd({ cmd = "cclose" }, {})
+    vim.api.nvim_exec2("cclose", {})
 end)
 
----@param direction string
----@param backup_direction string
-local qf_scroll = function(direction, backup_direction)
+local qf_scroll_wrapper = function(scroll_cmd)
+    local backup_cmd = nil
+
+    if scroll_cmd == "cprev" then
+        backup_cmd = "clast"
+    elseif scroll_cmd == "cnext" then
+        backup_cmd = "cfirst"
+    else
+        print("Invalid scroll cmd")
+
+        return
+    end
+
     local status, result = pcall(function()
-        vim.cmd("c" .. direction)
+        vim.api.nvim_exec2(scroll_cmd, {})
     end)
 
-    if (not status) and result then
-        if type(result) == "string" and string.find(result, "E553") then
-            vim.cmd("c" .. backup_direction)
-            vim.cmd("normal! zz")
-        elseif type(result) == "string" and string.find(result, "E42") then
-        else
-            print(result)
-        end
-    else
-        vim.cmd("normal! zz")
+    if status then
+        vim.api.nvim_exec2("normal! zz", {})
+
+        return
     end
+
+    if not result then
+        vim.api.nvim_err_writeln("Unknown error")
+
+        return
+    end
+
+    if type(result) == "string" and string.find(result, "E553") then
+        vim.api.nvim_exec2(backup_cmd, {})
+        vim.api.nvim_exec2("normal! zz", {})
+
+        return
+    elseif type(result) == "string" and string.find(result, "E42") then
+        return
+    end
+
+    vim.api.nvim_err_writeln(result)
 end
 
 vim.keymap.set("n", "[q", function()
-    qf_scroll("prev", "last")
+    qf_scroll_wrapper("cprev")
 end)
 
 vim.keymap.set("n", "]q", function()
-    qf_scroll("next", "first")
+    qf_scroll_wrapper("cnext")
 end)
 
 vim.keymap.set("n", "[Q", "<cmd>cfirst<cr>")
 vim.keymap.set("n", "]Q", "<cmd>clast<cr>")
-
----@param statuses table{{code: string, description: string}}
----@param filter boolean
-local get_git_info = function(statuses, filter)
-    local git_status = vim.fn.systemlist("git status --porcelain")
-    local files = {}
-
-    for _, file in ipairs(git_status) do
-        local found = false
-        local file_status = file:sub(1, 2)
-
-        ---@param text string
-        local to_insert = function(text)
-            return {
-                filename = file:sub(4),
-                text = text,
-                lnum = 1,
-                col = 1,
-                type = 1,
-            }
-        end
-
-        for _, status in ipairs(statuses) do
-            if file_status == status.code then
-                table.insert(files, to_insert(file_status .. " : " .. status.description))
-                found = true
-                break
-            end
-        end
-
-        if not found and not filter then
-            table.insert(files, to_insert(file_status .. " : Unknown"))
-        end
-    end
-
-    vim.fn.setqflist(files)
-    vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
-end
-
-local git_all = {
-    { code = " M", description = "Modified" },
-    { code = "A ", description = "Added" },
-    { code = " D", description = "Deleted" },
-    { code = "R ", description = "Renamed" },
-    { code = "C ", description = "Copied" },
-    { code = "U ", description = "Unmerged" },
-    { code = "??", description = "Untracked" },
-    { code = "!!", description = "Ignored" },
-    { code = "AM", description = "Staged and Modified" },
-    { code = "AD", description = "Staged for Deletion but Modified" },
-    { code = "MM", description = "Modified, Staged and Modified Again" },
-}
-
-vim.keymap.set("n", "<leader>qut", function()
-    get_git_info({
-        { code = "??", description = "Untracked File" },
-    }, true)
-end)
-
-vim.keymap.set("n", "<leader>quu", function()
-    get_git_info({
-        { code = " M", description = "Unstaged Change" },
-    }, true)
-end)
-
-vim.keymap.set("n", "<leader>qud", function()
-    get_git_info({
-        { code = " D", description = "Unstaged Change" },
-    }, true)
-end)
-
-vim.keymap.set("n", "<leader>qua", function()
-    get_git_info(git_all, false)
-end)
-
-vim.keymap.set("n", "<leader>qa", function()
-    local clients = vim.lsp.get_active_clients()
-
-    if #clients == 0 then
-        print("No active LSP clients")
-        return
-    end
-
-    local for_qf_list = {}
-
-    for _, client in ipairs(clients) do
-        local bufs_for_client = "( "
-
-        for _, buf in ipairs(vim.lsp.get_buffers_by_client_id(client.id)) do
-            bufs_for_client = bufs_for_client .. buf .. " "
-        end
-
-        bufs_for_client = bufs_for_client .. ")"
-        local lsp_entry = "LSP: "
-            .. client.name
-            .. ", ID: "
-            .. client.id
-            .. ", Buffer(s): "
-            .. bufs_for_client
-            .. ", Root: "
-            .. (client.config.root_dir or "")
-            .. ", Status: "
-            .. (client.config.status or "")
-            .. ", Command: "
-            .. (client.config.cmd[1] or "")
-
-        table.insert(for_qf_list, { text = lsp_entry })
-    end
-
-    vim.fn.setqflist(for_qf_list, "r")
-    vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
-end)

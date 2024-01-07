@@ -410,7 +410,7 @@ M.create_blank_line = function(use_bang)
     put_cmd = put_cmd .. " =repeat(nr2char(10), v:count1)"
 
     vim.api.nvim_exec2(put_cmd, {})
-    vim.api.nvim_cmd({ cmd = "normal", bang = true, args = { "`z" } }, {})
+    vim.api.nvim_exec2("normal! `z", {})
 end
 
 ---@param vcount1 number
@@ -466,7 +466,7 @@ M.visual_move = function(vcount1, direction)
 
     if (not status) and result then
         vim.api.nvim_err_writeln(result)
-        vim.api.nvim_cmd({ cmd = "normal", bang = true, args = { "gv" } }, {})
+        vim.api.nvim_exec2("normal! gv", {})
 
         return
     end
@@ -526,7 +526,7 @@ M.bump_up = function()
     local to_move_trim = to_move:gsub("^%s+", ""):gsub("%s+$", "")
     vim.api.nvim_exec2("put! =''", {})
     vim.api.nvim_buf_set_text(0, orig_set_row, 0, orig_set_row, 0, { to_move_trim })
-    vim.api.nvim_cmd({ cmd = "normal", bang = true, args = { "==" } }, {})
+    vim.api.nvim_exec2("normal! ==", {})
 end
 
 ---@param chars string

@@ -33,7 +33,7 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
         if expandtab then
             vim.api.nvim_buf_set_option(ev.buf, "tabstop", shiftwidth)
             vim.api.nvim_buf_set_option(ev.buf, "softtabstop", shiftwidth)
-            vim.api.nvim_cmd({ cmd = "retab" }, {})
+            vim.api.nvim_exec2("retab", {})
         end
 
         vim.cmd([[normal! mz]])
@@ -47,7 +47,8 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
     end,
 })
 
--- Does not work if set a global option
+-- Does not work as a global option
+-- Prevents automatic creation of comment syntax when pressing o or O in a comment
 vim.api.nvim_create_autocmd({ "FileType" }, {
     group = mjm_group,
     pattern = "*",

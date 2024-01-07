@@ -3,14 +3,12 @@ vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
 vim.g.loaded_netrwSettings = 1
 
--- Leader maps are set based on the definition of leader at the time the mapping is created
--- Thus, leader is set early to ensure that all leader maps are correct
+-- Set leader immediately to ensure leader mappings are correct
 vim.keymap.set({ "n", "v" }, "<Space>", "<Nop>")
 vim.g.mapleader = " "
 vim.g.maplocaleader = " "
 
--- On the monitors I use, a centered vsplit will be right on the color coloumn
--- for files under 10k lines
+-- On my monitors, for files under 10k lines, a centered vsplit will be on the color column
 vim.opt.nu = true
 vim.opt.relativenumber = true
 vim.opt.numberwidth = 5
@@ -31,13 +29,13 @@ vim.opt.cindent = true
 vim.opt.termguicolors = true
 vim.api.nvim_exec2("set gcr=n:block-blinkon1,i-c-ci:ver100-blinkon1,v-r:hor100-blinkon1", {})
 vim.opt.lazyredraw = true
+vim.opt.showmode = false
 
 vim.opt.scrolloff = 6
 vim.opt.startofline = true
 
 vim.opt.splitright = true
 vim.opt.splitbelow = true
-vim.opt.showmode = false
 
 vim.opt.ignorecase = true
 vim.opt.smartcase = true

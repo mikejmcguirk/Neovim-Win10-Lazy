@@ -91,23 +91,11 @@ return {
             vim.keymap.set("n", "<leader>tg", builtin.git_files)
 
             vim.keymap.set("n", "<leader>ts", function()
-                local pattern = nil
+                local gf = require("mjm.global_funcs")
 
-                local status, result = pcall(function()
-                    pattern = vim.fn.input("Grep > ")
-                end)
+                local pattern = gf.get_user_input("Grep > ")
 
-                if not status then
-                    if result then
-                        vim.api.nvim_err_writeln(result)
-                    end
-
-                    return
-                end
-
-                if pattern == "" or pattern == nil then
-                    vim.api.nvim_cmd({ cmd = "echo", args = { "''" } }, {})
-
+                if pattern == "" then
                     return
                 end
 
