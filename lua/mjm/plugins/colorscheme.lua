@@ -92,11 +92,11 @@ return {
                     overrides = overrides,
                 })
 
-                vim.cmd.colorscheme("fluoromachine")
+                vim.api.nvim_exec2("colorscheme fluoromachine", {})
             elseif Env_Theme == "green" then
                 require("zenburn").setup()
 
-                vim.cmd.colorscheme("zenburn")
+                vim.api.nvim_exec2("colorscheme zenburn", {})
             else
                 fm.setup({
                     glow = false,
@@ -105,7 +105,7 @@ return {
                     transparent = true,
                 })
 
-                vim.cmd.colorscheme("fluoromachine")
+                vim.api.nvim_exec2("colorscheme fluoromachine", {})
             end
 
             if Env_Theme == "green" then

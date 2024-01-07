@@ -75,7 +75,7 @@ return {
                 -- Harpoon's emit_changed() function to either not run properly or on a delay
                 -- The below cmd is a hack to deal with this issue. By running an empty command, it
                 -- forces the tabline to redraw
-                vim.cmd([[normal! :<esc>]])
+                vim.api.nvim_exec2("echo ''", {})
             end)
 
             vim.keymap.set("n", "<leader>ar", function()
@@ -93,7 +93,7 @@ return {
 
                 marked.set_mark_list(contents)
 
-                vim.cmd([[normal! :<esc>]])
+                vim.api.nvim_exec2("echo ''", {})
             end)
 
             vim.keymap.set("n", "<leader>ae", fromUI.toggle_quick_menu)
