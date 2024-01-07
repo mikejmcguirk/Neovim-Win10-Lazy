@@ -133,9 +133,8 @@ return {
                             actions.close(buffer)
 
                             local commit = actions_state.get_selected_entry().value
-
-                            vim.cmd.Git("diff " .. tostring(commit))
-                            vim.cmd.wincmd("L")
+                            local cmd_string = "botright Git diff " .. tostring(commit)
+                            vim.api.nvim_exec2(cmd_string, {})
                         end)
 
                         return true

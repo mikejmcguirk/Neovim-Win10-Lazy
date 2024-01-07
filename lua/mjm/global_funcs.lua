@@ -37,7 +37,7 @@ M.adjust_tab_width = function(width)
 end
 
 ---@return nil
-local get_home = function()
+M.get_home = function()
     if vim.fn.has("win32") == 1 then
         return os.getenv("USERPROFILE")
     else
@@ -50,7 +50,7 @@ end
 M.find_proj_root = function(patterns, path, backup_dir)
     local files = vim.deepcopy(patterns)
 
-    local matches = vim.fs.find(files, { path = path, upward = true, stop = get_home() })
+    local matches = vim.fs.find(files, { path = path, upward = true, stop = M.get_home() })
 
     for _, match in ipairs(matches) do
         local root_dir = vim.fs.dirname(match)
@@ -72,7 +72,8 @@ end
 ---@param field_name string
 ---@return boolean
 M.find_file_with_field = function(filename, root_start, field_name)
-    local matches = vim.fs.find(filename, { path = root_start, upward = true, stop = get_home() })
+    local matches =
+        vim.fs.find(filename, { path = root_start, upward = true, stop = M.get_home() })
 
     for _, match in ipairs(matches) do
         local file = io.open(match, "r")
