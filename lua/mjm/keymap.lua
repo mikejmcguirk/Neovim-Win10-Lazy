@@ -1,8 +1,8 @@
 local km = require("mjm.keymap_mod")
 
+vim.keymap.set("n", "<C-c>", "<nop>", { silent = true })
 -- Do not map in command mode or else <C-c> will accept commands
 vim.keymap.set({ "i", "v" }, "<C-c>", "<esc>", { silent = true })
-vim.keymap.set({ "i", "v" }, "<C-C>", "<esc>", { silent = true })
 
 vim.keymap.set("n", "<leader>st", function()
     vim.opt.spell = not vim.opt.spell:get()
@@ -23,19 +23,23 @@ vim.keymap.set("n", "<C-r>", function()
     vim.api.nvim_exec2(cmd_string, {})
 end, { silent = true })
 
-vim.keymap.set("n", "<leader>lv", "<cmd>vsplit<cr>", { silent = true })
-vim.keymap.set("n", "<leader>lh", "<cmd>split<cr>", { silent = true })
+vim.keymap.set("n", "/", "ms/", { silent = true })
+vim.keymap.set("n", "?", "ms?", { silent = true })
+
+vim.keymap.set("n", "<leader>lv", "<cmd>rightbelow vsplit<cr>", { silent = true })
+vim.keymap.set("n", "<leader>le", "<cmd>leftabove vsplit<cr>", { silent = true })
+vim.keymap.set("n", "<leader>lo", "<cmd>topleft vsplit<cr>", { silent = true })
+vim.keymap.set("n", "<leader>lr", "<cmd>botright vsplit<cr>", { silent = true })
+
+vim.keymap.set("n", "<leader>lh", "<cmd>belowright split<cr>", { silent = true })
+vim.keymap.set("n", "<leader>lf", "<cmd>leftabove split<cr>", { silent = true })
+vim.keymap.set("n", "<leader>lt", "<cmd>topleft split<cr>", { silent = true })
+vim.keymap.set("n", "<leader>li", "<cmd>botright split<cr>", { silent = true })
 
 vim.keymap.set("n", "<M-j>", "<cmd>resize -2<CR>", { silent = true })
 vim.keymap.set("n", "<M-k>", "<cmd>resize +2<CR>", { silent = true })
 vim.keymap.set("n", "<M-h>", "<cmd>vertical resize -2<CR>", { silent = true })
 vim.keymap.set("n", "<M-l>", "<cmd>vertical resize +2<CR>", { silent = true })
-
--- Controlled through vim-tmux-navigator
--- vim.keymap.set("n", "<C-h>", "<C-w>h", { silent = true })
--- vim.keymap.set("n", "<C-j>", "<C-w>j", { silent = true })
--- vim.keymap.set("n", "<C-k>", "<C-w>k", { silent = true })
--- vim.keymap.set("n", "<C-l>", "<C-w>l", { silent = true })
 
 vim.keymap.set({ "n", "v" }, "<C-u>", "<C-u>zz", { silent = true })
 vim.keymap.set({ "n", "v" }, "<C-d>", "<C-d>zz", { silent = true })
@@ -163,6 +167,14 @@ end, { silent = true })
 
 vim.keymap.set("n", "<leader>y^", function()
     km.rest_cursor('^vg_"+y')
+end, { silent = true })
+
+vim.keymap.set("n", "yY", function()
+    km.rest_cursor("ggyG", { rest_view = true })
+end, { silent = true })
+
+vim.keymap.set("n", "<leader>yY", function()
+    km.rest_cursor('gg"+yG', { rest_view = true })
 end, { silent = true })
 
 local backward_objects = { "b", "B", "ge", "gE" }

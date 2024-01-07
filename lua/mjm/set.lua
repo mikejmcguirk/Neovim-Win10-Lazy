@@ -8,6 +8,8 @@ vim.keymap.set({ "n", "v" }, "<Space>", "<Nop>")
 vim.g.mapleader = " "
 vim.g.maplocaleader = " "
 
+vim.g.did_install_default_menus = 1
+
 -- On my monitors, for files under 10k lines, a centered vsplit will be on the color column
 vim.opt.nu = true
 vim.opt.relativenumber = true
@@ -23,6 +25,8 @@ vim.opt.shiftwidth = default_tab_width
 vim.opt.expandtab = true
 vim.opt.shiftround = true
 
+vim.opt.fileformats = "unix,dos"
+
 vim.opt.autoindent = true
 vim.opt.cindent = true
 
@@ -33,6 +37,7 @@ vim.opt.showmode = false
 
 vim.opt.scrolloff = 6
 vim.opt.startofline = true
+vim.opt.jumpoptions:append("view")
 
 vim.opt.splitright = true
 vim.opt.splitbelow = true
