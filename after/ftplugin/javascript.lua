@@ -7,40 +7,32 @@ vim.lsp.start(gf.setup_tsserver(root_start))
 
 -- Autofixes are performed with eslint_d through conform
 
-local find_eslint_root_dir = function()
-    local eslint_root_files = {
-        "eslint.config.js",
-        "eslint.config.cjs",
-        ".eslintrc",
-        ".eslintrc.js",
-        ".eslintrc.cjs",
-        ".eslintrc.yaml",
-        ".eslintrc.yml",
-        ".eslintrc.json",
-    }
+local eslint_root_files = {
+    "eslint.config.js",
+    "eslint.config.cjs",
+    ".eslintrc",
+    ".eslintrc.js",
+    ".eslintrc.cjs",
+    ".eslintrc.yaml",
+    ".eslintrc.yml",
+    ".eslintrc.json",
+}
 
-    local package_json = "package.json"
+local package_json = "package.json"
 
-    if gf.find_file_with_field(package_json, root_start, "eslintConfig") then
-        table.insert(eslint_root_files, package_json)
-    end
-
-    return gf.find_proj_root(eslint_root_files, root_start, nil)
+if gf.find_file_with_field(package_json, root_start, "eslintConfig") then
+    table.insert(eslint_root_files, package_json)
 end
 
-local eslint_root = find_eslint_root_dir()
+local eslint_root = gf.find_proj_root(eslint_root_files, root_start, nil)
+local eslint_config = vim.fn.globpath(eslint_root, "eslint.config.js")
+local is_flat_config = nil
 
-local is_flat_config = function(eslint_root)
-    local eslint_config = vim.fn.globpath(eslint_root, "eslint.config.js")
-
-    if #eslint_config == 0 then
-        return false
-    else
-        return true
-    end
+if #eslint_config == 0 then
+    is_flat_config = false
+else
+    is_flat_config = true
 end
-
-local use_flat_config = is_flat_config(eslint_root)
 
 vim.lsp.start({
     name = "eslint",
@@ -61,7 +53,7 @@ vim.lsp.start({
         -- packageManager = nil,
         -- useESLintClass = false,
         experimental = {
-            useFlatConfig = use_flat_config,
+            useFlatConfig = is_flat_config,
         },
         codeActionOnSave = {
             enable = false,

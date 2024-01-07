@@ -1,6 +1,6 @@
 local gf = require("mjm.global_funcs")
 
--- Formatting is handled with the built-in RustFmt function + rust.vim plugin
+-- Formatting handled using the rust.vim plugin
 
 local root_start = gf.get_buf_directory(vim.fn.bufnr())
 
