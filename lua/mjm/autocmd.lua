@@ -15,9 +15,16 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
     group = mjm_group,
     pattern = "*",
     callback = function(ev)
-        if vim.bo.readonly then
+        if vim.b[ev.buf].readonly then
             return
         end
+
+        require("conform").format({
+            bufnr = ev.buf,
+            lsp_fallback = false,
+            async = false,
+            timeout_ms = 1000,
+        })
 
         local clients = vim.lsp.get_active_clients({ bufnr = ev.buf })
 

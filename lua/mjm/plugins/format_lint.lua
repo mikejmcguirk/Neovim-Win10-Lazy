@@ -17,21 +17,9 @@ return {
                     sh = { "beautysh" },
                     lua = { "stylua" },
                     python = { "ruff_format", "isort" },
-                },
-                format_on_save = {
-                    lsp_fallback = false,
-                    async = false,
-                    timeout_ms = 5000,
+                    rust = { "rustfmt" },
                 },
             })
-        end,
-    },
-    {
-        "rust-lang/rust.vim",
-        ft = "rust",
-        init = function()
-            vim.g.rustfmt_autosave = 0
-            vim.g.rustfmt_fail_silently = 1
         end,
     },
     {
