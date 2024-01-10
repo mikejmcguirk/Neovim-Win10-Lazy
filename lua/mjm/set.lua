@@ -42,7 +42,7 @@ vim.opt.splitbelow = true
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
 vim.opt.hlsearch = true
-vim.opt.incsearch = true
+vim.opt.incsearch = false
 
 vim.opt.modelines = 1
 vim.opt.updatetime = 1000
