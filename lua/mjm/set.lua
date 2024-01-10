@@ -29,7 +29,7 @@ vim.opt.fileformats = "unix,dos"
 
 vim.opt.termguicolors = true
 vim.api.nvim_exec2("set gcr=n:block-blinkon1,i-c-ci:ver100-blinkon1,v-r:hor100-blinkon1", {})
-vim.opt.lazyredraw = true
+vim.opt.lazyredraw = false -- Disabled because it prevents search info from showing
 vim.opt.showmode = false
 
 vim.opt.scrolloff = 6
@@ -42,7 +42,7 @@ vim.opt.splitbelow = true
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
 vim.opt.hlsearch = true
-vim.opt.incsearch = false
+vim.opt.incsearch = false -- Keep screen from shifting when running search of substitute commands
 
 vim.opt.modelines = 1
 vim.opt.updatetime = 1000
