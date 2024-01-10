@@ -25,53 +25,14 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
     group = mjm_group,
     pattern = "*",
     callback = function(ev)
-        local conformed = false
+        local ff = require("mjm.format_funcs")
 
-        local status, result = pcall(function()
-            conformed = require("conform").format({
-                bufnr = ev.buf,
-                lsp_fallback = false,
-                async = false,
-                timeout_ms = 1000,
-            })
-        end)
-
-        if not status and type(result) == "string" then
-            vim.api.nvim_err_writeln(result)
-        elseif not status then
-            vim.api.nvim_err_writeln("Unknown error occurred while formatting with Conform")
-        end
-
-        if status and conformed then
+        if ff.try_conform(ev.buf) then
             return
         end
 
-        local clients = vim.lsp.get_active_clients({ bufnr = ev.buf })
-        local mode = vim.api.nvim_get_mode().mode
-        local method = nil
-
-        if mode == "v" or mode == "V" then
-            method = "textDocument/rangeFormatting"
-        else
-            method = "textDocument/formatting"
-        end
-
-        clients = vim.tbl_filter(function(client)
-            return client.supports_method(method)
-        end, clients)
-
-        if #clients > 0 then
-            status, result = pcall(vim.lsp.buf.format, { bufnr = ev.buf, async = false })
-
-            if not status and type(result) == "string" then
-                vim.api.nvim_err_writeln(result)
-            elseif not status then
-                vim.api.nvim_err_writeln("Unknown error occurred while formatting with LSP")
-            end
-
-            if status then
-                return
-            end
+        if ff.try_lsp_format(ev.buf) then
+            return
         end
 
         local expandtab = vim.api.nvim_buf_get_option(ev.buf, "expandtab")
@@ -88,26 +49,7 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
             vim.api.nvim_exec2(ev.buf .. "bufdo retab", {})
         end
 
-        local function top_blank_lines()
-            local top_line = vim.api.nvim_buf_get_lines(ev.buf, 0, 1, true)[1]
-
-            if top_line == "" then
-                vim.api.nvim_buf_set_lines(ev.buf, 0, 1, false, {})
-                top_blank_lines()
-            end
-        end
-
-        local function bottom_blank_lines()
-            local bottom_line = vim.api.nvim_buf_get_lines(ev.buf, -2, -1, true)[1]
-
-            if bottom_line == "" then
-                vim.api.nvim_buf_set_lines(ev.buf, -2, -1, false, {})
-                bottom_blank_lines()
-            end
-        end
-
-        top_blank_lines()
-        bottom_blank_lines()
+        ff.fix_bookend_blanks(ev.buf)
 
         local total_lines = vim.api.nvim_buf_line_count(ev.buf)
         local lines = vim.api.nvim_buf_get_lines(ev.buf, 0, total_lines, true)
@@ -115,6 +57,9 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
         local consecutive_blanks = 0
         local lines_removed = 0
 
+        ---@param iter number
+        ---@param line string
+        ---@return nil
         local format_line = function(iter, line)
             local empty_line = line == ""
             local whitespace_line = line:match("^%s*$")
