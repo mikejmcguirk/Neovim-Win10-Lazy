@@ -11,6 +11,16 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 
 local mjm_group = vim.api.nvim_create_augroup("mjm", { clear = true })
 
+-- Does not work as a global option
+-- Prevents automatic creation of comment syntax when pressing o or O in a comment
+vim.api.nvim_create_autocmd({ "FileType" }, {
+    group = mjm_group,
+    pattern = "*",
+    callback = function()
+        vim.opt.formatoptions:remove("o")
+    end,
+})
+
 vim.api.nvim_create_autocmd({ "BufWritePre" }, {
     group = mjm_group,
     pattern = "*",
@@ -64,44 +74,75 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
             end
         end
 
-        local shiftwidth = vim.api.nvim_buf_get_option(ev.buf, "shiftwidth")
         local expandtab = vim.api.nvim_buf_get_option(ev.buf, "expandtab")
 
         if expandtab then
-            vim.api.nvim_buf_set_option(ev.buf, "tabstop", shiftwidth)
+            local shiftwidth = vim.api.nvim_buf_get_option(ev.buf, "shiftwidth")
+
+            if shiftwidth == 0 then
+                shiftwidth = vim.api.nvim_buf_get_option(ev.buf, "tabstop")
+            else
+                vim.api.nvim_buf_set_option(ev.buf, "tabstop", shiftwidth)
+            end
+
             vim.api.nvim_buf_set_option(ev.buf, "softtabstop", shiftwidth)
             vim.api.nvim_exec2(ev.buf .. "bufdo retab", {})
         end
 
-        local buf_wins = vim.fn.win_findbuf(ev.buf)
-        local saved_cursors = {}
+        local leading_blanks = true
 
-        for _, win in pairs(buf_wins) do
-            local win_cursor = vim.api.nvim_win_get_cursor(win)
-            table.insert(saved_cursors, win_cursor)
+        while leading_blanks do
+            local top_line = vim.api.nvim_buf_get_lines(ev.buf, 0, 1, true)[1]
+
+            if top_line == "" then
+                vim.api.nvim_buf_set_lines(ev.buf, 0, 1, false, {})
+            else
+                leading_blanks = false
+            end
         end
 
-        local remove_trailing_whitespace = ev.buf .. [[bufdo %s/\s\+$//e]]
-        vim.api.nvim_exec2(remove_trailing_whitespace, {})
-        local remove_leading_blank_lines = ev.buf .. [[bufdo %s/\%^\n\+//e]]
-        vim.api.nvim_exec2(remove_leading_blank_lines, {})
-        local fix_threeplus_newlines = ev.buf .. [[bufdo %s/\n\{3,}/\r\r/e]]
-        vim.api.nvim_exec2(fix_threeplus_newlines, {})
-        local remove_trailing_blank_lines = ev.buf .. [[bufdo %s/\n\+\%$//e]]
-        vim.api.nvim_exec2(remove_trailing_blank_lines, {})
+        local trailing_blanks = true
 
-        for _, win in pairs(buf_wins) do
-            vim.api.nvim_win_set_cursor(win, saved_cursors[_])
+        while trailing_blanks do
+            local bottom_line = vim.api.nvim_buf_get_lines(ev.buf, -2, -1, true)[1]
+
+            if bottom_line == "" then
+                vim.api.nvim_buf_set_lines(ev.buf, -2, -1, false, {})
+            else
+                trailing_blanks = false
+            end
         end
-    end,
-})
 
--- Does not work as a global option
--- Prevents automatic creation of comment syntax when pressing o or O in a comment
-vim.api.nvim_create_autocmd({ "FileType" }, {
-    group = mjm_group,
-    pattern = "*",
-    callback = function()
-        vim.opt.formatoptions:remove("o")
+        local total_lines = vim.api.nvim_buf_line_count(ev.buf)
+        local lines = vim.api.nvim_buf_get_lines(ev.buf, 0, total_lines, true)
+
+        local consecutive_blanks = 0
+        local lines_removed = 0
+
+        for i, line in ipairs(lines) do
+            local is_blank = line:match("^%s*$")
+
+            if line == "" or is_blank then
+                consecutive_blanks = consecutive_blanks + 1
+                local row = i - lines_removed - 1
+
+                if consecutive_blanks > 1 then
+                    vim.api.nvim_buf_set_lines(ev.buf, row, row + 1, false, {})
+                    lines_removed = lines_removed + 1
+                elseif is_blank then
+                    vim.api.nvim_buf_set_text(ev.buf, row, 0, row, #line, {})
+                end
+            else
+                consecutive_blanks = 0
+
+                local line_length = #line
+                local row = i - 1 - lines_removed
+                local last_non_blank, _ = line:find("(%S)%s*$")
+
+                if last_non_blank and last_non_blank ~= line_length then
+                    vim.api.nvim_buf_set_text(ev.buf, row, last_non_blank, row, line_length, {})
+                end
+            end
+        end
     end,
 })

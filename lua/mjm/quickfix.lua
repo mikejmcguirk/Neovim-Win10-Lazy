@@ -119,19 +119,13 @@ local diags_to_qf = function(origin, severity_cap)
         return
     end
 
-    local filtered_diags = {}
-
     if severity_cap < 4 then
-        for _, diag in ipairs(raw_diags) do
-            if diag.severity <= severity_cap then
-                table.insert(filtered_diags, diag)
-            end
-        end
-    else
-        filtered_diags = raw_diags
+        raw_diags = vim.tbl_filter(function(diag)
+            return diag.severity <= severity_cap
+        end, raw_diags)
     end
 
-    if #filtered_diags == 0 then
+    if #raw_diags == 0 then
         print("No diagnostics")
 
         return
@@ -169,7 +163,7 @@ local diags_to_qf = function(origin, severity_cap)
         return converted_diag
     end
 
-    local diags_for_qf = vim.tbl_map(convert_diag, filtered_diags)
+    local diags_for_qf = vim.tbl_map(convert_diag, raw_diags)
     vim.fn.setqflist(diags_for_qf, "r")
     vim.api.nvim_exec2("botright copen", {})
 end
