@@ -114,7 +114,7 @@ local diags_to_qf = function(origin, severity_cap)
     }
 
     if severity_map[severity_cap] == nil then
-        print("Invalid severity cap")
+        vim.api.nvim_err_writeln("Invalid severity cap")
 
         return
     end

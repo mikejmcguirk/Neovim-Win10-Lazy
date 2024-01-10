@@ -60,7 +60,7 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
             return client.supports_method(method)
         end, clients)
 
-        if #clients >= 0 then
+        if #clients > 0 then
             status, result = pcall(vim.lsp.buf.format, { bufnr = ev.buf, async = false })
 
             if not status and type(result) == "string" then

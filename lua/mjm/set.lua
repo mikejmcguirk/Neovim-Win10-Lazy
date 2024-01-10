@@ -3,12 +3,16 @@ vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
 vim.g.loaded_netrwSettings = 1
 
+vim.g.loaded_2html_plugin = 1
+vim.g.loaded_zipPlugin = 1
+vim.g.loaded_tarPlugin = 1
+vim.g.loaded_gzip = 1
+vim.g.did_install_default_menus = 1
+
 -- Set leader immediately to ensure leader mappings are correct
 vim.keymap.set({ "n", "v" }, "<Space>", "<Nop>")
 vim.g.mapleader = " "
 vim.g.maplocaleader = " "
-
-vim.g.did_install_default_menus = 1
 
 -- On my monitors, for files under 10k lines, a centered vsplit will be on the color column
 vim.opt.nu = true
