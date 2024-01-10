@@ -26,33 +26,40 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
     pattern = "*",
     callback = function(ev)
         local ff = require("mjm.format_funcs")
+        local buf = ev.buf
+        -- Even after mark restoration is moved into the Nvim release branch,
+        -- this should be kept for Conform or LSP formatting, as
+        -- the official version of these functions does not save system or global marks
+        local saved_marks = ff.get_marks(buf)
 
-        if ff.try_conform(ev.buf) then
+        if ff.try_conform(buf) then
+            ff.restore_marks(buf, saved_marks)
             return
         end
 
-        if ff.try_lsp_format(ev.buf) then
+        if ff.try_lsp_format(buf) then
+            ff.restore_marks(buf, saved_marks)
             return
         end
 
-        local expandtab = vim.api.nvim_buf_get_option(ev.buf, "expandtab")
-        local shiftwidth = vim.api.nvim_buf_get_option(ev.buf, "shiftwidth")
+        local expandtab = vim.api.nvim_buf_get_option(buf, "expandtab")
+        local shiftwidth = vim.api.nvim_buf_get_option(buf, "shiftwidth")
 
         if shiftwidth == 0 then
-            shiftwidth = vim.api.nvim_buf_get_option(ev.buf, "tabstop")
+            shiftwidth = vim.api.nvim_buf_get_option(buf, "tabstop")
         else
-            vim.api.nvim_buf_set_option(ev.buf, "tabstop", shiftwidth)
+            vim.api.nvim_buf_set_option(buf, "tabstop", shiftwidth)
         end
 
         if expandtab then
-            vim.api.nvim_buf_set_option(ev.buf, "softtabstop", shiftwidth)
-            vim.api.nvim_exec2(ev.buf .. "bufdo retab", {})
+            vim.api.nvim_buf_set_option(buf, "softtabstop", shiftwidth)
+            vim.api.nvim_exec2(buf .. "bufdo retab", {})
         end
 
-        ff.fix_bookend_blanks(ev.buf)
+        ff.fix_bookend_blanks(buf)
 
-        local total_lines = vim.api.nvim_buf_line_count(ev.buf)
-        local lines = vim.api.nvim_buf_get_lines(ev.buf, 0, total_lines, true)
+        local total_lines = vim.api.nvim_buf_line_count(buf)
+        local lines = vim.api.nvim_buf_get_lines(buf, 0, total_lines, true)
 
         local consecutive_blanks = 0
         local lines_removed = 0
@@ -72,14 +79,14 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
             local row = iter - lines_removed - 1
 
             if blank_line and consecutive_blanks > 1 then
-                vim.api.nvim_buf_set_lines(ev.buf, row, row + 1, false, {})
+                vim.api.nvim_buf_set_lines(buf, row, row + 1, false, {})
                 lines_removed = lines_removed + 1
 
                 return
             end
 
             if whitespace_line then
-                vim.api.nvim_buf_set_text(ev.buf, row, 0, row, #line, {})
+                vim.api.nvim_buf_set_text(buf, row, 0, row, #line, {})
 
                 return
             end
@@ -90,7 +97,7 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
             local last_non_blank, _ = line:find("(%S)%s*$")
 
             if last_non_blank and last_non_blank ~= line_length then
-                vim.api.nvim_buf_set_text(ev.buf, row, last_non_blank, row, line_length, {})
+                vim.api.nvim_buf_set_text(buf, row, last_non_blank, row, line_length, {})
             end
 
             local first_non_blank, _ = line:find("%S") or 1, nil
@@ -109,14 +116,16 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
                 local new_spaces = shiftwidth - extra_spaces
                 local spaces = string.rep(" ", new_spaces)
 
-                vim.api.nvim_buf_set_text(ev.buf, row, 0, row, 0, { spaces })
+                vim.api.nvim_buf_set_text(buf, row, 0, row, 0, { spaces })
             else
-                vim.api.nvim_buf_set_text(ev.buf, row, 0, row, extra_spaces, {})
+                vim.api.nvim_buf_set_text(buf, row, 0, row, extra_spaces, {})
             end
         end
 
         for i, line in ipairs(lines) do
             format_line(i, line)
         end
+
+        ff.restore_marks(buf, saved_marks)
     end,
 })
