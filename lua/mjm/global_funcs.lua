@@ -94,21 +94,6 @@ M.find_file_with_field = function(filename, root_start, field_name)
     return false
 end
 
----@return nil
-M.create_lsp_formatter = function(augroup)
-    vim.api.nvim_create_autocmd("BufWritePre", {
-        buffer = 0,
-        group = augroup,
-        callback = function(ev)
-            local ok, err = pcall(vim.lsp.buf.format, { bufnr = ev.buf, async = false })
-
-            if not ok then
-                vim.api.nvim_err_writeln("Failed to format via LSP: " .. vim.inspect(err))
-            end
-        end,
-    })
-end
-
 ---@param buf_num number
 ---@return string
 M.get_buf_directory = function(buf_num)

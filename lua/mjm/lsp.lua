@@ -69,9 +69,10 @@ vim.lsp.handlers["textDocument/signatureHelp"] =
     vim.lsp.with(vim.lsp.handlers.signature_help, handler_border)
 
 vim.lsp.set_log_level("ERROR")
+local lsp_group = vim.api.nvim_create_augroup("LSP_Augroup", { clear = true })
 
 vim.api.nvim_create_autocmd("LspAttach", {
-    group = LSP_Augroup,
+    group = lsp_group,
     callback = function(ev)
         local lsp_opts = { buffer = ev.buf }
 
