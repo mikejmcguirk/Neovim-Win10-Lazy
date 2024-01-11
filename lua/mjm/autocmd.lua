@@ -27,6 +27,7 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
     callback = function(ev)
         local ff = require("mjm.format_funcs")
         local buf = ev.buf
+
         -- Even after mark restoration is moved into the Nvim release branch,
         -- this should be kept for Conform or LSP formatting, as
         -- the official version of these functions does not save system or global marks
