@@ -65,14 +65,19 @@ end
 
 ---@param buf number
 M.fix_bookend_blanks = function(buf)
+    if vim.api.nvim_buf_line_count(buf) == 1 then
+        return
+    end
+
     ---@param line string
     ---@return boolean
     local check_line = function(line)
         local empty_line = line == ""
         local whitespace_line = line:match("^%s*$")
         local blank_line = empty_line or whitespace_line
+        local last_line = vim.api.nvim_buf_line_count(buf) == 1
 
-        return blank_line
+        return blank_line and not last_line
     end
 
     ---@return nil
@@ -131,7 +136,7 @@ end
 ---@param buf number
 ---@param marks table
 M.restore_marks = function(buf, marks)
-    local total_lines = vim.api.nvim_buf_line_count(buf) - 1
+    local total_lines = vim.api.nvim_buf_line_count(buf)
     local old_marks = vim.deepcopy(marks)
     local cur_marks = vim.fn.getmarklist(buf)
 
