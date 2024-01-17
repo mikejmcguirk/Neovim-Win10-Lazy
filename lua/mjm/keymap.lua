@@ -13,7 +13,8 @@ vim.keymap.set("n", "<leader>sf", "<cmd>set spell!<cr>", { silent = true })
 
 vim.api.nvim_create_user_command("We", "w | e", {})
 
--- These maps suppress undo history showing in the cmd line whever an undo/redo is performed
+-- These maps stop undo history from showing in the cmd line whever an undo/redo is performed
+-- Done as functions because <cmd>'s do not work with v:count1
 vim.keymap.set("n", "u", function()
     local cmd_string = "silent normal! " .. vim.v.count1 .. "u"
     vim.api.nvim_exec2(cmd_string, {})
@@ -24,22 +25,12 @@ vim.keymap.set("n", "<C-r>", function()
     vim.api.nvim_exec2(cmd_string, {})
 end, { silent = true })
 
--- These maps are done with API calls because, if done as simple maps,
--- the "/" and "?" prompts do not show in the command line
 vim.keymap.set("n", "/", function()
-    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
-    vim.api.nvim_buf_set_mark(0, "s", cur_row, cur_col, {})
-
-    local key = vim.api.nvim_replace_termcodes("/", true, false, true)
-    vim.api.nvim_feedkeys(key, "n", true)
+    km.search_with_mark("/")
 end, { silent = true })
 
 vim.keymap.set("n", "?", function()
-    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
-    vim.api.nvim_buf_set_mark(0, "s", cur_row, cur_col, {})
-
-    local key = vim.api.nvim_replace_termcodes("?", true, false, true)
-    vim.api.nvim_feedkeys(key, "n", true)
+    km.search_with_mark("?")
 end, { silent = true })
 
 vim.keymap.set("n", "<leader>lv", "<cmd>rightbelow vsplit<cr>", { silent = true })
@@ -104,7 +95,7 @@ vim.keymap.set("n", "gV", "`[v`]", { silent = true })
 vim.keymap.set("n", "<leader>V", "_vg_", { silent = true })
 
 vim.keymap.set("n", "J", function()
-    km.rest_cursor("J", { mod_check = true, rest_view = true })
+    km.rest_view("J", { mod_check = true })
 end, { silent = true })
 
 local cap_motions_norm = {
@@ -122,9 +113,8 @@ local cap_motions_norm = {
 
 for _, map in pairs(cap_motions_norm) do
     vim.keymap.set("n", map, function()
-        local cmd = vim.v.count1 .. map
-        km.rest_cursor(cmd, { mod_check = true })
-    end, { silent = true })
+        return "mz" .. vim.v.count1 .. map .. "`z"
+    end, { silent = true, expr = true })
 end
 
 local cap_motions_visual = {
@@ -136,8 +126,8 @@ local cap_motions_visual = {
 
 for _, map in pairs(cap_motions_visual) do
     vim.keymap.set("v", map, function()
-        km.rest_cursor(map, { mod_check = true })
-    end, { silent = true })
+        return "mz" .. vim.v.count1 .. map .. "`z"
+    end, { silent = true, expr = true })
 end
 
 vim.keymap.set({ "n", "v" }, "x", '"_x', { silent = true })
@@ -164,74 +154,63 @@ vim.keymap.set("n", "c^", "^cg_", { silent = true })
 vim.keymap.set({ "n", "v" }, "s", "<Nop>", { silent = true })
 -- vim.keymap.set("n", "S", "<Nop>", { silent = true }) -- Used in visual mode by nvim-surround
 
+vim.api.nvim_create_autocmd("TextYankPost", {
+    group = vim.api.nvim_create_augroup("yank_reset_cursor", { clear = true }),
+    callback = function()
+        if vim.v.event.operator ~= "y" then
+            return
+        end
+
+        vim.api.nvim_exec2("norm! `z", {})
+    end,
+})
+
+vim.keymap.set("n", "y", "mzy", { silent = true })
+vim.keymap.set("n", "<leader>y", 'mz"+y', { silent = true })
 vim.keymap.set("n", "Y", "y$", { silent = true }) -- Avoid inconsistent behavior
-
-vim.keymap.set("v", "y", function()
-    km.rest_cursor("y")
-end, { silent = true })
-
-vim.keymap.set("n", "<leader>y", '"+y', { silent = true })
-
-vim.keymap.set("v", "<leader>y", function()
-    km.rest_cursor('"+y')
-end, { silent = true })
-
 vim.keymap.set("n", "<leader>Y", '"+y$', { silent = true }) -- Mapping to "+Y yanks the whole line
+
+vim.keymap.set("v", "y", "mzy", { silent = true })
+vim.keymap.set("v", "<leader>y", 'mz"+y', { silent = true })
 vim.keymap.set("v", "Y", "<nop>", { silent = true })
 
-vim.keymap.set("n", "y^", function()
-    km.rest_cursor("^vg_y")
-end, { silent = true })
+vim.keymap.set("n", "y^", "mz^vg_y", { silent = true })
+vim.keymap.set("n", "<leader>y^", 'mz^vg_"+y', { silent = true })
+-- `z included in these maps to prevent visible scrolling before the autocmd is triggered
+vim.keymap.set("n", "yY", "mzggyG`z", { silent = true })
+vim.keymap.set("n", "<leader>yY", 'mzgg"+yG`z', { silent = true })
 
-vim.keymap.set("n", "<leader>y^", function()
-    km.rest_cursor('^vg_"+y')
-end, { silent = true })
+local startline_objects = { "0", "_", "g^", "g0" }
 
-vim.keymap.set("n", "yY", function()
-    km.rest_cursor("ggyG", { rest_view = true })
-end, { silent = true })
+for _, obj in pairs(startline_objects) do
+    vim.keymap.set("n", "y" .. obj, "mzv" .. obj .. "y", { silent = true })
+    vim.keymap.set("n", "<leader>y" .. obj, "mzv" .. obj .. '"+y', { silent = true })
 
-vim.keymap.set("n", "<leader>yY", function()
-    km.rest_cursor('gg"+yG', { rest_view = true })
-end, { silent = true })
+    vim.keymap.set("n", "d" .. obj, "mzv" .. obj .. "d", { silent = true })
+    vim.keymap.set("n", "<leader>d" .. obj, "mzv" .. obj .. '"_d', { silent = true })
 
-local backward_objects = { "b", "B", "ge", "gE" }
-km.fix_backward_yanks(backward_objects)
-
-local motions = { "d", "c", "y" }
-local nop_objects = { "b", "B", "s" } -- S is used by nvim-surround
-local ia = { "i", "a" }
-km.demap_text_objects_inout(motions, nop_objects, ia)
-
-local startline_motions = { "0", "_", "g^", "g0" }
-km.fix_startline_motions(motions, startline_motions)
-
-local text_objects = { "<", '"', "'", "`", "(", "[", "{", "p" }
-km.demap_text_objects(motions, text_objects)
-
-table.insert(text_objects, "w")
-table.insert(text_objects, "W")
-table.insert(text_objects, "t")
-km.yank_cursor_fixes(text_objects, ia)
+    vim.keymap.set("n", "c" .. obj, "mzv" .. obj .. "c", { silent = true })
+    vim.keymap.set("n", "<leader>c" .. obj, "mzv" .. obj .. '"_c', { silent = true })
+end
 
 vim.keymap.set("n", "p", function()
     local cmd = vim.v.count1 .. "p"
-    km.rest_cursor(cmd, { mod_check = true, rest_view = true })
-end, { silent = true })
-
-vim.keymap.set("n", "P", function()
-    local cmd = vim.v.count1 .. "P"
-    km.rest_cursor(cmd, { mod_check = true, rest_view = true })
+    km.rest_view(cmd, { mod_check = true })
 end, { silent = true })
 
 vim.keymap.set("n", "<leader>p", function()
     local cmd = vim.v.count1 .. '"+p'
-    km.rest_cursor(cmd, { mod_check = true, rest_view = true })
+    km.rest_view(cmd, { mod_check = true })
+end, { silent = true })
+
+vim.keymap.set("n", "P", function()
+    local cmd = vim.v.count1 .. "P"
+    km.rest_view(cmd, { mod_check = true })
 end, { silent = true })
 
 vim.keymap.set("n", "<leader>P", function()
     local cmd = vim.v.count1 .. '"+P'
-    km.rest_cursor(cmd, { mod_check = true, rest_view = true })
+    km.rest_view(cmd, { mod_check = true })
 end, { silent = true })
 
 vim.keymap.set("n", "<leader>gp", '"+gp', { silent = true })

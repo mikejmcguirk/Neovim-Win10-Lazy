@@ -1,5 +1,23 @@
 local M = {}
 
+---@param map string
+---@return nil
+M.search_with_mark = function(map)
+    if type(map) ~= "string" then
+        vim.api.nvim_err_writeln("Invalid map type provided in search_with_mark")
+
+        return
+    end
+
+    -- These are API calls because, if done as simple maps,
+    -- the "/" and "?" prompts do not show in the command line
+    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
+    vim.api.nvim_buf_set_mark(0, "s", cur_row, cur_col, {})
+
+    local key = vim.api.nvim_replace_termcodes(map, true, false, true)
+    vim.api.nvim_feedkeys(key, "n", true)
+end
+
 ---@return boolean
 M.check_modifiable = function()
     if vim.api.nvim_buf_get_option(0, "modifiable") then
@@ -13,35 +31,42 @@ end
 
 ---@param map string
 ---@return nil
-M.rest_cursor = function(map, options)
+M.rest_view = function(map, options)
+    if map == nil then
+        vim.api.nvim_err_writeln("No map provided in rest_view")
+
+        return
+    elseif type(map) ~= "string" then
+        vim.api.nvim_err_writeln("Invalid map type provided in rest_view")
+
+        return
+    elseif options ~= nil and type(options) ~= "table" then
+        vim.api.nvim_err_writeln("Invalid options provided in rest_view")
+
+        return
+    end
+
     local opts = vim.deepcopy(options or {})
 
     if opts.mod_check and not M.check_modifiable() then
         return
     end
 
-    local cur_view = nil
-
-    if opts.rest_view then
-        cur_view = vim.fn.winsaveview()
-    end
-
     local orig_row, orig_col = unpack(vim.api.nvim_win_get_cursor(0))
+    vim.api.nvim_buf_set_mark(0, "z", orig_row, orig_col, {})
+    local cur_view = vim.fn.winsaveview()
 
     local status, result = pcall(function()
         vim.api.nvim_exec2("silent normal! " .. map, {})
     end)
 
+    vim.api.nvim_exec2("normal! `z", {})
+    vim.fn.winrestview(cur_view)
+
     if (not status) and result then
         vim.api.nvim_err_writeln(result)
-
-        return
-    end
-
-    vim.api.nvim_win_set_cursor(0, { orig_row, orig_col })
-
-    if cur_view ~= nil then
-        vim.fn.winrestview(cur_view)
+    elseif (not status) and not result then
+        vim.api.nvim_err_writeln("Unknown error in rest_view")
     end
 end
 
@@ -81,8 +106,9 @@ local find_pairs = function()
     local next_col = cur_col + 1
     local next_char = cur_line:sub(next_col, next_col)
 
+    local line_to_set = cur_row - 1
+
     if close_char == next_char then
-        local line_to_set = cur_row - 1
         local start_col = cur_col - 1
         local end_col = cur_col + 1
 
@@ -106,7 +132,6 @@ local find_pairs = function()
     local prev_char = cur_line:sub(cur_col - 1, cur_col - 1)
 
     if open_char == prev_char then
-        local line_to_set = cur_row - 1
         local start_col = cur_col - 2
 
         vim.api.nvim_buf_set_text(0, line_to_set, start_col, line_to_set, cur_col, { "" })
@@ -125,28 +150,28 @@ local get_indent = function(line_num)
     -- nvim_treesitter#indent(), so that will be captured here
     local indentexpr = vim.bo.indentexpr
 
-    if indentexpr ~= "" then
-        -- Most indent expressions in the Nvim runtime do not take an argument
-        --
-        -- However, a few of them do take v:lnum as an argument
-        -- v:lnum is not updated when nvim_exec2 is called, so it must be updated here
-        --
-        -- A couple of the runtime expressions take '.' as an argument
-        -- This is already updated before nvim_exec2 is called
-        --
-        -- Other indentexpr options are not guaranteed to be handled properly
-        vim.v.lnum = line_num
-        local expr_indent_tbl = vim.api.nvim_exec2("echo " .. indentexpr, { output = true })
-        local expr_indent_str = expr_indent_tbl.output
-        local expr_indent = tonumber(expr_indent_str) or 0
+    if indentexpr == "" then
+        local prev_nonblank = vim.fn.prevnonblank(line_num - 1)
+        local prev_nonblank_indent = vim.fn.indent(prev_nonblank)
 
-        return expr_indent
+        return prev_nonblank_indent
     end
 
-    local prev_nonblank = vim.fn.prevnonblank(line_num - 1)
-    local prev_nonblank_indent = vim.fn.indent(prev_nonblank)
+    -- Most indent expressions in the Nvim runtime do not take an argument
+    --
+    -- However, a few of them do take v:lnum as an argument
+    -- v:lnum is not updated when nvim_exec2 is called, so it must be updated here
+    --
+    -- A couple of the runtime expressions take '.' as an argument
+    -- This is already updated before nvim_exec2 is called
+    --
+    -- Other indentexpr options are not guaranteed to be handled properly
+    vim.v.lnum = line_num
+    local expr_indent_tbl = vim.api.nvim_exec2("echo " .. indentexpr, { output = true })
+    local expr_indent_str = expr_indent_tbl.output
+    local expr_indent = tonumber(expr_indent_str) or 0
 
-    return prev_nonblank_indent
+    return expr_indent
 end
 
 ---@return nil
@@ -262,115 +287,6 @@ M.insert_backspace_fix = function(options)
     end
 
     backspace_blank_line(options)
-end
-
----@param backward_objects string[]
----@return nil
-M.fix_backward_yanks = function(backward_objects)
-    local back_objs = vim.deepcopy(backward_objects)
-
-    for _, object in ipairs(back_objs) do
-        local main_map = "y" .. object
-
-        vim.keymap.set("n", main_map, function()
-            local main_cmd = vim.v.count1 .. main_map
-            M.rest_cursor(main_cmd)
-        end, { silent = true })
-
-        local ext_map = "<leader>y" .. object
-
-        vim.keymap.set("n", ext_map, function()
-            local ext_cmd = vim.v.count1 .. '"+' .. main_map
-            M.rest_cursor(ext_cmd)
-        end, { silent = true })
-    end
-end
-
----@param motions string[]
----@param text_objects string[]
----@param inner_outer string[]
----@return nil
-M.demap_text_objects_inout = function(motions, text_objects, inner_outer)
-    for _, motion in pairs(motions) do
-        for _, object in pairs(text_objects) do
-            for _, in_out in pairs(inner_outer) do
-                local normal_map = motion .. in_out .. object
-                vim.keymap.set("n", normal_map, "<nop>")
-
-                local ext_map = "<leader>" .. normal_map
-                vim.keymap.set("n", ext_map, "<nop>")
-            end
-        end
-    end
-end
-
----@param motions string[]
----@param objects string[]
----@return nil
-M.fix_startline_motions = function(motions, objects)
-    for _, motion in pairs(motions) do
-        for _, object in pairs(objects) do
-            local what_register = function()
-                if motion == "y" then
-                    return '"+'
-                else
-                    return '"_'
-                end
-            end
-
-            local register = what_register()
-
-            local map = motion .. object
-            local ext_map = "<leader>" .. map
-
-            local cmd = "v" .. object .. motion
-            local cmd_mark = "mz" .. cmd .. "`z"
-
-            local ext_cmd = "v" .. object .. register .. motion
-            local ext_cmd_mark = "mz" .. ext_cmd .. "`z"
-
-            if motion == "y" then
-                vim.keymap.set("n", map, cmd_mark, { silent = true })
-                vim.keymap.set("n", ext_map, ext_cmd_mark, { silent = true })
-            else
-                vim.keymap.set("n", map, cmd, { silent = true })
-                vim.keymap.set("n", ext_map, ext_cmd, { silent = true })
-            end
-        end
-    end
-end
-
----@param motions string[]
----@param text_objects string[]
----@return nil
-M.demap_text_objects = function(motions, text_objects)
-    for _, motion in pairs(motions) do
-        for _, object in pairs(text_objects) do
-            vim.keymap.set("n", motion .. object, "<nop>")
-            vim.keymap.set("n", "<leader>" .. motion .. object, "<nop>")
-        end
-    end
-end
-
----@param text_objects string[]
----@param inner_outer string[]
----@return nil
-M.yank_cursor_fixes = function(text_objects, inner_outer)
-    for _, object in pairs(text_objects) do
-        for _, in_out in pairs(inner_outer) do
-            local main_cmd = "y" .. in_out .. object
-            local ext_map = "<leader>" .. main_cmd
-            local ext_cmd = '"+' .. main_cmd
-
-            vim.keymap.set("n", main_cmd, function()
-                M.rest_cursor(main_cmd)
-            end, { silent = true })
-
-            vim.keymap.set("n", ext_map, function()
-                M.rest_cursor(ext_cmd)
-            end, { silent = true })
-        end
-    end
 end
 
 ---@param paste_char string
