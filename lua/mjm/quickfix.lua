@@ -12,15 +12,11 @@ local check_if_qf_open = function()
 end
 
 vim.keymap.set("n", "<leader>qt", function()
-    local qf_open = check_if_qf_open()
-
-    if qf_open then
+    if check_if_qf_open() then
         vim.api.nvim_exec2("cclose", {})
-
-        return
+    else
+        vim.api.nvim_exec2("botright copen", {})
     end
-
-    vim.api.nvim_exec2("botright copen", {})
 end)
 
 vim.opt.grepprg = "rg --line-number"
@@ -127,6 +123,8 @@ local diags_to_qf = function(origin, severity_cap)
 
     if #raw_diags == 0 then
         print("No diagnostics")
+        vim.fn.setqflist({})
+        vim.api.nvim_exec2("cclose", {})
 
         return
     end

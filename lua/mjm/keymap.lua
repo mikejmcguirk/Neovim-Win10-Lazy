@@ -13,16 +13,14 @@ vim.keymap.set("n", "<leader>sf", "<cmd>set spell!<cr>", { silent = true })
 
 vim.api.nvim_create_user_command("We", "w | e", {})
 
--- These maps stop undo history from showing in the cmd line whever an undo/redo is performed
+-- Stop undo history from showing in the cmd line whever an undo/redo is performed
 -- Done as functions because <cmd>'s do not work with v:count1
 vim.keymap.set("n", "u", function()
-    local cmd_string = "silent normal! " .. vim.v.count1 .. "u"
-    vim.api.nvim_exec2(cmd_string, {})
+    vim.api.nvim_exec2("silent normal! " .. vim.v.count1 .. "u", {})
 end, { silent = true })
 
 vim.keymap.set("n", "<C-r>", function()
-    local cmd_string = 'silent exec "normal! ' .. vim.v.count1 .. '\\<C-r>"'
-    vim.api.nvim_exec2(cmd_string, {})
+    vim.api.nvim_exec2('silent exec "normal! ' .. vim.v.count1 .. '\\<C-r>"', {})
 end, { silent = true })
 
 vim.keymap.set("n", "/", function()
