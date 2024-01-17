@@ -1,4 +1,4 @@
-local gf = require("mjm.global_funcs")
+-- Formatting provided by ruff_format and isort through conform
 
 local root_files = {
     "pyproject.toml",
@@ -8,14 +8,14 @@ local root_files = {
     "Pipfile",
 }
 
--- Formatting provided by ruff_format and isort through conform
-
+local gf = require("mjm.global_funcs")
 local root_start = gf.get_buf_directory(vim.fn.bufnr())
+local proj_root = gf.find_proj_root(root_files, root_start, root_start)
 
 vim.lsp.start({
     name = "pylsp",
     cmd = { "pylsp" },
-    root_dir = gf.find_proj_root(root_files, root_start, root_start),
+    root_dir = proj_root,
     single_file_support = true,
     capabilities = Lsp_Capabilities,
     settings = {
@@ -42,7 +42,7 @@ vim.lsp.start({
 vim.lsp.start({
     name = "ruff_lsp",
     cmd = { "ruff-lsp" },
-    root_dir = gf.find_proj_root(root_files, root_start, root_start),
+    root_dir = proj_root,
     single_file_support = true,
     capabilities = Lsp_Capabilities,
     settings = {},

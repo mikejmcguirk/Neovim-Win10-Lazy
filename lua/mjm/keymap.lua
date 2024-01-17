@@ -52,6 +52,8 @@ vim.keymap.set("n", "<leader>lf", "<cmd>leftabove split<cr>", { silent = true })
 vim.keymap.set("n", "<leader>lt", "<cmd>topleft split<cr>", { silent = true })
 vim.keymap.set("n", "<leader>li", "<cmd>botright split<cr>", { silent = true })
 
+vim.keymap.set("n", "<leader>lc", "<cmd>wincmd o<cr>", { silent = true })
+
 vim.keymap.set("n", "<M-j>", "<cmd>resize -2<CR>", { silent = true })
 vim.keymap.set("n", "<M-k>", "<cmd>resize +2<CR>", { silent = true })
 vim.keymap.set("n", "<M-h>", "<cmd>vertical resize -2<CR>", { silent = true })
