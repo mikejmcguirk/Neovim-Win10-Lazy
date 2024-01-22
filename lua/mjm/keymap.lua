@@ -83,7 +83,7 @@ vim.keymap.set("n", "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = tr
 vim.keymap.set("v", "<", "<gv", { silent = true })
 vim.keymap.set("v", ">", ">gv", { silent = true })
 
-vim.keymap.set("n", "<leader>/", function()
+vim.keymap.set("n", "<esc>", function()
     vim.api.nvim_exec2("echo ''", {})
     vim.api.nvim_exec2("noh", {})
     vim.lsp.buf.clear_references()
@@ -165,7 +165,7 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 
 vim.keymap.set("n", "y", "mzy", { silent = true })
 vim.keymap.set("n", "<leader>y", 'mz"+y', { silent = true })
-vim.keymap.set("n", "Y", "y$", { silent = true }) -- Avoid inconsistent behavior
+vim.keymap.set("n", "Y", "y$", { silent = true })           -- Avoid inconsistent behavior
 vim.keymap.set("n", "<leader>Y", '"+y$', { silent = true }) -- Mapping to "+Y yanks the whole line
 
 vim.keymap.set("v", "y", "mzy", { silent = true })

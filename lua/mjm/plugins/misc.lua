@@ -1,5 +1,8 @@
 return {
     {
+        "tpope/vim-dadbod"
+    },
+    {
         "christoomey/vim-tmux-navigator",
         lazy = false,
     },

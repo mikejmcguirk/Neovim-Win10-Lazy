@@ -6,6 +6,8 @@ vim.api.nvim_create_autocmd("TextYankPost", {
             higroup = "IncSearch",
             timeout = 175,
         })
+
+        vim.api.nvim_exec2("echo ''", {})
     end,
 })
 
