@@ -165,8 +165,8 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 
 vim.keymap.set("n", "y", "mzy", { silent = true })
 vim.keymap.set("n", "<leader>y", 'mz"+y', { silent = true })
-vim.keymap.set("n", "Y", "y$", { silent = true })           -- Avoid inconsistent behavior
-vim.keymap.set("n", "<leader>Y", '"+y$', { silent = true }) -- Mapping to "+Y yanks the whole line
+vim.keymap.set("n", "Y", "mzy$", { silent = true }) -- Avoid inconsistent behavior
+vim.keymap.set("n", "<leader>Y", 'mz"+y$', { silent = true }) -- Mapping to "+Y yanks the whole line
 
 vim.keymap.set("v", "y", "mzy", { silent = true })
 vim.keymap.set("v", "<leader>y", 'mz"+y', { silent = true })
