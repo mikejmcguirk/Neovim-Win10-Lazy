@@ -23,12 +23,24 @@ vim.keymap.set("n", "<C-r>", function()
     vim.api.nvim_exec2('silent exec "normal! ' .. vim.v.count1 .. '\\<C-r>"', {})
 end, { silent = true })
 
+---@param map string
+---@return nil
+local search_with_mark = function(map)
+    -- These are API calls because, if done as simple maps,
+    -- the "/" and "?" prompts do not show in the command line
+    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
+    vim.api.nvim_buf_set_mark(0, "s", cur_row, cur_col, {})
+
+    local key = vim.api.nvim_replace_termcodes(map, true, false, true)
+    vim.api.nvim_feedkeys(key, "n", true)
+end
+
 vim.keymap.set("n", "/", function()
-    km.search_with_mark("/")
+    search_with_mark("/")
 end, { silent = true })
 
 vim.keymap.set("n", "?", function()
-    km.search_with_mark("?")
+    search_with_mark("?")
 end, { silent = true })
 
 vim.keymap.set("n", "<leader>lv", "<cmd>rightbelow vsplit<cr>", { silent = true })

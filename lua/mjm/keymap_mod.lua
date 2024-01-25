@@ -1,23 +1,5 @@
 local M = {}
 
----@param map string
----@return nil
-M.search_with_mark = function(map)
-    if type(map) ~= "string" then
-        vim.api.nvim_err_writeln("Invalid map type provided in search_with_mark")
-
-        return
-    end
-
-    -- These are API calls because, if done as simple maps,
-    -- the "/" and "?" prompts do not show in the command line
-    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
-    vim.api.nvim_buf_set_mark(0, "s", cur_row, cur_col, {})
-
-    local key = vim.api.nvim_replace_termcodes(map, true, false, true)
-    vim.api.nvim_feedkeys(key, "n", true)
-end
-
 ---@return boolean
 M.check_modifiable = function()
     if vim.api.nvim_buf_get_option(0, "modifiable") then
@@ -32,7 +14,11 @@ end
 ---@param map string
 ---@return nil
 M.rest_view = function(map, options)
-    if map == nil then
+    local opts = vim.deepcopy(options or {})
+
+    if opts.mod_check and not M.check_modifiable() then
+        return
+    elseif map == nil then
         vim.api.nvim_err_writeln("No map provided in rest_view")
 
         return
@@ -41,14 +27,8 @@ M.rest_view = function(map, options)
 
         return
     elseif options ~= nil and type(options) ~= "table" then
-        vim.api.nvim_err_writeln("Invalid options provided in rest_view")
+        vim.api.nvim_err_writeln("rest_view options is not a table")
 
-        return
-    end
-
-    local opts = vim.deepcopy(options or {})
-
-    if opts.mod_check and not M.check_modifiable() then
         return
     end
 
@@ -63,10 +43,12 @@ M.rest_view = function(map, options)
     vim.api.nvim_exec2("normal! `z", {})
     vim.fn.winrestview(cur_view)
 
-    if (not status) and result then
-        vim.api.nvim_err_writeln(result)
-    elseif (not status) and not result then
-        vim.api.nvim_err_writeln("Unknown error in rest_view")
+    if not status then
+        if result then
+            vim.api.nvim_err_writeln(result)
+        else
+            vim.api.nvim_err_writeln("Unknown error in rest_view")
+        end
     end
 end
 

@@ -71,6 +71,19 @@ vim.lsp.handlers["textDocument/signatureHelp"] =
 vim.lsp.set_log_level("ERROR")
 local lsp_group = vim.api.nvim_create_augroup("LSP_Augroup", { clear = true })
 
+vim.keymap.set("n", "<leader>vp", function()
+    local clients = vim.lsp.get_active_clients()
+
+    local capabilities = vim.tbl_map(function(client)
+        return client.server_capabilities
+    end, clients)
+
+    local buf = vim.api.nvim_create_buf(false, true)
+    local capabilities_to_print = vim.split(vim.inspect(capabilities), "\n")
+    vim.api.nvim_buf_set_lines(buf, 0, 0, true, capabilities_to_print)
+    vim.api.nvim_set_current_buf(buf)
+end)
+
 vim.api.nvim_create_autocmd("LspAttach", {
     group = lsp_group,
     callback = function(ev)

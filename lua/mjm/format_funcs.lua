@@ -50,17 +50,17 @@ M.try_lsp_format = function(buf)
 
     local status, result = pcall(vim.lsp.buf.format, { bufnr = buf, async = false })
 
-    if not status and type(result) == "string" then
-        vim.api.nvim_err_writeln(result)
-    elseif not status then
-        vim.api.nvim_err_writeln("Unknown error occurred while formatting with LSP")
+    if not status then
+        if type(result) == "string" then
+            vim.api.nvim_err_writeln(result)
+        else
+            vim.api.nvim_err_writeln("Unknown error occurred while formatting with LSP")
+        end
+
+        return false
     end
 
-    if status then
-        return true
-    end
-
-    return false
+    return true
 end
 
 ---@param buf number
