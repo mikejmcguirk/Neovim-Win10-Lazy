@@ -84,8 +84,31 @@ return {
             vim.keymap.set("n", "<leader>to", builtin.command_history)
             vim.keymap.set("n", "<leader>td", builtin.diagnostics)
 
+            local function find_git_root()
+                local current_file = vim.api.nvim_buf_get_name(0)
+                local current_dir
+                local cwd = vim.fn.getcwd()
+
+                if current_file == "" then
+                    current_dir = cwd
+                else
+                    current_dir = vim.fn.fnamemodify(current_file, ":h")
+                end
+
+                local git_root = vim.fn.systemlist(
+                    "git -C " .. vim.fn.escape(current_dir, " ") .. " rev-parse --show-toplevel"
+                )[1]
+                if vim.v.shell_error ~= 0 then
+                    print("Not a git repository. Searching on current working directory")
+
+                    return cwd
+                end
+
+                return git_root
+            end
+
             vim.keymap.set("n", "<leader>tf", function()
-                builtin.find_files({ hidden = true, no_ignore = true })
+                builtin.find_files({ cwd = find_git_root(), hidden = true, no_ignore = true })
             end)
 
             vim.keymap.set("n", "<leader>tg", builtin.git_files)
