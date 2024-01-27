@@ -28,14 +28,8 @@ return {
 
         require("ibl").setup({
             indent = { char = indent_char },
-            scope = {
-                enabled = show_ibl_scope,
-                show_start = false,
-                show_end = false,
-            },
-            exclude = {
-                filetypes = excluded_filetypes,
-            },
+            scope = { enabled = show_ibl_scope, show_start = false, show_end = false },
+            exclude = { filetypes = excluded_filetypes },
             whitespace = { highlight = { "Normal" } },
             debounce = 200,
         })
@@ -69,8 +63,8 @@ return {
         vim.api.nvim_create_autocmd("FileType", {
             group = vim.api.nvim_create_augroup("indentscope_group", { clear = true }),
             pattern = excluded_filetypes,
-            callback = function()
-                vim.b.miniindentscope_disable = true
+            callback = function(ev)
+                vim.b[ev.buf].miniindentscope_disable = true
             end,
         })
     end,
