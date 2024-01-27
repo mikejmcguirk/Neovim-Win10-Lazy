@@ -119,11 +119,11 @@ return {
             "rafamadriz/friendly-snippets", -- Snippets
 
             "hrsh7th/cmp-vsnip", -- From vsnip
-            "hrsh7th/cmp-nvim-lsp", -- From LSPs
-            "hrsh7th/cmp-buffer", -- From open buffers
+            "hrsh7th/cmp-nvim-lsp",
+            "hrsh7th/cmp-buffer",
             "hrsh7th/cmp-nvim-lsp-signature-help", -- Show current function signature
             "f3fora/cmp-spell", -- From Nvim's built-in spell check
-            "FelipeLema/cmp-async-path", -- From filesystem
+            "FelipeLema/cmp-async-path",
         },
     },
 }
