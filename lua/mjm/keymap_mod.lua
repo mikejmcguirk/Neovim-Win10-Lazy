@@ -37,10 +37,10 @@ M.rest_view = function(map, options)
     local cur_view = vim.fn.winsaveview()
 
     local status, result = pcall(function()
-        vim.api.nvim_exec2("silent normal! " .. map, {})
+        vim.api.nvim_exec2("silent norm! " .. map, {})
     end)
 
-    vim.api.nvim_exec2("normal! `z", {})
+    vim.api.nvim_exec2("norm! `z", {})
     vim.fn.winrestview(cur_view)
 
     if not status then
@@ -308,7 +308,7 @@ M.create_blank_line = function(use_bang)
     put_cmd = put_cmd .. " =repeat(nr2char(10), v:count1)"
 
     vim.api.nvim_exec2(put_cmd, {})
-    vim.api.nvim_exec2("normal! `z", {})
+    vim.api.nvim_exec2("norm! `z", {})
 end
 
 ---@param vcount1 number
@@ -327,7 +327,7 @@ M.visual_move = function(vcount1, direction)
 
     -- We must leave visual mode to update '< and '>
     -- Because vim.v.count1 is updated when we do this, it is passed as a parameter
-    vim.api.nvim_exec2('exec "silent normal! \\<esc>"', {})
+    vim.api.nvim_exec2('exec "silent norm! \\<esc>"', {})
 
     local min_count = 1
     local pos_1 = nil
@@ -364,7 +364,7 @@ M.visual_move = function(vcount1, direction)
 
     if (not status) and result then
         vim.api.nvim_err_writeln(result)
-        vim.api.nvim_exec2("normal! gv", {})
+        vim.api.nvim_exec2("norm! gv", {})
 
         return
     end
@@ -373,17 +373,17 @@ M.visual_move = function(vcount1, direction)
 
     -- After the move cmd, `] will be set to the beginning of the last line of the block
     -- To properly format the last line, we set the z mark to the end of the line
-    vim.api.nvim_exec2("silent normal! `]", {})
+    vim.api.nvim_exec2("silent norm! `]", {})
     local end_cursor_pos = vim.api.nvim_win_get_cursor(0)
     local end_row = end_cursor_pos[1]
     local end_line = vim.api.nvim_get_current_line()
     local end_col = #end_line
     vim.api.nvim_buf_set_mark(0, "z", end_row, end_col, {})
 
-    vim.api.nvim_exec2("silent normal! `[", {})
-    vim.api.nvim_exec2("silent normal! =`z", {})
+    vim.api.nvim_exec2("silent norm! `[", {})
+    vim.api.nvim_exec2("silent norm! =`z", {})
     vim.api.nvim_win_set_cursor(0, { dest_row, dest_col })
-    vim.api.nvim_exec2("silent normal! gv", {})
+    vim.api.nvim_exec2("silent norm! gv", {})
 end
 
 ---@return nil
@@ -424,7 +424,7 @@ M.bump_up = function()
     local to_move_trim = to_move:gsub("^%s+", ""):gsub("%s+$", "")
     vim.api.nvim_exec2("put! =''", {})
     vim.api.nvim_buf_set_text(0, orig_set_row, 0, orig_set_row, 0, { to_move_trim })
-    vim.api.nvim_exec2("normal! ==", {})
+    vim.api.nvim_exec2("norm! ==", {})
 end
 
 ---@param chars string

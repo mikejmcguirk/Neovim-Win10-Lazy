@@ -17,11 +17,11 @@ vim.api.nvim_create_user_command("Wbd", "w | bd", {})
 -- Stop undo history from showing in the cmd line whever an undo/redo is performed
 -- Done as functions because <cmd>'s do not work with v:count1
 vim.keymap.set("n", "u", function()
-    vim.api.nvim_exec2("silent normal! " .. vim.v.count1 .. "u", {})
+    vim.api.nvim_exec2("silent norm! " .. vim.v.count1 .. "u", {})
 end, { silent = true })
 
 vim.keymap.set("n", "<C-r>", function()
-    vim.api.nvim_exec2('silent exec "normal! ' .. vim.v.count1 .. '\\<C-r>"', {})
+    vim.api.nvim_exec2('silent exec "norm! ' .. vim.v.count1 .. '\\<C-r>"', {})
 end, { silent = true })
 
 ---@param map string
@@ -197,11 +197,11 @@ for _, obj in pairs(startline_objects) do
     vim.keymap.set("n", "y" .. obj, "mzv" .. obj .. "y", { silent = true })
     vim.keymap.set("n", "<leader>y" .. obj, "mzv" .. obj .. '"+y', { silent = true })
 
-    vim.keymap.set("n", "d" .. obj, "mzv" .. obj .. "d", { silent = true })
-    vim.keymap.set("n", "<leader>d" .. obj, "mzv" .. obj .. '"_d', { silent = true })
+    vim.keymap.set("n", "d" .. obj, "v" .. obj .. "d", { silent = true })
+    vim.keymap.set("n", "<leader>d" .. obj, "v" .. obj .. '"_d', { silent = true })
 
-    vim.keymap.set("n", "c" .. obj, "mzv" .. obj .. "c", { silent = true })
-    vim.keymap.set("n", "<leader>c" .. obj, "mzv" .. obj .. '"_c', { silent = true })
+    vim.keymap.set("n", "c" .. obj, "v" .. obj .. "c", { silent = true })
+    vim.keymap.set("n", "<leader>c" .. obj, "v" .. obj .. '"_c', { silent = true })
 end
 
 vim.keymap.set("n", "p", function()
@@ -276,7 +276,7 @@ vim.keymap.set("n", "gllw", function()
 
     vim.api.nvim_exec2("s/\\v<(.)(\\w*)/\\u\\1\\L\\2/ge", {})
     vim.api.nvim_exec2("noh", {})
-    vim.api.nvim_exec2("normal! `z", {})
+    vim.api.nvim_exec2("norm! `z", {})
 end, { silent = true })
 
 vim.keymap.set("n", "gllW", function()
@@ -285,5 +285,5 @@ vim.keymap.set("n", "gllW", function()
 
     vim.api.nvim_exec2("s/\\v<(.)(\\S*)/\\u\\1\\L\\2/ge", {})
     vim.api.nvim_exec2("noh", {})
-    vim.api.nvim_exec2("normal! `z", {})
+    vim.api.nvim_exec2("norm! `z", {})
 end, { silent = true })

@@ -255,7 +255,7 @@ local qf_scroll_wrapper = function(scroll_cmd)
     end)
 
     if status then
-        vim.api.nvim_exec2("normal! zz", {})
+        vim.api.nvim_exec2("norm! zz", {})
 
         return
     end
@@ -268,7 +268,7 @@ local qf_scroll_wrapper = function(scroll_cmd)
 
     if type(result) == "string" and string.find(result, "E553") then
         vim.api.nvim_exec2(backup_cmd, {})
-        vim.api.nvim_exec2("normal! zz", {})
+        vim.api.nvim_exec2("norm! zz", {})
 
         return
     elseif type(result) == "string" and string.find(result, "E42") then
