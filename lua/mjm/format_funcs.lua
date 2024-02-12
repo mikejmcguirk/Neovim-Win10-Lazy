@@ -65,43 +65,24 @@ end
 
 ---@param buf number
 M.fix_bookend_blanks = function(buf)
-    if vim.api.nvim_buf_line_count(buf) == 1 then
-        return
-    end
-
-    ---@param line string
-    ---@return boolean
-    local check_line = function(line)
-        local empty_line = line == ""
-        local whitespace_line = line:match("^%s*$")
-        local blank_line = empty_line or whitespace_line
+    ---@param start_idx number
+    ---@param end_idx number
+    ---@return nil
+    local function new_line_check(start_idx, end_idx)
+        local line = vim.api.nvim_buf_get_lines(buf, start_idx, end_idx, true)[1]
         local last_line = vim.api.nvim_buf_line_count(buf) == 1
+        local blank_line = (line == "") or line:match("^%s*$")
 
-        return blank_line and not last_line
-    end
-
-    ---@return nil
-    local function top_blank_lines()
-        local line = vim.api.nvim_buf_get_lines(buf, 0, 1, true)[1]
-
-        if check_line(line) then
-            vim.api.nvim_buf_set_lines(buf, 0, 1, false, {})
-            top_blank_lines()
+        if last_line or not blank_line then
+            return
         end
+
+        vim.api.nvim_buf_set_lines(buf, start_idx, end_idx, false, {})
+        new_line_check(start_idx, end_idx)
     end
 
-    ---@return nil
-    local function bottom_blank_lines()
-        local line = vim.api.nvim_buf_get_lines(buf, -2, -1, true)[1]
-
-        if check_line(line) then
-            vim.api.nvim_buf_set_lines(buf, -2, -1, false, {})
-            bottom_blank_lines()
-        end
-    end
-
-    top_blank_lines()
-    bottom_blank_lines()
+    new_line_check(0, 1)
+    new_line_check(-2, -1)
 end
 
 ---@param buf number
