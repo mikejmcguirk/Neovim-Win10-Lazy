@@ -106,23 +106,18 @@ local find_pairs = function()
 
     -- Check if we are directly to the right of a pair
     local open_char = check_pairs(cur_char, 2, 1)
+    local prev_char = cur_line:sub(cur_col - 1, cur_col - 1)
 
-    if open_char == nil then
+    if open_char ~= prev_char then
         return false
     end
 
-    local prev_char = cur_line:sub(cur_col - 1, cur_col - 1)
+    local start_col = cur_col - 2
 
-    if open_char == prev_char then
-        local start_col = cur_col - 2
+    vim.api.nvim_buf_set_text(0, line_to_set, start_col, line_to_set, cur_col, { "" })
+    vim.api.nvim_win_set_cursor(0, { cur_row, start_col })
 
-        vim.api.nvim_buf_set_text(0, line_to_set, start_col, line_to_set, cur_col, { "" })
-        vim.api.nvim_win_set_cursor(0, { cur_row, start_col })
-
-        return true
-    end
-
-    return false
+    return true
 end
 
 ---@param line_num number
@@ -253,22 +248,20 @@ end
 
 ---@return nil
 M.insert_backspace_fix = function(options)
-    local empty_string = string.match(vim.api.nvim_get_current_line(), "^%s*$")
-
-    if not empty_string then
-        -- windp/autopairs creates its own backspace mapping if map_bs is enabled
-        -- Since map_bs must be disabled there, check for pairs here
-        if find_pairs() then
-            return
-        end
-
-        local key = vim.api.nvim_replace_termcodes("<backspace>", true, false, true)
-        vim.api.nvim_feedkeys(key, "n", true)
+    if string.match(vim.api.nvim_get_current_line(), "^%s*$") then
+        backspace_blank_line(options)
 
         return
     end
 
-    backspace_blank_line(options)
+    -- windp/autopairs creates its own backspace mapping if map_bs is enabled
+    -- Since map_bs must be disabled there, check for pairs here
+    if find_pairs() then
+        return
+    end
+
+    local key = vim.api.nvim_replace_termcodes("<backspace>", true, false, true)
+    vim.api.nvim_feedkeys(key, "n", true)
 end
 
 ---@param paste_char string
@@ -370,7 +363,6 @@ M.visual_move = function(vcount1, direction)
     end
 
     local dest_row, dest_col = unpack(vim.api.nvim_win_get_cursor(0))
-
     -- After the move cmd, `] will be set to the beginning of the last line of the block
     -- To properly format the last line, we set the z mark to the end of the line
     vim.api.nvim_exec2("silent norm! `]", {})
