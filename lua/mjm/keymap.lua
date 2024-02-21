@@ -4,13 +4,6 @@ vim.keymap.set("n", "<C-c>", "<nop>", { silent = true })
 -- Do not map in command mode or else <C-c> will accept commands
 vim.keymap.set({ "i", "v" }, "<C-c>", "<esc>", { silent = true })
 
-vim.keymap.set("n", "<leader>st", function()
-    vim.opt.spell = not vim.opt.spell:get()
-end, { silent = true })
-
-vim.keymap.set("n", "<leader>sn", "<cmd>set spell<cr>", { silent = true })
-vim.keymap.set("n", "<leader>sf", "<cmd>set spell!<cr>", { silent = true })
-
 vim.api.nvim_create_user_command("We", "w | e", {})
 vim.api.nvim_create_user_command("Wbd", "w | bd", {})
 
@@ -49,8 +42,8 @@ vim.keymap.set("n", "<leader>llv", "<cmd>leftabove vsplit<cr>", { silent = true 
 vim.keymap.set("n", "<leader>ltv", "<cmd>topleft vsplit<cr>", { silent = true })
 vim.keymap.set("n", "<leader>lbv", "<cmd>botright vsplit<cr>", { silent = true })
 
-vim.keymap.set("n", "<leader>lbs", "<cmd>belowright split<cr>", { silent = true })
-vim.keymap.set("n", "<leader>las", "<cmd>aboveleft split<cr>", { silent = true })
+vim.keymap.set("n", "<leader>lrs", "<cmd>rightbelow split<cr>", { silent = true })
+vim.keymap.set("n", "<leader>lls", "<cmd>leftabove split<cr>", { silent = true })
 vim.keymap.set("n", "<leader>lts", "<cmd>topleft split<cr>", { silent = true })
 vim.keymap.set("n", "<leader>lbs", "<cmd>botright split<cr>", { silent = true })
 
@@ -65,9 +58,7 @@ vim.keymap.set({ "n", "v" }, "<C-d>", "<C-d>zz", { silent = true })
 vim.keymap.set({ "n", "v" }, "n", "nzzzv", { silent = true })
 vim.keymap.set({ "n", "v" }, "N", "Nzzzv", { silent = true })
 
-local insert_maps = { "i", "a", "A" }
-
-for _, map in pairs(insert_maps) do
+for _, map in pairs({ "i", "a", "A" }) do
     vim.keymap.set("n", map, function()
         if string.match(vim.api.nvim_get_current_line(), "^%s*$") then
             return '"_S'
@@ -241,12 +232,25 @@ vim.keymap.set("v", "<leader>P", function()
     return km.visual_paste('"+p')
 end, { silent = true, expr = true })
 
+---@param put_cmd string
+---@return nil
+local create_blank_line = function(put_cmd)
+    if not km.check_modifiable() then
+        return
+    end
+
+    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
+    vim.api.nvim_buf_set_mark(0, "z", cur_row, cur_col, {})
+    vim.api.nvim_exec2(put_cmd .. " =repeat(nr2char(10), v:count1)", {})
+    vim.api.nvim_exec2("norm! `z", {})
+end
+
 vim.keymap.set("n", "[ ", function()
-    km.create_blank_line(true)
+    create_blank_line("put!")
 end, { silent = true })
 
 vim.keymap.set("n", "] ", function()
-    km.create_blank_line(false)
+    create_blank_line("put")
 end, { silent = true })
 
 vim.keymap.set("v", "J", function()
@@ -258,11 +262,80 @@ vim.keymap.set("v", "K", function()
 end, { silent = true })
 
 vim.keymap.set("n", "<leader>=", function()
-    km.bump_up()
+    if not km.check_modifiable() then
+        return
+    end
+
+    local orig_line = vim.api.nvim_get_current_line()
+    local orig_row, orig_col = unpack(vim.api.nvim_win_get_cursor(0))
+    local orig_line_len = #orig_line
+    local orig_set_row = orig_row - 1
+    local rem_line = orig_line:sub(1, orig_col)
+    local trailing_whitespace = string.match(rem_line, "%s+$")
+
+    if trailing_whitespace then
+        local last_non_blank, _ = rem_line:find("(%S)%s*$")
+
+        if last_non_blank == nil then
+            last_non_blank = 1
+        end
+
+        local set_col = nil
+
+        if last_non_blank >= 1 then
+            set_col = last_non_blank - 1
+        else
+            set_col = 0
+        end
+
+        vim.api.nvim_buf_set_text(0, orig_set_row, set_col, orig_set_row, orig_line_len, {})
+    else
+        vim.api.nvim_buf_set_text(0, orig_set_row, orig_col, orig_set_row, orig_line_len, {})
+    end
+
+    local orig_col_lua = orig_col + 1
+    local to_move = orig_line:sub(orig_col_lua, orig_line_len)
+    local to_move_trim = to_move:gsub("^%s+", ""):gsub("%s+$", "")
+    vim.api.nvim_exec2("put! =''", {})
+    vim.api.nvim_buf_set_text(0, orig_set_row, 0, orig_set_row, 0, { to_move_trim })
+    vim.api.nvim_exec2("norm! ==", {})
 end, { silent = true })
 
+---@param chars string
+---@return nil
+local put_at_end = function(chars)
+    if not km.check_modifiable() then
+        return
+    end
+
+    local orig_line = vim.api.nvim_get_current_line()
+    local cur_row = vim.api.nvim_win_get_cursor(0)[1]
+    local set_row = cur_row - 1
+
+    if orig_line == "" then
+        vim.api.nvim_buf_set_text(0, set_row, 0, set_row, 0, { chars })
+
+        return
+    end
+
+    local trim_line = orig_line:gsub("%s+$", "")
+    local chars_len = #chars
+    local end_chars = trim_line:sub(-chars_len)
+
+    local orig_len = #orig_line
+    local trim_len = #trim_line
+
+    if end_chars == chars then
+        local set_col = trim_len - chars_len
+        vim.api.nvim_buf_set_text(0, set_row, set_col, set_row, orig_len, {})
+    else
+        local set_col = trim_len
+        vim.api.nvim_buf_set_text(0, set_row, set_col, set_row, orig_len, { chars })
+    end
+end
+
 vim.keymap.set("n", "<M-;>", function()
-    km.put_at_end(";")
+    put_at_end(";")
 end, { silent = true })
 
 vim.keymap.set("n", "gliw", "mzguiw~`z", { silent = true })

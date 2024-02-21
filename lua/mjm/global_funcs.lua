@@ -49,7 +49,6 @@ end
 ---@param path string
 M.find_proj_root = function(patterns, path, backup_dir)
     local files = vim.deepcopy(patterns)
-
     local matches = vim.fs.find(files, { path = path, upward = true, stop = M.get_home() })
 
     for _, match in ipairs(matches) do

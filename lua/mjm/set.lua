@@ -49,7 +49,8 @@ vim.opt.hlsearch = true
 vim.opt.incsearch = false -- Keep screen from shifting when running search of substitute commands
 
 vim.opt.modelines = 1
-vim.opt.updatetime = 1000
+vim.opt.updatetime = 500
+vim.opt.timeoutlen = 500
 
 vim.opt.list = true
 vim.opt.listchars = {
