@@ -27,6 +27,7 @@ vim.lsp.start({
                         "E201",
                         "E202",
                         "E211",
+                        "E226", -- Missing whitespace around arithmetic operator
                         "E261",
                         "E262",
                         "E265",
