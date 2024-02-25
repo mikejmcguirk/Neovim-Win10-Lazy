@@ -26,6 +26,7 @@ vim.lsp.start({
                     ignore = {
                         "E201",
                         "E202",
+                        "E203", -- Whitespace before ':' (Actually contradicts ruff formatter)
                         "E211",
                         "E226", -- Missing whitespace around arithmetic operator
                         "E261",
