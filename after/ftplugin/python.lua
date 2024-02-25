@@ -34,6 +34,7 @@ vim.lsp.start({
                         "E303",
                         "E305",
                         "E501",
+                        "E741", -- Ambiguous variable name
                         "W293",
                         "W391",
                     },
