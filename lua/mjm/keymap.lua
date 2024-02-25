@@ -261,6 +261,28 @@ vim.keymap.set("v", "K", function()
     km.visual_move(vim.v.count1, "u")
 end, { silent = true })
 
+vim.keymap.set("v", "H", function()
+    local cur_mode = vim.api.nvim_get_mode().mode
+    local is_visual_line = cur_mode == "V" or cur_mode == "Vs"
+
+    if km.check_modifiable() and is_visual_line then
+        return "d<cmd>wincmd h<cr>P`[v`]V"
+    else
+        return "<Nop>"
+    end
+end, { silent = true, expr = true })
+
+vim.keymap.set("v", "L", function()
+    local cur_mode = vim.api.nvim_get_mode().mode
+    local is_visual_line = cur_mode == "V" or cur_mode == "Vs"
+
+    if km.check_modifiable() and is_visual_line then
+        return "d<cmd>wincmd l<cr>P`[v`]V"
+    else
+        return "<Nop>"
+    end
+end, { silent = true, expr = true })
+
 vim.keymap.set("n", "<leader>=", function()
     if not km.check_modifiable() then
         return
