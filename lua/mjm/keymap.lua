@@ -3,6 +3,7 @@ local km = require("mjm.keymap_mod")
 -- Mapped in normal mode so that <C-c> will exit the start of commands with a count
 -- Do not map in command mode or else <C-c> will accept commands
 vim.keymap.set({ "n", "i", "v" }, "<C-c>", "<esc>", { silent = true })
+vim.keymap.set("v", "q", "<Nop>", { silent = true })
 
 vim.api.nvim_create_user_command("We", "w | e", {})
 vim.api.nvim_create_user_command("Wbd", "w | bd", {})
@@ -79,8 +80,8 @@ vim.keymap.set("i", "?", "?<C-g>u", { silent = true })
 vim.keymap.set("i", "!", "!<C-g>u", { silent = true })
 vim.keymap.set("i", ":", ":<C-g>u", { silent = true })
 
-vim.keymap.set("n", "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
-vim.keymap.set("n", "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
+vim.keymap.set({ "n", "v" }, "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
+vim.keymap.set({ "n", "v" }, "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
 
 vim.keymap.set("v", "<", "<gv", { silent = true })
 vim.keymap.set("v", ">", ">gv", { silent = true })
