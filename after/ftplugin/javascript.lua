@@ -19,8 +19,32 @@ local eslint_root_files = {
 }
 
 local package_json = "package.json"
+local pkg_json_files =
+    vim.fs.find(package_json, { path = root_start, upward = true, stop = gf.get_home() })
 
-if gf.find_file_with_field(package_json, root_start, "eslintConfig") then
+---@param matches string[]
+---@return boolean
+local check_eslint_cfg = function(matches)
+    for _, match in ipairs(matches) do
+        local file = io.open(match, "r")
+
+        if file then
+            for line in file:lines() do
+                if line:find("eslintConfig") then
+                    file:close()
+
+                    return true
+                end
+            end
+
+            file:close()
+        end
+    end
+
+    return false
+end
+
+if check_eslint_cfg(pkg_json_files) then
     table.insert(eslint_root_files, package_json)
 end
 

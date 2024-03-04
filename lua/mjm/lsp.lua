@@ -87,24 +87,22 @@ end)
 vim.api.nvim_create_autocmd("LspAttach", {
     group = lsp_group,
     callback = function(ev)
-        local lsp_opts = { buffer = ev.buf }
+        vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = ev.buf })
+        vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = ev.buf })
+        vim.keymap.set("n", "gI", vim.lsp.buf.implementation, { buffer = ev.buf })
+        vim.keymap.set("n", "gr", vim.lsp.buf.references, { buffer = ev.buf })
+        vim.keymap.set("n", "gt", vim.lsp.buf.type_definition, { buffer = ev.buf })
 
-        vim.keymap.set("n", "gd", vim.lsp.buf.definition, lsp_opts)
-        vim.keymap.set("n", "gD", vim.lsp.buf.declaration, lsp_opts)
-        vim.keymap.set("n", "gI", vim.lsp.buf.implementation, lsp_opts)
-        vim.keymap.set("n", "gr", vim.lsp.buf.references, lsp_opts)
-        vim.keymap.set("n", "gt", vim.lsp.buf.type_definition, lsp_opts)
+        vim.keymap.set("n", "K", vim.lsp.buf.hover, { buffer = ev.buf })
+        vim.keymap.set("n", "gs", vim.lsp.buf.signature_help, { buffer = ev.buf })
 
-        vim.keymap.set("n", "K", vim.lsp.buf.hover, lsp_opts)
-        vim.keymap.set("n", "gs", vim.lsp.buf.signature_help, lsp_opts)
-
-        vim.keymap.set("n", "<leader>va", vim.lsp.buf.add_workspace_folder, lsp_opts)
-        vim.keymap.set("n", "<leader>vd", vim.lsp.buf.remove_workspace_folder, lsp_opts)
-        vim.keymap.set("n", "<leader>vh", vim.lsp.buf.document_highlight, lsp_opts)
+        vim.keymap.set("n", "<leader>va", vim.lsp.buf.add_workspace_folder, { buffer = ev.buf })
+        vim.keymap.set("n", "<leader>vd", vim.lsp.buf.remove_workspace_folder, { buffer = ev.buf })
+        vim.keymap.set("n", "<leader>vh", vim.lsp.buf.document_highlight, { buffer = ev.buf })
 
         vim.keymap.set("n", "<leader>vf", function()
             print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
-        end, lsp_opts)
+        end, { buffer = ev.buf })
 
         vim.keymap.set("n", "<leader>vr", function()
             vim.ui.input({ prompt = "Rename: " }, function(input)
@@ -114,8 +112,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
                 vim.api.nvim_exec2("echo ''", {})
             end)
-        end, lsp_opts)
+        end, { buffer = ev.buf })
 
-        vim.keymap.set({ "n", "v" }, "<leader>vc", vim.lsp.buf.code_action, lsp_opts)
+        vim.keymap.set({ "n", "v" }, "<leader>vc", vim.lsp.buf.code_action, { buffer = ev.buf })
     end,
 })

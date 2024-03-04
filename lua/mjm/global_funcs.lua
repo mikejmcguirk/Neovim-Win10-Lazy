@@ -66,33 +66,6 @@ M.find_proj_root = function(patterns, path, backup_dir)
     return nil
 end
 
----@param filename string
----@param root_start string
----@param field_name string
----@return boolean
-M.find_file_with_field = function(filename, root_start, field_name)
-    local matches =
-        vim.fs.find(filename, { path = root_start, upward = true, stop = M.get_home() })
-
-    for _, match in ipairs(matches) do
-        local file = io.open(match, "r")
-
-        if file then
-            for line in file:lines() do
-                if line:find(field_name) then
-                    file:close()
-
-                    return true
-                end
-            end
-
-            file:close()
-        end
-    end
-
-    return false
-end
-
 ---@param buf_num number
 ---@return string
 M.get_buf_directory = function(buf_num)
