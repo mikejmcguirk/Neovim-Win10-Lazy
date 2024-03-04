@@ -1,15 +1,16 @@
 local km = require("mjm.keymap_mod")
 
 -- Mapped in normal mode so that <C-c> will exit the start of commands with a count
+-- (This also gets rid of a command bar nag)
 -- Do not map in command mode or else <C-c> will accept commands
 vim.keymap.set({ "n", "i", "v" }, "<C-c>", "<esc>", { silent = true })
 vim.keymap.set("v", "q", "<Nop>", { silent = true })
 
-vim.api.nvim_create_user_command("We", "w | e", {})
+vim.api.nvim_create_user_command("We", "w | e", {}) -- Quick refresh if Treesitter bugs out
 vim.api.nvim_create_user_command("Wbd", "w | bd", {})
 
 -- Stop undo history from showing in the cmd line whever an undo/redo is performed
--- Done as functions because <cmd>'s do not work with v:count1
+-- Done as functions because keymap <cmd>'s do not work with v:count1
 vim.keymap.set("n", "u", function()
     vim.api.nvim_exec2("silent norm! " .. vim.v.count1 .. "u", {})
 end, { silent = true })
@@ -155,7 +156,7 @@ vim.keymap.set("v", "C", "<nop>", { silent = true })
 vim.keymap.set("n", "c^", "^cg_", { silent = true })
 
 vim.keymap.set({ "n", "v" }, "s", "<Nop>", { silent = true })
--- vim.keymap.set("n", "S", "<Nop>", { silent = true }) -- Used in visual mode by nvim-surround
+vim.keymap.set("n", "S", "<Nop>", { silent = true }) -- Used in visual mode by nvim-surround
 
 vim.api.nvim_create_autocmd("TextYankPost", {
     group = vim.api.nvim_create_augroup("yank_reset_cursor", { clear = true }),
@@ -172,7 +173,7 @@ vim.keymap.set({ "n", "v" }, "y", "mzy", { silent = true })
 vim.keymap.set({ "n", "v" }, "<leader>y", 'mz"+y', { silent = true })
 
 vim.keymap.set("n", "Y", "mzy$", { silent = true }) -- Avoid inconsistent behavior
-vim.keymap.set("n", "<leader>Y", 'mz"+y$', { silent = true }) -- Mapping to "+Y yanks the whole line
+vim.keymap.set("n", "<leader>Y", 'mz"+y$', { silent = true }) -- Mapping to "+Y yanks whole line
 vim.keymap.set("v", "Y", "<nop>", { silent = true })
 
 vim.keymap.set("n", "y^", "mz^vg_y", { silent = true })
