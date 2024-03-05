@@ -1,8 +1,8 @@
 local km = require("mjm.keymap_mod")
 
 -- Mapped in normal mode so that <C-c> will exit the start of commands with a count
--- (This also gets rid of a command bar nag)
--- Do not map in command mode or else <C-c> will accept commands
+-- (This also gets rid of a command line nag)
+-- Mapping in command mode will cause <C-c> to accept commands
 vim.keymap.set({ "n", "i", "v" }, "<C-c>", "<esc>", { silent = true })
 vim.keymap.set("v", "q", "<Nop>", { silent = true })
 
