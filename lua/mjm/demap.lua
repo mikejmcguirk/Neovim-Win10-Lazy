@@ -46,10 +46,10 @@ vim.keymap.set({ "n", "v" }, "]*", "<Nop>")
 vim.keymap.set({ "n", "v" }, "[/", "<Nop>")
 vim.keymap.set({ "n", "v" }, "]/", "<Nop>")
 
-vim.keymap.set({ "n", "i", "v" }, "<up>", "<Nop>")
-vim.keymap.set({ "n", "i", "v" }, "<down>", "<Nop>")
-vim.keymap.set({ "n", "i", "v" }, "<left>", "<Nop>")
-vim.keymap.set({ "n", "i", "v" }, "<right>", "<Nop>")
+vim.keymap.set({ "n", "v" }, "<up>", "<Nop>")
+vim.keymap.set({ "n", "v" }, "<down>", "<Nop>")
+vim.keymap.set({ "n", "v" }, "<left>", "<Nop>")
+vim.keymap.set({ "n", "v" }, "<right>", "<Nop>")
 
 vim.keymap.set({ "n", "i", "v", "c" }, "<PageUp>", "<Nop>")
 vim.keymap.set({ "n", "i", "v", "c" }, "<PageDown>", "<Nop>")
@@ -57,7 +57,7 @@ vim.keymap.set({ "n", "i", "v", "c" }, "<Home>", "<Nop>")
 vim.keymap.set({ "n", "i", "v", "c" }, "<End>", "<Nop>")
 vim.keymap.set({ "n", "i", "v", "c" }, "<Insert>", "<Nop>")
 
-vim.opt.mouse = "a" -- Otherwise, the terminal handles mouse functionality
+vim.opt.mouse = "a"           -- Otherwise, the terminal handles mouse functionality
 vim.opt.mousemodel = "extend" -- Disables terminal right-click paste
 
 local mouse_maps = {
