@@ -2,6 +2,8 @@ local gf = require("mjm.global_funcs")
 
 local root_start = gf.get_buf_directory(vim.fn.bufnr())
 
+-- Formatting by taplo through conform
+
 vim.lsp.start({
     name = "taplo",
     cmd = { "taplo", "lsp", "stdio" },

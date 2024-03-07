@@ -64,9 +64,9 @@ end)
 local diags_to_qf = function(origin, severity_cap)
     local raw_diags = {}
 
-    if origin == "b" then
+    if origin == "b" then -- All diagnostics
         raw_diags = vim.diagnostic.get(nil)
-    elseif origin == "c" then
+    elseif origin == "c" then -- Current buffer diagnostics
         local non_diag_fts = {
             "NvimTree",
             "qf",
@@ -83,7 +83,7 @@ local diags_to_qf = function(origin, severity_cap)
         end
 
         raw_diags = vim.diagnostic.get(0)
-    elseif origin == "w" then
+    elseif origin == "w" then -- Diagnostics from open windows
         local all_wins = vim.api.nvim_list_wins()
 
         for _, win in ipairs(all_wins) do
@@ -98,9 +98,7 @@ local diags_to_qf = function(origin, severity_cap)
         return
     end
 
-    if severity_cap == nil then
-        severity_cap = 4
-    end
+    local sev_cap = severity_cap or 4
 
     local severity_map = {
         [vim.diagnostic.severity.ERROR] = "E",
@@ -109,15 +107,15 @@ local diags_to_qf = function(origin, severity_cap)
         [vim.diagnostic.severity.HINT] = "H",
     }
 
-    if severity_map[severity_cap] == nil then
+    if severity_map[sev_cap] == nil then
         vim.api.nvim_err_writeln("Invalid severity cap")
 
         return
     end
 
-    if severity_cap < 4 then
+    if sev_cap < 4 then
         raw_diags = vim.tbl_filter(function(diag)
-            return diag.severity <= severity_cap
+            return diag.severity <= sev_cap
         end, raw_diags)
     end
 
@@ -132,20 +130,19 @@ local diags_to_qf = function(origin, severity_cap)
     ---@param raw_diag table
     ---@return table
     local convert_diag = function(raw_diag)
-        local diag_source = raw_diag.source or ""
+        local diag_source = ""
 
-        if diag_source ~= "" then
-            diag_source = diag_source .. ": "
+        if raw_diag.source then
+            diag_source = raw_diag.source .. ": "
         end
 
-        local diag_code = raw_diag.code or ""
+        local diag_code = ""
 
-        if diag_code ~= "" then
-            diag_code = "[" .. diag_code .. "] "
+        if raw_diag.code then
+            diag_code = "[" .. raw_diag.code .. "] "
         end
 
         local diag_message = raw_diag.message or ""
-        local diag_text = diag_source .. diag_code .. diag_message
 
         local converted_diag = {
             bufnr = raw_diag.bufnr,
@@ -154,7 +151,7 @@ local diags_to_qf = function(origin, severity_cap)
             end_lnum = raw_diag.end_lnum + 1,
             col = raw_diag.col,
             end_col = raw_diag.end_col,
-            text = diag_text,
+            text = diag_source .. diag_code .. diag_message,
             type = severity_map[raw_diag.severity],
         }
 

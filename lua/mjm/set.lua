@@ -3,6 +3,7 @@ vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
 vim.g.loaded_netrwSettings = 1
 
+-- Prevent other default plugins from loading
 vim.g.loaded_2html_plugin = 1
 vim.g.loaded_zipPlugin = 1
 vim.g.loaded_tarPlugin = 1
@@ -22,7 +23,6 @@ vim.opt.signcolumn = "yes:1"
 vim.opt.colorcolumn = "100"
 
 local default_tab_width = 4
-
 vim.opt.tabstop = default_tab_width
 vim.opt.softtabstop = default_tab_width
 vim.opt.shiftwidth = default_tab_width
@@ -35,6 +35,7 @@ vim.opt.termguicolors = true
 vim.api.nvim_exec2("set gcr=n:block-blinkon1,i-c-ci:ver100-blinkon1,v-r:hor100-blinkon1", {})
 vim.opt.lazyredraw = false -- Disabled because it prevents search result indexes from showing
 vim.opt.showmode = false
+vim.opt.shortmess:append("I")
 
 vim.opt.scrolloff = 6
 vim.opt.startofline = true
@@ -46,9 +47,9 @@ vim.opt.splitbelow = true
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
 vim.opt.hlsearch = true
-vim.opt.incsearch = false -- Keep screen from shifting when running search of substitute commands
-
+vim.opt.incsearch = false -- Prevent screen from shifting when entering substitution patterns
 vim.opt.modelines = 1
+
 vim.opt.updatetime = 500
 vim.opt.timeoutlen = 500
 

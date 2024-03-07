@@ -6,16 +6,17 @@ return {
             require("conform").setup({
                 formatters_by_ft = {
                     cs = { "csharpier" },
-                    javascript = { "eslint_d", "prettierd" },
-                    typescript = { "prettierd" },
-                    markdown = { "prettierd" },
                     css = { "prettierd" },
                     html = { "prettierd" },
+                    javascript = { "eslint_d", "prettierd" },
                     json = { "prettierd" },
-                    sh = { "beautysh" },
                     lua = { "stylua" },
+                    markdown = { "prettierd" },
                     python = { "ruff_format", "isort" },
                     rust = { "rustfmt" },
+                    sh = { "beautysh" },
+                    toml = { "taplo" },
+                    typescript = { "prettierd" },
                 },
             })
         end,

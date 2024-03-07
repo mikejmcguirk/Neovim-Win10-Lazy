@@ -26,12 +26,17 @@ vim.lsp.start({
                     ignore = {
                         "E201",
                         "E202",
+                        "E203", -- Whitespace before ':' (Actually contradicts ruff formatter)
                         "E211",
+                        "E226", -- Missing whitespace around arithmetic operator
+                        "E261",
+                        "E262",
                         "E265",
                         "E302",
                         "E303",
                         "E305",
                         "E501",
+                        "E741", -- Ambiguous variable name
                         "W293",
                         "W391",
                     },
