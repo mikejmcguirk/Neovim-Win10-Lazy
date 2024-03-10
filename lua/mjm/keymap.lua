@@ -30,7 +30,7 @@ local write_boilerplate = function(cmd, error)
     vim.api.nvim_err_writeln(error)
 end
 
-vim.keymap.set("n", "ZZ", function()
+vim.keymap.set("n", "ZV", function()
     write_boilerplate("silent w", "Unknown error saving file")
 end)
 
@@ -41,6 +41,9 @@ end)
 vim.keymap.set("n", "ZX", function()
     write_boilerplate("silent w | so", "Unknown error")
 end)
+
+vim.keymap.set("n", "ZZ", "<Nop>")
+vim.keymap.set("n", "ZQ", "<Nop>")
 
 -- Stop undo history from showing in the cmd line whever an undo/redo is performed
 -- Done as functions because keymap <cmd>'s do not work with v:count1
