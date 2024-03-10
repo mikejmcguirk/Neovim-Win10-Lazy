@@ -9,6 +9,39 @@ vim.keymap.set("v", "q", "<Nop>", { silent = true })
 vim.api.nvim_create_user_command("We", "w | e", {}) -- Quick refresh if Treesitter bugs out
 vim.api.nvim_create_user_command("Wbd", "w | bd", {})
 
+---@param cmd string
+---@param error string
+---@return nil
+local write_boilerplate = function(cmd, error)
+    local status, result = pcall(function()
+        vim.api.nvim_exec2(cmd, {})
+    end)
+
+    if status then
+        return
+    end
+
+    if type(result) == "string" then
+        vim.api.nvim_err_writeln(result)
+
+        return
+    end
+
+    vim.api.nvim_err_writeln(error)
+end
+
+vim.keymap.set("n", "ZZ", function()
+    write_boilerplate("silent w", "Unknown error saving file")
+end)
+
+vim.keymap.set("n", "ZA", function()
+    write_boilerplate("silent wa", "Unknown error saving file(s)")
+end)
+
+vim.keymap.set("n", "ZX", function()
+    write_boilerplate("silent w | so", "Unknown error")
+end)
+
 -- Stop undo history from showing in the cmd line whever an undo/redo is performed
 -- Done as functions because keymap <cmd>'s do not work with v:count1
 vim.keymap.set("n", "u", function()
