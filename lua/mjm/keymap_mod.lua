@@ -148,6 +148,10 @@ local get_indent = function(line_num)
     local expr_indent_str = expr_indent_tbl.output
     local expr_indent = tonumber(expr_indent_str) or 0
 
+    if expr_indent < 0 then
+        return 0
+    end
+
     return expr_indent
 end
 
