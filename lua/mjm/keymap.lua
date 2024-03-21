@@ -190,6 +190,8 @@ vim.keymap.set({ "n", "v" }, "<leader>c", '"_c', { silent = true })
 vim.keymap.set("n", "<leader>C", '"_C', { silent = true })
 vim.keymap.set("v", "C", "<nop>", { silent = true })
 vim.keymap.set("n", "c^", "^cg_", { silent = true })
+vim.keymap.set("n", "cC", "ggcG", { silent = true })
+vim.keymap.set("n", "<leacer>cC", 'gg"_cG', { silent = true })
 
 vim.keymap.set({ "n", "v" }, "s", "<Nop>", { silent = true })
 vim.keymap.set("n", "S", "<Nop>", { silent = true }) -- Used in visual mode by nvim-surround
@@ -208,7 +210,7 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 vim.keymap.set({ "n", "v" }, "y", "mzy", { silent = true })
 vim.keymap.set({ "n", "v" }, "<leader>y", 'mz"+y', { silent = true })
 
-vim.keymap.set("n", "Y", "mzy$", { silent = true }) -- Avoid inconsistent behavior
+vim.keymap.set("n", "Y", "mzy$", { silent = true })           -- Avoid inconsistent behavior
 vim.keymap.set("n", "<leader>Y", 'mz"+y$', { silent = true }) -- Mapping to "+Y yanks whole line
 vim.keymap.set("v", "Y", "<nop>", { silent = true })
 
