@@ -64,14 +64,15 @@ M.try_lsp_format = function(buf)
 end
 
 ---@param buf number
+---@return nil
 M.fix_bookend_blanks = function(buf)
     ---@param start_idx number
     ---@param end_idx number
     ---@return nil
     local function new_line_check(start_idx, end_idx)
         local line = vim.api.nvim_buf_get_lines(buf, start_idx, end_idx, true)[1]
-        local last_line = vim.api.nvim_buf_line_count(buf) == 1
         local blank_line = (line == "") or line:match("^%s*$")
+        local last_line = vim.api.nvim_buf_line_count(buf) == 1
 
         if last_line or not blank_line then
             return

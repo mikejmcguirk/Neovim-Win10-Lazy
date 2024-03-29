@@ -330,7 +330,7 @@ M.visual_move = function(vcount1, direction)
         to_move = vcount1 - offset + fix_num
     end
 
-    local move_cmd = cmd_start .. to_move
+    local move_cmd = "silent " .. cmd_start .. to_move
 
     local status, result = pcall(function()
         vim.api.nvim_exec2(move_cmd, {})
