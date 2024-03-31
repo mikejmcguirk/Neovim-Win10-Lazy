@@ -131,7 +131,11 @@ local get_indent = function(line_num)
         local prev_nonblank = vim.fn.prevnonblank(line_num - 1)
         local prev_nonblank_indent = vim.fn.indent(prev_nonblank)
 
-        return prev_nonblank_indent
+        if prev_nonblank_indent < 0 then
+            return 0
+        else
+            return prev_nonblank_indent
+        end
     end
 
     -- Most indent expressions in the Nvim runtime do not take an argument
