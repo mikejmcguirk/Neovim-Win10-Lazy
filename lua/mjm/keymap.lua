@@ -6,8 +6,14 @@ local km = require("mjm.keymap_mod")
 vim.keymap.set({ "n", "i", "v" }, "<C-c>", "<esc>", { silent = true })
 vim.keymap.set("v", "q", "<Nop>", { silent = true })
 
-vim.api.nvim_create_user_command("We", "w | e", {}) -- Quick refresh if Treesitter bugs out
-vim.api.nvim_create_user_command("Wbd", "w | bd", {})
+vim.keymap.set("n", "<esc>", function()
+    vim.api.nvim_exec2("echo ''", {})
+    vim.api.nvim_exec2("noh", {})
+    vim.lsp.buf.clear_references()
+end, { silent = true })
+
+vim.api.nvim_create_user_command("We", "silent w | e", {}) -- Quick refresh if Treesitter bugs out
+vim.api.nvim_create_user_command("Wbd", "silent w | bd", {})
 
 ---@param cmd string
 ---@param error string
@@ -123,12 +129,6 @@ vim.keymap.set({ "n", "v" }, "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, si
 vim.keymap.set("v", "<", "<gv", { silent = true })
 vim.keymap.set("v", ">", ">gv", { silent = true })
 
-vim.keymap.set("n", "<esc>", function()
-    vim.api.nvim_exec2("echo ''", {})
-    vim.api.nvim_exec2("noh", {})
-    vim.lsp.buf.clear_references()
-end, { silent = true })
-
 vim.keymap.set("n", "gV", "`[v`]", { silent = true })
 vim.keymap.set("n", "<leader>V", "_vg_", { silent = true })
 
@@ -155,14 +155,14 @@ for _, map in pairs(cap_motions_norm) do
     end, { silent = true, expr = true })
 end
 
-local cap_motions_visual = {
+local cap_motions_vis = {
     "~",
     "g~",
     "gu",
     "gU",
 }
 
-for _, map in pairs(cap_motions_visual) do
+for _, map in pairs(cap_motions_vis) do
     vim.keymap.set("v", map, function()
         return "mz" .. vim.v.count1 .. map .. "`z"
     end, { silent = true, expr = true })
