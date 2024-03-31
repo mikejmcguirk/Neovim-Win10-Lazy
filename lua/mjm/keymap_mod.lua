@@ -293,17 +293,6 @@ M.visual_move = function(vcount1, direction)
         return
     end
 
-    if not (direction == "u" or direction == "d") then
-        vim.api.nvim_err_writeln("Invalid direction")
-
-        return
-    end
-
-    -- We must leave visual mode to update '< and '>
-    -- Because vim.v.count1 is updated when we do this, it is passed as a parameter
-    vim.api.nvim_exec2('exec "silent norm! \\<esc>"', {})
-
-    local min_count = 1
     local pos_1 = nil
     local pos_2 = nil
     local fix_num = nil
@@ -319,13 +308,22 @@ M.visual_move = function(vcount1, direction)
         pos_2 = "'<"
         fix_num = 1
         cmd_start = "'<,'> m '<-"
+    else
+        vim.api.nvim_err_writeln("Invalid direction")
+
+        return
     end
 
+    -- Leave visual mode to update '< and '>
+    -- vim.v.count1 is updated when we do this, thus why it was passed as a parameter
+    vim.api.nvim_exec2('exec "silent norm! \\<esc>"', {})
+    local min_count = 1
     local to_move = nil
 
     if vcount1 <= min_count then
         to_move = min_count + fix_num
     else
+        -- Offset calculated so that jumps based on rnu are correct
         local offset = vim.fn.line(pos_1) - vim.fn.line(pos_2)
         to_move = vcount1 - offset + fix_num
     end
@@ -336,26 +334,24 @@ M.visual_move = function(vcount1, direction)
         vim.api.nvim_exec2(move_cmd, {})
     end)
 
-    if (not status) and result then
-        vim.api.nvim_err_writeln(result)
+    if not status then
+        if result then
+            vim.api.nvim_err_writeln(result)
+        else
+            vim.api.nvim_err_writeln("Unknown error in visual_move")
+        end
+
         vim.api.nvim_exec2("norm! gv", {})
 
         return
     end
 
-    local dest_row, dest_col = unpack(vim.api.nvim_win_get_cursor(0))
-    -- After the move cmd, `] will be set to the beginning of the last line of the block
-    -- To properly format the last line, we set the z mark to the end of the line
-    vim.api.nvim_exec2("silent norm! `]", {})
-    local end_cursor_pos = vim.api.nvim_win_get_cursor(0)
-    local end_row = end_cursor_pos[1]
-    local end_line = vim.api.nvim_get_current_line()
-    local end_col = #end_line
+    local end_row = vim.api.nvim_buf_get_mark(0, "]")[1]
+    local end_col = #vim.api.nvim_buf_get_lines(0, end_row - 1, end_row, false)[1]
     vim.api.nvim_buf_set_mark(0, "z", end_row, end_col, {})
-
     vim.api.nvim_exec2("silent norm! `[", {})
     vim.api.nvim_exec2("silent norm! =`z", {})
-    vim.api.nvim_win_set_cursor(0, { dest_row, dest_col })
+
     vim.api.nvim_exec2("silent norm! gv", {})
 end
 
