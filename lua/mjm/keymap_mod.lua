@@ -131,7 +131,7 @@ local get_indent = function(line_num)
         local prev_nonblank = vim.fn.prevnonblank(line_num - 1)
         local prev_nonblank_indent = vim.fn.indent(prev_nonblank)
 
-        if prev_nonblank_indent < 0 then
+        if prev_nonblank_indent <= 0 then
             return 0
         else
             return prev_nonblank_indent
@@ -152,11 +152,11 @@ local get_indent = function(line_num)
     local expr_indent_str = expr_indent_tbl.output
     local expr_indent = tonumber(expr_indent_str) or 0
 
-    if expr_indent < 0 then
+    if expr_indent <= 0 then
         return 0
+    else
+        return expr_indent
     end
-
-    return expr_indent
 end
 
 ---@return nil
