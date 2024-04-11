@@ -29,7 +29,7 @@ vim.opt.shiftwidth = default_tab_width
 vim.opt.expandtab = true
 vim.opt.shiftround = true
 
-vim.opt.fileformats = "unix,dos"
+vim.opt.fileformats = "unix,dos" -- Override \r\n on Windows
 
 vim.opt.termguicolors = true
 vim.api.nvim_exec2("set gcr=n:block-blinkon1,i-c-ci:ver100-blinkon1,v-r:hor100-blinkon1", {})
@@ -46,7 +46,6 @@ vim.opt.splitbelow = true
 
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
-vim.opt.hlsearch = true
 vim.opt.incsearch = false -- Prevent screen from shifting when entering substitution patterns
 vim.opt.modelines = 1
 
