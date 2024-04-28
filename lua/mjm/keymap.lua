@@ -122,6 +122,7 @@ vim.keymap.set("i", ";", ";<C-g>u", { silent = true })
 vim.keymap.set("i", "?", "?<C-g>u", { silent = true })
 vim.keymap.set("i", "!", "!<C-g>u", { silent = true })
 vim.keymap.set("i", ":", ":<C-g>u", { silent = true })
+vim.keymap.set("i", "-", "-<C-g>u", { silent = true })
 
 vim.keymap.set({ "n", "v" }, "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
 vim.keymap.set({ "n", "v" }, "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
