@@ -127,6 +127,42 @@ vim.keymap.set("i", "-", "-<C-g>u", { silent = true })
 vim.keymap.set({ "n", "v" }, "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
 vim.keymap.set({ "n", "v" }, "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
 
+local get_cursor_char = function()
+    local cur_col = vim.api.nvim_win_get_cursor(0)[2] + 1
+    local cur_line = vim.api.nvim_get_current_line()
+    local cur_char = cur_line:sub(cur_col, cur_col)
+
+    return cur_char
+end
+
+local underscore_forward = function()
+    local cur_char = get_cursor_char()
+
+    if cur_char == "_" then
+        return "l"
+    else
+        return "f_"
+    end
+end
+
+local underscore_backward = function()
+    local cur_char = get_cursor_char()
+
+    if cur_char == "_" then
+        return "h"
+    else
+        return "F_"
+    end
+end
+
+vim.keymap.set({ "n", "v" }, "-", function()
+    return underscore_forward()
+end, { expr = true, silent = true })
+
+vim.keymap.set({ "n", "v" }, "_", function()
+    return underscore_backward()
+end, { expr = true, silent = true })
+
 vim.keymap.set("v", "<", "<gv", { silent = true })
 vim.keymap.set("v", ">", ">gv", { silent = true })
 
@@ -220,6 +256,8 @@ vim.keymap.set("n", "<leader>y^", 'mz^vg_"+y', { silent = true })
 -- `z included in these maps to prevent visible scrolling before the autocmd is triggered
 vim.keymap.set("n", "yY", "mzggyG`z", { silent = true })
 vim.keymap.set("n", "<leader>yY", 'mzgg"+yG`z', { silent = true })
+
+vim.keymap.set({ "n", "v" }, "<leader>yd", '"+d', { silent = true })
 
 local startline_objects = { "0", "_", "g^", "g0" }
 

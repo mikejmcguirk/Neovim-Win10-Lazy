@@ -35,9 +35,6 @@ vim.keymap.set({ "n", "v" }, "gm", "<Nop>")
 vim.keymap.set({ "n", "v" }, "gM", "<Nop>")
 vim.keymap.set({ "n", "v" }, "|", "<Nop>")
 
-vim.keymap.set({ "n", "v" }, "-", "<Nop>")
-vim.keymap.set({ "n", "v" }, "+", "<Nop>")
-
 vim.keymap.set({ "n", "v" }, "[*", "<Nop>")
 vim.keymap.set({ "n", "v" }, "]*", "<Nop>")
 vim.keymap.set({ "n", "v" }, "[/", "<Nop>")
