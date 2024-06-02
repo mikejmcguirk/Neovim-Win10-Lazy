@@ -17,7 +17,6 @@ vim.lsp.start({
     cmd = { "lua-language-server" },
     root_dir = gf.find_proj_root(root_files, root_start, nil),
     capabilities = Lsp_Capabilities,
-    before_init = require("neodev.lsp").before_init,
     settings = {
         Lua = {
             workspace = {

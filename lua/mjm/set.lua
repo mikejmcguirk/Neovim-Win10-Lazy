@@ -16,7 +16,7 @@ vim.g.mapleader = " "
 vim.g.maplocaleader = " "
 
 -- On my monitors, for files under 10k lines, a centered vsplit will be on the color column
-vim.opt.nu = true
+vim.opt.number = true
 vim.opt.relativenumber = true
 vim.opt.numberwidth = 5
 vim.opt.signcolumn = "yes:1"

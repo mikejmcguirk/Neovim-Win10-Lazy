@@ -63,6 +63,10 @@ local cmp_config = function()
             ["<CR>"] = nil,
         }),
         sources = {
+            {
+                name = "lazydev",
+                group_index = 0, -- Skip loading LuaLS completions
+            },
             { name = "nvim_lsp_signature_help" },
             { name = "nvim_lsp" },
             {

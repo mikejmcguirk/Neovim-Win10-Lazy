@@ -1,8 +1,9 @@
 return {
-    {
-        "folke/neodev.nvim",
-        -- event = { "BufReadPre", "BufNewFile" },
-        ft = "lua",
-        opts = {},
+    "folke/lazydev.nvim",
+    ft = "lua",
+    opts = {
+        library = {
+            vim.env.LAZY .. "/luvit-meta/library",
+        },
     },
 }

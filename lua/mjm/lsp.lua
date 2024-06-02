@@ -1,6 +1,3 @@
-vim.keymap.set("n", "[d", vim.diagnostic.goto_prev)
-vim.keymap.set("n", "]d", vim.diagnostic.goto_next)
-
 vim.keymap.set("n", "[D", function()
     vim.diagnostic.goto_prev({ severity = "ERROR" })
 end)
@@ -8,8 +5,6 @@ end)
 vim.keymap.set("n", "]D", function()
     vim.diagnostic.goto_next({ severity = "ERROR" })
 end)
-
-vim.keymap.set("n", "<leader>vl", vim.diagnostic.open_float)
 
 local handler_border = {
     border = "single",
@@ -93,7 +88,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
         vim.keymap.set("n", "gr", vim.lsp.buf.references, { buffer = ev.buf })
         vim.keymap.set("n", "gt", vim.lsp.buf.type_definition, { buffer = ev.buf })
 
-        vim.keymap.set("n", "K", vim.lsp.buf.hover, { buffer = ev.buf })
         vim.keymap.set("n", "gs", vim.lsp.buf.signature_help, { buffer = ev.buf })
 
         vim.keymap.set("n", "<leader>va", vim.lsp.buf.add_workspace_folder, { buffer = ev.buf })

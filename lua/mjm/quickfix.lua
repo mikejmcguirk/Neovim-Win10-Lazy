@@ -73,7 +73,7 @@ local diags_to_qf = function(origin, severity_cap)
             "help",
             "git",
             "harpoon",
-            "tsplayground",
+            "query",
         }
 
         if vim.tbl_contains(non_diag_fts, vim.bo.filetype) then

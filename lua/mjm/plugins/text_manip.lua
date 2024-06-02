@@ -1,12 +1,5 @@
 return {
     {
-        "numToStr/Comment.nvim",
-        event = { "BufReadPre", "BufNewFile" },
-        config = function()
-            require("Comment").setup()
-        end,
-    },
-    {
         "kylechui/nvim-surround",
         version = "*", -- Use for stability; omit to use `main` branch for the latest features
         event = { "BufReadPre", "BufNewFile" },
@@ -32,13 +25,6 @@ return {
             local cmp = require("cmp")
             local cmp_autopairs = require("nvim-autopairs.completion.cmp")
             cmp.event:on("confirm_done", cmp_autopairs.on_confirm_done())
-        end,
-    },
-    {
-        "triglav/vim-visual-increment",
-        event = { "BufReadPre", "BufNewFile" },
-        init = function()
-            vim.opt.nrformats = "alpha,octal,hex"
         end,
     },
 }
