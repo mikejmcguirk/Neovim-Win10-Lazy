@@ -16,7 +16,6 @@ vim.keymap.set("n", "<esc>", function()
     vim.api.nvim_exec2("echo ''", {})
     vim.api.nvim_exec2("noh", {})
     vim.lsp.buf.clear_references()
-    vim.lsp.semantic_tokens.force_refresh()
 end, { silent = true })
 
 vim.api.nvim_create_user_command("We", "silent w | e", {}) -- Quick refresh if Treesitter bugs out
