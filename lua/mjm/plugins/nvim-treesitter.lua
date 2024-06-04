@@ -4,7 +4,6 @@ return {
     event = { "BufReadPre", "BufNewFile" },
     dependencies = {
         "nvim-treesitter/nvim-treesitter-textobjects",
-        "windwp/nvim-ts-autotag",
     },
     config = function()
         local configs = require("nvim-treesitter.configs")
@@ -39,7 +38,6 @@ return {
             sync_install = false,
             highlight = { enable = true, additional_vim_regex_highlighting = false },
             indent = { enable = true },
-            autotag = { enable = true },
             textobjects = {
                 select = {
                     enable = true,
