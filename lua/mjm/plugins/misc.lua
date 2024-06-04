@@ -23,22 +23,22 @@ return {
             local lspconfig = require("lspconfig")
             local cmp_capabilities = require("cmp_nvim_lsp").default_capabilities()
 
+            -- Bash
+            lspconfig.bashls.setup({
+                capabilities = cmp_capabilities,
+            })
+
+            -- Lua
             lspconfig.lua_ls.setup({
                 capabilities = cmp_capabilities,
             })
 
-            lspconfig.taplo.setup({
-                capabilities = cmp_capabilities,
-            })
-
+            -- Markdown
             lspconfig.marksman.setup({
                 capabilities = cmp_capabilities,
             })
 
-            lspconfig.ruff_lsp.setup({
-                capabilities = cmp_capabilities,
-            })
-
+            -- Python
             lspconfig.pylsp.setup({
                 capabilities = cmp_capabilities,
                 settings = {
@@ -67,6 +67,15 @@ return {
                         },
                     },
                 },
+            })
+
+            lspconfig.ruff_lsp.setup({
+                capabilities = cmp_capabilities,
+            })
+
+            -- Toml
+            lspconfig.taplo.setup({
+                capabilities = cmp_capabilities,
             })
         end,
     },
