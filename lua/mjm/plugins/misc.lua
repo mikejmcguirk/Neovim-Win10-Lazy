@@ -24,6 +24,7 @@ return {
 
             lspconfig.lua_ls.setup({})
             lspconfig.taplo.setup({})
+            lspconfig.marksman.setup({})
         end,
     },
 }
