@@ -4,7 +4,3 @@ Env_Disable_Copilot = os.getenv("DisableCopilot")
 Env_Main_Browser = os.getenv("MainBrowser")
 
 Env_Theme = os.getenv("NvimTheme")
-
-Env_OmniSharp_DLL = os.getenv("OmniSharpDLL")
-
-Lsp_Capabilities = vim.lsp.protocol.make_client_capabilities()

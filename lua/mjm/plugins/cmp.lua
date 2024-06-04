@@ -5,12 +5,6 @@ local cmp_config = function()
     local win_highlight = "Normal:Normal,FloatBorder:FloatBorder,CursorLine:Visual,Search:None"
     vim.opt.completeopt = { "menu", "menuone", "noselect" }
 
-    Lsp_Capabilities = vim.tbl_deep_extend(
-        "force",
-        Lsp_Capabilities,
-        require("cmp_nvim_lsp").default_capabilities()
-    )
-
     cmp.setup({
         enabled = function()
             local context = require("cmp.config.context")
