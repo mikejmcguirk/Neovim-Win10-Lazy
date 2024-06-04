@@ -19,6 +19,11 @@ return {
             require("lspconfig.ui.windows").default_options = {
                 border = "single",
             }
+
+            local lspconfig = require("lspconfig")
+
+            lspconfig.lua_ls.setup({})
+            lspconfig.taplo.setup({})
         end,
     },
 }
