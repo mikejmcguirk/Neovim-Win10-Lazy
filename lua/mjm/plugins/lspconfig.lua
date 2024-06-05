@@ -60,6 +60,5 @@ return {
             -- Toml
             lspconfig.taplo.setup({ capabilities = cmp_capabilities })
         end,
-        init = function() end,
     },
 }

@@ -5,12 +5,8 @@
   - [Git Installation Notes](#git-installation-notes)
   - [Visual Studio Build Utils (Windows Specific)](#visual-studio-build-utils-windows-specific)
     - [Node Installation for JavaScript and Copilot (Windows Specific)](#node-installation-for-javascript-and-copilot-windows-specific)
-    - [Install JavaScript LSP Stack](#install-javascript-lsp-stack)
-    - [Docker LSP](#docker-lsp)
     - [Lua Language Server](#lua-language-server)
     - [pylsp (Windows Specific)](#pylsp-windows-specific)
-    - [OmniSharp](#omnisharp)
-    - [rust-analyzer and taplo](#rust-analyzer-and-taplo)
     - [Marksman](#marksman)
   - [Other Setup Notes](#other-setup-notes)
   - [Windows Terminal Notes](#windows-terminal-notes)
@@ -44,64 +40,11 @@
 
 ##### Node Installation for JavaScript and Copilot (Windows Specific)
 
-- Perform a clean install of NVM for Windows as described here: https://github.com/coreybutler/nvm-windows
+- For this config, create an environment variable called <code>NvimCopilotNode</code> containing the fully-qualified name of the Copilot node.exe file
 
-- Install Node and npm using <code>nvm install lts</code>
-
-- Type <code>nvm list</code> and find the latest installed LTS node.js version
-
-- Type <code>nvm use [version_number]</code> to point the %NVM_SYMLINK% path to the proper Node installation
-
-- Update npm by typing <code>npm i -g npm</code>
-
-- The highest version of Node.js that Copilot is guaranteed to be compatible with is 16.15.0 (see the g:copilot_node_command entry in the copilot readme)
-
-- Install it with <code>nvm install 16.15.0</code>
-
-- For this config, create an environment variable called <code>NvimCopilotNode</code> containing the fully-qualified name of your v16.15.0 node.exe file
-
-  - If this is not set, Copilot will look for the default Node path if it exists. Versions above v16.15.0 are not guaranteed to be supported
+  - If this is not set, Copilot will look for the default Node path if it exists. Versions above what's specified in the Copilot readme are not guaranteed to be supported
 
 - For this config, Copilot can be disabled by creating an environment variable called <code>DisableCopilot</code> and setting it to <code>true</code>
-
-##### Install JavaScript LSP Stack
-
-- This config opts for global installation where possible. This is to ensure a fallback is always present if <code>eslint --init</code> has not been run
-
-- Run these installation commands below in the order listed:
-
-  - <code>npm i -g typescript-language-server typescript</code>
-
-    - tsserver should then work with the provided lsp config. It will operate in single file mode unless a jsconfig.json file is present
-
-  - <code>npm i -g eslint</code>
-
-  - <code>npm i -g vscode-langservers-extracted</code>
-
-    - Because ESLint is installed globally, the ESLint LSP should be able to interface with it once a .eslintrc file is in your project directory. It should still work after running <code>eslint --init</code>
-
-  - <code>npm install -g --save-dev prettier</code>
-
-  - This config uses conform.nvim to interface with prettier, with the intention of avoiding ESLint for formatting
-
-  - To handle contradictory rules between ESLint and prettier:
-
-    - In the root directory of your project (global install does not work), run: <code>npm install --save-dev eslint-config-prettier</code>
-
-    - The eslint-config-prettier repo describes how to configure and check your .eslintrc files to use it
-
-    - To test that it's properly installed for your project, run <code>npx eslint-config-prettier main.js</code>. If you get an error that the prettier config is missing, eslint-config-prettier is not properly installed
-
-##### Docker LSP
-
-- Install the Docker Language server with <code>npm install -g dockerfile-language-server-nodejs</code>
-
-- Run the following in your JS project to add the components:
-  <code><pre>
-  npm install dockerfile-ast
-  npm install dockerfile-language-service
-  npm install dockerfile-utils
-  </pre></code>
 
 ##### Lua Language Server
 
@@ -110,8 +53,6 @@
 - Unzip the file to your desired location
 
 - The executable is located in the bin folder. Create a PATH variable pointing to it
-
-- This config uses the nvim-lspconfig boilerplate for checking the project workspace. If neither a .luarc.json nor a .luarc.jsonc file are found, the Neovim runtime files will be loaded
 
 ##### pylsp (Windows Specific)
 
@@ -153,51 +94,11 @@
 
 - Confirm that pylsp is installed by running <code>pylsp --help</code>
 
-##### OmniSharp
-
-- Go to the OmniSharp releases page: https://github.com/OmniSharp/omnisharp-roslyn/releases
-
-- Under the latest version, look for the Windows file targeted for your processor type with a .NET version in the file name. The files without .NET versions do not contain the .dll file that interfaces with Neovim. Do not download a file with http in the name (Neovim uses JSON for its LSP interface)
-
-- Unzip the file contents to your desired location
-
-- By default, Omnisharp cannot decompile .NET's built-in binaries. This is handled using the OmniSharp-Extended LSP plugin
-
-- To configure the OmniSharp-Extended LSP, create an omnisharp.json file in the same folder as your OmniSharp.dll file. Paste in the following:
-  <code><pre>{
-  &nbsp;&nbsp;"RoslynExtensionsOptions": {
-  &nbsp;&nbsp;&nbsp;&nbsp;"enableDecompilationSupport": true
-  &nbsp;&nbsp;}
-  }
-  </pre></code>
-
-- For this config, create an <code>OmniSharpDLL</code> system environment variable containing the fully-qualified name of your OmniSharp.dll file. If this is not present, OmniSharp will fail to attach
-
-- If the LSP still fails to attach, try typing <code>dotnet</code> in your command line without options to make sure it's available
-
-##### rust-analyzer and taplo
-
-- Download <code>rustup-init.exe</code> from <code>rustup.rs</code>. Run the file to install rustup
-
-  - This will also install clippy and RustFmt
-
-- Once rustup is installed, run the following to install rust-analyzer: <code>rustup component add rust-analyzer</code>
-
-- To install taplo: <code>cargo install --features lsp --locked taplo-cli</code>
-
-- clippy is configured to run on save
-
-- RustFmt is handled using Neovim's built-in command. It uses the rust.vim plugin to interface with the installed copy of RustFmt
-
-- This config has all cargo features enabled for rust-analyzer
-
 ##### Marksman
 
 - Download the latest marksman.exe file from the repo's releases page, placing it in your location of choice: https://github.com/artempyanykh/marksman/releases
 
 - Create a PATH variable pointing to its location
-
-- conform.nvim + prettier is used for formatting Markdown. Marksman does not contain a built-in formatter
 
 ### Other Setup Notes
 
