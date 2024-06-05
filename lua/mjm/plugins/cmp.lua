@@ -1,6 +1,5 @@
 local cmp_config = function()
     local cmp = require("cmp")
-
     local cmp_select = { behavior = cmp.SelectBehavior.Select }
     local win_highlight = "Normal:Normal,FloatBorder:FloatBorder,CursorLine:Visual,Search:None"
     vim.opt.completeopt = { "menu", "menuone", "noselect" }
@@ -8,7 +7,6 @@ local cmp_config = function()
     cmp.setup({
         enabled = function()
             local context = require("cmp.config.context")
-
             local in_ts_capture_comment = context.in_treesitter_capture("comment")
             local in_comment_syntax = context.in_syntax_group("Comment")
             local is_comment = in_ts_capture_comment or in_comment_syntax
@@ -16,9 +14,9 @@ local cmp_config = function()
 
             if is_prompt or is_comment then
                 return false
+            else
+                return true
             end
-
-            return true
         end,
         snippet = {
             expand = function(args)
