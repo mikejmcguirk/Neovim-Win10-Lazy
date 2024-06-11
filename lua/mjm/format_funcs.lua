@@ -30,7 +30,7 @@ end
 ---@param buf number
 ---@return boolean
 M.try_lsp_format = function(buf)
-    local clients = vim.lsp.get_active_clients({ bufnr = buf })
+    local clients = vim.lsp.get_clients({ bufnr = buf })
     local mode = vim.api.nvim_get_mode().mode
     local method = nil
 

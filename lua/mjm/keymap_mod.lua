@@ -11,44 +11,6 @@ M.check_modifiable = function()
     return false
 end
 
----@param map string
----@return nil
-M.rest_view = function(map, options)
-    local opts = vim.deepcopy(options or {})
-
-    if opts.mod_check and not M.check_modifiable() then
-        return
-    elseif map == nil then
-        vim.api.nvim_err_writeln("No map provided in rest_view")
-
-        return
-    elseif type(map) ~= "string" then
-        vim.api.nvim_err_writeln("Invalid map type provided in rest_view")
-
-        return
-    elseif options ~= nil and type(options) ~= "table" then
-        vim.api.nvim_err_writeln("rest_view options is not a table")
-
-        return
-    end
-
-    local cur_view = vim.fn.winsaveview()
-
-    local status, result = pcall(function()
-        vim.api.nvim_exec2("silent norm! " .. map, {})
-    end)
-
-    vim.fn.winrestview(cur_view)
-
-    if not status then
-        if result then
-            vim.api.nvim_err_writeln(result)
-        else
-            vim.api.nvim_err_writeln("Unknown error in rest_view")
-        end
-    end
-end
-
 ---@return boolean
 local find_pairs = function()
     local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))

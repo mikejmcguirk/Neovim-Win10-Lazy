@@ -139,7 +139,10 @@ vim.keymap.set("n", "gV", "`[v`]", { silent = true })
 vim.keymap.set("n", "<leader>V", "_vg_", { silent = true })
 
 vim.keymap.set("n", "J", function()
-    km.rest_view("J", { mod_check = true })
+    -- Done using a view instead of a mark to prevent visible screen shake
+    local view = vim.fn.winsaveview()
+    vim.api.nvim_exec2("norm! J", {})
+    vim.fn.winrestview(view)
 end, { silent = true })
 
 local cap_motions_norm = {
@@ -241,25 +244,17 @@ for _, obj in pairs(startline_objects) do
     vim.keymap.set("n", "<leader>c" .. obj, "v" .. obj .. '"_c', { silent = true })
 end
 
-vim.keymap.set("n", "p", function()
-    local cmd = vim.v.count1 .. "p"
-    km.rest_view(cmd, { mod_check = true })
-end, { silent = true })
-
-vim.keymap.set("n", "<leader>p", function()
-    local cmd = vim.v.count1 .. '"+p'
-    km.rest_view(cmd, { mod_check = true })
-end, { silent = true })
-
-vim.keymap.set("n", "P", function()
-    local cmd = vim.v.count1 .. "P"
-    km.rest_view(cmd, { mod_check = true })
-end, { silent = true })
-
-vim.keymap.set("n", "<leader>P", function()
-    local cmd = vim.v.count1 .. '"+P'
-    km.rest_view(cmd, { mod_check = true })
-end, { silent = true })
+local norm_pastes = {
+    { "p", "p" },
+    { "<leader>p", '"+p' },
+    { "P", "P" },
+    { "<leader>P", '"+P' },
+}
+for _, map in pairs(norm_pastes) do
+    vim.keymap.set("n", map[1], function()
+        return "mz" .. vim.v.count1 .. map[2] .. "`z"
+    end, { silent = true, expr = true })
+end
 
 vim.keymap.set("n", "<leader>gp", '"+gp', { silent = true })
 vim.keymap.set("n", "<leader>gP", '"+gP', { silent = true })
