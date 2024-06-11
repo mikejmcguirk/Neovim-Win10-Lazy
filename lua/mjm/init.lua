@@ -1,4 +1,4 @@
-require("mjm.global_vars")
+require("mjm.env_vars")
 
 require("mjm.set")
 require("mjm.keymap")
