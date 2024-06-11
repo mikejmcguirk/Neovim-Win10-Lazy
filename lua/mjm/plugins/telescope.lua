@@ -19,41 +19,30 @@ return {
         },
         config = function()
             local telescope = require("telescope")
-
+            local actions = require("telescope.actions")
+            local undo_actions = require("telescope-undo.actions")
             -- telescope.load_extension("fzf")
-            telescope.load_extension("harpoon")
-            telescope.load_extension("undo")
 
             telescope.setup({
                 defaults = {
                     mappings = {
                         n = {
                             ["<C-h>"] = "which_key",
-                            ["<c-d>"] = require("telescope.actions").delete_buffer,
-                            ["<C-c>"] = require("telescope.actions").close,
-                            ["<esc>"] = false,
-                            ["<up>"] = false,
-                            ["<down>"] = false,
-                            ["<left>"] = false,
-                            ["<right>"] = false,
-                            ["<PageUp>"] = false,
-                            ["<PageDown>"] = false,
-                            ["<Home>"] = false,
-                            ["<End>"] = false,
+                            ["<C-c>"] = actions.close,
                         },
                         i = {
                             ["<C-h>"] = "which_key",
-                            ["<C-u>"] = false,
-                            ["<c-d>"] = false,
-                            ["<C-c>"] = false,
-                            ["<up>"] = false,
-                            ["<down>"] = false,
-                            ["<left>"] = false,
-                            ["<right>"] = false,
-                            ["<PageUp>"] = false,
-                            ["<PageDown>"] = false,
-                            ["<Home>"] = false,
-                            ["<End>"] = false,
+                            ["<C-c>"] = false, --Reverts to default functionality
+                            ["<esc>"] = actions.close,
+                        },
+                    },
+                },
+                pickers = {
+                    buffers = {
+                        mappings = {
+                            n = {
+                                ["dd"] = actions.delete_buffer,
+                            },
                         },
                     },
                 },
@@ -61,14 +50,14 @@ return {
                     undo = {
                         mappings = {
                             i = {
-                                ["<cr>"] = require("telescope-undo.actions").yank_additions,
-                                ["<C-y>"] = require("telescope-undo.actions").yank_deletions,
-                                ["<C-r>"] = require("telescope-undo.actions").restore,
+                                ["<cr>"] = undo_actions.yank_additions,
+                                ["<C-y>"] = undo_actions.yank_deletions,
+                                ["<C-r>"] = undo_actions.restore,
                             },
                             n = {
-                                ["y"] = require("telescope-undo.actions").yank_additions,
-                                ["Y"] = require("telescope-undo.actions").yank_deletions,
-                                ["u"] = require("telescope-undo.actions").restore,
+                                ["y"] = undo_actions.yank_additions,
+                                ["Y"] = undo_actions.yank_deletions,
+                                ["u"] = undo_actions.restore,
                             },
                         },
                     },
@@ -77,24 +66,18 @@ return {
 
             local builtin = require("telescope.builtin")
 
+            vim.keymap.set("n", "<leader>tf", function()
+                builtin.find_files({ hidden = true, no_ignore = true })
+            end)
+            vim.keymap.set("n", "<leader>tg", builtin.git_files)
             vim.keymap.set("n", "<leader>tb", function()
                 builtin.buffers({ show_all_buffers = true })
             end)
 
-            vim.keymap.set("n", "<leader>to", builtin.command_history)
-            vim.keymap.set("n", "<leader>td", builtin.diagnostics)
-
-            vim.keymap.set("n", "<leader>tf", function()
-                builtin.find_files({ hidden = true, no_ignore = true })
-            end)
-
-            vim.keymap.set("n", "<leader>tg", builtin.git_files)
-
+            vim.keymap.set("n", "<leader>te", builtin.live_grep)
             vim.keymap.set("n", "<leader>ts", function()
                 local gf = require("mjm.global_funcs")
-
                 local pattern = gf.get_user_input("Grep > ")
-
                 if pattern == "" then
                     return
                 end
@@ -102,45 +85,29 @@ return {
                 builtin.grep_string({ search = pattern })
             end)
 
-            vim.keymap.set("n", "<leader>ta", "<cmd>Telescope harpoon marks<cr>")
             vim.keymap.set("n", "<leader>th", builtin.help_tags)
-
             vim.keymap.set("n", "<leader>tl", function()
                 builtin.grep_string({
                     prompt_title = "Help",
                     search = "",
-                    search_dirs = vim.api.nvim_get_runtime_file("doc/*.txt", "all"),
+                    search_dirs = vim.api.nvim_get_runtime_file("doc/*.txt", true),
                     only_sort_text = true,
                 })
             end)
 
             vim.keymap.set("n", "<leader>tt", builtin.highlights)
             vim.keymap.set("n", "<leader>tk", builtin.keymaps)
-            vim.keymap.set("n", "<leader>te", builtin.live_grep)
-            vim.keymap.set("n", "<leader>tw", builtin.lsp_workspace_symbols)
-            vim.keymap.set("n", "<leader>tq", builtin.quickfix)
+
+            vim.keymap.set("n", "<leader>to", builtin.command_history)
             vim.keymap.set("n", "<leader>ti", builtin.registers)
-            vim.keymap.set("n", "<leader>tr", builtin.resume)
+            telescope.load_extension("undo")
             vim.keymap.set("n", "<leader>tu", "<cmd>Telescope undo<cr>")
 
-            local actions = require("telescope.actions")
-            local actions_state = require("telescope.actions.state")
+            vim.keymap.set("n", "<leader>td", builtin.diagnostics)
+            vim.keymap.set("n", "<leader>tw", builtin.lsp_workspace_symbols)
+            vim.keymap.set("n", "<leader>tq", builtin.quickfix)
 
-            vim.keymap.set("n", "<leader>tv", function()
-                builtin.git_commits({
-                    attach_mappings = function(buffer)
-                        actions.select_default:replace(function()
-                            actions.close(buffer)
-
-                            local commit = actions_state.get_selected_entry().value
-                            local cmd_string = "botright Git diff " .. tostring(commit)
-                            vim.api.nvim_exec2(cmd_string, {})
-                        end)
-
-                        return true
-                    end,
-                })
-            end)
+            vim.keymap.set("n", "<leader>tr", builtin.resume)
         end,
     },
 }
