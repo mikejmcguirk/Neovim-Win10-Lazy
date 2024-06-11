@@ -113,6 +113,10 @@ vim.api.nvim_exec2("packadd cfilter", {})
 
 ---@param type string
 local cfilter_wrapper = function(type)
+    if #vim.fn.getqflist() == 0 then
+        print("Quickfix list is empty")
+        return
+    end
     if not check_if_qf_open() then
         print("Quickfix list not open")
         return
@@ -147,6 +151,12 @@ vim.keymap.set("n", "<leader>qr", function()
 end)
 
 local qf_scroll_wrapper = function(scroll_cmd)
+    if #vim.fn.getqflist() == 0 then
+        print("Quickfix list is empty")
+        return
+    end
+    vim.api.nvim_exec2("botright copen", {})
+
     local backup_cmd = nil
     if scroll_cmd == "cprev" then
         backup_cmd = "clast"
@@ -167,16 +177,12 @@ local qf_scroll_wrapper = function(scroll_cmd)
 
     if not result then
         vim.api.nvim_err_writeln("Unknown error")
-        return
-    end
-    if type(result) == "string" and string.find(result, "E553") then
+    elseif type(result) == "string" and string.find(result, "E553") then
         vim.api.nvim_exec2(backup_cmd, {})
         vim.api.nvim_exec2("norm! zz", {})
-        return
-    elseif type(result) == "string" and string.find(result, "E42") then
-        return
+    else
+        vim.api.nvim_err_writeln(result)
     end
-    vim.api.nvim_err_writeln(result)
 end
 
 vim.keymap.set("n", "[q", function()
