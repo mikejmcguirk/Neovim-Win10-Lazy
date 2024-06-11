@@ -76,8 +76,8 @@ return {
 
             vim.keymap.set("n", "<leader>te", builtin.live_grep)
             vim.keymap.set("n", "<leader>ts", function()
-                local gf = require("mjm.global_funcs")
-                local pattern = gf.get_user_input("Grep > ")
+                local ut = require("mjm.utils")
+                local pattern = ut.get_user_input("Grep > ")
                 if pattern == "" then
                     return
                 end

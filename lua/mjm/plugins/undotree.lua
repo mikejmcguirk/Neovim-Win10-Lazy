@@ -13,13 +13,11 @@ return {
             return
         end
 
-        local gf = require("mjm.global_funcs")
         local data_path = nil
-
         if isWin == 1 then
-            data_path = gf.get_home() .. "\\AppData\\Local\\nvim-data\\undodir"
+            data_path = os.getenv("USERPROFILE") .. "\\AppData\\Local\\nvim-data\\undodir"
         elseif isLinux == 1 then
-            data_path = gf.get_home() .. "/.vim/undodir"
+            data_path = os.getenv("HOME") .. "/.vim/undodir"
         end
 
         vim.g.undotree_SetFocusWhenToggle = 1

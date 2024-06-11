@@ -1,3 +1,2 @@
-local gf = require("mjm.global_funcs")
-
-gf.adjust_tab_width(2)
+local ut = require("mjm.utils")
+ut.adjust_tab_width(2)

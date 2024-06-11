@@ -1,4 +1,4 @@
-local gf = require("mjm.global_funcs")
+local ut = require("mjm.utils")
 
 ---@return boolean
 local check_if_qf_open = function()
@@ -27,7 +27,7 @@ vim.opt.grepformat = "%f:%l:%m"
 
 ---@param options table
 local grep_wrapper = function(options)
-    local pattern = gf.get_user_input("Enter Pattern: ")
+    local pattern = ut.get_user_input("Enter Pattern: ")
     if pattern == "" then
         return
     end
@@ -131,7 +131,7 @@ local cfilter_wrapper = function(type)
         return
     end
 
-    local pattern = gf.get_user_input(prompt)
+    local pattern = ut.get_user_input(prompt)
     if pattern == "" then
         return
     end
