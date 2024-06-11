@@ -4,10 +4,8 @@ return {
     init = function()
         if Env_Disable_Copilot == "true" then
             vim.g.copilot_enabled = false
-
             return
         end
-
         if Env_Copilot_Node then
             vim.g.copilot_node_command = Env_Copilot_Node
         else
@@ -17,9 +15,7 @@ return {
         vim.g.copilot_filetypes = {
             text = false,
         }
-
         vim.g.copilot_no_tab_map = true
-
         vim.keymap.set("i", "<C-l>", 'copilot#Accept("")', {
             silent = true,
             expr = true,

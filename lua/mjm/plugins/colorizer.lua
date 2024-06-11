@@ -1,8 +1,8 @@
 return {
-    'NvChad/nvim-colorizer.lua',
+    "NvChad/nvim-colorizer.lua",
     event = { "BufReadPre", "BufNewFile" },
     config = function()
-        require("colorizer").setup {
+        require("colorizer").setup({
             filetypes = { "*" },
             user_default_options = {
                 RGB = true,
@@ -14,18 +14,14 @@ return {
                 hsl_fn = false,
                 css = false,
                 css_fn = false,
-
                 mode = "background",
-
                 tailwind = false,
-
-                sass = { enable = false, parsers = { "css" }, },
+                sass = { enable = false, parsers = { "css" } },
                 virtualtext = "■",
-
-                always_update = false
+                always_update = false,
             },
             buftypes = {},
-        }
+        })
 
         vim.keymap.set("n", "<leader>ot", "<cmd>ColorizerToggle<cr>")
         vim.keymap.set("n", "<leader>oa", "<cmd>ColorizerAttachToBuffer<cr>")
