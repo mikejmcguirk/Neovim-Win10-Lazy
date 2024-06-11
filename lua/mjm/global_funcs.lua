@@ -4,28 +4,25 @@ local M = {}
 ---@return string
 M.get_user_input = function(prompt)
     local pattern = nil
-
     local status, result = pcall(function()
         pattern = vim.fn.input(prompt)
     end)
-
-    if not status then
-        if result then
-            vim.api.nvim_err_writeln(result)
-        else
-            vim.api.nvim_err_writeln("Failed to get user input, unknown error")
+    if status then
+        if pattern == "" or pattern == nil then
+            vim.api.nvim_exec2("echo ''", {})
         end
-
-        return ""
+        return pattern or ""
     end
 
-    if pattern == "" or pattern == nil then
-        vim.api.nvim_exec2("echo ''", {})
-
-        return ""
+    if result == "Keyboard interrupt" then
+        do
+        end
+    elseif result then
+        vim.api.nvim_err_writeln(result)
+    else
+        vim.api.nvim_err_writeln("Failed to get user input, unknown error")
     end
-
-    return pattern
+    return ""
 end
 
 ---@param width number
