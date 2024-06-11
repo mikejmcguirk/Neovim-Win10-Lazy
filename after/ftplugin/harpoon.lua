@@ -1,4 +1,6 @@
-local harpoon_map = "<cmd>lua require('harpoon.ui').toggle_quick_menu()<CR>"
-vim.keymap.set("n", "<C-c>", harpoon_map, { silent = true, buffer = true })
+local harpoon = require("harpoon")
 
-vim.opt_local.colorcolumn = ""
+vim.keymap.set("n", "<C-c>", function()
+    harpoon.ui:close_menu()
+end, { buffer = true })
+vim.keymap.set("n", "a", "<nop>", { buffer = true })
