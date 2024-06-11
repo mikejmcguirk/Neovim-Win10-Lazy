@@ -45,17 +45,17 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
             return
         end
 
-        local expandtab = vim.api.nvim_buf_get_option(buf, "expandtab")
-        local shiftwidth = vim.api.nvim_buf_get_option(buf, "shiftwidth")
+        local expandtab = vim.api.nvim_get_option_value("expandtab", { buf = buf })
+        local shiftwidth = vim.api.nvim_get_option_value("shiftwidth", { buf = buf })
 
         if shiftwidth == 0 then
-            shiftwidth = vim.api.nvim_buf_get_option(buf, "tabstop")
+            shiftwidth = vim.api.nvim_get_option_value("tabstop", { buf = buf })
         else
-            vim.api.nvim_buf_set_option(buf, "tabstop", shiftwidth)
+            vim.api.nvim_set_option_value("tabstop", shiftwidth, { buf = buf })
         end
 
         if expandtab then
-            vim.api.nvim_buf_set_option(buf, "softtabstop", shiftwidth)
+            vim.api.nvim_set_option_value("softtabstop", shiftwidth, { buf = buf })
             vim.api.nvim_exec2(buf .. "bufdo retab", {})
         end
 

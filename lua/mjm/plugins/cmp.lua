@@ -10,7 +10,7 @@ local cmp_config = function()
             local in_ts_capture_comment = context.in_treesitter_capture("comment")
             local in_comment_syntax = context.in_syntax_group("Comment")
             local is_comment = in_ts_capture_comment or in_comment_syntax
-            local is_prompt = vim.api.nvim_buf_get_option(0, "buftype") == "prompt"
+            local is_prompt = vim.api.nvim_get_option_value("buftype", { buf = 0 }) == "prompt"
 
             if is_prompt or is_comment then
                 return false

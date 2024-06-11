@@ -2,7 +2,7 @@ local M = {}
 
 ---@return boolean
 M.check_modifiable = function()
-    if vim.api.nvim_buf_get_option(0, "modifiable") then
+    if vim.api.nvim_get_option_value("modifiable", { buf = 0 }) then
         return true
     end
 
@@ -32,15 +32,12 @@ M.rest_view = function(map, options)
         return
     end
 
-    local orig_row, orig_col = unpack(vim.api.nvim_win_get_cursor(0))
-    vim.api.nvim_buf_set_mark(0, "z", orig_row, orig_col, {})
     local cur_view = vim.fn.winsaveview()
 
     local status, result = pcall(function()
         vim.api.nvim_exec2("silent norm! " .. map, {})
     end)
 
-    vim.api.nvim_exec2("norm! `z", {})
     vim.fn.winrestview(cur_view)
 
     if not status then
