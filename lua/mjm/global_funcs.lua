@@ -7,11 +7,9 @@ M.get_user_input = function(prompt)
     local status, result = pcall(function()
         pattern = vim.fn.input(prompt)
     end)
-    if status then
-        if pattern == "" or pattern == nil then
-            vim.api.nvim_exec2("echo ''", {})
-        end
-        return pattern or ""
+    vim.api.nvim_exec2("echo ''", {})
+    if pattern then
+        return pattern
     end
 
     if result == "Keyboard interrupt" then

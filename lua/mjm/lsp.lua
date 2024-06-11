@@ -1,3 +1,5 @@
+local gf = require("mjm.global_funcs")
+
 vim.keymap.set("n", "[D", function()
     vim.diagnostic.goto_prev({ severity = "ERROR" })
 end)
@@ -51,13 +53,10 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end, { buffer = ev.buf })
 
         vim.keymap.set("n", "<leader>vr", function()
-            vim.ui.input({ prompt = "Rename: " }, function(input)
-                if input and #input > 0 then
-                    vim.lsp.buf.rename(input)
-                end
-
-                vim.api.nvim_exec2("echo ''", {})
-            end)
+            local input = gf.get_user_input("Rename: ")
+            if #input > 0 then
+                vim.lsp.buf.rename(input)
+            end
         end, { buffer = ev.buf })
         vim.keymap.set({ "n", "v" }, "<leader>vc", vim.lsp.buf.code_action, { buffer = ev.buf })
     end,
