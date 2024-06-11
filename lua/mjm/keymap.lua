@@ -27,7 +27,6 @@ local write_boilerplate = function(cmd, error)
     local status, result = pcall(function()
         vim.api.nvim_exec2(cmd, {})
     end)
-
     if status then
         return
     end
@@ -37,22 +36,18 @@ local write_boilerplate = function(cmd, error)
 
         return
     end
-
     vim.api.nvim_err_writeln(error)
 end
 
 vim.keymap.set("n", "ZV", function()
     write_boilerplate("silent w", "Unknown error saving file")
 end)
-
 vim.keymap.set("n", "ZA", function()
     write_boilerplate("silent wa", "Unknown error saving file(s)")
 end)
-
 vim.keymap.set("n", "ZX", function()
     write_boilerplate("silent w | so", "Unknown error")
 end)
-
 vim.keymap.set("n", "ZZ", "<Nop>")
 vim.keymap.set("n", "ZQ", "<Nop>")
 
@@ -81,7 +76,6 @@ end
 vim.keymap.set("n", "/", function()
     search_with_mark("/")
 end, { silent = true })
-
 vim.keymap.set("n", "?", function()
     search_with_mark("?")
 end, { silent = true })
@@ -236,7 +230,6 @@ vim.keymap.set("n", "<leader>yY", 'mzgg"+yG`z', { silent = true })
 vim.keymap.set({ "n", "v" }, "<leader>yd", '"+d', { silent = true })
 
 local startline_objects = { "0", "_", "g^", "g0" }
-
 for _, obj in pairs(startline_objects) do
     vim.keymap.set("n", "y" .. obj, "mzv" .. obj .. "y", { silent = true })
     vim.keymap.set("n", "<leader>y" .. obj, "mzv" .. obj .. '"+y', { silent = true })
@@ -266,15 +259,12 @@ vim.keymap.set("n", "<leader>gP", '"+gP', { silent = true })
 vim.keymap.set("v", "p", function()
     return km.visual_paste("P")
 end, { silent = true, expr = true })
-
 vim.keymap.set("v", "P", function()
     return km.visual_paste("p")
 end, { silent = true, expr = true })
-
 vim.keymap.set("v", "<leader>p", function()
     return km.visual_paste('"+P')
 end, { silent = true, expr = true })
-
 vim.keymap.set("v", "<leader>P", function()
     return km.visual_paste('"+p')
 end, { silent = true, expr = true })
@@ -329,13 +319,11 @@ vim.keymap.set("n", "<leader>=", function()
 
     if trailing_whitespace then
         local last_non_blank, _ = rem_line:find("(%S)%s*$")
-
         if last_non_blank == nil then
             last_non_blank = 1
         end
 
         local set_col = nil
-
         if last_non_blank >= 1 then
             set_col = last_non_blank - 1
         else
