@@ -1,9 +1,7 @@
 local M = {}
 
 ---@return boolean
-local find_pairs = function()
-    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
-
+local find_pairs = function(cur_row, cur_col)
     if cur_col == 0 then
         return false
     end
@@ -212,6 +210,66 @@ local backspace_blank_line = function(options)
     vim.api.nvim_win_set_cursor(0, { dest_row, indent })
 end
 
+local fix_indent = function()
+    local cur_line = vim.api.nvim_get_current_line()
+    print(cur_line)
+    local start_idx, end_idx = string.find(cur_line, "%S")
+    if not start_idx then
+        return
+    end
+    local cur_row = vim.api.nvim_win_get_cursor(0)[1]
+    local indent = get_indent(cur_row)
+    local whitespace = start_idx - 1
+    if whitespace < indent then
+        local to_add = string.rep(" ", indent - whitespace)
+        local edit_row = cur_row - 1
+        print(start_idx)
+        -- local first_char = cur_line[start_idx]
+        vim.api.nvim_buf_set_text(0, edit_row, 0, edit_row, 0, { to_add })
+    end
+end
+
+local adjust_in_blank = function(options, start_idx, start_row)
+    local whitespace = start_idx - 1
+    local indent = get_indent(start_row)
+    local within_indent = whitespace <= indent
+    local shiftwidth = vim.fn.shiftwidth()
+    local edit_row = start_row - 1
+    local opts = vim.deepcopy(options or {})
+    if (not opts.allow_blank and within_indent) or (whitespace <= shiftwidth) then
+        vim.api.nvim_buf_set_text(0, edit_row, 0, edit_row, whitespace, { "" })
+
+        if not opts.allow_blank then
+            local key = vim.api.nvim_replace_termcodes("<backspace>", true, false, true)
+            vim.api.nvim_feedkeys(key, "n", false)
+            local insert_key = vim.api.nvim_replace_termcodes("<C-g>u", true, false, true)
+            vim.api.nvim_feedkeys(insert_key, "n", false)
+            local prev_line = vim.api.nvim_buf_get_lines(0, edit_row - 1, edit_row, false)
+            --
+            -- if string.match(prev_line[1], "^%s*$") then
+            --     fix_indent()
+            -- end
+        end
+        return
+    end
+
+    if not opts.allow_blank then
+        local over_indent = whitespace - indent
+        vim.api.nvim_buf_set_text(0, edit_row, 0, edit_row, over_indent, { "" })
+        return
+    end
+
+    vim.api.nvim_win_set_cursor(0, { start_row, start_idx - 1 })
+    local extra_spaces = whitespace % shiftwidth
+    local to_remove = nil
+    if extra_spaces == 0 then
+        to_remove = shiftwidth
+    else
+        to_remove = extra_spaces
+    end
+    vim.api.nvim_buf_set_text(0, edit_row, 0, edit_row, to_remove, { "" })
+end
+
 ---@return nil
 M.insert_backspace_fix = function(options)
     local cur_line = vim.api.nvim_get_current_line()
@@ -221,9 +279,15 @@ M.insert_backspace_fix = function(options)
         return
     end
 
+    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
+    if start_idx > 2 and cur_col < start_idx then
+        adjust_in_blank(options, start_idx, cur_row)
+        return
+    end
+
     -- windp/autopairs creates its own backspace mapping if map_bs is enabled
     -- Since map_bs must be disabled there, check for pairs here
-    if find_pairs() then
+    if find_pairs(cur_row, cur_col) then
         return
     end
 

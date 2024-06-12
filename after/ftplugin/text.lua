@@ -24,10 +24,19 @@ vim.keymap.set("i", "<backspace>", function()
     end
 
     local whitespace = start_idx - 1
-    local shiftwidth = vim.fn.shiftwidth()
     local edit_row = start_row - 1
-    if whitespace < shiftwidth then
+    if whitespace == 0 then
         vim.api.nvim_buf_set_text(0, edit_row, 0, edit_row, #cur_line, { "" })
+        return
+    end
+
+    local shiftwidth = vim.fn.shiftwidth()
+    if whitespace <= shiftwidth then
+        vim.api.nvim_buf_set_text(0, edit_row, 0, edit_row, whitespace, { "" })
+        if string.len(first_two) == 2 and start_col == start_idx then
+            local key = vim.api.nvim_replace_termcodes("<right>", true, false, true)
+            vim.api.nvim_feedkeys(key, "n", false)
+        end
         return
     end
 
