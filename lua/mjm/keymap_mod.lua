@@ -163,6 +163,18 @@ local backspace_blank_line = function(options)
     end
 
     vim.api.nvim_del_current_line()
+    -- This is a hack meant to address the following scenario:
+    --      - Enter insert mode on line 2
+    --      - Backspace enough to delete it and move to line 1
+    --      - Press backspace again on line 1 some number of times
+    --      - Leave insert mode
+    --      - Undo previous changes
+    --      - The backspaces on line 2 will be undone, but the ones on line 1 will remain
+    -- I think this happens because running nvim_del_current_line in insert mode does not
+    -- update the line numberg tracking properly for the undo history
+    -- Closing and reopening the undo sequence prevents this from occurring
+    local insert_key = vim.api.nvim_replace_termcodes("<C-g>u", true, false, true)
+    vim.api.nvim_feedkeys(insert_key, "n", false)
 
     local cur_row = vim.fn.line(".")
 
@@ -189,7 +201,6 @@ local backspace_blank_line = function(options)
 
     if dest_col > 0 and last_non_blank ~= nil then
         local trailing_whitespace = string.match(dest_line, "%s+$")
-
         if trailing_whitespace then
             vim.api.nvim_buf_set_text(0, set_row, last_non_blank, set_row, dest_col, { "" })
 
@@ -198,7 +209,6 @@ local backspace_blank_line = function(options)
         end
 
         vim.api.nvim_win_set_cursor(0, { dest_row, dest_col })
-
         return
     end
 
@@ -217,7 +227,6 @@ end
 M.insert_backspace_fix = function(options)
     if string.match(vim.api.nvim_get_current_line(), "^%s*$") then
         backspace_blank_line(options)
-
         return
     end
 
@@ -228,7 +237,7 @@ M.insert_backspace_fix = function(options)
     end
 
     local key = vim.api.nvim_replace_termcodes("<backspace>", true, false, true)
-    vim.api.nvim_feedkeys(key, "n", true)
+    vim.api.nvim_feedkeys(key, "n", false)
 end
 
 ---@param paste_char string

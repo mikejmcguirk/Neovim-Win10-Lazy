@@ -1,5 +1,6 @@
 function! TextIndent()
     let line_num = line(".")
+
     let prev_nonblank = prevnonblank(line_num - 1)
     let prev_nonblank_indent = indent(prev_nonblank)
 
