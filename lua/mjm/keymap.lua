@@ -1,5 +1,14 @@
 local km = require("mjm.keymap_mod")
 
+---@return boolean
+local check_modifiable = function()
+    if vim.api.nvim_get_option_value("modifiable", { buf = 0 }) then
+        return true
+    end
+    vim.api.nvim_err_writeln("E21: Cannot make changes, 'modifiable' is off")
+    return false
+end
+
 -- Mapped in normal mode so that <C-c> will exit the start of commands with a count
 -- (This also gets rid of a command line nag)
 -- Mapping in command mode will cause <C-c> to accept commands
@@ -256,23 +265,39 @@ end
 vim.keymap.set("n", "<leader>gp", '"+gp', { silent = true })
 vim.keymap.set("n", "<leader>gP", '"+gP', { silent = true })
 
+---@param paste_char string
+---@return string
+local visual_paste = function(paste_char)
+    if not check_modifiable() then
+        return "<Nop>"
+    end
+
+    local cur_mode = vim.api.nvim_get_mode().mode
+    local count = vim.v.count1
+    if cur_mode == "V" or cur_mode == "Vs" then
+        return count .. paste_char .. "=`]"
+    else
+        return "mz" .. count .. paste_char .. "`z"
+    end
+end
+
 vim.keymap.set("v", "p", function()
-    return km.visual_paste("P")
+    return visual_paste("P")
 end, { silent = true, expr = true })
 vim.keymap.set("v", "P", function()
-    return km.visual_paste("p")
+    return visual_paste("p")
 end, { silent = true, expr = true })
 vim.keymap.set("v", "<leader>p", function()
-    return km.visual_paste('"+P')
+    return visual_paste('"+P')
 end, { silent = true, expr = true })
 vim.keymap.set("v", "<leader>P", function()
-    return km.visual_paste('"+p')
+    return visual_paste('"+p')
 end, { silent = true, expr = true })
 
 ---@param put_cmd string
 ---@return nil
 local create_blank_line = function(put_cmd)
-    if not km.check_modifiable() then
+    if not check_modifiable() then
         return
     end
 
@@ -297,16 +322,78 @@ vim.keymap.set({ "n", "v" }, "][", "<Nop>")
 vim.keymap.set({ "n", "v" }, "[/", "<Nop>")
 vim.keymap.set({ "n", "v" }, "]/", "<Nop>")
 
-vim.keymap.set("v", "J", function()
-    km.visual_move(vim.v.count1, "d")
-end, { silent = true })
+---@param vcount1 number
+---@param direction string
+---@return nil
+local visual_move = function(vcount1, direction)
+    if not check_modifiable() then
+        return
+    end
 
+    local pos_1 = nil
+    local pos_2 = nil
+    local fix_num = nil
+    local cmd_start = nil
+    if direction == "d" then
+        pos_1 = "'>"
+        pos_2 = "."
+        fix_num = 0
+        cmd_start = "'<,'> m '>+"
+    elseif direction == "u" then
+        pos_1 = "."
+        pos_2 = "'<"
+        fix_num = 1
+        cmd_start = "'<,'> m '<-"
+    else
+        vim.api.nvim_err_writeln("Invalid direction")
+        return
+    end
+
+    -- Leave visual mode to update '< and '>
+    -- vim.v.count1 is updated when we do this, which is why it was passed as a parameter
+    vim.api.nvim_exec2('exec "silent norm! \\<esc>"', {})
+    local min_count = 1
+    local to_move = nil
+    if vcount1 <= min_count then
+        to_move = min_count + fix_num
+    else
+        -- Offset calculated so that jumps based on rnu are correct
+        local offset = vim.fn.line(pos_1) - vim.fn.line(pos_2)
+        to_move = vcount1 - offset + fix_num
+    end
+    local move_cmd = "silent " .. cmd_start .. to_move
+
+    local status, result = pcall(function()
+        vim.api.nvim_exec2(move_cmd, {})
+    end)
+
+    if not status then
+        if result then
+            vim.api.nvim_err_writeln(result)
+        else
+            vim.api.nvim_err_writeln("Unknown error in visual_move")
+        end
+        vim.api.nvim_exec2("norm! gv", {})
+        return
+    end
+
+    local end_row = vim.api.nvim_buf_get_mark(0, "]")[1]
+    local end_col = #vim.api.nvim_buf_get_lines(0, end_row - 1, end_row, false)[1]
+    vim.api.nvim_buf_set_mark(0, "z", end_row, end_col, {})
+    vim.api.nvim_exec2("silent norm! `[", {})
+    vim.api.nvim_exec2("silent norm! =`z", {})
+    vim.api.nvim_exec2("silent norm! gv", {})
+end
+
+vim.keymap.set("v", "J", function()
+    visual_move(vim.v.count1, "d")
+end, { silent = true })
 vim.keymap.set("v", "K", function()
-    km.visual_move(vim.v.count1, "u")
+    visual_move(vim.v.count1, "u")
 end, { silent = true })
 
 vim.keymap.set("n", "<leader>=", function()
-    if not km.check_modifiable() then
+    if not check_modifiable() then
         return
     end
 
