@@ -1,4 +1,4 @@
-local km = require("mjm.keymap_mod")
+local bp = require("mjm.backplacer")
 
 ---@return boolean
 local check_modifiable = function()
@@ -121,7 +121,7 @@ for _, map in pairs({ "i", "a", "A" }) do
 end
 
 vim.keymap.set("i", "<backspace>", function()
-    km.insert_backspace_fix()
+    bp.insert_backspace_fix()
 end, { silent = true })
 
 vim.keymap.set("i", ",", ",<C-g>u", { silent = true })

@@ -1,4 +1,4 @@
-local km = require("mjm.keymap_mod")
+local bp = require("mjm.backplacer")
 vim.keymap.set("i", "<backspace>", function()
-    km.insert_backspace_fix({ allow_blank = true })
+    bp.insert_backspace_fix({ allow_blank = true })
 end, { silent = true, buffer = true })

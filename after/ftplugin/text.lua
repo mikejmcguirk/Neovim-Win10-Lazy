@@ -3,12 +3,12 @@ vim.opt_local.spell = true
 vim.opt_local.colorcolumn = ""
 vim.opt_local.sidescrolloff = 12
 
-local km = require("mjm.keymap_mod")
+local bp = require("mjm.backplacer")
 vim.keymap.set("i", "<backspace>", function()
     local cur_line = vim.api.nvim_get_current_line()
     local start_idx, end_idx = string.find(cur_line, "%S")
     if not start_idx then
-        km.insert_backspace_fix({ allow_blank = true })
+        bp.insert_backspace_fix({ allow_blank = true })
         return
     end
 
@@ -19,7 +19,7 @@ vim.keymap.set("i", "<backspace>", function()
     local beginning_case = start_idx == 1
     local on_or_after = (start_col >= start_idx) or beginning_case
     if not (is_list and is_at_end and on_or_after) then
-        km.insert_backspace_fix({ allow_blank = true })
+        bp.insert_backspace_fix({ allow_blank = true })
         return
     end
 
