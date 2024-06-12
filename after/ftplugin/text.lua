@@ -8,19 +8,16 @@ vim.keymap.set("i", "<backspace>", function()
     local cur_line = vim.api.nvim_get_current_line()
     local start_idx, end_idx = string.find(cur_line, "%S")
     if not start_idx then
-        print("whitespace")
         km.insert_backspace_fix({ allow_blank = true })
         return
     end
     local first_char = string.sub(cur_line, start_idx, end_idx)
     if first_char ~= "-" then
-        print("not bullet")
         km.insert_backspace_fix({ allow_blank = true })
         return
     end
     local first_two = string.sub(cur_line, start_idx, end_idx + 1)
     if not (first_two == "- " or #cur_line == end_idx) then
-        print("bullet with text")
         km.insert_backspace_fix({ allow_blank = true })
         return
     end
@@ -30,7 +27,6 @@ vim.keymap.set("i", "<backspace>", function()
     local start_row, start_col = unpack(vim.api.nvim_win_get_cursor(0))
     local edit_row = start_row - 1
     if whitespace < shiftwidth then
-        print(#cur_line - 1)
         vim.api.nvim_buf_set_text(0, edit_row, 0, edit_row, #cur_line, { "" })
         return
     end
@@ -89,7 +85,6 @@ vim.keymap.set("i", "<tab>", function()
     end
 
     local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
-    print(cur_col, start_idx)
     if cur_col == start_idx then
         return "<left><tab><right><right>"
     end
