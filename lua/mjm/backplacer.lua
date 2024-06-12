@@ -214,7 +214,9 @@ end
 
 ---@return nil
 M.insert_backspace_fix = function(options)
-    if string.match(vim.api.nvim_get_current_line(), "^%s*$") then
+    local cur_line = vim.api.nvim_get_current_line()
+    local start_idx, end_idx = string.find(cur_line, "%S")
+    if not start_idx then
         backspace_blank_line(options)
         return
     end
