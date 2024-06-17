@@ -1,10 +1,15 @@
+local bp = require("mjm.backplacer")
+
 vim.opt_local.wrap = true
 vim.opt_local.spell = true
 vim.opt_local.colorcolumn = ""
 vim.opt_local.sidescrolloff = 12
 
-local bp = require("mjm.backplacer")
 vim.keymap.set("i", "<backspace>", function()
+    -- Add case where there is text after the bullet but you are on or right after the bullet
+    -- This should push the bullet back
+    -- shouldn't we also be able to handle the case where we have extra spaces after the bullet
+    -- Should just be able to hit <bs> once to remove them
     local cur_line = vim.api.nvim_get_current_line()
     local start_idx, end_idx = string.find(cur_line, "%S")
     if not start_idx then
@@ -13,19 +18,27 @@ vim.keymap.set("i", "<backspace>", function()
     end
 
     local first_two = string.sub(cur_line, start_idx, end_idx + 1)
-    local start_row, start_col = unpack(vim.api.nvim_win_get_cursor(0))
     local is_list = first_two == "- " or first_two == "-"
+    if not is_list then
+        bp.insert_backspace_fix({ allow_blank = true })
+        return
+    end
+
+    local start_row, start_col = unpack(vim.api.nvim_win_get_cursor(0))
+    if start_col < start_idx and start_idx > 1 then
+        bp.insert_backspace_fix({ allow_blank = true })
+        return
+    end
+
     local is_at_end = #cur_line == end_idx or #cur_line == end_idx + 1
-    local beginning_case = start_idx == 1
-    local on_or_after = (start_col >= start_idx) or beginning_case
-    if not (is_list and is_at_end and on_or_after) then
+    if not is_at_end then
         bp.insert_backspace_fix({ allow_blank = true })
         return
     end
 
     local whitespace = start_idx - 1
     local edit_row = start_row - 1
-    if whitespace == 0 then
+    if whitespace and is_at_end == 0 then
         vim.api.nvim_buf_set_text(0, edit_row, 0, edit_row, #cur_line, { "" })
         return
     end
@@ -61,6 +74,11 @@ vim.keymap.set("i", "<backspace>", function()
 end, { silent = true, buffer = true })
 
 vim.keymap.set("i", "<cr>", function()
+    -- Add case where there is text after the bullet but you are on or right after the bullet
+    -- This should return to the next line and remove the bullet
+    -- Or maybe not because there's not a good way to handle inserting a bullet between
+    -- two lines that are already bulleted
+    -- Or I don't know maybe the it's fine
     local cur_line = vim.api.nvim_get_current_line()
     local start_idx, end_idx = string.find(cur_line, "%S")
     if not start_idx then

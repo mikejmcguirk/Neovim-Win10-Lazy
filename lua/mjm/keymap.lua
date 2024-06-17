@@ -368,7 +368,10 @@ local visual_move = function(vcount1, direction)
     end)
 
     if not status then
-        if result then
+        if type(result) == "string" and string.find(result, "E16") and vcount1 <= 1 then
+            do
+            end
+        elseif result then
             vim.api.nvim_err_writeln(result)
         else
             vim.api.nvim_err_writeln("Unknown error in visual_move")
