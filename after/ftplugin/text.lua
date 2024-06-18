@@ -35,16 +35,12 @@ vim.keymap.set("i", "<backspace>", function()
         return
     end
 
-    -- Avoid edge case where there is no leading whitespace and you backspace twice into
-    -- the previous line
-    if start_col == 0 then
+    local whitespace = start_idx - 1
+    if start_col == 0 and whitespace == 0 then
         bp.insert_backspace_fix({ allow_blank = true })
         return
     end
 
-    -- These feedkeys are not theoretically necessary in cases where leading whitespace is zero
-    -- However, by doing them anyway, we avoid creating special logic to handle one case
-    -- And I see no performance issue with the extra feedkey
     if start_col == start_idx and (not second_one or second_one ~= " ") then
         local key = vim.api.nvim_replace_termcodes("<space>", true, false, true)
         vim.api.nvim_feedkeys(key, "n", false)
@@ -53,14 +49,13 @@ vim.keymap.set("i", "<backspace>", function()
         vim.api.nvim_feedkeys(key, "n", false)
     end
 
-    local whitespace = start_idx - 1
-    local shiftwidth = vim.fn.shiftwidth()
     if whitespace == 0 then
         local key = vim.api.nvim_replace_termcodes("<bs><bs>", true, false, true)
         vim.api.nvim_feedkeys(key, "n", false)
         return
     end
 
+    local shiftwidth = vim.fn.shiftwidth()
     if whitespace <= shiftwidth then
         vim.api.nvim_buf_set_text(0, edit_row, 0, edit_row, whitespace, { "" })
         return
@@ -77,18 +72,13 @@ vim.keymap.set("i", "<backspace>", function()
 end, { silent = true, buffer = true })
 
 vim.keymap.set("i", "<cr>", function()
-    -- Add case where there is text after the bullet but you are on or right after the bullet
-    -- This should return to the next line and remove the bullet
-    -- Or maybe not because there's not a good way to handle inserting a bullet between
-    -- two lines that are already bulleted
-    -- Or I don't know maybe the it's fine
     local cur_line = vim.api.nvim_get_current_line()
     local start_idx, end_idx = string.find(cur_line, "%S")
     if not start_idx then
         return "<cr>"
     end
 
-    local first_two = string.sub(cur_line, start_idx, end_idx + 1)
+    local first_two = string.sub(cur_line, start_idx, start_idx + 1)
     if first_two == "-" then
         return "<bs><cr>"
     end
@@ -109,7 +99,7 @@ vim.keymap.set("i", "<tab>", function()
         return "<tab>"
     end
 
-    local first_two = string.sub(cur_line, start_idx, end_idx + 1)
+    local first_two = string.sub(cur_line, start_idx, start_idx + 1)
     if first_two == "-" then
         return "<space>"
     end
