@@ -5,18 +5,11 @@ return {
         config = function()
             require("conform").setup({
                 formatters_by_ft = {
-                    cs = { "csharpier" },
-                    css = { "prettier" },
-                    html = { "prettier" },
-                    javascript = { "eslint_d", "prettier" },
-                    json = { "prettier" },
                     lua = { "stylua" },
                     markdown = { "prettier" },
                     python = { "ruff_format", "isort" },
-                    rust = { "rustfmt" },
                     sh = { "beautysh" },
                     toml = { "taplo" },
-                    typescript = { "prettier" },
                 },
             })
         end,
