@@ -1,12 +1,10 @@
 local M = {}
 
 ---@return boolean
-local find_pairs = function(cur_row, cur_col)
+local find_pairs = function(cur_row, cur_col, cur_line)
     if cur_col == 0 then
         return false
     end
-
-    local cur_line = vim.api.nvim_get_current_line()
     local cur_char = cur_line:sub(cur_col, cur_col)
 
     local pairs = {
@@ -18,7 +16,6 @@ local find_pairs = function(cur_row, cur_col)
         { '"', '"' },
         { "`", "`" },
     }
-
     local check_pairs = function(char, to_find, to_return)
         for _, pair in ipairs(pairs) do
             if pair[to_find] == char then
@@ -28,9 +25,8 @@ local find_pairs = function(cur_row, cur_col)
 
         return nil
     end
-
-    -- Check if we are in a pair
     local close_char = check_pairs(cur_char, 1, 2)
+
     local next_col = cur_col + 1
     local next_char = cur_line:sub(next_col, next_col)
 
@@ -287,7 +283,7 @@ M.insert_backspace_fix = function(options)
 
     -- windp/autopairs creates its own backspace mapping if map_bs is enabled
     -- Since map_bs must be disabled there, check for pairs here
-    if find_pairs(cur_row, cur_col) then
+    if find_pairs(cur_row, cur_col, cur_line) then
         return
     end
 
