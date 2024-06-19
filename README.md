@@ -4,7 +4,6 @@
   - [Notes](#notes)
   - [Git Installation Notes](#git-installation-notes)
   - [Visual Studio Build Utils (Windows Specific)](#visual-studio-build-utils-windows-specific)
-    - [Node Installation for JavaScript and Copilot (Windows Specific)](#node-installation-for-javascript-and-copilot-windows-specific)
     - [Lua Language Server](#lua-language-server)
     - [pylsp (Windows Specific)](#pylsp-windows-specific)
     - [Marksman](#marksman)
@@ -37,14 +36,6 @@
   - In the Visual Studio installer, click "Desktop development with C++". In the right pane of the installer, you should see MSVC, the Windows SDK, and C++ CMake Tools selected for install
 
   - Click the "Install" button
-
-##### Node Installation for JavaScript and Copilot (Windows Specific)
-
-- For this config, create an environment variable called <code>NvimCopilotNode</code> containing the fully-qualified name of the Copilot node.exe file
-
-  - If this is not set, Copilot will look for the default Node path if it exists. Versions above what's specified in the Copilot readme are not guaranteed to be supported
-
-- For this config, Copilot can be disabled by creating an environment variable called <code>DisableCopilot</code> and setting it to <code>true</code>
 
 ##### Lua Language Server
 

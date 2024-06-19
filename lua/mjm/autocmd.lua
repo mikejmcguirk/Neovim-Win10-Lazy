@@ -1,5 +1,5 @@
 vim.api.nvim_create_autocmd("TextYankPost", {
-    group = vim.api.nvim_create_augroup("HighlightYank", { clear = true }),
+    group = vim.api.nvim_create_augroup("yank_aesthetic", { clear = true }),
     pattern = "*",
     callback = function()
         vim.highlight.on_yank({

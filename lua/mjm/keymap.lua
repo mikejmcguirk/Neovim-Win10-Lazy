@@ -217,16 +217,16 @@ vim.api.nvim_create_autocmd("TextYankPost", {
     callback = function()
         if vim.v.event.operator ~= "y" then
             return
+        else
+            vim.api.nvim_exec2("norm! `z", {})
         end
-
-        vim.api.nvim_exec2("norm! `z", {})
     end,
 })
 
 vim.keymap.set({ "n", "v" }, "y", "mzy", { silent = true })
 vim.keymap.set({ "n", "v" }, "<leader>y", 'mz"+y', { silent = true })
 
-vim.keymap.set("n", "Y", "mzy$", { silent = true }) -- Avoid inconsistent behavior
+vim.keymap.set("n", "Y", "mzy$", { silent = true })           -- Avoid inconsistent behavior
 vim.keymap.set("n", "<leader>Y", 'mz"+y$', { silent = true }) -- Mapping to "+Y yanks whole line
 vim.keymap.set("v", "Y", "<nop>", { silent = true })
 
@@ -251,9 +251,9 @@ for _, obj in pairs(startline_objects) do
 end
 
 local norm_pastes = {
-    { "p", "p" },
+    { "p",         "p" },
     { "<leader>p", '"+p' },
-    { "P", "P" },
+    { "P",         "P" },
     { "<leader>P", '"+P' },
 }
 for _, map in pairs(norm_pastes) do
@@ -454,7 +454,7 @@ vim.keymap.set("n", "gllW", function()
     vim.api.nvim_exec2("norm! `z", {})
 end, { silent = true })
 
-vim.opt.mouse = "a" -- Otherwise, the terminal handles mouse functionality
+vim.opt.mouse = "a"           -- Otherwise, the terminal handles mouse functionality
 vim.opt.mousemodel = "extend" -- Disables terminal right-click paste
 
 local mouse_maps = {
