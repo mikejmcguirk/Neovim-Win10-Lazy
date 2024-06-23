@@ -265,7 +265,7 @@ M.insert_backspace_fix = function(options)
     local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
     local start_idx, end_idx = string.find(cur_line, "%S")
     if not start_idx then
-        backspace_blank_line(cur_row, cur, col, options)
+        backspace_blank_line(cur_row, cur_col, options)
         return
     end
 
