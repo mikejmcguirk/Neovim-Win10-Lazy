@@ -47,8 +47,8 @@ return {
                         ["i,"] = "@parameter.inner",
                         ["af"] = "@function.outer",
                         ["if"] = "@function.inner",
-                        ["ao"] = "@comment.outer",
-                        ["io"] = "@comment.inner",
+                        ["ac"] = "@comment.outer",
+                        ["ic"] = "@comment.inner",
                     },
                 },
                 move = {

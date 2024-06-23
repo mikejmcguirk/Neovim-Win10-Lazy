@@ -1,6 +1,10 @@
 return {
     "unblevable/quick-scope",
     event = { "BufReadPre", "BufNewFile" },
+    init = function()
+        vim.g.qs_highlight_on_keys = { "f", "F", "t", "T" }
+        vim.g.qs_max_chars = 9999
+    end,
     config = function()
         if Env_Theme == "blue" then
             vim.api.nvim_set_hl(
@@ -27,9 +31,5 @@ return {
                 ctermfg = 0,
             })
         end
-    end,
-    init = function()
-        vim.g.qs_highlight_on_keys = { "f", "F", "t", "T" }
-        vim.g.qs_max_chars = 9999
     end,
 }
