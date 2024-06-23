@@ -19,7 +19,6 @@ vim.keymap.set("v", "q", "<Nop>", { silent = true })
 vim.keymap.set("n", "Q", "<nop>")
 vim.keymap.set("n", "gQ", "<nop>")
 vim.keymap.set({ "n", "v" }, "<C-z>", "<nop>")
-vim.keymap.set({ "n", "v" }, "<C-z>", "<nop>")
 
 vim.keymap.set("n", "<esc>", function()
     vim.api.nvim_exec2("echo ''", {})
@@ -65,7 +64,6 @@ vim.keymap.set("n", "ZQ", "<Nop>")
 vim.keymap.set("n", "u", function()
     vim.api.nvim_exec2("silent norm! " .. vim.v.count1 .. "u", {})
 end, { silent = true })
-
 vim.keymap.set("n", "<C-r>", function()
     vim.api.nvim_exec2('silent exec "norm! ' .. vim.v.count1 .. '\\<C-r>"', {})
 end, { silent = true })
@@ -106,7 +104,6 @@ vim.keymap.set("n", "<M-l>", "<cmd>vertical resize +2<CR>", { silent = true })
 
 vim.keymap.set({ "n", "v" }, "<C-u>", "<C-u>zz", { silent = true })
 vim.keymap.set({ "n", "v" }, "<C-d>", "<C-d>zz", { silent = true })
-
 vim.keymap.set({ "n", "v" }, "n", "nzzzv", { silent = true })
 vim.keymap.set({ "n", "v" }, "N", "Nzzzv", { silent = true })
 
@@ -160,7 +157,6 @@ local cap_motions_norm = {
     "g~iw",
     "g~IW",
 }
-
 for _, map in pairs(cap_motions_norm) do
     vim.keymap.set("n", map, function()
         return "mz" .. vim.v.count1 .. map .. "`z"
@@ -173,7 +169,6 @@ local cap_motions_vis = {
     "gu",
     "gU",
 }
-
 for _, map in pairs(cap_motions_vis) do
     vim.keymap.set("v", map, function()
         return "mz" .. vim.v.count1 .. map .. "`z"
@@ -226,7 +221,7 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 vim.keymap.set({ "n", "v" }, "y", "mzy", { silent = true })
 vim.keymap.set({ "n", "v" }, "<leader>y", 'mz"+y', { silent = true })
 
-vim.keymap.set("n", "Y", "mzy$", { silent = true })           -- Avoid inconsistent behavior
+vim.keymap.set("n", "Y", "mzy$", { silent = true }) -- Avoid inconsistent behavior
 vim.keymap.set("n", "<leader>Y", 'mz"+y$', { silent = true }) -- Mapping to "+Y yanks whole line
 vim.keymap.set("v", "Y", "<nop>", { silent = true })
 
@@ -251,9 +246,9 @@ for _, obj in pairs(startline_objects) do
 end
 
 local norm_pastes = {
-    { "p",         "p" },
+    { "p", "p" },
     { "<leader>p", '"+p' },
-    { "P",         "P" },
+    { "P", "P" },
     { "<leader>P", '"+P' },
 }
 for _, map in pairs(norm_pastes) do
@@ -454,7 +449,7 @@ vim.keymap.set("n", "gllW", function()
     vim.api.nvim_exec2("norm! `z", {})
 end, { silent = true })
 
-vim.opt.mouse = "a"           -- Otherwise, the terminal handles mouse functionality
+vim.opt.mouse = "a" -- Otherwise, the terminal handles mouse functionality
 vim.opt.mousemodel = "extend" -- Disables terminal right-click paste
 
 local mouse_maps = {
@@ -549,7 +544,6 @@ local mouse_maps = {
     "C-M-ScrollWheelDown",
     "C-M-S-ScrollWheelDown",
 }
-
 for _, map in pairs(mouse_maps) do
     vim.keymap.set({ "n", "i", "v", "c" }, "<" .. map .. ">", "<Nop>")
 end

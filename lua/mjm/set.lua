@@ -66,7 +66,6 @@ vim.opt.spell = false
 vim.opt.spelllang = "en_us"
 
 vim.opt.cursorline = true
-
 ---@param event string
 ---@param value boolean
 ---@param pattern string
