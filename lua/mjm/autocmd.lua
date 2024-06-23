@@ -30,36 +30,44 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
         local ff = require("mjm.format_funcs")
         local buf = ev.buf
 
-        -- Even after mark restoration is moved into the Nvim release branch,
-        -- this should be kept for Conform or LSP formatting, as
-        -- the official version of these functions does not save system or global marks
-        local saved_marks = ff.get_marks(buf)
-
         if ff.try_conform(buf) then
-            ff.restore_marks(buf, saved_marks)
             return
         end
-
         if ff.try_lsp_format(buf) then
-            ff.restore_marks(buf, saved_marks)
             return
         end
 
-        local expandtab = vim.api.nvim_get_option_value("expandtab", { buf = buf })
         local shiftwidth = vim.api.nvim_get_option_value("shiftwidth", { buf = buf })
-
         if shiftwidth == 0 then
             shiftwidth = vim.api.nvim_get_option_value("tabstop", { buf = buf })
         else
             vim.api.nvim_set_option_value("tabstop", shiftwidth, { buf = buf })
         end
 
+        local expandtab = vim.api.nvim_get_option_value("expandtab", { buf = buf })
         if expandtab then
             vim.api.nvim_set_option_value("softtabstop", shiftwidth, { buf = buf })
             vim.api.nvim_exec2(buf .. "bufdo retab", {})
         end
 
-        ff.fix_bookend_blanks(buf)
+        ---@param start_idx number
+        ---@param end_idx number
+        ---@return nil
+        local function fix_bookend_blanks(start_idx, end_idx)
+            local line = vim.api.nvim_buf_get_lines(buf, start_idx, end_idx, true)[1]
+            local blank_line = (line == "") or line:match("^%s*$")
+            local last_line = vim.api.nvim_buf_line_count(buf) == 1
+
+            if last_line or not blank_line then
+                return
+            end
+
+            vim.api.nvim_buf_set_lines(buf, start_idx, end_idx, false, {})
+            fix_bookend_blanks(start_idx, end_idx)
+        end
+
+        fix_bookend_blanks(0, 1)
+        fix_bookend_blanks(-2, -1)
 
         local total_lines = vim.api.nvim_buf_line_count(buf)
         local lines = vim.api.nvim_buf_get_lines(buf, 0, total_lines, true)
@@ -128,7 +136,5 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
         for i, line in ipairs(lines) do
             format_line(i, line)
         end
-
-        ff.restore_marks(buf, saved_marks)
     end,
 })
