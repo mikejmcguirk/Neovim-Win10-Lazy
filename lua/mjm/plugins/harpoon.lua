@@ -6,9 +6,6 @@ return {
         config = function()
             local harpoon = require("harpoon")
             local Logger = require("harpoon.logger")
-            local function to_exact_name(value)
-                return "^" .. value .. "$"
-            end
             local Extensions = require("harpoon.extensions")
 
             harpoon:setup({
@@ -23,7 +20,7 @@ return {
                             return
                         end
 
-                        local bufnr = vim.fn.bufnr(to_exact_name(list_item.value))
+                        local bufnr = vim.fn.bufnr(list_item.value)
                         local set_position = false
                         if bufnr == -1 then
                             set_position = true
@@ -39,7 +36,7 @@ return {
                         end
 
                         vim.api.nvim_exec2("edit " .. list_item.value, {})
-                        bufnr = vim.fn.bufnr(to_exact_name(list_item.value))
+                        bufnr = vim.fn.bufnr(list_item.value)
 
                         if set_position then
                             local lines = vim.api.nvim_buf_line_count(bufnr)
