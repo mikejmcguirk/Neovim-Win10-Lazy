@@ -1,11 +1,13 @@
 local M = {}
 
+---@param cur_row number
+---@param cur_col number
+---@param cur_line string
 ---@return boolean
 local find_pairs = function(cur_row, cur_col, cur_line)
-    if cur_col == 0 then
+    if cur_col == 0 or #cur_line < 2 then
         return false
     end
-    local cur_char = cur_line:sub(cur_col, cur_col)
 
     local pairs = {
         { "{", "}" },
@@ -22,89 +24,80 @@ local find_pairs = function(cur_row, cur_col, cur_line)
                 return pair[to_return]
             end
         end
-
         return nil
     end
-    local close_char = check_pairs(cur_char, 1, 2)
 
+    local cur_char = cur_line:sub(cur_col, cur_col)
+    -- Check if we are within a pair
+    local close_char = check_pairs(cur_char, 1, 2)
     local next_col = cur_col + 1
     local next_char = cur_line:sub(next_col, next_col)
 
-    local line_to_set = cur_row - 1
-
+    local edit_row = cur_row - 1
     if close_char == next_char then
         local start_col = cur_col - 1
         local end_col = cur_col + 1
-
-        vim.api.nvim_buf_set_text(0, line_to_set, start_col, line_to_set, end_col, { "" })
+        vim.api.nvim_buf_set_text(0, edit_row, start_col, edit_row, end_col, { "" })
         vim.api.nvim_win_set_cursor(0, { cur_row, start_col })
-
         return true
     end
 
+    -- Check if we are directly to the right of a pair
     if cur_col == 1 then
         return false
     end
-
-    -- Check if we are directly to the right of a pair
     local open_char = check_pairs(cur_char, 2, 1)
     local prev_char = cur_line:sub(cur_col - 1, cur_col - 1)
-
     if open_char ~= prev_char then
         return false
     end
 
     local start_col = cur_col - 2
-
-    vim.api.nvim_buf_set_text(0, line_to_set, start_col, line_to_set, cur_col, { "" })
+    vim.api.nvim_buf_set_text(0, edit_row, start_col, edit_row, cur_col, { "" })
     vim.api.nvim_win_set_cursor(0, { cur_row, start_col })
-
     return true
 end
 
----@param line_num number
+---@param line_num number -- One indexed
 ---@return number
 local get_indent = function(line_num)
+    local fix_indent = function(indent)
+        if indent <= 0 then
+            return 0
+        else
+            return indent
+        end
+    end
+
     -- If Treesitter indent is enabled, the indentexpr will be set to
     -- nvim_treesitter#indent(), so that will be captured here
     local indentexpr = vim.bo.indentexpr
-
     if indentexpr == "" then
         local prev_nonblank = vim.fn.prevnonblank(line_num - 1)
         local prev_nonblank_indent = vim.fn.indent(prev_nonblank)
-
-        if prev_nonblank_indent <= 0 then
-            return 0
-        else
-            return prev_nonblank_indent
-        end
+        return fix_indent(prev_nonblank_indent)
     end
 
     -- Most indent expressions in the Nvim runtime do not take an argument
     --
-    -- However, a few of them do take v:lnum as an argument
+    -- However, a few of them do take v:lnum
     -- v:lnum is not updated when nvim_exec2 is called, so it must be updated here
     --
     -- A couple of the runtime expressions take '.' as an argument
     -- This is already updated before nvim_exec2 is called
     --
-    -- Other indentexpr options are not guaranteed to be handled properly
+    -- Other indentexpr arguments are not guaranteed to be handled properly
     vim.v.lnum = line_num
     local expr_indent_tbl = vim.api.nvim_exec2("echo " .. indentexpr, { output = true })
-    local expr_indent_str = expr_indent_tbl.output
-    local expr_indent = tonumber(expr_indent_str) or 0
-
-    if expr_indent <= 0 then
-        return 0
-    else
-        return expr_indent
-    end
+    local expr_indent = tonumber(expr_indent_tbl.output) or 0
+    return fix_indent(expr_indent)
 end
 
+---@param options? table
 ---@return nil
-local backspace_blank_line = function(options)
+local backspace_blank_line = function(start_row, start_col, options)
+    --rename start_row and start_col to cur_row and cur_col
     local opts = vim.deepcopy(options or {})
-    local start_row, start_col = unpack(vim.api.nvim_win_get_cursor(0))
     local start_indent = get_indent(start_row)
 
     local snap_to_indent = start_col > start_indent
@@ -147,15 +140,15 @@ local backspace_blank_line = function(options)
 
     vim.api.nvim_del_current_line()
     -- This is a hack meant to address the following scenario:
-    --      - Enter insert mode on line 2
-    --      - Backspace enough to delete it and move to line 1
-    --      - Press backspace again on line 1 some number of times
+    --      - Enter insert mode on line b
+    --      - Backspace enough to delete it and move to line a
+    --      - Press backspace again on line a some number of times
     --      - Leave insert mode
     --      - Undo previous changes
-    --      - The backspaces on line 2 will be undone, but the ones on line 1 will remain
+    --      - The backspaces on line b will be undone, but the ones on line a will remain
     -- I think this happens because running nvim_del_current_line in insert mode does not
-    -- update the line numberg tracking properly for the undo history
-    -- Closing and reopening the undo sequence prevents this from occurring
+    -- update the line number tracking properly for the undo history
+    -- Closing and reopening the undo sequence updates the line numbering
     local insert_key = vim.api.nvim_replace_termcodes("<C-g>u", true, false, true)
     vim.api.nvim_feedkeys(insert_key, "n", false)
 
@@ -269,13 +262,13 @@ end
 ---@return nil
 M.insert_backspace_fix = function(options)
     local cur_line = vim.api.nvim_get_current_line()
+    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
     local start_idx, end_idx = string.find(cur_line, "%S")
     if not start_idx then
-        backspace_blank_line(options)
+        backspace_blank_line(cur_row, cur, col, options)
         return
     end
 
-    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
     if start_idx > 2 and cur_col < start_idx then
         adjust_in_blank(options, start_idx, cur_row)
         return
