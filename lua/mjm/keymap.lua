@@ -1,12 +1,11 @@
-local bp = require("mjm.backplacer")
-
 ---@return boolean
 local check_modifiable = function()
     if vim.api.nvim_get_option_value("modifiable", { buf = 0 }) then
         return true
+    else
+        vim.api.nvim_err_writeln("E21: Cannot make changes, 'modifiable' is off")
+        return false
     end
-    vim.api.nvim_err_writeln("E21: Cannot make changes, 'modifiable' is off")
-    return false
 end
 
 -- Mapped in normal mode so that <C-c> will exit the start of commands with a count
@@ -79,6 +78,7 @@ local search_with_mark = function(map)
     local key = vim.api.nvim_replace_termcodes(map, true, false, true)
     vim.api.nvim_feedkeys(key, "n", true)
 end
+
 vim.keymap.set("n", "/", function()
     search_with_mark("/")
 end, { silent = true })
@@ -124,7 +124,7 @@ for _, map in pairs({ "i", "a", "A" }) do
 end
 
 vim.keymap.set("i", "<backspace>", function()
-    bp.insert_backspace_fix()
+    require("mjm.backplacer").insert_backspace_fix()
 end, { silent = true })
 
 vim.keymap.set("i", ",", ",<C-g>u", { silent = true })
@@ -138,8 +138,23 @@ vim.keymap.set("i", "-", "-<C-g>u", { silent = true })
 vim.keymap.set({ "n", "v" }, "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
 vim.keymap.set({ "n", "v" }, "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
 
-vim.keymap.set("v", "<", "<gv", { silent = true })
-vim.keymap.set("v", ">", ">gv", { silent = true })
+---@param direction string
+---@return nil
+local visual_indent = function(direction)
+    local count = vim.v.count1
+    vim.opt_local.cursorline = false
+    vim.api.nvim_exec2('exec "silent norm! \\<esc>"', {})
+    vim.api.nvim_exec2("silent '<,'> " .. string.rep(direction, count), {})
+    vim.api.nvim_exec2("silent norm! gv", {})
+    vim.opt_local.cursorline = true
+end
+
+vim.keymap.set("v", "<", function()
+    visual_indent("<")
+end, { silent = true })
+vim.keymap.set("v", ">", function()
+    visual_indent(">")
+end, { silent = true })
 
 vim.keymap.set("n", "gV", "`[v`]", { silent = true })
 vim.keymap.set("n", "<leader>V", "_vg_", { silent = true })
