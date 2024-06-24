@@ -48,10 +48,10 @@ local find_pairs = function(cur_row, cur_col, cur_line)
     end
     local open_char = check_pairs(cur_char, 2, 1)
     local prev_char = cur_line:sub(cur_col - 1, cur_col - 1)
+
     if open_char ~= prev_char then
         return false
     end
-
     local start_col = cur_col - 2
     vim.api.nvim_buf_set_text(0, edit_row, start_col, edit_row, cur_col, { "" })
     vim.api.nvim_win_set_cursor(0, { cur_row, start_col })
@@ -93,48 +93,30 @@ local get_indent = function(line_num)
     return fix_indent(expr_indent)
 end
 
+---@param start_row number
+---@param start_col number
+---@param cur_line string
 ---@param options? table
 ---@return nil
-local backspace_blank_line = function(start_row, start_col, options)
+local backspace_blank_line = function(start_row, start_col, cur_line, options)
     --rename start_row and start_col to cur_row and cur_col
     local opts = vim.deepcopy(options or {})
     local start_indent = get_indent(start_row)
 
-    local snap_to_indent = start_col > start_indent
-    local reduce_indent = start_col > 0 and opts.allow_blank
+    if start_col > start_indent then
+        local edit_row = start_row - 1
+        vim.api.nvim_buf_set_text(0, edit_row, start_indent, edit_row, #cur_line, {})
+        return
+    end
 
-    if snap_to_indent or reduce_indent then
-        local set_start
+    if start_col > 0 and opts.allow_blank then
+        local shiftwidth = vim.fn.shiftwidth()
+        local extra_spaces = start_col % shiftwidth
+        local to_remove = (extra_spaces == 0) and shiftwidth or extra_spaces
+        local edit_start = start_col - to_remove
+        local edit_row = start_row - 1
 
-        if snap_to_indent then
-            set_start = start_indent - 1
-        else
-            local shiftwidth = vim.fn.shiftwidth()
-            local extra_spaces = start_col % shiftwidth
-
-            local to_remove
-
-            if extra_spaces == 0 then
-                to_remove = shiftwidth
-            else
-                to_remove = extra_spaces
-            end
-
-            set_start = (start_col - 1) - to_remove
-        end
-
-        if set_start <= 0 then
-            vim.api.nvim_set_current_line("")
-
-            return
-        end
-
-        local start_line = vim.api.nvim_get_current_line()
-        local start_line_length = #start_line - 1
-        local set_row = start_row - 1
-
-        vim.api.nvim_buf_set_text(0, set_row, set_start, set_row, start_line_length, {})
-
+        vim.api.nvim_buf_set_text(0, edit_row, edit_start, edit_row, #cur_line, {})
         return
     end
 
@@ -151,7 +133,6 @@ local backspace_blank_line = function(start_row, start_col, options)
     -- Closing and reopening the undo sequence updates the line numbering
     local insert_key = vim.api.nvim_replace_termcodes("<C-g>u", true, false, true)
     vim.api.nvim_feedkeys(insert_key, "n", false)
-
     local cur_row = vim.fn.line(".")
 
     ---@return number
@@ -199,78 +180,14 @@ local backspace_blank_line = function(start_row, start_col, options)
     vim.api.nvim_win_set_cursor(0, { dest_row, indent })
 end
 
-local fix_indent = function()
-    local cur_line = vim.api.nvim_get_current_line()
-    print(cur_line)
-    local start_idx, end_idx = string.find(cur_line, "%S")
-    if not start_idx then
-        return
-    end
-    local cur_row = vim.api.nvim_win_get_cursor(0)[1]
-    local indent = get_indent(cur_row)
-    local whitespace = start_idx - 1
-    if whitespace < indent then
-        local to_add = string.rep(" ", indent - whitespace)
-        local edit_row = cur_row - 1
-        print(start_idx)
-        -- local first_char = cur_line[start_idx]
-        vim.api.nvim_buf_set_text(0, edit_row, 0, edit_row, 0, { to_add })
-    end
-end
-
-local adjust_in_blank = function(options, start_idx, start_row)
-    local whitespace = start_idx - 1
-    local indent = get_indent(start_row)
-    local within_indent = whitespace <= indent
-    local shiftwidth = vim.fn.shiftwidth()
-    local edit_row = start_row - 1
-    local opts = vim.deepcopy(options or {})
-    if (not opts.allow_blank and within_indent) or (whitespace <= shiftwidth) then
-        vim.api.nvim_buf_set_text(0, edit_row, 0, edit_row, whitespace, { "" })
-
-        if not opts.allow_blank then
-            local key = vim.api.nvim_replace_termcodes("<backspace>", true, false, true)
-            vim.api.nvim_feedkeys(key, "n", false)
-            local insert_key = vim.api.nvim_replace_termcodes("<C-g>u", true, false, true)
-            vim.api.nvim_feedkeys(insert_key, "n", false)
-            local prev_line = vim.api.nvim_buf_get_lines(0, edit_row - 1, edit_row, false)
-            --
-            -- if string.match(prev_line[1], "^%s*$") then
-            --     fix_indent()
-            -- end
-        end
-        return
-    end
-
-    if not opts.allow_blank then
-        local over_indent = whitespace - indent
-        vim.api.nvim_buf_set_text(0, edit_row, 0, edit_row, over_indent, { "" })
-        return
-    end
-
-    vim.api.nvim_win_set_cursor(0, { start_row, start_idx - 1 })
-    local extra_spaces = whitespace % shiftwidth
-    local to_remove = nil
-    if extra_spaces == 0 then
-        to_remove = shiftwidth
-    else
-        to_remove = extra_spaces
-    end
-    vim.api.nvim_buf_set_text(0, edit_row, 0, edit_row, to_remove, { "" })
-end
-
+---@param options? table
 ---@return nil
 M.insert_backspace_fix = function(options)
     local cur_line = vim.api.nvim_get_current_line()
     local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
     local start_idx, end_idx = string.find(cur_line, "%S")
     if not start_idx then
-        backspace_blank_line(cur_row, cur_col, options)
-        return
-    end
-
-    if start_idx > 2 and cur_col < start_idx then
-        adjust_in_blank(options, start_idx, cur_row)
+        backspace_blank_line(cur_row, cur_col, cur_line, options)
         return
     end
 
