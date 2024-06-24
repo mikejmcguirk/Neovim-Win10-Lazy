@@ -79,7 +79,6 @@ local search_with_mark = function(map)
     local key = vim.api.nvim_replace_termcodes(map, true, false, true)
     vim.api.nvim_feedkeys(key, "n", true)
 end
-
 vim.keymap.set("n", "/", function()
     search_with_mark("/")
 end, { silent = true })
@@ -102,8 +101,15 @@ vim.keymap.set("n", "<M-k>", "<cmd>resize +2<CR>", { silent = true })
 vim.keymap.set("n", "<M-h>", "<cmd>vertical resize -2<CR>", { silent = true })
 vim.keymap.set("n", "<M-l>", "<cmd>vertical resize +2<CR>", { silent = true })
 
-vim.keymap.set({ "n", "v" }, "<C-u>", "<C-u>zz", { silent = true })
-vim.keymap.set({ "n", "v" }, "<C-d>", "<C-d>zz", { silent = true })
+-- Running these as execs reduces screen shake vs standard mappings
+vim.keymap.set("n", "<C-u>", function()
+    vim.api.nvim_exec2('silent exec "norm! \\<C-u>zz"', {})
+end, { silent = true })
+vim.keymap.set("n", "<C-d>", function()
+    vim.api.nvim_exec2('silent exec "norm! \\<C-d>zz"', {})
+end, { silent = true })
+vim.keymap.set("v", "<C-u>", "<C-u>zz", { silent = true })
+vim.keymap.set("v", "<C-d>", "<C-d>zz", { silent = true })
 vim.keymap.set({ "n", "v" }, "n", "nzzzv", { silent = true })
 vim.keymap.set({ "n", "v" }, "N", "Nzzzv", { silent = true })
 

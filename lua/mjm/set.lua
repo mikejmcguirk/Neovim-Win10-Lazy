@@ -62,8 +62,9 @@ vim.opt.listchars = {
 
 vim.opt.wrap = false
 vim.opt.linebreak = true
+
 vim.opt.spell = false
-vim.opt.spelllang = "en_us"
+vim.opt.spelllang = "en_us" -- If spell is turned on by an ftplugin file
 
 vim.opt.cursorline = true
 ---@param event string
