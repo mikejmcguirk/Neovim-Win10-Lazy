@@ -45,14 +45,47 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
     group = mjm_group,
     pattern = "*",
     callback = function(ev)
-        local ff = require("mjm.format_funcs")
         local buf = ev.buf
 
-        if ff.try_conform(buf) then
+        local conformed = false
+        local status, result = pcall(function()
+            conformed = require("conform").format({
+                bufnr = buf,
+                lsp_fallback = false,
+                async = false,
+                timeout_ms = 1000,
+            })
+        end)
+
+        if status and conformed then
             return
+        elseif type(result) == "string" then
+            vim.api.nvim_err_writeln(result)
+        elseif not status then
+            vim.api.nvim_err_writeln("Unknown error occurred while formatting with Conform")
         end
-        if ff.try_lsp_format(buf) then
-            return
+
+        local clients = vim.lsp.get_clients({ bufnr = buf })
+        local mode = vim.api.nvim_get_mode().mode
+        local method = nil
+        if mode == "v" or mode == "V" then
+            method = "textDocument/rangeFormatting"
+        else
+            method = "textDocument/formatting"
+        end
+        clients = vim.tbl_filter(function(client)
+            return client.supports_method(method)
+        end, clients)
+
+        if #clients > 0 then
+            status, result = pcall(vim.lsp.buf.format, { bufnr = buf, async = false })
+            if status then
+                return
+            elseif type(result) == "string" then
+                vim.api.nvim_err_writeln(result)
+            else
+                vim.api.nvim_err_writeln("Unknown error occurred while formatting with LSP")
+            end
         end
 
         local shiftwidth = vim.api.nvim_get_option_value("shiftwidth", { buf = buf })
@@ -100,13 +133,11 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
             local empty_line = line == ""
             local whitespace_line = line:match("^%s*$")
             local blank_line = empty_line or whitespace_line
-
             if blank_line then
                 consecutive_blanks = consecutive_blanks + 1
             end
 
             local row = iter - lines_removed - 1
-
             if blank_line and consecutive_blanks > 1 then
                 vim.api.nvim_buf_set_lines(buf, row, row + 1, false, {})
                 lines_removed = lines_removed + 1
@@ -116,7 +147,6 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
 
             if whitespace_line then
                 vim.api.nvim_buf_set_text(buf, row, 0, row, #line, {})
-
                 return
             end
 
@@ -124,27 +154,22 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
 
             local line_length = #line
             local last_non_blank, _ = line:find("(%S)%s*$")
-
             if last_non_blank and last_non_blank ~= line_length then
                 vim.api.nvim_buf_set_text(buf, row, last_non_blank, row, line_length, {})
             end
 
             local first_non_blank, _ = line:find("%S") or 1, nil
-
             first_non_blank = first_non_blank - 1
             local extra_spaces = first_non_blank % shiftwidth
-
             if extra_spaces == 0 or not expandtab then
                 return
             end
 
             local half_shiftwidth = shiftwidth * 0.5
             local round_up = extra_spaces >= half_shiftwidth
-
             if round_up then
                 local new_spaces = shiftwidth - extra_spaces
                 local spaces = string.rep(" ", new_spaces)
-
                 vim.api.nvim_buf_set_text(buf, row, 0, row, 0, { spaces })
             else
                 vim.api.nvim_buf_set_text(buf, row, 0, row, extra_spaces, {})
