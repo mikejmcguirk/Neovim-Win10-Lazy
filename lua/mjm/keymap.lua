@@ -156,8 +156,7 @@ vim.keymap.set("v", ">", function()
     visual_indent(">")
 end, { silent = true })
 
-vim.keymap.set("n", "gV", "`[v`]", { silent = true })
-vim.keymap.set("n", "<leader>V", "_vg_", { silent = true })
+vim.keymap.set("n", "gV", "_vg_", { silent = true })
 
 vim.keymap.set("n", "J", function()
     -- Done using a view instead of a mark to prevent visible screen shake
@@ -199,7 +198,8 @@ vim.keymap.set({ "n", "v" }, "x", '"_x', { silent = true })
 vim.keymap.set({ "n", "v" }, "X", '"_X', { silent = true })
 
 vim.keymap.set("n", "dd", function()
-    if vim.v.count1 <= 1 and vim.api.nvim_get_current_line() == "" then
+    local has_non_blank = string.match(vim.api.nvim_get_current_line(), "%S")
+    if vim.v.count1 <= 1 and not has_non_blank then
         return '"_dd'
     else
         return "dd"
@@ -209,7 +209,7 @@ end, { silent = true, expr = true })
 vim.keymap.set({ "n", "v" }, "<leader>d", '"_d', { silent = true })
 vim.keymap.set("n", "<leader>D", '"_D', { silent = true })
 vim.keymap.set("v", "D", "<nop>", { silent = true })
-vim.keymap.set("n", "d^", '^dg_"_dd', { silent = true })
+vim.keymap.set("n", "d^", '^dg_"_dd', { silent = true }) -- Does not yank newline character
 vim.keymap.set("n", "dD", function()
     vim.api.nvim_exec2("silent norm! ggdG", {})
 end, { silent = true })
@@ -220,7 +220,7 @@ end, { silent = true })
 vim.keymap.set({ "n", "v" }, "<leader>c", '"_c', { silent = true })
 vim.keymap.set("n", "<leader>C", '"_C', { silent = true })
 vim.keymap.set("v", "C", "<nop>", { silent = true })
-vim.keymap.set("n", "c^", "^cg_", { silent = true })
+vim.keymap.set("n", "c^", "^cg_", { silent = true }) -- Does not yank newline character
 vim.keymap.set("n", "cC", "ggcG", { silent = true })
 vim.keymap.set("n", "<leacer>cC", 'gg"_cG', { silent = true })
 
@@ -264,48 +264,54 @@ for _, obj in pairs(startline_objects) do
 end
 
 local norm_pastes = {
-    { "p", "p" },
-    { "<leader>p", '"+p' },
-    { "P", "P" },
-    { "<leader>P", '"+P' },
+    { "p", "p", '"' },
+    { "<leader>p", '"+p', "+" },
+    { "P", "P", '"' },
+    { "<leader>P", '"+P', "+" },
 }
+-- Done as exec commands to reduce visible text shake when fixing indentation
 for _, map in pairs(norm_pastes) do
     vim.keymap.set("n", map[1], function()
-        return "mz" .. vim.v.count1 .. map[2] .. "`z"
-    end, { silent = true, expr = true })
+        if not check_modifiable() then
+            return
+        end
+
+        local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
+        vim.api.nvim_buf_set_mark(0, "z", cur_row, cur_col, {})
+
+        vim.api.nvim_exec2("silent norm! " .. vim.v.count1 .. map[2], {})
+        if vim.fn.getregtype(map[3]) == "V" then
+            vim.api.nvim_exec2("silent norm! `[=`]", {})
+        end
+        vim.api.nvim_exec2("silent norm! `z", {})
+    end, { silent = true })
 end
 
 vim.keymap.set("n", "<leader>gp", '"+gp', { silent = true })
 vim.keymap.set("n", "<leader>gP", '"+gP', { silent = true })
 
----@param paste_char string
----@return string
-local visual_paste = function(paste_char)
-    if not check_modifiable() then
-        return "<Nop>"
-    end
+local visual_pastes = {
+    { "p", "P", '"' },
+    { "<leader>p", '"+P', "+" },
+    { "P", "p", '"' },
+    { "<leader>P", '"+p', "+" },
+}
+for _, map in pairs(visual_pastes) do
+    vim.keymap.set("n", map[1], function()
+        if not check_modifiable() then
+            return "<Nop>"
+        end
 
-    local cur_mode = vim.api.nvim_get_mode().mode
-    local count = vim.v.count1
-    if cur_mode == "V" or cur_mode == "Vs" then
-        return count .. paste_char .. "=`]"
-    else
-        return "mz" .. count .. paste_char .. "`z"
-    end
+        local cur_mode = vim.api.nvim_get_mode().mode
+        if cur_mode == "V" or cur_mode == "Vs" then
+            return vim.v.count1 .. map[2] .. "=`]"
+        elseif vim.fn.getregtype(map[3]) == "V" then
+            return "mz" .. vim.v.count1 .. map[2] .. "`[=`]`z"
+        else
+            return "mz" .. vim.v.count1 .. map[2] .. "`z"
+        end
+    end, { silent = true, expr = true })
 end
-
-vim.keymap.set("v", "p", function()
-    return visual_paste("P")
-end, { silent = true, expr = true })
-vim.keymap.set("v", "P", function()
-    return visual_paste("p")
-end, { silent = true, expr = true })
-vim.keymap.set("v", "<leader>p", function()
-    return visual_paste('"+P')
-end, { silent = true, expr = true })
-vim.keymap.set("v", "<leader>P", function()
-    return visual_paste('"+p')
-end, { silent = true, expr = true })
 
 ---@param put_cmd string
 ---@return nil
@@ -323,7 +329,6 @@ end
 vim.keymap.set("n", "[ ", function()
     create_blank_line("put!")
 end, { silent = true })
-
 vim.keymap.set("n", "] ", function()
     create_blank_line("put")
 end, { silent = true })
@@ -380,25 +385,25 @@ local visual_move = function(vcount1, direction)
         vim.api.nvim_exec2(move_cmd, {})
     end)
 
-    if not status then
-        if type(result) == "string" and string.find(result, "E16") and vcount1 <= 1 then
-            do
-            end
-        elseif result then
-            vim.api.nvim_err_writeln(result)
-        else
-            vim.api.nvim_err_writeln("Unknown error in visual_move")
-        end
-        vim.api.nvim_exec2("norm! gv", {})
+    if status then
+        local end_row = vim.api.nvim_buf_get_mark(0, "]")[1]
+        local end_col = #vim.api.nvim_buf_get_lines(0, end_row - 1, end_row, false)[1]
+        vim.api.nvim_buf_set_mark(0, "z", end_row, end_col, {})
+        vim.api.nvim_exec2("silent norm! `[", {})
+        vim.api.nvim_exec2("silent norm! =`z", {})
+        vim.api.nvim_exec2("silent norm! gv", {})
         return
     end
 
-    local end_row = vim.api.nvim_buf_get_mark(0, "]")[1]
-    local end_col = #vim.api.nvim_buf_get_lines(0, end_row - 1, end_row, false)[1]
-    vim.api.nvim_buf_set_mark(0, "z", end_row, end_col, {})
-    vim.api.nvim_exec2("silent norm! `[", {})
-    vim.api.nvim_exec2("silent norm! =`z", {})
-    vim.api.nvim_exec2("silent norm! gv", {})
+    if type(result) == "string" and string.find(result, "E16") and vcount1 <= 1 then
+        do
+        end
+    elseif result then
+        vim.api.nvim_err_writeln(result)
+    else
+        vim.api.nvim_err_writeln("Unknown error in visual_move")
+    end
+    vim.api.nvim_exec2("norm! gv", {})
 end
 
 vim.keymap.set("v", "J", function()
