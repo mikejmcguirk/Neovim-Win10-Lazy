@@ -176,7 +176,6 @@ local cap_motions_norm = {
     "gUiW",
     "g~~",
     "g~iw",
-    "g~IW",
 }
 for _, map in pairs(cap_motions_norm) do
     vim.keymap.set("n", map, function()
@@ -231,9 +230,7 @@ vim.keymap.set("n", "S", "<Nop>", { silent = true }) -- Used in visual mode by n
 vim.api.nvim_create_autocmd("TextYankPost", {
     group = vim.api.nvim_create_augroup("yank_reset_cursor", { clear = true }),
     callback = function()
-        if vim.v.event.operator ~= "y" then
-            return
-        else
+        if vim.v.event.operator == "y" then
             vim.api.nvim_exec2("norm! `z", {})
         end
     end,

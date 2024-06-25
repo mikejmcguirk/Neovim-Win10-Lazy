@@ -10,6 +10,24 @@ vim.api.nvim_create_autocmd("TextYankPost", {
         vim.api.nvim_exec2("echo ''", {})
     end,
 })
+vim.api.nvim_create_autocmd("TextChanged", {
+    group = vim.api.nvim_create_augroup("delete_clear", { clear = true }),
+    pattern = "*",
+    callback = function()
+        if vim.v.operator == "d" then
+            vim.api.nvim_exec2("echo ''", {})
+        end
+    end,
+})
+vim.api.nvim_create_autocmd("InsertEnter", {
+    group = vim.api.nvim_create_augroup("change_clear", { clear = true }),
+    pattern = "*",
+    callback = function()
+        if vim.v.operator == "c" then
+            vim.api.nvim_exec2("echo ''", {})
+        end
+    end,
+})
 
 local mjm_group = vim.api.nvim_create_augroup("mjm", { clear = true })
 
