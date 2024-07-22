@@ -289,9 +289,6 @@ for _, map in pairs(norm_pastes) do
     end, { silent = true })
 end
 
-vim.keymap.set("n", "<leader>gp", '"+gp', { silent = true })
-vim.keymap.set("n", "<leader>gP", '"+gP', { silent = true })
-
 local visual_pastes = {
     { "p", "P", '"' },
     { "<leader>p", '"+P', "+" },
