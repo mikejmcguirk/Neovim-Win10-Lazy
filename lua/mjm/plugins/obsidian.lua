@@ -1,30 +1,35 @@
+local note_path = vim.fn.expand("~") .. "/notes/*.md"
 return {
     "epwalsh/obsidian.nvim",
-    version = "*", -- recommended, use latest release instead of latest commit
+    version = "*",
     lazy = true,
-    ft = "markdown",
-    -- Replace the above line with this if you only want to load obsidian.nvim for markdown files in your vault:
-    -- event = {
-    --   -- If you want to use the home shortcut '~' here you need to call 'vim.fn.expand'.
-    --   -- E.g. "BufReadPre " .. vim.fn.expand "~" .. "/my-vault/*.md"
-    --   -- refer to `:h file-pattern` for more examples
-    --   "BufReadPre path/to/my-vault/*.md",
-    --   "BufNewFile path/to/my-vault/*.md",
-    -- },
+    event = {
+        "BufReadPre " .. note_path,
+        "BufNewFile " .. note_path,
+    },
     dependencies = {
-        -- Required.
         "nvim-lua/plenary.nvim",
-
-        -- see below for full list of optional dependencies 👇
     },
-    opts = {
-        workspaces = {
-            {
-                name = "notes",
-                path = "~/notes",
+    config = function()
+        require("obsidian").setup({
+            workspaces = {
+                {
+                    name = "notes",
+                    path = "~/notes",
+                },
             },
-        },
+            completion = {
+                nvim_cmp = true,
+                min_chars = 1,
+            },
+            mappings = {},
+            ui = {
+                enable = false,
+            },
+        })
 
-        -- see below for full list of options 👇
-    },
+        vim.keymap.set("n", "<cr>", "<cmd>ObsidianFollowLink<cr>")
+        vim.keymap.set("n", "<leader>ta", "<cmd>ObsidianBacklinks<cr>")
+        vim.keymap.set("n", "<leader>sr", "<cmd>ObsidianRename<cr>")
+    end,
 }
