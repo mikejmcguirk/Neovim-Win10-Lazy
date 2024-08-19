@@ -52,6 +52,8 @@ vim.opt.modelines = 1
 vim.opt.updatetime = 500
 vim.opt.timeoutlen = 500
 
+vim.opt.shada = "!,'100,<50,/0,h"
+
 vim.opt.list = true
 vim.opt.listchars = {
     tab = "<–>",
