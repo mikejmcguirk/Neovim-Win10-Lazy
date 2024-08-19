@@ -30,6 +30,7 @@ return {
 
         vim.keymap.set("n", "<cr>", "<cmd>ObsidianFollowLink<cr>")
         vim.keymap.set("n", "<leader>ta", "<cmd>ObsidianBacklinks<cr>")
+        vim.keymap.set("n", "<leader>tn", "<cmd>ObsidianLinks<cr>")
         vim.keymap.set("n", "<leader>sr", "<cmd>ObsidianRename<cr>")
     end,
 }

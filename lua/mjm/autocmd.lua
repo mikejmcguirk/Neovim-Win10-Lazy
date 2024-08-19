@@ -41,14 +41,6 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
     end,
 })
 
-vim.api.nvim_create_autocmd({ "VimLeave" }, {
-    group = mjm_group,
-    pattern = "*",
-    callback = function()
-        vim.fn.histdel("/")
-    end,
-})
-
 vim.api.nvim_create_autocmd({ "BufWritePre" }, {
     group = mjm_group,
     pattern = "*",
