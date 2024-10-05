@@ -105,7 +105,8 @@ return {
 
             vim.keymap.set("n", "<leader>td", builtin.diagnostics)
             vim.keymap.set("n", "<leader>tw", builtin.lsp_workspace_symbols)
-            vim.keymap.set("n", "<leader>tq", builtin.quickfix)
+            -- Disabled because of issue where picker tries to place cursor in an invalid position
+            -- vim.keymap.set("n", "<leader>tq", builtin.quickfix)
 
             vim.keymap.set("n", "<leader>tr", builtin.resume)
         end,
