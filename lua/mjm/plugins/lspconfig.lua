@@ -59,6 +59,18 @@ return {
 
             -- Toml
             lspconfig.taplo.setup({ capabilities = cmp_capabilities })
+
+            -- Rust
+            lspconfig.rust_analyzer.setup({
+                capabilities = cmp_capabilities,
+                settings = {
+                    ["rust-analyzer"] = {
+                        checkOnSave = {
+                            command = "clippy",
+                        },
+                    },
+                },
+            })
         end,
     },
 }

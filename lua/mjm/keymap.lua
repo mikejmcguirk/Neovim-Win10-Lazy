@@ -251,8 +251,6 @@ vim.keymap.set("n", "<leader>y^", 'mz^vg_"+y', { silent = true })
 vim.keymap.set("n", "yY", "mzggyG`z", { silent = true })
 vim.keymap.set("n", "<leader>yY", 'mzgg"+yG`z', { silent = true })
 
-vim.keymap.set({ "n", "v" }, "<leader>yd", '"+d', { silent = true })
-
 local startline_objects = { "0", "_", "g^", "g0" }
 for _, obj in pairs(startline_objects) do
     vim.keymap.set("n", "y" .. obj, "mzv" .. obj .. "y", { silent = true })

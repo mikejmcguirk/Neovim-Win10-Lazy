@@ -64,6 +64,8 @@ local diags_to_qf = function()
     local raw_diags = vim.diagnostic.get(nil)
     if #raw_diags == 0 then
         print("No diagnostics")
+        vim.fn.setqflist({})
+        vim.api.nvim_exec2("cclose", {})
         return
     end
     local severity_map = {
