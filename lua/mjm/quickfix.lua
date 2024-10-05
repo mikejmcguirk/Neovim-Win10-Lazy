@@ -59,9 +59,22 @@ vim.keymap.set("n", "<leader>qgi", function()
     grep_wrapper({ insensitive = true })
 end)
 
+---@param options? table
 ---@return nil
-local diags_to_qf = function()
-    local raw_diags = vim.diagnostic.get(nil)
+local diags_to_qf = function(options)
+    local opts = vim.deepcopy(options or {})
+    local cur_buf = opts.cur_buf or false
+    local bufnr = nil
+    if cur_buf then
+        if not vim.api.nvim_get_option_value("modifiable", { buf = 0 }) then
+            vim.api.nvim_err_writeln("E21: Cannot make changes, 'modifiable' is off")
+            return
+        end
+
+        bufnr = 0
+    end
+
+    local raw_diags = vim.diagnostic.get(bufnr)
     if #raw_diags == 0 then
         print("No diagnostics")
         vim.fn.setqflist({})
@@ -109,6 +122,9 @@ end
 
 vim.keymap.set("n", "<leader>qi", function()
     diags_to_qf()
+end)
+vim.keymap.set("n", "<leader>qu", function()
+    diags_to_qf({ cur_buf = true })
 end)
 
 vim.api.nvim_exec2("packadd cfilter", {})
