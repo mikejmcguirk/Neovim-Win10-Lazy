@@ -10,6 +10,7 @@ return {
                     python = { "ruff_format", "isort" },
                     sh = { "beautysh" },
                     toml = { "taplo" },
+                    rust = { "rustfmt" },
                 },
             })
         end,
