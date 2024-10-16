@@ -19,7 +19,7 @@ vim.keymap.set("n", "Q", "<nop>")
 vim.keymap.set("n", "gQ", "<nop>")
 vim.keymap.set({ "n", "v" }, "<C-z>", "<nop>")
 
-vim.keymap.set("n", "<esc>", function()
+vim.keymap.set("n", "<leader><leader>", function()
     vim.api.nvim_exec2("echo ''", {})
     vim.api.nvim_exec2("noh", {})
     vim.lsp.buf.clear_references()
@@ -241,7 +241,7 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 vim.keymap.set({ "n", "v" }, "y", "mzy", { silent = true })
 vim.keymap.set({ "n", "v" }, "<leader>y", 'mz"+y', { silent = true })
 
-vim.keymap.set("n", "Y", "mzy$", { silent = true }) -- Avoid inconsistent behavior
+vim.keymap.set("n", "Y", "mzy$", { silent = true })           -- Avoid inconsistent behavior
 vim.keymap.set("n", "<leader>Y", 'mz"+y$', { silent = true }) -- Mapping to "+Y yanks whole line
 vim.keymap.set("v", "Y", "<nop>", { silent = true })
 
@@ -264,9 +264,9 @@ for _, obj in pairs(startline_objects) do
 end
 
 local norm_pastes = {
-    { "p", "p", '"' },
+    { "p",         "p",   '"' },
     { "<leader>p", '"+p', "+" },
-    { "P", "P", '"' },
+    { "P",         "P",   '"' },
     { "<leader>P", '"+P', "+" },
 }
 -- Done as exec commands to reduce visible text shake when fixing indentation
@@ -288,9 +288,9 @@ for _, map in pairs(norm_pastes) do
 end
 
 local visual_pastes = {
-    { "p", "P", '"' },
+    { "p",         "P",   '"' },
     { "<leader>p", '"+P', "+" },
-    { "P", "p", '"' },
+    { "P",         "p",   '"' },
     { "<leader>P", '"+p', "+" },
 }
 for _, map in pairs(visual_pastes) do
@@ -469,7 +469,7 @@ vim.keymap.set("n", "gllW", function()
     vim.api.nvim_exec2("norm! `z", {})
 end, { silent = true })
 
-vim.opt.mouse = "a" -- Otherwise, the terminal handles mouse functionality
+vim.opt.mouse = "a"           -- Otherwise, the terminal handles mouse functionality
 vim.opt.mousemodel = "extend" -- Disables terminal right-click paste
 
 local mouse_maps = {
