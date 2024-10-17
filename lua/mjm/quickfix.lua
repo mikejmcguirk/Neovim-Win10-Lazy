@@ -74,13 +74,25 @@ local diags_to_qf = function(options)
         bufnr = 0
     end
 
-    local raw_diags = vim.diagnostic.get(bufnr)
+    local err_only = opts.err_only or false
+    local raw_diags = nil
+    if err_only then
+        raw_diags = vim.diagnostic.get(bufnr, { severity = vim.diagnostic.severity.ERROR })
+    else
+        raw_diags = vim.diagnostic.get(bufnr)
+    end
+
     if #raw_diags == 0 then
-        print("No diagnostics")
+        if err_only then
+            print("No errors")
+        else
+            print("No diagnostics")
+        end
         vim.fn.setqflist({})
         vim.api.nvim_exec2("cclose", {})
         return
     end
+
     local severity_map = {
         [vim.diagnostic.severity.ERROR] = "E",
         [vim.diagnostic.severity.WARN] = "W",
@@ -125,6 +137,9 @@ vim.keymap.set("n", "<leader>qi", function()
 end)
 vim.keymap.set("n", "<leader>qu", function()
     diags_to_qf({ cur_buf = true })
+end)
+vim.keymap.set("n", "<leader>qe", function()
+    diags_to_qf({ err_only = true })
 end)
 
 vim.api.nvim_exec2("packadd cfilter", {})
