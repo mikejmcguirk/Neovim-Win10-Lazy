@@ -27,3 +27,10 @@ vim.keymap.set("n", "<leader>qf", function()
     local cur_line = vim.fn.line(".") --- @type number
     vim.api.nvim_exec2("cc! " .. tostring(cur_line), {})
 end, { buffer = true })
+
+vim.keymap.set("n", "<C-o>", function()
+    print("Currently in quickfix list")
+end, { buffer = true })
+vim.keymap.set("n", "<C-i>", function()
+    print("Currently in quickfix list")
+end, { buffer = true })

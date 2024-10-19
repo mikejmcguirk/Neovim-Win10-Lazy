@@ -8,24 +8,24 @@ local check_modifiable = function()
     end
 end
 
--- Mapped in normal mode so that <C-c> will exit the start of commands with a count
--- (This also gets rid of a command line nag)
 -- Mapping in command mode will cause <C-c> to accept commands
-vim.keymap.set({ "n", "i", "v" }, "<C-c>", "<esc>", { silent = true })
+vim.keymap.set({ "i", "v" }, "<C-c>", "<esc>", { silent = true })
 
 vim.keymap.set("v", "u", "<Nop>")
 vim.keymap.set("v", "q", "<Nop>", { silent = true })
 vim.keymap.set("n", "Q", "<nop>")
 vim.keymap.set("n", "gQ", "<nop>")
-vim.keymap.set({ "n", "v" }, "<C-z>", "<nop>")
 
-vim.keymap.set("n", "<leader><leader>", function()
+vim.keymap.set("n", "<C-c>", function()
     vim.api.nvim_exec2("echo ''", {})
     vim.api.nvim_exec2("noh", {})
     vim.lsp.buf.clear_references()
-end, { silent = true })
+    -- Allows <C-c> to exit the start of commands with a count
+    -- By default <C-c> in normal mode produces a command line nag, which this map eliminates
+    return "<esc>"
+end, { expr = true, silent = true })
 
-vim.keymap.set("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true })
+vim.keymap.set("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true }) -- Stop cmd line nag
 
 vim.api.nvim_create_user_command("We", "silent w | e", {}) -- Quick refresh if Treesitter bugs out
 
@@ -61,7 +61,26 @@ vim.keymap.set("n", "ZZ", "<Nop>")
 vim.keymap.set("n", "ZQ", "<Nop>")
 
 vim.keymap.set("n", "ZB", function()
-    cmd_boilerplate("bd", "Unknown error deleting buffer")
+    local current_buf = vim.api.nvim_get_current_buf()
+    local total_win_count = 0
+    local buf_win_count = 0
+
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+        total_win_count = total_win_count + 1
+        if vim.api.nvim_win_get_buf(win) == current_buf then
+            buf_win_count = buf_win_count + 1
+        end
+    end
+
+    if total_win_count < 2 then
+        return
+    end
+
+    if buf_win_count < 2 then
+        cmd_boilerplate("bd", "Unknown error deleting buffer")
+    else
+        cmd_boilerplate("q", "Unknown error quitting window")
+    end
 end)
 
 -- Stop undo history from showing in the cmd line whever an undo/redo is performed
@@ -71,25 +90,6 @@ vim.keymap.set("n", "u", function()
 end, { silent = true })
 vim.keymap.set("n", "<C-r>", function()
     vim.api.nvim_exec2('silent exec "norm! ' .. vim.v.count1 .. '\\<C-r>"', {})
-end, { silent = true })
-
----@param map string
----@return nil
-local search_with_mark = function(map)
-    -- These are API calls because, if done as simple maps,
-    -- the "/" and "?" prompts do not show in the command line
-    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
-    vim.api.nvim_buf_set_mark(0, "s", cur_row, cur_col, {})
-
-    local key = vim.api.nvim_replace_termcodes(map, true, false, true)
-    vim.api.nvim_feedkeys(key, "n", true)
-end
-
-vim.keymap.set("n", "/", function()
-    search_with_mark("/")
-end, { silent = true })
-vim.keymap.set("n", "?", function()
-    search_with_mark("?")
 end, { silent = true })
 
 vim.keymap.set("n", "<leader>lrv", "<cmd>rightbelow vsplit<cr>", { silent = true })
@@ -107,7 +107,7 @@ vim.keymap.set("n", "<M-k>", "<cmd>resize +2<CR>", { silent = true })
 vim.keymap.set("n", "<M-h>", "<cmd>vertical resize -2<CR>", { silent = true })
 vim.keymap.set("n", "<M-l>", "<cmd>vertical resize +2<CR>", { silent = true })
 
--- Running these as execs reduces screen shake vs standard mappings
+-- Running these as execs instead of standard mappings reduces visible screen shake
 vim.keymap.set("n", "<C-u>", function()
     vim.api.nvim_exec2('silent exec "norm! \\<C-u>zz"', {})
 end, { silent = true })
@@ -116,8 +116,29 @@ vim.keymap.set("n", "<C-d>", function()
 end, { silent = true })
 vim.keymap.set("v", "<C-u>", "<C-u>zz", { silent = true })
 vim.keymap.set("v", "<C-d>", "<C-d>zz", { silent = true })
-vim.keymap.set({ "n", "v" }, "n", "nzzzv", { silent = true })
-vim.keymap.set({ "n", "v" }, "N", "Nzzzv", { silent = true })
+
+-- Not silent so that the search prompting displays properly
+vim.keymap.set("n", "/", "ms/")
+vim.keymap.set("n", "?", "ms?")
+
+vim.keymap.set({ "n", "v" }, "n", function()
+    if not (vim.v.hlsearch == 1) then
+        local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
+        vim.api.nvim_buf_set_mark(0, "s", cur_row, cur_col, {})
+        return "Nnzzzv"
+    end
+
+    return "nzzzv"
+end, { expr = true })
+vim.keymap.set({ "n", "v" }, "N", function()
+    if not (vim.v.hlsearch == 1) then
+        local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
+        vim.api.nvim_buf_set_mark(0, "s", cur_row, cur_col, {})
+        return "nNzzzv"
+    end
+
+    return "Nzzzv"
+end, { expr = true })
 
 for _, map in pairs({ "i", "a", "A" }) do
     vim.keymap.set("n", map, function()
@@ -184,6 +205,7 @@ local cap_motions_norm = {
 }
 for _, map in pairs(cap_motions_norm) do
     vim.keymap.set("n", map, function()
+        -- For this and any other maps starting with mz, the v count must be manually inserted
         return "mz" .. vim.v.count1 .. map .. "`z"
     end, { silent = true, expr = true })
 end
@@ -204,8 +226,8 @@ vim.keymap.set({ "n", "v" }, "x", '"_x', { silent = true })
 vim.keymap.set({ "n", "v" }, "X", '"_X', { silent = true })
 
 vim.keymap.set("n", "dd", function()
-    local has_non_blank = string.match(vim.api.nvim_get_current_line(), "%S")
-    if vim.v.count1 <= 1 and not has_non_blank then
+    local has_chars = string.match(vim.api.nvim_get_current_line(), "%S")
+    if vim.v.count1 <= 1 and not has_chars then
         return '"_dd'
     else
         return "dd"

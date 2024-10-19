@@ -10,6 +10,7 @@ vim.api.nvim_create_autocmd("TextYankPost", {
         vim.api.nvim_exec2("echo ''", {})
     end,
 })
+
 vim.api.nvim_create_autocmd("TextChanged", {
     group = vim.api.nvim_create_augroup("delete_clear", { clear = true }),
     pattern = "*",
