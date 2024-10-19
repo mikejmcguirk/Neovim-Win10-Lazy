@@ -32,7 +32,7 @@ vim.api.nvim_create_user_command("We", "silent w | e", {}) -- Quick refresh if T
 ---@param cmd string
 ---@param error string
 ---@return nil
-local write_boilerplate = function(cmd, error)
+local cmd_boilerplate = function(cmd, error)
     local status, result = pcall(function()
         vim.api.nvim_exec2(cmd, {})
     end)
@@ -49,16 +49,20 @@ local write_boilerplate = function(cmd, error)
 end
 
 vim.keymap.set("n", "ZV", function()
-    write_boilerplate("silent w", "Unknown error saving file")
+    cmd_boilerplate("silent w", "Unknown error saving file")
 end)
 vim.keymap.set("n", "ZA", function()
-    write_boilerplate("silent wa", "Unknown error saving file(s)")
+    cmd_boilerplate("silent wa", "Unknown error saving file(s)")
 end)
 vim.keymap.set("n", "ZX", function()
-    write_boilerplate("silent w | so", "Unknown error")
+    cmd_boilerplate("silent w | so", "Unknown error")
 end)
 vim.keymap.set("n", "ZZ", "<Nop>")
 vim.keymap.set("n", "ZQ", "<Nop>")
+
+vim.keymap.set("n", "ZB", function()
+    cmd_boilerplate("bd", "Unknown error deleting buffer")
+end)
 
 -- Stop undo history from showing in the cmd line whever an undo/redo is performed
 -- Done as functions because keymap <cmd>'s do not work with v:count1
@@ -241,7 +245,7 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 vim.keymap.set({ "n", "v" }, "y", "mzy", { silent = true })
 vim.keymap.set({ "n", "v" }, "<leader>y", 'mz"+y', { silent = true })
 
-vim.keymap.set("n", "Y", "mzy$", { silent = true })           -- Avoid inconsistent behavior
+vim.keymap.set("n", "Y", "mzy$", { silent = true }) -- Avoid inconsistent behavior
 vim.keymap.set("n", "<leader>Y", 'mz"+y$', { silent = true }) -- Mapping to "+Y yanks whole line
 vim.keymap.set("v", "Y", "<nop>", { silent = true })
 
@@ -264,9 +268,9 @@ for _, obj in pairs(startline_objects) do
 end
 
 local norm_pastes = {
-    { "p",         "p",   '"' },
+    { "p", "p", '"' },
     { "<leader>p", '"+p', "+" },
-    { "P",         "P",   '"' },
+    { "P", "P", '"' },
     { "<leader>P", '"+P', "+" },
 }
 -- Done as exec commands to reduce visible text shake when fixing indentation
@@ -288,9 +292,9 @@ for _, map in pairs(norm_pastes) do
 end
 
 local visual_pastes = {
-    { "p",         "P",   '"' },
+    { "p", "P", '"' },
     { "<leader>p", '"+P', "+" },
-    { "P",         "p",   '"' },
+    { "P", "p", '"' },
     { "<leader>P", '"+p', "+" },
 }
 for _, map in pairs(visual_pastes) do
@@ -469,7 +473,7 @@ vim.keymap.set("n", "gllW", function()
     vim.api.nvim_exec2("norm! `z", {})
 end, { silent = true })
 
-vim.opt.mouse = "a"           -- Otherwise, the terminal handles mouse functionality
+vim.opt.mouse = "a" -- Otherwise, the terminal handles mouse functionality
 vim.opt.mousemodel = "extend" -- Disables terminal right-click paste
 
 local mouse_maps = {
