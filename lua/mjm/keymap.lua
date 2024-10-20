@@ -86,9 +86,15 @@ end)
 -- Stop undo history from showing in the cmd line whever an undo/redo is performed
 -- Done as functions because keymap <cmd>'s do not work with v:count1
 vim.keymap.set("n", "u", function()
+    if not check_modifiable() then
+        return
+    end
     vim.api.nvim_exec2("silent norm! " .. vim.v.count1 .. "u", {})
 end, { silent = true })
 vim.keymap.set("n", "<C-r>", function()
+    if not check_modifiable() then
+        return
+    end
     vim.api.nvim_exec2('silent exec "norm! ' .. vim.v.count1 .. '\\<C-r>"', {})
 end, { silent = true })
 
@@ -186,6 +192,9 @@ end, { silent = true })
 vim.keymap.set("n", "gV", "_vg_", { silent = true })
 
 vim.keymap.set("n", "J", function()
+    if not check_modifiable() then
+        return
+    end
     -- Done using a view instead of a mark to prevent visible screen shake
     local view = vim.fn.winsaveview()
     vim.api.nvim_exec2("norm! J", {})
@@ -239,9 +248,15 @@ vim.keymap.set("n", "<leader>D", '"_D', { silent = true })
 vim.keymap.set("v", "D", "<nop>", { silent = true })
 vim.keymap.set("n", "d^", '^dg_"_dd', { silent = true }) -- Does not yank newline character
 vim.keymap.set("n", "dD", function()
+    if not check_modifiable() then
+        return
+    end
     vim.api.nvim_exec2("silent norm! ggdG", {})
 end, { silent = true })
 vim.keymap.set("n", "<leader>dD", function()
+    if not check_modifiable() then
+        return
+    end
     vim.api.nvim_exec2('silent norm! gg"_dG', {})
 end, { silent = true })
 
