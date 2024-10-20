@@ -15,6 +15,8 @@ vim.keymap.set("v", "u", "<Nop>")
 vim.keymap.set("v", "q", "<Nop>", { silent = true })
 vim.keymap.set("n", "Q", "<nop>")
 vim.keymap.set("n", "gQ", "<nop>")
+-- Mapping Ctrl combos is tricky, but this suspends Neovim. Very bad to accidently hit
+vim.keymap.set("n", "<C-z>", "<nop>")
 
 vim.keymap.set("n", "<C-c>", function()
     vim.api.nvim_exec2("echo ''", {})
