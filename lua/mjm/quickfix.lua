@@ -67,7 +67,7 @@ local diags_to_qf = function(options)
     local bufnr = nil
     if cur_buf then
         if not vim.api.nvim_get_option_value("modifiable", { buf = 0 }) then
-            vim.api.nvim_err_writeln("E21: Cannot make changes, 'modifiable' is off")
+            vim.notify("Not a diagnostic producing buffer")
             return
         end
 
