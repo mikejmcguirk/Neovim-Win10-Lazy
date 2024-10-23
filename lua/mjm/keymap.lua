@@ -323,7 +323,20 @@ for _, map in pairs(norm_pastes) do
         local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
         vim.api.nvim_buf_set_mark(0, "z", cur_row, cur_col, {})
 
-        vim.api.nvim_exec2("silent norm! " .. vim.v.count1 .. map[2], {})
+        local status, result = pcall(function()
+            vim.api.nvim_exec2("silent norm! " .. vim.v.count1 .. map[2], {})
+        end)
+
+        if not status then
+            if type(result) == "string" then
+                vim.api.nvim_err_writeln(result)
+            else
+                vim.api.nvim_err_writeln("Unknown error pasting")
+            end
+
+            return
+        end
+
         if vim.fn.getregtype(map[3]) == "V" then
             vim.api.nvim_exec2("silent norm! `[=`]", {})
         end
