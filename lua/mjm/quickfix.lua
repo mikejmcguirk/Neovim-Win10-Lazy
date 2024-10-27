@@ -144,6 +144,7 @@ end)
 
 vim.api.nvim_exec2("packadd cfilter", {})
 
+-- NOTE: cfilter only works on the "text" portion of the qf entry
 ---@param type string
 local cfilter_wrapper = function(type)
     if #vim.fn.getqflist() == 0 then
