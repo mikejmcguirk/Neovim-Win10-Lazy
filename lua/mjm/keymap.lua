@@ -10,7 +10,6 @@ end
 
 -- Mapping in command mode will cause <C-c> to accept commands
 vim.keymap.set({ "i", "x" }, "<C-c>", "<esc>", { silent = true })
-
 vim.keymap.set("n", "<C-c>", function()
     vim.api.nvim_exec2("echo ''", {})
     vim.api.nvim_exec2("noh", {})
@@ -52,8 +51,6 @@ end)
 vim.keymap.set("n", "ZX", function()
     cmd_boilerplate("silent w | so", "Unknown error")
 end)
-vim.keymap.set("n", "ZZ", "<Nop>")
-vim.keymap.set("n", "ZQ", "<Nop>")
 
 vim.keymap.set("n", "ZB", function()
     local current_buf = vim.api.nvim_get_current_buf()
@@ -77,6 +74,9 @@ vim.keymap.set("n", "ZB", function()
         cmd_boilerplate("q", "Unknown error quitting window")
     end
 end)
+
+vim.keymap.set("n", "ZZ", "<Nop>")
+vim.keymap.set("n", "ZQ", "<Nop>")
 
 -- Stop undo history from showing in the cmd line whever an undo/redo is performed
 -- Done as functions because keymap <cmd>'s do not work with v:count1

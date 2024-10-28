@@ -47,6 +47,7 @@ vim.opt.splitbelow = true
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
 vim.opt.incsearch = false -- Prevent screen from shifting when entering substitution patterns
+
 vim.opt.modelines = 1
 
 -- Prevents disabled <C-w> and Z mappings from becoming active again after timeout

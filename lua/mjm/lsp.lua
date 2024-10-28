@@ -34,7 +34,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
         vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = ev.buf })
         vim.keymap.set("n", "gt", vim.lsp.buf.type_definition, { buffer = ev.buf })
 
-        vim.keymap.set("n", "gs", vim.lsp.buf.signature_help, { buffer = ev.buf })
         vim.keymap.set("n", "<leader>vh", vim.lsp.buf.document_highlight, { buffer = ev.buf })
 
         vim.keymap.set("n", "<leader>va", vim.lsp.buf.add_workspace_folder, { buffer = ev.buf })
@@ -84,5 +83,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
         vim.keymap.set("n", "gri", vim.lsp.buf.implementation, { buffer = ev.buf })
         vim.keymap.set("n", "grr", vim.lsp.buf.references, { buffer = ev.buf })
         vim.keymap.set({ "n", "x" }, "gra", vim.lsp.buf.code_action, { buffer = ev.buf })
+        vim.keymap.set("n", "gO", vim.lsp.buf.document_symbol, { buffer = ev.buf })
+        vim.keymap.set("n", "<C-s>", vim.lsp.buf.signature_help, { buffer = ev.buf })
     end,
 })
