@@ -17,8 +17,12 @@ vim.keymap.set("n", "Q", "<nop>")
 vim.keymap.set("n", "gQ", "<nop>")
 -- Mapping Ctrl combos is tricky, but this suspends Neovim. Very bad to accidently hit
 vim.keymap.set("n", "<C-z>", "<nop>")
-vim.keymap.set("n", "<C-w>c", "<nop>")
-vim.keymap.set("n", "<C-w><C-c>", "<nop>")
+
+local bad_wincmds = { "c", "f", "w", "q" }
+for _, key in pairs(bad_wincmds) do
+    vim.keymap.set("n", "<C-w>" .. key, "<nop>")
+    vim.keymap.set("n", "<C-w><C-" .. key .. ">", "<nop>")
+end
 
 vim.keymap.set("n", "<C-c>", function()
     vim.api.nvim_exec2("echo ''", {})
@@ -101,16 +105,6 @@ vim.keymap.set("n", "<C-r>", function()
     end
     vim.api.nvim_exec2('silent exec "norm! ' .. vim.v.count1 .. '\\<C-r>"', {})
 end, { silent = true })
-
-vim.keymap.set("n", "<leader>lrv", "<cmd>rightbelow vsplit<cr>", { silent = true })
-vim.keymap.set("n", "<leader>llv", "<cmd>leftabove vsplit<cr>", { silent = true })
-vim.keymap.set("n", "<leader>ltv", "<cmd>topleft vsplit<cr>", { silent = true })
-vim.keymap.set("n", "<leader>lbv", "<cmd>botright vsplit<cr>", { silent = true })
-
-vim.keymap.set("n", "<leader>lrs", "<cmd>rightbelow split<cr>", { silent = true })
-vim.keymap.set("n", "<leader>lls", "<cmd>leftabove split<cr>", { silent = true })
-vim.keymap.set("n", "<leader>lts", "<cmd>topleft split<cr>", { silent = true })
-vim.keymap.set("n", "<leader>lbs", "<cmd>botright split<cr>", { silent = true })
 
 vim.keymap.set("n", "<M-j>", "<cmd>resize -2<CR>", { silent = true })
 vim.keymap.set("n", "<M-k>", "<cmd>resize +2<CR>", { silent = true })
