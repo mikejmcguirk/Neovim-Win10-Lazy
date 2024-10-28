@@ -54,8 +54,6 @@ vim.opt.timeout = false
 
 vim.opt.updatetime = 500
 
-vim.opt.shada = "!,'100,<50,/0,h"
-
 vim.opt.list = true
 vim.opt.listchars = {
     tab = "<–>",
@@ -71,14 +69,14 @@ vim.opt.spell = false
 vim.opt.spelllang = "en_us" -- If spell is turned on by an ftplugin file
 
 vim.opt.cursorline = true
-local cursor_control = vim.api.nvim_create_augroup("cursor_control", { clear = true })
+local cursorline_control = vim.api.nvim_create_augroup("cursorline_control", { clear = true })
 ---@param event string
 ---@param value boolean
 ---@param pattern string
 ---@return nil
 local set_cursorline = function(event, value, pattern)
     vim.api.nvim_create_autocmd(event, {
-        group = cursor_control,
+        group = cursorline_control,
         pattern = pattern,
         callback = function()
             vim.opt_local.cursorline = value

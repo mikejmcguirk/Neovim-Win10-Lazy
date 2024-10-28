@@ -14,6 +14,7 @@ return {
                     sync_on_ui_close = true,
                 },
                 default = {
+                    -- TODO: Why did I do this?
                     select = function(list_item, list, options)
                         Logger:log("config_default#select", list_item, list.name, options)
                         if list_item == nil then
