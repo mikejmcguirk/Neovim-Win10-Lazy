@@ -1,12 +1,5 @@
 local ut = require("mjm.utils")
 
-vim.keymap.set("n", "[D", function()
-    vim.diagnostic.goto_prev({ severity = "ERROR" })
-end)
-vim.keymap.set("n", "]D", function()
-    vim.diagnostic.goto_next({ severity = "ERROR" })
-end)
-
 local handler_border = {
     border = "single",
     style = "minimal",
@@ -39,9 +32,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
     callback = function(ev)
         vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = ev.buf })
         vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = ev.buf })
-        vim.keymap.set("n", "gI", vim.lsp.buf.implementation, { buffer = ev.buf })
         vim.keymap.set("n", "gt", vim.lsp.buf.type_definition, { buffer = ev.buf })
-        vim.keymap.set("n", "gr", vim.lsp.buf.references, { buffer = ev.buf })
 
         vim.keymap.set("n", "gs", vim.lsp.buf.signature_help, { buffer = ev.buf })
         vim.keymap.set("n", "<leader>vh", vim.lsp.buf.document_highlight, { buffer = ev.buf })
@@ -52,7 +43,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
             print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
         end, { buffer = ev.buf })
 
-        vim.keymap.set("n", "<leader>vr", function()
+        vim.keymap.set("n", "grn", function()
             local bufnr = vim.api.nvim_get_current_buf()
             local clients = vim.lsp.get_clients({
                 bufnr = bufnr,
@@ -88,6 +79,10 @@ vim.api.nvim_create_autocmd("LspAttach", {
                 do_rename()
             end
         end, { buffer = ev.buf })
-        vim.keymap.set({ "n", "v" }, "<leader>vc", vim.lsp.buf.code_action, { buffer = ev.buf })
+
+        -- Future default LSP keymappings. Remove when pushed to release version
+        vim.keymap.set("n", "gri", vim.lsp.buf.implementation, { buffer = ev.buf })
+        vim.keymap.set("n", "grr", vim.lsp.buf.references, { buffer = ev.buf })
+        vim.keymap.set({ "n", "x" }, "gra", vim.lsp.buf.code_action, { buffer = ev.buf })
     end,
 })

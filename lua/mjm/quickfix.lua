@@ -184,6 +184,7 @@ vim.keymap.set("n", "<leader>qr", function()
     cfilter_wrapper("r")
 end)
 
+-- TODO: Add the ability to take count into this
 local qf_scroll_wrapper = function(scroll_cmd)
     if #vim.fn.getqflist() == 0 then
         print("Quickfix list is empty")
@@ -225,5 +226,6 @@ end)
 vim.keymap.set("n", "]q", function()
     qf_scroll_wrapper("cnext")
 end)
+-- TODO: Rewrite these with a pcall
 vim.keymap.set("n", "[Q", "<cmd>cfirst<cr>")
 vim.keymap.set("n", "]Q", "<cmd>clast<cr>")

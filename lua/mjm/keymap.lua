@@ -9,20 +9,7 @@ local check_modifiable = function()
 end
 
 -- Mapping in command mode will cause <C-c> to accept commands
-vim.keymap.set({ "i", "v" }, "<C-c>", "<esc>", { silent = true })
-
-vim.keymap.set("v", "u", "<Nop>")
-vim.keymap.set("v", "q", "<Nop>", { silent = true })
-vim.keymap.set("n", "Q", "<nop>")
-vim.keymap.set("n", "gQ", "<nop>")
--- Mapping Ctrl combos is tricky, but this suspends Neovim. Very bad to accidently hit
-vim.keymap.set("n", "<C-z>", "<nop>")
-
-local bad_wincmds = { "c", "f", "w", "q" }
-for _, key in pairs(bad_wincmds) do
-    vim.keymap.set("n", "<C-w>" .. key, "<nop>")
-    vim.keymap.set("n", "<C-w><C-" .. key .. ">", "<nop>")
-end
+vim.keymap.set({ "i", "x" }, "<C-c>", "<esc>", { silent = true })
 
 vim.keymap.set("n", "<C-c>", function()
     vim.api.nvim_exec2("echo ''", {})
@@ -118,14 +105,14 @@ end, { silent = true })
 vim.keymap.set("n", "<C-d>", function()
     vim.api.nvim_exec2('silent exec "norm! \\<C-d>zz"', {})
 end, { silent = true })
-vim.keymap.set("v", "<C-u>", "<C-u>zz", { silent = true })
-vim.keymap.set("v", "<C-d>", "<C-d>zz", { silent = true })
+vim.keymap.set("x", "<C-u>", "<C-u>zz", { silent = true })
+vim.keymap.set("x", "<C-d>", "<C-d>zz", { silent = true })
 
 -- Not silent so that the search prompting displays properly
 vim.keymap.set("n", "/", "ms/")
 vim.keymap.set("n", "?", "ms?")
 
-vim.keymap.set({ "n", "v" }, "n", function()
+vim.keymap.set({ "n", "x" }, "n", function()
     if not (vim.v.hlsearch == 1) then
         local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
         vim.api.nvim_buf_set_mark(0, "s", cur_row, cur_col, {})
@@ -134,7 +121,7 @@ vim.keymap.set({ "n", "v" }, "n", function()
 
     return "nzzzv"
 end, { expr = true })
-vim.keymap.set({ "n", "v" }, "N", function()
+vim.keymap.set({ "n", "x" }, "N", function()
     if not (vim.v.hlsearch == 1) then
         local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
         vim.api.nvim_buf_set_mark(0, "s", cur_row, cur_col, {})
@@ -166,8 +153,8 @@ vim.keymap.set("i", "!", "!<C-g>u", { silent = true })
 vim.keymap.set("i", ":", ":<C-g>u", { silent = true })
 vim.keymap.set("i", "-", "-<C-g>u", { silent = true })
 
-vim.keymap.set({ "n", "v" }, "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
-vim.keymap.set({ "n", "v" }, "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
+vim.keymap.set({ "n", "x" }, "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
+vim.keymap.set({ "n", "x" }, "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
 
 ---@param direction string
 ---@return nil
@@ -180,10 +167,10 @@ local visual_indent = function(direction)
     vim.opt_local.cursorline = true
 end
 
-vim.keymap.set("v", "<", function()
+vim.keymap.set("x", "<", function()
     visual_indent("<")
 end, { silent = true })
-vim.keymap.set("v", ">", function()
+vim.keymap.set("x", ">", function()
     visual_indent(">")
 end, { silent = true })
 
@@ -224,13 +211,13 @@ local cap_motions_vis = {
     "gU",
 }
 for _, map in pairs(cap_motions_vis) do
-    vim.keymap.set("v", map, function()
+    vim.keymap.set("x", map, function()
         return "mz" .. vim.v.count1 .. map .. "`z"
     end, { silent = true, expr = true })
 end
 
-vim.keymap.set({ "n", "v" }, "x", '"_x', { silent = true })
-vim.keymap.set({ "n", "v" }, "X", '"_X', { silent = true })
+vim.keymap.set({ "n", "x" }, "x", '"_x', { silent = true })
+vim.keymap.set({ "n", "x" }, "X", '"_X', { silent = true })
 
 vim.keymap.set("n", "dd", function()
     local has_chars = string.match(vim.api.nvim_get_current_line(), "%S")
@@ -241,9 +228,9 @@ vim.keymap.set("n", "dd", function()
     end
 end, { silent = true, expr = true })
 
-vim.keymap.set({ "n", "v" }, "<leader>d", '"_d', { silent = true })
+vim.keymap.set({ "n", "x" }, "<leader>d", '"_d', { silent = true })
 vim.keymap.set("n", "<leader>D", '"_D', { silent = true })
-vim.keymap.set("v", "D", "<nop>", { silent = true })
+vim.keymap.set("x", "D", "<nop>", { silent = true })
 vim.keymap.set("n", "d^", '^dg_"_dd', { silent = true }) -- Does not yank newline character
 vim.keymap.set("n", "dD", function()
     if not check_modifiable() then
@@ -258,14 +245,14 @@ vim.keymap.set("n", "<leader>dD", function()
     vim.api.nvim_exec2('silent norm! gg"_dG', {})
 end, { silent = true })
 
-vim.keymap.set({ "n", "v" }, "<leader>c", '"_c', { silent = true })
+vim.keymap.set({ "n", "x" }, "<leader>c", '"_c', { silent = true })
 vim.keymap.set("n", "<leader>C", '"_C', { silent = true })
-vim.keymap.set("v", "C", "<nop>", { silent = true })
+vim.keymap.set("x", "C", "<nop>", { silent = true })
 vim.keymap.set("n", "c^", "^cg_", { silent = true }) -- Does not yank newline character
 vim.keymap.set("n", "cC", "ggcG", { silent = true })
 vim.keymap.set("n", "<leacer>cC", 'gg"_cG', { silent = true })
 
-vim.keymap.set({ "n", "v" }, "s", "<Nop>", { silent = true })
+vim.keymap.set({ "n", "x" }, "s", "<Nop>", { silent = true })
 vim.keymap.set("n", "S", "<Nop>", { silent = true }) -- Used in visual mode by nvim-surround
 
 vim.api.nvim_create_autocmd("TextYankPost", {
@@ -277,12 +264,12 @@ vim.api.nvim_create_autocmd("TextYankPost", {
     end,
 })
 
-vim.keymap.set({ "n", "v" }, "y", "mzy", { silent = true })
-vim.keymap.set({ "n", "v" }, "<leader>y", 'mz"+y', { silent = true })
+vim.keymap.set({ "n", "x" }, "y", "mzy", { silent = true })
+vim.keymap.set({ "n", "x" }, "<leader>y", 'mz"+y', { silent = true })
 
 vim.keymap.set("n", "Y", "mzy$", { silent = true }) -- Avoid inconsistent behavior
 vim.keymap.set("n", "<leader>Y", 'mz"+y$', { silent = true }) -- Mapping to "+Y yanks whole line
-vim.keymap.set("v", "Y", "<nop>", { silent = true })
+vim.keymap.set("x", "Y", "<nop>", { silent = true })
 
 vim.keymap.set("n", "y^", "mz^vg_y", { silent = true })
 vim.keymap.set("n", "<leader>y^", 'mz^vg_"+y', { silent = true })
@@ -295,11 +282,11 @@ for _, obj in pairs(startline_objects) do
     vim.keymap.set("n", "y" .. obj, "mzv" .. obj .. "y", { silent = true })
     vim.keymap.set("n", "<leader>y" .. obj, "mzv" .. obj .. '"+y', { silent = true })
 
-    vim.keymap.set("n", "d" .. obj, "v" .. obj .. "d", { silent = true })
-    vim.keymap.set("n", "<leader>d" .. obj, "v" .. obj .. '"_d', { silent = true })
+    vim.keymap.set("n", "d" .. obj, "x" .. obj .. "d", { silent = true })
+    vim.keymap.set("n", "<leader>d" .. obj, "x" .. obj .. '"_d', { silent = true })
 
-    vim.keymap.set("n", "c" .. obj, "v" .. obj .. "c", { silent = true })
-    vim.keymap.set("n", "<leader>c" .. obj, "v" .. obj .. '"_c', { silent = true })
+    vim.keymap.set("n", "c" .. obj, "x" .. obj .. "c", { silent = true })
+    vim.keymap.set("n", "<leader>c" .. obj, "x" .. obj .. '"_c', { silent = true })
 end
 
 local norm_pastes = {
@@ -332,7 +319,7 @@ for _, map in pairs(norm_pastes) do
             return
         end
 
-        if vim.fn.getregtype(map[3]) == "V" then
+        if vim.fn.getregtype(map[3]) == "x" then
             vim.api.nvim_exec2("silent norm! `[=`]", {})
         end
         vim.api.nvim_exec2("silent norm! `z", {})
@@ -347,15 +334,15 @@ local visual_pastes = {
     { "<leader>P", '"+p', "+" },
 }
 for _, map in pairs(visual_pastes) do
-    vim.keymap.set("v", map[1], function()
+    vim.keymap.set("x", map[1], function()
         if not check_modifiable() then
             return "<Nop>"
         end
 
         local cur_mode = vim.api.nvim_get_mode().mode
-        if cur_mode == "V" or cur_mode == "Vs" then
+        if cur_mode == "x" or cur_mode == "Vs" then
             return vim.v.count1 .. map[2] .. "=`]"
-        elseif vim.fn.getregtype(map[3]) == "V" then
+        elseif vim.fn.getregtype(map[3]) == "x" then
             return "mz" .. vim.v.count1 .. map[2] .. "`[=`]`z"
         else
             return "mz" .. vim.v.count1 .. map[2] .. "`z"
@@ -382,13 +369,6 @@ end, { silent = true })
 vim.keymap.set("n", "] ", function()
     create_blank_line("put")
 end, { silent = true })
-
-vim.keymap.set({ "n", "v" }, "[[", "<Nop>")
-vim.keymap.set({ "n", "v" }, "]]", "<Nop>")
-vim.keymap.set({ "n", "v" }, "[]", "<Nop>")
-vim.keymap.set({ "n", "v" }, "][", "<Nop>")
-vim.keymap.set({ "n", "v" }, "[/", "<Nop>")
-vim.keymap.set({ "n", "v" }, "]/", "<Nop>")
 
 ---@param vcount1 number
 ---@param direction string
@@ -456,10 +436,10 @@ local visual_move = function(vcount1, direction)
     vim.api.nvim_exec2("norm! gv", {})
 end
 
-vim.keymap.set("v", "J", function()
+vim.keymap.set("x", "J", function()
     visual_move(vim.v.count1, "d")
 end, { silent = true })
-vim.keymap.set("v", "K", function()
+vim.keymap.set("x", "K", function()
     visual_move(vim.v.count1, "u")
 end, { silent = true })
 
@@ -521,102 +501,3 @@ vim.keymap.set("n", "gllW", function()
     vim.api.nvim_exec2("noh", {})
     vim.api.nvim_exec2("norm! `z", {})
 end, { silent = true })
-
-vim.opt.mouse = "a" -- Otherwise, the terminal handles mouse functionality
-vim.opt.mousemodel = "extend" -- Disables terminal right-click paste
-
-local mouse_maps = {
-    "LeftMouse",
-    "2-LeftMouse",
-    "3-LeftMouse",
-    "4-LeftMouse",
-    "C-LeftMouse",
-    "C-2-LeftMouse",
-    "C-3-LeftMouse",
-    "C-4-LeftMouse",
-    "M-LeftMouse",
-    "M-2-LeftMouse",
-    "M-3-LeftMouse",
-    "M-4-LeftMouse",
-    "C-M-LeftMouse",
-    "C-M-2-LeftMouse",
-    "C-M-3-LeftMouse",
-    "C-M-4-LeftMouse",
-    "RightMouse",
-    "2-RightMouse",
-    "3-RightMouse",
-    "4-RightMouse",
-    "A-RightMouse",
-    "S-RightMouse",
-    "C-RightMouse",
-    "C-2-RightMouse",
-    "C-3-RightMouse",
-    "C-4-RightMouse",
-    "C-A-RightMouse",
-    "C-S-RightMouse",
-    "M-RightMouse",
-    "M-2-RightMouse",
-    "M-3-RightMouse",
-    "M-4-RightMouse",
-    "M-A-RightMouse",
-    "M-S-RightMouse",
-    "M-C-RightMouse",
-    "C-M-RightMouse",
-    "C-M-2-RightMouse",
-    "C-M-3-RightMouse",
-    "C-M-4-RightMouse",
-    "C-M-A-RightMouse",
-    "C-M-S-RightMouse",
-    "C-M-C-RightMouse",
-    "LeftDrag",
-    "RightDrag",
-    "LeftRelease",
-    "RightRelease",
-    "C-LeftDrag",
-    "C-RightDrag",
-    "C-LeftRelease",
-    "C-RightRelease",
-    "M-LeftDrag",
-    "M-RightDrag",
-    "M-LeftRelease",
-    "M-RightRelease",
-    "C-M-LeftDrag",
-    "C-M-RightDrag",
-    "C-M-LeftRelease",
-    "C-M-RightRelease",
-    "MiddleMouse",
-    "2-MiddleMouse",
-    "3-MiddleMouse",
-    "4-MiddleMouse",
-    "C-MiddleMouse",
-    "C-2-MiddleMouse",
-    "C-3-MiddleMouse",
-    "C-4-MiddleMouse",
-    "M-MiddleMouse",
-    "M-2-MiddleMouse",
-    "M-3-MiddleMouse",
-    "M-4-MiddleMouse",
-    "C-M-MiddleMouse",
-    "C-M-2-MiddleMouse",
-    "C-M-3-MiddleMouse",
-    "C-M-4-MiddleMouse",
-    "ScrollWheelUp",
-    "S-ScrollWheelUp",
-    "ScrollWheelDown",
-    "S-ScrollWheelDown",
-    "C-ScrollWheelUp",
-    "C-S-ScrollWheelUp",
-    "C-ScrollWheelDown",
-    "C-S-ScrollWheelDown",
-    "M-ScrollWheelUp",
-    "M-S-ScrollWheelUp",
-    "M-ScrollWheelDown",
-    "M-S-ScrollWheelDown",
-    "C-M-ScrollWheelUp",
-    "C-M-S-ScrollWheelUp",
-    "C-M-ScrollWheelDown",
-    "C-M-S-ScrollWheelDown",
-}
-for _, map in pairs(mouse_maps) do
-    vim.keymap.set({ "n", "i", "v", "c" }, "<" .. map .. ">", "<Nop>")
-end
