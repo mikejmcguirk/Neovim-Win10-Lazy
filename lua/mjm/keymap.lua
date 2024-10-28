@@ -18,6 +18,7 @@ vim.keymap.set("n", "gQ", "<nop>")
 -- Mapping Ctrl combos is tricky, but this suspends Neovim. Very bad to accidently hit
 vim.keymap.set("n", "<C-z>", "<nop>")
 vim.keymap.set("n", "<C-w>c", "<nop>")
+vim.keymap.set("n", "<C-w><C-c>", "<nop>")
 
 vim.keymap.set("n", "<C-c>", function()
     vim.api.nvim_exec2("echo ''", {})
@@ -344,6 +345,7 @@ for _, map in pairs(norm_pastes) do
     end, { silent = true })
 end
 
+-- TODO: Change this to remove the "X lines indented" command line nag
 local visual_pastes = {
     { "p", "P", '"' },
     { "<leader>p", '"+P', "+" },

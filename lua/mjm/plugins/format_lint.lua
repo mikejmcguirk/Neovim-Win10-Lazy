@@ -11,6 +11,8 @@ return {
                     sh = { "beautysh" },
                     toml = { "taplo" },
                     rust = { "rustfmt" },
+                    -- TODO: This should be prettierd
+                    json = { "prettier" },
                 },
             })
         end,

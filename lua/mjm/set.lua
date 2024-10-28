@@ -49,8 +49,10 @@ vim.opt.smartcase = true
 vim.opt.incsearch = false -- Prevent screen from shifting when entering substitution patterns
 vim.opt.modelines = 1
 
+-- Prevents disabled <C-w> and Z mappings from becoming active again after timeout
+vim.opt.timeout = false
+
 vim.opt.updatetime = 500
-vim.opt.timeoutlen = 500
 
 vim.opt.shada = "!,'100,<50,/0,h"
 
