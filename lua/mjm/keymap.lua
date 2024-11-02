@@ -23,6 +23,8 @@ vim.keymap.set("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true }) -- Stop
 
 vim.api.nvim_create_user_command("We", "silent w | e", {}) -- Quick refresh if Treesitter bugs out
 
+-- TODO: Figure how how to make gq work for formatting comments
+
 ---@param cmd string
 ---@param error string
 ---@return nil
