@@ -304,6 +304,9 @@ for _, map in pairs(norm_pastes) do
             return
         end
 
+        local cur_line = vim.api.nvim_get_current_line()
+        local start_idx, _ = string.find(cur_line, "%S")
+        local is_blank = not start_idx
         local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
         vim.api.nvim_buf_set_mark(0, "z", cur_row, cur_col, {})
 
@@ -321,7 +324,7 @@ for _, map in pairs(norm_pastes) do
             return
         end
 
-        if vim.fn.getregtype(map[3]) == "V" then
+        if vim.fn.getregtype(map[3]) == "V" or is_blank then
             vim.api.nvim_exec2("silent norm! `[=`]", {})
         end
         vim.api.nvim_exec2("silent norm! `z", {})
