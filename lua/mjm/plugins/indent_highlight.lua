@@ -10,7 +10,6 @@ return {
         },
     },
     config = function()
-        local indent_char = "│"
         local excluded_filetypes = {
             "help",
             "neo-tree",
@@ -23,6 +22,7 @@ return {
             "NvimTree",
         }
 
+        local indent_char = "│"
         local has_indentscope, indentscope = pcall(require, "mini.indentscope")
         local show_ibl_scope = not has_indentscope
 
@@ -54,7 +54,6 @@ return {
             bg = vim.api.nvim_get_hl(0, { name = "MiniIndentscopeSymbol" }).bg,
             fg = vim.api.nvim_get_hl(0, { name = "MiniIndentscopeSymbol" }).fg,
         })
-
         vim.api.nvim_set_hl(0, "MiniIndentscopeSymbol", {
             bg = vim.api.nvim_get_hl(0, { name = "IblScope" }).bg,
             fg = vim.api.nvim_get_hl(0, { name = "IblScope" }).fg,

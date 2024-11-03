@@ -5,6 +5,10 @@ vim.opt_local.spell = true
 vim.opt_local.colorcolumn = ""
 vim.opt_local.sidescrolloff = 12
 
+vim.keymap.set("i", "-", "-<C-g>u", { silent = true, buffer = true })
+vim.keymap.set("i", "?", "?<C-g>u", { silent = true, buffer = true })
+vim.keymap.set("i", "!", "!<C-g>u", { silent = true, buffer = true })
+
 vim.keymap.set("i", "<backspace>", function()
     local cur_line = vim.api.nvim_get_current_line()
     local start_idx, end_idx = string.find(cur_line, "%S")

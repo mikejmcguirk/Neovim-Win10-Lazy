@@ -95,6 +95,7 @@ vim.keymap.set("n", "<C-r>", function()
     vim.api.nvim_exec2('silent exec "norm! ' .. vim.v.count1 .. '\\<C-r>"', {})
 end, { silent = true })
 
+-- Window navigation is handled through the tmux-navigator plugin
 vim.keymap.set("n", "<M-j>", "<cmd>resize -2<CR>", { silent = true })
 vim.keymap.set("n", "<M-k>", "<cmd>resize +2<CR>", { silent = true })
 vim.keymap.set("n", "<M-h>", "<cmd>vertical resize -2<CR>", { silent = true })
@@ -150,14 +151,12 @@ end, { silent = true })
 vim.keymap.set("i", ",", ",<C-g>u", { silent = true })
 vim.keymap.set("i", ".", ".<C-g>u", { silent = true })
 vim.keymap.set("i", ";", ";<C-g>u", { silent = true })
-vim.keymap.set("i", "?", "?<C-g>u", { silent = true })
-vim.keymap.set("i", "!", "!<C-g>u", { silent = true })
 vim.keymap.set("i", ":", ":<C-g>u", { silent = true })
-vim.keymap.set("i", "-", "-<C-g>u", { silent = true })
 
 vim.keymap.set({ "n", "x" }, "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
 vim.keymap.set({ "n", "x" }, "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
 
+-- Remove command line nags when indenting multiple lines visually
 ---@param direction string
 ---@return nil
 local visual_indent = function(direction)
@@ -297,7 +296,8 @@ local norm_pastes = {
     { "P", "P", '"' },
     { "<leader>P", '"+P', "+" },
 }
--- Done as exec commands to reduce visible text shake when fixing indentation
+-- Done as exec commands to reduce visible text shake when fixing indentation and
+-- to remove command line nags
 for _, map in pairs(norm_pastes) do
     vim.keymap.set("n", map[1], function()
         if not check_modifiable() then
@@ -313,12 +313,11 @@ for _, map in pairs(norm_pastes) do
         local status, result = pcall(function()
             vim.api.nvim_exec2("silent norm! " .. vim.v.count1 .. map[2], {})
         end)
-
         if not status then
             if type(result) == "string" then
                 vim.api.nvim_err_writeln(result)
             else
-                vim.api.nvim_err_writeln("Unknown error pasting")
+                vim.api.nvim_err_writeln("Unknown error when pasting")
             end
 
             return
