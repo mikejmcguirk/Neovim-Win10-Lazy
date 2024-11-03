@@ -27,8 +27,10 @@ vim.lsp.handlers["textDocument/signatureHelp"] =
 
 vim.lsp.set_log_level("ERROR")
 
+local lsp_group = vim.api.nvim_create_augroup("LSP_Augroup", { clear = true })
+
 vim.api.nvim_create_autocmd("LspAttach", {
-    group = vim.api.nvim_create_augroup("LSP_Augroup", { clear = true }),
+    group = lsp_group,
     callback = function(ev)
         local toggle_virtual_text = function()
             local current_config = vim.diagnostic.config() or {}
@@ -99,5 +101,26 @@ vim.api.nvim_create_autocmd("LspAttach", {
         vim.keymap.set({ "n", "x" }, "gra", vim.lsp.buf.code_action, { buffer = ev.buf })
         vim.keymap.set("n", "gO", vim.lsp.buf.document_symbol, { buffer = ev.buf })
         vim.keymap.set("n", "<C-s>", vim.lsp.buf.signature_help, { buffer = ev.buf })
+    end,
+})
+
+vim.api.nvim_create_autocmd("BufUnload", {
+    group = lsp_group,
+    callback = function(ev)
+        local bufnr = ev.buf
+        local clients = vim.lsp.get_clients({ bufnr = bufnr })
+        if not clients or vim.tbl_isempty(clients) then
+            return
+        end
+
+        for _, client in pairs(clients) do
+            local attached_buffers = vim.tbl_filter(function(buf_nbr)
+                return buf_nbr ~= bufnr
+            end, vim.tbl_keys(client.attached_buffers))
+
+            if vim.tbl_isempty(attached_buffers) then
+                vim.lsp.stop_client(client.id)
+            end
+        end
     end,
 })
