@@ -30,6 +30,20 @@ vim.lsp.set_log_level("ERROR")
 vim.api.nvim_create_autocmd("LspAttach", {
     group = vim.api.nvim_create_augroup("LSP_Augroup", { clear = true }),
     callback = function(ev)
+        local toggle_virtual_text = function()
+            local current_config = vim.diagnostic.config() or {}
+            local new_virtual_text = not current_config.virtual_text
+
+            vim.diagnostic.config({ virtual_text = new_virtual_text })
+
+            if new_virtual_text then
+                print("Diagnostic virtual text enabled")
+            else
+                print("Diagnostic virtual text disabled")
+            end
+        end
+        vim.keymap.set("n", "<leader>vd", toggle_virtual_text)
+
         vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = ev.buf })
         vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = ev.buf })
         vim.keymap.set("n", "gt", vim.lsp.buf.type_definition, { buffer = ev.buf })
@@ -37,7 +51,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
         vim.keymap.set("n", "<leader>vh", vim.lsp.buf.document_highlight, { buffer = ev.buf })
 
         vim.keymap.set("n", "<leader>va", vim.lsp.buf.add_workspace_folder, { buffer = ev.buf })
-        vim.keymap.set("n", "<leader>vd", vim.lsp.buf.remove_workspace_folder, { buffer = ev.buf })
+        vim.keymap.set("n", "<leader>vo", vim.lsp.buf.remove_workspace_folder, { buffer = ev.buf })
         vim.keymap.set("n", "<leader>vf", function()
             print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
         end, { buffer = ev.buf })
