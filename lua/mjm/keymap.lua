@@ -321,7 +321,7 @@ for _, map in pairs(norm_pastes) do
             return
         end
 
-        if vim.fn.getregtype(map[3]) == "x" then
+        if vim.fn.getregtype(map[3]) == "V" then
             vim.api.nvim_exec2("silent norm! `[=`]", {})
         end
         vim.api.nvim_exec2("silent norm! `z", {})
@@ -342,9 +342,9 @@ for _, map in pairs(visual_pastes) do
         end
 
         local cur_mode = vim.api.nvim_get_mode().mode
-        if cur_mode == "x" or cur_mode == "Vs" then
+        if cur_mode == "V" or cur_mode == "Vs" then
             return vim.v.count1 .. map[2] .. "=`]"
-        elseif vim.fn.getregtype(map[3]) == "x" then
+        elseif vim.fn.getregtype(map[3]) == "V" then
             return "mz" .. vim.v.count1 .. map[2] .. "`[=`]`z"
         else
             return "mz" .. vim.v.count1 .. map[2] .. "`z"
