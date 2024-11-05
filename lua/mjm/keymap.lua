@@ -25,12 +25,11 @@ vim.api.nvim_create_user_command("We", "silent w | e", {}) -- Quick refresh if T
 
 -- TODO: Figure how how to make gq work for formatting comments
 
----@param cmd string
----@param error string
----@return nil
-local cmd_boilerplate = function(cmd, error)
+vim.keymap.set("n", "ZV", "<cmd>silent w<cr>")
+vim.keymap.set("n", "ZA", "<cmd>silent wa<cr>")
+vim.keymap.set("n", "ZX", function()
     local status, result = pcall(function()
-        vim.api.nvim_exec2(cmd, {})
+        vim.api.nvim_exec2("silent w | so", {})
     end)
     if status then
         return
@@ -41,17 +40,7 @@ local cmd_boilerplate = function(cmd, error)
 
         return
     end
-    vim.api.nvim_err_writeln(error)
-end
-
-vim.keymap.set("n", "ZV", function()
-    cmd_boilerplate("silent w", "Unknown error saving file")
-end)
-vim.keymap.set("n", "ZA", function()
-    cmd_boilerplate("silent wa", "Unknown error saving file(s)")
-end)
-vim.keymap.set("n", "ZX", function()
-    cmd_boilerplate("silent w | so", "Unknown error")
+    vim.api.nvim_err_writeln("Unknown error")
 end)
 
 vim.keymap.set("n", "ZB", function()
@@ -67,15 +56,13 @@ vim.keymap.set("n", "ZB", function()
     end
 
     if total_win_count < 2 then
-        return
+        return "<nop>"
     end
-
     if buf_win_count < 2 then
-        cmd_boilerplate("bd", "Unknown error deleting buffer")
-    else
-        cmd_boilerplate("q", "Unknown error quitting window")
+        return "<cmd>bd<cr>"
     end
-end)
+    return "<cmd>q<cr>"
+end, { expr = true })
 
 vim.keymap.set("n", "ZZ", "<Nop>")
 vim.keymap.set("n", "ZQ", "<Nop>")
@@ -101,15 +88,8 @@ vim.keymap.set("n", "<M-k>", "<cmd>resize +2<CR>", { silent = true })
 vim.keymap.set("n", "<M-h>", "<cmd>vertical resize -2<CR>", { silent = true })
 vim.keymap.set("n", "<M-l>", "<cmd>vertical resize +2<CR>", { silent = true })
 
--- Running these as execs instead of standard mappings reduces visible screen shake
-vim.keymap.set("n", "<C-u>", function()
-    vim.api.nvim_exec2('silent exec "norm! \\<C-u>zz"', {})
-end, { silent = true })
-vim.keymap.set("n", "<C-d>", function()
-    vim.api.nvim_exec2('silent exec "norm! \\<C-d>zz"', {})
-end, { silent = true })
-vim.keymap.set("x", "<C-u>", "<C-u>zz", { silent = true })
-vim.keymap.set("x", "<C-d>", "<C-d>zz", { silent = true })
+vim.keymap.set({ "n", "x" }, "<C-u>", "<C-u>zz", { silent = true })
+vim.keymap.set({ "n", "x" }, "<C-d>", "<C-d>zz", { silent = true })
 
 -- Not silent so that the search prompting displays properly
 vim.keymap.set("n", "/", "ms/")
@@ -175,12 +155,11 @@ vim.keymap.set("x", ">", function()
     visual_indent(">")
 end, { silent = true })
 
-vim.keymap.set("n", "gV", "_vg_", { silent = true })
-
 vim.keymap.set("n", "J", function()
     if not check_modifiable() then
         return
     end
+
     -- Done using a view instead of a mark to prevent visible screen shake
     local view = vim.fn.winsaveview()
     vim.api.nvim_exec2("norm! J", {})
@@ -217,9 +196,14 @@ for _, map in pairs(cap_motions_vis) do
     end, { silent = true, expr = true })
 end
 
-vim.keymap.set({ "n", "x" }, "x", '"_x', { silent = true })
-vim.keymap.set({ "n", "x" }, "X", '"_X', { silent = true })
+vim.keymap.set("n", "x", '"_d', { silent = true })
+vim.keymap.set("n", "xx", '"_dd', { silent = true })
+vim.keymap.set("n", "X", '"_D', { silent = true })
+vim.keymap.set({ "x" }, "x", '"_x', { silent = true })
+vim.keymap.set({ "x" }, "X", "<nop>", { silent = true })
+vim.keymap.set("n", "xX", 'gg"_dG', { silent = true })
 
+-- TODO: This could be smarter/more expanded on
 vim.keymap.set("n", "dd", function()
     local has_chars = string.match(vim.api.nvim_get_current_line(), "%S")
     if vim.v.count1 <= 1 and not has_chars then
@@ -229,22 +213,9 @@ vim.keymap.set("n", "dd", function()
     end
 end, { silent = true, expr = true })
 
-vim.keymap.set({ "n", "x" }, "<leader>d", '"_d', { silent = true })
-vim.keymap.set("n", "<leader>D", '"_D', { silent = true })
 vim.keymap.set("x", "D", "<nop>", { silent = true })
 vim.keymap.set("n", "d^", '^dg_"_dd', { silent = true }) -- Does not yank newline character
-vim.keymap.set("n", "dD", function()
-    if not check_modifiable() then
-        return
-    end
-    vim.api.nvim_exec2("silent norm! ggdG", {})
-end, { silent = true })
-vim.keymap.set("n", "<leader>dD", function()
-    if not check_modifiable() then
-        return
-    end
-    vim.api.nvim_exec2('silent norm! gg"_dG', {})
-end, { silent = true })
+vim.keymap.set("n", "dD", "ggdG", { silent = true })
 
 vim.keymap.set({ "n", "x" }, "<leader>c", '"_c', { silent = true })
 vim.keymap.set("n", "<leader>C", '"_C', { silent = true })
@@ -284,7 +255,7 @@ for _, obj in pairs(startline_objects) do
     vim.keymap.set("n", "<leader>y" .. obj, "mzv" .. obj .. '"+y', { silent = true })
 
     vim.keymap.set("n", "d" .. obj, "v" .. obj .. "d", { silent = true })
-    vim.keymap.set("n", "<leader>d" .. obj, "x" .. obj .. '"_d', { silent = true })
+    vim.keymap.set("n", "x" .. obj, "v" .. obj .. '"_d', { silent = true })
 
     vim.keymap.set("n", "c" .. obj, "v" .. obj .. "c", { silent = true })
     vim.keymap.set("n", "<leader>c" .. obj, "x" .. obj .. '"_c', { silent = true })
@@ -445,63 +416,4 @@ vim.keymap.set("x", "J", function()
 end, { silent = true })
 vim.keymap.set("x", "K", function()
     visual_move(vim.v.count1, "u")
-end, { silent = true })
-
-vim.keymap.set("n", "<leader>=", function()
-    if not check_modifiable() then
-        return
-    end
-
-    local orig_line = vim.api.nvim_get_current_line()
-    local orig_row, orig_col = unpack(vim.api.nvim_win_get_cursor(0))
-    local orig_line_len = #orig_line
-    local orig_set_row = orig_row - 1
-    local rem_line = orig_line:sub(1, orig_col)
-    local trailing_whitespace = string.match(rem_line, "%s+$")
-
-    if trailing_whitespace then
-        local last_non_blank, _ = rem_line:find("(%S)%s*$")
-        if last_non_blank == nil then
-            last_non_blank = 1
-        end
-
-        local set_col = nil
-        if last_non_blank >= 1 then
-            set_col = last_non_blank - 1
-        else
-            set_col = 0
-        end
-
-        vim.api.nvim_buf_set_text(0, orig_set_row, set_col, orig_set_row, orig_line_len, {})
-    else
-        vim.api.nvim_buf_set_text(0, orig_set_row, orig_col, orig_set_row, orig_line_len, {})
-    end
-
-    local orig_col_lua = orig_col + 1
-    local to_move = orig_line:sub(orig_col_lua, orig_line_len)
-    local to_move_trim = to_move:gsub("^%s+", ""):gsub("%s+$", "")
-    vim.api.nvim_exec2("put! =''", {})
-    vim.api.nvim_buf_set_text(0, orig_set_row, 0, orig_set_row, 0, { to_move_trim })
-    vim.api.nvim_exec2("norm! ==", {})
-end, { silent = true })
-
-vim.keymap.set("n", "gliw", "mzguiw~`z", { silent = true })
-vim.keymap.set("n", "gliW", "mzguiW~`z", { silent = true })
-
-vim.keymap.set("n", "gllw", function()
-    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
-    vim.api.nvim_buf_set_mark(0, "z", cur_row, cur_col, {})
-
-    vim.api.nvim_exec2("s/\\v<(.)(\\w*)/\\u\\1\\L\\2/ge", {})
-    vim.api.nvim_exec2("noh", {})
-    vim.api.nvim_exec2("norm! `z", {})
-end, { silent = true })
-
-vim.keymap.set("n", "gllW", function()
-    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
-    vim.api.nvim_buf_set_mark(0, "z", cur_row, cur_col, {})
-
-    vim.api.nvim_exec2("s/\\v<(.)(\\S*)/\\u\\1\\L\\2/ge", {})
-    vim.api.nvim_exec2("noh", {})
-    vim.api.nvim_exec2("norm! `z", {})
 end, { silent = true })
