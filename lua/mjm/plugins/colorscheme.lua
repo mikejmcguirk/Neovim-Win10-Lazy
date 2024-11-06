@@ -1,15 +1,10 @@
--- TODO: Add this with appropriate colors
--- hi EoLSpace ctermbg=238 guibg=#333333
--- match EoLSpace /\s\+$/
-
 -- TODO: Use Zenburn again as a green theme?
 return {
     {
         "maxmx03/fluoromachine.nvim",
         lazy = false, -- Does not work with lazy loading
         priority = 1000, -- Set top priority so highlight groups load
-        -- TODO: Feels like this will break eventually. Better solution?
-        commit = "a5dc2cd",
+        commit = "a5dc2cd", -- TODO: Feels like this will break eventually. Better solution?
         config = function()
             local fm = require("fluoromachine")
 
@@ -47,6 +42,9 @@ return {
 
                 vim.api.nvim_exec2("colorscheme fluoromachine", {})
                 vim.api.nvim_set_hl(0, "CursorLineNr", { fg = "#6FE1FB" })
+
+                vim.api.nvim_set_hl(0, "EolSpace", { bg = "#94F96E", ctermbg = 10 })
+                vim.api.nvim_exec2([[match EoLSpace /\s\+$/]], {})
             else
                 fm.setup({
                     glow = false,
@@ -65,6 +63,9 @@ return {
                 "Cursorline",
                 { bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg }
             )
+
+            vim.api.nvim_set_hl(0, "EolSpace", { bg = "#ffd298", ctermbg = 14 })
+            vim.api.nvim_exec2([[match EoLSpace /\s\+$/]], {})
         end,
     },
 }
