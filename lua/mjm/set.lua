@@ -53,7 +53,12 @@ vim.opt.modelines = 1
 -- Prevents disabled <C-w> and Z mappings from becoming active again after timeout
 vim.opt.timeout = false
 
+vim.opt.swapfile = false
+vim.opt.backup = false
+vim.opt.undofile = true
 vim.opt.updatetime = 250
+-- Previous windows undo path
+-- data_path = os.getenv("USERPROFILE") .. "\\AppData\\Local\\nvim-data\\undodir"
 
 vim.opt.list = true
 vim.opt.listchars = {

@@ -57,7 +57,7 @@ return {
                             n = {
                                 ["y"] = undo_actions.yank_additions,
                                 ["Y"] = undo_actions.yank_deletions,
-                                ["u"] = undo_actions.restore,
+                                ["<cr>"] = undo_actions.restore,
                             },
                         },
                     },
