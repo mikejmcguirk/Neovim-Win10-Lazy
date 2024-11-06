@@ -7,29 +7,14 @@ return {
         config = function()
             local theme
 
-            if Env_Theme == "delta" then
-                -- TODO: Should be some kind of global
+            if Env_Theme == "blue" then
                 local c = {
                     fg = "#EFEFFD",
-                    bg = "#2f3f4d",
                     alt_bg = "#2f3f4d",
-                    currentline = "#2f3f4d",
-                    selection = "#3d5161",
                     comment = "#3c778c",
-                    cyan = "#94F96E",
-                    green = "#DC75EA",
                     orange = "#FF98B3",
-                    pink = "#6FE1FB",
                     purple = "#FFB924",
                     red = "#6CF3CA",
-                    cursor_fg = "#2f3f4d",
-                    cursor_bg = "#EFEFFD",
-                    sign_add = "#94F96E",
-                    sign_change = "#EDFF98",
-                    sign_delete = "#FF98B3",
-                    other = "#6FE1FB",
-                    blankline = "#2f3f4d",
-                    inlay_hint = "#94F96E",
                 }
                 local f_utils = require("fluoromachine.utils")
                 local darken = f_utils.darken

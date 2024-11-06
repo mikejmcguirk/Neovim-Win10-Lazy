@@ -13,8 +13,7 @@ return {
         config = function()
             local fm = require("fluoromachine")
 
-            -- if Env_Theme == "blue" then
-            if Env_Theme == "delta" then
+            if Env_Theme == "blue" then
                 fm.setup({
                     glow = false,
                     brightness = 0.05,

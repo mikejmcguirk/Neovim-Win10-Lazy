@@ -114,29 +114,11 @@ return {
             -- TODO: Should be a global
             local c = {
                 fg = "#EFEFFD",
-                bg = "#2f3f4d",
-                alt_bg = "#2f3f4d",
-                currentline = "#2f3f4d",
-                selection = "#3d5161",
                 comment = "#3c778c",
-                cyan = "#94F96E",
-                green = "#DC75EA",
-                orange = "#FF98B3",
-                pink = "#6FE1FB",
-                purple = "#FFB924",
-                red = "#6CF3CA",
                 yellow = "#EDFF98",
-                cursor_fg = "#2f3f4d",
-                cursor_bg = "#EFEFFD",
-                sign_add = "#94F96E",
-                sign_change = "#EDFF98",
-                sign_delete = "#FF98B3",
-                other = "#6FE1FB",
-                blankline = "#2f3f4d",
-                inlay_hint = "#94F96E",
             }
 
-            if Env_Theme == "delta" then
+            if Env_Theme == "blue" then
                 vim.api.nvim_set_hl(0, "HarpoonInactive", {
                     fg = c.fg,
                     bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg,
