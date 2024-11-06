@@ -55,7 +55,7 @@ return {
                     },
                 },
             })
-            lspconfig.ruff_lsp.setup({ capabilities = cmp_capabilities })
+            lspconfig.ruff.setup({ capabilities = cmp_capabilities })
 
             -- Toml
             lspconfig.taplo.setup({ capabilities = cmp_capabilities })
