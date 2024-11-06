@@ -11,7 +11,7 @@ vim.g.loaded_gzip = 1
 vim.g.did_install_default_menus = 1
 
 -- Set leader immediately to ensure leader mappings are correct
-vim.keymap.set({ "n", "v" }, "<Space>", "<Nop>")
+vim.keymap.set({ "n", "x" }, "<Space>", "<Nop>")
 vim.g.mapleader = " "
 vim.g.maplocaleader = " "
 
@@ -35,6 +35,7 @@ vim.opt.termguicolors = true
 vim.api.nvim_exec2("set gcr=n:block-blinkon1,i-c-ci:ver100-blinkon1,v-r:hor100-blinkon1", {})
 vim.opt.showmode = false
 vim.opt.shortmess:append("I")
+vim.opt.cpoptions:append("W")
 
 vim.opt.scrolloff = 6
 vim.opt.startofline = true
@@ -45,21 +46,21 @@ vim.opt.splitbelow = true
 
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
-vim.opt.incsearch = false -- Prevent screen from shifting when entering substitution patterns
+vim.opt.incsearch = false -- Prevent screen shifting while entering search/substitute patterns
 
 vim.opt.modelines = 1
 
 -- Prevents disabled <C-w> and Z mappings from becoming active again after timeout
 vim.opt.timeout = false
 
-vim.opt.updatetime = 500
+vim.opt.updatetime = 250
 
 vim.opt.list = true
 vim.opt.listchars = {
     tab = "<–>",
     extends = "»",
     precedes = "«",
-    nbsp = "×",
+    nbsp = "␣",
 }
 
 vim.opt.wrap = false

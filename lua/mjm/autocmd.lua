@@ -42,11 +42,17 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
     end,
 })
 
+---@return nil
 vim.api.nvim_create_autocmd({ "BufWritePre" }, {
     group = mjm_group,
     pattern = "*",
     callback = function(ev)
         local buf = ev.buf
+
+        if not vim.api.nvim_get_option_value("modifiable", { buf = ev.buf }) then
+            vim.api.nvim_err_writeln("E21: Cannot make changes, 'modifiable' is off")
+            return
+        end
 
         local conformed = false
         local status, result = pcall(function()

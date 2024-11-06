@@ -38,6 +38,7 @@ return {
             sync_install = false,
             highlight = { enable = true, additional_vim_regex_highlighting = false },
             indent = { enable = true },
+            -- TODO: How can we define | | as a surround?
             textobjects = {
                 select = {
                     enable = true,

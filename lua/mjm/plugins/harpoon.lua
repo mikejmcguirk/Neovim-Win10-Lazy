@@ -14,7 +14,9 @@ return {
                     sync_on_ui_close = true,
                 },
                 default = {
-                    -- TODO: Why did I do this?
+                    -- The default function uses bufload instead of edit to open the buffer
+                    -- I cannot remember what it was now, but it caused some kind of
+                    -- serious issue. The logic is re-written to use edit like Telescope does
                     select = function(list_item, list, options)
                         Logger:log("config_default#select", list_item, list.name, options)
                         if list_item == nil then

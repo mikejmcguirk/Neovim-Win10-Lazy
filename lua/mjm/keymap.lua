@@ -1,3 +1,4 @@
+-- TODO: Lots of places to use this. Factor out
 ---@return boolean
 local check_modifiable = function()
     if vim.api.nvim_get_option_value("modifiable", { buf = 0 }) then
@@ -23,8 +24,7 @@ vim.keymap.set("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true }) -- Stop
 
 vim.api.nvim_create_user_command("We", "silent w | e", {}) -- Quick refresh if Treesitter bugs out
 
--- TODO: Figure how how to make gq work for formatting comments
-
+-- TODO: Do we add check modifiable to these?
 vim.keymap.set("n", "ZV", "<cmd>silent w<cr>")
 vim.keymap.set("n", "ZA", "<cmd>silent wa<cr>")
 vim.keymap.set("n", "ZX", function()
