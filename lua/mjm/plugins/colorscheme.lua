@@ -76,9 +76,9 @@ return {
             )
 
             local match_control = vim.api.nvim_create_augroup("match_control", { clear = true })
-            local get_match_id = function()
+            local get_match_id = function(match_group)
                 for _, match in ipairs(vim.fn.getmatches()) do
-                    if match.group == "EolSpace" then
+                    if match.group == match_group then
                         return match.id
                     end
                 end
@@ -88,7 +88,7 @@ return {
                 group = match_control,
                 pattern = "*",
                 callback = function()
-                    local match_id = get_match_id()
+                    local match_id = get_match_id("EolSpace")
                     if not match_id then
                         return
                     end
@@ -96,7 +96,6 @@ return {
                     vim.fn.matchdelete(match_id)
                 end,
             })
-
             vim.api.nvim_create_autocmd("InsertLeave", {
                 group = match_control,
                 pattern = "*",
