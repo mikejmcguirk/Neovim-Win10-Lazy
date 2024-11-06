@@ -3,6 +3,11 @@ local cmp_config = function()
     local cmp_select = { behavior = cmp.SelectBehavior.Select }
     local win_highlight = "Normal:Normal,FloatBorder:FloatBorder,CursorLine:Visual,Search:None"
     vim.opt.completeopt = { "menu", "menuone", "noselect" }
+    local win_settings = {
+        border = "single",
+        winhighlight = win_highlight,
+        scrollbar = true,
+    }
 
     cmp.setup({
         enabled = function()
@@ -24,16 +29,8 @@ local cmp_config = function()
             end,
         },
         window = {
-            completion = {
-                border = "single",
-                winhighlight = win_highlight,
-                scrollbar = true,
-            },
-            documentation = {
-                border = "single",
-                winhighlight = win_highlight,
-                scrollbar = true,
-            },
+            completion = win_settings,
+            documentation = win_settings,
         },
         mapping = cmp.mapping.preset.insert({
             ["<C-d>"] = cmp.mapping.scroll_docs(4),
@@ -48,7 +45,6 @@ local cmp_config = function()
             ["<C-p>"] = cmp.mapping.select_prev_item(cmp_select),
             ["<C-n>"] = cmp.mapping.select_next_item(cmp_select),
             ["<C-y>"] = cmp.mapping.confirm({ select = true }),
-            -- ["<C-<space>>"] = cmp.mapping.complete(),
 
             ["<Tab>"] = nil,
             ["<S-Tab>"] = nil,
