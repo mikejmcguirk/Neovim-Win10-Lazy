@@ -32,7 +32,7 @@ vim.api.nvim_create_autocmd("InsertEnter", {
 
 local mjm_group = vim.api.nvim_create_augroup("mjm", { clear = true })
 
--- Does not work as a global option
+-- Buffer local option
 -- Prevents automatic creation of comment syntax when pressing o or O in a comment
 vim.api.nvim_create_autocmd({ "FileType" }, {
     group = mjm_group,
