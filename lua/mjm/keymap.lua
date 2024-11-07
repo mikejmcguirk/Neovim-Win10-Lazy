@@ -225,10 +225,9 @@ vim.keymap.set("n", "<leader>C", '"_C', { silent = true })
 vim.keymap.set("x", "C", "<nop>", { silent = true })
 vim.keymap.set("n", "c^", "^cg_", { silent = true }) -- Does not yank newline character
 vim.keymap.set("n", "cC", "ggcG", { silent = true })
-vim.keymap.set("n", "<leacer>cC", 'gg"_cG', { silent = true })
+vim.keymap.set("n", "<leader>cC", 'gg"_cG', { silent = true })
 
-vim.keymap.set({ "n", "x" }, "s", "<Nop>", { silent = true })
-vim.keymap.set("n", "S", "<Nop>", { silent = true }) -- Used in visual mode by nvim-surround
+vim.keymap.set({ "x" }, "s", "<Nop>", { silent = true })
 
 vim.api.nvim_create_autocmd("TextYankPost", {
     group = vim.api.nvim_create_augroup("yank_reset_cursor", { clear = true }),
