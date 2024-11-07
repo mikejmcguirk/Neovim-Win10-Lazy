@@ -51,11 +51,11 @@ local cmp_config = function()
             ["<CR>"] = nil,
         }),
         sources = {
+            { name = "nvim_lsp_signature_help" },
             {
                 name = "lazydev",
                 group_index = 0, -- Skip loading LuaLS completions
             },
-            { name = "nvim_lsp_signature_help" },
             { name = "nvim_lsp" },
             {
                 name = "buffer",
@@ -77,6 +77,7 @@ local cmp_config = function()
                 },
             },
             { name = "vsnip" },
+            { name = "sql" },
         },
         formatting = {
             fields = { "abbr", "kind", "menu" },
@@ -101,7 +102,7 @@ end
 return {
     {
         "hrsh7th/nvim-cmp",
-        event = { "InsertEnter" },
+        event = { "BufReadPre", "BufNewFile" },
         config = function()
             cmp_config()
         end,
@@ -116,6 +117,7 @@ return {
             "hrsh7th/cmp-nvim-lsp-signature-help", -- Show current function signature
             "f3fora/cmp-spell", -- From Nvim's built-in spell check
             "FelipeLema/cmp-async-path",
+            "ray-x/cmp-sql",
         },
     },
 }

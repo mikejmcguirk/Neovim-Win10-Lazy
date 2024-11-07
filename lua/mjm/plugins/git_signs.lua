@@ -28,6 +28,7 @@ return {
 
                     vim.keymap.set("n", "<leader>gi", gs.diffthis)
                     vim.keymap.set("n", "<leader>gp", gs.preview_hunk)
+                    vim.keymap.set("n", "<leader>gr", gs.reset_hunk)
                     vim.keymap.set("n", "<leader>gs", gs.stage_buffer)
                     vim.keymap.set("n", "<leader>gd", gs.toggle_deleted)
 
