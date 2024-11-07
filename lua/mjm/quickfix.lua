@@ -26,6 +26,7 @@ vim.opt.grepprg = "rg --line-number"
 vim.opt.grepformat = "%f:%l:%m"
 
 ---@param options table
+---@return nil
 local grep_wrapper = function(options)
     local pattern = ut.get_user_input("Enter Pattern: ")
     if pattern == "" then
@@ -146,6 +147,7 @@ vim.api.nvim_exec2("packadd cfilter", {})
 
 -- NOTE: cfilter only works on the "text" portion of the qf entry
 ---@param type string
+---@return nil
 local cfilter_wrapper = function(type)
     if #vim.fn.getqflist() == 0 then
         print("Quickfix list is empty")
@@ -185,6 +187,8 @@ vim.keymap.set("n", "<leader>qr", function()
 end)
 
 -- TODO: Add the ability to take count into this
+---@param scroll_cmd string
+---@return nil
 local qf_scroll_wrapper = function(scroll_cmd)
     if #vim.fn.getqflist() == 0 then
         print("Quickfix list is empty")
