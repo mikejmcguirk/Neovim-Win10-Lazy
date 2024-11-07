@@ -1,8 +1,5 @@
 return {
     {
-        "tpope/vim-fugitive",
-    },
-    {
         "lewis6991/gitsigns.nvim",
         event = { "BufReadPre", "BufNewFile" },
         config = function()
@@ -12,38 +9,28 @@ return {
                     change = { text = "~" },
                 },
                 on_attach = function(bufnr)
-                    local gs = package.loaded.gitsigns
+                    local gs = require("gitsigns")
 
-                    vim.keymap.set("n", "[g", function()
+                    vim.keymap.set("n", "]c", function()
                         if vim.wo.diff then
-                            return "[g"
+                            vim.api.nvim_exec2("silent norm! ]c", {})
+                        else
+                            gs.nav_hunk("next")
                         end
-
-                        vim.schedule(function()
-                            gs.prev_hunk()
-                        end)
-
-                        return "<Ignore>"
-                    end, { expr = true })
-
-                    vim.keymap.set("n", "]g", function()
+                    end, { silent = true })
+                    vim.keymap.set("n", "[c", function()
                         if vim.wo.diff then
-                            return "]g"
+                            vim.api.nvim_exec2("silent norm! [c", {})
+                        else
+                            gs.nav_hunk("prev")
                         end
+                    end, { silent = true })
 
-                        vim.schedule(function()
-                            gs.next_hunk()
-                        end)
-
-                        return "<Ignore>"
-                    end, { expr = true })
-
-                    -- Actions
-                    vim.keymap.set("n", "<leader>gsb", gs.stage_buffer)
                     vim.keymap.set("n", "<leader>gi", gs.diffthis)
+                    vim.keymap.set("n", "<leader>gp", gs.preview_hunk)
+                    vim.keymap.set("n", "<leader>gs", gs.stage_buffer)
                     vim.keymap.set("n", "<leader>gd", gs.toggle_deleted)
 
-                    -- Text object
                     vim.keymap.set({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>")
                 end,
             })

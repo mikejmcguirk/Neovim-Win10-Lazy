@@ -54,9 +54,9 @@ return {
 
             require("lualine").setup({
                 sections = {
-                    lualine_a = { "branch" },
+                    lualine_a = { "branch", "diff" },
                     -- :help statusline
-                    lualine_b = { "%m %F" },
+                    lualine_b = { "%m %f" },
                     lualine_c = { "diagnostics" },
                     lualine_x = { "encoding", "fileformat", "filetype" },
                     lualine_y = { "progress" },
@@ -64,7 +64,7 @@ return {
                 },
                 inactive_sections = {
                     lualine_a = {},
-                    lualine_b = { "%m %F" },
+                    lualine_b = { "%m %f" },
                     lualine_c = { "diagnostics" },
                     lualine_x = { "filetype" },
                     lualine_y = { "progress" },

@@ -1,5 +1,6 @@
 return {
     "gbprod/substitute.nvim",
+    event = { "BufReadPre", "BufNewFile" },
     config = function()
         require("substitute").setup({
             on_substitute = nil,

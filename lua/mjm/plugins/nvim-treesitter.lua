@@ -48,8 +48,6 @@ return {
                         ["i,"] = "@parameter.inner",
                         ["af"] = "@function.outer",
                         ["if"] = "@function.inner",
-                        ["ac"] = "@comment.outer",
-                        ["ic"] = "@comment.inner",
                     },
                 },
                 move = {
@@ -57,28 +55,15 @@ return {
                     set_jumps = true,
                     goto_previous_start = {
                         ["[,"] = "@parameter.inner",
-                        ["[c"] = "@comment.outer",
-                        ["[f"] = "@function.outer",
                     },
                     goto_next_start = {
                         ["],"] = "@parameter.inner",
-                        ["]c"] = "@comment.outer",
-                        ["]f"] = "@function.outer",
                     },
                 },
                 swap = {
                     enable = true,
                     swap_previous = { ["<leader>[,"] = "@parameter.inner" },
                     swap_next = { ["<leader>],"] = "@parameter.inner" },
-                },
-                lsp_interop = {
-                    enable = true,
-                    border = "single",
-                    floating_preview_opts = {},
-                    peek_definition_code = {
-                        ["<leader>glf"] = "@function.outer",
-                        ["<leader>glc"] = "@class.outer",
-                    },
                 },
             },
         })
