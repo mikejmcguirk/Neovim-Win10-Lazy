@@ -56,13 +56,13 @@ vim.keymap.set("n", "ZB", function()
     end
 
     if total_win_count < 2 then
-        return "<nop>"
+        return
+    elseif buf_win_count < 2 then
+        vim.cmd("bd")
+    else
+        vim.cmd("q")
     end
-    if buf_win_count < 2 then
-        return "<cmd>bd<cr>"
-    end
-    return "<cmd>q<cr>"
-end, { expr = true })
+end)
 
 vim.keymap.set("n", "ZZ", "<Nop>")
 vim.keymap.set("n", "ZQ", "<Nop>")
@@ -313,7 +313,7 @@ local visual_pastes = {
 for _, map in pairs(visual_pastes) do
     vim.keymap.set("x", map[1], function()
         if not check_modifiable() then
-            return "<Nop>"
+            return ""
         end
 
         local cur_mode = vim.api.nvim_get_mode().mode

@@ -1,0 +1,5 @@
+vim.keymap.set("i", "--T", "---@type", { buffer = true })
+vim.keymap.set("i", "--P", "---@param", { buffer = true })
+vim.keymap.set("i", "--R", "---@return", { buffer = true })
+vim.keymap.set("i", "--F", "---@field", { buffer = true })
+vim.keymap.set("i", "--A", "--[[@as", { buffer = true })

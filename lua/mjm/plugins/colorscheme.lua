@@ -61,7 +61,7 @@ return {
                 vim.api.nvim_set_hl(
                     0,
                     "EolSpace",
-                    { bg = "#ffd298", ctermbg = 14, fg = "#efeffd", ctermfg = 14 }
+                    { bg = "#ffd298", ctermbg = 14, fg = "#98fffb", ctermfg = 14 }
                 )
             end
 
