@@ -327,25 +327,17 @@ for _, map in pairs(visual_pastes) do
     end, { silent = true, expr = true })
 end
 
----@param put_cmd string
----@return nil
-local create_blank_line = function(put_cmd)
-    if not check_modifiable() then
-        return
-    end
-
-    local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
-    vim.api.nvim_buf_set_mark(0, "z", cur_row, cur_col, {})
-    vim.api.nvim_exec2(put_cmd .. " =repeat(nr2char(10), v:count1)", {})
-    vim.api.nvim_exec2("norm! `z", {})
-end
-
-vim.keymap.set("n", "[ ", function()
-    create_blank_line("put!")
-end, { silent = true })
-vim.keymap.set("n", "] ", function()
-    create_blank_line("put")
-end, { silent = true })
+-- TODO: Will be added as Nvim default
+vim.keymap.set("n", "[<Space>", function()
+    local repeated = vim.fn["repeat"]({ "" }, vim.v.count1)
+    local linenr = vim.api.nvim_win_get_cursor(0)[1]
+    vim.api.nvim_buf_set_lines(0, linenr - 1, linenr - 1, true, repeated)
+end, { desc = "Add empty line above cursor" })
+vim.keymap.set("n", "]<Space>", function()
+    local repeated = vim.fn["repeat"]({ "" }, vim.v.count1)
+    local linenr = vim.api.nvim_win_get_cursor(0)[1]
+    vim.api.nvim_buf_set_lines(0, linenr, linenr, true, repeated)
+end, { desc = "Add empty line below cursor" })
 
 ---@param vcount1 number
 ---@param direction string
