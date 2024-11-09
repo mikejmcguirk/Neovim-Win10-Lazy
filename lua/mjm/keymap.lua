@@ -203,8 +203,8 @@ end
 vim.keymap.set("n", "x", '"_d', { silent = true })
 vim.keymap.set("n", "xx", '"_dd', { silent = true })
 vim.keymap.set("n", "X", '"_D', { silent = true })
-vim.keymap.set({ "x" }, "x", '"_x', { silent = true })
-vim.keymap.set({ "x" }, "X", "<nop>", { silent = true })
+vim.keymap.set("x", "x", '"_x', { silent = true })
+vim.keymap.set("x", "X", "<nop>", { silent = true })
 vim.keymap.set("n", "xX", 'gg"_dG', { silent = true })
 
 -- TODO: This could be smarter/more expanded on
@@ -228,7 +228,7 @@ vim.keymap.set("n", "c^", "^cg_", { silent = true }) -- Does not yank newline ch
 vim.keymap.set("n", "cC", "ggcG", { silent = true })
 vim.keymap.set("n", "<leader>cC", 'gg"_cG', { silent = true })
 
-vim.keymap.set({ "x" }, "s", "<Nop>", { silent = true })
+vim.keymap.set({ "x" }, "s", "mzy`<v0o`>g_p`[=`]`z", { silent = true })
 
 vim.api.nvim_create_autocmd("TextYankPost", {
     group = vim.api.nvim_create_augroup("yank_reset_cursor", { clear = true }),
