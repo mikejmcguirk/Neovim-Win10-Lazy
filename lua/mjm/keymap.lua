@@ -25,6 +25,7 @@ vim.keymap.set("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true }) -- Stop
 vim.api.nvim_create_user_command("We", "silent w | e", {}) -- Quick refresh if Treesitter bugs out
 
 -- TODO: Do we add check modifiable to these?
+-- TODO: This should incorporate saving the last modified marks
 vim.keymap.set("n", "ZV", "<cmd>silent w<cr>")
 vim.keymap.set("n", "ZA", "<cmd>silent wa<cr>")
 vim.keymap.set("n", "ZX", function()

@@ -100,7 +100,9 @@ return {
                 group = match_control,
                 pattern = "*",
                 callback = function()
-                    vim.cmd([[match EolSpace /\s\+$/]])
+                    if vim.bo.filetype ~= "TelescopePrompt" then
+                        vim.cmd([[match EolSpace /\s\+$/]])
+                    end
                 end,
             })
         end,
