@@ -1,4 +1,4 @@
--- For nvim-tree, netrw should be disabled right away to avoid startup race conditions
+-- To avoid race conditions with nvim-tree
 vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
 vim.g.loaded_netrwSettings = 1
@@ -61,12 +61,7 @@ vim.opt.updatetime = 250
 -- data_path = os.getenv("USERPROFILE") .. "\\AppData\\Local\\nvim-data\\undodir"
 
 vim.opt.list = true
-vim.opt.listchars = {
-    tab = "<–>",
-    extends = "»",
-    precedes = "«",
-    nbsp = "␣",
-}
+vim.opt.listchars = { tab = "<–>", extends = "»", precedes = "«", nbsp = "␣" }
 
 vim.opt.wrap = false
 vim.opt.linebreak = true

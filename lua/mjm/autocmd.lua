@@ -32,7 +32,7 @@ vim.api.nvim_create_autocmd("InsertEnter", {
 
 local mjm_group = vim.api.nvim_create_augroup("mjm", { clear = true })
 
-vim.api.nvim_create_autocmd("InsertEnter", {
+vim.api.nvim_create_autocmd({ "InsertEnter", "CmdlineEnter" }, {
     group = mjm_group,
     pattern = "*",
     callback = vim.schedule_wrap(function()
@@ -41,7 +41,7 @@ vim.api.nvim_create_autocmd("InsertEnter", {
 })
 
 -- Buffer local option
--- Prevents automatic creation of comment syntax when pressing o or O in a comment
+-- See help fo-table
 vim.api.nvim_create_autocmd({ "FileType" }, {
     group = mjm_group,
     pattern = "*",
@@ -52,7 +52,6 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
 
 -- TODO: Try using an autocommand when leaving Nvim to clear search registers
 
----@return nil
 vim.api.nvim_create_autocmd({ "BufWritePre" }, {
     group = mjm_group,
     pattern = "*",
