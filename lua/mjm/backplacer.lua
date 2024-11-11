@@ -96,9 +96,9 @@ end
 ---@param cur_row number -- 1 Indexed
 ---@param cur_col number -- 0 Indexed
 ---@param cur_line string
----@param options? table
+---@param opts? table
 ---@return nil
-local backspace_blank_line = function(cur_row, cur_col, cur_line, options)
+local backspace_blank_line = function(cur_row, cur_col, cur_line, opts)
     local start_indent = get_indent(cur_row)
     if cur_col > start_indent then
         local edit_row = cur_row - 1
@@ -106,7 +106,7 @@ local backspace_blank_line = function(cur_row, cur_col, cur_line, options)
         return
     end
 
-    local opts = vim.deepcopy(options or {})
+    opts = vim.deepcopy(opts or {}, true)
     if cur_col > 0 and opts.allow_blank then
         local cur_line_length = #cur_line
         local shiftwidth = vim.fn.shiftwidth()

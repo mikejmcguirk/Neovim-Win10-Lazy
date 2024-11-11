@@ -3,10 +3,11 @@ local M = {}
 ---@param prompt string
 ---@return string
 M.get_input = function(prompt)
-    local pattern = nil
+    local pattern = nil ---@type string
     local status, result = pcall(function()
         pattern = vim.fn.input(prompt)
-    end)
+    end) ---@type boolean, unknown|nil
+
     vim.api.nvim_exec2("echo ''", {})
     if pattern then
         return pattern
@@ -21,7 +22,7 @@ M.get_input = function(prompt)
     return ""
 end
 
----@param width number
+---@param width integer
 ---@return nil
 M.adjust_tab_width = function(width)
     vim.bo.tabstop = width

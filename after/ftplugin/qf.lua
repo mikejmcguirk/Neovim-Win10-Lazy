@@ -16,5 +16,5 @@ local bad_maps = { "<C-o>", "<C-i>" }
 for _, map in pairs(bad_maps) do
     vim.keymap.set("n", map, function()
         vim.notify("Currently in quickfix list")
-    end)
+    end, { buffer = true })
 end

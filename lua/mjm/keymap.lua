@@ -306,7 +306,6 @@ local visual_move = function(opts)
     opts = vim.deepcopy(opts or {}, true)
     ---@return table
     local get_pieces = function()
-        opts = vim.deepcopy(opts or {}, true)
         if opts.upward then
             return {
                 fix_num = 1,

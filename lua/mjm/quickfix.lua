@@ -33,16 +33,16 @@ vim.keymap.set("n", "<leader>ql", function()
     vim.fn.setqflist({})
 end)
 
----@param options table
+---@param opts table
 ---@return nil
-local grep_wrapper = function(options)
+local grep_wrapper = function(opts)
     local pattern = ut.get_input("Enter Pattern: ")
     if pattern == "" then
         return
     end
     local args = { pattern }
 
-    local opts = vim.deepcopy(options) or {}
+    opts = vim.deepcopy(opts or {}, true)
     local case_insensitive = opts.insensitive or false
     if case_insensitive then
         table.insert(args, "-i")
@@ -71,10 +71,10 @@ vim.keymap.set("n", "<leader>qgi", function()
     grep_wrapper({ insensitive = true })
 end)
 
----@param options? table
+---@param opts? table
 ---@return nil
-local diags_to_qf = function(options)
-    local opts = vim.deepcopy(options or {})
+local diags_to_qf = function(opts)
+    opts = vim.deepcopy(opts or {}, true)
     local cur_buf = opts.cur_buf or false
     local bufnr = nil
     if cur_buf then
