@@ -31,9 +31,12 @@ M.adjust_tab_width = function(width)
     vim.bo.shiftwidth = width
 end
 
+---@param buf? integer
 ---@return boolean
-M.check_modifiable = function()
-    if vim.api.nvim_get_option_value("modifiable", { buf = 0 }) then
+M.check_modifiable = function(buf)
+    buf = buf or 0
+
+    if vim.api.nvim_get_option_value("modifiable", { buf = buf }) then
         return true
     else
         vim.api.nvim_err_writeln("E21: Cannot make changes, 'modifiable' is off")

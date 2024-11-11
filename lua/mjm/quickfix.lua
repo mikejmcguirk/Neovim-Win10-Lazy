@@ -67,8 +67,7 @@ local diags_to_qf = function(options)
     local cur_buf = opts.cur_buf or false
     local bufnr = nil
     if cur_buf then
-        if not vim.api.nvim_get_option_value("modifiable", { buf = 0 }) then
-            vim.notify("Not a diagnostic producing buffer")
+        if not ut.check_modifiable() then
             return
         end
 
