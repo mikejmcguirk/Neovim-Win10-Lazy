@@ -1,3 +1,5 @@
+-- TODO: Look at how windp/autopairs handles looking at treesitter
+-- It looks like it checks parent nodes as well
 ---@param row number
 ---@param col number
 ---@param root_lang_tree vim.treesitter.LanguageTree
