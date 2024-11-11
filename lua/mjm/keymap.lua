@@ -1,13 +1,4 @@
--- TODO: Lots of places to use this. Factor out
----@return boolean
-local check_modifiable = function()
-    if vim.api.nvim_get_option_value("modifiable", { buf = 0 }) then
-        return true
-    else
-        vim.api.nvim_err_writeln("E21: Cannot make changes, 'modifiable' is off")
-        return false
-    end
-end
+local ut = require("mjm.utils")
 
 -- Mapping in command mode will cause <C-c> to accept commands
 vim.keymap.set({ "i", "x" }, "<C-c>", "<esc>", { silent = true })
@@ -73,13 +64,13 @@ vim.keymap.set("n", "ZQ", "<Nop>")
 -- Stop undo history from showing in the cmd line whever an undo/redo is performed
 -- Done as functions because keymap <cmd>'s do not work with v:count1
 vim.keymap.set("n", "u", function()
-    if not check_modifiable() then
+    if not ut.check_modifiable() then
         return
     end
     vim.api.nvim_exec2("silent norm! " .. vim.v.count1 .. "u", {})
 end, { silent = true })
 vim.keymap.set("n", "<C-r>", function()
-    if not check_modifiable() then
+    if not ut.check_modifiable() then
         return
     end
     vim.api.nvim_exec2('silent exec "norm! ' .. vim.v.count1 .. '\\<C-r>"', {})
@@ -162,7 +153,7 @@ vim.keymap.set("x", ">", function()
 end, { silent = true })
 
 vim.keymap.set("n", "J", function()
-    if not check_modifiable() then
+    if not ut.check_modifiable() then
         return
     end
 
@@ -276,7 +267,7 @@ local norm_pastes = {
 -- to remove command line nags
 for _, map in pairs(norm_pastes) do
     vim.keymap.set("n", map[1], function()
-        if not check_modifiable() then
+        if not ut.check_modifiable() then
             return
         end
 
@@ -315,7 +306,7 @@ local visual_pastes = {
 }
 for _, map in pairs(visual_pastes) do
     vim.keymap.set("x", map[1], function()
-        if not check_modifiable() then
+        if not ut.check_modifiable() then
             return ""
         end
 
@@ -346,7 +337,7 @@ end, { desc = "Add empty line below cursor" })
 ---@param direction string
 ---@return nil
 local visual_move = function(vcount1, direction)
-    if not check_modifiable() then
+    if not ut.check_modifiable() then
         return
     end
 
