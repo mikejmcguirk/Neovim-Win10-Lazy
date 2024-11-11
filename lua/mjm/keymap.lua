@@ -11,7 +11,6 @@ vim.keymap.set("n", "<C-c>", function()
     return "<esc>"
 end, { expr = true, silent = true })
 
-vim.keymap.set("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true }) -- Stop cmd line nag
 vim.keymap.set("n", "'", "`", { silent = true })
 
 vim.api.nvim_create_user_command("We", "silent w | e", {}) -- Quick refresh if Treesitter bugs out
@@ -19,6 +18,7 @@ vim.api.nvim_create_user_command("We", "silent w | e", {}) -- Quick refresh if T
 -- TODO: Do we add check modifiable to these?
 -- TODO: This should incorporate saving the last modified marks
 -- TODO: We could also look at using the update command here instead of write
+-- TODO: Add some sort of logic so this doesn't work in runtime or plugin files
 vim.keymap.set("n", "ZV", "<cmd>silent w<cr>")
 vim.keymap.set("n", "ZA", "<cmd>silent wa<cr>")
 vim.keymap.set("n", "ZX", function()
@@ -61,28 +61,14 @@ end)
 vim.keymap.set("n", "ZZ", "<Nop>")
 vim.keymap.set("n", "ZQ", "<Nop>")
 
--- Stop undo history from showing in the cmd line whever an undo/redo is performed
--- Done as functions because keymap <cmd>'s do not work with v:count1
-vim.keymap.set("n", "u", function()
-    if not ut.check_modifiable() then
-        return
-    end
-    vim.api.nvim_exec2("silent norm! " .. vim.v.count1 .. "u", {})
-end, { silent = true })
-vim.keymap.set("n", "<C-r>", function()
-    if not ut.check_modifiable() then
-        return
-    end
-    vim.api.nvim_exec2('silent exec "norm! ' .. vim.v.count1 .. '\\<C-r>"', {})
-end, { silent = true })
-
 -- Window navigation is handled through the tmux-navigator plugin
 vim.keymap.set("n", "<M-j>", "<cmd>resize -2<CR>", { silent = true })
 vim.keymap.set("n", "<M-k>", "<cmd>resize +2<CR>", { silent = true })
 vim.keymap.set("n", "<M-h>", "<cmd>vertical resize -2<CR>", { silent = true })
 vim.keymap.set("n", "<M-l>", "<cmd>vertical resize +2<CR>", { silent = true })
 
--- Doing the normal mode scrolls as cmds reduces visible screen shake
+-- Normal mode scrolls done as commands because, even with lazyredraw on,
+-- visible screenshake is reduced
 vim.keymap.set({ "n" }, "<C-u>", "<cmd>norm! <C-u>zz<cr>", { silent = true })
 vim.keymap.set({ "n" }, "<C-d>", "<cmd>norm! <C-d>zz<cr>", { silent = true })
 vim.keymap.set({ "x" }, "<C-u>", "<C-u>zz", { silent = true })
@@ -132,25 +118,6 @@ vim.keymap.set("i", ":", ":<C-g>u", { silent = true })
 
 vim.keymap.set({ "n", "x" }, "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
 vim.keymap.set({ "n", "x" }, "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
-
--- Remove command line nags when indenting multiple lines visually
----@param direction string
----@return nil
-local visual_indent = function(direction)
-    local count = vim.v.count1
-    vim.opt_local.cursorline = false
-    vim.api.nvim_exec2('exec "silent norm! \\<esc>"', {})
-    vim.api.nvim_exec2("silent '<,'> " .. string.rep(direction, count), {})
-    vim.api.nvim_exec2("silent norm! gv", {})
-    vim.opt_local.cursorline = true
-end
-
-vim.keymap.set("x", "<", function()
-    visual_indent("<")
-end, { silent = true })
-vim.keymap.set("x", ">", function()
-    visual_indent(">")
-end, { silent = true })
 
 vim.keymap.set("n", "J", function()
     if not ut.check_modifiable() then
@@ -327,81 +294,78 @@ vim.keymap.set("n", "[<Space>", function()
     local linenr = vim.api.nvim_win_get_cursor(0)[1]
     vim.api.nvim_buf_set_lines(0, linenr - 1, linenr - 1, true, repeated)
 end, { desc = "Add empty line above cursor" })
+
 vim.keymap.set("n", "]<Space>", function()
     local repeated = vim.fn["repeat"]({ "" }, vim.v.count1)
     local linenr = vim.api.nvim_win_get_cursor(0)[1]
     vim.api.nvim_buf_set_lines(0, linenr, linenr, true, repeated)
 end, { desc = "Add empty line below cursor" })
 
----@param vcount1 number
----@param direction string
+---@param opts? table
 ---@return nil
-local visual_move = function(vcount1, direction)
+local visual_move = function(opts)
     if not ut.check_modifiable() then
         return
     end
 
-    local pos_1 = nil
-    local pos_2 = nil
-    local fix_num = nil
-    local cmd_start = nil
-    if direction == "d" then
-        pos_1 = "'>"
-        pos_2 = "."
-        fix_num = 0
-        cmd_start = "'<,'> m '>+"
-    elseif direction == "u" then
-        pos_1 = "."
-        pos_2 = "'<"
-        fix_num = 1
-        cmd_start = "'<,'> m '<-"
-    else
-        vim.api.nvim_err_writeln("Invalid direction")
-        return
+    opts = vim.deepcopy(opts or {}, true)
+    ---@return table
+    local get_pieces = function()
+        opts = vim.deepcopy(opts or {}, true)
+        if opts.upward then
+            return {
+                fix_num = 1,
+                offset_start = ".",
+                offset_end = "'<",
+                cmd_start = "'<,'> m '<-",
+            }
+        else
+            return {
+                fix_num = 0,
+                offset_start = "'>",
+                offset_end = ".",
+                cmd_start = "'<,'> m '>+",
+            }
+        end
     end
+    local pieces = get_pieces() ---@type table
 
-    -- Leave visual mode to update '< and '>
-    -- vim.v.count1 is updated when we do this, which is why it was passed as a parameter
-    vim.api.nvim_exec2('exec "silent norm! \\<esc>"', {})
-    local min_count = 1
-    local to_move = nil
-    if vcount1 <= min_count then
-        to_move = min_count + fix_num
-    else
-        -- Offset calculated so that jumps based on rnu are correct
-        local offset = vim.fn.line(pos_1) - vim.fn.line(pos_2)
-        to_move = vcount1 - offset + fix_num
+    local vcount1 = vim.v.count1 ---@type integer -- Get before leaving visual mode
+    vim.api.nvim_exec2('exec "silent norm! \\<esc>"', {}) -- Force update of '< and '> marks
+    ---@return integer -- Calculate so that rnu jumps are correct
+    local get_offset = function()
+        if vcount1 <= 1 then
+            return 0
+        else
+            return vim.fn.line(pieces.offset_start) - vim.fn.line(pieces.offset_end)
+        end
     end
-    local move_cmd = "silent " .. cmd_start .. to_move
+    local move_amt = (vcount1 + pieces.fix_num - get_offset()) ---@type integer
+    local move_cmd = "silent " .. pieces.cmd_start .. move_amt ---@type string
 
     local status, result = pcall(function()
         vim.api.nvim_exec2(move_cmd, {})
-    end)
+    end) ---@type boolean, unknown|nil
 
     if status then
-        local end_row = vim.api.nvim_buf_get_mark(0, "]")[1]
+        local end_row = vim.api.nvim_buf_get_mark(0, "]")[1] ---@type integer
+        ---@type integer
         local end_col = #vim.api.nvim_buf_get_lines(0, end_row - 1, end_row, false)[1]
         vim.api.nvim_buf_set_mark(0, "z", end_row, end_col, {})
-        vim.api.nvim_exec2("silent norm! `[", {})
-        vim.api.nvim_exec2("silent norm! =`z", {})
-        vim.api.nvim_exec2("silent norm! gv", {})
-        return
-    end
-
-    if type(result) == "string" and string.find(result, "E16") and vcount1 <= 1 then
+        vim.api.nvim_exec2("silent norm! `[=`z", {})
+    elseif type(result) == "string" and string.find(result, "E16") and vcount1 <= 1 then
         do
         end
-    elseif result then
-        vim.api.nvim_err_writeln(result)
     else
-        vim.api.nvim_err_writeln("Unknown error in visual_move")
+        vim.api.nvim_err_writeln(result or "Unknown error in visual_move")
     end
+
     vim.api.nvim_exec2("norm! gv", {})
 end
 
 vim.keymap.set("x", "J", function()
-    visual_move(vim.v.count1, "d")
-end, { silent = true })
+    visual_move({ upward = false })
+end)
 vim.keymap.set("x", "K", function()
-    visual_move(vim.v.count1, "u")
-end, { silent = true })
+    visual_move({ upward = true })
+end)
