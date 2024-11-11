@@ -9,18 +9,13 @@ return {
         require("nvim-tree").setup({
             disable_netrw = true,
             hijack_netrw = true,
-            hijack_unnamed_buffer_when_opening = false,
             sort_by = "case_sensitive",
             view = {
                 width = 36,
                 relativenumber = true,
             },
-            renderer = {
-                group_empty = true,
-            },
             filters = {
                 git_ignored = false,
-                dotfiles = false,
             },
             diagnostics = {
                 enable = true,
@@ -33,7 +28,6 @@ return {
                 local api = require("nvim-tree.api")
 
                 api.config.mappings.default_on_attach(bufnr)
-
                 vim.keymap.del("n", "<2-LeftMouse>", { buffer = bufnr })
                 vim.keymap.del("n", "<2-RightMouse>", { buffer = bufnr })
             end,
