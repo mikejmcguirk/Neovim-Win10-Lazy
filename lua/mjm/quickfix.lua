@@ -36,24 +36,22 @@ end)
 ---@param opts table
 ---@return nil
 local grep_wrapper = function(opts)
-    local pattern = ut.get_input("Enter Pattern: ")
+    local pattern = ut.get_input("Enter Pattern: ") ---@type string
     if pattern == "" then
         return
     end
-    local args = { pattern }
+    local args = { pattern } ---@type table
 
     opts = vim.deepcopy(opts or {}, true)
-    local case_insensitive = opts.insensitive or false
-    if case_insensitive then
+    if opts.insensitive then
         table.insert(args, "-i")
     end
+
     local grep_cmd = {
         args = args,
         bang = true,
         cmd = "grep",
-        mods = {
-            emsg_silent = true,
-        },
+        mods = { emsg_silent = true },
     }
 
     vim.api.nvim_cmd(grep_cmd, {})
@@ -71,27 +69,60 @@ vim.keymap.set("n", "<leader>qgi", function()
     grep_wrapper({ insensitive = true })
 end)
 
+---@param raw_diag table
+---@return table
+local convert_diag = function(raw_diag)
+    local severity_map = {
+        [vim.diagnostic.severity.ERROR] = "E",
+        [vim.diagnostic.severity.WARN] = "W",
+        [vim.diagnostic.severity.INFO] = "I",
+        [vim.diagnostic.severity.HINT] = "H",
+    } ---@type string
+
+    local diag_source = raw_diag.source .. ": " or "" ---@type string
+    local diag_code = "" ---@type string
+    if raw_diag.code then
+        diag_code = "[" .. raw_diag.code .. "] "
+    end
+    local diag_message = raw_diag.message or "" ---@type string
+
+    local converted_diag = {
+        bufnr = raw_diag.bufnr,
+        filename = vim.fn.bufname(raw_diag.bufnr),
+        lnum = raw_diag.lnum + 1,
+        end_lnum = raw_diag.end_lnum + 1,
+        col = raw_diag.col + 1,
+        end_col = raw_diag.end_col,
+        text = diag_source .. diag_code .. diag_message,
+        type = severity_map[raw_diag.severity],
+    } ---@type table
+
+    return converted_diag
+end
+
 ---@param opts? table
 ---@return nil
 local diags_to_qf = function(opts)
     opts = vim.deepcopy(opts or {}, true)
-    local cur_buf = opts.cur_buf or false
-    local bufnr = nil
-    if cur_buf then
-        if not ut.check_modifiable() then
-            return
-        end
 
+    local cur_buf = opts.cur_buf or false ---@type boolean
+    local bufnr = nil ---@type integer
+    if cur_buf and (not ut.check_modifiable()) then
+        return
+    elseif cur_buf then
         bufnr = 0
     end
 
-    local err_only = opts.err_only or false
-    local raw_diags = nil
-    if err_only then
-        raw_diags = vim.diagnostic.get(bufnr, { severity = vim.diagnostic.severity.ERROR })
-    else
-        raw_diags = vim.diagnostic.get(bufnr)
+    local err_only = opts.err_only or false ---@type boolean
+    ---@return table
+    local get_diags = function()
+        if err_only then
+            return vim.diagnostic.get(bufnr, { severity = vim.diagnostic.severity.ERROR })
+        else
+            return vim.diagnostic.get(bufnr)
+        end
     end
+    local raw_diags = get_diags() ---@type table
 
     if #raw_diags == 0 then
         if err_only then
@@ -102,40 +133,6 @@ local diags_to_qf = function(opts)
         vim.fn.setqflist({})
         vim.api.nvim_exec2("cclose", {})
         return
-    end
-
-    local severity_map = {
-        [vim.diagnostic.severity.ERROR] = "E",
-        [vim.diagnostic.severity.WARN] = "W",
-        [vim.diagnostic.severity.INFO] = "I",
-        [vim.diagnostic.severity.HINT] = "H",
-    }
-
-    ---@param raw_diag table
-    ---@return table
-    local convert_diag = function(raw_diag)
-        local diag_source = ""
-        if raw_diag.source then
-            diag_source = raw_diag.source .. ": "
-        end
-        local diag_code = ""
-        if raw_diag.code then
-            diag_code = "[" .. raw_diag.code .. "] "
-        end
-        local diag_message = raw_diag.message or ""
-
-        local converted_diag = {
-            bufnr = raw_diag.bufnr,
-            filename = vim.fn.bufname(raw_diag.bufnr),
-            lnum = raw_diag.lnum + 1,
-            end_lnum = raw_diag.end_lnum + 1,
-            col = raw_diag.col + 1,
-            end_col = raw_diag.end_col,
-            text = diag_source .. diag_code .. diag_message,
-            type = severity_map[raw_diag.severity],
-        }
-
-        return converted_diag
     end
 
     local diags_for_qf = vim.tbl_map(convert_diag, raw_diags)
@@ -156,84 +153,101 @@ end)
 vim.api.nvim_exec2("packadd cfilter", {})
 
 -- NOTE: cfilter only works on the "text" portion of the qf entry
----@param type string
+---@param opts? table
 ---@return nil
-local cfilter_wrapper = function(type)
+local cfilter_wrapper = function(opts)
     if not check_if_qf_open() then
         vim.notify("Quickfix list not open")
     end
     if check_if_qf_empty() then
-        vim.notify("Quickfix list is closed")
+        vim.notify("Quickfix list is empty")
     end
 
-    local prompt = nil
-    local use_bang = nil
-    if type == "k" then
-        prompt = "Pattern to keep: "
-        use_bang = false
-    elseif type == "r" then
-        prompt = "Pattern to remove: "
-        use_bang = true
-    else
-        print("Invalid filter type")
-        return
-    end
+    opts = vim.deepcopy(opts or {}, true)
 
-    local pattern = ut.get_input(prompt)
+    ---@return string
+    local get_prompt = function()
+        if opts.keep then
+            return "Pattern to keep: "
+        else
+            return "Pattern to remove: "
+        end
+    end
+    local prompt = get_prompt() ---@type string
+
+    local pattern = ut.get_input(prompt) ---@type string
     if pattern == "" then
         return
     end
 
-    vim.api.nvim_cmd({ cmd = "Cfilter", bang = use_bang, args = { pattern } }, {})
+    ---@return boolean
+    local check_bang = function()
+        if opts.keep then
+            return false
+        else
+            return true
+        end
+    end
+    local bang = check_bang() ---@type boolean
+
+    vim.api.nvim_cmd({ cmd = "Cfilter", bang = bang, args = { pattern } }, {})
 end
 
 vim.keymap.set("n", "<leader>qk", function()
-    cfilter_wrapper("k")
+    cfilter_wrapper({ keep = true })
 end)
 vim.keymap.set("n", "<leader>qr", function()
-    cfilter_wrapper("r")
+    cfilter_wrapper()
 end)
 
 -- TODO: Add the ability to take count into this
----@param scroll_cmd string
+---@param opts? table
 ---@return nil
-local qf_scroll_wrapper = function(scroll_cmd)
+local qf_scroll_wrapper = function(opts)
     if check_if_qf_empty() then
         return
     end
 
+    opts = vim.deepcopy(opts or {}, true)
+    ---@return string
+    local get_cmd = function()
+        if opts.prev then
+            return "cprev"
+        else
+            return "cnext"
+        end
+    end
+    local cmd = get_cmd() ---@type string
+
     vim.api.nvim_exec2("botright copen", {})
-
-    local backup_cmd = nil
-    if scroll_cmd == "cprev" then
-        backup_cmd = "clast"
-    elseif scroll_cmd == "cnext" then
-        backup_cmd = "cfirst"
-    else
-        print("Invalid scroll cmd")
-        return
-    end
-
     local status, result = pcall(function()
-        vim.api.nvim_exec2(scroll_cmd, {})
-    end)
+        vim.api.nvim_exec2(cmd, {})
+    end) ---@type boolean, unknown|nil
 
-    if (not status) and type(result) == "string" and string.find(result, "E553") then
-        vim.api.nvim_exec2(backup_cmd, {})
-    elseif not status then
-        vim.api.nvim_err_writeln(result or "Unknown error in qf_scroll_wraper")
+    if status then
+        vim.api.nvim_exec2("norm! zz", {})
         return
     end
 
-    vim.api.nvim_exec2("norm! zz", {})
+    if type(result) == "string" and string.find(result, "E553") then
+        if opts.prev then
+            vim.cmd("clast")
+        else
+            vim.cmd("cfirst")
+        end
+        vim.api.nvim_exec2("norm! zz", {})
+        return
+    end
+
+    vim.api.nvim_err_writeln(result or "Unknown error in qf_scroll_wraper")
 end
 
 vim.keymap.set("n", "[q", function()
-    qf_scroll_wrapper("cprev")
+    qf_scroll_wrapper({ prev = true })
 end)
 vim.keymap.set("n", "]q", function()
-    qf_scroll_wrapper("cnext")
+    qf_scroll_wrapper()
 end)
--- TODO: Rewrite these with a pcall
+
 vim.keymap.set("n", "[Q", "<cmd>cfirst<cr>")
 vim.keymap.set("n", "]Q", "<cmd>clast<cr>")
