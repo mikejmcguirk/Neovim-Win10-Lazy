@@ -29,12 +29,7 @@ vim.keymap.set("n", "ZX", function()
         return
     end
 
-    if type(result) == "string" then
-        vim.api.nvim_err_writeln(result)
-
-        return
-    end
-    vim.api.nvim_err_writeln("Unknown error")
+    vim.api.nvim_err_writeln(result or "Unknown error")
 end)
 
 vim.keymap.set("n", "ZB", function()

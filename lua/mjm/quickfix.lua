@@ -10,6 +10,16 @@ local check_if_qf_open = function()
     return false
 end
 
+---@return boolean
+local check_if_qf_empty = function()
+    if #vim.fn.getqflist() == 0 then
+        print("Quickfix list is empty")
+        return true
+    else
+        return false
+    end
+end
+
 vim.keymap.set("n", "<leader>qt", function()
     if check_if_qf_open() then
         vim.api.nvim_exec2("cclose", {})
@@ -148,13 +158,11 @@ vim.api.nvim_exec2("packadd cfilter", {})
 ---@param type string
 ---@return nil
 local cfilter_wrapper = function(type)
-    if #vim.fn.getqflist() == 0 then
-        print("Quickfix list is empty")
-        return
-    end
     if not check_if_qf_open() then
-        print("Quickfix list not open")
-        return
+        vim.notify("Quickfix list not open")
+    end
+    if check_if_qf_empty() then
+        vim.notify("Quickfix list is closed")
     end
 
     local prompt = nil
@@ -189,10 +197,10 @@ end)
 ---@param scroll_cmd string
 ---@return nil
 local qf_scroll_wrapper = function(scroll_cmd)
-    if #vim.fn.getqflist() == 0 then
-        print("Quickfix list is empty")
+    if check_if_qf_empty() then
         return
     end
+
     vim.api.nvim_exec2("botright copen", {})
 
     local backup_cmd = nil
@@ -208,19 +216,15 @@ local qf_scroll_wrapper = function(scroll_cmd)
     local status, result = pcall(function()
         vim.api.nvim_exec2(scroll_cmd, {})
     end)
-    if status then
-        vim.api.nvim_exec2("norm! zz", {})
+
+    if (not status) and type(result) == "string" and string.find(result, "E553") then
+        vim.api.nvim_exec2(backup_cmd, {})
+    elseif not status then
+        vim.api.nvim_err_writeln(result or "Unknown error in qf_scroll_wraper")
         return
     end
 
-    if not result then
-        vim.api.nvim_err_writeln("Unknown error")
-    elseif type(result) == "string" and string.find(result, "E553") then
-        vim.api.nvim_exec2(backup_cmd, {})
-        vim.api.nvim_exec2("norm! zz", {})
-    else
-        vim.api.nvim_err_writeln(result)
-    end
+    vim.api.nvim_exec2("norm! zz", {})
 end
 
 vim.keymap.set("n", "[q", function()
