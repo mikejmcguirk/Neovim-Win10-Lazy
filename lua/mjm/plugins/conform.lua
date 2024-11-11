@@ -5,14 +5,13 @@ return {
         config = function()
             require("conform").setup({
                 formatters_by_ft = {
+                    json = { "prettier" }, -- TODO: Should be prettierd
                     lua = { "stylua" },
-                    markdown = { "prettier" },
+                    markdown = { "prettier" }, -- TODO: Should be prettierd
                     python = { "ruff_format", "isort" },
+                    rust = { "rustfmt" },
                     sh = { "beautysh" },
                     toml = { "taplo" },
-                    rust = { "rustfmt" },
-                    -- TODO: This should be prettierd
-                    json = { "prettier" },
                 },
             })
         end,

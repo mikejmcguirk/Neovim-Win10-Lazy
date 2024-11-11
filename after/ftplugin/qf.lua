@@ -12,15 +12,9 @@ end, { buffer = true })
 
 vim.keymap.set("n", "<leader>qt", "<cmd>cclose<cr>", { buffer = true })
 
-vim.keymap.set("n", "<leader>qo", function()
-    local cur_line = vim.fn.line(".") --- @type number
-    vim.api.nvim_exec2("cc! " .. tostring(cur_line), {})
-    vim.api.nvim_exec2("cclose", {})
-end, { buffer = true })
-
-vim.keymap.set("n", "<C-o>", function()
-    print("Currently in quickfix list")
-end, { buffer = true })
-vim.keymap.set("n", "<C-i>", function()
-    print("Currently in quickfix list")
-end, { buffer = true })
+local bad_maps = { "<C-o>", "<C-i>" }
+for _, map in pairs(bad_maps) do
+    vim.keymap.set("n", map, function()
+        vim.notify("Currently in quickfix list")
+    end)
+end
