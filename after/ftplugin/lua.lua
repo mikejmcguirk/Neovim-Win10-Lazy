@@ -4,17 +4,22 @@ local function add_annotation(annotation)
     local buf = vim.api.nvim_get_current_buf() ---@type integer
     local row = vim.api.nvim_win_get_cursor(0)[1] ---@type integer
     local line = vim.api.nvim_get_current_line()
+    local line_len = #line ---@type integer
 
     if line:match("^%s*$") then
         vim.api.nvim_buf_set_text(buf, row - 1, 0, row - 1, 0, { annotation .. " " })
+    elseif line:match("%s$") then
+        vim.api.nvim_buf_set_text(buf, row - 1, line_len, row - 1, line_len, { annotation .. " " })
     else
-        if line:match("%s$") then
-            vim.api.nvim_set_current_line(line .. annotation .. " ")
-        else
-            vim.api.nvim_set_current_line(line .. " " .. annotation .. " ")
-        end
+        vim.api.nvim_buf_set_text(
+            buf,
+            row - 1,
+            line_len,
+            row - 1,
+            line_len,
+            { " " .. annotation .. " " }
+        )
     end
-
     vim.cmd("startinsert!")
 end
 
