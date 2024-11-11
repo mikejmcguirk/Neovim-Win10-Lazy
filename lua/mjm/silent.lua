@@ -1,5 +1,6 @@
 -- This file is for maps and autocommands that don't change functionality, but are
 -- simply meant to suppress command line nags
+local ut = require("mjm.utils")
 
 vim.keymap.set("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true }) -- Stop cmd line nag
 
@@ -34,3 +35,22 @@ end, { silent = true })
 vim.keymap.set("x", ">", function()
     visual_indent(">")
 end, { silent = true })
+
+vim.api.nvim_create_autocmd("TextChanged", {
+    group = vim.api.nvim_create_augroup("delete_clear", { clear = true }),
+    pattern = "*",
+    callback = function()
+        if vim.v.operator == "d" then
+            vim.api.nvim_exec2("echo ''", {})
+        end
+    end,
+})
+vim.api.nvim_create_autocmd("InsertEnter", {
+    group = vim.api.nvim_create_augroup("change_clear", { clear = true }),
+    pattern = "*",
+    callback = function()
+        if vim.v.operator == "c" then
+            vim.api.nvim_exec2("echo ''", {})
+        end
+    end,
+})
