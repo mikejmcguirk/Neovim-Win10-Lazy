@@ -96,15 +96,12 @@ return {
             end)
 
             vim.keymap.set("n", "<leader>tt", builtin.highlights)
-            vim.keymap.set("n", "<leader>tk", builtin.keymaps)
 
             vim.keymap.set("n", "<leader>to", builtin.command_history)
             vim.keymap.set("n", "<leader>ti", builtin.registers)
             telescope.load_extension("undo")
             vim.keymap.set("n", "<leader>tu", "<cmd>Telescope undo<cr>")
 
-            vim.keymap.set("n", "<leader>td", builtin.diagnostics)
-            vim.keymap.set("n", "<leader>tw", builtin.lsp_workspace_symbols)
             -- Disabled because of issue where picker tries to place cursor in an invalid position
             -- vim.keymap.set("n", "<leader>tq", builtin.quickfix)
 
