@@ -2,7 +2,7 @@ local M = {}
 
 ---@param prompt string
 ---@return string
-M.get_user_input = function(prompt)
+M.get_input = function(prompt)
     local pattern = nil
     local status, result = pcall(function()
         pattern = vim.fn.input(prompt)

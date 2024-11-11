@@ -28,7 +28,7 @@ vim.opt.grepformat = "%f:%l:%m"
 ---@param options table
 ---@return nil
 local grep_wrapper = function(options)
-    local pattern = ut.get_user_input("Enter Pattern: ")
+    local pattern = ut.get_input("Enter Pattern: ")
     if pattern == "" then
         return
     end
@@ -170,7 +170,7 @@ local cfilter_wrapper = function(type)
         return
     end
 
-    local pattern = ut.get_user_input(prompt)
+    local pattern = ut.get_input(prompt)
     if pattern == "" then
         return
     end

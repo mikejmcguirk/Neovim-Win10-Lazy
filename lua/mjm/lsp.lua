@@ -72,15 +72,15 @@ vim.api.nvim_create_autocmd("LspAttach", {
             local client = clients[1]
             local win = vim.api.nvim_get_current_win()
             local params = vim.lsp.util.make_position_params(win, client.offset_encoding)
+
             local do_rename = function()
-                local input = ut.get_user_input("Rename: ")
+                local input = ut.get_input("Rename: ")
                 if string.find(input, "%s") then
                     vim.notify(string.format("The name '%s' contains spaces", input))
                 elseif #input > 0 then
                     vim.lsp.buf.rename(input)
                 end
             end
-
             if client.supports_method("textDocument/prepareRename") then
                 client.request("textDocument/prepareRename", params, function(err, result)
                     if err or not result then
