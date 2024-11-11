@@ -8,6 +8,7 @@ return {
     config = function()
         local configs = require("nvim-treesitter.configs")
 
+        -- Default keys are listed as required by the LSP
         configs.setup({
             modules = {},
             ignore_install = {},

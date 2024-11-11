@@ -1,3 +1,4 @@
+-- TODO: Might replace with org mode but will keep for now
 local note_path = vim.fn.expand("~") .. "/notes/*.md"
 return {
     "epwalsh/obsidian.nvim",
