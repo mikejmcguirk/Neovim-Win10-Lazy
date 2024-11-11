@@ -27,13 +27,11 @@ vim.keymap.set("n", "<leader>qt", function()
         vim.api.nvim_exec2("botright copen", {})
     end
 end)
+
 vim.keymap.set("n", "<leader>ql", function()
     vim.api.nvim_exec2("cclose", {})
     vim.fn.setqflist({})
 end)
-
-vim.opt.grepprg = "rg --line-number"
-vim.opt.grepformat = "%f:%l:%m"
 
 ---@param options table
 ---@return nil
@@ -42,10 +40,10 @@ local grep_wrapper = function(options)
     if pattern == "" then
         return
     end
+    local args = { pattern }
 
     local opts = vim.deepcopy(options) or {}
     local case_insensitive = opts.insensitive or false
-    local args = { pattern }
     if case_insensitive then
         table.insert(args, "-i")
     end
@@ -61,6 +59,9 @@ local grep_wrapper = function(options)
     vim.api.nvim_cmd(grep_cmd, {})
     vim.api.nvim_exec2("botright copen", {})
 end
+
+vim.opt.grepprg = "rg --line-number"
+vim.opt.grepformat = "%f:%l:%m"
 
 vim.keymap.set("n", "<leader>qgn", function()
     grep_wrapper({})

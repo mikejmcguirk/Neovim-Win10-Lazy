@@ -15,10 +15,8 @@ M.get_input = function(prompt)
     if result == "Keyboard interrupt" then
         do
         end
-    elseif result then
-        vim.api.nvim_err_writeln(result)
     else
-        vim.api.nvim_err_writeln("Failed to get user input, unknown error")
+        vim.api.nvim_err_writeln(result or "Failed to get user input, unknown error")
     end
     return ""
 end
