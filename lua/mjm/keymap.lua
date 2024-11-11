@@ -21,11 +21,13 @@ vim.keymap.set("n", "<C-c>", function()
 end, { expr = true, silent = true })
 
 vim.keymap.set("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true }) -- Stop cmd line nag
+vim.keymap.set("n", "'", "`", { silent = true })
 
 vim.api.nvim_create_user_command("We", "silent w | e", {}) -- Quick refresh if Treesitter bugs out
 
 -- TODO: Do we add check modifiable to these?
 -- TODO: This should incorporate saving the last modified marks
+-- TODO: We could also look at using the update command here instead of write
 vim.keymap.set("n", "ZV", "<cmd>silent w<cr>")
 vim.keymap.set("n", "ZA", "<cmd>silent wa<cr>")
 vim.keymap.set("n", "ZX", function()

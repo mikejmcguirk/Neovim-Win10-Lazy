@@ -62,7 +62,6 @@ vim.opt.updatetime = 250
 
 vim.opt.list = true
 vim.opt.listchars = { tab = "<–>", extends = "»", precedes = "«", nbsp = "␣" }
-
 vim.opt.wrap = false
 vim.opt.linebreak = true
 
