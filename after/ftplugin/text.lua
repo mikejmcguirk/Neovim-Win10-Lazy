@@ -9,6 +9,9 @@ vim.keymap.set("i", "-", "-<C-g>u", { silent = true, buffer = true })
 vim.keymap.set("i", "?", "?<C-g>u", { silent = true, buffer = true })
 vim.keymap.set("i", "!", "!<C-g>u", { silent = true, buffer = true })
 
+-- There should be something like gc where I can take a few lines and turn them into a
+-- bulleted list, either in normal or visual mode
+
 vim.keymap.set("i", "<backspace>", function()
     local cur_line = vim.api.nvim_get_current_line()
     local start_idx, end_idx = string.find(cur_line, "%S")
