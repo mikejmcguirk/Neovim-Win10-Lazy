@@ -5,20 +5,23 @@ return {
         dependencies = { "nvim-lua/plenary.nvim", "jasonpanosso/harpoon-tabline.nvim" },
         config = function()
             local harpoon = require("harpoon")
-            local Logger = require("harpoon.logger")
-            local Extensions = require("harpoon.extensions")
+            local logger = require("harpoon.logger")
+            local extensions = require("harpoon.extensions")
 
             harpoon:setup({
                 settings = {
                     save_on_toggle = true,
                     sync_on_ui_close = true,
+                    menu = {
+                        height = 10,
+                    },
                 },
                 default = {
                     -- The default function uses bufload instead of edit to open the buffer
                     -- I cannot remember what it was now, but it caused some kind of
                     -- serious issue. The logic is re-written to use edit like Telescope does
                     select = function(list_item, list, options)
-                        Logger:log("config_default#select", list_item, list.name, options)
+                        logger:log("config_default#select", list_item, list.name, options)
                         if list_item == nil then
                             return
                         end
@@ -70,8 +73,8 @@ return {
                             })
 
                             if edited then
-                                Extensions.extensions:emit(
-                                    Extensions.event_names.POSITION_UPDATED,
+                                extensions.extensions:emit(
+                                    extensions.event_names.POSITION_UPDATED,
                                     {
                                         list_item = list_item,
                                     }
@@ -79,7 +82,7 @@ return {
                             end
                         end
 
-                        Extensions.extensions:emit(Extensions.event_names.NAVIGATE, {
+                        extensions.extensions:emit(extensions.event_names.NAVIGATE, {
                             buffer = bufnr,
                         })
                     end,
@@ -95,20 +98,27 @@ return {
             --     harpoon:list():remove()
             -- end)
             vim.keymap.set("n", "<leader>ae", function()
-                harpoon.ui:toggle_quick_menu(harpoon:list())
+                harpoon.ui:toggle_quick_menu(harpoon:list(), { height_in_lines = 10 })
             end)
 
             for i = 1, 9 do
                 vim.keymap.set("n", string.format("<leader>%s", i), function()
                     if vim.bo.filetype == "qf" then
                         print("Currently in quickfix list")
-
                         return
                     end
 
                     harpoon:list():select(i)
                 end)
             end
+            vim.keymap.set("n", string.format("<leader>%s", 0), function()
+                if vim.bo.filetype == "qf" then
+                    print("Currently in quickfix list")
+                    return
+                end
+
+                harpoon:list():select(10)
+            end)
 
             require("harpoon-tabline").setup({
                 use_editor_color_scheme = false,
