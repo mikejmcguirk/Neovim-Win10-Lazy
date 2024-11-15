@@ -24,6 +24,11 @@ return {
                         end
 
                         local bufnr = vim.fn.bufnr(list_item.value)
+                        if vim.api.nvim_get_current_buf() == bufnr then
+                            vim.notify("Already in buffer")
+                            return
+                        end
+
                         local set_position = false
                         if bufnr == -1 then
                             set_position = true
