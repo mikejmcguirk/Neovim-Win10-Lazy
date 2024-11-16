@@ -1,7 +1,9 @@
 local ut = require("mjm.utils")
 
 -- Mapping in command mode will cause <C-c> to accept commands
-vim.keymap.set({ "i", "x" }, "<C-c>", "<esc>", { silent = true })
+-- Mapped in operator pending mode because if you C-c out without the remap, quickscope will not
+-- properly exit highlighting. This implies to me there are events not being properly triggered
+vim.keymap.set({ "i", "x", "o" }, "<C-c>", "<esc>", { silent = true })
 vim.keymap.set("n", "<C-c>", function()
     vim.api.nvim_exec2("echo ''", {})
     vim.api.nvim_exec2("noh", {})
