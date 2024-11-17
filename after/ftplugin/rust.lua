@@ -37,11 +37,22 @@ local get_node_at_cursor = function(row, col)
     return root:named_descendant_for_range(row, col, row, col) ---@type TSNode
 end
 
+-- vim.keymap.set("i", "<esc>", function()
+--     local row, col = unpack(vim.api.nvim_win_get_cursor(0)) ---@type number, number
+--     row = row - 1
+--     col = col - 1
+--     print(get_node_at_cursor(row, col):type())
+-- end, { buffer = true })
+
 vim.keymap.set("i", "<", function()
     local row, col = unpack(vim.api.nvim_win_get_cursor(0)) ---@type number, number
     row = row - 1
     col = col - 1
-    if not (get_node_at_cursor(row, col):type() == "type_identifier") then
+    local node_type = get_node_at_cursor(row, col):type()
+    local type_id = node_type == "type_identifier"
+    local ident = node_type == "identifier"
+
+    if not (type_id or ident) then
         local key = vim.api.nvim_replace_termcodes("<", true, false, true) ---@type string
         vim.api.nvim_feedkeys(key, "n", false)
         return
