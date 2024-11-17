@@ -210,6 +210,8 @@ vim.keymap.set("n", "yY", "mzggyG`z", { silent = true })
 vim.keymap.set("n", "<leader>yY", 'mzgg"+yG`z', { silent = true })
 
 local startline_objects = { "0", "_", "g^", "g0" }
+-- If you do db, it does not delete the character the cursor is on, so the h's are included in
+-- these maps to offset the cursor
 for _, obj in pairs(startline_objects) do
     vim.keymap.set("n", "y" .. obj, "mzhv" .. obj .. "y", { silent = true })
     vim.keymap.set("n", "<leader>y" .. obj, "mzhv" .. obj .. '"+y', { silent = true })
