@@ -211,14 +211,14 @@ vim.keymap.set("n", "<leader>yY", 'mzgg"+yG`z', { silent = true })
 
 local startline_objects = { "0", "_", "g^", "g0" }
 for _, obj in pairs(startline_objects) do
-    vim.keymap.set("n", "y" .. obj, "mzv" .. obj .. "y", { silent = true })
-    vim.keymap.set("n", "<leader>y" .. obj, "mzv" .. obj .. '"+y', { silent = true })
+    vim.keymap.set("n", "y" .. obj, "mzhv" .. obj .. "y", { silent = true })
+    vim.keymap.set("n", "<leader>y" .. obj, "mzhv" .. obj .. '"+y', { silent = true })
 
-    vim.keymap.set("n", "d" .. obj, "v" .. obj .. "d", { silent = true })
-    vim.keymap.set("n", "x" .. obj, "v" .. obj .. '"_d', { silent = true })
+    vim.keymap.set("n", "d" .. obj, "hv" .. obj .. "d", { silent = true })
+    vim.keymap.set("n", "x" .. obj, "hv" .. obj .. '"_d', { silent = true })
 
-    vim.keymap.set("n", "c" .. obj, "v" .. obj .. "c", { silent = true })
-    vim.keymap.set("n", "<leader>c" .. obj, "x" .. obj .. '"_c', { silent = true })
+    vim.keymap.set("n", "c" .. obj, "hv" .. obj .. "c", { silent = true })
+    vim.keymap.set("n", "<leader>c" .. obj, "hv" .. obj .. '"_c', { silent = true })
 end
 
 local norm_pastes = {
