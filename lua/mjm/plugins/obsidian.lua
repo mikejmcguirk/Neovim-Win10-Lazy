@@ -1,18 +1,28 @@
+local workspaces = {
+    {
+        name = "main",
+        path = "~/obsidian/main",
+    },
+}
+
+local note_events = {}
+for _, workspace in ipairs(workspaces) do
+    local expanded_path = vim.fn.expand(workspace.path) .. "/*.md"
+    table.insert(note_events, "BufReadPre " .. expanded_path)
+    table.insert(note_events, "BufNewFile " .. expanded_path)
+end
+
 return {
     "epwalsh/obsidian.nvim",
     version = "*",
     lazy = true,
+    event = note_events,
     dependencies = {
         "nvim-lua/plenary.nvim",
     },
     config = function()
         require("obsidian").setup({
-            workspaces = {
-                {
-                    name = "main",
-                    path = "~/obsidian/main",
-                },
-            },
+            workspaces = workspaces,
             completion = {
                 nvim_cmp = true,
                 min_chars = 1,
