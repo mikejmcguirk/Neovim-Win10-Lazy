@@ -1,4 +1,3 @@
--- TODO: Might replace with org mode but will keep for now
 return {
     "epwalsh/obsidian.nvim",
     version = "*",
@@ -8,10 +7,6 @@ return {
     config = function()
         require("obsidian").setup({
             workspaces = {
-                {
-                    name = "notes",
-                    path = "~/notes",
-                },
                 {
                     name = "main",
                     path = "~/obsidian/main",
