@@ -15,6 +15,10 @@ end
 return {
     "epwalsh/obsidian.nvim",
     version = "*",
+    -- Must be lazy loaded, or else it will try and fail to load in invalid directories
+    -- Just setting lazy load = true does not work, so custom logic is built out here to
+    -- only load the plugin when entering an Obsidian buffer, since the plugin's functionality is
+    -- all tied to being in a relevant buffer anyway
     lazy = true,
     event = note_events,
     dependencies = {
