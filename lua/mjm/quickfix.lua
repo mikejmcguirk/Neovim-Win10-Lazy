@@ -201,7 +201,7 @@ vim.keymap.set("n", "<leader>qr", function()
 end)
 
 -- TODO: Add the ability to take count into this
----@param opts? table
+---@param opts? { prev: boolean }
 ---@return nil
 local qf_scroll_wrapper = function(opts)
     if check_if_qf_empty() then

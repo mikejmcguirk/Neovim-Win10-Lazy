@@ -1,13 +1,7 @@
 -- TODO: Might replace with org mode but will keep for now
-local note_path = vim.fn.expand("~") .. "/notes/*.md"
 return {
     "epwalsh/obsidian.nvim",
     version = "*",
-    lazy = true,
-    event = {
-        "BufReadPre " .. note_path,
-        "BufNewFile " .. note_path,
-    },
     dependencies = {
         "nvim-lua/plenary.nvim",
     },
@@ -18,15 +12,30 @@ return {
                     name = "notes",
                     path = "~/notes",
                 },
+                {
+                    name = "main",
+                    path = "~/obsidian/main",
+                },
             },
             completion = {
                 nvim_cmp = true,
-                min_chars = 1,
+                min_chars = 2,
             },
             mappings = {},
             ui = {
                 enable = false,
             },
+            disable_frontmatter = true, -- The aliasing creates inconsistent behavior with the GUI
+            -- Use the note title as the filename
+            -- I would like to validate that the filename is valid on Windows, but I can't because
+            -- cmp uses this when autocompleting [[]] bracket names
+            note_id_func = function(title)
+                if title ~= nil then
+                    return title
+                else
+                    return nil -- This makes the LSP complain, but I want the error
+                end
+            end,
         })
 
         vim.keymap.set("n", "<cr>", "<cmd>ObsidianFollowLink<cr>")
