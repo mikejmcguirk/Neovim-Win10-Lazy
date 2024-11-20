@@ -33,6 +33,7 @@ return {
             end,
         })
 
+        -- TODO: Create a map with [o and ]o that advances to the next/previous file in a folder
         vim.keymap.set("n", "<cr>", "<cmd>ObsidianFollowLink<cr>")
         vim.keymap.set("n", "<leader>ta", "<cmd>ObsidianBacklinks<cr>")
         vim.keymap.set("n", "<leader>tn", "<cmd>ObsidianLinks<cr>")
