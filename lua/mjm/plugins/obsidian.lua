@@ -70,6 +70,8 @@ local next_file_in_dir = function(opts)
     vim.cmd("edit " .. vim.fn.fnameescape(next_file_path))
 end
 
+local img_folder = "assets/imgs"
+
 local workspaces = {
     {
         name = "main",
@@ -97,7 +99,8 @@ return {
         "nvim-lua/plenary.nvim",
     },
     config = function()
-        require("obsidian").setup({
+        local obsidian = require("obsidian")
+        obsidian.setup({
             workspaces = workspaces,
             completion = {
                 nvim_cmp = true,
@@ -118,14 +121,44 @@ return {
                     return nil -- This makes the LSP complain, but I want the error
                 end
             end,
+            attachments = {
+                img_folder = img_folder,
+                ---@param client obsidian.Client
+                ---@param path obsidian.Path the absolute path to the image file
+                ---@return string
+                img_text_func = function(client, path)
+                    path = client:vault_relative_path(path) or path
+                    return string.format("![%s](%s)", path.name, path)
+                end,
+                confirm_img_paste = false,
+            },
         })
 
-        -- TODO: Create a map with [o and ]o that advances to the next/previous file in a folder
         vim.keymap.set("n", "<cr>", "<cmd>ObsidianFollowLink<cr>")
         vim.keymap.set("n", "<leader>ta", "<cmd>ObsidianBacklinks<cr>")
         vim.keymap.set("n", "<leader>tn", "<cmd>ObsidianLinks<cr>")
         vim.keymap.set("n", "<leader>sr", "<cmd>ObsidianRename<cr>")
+        vim.keymap.set("n", "<leader>si", function()
+            local current_file = vim.api.nvim_buf_get_name(0) ---@type string
+            local current_file_name = vim.fn.fnamemodify(current_file, ":t:r")
 
+            local cur_workspace = obsidian.get_client().current_workspace.root.filename
+            local img_dir = cur_workspace .. "/" .. img_folder
+            if vim.fn.isdirectory(img_dir) == 0 then
+                vim.fn.mkdir(img_dir, "p")
+            end
+
+            local pattern = img_dir .. "/" .. current_file_name .. "*.png"
+            local files = vim.fn.glob(pattern, false, true)
+            local count = #files
+
+            local padded_count = string.format("%02d", count)
+            local filename = current_file_name .. "_" .. padded_count
+
+            vim.cmd("ObsidianPasteImg " .. filename)
+        end)
+
+        -- If it becomes an issue, make these maps check if we're in an obsidian folder
         vim.keymap.set("n", "[o", function()
             next_file_in_dir({ skip_extensions })
         end)
