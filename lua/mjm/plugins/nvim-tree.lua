@@ -30,6 +30,7 @@ return {
                 api.config.mappings.default_on_attach(bufnr)
                 vim.keymap.del("n", "<2-LeftMouse>", { buffer = bufnr })
                 vim.keymap.del("n", "<2-RightMouse>", { buffer = bufnr })
+                vim.keymap.set("n", "y", "<nop>", { buffer = bufnr })
             end,
         })
 
