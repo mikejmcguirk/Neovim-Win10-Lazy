@@ -8,7 +8,7 @@ return {
                     json = { "prettier" }, -- TODO: Should be prettierd
                     lua = { "stylua" },
                     markdown = { "prettier" }, -- TODO: Should be prettierd
-                    python = { "ruff_format", "isort" },
+                    python = { "ruff_format" },
                     rust = { "rustfmt" },
                     sh = { "beautysh" },
                     toml = { "taplo" },
