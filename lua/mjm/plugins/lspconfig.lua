@@ -52,6 +52,7 @@ return {
                                     "E305",
                                     "E501",
                                     "E741", -- Ambiguous variable name
+                                    "W291", -- Trailing whitespace
                                     "W293",
                                     "W391",
                                 },

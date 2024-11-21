@@ -1,3 +1,75 @@
+local skip_extensions = { ".jpg", ".png", ".gif", ".bmp" }
+
+---@param opts? { next_file: boolean, skip_ext: string[] }
+---@return nil
+local next_file_in_dir = function(opts)
+    opts = vim.deepcopy(opts or {}, true)
+    local next_file = opts.next_file or false
+    local skip_ext = opts.skip_ext or {}
+
+    local current_file = vim.api.nvim_buf_get_name(0) ---@type string
+    if current_file == "" then
+        vim.notify("No file in the current buffer.", vim.log.levels.WARN)
+        return
+    end
+    if vim.bo.modified then
+        vim.notify("Buffer is unsaved.", vim.log.levels.WARN)
+        return
+    end
+
+    local dir = vim.fn.expand("%:p:h") ---@type string
+    local files = vim.fn.readdir(dir) ---@type string[]
+    table.sort(files)
+
+    ---@param ext string
+    ---@return string
+    local normalize_ext = function(ext)
+        return ext:gsub("^%.", ""):lower()
+    end
+    skip_ext = vim.tbl_map(normalize_ext, skip_ext)
+
+    ---@param file string
+    ---@return boolean
+    local is_valid_ext = function(file)
+        local ext = vim.fn.fnamemodify(file, ":e"):lower() ---@type string
+        if not skip_ext[ext] then
+            return true
+        else
+            return false
+        end
+    end
+    local filtered_files = vim.tbl_filter(is_valid_ext, files) ---@type string[]
+
+    if #filtered_files <= 1 then
+        vim.notify("Only one valid file in the directory.", vim.log.levels.INFO)
+        return
+    end
+
+    -- Make sure we aren't trying to advance out of an invalid extension
+    local current_index = nil ---@type integer|nil
+    local current_file_name = vim.fn.fnamemodify(current_file, ":t")
+    for idx, file in ipairs(filtered_files) do
+        if file == current_file_name then
+            current_index = idx
+            break
+        end
+    end
+    if not current_index then
+        vim.notify("Current file not found in directory listing.", vim.log.levels.WARN)
+        return
+    end
+
+    local next_index = nil ---@type integer|nil
+    if next_file then
+        next_index = current_index % #filtered_files + 1
+    else
+        next_index = (current_index - 2) % #filtered_files + 1
+    end
+
+    local next_file_path = vim.fn.join({ dir, filtered_files[next_index] }, "/") ---@type string
+    vim.cmd("edit " .. vim.fn.fnameescape(next_file_path))
+end
+
 local workspaces = {
     {
         name = "main",
@@ -53,5 +125,12 @@ return {
         vim.keymap.set("n", "<leader>ta", "<cmd>ObsidianBacklinks<cr>")
         vim.keymap.set("n", "<leader>tn", "<cmd>ObsidianLinks<cr>")
         vim.keymap.set("n", "<leader>sr", "<cmd>ObsidianRename<cr>")
+
+        vim.keymap.set("n", "[o", function()
+            next_file_in_dir({ skip_extensions })
+        end)
+        vim.keymap.set("n", "]o", function()
+            next_file_in_dir({ next_file = true, skip_extensions })
+        end)
     end,
 }
