@@ -109,6 +109,11 @@ return {
             mappings = {},
             ui = {
                 enable = false,
+                checkboxes = {
+                    [" "] = { order = 1, char = "󰄱", hl_group = "ObsidianTodo" },
+                    ["~"] = { order = 2, char = "󰰱", hl_group = "ObsidianTilde" },
+                    ["x"] = { order = 5, char = "", hl_group = "ObsidianDone" },
+                },
             },
             disable_frontmatter = true, -- The aliasing creates inconsistent behavior with the GUI
             -- Use the note title as the filename
@@ -134,26 +139,38 @@ return {
             },
         })
 
-        vim.keymap.set("n", "<cr>", "<cmd>ObsidianFollowLink<cr>")
+        -- vim.keymap.set("n", "<cr>", "<cmd>ObsidianFollowLink<cr>")
+        -- TODO: Might need to map these within the obsidian config so they stick to
+        -- Obsidian buffers
+        vim.keymap.set("n", "<cr>", function()
+            return obsidian.util.smart_action() ---@type string
+        end, { expr = true })
+        vim.keymap.set("n", "<leader>ss", "<cmd>ObsidianFollowLink hsplit<cr>")
+        vim.keymap.set("n", "<leader>sv", "<cmd>ObsidianFollowLink vsplit<cr>")
+        vim.keymap.set("n", "<leader>so", "<cmd>ObsidianOpen<cr>")
+
         vim.keymap.set("n", "<leader>ta", "<cmd>ObsidianBacklinks<cr>")
         vim.keymap.set("n", "<leader>tn", "<cmd>ObsidianLinks<cr>")
+
         vim.keymap.set("n", "<leader>sr", "<cmd>ObsidianRename<cr>")
+        -- TODO Make work in Windows as well
         vim.keymap.set("n", "<leader>si", function()
             local current_file = vim.api.nvim_buf_get_name(0) ---@type string
-            local current_file_name = vim.fn.fnamemodify(current_file, ":t:r")
+            local current_file_name = vim.fn.fnamemodify(current_file, ":t:r") ---@type string
 
+            ---@type string
             local cur_workspace = obsidian.get_client().current_workspace.root.filename
-            local img_dir = cur_workspace .. "/" .. img_folder
+            local img_dir = cur_workspace .. "/" .. img_folder ---@type string
             if vim.fn.isdirectory(img_dir) == 0 then
                 vim.fn.mkdir(img_dir, "p")
             end
 
-            local pattern = img_dir .. "/" .. current_file_name .. "*.png"
-            local files = vim.fn.glob(pattern, false, true)
-            local count = #files
+            local pattern = img_dir .. "/" .. current_file_name .. "*.png" ---@type string
+            local files = vim.fn.glob(pattern, false, true) ---@type table
+            local count = #files ---@type integer
 
-            local padded_count = string.format("%02d", count)
-            local filename = current_file_name .. "_" .. padded_count
+            local padded_count = string.format("%02d", count) ---@type string
+            local filename = current_file_name .. "_" .. padded_count ---@type string
 
             vim.cmd("ObsidianPasteImg " .. filename)
         end)
