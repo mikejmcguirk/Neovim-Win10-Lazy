@@ -22,6 +22,18 @@ vim.keymap.set({ "n", "x" }, "][", "<Nop>")
 vim.keymap.set({ "n", "x" }, "[/", "<Nop>")
 vim.keymap.set({ "n", "x" }, "]/", "<Nop>")
 
+vim.keymap.set({ "n", "i", "x" }, "<left>", "<Nop>")
+vim.keymap.set({ "n", "i", "x" }, "<right>", "<Nop>")
+vim.keymap.set({ "n", "i", "x" }, "<up>", "<Nop>")
+vim.keymap.set({ "n", "i", "x" }, "<down>", "<Nop>")
+
+vim.keymap.set({ "n", "i", "x" }, "<pageup>", "<Nop>")
+vim.keymap.set({ "n", "i", "x" }, "<pagedown>", "<Nop>")
+vim.keymap.set({ "n", "i", "x" }, "<home>", "<Nop>")
+vim.keymap.set({ "n", "i", "x" }, "<end>", "<Nop>")
+vim.keymap.set({ "n", "i", "x" }, "<insert>", "<Nop>")
+vim.keymap.set({ "n", "x" }, "<del>", "<Nop>")
+
 vim.opt.mouse = "a" -- Otherwise, the terminal handles mouse functionality
 vim.opt.mousemodel = "extend" -- Disables terminal right-click paste
 
