@@ -1,77 +1,3 @@
-local skip_extensions = { ".jpg", ".png", ".gif", ".bmp" }
-
----@param opts? { next_file: boolean, skip_ext: string[] }
----@return nil
-local next_file_in_dir = function(opts)
-    opts = vim.deepcopy(opts or {}, true)
-    local next_file = opts.next_file or false
-    local skip_ext = opts.skip_ext or {}
-
-    local current_file = vim.api.nvim_buf_get_name(0) ---@type string
-    if current_file == "" then
-        vim.notify("No file in the current buffer.", vim.log.levels.WARN)
-        return
-    end
-    if vim.bo.modified then
-        vim.notify("Buffer is unsaved.", vim.log.levels.WARN)
-        return
-    end
-
-    local dir = vim.fn.expand("%:p:h") ---@type string
-    local files = vim.fn.readdir(dir) ---@type string[]
-    table.sort(files)
-
-    ---@param ext string
-    ---@return string
-    local normalize_ext = function(ext)
-        return ext:gsub("^%.", ""):lower()
-    end
-    skip_ext = vim.tbl_map(normalize_ext, skip_ext)
-
-    ---@param file string
-    ---@return boolean
-    local is_valid_ext = function(file)
-        local ext = vim.fn.fnamemodify(file, ":e"):lower() ---@type string
-        if not skip_ext[ext] then
-            return true
-        else
-            return false
-        end
-    end
-    local filtered_files = vim.tbl_filter(is_valid_ext, files) ---@type string[]
-
-    if #filtered_files <= 1 then
-        vim.notify("Only one valid file in the directory.", vim.log.levels.INFO)
-        return
-    end
-
-    -- Make sure we aren't trying to advance out of an invalid extension
-    local current_index = nil ---@type integer|nil
-    local current_file_name = vim.fn.fnamemodify(current_file, ":t")
-    for idx, file in ipairs(filtered_files) do
-        if file == current_file_name then
-            current_index = idx
-            break
-        end
-    end
-    if not current_index then
-        vim.notify("Current file not found in directory listing.", vim.log.levels.WARN)
-        return
-    end
-
-    local next_index = nil ---@type integer|nil
-    if next_file then
-        next_index = current_index % #filtered_files + 1
-    else
-        next_index = (current_index - 2) % #filtered_files + 1
-    end
-
-    local next_file_path = vim.fn.join({ dir, filtered_files[next_index] }, "/") ---@type string
-    vim.cmd("edit " .. vim.fn.fnameescape(next_file_path))
-end
-
-local img_folder = "assets/imgs"
-
 local workspaces = {
     {
         name = "main",
@@ -99,6 +25,8 @@ return {
         "nvim-lua/plenary.nvim",
     },
     config = function()
+        local img_folder = "assets/imgs"
+
         local obsidian = require("obsidian")
         obsidian.setup({
             workspaces = workspaces,
@@ -123,7 +51,8 @@ return {
                 if title ~= nil then
                     return title
                 else
-                    return nil -- This makes the LSP complain, but I want the error
+                    ---@diagnostic disable-next-line: return-type-mismatch
+                    return nil -- I want the error to return if this happens
                 end
             end,
             attachments = {
@@ -145,6 +74,69 @@ return {
         vim.keymap.set("n", "<cr>", function()
             return obsidian.util.smart_action() ---@type string
         end, { expr = true })
+
+        -- A lot of this is lifted from the code's toggle_checkbox cmd setup and
+        -- the toggle_checkbox function
+        vim.keymap.set("v", "<cr>", function()
+            -- This specifically is re-written because I don't want it to create checkboxes if
+            -- one does not already exist
+            ---@param line_num integer
+            ---@return nil
+            local toggle_checkbox = function(line_num)
+                local line = vim.api.nvim_buf_get_lines(0, line_num - 1, line_num, false)[1]
+                local checkbox_pattern = "^%s*- %[.] "
+                if not string.match(line, checkbox_pattern) then
+                    return
+                end
+
+                local client = obsidian.get_client()
+                local checkboxes = vim.tbl_keys(client.opts.ui.checkboxes)
+                table.sort(checkboxes, function(a, b)
+                    return (client.opts.ui.checkboxes[a].order or 1000)
+                        < (client.opts.ui.checkboxes[b].order or 1000)
+                end)
+
+                local enumerate = require("obsidian.itertools").enumerate
+                local util = obsidian.util
+                for i, check_char in enumerate(checkboxes) do
+                    if
+                        string.match(
+                            line,
+                            "^%s*- %[" .. util.escape_magic_characters(check_char) .. "%].*"
+                        )
+                    then
+                        if i == #checkboxes then
+                            i = 0
+                        end
+                        line = util.string_replace(
+                            line,
+                            "- [" .. check_char .. "]",
+                            "- [" .. checkboxes[i + 1] .. "]",
+                            1
+                        )
+                        break
+                    end
+                end
+
+                vim.api.nvim_buf_set_lines(0, line_num - 1, line_num, true, { line })
+            end
+
+            vim.cmd('exec "silent norm! \\<esc>"', {}) -- Force update of '< and '> marks
+            local start_line = vim.fn.line("'<")
+            local end_line = vim.fn.line("'>")
+            local bad_start = start_line == 0 or start_line == nil
+            local bad_end = end_line == 0 or end_line == nil
+            if bad_start or bad_end then
+                vim.notify("Visual line marks not updated")
+                return
+            end
+
+            for i = start_line, end_line do
+                toggle_checkbox(i)
+            end
+            vim.api.nvim_exec2("norm! gv", {})
+        end)
+
         vim.keymap.set("n", "<leader>ss", "<cmd>ObsidianFollowLink hsplit<cr>")
         vim.keymap.set("n", "<leader>sv", "<cmd>ObsidianFollowLink vsplit<cr>")
         vim.keymap.set("n", "<leader>so", "<cmd>ObsidianOpen<cr>")
@@ -175,12 +167,103 @@ return {
             vim.cmd("ObsidianPasteImg " .. filename)
         end)
 
+        ---@return string
+        local get_current_file = function()
+            local current_file = vim.api.nvim_buf_get_name(0) ---@type string
+            if current_file == "" then
+                vim.notify("No file in the current buffer.", vim.log.levels.WARN)
+                return ""
+            end
+            if vim.bo.modified then
+                vim.notify("Buffer is unsaved.", vim.log.levels.WARN)
+                return ""
+            end
+
+            return current_file
+        end
+
+        ---@param files string[]
+        ---@param skip_ext string[]
+        ---@return string[]
+        local filter_files = function(files, skip_ext)
+            ---@param ext string
+            ---@return string
+            local normalize_ext = function(ext)
+                return ext:gsub("^%.", ""):lower()
+            end
+            skip_ext = vim.tbl_map(normalize_ext, skip_ext)
+
+            ---@param file string
+            ---@return boolean
+            local is_valid_ext = function(file)
+                local ext = vim.fn.fnamemodify(file, ":e"):lower() ---@type string
+                if not skip_ext[ext] then
+                    return true
+                else
+                    return false
+                end
+            end
+
+            return vim.tbl_filter(is_valid_ext, files)
+        end
+
+        ---@param opts? { goto_next: boolean, skip_ext: string[] }
+        ---@return nil
+        local next_file_in_dir = function(opts)
+            local current_file = get_current_file() ---@type string
+            if current_file == "" then
+                return
+            end
+
+            local dir = vim.fn.expand("%:p:h") ---@type string
+            local files = vim.fn.readdir(dir, function(name)
+                return vim.fn.isdirectory(dir .. "/" .. name) == 0
+            end) ---@type string[]
+            table.sort(files)
+
+            opts = vim.deepcopy(opts or {}, true)
+            local goto_next = opts.goto_next or false
+            local skip_ext = opts.skip_ext or {}
+
+            local filtered_files = filter_files(files, skip_ext) ---@type string[]
+            if #filtered_files <= 1 then
+                vim.notify("Only one valid file in the directory.", vim.log.levels.INFO)
+                return
+            end
+
+            -- Make sure we aren't trying to advance out of an invalid extension
+            local current_index = nil ---@type integer|nil
+            local current_file_name = vim.fn.fnamemodify(current_file, ":t")
+            for idx, file in ipairs(filtered_files) do
+                if file == current_file_name then
+                    current_index = idx
+                    break
+                end
+            end
+            if not current_index then
+                vim.notify("Current file not found in directory listing.", vim.log.levels.WARN)
+                return
+            end
+
+            local next_index = nil ---@type integer|nil
+            if goto_next then
+                next_index = current_index % #filtered_files + 1
+            else
+                next_index = (current_index - 2) % #filtered_files + 1
+            end
+
+            local next_file_path = vim.fn.join({ dir, filtered_files[next_index] }, "/") ---@type string
+            vim.cmd("edit " .. vim.fn.fnameescape(next_file_path))
+        end
+
+        local skip_extensions = { ".jpg", ".png", ".gif", ".bmp" }
+
         -- If it becomes an issue, make these maps check if we're in an obsidian folder
         vim.keymap.set("n", "[o", function()
             next_file_in_dir({ skip_extensions })
         end)
         vim.keymap.set("n", "]o", function()
-            next_file_in_dir({ next_file = true, skip_extensions })
+            next_file_in_dir({ goto_next = true, skip_extensions })
         end)
     end,
 }
