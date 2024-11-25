@@ -38,7 +38,7 @@ return {
                 enable = false,
                 checkboxes = {
                     [" "] = { order = 1, char = "󰄱", hl_group = "ObsidianTodo" },
-                    ["~"] = { order = 2, char = "󰰱", hl_group = "ObsidianTilde" },
+                    -- ["~"] = { order = 2, char = "󰰱", hl_group = "ObsidianTilde" },
                     ["x"] = { order = 5, char = "", hl_group = "ObsidianDone" },
                 },
             },
