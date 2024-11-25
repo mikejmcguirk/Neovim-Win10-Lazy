@@ -3,11 +3,12 @@ local workspaces = {
         name = "main",
         path = "~/obsidian/main",
     },
-}
+} ---@type table
 
+-- Only load if we enter a .md file in a defined Obsidian workspace
 local note_events = {}
 for _, workspace in ipairs(workspaces) do
-    local expanded_path = vim.fn.expand(workspace.path) .. "/*.md"
+    local expanded_path = vim.fn.expand(workspace.path) .. "/*.md" ---@type string
     table.insert(note_events, "BufReadPre " .. expanded_path)
     table.insert(note_events, "BufNewFile " .. expanded_path)
 end
@@ -21,9 +22,7 @@ return {
     -- all tied to being in a relevant buffer anyway
     lazy = true,
     event = note_events,
-    dependencies = {
-        "nvim-lua/plenary.nvim",
-    },
+    dependencies = { "nvim-lua/plenary.nvim" },
     config = function()
         local img_folder = "assets/imgs"
 
@@ -44,9 +43,10 @@ return {
                 },
             },
             disable_frontmatter = true, -- The aliasing creates inconsistent behavior with the GUI
-            -- Use the note title as the filename
-            -- I would like to validate that the filename is valid on Windows, but I can't because
-            -- cmp uses this when autocompleting [[]] bracket names
+            -- When creating a new file from a [[]] link, use the title in the link
+            -- I would like to validate that the title is a valid Windows filename, but
+            -- I can't because cmp uses this function when autocompleting [[]] bracket names
+            -- TODO: Can the cmp behavior be worked around?
             note_id_func = function(title)
                 if title ~= nil then
                     return title
@@ -68,62 +68,65 @@ return {
             },
         })
 
-        -- vim.keymap.set("n", "<cr>", "<cmd>ObsidianFollowLink<cr>")
         -- TODO: Might need to map these within the obsidian config so they stick to
         -- Obsidian buffers
         vim.keymap.set("n", "<cr>", function()
             return obsidian.util.smart_action() ---@type string
         end, { expr = true })
 
-        -- A lot of this is lifted from the code's toggle_checkbox cmd setup and
-        -- the toggle_checkbox function
-        vim.keymap.set("v", "<cr>", function()
-            -- This specifically is re-written because I don't want it to create checkboxes if
-            -- one does not already exist
-            ---@param line_num integer
-            ---@return nil
-            local toggle_checkbox = function(line_num)
-                local line = vim.api.nvim_buf_get_lines(0, line_num - 1, line_num, false)[1]
-                local checkbox_pattern = "^%s*- %[.] "
-                if not string.match(line, checkbox_pattern) then
-                    return
-                end
-
-                local client = obsidian.get_client()
-                local checkboxes = vim.tbl_keys(client.opts.ui.checkboxes)
-                table.sort(checkboxes, function(a, b)
-                    return (client.opts.ui.checkboxes[a].order or 1000)
-                        < (client.opts.ui.checkboxes[b].order or 1000)
-                end)
-
-                local enumerate = require("obsidian.itertools").enumerate
-                local util = obsidian.util
-                for i, check_char in enumerate(checkboxes) do
-                    if
-                        string.match(
-                            line,
-                            "^%s*- %[" .. util.escape_magic_characters(check_char) .. "%].*"
-                        )
-                    then
-                        if i == #checkboxes then
-                            i = 0
-                        end
-                        line = util.string_replace(
-                            line,
-                            "- [" .. check_char .. "]",
-                            "- [" .. checkboxes[i + 1] .. "]",
-                            1
-                        )
-                        break
-                    end
-                end
-
-                vim.api.nvim_buf_set_lines(0, line_num - 1, line_num, true, { line })
+        -- TODO: This multi-line checkboxing using visual mode is cool. An alternative would be to
+        -- write a custom normal mode motion. go is goto byte. Would look at Nvim gc logic
+        -- This is re-written from the plugin's ToggleCheckbox cmd setup and
+        -- the toggle_checkbox function specifically. Done so because I don't want to
+        -- create a checkbox if one doesn't already exist
+        ---@param line_num integer
+        ---@return nil
+        local toggle_checkbox = function(line_num)
+            ---@type string
+            local line = vim.api.nvim_buf_get_lines(0, line_num - 1, line_num, false)[1]
+            local checkbox_pattern = "^%s*- %[.] " ---@type string
+            -- This is where the plugin does alternative logic
+            if not string.match(line, checkbox_pattern) then
+                return
             end
 
-            vim.cmd('exec "silent norm! \\<esc>"', {}) -- Force update of '< and '> marks
-            local start_line = vim.fn.line("'<")
-            local end_line = vim.fn.line("'>")
+            -- The rest is lifted basically straight from the plugin
+            local client = obsidian.get_client()
+            local checkboxes = vim.tbl_keys(client.opts.ui.checkboxes)
+            table.sort(checkboxes, function(a, b)
+                return (client.opts.ui.checkboxes[a].order or 1000)
+                    < (client.opts.ui.checkboxes[b].order or 1000)
+            end)
+
+            local enumerate = require("obsidian.itertools").enumerate
+            local util = obsidian.util
+            for i, check_char in enumerate(checkboxes) do
+                if
+                    string.match(
+                        line,
+                        "^%s*- %[" .. util.escape_magic_characters(check_char) .. "%].*"
+                    )
+                then
+                    if i == #checkboxes then
+                        i = 0
+                    end
+                    line = util.string_replace(
+                        line,
+                        "- [" .. check_char .. "]",
+                        "- [" .. checkboxes[i + 1] .. "]",
+                        1
+                    )
+                    break
+                end
+            end
+
+            vim.api.nvim_buf_set_lines(0, line_num - 1, line_num, true, { line })
+        end
+
+        vim.keymap.set("v", "<cr>", function()
+            vim.cmd('exec "silent norm! \\<esc>"', {}) -- Update of '< and '> marks
+            local start_line = vim.fn.line("'<") ---@type integer
+            local end_line = vim.fn.line("'>") ---@type integer
             local bad_start = start_line == 0 or start_line == nil
             local bad_end = end_line == 0 or end_line == nil
             if bad_start or bad_end then
@@ -233,7 +236,7 @@ return {
 
             -- Make sure we aren't trying to advance out of an invalid extension
             local current_index = nil ---@type integer|nil
-            local current_file_name = vim.fn.fnamemodify(current_file, ":t")
+            local current_file_name = vim.fn.fnamemodify(current_file, ":t") ---@type string
             for idx, file in ipairs(filtered_files) do
                 if file == current_file_name then
                     current_index = idx
@@ -252,11 +255,12 @@ return {
                 next_index = (current_index - 2) % #filtered_files + 1
             end
 
-            local next_file_path = vim.fn.join({ dir, filtered_files[next_index] }, "/") ---@type string
+            ---@type string
+            local next_file_path = vim.fn.join({ dir, filtered_files[next_index] }, "/")
             vim.cmd("edit " .. vim.fn.fnameescape(next_file_path))
         end
 
-        local skip_extensions = { ".jpg", ".png", ".gif", ".bmp" }
+        local skip_extensions = { ".jpg", ".png", ".gif", ".bmp" } ---@type string[]
 
         -- If it becomes an issue, make these maps check if we're in an obsidian folder
         vim.keymap.set("n", "[o", function()

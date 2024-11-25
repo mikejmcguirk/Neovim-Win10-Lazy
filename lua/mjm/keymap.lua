@@ -177,6 +177,7 @@ end, { silent = true, expr = true })
 vim.keymap.set("x", "D", "<nop>", { silent = true })
 vim.keymap.set("n", "d^", '^dg_"_dd', { silent = true }) -- Does not yank newline character
 vim.keymap.set("n", "dD", "ggdG", { silent = true })
+vim.keymap.set("n", "dK", "DO<esc>p==", { silent = true })
 
 vim.keymap.set({ "n", "x" }, "<leader>c", '"_c', { silent = true })
 vim.keymap.set("n", "<leader>C", '"_C', { silent = true })

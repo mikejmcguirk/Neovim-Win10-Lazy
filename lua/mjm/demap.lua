@@ -2,6 +2,9 @@ vim.keymap.set("x", "u", "<Nop>")
 vim.keymap.set("x", "q", "<Nop>")
 vim.keymap.set("n", "Q", "<nop>")
 vim.keymap.set("n", "gQ", "<nop>")
+vim.keymap.set("n", "gh", "<nop>")
+vim.keymap.set("n", "gH", "<nop>")
+vim.keymap.set("n", "gs", "<nop>")
 
 vim.keymap.set("n", "<C-z>", "<nop>")
 
