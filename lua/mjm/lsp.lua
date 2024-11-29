@@ -47,8 +47,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
         vim.keymap.set("n", "<leader>vd", toggle_virtual_text)
 
         vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = ev.buf })
+        vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { buffer = ev.buf })
         vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = ev.buf })
-        vim.keymap.set("n", "gt", vim.lsp.buf.type_definition, { buffer = ev.buf })
 
         vim.keymap.set("n", "<leader>vh", vim.lsp.buf.document_highlight, { buffer = ev.buf })
 
@@ -59,39 +59,11 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end, { buffer = ev.buf })
 
         vim.keymap.set("n", "grn", function()
-            local bufnr = vim.api.nvim_get_current_buf()
-            local clients = vim.lsp.get_clients({
-                bufnr = bufnr,
-                method = "textDocument/rename",
-            })
-            if #clients == 0 then
-                vim.notify("[LSP] Rename, no language servers available with rename capability.")
-                return
-            end
-
-            local client = clients[1]
-            local win = vim.api.nvim_get_current_win()
-            local params = vim.lsp.util.make_position_params(win, client.offset_encoding)
-
-            local do_rename = function()
-                local input = ut.get_input("Rename: ")
-                if string.find(input, "%s") then
-                    vim.notify(string.format("The name '%s' contains spaces", input))
-                elseif #input > 0 then
-                    vim.lsp.buf.rename(input)
-                end
-            end
-            if client.supports_method("textDocument/prepareRename") then
-                client.request("textDocument/prepareRename", params, function(err, result)
-                    if err or not result then
-                        vim.notify("Nothing to rename here", vim.log.levels.INFO)
-                        return
-                    else
-                        do_rename()
-                    end
-                end, bufnr)
-            else
-                do_rename()
+            local input = ut.get_input("Rename: ")
+            if string.find(input, "%s") then
+                vim.notify(string.format("The name '%s' contains spaces", input))
+            elseif #input > 0 then
+                vim.lsp.buf.rename(input)
             end
         end, { buffer = ev.buf })
 

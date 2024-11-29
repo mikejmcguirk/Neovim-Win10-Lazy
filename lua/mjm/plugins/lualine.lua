@@ -1,9 +1,12 @@
 return {
     {
         "nvim-lualine/lualine.nvim",
-        dependencies = { "nvim-tree/nvim-web-devicons" },
-        lazy = false,
-        priority = 996,
+        dependencies = {
+            "nvim-tree/nvim-web-devicons",
+            "ThePrimeagen/harpoon", -- For harpoon tab info
+            "mike-jl/harpoonEx",
+            -- "mikejmcguirk/harpoonEx",
+        },
         config = function()
             local theme
 
@@ -53,6 +56,11 @@ return {
             end
 
             require("lualine").setup({
+                options = {
+                    component_separators = { left = "", right = "" },
+                    section_separators = { left = "", right = "" },
+                    theme = theme,
+                },
                 sections = {
                     lualine_a = { "branch", "diff" },
                     -- :help statusline
@@ -70,12 +78,48 @@ return {
                     lualine_y = { "progress" },
                     lualine_z = {},
                 },
-                options = {
-                    section_separators = { "", "" },
-                    component_separators = { "", "" },
-                    theme = theme,
+                tabline = {
+                    lualine_a = {
+                        {
+                            "harpoons",
+                            separator = nil, -- Must explicitly specify
+                            padding = 1,
+
+                            show_filename_only = true,
+                            hide_filename_extension = false,
+                            show_modified_status = true,
+
+                            mode = 2,
+
+                            max_length = vim.o.columns,
+
+                            harpoons_color = {
+                                active = "lualine_b_normal",
+                                inactive = "lualine_a_normal",
+                            },
+
+                            symbols = {
+                                modified = "[+]",
+                                alternate_file = "",
+                                directory = "",
+                            },
+                        },
+                    },
+                    lualine_z = {
+                        {
+                            "tabs",
+                            tabs_color = {
+                                active = "lualine_b_normal",
+                                inactive = "lualine_a_normal",
+                            },
+                        },
+                    },
                 },
             })
+
+            local normal_a = vim.api.nvim_get_hl(0, { name = "lualine_a_normal" })
+            local new_normal_a = vim.tbl_extend("force", normal_a, { bold = false })
+            vim.api.nvim_set_hl(0, "lualine_a_normal", new_normal_a)
         end,
     },
 }
