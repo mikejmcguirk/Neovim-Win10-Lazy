@@ -18,6 +18,9 @@ local mjm_group = vim.api.nvim_create_augroup("mjm", { clear = true })
 vim.api.nvim_create_autocmd({ "InsertEnter", "CmdlineEnter" }, {
     group = mjm_group,
     pattern = "*",
+    -- The highlight state is saved and restored when autocmds are triggered, so
+    -- schedule_warp is used to trigger nohlsearch aftewards
+    -- See nohlsearch() help
     callback = vim.schedule_wrap(function()
         vim.cmd.nohlsearch()
     end),

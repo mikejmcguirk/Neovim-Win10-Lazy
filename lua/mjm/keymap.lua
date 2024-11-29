@@ -13,7 +13,7 @@ vim.keymap.set("n", "<C-c>", function()
     return "<esc>"
 end, { expr = true, silent = true })
 
-vim.keymap.set("n", "'", "`", { silent = true })
+vim.keymap.set("n", "'", "`", { silent = true }) -- Jumps to row, but not column, by default
 
 vim.api.nvim_create_user_command("We", "silent w | e", {}) -- Quick refresh if Treesitter bugs out
 

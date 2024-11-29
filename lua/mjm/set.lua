@@ -33,14 +33,14 @@ vim.opt.fileformats = "unix,dos" -- Override \r\n on Windows
 
 vim.opt.lazyredraw = true
 vim.opt.termguicolors = true
-vim.api.nvim_exec2("set gcr=n:block-blinkon1,i-c-ci:ver100-blinkon1,v-r:hor100-blinkon1", {})
+vim.cmd("set gcr=n:block-blinkon1,i-c-ci:ver100-blinkon1,v-r:hor100-blinkon1")
 vim.opt.showmode = false
 vim.opt.shortmess:append("I")
-vim.opt.cpoptions:append("W")
+vim.opt.cpoptions:append("W") -- Don't overwrite read-only files
 
 vim.opt.scrolloff = 6
 vim.opt.startofline = true
-vim.opt.jumpoptions:append("view")
+vim.opt.jumpoptions:append("view") -- Restore views when possible
 
 vim.opt.splitright = true
 vim.opt.splitbelow = true
