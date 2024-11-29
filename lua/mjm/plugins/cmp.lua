@@ -4,10 +4,9 @@ local cmp_config = function()
     local cmp = require("cmp")
     local cmp_select = { behavior = cmp.SelectBehavior.Select }
 
-    local win_highlight = "Normal:Normal,FloatBorder:FloatBorder,CursorLine:Visual,Search:None"
     local win_settings = {
         border = "single",
-        winhighlight = win_highlight,
+        winhighlight = "Normal:Normal,FloatBorder:FloatBorder,CursorLine:Visual,Search:None",
         scrollbar = true,
     }
 
@@ -38,15 +37,13 @@ local cmp_config = function()
             ["<C-d>"] = cmp.mapping.scroll_docs(4),
             ["<C-u>"] = cmp.mapping.scroll_docs(-4),
 
-            ["<C-e>"] = cmp.mapping.abort(),
+            ["<C-p>"] = cmp.mapping.select_prev_item(cmp_select),
+            ["<C-n>"] = cmp.mapping.select_next_item(cmp_select),
+            ["<C-y>"] = cmp.mapping.confirm({ select = true }),
             ["<C-c>"] = function()
                 cmp.mapping.abort()
                 vim.cmd("stopinsert")
             end,
-
-            ["<C-p>"] = cmp.mapping.select_prev_item(cmp_select),
-            ["<C-n>"] = cmp.mapping.select_next_item(cmp_select),
-            ["<C-y>"] = cmp.mapping.confirm({ select = true }),
 
             ["<Tab>"] = nil,
             ["<S-Tab>"] = nil,
@@ -105,15 +102,16 @@ end
 return {
     {
         "hrsh7th/nvim-cmp",
+        -- The stop in typing on InsertEnter is awkward
         event = { "BufReadPre", "BufNewFile" },
         config = function()
             cmp_config()
         end,
         dependencies = {
-            "hrsh7th/vim-vsnip", -- Snippets engine
+            "hrsh7th/vim-vsnip",
 
-            "rafamadriz/friendly-snippets", -- Snippets
-            "hrsh7th/cmp-vsnip", -- From vsnip
+            "hrsh7th/cmp-vsnip",
+            "rafamadriz/friendly-snippets",
 
             "hrsh7th/cmp-nvim-lsp",
             "hrsh7th/cmp-nvim-lsp-signature-help", -- Show current function signature
