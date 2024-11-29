@@ -64,6 +64,12 @@ vim.keymap.set("n", "<M-k>", "<cmd>resize +2<CR>", { silent = true })
 vim.keymap.set("n", "<M-h>", "<cmd>vertical resize -2<CR>", { silent = true })
 vim.keymap.set("n", "<M-l>", "<cmd>vertical resize +2<CR>", { silent = true })
 
+-- Relies on dadbod being installed
+vim.keymap.set("n", "<leader>d", function()
+    vim.cmd("tabnew")
+    vim.cmd("DBUI")
+end)
+
 -- Normal mode scrolls done as commands because, even with lazyredraw on,
 -- visible screenshake is reduced
 vim.keymap.set({ "n" }, "<C-u>", "<cmd>norm! <C-u>zz<cr>", { silent = true })
