@@ -61,7 +61,7 @@ vim.keymap.set("n", "ZX", function()
     vim.api.nvim_err_writeln(result or "Unknown error")
 end)
 
-vim.keymap.set("n", "ZB", function()
+vim.keymap.set("n", "<C-w>q", function()
     local current_buf = vim.api.nvim_get_current_buf()
     local total_win_count = 0
     local buf_win_count = 0
@@ -74,6 +74,7 @@ vim.keymap.set("n", "ZB", function()
     end
 
     if total_win_count < 2 then
+        vim.notify("Only one window open")
         return
     elseif buf_win_count < 2 then
         vim.cmd("bd")
