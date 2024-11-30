@@ -18,6 +18,33 @@ vim.keymap.set("n", "'", "`", { silent = true }) -- Jumps to row, but not column
 vim.api.nvim_create_user_command("We", "silent w | e", {}) -- Quick refresh if Treesitter bugs out
 
 -- TODO: Do we add check modifiable to these?
+-- Relies on dadbod being installed
+vim.keymap.set("n", "<leader>d", function()
+    vim.cmd("tabnew")
+    vim.cmd("DBUI")
+    vim.cmd("set rnu")
+end)
+
+local function tab_kill()
+    local confirm = vim.fn.confirm(
+        "This will delete all buffers in the current tab. Unsaved changes will be lost. Proceed?",
+        "&Yes\n&No",
+        2
+    )
+
+    if confirm ~= 1 then
+        return
+    end
+
+    local buffers = vim.fn.tabpagebuflist(vim.fn.tabpagenr())
+    for _, buf in ipairs(buffers) do
+        if vim.api.nvim_buf_is_valid(buf) then
+            vim.api.nvim_buf_delete(buf, { force = true })
+        end
+    end
+end
+vim.api.nvim_create_user_command("TabKill", tab_kill, {})
+
 -- TODO: This should incorporate saving the last modified marks
 -- TODO: We could also look at using the update command here instead of write
 -- TODO: Add some sort of logic so this doesn't work in runtime or plugin files
@@ -63,12 +90,6 @@ vim.keymap.set("n", "<M-j>", "<cmd>resize -2<CR>", { silent = true })
 vim.keymap.set("n", "<M-k>", "<cmd>resize +2<CR>", { silent = true })
 vim.keymap.set("n", "<M-h>", "<cmd>vertical resize -2<CR>", { silent = true })
 vim.keymap.set("n", "<M-l>", "<cmd>vertical resize +2<CR>", { silent = true })
-
--- Relies on dadbod being installed
-vim.keymap.set("n", "<leader>d", function()
-    vim.cmd("tabnew")
-    vim.cmd("DBUI")
-end)
 
 -- Normal mode scrolls done as commands because, even with lazyredraw on,
 -- visible screenshake is reduced
