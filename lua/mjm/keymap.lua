@@ -61,27 +61,29 @@ vim.keymap.set("n", "ZX", function()
     vim.api.nvim_err_writeln(result or "Unknown error")
 end)
 
-vim.keymap.set("n", "<C-w>q", function()
-    local current_buf = vim.api.nvim_get_current_buf()
-    local total_win_count = 0
-    local buf_win_count = 0
+for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
+    vim.keymap.set("n", map, function()
+        local current_buf = vim.api.nvim_get_current_buf()
+        local total_win_count = 0
+        local buf_win_count = 0
 
-    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-        total_win_count = total_win_count + 1
-        if vim.api.nvim_win_get_buf(win) == current_buf then
-            buf_win_count = buf_win_count + 1
+        for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+            total_win_count = total_win_count + 1
+            if vim.api.nvim_win_get_buf(win) == current_buf then
+                buf_win_count = buf_win_count + 1
+            end
         end
-    end
 
-    if total_win_count < 2 then
-        vim.notify("Only one window open")
-        return
-    elseif buf_win_count < 2 then
-        vim.cmd("bd")
-    else
-        vim.cmd("q")
-    end
-end)
+        if total_win_count < 2 then
+            vim.notify("Only one window open")
+            return
+        elseif buf_win_count < 2 then
+            vim.cmd("bd")
+        else
+            vim.cmd("q")
+        end
+    end)
+end
 
 vim.keymap.set("n", "ZZ", "<Nop>")
 vim.keymap.set("n", "ZQ", "<Nop>")

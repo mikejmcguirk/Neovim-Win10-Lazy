@@ -9,7 +9,7 @@ vim.keymap.set("n", "gs", "<nop>")
 vim.keymap.set("n", "<C-z>", "<nop>")
 
 -- Even mapping <C-c> in operator pending mode does not fix these
-local bad_wincmds = { "c", "f", "w", "q" }
+local bad_wincmds = { "c", "f", "w" }
 for _, key in pairs(bad_wincmds) do
     vim.keymap.set("n", "<C-w>" .. key, "<nop>")
     vim.keymap.set("n", "<C-w><C-" .. key .. ">", "<nop>")
