@@ -7,7 +7,9 @@ return {
                 formatters_by_ft = {
                     json = { "prettier" }, -- TODO: Should be prettierd
                     lua = { "stylua" },
-                    markdown = { "prettier" }, -- TODO: Should be prettierd
+                    -- Markdown formatting does too many unpredictable things
+                    -- Maybe at some point in the future it can come back
+                    -- markdown = { "prettier" }, -- TODO: Should be prettierd
                     python = { "ruff_format" },
                     rust = { "rustfmt" },
                     sh = { "beautysh" },
