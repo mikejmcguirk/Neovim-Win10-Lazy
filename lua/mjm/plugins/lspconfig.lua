@@ -32,6 +32,37 @@ return {
 
             -- Python
             lspconfig.ruff.setup({ capabilities = cmp_capabilities })
+            -- Ruff is still more a linter than a feature-complete replacement
+            lspconfig.pylsp.setup({
+                capabilities = cmp_capabilities,
+                settings = {
+                    pylsp = {
+                        plugins = {
+                            pycodestyle = {
+                                maxLineLength = 99,
+                                ignore = {
+                                    "E201",
+                                    "E202",
+                                    "E203", -- Whitespace before ':' (Contradicts ruff formatter)
+                                    "E211",
+                                    "E226", -- Missing whitespace around arithmetic operator
+                                    "E261",
+                                    "E262",
+                                    "E265",
+                                    "E302",
+                                    "E303",
+                                    "E305",
+                                    "E501",
+                                    "E741", -- Ambiguous variable name
+                                    "W291", -- Trailing whitespace
+                                    "W293",
+                                    "W391",
+                                },
+                            },
+                        },
+                    },
+                },
+            })
 
             -- Toml
             lspconfig.taplo.setup({ capabilities = cmp_capabilities })
