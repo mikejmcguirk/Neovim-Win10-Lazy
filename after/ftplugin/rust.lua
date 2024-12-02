@@ -120,3 +120,16 @@ vim.keymap.set("i", ">", function()
     local key = vim.api.nvim_replace_termcodes("<Right>", true, false, true) ---@type string
     vim.api.nvim_feedkeys(key, "n", false)
 end, { buffer = true })
+
+local add_derive_debug = function()
+    local buf = vim.api.nvim_get_current_buf() ---@type integer
+    local row = vim.api.nvim_win_get_cursor(0)[1] ---@type integer
+    local line = vim.api.nvim_get_current_line() ---@type string
+
+    if line:match("^%s*$") then
+        vim.api.nvim_buf_set_text(buf, row - 1, 0, row - 1, 0, { "#[derive(Debug)]" })
+    else
+        vim.notify("Line is not blank")
+    end
+end
+vim.keymap.set("n", "--D", add_derive_debug)
