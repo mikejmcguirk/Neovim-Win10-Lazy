@@ -1,3 +1,5 @@
+local ut = require("mjm.utils")
+
 -- TODO: Look at how windp/autopairs handles looking at treesitter
 -- It looks like it checks parent nodes as well
 ---@param row number
@@ -121,15 +123,27 @@ vim.keymap.set("i", ">", function()
     vim.api.nvim_feedkeys(key, "n", false)
 end, { buffer = true })
 
-local add_derive_debug = function()
-    local buf = vim.api.nvim_get_current_buf() ---@type integer
-    local row = vim.api.nvim_win_get_cursor(0)[1] ---@type integer
+---@param pragma string
+---@return nil
+local add_pragma = function(pragma)
     local line = vim.api.nvim_get_current_line() ---@type string
-
-    if line:match("^%s*$") then
-        vim.api.nvim_buf_set_text(buf, row - 1, 0, row - 1, 0, { "#[derive(Debug)]" })
-    else
+    if not line:match("^%s*$") then
         vim.notify("Line is not blank")
+        return
     end
+
+    local row = vim.api.nvim_win_get_cursor(0)[1] ---@type integer
+    local indent = ut.get_indent(row) ---@type integer
+    local padding = string.rep(" ", indent) ---@type string
+    vim.api.nvim_buf_set_text(0, row - 1, 0, row - 1, 0, { padding .. pragma })
 end
-vim.keymap.set("n", "--D", add_derive_debug)
+
+vim.keymap.set("n", "--D", function()
+    add_pragma("#[derive(Debug)]")
+end)
+vim.keymap.set("n", "--t", function()
+    add_pragma("#[cfg(test)]")
+end)
+vim.keymap.set("n", "--d", function()
+    add_pragma("#[cfg(debug_assertions)]")
+end)

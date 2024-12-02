@@ -1,3 +1,5 @@
+local ut = require("mjm.utils")
+
 local M = {}
 
 ---@param cur_row number
@@ -58,48 +60,13 @@ local find_pairs = function(cur_row, cur_col, cur_line)
     return true
 end
 
----@param line_num number -- One indexed
----@return number
-local get_indent = function(line_num)
-    local fix_indent = function(indent)
-        if indent <= 0 then
-            return 0
-        else
-            return indent
-        end
-    end
-
-    -- If Treesitter indent is enabled, the indentexpr will be set to
-    -- nvim_treesitter#indent(), so that will be captured here
-    local indentexpr = vim.bo.indentexpr
-    if indentexpr == "" then
-        local prev_nonblank = vim.fn.prevnonblank(line_num - 1)
-        local prev_nonblank_indent = vim.fn.indent(prev_nonblank)
-        return fix_indent(prev_nonblank_indent)
-    end
-
-    -- Most indent expressions in the Nvim runtime do not take an argument
-    --
-    -- However, a few of them do take v:lnum
-    -- v:lnum is not updated when nvim_exec2 is called, so it must be updated here
-    --
-    -- A couple of the runtime expressions take '.' as an argument
-    -- This is already updated before nvim_exec2 is called
-    --
-    -- Other indentexpr arguments are not guaranteed to be handled properly
-    vim.v.lnum = line_num
-    local expr_indent_tbl = vim.api.nvim_exec2("echo " .. indentexpr, { output = true })
-    local expr_indent = tonumber(expr_indent_tbl.output) or 0
-    return fix_indent(expr_indent)
-end
-
 ---@param cur_row number -- 1 Indexed
 ---@param cur_col number -- 0 Indexed
 ---@param cur_line string
 ---@param opts? table
 ---@return nil
 local backspace_blank_line = function(cur_row, cur_col, cur_line, opts)
-    local start_indent = get_indent(cur_row)
+    local start_indent = ut.get_indent(cur_row)
     if cur_col > start_indent then
         local edit_row = cur_row - 1
         vim.api.nvim_buf_set_text(0, edit_row, start_indent, edit_row, #cur_line, {})
@@ -130,7 +97,7 @@ local backspace_blank_line = function(cur_row, cur_col, cur_line, opts)
 
     local last_non_blank, _ = dest_line:find("(%S)%s*$")
     if not last_non_blank then
-        local indent = get_indent(dest_row)
+        local indent = ut.get_indent(dest_row)
         vim.api.nvim_buf_set_lines(0, edit_row, dest_row, false, { string.rep(" ", indent) })
         vim.api.nvim_win_set_cursor(0, { dest_row, indent })
         return
