@@ -57,6 +57,7 @@ return {
                                     "W291", -- Trailing whitespace
                                     "W293",
                                     "W391",
+                                    "W503", -- Line break after binary operator
                                 },
                             },
                         },

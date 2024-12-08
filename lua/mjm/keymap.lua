@@ -2,7 +2,7 @@ local ut = require("mjm.utils")
 
 -- Mapping in command mode will cause <C-c> to accept commands
 -- Mapped in operator pending mode because if you C-c out without the remap, quickscope will not
--- properly exit highlighting. This implies to me there are events not being properly triggered
+-- properly exit highlighting
 vim.keymap.set({ "i", "x", "o" }, "<C-c>", "<esc>", { silent = true })
 vim.keymap.set("n", "<C-c>", function()
     vim.api.nvim_exec2("echo ''", {})
@@ -13,7 +13,7 @@ vim.keymap.set("n", "<C-c>", function()
     return "<esc>"
 end, { expr = true, silent = true })
 
-vim.keymap.set("n", "'", "`", { silent = true }) -- Jumps to row, but not column, by default
+vim.keymap.set("n", "'", "`") -- Jumps to row, but not column, by default
 
 vim.api.nvim_create_user_command("We", "silent w | e", {}) -- Quick refresh if Treesitter bugs out
 
@@ -31,7 +31,6 @@ local function tab_kill()
         "&Yes\n&No",
         2
     )
-
     if confirm ~= 1 then
         return
     end
@@ -74,13 +73,10 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
             end
         end
 
-        if total_win_count < 2 then
-            vim.notify("Only one window open")
-            return
-        elseif buf_win_count < 2 then
-            vim.cmd("bd")
-        else
+        if buf_win_count > 1 then
             vim.cmd("q")
+        else
+            vim.cmd("bd")
         end
     end)
 end
