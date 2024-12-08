@@ -13,6 +13,40 @@ vim.api.nvim_create_autocmd("TextYankPost", {
     end,
 })
 
+-- Done using the cmd because the lua function is buffer specific
+vim.cmd([[match EolSpace /\s\+$/]])
+
+local match_control = vim.api.nvim_create_augroup("match_control", { clear = true })
+local get_match_id = function(match_group)
+    for _, match in ipairs(vim.fn.getmatches()) do
+        if match.group == match_group then
+            return match.id
+        end
+    end
+end
+
+vim.api.nvim_create_autocmd("InsertEnter", {
+    group = match_control,
+    pattern = "*",
+    callback = function()
+        local match_id = get_match_id("EolSpace")
+        if not match_id then
+            return
+        end
+
+        vim.fn.matchdelete(match_id)
+    end,
+})
+vim.api.nvim_create_autocmd("InsertLeave", {
+    group = match_control,
+    pattern = "*",
+    callback = function()
+        if vim.bo.filetype ~= "TelescopePrompt" then
+            vim.cmd([[match EolSpace /\s\+$/]])
+        end
+    end,
+})
+
 local mjm_group = vim.api.nvim_create_augroup("mjm", { clear = true })
 
 vim.api.nvim_create_autocmd({ "InsertEnter", "CmdlineEnter" }, {

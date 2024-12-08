@@ -40,9 +40,7 @@ return {
                     end,
                 })
 
-                vim.api.nvim_exec2("colorscheme fluoromachine", {})
                 vim.api.nvim_set_hl(0, "CursorLineNr", { fg = "#6FE1FB" })
-
                 vim.api.nvim_set_hl(
                     0,
                     "EolSpace",
@@ -56,8 +54,6 @@ return {
                     transparent = true,
                 })
 
-                vim.api.nvim_exec2("colorscheme fluoromachine", {})
-
                 vim.api.nvim_set_hl(
                     0,
                     "EolSpace",
@@ -65,46 +61,20 @@ return {
                 )
             end
 
-            vim.cmd([[match EolSpace /\s\+$/]])
+            vim.api.nvim_exec2("colorscheme fluoromachine", {})
 
             -- Still needed even with fluoromachine transparent = true
             vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" })
+
+            local old_float_border = vim.api.nvim_get_hl(0, { name = "FloatBorder" })
+            local new_float_border = vim.tbl_extend("force", old_float_border, { bg = "none" })
+            vim.api.nvim_set_hl(0, "FloatBorder", new_float_border)
+
             vim.api.nvim_set_hl(
                 0,
                 "Cursorline",
                 { bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg }
             )
-
-            local match_control = vim.api.nvim_create_augroup("match_control", { clear = true })
-            local get_match_id = function(match_group)
-                for _, match in ipairs(vim.fn.getmatches()) do
-                    if match.group == match_group then
-                        return match.id
-                    end
-                end
-            end
-
-            vim.api.nvim_create_autocmd("InsertEnter", {
-                group = match_control,
-                pattern = "*",
-                callback = function()
-                    local match_id = get_match_id("EolSpace")
-                    if not match_id then
-                        return
-                    end
-
-                    vim.fn.matchdelete(match_id)
-                end,
-            })
-            vim.api.nvim_create_autocmd("InsertLeave", {
-                group = match_control,
-                pattern = "*",
-                callback = function()
-                    if vim.bo.filetype ~= "TelescopePrompt" then
-                        vim.cmd([[match EolSpace /\s\+$/]])
-                    end
-                end,
-            })
         end,
     },
 }
