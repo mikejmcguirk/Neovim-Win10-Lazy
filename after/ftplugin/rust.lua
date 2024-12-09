@@ -150,3 +150,11 @@ end)
 vim.keymap.set("n", "--a", function()
     add_pragma("#[allow(clippy::lint)]")
 end)
+
+vim.keymap.set("n", "<M-;>", function()
+    ut.norm_toggle_semicolon()
+end)
+
+vim.keymap.set("i", "<M-;>", function()
+    ut.ins_add_semicolon()
+end)
