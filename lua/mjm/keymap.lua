@@ -139,8 +139,20 @@ vim.keymap.set("i", ".", ".<C-g>u", { silent = true })
 vim.keymap.set("i", ";", ";<C-g>u", { silent = true })
 vim.keymap.set("i", ":", ":<C-g>u", { silent = true })
 
-vim.keymap.set({ "n", "x" }, "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true })
-vim.keymap.set({ "n", "x" }, "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true })
+vim.keymap.set({ "n", "x" }, "k", function()
+    if vim.v.count == 0 then
+        return "gk"
+    else
+        return "k"
+    end
+end, { expr = true, silent = true })
+vim.keymap.set({ "n", "x" }, "j", function()
+    if vim.v.count == 0 then
+        return "gj"
+    else
+        return "j"
+    end
+end, { expr = true, silent = true })
 
 vim.keymap.set("n", "J", function()
     if not ut.check_modifiable() then
