@@ -14,7 +14,9 @@ return {
                 group = vim.api.nvim_create_augroup("tmux_safety", { clear = true }),
                 pattern = "*",
                 callback = function()
-                    vim.fn.system([[tmux set status on]])
+                    pcall(function()
+                        vim.fn.system([[tmux set status on]])
+                    end)
                 end,
             })
         end,
@@ -26,10 +28,14 @@ return {
 
             if not view.is_open() then
                 view.open()
-                vim.fn.system([[tmux set status off]])
+                pcall(function()
+                    vim.fn.system([[tmux set status off]])
+                end)
             else
                 view.close()
-                vim.fn.system([[tmux set status on]])
+                pcall(function()
+                    vim.fn.system([[tmux set status on]])
+                end)
             end
         end)
     end,
