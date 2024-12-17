@@ -70,6 +70,10 @@ return {
             local new_float_border = vim.tbl_extend("force", old_float_border, { bg = "none" })
             vim.api.nvim_set_hl(0, "FloatBorder", new_float_border)
 
+            local old_win_border = vim.api.nvim_get_hl(0, { name = "WinSeparator" })
+            local new_win_border = vim.tbl_extend("force", old_win_border, { bg = "none" })
+            vim.api.nvim_set_hl(0, "WinSeparator", new_win_border)
+
             vim.api.nvim_set_hl(
                 0,
                 "Cursorline",

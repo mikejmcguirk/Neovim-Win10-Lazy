@@ -120,6 +120,7 @@ vim.keymap.set({ "n", "x" }, "N", function()
     return "Nzzzv"
 end, { expr = true })
 
+-- "S" enters insert with the proper indent. "I" left on default behavior (start of line)
 for _, map in pairs({ "i", "a", "A" }) do
     vim.keymap.set("n", map, function()
         if string.match(vim.api.nvim_get_current_line(), "^%s*$") then
@@ -238,8 +239,10 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 vim.keymap.set({ "n", "x" }, "y", "mzy", { silent = true })
 vim.keymap.set({ "n", "x" }, "<leader>y", 'mz"+y', { silent = true })
 
-vim.keymap.set("n", "Y", "mzy$", { silent = true }) -- Avoid inconsistent behavior
-vim.keymap.set("n", "<leader>Y", 'mz"+y$', { silent = true }) -- Mapping to "+Y yanks whole line
+-- In Vim, Y is a synonym for yy. It only behaves like y$ because of a Neovim default mapping
+-- Any Neovim equivalent Y behavior below must be mapped manually
+vim.keymap.set("n", "Y", "mzy$", { silent = true })
+vim.keymap.set("n", "<leader>Y", 'mz"+y$', { silent = true })
 vim.keymap.set("x", "Y", "<nop>", { silent = true })
 
 vim.keymap.set("n", "y^", "mz^vg_y", { silent = true })
@@ -250,7 +253,7 @@ vim.keymap.set("n", "<leader>yY", 'mzgg"+yG`z', { silent = true })
 
 local startline_objects = { "0", "_", "g^", "g0" }
 -- If you do db, it does not delete the character the cursor is on, so the h's are included in
--- these maps to offset the cursor
+-- these maps to offset the cursor and match default behavior
 for _, obj in pairs(startline_objects) do
     vim.keymap.set("n", "y" .. obj, "mzhv" .. obj .. "y", { silent = true })
     vim.keymap.set("n", "<leader>y" .. obj, "mzhv" .. obj .. '"+y', { silent = true })
@@ -276,22 +279,21 @@ for _, map in pairs(norm_pastes) do
             return
         end
 
-        local cur_line = vim.api.nvim_get_current_line()
-        local start_idx, _ = string.find(cur_line, "%S")
-        local is_blank = not start_idx
+        local line = vim.api.nvim_get_current_line() ---@type string
+        local is_blank = line:match("^%s*$") ---@type boolean|nil
+
         local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
         vim.api.nvim_buf_set_mark(0, "z", cur_row, cur_col, {})
 
         local status, result = pcall(function()
             vim.api.nvim_exec2("silent norm! " .. vim.v.count1 .. map[2], {})
-        end)
+        end) ---@type boolean, unknown|nil
         if not status then
             if type(result) == "string" then
                 vim.api.nvim_err_writeln(result)
             else
                 vim.api.nvim_err_writeln("Unknown error when pasting")
             end
-
             return
         end
 
