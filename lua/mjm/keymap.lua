@@ -1,23 +1,38 @@
 local ut = require("mjm.utils")
 
--- Mapping in command mode will cause <C-c> to accept commands
+-- Mapping <esc> to <C-c> in command mode will cause <C-c> to accept commands rather than cancel
 -- Mapped in operator pending mode because if you C-c out without the remap, quickscope will not
 -- properly exit highlighting
-vim.keymap.set({ "i", "x", "o" }, "<C-c>", "<esc>", { silent = true })
+vim.keymap.set({ "x", "o" }, "<C-c>", "<esc>", { silent = true })
+-- Deal with default behavior where you type just to the bound of a window, so Nvim scrolls to
+-- the next column so you can see what you're typing, but then you exit insert mode, meaning the
+-- character no longer can exist, but Neovim still has you scrolled to the side
+vim.keymap.set("i", "<C-c>", "<esc>ze")
 vim.keymap.set("n", "<C-c>", function()
     vim.api.nvim_exec2("echo ''", {})
     vim.api.nvim_exec2("noh", {})
     vim.lsp.buf.clear_references()
     -- Allows <C-c> to exit the start of commands with a count
-    -- By default <C-c> in normal mode produces a command line nag, which this map eliminates
+    -- Eliminates default command line nag
     return "<esc>"
 end, { expr = true, silent = true })
 
-vim.keymap.set("n", "'", "`") -- Jumps to row, but not column, by default
+vim.keymap.set("i", "<enter>", function()
+    local line = vim.api.nvim_get_current_line()
+    local col = vim.api.nvim_win_get_cursor(0)[2]
+    local after_cursor = line:sub(col + 1)
+
+    if after_cursor:match("^%s*$") then
+        return '<enter><esc>ze"_S'
+    else
+        return "<enter><C-o>ze"
+    end
+end, { expr = true })
+
+vim.keymap.set("n", "'", "`") -- By default, only jumps to the row, not the column
 
 vim.api.nvim_create_user_command("We", "silent w | e", {}) -- Quick refresh if Treesitter bugs out
 
--- TODO: Do we add check modifiable to these?
 -- Relies on dadbod being installed
 vim.keymap.set("n", "<leader>d", function()
     vim.cmd("tabnew")
@@ -60,6 +75,9 @@ vim.keymap.set("n", "ZX", function()
     vim.api.nvim_err_writeln(result or "Unknown error")
 end)
 
+vim.keymap.set("n", "ZZ", "<Nop>")
+vim.keymap.set("n", "ZQ", "<Nop>")
+
 for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
     vim.keymap.set("n", map, function()
         local current_buf = vim.api.nvim_get_current_buf()
@@ -81,8 +99,9 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
     end)
 end
 
-vim.keymap.set("n", "ZZ", "<Nop>")
-vim.keymap.set("n", "ZQ", "<Nop>")
+vim.keymap.set("n", "<C-w>S", "<cmd>leftabove split<cr>")
+vim.keymap.set("n", "<C-w>v", "<cmd>botright vsplit<cr>")
+vim.keymap.set("n", "<C-w>V", "<cmd>topleft vsplit<cr>")
 
 -- Window navigation is handled through the tmux-navigator plugin
 vim.keymap.set("n", "<M-j>", "<cmd>resize -2<CR>", { silent = true })
@@ -101,24 +120,49 @@ vim.keymap.set({ "x" }, "<C-d>", "<C-d>zz", { silent = true })
 vim.keymap.set("n", "/", "ms/")
 vim.keymap.set("n", "?", "ms?")
 
-vim.keymap.set({ "n", "x" }, "n", function()
+-- Doing the n and N maps as functions reduces screen shake
+vim.keymap.set({ "n" }, "n", function()
+    local search_cmd = ""
     if not (vim.v.hlsearch == 1) then
         local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
         vim.api.nvim_buf_set_mark(0, "s", cur_row, cur_col, {})
-        return "Nnzzzv"
+        search_cmd = "Nnzzzv"
+    else
+        search_cmd = "nzzzv"
     end
 
-    return "nzzzv"
-end, { expr = true })
-vim.keymap.set({ "n", "x" }, "N", function()
+    local status, result = pcall(function()
+        vim.cmd("norm! " .. vim.v.count1 .. search_cmd)
+    end)
+    if not status then
+        if type(result) == "string" then
+            vim.api.nvim_err_writeln(result)
+        else
+            vim.api.nvim_err_writeln("Unknown error when repeating search term")
+        end
+    end
+end)
+vim.keymap.set({ "n" }, "N", function()
+    local search_cmd = ""
     if not (vim.v.hlsearch == 1) then
         local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
         vim.api.nvim_buf_set_mark(0, "s", cur_row, cur_col, {})
-        return "nNzzzv"
+        search_cmd = "nNzzzv"
+    else
+        search_cmd = "Nzzzv"
     end
 
-    return "Nzzzv"
-end, { expr = true })
+    local status, result = pcall(function()
+        vim.cmd("norm! " .. vim.v.count1 .. search_cmd)
+    end)
+    if not status then
+        if type(result) == "string" then
+            vim.api.nvim_err_writeln(result)
+        else
+            vim.api.nvim_err_writeln("Unknown error when repeating search term")
+        end
+    end
+end)
 
 -- "S" enters insert with the proper indent. "I" left on default behavior (start of line)
 for _, map in pairs({ "i", "a", "A" }) do

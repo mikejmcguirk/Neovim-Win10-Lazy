@@ -40,10 +40,7 @@ local cmp_config = function()
             ["<C-p>"] = cmp.mapping.select_prev_item(cmp_select),
             ["<C-n>"] = cmp.mapping.select_next_item(cmp_select),
             ["<C-y>"] = cmp.mapping.confirm({ select = true }),
-            ["<C-c>"] = function()
-                cmp.mapping.abort()
-                vim.cmd("stopinsert")
-            end,
+            ["<C-e>"] = cmp.mapping.abort(),
 
             ["<Tab>"] = nil,
             ["<S-Tab>"] = nil,

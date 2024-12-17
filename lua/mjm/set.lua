@@ -31,7 +31,7 @@ vim.opt.shiftround = true
 
 vim.opt.fileformats = "unix,dos" -- Override \r\n on Windows
 
-vim.opt.lazyredraw = true
+vim.opt.lazyredraw = false -- Causes unpredictable problems
 vim.opt.termguicolors = true
 vim.cmd("set gcr=n:block-blinkon1,i-c-ci:ver100-blinkon1,v-r:hor100-blinkon1")
 vim.opt.showmode = false
