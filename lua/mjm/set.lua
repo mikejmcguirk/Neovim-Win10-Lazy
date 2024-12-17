@@ -10,7 +10,7 @@ vim.g.loaded_tarPlugin = 1
 vim.g.loaded_gzip = 1
 vim.g.did_install_default_menus = 1
 
--- Set leader immediately to ensure leader mappings are correct
+-- Set immediately to ensure leader mappings are correct
 vim.keymap.set({ "n", "x" }, "<Space>", "<Nop>")
 vim.g.mapleader = " "
 vim.g.maplocaleader = " "
@@ -35,12 +35,13 @@ vim.opt.lazyredraw = false -- Causes unpredictable problems
 vim.opt.termguicolors = true
 vim.cmd("set gcr=n:block-blinkon1,i-c-ci:ver100-blinkon1,v-r:hor100-blinkon1")
 vim.opt.showmode = false
-vim.opt.shortmess:append("I")
-vim.opt.cpoptions:append("W") -- Don't overwrite read-only files
 
 vim.opt.scrolloff = 6
 vim.opt.startofline = true
 vim.opt.jumpoptions:append("view") -- Restore views when possible
+
+vim.opt.shortmess:append("I")
+vim.opt.cpoptions:append("W") -- Don't overwrite read-only files
 
 vim.opt.splitright = true
 vim.opt.splitbelow = true
