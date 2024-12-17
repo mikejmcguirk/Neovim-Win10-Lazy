@@ -49,7 +49,17 @@ vim.api.nvim_create_autocmd("InsertLeave", {
 
 local mjm_group = vim.api.nvim_create_augroup("mjm", { clear = true })
 
-vim.api.nvim_create_autocmd({ "InsertEnter", "CmdlineEnter" }, {
+local clear_conditions = {
+    "BufEnter",
+    "CmdlineEnter",
+    "InsertEnter",
+    "RecordingEnter",
+    "TabLeave",
+    "TabNewEntered",
+    "WinEnter",
+    "WinLeave",
+}
+vim.api.nvim_create_autocmd(clear_conditions, {
     group = mjm_group,
     pattern = "*",
     -- The highlight state is saved and restored when autocmds are triggered, so
