@@ -1,3 +1,6 @@
+vim.keymap.set("n", "ZZ", "<Nop>")
+vim.keymap.set("n", "ZQ", "<Nop>")
+
 vim.keymap.set("x", "u", "<Nop>")
 vim.keymap.set("x", "q", "<Nop>")
 vim.keymap.set("n", "Q", "<nop>")

@@ -23,41 +23,11 @@ vim.keymap.set("i", "<enter>", function()
     local after_cursor = line:sub(col + 1)
 
     if after_cursor:match("^%s*$") then
-        return '<enter><esc>ze"_S'
+        return '<enter><esc>ze"_S' -- Make sure we re-enter insert mode properly indented
     else
         return "<enter><C-o>ze"
     end
 end, { expr = true })
-
-vim.keymap.set("n", "'", "`") -- By default, only jumps to the row, not the column
-
-vim.api.nvim_create_user_command("We", "silent w | e", {}) -- Quick refresh if Treesitter bugs out
-
--- Relies on dadbod being installed
-vim.keymap.set("n", "<leader>d", function()
-    vim.cmd("tabnew")
-    vim.cmd("DBUI")
-    vim.cmd("set rnu")
-end)
-
-local function tab_kill()
-    local confirm = vim.fn.confirm(
-        "This will delete all buffers in the current tab. Unsaved changes will be lost. Proceed?",
-        "&Yes\n&No",
-        2
-    )
-    if confirm ~= 1 then
-        return
-    end
-
-    local buffers = vim.fn.tabpagebuflist(vim.fn.tabpagenr())
-    for _, buf in ipairs(buffers) do
-        if vim.api.nvim_buf_is_valid(buf) then
-            vim.api.nvim_buf_delete(buf, { force = true })
-        end
-    end
-end
-vim.api.nvim_create_user_command("TabKill", tab_kill, {})
 
 -- TODO: This should incorporate saving the last modified marks
 -- TODO: We could also look at using the update command here instead of write
@@ -75,17 +45,12 @@ vim.keymap.set("n", "ZX", function()
     vim.api.nvim_err_writeln(result or "Unknown error")
 end)
 
-vim.keymap.set("n", "ZZ", "<Nop>")
-vim.keymap.set("n", "ZQ", "<Nop>")
-
 for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
     vim.keymap.set("n", map, function()
         local current_buf = vim.api.nvim_get_current_buf()
-        local total_win_count = 0
         local buf_win_count = 0
 
         for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-            total_win_count = total_win_count + 1
             if vim.api.nvim_win_get_buf(win) == current_buf then
                 buf_win_count = buf_win_count + 1
             end
@@ -103,14 +68,12 @@ vim.keymap.set("n", "<C-w>S", "<cmd>leftabove split<cr>")
 vim.keymap.set("n", "<C-w>v", "<cmd>botright vsplit<cr>")
 vim.keymap.set("n", "<C-w>V", "<cmd>topleft vsplit<cr>")
 
--- Window navigation is handled through the tmux-navigator plugin
 vim.keymap.set("n", "<M-j>", "<cmd>resize -2<CR>", { silent = true })
 vim.keymap.set("n", "<M-k>", "<cmd>resize +2<CR>", { silent = true })
 vim.keymap.set("n", "<M-h>", "<cmd>vertical resize -2<CR>", { silent = true })
 vim.keymap.set("n", "<M-l>", "<cmd>vertical resize +2<CR>", { silent = true })
 
--- Normal mode scrolls done as commands because, even with lazyredraw on,
--- visible screenshake is reduced
+-- Normal mode scrolls done as commands to reduce visible screenshake
 vim.keymap.set({ "n" }, "<C-u>", "<cmd>norm! <C-u>zz<cr>", { silent = true })
 vim.keymap.set({ "n" }, "<C-d>", "<cmd>norm! <C-d>zz<cr>", { silent = true })
 vim.keymap.set({ "x" }, "<C-u>", "<C-u>zz", { silent = true })
@@ -164,7 +127,7 @@ vim.keymap.set({ "n" }, "N", function()
     end
 end)
 
--- "S" enters insert with the proper indent. "I" left on default behavior (start of line)
+-- "S" enters insert with the proper indent. "I" purposefully left on default behavior
 for _, map in pairs({ "i", "a", "A" }) do
     vim.keymap.set("n", map, function()
         if string.match(vim.api.nvim_get_current_line(), "^%s*$") then
@@ -179,10 +142,7 @@ vim.keymap.set("i", "<backspace>", function()
     require("mjm.backplacer").insert_backspace_fix()
 end, { silent = true })
 
-vim.keymap.set("i", ",", ",<C-g>u", { silent = true })
-vim.keymap.set("i", ".", ".<C-g>u", { silent = true })
 vim.keymap.set("i", ";", ";<C-g>u", { silent = true })
-vim.keymap.set("i", ":", ":<C-g>u", { silent = true })
 
 vim.keymap.set({ "n", "x" }, "k", function()
     if vim.v.count == 0 then

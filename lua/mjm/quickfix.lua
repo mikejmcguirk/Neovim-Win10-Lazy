@@ -158,9 +158,11 @@ vim.api.nvim_exec2("packadd cfilter", {})
 local cfilter_wrapper = function(opts)
     if not check_if_qf_open() then
         vim.notify("Quickfix list not open")
+        return
     end
     if check_if_qf_empty() then
         vim.notify("Quickfix list is empty")
+        return
     end
 
     opts = vim.deepcopy(opts or {}, true)

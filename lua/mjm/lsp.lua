@@ -18,6 +18,7 @@ local default_diag_cfg = {
         },
     },
 }
+
 vim.diagnostic.config(default_diag_cfg)
 -- LSP windows use floating windows, documented in nvim_open_win
 -- The borders use the "FloatBorder" highlight group
@@ -32,6 +33,8 @@ local lsp_group = vim.api.nvim_create_augroup("LSP_Augroup", { clear = true })
 vim.api.nvim_create_autocmd("LspAttach", {
     group = lsp_group,
     callback = function(ev)
+        local buf = ev.buf
+
         local toggle_virtual_text = function()
             local current_config = vim.diagnostic.config() or {}
             local new_virtual_text = not current_config.virtual_text
@@ -46,17 +49,17 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
         vim.keymap.set("n", "<leader>vd", toggle_virtual_text)
 
-        vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = ev.buf })
-        vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { buffer = ev.buf })
-        vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = ev.buf })
+        vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })
+        vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = buf })
+        vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { buffer = buf })
 
-        vim.keymap.set("n", "<leader>vh", vim.lsp.buf.document_highlight, { buffer = ev.buf })
+        vim.keymap.set("n", "<leader>vh", vim.lsp.buf.document_highlight, { buffer = buf })
 
-        vim.keymap.set("n", "<leader>va", vim.lsp.buf.add_workspace_folder, { buffer = ev.buf })
-        vim.keymap.set("n", "<leader>vo", vim.lsp.buf.remove_workspace_folder, { buffer = ev.buf })
+        vim.keymap.set("n", "<leader>va", vim.lsp.buf.add_workspace_folder, { buffer = buf })
+        vim.keymap.set("n", "<leader>vo", vim.lsp.buf.remove_workspace_folder, { buffer = buf })
         vim.keymap.set("n", "<leader>vf", function()
             print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
-        end, { buffer = ev.buf })
+        end, { buffer = buf })
 
         vim.keymap.set("n", "grn", function()
             local input = ut.get_input("Rename: ")
@@ -65,14 +68,14 @@ vim.api.nvim_create_autocmd("LspAttach", {
             elseif #input > 0 then
                 vim.lsp.buf.rename(input)
             end
-        end, { buffer = ev.buf })
+        end, { buffer = buf })
 
         -- Future default LSP keymappings. Remove when pushed to release version
-        vim.keymap.set("n", "gri", vim.lsp.buf.implementation, { buffer = ev.buf })
-        vim.keymap.set("n", "grr", vim.lsp.buf.references, { buffer = ev.buf })
-        vim.keymap.set({ "n", "x" }, "gra", vim.lsp.buf.code_action, { buffer = ev.buf })
-        vim.keymap.set("n", "gO", vim.lsp.buf.document_symbol, { buffer = ev.buf })
-        vim.keymap.set("n", "<C-s>", vim.lsp.buf.signature_help, { buffer = ev.buf })
+        vim.keymap.set("n", "gri", vim.lsp.buf.implementation, { buffer = buf })
+        vim.keymap.set("n", "grr", vim.lsp.buf.references, { buffer = buf })
+        vim.keymap.set({ "n", "x" }, "gra", vim.lsp.buf.code_action, { buffer = buf })
+        vim.keymap.set("n", "gO", vim.lsp.buf.document_symbol, { buffer = buf })
+        vim.keymap.set("n", "<C-s>", vim.lsp.buf.signature_help, { buffer = buf })
     end,
 })
 
