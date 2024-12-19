@@ -1,10 +1,22 @@
 return {
     "nvim-tree/nvim-tree.lua",
     version = "*",
-    lazy = false,
+    lazy = true,
+    cmd = {
+        "NvimTreeToggle",
+        "NvimTreeFindFile",
+        "NvimTreeOpen",
+        "NvimTreeClose",
+    },
     dependencies = {
         "nvim-tree/nvim-web-devicons",
     },
+    init = function()
+        vim.keymap.set("n", "<leader>nt", "<cmd>NvimTreeToggle<cr>")
+        vim.keymap.set("n", "<leader>nr", "<cmd>NvimTreeRefresh<cr>")
+        vim.keymap.set("n", "<leader>nf", "<cmd>NvimTreeFocus<cr>")
+        vim.keymap.set("n", "<leader>ni", "<cmd>NvimTreeFindFile<cr>")
+    end,
     config = function()
         require("nvim-tree").setup({
             disable_netrw = true,
@@ -33,10 +45,5 @@ return {
                 vim.keymap.set("n", "y", "<nop>", { buffer = bufnr })
             end,
         })
-
-        vim.keymap.set("n", "<leader>nt", "<cmd>NvimTreeToggle<cr>")
-        vim.keymap.set("n", "<leader>nr", "<cmd>NvimTreeRefresh<cr>")
-        vim.keymap.set("n", "<leader>nf", "<cmd>NvimTreeFocus<cr>")
-        vim.keymap.set("n", "<leader>ni", "<cmd>NvimTreeFindFile<cr>")
     end,
 }
