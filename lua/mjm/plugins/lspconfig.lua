@@ -28,7 +28,9 @@ return {
             lspconfig.lua_ls.setup({ capabilities = cmp_capabilities })
 
             -- Markdown
-            lspconfig.marksman.setup({ capabilities = cmp_capabilities })
+            -- Turned off right now because it causes problems with Obsidian. Not sure how to
+            -- make it read new files when they're created, rather than requiring a restart
+            -- lspconfig.marksman.setup({ capabilities = cmp_capabilities })
 
             -- Python
             lspconfig.ruff.setup({ capabilities = cmp_capabilities })
