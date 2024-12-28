@@ -211,15 +211,10 @@ local qf_scroll_wrapper = function(opts)
     end
 
     opts = vim.deepcopy(opts or {}, true)
-    ---@return string
-    local get_cmd = function()
-        if opts.prev then
-            return "cprev"
-        else
-            return "cnext"
-        end
+    local cmd = "cnext"
+    if opts.prev then
+        cmd = "cprev"
     end
-    local cmd = get_cmd() ---@type string
 
     vim.api.nvim_exec2("botright copen", {})
     local status, result = pcall(function()

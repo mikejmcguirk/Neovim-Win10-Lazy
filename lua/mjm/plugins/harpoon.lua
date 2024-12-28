@@ -21,7 +21,7 @@ return {
                 },
                 default = {
                     -- When using the built-in select function, ftplugin settings fail to load
-                    -- Issue does not occur if we use edit instead
+                    -- Issue does not occur if we use edit instead of bufload
                     select = function(list_item, list, options)
                         logger:log("config_default#select", list_item, list.name, options)
                         if list_item == nil then
