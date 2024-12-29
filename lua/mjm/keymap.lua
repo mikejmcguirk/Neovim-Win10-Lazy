@@ -412,3 +412,86 @@ end)
 vim.keymap.set("x", "K", function()
     visual_move({ upward = true })
 end)
+
+vim.keymap.set("n", "<leader>ga", function()
+    local file = vim.api.nvim_buf_get_name(0)
+    if file == "" then
+        vim.notify("No file detected", vim.log.levels.WARN)
+        return
+    end
+
+    local cwd = vim.fn.getcwd()
+    local git_root = vim.fn.trim(vim.fn.system("git rev-parse --show-toplevel"))
+    if vim.v.shell_error ~= 0 then
+        vim.notify("Current directory is not a git repository.", vim.log.levels.WARN)
+        return
+    end
+
+    if git_root ~= cwd then
+        vim.notify(
+            "Current working directory is not the root of a Git repository.",
+            vim.log.levels.WARN
+        )
+        return
+    end
+
+    local relative_file = vim.fn.fnamemodify(file, ":.")
+    local file_check =
+        vim.fn.system("git ls-files --error-unmatch " .. vim.fn.shellescape(relative_file))
+    if vim.v.shell_error == 0 then
+        vim.notify(relative_file .. " is already tracked in git: " .. vim.fn.trim(file_check))
+        return
+    end
+
+    local git_add = vim.fn.system("git add " .. vim.fn.shellescape(relative_file))
+    if vim.v.shell_error == 0 then
+        print("File successfully added to git: " .. relative_file)
+    else
+        print("Failed to add file to git: " .. vim.fn.trim(git_add))
+    end
+end)
+
+vim.keymap.set("n", "<leader>ge", function()
+    local file = vim.api.nvim_buf_get_name(0)
+    if file == "" then
+        vim.notify("No file detected", vim.log.levels.WARN)
+        return
+    end
+
+    local cwd = vim.fn.getcwd()
+    local git_root = vim.fn.trim(vim.fn.system("git rev-parse --show-toplevel"))
+    if vim.v.shell_error ~= 0 then
+        vim.notify("Current directory is not a git repository.", vim.log.levels.WARN)
+        return
+    end
+
+    if git_root ~= cwd then
+        vim.notify(
+            "Current working directory is not the root of a Git repository.",
+            vim.log.levels.WARN
+        )
+        return
+    end
+
+    local relative_file = vim.fn.fnamemodify(file, ":.")
+    local file_check =
+        vim.fn.system("git ls-files --error-unmatch " .. vim.fn.shellescape(relative_file))
+    if vim.v.shell_error ~= 0 then
+        vim.notify(
+            relative_file
+                .. " is not tracked in the current Git repository: "
+                .. vim.fn.trim(file_check)
+        )
+        return
+    end
+
+    local git_rm = vim.fn.system("git rm -f " .. vim.fn.shellescape(relative_file))
+    if vim.v.shell_error == 0 then
+        vim.notify(relative_file .. " removed from Git")
+    else
+        vim.notify(
+            "Failed to remove " .. relative_file .. " from git: \n" .. vim.fn.trim(git_rm),
+            vim.log.levels.WARN
+        )
+    end
+end)
