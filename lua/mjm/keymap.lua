@@ -49,17 +49,25 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
     vim.keymap.set("n", map, function()
         local current_buf = vim.api.nvim_get_current_buf()
         local buf_win_count = 0
-
         for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
             if vim.api.nvim_win_get_buf(win) == current_buf then
                 buf_win_count = buf_win_count + 1
             end
         end
-
+        local cmd = "bd"
         if buf_win_count > 1 then
-            vim.cmd("q")
+            cmd = "q"
+        end
+
+        local status, result = pcall(function()
+            vim.cmd(cmd)
+        end)
+        if status then
+            return
+        elseif type(result) == "string" then
+            vim.notify(result, vim.log.levels.WARN)
         else
-            vim.cmd("bd")
+            vim.notify("Unknown error closing window", vim.log.levels.WARN)
         end
     end)
 end
