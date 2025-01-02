@@ -28,6 +28,16 @@ return {
                             return
                         end
 
+                        -- For some reason, the LSP does not recognize vim.uv
+                        ---@diagnostic disable-next-line: undefined-field
+                        if not vim.uv.fs_stat(list_item.value) then
+                            vim.notify(
+                                "File " .. list_item.value .. " Does not exist",
+                                vim.log.levels.WARN
+                            )
+                            return
+                        end
+
                         local bufnr = vim.fn.bufnr(list_item.value)
                         if vim.api.nvim_get_current_buf() == bufnr then
                             vim.notify("Already in buffer")
