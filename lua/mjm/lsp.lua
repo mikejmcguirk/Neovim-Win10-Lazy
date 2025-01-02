@@ -41,11 +41,12 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
             vim.diagnostic.config({ virtual_text = new_virtual_text })
 
-            if new_virtual_text then
-                print("Diagnostic virtual text enabled")
-            else
-                print("Diagnostic virtual text disabled")
-            end
+            -- Trying turning this off because diags show in the gutter
+            -- if new_virtual_text then
+            -- print("Diagnostic virtual text enabled")
+            -- else
+            -- print("Diagnostic virtual text disabled")
+            -- end
         end
         vim.keymap.set("n", "<leader>vd", toggle_virtual_text)
 
