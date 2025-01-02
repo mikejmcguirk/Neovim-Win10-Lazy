@@ -132,23 +132,26 @@ local add_pragma = function(pragma)
         return
     end
 
-    local row = vim.api.nvim_win_get_cursor(0)[1] ---@type integer
-    local indent = ut.get_indent(row) ---@type integer
+    local row_one = vim.api.nvim_win_get_cursor(0)[1] ---@type integer
+    local row_zero = row_one - 1
+    local indent = ut.get_indent(row_one) ---@type integer
     local padding = string.rep(" ", indent) ---@type string
-    vim.api.nvim_buf_set_text(0, row - 1, 0, row - 1, 0, { padding .. pragma })
+    vim.api.nvim_buf_set_text(0, row_zero, 0, row_zero, 0, { padding .. pragma })
+
+    line = vim.api.nvim_get_current_line() ---@type string
+    local line_len_zero = #line - 1
+    vim.api.nvim_win_set_cursor(0, { row_one, line_len_zero - 1 })
+    vim.cmd("startinsert")
 end
 
-vim.keymap.set("n", "--D", function()
-    add_pragma("#[derive(Debug)]")
-end)
-vim.keymap.set("n", "--t", function()
-    add_pragma("#[cfg(test)]")
-end)
 vim.keymap.set("n", "--d", function()
-    add_pragma("#[cfg(debug_assertions)]")
+    add_pragma("#[derive()]")
+end)
+vim.keymap.set("n", "--c", function()
+    add_pragma("#[cfg()]")
 end)
 vim.keymap.set("n", "--a", function()
-    add_pragma("#[allow(clippy::lint)]")
+    add_pragma("#[allow()]")
 end)
 
 vim.keymap.set("n", "<M-;>", function()
