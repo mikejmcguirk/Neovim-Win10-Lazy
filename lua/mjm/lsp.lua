@@ -76,7 +76,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
         vim.keymap.set("n", "grr", vim.lsp.buf.references, { buffer = buf })
         vim.keymap.set({ "n", "x" }, "gra", vim.lsp.buf.code_action, { buffer = buf })
         vim.keymap.set("n", "gO", vim.lsp.buf.document_symbol, { buffer = buf })
-        vim.keymap.set("n", "<C-s>", vim.lsp.buf.signature_help, { buffer = buf })
+        vim.keymap.set({ "i", "s" }, "<C-S>", vim.lsp.buf.signature_help, { buffer = buf })
     end,
 })
 
