@@ -43,7 +43,7 @@ return {
             textobjects = {
                 select = {
                     enable = true,
-                    lookahead = true,
+                    lookahead = false, -- Don't jump to next text object
                     keymaps = {
                         ["a,"] = "@parameter.outer",
                         ["i,"] = "@parameter.inner",
