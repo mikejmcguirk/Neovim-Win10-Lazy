@@ -492,9 +492,19 @@ vim.keymap.set("n", "<leader>ge", function()
         return
     end
 
+    local confirm = vim.fn.confirm(
+        "This will delete the current buffer and remove it from Git. Proceed?",
+        "&Yes\n&No",
+        2
+    )
+    if confirm ~= 1 then
+        return
+    end
+
     local git_rm = vim.fn.system("git rm -f " .. vim.fn.shellescape(relative_file))
     if vim.v.shell_error == 0 then
         vim.notify(relative_file .. " removed from Git")
+        vim.cmd("bd")
     else
         vim.notify(
             "Failed to remove " .. relative_file .. " from git: \n" .. vim.fn.trim(git_rm),
