@@ -316,7 +316,6 @@ for _, map in pairs(norm_pastes) do
     end, { silent = true })
 end
 
--- TODO: Change this to remove the "X lines indented" command line nag
 local visual_pastes = {
     { "p", "P", '"' },
     { "<leader>p", '"+P', "+" },
@@ -331,9 +330,9 @@ for _, map in pairs(visual_pastes) do
 
         local cur_mode = vim.api.nvim_get_mode().mode
         if cur_mode == "V" or cur_mode == "Vs" then
-            return vim.v.count1 .. map[2] .. "=`]"
+            return vim.v.count1 .. map[2] .. "<cmd>silent norm! =`]<cr>"
         elseif vim.fn.getregtype(map[3]) == "V" then
-            return "mz" .. vim.v.count1 .. map[2] .. "`[=`]`z"
+            return "mz" .. vim.v.count1 .. map[2] .. "<cmd>silent norm! `[=`]`z<cr>"
         else
             return "mz" .. vim.v.count1 .. map[2] .. "`z"
         end
