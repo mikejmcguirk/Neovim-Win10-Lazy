@@ -1,0 +1,17 @@
+if not (vim.fn.has("linux") or vim.fn.has("unix")) then
+    return
+end
+
+return {
+    "meathook",
+    dir = "~/programming/nvim_plugin_dev/meathook",
+    config = function()
+        local meathook = require("meathook")
+
+        local config = {
+            greeting = "meathooked",
+        }
+
+        meathook.setup(config)
+    end,
+}

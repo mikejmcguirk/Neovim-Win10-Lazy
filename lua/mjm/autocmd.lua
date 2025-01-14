@@ -17,18 +17,19 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 vim.cmd([[match EolSpace /\s\+$/]])
 
 local match_control = vim.api.nvim_create_augroup("match_control", { clear = true })
-local get_match_id = function(match_group)
-    for _, match in ipairs(vim.fn.getmatches()) do
-        if match.group == match_group then
-            return match.id
-        end
-    end
-end
 
 vim.api.nvim_create_autocmd("InsertEnter", {
     group = match_control,
     pattern = "*",
     callback = function()
+        local get_match_id = function(match_group)
+            for _, match in ipairs(vim.fn.getmatches()) do
+                if match.group == match_group then
+                    return match.id
+                end
+            end
+        end
+
         local match_id = get_match_id("EolSpace")
         if not match_id then
             return
@@ -37,6 +38,7 @@ vim.api.nvim_create_autocmd("InsertEnter", {
         vim.fn.matchdelete(match_id)
     end,
 })
+
 vim.api.nvim_create_autocmd("InsertLeave", {
     group = match_control,
     pattern = "*",
@@ -82,6 +84,7 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
 
 -- TODO: Try using an autocommand when leaving Nvim to clear search registers
 
+-- TODO: Outline this into its own file
 vim.api.nvim_create_autocmd({ "BufWritePre" }, {
     group = mjm_group,
     pattern = "*",
