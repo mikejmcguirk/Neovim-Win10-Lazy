@@ -33,42 +33,6 @@ vim.keymap.set("n", "<leader>ql", function()
     vim.fn.setqflist({})
 end)
 
----@param opts table
----@return nil
-local grep_wrapper = function(opts)
-    local pattern = ut.get_input("Enter Pattern: ") ---@type string
-    if pattern == "" then
-        return
-    end
-    local args = { pattern } ---@type table
-
-    opts = vim.deepcopy(opts or {}, true)
-    if opts.insensitive then
-        table.insert(args, "-i")
-    end
-
-    local grep_cmd = {
-        args = args,
-        bang = true,
-        cmd = "grep",
-        mods = { emsg_silent = true },
-    }
-
-    vim.api.nvim_cmd(grep_cmd, {})
-    vim.api.nvim_exec2("botright copen", {})
-end
-
-vim.opt.grepprg = "rg --line-number"
-vim.opt.grepformat = "%f:%l:%m"
-
-vim.keymap.set("n", "<leader>qgn", function()
-    grep_wrapper({})
-end)
--- This command depends on the grepprg being set to ripgrep
-vim.keymap.set("n", "<leader>qgi", function()
-    grep_wrapper({ insensitive = true })
-end)
-
 ---@param raw_diag table
 ---@return table
 local convert_diag = function(raw_diag)

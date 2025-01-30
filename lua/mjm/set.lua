@@ -67,6 +67,9 @@ vim.opt.listchars = { tab = "<–>", extends = "»", precedes = "«", nbsp = "�
 vim.opt.wrap = false
 vim.opt.linebreak = true
 
+vim.opt.grepprg = "rg --line-number"
+vim.opt.grepformat = "%f:%l:%m"
+
 vim.opt.spell = false
 vim.opt.spelllang = "en_us" -- If spell is turned on by an ftplugin file
 
