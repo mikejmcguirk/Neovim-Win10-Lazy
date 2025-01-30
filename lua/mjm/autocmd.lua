@@ -18,6 +18,8 @@ vim.cmd([[match EolSpace /\s\+$/]])
 
 local match_control = vim.api.nvim_create_augroup("match_control", { clear = true })
 
+-- TODO: This should also turn off when entering cmd mode. Should be possible using the mode
+-- change event and extracting the proper mode changes
 vim.api.nvim_create_autocmd("InsertEnter", {
     group = match_control,
     pattern = "*",
