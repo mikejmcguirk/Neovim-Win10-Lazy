@@ -93,9 +93,9 @@ local diags_to_qf = function(opts)
             print("No errors")
         else
             print("No diagnostics")
+            vim.fn.setqflist({})
+            vim.api.nvim_exec2("cclose", {})
         end
-        vim.fn.setqflist({})
-        vim.api.nvim_exec2("cclose", {})
         return
     end
 
