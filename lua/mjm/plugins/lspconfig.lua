@@ -57,6 +57,7 @@ return {
                                     "E501",
                                     "E741", -- Ambiguous variable name
                                     "W291", -- Trailing whitespace
+                                    "W292", -- No newline at end of file
                                     "W293",
                                     "W391",
                                     "W503", -- Line break after binary operator
