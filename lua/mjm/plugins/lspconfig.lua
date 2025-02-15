@@ -82,6 +82,9 @@ return {
                     },
                 },
             })
+
+            -- Go
+            -- lspconfig.gopls.setup({})
         end,
     },
 }

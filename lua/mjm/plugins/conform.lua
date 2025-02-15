@@ -17,7 +17,7 @@ return {
                     -- TODO: This is tough to swing with dadbod-ui because it stores queries in
                     -- tmp or a local dir. You could edit the g variables or something but iunno
                     -- sql = { "sqlfluff" },
-                    go = { "gofmt" },
+                    -- go = { "gofmt" },
                 },
             })
         end,
