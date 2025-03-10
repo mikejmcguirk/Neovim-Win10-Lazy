@@ -176,36 +176,6 @@ vim.keymap.set("n", "J", function()
     vim.fn.winrestview(view)
 end, { silent = true })
 
-local cap_motions_norm = {
-    "~",
-    "guu",
-    "guiw",
-    "guiW",
-    "gUU",
-    "gUiw",
-    "gUiW",
-    "g~~",
-    "g~iw",
-}
-for _, map in pairs(cap_motions_norm) do
-    vim.keymap.set("n", map, function()
-        -- For this and any other maps starting with mz, the v count must be manually inserted
-        return "mz" .. vim.v.count1 .. map .. "`z"
-    end, { silent = true, expr = true })
-end
-
-local cap_motions_vis = {
-    "~",
-    "g~",
-    "gu",
-    "gU",
-}
-for _, map in pairs(cap_motions_vis) do
-    vim.keymap.set("x", map, function()
-        return "mz" .. vim.v.count1 .. map .. "`z"
-    end, { silent = true, expr = true })
-end
-
 vim.keymap.set("n", "x", '"_d', { silent = true })
 vim.keymap.set("n", "xx", '"_dd', { silent = true })
 vim.keymap.set("n", "X", '"_D', { silent = true })
