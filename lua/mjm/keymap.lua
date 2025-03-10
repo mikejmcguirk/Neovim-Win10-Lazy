@@ -113,6 +113,7 @@ vim.keymap.set({ "n" }, "n", function()
         end
     end
 end)
+
 vim.keymap.set({ "n" }, "N", function()
     local search_cmd = ""
     if not (vim.v.hlsearch == 1) then
@@ -155,6 +156,7 @@ vim.keymap.set({ "n", "x" }, "k", function()
         return "k"
     end
 end, { expr = true, silent = true })
+
 vim.keymap.set({ "n", "x" }, "j", function()
     if vim.v.count == 0 then
         return "gj"
