@@ -146,10 +146,6 @@ for _, map in pairs({ "i", "a", "A" }) do
     end, { silent = true, expr = true })
 end
 
-vim.keymap.set("i", "<backspace>", function()
-    require("mjm.backplacer").insert_backspace_fix()
-end, { silent = true })
-
 vim.keymap.set("i", ";", ";<C-g>u", { silent = true })
 
 vim.keymap.set({ "n", "x" }, "k", function()
