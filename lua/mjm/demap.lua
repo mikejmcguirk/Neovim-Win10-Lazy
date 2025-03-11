@@ -14,7 +14,7 @@ vim.keymap.set("n", "<C-z>", "<nop>")
 vim.keymap.set("x", "<C-w>", "<nop>")
 
 -- Even mapping <C-c> in operator pending mode does not fix these
-local bad_wincmds = { "c", "f", "w", "i" }
+local bad_wincmds = { "c", "f", "w", "i", "+", "-" }
 for _, key in pairs(bad_wincmds) do
     vim.keymap.set("n", "<C-w>" .. key, "<nop>")
     vim.keymap.set("n", "<C-w><C-" .. key .. ">", "<nop>")
@@ -27,6 +27,7 @@ vim.keymap.set({ "n", "x" }, "][", "<Nop>")
 vim.keymap.set({ "n", "x" }, "[/", "<Nop>")
 vim.keymap.set({ "n", "x" }, "]/", "<Nop>")
 
+-- Purposefully left alone in cmd mode
 vim.keymap.set({ "n", "i", "x" }, "<left>", "<Nop>")
 vim.keymap.set({ "n", "i", "x" }, "<right>", "<Nop>")
 vim.keymap.set({ "n", "i", "x" }, "<up>", "<Nop>")
