@@ -84,7 +84,8 @@ return {
             })
 
             -- Go
-            -- lspconfig.gopls.setup({})
+            lspconfig.gopls.setup({})
+            lspconfig.golangci_lint_ls.setup({})
         end,
     },
 }
