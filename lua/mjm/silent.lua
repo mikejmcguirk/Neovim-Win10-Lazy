@@ -45,6 +45,7 @@ vim.api.nvim_create_autocmd("TextChanged", {
         end
     end,
 })
+
 vim.api.nvim_create_autocmd("InsertEnter", {
     group = vim.api.nvim_create_augroup("change_clear", { clear = true }),
     pattern = "*",

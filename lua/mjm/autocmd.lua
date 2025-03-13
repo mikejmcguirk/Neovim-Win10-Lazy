@@ -84,8 +84,8 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
     end,
 })
 
+-- TODO: In general this is bad because it's a lot of highly coupled behavior
 -- TODO: Try using an autocommand when leaving Nvim to clear search registers
-
 -- TODO: Outline this into its own file
 vim.api.nvim_create_autocmd({ "BufWritePre" }, {
     group = mjm_group,

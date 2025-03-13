@@ -4,6 +4,7 @@ local handler_border = {
     border = "single",
     style = "minimal",
 }
+
 local default_diag_cfg = {
     severity_sort = true,
     float = vim.tbl_extend("force", { source = "always" }, handler_border),
@@ -40,14 +41,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
             local new_virtual_text = not current_config.virtual_text
 
             vim.diagnostic.config({ virtual_text = new_virtual_text })
-
-            -- Trying turning this off because diags show in the gutter
-            -- if new_virtual_text then
-            -- print("Diagnostic virtual text enabled")
-            -- else
-            -- print("Diagnostic virtual text disabled")
-            -- end
         end
+
         vim.keymap.set("n", "<leader>vd", toggle_virtual_text)
 
         vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })

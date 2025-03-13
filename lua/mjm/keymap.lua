@@ -30,9 +30,8 @@ vim.keymap.set("i", "<enter>", function()
 end, { expr = true })
 
 -- TODO: This should incorporate saving the last modified marks
--- TODO: We could also look at using the update command here instead of write
 -- TODO: Add some sort of logic so this doesn't work in runtime or plugin files
-vim.keymap.set("n", "ZV", "<cmd>silent w<cr>")
+vim.keymap.set("n", "ZV", "<cmd>silent up<cr>")
 vim.keymap.set("n", "ZA", "<cmd>silent wa<cr>")
 vim.keymap.set("n", "ZX", function()
     local status, result = pcall(function()
@@ -49,11 +48,13 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
     vim.keymap.set("n", map, function()
         local current_buf = vim.api.nvim_get_current_buf()
         local buf_win_count = 0
+
         for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
             if vim.api.nvim_win_get_buf(win) == current_buf then
                 buf_win_count = buf_win_count + 1
             end
         end
+
         local cmd = "bd"
         if buf_win_count > 1 then
             cmd = "q"
@@ -62,6 +63,7 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
         local status, result = pcall(function()
             vim.cmd(cmd)
         end)
+
         if status then
             return
         elseif type(result) == "string" then
@@ -71,10 +73,6 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
         end
     end)
 end
-
-vim.keymap.set("n", "<C-w>S", "<cmd>leftabove split<cr>")
-vim.keymap.set("n", "<C-w>v", "<cmd>botright vsplit<cr>")
-vim.keymap.set("n", "<C-w>V", "<cmd>topleft vsplit<cr>")
 
 vim.keymap.set("n", "<M-j>", "<cmd>resize -2<CR>", { silent = true })
 vim.keymap.set("n", "<M-k>", "<cmd>resize +2<CR>", { silent = true })
@@ -91,50 +89,40 @@ vim.keymap.set({ "x" }, "<C-d>", "<C-d>zz", { silent = true })
 vim.keymap.set("n", "/", "ms/")
 vim.keymap.set("n", "?", "ms?")
 
--- Doing the n and N maps as functions reduces screen shake
-vim.keymap.set({ "n" }, "n", function()
-    local search_cmd = ""
-    if not (vim.v.hlsearch == 1) then
-        local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
-        vim.api.nvim_buf_set_mark(0, "s", cur_row, cur_col, {})
-        search_cmd = "Nnzzzv"
-    else
-        search_cmd = "nzzzv"
-    end
+vim.keymap.set("n", "N", "Nzzzv")
+vim.keymap.set("n", "n", "nzzzv")
 
-    local status, result = pcall(function()
-        vim.cmd("norm! " .. vim.v.count1 .. search_cmd)
-    end)
-    if not status then
-        if type(result) == "string" then
-            vim.api.nvim_err_writeln(result)
-        else
-            vim.api.nvim_err_writeln("Unknown error when repeating search term")
-        end
-    end
-end)
+local cap_motions_norm = {
+    "~",
+    "guu",
+    "guiw",
+    "guiW",
+    "gUU",
+    "gUiw",
+    "gUiW",
+    "g~~",
+    "g~iw",
+}
 
-vim.keymap.set({ "n" }, "N", function()
-    local search_cmd = ""
-    if not (vim.v.hlsearch == 1) then
-        local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
-        vim.api.nvim_buf_set_mark(0, "s", cur_row, cur_col, {})
-        search_cmd = "nNzzzv"
-    else
-        search_cmd = "Nzzzv"
-    end
+for _, map in pairs(cap_motions_norm) do
+    vim.keymap.set("n", map, function()
+        -- For this and any other maps starting with mz, the v count must be manually inserted
+        return "mz" .. vim.v.count1 .. map .. "`z"
+    end, { silent = true, expr = true })
+end
 
-    local status, result = pcall(function()
-        vim.cmd("norm! " .. vim.v.count1 .. search_cmd)
-    end)
-    if not status then
-        if type(result) == "string" then
-            vim.api.nvim_err_writeln(result)
-        else
-            vim.api.nvim_err_writeln("Unknown error when repeating search term")
-        end
-    end
-end)
+local cap_motions_vis = {
+    "~",
+    "g~",
+    "gu",
+    "gU",
+}
+
+for _, map in pairs(cap_motions_vis) do
+    vim.keymap.set("x", map, function()
+        return "mz" .. vim.v.count1 .. map .. "`z"
+    end, { silent = true, expr = true })
+end
 
 -- "S" enters insert with the proper indent. "I" purposefully left on default behavior
 for _, map in pairs({ "i", "a", "A" }) do
@@ -176,12 +164,11 @@ vim.keymap.set("n", "J", function()
     vim.fn.winrestview(view)
 end, { silent = true })
 
-vim.keymap.set("n", "x", '"_d', { silent = true })
-vim.keymap.set("n", "xx", '"_dd', { silent = true })
-vim.keymap.set("n", "X", '"_D', { silent = true })
+vim.keymap.set("n", "<leader>d", '"_d', { silent = true })
+vim.keymap.set("n", "<leader>D", '"_D', { silent = true })
 vim.keymap.set("x", "x", '"_x', { silent = true })
-vim.keymap.set("x", "X", "<nop>", { silent = true })
-vim.keymap.set("n", "xX", 'gg"_dG', { silent = true })
+vim.keymap.set("x", "<leader>D", "<nop>", { silent = true })
+vim.keymap.set("n", "<leader>dD", 'gg"_dG', { silent = true })
 
 -- TODO: This could be smarter/more expanded on
 vim.keymap.set("n", "dd", function()
@@ -204,8 +191,6 @@ vim.keymap.set("x", "C", "<nop>", { silent = true })
 vim.keymap.set("n", "c^", "^cg_", { silent = true }) -- Does not yank newline character
 vim.keymap.set("n", "cC", "ggcG", { silent = true })
 vim.keymap.set("n", "<leader>cC", 'gg"_cG', { silent = true })
-
-vim.keymap.set({ "x" }, "s", "mzy`<v0o`>g_p`[=`]`z", { silent = true })
 
 vim.api.nvim_create_autocmd("TextYankPost", {
     group = vim.api.nvim_create_augroup("yank_reset_cursor", { clear = true }),
@@ -268,18 +253,21 @@ for _, map in pairs(norm_pastes) do
         local status, result = pcall(function()
             vim.api.nvim_exec2("silent norm! " .. vim.v.count1 .. map[2], {})
         end) ---@type boolean, unknown|nil
+
         if not status then
             if type(result) == "string" then
                 vim.api.nvim_err_writeln(result)
             else
                 vim.api.nvim_err_writeln("Unknown error when pasting")
             end
+
             return
         end
 
         if vim.fn.getregtype(map[3]) == "V" or is_blank then
             vim.api.nvim_exec2("silent norm! `[=`]", {})
         end
+
         vim.api.nvim_exec2("silent norm! `z", {})
     end, { silent = true })
 end

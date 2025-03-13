@@ -135,6 +135,7 @@ local mouse_maps = {
     "C-M-ScrollWheelDown",
     "C-M-S-ScrollWheelDown",
 }
+
 for _, map in pairs(mouse_maps) do
     vim.keymap.set({ "n", "i", "x", "c" }, "<" .. map .. ">", "<Nop>")
 end

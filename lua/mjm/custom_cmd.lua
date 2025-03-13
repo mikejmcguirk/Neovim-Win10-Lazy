@@ -6,6 +6,7 @@ local function tab_kill()
         "&Yes\n&No",
         2
     )
+
     if confirm ~= 1 then
         return
     end
@@ -17,4 +18,5 @@ local function tab_kill()
         end
     end
 end
+
 vim.api.nvim_create_user_command("TabKill", tab_kill, {})
