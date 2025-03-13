@@ -164,6 +164,7 @@ vim.keymap.set("n", "J", function()
     vim.fn.winrestview(view)
 end, { silent = true })
 
+vim.keymap.set("n", "x", '"_x', { silent = true })
 vim.keymap.set("n", "<leader>d", '"_d', { silent = true })
 vim.keymap.set("n", "<leader>D", '"_D', { silent = true })
 vim.keymap.set("x", "x", '"_x', { silent = true })
@@ -224,7 +225,7 @@ for _, obj in pairs(startline_objects) do
     vim.keymap.set("n", "<leader>y" .. obj, "mzhv" .. obj .. '"+y', { silent = true })
 
     vim.keymap.set("n", "d" .. obj, "hv" .. obj .. "d", { silent = true })
-    vim.keymap.set("n", "x" .. obj, "hv" .. obj .. '"_d', { silent = true })
+    vim.keymap.set("n", "<leader>d" .. obj, "hv" .. obj .. '"_d', { silent = true })
 
     vim.keymap.set("n", "c" .. obj, "hv" .. obj .. "c", { silent = true })
     vim.keymap.set("n", "<leader>c" .. obj, "hv" .. obj .. '"_c', { silent = true })
