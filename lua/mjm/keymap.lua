@@ -74,17 +74,6 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
     end)
 end
 
-vim.keymap.set("n", "<M-j>", "<cmd>resize -2<CR>", { silent = true })
-vim.keymap.set("n", "<M-k>", "<cmd>resize +2<CR>", { silent = true })
-vim.keymap.set("n", "<M-h>", "<cmd>vertical resize -2<CR>", { silent = true })
-vim.keymap.set("n", "<M-l>", "<cmd>vertical resize +2<CR>", { silent = true })
-
--- Normal mode scrolls done as commands to reduce visible screenshake
-vim.keymap.set({ "n" }, "<C-u>", "<cmd>norm! <C-u>zz<cr>", { silent = true })
-vim.keymap.set({ "n" }, "<C-d>", "<cmd>norm! <C-d>zz<cr>", { silent = true })
-vim.keymap.set({ "x" }, "<C-u>", "<C-u>zz", { silent = true })
-vim.keymap.set({ "x" }, "<C-d>", "<C-d>zz", { silent = true })
-
 -- Not silent so that the search prompting displays properly
 vim.keymap.set("n", "/", "ms/")
 vim.keymap.set("n", "?", "ms?")

@@ -71,6 +71,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
         vim.keymap.set("n", "grr", vim.lsp.buf.references, { buffer = buf })
         vim.keymap.set({ "n", "x" }, "gra", vim.lsp.buf.code_action, { buffer = buf })
         vim.keymap.set("n", "gO", vim.lsp.buf.document_symbol, { buffer = buf })
+        -- This works as a capital S map or whatever, but should really be mapped to lowerase s
+        -- Might need to do this as custom at v11
         vim.keymap.set({ "i", "s" }, "<C-S>", vim.lsp.buf.signature_help, { buffer = buf })
     end,
 })
