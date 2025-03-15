@@ -6,18 +6,34 @@ local function win_move_wezterm(key, dir)
     end
 end
 
-vim.keymap.set("n", "<C-h>", function()
-    win_move_wezterm("h", "left")
-end, { silent = true })
-vim.keymap.set("n", "<C-j>", function()
-    win_move_wezterm("j", "down")
-end, { silent = true })
-vim.keymap.set("n", "<C-k>", function()
-    win_move_wezterm("k", "up")
-end, { silent = true })
-vim.keymap.set("n", "<C-l>", function()
-    win_move_wezterm("l", "right")
-end, { silent = true })
+if vim.fn.has("win64") then
+    vim.keymap.set("n", "<C-h>", function()
+        vim.cmd("wincmd h")
+    end, { silent = true })
+    vim.keymap.set("n", "<C-j>", function()
+        vim.cmd("wincmd j")
+    end, { silent = true })
+    vim.keymap.set("n", "<C-k>", function()
+        vim.cmd("wincmd k")
+    end, { silent = true })
+    vim.keymap.set("n", "<C-l>", function()
+        vim.cmd("wincmd l")
+    end, { silent = true })
+else
+    vim.keymap.set("n", "<C-h>", function()
+        win_move_wezterm("h", "left")
+    end, { silent = true })
+    vim.keymap.set("n", "<C-j>", function()
+        win_move_wezterm("j", "down")
+    end, { silent = true })
+    vim.keymap.set("n", "<C-k>", function()
+        win_move_wezterm("k", "up")
+    end, { silent = true })
+    vim.keymap.set("n", "<C-l>", function()
+        win_move_wezterm("l", "right")
+    end, { silent = true })
+end
+
 
 -- TODO: This should be a different map, but I can't think of a better one
 -- Using alt feels like an anti-pattern
