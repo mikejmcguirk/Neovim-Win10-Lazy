@@ -6,6 +6,7 @@ local function win_move_wezterm(key, dir)
     end
 end
 
+-- Because I have not been able to make integrated Wezterm navigation work on Windows
 if vim.fn.has("win64") then
     vim.keymap.set("n", "<C-h>", function()
         vim.cmd("wincmd h")
@@ -33,7 +34,6 @@ else
         win_move_wezterm("l", "right")
     end, { silent = true })
 end
-
 
 -- TODO: This should be a different map, but I can't think of a better one
 -- Using alt feels like an anti-pattern
