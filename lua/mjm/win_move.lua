@@ -8,7 +8,7 @@ end
 
 -- Because I have not put in enough research yet on how to make window/navigation integration
 -- work between Wezterm and Neovim
-if vim.fn.has("win64") then
+if vim.fn.has("win64") == 1 then
     vim.keymap.set("n", "<C-h>", function()
         vim.cmd("wincmd h")
     end, { silent = true })
