@@ -61,7 +61,7 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
         end
 
         local status, result = pcall(function()
-            vim.cmd(cmd)
+            vim.cmd("silent up | " .. cmd)
         end)
 
         if status then
