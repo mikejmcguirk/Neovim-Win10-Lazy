@@ -84,8 +84,14 @@ return {
             })
 
             -- Go
-            lspconfig.gopls.setup({})
-            lspconfig.golangci_lint_ls.setup({})
+            lspconfig.gopls.setup({ capabilities = cmp_capabilities })
+            lspconfig.golangci_lint_ls.setup({ capabilities = cmp_capabilities })
+
+            -- HTML
+            lspconfig.html.setup({ capabilities = cmp_capabilities })
+
+            -- CSS
+            lspconfig.cssls.setup({ capabilities = cmp_capabilities })
         end,
     },
 }
