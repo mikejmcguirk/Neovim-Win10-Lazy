@@ -53,6 +53,12 @@ vim.api.nvim_create_autocmd("InsertLeave", {
 
 local mjm_group = vim.api.nvim_create_augroup("mjm", { clear = true })
 
+vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
+    group = mjm_group,
+    pattern = ".bashrc_custom",
+    command = "set filetype=sh",
+})
+
 local clear_conditions = {
     "BufEnter",
     "CmdlineEnter",
