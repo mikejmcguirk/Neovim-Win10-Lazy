@@ -74,6 +74,9 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
     end)
 end
 
+vim.keymap.set({ "n", "x" }, "<C-u>", "<C-u>zz", { silent = true })
+vim.keymap.set({ "n", "x" }, "<C-d>", "<C-d>zz", { silent = true })
+
 -- Not silent so that the search prompting displays properly
 vim.keymap.set("n", "/", "ms/")
 vim.keymap.set("n", "?", "ms?")
