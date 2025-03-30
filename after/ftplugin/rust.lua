@@ -31,6 +31,8 @@ local get_node_at_cursor = function(row, col)
         return
     end
 
+    root_lang_tree:parse()
+
     local root = get_root_for_position(row, col, root_lang_tree) ---@type TSNode|nil
     if not root then
         return nil
@@ -73,7 +75,7 @@ end
 vim.keymap.set("i", ">", function()
     local row, col = unpack(vim.api.nvim_win_get_cursor(0)) ---@type number, number
     row = row - 1
-    col = col
+    -- col = col
     local line = vim.api.nvim_get_current_line() ---@type string
 
     local char_at_cursor = line:sub(col + 1, col + 1) ---@type string

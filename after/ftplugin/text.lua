@@ -33,12 +33,7 @@ for _, map in pairs(norm_pastes) do
             vim.api.nvim_exec2("silent norm! " .. vim.v.count1 .. map[2], {})
         end) ---@type boolean, unknown|nil
         if not status then
-            if type(result) == "string" then
-                vim.api.nvim_err_writeln(result)
-            else
-                vim.api.nvim_err_writeln("Unknown error when pasting")
-            end
-            return
+            vim.api.nvim_echo({ { result or "Unknown error when pasting" } }, true, { err = true })
         end
 
         vim.api.nvim_exec2("silent norm! `z", {})

@@ -1,18 +1,22 @@
+-- Note: Not using the built-in LSP autocompletion because it doesn't bring in other sources
+
 local ut = require("mjm.utils")
 
-local handler_border = {
-    border = "single",
-    style = "minimal",
-}
+-- local border = {
+--     border = "single",
+--     style = "minimal",
+-- }
 
 local default_diag_cfg = {
     severity_sort = true,
-    float = vim.tbl_extend("force", { source = "always" }, handler_border),
-    virtual_text = {
-        severity = {
-            min = vim.diagnostic.severity.HINT,
-        },
-    },
+    -- float = vim.tbl_extend("force", { source = "always" }, border),
+    -- virtual_text = {
+    --     severity = {
+    --         min = vim.diagnostic.severity.HINT,
+    --     },
+    --     { current_line = false },
+    -- },
+    virtual_lines = { current_line = true },
     signs = {
         severity = {
             min = vim.diagnostic.severity.HINT,
@@ -21,11 +25,6 @@ local default_diag_cfg = {
 }
 
 vim.diagnostic.config(default_diag_cfg)
--- LSP windows use floating windows, documented in nvim_open_win
--- The borders use the "FloatBorder" highlight group
-vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, handler_border)
-vim.lsp.handlers["textDocument/signatureHelp"] =
-    vim.lsp.with(vim.lsp.handlers.signature_help, handler_border)
 
 vim.lsp.set_log_level("ERROR")
 
@@ -36,23 +35,23 @@ vim.api.nvim_create_autocmd("LspAttach", {
     callback = function(ev)
         local buf = ev.buf
 
-        local toggle_virtual_text = function()
-            local current_config = vim.diagnostic.config() or {}
-            local new_virtual_text = not current_config.virtual_text
+        -- local toggle_virtual_text = function()
+        --     local current_config = vim.diagnostic.config() or {}
+        --     local new_virtual_text = not current_config.virtual_text
+        --
+        --     vim.diagnostic.config({ virtual_text = new_virtual_text })
+        -- end
 
-            vim.diagnostic.config({ virtual_text = new_virtual_text })
-        end
-
-        vim.keymap.set("n", "<leader>vd", toggle_virtual_text)
+        -- vim.keymap.set("n", "<leader>vd", toggle_virtual_text)
 
         vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })
         vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = buf })
         vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { buffer = buf })
 
-        vim.keymap.set("n", "<leader>vh", vim.lsp.buf.document_highlight, { buffer = buf })
+        -- vim.keymap.set("n", "<leader>vh", vim.lsp.buf.document_highlight, { buffer = buf })
+        -- vim.keymap.set("n", "<leader>va", vim.lsp.buf.add_workspace_folder, { buffer = buf })
+        -- vim.keymap.set("n", "<leader>vo", vim.lsp.buf.remove_workspace_folder, { buffer = buf })
 
-        vim.keymap.set("n", "<leader>va", vim.lsp.buf.add_workspace_folder, { buffer = buf })
-        vim.keymap.set("n", "<leader>vo", vim.lsp.buf.remove_workspace_folder, { buffer = buf })
         vim.keymap.set("n", "<leader>vf", function()
             print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
         end, { buffer = buf })
@@ -65,15 +64,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
                 vim.lsp.buf.rename(input)
             end
         end, { buffer = buf })
-
-        -- Future default LSP keymappings. Remove when pushed to release version
-        vim.keymap.set("n", "gri", vim.lsp.buf.implementation, { buffer = buf })
-        vim.keymap.set("n", "grr", vim.lsp.buf.references, { buffer = buf })
-        vim.keymap.set({ "n", "x" }, "gra", vim.lsp.buf.code_action, { buffer = buf })
-        vim.keymap.set("n", "gO", vim.lsp.buf.document_symbol, { buffer = buf })
-        -- This works as a capital S map or whatever, but should really be mapped to lowerase s
-        -- Might need to do this as custom at v11
-        vim.keymap.set({ "i", "s" }, "<C-S>", vim.lsp.buf.signature_help, { buffer = buf })
     end,
 })
 

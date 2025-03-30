@@ -17,7 +17,11 @@ M.get_input = function(prompt)
         do
         end
     else
-        vim.api.nvim_err_writeln(result or "Failed to get user input, unknown error")
+        vim.api.nvim_echo(
+            { { result or "Failed to get user input, unknown error" } },
+            true,
+            { err = true }
+        )
     end
     return ""
 end
@@ -38,7 +42,11 @@ M.check_modifiable = function(buf)
     if vim.api.nvim_get_option_value("modifiable", { buf = buf }) then
         return true
     else
-        vim.api.nvim_err_writeln("E21: Cannot make changes, 'modifiable' is off")
+        vim.api.nvim_echo(
+            { { "E21: Cannot make changes, 'modifiable' is off" } },
+            true,
+            { err = true }
+        )
         return false
     end
 end

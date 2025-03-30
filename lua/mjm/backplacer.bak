@@ -86,7 +86,7 @@ local backspace_blank_line = function(cur_row, cur_col, cur_line, opts)
         return
     end
 
-    vim.api.nvim_del_current_line()
+    vim.api.nvim_del_current_line() -- is this deprecated now?
     -- Force undo line numbers to update. Otherwise ShaDa and undo history break
     local insert_key = vim.api.nvim_replace_termcodes("<C-g>u", true, false, true)
     vim.api.nvim_feedkeys(insert_key, "n", false)

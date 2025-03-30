@@ -200,7 +200,7 @@ local qf_scroll_wrapper = function(opts)
         return
     end
 
-    vim.api.nvim_err_writeln(result or "Unknown error in qf_scroll_wraper")
+    vim.api.nvim_echo({ { result or "Unknown error in qf_scroll_wraper" } }, true, { err = true })
 end
 
 vim.keymap.set("n", "[q", function()
@@ -209,6 +209,3 @@ end)
 vim.keymap.set("n", "]q", function()
     qf_scroll_wrapper()
 end)
-
-vim.keymap.set("n", "[Q", "<cmd>cfirst<cr>")
-vim.keymap.set("n", "]Q", "<cmd>clast<cr>")

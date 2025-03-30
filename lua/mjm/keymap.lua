@@ -41,7 +41,7 @@ vim.keymap.set("n", "ZX", function()
         return
     end
 
-    vim.api.nvim_err_writeln(result or "Unknown error")
+    vim.api.nvim_echo({ { result or "Unknown error" } }, true, { err = true })
 end)
 
 for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
@@ -248,12 +248,7 @@ for _, map in pairs(norm_pastes) do
         end) ---@type boolean, unknown|nil
 
         if not status then
-            if type(result) == "string" then
-                vim.api.nvim_err_writeln(result)
-            else
-                vim.api.nvim_err_writeln("Unknown error when pasting")
-            end
-
+            vim.api.nvim_echo({ { result or "Unknown error when pasting" } }, true, { err = true })
             return
         end
 
@@ -287,19 +282,6 @@ for _, map in pairs(visual_pastes) do
         end
     end, { silent = true, expr = true })
 end
-
--- TODO: Will be added as Nvim default
-vim.keymap.set("n", "[<Space>", function()
-    local repeated = vim.fn["repeat"]({ "" }, vim.v.count1)
-    local linenr = vim.api.nvim_win_get_cursor(0)[1]
-    vim.api.nvim_buf_set_lines(0, linenr - 1, linenr - 1, true, repeated)
-end, { desc = "Add empty line above cursor" })
-
-vim.keymap.set("n", "]<Space>", function()
-    local repeated = vim.fn["repeat"]({ "" }, vim.v.count1)
-    local linenr = vim.api.nvim_win_get_cursor(0)[1]
-    vim.api.nvim_buf_set_lines(0, linenr, linenr, true, repeated)
-end, { desc = "Add empty line below cursor" })
 
 ---@param opts? table
 ---@return nil
@@ -356,7 +338,7 @@ local visual_move = function(opts)
         do
         end
     else
-        vim.api.nvim_err_writeln(result or "Unknown error in visual_move")
+        vim.api.nvim_echo({ { result or "Unknown error in visual_move" } }, true, { err = true })
     end
 
     vim.api.nvim_exec2("norm! gv", {})

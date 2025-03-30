@@ -4,7 +4,7 @@ vim.api.nvim_create_autocmd("TextYankPost", {
     group = vim.api.nvim_create_augroup("yank_aesthetic", { clear = true }),
     pattern = "*",
     callback = function()
-        vim.highlight.on_yank({
+        vim.hl.on_yank({
             higroup = "IncSearch",
             timeout = 150,
         })
@@ -116,9 +116,13 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
         if status and conformed then
             return
         elseif type(result) == "string" then
-            vim.api.nvim_err_writeln(result)
+            vim.api.nvim_echo({ { result } }, true, { err = true })
         elseif not status then
-            vim.api.nvim_err_writeln("Unknown error occurred while formatting with Conform")
+            vim.api.nvim_echo(
+                { { "Unknown error occurred while formatting with Conform" } },
+                true,
+                { err = true }
+            )
         end
 
         local clients = vim.lsp.get_clients({ bufnr = buf })
@@ -137,11 +141,13 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
             status, result = pcall(vim.lsp.buf.format, { bufnr = buf, async = false })
             if status then
                 return
-            elseif type(result) == "string" then
-                vim.api.nvim_err_writeln(result)
-            else
-                vim.api.nvim_err_writeln("Unknown error occurred while formatting with LSP")
             end
+
+            vim.api.nvim_echo(
+                { { result or "Unknown error occurred while formatting with LSP" } },
+                true,
+                { err = true }
+            )
         end
 
         local shiftwidth = vim.api.nvim_get_option_value("shiftwidth", { buf = buf })

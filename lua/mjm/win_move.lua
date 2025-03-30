@@ -7,6 +7,8 @@
 -- end
 
 -- TODO: tmux-navigator is simple enough that it can just be done here
+-- This should be fixed in the future though, because it IS simple
+-- Also, we want to add in special cases, like being in a telescope prompt
 
 -- Because I have not put in enough research yet on how to make window/navigation integration
 -- work between Wezterm and Neovim
