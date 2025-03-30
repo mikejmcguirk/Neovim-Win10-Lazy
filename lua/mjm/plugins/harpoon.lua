@@ -104,6 +104,7 @@ return {
             vim.keymap.set("n", "<leader>ad", function()
                 harpoon:list():add()
             end)
+
             vim.keymap.set("n", "<leader>ae", function()
                 harpoon.ui:toggle_quick_menu(harpoon:list(), { height_in_lines = 10 })
             end)
@@ -116,7 +117,7 @@ return {
                 local mod_mark = this_mark % 10 -- 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
                 vim.keymap.set("n", string.format("<leader>%s", mod_mark), function()
                     if vim.bo.filetype == "qf" then
-                        print("Currently in quickfix list")
+                        vim.notify("Currently in quickfix list", vim.log.levels.WARN)
                         return
                     end
 

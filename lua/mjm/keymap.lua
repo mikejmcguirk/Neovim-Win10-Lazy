@@ -35,7 +35,7 @@ vim.keymap.set("n", "ZV", "<cmd>silent up<cr>")
 vim.keymap.set("n", "ZA", "<cmd>silent wa<cr>")
 vim.keymap.set("n", "ZX", function()
     local status, result = pcall(function()
-        vim.api.nvim_exec2("silent w | so", {})
+        vim.api.nvim_exec2("silent up | so", {})
     end)
     if status then
         return
@@ -66,10 +66,8 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
 
         if status then
             return
-        elseif type(result) == "string" then
-            vim.notify(result, vim.log.levels.WARN)
         else
-            vim.notify("Unknown error closing window", vim.log.levels.WARN)
+            vim.notify(result or "Unknown error closing window", vim.log.levels.WARN)
         end
     end)
 end
@@ -80,7 +78,6 @@ vim.keymap.set({ "n", "x" }, "<C-d>", "<C-d>zz", { silent = true })
 -- Not silent so that the search prompting displays properly
 vim.keymap.set("n", "/", "ms/")
 vim.keymap.set("n", "?", "ms?")
-
 vim.keymap.set("n", "N", "Nzzzv")
 vim.keymap.set("n", "n", "nzzzv")
 
@@ -152,37 +149,33 @@ vim.keymap.set("n", "J", function()
 
     -- Done using a view instead of a mark to prevent visible screen shake
     local view = vim.fn.winsaveview()
-    vim.api.nvim_exec2("norm! J", {})
+    -- By default, [count]J joins one fewer lines than indicated by the relative line numbers
+    local count = vim.v.count1 + 1
+
+    vim.cmd("norm! " .. count .. "J")
     vim.fn.winrestview(view)
 end, { silent = true })
 
-vim.keymap.set("n", "x", '"_x', { silent = true })
-vim.keymap.set("n", "<leader>d", '"_d', { silent = true })
-vim.keymap.set("n", "<leader>D", '"_D', { silent = true })
-vim.keymap.set("x", "x", '"_x', { silent = true })
-vim.keymap.set("x", "<leader>D", "<nop>", { silent = true })
-vim.keymap.set("n", "<leader>dD", 'gg"_dG', { silent = true })
-
--- TODO: This could be smarter/more expanded on
-vim.keymap.set("n", "dd", function()
-    local has_chars = string.match(vim.api.nvim_get_current_line(), "%S")
-    if vim.v.count1 <= 1 and not has_chars then
-        return '"_dd'
-    else
-        return "dd"
-    end
-end, { silent = true, expr = true })
+vim.keymap.set({ "n", "x" }, "x", '"_x', { silent = true })
+vim.keymap.set("n", "X", '"_X', { silent = true })
+vim.keymap.set("x", "X", "<nop>", { silent = true })
 
 vim.keymap.set("x", "D", "<nop>", { silent = true })
 vim.keymap.set("n", "d^", '^dg_"_dd', { silent = true }) -- Does not yank newline character
 vim.keymap.set("n", "dD", "ggdG", { silent = true })
 vim.keymap.set("n", "dK", "DO<esc>p==", { silent = true })
 
-vim.keymap.set({ "n", "x" }, "<leader>c", '"_c', { silent = true })
-vim.keymap.set("n", "<leader>C", '"_C', { silent = true })
-vim.keymap.set("x", "C", "<nop>", { silent = true })
+vim.keymap.set("n", "<leader>d", '"_d', { silent = true })
+vim.keymap.set("n", "<leader>D", '"_D', { silent = true })
+vim.keymap.set("n", "<leader>dD", 'gg"_dG', { silent = true })
+vim.keymap.set("x", "<leader>D", "<nop>", { silent = true })
+
 vim.keymap.set("n", "c^", "^cg_", { silent = true }) -- Does not yank newline character
 vim.keymap.set("n", "cC", "ggcG", { silent = true })
+vim.keymap.set("x", "C", "<nop>", { silent = true })
+
+vim.keymap.set({ "n", "x" }, "<leader>c", '"_c', { silent = true })
+vim.keymap.set("n", "<leader>C", '"_C', { silent = true })
 vim.keymap.set("n", "<leader>cC", 'gg"_cG', { silent = true })
 
 vim.api.nvim_create_autocmd("TextYankPost", {
@@ -197,14 +190,15 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 vim.keymap.set({ "n", "x" }, "y", "mzy", { silent = true })
 vim.keymap.set({ "n", "x" }, "<leader>y", 'mz"+y', { silent = true })
 
--- In Vim, Y is a synonym for yy. It only behaves like y$ because of a Neovim default mapping
--- Any Neovim equivalent Y behavior below must be mapped manually
+-- Nvim sets Y to be equivalent to y$ through a lua runtime file
+-- Neovim equivalent Y behavior must be mapped manually
 vim.keymap.set("n", "Y", "mzy$", { silent = true })
 vim.keymap.set("n", "<leader>Y", 'mz"+y$', { silent = true })
 vim.keymap.set("x", "Y", "<nop>", { silent = true })
 
 vim.keymap.set("n", "y^", "mz^vg_y", { silent = true })
 vim.keymap.set("n", "<leader>y^", 'mz^vg_"+y', { silent = true })
+
 -- `z included in these maps to prevent visible scrolling before the autocmd is triggered
 vim.keymap.set("n", "yY", "mzggyG`z", { silent = true })
 vim.keymap.set("n", "<leader>yY", 'mzgg"+yG`z', { silent = true })
@@ -229,35 +223,19 @@ local norm_pastes = {
     { "P", "P", '"' },
     { "<leader>P", '"+P', "+" },
 }
--- Done as exec commands to reduce visible text shake when fixing indentation and
--- to remove command line nags
+
 for _, map in pairs(norm_pastes) do
     vim.keymap.set("n", map[1], function()
-        if not ut.check_modifiable() then
-            return
-        end
+        local paste_cmd = "mz<cmd>silent norm! " .. vim.v.count1 .. map[2] .. "<cr>"
 
         local line = vim.api.nvim_get_current_line() ---@type string
         local is_blank = line:match("^%s*$") ---@type boolean|nil
-
-        local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(0))
-        vim.api.nvim_buf_set_mark(0, "z", cur_row, cur_col, {})
-
-        local status, result = pcall(function()
-            vim.api.nvim_exec2("silent norm! " .. vim.v.count1 .. map[2], {})
-        end) ---@type boolean, unknown|nil
-
-        if not status then
-            vim.api.nvim_echo({ { result or "Unknown error when pasting" } }, true, { err = true })
-            return
-        end
-
         if vim.fn.getregtype(map[3]) == "V" or is_blank then
-            vim.api.nvim_exec2("silent norm! `[=`]", {})
+            paste_cmd = paste_cmd .. "<cmd>silent norm! `[=`]<cr>"
         end
 
-        vim.api.nvim_exec2("silent norm! `z", {})
-    end, { silent = true })
+        return paste_cmd .. "`z"
+    end, { expr = true, silent = true })
 end
 
 local visual_pastes = {
@@ -266,15 +244,18 @@ local visual_pastes = {
     { "P", "p", '"' },
     { "<leader>P", '"+p', "+" },
 }
+
 for _, map in pairs(visual_pastes) do
     vim.keymap.set("x", map[1], function()
         if not ut.check_modifiable() then
-            return ""
+            return
         end
 
         local cur_mode = vim.api.nvim_get_mode().mode
         if cur_mode == "V" or cur_mode == "Vs" then
-            return vim.v.count1 .. map[2] .. "<cmd>silent norm! =`]<cr>"
+            -- Cursor goes to the beginning of the paste by default, no mark needed
+            -- Because there is no mark, count is taken in by default
+            return map[2] .. "<cmd>silent norm! =`]<cr>"
         elseif vim.fn.getregtype(map[3]) == "V" then
             return "mz" .. vim.v.count1 .. map[2] .. "<cmd>silent norm! `[=`]`z<cr>"
         else
@@ -313,6 +294,7 @@ local visual_move = function(opts)
 
     local vcount1 = vim.v.count1 ---@type integer -- Get before leaving visual mode
     vim.api.nvim_exec2('exec "silent norm! \\<esc>"', {}) -- Force update of '< and '> marks
+
     ---@return integer -- Calculate so that rnu jumps are correct
     local get_offset = function()
         if vcount1 <= 1 then
@@ -334,6 +316,7 @@ local visual_move = function(opts)
         local end_col = #vim.api.nvim_buf_get_lines(0, end_row - 1, end_row, false)[1]
         vim.api.nvim_buf_set_mark(0, "z", end_row, end_col, {})
         vim.api.nvim_exec2("silent norm! `[=`z", {})
+    -- Trying to move text off the screen
     elseif type(result) == "string" and string.find(result, "E16") and vcount1 <= 1 then
         do
         end
