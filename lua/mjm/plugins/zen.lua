@@ -72,6 +72,8 @@ return {
                 end
             end
 
+            -- view.open({ window = { border = "none" } })
+            -- view.open({ border = "single" })
             view.open()
         end)
     end,

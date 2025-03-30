@@ -2,14 +2,11 @@
 
 local ut = require("mjm.utils")
 
--- local border = {
---     border = "single",
---     style = "minimal",
--- }
+local border = "single" -- "FloatBorder" highlight group
 
 local default_diag_cfg = {
     severity_sort = true,
-    -- float = vim.tbl_extend("force", { source = "always" }, border),
+    float = { source = "always", border = border },
     -- virtual_text = {
     --     severity = {
     --         min = vim.diagnostic.severity.HINT,
@@ -47,6 +44,14 @@ vim.api.nvim_create_autocmd("LspAttach", {
         vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })
         vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = buf })
         vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { buffer = buf })
+
+        vim.keymap.set("n", "K", function()
+            vim.lsp.buf.hover({ border = border })
+        end, { buffer = buf, desc = "vim.lsp.buf.hover()" })
+
+        vim.keymap.set({ "i", "s" }, "<C-S>", function()
+            vim.lsp.buf.signature_help({ border = border })
+        end, { buffer = buf, desc = "vim.lsp.buf.signature_help()" })
 
         -- vim.keymap.set("n", "<leader>vh", vim.lsp.buf.document_highlight, { buffer = buf })
         -- vim.keymap.set("n", "<leader>va", vim.lsp.buf.add_workspace_folder, { buffer = buf })
