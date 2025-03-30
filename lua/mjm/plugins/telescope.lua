@@ -27,11 +27,11 @@ return {
                 defaults = {
                     mappings = {
                         n = {
-                            ["<C-h>"] = "which_key",
+                            ["<C-w>"] = "which_key",
                             ["<C-c>"] = actions.close,
                         },
                         i = {
-                            ["<C-h>"] = "which_key",
+                            ["<C-w>"] = "which_key",
                             ["<C-c>"] = false, --Reverts to default functionality
                             ["<esc>"] = actions.close,
                         },

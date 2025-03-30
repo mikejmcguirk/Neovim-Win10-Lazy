@@ -114,4 +114,14 @@ M.ins_add_semicolon = function()
     vim.api.nvim_win_set_cursor(0, { line_num, #line })
 end
 
+---@return string
+M.clear_clutter = function()
+    vim.api.nvim_exec2("echo ''", {})
+    vim.api.nvim_exec2("noh", {})
+    vim.lsp.buf.clear_references()
+    -- Allows <C-c> to exit the start of commands with a count
+    -- Eliminates default command line nag
+    return "<esc>"
+end
+
 return M

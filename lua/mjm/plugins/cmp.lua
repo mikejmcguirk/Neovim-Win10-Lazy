@@ -1,3 +1,4 @@
+-- TODO: Should try blink.cmp at some point
 local cmp_config = function()
     vim.opt.completeopt = { "menu", "menuone", "noselect" }
 

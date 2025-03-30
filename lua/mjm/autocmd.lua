@@ -69,6 +69,7 @@ local clear_conditions = {
     "WinEnter",
     "WinLeave",
 }
+
 vim.api.nvim_create_autocmd(clear_conditions, {
     group = mjm_group,
     pattern = "*",

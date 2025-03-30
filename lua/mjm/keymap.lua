@@ -1,5 +1,9 @@
 local ut = require("mjm.utils")
 
+--------------------
+-- Mode Switching --
+--------------------
+
 -- Mapping <esc> to <C-c> in command mode will cause <C-c> to accept commands rather than cancel
 -- Mapped in operator pending mode because if you C-c out without the remap, quickscope will not
 -- properly exit highlighting
@@ -8,26 +12,33 @@ vim.keymap.set({ "x", "o" }, "<C-c>", "<esc>", { silent = true })
 -- the next column so you can see what you're typing, but then you exit insert mode, meaning the
 -- character no longer can exist, but Neovim still has you scrolled to the side
 vim.keymap.set("i", "<C-c>", "<esc>ze")
-vim.keymap.set("n", "<C-c>", function()
-    vim.api.nvim_exec2("echo ''", {})
-    vim.api.nvim_exec2("noh", {})
-    vim.lsp.buf.clear_references()
-    -- Allows <C-c> to exit the start of commands with a count
-    -- Eliminates default command line nag
-    return "<esc>"
-end, { expr = true, silent = true })
+-- Mapped in init for sneak to invoke cancel
+-- vim.keymap.set("n", "<C-c>", function()
+--     return ut.clear_clutter()
+-- end, { expr = true, silent = true })
 
-vim.keymap.set("i", "<enter>", function()
-    local line = vim.api.nvim_get_current_line()
-    local col = vim.api.nvim_win_get_cursor(0)[2]
-    local after_cursor = line:sub(col + 1)
+-- "S" enters insert with the proper indent. "I" purposefully left on default behavior
+for _, map in pairs({ "i", "a", "A" }) do
+    vim.keymap.set("n", map, function()
+        if string.match(vim.api.nvim_get_current_line(), "^%s*$") then
+            return '"_S'
+        else
+            return map
+        end
+    end, { silent = true, expr = true })
+end
 
-    if after_cursor:match("^%s*$") then
-        return '<enter><esc>ze"_S' -- Make sure we re-enter insert mode properly indented
-    else
-        return "<enter><C-o>ze"
-    end
-end, { expr = true })
+vim.keymap.set("x", "q", "<Nop>")
+vim.keymap.set("n", "Q", "<nop>")
+vim.keymap.set("n", "gQ", "<nop>")
+vim.keymap.set("n", "gh", "<nop>")
+vim.keymap.set("n", "gH", "<nop>")
+
+vim.keymap.set("n", "gs", "<nop>") -- I guess this is fine here
+
+-------------------------
+-- Saving and Quitting --
+-------------------------
 
 -- TODO: This should incorporate saving the last modified marks
 -- TODO: Add some sort of logic so this doesn't work in runtime or plugin files
@@ -72,6 +83,129 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
     end)
 end
 
+-- ZZ is intuitively a better mapping to save than ZV, but by default ZZ exits the current window
+-- This muscle memory becomes a problem if you need to go into vanilla vim or a clean config
+vim.keymap.set("n", "ZZ", "<Nop>")
+vim.keymap.set("n", "ZQ", "<Nop>")
+
+vim.keymap.set("n", "<C-z>", "<nop>")
+
+-------------------
+-- Undo and Redo --
+-------------------
+
+-- Purposefully not setup to accept counts. Don't want to accidently get lost
+-- For some reason, these don't actually go silent unless run as cmds
+
+vim.keymap.set("n", "u", function()
+    vim.cmd("silent norm! u")
+end, { silent = true })
+
+vim.keymap.set("n", "<C-r>", function()
+    vim.cmd('silent exec "norm! \\<C-r>"')
+end, { silent = true })
+
+---------------------
+-- Window Movement --
+---------------------
+
+---@return boolean
+local is_tmux_zoomed = function()
+    return vim.fn.system("tmux display-message -p '#{window_zoomed_flag}'") == "1\n"
+end
+
+-- vim.keymap.set("n", "<esc>", function()
+--     print(is_tmux_zoomed())
+-- end)
+
+local tmux_cmd_map = {
+    ["h"] = "L",
+    ["j"] = "D",
+    ["k"] = "U",
+    ["l"] = "R",
+}
+
+---@param direction string
+---@return nil
+local do_tmux_move = function(direction)
+    if is_tmux_zoomed() then
+        return
+    end
+
+    pcall(function()
+        vim.fn.system([[tmux select-pane -]] .. tmux_cmd_map[direction])
+    end)
+end
+
+---@param nvim_cmd string
+---@return nil
+local win_move_tmux = function(nvim_cmd)
+    local is_prompt = vim.api.nvim_get_option_value("buftype", { buf = 0 }) == "prompt"
+    if is_prompt then
+        do_tmux_move(nvim_cmd)
+        return
+    end
+
+    local start_win = vim.fn.winnr() ---@type integer
+    vim.cmd("wincmd " .. nvim_cmd)
+
+    if vim.fn.winnr() ~= start_win then
+        return
+    end
+
+    do_tmux_move(nvim_cmd)
+end
+
+for k, _ in pairs(tmux_cmd_map) do
+    vim.keymap.set("n", "<C-" .. k .. ">", function()
+        win_move_tmux(k)
+    end)
+end
+
+-- local function win_move_wezterm(key, dir)
+--     local curwin = vim.fn.winnr()
+--     vim.cmd("wincmd " .. key)
+--     if curwin == vim.fn.winnr() then
+--         vim.fn.system("wezterm cli activate-pane-direction " .. dir)
+--     end
+-- end
+
+-- TODO: This should be a different map, but I can't think of a better one
+-- Using alt feels like an anti-pattern
+vim.keymap.set("n", "<M-j>", "<cmd>resize -2<CR>", { silent = true })
+vim.keymap.set("n", "<M-k>", "<cmd>resize +2<CR>", { silent = true })
+vim.keymap.set("n", "<M-h>", "<cmd>vertical resize -2<CR>", { silent = true })
+vim.keymap.set("n", "<M-l>", "<cmd>vertical resize +2<CR>", { silent = true })
+
+vim.keymap.set("x", "<C-w>", "<nop>")
+
+-- Even mapping <C-c> in operator pending mode does not fix these
+local bad_wincmds = { "c", "f", "w", "i", "+", "-" }
+for _, key in pairs(bad_wincmds) do
+    vim.keymap.set("n", "<C-w>" .. key, "<nop>")
+    vim.keymap.set("n", "<C-w><C-" .. key .. ">", "<nop>")
+end
+
+----------------
+-- Navigation --
+----------------
+
+vim.keymap.set({ "n", "x" }, "k", function()
+    if vim.v.count == 0 then
+        return "gk"
+    else
+        return "k"
+    end
+end, { expr = true, silent = true })
+
+vim.keymap.set({ "n", "x" }, "j", function()
+    if vim.v.count == 0 then
+        return "gj"
+    else
+        return "j"
+    end
+end, { expr = true, silent = true })
+
 vim.keymap.set({ "n", "x" }, "<C-u>", "<C-u>zz", { silent = true })
 vim.keymap.set({ "n", "x" }, "<C-d>", "<C-d>zz", { silent = true })
 
@@ -80,6 +214,30 @@ vim.keymap.set("n", "/", "ms/")
 vim.keymap.set("n", "?", "ms?")
 vim.keymap.set("n", "N", "Nzzzv")
 vim.keymap.set("n", "n", "nzzzv")
+
+vim.keymap.set({ "n", "x" }, "[[", "<Nop>")
+vim.keymap.set({ "n", "x" }, "]]", "<Nop>")
+vim.keymap.set({ "n", "x" }, "[]", "<Nop>")
+vim.keymap.set({ "n", "x" }, "][", "<Nop>")
+vim.keymap.set({ "n", "x" }, "[/", "<Nop>")
+vim.keymap.set({ "n", "x" }, "]/", "<Nop>")
+
+-- Purposefully left alone in cmd mode
+vim.keymap.set({ "n", "i", "x" }, "<left>", "<Nop>")
+vim.keymap.set({ "n", "i", "x" }, "<right>", "<Nop>")
+vim.keymap.set({ "n", "i", "x" }, "<up>", "<Nop>")
+vim.keymap.set({ "n", "i", "x" }, "<down>", "<Nop>")
+
+vim.keymap.set({ "n", "i", "x" }, "<pageup>", "<Nop>")
+vim.keymap.set({ "n", "i", "x" }, "<pagedown>", "<Nop>")
+vim.keymap.set({ "n", "i", "x" }, "<home>", "<Nop>")
+vim.keymap.set({ "n", "i", "x" }, "<end>", "<Nop>")
+vim.keymap.set({ "n", "i", "x" }, "<insert>", "<Nop>")
+vim.keymap.set({ "n", "x" }, "<del>", "<Nop>")
+
+--------------------
+-- Capitalization --
+--------------------
 
 local cap_motions_norm = {
     "~",
@@ -113,48 +271,12 @@ for _, map in pairs(cap_motions_vis) do
     end, { silent = true, expr = true })
 end
 
--- "S" enters insert with the proper indent. "I" purposefully left on default behavior
-for _, map in pairs({ "i", "a", "A" }) do
-    vim.keymap.set("n", map, function()
-        if string.match(vim.api.nvim_get_current_line(), "^%s*$") then
-            return '"_S'
-        else
-            return map
-        end
-    end, { silent = true, expr = true })
-end
+vim.keymap.set("x", "u", "<nop>")
+vim.keymap.set("x", "U", "<nop>")
 
-vim.keymap.set("i", ";", ";<C-g>u", { silent = true })
-
-vim.keymap.set({ "n", "x" }, "k", function()
-    if vim.v.count == 0 then
-        return "gk"
-    else
-        return "k"
-    end
-end, { expr = true, silent = true })
-
-vim.keymap.set({ "n", "x" }, "j", function()
-    if vim.v.count == 0 then
-        return "gj"
-    else
-        return "j"
-    end
-end, { expr = true, silent = true })
-
-vim.keymap.set("n", "J", function()
-    if not ut.check_modifiable() then
-        return
-    end
-
-    -- Done using a view instead of a mark to prevent visible screen shake
-    local view = vim.fn.winsaveview()
-    -- By default, [count]J joins one fewer lines than indicated by the relative line numbers
-    local count = vim.v.count1 + 1
-
-    vim.cmd("norm! " .. count .. "J")
-    vim.fn.winrestview(view)
-end, { silent = true })
+--------------------------
+-- Yank, Change, Delete --
+--------------------------
 
 vim.keymap.set({ "n", "x" }, "x", '"_x', { silent = true })
 vim.keymap.set("n", "X", '"_X', { silent = true })
@@ -217,6 +339,30 @@ for _, obj in pairs(startline_objects) do
     vim.keymap.set("n", "<leader>c" .. obj, "hv" .. obj .. '"_c', { silent = true })
 end
 
+vim.api.nvim_create_autocmd("TextChanged", {
+    group = vim.api.nvim_create_augroup("delete_clear", { clear = true }),
+    pattern = "*",
+    callback = function()
+        if vim.v.operator == "d" then
+            vim.api.nvim_exec2("echo ''", {})
+        end
+    end,
+})
+
+vim.api.nvim_create_autocmd("InsertEnter", {
+    group = vim.api.nvim_create_augroup("change_clear", { clear = true }),
+    pattern = "*",
+    callback = function()
+        if vim.v.operator == "c" then
+            vim.api.nvim_exec2("echo ''", {})
+        end
+    end,
+})
+
+-------------
+-- Pasting --
+-------------
+
 local norm_pastes = {
     { "p", "p", '"' },
     { "<leader>p", '"+p', "+" },
@@ -263,6 +409,42 @@ for _, map in pairs(visual_pastes) do
         end
     end, { silent = true, expr = true })
 end
+
+-----------------------
+-- Insert Mode Fixes --
+-----------------------
+
+vim.keymap.set("i", ";", ";<C-g>u", { silent = true })
+
+vim.keymap.set("i", "<enter>", function()
+    local line = vim.api.nvim_get_current_line()
+    local col = vim.api.nvim_win_get_cursor(0)[2]
+    local after_cursor = line:sub(col + 1)
+
+    if after_cursor:match("^%s*$") then
+        return '<enter><esc>ze"_S' -- Make sure we re-enter insert mode properly indented
+    else
+        return "<enter><C-o>ze"
+    end
+end, { expr = true })
+
+-----------------------
+-- Text Manipulation --
+-----------------------
+
+vim.keymap.set("n", "J", function()
+    if not ut.check_modifiable() then
+        return
+    end
+
+    -- Done using a view instead of a mark to prevent visible screen shake
+    local view = vim.fn.winsaveview()
+    -- By default, [count]J joins one fewer lines than indicated by the relative line numbers
+    local count = vim.v.count1 + 1
+
+    vim.cmd("norm! " .. count .. "J")
+    vim.fn.winrestview(view)
+end, { silent = true })
 
 ---@param opts? table
 ---@return nil
@@ -333,6 +515,31 @@ end)
 vim.keymap.set("x", "K", function()
     visual_move({ upward = true })
 end)
+
+---@param direction string
+---@return nil
+local visual_indent = function(direction)
+    local count = vim.v.count1
+    vim.opt_local.cursorline = false
+    vim.api.nvim_exec2('exec "silent norm! \\<esc>"', {})
+    vim.api.nvim_exec2("silent '<,'> " .. string.rep(direction, count), {})
+    vim.api.nvim_exec2("silent norm! gv", {})
+    vim.opt_local.cursorline = true
+end
+
+vim.keymap.set("x", "<", function()
+    visual_indent("<")
+end, { silent = true })
+vim.keymap.set("x", ">", function()
+    visual_indent(">")
+end, { silent = true })
+
+-- I don't know a better place to put this
+vim.keymap.set("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true })
+
+---------------------
+-- Git Integration --
+---------------------
 
 vim.keymap.set("n", "<leader>ga", function()
     local file = vim.api.nvim_buf_get_name(0)
@@ -418,7 +625,7 @@ vim.keymap.set("n", "<leader>ge", function()
     local git_rm = vim.fn.system("git rm -f " .. vim.fn.shellescape(relative_file))
     if vim.v.shell_error == 0 then
         vim.notify(relative_file .. " removed from Git")
-        vim.cmd("bd")
+        vim.cmd("bd!")
     else
         vim.notify(
             "Failed to remove " .. relative_file .. " from git: \n" .. vim.fn.trim(git_rm),
@@ -426,3 +633,107 @@ vim.keymap.set("n", "<leader>ge", function()
         )
     end
 end)
+
+---------------
+-- The Mouse --
+---------------
+
+vim.opt.mouse = "a" -- Otherwise, the terminal handles mouse functionality
+vim.opt.mousemodel = "extend" -- Disables terminal right-click paste
+
+local mouse_maps = {
+    "LeftMouse",
+    "2-LeftMouse",
+    "3-LeftMouse",
+    "4-LeftMouse",
+    "C-LeftMouse",
+    "C-2-LeftMouse",
+    "C-3-LeftMouse",
+    "C-4-LeftMouse",
+    "M-LeftMouse",
+    "M-2-LeftMouse",
+    "M-3-LeftMouse",
+    "M-4-LeftMouse",
+    "C-M-LeftMouse",
+    "C-M-2-LeftMouse",
+    "C-M-3-LeftMouse",
+    "C-M-4-LeftMouse",
+    "RightMouse",
+    "2-RightMouse",
+    "3-RightMouse",
+    "4-RightMouse",
+    "A-RightMouse",
+    "S-RightMouse",
+    "C-RightMouse",
+    "C-2-RightMouse",
+    "C-3-RightMouse",
+    "C-4-RightMouse",
+    "C-A-RightMouse",
+    "C-S-RightMouse",
+    "M-RightMouse",
+    "M-2-RightMouse",
+    "M-3-RightMouse",
+    "M-4-RightMouse",
+    "M-A-RightMouse",
+    "M-S-RightMouse",
+    "M-C-RightMouse",
+    "C-M-RightMouse",
+    "C-M-2-RightMouse",
+    "C-M-3-RightMouse",
+    "C-M-4-RightMouse",
+    "C-M-A-RightMouse",
+    "C-M-S-RightMouse",
+    "C-M-C-RightMouse",
+    "LeftDrag",
+    "RightDrag",
+    "LeftRelease",
+    "RightRelease",
+    "C-LeftDrag",
+    "C-RightDrag",
+    "C-LeftRelease",
+    "C-RightRelease",
+    "M-LeftDrag",
+    "M-RightDrag",
+    "M-LeftRelease",
+    "M-RightRelease",
+    "C-M-LeftDrag",
+    "C-M-RightDrag",
+    "C-M-LeftRelease",
+    "C-M-RightRelease",
+    "MiddleMouse",
+    "2-MiddleMouse",
+    "3-MiddleMouse",
+    "4-MiddleMouse",
+    "C-MiddleMouse",
+    "C-2-MiddleMouse",
+    "C-3-MiddleMouse",
+    "C-4-MiddleMouse",
+    "M-MiddleMouse",
+    "M-2-MiddleMouse",
+    "M-3-MiddleMouse",
+    "M-4-MiddleMouse",
+    "C-M-MiddleMouse",
+    "C-M-2-MiddleMouse",
+    "C-M-3-MiddleMouse",
+    "C-M-4-MiddleMouse",
+    "ScrollWheelUp",
+    "S-ScrollWheelUp",
+    "ScrollWheelDown",
+    "S-ScrollWheelDown",
+    "C-ScrollWheelUp",
+    "C-S-ScrollWheelUp",
+    "C-ScrollWheelDown",
+    "C-S-ScrollWheelDown",
+    "M-ScrollWheelUp",
+    "M-S-ScrollWheelUp",
+    "M-ScrollWheelDown",
+    "M-S-ScrollWheelDown",
+    "C-M-ScrollWheelUp",
+    "C-M-S-ScrollWheelUp",
+    "C-M-ScrollWheelDown",
+    "C-M-S-ScrollWheelDown",
+}
+
+for _, map in pairs(mouse_maps) do
+    vim.keymap.set({ "n", "i", "x", "c" }, "<" .. map .. ">", "<Nop>")
+end

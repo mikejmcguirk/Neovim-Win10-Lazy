@@ -16,9 +16,9 @@ return {
         local sub = require("substitute")
         vim.api.nvim_set_hl(0, "SubstituteSubstituted", { link = "IncSearch" })
 
-        vim.keymap.set("n", "s", function()
-            sub.operator({ modifiers = { "trim" } })
-        end)
-        vim.keymap.set("n", "S", sub.eol)
+        -- vim.keymap.set("n", "s", function()
+        --     sub.operator({ modifiers = { "trim" } })
+        -- end)
+        -- vim.keymap.set("n", "S", sub.eol)
     end,
 }
