@@ -1,4 +1,4 @@
-vim.api.nvim_create_user_command("We", "silent w | e", {}) -- Quick refresh if Treesitter bugs out
+vim.api.nvim_create_user_command("We", "silent up | e", {}) -- Quick refresh if Treesitter bugs out
 
 local function tab_kill()
     local confirm = vim.fn.confirm(
