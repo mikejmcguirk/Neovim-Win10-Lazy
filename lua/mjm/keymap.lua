@@ -86,6 +86,7 @@ end
 
 -- ZZ is intuitively a better mapping to save than ZV, but by default ZZ exits the current window
 -- This muscle memory becomes a problem if you need to go into vanilla vim or a clean config
+-- Likewise with ZQ. By default, it is quit without save. Unfortunate to hit by accident
 vim.keymap.set("n", "ZZ", "<Nop>")
 vim.keymap.set("n", "ZQ", "<Nop>")
 
