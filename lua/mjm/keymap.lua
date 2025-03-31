@@ -12,6 +12,7 @@ vim.keymap.set({ "x", "o" }, "<C-c>", "<esc>", { silent = true })
 -- the next column so you can see what you're typing, but then you exit insert mode, meaning the
 -- character no longer can exist, but Neovim still has you scrolled to the side
 vim.keymap.set("i", "<C-c>", "<esc>ze")
+
 -- Mapped in init for sneak to invoke cancel
 -- vim.keymap.set("n", "<C-c>", function()
 --     return ut.clear_clutter()
