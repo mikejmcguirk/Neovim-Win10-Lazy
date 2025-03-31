@@ -91,15 +91,6 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
     end,
 })
 
--- Make sure that block or horizontal cursors don't persist into terminal
-vim.api.nvim_create_autocmd({ "VimLeave" }, {
-    group = mjm_group,
-    pattern = "*",
-    callback = function()
-        vim.cmd("set gcr=n-i-c-ci-v-r:ver100-blinkon1-blinkoff1")
-    end,
-})
-
 -- TODO: In general this is bad because it's a lot of highly coupled behavior
 -- TODO: Try using an autocommand when leaving Nvim to clear search registers
 -- TODO: Outline this into its own file
