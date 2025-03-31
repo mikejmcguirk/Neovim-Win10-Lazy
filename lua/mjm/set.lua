@@ -33,10 +33,16 @@ vim.opt.fileformats = "unix,dos" -- Override \r\n on Windows
 
 vim.opt.lazyredraw = false -- Causes unpredictable problems
 vim.opt.termguicolors = true
-vim.cmd("set gcr=n:block-blinkon1,i-c-ci:ver100-blinkon1,v-r:hor100-blinkon1")
 vim.opt.showmode = false
 -- Don't use. Sets arbitrary border around zen mode display
 -- vim.opt.winborder = "single"
+
+local blink_setting = "blinkon1-blinkoff1"
+local block_cursor = "n:" .. blink_setting
+local ver_cursor = "i-c-ci:ver100-" .. blink_setting
+local hor_cursor = "v-r:hor100-" .. blink_setting
+local gcr_string = block_cursor .. "," .. ver_cursor .. "," .. hor_cursor
+vim.cmd("set gcr=" .. gcr_string)
 
 vim.opt.scrolloff = 6
 vim.opt.startofline = true
