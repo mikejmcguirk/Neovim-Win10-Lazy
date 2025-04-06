@@ -2,8 +2,8 @@
 return {
     {
         "maxmx03/fluoromachine.nvim",
-        lazy = false,       -- Does not work with lazy loading
-        priority = 1000,    -- Set top priority so highlight groups load
+        lazy = false, -- Does not work with lazy loading
+        priority = 1000, -- Set top priority so highlight groups load
         commit = "a5dc2cd", -- TODO: Feels like this will break eventually. Better solution?
         config = function()
             local fm = require("fluoromachine")

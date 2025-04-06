@@ -13,10 +13,9 @@ vim.keymap.set({ "x", "o" }, "<C-c>", "<esc>", { silent = true })
 -- character no longer can exist, but Neovim still has you scrolled to the side
 vim.keymap.set("i", "<C-c>", "<esc>ze")
 
--- Mapped in init for sneak to invoke cancel
--- vim.keymap.set("n", "<C-c>", function()
---     return ut.clear_clutter()
--- end, { expr = true, silent = true })
+vim.keymap.set("n", "<C-c>", function()
+    return ut.clear_clutter()
+end, { expr = true, silent = true })
 
 -- "S" enters insert with the proper indent. "I" purposefully left on default behavior
 for _, map in pairs({ "i", "a", "A" }) do
