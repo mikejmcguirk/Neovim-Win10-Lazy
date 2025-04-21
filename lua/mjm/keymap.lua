@@ -314,7 +314,7 @@ vim.keymap.set({ "n", "x" }, "y", "mzy", { silent = true })
 vim.keymap.set({ "n", "x" }, "<leader>y", 'mz"+y', { silent = true })
 
 -- Nvim sets Y to be equivalent to y$ through a lua runtime file
--- Neovim equivalent Y behavior must be mapped manually
+-- Equivalent of Neovim Y behavior must be mapped manually
 vim.keymap.set("n", "Y", "mzy$", { silent = true })
 vim.keymap.set("n", "<leader>Y", 'mz"+y$', { silent = true })
 vim.keymap.set("x", "Y", "<nop>", { silent = true })
@@ -454,6 +454,8 @@ local visual_move = function(opts)
         return
     end
 
+    vim.opt.lazyredraw = true
+
     opts = vim.deepcopy(opts or {}, true)
     ---@return table
     local get_pieces = function()
@@ -508,6 +510,8 @@ local visual_move = function(opts)
     end
 
     vim.api.nvim_exec2("norm! gv", {})
+
+    vim.opt.lazyredraw = false
 end
 
 vim.keymap.set("x", "J", function()
@@ -520,12 +524,16 @@ end)
 ---@param direction string
 ---@return nil
 local visual_indent = function(direction)
-    local count = vim.v.count1
+    vim.opt.lazyredraw = true
     vim.opt_local.cursorline = false
+
+    local count = vim.v.count1
     vim.api.nvim_exec2('exec "silent norm! \\<esc>"', {})
     vim.api.nvim_exec2("silent '<,'> " .. string.rep(direction, count), {})
     vim.api.nvim_exec2("silent norm! gv", {})
+
     vim.opt_local.cursorline = true
+    vim.opt.lazyredraw = false
 end
 
 vim.keymap.set("x", "<", function()

@@ -57,6 +57,7 @@ vim.opt.splitbelow = true
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
 vim.opt.incsearch = false -- Prevent screen shifting while entering search/substitute patterns
+vim.fn.setreg("/", nil)
 
 vim.opt.modelines = 1
 
@@ -82,20 +83,21 @@ vim.opt.spell = false
 vim.opt.spelllang = "en_us" -- If spell is turned on by an ftplugin file
 
 vim.opt.cursorline = true
-local cursorline_control = vim.api.nvim_create_augroup("cursorline_control", { clear = true })
+
 ---@param event string
 ---@param pattern string
 ---@param value boolean
 ---@return nil
 local set_cursorline = function(event, pattern, value)
     vim.api.nvim_create_autocmd(event, {
-        group = cursorline_control,
+        group = vim.api.nvim_create_augroup("cursorline_control", { clear = true }),
         pattern = pattern,
         callback = function()
             vim.opt_local.cursorline = value
         end,
     })
 end
+
 set_cursorline("WinLeave", "", false)
 set_cursorline("WinEnter", "", true)
 set_cursorline("FileType", "TelescopePrompt", false)
