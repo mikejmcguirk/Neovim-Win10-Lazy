@@ -80,6 +80,23 @@ return {
                 "Cursorline",
                 { bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg }
             )
+
+            local diag_text_groups = {
+                ["DiagnosticError"] = "DiagnosticUnderlineError",
+                ["DiagnosticWarn"] = "DiagnosticUnderlineWarn",
+                ["DiagnosticInfo"] = "DiagnosticUnderlineInfo",
+                ["DiagnosticHint"] = "DiagnosticUnderlineHint",
+                ["DiagnosticOk"] = "DiagnosticUnderlineOk",
+            }
+
+            for base, uline in pairs(diag_text_groups) do
+                local old = vim.api.nvim_get_hl(0, { name = uline })
+                local new = vim.tbl_extend("force", old, {
+                    fg = vim.api.nvim_get_hl(0, { name = base }).fg,
+                    underline = true,
+                })
+                vim.api.nvim_set_hl(0, uline, new)
+            end
         end,
     },
 }

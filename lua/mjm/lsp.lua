@@ -3,6 +3,7 @@
 local ut = require("mjm.utils")
 
 local border = "single" -- "FloatBorder" highlight group
+local virt_lines_cfg = { current_line = true }
 
 local default_diag_cfg = {
     severity_sort = true,
@@ -11,9 +12,8 @@ local default_diag_cfg = {
     --     severity = {
     --         min = vim.diagnostic.severity.HINT,
     --     },
-    --     { current_line = false },
     -- },
-    virtual_lines = { current_line = true },
+    virtual_lines = virt_lines_cfg,
     signs = {
         severity = {
             min = vim.diagnostic.severity.HINT,
@@ -22,6 +22,17 @@ local default_diag_cfg = {
 }
 
 vim.diagnostic.config(default_diag_cfg)
+
+local toggle_virtual_lines = function()
+    local current_config = vim.diagnostic.config() or {}
+    if current_config.virtual_lines == false then
+        vim.diagnostic.config({ virtual_lines = virt_lines_cfg })
+    else
+        vim.diagnostic.config({ virtual_lines = false })
+    end
+end
+
+vim.keymap.set("n", "grd", toggle_virtual_lines)
 
 vim.lsp.set_log_level("ERROR")
 
@@ -32,18 +43,19 @@ vim.api.nvim_create_autocmd("LspAttach", {
     callback = function(ev)
         local buf = ev.buf
 
-        -- local toggle_virtual_text = function()
-        --     local current_config = vim.diagnostic.config() or {}
-        --     local new_virtual_text = not current_config.virtual_text
-        --
-        --     vim.diagnostic.config({ virtual_text = new_virtual_text })
-        -- end
-
-        -- vim.keymap.set("n", "<leader>vd", toggle_virtual_text)
-
+        -- Overwrite vim defaults
         vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })
         vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = buf })
-        vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { buffer = buf })
+
+        -- Overwrite Nvim defaults (:help lsp-defaults)
+        vim.keymap.set("n", "grn", function()
+            local input = ut.get_input("Rename: ")
+            if string.find(input, "%s") then
+                vim.notify(string.format("The name '%s' contains spaces", input))
+            elseif #input > 0 then
+                vim.lsp.buf.rename(input)
+            end
+        end, { buffer = buf })
 
         vim.keymap.set("n", "K", function()
             vim.lsp.buf.hover({ border = border })
@@ -53,22 +65,16 @@ vim.api.nvim_create_autocmd("LspAttach", {
             vim.lsp.buf.signature_help({ border = border })
         end, { buffer = buf, desc = "vim.lsp.buf.signature_help()" })
 
-        -- vim.keymap.set("n", "<leader>vh", vim.lsp.buf.document_highlight, { buffer = buf })
-        -- vim.keymap.set("n", "<leader>va", vim.lsp.buf.add_workspace_folder, { buffer = buf })
-        -- vim.keymap.set("n", "<leader>vo", vim.lsp.buf.remove_workspace_folder, { buffer = buf })
-
-        vim.keymap.set("n", "<leader>vf", function()
+        -- Patternful with the rest of the defaults
+        vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { buffer = buf })
+        vim.keymap.set("n", "grf", function()
             print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
         end, { buffer = buf })
 
-        vim.keymap.set("n", "grn", function()
-            local input = ut.get_input("Rename: ")
-            if string.find(input, "%s") then
-                vim.notify(string.format("The name '%s' contains spaces", input))
-            elseif #input > 0 then
-                vim.lsp.buf.rename(input)
-            end
-        end, { buffer = buf })
+        -- Unsure what to do with these
+        -- vim.keymap.set("n", "<leader>vh", vim.lsp.buf.document_highlight, { buffer = buf })
+        -- vim.keymap.set("n", "<leader>va", vim.lsp.buf.add_workspace_folder, { buffer = buf })
+        -- vim.keymap.set("n", "<leader>vo", vim.lsp.buf.remove_workspace_folder, { buffer = buf })
     end,
 })
 
