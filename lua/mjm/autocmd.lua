@@ -193,32 +193,33 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
         ---@param line string
         ---@return nil
         local format_line = function(iter, line)
+            local row_0 = iter - lines_removed - 1
+            local line_len = #line
             local empty_line = line == ""
-            local whitespace_line = line:match("^%s*$")
+            local whitespace_line = line:match("^%s+$")
             local blank_line = empty_line or whitespace_line
+
             if blank_line then
                 consecutive_blanks = consecutive_blanks + 1
+            else
+                consecutive_blanks = 0
             end
 
-            local row = iter - lines_removed - 1
             if blank_line and consecutive_blanks > 1 then
-                vim.api.nvim_buf_set_lines(buf, row, row + 1, false, {})
+                vim.api.nvim_buf_set_lines(buf, row_0, row_0 + 1, false, {})
                 lines_removed = lines_removed + 1
 
                 return
             end
 
             if whitespace_line then
-                vim.api.nvim_buf_set_text(buf, row, 0, row, #line, {})
+                vim.api.nvim_buf_set_text(buf, row_0, 0, row_0, line_len, {})
                 return
             end
 
-            consecutive_blanks = 0
-
-            local line_length = #line
             local last_non_blank, _ = line:find("(%S)%s*$")
-            if last_non_blank and last_non_blank ~= line_length then
-                vim.api.nvim_buf_set_text(buf, row, last_non_blank, row, line_length, {})
+            if last_non_blank and last_non_blank ~= line_len then
+                vim.api.nvim_buf_set_text(buf, row_0, last_non_blank, row_0, line_len, {})
             end
 
             local first_non_blank, _ = line:find("%S") or 1, nil
@@ -233,9 +234,9 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
             if round_up then
                 local new_spaces = shiftwidth - extra_spaces
                 local spaces = string.rep(" ", new_spaces)
-                vim.api.nvim_buf_set_text(buf, row, 0, row, 0, { spaces })
+                vim.api.nvim_buf_set_text(buf, row_0, 0, row_0, 0, { spaces })
             else
-                vim.api.nvim_buf_set_text(buf, row, 0, row, extra_spaces, {})
+                vim.api.nvim_buf_set_text(buf, row_0, 0, row_0, extra_spaces, {})
             end
         end
 

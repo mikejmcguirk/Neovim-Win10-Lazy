@@ -30,7 +30,7 @@ return {
                     vim.keymap.set("n", "<leader>gp", gs.preview_hunk)
                     vim.keymap.set("n", "<leader>gr", gs.reset_hunk)
                     vim.keymap.set("n", "<leader>gs", gs.stage_buffer)
-                    vim.keymap.set("n", "<leader>gd", gs.toggle_deleted)
+                    vim.keymap.set("n", "<leader>gd", gs.preview_hunk_inline)
 
                     vim.keymap.set({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>")
                 end,
