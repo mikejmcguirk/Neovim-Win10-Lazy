@@ -70,6 +70,7 @@ return {
                 builtin.find_files({ hidden = true, no_ignore = true })
             end)
             vim.keymap.set("n", "<leader>tg", builtin.git_files)
+            vim.keymap.set("n", "<leader>ta", builtin.git_status)
             vim.keymap.set("n", "<leader>tb", function()
                 builtin.buffers({ show_all_buffers = true })
             end)
@@ -99,6 +100,7 @@ return {
 
             vim.keymap.set("n", "<leader>to", builtin.command_history)
             vim.keymap.set("n", "<leader>ti", builtin.registers)
+            vim.keymap.set("n", "<leader>tk", builtin.keymaps)
             telescope.load_extension("undo")
             vim.keymap.set("n", "<leader>tu", "<cmd>Telescope undo<cr>")
 

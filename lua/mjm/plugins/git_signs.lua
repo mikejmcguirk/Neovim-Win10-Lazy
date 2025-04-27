@@ -26,13 +26,13 @@ return {
                         end
                     end, { silent = true })
 
-                    vim.keymap.set("n", "<leader>gi", gs.diffthis)
-                    vim.keymap.set("n", "<leader>gp", gs.preview_hunk)
-                    vim.keymap.set("n", "<leader>gr", gs.reset_hunk)
-                    vim.keymap.set("n", "<leader>gs", gs.stage_buffer)
-                    vim.keymap.set("n", "<leader>gd", gs.preview_hunk_inline)
+                    vim.keymap.set("n", "<leader>hd", gs.diffthis)
+                    vim.keymap.set("n", "<leader>hp", gs.preview_hunk)
+                    vim.keymap.set("n", "<leader>hr", gs.reset_hunk)
+                    vim.keymap.set("n", "<leader>hS", gs.stage_buffer)
+                    vim.keymap.set("n", "<leader>hi", gs.preview_hunk_inline)
 
-                    vim.keymap.set({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>")
+                    vim.keymap.set({ "o", "x" }, "ih", gs.select_hunk)
                 end,
             })
         end,
