@@ -6,7 +6,7 @@ return {
     "folke/zen-mode.nvim",
     opts = {
         window = {
-            width = 106,
+            width = 106, -- 99 text columns + gutter
         },
         plugins = {
             options = {
@@ -19,9 +19,7 @@ return {
                 vim.fn.system([[tmux set status off]])
             end)
 
-            -- It's more logical in an abstract sense to clean when exiting Zen, but
-            -- do it here to reduce the chance of a duplicate autocmd being created because
-            -- of unforeseen behavior
+            -- In case clear on toggle off doesn't run for some reason
             vim.api.nvim_clear_autocmds({ group = "tmux_safety" })
             -- Needed because the on_close callback does not fire, at least not in the expected
             -- manner, when Nvim is closed from within a Zen window
@@ -48,13 +46,14 @@ return {
             pcall(function()
                 vim.fn.system([[tmux set status on]])
             end)
+
+            vim.api.nvim_clear_autocmds({ group = "tmux_safety" })
         end,
     },
     -- Done using an init because config overwrites the opts table
     init = function()
         vim.keymap.set("n", "<leader>e", function()
             local view = require("zen-mode.view")
-
             if view.is_open() then
                 view.close()
                 return
@@ -65,6 +64,7 @@ return {
                 "harpoon",
                 "qf",
             }
+
             for _, ft in pairs(bad_filetypes) do
                 if vim.bo.filetype == ft then
                     vim.notify("Zen open map disabled for filetype " .. ft)
@@ -72,8 +72,6 @@ return {
                 end
             end
 
-            -- view.open({ window = { border = "none" } })
-            -- view.open({ border = "single" })
             view.open()
         end)
     end,
