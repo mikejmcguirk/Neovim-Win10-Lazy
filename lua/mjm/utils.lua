@@ -54,21 +54,18 @@ end
 ---@param line_num number -- One indexed
 ---@return integer
 M.get_indent = function(line_num)
-    local fix_indent = function(indent)
-        if indent <= 0 then
-            return 0
-        else
-            return indent
-        end
-    end
-
     -- If Treesitter indent is enabled, the indentexpr will be set to
     -- nvim_treesitter#indent(), so that will be captured here
     local indentexpr = vim.bo.indentexpr
     if indentexpr == "" then
         local prev_nonblank = vim.fn.prevnonblank(line_num - 1)
         local prev_nonblank_indent = vim.fn.indent(prev_nonblank)
-        return fix_indent(prev_nonblank_indent)
+
+        if prev_nonblank_indent <= 0 then
+            return 0
+        else
+            return prev_nonblank_indent
+        end
     end
 
     -- Most indent expressions in the Nvim runtime do not take an argument
@@ -81,9 +78,16 @@ M.get_indent = function(line_num)
     --
     -- Other indentexpr arguments are not guaranteed to be handled properly
     vim.v.lnum = line_num
-    local expr_indent_tbl = vim.api.nvim_exec2("echo " .. indentexpr, { output = true })
-    local expr_indent = tonumber(expr_indent_tbl.output) or 0
-    return fix_indent(expr_indent)
+    -- pcall in case treesitter errors out due to a null node
+    local status, expr_indent_tbl = pcall(function()
+        vim.api.nvim_exec2("echo " .. indentexpr, { output = true })
+    end)
+
+    if status and expr_indent_tbl then
+        return tonumber(expr_indent_tbl.output) or 0
+    end
+
+    return 0
 end
 
 M.norm_toggle_semicolon = function()
