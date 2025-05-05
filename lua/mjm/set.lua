@@ -85,13 +85,15 @@ vim.opt.spelllang = "en_us" -- If spell is turned on by an ftplugin file
 
 vim.opt.cursorline = true
 
+local cursorline_control = vim.api.nvim_create_augroup("cursorline_control", { clear = true })
+
 ---@param event string
 ---@param pattern string
 ---@param value boolean
 ---@return nil
 local set_cursorline = function(event, pattern, value)
     vim.api.nvim_create_autocmd(event, {
-        group = vim.api.nvim_create_augroup("cursorline_control", { clear = true }),
+        group = cursorline_control,
         pattern = pattern,
         callback = function()
             vim.opt_local.cursorline = value
