@@ -4,6 +4,7 @@ return {
     lazy = true,
     cmd = {
         "NvimTreeToggle",
+        "NvimTreeFocus",
         "NvimTreeFindFile",
         "NvimTreeOpen",
         "NvimTreeClose",

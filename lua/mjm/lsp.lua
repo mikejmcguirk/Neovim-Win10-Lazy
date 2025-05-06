@@ -19,6 +19,7 @@ local virtual_text_cfg = {
         severity = {
             min = vim.diagnostic.severity.HINT,
         },
+        current_line = true,
     },
     virtual_lines = false,
 }
