@@ -3,17 +3,10 @@
 local ut = require("mjm.utils")
 
 local border = "single" -- "FloatBorder" highlight group
-local virt_lines_cfg = { current_line = true }
 
-local default_diag_cfg = {
+local main_diag_cfg = {
     severity_sort = true,
     float = { source = "always", border = border },
-    -- virtual_text = {
-    --     severity = {
-    --         min = vim.diagnostic.severity.HINT,
-    --     },
-    -- },
-    virtual_lines = virt_lines_cfg,
     signs = {
         severity = {
             min = vim.diagnostic.severity.HINT,
@@ -21,14 +14,31 @@ local default_diag_cfg = {
     },
 }
 
+local virtual_text_cfg = {
+    virtual_text = {
+        severity = {
+            min = vim.diagnostic.severity.HINT,
+        },
+    },
+    virtual_lines = false,
+}
+
+local virtual_lines_cfg = {
+    virtual_text = false,
+    virtual_lines = { current_line = true },
+}
+
+local default_diag_cfg = vim.tbl_extend("force", main_diag_cfg, virtual_text_cfg)
+local alt_diag_cfg = vim.tbl_extend("force", main_diag_cfg, virtual_lines_cfg)
+
 vim.diagnostic.config(default_diag_cfg)
 
 local toggle_virtual_lines = function()
     local current_config = vim.diagnostic.config() or {}
     if current_config.virtual_lines == false then
-        vim.diagnostic.config({ virtual_lines = virt_lines_cfg })
+        vim.diagnostic.config(alt_diag_cfg)
     else
-        vim.diagnostic.config({ virtual_lines = false })
+        vim.diagnostic.config(default_diag_cfg)
     end
 end
 
