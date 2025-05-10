@@ -1,5 +1,7 @@
 -- TODO: Should try blink.cmp at some point
 local cmp_config = function()
+    vim.keymap.set("i", "<C-y>", "<nop>")
+
     vim.opt.completeopt = { "menu", "menuone", "noselect" }
 
     local cmp = require("cmp")
@@ -43,6 +45,7 @@ local cmp_config = function()
             -- ["<C-y>"] = cmp.mapping.confirm({ select = true }),
             -- Similar to the "Copilot pause" I've found myself having an autocomplete pause
             -- Autocomplete should still show options to ensure correctness, but then I can
+            -- NOTE: <C-y> is also set to <nop> at the start of the config function
             -- type them out
             ["<C-y>"] = nil,
             ["<C-e>"] = cmp.mapping.abort(),
