@@ -1,7 +1,5 @@
 -- TODO: Should try blink.cmp at some point
 local cmp_config = function()
-    vim.keymap.set("i", "<C-y>", "<nop>")
-
     vim.opt.completeopt = { "menu", "menuone", "noselect" }
 
     local cmp = require("cmp")
@@ -36,24 +34,23 @@ local cmp_config = function()
     }
 
     cmp.setup({
-        mapping = cmp.mapping.preset.insert({
-            ["<C-d>"] = cmp.mapping.scroll_docs(4),
-            ["<C-u>"] = cmp.mapping.scroll_docs(-4),
+        mapping = {
+            ["<C-d>"] = cmp.mapping(cmp.mapping.scroll_docs(4)),
+            ["<C-u>"] = cmp.mapping(cmp.mapping.scroll_docs(-4)),
 
-            ["<C-p>"] = cmp.mapping.select_prev_item(cmp_select),
-            ["<C-n>"] = cmp.mapping.select_next_item(cmp_select),
-            -- ["<C-y>"] = cmp.mapping.confirm({ select = true }),
-            -- Similar to the "Copilot pause" I've found myself having an autocomplete pause
-            -- Autocomplete should still show options to ensure correctness, but then I can
-            -- NOTE: <C-y> is also set to <nop> at the start of the config function
-            -- type them out
-            ["<C-y>"] = nil,
-            ["<C-e>"] = cmp.mapping.abort(),
+            ["<C-p>"] = cmp.mapping(cmp.mapping.select_prev_item(cmp_select), { "i" }),
+            ["<C-n>"] = cmp.mapping(cmp.mapping.select_next_item(cmp_select), { "i" }),
 
-            ["<Tab>"] = nil,
-            ["<S-Tab>"] = nil,
-            ["<CR>"] = nil,
-        }),
+            -- Similar to the "Copilot pause" I've found myself experiencing an autocomplete pause
+            -- Autocompletes will still display but need to be manually typed
+            -- ["<C-y>"] = cmp.mapping(cmp.mapping.confirm({select = true}), {"i"}),
+            ["<C-y>"] = cmp.mapping(nil),
+            ["<C-e>"] = cmp.mapping(cmp.mapping.abort()),
+
+            ["<Tab>"] = cmp.mapping(nil),
+            ["<S-Tab>"] = cmp.mapping(nil),
+            ["<CR>"] = cmp.mapping(nil),
+        },
         snippet = {
             expand = function(args)
                 vim.fn["vsnip#anonymous"](args.body)
