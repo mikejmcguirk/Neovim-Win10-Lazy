@@ -40,7 +40,11 @@ local cmp_config = function()
 
             ["<C-p>"] = cmp.mapping.select_prev_item(cmp_select),
             ["<C-n>"] = cmp.mapping.select_next_item(cmp_select),
-            ["<C-y>"] = cmp.mapping.confirm({ select = true }),
+            -- ["<C-y>"] = cmp.mapping.confirm({ select = true }),
+            -- Similar to the "Copilot pause" I've found myself having an autocomplete pause
+            -- Autocomplete should still show options to ensure correctness, but then I can
+            -- type them out
+            ["<C-y>"] = nil,
             ["<C-e>"] = cmp.mapping.abort(),
 
             ["<Tab>"] = nil,
