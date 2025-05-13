@@ -44,7 +44,7 @@ local hor_cursor = "v-r:hor100-" .. blink_setting
 local gcr_string = block_cursor .. "," .. ver_cursor .. "," .. hor_cursor
 vim.cmd("set gcr=" .. gcr_string)
 
-vim.opt.scrolloff = 6
+vim.opt.scrolloff = Scrolloff_Val
 vim.opt.startofline = true
 vim.opt.jumpoptions:append("view") -- Restore views when possible
 

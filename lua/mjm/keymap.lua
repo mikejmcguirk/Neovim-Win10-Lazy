@@ -210,6 +210,18 @@ end, { expr = true, silent = true })
 vim.keymap.set({ "n", "x" }, "<C-u>", "<C-u>zz", { silent = true })
 vim.keymap.set({ "n", "x" }, "<C-d>", "<C-d>zz", { silent = true })
 
+vim.keymap.set("n", "zT", function()
+    vim.opt.scrolloff = 0
+    vim.cmd("norm! zt")
+    vim.opt.scrolloff = Scrolloff_Val
+end)
+
+vim.keymap.set("n", "zB", function()
+    vim.opt.scrolloff = 0
+    vim.cmd("norm! zb")
+    vim.opt.scrolloff = Scrolloff_Val
+end)
+
 -- Not silent so that the search prompting displays properly
 vim.keymap.set("n", "/", "ms/")
 vim.keymap.set("n", "?", "ms?")
