@@ -28,6 +28,8 @@ for _, map in pairs({ "i", "a", "A" }) do
     end, { silent = true, expr = true })
 end
 
+vim.keymap.set("n", "v", "mvv", { silent = true })
+
 vim.keymap.set("x", "q", "<Nop>")
 vim.keymap.set("n", "Q", "<nop>")
 vim.keymap.set("n", "gQ", "<nop>")
@@ -221,6 +223,8 @@ vim.keymap.set("n", "zB", function()
     vim.cmd("norm! zb")
     vim.opt.scrolloff = Scrolloff_Val
 end)
+
+vim.keymap.set("n", "'", "`")
 
 -- Not silent so that the search prompting displays properly
 vim.keymap.set("n", "/", "ms/")
