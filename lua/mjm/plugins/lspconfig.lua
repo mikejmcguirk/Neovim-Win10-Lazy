@@ -47,6 +47,7 @@ return {
                                     "E202",
                                     "E203", -- Whitespace before ':' (Contradicts ruff formatter)
                                     "E211",
+                                    "E225", -- Missing whitespace around operator
                                     "E226", -- Missing whitespace around arithmetic operator
                                     "E261",
                                     "E262",
