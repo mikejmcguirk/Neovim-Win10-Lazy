@@ -49,6 +49,7 @@ return {
                                     "E211",
                                     "E225", -- Missing whitespace around operator
                                     "E226", -- Missing whitespace around arithmetic operator
+                                    "E231", -- Missing whitespace after ,
                                     "E261",
                                     "E262",
                                     "E265",
