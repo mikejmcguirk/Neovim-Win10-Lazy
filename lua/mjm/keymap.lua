@@ -33,6 +33,7 @@ end
 
 vim.keymap.set("n", "v", "mvv", { silent = true })
 
+vim.keymap.set("n", "s", "<Nop>")
 vim.keymap.set("x", "q", "<Nop>")
 vim.keymap.set("n", "Q", "<nop>")
 vim.keymap.set("n", "gQ", "<nop>")

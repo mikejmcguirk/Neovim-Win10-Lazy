@@ -185,7 +185,7 @@ return {
             if status then
                 -- For reasons I'm unsure of, if you PasteImg, then PasteImg again without saving,
                 -- the previously pasted image might be contain no data, even though it's
-                -- saved in assets. Have not seen this occur if you save after every PasteImg
+                -- saved in assets. Seems to happen less if you save after every PasteImg
                 vim.cmd("silent up")
                 return
             end
