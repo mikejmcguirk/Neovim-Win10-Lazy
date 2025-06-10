@@ -1,7 +1,10 @@
 return {
     "nvim-treesitter/nvim-treesitter",
     build = ":TSUpdate",
-    event = { "BufReadPre", "BufNewFile" },
+    lazy = false,
+    -- TODO: This will be replaced by a new version. Holding for now because it is not
+    -- compatible with text objects
+    branch = "master",
     dependencies = {
         "nvim-treesitter/nvim-treesitter-textobjects",
     },
