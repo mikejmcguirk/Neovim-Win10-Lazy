@@ -150,8 +150,8 @@ return {
         vim.keymap.set("n", "<leader>sr", "<cmd>ObsidianRename<cr>")
         -- TODO Make work in Windows as well
         vim.keymap.set("n", "<leader>si", function()
-            local current_file = vim.api.nvim_buf_get_name(0) ---@type string
-            local current_file_name = vim.fn.fnamemodify(current_file, ":t:r") ---@type string
+            local cur_buf_name = vim.api.nvim_buf_get_name(0) ---@type string
+            local cur_file_name = vim.fn.fnamemodify(cur_buf_name, ":t:r") ---@type string
 
             ---@type string
             local cur_workspace = obsidian.get_client().current_workspace.root.filename
@@ -162,25 +162,45 @@ return {
             end
 
             -- TODO: Don't think this would work on Windows
-            local pattern = img_dir .. "/" .. current_file_name .. "*.png" ---@type string
+            local pattern = img_dir .. "/" .. cur_file_name .. "*.png" ---@type string
             local files = vim.fn.glob(pattern, false, true) ---@type table
             local count = #files ---@type integer
 
-            local padded_count = string.format("%02d", count) ---@type string
-            local filename = current_file_name .. "_" .. padded_count ---@type string
+            local padded_count = string.format("%03d", count) ---@type string
+            local filename = cur_file_name .. "_" .. padded_count ---@type string
 
+            local made_newline = false
             if not string.match(vim.api.nvim_get_current_line(), "^%s*$") then
                 -- If you use feedkeys to input o<esc> for some reason it runs async/after
                 -- the ObsidianPasteImg cmd even though it's supposed to be blocking
                 vim.cmd("norm! o")
                 vim.cmd("stopinsert")
+                made_newline = true
             end
 
-            vim.cmd("ObsidianPasteImg " .. filename)
-            -- For reasons I'm unsure of, if you PasteImg, then PasteImg again without saving,
-            -- the previously pasted image might be contain no data, even though it's
-            -- saved in assets. Have not seen this occur if you save after every PasteImg
-            vim.cmd("silent up")
+            local status, result = pcall(function()
+                vim.cmd("ObsidianPasteImg " .. filename)
+            end)
+
+            if status then
+                -- For reasons I'm unsure of, if you PasteImg, then PasteImg again without saving,
+                -- the previously pasted image might be contain no data, even though it's
+                -- saved in assets. Have not seen this occur if you save after every PasteImg
+                vim.cmd("silent up")
+                return
+            end
+
+            if made_newline then
+                -- It would be better in theory to check if there's an image in the clipboard
+                -- first, but that function is not exposed, so just unwind on failure
+                vim.cmd("norm! u")
+            end
+
+            vim.api.nvim_echo(
+                { { result or "Unknown error with ObsidianPasteImg" } },
+                true,
+                { err = true }
+            )
         end)
 
         ---@return string
