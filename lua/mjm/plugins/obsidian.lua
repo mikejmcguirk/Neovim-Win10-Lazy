@@ -155,11 +155,13 @@ return {
 
             ---@type string
             local cur_workspace = obsidian.get_client().current_workspace.root.filename
+            -- TODO: Don't think this would work on Windows
             local img_dir = cur_workspace .. "/" .. img_folder ---@type string
             if vim.fn.isdirectory(img_dir) == 0 then
                 vim.fn.mkdir(img_dir, "p")
             end
 
+            -- TODO: Don't think this would work on Windows
             local pattern = img_dir .. "/" .. current_file_name .. "*.png" ---@type string
             local files = vim.fn.glob(pattern, false, true) ---@type table
             local count = #files ---@type integer
@@ -167,7 +169,18 @@ return {
             local padded_count = string.format("%02d", count) ---@type string
             local filename = current_file_name .. "_" .. padded_count ---@type string
 
+            if not string.match(vim.api.nvim_get_current_line(), "^%s*$") then
+                -- If you use feedkeys to input o<esc> for some reason it runs async/after
+                -- the ObsidianPasteImg cmd even though it's supposed to be blocking
+                vim.cmd("norm! o")
+                vim.cmd("stopinsert")
+            end
+
             vim.cmd("ObsidianPasteImg " .. filename)
+            -- For reasons I'm unsure of, if you PasteImg, then PasteImg again without saving,
+            -- the previously pasted image might be contain no data, even though it's
+            -- saved in assets. Have not seen this occur if you save after every PasteImg
+            vim.cmd("silent up")
         end)
 
         ---@return string

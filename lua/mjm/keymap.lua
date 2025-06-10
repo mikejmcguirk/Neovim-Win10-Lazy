@@ -13,6 +13,9 @@ vim.keymap.set({ "x", "o" }, "<C-c>", "<esc>", { silent = true })
 -- character no longer can exist, but Neovim still has you scrolled to the side
 vim.keymap.set("i", "<C-c>", "<esc>ze")
 
+-- TODO: It might be good to imap <cr> to something like <cr><esc>zea but it contradicts with an
+-- autopairs mapping. need to investigate
+
 vim.keymap.set("n", "<C-c>", function()
     return ut.clear_clutter()
 end, { expr = true, silent = true })
