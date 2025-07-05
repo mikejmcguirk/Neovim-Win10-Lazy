@@ -38,6 +38,7 @@ for _, map in pairs({ "i", "a", "A" }) do
 end
 
 vim.keymap.set("n", "v", "mvv", { silent = true })
+vim.keymap.set("n", "V", "mvV", { silent = true })
 
 vim.keymap.set("n", "s", "<Nop>")
 vim.keymap.set("x", "q", "<Nop>")
@@ -127,10 +128,6 @@ local is_tmux_zoomed = function()
     return vim.fn.system("tmux display-message -p '#{window_zoomed_flag}'") == "1\n"
 end
 
--- vim.keymap.set("n", "<esc>", function()
---     print(is_tmux_zoomed())
--- end)
-
 local tmux_cmd_map = {
     ["h"] = "L",
     ["j"] = "D",
@@ -161,7 +158,6 @@ local win_move_tmux = function(nvim_cmd)
 
     local start_win = vim.fn.winnr() ---@type integer
     vim.cmd("wincmd " .. nvim_cmd)
-
     if vim.fn.winnr() ~= start_win then
         return
     end
@@ -175,20 +171,29 @@ for k, _ in pairs(tmux_cmd_map) do
     end)
 end
 
--- local function win_move_wezterm(key, dir)
---     local curwin = vim.fn.winnr()
---     vim.cmd("wincmd " .. key)
---     if curwin == vim.fn.winnr() then
---         vim.fn.system("wezterm cli activate-pane-direction " .. dir)
---     end
--- end
+local resize_win = function(cmd)
+    if vim.fn.win_gettype(vim.api.nvim_get_current_win()) == "" then
+        vim.cmd(cmd)
+    end
+end
 
--- TODO: This should be a different map, but I can't think of a better one
+-- TODO: These should be a different map, but I can't think of a better one
 -- Using alt feels like an anti-pattern
-vim.keymap.set("n", "<M-j>", "<cmd>resize -2<CR>", { silent = true })
-vim.keymap.set("n", "<M-k>", "<cmd>resize +2<CR>", { silent = true })
-vim.keymap.set("n", "<M-h>", "<cmd>vertical resize -2<CR>", { silent = true })
-vim.keymap.set("n", "<M-l>", "<cmd>vertical resize +2<CR>", { silent = true })
+vim.keymap.set("n", "<M-j>", function()
+    resize_win("silent resize -2")
+end)
+
+vim.keymap.set("n", "<M-k>", function()
+    resize_win("silent resize +2")
+end)
+
+vim.keymap.set("n", "<M-h>", function()
+    resize_win("silent vertical resize -2")
+end)
+
+vim.keymap.set("n", "<M-l>", function()
+    resize_win("silent vertical resize +2")
+end)
 
 vim.keymap.set("x", "<C-w>", "<nop>")
 
