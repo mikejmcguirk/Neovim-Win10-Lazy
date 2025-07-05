@@ -17,10 +17,16 @@ vim.keymap.set("i", "<C-c>", "<esc>ze")
 -- autopairs mapping. need to investigate
 
 vim.keymap.set("n", "<C-c>", function()
-    return ut.clear_clutter()
+    vim.api.nvim_exec2("echo ''", {})
+    vim.api.nvim_exec2("noh", {})
+    vim.lsp.buf.clear_references()
+
+    -- Allows <C-c> to exit the start of commands with a count
+    -- Eliminates default command line nag
+    return "<esc>"
 end, { expr = true, silent = true })
 
--- "S" enters insert with the proper indent. "I" purposefully left on default behavior
+-- "S" enters insert with the proper indent. "I" left on default behavior
 for _, map in pairs({ "i", "a", "A" }) do
     vim.keymap.set("n", map, function()
         if string.match(vim.api.nvim_get_current_line(), "^%s*$") then
@@ -54,20 +60,20 @@ vim.keymap.set("n", "ZX", function()
     local status, result = pcall(function()
         vim.api.nvim_exec2("silent up | so", {})
     end)
+
     if status then
         return
     end
 
-    vim.api.nvim_echo({ { result or "Unknown error" } }, true, { err = true })
+    vim.api.nvim_echo({ { result or "Unknown error on save and source" } }, true, { err = true })
 end)
 
 for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
     vim.keymap.set("n", map, function()
-        local current_buf = vim.api.nvim_get_current_buf()
+        local cur_buf = vim.api.nvim_get_current_buf()
         local buf_win_count = 0
-
         for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-            if vim.api.nvim_win_get_buf(win) == current_buf then
+            if vim.api.nvim_win_get_buf(win) == cur_buf then
                 buf_win_count = buf_win_count + 1
             end
         end

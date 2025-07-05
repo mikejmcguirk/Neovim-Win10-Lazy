@@ -22,10 +22,9 @@ vim.opt.numberwidth = 5
 vim.opt.signcolumn = "yes:1"
 vim.opt.colorcolumn = "100"
 
-local default_tab_width = 4
-vim.opt.tabstop = default_tab_width
-vim.opt.softtabstop = default_tab_width
-vim.opt.shiftwidth = default_tab_width
+vim.opt.tabstop = 4
+vim.opt.softtabstop = 4
+vim.opt.shiftwidth = 4
 vim.opt.expandtab = true
 vim.opt.shiftround = true
 
@@ -34,6 +33,8 @@ vim.opt.fileformats = "unix,dos" -- Override \r\n on Windows
 vim.opt.lazyredraw = false -- Causes unpredictable problems
 vim.opt.termguicolors = true
 vim.opt.showmode = false
+vim.opt.modelines = 1
+
 -- Don't use. Sets arbitrary border around zen mode display
 -- vim.opt.winborder = "single"
 
@@ -57,19 +58,15 @@ vim.opt.splitbelow = true
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
 vim.opt.incsearch = false -- Prevent screen shifting while entering search/substitute patterns
-vim.fn.setreg("/", nil)
+vim.fn.setreg("/", nil) -- Only way I know to clear previous history
 
-vim.opt.modelines = 1
-
--- Prevents disabled <C-w> and Z mappings from becoming active again after timeout
+-- Prevents disabled mappings from becoming active again after timeout
 vim.opt.timeout = false
 
 vim.opt.swapfile = false
 vim.opt.backup = false
 vim.opt.undofile = true
 vim.opt.updatetime = 250
--- Previous windows undo path
--- data_path = os.getenv("USERPROFILE") .. "\\AppData\\Local\\nvim-data\\undodir"
 
 vim.opt.list = true
 vim.opt.listchars = { tab = "<–>", extends = "»", precedes = "«", nbsp = "␣" }
@@ -84,7 +81,6 @@ vim.opt.spell = false
 vim.opt.spelllang = "en_us" -- If spell is turned on by an ftplugin file
 
 vim.opt.cursorline = true
-
 local cursorline_control = vim.api.nvim_create_augroup("cursorline_control", { clear = true })
 
 ---@param event string
