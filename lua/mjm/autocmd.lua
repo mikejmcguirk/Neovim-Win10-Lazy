@@ -24,20 +24,12 @@ vim.api.nvim_create_autocmd("InsertEnter", {
     group = match_control,
     pattern = "*",
     callback = function()
-        local get_match_id = function(match_group)
-            for _, match in ipairs(vim.fn.getmatches()) do
-                if match.group == match_group then
-                    return match.id
-                end
+        for _, match in ipairs(vim.fn.getmatches()) do
+            if match.group == "EolSpace" then
+                vim.fn.matchdelete(match.id)
+                return
             end
         end
-
-        local match_id = get_match_id("EolSpace")
-        if not match_id then
-            return
-        end
-
-        vim.fn.matchdelete(match_id)
     end,
 })
 

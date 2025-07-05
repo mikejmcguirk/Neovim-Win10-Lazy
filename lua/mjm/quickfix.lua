@@ -15,9 +15,9 @@ end
 local is_qf_empty = function()
     if #vim.fn.getqflist() == 0 then
         return true
+    else
+        return false
     end
-
-    return false
 end
 
 vim.keymap.set("n", "<leader>qt", function()
@@ -33,24 +33,24 @@ vim.keymap.set("n", "<leader>ql", function()
     vim.fn.setqflist({})
 end)
 
+local severity_map = {
+    [vim.diagnostic.severity.ERROR] = "E",
+    [vim.diagnostic.severity.WARN] = "W",
+    [vim.diagnostic.severity.INFO] = "I",
+    [vim.diagnostic.severity.HINT] = "H",
+} ---@type string
+
 ---@param raw_diag table
 ---@return table
 local convert_diag = function(raw_diag)
-    local severity_map = {
-        [vim.diagnostic.severity.ERROR] = "E",
-        [vim.diagnostic.severity.WARN] = "W",
-        [vim.diagnostic.severity.INFO] = "I",
-        [vim.diagnostic.severity.HINT] = "H",
-    } ---@type string
-
     local diag_source = raw_diag.source .. ": " or "" ---@type string
+    local diag_message = raw_diag.message or "" ---@type string
     local diag_code = "" ---@type string
     if raw_diag.code then
         diag_code = "[" .. raw_diag.code .. "] "
     end
-    local diag_message = raw_diag.message or "" ---@type string
 
-    local converted_diag = {
+    return {
         bufnr = raw_diag.bufnr,
         filename = vim.fn.bufname(raw_diag.bufnr),
         lnum = raw_diag.lnum + 1,
@@ -59,9 +59,7 @@ local convert_diag = function(raw_diag)
         end_col = raw_diag.end_col,
         text = diag_source .. diag_code .. diag_message,
         type = severity_map[raw_diag.severity],
-    } ---@type table
-
-    return converted_diag
+    }
 end
 
 ---@param opts? table
@@ -135,32 +133,19 @@ local cfilter_wrapper = function(opts)
     end
 
     opts = vim.deepcopy(opts or {}, true)
-
-    ---@return string
-    local get_prompt = function()
-        if opts.keep then
-            return "Pattern to keep: "
-        end
-
-        return "Pattern to remove: "
+    local pattern = nil ---@type string
+    local bang = true ---@type boolean
+    if opts.keep then
+        pattern = ut.get_input("Pattern to keep: ")
+        bang = false
+    else
+        pattern = ut.get_input("Pattern to remove: ")
     end
 
-    local prompt = get_prompt() ---@type string
-    local pattern = ut.get_input(prompt) ---@type string
     if pattern == "" then
         return
     end
 
-    ---@return boolean
-    local check_bang = function()
-        if opts.keep then
-            return false
-        end
-
-        return true
-    end
-
-    local bang = check_bang() ---@type boolean
     vim.api.nvim_cmd({ cmd = "Cfilter", bang = bang, args = { pattern } }, {})
 end
 
