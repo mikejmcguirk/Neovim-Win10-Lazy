@@ -115,6 +115,8 @@ vim.keymap.set("n", "u", function()
     vim.cmd("silent norm! u")
 end, { silent = true })
 
+vim.keymap.set("n", "U", "<nop>")
+
 vim.keymap.set("n", "<C-r>", function()
     vim.cmd('silent exec "norm! \\<C-r>"')
 end, { silent = true })
@@ -228,15 +230,15 @@ vim.keymap.set({ "n", "x" }, "<C-u>", "<C-u>zz", { silent = true })
 vim.keymap.set({ "n", "x" }, "<C-d>", "<C-d>zz", { silent = true })
 
 vim.keymap.set("n", "zT", function()
-    vim.opt.scrolloff = 0
+    vim.opt_local.scrolloff = 0
     vim.cmd("norm! zt")
-    vim.opt.scrolloff = Scrolloff_Val
+    vim.opt_local.scrolloff = Scrolloff_Val
 end)
 
 vim.keymap.set("n", "zB", function()
-    vim.opt.scrolloff = 0
+    vim.opt_local.scrolloff = 0
     vim.cmd("norm! zb")
-    vim.opt.scrolloff = Scrolloff_Val
+    vim.opt_local.scrolloff = Scrolloff_Val
 end)
 
 vim.keymap.set("n", "'", "`")
@@ -303,6 +305,7 @@ for _, map in pairs(cap_motions_vis) do
     end, { silent = true, expr = true })
 end
 
+-- Don't want to confuse muscle memory for "u"
 vim.keymap.set("x", "u", "<nop>")
 vim.keymap.set("x", "U", "<nop>")
 
@@ -314,15 +317,25 @@ vim.keymap.set({ "n", "x" }, "x", '"_x', { silent = true })
 vim.keymap.set("n", "X", '"_X', { silent = true })
 vim.keymap.set("x", "X", "<nop>", { silent = true })
 
-vim.keymap.set("x", "D", "<nop>", { silent = true })
 vim.keymap.set("n", "d^", '^dg_"_dd', { silent = true }) -- Does not yank newline character
 vim.keymap.set("n", "dD", "ggdG", { silent = true })
 vim.keymap.set("n", "dK", "DO<esc>p==", { silent = true })
+vim.keymap.set("x", "D", "<nop>", { silent = true })
 
 vim.keymap.set("n", "<leader>d", '"_d', { silent = true })
 vim.keymap.set("n", "<leader>D", '"_D', { silent = true })
 vim.keymap.set("n", "<leader>dD", 'gg"_dG', { silent = true })
 vim.keymap.set("x", "<leader>D", "<nop>", { silent = true })
+
+vim.api.nvim_create_autocmd("TextChanged", {
+    group = vim.api.nvim_create_augroup("delete_clear", { clear = true }),
+    pattern = "*",
+    callback = function()
+        if vim.v.operator == "d" then
+            vim.api.nvim_exec2("echo ''", {})
+        end
+    end,
+})
 
 vim.keymap.set("n", "c^", "^cg_", { silent = true }) -- Does not yank newline character
 vim.keymap.set("n", "cC", "ggcG", { silent = true })
@@ -331,6 +344,17 @@ vim.keymap.set("x", "C", "<nop>", { silent = true })
 vim.keymap.set({ "n", "x" }, "<leader>c", '"_c', { silent = true })
 vim.keymap.set("n", "<leader>C", '"_C', { silent = true })
 vim.keymap.set("n", "<leader>cC", 'gg"_cG', { silent = true })
+vim.keymap.set("x", "<leader>C", "<nop>", { silent = true })
+
+vim.api.nvim_create_autocmd("InsertEnter", {
+    group = vim.api.nvim_create_augroup("change_clear", { clear = true }),
+    pattern = "*",
+    callback = function()
+        if vim.v.operator == "c" then
+            vim.api.nvim_exec2("echo ''", {})
+        end
+    end,
+})
 
 vim.api.nvim_create_autocmd("TextYankPost", {
     group = vim.api.nvim_create_augroup("yank_reset_cursor", { clear = true }),
@@ -370,26 +394,6 @@ for _, obj in pairs(startline_objects) do
     vim.keymap.set("n", "c" .. obj, "hv" .. obj .. "c", { silent = true })
     vim.keymap.set("n", "<leader>c" .. obj, "hv" .. obj .. '"_c', { silent = true })
 end
-
-vim.api.nvim_create_autocmd("TextChanged", {
-    group = vim.api.nvim_create_augroup("delete_clear", { clear = true }),
-    pattern = "*",
-    callback = function()
-        if vim.v.operator == "d" then
-            vim.api.nvim_exec2("echo ''", {})
-        end
-    end,
-})
-
-vim.api.nvim_create_autocmd("InsertEnter", {
-    group = vim.api.nvim_create_augroup("change_clear", { clear = true }),
-    pattern = "*",
-    callback = function()
-        if vim.v.operator == "c" then
-            vim.api.nvim_exec2("echo ''", {})
-        end
-    end,
-})
 
 -------------
 -- Pasting --
