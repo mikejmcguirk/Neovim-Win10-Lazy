@@ -116,9 +116,6 @@ vim.keymap.set("n", "<leader>qe", function()
     diags_to_qf({ err_only = true })
 end)
 
-vim.cmd("packadd cfilter")
-
--- NOTE: cfilter only works on the "text" portion of the qf entry
 ---@param opts? table
 ---@return nil
 local cfilter_wrapper = function(opts)
@@ -142,11 +139,9 @@ local cfilter_wrapper = function(opts)
         pattern = ut.get_input("Pattern to remove: ")
     end
 
-    if pattern == "" then
-        return
+    if pattern ~= "" then
+        vim.api.nvim_cmd({ cmd = "Cfilter", bang = bang, args = { pattern } }, {})
     end
-
-    vim.api.nvim_cmd({ cmd = "Cfilter", bang = bang, args = { pattern } }, {})
 end
 
 vim.keymap.set("n", "<leader>qk", function()
@@ -165,8 +160,8 @@ local qf_scroll_wrapper = function(opts)
         return
     end
 
+    vim.cmd("botright copen") -- Run cmd after this to move focus to qf item
     opts = vim.deepcopy(opts or {}, true)
-    vim.api.nvim_exec2("botright copen", {})
     local status, result = pcall(function()
         if opts.prev then
             vim.cmd("cprev")
@@ -188,7 +183,6 @@ local qf_scroll_wrapper = function(opts)
         end
 
         vim.cmd("norm! zz")
-
         return
     end
 

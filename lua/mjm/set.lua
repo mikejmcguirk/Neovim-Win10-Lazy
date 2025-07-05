@@ -10,6 +10,10 @@ vim.g.loaded_tarPlugin = 1
 vim.g.loaded_gzip = 1
 vim.g.did_install_default_menus = 1
 
+-- Load useful plugins
+-- NOTE: cfilter only works on the "text" portion of the qf entry
+vim.cmd("packadd cfilter")
+
 -- Set immediately to ensure leader mappings are correct
 vim.keymap.set({ "n", "x" }, "<Space>", "<Nop>")
 vim.g.mapleader = " "
