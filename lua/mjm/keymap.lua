@@ -491,14 +491,14 @@ local visual_move = function(opts)
 
     opts = vim.deepcopy(opts or {}, true)
     local fix_num = 0 ---@type integer
-    local offset_start = "." ---@type string
-    local offset_end = "'<" ---@type string
-    local cmd_start = "'<,'> m '<-" ---@type string
+    local offset_start = "'>" ---@type string
+    local offset_end = "." ---@type string
+    local cmd_start = "'<,'> m '>+" ---@type string
     if opts.upward then
         fix_num = 1
-        offset_start = "'>"
-        offset_end = "."
-        cmd_start = "'<,'> m '>+"
+        offset_start = "."
+        offset_end = "'<"
+        cmd_start = "'<,'> m '<-"
     end
 
     local vcount1 = vim.v.count1 ---@type integer -- Get before leaving visual mode
@@ -514,7 +514,7 @@ local visual_move = function(opts)
     local move_cmd = "silent " .. cmd_start .. move_amt ---@type string
 
     local status, result = pcall(function()
-        vim.api.nvim_exec2(move_cmd, {})
+        vim.cmd(move_cmd)
     end) ---@type boolean, unknown|nil
 
     if status then
@@ -523,9 +523,6 @@ local visual_move = function(opts)
         local end_col = #vim.api.nvim_buf_get_lines(0, end_row - 1, end_row, false)[1]
         vim.api.nvim_buf_set_mark(0, "z", end_row, end_col, {})
         vim.cmd("silent norm! `[=`z")
-    elseif type(result) == "string" and string.find(result, "E16") and vcount1 <= 1 then
-        do
-        end
     else
         vim.api.nvim_echo({ { result or "Unknown error in visual_move" } }, true, { err = true })
     end
@@ -536,7 +533,7 @@ local visual_move = function(opts)
 end
 
 vim.keymap.set("x", "J", function()
-    visual_move({ upward = false })
+    visual_move()
 end)
 
 vim.keymap.set("x", "K", function()
@@ -568,6 +565,7 @@ end
 vim.keymap.set("x", "<", function()
     visual_indent({ back = true })
 end, { silent = true })
+
 vim.keymap.set("x", ">", function()
     visual_indent()
 end, { silent = true })
