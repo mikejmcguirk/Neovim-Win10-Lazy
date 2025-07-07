@@ -19,6 +19,8 @@ vim.keymap.set({ "n", "x" }, "<Space>", "<Nop>")
 vim.g.mapleader = " "
 vim.g.maplocaleader = " "
 
+vim.opt.mouse = "a" -- Otherwise, the terminal handles mouse functionality
+
 -- On my monitors, for files under 10k lines, a centered vsplit will be on the color column
 vim.opt.number = true
 vim.opt.relativenumber = true
