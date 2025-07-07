@@ -489,32 +489,27 @@ local visual_move = function(opts)
         return
     end
 
+    vim.opt.lazyredraw = true
+    local vcount1 = vim.v.count1 ---@type integer -- Get before leaving visual mode
+    vim.cmd('exec "silent norm! \\<esc>"') -- Force update of '< and '> marks
+
     opts = vim.deepcopy(opts or {}, true)
     local fix_num = 0 ---@type integer
-    local offset_start = "'>" ---@type string
-    local offset_end = "." ---@type string
     local cmd_start = "'<,'> m '>+" ---@type string
     if opts.upward then
         fix_num = 1
-        offset_start = "."
-        offset_end = "'<"
         cmd_start = "'<,'> m '<-"
     end
 
-    local vcount1 = vim.v.count1 ---@type integer -- Get before leaving visual mode
-    vim.opt.lazyredraw = true
-    vim.api.nvim_exec2('exec "silent norm! \\<esc>"', {}) -- Force update of '< and '> marks
-
     local offset = 0 ---@type integer
-    if vcount1 > 1 then
-        offset = vim.fn.line(offset_start) - vim.fn.line(offset_end)
+    if vcount1 > 1 and opts.upward then
+        offset = vim.fn.line(".") - vim.fn.line("'<")
+    elseif vcount1 > 1 and not opts.upward then
+        offset = vim.fn.line("'>") - vim.fn.line(".")
     end
 
-    local move_amt = (vcount1 + fix_num - offset) ---@type integer
-    local move_cmd = "silent " .. cmd_start .. move_amt ---@type string
-
     local status, result = pcall(function()
-        vim.cmd(move_cmd)
+        vim.cmd("silent " .. cmd_start .. (vcount1 + fix_num - offset))
     end) ---@type boolean, unknown|nil
 
     if status then
@@ -528,7 +523,6 @@ local visual_move = function(opts)
     end
 
     vim.cmd("norm! gv")
-
     vim.opt.lazyredraw = false
 end
 
