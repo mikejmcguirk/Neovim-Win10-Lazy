@@ -2,8 +2,9 @@
 
 local ut = require("mjm.utils")
 
-local border = "single" -- "FloatBorder" highlight group
+vim.lsp.set_log_level("ERROR")
 
+local border = "single" -- "FloatBorder" highlight group
 local main_diag_cfg = {
     severity_sort = true,
     float = { source = "always", border = border },
@@ -31,24 +32,17 @@ local virtual_lines_cfg = {
 
 local default_diag_cfg = vim.tbl_extend("force", main_diag_cfg, virtual_text_cfg)
 local alt_diag_cfg = vim.tbl_extend("force", main_diag_cfg, virtual_lines_cfg)
-
 vim.diagnostic.config(default_diag_cfg)
-
-local toggle_virtual_lines = function()
+vim.keymap.set("n", "grd", function()
     local current_config = vim.diagnostic.config() or {}
     if current_config.virtual_lines == false then
         vim.diagnostic.config(alt_diag_cfg)
     else
         vim.diagnostic.config(default_diag_cfg)
     end
-end
-
-vim.keymap.set("n", "grd", toggle_virtual_lines)
-
-vim.lsp.set_log_level("ERROR")
+end)
 
 local lsp_group = vim.api.nvim_create_augroup("LSP_Augroup", { clear = true })
-
 vim.api.nvim_create_autocmd("LspAttach", {
     group = lsp_group,
     callback = function(ev)
