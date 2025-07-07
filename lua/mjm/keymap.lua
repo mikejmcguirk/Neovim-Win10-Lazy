@@ -489,42 +489,29 @@ local visual_move = function(opts)
         return
     end
 
-    vim.opt.lazyredraw = true
-
     opts = vim.deepcopy(opts or {}, true)
-    ---@return table
-    local get_pieces = function()
-        if opts.upward then
-            return {
-                fix_num = 1,
-                offset_start = ".",
-                offset_end = "'<",
-                cmd_start = "'<,'> m '<-",
-            }
-        else
-            return {
-                fix_num = 0,
-                offset_start = "'>",
-                offset_end = ".",
-                cmd_start = "'<,'> m '>+",
-            }
-        end
+    local fix_num = 0 ---@type integer
+    local offset_start = "." ---@type string
+    local offset_end = "'<" ---@type string
+    local cmd_start = "'<,'> m '<-" ---@type string
+    if opts.upward then
+        fix_num = 1
+        offset_start = "'>"
+        offset_end = "."
+        cmd_start = "'<,'> m '>+"
     end
-    local pieces = get_pieces() ---@type table
 
     local vcount1 = vim.v.count1 ---@type integer -- Get before leaving visual mode
+    vim.opt.lazyredraw = true
     vim.api.nvim_exec2('exec "silent norm! \\<esc>"', {}) -- Force update of '< and '> marks
 
-    ---@return integer -- Calculate so that rnu jumps are correct
-    local get_offset = function()
-        if vcount1 <= 1 then
-            return 0
-        else
-            return vim.fn.line(pieces.offset_start) - vim.fn.line(pieces.offset_end)
-        end
+    local offset = 0 ---@type integer
+    if vcount1 > 1 then
+        offset = vim.fn.line(offset_start) - vim.fn.line(offset_end)
     end
-    local move_amt = (vcount1 + pieces.fix_num - get_offset()) ---@type integer
-    local move_cmd = "silent " .. pieces.cmd_start .. move_amt ---@type string
+
+    local move_amt = (vcount1 + fix_num - offset) ---@type integer
+    local move_cmd = "silent " .. cmd_start .. move_amt ---@type string
 
     local status, result = pcall(function()
         vim.api.nvim_exec2(move_cmd, {})
@@ -535,8 +522,7 @@ local visual_move = function(opts)
         ---@type integer
         local end_col = #vim.api.nvim_buf_get_lines(0, end_row - 1, end_row, false)[1]
         vim.api.nvim_buf_set_mark(0, "z", end_row, end_col, {})
-        vim.api.nvim_exec2("silent norm! `[=`z", {})
-    -- Trying to move text off the screen
+        vim.cmd("silent norm! `[=`z")
     elseif type(result) == "string" and string.find(result, "E16") and vcount1 <= 1 then
         do
         end
@@ -544,7 +530,7 @@ local visual_move = function(opts)
         vim.api.nvim_echo({ { result or "Unknown error in visual_move" } }, true, { err = true })
     end
 
-    vim.api.nvim_exec2("norm! gv", {})
+    vim.cmd("norm! gv")
 
     vim.opt.lazyredraw = false
 end
@@ -552,30 +538,38 @@ end
 vim.keymap.set("x", "J", function()
     visual_move({ upward = false })
 end)
+
 vim.keymap.set("x", "K", function()
     visual_move({ upward = true })
 end)
 
----@param direction string
+-- Done using a function to prevent nag when shifting multiple lines
+---@param opts? table
 ---@return nil
-local visual_indent = function(direction)
+local visual_indent = function(opts)
     vim.opt.lazyredraw = true
     vim.opt_local.cursorline = false
 
     local count = vim.v.count1
-    vim.api.nvim_exec2('exec "silent norm! \\<esc>"', {})
-    vim.api.nvim_exec2("silent '<,'> " .. string.rep(direction, count), {})
-    vim.api.nvim_exec2("silent norm! gv", {})
+    opts = vim.deepcopy(opts or {}, true)
+    local shift = ">"
+    if opts.back then
+        shift = "<"
+    end
+
+    vim.cmd('exec "silent norm! \\<esc>"')
+    vim.cmd("silent '<,'> " .. string.rep(shift, count))
+    vim.cmd("silent norm! gv")
 
     vim.opt_local.cursorline = true
     vim.opt.lazyredraw = false
 end
 
 vim.keymap.set("x", "<", function()
-    visual_indent("<")
+    visual_indent({ back = true })
 end, { silent = true })
 vim.keymap.set("x", ">", function()
-    visual_indent(">")
+    visual_indent()
 end, { silent = true })
 
 -- I don't know a better place to put this
