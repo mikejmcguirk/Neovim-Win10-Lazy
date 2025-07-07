@@ -12,7 +12,6 @@
 
 ### Notes
 
-- Uses system environment variables (see global_env.lua) for machine-specific settings
 - When installing on Windows, avoid running as Administrator or using an elevated terminal if possible (accepting UAC prompts is still fine). If the nvim-data files have mixed ownership, permissions conflicts might cause plugins to fail
 
 ### Git Installation Notes
@@ -101,14 +100,6 @@
 
 - To be able to install the Telescope fzf extension, install CMake using the Windows binary distribution
 
-- In this config, Undotree's path is setup using Windows's built-in home directory path + "\\AppData\\local\\nvim\"
-
-- Using Neovim or configuring Undotree through a symlink is not recommended. This can cause inconsistent behavior with whether the undo histories are renamed based on their symlink path or absolute path
-
-- For this config, a "MainBrowser" environment variable can be created containing the fully-qualified name of the Browser you want Markdown Preview to use. If this variable does not exist, Markdown Preview will attempt to use your default browser
-
-- By default, this config uses the Fluoromachine "delta" theme. This can be changed by creating an "NvimTheme" environment variable. Set to "blue" to use a custom blue theme or "green" to use zenburn
-
 - To use Zig as an alternative compiler for Treesitter:
 
   - Download and unzip Zig to your preferred directory. Create a Windows PATH to the zig.exe
@@ -118,29 +109,3 @@
   - Set <code>require('nvim-treesitter.install').compilers = { "zig" }</code> above the default <code>require('nvim-treesitter.configs').setup</code> line
 
   - Restart Neovim and see if the parsers try re-installing
-
-### Windows Terminal Notes
-
-- Installing through Windows Store is easiest. Windows Terminal will be set to be your default terminal and Windows Store will automatically check for updates
-
-  - Alternatively, the project's GitHub repo contains manual installation instructions
-
-- Windows Terminal uses shift to override the mouse settings of the program running in the terminal Window. It does not currently have an option to disable this
-
-  - Otherwise, this config enables the mouse in Neovim then uses keymaps to disable the various controls, limiting mouse functionality only to Windows Terminal overrides
-
-- By default, Windows Terminal binds ctrl+v to Paste, overwriting Visual Block Mode. This binding can be removed in Windows Terminal's settings in favor of an alternative like ctrl+shift+v
-
-  - By default, Neovim also binds ctrl+q to enter Visual Block Mode. If needed, the keymap to disable this can be removed
-
-- A nerd font is required for viewing symbols (https://www.nerdfonts.com/)
-
-- After installing your font of choice, restart Windows Terminal then go to Settings to select it. Otherwise, the font will show as available but not actually be recognized
-
-- The appearance of Neovim in Windows Terminal is affected by the font size, padding, and if the scroll bar is enabled
-
-  - To most easily see the difference between Neovim itself and Windows Terminal's padding, set Windows Terminal and Neovim to have different backgrounds
-
-- The guicursor style configs work in Windows Terminal. However, any highlight settings are overwritten by Windows Terminal's cursor color settings, so no highlight configs are present here
-
-- This config might not work properly in the GUI or a different terminal environment

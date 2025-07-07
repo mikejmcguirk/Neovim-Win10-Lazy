@@ -1,4 +1,3 @@
-require("mjm.env_vars")
 require("mjm.global_vars")
 
 require("mjm.set")
