@@ -1,8 +1,6 @@
 -- TODO: Should try blink.cmp at some point
 local cmp_config = function()
-    vim.keymap.set("i", "<C-y>", "<nop>")
     vim.opt.completeopt = { "menu", "menuone", "noselect" }
-
     local cmp = require("cmp")
     local cmp_select = { behavior = cmp.SelectBehavior.Select }
 
@@ -42,11 +40,7 @@ local cmp_config = function()
             ["<C-p>"] = cmp.mapping(cmp.mapping.select_prev_item(cmp_select), { "i" }),
             ["<C-n>"] = cmp.mapping(cmp.mapping.select_next_item(cmp_select), { "i" }),
 
-            -- Similar to the "Copilot pause" I've found myself experiencing an autocomplete pause
-            -- Autocompletes will still display but need to be manually typed
-            -- NOTE: Default Nvim insert <c-y> binding is disabled at the top of this function
-            -- ["<C-y>"] = cmp.mapping(cmp.mapping.confirm({select = true}), {"i"}),
-            ["<C-y>"] = cmp.mapping(nil),
+            ["<C-y>"] = cmp.mapping(cmp.mapping.confirm({ select = true }), { "i" }),
             ["<C-e>"] = cmp.mapping(cmp.mapping.abort()),
 
             ["<Tab>"] = cmp.mapping(nil),
