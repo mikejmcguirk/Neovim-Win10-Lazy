@@ -14,7 +14,6 @@ return {
     },
     init = function()
         vim.keymap.set("n", "<leader>nt", "<cmd>NvimTreeToggle<cr>")
-        vim.keymap.set("n", "<leader>nr", "<cmd>NvimTreeRefresh<cr>")
         vim.keymap.set("n", "<leader>nf", "<cmd>NvimTreeFocus<cr>")
         vim.keymap.set("n", "<leader>ni", "<cmd>NvimTreeFindFile<cr>")
     end,

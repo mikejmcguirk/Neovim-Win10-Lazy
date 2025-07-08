@@ -18,6 +18,7 @@ return {
                             gs.nav_hunk("next")
                         end
                     end, { silent = true })
+
                     vim.keymap.set("n", "[c", function()
                         if vim.wo.diff then
                             vim.api.nvim_exec2("silent norm! [c", {})
