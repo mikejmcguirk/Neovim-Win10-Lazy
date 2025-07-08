@@ -1,3 +1,5 @@
+-- Only load if we enter a .md file in a defined Obsidian workspace
+local note_events = {}
 local workspaces = {
     {
         name = "main",
@@ -5,9 +7,7 @@ local workspaces = {
     },
 } ---@type table
 
--- Only load if we enter a .md file in a defined Obsidian workspace
-local note_events = {}
-for _, workspace in ipairs(workspaces) do
+for _, workspace in pairs(workspaces) do
     local expanded_path = vim.fn.expand(workspace.path) .. "/*.md" ---@type string
     table.insert(note_events, "BufReadPre " .. expanded_path)
     table.insert(note_events, "BufNewFile " .. expanded_path)
@@ -201,106 +201,6 @@ return {
                 true,
                 { err = true }
             )
-        end)
-
-        ---@return string
-        local get_current_file = function()
-            local current_file = vim.api.nvim_buf_get_name(0) ---@type string
-            if current_file == "" then
-                vim.notify("No file in the current buffer.", vim.log.levels.WARN)
-                return ""
-            end
-            if vim.bo.modified then
-                vim.notify("Buffer is unsaved.", vim.log.levels.WARN)
-                return ""
-            end
-
-            return current_file
-        end
-
-        ---@param files string[]
-        ---@param skip_ext string[]
-        ---@return string[]
-        local filter_files = function(files, skip_ext)
-            ---@param ext string
-            ---@return string
-            local normalize_ext = function(ext)
-                return ext:gsub("^%.", ""):lower()
-            end
-            skip_ext = vim.tbl_map(normalize_ext, skip_ext)
-
-            ---@param file string
-            ---@return boolean
-            local is_valid_ext = function(file)
-                local ext = vim.fn.fnamemodify(file, ":e"):lower() ---@type string
-                if not skip_ext[ext] then
-                    return true
-                else
-                    return false
-                end
-            end
-
-            return vim.tbl_filter(is_valid_ext, files)
-        end
-
-        ---@param opts? { goto_next: boolean, skip_ext: string[] }
-        ---@return nil
-        local next_file_in_dir = function(opts)
-            local current_file = get_current_file() ---@type string
-            if current_file == "" then
-                return
-            end
-
-            local dir = vim.fn.expand("%:p:h") ---@type string
-            local files = vim.fn.readdir(dir, function(name)
-                return vim.fn.isdirectory(dir .. "/" .. name) == 0
-            end) ---@type string[]
-            table.sort(files)
-
-            opts = vim.deepcopy(opts or {}, true)
-            local goto_next = opts.goto_next or false
-            local skip_ext = opts.skip_ext or {}
-
-            local filtered_files = filter_files(files, skip_ext) ---@type string[]
-            if #filtered_files <= 1 then
-                vim.notify("Only one valid file in the directory.", vim.log.levels.INFO)
-                return
-            end
-
-            -- Make sure we aren't trying to advance out of an invalid extension
-            local current_index = nil ---@type integer|nil
-            local current_file_name = vim.fn.fnamemodify(current_file, ":t") ---@type string
-            for idx, file in ipairs(filtered_files) do
-                if file == current_file_name then
-                    current_index = idx
-                    break
-                end
-            end
-            if not current_index then
-                vim.notify("Current file not found in directory listing.", vim.log.levels.WARN)
-                return
-            end
-
-            local next_index = nil ---@type integer|nil
-            if goto_next then
-                next_index = current_index % #filtered_files + 1
-            else
-                next_index = (current_index - 2) % #filtered_files + 1
-            end
-
-            ---@type string
-            local next_file_path = vim.fn.join({ dir, filtered_files[next_index] }, "/")
-            vim.cmd("edit " .. vim.fn.fnameescape(next_file_path))
-        end
-
-        local skip_extensions = { ".jpg", ".png", ".gif", ".bmp" } ---@type string[]
-
-        -- If it becomes an issue, make these maps check if we're in an obsidian folder
-        vim.keymap.set("n", "[o", function()
-            next_file_in_dir({ skip_extensions })
-        end)
-        vim.keymap.set("n", "]o", function()
-            next_file_in_dir({ goto_next = true, skip_extensions })
         end)
 
         vim.keymap.set("n", "<leader>sw", function()
