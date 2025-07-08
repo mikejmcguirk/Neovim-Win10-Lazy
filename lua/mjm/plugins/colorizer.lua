@@ -8,10 +8,5 @@ return {
                 names = false,
             },
         })
-
-        vim.keymap.set("n", "<leader>ot", "<cmd>ColorizerToggle<cr>")
-        vim.keymap.set("n", "<leader>oa", "<cmd>ColorizerAttachToBuffer<cr>")
-        vim.keymap.set("n", "<leader>od", "<cmd>ColorizerDetachFromBuffer<cr>")
-        vim.keymap.set("n", "<leader>or", "<cmd>ColorizerReloadAllBuffers<cr>")
     end,
 }
