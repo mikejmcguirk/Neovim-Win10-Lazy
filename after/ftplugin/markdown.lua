@@ -1,5 +1,7 @@
-local ut = require("mjm.utils")
-ut.adjust_tab_width(2)
+local width = 2
+vim.bo.tabstop = width
+vim.bo.softtabstop = width
+vim.bo.shiftwidth = width
 
 vim.opt_local.wrap = true
 vim.opt_local.spell = true

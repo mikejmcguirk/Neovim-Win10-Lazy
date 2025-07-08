@@ -22,14 +22,6 @@ M.get_input = function(prompt)
     return ""
 end
 
----@param width integer
----@return nil
-M.adjust_tab_width = function(width)
-    vim.bo.tabstop = width
-    vim.bo.softtabstop = width
-    vim.bo.shiftwidth = width
-end
-
 ---@param bufnr? integer
 ---@return boolean
 M.check_modifiable = function(bufnr)
