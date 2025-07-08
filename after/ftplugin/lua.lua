@@ -1,3 +1,5 @@
+-- Formatted with Conform (2025-07-07)
+
 local ut = require("mjm.utils")
 
 ---@param annotation string

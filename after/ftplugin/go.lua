@@ -1,3 +1,5 @@
+-- Formatted with Conform (2025-07-07)
+
 vim.opt_local.listchars = { tab = "   ", extends = "»", precedes = "«", nbsp = "␣" }
 
 -- Since Go uses tabs

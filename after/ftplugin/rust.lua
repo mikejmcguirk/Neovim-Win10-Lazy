@@ -1,3 +1,5 @@
+-- Formatted with Conform (2025-07-07)
+
 local ut = require("mjm.utils")
 
 -- TODO: Look at how windp/autopairs handles looking at treesitter

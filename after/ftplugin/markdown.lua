@@ -14,3 +14,12 @@ vim.keymap.set("i", ":", ":<C-g>u", { silent = true, buffer = true })
 vim.keymap.set("i", "-", "-<C-g>u", { silent = true, buffer = true })
 vim.keymap.set("i", "?", "?<C-g>u", { silent = true, buffer = true })
 vim.keymap.set("i", "!", "!<C-g>u", { silent = true, buffer = true })
+
+local ut = require("mjm.utils")
+vim.api.nvim_create_autocmd("BufWritePre", {
+    group = vim.api.nvim_create_augroup("md_save", { clear = true }),
+    pattern = "*.md",
+    callback = function(ev)
+        ut.fallback_formatter(ev.buf)
+    end,
+})

@@ -1,5 +1,3 @@
-local ut = require("mjm.utils")
-
 vim.opt_local.wrap = true
 vim.opt_local.spell = true
 vim.opt_local.colorcolumn = ""
@@ -12,12 +10,14 @@ vim.keymap.set("i", "-", "-<C-g>u", { silent = true, buffer = true })
 vim.keymap.set("i", "?", "?<C-g>u", { silent = true, buffer = true })
 vim.keymap.set("i", "!", "!<C-g>u", { silent = true, buffer = true })
 
+local ut = require("mjm.utils")
 local norm_pastes = {
     { "p", "p", '"' },
     { "<leader>p", '"+p', "+" },
     { "P", "P", '"' },
     { "<leader>P", '"+P', "+" },
 }
+
 -- TODO: Don't just repeat the code from keymap.lua
 -- Just repasted here for now because automated indenting in text files creates cooked results
 for _, map in pairs(norm_pastes) do
@@ -39,3 +39,11 @@ for _, map in pairs(norm_pastes) do
         vim.cmd("silent norm! `z")
     end, { silent = true })
 end
+
+vim.api.nvim_create_autocmd("BufWritePre", {
+    group = vim.api.nvim_create_augroup("text_save", { clear = true }),
+    pattern = "*.txt",
+    callback = function(ev)
+        ut.fallback_formatter(ev.buf)
+    end,
+})
