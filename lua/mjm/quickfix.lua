@@ -29,7 +29,7 @@ vim.keymap.set("n", "<leader>qt", function()
 end)
 
 vim.keymap.set("n", "<leader>ql", function()
-    vim.api.nvim_exec2("cclose", {})
+    vim.cmd("cclose")
     vim.fn.setqflist({})
 end)
 

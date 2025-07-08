@@ -9,7 +9,7 @@ vim.api.nvim_create_autocmd("TextYankPost", {
             timeout = 150,
         })
 
-        vim.api.nvim_exec2("echo ''", {})
+        vim.cmd("echo ''")
     end,
 })
 
@@ -153,7 +153,7 @@ vim.api.nvim_create_autocmd({ "BufWritePre" }, {
         local expandtab = vim.api.nvim_get_option_value("expandtab", { buf = buf })
         if expandtab then
             vim.api.nvim_set_option_value("softtabstop", shiftwidth, { buf = buf })
-            vim.api.nvim_exec2(buf .. "bufdo retab", {})
+            vim.cmd(buf .. "bufdo retab")
         end
 
         ---@param start_idx number

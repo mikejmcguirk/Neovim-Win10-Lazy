@@ -124,7 +124,7 @@ return {
         end
 
         vim.keymap.set("v", "<cr>", function()
-            vim.cmd('exec "silent norm! \\<esc>"', {}) -- Update of '< and '> marks
+            vim.cmd('exec "silent norm! \\<esc>"') -- Update of '< and '> marks
             local start_line = vim.fn.line("'<") ---@type integer
             local end_line = vim.fn.line("'>") ---@type integer
             local bad_start = start_line == 0 or start_line == nil
@@ -137,7 +137,7 @@ return {
             for i = start_line, end_line do
                 toggle_checkbox(i)
             end
-            vim.api.nvim_exec2("norm! gv", {})
+            vim.cmd("norm! gv")
         end)
 
         vim.keymap.set("n", "<leader>ss", "<cmd>ObsidianFollowLink hsplit<cr>")

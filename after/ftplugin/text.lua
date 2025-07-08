@@ -30,12 +30,12 @@ for _, map in pairs(norm_pastes) do
         vim.api.nvim_buf_set_mark(0, "z", cur_row, cur_col, {})
 
         local status, result = pcall(function()
-            vim.api.nvim_exec2("silent norm! " .. vim.v.count1 .. map[2], {})
+            vim.cmd("silent norm! " .. vim.v.count1 .. map[2])
         end) ---@type boolean, unknown|nil
         if not status then
             vim.api.nvim_echo({ { result or "Unknown error when pasting" } }, true, { err = true })
         end
 
-        vim.api.nvim_exec2("silent norm! `z", {})
+        vim.cmd("silent norm! `z")
     end, { silent = true })
 end

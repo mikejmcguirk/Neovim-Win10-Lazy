@@ -13,7 +13,7 @@ return {
 
                     vim.keymap.set("n", "]c", function()
                         if vim.wo.diff then
-                            vim.api.nvim_exec2("silent norm! ]c", {})
+                            vim.cmd("silent norm! ]c")
                         else
                             gs.nav_hunk("next")
                         end
@@ -21,7 +21,7 @@ return {
 
                     vim.keymap.set("n", "[c", function()
                         if vim.wo.diff then
-                            vim.api.nvim_exec2("silent norm! [c", {})
+                            vim.cmd("silent norm! [c")
                         else
                             gs.nav_hunk("prev")
                         end

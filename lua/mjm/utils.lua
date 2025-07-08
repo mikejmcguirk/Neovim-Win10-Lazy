@@ -63,7 +63,7 @@ M.get_indent = function(line_num)
     vim.v.lnum = line_num
     -- pcall in case treesitter errors out due to a null node
     local status, expr_indent_tbl = pcall(function()
-        vim.api.nvim_exec2("echo " .. indentexpr, { output = true })
+        vim.cmd("echo " .. indentexpr, { output = true })
     end)
 
     if status and expr_indent_tbl then

@@ -7,7 +7,7 @@ vim.keymap.set("n", "dd", function()
 
     vim.fn.setqflist(qf_list, "r")
     local reset_line_cmd = ":" .. tostring(cur_line)
-    vim.api.nvim_exec2(reset_line_cmd, {})
+    vim.cmd(reset_line_cmd)
 end, { buffer = true })
 
 vim.keymap.set("n", "<leader>qt", "<cmd>cclose<cr>", { buffer = true })

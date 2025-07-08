@@ -17,8 +17,8 @@ vim.keymap.set("i", "<C-c>", "<esc>ze")
 -- autopairs mapping. need to investigate
 
 vim.keymap.set("n", "<C-c>", function()
-    vim.api.nvim_exec2("echo ''", {})
-    vim.api.nvim_exec2("noh", {})
+    vim.cmd("echo ''")
+    vim.cmd("noh")
     vim.lsp.buf.clear_references()
 
     -- Allows <C-c> to exit the start of commands with a count
@@ -59,7 +59,7 @@ vim.keymap.set("n", "ZV", "<cmd>silent up<cr>")
 vim.keymap.set("n", "ZA", "<cmd>silent wa<cr>")
 vim.keymap.set("n", "ZX", function()
     local status, result = pcall(function()
-        vim.api.nvim_exec2("silent up | so", {})
+        vim.cmd("silent up | so")
     end)
 
     if status then
@@ -332,7 +332,7 @@ vim.api.nvim_create_autocmd("TextChanged", {
     pattern = "*",
     callback = function()
         if vim.v.operator == "d" then
-            vim.api.nvim_exec2("echo ''", {})
+            vim.cmd("echo ''")
         end
     end,
 })
@@ -351,7 +351,7 @@ vim.api.nvim_create_autocmd("InsertEnter", {
     pattern = "*",
     callback = function()
         if vim.v.operator == "c" then
-            vim.api.nvim_exec2("echo ''", {})
+            vim.cmd("echo ''")
         end
     end,
 })
@@ -360,7 +360,7 @@ vim.api.nvim_create_autocmd("TextYankPost", {
     group = vim.api.nvim_create_augroup("yank_reset_cursor", { clear = true }),
     callback = function()
         if vim.v.event.operator == "y" then
-            vim.api.nvim_exec2("norm! `z", {})
+            vim.cmd("norm! `z")
         end
     end,
 })

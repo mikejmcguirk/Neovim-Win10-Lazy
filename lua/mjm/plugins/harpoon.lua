@@ -58,7 +58,7 @@ return {
                             vim.cmd("tabedit")
                         end
 
-                        vim.api.nvim_exec2("edit " .. list_item.value, {})
+                        vim.cmd("edit " .. list_item.value)
                         bufnr = vim.fn.bufnr(list_item.value)
 
                         if set_position then
