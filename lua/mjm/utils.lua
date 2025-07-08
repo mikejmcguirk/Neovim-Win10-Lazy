@@ -8,21 +8,17 @@ M.get_input = function(prompt)
         pattern = vim.fn.input(prompt)
     end) ---@type boolean, unknown|nil
 
-    vim.api.nvim_exec2("echo ''", {})
+    vim.cmd("echo ''")
     if pattern then
         return pattern
     end
 
     if result == "Keyboard interrupt" then
-        do
-        end
-    else
-        vim.api.nvim_echo(
-            { { result or "Failed to get user input, unknown error" } },
-            true,
-            { err = true }
-        )
+        return ""
     end
+
+    local err_msg = result or "Failed to get user input, unknown error"
+    vim.api.nvim_echo({ { err_msg } }, true, { err = true })
     return ""
 end
 
@@ -39,15 +35,11 @@ end
 M.check_modifiable = function(bufnr)
     if vim.api.nvim_get_option_value("modifiable", { buf = bufnr or 0 }) then
         return true
+    else
+        local err_msg = "E21: Cannot make changes, 'modifiable' is off"
+        vim.api.nvim_echo({ { err_msg } }, true, { err = true })
+        return false
     end
-
-    vim.api.nvim_echo(
-        { { "E21: Cannot make changes, 'modifiable' is off" } },
-        true,
-        { err = true }
-    )
-
-    return false
 end
 
 ---@param line_num number -- One indexed
