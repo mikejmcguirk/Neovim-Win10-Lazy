@@ -158,11 +158,3 @@ end)
 vim.keymap.set("n", "--e", function()
     add_pragma("#[expect()]")
 end)
-
-vim.keymap.set("n", "<M-;>", function()
-    ut.norm_toggle_semicolon()
-end)
-
-vim.keymap.set("i", "<M-;>", function()
-    ut.ins_add_semicolon()
-end)

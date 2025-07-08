@@ -89,32 +89,4 @@ M.get_indent = function(line_num)
     return 0
 end
 
-M.norm_toggle_semicolon = function()
-    local line_num = vim.api.nvim_win_get_cursor(0)[1] - 1 ---@type integer
-    local line = vim.api.nvim_get_current_line() ---@type string
-
-    -- Check for trailing whitespace and remove it
-    local trail_start, trail_end = line:find("%s+$") ---@type integer|nil, integer|nil
-    if trail_start and trail_end then
-        vim.api.nvim_buf_set_text(0, line_num, trail_start - 1, line_num, trail_end, {})
-        line = vim.api.nvim_get_current_line()
-    end
-
-    if line:sub(-1) == ";" then
-        vim.api.nvim_buf_set_text(0, line_num, #line - 1, line_num, #line, {})
-    elseif line:sub(-1) ~= ";" then
-        vim.api.nvim_buf_set_text(0, line_num, #line, line_num, #line, { ";" })
-    end
-end
-
-M.ins_add_semicolon = function()
-    vim.cmd("stopinsert")
-    local line_num = vim.api.nvim_win_get_cursor(0)[1] ---@type integer
-    local line = vim.api.nvim_get_current_line() ---@type string
-    vim.api.nvim_buf_set_text(0, line_num - 1, #line, line_num - 1, #line, { ";" })
-
-    line = vim.api.nvim_get_current_line() ---@type string
-    vim.api.nvim_win_set_cursor(0, { line_num, #line })
-end
-
 return M
