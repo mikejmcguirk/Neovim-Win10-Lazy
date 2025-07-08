@@ -4,25 +4,29 @@ vim.api.nvim_create_autocmd("TextYankPost", {
     group = vim.api.nvim_create_augroup("yank_aesthetic", { clear = true }),
     pattern = "*",
     callback = function()
+        vim.cmd("echo ''")
         vim.hl.on_yank({
             higroup = "IncSearch",
             timeout = 150,
         })
-
-        vim.cmd("echo ''")
     end,
 })
 
--- Done using the cmd because the lua function is buffer specific
-vim.cmd([[match EolSpace /\s\+$/]])
-
 local match_control = vim.api.nvim_create_augroup("match_control", { clear = true })
 
--- TODO: This should also turn off when entering cmd mode. Should be possible using the mode
--- change event and extracting the proper mode changes
-vim.api.nvim_create_autocmd("InsertEnter", {
+vim.api.nvim_create_autocmd("WinNew", {
     group = match_control,
     pattern = "*",
+    callback = function()
+        if vim.bo.filetype ~= "TelescopePrompt" then
+            vim.cmd([[match EolSpace /\s\+$/]])
+        end
+    end,
+})
+
+vim.api.nvim_create_autocmd("ModeChanged", {
+    group = match_control,
+    pattern = "n:*",
     callback = function()
         for _, match in ipairs(vim.fn.getmatches()) do
             if match.group == "EolSpace" then
@@ -33,9 +37,9 @@ vim.api.nvim_create_autocmd("InsertEnter", {
     end,
 })
 
-vim.api.nvim_create_autocmd("InsertLeave", {
+vim.api.nvim_create_autocmd("ModeChanged", {
     group = match_control,
-    pattern = "*",
+    pattern = "*:n",
     callback = function()
         if vim.bo.filetype ~= "TelescopePrompt" then
             vim.cmd([[match EolSpace /\s\+$/]])

@@ -79,13 +79,13 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
             end
         end
 
-        local cmd = "bd"
+        local cmd = "up | bd"
         if buf_win_count > 1 then
             cmd = "q"
         end
 
         local status, result = pcall(function()
-            vim.cmd("silent up | " .. cmd)
+            vim.cmd("silent " .. cmd)
         end)
 
         if status then
