@@ -4,7 +4,7 @@ require("mjm.set")
 require("mjm.keymap")
 require("mjm.custom_cmd")
 require("mjm.quickfix")
-require("mjm.lsp")
 require("mjm.autocmd")
 
 require("mjm.lazy")
+require("mjm.lsp") -- Requires LSPConfig Plugin

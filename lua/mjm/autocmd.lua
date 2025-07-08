@@ -68,7 +68,7 @@ vim.api.nvim_create_autocmd(clear_conditions, {
     group = mjm_group,
     pattern = "*",
     -- The highlight state is saved and restored when autocmds are triggered, so
-    -- schedule_warp is used to trigger nohlsearch aftewards
+    -- schedule_wrap is used to trigger nohlsearch aftewards
     -- See nohlsearch() help
     callback = vim.schedule_wrap(function()
         vim.cmd.nohlsearch()
