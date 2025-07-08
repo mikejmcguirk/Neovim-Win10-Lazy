@@ -1,4 +1,6 @@
--- TODO: Should try blink.cmp at some point
+-- NOTE: Autopairs uses this for function signature completions
+-- NOTE: Obsidian looks for this to feed completions to
+
 local cmp_config = function()
     vim.opt.completeopt = { "menu", "menuone", "noselect" }
     local cmp = require("cmp")
@@ -33,9 +35,18 @@ local cmp_config = function()
     }
 
     cmp.setup({
+        snippet = {
+            expand = function(args)
+                vim.fn["vsnip#anonymous"](args.body)
+            end,
+        },
+        window = {
+            completion = win_settings,
+            documentation = win_settings,
+        },
         mapping = {
-            ["<C-d>"] = cmp.mapping(cmp.mapping.scroll_docs(4)),
-            ["<C-u>"] = cmp.mapping(cmp.mapping.scroll_docs(-4)),
+            ["<C-d>"] = cmp.mapping(cmp.mapping.scroll_docs(3)),
+            ["<C-u>"] = cmp.mapping(cmp.mapping.scroll_docs(-5)),
 
             ["<C-p>"] = cmp.mapping(cmp.mapping.select_prev_item(cmp_select), { "i" }),
             ["<C-n>"] = cmp.mapping(cmp.mapping.select_next_item(cmp_select), { "i" }),
@@ -46,15 +57,6 @@ local cmp_config = function()
             ["<Tab>"] = cmp.mapping(nil),
             ["<S-Tab>"] = cmp.mapping(nil),
             ["<CR>"] = cmp.mapping(nil),
-        },
-        snippet = {
-            expand = function(args)
-                vim.fn["vsnip#anonymous"](args.body)
-            end,
-        },
-        window = {
-            completion = win_settings,
-            documentation = win_settings,
         },
         sources = {
             { name = "nvim_lsp_signature_help" },

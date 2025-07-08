@@ -1,6 +1,7 @@
+-- NOTE: Cmp pulls this in as a source
+
 return {
     "folke/lazydev.nvim",
-    -- No lazy load in recommended config
     ft = "lua",
     opts = {
         library = {

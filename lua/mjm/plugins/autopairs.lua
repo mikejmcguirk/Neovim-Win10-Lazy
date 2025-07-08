@@ -5,8 +5,6 @@ return {
         config = function()
             require("nvim-autopairs").setup({
                 check_ts = true,
-                -- map_bs = false, -- To keep my <backspace> mapping intact
-                map_bs = true,
             })
 
             local cmp_autopairs = require("nvim-autopairs.completion.cmp")
