@@ -47,6 +47,7 @@ local severity_map = {
 ---@param raw_diag table
 ---@return table
 local convert_diag = function(raw_diag)
+    raw_diag = raw_diag or {}
     local diag_source = raw_diag.source .. ": " or "" ---@type string
     local diag_message = raw_diag.message or "" ---@type string
     local diag_code = "" ---@type string
@@ -136,7 +137,7 @@ local cfilter_wrapper = function(opts)
         return
     end
 
-    opts = vim.deepcopy(opts or {}, true)
+    opts = opts or {}
     local pattern = nil ---@type string
     local bang = true ---@type boolean
     if opts.keep then
@@ -168,7 +169,7 @@ local qf_scroll_wrapper = function(opts)
         return
     end
 
-    opts = vim.deepcopy(opts or {}, true)
+    opts = opts or {}
     local cmd = "cnext"
     if opts.prev then
         cmd = "cprev"

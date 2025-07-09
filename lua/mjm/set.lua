@@ -65,6 +65,7 @@ vim.opt.scrolloff = Scrolloff_Val
 vim.opt.startofline = false
 vim.opt.jumpoptions:append("view") -- Restore views when possible
 vim.opt.matchpairs:append("<:>")
+vim.opt.cpoptions:append("W") -- Don't overwrite read-only files
 
 vim.opt.selection = "old"
 vim.opt.smartindent = true
@@ -73,7 +74,6 @@ vim.opt.shortmess:append("I")
 vim.opt.shortmess:append("W")
 vim.opt.shortmess:append("s")
 vim.opt.shortmess:append("r")
-vim.opt.cpoptions:append("W") -- Don't overwrite read-only files
 
 vim.opt.splitright = true
 vim.opt.splitbelow = true

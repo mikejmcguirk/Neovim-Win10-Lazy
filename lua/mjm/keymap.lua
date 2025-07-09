@@ -615,7 +615,7 @@ local visual_move = function(opts)
     local vcount1 = vim.v.count1 ---@type integer -- Get before leaving visual mode
     vim.cmd('exec "silent norm! \\<esc>"') -- Force update of '< and '> marks
 
-    opts = vim.deepcopy(opts or {}, true)
+    opts = opts or {}
     local fix_num = 0 ---@type integer
     local cmd_start = "'<,'> m '>+" ---@type string
     if opts.upward then
@@ -664,7 +664,7 @@ local visual_indent = function(opts)
     vim.opt_local.cursorline = false
 
     local count = vim.v.count1
-    opts = vim.deepcopy(opts or {}, true)
+    opts = opts or {}
     local shift = ">"
     if opts.back then
         shift = "<"

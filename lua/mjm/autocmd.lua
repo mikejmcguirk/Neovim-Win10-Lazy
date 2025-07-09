@@ -98,10 +98,9 @@ vim.api.nvim_create_autocmd({ "VimLeavePre" }, {
 vim.api.nvim_create_autocmd("BufReadPost", {
     group = mjm_group,
     desc = "Go to the last location when opening a buffer",
-    callback = function(args)
-        local mark = vim.api.nvim_buf_get_mark(args.buf, '"')
-        local line_count = vim.api.nvim_buf_line_count(args.buf)
-        if mark[1] > 0 and mark[1] <= line_count then
+    callback = function(ev)
+        local mark = vim.api.nvim_buf_get_mark(ev.buf, '"')
+        if mark[1] > 0 and mark[1] <= vim.api.nvim_buf_line_count(ev.buf) then
             vim.cmd('normal! g`"zz')
         end
     end,
@@ -134,7 +133,7 @@ vim.api.nvim_create_autocmd(
             -- Redraw here to avoid having to first write something for the line numbers to update.
             if args.event == "CmdlineEnter" then
                 if not vim.tbl_contains({ "@", "-" }, vim.v.event.cmdtype) then
-                    vim.cmd.redraw()
+                    vim.cmd("redraw")
                 end
             end
         end,
