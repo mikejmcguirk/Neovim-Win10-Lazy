@@ -159,7 +159,7 @@ vim.api.nvim_create_autocmd(
 vim.api.nvim_create_autocmd("WinNew", {
     group = mjm_group,
     pattern = "*",
-    callback = function(ev)
+    callback = function()
         vim.fn.setloclist(0, {}, "f")
     end,
 })

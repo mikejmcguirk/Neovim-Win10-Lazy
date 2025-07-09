@@ -40,7 +40,7 @@ end)
 
 vim.keymap.set("n", "cuo", "<cmd>botright copen<cr>")
 vim.keymap.set("n", "cuc", "<cmd>cclose<cr>")
-vim.keymap.set("n", "cut", function()
+vim.keymap.set("n", "cuu", function()
     if is_qf_open() then
         vim.cmd("cclose")
     else
