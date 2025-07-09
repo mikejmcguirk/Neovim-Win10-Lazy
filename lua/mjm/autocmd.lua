@@ -84,3 +84,11 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
         vim.opt.formatoptions:append("r")
     end,
 })
+
+vim.api.nvim_create_autocmd({ "VimLeavePre" }, {
+    group = mjm_group,
+    pattern = "*",
+    callback = function()
+        vim.fn.setreg("/", nil)
+    end,
+})

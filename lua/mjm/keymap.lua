@@ -1,5 +1,4 @@
 local ut = require("mjm.utils")
-
 local set_z_at_cursor = function()
     local row, col = unpack(vim.api.nvim_win_get_cursor(0))
     vim.api.nvim_buf_set_mark(0, "z", row, col, {})
@@ -114,7 +113,6 @@ vim.keymap.set("n", "<C-z>", "<nop>")
 -------------------
 
 -- Purposefully not setup to accept counts. Don't want to accidently get lost
--- For some reason, these don't actually go silent unless run as cmds
 
 vim.keymap.set("n", "u", function()
     vim.cmd("silent norm! u")
@@ -287,7 +285,7 @@ local function whole_file()
     end
 
     -- get_lines result does not include \n. Subtract one because set_mark's col is 0 indexed
-    local last_line_len = #vim.api.nvim_buf_get_lines(0, -2, -1, true)[1]
+    local last_line_len = #vim.api.nvim_buf_get_lines(0, -2, -1, true)[1] - 1
     vim.api.nvim_buf_set_mark(0, "[", 1, 0, {})
     vim.api.nvim_buf_set_mark(0, "]", line_count, last_line_len, {})
 
@@ -404,24 +402,19 @@ vim.keymap.set("x", "X", 'd0"_Dp==', { silent = true })
 
 -- Explicitly delete to unnamed to write the contents to reg 0
 -- No mark, so count does not need to be manually specified
-vim.keymap.set("n", "d", function()
-    if (not vim.v.register) or vim.v.register == "" or vim.v.register == '"' then
-        -- If you type ""di, Nvim will see the command as """"di
-        -- This does not seem to cause an issue, but still, limit to only this case
-        return '""d'
-    else
-        return "d"
-    end
-end, { expr = true })
 
--- Same as the delete map
-vim.keymap.set("n", "c", function()
-    if (not vim.v.register) or vim.v.register == "" or vim.v.register == '"' then
-        return '""c'
-    else
-        return "c"
-    end
-end, { expr = true })
+local dc_maps = { "d", "c", "D", "C" }
+for _, map in pairs(dc_maps) do
+    vim.keymap.set({ "n", "x" }, map, function()
+        if (not vim.v.register) or vim.v.register == "" or vim.v.register == '"' then
+            -- If you type ""di, Nvim will see the command as """"di
+            -- This does not seem to cause an issue, but still, limit to only this case
+            return '""' .. map
+        else
+            return map
+        end
+    end, { expr = true })
+end
 
 vim.keymap.set("x", "D", '"_d', { silent = true })
 vim.keymap.set("x", "C", '"_c', { silent = true })

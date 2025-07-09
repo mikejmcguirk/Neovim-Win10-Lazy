@@ -67,7 +67,6 @@ vim.opt.splitbelow = true
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
 vim.opt.incsearch = false -- Prevent screen shifting while entering search/substitute patterns
-vim.fn.setreg("/", nil) -- Only way I know to clear previous history
 
 -- Prevents disabled mappings from becoming active again after timeout
 vim.opt.timeout = false
