@@ -1,3 +1,7 @@
+-- TODO: These should not be leader hotkeys, but I struggle with what a better alternative would
+-- be. grq is cumbersome. Same with zq, which is also used for spell. Same with <c-q>
+-- One idea is to use Q, though the default is somewhat useful
+
 local ut = require("mjm.utils")
 
 ---@return boolean
@@ -62,10 +66,21 @@ local convert_diag = function(raw_diag)
     }
 end
 
+local get_diags = function(opts)
+    opts = opts or {}
+    local err_only = opts.err_only or false
+    if err_only then
+        return vim.diagnostic.get(opts.bufnr or nil, { severity = vim.diagnostic.severity.ERROR })
+    else
+        return vim.diagnostic.get(opts.bufnr or nil)
+    end
+end
+
+-- TODO: Consider using vim.diagnostic.setqflist in the future if enough features are added
 ---@param opts? table
 ---@return nil
 local diags_to_qf = function(opts)
-    opts = vim.deepcopy(opts or {}, true)
+    opts = opts or {}
 
     local cur_buf = opts.cur_buf or false ---@type boolean
     local bufnr = nil ---@type integer
@@ -76,15 +91,7 @@ local diags_to_qf = function(opts)
     end
 
     local err_only = opts.err_only or false ---@type boolean
-    ---@return table
-    local get_diags = function()
-        if err_only then
-            return vim.diagnostic.get(bufnr, { severity = vim.diagnostic.severity.ERROR })
-        else
-            return vim.diagnostic.get(bufnr)
-        end
-    end
-    local raw_diags = get_diags() ---@type table
+    local raw_diags = get_diags({ err_only = err_only, bufnr = bufnr }) ---@type table
 
     if #raw_diags == 0 then
         if err_only then

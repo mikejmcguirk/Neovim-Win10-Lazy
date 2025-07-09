@@ -36,6 +36,8 @@ vim.keymap.set("n", "grd", function()
 end)
 
 -- Taken from nvim-overfly
+-- TODO: If I understand the code right, at some point a "highest" filter will be added to
+-- diagnostic jumping
 local function get_severity()
     local has_warn = false
     local has_info = false
