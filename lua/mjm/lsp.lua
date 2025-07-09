@@ -34,6 +34,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end, { buffer = buf, desc = "vim.lsp.buf.signature_help()" })
 
         -- Patternful with the rest of the defaults
+        -- TODO: This will be added as a default in the future
         vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { buffer = buf })
         vim.keymap.set("n", "grf", function()
             print(vim.inspect(vim.lsp.buf.list_workspace_folders()))

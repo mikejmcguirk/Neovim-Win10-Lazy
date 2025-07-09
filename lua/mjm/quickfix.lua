@@ -152,41 +152,42 @@ vim.keymap.set("n", "<leader>qr", function()
     cfilter_wrapper()
 end)
 
--- TODO: Add the ability to take count into this
----@param opts? { prev: boolean }
+-- TODO: Make this take a count
+---@param opts? table
 ---@return nil
 local qf_scroll_wrapper = function(opts)
     if is_qf_empty() then
+        vim.notify("Quickfix list is empty")
         return
     end
 
-    vim.cmd("botright copen") -- Run cmd after this to move focus to qf item
     opts = vim.deepcopy(opts or {}, true)
-    local status, result = pcall(function()
-        if opts.prev then
-            vim.cmd("cprev")
-        else
-            vim.cmd("cnext")
-        end
-    end) ---@type boolean, unknown|nil
-
-    if status then
-        vim.cmd("norm! zz")
-        return
+    local cmd = "cnext"
+    if opts.prev then
+        cmd = "cprev"
     end
 
-    if type(result) == "string" and string.find(result, "E553") then
+    vim.cmd("botright copen")
+    local ok, err = pcall(function()
+        vim.cmd(cmd)
+    end)
+
+    if type(err) == "string" and string.find(err, "E553") then
+        local backup_cmd = "cfirst"
         if opts.prev then
-            vim.cmd("clast")
-        else
-            vim.cmd("cfirst")
+            backup_cmd = "clast"
         end
 
-        vim.cmd("norm! zz")
-        return
+        ok, err = pcall(function()
+            vim.cmd(backup_cmd)
+        end)
     end
 
-    vim.api.nvim_echo({ { result or "Unknown error in qf_scroll_wraper" } }, true, { err = true })
+    if ok then
+        vim.cmd("norm! zz")
+    else
+        vim.api.nvim_echo({ { err or "Unknown error in qf_scroll_wraper" } }, true, { err = true })
+    end
 end
 
 vim.keymap.set("n", "[q", function()
