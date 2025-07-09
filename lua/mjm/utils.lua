@@ -61,15 +61,19 @@ M.get_indent = function(line_num)
     --
     -- Other indentexpr arguments are not guaranteed to be handled properly
     vim.v.lnum = line_num
-    -- pcall in case treesitter errors out due to a null node
-    local status, expr_indent_tbl = pcall(function()
-        vim.cmd("echo " .. indentexpr, { output = true })
+    local indentexpr_out = nil
+    -- pcall in case treesitter errors due to a null node
+    local ok, err = pcall(function()
+        -- Must run nvim_exec2 explicitly to properly capture output table and avoid
+        -- printing to cmdline
+        indentexpr_out = vim.api.nvim_exec2("echo " .. indentexpr, { output = true })
     end)
 
-    if status and expr_indent_tbl then
-        return tonumber(expr_indent_tbl.output) or 0
+    if ok then
+        return tonumber(indentexpr_out.output) or 0
     end
 
+    vim.api.nvim_echo({ { err or "Unknown error getting indent" } }, true, { err = true })
     return 0
 end
 

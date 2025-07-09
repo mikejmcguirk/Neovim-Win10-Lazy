@@ -9,13 +9,13 @@ local function add_annotation(annotation)
     local line = vim.api.nvim_get_current_line()
     local line_len = #line ---@type integer
 
-    if line:match("^%s*$") then
+    if line:match("^%s*$") then -- All whitespace
         local indent = ut.get_indent(row) ---@type integer
         local padding = string.rep(" ", indent) ---@type string
         vim.api.nvim_buf_set_text(0, row - 1, 0, row - 1, 0, { padding .. annotation .. " " })
-    elseif line:match("%s$") then
+    elseif line:match("%s$") then -- Has trailing whitespace
         vim.api.nvim_buf_set_text(0, row - 1, line_len, row - 1, line_len, { annotation .. " " })
-    else
+    else -- No trailing whitespace. Needs added
         vim.api.nvim_buf_set_text(
             0,
             row - 1,
@@ -25,24 +25,34 @@ local function add_annotation(annotation)
             { " " .. annotation .. " " }
         )
     end
+
     vim.cmd("startinsert!")
 end
+
+vim.keymap.set("n", "---", function()
+    add_annotation("--")
+end, { buffer = true })
 
 vim.keymap.set("n", "--t", function()
     add_annotation("---@type")
 end, { buffer = true })
+
 vim.keymap.set("n", "--p", function()
     add_annotation("---@param")
 end, { buffer = true })
+
 vim.keymap.set("n", "--r", function()
     add_annotation("---@return")
 end, { buffer = true })
+
 vim.keymap.set("n", "--d", function()
     add_annotation("---@diagnostic")
 end, { buffer = true })
+
 vim.keymap.set("n", "--f", function()
     add_annotation("---@field")
 end, { buffer = true })
+
 vim.keymap.set("n", "--a", function()
     add_annotation("---[[@as")
 end, { buffer = true })
