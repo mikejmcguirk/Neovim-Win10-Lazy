@@ -3,6 +3,7 @@ require("mjm.global_vars")
 require("mjm.set")
 require("mjm.keymap")
 require("mjm.custom_cmd")
+require("mjm.diagnostic")
 require("mjm.quickfix")
 require("mjm.autocmd")
 

@@ -4,44 +4,6 @@ local ut = require("mjm.utils")
 
 vim.lsp.set_log_level("ERROR")
 
-local border = "single" -- "FloatBorder" highlight group
-local main_diag_cfg = {
-    severity_sort = true,
-    float = { source = "always", border = border },
-    signs = {
-        severity = {
-            min = vim.diagnostic.severity.HINT,
-        },
-    },
-}
-
-local virtual_text_cfg = {
-    virtual_text = {
-        severity = {
-            min = vim.diagnostic.severity.HINT,
-        },
-        current_line = true,
-    },
-    virtual_lines = false,
-}
-
-local virtual_lines_cfg = {
-    virtual_text = false,
-    virtual_lines = { current_line = true },
-}
-
-local default_diag_cfg = vim.tbl_extend("force", main_diag_cfg, virtual_text_cfg)
-local alt_diag_cfg = vim.tbl_extend("force", main_diag_cfg, virtual_lines_cfg)
-vim.diagnostic.config(default_diag_cfg)
-vim.keymap.set("n", "grd", function()
-    local current_config = vim.diagnostic.config() or {}
-    if current_config.virtual_lines == false then
-        vim.diagnostic.config(alt_diag_cfg)
-    else
-        vim.diagnostic.config(default_diag_cfg)
-    end
-end)
-
 local lsp_group = vim.api.nvim_create_augroup("LSP_Augroup", { clear = true })
 vim.api.nvim_create_autocmd("LspAttach", {
     group = lsp_group,
@@ -64,11 +26,11 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end, { buffer = buf })
 
         vim.keymap.set("n", "K", function()
-            vim.lsp.buf.hover({ border = border })
+            vim.lsp.buf.hover({ border = Border })
         end, { buffer = buf, desc = "vim.lsp.buf.hover()" })
 
         vim.keymap.set({ "i", "s" }, "<C-S>", function()
-            vim.lsp.buf.signature_help({ border = border })
+            vim.lsp.buf.signature_help({ border = Border })
         end, { buffer = buf, desc = "vim.lsp.buf.signature_help()" })
 
         -- Patternful with the rest of the defaults
