@@ -30,6 +30,7 @@ vim.g.mapleader = " "
 vim.g.maplocaleader = " "
 
 vim.opt.mouse = "a" -- Otherwise, the terminal handles mouse functionality
+vim.o.mousescroll = "ver:0,hor:0"
 
 -- On my monitors, for files under 10k lines, a centered vsplit will be on the color column
 vim.opt.number = true
@@ -87,7 +88,7 @@ vim.opt.timeout = false
 vim.opt.swapfile = false
 vim.opt.backup = false
 vim.opt.undofile = true
-vim.opt.updatetime = 1000
+vim.opt.updatetime = 250
 
 vim.opt.list = true
 vim.opt.listchars = { tab = "<–>", extends = "»", precedes = "«", nbsp = "␣" }

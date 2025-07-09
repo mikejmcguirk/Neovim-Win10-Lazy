@@ -1,3 +1,6 @@
+-- TODO: https://github.com/ibhagwan/fzf-lua
+-- Give this a try
+
 return {
     {
         "nvim-telescope/telescope.nvim",

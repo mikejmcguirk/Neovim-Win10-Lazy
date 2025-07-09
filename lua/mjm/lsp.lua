@@ -1,15 +1,30 @@
 -- Note: Not using the built-in LSP autocompletion because it doesn't bring in other sources
 
 local ut = require("mjm.utils")
-
 vim.lsp.set_log_level("ERROR")
-
 local lsp_group = vim.api.nvim_create_augroup("LSP_Augroup", { clear = true })
+
 vim.api.nvim_create_autocmd("LspAttach", {
     group = lsp_group,
     callback = function(ev)
         local buf = ev.buf
         local client = assert(vim.lsp.get_client_by_id(ev.data.client_id))
+        local methods = vim.lsp.protocol.Methods
+
+        if client:supports_method(methods.textDocument_documentHighlight) then
+            local doc_highlights = vim.api.nvim_create_augroup("doc_highlights", { clear = false })
+            vim.api.nvim_create_autocmd({ "CursorHold", "InsertLeave" }, {
+                group = doc_highlights,
+                buffer = buf,
+                callback = vim.lsp.buf.document_highlight,
+            })
+
+            vim.api.nvim_create_autocmd({ "CursorMoved", "InsertEnter", "BufLeave" }, {
+                group = doc_highlights,
+                buffer = buf,
+                callback = vim.lsp.buf.clear_references,
+            })
+        end
 
         -- Overwrite vim defaults
         vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })
@@ -18,7 +33,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
             vim.keymap.set("n", "gI", vim.lsp.buf.implementation, { buffer = buf })
         end
 
-        if client:supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint) then
+        if client:supports_method(methods.textDocument_inlayHint) then
             vim.keymap.set("n", "grl", function()
                 vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = buf }))
             end)
@@ -55,10 +70,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
         vim.keymap.set("n", "grf", function()
             print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
         end, { buffer = buf })
-
-        -- Unsure what to do with these
-        -- vim.keymap.set("n", "<leader>va", vim.lsp.buf.add_workspace_folder, { buffer = buf })
-        -- vim.keymap.set("n", "<leader>vo", vim.lsp.buf.remove_workspace_folder, { buffer = buf })
     end,
 })
 

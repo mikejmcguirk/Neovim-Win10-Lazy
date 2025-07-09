@@ -1,4 +1,5 @@
 vim.opt_local.colorcolumn = ""
+vim.o.buflisted = false
 
 vim.keymap.set("n", "<leader>qt", "<cmd>cclose<cr>", { buffer = true })
 vim.keymap.set("n", "dd", function()

@@ -423,6 +423,10 @@ vim.keymap.set("x", "D", '"_d', { silent = true })
 vim.keymap.set("x", "C", '"_c', { silent = true })
 
 vim.keymap.set("n", "dK", "DO<esc>p==", { silent = true })
+-- Not necessarily a huge use case for this in and of itself, but points to the idea that
+-- d, c, and y have a lot more behind them than da, di, ca, ci, ya, and yi
+-- Surround was an early indicator of this
+vim.keymap.set("n", "dm", "<cmd>delmarks!<cr>")
 
 vim.api.nvim_create_autocmd("TextChanged", {
     group = vim.api.nvim_create_augroup("delete_clear", { clear = true }),

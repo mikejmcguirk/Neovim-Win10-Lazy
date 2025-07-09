@@ -15,7 +15,8 @@ return {
                     -- markdown = { "prettier" },
                     python = { "ruff_format" },
                     rust = { "rustfmt" },
-                    sh = { "beautysh" },
+                    sh = { "shfmt" },
+                    -- sh = { "beautysh" },
                     toml = { "taplo" },
                     -- TODO: This is tough to swing with dadbod-ui because it stores queries in
                     -- tmp or a local dir. You could edit the g variables or something but iunno

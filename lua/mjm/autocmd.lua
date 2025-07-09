@@ -92,3 +92,51 @@ vim.api.nvim_create_autocmd({ "VimLeavePre" }, {
         vim.fn.setreg("/", nil)
     end,
 })
+
+-- TODO: This should check the last file read date and just go to the beginning of the file
+-- if it was a week or so ago
+vim.api.nvim_create_autocmd("BufReadPost", {
+    group = mjm_group,
+    desc = "Go to the last location when opening a buffer",
+    callback = function(args)
+        local mark = vim.api.nvim_buf_get_mark(args.buf, '"')
+        local line_count = vim.api.nvim_buf_line_count(args.buf)
+        if mark[1] > 0 and mark[1] <= line_count then
+            vim.cmd('normal! g`"zz')
+        end
+    end,
+})
+
+-- From MariasolOs
+vim.api.nvim_create_autocmd(
+    { "BufEnter", "FocusGained", "InsertLeave", "CmdlineLeave", "WinEnter" },
+    {
+        group = mjm_group,
+        desc = "Toggle relative line numbers on",
+        callback = function()
+            if vim.wo.nu and not vim.startswith(vim.api.nvim_get_mode().mode, "i") then
+                vim.wo.relativenumber = true
+            end
+        end,
+    }
+)
+
+vim.api.nvim_create_autocmd(
+    { "BufLeave", "FocusLost", "InsertEnter", "CmdlineEnter", "WinLeave" },
+    {
+        group = mjm_group,
+        desc = "Toggle relative line numbers off",
+        callback = function(args)
+            if vim.wo.nu then
+                vim.wo.relativenumber = false
+            end
+
+            -- Redraw here to avoid having to first write something for the line numbers to update.
+            if args.event == "CmdlineEnter" then
+                if not vim.tbl_contains({ "@", "-" }, vim.v.event.cmdtype) then
+                    vim.cmd.redraw()
+                end
+            end
+        end,
+    }
+)
