@@ -229,6 +229,9 @@ vim.keymap.set({ "n", "x" }, "j", function()
     end
 end, { expr = true, silent = true })
 
+vim.keymap.set("c", "<C-p>", "<up>")
+vim.keymap.set("c", "<C-n>", "<down>")
+
 vim.keymap.set({ "n", "x" }, "<C-u>", "<C-u>zz", { silent = true })
 vim.keymap.set({ "n", "x" }, "<C-d>", "<C-d>zz", { silent = true })
 
@@ -587,6 +590,9 @@ vim.keymap.set("i", ";", ";<C-g>u", { silent = true })
 -- Text Manipulation --
 -----------------------
 
+-- Good Primeagen map, but not sure what to set it for
+-- vim.keymap.set("n", "<leader>s", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
+
 vim.keymap.set("n", "J", function()
     if not ut.check_modifiable() then
         return
@@ -596,7 +602,6 @@ vim.keymap.set("n", "J", function()
     local view = vim.fn.winsaveview()
     -- By default, [count]J joins one fewer lines than indicated by the relative line numbers
     local count = vim.v.count1 + 1
-
     vim.cmd("norm! " .. count .. "J")
     vim.fn.winrestview(view)
 end, { silent = true })

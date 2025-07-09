@@ -9,10 +9,12 @@ vim.api.nvim_create_autocmd("LspAttach", {
     group = lsp_group,
     callback = function(ev)
         local buf = ev.buf
+        local client = assert(vim.lsp.get_client_by_id(ev.data.client_id))
 
         -- Overwrite vim defaults
         vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })
         vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = buf })
+
         vim.keymap.set("n", "gi", vim.lsp.buf.implementation, { buffer = buf })
 
         -- Overwrite Nvim defaults (:help lsp-defaults)

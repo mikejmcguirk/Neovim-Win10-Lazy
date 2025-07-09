@@ -1,7 +1,12 @@
-vim.opt_local.wrap = true
-vim.opt_local.spell = true
+-- TODO: Some version of this from mfussenegger:
+-- setlocal keywordprg=:sp\ term://sdcv\ -n\ -c
+-- setlocal spell
+-- setlocal complete+=kspell
+
 vim.opt_local.colorcolumn = ""
+vim.opt_local.wrap = true
 vim.opt_local.sidescrolloff = 12
+vim.opt_local.spell = true
 
 vim.keymap.set("i", ",", ",<C-g>u", { silent = true, buffer = true })
 vim.keymap.set("i", ".", ".<C-g>u", { silent = true, buffer = true })

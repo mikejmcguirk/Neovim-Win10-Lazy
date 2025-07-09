@@ -48,12 +48,15 @@ local blink_setting = "blinkon1-blinkoff1"
 local block_cursor = "n:" .. blink_setting
 local ver_cursor = "i-c-ci:ver100-" .. blink_setting
 local hor_cursor = "v-r:hor100-" .. blink_setting
-local gcr_string = block_cursor .. "," .. ver_cursor .. "," .. hor_cursor
-vim.cmd("set gcr=" .. gcr_string)
+vim.cmd("set gcr=" .. block_cursor .. "," .. ver_cursor .. "," .. hor_cursor)
 
 vim.opt.scrolloff = Scrolloff_Val
-vim.opt.startofline = true
+vim.opt.startofline = false
 vim.opt.jumpoptions:append("view") -- Restore views when possible
+vim.opt.matchpairs:append("<:>")
+
+vim.opt.selection = "old"
+vim.opt.smartindent = true
 
 vim.opt.shortmess:append("I")
 vim.opt.shortmess:append("W")
@@ -74,14 +77,17 @@ vim.opt.timeout = false
 vim.opt.swapfile = false
 vim.opt.backup = false
 vim.opt.undofile = true
-vim.opt.updatetime = 250
+vim.opt.updatetime = 1000
 
 vim.opt.list = true
 vim.opt.listchars = { tab = "<–>", extends = "»", precedes = "«", nbsp = "␣" }
+-- vim.opt.listchars = { tab = "<–>", extends = "»", precedes = "«", nbsp = "␣", trail = "⣿" }
 -- vim.opt.listchars = { eol = "↲", tab = "<–>", extends = "»", precedes = "«", nbsp = "␣" }
 vim.opt.wrap = false
 vim.opt.linebreak = true
 
+-- TODO: Nvim I think has rg as its default grep now, but I had tuned these options to work with
+-- my qf wrappers, so would need to check the defaults against my code
 vim.opt.grepprg = "rg --line-number"
 vim.opt.grepformat = "%f:%l:%m"
 

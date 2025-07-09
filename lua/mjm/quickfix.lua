@@ -66,9 +66,11 @@ local convert_diag = function(raw_diag)
     }
 end
 
+---@param opts? table
+---@return table
 local get_diags = function(opts)
     opts = opts or {}
-    local err_only = opts.err_only or false
+    local err_only = opts.err_only or false ---@type boolean
     if err_only then
         return vim.diagnostic.get(opts.bufnr or nil, { severity = vim.diagnostic.severity.ERROR })
     else
@@ -92,7 +94,6 @@ local diags_to_qf = function(opts)
 
     local err_only = opts.err_only or false ---@type boolean
     local raw_diags = get_diags({ err_only = err_only, bufnr = bufnr }) ---@type table
-
     if #raw_diags == 0 then
         if err_only then
             print("No errors")
@@ -102,11 +103,10 @@ local diags_to_qf = function(opts)
 
         vim.fn.setqflist({})
         vim.cmd("cclose")
-
         return
     end
 
-    local diags_for_qf = vim.tbl_map(convert_diag, raw_diags)
+    local diags_for_qf = vim.tbl_map(convert_diag, raw_diags) ---@type table
     vim.fn.setqflist(diags_for_qf, "r")
     vim.cmd("botright copen")
 end
