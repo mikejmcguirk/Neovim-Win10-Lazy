@@ -10,13 +10,14 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 })
 
 local match_control = vim.api.nvim_create_augroup("match_control", { clear = true })
+local no_match = { "TelescopePrompt", "git" }
 
 vim.api.nvim_create_autocmd("WinNew", {
     group = match_control,
     pattern = "*",
     callback = function()
-        if vim.bo.filetype ~= "TelescopePrompt" then
-            vim.cmd([[match EolSpace /\s\+$/]])
+        if not vim.tbl_contains(no_match, vim.bo.filetype) then
+            vim.fn.matchadd("EolSpace", [[\s\+$]])
         end
     end,
 })
@@ -39,7 +40,7 @@ vim.api.nvim_create_autocmd("ModeChanged", {
     pattern = "*:n",
     callback = function()
         if vim.bo.filetype ~= "TelescopePrompt" then
-            vim.cmd([[match EolSpace /\s\+$/]])
+            vim.fn.matchadd("EolSpace", [[\s\+$]])
         end
     end,
 })

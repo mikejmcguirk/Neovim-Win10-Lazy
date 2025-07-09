@@ -20,3 +20,15 @@ local function tab_kill()
 end
 
 vim.api.nvim_create_user_command("TabKill", tab_kill, {})
+
+local function close_floats()
+    for _, win in pairs(vim.fn.getwininfo()) do
+        local id = win.winid
+        local config = vim.api.nvim_win_get_config(id)
+        if config.relative and config.relative ~= "" then
+            vim.api.nvim_win_close(id, false)
+        end
+    end
+end
+
+vim.api.nvim_create_user_command("CloseFloats", close_floats, {})
