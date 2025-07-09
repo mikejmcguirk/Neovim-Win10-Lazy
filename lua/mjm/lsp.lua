@@ -14,8 +14,15 @@ vim.api.nvim_create_autocmd("LspAttach", {
         -- Overwrite vim defaults
         vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })
         vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = buf })
+        if client.server_capabilities.implementationProvider then
+            vim.keymap.set("n", "gi", vim.lsp.buf.implementation, { buffer = buf })
+        end
 
-        vim.keymap.set("n", "gi", vim.lsp.buf.implementation, { buffer = buf })
+        if client:supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint) then
+            vim.keymap.set("n", "grl", function()
+                vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = buf }))
+            end)
+        end
 
         -- Overwrite Nvim defaults (:help lsp-defaults)
         vim.keymap.set("n", "grn", function()
@@ -38,12 +45,14 @@ vim.api.nvim_create_autocmd("LspAttach", {
         -- Patternful with the rest of the defaults
         -- TODO: This will be added as a default in the future
         vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { buffer = buf })
+        -- Kickstart mapping
+        vim.keymap.set("n", "gW", vim.lsp.buf.workspace_symbol, { buffer = buf })
+        vim.keymap.set("n", "grh", vim.lsp.buf.document_highlight, { buffer = buf })
         vim.keymap.set("n", "grf", function()
             print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
         end, { buffer = buf })
 
         -- Unsure what to do with these
-        -- vim.keymap.set("n", "<leader>vh", vim.lsp.buf.document_highlight, { buffer = buf })
         -- vim.keymap.set("n", "<leader>va", vim.lsp.buf.add_workspace_folder, { buffer = buf })
         -- vim.keymap.set("n", "<leader>vo", vim.lsp.buf.remove_workspace_folder, { buffer = buf })
     end,

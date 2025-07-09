@@ -97,6 +97,7 @@ return {
             end)
 
             vim.keymap.set("n", "<leader>tt", builtin.highlights)
+            vim.keymap.set("n", "<leader>tw", builtin.lsp_dynamic_workspace_symbols)
 
             vim.keymap.set("n", "<leader>to", builtin.command_history)
             vim.keymap.set("n", "<leader>ti", builtin.registers)

@@ -4,10 +4,20 @@ vim.g.loaded_netrwPlugin = 1
 vim.g.loaded_netrwSettings = 1
 
 -- Prevent other default plugins from loading
-vim.g.loaded_2html_plugin = 1
-vim.g.loaded_zipPlugin = 1
-vim.g.loaded_tarPlugin = 1
 vim.g.loaded_gzip = 1
+vim.g.loaded_tar = 1
+vim.g.loaded_tarPlugin = 1
+vim.g.loaded_zip = 1
+vim.g.loaded_zipPlugin = 1
+vim.g.loaded_getscript = 1
+vim.g.loaded_getscriptPlugin = 1
+vim.g.loaded_vimball = 1
+vim.g.loaded_vimballPlugin = 1
+vim.g.loaded_matchit = 1
+vim.g.loaded_2html_plugin = 1
+vim.g.loaded_rrhelper = 1
+vim.g.loaded_netrwPlugin = 1
+vim.g.loaded_matchparen = 1
 vim.g.did_install_default_menus = 1
 
 -- Load useful plugins
@@ -84,6 +94,7 @@ vim.opt.listchars = { tab = "<–>", extends = "»", precedes = "«", nbsp = "�
 -- vim.opt.listchars = { tab = "<–>", extends = "»", precedes = "«", nbsp = "␣", trail = "⣿" }
 -- vim.opt.listchars = { eol = "↲", tab = "<–>", extends = "»", precedes = "«", nbsp = "␣" }
 vim.opt.wrap = false
+vim.opt.breakindent = true -- For fts where opt_local wrap is true
 vim.opt.linebreak = true
 
 -- TODO: Nvim I think has rg as its default grep now, but I had tuned these options to work with
