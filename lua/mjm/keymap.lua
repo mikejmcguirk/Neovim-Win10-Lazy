@@ -519,46 +519,54 @@ end, { silent = true, expr = true })
 -- NOTE: I had previously added code to the text ftplugin file to not autoformat certain pastes
 -- If we see wonky formatting issues again, add an ftdetect here instead to avoid code duplication
 
+---@param reg string
+---@return boolean
+local should_format_paste = function(reg)
+    if vim.api.nvim_get_current_line():match("^%s*$") then
+        return true
+    end
+
+    if vim.fn.getregtype(reg or '"') == "V" then
+        return true
+    end
+
+    local cur_mode = vim.api.nvim_get_mode().mode ---@type string
+    if cur_mode == "V" or cur_mode == "Vs" then
+        return true
+    end
+
+    return false
+end
+
 local norm_pastes = { "p", "P" }
 for _, map in pairs(norm_pastes) do
     vim.keymap.set("n", map, function()
-        local register = vim.v.register or '"'
-        local is_linewise = vim.fn.getregtype(register) == "V" ---@type boolean
-        local is_blank = vim.api.nvim_get_current_line():match("^%s*$") ---@type boolean|nil
-
-        local paste_cmd = "<cmd>silent norm! " .. vim.v.count1 .. '"' .. register .. map .. "<cr>"
-        if is_linewise or is_blank then
-            paste_cmd = paste_cmd .. "<cmd>silent norm! `[=`]<cr>"
+        local reg = vim.v.register or '"'
+        local paste_cmd = "<cmd>silent norm! " .. vim.v.count1 .. '"' .. reg .. map .. "<cr>"
+        if should_format_paste(reg) then
+            return paste_cmd .. "<cmd>silent norm! `[=`]<cr>"
+        else
+            return paste_cmd
         end
-
-        return paste_cmd
     end, { expr = true, silent = true })
 end
 
 for _, map in pairs(norm_pastes) do
     vim.keymap.set("n", "g" .. map, function()
-        local is_linewise = vim.fn.getregtype("+") == "V" ---@type boolean
-        local is_blank = vim.api.nvim_get_current_line():match("^%s*$") ---@type boolean|nil
-
-        local paste_cmd = "<cmd>silent norm! " .. vim.v.count1 .. '"+' .. map .. "<cr>"
-        if is_linewise or is_blank then
-            paste_cmd = paste_cmd .. "<cmd>silent norm! `[=`]<cr>"
+        local reg = "+"
+        local paste_cmd = "<cmd>silent norm! " .. vim.v.count1 .. '"' .. reg .. map .. "<cr>"
+        if should_format_paste(reg) then
+            return paste_cmd .. "<cmd>silent norm! `[=`]<cr>"
+        else
+            return paste_cmd
         end
-
-        return paste_cmd
     end, { expr = true, silent = true })
 end
 
 -- Visual pastes do not need any additional contrivances in order to run silently, as they
 -- run a delete under the hood, which triggers the TextChanged autocmd for deletes
 vim.keymap.set("x", "p", function()
-    local cur_mode = vim.api.nvim_get_mode().mode ---@type string
-    local is_linewise_mode = cur_mode == "V" or cur_mode == "Vs" ---@type boolean
-    local register = vim.v.register or '"' ---@type string
-    local is_linewise_reg = vim.fn.getregtype(register) == "V" ---@type boolean
-    local is_blank = vim.api.nvim_get_current_line():match("^%s*$") ---@type boolean|nil
-
-    if is_linewise_mode or is_linewise_reg or is_blank then
+    if should_format_paste(vim.v.register) then
         return "Pmz<cmd>silent norm! `[=`]`z<cr>"
     else
         return "P"
@@ -566,12 +574,7 @@ vim.keymap.set("x", "p", function()
 end, { silent = true, expr = true })
 
 vim.keymap.set("x", "P", function()
-    local cur_mode = vim.api.nvim_get_mode().mode ---@type string
-    local is_linewise_mode = cur_mode == "V" or cur_mode == "Vs" ---@type boolean
-    local is_linewise_reg = vim.fn.getregtype("+") == "V" ---@type boolean
-    local is_blank_line = vim.api.nvim_get_current_line():match("^%s*$") ---@type boolean|nil
-
-    if is_linewise_mode or is_linewise_reg or is_blank_line then
+    if should_format_paste("+") then
         return '"+Pmz<cmd>silent norm! `[=`]`z<cr>'
     else
         return '"+P'
