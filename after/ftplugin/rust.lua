@@ -1,5 +1,7 @@
 -- Formatted with Conform (2025-07-07)
 
+vim.keymap.set("i", ";", ";<C-g>u", { silent = true })
+
 local ut = require("mjm.utils")
 
 -- TODO: Look at how windp/autopairs handles looking at treesitter

@@ -28,6 +28,19 @@ lazy.setup("mjm.plugins", {
     ui = {
         border = "single",
     },
+    performance = {
+        rtp = {
+            disabled_plugins = {
+                "gzip",
+                -- "matchparen",
+                "netrwPlugin",
+                "tarPlugin",
+                "tohtml",
+                -- "tutor",
+                "zipPlugin",
+            },
+        },
+    },
 })
 
 vim.keymap.set("n", "<leader>zh", lazy.home)

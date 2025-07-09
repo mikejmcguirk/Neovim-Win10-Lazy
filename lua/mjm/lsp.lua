@@ -15,7 +15,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
         vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })
         vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = buf })
         if client.server_capabilities.implementationProvider then
-            vim.keymap.set("n", "gi", vim.lsp.buf.implementation, { buffer = buf })
+            vim.keymap.set("n", "gI", vim.lsp.buf.implementation, { buffer = buf })
         end
 
         if client:supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint) then
@@ -32,6 +32,10 @@ vim.api.nvim_create_autocmd("LspAttach", {
             elseif #input > 0 then
                 vim.lsp.buf.rename(input)
             end
+        end, { buffer = buf })
+
+        vim.keymap.set("n", "grr", function()
+            vim.lsp.buf.references({ includeDeclaration = false })
         end, { buffer = buf })
 
         vim.keymap.set("n", "K", function()
@@ -89,6 +93,9 @@ vim.lsp.config("rust_analyzer", {
             checkOnSave = true,
             check = {
                 command = "clippy",
+            },
+            lens = {
+                enable = true,
             },
         },
     },

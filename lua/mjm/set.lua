@@ -17,7 +17,7 @@ vim.g.loaded_matchit = 1
 vim.g.loaded_2html_plugin = 1
 vim.g.loaded_rrhelper = 1
 vim.g.loaded_netrwPlugin = 1
-vim.g.loaded_matchparen = 1
+-- vim.g.loaded_matchparen = 1
 vim.g.did_install_default_menus = 1
 
 -- Load useful plugins

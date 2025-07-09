@@ -581,12 +581,6 @@ vim.keymap.set("x", "P", function()
 end, { silent = true, expr = true })
 
 -----------------------
--- Insert Mode Fixes --
------------------------
-
-vim.keymap.set("i", ";", ";<C-g>u", { silent = true })
-
------------------------
 -- Text Manipulation --
 -----------------------
 

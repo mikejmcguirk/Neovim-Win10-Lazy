@@ -5,9 +5,18 @@ return {
             "nvim-tree/nvim-web-devicons",
             "ThePrimeagen/harpoon", -- For harpoon tab info
             "mike-jl/harpoonEx",
+            "linrongbin16/lsp-progress.nvim",
         },
         config = function()
             local theme = "fluoromachine"
+
+            require("lsp-progress").setup()
+            vim.api.nvim_create_augroup("lualine_augroup", { clear = true })
+            vim.api.nvim_create_autocmd("User", {
+                group = "lualine_augroup",
+                pattern = "LspProgressStatusUpdated",
+                callback = require("lualine").refresh,
+            })
 
             require("lualine").setup({
                 options = {
@@ -19,7 +28,12 @@ return {
                     lualine_a = { "branch", "diff" },
                     -- :help statusline
                     lualine_b = { "%m %f" },
-                    lualine_c = { "diagnostics" },
+                    lualine_c = {
+                        "diagnostics",
+                        function()
+                            return require("lsp-progress").progress()
+                        end,
+                    },
                     lualine_x = { "encoding", "fileformat", "filetype" },
                     lualine_y = { "progress" },
                     lualine_z = { "%l/%L : %c : %o" },
