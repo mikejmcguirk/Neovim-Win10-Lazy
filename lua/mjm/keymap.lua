@@ -44,9 +44,9 @@ end
 vim.keymap.set("n", "v", "mvv", { silent = true })
 vim.keymap.set("n", "V", "mvV", { silent = true })
 
-vim.keymap.set("n", "s", "<Nop>")
+vim.keymap.set({ "n", "x" }, "s", "<Nop>")
+vim.keymap.set({ "n" }, "S", "<Nop>") -- Left open in x mode for surround
 vim.keymap.set("x", "q", "<Nop>")
-vim.keymap.set("n", "Q", "<nop>")
 vim.keymap.set("n", "gQ", "<nop>")
 vim.keymap.set("n", "gh", "<nop>")
 vim.keymap.set("n", "gH", "<nop>")
