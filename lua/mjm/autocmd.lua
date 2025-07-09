@@ -1,11 +1,10 @@
 vim.api.nvim_create_autocmd("TextYankPost", {
-    group = vim.api.nvim_create_augroup("yank_aesthetic", { clear = true }),
+    group = vim.api.nvim_create_augroup("yank_highlight", { clear = true }),
     pattern = "*",
     callback = function()
-        vim.cmd("echo ''")
         vim.hl.on_yank({
             higroup = "IncSearch",
-            timeout = 150,
+            timeout = 175,
         })
     end,
 })
@@ -82,5 +81,6 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
     pattern = "*",
     callback = function()
         vim.opt.formatoptions:remove("o")
+        vim.opt.formatoptions:append("r")
     end,
 })

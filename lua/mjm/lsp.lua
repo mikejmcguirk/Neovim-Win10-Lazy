@@ -51,6 +51,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
         -- Overwrite vim defaults
         vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })
         vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = buf })
+        vim.keymap.set("n", "gi", vim.lsp.buf.implementation, { buffer = buf })
 
         -- Overwrite Nvim defaults (:help lsp-defaults)
         vim.keymap.set("n", "grn", function()

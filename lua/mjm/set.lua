@@ -56,6 +56,9 @@ vim.opt.startofline = true
 vim.opt.jumpoptions:append("view") -- Restore views when possible
 
 vim.opt.shortmess:append("I")
+vim.opt.shortmess:append("W")
+vim.opt.shortmess:append("s")
+vim.opt.shortmess:append("r")
 vim.opt.cpoptions:append("W") -- Don't overwrite read-only files
 
 vim.opt.splitright = true

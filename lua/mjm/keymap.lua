@@ -1,5 +1,10 @@
 local ut = require("mjm.utils")
 
+local set_z_at_cursor = function()
+    local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+    vim.api.nvim_buf_set_mark(0, "z", row, col, {})
+end
+
 --------------------
 -- Mode Switching --
 --------------------
@@ -269,26 +274,93 @@ vim.keymap.set({ "n", "i", "x" }, "<end>", "<Nop>")
 vim.keymap.set({ "n", "i", "x" }, "<insert>", "<Nop>")
 vim.keymap.set({ "n", "x" }, "<del>", "<Nop>")
 
+------------------
+-- Text Objects --
+------------------
+
+-- Translated from justinmk from jdaddy.vim
+local function whole_file()
+    local line_count = vim.api.nvim_buf_line_count(0)
+    if vim.api.nvim_buf_get_lines(0, 0, 1, true)[1] == "" and line_count == 1 then
+        -- Because the omap is not an expr, we need the <esc> keycode literal
+        return "'\027'"
+    end
+
+    -- get_lines result does not include \n. Subtract one because set_mark's col is 0 indexed
+    local last_line_len = #vim.api.nvim_buf_get_lines(0, -2, -1, true)[1]
+    vim.api.nvim_buf_set_mark(0, "[", 1, 0, {})
+    vim.api.nvim_buf_set_mark(0, "]", line_count, last_line_len, {})
+
+    return "'[o']g_"
+end
+
+vim.keymap.set("x", "al", function()
+    return whole_file()
+end, { expr = true })
+
+vim.keymap.set("o", "al", "<cmd>normal Val<CR>", { silent = true })
+
+-- TODO: Make this text object accept a count
+-- This could also be made to start at the first non-blank character rather than the first char
+-- But test this first rather than speculatively make adjustments
+
+-- Translated from justinmk from jdaddy.vim
+local function inner_line()
+    local cur_line = vim.api.nvim_get_current_line()
+    if cur_line == "" then
+        -- Because the omap is not an expr, we need the <esc> keycode literal
+        return "'\027'"
+    end
+
+    local row = vim.api.nvim_win_get_cursor(0)[1]
+    -- #cur_line does not include \n. Subtract one because set_mark's col is 0 indexed
+    local end_col = #cur_line - 1
+    vim.api.nvim_buf_set_mark(0, "[", row, 0, {})
+    vim.api.nvim_buf_set_mark(0, "]", row, end_col, {})
+
+    return "`[o`]"
+end
+
+vim.keymap.set("x", "il", function()
+    return inner_line()
+end, { expr = true })
+
+vim.keymap.set("o", "il", "<cmd>normal vil<CR>", { silent = true })
+
+vim.keymap.set("o", "_", "<cmd>normal v_<cr>", { silent = true })
+
 --------------------
 -- Capitalization --
 --------------------
+
+-- I am not sure how to do these fixes without manually returning to the mark
+-- If you use an autocmd to goto mark based on v:operator, v:operator persists after the autocmd,
+-- so the goto mark can retrigger after changing text in insert mode
+-- v:operator is read-only, so it cannot be manually set to ""
+-- vim.v.event.operator is nil in TextChanged
 
 local cap_motions_norm = {
     "~",
     "guu",
     "guiw",
     "guiW",
+    "guil",
+    "gual",
     "gUU",
     "gUiw",
     "gUiW",
+    "gUil",
+    "gUal",
     "g~~",
     "g~iw",
+    "g~il",
+    "g~al",
 }
 
 for _, map in pairs(cap_motions_norm) do
     vim.keymap.set("n", map, function()
-        -- For this and any other maps starting with mz, the v count must be manually inserted
-        return "mz" .. vim.v.count1 .. map .. "`z"
+        set_z_at_cursor()
+        return map .. "`z"
     end, { silent = true, expr = true })
 end
 
@@ -301,7 +373,8 @@ local cap_motions_vis = {
 
 for _, map in pairs(cap_motions_vis) do
     vim.keymap.set("x", map, function()
-        return "mz" .. vim.v.count1 .. map .. "`z"
+        set_z_at_cursor()
+        return map .. "`z"
     end, { silent = true, expr = true })
 end
 
@@ -313,19 +386,47 @@ vim.keymap.set("x", "U", "<nop>")
 -- Yank, Change, Delete --
 --------------------------
 
+-- Currently, autocmds are used to handle mark movement and suppress information messages
+-- Alternatively, it might be possible to handle these using custom operatorfuncs
+-- But for now, there is not an issue with the message suppression or mark movement significant
+-- enough to necessitate that
+
 vim.keymap.set({ "n", "x" }, "x", '"_x', { silent = true })
 vim.keymap.set("n", "X", '"_X', { silent = true })
-vim.keymap.set("x", "X", "<nop>", { silent = true })
+vim.keymap.set("x", "X", 'd0"_Dp==', { silent = true })
 
-vim.keymap.set("n", "d^", '^dg_"_dd', { silent = true }) -- Does not yank newline character
-vim.keymap.set("n", "dD", "ggdG", { silent = true })
+-- For now, I'm going to omit specific maps for "_d and "_c in normal mode
+-- Trying to use the pattern of <leader> maps being for external plugins only
+-- <leader>d and <leader>c contradict that
+-- gd and gc are goto definition and comment, so can't be used
+-- Could use Zc and Zd, but a bit cumbersome
+-- zd and zc are fold maps, but could be fine since I don't use those
+
+-- Explicitly delete to unnamed to write the contents to reg 0
+-- No mark, so count does not need to be manually specified
+vim.keymap.set("n", "d", function()
+    if (not vim.v.register) or vim.v.register == "" or vim.v.register == '"' then
+        -- If you type ""di, Nvim will see the command as """"di
+        -- This does not seem to cause an issue, but still, limit to only this case
+        return '""d'
+    else
+        return "d"
+    end
+end, { expr = true })
+
+-- Same as the delete map
+vim.keymap.set("n", "c", function()
+    if (not vim.v.register) or vim.v.register == "" or vim.v.register == '"' then
+        return '""c'
+    else
+        return "c"
+    end
+end, { expr = true })
+
+vim.keymap.set("x", "D", '"_d', { silent = true })
+vim.keymap.set("x", "C", '"_c', { silent = true })
+
 vim.keymap.set("n", "dK", "DO<esc>p==", { silent = true })
-vim.keymap.set("x", "D", "<nop>", { silent = true })
-
-vim.keymap.set("n", "<leader>d", '"_d', { silent = true })
-vim.keymap.set("n", "<leader>D", '"_D', { silent = true })
-vim.keymap.set("n", "<leader>dD", 'gg"_dG', { silent = true })
-vim.keymap.set("x", "<leader>D", "<nop>", { silent = true })
 
 vim.api.nvim_create_autocmd("TextChanged", {
     group = vim.api.nvim_create_augroup("delete_clear", { clear = true }),
@@ -337,15 +438,6 @@ vim.api.nvim_create_autocmd("TextChanged", {
     end,
 })
 
-vim.keymap.set("n", "c^", "^cg_", { silent = true }) -- Does not yank newline character
-vim.keymap.set("n", "cC", "ggcG", { silent = true })
-vim.keymap.set("x", "C", "<nop>", { silent = true })
-
-vim.keymap.set({ "n", "x" }, "<leader>c", '"_c', { silent = true })
-vim.keymap.set("n", "<leader>C", '"_C', { silent = true })
-vim.keymap.set("n", "<leader>cC", 'gg"_cG', { silent = true })
-vim.keymap.set("x", "<leader>C", "<nop>", { silent = true })
-
 vim.api.nvim_create_autocmd("InsertEnter", {
     group = vim.api.nvim_create_augroup("change_clear", { clear = true }),
     pattern = "*",
@@ -356,113 +448,148 @@ vim.api.nvim_create_autocmd("InsertEnter", {
     end,
 })
 
+-- FUTURE: No strong use case for this at the moment, but could use reges 1-9 as a yank ring for
+-- all yank commands, not just delete or change. But this could potentially create more conflicts
+-- under the hood
 vim.api.nvim_create_autocmd("TextYankPost", {
-    group = vim.api.nvim_create_augroup("yank_reset_cursor", { clear = true }),
+    group = vim.api.nvim_create_augroup("yank_cleanup", { clear = true }),
     callback = function()
         if vim.v.event.operator == "y" then
             vim.cmd("norm! `z")
         end
+
+        -- We want to suppress any "X lines yanked" messages
+        vim.cmd("echo ''")
+
+        -- The below assumes that the default clipboard is not set to unnamed plus:
+        -- All yanks write to unnamed if a register is not specified
+        -- If the yank command is used, the latest yank also writes to reg 0
+        -- The latest delete or change also writes to reg 1 or - (:h quote_number)
+        -- If you delete or change to unnamed explicitly, it will also write to reg 0
+        --- (the default writes to reg 1 are preserved. Not so with reg -. Acceptable loss)
+        -- The code below assumes that deletes/changes to unnamed are explicit
+        -- When explicitly yanking to a register other than unnamed, unnamed is still overwritten
+        --- (except for the black hole register)
+        -- To override this, the code below copies back from reg 0
+        -- When using a yank cmd without specifying a register, vim.v.event.regname shows "
+        -- When using a delete or change without specifying, regname shows nothing
+        -- regname will show a register for delete/change if one is specified
+        -- If yanking to the black hole register with any method, regname will show nothing
+        -- Therefore, do not copy from reg 0 if regname is '"' or ""
+        if vim.v.event.regname ~= '"' and vim.v.event.regname ~= "" then
+            vim.fn.setreg('"', vim.fn.getreg("0"))
+        end
     end,
 })
 
-vim.keymap.set({ "n", "x" }, "y", "mzy", { silent = true })
-vim.keymap.set({ "n", "x" }, "<leader>y", 'mz"+y', { silent = true })
+-- Set mark with the API so vim.v.count1 and vim.v.register don't need to be manually added
+-- to the return
+vim.keymap.set("n", "y", function()
+    set_z_at_cursor()
+    return "y"
+end, { silent = true, expr = true })
 
--- Nvim sets Y to be equivalent to y$ through a lua runtime file
+vim.keymap.set("x", "y", function()
+    set_z_at_cursor()
+    return "y"
+end, { silent = true, expr = true })
+
+vim.keymap.set("n", "gy", function()
+    set_z_at_cursor()
+    return '"+y'
+end, { silent = true, expr = true })
+
+vim.keymap.set("x", "Y", function()
+    set_z_at_cursor()
+    return '"+y'
+end, { silent = true, expr = true })
+
+-- Nvim sets Y to be equivalent to y$ through a lua runtime file (:h default-mappings)
 -- Equivalent of Neovim Y behavior must be mapped manually
-vim.keymap.set("n", "Y", "mzy$", { silent = true })
-vim.keymap.set("n", "<leader>Y", 'mz"+y$', { silent = true })
-vim.keymap.set("x", "Y", "<nop>", { silent = true })
+vim.keymap.set("n", "Y", function()
+    set_z_at_cursor()
+    return "y$"
+end, { silent = true, expr = true })
 
-vim.keymap.set("n", "y^", "mz^vg_y", { silent = true })
-vim.keymap.set("n", "<leader>y^", 'mz^vg_"+y', { silent = true })
-
--- `z included in these maps to prevent visible scrolling before the autocmd is triggered
-vim.keymap.set("n", "yY", "mzggyG`z", { silent = true })
-vim.keymap.set("n", "<leader>yY", 'mzgg"+yG`z', { silent = true })
-
-local startline_objects = { "0", "_", "g^", "g0" }
--- If you do db, it does not delete the character the cursor is on, so the h's are included in
--- these maps to offset the cursor and match default behavior
-for _, obj in pairs(startline_objects) do
-    vim.keymap.set("n", "y" .. obj, "mzhv" .. obj .. "y", { silent = true })
-    vim.keymap.set("n", "<leader>y" .. obj, "mzhv" .. obj .. '"+y', { silent = true })
-
-    vim.keymap.set("n", "d" .. obj, "hv" .. obj .. "d", { silent = true })
-    vim.keymap.set("n", "<leader>d" .. obj, "hv" .. obj .. '"_d', { silent = true })
-
-    vim.keymap.set("n", "c" .. obj, "hv" .. obj .. "c", { silent = true })
-    vim.keymap.set("n", "<leader>c" .. obj, "hv" .. obj .. '"_c', { silent = true })
-end
+vim.keymap.set("n", "gY", function()
+    set_z_at_cursor()
+    return '"+y$'
+end, { silent = true, expr = true })
 
 -------------
 -- Pasting --
 -------------
 
-local norm_pastes = {
-    { "p", "p", '"' },
-    { "<leader>p", '"+p', "+" },
-    { "P", "P", '"' },
-    { "<leader>P", '"+P', "+" },
-}
+-- NOTE: For now, I have omitted marks to return to original position. This is more consistent
+-- with the behavior of other text editors. Can add them back in if it becomes annoying
 
+-- NOTE: I had previously added code to the text ftplugin file to not autoformat certain pastes
+-- If we see wonky formatting issues again, add an ftdetect here instead to avoid code duplication
+
+local norm_pastes = { "p", "P" }
 for _, map in pairs(norm_pastes) do
-    vim.keymap.set("n", map[1], function()
-        local paste_cmd = "mz<cmd>silent norm! " .. vim.v.count1 .. map[2] .. "<cr>"
+    vim.keymap.set("n", map, function()
+        local register = vim.v.register or '"'
+        local is_linewise = vim.fn.getregtype(register) == "V" ---@type boolean
+        local is_blank = vim.api.nvim_get_current_line():match("^%s*$") ---@type boolean|nil
 
-        local line = vim.api.nvim_get_current_line() ---@type string
-        local is_blank = line:match("^%s*$") ---@type boolean|nil
-        if vim.fn.getregtype(map[3]) == "V" or is_blank then
+        local paste_cmd = "<cmd>silent norm! " .. vim.v.count1 .. '"' .. register .. map .. "<cr>"
+        if is_linewise or is_blank then
             paste_cmd = paste_cmd .. "<cmd>silent norm! `[=`]<cr>"
         end
 
-        return paste_cmd .. "`z"
+        return paste_cmd
     end, { expr = true, silent = true })
 end
 
-local visual_pastes = {
-    { "p", "P", '"' },
-    { "<leader>p", '"+P', "+" },
-    { "P", "p", '"' },
-    { "<leader>P", '"+p', "+" },
-}
+for _, map in pairs(norm_pastes) do
+    vim.keymap.set("n", "g" .. map, function()
+        local is_linewise = vim.fn.getregtype("+") == "V" ---@type boolean
+        local is_blank = vim.api.nvim_get_current_line():match("^%s*$") ---@type boolean|nil
 
-for _, map in pairs(visual_pastes) do
-    vim.keymap.set("x", map[1], function()
-        if not ut.check_modifiable() then
-            return
+        local paste_cmd = "<cmd>silent norm! " .. vim.v.count1 .. '"+' .. map .. "<cr>"
+        if is_linewise or is_blank then
+            paste_cmd = paste_cmd .. "<cmd>silent norm! `[=`]<cr>"
         end
 
-        local cur_mode = vim.api.nvim_get_mode().mode
-        if cur_mode == "V" or cur_mode == "Vs" then
-            -- Cursor goes to the beginning of the paste by default, no mark needed
-            -- Because there is no mark, count is taken in by default
-            return map[2] .. "<cmd>silent norm! =`]<cr>"
-        elseif vim.fn.getregtype(map[3]) == "V" then
-            return "mz" .. vim.v.count1 .. map[2] .. "<cmd>silent norm! `[=`]`z<cr>"
-        else
-            return "mz" .. vim.v.count1 .. map[2] .. "`z"
-        end
-    end, { silent = true, expr = true })
+        return paste_cmd
+    end, { expr = true, silent = true })
 end
+
+-- Visual pastes do not need any additional contrivances in order to run silently, as they
+-- run a delete under the hood, which triggers the TextChanged autocmd for deletes
+vim.keymap.set("x", "p", function()
+    local cur_mode = vim.api.nvim_get_mode().mode ---@type string
+    local is_linewise_mode = cur_mode == "V" or cur_mode == "Vs" ---@type boolean
+    local register = vim.v.register or '"' ---@type string
+    local is_linewise_reg = vim.fn.getregtype(register) == "V" ---@type boolean
+    local is_blank = vim.api.nvim_get_current_line():match("^%s*$") ---@type boolean|nil
+
+    if is_linewise_mode or is_linewise_reg or is_blank then
+        return "Pmz<cmd>silent norm! `[=`]`z<cr>"
+    else
+        return "P"
+    end
+end, { silent = true, expr = true })
+
+vim.keymap.set("x", "P", function()
+    local cur_mode = vim.api.nvim_get_mode().mode ---@type string
+    local is_linewise_mode = cur_mode == "V" or cur_mode == "Vs" ---@type boolean
+    local is_linewise_reg = vim.fn.getregtype("+") == "V" ---@type boolean
+    local is_blank_line = vim.api.nvim_get_current_line():match("^%s*$") ---@type boolean|nil
+
+    if is_linewise_mode or is_linewise_reg or is_blank_line then
+        return '"+Pmz<cmd>silent norm! `[=`]`z<cr>'
+    else
+        return '"+P'
+    end
+end, { silent = true, expr = true })
 
 -----------------------
 -- Insert Mode Fixes --
 -----------------------
 
 vim.keymap.set("i", ";", ";<C-g>u", { silent = true })
-
-vim.keymap.set("i", "<enter>", function()
-    local line = vim.api.nvim_get_current_line()
-    local col = vim.api.nvim_win_get_cursor(0)[2]
-    local after_cursor = line:sub(col + 1)
-
-    if after_cursor:match("^%s*$") then
-        return '<enter><esc>ze"_S' -- Make sure we re-enter insert mode properly indented
-    else
-        return "<enter><C-o>ze"
-    end
-end, { expr = true })
 
 -----------------------
 -- Text Manipulation --
