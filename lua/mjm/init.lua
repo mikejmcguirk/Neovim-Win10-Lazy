@@ -4,7 +4,7 @@ require("mjm.set")
 require("mjm.keymap")
 require("mjm.custom_cmd")
 require("mjm.diagnostic")
-require("mjm.quickfix")
+require("mjm.error-list")
 require("mjm.autocmd")
 
 require("mjm.lazy")

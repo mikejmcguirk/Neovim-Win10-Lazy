@@ -11,20 +11,22 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 
 local match_control = vim.api.nvim_create_augroup("match_control", { clear = true })
 local no_match = { "TelescopePrompt", "git" }
+-- When doing vim.fn.matchadd, the scopes seem to get mixed up between different windows
+-- By using the cmd, the highlights disappear on WinLeave as they should
 
-vim.api.nvim_create_autocmd("WinNew", {
+vim.api.nvim_create_autocmd({ "WinNew", "WinEnter" }, {
     group = match_control,
     pattern = "*",
     callback = function()
         if not vim.tbl_contains(no_match, vim.bo.filetype) then
-            vim.fn.matchadd("EolSpace", [[\s\+$]])
+            vim.cmd([[match EolSpace /\s\+$/]])
         end
     end,
 })
 
-vim.api.nvim_create_autocmd("ModeChanged", {
+vim.api.nvim_create_autocmd("WinLeave", {
     group = match_control,
-    pattern = "n:*",
+    pattern = "*",
     callback = function()
         for _, match in ipairs(vim.fn.getmatches()) do
             if match.group == "EolSpace" then
@@ -39,8 +41,21 @@ vim.api.nvim_create_autocmd("ModeChanged", {
     group = match_control,
     pattern = "*:n",
     callback = function()
-        if vim.bo.filetype ~= "TelescopePrompt" then
-            vim.fn.matchadd("EolSpace", [[\s\+$]])
+        if not vim.tbl_contains(no_match, vim.bo.filetype) then
+            vim.cmd([[match EolSpace /\s\+$/]])
+        end
+    end,
+})
+
+vim.api.nvim_create_autocmd("ModeChanged", {
+    group = match_control,
+    pattern = "n:*",
+    callback = function()
+        for _, match in ipairs(vim.fn.getmatches()) do
+            if match.group == "EolSpace" then
+                vim.fn.matchdelete(match.id)
+                return
+            end
         end
     end,
 })
@@ -140,3 +155,11 @@ vim.api.nvim_create_autocmd(
         end,
     }
 )
+
+vim.api.nvim_create_autocmd("WinNew", {
+    group = mjm_group,
+    pattern = "*",
+    callback = function(ev)
+        vim.fn.setloclist(0, {}, "f")
+    end,
+})

@@ -1,7 +1,3 @@
--- TODO: These should not be leader hotkeys, but I struggle with what a better alternative would
--- be. grq is cumbersome. Same with zq, which is also used for spell. Same with <c-q>
--- One idea is to use Q, though the default is somewhat useful
-
 local ut = require("mjm.utils")
 
 ---@return boolean
@@ -24,7 +20,27 @@ local is_qf_empty = function()
     end
 end
 
-vim.keymap.set("n", "<leader>qt", function()
+local has_loc_list = function()
+    local win = vim.api.nvim_get_current_win()
+    local loclist = vim.fn.getloclist(win)
+    if loclist and #loclist > 0 then
+        return true
+    else
+        return false
+    end
+end
+
+vim.keymap.set("n", "<leader><leader>", function()
+    if has_loc_list() then
+        print("has loc list")
+    else
+        print("no loc list")
+    end
+end)
+
+vim.keymap.set("n", "cuo", "<cmd>botright copen<cr>")
+vim.keymap.set("n", "cuc", "<cmd>cclose<cr>")
+vim.keymap.set("n", "cut", function()
     if is_qf_open() then
         vim.cmd("cclose")
     else
@@ -32,7 +48,7 @@ vim.keymap.set("n", "<leader>qt", function()
     end
 end)
 
-vim.keymap.set("n", "<leader>ql", function()
+vim.keymap.set("n", "duu", function()
     vim.cmd("cclose")
     vim.fn.setqflist({})
 end)
@@ -79,6 +95,14 @@ local get_diags = function(opts)
     end
 end
 
+-- TODO: Buffer specific diagnostics should be sent to location lists instead
+-- So you would have:
+--- yui (project diags to qf)
+--- yue (projects errors to qf)
+--- yoi (buffer diags to ll)
+--- yoe (buffer errors to ll)
+-- This allows for more flexibility with what diags are being viewed, using patterns that
+-- alleviate memory overload
 -- TODO: Consider using vim.diagnostic.setqflist in the future if enough features are added
 ---@param opts? table
 ---@return nil
@@ -112,15 +136,15 @@ local diags_to_qf = function(opts)
     vim.cmd("botright copen")
 end
 
-vim.keymap.set("n", "<leader>qi", function()
+vim.keymap.set("n", "yui", function()
     diags_to_qf()
 end)
 
-vim.keymap.set("n", "<leader>qu", function()
+vim.keymap.set("n", "yuu", function()
     diags_to_qf({ cur_buf = true })
 end)
 
-vim.keymap.set("n", "<leader>qe", function()
+vim.keymap.set("n", "yue", function()
     diags_to_qf({ err_only = true })
 end)
 
@@ -152,11 +176,11 @@ local cfilter_wrapper = function(opts)
     end
 end
 
-vim.keymap.set("n", "<leader>qk", function()
+vim.keymap.set("n", "duk", function()
     cfilter_wrapper({ keep = true })
 end)
 
-vim.keymap.set("n", "<leader>qr", function()
+vim.keymap.set("n", "dur", function()
     cfilter_wrapper()
 end)
 

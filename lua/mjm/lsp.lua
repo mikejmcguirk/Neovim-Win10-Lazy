@@ -66,6 +66,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
         vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { buffer = buf })
         -- Kickstart mapping
         vim.keymap.set("n", "gW", vim.lsp.buf.workspace_symbol, { buffer = buf })
+        vim.keymap.set("n", "gO", function()
+            vim.lsp.buf.document_symbol()
+        end, { buffer = buf })
         vim.keymap.set("n", "grh", vim.lsp.buf.document_highlight, { buffer = buf })
         vim.keymap.set("n", "grf", function()
             print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
