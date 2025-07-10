@@ -3,11 +3,7 @@ local ut = require("mjm.utils")
 ---@param opts? table
 local is_error_open = function(opts)
     opts = opts or {}
-    local loclist = 0
-    if opts.loclist then
-        loclist = 1
-    end
-
+    local loclist = opts.loclist and 1 or 0
     for _, win in ipairs(vim.fn.getwininfo()) do
         if win.quickfix == 1 and win.loclist == loclist then
             return true
@@ -200,55 +196,38 @@ end)
 ---@return nil
 local filter_wrapper = function(opts)
     opts = opts or {}
-    local loclist = opts.loclist or false
-    local name = "Quickfix"
-    if loclist then
-        name = "Location"
+    local name = opts.loclist and "Location" or "Quickfix"
+    local prefix = opts.loclist and "L" or "C"
+
+    if not is_error_open({ loclist = opts.loclist }) then
+        return vim.notify(name .. " list not open")
     end
 
-    if not is_error_open({ loclist = loclist }) then
-        vim.notify(name .. " list not open")
-        return
+    if is_error_empty({ loclist = opts.loclist }) then
+        return vim.notify(name .. " list is empty")
     end
 
-    if is_error_empty({ loclist = loclist }) then
-        vim.notify(name .. " list is empty")
-        return
-    end
-
-    local pattern = nil ---@type string
-    local bang = true ---@type boolean
-    if opts.keep then
-        pattern = ut.get_input("Pattern to keep: ")
-        bang = false
-    else
-        pattern = ut.get_input("Pattern to remove: ")
-    end
-
-    local prefix = "C"
-    if loclist then
-        prefix = "L"
-    end
-
+    local pattern = ut.get_input("Pattern to " .. (opts.remove and "remove: " or "keep: "))
+    local cmd = prefix .. "filter"
     if pattern ~= "" then
-        vim.api.nvim_cmd({ cmd = prefix .. "filter", bang = bang, args = { pattern } }, {})
+        vim.api.nvim_cmd({ cmd = cmd, bang = opts.remove, args = { pattern } }, {})
     end
 end
 
 vim.keymap.set("n", "duk", function()
-    filter_wrapper({ keep = true })
-end)
-
-vim.keymap.set("n", "dur", function()
     filter_wrapper()
 end)
 
+vim.keymap.set("n", "dur", function()
+    filter_wrapper({ remove = true })
+end)
+
 vim.keymap.set("n", "dok", function()
-    filter_wrapper({ loclist = true, keep = true })
+    filter_wrapper({ loclist = true })
 end)
 
 vim.keymap.set("n", "dor", function()
-    filter_wrapper({ loclist = true })
+    filter_wrapper({ loclist = true, remove = true })
 end)
 
 -- TODO: Make this take a count
