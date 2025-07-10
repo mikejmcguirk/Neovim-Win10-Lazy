@@ -59,9 +59,18 @@ vim.keymap.set("n", "gs", "<nop>") -- I guess this is fine here
 
 -- TODO: This should incorporate saving the last modified marks
 -- TODO: Add some sort of logic so this doesn't work in runtime or plugin files
-vim.keymap.set("n", "ZV", "<cmd>silent up<cr>")
+vim.keymap.set("n", "ZV", function()
+    if ut.check_modifiable() then
+        vim.cmd("silent up")
+    end
+end)
+
 vim.keymap.set("n", "ZA", "<cmd>silent wa<cr>")
 vim.keymap.set("n", "ZX", function()
+    if not ut.check_modifiable() then
+        return
+    end
+
     local status, result = pcall(function()
         vim.cmd("silent up | so")
     end)
@@ -114,6 +123,7 @@ vim.keymap.set("n", "<C-z>", "<nop>")
 
 -- Purposefully not setup to accept counts. Don't want to accidently get lost
 
+vim.keymap.set("n", "U", "<nop>")
 vim.keymap.set("n", "u", function()
     if not ut.check_modifiable() then
         return
@@ -121,8 +131,6 @@ vim.keymap.set("n", "u", function()
 
     vim.cmd("silent norm! u")
 end, { silent = true })
-
-vim.keymap.set("n", "U", "<nop>")
 
 vim.keymap.set("n", "<C-r>", function()
     if not ut.check_modifiable() then
@@ -146,7 +154,7 @@ local tmux_cmd_map = {
     ["j"] = "D",
     ["k"] = "U",
     ["l"] = "R",
-}
+} ---@type table {[string]: string}
 
 ---@param direction string
 ---@return nil
@@ -163,6 +171,7 @@ end
 ---@param nvim_cmd string
 ---@return nil
 local win_move_tmux = function(nvim_cmd)
+    ---@type boolean
     local is_prompt = vim.api.nvim_get_option_value("buftype", { buf = 0 }) == "prompt"
     if is_prompt then
         do_tmux_move(nvim_cmd)
@@ -289,14 +298,14 @@ vim.keymap.set({ "n", "x" }, "<del>", "<Nop>")
 
 -- Translated from justinmk from jdaddy.vim
 local function whole_file()
-    local line_count = vim.api.nvim_buf_line_count(0)
+    local line_count = vim.api.nvim_buf_line_count(0) ---@type integer
     if vim.api.nvim_buf_get_lines(0, 0, 1, true)[1] == "" and line_count == 1 then
         -- Because the omap is not an expr, we need the <esc> keycode literal
         return "'\027'"
     end
 
     -- get_lines result does not include \n. Subtract one because set_mark's col is 0 indexed
-    local last_line_len = #vim.api.nvim_buf_get_lines(0, -2, -1, true)[1] - 1
+    local last_line_len = #vim.api.nvim_buf_get_lines(0, -2, -1, true)[1] - 1 ---@type integer
     vim.api.nvim_buf_set_mark(0, "[", 1, 0, {})
     vim.api.nvim_buf_set_mark(0, "]", line_count, last_line_len, {})
 
@@ -315,15 +324,15 @@ vim.keymap.set("o", "al", "<cmd>normal Val<CR>", { silent = true })
 
 -- Translated from justinmk from jdaddy.vim
 local function inner_line()
-    local cur_line = vim.api.nvim_get_current_line()
+    local cur_line = vim.api.nvim_get_current_line() ---@type string
     if cur_line == "" then
         -- Because the omap is not an expr, we need the <esc> keycode literal
         return "'\027'"
     end
 
-    local row = vim.api.nvim_win_get_cursor(0)[1]
+    local row = vim.api.nvim_win_get_cursor(0)[1] ---@type integer
     -- #cur_line does not include \n. Subtract one because set_mark's col is 0 indexed
-    local end_col = #cur_line - 1
+    local end_col = #cur_line - 1 ---@type integer
     vim.api.nvim_buf_set_mark(0, "[", row, 0, {})
     vim.api.nvim_buf_set_mark(0, "]", row, end_col, {})
 
@@ -335,7 +344,6 @@ vim.keymap.set("x", "il", function()
 end, { expr = true })
 
 vim.keymap.set("o", "il", "<cmd>normal vil<CR>", { silent = true })
-
 vim.keymap.set("o", "_", "<cmd>normal v_<cr>", { silent = true })
 
 --------------------
@@ -364,7 +372,7 @@ local cap_motions_norm = {
     "g~iw",
     "g~il",
     "g~al",
-}
+} ---@type table string[]
 
 for _, map in pairs(cap_motions_norm) do
     vim.keymap.set("n", map, function()
@@ -602,14 +610,14 @@ vim.keymap.set("n", "J", function()
     end
 
     -- Done using a view instead of a mark to prevent visible screen shake
-    local view = vim.fn.winsaveview()
+    local view = vim.fn.winsaveview() ---@type vim.fn.winsaveview.ret
     -- By default, [count]J joins one fewer lines than indicated by the relative line numbers
-    local count = vim.v.count1 + 1
+    local count = vim.v.count1 + 1 ---@type integer
     vim.cmd("norm! " .. count .. "J")
     vim.fn.winrestview(view)
 end, { silent = true })
 
----@param opts? table
+---@param opts? table(upward:boolean)
 ---@return nil
 local visual_move = function(opts)
     if not ut.check_modifiable() then
@@ -664,9 +672,9 @@ local visual_indent = function(opts)
     vim.opt.lazyredraw = true
     vim.opt_local.cursorline = false
 
-    local count = vim.v.count1
+    local count = vim.v.count1 ---@type integer
     opts = opts or {}
-    local shift = opts.back and "<" or ">"
+    local shift = opts.back and "<" or ">" ---@type string
 
     vim.cmd('exec "silent norm! \\<esc>"')
     vim.cmd("silent '<,'> " .. string.rep(shift, count))

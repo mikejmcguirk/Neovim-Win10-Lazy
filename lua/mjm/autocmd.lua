@@ -1,3 +1,6 @@
+-- FUTURE: It would be good to have an autocmd where, if the file was last opened within the
+-- past week, you go to where you left off, but after that it just goes fresh to the top
+
 vim.api.nvim_create_autocmd("TextYankPost", {
     group = vim.api.nvim_create_augroup("yank_highlight", { clear = true }),
     pattern = "*",
@@ -77,7 +80,7 @@ local clear_conditions = {
     "TabNewEntered",
     "WinEnter",
     "WinLeave",
-}
+} ---@type string[]
 
 vim.api.nvim_create_autocmd(clear_conditions, {
     group = mjm_group,
@@ -106,18 +109,5 @@ vim.api.nvim_create_autocmd({ "VimLeavePre" }, {
     pattern = "*",
     callback = function()
         vim.fn.setreg("/", nil)
-    end,
-})
-
--- TODO: This should check the last file read date and just go to the beginning of the file
--- if it was a week or so ago
-vim.api.nvim_create_autocmd("BufReadPost", {
-    group = mjm_group,
-    desc = "Go to the last location when opening a buffer",
-    callback = function(ev)
-        local mark = vim.api.nvim_buf_get_mark(ev.buf, '"')
-        if mark[1] > 0 and mark[1] <= vim.api.nvim_buf_line_count(ev.buf) then
-            vim.cmd('normal! g`"zz')
-        end
     end,
 })
