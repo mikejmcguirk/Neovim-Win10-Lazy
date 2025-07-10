@@ -198,18 +198,24 @@ end)
 
 ---@param opts? table
 ---@return nil
-local cfilter_wrapper = function(opts)
-    if not is_error_open() then
-        vim.notify("Quickfix list not open")
-        return
-    end
-
-    if is_error_empty() then
-        vim.notify("Quickfix list is empty")
-        return
-    end
-
+local filter_wrapper = function(opts)
     opts = opts or {}
+    local loclist = opts.loclist or false
+    local name = "Quickfix"
+    if loclist then
+        name = "Location"
+    end
+
+    if not is_error_open({ loclist = loclist }) then
+        vim.notify(name .. " list not open")
+        return
+    end
+
+    if is_error_empty({ loclist = loclist }) then
+        vim.notify(name .. " list is empty")
+        return
+    end
+
     local pattern = nil ---@type string
     local bang = true ---@type boolean
     if opts.keep then
@@ -219,17 +225,30 @@ local cfilter_wrapper = function(opts)
         pattern = ut.get_input("Pattern to remove: ")
     end
 
+    local prefix = "C"
+    if loclist then
+        prefix = "L"
+    end
+
     if pattern ~= "" then
-        vim.api.nvim_cmd({ cmd = "Cfilter", bang = bang, args = { pattern } }, {})
+        vim.api.nvim_cmd({ cmd = prefix .. "filter", bang = bang, args = { pattern } }, {})
     end
 end
 
 vim.keymap.set("n", "duk", function()
-    cfilter_wrapper({ keep = true })
+    filter_wrapper({ keep = true })
 end)
 
 vim.keymap.set("n", "dur", function()
-    cfilter_wrapper()
+    filter_wrapper()
+end)
+
+vim.keymap.set("n", "dok", function()
+    filter_wrapper({ loclist = true, keep = true })
+end)
+
+vim.keymap.set("n", "dor", function()
+    filter_wrapper({ loclist = true })
 end)
 
 -- TODO: Make this take a count
