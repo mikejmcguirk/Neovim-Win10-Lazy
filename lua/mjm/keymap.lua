@@ -616,12 +616,8 @@ local visual_move = function(opts)
     vim.cmd('exec "silent norm! \\<esc>"') -- Force update of '< and '> marks
 
     opts = opts or {}
-    local fix_num = 0 ---@type integer
-    local cmd_start = "'<,'> m '>+" ---@type string
-    if opts.upward then
-        fix_num = 1
-        cmd_start = "'<,'> m '<-"
-    end
+    local fix_num = opts.upward and 1 or 0
+    local cmd_start = opts.upward and "'<,'> m '<-" or "'<,'> m '>+"
 
     local offset = 0 ---@type integer
     if vcount1 > 1 and opts.upward then
