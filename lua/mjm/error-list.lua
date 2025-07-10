@@ -235,37 +235,20 @@ end)
 ---@return nil
 local err_scroll_wrapper = function(opts)
     opts = opts or {}
+    local name = opts.loclist and "Location" or "Quickfix"
     if is_error_empty({ loclist = opts.loclist or false }) then
-        if opts.loclist then
-            vim.notify("Location list is empty")
-        else
-            vim.notify("Quickfix list is empty")
-        end
-
-        return
+        return vim.notify(name .. " list is empty")
     end
 
-    local prefix = "c"
-    if opts.loclist then
-        prefix = "l"
-    end
-
-    local cmd = prefix .. "next"
-    if opts.prev then
-        cmd = prefix .. "prev"
-    end
-
+    local prefix = opts.loclist and "l" or "c"
+    local cmd = opts.prev and prefix .. "prev" or prefix .. "next"
     vim.cmd("botright " .. prefix .. "open")
     local ok, err = pcall(function()
         vim.cmd(cmd)
     end)
 
     if type(err) == "string" and string.find(err, "E553") then
-        local backup_cmd = prefix .. "first"
-        if opts.prev then
-            backup_cmd = prefix .. "last"
-        end
-
+        local backup_cmd = opts.prev and prefix .. "last" or prefix .. "first"
         ok, err = pcall(function()
             vim.cmd(backup_cmd)
         end)
