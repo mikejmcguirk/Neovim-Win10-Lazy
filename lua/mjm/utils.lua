@@ -189,21 +189,6 @@ M.list_closer = function(opts)
         end
     end
 
-    local qflist = 1
-    if opts.loclist then
-        qflist = 0
-    end
-
-    local cur_win = vim.api.nvim_get_current_win()
-    local win_info = vim.fn.getwininfo(cur_win)[1]
-    if win_info.quickfix == 1 and win_info.loclist == qflist then
-        if qflist == 1 then
-            vim.notify("Inside Location list")
-        else
-            vim.notify("Inside Quickfix list")
-        end
-    end
-
     return false
 end
 

@@ -1,5 +1,14 @@
 local ut = require("mjm.utils")
 
+-- NOTE: If we need to use these maps across files, like qf.lua, define here for consistency
+-- Keymap pattern:
+--- y - Yank to list
+--- c - Change status of list
+--- d - Delete from list
+--- u - Quickfix List (dq and cq are nasty)
+--- o - Location List
+-- NOTE: do creates a potential conflict with diff mode
+
 ---@param opts? table
 local is_error_open = function(opts)
     opts = opts or {}
@@ -26,6 +35,23 @@ local is_qf_empty = function()
     end
 end
 
+local is_error_empty = function(opts)
+    opts = opts or {}
+    local count = nil
+    if opts.loclist then
+        local cur_win = vim.api.nvim_get_current_win()
+        count = #vim.fn.getloclist(cur_win)
+    else
+        count = #vim.fn.getqflist()
+    end
+
+    if count == 0 then
+        return true
+    else
+        return false
+    end
+end
+
 local has_loc_list = function()
     local win = vim.api.nvim_get_current_win()
     local loclist = vim.fn.getloclist(win)
@@ -36,17 +62,13 @@ local has_loc_list = function()
     end
 end
 
--- Use error_closer here to get the inside location list notification
 vim.keymap.set("n", "cuc", function()
     ut.list_closer()
 end)
 
 vim.keymap.set("n", "cup", function()
-    if is_error_open({ loclist = true }) then
-        vim.notify("Location list is open")
-    else
-        vim.cmd("botright copen")
-    end
+    ut.list_closer({ loclist = true })
+    vim.cmd("botright copen")
 end)
 
 vim.keymap.set("n", "cui", function()
@@ -54,11 +76,7 @@ vim.keymap.set("n", "cui", function()
         return
     end
 
-    if is_error_open({ loclist = true }) then
-        vim.notify("Location list is open")
-        return
-    end
-
+    ut.list_closer({ loclist = true })
     vim.cmd("botright copen")
 end)
 
@@ -67,20 +85,17 @@ vim.keymap.set("n", "coc", function()
 end)
 
 vim.keymap.set("n", "cop", function()
-    if is_error_open() then
-        vim.notify("Quickfix list is open")
-    else
-        vim.cmd("botright lopen")
+    if not has_loc_list() then
+        vim.notify("No location list for this window")
+        return
     end
+
+    ut.list_closer()
+    vim.cmd("botright lopen")
 end)
 
 vim.keymap.set("n", "coi", function()
     if ut.list_closer({ loclist = true }) then
-        return
-    end
-
-    if is_error_open() then
-        vim.notify("Quickfix list is open")
         return
     end
 
@@ -89,12 +104,21 @@ vim.keymap.set("n", "coi", function()
         return
     end
 
+    ut.list_closer()
     vim.cmd("botright lopen")
 end)
 
-vim.keymap.set("n", "duu", function()
-    vim.cmd("cclose")
-    vim.fn.setqflist({})
+-- Not a great way at the moment to deal with chistory and lhistory, so just wipe everything
+
+vim.keymap.set("n", "dua", function()
+    ut.list_closer()
+    vim.fn.setqflist({}, "f")
+end)
+
+vim.keymap.set("n", "doa", function()
+    ut.list_closer({ loclist = true })
+    local cur_win = vim.api.nvim_get_current_win()
+    vim.fn.setloclist(cur_win, {}, "f")
 end)
 
 local severity_map = {
@@ -231,27 +255,37 @@ end)
 -- TODO: Make this take a count
 ---@param opts? table
 ---@return nil
-local qf_scroll_wrapper = function(opts)
-    if is_qf_empty() then
-        vim.notify("Quickfix list is empty")
+local err_scroll_wrapper = function(opts)
+    opts = opts or {}
+    if is_error_empty({ loclist = opts.loclist or false }) then
+        if opts.loclist then
+            vim.notify("Location list is empty")
+        else
+            vim.notify("Quickfix list is empty")
+        end
+
         return
     end
 
-    opts = opts or {}
-    local cmd = "cnext"
-    if opts.prev then
-        cmd = "cprev"
+    local prefix = "c"
+    if opts.loclist then
+        prefix = "l"
     end
 
-    vim.cmd("botright copen")
+    local cmd = prefix .. "next"
+    if opts.prev then
+        cmd = prefix .. "prev"
+    end
+
+    vim.cmd("botright " .. prefix .. "open")
     local ok, err = pcall(function()
         vim.cmd(cmd)
     end)
 
     if type(err) == "string" and string.find(err, "E553") then
-        local backup_cmd = "cfirst"
+        local backup_cmd = prefix .. "first"
         if opts.prev then
-            backup_cmd = "clast"
+            backup_cmd = prefix .. "last"
         end
 
         ok, err = pcall(function()
@@ -262,14 +296,23 @@ local qf_scroll_wrapper = function(opts)
     if ok then
         vim.cmd("norm! zz")
     else
-        vim.api.nvim_echo({ { err or "Unknown error in qf_scroll_wraper" } }, true, { err = true })
+        local err_msg = err or "Unknown error in err_scroll_wrapper"
+        vim.api.nvim_echo({ { err_msg } }, true, { err = true })
     end
 end
 
 vim.keymap.set("n", "[q", function()
-    qf_scroll_wrapper({ prev = true })
+    err_scroll_wrapper({ prev = true })
 end)
 
 vim.keymap.set("n", "]q", function()
-    qf_scroll_wrapper()
+    err_scroll_wrapper()
+end)
+
+vim.keymap.set("n", "[l", function()
+    err_scroll_wrapper({ loclist = true, prev = true })
+end)
+
+vim.keymap.set("n", "]l", function()
+    err_scroll_wrapper({ loclist = true })
 end)
