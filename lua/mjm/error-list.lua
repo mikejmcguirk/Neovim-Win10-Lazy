@@ -1,9 +1,15 @@
 local ut = require("mjm.utils")
 
----@return boolean
-local is_qf_open = function()
+---@param opts? table
+local is_error_open = function(opts)
+    opts = opts or {}
+    local loclist = 0
+    if opts.loclist then
+        loclist = 1
+    end
+
     for _, win in ipairs(vim.fn.getwininfo()) do
-        if win.quickfix == 1 then
+        if win.quickfix == 1 and win.loclist == loclist then
             return true
         end
     end
@@ -30,22 +36,60 @@ local has_loc_list = function()
     end
 end
 
-vim.keymap.set("n", "<leader><leader>", function()
-    if has_loc_list() then
-        print("has loc list")
-    else
-        print("no loc list")
-    end
+-- Use error_closer here to get the inside location list notification
+vim.keymap.set("n", "cuc", function()
+    ut.list_closer()
 end)
 
-vim.keymap.set("n", "cuo", "<cmd>botright copen<cr>")
-vim.keymap.set("n", "cuc", "<cmd>cclose<cr>")
-vim.keymap.set("n", "cuu", function()
-    if is_qf_open() then
-        vim.cmd("cclose")
+vim.keymap.set("n", "cup", function()
+    if is_error_open({ loclist = true }) then
+        vim.notify("Location list is open")
     else
         vim.cmd("botright copen")
     end
+end)
+
+vim.keymap.set("n", "cui", function()
+    if ut.list_closer() then
+        return
+    end
+
+    if is_error_open({ loclist = true }) then
+        vim.notify("Location list is open")
+        return
+    end
+
+    vim.cmd("botright copen")
+end)
+
+vim.keymap.set("n", "coc", function()
+    ut.list_closer({ loclist = true })
+end)
+
+vim.keymap.set("n", "cop", function()
+    if is_error_open() then
+        vim.notify("Quickfix list is open")
+    else
+        vim.cmd("botright lopen")
+    end
+end)
+
+vim.keymap.set("n", "coi", function()
+    if ut.list_closer({ loclist = true }) then
+        return
+    end
+
+    if is_error_open() then
+        vim.notify("Quickfix list is open")
+        return
+    end
+
+    if not has_loc_list() then
+        vim.notify("No location list for this window")
+        return
+    end
+
+    vim.cmd("botright lopen")
 end)
 
 vim.keymap.set("n", "duu", function()
@@ -151,7 +195,7 @@ end)
 ---@param opts? table
 ---@return nil
 local cfilter_wrapper = function(opts)
-    if not is_qf_open() then
+    if not is_error_open() then
         vim.notify("Quickfix list not open")
         return
     end

@@ -173,4 +173,38 @@ M.fallback_formatter = function(buf)
     end
 end
 
+---@param opts? table
+---@return boolean
+M.list_closer = function(opts)
+    opts = opts or {}
+    local loclist = 0
+    if opts.loclist then
+        loclist = 1
+    end
+
+    for _, win in ipairs(vim.fn.getwininfo()) do
+        if win.quickfix == 1 and win.loclist == loclist then
+            vim.api.nvim_win_close(win.winid, false)
+            return true
+        end
+    end
+
+    local qflist = 1
+    if opts.loclist then
+        qflist = 0
+    end
+
+    local cur_win = vim.api.nvim_get_current_win()
+    local win_info = vim.fn.getwininfo(cur_win)[1]
+    if win_info.quickfix == 1 and win_info.loclist == qflist then
+        if qflist == 1 then
+            vim.notify("Inside Location list")
+        else
+            vim.notify("Inside Quickfix list")
+        end
+    end
+
+    return false
+end
+
 return M
