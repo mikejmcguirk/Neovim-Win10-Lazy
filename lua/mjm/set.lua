@@ -66,6 +66,7 @@ vim.opt.startofline = false
 vim.opt.jumpoptions:append("view") -- Restore views when possible
 vim.opt.matchpairs:append("<:>")
 vim.opt.cpoptions:append("W") -- Don't overwrite read-only files
+vim.opt.splitkeep = "screen"
 
 vim.opt.selection = "old"
 vim.opt.smartindent = true
