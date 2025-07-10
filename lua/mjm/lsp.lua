@@ -55,7 +55,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
             vim.lsp.buf.signature_help({ border = Border })
         end, { buffer = buf, desc = "vim.lsp.buf.signature_help()" })
 
-        -- TODO: This will be added as a default in the future
+        -- FUTURE: This will be added as a default in the future
         vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { buffer = buf })
 
         -- Kickstart mapping

@@ -57,8 +57,7 @@ vim.keymap.set("n", "gs", "<nop>") -- I guess this is fine here
 -- Saving and Quitting --
 -------------------------
 
--- TODO: This should incorporate saving the last modified marks
--- TODO: Add some sort of logic so this doesn't work in runtime or plugin files
+-- FUTURE: This should incorporate saving the last modified marks
 vim.keymap.set("n", "ZV", function()
     if ut.check_modifiable() then
         vim.cmd("silent up")
@@ -199,7 +198,7 @@ local resize_win = function(cmd)
     end
 end
 
--- TODO: These should be a different map, but I can't think of a better one
+-- FUTURE: These should be a different map, but I can't think of a better one
 -- Using alt feels like an anti-pattern
 vim.keymap.set("n", "<M-j>", function()
     resize_win("silent resize -2")
