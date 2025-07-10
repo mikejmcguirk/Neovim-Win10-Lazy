@@ -20,13 +20,14 @@ end
 ---@return boolean
 local is_error_empty = function(opts)
     opts = opts or {}
-    if opts.loclist and #vim.fn.getloclist(vim.api.nvim_get_current_win()) <= 0 then
-        return true
-    elseif #vim.fn.getqflist() <= 0 then
-        return true
+    local loclist = opts.loclist or false
+    if loclist and #vim.fn.getloclist(vim.api.nvim_get_current_win()) > 0 then
+        return false
+    elseif (not loclist) and #vim.fn.getqflist() > 0 then
+        return false
     end
 
-    return false
+    return true
 end
 
 vim.keymap.set("n", "cuc", "<cmd>cclose<cr>")
@@ -80,6 +81,13 @@ vim.keymap.set("n", "coi", function()
     local err_msg = err or "Unknown error opening location list"
     vim.api.nvim_echo({ { err_msg } }, true, { err = true })
 end)
+
+for _, map in pairs({ "cuu", "coo" }) do
+    vim.keymap.set("n", map, function()
+        ut.loc_list_closer()
+        vim.cmd("cclose")
+    end)
+end
 
 -- Not a great way at the moment to deal with chistory and lhistory, so just wipe everything
 
