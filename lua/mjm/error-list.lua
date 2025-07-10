@@ -1,4 +1,11 @@
-local ut = require("mjm.utils")
+-- Override Nvim default behavior where new windows get a copy of the previous window's loc list
+vim.api.nvim_create_autocmd("WinNew", {
+    group = vim.api.nvim_create_augroup("new_llist_delete", { clear = true }),
+    pattern = "*",
+    callback = function()
+        vim.fn.setloclist(0, {}, "f")
+    end,
+})
 
 ---@param opts? table
 local is_error_open = function(opts)
@@ -26,56 +33,83 @@ local is_error_empty = function(opts)
     return true
 end
 
-vim.keymap.set("n", "cuc", "<cmd>cclose<cr>")
-vim.keymap.set("n", "cup", function()
+local ut = require("mjm.utils")
+local open_qf_list = function()
     ut.loc_list_closer()
     vim.cmd("botright copen")
+end
+
+local open_loc_list = function()
+    -- Not the best to do this before verifying the loc list opened, but having the qf list open
+    -- while the loc list opens messes up its formatting
+    vim.cmd("cclose")
+    -- Nvim already internally checks if an active qf window is available. No need to
+    -- duplicate logic
+    -- In theory, this should only be run after checking that a valid loc list is present,
+    -- but the pcall is here for defensive coding purposes
+    local ok, err = pcall(function()
+        vim.cmd("lopen")
+    end)
+
+    if not ok then
+        local err_msg = err or "Unknown error opening location list"
+        vim.api.nvim_echo({ { err_msg } }, true, { err = true })
+    end
+end
+
+vim.keymap.set("n", "cuc", "<cmd>cclose<cr>")
+vim.keymap.set("n", "cup", function()
+    open_qf_list()
 end)
 
 vim.keymap.set("n", "cuu", function()
     if is_error_open({ loclist = false }) then
-        vim.cmd("cclose")
-        return
+        return vim.cmd("cclose")
     end
 
-    ut.loc_list_closer()
-    vim.cmd("botright copen")
+    open_qf_list()
 end)
 
-vim.keymap.set("n", "coc", function()
-    ut.loc_list_closer()
-end)
-
+vim.keymap.set("n", "coc", "<cmd>lclose<cr>")
 vim.keymap.set("n", "cop", function()
-    local ok, err = pcall(function()
-        vim.cmd("botright lopen")
-    end)
-
-    if ok then
-        vim.cmd("cclose")
-        return
+    local cur_win = vim.api.nvim_get_current_win() ---@type integer
+    local cur_win_info = vim.fn.getwininfo(cur_win)[1]
+    if cur_win_info.quickfix == 1 then
+        return -- qf windows cannot have associated llists
     end
 
-    local err_msg = err or "Unknown error opening location list"
-    vim.api.nvim_echo({ { err_msg } }, true, { err = true })
+    local llist_id = vim.fn.getloclist(cur_win, { id = 0 }).id
+    if llist_id == 0 then
+        return vim.notify("No location list for this window")
+    end
+
+    open_loc_list()
 end)
 
 vim.keymap.set("n", "coo", function()
-    if ut.loc_list_closer() then
-        return
+    local cur_win = vim.api.nvim_get_current_win() ---@type integer
+    local cur_win_info = vim.fn.getwininfo(cur_win)[1]
+    if cur_win_info.quickfix == 1 and cur_win_info.loclist == 1 then
+        return vim.cmd("lclose")
     end
 
-    local ok, err = pcall(function()
-        vim.cmd("botright lopen")
-    end)
-
-    if ok then
-        vim.cmd("cclose")
-        return
+    -- See :h getqflist what section for id field. Zero gets ID for current list
+    local llist_id = vim.fn.getloclist(cur_win, { id = 0 }).id
+    -- See :h getqflist returned dictionary for what items
+    if llist_id == 0 then
+        return vim.notify("No location list for this window")
     end
 
-    local err_msg = err or "Unknown error opening location list"
-    vim.api.nvim_echo({ { err_msg } }, true, { err = true })
+    for _, win in ipairs(vim.fn.getwininfo()) do
+        if win.quickfix == 1 and win.loclist == 1 then
+            local this_id = vim.fn.getloclist(win.winid, { id = 0 }).id
+            if this_id == llist_id then
+                return vim.cmd("lclose")
+            end
+        end
+    end
+
+    open_loc_list()
 end)
 
 for _, map in pairs({ "cuo", "cou" }) do
@@ -127,69 +161,76 @@ local convert_diag = function(raw_diag)
     }
 end
 
----@param opts? table
----@return table
-local get_diags = function(opts)
-    opts = opts or {}
-    local err_only = opts.err_only or false ---@type boolean
-    if err_only then
-        return vim.diagnostic.get(opts.bufnr or nil, { severity = vim.diagnostic.severity.ERROR })
-    else
-        return vim.diagnostic.get(opts.bufnr or nil)
-    end
-end
-
--- TODO: Buffer specific diagnostics should be sent to location lists instead
--- So you would have:
---- yui (project diags to qf)
---- yue (projects errors to qf)
---- yoi (buffer diags to ll)
---- yoe (buffer errors to ll)
--- This allows for more flexibility with what diags are being viewed, using patterns that
--- alleviate memory overload
 -- TODO: Consider using vim.diagnostic.setqflist in the future if enough features are added
 ---@param opts? table
 ---@return nil
-local diags_to_qf = function(opts)
+local all_diags_to_qf = function(opts)
     opts = opts or {}
+    local error = vim.diagnostic.severity.ERROR ---@type integer
+    local hint = vim.diagnostic.severity.HINT ---@type integer
+    local severity = opts.err_only and error or hint ---@type integer
 
-    local cur_buf = opts.cur_buf or false ---@type boolean
-    local bufnr = nil ---@type integer
-    if cur_buf and (not ut.check_modifiable()) then
-        return
-    elseif cur_buf then
-        bufnr = 0
-    end
-
-    local err_only = opts.err_only or false ---@type boolean
-    local raw_diags = get_diags({ err_only = err_only, bufnr = bufnr }) ---@type table
+    ---@diagnostic disable: undefined-doc-name
+    ---@type vim.diagnostic[]
+    local raw_diags = vim.diagnostic.get(nil, { severity = { min = severity } })
     if #raw_diags == 0 then
-        if err_only then
-            print("No errors")
-        else
-            print("No diagnostics")
-        end
-
-        vim.fn.setqflist({})
+        local name = opts.err_only and "errors" or "diagnostics" ---@type string
+        -- At least for now, will omit clearing the qflist
         vim.cmd("cclose")
-        return
+        return vim.notify("No " .. name)
     end
 
     local diags_for_qf = vim.tbl_map(convert_diag, raw_diags) ---@type table
+    assert(#raw_diags == #diags_for_qf, "Coverted diags were filtered")
     vim.fn.setqflist(diags_for_qf, "r")
-    vim.cmd("botright copen")
+    open_qf_list()
 end
 
-vim.keymap.set("n", "yui", function()
-    diags_to_qf()
-end)
+---@param opts? table
+local buf_diags_to_loc_list = function(opts)
+    opts = opts or {}
+    local cur_win = vim.api.nvim_get_current_win() ---@type integer
+    local cur_buf = vim.api.nvim_win_get_buf(cur_win) ---@type integer
+    if not ut.check_modifiable(cur_buf) then
+        return
+    end
 
-vim.keymap.set("n", "yuu", function()
-    diags_to_qf({ cur_buf = true })
+    local error = vim.diagnostic.severity.ERROR ---@type integer
+    local hint = vim.diagnostic.severity.HINT ---@type integer
+    local min_severity = opts.err_only and error or hint ---@type integer
+
+    ---@diagnostic disable: undefined-doc-name
+    ---@type vim.diagnostic[]
+    local raw_diags = vim.diagnostic.get(cur_buf, { severity = { min = min_severity } })
+    if #raw_diags == 0 then
+        local name = opts.err_only and "errors" or "diagnostics" ---@type string
+        -- At least for now, will omit clearing the llist
+        vim.cmd("lclose")
+        return vim.notify("No " .. name)
+    end
+
+    local diags_for_ll = vim.tbl_map(convert_diag, raw_diags) ---@type table ---@type table
+    assert(#raw_diags == #diags_for_ll, "Coverted diags were filtered")
+    vim.fn.setloclist(cur_win, diags_for_ll, "r")
+    open_loc_list()
+end
+
+-- TODO: Add one of these for highest priority diags
+
+vim.keymap.set("n", "yui", function()
+    all_diags_to_qf()
 end)
 
 vim.keymap.set("n", "yue", function()
-    diags_to_qf({ err_only = true })
+    all_diags_to_qf({ err_only = true })
+end)
+
+vim.keymap.set("n", "yoi", function()
+    buf_diags_to_loc_list()
+end)
+
+vim.keymap.set("n", "yoe", function()
+    buf_diags_to_loc_list({ err_only = true })
 end)
 
 ---@param opts? table
@@ -242,7 +283,12 @@ local err_scroll_wrapper = function(opts)
 
     local prefix = opts.loclist and "l" or "c"
     local cmd = opts.prev and prefix .. "prev" or prefix .. "next"
-    vim.cmd("botright " .. prefix .. "open")
+    if opts.loclist then
+        open_loc_list()
+    else
+        open_qf_list()
+    end
+
     local ok, err = pcall(function()
         vim.cmd(cmd)
     end)
@@ -254,12 +300,12 @@ local err_scroll_wrapper = function(opts)
         end)
     end
 
-    if ok then
-        vim.cmd("norm! zz")
-    else
+    if not ok then
         local err_msg = err or "Unknown error in err_scroll_wrapper"
-        vim.api.nvim_echo({ { err_msg } }, true, { err = true })
+        return vim.api.nvim_echo({ { err_msg } }, true, { err = true })
     end
+
+    vim.cmd("norm! zz")
 end
 
 vim.keymap.set("n", "[q", function()

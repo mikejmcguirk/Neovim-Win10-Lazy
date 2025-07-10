@@ -175,14 +175,15 @@ end
 
 ---@return boolean
 M.loc_list_closer = function()
+    local closed_loc_list = false
     for _, win in ipairs(vim.fn.getwininfo()) do
         if win.quickfix == 1 and win.loclist == 1 then
             vim.api.nvim_win_close(win.winid, false)
-            return true
+            closed_loc_list = true
         end
     end
 
-    return false
+    return closed_loc_list
 end
 
 return M
