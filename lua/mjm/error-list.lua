@@ -82,6 +82,13 @@ vim.keymap.set("n", "coo", function()
     vim.api.nvim_echo({ { err_msg } }, true, { err = true })
 end)
 
+for _, map in pairs({ "cuo", "cou" }) do
+    vim.keymap.set("n", map, function()
+        ut.loc_list_closer()
+        vim.cmd("cclose")
+    end)
+end
+
 -- Not a great way at the moment to deal with chistory and lhistory, so just wipe everything
 
 vim.keymap.set("n", "dua", function()
