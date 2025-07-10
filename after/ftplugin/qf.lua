@@ -1,6 +1,7 @@
 vim.opt_local.colorcolumn = ""
 vim.o.buflisted = false
 
+vim.keymap.set("n", "q", "<cmd>q<cr>", { buffer = true })
 vim.keymap.set("n", "dd", function()
     local cur_line = vim.fn.line(".") --- @type integer
     local cur_win = vim.api.nvim_get_current_win()

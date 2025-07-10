@@ -323,3 +323,56 @@ end)
 vim.keymap.set("n", "]l", function()
     err_scroll_wrapper({ loclist = true })
 end)
+
+---Assumes gregprg is ripgrep
+---@param opts table
+---@return nil
+local grep_wrapper = function(opts)
+    local pattern = ut.get_input("Enter Pattern: ") ---@type string
+    if pattern == "" then
+        return
+    end
+
+    local args = { pattern } ---@type table
+    opts = opts or {}
+    local cmd = opts.loclist and "lgrep" or "grep"
+    if opts.insensitive then
+        table.insert(args, "-i")
+    end
+
+    local magic = opts.loclist and { file = true } or {}
+    if opts.loclist then
+        table.insert(args, "%")
+    end
+
+    local grep_cmd = {
+        args = args,
+        bang = true,
+        cmd = cmd,
+        mods = { emsg_silent = true },
+        magic = magic,
+    }
+
+    vim.api.nvim_cmd(grep_cmd, {})
+    if opts.loclist then
+        open_loc_list()
+    else
+        open_qf_list()
+    end
+end
+
+vim.keymap.set("n", "yugs", function()
+    grep_wrapper({})
+end)
+
+vim.keymap.set("n", "yugi", function()
+    grep_wrapper({ insensitive = true })
+end)
+
+vim.keymap.set("n", "yogs", function()
+    grep_wrapper({ loclist = true })
+end)
+
+vim.keymap.set("n", "yogi", function()
+    grep_wrapper({ loclist = true, insensitive = true })
+end)

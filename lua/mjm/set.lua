@@ -98,11 +98,6 @@ vim.opt.wrap = false
 vim.opt.breakindent = true -- For fts where opt_local wrap is true
 vim.opt.linebreak = true
 
--- TODO: Nvim I think has rg as its default grep now, but I had tuned these options to work with
--- my qf wrappers, so would need to check the defaults against my code
-vim.opt.grepprg = "rg --line-number"
-vim.opt.grepformat = "%f:%l:%m"
-
 vim.opt.spell = false
 vim.opt.spelllang = "en_us" -- If spell is turned on by an ftplugin file
 
