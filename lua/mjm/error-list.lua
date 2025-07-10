@@ -329,7 +329,6 @@ vim.keymap.set("n", "dor", function()
     filter_wrapper({ loclist = true, remove = true })
 end)
 
----Assumes gregprg is ripgrep
 ---@param opts table
 ---@return nil
 local grep_wrapper = function(opts)
@@ -340,25 +339,22 @@ local grep_wrapper = function(opts)
 
     local args = { pattern } ---@type table
     opts = opts or {}
-    local cmd = opts.loclist and "lgrep" or "grep"
     if opts.insensitive then
         table.insert(args, "-i")
     end
 
-    local magic = opts.loclist and { file = true } or {}
     if opts.loclist then
         table.insert(args, "%")
     end
 
-    local grep_cmd = {
+    vim.api.nvim_cmd({
         args = args,
         bang = true,
-        cmd = cmd,
+        cmd = opts.loclist and "lgrep" or "grep",
         mods = { emsg_silent = true },
-        magic = magic,
-    }
+        magic = opts.loclist and { file = true } or {},
+    }, {})
 
-    vim.api.nvim_cmd(grep_cmd, {})
     if opts.loclist then
         open_loc_list()
     else
