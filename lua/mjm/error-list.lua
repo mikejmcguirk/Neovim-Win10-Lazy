@@ -168,11 +168,11 @@ local all_diags_to_qf = function(opts)
     opts = opts or {}
     local error = vim.diagnostic.severity.ERROR ---@type integer
     local hint = vim.diagnostic.severity.HINT ---@type integer
-    local severity = opts.err_only and error or hint ---@type integer
+    local severity = { min = opts.err_only and error or hint }
 
     ---@diagnostic disable: undefined-doc-name
     ---@type vim.diagnostic[]
-    local raw_diags = vim.diagnostic.get(nil, { severity = { min = severity } })
+    local raw_diags = vim.diagnostic.get(nil, { severity = severity })
     if #raw_diags == 0 then
         local name = opts.err_only and "errors" or "diagnostics" ---@type string
         -- At least for now, will omit clearing the qflist
@@ -197,11 +197,11 @@ local buf_diags_to_loc_list = function(opts)
 
     local error = vim.diagnostic.severity.ERROR ---@type integer
     local hint = vim.diagnostic.severity.HINT ---@type integer
-    local min_severity = opts.err_only and error or hint ---@type integer
+    local severity = { min = opts.err_only and error or hint }
 
     ---@diagnostic disable: undefined-doc-name
     ---@type vim.diagnostic[]
-    local raw_diags = vim.diagnostic.get(cur_buf, { severity = { min = min_severity } })
+    local raw_diags = vim.diagnostic.get(cur_buf, { severity = severity })
     if #raw_diags == 0 then
         local name = opts.err_only and "errors" or "diagnostics" ---@type string
         -- At least for now, will omit clearing the llist
