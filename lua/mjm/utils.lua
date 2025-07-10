@@ -175,7 +175,7 @@ end
 
 ---@return boolean
 M.loc_list_closer = function()
-    local closed_loc_list = false
+    local closed_loc_list = false ---@type boolean
     for _, win in ipairs(vim.fn.getwininfo()) do
         if win.quickfix == 1 and win.loclist == 1 then
             vim.api.nvim_win_close(win.winid, false)
@@ -187,13 +187,15 @@ M.loc_list_closer = function()
 end
 
 -- Taken from nvim-overfly
--- TODO: If I understand the Neovim repo code right, at some point a "highest" filter will be
+-- FUTURE: If I understand the Neovim repo code right, at some point a "highest" filter will be
 -- added to diagnostic jumping
+---@param opts? table{buf:integer|nil}
+---@return integer|nil
 M.get_highest_severity = function(opts)
-    local has_warn = false
-    local has_info = false
-    local has_hint = false
     opts = opts or {}
+    local has_warn = false ---@type boolean
+    local has_info = false ---@type boolean
+    local has_hint = false ---@type boolean
 
     for _, d in ipairs(vim.diagnostic.get(opts.buf or nil)) do
         if d.severity == vim.diagnostic.severity.ERROR then

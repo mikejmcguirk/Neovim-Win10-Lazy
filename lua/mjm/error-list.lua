@@ -7,10 +7,11 @@ vim.api.nvim_create_autocmd("WinNew", {
     end,
 })
 
----@param opts? table
+---@param opts? table{loclist:boolean}
+---@return boolean
 local is_error_open = function(opts)
     opts = opts or {}
-    local loclist = opts.loclist and 1 or 0
+    local loclist = opts.loclist and 1 or 0 ---@type integer
     for _, win in ipairs(vim.fn.getwininfo()) do
         if win.quickfix == 1 and win.loclist == loclist then
             return true
@@ -20,13 +21,13 @@ local is_error_open = function(opts)
     return false
 end
 
+---@param opts? table{loclist:boolean}
 ---@return boolean
 local is_error_empty = function(opts)
     opts = opts or {}
-    local loclist = opts.loclist or false
-    if loclist and #vim.fn.getloclist(vim.api.nvim_get_current_win()) > 0 then
+    if opts.loclist and #vim.fn.getloclist(vim.api.nvim_get_current_win()) > 0 then
         return false
-    elseif (not loclist) and #vim.fn.getqflist() > 0 then
+    elseif (not opts.loclist) and #vim.fn.getqflist() > 0 then
         return false
     end
 
@@ -34,27 +35,28 @@ local is_error_empty = function(opts)
 end
 
 local ut = require("mjm.utils")
+---@return nil
 local open_qf_list = function()
     ut.loc_list_closer()
     vim.cmd("botright copen")
 end
 
+---@return nil
 local open_loc_list = function()
     -- Not the best to do this before verifying the loc list opened, but having the qf list open
     -- while the loc list opens messes up its formatting
     vim.cmd("cclose")
-    -- Nvim already internally checks if an active qf window is available. No need to
-    -- duplicate logic
-    -- In theory, this should only be run after checking that a valid loc list is present,
-    -- but the pcall is here for defensive coding purposes
+    -- Because the function can't guarantee that we've checked for a valid loc list, pcall
     local ok, err = pcall(function()
         vim.cmd("lopen")
     end)
 
-    if not ok then
-        local err_msg = err or "Unknown error opening location list"
-        vim.api.nvim_echo({ { err_msg } }, true, { err = true })
+    if ok then
+        return
     end
+
+    local err_msg = err or "Unknown error opening location list"
+    vim.api.nvim_echo({ { err_msg } }, true, { err = true })
 end
 
 vim.keymap.set("n", "cuc", "<cmd>cclose<cr>")
@@ -73,12 +75,12 @@ end)
 vim.keymap.set("n", "coc", "<cmd>lclose<cr>")
 vim.keymap.set("n", "cop", function()
     local cur_win = vim.api.nvim_get_current_win() ---@type integer
-    local cur_win_info = vim.fn.getwininfo(cur_win)[1]
-    if cur_win_info.quickfix == 1 then
-        return -- qf windows cannot have associated llists
+    if vim.fn.getwininfo(cur_win)[1].quickfix == 1 then
+        return -- qf windows cannot have associated loc lists
     end
 
-    local llist_id = vim.fn.getloclist(cur_win, { id = 0 }).id
+    local llist_id = vim.fn.getloclist(cur_win, { id = 0 }).id ---@type any
+    assert(type(llist_id) == "number")
     if llist_id == 0 then
         return vim.notify("No location list for this window")
     end
@@ -94,7 +96,8 @@ vim.keymap.set("n", "coo", function()
     end
 
     -- See :h getqflist what section for id field. Zero gets ID for current list
-    local llist_id = vim.fn.getloclist(cur_win, { id = 0 }).id
+    local llist_id = vim.fn.getloclist(cur_win, { id = 0 }).id ---@type any
+    assert(type(llist_id) == "number")
     -- See :h getqflist returned dictionary for what items
     if llist_id == 0 then
         return vim.notify("No location list for this window")
@@ -102,8 +105,7 @@ vim.keymap.set("n", "coo", function()
 
     for _, win in ipairs(vim.fn.getwininfo()) do
         if win.quickfix == 1 and win.loclist == 1 then
-            local this_id = vim.fn.getloclist(win.winid, { id = 0 }).id
-            if this_id == llist_id then
+            if vim.fn.getloclist(win.winid, { id = 0 }).id == llist_id then
                 return vim.cmd("lclose")
             end
         end
@@ -119,7 +121,7 @@ for _, map in pairs({ "cuo", "cou" }) do
     end)
 end
 
--- Not a great way at the moment to deal with chistory and lhistory, so just wipe everything
+-- FUTURE: Might be future value in actually using the qf and loc list stacks
 
 vim.keymap.set("n", "dua", function()
     vim.cmd("cclose")
@@ -136,7 +138,7 @@ local severity_map = {
     [vim.diagnostic.severity.WARN] = "W",
     [vim.diagnostic.severity.INFO] = "I",
     [vim.diagnostic.severity.HINT] = "H",
-} ---@type string
+} ---@type table<integer, string>
 
 ---@param raw_diag table
 ---@return table
@@ -145,6 +147,7 @@ local convert_diag = function(raw_diag)
     local diag_source = raw_diag.source .. ": " or "" ---@type string
     local diag_message = raw_diag.message or "" ---@type string
     local diag_code = "" ---@type string
+    -- For whatever reason, this doesn't work with an or
     if raw_diag.code then
         diag_code = "[" .. raw_diag.code .. "] "
     end
@@ -161,23 +164,20 @@ local convert_diag = function(raw_diag)
     }
 end
 
--- FUTURE: Consider using vim.diagnostic.setqflist in the future if enough features are added
----@param opts? table
+-- FUTURE: Consider using vim.diagnostic.setqflist if enough features are added
+---@param opts? table{highest:boolean, err_only:boolean}
 ---@return nil
 local all_diags_to_qf = function(opts)
     opts = opts or {}
-    local severity = nil
-    if opts.highest then
-        severity = ut.get_highest_severity({ buf = nil })
-    else
-        local error = vim.diagnostic.severity.ERROR ---@type integer
-        local hint = vim.diagnostic.severity.HINT ---@type integer
-        severity = { min = opts.err_only and error or hint }
-    end
+    -- Running vim.diagnostic.get() twice is not ideal, but better than hacking together
+    -- a manual diag filter
+    local severity = opts.highest and ut.get_highest_severity({ buf = nil })
+        or {
+            min = opts.err_only and vim.diagnostic.severity.ERROR or vim.diagnostic.severity.HINT,
+        } ---@type integer|table{min:integer}
 
     ---@diagnostic disable: undefined-doc-name
-    ---@type vim.diagnostic[]
-    local raw_diags = vim.diagnostic.get(nil, { severity = severity })
+    local raw_diags = vim.diagnostic.get(nil, { severity = severity }) ---@type vim.diagnostic[]
     if #raw_diags == 0 then
         local name = opts.err_only and "errors" or "diagnostics" ---@type string
         -- At least for now, will omit clearing the qflist
@@ -191,35 +191,31 @@ local all_diags_to_qf = function(opts)
     open_qf_list()
 end
 
----@param opts? table
+---@param opts? table{highest:boolean, err_only:boolean}
+---@return nil
 local buf_diags_to_loc_list = function(opts)
     opts = opts or {}
     local cur_win = vim.api.nvim_get_current_win() ---@type integer
-    local cur_buf = vim.api.nvim_win_get_buf(cur_win) ---@type integer
-    if not ut.check_modifiable(cur_buf) then
+    local buf = vim.api.nvim_win_get_buf(cur_win) ---@type integer
+    if not ut.check_modifiable(buf) then
         return
     end
 
-    local severity = nil
-    if opts.highest then
-        severity = ut.get_highest_severity({ buf = cur_buf })
-    else
-        local error = vim.diagnostic.severity.ERROR ---@type integer
-        local hint = vim.diagnostic.severity.HINT ---@type integer
-        severity = { min = opts.err_only and error or hint }
-    end
+    local severity = opts.highest and ut.get_highest_severity({ buf = nil })
+        or {
+            min = opts.err_only and vim.diagnostic.severity.ERROR or vim.diagnostic.severity.HINT,
+        } ---@type integer|table{min:integer}
 
     ---@diagnostic disable: undefined-doc-name
-    ---@type vim.diagnostic[]
-    local raw_diags = vim.diagnostic.get(cur_buf, { severity = severity })
+    local raw_diags = vim.diagnostic.get(buf, { severity = severity }) ---@type vim.diagnostic[]
     if #raw_diags == 0 then
         local name = opts.err_only and "errors" or "diagnostics" ---@type string
-        -- At least for now, will omit clearing the llist
+        -- At least for now, will omit clearing the loc list
         vim.cmd("lclose")
         return vim.notify("No " .. name)
     end
 
-    local diags_for_ll = vim.tbl_map(convert_diag, raw_diags) ---@type table ---@type table
+    local diags_for_ll = vim.tbl_map(convert_diag, raw_diags) ---@type table
     assert(#raw_diags == #diags_for_ll, "Coverted diags were filtered")
     vim.fn.setloclist(cur_win, diags_for_ll, "r")
     open_loc_list()
@@ -249,13 +245,11 @@ vim.keymap.set("n", "yoh", function()
     buf_diags_to_loc_list({ highest = true })
 end)
 
----@param opts? table
+---@param opts? table{loclist:boolean, remove:boolean}
 ---@return nil
 local filter_wrapper = function(opts)
     opts = opts or {}
-    local name = opts.loclist and "Location" or "Quickfix"
-    local prefix = opts.loclist and "L" or "C"
-
+    local name = opts.loclist and "Location" or "Quickfix" ---@type string
     if not is_error_open({ loclist = opts.loclist }) then
         return vim.notify(name .. " list not open")
     end
@@ -265,6 +259,7 @@ local filter_wrapper = function(opts)
     end
 
     local pattern = ut.get_input("Pattern to " .. (opts.remove and "remove: " or "keep: "))
+    local prefix = opts.loclist and "L" or "C" ---@type string
     local cmd = prefix .. "filter"
     if pattern ~= "" then
         vim.api.nvim_cmd({ cmd = cmd, bang = opts.remove, args = { pattern } }, {})
