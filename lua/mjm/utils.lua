@@ -39,10 +39,10 @@ end
 M.get_indent = function(line_num)
     -- If Treesitter indent is enabled, the indentexpr will be set to
     -- nvim_treesitter#indent(), so that will be captured here
-    local indentexpr = vim.bo.indentexpr
+    local indentexpr = vim.bo.indentexpr ---@type string
     if indentexpr == "" then
-        local prev_nonblank = vim.fn.prevnonblank(line_num - 1)
-        local prev_nonblank_indent = vim.fn.indent(prev_nonblank)
+        local prev_nonblank = vim.fn.prevnonblank(line_num - 1) ---@type integer
+        local prev_nonblank_indent = vim.fn.indent(prev_nonblank) ---@type integer
 
         if prev_nonblank_indent <= 0 then
             return 0
@@ -61,7 +61,7 @@ M.get_indent = function(line_num)
     --
     -- Other indentexpr arguments are not guaranteed to be handled properly
     vim.v.lnum = line_num
-    local indentexpr_out = nil
+    local indentexpr_out = nil ---@type table<string, any>
     -- pcall in case treesitter errors due to a null node
     local ok, err = pcall(function()
         -- Must run nvim_exec2 explicitly to properly capture output table and avoid
@@ -82,9 +82,9 @@ end
 ---@param end_idx number
 ---@return nil
 local function fix_bookend_blanks(buf, start_idx, end_idx)
-    local line = vim.api.nvim_buf_get_lines(buf, start_idx, end_idx, true)[1]
-    local blank_line = (line == "") or line:match("^%s*$")
-    local last_line = vim.api.nvim_buf_line_count(buf) == 1
+    local line = vim.api.nvim_buf_get_lines(buf, start_idx, end_idx, true)[1] ---@type string
+    local blank_line = (line == "") or line:match("^%s*$") ---@type any
+    local last_line = vim.api.nvim_buf_line_count(buf) == 1 ---@type boolean
 
     if last_line or not blank_line then
         return
@@ -95,14 +95,14 @@ local function fix_bookend_blanks(buf, start_idx, end_idx)
 end
 
 M.fallback_formatter = function(buf)
-    local shiftwidth = vim.api.nvim_get_option_value("shiftwidth", { buf = buf })
+    local shiftwidth = vim.api.nvim_get_option_value("shiftwidth", { buf = buf }) ---@type any
     if shiftwidth == 0 then
         shiftwidth = vim.api.nvim_get_option_value("tabstop", { buf = buf })
     else
         vim.api.nvim_set_option_value("tabstop", shiftwidth, { buf = buf })
     end
 
-    local expandtab = vim.api.nvim_get_option_value("expandtab", { buf = buf })
+    local expandtab = vim.api.nvim_get_option_value("expandtab", { buf = buf }) ---@type any
     if expandtab then
         vim.api.nvim_set_option_value("softtabstop", shiftwidth, { buf = buf })
         vim.cmd(buf .. "bufdo retab")
@@ -111,21 +111,21 @@ M.fallback_formatter = function(buf)
     fix_bookend_blanks(buf, 0, 1)
     fix_bookend_blanks(buf, -2, -1)
 
-    local total_lines = vim.api.nvim_buf_line_count(buf)
-    local lines = vim.api.nvim_buf_get_lines(buf, 0, total_lines, true)
+    local total_lines = vim.api.nvim_buf_line_count(buf) ---@type integer
+    local lines = vim.api.nvim_buf_get_lines(buf, 0, total_lines, true) ---@type string[]
 
-    local consecutive_blanks = 0
-    local lines_removed = 0
+    local consecutive_blanks = 0 ---@type integer
+    local lines_removed = 0 ---@type integer
 
     ---@param iter number
     ---@param line string
     ---@return nil
     local format_line = function(iter, line)
-        local row_0 = iter - lines_removed - 1
-        local line_len = #line
-        local empty_line = line == ""
-        local whitespace_line = line:match("^%s+$")
-        local blank_line = empty_line or whitespace_line
+        local row_0 = iter - lines_removed - 1 ---@type number
+        local line_len = #line ---@type integer
+        local empty_line = line == "" ---@type boolean
+        local whitespace_line = line:match("^%s+$") ---@type any
+        local blank_line = empty_line or whitespace_line ---@type any
 
         if blank_line then
             consecutive_blanks = consecutive_blanks + 1
@@ -145,20 +145,20 @@ M.fallback_formatter = function(buf)
             return
         end
 
-        local last_non_blank, _ = line:find("(%S)%s*$")
+        local last_non_blank, _ = line:find("(%S)%s*$") ---@type integer|nil
         if last_non_blank and last_non_blank ~= line_len then
             vim.api.nvim_buf_set_text(buf, row_0, last_non_blank, row_0, line_len, {})
         end
 
-        local first_non_blank, _ = line:find("%S") or 1, nil
+        local first_non_blank, _ = line:find("%S") or 1, nil ---@type integer, nil
         first_non_blank = first_non_blank - 1
-        local extra_spaces = first_non_blank % shiftwidth
+        local extra_spaces = first_non_blank % shiftwidth ---@type unknown
         if extra_spaces == 0 or not expandtab then
             return
         end
 
-        local half_shiftwidth = shiftwidth * 0.5
-        local round_up = extra_spaces >= half_shiftwidth
+        local half_shiftwidth = shiftwidth * 0.5 ---@type unknown
+        local round_up = extra_spaces >= half_shiftwidth ---@type boolean
         if round_up then
             local new_spaces = shiftwidth - extra_spaces
             local spaces = string.rep(" ", new_spaces)
