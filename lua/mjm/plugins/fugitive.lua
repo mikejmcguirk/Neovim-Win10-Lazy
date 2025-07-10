@@ -3,7 +3,12 @@ return {
     "tpope/vim-fugitive",
     lazy = false,
     config = function()
-        vim.keymap.set("n", "<leader>gd", "<cmd>botright Git diff<cr>")
+        vim.keymap.set("n", "<leader>gd", function()
+            ut.loc_list_closer()
+            ut.loc_list_closer({ loclist = true })
+            vim.cmd("botright Git diff")
+        end)
+
         vim.keymap.set("n", "<leader>gc", function()
             local message = ut.get_input("Enter commit message (no quotes): ")
             if message == "" then

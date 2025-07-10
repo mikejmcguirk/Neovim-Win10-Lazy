@@ -173,17 +173,10 @@ M.fallback_formatter = function(buf)
     end
 end
 
----@param opts? table
 ---@return boolean
-M.list_closer = function(opts)
-    opts = opts or {}
-    local loclist = 0
-    if opts.loclist then
-        loclist = 1
-    end
-
+M.loc_list_closer = function()
     for _, win in ipairs(vim.fn.getwininfo()) do
-        if win.quickfix == 1 and win.loclist == loclist then
+        if win.quickfix == 1 and win.loclist == 1 then
             vim.api.nvim_win_close(win.winid, false)
             return true
         end

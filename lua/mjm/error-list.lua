@@ -1,14 +1,5 @@
 local ut = require("mjm.utils")
 
--- NOTE: If we need to use these maps across files, like qf.lua, define here for consistency
--- Keymap pattern:
---- y - Yank to list
---- c - Change status of list
---- d - Delete from list
---- u - Quickfix List (dq and cq are nasty)
---- o - Location List
--- NOTE: do creates a potential conflict with diff mode
-
 ---@param opts? table
 local is_error_open = function(opts)
     opts = opts or {}
@@ -27,98 +18,79 @@ local is_error_open = function(opts)
 end
 
 ---@return boolean
-local is_qf_empty = function()
-    if #vim.fn.getqflist() == 0 then
-        return true
-    else
-        return false
-    end
-end
-
 local is_error_empty = function(opts)
     opts = opts or {}
-    local count = nil
-    if opts.loclist then
-        local cur_win = vim.api.nvim_get_current_win()
-        count = #vim.fn.getloclist(cur_win)
-    else
-        count = #vim.fn.getqflist()
+    if opts.loclist and #vim.fn.getloclist(vim.api.nvim_get_current_win()) <= 0 then
+        return true
+    elseif #vim.fn.getqflist() <= 0 then
+        return true
     end
 
-    if count == 0 then
-        return true
-    else
-        return false
-    end
+    return false
 end
 
-local has_loc_list = function()
-    local win = vim.api.nvim_get_current_win()
-    local loclist = vim.fn.getloclist(win)
-    if loclist and #loclist > 0 then
-        return true
-    else
-        return false
-    end
-end
-
-vim.keymap.set("n", "cuc", function()
-    ut.list_closer()
-end)
-
+vim.keymap.set("n", "cuc", "<cmd>cclose<cr>")
 vim.keymap.set("n", "cup", function()
-    ut.list_closer({ loclist = true })
+    ut.loc_list_closer()
     vim.cmd("botright copen")
 end)
 
 vim.keymap.set("n", "cui", function()
-    if ut.list_closer() then
+    if is_error_open({ loclist = false }) then
+        vim.cmd("cclose")
         return
     end
 
-    ut.list_closer({ loclist = true })
+    ut.loc_list_closer()
     vim.cmd("botright copen")
 end)
 
 vim.keymap.set("n", "coc", function()
-    ut.list_closer({ loclist = true })
+    ut.loc_list_closer()
 end)
 
 vim.keymap.set("n", "cop", function()
-    if not has_loc_list() then
-        vim.notify("No location list for this window")
+    local ok, err = pcall(function()
+        vim.cmd("botright lopen")
+    end)
+
+    if ok then
+        vim.cmd("cclose")
         return
     end
 
-    ut.list_closer()
-    vim.cmd("botright lopen")
+    local err_msg = err or "Unknown error opening location list"
+    vim.api.nvim_echo({ { err_msg } }, true, { err = true })
 end)
 
 vim.keymap.set("n", "coi", function()
-    if ut.list_closer({ loclist = true }) then
+    if ut.loc_list_closer() then
         return
     end
 
-    if not has_loc_list() then
-        vim.notify("No location list for this window")
+    local ok, err = pcall(function()
+        vim.cmd("botright lopen")
+    end)
+
+    if ok then
+        vim.cmd("cclose")
         return
     end
 
-    ut.list_closer()
-    vim.cmd("botright lopen")
+    local err_msg = err or "Unknown error opening location list"
+    vim.api.nvim_echo({ { err_msg } }, true, { err = true })
 end)
 
 -- Not a great way at the moment to deal with chistory and lhistory, so just wipe everything
 
 vim.keymap.set("n", "dua", function()
-    ut.list_closer()
+    vim.cmd("cclose")
     vim.fn.setqflist({}, "f")
 end)
 
 vim.keymap.set("n", "doa", function()
-    ut.list_closer({ loclist = true })
-    local cur_win = vim.api.nvim_get_current_win()
-    vim.fn.setloclist(cur_win, {}, "f")
+    ut.loc_list_closer()
+    vim.fn.setloclist(vim.api.nvim_get_current_win(), {}, "f")
 end)
 
 local severity_map = {
@@ -224,7 +196,7 @@ local cfilter_wrapper = function(opts)
         return
     end
 
-    if is_qf_empty() then
+    if is_error_empty() then
         vim.notify("Quickfix list is empty")
         return
     end
