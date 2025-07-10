@@ -7,9 +7,9 @@ local lsp_group = vim.api.nvim_create_augroup("LSP_Augroup", { clear = true })
 vim.api.nvim_create_autocmd("LspAttach", {
     group = lsp_group,
     callback = function(ev)
-        local buf = ev.buf
-        local client = assert(vim.lsp.get_client_by_id(ev.data.client_id))
-        local methods = vim.lsp.protocol.Methods
+        local buf = ev.buf ---@type integer
+        local client = assert(vim.lsp.get_client_by_id(ev.data.client_id)) ---@type vim.lsp.Client
+        local methods = vim.lsp.protocol.Methods ---@type table
 
         if client:supports_method(methods.textDocument_documentHighlight) then
             local doc_highlights = vim.api.nvim_create_augroup("doc_highlights", { clear = false })
@@ -31,12 +31,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
         vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = buf })
         if client.server_capabilities.implementationProvider then
             vim.keymap.set("n", "gI", vim.lsp.buf.implementation, { buffer = buf })
-        end
-
-        if client:supports_method(methods.textDocument_inlayHint) then
-            vim.keymap.set("n", "grl", function()
-                vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = buf }))
-            end)
         end
 
         -- Overwrite Nvim defaults (:help lsp-defaults)
@@ -61,26 +55,30 @@ vim.api.nvim_create_autocmd("LspAttach", {
             vim.lsp.buf.signature_help({ border = Border })
         end, { buffer = buf, desc = "vim.lsp.buf.signature_help()" })
 
-        -- Patternful with the rest of the defaults
         -- TODO: This will be added as a default in the future
         vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { buffer = buf })
+
         -- Kickstart mapping
         vim.keymap.set("n", "gW", vim.lsp.buf.workspace_symbol, { buffer = buf })
-        vim.keymap.set("n", "gO", function()
-            vim.lsp.buf.document_symbol()
-        end, { buffer = buf })
+        -- Patternful with the rest of the defaults
         vim.keymap.set("n", "grh", vim.lsp.buf.document_highlight, { buffer = buf })
         vim.keymap.set("n", "grf", function()
             print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
         end, { buffer = buf })
+
+        if client:supports_method(methods.textDocument_inlayHint) then
+            vim.keymap.set("n", "grl", function()
+                vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = buf }))
+            end)
+        end
     end,
 })
 
 vim.api.nvim_create_autocmd("BufUnload", {
     group = lsp_group,
     callback = function(ev)
-        local bufnr = ev.buf
-        local clients = vim.lsp.get_clients({ bufnr = bufnr })
+        local bufnr = ev.buf ---@type integer
+        local clients = vim.lsp.get_clients({ bufnr = bufnr }) ---@type vim.lsp.Client[]
         if not clients or vim.tbl_isempty(clients) then
             return
         end
@@ -88,7 +86,7 @@ vim.api.nvim_create_autocmd("BufUnload", {
         for _, client in pairs(clients) do
             local attached_buffers = vim.tbl_filter(function(buf_nbr)
                 return buf_nbr ~= bufnr
-            end, vim.tbl_keys(client.attached_buffers))
+            end, vim.tbl_keys(client.attached_buffers)) ---@type unknown[]
 
             if vim.tbl_isempty(attached_buffers) then
                 vim.lsp.stop_client(client.id)
