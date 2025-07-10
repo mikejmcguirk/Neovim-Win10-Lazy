@@ -6,7 +6,7 @@ local main_diag_cfg = {
             min = vim.diagnostic.severity.HINT,
         },
     },
-}
+} ---@type table
 
 local virtual_text_cfg = {
     virtual_text = {
@@ -16,18 +16,18 @@ local virtual_text_cfg = {
         current_line = true,
     },
     virtual_lines = false,
-}
+} ---@type table
 
 local virtual_lines_cfg = {
     virtual_text = false,
     virtual_lines = { current_line = true },
-}
+} ---@type table
 
 local default_diag_cfg = vim.tbl_extend("force", main_diag_cfg, virtual_text_cfg)
 local alt_diag_cfg = vim.tbl_extend("force", main_diag_cfg, virtual_lines_cfg)
 vim.diagnostic.config(default_diag_cfg)
 vim.keymap.set("n", "grd", function()
-    local current_config = vim.diagnostic.config() or {}
+    local current_config = vim.diagnostic.config() or {} ---@type vim.diagnostic.Opts
     if current_config.virtual_lines == false then
         vim.diagnostic.config(alt_diag_cfg)
     else
