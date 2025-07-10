@@ -6,6 +6,6 @@ return {
 
         vim.keymap.set("n", "<leader>me", "<cmd>MarkdownPreview<cr>")
         vim.keymap.set("n", "<leader>ms", "<cmd>MarkdownPreviewStop<cr>")
-        vim.keymap.set("n", "<leader>mt", "<cmd>MarkdownPreviewToggle<cr>")
+        vim.keymap.set("n", "<leader>mm", "<cmd>MarkdownPreviewToggle<cr>")
     end,
 }

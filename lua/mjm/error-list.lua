@@ -36,7 +36,7 @@ vim.keymap.set("n", "cup", function()
     vim.cmd("botright copen")
 end)
 
-vim.keymap.set("n", "cui", function()
+vim.keymap.set("n", "cuu", function()
     if is_error_open({ loclist = false }) then
         vim.cmd("cclose")
         return
@@ -64,7 +64,7 @@ vim.keymap.set("n", "cop", function()
     vim.api.nvim_echo({ { err_msg } }, true, { err = true })
 end)
 
-vim.keymap.set("n", "coi", function()
+vim.keymap.set("n", "coo", function()
     if ut.loc_list_closer() then
         return
     end
@@ -81,13 +81,6 @@ vim.keymap.set("n", "coi", function()
     local err_msg = err or "Unknown error opening location list"
     vim.api.nvim_echo({ { err_msg } }, true, { err = true })
 end)
-
-for _, map in pairs({ "cuu", "coo" }) do
-    vim.keymap.set("n", map, function()
-        ut.loc_list_closer()
-        vim.cmd("cclose")
-    end)
-end
 
 -- Not a great way at the moment to deal with chistory and lhistory, so just wipe everything
 
