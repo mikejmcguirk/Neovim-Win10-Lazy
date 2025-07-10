@@ -166,9 +166,14 @@ end
 ---@return nil
 local all_diags_to_qf = function(opts)
     opts = opts or {}
-    local error = vim.diagnostic.severity.ERROR ---@type integer
-    local hint = vim.diagnostic.severity.HINT ---@type integer
-    local severity = { min = opts.err_only and error or hint }
+    local severity = nil
+    if opts.highest then
+        severity = ut.get_highest_severity({ buf = nil })
+    else
+        local error = vim.diagnostic.severity.ERROR ---@type integer
+        local hint = vim.diagnostic.severity.HINT ---@type integer
+        severity = { min = opts.err_only and error or hint }
+    end
 
     ---@diagnostic disable: undefined-doc-name
     ---@type vim.diagnostic[]
@@ -195,9 +200,14 @@ local buf_diags_to_loc_list = function(opts)
         return
     end
 
-    local error = vim.diagnostic.severity.ERROR ---@type integer
-    local hint = vim.diagnostic.severity.HINT ---@type integer
-    local severity = { min = opts.err_only and error or hint }
+    local severity = nil
+    if opts.highest then
+        severity = ut.get_highest_severity({ buf = cur_buf })
+    else
+        local error = vim.diagnostic.severity.ERROR ---@type integer
+        local hint = vim.diagnostic.severity.HINT ---@type integer
+        severity = { min = opts.err_only and error or hint }
+    end
 
     ---@diagnostic disable: undefined-doc-name
     ---@type vim.diagnostic[]
@@ -225,12 +235,20 @@ vim.keymap.set("n", "yue", function()
     all_diags_to_qf({ err_only = true })
 end)
 
+vim.keymap.set("n", "yuh", function()
+    all_diags_to_qf({ highest = true })
+end)
+
 vim.keymap.set("n", "yoi", function()
     buf_diags_to_loc_list()
 end)
 
 vim.keymap.set("n", "yoe", function()
     buf_diags_to_loc_list({ err_only = true })
+end)
+
+vim.keymap.set("n", "yoh", function()
+    buf_diags_to_loc_list({ highest = true })
 end)
 
 ---@param opts? table
