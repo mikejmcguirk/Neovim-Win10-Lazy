@@ -7,15 +7,68 @@ vim.api.nvim_create_autocmd("WinNew", {
     end,
 })
 
+---@param opts table(winid:integer)
+---@return number
+local get_loc_id = function(opts)
+    opts = opts or {}
+    if not opts.winid then
+        return 0
+    end
+
+    -- See :h getqflist what section for id field. Zero gets ID for current list
+    -- See :h getqflist returned dictionary for what items
+    local loc_id = vim.fn.getloclist(opts.winid, { id = 0 }).id ---@type any
+    assert(type(loc_id) == "number")
+    return loc_id
+end
+
+--- NOTE: This function does not check that the id parameter is present in a non-qf window
+---@param opts table{qfid:number}
+---@return boolean
+local has_open_associated_loc = function(opts)
+    opts = opts or {}
+    if not opts.qfid then
+        return false
+    end
+
+    for _, win in ipairs(vim.fn.getwininfo()) do
+        if win.quickfix == 1 and win.loclist == 1 then
+            if vim.fn.getloclist(win.winid, { id = 0 }).id == opts.qfid then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
 ---@param opts? table{loclist:boolean}
 ---@return boolean
 local is_error_open = function(opts)
     opts = opts or {}
-    local loclist = opts.loclist and 1 or 0 ---@type integer
-    for _, win in ipairs(vim.fn.getwininfo()) do
-        if win.quickfix == 1 and win.loclist == loclist then
-            return true
+    if not opts.loclist then
+        for _, win in ipairs(vim.fn.getwininfo()) do
+            if win.quickfix == 1 and win.loclist == 0 then
+                return true
+            end
         end
+
+        return false
+    end
+
+    local cur_win = vim.api.nvim_get_current_win() ---@type integer
+    local cur_win_info = vim.fn.getwininfo(cur_win)[1] ---@type vim.fn.getwininfo.ret.item
+    if cur_win_info.quickfix == 1 and cur_win_info.loclist == 1 then
+        return true
+    end
+
+    local loc_id = get_loc_id({ winid = cur_win }) ---@type number
+    if loc_id == 0 then
+        return false
+    end
+
+    if has_open_associated_loc({ id = loc_id }) then
+        return true
     end
 
     return false
@@ -90,25 +143,18 @@ end)
 
 vim.keymap.set("n", "coo", function()
     local cur_win = vim.api.nvim_get_current_win() ---@type integer
-    local cur_win_info = vim.fn.getwininfo(cur_win)[1]
+    local cur_win_info = vim.fn.getwininfo(cur_win)[1] ---@type vim.fn.getwininfo.ret.item
     if cur_win_info.quickfix == 1 and cur_win_info.loclist == 1 then
         return vim.cmd("lclose")
     end
 
-    -- See :h getqflist what section for id field. Zero gets ID for current list
-    local llist_id = vim.fn.getloclist(cur_win, { id = 0 }).id ---@type any
-    assert(type(llist_id) == "number")
-    -- See :h getqflist returned dictionary for what items
-    if llist_id == 0 then
+    local loc_id = get_loc_id({ winid = cur_win }) ---@type number
+    if loc_id == 0 then
         return vim.notify("No location list for this window")
     end
 
-    for _, win in ipairs(vim.fn.getwininfo()) do
-        if win.quickfix == 1 and win.loclist == 1 then
-            if vim.fn.getloclist(win.winid, { id = 0 }).id == llist_id then
-                return vim.cmd("lclose")
-            end
-        end
+    if has_open_associated_loc({ id = loc_id }) then
+        return vim.cmd("lclose")
     end
 
     open_loc_list()
@@ -258,10 +304,11 @@ local filter_wrapper = function(opts)
         return vim.notify(name .. " list is empty")
     end
 
+    ---@type string
     local pattern = ut.get_input("Pattern to " .. (opts.remove and "remove: " or "keep: "))
-    local prefix = opts.loclist and "L" or "C" ---@type string
-    local cmd = prefix .. "filter"
     if pattern ~= "" then
+        local prefix = opts.loclist and "L" or "C" ---@type string
+        local cmd = prefix .. "filter" ---@type string
         vim.api.nvim_cmd({ cmd = cmd, bang = opts.remove, args = { pattern } }, {})
     end
 end
