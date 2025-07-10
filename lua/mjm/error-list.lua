@@ -161,7 +161,7 @@ local convert_diag = function(raw_diag)
     }
 end
 
--- TODO: Consider using vim.diagnostic.setqflist in the future if enough features are added
+-- FUTURE: Consider using vim.diagnostic.setqflist in the future if enough features are added
 ---@param opts? table
 ---@return nil
 local all_diags_to_qf = function(opts)
@@ -224,8 +224,6 @@ local buf_diags_to_loc_list = function(opts)
     vim.fn.setloclist(cur_win, diags_for_ll, "r")
     open_loc_list()
 end
-
--- TODO: Add one of these for highest priority diags
 
 vim.keymap.set("n", "yui", function()
     all_diags_to_qf()
