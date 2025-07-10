@@ -35,41 +35,11 @@ vim.keymap.set("n", "grd", function()
     end
 end)
 
--- Taken from nvim-overfly
--- TODO: If I understand the Neovim repo code right, at some point a "highest" filter will be
--- added to diagnostic jumping
-local function get_severity()
-    local has_warn = false
-    local has_info = false
-    local has_hint = false
-
-    for _, d in ipairs(vim.diagnostic.get(0)) do
-        if d.severity == vim.diagnostic.severity.ERROR then
-            return vim.diagnostic.severity.ERROR
-        elseif d.severity == vim.diagnostic.severity.WARN then
-            has_warn = true
-        elseif d.severity == vim.diagnostic.severity.INFO then
-            has_info = true
-        elseif d.severity == vim.diagnostic.severity.HINT then
-            has_hint = true
-        end
-    end
-
-    if has_warn then
-        return vim.diagnostic.severity.WARN
-    elseif has_info then
-        return vim.diagnostic.severity.INFO
-    elseif has_hint then
-        return vim.diagnostic.severity.HINT
-    else
-        return nil
-    end
-end
-
+local ut = require("mjm.utils")
 vim.keymap.set("n", "]w", function()
-    vim.diagnostic.jump({ count = vim.v.count1, severity = get_severity() })
+    vim.diagnostic.jump({ count = vim.v.count1, severity = ut.get_highest_severity({ buf = 0 }) })
 end, { desc = "Jump to the next diagnostic in the current buffer prioritized by severity" })
 
 vim.keymap.set("n", "[w", function()
-    vim.diagnostic.jump({ count = -vim.v.count1, severity = get_severity() })
+    vim.diagnostic.jump({ count = -vim.v.count1, severity = ut.get_highest_severity({ buf = 0 }) })
 end, { desc = "Jump to the previous diagnostic in the current buffer priotizied by severity" })

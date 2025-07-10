@@ -186,4 +186,36 @@ M.loc_list_closer = function()
     return closed_loc_list
 end
 
+-- Taken from nvim-overfly
+-- TODO: If I understand the Neovim repo code right, at some point a "highest" filter will be
+-- added to diagnostic jumping
+M.get_highest_severity = function(opts)
+    local has_warn = false
+    local has_info = false
+    local has_hint = false
+    opts = opts or {}
+
+    for _, d in ipairs(vim.diagnostic.get(opts.buf or nil)) do
+        if d.severity == vim.diagnostic.severity.ERROR then
+            return vim.diagnostic.severity.ERROR
+        elseif d.severity == vim.diagnostic.severity.WARN then
+            has_warn = true
+        elseif d.severity == vim.diagnostic.severity.INFO then
+            has_info = true
+        elseif d.severity == vim.diagnostic.severity.HINT then
+            has_hint = true
+        end
+    end
+
+    if has_warn then
+        return vim.diagnostic.severity.WARN
+    elseif has_info then
+        return vim.diagnostic.severity.INFO
+    elseif has_hint then
+        return vim.diagnostic.severity.HINT
+    else
+        return nil
+    end
+end
+
 return M

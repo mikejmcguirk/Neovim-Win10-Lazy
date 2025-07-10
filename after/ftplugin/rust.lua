@@ -4,10 +4,8 @@
 -- The former unlocks more features of rust-analyzer, the latter does some basic formatting
 
 vim.keymap.set("i", ";", ";<C-g>u", { silent = true })
-
 local ut = require("mjm.utils")
 
--- TODO: get_indent needs fixed
 ---@param pragma string
 ---@return nil
 local add_pragma = function(pragma)
