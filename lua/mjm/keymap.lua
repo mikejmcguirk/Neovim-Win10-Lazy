@@ -115,12 +115,20 @@ vim.keymap.set("n", "<C-z>", "<nop>")
 -- Purposefully not setup to accept counts. Don't want to accidently get lost
 
 vim.keymap.set("n", "u", function()
+    if not ut.check_modifiable() then
+        return
+    end
+
     vim.cmd("silent norm! u")
 end, { silent = true })
 
 vim.keymap.set("n", "U", "<nop>")
 
 vim.keymap.set("n", "<C-r>", function()
+    if not ut.check_modifiable() then
+        return
+    end
+
     vim.cmd('silent exec "norm! \\<C-r>"')
 end, { silent = true })
 
