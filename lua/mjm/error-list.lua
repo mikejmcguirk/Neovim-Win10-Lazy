@@ -243,8 +243,8 @@ end
 ---@return nil
 local buf_diags_to_loclist = function(opts)
     opts = opts or {}
-    local cur_win = vim.api.nvim_get_current_win() ---@type integer
-    local buf = vim.api.nvim_win_get_buf(cur_win) ---@type integer
+    local win = vim.api.nvim_get_current_win() ---@type integer
+    local buf = vim.api.nvim_win_get_buf(win) ---@type integer
     if not ut.check_modifiable(buf) then
         return
     end
@@ -265,7 +265,7 @@ local buf_diags_to_loclist = function(opts)
 
     local diags_for_loclist = vim.tbl_map(convert_diag, raw_diags) ---@type table
     assert(#raw_diags == #diags_for_loclist, "Coverted diags were filtered")
-    vim.fn.setloclist(cur_win, diags_for_loclist, "r")
+    vim.fn.setloclist(win, diags_for_loclist, "r")
     open_loclist()
 end
 
