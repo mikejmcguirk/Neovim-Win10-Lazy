@@ -10,33 +10,42 @@ vim.api.nvim_create_autocmd("WinNew", {
 -- Both Quickfix lists and Loclists are identified with quickfix-ID values
 -- The terminology is used here for consistency
 
----@param opts table(winid:integer)
----@return number
-local get_qf_id = function(opts)
-    opts = opts or {}
-    if not opts.winid then
-        return 0
+---@return boolean
+local cur_buf_is_qf = function()
+    if vim.api.nvim_get_option_value("filetype", { buf = 0 }) == "qf" then
+        return true
+    else
+        return false
     end
+end
 
+---@return number
+local get_cur_win_qf_id = function()
     -- See :h getqflist what section for id field. Zero gets ID for current list
     -- See :h getqflist returned dictionary for what items
-    local qf_id = vim.fn.getloclist(opts.winid, { id = 0 }).id ---@type any
+    local qf_id = vim.fn.getloclist(vim.api.nvim_get_current_win(), { id = 0 }).id ---@type any
     assert(type(qf_id) == "number")
     return qf_id
 end
 
---- NOTE: This function does not check that the id parameter is present in a non-qf window
----@param opts table{qf_id:number}
+local cur_win_has_loclist = function()
+    if get_cur_win_qf_id() == 0 then
+        return false
+    else
+        return true
+    end
+end
+
 ---@return boolean
-local is_win_loclist_open = function(opts)
-    opts = opts or {}
-    if not opts.qf_id then
+local is_cur_win_loclist_open = function()
+    if not cur_win_has_loclist() then
         return false
     end
 
+    local qf_id = get_cur_win_qf_id()
     for _, w in ipairs(vim.fn.getwininfo()) do
         if w.quickfix == 1 and w.loclist == 1 then
-            if vim.fn.getloclist(w.winid, { id = 0 }).id == opts.qf_id then
+            if vim.fn.getloclist(w.winid, { id = 0 }).id == qf_id then
                 return true
             end
         end
@@ -45,33 +54,11 @@ local is_win_loclist_open = function(opts)
     return false
 end
 
----@param opts? table{loclist:boolean}
----@return boolean
-local is_list_open = function(opts)
-    opts = opts or {}
-    if not opts.loclist then
-        for _, w in ipairs(vim.fn.getwininfo()) do
-            if w.quickfix == 1 and w.loclist == 0 then
-                return true
-            end
+local is_qflist_open = function()
+    for _, w in ipairs(vim.fn.getwininfo()) do
+        if w.quickfix == 1 and w.loclist == 0 then
+            return true
         end
-
-        return false
-    end
-
-    local win = vim.api.nvim_get_current_win() ---@type integer
-    local win_info = vim.fn.getwininfo(win)[1] ---@type vim.fn.getwininfo.ret.item
-    if win_info.quickfix == 1 and win_info.loclist == 1 then
-        return true
-    end
-
-    local qf_id = get_qf_id({ winid = win }) ---@type number
-    if qf_id == 0 then
-        return false
-    end
-
-    if is_win_loclist_open({ id = qf_id }) then
-        return true
     end
 
     return false
@@ -121,7 +108,7 @@ vim.keymap.set("n", "cup", function()
 end)
 
 vim.keymap.set("n", "cuu", function()
-    if is_list_open({ loclist = false }) then
+    if is_qflist_open() then
         return vim.cmd("cclose")
     else
         open_qflist()
@@ -130,33 +117,25 @@ end)
 
 vim.keymap.set("n", "coc", "<cmd>lclose<cr>")
 vim.keymap.set("n", "cop", function()
-    local win = vim.api.nvim_get_current_win() ---@type integer
-    if vim.fn.getwininfo(win)[1].quickfix == 1 then
-        return -- qf bufs cannot have associated loclists
+    if cur_buf_is_qf() then
+        return vim.notify("Inside qf buffer")
     end
 
-    local qf_id = get_qf_id({ winid = win }) ---@type number
-    if qf_id == 0 then
-        return vim.notify("Window has no location list")
+    if cur_win_has_loclist() then
+        open_loclist()
+    else
+        vim.notify("No location list for this window")
     end
-
-    open_loclist()
 end)
 
 vim.keymap.set("n", "coo", function()
-    local win = vim.api.nvim_get_current_win() ---@type integer
-    local win_info = vim.fn.getwininfo(win)[1] ---@type vim.fn.getwininfo.ret.item
-    if win_info.quickfix == 1 and win_info.loclist == 1 then
-        return vim.cmd("lclose")
+    if not cur_win_has_loclist() then -- The qflist is always id zero, so test fails
+        return vim.notify("Current window does not have a location list")
     end
 
-    local qf_id = get_qf_id({ winid = win }) ---@type number
-    if qf_id == 0 then
-        return vim.notify("No location list for this window")
-    end
-
-    if is_win_loclist_open({ id = qf_id }) then
-        return vim.cmd("lclose")
+    if is_cur_win_loclist_open() then
+        vim.cmd("lclose")
+        return
     end
 
     open_loclist()
@@ -297,21 +276,21 @@ end)
 ---@return nil
 local filter_wrapper = function(opts)
     opts = opts or {}
-    local list = opts.loclist and "Location" or "Quickfix" ---@type string
-    if not is_list_open({ loclist = opts.loclist }) then
-        return vim.notify(list .. " list not open")
+    if opts.loclist and not cur_win_has_loclist() then
+        return vim.notify("Current window has no location list")
     end
 
+    local list = opts.loclist and "Location" or "Quickfix" ---@type string
     if is_list_empty({ loclist = opts.loclist }) then
         return vim.notify(list .. " list is empty")
     end
 
     ---@type string
-    local pattern = ut.get_input("Pattern to " .. (opts.remove and "remove: " or "keep: "))
+    local action = opts.remove and "remove: " or "keep: "
+    local pattern = ut.get_input(list .. " pattern to " .. action)
     if pattern ~= "" then
         local prefix = opts.loclist and "L" or "C" ---@type string
-        local cmd = prefix .. "filter" ---@type string
-        vim.api.nvim_cmd({ cmd = cmd, bang = opts.remove, args = { pattern } }, {})
+        vim.api.nvim_cmd({ cmd = prefix .. "filter", bang = opts.remove, args = { pattern } }, {})
     end
 end
 
@@ -334,7 +313,11 @@ end)
 ---@param opts table
 ---@return nil
 local grep_wrapper = function(opts)
-    local pattern = ut.get_input("Enter Pattern: ") ---@type string
+    if cur_buf_is_qf() then
+        return vim.notify("Inside qf buffer")
+    end
+
+    local pattern = ut.get_input("Enter Grep Pattern: ") ---@type string
     if pattern == "" then
         return
     end
