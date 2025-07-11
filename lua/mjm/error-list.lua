@@ -215,7 +215,7 @@ end
 -- FUTURE: Consider using vim.diagnostic.setqflist if enough features are added
 ---@param opts? table{highest:boolean, err_only:boolean}
 ---@return nil
-local all_diags_to_qf = function(opts)
+local all_diags_to_qflist = function(opts)
     opts = opts or {}
     -- Running vim.diagnostic.get() twice is not ideal, but better than hacking together
     -- a manual diag filter
@@ -241,7 +241,7 @@ end
 
 ---@param opts? table{highest:boolean, err_only:boolean}
 ---@return nil
-local buf_diags_to_loc_list = function(opts)
+local buf_diags_to_loclist = function(opts)
     opts = opts or {}
     local cur_win = vim.api.nvim_get_current_win() ---@type integer
     local buf = vim.api.nvim_win_get_buf(cur_win) ---@type integer
@@ -249,7 +249,7 @@ local buf_diags_to_loc_list = function(opts)
         return
     end
 
-    local severity = opts.highest and ut.get_highest_severity({ buf = nil })
+    local severity = opts.highest and ut.get_highest_severity({ buf = buf })
         or {
             min = opts.err_only and vim.diagnostic.severity.ERROR or vim.diagnostic.severity.HINT,
         } ---@type integer|table{min:integer}
@@ -270,27 +270,27 @@ local buf_diags_to_loc_list = function(opts)
 end
 
 vim.keymap.set("n", "yui", function()
-    all_diags_to_qf()
+    all_diags_to_qflist()
 end)
 
 vim.keymap.set("n", "yue", function()
-    all_diags_to_qf({ err_only = true })
+    all_diags_to_qflist({ err_only = true })
 end)
 
 vim.keymap.set("n", "yuh", function()
-    all_diags_to_qf({ highest = true })
+    all_diags_to_qflist({ highest = true })
 end)
 
 vim.keymap.set("n", "yoi", function()
-    buf_diags_to_loc_list()
+    buf_diags_to_loclist()
 end)
 
 vim.keymap.set("n", "yoe", function()
-    buf_diags_to_loc_list({ err_only = true })
+    buf_diags_to_loclist({ err_only = true })
 end)
 
 vim.keymap.set("n", "yoh", function()
-    buf_diags_to_loc_list({ highest = true })
+    buf_diags_to_loclist({ highest = true })
 end)
 
 ---@param opts? table{loclist:boolean, remove:boolean}
