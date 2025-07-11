@@ -4,7 +4,7 @@ return {
     lazy = false,
     config = function()
         vim.keymap.set("n", "<leader>gd", function()
-            ut.loc_list_closer()
+            ut.close_all_loclists()
             vim.cmd("cclose")
             vim.cmd("botright Git diff")
         end)
