@@ -1,5 +1,7 @@
 -- FUTURE: It would be good to have an autocmd where, if the file was last opened within the
 -- past week, you go to where you left off, but after that it just goes fresh to the top
+-- FUTURE: https://github.com/ibhagwan/nvim-lua/blob/main/lua/autocmd.lua
+-- autocmd for smart yank over SSH
 
 vim.api.nvim_create_autocmd("TextYankPost", {
     group = vim.api.nvim_create_augroup("yank_highlight", { clear = true }),
