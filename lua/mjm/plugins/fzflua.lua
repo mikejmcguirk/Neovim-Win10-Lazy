@@ -11,7 +11,6 @@ return {
         -- STILL NEEDED:
         --- Custom help search function. Though it looks possible thorugh inline customization
         --- Command history (not a huge deal though)
-        --- undo history is meh
 
         local fzf_lua = require("fzf-lua")
         fzf_lua.setup({ "telescope" })
@@ -34,6 +33,7 @@ return {
         -- })
 
         vim.keymap.set("n", "<leader>ff", fzf_lua.resume)
+
         vim.keymap.set("n", "<leader>fi", fzf_lua.files)
         vim.keymap.set("n", "<leader>fb", fzf_lua.buffers)
         vim.keymap.set("n", "<leader>fp", fzf_lua.grep)
