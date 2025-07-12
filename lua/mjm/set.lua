@@ -55,9 +55,6 @@ vim.opt.ignorecase = true
 vim.opt.smartcase = true
 vim.opt.incsearch = false -- Prevent screen shifting while entering search/substitute patterns
 
--- Prevents disabled mappings from becoming active again after timeout
-vim.opt.timeout = false
-
 vim.opt.swapfile = false
 vim.opt.backup = false
 vim.opt.undofile = true
