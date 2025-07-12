@@ -1,9 +1,9 @@
 -- Note: Not using the built-in LSP autocompletion because it doesn't bring in other sources
 
-local ut = require("mjm.utils")
 vim.lsp.set_log_level("ERROR")
-local lsp_group = vim.api.nvim_create_augroup("LSP_Augroup", { clear = true })
+local ut = require("mjm.utils")
 
+local lsp_group = vim.api.nvim_create_augroup("LSP_Augroup", { clear = true })
 vim.api.nvim_create_autocmd("LspAttach", {
     group = lsp_group,
     callback = function(ev)
