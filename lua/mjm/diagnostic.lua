@@ -23,8 +23,10 @@ local virtual_lines_cfg = {
     virtual_lines = { current_line = true },
 } ---@type table
 
-local default_diag_cfg = vim.tbl_extend("force", main_diag_cfg, virtual_text_cfg)
-local alt_diag_cfg = vim.tbl_extend("force", main_diag_cfg, virtual_lines_cfg)
+-- local default_diag_cfg = vim.tbl_extend("force", main_diag_cfg, virtual_text_cfg)
+-- local alt_diag_cfg = vim.tbl_extend("force", main_diag_cfg, virtual_lines_cfg)
+local default_diag_cfg = vim.tbl_extend("force", main_diag_cfg, virtual_lines_cfg)
+local alt_diag_cfg = vim.tbl_extend("force", main_diag_cfg, virtual_text_cfg)
 vim.diagnostic.config(default_diag_cfg)
 vim.keymap.set("n", "grd", function()
     local current_config = vim.diagnostic.config() or {} ---@type vim.diagnostic.Opts
