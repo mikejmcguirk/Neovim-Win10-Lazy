@@ -38,11 +38,11 @@ end
 
 ---@return boolean
 local is_cur_win_loclist_open = function()
-    if not cur_win_has_loclist() then
+    local qf_id = get_cur_win_qf_id()
+    if qf_id == 0 then
         return false
     end
 
-    local qf_id = get_cur_win_qf_id()
     for _, w in ipairs(vim.fn.getwininfo()) do
         if w.quickfix == 1 and w.loclist == 1 then
             if vim.fn.getloclist(w.winid, { id = 0 }).id == qf_id then
