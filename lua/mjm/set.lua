@@ -23,6 +23,7 @@ vim.opt.lazyredraw = false -- Causes unpredictable problems
 vim.opt.termguicolors = true
 vim.opt.showmode = false
 vim.opt.modelines = 1
+vim.opt.laststatus = 3
 
 -- Don't use. Sets arbitrary border around zen mode display
 -- vim.opt.winborder = "single"
