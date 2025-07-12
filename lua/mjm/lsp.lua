@@ -129,11 +129,19 @@ vim.api.nvim_create_autocmd("BufUnload", {
     end,
 })
 
+local capabilities = vim.lsp.protocol.make_client_capabilities()
+local cmp_capabilities =
+    vim.tbl_deep_extend("force", capabilities, require("cmp_nvim_lsp").default_capabilities())
+
+vim.lsp.config("bashls", { capabilities = cmp_capabilities })
 vim.lsp.enable("bashls")
+vim.lsp.config("lua_ls", { capabilities = cmp_capabilities })
 vim.lsp.enable("lua_ls")
+vim.lsp.config("taplo", { capabilities = cmp_capabilities })
 vim.lsp.enable("taplo")
 
 vim.lsp.config("rust_analyzer", {
+    capabilities = cmp_capabilities,
     settings = {
         ["rust-analyzer"] = {
             checkOnSave = true,
@@ -149,15 +157,21 @@ vim.lsp.config("rust_analyzer", {
 
 vim.lsp.enable("rust_analyzer")
 
+vim.lsp.config("gopls", { capabilities = cmp_capabilities })
 vim.lsp.enable("gopls")
+vim.lsp.config("golangci_lint_ls", { capabilities = cmp_capabilities })
 vim.lsp.enable("golangci_lint_ls")
 
+vim.lsp.config("html", { capabilities = cmp_capabilities })
+vim.lsp.config("cssls", { capabilities = cmp_capabilities })
 vim.lsp.enable("html")
 vim.lsp.enable("cssls")
 
+vim.lsp.config("ruff", { capabilities = cmp_capabilities })
 vim.lsp.enable("ruff")
 -- Ruff is not feature-complete enough to replace pylsp
 vim.lsp.config("pylsp", {
+    { capabilities = cmp_capabilities },
     settings = {
         pylsp = {
             plugins = {
