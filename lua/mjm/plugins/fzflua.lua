@@ -4,7 +4,6 @@ return {
     opts = {},
     config = function()
         -- FUTURE: Turn :let g: into a picker
-        -- Undo history (as well as restore)
         -- How to see key help
         -- Border/aesthetic config
         -- The qf and loclist stacks are very interesting, and unlock those features
@@ -42,6 +41,8 @@ return {
         vim.keymap.set("n", "<leader>fw", fzf_lua.lsp_live_workspace_symbols)
         vim.keymap.set("n", "<leader>fh", fzf_lua.helptags)
         vim.keymap.set("n", "<leader>fk", fzf_lua.keymaps)
+        vim.keymap.set("n", "<leader>fu", fzf_lua.quickfix_stack)
+        vim.keymap.set("n", "<leader>fo", fzf_lua.loclist_stack)
         -- vim.keymap.set("n", "<leader>fh", fzf_lua.highlights)
         -- vim.keymap.set("n", "<leader>fh", fzf_lua.registers)
         -- vim.keymap.set("n", "<leader>fh", fzf_lua.spellcheck)

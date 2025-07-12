@@ -321,7 +321,8 @@ end)
 ---@param opts table
 ---@return nil
 local grep_wrapper = function(opts)
-    if cur_buf_is_qf() then
+    opts = opts or {}
+    if opts.loclist and cur_buf_is_qf() then
         return vim.notify("Inside qf buffer")
     end
 
@@ -331,7 +332,6 @@ local grep_wrapper = function(opts)
     end
 
     local args = { pattern } ---@type table
-    opts = opts or {}
     if opts.insensitive then
         table.insert(args, "-i")
     end
