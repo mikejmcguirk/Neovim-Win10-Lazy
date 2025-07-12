@@ -163,8 +163,8 @@ vim.lsp.config("golangci_lint_ls", { capabilities = cmp_capabilities })
 vim.lsp.enable("golangci_lint_ls")
 
 vim.lsp.config("html", { capabilities = cmp_capabilities })
-vim.lsp.config("cssls", { capabilities = cmp_capabilities })
 vim.lsp.enable("html")
+vim.lsp.config("cssls", { capabilities = cmp_capabilities })
 vim.lsp.enable("cssls")
 
 vim.lsp.config("ruff", { capabilities = cmp_capabilities })
