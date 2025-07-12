@@ -205,6 +205,19 @@ vim.keymap.set("n", "<M-l>", function()
     resize_win("silent vertical resize +2")
 end)
 
+local tab = 10
+for _ = 1, 10 do
+    -- Need to bring tab into this scope, or else final value of tab is
+    -- used for all maps
+    local this_tab = tab -- 10, 1, 2, 3, 4, 5, 6, 7, 8, 9
+    local mod_tab = this_tab % 10 -- 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+    vim.keymap.set("n", string.format("<M-%s>", mod_tab), function()
+        vim.cmd("tabn " .. this_tab)
+    end)
+
+    tab = mod_tab + 1
+end
+
 ----------------
 -- Navigation --
 ----------------
