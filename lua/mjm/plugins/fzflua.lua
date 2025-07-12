@@ -3,6 +3,7 @@ return {
     dependencies = { "nvim-tree/nvim-web-devicons" },
     opts = {},
     config = function()
+        -- FUTURE: Turn :let g: into a picker
         -- Undo history (as well as restore)
         -- How to see key help
         -- Border/aesthetic config

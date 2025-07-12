@@ -1,3 +1,13 @@
+-- Lazy requirement
+vim.keymap.set({ "n", "x" }, "<Space>", "<Nop>")
+vim.g.mapleader = " "
+vim.g.maplocaleader = " "
+
+-- To avoid race conditions with nvim-tree
+vim.g.loaded_netrw = 1
+vim.g.loaded_netrwPlugin = 1
+vim.g.loaded_netrwSettings = 1
+
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
     local lazyrepo = "https://github.com/folke/lazy.nvim.git"
@@ -31,13 +41,32 @@ lazy.setup("mjm.plugins", {
     performance = {
         rtp = {
             disabled_plugins = {
-                "gzip",
-                -- "matchparen",
-                "netrwPlugin",
-                "tarPlugin",
+                "2html_plugin",
                 "tohtml",
-                -- "tutor",
+                "getscript",
+                "getscriptPlugin",
+                "gzip",
+                "logipat",
+                "netrw",
+                "netrwPlugin",
+                "netrwSettings",
+                "netrwFileHandlers",
+                "matchit",
+                "tar",
+                "tarPlugin",
+                "rrhelper",
+                "spellfile_plugin",
+                "vimball",
+                "vimballPlugin",
+                "zip",
                 "zipPlugin",
+                "tutor",
+                "rplugin",
+                "syntax",
+                "synmenu",
+                "optwin",
+                "compiler",
+                "bugreport",
             },
         },
     },

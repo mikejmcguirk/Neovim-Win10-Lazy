@@ -69,49 +69,49 @@ return {
 
             local builtin = require("telescope.builtin")
 
-            vim.keymap.set("n", "<leader>tf", function()
-                builtin.find_files({ hidden = true, no_ignore = true })
-            end)
-            vim.keymap.set("n", "<leader>tg", builtin.git_files)
-            vim.keymap.set("n", "<leader>ta", builtin.git_status)
-            vim.keymap.set("n", "<leader>tb", function()
-                builtin.buffers({ show_all_buffers = true })
-            end)
-
-            vim.keymap.set("n", "<leader>te", builtin.live_grep)
-            vim.keymap.set("n", "<leader>tp", function()
-                local ut = require("mjm.utils")
-                local pattern = ut.get_input("Grep > ")
-                if pattern == "" then
-                    return
-                end
-
-                builtin.grep_string({ search = pattern })
-            end)
-
-            vim.keymap.set("n", "<leader>th", builtin.help_tags)
-            vim.keymap.set("n", "<leader>tl", function()
-                builtin.grep_string({
-                    prompt_title = "Help",
-                    search = "",
-                    search_dirs = vim.api.nvim_get_runtime_file("doc/*.txt", true),
-                    only_sort_text = true,
-                })
-            end)
-
-            vim.keymap.set("n", "<leader>ti", builtin.highlights)
-            vim.keymap.set("n", "<leader>tw", builtin.lsp_dynamic_workspace_symbols)
-
-            vim.keymap.set("n", "<leader>to", builtin.command_history)
-            vim.keymap.set("n", "<leader>ts", builtin.registers)
-            vim.keymap.set("n", "<leader>tk", builtin.keymaps)
-            telescope.load_extension("undo")
-            vim.keymap.set("n", "<leader>tu", "<cmd>Telescope undo<cr>")
-
-            -- Disabled because of issue where picker tries to place cursor in an invalid position
-            -- vim.keymap.set("n", "<leader>tq", builtin.quickfix)
-
-            vim.keymap.set("n", "<leader>tt", builtin.resume)
+            -- vim.keymap.set("n", "<leader>tf", function()
+            --     builtin.find_files({ hidden = true, no_ignore = true })
+            -- end)
+            -- vim.keymap.set("n", "<leader>tg", builtin.git_files)
+            -- vim.keymap.set("n", "<leader>ta", builtin.git_status)
+            -- vim.keymap.set("n", "<leader>tb", function()
+            --     builtin.buffers({ show_all_buffers = true })
+            -- end)
+            --
+            -- vim.keymap.set("n", "<leader>te", builtin.live_grep)
+            -- vim.keymap.set("n", "<leader>tp", function()
+            --     local ut = require("mjm.utils")
+            --     local pattern = ut.get_input("Grep > ")
+            --     if pattern == "" then
+            --         return
+            --     end
+            --
+            --     builtin.grep_string({ search = pattern })
+            -- end)
+            --
+            -- vim.keymap.set("n", "<leader>th", builtin.help_tags)
+            -- vim.keymap.set("n", "<leader>tl", function()
+            --     builtin.grep_string({
+            --         prompt_title = "Help",
+            --         search = "",
+            --         search_dirs = vim.api.nvim_get_runtime_file("doc/*.txt", true),
+            --         only_sort_text = true,
+            --     })
+            -- end)
+            --
+            -- vim.keymap.set("n", "<leader>ti", builtin.highlights)
+            -- vim.keymap.set("n", "<leader>tw", builtin.lsp_dynamic_workspace_symbols)
+            --
+            -- vim.keymap.set("n", "<leader>to", builtin.command_history)
+            -- vim.keymap.set("n", "<leader>ts", builtin.registers)
+            -- vim.keymap.set("n", "<leader>tk", builtin.keymaps)
+            -- telescope.load_extension("undo")
+            -- vim.keymap.set("n", "<leader>tu", "<cmd>Telescope undo<cr>")
+            --
+            -- -- Disabled because of issue where picker tries to place cursor in an invalid position
+            -- -- vim.keymap.set("n", "<leader>tq", builtin.quickfix)
+            --
+            -- vim.keymap.set("n", "<leader>tt", builtin.resume)
         end,
     },
 }
