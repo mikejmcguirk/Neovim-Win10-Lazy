@@ -290,10 +290,6 @@ end, { expr = true })
 
 vim.keymap.set("o", "al", "<cmd>normal Val<CR>", { silent = true })
 
--- TODO: Make this text object accept a count
--- This could also be made to start at the first non-blank character rather than the first char
--- But test this first rather than speculatively make adjustments
-
 -- Translated from justinmk from jdaddy.vim
 local function inner_line()
     local cur_line = vim.api.nvim_get_current_line() ---@type string
@@ -303,9 +299,11 @@ local function inner_line()
     end
 
     local row = vim.api.nvim_win_get_cursor(0)[1] ---@type integer
-    -- #cur_line does not include \n. Subtract one because set_mark's col is 0 indexed
+    local first_non_blank_col = cur_line:find("%S") or 1 ---@type integer
+    first_non_blank_col = first_non_blank_col - 1
+    -- #cur_line does not include \n. Subtract one because set_mark's col is 0-indexed
     local end_col = #cur_line - 1 ---@type integer
-    vim.api.nvim_buf_set_mark(0, "[", row, 0, {})
+    vim.api.nvim_buf_set_mark(0, "[", row, first_non_blank_col, {})
     vim.api.nvim_buf_set_mark(0, "]", row, end_col, {})
 
     return "`[o`]"
@@ -315,8 +313,106 @@ vim.keymap.set("x", "il", function()
     return inner_line()
 end, { expr = true })
 
-vim.keymap.set("o", "il", "<cmd>normal vil<CR>", { silent = true })
+vim.keymap.set("o", "il", function()
+    local vcount1 = vim.v.count1
+    if vcount1 <= 1 then
+        vim.cmd("normal vil")
+        return
+    end
+
+    vim.cmd("normal vil" .. vcount1 .. "jg_")
+end, { silent = true })
+
 vim.keymap.set("o", "_", "<cmd>normal v_<cr>", { silent = true })
+
+local function find_pipe_pair(line, col)
+    local function is_pipe_pair(pos)
+        return line:sub(pos, pos) == "|" and line:find("|", pos + 1, true)
+    end
+
+    local start_pos, end_pos
+    for i = col, 1, -1 do
+        if is_pipe_pair(i) then
+            start_pos = i
+            end_pos = line:find("|", i + 1, true)
+            break
+        end
+    end
+
+    if not start_pos and line:sub(col, col) == "|" then
+        for i = col, #line do
+            if is_pipe_pair(i) then
+                start_pos = i
+                end_pos = line:find("|", i + 1, true)
+                break
+            end
+        end
+    end
+
+    if not start_pos then
+        for i = col, #line do
+            if is_pipe_pair(i) then
+                start_pos = i
+                end_pos = line:find("|", i + 1, true)
+                break
+            end
+        end
+    end
+
+    return start_pos, end_pos
+end
+
+local function pipe_text_object(opts)
+    local line = vim.api.nvim_get_current_line() ---@type string
+    if line == "" then
+        return "'\027'"
+    end
+
+    local row, col = unpack(vim.api.nvim_win_get_cursor(0)) ---@type integer, integer
+    local start_pos, end_pos = find_pipe_pair(line, col)
+    if not start_pos or not end_pos then
+        return "'\027'"
+    end
+
+    opts = opts or {}
+    local start_col, end_col
+    if opts.outer then
+        start_col = start_pos - 1
+        end_col = end_pos - 1
+        if end_pos < #line and line:sub(end_pos + 1, end_pos + 1):match("%s") then
+            end_col = end_col + 1
+        elseif start_pos > 1 and line:sub(start_pos - 1, start_pos - 1):match("%s") then
+            start_col = start_col - 1
+        end
+    else
+        start_col = start_pos
+        end_col = end_pos - 2
+    end
+
+    if start_col < 0 then
+        start_col = 0
+    end
+
+    if end_col >= #line then
+        end_col = #line - 1
+    end
+
+    vim.api.nvim_buf_set_mark(0, "[", row, start_col, {})
+    vim.api.nvim_buf_set_mark(0, "]", row, end_col, {})
+    return "`[o`]"
+end
+
+vim.keymap.set("x", "i|", function()
+    return pipe_text_object()
+end, { expr = true })
+
+vim.keymap.set("x", "a|", function()
+    return pipe_text_object({ outer = true })
+end, { expr = true })
+
+vim.keymap.set("o", "i|", "<cmd>normal vi|<cr>")
+
+vim.keymap.set("o", "a|", "<cmd>normal va|<cr>")
 
 --------------------
 -- Capitalization --
