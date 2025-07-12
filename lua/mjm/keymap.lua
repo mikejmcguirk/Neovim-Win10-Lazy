@@ -44,15 +44,6 @@ end
 vim.keymap.set("n", "v", "mvv", { silent = true })
 vim.keymap.set("n", "V", "mvV", { silent = true })
 
-vim.keymap.set({ "n", "x" }, "s", "<Nop>")
-vim.keymap.set({ "n" }, "S", "<Nop>") -- Left open in x mode for surround
-vim.keymap.set("x", "q", "<Nop>")
-vim.keymap.set("n", "gQ", "<nop>")
-vim.keymap.set("n", "gh", "<nop>")
-vim.keymap.set("n", "gH", "<nop>")
-
-vim.keymap.set("n", "gs", "<nop>") -- I guess this is fine here
-
 -------------------------
 -- Saving and Quitting --
 -------------------------
@@ -113,7 +104,6 @@ end
 -- Likewise with ZQ. By default, it is quit without save. Unfortunate to hit by accident
 vim.keymap.set("n", "ZZ", "<Nop>")
 vim.keymap.set("n", "ZQ", "<Nop>")
-
 vim.keymap.set("n", "<C-z>", "<nop>")
 
 -------------------
@@ -122,7 +112,6 @@ vim.keymap.set("n", "<C-z>", "<nop>")
 
 -- Purposefully not setup to accept counts. Don't want to accidently get lost
 
-vim.keymap.set("n", "U", "<nop>")
 vim.keymap.set("n", "u", function()
     if not ut.check_modifiable() then
         return
@@ -216,15 +205,6 @@ vim.keymap.set("n", "<M-l>", function()
     resize_win("silent vertical resize +2")
 end)
 
-vim.keymap.set("x", "<C-w>", "<nop>")
-
--- Even mapping <C-c> in operator pending mode does not fix these
-local bad_wincmds = { "c", "f", "w", "i", "+", "-" }
-for _, key in pairs(bad_wincmds) do
-    vim.keymap.set("n", "<C-w>" .. key, "<nop>")
-    vim.keymap.set("n", "<C-w><C-" .. key .. ">", "<nop>")
-end
-
 ----------------
 -- Navigation --
 ----------------
@@ -270,26 +250,6 @@ vim.keymap.set("n", "/", "ms/")
 vim.keymap.set("n", "?", "ms?")
 vim.keymap.set("n", "N", "Nzzzv")
 vim.keymap.set("n", "n", "nzzzv")
-
-vim.keymap.set({ "n", "x" }, "[[", "<Nop>")
-vim.keymap.set({ "n", "x" }, "]]", "<Nop>")
-vim.keymap.set({ "n", "x" }, "[]", "<Nop>")
-vim.keymap.set({ "n", "x" }, "][", "<Nop>")
-vim.keymap.set({ "n", "x" }, "[/", "<Nop>")
-vim.keymap.set({ "n", "x" }, "]/", "<Nop>")
-
--- Purposefully left alone in cmd mode
-vim.keymap.set({ "n", "i", "x" }, "<left>", "<Nop>")
-vim.keymap.set({ "n", "i", "x" }, "<right>", "<Nop>")
-vim.keymap.set({ "n", "i", "x" }, "<up>", "<Nop>")
-vim.keymap.set({ "n", "i", "x" }, "<down>", "<Nop>")
-
-vim.keymap.set({ "n", "i", "x" }, "<pageup>", "<Nop>")
-vim.keymap.set({ "n", "i", "x" }, "<pagedown>", "<Nop>")
-vim.keymap.set({ "n", "i", "x" }, "<home>", "<Nop>")
-vim.keymap.set({ "n", "i", "x" }, "<end>", "<Nop>")
-vim.keymap.set({ "n", "i", "x" }, "<insert>", "<Nop>")
-vim.keymap.set({ "n", "x" }, "<del>", "<Nop>")
 
 ------------------
 -- Text Objects --
@@ -393,10 +353,6 @@ for _, map in pairs(cap_motions_vis) do
         return map .. "`z"
     end, { silent = true, expr = true })
 end
-
--- Don't want to confuse muscle memory for "u"
-vim.keymap.set("x", "u", "<nop>")
-vim.keymap.set("x", "U", "<nop>")
 
 --------------------------
 -- Yank, Change, Delete --
