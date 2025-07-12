@@ -3,6 +3,14 @@
 vim.lsp.set_log_level("ERROR")
 local ut = require("mjm.utils")
 
+-- By default, mapped in non-LSP buffers without checking for LSP method support
+vim.keymap.del("n", "grn")
+vim.keymap.del("n", "gra")
+vim.keymap.del("n", "grr")
+vim.keymap.del("n", "gri")
+vim.keymap.del("n", "gO")
+vim.keymap.del("i", "<C-S>")
+
 local lsp_group = vim.api.nvim_create_augroup("LSP_Augroup", { clear = true })
 vim.api.nvim_create_autocmd("LspAttach", {
     group = lsp_group,
@@ -27,50 +35,76 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
 
         -- Overwrite vim defaults
-        vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })
-        vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = buf })
-        if client.server_capabilities.implementationProvider then
-            vim.keymap.set("n", "gI", vim.lsp.buf.implementation, { buffer = buf })
+        if client:supports_method(methods.textDocument_definition) then
+            vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })
         end
 
-        -- Overwrite Nvim defaults (:help lsp-defaults)
-        vim.keymap.set("n", "grn", function()
-            local input = ut.get_input("Rename: ")
-            if string.find(input, "%s") then
-                vim.notify(string.format("The name '%s' contains spaces", input))
-            elseif #input > 0 then
-                vim.lsp.buf.rename(input)
-            end
-        end, { buffer = buf })
+        if client:supports_method(methods.textDocument_declaration) then
+            vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = buf })
+        end
 
-        vim.keymap.set("n", "grr", function()
-            vim.lsp.buf.references({ includeDeclaration = false })
-        end, { buffer = buf })
+        -- Replace Nvim defaults (:help lsp-defaults)
+        if client:supports_method(methods.textDocument_rename) then
+            vim.keymap.set("n", "grn", function()
+                local input = ut.get_input("Rename: ")
+                if string.find(input, "%s") then
+                    vim.notify(string.format("The name '%s' contains spaces", input))
+                elseif #input > 0 then
+                    vim.lsp.buf.rename(input)
+                end
+            end, { buffer = buf })
+        end
 
-        vim.keymap.set("n", "K", function()
-            vim.lsp.buf.hover({ border = Border })
-        end, { buffer = buf, desc = "vim.lsp.buf.hover()" })
+        if client:supports_method(methods.textDocument_implementation) then
+            vim.keymap.set("n", "gri", vim.lsp.buf.implementation, { buffer = buf })
+        end
 
-        vim.keymap.set({ "i", "s" }, "<C-S>", function()
-            vim.lsp.buf.signature_help({ border = Border })
-        end, { buffer = buf, desc = "vim.lsp.buf.signature_help()" })
+        if client:supports_method(methods.textDocument_codeAction) then
+            vim.keymap.set("n", "gra", vim.lsp.buf.code_action, { buffer = buf })
+        end
+
+        if client:supports_method(methods.textDocument_references) then
+            vim.keymap.set("n", "grr", function()
+                vim.lsp.buf.references({ includeDeclaration = false })
+            end, { buffer = buf })
+        end
+
+        if client:supports_method(methods.textDocument_hover) then
+            vim.keymap.set("n", "K", function()
+                vim.lsp.buf.hover({ border = Border })
+            end, { buffer = buf, desc = "vim.lsp.buf.hover()" })
+        end
+
+        if client:supports_method(methods.textDocument_signatureHelp) then
+            vim.keymap.set({ "i", "s" }, "<C-S>", function()
+                vim.lsp.buf.signature_help({ border = Border })
+            end, { buffer = buf, desc = "vim.lsp.buf.signature_help()" })
+        end
 
         -- FUTURE: This will be added as a default in the future
-        vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { buffer = buf })
+        if client:supports_method(methods.textDocument_typeDefinition) then
+            vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { buffer = buf })
+        end
 
         -- Kickstart mapping
-        vim.keymap.set("n", "gW", vim.lsp.buf.workspace_symbol, { buffer = buf })
+        if client:supports_method(methods.workspace_symbol) then
+            vim.keymap.set("n", "gW", vim.lsp.buf.workspace_symbol, { buffer = buf })
+        end
+
         -- Patternful with the rest of the defaults
-        vim.keymap.set("n", "grh", vim.lsp.buf.document_highlight, { buffer = buf })
-        vim.keymap.set("n", "grf", function()
-            print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
-        end, { buffer = buf })
+        if client:supports_method(methods.textDocument_documentHighlight) then
+            vim.keymap.set("n", "grh", vim.lsp.buf.document_highlight, { buffer = buf })
+        end
 
         if client:supports_method(methods.textDocument_inlayHint) then
             vim.keymap.set("n", "grl", function()
                 vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = buf }))
             end)
         end
+
+        vim.keymap.set("n", "grf", function()
+            print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
+        end, { buffer = buf })
     end,
 })
 
