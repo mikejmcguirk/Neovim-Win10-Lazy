@@ -198,7 +198,7 @@ local all_diags_to_qflist = function(opts)
     opts = opts or {}
     -- Running vim.diagnostic.get() twice is not ideal, but better than hacking together
     -- a manual diag filter
-    local severity = opts.highest and ut.get_highest_severity({ buf = nil })
+    local severity = opts.highest and ut.get_top_severity({ buf = nil })
         or {
             min = opts.err_only and vim.diagnostic.severity.ERROR or vim.diagnostic.severity.HINT,
         } ---@type integer|table{min:integer}
@@ -228,7 +228,7 @@ local buf_diags_to_loclist = function(opts)
         return
     end
 
-    local severity = opts.highest and ut.get_highest_severity({ buf = buf })
+    local severity = opts.highest and ut.get_top_severity({ buf = buf })
         or {
             min = opts.err_only and vim.diagnostic.severity.ERROR or vim.diagnostic.severity.HINT,
         } ---@type integer|table{min:integer}

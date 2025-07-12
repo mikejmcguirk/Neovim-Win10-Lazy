@@ -37,9 +37,9 @@ end)
 
 local ut = require("mjm.utils")
 vim.keymap.set("n", "]w", function()
-    vim.diagnostic.jump({ count = vim.v.count1, severity = ut.get_highest_severity({ buf = 0 }) })
-end, { desc = "Jump to the next diagnostic in the current buffer prioritized by severity" })
+    vim.diagnostic.jump({ count = vim.v.count1, severity = ut.get_top_severity({ buf = 0 }) })
+end)
 
 vim.keymap.set("n", "[w", function()
-    vim.diagnostic.jump({ count = -vim.v.count1, severity = ut.get_highest_severity({ buf = 0 }) })
-end, { desc = "Jump to the previous diagnostic in the current buffer priotizied by severity" })
+    vim.diagnostic.jump({ count = -vim.v.count1, severity = ut.get_top_severity({ buf = 0 }) })
+end)
