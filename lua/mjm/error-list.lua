@@ -148,11 +148,19 @@ for _, map in pairs({ "cuo", "cou" }) do
     end)
 end
 
--- FUTURE: Might be future value in actually using the qf and loc list stacks
+vim.keymap.set("n", "duc", function()
+    vim.cmd("cclose")
+    vim.fn.setqflist({}, "r")
+end)
 
 vim.keymap.set("n", "dua", function()
     vim.cmd("cclose")
     vim.fn.setqflist({}, "f")
+end)
+
+vim.keymap.set("n", "doc", function()
+    vim.cmd("lclose")
+    vim.fn.setloclist(vim.api.nvim_get_current_win(), {}, "r")
 end)
 
 vim.keymap.set("n", "doa", function()
