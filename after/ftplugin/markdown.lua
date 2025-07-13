@@ -17,6 +17,7 @@ vim.keymap.set("i", "?", "?<C-g>u", { silent = true, buffer = true })
 vim.keymap.set("i", "!", "!<C-g>u", { silent = true, buffer = true })
 
 local ut = require("mjm.utils")
+vim.keymap.set("n", "K", ut.check_word_under_cursor)
 vim.api.nvim_create_autocmd("BufWritePre", {
     group = vim.api.nvim_create_augroup("md_save", { clear = true }),
     pattern = "*.md",
@@ -24,5 +25,3 @@ vim.api.nvim_create_autocmd("BufWritePre", {
         ut.fallback_formatter(ev.buf)
     end,
 })
-
-vim.keymap.set("n", "K", ut.check_word_under_cursor)
