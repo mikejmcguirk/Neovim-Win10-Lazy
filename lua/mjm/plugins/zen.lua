@@ -40,7 +40,7 @@ return {
             vim.keymap.set("n", "<leader>nf", "<nop>")
         end,
         on_close = function()
-            vim.keymap.set("n", "<leader>nt", "<cmd>NvimTreeToggle<cr>")
+            vim.keymap.set("n", "<leader>nn", "<cmd>NvimTreeToggle<cr>")
             vim.keymap.set("n", "<leader>nf", "<cmd>NvimTreeFocus<cr>")
 
             pcall(function()
