@@ -70,7 +70,8 @@ vim.opt.breakindent = true -- For fts where opt_local wrap is true
 vim.opt.linebreak = true
 
 vim.opt.spell = false
-vim.opt.spelllang = "en_us" -- If spell is turned on by an ftplugin file
+vim.opt.spelllang = "en_us"
+vim.opt.dictionary = "/usr/share/dict/words"
 
 vim.opt.cursorline = true
 local cursorline_control = vim.api.nvim_create_augroup("cursorline_control", { clear = true })

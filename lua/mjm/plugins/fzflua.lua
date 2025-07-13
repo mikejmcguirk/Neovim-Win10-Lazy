@@ -7,7 +7,8 @@ return {
 
         local fzf_lua = require("fzf-lua")
         fzf_lua.setup({
-            "telescope",
+            -- "telescope",
+            debug = false,
             winopts = {
                 border = Border,
                 preview = {
@@ -63,5 +64,79 @@ return {
         --         only_sort_text = true,
         --     })
         -- end)
+
+        local function fuzzy_spell_correct()
+            local word = vim.fn.expand("<cword>") ---@type string
+            if word == "" then
+                return vim.notify("No word under cursor", vim.log.levels.WARN)
+            end
+
+            if vim.fn.spellbadword(word) == "" then
+                return vim.notify("'" .. word .. "' is already correct")
+            end
+
+            vim.notify("Getting dictionary...")
+            local buf = vim.api.nvim_get_current_buf()
+            local dict_file = "/usr/share/dict/words"
+            fzf_lua.fzf_exec("cat " .. dict_file, {
+                prompt = 'Suggestions for "' .. word .. '": ',
+                actions = {
+                    ["default"] = function(selected, _)
+                        if not selected or not selected[1] then
+                            return
+                        end
+
+                        local line = vim.api.nvim_get_current_line()
+                        local row_1, col_0 = unpack(vim.api.nvim_win_get_cursor(0))
+                        local col_1 = col_0 + 1
+                        local search_start = math.max(1, col_1 - #word)
+                        local start_col_1 = line:find(word, search_start, false)
+                        if not start_col_1 then
+                            local err_msg = "Unable to find word boundary for " .. word
+                            err_msg = err_msg .. " from cursor position " .. col_1
+                            return vim.notify(err_msg, vim.log.levels.ERROR)
+                        end
+
+                        if not (start_col_1 <= col_1 and col_1 < start_col_1 + #word) then
+                            return vim.notify("Invalid word position (", vim.log.levels.ERROR)
+                        end
+
+                        local new_word = selected[1]
+                        local row_0 = row_1 - 1
+                        local start_col_0 = start_col_1 - 1
+                        local end_col_ex = start_col_0 + #word
+                        vim.api.nvim_buf_set_text(
+                            buf,
+                            row_0,
+                            start_col_0,
+                            row_0,
+                            end_col_ex,
+                            { new_word }
+                        )
+
+                        vim.api.nvim_win_set_cursor(0, { row_1, col_0 })
+                        local msg = 'Replaced "' .. word .. '" with "' .. new_word .. '"'
+                        vim.fn.timer_start(100, function()
+                            vim.api.nvim_echo({ { msg } }, true, {})
+                        end)
+                    end,
+                    ["ctrl-w"] = function(_, _)
+                        vim.fn.writefile({ word }, SpellFile, "a")
+                        vim.cmd("mkspell! " .. SpellFile)
+                        local msg = 'Added new word "' .. word .. '" to spellfile as valid'
+                        vim.fn.timer_start(100, function()
+                            vim.api.nvim_echo({ { msg } }, true, {})
+                        end)
+                    end,
+                },
+                previewer = false,
+                fzf_opts = {
+                    ["--query"] = word,
+                    ["--tiebreak"] = "length",
+                    ["--algo"] = "v2",
+                },
+            })
+        end
+        vim.keymap.set("n", "<leader>fd", fuzzy_spell_correct)
     end,
 }

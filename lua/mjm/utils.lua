@@ -220,4 +220,34 @@ M.get_top_severity = function(opts)
     end
 end
 
+M.check_word_under_cursor = function()
+    local word = vim.fn.expand("<cword>") ---@type string
+    if word == "" then
+        vim.notify("No word under cursor")
+        return
+    end
+
+    if vim.fn.spellbadword(word) == "" then
+        return vim.notify("'" .. word .. "' is a valid word")
+    end
+
+    local dict_file = vim.opt.dictionary:get()[1]
+    local grep_cmd
+    if vim.o.grepprg:match("^rg") then
+        grep_cmd = vim.o.grepprg
+            .. "-w --ignore-case "
+            .. vim.fn.shellescape(word)
+            .. " "
+            .. dict_file
+    else
+        grep_cmd = vim.o.grepprg .. "-w -i " .. vim.fn.shellescape(word) .. " " .. dict_file
+    end
+
+    if vim.fn.system(grep_cmd) ~= "" then
+        return vim.notify("'" .. word .. "' is a valid word")
+    end
+
+    vim.notify("'" .. word .. "' is misspelled or not in dictionary")
+end
+
 return M
