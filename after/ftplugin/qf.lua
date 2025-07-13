@@ -3,26 +3,25 @@ vim.o.buflisted = false
 
 vim.keymap.set("n", "q", "<cmd>q<cr>", { buffer = true })
 vim.keymap.set("n", "dd", function()
-    local cur_line = vim.fn.line(".") --- @type integer
+    local row = vim.api.nvim_win_get_cursor(0)[1]
     local cur_win = vim.api.nvim_get_current_win()
     local win_info = vim.fn.getwininfo(cur_win)[1]
     if win_info.quickfix == 1 and win_info.loclist == 1 then
         local list = vim.fn.getloclist(cur_win)
-        table.remove(list, cur_line)
+        table.remove(list, row)
         vim.fn.setloclist(cur_win, list, "r")
     else
         local list = vim.fn.getqflist()
-        table.remove(list, cur_line)
+        table.remove(list, row)
         vim.fn.setqflist(list, "r")
     end
 
-    vim.cmd(":" .. tostring(cur_line))
+    vim.cmd(":" .. tostring(row))
 end, { buffer = true })
 
--- Only put Nvim defaults here. For plugin specific maps, handle on a case-by-case basis
 local bad_maps = { "<C-o>", "<C-i>" }
 for _, map in pairs(bad_maps) do
     vim.keymap.set("n", map, function()
-        vim.notify("Currently in error list")
+        vim.notify("Currently in qf buffer")
     end, { buffer = true })
 end
