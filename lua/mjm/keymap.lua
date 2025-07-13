@@ -8,9 +8,8 @@ end
 -- Mode Switching --
 --------------------
 
--- Mapping <esc> to <C-c> in command mode will cause <C-c> to accept commands rather than cancel
--- Mapped in operator pending mode because if you C-c out without the remap, quickscope will not
--- properly exit highlighting
+-- Mapping <C-c> to <esc> in cmd mode causes <C-C> to accept commands rather than cancel them
+-- omapped so that Quickscope highlighting properly exits
 vim.keymap.set({ "x", "o" }, "<C-c>", "<esc>", { silent = true })
 -- Deal with default behavior where you type just to the bound of a window, so Nvim scrolls to
 -- the next column so you can see what you're typing, but then you exit insert mode, meaning the
@@ -25,8 +24,7 @@ vim.keymap.set("n", "<C-c>", function()
     vim.cmd("noh")
     vim.lsp.buf.clear_references()
 
-    -- Allows <C-c> to exit the start of commands with a count
-    -- Eliminates default command line nag
+    -- Allows <C-c> to exit commands with a count. Also eliminates command line nag
     return "<esc>"
 end, { expr = true, silent = true })
 
@@ -49,9 +47,15 @@ vim.keymap.set("n", "V", "mvV", { silent = true })
 -------------------------
 
 -- FUTURE: This should incorporate saving the last modified marks
-vim.keymap.set("n", "ZV", function()
+vim.keymap.set("n", "ZZ", function()
     if ut.check_modifiable() then
         vim.cmd("silent up")
+    end
+end)
+
+vim.keymap.set("n", "ZQ", function()
+    if ut.check_modifiable() then
+        vim.cmd("silent wq")
     end
 end)
 
@@ -61,7 +65,7 @@ vim.keymap.set("n", "ZX", function()
         return
     end
 
-    local status, result = pcall(function()
+    local status, result = pcall(function() ---@type boolean, unknown|nil
         vim.cmd("silent up | so")
     end)
 
@@ -74,59 +78,54 @@ end)
 
 for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
     vim.keymap.set("n", map, function()
-        local cur_buf = vim.api.nvim_get_current_buf()
-        local buf_win_count = 0
+        local buf = vim.api.nvim_get_current_buf() ---@type integer
+        local buf_wins = 0 ---@type integer
         for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-            if vim.api.nvim_win_get_buf(win) == cur_buf then
-                buf_win_count = buf_win_count + 1
+            if vim.api.nvim_win_get_buf(win) == buf then
+                buf_wins = buf_wins + 1
             end
         end
 
-        local cmd = "up | bd"
-        if buf_win_count > 1 then
-            cmd = "q"
-        end
-
-        local status, result = pcall(function()
-            vim.cmd("silent " .. cmd)
+        local cmd = buf_wins > 1 and "silent q" or "silent up | bd"
+        local status, result = pcall(function() ---@type boolean, unknown|nil
+            vim.cmd(cmd)
         end)
 
-        if status then
-            return
-        else
+        if not status then
             vim.notify(result or "Unknown error closing window", vim.log.levels.WARN)
         end
     end)
 end
 
--- ZZ is intuitively a better mapping to save than ZV, but by default ZZ exits the current window
--- This muscle memory becomes a problem if you need to go into vanilla vim or a clean config
--- Likewise with ZQ. By default, it is quit without save. Unfortunate to hit by accident
-vim.keymap.set("n", "ZZ", "<Nop>")
-vim.keymap.set("n", "ZQ", "<Nop>")
 vim.keymap.set("n", "<C-z>", "<nop>")
 
 -------------------
 -- Undo and Redo --
 -------------------
 
--- Purposefully not setup to accept counts. Don't want to accidently get lost
-
 vim.keymap.set("n", "u", function()
     if not ut.check_modifiable() then
         return
     end
 
-    vim.cmd("silent norm! u")
-end, { silent = true })
+    if vim.v.count1 > 1 then
+        vim.cmd("norm! " .. vim.v.count1 .. "u")
+    else
+        vim.cmd("silent norm! u")
+    end
+end)
 
 vim.keymap.set("n", "<C-r>", function()
     if not ut.check_modifiable() then
         return
     end
 
-    vim.cmd('silent exec "norm! \\<C-r>"')
-end, { silent = true })
+    if vim.v.count1 > 1 then
+        vim.cmd('exec "norm! ' .. vim.v.count1 .. '\\<C-r>"')
+    else
+        vim.cmd('silent exec "norm! \\<C-r>"')
+    end
+end)
 
 ---------------------
 -- Window Movement --
@@ -207,12 +206,18 @@ end)
 
 local tab = 10
 for _ = 1, 10 do
-    -- Need to bring tab into this scope, or else final value of tab is
+    -- Need to bring tab into this scope, or else the final value of tab is
     -- used for all maps
     local this_tab = tab -- 10, 1, 2, 3, 4, 5, 6, 7, 8, 9
     local mod_tab = this_tab % 10 -- 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
     vim.keymap.set("n", string.format("<M-%s>", mod_tab), function()
-        vim.cmd("tabn " .. this_tab)
+        local ok, err = pcall(function() ---@type boolean, unknown|nil
+            vim.cmd("tabn " .. this_tab)
+        end)
+
+        if not ok then
+            vim.notify(err or ("Unknown error moving to " .. this_tab), vim.log.levels.ERROR)
+        end
     end)
 
     tab = mod_tab + 1
@@ -316,8 +321,7 @@ end, { expr = true })
 vim.keymap.set("o", "il", function()
     local vcount1 = vim.v.count1
     if vcount1 <= 1 then
-        vim.cmd("normal vil")
-        return
+        return vim.cmd("normal vil")
     end
 
     vim.cmd("normal vil" .. vcount1 .. "jg_")
