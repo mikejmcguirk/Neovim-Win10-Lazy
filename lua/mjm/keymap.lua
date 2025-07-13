@@ -174,12 +174,14 @@ local win_move_tmux = function(nvim_cmd)
     do_tmux_move(nvim_cmd)
 end
 
+-- See tmux config (mikejmcguirk/dotfiles) for reasoning and how on C-S for this mapping
 for k, _ in pairs(tmux_cmd_map) do
-    vim.keymap.set("n", "<C-" .. k .. ">", function()
+    vim.keymap.set("n", "<C-S-" .. k .. ">", function()
         win_move_tmux(k)
     end)
 end
 
+-- TODO: Fix to be inclusive of more window types
 local resize_win = function(cmd)
     if vim.fn.win_gettype(vim.api.nvim_get_current_win()) == "" then
         vim.cmd(cmd)
@@ -261,7 +263,7 @@ vim.keymap.set("n", "zB", function()
     vim.opt_local.scrolloff = Scrolloff_Val
 end)
 
-vim.keymap.set("n", "'", "`")
+vim.keymap.set("n", "'", "g`")
 
 -- Not silent so that the search prompting displays properly
 vim.keymap.set("n", "/", "ms/")

@@ -17,8 +17,16 @@ return {
                 },
             },
             keymap = {
+                builtin = {
+                    -- Undo Telescope profile mappings
+                    ["<C-d>"] = false,
+                    ["<C-u>"] = false,
+                },
                 fzf = {
-                    ["ctrl-s"] = "unix-line-discard",
+                    ["ctrl-k"] = "kill-line",
+                    -- Undo Telescope profile mappings
+                    ["ctrl-u"] = "unix-line-discard",
+                    ["ctrl-d"] = false,
                 },
             },
             hls = {

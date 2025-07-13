@@ -3,7 +3,7 @@ local note_events = {}
 local workspaces = {
     {
         name = "main",
-        path = "~/obsidian/main",
+        path = "~/Documents/obsidian/main",
     },
 } ---@type table
 
