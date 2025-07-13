@@ -15,7 +15,7 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 })
 
 local match_control = vim.api.nvim_create_augroup("match_control", { clear = true })
-local no_match = { "TelescopePrompt", "git" }
+local no_match = { "TelescopePrompt", "git", "fzflua_backdrop", "help", "fzf", "query" }
 -- When doing vim.fn.matchadd, the scopes seem to get mixed up between different windows
 -- By using the cmd, the highlights disappear on WinLeave as they should
 
