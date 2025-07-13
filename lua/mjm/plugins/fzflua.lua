@@ -4,6 +4,7 @@ return {
     opts = {},
     config = function()
         -- FUTURE: Turn :let g: into a picker
+        -- FUTURE: Why can async messages not be displayed?
 
         local fzf_lua = require("fzf-lua")
         fzf_lua.setup({
@@ -115,18 +116,16 @@ return {
                         )
 
                         vim.api.nvim_win_set_cursor(0, { row_1, col_0 })
-                        local msg = 'Replaced "' .. word .. '" with "' .. new_word .. '"'
-                        vim.fn.timer_start(100, function()
-                            vim.api.nvim_echo({ { msg } }, true, {})
-                        end)
+                        -- Doesn't display for whatever reason
+                        -- local msg = 'Replaced "' .. word .. '" with "' .. new_word .. '"'
+                        -- vim.api.nvim_echo({ { msg } }, true, {})
                     end,
                     ["ctrl-w"] = function(_, _)
                         vim.fn.writefile({ word }, SpellFile, "a")
                         vim.cmd("mkspell! " .. SpellFile)
-                        local msg = 'Added new word "' .. word .. '" to spellfile as valid'
-                        vim.fn.timer_start(100, function()
-                            vim.api.nvim_echo({ { msg } }, true, {})
-                        end)
+                        -- Doesn't display for whatever reason
+                        -- local msg = 'Added new word "' .. word .. '" to spellfile as valid'
+                        -- vim.api.nvim_echo({ { msg } }, true, {})
                     end,
                 },
                 previewer = false,

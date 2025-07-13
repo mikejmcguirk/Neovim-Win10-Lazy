@@ -8,6 +8,7 @@ vim.keymap.del("n", "grn")
 vim.keymap.del("n", "gra")
 vim.keymap.del("n", "grr")
 vim.keymap.del("n", "gri")
+vim.keymap.del("n", "grt")
 vim.keymap.del("n", "gO")
 vim.keymap.del("i", "<C-S>")
 
@@ -81,7 +82,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
             end, { buffer = buf, desc = "vim.lsp.buf.signature_help()" })
         end
 
-        -- FUTURE: This will be added as a default in the future
         if client:supports_method(methods.textDocument_typeDefinition) then
             vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { buffer = buf })
         end
