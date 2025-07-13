@@ -28,6 +28,10 @@ return {
                 preview_border = "FloatBorder",
                 backdrop = "NormalFloat",
             },
+            fzf_opts = {
+                ["--tiebreak"] = "length,chunk",
+                ["--algo"] = "v2",
+            },
         })
 
         vim.api.nvim_set_hl(0, "FzfLuaScrollBorderFull", { link = "FzfLuaScrollFloatFull" })
@@ -54,7 +58,13 @@ return {
 
         vim.keymap.set("n", "<leader>fs", fzf_lua.spellcheck)
         vim.keymap.set("n", "<leader>fw", fzf_lua.lsp_live_workspace_symbols)
-        vim.keymap.set("n", "<leader>fh", fzf_lua.helptags)
+        vim.keymap.set("n", "<leader>fh", function()
+            fzf_lua.helptags({
+                fzf_opts = {
+                    ["--tiebreak"] = "begin,chunk,length",
+                },
+            })
+        end)
 
         -- FUTURE: Re-add this back in
         -- vim.keymap.set("n", "<leader>tl", function()
