@@ -73,13 +73,13 @@ vim.api.nvim_create_autocmd("LspAttach", {
         if client:supports_method(methods.textDocument_hover) then
             vim.keymap.set("n", "K", function()
                 vim.lsp.buf.hover({ border = Border })
-            end, { buffer = buf, desc = "vim.lsp.buf.hover()" })
+            end, { buffer = buf })
         end
 
         if client:supports_method(methods.textDocument_signatureHelp) then
             vim.keymap.set({ "i", "s" }, "<C-S>", function()
                 vim.lsp.buf.signature_help({ border = Border })
-            end, { buffer = buf, desc = "vim.lsp.buf.signature_help()" })
+            end, { buffer = buf })
         end
 
         if client:supports_method(methods.textDocument_typeDefinition) then
@@ -130,18 +130,18 @@ vim.api.nvim_create_autocmd("BufUnload", {
 })
 
 local capabilities = vim.lsp.protocol.make_client_capabilities()
-local cmp_capabilities =
-    vim.tbl_deep_extend("force", capabilities, require("cmp_nvim_lsp").default_capabilities())
+local cmp_capabilities = require("cmp_nvim_lsp").default_capabilities()
+capabilities = vim.tbl_deep_extend("force", capabilities, cmp_capabilities)
 
-vim.lsp.config("bashls", { capabilities = cmp_capabilities })
+vim.lsp.config("bashls", { capabilities = capabilities })
 vim.lsp.enable("bashls")
-vim.lsp.config("lua_ls", { capabilities = cmp_capabilities })
+vim.lsp.config("lua_ls", { capabilities = capabilities })
 vim.lsp.enable("lua_ls")
-vim.lsp.config("taplo", { capabilities = cmp_capabilities })
+vim.lsp.config("taplo", { capabilities = capabilities })
 vim.lsp.enable("taplo")
 
 vim.lsp.config("rust_analyzer", {
-    capabilities = cmp_capabilities,
+    capabilities = capabilities,
     settings = {
         ["rust-analyzer"] = {
             checkOnSave = true,
@@ -157,21 +157,21 @@ vim.lsp.config("rust_analyzer", {
 
 vim.lsp.enable("rust_analyzer")
 
-vim.lsp.config("gopls", { capabilities = cmp_capabilities })
+vim.lsp.config("gopls", { capabilities = capabilities })
 vim.lsp.enable("gopls")
-vim.lsp.config("golangci_lint_ls", { capabilities = cmp_capabilities })
+vim.lsp.config("golangci_lint_ls", { capabilities = capabilities })
 vim.lsp.enable("golangci_lint_ls")
 
-vim.lsp.config("html", { capabilities = cmp_capabilities })
+vim.lsp.config("html", { capabilities = capabilities })
 vim.lsp.enable("html")
-vim.lsp.config("cssls", { capabilities = cmp_capabilities })
+vim.lsp.config("cssls", { capabilities = capabilities })
 vim.lsp.enable("cssls")
 
-vim.lsp.config("ruff", { capabilities = cmp_capabilities })
+vim.lsp.config("ruff", { capabilities = capabilities })
 vim.lsp.enable("ruff")
 -- Ruff is not feature-complete enough to replace pylsp
 vim.lsp.config("pylsp", {
-    { capabilities = cmp_capabilities },
+    { capabilities = capabilities },
     settings = {
         pylsp = {
             plugins = {
