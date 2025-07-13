@@ -9,7 +9,7 @@ local function add_annotation(annotation)
     local line_len = #line ---@type integer
 
     if line:match("^%s*$") then -- All whitespace
-        local indent = ut.get_indent(row_1) ---@type integer
+        local indent = ut.get_indent(row_1) or 0 ---@type integer
         local padding = string.rep(" ", indent) ---@type string
         vim.api.nvim_buf_set_text(0, row_0, 0, row_0, 0, { padding .. annotation .. " " })
     elseif line:match("%s$") then -- Non-whitespace with trailing whitespace

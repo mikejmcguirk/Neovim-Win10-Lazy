@@ -28,37 +28,27 @@ M.check_modifiable = function(bufnr)
     if vim.api.nvim_get_option_value("modifiable", { buf = bufnr or 0 }) then
         return true
     else
-        local err_msg = "E21: Cannot make changes, 'modifiable' is off"
+        local err_msg = "E21: Cannot make changes, 'modifiable' is off" ---@type string
         vim.api.nvim_echo({ { err_msg } }, true, { err = true })
         return false
     end
 end
 
 ---@param line_num number -- One indexed
----@return integer
+---@return integer|nil
 M.get_indent = function(line_num)
-    -- If Treesitter indent is enabled, the indentexpr will be set to
-    -- nvim_treesitter#indent(), so that will be captured here
-    local indentexpr = vim.bo.indentexpr ---@type string
-    if indentexpr == "" then
-        local prev_nonblank = vim.fn.prevnonblank(line_num - 1) ---@type integer
-        local prev_nonblank_indent = vim.fn.indent(prev_nonblank) ---@type integer
-
-        if prev_nonblank_indent <= 0 then
-            return 0
-        else
-            return prev_nonblank_indent
-        end
+    -- Captures nvim_treesitter#indent() if enabled
+    if vim.bo.indentexpr == "" then
+        local prevnonblank = vim.fn.prevnonblank(line_num - 1) ---@type integer
+        local prevnonblank_indent = vim.fn.indent(prevnonblank) ---@type integer
+        return prevnonblank_indent <= 0 and 0 or prevnonblank_indent
     end
 
-    -- Most indent expressions in the Nvim runtime do not take an argument
-    --
-    -- However, a few of them do take v:lnum
+    -- Most Nvim runtime indent expressions do not take an argument
+    -- A few, however, take v:lnum
     -- v:lnum is not updated when nvim_exec2 is called, so it must be updated here
-    --
     -- A couple of the runtime expressions take '.' as an argument
     -- This is already updated before nvim_exec2 is called
-    --
     -- Other indentexpr arguments are not guaranteed to be handled properly
     vim.v.lnum = line_num
     local indentexpr_out = nil ---@type table<string, any>
@@ -66,15 +56,16 @@ M.get_indent = function(line_num)
     local ok, err = pcall(function()
         -- Must run nvim_exec2 explicitly to properly capture output table and avoid
         -- printing to cmdline
-        indentexpr_out = vim.api.nvim_exec2("echo " .. indentexpr, { output = true })
+        indentexpr_out = vim.api.nvim_exec2("echo " .. vim.bo.indentexpr, { output = true })
     end)
 
     if ok then
-        return tonumber(indentexpr_out.output) or 0
+        local indent = tonumber(indentexpr_out.output) ---@type number?
+        return indent >= 0 and indent or nil
     end
 
     vim.api.nvim_echo({ { err or "Unknown error getting indent" } }, true, { err = true })
-    return 0
+    return nil
 end
 
 ---@param buf number
@@ -220,18 +211,19 @@ M.get_top_severity = function(opts)
     end
 end
 
+---@return nil
 M.check_word_under_cursor = function()
     local word = vim.fn.expand("<cword>") ---@type string
     if word == "" then
-        vim.notify("No word under cursor")
-        return
+        return vim.notify("No word under cursor")
     end
 
     if vim.fn.spellbadword(word) == "" then
         return vim.notify("'" .. word .. "' is a valid word")
     end
 
-    local dict_file = vim.opt.dictionary:get()[1]
+    vim.notify("Checking dictionary...")
+    local dict_file = vim.opt.dictionary:get()[1] ---@type unknown
     local grep_cmd
     if vim.o.grepprg:match("^rg") then
         grep_cmd = vim.o.grepprg
