@@ -1,5 +1,5 @@
-require("mjm.lazy")
 require("mjm.global_vars")
+require("mjm.lazy")
 
 require("mjm.set")
 require("mjm.keymap")

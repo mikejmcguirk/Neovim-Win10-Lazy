@@ -9,7 +9,7 @@ vim.api.nvim_create_autocmd("TextYankPost", {
     callback = function()
         vim.hl.on_yank({
             higroup = "IncSearch",
-            timeout = 175,
+            timeout = Highlight_Time,
         })
     end,
 })

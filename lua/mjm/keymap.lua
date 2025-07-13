@@ -529,14 +529,22 @@ vim.api.nvim_create_autocmd("InsertEnter", {
     end,
 })
 
+vim.keymap.set("n", "ss", "Vp==", { silent = true })
+
 -- FUTURE: No strong use case for this at the moment, but could use reges 1-9 as a yank ring for
 -- all yank commands, not just delete or change. But this could potentially create more conflicts
 -- under the hood
 vim.api.nvim_create_autocmd("TextYankPost", {
     group = vim.api.nvim_create_augroup("yank_cleanup", { clear = true }),
-    callback = function()
+    callback = function(ev)
         if vim.v.event.operator == "y" then
-            vim.cmd("norm! `z")
+            local mark = vim.api.nvim_buf_get_mark(ev.buf, "z")
+            vim.api.nvim_buf_del_mark(ev.buf, "z")
+            local win = vim.api.nvim_get_current_win()
+            local win_buf = vim.api.nvim_win_get_buf(win)
+            if win_buf == ev.buf then
+                vim.api.nvim_win_set_cursor(win, mark)
+            end
         end
 
         -- We want to suppress any "X lines yanked" messages
