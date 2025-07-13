@@ -1,4 +1,4 @@
--- TODO: https://github.com/MariaSolOs/dotfiles/blob/main/.config/nvim/lua/statusline.lua
+-- FUTURE: https://github.com/MariaSolOs/dotfiles/blob/main/.config/nvim/lua/statusline.lua
 -- Code for adding an LSP progress module is in here
 
 return {

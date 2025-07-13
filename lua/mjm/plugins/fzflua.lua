@@ -4,11 +4,11 @@ return {
     opts = {},
     config = function()
         -- FUTURE: Turn :let g: into a picker
-        -- FUTURE: Why can async messages not be displayed?
+        -- FUTURE: What makes asnc messages not display?
 
         local fzf_lua = require("fzf-lua")
         fzf_lua.setup({
-            -- "telescope",
+            "telescope",
             debug = false,
             winopts = {
                 border = Border,
@@ -56,7 +56,7 @@ return {
         vim.keymap.set("n", "<leader>fw", fzf_lua.lsp_live_workspace_symbols)
         vim.keymap.set("n", "<leader>fh", fzf_lua.helptags)
 
-        -- TODO: Re-add this back in
+        -- FUTURE: Re-add this back in
         -- vim.keymap.set("n", "<leader>tl", function()
         --     builtin.grep_string({
         --         prompt_title = "Help",

@@ -43,10 +43,9 @@ return {
                 },
             },
             disable_frontmatter = true, -- The aliasing creates inconsistent behavior with the GUI
-            -- When creating a new file from a [[]] link, use the title in the link
-            -- I would like to validate that the title is a valid Windows filename, but
-            -- I can't because cmp uses this function when autocompleting [[]] bracket names
-            -- TODO: Can the cmp behavior be worked around?
+            -- In addition to file creation from a [[]] link, note_id_func is also used by cmp for
+            -- working with filenames. Unfortunate, because it means validation cannot be put here
+            -- FUTURE: Can this cmp behavior be worked around?
             note_id_func = function(title)
                 if title ~= nil then
                     return title

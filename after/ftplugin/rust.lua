@@ -1,6 +1,6 @@
 -- Formatted with Conform (2025-07-07)
 
--- TODO: Worth exploring mrcjkb/rustaceanvim and rust-lang/rust.vim
+-- FUTURE: Worth exploring mrcjkb/rustaceanvim and rust-lang/rust.vim
 -- The former unlocks more features of rust-analyzer, the latter does some basic formatting
 
 vim.keymap.set("i", ";", ";<C-g>u", { silent = true })

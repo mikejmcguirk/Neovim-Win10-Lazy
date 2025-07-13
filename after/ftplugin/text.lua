@@ -1,8 +1,3 @@
--- TODO: Some version of this from mfussenegger:
--- setlocal keywordprg=:sp\ term://sdcv\ -n\ -c
--- setlocal spell
--- setlocal complete+=kspell
-
 vim.opt_local.colorcolumn = ""
 vim.opt_local.wrap = true
 vim.opt_local.sidescrolloff = 12
