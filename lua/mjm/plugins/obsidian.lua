@@ -33,7 +33,128 @@ return {
                 nvim_cmp = true,
                 min_chars = 1,
             },
-            mappings = {},
+            picker = {
+                -- Set your preferred picker. Can be one of 'telescope.nvim', 'fzf-lua', or 'mini.pick'.
+                name = "fzf-lua",
+                -- Optional, configure key mappings for the picker. These are the defaults.
+                -- Not all pickers support all mappings.
+                note_mappings = {
+                    -- Create a new note from your query.
+                    new = "<C-x>",
+                    -- Insert a link to the selected note.
+                    insert_link = "<C-l>",
+                },
+                tag_mappings = {
+                    -- Add tag(s) to current note.
+                    tag_note = "<C-x>",
+                    -- Insert a tag at the current location.
+                    insert_tag = "<C-l>",
+                },
+            },
+            mappings = {
+                ["<cr>"] = {
+                    action = function()
+                        return obsidian.util.smart_action()
+                    end,
+                    opts = { buffer = true, expr = true },
+                },
+                ["<leader>ss"] = {
+                    action = function()
+                        vim.cmd("ObsidianFollowLink hsplit")
+                    end,
+                    opts = { buffer = true },
+                },
+                ["<leader>sv"] = {
+                    action = function()
+                        vim.cmd("ObsidianFollowLink vsplit")
+                    end,
+                    opts = { buffer = true },
+                },
+                ["<leader>so"] = {
+                    action = function()
+                        vim.cmd("ObsidianOpen")
+                    end,
+                    opts = { buffer = true },
+                },
+                ["<leader>fab"] = {
+                    action = function()
+                        vim.cmd("ObsidianBacklinks")
+                    end,
+                    opts = { buffer = true },
+                },
+                ["<leader>fal"] = {
+                    action = function()
+                        vim.cmd("ObsidianLinks")
+                    end,
+                    opts = { buffer = true },
+                },
+                ["<leader>sr"] = {
+                    action = function()
+                        vim.cmd("ObsidianRename")
+                    end,
+                    opts = { buffer = true },
+                },
+                ["<leader>si"] = {
+                    -- FUTURE: Make this work with Windows
+                    action = function()
+                        ---@type string
+                        local cur_buf_name = vim.api.nvim_buf_get_name(0)
+                        ---@type string
+                        local cur_file_name = vim.fn.fnamemodify(cur_buf_name, ":t:r")
+
+                        ---@type string
+                        local cur_workspace = obsidian.get_client().current_workspace.root.filename
+                        local img_dir = cur_workspace .. "/" .. img_folder ---@type string
+                        if vim.fn.isdirectory(img_dir) == 0 then
+                            vim.fn.mkdir(img_dir, "p")
+                        end
+
+                        local pattern = img_dir .. "/" .. cur_file_name .. "*.png" ---@type string
+                        local files = vim.fn.glob(pattern, false, true) ---@type table
+                        local count = #files ---@type integer
+
+                        local padded_count = string.format("%03d", count) ---@type string
+                        local filename = cur_file_name .. "_" .. padded_count ---@type string
+
+                        local made_newline = false
+                        if not string.match(vim.api.nvim_get_current_line(), "^%s*$") then
+                            -- If you use feedkeys to input o<esc> for some reason it runs
+                            -- async/after the ObsidianPasteImg cmd even though it's supposed
+                            -- to be blocking
+                            vim.cmd("norm! o")
+                            vim.cmd("stopinsert")
+                            made_newline = true
+                        end
+
+                        local status, result = pcall(function()
+                            vim.cmd("ObsidianPasteImg " .. filename)
+                        end)
+
+                        if status then
+                            -- For reasons I'm unsure of, if you PasteImg, then PasteImg again
+                            -- without saving, the previously pasted image might be contain no
+                            -- data, even though it's saved in assets. Seems to happen less if
+                            -- you save after every PasteImg
+                            vim.cmd("silent up")
+                            return
+                        end
+
+                        if made_newline then
+                            -- It would be better in theory to check if there's an image in the
+                            -- clipboard first, but that function is not exposed, so just
+                            -- unwind on failure
+                            vim.cmd("norm! u")
+                        end
+
+                        vim.api.nvim_echo(
+                            { { result or "Unknown error with ObsidianPasteImg" } },
+                            true,
+                            { err = true }
+                        )
+                    end,
+                    opts = { buffer = true },
+                },
+            },
             ui = {
                 enable = false,
                 checkboxes = {
@@ -67,75 +188,7 @@ return {
             },
         })
 
-        -- TODO: Might need to map these within the obsidian config so they stick to
-        -- Obsidian buffers
-        vim.keymap.set("n", "<cr>", function()
-            return obsidian.util.smart_action() ---@type string
-        end, { expr = true })
-
-        vim.keymap.set("n", "<leader>ss", "<cmd>ObsidianFollowLink hsplit<cr>")
-        vim.keymap.set("n", "<leader>sv", "<cmd>ObsidianFollowLink vsplit<cr>")
-        vim.keymap.set("n", "<leader>so", "<cmd>ObsidianOpen<cr>")
-
-        vim.keymap.set("n", "<leader>ta", "<cmd>ObsidianBacklinks<cr>")
-        vim.keymap.set("n", "<leader>tn", "<cmd>ObsidianLinks<cr>")
-
-        vim.keymap.set("n", "<leader>sr", "<cmd>ObsidianRename<cr>")
-        -- TODO Make work in Windows as well
-        vim.keymap.set("n", "<leader>si", function()
-            local cur_buf_name = vim.api.nvim_buf_get_name(0) ---@type string
-            local cur_file_name = vim.fn.fnamemodify(cur_buf_name, ":t:r") ---@type string
-
-            ---@type string
-            local cur_workspace = obsidian.get_client().current_workspace.root.filename
-            -- TODO: Don't think this would work on Windows
-            local img_dir = cur_workspace .. "/" .. img_folder ---@type string
-            if vim.fn.isdirectory(img_dir) == 0 then
-                vim.fn.mkdir(img_dir, "p")
-            end
-
-            -- TODO: Don't think this would work on Windows
-            local pattern = img_dir .. "/" .. cur_file_name .. "*.png" ---@type string
-            local files = vim.fn.glob(pattern, false, true) ---@type table
-            local count = #files ---@type integer
-
-            local padded_count = string.format("%03d", count) ---@type string
-            local filename = cur_file_name .. "_" .. padded_count ---@type string
-
-            local made_newline = false
-            if not string.match(vim.api.nvim_get_current_line(), "^%s*$") then
-                -- If you use feedkeys to input o<esc> for some reason it runs async/after
-                -- the ObsidianPasteImg cmd even though it's supposed to be blocking
-                vim.cmd("norm! o")
-                vim.cmd("stopinsert")
-                made_newline = true
-            end
-
-            local status, result = pcall(function()
-                vim.cmd("ObsidianPasteImg " .. filename)
-            end)
-
-            if status then
-                -- For reasons I'm unsure of, if you PasteImg, then PasteImg again without saving,
-                -- the previously pasted image might be contain no data, even though it's
-                -- saved in assets. Seems to happen less if you save after every PasteImg
-                vim.cmd("silent up")
-                return
-            end
-
-            if made_newline then
-                -- It would be better in theory to check if there's an image in the clipboard
-                -- first, but that function is not exposed, so just unwind on failure
-                vim.cmd("norm! u")
-            end
-
-            vim.api.nvim_echo(
-                { { result or "Unknown error with ObsidianPasteImg" } },
-                true,
-                { err = true }
-            )
-        end)
-
+        -- This doens't play nice with Obsidian's config table
         vim.keymap.set("n", "<leader>sw", function()
             local year = os.date("%Y")
             local month = os.date("%m")
