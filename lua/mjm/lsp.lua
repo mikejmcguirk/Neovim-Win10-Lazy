@@ -36,6 +36,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
 
         -- Overwrite vim defaults
+        vim.keymap.set("n", "gr", "<nop>", { buffer = buf }) -- Prevent default gr functionality
         if client:supports_method(methods.textDocument_definition) then
             vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })
         end
