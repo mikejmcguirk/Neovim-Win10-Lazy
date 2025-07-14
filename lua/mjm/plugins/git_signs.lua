@@ -20,7 +20,7 @@ return {
                         if vim.wo.diff then
                             vim.cmd.normal({ "]c", bang = true })
                         else
-                            gitsigns.nav_hunk("next")
+                            gitsigns.nav_hunk("next", { greedy = true })
                         end
                     end)
 
