@@ -714,6 +714,10 @@ vim.keymap.set("n", "J", function()
     vim.fn.winrestview(view)
 end, { silent = true })
 
+-- Future: It would be better if the visual move were done with vim.fn.line("v"), which would
+-- avoid the contrivance of leaving visual mode. This would require both redoing the offset math
+-- and changing the range value of the move command
+-- Future: It would be cool to do all of these moves in a way that is dot-repeatable
 ---@param opts? table(upward:boolean)
 ---@return nil
 local visual_move = function(opts)
@@ -722,12 +726,11 @@ local visual_move = function(opts)
     end
 
     vim.opt.lazyredraw = true
-    local vcount1 = vim.v.count1 ---@type integer -- Get before leaving visual mode
-    vim.cmd('exec "silent norm! \\<esc>"') -- Force update of '< and '> marks
-
     opts = opts or {}
-    local fix_num = opts.upward and 1 or 0
-    local cmd_start = opts.upward and "'<,'> m '<-" or "'<,'> m '>+"
+    -- Get before leaving visual mode
+    local vcount1 = vim.v.count1 + (opts.upward and 1 or 0) ---@type integer
+    local cmd_start = opts.upward and "silent '<,'>m '<-" or "silent '<,'>m '>+"
+    vim.cmd('exec "silent norm! \\<esc>"') -- Force the '< and '> marks to update
 
     local offset = 0 ---@type integer
     if vcount1 > 1 and opts.upward then
@@ -737,15 +740,15 @@ local visual_move = function(opts)
     end
 
     local status, result = pcall(function()
-        vim.cmd("silent " .. cmd_start .. (vcount1 + fix_num - offset))
+        vim.cmd(cmd_start .. (vcount1 - offset))
     end) ---@type boolean, unknown|nil
 
     if status then
-        local end_row = vim.api.nvim_buf_get_mark(0, "]")[1] ---@type integer
-        ---@type integer
-        local end_col = #vim.api.nvim_buf_get_lines(0, end_row - 1, end_row, false)[1]
-        vim.api.nvim_buf_set_mark(0, "z", end_row, end_col, {})
-        vim.cmd("silent norm! `[=`z")
+        local row_1 = vim.api.nvim_buf_get_mark(0, "]")[1] ---@type integer
+        local row_0 = row_1 - 1
+        local end_col = #vim.api.nvim_buf_get_lines(0, row_0, row_1, false)[1] ---@type integer
+        vim.api.nvim_buf_set_mark(0, "]", row_1, end_col, {})
+        vim.cmd("silent norm! `[=`]")
     else
         vim.api.nvim_echo({ { result or "Unknown error in visual_move" } }, true, { err = true })
     end
@@ -754,11 +757,21 @@ local visual_move = function(opts)
     vim.opt.lazyredraw = false
 end
 
-vim.keymap.set("x", "J", function()
+vim.keymap.set("n", "<C-j>", function()
+    local vcount1 = vim.v.count1 -- Need to grab this first
+    vim.cmd("m+" .. vcount1 .. " | norm! ==")
+end)
+
+vim.keymap.set("n", "<C-k>", function()
+    local vcount1 = vim.v.count1 + 1 -- Since the base count to go up is -2
+    vim.cmd("m-" .. vcount1 .. " | norm! ==")
+end)
+
+vim.keymap.set("x", "<C-j>", function()
     visual_move()
 end)
 
-vim.keymap.set("x", "K", function()
+vim.keymap.set("x", "<C-k>", function()
     visual_move({ upward = true })
 end)
 
