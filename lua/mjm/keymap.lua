@@ -531,7 +531,7 @@ vim.api.nvim_create_autocmd("InsertEnter", {
     end,
 })
 
-vim.keymap.set("n", "ss", "Vp==", { silent = true })
+vim.keymap.set("n", "ss", "VP==", { silent = true })
 
 -- FUTURE: No strong use case for this at the moment, but could use reges 1-9 as a yank ring for
 -- all yank commands, not just delete or change. But this could potentially create more conflicts
