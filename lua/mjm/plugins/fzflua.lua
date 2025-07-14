@@ -19,14 +19,27 @@ return {
             keymap = {
                 builtin = {
                     -- Undo Telescope profile mappings
-                    ["<C-d>"] = false,
                     ["<C-u>"] = false,
+                    ["<C-d>"] = false,
+                    -- Avoid shift maps
+                    -- The ctrl maps are only bound here because ctrl-up/down are not valid
+                    -- bindings in fzf
+                    ["<C-up>"] = "preview-page-up",
+                    ["<C-down>"] = "preview-page-down",
+                    ["<M-up>"] = "preview-up",
+                    ["<M-down>"] = "preview-down",
                 },
                 fzf = {
+                    ["ctrl-j"] = "ignore",
                     ["ctrl-k"] = "kill-line",
+                    ["alt-j"] = "down",
+                    ["alt-k"] = "up",
                     -- Undo Telescope profile mappings
                     ["ctrl-u"] = "unix-line-discard",
                     ["ctrl-d"] = false,
+                    -- Avoid shift maps
+                    ["alt-up"] = "preview-up",
+                    ["alt-down"] = "preview-down",
                 },
             },
             hls = {
