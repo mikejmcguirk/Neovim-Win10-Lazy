@@ -188,8 +188,6 @@ local resize_win = function(cmd)
     end
 end
 
--- FUTURE: These should be a different map, but I can't think of a better one
--- Using alt feels like an anti-pattern
 vim.keymap.set("n", "<M-j>", function()
     resize_win("silent resize -2")
 end)
