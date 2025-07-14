@@ -42,6 +42,14 @@ end
 vim.keymap.set("n", "v", "mvv", { silent = true })
 vim.keymap.set("n", "V", "mvV", { silent = true })
 
+-----------------
+-- Insert Mode --
+-----------------
+
+vim.keymap.set("i", "<C-bs>", "<C-g>u<C-w>")
+vim.keymap.set("i", "<C-S-bs>", "<C-g>u<C-u>")
+vim.keymap.set("i", "<M-bs>", "<C-g>u<C-o>vBx")
+
 --------------------------------
 -- Layered Command Cancelling --
 
