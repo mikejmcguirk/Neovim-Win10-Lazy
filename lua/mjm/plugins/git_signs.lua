@@ -28,7 +28,23 @@ return {
                         if vim.wo.diff then
                             vim.cmd.normal({ "[c", bang = true })
                         else
-                            gitsigns.nav_hunk("prev")
+                            gitsigns.nav_hunk("prev", { greedy = true })
+                        end
+                    end)
+
+                    map("n", "]h", function()
+                        if vim.wo.diff then
+                            vim.cmd.normal({ "]c", bang = true })
+                        else
+                            gitsigns.nav_hunk("next", { greedy = true, target = "staged" })
+                        end
+                    end)
+
+                    map("n", "[h", function()
+                        if vim.wo.diff then
+                            vim.cmd.normal({ "[c", bang = true })
+                        else
+                            gitsigns.nav_hunk("prev", { greedy = true, target = "staged" })
                         end
                     end)
 
