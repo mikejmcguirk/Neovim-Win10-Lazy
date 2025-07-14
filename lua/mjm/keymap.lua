@@ -648,7 +648,7 @@ for _, map in pairs(better_norm_pastes) do
         ---@type string
         local paste_cmd = "<cmd>silent norm! " .. vim.v.count1 .. '"' .. reg .. map[1] .. "<cr>"
         if should_format_paste(reg) then
-            return paste_cmd .. "<cmd>silent norm! `[=`]<cr>"
+            return paste_cmd .. "<cmd>silent norm! mz`[=`]`z<cr>"
         else
             return paste_cmd
         end
