@@ -65,9 +65,15 @@ vim.keymap.set("n", "]", "<nop>")
 
 -------------------------
 -- Saving and Quitting --
+
+-- FUTURE: These maps should save the `[`] marks. This cannot be done using an autocmd because
+-- they are altered too early. But with these maps it should be possible. But we would need
+-- a way to calculate their new positions after formatters run. There is Neovim code for
+-- LSP formatting that might be able to handle this. I think conform uses a version of this
+-- as well
+
 -------------------------
 
--- FUTURE: This should incorporate saving the last modified marks
 vim.keymap.set("n", "ZZ", function()
     if ut.check_modifiable() then
         vim.cmd("silent up")
@@ -592,6 +598,9 @@ vim.api.nvim_create_autocmd("TextYankPost", {
     end,
 })
 
+-- FUTURE: Consider making a custom operator for these. It should be possible to
+-- store cursor position in some form of state that's not a mark, like the substitute plugin does
+
 -- Set mark with the API so vim.v.count1 and vim.v.register don't need to be manually added
 -- to the return
 vim.keymap.set("n", "y", function()
@@ -775,7 +784,7 @@ vim.keymap.set("x", "<C-k>", function()
     visual_move({ upward = true })
 end)
 
--- Done using a function to prevent nag when shifting multiple lines
+-- Done as a function to suppress a nag when shifting multiple lines
 ---@param opts? table
 ---@return nil
 local visual_indent = function(opts)
