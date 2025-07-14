@@ -181,9 +181,9 @@ for k, _ in pairs(tmux_cmd_map) do
     end)
 end
 
--- TODO: Fix to be inclusive of more window types
+local good_wintypes = { "", "quickfix", "loclist" }
 local resize_win = function(cmd)
-    if vim.fn.win_gettype(vim.api.nvim_get_current_win()) == "" then
+    if vim.tbl_contains(good_wintypes, vim.fn.win_gettype(vim.api.nvim_get_current_win())) then
         vim.cmd(cmd)
     end
 end

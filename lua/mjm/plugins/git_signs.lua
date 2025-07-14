@@ -63,8 +63,10 @@ return {
                     end)
                     map("n", "<leader>hq", gitsigns.setqflist)
 
-                    map("n", "<leader>tb", gitsigns.toggle_current_line_blame)
-                    map("n", "<leader>tw", gitsigns.toggle_word_diff)
+                    -- Changed from default tb
+                    map("n", "<leader>ha", gitsigns.toggle_current_line_blame)
+                    -- Changed from default tw
+                    map("n", "<leader>hw", gitsigns.toggle_word_diff)
 
                     map({ "o", "x" }, "ih", gitsigns.select_hunk)
                 end,
