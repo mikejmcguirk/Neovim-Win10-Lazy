@@ -24,5 +24,14 @@ return {
 
             vim.cmd('Git commit -a -m "' .. message .. '"')
         end)
+
+        vim.keymap.set("n", "<leader>gch", function()
+            local message = ut.get_input("Committing staged hunks. Enter message (no quotes): ")
+            if message == "" then
+                return vim.notify("Git commit aborted")
+            end
+
+            vim.cmd('Git commit -m "' .. message .. '"')
+        end)
     end,
 }
