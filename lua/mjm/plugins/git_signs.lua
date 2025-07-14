@@ -48,6 +48,7 @@ return {
                         end
                     end)
 
+                    -- NOTE: stage_hunk is also undo stage
                     map("n", "<leader>hs", gitsigns.stage_hunk)
                     map("n", "<leader>hr", gitsigns.reset_hunk)
 
@@ -69,15 +70,14 @@ return {
                     end)
 
                     map("n", "<leader>hd", gitsigns.diffthis)
-
                     map("n", "<leader>hD", function()
                         gitsigns.diffthis("~")
                     end)
 
+                    map("n", "<leader>hq", gitsigns.setqflist)
                     map("n", "<leader>hQ", function()
                         gitsigns.setqflist("all")
                     end)
-                    map("n", "<leader>hq", gitsigns.setqflist)
 
                     -- Changed from default tb
                     map("n", "<leader>ha", gitsigns.toggle_current_line_blame)

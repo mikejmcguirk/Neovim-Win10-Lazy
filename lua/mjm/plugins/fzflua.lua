@@ -61,6 +61,8 @@ return {
         vim.api.nvim_set_hl(0, "FzfLuaBufFlagCur", { link = "Constant" })
         vim.api.nvim_set_hl(0, "FzfLuaHeaderText", { link = "Constant" })
 
+        -- Obsidian pickers are set to "fa"
+
         vim.keymap.set("n", "<leader>ff", fzf_lua.resume)
 
         vim.keymap.set("n", "<leader>fi", fzf_lua.files)

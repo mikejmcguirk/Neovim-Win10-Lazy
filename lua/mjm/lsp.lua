@@ -141,6 +141,7 @@ vim.lsp.enable("lua_ls")
 vim.lsp.config("taplo", { capabilities = capabilities })
 vim.lsp.enable("taplo")
 
+-- FUTURE: Figure out why code lens isn't working
 vim.lsp.config("rust_analyzer", {
     capabilities = capabilities,
     settings = {
@@ -149,9 +150,13 @@ vim.lsp.config("rust_analyzer", {
             check = {
                 command = "clippy",
             },
-            lens = {
-                enable = true,
-            },
+            -- lens = {
+            --     enable = true,
+            --     run = { enable = true },
+            --     debug = { enable = true },
+            --     implementations = { enable = true },
+            --     references = { enable = true },
+            -- },
         },
     },
 })

@@ -34,4 +34,11 @@ return {
             vim.cmd('Git commit -m "' .. message .. '"')
         end)
     end,
+
+    -- Various git commands:
+    --- git reset -p | opens interactive mode for unstaging staged hunks
+    --- git add -p | interactive mode for staging hunks
+    --- git reset | unstage everything
+    --- git reset [<file>] | unstage a file
+    --- git reset --mixed HEAD~1 | undo last unpushed commit. use 2 and so on to go deeper
 }
