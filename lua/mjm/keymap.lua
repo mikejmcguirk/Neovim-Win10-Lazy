@@ -42,6 +42,19 @@ end
 vim.keymap.set("n", "v", "mvv", { silent = true })
 vim.keymap.set("n", "V", "mvV", { silent = true })
 
+--------------------------------
+-- Layered Command Cancelling --
+
+-- When a layered command is pressed and allowed to time out, the layered command is still
+-- queued and waiting for follow-up input, the maps no longer apply
+-- Disable layered commands on their own to prevent this
+
+--------------------------------
+
+vim.keymap.set("n", "Z", "<nop>")
+vim.keymap.set("n", "[", "<nop>")
+vim.keymap.set("n", "]", "<nop>")
+
 -------------------------
 -- Saving and Quitting --
 -------------------------
