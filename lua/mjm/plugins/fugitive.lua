@@ -15,8 +15,9 @@ return {
             vim.cmd("botright Git diff")
         end)
 
-        vim.keymap.set("n", "<leader>gc", function()
-            local message = ut.get_input("Enter commit message (no quotes): ")
+        vim.keymap.set("n", "<leader>gp", "<cmd>Git push<cr>")
+        vim.keymap.set("n", "<leader>gca", function()
+            local message = ut.get_input("Committing all. Enter message (no quotes): ")
             if message == "" then
                 return vim.notify("Git commit aborted")
             end
