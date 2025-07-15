@@ -7,6 +7,10 @@ return {
         -- FUTURE: What makes asnc messages not display?
 
         local fzf_lua = require("fzf-lua")
+        local utils = require("fzf-lua.utils")
+        local core = require("fzf-lua.core")
+        local config = require("fzf-lua.config")
+
         fzf_lua.setup({
             "telescope",
             debug = false,
@@ -75,7 +79,6 @@ return {
         vim.keymap.set("n", "<leader>fe", fzf_lua.live_grep_glob)
 
         vim.keymap.set("n", "<leader>ft", fzf_lua.highlights)
-        vim.keymap.set("n", "<leader>fr", fzf_lua.registers)
         vim.keymap.set("n", "<leader>fk", fzf_lua.keymaps)
         vim.keymap.set("n", "<leader>fu", fzf_lua.quickfix_stack)
         vim.keymap.set("n", "<leader>fo", fzf_lua.loclist_stack)
@@ -171,6 +174,84 @@ return {
                 },
             })
         end
+
         vim.keymap.set("n", "<leader>fd", fuzzy_spell_correct)
+
+        -- Copy of the original code with vim.fn.getregtype() added
+        fzf_lua.registers = function(opts)
+            opts = config.normalize_opts(opts, "registers")
+            if not opts then
+                return
+            end
+
+            local registers = { [["]], "_", "#", "=", "_", "/", "*", "+", ":", ".", "%" }
+            for i = 0, 9 do
+                table.insert(registers, tostring(i))
+            end
+
+            -- Alphabetical registers
+            for i = 65, 90 do
+                table.insert(registers, string.char(i))
+            end
+
+            if type(opts.filter) == "string" or type(opts.filter) == "function" then
+                local filter = type(opts.filter) == "function" and opts.filter
+                    or function(r)
+                        return r:match(opts.filter) ~= nil
+                    end
+
+                registers = vim.tbl_filter(filter, registers)
+            end
+
+            local function register_escape_special(reg, nl)
+                if not reg then
+                    return
+                end
+
+                local gsub_map = {
+                    ["\3"] = "^C", -- <C-c>
+                    ["\27"] = "^[", -- <Esc>
+                    ["\18"] = "^R", -- <C-r>
+                }
+
+                for k, v in pairs(gsub_map) do
+                    reg = reg:gsub(k, utils.ansi_codes.magenta(v))
+                end
+
+                return not nl and reg
+                    or nl == 2 and reg:gsub("\n$", "")
+                    or reg:gsub("\n", utils.ansi_codes.magenta("\\n"))
+            end
+
+            local entries = {}
+            for _, r in ipairs(registers) do
+                -- pcall in case of invalid data err E5108
+                local _, contents = pcall(vim.fn.getreg, r)
+                contents = register_escape_special(contents, opts.multiline and 2 or 1)
+                local regtype = vim.fn.getregtype(r) or " "
+                if (contents and #contents > 0) or not opts.ignore_empty then
+                    -- Insert regtype here
+                    table.insert(
+                        entries,
+                        string.format(
+                            "[%s] [%s] %s",
+                            utils.ansi_codes.yellow(r),
+                            utils.ansi_codes.blue(regtype),
+                            contents
+                        )
+                    )
+                end
+            end
+
+            opts.preview = function(args)
+                local r = args[1]:match("%[(.*)%] ")
+                local _, contents = pcall(vim.fn.getreg, r)
+                return contents and register_escape_special(contents) or args[1]
+            end
+
+            core.fzf_exec(entries, opts)
+        end
+
+        vim.keymap.set("n", "<leader>fr", fzf_lua.registers)
     end,
 }
