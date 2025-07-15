@@ -739,6 +739,11 @@ local visual_move = function(opts)
         return
     end
 
+    local cur_mode = vim.api.nvim_get_mode().mode ---@type string
+    if cur_mode ~= "V" and cur_mode ~= "Vs" then
+        return vim.notify("Not in visual line mode", vim.log.levels.WARN)
+    end
+
     vim.opt.lazyredraw = true
     opts = opts or {}
     -- Get before leaving visual mode
