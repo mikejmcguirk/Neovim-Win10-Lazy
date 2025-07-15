@@ -538,6 +538,7 @@ end
 vim.keymap.set("x", "D", '"_d', { silent = true })
 vim.keymap.set("x", "C", '"_c', { silent = true })
 
+vim.keymap.set("n", "dJ", "Do<esc>p==", { silent = true })
 vim.keymap.set("n", "dK", "DO<esc>p==", { silent = true })
 vim.keymap.set("n", "dm", "<cmd>delmarks!<cr>")
 
