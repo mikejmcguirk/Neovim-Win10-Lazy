@@ -715,6 +715,9 @@ end, { silent = true, expr = true })
 -- Good Primeagen map, but not sure what to set it for
 -- vim.keymap.set("n", "<leader>s", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
 
+-- FUTURE: I'm not sure why, but this properly handles being on the very top line
+-- This could also handle whitespace/comments/count/view, but is fine for now as a quick map
+vim.keymap.set("n", "H", 'mzk_D"_ddA <esc>p`zze', { silent = true })
 vim.keymap.set("n", "J", function()
     if not ut.check_modifiable() then
         return
