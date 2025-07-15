@@ -778,11 +778,19 @@ local visual_move = function(opts)
 end
 
 vim.keymap.set("n", "<C-j>", function()
+    if not ut.check_modifiable() then
+        return
+    end
+
     local vcount1 = vim.v.count1 -- Need to grab this first
     vim.cmd("m+" .. vcount1 .. " | norm! ==")
 end)
 
 vim.keymap.set("n", "<C-k>", function()
+    if not ut.check_modifiable() then
+        return
+    end
+
     local vcount1 = vim.v.count1 + 1 -- Since the base count to go up is -2
     vim.cmd("m-" .. vcount1 .. " | norm! ==")
 end)
