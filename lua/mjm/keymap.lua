@@ -747,14 +747,15 @@ local visual_move = function(opts)
     vim.cmd('exec "silent norm! \\<esc>"') -- Force the '< and '> marks to update
 
     local offset = 0 ---@type integer
-    if vcount1 > 1 and opts.upward then
+    if vcount1 > 2 and opts.upward then
         offset = vim.fn.line(".") - vim.fn.line("'<")
     elseif vcount1 > 1 and not opts.upward then
         offset = vim.fn.line("'>") - vim.fn.line(".")
     end
 
     local status, result = pcall(function()
-        vim.cmd(cmd_start .. (vcount1 - offset))
+        local cmd = cmd_start .. (vcount1 - offset)
+        vim.cmd(cmd)
     end) ---@type boolean, unknown|nil
 
     if status then
