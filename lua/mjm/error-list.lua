@@ -326,8 +326,10 @@ local grep_wrapper = function(opts)
         return vim.notify("Inside qf buffer")
     end
 
-    local pattern = ut.get_input("Enter Grep Pattern: ") ---@type string
-    if pattern == "" then
+    local pattern = opts.pattern or ut.get_input("Enter Grep Pattern: ") ---@type string
+    if pattern == "" and opts.pattern then
+        return vim.notify("Invalid pattern", vim.log.levels.WARN)
+    elseif pattern == "" then
         return
     end
 
@@ -349,8 +351,10 @@ local grep_wrapper = function(opts)
     }, {})
 
     if opts.loclist then
+        require("mjm.error-list-state").last_lgrep = pattern
         open_loclist()
     else
+        require("mjm.error-list-state").last_grep = pattern
         open_qflist()
     end
 end
@@ -363,10 +367,18 @@ vim.keymap.set("n", "yugi", function()
     grep_wrapper({ insensitive = true })
 end)
 
+vim.keymap.set("n", "yugr", function()
+    grep_wrapper({ pattern = require("mjm.error-list-state").last_grep })
+end)
+
 vim.keymap.set("n", "yogs", function()
     grep_wrapper({ loclist = true })
 end)
 
 vim.keymap.set("n", "yogi", function()
     grep_wrapper({ loclist = true, insensitive = true })
+end)
+
+vim.keymap.set("n", "yogr", function()
+    grep_wrapper({ loclist = true, pattern = require("mjm.error-list-state").last_lgrep })
 end)
