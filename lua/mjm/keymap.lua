@@ -211,6 +211,11 @@ for k, _ in pairs(tmux_cmd_map) do
     vim.keymap.set("n", "<C-S-" .. k .. ">", function()
         win_move_tmux(k)
     end)
+
+    vim.keymap.set("i", "<C-S-" .. k .. ">", function()
+        vim.cmd("stopinsert")
+        win_move_tmux(k)
+    end)
 end
 
 local good_wintypes = { "", "quickfix", "loclist" }
