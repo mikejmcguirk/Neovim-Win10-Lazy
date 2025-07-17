@@ -20,21 +20,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
         local client = assert(vim.lsp.get_client_by_id(ev.data.client_id)) ---@type vim.lsp.Client
         local methods = vim.lsp.protocol.Methods ---@type table
 
-        if client:supports_method(methods.textDocument_documentHighlight) then
-            local doc_highlights = vim.api.nvim_create_augroup("doc_highlights", { clear = false })
-            vim.api.nvim_create_autocmd({ "CursorHold", "InsertLeave" }, {
-                group = doc_highlights,
-                buffer = buf,
-                callback = vim.lsp.buf.document_highlight,
-            })
-
-            vim.api.nvim_create_autocmd({ "CursorMoved", "InsertEnter", "BufLeave" }, {
-                group = doc_highlights,
-                buffer = buf,
-                callback = vim.lsp.buf.clear_references,
-            })
-        end
-
         -- Overwrite vim defaults
         vim.keymap.set("n", "gr", "<nop>", { buffer = buf }) -- Prevent default gr functionality
         if client:supports_method(methods.textDocument_definition) then
