@@ -52,7 +52,8 @@ local cmp_config = function()
             ["<C-n>"] = cmp.mapping(cmp.mapping.select_next_item(cmp_select), { "i" }),
 
             ["<C-y>"] = cmp.mapping(cmp.mapping.confirm({ select = true }), { "i" }),
-            ["<C-e>"] = cmp.mapping(cmp.mapping.abort()),
+            ["<C-e>"] = cmp.mapping(nil),
+            -- ["<C-e>"] = cmp.mapping(cmp.mapping.abort()),
 
             ["<Tab>"] = cmp.mapping(nil),
             ["<S-Tab>"] = cmp.mapping(nil),

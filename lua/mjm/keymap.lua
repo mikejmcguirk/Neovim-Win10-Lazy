@@ -50,7 +50,9 @@ vim.keymap.set("i", "<C-bs>", "<C-g>u<C-w>")
 vim.keymap.set("i", "<C-S-bs>", "<C-g>u<C-u>")
 vim.keymap.set("i", "<M-bs>", "<C-g>u<C-o>vBx")
 
-vim.keymap.set("i", "<C-h>", "<C-o>h")
+vim.keymap.set("i", "<C-e>", "<C-o>ze", { silent = true })
+
+vim.keymap.set("i", "<C-h>", "<C-o>_")
 vim.keymap.set("i", "<C-j>", "<C-o>j")
 vim.keymap.set("i", "<C-k>", "<C-o>k")
 vim.keymap.set("i", "<C-l>", "<C-o>l")
