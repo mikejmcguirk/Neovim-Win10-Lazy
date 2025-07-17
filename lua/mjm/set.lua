@@ -23,7 +23,8 @@ vim.opt.lazyredraw = false -- Causes unpredictable problems
 vim.opt.termguicolors = true
 vim.opt.showmode = false
 vim.opt.modelines = 1
-vim.opt.laststatus = 3
+-- Able to identify what other buffers are at a glance. Easier to tell which window you're in
+vim.opt.laststatus = 2
 
 -- Don't use. Sets arbitrary border around zen mode display
 -- vim.opt.winborder = "single"
