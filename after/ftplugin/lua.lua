@@ -11,8 +11,7 @@ local function add_annotation(annotation)
 
     -- Right after three dashes
     if col_1 >= 3 and line:sub(col_1 - 2, col_1) == "---" and annotation:sub(1, 3) == "---" then
-        local truncated = annotation:sub(4) .. " " ---@type string
-        vim.api.nvim_buf_set_text(0, row_0, col_1, row_0, col_1, { truncated })
+        vim.api.nvim_buf_set_text(0, row_0, col_1, row_0, col_1, { annotation:sub(4) .. " " })
     else
         if line:match("^%s*$") then -- All whitespace
             local indent = ut.get_indent(row_1) or 0 ---@type integer
