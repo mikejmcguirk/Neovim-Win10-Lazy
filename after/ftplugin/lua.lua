@@ -18,7 +18,7 @@ local function add_annotation(annotation)
         vim.api.nvim_buf_set_text(0, row_0, 0, row_0, 0, { padding .. annotation .. " " })
     elseif line:match("%s$") then -- Non-whitespace with trailing whitespace
         vim.api.nvim_buf_set_text(0, row_0, line_len, row_0, line_len, { annotation .. " " })
-    else -- Non-whitespace, needs trailing whitespace added
+    else -- Non-whitespace without trailing whitespace
         local new_text = " " .. annotation .. " " ---@type string
         vim.api.nvim_buf_set_text(0, row_0, line_len, row_0, line_len, { new_text })
     end
