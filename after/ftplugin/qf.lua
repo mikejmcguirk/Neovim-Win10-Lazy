@@ -19,6 +19,17 @@ vim.keymap.set("n", "dd", function()
     vim.cmd(":" .. tostring(row))
 end, { buffer = true })
 
+vim.keymap.set("n", "<C-cr>", function()
+    local row = vim.api.nvim_win_get_cursor(0)[1]
+    local cur_win = vim.api.nvim_get_current_win()
+    local win_info = vim.fn.getwininfo(cur_win)[1]
+    if win_info.quickfix == 1 and win_info.loclist == 1 then
+        vim.cmd(row .. "ll | lclose")
+    else
+        vim.cmd(row .. "cc | cclose")
+    end
+end, { buffer = true })
+
 local bad_maps = { "<C-o>", "<C-i>" }
 for _, map in pairs(bad_maps) do
     vim.keymap.set("n", map, function()
