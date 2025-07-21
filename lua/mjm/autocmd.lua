@@ -22,8 +22,8 @@ local no_match = { "TelescopePrompt", "git", "fzflua_backdrop", "help", "fzf", "
 vim.api.nvim_create_autocmd({ "WinNew", "WinEnter" }, {
     group = match_control,
     pattern = "*",
-    callback = function()
-        if not vim.tbl_contains(no_match, vim.bo.filetype) then
+    callback = function(ev)
+        if not vim.tbl_contains(no_match, vim.bo[ev.buf].filetype) then
             vim.cmd([[match EolSpace /\s\+$/]])
         end
     end,
@@ -45,8 +45,8 @@ vim.api.nvim_create_autocmd("WinLeave", {
 vim.api.nvim_create_autocmd("ModeChanged", {
     group = match_control,
     pattern = "*:n",
-    callback = function()
-        if not vim.tbl_contains(no_match, vim.bo.filetype) then
+    callback = function(ev)
+        if not vim.tbl_contains(no_match, vim.bo[ev.buf].filetype) then
             vim.cmd([[match EolSpace /\s\+$/]])
         end
     end,
