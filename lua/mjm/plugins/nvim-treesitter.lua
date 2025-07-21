@@ -64,11 +64,12 @@ return {
                         ["],"] = "@parameter.inner",
                     },
                 },
-                swap = {
-                    enable = true,
-                    swap_previous = { ["<leader>[,"] = "@parameter.inner" },
-                    swap_next = { ["<leader>],"] = "@parameter.inner" },
-                },
+                -- FUTURE: Disabling because never used. The pattern just doesn't feel good
+                -- swap = {
+                --     enable = true,
+                --     swap_previous = { ["<leader>[,"] = "@parameter.inner" },
+                --     swap_next = { ["<leader>],"] = "@parameter.inner" },
+                -- },
             },
         })
     end,
