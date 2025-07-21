@@ -1,8 +1,3 @@
--- Lazy requirement
-vim.keymap.set({ "n", "x" }, "<Space>", "<Nop>")
-vim.g.mapleader = " "
-vim.g.maplocaleader = " "
-
 -- To avoid race conditions with nvim-tree
 vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
