@@ -72,6 +72,10 @@ vim.api.nvim_create_autocmd("LspAttach", {
             vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { buffer = buf })
         end
 
+        if client:supports_method(methods.textDocument_documentSymbol) then
+            vim.keymap.set("n", "gO", vim.lsp.buf.document_symbol, { buffer = buf })
+        end
+
         -- Kickstart mapping
         if client:supports_method(methods.workspace_symbol) then
             vim.keymap.set("n", "gW", vim.lsp.buf.workspace_symbol, { buffer = buf })
