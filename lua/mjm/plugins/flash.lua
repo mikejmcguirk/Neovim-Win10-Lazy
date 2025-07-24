@@ -7,8 +7,8 @@ return {
                 enabled = false,
             },
         },
-        label = {
-            style = "inline",
+        jump = {
+            pos = "end", -- Match how / and ? work
         },
         highlight = {
             backdrop = false,
