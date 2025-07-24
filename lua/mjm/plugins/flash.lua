@@ -23,7 +23,7 @@ return {
     keys = {
         {
             "\\",
-            mode = { "n" },
+            mode = { "n", "x" },
             function()
                 require("flash").jump({
                     search = { forward = true, wrap = false, multi_window = false },
@@ -32,7 +32,7 @@ return {
         },
         {
             "|",
-            mode = { "n" },
+            mode = { "n", "x" },
             function()
                 require("flash").jump({
                     search = { forward = false, wrap = false, multi_window = false },
