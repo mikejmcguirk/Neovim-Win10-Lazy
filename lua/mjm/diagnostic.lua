@@ -36,10 +36,91 @@ vim.keymap.set("n", "grd", function()
 end)
 
 local ut = require("mjm.utils")
+vim.keymap.set("n", "[w", function()
+    vim.diagnostic.jump({ count = -vim.v.count1, severity = ut.get_top_severity({ buf = 0 }) })
+end)
+
 vim.keymap.set("n", "]w", function()
     vim.diagnostic.jump({ count = vim.v.count1, severity = ut.get_top_severity({ buf = 0 }) })
 end)
 
-vim.keymap.set("n", "[w", function()
-    vim.diagnostic.jump({ count = -vim.v.count1, severity = ut.get_top_severity({ buf = 0 }) })
+-- For whatever reason, [D/]D on my computer cause Neovim to lock up. Even when just using large
+-- numbers for count, they don't reliably find the top and bottom diag. Instead, just search
+-- for the first/last diag manually and jump to it
+local function get_top_or_bot_diag(opts)
+    opts = opts or {}
+    local diagnostics
+    if opts.severity then
+        diagnostics = vim.diagnostic.get(0, { severity = opts.severity })
+    else
+        diagnostics = vim.diagnostic.get(0)
+    end
+    if #diagnostics == 0 then
+        vim.notify("No diagnostics in current buffer")
+        return nil
+    end
+
+    table.sort(diagnostics, function(a, b)
+        if a.lnum ~= b.lnum then
+            return a.lnum < b.lnum
+        end
+
+        if a.severity ~= b.severity then
+            return a.severity < b.severity
+        end
+
+        if a.end_lnum ~= b.end_lnum then
+            return a.end_lnum < b.end_lnum
+        end
+
+        if a.col ~= b.col then
+            return a.col < b.col
+        end
+
+        return a.end_col < b.end_col
+    end)
+
+    return opts.last and diagnostics[#diagnostics] or diagnostics[1]
+end
+
+vim.keymap.set("n", "[D", function()
+    local diagnostic = get_top_or_bot_diag()
+    if not diagnostic then
+        return
+    end
+    vim.diagnostic.jump({
+        diagnostic = diagnostic,
+    })
+end)
+
+vim.keymap.set("n", "]D", function()
+    local diagnostic = get_top_or_bot_diag({ last = true })
+    if not diagnostic then
+        return
+    end
+    vim.diagnostic.jump({
+        diagnostic = diagnostic,
+    })
+end)
+
+vim.keymap.set("n", "[W", function()
+    local severity = ut.get_top_severity({ buf = 0 })
+    local diagnostic = get_top_or_bot_diag({ severity = severity })
+    if not diagnostic then
+        return
+    end
+    vim.diagnostic.jump({
+        diagnostic = diagnostic,
+    })
+end)
+
+vim.keymap.set("n", "]W", function()
+    local severity = ut.get_top_severity({ buf = 0 })
+    local diagnostic = get_top_or_bot_diag({ severity = severity, last = true })
+    if not diagnostic then
+        return
+    end
+    vim.diagnostic.jump({
+        diagnostic = diagnostic,
+    })
 end)
