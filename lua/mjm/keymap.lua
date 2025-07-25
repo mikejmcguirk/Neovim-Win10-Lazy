@@ -720,8 +720,8 @@ end, { silent = true, expr = true })
 -- Text Manipulation --
 -----------------------
 
--- Good Primeagen map, but not sure what to set it for
--- vim.keymap.set("n", "<leader>s", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
+-- Credit ThePrimeagen
+vim.keymap.set("n", "g*", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
 
 -- FUTURE: I'm not sure why, but this properly handles being on the very top line
 -- This could also handle whitespace/comments/count/view, but is fine for now as a quick map
