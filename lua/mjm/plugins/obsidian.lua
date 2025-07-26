@@ -188,7 +188,7 @@ return {
             },
         })
 
-        -- This doens't play nice with Obsidian's config table
+        -- This doesn't play nice with Obsidian's config table
         vim.keymap.set("n", "<leader>sw", function()
             local year = os.date("%Y")
             local month = os.date("%m")

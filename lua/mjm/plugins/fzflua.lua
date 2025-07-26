@@ -76,7 +76,7 @@ return {
         vim.keymap.set("n", "<leader>fgs", fzf_lua.git_status)
 
         vim.keymap.set("n", "<leader>fp", fzf_lua.grep)
-        vim.keymap.set("n", "<leader>fe", fzf_lua.live_grep_glob)
+        vim.keymap.set("n", "<leader>fe", fzf_lua.live_grep)
 
         vim.keymap.set("n", "<leader>ft", fzf_lua.highlights)
         vim.keymap.set("n", "<leader>fk", fzf_lua.keymaps)
@@ -177,6 +177,8 @@ return {
 
         vim.keymap.set("n", "<leader>fd", fuzzy_spell_correct)
 
+        -- TODO: This is an easy pull request to make so I don't have to hold onto bespoke code
+        -- But this doesn't show the "l"/"c" conversions like :registers does so needs more work
         -- Copy of the original code with vim.fn.getregtype() added
         fzf_lua.registers = function(opts)
             opts = config.normalize_opts(opts, "registers")
