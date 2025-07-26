@@ -19,15 +19,8 @@ vim.opt.shiftround = true
 
 vim.opt.fileformats = "unix,dos" -- Override \r\n on Windows
 
-vim.opt.lazyredraw = false -- Causes unpredictable problems
-vim.opt.termguicolors = true
 vim.opt.showmode = false
 vim.opt.modelines = 1
--- Able to identify what other buffers are at a glance. Easier to tell which window you're in
-vim.opt.laststatus = 2
-
--- Don't use. Sets arbitrary border around zen mode display
--- vim.opt.winborder = "single"
 
 local blink_setting = "blinkon1-blinkoff1"
 local block_cursor = "n:" .. blink_setting
@@ -36,11 +29,9 @@ local hor_cursor = "v-r:hor100-" .. blink_setting
 vim.cmd("set gcr=" .. block_cursor .. "," .. ver_cursor .. "," .. hor_cursor)
 
 vim.opt.scrolloff = Scrolloff_Val
-vim.opt.startofline = false
-vim.opt.jumpoptions:append("view") -- Restore views when possible
+vim.opt.jumpoptions:append("view")
 vim.opt.matchpairs:append("<:>")
-vim.opt.cpoptions:append("W") -- Don't overwrite read-only files
-vim.opt.splitkeep = "cursor" -- Screen is cool in theory, but makes horizontal splits disorienting
+vim.opt.cpoptions:append("W")
 
 vim.opt.selection = "old"
 vim.opt.smartindent = true
@@ -55,7 +46,6 @@ vim.opt.splitbelow = true
 
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
-vim.opt.incsearch = false -- Prevent screen shifting while entering search/substitute patterns
 
 vim.opt.swapfile = false
 vim.opt.backup = false
@@ -94,3 +84,10 @@ end
 set_cursorline("WinLeave", "", false)
 set_cursorline("WinEnter", "", true)
 set_cursorline("FileType", "TelescopePrompt", false)
+
+----------------
+
+vim.opt.incsearch = false -- Prevent screen shifting while entering search/substitute patterns
+vim.opt.lazyredraw = false -- Causes unpredictable problems
+vim.opt.startofline = false -- Makes gg/G feel weird
+-- vim.opt.winborder = "single" -- Sets arbitrary border around Zen mode display
