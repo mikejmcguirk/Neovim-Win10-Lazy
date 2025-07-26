@@ -8,7 +8,7 @@ vim.keymap.del("n", "grn")
 vim.keymap.del("n", "gra")
 vim.keymap.del("n", "grr")
 vim.keymap.del("n", "gri")
--- vim.keymap.del("n", "grt")
+-- vim.keymap.del("n", "grt") -- Disabled because I'm running 0.11.2
 vim.keymap.del("n", "gO")
 vim.keymap.del("i", "<C-S>")
 
@@ -22,6 +22,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         -- Overwrite vim defaults
         vim.keymap.set("n", "gr", "<nop>", { buffer = buf }) -- Prevent default gr functionality
+
         if client:supports_method(methods.textDocument_definition) then
             vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })
         end
@@ -30,7 +31,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
             vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = buf })
         end
 
-        -- Replace Nvim defaults (:help lsp-defaults)
+        -- Recreate/replace Nvim defaults (:help lsp-defaults)
         if client:supports_method(methods.textDocument_rename) then
             vim.keymap.set("n", "grn", function()
                 local input = ut.get_input("Rename: ")
