@@ -35,6 +35,10 @@ for _, map in pairs({ "i", "a", "A" }) do
     end, { silent = true, expr = true })
 end
 
+-- Because I remove "o" from the fo-table
+vim.keymap.set("n", "<M-o>", "A<cr>", { silent = true })
+vim.keymap.set("n", "<M-O>", "A<cr><esc>ddkPA ", { silent = true }) -- FUTURE: brittle
+
 vim.keymap.set("n", "v", "mvv", { silent = true })
 vim.keymap.set("n", "V", "mvV", { silent = true })
 
@@ -42,15 +46,33 @@ vim.keymap.set("n", "V", "mvV", { silent = true })
 -- Insert Mode --
 -----------------
 
--- TODO: Where should this go?
--- vim.keymap.set("i", "<C-e>", "<C-o>ze", { silent = true })
+-- FUTURE: Re-create these maps in cmd mode as well
+-- FUTURE: By default, ghostty sends <C-m> and <C-i> down as their own keycodes. Make tmux
+-- do the same so they can be used here
 
+-- Bash style typing
 vim.keymap.set("i", "<C-a>", "<C-o>_")
-vim.keymap.set("i", "<C-k>", "<C-o>D")
 vim.keymap.set("i", "<C-e>", "<C-o>$")
 
--- Ideas:
--- - <M-f>/<M-b> (forward and backward one word)
+vim.keymap.set("i", "<C-u>", "<C-g>u<C-o>d^")
+vim.keymap.set("i", "<C-k>", "<C-g>u<C-o>D")
+vim.keymap.set("i", "<M-d>", "<C-g>u<C-o>dw")
+vim.keymap.set("i", "<C-l>", "<esc>u")
+
+vim.keymap.set("i", "<C-b>", "<C-o>h")
+-- FUTURE: Would be good to find a home for the default <C-f> mapping
+vim.keymap.set("i", "<C-f>", "<C-o>l")
+vim.keymap.set("i", "<M-b>", "<C-o>b")
+vim.keymap.set("i", "<M-f>", "<esc>ea") -- Because <C-o> returns to insert with i behavior
+
+-- FUTURE: Maybe make this paste after getting used to enter for cmp. Ctrl-r is the default, but
+-- Ctrl-y is not a useful default and it would help with the Unix typing style pattern
+vim.keymap.set("i", "<C-y>", "<nop>")
+
+--Other stuff
+vim.keymap.set("i", "<M-j>", "<C-o>j")
+vim.keymap.set("i", "<M-k>", "<C-o>k")
+
 -- TODO: Where should this go?
 -- vim.keymap.set("i", "<C-e>", "<C-o>ze", { silent = true })
 
