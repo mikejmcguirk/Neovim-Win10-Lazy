@@ -334,28 +334,10 @@ end, { expr = true })
 
 vim.keymap.set("o", "al", "<cmd>normal Val<CR>", { silent = true })
 
--- Translated from justinmk from jdaddy.vim
-local function inner_line()
-    local cur_line = vim.api.nvim_get_current_line() ---@type string
-    if cur_line == "" then
-        -- Because the omap is not an expr, we need the <esc> keycode literal
-        return "'\027'"
-    end
-
-    local row = vim.api.nvim_win_get_cursor(0)[1] ---@type integer
-    local first_non_blank_col = cur_line:find("%S") or 1 ---@type integer
-    first_non_blank_col = first_non_blank_col - 1
-    -- #cur_line does not include \n. Subtract one because set_mark's col is 0-indexed
-    local end_col = #cur_line - 1 ---@type integer
-    vim.api.nvim_buf_set_mark(0, "[", row, first_non_blank_col, {})
-    vim.api.nvim_buf_set_mark(0, "]", row, end_col, {})
-
-    return "`[o`]"
-end
-
 vim.keymap.set("x", "il", function()
-    return inner_line()
-end, { expr = true })
+    local keys = "g_o^o" .. vim.v.count .. "g_"
+    vim.api.nvim_feedkeys(keys, "ni", false)
+end, { silent = true })
 
 vim.keymap.set("o", "il", function()
     local vcount1 = vim.v.count1
@@ -363,7 +345,7 @@ vim.keymap.set("o", "il", function()
         return vim.cmd("normal vil")
     end
 
-    vim.cmd("normal vil" .. vcount1 .. "jg_")
+    vim.cmd("normal v" .. vcount1 .. "il")
 end, { silent = true })
 
 vim.keymap.set("o", "_", "<cmd>normal v_<cr>", { silent = true })
