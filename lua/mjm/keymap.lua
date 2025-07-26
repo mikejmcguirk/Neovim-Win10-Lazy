@@ -51,15 +51,15 @@ vim.keymap.set("i", "<C-e>", "<C-o>$")
 
 -- Ideas:
 -- - <M-f>/<M-b> (forward and backward one word)
+-- TODO: Where should this go?
+-- vim.keymap.set("i", "<C-e>", "<C-o>ze", { silent = true })
 
 -------------------------
+
 -- Saving and Quitting --
 
--- FUTURE: These maps should save the `[`] marks. This cannot be done using an autocmd because
--- they are altered too early. But with these maps it should be possible. But we would need
--- a way to calculate their new positions after formatters run. There is Neovim code for
--- LSP formatting that might be able to handle this. I think conform uses a version of this
--- as well
+-- FUTURE: Save `[`] marks. Cannot be done using an autocmd because they are altered before
+-- BufWritePre. Calculate changes using Nvim LSP/Conform functions
 
 -------------------------
 
