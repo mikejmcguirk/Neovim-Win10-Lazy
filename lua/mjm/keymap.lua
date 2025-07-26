@@ -1,8 +1,4 @@
 local ut = require("mjm.utils")
-local set_z_at_cursor = function()
-    local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-    vim.api.nvim_buf_set_mark(0, "z", row, col, {})
-end
 
 --------------------
 -- Mode Switching --
@@ -46,29 +42,14 @@ vim.keymap.set("n", "V", "mvV", { silent = true })
 -- Insert Mode --
 -----------------
 
-vim.keymap.set("i", "<C-bs>", "<C-g>u<C-w>")
-vim.keymap.set("i", "<C-S-bs>", "<C-g>u<C-u>")
+-- TODO: Map <M-w> in tmux so it can be used here
 vim.keymap.set("i", "<M-bs>", "<C-g>u<C-o>vBx")
+-- TODO: Where should this go?
+-- vim.keymap.set("i", "<C-e>", "<C-o>ze", { silent = true })
 
-vim.keymap.set("i", "<C-e>", "<C-o>ze", { silent = true })
-
-vim.keymap.set("i", "<C-h>", "<C-o>_")
-vim.keymap.set("i", "<C-j>", "<C-o>j")
-vim.keymap.set("i", "<C-k>", "<C-o>k")
-vim.keymap.set("i", "<C-l>", "<C-o>l")
-
---------------------------------
--- Layered Command Cancelling --
-
--- When a layered command is pressed and allowed to time out, the layered command is still
--- queued and waiting for follow-up input, the maps no longer apply
--- Disable layered commands on their own to prevent this
-
---------------------------------
-
-vim.keymap.set("n", "Z", "<nop>")
-vim.keymap.set("n", "[", "<nop>")
-vim.keymap.set("n", "]", "<nop>")
+vim.keymap.set("i", "<C-a>", "<C-o>_")
+vim.keymap.set("i", "<C-k>", "<C-o>D")
+vim.keymap.set("i", "<C-e>", "<C-o>$")
 
 -------------------------
 -- Saving and Quitting --
@@ -132,6 +113,9 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
 end
 
 vim.keymap.set("n", "<C-z>", "<nop>")
+-- This trick mostly doesn't work because it also blocks any map in the layer below it, but
+-- anything under Z has to be manually mapped anyway, so this is fine
+vim.keymap.set("n", "Z", "<nop>")
 
 -------------------
 -- Undo and Redo --
@@ -308,6 +292,9 @@ vim.keymap.set("n", "?", "ms?")
 vim.keymap.set("n", "N", "Nzzzv")
 vim.keymap.set("n", "n", "nzzzv")
 
+vim.keymap.set("n", "<C-w>c", "<nop>")
+vim.keymap.set("n", "<C-w><C-c>", "<nop>")
+
 ------------------
 -- Text Objects --
 ------------------
@@ -348,355 +335,19 @@ vim.keymap.set("o", "il", function()
     vim.cmd("normal v" .. vcount1 .. "il")
 end, { silent = true })
 
-vim.keymap.set("o", "_", "<cmd>normal v_<cr>", { silent = true })
-
-local function find_pipe_pair(line, col)
-    local function is_pipe_pair(pos)
-        return line:sub(pos, pos) == "|" and line:find("|", pos + 1, true)
-    end
-
-    local start_pos, end_pos
-    for i = col, 1, -1 do
-        if is_pipe_pair(i) then
-            start_pos = i
-            end_pos = line:find("|", i + 1, true)
-            break
-        end
-    end
-
-    if not start_pos and line:sub(col, col) == "|" then
-        for i = col, #line do
-            if is_pipe_pair(i) then
-                start_pos = i
-                end_pos = line:find("|", i + 1, true)
-                break
-            end
-        end
-    end
-
-    if not start_pos then
-        for i = col, #line do
-            if is_pipe_pair(i) then
-                start_pos = i
-                end_pos = line:find("|", i + 1, true)
-                break
-            end
-        end
-    end
-
-    return start_pos, end_pos
-end
-
-local function pipe_text_object(opts)
-    local line = vim.api.nvim_get_current_line() ---@type string
-    if line == "" then
-        return "'\027'"
-    end
-
-    local row, col = unpack(vim.api.nvim_win_get_cursor(0)) ---@type integer, integer
-    local start_pos, end_pos = find_pipe_pair(line, col)
-    if not start_pos or not end_pos then
-        return "'\027'"
-    end
-
-    opts = opts or {}
-    local start_col, end_col
-    if opts.outer then
-        start_col = start_pos - 1
-        end_col = end_pos - 1
-        if end_pos < #line and line:sub(end_pos + 1, end_pos + 1):match("%s") then
-            end_col = end_col + 1
-        elseif start_pos > 1 and line:sub(start_pos - 1, start_pos - 1):match("%s") then
-            start_col = start_col - 1
-        end
-    else
-        start_col = start_pos
-        end_col = end_pos - 2
-    end
-
-    if start_col < 0 then
-        start_col = 0
-    end
-
-    if end_col >= #line then
-        end_col = #line - 1
-    end
-
-    vim.api.nvim_buf_set_mark(0, "[", row, start_col, {})
-    vim.api.nvim_buf_set_mark(0, "]", row, end_col, {})
-    return "`[o`]"
-end
-
-vim.keymap.set("x", "i|", function()
-    return pipe_text_object()
-end, { expr = true })
-
-vim.keymap.set("x", "a|", function()
-    return pipe_text_object({ outer = true })
-end, { expr = true })
-
-vim.keymap.set("o", "i|", "<cmd>normal vi|<cr>")
-
-vim.keymap.set("o", "a|", "<cmd>normal va|<cr>")
-
---------------------
--- Capitalization --
---------------------
-
--- I am not sure how to do these fixes without manually returning to the mark
--- If you use an autocmd to goto mark based on v:operator, v:operator persists after the autocmd,
--- so the goto mark can retrigger after changing text in insert mode
--- v:operator is read-only, so it cannot be manually set to ""
--- vim.v.event.operator is nil in TextChanged
-
-local cap_motions_norm = {
-    "~",
-    "guu",
-    "guiw",
-    "guiW",
-    "guil",
-    "gual",
-    "gUU",
-    "gUiw",
-    "gUiW",
-    "gUil",
-    "gUal",
-    "g~~",
-    "g~iw",
-    "g~il",
-    "g~al",
-} ---@type table string[]
-
-for _, map in pairs(cap_motions_norm) do
-    vim.keymap.set("n", map, function()
-        set_z_at_cursor()
-        return map .. "`z"
-    end, { silent = true, expr = true })
-end
-
-local cap_motions_vis = {
-    "~",
-    "g~",
-    "gu",
-    "gU",
-}
-
-for _, map in pairs(cap_motions_vis) do
-    vim.keymap.set("x", map, function()
-        set_z_at_cursor()
-        return map .. "`z"
-    end, { silent = true, expr = true })
-end
-
 --------------------------
 -- Yank, Change, Delete --
 --------------------------
-
--- Currently, autocmds are used to handle mark movement and suppress information messages
--- Alternatively, it might be possible to handle these using custom operatorfuncs
--- But for now, there is not an issue with the message suppression or mark movement significant
--- enough to necessitate that
 
 vim.keymap.set({ "n", "x" }, "x", '"_x', { silent = true })
 vim.keymap.set("n", "X", '"_X', { silent = true })
 vim.keymap.set("x", "X", 'd0"_Dp==', { silent = true })
 
--- For now, I'm going to omit specific maps for "_d and "_c in normal mode
--- Trying to use the pattern of <leader> maps being for external plugins only
--- <leader>d and <leader>c contradict that
--- gd and gc are goto definition and comment, so can't be used
--- Could use Zc and Zd, but a bit cumbersome
--- zd and zc are fold maps, but could be fine since I don't use those
-
--- Explicitly delete to unnamed to write the contents to reg 0
--- No mark, so count does not need to be manually specified
-
-local dc_maps = { "d", "c", "D", "C" }
-for _, map in pairs(dc_maps) do
-    vim.keymap.set({ "n", "x" }, map, function()
-        if (not vim.v.register) or vim.v.register == "" or vim.v.register == '"' then
-            -- If you type ""di, Nvim will see the command as """"di
-            -- This does not seem to cause an issue, but still, limit to only this case
-            return '""' .. map
-        else
-            return map
-        end
-    end, { expr = true })
-end
-
-vim.keymap.set("x", "D", '"_d', { silent = true })
-vim.keymap.set("x", "C", '"_c', { silent = true })
-
+-- FUTURE: These should remove trailing whitespace from the original line. The == should handle
+-- invalid leading whitespace on the new line
 vim.keymap.set("n", "dJ", "Do<esc>p==", { silent = true })
 vim.keymap.set("n", "dK", "DO<esc>p==", { silent = true })
 vim.keymap.set("n", "dm", "<cmd>delmarks!<cr>")
-
-vim.api.nvim_create_autocmd("TextChanged", {
-    group = vim.api.nvim_create_augroup("delete_clear", { clear = true }),
-    pattern = "*",
-    callback = function()
-        if vim.v.operator == "d" then
-            vim.cmd("echo ''")
-        end
-    end,
-})
-
-vim.api.nvim_create_autocmd("InsertEnter", {
-    group = vim.api.nvim_create_augroup("change_clear", { clear = true }),
-    pattern = "*",
-    callback = function()
-        if vim.v.operator == "c" then
-            vim.cmd("echo ''")
-        end
-    end,
-})
-
-vim.keymap.set("n", "ss", "VP==", { silent = true })
-
--- FUTURE: No strong use case for this at the moment, but could use reges 1-9 as a yank ring for
--- all yank commands, not just delete or change. But this could potentially create more conflicts
--- under the hood
-vim.api.nvim_create_autocmd("TextYankPost", {
-    group = vim.api.nvim_create_augroup("yank_cleanup", { clear = true }),
-    callback = function(ev)
-        if vim.v.event.operator == "y" then
-            local mark = vim.api.nvim_buf_get_mark(ev.buf, "z")
-            vim.api.nvim_buf_del_mark(ev.buf, "z")
-            local win = vim.api.nvim_get_current_win()
-            local win_buf = vim.api.nvim_win_get_buf(win)
-            if win_buf == ev.buf then
-                vim.api.nvim_win_set_cursor(win, mark)
-            end
-        end
-
-        -- We want to suppress any "X lines yanked" messages
-        vim.cmd("echo ''")
-
-        -- The below assumes that the default clipboard is not set to unnamed plus:
-        -- All yanks write to unnamed if a register is not specified
-        -- If the yank command is used, the latest yank also writes to reg 0
-        -- The latest delete or change also writes to reg 1 or - (:h quote_number)
-        -- If you delete or change to unnamed explicitly, it will also write to reg 0
-        --- (the default writes to reg 1 are preserved. Not so with reg -. Acceptable loss)
-        -- The code below assumes that deletes/changes to unnamed are explicit
-        -- When explicitly yanking to a register other than unnamed, unnamed is still overwritten
-        --- (except for the black hole register)
-        -- To override this, the code below copies back from reg 0
-        -- When using a yank cmd without specifying a register, vim.v.event.regname shows "
-        -- When using a delete or change without specifying, regname shows nothing
-        -- regname will show a register for delete/change if one is specified
-        -- If yanking to the black hole register with any method, regname will show nothing
-        -- Therefore, do not copy from reg 0 if regname is '"' or ""
-        if vim.v.event.regname ~= '"' and vim.v.event.regname ~= "" then
-            vim.fn.setreg('"', vim.fn.getreg("0"))
-        end
-    end,
-})
-
--- FUTURE: Consider making a custom operator for these. It should be possible to
--- store cursor position in some form of state that's not a mark, like the substitute plugin does
-
--- Set mark with the API so vim.v.count1 and vim.v.register don't need to be manually added
--- to the return
-vim.keymap.set("n", "y", function()
-    set_z_at_cursor()
-    return "y"
-end, { silent = true, expr = true })
-
-vim.keymap.set("x", "y", function()
-    set_z_at_cursor()
-    return "y"
-end, { silent = true, expr = true })
-
-vim.keymap.set("n", "gy", function()
-    set_z_at_cursor()
-    return '"+y'
-end, { silent = true, expr = true })
-
-vim.keymap.set("x", "Y", function()
-    set_z_at_cursor()
-    return '"+y'
-end, { silent = true, expr = true })
-
--- Nvim sets Y to be equivalent to y$ through a lua runtime file (:h default-mappings)
--- Equivalent of Neovim Y behavior must be mapped manually
-vim.keymap.set("n", "Y", function()
-    set_z_at_cursor()
-    return "y$"
-end, { silent = true, expr = true })
-
-vim.keymap.set("n", "gY", function()
-    set_z_at_cursor()
-    return '"+y$'
-end, { silent = true, expr = true })
-
--------------
--- Pasting --
--------------
-
--- NOTE: For now, I have omitted marks to return to original position. This is more consistent
--- with the behavior of other text editors. Can add them back in if it becomes annoying
-
--- NOTE: I had previously added code to the text ftplugin file to not autoformat certain pastes
--- If we see wonky formatting issues again, add an ftdetect here instead to avoid code duplication
-
----@param reg string
----@return boolean
-local should_format_paste = function(reg)
-    if vim.api.nvim_get_current_line():match("^%s*$") then
-        return true
-    end
-
-    if vim.fn.getregtype(reg or '"') == "V" then
-        return true
-    end
-
-    local cur_mode = vim.api.nvim_get_mode().mode ---@type string
-    if cur_mode == "V" or cur_mode == "Vs" then
-        return true
-    end
-
-    return false
-end
-
-local better_norm_pastes = {
-    { "p", nil },
-    { "P", nil },
-    { "gp", "+" },
-    { "gP", "+" },
-}
-
-for _, map in pairs(better_norm_pastes) do
-    vim.keymap.set("n", map[1], function()
-        local reg = map[2] or vim.v.register or '"' ---@type string
-
-        ---@type string
-        local paste_cmd = "<cmd>silent norm! " .. vim.v.count1 .. '"' .. reg .. map[1] .. "<cr>"
-        if should_format_paste(reg) then
-            return paste_cmd .. "<cmd>silent norm! mz`[=`]`z<cr>"
-        else
-            return paste_cmd
-        end
-    end, { expr = true, silent = true })
-end
-
--- Visual pastes do not need any additional contrivances in order to run silently, as they
--- run a delete under the hood, which triggers the TextChanged autocmd for deletes
-vim.keymap.set("x", "p", function()
-    if should_format_paste(vim.v.register) then
-        return "Pmz<cmd>silent norm! `[=`]`z<cr>"
-    else
-        return "P"
-    end
-end, { silent = true, expr = true })
-
-vim.keymap.set("x", "P", function()
-    if should_format_paste("+") then
-        return '"+Pmz<cmd>silent norm! `[=`]`z<cr>'
-    else
-        return '"+P'
-    end
-end, { silent = true, expr = true })
 
 -----------------------
 -- Text Manipulation --
@@ -723,10 +374,7 @@ vim.keymap.set("n", "J", function()
     vim.fn.winrestview(view)
 end, { silent = true })
 
--- Future: It would be better if the visual move were done with vim.fn.line("v"), which would
--- avoid the contrivance of leaving visual mode. This would require both redoing the offset math
--- and changing the range value of the move command
--- Future: It would be cool to do all of these moves in a way that is dot-repeatable
+-- FUTURE: Do this with the API so it's dot-repeatable
 ---@param opts? table(upward:boolean)
 ---@return nil
 local visual_move = function(opts)

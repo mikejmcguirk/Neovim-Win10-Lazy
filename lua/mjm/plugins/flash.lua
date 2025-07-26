@@ -14,7 +14,8 @@ return {
             backdrop = false,
             groups = {
                 current = "CurSearch",
-                -- label = "DiffText",
+                -- TODO: Create this as an hl group in the colorscheme config so I'm not relying
+                -- on QuickScope to make it
                 label = "QuickScopePrimary",
                 match = "CurSearch",
             },
