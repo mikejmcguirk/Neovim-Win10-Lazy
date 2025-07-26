@@ -42,14 +42,15 @@ vim.keymap.set("n", "V", "mvV", { silent = true })
 -- Insert Mode --
 -----------------
 
--- TODO: Map <M-w> in tmux so it can be used here
-vim.keymap.set("i", "<M-bs>", "<C-g>u<C-o>vBx")
 -- TODO: Where should this go?
 -- vim.keymap.set("i", "<C-e>", "<C-o>ze", { silent = true })
 
 vim.keymap.set("i", "<C-a>", "<C-o>_")
 vim.keymap.set("i", "<C-k>", "<C-o>D")
 vim.keymap.set("i", "<C-e>", "<C-o>$")
+
+-- Ideas:
+-- - <M-f>/<M-b> (forward and backward one word)
 
 -------------------------
 -- Saving and Quitting --
