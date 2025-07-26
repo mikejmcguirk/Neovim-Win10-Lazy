@@ -385,7 +385,7 @@ local visual_move = function(opts)
 
     local cur_mode = vim.api.nvim_get_mode().mode ---@type string
     if cur_mode ~= "V" and cur_mode ~= "Vs" then
-        return vim.notify("Not in visual line mode", vim.log.levels.WARN)
+        return vim.notify("Not in visual line mode")
     end
 
     vim.opt.lazyredraw = true
