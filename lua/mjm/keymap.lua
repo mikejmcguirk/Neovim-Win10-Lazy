@@ -358,6 +358,7 @@ vim.keymap.set("n", "dm", "<cmd>delmarks!<cr>")
 vim.keymap.set("n", "g%", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
 
 vim.keymap.set("n", "gV", "`[v`]")
+vim.keymap.set("n", "g<C-v>", "`[<C-v>`]")
 
 -- FUTURE: I'm not sure why, but this properly handles being on the very top line
 -- This could also handle whitespace/comments/count/view, but is fine for now as a quick map
