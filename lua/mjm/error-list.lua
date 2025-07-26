@@ -1,4 +1,4 @@
--- Override Nvim default behavior where new windows get a copy of the previous window's loc list
+-- Override default behavior where new windows get a copy of the previous window's loc list
 vim.api.nvim_create_autocmd("WinNew", {
     group = vim.api.nvim_create_augroup("del_new_loclist", { clear = true }),
     pattern = "*",
@@ -78,6 +78,7 @@ local is_list_empty = function(opts)
 end
 
 local ut = require("mjm.utils")
+
 ---@return nil
 local open_qflist = function()
     ut.close_all_loclists()
@@ -87,7 +88,7 @@ end
 ---@return nil
 local open_loclist = function()
     -- In theory, qflist should not be closed before verifying lopen is okay
-    -- In practice, opening the loclist with the qflist open messes up formating
+    -- In practice, opening the loclist with the qflist open messes up the window layout
     -- lopen produces an error if no loclist is present. This function cannot be responsible for
     -- verifying one exists because the steps are situational. Defensively pcall instead
     vim.cmd("cclose")
@@ -134,8 +135,7 @@ vim.keymap.set("n", "coo", function()
     end
 
     if is_cur_win_loclist_open() then
-        vim.cmd("lclose")
-        return
+        return vim.cmd("lclose")
     end
 
     open_loclist()
@@ -181,12 +181,7 @@ local convert_diag = function(diag)
     diag = diag or {}
     local source = diag.source .. ": " or "" ---@type string
     local message = diag.message or "" ---@type string
-    local code = "" ---@type string
-    -- For whatever reason, this doesn't work with an or
-    if diag.code then
-        code = "[" .. diag.code .. "] "
-    end
-
+    local code = diag.code and "[" .. diag.code .. "]" or "" --- @type string
     return {
         bufnr = diag.bufnr,
         filename = vim.fn.bufname(diag.bufnr),
@@ -318,6 +313,8 @@ vim.keymap.set("n", "dor", function()
     filter_wrapper({ loclist = true, remove = true })
 end)
 
+local err_list_state = require("mjm.error-list-state")
+
 ---@param opts table
 ---@return nil
 local grep_wrapper = function(opts)
@@ -328,7 +325,7 @@ local grep_wrapper = function(opts)
 
     local pattern = opts.pattern or ut.get_input("Enter Grep Pattern: ") ---@type string
     if pattern == "" and opts.pattern then
-        return vim.notify("Invalid pattern", vim.log.levels.WARN)
+        return vim.notify("Empty grep pattern", vim.log.levels.WARN)
     elseif pattern == "" then
         return
     end
@@ -351,10 +348,10 @@ local grep_wrapper = function(opts)
     }, {})
 
     if opts.loclist then
-        require("mjm.error-list-state").last_lgrep = pattern
+        err_list_state.last_lgrep = pattern
         open_loclist()
     else
-        require("mjm.error-list-state").last_grep = pattern
+        err_list_state.last_grep = pattern
         open_qflist()
     end
 end
@@ -363,26 +360,30 @@ vim.keymap.set("n", "yugs", function()
     grep_wrapper({})
 end)
 
-vim.keymap.set("n", "yugi", function()
-    grep_wrapper({ insensitive = true })
-end)
-
-vim.keymap.set("n", "yugv", function()
-    print(require("mjm.error-list-state").last_grep)
-end)
-
-vim.keymap.set("n", "yugr", function()
-    grep_wrapper({ pattern = require("mjm.error-list-state").last_grep })
-end)
-
 vim.keymap.set("n", "yogs", function()
     grep_wrapper({ loclist = true })
 end)
 
-vim.keymap.set("n", "yogv", function()
-    print(require("mjm.error-list-state").last_lgrep)
+vim.keymap.set("n", "yugi", function()
+    grep_wrapper({ insensitive = true })
 end)
 
 vim.keymap.set("n", "yogi", function()
-    grep_wrapper({ loclist = true, insensitive = true })
+    grep_wrapper({ insensitive = true, loclist = true })
+end)
+
+vim.keymap.set("n", "yugv", function()
+    print(err_list_state.last_grep)
+end)
+
+vim.keymap.set("n", "yogv", function()
+    print(err_list_state.last_lgrep)
+end)
+
+vim.keymap.set("n", "yugr", function()
+    grep_wrapper({ pattern = err_list_state.last_grep })
+end)
+
+vim.keymap.set("n", "yogr", function()
+    grep_wrapper({ pattern = err_list_state.last_lgrep, loclist = true })
 end)
