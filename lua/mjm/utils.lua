@@ -182,7 +182,7 @@ end
 -- added to diagnostic jumping
 ---@param opts? table{buf:integer|nil}
 ---@return integer|nil
-M.get_top_severity = function(opts)
+function M.get_top_severity(opts)
     opts = opts or {}
     local has_warn = false ---@type boolean
     local has_info = false ---@type boolean
