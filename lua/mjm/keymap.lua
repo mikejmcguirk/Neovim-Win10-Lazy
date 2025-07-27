@@ -51,26 +51,32 @@ vim.keymap.set("n", "V", "mvV", { silent = true })
 -- do the same so they can be used here
 
 -- Bash style typing
-vim.keymap.set("i", "<C-a>", "<C-o>_")
-vim.keymap.set("i", "<C-e>", "<C-o>$")
+vim.keymap.set("i", "<C-a>", "<Home>")
+vim.keymap.set("i", "<C-e>", "<End>")
 
+-- FUTURE: Rebind the default functionality
+vim.keymap.set("i", "<C-d>", "<Del>")
 vim.keymap.set("i", "<C-k>", "<C-g>u<C-o>D")
 vim.keymap.set("i", "<M-d>", "<C-g>u<C-o>dw")
 vim.keymap.set("i", "<C-l>", "<esc>u")
 
-vim.keymap.set("i", "<C-b>", "<C-o>h")
+vim.keymap.set("i", "<C-b>", "<left>")
 -- FUTURE: Would be good to find a home for the default <C-f> mapping
-vim.keymap.set("i", "<C-f>", "<C-o>l")
-vim.keymap.set("i", "<M-b>", "<C-o>b")
-vim.keymap.set("i", "<M-f>", "<esc>ea") -- Because <C-o> returns to insert with i behavior
+vim.keymap.set("i", "<C-f>", "<right>")
+vim.keymap.set("i", "<M-b>", "<S-left>")
+vim.keymap.set("i", "<M-f>", "<S-right>") -- Because <C-o> returns to insert with i behavior
 
 -- FUTURE: Maybe make this paste after getting used to enter for cmp. Ctrl-r is the default, but
 -- Ctrl-y is not a useful default and it would help with the Unix typing style pattern
 vim.keymap.set("i", "<C-y>", "<nop>")
 
 --Other stuff
-vim.keymap.set("i", "<M-j>", "<C-o>j")
-vim.keymap.set("i", "<M-k>", "<C-o>k")
+vim.keymap.set("i", "<M-j>", "<Down>")
+vim.keymap.set("i", "<M-k>", "<Up>")
+
+-- Reserved for cmp
+vim.keymap.set("i", "<C-n>", "<nop>")
+vim.keymap.set("i", "<C-p>", "<nop>")
 
 -- TODO: Where should this go?
 -- vim.keymap.set("i", "<C-e>", "<C-o>ze", { silent = true })
