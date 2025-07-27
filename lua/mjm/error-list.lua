@@ -388,3 +388,42 @@ end)
 vim.keymap.set("n", "yogr", function()
     grep_wrapper({ pattern = last_lgrep, loclist = true })
 end)
+
+local function qf_scroll_wrapper(main, alt)
+    local cmd_opts = { cmd = main, count = vim.v.count1 }
+    local ok, err = pcall(vim.api.nvim_cmd, cmd_opts, {})
+
+    if not ok and (err:match("E42") or err:match("E776")) then
+        vim.notify(err:sub(#"Vim:" + 1))
+        return
+    end
+
+    if not ok and err:match("E553") then
+        local alt_opts = { cmd = alt }
+        ok, err = pcall(vim.api.nvim_cmd, alt_opts, {})
+    end
+
+    if not ok then
+        err = err and err:sub(#"Vim:" + 1) or "Unknown qf_scroll error"
+        vim.notify(err, vim.log.levels.WARN)
+        return
+    end
+
+    vim.cmd("norm! zz")
+end
+
+vim.keymap.set("n", "[q", function()
+    qf_scroll_wrapper("cprev", "clast")
+end)
+
+vim.keymap.set("n", "]q", function()
+    qf_scroll_wrapper("cnext", "crewind")
+end)
+
+vim.keymap.set("n", "[l", function()
+    qf_scroll_wrapper("lprev", "llast")
+end)
+
+vim.keymap.set("n", "]l", function()
+    qf_scroll_wrapper("lnext", "lrewind")
+end)
