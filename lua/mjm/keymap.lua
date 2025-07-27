@@ -54,7 +54,6 @@ vim.keymap.set("n", "V", "mvV", { silent = true })
 vim.keymap.set("i", "<C-a>", "<C-o>_")
 vim.keymap.set("i", "<C-e>", "<C-o>$")
 
-vim.keymap.set("i", "<C-u>", "<C-g>u<C-o>d^")
 vim.keymap.set("i", "<C-k>", "<C-g>u<C-o>D")
 vim.keymap.set("i", "<M-d>", "<C-g>u<C-o>dw")
 vim.keymap.set("i", "<C-l>", "<esc>u")
