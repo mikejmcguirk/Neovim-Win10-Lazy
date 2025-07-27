@@ -55,6 +55,7 @@ local function get_top_or_bot_diag(opts)
     else
         diagnostics = vim.diagnostic.get(0)
     end
+
     if #diagnostics == 0 then
         vim.notify("No diagnostics in current buffer")
         return nil

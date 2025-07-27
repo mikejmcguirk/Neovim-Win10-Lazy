@@ -165,7 +165,7 @@ M.fallback_formatter = function(buf)
 end
 
 ---@return boolean
-M.close_all_loclists = function()
+function M.close_all_loclists()
     local closed_loc_list = false ---@type boolean
     for _, win in ipairs(vim.fn.getwininfo()) do
         if win.quickfix == 1 and win.loclist == 1 then

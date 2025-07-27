@@ -1,76 +1,49 @@
+-- TODO: Re-create the parameter text objects
+
 return {
     "nvim-treesitter/nvim-treesitter",
-    build = ":TSUpdate",
     lazy = false,
-    -- TODO: This will be replaced by a new version. Holding for now because it is not
-    -- compatible with text objects
-    branch = "master",
-    dependencies = {
-        "nvim-treesitter/nvim-treesitter-textobjects",
-    },
+    branch = "main",
+    build = ":TSUpdate",
     config = function()
-        local configs = require("nvim-treesitter.configs")
+        local ts = require("nvim-treesitter")
+        ts.setup({
+            install_dir = vim.fn.stdpath("data") .. "/site",
+        })
 
-        -- Default keys are listed as required by the LSP
-        configs.setup({
-            modules = {},
-            ignore_install = {},
-            auto_install = false,
-            ensure_installed = {
-                "c",
-                "lua",
-                "vim",
-                "vimdoc",
-                "query",
-                "elixir",
-                "heex",
-                "markdown_inline",
-                "javascript",
-                "html",
-                "css",
-                "rust",
-                "sql",
-                -- "c_sharp",
-                "python",
-                "json",
-                "typescript",
-                -- "dockerfile",
-                "bash",
-                -- "perl",
-                "markdown",
-                "go",
-            },
-            sync_install = false,
-            highlight = { enable = true, additional_vim_regex_highlighting = false },
-            indent = { enable = true },
-            textobjects = {
-                select = {
-                    enable = true,
-                    lookahead = false, -- Don't jump to next text object
-                    keymaps = {
-                        ["a,"] = "@parameter.outer",
-                        ["i,"] = "@parameter.inner",
-                        ["af"] = "@function.outer",
-                        ["if"] = "@function.inner",
-                    },
-                },
-                move = {
-                    enable = true,
-                    set_jumps = true,
-                    goto_previous_start = {
-                        ["[,"] = "@parameter.inner",
-                    },
-                    goto_next_start = {
-                        ["],"] = "@parameter.inner",
-                    },
-                },
-                -- FUTURE: Disabling because never used. The pattern just doesn't feel good
-                -- swap = {
-                --     enable = true,
-                --     swap_previous = { ["<leader>[,"] = "@parameter.inner" },
-                --     swap_next = { ["<leader>],"] = "@parameter.inner" },
-                -- },
-            },
+        local languages = {
+            "c",
+            "lua",
+            "vim",
+            "vimdoc",
+            "query",
+            "markdown_inline",
+            "markdown",
+            -- Optional
+            "javascript",
+            "html",
+            "css",
+            "rust",
+            "sql",
+            "python",
+            "json",
+            "typescript",
+            "bash",
+            "go",
+        }
+        ts.install(languages)
+
+        vim.api.nvim_create_autocmd({ "FileType" }, {
+            group = vim.api.nvim_create_augroup("ts-start", { clear = true }),
+            pattern = "*",
+            callback = function(ev)
+                local ft = vim.api.nvim_get_option_value("filetype", { buf = ev.buf })
+                if vim.tbl_contains(languages, ft) then
+                    vim.treesitter.start()
+                end
+
+                vim.bo[ev.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+            end,
         })
     end,
 }

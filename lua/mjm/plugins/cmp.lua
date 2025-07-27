@@ -1,5 +1,6 @@
 -- NOTE: Autopairs uses this for function signature completions
 -- NOTE: Obsidian looks for this to feed completions to
+-- NOTE: This is used to build LSP capabilities
 
 local cmp_config = function()
     vim.opt.completeopt = { "menu", "menuone", "noselect" }
@@ -48,16 +49,16 @@ local cmp_config = function()
             ["<C-d>"] = cmp.mapping(cmp.mapping.scroll_docs(3)),
             ["<C-u>"] = cmp.mapping(cmp.mapping.scroll_docs(-5)),
 
+            ["<cr>"] = cmp.mapping(nil),
+            ["<C-cr>"] = cmp.mapping(cmp.mapping.confirm({ select = true }), { "i" }),
+            ["<C-y>"] = cmp.mapping(nil),
             ["<C-p>"] = cmp.mapping(cmp.mapping.select_prev_item(cmp_select), { "i" }),
             ["<C-n>"] = cmp.mapping(cmp.mapping.select_next_item(cmp_select), { "i" }),
 
-            ["<C-y>"] = cmp.mapping(cmp.mapping.confirm({ select = true }), { "i" }),
             ["<C-e>"] = cmp.mapping(nil),
-            -- ["<C-e>"] = cmp.mapping(cmp.mapping.abort()),
 
             ["<Tab>"] = cmp.mapping(nil),
             ["<S-Tab>"] = cmp.mapping(nil),
-            ["<CR>"] = cmp.mapping(nil),
         },
         sources = {
             { name = "nvim_lsp_signature_help" },
