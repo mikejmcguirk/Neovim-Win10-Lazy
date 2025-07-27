@@ -313,7 +313,8 @@ vim.keymap.set("n", "dor", function()
     filter_wrapper({ loclist = true, remove = true })
 end)
 
-local err_list_state = require("mjm.error-list-state")
+local last_grep = nil
+local last_lgrep = nil
 
 ---@param opts table
 ---@return nil
@@ -348,10 +349,10 @@ local grep_wrapper = function(opts)
     }, {})
 
     if opts.loclist then
-        err_list_state.last_lgrep = pattern
+        last_lgrep = pattern
         open_loclist()
     else
-        err_list_state.last_grep = pattern
+        last_grep = pattern
         open_qflist()
     end
 end
@@ -373,17 +374,17 @@ vim.keymap.set("n", "yogi", function()
 end)
 
 vim.keymap.set("n", "yugv", function()
-    print(err_list_state.last_grep)
+    print(last_grep)
 end)
 
 vim.keymap.set("n", "yogv", function()
-    print(err_list_state.last_lgrep)
+    print(last_lgrep)
 end)
 
 vim.keymap.set("n", "yugr", function()
-    grep_wrapper({ pattern = err_list_state.last_grep })
+    grep_wrapper({ pattern = last_grep })
 end)
 
 vim.keymap.set("n", "yogr", function()
-    grep_wrapper({ pattern = err_list_state.last_lgrep, loclist = true })
+    grep_wrapper({ pattern = last_lgrep, loclist = true })
 end)
