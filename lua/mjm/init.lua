@@ -66,6 +66,7 @@ require("mjm.lsp")
 
 require("mjm.plugins.autopairs")
 require("mjm.plugins.colorizer")
+require("mjm.plugins.comment")
 require("mjm.plugins.conform")
 require("mjm.plugins.flash")
 require("mjm.plugins.git_signs")

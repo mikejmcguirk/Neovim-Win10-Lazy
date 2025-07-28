@@ -2,14 +2,13 @@
 -- https://github.com/kosayoda/nvim-lightbulb
 -- Show icon where code actions are available, but would need more aesthetic icon
 
--- TODO: Re-install numToStr/Comment
--- DOn't like all of the default mappings, but it has some good motions built in
-
 vim.pack.add({
     -- Multi-deps
     { src = "https://github.com/mike-jl/harpoonEx" },
     { src = "https://github.com/nvim-tree/nvim-web-devicons" },
     { src = "https://github.com/nvim-lua/plenary.nvim" },
+
+    { src = "https://github.com/numToStr/Comment.nvim" },
 
     { src = "https://github.com/stevearc/conform.nvim" },
 
