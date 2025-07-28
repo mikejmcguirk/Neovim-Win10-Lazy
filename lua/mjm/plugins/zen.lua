@@ -1,10 +1,8 @@
--- Anything tmux related is handled manually because, by default, when zen-mode closes, it also
--- unhides all tmux panes
-local tmux_safety = vim.api.nvim_create_augroup("tmux_safety", { clear = true })
-
-return {
-    "folke/zen-mode.nvim",
-    opts = {
+local function load_zen()
+    -- Anything tmux related is handled manually because, by default, when zen-mode closes, it also
+    -- unhides all tmux panes
+    local tmux_safety = vim.api.nvim_create_augroup("tmux_safety", { clear = true })
+    require("zen-mode.config").setup({
         window = {
             width = 106, -- 99 text columns + gutter
         },
@@ -35,8 +33,8 @@ return {
             })
 
             -- Avoid issue where you toggle NvimTree closed underneath the Zen window
-            vim.keymap.set("n", "<leader>nt", "<cmd>NvimTreeOpen<cr>")
-            -- Will close Zen but then focus on the Zen-creating buffer. Pointless to have
+            vim.keymap.set("n", "<leader>nn", "<cmd>NvimTreeOpen<cr>")
+            -- Will close Zen but then focus on the Zen-creating buffer. Pointless
             vim.keymap.set("n", "<leader>nf", "<nop>")
         end,
         on_close = function()
@@ -49,30 +47,36 @@ return {
 
             vim.api.nvim_clear_autocmds({ group = "tmux_safety" })
         end,
-    },
-    -- Done using an init because config overwrites the opts table
-    init = function()
-        vim.keymap.set("n", "<leader>e", function()
-            local view = require("zen-mode.view")
-            if view.is_open() then
-                view.close()
+    })
+
+    vim.keymap.set("n", "<leader>e", function()
+        local view = require("zen-mode.view")
+        if view.is_open() then
+            view.close()
+            return
+        end
+
+        local bad_filetypes = {
+            "NvimTree",
+            "harpoon",
+            "qf",
+        }
+
+        for _, ft in pairs(bad_filetypes) do
+            if vim.bo.filetype == ft then
+                vim.notify("Zen open map disabled for filetype " .. ft)
                 return
             end
+        end
 
-            local bad_filetypes = {
-                "NvimTree",
-                "harpoon",
-                "qf",
-            }
+        view.open()
+    end)
+end
 
-            for _, ft in pairs(bad_filetypes) do
-                if vim.bo.filetype == ft then
-                    vim.notify("Zen open map disabled for filetype " .. ft)
-                    return
-                end
-            end
-
-            view.open()
-        end)
+vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
+    group = vim.api.nvim_create_augroup("load-zen", { clear = true }),
+    once = true,
+    callback = function()
+        load_zen()
     end,
-}
+})

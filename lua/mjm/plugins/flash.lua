@@ -1,7 +1,5 @@
-return {
-    "folke/flash.nvim",
-    event = "VeryLazy",
-    opts = {
+local function setup_flash()
+    require("flash.config").setup({
         modes = {
             char = {
                 enabled = false,
@@ -20,25 +18,25 @@ return {
                 match = "CurSearch",
             },
         },
-    },
-    keys = {
-        {
-            "\\",
-            mode = { "n", "x" },
-            function()
-                require("flash").jump({
-                    search = { forward = true, wrap = false, multi_window = false },
-                })
-            end,
-        },
-        {
-            "|",
-            mode = { "n", "x" },
-            function()
-                require("flash").jump({
-                    search = { forward = false, wrap = false, multi_window = false },
-                })
-            end,
-        },
-    },
-}
+    })
+
+    vim.keymap.set({ "n", "x" }, "\\", function()
+        require("flash").jump({
+            search = { forward = true, wrap = false, multi_window = false },
+        })
+    end)
+
+    vim.keymap.set({ "n", "x" }, "|", function()
+        require("flash").jump({
+            search = { forward = false, wrap = false, multi_window = false },
+        })
+    end)
+end
+
+vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
+    group = vim.api.nvim_create_augroup("load-flash", { clear = true }),
+    once = true,
+    callback = function()
+        setup_flash()
+    end,
+})
