@@ -8,7 +8,7 @@ local function load_ts_autotag()
     })
 end
 
-vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
+vim.api.nvim_create_autocmd("InsertEnter", {
     group = vim.api.nvim_create_augroup("load-ts-autotag", { clear = true }),
     once = true,
     callback = function()
