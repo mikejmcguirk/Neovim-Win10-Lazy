@@ -1,4 +1,5 @@
 -- TODO: Re-create the parameter TS-TextObjects
+-- FUTURE: Test TS-Indent again
 
 local ts = require("nvim-treesitter")
 ts.setup({
@@ -37,6 +38,6 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
             vim.treesitter.start()
         end
 
-        vim.bo[ev.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+        -- vim.bo[ev.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
     end,
 })
