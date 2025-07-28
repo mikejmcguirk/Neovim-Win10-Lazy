@@ -154,24 +154,14 @@ vim.keymap.set("n", "u", function()
     if not ut.check_modifiable() then
         return
     end
-
-    if vim.v.count1 > 1 then
-        vim.cmd("norm! " .. vim.v.count1 .. "u")
-    else
-        vim.cmd("silent norm! u")
-    end
+    vim.cmd("silent norm! " .. vim.v.count1 .. "u")
 end)
 
 vim.keymap.set("n", "<C-r>", function()
     if not ut.check_modifiable() then
         return
     end
-
-    if vim.v.count1 > 1 then
-        vim.cmd('exec "norm! ' .. vim.v.count1 .. '\\<C-r>"')
-    else
-        vim.cmd('silent exec "norm! \\<C-r>"')
-    end
+    vim.cmd("silent norm! " .. vim.v.count1 .. "\18")
 end)
 
 ---------------------
