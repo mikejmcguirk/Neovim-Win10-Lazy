@@ -231,6 +231,11 @@ for k, _ in pairs(tmux_cmd_map) do
         vim.cmd("stopinsert")
         win_move_tmux(k)
     end)
+
+    vim.keymap.set("x", "<C-S-" .. k .. ">", function()
+        vim.cmd("norm! \27")
+        win_move_tmux(k)
+    end)
 end
 
 local good_wintypes = { "", "quickfix", "loclist" }
