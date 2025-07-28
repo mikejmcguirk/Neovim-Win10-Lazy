@@ -7,7 +7,18 @@ vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
 vim.g.loaded_netrwSettings = 1
 
--- Have to do this before it's loaded
+-- Disable other rtp plugins
+vim.g.loaded_gzip = 1
+vim.g.loaded_matchit = 1
+-- vim.g.loaded_matchparen = 1
+vim.g.loaded_tarPlugin = 1
+vim.g.loaded_tar = 1
+vim.g.loaded_2html_plugin = 1
+vim.g.loaded_tutor_mode_plugin = 1
+vim.g.loaded_zipPlugin = 1
+vim.g.loaded_zip = 1
+
+-- Have to do this before it's registered
 vim.g.qs_highlight_on_keys = { "f", "F", "t", "T" }
 vim.g.qs_max_chars = 9999
 
@@ -47,8 +58,7 @@ require("mjm.custom_cmd")
 require("mjm.diagnostic")
 require("mjm.error-list")
 require("mjm.autocmd")
-
-require("mjm.lsp") -- Requires LSPConfig Plugin
+require("mjm.lsp")
 
 -------------------------
 -- Lazy Loaded Plugins --

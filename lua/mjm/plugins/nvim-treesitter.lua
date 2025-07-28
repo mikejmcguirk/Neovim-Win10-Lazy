@@ -1,3 +1,5 @@
+-- TODO: Re-create the parameter TS-TextObjects
+
 local ts = require("nvim-treesitter")
 ts.setup({
     install_dir = vim.fn.stdpath("data") .. "/site",
