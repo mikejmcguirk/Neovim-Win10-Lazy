@@ -1,12 +1,4 @@
 vim.opt.completeopt = { "menu", "menuone", "noselect" }
-local cmp = require("cmp")
-local cmp_select = { behavior = cmp.SelectBehavior.Select }
-
-local win_settings = {
-    border = "single",
-    winhighlight = "Normal:Normal,FloatBorder:FloatBorder,CursorLine:Visual,Search:None",
-    scrollbar = true,
-}
 
 local formatting = {
     expandable_indicator = true,
@@ -30,67 +22,85 @@ local formatting = {
     end,
 }
 
-cmp.setup({
-    snippet = {
-        expand = function(args)
-            vim.fn["vsnip#anonymous"](args.body)
-        end,
-    },
-    window = {
-        completion = win_settings,
-        documentation = win_settings,
-    },
-    mapping = {
-        ["<C-d>"] = cmp.mapping(cmp.mapping.scroll_docs(3)),
-        ["<C-u>"] = cmp.mapping(cmp.mapping.scroll_docs(-5)),
+local function setup_cmp()
+    local cmp = require("cmp")
+    local cmp_select = { behavior = cmp.SelectBehavior.Select }
+    local win_settings = {
+        border = "single",
+        winhighlight = "Normal:Normal,FloatBorder:FloatBorder,CursorLine:Visual,Search:None",
+        scrollbar = true,
+    }
 
-        ["<cr>"] = cmp.mapping(nil),
-        ["<C-cr>"] = cmp.mapping(cmp.mapping.confirm({ select = true }), { "i" }),
-        ["<C-y>"] = cmp.mapping(nil),
-        ["<C-p>"] = cmp.mapping(cmp.mapping.select_prev_item(cmp_select), { "i" }),
-        ["<C-n>"] = cmp.mapping(cmp.mapping.select_next_item(cmp_select), { "i" }),
-
-        ["<C-e>"] = cmp.mapping(nil),
-
-        ["<Tab>"] = cmp.mapping(nil),
-        ["<S-Tab>"] = cmp.mapping(nil),
-    },
-    sources = {
-        { name = "nvim_lsp_signature_help" },
-        {
-            name = "lazydev",
-            group_index = 0, -- Skip loading LuaLS completions
+    cmp.setup({
+        snippet = {
+            expand = function(args)
+                vim.fn["vsnip#anonymous"](args.body)
+            end,
         },
-        { name = "nvim_lsp" },
-        {
-            name = "buffer",
-            option = {
-                get_bufnrs = function()
-                    return vim.api.nvim_list_bufs()
-                end,
+        window = {
+            completion = win_settings,
+            documentation = win_settings,
+        },
+        mapping = {
+            ["<C-d>"] = cmp.mapping(cmp.mapping.scroll_docs(3)),
+            ["<C-u>"] = cmp.mapping(cmp.mapping.scroll_docs(-5)),
+
+            ["<cr>"] = cmp.mapping(nil),
+            ["<C-cr>"] = cmp.mapping(cmp.mapping.confirm({ select = true }), { "i" }),
+            ["<C-y>"] = cmp.mapping(nil),
+            ["<C-p>"] = cmp.mapping(cmp.mapping.select_prev_item(cmp_select), { "i" }),
+            ["<C-n>"] = cmp.mapping(cmp.mapping.select_next_item(cmp_select), { "i" }),
+
+            ["<C-e>"] = cmp.mapping(nil),
+
+            ["<Tab>"] = cmp.mapping(nil),
+            ["<S-Tab>"] = cmp.mapping(nil),
+        },
+        sources = {
+            { name = "nvim_lsp_signature_help" },
+            {
+                name = "lazydev",
+                group_index = 0, -- Skip loading LuaLS completions
             },
-        },
-        { name = "treesitter" },
-        { name = "async_path" },
-        {
-            name = "spell",
-            option = {
-                keep_all_entries = false,
-                enable_in_context = function()
-                    return true
-                end,
+            { name = "nvim_lsp" },
+            {
+                name = "buffer",
+                option = {
+                    get_bufnrs = function()
+                        return vim.api.nvim_list_bufs()
+                    end,
+                },
             },
+            { name = "treesitter" },
+            { name = "async_path" },
+            {
+                name = "spell",
+                option = {
+                    keep_all_entries = false,
+                    enable_in_context = function()
+                        return true
+                    end,
+                },
+            },
+            { name = "vsnip" },
         },
-        { name = "vsnip" },
-    },
-    formatting = formatting,
-})
+        formatting = formatting,
+    })
 
-cmp.setup.filetype({ "sql" }, {
-    sources = {
-        { name = "vim-dadbod-completion" },
-        { name = "buffer" },
-        { name = "sql" },
-    },
-    formatting = formatting,
+    cmp.setup.filetype({ "sql" }, {
+        sources = {
+            { name = "vim-dadbod-completion" },
+            { name = "buffer" },
+            { name = "sql" },
+        },
+        formatting = formatting,
+    })
+end
+
+vim.api.nvim_create_autocmd("InsertEnter", {
+    group = vim.api.nvim_create_augroup("load-cmp", { clear = true }),
+    once = true,
+    callback = function()
+        setup_cmp()
+    end,
 })

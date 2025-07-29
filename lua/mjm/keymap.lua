@@ -64,7 +64,7 @@ vim.keymap.set("i", "<C-b>", "<left>")
 -- FUTURE: Would be good to find a home for the default <C-f> mapping
 vim.keymap.set("i", "<C-f>", "<right>")
 vim.keymap.set("i", "<M-b>", "<S-left>")
-vim.keymap.set("i", "<M-f>", "<S-right>") -- Because <C-o> returns to insert with i behavior
+vim.keymap.set("i", "<M-f>", "<S-right>")
 
 -- FUTURE: Maybe make this paste after getting used to enter for cmp. Ctrl-r is the default, but
 -- Ctrl-y is not a useful default and it would help with the Unix typing style pattern
@@ -253,8 +253,7 @@ end)
 
 local tab = 10
 for _ = 1, 10 do
-    -- Need to bring tab into this scope, or else the final value of tab is
-    -- used for all maps
+    -- Create inner-scoped tab so we don't make a closure
     local this_tab = tab -- 10, 1, 2, 3, 4, 5, 6, 7, 8, 9
     local mod_tab = this_tab % 10 -- 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
     vim.keymap.set("n", string.format("<M-%s>", mod_tab), function()
