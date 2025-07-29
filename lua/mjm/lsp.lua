@@ -89,8 +89,17 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         if client:supports_method(methods.textDocument_inlayHint) then
             vim.keymap.set("n", "grl", function()
-                vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = buf }))
+                vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ buffer = buf }))
             end)
+        end
+
+        vim.lsp.document_color.enable(true, buf)
+
+        if client:supports_method(methods.textDocument_documentColor) then
+            vim.keymap.set("n", "grc", function()
+                -- vim.lsp.document_color.color_presentation()
+                vim.lsp.document_color.enable(not vim.lsp.document_color.is_enabled())
+            end, { buffer = buf })
         end
 
         vim.keymap.set("n", "grf", function()

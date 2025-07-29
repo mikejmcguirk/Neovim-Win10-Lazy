@@ -1,5 +1,9 @@
 local function setup_colorizer()
     require("colorizer").setup({
+        -- disabled for filetypes that work with LSP document_color
+        filetypes = {
+            "!lua",
+        },
         user_default_options = {
             names = false,
         },
