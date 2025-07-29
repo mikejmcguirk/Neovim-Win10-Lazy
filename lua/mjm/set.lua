@@ -82,6 +82,30 @@ set_cursorline("WinLeave", "", false)
 set_cursorline("WinEnter", "", true)
 set_cursorline("FileType", "TelescopePrompt", false)
 
+local rnu_control = vim.api.nvim_create_augroup("rnu_control", { clear = true })
+
+---@param event string|string[]
+---@param pattern string
+---@param value boolean
+---@return nil
+local set_rnu = function(event, pattern, value)
+    vim.api.nvim_create_autocmd(event, {
+        group = rnu_control,
+        pattern = pattern,
+        callback = function(ev)
+            vim.opt_local.rnu = value
+            if ev.event == "CmdlineEnter" then
+                if not vim.tbl_contains({ "@", "-" }, vim.v.event.cmdtype) then
+                    vim.cmd("redraw")
+                end
+            end
+        end,
+    })
+end
+
+set_rnu({ "WinLeave", "CmdlineEnter" }, "*", false)
+set_rnu({ "WinEnter", "CmdlineLeave" }, "*", true)
+
 ----------------
 
 vim.opt.incsearch = false -- Prevent screen shifting while entering search/substitute patterns
