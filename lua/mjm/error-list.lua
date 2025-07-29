@@ -344,6 +344,7 @@ local grep_wrapper = function(opts)
         args = args,
         bang = true,
         cmd = opts.loclist and "lgrep" or "grep",
+        --- @diagnostic disable: missing-fields
         mods = { emsg_silent = true },
         magic = opts.loclist and { file = true } or {},
     }, {})
