@@ -5,6 +5,7 @@ local function setup_nvim_tree()
         sort_by = "case_sensitive",
         view = {
             width = 36,
+            number = true,
             relativenumber = true,
         },
         filters = {
