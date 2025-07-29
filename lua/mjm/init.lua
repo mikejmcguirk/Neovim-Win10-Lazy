@@ -96,18 +96,18 @@ vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
 })
 local lazy_loaded = vim.loop.hrtime()
 
-local finish = vim.loop.hrtime()
-
 local to_env_setup = math.floor((env_setup - start) / 1e6 * 100) / 100
 local to_pack_finished = math.floor((pack_finish - start) / 1e6 * 100) / 100
 local to_eager_loaded = math.floor((eager_loaded - start) / 1e6 * 100) / 100
 local to_config_set = math.floor((config_set - start) / 1e6 * 100) / 100
 local to_lazy_loaded = math.floor((lazy_loaded - start) / 1e6 * 100) / 100
-local to_finish = math.floor((finish - start) / 1e6 * 100) / 100
 
-vim.api.nvim_create_autocmd("VimEnter", {
+vim.api.nvim_create_autocmd("UIEnter", {
     group = vim.api.nvim_create_augroup("display-profile-info", { clear = true }),
     callback = function()
+        local ui_enter = vim.loop.hrtime()
+        local to_ui_enter = math.floor((ui_enter - start) / 1e6 * 100) / 100
+
         if vim.fn.argc() > 0 or vim.fn.line2byte("$") ~= -1 or vim.bo.modified then
             return
         end
@@ -118,7 +118,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
             { "Eager Plugin Loading: ", to_eager_loaded },
             { "Setup Config: ", to_config_set },
             { "Setup Lazy Loading: ", to_lazy_loaded },
-            { "Finish: ", to_finish },
+            { "UI Enter: ", to_ui_enter },
         }
         local max_header_len = 0
         for _, header in pairs(headers) do
