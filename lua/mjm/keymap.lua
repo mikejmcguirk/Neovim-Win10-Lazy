@@ -105,7 +105,7 @@ end)
 vim.keymap.set("n", "ZA", "<cmd>silent wa<cr>")
 vim.keymap.set("n", "ZL", "<cmd>wqa<cr>")
 vim.keymap.set("n", "ZR", function()
-    vim.cmd("wa")
+    vim.cmd("silent wa")
     vim.cmd("restart")
 end)
 
