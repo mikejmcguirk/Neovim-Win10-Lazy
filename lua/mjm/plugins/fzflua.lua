@@ -9,6 +9,9 @@ local config = require("fzf-lua.config")
 fzf_lua.setup({
     "telescope",
     debug = false,
+    files = {
+        no_ignore = true,
+    },
     winopts = {
         border = Border,
         preview = {
