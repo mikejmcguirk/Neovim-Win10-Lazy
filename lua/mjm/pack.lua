@@ -149,7 +149,7 @@ local function rebuild_cache()
     cache_git_data(cached_spec, false)
 end
 
-vim.keymap.set("n", "zqr", function()
+vim.keymap.set("n", "zqc", function()
     rebuild_cache()
 end)
 
@@ -336,4 +336,31 @@ vim.keymap.set("n", "zqu", function()
 
     vim.api.nvim_echo({ { "" } }, false, {})
     open_giftwrap_buf(new_giftwrap_buf(lines, name_lines))
+end)
+
+local ut = require("mjm.utils")
+
+local function tbl_from_str(s)
+    local t = {}
+    for w in s:gmatch("%S+") do
+        table.insert(t, w)
+    end
+    return t
+end
+
+vim.keymap.set("n", "zqd", function()
+    local input = ut.get_input("Enter plugins to delete (space separated): ")
+    if input == "" then
+        return
+    end
+    vim.pack.del(tbl_from_str(input))
+end)
+
+vim.keymap.set("n", "zqr", function()
+    local input = ut.get_input("Enter plugins to refresh (space separated): ")
+    if input == "" then
+        return
+    end
+    vim.pack.del(tbl_from_str(input))
+    vim.pack.add(pack_spec)
 end)
