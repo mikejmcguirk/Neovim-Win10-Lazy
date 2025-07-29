@@ -1,6 +1,6 @@
 local ut = require("mjm.utils")
 
-vim.keymap.set("n", "<leader>gd", function()
+local function open_diff(opts)
     for _, w in ipairs(vim.fn.getwininfo()) do
         if vim.api.nvim_get_option_value("filetype", { buf = w.bufnr }) == "git" then
             return
@@ -9,26 +9,58 @@ vim.keymap.set("n", "<leader>gd", function()
 
     ut.close_all_loclists()
     vim.cmd("cclose")
-    vim.cmd("botright Git diff")
+
+    opts = opts or {}
+    if opts.staged then
+        vim.cmd("botright Git diff --staged")
+    else
+        vim.cmd("botright Git diff")
+    end
+end
+
+vim.keymap.set("n", "<leader>gdd", function()
+    open_diff()
+end)
+
+vim.keymap.set("n", "<leader>gds", function()
+    open_diff({ staged = true })
 end)
 
 vim.keymap.set("n", "<leader>gp", "<cmd>Git push<cr>")
 vim.keymap.set("n", "<leader>gca", function()
-    local message = ut.get_input("Committing all. Enter message (no quotes): ")
-    if message == "" then
-        return vim.notify("Git commit aborted")
+    local msg = ut.get_input("Committing all. Enter message (no quotes): ")
+    if msg == "" then
+        return vim.notify("Commit aborted: empty message")
     end
 
-    vim.cmd('Git commit -a -m "' .. message .. '"')
+    local escaped_msg = vim.fn.escape(msg, '"\\')
+    vim.cmd('Git commit -a -m "' .. escaped_msg .. '"')
 end)
 
 vim.keymap.set("n", "<leader>gch", function()
-    local message = ut.get_input("Committing staged hunks. Enter message (no quotes): ")
-    if message == "" then
+    local msg = ut.get_input("Committing staged hunks. Enter message: ")
+    if msg == "" then
         return vim.notify("Git commit aborted")
     end
 
-    vim.cmd('Git commit -m "' .. message .. '"')
+    local escaped_msg = vim.fn.escape(msg, '"\\')
+    vim.cmd('Git commit -m "' .. escaped_msg .. '"')
+end)
+
+vim.keymap.set("n", "<leader>gcb", function()
+    local file = vim.api.nvim_buf_get_name(0)
+    if file == "" then
+        return vim.notify("No file in current buffer")
+    end
+
+    local msg = ut.get_input("Committing current buffer. Enter message: ")
+    if msg == "" then
+        return vim.notify("Commit aborted: empty message")
+    end
+
+    local escaped_msg = vim.fn.escape(msg, '"\\')
+    local escaped_file = vim.fn.fnameescape(file)
+    vim.cmd(string.format('Git commit -m "%s" -- %s', escaped_msg, escaped_file))
 end)
 
 -- Various git commands:
