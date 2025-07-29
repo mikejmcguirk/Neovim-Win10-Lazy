@@ -368,20 +368,22 @@ vim.keymap.set("n", "zqd", function()
     end, cached_spec)
     local r = {}
     for _, p in pairs(f) do
+        if #t == 0 then
+            break
+        end
         if vim.tbl_contains(t, p.spec.name) then
             table.insert(r, p.spec.name)
+            t = vim.tbl_filter(function(x)
+                return x == p.spec.name
+            end, t)
         end
     end
 
     if #r <= 0 then
         return
     end
-
-    vim.notify(
-        "Verify the following plugins are removed from the installation spec: "
-            .. table.concat(r, ", "),
-        vim.log.levels.INFO
-    )
+    local r_str = table.concat(r, ", ")
+    vim.notify("Verify removal from installatin spec: " .. r_str, vim.log.levels.INFO)
 end)
 
 vim.keymap.set("n", "zqr", function()
