@@ -115,6 +115,7 @@ local function cache_git_data(packs, sync)
             local commit = vim.fn.system(commit_cmd):gsub("\n$", "")
             cached_git_data[pack.spec.name] = { date = date, commit = commit }
         end
+        is_fetching = false
     else
         started = true
         is_fetching = true
@@ -135,7 +136,7 @@ local function cache_spec()
     cached_spec = vim.pack.get()
 end
 
-local function rebuild_cache()
+local function rebuild_cache(opts)
     started = true
     is_fetching = true
 
@@ -146,42 +147,17 @@ local function rebuild_cache()
         return
     end
 
-    cache_git_data(cached_spec, false)
+    opts = opts or {}
+    cache_git_data(cached_spec, opts.sync)
 end
 
 vim.keymap.set("n", "zqc", function()
     rebuild_cache()
 end)
 
-vim.api.nvim_create_autocmd({ "SourcePost", "UIEnter" }, {
+vim.api.nvim_create_autocmd({ "UIEnter" }, {
     group = vim.api.nvim_create_augroup("cache-packs", { clear = true }),
-    callback = function(ev)
-        if ev.event == "SourcePost" then
-            local bufnr_str = ev.file:match("^:source buffer=(%d+)$")
-            if not bufnr_str then
-                vim.notify("Unable to get bufnr from SourcePost event string", vim.log.levels.WARN)
-                return
-            end
-
-            local bufnr = tonumber(bufnr_str)
-            if not bufnr then
-                return vim.notify(
-                    "Unable to convert bufnr_str "
-                        .. bufnr_str
-                        .. " to a number"
-                        .. vim.log.levels.WARN
-                )
-            end
-
-            local file_name = vim.api.nvim_buf_get_name(bufnr)
-            -- NOTE: This would cause it to source on the nvim-pack ftplugin file
-            -- Fix if this becomes an issue
-            if not file_name:match("pack.lua") then
-                return
-            end
-        end
-        vim.fn.confirm("building")
-
+    callback = function()
         vim.defer_fn(function()
             rebuild_cache()
         end, 50)
@@ -281,10 +257,9 @@ end
 
 vim.keymap.set("n", "zqe", function()
     vim.api.nvim_echo({ { "Getting current plugin state..." } }, false, {})
-    local has_cache = wait_for_fetch()
+    local has_cache = wait_for_fetch() and cached_spec and cached_git_data
     if not has_cache then
-        cache_spec()
-        cache_git_data(cached_spec, true)
+        rebuild_cache({ sync = true })
     end
 
     table.sort(cached_spec, function(a, b)
@@ -308,10 +283,9 @@ end)
 
 vim.keymap.set("n", "zqu", function()
     vim.notify("Getting current plugin state...")
-    local has_cache = wait_for_fetch()
+    local has_cache = wait_for_fetch() and cached_spec and cached_git_data
     if not has_cache then
-        cache_spec()
-        cache_git_data(cached_spec, true)
+        rebuild_cache({ sync = true })
     end
 
     local old_git = {}
@@ -378,28 +352,34 @@ vim.keymap.set("n", "zqd", function()
     if input == "" then
         return
     end
+
+    local has_cache = wait_for_fetch() and cached_spec and cached_git_data
+    if not has_cache then
+        vim.notify("Rebuilding cache...", vim.log.levels.WARN)
+        rebuild_cache({ sync = true })
+        vim.api.nvim_echo({ { "" } }, false, {})
+    end
+
     local t = tbl_from_str(input)
     vim.pack.del(t)
 
-    if not cached_spec then
-        return vim.notify("No cached spec to check", vim.log.levels.WARN)
-    elseif #cached_spec == 0 then
-        return vim.notify("Cached spec is empty", vim.log.levels.WARN)
-    end
-
-    local n = {}
-    for _, p in pairs(cached_spec) do
+    local f = vim.tbl_filter(function(x)
+        return x.active == true
+    end, cached_spec)
+    local r = {}
+    for _, p in pairs(f) do
         if vim.tbl_contains(t, p.spec.name) then
-            table.insert(n, p.spec.name)
+            table.insert(r, p.spec.name)
         end
     end
 
-    if #n <= 0 then
+    if #r <= 0 then
         return
     end
 
     vim.notify(
-        "The following plugins are still in spec: " .. table.concat(n, ", "),
+        "Verify the following plugins are removed from the installation spec: "
+            .. table.concat(r, ", "),
         vim.log.levels.INFO
     )
 end)
