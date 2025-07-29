@@ -235,9 +235,13 @@ end
 local function open_giftwrap_buf(bufnr)
     local cur_tab_count = #vim.api.nvim_list_tabpages()
     vim.cmd(cur_tab_count .. "tabnew")
+
     local new_tab_id = vim.api.nvim_list_tabpages()[cur_tab_count + 1]
     local tab_win = vim.api.nvim_tabpage_get_win(new_tab_id)
+    local noname_buf = vim.api.nvim_win_get_buf(tab_win)
+
     vim.api.nvim_win_set_buf(tab_win, bufnr)
+    vim.api.nvim_buf_delete(noname_buf, { force = true })
 end
 
 vim.keymap.set("n", "zqe", function()
