@@ -41,6 +41,8 @@ local function setup_conform()
             })
         end,
     })
+
+    vim.o.formatexpr = "v:lua.require'conform'.formatexpr()"
 end
 
 vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
