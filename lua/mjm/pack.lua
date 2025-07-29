@@ -384,6 +384,26 @@ vim.keymap.set("n", "zqr", function()
     if input == "" then
         return
     end
+
+    local has_cache = wait_for_fetch() and cached_spec and cached_git_data
+    if not has_cache then
+        vim.notify("Rebuilding cache...", vim.log.levels.WARN)
+        rebuild_cache({ sync = true })
+        vim.api.nvim_echo({ { "" } }, false, {})
+    end
+
+    local spec
+    for _, p in pairs(cached_spec) do
+        if p.spec.name == input then
+            spec = p.spec
+        end
+    end
+
     vim.pack.del(tbl_from_str(input))
-    vim.pack.add(pack_spec)
+
+    if not spec then
+        vim.notify("No plugin spec to re-install", vim.log.levels.INFO)
+        return
+    end
+    vim.pack.add({ spec })
 end)
