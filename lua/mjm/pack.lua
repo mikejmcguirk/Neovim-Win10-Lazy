@@ -149,6 +149,10 @@ local function rebuild_cache()
     cache_git_data(cached_spec, false)
 end
 
+vim.keymap.set("n", "zqr", function()
+    rebuild_cache()
+end)
+
 vim.api.nvim_create_autocmd("UIEnter", {
     group = vim.api.nvim_create_augroup("cache-packs", { clear = true }),
     once = true,
