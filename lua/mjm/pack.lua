@@ -153,10 +153,35 @@ vim.keymap.set("n", "zqc", function()
     rebuild_cache()
 end)
 
-vim.api.nvim_create_autocmd("UIEnter", {
+vim.api.nvim_create_autocmd({ "SourcePost", "UIEnter" }, {
     group = vim.api.nvim_create_augroup("cache-packs", { clear = true }),
-    once = true,
-    callback = function()
+    callback = function(ev)
+        if ev.event == "SourcePost" then
+            local bufnr_str = ev.file:match("^:source buffer=(%d+)$")
+            if not bufnr_str then
+                vim.notify("Unable to get bufnr from SourcePost event string", vim.log.levels.WARN)
+                return
+            end
+
+            local bufnr = tonumber(bufnr_str)
+            if not bufnr then
+                return vim.notify(
+                    "Unable to convert bufnr_str "
+                        .. bufnr_str
+                        .. " to a number"
+                        .. vim.log.levels.WARN
+                )
+            end
+
+            local file_name = vim.api.nvim_buf_get_name(bufnr)
+            -- NOTE: This would cause it to source on the nvim-pack ftplugin file
+            -- Fix if this becomes an issue
+            if not file_name:match("pack.lua") then
+                return
+            end
+        end
+        vim.fn.confirm("building")
+
         vim.defer_fn(function()
             rebuild_cache()
         end, 50)
@@ -353,7 +378,30 @@ vim.keymap.set("n", "zqd", function()
     if input == "" then
         return
     end
-    vim.pack.del(tbl_from_str(input))
+    local t = tbl_from_str(input)
+    vim.pack.del(t)
+
+    if not cached_spec then
+        return vim.notify("No cached spec to check", vim.log.levels.WARN)
+    elseif #cached_spec == 0 then
+        return vim.notify("Cached spec is empty", vim.log.levels.WARN)
+    end
+
+    local n = {}
+    for _, p in pairs(cached_spec) do
+        if vim.tbl_contains(t, p.spec.name) then
+            table.insert(n, p.spec.name)
+        end
+    end
+
+    if #n <= 0 then
+        return
+    end
+
+    vim.notify(
+        "The following plugins are still in spec: " .. table.concat(n, ", "),
+        vim.log.levels.INFO
+    )
 end)
 
 vim.keymap.set("n", "zqr", function()
