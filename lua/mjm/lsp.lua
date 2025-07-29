@@ -8,7 +8,7 @@ vim.keymap.del("n", "grn")
 vim.keymap.del("n", "gra")
 vim.keymap.del("n", "grr")
 vim.keymap.del("n", "gri")
--- vim.keymap.del("n", "grt") -- Disabled because I'm running 0.11.2
+vim.keymap.del("n", "grt")
 vim.keymap.del("n", "gO")
 vim.keymap.del("i", "<C-S>")
 
