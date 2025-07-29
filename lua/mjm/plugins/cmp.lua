@@ -1,3 +1,5 @@
+-- FUTURE: Investigate blink.cmp
+
 vim.opt.completeopt = { "menu", "menuone", "noselect" }
 
 local formatting = {

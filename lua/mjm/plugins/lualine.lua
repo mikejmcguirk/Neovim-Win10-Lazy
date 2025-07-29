@@ -1,3 +1,5 @@
+--- FUTURE: Roll own statusline
+
 local theme = "fluoromachine"
 
 require("lsp-progress").setup()
