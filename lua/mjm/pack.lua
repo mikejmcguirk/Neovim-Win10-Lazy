@@ -81,7 +81,7 @@ vim.pack.add({
     { src = "https://github.com/tpope/vim-fugitive" },
 
     { src = "https://github.com/folke/zen-mode.nvim" },
-})
+}, { load = false })
 
 local cache = {}
 local started = false

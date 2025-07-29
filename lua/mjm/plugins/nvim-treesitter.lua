@@ -16,16 +16,18 @@ local languages = {
     "markdown_inline",
     "markdown",
     -- Optional
-    "javascript",
-    "html",
+    "c_sharp",
+    "bash",
     "css",
+    "javascript",
+    "json",
+    "go",
+    "html",
+    "perl",
+    "python",
     "rust",
     "sql",
-    "python",
-    "json",
     "typescript",
-    "bash",
-    "go",
 }
 ts.install(languages)
 
@@ -39,5 +41,17 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
         end
 
         -- vim.bo[ev.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+    end,
+})
+
+-- Defer execution until after Neovim automatically executes packadd. I have the vim.pack step
+-- to do so early disabled
+vim.api.nvim_create_autocmd("VimEnter", {
+    group = vim.api.nvim_create_augroup("run-tsupdate", { clear = true }),
+    pattern = "*",
+    callback = function()
+        vim.schedule_wrap(function()
+            vim.cmd("TSUpdate")
+        end)
     end,
 })

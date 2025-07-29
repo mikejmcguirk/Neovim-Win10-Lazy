@@ -22,16 +22,13 @@ vim.g.loaded_zip = 1
 
 require("mjm.global_vars")
 
--- Have to do this before it's registered
-vim.g.qs_highlight_on_keys = { "f", "F", "t", "T" }
-vim.g.qs_max_chars = 9999
-
 -- Ensure nothing's missed
 vim.keymap.set({ "n", "x" }, "<Space>", "<Nop>")
 vim.g.mapleader = " "
 vim.g.maplocaleader = " "
 
 local env_setup = vim.loop.hrtime()
+
 require("mjm.pack")
 local pack_finish = vim.loop.hrtime()
 
@@ -40,9 +37,7 @@ local pack_finish = vim.loop.hrtime()
 --------------------------
 
 require("mjm.plugins.colorscheme")
-require("mjm.plugins.quickscope") -- For the highlight groups
 require("mjm.plugins.nvim-treesitter")
-vim.cmd("TSUpdate")
 
 require("mjm.plugins.harpoon")
 require("mjm.plugins.lualine")
@@ -50,6 +45,8 @@ require("mjm.plugins.lualine")
 require("mjm.plugins.dadbod")
 require("mjm.plugins.fugitive")
 require("mjm.plugins.fzflua")
+
+require("mjm.plugins.quickscope") -- Nothing to lazy load
 local eager_loaded = vim.loop.hrtime()
 
 ------------------------------
