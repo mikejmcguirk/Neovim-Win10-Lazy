@@ -1,5 +1,5 @@
 -- Only load if we enter a .md file in a defined Obsidian workspace
-local note_events = {}
+local note_paths = {}
 local workspaces = {
     {
         name = "main",
@@ -8,9 +8,7 @@ local workspaces = {
 } ---@type table
 
 for _, workspace in pairs(workspaces) do
-    local expanded_path = vim.fn.expand(workspace.path) .. "/*.md" ---@type string
-    table.insert(note_events, "BufReadPre " .. expanded_path)
-    table.insert(note_events, "BufNewFile " .. expanded_path)
+    table.insert(note_paths, vim.fn.expand(workspace.path) .. "/*.md")
 end
 
 local function load_obsidian()
@@ -190,7 +188,7 @@ local function load_obsidian()
 end
 
 local obsidian_group = vim.api.nvim_create_augroup("load-obsidian", { clear = true })
-for _, event in pairs(note_events) do
+for _, event in pairs(note_paths) do
     vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
         pattern = event,
         group = obsidian_group,
