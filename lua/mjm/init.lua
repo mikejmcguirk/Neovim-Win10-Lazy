@@ -4,7 +4,7 @@ local start = vim.loop.hrtime()
 -- Environment Setup --
 -----------------------
 
--- To avoid race conditions with nvim-tree
+-- Avoid race conditions with nvim-tree
 vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
 vim.g.loaded_netrwSettings = 1
@@ -141,8 +141,10 @@ vim.api.nvim_create_autocmd("UIEnter", {
             local padding = math.floor((vim.fn.winwidth(0) - #lines[i]) / 2)
             lines[i] = string.rep(" ", padding) .. line
         end
-        vim.api.nvim_buf_set_lines(0, 0, -1, false, lines)
 
+        local win = vim.api.nvim_get_current_win()
+        local bufnr = vim.api.nvim_win_get_buf(win)
+        vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
         local buf_opts = {
             { "buftype", "nofile" },
             { "bufhidden", "wipe" },
@@ -153,7 +155,19 @@ vim.api.nvim_create_autocmd("UIEnter", {
             { "buflisted", false },
         }
         for _, option in pairs(buf_opts) do
-            vim.api.nvim_set_option_value(option[1], option[2], { buf = 0 })
+            vim.api.nvim_set_option_value(option[1], option[2], { buf = bufnr })
         end
+
+        vim.api.nvim_create_autocmd("BufLeave", {
+            group = vim.api.nvim_create_augroup("leave-greeter", { clear = true }),
+            buffer = bufnr,
+            once = true,
+            callback = function()
+                -- Treesitter fails in the next buffer if not scheduled wrapped
+                vim.schedule_wrap(function()
+                    vim.api.nvim_buf_delete(bufnr, { force = true })
+                end)
+            end,
+        })
     end,
 })
