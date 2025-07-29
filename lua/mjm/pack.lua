@@ -83,13 +83,13 @@ vim.pack.add({
     { src = "https://github.com/folke/zen-mode.nvim" },
 }, { load = false })
 
-local cache = {}
+local cached_git_data = {}
 local started = false
 local is_fetching = false
 local pending_fetches = 0
-local cached_packs
+local cached_spec
 
-local function fetch_pack_data(pack, callback)
+local function fetch_git_data(pack, callback)
     local cmd = { "git", "-C", pack.path, "log", "-1", "--format=%cd %H", "--date=short" }
     vim.system(cmd, { text = true }, function(result)
         local date = "Unknown"
@@ -104,7 +104,7 @@ local function fetch_pack_data(pack, callback)
     end)
 end
 
-local function cache_packs(packs, sync)
+local function cache_git_data(packs, sync)
     if sync then
         for _, pack in ipairs(packs) do
             local path_esc = vim.fn.shellescape(pack.path)
@@ -113,15 +113,15 @@ local function cache_packs(packs, sync)
             local date = date_output:match("%d%d%d%d%-%d%d%-%d%d") or "Unknown"
             local commit_cmd = string.format("git -C %s rev-parse HEAD", path_esc)
             local commit = vim.fn.system(commit_cmd):gsub("\n$", "")
-            cache[pack.spec.name] = { date = date, commit = commit }
+            cached_git_data[pack.spec.name] = { date = date, commit = commit }
         end
     else
         started = true
         is_fetching = true
         pending_fetches = #packs
         for _, pack in ipairs(packs) do
-            fetch_pack_data(pack, function(data)
-                cache[pack.spec.name] = data
+            fetch_git_data(pack, function(data)
+                cached_git_data[pack.spec.name] = data
                 pending_fetches = pending_fetches - 1
                 if pending_fetches == 0 then
                     is_fetching = false
@@ -131,20 +131,22 @@ local function cache_packs(packs, sync)
     end
 end
 
-local function wait_for_fetch()
-    if not started then
-        return false
+local function cache_spec()
+    cached_spec = vim.pack.get()
+end
+
+local function rebuild_cache()
+    started = true
+    is_fetching = true
+
+    cache_spec()
+    pending_fetches = #cached_spec
+    if pending_fetches == 0 then
+        is_fetching = false
+        return
     end
-    if not is_fetching then
-        return true
-    end
-    local success = vim.wait(30000, function()
-        return not is_fetching
-    end, 50)
-    if not success then
-        vim.notify("Timeout waiting for plugin data fetch", vim.log.levels.WARN)
-    end
-    return success
+
+    cache_git_data(cached_spec, false)
 end
 
 vim.api.nvim_create_autocmd("UIEnter", {
@@ -152,28 +154,31 @@ vim.api.nvim_create_autocmd("UIEnter", {
     once = true,
     callback = function()
         vim.defer_fn(function()
-            started = true
-            is_fetching = true
-            local initial_packs = vim.pack.get()
-            pending_fetches = #initial_packs
-            if pending_fetches == 0 then
-                cached_packs = initial_packs
-                is_fetching = false
-                return
-            end
-            for _, pack in ipairs(initial_packs) do
-                fetch_pack_data(pack, function(data)
-                    cache[pack.spec.name] = data
-                    pending_fetches = pending_fetches - 1
-                    if pending_fetches == 0 then
-                        cached_packs = initial_packs
-                        is_fetching = false
-                    end
-                end)
-            end
-        end, 100)
+            rebuild_cache()
+        end, 50)
     end,
 })
+
+local function wait_for_fetch()
+    if not started then
+        return false
+    end
+
+    if not is_fetching then
+        return true
+    end
+
+    local result = vim.wait(10000, function()
+        is_fetching = false
+        return is_fetching
+    end, 50)
+
+    if not result then
+        vim.notify("Timeout waiting for plugin data fetch", vim.log.levels.WARN)
+    end
+
+    return result
+end
 
 --- @param lines string[]
 --- @param pack vim.pack.PlugData
@@ -183,7 +188,7 @@ local function add_base_lines(lines, pack, opts)
     table.insert(lines, string.format("Source: %s (%s)", pack.spec.src, pack.spec.version))
     table.insert(lines, string.format("Path: %s", pack.path))
 
-    local data = cache[pack.spec.name] or { date = "Unknown" }
+    local data = cached_git_data[pack.spec.name] or { date = "Unknown" }
     table.insert(lines, string.format("Last Updated: %s", data.date))
 
     opts = opts or {}
@@ -198,13 +203,14 @@ local function new_giftwrap_buf(lines, name_lines)
     local bufnr = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
     local options = {
-        { "buftype", "nofile" },
         { "bufhidden", "wipe" },
-        { "swapfile", false },
-        { "readonly", true },
+        { "buflisted", false },
+        { "buftype", "nofile" },
+        { "filetype", "giftwrap" },
         { "modifiable", false },
         { "modified", false },
-        { "buflisted", false },
+        { "readonly", true },
+        { "swapfile", false },
     }
     for _, option in pairs(options) do
         vim.api.nvim_set_option_value(option[1], option[2], { buf = bufnr })
@@ -247,23 +253,18 @@ end
 vim.keymap.set("n", "zqe", function()
     vim.api.nvim_echo({ { "Getting current plugin state..." } }, false, {})
     local has_cache = wait_for_fetch()
-    local packs
-    if has_cache then
-        packs = cached_packs
-    else
-        started = true
-        is_fetching = false
-        packs = vim.pack.get()
-        cache_packs(packs, true)
-        cached_packs = packs
+    if not has_cache then
+        cache_spec()
+        cache_git_data(cached_spec, true)
     end
-    table.sort(packs, function(a, b)
+
+    table.sort(cached_spec, function(a, b)
         return a.spec.name < b.spec.name
     end)
 
     local lines = {}
     local name_lines = {}
-    for _, pack in ipairs(packs) do
+    for _, pack in ipairs(cached_spec) do
         local hl_group = pack.active and "DiagnosticHint" or "DiagnosticWarn"
         table.insert(name_lines, { idx = #lines, group = hl_group })
         lines = add_base_lines(lines, pack, { add_blank = true })
@@ -278,39 +279,35 @@ end)
 
 vim.keymap.set("n", "zqu", function()
     vim.notify("Getting current plugin state...")
-    local success = wait_for_fetch()
-    local old_packs
-    if success then
-        old_packs = cached_packs
-    else
-        is_fetching = false
-        old_packs = vim.pack.get()
-        cache_packs(old_packs, true)
-        cached_packs = old_packs
+    local has_cache = wait_for_fetch()
+    if not has_cache then
+        cache_spec()
+        cache_git_data(cached_spec, true)
     end
-    local old_data = {}
-    for _, pack in ipairs(old_packs) do
-        old_data[pack.spec.name] = cache[pack.spec.name] or { commit = "", date = "Unknown" }
+
+    local old_git = {}
+    for _, pack in ipairs(cached_spec) do
+        old_git[pack.spec.name] = cached_git_data[pack.spec.name]
+            or { commit = "", date = "Unknown" }
     end
 
     vim.notify("Updating vim.pack...")
     vim.pack.update({}, { force = true })
-    local new_packs = vim.pack.get()
-    cache_packs(new_packs, true)
-
-    table.sort(new_packs, function(a, b)
+    cache_git_data(cached_spec, true)
+    table.sort(cached_spec, function(a, b)
         return a.spec.name < b.spec.name
     end)
 
     local lines = {}
     local name_lines = {}
-    for _, pack in ipairs(new_packs) do
+    for _, pack in ipairs(cached_spec) do
         local hl_group = pack.active and "DiagnosticHint" or "DiagnosticWarn"
         table.insert(name_lines, { idx = #lines, group = hl_group })
         lines = add_base_lines(lines, pack)
 
-        local prev_state = old_data[pack.spec.name] or { commit = "", date = "Unknown" }
-        local new_data = cache[pack.spec.name] or { commit = "Unknown", date = "Unknown" }
+        local prev_state = old_git[pack.spec.name] or { commit = "", date = "Unknown" }
+        local new_data = cached_git_data[pack.spec.name]
+            or { commit = "Unknown", date = "Unknown" }
         local updated = new_data.commit ~= prev_state.commit
 
         if updated and prev_state.commit ~= "" then
