@@ -11,11 +11,9 @@ local function setup_flash()
         highlight = {
             backdrop = false,
             groups = {
-                current = "CurSearch",
-                -- TODO: Create this as an hl group in the colorscheme config so I'm not relying
-                -- on QuickScope to make it
+                current = "QuickScopeSecondary",
                 label = "QuickScopePrimary",
-                match = "CurSearch",
+                match = "QuickScopeSecondary",
             },
         },
     })
