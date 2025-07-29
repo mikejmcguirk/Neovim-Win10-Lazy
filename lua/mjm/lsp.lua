@@ -123,17 +123,14 @@ vim.api.nvim_create_autocmd("BufUnload", {
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 local cmp_capabilities = require("cmp_nvim_lsp").default_capabilities()
 capabilities = vim.tbl_deep_extend("force", capabilities, cmp_capabilities)
+vim.lsp.config("*", { capabilities = capabilities })
 
-vim.lsp.config("bashls", { capabilities = capabilities })
 vim.lsp.enable("bashls")
-vim.lsp.config("lua_ls", { capabilities = capabilities })
 vim.lsp.enable("lua_ls")
-vim.lsp.config("taplo", { capabilities = capabilities })
 vim.lsp.enable("taplo")
 
 -- FUTURE: Figure out why code lens isn't working
 vim.lsp.config("rust_analyzer", {
-    capabilities = capabilities,
     settings = {
         ["rust-analyzer"] = {
             checkOnSave = true,
@@ -153,21 +150,15 @@ vim.lsp.config("rust_analyzer", {
 
 vim.lsp.enable("rust_analyzer")
 
-vim.lsp.config("gopls", { capabilities = capabilities })
 vim.lsp.enable("gopls")
-vim.lsp.config("golangci_lint_ls", { capabilities = capabilities })
 vim.lsp.enable("golangci_lint_ls")
 
-vim.lsp.config("html", { capabilities = capabilities })
 vim.lsp.enable("html")
-vim.lsp.config("cssls", { capabilities = capabilities })
 vim.lsp.enable("cssls")
 
-vim.lsp.config("ruff", { capabilities = capabilities })
 vim.lsp.enable("ruff")
 -- Ruff is not feature-complete enough to replace pylsp
 vim.lsp.config("pylsp", {
-    { capabilities = capabilities },
     settings = {
         pylsp = {
             plugins = {
