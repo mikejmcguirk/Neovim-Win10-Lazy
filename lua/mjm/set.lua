@@ -1,6 +1,3 @@
--- Load useful plugins
-vim.cmd("packadd cfilter")
-
 vim.opt.mouse = "a" -- Otherwise, the terminal handles mouse functionality
 vim.o.mousescroll = "ver:0,hor:0"
 

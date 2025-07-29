@@ -1,7 +1,10 @@
+vim.cmd("packadd cfilter")
+
 vim.opt_local.colorcolumn = ""
 vim.o.buflisted = false
 
 vim.keymap.set("n", "q", "<cmd>q<cr>", { buffer = true })
+
 vim.keymap.set("n", "dd", function()
     local row = vim.api.nvim_win_get_cursor(0)[1]
     local cur_win = vim.api.nvim_get_current_win()
