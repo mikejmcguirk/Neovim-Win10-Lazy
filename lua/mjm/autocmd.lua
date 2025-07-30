@@ -31,7 +31,8 @@ vim.api.nvim_create_autocmd({ "WinNew", "WinEnter" }, {
     pattern = "*",
     callback = function(ev)
         local is_insert = string.match(vim.fn.mode(), "i") -- Don't match in blink windows
-        local is_no_match_buf = vim.tbl_contains(no_match, vim.bo[ev.buf].filetype)
+        local ft = vim.api.nvim_get_option_value("filetype", { buf = ev.buf })
+        local is_no_match_buf = vim.tbl_contains(no_match, ft)
         if is_insert or is_no_match_buf then
             return
         end
@@ -110,10 +111,10 @@ vim.api.nvim_create_autocmd(clear_conditions, {
 vim.api.nvim_create_autocmd({ "FileType" }, {
     group = mjm_group,
     pattern = "*",
-    callback = function(ev)
+    callback = function()
         vim.opt.formatoptions:remove("o")
 
-        if not vim.api.nvim_get_option_value("filetype", { buf = ev.buf }) == "markdown" then
+        if not vim.fn.expand("<amatch>") == "markdown" then
             -- "r" in Markdown treats "- some text" as a comment and indents them
             vim.opt.formatoptions:append("r")
         end
