@@ -94,8 +94,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
 
         vim.lsp.document_color.enable(true, buf)
-
         if client:supports_method(methods.textDocument_documentColor) then
+            -- Maria Solano map (kinda)
             vim.keymap.set("n", "grc", function()
                 -- vim.lsp.document_color.color_presentation()
                 vim.lsp.document_color.enable(not vim.lsp.document_color.is_enabled())
