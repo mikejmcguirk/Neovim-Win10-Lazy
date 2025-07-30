@@ -129,11 +129,6 @@ vim.api.nvim_create_autocmd("BufUnload", {
     end,
 })
 
-local capabilities = vim.lsp.protocol.make_client_capabilities()
-local cmp_capabilities = require("cmp_nvim_lsp").default_capabilities()
-capabilities = vim.tbl_deep_extend("force", capabilities, cmp_capabilities)
-vim.lsp.config("*", { capabilities = capabilities })
-
 vim.lsp.enable("bashls")
 vim.lsp.enable("lua_ls")
 vim.lsp.enable("taplo")

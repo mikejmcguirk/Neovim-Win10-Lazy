@@ -26,14 +26,10 @@ local function setup_autopairs()
         rule("'", "',", "lua"):with_pair(ts_conds.is_ts_node({ "table_constructor" })),
         rule('"', '",', "lua"):with_pair(ts_conds.is_ts_node({ "table_constructor" })),
     })
-
-    local cmp_autopairs = require("nvim-autopairs.completion.cmp")
-    local cmp = require("cmp")
-    cmp.event:on("confirm_done", cmp_autopairs.on_confirm_done())
 end
 
 vim.api.nvim_create_autocmd("InsertEnter", {
-    group = vim.api.nvim_create_augroup("load-textmanip-insert", { clear = true }),
+    group = vim.api.nvim_create_augroup("setup-autopairs", { clear = true }),
     once = true,
     callback = function()
         setup_autopairs()

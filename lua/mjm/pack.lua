@@ -2,7 +2,8 @@
 -- https://github.com/kosayoda/nvim-lightbulb
 -- Show icon where code actions are available, but would need more aesthetic icon
 
-vim.pack.add({
+-- TODO: Check plugins for version ranges
+local pack_spec = {
     -- Multi-deps
     { src = "https://github.com/mike-jl/harpoonEx" },
     { src = "https://github.com/nvim-tree/nvim-web-devicons" },
@@ -27,7 +28,7 @@ vim.pack.add({
     { src = "https://github.com/echasnovski/mini.indentscope" },
 
     -- { src = "https://github.com/folke/lazydev.nvim" },
-    { src = "https://github.com/Jari27/lazydev.nvim" },
+    { src = "https://github.com/Jari27/lazydev.nvim", version = "deprecate_client_notify" },
 
     -- Requires nvim-web-devicons, Harpoon, and HarpoonEx
     { src = "https://github.com/nvim-lualine/lualine.nvim" },
@@ -37,19 +38,12 @@ vim.pack.add({
 
     { src = "https://github.com/windwp/nvim-autopairs" },
 
-    { src = "https://github.com/hrsh7th/nvim-cmp" },
-    { src = "https://github.com/hrsh7th/vim-vsnip" },
-    { src = "https://github.com/hrsh7th/cmp-vsnip" },
+    { src = "https://github.com/saghen/blink.cmp", version = vim.version.range("1.*") },
     { src = "https://github.com/rafamadriz/friendly-snippets" },
-    { src = "https://github.com/hrsh7th/cmp-nvim-lsp" },
-    -- Show current function signature
-    { src = "https://github.com/hrsh7th/cmp-nvim-lsp-signature-help" },
-    { src = "https://github.com/hrsh7th/cmp-buffer" },
-    -- From Nvim's built-in spell check },
-    { src = "https://github.com/f3fora/cmp-spell" },
-    { src = "https://github.com/FelipeLema/cmp-async-path" },
-    { src = "https://github.com/ray-x/cmp-sql" },
     { src = "https://github.com/kristijanhusak/vim-dadbod-completion" },
+    { src = "https://github.com/Saghen/blink.compat", version = vim.version.range("2.*") },
+    -- Requires plenary
+    { src = "https://github.com/Kaiser-Yang/blink-cmp-dictionary" },
 
     { src = "https://github.com/NvChad/nvim-colorizer.lua" },
 
@@ -57,7 +51,7 @@ vim.pack.add({
 
     { src = "https://github.com/nvim-treesitter/nvim-treesitter", version = "main" },
 
-    { src = "https://github.com/kylechui/nvim-surround" },
+    { src = "https://github.com/kylechui/nvim-surround", version = vim.version.range("^3.0.0") },
 
     -- Depends on nvim-web-devicons
     { src = "https://github.com/nvim-tree/nvim-tree.lua" },
@@ -81,7 +75,9 @@ vim.pack.add({
     { src = "https://github.com/tpope/vim-fugitive" },
 
     { src = "https://github.com/folke/zen-mode.nvim" },
-}, { load = false })
+}
+
+vim.pack.add(pack_spec, { load = false })
 
 local cached_git_data = {}
 local started = false

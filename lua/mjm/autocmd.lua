@@ -15,7 +15,14 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 })
 
 local match_control = vim.api.nvim_create_augroup("match_control", { clear = true })
-local no_match = { "TelescopePrompt", "git", "fzflua_backdrop", "help", "fzf", "query" }
+local no_match = {
+    "TelescopePrompt",
+    "git",
+    "fzflua_backdrop",
+    "help",
+    "fzf",
+    "query",
+}
 -- When doing vim.fn.matchadd, the scopes seem to get mixed up between different windows
 -- By using the cmd, the highlights disappear on WinLeave as they should
 
@@ -23,9 +30,12 @@ vim.api.nvim_create_autocmd({ "WinNew", "WinEnter" }, {
     group = match_control,
     pattern = "*",
     callback = function(ev)
-        if not vim.tbl_contains(no_match, vim.bo[ev.buf].filetype) then
-            vim.cmd([[match EolSpace /\s\+$/]])
+        local is_insert = string.match(vim.fn.mode(), "i") -- Don't match in blink windows
+        local is_no_match_buf = vim.tbl_contains(no_match, vim.bo[ev.buf].filetype)
+        if is_insert or is_no_match_buf then
+            return
         end
+        vim.cmd([[match EolSpace /\s\+$/]])
     end,
 })
 
@@ -46,9 +56,10 @@ vim.api.nvim_create_autocmd("ModeChanged", {
     group = match_control,
     pattern = "*:n",
     callback = function(ev)
-        if not vim.tbl_contains(no_match, vim.bo[ev.buf].filetype) then
-            vim.cmd([[match EolSpace /\s\+$/]])
+        if vim.tbl_contains(no_match, vim.bo[ev.buf].filetype) then
+            return
         end
+        vim.cmd([[match EolSpace /\s\+$/]])
     end,
 })
 

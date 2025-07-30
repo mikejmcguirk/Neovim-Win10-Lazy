@@ -47,6 +47,7 @@ require("mjm.plugins.fugitive")
 require("mjm.plugins.fzflua")
 
 require("mjm.plugins.quickscope") -- Nothing to lazy load
+require("mjm.plugins.blink") -- Setup is lazy, but do LSP capabilities here
 local eager_loaded = vim.loop.hrtime()
 
 ------------------------------
@@ -75,7 +76,6 @@ require("mjm.plugins.git_signs")
 require("mjm.plugins.indent_highlight")
 require("mjm.plugins.lazydev")
 require("mjm.plugins.markdown-preview")
-require("mjm.plugins.cmp")
 require("mjm.plugins.nvim-surround")
 require("mjm.plugins.nvim-tree")
 require("mjm.plugins.obsidian")

@@ -83,7 +83,7 @@ vim.opt.linebreak = true
 
 vim.opt.spell = false
 vim.opt.spelllang = "en_us"
-vim.opt.dictionary = "/usr/share/dict/words"
+vim.opt.dictionary = vim.fn.expand("~/.local/bin/words/words_alpha.txt")
 
 vim.opt.cursorline = true
 local cursorline_control = vim.api.nvim_create_augroup("cursorline_control", { clear = true })
