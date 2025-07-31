@@ -359,20 +359,20 @@ vim.keymap.set("n", "zqd", function()
     local t = tbl_from_str(input)
     vim.pack.del(t)
 
-    local r = vim.tbl_filter(function(x)
-        for _, p in pairs(cached_spec) do
-            if x == p.spec.name and p.active then
+    local f = vim.tbl_filter(function(x)
+        for _, c in pairs(cached_spec) do
+            if x == c.spec.name and c.active then
                 return true
             end
         end
         return false
     end, t)
 
-    if #r <= 0 then
+    if #f <= 0 then
         return
     end
-    local r_str = table.concat(r, ", ")
-    vim.notify("Verify removal from installation spec: " .. r_str, vim.log.levels.INFO)
+    local f_str = table.concat(f, ", ")
+    vim.notify("Verify removal from installation spec: " .. f_str, vim.log.levels.INFO)
 end)
 
 vim.keymap.set("n", "zqr", function()
@@ -388,18 +388,33 @@ vim.keymap.set("n", "zqr", function()
         vim.api.nvim_echo({ { "" } }, false, {})
     end
 
-    local spec
-    for _, p in pairs(cached_spec) do
-        if p.spec.name == input then
-            spec = p.spec
+    -- TODO: Go through config and use IIFE pattern where appropriate
+    local t = (function()
+        if input == "all_plugins" then
+            local t = {}
+            for _, p in pairs(cached_spec) do
+                table.insert(t, p.spec.name)
+            end
+            return t
+        else
+            return tbl_from_str(input)
+        end
+    end)()
+
+    vim.pack.del(t)
+
+    local s = {}
+    for _, c in pairs(cached_spec) do
+        if vim.tbl_contains(t, c.spec.name) then
+            table.insert(s, c.spec)
         end
     end
 
-    vim.pack.del(tbl_from_str(input))
-
-    if not spec then
+    if #s > 0 then
+        vim.pack.add(s)
+    else
         vim.notify("No plugin spec to re-install", vim.log.levels.INFO)
-        return
     end
-    vim.pack.add({ spec })
+
+    rebuild_cache()
 end)
