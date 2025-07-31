@@ -46,7 +46,7 @@ local function setup_conform()
         group = vim.api.nvim_create_augroup("conform-formatexpr", { clear = true }),
         pattern = "*",
         callback = function(ev)
-            if vim.tbl_contains(valid_filetypes, vim.fn.expand("<amatch>")) then
+            if vim.tbl_contains(valid_filetypes, ev.match) then
                 local expr = "v:lua.require'conform'.formatexpr()"
                 vim.api.nvim_set_option_value("formatexpr", expr, { buf = ev.buf })
             end

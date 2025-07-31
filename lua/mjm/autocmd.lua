@@ -111,10 +111,10 @@ vim.api.nvim_create_autocmd(clear_conditions, {
 vim.api.nvim_create_autocmd({ "FileType" }, {
     group = mjm_group,
     pattern = "*",
-    callback = function()
+    callback = function(ev)
         vim.opt.formatoptions:remove("o")
 
-        if not vim.fn.expand("<amatch>") == "markdown" then
+        if not ev.match == "markdown" then
             -- "r" in Markdown treats "- some text" as a comment and indents them
             vim.opt.formatoptions:append("r")
         end

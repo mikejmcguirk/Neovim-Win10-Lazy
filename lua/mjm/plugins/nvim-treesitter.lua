@@ -34,8 +34,8 @@ ts.install(languages)
 vim.api.nvim_create_autocmd({ "FileType" }, {
     group = vim.api.nvim_create_augroup("ts-start", { clear = true }),
     pattern = "*",
-    callback = function()
-        if vim.tbl_contains(languages, vim.fn.expand("<amatch>")) then
+    callback = function(ev)
+        if vim.tbl_contains(languages, ev.match) then
             vim.treesitter.start()
         end
 
