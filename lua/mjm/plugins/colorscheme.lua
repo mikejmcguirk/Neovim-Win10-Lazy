@@ -24,7 +24,9 @@ vim.api.nvim_set_hl(0, "EolSpace", { bg = cur_search.bg, fg = number_hl.fg })
 
 local color_col = vim.api.nvim_get_hl(0, { name = "ColorColumn" })
 vim.api.nvim_set_hl(0, "Cursorline", { bg = color_col.bg })
--- vim.api.nvim_set_hl(0, "Cursorline", { bg = "#454545" })
+
+local sl = vim.api.nvim_get_hl(0, { name = "StatusLine" })
+vim.api.nvim_set_hl(0, "StatusLineNC", { fg = sl.fg })
 
 local diag_text_groups = {
     ["DiagnosticError"] = "DiagnosticUnderlineError",
