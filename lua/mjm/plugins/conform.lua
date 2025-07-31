@@ -29,7 +29,8 @@ local function setup_conform()
         group = vim.api.nvim_create_augroup("conformer", { clear = true }),
         pattern = "*",
         callback = function(ev)
-            if not vim.tbl_contains(valid_filetypes, vim.bo[ev.buf].filetype) then
+            local ft = vim.api.nvim_get_option_value("filetype", { buf = ev.buf })
+            if not vim.tbl_contains(valid_filetypes, ft) then
                 return
             end
 
