@@ -2,11 +2,11 @@ vim.opt.mouse = "a" -- Otherwise, the terminal handles mouse functionality
 vim.o.mousescroll = "ver:0,hor:0"
 
 -- On my monitors, for files under 10k lines, a centered vsplit will be on the color column
-vim.opt.number = true
-vim.opt.relativenumber = true
-vim.opt.numberwidth = 5
-vim.opt.signcolumn = "yes:1"
-vim.opt.colorcolumn = "100"
+vim.opt.nu = true
+vim.opt.rnu = true
+vim.opt.nuw = 5
+vim.opt.scl = "yes:1"
+vim.opt.cc = "100"
 
 local rnu_control = vim.api.nvim_create_augroup("rnu_control", { clear = true })
 
@@ -30,8 +30,10 @@ local set_rnu = function(event, pattern, value)
     })
 end
 
-set_rnu({ "WinLeave", "CmdlineEnter" }, "*", false)
-set_rnu({ "WinEnter", "CmdlineLeave" }, "*", true)
+-- Note: Need BufLeave/BufEnter for this to work when going into help. Seems like the autocmds run
+-- before the buf is loaded, and rnu can't be set on Win Enter since there's no buffer
+set_rnu({ "WinLeave", "CmdlineEnter", "BufLeave" }, "*", false)
+set_rnu({ "WinEnter", "CmdlineLeave", "BufEnter" }, "*", true)
 
 vim.opt.tabstop = 4
 vim.opt.softtabstop = 4
