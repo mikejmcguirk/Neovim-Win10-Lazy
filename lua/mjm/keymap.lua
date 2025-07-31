@@ -51,7 +51,7 @@ vim.keymap.set("n", "V", "mvV", { silent = true })
 -- do the same so they can be used here
 
 -- Bash style typing
-vim.keymap.set("i", "<C-a>", "<Home>")
+vim.keymap.set("i", "<C-a>", "<C-o>I")
 vim.keymap.set("i", "<C-e>", "<End>")
 
 -- FUTURE: Rebind the default functionality
