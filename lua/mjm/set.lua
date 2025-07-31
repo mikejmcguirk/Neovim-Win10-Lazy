@@ -19,7 +19,8 @@ local set_rnu = function(event, pattern, value)
         group = rnu_control,
         pattern = pattern,
         callback = function(ev)
-            vim.opt_local.rnu = value
+            local win = vim.api.nvim_get_current_win()
+            vim.api.nvim_set_option_value("rnu", value, { win = win })
             if ev.event == "CmdlineEnter" then
                 if not vim.tbl_contains({ "@", "-" }, vim.v.event.cmdtype) then
                     vim.cmd("redraw")
@@ -97,7 +98,8 @@ local set_cursorline = function(event, pattern, value)
         group = cursorline_control,
         pattern = pattern,
         callback = function()
-            vim.opt_local.cursorline = value
+            local win = vim.api.nvim_get_current_win()
+            vim.api.nvim_set_option_value("cursorline", value, { win = win })
         end,
     })
 end
