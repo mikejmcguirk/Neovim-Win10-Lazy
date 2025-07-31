@@ -69,9 +69,11 @@ vim.keymap.set("n", "<leader>ff", fzf_lua.resume)
 
 vim.keymap.set("n", "<leader>fi", fzf_lua.files)
 vim.keymap.set("n", "<leader>fb", fzf_lua.buffers)
+
 vim.keymap.set("n", "<leader>fgf", fzf_lua.git_files)
 vim.keymap.set("n", "<leader>fgh", fzf_lua.git_hunks)
 vim.keymap.set("n", "<leader>fgs", fzf_lua.git_status)
+vim.keymap.set("n", "<leader>fgc", fzf_lua.git_commits)
 
 vim.keymap.set("n", "<leader>fp", fzf_lua.grep)
 vim.keymap.set("n", "<leader>fe", fzf_lua.live_grep)
