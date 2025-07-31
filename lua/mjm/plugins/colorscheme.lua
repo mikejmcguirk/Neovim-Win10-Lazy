@@ -8,7 +8,9 @@ fm.setup({
 
 vim.cmd("colorscheme fluoromachine")
 
-vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" })
+local old_norm_float = vim.api.nvim_get_hl(0, { name = "NormalFloat" })
+local new_norm_float = vim.tbl_extend("force", old_norm_float, { bg = "none" })
+vim.api.nvim_set_hl(0, "NormalFloat", new_norm_float)
 
 local old_float_border = vim.api.nvim_get_hl(0, { name = "FloatBorder" })
 local new_float_border = vim.tbl_extend("force", old_float_border, { bg = "none" })
@@ -22,11 +24,14 @@ local number_hl = vim.api.nvim_get_hl(0, { name = "Number" })
 local cur_search = vim.api.nvim_get_hl(0, { name = "CurSearch" })
 vim.api.nvim_set_hl(0, "EolSpace", { bg = cur_search.bg, fg = number_hl.fg })
 
-local color_col = vim.api.nvim_get_hl(0, { name = "ColorColumn" })
-vim.api.nvim_set_hl(0, "Cursorline", { bg = color_col.bg })
+local old_color_col = vim.api.nvim_get_hl(0, { name = "ColorColumn" })
+local new_color_col = vim.tbl_extend("force", old_color_col, { bg = "none" })
+vim.api.nvim_set_hl(0, "Cursorline", new_color_col)
 
-local sl = vim.api.nvim_get_hl(0, { name = "StatusLine" })
-vim.api.nvim_set_hl(0, "StatusLineNC", { fg = sl.fg })
+local old_stl_nc = vim.api.nvim_get_hl(0, { name = "StatusLineNC" })
+local stl = vim.api.nvim_get_hl(0, { name = "StatusLine" })
+local new_stl_nc = vim.tbl_extend("force", old_stl_nc, { fg = stl.fg })
+vim.api.nvim_set_hl(0, "StatusLineNC", new_stl_nc)
 
 local diag_text_groups = {
     ["DiagnosticError"] = "DiagnosticUnderlineError",
