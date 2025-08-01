@@ -66,7 +66,7 @@ vim.keymap.set("i", "<C-f>", "<right>")
 vim.keymap.set("i", "<M-b>", "<S-left>")
 vim.keymap.set("i", "<M-f>", "<S-right>")
 
--- FUTURE: Maybe make this paste after getting used to enter for cmp. Ctrl-r is the default, but
+-- FUTURE: Maybe make this paste after getting used to enter for blink. Ctrl-r is the default, but
 -- Ctrl-y is not a useful default and it would help with the Unix typing style pattern
 vim.keymap.set("i", "<C-y>", "<nop>")
 
@@ -74,9 +74,12 @@ vim.keymap.set("i", "<C-y>", "<nop>")
 vim.keymap.set("i", "<M-j>", "<Down>")
 vim.keymap.set("i", "<M-k>", "<Up>")
 
--- Reserved for cmp
+-- Reserved for blink
+vim.keymap.set("i", "<C-cr>", "<nop>")
 vim.keymap.set("i", "<C-n>", "<nop>")
 vim.keymap.set("i", "<C-p>", "<nop>")
+vim.keymap.set("i", "<M-n>", "<nop>")
+vim.keymap.set("i", "<M-p>", "<nop>")
 
 -- TODO: Where should this go?
 -- vim.keymap.set("i", "<C-e>", "<C-o>ze", { silent = true })

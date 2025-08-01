@@ -23,7 +23,6 @@ local function is_comment()
     end
 end
 
--- Change if slow
 local function setup_blink()
     require("blink.cmp").setup({
         completion = {
@@ -74,10 +73,12 @@ local function setup_blink()
                     cmp.select_next({ auto_insert = false })
                 end,
             },
+            -- FUTURE: Show/hide maps, both overall and specific sources
+            -- Thinking of using ctrl+r and moving register to ctrl+y
+            ["<M-p>"] = { "scroll_documentation_up" },
+            ["<M-n>"] = { "scroll_documentation_down" },
             ["<C-cr>"] = { "select_and_accept" },
             ["<C-y>"] = false,
-            ["<C-u>"] = { "scroll_documentation_up" },
-            ["<C-d>"] = { "scroll_documentation_down" },
         },
         signature = {
             enabled = true,
