@@ -1,12 +1,13 @@
-vim.opt.mouse = "a" -- Otherwise, the terminal handles mouse functionality
-vim.o.mousescroll = "ver:0,hor:0"
+-- Otherwise, the terminal handles mouse functionality
+vim.api.nvim_set_option_value("mouse", "a", { scope = "global" })
+vim.api.nvim_set_option_value("mousescroll", "ver:0,hor:0", { scope = "global" })
 
 -- On my monitors, for files under 10k lines, a centered vsplit will be on the color column
-vim.opt.nu = true
-vim.opt.rnu = true
-vim.opt.nuw = 5
-vim.opt.scl = "yes:1"
-vim.opt.cc = "100"
+vim.api.nvim_set_option_value("nu", true, { scope = "global" })
+vim.api.nvim_set_option_value("rnu", true, { scope = "global" })
+vim.api.nvim_set_option_value("nuw", 5, { scope = "global" })
+vim.api.nvim_set_option_value("scl", "yes:1", { scope = "global" })
+vim.api.nvim_set_option_value("cc", "100", { scope = "global" })
 
 local rnu_control = vim.api.nvim_create_augroup("rnu_control", { clear = true })
 
@@ -35,60 +36,63 @@ end
 set_rnu({ "WinLeave", "CmdlineEnter", "BufLeave" }, "*", false)
 set_rnu({ "WinEnter", "CmdlineLeave", "BufEnter" }, "*", true)
 
-vim.opt.tabstop = 4
-vim.opt.softtabstop = 4
-vim.opt.shiftwidth = 4
-vim.opt.expandtab = true
-vim.opt.shiftround = true
+vim.api.nvim_set_option_value("tabstop", 4, { scope = "global" })
+vim.api.nvim_set_option_value("softtabstop", 4, { scope = "global" })
+vim.api.nvim_set_option_value("shiftwidth", 4, { scope = "global" })
+vim.api.nvim_set_option_value("expandtab", true, { scope = "global" })
+vim.api.nvim_set_option_value("shiftround", true, { scope = "global" })
 
-vim.opt.fileformats = "unix,dos" -- Override \r\n on Windows
+-- Override \r\n on Windows
+vim.api.nvim_set_option_value("fileformats", "unix,dos", { scope = "global" })
 
-vim.opt.showmode = false
-vim.opt.modelines = 1
+vim.api.nvim_set_option_value("showmode", false, { scope = "global" })
+vim.api.nvim_set_option_value("modelines", 1, { scope = "global" })
 
 local blink_setting = "blinkon1-blinkoff1"
 local block_cursor = "n:" .. blink_setting
 local ver_cursor = "i-c-ci:ver100-" .. blink_setting
 local hor_cursor = "v-r:hor100-" .. blink_setting
-vim.cmd("set gcr=" .. block_cursor .. "," .. ver_cursor .. "," .. hor_cursor)
+local gcr = block_cursor .. "," .. ver_cursor .. "," .. hor_cursor
+vim.api.nvim_set_option_value("gcr", gcr, { scope = "global" })
 
-vim.opt.scrolloff = Scrolloff_Val
+vim.api.nvim_set_option_value("scrolloff", Scrolloff_Val, { scope = "global" })
 vim.opt.jumpoptions:append("view")
 vim.opt.matchpairs:append("<:>")
 vim.opt.cpoptions:append("W")
 
-vim.opt.selection = "old"
-vim.opt.smartindent = true
+vim.api.nvim_set_option_value("selection", "old", { scope = "global" })
+vim.api.nvim_set_option_value("smartindent", true, { scope = "global" })
 
 vim.opt.shortmess:append("I")
 vim.opt.shortmess:append("W")
 vim.opt.shortmess:append("s")
 vim.opt.shortmess:append("r")
 
-vim.opt.splitright = true
-vim.opt.splitbelow = true
+vim.api.nvim_set_option_value("splitright", true, { scope = "global" })
+vim.api.nvim_set_option_value("splitbelow", true, { scope = "global" })
 
-vim.opt.ignorecase = true
-vim.opt.smartcase = true
+vim.api.nvim_set_option_value("ignorecase", true, { scope = "global" })
+vim.api.nvim_set_option_value("smartcase", true, { scope = "global" })
 
-vim.opt.swapfile = false
-vim.opt.backup = false
-vim.opt.undofile = true
-vim.opt.updatetime = 250
+vim.api.nvim_set_option_value("swapfile", false, { scope = "global" })
+vim.api.nvim_set_option_value("backup", false, { scope = "global" })
+vim.api.nvim_set_option_value("undofile", true, { scope = "global" })
+vim.api.nvim_set_option_value("updatetime", 250, { scope = "global" })
 
-vim.opt.list = true
+vim.api.nvim_set_option_value("list", true, { scope = "global" })
 vim.opt.listchars = { tab = "<–>", extends = "»", precedes = "«", nbsp = "␣" }
 -- vim.opt.listchars = { tab = "<–>", extends = "»", precedes = "«", nbsp = "␣", trail = "⣿" }
 -- vim.opt.listchars = { eol = "↲", tab = "<–>", extends = "»", precedes = "«", nbsp = "␣" }
-vim.opt.wrap = false
-vim.opt.breakindent = true -- For fts where opt_local wrap is true
-vim.opt.linebreak = true
+vim.api.nvim_set_option_value("wrap", false, { scope = "global" })
+-- For fts where opt_local wrap is true
+vim.api.nvim_set_option_value("breakindent", true, { scope = "global" })
+vim.api.nvim_set_option_value("linebreak", true, { scope = "global" })
 
-vim.opt.spell = false
-vim.opt.spelllang = "en_us"
+vim.api.nvim_set_option_value("spell", false, { scope = "global" })
+vim.api.nvim_set_option_value("spelllang", "en_us", { scope = "global" })
 vim.opt.dictionary = vim.fn.expand("~/.local/bin/words/words_alpha.txt")
 
-vim.opt.cursorline = true
+vim.api.nvim_set_option_value("cursorline", true, { scope = "global" })
 local cursorline_control = vim.api.nvim_create_augroup("cursorline_control", { clear = true })
 
 ---@param event string
