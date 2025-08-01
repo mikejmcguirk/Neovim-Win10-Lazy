@@ -73,6 +73,8 @@ vim.api.nvim_set_option_value("splitbelow", true, { scope = "global" })
 
 vim.api.nvim_set_option_value("ignorecase", true, { scope = "global" })
 vim.api.nvim_set_option_value("smartcase", true, { scope = "global" })
+-- Don't want screen shifting while entering search/subsitute patterns
+vim.api.nvim_set_option_value("incsearch", false, { scope = "global" })
 
 vim.api.nvim_set_option_value("swapfile", false, { scope = "global" })
 vim.api.nvim_set_option_value("backup", false, { scope = "global" })
@@ -115,7 +117,6 @@ set_cursorline("WinEnter", "", true)
 
 ----------------
 
-vim.opt.incsearch = false -- Prevent screen shifting while entering search/substitute patterns
-vim.opt.lazyredraw = false -- Causes unpredictable problems
-vim.opt.startofline = false -- Makes gg/G feel weird
+-- vim.opt.lazyredraw = false -- Causes unpredictable problems
+-- vim.opt.startofline = false -- Makes gg/G feel weird
 -- vim.opt.winborder = "single" -- Sets arbitrary border around Zen mode display
