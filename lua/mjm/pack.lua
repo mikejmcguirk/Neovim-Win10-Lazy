@@ -284,14 +284,16 @@ vim.keymap.set("n", "zqu", function()
         rebuild_cache({ sync = true })
     end
 
+    local names = {}
     local old_git = {}
-    for _, pack in ipairs(cached_spec) do
-        old_git[pack.spec.name] = cached_git_data[pack.spec.name]
-            or { commit = "", date = "Unknown" }
+    for _, p in ipairs(cached_spec) do
+        old_git[p.spec.name] = cached_git_data[p.spec.name] or { commit = "", date = "Unknown" }
+
+        table.insert(names, p.spec.name)
     end
 
     vim.notify("Updating vim.pack...")
-    vim.pack.update({}, { force = true })
+    vim.pack.update(names, { force = true })
     cache_git_data(cached_spec, true)
     table.sort(cached_spec, function(a, b)
         return a.spec.name < b.spec.name
