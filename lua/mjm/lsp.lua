@@ -53,7 +53,50 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         if client:supports_method(methods.textDocument_references) then
             vim.keymap.set("n", "grr", function()
-                vim.lsp.buf.references({ includeDeclaration = false })
+                -- https://github.com/neovim/neovim/issues/35137
+                -- TODO: When resolved, add qf handling below to list_opts
+                -- vim.lsp.buf.references({ includeDeclaration = false })
+                local bufnr = buf
+                local win = vim.api.nvim_get_current_win()
+                local vim_lsp = require("vim.lsp")
+                local util = require("vim.lsp.util")
+                local ms = require("vim.lsp.protocol").Methods
+
+                vim_lsp.buf_request_all(bufnr, ms.textDocument_references, function(p_client)
+                    local params = util.make_position_params(win, p_client.offset_encoding)
+                    ---@diagnostic disable-next-line: inject-field
+                    params.context = { includeDeclaration = false }
+                    return params
+                end, function(results)
+                    local all_items = {}
+                    local title = "References"
+
+                    for client_id, res in pairs(results) do
+                        local r_client = assert(vim_lsp.get_client_by_id(client_id))
+                        local result = res.result or {} -- Add this
+                        -- Change this:
+                        -- local items = util.locations_to_items(res.result, client.offset_encoding)
+                        -- To this:
+                        local items = util.locations_to_items(result, r_client.offset_encoding)
+                        vim.list_extend(all_items, items)
+                    end
+
+                    if not next(all_items) then
+                        vim.notify("No references found")
+                    else
+                        local list = {
+                            title = title,
+                            items = all_items,
+                            context = {
+                                method = ms.textDocument_references,
+                                bufnr = bufnr,
+                            },
+                        }
+                        vim.fn.setqflist({}, " ", list)
+                        ut.close_all_loclists()
+                        vim.cmd("botright copen")
+                    end
+                end)
             end, { buffer = buf })
         end
 
