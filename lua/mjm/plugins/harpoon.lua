@@ -19,8 +19,6 @@ harpoon:setup({
                 return
             end
 
-            -- For some reason, the LSP does not recognize vim.uv
-            ---@diagnostic disable-next-line: undefined-field
             if not vim.uv.fs_stat(list_item.value) then
                 vim.notify("File " .. list_item.value .. " Does not exist", vim.log.levels.WARN)
                 return
@@ -96,14 +94,12 @@ end)
 
 local mark = 10
 for _ = 1, 10 do
-    -- Need to bring mark into this scope, or else final value of mark is
-    -- used for all maps
     local this_mark = mark -- 10, 1, 2, 3, 4, 5, 6, 7, 8, 9
     local mod_mark = this_mark % 10 -- 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+
     vim.keymap.set("n", string.format("<leader>%s", mod_mark), function()
-        if vim.bo.filetype == "qf" then
-            vim.notify("Currently in quickfix list", vim.log.levels.WARN)
-            return
+        if vim.api.nvim_get_option_value("filetype", { buf = 0 }) == "qf" then
+            return vim.notify("Currently in qf buffer", vim.log.levels.WARN)
         end
 
         harpoon:list():select(this_mark)
@@ -112,10 +108,34 @@ for _ = 1, 10 do
     mark = mod_mark + 1
 end
 
-local harpoonEx = require("harpoonEx")
-harpoon:extend(extensions.builtins.navigate_with_number())
-harpoon:extend(harpoonEx.extend())
+-- Adapted from mike-jl/harpoonEx
+local function del_cur_buf()
+    local list = harpoon:list()
+    if not list then
+        return
+    end
+    local items = list.items
+
+    local buf = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":p")
+    local idx = nil
+    for i, t in pairs(items) do
+        local item = vim.fn.fnamemodify(t.value, ":p")
+        if buf == item then
+            idx = i
+            break
+        end
+    end
+
+    if not idx then
+        return
+    end
+
+    table.remove(list.items, idx)
+    list._length = list._length - 1
+
+    extensions.extensions:emit(extensions.event_names.REMOVE)
+end
 
 vim.keymap.set("n", "<leader>ar", function()
-    harpoonEx.delete(harpoon:list())
+    del_cur_buf()
 end, { desc = "Delete current file from Harpoon List" })
