@@ -24,9 +24,10 @@ local number_hl = vim.api.nvim_get_hl(0, { name = "Number" })
 local cur_search = vim.api.nvim_get_hl(0, { name = "CurSearch" })
 vim.api.nvim_set_hl(0, "EolSpace", { bg = cur_search.bg, fg = number_hl.fg })
 
-local old_color_col = vim.api.nvim_get_hl(0, { name = "ColorColumn" })
-local new_color_col = vim.tbl_extend("force", old_color_col, { bg = "none" })
-vim.api.nvim_set_hl(0, "Cursorline", new_color_col)
+local color_col = vim.api.nvim_get_hl(0, { name = "ColorColumn" })
+local old_cursorline = vim.api.nvim_get_hl(0, { name = "CursorLine" })
+local new_cursorline = vim.tbl_extend("force", old_cursorline, { bg = color_col.bg })
+vim.api.nvim_set_hl(0, "CursorLine", new_cursorline)
 
 local old_stl_nc = vim.api.nvim_get_hl(0, { name = "StatusLineNC" })
 local stl = vim.api.nvim_get_hl(0, { name = "StatusLine" })
