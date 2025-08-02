@@ -261,17 +261,16 @@ end)
 
 local tab = 10
 for _ = 1, 10 do
-    -- Create inner-scoped tab so we don't make a closure
     local this_tab = tab -- 10, 1, 2, 3, 4, 5, 6, 7, 8, 9
     local mod_tab = this_tab % 10 -- 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
-    vim.keymap.set("n", string.format("<M-%s>", mod_tab), function()
-        local ok, err = pcall(function() ---@type boolean, unknown|nil
-            vim.cmd("tabn " .. this_tab)
-        end)
 
-        if not ok then
-            vim.notify(err or ("Unknown error moving to " .. this_tab), vim.log.levels.ERROR)
+    vim.keymap.set("n", string.format("<M-%s>", mod_tab), function()
+        local tabs = vim.api.nvim_list_tabpages()
+        if #tabs < this_tab then
+            return
         end
+
+        vim.api.nvim_set_current_tabpage(tabs[this_tab])
     end)
 
     tab = mod_tab + 1
