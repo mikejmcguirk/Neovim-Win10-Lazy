@@ -473,15 +473,6 @@ vim.keymap.set("n", "dJ", "Do<esc>p==", { silent = true })
 vim.keymap.set("n", "dK", "DO<esc>p==", { silent = true })
 vim.keymap.set("n", "dm", "<cmd>delmarks!<cr>")
 
-vim.keymap.set("n", "ss", function()
-    local count = vim.v.count1 - 1
-    if count > 1 then
-        return string.format("V%djP")
-    else
-        return "VP"
-    end
-end, { expr = true, silent = true })
-
 vim.api.nvim_create_autocmd("TextYankPost", {
     group = vim.api.nvim_create_augroup("yank_cleanup", { clear = true }),
     callback = function(ev)
