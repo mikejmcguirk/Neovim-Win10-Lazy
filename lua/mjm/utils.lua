@@ -213,33 +213,32 @@ end
 
 ---@return nil
 M.check_word_under_cursor = function()
-    local word = vim.fn.expand("<cword>") ---@type string
+    local word = vim.fn.expand("<cword>")
     if word == "" then
-        return vim.notify("No word under cursor")
+        return vim.notify("No word under cursor", vim.log.levels.INFO)
     end
 
-    if vim.fn.spellbadword(word) == "" then
-        return vim.notify("'" .. word .. "' is a valid word")
+    local cmd = "wn " .. vim.fn.shellescape(word) .. " -over"
+    local output = vim.fn.system(cmd)
+    if vim.v.shell_error == -1 then
+        return vim.notify("Error running wn: " .. output, vim.log.levels.ERROR)
     end
 
-    vim.notify("Checking dictionary...")
-    local dict_file = vim.opt.dictionary:get()[1] ---@type unknown
-    local grep_cmd
-    if vim.o.grepprg:match("^rg") then
-        grep_cmd = vim.o.grepprg
-            .. "-w --ignore-case "
-            .. vim.fn.shellescape(word)
-            .. " "
-            .. dict_file
-    else
-        grep_cmd = vim.o.grepprg .. "-w -i " .. vim.fn.shellescape(word) .. " " .. dict_file
+    local lines = {}
+    for line in output:gmatch("[^\n]+") do
+        line = line:match("^%s*(.-)%s*$")
+        if line ~= "" then
+            table.insert(lines, line)
+        end
     end
 
-    if vim.fn.system(grep_cmd) ~= "" then
-        return vim.notify("'" .. word .. "' is a valid word")
+    if #lines == 0 then
+        return vim.notify("No results from WordNet for '" .. word .. "'", vim.log.levels.INFO)
     end
 
-    vim.notify("'" .. word .. "' is misspelled or not in dictionary")
+    vim.lsp.util.open_floating_preview(lines, "markdown", { border = Border })
+end
+
 end
 
 return M

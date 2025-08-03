@@ -1,5 +1,5 @@
 -- FUTURE: Turn :let g: into a picker
--- FUTURE: What makes asnc messages not display?
+-- LOW: What makes asnc(?) messages not display?
 
 local fzf_lua = require("fzf-lua")
 local utils = require("fzf-lua.utils")
@@ -96,7 +96,7 @@ vim.keymap.set("n", "<leader>fh", function()
     })
 end)
 
--- FUTURE: Re-add this back in
+-- LOW: Re-add this back in
 -- vim.keymap.set("n", "<leader>tl", function()
 --     builtin.grep_string({
 --         prompt_title = "Help",
@@ -106,20 +106,50 @@ end)
 --     })
 -- end)
 
+local function fuzzy_dict()
+    vim.notify("Getting dictionary...")
+    local lines = {}
+    --- @diagnostic disable: undefined-field
+    local dict_file = vim.opt.dictionary:get()[1]
+
+    local file = io.open(dict_file, "r")
+    if file then
+        for line in file:lines() do
+            table.insert(lines, (line:gsub("\r$", "")))
+        end
+        file:close()
+    else
+        return vim.notify("Unable to open dictionary file: " .. dict_file, vim.log.levels.ERROR)
+    end
+
+    vim.api.nvim_echo({ { "" } }, false, {})
+    fzf_lua.fzf_exec(lines)
+end
+
 local function fuzzy_spell_correct()
     local word = vim.fn.expand("<cword>") ---@type string
     if word == "" then
         return vim.notify("No word under cursor", vim.log.levels.WARN)
     end
 
-    if vim.fn.spellbadword(word) == "" then
-        return vim.notify("'" .. word .. "' is already correct")
+    local buf = vim.api.nvim_get_current_buf()
+    vim.notify("Getting dictionary...")
+    local lines = {}
+    --- @diagnostic disable: undefined-field
+    local dict_file = vim.opt.dictionary:get()[1]
+
+    local file = io.open(dict_file, "r")
+    if file then
+        for line in file:lines() do
+            table.insert(lines, (line:gsub("\r$", "")))
+        end
+        file:close()
+    else
+        return vim.notify("Unable to open dictionary file: " .. dict_file, vim.log.levels.ERROR)
     end
 
-    vim.notify("Getting dictionary...")
-    local buf = vim.api.nvim_get_current_buf()
-    local dict_file = "/usr/share/dict/words"
-    fzf_lua.fzf_exec("cat " .. dict_file, {
+    vim.api.nvim_echo({ { "" } }, false, {})
+    fzf_lua.fzf_exec(lines, {
         prompt = 'Suggestions for "' .. word .. '": ',
         actions = {
             ["default"] = function(selected, _)
@@ -170,9 +200,10 @@ local function fuzzy_spell_correct()
     })
 end
 
-vim.keymap.set("n", "<leader>fd", fuzzy_spell_correct)
+vim.keymap.set("n", "<leader>fdd", fuzzy_dict)
+vim.keymap.set("n", "<leader>fds", fuzzy_spell_correct)
 
--- TODO: This is an easy pull request to make so I don't have to hold onto bespoke code
+-- PR: This is an easy pull request to make so I don't have to hold onto bespoke code
 -- But this doesn't show the "l"/"c" conversions like :registers does so needs more work
 -- Copy of the original code with vim.fn.getregtype() added
 fzf_lua.registers = function(opts)

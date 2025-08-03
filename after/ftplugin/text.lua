@@ -1,3 +1,5 @@
+-- LOW: Make a thesaurus picker
+
 vim.opt_local.colorcolumn = ""
 vim.opt_local.cursorlineopt = "screenline"
 vim.opt_local.wrap = true
@@ -13,6 +15,7 @@ vim.keymap.set("i", "!", "!<C-g>u", { silent = true, buffer = true })
 
 local ut = require("mjm.utils")
 vim.keymap.set("n", "K", ut.check_word_under_cursor)
+
 vim.api.nvim_create_autocmd("BufWritePre", {
     group = vim.api.nvim_create_augroup("text_save", { clear = true }),
     pattern = "*.txt",
