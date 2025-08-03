@@ -30,33 +30,24 @@ local function setup_nvim_tree()
 end
 
 local cmds = {
-    { "n", "<leader>nn", "<cmd>NvimTreeToggle<cr>" },
-    { "n", "<leader>nf", "<cmd>NvimTreeFocus<cr>" },
-    { "n", "<leader>ni", "<cmd>NvimTreeFindFile<cr>" },
-    { "n", "<leader>no", "<cmd>NvimTreeOpen<cr>" },
-    { "n", "<leader>nc", "<cmd>NvimTreeClose<cr>" },
+    { "n", "<leader>nn", "NvimTreeToggle" },
+    { "n", "<leader>nf", "NvimTreeFocus" },
+    { "n", "<leader>ni", "NvimTreeFindFile" },
+    { "n", "<leader>no", "NvimTreeOpen" },
+    { "n", "<leader>nc", "NvimTreeClose" },
 }
 
-local function lazy_keymaps(setup_func, keymaps)
-    local loaded = false
+-- MAYBE: Had seen inconsistent issue with the initial keymap failing to run the lazy load
+-- Hoping to not see that recur with new method
+for _, c in pairs(cmds) do
+    vim.keymap.set(c[1], c[2], "<cmd>" .. c[3] .. "<cr>")
 
-    for _, map in ipairs(keymaps) do
-        local mode, lhs, rhs = unpack(map)
-        vim.keymap.set(mode, lhs, function()
-            if not loaded then
-                setup_func()
-                for _, inner_km in ipairs(keymaps) do
-                    local inner_mode, inner_lhs, inner_rhs_str = unpack(inner_km)
-                    vim.keymap.del(inner_mode, inner_lhs)
-                    vim.keymap.set(inner_mode, inner_lhs, inner_rhs_str)
-                end
+    vim.api.nvim_create_user_command(c[3], function()
+        for _, m in pairs(cmds) do
+            vim.api.nvim_del_user_command(m[3])
+        end
 
-                loaded = true
-            end
-
-            return rhs
-        end, { expr = true })
-    end
+        setup_nvim_tree()
+        vim.cmd(c[3])
+    end, {})
 end
-
-lazy_keymaps(setup_nvim_tree, cmds)
