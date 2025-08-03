@@ -1,5 +1,10 @@
 local ut = require("mjm.utils")
 
+local set_z_at_cursor = function()
+    local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+    vim.api.nvim_buf_set_mark(0, "z", row, col, {})
+end
+
 --------------------
 -- Mode Switching --
 --------------------
@@ -11,9 +16,6 @@ vim.keymap.set({ "x", "o" }, "<C-c>", "<esc>", { silent = true })
 -- the next column so you can see what you're typing, but then you exit insert mode, meaning the
 -- character no longer can exist, but Neovim still has you scrolled to the side
 vim.keymap.set("i", "<C-c>", "<esc>ze")
-
--- FUTURE: It might be good to imap <cr> to something like <cr><esc>zea but it contradicts with an
--- autopairs mapping. need to investigate
 
 vim.keymap.set("n", "<C-c>", function()
     vim.cmd("echo ''")
@@ -288,6 +290,9 @@ for _ = 1, 10 do
     tab = mod_tab + 1
 end
 
+vim.keymap.set("n", "<C-w>c", "<nop>")
+vim.keymap.set("n", "<C-w><C-c>", "<nop>")
+
 ----------------
 -- Navigation --
 ----------------
@@ -334,9 +339,6 @@ vim.keymap.set("n", "?", "ms?")
 vim.keymap.set("n", "N", "Nzzzv")
 vim.keymap.set("n", "n", "nzzzv")
 
-vim.keymap.set("n", "<C-w>c", "<nop>")
-vim.keymap.set("n", "<C-w><C-c>", "<nop>")
-
 ------------------
 -- Text Objects --
 ------------------
@@ -377,6 +379,49 @@ vim.keymap.set("o", "il", function()
     vim.cmd("normal v" .. vcount1 .. "il")
 end, { silent = true })
 
+--------------------
+-- Capitalization --
+--------------------
+
+local cap_motions_norm = {
+    "~",
+    "guu",
+    "guiw",
+    "guiW",
+    "guil",
+    "gual",
+    "gUU",
+    "gUiw",
+    "gUiW",
+    "gUil",
+    "gUal",
+    "g~~",
+    "g~iw",
+    "g~il",
+    "g~al",
+} ---@type table string[]
+
+for _, map in pairs(cap_motions_norm) do
+    vim.keymap.set("n", map, function()
+        set_z_at_cursor()
+        return map .. "`z"
+    end, { silent = true, expr = true })
+end
+
+local cap_motions_vis = {
+    "~",
+    "g~",
+    "gu",
+    "gU",
+}
+
+for _, map in pairs(cap_motions_vis) do
+    vim.keymap.set("x", map, function()
+        set_z_at_cursor()
+        return map .. "`z"
+    end, { silent = true, expr = true })
+end
+
 --------------------------
 -- Yank, Change, Delete --
 --------------------------
@@ -385,14 +430,195 @@ vim.keymap.set({ "n", "x" }, "x", '"_x', { silent = true })
 vim.keymap.set("n", "X", '"_X', { silent = true })
 vim.keymap.set("x", "X", 'd0"_Dp==', { silent = true })
 
+local dc_maps = { "d", "c", "D", "C" }
+for _, map in pairs(dc_maps) do
+    vim.keymap.set({ "n", "x" }, map, function()
+        if (not vim.v.register) or vim.v.register == "" or vim.v.register == '"' then
+            -- If you type ""di, Nvim will see the command as """"di
+            -- This does not seem to cause an issue, but still, limit to only this case
+            return '""' .. map
+        else
+            return map
+        end
+    end, { expr = true })
+end
+
+-- MAYBE: Not sure about this pattern
+vim.keymap.set("x", "D", '"_d', { silent = true })
+vim.keymap.set("x", "C", '"_c', { silent = true })
+
+vim.api.nvim_create_autocmd("TextChanged", {
+    group = vim.api.nvim_create_augroup("delete_clear", { clear = true }),
+    pattern = "*",
+    callback = function()
+        if vim.v.operator == "d" then
+            vim.cmd("echo ''")
+        end
+    end,
+})
+
+vim.api.nvim_create_autocmd("InsertEnter", {
+    group = vim.api.nvim_create_augroup("change_clear", { clear = true }),
+    pattern = "*",
+    callback = function()
+        if vim.v.operator == "c" then
+            vim.cmd("echo ''")
+        end
+    end,
+})
+
 -- FUTURE: These should remove trailing whitespace from the original line. The == should handle
 -- invalid leading whitespace on the new line
 vim.keymap.set("n", "dJ", "Do<esc>p==", { silent = true })
 vim.keymap.set("n", "dK", "DO<esc>p==", { silent = true })
 vim.keymap.set("n", "dm", "<cmd>delmarks!<cr>")
 
-vim.keymap.set("x", "p", "P")
-vim.keymap.set("x", "P", "p")
+vim.keymap.set("n", "ss", function()
+    local count = vim.v.count1 - 1
+    if count > 1 then
+        return string.format("V%djP")
+    else
+        return "VP"
+    end
+end, { expr = true, silent = true })
+
+vim.api.nvim_create_autocmd("TextYankPost", {
+    group = vim.api.nvim_create_augroup("yank_cleanup", { clear = true }),
+    callback = function(ev)
+        if vim.v.event.operator == "y" then
+            local mark = vim.api.nvim_buf_get_mark(ev.buf, "z")
+            vim.api.nvim_buf_del_mark(ev.buf, "z")
+            local win = vim.api.nvim_get_current_win()
+            local win_buf = vim.api.nvim_win_get_buf(win)
+            if win_buf == ev.buf then
+                vim.api.nvim_win_set_cursor(win, mark)
+            end
+        end
+
+        -- We want to suppress any "X lines yanked" messages
+        vim.cmd("echo ''")
+
+        -- The below assumes that the default clipboard is not set to unnamed plus:
+        -- All yanks write to unnamed if a register is not specified
+        -- If the yank command is used, the latest yank also writes to reg 0
+        -- The latest delete or change also writes to reg 1 or - (:h quote_number)
+        -- If you delete or change to unnamed explicitly, it will also write to reg 0
+        --- (the default writes to reg 1 are preserved. Not so with reg -. Acceptable loss)
+        -- The code below assumes that deletes/changes to unnamed are explicit
+        -- When explicitly yanking to a register other than unnamed, unnamed is still overwritten
+        --- (except for the black hole register)
+        -- To override this, the code below copies back from reg 0
+        -- When using a yank cmd without specifying a register, vim.v.event.regname shows "
+        -- When using a delete or change without specifying, regname shows nothing
+        -- regname will show a register for delete/change if one is specified
+        -- If yanking to the black hole register with any method, regname will show nothing
+        -- Therefore, do not copy from reg 0 if regname is '"' or ""
+        if vim.v.event.regname ~= '"' and vim.v.event.regname ~= "" then
+            vim.fn.setreg('"', vim.fn.getreg("0"))
+        end
+    end,
+})
+
+-- Set mark with the API so vim.v.count1 and vim.v.register don't need to be manually added
+-- to the return
+vim.keymap.set("n", "y", function()
+    set_z_at_cursor()
+    return "y"
+end, { silent = true, expr = true })
+
+vim.keymap.set("x", "y", function()
+    set_z_at_cursor()
+    return "y"
+end, { silent = true, expr = true })
+
+vim.keymap.set("n", "gy", function()
+    set_z_at_cursor()
+    return '"+y'
+end, { silent = true, expr = true })
+
+vim.keymap.set("x", "Y", function()
+    set_z_at_cursor()
+    return '"+y'
+end, { silent = true, expr = true })
+
+-- :h Y-default
+vim.keymap.set("n", "Y", function()
+    set_z_at_cursor()
+    return "y$"
+end, { silent = true, expr = true })
+
+vim.keymap.set("n", "gY", function()
+    set_z_at_cursor()
+    return '"+y$'
+end, { silent = true, expr = true })
+
+-------------
+-- Pasting --
+-------------
+
+-- NOTE: For now, I have omitted marks to return to original position. This is more consistent
+-- with the behavior of other text editors. Can add them back in if it becomes annoying
+
+-- NOTE: I had previously added code to the text ftplugin file to not autoformat certain pastes
+-- If we see wonky formatting issues again, add an ftdetect here instead to avoid code duplication
+
+---@param reg string
+---@return boolean
+local should_format_paste = function(reg)
+    if vim.api.nvim_get_current_line():match("^%s*$") then
+        return true
+    end
+
+    if vim.fn.getregtype(reg or '"') == "V" then
+        return true
+    end
+
+    local cur_mode = vim.api.nvim_get_mode().mode ---@type string
+    if cur_mode == "V" or cur_mode == "Vs" then
+        return true
+    end
+
+    return false
+end
+
+local better_norm_pastes = {
+    { "p", nil },
+    { "P", nil },
+    { "gp", "+" },
+    { "gP", "+" },
+}
+
+for _, map in pairs(better_norm_pastes) do
+    vim.keymap.set("n", map[1], function()
+        local reg = map[2] or vim.v.register or '"' ---@type string
+
+        ---@type string
+        local paste_cmd = "<cmd>silent norm! " .. vim.v.count1 .. '"' .. reg .. map[1] .. "<cr>"
+        if should_format_paste(reg) then
+            return paste_cmd .. "<cmd>silent norm! mz`[=`]`z<cr>"
+        else
+            return paste_cmd
+        end
+    end, { expr = true, silent = true })
+end
+
+-- Visual pastes do not need any additional contrivances in order to run silently, as they
+-- run a delete under the hood, which triggers the TextChanged autocmd for deletes
+vim.keymap.set("x", "p", function()
+    if should_format_paste(vim.v.register) then
+        return "Pmz<cmd>silent norm! `[=`]`z<cr>"
+    else
+        return "P"
+    end
+end, { silent = true, expr = true })
+
+vim.keymap.set("x", "P", function()
+    if should_format_paste("+") then
+        return '"+Pmz<cmd>silent norm! `[=`]`z<cr>'
+    else
+        return '"+P'
+    end
+end, { silent = true, expr = true })
 
 -----------------------
 -- Text Manipulation --
