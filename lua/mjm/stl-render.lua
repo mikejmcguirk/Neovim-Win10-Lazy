@@ -122,11 +122,6 @@ function M.set_active_stl(opts)
         if not found then
             return
         end
-    else
-        -- MAYBE: The only case this should come up is on startup or a directory change
-        -- If a wonky behavior comes up this fallback can't fix, then address
-        -- TODO: Not where this should be
-        opts.buf = vim.api.nvim_get_current_buf()
     end
 
     local stl = {}
