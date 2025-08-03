@@ -1,46 +1,55 @@
--- TODO: Re-create the parameter TS-TextObjects
--- FUTURE: Test TS-Indent again
+local configs = require("nvim-treesitter.configs")
 
-local ts = require("nvim-treesitter")
-ts.setup({
-    install_dir = vim.fn.stdpath("data") .. "/site",
-})
-
-local languages = {
-    -- Mandatory
-    "c",
-    "lua",
-    "vim",
-    "vimdoc",
-    "query",
-    "markdown_inline",
-    "markdown",
-    -- Optional
-    "c_sharp",
-    "bash",
-    "css",
-    "javascript",
-    "json",
-    "go",
-    "html",
-    "perl",
-    "python",
-    "rust",
-    "sql",
-    "typescript",
-}
-ts.install(languages)
-
-vim.api.nvim_create_autocmd({ "FileType" }, {
-    group = vim.api.nvim_create_augroup("ts-start", { clear = true }),
-    pattern = "*",
-    callback = function(ev)
-        if vim.tbl_contains(languages, ev.match) then
-            vim.treesitter.start()
-        end
-
-        -- vim.bo[ev.buf].indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
-    end,
+configs.setup({
+    modules = {},
+    ignore_install = {},
+    auto_install = false,
+    ensure_installed = {
+        -- Mandatory
+        "c",
+        "lua",
+        "vim",
+        "vimdoc",
+        "query",
+        "markdown_inline",
+        "markdown",
+        -- Optional
+        "c_sharp",
+        "bash",
+        "css",
+        "javascript",
+        "json",
+        "go",
+        "html",
+        "perl",
+        "python",
+        "rust",
+        "sql",
+        "typescript",
+    },
+    sync_install = false,
+    highlight = { enable = true, additional_vim_regex_highlighting = false },
+    indent = { enable = true },
+    textobjects = {
+        select = {
+            enable = true,
+            lookahead = false, -- Don't jump to next text object
+            keymaps = {
+                ["a,"] = "@parameter.outer",
+                ["i,"] = "@parameter.inner",
+            },
+        },
+        move = {
+            enable = true,
+            set_jumps = true,
+            goto_previous_start = {
+                ["[,"] = "@parameter.inner",
+            },
+            goto_next_start = {
+                ["],"] = "@parameter.inner",
+            },
+        },
+    },
 })
 
 -- Defer execution until after Neovim automatically executes packadd. I have the vim.pack step
