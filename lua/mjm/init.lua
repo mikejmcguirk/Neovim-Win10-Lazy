@@ -9,20 +9,20 @@ vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
 vim.g.loaded_netrwSettings = 1
 
--- Disable other rtp plugins
+vim.g.loaded_2html_plugin = 1
 vim.g.loaded_gzip = 1
 vim.g.loaded_matchit = 1
--- vim.g.loaded_matchparen = 1
+-- vim.g.loaded_matchparen = 1 -- FUTURE: Lazy load
+vim.g.loaded_remote_plugins = 1
+vim.g.loaded_spellfile_plugin = 1
 vim.g.loaded_tarPlugin = 1
 vim.g.loaded_tar = 1
-vim.g.loaded_2html_plugin = 1
 vim.g.loaded_tutor_mode_plugin = 1
 vim.g.loaded_zipPlugin = 1
 vim.g.loaded_zip = 1
 
 require("mjm.global_vars")
 
--- Ensure nothing's missed
 vim.keymap.set({ "n", "x" }, "<Space>", "<Nop>")
 vim.g.mapleader = " "
 vim.g.maplocaleader = " "
@@ -30,6 +30,7 @@ vim.g.maplocaleader = " "
 local env_setup = vim.loop.hrtime()
 
 require("mjm.pack")
+
 local pack_finish = vim.loop.hrtime()
 
 --------------------------
@@ -39,15 +40,15 @@ local pack_finish = vim.loop.hrtime()
 require("mjm.plugins.colorscheme")
 require("mjm.plugins.nvim-treesitter")
 
-require("mjm.plugins.harpoon")
-require("mjm.plugins.lualine")
-
-require("mjm.plugins.dadbod")
-require("mjm.plugins.fugitive")
 require("mjm.plugins.fzflua")
+require("mjm.plugins.harpoon")
 
-require("mjm.plugins.quickscope") -- Nothing to lazy load
 require("mjm.plugins.blink") -- Setup is lazy, but do LSP capabilities here
+require("mjm.plugins.fugitive")
+
+require("mjm.plugins.quickscope") -- Vimscript plugin
+require("mjm.plugins.dadbod") -- Vimscript plugin
+
 local eager_loaded = vim.loop.hrtime()
 
 ------------------------------
@@ -61,6 +62,9 @@ require("mjm.diagnostic")
 require("mjm.error-list")
 require("mjm.autocmd")
 require("mjm.lsp")
+require("mjm.stl-events")
+require("mjm.tal")
+
 local config_set = vim.loop.hrtime()
 
 -------------------------
@@ -75,7 +79,6 @@ require("mjm.plugins.flash")
 require("mjm.plugins.git_signs")
 require("mjm.plugins.indent_highlight")
 require("mjm.plugins.lazydev")
-require("mjm.plugins.markdown-preview")
 require("mjm.plugins.nvim-surround")
 require("mjm.plugins.nvim-tree")
 require("mjm.plugins.obsidian")
@@ -84,13 +87,6 @@ require("mjm.plugins.ts-autotag")
 require("mjm.plugins.undotree")
 require("mjm.plugins.zen")
 
-vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
-    group = vim.api.nvim_create_augroup("load-matchparen", { clear = true }),
-    once = true,
-    callback = function()
-        vim.cmd("runtime plugin/matchparen.vim")
-    end,
-})
 local lazy_loaded = vim.loop.hrtime()
 
 local to_env_setup = math.floor((env_setup - start) / 1e6 * 100) / 100
@@ -102,6 +98,7 @@ local to_lazy_loaded = math.floor((lazy_loaded - start) / 1e6 * 100) / 100
 vim.api.nvim_create_autocmd("UIEnter", {
     group = vim.api.nvim_create_augroup("display-profile-info", { clear = true }),
     callback = function()
+        -- TODO: set nu in the scratch buffer so it doesn't look weird when you :q out of it
         local ui_enter = vim.loop.hrtime()
         local to_ui_enter = math.floor((ui_enter - start) / 1e6 * 100) / 100
 
@@ -128,6 +125,7 @@ vim.api.nvim_create_autocmd("UIEnter", {
         end
 
         local lines = {
+            "",
             "=================",
             "==== STARTUP ====",
             "=================",

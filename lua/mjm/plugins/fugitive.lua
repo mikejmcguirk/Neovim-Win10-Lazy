@@ -1,3 +1,5 @@
+-- NOTE: The FugitiveChanged event is used for statusline checks
+
 local ut = require("mjm.utils")
 
 local function open_diff(opts)

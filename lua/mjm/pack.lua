@@ -1,11 +1,10 @@
 -- FUTURE:
 -- https://github.com/kosayoda/nvim-lightbulb
 -- Show icon where code actions are available, but would need more aesthetic icon
+-- The nerd font lightbulb might suffice
 
--- TODO: Check plugins for version ranges
 local pack_spec = {
     -- Multi-deps
-    { src = "https://github.com/mike-jl/harpoonEx" },
     { src = "https://github.com/nvim-tree/nvim-web-devicons" },
     { src = "https://github.com/nvim-lua/plenary.nvim" },
 
@@ -25,16 +24,10 @@ local pack_spec = {
     { src = "https://github.com/ThePrimeagen/harpoon", version = "harpoon2" },
 
     { src = "https://github.com/lukas-reineke/indent-blankline.nvim" },
-    { src = "https://github.com/echasnovski/mini.indentscope" },
+    { src = "https://github.com/echasnovski/mini.indentscope", version = vim.version.range("*") },
 
     -- { src = "https://github.com/folke/lazydev.nvim" },
     { src = "https://github.com/Jari27/lazydev.nvim", version = "deprecate_client_notify" },
-
-    -- Requires nvim-web-devicons, Harpoon, and HarpoonEx
-    { src = "https://github.com/nvim-lualine/lualine.nvim" },
-    { src = "https://github.com/linrongbin16/lsp-progress.nvim" },
-
-    { src = "https://github.com/iamcco/markdown-preview.nvim" },
 
     { src = "https://github.com/windwp/nvim-autopairs" },
 
@@ -53,8 +46,8 @@ local pack_spec = {
 
     { src = "https://github.com/kylechui/nvim-surround", version = vim.version.range("^3.0.0") },
 
-    -- Depends on nvim-web-devicons
-    { src = "https://github.com/nvim-tree/nvim-tree.lua" },
+    -- Requires nvim-web-devicons
+    { src = "https://github.com/nvim-tree/nvim-tree.lua", version = vim.version.range("*") },
 
     { src = "https://github.com/windwp/nvim-ts-autotag" },
 
