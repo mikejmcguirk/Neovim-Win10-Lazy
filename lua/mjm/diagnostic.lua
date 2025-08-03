@@ -47,7 +47,7 @@ end)
 -- For whatever reason, [D/]D on my computer cause Neovim to lock up. Even when just using large
 -- numbers for count, they don't reliably find the top and bottom diag. Instead, just search
 -- for the first/last diag manually and jump to it
-local function get_top_or_bot_diag(opts)
+local function get_first_or_last_diag(opts)
     opts = opts or {}
     local diagnostics
     if opts.severity then
@@ -85,7 +85,7 @@ local function get_top_or_bot_diag(opts)
 end
 
 vim.keymap.set("n", "[D", function()
-    local diagnostic = get_top_or_bot_diag()
+    local diagnostic = get_first_or_last_diag()
     if not diagnostic then
         return
     end
@@ -95,7 +95,7 @@ vim.keymap.set("n", "[D", function()
 end)
 
 vim.keymap.set("n", "]D", function()
-    local diagnostic = get_top_or_bot_diag({ last = true })
+    local diagnostic = get_first_or_last_diag({ last = true })
     if not diagnostic then
         return
     end
@@ -106,7 +106,7 @@ end)
 
 vim.keymap.set("n", "[W", function()
     local severity = ut.get_top_severity({ buf = 0 })
-    local diagnostic = get_top_or_bot_diag({ severity = severity })
+    local diagnostic = get_first_or_last_diag({ severity = severity })
     if not diagnostic then
         return
     end
@@ -117,7 +117,7 @@ end)
 
 vim.keymap.set("n", "]W", function()
     local severity = ut.get_top_severity({ buf = 0 })
-    local diagnostic = get_top_or_bot_diag({ severity = severity, last = true })
+    local diagnostic = get_first_or_last_diag({ severity = severity, last = true })
     if not diagnostic then
         return
     end

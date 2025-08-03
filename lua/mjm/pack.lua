@@ -26,6 +26,7 @@ local pack_spec = {
     { src = "https://github.com/lukas-reineke/indent-blankline.nvim" },
     { src = "https://github.com/echasnovski/mini.indentscope", version = vim.version.range("*") },
 
+    -- LOW: Replace with custom config
     -- { src = "https://github.com/folke/lazydev.nvim" },
     { src = "https://github.com/Jari27/lazydev.nvim", version = "deprecate_client_notify" },
 
@@ -383,7 +384,6 @@ vim.keymap.set("n", "zqr", function()
         vim.api.nvim_echo({ { "" } }, false, {})
     end
 
-    -- TODO: Go through config and use IIFE pattern where appropriate
     local t = (function()
         if input == "all_plugins" then
             local t = {}

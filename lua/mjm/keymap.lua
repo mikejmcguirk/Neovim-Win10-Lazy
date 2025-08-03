@@ -81,8 +81,7 @@ vim.keymap.set("i", "<C-p>", "<nop>")
 vim.keymap.set("i", "<M-n>", "<nop>")
 vim.keymap.set("i", "<M-p>", "<nop>")
 
--- TODO: Where should this go?
--- vim.keymap.set("i", "<C-e>", "<C-o>ze", { silent = true })
+vim.keymap.set("i", "<M-z>", "<C-o>ze", { silent = true })
 
 -------------------------
 
@@ -90,6 +89,13 @@ vim.keymap.set("i", "<M-p>", "<nop>")
 
 -- FUTURE: Save `[`] marks. Cannot be done using an autocmd because they are altered before
 -- BufWritePre. Calculate changes using Nvim LSP/Conform functions
+-- Have had mixed luck with lockmarks + conform formatting. Sometimes conform adjusts the
+-- marks properly, sometimes it doesn't
+
+-- MAYBE: Change ZQ into an alias for wqa, since I alrady have <C-w>q for individual windows
+-- This might also help with avoiding mistakes in clean configs
+-- MAYBE: Implement autosaving. This is feasible with up rather than w
+-- Concern is broken undo histories
 
 -------------------------
 
@@ -101,7 +107,13 @@ end)
 
 vim.keymap.set("n", "ZQ", function()
     if ut.check_modifiable() then
-        vim.cmd("silent wq")
+        local ok, err = pcall(function()
+            vim.cmd("silent qa")
+        end)
+        if not ok then
+            local err_msg = err or "Unknown error performing wq"
+            vim.notify(err_msg or "Unknown wq error", vim.log.levels.WARN)
+        end
     end
 end)
 

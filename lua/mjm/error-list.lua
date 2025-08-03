@@ -125,13 +125,13 @@ vim.keymap.set("n", "cop", function()
     if cur_win_has_loclist() then
         open_loclist()
     else
-        vim.notify("No location list for this window")
+        vim.notify("Window has no location last")
     end
 end)
 
 vim.keymap.set("n", "coo", function()
     if not cur_win_has_loclist() then -- The qflist is always id zero, so test fails
-        return vim.notify("Current window does not have a location list")
+        return vim.notify("Window has no location last")
     end
 
     if is_cur_win_loclist_open() then
@@ -194,6 +194,8 @@ local convert_diag = function(diag)
     }
 end
 
+-- LOW: I doubt this is the best way to get the highest severity, as it requires two pulls
+-- from vim.diagnostic.get(). It might also be cleaner to use iter functions
 -- FUTURE: Consider using vim.diagnostic.setqflist if enough features are added
 ---@param opts? table{highest:boolean, err_only:boolean}
 ---@return nil

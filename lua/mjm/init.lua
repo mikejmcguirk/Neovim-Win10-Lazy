@@ -98,7 +98,6 @@ local to_lazy_loaded = math.floor((lazy_loaded - start) / 1e6 * 100) / 100
 vim.api.nvim_create_autocmd("UIEnter", {
     group = vim.api.nvim_create_augroup("display-profile-info", { clear = true }),
     callback = function()
-        -- TODO: set nu in the scratch buffer so it doesn't look weird when you :q out of it
         local ui_enter = vim.loop.hrtime()
         local to_ui_enter = math.floor((ui_enter - start) / 1e6 * 100) / 100
 
@@ -155,6 +154,7 @@ vim.api.nvim_create_autocmd("UIEnter", {
         for _, option in pairs(buf_opts) do
             vim.api.nvim_set_option_value(option[1], option[2], { buf = bufnr })
         end
+        vim.api.nvim_set_option_value("nu", true, { win = win })
 
         vim.api.nvim_create_autocmd("BufLeave", {
             group = vim.api.nvim_create_augroup("leave-greeter", { clear = true }),

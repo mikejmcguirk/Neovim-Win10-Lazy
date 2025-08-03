@@ -239,6 +239,15 @@ M.check_word_under_cursor = function()
     vim.lsp.util.open_floating_preview(lines, "markdown", { border = Border })
 end
 
+function M.write_to_scratch_buf(lines)
+    local scratch = vim.api.nvim_create_buf(false, true)
+    vim.api.nvim_set_option_value("buftype", "nofile", { buf = scratch })
+    vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = scratch })
+    vim.api.nvim_set_option_value("swapfile", false, { buf = scratch })
+
+    vim.api.nvim_buf_set_lines(scratch, 0, -1, false, vim.split(lines, "\n"))
+    vim.cmd.vsplit()
+    vim.api.nvim_set_current_buf(scratch)
 end
 
 return M

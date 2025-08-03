@@ -82,7 +82,7 @@ vim.keymap.set("n", "<leader>fa", fzf_lua.autocmds)
 vim.keymap.set("n", "<leader>ft", fzf_lua.highlights)
 vim.keymap.set("n", "<leader>fk", fzf_lua.keymaps)
 vim.keymap.set("n", "<leader>fc", fzf_lua.command_history)
--- TODO: Add a way to delete individual or all lists from here
+-- LOW: Add a way to delete individual or all lists from here
 vim.keymap.set("n", "<leader>fu", fzf_lua.quickfix_stack)
 vim.keymap.set("n", "<leader>fo", fzf_lua.loclist_stack)
 

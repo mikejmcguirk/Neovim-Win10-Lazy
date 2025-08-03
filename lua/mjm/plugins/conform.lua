@@ -8,6 +8,7 @@ local function setup_conform()
             lua = { "stylua" },
             python = { "ruff_format" },
             rust = { "rustfmt" },
+            query = { "format-queries" },
             sh = { "shfmt" },
             toml = { "taplo" },
         },
