@@ -1,43 +1,3 @@
-local modes = {
-    ["n"] = "norm",
-    ["no"] = "norm",
-    ["nov"] = "norm",
-    ["noV"] = "norm",
-    ["no\22"] = "norm",
-    ["niI"] = "norm",
-    ["niR"] = "norm",
-    ["niV"] = "norm",
-    ["nt"] = "norm",
-    ["ntT"] = "norm",
-    ["v"] = "vis",
-    ["vs"] = "vis",
-    ["V"] = "vis",
-    ["Vs"] = "vis",
-    ["\22"] = "vis",
-    ["\22s"] = "vis",
-    ["s"] = "vis",
-    ["S"] = "vis",
-    ["\19"] = "vis",
-    ["i"] = "ins",
-    ["ic"] = "ins",
-    ["ix"] = "ins",
-    ["R"] = "rep",
-    ["Rc"] = "rep",
-    ["Rx"] = "rep",
-    ["Rv"] = "vis",
-    ["Rvc"] = "vis",
-    ["Rvx"] = "vis",
-    ["c"] = "cmd",
-    ["cv"] = "cmd",
-    ["ce"] = "cmd",
-    ["r"] = "rep",
-    ["rm"] = "cmd",
-    ["r?"] = "cmd",
-    -- Didn't see an explicit mapping for these in lualine'
-    ["!"] = "norm",
-    ["t"] = "norm",
-}
-
 local stl = require("mjm.stl")
 local stl_events = vim.api.nvim_create_augroup("stl-events", { clear = true })
 
@@ -67,7 +27,7 @@ vim.api.nvim_create_autocmd("WinEnter", {
     group = stl_events,
     callback = function(ev)
         -- Avoid stale diags when re-entering a window
-        stl.event_router({ event = ev.event, buf = ev.buf, new_diags = true, mode = "norm" })
+        stl.event_router({ event = ev.event, buf = ev.buf, new_diags = true })
     end,
 })
 
@@ -81,26 +41,28 @@ vim.api.nvim_create_autocmd("WinLeave", {
 vim.api.nvim_create_autocmd("ModeChanged", {
     group = stl_events,
     callback = function(ev)
+        local stl_data = require("mjm.stl-data")
         --- @diagnostic disable: undefined-field
-        local old = modes[vim.v.event.old_mode] or "norm"
-        local new = modes[vim.v.event.new_mode] or "norm"
+        local old = stl_data.modes[vim.v.event.old_mode] or "norm"
+        local new = stl_data.modes[vim.v.event.new_mode] or "norm"
         if old == new then
             return
         end
 
         if vim.tbl_contains({ "ins", "rep" }, old) then
             -- Since we held diag changes during insert/replace
-            stl.event_router({ event = ev.event, mode = new, buf = ev.buf, new_diags = true })
+            stl.event_router({ event = ev.event, buf = ev.buf, new_diags = true })
             return
         end
-        stl.event_router({ event = ev.event, mode = new, buf = ev.buf })
+        stl.event_router({ event = ev.event, buf = ev.buf })
     end,
 })
 
 vim.api.nvim_create_autocmd("DiagnosticChanged", {
     group = stl_events,
     callback = function(ev)
-        if vim.tbl_contains({ "ins", "rep" }, modes[vim.fn.mode()]) then
+        local stl_data = require("mjm.stl-data")
+        if vim.tbl_contains({ "ins", "rep" }, stl_data.modes[vim.fn.mode()]) then
             return
         end
 
@@ -108,7 +70,6 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
             event = ev.event,
             buf = ev.buf,
             diags = ev.data.diagnostics,
-            mode = modes[vim.fn.mode()],
         })
     end,
 })
@@ -134,7 +95,6 @@ vim.api.nvim_create_autocmd("LspProgress", {
         stl.event_router({
             event = ev.event,
             progress = progress,
-            mode = modes[vim.fn.mode()],
         })
 
         if ev.data.params.value.kind == "end" then

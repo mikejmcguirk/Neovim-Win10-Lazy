@@ -124,6 +124,7 @@ function M.set_active_stl(opts)
         end
     end
 
+    opts.mode = stl_data.modes[vim.fn.mode()]
     local stl = {}
 
     build_active_a(stl, opts)

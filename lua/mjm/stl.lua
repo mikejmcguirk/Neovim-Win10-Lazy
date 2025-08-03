@@ -46,11 +46,6 @@ function M.event_router(opts)
         return vim.notify(err_msg, vim.log.levels.ERROR)
     end
 
-    if opts.event == "ModeChanged" and not opts.mode then
-        local err_msg = string.format("No mode provided on event %s", opts.event)
-        vim.notify(err_msg, vim.log.levels.WARN)
-    end
-
     local handler = on_event[stl_event]
     if not handler then
         local err_msg = string.format("No handler present for stl event %s", stl_event)

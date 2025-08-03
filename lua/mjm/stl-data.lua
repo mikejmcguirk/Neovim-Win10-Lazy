@@ -1,5 +1,9 @@
 local M = {}
 
+------------------
+--- Highlights ---
+------------------
+
 local function darken_24bit(color, pct)
     local r = bit.band(bit.rshift(color, 16), 0xFF)
     local g = bit.band(bit.rshift(color, 8), 0xFF)
@@ -40,6 +44,51 @@ for m, m_fg in pairs(hl_modes) do
     vim.api.nvim_set_hl(0, group_c, { fg = fg, bg = bg })
     M[c] = group_c
 end
+
+-------------
+--- Modes ---
+-------------
+
+-- Cribbed from LuaLine
+M.modes = {
+    ["n"] = "norm",
+    ["no"] = "norm",
+    ["nov"] = "norm",
+    ["noV"] = "norm",
+    ["no\22"] = "norm",
+    ["niI"] = "norm",
+    ["niR"] = "norm",
+    ["niV"] = "norm",
+    ["nt"] = "norm",
+    ["ntT"] = "norm",
+    ["v"] = "vis",
+    ["vs"] = "vis",
+    ["V"] = "vis",
+    ["Vs"] = "vis",
+    ["\22"] = "vis",
+    ["\22s"] = "vis",
+    ["s"] = "vis",
+    ["S"] = "vis",
+    ["\19"] = "vis",
+    ["i"] = "ins",
+    ["ic"] = "ins",
+    ["ix"] = "ins",
+    ["R"] = "rep",
+    ["Rc"] = "rep",
+    ["Rx"] = "rep",
+    ["Rv"] = "vis",
+    ["Rvc"] = "vis",
+    ["Rvx"] = "vis",
+    ["c"] = "cmd",
+    ["cv"] = "cmd",
+    ["ce"] = "cmd",
+    ["r"] = "rep",
+    ["rm"] = "cmd",
+    ["r?"] = "cmd",
+    -- Didn't see an explicit mapping for these in lualine'
+    ["!"] = "norm",
+    ["t"] = "norm",
+}
 
 ----------------------
 --- Git Dir/Status ---
