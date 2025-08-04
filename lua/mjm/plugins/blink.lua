@@ -1,8 +1,13 @@
 vim.lsp.config("*", { capabilities = require("blink.cmp").get_lsp_capabilities(nil, true) })
 
 local function is_comment()
-    local lang_tree = vim.treesitter.get_parser()
-    if not lang_tree then
+    local ok, lang_tree = pcall(vim.treesitter.get_parser)
+    if (not ok) or not lang_tree then
+        if type(lang_tree) == "string" then
+            vim.api.nvim_echo({ { lang_tree } }, true, { kind = "echoerr" })
+        else
+            vim.notify("Unknown error getting parser in is_comment", vim.log.levels.ERROR)
+        end
         return false
     end
     lang_tree:parse()
