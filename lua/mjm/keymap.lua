@@ -94,9 +94,10 @@ vim.keymap.set("i", "<M-z>", "<C-o>ze", { silent = true })
 -- Have had mixed luck with lockmarks + conform formatting. Sometimes conform adjusts the
 -- marks properly, sometimes it doesn't
 
--- Note: Don't map ZQ. Running ZZ in vanilla Vim is a gaffe. ZQ not so much
-
 -------------------------
+
+-- Don't map ZQ. Running ZZ in vanilla Vim is a gaffe. ZQ not so much
+vim.keymap.set("n", "ZQ", "<nop>")
 
 vim.keymap.set("n", "ZZ", function()
     if ut.check_modifiable() then
