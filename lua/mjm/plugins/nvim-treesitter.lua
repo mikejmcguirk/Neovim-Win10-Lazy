@@ -25,6 +25,7 @@ configs.setup({
         "python",
         "rust",
         "sql",
+        "tmux",
         "typescript",
     },
     sync_install = false,
