@@ -94,28 +94,13 @@ vim.keymap.set("i", "<M-z>", "<C-o>ze", { silent = true })
 -- Have had mixed luck with lockmarks + conform formatting. Sometimes conform adjusts the
 -- marks properly, sometimes it doesn't
 
--- MAYBE: Change ZQ into an alias for wqa, since I alrady have <C-w>q for individual windows
--- This might also help with avoiding mistakes in clean configs
--- MAYBE: Implement autosaving. This is feasible with up rather than w
--- Concern is broken undo histories
+-- Note: Don't map ZQ. Running ZZ in vanilla Vim is a gaffe. ZQ not so much
 
 -------------------------
 
 vim.keymap.set("n", "ZZ", function()
     if ut.check_modifiable() then
         vim.cmd("silent up")
-    end
-end)
-
-vim.keymap.set("n", "ZQ", function()
-    if ut.check_modifiable() then
-        local ok, err = pcall(function()
-            vim.cmd("silent qa")
-        end)
-        if not ok then
-            local err_msg = err or "Unknown error performing wq"
-            vim.notify(err_msg or "Unknown wq error", vim.log.levels.WARN)
-        end
     end
 end)
 
