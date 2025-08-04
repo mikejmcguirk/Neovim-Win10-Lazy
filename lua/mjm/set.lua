@@ -45,6 +45,7 @@ vim.api.nvim_set_option_value("shiftround", true, { scope = "global" })
 -- Override \r\n on Windows
 vim.api.nvim_set_option_value("fileformats", "unix,dos", { scope = "global" })
 
+vim.api.nvim_set_option_value("messagesopt", "wait:2000,history:500", { scope = "global" })
 vim.api.nvim_set_option_value("showmode", false, { scope = "global" })
 vim.api.nvim_set_option_value("modelines", 1, { scope = "global" })
 
