@@ -5,6 +5,13 @@ local set_z_at_cursor = function()
     vim.api.nvim_buf_set_mark(0, "z", row, col, {})
 end
 
+-- Notes in simplified inputs
+-- Simplified: <cr>, <tab>, <esc>
+-- Unsimplified: <C-m>, <C-i>, <C-[>
+-- See :h <tab> and https://github.com/neovim/neovim/pull/17932
+-- Note that i_ctrl-v will always insert the simplified form of the key. i_ctrl-shift-v must be
+-- used to get the unsimplified form
+
 --------------------
 -- Mode Switching --
 --------------------
