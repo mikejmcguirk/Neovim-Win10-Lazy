@@ -91,6 +91,7 @@ vim.keymap.set("i", "<M-n>", "<nop>")
 vim.keymap.set("i", "<M-p>", "<nop>")
 
 vim.keymap.set("i", "<M-z>", "<C-o>ze", { silent = true })
+vim.keymap.set("i", "<C-q>", "<C-S-v>")
 
 -------------------------
 
