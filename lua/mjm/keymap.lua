@@ -442,9 +442,14 @@ for _, map in pairs(dc_maps) do
     end, { expr = true })
 end
 
--- MAYBE: Not sure about this pattern
-vim.keymap.set("x", "D", '"_d', { silent = true })
-vim.keymap.set("x", "C", '"_c', { silent = true })
+-- Helix style black hole mappings
+vim.keymap.set({ "n", "x" }, "<M-d>", '"_d', { silent = true })
+vim.keymap.set({ "n", "x" }, "<M-c>", '"_c', { silent = true })
+vim.keymap.set("n", "<M-D>", '"_D', { silent = true })
+vim.keymap.set("n", "<M-C>", '"_C', { silent = true })
+
+vim.keymap.set("x", "D", "<nop>")
+vim.keymap.set("x", "C", "<nop>")
 
 vim.api.nvim_create_autocmd("TextChanged", {
     group = vim.api.nvim_create_augroup("delete_clear", { clear = true }),
@@ -488,7 +493,7 @@ vim.api.nvim_create_autocmd("TextYankPost", {
         -- We want to suppress any "X lines yanked" messages
         vim.cmd("echo ''")
 
-        -- The below assumes that the default clipboard is not set to unnamed plus:
+        -- The below assumes that the default clipboard is unset:
         -- All yanks write to unnamed if a register is not specified
         -- If the yank command is used, the latest yank also writes to reg 0
         -- The latest delete or change also writes to reg 1 or - (:h quote_number)
@@ -511,22 +516,12 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 
 -- Set mark with the API so vim.v.count1 and vim.v.register don't need to be manually added
 -- to the return
-vim.keymap.set("n", "y", function()
+vim.keymap.set({ "n", "x" }, "y", function()
     set_z_at_cursor()
     return "y"
 end, { silent = true, expr = true })
 
-vim.keymap.set("x", "y", function()
-    set_z_at_cursor()
-    return "y"
-end, { silent = true, expr = true })
-
-vim.keymap.set("n", "gy", function()
-    set_z_at_cursor()
-    return '"+y'
-end, { silent = true, expr = true })
-
-vim.keymap.set("x", "Y", function()
+vim.keymap.set({ "n", "x" }, "<M-y>", function()
     set_z_at_cursor()
     return '"+y'
 end, { silent = true, expr = true })
@@ -537,10 +532,12 @@ vim.keymap.set("n", "Y", function()
     return "y$"
 end, { silent = true, expr = true })
 
-vim.keymap.set("n", "gY", function()
+vim.keymap.set("n", "<M-Y>", function()
     set_z_at_cursor()
     return '"+y$'
 end, { silent = true, expr = true })
+
+vim.keymap.set("x", "Y", "<nop>")
 
 -------------
 -- Pasting --
@@ -574,8 +571,8 @@ end
 local better_norm_pastes = {
     { "p", nil },
     { "P", nil },
-    { "gp", "+" },
-    { "gP", "+" },
+    { "<M-p>", "+" },
+    { "<M-P>", "+" },
 }
 
 for _, map in pairs(better_norm_pastes) do
@@ -602,13 +599,15 @@ vim.keymap.set("x", "p", function()
     end
 end, { silent = true, expr = true })
 
-vim.keymap.set("x", "P", function()
+vim.keymap.set("x", "<M-p>", function()
     if should_format_paste("+") then
         return '"+Pmz<cmd>silent norm! `[=`]`z<cr>'
     else
         return '"+P'
     end
 end, { silent = true, expr = true })
+
+vim.keymap.set("x", "P", "<nop>")
 
 -----------------------
 -- Text Manipulation --
