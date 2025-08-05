@@ -36,7 +36,7 @@ local function load_obsidian()
             },
         },
         mappings = {
-            ["<cr>"] = {
+            ["gf"] = {
                 action = function()
                     return obsidian.util.smart_action()
                 end,
