@@ -329,7 +329,8 @@ vim.keymap.set("n", "zB", function()
     vim.opt_local.scrolloff = Scrolloff_Val
 end)
 
-vim.keymap.set("n", "'", "g`")
+vim.keymap.set("n", "'", "`")
+vim.keymap.set("n", "g'", "g`")
 
 -- Not silent so that the search prompting displays properly
 vim.keymap.set("n", "/", "ms/")
