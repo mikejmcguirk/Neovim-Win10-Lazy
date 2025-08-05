@@ -681,6 +681,14 @@ local visual_move = function(opts)
     vim.opt.lazyredraw = false
 end
 
+vim.keymap.set(
+    "v",
+    -- Has to be literally opening the cmdline or else the visual selection goes haywire
+    "<C-=>",
+    ":s/\\%V.*\\%V./\\=eval(submatch(0))/<CR>",
+    { noremap = true, silent = true }
+)
+
 vim.keymap.set("n", "<C-j>", function()
     if not ut.check_modifiable() then
         return
