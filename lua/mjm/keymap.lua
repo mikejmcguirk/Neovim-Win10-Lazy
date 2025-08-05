@@ -665,9 +665,10 @@ local visual_move = function(opts)
     elseif vcount1 > 1 and not opts.upward then
         offset = vim.fn.line("'>") - vim.fn.line(".")
     end
+    local offset_count = vcount1 - offset
 
     local status, result = pcall(function()
-        local cmd = cmd_start .. (vcount1 - offset)
+        local cmd = cmd_start .. offset_count
         vim.cmd(cmd)
     end) ---@type boolean, unknown|nil
 
@@ -677,7 +678,7 @@ local visual_move = function(opts)
         local end_col = #vim.api.nvim_buf_get_lines(0, row_0, row_1, false)[1] ---@type integer
         vim.api.nvim_buf_set_mark(0, "]", row_1, end_col, {})
         vim.cmd("silent norm! `[=`]")
-    else
+    elseif offset_count > 1 then
         vim.api.nvim_echo({ { result or "Unknown error in visual_move" } }, true, { err = true })
     end
 
