@@ -45,7 +45,11 @@ vim.api.nvim_set_option_value("shiftround", true, { scope = "global" })
 -- Override \r\n on Windows
 vim.api.nvim_set_option_value("fileformats", "unix,dos", { scope = "global" })
 
-vim.api.nvim_set_option_value("messagesopt", "wait:2000,history:500", { scope = "global" })
+-- Have to turn this off. When doing Git push with Fugitive, it goes into replace(?) mode,
+-- and sometimes the "last saved" position in the file gets broken
+-- PR: Identify why this happens. Though, in the longer term, extui should finally alleviate
+-- the need for this setting at all
+-- vim.api.nvim_set_option_value("messagesopt", "wait:2000,history:500", { scope = "global" })
 vim.api.nvim_set_option_value("showmode", false, { scope = "global" })
 vim.api.nvim_set_option_value("modelines", 1, { scope = "global" })
 
