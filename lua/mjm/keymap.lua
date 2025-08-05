@@ -5,13 +5,6 @@ local set_z_at_cursor = function()
     vim.api.nvim_buf_set_mark(0, "z", row, col, {})
 end
 
--- Notes in simplified inputs
--- Simplified: <cr>, <tab>, <esc>
--- Unsimplified: <C-m>, <C-i>, <C-[>
--- See :h <tab> and https://github.com/neovim/neovim/pull/17932
--- Note that i_ctrl-v will always insert the simplified form of the key. i_ctrl-shift-v must be
--- used to get the unsimplified form
-
 --------------------
 -- Mode Switching --
 --------------------
@@ -45,8 +38,8 @@ for _, map in pairs({ "i", "a", "A" }) do
 end
 
 -- It is fine if this is over-written with LSP goto implementation
--- FUTURE: A really niche use case could be marksman in markdown files. Can look at that if I
--- ever use that LSP again
+-- FUTURE: A corner case where this could be overwritten but should not be is marksman in
+-- markdown files. Can look at that if I ever use that LSP again
 vim.keymap.set("n", "gI", "g^i")
 
 -- Because I remove "o" from the fo-table
@@ -116,14 +109,11 @@ vim.keymap.set("i", "<C-cr>", "<nop>") -- To avoid mistypes while transitioning 
 vim.keymap.set("i", "<M-j>", "<Down>")
 vim.keymap.set("i", "<M-k>", "<Up>")
 
--- Reserved for blink
-vim.keymap.set("i", "<C-cr>", "<nop>")
-vim.keymap.set("i", "<C-n>", "<nop>")
-vim.keymap.set("i", "<C-p>", "<nop>")
-vim.keymap.set("i", "<M-n>", "<nop>")
-vim.keymap.set("i", "<M-p>", "<nop>")
+-- M-z is too much like ctrl-z
+-- vim.keymap.set("i", "<M-z>", "<C-o>ze", { silent = true })
 
-vim.keymap.set("i", "<M-z>", "<C-o>ze", { silent = true })
+-- i_Ctrl-v always shows the simplified form of a key, Ctrl-Shift-v must be used to show the
+-- unsimplified form. Use this map since I have Ctrl-Shift-v as terminal paste
 vim.keymap.set("i", "<C-q>", "<C-S-v>")
 
 -------------------------
@@ -138,6 +128,7 @@ vim.keymap.set("i", "<C-q>", "<C-S-v>")
 -------------------------
 
 -- Don't map ZQ. Running ZZ in vanilla Vim is a gaffe. ZQ not so much
+-- TODO: Maybe use ZU as an alternative. ZL feels off
 vim.keymap.set("n", "ZQ", "<nop>")
 
 vim.keymap.set("n", "ZZ", function()
@@ -253,12 +244,15 @@ local win_move_tmux = function(nvim_cmd)
 
     local start_win = vim.fn.winnr() ---@type integer
     vim.cmd("wincmd " .. nvim_cmd)
-    if vim.fn.winnr() ~= start_win then
-        return
-    end
 
-    do_tmux_move(nvim_cmd)
+    if vim.fn.winnr() == start_win then
+        do_tmux_move(nvim_cmd)
+    end
 end
+
+-- tmux-navigator style window navigation
+-- C-S because I want terminal ctrl-k and ctrl-l available
+-- C-S is also something of a super layer for terminal commands, so this is a better pattern
 
 -- See tmux config (mikejmcguirk/dotfiles) for reasoning and how on C-S for this mapping
 for k, _ in pairs(tmux_cmd_map) do
@@ -303,7 +297,9 @@ end)
 -- Relies on a terminal protocol that can send <C-i> and <tab> separately
 vim.keymap.set("n", "<tab>", "gt")
 vim.keymap.set("n", "<S-tab>", "gT")
-vim.keymap.set("n", "<C-i>", "<C-i>") -- Remove character simplification
+-- See :h <tab> and https://github.com/neovim/neovim/pull/17932
+-- Note: This also applies to <cr>/<C-m> and <esc>/<C-[>
+vim.keymap.set("n", "<C-i>", "<C-i>")
 
 local tab = 10
 for _ = 1, 10 do
@@ -653,9 +649,12 @@ vim.keymap.set("n", "g%", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]]
 vim.keymap.set("n", "gV", "`[v`]")
 vim.keymap.set("n", "g<C-v>", "`[<C-v>`]")
 
+vim.keymap.set("n", "g?", "<nop>")
+
 -- FUTURE: I'm not sure why, but this properly handles being on the very top line
 -- This could also handle whitespace/comments/count/view, but is fine for now as a quick map
-vim.keymap.set("n", "H", 'mzk_D"_ddA <esc>p`zze', { silent = true })
+-- TODO: Find a better key for this
+-- vim.keymap.set("n", "H", 'mzk_D"_ddA <esc>p`zze', { silent = true })
 vim.keymap.set("n", "J", function()
     if not ut.check_modifiable() then
         return

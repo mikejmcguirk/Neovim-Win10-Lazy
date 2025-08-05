@@ -28,6 +28,9 @@ vim.keymap.set("n", "<leader>gds", function()
     open_diff({ staged = true })
 end)
 
+-- PR: When you run this with messages wait, the mode_changed flag doesn't fire when the window
+-- closes. Need to see what Fugitive actually does here though. It also shows replace mode
+-- for whatever reason
 vim.keymap.set("n", "<leader>gp", "<cmd>Git push<cr>")
 vim.keymap.set("n", "<leader>gca", function()
     local msg = ut.get_input("Committing all. Enter message (no quotes): ")
