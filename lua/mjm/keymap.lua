@@ -266,6 +266,11 @@ vim.keymap.set("n", "<M-l>", function()
     resize_win("silent vertical resize +2")
 end)
 
+-- Relies on a terminal protocol that can send <C-i> and <tab> separately
+vim.keymap.set("n", "<tab>", "gt")
+vim.keymap.set("n", "<S-tab>", "gT")
+vim.keymap.set("n", "<C-i>", "<C-i>") -- Remove character simplification
+
 local tab = 10
 for _ = 1, 10 do
     local this_tab = tab -- 10, 1, 2, 3, 4, 5, 6, 7, 8, 9
