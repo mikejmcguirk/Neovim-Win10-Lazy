@@ -18,13 +18,13 @@ local function setup_flash()
         },
     })
 
-    vim.keymap.set({ "n", "x" }, "\\", function()
+    vim.keymap.set({ "n", "x" }, "gs", function()
         require("flash").jump({
             search = { forward = true, wrap = false, multi_window = false },
         })
     end)
 
-    vim.keymap.set({ "n", "x" }, "|", function()
+    vim.keymap.set({ "n", "x" }, "gS", function()
         require("flash").jump({
             search = { forward = false, wrap = false, multi_window = false },
         })
