@@ -59,32 +59,49 @@ vim.keymap.set("n", "V", "mvV", { silent = true })
 vim.keymap.set("n", "<M-r>", "gr", { silent = true })
 vim.keymap.set("n", "<M-R>", "gR", { silent = true })
 
+------------------
+-- Command Mode --
+------------------
+
+vim.keymap.set("c", "<C-a>", "<C-b>")
+
+vim.keymap.set("c", "<C-d>", "<Del>")
+-- MAYBE: FIgure out how to do <M-d> if it's really needed
+vim.keymap.set(
+    "c",
+    "<C-k>",
+    "<c-\\>estrpart(getcmdline(), 0, getcmdpos()-1)<cr>",
+    { noremap = true }
+)
+
+vim.keymap.set("c", "<C-b>", "<left>")
+vim.keymap.set("c", "<C-f>", "<right>")
+vim.keymap.set("c", "<M-b>", "<S-left>")
+vim.keymap.set("c", "<M-f>", "<S-right>")
+
 -----------------
 -- Insert Mode --
 -----------------
 
 -- FUTURE: Re-create these maps in cmd mode as well
--- FUTURE: By default, ghostty sends <C-m> and <C-i> down as their own keycodes. Make tmux
--- do the same so they can be used here
 
 -- Bash style typing
 vim.keymap.set("i", "<C-a>", "<C-o>I")
 vim.keymap.set("i", "<C-e>", "<End>")
 
--- FUTURE: Rebind the default functionality
 vim.keymap.set("i", "<C-d>", "<Del>")
-vim.keymap.set("i", "<C-k>", "<C-g>u<C-o>D")
 vim.keymap.set("i", "<M-d>", "<C-g>u<C-o>dw")
+vim.keymap.set("i", "<C-k>", "<C-g>u<C-o>D")
 vim.keymap.set("i", "<C-l>", "<esc>u")
 
 vim.keymap.set("i", "<C-b>", "<left>")
--- FUTURE: Would be good to find a home for the default <C-f> mapping
 vim.keymap.set("i", "<C-f>", "<right>")
 vim.keymap.set("i", "<M-b>", "<S-left>")
 vim.keymap.set("i", "<M-f>", "<S-right>")
 
--- FUTURE: Maybe make this paste after getting used to enter for blink. Ctrl-r is the default, but
--- Ctrl-y is not a useful default and it would help with the Unix typing style pattern
+vim.keymap.set("i", "<C-m>", "<C-d>")
+vim.keymap.set("i", "<cr>", "<cr>") -- Remove key simplification
+
 -- Reserve for blink
 vim.keymap.set("i", "<C-y>", "<nop>")
 vim.keymap.set("i", "<C-n>", "<nop>")
