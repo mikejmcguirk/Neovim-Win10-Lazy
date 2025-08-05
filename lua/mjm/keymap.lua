@@ -686,9 +686,9 @@ local visual_move = function(opts)
 end
 
 vim.keymap.set(
-    "v",
-    -- Has to be literally opening the cmdline or else the visual selection goes haywire
+    "x",
     "<C-=>",
+    -- Has to be literally opening the cmdline or else the visual selection goes haywire
     ":s/\\%V.*\\%V./\\=eval(submatch(0))/<CR>",
     { noremap = true, silent = true }
 )
