@@ -70,6 +70,8 @@ local pack_spec = {
 
     { src = "https://github.com/tpope/vim-fugitive" },
 
+    { src = "https://github.com/tpope/vim-speeddating" },
+
     { src = "https://github.com/folke/zen-mode.nvim" },
 }
 
