@@ -44,7 +44,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
 
         if client:supports_method(methods.textDocument_implementation) then
-            vim.keymap.set("n", "gri", vim.lsp.buf.implementation, { buffer = buf })
+            vim.keymap.set("n", "gI", vim.lsp.buf.implementation, { buffer = buf })
         end
 
         if client:supports_method(methods.textDocument_codeAction) then

@@ -44,6 +44,11 @@ for _, map in pairs({ "i", "a", "A" }) do
     end, { silent = true, expr = true })
 end
 
+-- It is fine if this is over-written with LSP goto implementation
+-- FUTURE: A really niche use case could be marksman in markdown files. Can look at that if I
+-- ever use that LSP again
+vim.keymap.set("n", "gI", "g^i")
+
 -- Because I remove "o" from the fo-table
 vim.keymap.set("n", "<M-o>", "A<cr>", { silent = true })
 vim.keymap.set("n", "<M-O>", "A<cr><esc>ddkPA ", { silent = true }) -- FUTURE: brittle
