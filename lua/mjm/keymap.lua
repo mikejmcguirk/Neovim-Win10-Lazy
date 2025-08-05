@@ -51,6 +51,9 @@ vim.keymap.set("n", "<M-O>", "A<cr><esc>ddkPA ", { silent = true }) -- FUTURE: b
 vim.keymap.set("n", "v", "mvv", { silent = true })
 vim.keymap.set("n", "V", "mvV", { silent = true })
 
+vim.keymap.set("n", "<M-r>", "gr", { silent = true })
+vim.keymap.set("n", "<M-R>", "gR", { silent = true })
+
 -----------------
 -- Insert Mode --
 -----------------
