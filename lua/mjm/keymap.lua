@@ -85,7 +85,15 @@ vim.keymap.set("i", "<M-f>", "<S-right>")
 
 -- FUTURE: Maybe make this paste after getting used to enter for blink. Ctrl-r is the default, but
 -- Ctrl-y is not a useful default and it would help with the Unix typing style pattern
+-- Reserve for blink
 vim.keymap.set("i", "<C-y>", "<nop>")
+vim.keymap.set("i", "<C-n>", "<nop>")
+vim.keymap.set("i", "<C-p>", "<nop>")
+vim.keymap.set("i", "<M-y>", "<nop>")
+vim.keymap.set("i", "<M-n>", "<nop>")
+vim.keymap.set("i", "<M-p>", "<nop>")
+
+vim.keymap.set("i", "<C-cr>", "<nop>") -- To avoid mistypes while transitioning back
 
 --Other stuff
 vim.keymap.set("i", "<M-j>", "<Down>")

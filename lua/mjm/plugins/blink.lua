@@ -1,3 +1,4 @@
+local blink = require("blink.cmp")
 vim.lsp.config("*", { capabilities = require("blink.cmp").get_lsp_capabilities(nil, true) })
 
 local function is_comment()
@@ -29,7 +30,7 @@ local function is_comment()
 end
 
 local function setup_blink()
-    require("blink.cmp").setup({
+    blink.setup({
         completion = {
             accept = { auto_brackets = { enabled = true } },
             documentation = {
@@ -78,12 +79,18 @@ local function setup_blink()
                     cmp.select_next({ auto_insert = false })
                 end,
             },
-            -- FUTURE: Show/hide maps, both overall and specific sources
-            -- Thinking of using ctrl+r and moving register to ctrl+y
+            ["<C-y>"] = { "select_and_accept" },
             ["<M-p>"] = { "scroll_documentation_up" },
             ["<M-n>"] = { "scroll_documentation_down" },
-            ["<C-cr>"] = { "select_and_accept" },
-            ["<C-y>"] = false,
+            ["<M-y>"] = {
+                function(cmp)
+                    if cmp.is_visible() then
+                        cmp.hide()
+                    else
+                        cmp.show()
+                    end
+                end,
+            },
         },
         signature = {
             enabled = true,
