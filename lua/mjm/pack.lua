@@ -68,6 +68,7 @@ local pack_spec = {
     { src = "https://github.com/tpope/vim-dadbod" },
     { src = "https://github.com/kristijanhusak/vim-dadbod-ui" },
 
+    -- NOTE: The FugitiveChanged event is used for statusline updates
     { src = "https://github.com/tpope/vim-fugitive" },
 
     { src = "https://github.com/tpope/vim-speeddating" },

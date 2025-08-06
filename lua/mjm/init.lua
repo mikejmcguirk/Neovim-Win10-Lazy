@@ -44,7 +44,6 @@ require("mjm.plugins.fzflua")
 require("mjm.plugins.harpoon")
 
 require("mjm.plugins.blink") -- Setup is lazy, but do LSP capabilities here
-require("mjm.plugins.fugitive")
 
 require("mjm.plugins.quickscope") -- Vimscript plugin
 require("mjm.plugins.dadbod") -- Vimscript plugin
