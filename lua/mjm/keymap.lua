@@ -771,7 +771,7 @@ local visual_indent = function(opts)
     opts = opts or {}
     local shift = opts.back and "<" or ">" ---@type string
 
-    vim.cmd('exec "silent norm! \\<esc>"')
+    vim.cmd("norm! \27")
     vim.cmd("silent '<,'> " .. string.rep(shift, count))
     vim.cmd("silent norm! gv")
 
