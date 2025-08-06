@@ -457,7 +457,7 @@ end
 
 vim.keymap.set({ "n", "x" }, "x", '"_x', { silent = true })
 vim.keymap.set("n", "X", '"_X', { silent = true })
-vim.keymap.set("x", "X", 'd0"_Dp==', { silent = true })
+vim.keymap.set("x", "X", 'mzygvV"_d<cmd>put!<cr>=`]', { silent = true })
 
 local dc_maps = { "d", "c", "D", "C" }
 for _, map in pairs(dc_maps) do
@@ -507,20 +507,31 @@ vim.keymap.set("n", "dJ", "Do<esc>p==", { silent = true })
 vim.keymap.set("n", "dK", "DO<esc>p==", { silent = true })
 vim.keymap.set("n", "dm", "<cmd>delmarks!<cr>")
 
+-- TODO: This is creating complexity in other maps. Put in the custom yank so this can be
+-- removed
 vim.api.nvim_create_autocmd("TextYankPost", {
     group = vim.api.nvim_create_augroup("yank_cleanup", { clear = true }),
     callback = function(ev)
         if vim.v.event.operator == "y" then
-            local mark = vim.api.nvim_buf_get_mark(ev.buf, "z")
-            vim.api.nvim_buf_del_mark(ev.buf, "z")
-            local win = vim.api.nvim_get_current_win()
-            local win_buf = vim.api.nvim_win_get_buf(win)
-            if win_buf == ev.buf then
-                vim.api.nvim_win_set_cursor(win, mark)
+            local row, col = unpack(vim.api.nvim_buf_get_mark(ev.buf, "z"))
+            if row and col then
+                local count_lines = vim.api.nvim_buf_line_count(ev.buf)
+                if row > count_lines then
+                    row = count_lines
+                end
+                local line_len = #vim.api.nvim_buf_get_lines(ev.buf, row - 1, row, false)[1]
+                if line_len == 0 then
+                    col = 0
+                elseif col >= line_len then
+                    col = line_len - 1
+                end
+
+                vim.api.nvim_win_set_cursor(vim.api.nvim_get_current_win(), { row, col })
             end
         end
+        vim.api.nvim_buf_del_mark(ev.buf, "z")
 
-        -- We want to suppress any "X lines yanked" messages
+        -- Suppress any "X lines yanked" messages
         vim.cmd("echo ''")
 
         -- The below assumes that the default clipboard is unset:
