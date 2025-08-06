@@ -1,3 +1,4 @@
+-- NOTE: Various LSP maps use this to display references/symbols
 -- FUTURE: Turn :let g: into a picker
 -- LOW: What makes asnc(?) messages not display?
 

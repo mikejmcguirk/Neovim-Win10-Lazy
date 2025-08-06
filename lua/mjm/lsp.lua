@@ -53,7 +53,12 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         if client:supports_method(methods.textDocument_references) then
             vim.keymap.set("n", "grr", function()
-                vim.lsp.buf.references({ includeDeclaration = false })
+                local ok, fzf_lua = pcall(require, "fzf-lua")
+                if ok then
+                    fzf_lua.lsp_references()
+                else
+                    vim.lsp.buf.references({ includeDeclaration = false })
+                end
             end, { buffer = buf })
         end
 
@@ -74,12 +79,26 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
 
         if client:supports_method(methods.textDocument_documentSymbol) then
-            vim.keymap.set("n", "gO", vim.lsp.buf.document_symbol, { buffer = buf })
+            vim.keymap.set("n", "gO", function()
+                local ok, fzf_lua = pcall(require, "fzf-lua")
+                if ok then
+                    fzf_lua.lsp_document_symbols()
+                else
+                    vim.lsp.buf.document_symbol()
+                end
+            end, { buffer = buf })
         end
 
         -- Kickstart mapping
         if client:supports_method(methods.workspace_symbol) then
-            vim.keymap.set("n", "gW", vim.lsp.buf.workspace_symbol, { buffer = buf })
+            vim.keymap.set("n", "gW", function()
+                local ok, fzf_lua = pcall(require, "fzf-lua")
+                if ok then
+                    fzf_lua.lsp_workspace_symbols()
+                else
+                    vim.lsp.buf.workspace_symbol()
+                end
+            end, { buffer = buf })
         end
 
         -- Patternful with the rest of the defaults
