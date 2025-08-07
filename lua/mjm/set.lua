@@ -65,6 +65,7 @@ vim.opt.jumpoptions:append("view")
 vim.opt.matchpairs:append("<:>")
 vim.opt.cpoptions:append("W")
 
+vim.api.nvim_set_option_value("backspace", "indent,eol,nostop", { scope = "global" })
 vim.api.nvim_set_option_value("selection", "old", { scope = "global" })
 vim.api.nvim_set_option_value("smartindent", true, { scope = "global" })
 
