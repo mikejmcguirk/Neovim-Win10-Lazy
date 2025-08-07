@@ -44,7 +44,7 @@ end
 --- @param l_vcol integer
 --- @param r_vcol integer
 --- @return string|nil, string|nil
-local function get_block_line(line, l_vcol, r_vcol, max_curswant)
+local function get_block_line(bufnr, row_0, line, l_vcol, r_vcol, max_curswant)
     local max_vcol = vim.fn.strdisplaywidth(line)
     if max_vcol < l_vcol then
         return "", nil
@@ -55,26 +55,35 @@ local function get_block_line(line, l_vcol, r_vcol, max_curswant)
         return nil, "get_block_line: " .. l_err
     end
 
-    l_l_vcol = l_vcol <= l_l_vcol and l_l_vcol or l_r_vcol + 1
-    if l_l_vcol > max_vcol then
+    local this_l_vcol = l_vcol <= l_l_vcol and l_l_vcol or l_r_vcol + 1
+    if this_l_vcol > max_vcol then
         return "", nil
     end
 
-    local l_byte, _, lb_err = blk_utils.byte_bounds_from_vcol(line, l_l_vcol)
-    if not l_byte then
-        return nil, "get_block: " .. (lb_err or "Unknown error in byte_bounds_from_vcol")
-    end
-
-    local this_r_vcol = r_vcol <= max_vcol and r_vcol or max_vcol
+    local this_r_vcol = math.min(r_vcol, max_vcol)
     this_r_vcol = max_curswant and max_vcol or r_vcol
     local r_l_vcol, r_r_vcol, r_err = blk_utils.vcols_from_vcol(line, this_r_vcol)
     if (not r_l_vcol) or not r_r_vcol or r_err then
         return nil, "get_block_line: " .. r_err
     end
-    -- this_r_vcol = this_r_vcol <= r_vcol
 
-    -- wait until we know we can
-    local l_padding = l_l_vcol - l_vcol
+    this_r_vcol = r_r_vcol <= this_r_vcol and this_r_vcol or r_l_vcol - 1
+    if (this_r_vcol < 0) or this_r_vcol < this_l_vcol then
+        return ""
+    end
+
+    local l_byte, _, lb_err = blk_utils.byte_bounds_from_vcol(line, this_l_vcol)
+    if (not l_byte) or lb_err then
+        return nil, "get_block: " .. (lb_err or "Unknown error in byte_bounds_from_vcol")
+    end
+
+    local _, r_byte, rb_err = blk_utils.byte_bounds_from_vcol(line, this_r_vcol)
+    if (not r_byte) or rb_err then
+        return nil, "get_block: " .. (rb_err or "Unknown error in byte_bounds_from_vcol")
+    end
+
+    local text = vim.api.nvim_buf_get_text(bufnr, row_0, l_byte, row_0, r_byte + 1, {})[1]
+    return string.rep(" ", this_l_vcol - l_vcol) .. text
 end
 
 --- @param bufnr integer
@@ -87,57 +96,22 @@ function M.get_block(bufnr, marks, curswant)
     local start_row = marks.start.row
     local finish_row = marks.finish.row
     local lines = vim.api.nvim_buf_get_lines(bufnr, start_row - 1, finish_row, false)
+
     local l_vcol, r_vcol, vcol_err = blk_utils.get_vcols_from_marks(lines, marks)
     if (not l_vcol) or not r_vcol or vcol_err then
         return nil, "get_block: " .. vcol_err
     end
+
     local max_curswant = curswant and curswant == vim.v.maxcol
 
-    local yanked_lines = {}
+    local block_lines = {}
     for i = 1, #lines do
-        local row_1 = start_row + i - 1
-        local row_0 = row_1 - 1
-
-        local max_vcol = vim.fn.strdisplaywidth(lines[i])
-        if max_vcol < l_vcol then
-            table.insert(yanked_lines, "")
-        else
-            local l_l_vcol, l_r_vcol = blk_utils.vcols_from_vcol(lines[i], l_vcol)
-            l_l_vcol, l_r_vcol = l_l_vcol or 0, l_r_vcol or 0
-            l_l_vcol = l_vcol <= l_l_vcol and l_l_vcol or l_r_vcol + 1
-            local l_byte, _, l_err = blk_utils.byte_bounds_from_vcol(lines[i], l_l_vcol)
-            if not l_byte then
-                return nil, "get_block: " .. (l_err or "Unknown error in byte_bounds_from_vcol")
-            end
-            l_byte = l_byte or math.huge
-            local l_padding = l_l_vcol - l_vcol
-
-            local this_r_vcol = max_curswant and max_vcol or r_vcol
-            this_r_vcol = this_r_vcol <= max_vcol and this_r_vcol or max_vcol
-            local r_l_vcol, r_r_vcol = blk_utils.vcols_from_vcol(lines[i], this_r_vcol)
-            r_l_vcol, r_r_vcol = r_l_vcol or math.huge, r_r_vcol or math.huge
-            if this_r_vcol < r_r_vcol then
-                local vcol_target = math.min(max_vcol, r_l_vcol - 1)
-                r_r_vcol = math.max(vcol_target, l_vcol)
-            end
-
-            local _, r_byte, r_err = blk_utils.byte_bounds_from_vcol(lines[i], r_r_vcol)
-            if not r_byte then
-                return nil, "get_block: " .. (r_err or "Unknown error in byte_bounds_from_vcol")
-            end
-            r_byte = r_byte or 0
-
-            if r_byte < l_byte then
-                table.insert(yanked_lines, "")
-            else
-                local text = vim.api.nvim_buf_get_text(0, row_0, l_byte, row_0, r_byte + 1, {})[1]
-                local padded = string.rep(" ", l_padding) .. text
-                table.insert(yanked_lines, padded)
-            end
-        end
+        local row_0 = start_row + i - 2
+        local this_line = get_block_line(bufnr, row_0, lines[i], l_vcol, r_vcol, max_curswant)
+        table.insert(block_lines, this_line)
     end
 
-    return yanked_lines, nil
+    return block_lines, nil
 end
 
 return M
