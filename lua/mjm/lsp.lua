@@ -24,11 +24,25 @@ vim.api.nvim_create_autocmd("LspAttach", {
         vim.keymap.set("n", "gr", "<nop>", { buffer = buf }) -- Prevent default gr functionality
 
         if client:supports_method(methods.textDocument_definition) then
-            vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })
+            local ok, fzf_lua = pcall(require, "fzf-lua")
+            if ok then
+                vim.keymap.set("n", "gd", function()
+                    fzf_lua.lsp_definitions()
+                end, { buffer = buf })
+            else
+                vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })
+            end
         end
 
         if client:supports_method(methods.textDocument_declaration) then
-            vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = buf })
+            local ok, fzf_lua = pcall(require, "fzf-lua")
+            if ok then
+                vim.keymap.set("n", "gD", function()
+                    fzf_lua.lsp_declarations()
+                end, { buffer = buf })
+            else
+                vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = buf })
+            end
         end
 
         -- Recreate/replace Nvim defaults (:help lsp-defaults)
@@ -44,7 +58,14 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
 
         if client:supports_method(methods.textDocument_implementation) then
-            vim.keymap.set("n", "gI", vim.lsp.buf.implementation, { buffer = buf })
+            local ok, fzf_lua = pcall(require, "fzf-lua")
+            if ok then
+                vim.keymap.set("n", "gI", function()
+                    fzf_lua.lsp_implementations()
+                end, { buffer = buf })
+            else
+                vim.keymap.set("n", "gI", vim.lsp.buf.implementation, { buffer = buf })
+            end
         end
 
         if client:supports_method(methods.textDocument_codeAction) then
@@ -52,14 +73,16 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
 
         if client:supports_method(methods.textDocument_references) then
-            vim.keymap.set("n", "grr", function()
-                local ok, fzf_lua = pcall(require, "fzf-lua")
-                if ok then
+            local ok, fzf_lua = pcall(require, "fzf-lua")
+            if ok then
+                vim.keymap.set("n", "grr", function()
                     fzf_lua.lsp_references({ includeDeclaration = false })
-                else
+                end, { buffer = buf })
+            else
+                vim.keymap.set("n", "grr", function()
                     vim.lsp.buf.references({ includeDeclaration = false })
-                end
-            end, { buffer = buf })
+                end, { buffer = buf })
+            end
         end
 
         if client:supports_method(methods.textDocument_hover) then
@@ -79,26 +102,26 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
 
         if client:supports_method(methods.textDocument_documentSymbol) then
-            vim.keymap.set("n", "gO", function()
-                local ok, fzf_lua = pcall(require, "fzf-lua")
-                if ok then
+            local ok, fzf_lua = pcall(require, "fzf-lua")
+            if ok then
+                vim.keymap.set("n", "gO", function()
                     fzf_lua.lsp_document_symbols()
-                else
-                    vim.lsp.buf.document_symbol()
-                end
-            end, { buffer = buf })
+                end, { buffer = buf })
+            else
+                vim.keymap.set("n", "gO", vim.lsp.buf.document_symbol, { buffer = buf })
+            end
         end
 
         -- Kickstart mapping
         if client:supports_method(methods.workspace_symbol) then
-            vim.keymap.set("n", "gW", function()
-                local ok, fzf_lua = pcall(require, "fzf-lua")
-                if ok then
+            local ok, fzf_lua = pcall(require, "fzf-lua")
+            if ok then
+                vim.keymap.set("n", "gW", function()
                     fzf_lua.lsp_workspace_symbols()
-                else
-                    vim.lsp.buf.workspace_symbol()
-                end
-            end, { buffer = buf })
+                end, { buffer = buf })
+            else
+                vim.keymap.set("n", "gW", vim.lsp.buf.workspace_symbol, { buffer = buf })
+            end
         end
 
         -- Patternful with the rest of the defaults
