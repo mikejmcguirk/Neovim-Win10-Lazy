@@ -55,7 +55,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
             vim.keymap.set("n", "grr", function()
                 local ok, fzf_lua = pcall(require, "fzf-lua")
                 if ok then
-                    fzf_lua.lsp_references()
+                    fzf_lua.lsp_references({ includeDeclaration = false })
                 else
                     vim.lsp.buf.references({ includeDeclaration = false })
                 end
