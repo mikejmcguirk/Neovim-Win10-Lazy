@@ -102,36 +102,34 @@ local function setup_blink()
         },
         sources = {
             default = function()
-                local s = { "buffer", "path" }
+                local sources = { "buffer", "path" }
 
                 local ft = vim.api.nvim_get_option_value("filetype", { buf = 0 })
                 if ft == "lua" then
-                    table.insert(s, "lazydev")
+                    table.insert(sources, "lazydev")
                 end
 
-                local is_prose = vim.tbl_contains({ "text", "markdown" }, ft)
-                local in_comment = is_comment()
-                if is_prose or in_comment then
-                    table.insert(s, "dictionary")
+                if vim.tbl_contains({ "text", "markdown" }, ft) or is_comment() then
+                    table.insert(sources, "dictionary")
                 else
-                    table.insert(s, "snippets")
+                    table.insert(sources, "snippets")
                     if ft ~= "sql" then
-                        table.insert(s, "lsp")
-                        return s
+                        table.insert(sources, "lsp")
+                        return sources
                     end
                 end
 
                 if ft == "sql" then
-                    table.insert(s, "dadbod")
+                    table.insert(sources, "dadbod")
                 end
 
                 if ft == "markdown" then
-                    table.insert(s, "obsidian")
-                    table.insert(s, "obsidian_new")
-                    table.insert(s, "obsidian_tags")
+                    table.insert(sources, "obsidian")
+                    table.insert(sources, "obsidian_new")
+                    table.insert(sources, "obsidian_tags")
                 end
 
-                return s
+                return sources
             end,
             providers = {
                 buffer = {
