@@ -3,16 +3,16 @@
 -- FUTURE: https://github.com/ibhagwan/nvim-lua/blob/main/lua/autocmd.lua
 -- autocmd for smart yank over SSH
 
-vim.api.nvim_create_autocmd("TextYankPost", {
-    group = vim.api.nvim_create_augroup("yank_highlight", { clear = true }),
-    pattern = "*",
-    callback = function()
-        vim.hl.on_yank({
-            higroup = "IncSearch",
-            timeout = Highlight_Time,
-        })
-    end,
-})
+-- vim.api.nvim_create_autocmd("TextYankPost", {
+--     group = vim.api.nvim_create_augroup("yank_highlight", { clear = true }),
+--     pattern = "*",
+--     callback = function()
+--         vim.hl.on_yank({
+--             higroup = "IncSearch",
+--             timeout = Highlight_Time,
+--         })
+--     end,
+-- })
 
 local match_control = vim.api.nvim_create_augroup("match_control", { clear = true })
 local no_match = {

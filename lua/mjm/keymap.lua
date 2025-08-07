@@ -457,7 +457,10 @@ end
 
 vim.keymap.set({ "n", "x" }, "x", '"_x', { silent = true })
 vim.keymap.set("n", "X", '"_X', { silent = true })
-vim.keymap.set("x", "X", 'mzygvV"_d<cmd>put!<cr>=`]', { silent = true })
+vim.keymap.set("x", "X", 'ygvV"_d<cmd>put!<cr>=`]', { silent = true })
+-- TODO: Should not need the mz here if the spec-ops yank works out
+-- vim.keymap.set("x", "X", 'mzygvV"_d<cmd>put!<cr>=`]', { silent = true })
+
 vim.keymap.set("n", "ss", function()
     local count = vim.v.count1 - 1
     -- Use feedkeys so the count is not multiplied implicitly
@@ -516,32 +519,32 @@ vim.keymap.set("n", "dJ", "Do<esc>p==", { silent = true })
 vim.keymap.set("n", "dK", "DO<esc>p==", { silent = true })
 vim.keymap.set("n", "dm", "<cmd>delmarks!<cr>")
 
--- TODO: This is creating complexity in other maps. Put in the custom yank so this can be
--- removed
+-- Keeping around with the custom yank to move reges after deletes
 vim.api.nvim_create_autocmd("TextYankPost", {
     group = vim.api.nvim_create_augroup("yank_cleanup", { clear = true }),
-    callback = function(ev)
-        if vim.v.event.operator == "y" then
-            local row, col = unpack(vim.api.nvim_buf_get_mark(ev.buf, "z"))
-            if row and col then
-                local count_lines = vim.api.nvim_buf_line_count(ev.buf)
-                if row > count_lines then
-                    row = count_lines
-                end
-                local line_len = #vim.api.nvim_buf_get_lines(ev.buf, row - 1, row, false)[1]
-                if line_len == 0 then
-                    col = 0
-                elseif col >= line_len then
-                    col = line_len - 1
-                end
+    callback = function()
+        -- callback = function(ev)
+        -- if vim.v.event.operator == "y" then
+        --     local row, col = unpack(vim.api.nvim_buf_get_mark(ev.buf, "z"))
+        --     if row and col then
+        --         local count_lines = vim.api.nvim_buf_line_count(ev.buf)
+        --         if row > count_lines then
+        --             row = count_lines
+        --         end
+        --         local line_len = #vim.api.nvim_buf_get_lines(ev.buf, row - 1, row, false)[1]
+        --         if line_len == 0 then
+        --             col = 0
+        --         elseif col >= line_len then
+        --             col = line_len - 1
+        --         end
 
-                vim.api.nvim_win_set_cursor(vim.api.nvim_get_current_win(), { row, col })
-            end
-        end
-        vim.api.nvim_buf_del_mark(ev.buf, "z")
+        --         vim.api.nvim_win_set_cursor(vim.api.nvim_get_current_win(), { row, col })
+        --     end
+        -- end
+        -- vim.api.nvim_buf_del_mark(ev.buf, "z")
 
         -- Suppress any "X lines yanked" messages
-        vim.cmd("echo ''")
+        -- vim.cmd("echo ''")
 
         -- The below assumes that the default clipboard is unset:
         -- All yanks write to unnamed if a register is not specified
@@ -566,26 +569,29 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 
 -- Set mark with the API so vim.v.count1 and vim.v.register don't need to be manually added
 -- to the return
-vim.keymap.set({ "n", "x" }, "y", function()
-    set_z_at_cursor()
-    return "y"
-end, { silent = true, expr = true })
+-- vim.keymap.set({ "n", "x" }, "y", function()
+--     set_z_at_cursor()
+--     return "y"
+-- end, { silent = true, expr = true })
 
-vim.keymap.set({ "n", "x" }, "<M-y>", function()
-    set_z_at_cursor()
-    return '"+y'
-end, { silent = true, expr = true })
+-- vim.keymap.set({ "n", "x" }, "<M-y>", function()
+--     set_z_at_cursor()
+--     return '"+y'
+-- end, { silent = true, expr = true })
 
--- :h Y-default
-vim.keymap.set("n", "Y", function()
-    set_z_at_cursor()
-    return "y$"
-end, { silent = true, expr = true })
+-- -- :h Y-default
+-- vim.keymap.set("n", "Y", function()
+--     set_z_at_cursor()
+--     return "y$"
+-- end, { silent = true, expr = true })
 
-vim.keymap.set("n", "<M-Y>", function()
-    set_z_at_cursor()
-    return '"+y$'
-end, { silent = true, expr = true })
+-- vim.keymap.set("n", "<M-Y>", function()
+--     set_z_at_cursor()
+--     return '"+y$'
+-- end, { silent = true, expr = true })
+
+vim.keymap.set("n", "<M-y>", '"+<Plug>(SpecOpsYankOperator)')
+vim.keymap.set("n", "<M-Y>", '"+<Plug>(SpecOpsYankEol)')
 
 vim.keymap.set("x", "Y", "<nop>")
 
@@ -768,6 +774,9 @@ end)
 vim.keymap.set("x", "<C-k>", function()
     visual_move({ upward = true })
 end)
+
+-- TODO: A cool extension of the add space unimpaired command would be to perform it on a visual
+-- selection. Easier to add space around a multi-line paste
 
 -- Done as a function to suppress a nag when shifting multiple lines
 ---@param opts? table
