@@ -128,7 +128,7 @@ local function fuzzy_dict()
 end
 
 local function fuzzy_spell_correct()
-    local word = vim.fn.expand("<cword>") ---@type string
+    local word = vim.fn.expand("<cword>"):lower() ---@type string
     if word == "" then
         return vim.notify("No word under cursor", vim.log.levels.WARN)
     end
