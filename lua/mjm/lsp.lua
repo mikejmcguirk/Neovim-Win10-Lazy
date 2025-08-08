@@ -1,5 +1,3 @@
--- Note: Not using the built-in LSP autocompletion because it doesn't bring in other sources
-
 vim.lsp.set_log_level("ERROR")
 local ut = require("mjm.utils")
 
@@ -19,12 +17,12 @@ vim.api.nvim_create_autocmd("LspAttach", {
         local buf = ev.buf ---@type integer
         local client = assert(vim.lsp.get_client_by_id(ev.data.client_id)) ---@type vim.lsp.Client
         local methods = vim.lsp.protocol.Methods ---@type table
+        local ok, fzf_lua = pcall(require, "fzf-lua")
 
         -- Overwrite vim defaults
         vim.keymap.set("n", "gr", "<nop>", { buffer = buf }) -- Prevent default gr functionality
 
         if client:supports_method(methods.textDocument_definition) then
-            local ok, fzf_lua = pcall(require, "fzf-lua")
             if ok then
                 vim.keymap.set("n", "gd", function()
                     fzf_lua.lsp_definitions()
@@ -35,7 +33,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
 
         if client:supports_method(methods.textDocument_declaration) then
-            local ok, fzf_lua = pcall(require, "fzf-lua")
             if ok then
                 vim.keymap.set("n", "gD", function()
                     fzf_lua.lsp_declarations()
@@ -58,7 +55,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
 
         if client:supports_method(methods.textDocument_implementation) then
-            local ok, fzf_lua = pcall(require, "fzf-lua")
             if ok then
                 vim.keymap.set("n", "gI", function()
                     fzf_lua.lsp_implementations()
@@ -73,7 +69,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
 
         if client:supports_method(methods.textDocument_references) then
-            local ok, fzf_lua = pcall(require, "fzf-lua")
             if ok then
                 vim.keymap.set("n", "grr", function()
                     fzf_lua.lsp_references({ includeDeclaration = false })
@@ -102,7 +97,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
 
         if client:supports_method(methods.textDocument_documentSymbol) then
-            local ok, fzf_lua = pcall(require, "fzf-lua")
             if ok then
                 vim.keymap.set("n", "gO", function()
                     fzf_lua.lsp_document_symbols()
@@ -114,7 +108,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         -- Kickstart mapping
         if client:supports_method(methods.workspace_symbol) then
-            local ok, fzf_lua = pcall(require, "fzf-lua")
             if ok then
                 vim.keymap.set("n", "gW", function()
                     fzf_lua.lsp_workspace_symbols()
