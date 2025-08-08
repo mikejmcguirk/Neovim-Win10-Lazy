@@ -62,7 +62,7 @@ function M.get_default_reg()
     end
 end
 
----@param reg string
+---@param reg string|nil
 ---@return boolean, string|nil
 function M.is_valid_register(reg)
     if not reg then

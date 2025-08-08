@@ -53,6 +53,7 @@ configs.setup({
     },
 })
 
+
 -- Defer execution until after Neovim automatically executes packadd. I have the vim.pack step
 -- to do so early disabled
 vim.api.nvim_create_autocmd("VimEnter", {

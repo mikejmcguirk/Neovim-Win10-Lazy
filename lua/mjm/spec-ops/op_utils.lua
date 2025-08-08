@@ -12,7 +12,7 @@ function M.get_chars(bufnr, marks)
     local finish_col = marks.finish.col
 
     if start_row > finish_row then
-        local err = "Start row " .. start_row .. " > finish row " .. finish_row .. "in get_chars"
+        local err = "Start row " .. start_row .. " > finish row " .. finish_row .. " in get_chars"
         return nil, err
     end
 

@@ -372,40 +372,22 @@ vim.keymap.set("n", "n", "nzzzv")
 -- Text Objects --
 ------------------
 
--- Translated from justinmk from jdaddy.vim
-local function whole_file()
-    local line_count = vim.api.nvim_buf_line_count(0) ---@type integer
-    if vim.api.nvim_buf_get_lines(0, 0, 1, true)[1] == "" and line_count == 1 then
-        -- Because the omap is not an expr, we need the <esc> keycode literal
-        return "'\027'"
-    end
-
-    -- get_lines result does not include \n. Subtract one because set_mark's col is 0 indexed
-    local last_line_len = #vim.api.nvim_buf_get_lines(0, -2, -1, true)[1] - 1 ---@type integer
-    vim.api.nvim_buf_set_mark(0, "[", 1, 0, {})
-    vim.api.nvim_buf_set_mark(0, "]", line_count, last_line_len, {})
-
-    return "'[o']g_"
-end
+vim.keymap.set("o", "al", function()
+    vim.cmd("norm! ggVG")
+end, { silent = true })
 
 vim.keymap.set("x", "al", function()
-    return whole_file()
-end, { expr = true })
+    vim.cmd("norm! ggoVG")
+end, { silent = true })
 
-vim.keymap.set("o", "al", "<cmd>normal Val<CR>", { silent = true })
+-- TODO: This object breaks if initiated on a zero length line
+vim.keymap.set("o", "il", function()
+    vim.cmd("norm! _v" .. vim.v.count1 .. "g_")
+end, { silent = true })
 
 vim.keymap.set("x", "il", function()
     local keys = "g_o^o" .. vim.v.count .. "g_"
     vim.api.nvim_feedkeys(keys, "ni", false)
-end, { silent = true })
-
-vim.keymap.set("o", "il", function()
-    local vcount1 = vim.v.count1
-    if vcount1 <= 1 then
-        return vim.cmd("normal vil")
-    end
-
-    vim.cmd("normal v" .. vcount1 .. "il")
 end, { silent = true })
 
 --------------------
