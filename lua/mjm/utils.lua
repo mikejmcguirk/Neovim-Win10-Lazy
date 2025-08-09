@@ -51,21 +51,9 @@ M.get_indent = function(line_num)
     -- This is already updated before nvim_exec2 is called
     -- Other indentexpr arguments are not guaranteed to be handled properly
     vim.v.lnum = line_num
-    local indentexpr_out = nil ---@type table<string, any>
-    -- pcall in case treesitter errors due to a null node
-    local ok, err = pcall(function()
-        -- Must run nvim_exec2 explicitly to properly capture output table and avoid
-        -- printing to cmdline
-        indentexpr_out = vim.api.nvim_exec2("echo " .. vim.bo.indentexpr, { output = true })
-    end)
-
-    if ok then
-        local indent = tonumber(indentexpr_out.output) ---@type number?
-        return indent >= 0 and indent or nil
-    end
-
-    vim.api.nvim_echo({ { err or "Unknown error getting indent" } }, true, { err = true })
-    return nil
+    local indentexpr_out = vim.api.nvim_eval(vim.bo.indentexpr) --- @type any
+    local indent = tonumber(indentexpr_out) ---@type number?
+    return indent >= 0 and indent or nil
 end
 
 ---@param buf number
