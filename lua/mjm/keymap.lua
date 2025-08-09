@@ -587,6 +587,8 @@ vim.keymap.set("x", "Y", "<nop>")
 -- NOTE: I had previously added code to the text ftplugin file to not autoformat certain pastes
 -- If we see wonky formatting issues again, add an ftdetect here instead to avoid code duplication
 
+-- TODO: The indenting here blows up dot repeats
+
 ---@param reg string
 ---@return boolean
 local should_format_paste = function(reg)

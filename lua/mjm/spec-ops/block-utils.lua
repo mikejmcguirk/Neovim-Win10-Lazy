@@ -69,9 +69,9 @@ end
 --- @return integer
 function M.get_block_reg_width(lines)
     return vim.iter(lines):fold(0, function(acc, d)
-        local this_width = vim.fn.strcharlen(d)
-        if this_width > acc then
-            return this_width
+        local width = vim.fn.strcharlen(d)
+        if width > acc then
+            return width
         else
             return acc
         end

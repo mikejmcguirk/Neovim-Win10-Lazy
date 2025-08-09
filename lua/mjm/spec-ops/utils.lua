@@ -66,26 +66,22 @@ end
 ---@return boolean, string|nil
 function M.is_valid_register(reg)
     if not reg then
-        local err_msg = "No regname to check in is_valid_register"
-        return false, err_msg
+        return false, "is_valid_register: No reg provided"
     end
 
-    if not type(reg) == "string" then
-        local err_msg = "Register " .. reg .. " in is_valid_register is not a string"
-        return false, err_msg
+    if type(reg) ~= "string" then
+        return false, "is_valid_register: Register " .. reg .. " is not a string"
     end
 
     if #reg ~= 1 then
-        local err_msg = "Register " .. reg .. " is more than one character long"
-        return false, err_msg
+        return false, "is_valid_register: " .. reg .. " is more than one character long"
     end
 
-    if reg:match('["0-9a-zA-Z.*%%:#=+_%-/]') then
-        return true, nil
-    else
-        local err_msg = "Register " .. reg .. " is invalid"
-        return false, err_msg
+    if not reg:match('["0-9a-zA-Z.*%%:#=+_%-/]') then
+        return false, "is_valid_register: Register " .. reg .. " does not match a valid register"
     end
+
+    return true, nil
 end
 
 return M
