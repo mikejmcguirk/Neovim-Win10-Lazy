@@ -11,10 +11,10 @@ local utils = require("mjm.spec-ops.utils")
 
 local M = {}
 
-local hl_group = "SpecOpsYank"
+local hl_group = "SpecOpsYank" --- @type string
 vim.api.nvim_set_hl(0, hl_group, { link = "IncSearch", default = true })
-local hl_ns = vim.api.nvim_create_namespace("mjm.spec-ops.highlight")
-local hl_timer = 175
+local hl_ns = vim.api.nvim_create_namespace("mjm.spec-ops.highlight") --- @type integer
+local hl_timer = 175 --- @type integer
 
 -- NOTE: Saving the whole view is inefficient now, but the coladd might be necessary to support
 -- virtualedit later
@@ -23,7 +23,7 @@ local op_view = nil --- @type vim.fn.winsaveview.ret|nil
 -- Works out since, by default, the register can't be edited on dot repeat
 local op_vreg = nil --- @type string|nil
 local op_vmode = false --- @type boolean
-local op_in_yank = false
+local op_in_yank = false --- @type boolean
 
 local cb_view = nil --- @type vim.fn.winsaveview.ret
 local cb_max_curswant = false --- @type boolean
@@ -132,7 +132,7 @@ function M.yank_callback(motion)
 
     vim.api.nvim_win_set_cursor(win, { cb_view.lnum, cb_view.col })
 
-    local reg_type = vim.fn.getregtype(cb_vreg) or "v"
+    local reg_type = vim.fn.getregtype(cb_vreg) or "v" --- @type string
     shared.highlight_text(buf, marks, hl_group, hl_ns, hl_timer, reg_type)
 end
 
@@ -141,12 +141,12 @@ vim.keymap.set("n", "<Plug>(SpecOpsYankOperator)", function()
 end, { expr = true })
 
 vim.keymap.set("o", "<Plug>(SpecOpsYankLineObject)", function()
-    if op_in_yank then
-        op_in_yank = false
-        return "_" -- Mimic yy/dd/cc internal behavior
-    else
+    if not op_in_yank then
         return "<esc>"
     end
+
+    op_in_yank = false
+    return "_" -- yy/dd/cc internal behavior
 end, { expr = true })
 
 vim.keymap.set(
