@@ -4,6 +4,12 @@ endif
 
 let b:did_indent = 1
 
+setlocal indentexpr=TextIndent()
+
+if exists("*TextIndent")
+    finish
+endif
+
 function! TextIndent()
     let line_num = line(".")
     let prev_nonblank = prevnonblank(line_num - 1)
@@ -14,5 +20,3 @@ function! TextIndent()
         return prev_nonblank_indent
     endif
 endfunction
-
-setlocal indentexpr=TextIndent()
