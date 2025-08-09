@@ -1,3 +1,9 @@
+if exists("b:did_indent")
+    finish
+endif
+
+let b:did_indent = 1
+
 function! TextIndent()
     let line_num = line(".")
     let prev_nonblank = prevnonblank(line_num - 1)
