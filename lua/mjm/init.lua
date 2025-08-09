@@ -64,6 +64,7 @@ require("mjm.lsp")
 require("mjm.stl-events")
 require("mjm.tal")
 require("mjm.spec-ops.yank")
+require("mjm.spec-ops.delete")
 
 local config_set = vim.loop.hrtime()
 

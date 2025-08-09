@@ -453,7 +453,8 @@ vim.keymap.set("n", "ss", function()
     end
 end, { silent = true })
 
-local dc_maps = { "d", "c", "D", "C" }
+local dc_maps = { "c", "C" }
+-- local dc_maps = { "d", "c", "D", "C" }
 for _, map in pairs(dc_maps) do
     vim.keymap.set({ "n", "x" }, map, function()
         if (not vim.v.register) or vim.v.register == "" or vim.v.register == '"' then
@@ -467,23 +468,22 @@ for _, map in pairs(dc_maps) do
 end
 
 -- Helix style black hole mappings
-vim.keymap.set({ "n", "x" }, "<M-d>", '"_d', { silent = true })
+-- vim.keymap.set({ "n", "x" }, "<M-d>", '"_d', { silent = true })
 vim.keymap.set({ "n", "x" }, "<M-c>", '"_c', { silent = true })
-vim.keymap.set("n", "<M-D>", '"_D', { silent = true })
+-- vim.keymap.set("n", "<M-D>", '"_D', { silent = true })
 vim.keymap.set("n", "<M-C>", '"_C', { silent = true })
 
-vim.keymap.set("x", "D", "<nop>")
 vim.keymap.set("x", "C", "<nop>")
 
-vim.api.nvim_create_autocmd("TextChanged", {
-    group = vim.api.nvim_create_augroup("delete_clear", { clear = true }),
-    pattern = "*",
-    callback = function()
-        if vim.v.operator == "d" then
-            vim.cmd("echo ''")
-        end
-    end,
-})
+-- vim.api.nvim_create_autocmd("TextChanged", {
+--     group = vim.api.nvim_create_augroup("delete_clear", { clear = true }),
+--     pattern = "*",
+--     callback = function()
+--         if vim.v.operator == "d" then
+--             vim.cmd("echo ''")
+--         end
+--     end,
+-- })
 
 vim.api.nvim_create_autocmd("InsertEnter", {
     group = vim.api.nvim_create_augroup("change_clear", { clear = true }),
@@ -571,11 +571,6 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 --     set_z_at_cursor()
 --     return '"+y$'
 -- end, { silent = true, expr = true })
-
-vim.keymap.set("n", "<M-y>", '"+<Plug>(SpecOpsYankOperator)')
-vim.keymap.set("n", "<M-Y>", '"+<Plug>(SpecOpsYankEol)')
-
-vim.keymap.set("x", "Y", "<nop>")
 
 -------------
 -- Pasting --
