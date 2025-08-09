@@ -1,6 +1,8 @@
 -- TODO: Can't make useful observations about how this function renders count because, for
 -- the moment, it doesn't do anything with it
 -- When delete is put in, can then see how count acts and work accordingly
+-- TODO: A good extensibility option for Delete would be to use a function to determine when to
+-- yank the deleted text
 
 local blk_utils = require("mjm.spec-ops.block-utils")
 local op_utils = require("mjm.spec-ops.op-utils")
@@ -130,7 +132,7 @@ function M.yank_callback(motion)
 
     vim.api.nvim_win_set_cursor(win, { cb_view.lnum, cb_view.col })
 
-    local reg_type = vim.fn.getregtype(cb_vreg):sub(1, 1) or "v"
+    local reg_type = vim.fn.getregtype(cb_vreg) or "v"
     shared.highlight_text(buf, marks, hl_group, hl_ns, hl_timer, reg_type)
 end
 
