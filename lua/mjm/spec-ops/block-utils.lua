@@ -236,6 +236,10 @@ function M.vcols_from_vcol(line, vcol)
         return (#line <= max_vcol and #line or max_vcol), max_vcol, nil
     end
 
+    if vcol == 0 then
+        return 0, 0, nil
+    end
+
     if vcol < 0 or vcol > max_vcol then
         --- @type string
         local err = string.format("vcols_from_vcol: Invalid vcol %d. Max vcol %d", vcol, max_vcol)

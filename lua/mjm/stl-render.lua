@@ -1,3 +1,5 @@
+-- TODO: char index and virtual column positions
+
 local M = {}
 
 local stl_data = require("mjm.stl-data")
