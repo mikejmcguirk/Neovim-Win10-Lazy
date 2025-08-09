@@ -139,6 +139,7 @@ function M.del_chars(buf, marks)
     fin_byte = #fin_line > 0 and fin_byte + 1 or 0
 
     vim.api.nvim_buf_set_text(buf, start_row - 1, start_col, fin_row - 1, fin_byte, {})
+    start_row = math.min(start_row, vim.api.nvim_buf_line_count(buf))
     vim.api.nvim_buf_set_mark(0, "[", start_row, start_col, {})
     vim.api.nvim_buf_set_mark(0, "]", start_row, start_col, {})
 
@@ -163,6 +164,7 @@ function M.del_lines(buf, marks, curswant, visual)
 
     vim.api.nvim_buf_set_lines(buf, start_row - 1, fin_row, false, {})
 
+    start_row = math.min(start_row, vim.api.nvim_buf_line_count(buf))
     local post_line = vim.api.nvim_buf_get_lines(buf, start_row - 1, start_row, false)[1]
     local post_col = visual and 0 or math.min((#post_line > 0 and #post_line - 1 or 0), curswant)
 
