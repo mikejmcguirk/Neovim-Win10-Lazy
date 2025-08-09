@@ -198,7 +198,7 @@ local function del_block_line(line, l_vcol, r_vcol, max_curswant, buf, row_0)
     end
 
     local this_r_vcol = math.min(r_vcol, max_vcol)
-    this_r_vcol = max_curswant and max_vcol or r_vcol
+    this_r_vcol = max_curswant and max_vcol or this_r_vcol
     local _, r_byte, r_err = blk_utils.byte_bounds_from_vcol(line, this_r_vcol)
     if (not r_byte) or r_err then
         return false, "del_block_line: " .. (r_err or "Unknown error in byte_bounds_from_vcol")
@@ -245,7 +245,7 @@ function M.del_block(buf, marks, curswant)
         local row_0 = start_row + i - 2
         local ok, err = del_block_line(lines[i], l_vcol, r_vcol, max_curswant, buf, row_0)
         if not ok then
-            return nil, "del_block " .. (err or "Unknown error in del_block_line")
+            return nil, "del_block: " .. (err or "Unknown error in del_block_line")
         end
     end
 
