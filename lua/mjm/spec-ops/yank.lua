@@ -168,4 +168,9 @@ vim.keymap.set("o", "y", "<Plug>(SpecOpsYankLineObject)")
 vim.keymap.set("n", "Y", "<Plug>(SpecOpsYankEol)")
 vim.keymap.set("x", "y", "<Plug>(SpecOpsYankVisual)")
 
+-- Helix style system clipboard mappings
+vim.keymap.set("n", "<M-y>", '"+<Plug>(SpecOpsYankOperator)')
+vim.keymap.set("n", "<M-Y>", '"+<Plug>(SpecOpsYankEol)')
+vim.keymap.set("x", "<M-y>", '"+<Plug>(SpecOpsYankVisual)')
+
 return M
