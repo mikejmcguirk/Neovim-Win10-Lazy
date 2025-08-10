@@ -610,19 +610,19 @@ local better_norm_pastes = {
     { "<M-P>", "+" },
 }
 
--- for _, map in pairs(better_norm_pastes) do
---     vim.keymap.set("n", map[1], function()
---         local reg = map[2] or vim.v.register or '"' ---@type string
+for _, map in pairs(better_norm_pastes) do
+    vim.keymap.set("n", map[1], function()
+        local reg = map[2] or vim.v.register or '"' ---@type string
 
---         ---@type string
---         local paste_cmd = "<cmd>silent norm! " .. vim.v.count1 .. '"' .. reg .. map[1] .. "<cr>"
---         if should_format_paste(reg) then
---             return paste_cmd .. "<cmd>silent norm! mz`[=`]`z<cr>"
---         else
---             return paste_cmd
---         end
---     end, { expr = true, silent = true })
--- end
+        ---@type string
+        local paste_cmd = "<cmd>silent norm! " .. vim.v.count1 .. '"' .. reg .. map[1] .. "<cr>"
+        if should_format_paste(reg) then
+            return paste_cmd .. "<cmd>silent norm! mz`[=`]`z<cr>"
+        else
+            return paste_cmd
+        end
+    end, { expr = true, silent = true })
+end
 
 -- Visual pastes do not need any additional contrivances in order to run silently, as they
 -- run a delete under the hood, which triggers the TextChanged autocmd for deletes
