@@ -172,11 +172,11 @@ vim.keymap.set("o", "d", "<Plug>(SpecOpsDeleteLineObject)")
 vim.keymap.set("x", "d", "<Plug>(SpecOpsDeleteVisual)")
 vim.keymap.set("n", "D", "<Plug>(SpecOpsDeleteEol)")
 
+vim.keymap.set("x", "D", "<nop>")
+
 -- Helix style black hole mappings
 vim.keymap.set("n", "<M-d>", '"_<Plug>(SpecOpsDeleteOperator)')
 vim.keymap.set("x", "<M-d>", '"_<Plug>(SpecOpsDeleteVisual)')
 vim.keymap.set("n", "<M-D>", '"_<Plug>(SpecOpsDeleteEol)')
-
-vim.keymap.set("x", "D", "<nop>")
 
 return M
