@@ -1,4 +1,4 @@
--- TODO: Re-create the parameter TS-TextObjects
+-- MAYBE: Re-create the parameter TS-TextObjects
 -- FUTURE: Test TS-Indent again
 
 local ts = require("nvim-treesitter")

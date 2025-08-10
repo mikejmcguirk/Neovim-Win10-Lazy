@@ -22,7 +22,7 @@ function M.get_marks(bufnr, motion, vmode)
             row = finish[1],
             col = finish[2],
         },
-    }
+    } --- @type Marks
 
     if motion == "block" then
         return M.sort_marks(marks)
@@ -102,7 +102,6 @@ function M.get_paste_lines(text, vcount, regtype)
     local lines = vim.split(text:gsub("\n$", ""), "\n") ---@type string[]
 
     if type == "V" and vcount > 1 then
-        -- TODO: Verify this works
         local ext_count = vcount - 1
         local orig_lines = vim.deepcopy(lines, true)
         for _ = 1, ext_count do
@@ -115,6 +114,170 @@ function M.get_paste_lines(text, vcount, regtype)
     end
 
     return lines
+end
+
+-- FUTURE: Accomodate preserveindent and copyindent
+-- TODO: Return a function for the indent compute method so it doesn't have to be re-checked
+-- every line
+
+--- @param buf integer
+--- @param row integer
+--- @return integer
+local function buf_prevnonblank(buf, row)
+    while row > 0 do
+        local line = vim.api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
+        if line:match("%S") then
+            return row
+        end
+
+        row = row - 1
+    end
+
+    return 0
+end
+
+--- @param buf integer
+--- @param line string
+--- @return integer
+local function get_line_indent(buf, line)
+    local tabstop = vim.api.nvim_get_option_value("tabstop", { buf = buf })
+    local indent = 0
+
+    for i = 1, #line do
+        local char = line:sub(i, i)
+        if char == "\t" then
+            indent = indent + (tabstop - (indent % tabstop))
+        elseif char == " " then
+            indent = indent + 1
+        else
+            break
+        end
+    end
+
+    return indent
+end
+
+--- @param win integer
+--- @param cur_pos {[1]: integer, [2]: integer}
+--- @param row integer
+--- @param buf integer
+--- @return integer
+local function get_indent(win, cur_pos, row, buf)
+    local line_count = vim.api.nvim_buf_line_count(buf) --- @type integer
+    if row < 1 or row > line_count then
+        return 0
+    end
+
+    local indentexpr = vim.api.nvim_get_option_value("indentexpr", { buf = buf }) --- @type string
+    if indentexpr ~= "" then
+        vim.v.lnum = row
+        vim.api.nvim_win_set_cursor(win, { row, 0 }) -- For functions getting "."
+
+        local eval = vim.api.nvim_eval(indentexpr) --- @type integer
+
+        vim.v.lnum = cur_pos[1]
+        vim.api.nvim_win_set_cursor(win, cur_pos)
+
+        return eval >= 0 and eval or 0
+    end
+
+    if vim.api.nvim_get_option_value("cindent", { buf = buf }) then
+        return vim.fn.cindent(row)
+    end
+
+    if vim.api.nvim_get_option_value("lisp", { buf = buf }) then
+        return vim.fn.lispindent(row)
+    end
+
+    local prev_row = row > 1 and buf_prevnonblank(buf, row - 1) or 0 --- @type integer
+    if prev_row == 0 then
+        return 0
+    end
+
+    --- @type string
+    local prev_line = vim.api.nvim_buf_get_lines(buf, prev_row - 1, prev_row, false)[1]
+    local prev_indent = get_line_indent(buf, prev_line) --- @type integer
+
+    --- @type boolean
+    local smartindent = vim.api.nvim_get_option_value("smartindent", { buf = buf })
+    if smartindent and prev_line():match("{$") then
+        prev_indent = prev_indent + vim.api.nvim_get_option_value("shiftwidth", { buf = buf })
+    end
+
+    return prev_indent
+end
+
+local function get_indent_str_function(buf)
+    if vim.api.nvim_get_option_value("expandtab", { buf = buf }) then
+        return function(indent)
+            return string.rep(" ", indent)
+        end
+    end
+
+    local tabstop = vim.api.nvim_get_option_value("tabstop", { buf = buf })
+    return function(indent)
+        local tabs = math.floor(indent / tabstop)
+        local spaces = indent % tabstop
+
+        return string.rep("\t", tabs) .. string.rep(" ", spaces)
+    end
+end
+
+--- @param win integer
+--- @param cur_pos {[1]: integer, [2]: integer}
+--- @param row integer
+--- @param buf integer
+--- @param str_fn fun(indent: integer): string
+--- @return integer
+local function apply_indent(win, cur_pos, row, buf, str_fn)
+    local line = vim.api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
+    if line == "" then
+        return 0
+    end
+
+    local indent = get_indent(win, cur_pos, row, buf)
+    local indent_str = str_fn(indent)
+
+    local leading_ws = line:match("^(%s*)")
+    if indent_str == leading_ws then
+        return 0
+    end
+
+    vim.api.nvim_buf_set_text(buf, row - 1, 0, row - 1, #leading_ws, { indent_str })
+
+    return #indent_str - #leading_ws
+end
+
+--- @param marks Marks
+--- @param win integer
+--- @param cur_pos {[1]: integer, [2]: integer}
+--- @param buf integer
+--- @return Marks
+function M.fix_indents(marks, win, cur_pos, buf)
+    local new_marks = marks
+    local str_fn = get_indent_str_function(buf)
+
+    for i = marks.start.row, marks.finish.row do
+        local adjustment = apply_indent(win, cur_pos, i, buf, str_fn)
+
+        if adjustment ~= 0 and i == marks.start.row then
+            local new_start_col = marks.start.col + adjustment
+            new_start_col = math.max(new_start_col, 0)
+
+            vim.api.nvim_buf_set_mark(buf, "[", marks.start.row, new_start_col, {})
+            new_marks.start.col = new_start_col
+        end
+
+        if adjustment ~= 0 and i == marks.finish.row then
+            local new_fin_col = marks.finish.col + adjustment
+            new_fin_col = math.max(new_fin_col, 0)
+
+            vim.api.nvim_buf_set_mark(buf, "]", marks.finish.row, new_fin_col, {})
+            new_marks.finish.col = new_fin_col
+        end
+    end
+
+    return new_marks
 end
 
 return M

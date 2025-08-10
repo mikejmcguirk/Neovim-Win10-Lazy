@@ -352,7 +352,6 @@ function M.paste_chars(cur_pos, before, buf, lines)
 
     local fin_row = row + #lines - 1
     local len_last = string.len(lines[#lines])
-    -- TODO: Double check this is right
     local fin_col = #lines == 1 and len_last + col - 1 or len_last - 1
 
     local fin_line = vim.api.nvim_buf_get_lines(buf, fin_row - 1, fin_row, false)[1]
