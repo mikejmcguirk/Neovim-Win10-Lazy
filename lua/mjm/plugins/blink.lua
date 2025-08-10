@@ -82,13 +82,21 @@ local function setup_blink()
             ["<C-y>"] = { "select_and_accept" },
             ["<M-p>"] = { "scroll_documentation_up" },
             ["<M-n>"] = { "scroll_documentation_down" },
-            -- TODO: Add toggle for signature help as well. <M-s>?
             ["<M-y>"] = {
                 function(cmp)
                     if cmp.is_visible() then
                         cmp.hide()
                     else
                         cmp.show()
+                    end
+                end,
+            },
+            ["<M-s>"] = {
+                function(cmp)
+                    if cmp.is_signature_visible() then
+                        cmp.hide_signature()
+                    else
+                        cmp.show_signature()
                     end
                 end,
             },
