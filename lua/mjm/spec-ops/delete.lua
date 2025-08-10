@@ -1,4 +1,7 @@
 -- TODO: Support virtualedit onemore
+-- TODO: Register behavior options should be default, only specified, or ring
+-- https://github.com/gbprod/yanky.nvim -- Really though, a lot more to integrate here
+-- TODO: Test behavior with count
 
 local utils = require("mjm.spec-ops.utils")
 local op_utils = require("mjm.spec-ops.op-utils")

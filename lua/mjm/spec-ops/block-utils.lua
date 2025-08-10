@@ -461,4 +461,18 @@ function M.byte_bounds_from_vcol(line, vcol)
     return nil, nil, err_msg
 end
 
+--- @param lines string[]
+--- @return integer
+function M.get_block_width(lines)
+    local max_vcol_width = 0
+    for _, line in ipairs(lines) do
+        local width = vim.fn.strdisplaywidth(line)
+        if width > max_vcol_width then
+            max_vcol_width = width
+        end
+    end
+
+    return max_vcol_width
+end
+
 return M

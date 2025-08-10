@@ -84,4 +84,37 @@ function M.is_valid_register(reg)
     return true, nil
 end
 
+--- @param text string
+--- @param vcount integer
+--- @param regtype string
+--- @return string[]
+function M.get_paste_lines(text, vcount, regtype)
+    if text == "" then
+        return {}
+    end
+
+    local type = regtype:sub(1, 1)
+
+    if type == "v" and vcount > 1 then
+        text = string.rep(text, vcount)
+    end
+
+    local lines = vim.split(text:gsub("\n$", ""), "\n") ---@type string[]
+
+    if type == "V" and vcount > 1 then
+        -- TODO: Verify this works
+        local ext_count = vcount - 1
+        local orig_lines = vim.deepcopy(lines, true)
+        for _ = 1, ext_count do
+            vim.list_extend(lines, orig_lines)
+        end
+    elseif type == "\22" and vcount > 1 then
+        for i, l in ipairs(lines) do
+            lines[i] = string.rep(l, vcount)
+        end
+    end
+
+    return lines
+end
+
 return M

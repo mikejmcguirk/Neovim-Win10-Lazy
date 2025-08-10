@@ -1,5 +1,6 @@
 -- TODO: Respect the "y" cpoption
 -- TODO: Support virtualedit
+-- TODO: Handle zy
 
 local blk_utils = require("mjm.spec-ops.block-utils")
 local op_utils = require("mjm.spec-ops.op-utils")
@@ -10,7 +11,7 @@ local M = {}
 
 local hl_group = "SpecOpsYank" --- @type string
 vim.api.nvim_set_hl(0, hl_group, { link = "IncSearch", default = true })
-local hl_ns = vim.api.nvim_create_namespace("mjm.spec-ops.highlight") --- @type integer
+local hl_ns = vim.api.nvim_create_namespace("mjm.spec-ops.yank-highlight") --- @type integer
 local hl_timer = 175 --- @type integer
 
 -- NOTE: Saving the whole view is inefficient now, but the coladd might be necessary to support
@@ -129,7 +130,7 @@ function M.yank_callback(motion)
 
     vim.api.nvim_win_set_cursor(win, { cb_view.lnum, cb_view.col })
 
-    local reg_type = vim.fn.getregtype(cb_vreg) or "v" --- @type string
+    local reg_type = vim.fn.getregtype(cb_vreg) --- @type string
     shared.highlight_text(buf, marks, hl_group, hl_ns, hl_timer, reg_type)
 end
 
@@ -160,10 +161,10 @@ vim.keymap.set("x", "<Plug>(SpecOpsYankVisual)", function()
     return visual()
 end, { expr = true })
 
-vim.keymap.set("n", "y", "<Plug>(SpecOpsYankOperator)")
-vim.keymap.set("o", "y", "<Plug>(SpecOpsYankLineObject)")
-vim.keymap.set("n", "Y", "<Plug>(SpecOpsYankEol)")
-vim.keymap.set("x", "y", "<Plug>(SpecOpsYankVisual)")
+-- vim.keymap.set("n", "y", "<Plug>(SpecOpsYankOperator)")
+-- vim.keymap.set("o", "y", "<Plug>(SpecOpsYankLineObject)")
+-- vim.keymap.set("n", "Y", "<Plug>(SpecOpsYankEol)")
+-- vim.keymap.set("x", "y", "<Plug>(SpecOpsYankVisual)")
 
 -- Helix style system clipboard mappings
 vim.keymap.set("n", "<M-y>", '"+<Plug>(SpecOpsYankOperator)')
