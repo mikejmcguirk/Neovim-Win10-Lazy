@@ -3,7 +3,7 @@
 -- TODO: Handle zy
 
 local blk_utils = require("mjm.spec-ops.block-utils")
-local op_utils = require("mjm.spec-ops.op-utils")
+local get_utils = require("mjm.spec-ops.get-utils")
 local shared = require("mjm.spec-ops.shared")
 local utils = require("mjm.spec-ops.utils")
 
@@ -103,18 +103,13 @@ function M.yank_callback(motion)
     update_cb_state(motion)
 
     local win = vim.api.nvim_get_current_win() --- @type integer
-    local buf = vim.api.nvim_win_get_buf(win) --- @type integer
-    local marks = utils.get_marks(buf, motion, cb_vmode) --- @type Marks
+    local marks = utils.get_marks(motion, cb_vmode) --- @type Marks
 
-    local lines, err = (function()
-        if motion == "char" then
-            return op_utils.get_chars(buf, marks)
-        elseif motion == "line" then
-            return op_utils.get_lines(buf, marks)
-        else
-            return op_utils.get_block(buf, marks, cb_view.curswant)
-        end
-    end)() --- @type string[]|nil, string|nil
+    local lines, err = get_utils.do_get({
+        marks = marks,
+        curswant = cb_view.curswant,
+        motion = motion,
+    }) --- @type string[]|nil, string|nil
 
     if (not lines) or err then
         local err_msg = err or "Unknown error getting text to yank" --- @type string
@@ -131,7 +126,7 @@ function M.yank_callback(motion)
     vim.api.nvim_win_set_cursor(win, { cb_view.lnum, cb_view.col })
 
     local reg_type = vim.fn.getregtype(cb_vreg) --- @type string
-    shared.highlight_text(buf, marks, hl_group, hl_ns, hl_timer, reg_type)
+    shared.highlight_text(marks, hl_group, hl_ns, hl_timer, reg_type)
 end
 
 vim.keymap.set("n", "<Plug>(SpecOpsYankOperator)", function()
@@ -168,9 +163,9 @@ vim.keymap.set("x", "y", "<Plug>(SpecOpsYankVisual)")
 
 -- Helix style system clipboard mappings
 vim.keymap.set("n", "<M-y>", '"+<Plug>(SpecOpsYankOperator)')
-vim.keymap.set("n", "<M-Y>", '"+<Plug>(SpecOpsYankEol)')
 vim.keymap.set("x", "<M-y>", '"+<Plug>(SpecOpsYankVisual)')
 
 vim.keymap.set("x", "Y", "<Plug>(SpecOpsYankEol)")
+vim.keymap.set("n", "<M-Y>", '"+<Plug>(SpecOpsYankEol)')
 
 return M

@@ -4,7 +4,8 @@
 -- TODO: Test behavior with count
 
 local utils = require("mjm.spec-ops.utils")
-local op_utils = require("mjm.spec-ops.op-utils")
+local get_utils = require("mjm.spec-ops.get-utils")
+local del_utils = require("mjm.spec-ops.del-utils")
 local blk_utils = require("mjm.spec-ops.block-utils")
 
 local M = {}
@@ -102,18 +103,13 @@ function M.delete_callback(motion)
     update_cb_state(motion)
 
     local win = vim.api.nvim_get_current_win() --- @type integer
-    local buf = vim.api.nvim_win_get_buf(win) --- @type integer
-    local marks = utils.get_marks(buf, motion, cb_vmode) --- @type Marks
+    local marks = utils.get_marks(motion, cb_vmode) --- @type Marks
 
-    local lines, err_y = (function()
-        if motion == "char" then
-            return op_utils.get_chars(buf, marks)
-        elseif motion == "line" then
-            return op_utils.get_lines(buf, marks)
-        else
-            return op_utils.get_block(buf, marks, cb_view.curswant)
-        end
-    end)() --- @type string[]|nil, string|nil
+    local lines, err_y = get_utils.do_get({
+        marks = marks,
+        curswant = cb_view.curswant,
+        motion = motion,
+    }) --- @type string[]|nil, string|nil
 
     if (not lines) or err_y then
         local err_msg = err_y or "Unknown error getting text to yank" --- @type string
@@ -129,15 +125,12 @@ function M.delete_callback(motion)
         end
     end
 
-    local post_marks, err_d = (function()
-        if motion == "char" then
-            return op_utils.del_chars(buf, marks)
-        elseif motion == "line" then
-            return op_utils.del_lines(buf, marks, cb_view.curswant, cb_vmode)
-        else
-            return op_utils.del_block(buf, marks, cb_view.curswant)
-        end
-    end)() --- @type Marks|nil, string|nil
+    local post_marks, err_d = del_utils.do_del({
+        marks = marks,
+        motion = motion,
+        curswant = cb_view.curswant,
+        visual = cb_vmode,
+    }) --- @type Marks|nil, string|nil
 
     if (not post_marks) or err_d then
         local err_msg = err_d or "Unknown error at delete callback"
