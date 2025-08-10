@@ -1,4 +1,5 @@
--- TODO: char index and virtual column positions
+-- MAYBE: Could explore adding the char index. But it looks like I would need to compute that in
+-- Lua, which might incur a performance cost
 
 local M = {}
 
@@ -105,7 +106,10 @@ local function build_active_y_z(stl, opts)
     local hl_y = stl_data[string.format("%s-b", (opts.mode or "norm"))]
     local hl_z = stl_data[string.format("%s-a", (opts.mode or "norm"))]
     local fn = " %{v:lua.require'mjm.stl-data'.get_scroll_pct()}%% %*"
-    table.insert(stl, string.format("%%#%s#%s%%#%s# %%l/%%L | %%c | %%o %%*", hl_y, fn, hl_z))
+    table.insert(
+        stl,
+        string.format("%%#%s#%s%%#%s# %%l/%%L | %%c | v:%%v | %%o %%*", hl_y, fn, hl_z)
+    )
 end
 
 function M.set_active_stl(opts)
