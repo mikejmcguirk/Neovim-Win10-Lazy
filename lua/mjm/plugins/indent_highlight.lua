@@ -27,34 +27,34 @@ local function setup_indent_highlight()
         return
     end
 
-    indentscope.setup({
-        symbol = indent_char,
-        options = {
-            try_as_border = false,
-            indent_at_cursor = false,
-        },
-        draw = {
-            delay = 0,
-            animation = indentscope.gen_animation.none(),
-        },
-    })
+    -- indentscope.setup({
+    --     symbol = indent_char,
+    --     options = {
+    --         try_as_border = false,
+    --         indent_at_cursor = false,
+    --     },
+    --     draw = {
+    --         delay = 0,
+    --         animation = indentscope.gen_animation.none(),
+    --     },
+    -- })
 
-    vim.api.nvim_set_hl(0, "MiniIndentscopeSymbolOff", {
-        bg = vim.api.nvim_get_hl(0, { name = "MiniIndentscopeSymbol" }).bg,
-        fg = vim.api.nvim_get_hl(0, { name = "MiniIndentscopeSymbol" }).fg,
-    })
-    vim.api.nvim_set_hl(0, "MiniIndentscopeSymbol", {
-        bg = vim.api.nvim_get_hl(0, { name = "IblScope" }).bg,
-        fg = vim.api.nvim_get_hl(0, { name = "IblScope" }).fg,
-    })
+    -- vim.api.nvim_set_hl(0, "MiniIndentscopeSymbolOff", {
+    --     bg = vim.api.nvim_get_hl(0, { name = "MiniIndentscopeSymbol" }).bg,
+    --     fg = vim.api.nvim_get_hl(0, { name = "MiniIndentscopeSymbol" }).fg,
+    -- })
+    -- vim.api.nvim_set_hl(0, "MiniIndentscopeSymbol", {
+    --     bg = vim.api.nvim_get_hl(0, { name = "IblScope" }).bg,
+    --     fg = vim.api.nvim_get_hl(0, { name = "IblScope" }).fg,
+    -- })
 
-    vim.api.nvim_create_autocmd("FileType", {
-        group = vim.api.nvim_create_augroup("indentscope_group", { clear = true }),
-        pattern = excluded_filetypes,
-        callback = function(ev)
-            vim.b[ev.buf].miniindentscope_disable = true
-        end,
-    })
+    -- vim.api.nvim_create_autocmd("FileType", {
+    --     group = vim.api.nvim_create_augroup("indentscope_group", { clear = true }),
+    --     pattern = excluded_filetypes,
+    --     callback = function(ev)
+    --         vim.b[ev.buf].miniindentscope_disable = true
+    --     end,
+    -- })
 end
 
 vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
