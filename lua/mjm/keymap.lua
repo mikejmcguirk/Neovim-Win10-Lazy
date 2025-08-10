@@ -128,7 +128,6 @@ vim.keymap.set("i", "<C-q>", "<C-S-v>")
 -------------------------
 
 -- Don't map ZQ. Running ZZ in vanilla Vim is a gaffe. ZQ not so much
--- TODO: Maybe use ZU as an alternative. ZL feels off
 vim.keymap.set("n", "ZQ", "<nop>")
 
 vim.keymap.set("n", "ZZ", function()
@@ -138,7 +137,7 @@ vim.keymap.set("n", "ZZ", function()
 end)
 
 vim.keymap.set("n", "ZA", "<cmd>silent wa<cr>")
-vim.keymap.set("n", "ZL", "<cmd>wqa<cr>")
+vim.keymap.set("n", "ZI", "<cmd>wqa<cr>")
 vim.keymap.set("n", "ZR", function()
     vim.cmd("silent wa")
     vim.cmd("restart")
