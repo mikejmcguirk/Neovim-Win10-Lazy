@@ -1,33 +1,7 @@
+local ut = require("mjm.utils")
+
 local blink = require("blink.cmp")
 vim.lsp.config("*", { capabilities = require("blink.cmp").get_lsp_capabilities(nil, true) })
-
-local function is_comment()
-    local ok, lang_tree = pcall(vim.treesitter.get_parser)
-    if (not ok) or not lang_tree then
-        if type(lang_tree) == "string" then
-            vim.api.nvim_echo({ { lang_tree } }, true, { kind = "echoerr" })
-        else
-            vim.notify("Unknown error getting parser in is_comment", vim.log.levels.ERROR)
-        end
-        return false
-    end
-    lang_tree:parse()
-
-    -- Include col before or a cursor at the very end of a comment will be a "chunk" node
-    local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-    local start_col = col > 0 and col - 1 or col
-    local node = lang_tree:node_for_range({ row - 1, start_col, row - 1, col })
-    if not node then
-        return false
-    end
-
-    local comment_nodes = { "comment", "line_comment", "block_comment", "comment_content" }
-    if vim.tbl_contains(comment_nodes, node:type()) then
-        return true
-    else
-        return false
-    end
-end
 
 local function setup_blink()
     blink.setup({
@@ -109,37 +83,43 @@ local function setup_blink()
                 show_documentation = true,
             },
         },
+
+        -- PR: If the sources option is a function, and dictionary is one of the possible sources,
+        -- what can happen is that the dictionary can spawn an fzf process that is not closed.
+        -- The easiest way to observe this is by typing "let's" repeatedly. This issue seems to
+        -- occur when the dictionary runs out of sources. Even without the dynamic source config,
+        -- you can still see an fzf job spawn and take a moment to close sometimes when the
+        -- dictionary runs out of words. If you type the words slowly, one character at a time,
+        -- this does not occur. I cannot help but note that, yes, this is an issue that occurs
+        -- because I type too fast. My vague theory is that, during the period when blink is
+        -- running the function to check providers, it is not sending events to those providers,
+        -- and the dictionary provider relies on an event from cmp to close the fzf job that it is
+        -- not getting. But this would need testing with a minimal config to isolate
+        -- I can also see this occurring if another async source is running alongside the
+        -- Dictionary source, which points further to me at the broken event loop idea
+        -- In the meantime, if I statically set the sources by filetype and make sure no async
+        -- sources are running next to the dictionary, this does not occur
+        -- Something else I notice is, if I type quickly with Obsidian completions on, I eventually
+        -- get an error about how Vimscript functions cannot be used in a fast event context, but
+        -- this doesn't happen if I type slowly. I guess I'm the fast event! But this points to
+        -- blink's event handling also being an element of what's happening. A downside here
+        -- seems to be that async needs to be turned off for all providers, or else if an async
+        -- provider pushes completions first, then the others will not be seen
         sources = {
-            default = function()
-                local sources = { "buffer", "path" }
-
-                local ft = vim.api.nvim_get_option_value("filetype", { buf = 0 })
-                if ft == "lua" then
-                    table.insert(sources, "lazydev")
-                end
-
-                if vim.tbl_contains({ "text", "markdown" }, ft) or is_comment() then
-                    table.insert(sources, "dictionary")
-                else
-                    table.insert(sources, "snippets")
-                    if ft ~= "sql" then
-                        table.insert(sources, "lsp")
-                        return sources
-                    end
-                end
-
-                if ft == "sql" then
-                    table.insert(sources, "dadbod")
-                end
-
-                if ft == "markdown" then
-                    table.insert(sources, "obsidian")
-                    table.insert(sources, "obsidian_new")
-                    table.insert(sources, "obsidian_tags")
-                end
-
-                return sources
-            end,
+            default = { "lsp", "snippets", "buffer", "path" },
+            per_filetype = {
+                lua = { inherit_defaults = true, "lazydev" },
+                markdown = {
+                    "dictionary",
+                    "obsidian",
+                    "obsidian_new",
+                    "obsidian_tags",
+                    "buffer",
+                    "path",
+                },
+                sql = { "dadbod", "buffer", "path" },
+                text = { "dictionary", "buffer", "path" },
+            },
             providers = {
                 buffer = {
                     enabled = true,
@@ -154,7 +134,7 @@ local function setup_blink()
                     transform_items = function(a, items)
                         local prose_ft = { "text", "markdown" }
                         local ft = vim.api.nvim_get_option_value("filetype", { buf = 0 })
-                        if not (vim.tbl_contains(prose_ft, ft) or is_comment()) then
+                        if not (vim.tbl_contains(prose_ft, ft) or ut.is_comment()) then
                             return items
                         end
 
@@ -191,50 +171,31 @@ local function setup_blink()
                 dadbod = { name = "Dadbod", module = "vim_dadbod_completion.blink" },
                 dictionary = {
                     -- NOTE: Do not set async for this provider, or else the fzf jobs it spawns
-                    -- will not be closed on exit
+                    -- might not be closed on exit. Per the docs, it should be async by default
+                    -- and non-blocking anyway
                     module = "blink-cmp-dictionary",
                     name = "Dict",
                     min_keyword_length = 3, -- How many two letter words do we need to look up?
                     opts = {
-                        -- Note: This can be a function that returns a table as well
                         dictionary_files = {
                             vim.fn.expand("~/.local/bin/words/words_alpha.txt"),
                             vim.fn.expand(SpellFile),
                         },
-                        -- dictionary_directories = nil
                     },
-                    transform_items = function(a, items)
-                        local f = vim.tbl_filter(function(item)
-                            local text = item.insertText or ""
-                            return #text > 0 and text:match("^[a-zA-Z]+$") ~= nil
+                    transform_items = function(_, items)
+                        local seen = {} --- @type boolean[]
+
+                        local out = vim.tbl_filter(function(item)
+                            local text = item.insertText or "" --- @type string
+
+                            if seen[text] then
+                                return false
+                            end
+
+                            seen[text] = true
+
+                            return #text > 0 and text:match("^[a-zA-Z]+$")
                         end, items)
-
-                        local keyword = a.get_keyword()
-                        local correct, case
-                        if keyword:match("^%l") then
-                            correct = "^%u%l+$"
-                            case = string.lower
-                        elseif keyword:match("^%u") then
-                            correct = "^%l+$"
-                            case = string.upper
-                        else
-                            return f
-                        end
-
-                        local seen = {}
-                        local out = {}
-                        for _, item in ipairs(f) do
-                            local raw = item.insertText or ""
-                            if raw:match(correct) then
-                                local text = case(raw:sub(1, 1)) .. raw:sub(2)
-                                item.insertText = text
-                                item.label = text
-                            end
-                            if not seen[item.insertText] then
-                                seen[item.insertText] = true
-                                table.insert(out, item)
-                            end
-                        end
 
                         return out
                     end,
@@ -242,7 +203,7 @@ local function setup_blink()
                 lazydev = {
                     module = "lazydev.integrations.blink",
                     name = "LazyDev",
-                    score_offset = 100,
+                    -- score_offset = 100,
                 },
                 lsp = { fallbacks = {} },
                 obsidian = {
