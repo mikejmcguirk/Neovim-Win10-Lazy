@@ -144,13 +144,13 @@ local function setup_blink()
                 buffer = {
                     async = true,
                     enabled = true,
-                    opts = {
-                        get_bufnrs = function()
-                            return vim.tbl_filter(function(bufnr)
-                                return vim.bo[bufnr].buftype == ""
-                            end, vim.api.nvim_list_bufs())
-                        end,
-                    },
+                    -- opts = {
+                    --     get_bufnrs = function()
+                    --         return vim.tbl_filter(function(bufnr)
+                    --             return vim.bo[bufnr].buftype == ""
+                    --         end, vim.api.nvim_list_bufs())
+                    --     end,
+                    -- },
                     score_offset = -6,
                     transform_items = function(a, items)
                         local prose_ft = { "text", "markdown" }
