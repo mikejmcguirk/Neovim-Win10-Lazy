@@ -341,7 +341,7 @@ vim.keymap.set({ "n", "x" }, "j", function()
 end, { expr = true, silent = true })
 
 vim.keymap.set({ "n", "x" }, "gg", "<nop>")
-vim.keymap.set({ "n", "x" }, "go", function()
+vim.keymap.set({ "n", "x", "o" }, "go", function()
     if vim.v.count < 1 then
         return "gg" -- I have startofline off, so this keeps cursor position
     else
