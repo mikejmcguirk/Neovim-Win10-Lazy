@@ -142,7 +142,6 @@ local function setup_blink()
             end,
             providers = {
                 buffer = {
-                    async = true,
                     enabled = true,
                     -- opts = {
                     --     get_bufnrs = function()
@@ -191,10 +190,11 @@ local function setup_blink()
                 },
                 dadbod = { name = "Dadbod", module = "vim_dadbod_completion.blink" },
                 dictionary = {
-                    async = true,
+                    -- NOTE: Do not set async for this provider, or else the fzf jobs it spawns
+                    -- will not be closed on exit
                     module = "blink-cmp-dictionary",
                     name = "Dict",
-                    min_keyword_length = 2, -- Try 3 if this is slow
+                    min_keyword_length = 3, -- Trying 3 for performance
                     opts = {
                         -- Note: This can be a function that returns a table as well
                         dictionary_files = {
@@ -240,41 +240,36 @@ local function setup_blink()
                     end,
                 },
                 lazydev = {
-                    async = true,
                     module = "lazydev.integrations.blink",
                     name = "LazyDev",
                     score_offset = 100,
                 },
-                lsp = { async = true, fallbacks = {} },
+                lsp = { fallbacks = {} },
                 obsidian = {
-                    async = true,
                     name = "obsidian",
                     module = "blink.compat.source",
                     score_offset = 2,
                     -- opts = require("cmp_obsidian").new()
                 },
                 obsidian_new = {
-                    async = true,
                     name = "obsidian_new",
                     module = "blink.compat.source",
                     score_offset = 3,
                     -- opts = require("cmp_obsidian_new").new()
                 },
                 obsidian_tags = {
-                    async = true,
                     name = "obsidian_tags",
                     module = "blink.compat.source",
                     -- opts = require("cmp_obsidian_tags").new()
                 },
                 path = {
-                    async = true,
                     opts = {
                         get_cwd = function(_)
                             return vim.fn.getcwd()
                         end,
                     },
                 },
-                snippets = { async = true },
+                -- snippets = { async = true },
             },
         },
     })
