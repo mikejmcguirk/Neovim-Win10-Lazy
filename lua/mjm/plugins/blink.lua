@@ -143,13 +143,13 @@ local function setup_blink()
             providers = {
                 buffer = {
                     enabled = true,
-                    -- opts = {
-                    --     get_bufnrs = function()
-                    --         return vim.tbl_filter(function(bufnr)
-                    --             return vim.bo[bufnr].buftype == ""
-                    --         end, vim.api.nvim_list_bufs())
-                    --     end,
-                    -- },
+                    opts = {
+                        get_bufnrs = function()
+                            return vim.tbl_filter(function(bufnr)
+                                return vim.bo[bufnr].buftype == ""
+                            end, vim.api.nvim_list_bufs())
+                        end,
+                    },
                     score_offset = -6,
                     transform_items = function(a, items)
                         local prose_ft = { "text", "markdown" }
@@ -194,7 +194,7 @@ local function setup_blink()
                     -- will not be closed on exit
                     module = "blink-cmp-dictionary",
                     name = "Dict",
-                    min_keyword_length = 3, -- Trying 3 for performance
+                    min_keyword_length = 2, -- Try 3 if slow
                     opts = {
                         -- Note: This can be a function that returns a table as well
                         dictionary_files = {
