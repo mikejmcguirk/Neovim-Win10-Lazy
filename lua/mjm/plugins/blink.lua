@@ -35,7 +35,7 @@ local function setup_blink()
             accept = { auto_brackets = { enabled = true } },
             documentation = {
                 auto_show = true,
-                auto_show_delay_ms = 100,
+                auto_show_delay_ms = 125,
                 window = { border = "single" },
             },
             menu = {
@@ -194,7 +194,7 @@ local function setup_blink()
                     -- will not be closed on exit
                     module = "blink-cmp-dictionary",
                     name = "Dict",
-                    min_keyword_length = 2, -- Try 3 if slow
+                    min_keyword_length = 3, -- How many two letter words do we need to look up?
                     opts = {
                         -- Note: This can be a function that returns a table as well
                         dictionary_files = {
