@@ -108,23 +108,16 @@ end)
 -- end)
 
 local function fuzzy_dict()
-    vim.notify("Getting dictionary...")
-    local lines = {}
+    -- TODO: This should merge the results form all dictionary files
     --- @diagnostic disable: undefined-field
     local dict_file = vim.opt.dictionary:get()[1]
-
     local file = io.open(dict_file, "r")
-    if file then
-        for line in file:lines() do
-            table.insert(lines, (line:gsub("\r$", "")))
-        end
-        file:close()
-    else
+    if not file then
         return vim.notify("Unable to open dictionary file: " .. dict_file, vim.log.levels.ERROR)
     end
+    file:close()
 
-    vim.api.nvim_echo({ { "" } }, false, {})
-    fzf_lua.fzf_exec(lines)
+    fzf_lua.fzf_exec("tr -d '\\r' < " .. vim.fn.shellescape(dict_file))
 end
 
 local function fuzzy_spell_correct()
@@ -134,23 +127,17 @@ local function fuzzy_spell_correct()
     end
 
     local buf = vim.api.nvim_get_current_buf()
-    vim.notify("Getting dictionary...")
-    local lines = {}
+
+    -- TODO: This should merge the results form all dictionary files
     --- @diagnostic disable: undefined-field
     local dict_file = vim.opt.dictionary:get()[1]
-
     local file = io.open(dict_file, "r")
-    if file then
-        for line in file:lines() do
-            table.insert(lines, (line:gsub("\r$", "")))
-        end
-        file:close()
-    else
+    if not file then
         return vim.notify("Unable to open dictionary file: " .. dict_file, vim.log.levels.ERROR)
     end
+    file:close()
 
-    vim.api.nvim_echo({ { "" } }, false, {})
-    fzf_lua.fzf_exec(lines, {
+    fzf_lua.fzf_exec("tr -d '\\r' < " .. vim.fn.shellescape(dict_file), {
         prompt = 'Suggestions for "' .. word .. '": ',
         actions = {
             ["default"] = function(selected, _)
@@ -192,6 +179,7 @@ local function fuzzy_spell_correct()
                 -- vim.api.nvim_echo({ { msg } }, true, {})
             end,
         },
+        -- FUTURE: Would be cool if the previewer tied into wordnet
         previewer = false,
         fzf_opts = {
             ["--query"] = word,
