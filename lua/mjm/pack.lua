@@ -37,7 +37,8 @@ local pack_spec = {
     { src = "https://github.com/kristijanhusak/vim-dadbod-completion" },
     { src = "https://github.com/Saghen/blink.compat", version = vim.version.range("2.*") },
     -- Requires plenary
-    { src = "https://github.com/Kaiser-Yang/blink-cmp-dictionary" },
+    -- { src = "https://github.com/mikejmcguirk/blink-cmp-dictionary", version = "add-cancel" },
+    -- { src = "https://github.com/Kaiser-Yang/blink-cmp-dictionary" },
 
     { src = "https://github.com/NvChad/nvim-colorizer.lua" },
 

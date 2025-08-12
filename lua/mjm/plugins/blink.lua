@@ -121,7 +121,7 @@ local function setup_blink()
             per_filetype = {
                 lua = { inherit_defaults = true, "lazydev" },
                 markdown = {
-                    "dictionary",
+                    -- "dictionary",
                     "obsidian",
                     "obsidian_new",
                     "obsidian_tags",
@@ -129,7 +129,8 @@ local function setup_blink()
                     "path",
                 },
                 sql = { "dadbod", "buffer", "path" },
-                text = { "dictionary", "buffer", "path" },
+                text = { "buffer", "path" },
+                -- text = { "dictionary", "buffer", "path" },
             },
             providers = {
                 buffer = {
