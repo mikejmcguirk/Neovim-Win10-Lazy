@@ -196,7 +196,6 @@ local function setup_blink()
                         get_prefix = function(ctx)
                             local line = ctx.line:sub(1, ctx.cursor[2])
                             local word = line:match("[a-zA-Z]+$")
-                            print(word)
                             return word or ""
                         end,
                     },
