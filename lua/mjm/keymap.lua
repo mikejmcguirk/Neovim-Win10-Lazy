@@ -181,6 +181,8 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
 end
 
 vim.keymap.set("n", "<C-z>", "<nop>")
+vim.keymap.set("n", "<C-S-z>", "<nop>")
+
 -- This trick mostly doesn't work because it also blocks any map in the layer below it, but
 -- anything under Z has to be manually mapped anyway, so this is fine
 vim.keymap.set("n", "Z", "<nop>")
