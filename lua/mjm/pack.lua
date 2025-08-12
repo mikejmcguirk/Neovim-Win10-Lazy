@@ -24,7 +24,6 @@ local pack_spec = {
     { src = "https://github.com/ThePrimeagen/harpoon", version = "harpoon2" },
 
     { src = "https://github.com/lukas-reineke/indent-blankline.nvim" },
-    { src = "https://github.com/echasnovski/mini.indentscope", version = vim.version.range("*") },
 
     -- LOW: Replace with custom config
     -- { src = "https://github.com/folke/lazydev.nvim" },
