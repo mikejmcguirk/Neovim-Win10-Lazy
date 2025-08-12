@@ -180,43 +180,43 @@ local function setup_blink()
                     end,
                 },
                 dadbod = { name = "Dadbod", module = "vim_dadbod_completion.blink" },
-                dictionary = {
-                    -- NOTE: Do not set async for this provider, or else the fzf jobs it spawns
-                    -- might not be closed on exit. Per the docs, it should be async by default
-                    -- and non-blocking anyway
-                    module = "blink-cmp-dictionary",
-                    name = "Dict",
-                    max_items = 20,
-                    min_keyword_length = 3, -- How many two letter words do we need to look up?
-                    opts = {
-                        dictionary_files = {
-                            vim.fn.expand("~/.local/bin/words/words_alpha.txt"),
-                            vim.fn.expand(SpellFile),
-                        },
-                        get_prefix = function(ctx)
-                            local line = ctx.line:sub(1, ctx.cursor[2])
-                            local word = line:match("[a-zA-Z]+$")
-                            return word or ""
-                        end,
-                    },
-                    -- transform_items = function(_, items)
-                    --     local seen = {} --- @type boolean[]
+                -- dictionary = {
+                --     -- NOTE: Do not set async for this provider, or else the fzf jobs it spawns
+                --     -- might not be closed on exit. Per the docs, it should be async by default
+                --     -- and non-blocking anyway
+                --     module = "blink-cmp-dictionary",
+                --     name = "Dict",
+                --     max_items = 20,
+                --     min_keyword_length = 3, -- How many two letter words do we need to look up?
+                --     opts = {
+                --         dictionary_files = {
+                --             vim.fn.expand("~/.local/bin/words/words_alpha.txt"),
+                --             vim.fn.expand(SpellFile),
+                --         },
+                --         get_prefix = function(ctx)
+                --             local line = ctx.line:sub(1, ctx.cursor[2])
+                --             local word = line:match("[a-zA-Z]+$")
+                --             return word or ""
+                --         end,
+                --     },
+                --     -- transform_items = function(_, items)
+                --     --     local seen = {} --- @type boolean[]
 
-                    --     local out = vim.tbl_filter(function(item)
-                    --         local text = item.insertText or "" --- @type string
+                --     --     local out = vim.tbl_filter(function(item)
+                --     --         local text = item.insertText or "" --- @type string
 
-                    --         if seen[text] then
-                    --             return false
-                    --         end
+                --     --         if seen[text] then
+                --     --             return false
+                --     --         end
 
-                    --         seen[text] = true
+                --     --         seen[text] = true
 
-                    --         return #text > 0 and text:match("^[a-zA-Z]+$")
-                    --     end, items)
+                --     --         return #text > 0 and text:match("^[a-zA-Z]+$")
+                --     --     end, items)
 
-                    --     return out
-                    -- end,
-                },
+                --     --     return out
+                --     -- end,
+                -- },
                 -- NOTE: To test, trigger LazyDev's specific completion by requiring a module
                 lazydev = {
                     module = "lazydev.integrations.blink",
