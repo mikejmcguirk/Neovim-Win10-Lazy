@@ -105,6 +105,17 @@ local function setup_blink()
         -- blink's event handling also being an element of what's happening. A downside here
         -- seems to be that async needs to be turned off for all providers, or else if an async
         -- provider pushes completions first, then the others will not be seen
+        -- UPDATE: While less frequent, this can still happen. Can trigger by just doing
+        -- as;ldfkj spam. The solution here I think is to use vim.system instead of a plenary
+        -- job, because then the calls are managed through Vim's context.
+        -- If you prevent a prefix from being added if there is any special character, it works
+        -- If you make Dictionary run synrhonously, it works
+        -- If you prevent non-alpha characters from going into prefix, doesn't change. Feels like
+        -- data is being polluted somehow. Like, something is being affected in a scope
+        -- it's not meant to be. It also looks like both the plenary jobs and vim.system use
+        -- uv.spawn under the hood, so I'm not sure that would actually do anything. Though with
+        -- vim.system, you pass the callback handler and that handler does its work, whereas
+        -- plenary has wrappers after uv.spawn to handle cleanup
         sources = {
             default = { "lsp", "snippets", "buffer", "path" },
             per_filetype = {
@@ -175,31 +186,39 @@ local function setup_blink()
                     -- and non-blocking anyway
                     module = "blink-cmp-dictionary",
                     name = "Dict",
+                    max_items = 20,
                     min_keyword_length = 3, -- How many two letter words do we need to look up?
                     opts = {
                         dictionary_files = {
                             vim.fn.expand("~/.local/bin/words/words_alpha.txt"),
                             vim.fn.expand(SpellFile),
                         },
+                        get_prefix = function(ctx)
+                            local line = ctx.line:sub(1, ctx.cursor[2])
+                            local word = line:match("[a-zA-Z]+$")
+                            print(word)
+                            return word or ""
+                        end,
                     },
-                    transform_items = function(_, items)
-                        local seen = {} --- @type boolean[]
+                    -- transform_items = function(_, items)
+                    --     local seen = {} --- @type boolean[]
 
-                        local out = vim.tbl_filter(function(item)
-                            local text = item.insertText or "" --- @type string
+                    --     local out = vim.tbl_filter(function(item)
+                    --         local text = item.insertText or "" --- @type string
 
-                            if seen[text] then
-                                return false
-                            end
+                    --         if seen[text] then
+                    --             return false
+                    --         end
 
-                            seen[text] = true
+                    --         seen[text] = true
 
-                            return #text > 0 and text:match("^[a-zA-Z]+$")
-                        end, items)
+                    --         return #text > 0 and text:match("^[a-zA-Z]+$")
+                    --     end, items)
 
-                        return out
-                    end,
+                    --     return out
+                    -- end,
                 },
+                -- NOTE: To test, trigger LazyDev's specific completion by requiring a module
                 lazydev = {
                     module = "lazydev.integrations.blink",
                     name = "LazyDev",
