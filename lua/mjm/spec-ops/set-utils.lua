@@ -1,4 +1,5 @@
 local blk_utils = require("mjm.spec-ops.block-utils")
+local paste_utils = require("mjm.spec-ops.paste-utils")
 local op_utils = require("mjm.spec-ops.op-utils")
 local utils = require("mjm.spec-ops.utils")
 
@@ -239,8 +240,19 @@ function M.do_set(text, marks, regtype, motion, vcount, curswant)
 
         return op_utils.paste_chars({ del_marks.start.row, del_marks.start.col }, true, set_lines)
     elseif reg_mtype == mtype.MB and motion_mtype == mtype.MC then
-        -- block repeat. set text on selection then paste everything else
-        return marks
+        local del_marks, err = op_utils.del_chars(marks)
+        if not del_marks or err then
+            return nil, "do_set: " .. (err or "Unknown error in op_set_block")
+        end
+
+        return paste_utils.paste_block({
+            cur_pos = {
+                del_marks.start.row,
+                del_marks.start.col,
+            },
+            before = true,
+            lines = set_lines,
+        })
     end
 
     return nil, "do_set: Unable to find a valid set function"

@@ -120,6 +120,37 @@ function M.setup_text_lines(opts)
     return lines
 end
 
+--- @param marks op_marks
+--- @return  op_marks|nil, string|nil
+function M.del_chars(marks)
+    local start_row = marks.start.row
+    local fin_row = marks.fin.row
+    if start_row > fin_row then
+        return nil, "Start row " .. start_row .. " > finish row " .. fin_row .. " in get_chars"
+    end
+
+    local start_col = marks.start.col
+    local fin_col = marks.fin.col
+
+    local fin_line = vim.api.nvim_buf_get_lines(0, fin_row - 1, fin_row, false)[1]
+    local _, fin_byte, err = blk_utils.byte_bounds_from_col(fin_line, fin_col)
+    if (not fin_byte) or err then
+        return nil, "delete_chars: " .. (err or "Unknown error in byte_bounds_from_col")
+    end
+    fin_byte = #fin_line > 0 and fin_byte + 1 or 0
+
+    vim.api.nvim_buf_set_text(0, start_row - 1, start_col, fin_row - 1, fin_byte, {})
+    start_row = math.min(start_row, vim.api.nvim_buf_line_count(0))
+    vim.api.nvim_buf_set_mark(0, "[", start_row, start_col, {})
+    vim.api.nvim_buf_set_mark(0, "]", start_row, start_col, {})
+
+    return {
+        start = { row = start_row, col = start_col },
+        fin = { row = start_row, col = start_col },
+    },
+        nil
+end
+
 --- @param cur_pos {[1]: integer, [2]: integer}
 --- @param before boolean
 --- @param lines string[]

@@ -36,12 +36,15 @@ function M.get_paste_lines(text, vcount, regtype)
 end
 
 -- TODO: do_block_ops can be used to paste the rows
+-- TODO: Whole function needs rewritten. Three layers of callbacks deep for no good reason
+-- Should also better interface with the op functions
+--
 
 --- @param row integer
 --- @param lines string[]
 --- @param target_vcol integer
 --- @return op_marks|nil, string|nil
-local function norm_paste_block_callback(row, lines, target_vcol, blk_width)
+local function paste_block_callback(row, lines, target_vcol, blk_width)
     local paste_info = {} --- @type block_op_info[]
     local total_rows = vim.api.nvim_buf_line_count(0)
 
@@ -98,7 +101,7 @@ local function norm_paste_block_callback(row, lines, target_vcol, blk_width)
 end
 
 --- @return op_marks|nil, string|nil
-local function norm_paste_block(opts)
+function M.paste_block(opts)
     opts = opts or {}
     local cur_pos = opts.cur_pos or vim.api.nvim_win_get_cursor(0)
     local before = opts.before or false
@@ -119,11 +122,11 @@ local function norm_paste_block(opts)
 
     local paste_vcol = before and math.max(start_vcol - 1, 0) or fin_vcol --- @type integer
     local width = blk_utils.get_block_reg_width(lines)
-    return norm_paste_block_callback(row, lines, paste_vcol, width)
+    return paste_block_callback(row, lines, paste_vcol, width)
 end
 
 --- @return op_marks|nil, string|nil
-function M.do_norm_paste(opts)
+function M.do_paste(opts)
     opts = opts or {}
 
     opts.regtype = opts.regtype or "v"
@@ -148,7 +151,7 @@ function M.do_norm_paste(opts)
     elseif opts.regtype == "V" then
         return op_utils.paste_lines(opts.cur_pos[1], opts.before, opts.lines)
     else
-        return norm_paste_block({
+        return M.paste_block({
             cur_pos = opts.cur_pos,
             lines = opts.lines,
             before = opts.before,

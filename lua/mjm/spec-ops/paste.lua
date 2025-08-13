@@ -81,7 +81,7 @@ M.paste_norm_callback = function(motion)
     local start_line = vim.api.nvim_buf_get_lines(0, cur_pos[1] - 1, cur_pos[1], false)[1]
     local on_blank = not start_line:match("%S") --- @type boolean
 
-    local marks, err = paste_utils.do_norm_paste({
+    local marks, err = paste_utils.do_paste({
         regtype = regtype,
         cur_pos = cur_pos,
         before = before,
