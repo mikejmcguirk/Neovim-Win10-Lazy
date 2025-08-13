@@ -6,13 +6,13 @@
 
 local M = {}
 
---- @class Marks
+--- @class op_marks
 --- @field start {row: integer, col: integer}
 --- @field fin {row: integer, col: integer}
 
 --- @param motion string
 --- @param vmode? boolean
---- @return Marks
+--- @return op_marks
 function M.get_marks(motion, vmode)
     --- @type {[1]:integer, [2]:integer}
     local start = vim.api.nvim_buf_get_mark(0, vmode and "<" or "[")
@@ -27,7 +27,7 @@ function M.get_marks(motion, vmode)
             row = fin[1],
             col = fin[2],
         },
-    } --- @type Marks
+    } --- @type op_marks
 
     if motion == "block" then
         return M.sort_marks(marks)
@@ -36,8 +36,8 @@ function M.get_marks(motion, vmode)
     end
 end
 
---- @param marks Marks
---- @return Marks
+--- @param marks op_marks
+--- @return op_marks
 function M.sort_marks(marks)
     if marks.start.row > marks.fin.row then
         return {
@@ -202,9 +202,9 @@ local function apply_indent(cur_pos, row, str_fn)
     return #indent_str - #leading_ws
 end
 
---- @param marks Marks
+--- @param marks op_marks
 --- @param cur_pos {[1]: integer, [2]: integer}
---- @return Marks
+--- @return op_marks
 function M.fix_indents(marks, cur_pos)
     local new_marks = marks
     local str_fn = get_indent_str_function()

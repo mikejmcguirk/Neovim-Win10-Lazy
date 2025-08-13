@@ -1,11 +1,12 @@
 -- TODO: Annotate M when the project is more baked in
+
 local M = {}
 
 local hl_timer = vim.uv.new_timer()
 
 -- TODO: handle nil for the timers
 
---- @param marks Marks
+--- @param marks op_marks
 --- @param group string
 --- @param ns integer
 --- @param duration integer
@@ -31,8 +32,7 @@ local function wrapped_hl_text(marks, group, ns, duration, regtype)
     )
 end
 
--- TODO: It would be better to pcall this to get the error, rather than relying on the caller
---- @param marks Marks
+--- @param marks op_marks
 --- @param group string
 --- @param ns integer
 --- @param duration integer

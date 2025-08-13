@@ -38,45 +38,7 @@ end
 --- @param cur_pos {[1]: integer, [2]: integer}
 --- @param before boolean
 --- @param lines string[]
---- @return Marks|nil, string|nil
-local function paste_lines(cur_pos, before, lines)
-    local row = cur_pos[1]
-    row = before and row - 1 or row
-
-    vim.api.nvim_buf_set_lines(0, row, row, false, lines)
-
-    local start_row = row + 1
-    local start_col = 0
-    local fin_row = row + #lines
-    local fin_col = #vim.api.nvim_buf_get_lines(0, fin_row - 1, fin_row, false)[1] - 1
-
-    local fin_line = vim.api.nvim_buf_get_lines(0, fin_row - 1, fin_row, false)[1]
-    local start_byte, _, bb_err = blk_utils.byte_bounds_from_col(fin_line, fin_col)
-    if (not start_byte) or bb_err then
-        return nil, "paste lines: " .. (bb_err or "Unknown error in byte_bounds_from_col")
-    end
-    fin_col = start_byte
-
-    vim.api.nvim_buf_set_mark(0, "[", start_row, start_col, {})
-    vim.api.nvim_buf_set_mark(0, "]", fin_row, fin_col, {})
-
-    return {
-        start = {
-            row = start_row,
-            col = start_col,
-        },
-        fin = {
-            row = fin_row,
-            col = fin_col,
-        },
-    },
-        nil
-end
-
---- @param cur_pos {[1]: integer, [2]: integer}
---- @param before boolean
---- @param lines string[]
---- @return Marks|nil, string|nil
+--- @return op_marks|nil, string|nil
 local function paste_chars(cur_pos, before, lines)
     local row, col = unpack(cur_pos)
 
@@ -118,10 +80,12 @@ local function paste_chars(cur_pos, before, lines)
     }
 end
 
+-- TODO: do_block_ops can be used to paste the rows
+
 --- @param row integer
 --- @param lines string[]
 --- @param target_vcol integer
---- @return Marks|nil, string|nil
+--- @return op_marks|nil, string|nil
 local function norm_paste_block_callback(row, lines, target_vcol, blk_width)
     local paste_info = {} --- @type block_op_info[]
     local total_rows = vim.api.nvim_buf_line_count(0)
@@ -153,8 +117,7 @@ local function norm_paste_block_callback(row, lines, target_vcol, blk_width)
         return nil, "norm_paste_block_callback: " .. err
     end
 
-    --- @diagnostic disable: missing-fields
-    local marks = {} --- @type Marks
+    local marks = { start = {}, fin = {} } --- @type op_marks
     for i, p in ipairs(paste_info) do
         local row_1 = row + i - 1 --- @type integer
         local row_0 = row_1 - 1 --- @type integer
@@ -164,13 +127,11 @@ local function norm_paste_block_callback(row, lines, target_vcol, blk_width)
         vim.api.nvim_buf_set_text(0, row_0, byte, row_0, byte, { line })
 
         if i == 1 then
-            marks.start = {}
             marks.start.row = row_1
             marks.start.col = byte
         end
 
         if i == #paste_info then
-            marks.fin = {}
             marks.fin.row = row_1
             marks.fin.col = byte + #line - 1
         end
@@ -181,7 +142,7 @@ local function norm_paste_block_callback(row, lines, target_vcol, blk_width)
     return marks
 end
 
---- @return Marks|nil, string|nil
+--- @return op_marks|nil, string|nil
 local function norm_paste_block(opts)
     opts = opts or {}
     local cur_pos = opts.cur_pos or vim.api.nvim_win_get_cursor(0)
@@ -206,7 +167,7 @@ local function norm_paste_block(opts)
     return norm_paste_block_callback(row, lines, paste_vcol, width)
 end
 
---- @return Marks|nil, string|nil
+--- @return op_marks|nil, string|nil
 function M.do_norm_paste(opts)
     opts = opts or {}
 
@@ -230,7 +191,7 @@ function M.do_norm_paste(opts)
     if opts.regtype == "v" then
         return paste_chars(opts.cur_pos, opts.before, opts.lines)
     elseif opts.regtype == "V" then
-        return paste_lines(opts.cur_pos, opts.before, opts.lines)
+        return op_utils.paste_lines(opts.cur_pos[1], opts.before, opts.lines)
     else
         return norm_paste_block({
             cur_pos = opts.cur_pos,

@@ -634,23 +634,25 @@ end
 
 -- Visual pastes do not need any additional contrivances in order to run silently, as they
 -- run a delete under the hood, which triggers the TextChanged autocmd for deletes
-vim.keymap.set("x", "p", function()
-    if should_format_paste(vim.v.register) then
-        return "Pmz<cmd>silent norm! `[=`]`z<cr>"
-    else
-        return "P"
-    end
-end, { silent = true, expr = true })
+-- vim.keymap.set("x", "p", function()
+--     if should_format_paste(vim.v.register) then
+--         return "Pmz<cmd>silent norm! `[=`]`z<cr>"
+--     else
+--         return "P"
+--     end
+-- end, { silent = true, expr = true })
 
-vim.keymap.set("x", "<M-p>", function()
-    if should_format_paste("+") then
-        return '"+Pmz<cmd>silent norm! `[=`]`z<cr>'
-    else
-        return '"+P'
-    end
-end, { silent = true, expr = true })
+-- vim.keymap.set("x", "<M-p>", function()
+--     if should_format_paste("+") then
+--         return '"+Pmz<cmd>silent norm! `[=`]`z<cr>'
+--     else
+--         return '"+P'
+--     end
+-- end, { silent = true, expr = true })
 
-vim.keymap.set("x", "P", "<nop>")
+-- vim.keymap.set("x", "P", "<nop>")
+
+vim.keymap.set("x", "p", "P")
 
 -----------------------
 -- Text Manipulation --
@@ -735,6 +737,8 @@ vim.keymap.set(
     ":s/\\%V.*\\%V./\\=eval(submatch(0))/<CR>",
     { noremap = true, silent = true }
 )
+
+-- TODO: The normal mode moves create enter errors when going out of range
 
 vim.keymap.set("n", "<C-j>", function()
     if not ut.check_modifiable() then

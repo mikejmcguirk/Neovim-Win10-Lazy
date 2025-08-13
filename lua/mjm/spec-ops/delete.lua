@@ -52,7 +52,7 @@ end
 function M.delete_callback(motion)
     op_utils.update_cb_from_op(op_state, cb_state, motion)
 
-    local marks = utils.get_marks(motion, cb_state.vmode) --- @type Marks
+    local marks = utils.get_marks(motion, cb_state.vmode) --- @type op_marks
 
     --- @diagnostic disable: undefined-field
     local yank_lines, err_y = get_utils.do_get({
@@ -81,7 +81,7 @@ function M.delete_callback(motion)
         motion = motion,
         curswant = cb_state.view.curswant,
         visual = cb_state.vmode,
-    }) --- @type Marks|nil, string|nil
+    }) --- @type op_marks|nil, string|nil
 
     if (not post_marks) or err_d then
         local err_msg = err_d or "Unknown error at delete callback"

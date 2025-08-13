@@ -53,7 +53,7 @@ end
 function M.yank_callback(motion)
     op_utils.update_cb_from_op(op_state, cb_state, motion)
 
-    local marks = utils.get_marks(motion, cb_state.vmode) --- @type Marks
+    local marks = utils.get_marks(motion, cb_state.vmode) --- @type op_marks
 
     --- @diagnostic disable: undefined-field
     local lines, err = get_utils.do_get({

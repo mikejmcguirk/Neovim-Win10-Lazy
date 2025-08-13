@@ -36,16 +36,16 @@ local function is_valid_col(line, col)
 end
 
 --- @param lines string[]
---- @param marks Marks
+--- @param marks op_marks
 --- @return integer|nil, integer|nil, string|nil
 --- From a pair of byte-based marks, get the left and right virtual column boundaries
 --- Virtual columns are one-indexed, unless the line length is zero, in which case the virtual
 --- column is zero
-function M.get_vcols_from_marks(lines, marks)
+function M.vcols_from_marks(lines, marks)
     if #lines < 1 then
-        return nil, nil, "Lines is empty at get_vcols_from_marks"
+        return nil, nil, "Lines is empty at vcols_from_marks"
     end
-    marks = utils.sort_marks(marks) --- @type Marks
+    marks = utils.sort_marks(marks) --- @type op_marks
 
     --- @type integer|nil, integer|nil, string|nil
     local t_l_vcol, t_r_vcol, t_vcol_err = M.vcols_from_col(lines[1], marks.start.col)

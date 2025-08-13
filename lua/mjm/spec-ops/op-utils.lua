@@ -1,15 +1,9 @@
 local blk_utils = require("mjm.spec-ops.block-utils")
 local utils = require("mjm.spec-ops.utils")
 
---- @class block_op_info
---- @field start_byte integer
---- @field fin_byte_ex integer
---- @field text string
+local M = {}
 
 -- Store register in op_state since vim.v.register is clobbered by some text objects
--- TODO: Check in delete function if I need to store count here
-
-local M = {}
 
 --- @class op_state
 --- @field reg string|nil
@@ -89,11 +83,13 @@ end
 --- @field text string
 --- @field vcount integer
 
+-- TODO: Have paste use this
+
 --- @param opts SetupTextLineOpts
 --- @return string[]
 function M.setup_text_lines(opts)
     opts = opts or {}
-    if not type(opts.text) == "table" then
+    if not type(opts.text) == "string" then
         return { "" }
     end
 
@@ -124,6 +120,48 @@ function M.setup_text_lines(opts)
     return lines
 end
 
+--- @param row integer
+--- @param before boolean
+--- @param lines string[]
+--- @return op_marks|nil, string|nil
+function M.paste_lines(row, before, lines)
+    row = before and row - 1 or row
+
+    vim.api.nvim_buf_set_lines(0, row, row, false, lines)
+
+    local start_row = row + 1
+    local start_col = 0
+    local fin_row = row + #lines
+    local fin_col = #vim.api.nvim_buf_get_lines(0, fin_row - 1, fin_row, false)[1] - 1
+
+    local fin_line = vim.api.nvim_buf_get_lines(0, fin_row - 1, fin_row, false)[1]
+    local start_byte, _, bb_err = blk_utils.byte_bounds_from_col(fin_line, fin_col)
+    if (not start_byte) or bb_err then
+        return nil, "paste lines: " .. (bb_err or "Unknown error in byte_bounds_from_col")
+    end
+    fin_col = start_byte
+
+    vim.api.nvim_buf_set_mark(0, "[", start_row, start_col, {})
+    vim.api.nvim_buf_set_mark(0, "]", fin_row, fin_col, {})
+
+    return {
+        start = {
+            row = start_row,
+            col = start_col,
+        },
+        fin = {
+            row = fin_row,
+            col = fin_col,
+        },
+    },
+        nil
+end
+
+--- @class block_op_info
+--- @field start_byte integer
+--- @field fin_byte_ex integer
+--- @field text string
+
 --- @param set_line string|nil
 --- @param l_vcol integer
 --- @param r_vcol integer
@@ -131,12 +169,13 @@ end
 --- @param buf_line string
 --- @param max_curswant boolean
 --- @return block_op_info|nil, string|nil
-function M.get_block_set_row(set_line, l_vcol, r_vcol, blk_width, buf_line, max_curswant)
+local function get_block_set_row(set_line, l_vcol, r_vcol, blk_width, buf_line, max_curswant)
     local max_vcol = vim.fn.strdisplaywidth(buf_line) --- @type integer
     local target_l_vcol = math.min(l_vcol, max_vcol) --- @type integer
+
     if target_l_vcol < max_vcol and set_line then
         local pad_len = math.max(blk_width - vim.fn.strdisplaywidth(set_line), 0)
-        set_line = set_line .. string.rep(" ", pad_len)
+        set_line = pad_len > 0 and set_line .. string.rep(" ", pad_len) or set_line
     elseif set_line then
         set_line = set_line:gsub("%s+$", "")
     else
@@ -146,8 +185,13 @@ function M.get_block_set_row(set_line, l_vcol, r_vcol, blk_width, buf_line, max_
     --- @type integer|nil, integer|nil, string|nil
     local this_l_vcol, _, l_err = blk_utils.vcols_from_vcol(buf_line, target_l_vcol)
     if (not this_l_vcol) or l_err then
-        local err = l_err or "Unknown error in vcols_from_vcol"
-        return nil, "get_block_set_row: " .. err
+        return nil, "get_block_set_row: " .. (l_err or "Unknown error in vcols_from_vcol")
+    end
+
+    --- @type integer|nil, integer|nil, string|nil
+    local l_byte, _, lb_err = blk_utils.byte_bounds_from_vcol(buf_line, this_l_vcol)
+    if (not l_byte) or lb_err then
+        return nil, "get_block_set_row: " .. (lb_err or "Unknown error in byte_bounds_from_vcol")
     end
 
     local target_r_vcol = math.min(r_vcol, max_vcol) --- @type integer
@@ -156,22 +200,13 @@ function M.get_block_set_row(set_line, l_vcol, r_vcol, blk_width, buf_line, max_
     --- @type integer|nil, integer|nil, string|nil
     local _, this_r_vcol, r_err = blk_utils.vcols_from_vcol(buf_line, target_r_vcol)
     if (not this_r_vcol) or r_err then
-        local err = r_err or "Unknown error in vcols_from_vcol"
-        return nil, "get_block_set_row: " .. err
-    end
-
-    --- @type integer|nil, integer|nil, string|nil
-    local l_byte, _, lb_err = blk_utils.byte_bounds_from_vcol(buf_line, this_l_vcol)
-    if (not l_byte) or lb_err then
-        local err = lb_err or "Unknown error in byte_bounds_from_vcol"
-        return nil, "get_block_set_row: " .. err
+        return nil, "get_block_set_row: " .. (r_err or "Unknown error in vcols_from_vcol")
     end
 
     --- @type integer|nil, integer|nil, string|nil
     local _, r_byte, rb_err = blk_utils.byte_bounds_from_vcol(buf_line, this_r_vcol)
     if (not r_byte) or rb_err then
-        local err = rb_err or "Unknown error in byte_bounds_from_vcol"
-        return nil, "get_block_set_row: " .. err
+        return nil, "get_block_set_row: " .. (rb_err or "Unknown error in byte_bounds_from_vcol")
     end
 
     r_byte = #buf_line > 0 and r_byte + 1 or 0
@@ -188,7 +223,7 @@ function M.get_block_set_row(set_line, l_vcol, r_vcol, blk_width, buf_line, max_
     return { start_byte = l_byte, fin_byte_ex = r_byte, text = set_line }
 end
 
--- TODO: Example scenario:
+-- FUTURE: Example scenario:
 -- - Three lines are yanked blockwise. The middle line is only whitespace
 -- - Those lines are blockwise pasted
 -- - The middle line being pasted over is shorter than the paste column
@@ -198,88 +233,71 @@ end
 -- afterwards. An option should be added to skip the whitespce entirely though
 
 --- @param target_vcol integer
---- @param set_line string
+--- @param paste_line string
 --- @param buf_line string
 --- @param blk_width integer
 --- @return block_op_info|nil, string|nil
-function M.get_block_paste_row(target_vcol, set_line, buf_line, blk_width)
+function M.get_block_paste_row(target_vcol, paste_line, buf_line, blk_width)
     local max_vcol = vim.fn.strdisplaywidth(buf_line) --- @type integer
     local paste_vcol = math.min(max_vcol, target_vcol) --- @type integer
 
     if paste_vcol < max_vcol then
-        local pad_len = math.max(blk_width - vim.fn.strdisplaywidth(set_line), 0)
-        set_line = set_line .. string.rep(" ", pad_len)
+        local pad_len = blk_width - vim.fn.strdisplaywidth(paste_line) --- @type integer
+        pad_len = math.max(pad_len, 0)
+        paste_line = pad_len > 0 and paste_line .. string.rep(" ", pad_len) or paste_line
     else
-        set_line = set_line:gsub("%s+$", "")
+        paste_line = paste_line:gsub("%s+$", "")
     end
 
     --- @type integer|nil, integer|nil, string|nil
     local start_vcol, fin_vcol, vcol_err = blk_utils.vcols_from_vcol(buf_line, paste_vcol)
     if (not start_vcol) or not fin_vcol or vcol_err then
-        vcol_err = vcol_err or "Unknown error in vcols_from_vcol" --- @type string
-        return nil, "norm_set_block_line: " .. vcol_err
+        return nil, "get_block_paste_row: " .. (vcol_err or "Unknown error in vcols_from_vcol")
     end
 
     if paste_vcol < target_vcol then
-        set_line = string.match(set_line, "%S") and set_line or ""
-        set_line = string.rep(" ", target_vcol - paste_vcol) .. set_line
+        paste_line = string.match(paste_line, "%S") and paste_line or ""
+        paste_line = string.rep(" ", target_vcol - paste_vcol) .. paste_line
     elseif fin_vcol > paste_vcol then
-        local padding = string.rep(" ", paste_vcol - start_vcol + 1) --- @type string
-        set_line = padding .. set_line
+        paste_line = string.rep(" ", paste_vcol - start_vcol + 1) .. paste_line
     end
 
-    --- @type integer|nil, string|nil
-    local set_byte, err = (function()
+    local paste_byte, err = (function()
         if fin_vcol > paste_vcol then
             local start_byte, _, bb_err = blk_utils.byte_bounds_from_vcol(buf_line, start_vcol)
-            if (not start_byte) or bb_err then
-                return nil, (bb_err or "Unknown error in byte_bounds_from_col")
-            end
-
-            return start_byte
+            return start_byte, bb_err
         else
             local _, fin_byte, bb_err = blk_utils.byte_bounds_from_vcol(buf_line, fin_vcol)
-            if (not fin_byte) or bb_err then
-                return nil, (bb_err or "Unknown error in byte_bounds_from_col")
-            end
-
-            return fin_byte
+            return fin_byte, bb_err
         end
-    end)()
-    if (not set_byte) or err then
-        return nil, "norm_paste_block_callback: " .. err
+    end)() --- @type integer|nil, string|nil
+
+    if (not paste_byte) or err then
+        return nil, "get_block_paste_row: " .. (err or "Unknown error in byte_bounds_from_col")
     end
 
     if fin_vcol <= paste_vcol then
-        set_byte = paste_vcol > 0 and set_byte + 1 or 0
+        paste_byte = paste_vcol > 0 and paste_byte + 1 or 0
     end
 
-    return { start_byte = set_byte, fin_byte_ex = set_byte, text = set_line }
+    return { start_byte = paste_byte, fin_byte_ex = paste_byte, text = paste_line }
 end
 
--- TODO: Long function
 -- MAYBE: Create a function to validate that a collection of lines is a set of valid block lines
 
 --- @param blk_ops block_op_info[]
---- @param marks Marks
+--- @param marks op_marks
 --- @param opts? {set_del_marks: boolean}
---- @return Marks|nil, string|nil
-function M.do_block_ops(blk_ops, marks, opts)
-    vim.validate("blk_ops", blk_ops, "table")
-    vim.validate("marks", marks, "table")
+--- @return op_marks|nil, string|nil
+local function do_block_ops(blk_ops, marks, opts)
     opts = opts or {}
-    vim.validate("opts", opts, "table", true)
 
     local start_row = marks.start.row --- @type integer
-    --- @diagnostic disable: missing-fields
-    local post_marks = {} --- @type Marks
-    local post_fin_row = start_row --- @type integer
-    local post_fin_col = marks.start.col --- @type integer
+    local post_marks = { start = {}, fin = {} } --- @type op_marks
 
     for i, o in pairs(blk_ops) do
         local row_1 = start_row + i - 1 --- @type integer
         local row_0 = row_1 - 1 --- @type integer
-
         vim.api.nvim_buf_set_text(0, row_0, o.start_byte, row_0, o.fin_byte_ex, { o.text })
 
         if i == 1 then
@@ -290,20 +308,18 @@ function M.do_block_ops(blk_ops, marks, opts)
             start_byte = math.max(start_byte, 0)
 
             --- @type integer|nil, integer|nil, string|nil
-            local l_byte, _, bb_err = blk_utils.byte_bounds_from_col(start_line, start_byte)
-            if (not l_byte) or bb_err then
-                local err = bb_err or "Unknown error in byte_bounds_from_col"
-                return nil, "do_block_ops: " .. err
+            local l_byte, _, err = blk_utils.byte_bounds_from_col(start_line, start_byte)
+            if (not l_byte) or err then
+                return nil, "do_block_ops: " .. (err or "Unknown error in byte_bounds_from_col")
             end
 
-            post_marks.start = {}
             post_marks.start.row = row_1
             post_marks.start.col = l_byte
         end
 
         if (not opts.set_del_marks) and #o.text > 0 then
-            post_fin_row = row_1
-            post_fin_col = o.start_byte + #o.text - 1
+            post_marks.fin.row = row_1
+            post_marks.fin.col = math.max(o.start_byte + #o.text - 1, 0)
         elseif opts.set_del_marks and i == #blk_ops then
             --- @type string
             local fin_line = vim.api.nvim_buf_get_lines(0, row_0, row_1, false)[1]
@@ -311,24 +327,78 @@ function M.do_block_ops(blk_ops, marks, opts)
             fin_byte = math.max(fin_byte, 0)
 
             --- @type integer|nil, integer|nil, string|nil
-            local l_byte, _, bb_err = blk_utils.byte_bounds_from_col(fin_line, fin_byte)
-            if (not l_byte) or bb_err then
-                local err = bb_err or "Unknown error in byte_bounds_from_col"
-                return nil, "do_block_ops: " .. err
+            local l_byte, _, err = blk_utils.byte_bounds_from_col(fin_line, fin_byte)
+            if (not l_byte) or err then
+                return nil, "do_block_ops: " .. (err or "Unknown error in byte_bounds_from_col")
             end
 
-            post_fin_row = row_1
-            post_fin_col = l_byte
+            post_marks.fin.row = row_1
+            post_marks.fin.col = l_byte
         end
     end
 
-    post_marks.fin = {}
-    post_marks.fin.row = post_fin_row
-    post_marks.fin.col = post_fin_col
-
     vim.api.nvim_buf_set_mark(0, "[", post_marks.start.row, post_marks.start.col, {})
     vim.api.nvim_buf_set_mark(0, "]", post_marks.fin.row, post_marks.fin.col, {})
-    return post_marks
+    return post_marks, nil
+end
+
+--- @param marks op_marks
+--- @param curswant integer
+--- @param lines? string[]
+--- @return op_marks|nil, string|nil
+--- Assumes that the row marks have been checked beforehand
+function M.op_set_block(marks, curswant, lines)
+    lines = lines or {}
+
+    --- @type string[]
+    local buf_lines = vim.api.nvim_buf_get_lines(0, marks.start.row - 1, marks.fin.row, false)
+
+    --- @type integer|nil, integer|nil, string|nil
+    local l_vcol, r_vcol, vcol_err = blk_utils.vcols_from_marks(buf_lines, marks)
+    if (not l_vcol) or not r_vcol or vcol_err then
+        return nil, "op_set_block: " .. vcol_err
+    end
+
+    local max_iter = math.max(#buf_lines, #lines) --- @type integer
+    local total_rows = vim.api.nvim_buf_line_count(0) --- @type integer
+    local mc = curswant and curswant == vim.v.maxcol --- @type boolean
+    local width = blk_utils.get_block_width(lines) --- @type integer
+    local set_info = {} --- @type block_op_info[]
+
+    for i = 1, max_iter do
+        local row_1 = marks.start.row + i - 1 --- @type integer
+        local set_line = lines[i] and lines[i] or nil --- @type string|nil
+
+        local info, err = (function()
+            if i <= #lines and i > #buf_lines and set_line then
+                local target_vcol = l_vcol - 1 --- @type integer
+                local buf_line = (function()
+                    if row_1 > total_rows then
+                        local new_line = string.rep(" ", target_vcol) --- @type string
+                        vim.api.nvim_buf_set_lines(0, total_rows, total_rows, false, { new_line })
+
+                        total_rows = total_rows + 1
+                        return new_line
+                    end
+
+                    return vim.api.nvim_buf_get_lines(0, row_1 - 1, row_1, false)[1]
+                end)() --- @type string
+
+                return M.get_block_paste_row(target_vcol, set_line, buf_line, width)
+            else
+                local buf_line = buf_lines[i]
+                return get_block_set_row(set_line, l_vcol, r_vcol, width, buf_line, mc)
+            end
+        end)() --- @type block_op_info|nil, string|nil
+
+        if (not info) or err then
+            return nil, "op_set_block: " .. (err or "Unknown error getting block op info")
+        end
+
+        table.insert(set_info, info)
+    end
+
+    return do_block_ops(set_info, marks, { set_del_marks = #lines == 0 })
 end
 
 return M

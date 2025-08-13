@@ -2,7 +2,7 @@ local blk_utils = require("mjm.spec-ops.block-utils")
 
 local M = {}
 
----@param marks Marks
+---@param marks op_marks
 ---@return string[]|nil, string|nil
 local function get_chars(marks)
     local start_row = marks.start.row
@@ -25,7 +25,7 @@ local function get_chars(marks)
     return vim.api.nvim_buf_get_text(0, start_row - 1, start_col, fin_row - 1, fin_byte, {})
 end
 
----@param marks Marks
+---@param marks op_marks
 ---@return string[]|nil, string|nil
 local function get_lines(marks)
     local start_row = marks.start.row
@@ -89,7 +89,7 @@ local function get_block_line(row_0, line, l_vcol, r_vcol, max_curswant)
     return string.rep(" ", this_l_vcol - l_vcol) .. text
 end
 
---- @param marks Marks
+--- @param marks op_marks
 --- @param curswant? integer
 --- @return string[]|nil, string|nil
 --- This function assumes that the marks are already sorted so the start mark is on the
@@ -99,7 +99,7 @@ local function get_block(marks, curswant)
     local fin_row = marks.fin.row
     local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, fin_row, false)
 
-    local l_vcol, r_vcol, vcol_err = blk_utils.get_vcols_from_marks(lines, marks)
+    local l_vcol, r_vcol, vcol_err = blk_utils.vcols_from_marks(lines, marks)
     if (not l_vcol) or not r_vcol or vcol_err then
         return nil, "get_block: " .. vcol_err
     end
