@@ -1,8 +1,14 @@
+-- TODO: A good general helper function would be an interator over a string by character idx
+-- You pass in the string and a function, and then the helper takes each extracted character and
+-- applies the helper function to it
+-- So for something like capitalization operations, rather than iterating by byte and having to
+-- check if you're in an alpha character, you can iterate by char index and check that way
+
 local M = {}
 
 --- @class Marks
 --- @field start {row: integer, col: integer}
---- @field finish {row: integer, col: integer}
+--- @field fin {row: integer, col: integer}
 
 --- @param motion string
 --- @param vmode? boolean
@@ -11,15 +17,15 @@ function M.get_marks(motion, vmode)
     --- @type {[1]:integer, [2]:integer}
     local start = vim.api.nvim_buf_get_mark(0, vmode and "<" or "[")
     --- @type {[1]:integer, [2]:integer}
-    local finish = vim.api.nvim_buf_get_mark(0, vmode and ">" or "]")
+    local fin = vim.api.nvim_buf_get_mark(0, vmode and ">" or "]")
     local marks = {
         start = {
             row = start[1],
             col = start[2],
         },
-        finish = {
-            row = finish[1],
-            col = finish[2],
+        fin = {
+            row = fin[1],
+            col = fin[2],
         },
     } --- @type Marks
 
@@ -33,13 +39,13 @@ end
 --- @param marks Marks
 --- @return Marks
 function M.sort_marks(marks)
-    if marks.start.row > marks.finish.row then
+    if marks.start.row > marks.fin.row then
         return {
             start = {
-                row = marks.finish.row,
-                col = marks.finish.col,
+                row = marks.fin.row,
+                col = marks.fin.col,
             },
-            finish = {
+            fin = {
                 row = marks.start.row,
                 col = marks.start.col,
             },
@@ -81,6 +87,28 @@ function M.is_valid_register(reg)
     end
 
     return true, nil
+end
+
+--- @param motion string
+--- @return string
+function M.regtype_from_motion(motion)
+    if motion == "line" then
+        return "V"
+    elseif motion == "block" then
+        return "\22"
+    else
+        return "v"
+    end
+end
+
+--- @param regtype string
+--- @return boolean
+function M.is_valid_regtype(regtype)
+    if regtype == "v" or regtype == "V" or regtype:sub(1, 1) == "\22" then
+        return true
+    else
+        return false
+    end
 end
 
 -- FUTURE: Accomodate preserveindent and copyindent
@@ -181,7 +209,7 @@ function M.fix_indents(marks, cur_pos)
     local new_marks = marks
     local str_fn = get_indent_str_function()
 
-    for i = marks.start.row, marks.finish.row do
+    for i = marks.start.row, marks.fin.row do
         local adjustment = apply_indent(cur_pos, i, str_fn)
 
         if adjustment ~= 0 and i == marks.start.row then
@@ -192,12 +220,12 @@ function M.fix_indents(marks, cur_pos)
             new_marks.start.col = new_start_col
         end
 
-        if adjustment ~= 0 and i == marks.finish.row then
-            local new_fin_col = marks.finish.col + adjustment
+        if adjustment ~= 0 and i == marks.fin.row then
+            local new_fin_col = marks.fin.col + adjustment
             new_fin_col = math.max(new_fin_col, 0)
 
-            vim.api.nvim_buf_set_mark(0, "]", marks.finish.row, new_fin_col, {})
-            new_marks.finish.col = new_fin_col
+            vim.api.nvim_buf_set_mark(0, "]", marks.fin.row, new_fin_col, {})
+            new_marks.fin.col = new_fin_col
         end
     end
 

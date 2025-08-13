@@ -1,4 +1,5 @@
 local blk_utils = require("mjm.spec-ops.block-utils")
+local op_utils = require("mjm.spec-ops.op-utils")
 
 local M = {}
 
@@ -6,13 +7,13 @@ local M = {}
 --- @return  Marks|nil, string|nil
 local function del_chars(marks)
     local start_row = marks.start.row
-    local fin_row = marks.finish.row
+    local fin_row = marks.fin.row
     if start_row > fin_row then
         return nil, "Start row " .. start_row .. " > finish row " .. fin_row .. " in get_chars"
     end
 
     local start_col = marks.start.col
-    local fin_col = marks.finish.col
+    local fin_col = marks.fin.col
 
     local fin_line = vim.api.nvim_buf_get_lines(0, fin_row - 1, fin_row, false)[1]
     local _, fin_byte, err = blk_utils.byte_bounds_from_col(fin_line, fin_col)
@@ -28,7 +29,7 @@ local function del_chars(marks)
 
     return {
         start = { row = start_row, col = start_col },
-        finish = { row = start_row, col = start_col },
+        fin = { row = start_row, col = start_col },
     },
         nil
 end
@@ -39,7 +40,7 @@ end
 --- @return Marks|nil, string|nil
 local function del_lines(marks, curswant, visual)
     local start_row = marks.start.row
-    local fin_row = marks.finish.row
+    local fin_row = marks.fin.row
     if start_row > fin_row then
         return nil, "del_lines: Start row " .. start_row .. " > finish row " .. fin_row
     end
@@ -58,54 +59,12 @@ local function del_lines(marks, curswant, visual)
             row = start_row,
             col = post_col,
         },
-        finish = {
+        fin = {
             row = start_row,
             col = post_col,
         },
     },
         nil
-end
-
---- @param line string
---- @param l_vcol integer
---- @param r_vcol integer
---- @param max_curswant boolean
---- @param row_0 integer
---- @return boolean, string|nil
-local function del_block_line(line, l_vcol, r_vcol, max_curswant, row_0)
-    if #line == 0 then
-        return true, nil
-    end
-
-    local max_vcol = vim.fn.strdisplaywidth(line)
-    if max_vcol < l_vcol then
-        return true, nil
-    end
-
-    local l_byte, _, l_err = blk_utils.byte_bounds_from_vcol(line, l_vcol)
-    if not l_byte then
-        return false, "del_block_line: " .. (l_err or "Unknown error in byte_bounds_from_vcol")
-    end
-
-    local this_r_vcol = math.min(r_vcol, max_vcol)
-    this_r_vcol = max_curswant and max_vcol or this_r_vcol
-    local _, r_byte, r_err = blk_utils.byte_bounds_from_vcol(line, this_r_vcol)
-    if (not r_byte) or r_err then
-        return false, "del_block_line: " .. (r_err or "Unknown error in byte_bounds_from_vcol")
-    end
-
-    if l_byte > r_byte then
-        return true, nil
-    end
-
-    local this_vcol_len = vim.fn.strdisplaywidth(line:sub(l_byte + 1, r_byte + 1))
-    local target_vcol_len = this_r_vcol - l_vcol + 1
-    local pad_len = this_vcol_len - target_vcol_len
-    local padding = string.rep(" ", (pad_len >= 0 and pad_len or 0))
-
-    vim.api.nvim_buf_set_text(0, row_0, l_byte, row_0, r_byte + 1, { padding })
-
-    return true, nil
 end
 
 --- @param marks Marks
@@ -114,60 +73,30 @@ end
 --- This function assumes that the marks are already sorted so the start mark is on the
 --- first row
 local function del_block(marks, curswant)
-    local start_row = marks.start.row
-    local fin_row = marks.finish.row
-    local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, fin_row, false)
+    local start_row = marks.start.row --- @type integer
+    local fin_row = marks.fin.row --- @type integer
+    local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, fin_row, false) --- @type string[]
 
+    --- @type integer|nil, integer|nil, string|nil
     local l_vcol, r_vcol, vcol_err = blk_utils.get_vcols_from_marks(lines, marks)
     if (not l_vcol) or not r_vcol or vcol_err then
         return nil, "del_block: " .. vcol_err
     end
 
-    local max_curswant = curswant and curswant == vim.v.maxcol
+    local mc = curswant and curswant == vim.v.maxcol --- @type boolean
 
-    local l_mark_vcol, _, l_vcol_err = blk_utils.vcols_from_vcol(lines[1], l_vcol)
-    if (not l_mark_vcol) or l_vcol_err then
-        return nil, "del_block: " .. (l_vcol_err or "Unknown error in vcols_from_vcol")
-    end
-
+    local op_lines = {} --- @type block_op_info[]
     for i = 1, #lines do
-        local row_0 = start_row + i - 2
-        local ok, err = del_block_line(lines[i], l_vcol, r_vcol, max_curswant, row_0)
-        if not ok then
-            return nil, "del_block: " .. (err or "Unknown error in del_block_line")
+        --- @type block_op_info|nil, string|nil
+        local op_line, op_err = op_utils.get_block_set_row(nil, l_vcol, r_vcol, 0, lines[i], mc)
+        if (not op_line) or op_err then
+            return nil, "del_block: " .. (op_err or "Unknown error in get_block_set_row")
         end
+
+        table.insert(op_lines, op_line)
     end
 
-    local start_line_after = vim.api.nvim_buf_get_lines(0, start_row - 1, start_row, false)[1]
-    local max_vcol_after = vim.fn.strdisplaywidth(start_line_after)
-    l_mark_vcol = math.min(l_mark_vcol, max_vcol_after)
-
-    local l_byte, _, l_err = blk_utils.byte_bounds_from_vcol(start_line_after, l_mark_vcol)
-    if (not l_byte) or l_err then
-        return nil, "del_block: " .. (l_err or "Unknown error in byte_bounds_from_vcol")
-    end
-
-    local fin_line_after = vim.api.nvim_buf_get_lines(0, fin_row - 1, fin_row, false)[1]
-    local r_col = math.min(l_byte, (#fin_line_after - 1))
-    local r_byte, _, r_err = blk_utils.byte_bounds_from_col(fin_line_after, r_col)
-    if (not r_byte) or r_err then
-        return nil, "del_block: " .. (r_err or "Unknown error in byte_bounds_from_col")
-    end
-
-    vim.api.nvim_buf_set_mark(0, "[", start_row, l_byte, {})
-    vim.api.nvim_buf_set_mark(0, "]", fin_row, r_byte, {})
-
-    return {
-        start = {
-            row = start_row,
-            col = l_byte,
-        },
-        finish = {
-            row = fin_row,
-            col = r_byte,
-        },
-    },
-        nil
+    return op_utils.do_block_ops(op_lines, marks, { set_del_marks = true })
 end
 
 --- @return Marks|nil, string|nil

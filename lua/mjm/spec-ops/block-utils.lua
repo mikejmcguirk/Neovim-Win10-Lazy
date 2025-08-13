@@ -54,7 +54,7 @@ function M.get_vcols_from_marks(lines, marks)
     end
 
     --- @type integer|nil, integer|nil, string|nil
-    local b_l_vcol, b_r_vcol, b_vcol_err = M.vcols_from_col(lines[#lines], marks.finish.col)
+    local b_l_vcol, b_r_vcol, b_vcol_err = M.vcols_from_col(lines[#lines], marks.fin.col)
     if (not b_l_vcol) or not b_r_vcol or b_vcol_err then
         return nil, nil, "get_block_vcols: " .. (b_vcol_err or "Unknown error in vcols_from_col")
     end
@@ -231,6 +231,10 @@ end
 -- returns 0, 0
 function M.vcols_from_vcol(line, vcol)
     local max_vcol = vim.fn.strdisplaywidth(line) --- @type integer
+    if not line then
+        return nil, nil, "vcols_from_vcol: nil line"
+    end
+
     if #line <= 1 then
         -- Check #line vs. max_vcol for edge case where a one byte char has a zero display width
         return (#line <= max_vcol and #line or max_vcol), max_vcol, nil

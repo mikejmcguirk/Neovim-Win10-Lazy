@@ -1,4 +1,6 @@
 -- TODO: Handle gp and zp
+-- zp note: Repeats do not add intermediate white space. so longer lines get multiplicatively
+-- longer
 -- TODO: Alternative cursor options
 -- - Norm single line char after: Hold cursor
 -- - Norm single line char before: Either hold or beginning of pasted text
@@ -9,23 +11,42 @@
 -- the user wants
 -- TODO: Come up with some naming scheme for state. In particular so it's clear what "before" is
 
+
+local blk_utils = require("mjm.spec-ops.block-utils")
+local get_utils = require("mjm.spec-ops.get-utils")
+local op_utils = require("mjm.spec-ops.op-utils")
+local paste_utils = require("mjm.spec-ops.paste-utils")
 local shared = require("mjm.spec-ops.shared")
 local utils = require("mjm.spec-ops.utils")
-local paste_utils = require("mjm.spec-ops.paste-utils")
 
 local M = {}
 
 local hl_group = "SpecOpsPaste" --- @type string
 vim.api.nvim_set_hl(0, hl_group, { link = "IncSearch", default = true })
-local hl_ns = vim.api.nvim_create_namespace("mjm.spec-ops.paste-highlight") --- @type integer
+local hl_ns = vim.api.nvim_create_namespace("mjm.spec-ops.highlight") --- @type integer
 local hl_timer = 175 --- @type integer
 
-local vcount = 0 --- @type integer
+local op_state = {
+    view = nil,
+    vmode = false,
+    reg = nil,
+} --- @type op_state
+
+local cb_state = {
+    view = nil,
+    vmode = false,
+    reg = nil,
+} --- @type op_state
+
+-- TODO: Don't have bespoke implementation here if count put into op_state
 local before = false --- @type boolean
+local yank_old = false --- @type boolean
 
 local function paste_norm(opts)
     opts = opts or {}
     before = opts.before
+
+    op_utils.update_op_state(op_state)
 
     vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.paste'.paste_norm_callback"
     return "g@l"
@@ -43,18 +64,15 @@ local function should_reindent(ctx)
 end
 
 --- @return nil
-M.paste_norm_callback = function()
-    vcount = vim.v.count > 0 and vim.v.count or vcount
-    --- @type string
-    local reg = utils.is_valid_register(vim.v.register) and vim.v.register
-        or utils.get_default_reg()
+M.paste_norm_callback = function(motion)
+    op_utils.update_cb_from_op(op_state, cb_state, motion)
 
-    local text = vim.fn.getreg(reg) --- @type string
+    local text = vim.fn.getreg(cb_state.reg) --- @type string
     if (not text) or text == "" then
-        return vim.notify(reg .. " register is empty", vim.log.levels.INFO)
+        return vim.notify(cb_state.reg .. " register is empty", vim.log.levels.INFO)
     end
 
-    local regtype = vim.fn.getregtype(reg) --- @type string
+    local regtype = vim.fn.getregtype(cb_state.reg) --- @type string
     local cur_pos = vim.api.nvim_win_get_cursor(0) --- @type {[1]: integer, [2]:integer}
 
     --- @type string
@@ -66,7 +84,7 @@ M.paste_norm_callback = function()
         cur_pos = cur_pos,
         before = before,
         text = text,
-        vcount = vcount,
+        vcount = vim.v.count1,
     }) --- @type Marks|nil, string|nil
 
     if (not marks) or err then

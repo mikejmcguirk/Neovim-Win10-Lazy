@@ -1,11 +1,3 @@
--- TODO: General note for the whole project, set every function to use an opts table and then
--- create classes for those opts when they are settled in
-
--- TODO: https://github.com/neovim/neovim/issues/21460 - Unsure if this should be re-created
--- since it contradicts Vim
-
--- MAYBE: Might be interesting to try: https://github.com/neovim/neovim/issues/20329
-
 local blk_utils = require("mjm.spec-ops.block-utils")
 
 local M = {}
@@ -14,14 +6,14 @@ local M = {}
 ---@return string[]|nil, string|nil
 local function get_chars(marks)
     local start_row = marks.start.row
-    local fin_row = marks.finish.row
+    local fin_row = marks.fin.row
     if start_row > fin_row then
         local err = "Start row " .. start_row .. " > finish row " .. fin_row .. " in get_chars"
         return nil, err
     end
 
     local start_col = marks.start.col
-    local fin_col = marks.finish.col
+    local fin_col = marks.fin.col
 
     local fin_line = vim.api.nvim_buf_get_lines(0, fin_row - 1, fin_row, false)[1]
     local _, fin_byte, err = blk_utils.byte_bounds_from_col(fin_line, fin_col)
@@ -37,14 +29,14 @@ end
 ---@return string[]|nil, string|nil
 local function get_lines(marks)
     local start_row = marks.start.row
-    local finish_row = marks.finish.row
+    local fin_row = marks.fin.row
 
-    if start_row > finish_row then
-        return nil, "Start row " .. start_row .. " > finish row " .. finish_row .. "in get_lines"
+    if start_row > fin_row then
+        return nil, "Start row " .. start_row .. " > finish row " .. fin_row .. "in get_lines"
     end
 
-    local finish_line = vim.api.nvim_buf_get_lines(0, finish_row - 1, finish_row, false)[1]
-    return vim.api.nvim_buf_get_text(0, start_row - 1, 0, finish_row - 1, #finish_line, {}), nil
+    local fin_line = vim.api.nvim_buf_get_lines(0, fin_row - 1, fin_row, false)[1]
+    return vim.api.nvim_buf_get_text(0, start_row - 1, 0, fin_row - 1, #fin_line, {}), nil
 end
 
 --- @param line string
@@ -104,8 +96,8 @@ end
 --- first row
 local function get_block(marks, curswant)
     local start_row = marks.start.row
-    local finish_row = marks.finish.row
-    local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, finish_row, false)
+    local fin_row = marks.fin.row
+    local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, fin_row, false)
 
     local l_vcol, r_vcol, vcol_err = blk_utils.get_vcols_from_marks(lines, marks)
     if (not l_vcol) or not r_vcol or vcol_err then

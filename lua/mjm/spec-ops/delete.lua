@@ -1,28 +1,28 @@
--- TODO: Support virtualedit onemore
--- TODO: Register behavior options should be default, only specified, or ring
--- https://github.com/gbprod/yanky.nvim -- Really though, a lot more to integrate here
--- TODO: Test behavior with count
+-- CHORE: The yank error is confusing if you don't want to delete yank
 
-local utils = require("mjm.spec-ops.utils")
-local get_utils = require("mjm.spec-ops.get-utils")
-local del_utils = require("mjm.spec-ops.del-utils")
 local blk_utils = require("mjm.spec-ops.block-utils")
+local del_utils = require("mjm.spec-ops.del-utils")
+local get_utils = require("mjm.spec-ops.get-utils")
+local op_utils = require("mjm.spec-ops.op-utils")
+local utils = require("mjm.spec-ops.utils")
 
 local M = {}
 
--- NOTE: Saving the whole view is inefficient now, but the coladd might be necessary to support
--- virtualedit later
-local op_view = nil --- @type vim.fn.winsaveview.ret|nil
--- Some text objects clobber vim.v.register, so store here
--- Works out since, by default, the register can't be edited on dot repeat
-local op_vreg = nil --- @type string|nil
-local op_vmode = false --- @type boolean
-local op_in_del = false --- @type boolean
+local op_state = {
+    view = nil,
+    vmode = false,
+    vcount = 1,
+    reg = nil,
+} --- @type op_state
 
-local cb_view = nil --- @type vim.fn.winsaveview.ret
-local cb_max_curswant = false --- @type boolean
-local cb_vreg = nil --- @type string
-local cb_vmode = false --- @type boolean
+local cb_state = {
+    view = nil,
+    vmode = false,
+    vcount = 1,
+    reg = nil,
+} --- @type op_state
+
+local op_in_del = false --- @type boolean
 
 vim.api.nvim_create_autocmd("ModeChanged", {
     group = vim.api.nvim_create_augroup("spec-ops_del-flag", { clear = true }),
@@ -32,62 +32,23 @@ vim.api.nvim_create_autocmd("ModeChanged", {
     end,
 })
 
-local function set_op_state(opts)
-    opts = opts or {}
-
-    op_view = vim.fn.winsaveview()
-    op_vreg = vim.v.register
-    op_vmode = opts.vmode
-    op_in_del = opts.in_del
-
-    vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.delete'.delete_callback"
-end
-
 local function operator()
-    set_op_state({ in_del = true })
+    op_utils.update_op_state(op_state)
+    op_in_del = true
+    vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.delete'.delete_callback"
     return "g@"
 end
 
 local function visual()
-    set_op_state({ vmode = true })
+    op_utils.update_op_state(op_state)
+    vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.delete'.delete_callback"
     return "g@"
 end
 
 local function eol()
-    set_op_state()
+    op_utils.update_op_state(op_state)
+    vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.delete'.delete_callback"
     return "g@$"
-end
-
---- @param motion string
-local function update_cb_state(motion)
-    cb_vmode = op_vmode
-    op_vmode = false
-
-    if op_view then
-        cb_view = op_view
-
-        if (not cb_vmode) and motion == "block" then
-            vim.cmd("norm! gv")
-            cb_view.curswant = vim.fn.winsaveview().curswant
-            vim.cmd("norm! \27")
-        end
-
-        cb_max_curswant = cb_view.curswant == vim.v.maxcol
-    else
-        cb_view = vim.fn.winsaveview()
-        cb_view.curswant = cb_max_curswant and vim.v.maxcol or cb_view.curswant
-    end
-
-    op_view = nil
-
-    if utils.is_valid_register(op_vreg) then
-        --- @diagnostic disable: cast-local-type -- Checked by is_valid_register
-        cb_vreg = op_vreg
-    elseif not utils.is_valid_register(cb_vreg) then
-        cb_vreg = utils.get_default_reg()
-    end
-
-    op_vreg = nil
 end
 
 -- NOTE: Outlining for architectural purposes
@@ -100,36 +61,37 @@ end
 
 --- @param motion string
 function M.delete_callback(motion)
-    update_cb_state(motion)
+    op_utils.update_cb_from_op(op_state, cb_state, motion)
 
-    local win = vim.api.nvim_get_current_win() --- @type integer
-    local marks = utils.get_marks(motion, cb_vmode) --- @type Marks
+    local marks = utils.get_marks(motion, cb_state.vmode) --- @type Marks
 
-    local lines, err_y = get_utils.do_get({
+    --- @diagnostic disable: undefined-field
+    local yank_lines, err_y = get_utils.do_get({
         marks = marks,
-        curswant = cb_view.curswant,
+        curswant = cb_state.view.curswant,
         motion = motion,
     }) --- @type string[]|nil, string|nil
 
-    if (not lines) or err_y then
+    if (not yank_lines) or err_y then
         local err_msg = err_y or "Unknown error getting text to yank" --- @type string
         return vim.notify("delete_callback: " .. err_msg, vim.log.levels.ERROR)
     end
 
-    local text = table.concat(lines, "\n") .. (motion == "line" and "\n" or "") --- @type string
+    --- @type string
+    local text = table.concat(yank_lines, "\n") .. (motion == "line" and "\n" or "")
     if should_yank(text) then
         if motion == "block" then
-            vim.fn.setreg(cb_vreg, text, "b" .. blk_utils.get_block_reg_width(lines))
+            vim.fn.setreg(cb_state.reg, text, "b" .. blk_utils.get_block_reg_width(yank_lines))
         else
-            vim.fn.setreg(cb_vreg, text)
+            vim.fn.setreg(cb_state.reg, text)
         end
     end
 
     local post_marks, err_d = del_utils.do_del({
         marks = marks,
         motion = motion,
-        curswant = cb_view.curswant,
-        visual = cb_vmode,
+        curswant = cb_state.view.curswant,
+        visual = cb_state.vmode,
     }) --- @type Marks|nil, string|nil
 
     if (not post_marks) or err_d then
@@ -137,7 +99,7 @@ function M.delete_callback(motion)
         return vim.notify("delete_callback: " .. err_msg, vim.log.levels.ERROR)
     end
 
-    vim.api.nvim_win_set_cursor(win, { post_marks.start.row, post_marks.start.col })
+    vim.api.nvim_win_set_cursor(0, { post_marks.start.row, post_marks.start.col })
 end
 
 vim.keymap.set("n", "<Plug>(SpecOpsDeleteOperator)", function()

@@ -18,7 +18,7 @@ local function wrapped_hl_text(marks, group, ns, duration, regtype)
         ns,
         group,
         { marks.start.row - 1, marks.start.col },
-        { marks.finish.row - 1, marks.finish.col },
+        { marks.fin.row - 1, marks.fin.col },
         { inclusive = true, regtype = regtype }
     )
 
