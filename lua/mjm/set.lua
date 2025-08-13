@@ -64,7 +64,7 @@ vim.api.nvim_set_option_value("scrolloff", Scrolloff_Val, { scope = "global" })
 vim.opt.jumpoptions:append("view")
 vim.opt.matchpairs:append("<:>")
 vim.opt.cpoptions:append("W")
--- TODO: Should "Z" be added to cpoptions?
+vim.opt.cpoptions:append("Z")
 
 vim.api.nvim_set_option_value("backspace", "indent,eol,nostop", { scope = "global" })
 vim.api.nvim_set_option_value("selection", "old", { scope = "global" })
