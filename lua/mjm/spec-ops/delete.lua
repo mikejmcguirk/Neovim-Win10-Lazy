@@ -8,19 +8,8 @@ local utils = require("mjm.spec-ops.utils")
 
 local M = {}
 
-local op_state = {
-    view = nil,
-    vmode = false,
-    vcount = 1,
-    reg = nil,
-} --- @type op_state
-
-local cb_state = {
-    view = nil,
-    vmode = false,
-    vcount = 1,
-    reg = nil,
-} --- @type op_state
+local op_state = op_utils.create_new_op_state() --- @type op_state
+local cb_state = op_utils.create_new_op_state() --- @type op_state
 
 local op_in_del = false --- @type boolean
 

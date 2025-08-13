@@ -1,4 +1,5 @@
 local blk_utils = require("mjm.spec-ops.block-utils")
+local op_utils = require("mjm.spec-ops.op-utils")
 
 local M = {}
 
@@ -117,75 +118,6 @@ local function paste_chars(cur_pos, before, lines)
     }
 end
 
--- TODO: Example scenario:
--- - Three lines are yanked blockwise. The middle line is only whitespace
--- - Those lines are blockwise pasted
--- - The middle line being pasted over is shorter than the paste column
--- Neovim default behavior: The padding spaces to align with the paste column are added, but
--- the actual whitespace in the register is skipped over
--- This can be useful in case you want to do a block paste then gv and do a block insert
--- afterwards. An option should be added to skip the whitespce entirely though
-
---- @param paste_line string
---- @param buf_line string
---- @param target_vcol integer
---- @return block_op_info|nil, string|nil
-local function get_norm_paste_block_info(paste_line, buf_line, target_vcol, blk_width)
-    local max_vcol = vim.fn.strdisplaywidth(buf_line) --- @type integer
-    local paste_vcol = math.min(max_vcol, target_vcol) --- @type integer
-
-    if paste_vcol < max_vcol then
-        local pad_len = math.max(blk_width - vim.fn.strdisplaywidth(paste_line), 0)
-        paste_line = paste_line .. string.rep(" ", pad_len)
-    else
-        paste_line = paste_line:gsub("%s+$", "")
-    end
-
-    --- @type integer|nil, integer|nil, string|nil
-    local start_vcol, fin_vcol, vcol_err = blk_utils.vcols_from_vcol(buf_line, paste_vcol)
-    if (not start_vcol) or not fin_vcol or vcol_err then
-        vcol_err = vcol_err or "Unknown error in vcols_from_vcol" --- @type string
-        return nil, "norm_set_block_line: " .. vcol_err
-    end
-
-    if paste_vcol < target_vcol then
-        paste_line = string.match(paste_line, "%S") and paste_line or ""
-        paste_line = string.rep(" ", target_vcol - paste_vcol) .. paste_line
-    elseif fin_vcol > paste_vcol then
-        local padding = string.rep(" ", paste_vcol - start_vcol + 1) --- @type string
-        paste_line = padding .. paste_line
-    end
-
-    --- @type integer|nil, string|nil
-    local paste_byte, err = (function()
-        if fin_vcol > paste_vcol then
-            local start_byte, _, bb_err = blk_utils.byte_bounds_from_vcol(buf_line, start_vcol)
-            if (not start_byte) or bb_err then
-                return nil, (bb_err or "Unknown error in byte_bounds_from_col")
-            end
-
-            return start_byte
-        else
-            local _, fin_byte, bb_err = blk_utils.byte_bounds_from_vcol(buf_line, fin_vcol)
-            if (not fin_byte) or bb_err then
-                return nil, (bb_err or "Unknown error in byte_bounds_from_col")
-            end
-
-            return fin_byte
-        end
-    end)()
-    if (not paste_byte) or err then
-        return nil, "norm_paste_block_callback: " .. err
-    end
-
-    if fin_vcol > paste_vcol then
-        return { start_byte = paste_byte, text = paste_line }, nil
-    else
-        paste_byte = paste_vcol > 0 and paste_byte + 1 or 0
-        return { start_byte = paste_byte, text = paste_line }, nil
-    end
-end
-
 --- @param row integer
 --- @param lines string[]
 --- @param target_vcol integer
@@ -206,7 +138,7 @@ local function norm_paste_block_callback(row, lines, target_vcol, blk_width)
         local buf_line = vim.api.nvim_buf_get_lines(0, row_1 - 1, row_1, false)[1]
 
         --- @type block_op_info|nil, string|nil
-        local info, err = get_norm_paste_block_info(line, buf_line, target_vcol, blk_width)
+        local info, err = op_utils.get_block_paste_row(target_vcol, line, buf_line, blk_width)
         if (not info) or err then
             err = err or "Unknown error in get_norm_block_paste_info"
             return nil, "norm_paste_block_callback: " .. err

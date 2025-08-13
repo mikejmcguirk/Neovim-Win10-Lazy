@@ -9,12 +9,21 @@ local utils = require("mjm.spec-ops.utils")
 -- Store register in op_state since vim.v.register is clobbered by some text objects
 -- TODO: Check in delete function if I need to store count here
 
+local M = {}
+
 --- @class op_state
 --- @field reg string|nil
 --- @field view vim.fn.winsaveview.ret|nil
 --- @field vmode boolean
 
-local M = {}
+--- @return op_state
+function M.create_new_op_state()
+    return {
+        view = nil,
+        vmode = false,
+        reg = nil,
+    }
+end
 
 --- @return boolean
 local function is_virtual_mode()
@@ -115,8 +124,6 @@ function M.setup_text_lines(opts)
     return lines
 end
 
--- TODO: Have the delete op use this
-
 --- @param set_line string|nil
 --- @param l_vcol integer
 --- @param r_vcol integer
@@ -179,6 +186,75 @@ function M.get_block_set_row(set_line, l_vcol, r_vcol, blk_width, buf_line, max_
     set_line = l_padding .. set_line .. r_padding
 
     return { start_byte = l_byte, fin_byte_ex = r_byte, text = set_line }
+end
+
+-- TODO: Example scenario:
+-- - Three lines are yanked blockwise. The middle line is only whitespace
+-- - Those lines are blockwise pasted
+-- - The middle line being pasted over is shorter than the paste column
+-- Neovim default behavior: The padding spaces to align with the paste column are added, but
+-- the actual whitespace in the register is skipped over
+-- This can be useful in case you want to do a block paste then gv and do a block insert
+-- afterwards. An option should be added to skip the whitespce entirely though
+
+--- @param target_vcol integer
+--- @param set_line string
+--- @param buf_line string
+--- @param blk_width integer
+--- @return block_op_info|nil, string|nil
+function M.get_block_paste_row(target_vcol, set_line, buf_line, blk_width)
+    local max_vcol = vim.fn.strdisplaywidth(buf_line) --- @type integer
+    local paste_vcol = math.min(max_vcol, target_vcol) --- @type integer
+
+    if paste_vcol < max_vcol then
+        local pad_len = math.max(blk_width - vim.fn.strdisplaywidth(set_line), 0)
+        set_line = set_line .. string.rep(" ", pad_len)
+    else
+        set_line = set_line:gsub("%s+$", "")
+    end
+
+    --- @type integer|nil, integer|nil, string|nil
+    local start_vcol, fin_vcol, vcol_err = blk_utils.vcols_from_vcol(buf_line, paste_vcol)
+    if (not start_vcol) or not fin_vcol or vcol_err then
+        vcol_err = vcol_err or "Unknown error in vcols_from_vcol" --- @type string
+        return nil, "norm_set_block_line: " .. vcol_err
+    end
+
+    if paste_vcol < target_vcol then
+        set_line = string.match(set_line, "%S") and set_line or ""
+        set_line = string.rep(" ", target_vcol - paste_vcol) .. set_line
+    elseif fin_vcol > paste_vcol then
+        local padding = string.rep(" ", paste_vcol - start_vcol + 1) --- @type string
+        set_line = padding .. set_line
+    end
+
+    --- @type integer|nil, string|nil
+    local set_byte, err = (function()
+        if fin_vcol > paste_vcol then
+            local start_byte, _, bb_err = blk_utils.byte_bounds_from_vcol(buf_line, start_vcol)
+            if (not start_byte) or bb_err then
+                return nil, (bb_err or "Unknown error in byte_bounds_from_col")
+            end
+
+            return start_byte
+        else
+            local _, fin_byte, bb_err = blk_utils.byte_bounds_from_vcol(buf_line, fin_vcol)
+            if (not fin_byte) or bb_err then
+                return nil, (bb_err or "Unknown error in byte_bounds_from_col")
+            end
+
+            return fin_byte
+        end
+    end)()
+    if (not set_byte) or err then
+        return nil, "norm_paste_block_callback: " .. err
+    end
+
+    if fin_vcol <= paste_vcol then
+        set_byte = paste_vcol > 0 and set_byte + 1 or 0
+    end
+
+    return { start_byte = set_byte, fin_byte_ex = set_byte, text = set_line }
 end
 
 -- TODO: Long function

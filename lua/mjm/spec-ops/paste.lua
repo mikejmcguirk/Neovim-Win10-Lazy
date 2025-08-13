@@ -26,17 +26,8 @@ vim.api.nvim_set_hl(0, hl_group, { link = "IncSearch", default = true })
 local hl_ns = vim.api.nvim_create_namespace("mjm.spec-ops.highlight") --- @type integer
 local hl_timer = 175 --- @type integer
 
-local op_state = {
-    view = nil,
-    vmode = false,
-    reg = nil,
-} --- @type op_state
-
-local cb_state = {
-    view = nil,
-    vmode = false,
-    reg = nil,
-} --- @type op_state
+local op_state = op_utils.create_new_op_state() --- @type op_state
+local cb_state = op_utils.create_new_op_state() --- @type op_state
 
 -- TODO: Don't have bespoke implementation here if count put into op_state
 local before = false --- @type boolean
