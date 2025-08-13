@@ -738,15 +738,19 @@ vim.keymap.set(
     { noremap = true, silent = true }
 )
 
--- TODO: The normal mode moves create enter errors when going out of range
-
 vim.keymap.set("n", "<C-j>", function()
     if not ut.check_modifiable() then
         return
     end
 
     local vcount1 = vim.v.count1 -- Need to grab this first
-    vim.cmd("m+" .. vcount1 .. " | norm! ==")
+    local ok, err = pcall(function()
+        vim.cmd("m+" .. vcount1 .. " | norm! ==")
+    end)
+
+    if not ok then
+        vim.api.nvim_echo({ { err or "Unknown error in normal move" } }, true, { err = true })
+    end
 end)
 
 vim.keymap.set("n", "<C-k>", function()
@@ -755,7 +759,13 @@ vim.keymap.set("n", "<C-k>", function()
     end
 
     local vcount1 = vim.v.count1 + 1 -- Since the base count to go up is -2
-    vim.cmd("m-" .. vcount1 .. " | norm! ==")
+    local ok, err = pcall(function()
+        vim.cmd("m-" .. vcount1 .. " | norm! ==")
+    end)
+
+    if not ok then
+        vim.api.nvim_echo({ { err or "Unknown error in normal move" } }, true, { err = true })
+    end
 end)
 
 vim.keymap.set("x", "<C-j>", function()
