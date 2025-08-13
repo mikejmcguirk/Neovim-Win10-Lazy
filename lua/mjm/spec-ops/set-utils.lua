@@ -217,6 +217,11 @@ function M.do_set(text, marks, regtype, motion, vcount, curswant)
 
         return op_utils.paste_lines(del_marks.start.row, true, set_lines)
     elseif reg_mtype == mtype.SC and motion_mtype == mtype.MB then
+        -- TODO: Built-in behavior places marks only on the first row. I am currently placing
+        -- on the whole area
+        -- Though one boarder note is, if we're going to support yank cycling, the marks have to
+        -- support it. The default here, for example, would not. So would need a way to feed
+        -- mark schemes to the functions
         local rows = marks.fin.row - marks.start.row + 1
         local block_lines = op_utils.setup_text_lines({
             motion = "line",
@@ -227,49 +232,12 @@ function M.do_set(text, marks, regtype, motion, vcount, curswant)
 
         return op_utils.op_set_block(marks, curswant, block_lines)
     elseif reg_mtype == mtype.MC and motion_mtype == mtype.MB then
-        -- char repeat (already done)
-        -- char set the register into the first line of the block
-        -- set block for other rows
-        local lines = vim.api.nvim_buf_get_lines(0, marks.start.row - 1, marks.fin.row, false)
-
-        --- @type integer|nil, integer|nil, string|nil
-        local l_vcol, r_vcol, v_err = M.vcols_from_marks(lines, marks)
-        if (not l_vcol) or not r_vcol or v_err then
-            return nil, (v_err or "Unknown error in vcols_from_marks")
+        local del_marks, err = op_utils.op_set_block(marks, curswant)
+        if not del_marks or err then
+            return nil, "do_set: " .. (err or "Unknown error in op_set_block")
         end
 
-        --- @type integer|nil, integer|nil, string|nil
-        local l_byte, _, lb_err = M.byte_bounds_from_vcol(lines[1], l_vcol)
-        if (not l_byte) or lb_err then
-            return nil, (lb_err or "Unknown error in byte_bounds_from_vcol")
-        end
-
-        --- @type integer|nil, integer|nil, string|nil
-        local _, r_byte, rb_err = M.byte_bounds_from_vcol(lines[1], r_vcol)
-        if (not r_byte) or rb_err then
-            return nil, (rb_err or "Unknown error in byte_bounds_from_vcol")
-        end
-
-        local set_marks = {
-            start = { row = marks.start.row, col = l_byte },
-            fin = { row = marks.start.row, col = r_byte },
-        }
-
-        local post_set_marks, s_err = op_set_text(set_marks, set_lines)
-        if (not post_set_marks) or s_err then
-            return nil, "do_set: " .. (s_err or "Unknown error in op_set_text")
-        end
-
-        return post_set_marks, nil
-
-        -- local post_set_rows = post_set_marks.fin.row - post_set_marks.start.row + 1
-        -- local new_block_marks = {
-        --     start = { row = marks.start.row, col = l_byte },
-        --     fin = { row = marks.start.row, col = r_byte },
-        -- }
-
-        -- Do need to pull back on the outlined function. We need the vcols to calculate
-        -- the rest of the block delete.
+        return op_utils.paste_chars({ del_marks.start.row, del_marks.start.col }, true, set_lines)
     elseif reg_mtype == mtype.MB and motion_mtype == mtype.MC then
         -- block repeat. set text on selection then paste everything else
         return marks

@@ -120,6 +120,51 @@ function M.setup_text_lines(opts)
     return lines
 end
 
+--- @param cur_pos {[1]: integer, [2]: integer}
+--- @param before boolean
+--- @param lines string[]
+--- @return op_marks|nil, string|nil
+function M.paste_chars(cur_pos, before, lines)
+    local row, col = unpack(cur_pos)
+
+    if not before then
+        local start_line = vim.api.nvim_buf_get_lines(0, row - 1, row, false)[1]
+        local _, fin_byte, bb_err = blk_utils.byte_bounds_from_col(start_line, col)
+        if (not fin_byte) or bb_err then
+            return nil, "paste chars: " .. (bb_err or "Unknown error in byte_bounds_from_col")
+        end
+
+        col = math.min(#start_line, fin_byte + 1)
+    end
+
+    vim.api.nvim_buf_set_text(0, row - 1, col, row - 1, col, lines)
+
+    local fin_row = row + #lines - 1
+    local len_last = string.len(lines[#lines])
+    local fin_col = #lines == 1 and len_last + col - 1 or len_last - 1
+
+    local fin_line = vim.api.nvim_buf_get_lines(0, fin_row - 1, fin_row, false)[1]
+    local start_byte, _, bb_err = blk_utils.byte_bounds_from_col(fin_line, fin_col)
+    if (not start_byte) or bb_err then
+        return nil, "paste chars: " .. (bb_err or "Unknown error in byte_bounds_from_col")
+    end
+    fin_col = start_byte
+
+    vim.api.nvim_buf_set_mark(0, "[", row, col, {})
+    vim.api.nvim_buf_set_mark(0, "]", fin_row, fin_col, {})
+
+    return {
+        start = {
+            row = row,
+            col = col,
+        },
+        fin = {
+            row = fin_row,
+            col = fin_col,
+        },
+    }
+end
+
 --- @param row integer
 --- @param before boolean
 --- @param lines string[]
