@@ -108,7 +108,7 @@ end)
 -- end)
 
 local function fuzzy_dict()
-    -- TODO: This should merge the results form all dictionary files
+    -- FUTURE: This should merge the results form all dictionary files
     --- @diagnostic disable: undefined-field
     local dict_file = vim.opt.dictionary:get()[1]
     local file = io.open(dict_file, "r")
@@ -128,7 +128,7 @@ local function fuzzy_spell_correct()
 
     local buf = vim.api.nvim_get_current_buf()
 
-    -- TODO: This should merge the results form all dictionary files
+    -- FUTURE: This should merge the results form all dictionary files
     --- @diagnostic disable: undefined-field
     local dict_file = vim.opt.dictionary:get()[1]
     local file = io.open(dict_file, "r")

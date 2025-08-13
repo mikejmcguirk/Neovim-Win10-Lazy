@@ -390,7 +390,6 @@ vim.keymap.set("x", "al", function()
     vim.cmd("norm! ggoVG")
 end, { silent = true })
 
--- TODO: This object breaks if initiated on a zero length line
 vim.keymap.set("o", "il", function()
     vim.cmd("norm! _v" .. vim.v.count1 .. "g_")
 end, { silent = true })
