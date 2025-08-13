@@ -238,16 +238,16 @@ function M.write_to_scratch_buf(lines)
     vim.api.nvim_set_current_buf(scratch)
 end
 
--- TODO: Should probably just hide errors here, or figure out a way to avoid grabbing parsers
--- for buffers that don't have one
+-- FUTURE: More sophisticated handling if we don't have a parser
+
 function M.is_comment()
     local ok, lang_tree = pcall(vim.treesitter.get_parser)
     if (not ok) or not lang_tree then
-        if type(lang_tree) == "string" then
-            vim.api.nvim_echo({ { lang_tree } }, true, { kind = "echoerr" })
-        else
-            vim.notify("Unknown error getting parser in is_comment", vim.log.levels.ERROR)
-        end
+        -- if type(lang_tree) == "string" then
+        --     vim.api.nvim_echo({ { lang_tree } }, true, { kind = "echoerr" })
+        -- else
+        --     vim.notify("Unknown error getting parser in is_comment", vim.log.levels.ERROR)
+        -- end
         return false
     end
     lang_tree:parse()
