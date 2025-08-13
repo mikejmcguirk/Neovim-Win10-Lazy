@@ -8,6 +8,14 @@ local pack_spec = {
     { src = "https://github.com/nvim-tree/nvim-web-devicons" },
     { src = "https://github.com/nvim-lua/plenary.nvim" },
 
+    { src = "https://github.com/saghen/blink.cmp", version = vim.version.range("1.*") },
+    { src = "https://github.com/Saghen/blink.compat", version = vim.version.range("2.*") },
+    { src = "https://github.com/rafamadriz/friendly-snippets" },
+    { src = "https://github.com/kristijanhusak/vim-dadbod-completion" },
+    -- Requires plenary
+    -- { src = "https://github.com/mikejmcguirk/blink-cmp-dictionary", version = "add-cancel" },
+    -- { src = "https://github.com/Kaiser-Yang/blink-cmp-dictionary" },
+
     { src = "https://github.com/numToStr/Comment.nvim" },
 
     { src = "https://github.com/stevearc/conform.nvim" },
@@ -31,26 +39,18 @@ local pack_spec = {
 
     { src = "https://github.com/windwp/nvim-autopairs" },
 
-    { src = "https://github.com/saghen/blink.cmp", version = vim.version.range("1.*") },
-    { src = "https://github.com/rafamadriz/friendly-snippets" },
-    { src = "https://github.com/kristijanhusak/vim-dadbod-completion" },
-    { src = "https://github.com/Saghen/blink.compat", version = vim.version.range("2.*") },
-    -- Requires plenary
-    -- { src = "https://github.com/mikejmcguirk/blink-cmp-dictionary", version = "add-cancel" },
-    -- { src = "https://github.com/Kaiser-Yang/blink-cmp-dictionary" },
-
     { src = "https://github.com/NvChad/nvim-colorizer.lua" },
 
     { src = "https://github.com/neovim/nvim-lspconfig" },
-
-    { src = "https://github.com/nvim-treesitter/nvim-treesitter", version = "master" },
-    -- { src = "https://github.com/nvim-treesitter/nvim-treesitter", version = "main" },
-    { src = "https://github.com/nvim-treesitter/nvim-treesitter-textobjects" },
 
     { src = "https://github.com/kylechui/nvim-surround", version = vim.version.range("^3.0.0") },
 
     -- Requires nvim-web-devicons
     { src = "https://github.com/nvim-tree/nvim-tree.lua", version = vim.version.range("*") },
+
+    { src = "https://github.com/nvim-treesitter/nvim-treesitter", version = "master" },
+    { src = "https://github.com/nvim-treesitter/nvim-treesitter-textobjects" },
+    -- { src = "https://github.com/nvim-treesitter/nvim-treesitter", version = "main" },
 
     { src = "https://github.com/windwp/nvim-ts-autotag" },
 

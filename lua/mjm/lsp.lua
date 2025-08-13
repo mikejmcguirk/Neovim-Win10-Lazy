@@ -1,3 +1,4 @@
+-- TODO: https://github.com/neovim/neovim/commit/f7802dd5d57223ba1602b7eb13af0a64a3bf0360
 vim.lsp.set_log_level("ERROR")
 local ut = require("mjm.utils")
 
@@ -107,6 +108,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
 
         -- Kickstart mapping
+        -- TODO: Does not return local scope, only broader RTP
         if client:supports_method(methods.workspace_symbol) then
             if ok then
                 vim.keymap.set("n", "gW", function()

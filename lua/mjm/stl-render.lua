@@ -1,5 +1,7 @@
 -- MAYBE: Could explore adding the char index. But it looks like I would need to compute that in
 -- Lua, which might incur a performance cost
+-- TODO: When LSP progress messages send, elements A and B are shrunk to accomodate them
+-- Those elements should stay stable
 
 local M = {}
 

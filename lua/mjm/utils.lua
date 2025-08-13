@@ -238,6 +238,8 @@ function M.write_to_scratch_buf(lines)
     vim.api.nvim_set_current_buf(scratch)
 end
 
+-- TODO: Should probably just hide errors here, or figure out a way to avoid grabbing parsers
+-- for buffers that don't have one
 function M.is_comment()
     local ok, lang_tree = pcall(vim.treesitter.get_parser)
     if (not ok) or not lang_tree then
