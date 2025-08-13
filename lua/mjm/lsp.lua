@@ -107,11 +107,10 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
 
         -- Kickstart mapping
-        -- TODO: Does not return local scope, only broader RTP
         if client:supports_method(methods.workspace_symbol) then
             if ok then
                 vim.keymap.set("n", "gW", function()
-                    fzf_lua.lsp_workspace_symbols()
+                    fzf_lua.lsp_live_workspace_symbols()
                 end, { buffer = buf })
             else
                 vim.keymap.set("n", "gW", vim.lsp.buf.workspace_symbol, { buffer = buf })
