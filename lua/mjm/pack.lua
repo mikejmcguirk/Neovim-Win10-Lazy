@@ -69,13 +69,6 @@ local pack_spec = {
         version = vim.version.range("^3.0.0"),
     },
 
-    -- Requires nvim-web-devicons
-    {
-        name = "nvim-tree.lua",
-        src = "https://github.com/nvim-tree/nvim-tree.lua",
-        version = vim.version.range("*"),
-    },
-
     -- {
     --     name = "nvim-treesitter",
     --     src = "https://github.com/nvim-treesitter/nvim-treesitter",
@@ -122,30 +115,18 @@ vim.pack.add(pack_spec, {
 })
 
 function M.post_load(plug_name)
-    vim.cmd.packadd({
-        vim.fn.escape(plug_name, " "),
-        bang = false,
-        magic = { file = false },
-    })
+    vim.cmd.packadd({ vim.fn.escape(plug_name, " "), bang = false, magic = { file = false } })
 
     local plugin_path = paths[plug_name]
     local after_paths = vim.fn.glob(plugin_path .. "/after/plugin/**/*.{vim,lua}", false, true)
 
-    --- @param path string
-    vim.tbl_map(function(path)
+    for _, path in pairs(after_paths) do
         vim.cmd.source({ path, magic = { file = false } })
-    end, after_paths)
+    end
 end
 
 vim.keymap.set("n", "zqu", function()
-    local spec = vim.pack.get()
-
-    local names = {}
-    for _, p in ipairs(spec) do
-        table.insert(names, p.spec.name)
-    end
-
-    vim.pack.update(names)
+    vim.pack.update()
 end)
 
 return M
