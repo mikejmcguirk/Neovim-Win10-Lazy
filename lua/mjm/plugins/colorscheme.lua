@@ -1,3 +1,9 @@
+vim.cmd.packadd({
+    vim.fn.escape("fluoromachine.nvim", " "),
+    bang = true,
+    magic = { file = false },
+})
+
 local fm = require("fluoromachine")
 fm.setup({
     glow = false,

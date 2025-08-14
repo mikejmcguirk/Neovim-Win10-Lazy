@@ -1,3 +1,5 @@
+vim.cmd.packadd({ vim.fn.escape("harpoon", " "), bang = true, magic = { file = false } })
+
 local harpoon = require("harpoon")
 local logger = require("harpoon.logger")
 local extensions = require("harpoon.extensions")

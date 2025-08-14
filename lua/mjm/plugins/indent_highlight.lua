@@ -1,4 +1,4 @@
-local function setup_indent_highlight()
+local function setup_ibl()
     local excluded_filetypes = {
         "help",
         "neo-tree",
@@ -26,6 +26,7 @@ vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
     group = vim.api.nvim_create_augroup("load-indent_highlight", { clear = true }),
     once = true,
     callback = function()
-        setup_indent_highlight()
+        require("mjm.pack").post_load("indent-blankline.nvim")
+        setup_ibl()
     end,
 })

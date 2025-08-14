@@ -37,16 +37,20 @@ local pack_finish = vim.loop.hrtime()
 -- Eager Loaded Plugins --
 --------------------------
 
+require("mjm.plugins.plenary")
+require("mjm.plugins.nvim-web-devicons")
+
 require("mjm.plugins.colorscheme")
 require("mjm.plugins.nvim-treesitter")
+
+require("mjm.plugins.nvim-lspconfig")
 
 require("mjm.plugins.fzflua")
 require("mjm.plugins.harpoon")
 
-require("mjm.plugins.blink") -- Setup is lazy, but do LSP capabilities here
+require("mjm.plugins.blink") -- Setup is lazy, but add to path for LSP capabilities and compat
 
-require("mjm.plugins.quickscope") -- Vimscript plugin
-require("mjm.plugins.dadbod") -- Vimscript plugin
+require("mjm.plugins.fugitive")
 
 local eager_loaded = vim.loop.hrtime()
 
@@ -73,10 +77,12 @@ local config_set = vim.loop.hrtime()
 -- Lazy Loaded Plugins --
 -------------------------
 
+require("mjm.plugins.abolish")
 require("mjm.plugins.autopairs")
 require("mjm.plugins.colorizer")
 require("mjm.plugins.comment")
 require("mjm.plugins.conform")
+require("mjm.plugins.dadbod")
 require("mjm.plugins.flash")
 require("mjm.plugins.git_signs")
 require("mjm.plugins.indent_highlight")
@@ -84,6 +90,8 @@ require("mjm.plugins.lazydev")
 require("mjm.plugins.nvim-surround")
 require("mjm.plugins.nvim-tree")
 require("mjm.plugins.obsidian")
+require("mjm.plugins.quickscope")
+require("mjm.plugins.speeddating")
 require("mjm.plugins.substitute")
 require("mjm.plugins.ts-autotag")
 require("mjm.plugins.undotree")

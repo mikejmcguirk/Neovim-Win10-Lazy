@@ -38,6 +38,7 @@ vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
     group = vim.api.nvim_create_augroup("load-substitute", { clear = true }),
     once = true,
     callback = function()
+        require("mjm.pack").post_load("substitute.nvim")
         load_substitute()
     end,
 })

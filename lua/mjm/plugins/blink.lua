@@ -1,3 +1,6 @@
+vim.cmd.packadd({ vim.fn.escape("blink.cmp", " "), bang = true, magic = { file = false } })
+vim.cmd.packadd({ vim.fn.escape("blink.compat", " "), bang = true, magic = { file = false } })
+
 local ut = require("mjm.utils")
 
 local blink = require("blink.cmp")
@@ -266,6 +269,8 @@ vim.api.nvim_create_autocmd("InsertEnter", {
     group = vim.api.nvim_create_augroup("setup-blink", { clear = true }),
     once = true,
     callback = function()
+        require("mjm.pack").post_load("friendly-snippets")
+
         setup_blink()
         --- @diagnostic disable: missing-parameter
         require("blink-compat").setup()

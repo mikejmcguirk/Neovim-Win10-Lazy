@@ -1,3 +1,5 @@
+vim.cmd.packadd({ vim.fn.escape("nvim-treesitter", " "), bang = true, magic = { file = false } })
+
 local configs = require("nvim-treesitter.configs")
 
 configs.setup({
@@ -52,7 +54,6 @@ configs.setup({
         },
     },
 })
-
 
 -- Defer execution until after Neovim automatically executes packadd. I have the vim.pack step
 -- to do so early disabled

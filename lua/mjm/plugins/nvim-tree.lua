@@ -47,6 +47,7 @@ for _, c in pairs(cmds) do
             vim.api.nvim_del_user_command(m[3])
         end
 
+        require("mjm.pack").post_load("nvim-tree.lua")
         setup_nvim_tree()
         vim.cmd(c[3])
     end, {})

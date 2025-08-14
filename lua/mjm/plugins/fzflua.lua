@@ -2,6 +2,8 @@
 -- FUTURE: Turn :let g: into a picker
 -- LOW: What makes asnc(?) messages not display?
 
+vim.cmd.packadd({ vim.fn.escape("fzf-lua", " "), bang = true, magic = { file = false } })
+
 local fzf_lua = require("fzf-lua")
 local utils = require("fzf-lua.utils")
 local core = require("fzf-lua.core")

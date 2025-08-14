@@ -190,7 +190,9 @@ for _, event in pairs(note_paths) do
         group = obsidian_group,
         once = true,
         callback = function()
+            require("mjm.pack").post_load("obsidian.nvim")
             load_obsidian()
+
             vim.api.nvim_clear_autocmds({ group = obsidian_group })
         end,
     })

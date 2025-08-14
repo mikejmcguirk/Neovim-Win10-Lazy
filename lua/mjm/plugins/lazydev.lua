@@ -12,6 +12,7 @@ vim.api.nvim_create_autocmd("FileType", {
     pattern = "lua",
     once = true,
     callback = function()
+        require("mjm.pack").post_load("lazydev.nvim")
         load_lazydev()
     end,
 })
