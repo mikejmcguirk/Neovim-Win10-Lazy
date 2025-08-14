@@ -1,4 +1,9 @@
 vim.cmd.packadd({ vim.fn.escape("nvim-treesitter", " "), bang = true, magic = { file = false } })
+vim.cmd.packadd({
+    vim.fn.escape("nvim-treesitter-textobjects", " "),
+    bang = true,
+    magic = { file = false },
+})
 
 local configs = require("nvim-treesitter.configs")
 
@@ -36,7 +41,7 @@ configs.setup({
     textobjects = {
         select = {
             enable = true,
-            lookahead = false, -- Don't jump to next text object
+            lookahead = true,
             keymaps = {
                 ["a,"] = "@parameter.outer",
                 ["i,"] = "@parameter.inner",
