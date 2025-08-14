@@ -61,8 +61,6 @@ local pack_spec = {
 
     { name = "nvim-autopairs", src = "https://github.com/windwp/nvim-autopairs" },
 
-    { name = "nvim-colorizer.lua", src = "https://github.com/NvChad/nvim-colorizer.lua" },
-
     { name = "nvim-lspconfig", src = "https://github.com/neovim/nvim-lspconfig" },
 
     {

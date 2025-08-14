@@ -79,7 +79,6 @@ local config_set = vim.loop.hrtime()
 
 require("mjm.plugins.abolish")
 require("mjm.plugins.autopairs")
-require("mjm.plugins.colorizer")
 require("mjm.plugins.conform")
 require("mjm.plugins.dadbod")
 require("mjm.plugins.flash")
