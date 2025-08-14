@@ -1,5 +1,4 @@
 vim.api.nvim_set_option_value("mouse", "", { scope = "global" })
-vim.api.nvim_set_option_value("mousescroll", "ver:0,hor:0", { scope = "global" })
 
 -- On my monitors, for files under 10k lines, a centered vsplit will be on the color column
 vim.api.nvim_set_option_value("nu", true, { scope = "global" })
