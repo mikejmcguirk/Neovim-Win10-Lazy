@@ -29,8 +29,6 @@ local pack_spec = {
     -- { src = "https://github.com/mikejmcguirk/blink-cmp-dictionary", version = "add-cancel" },
     -- { src = "https://github.com/Kaiser-Yang/blink-cmp-dictionary" },
 
-    { name = "Comment.nvim", src = "https://github.com/numToStr/Comment.nvim" },
-
     { name = "conform.nvim", src = "https://github.com/stevearc/conform.nvim" },
 
     { name = "flash.nvim", src = "https://github.com/folke/flash.nvim" },
