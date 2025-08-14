@@ -76,13 +76,34 @@ local pack_spec = {
     { src = "https://github.com/folke/zen-mode.nvim" },
 }
 
-vim.pack.add(pack_spec, { load = false })
+local cached_spec = {}
+
+--- @param ctx {spec: vim.pack.Spec, path: string}
+local function load(ctx)
+    local this_spec = {}
+
+    this_spec.active = true
+    this_spec.path = ctx.path
+    this_spec.spec = ctx.spec
+
+    table.insert(cached_spec, this_spec)
+    vim.cmd.packadd({
+        vim.fn.escape(ctx.spec.name, " "),
+        bang = true,
+        magic = { file = false },
+    })
+end
+
+vim.pack.add(pack_spec, { load = load })
+
+vim.keymap.set("n", "zqs", function()
+    print(vim.inspect(cached_spec))
+end)
 
 local cached_git_data = {}
 local started = false
 local is_fetching = false
 local pending_fetches = 0
-local cached_spec
 
 local function fetch_git_data(pack, callback)
     local cmd = { "git", "-C", pack.path, "log", "-1", "--format=%cd %H", "--date=short" }
