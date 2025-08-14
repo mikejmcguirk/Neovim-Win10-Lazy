@@ -114,8 +114,6 @@ local pack_spec = {
     -- NOTE: The FugitiveChanged event is used for statusline updates
     { name = "vim-fugitive", src = "https://github.com/tpope/vim-fugitive" },
 
-    { name = "vim-speeddating", src = "https://github.com/tpope/vim-speeddating" },
-
     { name = "zen-mode.nvim", src = "https://github.com/folke/zen-mode.nvim" },
 }
 

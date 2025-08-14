@@ -4,10 +4,9 @@ vim.cmd.packadd({
     magic = { file = false },
 })
 
-local fm = require("fluoromachine")
-fm.setup({
+require("fluoromachine").setup({
+    brightness = 0.01,
     glow = false,
-    brightness = 0.05,
     theme = "delta",
     transparent = true,
 })
