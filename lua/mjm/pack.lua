@@ -84,6 +84,10 @@ local pack_spec = {
         src = "https://github.com/nvim-treesitter/nvim-treesitter-textobjects",
         version = "master",
     },
+    {
+        name = "nvim-treesitter-context",
+        src = "https://github.com/nvim-treesitter/nvim-treesitter-context",
+    },
 
     { name = "nvim-ts-autotag", src = "https://github.com/windwp/nvim-ts-autotag" },
 

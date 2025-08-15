@@ -1,6 +1,13 @@
 vim.cmd.packadd({ vim.fn.escape("nvim-treesitter", " "), bang = true, magic = { file = false } })
+
 vim.cmd.packadd({
     vim.fn.escape("nvim-treesitter-textobjects", " "),
+    bang = true,
+    magic = { file = false },
+})
+
+vim.cmd.packadd({
+    vim.fn.escape("nvim-treesitter-context", " "),
     bang = true,
     magic = { file = false },
 })
@@ -60,8 +67,11 @@ configs.setup({
     },
 })
 
--- Defer execution until after Neovim automatically executes packadd. I have the vim.pack step
--- to do so early disabled
+local border = vim.api.nvim_get_hl(0, { name = "FloatBorder" })
+vim.api.nvim_set_hl(0, "TreesitterContextBottom", { underline = true, sp = border.fg })
+-- TreesitterContextLineNumberBottom links to TreesitterContextBottom by default
+
+-- Defer until the plugin is fully sourced
 vim.api.nvim_create_autocmd("VimEnter", {
     group = vim.api.nvim_create_augroup("run-tsupdate", { clear = true }),
     pattern = "*",
