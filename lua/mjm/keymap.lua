@@ -514,7 +514,6 @@ vim.keymap.set("n", "dm", "<cmd>delmarks!<cr>")
 vim.api.nvim_create_autocmd("TextYankPost", {
     group = vim.api.nvim_create_augroup("yank_cleanup", { clear = true }),
     callback = function()
-        vim.fn.confirm(vim.inspect(vim.v.event))
         -- callback = function(ev)
         -- if vim.v.event.operator == "y" then
         --     local row, col = unpack(vim.api.nvim_buf_get_mark(ev.buf, "z"))
