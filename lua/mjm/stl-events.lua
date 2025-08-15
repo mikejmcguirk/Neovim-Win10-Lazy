@@ -36,31 +36,12 @@ vim.api.nvim_create_autocmd("ModeChanged", {
     end,
 })
 
--- TODO: Refactor this the same way as LSP progress.
--- - Move the event into stl
--- - Diagnostic updates should only trigger statusline redraws rather than total rebuilds
-vim.api.nvim_create_autocmd("DiagnosticChanged", {
-    group = stl_events,
-    callback = function(ev)
-        local stl_data = require("mjm.stl-data")
-        if vim.tbl_contains({ "ins", "rep" }, stl_data.modes[vim.fn.mode()]) then
-            return
-        end
-
-        stl.event_router({
-            event = ev.event,
-            buf = ev.buf,
-            diags = ev.data.diagnostics,
-        })
-    end,
-})
-
 vim.api.nvim_create_autocmd("BufUnload", {
     group = stl_events,
     callback = function(ev)
         local stl_data = require("mjm.stl-data")
-        if stl_data.diag_count_cache and stl_data.diag_count_cache[tostring(ev.buf)] then
-            stl_data.diag_count_cache[tostring(ev.buf)] = nil
+        if stl_data.diag_cache and stl_data.diag_cache[tostring(ev.buf)] then
+            stl_data.diag_cache[tostring(ev.buf)] = nil
         end
     end,
 })

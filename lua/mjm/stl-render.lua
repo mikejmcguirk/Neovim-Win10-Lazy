@@ -39,28 +39,26 @@ local function build_active_b(stl, opts)
     table.insert(stl, "%#" .. hl .. "# %m %f %*")
 end
 
--- TODO: Needs to be redone as a Lua function so it can update on redraw
-local function add_diags(stl, buf)
-    local diag_counts = stl_data.diag_count_cache[tostring(buf)]
-    if diag_counts then
-        local parts = vim.iter({ "ERROR", "WARN", "INFO", "HINT" })
-            :map(function(severity)
-                local count = diag_counts[severity]
-                if count == 0 then
-                    return nil
-                end
-
-                local diag_hl = "Diagnostic" .. severity:sub(1, 1) .. severity:sub(2):lower()
-                return "%#" .. diag_hl .. "#" .. diag_icons[severity] .. " " .. count .. " "
-            end)
-            :filter(function(part)
-                return part ~= nil
-            end)
-            :totable()
-
-        table.insert(stl, table.concat(parts, ""))
+-- TODO: Do not need to individually get the mode and buf for each diag
+-- But wait to outline until architecture has re-settled in
+function M.get_diags(level)
+    local mode = stl_data.modes[vim.fn.mode()] or "norm"
+    if not vim.tbl_contains({ "norm", "vis", "cmd" }, mode) then
+        return ""
     end
-    table.insert(stl, "%*")
+
+    local buf = vim.api.nvim_get_current_buf()
+    local diag_counts = stl_data.diag_cache[tostring(buf)]
+    if not diag_counts then
+        return ""
+    end
+
+    local count = diag_counts[level]
+    if count == 0 then
+        return ""
+    end
+
+    return string.format("%s %d ", diag_icons[level], count)
 end
 
 function M.get_lsps()
@@ -108,13 +106,17 @@ local function build_active_c(stl, opts)
     local hl = stl_data[string.format("%s-c", mode)]
     table.insert(stl, "%#" .. hl .. "# ")
 
-    local buf = opts.buf or vim.api.nvim_get_current_buf()
-    add_diags(stl, buf)
+    local err_hl = "%#DiagnosticError#" .. "%{v:lua.require'mjm.stl-render'.get_diags('ERROR')}%*"
+    local warn_hl = "%#DiagnosticWarn#" .. "%{v:lua.require'mjm.stl-render'.get_diags('WARN')}%*"
+    local info_hl = "%#DiagnosticInfo#" .. "%{v:lua.require'mjm.stl-render'.get_diags('INFO')}%*"
+    local hint_hl = "%#DiagnosticHint#" .. "%{v:lua.require'mjm.stl-render'.get_diags('HINT')}%*"
 
+    local diags = err_hl .. warn_hl .. info_hl .. hint_hl
+    -- local diags = "%{v:lua.require'mjm.stl-render'.get_diags()} %*"
     local lsp_count = "%{v:lua.require'mjm.stl-render'.get_lsps()} "
     local progress = "%{v:lua.require'mjm.stl-render'.get_progress()} %*"
 
-    table.insert(stl, lsp_count .. progress)
+    table.insert(stl, diags .. lsp_count .. progress)
 end
 
 local function build_active_x(stl, opts)

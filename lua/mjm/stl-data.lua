@@ -236,7 +236,7 @@ M.progress = nil --- @type {client_id:integer, params:lsp.ProgressParams, msg: s
 --- Diagnostics ---
 -------------------
 
-M.diag_count_cache = {}
+M.diag_cache = {}
 
 function M.process_diags(opts)
     opts = opts or {}
@@ -258,7 +258,26 @@ function M.process_diags(opts)
             return acc
         end)
 
-    M.diag_count_cache[tostring(buf)] = counts
+    M.diag_cache[tostring(buf)] = counts
+end
+
+function M.cache_diags(buf, diags)
+    local counts = vim.iter(diags)
+        :filter(function(d)
+            return d.bufnr == buf
+        end)
+        :fold({
+            ERROR = 0,
+            WARN = 0,
+            HINT = 0,
+            INFO = 0,
+        }, function(acc, d)
+            local severity = vim.diagnostic.severity[d.severity]
+            acc[severity] = acc[severity] + 1
+            return acc
+        end)
+
+    M.diag_cache[tostring(buf)] = counts
 end
 
 ----------------

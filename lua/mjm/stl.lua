@@ -94,6 +94,17 @@ vim.api.nvim_create_autocmd("LspProgress", {
     end,
 })
 
+-- TODO: Refactor this the same way as LSP progress.
+-- - Move the event into stl
+-- - Diagnostic updates should only trigger statusline redraws rather than total rebuilds
+vim.api.nvim_create_autocmd("DiagnosticChanged", {
+    group = M.augroup,
+    callback = function(ev)
+        stl_data.cache_diags(ev.buf, ev.data.diagnostics)
+        vim.cmd("redraws")
+    end,
+})
+
 function M.event_router(opts)
     opts = opts or {}
     if not opts.event then
