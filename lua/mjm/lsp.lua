@@ -1,7 +1,8 @@
-vim.lsp.log.set_level(vim.log.levels.ERROR)
 local ut = require("mjm.utils")
 
--- By default, mapped in non-LSP buffers without checking for LSP method support
+vim.lsp.log.set_level(vim.log.levels.ERROR)
+
+-- By default, mapped in non-LSP buffers and without checking for LSP method support
 vim.keymap.del("n", "grn")
 vim.keymap.del("n", "gra")
 vim.keymap.del("n", "grr")
@@ -19,8 +20,11 @@ vim.api.nvim_create_autocmd("LspAttach", {
         local methods = vim.lsp.protocol.Methods ---@type table
         local ok, fzf_lua = pcall(require, "fzf-lua")
 
+        -------------------------
         -- Overwrite vim defaults
-        vim.keymap.set("n", "gr", "<nop>", { buffer = buf }) -- Prevent default gr functionality
+        -------------------------
+
+        vim.keymap.set("n", "gr", "<nop>", { buffer = buf })
 
         if client:supports_method(methods.textDocument_definition) then
             if ok then
@@ -42,12 +46,15 @@ vim.api.nvim_create_autocmd("LspAttach", {
             end
         end
 
+        ------------------------------------------------------
         -- Recreate/replace Nvim defaults (:help lsp-defaults)
+        ------------------------------------------------------
+
         if client:supports_method(methods.textDocument_rename) then
             vim.keymap.set("n", "grn", function()
                 local input = ut.get_input("Rename: ")
                 if string.find(input, "%s") then
-                    vim.notify(string.format("The name '%s' contains spaces", input))
+                    vim.notify(string.format("'%s' contains spaces", input))
                 elseif #input > 0 then
                     vim.lsp.buf.rename(input)
                 end
@@ -93,7 +100,13 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
 
         if client:supports_method(methods.textDocument_typeDefinition) then
-            vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { buffer = buf })
+            if ok then
+                vim.keymap.set("n", "grt", function()
+                    fzf_lua.lsp_typedefs()
+                end, { buffer = buf })
+            else
+                vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { buffer = buf })
+            end
         end
 
         if client:supports_method(methods.textDocument_documentSymbol) then
@@ -105,6 +118,10 @@ vim.api.nvim_create_autocmd("LspAttach", {
                 vim.keymap.set("n", "gO", vim.lsp.buf.document_symbol, { buffer = buf })
             end
         end
+
+        --------
+        -- Other
+        --------
 
         -- Kickstart mapping
         if client:supports_method(methods.workspace_symbol) then
@@ -128,7 +145,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
             end)
         end
 
-        vim.lsp.document_color.enable(true, buf)
         if client:supports_method(methods.textDocument_documentColor) then
             -- Maria Solano map (kinda)
             vim.keymap.set("n", "grc", function()
