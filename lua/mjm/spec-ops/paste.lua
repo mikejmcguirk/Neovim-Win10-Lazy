@@ -12,6 +12,7 @@
 -- TODO: The paste yank error is confusing if you're not yanking
 -- TODO: The yank should only exit on failure if yanking or indenting
 -- FUTURE: line into char visual paste creates trailing whitespace. Option to remove?
+-- TODO: Unsure if TextYankPost fires when doing a delete/paste visually
 
 -- cursor placements
 -- sc > sc -- end
