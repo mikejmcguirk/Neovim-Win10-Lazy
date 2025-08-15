@@ -74,6 +74,18 @@ function M.delete_callback(motion)
         else
             vim.fn.setreg(cb_state.reg, text)
         end
+
+        vim.api.nvim_exec_autocmds("TextYankPost", {
+            buffer = vim.api.nvim_get_current_buf(),
+            data = {
+                inclusive = true,
+                operator = "y",
+                regcontents = yank_lines,
+                regname = cb_state.reg,
+                regtype = utils.regtype_from_motion(motion),
+                visual = cb_state.vmode,
+            },
+        })
     end
 
     local post_marks, err_d = del_utils.do_del({
