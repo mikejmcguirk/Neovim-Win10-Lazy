@@ -214,11 +214,24 @@ function M.do_set(text, marks, regtype, motion, vcount, curswant)
         return op_utils.op_set_block(marks, curswant, set_lines)
     elseif reg_mtype == mtype.L and block_motion then
         local del_marks, err = op_utils.op_set_block(marks, curswant)
-        if not del_marks or err then
+        if (not del_marks) or err then
             return nil, "do_set: " .. (err or "Unknown error in op_set_block")
         end
 
-        return op_utils.paste_lines(del_marks.start.row, true, set_lines)
+        local d_start_row = del_marks.start.row --- @type integer
+        local d_start_col = del_marks.start.col --- @type integer
+        --- @type string
+        local first_line = vim.api.nvim_buf_get_lines(0, d_start_row - 1, d_start_row, false)[1]
+        local end_byte = math.max(#first_line - 1, 0) --- @type integer
+
+        --- @type integer|nil, integer|nil, string|nil
+        local l_byte, _, bb_err = blk_utils.byte_bounds_from_col(first_line, end_byte)
+        if (not l_byte) or bb_err then
+            return nil, "do_set: " .. (bb_err or "Unknown error in byte_bounds_from_col")
+        end
+
+        local before = not (l_byte == d_start_col) --- @type boolean
+        return op_utils.paste_lines(del_marks.start.row, before, set_lines)
     elseif reg_mtype == mtype.SC and motion_mtype == mtype.MB then
         -- TODO: Built-in behavior places marks only on the first row. I am currently placing
         -- on the whole area
