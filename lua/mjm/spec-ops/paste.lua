@@ -7,11 +7,30 @@
 -- - Norm multiline char after: Either hold or end of pasted text
 -- - Norm multiline char before: End of pasted text
 -- - Norm linewise: Hold cursor
--- TODO: Keep working through visual paste implementations
+-- TODO: Keep linewise through visual paste implementations
 -- TODO: Implement correct cursor behavior for visual pastes
 -- TODO: The paste yank error is confusing if you're not yanking
 -- TODO: The yank should only exit on failure if yanking or indenting
 -- FUTURE: line into char visual paste creates trailing whitespace. Option to remove?
+
+-- cursor placements
+-- sc > sc -- end
+-- sc > mc -- end
+-- sc > sb -- end
+-- mc > sc -- beginning
+-- mc > mc -- beginning
+-- mc > sb -- beginning
+-- sb > sc -- beginning
+-- sb > mc -- beginning
+-- sb > sb -- beginning
+-- {} > l -- beginning
+-- l > c -- beginning
+-- b > b -- beginning
+-- l > b -- beginning of pasted line
+-- mc > b beginning
+-- mb > mc - beginning
+-- so really with the cursor logic, if sc then end otherwise beginning of change marks
+-- Put these in the visual paste function for now
 
 local blk_utils = require("mjm.spec-ops.block-utils")
 local get_utils = require("mjm.spec-ops.get-utils")
