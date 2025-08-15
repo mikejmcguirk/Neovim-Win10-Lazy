@@ -238,6 +238,7 @@ M.progress = nil --- @type {client_id:integer, params:lsp.ProgressParams, msg: s
 
 M.diag_cache = {}
 
+-- TODO: Remove this function
 function M.process_diags(opts)
     opts = opts or {}
     local buf = opts.buf or vim.api.nvim_get_current_buf()
@@ -261,6 +262,8 @@ function M.process_diags(opts)
     M.diag_cache[tostring(buf)] = counts
 end
 
+--- @param buf integer
+--- @param diags vim.Diagnostic[]
 function M.cache_diags(buf, diags)
     local counts = vim.iter(diags)
         :filter(function(d)

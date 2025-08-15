@@ -18,25 +18,25 @@ local format_icons = Has_Nerd_Font and { unix = "", dos = "", mac = "" 
 
 local git_symbol = Has_Nerd_Font and " " or " "
 
+function M.get_section_hl(section)
+    local mode = stl_data.modes[vim.fn.mode()] or "norm"
+    return mode .. "-" .. section
+end
+
 local function build_separator(stl, opts)
     opts = opts or {}
     local hl = stl_data[string.format("%s-c", (opts.mode or "norm"))]
     table.insert(stl, "%#" .. hl .. "#%=%*")
 end
 
-local function build_active_a(stl, opts)
-    opts = opts or {}
-    local hl = stl_data[string.format("%s-a", (opts.mode or "norm"))]
-
+local function build_active_a(stl)
     local head = stl_data.head and string.format(" %s ", stl_data.head) or " "
 
-    table.insert(stl, "%#" .. hl .. "#" .. git_symbol .. head)
+    table.insert(stl, git_symbol .. head)
 end
 
-local function build_active_b(stl, opts)
-    opts = opts or {}
-    local hl = stl_data[string.format("%s-b", (opts.mode or "norm"))]
-    table.insert(stl, "%#" .. hl .. "# %m %f %*")
+local function build_active_b(stl)
+    table.insert(stl, " %m %f ")
 end
 
 -- TODO: Do not need to individually get the mode and buf for each diag
@@ -100,12 +100,7 @@ function M.get_progress()
     return pct .. name .. ": " .. values.title .. message
 end
 
-local function build_active_c(stl, opts)
-    opts = opts or {}
-    local mode = opts.mode or "norm"
-    local hl = stl_data[string.format("%s-c", mode)]
-    table.insert(stl, "%#" .. hl .. "# ")
-
+local function build_active_c(stl)
     local err_hl = "%#DiagnosticError#" .. "%{v:lua.require'mjm.stl-render'.get_diags('ERROR')}%*"
     local warn_hl = "%#DiagnosticWarn#" .. "%{v:lua.require'mjm.stl-render'.get_diags('WARN')}%*"
     local info_hl = "%#DiagnosticInfo#" .. "%{v:lua.require'mjm.stl-render'.get_diags('INFO')}%*"
@@ -114,32 +109,27 @@ local function build_active_c(stl, opts)
     local diags = err_hl .. warn_hl .. info_hl .. hint_hl
     -- local diags = "%{v:lua.require'mjm.stl-render'.get_diags()} %*"
     local lsp_count = "%{v:lua.require'mjm.stl-render'.get_lsps()} "
-    local progress = "%{v:lua.require'mjm.stl-render'.get_progress()} %*"
+    local progress = "%{v:lua.require'mjm.stl-render'.get_progress()} "
 
     table.insert(stl, diags .. lsp_count .. progress)
 end
 
+-- TODO: Ain't no way there aren't built-ins for any of these
 local function build_active_x(stl, opts)
-    opts = opts or {}
-    local hl = stl_data[string.format("%s-c", (opts.mode or "norm"))]
-
     local bufnr = opts.buf or vim.api.nvim_get_current_buf()
     local encoding = vim.api.nvim_get_option_value("encoding", { scope = "local" })
     local format = vim.api.nvim_get_option_value("fileformat", { buf = bufnr })
     local ft = vim.api.nvim_get_option_value("filetype", { buf = bufnr })
 
-    table.insert(stl, string.format("%%#%s#%s %s %s %%*", hl, encoding, format_icons[format], ft))
+    table.insert(stl, string.format("%s %s %s ", encoding, format_icons[format], ft))
 end
 
-local function build_active_y_z(stl, opts)
-    opts = opts or {}
-    local hl_y = stl_data[string.format("%s-b", (opts.mode or "norm"))]
-    local hl_z = stl_data[string.format("%s-a", (opts.mode or "norm"))]
-    local fn = " %{v:lua.require'mjm.stl-data'.get_scroll_pct()}%% %*"
-    table.insert(
-        stl,
-        string.format("%%#%s#%s%%#%s# %%l/%%L | %%c | v:%%v | %%o %%*", hl_y, fn, hl_z)
-    )
+local function build_active_y(stl)
+    table.insert(stl, " %{v:lua.require'mjm.stl-data'.get_scroll_pct()}%% ")
+end
+
+local function build_active_z(stl)
+    table.insert(stl, " %l/%L | %c | v:%v | %o ")
 end
 
 function M.set_active_stl(opts)
@@ -163,12 +153,49 @@ function M.set_active_stl(opts)
     opts.mode = stl_data.modes[vim.fn.mode()]
     local stl = {}
 
-    build_active_a(stl, opts)
-    build_active_b(stl, opts)
-    build_active_c(stl, opts)
+    table.insert(stl, "%#")
+    table.insert(stl, "%{v:lua.require'mjm.stl-render'.get_section_hl('a')}")
+    table.insert(stl, "#")
+    build_active_a(stl)
+    table.insert(stl, "%*")
+
+    table.insert(stl, "%#")
+    table.insert(stl, "%{v:lua.require'mjm.stl-render'.get_section_hl('b')}")
+    table.insert(stl, "#")
+    build_active_b(stl)
+    table.insert(stl, "%*")
+
+    table.insert(stl, "%#")
+    table.insert(stl, "%{v:lua.require'mjm.stl-render'.get_section_hl('c')}")
+    table.insert(stl, "#")
+    build_active_c(stl)
+    table.insert(stl, "%*")
+
     build_separator(stl, opts)
+
+    table.insert(stl, "%#")
+    table.insert(stl, "%{v:lua.require'mjm.stl-render'.get_section_hl('c')}")
+    table.insert(stl, "#")
+    table.insert(stl, "%=")
+    table.insert(stl, "%*")
+
+    table.insert(stl, "%#")
+    table.insert(stl, "%{v:lua.require'mjm.stl-render'.get_section_hl('c')}")
+    table.insert(stl, "#")
     build_active_x(stl, opts)
-    build_active_y_z(stl, opts)
+    table.insert(stl, "%*")
+
+    table.insert(stl, "%#")
+    table.insert(stl, "%{v:lua.require'mjm.stl-render'.get_section_hl('b')}")
+    table.insert(stl, "#")
+    build_active_y(stl)
+    table.insert(stl, "%*")
+
+    table.insert(stl, "%#")
+    table.insert(stl, "%{v:lua.require'mjm.stl-render'.get_section_hl('a')}")
+    table.insert(stl, "#")
+    build_active_z(stl)
+    table.insert(stl, "%*")
 
     vim.api.nvim_set_option_value("stl", table.concat(stl, ""), { win = win })
 end

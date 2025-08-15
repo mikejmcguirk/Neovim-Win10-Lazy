@@ -8,14 +8,14 @@ vim.api.nvim_create_autocmd({ "BufWinEnter" }, {
     end,
 })
 
-vim.api.nvim_create_autocmd("WinEnter", {
-    group = stl_events,
-    callback = function(ev)
-        -- Avoid stale diags when re-entering a window
-        stl.event_router({ event = ev.event, buf = ev.buf, new_diags = true })
-    end,
-})
-
+-- vim.api.nvim_create_autocmd("WinEnter", {
+--     group = stl_events,
+--     callback = function(ev)
+--         -- Avoid stale diags when re-entering a window
+--         stl.event_router({ event = ev.event, buf = ev.buf, new_diags = true })
+--     end,
+-- })
+--
 vim.api.nvim_create_autocmd("ModeChanged", {
     group = stl_events,
     callback = function(ev)
@@ -33,15 +33,5 @@ vim.api.nvim_create_autocmd("ModeChanged", {
             return
         end
         stl.event_router({ event = ev.event, buf = ev.buf })
-    end,
-})
-
-vim.api.nvim_create_autocmd("BufUnload", {
-    group = stl_events,
-    callback = function(ev)
-        local stl_data = require("mjm.stl-data")
-        if stl_data.diag_cache and stl_data.diag_cache[tostring(ev.buf)] then
-            stl_data.diag_cache[tostring(ev.buf)] = nil
-        end
     end,
 })

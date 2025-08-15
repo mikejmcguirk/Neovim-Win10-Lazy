@@ -1,5 +1,8 @@
 -- TODO: There should be an exposed git done function. More generalized for the git functions
 -- And provides more control here over what's done when called
+-- TODO: Put in notes - The question of programming paradigms and design patterns if one of
+-- where does the agency in the code lie? Good code has clear agency. Spaghetti code has
+-- fragmented agency
 
 local M = {}
 
@@ -58,6 +61,20 @@ vim.api.nvim_create_autocmd("User", {
     end,
 })
 
+vim.api.nvim_create_autocmd("WinEnter", {
+    group = M.augroup,
+    callback = function(ev)
+        stl_render.set_active_stl({ event = ev.event, buf = ev.buf })
+    end,
+})
+
+vim.api.nvim_create_autocmd("BufWinEnter", {
+    group = M.augroup,
+    callback = function()
+        vim.cmd("redraws")
+    end,
+})
+
 vim.api.nvim_create_autocmd("WinLeave", {
     group = M.augroup,
     callback = function()
@@ -94,14 +111,20 @@ vim.api.nvim_create_autocmd("LspProgress", {
     end,
 })
 
--- TODO: Refactor this the same way as LSP progress.
--- - Move the event into stl
--- - Diagnostic updates should only trigger statusline redraws rather than total rebuilds
 vim.api.nvim_create_autocmd("DiagnosticChanged", {
     group = M.augroup,
     callback = function(ev)
         stl_data.cache_diags(ev.buf, ev.data.diagnostics)
         vim.cmd("redraws")
+    end,
+})
+
+vim.api.nvim_create_autocmd("BufUnload", {
+    group = M.augroup,
+    callback = function(ev)
+        if stl_data.diag_cache and stl_data.diag_cache[tostring(ev.buf)] then
+            stl_data.diag_cache[tostring(ev.buf)] = nil
+        end
     end,
 })
 
