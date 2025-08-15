@@ -1,8 +1,9 @@
 -- FUTURE: Is there a way to make this operator respect  the "y" cpoption?
 -- TODO: Handle zy
--- FUTURE: If I exec TextYankPost autocmds after setting a block register, the register's type is
--- changed to "v". The event also contains no v:event data. Either solve these problems or
--- fire a custom event
+-- FUTURE: Have event firing without other issues (was due to other autocmd I had up), but v:event
+-- is populated from the internal c data. I have a replication of the event data in the function,
+-- so that's probably where this has to land, but is worth further research
+-- https://github.com/neovim/neovim/issues/15136 -- Seems worth adding
 
 local blk_utils = require("mjm.spec-ops.block-utils")
 local get_utils = require("mjm.spec-ops.get-utils")
@@ -75,6 +76,18 @@ function M.yank_callback(motion)
     end
 
     vim.api.nvim_win_set_cursor(0, { cb_state.view.lnum, cb_state.view.col })
+
+    vim.api.nvim_exec_autocmds("TextYankPost", {
+        buffer = vim.api.nvim_get_current_buf(),
+        data = {
+            inclusive = true,
+            operator = "y",
+            regcontents = lines,
+            regname = cb_state.reg,
+            regtype = utils.regtype_from_motion(motion),
+            visual = cb_state.vmode,
+        },
+    })
 
     local reg_type = vim.fn.getregtype(cb_state.reg) --- @type string
     shared.highlight_text(marks, hl_group, hl_ns, hl_timer, reg_type)

@@ -514,6 +514,7 @@ vim.keymap.set("n", "dm", "<cmd>delmarks!<cr>")
 vim.api.nvim_create_autocmd("TextYankPost", {
     group = vim.api.nvim_create_augroup("yank_cleanup", { clear = true }),
     callback = function()
+        vim.fn.confirm(vim.inspect(vim.v.event))
         -- callback = function(ev)
         -- if vim.v.event.operator == "y" then
         --     local row, col = unpack(vim.api.nvim_buf_get_mark(ev.buf, "z"))
@@ -552,9 +553,9 @@ vim.api.nvim_create_autocmd("TextYankPost", {
         -- regname will show a register for delete/change if one is specified
         -- If yanking to the black hole register with any method, regname will show nothing
         -- Therefore, do not copy from reg 0 if regname is '"' or ""
-        if vim.v.event.regname ~= '"' and vim.v.event.regname ~= "" then
-            vim.fn.setreg('"', vim.fn.getreg("0"))
-        end
+        --     if vim.v.event.regname ~= '"' and vim.v.event.regname ~= "" then
+        --         vim.fn.setreg('"', vim.fn.getreg("0"))
+        --     end
     end,
 })
 
