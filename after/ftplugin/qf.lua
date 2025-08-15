@@ -1,5 +1,3 @@
-vim.cmd("packadd cfilter")
-
 vim.opt_local.colorcolumn = ""
 vim.o.buflisted = false
 
