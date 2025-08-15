@@ -1,3 +1,5 @@
+vim.cmd("packadd! cfilter")
+
 -- Override default behavior where new windows get a copy of the previous window's loc list
 vim.api.nvim_create_autocmd("WinNew", {
     group = vim.api.nvim_create_augroup("del_new_loclist", { clear = true }),
