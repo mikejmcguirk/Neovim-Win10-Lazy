@@ -1,6 +1,8 @@
+local ut = require("mjm.utils")
+
 vim.cmd("packadd! cfilter")
 
--- Override default behavior where new windows get a copy of the previous window's loc list
+-- Override default behavior where new windows get a copy of the previous window's loclist
 vim.api.nvim_create_autocmd("WinNew", {
     group = vim.api.nvim_create_augroup("del_new_loclist", { clear = true }),
     pattern = "*",
@@ -9,100 +11,10 @@ vim.api.nvim_create_autocmd("WinNew", {
     end,
 })
 
--- Both Quickfix lists and Loclists are identified with quickfix-ID values
--- The terminology is used here for consistency
-
----@return boolean
-local cur_buf_is_qf = function()
-    if vim.api.nvim_get_option_value("filetype", { buf = 0 }) == "qf" then
-        return true
-    else
-        return false
-    end
-end
-
----@return number
-local get_cur_win_qf_id = function()
-    -- See :h getqflist what section for id field. Zero gets ID for current list
-    -- See :h getqflist returned dictionary for what items
-    local qf_id = vim.fn.getloclist(vim.api.nvim_get_current_win(), { id = 0 }).id ---@type any
-    assert(type(qf_id) == "number")
-    return qf_id
-end
-
-local cur_win_has_loclist = function()
-    if get_cur_win_qf_id() == 0 then
-        return false
-    else
-        return true
-    end
-end
-
----@return boolean
-local is_cur_win_loclist_open = function()
-    local qf_id = get_cur_win_qf_id()
-    if qf_id == 0 then
-        return false
-    end
-
-    for _, w in ipairs(vim.fn.getwininfo()) do
-        if w.quickfix == 1 and w.loclist == 1 then
-            if vim.fn.getloclist(w.winid, { id = 0 }).id == qf_id then
-                return true
-            end
-        end
-    end
-
-    return false
-end
-
-local is_qflist_open = function()
-    for _, w in ipairs(vim.fn.getwininfo()) do
-        if w.quickfix == 1 and w.loclist == 0 then
-            return true
-        end
-    end
-
-    return false
-end
-
----@param opts? table{loclist:boolean}
----@return boolean
-local is_list_empty = function(opts)
-    opts = opts or {}
-    if opts.loclist and #vim.fn.getloclist(vim.api.nvim_get_current_win()) > 0 then
-        return false
-    elseif (not opts.loclist) and #vim.fn.getqflist() > 0 then
-        return false
-    end
-
-    return true
-end
-
-local ut = require("mjm.utils")
-
 ---@return nil
-local open_qflist = function()
+local function open_qflist()
     ut.close_all_loclists()
     vim.cmd("botright copen")
-end
-
----@return nil
-local open_loclist = function()
-    -- In theory, qflist should not be closed before verifying lopen is okay
-    -- In practice, opening the loclist with the qflist open messes up the window layout
-    -- lopen produces an error if no loclist is present. This function cannot be responsible for
-    -- verifying one exists because the steps are situational. Defensively pcall instead
-    vim.cmd("cclose")
-    local ok, err = pcall(function()
-        vim.cmd("lopen")
-    end)
-
-    if ok then
-        return
-    end
-
-    vim.api.nvim_echo({ { err or "Unknown error opening location list" } }, true, { err = true })
 end
 
 vim.keymap.set("n", "cuc", "<cmd>cclose<cr>")
@@ -111,36 +23,47 @@ vim.keymap.set("n", "cup", function()
 end)
 
 vim.keymap.set("n", "cuu", function()
-    if is_qflist_open() then
-        return vim.cmd("cclose")
-    else
-        open_qflist()
+    for _, w in ipairs(vim.fn.getwininfo()) do
+        if w.quickfix == 1 and w.loclist == 0 then
+            return vim.cmd("cclose")
+        end
     end
+
+    open_qflist()
 end)
 
 vim.keymap.set("n", "coc", "<cmd>lclose<cr>")
 vim.keymap.set("n", "cop", function()
-    if cur_buf_is_qf() then
+    if vim.api.nvim_get_option_value("filetype", { buf = 0 }) == "qf" then
         return vim.notify("Inside qf buffer")
     end
 
-    if cur_win_has_loclist() then
-        open_loclist()
+    if not (vim.fn.getloclist(vim.api.nvim_get_current_win(), { id = 0 }).id == 0) then
+        vim.cmd("cclose | lopen")
     else
-        vim.notify("Window has no location last")
+        vim.notify("Window has no location list")
     end
 end)
 
 vim.keymap.set("n", "coo", function()
-    if not cur_win_has_loclist() then -- The qflist is always id zero, so test fails
-        return vim.notify("Window has no location last")
+    if vim.api.nvim_get_option_value("filetype", { buf = 0 }) == "qf" then
+        return vim.notify("Inside qf buffer")
     end
 
-    if is_cur_win_loclist_open() then
-        return vim.cmd("lclose")
+    local qf_id = vim.fn.getloclist(vim.api.nvim_get_current_win(), { id = 0 }).id ---@type any
+    if qf_id == 0 then
+        return vim.notify("Window has no location list")
     end
 
-    open_loclist()
+    for _, w in ipairs(vim.fn.getwininfo()) do
+        if w.quickfix == 1 and w.loclist == 1 then
+            if vim.fn.getloclist(w.winid, { id = 0 }).id == qf_id then
+                return vim.cmd("lclose")
+            end
+        end
+    end
+
+    vim.cmd("cclose | lopen")
 end)
 
 for _, map in pairs({ "cuo", "cou" }) do
@@ -179,7 +102,7 @@ local severity_map = {
 
 ---@param diag table
 ---@return table
-local convert_diag = function(diag)
+local function convert_diag(diag)
     diag = diag or {}
     local source = diag.source .. ": " or "" ---@type string
     local message = diag.message or "" ---@type string
@@ -201,7 +124,7 @@ end
 -- FUTURE: Consider using vim.diagnostic.setqflist if enough features are added
 ---@param opts? table{highest:boolean, err_only:boolean}
 ---@return nil
-local all_diags_to_qflist = function(opts)
+local function all_diags_to_qflist(opts)
     opts = opts or {}
     -- Running vim.diagnostic.get() twice is not ideal, but better than hacking together
     -- a manual diag filter
@@ -227,7 +150,7 @@ end
 
 ---@param opts? table{highest:boolean, err_only:boolean}
 ---@return nil
-local buf_diags_to_loclist = function(opts)
+local function buf_diags_to_loclist(opts)
     opts = opts or {}
     local win = vim.api.nvim_get_current_win() ---@type integer
     local buf = vim.api.nvim_win_get_buf(win) ---@type integer
@@ -252,7 +175,7 @@ local buf_diags_to_loclist = function(opts)
     local diags_for_loclist = vim.tbl_map(convert_diag, raw_diags) ---@type table
     assert(#raw_diags == #diags_for_loclist, "Coverted diags were filtered")
     vim.fn.setloclist(win, diags_for_loclist, "r")
-    open_loclist()
+    vim.cmd("cclose | lopen")
 end
 
 vim.keymap.set("n", "yui", function()
@@ -281,14 +204,18 @@ end)
 
 ---@param opts? table{loclist:boolean, remove:boolean}
 ---@return nil
-local filter_wrapper = function(opts)
+local function filter_wrapper(opts)
     opts = opts or {}
-    if opts.loclist and not cur_win_has_loclist() then
+
+    if opts.loclist and vim.fn.getloclist(vim.api.nvim_get_current_win(), { id = 0 }).id == 0 then
         return vim.notify("Current window has no location list")
     end
 
     local list = opts.loclist and "Location" or "Quickfix" ---@type string
-    if is_list_empty({ loclist = opts.loclist }) then
+
+    if opts.loclist and #vim.fn.getloclist(vim.api.nvim_get_current_win()) > 0 then
+        return vim.notify(list .. " list is empty")
+    elseif (not opts.loclist) and #vim.fn.getqflist() > 0 then
         return vim.notify(list .. " list is empty")
     end
 
@@ -322,9 +249,9 @@ local last_lgrep = nil
 
 ---@param opts table
 ---@return nil
-local grep_wrapper = function(opts)
+local function grep_wrapper(opts)
     opts = opts or {}
-    if opts.loclist and cur_buf_is_qf() then
+    if opts.loclist and vim.api.nvim_get_option_value("filetype", { buf = 0 }) == "qf" then
         return vim.notify("Inside qf buffer")
     end
 
@@ -355,7 +282,7 @@ local grep_wrapper = function(opts)
 
     if opts.loclist then
         last_lgrep = pattern
-        open_loclist()
+        vim.cmd("cclose | lopen")
     else
         last_grep = pattern
         open_qflist()
@@ -378,14 +305,6 @@ vim.keymap.set("n", "yogi", function()
     grep_wrapper({ insensitive = true, loclist = true })
 end)
 
-vim.keymap.set("n", "yugv", function()
-    print(last_grep)
-end)
-
-vim.keymap.set("n", "yogv", function()
-    print(last_lgrep)
-end)
-
 vim.keymap.set("n", "yugr", function()
     grep_wrapper({ pattern = last_grep })
 end)
@@ -394,16 +313,24 @@ vim.keymap.set("n", "yogr", function()
     grep_wrapper({ pattern = last_lgrep, loclist = true })
 end)
 
+vim.keymap.set("n", "yugv", function()
+    print(last_grep)
+end)
+
+vim.keymap.set("n", "yogv", function()
+    print(last_lgrep)
+end)
+
 local function qf_scroll_wrapper(main, alt)
     local cmd_opts = { cmd = main, count = vim.v.count1 }
     local ok, err = pcall(vim.api.nvim_cmd, cmd_opts, {})
 
-    if not ok and (err:match("E42") or err:match("E776")) then
+    if (not ok) and (err:match("E42") or err:match("E776")) then
         vim.notify(err:sub(#"Vim:" + 1))
         return
     end
 
-    if not ok and err:match("E553") then
+    if (not ok) and err:match("E553") then
         local alt_opts = { cmd = alt }
         ok, err = pcall(vim.api.nvim_cmd, alt_opts, {})
     end
@@ -417,18 +344,15 @@ local function qf_scroll_wrapper(main, alt)
     vim.cmd("norm! zz")
 end
 
-vim.keymap.set("n", "[q", function()
-    qf_scroll_wrapper("cprev", "clast")
-end)
+local scroll_maps = {
+    { "[q", "cprev", "clast" },
+    { "]q", "cnext", "crewind" },
+    { "[l", "lprev", "llast" },
+    { "]l", "lnext", "lrewind" },
+}
 
-vim.keymap.set("n", "]q", function()
-    qf_scroll_wrapper("cnext", "crewind")
-end)
-
-vim.keymap.set("n", "[l", function()
-    qf_scroll_wrapper("lprev", "llast")
-end)
-
-vim.keymap.set("n", "]l", function()
-    qf_scroll_wrapper("lnext", "lrewind")
-end)
+for _, m in pairs(scroll_maps) do
+    vim.keymap.set("n", m[1], function()
+        qf_scroll_wrapper(m[2], m[3])
+    end)
+end
