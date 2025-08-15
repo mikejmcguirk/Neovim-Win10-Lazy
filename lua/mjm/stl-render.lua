@@ -1,7 +1,9 @@
--- MAYBE: Could explore adding the char index. But it looks like I would need to compute that in
--- Lua, which might incur a performance cost
 -- TODO: When LSP progress messages send, elements A and B are shrunk to accomodate them
 -- Those elements should stay stable
+-- MAYBE: Could explore adding the char index. But it looks like I would need to compute that in
+-- Lua, which might incur a performance cost
+-- MAYBE: Build inactive stl as a Lua function that takes the window number as a parameter
+-- Allows for showing diags
 
 local M = {}
 
@@ -14,28 +16,30 @@ local diag_icons = Has_Nerd_Font
 local format_icons = Has_Nerd_Font and { unix = "", dos = "", mac = "" }
     or { unix = "unix", dos = "dos", mac = "mac" }
 
+local git_symbol = Has_Nerd_Font and " " or " "
+
 local function build_separator(stl, opts)
     opts = opts or {}
     local hl = stl_data[string.format("%s-c", (opts.mode or "norm"))]
-    table.insert(stl, string.format("%%#%s#%%=%%*", hl))
+    table.insert(stl, "%#" .. hl .. "#%=%*")
 end
 
 local function build_active_a(stl, opts)
     opts = opts or {}
     local hl = stl_data[string.format("%s-a", (opts.mode or "norm"))]
 
-    local git_symbol = Has_Nerd_Font and " " or " "
     local head = stl_data.head and string.format(" %s ", stl_data.head) or " "
 
-    table.insert(stl, string.format("%%#%s#%s%s", hl, git_symbol, head))
+    table.insert(stl, "%#" .. hl .. "#" .. git_symbol .. head)
 end
 
 local function build_active_b(stl, opts)
     opts = opts or {}
     local hl = stl_data[string.format("%s-b", (opts.mode or "norm"))]
-    table.insert(stl, string.format("%%#%s# %%m %%f %%*", hl))
+    table.insert(stl, "%#" .. hl .. "# %m %f %*")
 end
 
+-- TODO: Needs to be redone as a Lua function so it can update on redraw
 local function add_diags(stl, buf)
     local diag_counts = stl_data.diag_count_cache[tostring(buf)]
     if diag_counts then
@@ -47,7 +51,7 @@ local function add_diags(stl, buf)
                 end
 
                 local diag_hl = "Diagnostic" .. severity:sub(1, 1) .. severity:sub(2):lower()
-                return string.format("%%#%s#%s %d ", diag_hl, diag_icons[severity], count)
+                return "%#" .. diag_hl .. "#" .. diag_icons[severity] .. " " .. count .. " "
             end)
             :filter(function(part)
                 return part ~= nil
@@ -59,36 +63,58 @@ local function add_diags(stl, buf)
     table.insert(stl, "%*")
 end
 
+function M.get_lsps()
+    local buf = vim.api.nvim_get_current_buf()
+    local clients = vim.lsp.get_clients({ bufnr = buf })
+
+    if clients and #clients >= 1 then
+        return string.format("[%d]", #clients)
+    else
+        return ""
+    end
+end
+
+function M.get_progress()
+    if not stl_data.progress then
+        return ""
+    end
+
+    local mode = stl_data.modes[vim.fn.mode()] or "norm"
+    if not vim.tbl_contains({ "norm", "vis", "cmd" }, mode) then
+        return ""
+    end
+
+    local values = stl_data.progress.params.value
+
+    local pct = (function()
+        if values.kind == "end" then
+            return "(Complete) "
+        elseif values.percentage then
+            return string.format("%d%% ", values.percentage)
+        else
+            return ""
+        end
+    end)()
+
+    local name = vim.lsp.get_client_by_id(stl_data.progress.client_id).name
+    local message = stl_data.progress.msg and " - " .. values.msg or ""
+
+    return pct .. name .. ": " .. values.title .. message
+end
+
 local function build_active_c(stl, opts)
     opts = opts or {}
     local mode = opts.mode or "norm"
     local hl = stl_data[string.format("%s-c", mode)]
-    table.insert(stl, string.format("%%#%s# ", hl))
+    table.insert(stl, "%#" .. hl .. "# ")
 
     local buf = opts.buf or vim.api.nvim_get_current_buf()
-    local display_mode = vim.tbl_contains({ "norm", "vis", "cmd" }, mode)
     add_diags(stl, buf)
 
-    local clients = vim.lsp.get_clients({ bufnr = buf })
-    table.insert(stl, clients and #clients >= 1 and string.format("[%d] ", #clients) or "")
-    if not (clients and opts.progress and display_mode) then
-        return table.insert(stl, "%*")
-    end
+    local lsp_count = "%{v:lua.require'mjm.stl-render'.get_lsps()} "
+    local progress = "%{v:lua.require'mjm.stl-render'.get_progress()} %*"
 
-    local is_attached = vim.tbl_contains(clients, function(c)
-        return c.id == opts.progress.client_id
-    end, { predicate = true })
-    if not is_attached then
-        return table.insert(stl, "%*")
-    end
-
-    local values = opts.progress.params.value
-    local pct = values.kind == "end" and "(Complete) "
-        or (values.percentage and string.format("(%d%%%%) ", values.percentage) or "")
-    local name = vim.lsp.get_client_by_id(opts.progress.client_id).name
-    local message = opts.progress.msg and string.format(" - %s", values.msg) or ""
-
-    table.insert(stl, string.format("%s%s: %s%s%%*", pct, name, values.title, message))
+    table.insert(stl, lsp_count .. progress)
 end
 
 local function build_active_x(stl, opts)

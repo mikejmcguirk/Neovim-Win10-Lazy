@@ -226,6 +226,12 @@ function M.setup_stl_git_dir()
     end)
 end
 
+--------------------
+--- LSP Progress ---
+--------------------
+
+M.progress = nil --- @type {client_id:integer, params:lsp.ProgressParams, msg: string}
+
 -------------------
 --- Diagnostics ---
 -------------------
