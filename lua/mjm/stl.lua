@@ -3,6 +3,7 @@
 -- TODO: Put in notes - The question of programming paradigms and design patterns if one of
 -- where does the agency in the code lie? Good code has clear agency. Spaghetti code has
 -- fragmented agency
+-- FUTURE: Use nvim_redraw when it stops being experimental
 
 local M = {}
 
@@ -125,6 +126,20 @@ vim.api.nvim_create_autocmd("BufUnload", {
         if stl_data.diag_cache and stl_data.diag_cache[tostring(ev.buf)] then
             stl_data.diag_cache[tostring(ev.buf)] = nil
         end
+    end,
+})
+
+vim.api.nvim_create_autocmd("ModeChanged", {
+    group = M.augroup,
+    callback = function()
+        --- @diagnostic disable: undefined-field
+        local old = stl_data.modes[vim.v.event.old_mode] or "norm"
+        local new = stl_data.modes[vim.v.event.new_mode] or "norm"
+        if old == new then
+            return
+        end
+
+        vim.cmd("redraws")
     end,
 })
 
