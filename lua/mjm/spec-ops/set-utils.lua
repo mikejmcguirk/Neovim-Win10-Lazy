@@ -233,11 +233,6 @@ function M.do_set(text, marks, regtype, motion, vcount, curswant)
         local before = not (l_byte == d_start_col) --- @type boolean
         return op_utils.paste_lines(del_marks.start.row, before, set_lines)
     elseif reg_mtype == mtype.SC and motion_mtype == mtype.MB then
-        -- TODO: Built-in behavior places marks only on the first row. I am currently placing
-        -- on the whole area
-        -- Though one boarder note is, if we're going to support yank cycling, the marks have to
-        -- support it. The default here, for example, would not. So would need a way to feed
-        -- mark schemes to the functions
         local rows = marks.fin.row - marks.start.row + 1
         local block_lines = op_utils.setup_text_lines({
             motion = "line",
@@ -246,7 +241,16 @@ function M.do_set(text, marks, regtype, motion, vcount, curswant)
             vcount = rows,
         })
 
-        return op_utils.op_set_block(marks, curswant, block_lines)
+        --- @type op_marks|nil,  string|nil
+        local post_marks, err = op_utils.op_set_block(marks, curswant, block_lines)
+        if (not post_marks) or err then
+            return nil, (err or "Unknown error in op_set_block")
+        end
+
+        post_marks.fin.row = post_marks.start.row
+        -- TODO: Repetitive setting of the mark
+        vim.api.nvim_buf_set_mark(0, "]", post_marks.fin.row, post_marks.fin.col, {})
+        return post_marks, nil
     elseif reg_mtype == mtype.MC and motion_mtype == mtype.MB then
         local del_marks, err = op_utils.op_set_block(marks, curswant)
         if not del_marks or err then
