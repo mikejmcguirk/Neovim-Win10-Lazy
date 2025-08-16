@@ -10,7 +10,7 @@ local stl_events = vim.api.nvim_create_augroup("stl-events", { clear = true })
 vim.api.nvim_create_autocmd({ "UIEnter" }, {
     group = stl_events,
     callback = function()
-        stl_render.set_active_stl(true)
+        stl_render.set_active_stl()
         stl_data.setup_stl_git_dir()
     end,
 })
@@ -30,17 +30,11 @@ vim.api.nvim_create_autocmd("User", {
     end,
 })
 
-vim.api.nvim_create_autocmd({ "WinEnter" }, {
+-- Doing a full rebuild on all these events is hacky, but avoids weird edge cases
+vim.api.nvim_create_autocmd({ "WinEnter", "BufEnter", "BufWinEnter" }, {
     group = stl_events,
     callback = function()
         stl_render.set_active_stl()
-    end,
-})
-
-vim.api.nvim_create_autocmd("BufWinEnter", {
-    group = stl_events,
-    callback = function()
-        vim.cmd("redraws")
     end,
 })
 
@@ -107,12 +101,12 @@ vim.api.nvim_create_autocmd("ModeChanged", {
             return
         end
 
-        vim.cmd("redraws")
+        stl_render.set_active_stl()
     end,
 })
 
 function M.git_updated()
-    vim.cmd("redraws")
+    stl_render.set_active_stl()
 end
 
 return M

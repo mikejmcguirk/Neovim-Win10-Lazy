@@ -1,3 +1,9 @@
+-- TODO: My philosophy on this was incorrect. When the STL is re-calculated dynamically, the
+-- time to do so is creating flickering, most noticeable when you see blink.cmp windows
+-- build in stages and the sizes of them flicker. Can also see cursor flicker when doing things
+-- like entering insert mode. I think this is in part because statusline redraws activate
+-- text lock. So what we need to do is take components that don't change much and do full
+-- rebuilds on them. Git info is obvious, and probably diagnostics. Not sure about progress still
 -- TODO: When LSP progress messages send, elements A and B are shrunk to accomodate them
 -- Those elements should stay stable
 -- MAYBE: Could explore adding the char index. But it looks like I would need to compute that in
@@ -18,10 +24,10 @@ local format_icons = Has_Nerd_Font and { unix = "", dos = "", mac = "" 
 
 local git_symbol = Has_Nerd_Font and " " or " "
 
-function M.get_section_hl(section)
+local function get_section_hl(stl, section)
     local mode = stl_data.modes[vim.fn.mode()] or "norm"
     local hl = stl_data[mode .. "-" .. section]
-    return "%#" .. hl .. "#"
+    table.insert(stl, "%#" .. hl .. "#")
 end
 
 function M.get_git_info()
@@ -29,7 +35,8 @@ function M.get_git_info()
 end
 
 local function build_active_a(stl)
-    table.insert(stl, "%{%v:lua.require'mjm.stl-render'.get_git_info()%}")
+    local head_info = stl_data.head and string.format(" %s ", stl_data.head) or " "
+    table.insert(stl, " " .. git_symbol .. head_info)
 end
 
 -- TODO: How to only add spacing for the %m option if it displays
@@ -130,47 +137,38 @@ end
 local function build_active_z(stl)
     table.insert(stl, " %l/%L | %c | v:%v | %o ")
 end
-
---- TODO: Have a separate set_global_stl function that basically does this logic
---- Want to avoid having to do the if check each time this is run
-
---- @param global? boolean
-function M.set_active_stl(global)
+function M.set_active_stl()
     local stl = {}
 
-    table.insert(stl, "%{%v:lua.require'mjm.stl-render'.get_section_hl('a')%}")
+    get_section_hl(stl, "a")
     build_active_a(stl)
     table.insert(stl, "%*")
 
-    table.insert(stl, "%{%v:lua.require'mjm.stl-render'.get_section_hl('b')%}")
+    get_section_hl(stl, "b")
     build_active_b(stl)
     table.insert(stl, "%*")
 
-    table.insert(stl, "%{%v:lua.require'mjm.stl-render'.get_section_hl('c')%}")
+    get_section_hl(stl, "c")
     build_active_c(stl)
     table.insert(stl, "%*")
 
-    table.insert(stl, "%{%v:lua.require'mjm.stl-render'.get_section_hl('c')%}")
+    get_section_hl(stl, "c")
     table.insert(stl, "%=")
     table.insert(stl, "%*")
 
-    table.insert(stl, "%{%v:lua.require'mjm.stl-render'.get_section_hl('c')%}")
+    get_section_hl(stl, "c")
     build_active_x(stl)
     table.insert(stl, "%*")
 
-    table.insert(stl, "%{%v:lua.require'mjm.stl-render'.get_section_hl('b')%}")
+    get_section_hl(stl, "b")
     build_active_y(stl)
     table.insert(stl, "%*")
 
-    table.insert(stl, "%{%v:lua.require'mjm.stl-render'.get_section_hl('a')%}")
+    get_section_hl(stl, "a")
     build_active_z(stl)
     table.insert(stl, "%*")
 
     local stl_str = table.concat(stl, "")
-
-    if global then
-        vim.api.nvim_set_option_value("stl", stl_str, { scope = "global" })
-    end
 
     local win = vim.api.nvim_get_current_win()
     vim.api.nvim_set_option_value("stl", stl_str, { win = win })
