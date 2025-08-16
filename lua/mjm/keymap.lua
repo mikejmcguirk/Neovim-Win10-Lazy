@@ -651,7 +651,8 @@ end
 
 -- vim.keymap.set("x", "P", "<nop>")
 
-vim.keymap.set("x", "p", "P")
+-- vim.keymap.set("x", "p", "P")
+-- vim.keymap.set("x", "P", "p")
 
 -----------------------
 -- Text Manipulation --

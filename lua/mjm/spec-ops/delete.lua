@@ -68,7 +68,12 @@ function M.delete_callback(motion)
 
     --- @type string
     local text = table.concat(yank_lines, "\n") .. (motion == "line" and "\n" or "")
-    if should_yank(text) then
+    -- TODO: Architecturally, this broadly makes sense. The user specified condition is distinct
+    -- from the built-in notion that selecting the black hole register needs no yank. More broadly
+    -- though, how the yank behavior operates would also dependon if the user selects ring,
+    -- default, target only, or some other thing. Find to leave as is for now, but might be
+    -- changed
+    if should_yank(text) and cb_state.reg ~= "_" then
         if motion == "block" then
             vim.fn.setreg(cb_state.reg, text, "b" .. blk_utils.get_block_reg_width(yank_lines))
         else

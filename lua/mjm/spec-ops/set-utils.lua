@@ -151,15 +151,14 @@ local function op_set_lines(marks, lines)
     return post_marks, nil
 end
 
---- @param text string
+--- @param lines string[]
 --- @param marks op_marks
 --- @param regtype string
 --- @param motion string
---- @param vcount integer
 --- @param curswant integer
 --- @return op_marks|nil, string|nil
-function M.do_set(text, marks, regtype, motion, vcount, curswant)
-    if not text then
+function M.do_set(lines, marks, regtype, motion, curswant)
+    if not lines then
         return nil, "do_set: No set text provided"
     end
 
@@ -170,22 +169,15 @@ function M.do_set(text, marks, regtype, motion, vcount, curswant)
         return nil, "do_set: Start row " .. marks.start.row .. " > " .. marks.fin.row
     end
 
-    if not regtype then
-        regtype = text:sub(-1) == "\n" and "V" or "v"
-    end
+    -- TODO: Should be able to check for "V" somehow, no?
+    regtype = regtype or "v"
     if not utils.is_valid_regtype(regtype) then
         return nil, "do_set: regtype " .. regtype .. " is invalid"
     end
 
-    local set_lines = op_utils.setup_text_lines({
-        motion = motion,
-        regtype = regtype,
-        text = text,
-        vcount = vcount,
-    })
-    local reg_mtype = get_mtype({ lines = set_lines, regtype = regtype })
+    local reg_mtype = get_mtype({ lines = lines, regtype = regtype })
     if reg_mtype == -1 then
-        local inspected = vim.insepct(set_lines)
+        local inspected = vim.insepct(lines)
         local err = "No motion type for regtype " .. regtype .. " and lines " .. inspected
         return nil, "do_set: " .. err
     end
@@ -205,13 +197,13 @@ function M.do_set(text, marks, regtype, motion, vcount, curswant)
     local block_motion = vim.tbl_contains({ mtype.SB, mtype.MB }, motion_mtype)
 
     if char_reg and char_motion then
-        return op_set_text(marks, set_lines)
+        return op_set_text(marks, lines)
     elseif motion_mtype == mtype.L then
-        return op_set_lines(marks, set_lines)
+        return op_set_lines(marks, lines)
     elseif reg_mtype == mtype.L and vim.tbl_contains({ mtype.SC, mtype.MC }, motion_mtype) then
-        return op_set_lines_into_chars(marks, set_lines)
+        return op_set_lines_into_chars(marks, lines)
     elseif block_reg and (block_motion or motion_mtype == mtype.SC) then
-        return op_utils.op_set_block(marks, curswant, set_lines)
+        return op_utils.op_set_block(marks, curswant, lines)
     elseif reg_mtype == mtype.L and block_motion then
         local del_marks, err = op_utils.op_set_block(marks, curswant)
         if (not del_marks) or err then
@@ -231,33 +223,33 @@ function M.do_set(text, marks, regtype, motion, vcount, curswant)
         end
 
         local before = not (l_byte == d_start_col) --- @type boolean
-        return op_utils.paste_lines(del_marks.start.row, before, set_lines)
+        return op_utils.paste_lines(del_marks.start.row, before, lines)
     elseif reg_mtype == mtype.SC and motion_mtype == mtype.MB then
         local rows = marks.fin.row - marks.start.row + 1
         local block_lines = op_utils.setup_text_lines({
             motion = "line",
             regtype = "V",
-            text = set_lines[1],
+            text = lines[1],
             vcount = rows,
         })
 
-        --- @type op_marks|nil,  string|nil
-        local post_marks, err = op_utils.op_set_block(marks, curswant, block_lines)
-        if (not post_marks) or err then
-            return nil, (err or "Unknown error in op_set_block")
-        end
-
-        post_marks.fin.row = post_marks.start.row
-        -- TODO: Repetitive setting of the mark
-        vim.api.nvim_buf_set_mark(0, "]", post_marks.fin.row, post_marks.fin.col, {})
-        return post_marks, nil
+        return op_utils.op_set_block(marks, curswant, block_lines)
+        -- local post_marks, err = op_utils.op_set_block(marks, curswant, block_lines)
+        -- if (not post_marks) or err then
+        --     return nil, (err or "Unknown error in op_set_block")
+        -- end
+        --
+        -- post_marks.fin.row = post_marks.start.row
+        -- -- TODO: Repetitive setting of the mark
+        -- vim.api.nvim_buf_set_mark(0, "]", post_marks.fin.row, post_marks.fin.col, {})
+        -- return post_marks, nil
     elseif reg_mtype == mtype.MC and motion_mtype == mtype.MB then
         local del_marks, err = op_utils.op_set_block(marks, curswant)
         if not del_marks or err then
             return nil, "do_set: " .. (err or "Unknown error in op_set_block")
         end
 
-        return op_utils.paste_chars({ del_marks.start.row, del_marks.start.col }, true, set_lines)
+        return op_utils.paste_chars({ del_marks.start.row, del_marks.start.col }, true, lines)
     elseif reg_mtype == mtype.MB and motion_mtype == mtype.MC then
         local del_marks, err = op_utils.del_chars(marks)
         if not del_marks or err then
@@ -270,7 +262,7 @@ function M.do_set(text, marks, regtype, motion, vcount, curswant)
                 del_marks.start.col,
             },
             before = true,
-            lines = set_lines,
+            lines = lines,
         })
     end
 

@@ -14,25 +14,6 @@
 -- FUTURE: line into char visual paste creates trailing whitespace. Option to remove?
 -- TODO: Unsure if TextYankPost fires when doing a delete/paste visually
 
--- cursor placements
--- sc > sc -- end
--- sc > mc -- end
--- sc > sb -- end
--- mc > sc -- beginning
--- mc > mc -- beginning
--- mc > sb -- beginning
--- sb > sc -- beginning
--- sb > mc -- beginning
--- sb > sb -- beginning
--- {} > l -- beginning
--- l > c -- beginning
--- b > b -- beginning
--- l > b -- beginning of pasted line
--- mc > b beginning
--- mb > mc - beginning
--- so really with the cursor logic, if sc then end otherwise beginning of change marks
--- Put these in the visual paste function for now
-
 local blk_utils = require("mjm.spec-ops.block-utils")
 local get_utils = require("mjm.spec-ops.get-utils")
 local op_utils = require("mjm.spec-ops.op-utils")
@@ -135,13 +116,6 @@ end
 function M.paste_visual_callback(motion)
     op_utils.update_cb_from_op(op_state, cb_state, motion)
 
-    -- if is_operating then
-    --     vcount = vim.v.count1
-    -- else
-    --     vcount = vim.v.count > 0 and vim.v.count or vcount
-    -- end
-    -- is_operating = false
-
     local marks = utils.get_marks(motion, cb_state.vmode) --- @type op_marks
 
     local cur_pos = vim.api.nvim_win_get_cursor(0) --- @type {[1]: integer, [2]:integer}
@@ -168,8 +142,15 @@ function M.paste_visual_callback(motion)
     end
 
     local curswant = cb_state.view.curswant
-    local post_marks, err_s =
-        set_utils.do_set(text, marks, regtype, motion, vim.v.count1, curswant)
+
+    local lines = op_utils.setup_text_lines({
+        text = text,
+        motion = motion,
+        regtype = regtype,
+        vcount = vim.v.count1,
+    })
+
+    local post_marks, err_s = set_utils.do_set(lines, marks, regtype, motion, curswant)
 
     if (not post_marks) or err_s then
         local err_msg = err_s or "Unknown error in do_set"
@@ -180,8 +161,27 @@ function M.paste_visual_callback(motion)
         marks = utils.fix_indents(post_marks, cur_pos)
     end
 
+    -- TODO: While this wouldn't happen in my current setup/config, it is theoretically possible
+    -- for a user to set an indent pattern that causes the start row to indent differently from
+    -- the bottom row, making this adjustment method invalid
+    -- For now, we will hold on this until substitute is also complete
+    if #lines == 1 and regtype == "v" and motion == "block" then
+        marks.fin.row = marks.start.row
+        vim.api.nvim_buf_set_mark(0, "]", post_marks.fin.row, post_marks.fin.col, {})
+    end
+
+    -- TODO: The alternative method here is calculating the pythagorean distance of the cursor
+    -- from the start and the end, and placing it at the closer one (or the block corners for
+    -- thos selections). Holding on implementing for now though due to the same architecture
+    -- issues as above. Want to see the substitute use case first
+    if #lines == 1 and regtype == "v" then
+        vim.api.nvim_win_set_cursor(0, { marks.fin.row, marks.fin.col })
+    else
+        vim.api.nvim_win_set_cursor(0, { marks.start.row, marks.start.col })
+    end
+
     --- @type string
-    if yank_old then
+    if yank_old and cb_state.reg ~= "_" then
         local yank_text = table.concat(yanked, "\n") .. (motion == "line" and "\n" or "")
         if should_yank(yank_text) then
             if motion == "block" then
@@ -193,6 +193,18 @@ function M.paste_visual_callback(motion)
             else
                 vim.fn.setreg(cb_state.reg, yank_text)
             end
+
+            vim.api.nvim_exec_autocmds("TextYankPost", {
+                buffer = vim.api.nvim_get_current_buf(),
+                data = {
+                    inclusive = true,
+                    operator = "y",
+                    regcontents = lines,
+                    regname = cb_state.reg,
+                    regtype = utils.regtype_from_motion(motion),
+                    visual = cb_state.vmode,
+                },
+            })
         end
     end
 
@@ -221,9 +233,10 @@ vim.keymap.set("n", "P", "<Plug>(SpecOpsPasteNormalBeforeCursor)")
 vim.keymap.set("n", "<M-p>", '"+<Plug>(SpecOpsPasteNormalAfterCursor)')
 vim.keymap.set("n", "<M-P>", '"+<Plug>(SpecOpsPasteNormalBeforeCursor)')
 
-vim.keymap.set("x", "gp", "<Plug>(SpecOpsPasteVisual)")
-vim.keymap.set("x", "gP", "<Plug>(SpecOpsPasteVisualAndYank)")
+vim.keymap.set("x", "p", "<Plug>(SpecOpsPasteVisual)")
+vim.keymap.set("x", "P", "<Plug>(SpecOpsPasteVisualAndYank)")
 
--- TODO: Add visual from clipboard maps
+vim.keymap.set("x", "<M-p>", '"+<Plug>(SpecOpsPasteVisual)')
+vim.keymap.set("x", "<M-P>", '"+<Plug>(SpecOpsPasteVisualAndYank)')
 
 return M

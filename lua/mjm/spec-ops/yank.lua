@@ -77,20 +77,27 @@ function M.yank_callback(motion)
 
     vim.api.nvim_win_set_cursor(0, { cb_state.view.lnum, cb_state.view.col })
 
-    vim.api.nvim_exec_autocmds("TextYankPost", {
-        buffer = vim.api.nvim_get_current_buf(),
-        data = {
-            inclusive = true,
-            operator = "y",
-            regcontents = lines,
-            regname = cb_state.reg,
-            regtype = utils.regtype_from_motion(motion),
-            visual = cb_state.vmode,
-        },
-    })
+    -- TODO: In terms of user observed behavior this tracks. If I do a black hole yank with the
+    -- built-in operator, it will go over the motion but not actually yank or fire the
+    -- TextYankPost event. I think the better way to handle this would be to check for the black
+    -- hole register at the very beginning, since we should have already gone over the motion in
+    -- the callback
+    if cb_state.reg ~= "_" then
+        vim.api.nvim_exec_autocmds("TextYankPost", {
+            buffer = vim.api.nvim_get_current_buf(),
+            data = {
+                inclusive = true,
+                operator = "y",
+                regcontents = lines,
+                regname = cb_state.reg,
+                regtype = utils.regtype_from_motion(motion),
+                visual = cb_state.vmode,
+            },
+        })
 
-    local reg_type = vim.fn.getregtype(cb_state.reg) --- @type string
-    shared.highlight_text(marks, hl_group, hl_ns, hl_timer, reg_type)
+        local reg_type = vim.fn.getregtype(cb_state.reg) --- @type string
+        shared.highlight_text(marks, hl_group, hl_ns, hl_timer, reg_type)
+    end
 end
 
 vim.keymap.set("n", "<Plug>(SpecOpsYankOperator)", function()
