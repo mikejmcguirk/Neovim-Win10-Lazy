@@ -24,10 +24,12 @@ function M.get_section_hl(section)
     return "%#" .. hl .. "#"
 end
 
-local function build_active_a(stl)
-    local head = stl_data.head and string.format(" %s ", stl_data.head) or " "
+function M.get_git_info()
+    return " " .. git_symbol .. (stl_data.head and string.format(" %s ", stl_data.head) or " ")
+end
 
-    table.insert(stl, git_symbol .. head)
+local function build_active_a(stl)
+    table.insert(stl, "%{%v:lua.require'mjm.stl-render'.get_git_info()%}")
 end
 
 -- TODO: How to only add spacing for the %m option if it displays
