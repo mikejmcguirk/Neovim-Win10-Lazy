@@ -213,9 +213,9 @@ local function filter_wrapper(opts)
 
     local list = opts.loclist and "Location" or "Quickfix" ---@type string
 
-    if opts.loclist and #vim.fn.getloclist(vim.api.nvim_get_current_win()) > 0 then
+    if opts.loclist and #vim.fn.getloclist(vim.api.nvim_get_current_win()) <= 0 then
         return vim.notify(list .. " list is empty")
-    elseif (not opts.loclist) and #vim.fn.getqflist() > 0 then
+    elseif (not opts.loclist) and #vim.fn.getqflist() <= 0 then
         return vim.notify(list .. " list is empty")
     end
 
