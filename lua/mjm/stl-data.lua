@@ -200,13 +200,13 @@ function M.check_head()
             end
 
             M.head = head
-            stl.event_router({ event = "mjmGitHeadFound" })
+            stl.git_updated()
         end)
     )
 end
 
 local function send_nogit()
-    require("mjm.stl").event_router({ event = "mjmNoGit" })
+    require("mjm.stl").git_updated()
 end
 
 function M.setup_stl_git_dir()
@@ -287,9 +287,8 @@ end
 --- Scroll % ---
 ----------------
 
-function M.get_scroll_pct(opts)
-    opts = opts or {}
-    local win = opts.win or vim.api.nvim_get_current_win()
+function M.get_scroll_pct()
+    local win = vim.api.nvim_get_current_win()
     local row = vim.api.nvim_win_get_cursor(win)[1]
     local tot_rows = vim.api.nvim_buf_line_count(vim.api.nvim_win_get_buf(win))
 

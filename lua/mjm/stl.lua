@@ -1,90 +1,58 @@
--- TODO: There should be an exposed git done function. More generalized for the git functions
--- And provides more control here over what's done when called
--- TODO: Put in notes - The question of programming paradigms and design patterns if one of
--- where does the agency in the code lie? Good code has clear agency. Spaghetti code has
--- fragmented agency
 -- FUTURE: Use nvim_redraw when it stops being experimental
 
 local M = {}
 
-local event_map = {
-    ["BufWinEnter"] = "build-active",
-    ["DiagnosticChanged"] = "build-active",
-    ["LspProgress"] = "build-active",
-    ["mjmGitHeadFound"] = "build-active",
-    ["mjmNoGit"] = "build-active",
-    ["ModeChanged"] = "build-active",
-    ["WinEnter"] = "build-active",
-
-    ["WinLeave"] = "build-inactive",
-
-    ["DirChanged"] = "get-git-dir",
-    ["FugitiveChanged"] = "get-git-dir",
-    ["UIEnter"] = "get-git-dir",
-}
-
 local stl_data = require("mjm.stl-data")
 local stl_render = require("mjm.stl-render")
 
-local on_event = {
-    -- TODO: For WinEnter:
-    -- - This should first trigger a statusline rebuild since we're setting a new active window
-    -- - This should then kick off a vim.diagnostic.get + cache storage
-    -- - The stl-data function should then callback to here to trigger a statusline redraw
-    ["build-active"] = function(opts)
-        if opts.new_diags or opts.diags then
-            stl_data.process_diags(opts)
-        end
-        stl_render.set_active_stl(opts)
-    end,
-    ["build-inactive"] = function(opts)
-        stl_render.set_inactive_stl(opts)
-    end,
-    ["get-git-dir"] = function()
+local stl_events = vim.api.nvim_create_augroup("stl-events", { clear = true })
+
+vim.api.nvim_create_autocmd({ "UIEnter" }, {
+    group = stl_events,
+    callback = function()
+        stl_render.set_active_stl(true)
         stl_data.setup_stl_git_dir()
     end,
-}
+})
 
-M.augroup = vim.api.nvim_create_augroup("stl-events", { clear = true })
-
-vim.api.nvim_create_autocmd({ "UIEnter", "DirChanged", "User" }, {
-    group = M.augroup,
+vim.api.nvim_create_autocmd({ "DirChanged" }, {
+    group = stl_events,
     callback = function()
         stl_data.setup_stl_git_dir()
     end,
 })
 
 vim.api.nvim_create_autocmd("User", {
-    group = M.augroup,
+    group = stl_events,
     pattern = "FugitiveChanged",
     callback = function()
         stl_data.setup_stl_git_dir()
     end,
 })
 
-vim.api.nvim_create_autocmd("WinEnter", {
-    group = M.augroup,
-    callback = function(ev)
-        stl_render.set_active_stl({ event = ev.event, buf = ev.buf })
+vim.api.nvim_create_autocmd({ "WinEnter" }, {
+    group = stl_events,
+    callback = function()
+        stl_render.set_active_stl()
     end,
 })
 
 vim.api.nvim_create_autocmd("BufWinEnter", {
-    group = M.augroup,
+    group = stl_events,
     callback = function()
         vim.cmd("redraws")
     end,
 })
 
 vim.api.nvim_create_autocmd("WinLeave", {
-    group = M.augroup,
+    group = stl_events,
     callback = function()
-        stl_render.set_inactive_stl({ win = vim.api.nvim_get_current_win() })
+        stl_render.set_inactive_stl(vim.api.nvim_get_current_win())
     end,
 })
 
 vim.api.nvim_create_autocmd("LspProgress", {
-    group = M.augroup,
+    group = stl_events,
     callback = function(ev)
         if (not ev.data) or not ev.data.client_id then
             return
@@ -113,7 +81,7 @@ vim.api.nvim_create_autocmd("LspProgress", {
 })
 
 vim.api.nvim_create_autocmd("DiagnosticChanged", {
-    group = M.augroup,
+    group = stl_events,
     callback = function(ev)
         stl_data.cache_diags(ev.buf, ev.data.diagnostics)
         vim.cmd("redraws")
@@ -121,7 +89,7 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
 })
 
 vim.api.nvim_create_autocmd("BufUnload", {
-    group = M.augroup,
+    group = stl_events,
     callback = function(ev)
         if stl_data.diag_cache and stl_data.diag_cache[tostring(ev.buf)] then
             stl_data.diag_cache[tostring(ev.buf)] = nil
@@ -130,7 +98,7 @@ vim.api.nvim_create_autocmd("BufUnload", {
 })
 
 vim.api.nvim_create_autocmd("ModeChanged", {
-    group = M.augroup,
+    group = stl_events,
     callback = function()
         --- @diagnostic disable: undefined-field
         local old = stl_data.modes[vim.v.event.old_mode] or "norm"
@@ -143,25 +111,8 @@ vim.api.nvim_create_autocmd("ModeChanged", {
     end,
 })
 
-function M.event_router(opts)
-    opts = opts or {}
-    if not opts.event then
-        return vim.notify("No event provided to stl event_handler", vim.log.levels.ERROR)
-    end
-
-    local stl_event = event_map[opts.event]
-    if not stl_event then
-        local err_msg = string.format("%s invalid in stl event_handler", opts.event)
-        return vim.notify(err_msg, vim.log.levels.ERROR)
-    end
-
-    local handler = on_event[stl_event]
-    if not handler then
-        local err_msg = string.format("No handler present for stl event %s", stl_event)
-        vim.notify(err_msg, vim.log.levels.ERROR)
-    end
-
-    handler(opts)
+function M.git_updated()
+    vim.cmd("redraws")
 end
 
 return M

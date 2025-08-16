@@ -30,8 +30,9 @@ local function build_active_a(stl)
     table.insert(stl, git_symbol .. head)
 end
 
+-- TODO: How to only add spacing for the %m option if it displays
 local function build_active_b(stl)
-    table.insert(stl, "%m %f ")
+    table.insert(stl, " %m %f ")
 end
 
 -- TODO: Do not need to individually get the mode and buf for each diag
@@ -111,8 +112,8 @@ local function build_active_c(stl)
 end
 
 -- TODO: Ain't no way there aren't built-ins for any of these
-local function build_active_x(stl, opts)
-    local bufnr = opts.buf or vim.api.nvim_get_current_buf()
+local function build_active_x(stl)
+    local bufnr = vim.api.nvim_get_current_buf()
     local encoding = vim.api.nvim_get_option_value("encoding", { scope = "local" })
     local format = vim.api.nvim_get_option_value("fileformat", { buf = bufnr })
     local ft = vim.api.nvim_get_option_value("filetype", { buf = bufnr })
@@ -128,25 +129,11 @@ local function build_active_z(stl)
     table.insert(stl, " %l/%L | %c | v:%v | %o ")
 end
 
-function M.set_active_stl(opts)
-    opts = opts or {}
-    local win = vim.api.nvim_get_current_win()
+--- TODO: Have a separate set_global_stl function that basically does this logic
+--- Want to avoid having to do the if check each time this is run
 
-    if opts.buf then
-        local found = false
-        local wins = vim.api.nvim_list_wins()
-        for _, w in pairs(wins) do
-            if vim.api.nvim_win_get_buf(w) == opts.buf then
-                found = true
-                break
-            end
-        end
-        if not found then
-            return
-        end
-    end
-
-    opts.mode = stl_data.modes[vim.fn.mode()]
+--- @param global? boolean
+function M.set_active_stl(global)
     local stl = {}
 
     table.insert(stl, "%{%v:lua.require'mjm.stl-render'.get_section_hl('a')%}")
@@ -166,7 +153,7 @@ function M.set_active_stl(opts)
     table.insert(stl, "%*")
 
     table.insert(stl, "%{%v:lua.require'mjm.stl-render'.get_section_hl('c')%}")
-    build_active_x(stl, opts)
+    build_active_x(stl)
     table.insert(stl, "%*")
 
     table.insert(stl, "%{%v:lua.require'mjm.stl-render'.get_section_hl('b')%}")
@@ -177,12 +164,18 @@ function M.set_active_stl(opts)
     build_active_z(stl)
     table.insert(stl, "%*")
 
-    vim.api.nvim_set_option_value("stl", table.concat(stl, ""), { win = win })
+    local stl_str = table.concat(stl, "")
+
+    if global then
+        vim.api.nvim_set_option_value("stl", stl_str, { scope = "global" })
+    end
+
+    local win = vim.api.nvim_get_current_win()
+    vim.api.nvim_set_option_value("stl", stl_str, { win = win })
 end
 
-function M.set_inactive_stl(opts)
-    opts = opts or {}
-    if not opts.win then
+function M.set_inactive_stl(win)
+    if not win then
         return vim.notify("No window provided to set_inactive_stl", vim.log.levels.WARN)
     end
 
@@ -197,12 +190,12 @@ function M.set_inactive_stl(opts)
     table.insert(stl, "%*")
 
     table.insert(stl, "%{%v:lua.require'mjm.stl-render'.get_section_hl('b')%}")
-    local scroll_pct = require("mjm.stl-data").get_scroll_pct(opts)
+    local scroll_pct = require("mjm.stl-data").get_scroll_pct()
     -- Unlike the active statusline, place the result here so it doesn't dynamically update
     table.insert(stl, string.format(" %d%%%% ", scroll_pct))
     table.insert(stl, "%*")
 
-    vim.api.nvim_set_option_value("stl", table.concat(stl, ""), { win = opts.win })
+    vim.api.nvim_set_option_value("stl", table.concat(stl, ""), { win = win })
 end
 
 return M
