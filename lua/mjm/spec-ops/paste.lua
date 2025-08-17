@@ -36,11 +36,13 @@ local op_state = op_utils.create_new_op_state() --- @type op_state
 local cb_state = op_utils.create_new_op_state() --- @type op_state
 
 local before = false --- @type boolean
+local force_linewise = false --- @type boolean
 local yank_old = false --- @type boolean
 
 local function paste_norm(opts)
     opts = opts or {}
     before = opts.before
+    force_linewise = opts.force_linewise
 
     op_utils.update_op_state(op_state)
 
@@ -78,7 +80,7 @@ M.paste_norm_callback = function(motion)
         return vim.notify(cb_state.reg .. " register is empty", vim.log.levels.INFO)
     end
 
-    local regtype = vim.fn.getregtype(cb_state.reg) --- @type string
+    local regtype = force_linewise and "V" or vim.fn.getregtype(cb_state.reg) --- @type string
     local cur_pos = vim.api.nvim_win_get_cursor(0) --- @type {[1]: integer, [2]:integer}
 
     --- @type string
@@ -224,6 +226,14 @@ vim.keymap.set("n", "<Plug>(SpecOpsPasteNormalBeforeCursor)", function()
     return paste_norm({ before = true })
 end, { expr = true, silent = true })
 
+vim.keymap.set("n", "<Plug>(SpecOpsPasteLinewiseAfter)", function()
+    return paste_norm({ force_linewise = true })
+end, { expr = true, silent = true })
+
+vim.keymap.set("n", "<Plug>(SpecOpsPasteLinewiseBefore)", function()
+    return paste_norm({ force_linewise = true, before = true })
+end, { expr = true, silent = true })
+
 vim.keymap.set("x", "<Plug>(SpecOpsPasteVisual)", function()
     return paste_visual()
 end, { expr = true, silent = true })
@@ -237,6 +247,14 @@ vim.keymap.set("n", "P", "<Plug>(SpecOpsPasteNormalBeforeCursor)")
 
 vim.keymap.set("n", "<M-p>", '"+<Plug>(SpecOpsPasteNormalAfterCursor)')
 vim.keymap.set("n", "<M-P>", '"+<Plug>(SpecOpsPasteNormalBeforeCursor)')
+
+vim.keymap.set("n", "[p", "<Plug>(SpecOpsPasteLinewiseBefore)")
+vim.keymap.set("n", "]p", "<Plug>(SpecOpsPasteLinewiseAfter)")
+
+vim.keymap.set("n", "<M-[>p", '"+<Plug>(SpecOpsPasteLinewiseBefore)')
+vim.keymap.set("n", "<M-]>p", '"+<Plug>(SpecOpsPasteLinewiseAfter)')
+vim.keymap.set("n", "<M-[><M-p>", '"+<Plug>(SpecOpsPasteLinewiseBefore)')
+vim.keymap.set("n", "<M-]><M-p>", '"+<Plug>(SpecOpsPasteLinewiseAfter)')
 
 vim.keymap.set("x", "p", "<Plug>(SpecOpsPasteVisual)")
 vim.keymap.set("x", "P", "<Plug>(SpecOpsPasteVisualAndYank)")

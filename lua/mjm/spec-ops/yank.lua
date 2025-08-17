@@ -1,5 +1,6 @@
 -- FUTURE: Is there a way to make this operator respect  the "y" cpoption?
--- TODO: Handle zy
+-- TODO: Handle zy. The key is that it removes trailing whitespace *in* the block selection, not
+-- outside it, which is always removed
 -- FUTURE: Have event firing without other issues (was due to other autocmd I had up), but v:event
 -- is populated from the internal c data. I have a replication of the event data in the function,
 -- so that's probably where this has to land, but is worth further research

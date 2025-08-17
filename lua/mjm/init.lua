@@ -67,11 +67,11 @@ require("mjm.autocmd")
 require("mjm.lsp")
 require("mjm.stl")
 require("mjm.tal")
-require("mjm.spec-ops.yank")
+require("mjm.spec-ops.change")
 require("mjm.spec-ops.delete")
 require("mjm.spec-ops.paste")
-require("mjm.spec-ops.change")
 require("mjm.spec-ops.substitute")
+require("mjm.spec-ops.yank")
 
 local config_set = vim.loop.hrtime()
 
