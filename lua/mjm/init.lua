@@ -72,7 +72,6 @@ require("mjm.spec-ops.delete")
 require("mjm.spec-ops.paste")
 require("mjm.spec-ops.change")
 require("mjm.spec-ops.substitute")
-require("mjm.spec-ops.substitute")
 
 local config_set = vim.loop.hrtime()
 

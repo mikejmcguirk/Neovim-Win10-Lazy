@@ -1,3 +1,5 @@
+-- TODO: Create a cmd to rename the current buffer
+
 vim.api.nvim_create_user_command("We", "silent up | e", {}) -- Quick refresh if Treesitter bugs out
 
 local function tab_kill()

@@ -18,8 +18,8 @@ local utils = require("mjm.spec-ops.utils")
 local M = {}
 
 local hl_group = "SpecOpsSubstitute" --- @type string
-vim.api.nvim_set_hl(0, hl_group, { link = "IncSearch", default = true })
-local hl_ns = vim.api.nvim_create_namespace("mjm.spec-ops.highlight") --- @type integer
+vim.api.nvim_set_hl(0, hl_group, { link = "DiagnosticWarn", default = true })
+local hl_ns = vim.api.nvim_create_namespace("mjm.spec-ops.substitute-highlight") --- @type integer
 local hl_timer = 175 --- @type integer
 
 local op_state = op_utils.create_new_op_state() --- @type op_state

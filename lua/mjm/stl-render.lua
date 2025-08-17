@@ -181,15 +181,15 @@ function M.set_inactive_stl(win)
 
     local stl = {}
 
-    table.insert(stl, "%{%v:lua.require'mjm.stl-render'.get_section_hl('b')%}")
+    get_section_hl(stl, "b")
     table.insert(stl, " %m %t ")
     table.insert(stl, "%*")
 
-    table.insert(stl, "%{%v:lua.require'mjm.stl-render'.get_section_hl('c')%}")
+    get_section_hl(stl, "c")
     table.insert(stl, "%=")
     table.insert(stl, "%*")
 
-    table.insert(stl, "%{%v:lua.require'mjm.stl-render'.get_section_hl('b')%}")
+    get_section_hl(stl, "b")
     local scroll_pct = require("mjm.stl-data").get_scroll_pct()
     -- Unlike the active statusline, place the result here so it doesn't dynamically update
     table.insert(stl, string.format(" %d%%%% ", scroll_pct))

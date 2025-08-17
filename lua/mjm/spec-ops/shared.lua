@@ -3,6 +3,7 @@
 local M = {}
 
 local hl_timer = vim.uv.new_timer()
+local cur_ns = nil
 
 -- TODO: handle nil for the timers
 
@@ -13,10 +14,15 @@ local hl_timer = vim.uv.new_timer()
 --- @param regtype string
 local function wrapped_hl_text(marks, group, ns, duration, regtype)
     hl_timer:stop()
-    vim.api.nvim_buf_clear_namespace(0, ns, 0, -1)
+    if cur_ns then
+        vim.api.nvim_buf_clear_namespace(0, cur_ns, 0, -1)
+    end
+
+    cur_ns = ns
+
     vim.hl.range(
         0,
-        ns,
+        cur_ns,
         group,
         { marks.start.row - 1, marks.start.col },
         { marks.fin.row - 1, marks.fin.col },
@@ -27,7 +33,7 @@ local function wrapped_hl_text(marks, group, ns, duration, regtype)
         duration,
         0,
         vim.schedule_wrap(function()
-            vim.api.nvim_buf_clear_namespace(0, ns, 0, -1)
+            vim.api.nvim_buf_clear_namespace(0, cur_ns, 0, -1)
         end)
     )
 end

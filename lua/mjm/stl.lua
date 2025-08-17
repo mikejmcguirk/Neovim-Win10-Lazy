@@ -74,6 +74,7 @@ vim.api.nvim_create_autocmd("LspProgress", {
     end,
 })
 
+-- TODO: nil argument error on GDelete
 vim.api.nvim_create_autocmd("DiagnosticChanged", {
     group = stl_events,
     callback = function(ev)

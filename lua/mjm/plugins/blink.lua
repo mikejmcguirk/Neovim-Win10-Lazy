@@ -128,6 +128,7 @@ local function setup_blink()
                     "obsidian",
                     "obsidian_new",
                     "obsidian_tags",
+                    "snippets",
                     "buffer",
                     "path",
                 },

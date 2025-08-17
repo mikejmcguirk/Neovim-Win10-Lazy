@@ -46,7 +46,7 @@ vim.api.nvim_set_option_value("fileformats", "unix,dos", { scope = "global" })
 vim.api.nvim_set_option_value("showmode", false, { scope = "global" })
 vim.api.nvim_set_option_value("modelines", 1, { scope = "global" })
 
-local blink_setting = "blinkon1-blinkoff1"
+local blink_setting = "blinkon1000-blinkoff1000"
 local block_cursor = "n:" .. blink_setting
 local ver_cursor = "i-c-ci:ver100-" .. blink_setting
 local hor_cursor = "v-r:hor100-" .. blink_setting

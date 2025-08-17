@@ -265,6 +265,10 @@ end
 --- @param buf integer
 --- @param diags vim.Diagnostic[]
 function M.cache_diags(buf, diags)
+    if not diags then
+        M.diag_cache[tostring(buf)] = nil
+    end
+
     local counts = vim.iter(diags)
         :filter(function(d)
             return d.bufnr == buf
