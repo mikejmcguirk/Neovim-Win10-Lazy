@@ -238,35 +238,12 @@ M.progress = nil --- @type {client_id:integer, params:lsp.ProgressParams, msg: s
 
 M.diag_cache = {}
 
--- TODO: Remove this function
-function M.process_diags(opts)
-    opts = opts or {}
-    local buf = opts.buf or vim.api.nvim_get_current_buf()
-
-    local raw_diags = opts.diags or vim.diagnostic.get(buf)
-    local counts = vim.iter(raw_diags)
-        :filter(function(d)
-            return d.bufnr == buf
-        end)
-        :fold({
-            ERROR = 0,
-            WARN = 0,
-            HINT = 0,
-            INFO = 0,
-        }, function(acc, d)
-            local severity = vim.diagnostic.severity[d.severity]
-            acc[severity] = acc[severity] + 1
-            return acc
-        end)
-
-    M.diag_cache[tostring(buf)] = counts
-end
-
 --- @param buf integer
 --- @param diags vim.Diagnostic[]
 function M.cache_diags(buf, diags)
     if not diags then
         M.diag_cache[tostring(buf)] = nil
+        return
     end
 
     local counts = vim.iter(diags)
