@@ -452,15 +452,15 @@ vim.keymap.set("x", "X", 'ygvV"_d<cmd>put!<cr>=`]', { silent = true })
 -- TODO: Should not need the mz here if the spec-ops yank works out
 -- vim.keymap.set("x", "X", 'mzygvV"_d<cmd>put!<cr>=`]', { silent = true })
 
-vim.keymap.set("n", "ss", function()
-    local count = vim.v.count1 - 1
-    -- Use feedkeys so the count is not multiplied implicitly
-    if count > 0 then
-        vim.api.nvim_feedkeys(string.format("V%djP", count), "ni", false)
-    else
-        vim.api.nvim_feedkeys("VP", "ni", false)
-    end
-end, { silent = true })
+-- vim.keymap.set("n", "ss", function()
+--     local count = vim.v.count1 - 1
+--     -- Use feedkeys so the count is not multiplied implicitly
+--     if count > 0 then
+--         vim.api.nvim_feedkeys(string.format("V%djP", count), "ni", false)
+--     else
+--         vim.api.nvim_feedkeys("VP", "ni", false)
+--     end
+-- end, { silent = true })
 
 local dc_maps = { "c", "C" }
 -- local dc_maps = { "d", "c", "D", "C" }

@@ -504,7 +504,7 @@ function M.op_set_block(marks, curswant, opts)
                         return new_line
                     end
 
-                    return vim.api.nvim_buf_get_opts.lines(0, row_1 - 1, row_1, false)[1]
+                    return vim.api.nvim_buf_get_lines(0, row_1 - 1, row_1, false)[1]
                 end)() --- @type string
 
                 return M.get_block_paste_row(target_vcol, set_line, buf_line, width)

@@ -1,4 +1,7 @@
--- TODO: Handle gp and zp
+-- TODO: Handle gp and zp. An important note with zp is, because right now I'm pasting rectangles,
+-- I can assume that the top mark is always left and the bottom mark is always right. Because
+-- zp block pastes can have ragged edges, you might have to place marks in the top right
+-- bottom left scheme, which breaks a lot of other assumptions
 -- zp note: Repeats do not add intermediate white space. so longer lines get multiplicatively
 -- longer
 -- TODO: Alternative cursor options
@@ -59,7 +62,7 @@ end
 local function should_reindent(ctx)
     ctx = ctx or {}
 
-    if ctx.on_blank or ctx.regtype == "V" then
+    if ctx.on_blank or ctx.regtype == "V" or ctx.motion == "line" then
         return true
     else
         return false
@@ -94,7 +97,7 @@ M.paste_norm_callback = function(motion)
         return "paste_norm: " .. (err or ("Unknown error in " .. regtype .. " paste"))
     end
 
-    if should_reindent({ on_blank = on_blank, regtype = regtype }) then
+    if should_reindent({ on_blank = on_blank, regtype = regtype, motion = motion }) then
         marks = utils.fix_indents(marks, cur_pos)
     end
 
@@ -119,6 +122,7 @@ function M.paste_visual_callback(motion)
     local marks = utils.get_marks(motion, cb_state.vmode) --- @type op_marks
 
     local cur_pos = vim.api.nvim_win_get_cursor(0) --- @type {[1]: integer, [2]:integer}
+    -- TODO: Do all the lines matter?
     --- @type string
     local start_line = vim.api.nvim_buf_get_lines(0, cur_pos[1] - 1, cur_pos[1], false)[1]
     local on_blank = not start_line:match("%S") --- @type boolean
@@ -150,6 +154,7 @@ function M.paste_visual_callback(motion)
         vcount = vim.v.count1,
     })
 
+    --- @type op_marks|nil, string|nil
     local post_marks, err_s = set_utils.do_set(lines, marks, regtype, motion, curswant)
 
     if (not post_marks) or err_s then
@@ -157,8 +162,8 @@ function M.paste_visual_callback(motion)
         return vim.notify("paste_visual_callback: " .. err_msg, vim.log.levels.ERROR)
     end
 
-    if should_reindent({ on_blank = on_blank, regtype = regtype }) then
-        marks = utils.fix_indents(post_marks, cur_pos)
+    if should_reindent({ on_blank = on_blank, regtype = regtype, motion = motion }) then
+        post_marks = utils.fix_indents(post_marks, cur_pos)
     end
 
     -- TODO: While this wouldn't happen in my current setup/config, it is theoretically possible
@@ -166,7 +171,7 @@ function M.paste_visual_callback(motion)
     -- the bottom row, making this adjustment method invalid
     -- For now, we will hold on this until substitute is also complete
     if #lines == 1 and regtype == "v" and motion == "block" then
-        marks.fin.row = marks.start.row
+        post_marks.fin.row = post_marks.start.row
         vim.api.nvim_buf_set_mark(0, "]", post_marks.fin.row, post_marks.fin.col, {})
     end
 
@@ -175,9 +180,9 @@ function M.paste_visual_callback(motion)
     -- thos selections). Holding on implementing for now though due to the same architecture
     -- issues as above. Want to see the substitute use case first
     if #lines == 1 and regtype == "v" then
-        vim.api.nvim_win_set_cursor(0, { marks.fin.row, marks.fin.col })
+        vim.api.nvim_win_set_cursor(0, { post_marks.fin.row, post_marks.fin.col })
     else
-        vim.api.nvim_win_set_cursor(0, { marks.start.row, marks.start.col })
+        vim.api.nvim_win_set_cursor(0, { post_marks.start.row, post_marks.start.col })
     end
 
     --- @type string

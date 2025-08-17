@@ -96,8 +96,6 @@ local pack_spec = {
 
     { name = "quick-scope", src = "https://github.com/unblevable/quick-scope" },
 
-    { name = "substitute.nvim", src = "https://github.com/gbprod/substitute.nvim" },
-
     { name = "undotree", src = "https://github.com/mbbill/undotree" },
 
     { name = "vim-abolish", src = "https://github.com/tpope/vim-abolish" },
