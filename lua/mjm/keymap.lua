@@ -446,6 +446,8 @@ end
 -- Yank, Change, Delete --
 --------------------------
 
+-- TODO: For any d/c mappings in here, use the spec-ops plug mappings
+
 vim.keymap.set({ "n", "x" }, "x", '"_x', { silent = true })
 vim.keymap.set("n", "X", '"_X', { silent = true })
 vim.keymap.set("x", "X", 'ygvV"_d<cmd>put!<cr>=`]', { silent = true })
@@ -462,27 +464,27 @@ vim.keymap.set("x", "X", 'ygvV"_d<cmd>put!<cr>=`]', { silent = true })
 --     end
 -- end, { silent = true })
 
-local dc_maps = { "c", "C" }
--- local dc_maps = { "d", "c", "D", "C" }
-for _, map in pairs(dc_maps) do
-    vim.keymap.set({ "n", "x" }, map, function()
-        if (not vim.v.register) or vim.v.register == "" or vim.v.register == '"' then
-            -- If you type ""di, Nvim will see the command as """"di
-            -- This does not seem to cause an issue, but still, limit to only this case
-            return '""' .. map
-        else
-            return map
-        end
-    end, { expr = true })
-end
+-- local dc_maps = { "c", "C" }
+-- -- local dc_maps = { "d", "c", "D", "C" }
+-- for _, map in pairs(dc_maps) do
+--     vim.keymap.set({ "n", "x" }, map, function()
+--         if (not vim.v.register) or vim.v.register == "" or vim.v.register == '"' then
+--             -- If you type ""di, Nvim will see the command as """"di
+--             -- This does not seem to cause an issue, but still, limit to only this case
+--             return '""' .. map
+--         else
+--             return map
+--         end
+--     end, { expr = true })
+-- end
 
 -- Helix style black hole mappings
 -- vim.keymap.set({ "n", "x" }, "<M-d>", '"_d', { silent = true })
-vim.keymap.set({ "n", "x" }, "<M-c>", '"_c', { silent = true })
+-- vim.keymap.set({ "n", "x" }, "<M-c>", '"_c', { silent = true })
 -- vim.keymap.set("n", "<M-D>", '"_D', { silent = true })
-vim.keymap.set("n", "<M-C>", '"_C', { silent = true })
+-- vim.keymap.set("n", "<M-C>", '"_C', { silent = true })
 
-vim.keymap.set("x", "C", "<nop>")
+-- vim.keymap.set("x", "C", "<nop>")
 
 -- vim.api.nvim_create_autocmd("TextChanged", {
 --     group = vim.api.nvim_create_augroup("delete_clear", { clear = true }),
@@ -593,22 +595,22 @@ vim.keymap.set("n", "dm", "<cmd>delmarks!<cr>")
 
 ---@param reg string
 ---@return boolean
-local should_format_paste = function(reg)
-    if vim.api.nvim_get_current_line():match("^%s*$") then
-        return true
-    end
-
-    if vim.fn.getregtype(reg or '"') == "V" then
-        return true
-    end
-
-    local cur_mode = vim.api.nvim_get_mode().mode ---@type string
-    if cur_mode == "V" or cur_mode == "Vs" then
-        return true
-    end
-
-    return false
-end
+-- local should_format_paste = function(reg)
+--     if vim.api.nvim_get_current_line():match("^%s*$") then
+--         return true
+--     end
+--
+--     if vim.fn.getregtype(reg or '"') == "V" then
+--         return true
+--     end
+--
+--     local cur_mode = vim.api.nvim_get_mode().mode ---@type string
+--     if cur_mode == "V" or cur_mode == "Vs" then
+--         return true
+--     end
+--
+--     return false
+-- end
 
 -- local better_norm_pastes = {
 --     { "p", nil },

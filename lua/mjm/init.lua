@@ -52,6 +52,9 @@ require("mjm.plugins.blink") -- Setup is lazy, but add to path for LSP capabilit
 
 require("mjm.plugins.fugitive")
 
+-- Due to extra keymapping issue. Added to RTP, but setup lazily
+require("mjm.plugins.nvim-surround")
+
 local eager_loaded = vim.loop.hrtime()
 
 ------------------------------
@@ -87,7 +90,6 @@ require("mjm.plugins.flash")
 require("mjm.plugins.git_signs")
 require("mjm.plugins.indent_highlight")
 require("mjm.plugins.lazydev")
-require("mjm.plugins.nvim-surround")
 require("mjm.plugins.obsidian")
 require("mjm.plugins.quickscope")
 require("mjm.plugins.ts-autotag")
