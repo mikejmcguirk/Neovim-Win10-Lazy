@@ -363,7 +363,7 @@ end
 
 --- @param blk_ops block_op_info[]
 --- @param marks op_marks
---- @param opts? {set_del_marks: boolean}
+--- @param opts? {mark_type: string}
 --- @return op_marks|nil, string|nil
 local function do_block_ops(blk_ops, marks, opts)
     opts = opts or {}
@@ -393,10 +393,13 @@ local function do_block_ops(blk_ops, marks, opts)
             post_marks.start.col = l_byte
         end
 
-        if (not opts.set_del_marks) and #o.text > 0 then
-            post_marks.fin.row = row_1
-            post_marks.fin.col = math.max(o.start_byte + #o.text - 1, 0)
-        elseif opts.set_del_marks and i == #blk_ops then
+        if opts.mark_type == "change" and i > 1 then
+            local cur_line = vim.api.nvim_buf_get_lines(0, row_0, row_1, false)[1]
+            local cur_line_len = math.max(#cur_line - 1, 0)
+            post_marks.start.col = math.min(post_marks.start.col, cur_line_len)
+        end
+
+        if opts.mark_type == "delete" and i == #blk_ops then
             --- @type string
             local fin_line = vim.api.nvim_buf_get_lines(0, row_0, row_1, false)[1]
             local fin_byte = math.min(post_marks.start.col, #fin_line - 1) --- @type integer
@@ -410,6 +413,38 @@ local function do_block_ops(blk_ops, marks, opts)
 
             post_marks.fin.row = row_1
             post_marks.fin.col = l_byte
+        elseif opts.mark_type == "change" and i == #blk_ops then
+            local start_line =
+                vim.api.nvim_buf_get_lines(0, marks.start.row - 1, marks.start.row, false)[1]
+            -- TODO: This is wasteful because we already acquired the vcol info when gathering
+            -- the block info. Am going to hold on refactoring though until yank cycling is in, as
+            -- that should give us a complete picture of the cases the block functions need to
+            -- be able to handle. My guess is that you need built-in handling for paste, set,
+            -- delete, and change, since those are the base mark setups Neovim handles, and then
+            -- you can probably pass a handler for a function that processes extra marks, be they
+            -- the cycle marks or something else someone comes up with
+            --- @type integer|nil, integer|nil, string|nil
+            local target_vcol, _, vcol_err =
+                blk_utils.vcols_from_col(start_line, post_marks.start.col)
+            if (not target_vcol) or vcol_err then
+                return nil, "do_block_ops" .. (vcol_err or "Unknown error in vcols_from_col")
+            end
+
+            local fin_line = vim.api.nvim_buf_get_lines(0, row_0, row_1, false)[1]
+            local max_vcol = vim.fn.strdisplaywidth(fin_line)
+            target_vcol = math.min(target_vcol, max_vcol)
+
+            --- @type integer|nil, integer|nil, string|nil
+            local l_byte, _, bb_err = blk_utils.byte_bounds_from_vcol(fin_line, target_vcol)
+            if (not l_byte) or bb_err then
+                return nil, "do_block_ops" .. (bb_err or "Unknown error in vcols_from_col")
+            end
+
+            post_marks.fin.row = row_1
+            post_marks.fin.col = l_byte
+        else
+            post_marks.fin.row = row_1
+            post_marks.fin.col = math.max(o.start_byte + #o.text - 1, 0)
         end
     end
 
@@ -418,13 +453,18 @@ local function do_block_ops(blk_ops, marks, opts)
     return post_marks, nil
 end
 
+-- TODO: I don't love the "is_change" opt because it's an anti-pattern with how set/paste vs del
+-- marks are determined. But want to see4 how other mark situations are handled before settling
+-- in on a pattern
+
 --- @param marks op_marks
 --- @param curswant integer
---- @param lines? string[]
+--- @param opts? {lines: string[], is_change: boolean}
 --- @return op_marks|nil, string|nil
 --- Assumes that the row marks have been checked beforehand
-function M.op_set_block(marks, curswant, lines)
-    lines = lines or {}
+function M.op_set_block(marks, curswant, opts)
+    opts = opts or {}
+    opts.lines = opts.lines or {}
 
     --- @type string[]
     local buf_lines = vim.api.nvim_buf_get_lines(0, marks.start.row - 1, marks.fin.row, false)
@@ -435,29 +475,36 @@ function M.op_set_block(marks, curswant, lines)
         return nil, "op_set_block: " .. vcol_err
     end
 
-    local max_iter = math.max(#buf_lines, #lines) --- @type integer
+    local max_iter = math.max(#buf_lines, #opts.lines) --- @type integer
     local total_rows = vim.api.nvim_buf_line_count(0) --- @type integer
     local mc = curswant and curswant == vim.v.maxcol --- @type boolean
-    local width = blk_utils.get_block_width(lines) --- @type integer
+    local width = blk_utils.get_block_width(opts.lines) --- @type integer
     local set_info = {} --- @type block_op_info[]
 
     for i = 1, max_iter do
         local row_1 = marks.start.row + i - 1 --- @type integer
-        local set_line = lines[i] and lines[i] or nil --- @type string|nil
+        -- TODO: Double check that you need to do this
+        local set_line = opts.lines[i] and opts.lines[i] or nil --- @type string|nil
 
         local info, err = (function()
-            if i <= #lines and i > #buf_lines and set_line then
+            if i <= #opts.lines and i > #buf_lines and set_line then
                 local target_vcol = l_vcol - 1 --- @type integer
                 local buf_line = (function()
                     if row_1 > total_rows then
                         local new_line = string.rep(" ", target_vcol) --- @type string
-                        vim.api.nvim_buf_set_lines(0, total_rows, total_rows, false, { new_line })
+                        vim.api.nvim_buf_set_opts.lines(
+                            0,
+                            total_rows,
+                            total_rows,
+                            false,
+                            { new_line }
+                        )
 
                         total_rows = total_rows + 1
                         return new_line
                     end
 
-                    return vim.api.nvim_buf_get_lines(0, row_1 - 1, row_1, false)[1]
+                    return vim.api.nvim_buf_get_opts.lines(0, row_1 - 1, row_1, false)[1]
                 end)() --- @type string
 
                 return M.get_block_paste_row(target_vcol, set_line, buf_line, width)
@@ -474,7 +521,13 @@ function M.op_set_block(marks, curswant, lines)
         table.insert(set_info, info)
     end
 
-    return do_block_ops(set_info, marks, { set_del_marks = #lines == 0 })
+    if opts.is_change then
+        return do_block_ops(set_info, marks, { mark_type = "change" })
+    elseif #opts.lines == 0 then
+        return do_block_ops(set_info, marks, { mark_type = "delete" })
+    else
+        return do_block_ops(set_info, marks)
+    end
 end
 
 return M

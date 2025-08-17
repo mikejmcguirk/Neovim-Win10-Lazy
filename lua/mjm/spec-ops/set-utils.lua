@@ -123,7 +123,7 @@ end
 --- @param lines string[]
 --- @return op_marks|nil, string|nil
 --- Assumes that the row marks have been checked beforehand
-local function op_set_lines(marks, lines)
+function M.op_set_lines(marks, lines)
     local start_row = marks.start.row
     local fin_row = marks.fin.row
 
@@ -199,11 +199,11 @@ function M.do_set(lines, marks, regtype, motion, curswant)
     if char_reg and char_motion then
         return op_set_text(marks, lines)
     elseif motion_mtype == mtype.L then
-        return op_set_lines(marks, lines)
+        return M.op_set_lines(marks, lines)
     elseif reg_mtype == mtype.L and vim.tbl_contains({ mtype.SC, mtype.MC }, motion_mtype) then
         return op_set_lines_into_chars(marks, lines)
     elseif block_reg and (block_motion or motion_mtype == mtype.SC) then
-        return op_utils.op_set_block(marks, curswant, lines)
+        return op_utils.op_set_block(marks, curswant, { lines = lines })
     elseif reg_mtype == mtype.L and block_motion then
         local del_marks, err = op_utils.op_set_block(marks, curswant)
         if (not del_marks) or err then
@@ -233,7 +233,7 @@ function M.do_set(lines, marks, regtype, motion, curswant)
             vcount = rows,
         })
 
-        return op_utils.op_set_block(marks, curswant, block_lines)
+        return op_utils.op_set_block(marks, curswant, { lines = block_lines })
         -- local post_marks, err = op_utils.op_set_block(marks, curswant, block_lines)
         -- if (not post_marks) or err then
         --     return nil, (err or "Unknown error in op_set_block")

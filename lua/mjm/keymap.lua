@@ -494,15 +494,15 @@ vim.keymap.set("x", "C", "<nop>")
 --     end,
 -- })
 
-vim.api.nvim_create_autocmd("InsertEnter", {
-    group = vim.api.nvim_create_augroup("change_clear", { clear = true }),
-    pattern = "*",
-    callback = function()
-        if vim.v.operator == "c" then
-            vim.cmd("echo ''")
-        end
-    end,
-})
+-- vim.api.nvim_create_autocmd("InsertEnter", {
+--     group = vim.api.nvim_create_augroup("change_clear", { clear = true }),
+--     pattern = "*",
+--     callback = function()
+--         if vim.v.operator == "c" then
+--             vim.cmd("echo ''")
+--         end
+--     end,
+-- })
 
 -- FUTURE: These should remove trailing whitespace from the original line. The == should handle
 -- invalid leading whitespace on the new line
@@ -511,52 +511,52 @@ vim.keymap.set("n", "dK", "DO<esc>p==", { silent = true })
 vim.keymap.set("n", "dm", "<cmd>delmarks!<cr>")
 
 -- Keeping around with the custom yank to move reges after deletes
-vim.api.nvim_create_autocmd("TextYankPost", {
-    group = vim.api.nvim_create_augroup("yank_cleanup", { clear = true }),
-    callback = function()
-        -- callback = function(ev)
-        -- if vim.v.event.operator == "y" then
-        --     local row, col = unpack(vim.api.nvim_buf_get_mark(ev.buf, "z"))
-        --     if row and col then
-        --         local count_lines = vim.api.nvim_buf_line_count(ev.buf)
-        --         if row > count_lines then
-        --             row = count_lines
-        --         end
-        --         local line_len = #vim.api.nvim_buf_get_lines(ev.buf, row - 1, row, false)[1]
-        --         if line_len == 0 then
-        --             col = 0
-        --         elseif col >= line_len then
-        --             col = line_len - 1
-        --         end
+-- vim.api.nvim_create_autocmd("TextYankPost", {
+--     group = vim.api.nvim_create_augroup("yank_cleanup", { clear = true }),
+--     callback = function()
+-- callback = function(ev)
+-- if vim.v.event.operator == "y" then
+--     local row, col = unpack(vim.api.nvim_buf_get_mark(ev.buf, "z"))
+--     if row and col then
+--         local count_lines = vim.api.nvim_buf_line_count(ev.buf)
+--         if row > count_lines then
+--             row = count_lines
+--         end
+--         local line_len = #vim.api.nvim_buf_get_lines(ev.buf, row - 1, row, false)[1]
+--         if line_len == 0 then
+--             col = 0
+--         elseif col >= line_len then
+--             col = line_len - 1
+--         end
 
-        --         vim.api.nvim_win_set_cursor(vim.api.nvim_get_current_win(), { row, col })
-        --     end
-        -- end
-        -- vim.api.nvim_buf_del_mark(ev.buf, "z")
+--         vim.api.nvim_win_set_cursor(vim.api.nvim_get_current_win(), { row, col })
+--     end
+-- end
+-- vim.api.nvim_buf_del_mark(ev.buf, "z")
 
-        -- Suppress any "X lines yanked" messages
-        -- vim.cmd("echo ''")
+-- Suppress any "X lines yanked" messages
+-- vim.cmd("echo ''")
 
-        -- The below assumes that the default clipboard is unset:
-        -- All yanks write to unnamed if a register is not specified
-        -- If the yank command is used, the latest yank also writes to reg 0
-        -- The latest delete or change also writes to reg 1 or - (:h quote_number)
-        -- If you delete or change to unnamed explicitly, it will also write to reg 0
-        --- (the default writes to reg 1 are preserved. Not so with reg -. Acceptable loss)
-        -- The code below assumes that deletes/changes to unnamed are explicit
-        -- When explicitly yanking to a register other than unnamed, unnamed is still overwritten
-        --- (except for the black hole register)
-        -- To override this, the code below copies back from reg 0
-        -- When using a yank cmd without specifying a register, vim.v.event.regname shows "
-        -- When using a delete or change without specifying, regname shows nothing
-        -- regname will show a register for delete/change if one is specified
-        -- If yanking to the black hole register with any method, regname will show nothing
-        -- Therefore, do not copy from reg 0 if regname is '"' or ""
-        --     if vim.v.event.regname ~= '"' and vim.v.event.regname ~= "" then
-        --         vim.fn.setreg('"', vim.fn.getreg("0"))
-        --     end
-    end,
-})
+-- The below assumes that the default clipboard is unset:
+-- All yanks write to unnamed if a register is not specified
+-- If the yank command is used, the latest yank also writes to reg 0
+-- The latest delete or change also writes to reg 1 or - (:h quote_number)
+-- If you delete or change to unnamed explicitly, it will also write to reg 0
+--- (the default writes to reg 1 are preserved. Not so with reg -. Acceptable loss)
+-- The code below assumes that deletes/changes to unnamed are explicit
+-- When explicitly yanking to a register other than unnamed, unnamed is still overwritten
+--- (except for the black hole register)
+-- To override this, the code below copies back from reg 0
+-- When using a yank cmd without specifying a register, vim.v.event.regname shows "
+-- When using a delete or change without specifying, regname shows nothing
+-- regname will show a register for delete/change if one is specified
+-- If yanking to the black hole register with any method, regname will show nothing
+-- Therefore, do not copy from reg 0 if regname is '"' or ""
+--     if vim.v.event.regname ~= '"' and vim.v.event.regname ~= "" then
+--         vim.fn.setreg('"', vim.fn.getreg("0"))
+--     end
+--     end,
+-- })
 
 -- Set mark with the API so vim.v.count1 and vim.v.register don't need to be manually added
 -- to the return

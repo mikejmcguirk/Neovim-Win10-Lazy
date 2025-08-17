@@ -118,7 +118,7 @@ end
 --- @param cur_pos {[1]: integer, [2]: integer}
 --- @param row integer
 --- @return integer
-local function get_indent(cur_pos, row)
+function M.get_indent(cur_pos, row)
     local line_count = vim.api.nvim_buf_line_count(0) --- @type integer
     if row < 1 or row > line_count then
         return 0
@@ -189,7 +189,7 @@ local function apply_indent(cur_pos, row, str_fn)
         return 0
     end
 
-    local indent = get_indent(cur_pos, row)
+    local indent = M.get_indent(cur_pos, row)
     local indent_str = str_fn(indent)
 
     local leading_ws = line:match("^(%s*)")
@@ -201,6 +201,8 @@ local function apply_indent(cur_pos, row, str_fn)
 
     return #indent_str - #leading_ws
 end
+
+-- TODO: Should probably be an op util
 
 --- @param marks op_marks
 --- @param cur_pos {[1]: integer, [2]: integer}
