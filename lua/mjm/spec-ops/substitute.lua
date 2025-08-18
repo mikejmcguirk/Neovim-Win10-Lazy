@@ -1,5 +1,6 @@
 local op_utils = require("mjm.spec-ops.op-utils")
 local set_utils = require("mjm.spec-ops.set-utils")
+local reg_utils = require("mjm.spec-ops.reg-utils")
 local shared = require("mjm.spec-ops.shared")
 local utils = require("mjm.spec-ops.utils")
 
@@ -10,6 +11,7 @@ vim.api.nvim_set_hl(0, hl_group, { link = "DiagnosticWarn", default = true })
 local hl_ns = vim.api.nvim_create_namespace("mjm.spec-ops.substitute-highlight") --- @type integer
 local hl_timer = 175 --- @type integer
 
+local reg_handler = nil ---@type fun( ctx: reg_ctx): string[]
 local op_state = op_utils.create_new_op_state() --- @type op_state
 local cb_state = op_utils.create_new_op_state() --- @type op_state
 
@@ -49,6 +51,43 @@ local function eol()
     return "g@$"
 end
 
+function M.setup(opts)
+    opts = opts or {}
+
+    reg_handler = opts.reg_handler or reg_utils.get_handler()
+
+    vim.keymap.set("n", "<Plug>(SpecOpsSubstituteOperator)", function()
+        return operator()
+    end, { expr = true })
+
+    vim.keymap.set("o", "<Plug>(SpecOpsSubstituteLineObject)", function()
+        if not is_substituting then
+            return "<esc>"
+        end
+
+        is_substituting = false
+        return "_" -- dd/yy/cc internal behavior
+    end, { expr = true })
+
+    vim.keymap.set(
+        "n",
+        "<Plug>(SpecOpsSubstituteLine)",
+        "<Plug>(SpecOpsSubstituteOperator)<Plug>(SpecOpsSubstituteLineObject)"
+    )
+
+    vim.keymap.set("n", "<Plug>(SpecOpsSubstituteEol)", function()
+        return eol()
+    end, { expr = true })
+
+    vim.keymap.set("x", "<Plug>(SpecOpsSubstituteVisual)", function()
+        return visual(true)
+    end, { expr = true })
+
+    vim.keymap.set("x", "<Plug>(SpecOpsSubstituteVisualBefore)", function()
+        return visual(false)
+    end, { expr = true })
+end
+
 local function should_reindent(ctx)
     ctx = ctx or {}
 
@@ -64,14 +103,20 @@ function M.substitute_callback(motion)
 
     local marks = utils.get_marks(motion, cb_state.vmode) --- @type op_marks
 
+    -- TODO: This is silly right now, but the validation logic will be removed from the state
+    -- update
+    local reges = reg_handler({ op = "p", reg = cb_state.reg, vmode = cb_state.vmode })
+    -- TODO: This technically works right now, but is a brittle assumption
+    local reg = reges[1]
+
     local cur_pos = vim.api.nvim_win_get_cursor(0) --- @type {[1]: integer, [2]:integer}
     local start_line = vim.api.nvim_buf_get_lines(0, cur_pos[1] - 1, cur_pos[1], false)[1]
     local on_blank = not start_line:match("%S") --- @type boolean
-    local regtype = vim.fn.getregtype(cb_state.reg) --- @type string
+    local regtype = vim.fn.getregtype(reg) --- @type string
 
-    local text = vim.fn.getreg(cb_state.reg) --- @type string
+    local text = vim.fn.getreg(reg) --- @type string
     if (not text) or text == "" then
-        return vim.notify(cb_state.reg .. " register is empty", vim.log.levels.INFO)
+        return vim.notify(reg .. " register is empty", vim.log.levels.INFO)
     end
 
     local curswant = cb_state.view.curswant
@@ -114,36 +159,5 @@ function M.substitute_callback(motion)
         vim.api.nvim_win_set_cursor(0, { cb_state.view.lnum, cb_state.view.col })
     end
 end
-
-vim.keymap.set("n", "<Plug>(SpecOpsSubstituteOperator)", function()
-    return operator()
-end, { expr = true })
-
-vim.keymap.set("o", "<Plug>(SpecOpsSubstituteLineObject)", function()
-    if not is_substituting then
-        return "<esc>"
-    end
-
-    is_substituting = false
-    return "_" -- dd/yy/cc internal behavior
-end, { expr = true })
-
-vim.keymap.set(
-    "n",
-    "<Plug>(SpecOpsSubstituteLine)",
-    "<Plug>(SpecOpsSubstituteOperator)<Plug>(SpecOpsSubstituteLineObject)"
-)
-
-vim.keymap.set("n", "<Plug>(SpecOpsSubstituteEol)", function()
-    return eol()
-end, { expr = true })
-
-vim.keymap.set("x", "<Plug>(SpecOpsSubstituteVisual)", function()
-    return visual(true)
-end, { expr = true })
-
-vim.keymap.set("x", "<Plug>(SpecOpsSubstituteVisualBefore)", function()
-    return visual(false)
-end, { expr = true })
 
 return M

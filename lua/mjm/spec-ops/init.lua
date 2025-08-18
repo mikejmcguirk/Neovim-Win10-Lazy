@@ -61,7 +61,7 @@ local defaults = {
             reg_handler = nil,
         },
         substitute = {
-            enabled = false,
+            enabled = true,
             setup_fun = require("mjm.spec-ops.substitute").setup,
             reg_handler = nil,
         },
@@ -128,7 +128,6 @@ function M.setup(opts)
         end
     end
 
-    vim.fn.confirm(vim.inspect(config))
     return config
 end
 
