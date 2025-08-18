@@ -447,6 +447,9 @@ end
 -- Yank, Change, Delete --
 --------------------------
 
+-- TODO: The "backward" mappings seem to have gone missing. Do these need to be re-created? If so,
+-- do them in omode
+
 -- TODO: For any d/c mappings in here, use the spec-ops plug mappings
 
 vim.keymap.set({ "n", "x" }, "x", '"_x', { silent = true })

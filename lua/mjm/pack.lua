@@ -1,3 +1,5 @@
+-- TODO: Doing a lot of restarting Neovim to enter the same windows I was in before to refresh
+-- code changes. Build or download a plugin for session management
 -- FUTURE:
 -- https://github.com/kosayoda/nvim-lightbulb
 -- Show icon where code actions are available, but would need more aesthetic icon
