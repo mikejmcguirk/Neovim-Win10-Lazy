@@ -2,10 +2,12 @@ local blk_utils = require("mjm.spec-ops.block-utils")
 local del_utils = require("mjm.spec-ops.del-utils")
 local get_utils = require("mjm.spec-ops.get-utils")
 local op_utils = require("mjm.spec-ops.op-utils")
+local reg_utils = require("mjm.spec-ops.reg-utils")
 local utils = require("mjm.spec-ops.utils")
 
 local M = {}
 
+local reg_handler = nil ---@type fun( ctx: reg_ctx): string[]
 local op_state = op_utils.create_new_op_state() --- @type op_state
 local cb_state = op_utils.create_new_op_state() --- @type op_state
 
@@ -38,6 +40,39 @@ local function eol()
     return "g@$"
 end
 
+function M.setup(opts)
+    opts = opts or {}
+
+    reg_handler = opts.reg_handler or reg_utils.get_handler()
+
+    vim.keymap.set("n", "<Plug>(SpecOpsDeleteOperator)", function()
+        return operator()
+    end, { expr = true })
+
+    vim.keymap.set("o", "<Plug>(SpecOpsDeleteLineObject)", function()
+        if not op_in_del then
+            return "<esc>"
+        end
+
+        op_in_del = false
+        return "_" -- dd/yy/cc internal behavior
+    end, { expr = true })
+
+    vim.keymap.set(
+        "n",
+        "<Plug>(SpecOpsDeleteLine)",
+        "<Plug>(SpecOpsDeleteOperator)<Plug>(SpecOpsDeleteLineObject)"
+    )
+
+    vim.keymap.set("n", "<Plug>(SpecOpsDeleteEol)", function()
+        return eol()
+    end, { expr = true })
+
+    vim.keymap.set("x", "<Plug>(SpecOpsDeleteVisual)", function()
+        return visual()
+    end, { expr = true })
+end
+
 -- TODO: Means that doing "dlp" when starting on a space does not work
 
 --- @param text string
@@ -64,13 +99,32 @@ function M.delete_callback(motion)
         return vim.notify("delete_callback: " .. err_msg, vim.log.levels.ERROR)
     end
 
-    --- @type string
+    local post_marks, err_d = del_utils.do_del({
+        marks = marks,
+        motion = motion,
+        curswant = cb_state.view.curswant,
+        visual = cb_state.vmode,
+    }) --- @type op_marks|nil, string|nil
+
+    if (not post_marks) or err_d then
+        local err_msg = err_d or "Unknown error at delete callback"
+        return vim.notify("delete_callback: " .. err_msg, vim.log.levels.ERROR)
+    end
+
+    vim.api.nvim_win_set_cursor(0, { post_marks.start.row, post_marks.start.col })
+
+    --- @type string[]
+    local reges =
+        reg_handler({ lines = yank_lines, op = "d", reg = cb_state.reg, vmode = cb_state.vmode })
+
     local text = table.concat(yank_lines, "\n") .. (motion == "line" and "\n" or "")
-    if should_yank(text) and cb_state.reg ~= "_" then
-        if motion == "block" then
-            vim.fn.setreg(cb_state.reg, text, "b" .. blk_utils.get_block_reg_width(yank_lines))
-        else
-            vim.fn.setreg(cb_state.reg, text)
+    if should_yank(text) and reges and #reges >= 1 and not vim.tbl_contains(reges, "_") then
+        for _, r in pairs(reges) do
+            if motion == "block" then
+                vim.fn.setreg(r, text, "b" .. blk_utils.get_block_reg_width(yank_lines))
+            else
+                vim.fn.setreg(r, text)
+            end
         end
 
         vim.api.nvim_exec_autocmds("TextYankPost", {
@@ -85,47 +139,6 @@ function M.delete_callback(motion)
             },
         })
     end
-
-    local post_marks, err_d = del_utils.do_del({
-        marks = marks,
-        motion = motion,
-        curswant = cb_state.view.curswant,
-        visual = cb_state.vmode,
-    }) --- @type op_marks|nil, string|nil
-
-    if (not post_marks) or err_d then
-        local err_msg = err_d or "Unknown error at delete callback"
-        return vim.notify("delete_callback: " .. err_msg, vim.log.levels.ERROR)
-    end
-
-    vim.api.nvim_win_set_cursor(0, { post_marks.start.row, post_marks.start.col })
 end
-
-vim.keymap.set("n", "<Plug>(SpecOpsDeleteOperator)", function()
-    return operator()
-end, { expr = true })
-
-vim.keymap.set("o", "<Plug>(SpecOpsDeleteLineObject)", function()
-    if not op_in_del then
-        return "<esc>"
-    end
-
-    op_in_del = false
-    return "_" -- dd/yy/cc internal behavior
-end, { expr = true })
-
-vim.keymap.set(
-    "n",
-    "<Plug>(SpecOpsDeleteLine)",
-    "<Plug>(SpecOpsDeleteOperator)<Plug>(SpecOpsDeleteLineObject)"
-)
-
-vim.keymap.set("n", "<Plug>(SpecOpsDeleteEol)", function()
-    return eol()
-end, { expr = true })
-
-vim.keymap.set("x", "<Plug>(SpecOpsDeleteVisual)", function()
-    return visual()
-end, { expr = true })
 
 return M

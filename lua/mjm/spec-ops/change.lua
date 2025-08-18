@@ -2,10 +2,12 @@ local blk_utils = require("mjm.spec-ops.block-utils")
 local change_utils = require("mjm.spec-ops.change-utils")
 local get_utils = require("mjm.spec-ops.get-utils")
 local op_utils = require("mjm.spec-ops.op-utils")
+local reg_utils = require("mjm.spec-ops.reg-utils")
 local utils = require("mjm.spec-ops.utils")
 
 local M = {}
 
+local reg_handler = nil ---@type fun( ctx: reg_ctx): string[]
 local op_state = op_utils.create_new_op_state() --- @type op_state
 local cb_state = op_utils.create_new_op_state() --- @type op_state
 
@@ -38,6 +40,39 @@ local function eol()
     return "g@$"
 end
 
+function M.setup(opts)
+    opts = opts or {}
+
+    reg_handler = opts.reg_handler or reg_utils.get_handler()
+
+    vim.keymap.set("n", "<Plug>(SpecOpsChangeOperator)", function()
+        return operator()
+    end, { expr = true })
+
+    vim.keymap.set("o", "<Plug>(SpecOpsChangeLineObject)", function()
+        if not is_changing then
+            return "<esc>"
+        end
+
+        is_changing = false
+        return "_" -- dd/yy/cc internal behavior
+    end, { expr = true })
+
+    vim.keymap.set(
+        "n",
+        "<Plug>(SpecOpsChangeLine)",
+        "<Plug>(SpecOpsChangeOperator)<Plug>(SpecOpsChangeLineObject)"
+    )
+
+    vim.keymap.set("n", "<Plug>(SpecOpsChangeEol)", function()
+        return eol()
+    end, { expr = true })
+
+    vim.keymap.set("x", "<Plug>(SpecOpsChangeVisual)", function()
+        return visual()
+    end, { expr = true })
+end
+
 --- @param text string
 --- @return boolean
 local function should_yank(text)
@@ -60,28 +95,6 @@ function M.change_callback(motion)
     if (not yank_lines) or err_y then
         local err_msg = err_y or "Unknown error getting text to yank" --- @type string
         return vim.notify("change_callback: " .. err_msg, vim.log.levels.ERROR)
-    end
-
-    --- @type string
-    local text = table.concat(yank_lines, "\n") .. (motion == "line" and "\n" or "")
-    if should_yank(text) and cb_state.reg ~= "_" then
-        if motion == "block" then
-            vim.fn.setreg(cb_state.reg, text, "b" .. blk_utils.get_block_reg_width(yank_lines))
-        else
-            vim.fn.setreg(cb_state.reg, text)
-        end
-
-        vim.api.nvim_exec_autocmds("TextYankPost", {
-            buffer = vim.api.nvim_get_current_buf(),
-            data = {
-                inclusive = true,
-                operator = "y",
-                regcontents = yank_lines,
-                regname = cb_state.reg,
-                regtype = utils.regtype_from_motion(motion),
-                visual = cb_state.vmode,
-            },
-        })
     end
 
     local insert_after = (function()
@@ -116,6 +129,33 @@ function M.change_callback(motion)
         return vim.notify("delete_callback: " .. err_msg, vim.log.levels.ERROR)
     end
 
+    --- @type string[]
+    local reges =
+        reg_handler({ lines = yank_lines, op = "c", reg = cb_state.reg, vmode = cb_state.vmode })
+
+    local text = table.concat(yank_lines, "\n") .. (motion == "line" and "\n" or "")
+    if should_yank(text) and reges and #reges >= 1 and not vim.tbl_contains(reges, "_") then
+        for _, r in pairs(reges) do
+            if motion == "block" then
+                vim.fn.setreg(r, text, "b" .. blk_utils.get_block_reg_width(yank_lines))
+            else
+                vim.fn.setreg(r, text)
+            end
+        end
+
+        vim.api.nvim_exec_autocmds("TextYankPost", {
+            buffer = vim.api.nvim_get_current_buf(),
+            data = {
+                inclusive = true,
+                operator = "y",
+                regcontents = yank_lines,
+                regname = cb_state.reg,
+                regtype = utils.regtype_from_motion(motion),
+                visual = cb_state.vmode,
+            },
+        })
+    end
+
     vim.api.nvim_win_set_cursor(0, { post_marks.start.row, post_marks.start.col })
 
     if motion == "line" then
@@ -137,32 +177,5 @@ function M.change_callback(motion)
         end
     end
 end
-
-vim.keymap.set("n", "<Plug>(SpecOpsChangeOperator)", function()
-    return operator()
-end, { expr = true })
-
-vim.keymap.set("o", "<Plug>(SpecOpsChangeLineObject)", function()
-    if not is_changing then
-        return "<esc>"
-    end
-
-    is_changing = false
-    return "_" -- dd/yy/cc internal behavior
-end, { expr = true })
-
-vim.keymap.set(
-    "n",
-    "<Plug>(SpecOpsChangeLine)",
-    "<Plug>(SpecOpsChangeOperator)<Plug>(SpecOpsChangeLineObject)"
-)
-
-vim.keymap.set("n", "<Plug>(SpecOpsChangeEol)", function()
-    return eol()
-end, { expr = true })
-
-vim.keymap.set("x", "<Plug>(SpecOpsChangeVisual)", function()
-    return visual()
-end, { expr = true })
 
 return M

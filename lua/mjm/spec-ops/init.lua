@@ -46,23 +46,23 @@ local defaults = {
     },
     operators = {
         change = {
-            enabled = false,
-            setup_fun = require("mjm.spec-ops.yank").setup,
+            enabled = true,
+            setup_fun = require("mjm.spec-ops.change").setup,
             reg_handler = nil,
         },
         delete = {
-            enabled = false,
-            setup_fun = require("mjm.spec-ops.yank").setup,
+            enabled = true,
+            setup_fun = require("mjm.spec-ops.delete").setup,
             reg_handler = nil,
         },
         paste = {
-            enabled = false,
-            setup_fun = require("mjm.spec-ops.yank").setup,
+            enabled = true,
+            setup_fun = require("mjm.spec-ops.paste").setup,
             reg_handler = nil,
         },
         substitute = {
-            enabled = true,
-            setup_fun = require("mjm.spec-ops.paste").setup,
+            enabled = false,
+            setup_fun = require("mjm.spec-ops.substitute").setup,
             reg_handler = nil,
         },
         yank = {
@@ -128,6 +128,7 @@ function M.setup(opts)
         end
     end
 
+    vim.fn.confirm(vim.inspect(config))
     return config
 end
 
