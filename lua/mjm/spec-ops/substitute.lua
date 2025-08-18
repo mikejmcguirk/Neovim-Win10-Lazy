@@ -146,14 +146,4 @@ vim.keymap.set("x", "<Plug>(SpecOpsSubstituteVisualBefore)", function()
     return visual(false)
 end, { expr = true })
 
-vim.keymap.set("o", "s", "<Plug>(SpecOpsSubstituteLineObject)")
-
-vim.keymap.set("n", "s", "<Plug>(SpecOpsSubstituteOperator)")
-vim.keymap.set("n", "S", "<Plug>(SpecOpsSubstituteEol)")
-vim.keymap.set("n", "<M-s>", '"+<Plug>(SpecOpsSubstituteOperator)')
-vim.keymap.set("n", "<M-S>", '"+<Plug>(SpecOpsSubstituteEol)')
-
-vim.keymap.set("x", "s", "<Plug>(SpecOpsSubstituteVisual)")
-vim.keymap.set("x", "<M-s>", '"+<Plug>(SpecOpsSubstituteVisual)')
-
 return M

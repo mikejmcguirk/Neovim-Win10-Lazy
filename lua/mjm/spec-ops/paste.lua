@@ -208,24 +208,4 @@ vim.keymap.set("x", "<Plug>(SpecOpsPasteVisualAndYank)", function()
     return paste_visual({ yank_old = true })
 end, { expr = true, silent = true })
 
-vim.keymap.set("n", "p", "<Plug>(SpecOpsPasteNormalAfterCursor)")
-vim.keymap.set("n", "P", "<Plug>(SpecOpsPasteNormalBeforeCursor)")
-
-vim.keymap.set("n", "<M-p>", '"+<Plug>(SpecOpsPasteNormalAfterCursor)')
-vim.keymap.set("n", "<M-P>", '"+<Plug>(SpecOpsPasteNormalBeforeCursor)')
-
-vim.keymap.set("n", "[p", "<Plug>(SpecOpsPasteLinewiseBefore)")
-vim.keymap.set("n", "]p", "<Plug>(SpecOpsPasteLinewiseAfter)")
-
-vim.keymap.set("n", "<M-[>p", '"+<Plug>(SpecOpsPasteLinewiseBefore)')
-vim.keymap.set("n", "<M-]>p", '"+<Plug>(SpecOpsPasteLinewiseAfter)')
-vim.keymap.set("n", "<M-[><M-p>", '"+<Plug>(SpecOpsPasteLinewiseBefore)')
-vim.keymap.set("n", "<M-]><M-p>", '"+<Plug>(SpecOpsPasteLinewiseAfter)')
-
-vim.keymap.set("x", "p", "<Plug>(SpecOpsPasteVisual)")
-vim.keymap.set("x", "P", "<Plug>(SpecOpsPasteVisualAndYank)")
-
-vim.keymap.set("x", "<M-p>", '"+<Plug>(SpecOpsPasteVisual)')
-vim.keymap.set("x", "<M-P>", '"+<Plug>(SpecOpsPasteVisualAndYank)')
-
 return M

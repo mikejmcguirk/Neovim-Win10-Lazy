@@ -12,7 +12,7 @@
 
 local utils = require("mjm.spec-ops.utils")
 
-local M
+local M = {}
 
 --- @class reg_ctx
 --- @field lines string[]

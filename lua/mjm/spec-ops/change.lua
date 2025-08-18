@@ -165,15 +165,4 @@ vim.keymap.set("x", "<Plug>(SpecOpsChangeVisual)", function()
     return visual()
 end, { expr = true })
 
-vim.keymap.set("o", "c", "<Plug>(SpecOpsChangeLineObject)")
-
-vim.keymap.set("n", "c", "<Plug>(SpecOpsChangeOperator)")
-vim.keymap.set("n", "C", "<Plug>(SpecOpsChangeEol)")
-vim.keymap.set("n", "<M-c>", '"_<Plug>(SpecOpsChangeOperator)')
-vim.keymap.set("n", "<M-C>", '"_<Plug>(SpecOpsChangeEol)')
-
-vim.keymap.set("x", "c", "<Plug>(SpecOpsChangeVisual)")
-vim.keymap.set("x", "<M-c>", '"_<Plug>(SpecOpsChangeVisual)')
-vim.keymap.set("x", "C", "<nop>")
-
 return M

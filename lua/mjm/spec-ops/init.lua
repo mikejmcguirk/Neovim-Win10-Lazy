@@ -31,8 +31,8 @@ local reg_utils = require("mjm.spec-ops.reg-utils")
 --- @field operators OptsList
 
 --- @class SpecOpsConfigOpts
---- @field global GlobalConfigOpts
---- @field operators OptsListOpts
+--- @field global GlobalConfigOpts|nil
+--- @field operators OptsListOpts|nil
 
 local M = {}
 
