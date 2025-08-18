@@ -15,7 +15,7 @@ local utils = require("mjm.spec-ops.utils")
 local M = {}
 
 --- @class reg_ctx
---- @field lines string[]
+--- @field lines? string[]
 --- @field op string
 --- @field reg string
 --- @field vmode boolean

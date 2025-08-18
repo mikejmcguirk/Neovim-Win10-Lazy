@@ -61,8 +61,8 @@ local defaults = {
             reg_handler = nil,
         },
         substitute = {
-            enabled = false,
-            setup_fun = require("mjm.spec-ops.yank").setup,
+            enabled = true,
+            setup_fun = require("mjm.spec-ops.paste").setup,
             reg_handler = nil,
         },
         yank = {
