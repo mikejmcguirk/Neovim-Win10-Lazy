@@ -20,9 +20,6 @@ local M
 --- @field reg string
 --- @field vmode boolean
 
---- @type { reg_handler: fun( ctx: reg_ctx): string[] }
-local reg_config = {}
-
 -- TODO: Weird question - Do we handle reg validity here or in the ops? If you do it here, anyone
 -- who wants to make a custom handler has to do it themselves. But if you don't, then you're
 -- firing and forgetting the register. You're relying on spooky action at a distance
@@ -34,6 +31,10 @@ local reg_config = {}
 --- @param ctx reg_ctx
 --- @return string[]
 ---  See :h registers
+---  If ctx.op is "p", will return ctx.reg or a fallback
+---  For op values of "y", "c", and "d", will calculate a combination of registers to write to
+---  in line with Neovim's defaults
+---  If ctx.reg is the black hole, simply returns that value
 function M.default_handler(ctx)
     ctx = ctx or {}
 
@@ -46,11 +47,11 @@ function M.default_handler(ctx)
         end
     end)() --- @type string
 
-    if reg == "_" then
+    ctx.op = ctx.op or "p"
+    if reg == "_" or ctx.op == "p" then
         return { reg }
     end
 
-    ctx.op = ctx.op or "y"
     ctx.lines = ctx.lines or { "" } -- Fallback should not trigger a ring movement on delete
 
     local to_overwrite = { '"' }
@@ -85,6 +86,7 @@ end
 
 --- @param ctx reg_ctx
 --- @return string[]
+--- Validates ctx.reg, returning either it or a fallback to the default reg
 function M.target_only_handler(ctx)
     ctx = ctx or {}
 
@@ -92,6 +94,48 @@ function M.target_only_handler(ctx)
         return { ctx.reg }
     else
         return { utils.get_default_reg() }
+    end
+end
+
+--- @param ctx reg_ctx
+--- @return string[]
+--- If yanking, changing, or deleting (ctx.op "y", "c", or "d"), write a copy to reg 0,
+--- incrementing the other numbered registers to store history
+--- Will only return the input register if it is the black hole or is a numbered register
+--- Pasting (ctx.op "p") will not advance the ring
+function M.ring_handler(ctx)
+    ctx = ctx or {}
+
+    local reg = (function()
+        if utils.is_valid_register(ctx.reg) then
+            return ctx.reg
+        else
+            return utils.get_default_reg()
+        end
+    end)() --- @type string
+
+    if reg == "_" or reg:match("^%d$") or ctx.op == "p" then
+        return { reg }
+    end
+
+    for i = 9, 1, -1 do
+        local old_reg = vim.fn.getreginfo(tostring(i - 1)) --- @type table
+        vim.fn.setreg(tostring(i), old_reg.regcontents, old_reg.regtype)
+    end
+
+    return { reg, "0" }
+end
+
+--- @param opt? string
+function M.get_handler(opt)
+    opt = opt or ""
+
+    if opt == "target_only" then
+        return M.target_only_handler
+    elseif opt == "ring" then
+        return M.ring_handler
+    else
+        return M.default_handler
     end
 end
 
