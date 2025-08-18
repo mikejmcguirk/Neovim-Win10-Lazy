@@ -56,7 +56,7 @@ function M.default_handler(ctx)
 
     local to_overwrite = { '"' }
     if reg ~= '"' then
-        vim.tbl_extend("force", to_overwrite, reg)
+        table.insert(to_overwrite, reg)
     end
 
     if vim.tbl_contains({ "d", "c" }, ctx.op) and not ctx.vmode then
@@ -73,12 +73,14 @@ function M.default_handler(ctx)
                 vim.fn.setreg(tostring(i), old_reg.regcontents, old_reg.regtype)
             end
 
-            return vim.tbl_extend("force", to_overwrite, { "1" })
+            table.insert(to_overwrite, "1")
+            return to_overwrite
         end
     end
 
     if reg == default_reg then
-        return vim.tbl_extend("force", to_overwrite, { "0" })
+        table.insert(to_overwrite, "0")
+        return to_overwrite
     else
         return to_overwrite
     end

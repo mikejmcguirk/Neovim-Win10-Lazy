@@ -7,9 +7,12 @@ local reg_utils = require("mjm.spec-ops.reg-utils")
 --- @field reg_handler nil|"default"|"target_only"|"ring"|fun( ctx: reg_ctx): string[]
 
 --- @class OpConfig
+--- @field enabled boolean
+--- @field setup_fun fun(opts: OpConfig)
 --- @field reg_handler nil|fun( ctx: reg_ctx): string[]
 
 --- @class OpConfigOpts
+--- @field enabled boolean|nil
 --- @field reg_handler nil|"default"|"target_only"|"ring"|fun( ctx: reg_ctx): string[]
 
 --- @class OptsList
@@ -43,18 +46,28 @@ local defaults = {
     },
     operators = {
         change = {
+            enabled = false,
+            setup_fun = require("mjm.spec-ops.yank").setup,
             reg_handler = nil,
         },
         delete = {
+            enabled = false,
+            setup_fun = require("mjm.spec-ops.yank").setup,
             reg_handler = nil,
         },
         paste = {
+            enabled = false,
+            setup_fun = require("mjm.spec-ops.yank").setup,
             reg_handler = nil,
         },
         substitute = {
+            enabled = false,
+            setup_fun = require("mjm.spec-ops.yank").setup,
             reg_handler = nil,
         },
         yank = {
+            enabled = true,
+            setup_fun = require("mjm.spec-ops.yank").setup,
             reg_handler = nil,
         },
     },
@@ -83,19 +96,37 @@ function M.setup(opts)
     end
 
     opts.operators = opts.operators or {}
-    for _, o in pairs(opts.operators) do
-        local op_reg_handler_is_fun = type(opts.global.reg_handler) == "function"
-        local op_reg_handler_is_string = type(opts.global.reg_handler) == "string"
-        if not (op_reg_handler_is_fun or op_reg_handler_is_string) then
-            o.reg_handler = nil
+    for _, v in pairs(opts.operators) do
+        if v.enabled == true or v.enabled == nil then
+            if v.reg_handler then
+                local op_reg_handler_is_fun = type(v.reg_handler) == "function"
+                local op_reg_handler_is_string = type(v.reg_handler) == "string"
+                if not (op_reg_handler_is_fun or op_reg_handler_is_string) then
+                    v.reg_handler = nil
+                end
+
+                if v.reg_handler and type(v.reg_handler) ~= "function" then
+                    v.reg_handler = reg_utils.get_handler(v.reg_handler)
+                end
+            end
         end
 
-        if o.reg_handler and type(o.reg_handler) ~= "function" then
-            o.reg_handler = reg_utils.get_handler(o.reg_handler)
+        if v.setup_fun then
+            v.setup_fun = nil
         end
     end
 
-    config = vim.tbl_extend("force", defaults, opts)
+    config = vim.tbl_deep_extend("force", defaults, opts)
+
+    for _, o in pairs(config.operators) do
+        if o.enabled then
+            if not o.reg_handler then
+                o.reg_handler = config.global.reg_handler
+            end
+
+            o.setup_fun(o)
+        end
+    end
 
     return config
 end
