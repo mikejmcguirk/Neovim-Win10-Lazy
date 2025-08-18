@@ -30,8 +30,10 @@ local reg_config = {}
 -- PERF: I have table extends here for clarity, but they are unnecessary heap allocations
 -- Same with inlining the delete_cmds table instead of storing it persistently
 -- Same with creating locals for every part of ctx
+
 --- @param ctx reg_ctx
 --- @return string[]
+---  See :h registers
 function M.default_handler(ctx)
     ctx = ctx or {}
 
@@ -58,18 +60,15 @@ function M.default_handler(ctx)
 
     if vim.tbl_contains({ "d", "c" }, ctx.op) and not ctx.vmode then
         if #ctx.lines == 1 and reg ~= default_reg then
-            -- NOTE: per :h registers, the "1" register is used in addition to the small delete
-            -- register if certain motions are used. I am not sure how to check for those motions
-            -- without remapping multiple default operators or using a gluttonous amount of
-            -- autocmds. For simplicity, only use the small delete register on one-liners
-            -- CORE: When leaving operator pending mode, it would be useful to be able to access
-            -- what operator was used
+            -- Known issue: When certain motions are used, the 1 register is written in addition
+            -- to the small delete register. That behavior is omitted
+            -- CORE: Would be useful to see the last omode text object/motion
             return vim.tbl_extend("force", to_overwrite, { "-" })
         else
-            -- NOTE; Unfortunate if the calling function errors after this, but don't want to
-            -- spread out the behavior and make things confusing
+            -- NOTE: The possibility of the calling function erroring after this is run is
+            -- accepted in order to keep register behavior centralized
             for i = 9, 2, -1 do
-                local old_reg = vim.fn.getreginfo(tostring(i - 1))
+                local old_reg = vim.fn.getreginfo(tostring(i - 1)) --- @type table
                 vim.fn.setreg(tostring(i), old_reg.regcontents, old_reg.regtype)
             end
 
