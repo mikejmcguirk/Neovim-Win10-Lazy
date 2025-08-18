@@ -1,5 +1,4 @@
 local blk_utils = require("mjm.spec-ops.block-utils")
-local utils = require("mjm.spec-ops.utils")
 
 local M = {}
 
@@ -67,19 +66,8 @@ function M.update_cb_from_op(op_state, cb_state, motion)
 
     op_state.view = nil
 
-    -- NOTE: For moving to the behavior handler, use op_state if it exists, cb_state if it does
-    -- not, then pass that to the handler. The type of the state tables will need to be changed
-    -- to a string[] to accomodate the handler output. The input to here will also need
-    -- to handle the reg ctx. It might even be possible that, rather than handle all reg state
-    -- here, we simply handle moving op_state and cb_state around to we can track v:register
-    -- (avoiding clobbering), then handle the actual register resolution separately
-    if utils.is_valid_register(op_state.reg) then
-        --- @diagnostic disable: cast-local-type -- Checked by is_valid_register
-        cb_state.reg = op_state.reg
-    elseif not utils.is_valid_register(cb_state.reg) then
-        cb_state.reg = utils.get_default_reg()
-    end
-
+    -- NOTE: This will be validated later in reg handler
+    cb_state.reg = op_state.reg or cb_state.reg
     op_state.reg = nil
 end
 
