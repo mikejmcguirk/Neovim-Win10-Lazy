@@ -1,12 +1,8 @@
--- TODO: A lot of this can probably be merged in with delete, but want to see the use cases
--- play out first
-
 local set_utils = require("mjm.spec-ops.set-utils")
 local op_utils = require("mjm.spec-ops.op-utils")
 
 local M = {}
 
--- TODO: These are not opts
 --- @return op_marks|nil, string|nil
 function M.do_change(opts)
     opts = opts or {}

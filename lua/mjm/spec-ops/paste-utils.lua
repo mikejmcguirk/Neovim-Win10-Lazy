@@ -35,11 +35,6 @@ function M.get_paste_lines(text, vcount, regtype)
     return lines
 end
 
--- TODO: do_block_ops can be used to paste the rows
--- TODO: Whole function needs rewritten. Three layers of callbacks deep for no good reason
--- Should also better interface with the op functions
---
-
 --- @param row integer
 --- @param lines string[]
 --- @param target_vcol integer

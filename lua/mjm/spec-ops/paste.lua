@@ -1,22 +1,3 @@
--- TODO: Handle gp and zp. An important note with zp is, because right now I'm pasting rectangles,
--- I can assume that the top mark is always left and the bottom mark is always right. Because
--- zp block pastes can have ragged edges, you might have to place marks in the top right
--- bottom left scheme, which breaks a lot of other assumptions
--- zp note: Repeats do not add intermediate white space. so longer lines get multiplicatively
--- longer
--- TODO: Alternative cursor options
--- - Norm single line char after: Hold cursor
--- - Norm single line char before: Either hold or beginning of pasted text
--- - Norm multiline char after: Either hold or end of pasted text
--- - Norm multiline char before: End of pasted text
--- - Norm linewise: Hold cursor
--- TODO: Keep linewise through visual paste implementations
--- TODO: Implement correct cursor behavior for visual pastes
--- TODO: The paste yank error is confusing if you're not yanking
--- TODO: The yank should only exit on failure if yanking or indenting
--- FUTURE: line into char visual paste creates trailing whitespace. Option to remove?
--- TODO: Unsure if TextYankPost fires when doing a delete/paste visually
-
 local blk_utils = require("mjm.spec-ops.block-utils")
 local get_utils = require("mjm.spec-ops.get-utils")
 local op_utils = require("mjm.spec-ops.op-utils")
@@ -60,7 +41,6 @@ local function paste_visual(opts)
     return "g@"
 end
 
--- Outlined for architectural purposes
 local function should_reindent(ctx)
     ctx = ctx or {}
 
@@ -107,11 +87,6 @@ M.paste_norm_callback = function(motion)
     shared.highlight_text(marks, hl_group, hl_ns, hl_timer, regtype)
 end
 
--- NOTE: Outlining for architectural purposes
--- TODO: We're starting to see the first organic case for having a config function. I don't need
--- the should_yank handler defined individually for each operator. There should be a config
--- that can set it for each one. Can also work out stuff like highlight architecture
-
 --- @param text string
 --- @return boolean
 local function should_yank(text)
@@ -124,7 +99,6 @@ function M.paste_visual_callback(motion)
     local marks = utils.get_marks(motion, cb_state.vmode) --- @type op_marks
 
     local cur_pos = vim.api.nvim_win_get_cursor(0) --- @type {[1]: integer, [2]:integer}
-    -- TODO: Do all the lines matter?
     --- @type string
     local start_line = vim.api.nvim_buf_get_lines(0, cur_pos[1] - 1, cur_pos[1], false)[1]
     local on_blank = not start_line:match("%S") --- @type boolean
@@ -147,7 +121,7 @@ function M.paste_visual_callback(motion)
         return vim.notify(cb_state.reg .. " register is empty", vim.log.levels.INFO)
     end
 
-    local curswant = cb_state.view.curswant
+    local curswant = cb_state.view.curswant --- @type integer
 
     local lines = op_utils.setup_text_lines({
         text = text,
@@ -168,19 +142,11 @@ function M.paste_visual_callback(motion)
         post_marks = utils.fix_indents(post_marks, cur_pos)
     end
 
-    -- TODO: While this wouldn't happen in my current setup/config, it is theoretically possible
-    -- for a user to set an indent pattern that causes the start row to indent differently from
-    -- the bottom row, making this adjustment method invalid
-    -- For now, we will hold on this until substitute is also complete
     if #lines == 1 and regtype == "v" and motion == "block" then
         post_marks.fin.row = post_marks.start.row
         vim.api.nvim_buf_set_mark(0, "]", post_marks.fin.row, post_marks.fin.col, {})
     end
 
-    -- TODO: The alternative method here is calculating the pythagorean distance of the cursor
-    -- from the start and the end, and placing it at the closer one (or the block corners for
-    -- thos selections). Holding on implementing for now though due to the same architecture
-    -- issues as above. Want to see the substitute use case first
     if #lines == 1 and regtype == "v" then
         vim.api.nvim_win_set_cursor(0, { post_marks.fin.row, post_marks.fin.col })
     else

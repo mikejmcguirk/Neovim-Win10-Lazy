@@ -1,11 +1,3 @@
--- FUTURE: Is there a way to make this operator respect  the "y" cpoption?
--- TODO: Handle zy. The key is that it removes trailing whitespace *in* the block selection, not
--- outside it, which is always removed
--- FUTURE: Have event firing without other issues (was due to other autocmd I had up), but v:event
--- is populated from the internal c data. I have a replication of the event data in the function,
--- so that's probably where this has to land, but is worth further research
--- https://github.com/neovim/neovim/issues/15136 -- Seems worth adding
-
 local blk_utils = require("mjm.spec-ops.block-utils")
 local get_utils = require("mjm.spec-ops.get-utils")
 local op_utils = require("mjm.spec-ops.op-utils")
@@ -78,11 +70,6 @@ function M.yank_callback(motion)
 
     vim.api.nvim_win_set_cursor(0, { cb_state.view.lnum, cb_state.view.col })
 
-    -- TODO: In terms of user observed behavior this tracks. If I do a black hole yank with the
-    -- built-in operator, it will go over the motion but not actually yank or fire the
-    -- TextYankPost event. I think the better way to handle this would be to check for the black
-    -- hole register at the very beginning, since we should have already gone over the motion in
-    -- the callback
     if cb_state.reg ~= "_" then
         vim.api.nvim_exec_autocmds("TextYankPost", {
             buffer = vim.api.nvim_get_current_buf(),
@@ -128,16 +115,15 @@ vim.keymap.set("x", "<Plug>(SpecOpsYankVisual)", function()
     return visual()
 end, { expr = true })
 
-vim.keymap.set("n", "y", "<Plug>(SpecOpsYankOperator)")
 vim.keymap.set("o", "y", "<Plug>(SpecOpsYankLineObject)")
+
+vim.keymap.set("n", "y", "<Plug>(SpecOpsYankOperator)")
 vim.keymap.set("n", "Y", "<Plug>(SpecOpsYankEol)")
-vim.keymap.set("x", "y", "<Plug>(SpecOpsYankVisual)")
-
-vim.keymap.set("x", "Y", "<nop>")
-
--- Helix style system clipboard mappings
 vim.keymap.set("n", "<M-y>", '"+<Plug>(SpecOpsYankOperator)')
 vim.keymap.set("n", "<M-Y>", '"+<Plug>(SpecOpsYankEol)')
+
+vim.keymap.set("x", "y", "<Plug>(SpecOpsYankVisual)")
 vim.keymap.set("x", "<M-y>", '"+<Plug>(SpecOpsYankVisual)')
+vim.keymap.set("x", "Y", "<nop>")
 
 return M

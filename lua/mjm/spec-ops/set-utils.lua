@@ -1,5 +1,3 @@
--- TOOD: Handle bottom < top row the way substitute does
-
 local blk_utils = require("mjm.spec-ops.block-utils")
 local paste_utils = require("mjm.spec-ops.paste-utils")
 local op_utils = require("mjm.spec-ops.op-utils")
@@ -169,7 +167,6 @@ function M.do_set(lines, marks, regtype, motion, curswant)
         return nil, "do_set: Start row " .. marks.start.row .. " > " .. marks.fin.row
     end
 
-    -- TODO: Should be able to check for "V" somehow, no?
     regtype = regtype or "v"
     if not utils.is_valid_regtype(regtype) then
         return nil, "do_set: regtype " .. regtype .. " is invalid"
@@ -234,15 +231,6 @@ function M.do_set(lines, marks, regtype, motion, curswant)
         })
 
         return op_utils.op_set_block(marks, curswant, { lines = block_lines })
-        -- local post_marks, err = op_utils.op_set_block(marks, curswant, block_lines)
-        -- if (not post_marks) or err then
-        --     return nil, (err or "Unknown error in op_set_block")
-        -- end
-        --
-        -- post_marks.fin.row = post_marks.start.row
-        -- -- TODO: Repetitive setting of the mark
-        -- vim.api.nvim_buf_set_mark(0, "]", post_marks.fin.row, post_marks.fin.col, {})
-        -- return post_marks, nil
     elseif reg_mtype == mtype.MC and motion_mtype == mtype.MB then
         local del_marks, err = op_utils.op_set_block(marks, curswant)
         if not del_marks or err then

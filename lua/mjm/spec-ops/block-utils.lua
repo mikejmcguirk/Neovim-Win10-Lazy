@@ -381,10 +381,6 @@ function M.vcols_from_byte_bounds(line, start_byte, end_byte)
     return start_vcol, end_vcol, nil
 end
 
--- FUTURE: The binary search and the fallback loop have enough common logic to be outlined.
--- Roughly, see if we get good byte bounds. If not, then do individualized iteration.
--- But I want to make sure the current logic meets enough use cases before doing so
-
 --- @param line string
 --- @param vcol integer
 --- @return integer|nil, integer|nil, string|nil

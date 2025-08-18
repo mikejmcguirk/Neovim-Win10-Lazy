@@ -1,5 +1,3 @@
--- CHORE: The yank error is confusing if you don't want to delete yank
-
 local blk_utils = require("mjm.spec-ops.block-utils")
 local del_utils = require("mjm.spec-ops.del-utils")
 local get_utils = require("mjm.spec-ops.get-utils")
@@ -40,7 +38,7 @@ local function eol()
     return "g@$"
 end
 
--- NOTE: Outlining for architectural purposes
+-- TODO: Means that doing "dlp" when starting on a space does not work
 
 --- @param text string
 --- @return boolean
@@ -68,11 +66,6 @@ function M.delete_callback(motion)
 
     --- @type string
     local text = table.concat(yank_lines, "\n") .. (motion == "line" and "\n" or "")
-    -- TODO: Architecturally, this broadly makes sense. The user specified condition is distinct
-    -- from the built-in notion that selecting the black hole register needs no yank. More broadly
-    -- though, how the yank behavior operates would also dependon if the user selects ring,
-    -- default, target only, or some other thing. Find to leave as is for now, but might be
-    -- changed
     if should_yank(text) and cb_state.reg ~= "_" then
         if motion == "block" then
             vim.fn.setreg(cb_state.reg, text, "b" .. blk_utils.get_block_reg_width(yank_lines))
@@ -135,16 +128,15 @@ vim.keymap.set("x", "<Plug>(SpecOpsDeleteVisual)", function()
     return visual()
 end, { expr = true })
 
-vim.keymap.set("n", "d", "<Plug>(SpecOpsDeleteOperator)")
 vim.keymap.set("o", "d", "<Plug>(SpecOpsDeleteLineObject)")
-vim.keymap.set("x", "d", "<Plug>(SpecOpsDeleteVisual)")
-vim.keymap.set("n", "D", "<Plug>(SpecOpsDeleteEol)")
 
-vim.keymap.set("x", "D", "<nop>")
-
--- Helix style black hole mappings
+vim.keymap.set("n", "d", "<Plug>(SpecOpsDeleteOperator)")
 vim.keymap.set("n", "<M-d>", '"_<Plug>(SpecOpsDeleteOperator)')
-vim.keymap.set("x", "<M-d>", '"_<Plug>(SpecOpsDeleteVisual)')
+vim.keymap.set("n", "D", "<Plug>(SpecOpsDeleteEol)")
 vim.keymap.set("n", "<M-D>", '"_<Plug>(SpecOpsDeleteEol)')
+
+vim.keymap.set("x", "d", "<Plug>(SpecOpsDeleteVisual)")
+vim.keymap.set("x", "<M-d>", '"_<Plug>(SpecOpsDeleteVisual)')
+vim.keymap.set("x", "D", "<nop>")
 
 return M

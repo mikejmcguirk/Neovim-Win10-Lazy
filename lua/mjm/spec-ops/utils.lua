@@ -1,9 +1,3 @@
--- TODO: A good general helper function would be an interator over a string by character idx
--- You pass in the string and a function, and then the helper takes each extracted character and
--- applies the helper function to it
--- So for something like capitalization operations, rather than iterating by byte and having to
--- check if you're in an alpha character, you can iterate by char index and check that way
-
 local M = {}
 
 --- @class op_marks
@@ -54,6 +48,8 @@ function M.sort_marks(marks)
         return marks
     end
 end
+
+-- TODO: Move to reg file. Wait for all references to only be from it
 
 ---@return string
 function M.get_default_reg()
@@ -110,10 +106,6 @@ function M.is_valid_regtype(regtype)
         return false
     end
 end
-
--- FUTURE: Accomodate preserveindent and copyindent
--- TODO: Return a function for the indent compute method so it doesn't have to be re-checked
--- every line
 
 --- @param cur_pos {[1]: integer, [2]: integer}
 --- @param row integer
@@ -201,8 +193,6 @@ local function apply_indent(cur_pos, row, str_fn)
 
     return #indent_str - #leading_ws
 end
-
--- TODO: Should probably be an op util
 
 --- @param marks op_marks
 --- @param cur_pos {[1]: integer, [2]: integer}

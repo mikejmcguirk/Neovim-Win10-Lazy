@@ -1,11 +1,7 @@
--- TODO: Annotate M when the project is more baked in
-
 local M = {}
 
 local hl_timer = vim.uv.new_timer()
 local cur_ns = nil
-
--- TODO: handle nil for the timers
 
 --- @param marks op_marks
 --- @param group string

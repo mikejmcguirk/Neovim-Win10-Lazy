@@ -67,6 +67,12 @@ function M.update_cb_from_op(op_state, cb_state, motion)
 
     op_state.view = nil
 
+    -- NOTE: For moving to the behavior handler, use op_state if it exists, cb_state if it does
+    -- not, then pass that to the handler. The type of the state tables will need to be changed
+    -- to a string[] to accomodate the handler output. The input to here will also need
+    -- to handle the reg ctx. It might even be possible that, rather than handle all reg state
+    -- here, we simply handle moving op_state and cb_state around to we can track v:register
+    -- (avoiding clobbering), then handle the actual register resolution separately
     if utils.is_valid_register(op_state.reg) then
         --- @diagnostic disable: cast-local-type -- Checked by is_valid_register
         cb_state.reg = op_state.reg
@@ -82,8 +88,6 @@ end
 --- @field regtype string
 --- @field text string
 --- @field vcount integer
-
--- TODO: Have paste use this
 
 --- @param opts SetupTextLineOpts
 --- @return string[]
@@ -299,15 +303,6 @@ local function get_block_set_row(set_line, l_vcol, r_vcol, blk_width, buf_line, 
     return { start_byte = l_byte, fin_byte_ex = r_byte, text = set_line }
 end
 
--- FUTURE: Example scenario:
--- - Three lines are yanked blockwise. The middle line is only whitespace
--- - Those lines are blockwise pasted
--- - The middle line being pasted over is shorter than the paste column
--- Neovim default behavior: The padding spaces to align with the paste column are added, but
--- the actual whitespace in the register is skipped over
--- This can be useful in case you want to do a block paste then gv and do a block insert
--- afterwards. An option should be added to skip the whitespce entirely though
-
 --- @param target_vcol integer
 --- @param paste_line string
 --- @param buf_line string
@@ -358,8 +353,6 @@ function M.get_block_paste_row(target_vcol, paste_line, buf_line, blk_width)
 
     return { start_byte = paste_byte, fin_byte_ex = paste_byte, text = paste_line }
 end
-
--- MAYBE: Create a function to validate that a collection of lines is a set of valid block lines
 
 --- @param blk_ops block_op_info[]
 --- @param marks op_marks
@@ -416,13 +409,7 @@ local function do_block_ops(blk_ops, marks, opts)
         elseif opts.mark_type == "change" and i == #blk_ops then
             local start_line =
                 vim.api.nvim_buf_get_lines(0, marks.start.row - 1, marks.start.row, false)[1]
-            -- TODO: This is wasteful because we already acquired the vcol info when gathering
-            -- the block info. Am going to hold on refactoring though until yank cycling is in, as
-            -- that should give us a complete picture of the cases the block functions need to
-            -- be able to handle. My guess is that you need built-in handling for paste, set,
-            -- delete, and change, since those are the base mark setups Neovim handles, and then
-            -- you can probably pass a handler for a function that processes extra marks, be they
-            -- the cycle marks or something else someone comes up with
+
             --- @type integer|nil, integer|nil, string|nil
             local target_vcol, _, vcol_err =
                 blk_utils.vcols_from_col(start_line, post_marks.start.col)
@@ -453,10 +440,6 @@ local function do_block_ops(blk_ops, marks, opts)
     return post_marks, nil
 end
 
--- TODO: I don't love the "is_change" opt because it's an anti-pattern with how set/paste vs del
--- marks are determined. But want to see4 how other mark situations are handled before settling
--- in on a pattern
-
 --- @param marks op_marks
 --- @param curswant integer
 --- @param opts? {lines: string[], is_change: boolean}
@@ -483,8 +466,7 @@ function M.op_set_block(marks, curswant, opts)
 
     for i = 1, max_iter do
         local row_1 = marks.start.row + i - 1 --- @type integer
-        -- TODO: Double check that you need to do this
-        local set_line = opts.lines[i] and opts.lines[i] or nil --- @type string|nil
+        local set_line = opts.lines[i] or nil --- @type string|nil
 
         local info, err = (function()
             if i <= #opts.lines and i > #buf_lines and set_line then
