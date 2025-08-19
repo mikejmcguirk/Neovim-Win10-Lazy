@@ -6,20 +6,65 @@ local M = {}
 
 --- @class op_state
 --- @field reg string|nil
---- @field view vim.fn.winsaveview.ret|nil
+--- @field view vim.fn.winsaveview.ret
 --- @field vmode boolean
 
---- @return op_state
-function M.create_new_op_state()
+--- @class new_op_state
+--- @field pre op_state
+--- @field post op_state
+
+--- @param op_state new_op_state
+--- @return nil
+function M.update_op_state(op_state, motion)
+    local pre = op_state.pre
+    local post = op_state.post
+
+    post.vmode = pre.vmode
+    pre.vmode = false
+
+    if pre.view then
+        post.view = pre.view
+
+        if (not post.vmode) and motion == "block" then
+            vim.cmd("norm! gv")
+            post.view.curswant = vim.fn.winsaveview().curswant
+            vim.cmd("norm! \27")
+
+            vim.api.nvim_win_set_cursor(0, { post.view.lnum, post.view.col })
+        end
+    else
+        local old_curswant = post.view.curswant
+
+        post.view = vim.fn.winsaveview()
+        if old_curswant == vim.v.maxcol then
+            post.view.curswant = vim.v.maxcol
+        end
+    end
+
+    pre.view = nil
+
+    -- NOTE: This will be validated later in reg handler
+    post.reg = pre.reg or post.reg
+    pre.reg = nil
+end
+
+function M.get_new_op_state()
     return {
-        view = nil,
-        vmode = false,
-        reg = nil,
+        pre = {
+            view = nil,
+            vmode = false,
+            reg = nil,
+        },
+        post = {
+            view = nil,
+            vmode = false,
+            reg = nil,
+        },
     }
 end
 
 --- @return boolean
-local function is_virtual_mode()
+local function is_vmode()
     local short_mode = string.sub(vim.fn.mode(), 1, 1)
 
     if short_mode == "v" or short_mode == "V" or short_mode == "\22" then
@@ -29,46 +74,10 @@ local function is_virtual_mode()
     end
 end
 
---- @param op_state op_state
---- @return nil
-function M.update_op_state(op_state)
-    op_state.view = vim.fn.winsaveview()
-    op_state.reg = vim.v.register
-    op_state.vmode = is_virtual_mode()
-end
-
---- @param op_state op_state
---- @param cb_state op_state
---- @param motion string
---- @return nil
-function M.update_cb_from_op(op_state, cb_state, motion)
-    cb_state.vmode = op_state.vmode
-    op_state.vmode = false
-
-    if op_state.view then
-        cb_state.view = op_state.view
-
-        if (not cb_state.vmode) and motion == "block" then
-            vim.cmd("norm! gv")
-            cb_state.view.curswant = vim.fn.winsaveview().curswant
-            vim.cmd("norm! \27")
-
-            vim.api.nvim_win_set_cursor(0, { cb_state.view.lnum, cb_state.view.col })
-        end
-    else
-        local old_curswant = cb_state.view.curswant
-
-        cb_state.view = vim.fn.winsaveview()
-        if old_curswant == vim.v.maxcol then
-            cb_state.view.curswant = vim.v.maxcol
-        end
-    end
-
-    op_state.view = nil
-
-    -- NOTE: This will be validated later in reg handler
-    cb_state.reg = op_state.reg or cb_state.reg
-    op_state.reg = nil
+function M.update_op_state_pre(op_state)
+    op_state.pre.view = vim.fn.winsaveview()
+    op_state.pre.reg = vim.v.register
+    op_state.pre.vmode = is_vmode()
 end
 
 --- @class SetupTextLineOpts

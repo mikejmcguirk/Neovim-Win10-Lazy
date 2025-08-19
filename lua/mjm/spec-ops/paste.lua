@@ -1,4 +1,5 @@
 local blk_utils = require("mjm.spec-ops.block-utils")
+local cycle = require("mjm.spec-ops.cycle")
 local get_utils = require("mjm.spec-ops.get-utils")
 local op_utils = require("mjm.spec-ops.op-utils")
 local paste_utils = require("mjm.spec-ops.paste-utils")
@@ -15,8 +16,8 @@ local hl_ns = vim.api.nvim_create_namespace("mjm.spec-ops.paste-highlight") --- 
 local hl_timer = 175 --- @type integer
 
 local reg_handler = nil ---@type fun( ctx: reg_ctx): string[]
-local op_state = op_utils.create_new_op_state() --- @type op_state
-local cb_state = op_utils.create_new_op_state() --- @type op_state
+
+local new_op_state = op_utils.get_new_op_state()
 
 local before = false --- @type boolean
 local force_linewise = false --- @type boolean
@@ -27,7 +28,7 @@ local function paste_norm(opts)
     before = opts.before
     force_linewise = opts.force_linewise
 
-    op_utils.update_op_state(op_state)
+    op_utils.update_op_state_pre(new_op_state)
 
     vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.paste'.paste_norm_callback"
     return "g@l"
@@ -37,7 +38,7 @@ local function paste_visual(opts)
     opts = opts or {}
     yank_old = opts.yank_old
 
-    op_utils.update_op_state(op_state)
+    op_utils.update_op_state_pre(new_op_state)
 
     vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.paste'.paste_visual_callback"
     return "g@"
@@ -85,11 +86,12 @@ end
 
 --- @return nil
 M.paste_norm_callback = function(motion)
-    op_utils.update_cb_from_op(op_state, cb_state, motion)
+    op_utils.update_op_state(new_op_state, motion)
+    local post = new_op_state.post
 
     -- TODO: This is silly right now, but the validation logic will be removed from the state
     -- update
-    local reges = reg_handler({ op = "p", reg = cb_state.reg, vmode = cb_state.vmode })
+    local reges = reg_handler({ op = "p", reg = post.reg, vmode = post.vmode })
     -- TODO: This technically works right now, but is a brittle assumption
     local reg = reges[1]
 
@@ -105,12 +107,13 @@ M.paste_norm_callback = function(motion)
     local start_line = vim.api.nvim_buf_get_lines(0, cur_pos[1] - 1, cur_pos[1], false)[1]
     local on_blank = not start_line:match("%S") --- @type boolean
 
+    local vcount = vim.v.count1
     local marks, err = paste_utils.do_paste({
         regtype = regtype,
         cur_pos = cur_pos,
         before = before,
         text = text,
-        vcount = vim.v.count1,
+        vcount = vcount,
     }) --- @type op_marks|nil, string|nil
 
     if (not marks) or err then
@@ -122,6 +125,19 @@ M.paste_norm_callback = function(motion)
     end
 
     paste_utils.adj_paste_cursor_default({ marks = marks, regtype = regtype })
+    cycle.ingest_state(
+        motion,
+        reg,
+        marks,
+        post.vmode,
+        -- text,
+        vim.api.nvim_get_current_buf(),
+        vim.api.nvim_get_current_win(),
+        before,
+        vcount,
+        --- @diagnostic disable: undefined-field
+        post.view.curswant
+    )
     shared.highlight_text(marks, hl_group, hl_ns, hl_timer, regtype)
 end
 
@@ -132,9 +148,10 @@ local function should_yank(text)
 end
 
 function M.paste_visual_callback(motion)
-    op_utils.update_cb_from_op(op_state, cb_state, motion)
+    op_utils.update_op_state(new_op_state, motion)
+    local post = new_op_state.post
 
-    local marks = utils.get_marks(motion, cb_state.vmode) --- @type op_marks
+    local marks = utils.get_marks(motion, post.vmode) --- @type op_marks
 
     local cur_pos = vim.api.nvim_win_get_cursor(0) --- @type {[1]: integer, [2]:integer}
     --- @type string
@@ -143,14 +160,14 @@ function M.paste_visual_callback(motion)
 
     -- TODO: This is silly right now, but the validation logic will be removed from the state
     -- update
-    local reges = reg_handler({ op = "p", reg = cb_state.reg, vmode = cb_state.vmode })
+    local reges = reg_handler({ op = "p", reg = post.reg, vmode = post.vmode })
     -- TODO: This technically works right now, but is a brittle assumption
     local reg = reges[1]
 
     --- @diagnostic disable: undefined-field
     local yanked, err_y = get_utils.do_get({
         marks = marks,
-        curswant = cb_state.view.curswant,
+        curswant = post.view.curswant,
         motion = motion,
     }) --- @type string[]|nil, string|nil
 
@@ -165,13 +182,14 @@ function M.paste_visual_callback(motion)
         return vim.notify(reg .. " register is empty", vim.log.levels.INFO)
     end
 
-    local curswant = cb_state.view.curswant --- @type integer
+    local curswant = post.view.curswant --- @type integer
 
+    local vcount = vim.v.count1
     local lines = op_utils.setup_text_lines({
         text = text,
         motion = motion,
         regtype = regtype,
-        vcount = vim.v.count1,
+        vcount = vcount,
     })
 
     --- @type op_marks|nil, string|nil
@@ -215,11 +233,24 @@ function M.paste_visual_callback(motion)
                     regcontents = lines,
                     regname = reg,
                     regtype = utils.regtype_from_motion(motion),
-                    visual = cb_state.vmode,
+                    visual = post.vmode,
                 },
             })
         end
     end
+
+    cycle.ingest_state(
+        motion,
+        reg,
+        marks,
+        post.vmode,
+        -- text,
+        vim.api.nvim_get_current_buf(),
+        vim.api.nvim_get_current_win(),
+        before,
+        vcount,
+        post.view.curswant
+    )
 
     shared.highlight_text(post_marks, hl_group, hl_ns, hl_timer, regtype)
 end

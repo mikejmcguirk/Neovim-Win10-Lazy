@@ -9,24 +9,25 @@ local M = {}
 
 local reg_handler = nil ---@type fun( ctx: reg_ctx): string[]
 local op_in_yank = false --- @type boolean
-local op_state = op_utils.create_new_op_state() --- @type op_state
-local cb_state = op_utils.create_new_op_state() --- @type op_state
+local new_op_state = op_utils.get_new_op_state()
+-- local op_state = op_utils.create_new_op_state() --- @type op_state
+-- local cb_state = op_utils.create_new_op_state() --- @type op_state
 
 local function operator()
-    op_utils.update_op_state(op_state)
+    op_utils.update_op_state_pre(new_op_state)
     op_in_yank = true
     vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.yank'.yank_callback"
     return "g@"
 end
 
 local function visual()
-    op_utils.update_op_state(op_state)
+    op_utils.update_op_state_pre(new_op_state)
     vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.yank'.yank_callback"
     return "g@"
 end
 
 local function eol()
-    op_utils.update_op_state(op_state)
+    op_utils.update_op_state_pre(new_op_state)
     vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.yank'.yank_callback"
     return "g@$"
 end
@@ -79,14 +80,15 @@ local hl_timer = 175 --- @type integer
 
 --- @param motion string
 function M.yank_callback(motion)
-    op_utils.update_cb_from_op(op_state, cb_state, motion)
+    op_utils.update_op_state(new_op_state, motion)
+    local post = new_op_state.post
 
-    local marks = utils.get_marks(motion, cb_state.vmode) --- @type op_marks
+    local marks = utils.get_marks(motion, post.vmode) --- @type op_marks
 
     --- @diagnostic disable: undefined-field
     local lines, err = get_utils.do_get({
         marks = marks,
-        curswant = cb_state.view.curswant,
+        curswant = post.view.curswant,
         motion = motion,
     }) --- @type string[]|nil, string|nil
 
@@ -95,11 +97,10 @@ function M.yank_callback(motion)
         return vim.notify("Abandoning yank_callback: " .. err_msg, vim.log.levels.ERROR)
     end
 
-    vim.api.nvim_win_set_cursor(0, { cb_state.view.lnum, cb_state.view.col })
+    vim.api.nvim_win_set_cursor(0, { post.view.lnum, post.view.col })
 
     --- @type string[]
-    local reges =
-        reg_handler({ lines = lines, op = "y", reg = cb_state.reg, vmode = cb_state.vmode })
+    local reges = reg_handler({ lines = lines, op = "y", reg = post.reg, vmode = post.vmode })
 
     if (not reges) or #reges < 1 or vim.tbl_contains(reges, "_") then
         return
@@ -122,7 +123,7 @@ function M.yank_callback(motion)
             regcontents = lines,
             regname = reges[1],
             regtype = utils.regtype_from_motion(motion),
-            visual = cb_state.vmode,
+            visual = post.vmode,
         },
     })
 

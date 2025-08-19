@@ -12,8 +12,7 @@ local hl_ns = vim.api.nvim_create_namespace("mjm.spec-ops.substitute-highlight")
 local hl_timer = 175 --- @type integer
 
 local reg_handler = nil ---@type fun( ctx: reg_ctx): string[]
-local op_state = op_utils.create_new_op_state() --- @type op_state
-local cb_state = op_utils.create_new_op_state() --- @type op_state
+local new_op_state = op_utils.get_new_op_state()
 
 local is_substituting = false --- @type boolean
 local is_after = true --- @type boolean
@@ -30,7 +29,7 @@ local operator_str = "v:lua.require'mjm.spec-ops.substitute'.substitute_callback
 
 local function operator()
     is_substituting = true
-    op_utils.update_op_state(op_state)
+    op_utils.update_op_state_pre(new_op_state)
 
     vim.api.nvim_set_option_value("operatorfunc", operator_str, { scope = "global" })
     return "g@"
@@ -38,14 +37,14 @@ end
 
 local function visual(after)
     is_after = after
-    op_utils.update_op_state(op_state)
+    op_utils.update_op_state_pre(new_op_state)
 
     vim.api.nvim_set_option_value("operatorfunc", operator_str, { scope = "global" })
     return "g@"
 end
 
 local function eol()
-    op_utils.update_op_state(op_state)
+    op_utils.update_op_state_pre(new_op_state)
 
     vim.api.nvim_set_option_value("operatorfunc", operator_str, { scope = "global" })
     return "g@$"
@@ -99,13 +98,14 @@ local function should_reindent(ctx)
 end
 
 function M.substitute_callback(motion)
-    op_utils.update_cb_from_op(op_state, cb_state, motion)
+    op_utils.update_op_state(new_op_state, motion)
+    local post = new_op_state.post
 
-    local marks = utils.get_marks(motion, cb_state.vmode) --- @type op_marks
+    local marks = utils.get_marks(motion, post.vmode) --- @type op_marks
 
     -- TODO: This is silly right now, but the validation logic will be removed from the state
     -- update
-    local reges = reg_handler({ op = "p", reg = cb_state.reg, vmode = cb_state.vmode })
+    local reges = reg_handler({ op = "p", reg = post.reg, vmode = post.vmode })
     -- TODO: This technically works right now, but is a brittle assumption
     local reg = reges[1]
 
@@ -119,7 +119,8 @@ function M.substitute_callback(motion)
         return vim.notify(reg .. " register is empty", vim.log.levels.INFO)
     end
 
-    local curswant = cb_state.view.curswant
+    --- @diagnostic disable: undefined-field
+    local curswant = post.view.curswant
 
     local lines = op_utils.setup_text_lines({
         text = text,
@@ -147,7 +148,7 @@ function M.substitute_callback(motion)
 
     shared.highlight_text(post_marks, hl_group, hl_ns, hl_timer, regtype)
 
-    if cb_state.vmode then
+    if post.vmode then
         if is_after then
             vim.api.nvim_win_set_cursor(0, { post_marks.fin.row, post_marks.fin.col })
             vim.api.nvim_feedkeys("a", "nix!", false)
@@ -156,7 +157,7 @@ function M.substitute_callback(motion)
             vim.api.nvim_feedkeys("i", "nix!", false)
         end
     else
-        vim.api.nvim_win_set_cursor(0, { cb_state.view.lnum, cb_state.view.col })
+        vim.api.nvim_win_set_cursor(0, { post.view.lnum, post.view.col })
     end
 end
 
