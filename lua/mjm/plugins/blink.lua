@@ -46,6 +46,7 @@ local function setup_blink()
         fuzzy = { sorts = { "exact", "score", "sort_text" } },
         keymap = {
             preset = "none",
+            ["<C-e>"] = false, -- Overwrites default <C-e> in cmd mode
             ["<C-p>"] = {
                 function(cmp)
                     cmp.select_prev({ auto_insert = false })
