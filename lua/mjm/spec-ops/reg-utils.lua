@@ -1,24 +1,24 @@
---small delete is normal only
--- use the modulo loop to cycle registers
+local blk_utils = require("mjm.spec-ops.block-utils")
 
 ---------------
 -- Behaviors --
 ---------------
 
--- Default:
---   - Yank to the default unless a register is specified
---   - Also place in reg 0 (or 1, whatever)
---   - Bump reg history
-
 local utils = require("mjm.spec-ops.utils")
 
 local M = {}
 
---- @class reg_ctx
+--- @class reg_handler_ctx
 --- @field lines? string[]
---- @field op string
+--- @field op string "y"|"p"|"d"
 --- @field reg string
 --- @field vmode boolean
+
+--- @class reg_info
+--- @field reg string
+--- @field lines string[]
+--- @field type string
+--- @field vtype string
 
 -- TODO: Weird question - Do we handle reg validity here or in the ops? If you do it here, anyone
 -- who wants to make a custom handler has to do it themselves. But if you don't, then you're
@@ -28,7 +28,7 @@ local M = {}
 -- Same with inlining the delete_cmds table instead of storing it persistently
 -- Same with creating locals for every part of ctx
 
---- @param ctx reg_ctx
+--- @param ctx reg_handler_ctx
 --- @return string[]
 ---  See :h registers
 ---  If ctx.op is "p", will return ctx.reg or a fallback
@@ -59,7 +59,7 @@ function M.default_handler(ctx)
         table.insert(to_overwrite, reg)
     end
 
-    if vim.tbl_contains({ "d", "c" }, ctx.op) and not ctx.vmode then
+    if ctx.op == "d" and not ctx.vmode then
         if #ctx.lines == 1 and reg ~= default_reg then
             -- Known issue: When certain motions are used, the 1 register is written in addition
             -- to the small delete register. That behavior is omitted
@@ -86,7 +86,7 @@ function M.default_handler(ctx)
     end
 end
 
---- @param ctx reg_ctx
+--- @param ctx reg_handler_ctx
 --- @return string[]
 --- Validates ctx.reg, returning either it or a fallback to the default reg
 function M.target_only_handler(ctx)
@@ -99,7 +99,7 @@ function M.target_only_handler(ctx)
     end
 end
 
---- @param ctx reg_ctx
+--- @param ctx reg_handler_ctx
 --- @return string[]
 --- If yanking, changing, or deleting (ctx.op "y", "c", or "d"), write a copy to reg 0,
 --- incrementing the other numbered registers to store history
@@ -141,4 +141,79 @@ function M.get_handler(opt)
     end
 end
 
+local function regtype_from_vtype(vtype)
+    local short_vtype = string.sub(vtype, 1, 1)
+    if short_vtype == "\22" then
+        local width = string.sub(vtype, 2, #vtype)
+        return "b" .. width
+    elseif short_vtype == "V" then
+        return "l"
+    else
+        return "c"
+    end
+end
+
+-- TODO: Need to clamp paste returns to one here
+-- TODO: If we do it this way, try to stay out of doing it as text entirely
+
+--- @param op_state op_state
+--- @return reg_info[]
+--- Returns an empty table if the black hole is passed to it
+function M.get_reg_info(op_state)
+    -- TODO: Remove this. Right now though the other ops depend on the old method
+    local reg_handler_ctx = {
+        lines = op_state.post.lines,
+        op = op_state.pre.op_type,
+        reg = op_state.post.reg,
+        vmode = op_state.post.vmode,
+    }
+    local reges = op_state.pre.reg_handler(reg_handler_ctx) --- @type string[]
+    local r = {} --- @type reg_info[]
+
+    if vim.tbl_contains(reges, "_") then
+        return r
+    end
+
+    for _, reg in pairs(reges) do
+        local reginfo = vim.fn.getreginfo(reg)
+        local lines = reginfo.regcontents
+        local vtype = reginfo.regtype
+        local type = regtype_from_vtype(vtype)
+
+        table.insert(r, { reg = reg, lines = lines, type = type, vtype = vtype })
+    end
+
+    return r
+end
+
+--- @param op_state op_state
+--- @return boolean
+--- This function assumes that, if the black hole register was specified, it will receive an
+--- empty op_state.post.reg_info table
+function M.set_reges(op_state)
+    local reg_info = op_state.post.reg_info or {} --- @type reg_info[]
+    if (not reg_info) or #reg_info < 1 then
+        return false
+    end
+
+    local lines = op_state.post.lines or { "" }
+    local motion = op_state.post.motion or "char"
+
+    local text = table.concat(lines, "\n") .. (motion == "line" and "\n" or "") --- @type string
+    local regtype = (function()
+        if motion == "block" then
+            return "b" .. blk_utils.get_block_reg_width(lines) or nil
+        elseif motion == "line" then
+            return "l"
+        else
+            return "c"
+        end
+    end)()
+
+    for _, reg in pairs(reg_info) do
+        vim.fn.setreg(reg.reg, text, regtype)
+    end
+
+    return true
+end
 return M

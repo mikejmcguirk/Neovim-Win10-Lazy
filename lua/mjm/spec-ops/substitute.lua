@@ -11,8 +11,8 @@ vim.api.nvim_set_hl(0, hl_group, { link = "DiagnosticWarn", default = true })
 local hl_ns = vim.api.nvim_create_namespace("mjm.spec-ops.substitute-highlight") --- @type integer
 local hl_timer = 175 --- @type integer
 
-local reg_handler = nil ---@type fun( ctx: reg_ctx): string[]
-local new_op_state = op_utils.get_new_op_state()
+local reg_handler = nil ---@type fun( ctx: reg_handler_ctx): string[]
+local op_state = op_utils.get_new_op_state() --- @type op_state
 
 local is_substituting = false --- @type boolean
 local is_after = true --- @type boolean
@@ -29,7 +29,7 @@ local operator_str = "v:lua.require'mjm.spec-ops.substitute'.substitute_callback
 
 local function operator()
     is_substituting = true
-    op_utils.update_op_state_pre(new_op_state)
+    op_utils.set_op_state_pre(op_state)
 
     vim.api.nvim_set_option_value("operatorfunc", operator_str, { scope = "global" })
     return "g@"
@@ -37,14 +37,14 @@ end
 
 local function visual(after)
     is_after = after
-    op_utils.update_op_state_pre(new_op_state)
+    op_utils.set_op_state_pre(op_state)
 
     vim.api.nvim_set_option_value("operatorfunc", operator_str, { scope = "global" })
     return "g@"
 end
 
 local function eol()
-    op_utils.update_op_state_pre(new_op_state)
+    op_utils.set_op_state_pre(op_state)
 
     vim.api.nvim_set_option_value("operatorfunc", operator_str, { scope = "global" })
     return "g@$"
@@ -98,8 +98,8 @@ local function should_reindent(ctx)
 end
 
 function M.substitute_callback(motion)
-    op_utils.update_op_state(new_op_state, motion)
-    local post = new_op_state.post
+    op_utils.set_op_state_post(op_state, motion)
+    local post = op_state.post
 
     local marks = utils.get_marks(motion, post.vmode) --- @type op_marks
 

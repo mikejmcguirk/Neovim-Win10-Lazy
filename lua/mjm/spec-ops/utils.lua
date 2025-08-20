@@ -85,6 +85,8 @@ function M.is_valid_register(reg)
     return true, nil
 end
 
+-- TODO: Should be in reg utils
+
 --- @param motion string
 --- @return string
 function M.regtype_from_motion(motion)
@@ -96,6 +98,8 @@ function M.regtype_from_motion(motion)
         return "v"
     end
 end
+
+-- TODO: Should be in reg utils
 
 --- @param regtype string
 --- @return boolean

@@ -1,26 +1,64 @@
 local blk_utils = require("mjm.spec-ops.block-utils")
+local utils = require("mjm.spec-ops.utils")
 
 local M = {}
 
 -- Store register in op_state since vim.v.register is clobbered by some text objects
 
---- @class op_state
+--- @class op_pre
+--- @field data any
+--- @field op_type "y"|"c"|"p"|"d"
 --- @field reg string|nil
+--- @field reg_handler fun( ctx: reg_handler_ctx): string[]
 --- @field view vim.fn.winsaveview.ret
 --- @field vmode boolean
 
---- @class new_op_state
---- @field pre op_state
---- @field post op_state
+--- @class op_post
+--- @field data any
+--- @field lines string[]
+--- @field marks op_marks
+--- @field marks_after op_marks
+--- @field motion string
+--- @field reg string|nil
+--- @field reg_info reg_info[]
+--- @field view vim.fn.winsaveview.ret
+--- @field vmode boolean
 
---- @param op_state new_op_state
+--- @class op_state
+--- @field pre op_pre
+--- @field post op_post
+
+--- @param reg_handler fun( ctx: reg_handler_ctx): string[]
+--- @param op_type "y"|"c"|"p"|"d"
+--- @return op_state
+function M.get_new_op_state(reg_handler, op_type)
+    return {
+        pre = {
+            op_type = op_type,
+            reg = nil,
+            reg_handler = reg_handler,
+            view = nil,
+            vmode = false,
+        },
+        post = {
+            view = nil,
+            vmode = false,
+            reg = nil,
+        },
+    }
+end
+
+--- @param op_state op_state
 --- @return nil
-function M.update_op_state(op_state, motion)
+function M.set_op_state_post(op_state, motion)
     local pre = op_state.pre
     local post = op_state.post
 
     post.vmode = pre.vmode
     pre.vmode = false
+
+    post.motion = motion
+    post.marks = utils.get_marks(post.motion, post.vmode)
 
     if pre.view then
         post.view = pre.view
@@ -45,22 +83,18 @@ function M.update_op_state(op_state, motion)
 
     -- NOTE: This will be validated later in reg handler
     post.reg = pre.reg or post.reg
+    post.reg_info = nil
     pre.reg = nil
 end
 
-function M.get_new_op_state()
-    return {
-        pre = {
-            view = nil,
-            vmode = false,
-            reg = nil,
-        },
-        post = {
-            view = nil,
-            vmode = false,
-            reg = nil,
-        },
-    }
+function M.cleanup_op_state(op_state)
+    op_state.post.lines = nil
+    op_state.post.marks = nil
+    op_state.post.marks_after = nil
+    op_state.post.motion = nil
+    -- Keep reg for dot-repeat
+    -- Keep view for dot repeat
+    -- vmode will take the false value from op_state.pre
 end
 
 --- @return boolean
@@ -74,7 +108,7 @@ local function is_vmode()
     end
 end
 
-function M.update_op_state_pre(op_state)
+function M.set_op_state_pre(op_state)
     op_state.pre.view = vim.fn.winsaveview()
     op_state.pre.reg = vim.v.register
     op_state.pre.vmode = is_vmode()

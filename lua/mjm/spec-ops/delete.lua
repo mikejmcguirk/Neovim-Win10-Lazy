@@ -1,4 +1,3 @@
-local blk_utils = require("mjm.spec-ops.block-utils")
 local del_utils = require("mjm.spec-ops.del-utils")
 local get_utils = require("mjm.spec-ops.get-utils")
 local op_utils = require("mjm.spec-ops.op-utils")
@@ -7,53 +6,53 @@ local utils = require("mjm.spec-ops.utils")
 
 local M = {}
 
-local reg_handler = nil ---@type fun( ctx: reg_ctx): string[]
-local op_state = op_utils.get_new_op_state()
-
-local op_in_del = false --- @type boolean
-
-vim.api.nvim_create_autocmd("ModeChanged", {
-    group = vim.api.nvim_create_augroup("spec-ops_del-flag", { clear = true }),
-    pattern = "no*",
-    callback = function()
-        op_in_del = false
-    end,
-})
+local op_state = nil --- @type op_state
+local is_deleting = false --- @type boolean
+local ofunc = "v:lua.require'mjm.spec-ops.delete'.delete_callback" --- @type string
 
 local function operator()
-    op_utils.update_op_state_pre(op_state)
-    op_in_del = true
-    vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.delete'.delete_callback"
+    op_utils.set_op_state_pre(op_state)
+    is_deleting = true
+    vim.api.nvim_set_option_value("operatorfunc", ofunc, { scope = "global" })
     return "g@"
 end
 
 local function visual()
-    op_utils.update_op_state_pre(op_state)
-    vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.delete'.delete_callback"
+    op_utils.set_op_state_pre(op_state)
+    vim.api.nvim_set_option_value("operatorfunc", ofunc, { scope = "global" })
     return "g@"
 end
 
 local function eol()
-    op_utils.update_op_state_pre(op_state)
-    vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.delete'.delete_callback"
+    op_utils.set_op_state_pre(op_state)
+    vim.api.nvim_set_option_value("operatorfunc", ofunc, { scope = "global" })
     return "g@$"
 end
 
 function M.setup(opts)
     opts = opts or {}
 
-    reg_handler = opts.reg_handler or reg_utils.get_handler()
+    local reg_handler = opts.reg_handler or reg_utils.get_handler()
+    op_state = op_utils.get_new_op_state(reg_handler, "d")
+
+    vim.api.nvim_create_autocmd("ModeChanged", {
+        group = vim.api.nvim_create_augroup("spec-ops_del-flag", { clear = true }),
+        pattern = "no*",
+        callback = function()
+            is_deleting = false
+        end,
+    })
 
     vim.keymap.set("n", "<Plug>(SpecOpsDeleteOperator)", function()
         return operator()
     end, { expr = true })
 
     vim.keymap.set("o", "<Plug>(SpecOpsDeleteLineObject)", function()
-        if not op_in_del then
+        if not is_deleting then
             return "<esc>"
         end
 
-        op_in_del = false
+        is_deleting = false
         return "_" -- dd/yy/cc internal behavior
     end, { expr = true })
 
@@ -72,72 +71,67 @@ function M.setup(opts)
     end, { expr = true })
 end
 
--- TODO: Means that doing "dlp" when starting on a space does not work
+-- TODO: Current "should yank" criteria means dlp does not work on a space
+-- TODO: Very obviously then, the various handlers should all be added to state so they can be
+-- moved around fluidly
 
---- @param text string
+--- @param lines string[]
 --- @return boolean
-local function should_yank(text)
-    return string.match(text, "%S")
+local function should_yank(lines)
+    for _, line in pairs(lines) do
+        if string.match(line, "%S") then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function do_delete()
+    local post = op_state.post
+
+    local err_y = get_utils.do_state_get(op_state) --- @type string|nil
+    if (not post.lines) or err_y then
+        local err = "do_delete: " .. (err_y or "Unknown error at do_get")
+        return vim.notify(err, vim.log.levels.ERROR)
+    end
+
+    local err_d = del_utils.do_del(op_state) --- @type string|nil
+    if err_d then
+        local err = "do_delete: " .. (err_d or "Unknown error at delete callback")
+        return vim.notify(err, vim.log.levels.ERROR)
+    end
+
+    local marks_after = op_state.post.marks_after --- @type op_marks
+    vim.api.nvim_win_set_cursor(0, { marks_after.start.row, marks_after.start.col })
+
+    if not should_yank(post.lines) then
+        return
+    end
+
+    post.reg_info = post.reg_info or reg_utils.get_reg_info(op_state)
+    if not reg_utils.set_reges(op_state) then
+        return
+    end
+
+    vim.api.nvim_exec_autocmds("TextYankPost", {
+        buffer = vim.api.nvim_get_current_buf(),
+        data = {
+            inclusive = true,
+            operator = "d",
+            regcontents = post.lines,
+            regname = post.reg,
+            regtype = utils.regtype_from_motion(post.motion),
+            visual = post.vmode,
+        },
+    })
 end
 
 --- @param motion string
 function M.delete_callback(motion)
-    op_utils.update_op_state(op_state, motion)
-    local post = op_state.post
-
-    local marks = utils.get_marks(motion, post.vmode) --- @type op_marks
-
-    --- @diagnostic disable: undefined-field
-    local yank_lines, err_y = get_utils.do_get({
-        marks = marks,
-        curswant = post.view.curswant,
-        motion = motion,
-    }) --- @type string[]|nil, string|nil
-
-    if (not yank_lines) or err_y then
-        local err_msg = err_y or "Unknown error getting text to yank" --- @type string
-        return vim.notify("delete_callback: " .. err_msg, vim.log.levels.ERROR)
-    end
-
-    local post_marks, err_d = del_utils.do_del({
-        marks = marks,
-        motion = motion,
-        curswant = post.view.curswant,
-        visual = post.vmode,
-    }) --- @type op_marks|nil, string|nil
-
-    if (not post_marks) or err_d then
-        local err_msg = err_d or "Unknown error at delete callback"
-        return vim.notify("delete_callback: " .. err_msg, vim.log.levels.ERROR)
-    end
-
-    vim.api.nvim_win_set_cursor(0, { post_marks.start.row, post_marks.start.col })
-
-    --- @type string[]
-    local reges = reg_handler({ lines = yank_lines, op = "d", reg = post.reg, vmode = post.vmode })
-
-    local text = table.concat(yank_lines, "\n") .. (motion == "line" and "\n" or "")
-    if should_yank(text) and reges and #reges >= 1 and not vim.tbl_contains(reges, "_") then
-        for _, r in pairs(reges) do
-            if motion == "block" then
-                vim.fn.setreg(r, text, "b" .. blk_utils.get_block_reg_width(yank_lines))
-            else
-                vim.fn.setreg(r, text)
-            end
-        end
-
-        vim.api.nvim_exec_autocmds("TextYankPost", {
-            buffer = vim.api.nvim_get_current_buf(),
-            data = {
-                inclusive = true,
-                operator = "y",
-                regcontents = yank_lines,
-                regname = post.reg,
-                regtype = utils.regtype_from_motion(motion),
-                visual = post.vmode,
-            },
-        })
-    end
+    op_utils.set_op_state_post(op_state, motion)
+    do_delete()
+    op_utils.cleanup_op_state(op_state)
 end
 
 return M

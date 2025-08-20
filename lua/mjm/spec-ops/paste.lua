@@ -15,9 +15,8 @@ vim.api.nvim_set_hl(0, hl_group, { link = "Boolean", default = true })
 local hl_ns = vim.api.nvim_create_namespace("mjm.spec-ops.paste-highlight") --- @type integer
 local hl_timer = 175 --- @type integer
 
-local reg_handler = nil ---@type fun( ctx: reg_ctx): string[]
-
-local new_op_state = op_utils.get_new_op_state()
+local reg_handler = nil ---@type fun( ctx: reg_handler_ctx): string[]
+local op_state = op_utils.get_new_op_state() --- @type op_state
 
 local before = false --- @type boolean
 local force_linewise = false --- @type boolean
@@ -28,7 +27,7 @@ local function paste_norm(opts)
     before = opts.before
     force_linewise = opts.force_linewise
 
-    op_utils.update_op_state_pre(new_op_state)
+    op_utils.set_op_state_pre(op_state)
 
     vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.paste'.paste_norm_callback"
     return "g@l"
@@ -38,7 +37,7 @@ local function paste_visual(opts)
     opts = opts or {}
     yank_old = opts.yank_old
 
-    op_utils.update_op_state_pre(new_op_state)
+    op_utils.set_op_state_pre(op_state)
 
     vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.paste'.paste_visual_callback"
     return "g@"
@@ -86,8 +85,8 @@ end
 
 --- @return nil
 M.paste_norm_callback = function(motion)
-    op_utils.update_op_state(new_op_state, motion)
-    local post = new_op_state.post
+    op_utils.set_op_state_post(op_state, motion)
+    local post = op_state.post
 
     -- TODO: This is silly right now, but the validation logic will be removed from the state
     -- update
@@ -148,8 +147,8 @@ local function should_yank(text)
 end
 
 function M.paste_visual_callback(motion)
-    op_utils.update_op_state(new_op_state, motion)
-    local post = new_op_state.post
+    op_utils.set_op_state_post(op_state, motion)
+    local post = op_state.post
 
     local marks = utils.get_marks(motion, post.vmode) --- @type op_marks
 

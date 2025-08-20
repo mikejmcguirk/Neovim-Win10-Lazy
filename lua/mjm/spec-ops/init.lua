@@ -1,19 +1,19 @@
 local reg_utils = require("mjm.spec-ops.reg-utils")
 
 --- @class GlobalConfig
---- @field reg_handler fun( ctx: reg_ctx): string[]
+--- @field reg_handler fun( ctx: reg_handler_ctx): string[]
 
 --- @class GlobalConfigOpts
---- @field reg_handler nil|"default"|"target_only"|"ring"|fun( ctx: reg_ctx): string[]
+--- @field reg_handler nil|"default"|"target_only"|"ring"|fun( ctx: reg_handler_ctx): string[]
 
 --- @class OpConfig
 --- @field enabled boolean
 --- @field setup_fun fun(opts: OpConfig)
---- @field reg_handler nil|fun( ctx: reg_ctx): string[]
+--- @field reg_handler nil|fun( ctx: reg_handler_ctx): string[]
 
 --- @class OpConfigOpts
 --- @field enabled boolean|nil
---- @field reg_handler nil|"default"|"target_only"|"ring"|fun( ctx: reg_ctx): string[]
+--- @field reg_handler nil|"default"|"target_only"|"ring"|fun( ctx: reg_handler_ctx): string[]
 
 --- @class OptsList
 --- @field change OpConfig

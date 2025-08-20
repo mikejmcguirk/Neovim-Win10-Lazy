@@ -7,8 +7,8 @@ local utils = require("mjm.spec-ops.utils")
 
 local M = {}
 
-local reg_handler = nil ---@type fun( ctx: reg_ctx): string[]
-local new_op_state = op_utils.get_new_op_state()
+local reg_handler = nil ---@type fun( ctx: reg_handler_ctx): string[]
+local op_state = op_utils.get_new_op_state() --- @type op_state
 
 local is_changing = false --- @type boolean
 
@@ -21,20 +21,20 @@ vim.api.nvim_create_autocmd("ModeChanged", {
 })
 
 local function operator()
-    op_utils.update_op_state_pre(new_op_state)
+    op_utils.set_op_state_pre(op_state)
     is_changing = true
     vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.change'.change_callback"
     return "g@"
 end
 
 local function visual()
-    op_utils.update_op_state_pre(new_op_state)
+    op_utils.set_op_state_pre(op_state)
     vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.change'.change_callback"
     return "g@"
 end
 
 local function eol()
-    op_utils.update_op_state_pre(new_op_state)
+    op_utils.set_op_state_pre(op_state)
     vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.change'.change_callback"
     return "g@$"
 end
@@ -80,8 +80,8 @@ end
 
 --- @param motion string
 function M.change_callback(motion)
-    op_utils.update_op_state(new_op_state, motion)
-    local post = new_op_state.post
+    op_utils.set_op_state_post(op_state, motion)
+    local post = op_state.post
 
     local marks = utils.get_marks(motion, post.vmode) --- @type op_marks
 
@@ -130,7 +130,7 @@ function M.change_callback(motion)
     end
 
     --- @type string[]
-    local reges = reg_handler({ lines = yank_lines, op = "c", reg = post.reg, vmode = post.vmode })
+    local reges = reg_handler({ lines = yank_lines, op = "d", reg = post.reg, vmode = post.vmode })
 
     local text = table.concat(yank_lines, "\n") .. (motion == "line" and "\n" or "")
     if should_yank(text) and reges and #reges >= 1 and not vim.tbl_contains(reges, "_") then
