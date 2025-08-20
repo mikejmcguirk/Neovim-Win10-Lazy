@@ -76,8 +76,6 @@ vim.keymap.set("c", "<M-f>", "<S-right>")
 -- Insert Mode --
 -----------------
 
--- FUTURE: Re-create these maps in cmd mode as well
-
 -- Bash style typing
 vim.keymap.set("i", "<C-a>", "<C-o>I")
 vim.keymap.set("i", "<C-e>", "<End>")
@@ -92,6 +90,7 @@ vim.keymap.set("i", "<C-f>", "<right>")
 vim.keymap.set("i", "<M-b>", "<S-left>")
 vim.keymap.set("i", "<M-f>", "<S-right>")
 
+-- Since <C-d> is remapped
 vim.keymap.set("i", "<C-m>", "<C-d>")
 vim.keymap.set("i", "<cr>", "<cr>") -- Remove key simplification
 
@@ -102,12 +101,7 @@ vim.keymap.set("i", "<C-p>", "<nop>")
 vim.keymap.set("i", "<M-y>", "<nop>")
 vim.keymap.set("i", "<M-n>", "<nop>")
 vim.keymap.set("i", "<M-p>", "<nop>")
-
-vim.keymap.set("i", "<C-cr>", "<nop>") -- To avoid mistypes while transitioning back
-
---Other stuff
-vim.keymap.set("i", "<M-j>", "<Down>")
-vim.keymap.set("i", "<M-k>", "<Up>")
+vim.keymap.set("i", "<M-s>", "<nop>")
 
 -- M-z is too much like ctrl-z
 -- vim.keymap.set("i", "<M-z>", "<C-o>ze", { silent = true })
@@ -169,7 +163,7 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
             end
         end
 
-        local cmd = buf_wins > 1 and "silent q" or "silent up | bd"
+        local cmd = buf_wins > 1 and "silent up | q" or "silent up | bd"
         local status, result = pcall(function() ---@type boolean, unknown|nil
             vim.cmd(cmd)
         end)
@@ -300,7 +294,7 @@ vim.keymap.set("n", "<tab>", "gt")
 vim.keymap.set("n", "<S-tab>", "gT")
 -- See :h <tab> and https://github.com/neovim/neovim/pull/17932
 -- Note: This also applies to <cr>/<C-m> and <esc>/<C-[>
-vim.keymap.set("n", "<C-i>", "<C-i>")
+vim.keymap.set("n", "<C-i>", "<C-i>") -- Unsimplify mapping
 
 local tab = 10
 for _ = 1, 10 do
@@ -450,215 +444,15 @@ end
 -- TODO: The "backward" mappings seem to have gone missing. Do these need to be re-created? If so,
 -- do them in omode
 
--- TODO: For any d/c mappings in here, use the spec-ops plug mappings
-
 vim.keymap.set({ "n", "x" }, "x", '"_x', { silent = true })
 vim.keymap.set("n", "X", '"_X', { silent = true })
 vim.keymap.set("x", "X", 'ygvV"_d<cmd>put!<cr>=`]', { silent = true })
--- TODO: Should not need the mz here if the spec-ops yank works out
--- vim.keymap.set("x", "X", 'mzygvV"_d<cmd>put!<cr>=`]', { silent = true })
-
--- vim.keymap.set("n", "ss", function()
---     local count = vim.v.count1 - 1
---     -- Use feedkeys so the count is not multiplied implicitly
---     if count > 0 then
---         vim.api.nvim_feedkeys(string.format("V%djP", count), "ni", false)
---     else
---         vim.api.nvim_feedkeys("VP", "ni", false)
---     end
--- end, { silent = true })
-
--- local dc_maps = { "c", "C" }
--- -- local dc_maps = { "d", "c", "D", "C" }
--- for _, map in pairs(dc_maps) do
---     vim.keymap.set({ "n", "x" }, map, function()
---         if (not vim.v.register) or vim.v.register == "" or vim.v.register == '"' then
---             -- If you type ""di, Nvim will see the command as """"di
---             -- This does not seem to cause an issue, but still, limit to only this case
---             return '""' .. map
---         else
---             return map
---         end
---     end, { expr = true })
--- end
-
--- Helix style black hole mappings
--- vim.keymap.set({ "n", "x" }, "<M-d>", '"_d', { silent = true })
--- vim.keymap.set({ "n", "x" }, "<M-c>", '"_c', { silent = true })
--- vim.keymap.set("n", "<M-D>", '"_D', { silent = true })
--- vim.keymap.set("n", "<M-C>", '"_C', { silent = true })
-
--- vim.keymap.set("x", "C", "<nop>")
-
--- vim.api.nvim_create_autocmd("TextChanged", {
---     group = vim.api.nvim_create_augroup("delete_clear", { clear = true }),
---     pattern = "*",
---     callback = function()
---         if vim.v.operator == "d" then
---             vim.cmd("echo ''")
---         end
---     end,
--- })
-
--- vim.api.nvim_create_autocmd("InsertEnter", {
---     group = vim.api.nvim_create_augroup("change_clear", { clear = true }),
---     pattern = "*",
---     callback = function()
---         if vim.v.operator == "c" then
---             vim.cmd("echo ''")
---         end
---     end,
--- })
 
 -- FUTURE: These should remove trailing whitespace from the original line. The == should handle
 -- invalid leading whitespace on the new line
 vim.keymap.set("n", "dJ", "Do<esc>p==", { silent = true })
 vim.keymap.set("n", "dK", "DO<esc>p==", { silent = true })
 vim.keymap.set("n", "dm", "<cmd>delmarks!<cr>")
-
--- Keeping around with the custom yank to move reges after deletes
--- vim.api.nvim_create_autocmd("TextYankPost", {
---     group = vim.api.nvim_create_augroup("yank_cleanup", { clear = true }),
---     callback = function()
--- callback = function(ev)
--- if vim.v.event.operator == "y" then
---     local row, col = unpack(vim.api.nvim_buf_get_mark(ev.buf, "z"))
---     if row and col then
---         local count_lines = vim.api.nvim_buf_line_count(ev.buf)
---         if row > count_lines then
---             row = count_lines
---         end
---         local line_len = #vim.api.nvim_buf_get_lines(ev.buf, row - 1, row, false)[1]
---         if line_len == 0 then
---             col = 0
---         elseif col >= line_len then
---             col = line_len - 1
---         end
-
---         vim.api.nvim_win_set_cursor(vim.api.nvim_get_current_win(), { row, col })
---     end
--- end
--- vim.api.nvim_buf_del_mark(ev.buf, "z")
-
--- Suppress any "X lines yanked" messages
--- vim.cmd("echo ''")
-
--- The below assumes that the default clipboard is unset:
--- All yanks write to unnamed if a register is not specified
--- If the yank command is used, the latest yank also writes to reg 0
--- The latest delete or change also writes to reg 1 or - (:h quote_number)
--- If you delete or change to unnamed explicitly, it will also write to reg 0
---- (the default writes to reg 1 are preserved. Not so with reg -. Acceptable loss)
--- The code below assumes that deletes/changes to unnamed are explicit
--- When explicitly yanking to a register other than unnamed, unnamed is still overwritten
---- (except for the black hole register)
--- To override this, the code below copies back from reg 0
--- When using a yank cmd without specifying a register, vim.v.event.regname shows "
--- When using a delete or change without specifying, regname shows nothing
--- regname will show a register for delete/change if one is specified
--- If yanking to the black hole register with any method, regname will show nothing
--- Therefore, do not copy from reg 0 if regname is '"' or ""
---     if vim.v.event.regname ~= '"' and vim.v.event.regname ~= "" then
---         vim.fn.setreg('"', vim.fn.getreg("0"))
---     end
---     end,
--- })
-
--- Set mark with the API so vim.v.count1 and vim.v.register don't need to be manually added
--- to the return
--- vim.keymap.set({ "n", "x" }, "y", function()
---     set_z_at_cursor()
---     return "y"
--- end, { silent = true, expr = true })
-
--- vim.keymap.set({ "n", "x" }, "<M-y>", function()
---     set_z_at_cursor()
---     return '"+y'
--- end, { silent = true, expr = true })
-
--- -- :h Y-default
--- vim.keymap.set("n", "Y", function()
---     set_z_at_cursor()
---     return "y$"
--- end, { silent = true, expr = true })
-
--- vim.keymap.set("n", "<M-Y>", function()
---     set_z_at_cursor()
---     return '"+y$'
--- end, { silent = true, expr = true })
-
--------------
--- Pasting --
--------------
-
--- NOTE: For now, I have omitted marks to return to original position. This is more consistent
--- with the behavior of other text editors. Can add them back in if it becomes annoying
-
--- NOTE: I had previously added code to the text ftplugin file to not autoformat certain pastes
--- If we see wonky formatting issues again, add an ftdetect here instead to avoid code duplication
-
----@param reg string
----@return boolean
--- local should_format_paste = function(reg)
---     if vim.api.nvim_get_current_line():match("^%s*$") then
---         return true
---     end
---
---     if vim.fn.getregtype(reg or '"') == "V" then
---         return true
---     end
---
---     local cur_mode = vim.api.nvim_get_mode().mode ---@type string
---     if cur_mode == "V" or cur_mode == "Vs" then
---         return true
---     end
---
---     return false
--- end
-
--- local better_norm_pastes = {
---     { "p", nil },
---     { "P", nil },
---     { "<M-p>", "+" },
---     { "<M-P>", "+" },
--- }
-
--- for _, map in pairs(better_norm_pastes) do
---     vim.keymap.set("n", map[1], function()
---         local reg = map[2] or vim.v.register or '"' ---@type string
-
---         ---@type string
---         local paste_cmd = "<cmd>silent norm! " .. vim.v.count1 .. '"' .. reg .. map[1] .. "<cr>"
---         if should_format_paste(reg) then
---             return paste_cmd .. "<cmd>silent norm! mz`[=`]`z<cr>"
---         else
---             return paste_cmd
---         end
---     end, { expr = true, silent = true })
--- end
-
--- Visual pastes do not need any additional contrivances in order to run silently, as they
--- run a delete under the hood, which triggers the TextChanged autocmd for deletes
--- vim.keymap.set("x", "p", function()
---     if should_format_paste(vim.v.register) then
---         return "Pmz<cmd>silent norm! `[=`]`z<cr>"
---     else
---         return "P"
---     end
--- end, { silent = true, expr = true })
-
--- vim.keymap.set("x", "<M-p>", function()
---     if should_format_paste("+") then
---         return '"+Pmz<cmd>silent norm! `[=`]`z<cr>'
---     else
---         return '"+P'
---     end
--- end, { silent = true, expr = true })
-
--- vim.keymap.set("x", "P", "<nop>")
-
--- vim.keymap.set("x", "p", "P")
--- vim.keymap.set("x", "P", "p")
 
 -----------------------
 -- Text Manipulation --
