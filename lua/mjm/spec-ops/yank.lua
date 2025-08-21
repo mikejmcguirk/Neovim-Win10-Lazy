@@ -29,6 +29,24 @@ local function eol()
     return "g@$"
 end
 
+-- Lifted from echasnovski's mini.operators
+-- TODO: Inconsistent behavior. If I do a yank after a delete, it doesn't properly cancel
+-- the Redo, but if I do it after a paste it does
+local cancel_redo = (function()
+    local has_ffi, ffi = pcall(require, "ffi")
+    if not has_ffi then
+        return function() end
+    end
+    local has_cancel_redo = pcall(ffi.cdef, "void CancelRedo(void)")
+    if not has_cancel_redo then
+        return function() end
+    end
+
+    return function()
+        pcall(ffi.C.CancelRedo)
+    end
+end)()
+
 function M.setup(opts)
     opts = opts or {}
 
@@ -100,6 +118,11 @@ local function do_yank()
             visual = op_state.vmode,
         },
     })
+
+    local cpoptions = vim.api.nvim_get_option_value("cpoptions", { scope = "local" })
+    if not cpoptions:find("y") then
+        cancel_redo()
+    end
 
     -- TODO: This should just take op_state as well, but don't want to disrupt other ops at
     -- the moment. You can probably put the highlight info into it as well

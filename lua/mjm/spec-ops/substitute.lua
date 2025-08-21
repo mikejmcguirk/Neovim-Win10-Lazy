@@ -27,6 +27,10 @@ vim.api.nvim_create_autocmd("ModeChanged", {
 
 local operator_str = "v:lua.require'mjm.spec-ops.substitute'.substitute_callback"
 
+-- TODO: If you do sw or sW, shouldn't this mimick cw and cW. The counter is that it might
+-- not properly emulate vwp and vWp, but I'm not sure it's a one-to-one match anyway. This way,
+-- if you're substituting a word, you aren't also eating the whitespace
+
 local function operator()
     is_substituting = true
     op_utils.set_op_state_pre(op_state)

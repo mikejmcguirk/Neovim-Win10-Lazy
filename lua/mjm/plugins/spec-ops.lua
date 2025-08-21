@@ -12,7 +12,7 @@ local function setup_spec_opts()
 
     vim.keymap.set("o", "c", "<Plug>(SpecOpsChangeLineObject)")
     vim.keymap.set("o", "w", "<Plug>(SpecOpsChangeWord)")
-    vim.keymap.set("o", "W", "<Plug>(SpecOpsChangeBigWord)")
+    vim.keymap.set("o", "W", "<Plug>(SpecOpsChangeWORD)")
 
     vim.keymap.set("n", "c", "<Plug>(SpecOpsChangeOperator)")
     vim.keymap.set("n", "C", "<Plug>(SpecOpsChangeEol)")

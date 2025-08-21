@@ -29,6 +29,27 @@ local function eol()
     return "g@$"
 end
 
+-- TODO: Since we need to get the start line here anyway, it should be packed away in op_state
+-- for future use
+
+local function is_at_end_of_cword()
+    local pos = vim.api.nvim_win_get_cursor(0)
+    local col = pos[2] + 1
+    local line = vim.api.nvim_get_current_line()
+    local cur_match = vim.fn.matchstr(line, "\\%" .. col .. "c\\k"):len() > 0
+    local next_match = vim.fn.matchstr(line, "\\%" .. (col + 1) .. "c\\k"):len() > 0
+    return cur_match and not next_match
+end
+
+local function is_at_end_of_cWORD()
+    local pos = vim.api.nvim_win_get_cursor(0)
+    local col = pos[2] + 1
+    local line = vim.api.nvim_get_current_line()
+    local cur_match = vim.fn.matchstr(line, "\\%" .. col .. "c\\S"):len() > 0
+    local next_match = vim.fn.matchstr(line, "\\%" .. (col + 1) .. "c\\S"):len() > 0
+    return cur_match and not next_match
+end
+
 function M.setup(opts)
     opts = opts or {}
 
@@ -56,22 +77,47 @@ function M.setup(opts)
         return "_" -- dd/yy/cc internal behavior
     end, { expr = true })
 
+    -- TODO: Still existing problem case: Because is_changing is not set on dot-repeat, the
+    -- special case logic does not trigger when the motion is re-run. This is acceptable for now
+    -- while I'm still working through the state management
     vim.keymap.set("o", "<Plug>(SpecOpsChangeWord)", function()
-        if not is_changing then
+        local cpoptions = vim.api.nvim_get_option_value("cpoptions", { scope = "local" })
+        if not (is_changing and cpoptions:find("_")) then
             return "w"
         end
 
         is_changing = false
-        return "e"
+
+        if not is_at_end_of_cword() then
+            return "e"
+        end
+
+        -- Somewhat like echasnovski's redraw hack
+        if vim.v.count1 > 1 then
+            return "<esc>g@" .. vim.v.count1 - 1 .. "e"
+        end
+
+        return "l"
     end, { expr = true })
 
-    vim.keymap.set("o", "<Plug>(SpecOpsChangeBigWord)", function()
-        if not is_changing then
+    vim.keymap.set("o", "<Plug>(SpecOpsChangeWORD)", function()
+        local cpoptions = vim.api.nvim_get_option_value("cpoptions", { scope = "local" })
+
+        if not (is_changing and cpoptions:find("_")) then
             return "W"
         end
 
         is_changing = false
-        return "E"
+
+        if not is_at_end_of_cWORD() then
+            return "E"
+        end
+
+        if vim.v.count1 > 1 then
+            return "<esc>g@" .. vim.v.count1 - 1 .. "E"
+        end
+
+        return "l"
     end, { expr = true })
 
     vim.keymap.set(
