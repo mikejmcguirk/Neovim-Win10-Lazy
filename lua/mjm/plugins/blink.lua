@@ -47,6 +47,7 @@ local function setup_blink()
         keymap = {
             preset = "none",
             ["<C-e>"] = false, -- Overwrites default <C-e> in cmd mode
+            ["<C-E>"] = false, -- Overwrites default <C-e> in cmd mode
             ["<C-p>"] = {
                 function(cmp)
                     cmp.select_prev({ auto_insert = false })
