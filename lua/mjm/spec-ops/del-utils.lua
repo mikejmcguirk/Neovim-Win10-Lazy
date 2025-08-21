@@ -1,5 +1,4 @@
 local blk_utils = require("mjm.spec-ops.block-utils")
-local op_utils = require("mjm.spec-ops.op-utils")
 
 local M = {}
 

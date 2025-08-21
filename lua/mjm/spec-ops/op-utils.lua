@@ -3,6 +3,8 @@ local utils = require("mjm.spec-ops.utils")
 
 local M = {}
 
+-- TODO: This should be flatter. Use "pre" for anything done in the operator, then post for
+-- anything after the change/yank happens
 -- Store register in op_state since vim.v.register is clobbered by some text objects
 
 --- @class op_pre
@@ -27,6 +29,8 @@ local M = {}
 --- @class op_state
 --- @field pre op_pre
 --- @field post op_post
+--- @field start_line_post string
+--- @field fin_line_post string
 
 --- @param reg_handler fun( ctx: reg_handler_ctx): string[]
 --- @param op_type "y"|"c"|"p"|"d"
@@ -87,11 +91,14 @@ function M.set_op_state_post(op_state, motion)
     pre.reg = nil
 end
 
+--- @param op_state op_state
 function M.cleanup_op_state(op_state)
     op_state.post.lines = nil
     op_state.post.marks = nil
     op_state.post.marks_after = nil
     op_state.post.motion = nil
+    op_state.start_line_post = nil
+    op_state.fin_line_post = nil
     -- Keep reg for dot-repeat
     -- Keep view for dot repeat
     -- vmode will take the false value from op_state.pre
@@ -272,6 +279,8 @@ end
 --- @field start_byte integer
 --- @field fin_byte_ex integer
 --- @field text string
+--- @field l_vcol integer
+--- @field r_vcol integer
 
 --- @param set_line string|nil
 --- @param l_vcol integer

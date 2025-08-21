@@ -124,7 +124,7 @@ end
 --- The output bytes are zero indexed and end inclusive
 function M.byte_bounds_from_col(line, col)
     if #line <= 1 then
-        return 0, 0
+        return 0, 0, nil
     end
 
     local valid_col, valid_col_err = is_valid_col(line, col) --- @type boolean, string|nil

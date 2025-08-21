@@ -7,42 +7,42 @@ local utils = require("mjm.spec-ops.utils")
 
 local M = {}
 
-local reg_handler = nil ---@type fun( ctx: reg_handler_ctx): string[]
-local op_state = op_utils.get_new_op_state() --- @type op_state
-
+local op_state = nil --- @type op_state
 local is_changing = false --- @type boolean
-
-vim.api.nvim_create_autocmd("ModeChanged", {
-    group = vim.api.nvim_create_augroup("spec-ops_change-flag", { clear = true }),
-    pattern = "no*",
-    callback = function()
-        is_changing = false
-    end,
-})
+local ofunc = "v:lua.require'mjm.spec-ops.change'.change_callback" --- @type string
 
 local function operator()
     op_utils.set_op_state_pre(op_state)
     is_changing = true
-    vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.change'.change_callback"
+    vim.api.nvim_set_option_value("operatorfunc", ofunc, { scope = "global" })
     return "g@"
 end
 
 local function visual()
     op_utils.set_op_state_pre(op_state)
-    vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.change'.change_callback"
+    vim.api.nvim_set_option_value("operatorfunc", ofunc, { scope = "global" })
     return "g@"
 end
 
 local function eol()
     op_utils.set_op_state_pre(op_state)
-    vim.o.operatorfunc = "v:lua.require'mjm.spec-ops.change'.change_callback"
+    vim.api.nvim_set_option_value("operatorfunc", ofunc, { scope = "global" })
     return "g@$"
 end
 
 function M.setup(opts)
     opts = opts or {}
 
-    reg_handler = opts.reg_handler or reg_utils.get_handler()
+    local reg_handler = opts.reg_handler or reg_utils.get_handler()
+    op_state = op_utils.get_new_op_state(reg_handler, "d")
+
+    vim.api.nvim_create_autocmd("ModeChanged", {
+        group = vim.api.nvim_create_augroup("spec-ops_change-flag", { clear = true }),
+        pattern = "no*",
+        callback = function()
+            is_changing = false
+        end,
+    })
 
     vim.keymap.set("n", "<Plug>(SpecOpsChangeOperator)", function()
         return operator()
@@ -72,109 +72,110 @@ function M.setup(opts)
     end, { expr = true })
 end
 
---- @param text string
+--- @param lines string[]
 --- @return boolean
-local function should_yank(text)
-    return string.match(text, "%S")
-end
-
---- @param motion string
-function M.change_callback(motion)
-    op_utils.set_op_state_post(op_state, motion)
-    local post = op_state.post
-
-    local marks = utils.get_marks(motion, post.vmode) --- @type op_marks
-
-    --- @diagnostic disable: undefined-field
-    local yank_lines, err_y = get_utils.do_get({
-        marks = marks,
-        curswant = post.view.curswant,
-        motion = motion,
-    }) --- @type string[]|nil, string|nil
-
-    if (not yank_lines) or err_y then
-        local err_msg = err_y or "Unknown error getting text to yank" --- @type string
-        return vim.notify("change_callback: " .. err_msg, vim.log.levels.ERROR)
-    end
-
-    local insert_after = (function()
-        local buf_lines = vim.api.nvim_buf_get_lines(0, marks.start.row - 1, marks.fin.row, false)
-        local fin_line_len = math.max(#buf_lines[#buf_lines] - 1, 0)
-        if marks.fin.col >= fin_line_len then
+local function should_yank(lines)
+    for _, line in pairs(lines) do
+        if string.match(line, "%S") then
             return true
         end
-
-        if motion ~= "block" then
-            return false
-        end
-
-        for _, l in pairs(buf_lines) do
-            if post.view.curswant >= #l - 1 then
-                return true
-            end
-
-            return false
-        end
-    end)() --- @type boolean
-
-    local post_marks, err_d = change_utils.do_change({
-        marks = marks,
-        motion = motion,
-        curswant = post.view.curswant,
-        visual = post.vmode,
-    }) --- @type op_marks|nil, string|nil
-
-    if (not post_marks) or err_d then
-        local err_msg = err_d or "Unknown error at delete callback"
-        return vim.notify("delete_callback: " .. err_msg, vim.log.levels.ERROR)
     end
 
-    --- @type string[]
-    local reges = reg_handler({ lines = yank_lines, op = "d", reg = post.reg, vmode = post.vmode })
+    return false
+end
 
-    local text = table.concat(yank_lines, "\n") .. (motion == "line" and "\n" or "")
-    if should_yank(text) and reges and #reges >= 1 and not vim.tbl_contains(reges, "_") then
-        for _, r in pairs(reges) do
-            if motion == "block" then
-                vim.fn.setreg(r, text, "b" .. blk_utils.get_block_reg_width(yank_lines))
-            else
-                vim.fn.setreg(r, text)
-            end
+local function do_change()
+    local post = op_state.post
+
+    local err_y = get_utils.do_state_get(op_state) --- @type string|nil
+    if (not post.lines) or err_y then
+        local err = "do_delete: " .. (err_y or "Unknown error at do_get")
+        return vim.notify(err, vim.log.levels.ERROR)
+    end
+
+    local ok, err_c = change_utils.op_state_do_change(op_state) --- @type boolean|nil, string|nil
+    if not ok then
+        local err = "do_delete: " .. (err_c or "Unknown error at delete callback")
+        return vim.notify(err, vim.log.levels.ERROR)
+    end
+
+    local marks_after = op_state.post.marks_after --- @type op_marks
+    vim.api.nvim_win_set_cursor(0, { marks_after.start.row, marks_after.start.col })
+
+    if should_yank(post.lines) then
+        post.reg_info = post.reg_info or reg_utils.get_reg_info(op_state)
+        if not reg_utils.set_reges(op_state) then
+            return
         end
 
+        -- TODO: roll the autocmd up into set_reges
         vim.api.nvim_exec_autocmds("TextYankPost", {
             buffer = vim.api.nvim_get_current_buf(),
             data = {
                 inclusive = true,
-                operator = "y",
-                regcontents = yank_lines,
+                operator = "d",
+                regcontents = post.lines,
                 regname = post.reg,
-                regtype = utils.regtype_from_motion(motion),
+                regtype = utils.regtype_from_motion(post.motion),
                 visual = post.vmode,
             },
         })
     end
 
-    vim.api.nvim_win_set_cursor(0, { post_marks.start.row, post_marks.start.col })
-
-    if motion == "line" then
+    if op_state.post.motion == "line" then
         -- cc both automatically adds indentation and removes it if nothing's typed after
         -- x to run out the typeahead and avoid weird flickering
         -- ! to stay in insert mode
         vim.api.nvim_feedkeys('"_cc', "nix!", false)
-    elseif motion == "block" then
-        if insert_after then
-            vim.api.nvim_feedkeys("`[\22`]A", "nix!", false)
+        return
+    end
+
+    local start_end = (function()
+        if #op_state.start_line_post == 0 then
+            return false
         else
-            vim.api.nvim_feedkeys("`[\22`]I", "nix!", false)
+            local len = vim.fn.strcharlen(op_state.start_line_post)
+            local char_idx =
+                vim.fn.charidx(op_state.start_line_post, op_state.post.marks_after.start.col)
+
+            return char_idx == len - 1
         end
-    else
-        if insert_after then
+    end)()
+
+    if op_state.post.motion == "char" then
+        if start_end then
             vim.cmd("startinsert!")
         else
             vim.cmd("startinsert")
         end
+
+        return
     end
+
+    local fin_end = (function()
+        if #op_state.fin_line_post == 0 then
+            return false
+        else
+            local len = vim.fn.strcharlen(op_state.fin_line_post)
+            local char_idx =
+                vim.fn.charidx(op_state.fin_line_post, op_state.post.marks_after.fin.col)
+
+            return char_idx == len - 1
+        end
+    end)()
+
+    if start_end or fin_end then
+        vim.api.nvim_feedkeys("`[\22`]A", "nix!", false)
+    else
+        vim.api.nvim_feedkeys("`[\22`]I", "nix!", false)
+    end
+end
+
+--- @param motion string
+function M.change_callback(motion)
+    op_utils.set_op_state_post(op_state, motion)
+    do_change()
+    op_utils.cleanup_op_state(op_state)
 end
 
 return M
