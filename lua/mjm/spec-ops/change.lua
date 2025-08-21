@@ -93,7 +93,7 @@ local function do_change()
         return vim.notify(err, vim.log.levels.ERROR)
     end
 
-    local ok, err_c = change_utils.op_state_do_change(op_state) --- @type boolean|nil, string|nil
+    local ok, err_c = change_utils.do_change(op_state) --- @type boolean|nil, string|nil
     if not ok then
         local err = "do_delete: " .. (err_c or "Unknown error at delete callback")
         return vim.notify(err, vim.log.levels.ERROR)
