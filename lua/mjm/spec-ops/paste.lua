@@ -85,7 +85,7 @@ end
 
 --- @return nil
 M.paste_norm_callback = function(motion)
-    op_utils.set_op_state_post(op_state, motion)
+    op_utils.set_op_state_cb(op_state, motion)
     local post = op_state.post
 
     -- TODO: This is silly right now, but the validation logic will be removed from the state
@@ -147,7 +147,7 @@ local function should_yank(text)
 end
 
 function M.paste_visual_callback(motion)
-    op_utils.set_op_state_post(op_state, motion)
+    op_utils.set_op_state_cb(op_state, motion)
     local post = op_state.post
 
     local marks = utils.get_marks(motion, post.vmode) --- @type op_marks

@@ -162,12 +162,12 @@ end
 function M.get_reg_info(op_state)
     -- TODO: Remove this. Right now though the other ops depend on the old method
     local reg_handler_ctx = {
-        lines = op_state.post.lines,
-        op = op_state.pre.op_type,
-        reg = op_state.post.reg,
-        vmode = op_state.post.vmode,
+        lines = op_state.lines,
+        op = op_state.op_type,
+        reg = op_state.vreg,
+        vmode = op_state.vmode,
     }
-    local reges = op_state.pre.reg_handler(reg_handler_ctx) --- @type string[]
+    local reges = op_state.reg_handler(reg_handler_ctx) --- @type string[]
     local r = {} --- @type reg_info[]
 
     if vim.tbl_contains(reges, "_") then
@@ -189,15 +189,15 @@ end
 --- @param op_state op_state
 --- @return boolean
 --- This function assumes that, if the black hole register was specified, it will receive an
---- empty op_state.post.reg_info table
+--- empty op_state.reg_info table
 function M.set_reges(op_state)
-    local reg_info = op_state.post.reg_info or {} --- @type reg_info[]
+    local reg_info = op_state.reg_info or {} --- @type reg_info[]
     if (not reg_info) or #reg_info < 1 then
         return false
     end
 
-    local lines = op_state.post.lines or { "" }
-    local motion = op_state.post.motion or "char"
+    local lines = op_state.lines or { "" }
+    local motion = op_state.motion or "char"
 
     local text = table.concat(lines, "\n") .. (motion == "line" and "\n" or "") --- @type string
     local regtype = (function()

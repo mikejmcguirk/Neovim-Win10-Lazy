@@ -8,10 +8,10 @@ local M = {}
 --- @return string|nil
 --- This function assumes that start_row <= fin_row is already verified
 local function op_state_del_chars(op_state)
-    local start_row = op_state.post.marks.start.row
-    local start_col = op_state.post.marks.start.col
-    local fin_row = op_state.post.marks.fin.row
-    local fin_col = op_state.post.marks.fin.col
+    local start_row = op_state.marks.start.row
+    local start_col = op_state.marks.start.col
+    local fin_row = op_state.marks.fin.row
+    local fin_col = op_state.marks.fin.col
 
     local fin_line = vim.api.nvim_buf_get_lines(0, fin_row - 1, fin_row, false)[1]
 
@@ -28,7 +28,7 @@ local function op_state_del_chars(op_state)
     vim.api.nvim_buf_set_mark(0, "[", start_row, start_col, {})
     vim.api.nvim_buf_set_mark(0, "]", start_row, start_col, {})
 
-    op_state.post.marks_after = {
+    op_state.marks_post = {
         start = { row = start_row, col = start_col },
         fin = { row = start_row, col = start_col },
     }
@@ -40,26 +40,26 @@ end
 ---@return nil|string
 --- This function assumes that start_row <= fin_row is already verified
 local function del_lines(op_state)
-    local start_row = op_state.post.marks.start.row
-    local fin_row = op_state.post.marks.fin.row
+    local start_row = op_state.marks.start.row
+    local fin_row = op_state.marks.fin.row
 
     vim.api.nvim_buf_set_lines(0, start_row - 1, fin_row, false, {})
 
     start_row = math.min(start_row, vim.api.nvim_buf_line_count(0))
     local post_line = vim.api.nvim_buf_get_lines(0, start_row - 1, start_row, false)[1]
     local post_col = (function()
-        if op_state.post.vmode then
+        if op_state.vmode then
             return 0
         else
             local line_len_0 = #post_line > 0 and #post_line - 1 or 0
-            return math.min(line_len_0, op_state.post.view.curswant)
+            return math.min(line_len_0, op_state.view.curswant)
         end
     end)()
 
     vim.api.nvim_buf_set_mark(0, "[", start_row, post_col, {})
     vim.api.nvim_buf_set_mark(0, "]", start_row, post_col, {})
 
-    op_state.post.marks_after = {
+    op_state.marks_post = {
         start = { row = start_row, col = post_col },
         fin = { row = start_row, col = post_col },
     }
@@ -98,7 +98,7 @@ local function get_block_del_row(op_state, line, l_vcol, r_vcol)
     end
 
     local target_r_vcol = math.min(r_vcol, max_vcol) --- @type integer
-    target_r_vcol = op_state.post.view.curswant == vim.v.maxcol and max_vcol or target_r_vcol
+    target_r_vcol = op_state.view.curswant == vim.v.maxcol and max_vcol or target_r_vcol
 
     --- @type integer|nil, integer|nil, string|nil
     local _, this_r_vcol, r_err = blk_utils.vcols_from_vcol(line, target_r_vcol)
@@ -137,7 +137,7 @@ end
 --- @param del_info block_op_info[]
 --- @return nil|string
 local function do_block_del_ops(op_state, del_info)
-    local marks = op_state.post.marks
+    local marks = op_state.marks
 
     local start_row = marks.start.row --- @type integer
     local marks_after = { start = {}, fin = {} } --- @type op_marks
@@ -193,7 +193,7 @@ local function do_block_del_ops(op_state, del_info)
 
     vim.api.nvim_buf_set_mark(0, "[", marks_after.start.row, marks_after.start.col, {})
     vim.api.nvim_buf_set_mark(0, "]", marks_after.fin.row, marks_after.fin.col, {})
-    op_state.post.marks_after = marks_after
+    op_state.marks_post = marks_after
 end
 
 -- TODO: Can certainly be re-generalized, but trying to get the logic specific
@@ -203,7 +203,7 @@ end
 --- first row
 --- This function assumes that start_row <= fin_row is already verified
 local function del_block(op_state)
-    local marks = op_state.post.marks --- @type op_marks
+    local marks = op_state.marks --- @type op_marks
 
     --- @type string[]
     local lines = vim.api.nvim_buf_get_lines(0, marks.start.row - 1, marks.fin.row, false)
@@ -233,26 +233,26 @@ end
 --- @param op_state op_state
 --- @return string|nil
 function M.do_del(op_state)
-    if not op_state.post.marks then
-        op_state.post.lines = nil
+    if not op_state.marks then
+        op_state.lines = nil
         return "do_del: No marks in op_state"
     end
 
-    local start_row = op_state.post.marks.start.row
-    local start_col = op_state.post.marks.start.col
-    local fin_row = op_state.post.marks.fin.row
+    local start_row = op_state.marks.start.row
+    local start_col = op_state.marks.start.col
+    local fin_row = op_state.marks.fin.row
 
     if start_row > fin_row then
         local row_0 = start_row - 1
-        op_state.post.lines = vim.api.nvim_buf_get_text(0, row_0, start_col, row_0, start_col, {})
+        op_state.lines = vim.api.nvim_buf_get_text(0, row_0, start_col, row_0, start_col, {})
         return nil
     end
 
-    op_state.post.motion = op_state.post.motion or "char"
+    op_state.motion = op_state.motion or "char"
 
-    if op_state.post.motion == "line" then
+    if op_state.motion == "line" then
         return del_lines(op_state)
-    elseif op_state.post.motion == "block" then
+    elseif op_state.motion == "block" then
         return del_block(op_state)
     else
         return op_state_del_chars(op_state)

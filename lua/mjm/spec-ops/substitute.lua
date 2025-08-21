@@ -98,7 +98,7 @@ local function should_reindent(ctx)
 end
 
 function M.substitute_callback(motion)
-    op_utils.set_op_state_post(op_state, motion)
+    op_utils.set_op_state_cb(op_state, motion)
     local post = op_state.post
 
     local marks = utils.get_marks(motion, post.vmode) --- @type op_marks

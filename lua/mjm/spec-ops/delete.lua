@@ -88,10 +88,8 @@ local function should_yank(lines)
 end
 
 local function do_delete()
-    local post = op_state.post
-
     local err_y = get_utils.do_state_get(op_state) --- @type string|nil
-    if (not post.lines) or err_y then
+    if (not op_state.lines) or err_y then
         local err = "do_delete: " .. (err_y or "Unknown error at do_get")
         return vim.notify(err, vim.log.levels.ERROR)
     end
@@ -102,14 +100,14 @@ local function do_delete()
         return vim.notify(err, vim.log.levels.ERROR)
     end
 
-    local marks_after = op_state.post.marks_after --- @type op_marks
+    local marks_after = op_state.marks_post --- @type op_marks
     vim.api.nvim_win_set_cursor(0, { marks_after.start.row, marks_after.start.col })
 
-    if not should_yank(post.lines) then
+    if not should_yank(op_state.lines) then
         return
     end
 
-    post.reg_info = post.reg_info or reg_utils.get_reg_info(op_state)
+    op_state.reg_info = op_state.reg_info or reg_utils.get_reg_info(op_state)
     if not reg_utils.set_reges(op_state) then
         return
     end
@@ -119,17 +117,17 @@ local function do_delete()
         data = {
             inclusive = true,
             operator = "d",
-            regcontents = post.lines,
-            regname = post.reg,
-            regtype = utils.regtype_from_motion(post.motion),
-            visual = post.vmode,
+            regcontents = op_state.lines,
+            regname = op_state.vreg,
+            regtype = utils.regtype_from_motion(op_state.motion),
+            visual = op_state.vmode,
         },
     })
 end
 
 --- @param motion string
 function M.delete_callback(motion)
-    op_utils.set_op_state_post(op_state, motion)
+    op_utils.set_op_state_cb(op_state, motion)
     do_delete()
     op_utils.cleanup_op_state(op_state)
 end

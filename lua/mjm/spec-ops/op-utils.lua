@@ -5,100 +5,94 @@ local M = {}
 
 -- TODO: This should be flatter. Use "pre" for anything done in the operator, then post for
 -- anything after the change/yank happens
+-- TODO: Rather than append post lines and post marks directly, there should be an op_data
+-- sub-table that is added on. Preserves the idea of the ops having their own return data
+-- but composes the state into the main state table
 -- Store register in op_state since vim.v.register is clobbered by some text objects
 
---- @class op_pre
---- @field data any
---- @field op_type "y"|"c"|"p"|"d"
---- @field reg string|nil
---- @field reg_handler fun( ctx: reg_handler_ctx): string[]
---- @field view vim.fn.winsaveview.ret
---- @field vmode boolean
-
---- @class op_post
---- @field data any
+--- @class op_state
+--- @field fin_line_post string
 --- @field lines string[]
 --- @field marks op_marks
---- @field marks_after op_marks
+--- @field marks_post op_marks
 --- @field motion string
---- @field reg string|nil
+--- @field op_type "y"|"c"|"p"|"d"
+--- @field reg_handler fun( ctx: reg_handler_ctx): string[]
 --- @field reg_info reg_info[]
---- @field view vim.fn.winsaveview.ret
---- @field vmode boolean
-
---- @class op_state
---- @field pre op_pre
---- @field post op_post
 --- @field start_line_post string
---- @field fin_line_post string
+--- @field view_pre vim.fn.winsaveview.ret
+--- @field view vim.fn.winsaveview.ret
+--- @field vmode_pre boolean
+--- @field vmode boolean
+--- @field vreg_pre string|nil
+--- @field vreg string|nil
 
 --- @param reg_handler fun( ctx: reg_handler_ctx): string[]
 --- @param op_type "y"|"c"|"p"|"d"
 --- @return op_state
 function M.get_new_op_state(reg_handler, op_type)
     return {
-        pre = {
-            op_type = op_type,
-            reg = nil,
-            reg_handler = reg_handler,
-            view = nil,
-            vmode = false,
-        },
-        post = {
-            view = nil,
-            vmode = false,
-            reg = nil,
-        },
+        op_type = op_type,
+        reg_handler = reg_handler,
+        view = nil,
+        view_pre = nil,
+        vmode = false,
+        vmode_pre = false,
+        vreg = nil,
+        vreg_pre = nil,
     }
 end
 
+-- TODO: Address case where, when doing <C-o> Y, the last marks goes to the col after the line
+-- Only seems to happen with $ motion
+-- Pull start and fin lines immediately and check cols for overages
+-- get_marks needs to take op_state so that the lines gotten there can be appended to the table
+
 --- @param op_state op_state
 --- @return nil
-function M.set_op_state_post(op_state, motion)
-    local pre = op_state.pre
-    local post = op_state.post
+--- Modifies op_state in place
+function M.set_op_state_cb(op_state, motion)
+    op_state.vmode = op_state.vmode_pre
+    op_state.vmode = false
 
-    post.vmode = pre.vmode
-    pre.vmode = false
+    op_state.motion = motion
+    op_state.marks = utils.get_marks(op_state.motion, op_state.vmode)
 
-    post.motion = motion
-    post.marks = utils.get_marks(post.motion, post.vmode)
+    if op_state.view_pre then
+        op_state.view = op_state.view_pre
 
-    if pre.view then
-        post.view = pre.view
-
-        if (not post.vmode) and motion == "block" then
+        if (not op_state.vmode) and op_state.motion == "block" then
             vim.cmd("norm! gv")
-            post.view.curswant = vim.fn.winsaveview().curswant
+            op_state.view.curswant = vim.fn.winsaveview().curswant
             vim.cmd("norm! \27")
 
-            vim.api.nvim_win_set_cursor(0, { post.view.lnum, post.view.col })
+            vim.api.nvim_win_set_cursor(0, { op_state.view.lnum, op_state.view.col })
         end
     else
-        local old_curswant = post.view.curswant
+        local old_curswant = op_state.view.curswant
 
-        post.view = vim.fn.winsaveview()
+        op_state.view = vim.fn.winsaveview()
         if old_curswant == vim.v.maxcol then
-            post.view.curswant = vim.v.maxcol
+            op_state.view.curswant = vim.v.maxcol
         end
     end
 
-    pre.view = nil
+    op_state.view_pre = nil
 
     -- NOTE: This will be validated later in reg handler
-    post.reg = pre.reg or post.reg
-    post.reg_info = nil
-    pre.reg = nil
+    op_state.vreg = op_state.vreg_pre or op_state.vreg
+    op_state.reg_info = nil
+    op_state.vreg_pre = nil
 end
 
 --- @param op_state op_state
 function M.cleanup_op_state(op_state)
-    op_state.post.lines = nil
-    op_state.post.marks = nil
-    op_state.post.marks_after = nil
-    op_state.post.motion = nil
-    op_state.start_line_post = nil
     op_state.fin_line_post = nil
+    op_state.lines = nil
+    op_state.marks = nil
+    op_state.marks_post = nil
+    op_state.motion = nil
+    op_state.start_line_post = nil
     -- Keep reg for dot-repeat
     -- Keep view for dot repeat
     -- vmode will take the false value from op_state.pre
@@ -115,10 +109,11 @@ local function is_vmode()
     end
 end
 
+--- @param op_state op_state
 function M.set_op_state_pre(op_state)
-    op_state.pre.view = vim.fn.winsaveview()
-    op_state.pre.reg = vim.v.register
-    op_state.pre.vmode = is_vmode()
+    op_state.view_pre = vim.fn.winsaveview()
+    op_state.vreg_pre = vim.v.register
+    op_state.vmode_pre = is_vmode()
 end
 
 --- @class SetupTextLineOpts

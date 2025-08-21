@@ -28,7 +28,7 @@ local function is_valid_col(line, col)
         return false, err_msg
     end
 
-    if #line > 0 and col >= #line then
+    if col >= #line then
         return false, string.format("is_valid_col: Input col %d >= line length %d", col, #line)
     end
 

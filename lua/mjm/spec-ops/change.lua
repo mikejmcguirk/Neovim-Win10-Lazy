@@ -1,4 +1,3 @@
-local blk_utils = require("mjm.spec-ops.block-utils")
 local change_utils = require("mjm.spec-ops.change-utils")
 local get_utils = require("mjm.spec-ops.get-utils")
 local op_utils = require("mjm.spec-ops.op-utils")
@@ -85,10 +84,8 @@ local function should_yank(lines)
 end
 
 local function do_change()
-    local post = op_state.post
-
     local err_y = get_utils.do_state_get(op_state) --- @type string|nil
-    if (not post.lines) or err_y then
+    if (not op_state.lines) or err_y then
         local err = "do_delete: " .. (err_y or "Unknown error at do_get")
         return vim.notify(err, vim.log.levels.ERROR)
     end
@@ -99,11 +96,11 @@ local function do_change()
         return vim.notify(err, vim.log.levels.ERROR)
     end
 
-    local marks_after = op_state.post.marks_after --- @type op_marks
+    local marks_after = op_state.marks_post --- @type op_marks
     vim.api.nvim_win_set_cursor(0, { marks_after.start.row, marks_after.start.col })
 
-    if should_yank(post.lines) then
-        post.reg_info = post.reg_info or reg_utils.get_reg_info(op_state)
+    if should_yank(op_state.lines) then
+        op_state.reg_info = op_state.reg_info or reg_utils.get_reg_info(op_state)
         if not reg_utils.set_reges(op_state) then
             return
         end
@@ -114,15 +111,15 @@ local function do_change()
             data = {
                 inclusive = true,
                 operator = "d",
-                regcontents = post.lines,
-                regname = post.reg,
-                regtype = utils.regtype_from_motion(post.motion),
-                visual = post.vmode,
+                regcontents = op_state.lines,
+                regname = op_state.vreg,
+                regtype = utils.regtype_from_motion(op_state.motion),
+                visual = op_state.vmode,
             },
         })
     end
 
-    if op_state.post.motion == "line" then
+    if op_state.motion == "line" then
         -- cc both automatically adds indentation and removes it if nothing's typed after
         -- x to run out the typeahead and avoid weird flickering
         -- ! to stay in insert mode
@@ -130,19 +127,22 @@ local function do_change()
         return
     end
 
+    -- TODO: cw inserts past the space. Confirmed this is an issue with how the marks are
+    -- setup initially
+
     local start_end = (function()
         if #op_state.start_line_post == 0 then
             return false
         else
             local len = vim.fn.strcharlen(op_state.start_line_post)
             local char_idx =
-                vim.fn.charidx(op_state.start_line_post, op_state.post.marks_after.start.col)
+                vim.fn.charidx(op_state.start_line_post, op_state.marks_post.start.col)
 
             return char_idx == len - 1
         end
     end)()
 
-    if op_state.post.motion == "char" then
+    if op_state.motion == "char" then
         if start_end then
             vim.cmd("startinsert!")
         else
@@ -157,8 +157,7 @@ local function do_change()
             return false
         else
             local len = vim.fn.strcharlen(op_state.fin_line_post)
-            local char_idx =
-                vim.fn.charidx(op_state.fin_line_post, op_state.post.marks_after.fin.col)
+            local char_idx = vim.fn.charidx(op_state.fin_line_post, op_state.marks_post.fin.col)
 
             return char_idx == len - 1
         end
@@ -173,7 +172,7 @@ end
 
 --- @param motion string
 function M.change_callback(motion)
-    op_utils.set_op_state_post(op_state, motion)
+    op_utils.set_op_state_cb(op_state, motion)
     do_change()
     op_utils.cleanup_op_state(op_state)
 end

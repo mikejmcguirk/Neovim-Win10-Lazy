@@ -77,40 +77,39 @@ local hl_ns = vim.api.nvim_create_namespace("mjm.spec-ops.highlight") --- @type 
 local hl_timer = 175 --- @type integer
 
 local function do_yank()
-    local post = op_state.post
-
     local err = get_utils.do_state_get(op_state) --- @type string|nil
-    if (not post.lines) or err then
+    -- TODO: Should be an ok, err return
+    if (not op_state.lines) or err then
         return vim.notify(err or "Unknown error in do_get", vim.log.levels.ERROR)
     end
 
-    post.reg_info = post.reg_info or reg_utils.get_reg_info(op_state)
+    op_state.reg_info = op_state.reg_info or reg_utils.get_reg_info(op_state)
     if not reg_utils.set_reges(op_state) then
         return
     end
 
-    vim.api.nvim_win_set_cursor(0, { post.view.lnum, post.view.col })
+    vim.api.nvim_win_set_cursor(0, { op_state.view.lnum, op_state.view.col })
     vim.api.nvim_exec_autocmds("TextYankPost", {
         buffer = vim.api.nvim_get_current_buf(),
         data = {
             inclusive = true,
             operator = "y",
-            regcontents = post.lines,
-            regname = post.reg,
-            regtype = utils.regtype_from_motion(post.motion),
-            visual = post.vmode,
+            regcontents = op_state.lines,
+            regname = op_state.vreg,
+            regtype = utils.regtype_from_motion(op_state.motion),
+            visual = op_state.vmode,
         },
     })
 
     -- TODO: This should just take op_state as well, but don't want to disrupt other ops at
-    -- the moment
-    local reg_type = vim.fn.getregtype(post.reg) --- @type string
-    shared.highlight_text(post.marks, hl_group, hl_ns, hl_timer, reg_type)
+    -- the moment. You can probably put the highlight info into it as well
+    local reg_type = vim.fn.getregtype(op_state.vreg) --- @type string
+    shared.highlight_text(op_state.marks, hl_group, hl_ns, hl_timer, reg_type)
 end
 
 --- @param motion string
 function M.yank_callback(motion)
-    op_utils.set_op_state_post(op_state, motion)
+    op_utils.set_op_state_cb(op_state, motion)
     do_yank()
     op_utils.cleanup_op_state(op_state)
 end

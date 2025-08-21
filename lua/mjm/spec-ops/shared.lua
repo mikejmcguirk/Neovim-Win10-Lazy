@@ -34,6 +34,8 @@ local function wrapped_hl_text(marks, group, ns, duration, regtype)
     )
 end
 
+-- TODO: It looks like hl.range uses vim._with to get vi_curswant
+
 --- @param marks op_marks
 --- @param group string
 --- @param ns integer

@@ -29,10 +29,10 @@ end
 ---@return string[]|nil, string|nil
 --- This function assumes that start_row <= fin_row is already verified
 local function op_state_get_chars(op_state)
-    local start_row = op_state.post.marks.start.row
-    local start_col = op_state.post.marks.start.col
-    local fin_row = op_state.post.marks.fin.row
-    local fin_col = op_state.post.marks.fin.col
+    local start_row = op_state.marks.start.row
+    local start_col = op_state.marks.start.col
+    local fin_row = op_state.marks.fin.row
+    local fin_col = op_state.marks.fin.col
 
     local fin_line = vim.api.nvim_buf_get_lines(0, fin_row - 1, fin_row, false)[1]
     local _, fin_byte, err = blk_utils.byte_bounds_from_col(fin_line, fin_col)
@@ -62,8 +62,8 @@ end
 ---@return string[]|nil, string|nil
 --- This function assumes that start_row <= fin_row is already verified
 local function op_state_get_lines(op_state)
-    local start_row = op_state.post.marks.start.row
-    local fin_row = op_state.post.marks.fin.row
+    local start_row = op_state.marks.start.row
+    local fin_row = op_state.marks.fin.row
 
     local fin_line = vim.api.nvim_buf_get_lines(0, fin_row - 1, fin_row, false)[1]
     return vim.api.nvim_buf_get_text(0, start_row - 1, 0, fin_row - 1, #fin_line, {}), nil
@@ -205,11 +205,11 @@ end
 --- This function assumes that the marks are already sorted so the start mark is on the
 --- first row
 local function op_state_get_block(op_state)
-    local start_row = op_state.post.marks.start.row
-    local fin_row = op_state.post.marks.fin.row
+    local start_row = op_state.marks.start.row
+    local fin_row = op_state.marks.fin.row
     local lines = vim.api.nvim_buf_get_lines(0, start_row - 1, fin_row, false)
 
-    local l_vcol, r_vcol, vcol_err = blk_utils.vcols_from_marks(lines, op_state.post.marks)
+    local l_vcol, r_vcol, vcol_err = blk_utils.vcols_from_marks(lines, op_state.marks)
     if (not l_vcol) or not r_vcol or vcol_err then
         return nil, "get_block: " .. (vcol_err or "Unknown error in vcols_from_marks")
     end
@@ -247,26 +247,26 @@ end
 --- @param op_state op_state
 --- @return string|nil
 function M.do_state_get(op_state)
-    if not op_state.post.marks then
-        op_state.post.lines = nil
+    if not op_state.marks then
+        op_state.lines = nil
         return "do_get: No marks in op_state"
     end
 
-    local start_row = op_state.post.marks.start.row
-    local start_col = op_state.post.marks.start.col
-    local fin_row = op_state.post.marks.fin.row
+    local start_row = op_state.marks.start.row
+    local start_col = op_state.marks.start.col
+    local fin_row = op_state.marks.fin.row
 
     if start_row > fin_row then
         local row_0 = start_row - 1
-        op_state.post.lines = vim.api.nvim_buf_get_text(0, row_0, start_col, row_0, start_col, {})
+        op_state.lines = vim.api.nvim_buf_get_text(0, row_0, start_col, row_0, start_col, {})
         return nil
     end
 
-    op_state.post.motion = op_state.post.motion or "char"
+    op_state.motion = op_state.motion or "char"
     local lines, err = (function()
-        if op_state.post.motion == "line" then
+        if op_state.motion == "line" then
             return op_state_get_lines(op_state)
-        elseif op_state.post.motion == "block" then
+        elseif op_state.motion == "block" then
             return op_state_get_block(op_state)
         else
             return op_state_get_chars(op_state)
@@ -274,7 +274,7 @@ function M.do_state_get(op_state)
     end)()
 
     -- TODO: Unsure of how to handle the typing here
-    op_state.post.lines = lines
+    op_state.lines = lines
     return err
 end
 
