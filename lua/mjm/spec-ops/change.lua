@@ -56,6 +56,24 @@ function M.setup(opts)
         return "_" -- dd/yy/cc internal behavior
     end, { expr = true })
 
+    vim.keymap.set("o", "<Plug>(SpecOpsChangeWord)", function()
+        if not is_changing then
+            return "w"
+        end
+
+        is_changing = false
+        return "e"
+    end, { expr = true })
+
+    vim.keymap.set("o", "<Plug>(SpecOpsChangeBigWord)", function()
+        if not is_changing then
+            return "W"
+        end
+
+        is_changing = false
+        return "E"
+    end, { expr = true })
+
     vim.keymap.set(
         "n",
         "<Plug>(SpecOpsChangeLine)",
