@@ -10,35 +10,35 @@ local function setup_spec_opts()
     -- Change --
     ------------
 
-    vim.keymap.set("o", "c", "<Plug>(SpecOpsChangeLineObject)")
-
-    vim.keymap.set("n", "c", "<Plug>(SpecOpsChangeOperator)")
-    vim.keymap.set("n", "C", "<Plug>(SpecOpsChangeEol)")
-
-    vim.keymap.set("n", "<M-c>", '"_<Plug>(SpecOpsChangeOperator)')
-    vim.keymap.set("n", "<M-C>", '"_<Plug>(SpecOpsChangeEol)')
-
-    vim.keymap.set("x", "c", "<Plug>(SpecOpsChangeVisual)")
-    vim.keymap.set("x", "C", "<nop>")
-
-    vim.keymap.set("x", "<M-c>", '"_<Plug>(SpecOpsChangeVisual)')
+    -- vim.keymap.set("o", "c", "<Plug>(SpecOpsChangeLineObject)")
+    --
+    -- vim.keymap.set("n", "c", "<Plug>(SpecOpsChangeOperator)")
+    -- vim.keymap.set("n", "C", "<Plug>(SpecOpsChangeEol)")
+    --
+    -- vim.keymap.set("n", "<M-c>", '"_<Plug>(SpecOpsChangeOperator)')
+    -- vim.keymap.set("n", "<M-C>", '"_<Plug>(SpecOpsChangeEol)')
+    --
+    -- vim.keymap.set("x", "c", "<Plug>(SpecOpsChangeVisual)")
+    -- vim.keymap.set("x", "C", "<nop>")
+    --
+    -- vim.keymap.set("x", "<M-c>", '"_<Plug>(SpecOpsChangeVisual)')
 
     ------------
     -- Delete --
     ------------
 
-    vim.keymap.set("o", "d", "<Plug>(SpecOpsDeleteLineObject)")
-
-    vim.keymap.set("n", "d", "<Plug>(SpecOpsDeleteOperator)")
-    vim.keymap.set("n", "D", "<Plug>(SpecOpsDeleteEol)")
-
-    vim.keymap.set("n", "<M-d>", '"_<Plug>(SpecOpsDeleteOperator)')
-    vim.keymap.set("n", "<M-D>", '"_<Plug>(SpecOpsDeleteEol)')
-
-    vim.keymap.set("x", "d", "<Plug>(SpecOpsDeleteVisual)")
-    vim.keymap.set("x", "D", "<nop>")
-
-    vim.keymap.set("x", "<M-d>", '"_<Plug>(SpecOpsDeleteVisual)')
+    -- vim.keymap.set("o", "d", "<Plug>(SpecOpsDeleteLineObject)")
+    --
+    -- vim.keymap.set("n", "d", "<Plug>(SpecOpsDeleteOperator)")
+    -- vim.keymap.set("n", "D", "<Plug>(SpecOpsDeleteEol)")
+    --
+    -- vim.keymap.set("n", "<M-d>", '"_<Plug>(SpecOpsDeleteOperator)')
+    -- vim.keymap.set("n", "<M-D>", '"_<Plug>(SpecOpsDeleteEol)')
+    --
+    -- vim.keymap.set("x", "d", "<Plug>(SpecOpsDeleteVisual)")
+    -- vim.keymap.set("x", "D", "<nop>")
+    --
+    -- vim.keymap.set("x", "<M-d>", '"_<Plug>(SpecOpsDeleteVisual)')
 
     ----------------
     -- Substitute --
