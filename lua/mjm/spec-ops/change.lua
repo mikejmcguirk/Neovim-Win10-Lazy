@@ -127,8 +127,8 @@ local function do_change()
         return
     end
 
-    -- TODO: cw inserts past the space. Confirmed this is an issue with how the marks are
-    -- setup initially
+    -- TODO: :h cw - Re-create this behavior
+    -- cpoptions _ is what makes it happen
 
     local start_end = (function()
         if #op_state.start_line_post == 0 then
