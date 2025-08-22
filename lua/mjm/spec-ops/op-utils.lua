@@ -11,7 +11,11 @@ local M = {}
 -- Store register in op_state since vim.v.register is clobbered by some text objects
 
 --- @class op_state
+--- @field fin_line_pre string
 --- @field fin_line_post string
+--- @field hl_group string
+--- @field hl_ns integer
+--- @field hl_timeout integer
 --- @field lines string[]
 --- @field marks op_marks
 --- @field marks_post op_marks
@@ -19,6 +23,7 @@ local M = {}
 --- @field op_type "y"|"c"|"p"|"d"
 --- @field reg_handler fun( ctx: reg_handler_ctx): string[]
 --- @field reg_info reg_info[]
+--- @field start_line_pre string
 --- @field start_line_post string
 --- @field view_pre vim.fn.winsaveview.ret
 --- @field view vim.fn.winsaveview.ret
@@ -27,11 +32,21 @@ local M = {}
 --- @field vreg_pre string|nil
 --- @field vreg string|nil
 
+-- TODO: The op_state args are going to get too big
+-- A table should be used to pass the values in. The class fields can be labelled with question
+-- marks or not based on what's optional. hl info should not flag as a missing field, op_type
+-- should, though we should have whatever fallback behavior we can
+-- This will be useful for making more explicit what partgs of the opts table "seed" it vs.
+-- which ones are determined as the process is run
+
 --- @param reg_handler fun( ctx: reg_handler_ctx): string[]
 --- @param op_type "y"|"c"|"p"|"d"
 --- @return op_state
-function M.get_new_op_state(reg_handler, op_type)
+function M.get_new_op_state(hl_group, hl_ns, hl_timeout, reg_handler, op_type)
     return {
+        hl_group = hl_group or nil,
+        hl_ns = hl_ns or nil,
+        hl_timeout = hl_timeout or nil,
         op_type = op_type,
         reg_handler = reg_handler,
         view = nil,
@@ -57,6 +72,17 @@ function M.set_op_state_cb(op_state, motion)
 
     op_state.motion = motion
     op_state.marks = utils.get_marks(op_state.motion, op_state.vmode)
+    local marks = op_state.marks
+    local start_row = marks.start.row
+    local fin_row = marks.fin.row
+
+    if not op_state.start_line_pre then
+        op_state.start_line_pre = vim.api.nvim_buf_get_lines(0, start_row - 1, start_row, false)[1]
+    end
+
+    if not op_state.fin_line_pre then
+        op_state.fin_line_pre = vim.api.nvim_buf_get_lines(0, fin_row - 1, fin_row, false)[1]
+    end
 
     if op_state.view_pre then
         op_state.view = op_state.view_pre
@@ -87,11 +113,13 @@ end
 
 --- @param op_state op_state
 function M.cleanup_op_state(op_state)
+    op_state.fin_line_pre = nil
     op_state.fin_line_post = nil
     op_state.lines = nil
     op_state.marks = nil
     op_state.marks_post = nil
     op_state.motion = nil
+    op_state.start_line_pre = nil
     op_state.start_line_post = nil
     -- Keep reg for dot-repeat
     -- Keep view for dot repeat

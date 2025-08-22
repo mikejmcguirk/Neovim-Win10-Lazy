@@ -230,6 +230,8 @@ local function del_block(op_state)
     return do_block_del_ops(op_state, del_info)
 end
 
+-- TODO: needs to be ok, err pattern
+
 --- @param op_state op_state
 --- @return string|nil
 function M.do_del(op_state)
@@ -244,7 +246,7 @@ function M.do_del(op_state)
 
     if start_row > fin_row then
         local row_0 = start_row - 1
-        op_state.lines = vim.api.nvim_buf_get_text(0, row_0, start_col, row_0, start_col, {})
+        vim.api.nvim_buf_set_text(0, row_0, start_col, row_0, start_col, {})
         return nil
     end
 

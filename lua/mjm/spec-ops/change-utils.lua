@@ -294,8 +294,8 @@ function M.do_change(op_state)
 
     if start_row > fin_row then
         local row_0 = start_row - 1
-        op_state.lines = vim.api.nvim_buf_get_text(0, row_0, start_col, row_0, start_col, {})
-        return nil
+        vim.api.nvim_buf_set_text(0, row_0, start_col, row_0, start_col, {})
+        return true, nil
     end
 
     op_state.motion = op_state.motion or "char"

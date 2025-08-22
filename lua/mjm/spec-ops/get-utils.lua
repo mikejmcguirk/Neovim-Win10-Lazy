@@ -245,11 +245,11 @@ end
 
 -- TODO: Obviously rename this when done
 --- @param op_state op_state
---- @return string|nil
+--- @return boolean|nil, nil|string
 function M.do_state_get(op_state)
     if not op_state.marks then
         op_state.lines = nil
-        return "do_get: No marks in op_state"
+        return nil, "do_get: No marks in op_state"
     end
 
     local start_row = op_state.marks.start.row
@@ -273,9 +273,14 @@ function M.do_state_get(op_state)
         end
     end)()
 
+    if (not lines) or err then
+        return nil, "do_get: " .. (err or "Unknown error in sub-function")
+    end
+
     -- TODO: Unsure of how to handle the typing here
     op_state.lines = lines
-    return err
+    op_state.marks_post = op_state.marks
+    return true, nil
 end
 
 return M

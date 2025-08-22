@@ -76,6 +76,8 @@ vim.keymap.set("c", "<M-f>", "<S-right>")
 -- Insert Mode --
 -----------------
 
+-- TODO: Does one-shot insert mode really not work on zero length lines? Never seen before
+
 -- Bash style typing
 vim.keymap.set("i", "<C-a>", "<C-o>I")
 vim.keymap.set("i", "<C-e>", "<End>")

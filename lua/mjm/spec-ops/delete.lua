@@ -33,7 +33,7 @@ function M.setup(opts)
     opts = opts or {}
 
     local reg_handler = opts.reg_handler or reg_utils.get_handler()
-    op_state = op_utils.get_new_op_state(reg_handler, "d")
+    op_state = op_utils.get_new_op_state(nil, nil, nil, reg_handler, "d")
 
     vim.api.nvim_create_autocmd("ModeChanged", {
         group = vim.api.nvim_create_augroup("spec-ops_del-flag", { clear = true }),
@@ -88,10 +88,9 @@ local function should_yank(lines)
 end
 
 local function do_delete()
-    local err_y = get_utils.do_state_get(op_state) --- @type string|nil
-    if (not op_state.lines) or err_y then
-        local err = "do_delete: " .. (err_y or "Unknown error at do_get")
-        return vim.notify(err, vim.log.levels.ERROR)
+    local ok_y, err_y = get_utils.do_state_get(op_state) --- @type boolean|nil, nil|string
+    if (not ok_y) or err_y then
+        return vim.notify(err_y or "Unknown error in do_get", vim.log.levels.ERROR)
     end
 
     local err_d = del_utils.do_del(op_state) --- @type string|nil
@@ -100,8 +99,8 @@ local function do_delete()
         return vim.notify(err, vim.log.levels.ERROR)
     end
 
-    local marks_after = op_state.marks_post --- @type op_marks
-    vim.api.nvim_win_set_cursor(0, { marks_after.start.row, marks_after.start.col })
+    local marks_post = op_state.marks_post --- @type op_marks
+    vim.api.nvim_win_set_cursor(0, { marks_post.start.row, marks_post.start.col })
 
     if not should_yank(op_state.lines) then
         return

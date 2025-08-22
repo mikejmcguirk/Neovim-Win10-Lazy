@@ -7,8 +7,11 @@ local utils = require("mjm.spec-ops.utils")
 local M = {}
 
 local is_yanking = false --- @type boolean
-local op_state = nil --- @type op_state
 local ofunc = "v:lua.require'mjm.spec-ops.yank'.yank_callback"
+local op_state = nil --- @type op_state
+
+-- TODO: cw/cW behavior would actually work here. Do in Substitute first though so we can see how
+-- the generalization builds out. Needs to be a configurable flag on setup
 
 local function operator()
     is_yanking = true
@@ -32,26 +35,19 @@ end
 -- Lifted from echasnovski's mini.operators
 -- TODO: Inconsistent behavior. If I do a yank after a delete, it doesn't properly cancel
 -- the Redo, but if I do it after a paste it does
-local cancel_redo = (function()
-    local has_ffi, ffi = pcall(require, "ffi")
-    if not has_ffi then
-        return function() end
-    end
-    local has_cancel_redo = pcall(ffi.cdef, "void CancelRedo(void)")
-    if not has_cancel_redo then
-        return function() end
-    end
-
-    return function()
-        pcall(ffi.C.CancelRedo)
-    end
-end)()
-
+-- I also notice that, if I do the cancel after a default delete, it works, but not if I do it
+-- after a spec-ops delete
 function M.setup(opts)
     opts = opts or {}
 
     local reg_handler = opts.reg_handler or reg_utils.get_handler()
-    op_state = op_utils.get_new_op_state(reg_handler, "y")
+
+    local hl_group = "SpecOpsYank" --- @type string
+    vim.api.nvim_set_hl(0, hl_group, { link = "IncSearch", default = true })
+    local hl_ns = vim.api.nvim_create_namespace("mjm.spec-ops.highlight") --- @type integer
+    local hl_timeout = 175 --- @type integer
+
+    op_state = op_utils.get_new_op_state(hl_group, hl_ns, hl_timeout, reg_handler, "y")
 
     vim.api.nvim_create_autocmd("ModeChanged", {
         group = vim.api.nvim_create_augroup("spec-ops_yank-flag", { clear = true }),
@@ -89,24 +85,40 @@ function M.setup(opts)
     end, { expr = true })
 end
 
-local hl_group = "SpecOpsYank" --- @type string
-vim.api.nvim_set_hl(0, hl_group, { link = "IncSearch", default = true })
-local hl_ns = vim.api.nvim_create_namespace("mjm.spec-ops.highlight") --- @type integer
-local hl_timer = 175 --- @type integer
+local cancel_redo = (function()
+    local has_ffi, ffi = pcall(require, "ffi")
+    if not has_ffi then
+        return function() end
+    end
+    local has_cancel_redo = pcall(ffi.cdef, "void CancelRedo(void)")
+    if not has_cancel_redo then
+        return function() end
+    end
+
+    return function()
+        pcall(ffi.C.CancelRedo)
+    end
+end)()
 
 local function do_yank()
-    local err = get_utils.do_state_get(op_state) --- @type string|nil
-    -- TODO: Should be an ok, err return
-    if (not op_state.lines) or err then
+    vim.api.nvim_win_set_cursor(0, { op_state.view.lnum, op_state.view.col })
+
+    local ok, err = get_utils.do_state_get(op_state) --- @type boolean|nil, nil|string
+    if (not ok) or err then
         return vim.notify(err or "Unknown error in do_get", vim.log.levels.ERROR)
     end
 
+    -- TODO: Good example of something that should be made explicit. We can see, obviously, that
+    -- we only get new reg_info if the current one is nil, but then it's like, where is that set?
+    -- Better to have a flag, because then you can gd and find where it's set
+    -- And then also put TextYankPost in here. The flag to fire it or not then needs to be
+    -- included in op_state
+    -- Do that and the TextYankPost flag after change is updated
     op_state.reg_info = op_state.reg_info or reg_utils.get_reg_info(op_state)
     if not reg_utils.set_reges(op_state) then
         return
     end
 
-    vim.api.nvim_win_set_cursor(0, { op_state.view.lnum, op_state.view.col })
     vim.api.nvim_exec_autocmds("TextYankPost", {
         buffer = vim.api.nvim_get_current_buf(),
         data = {
@@ -124,10 +136,7 @@ local function do_yank()
         cancel_redo()
     end
 
-    -- TODO: This should just take op_state as well, but don't want to disrupt other ops at
-    -- the moment. You can probably put the highlight info into it as well
-    local reg_type = vim.fn.getregtype(op_state.vreg) --- @type string
-    shared.highlight_text(op_state.marks, hl_group, hl_ns, hl_timer, reg_type)
+    shared.highlight_text(op_state)
 end
 
 --- @param motion string
