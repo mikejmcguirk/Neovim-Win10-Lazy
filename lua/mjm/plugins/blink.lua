@@ -3,6 +3,7 @@ vim.cmd.packadd({ vim.fn.escape("blink.compat", " "), bang = true, magic = { fil
 
 local ut = require("mjm.utils")
 
+-- TODO: blink's plugin dir does this automatically. Still needed?
 local blink = require("blink.cmp")
 vim.lsp.config("*", { capabilities = require("blink.cmp").get_lsp_capabilities(nil, true) })
 
