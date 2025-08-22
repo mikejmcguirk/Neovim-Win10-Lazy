@@ -71,6 +71,8 @@ function M.set_op_state_cb(op_state, motion)
     op_state.vmode = false
 
     op_state.motion = motion
+
+    -- TODO: This should just take op_state, but holding to not break stuff
     op_state.marks = utils.get_marks(op_state.motion, op_state.vmode)
     local marks = op_state.marks
     local start_row = marks.start.row

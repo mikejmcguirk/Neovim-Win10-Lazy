@@ -208,7 +208,7 @@ local function do_change()
         -- Assuming that more non-keywords want to insert before than after
         -- MAYBE: Could add "_" for users that remove it. But I'd prefer to add exceptions based on
         -- default behavior or real-world use-cases
-        elseif vim.tbl_contains({ "." }, start_char_post) then
+        elseif vim.tbl_contains({ ".", " " }, start_char_post) then
             return true
         else
             return false
