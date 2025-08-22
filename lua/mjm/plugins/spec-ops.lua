@@ -1,3 +1,6 @@
+-- https://github.com/mikejmcguirk/spec-ops
+vim.cmd.packadd({ vim.fn.escape("spec-ops", " "), bang = true, magic = { file = false } })
+
 local function setup_spec_opts()
     --- @type SpecOpsConfigOpts
     -- local opts = {
@@ -5,7 +8,7 @@ local function setup_spec_opts()
     -- }
     --
     -- require("mjm.spec-ops").setup(opts)
-    require("mjm.spec-ops").setup({})
+    require("spec-ops").setup({})
 
     ------------
     -- Change --

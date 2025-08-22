@@ -55,6 +55,8 @@ require("mjm.plugins.fugitive")
 -- Due to extra keymapping issue. Added to RTP, but setup lazily
 require("mjm.plugins.nvim-surround")
 
+require("mjm.plugins.spec-ops")
+
 local eager_loaded = vim.loop.hrtime()
 
 ------------------------------
@@ -70,11 +72,11 @@ require("mjm.autocmd")
 require("mjm.lsp")
 require("mjm.stl")
 require("mjm.tal")
-require("mjm.spec-ops.change")
-require("mjm.spec-ops.delete")
-require("mjm.spec-ops.paste")
-require("mjm.spec-ops.substitute")
-require("mjm.spec-ops.yank")
+-- require("mjm.spec-ops.change")
+-- require("mjm.spec-ops.delete")
+-- require("mjm.spec-ops.paste")
+-- require("mjm.spec-ops.substitute")
+-- require("mjm.spec-ops.yank")
 
 local config_set = vim.loop.hrtime()
 
@@ -92,7 +94,6 @@ require("mjm.plugins.indent_highlight")
 require("mjm.plugins.lazydev")
 require("mjm.plugins.obsidian")
 require("mjm.plugins.quickscope")
-require("mjm.plugins.spec-ops")
 require("mjm.plugins.ts-autotag")
 require("mjm.plugins.undotree")
 require("mjm.plugins.zen")
