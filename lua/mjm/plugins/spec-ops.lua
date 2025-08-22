@@ -10,20 +10,20 @@ local function setup_spec_opts()
     -- Change --
     ------------
 
-    -- vim.keymap.set("o", "c", "<Plug>(SpecOpsChangeLineObject)")
-    -- vim.keymap.set("o", "w", "<Plug>(SpecOpsChangeWord)")
-    -- vim.keymap.set("o", "W", "<Plug>(SpecOpsChangeWORD)")
-    --
-    -- vim.keymap.set("n", "c", "<Plug>(SpecOpsChangeOperator)")
-    -- vim.keymap.set("n", "C", "<Plug>(SpecOpsChangeEol)")
-    --
-    -- vim.keymap.set("n", "<M-c>", '"_<Plug>(SpecOpsChangeOperator)')
-    -- vim.keymap.set("n", "<M-C>", '"_<Plug>(SpecOpsChangeEol)')
-    --
-    -- vim.keymap.set("x", "c", "<Plug>(SpecOpsChangeVisual)")
-    -- vim.keymap.set("x", "C", "<nop>")
-    --
-    -- vim.keymap.set("x", "<M-c>", '"_<Plug>(SpecOpsChangeVisual)')
+    vim.keymap.set("o", "c", "<Plug>(SpecOpsChangeLineObject)")
+    vim.keymap.set("o", "w", "<Plug>(SpecOpsChangeWord)")
+    vim.keymap.set("o", "W", "<Plug>(SpecOpsChangeWORD)")
+
+    vim.keymap.set("n", "c", "<Plug>(SpecOpsChangeOperator)")
+    vim.keymap.set("n", "C", "<Plug>(SpecOpsChangeEol)")
+
+    vim.keymap.set("n", "<M-c>", '"_<Plug>(SpecOpsChangeOperator)')
+    vim.keymap.set("n", "<M-C>", '"_<Plug>(SpecOpsChangeEol)')
+
+    vim.keymap.set("x", "c", "<Plug>(SpecOpsChangeVisual)")
+    vim.keymap.set("x", "C", "<nop>")
+
+    vim.keymap.set("x", "<M-c>", '"_<Plug>(SpecOpsChangeVisual)')
 
     ------------
     -- Delete --

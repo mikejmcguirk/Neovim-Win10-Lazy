@@ -29,38 +29,6 @@ local function eol()
     return "g@$"
 end
 
--- TODO: still need to check if next is a space
--- if you're at the end of a cWord and the next char is a space, l
--- If you're at the end of a non-keyword and the next char begins a keyword, l or w
--- if you're at the end of a keyword and the next char is a non-keyword, w or l
--- Basically you need to know what your cur and next chars are, like if they're keywords or not
--- because that does determine what to do
--- TODO: Sloppy
-local function is_at_end_of_cword()
-    local pos = vim.api.nvim_win_get_cursor(0)
-    local col = pos[2] + 1
-    op_state.start_line_pre = vim.api.nvim_get_current_line()
-    -- local cur_match = vim.fn.matchstr(op_state.start_line_pre, "\\%" .. col .. "c\\k"):len() > 0
-    local next_match = vim.fn.matchstr(op_state.start_line_pre, "\\%" .. (col + 1) .. "c\\k"):len()
-        > 0
-    local next_match_space = vim.fn
-        .matchstr(op_state.start_line_pre, "\\%" .. (col + 1) .. "c\\S")
-        :len() > 0
-    -- return cur_match and not next_match
-    return not next_match
-end
-
--- TODO: Sloppy
-local function is_at_end_of_cWORD()
-    local pos = vim.api.nvim_win_get_cursor(0)
-    local col = pos[2] + 1
-    op_state.start_line_pre = vim.api.nvim_get_current_line()
-    local cur_match = vim.fn.matchstr(op_state.start_line_pre, "\\%" .. col .. "c\\S"):len() > 0
-    local next_match = vim.fn.matchstr(op_state.start_line_pre, "\\%" .. (col + 1) .. "c\\S"):len()
-        > 0
-    return cur_match and not next_match
-end
-
 function M.setup(opts)
     opts = opts or {}
 
@@ -78,6 +46,9 @@ function M.setup(opts)
     -- TODO: Still existing problem case: Because is_changing is not set on dot-repeat, the
     -- special case logic does not trigger when the motion is re-run. This is acceptable for now
     -- while I'm still working through the state management
+    -- TODO: When moving this into substitute, just copy the logic over. Should just work. Make
+    -- sure the dot-repeat issue is fixed. Then create an individualized version for yank with
+    -- an option, then create the abstraction for all three
     vim.keymap.set("o", "<Plug>(SpecOpsChangeWord)", function()
         local cpoptions = vim.api.nvim_get_option_value("cpoptions", { scope = "local" })
         if not (is_changing and cpoptions:find("_")) then
@@ -86,7 +57,22 @@ function M.setup(opts)
 
         is_changing = false
 
-        if not is_at_end_of_cword() then
+        local col_1 = vim.api.nvim_win_get_cursor(0)[2] + 1
+        op_state.start_line_pre = vim.api.nvim_get_current_line()
+        local start_line = op_state.start_line_pre
+
+        local on_space = vim.fn.matchstr(start_line, "\\%" .. col_1 .. "c\\s"):len() > 0
+        if on_space and vim.v.count1 <= 1 then
+            return "w"
+        end
+
+        local on_keyword = vim.fn.matchstr(start_line, "\\%" .. col_1 .. "c\\k"):len() > 0
+        local next_keyword = vim.fn.matchstr(start_line, "\\%" .. (col_1 + 1) .. "c\\k"):len() > 0
+        local next_space = vim.fn.matchstr(start_line, "\\%" .. (col_1 + 1) .. "c\\s"):len() > 0
+
+        local double_keyword = on_keyword and next_keyword
+        local double_non_keyword = not (on_keyword or next_keyword or next_space)
+        if double_keyword or double_non_keyword then
             return "e"
         end
 
@@ -100,14 +86,20 @@ function M.setup(opts)
 
     vim.keymap.set("o", "<Plug>(SpecOpsChangeWORD)", function()
         local cpoptions = vim.api.nvim_get_option_value("cpoptions", { scope = "local" })
-
         if not (is_changing and cpoptions:find("_")) then
             return "W"
         end
 
         is_changing = false
 
-        if not is_at_end_of_cWORD() then
+        local col_1 = vim.api.nvim_win_get_cursor(0)[2] + 1
+        op_state.start_line_pre = vim.api.nvim_get_current_line()
+        local start_line = op_state.start_line_pre
+
+        local on_char = vim.fn.matchstr(start_line, "\\%" .. col_1 .. "c\\S"):len() > 0
+        local next_char = vim.fn.matchstr(start_line, "\\%" .. (col_1 + 1) .. "c\\S"):len() > 0
+
+        if on_char and next_char then
             return "E"
         end
 
@@ -118,11 +110,6 @@ function M.setup(opts)
         return "l"
     end, { expr = true })
 
-    local change_op = "<Plug>(SpecOpsChangeOperator)"
-    vim.keymap.set("n", change_op, function()
-        return operator()
-    end, { expr = true })
-
     local line_obj = "<Plug>(SpecOpsChangeLineObject)"
     vim.keymap.set("o", line_obj, function()
         if not is_changing then
@@ -131,6 +118,11 @@ function M.setup(opts)
 
         is_changing = false
         return "_" -- dd/yy/cc internal behavior
+    end, { expr = true })
+
+    local change_op = "<Plug>(SpecOpsChangeOperator)"
+    vim.keymap.set("n", change_op, function()
+        return operator()
     end, { expr = true })
 
     -- TODO: do this in other ops
@@ -165,7 +157,7 @@ local function do_change()
 
     local ok_c, err_c = change_utils.do_change(op_state) --- @type boolean|nil, string|nil
     if not ok_c then
-        local err = "do_delete: " .. (err_c or "Unknown error at delete callback")
+        local err = "do_change: " .. (err_c or "Unknown error at change sub-function")
         return vim.notify(err, vim.log.levels.ERROR)
     end
 
@@ -174,7 +166,6 @@ local function do_change()
 
     if should_yank(op_state.lines) then
         op_state.reg_info = op_state.reg_info or reg_utils.get_reg_info(op_state)
-        -- TODO: This one still doesn't go to the end. 5cw just after the period
         if not reg_utils.set_reges(op_state) then
             return
         end
@@ -193,37 +184,36 @@ local function do_change()
         })
     end
 
-    -- TODO: If you cw, or maybe ciw, to the end of a line where the last character is a cword
-    -- delimiter, it will delete up to but not including that character (correct) but then insert
-    -- after since the change mark sets on the last character. Not totally sure how to deal
-    -- with this either because the undeleted char does move to where the start of the change is
-    --
+    -- NOTE: This cannot be handled purely through marks because of one column lines. Rather than
+    -- add branching logic to shared functions, centralize all behavior here (especially so since
+    -- change is the only operator that needs this bookkeeping)
+    -- MAYBE: Move the block change mark adjustments here as well. Though I can imagine those
+    -- being hypothetically useful in other contexts
     if op_state.motion == "line" then
-        -- cc both automatically adds indentation and removes it if nothing's typed after
+        -- Just run cc to handle adding/removing indentation and avoid making an autocmd
         -- x to run out the typeahead and avoid weird flickering
-        -- ! to stay in insert mode
         vim.api.nvim_feedkeys('"_cc', "nix!", false)
         return
     end
 
-    local start_charlen_post = vim.fn.strcharlen(op_state.start_line_post)
-    local start_charidx_post =
-        vim.fn.charidx(op_state.start_line_post, op_state.marks_post.start.col)
+    local start_line_post = op_state.start_line_post
+    local start_charlen_post = vim.fn.strcharlen(start_line_post)
+    local start_charidx_post = vim.fn.charidx(start_line_post, marks_post.start.col)
     local start_end_post = start_charidx_post == start_charlen_post - 1
 
-    local start_char_post =
-        vim.fn.strcharpart(op_state.start_line_post, start_charidx_post, 1, true)
-    local start_iskeyword_post = vim.fn.matchstr(start_char_post, "\\%" .. 1 .. "c\\k"):len() > 0
-    -- Assuming that more non-keywords want to insert before than after
-    if (not start_iskeyword_post) and vim.tbl_contains({ "." }, start_char_post) then
-        start_iskeyword_post = true
-    end
-
-    -- if start_iskeyword_post then
-    --     vim.fn.confirm("is keyboard: " .. start_char_post)
-    -- else
-    --     vim.fn.confirm("not keyboard: " .. start_char_post)
-    -- end
+    local start_char_post = vim.fn.strcharpart(start_line_post, start_charidx_post, 1, true)
+    local start_iskeyword_post = (function()
+        if vim.fn.matchstr(start_char_post, "\\%" .. 1 .. "c\\k"):len() > 0 then
+            return true
+        -- Assuming that more non-keywords want to insert before than after
+        -- MAYBE: Could add "_" for users that remove it. But I'd prefer to add exceptions based on
+        -- default behavior or real-world use-cases
+        elseif vim.tbl_contains({ "." }, start_char_post) then
+            return true
+        else
+            return false
+        end
+    end)()
 
     if op_state.motion == "char" then
         if start_end_post and start_iskeyword_post then
