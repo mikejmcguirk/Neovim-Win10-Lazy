@@ -2,14 +2,6 @@
 PROJECT WIDE
 ------------
 
-- Reginfo:
-    - The op (either "y", "d", or "p")
-    - Return reg table, reg text, v type and letter type (with block lengths in each)
-    - only return regtext on p
-    - take in handler
-
-- Need to address the case where the cursor is on the edge of the screen and then a cursor movement is applied to it. Delete/change/substitute/visual paste all apply here
-- I think we make the ring behavior the default, right? But then we have to rename the "default" option
 - Unsure what to do about automatic lazy loading. Hard to do at all because I'm not sure how we can do a plugin folder, and there's also the reality that, as is, most people use Lazy and lazy handles Lazy loading, so having the plugin do it risks a conflict
 - Register bookkeeping
     - Maybe schedule_wrap register bookkeeping. But I'm not sure how that would affect mappings
@@ -104,6 +96,13 @@ DOCUMENTATION
 - Contributing
     - Use the stylua.toml file
     - Please note non-goals
+- Make sure a default keymap config is provided
+
+=========
+QUESTIONS
+=========
+
+- Should a set default keymaps option be provided? It's more ergonomic, but it creates issues if the user wants to only change one thing. Or let's say the user mostly wants the defaults but wants to remove one keymap (like the cw behavior). So now you have to get into like how you delete the keymaps properly. On the other hand, my list of keymaps for the plugin is long and there's still more to add. I think the right compromise here is to add a one-liner to create the default keymaps, and document the plug mappings (including the defaults). It's somewhat unprincipled, but avoids a major friction point
 
 -----
 PASTE
@@ -175,17 +174,17 @@ the actual whitespace in the register is skipped over
 This can be useful in case you want to do a block paste then gv and do a block insert
 afterwards. An option should be added to skip the whitespce entirely though
 
--------------
-DOCUMENTATION
--------------
+-----
+NOTES
+-----
 
-- Make sure a default keymap config is provided
+- I don't think it's necessary to include any user commands here. Hypothetically, you could create user commands for re-assigning config values, but I think doing that purely through APIs both makes things simpler to develop and creates a necessary barrier to entry
 
 ---------
 NON-GOALS
 ---------
 
-- Default keymap configuration
+- Config-based keymap configuration
 - Direct integration with external plugins, as this now creates an external target for the code base
     - Integration with external plugins should be in recipes or maybe documentation for specific cases
     - In general, the ability to integrate with an external plugin is an opportunity for extensibility, rather than something that should be built-in

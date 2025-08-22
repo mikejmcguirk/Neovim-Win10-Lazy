@@ -1,3 +1,7 @@
+-- TODO: Seeing the error again where, the first time I yank to "+", I get the target string
+-- not available message. Also have to use or statements because the regdata is vacant
+-- The or statements could be better handled, but are a minor problem. The STRING error is not
+
 local get_utils = require("mjm.spec-ops.get-utils")
 local op_utils = require("mjm.spec-ops.op-utils")
 local reg_utils = require("mjm.spec-ops.reg-utils")
@@ -92,6 +96,14 @@ end
 -- the Redo, but if I do it after a paste it does
 -- I also notice that, if I do the cancel after a default delete, it works, but not if I do it
 -- after a spec-ops delete
+-- Thinking on this more, I have a feeling that part of the issue is that the dot-repeat uses the
+-- ofunc, which is redefined. So like, if you have a dot-repeatable o-func, and then you
+-- cancel_redo, you revert back to the ofunc, which has been redefined. So what we would want to
+-- do here is save the old ofunc for reversion
+-- A broader note here - Something we want to do in the broader code is reduce the amount of if
+-- checking, moving stuff to set function handlers. But what's tough in this particular case is
+-- we need to check the externally set cpoption, unless we want to do some kind of convoluted
+-- syncing with an autocmd. There is the OptionSet event, but now we're adding that bulk
 local cancel_redo = (function()
     local has_ffi, ffi = pcall(require, "ffi")
     if not has_ffi then

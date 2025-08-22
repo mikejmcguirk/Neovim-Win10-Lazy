@@ -35,7 +35,7 @@ local M = {}
 ---  For op values of "y", "c", and "d", will calculate a combination of registers to write to
 ---  in line with Neovim's defaults
 ---  If ctx.reg is the black hole, simply returns that value
-function M.default_handler(ctx)
+function M.base_handler(ctx)
     ctx = ctx or {}
 
     local default_reg = utils.get_default_reg() --- @type string
@@ -103,8 +103,8 @@ end
 --- @return string[]
 --- If yanking, changing, or deleting (ctx.op "y", "c", or "d"), write a copy to reg 0,
 --- incrementing the other numbered registers to store history
---- Will only return the input register if it is the black hole or is a numbered register
---- Pasting (ctx.op "p") will not advance the ring
+--- If the op is paste (ctx.op = "p"), a numbered register is passed, or the black hole register
+--- is passed, only the input register will be returned and the history will not be incremented
 function M.ring_handler(ctx)
     ctx = ctx or {}
 
@@ -129,15 +129,16 @@ function M.ring_handler(ctx)
 end
 
 --- @param opt? string
+--- @return fun( ctx: reg_handler_ctx): string[]
 function M.get_handler(opt)
     opt = opt or ""
 
     if opt == "target_only" then
         return M.target_only_handler
-    elseif opt == "ring" then
-        return M.ring_handler
+    elseif opt == "base" then
+        return M.base_handler
     else
-        return M.default_handler
+        return M.ring_handler
     end
 end
 
@@ -182,8 +183,8 @@ function M.get_reg_info(op_state)
 
     for _, reg in pairs(reges) do
         local reginfo = vim.fn.getreginfo(reg)
-        local lines = reginfo.regcontents
-        local vtype = reginfo.regtype
+        local lines = reginfo.regcontents or ""
+        local vtype = reginfo.regtype or "v"
         local type = regtype_from_vtype(vtype)
 
         table.insert(r, { reg = reg, lines = lines, type = type, vtype = vtype })

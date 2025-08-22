@@ -1,10 +1,11 @@
 local function setup_spec_opts()
     --- @type SpecOpsConfigOpts
-    local opts = {
-        global = { reg_handler = "ring" },
-    }
-
-    require("mjm.spec-ops").setup(opts)
+    -- local opts = {
+    --     global = { reg_handler = "ring" },
+    -- }
+    --
+    -- require("mjm.spec-ops").setup(opts)
+    require("mjm.spec-ops").setup({})
 
     ------------
     -- Change --

@@ -75,6 +75,13 @@ local defaults = {
 
 local config = nil --- @type SpecOpsConfig
 
+-- PERF: In my testing, spec-ops adds ~2ms to startup time. And I have to imagine that all the
+-- if checking in here plays a part in that
+
+local function load()
+    --
+end
+
 --- @param opts SpecOpsConfigOpts
 --- @return SpecOpsConfig
 function M.setup(opts)
