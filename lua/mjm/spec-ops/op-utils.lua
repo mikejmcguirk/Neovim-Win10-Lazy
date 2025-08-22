@@ -9,6 +9,8 @@ local M = {}
 -- sub-table that is added on. Preserves the idea of the ops having their own return data
 -- but composes the state into the main state table
 -- Store register in op_state since vim.v.register is clobbered by some text objects
+-- NOTE: A lot of the "pre" values are to handle the case where you enter an operator then
+-- cancel operator pending mode. By not over-writing the non-pre state, dot-repeats still work
 
 --- @class op_state
 --- @field fin_line_pre string
@@ -36,7 +38,7 @@ local M = {}
 -- A table should be used to pass the values in. The class fields can be labelled with question
 -- marks or not based on what's optional. hl info should not flag as a missing field, op_type
 -- should, though we should have whatever fallback behavior we can
--- This will be useful for making more explicit what partgs of the opts table "seed" it vs.
+-- This will be useful for making more explicit what parts of the opts table "seed" it vs.
 -- which ones are determined as the process is run
 
 --- @param reg_handler fun( ctx: reg_handler_ctx): string[]
@@ -89,6 +91,7 @@ function M.set_op_state_cb(op_state, motion)
     if op_state.view_pre then
         op_state.view = op_state.view_pre
 
+        -- TODO: See how the hl function does it
         if (not op_state.vmode) and op_state.motion == "block" then
             vim.cmd("norm! gv")
             op_state.view.curswant = vim.fn.winsaveview().curswant
@@ -108,7 +111,7 @@ function M.set_op_state_cb(op_state, motion)
     op_state.view_pre = nil
 
     -- NOTE: This will be validated later in reg handler
-    op_state.vreg = op_state.vreg_pre or op_state.vreg
+    op_state.vreg = op_state.vreg_pre or utils.get_default_reg()
     op_state.reg_info = nil
     op_state.vreg_pre = nil
 end

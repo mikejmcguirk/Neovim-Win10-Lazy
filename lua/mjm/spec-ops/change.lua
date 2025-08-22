@@ -2,7 +2,6 @@ local change_utils = require("mjm.spec-ops.change-utils")
 local get_utils = require("mjm.spec-ops.get-utils")
 local op_utils = require("mjm.spec-ops.op-utils")
 local reg_utils = require("mjm.spec-ops.reg-utils")
-local utils = require("mjm.spec-ops.utils")
 
 local M = {}
 
@@ -165,23 +164,8 @@ local function do_change()
     vim.api.nvim_win_set_cursor(0, { marks_post.start.row, marks_post.start.col })
 
     if should_yank(op_state.lines) then
-        op_state.reg_info = op_state.reg_info or reg_utils.get_reg_info(op_state)
-        if not reg_utils.set_reges(op_state) then
-            return
-        end
-
-        -- TODO: roll the autocmd up into set_reges
-        vim.api.nvim_exec_autocmds("TextYankPost", {
-            buffer = vim.api.nvim_get_current_buf(),
-            data = {
-                inclusive = true,
-                operator = "c",
-                regcontents = op_state.lines,
-                regname = op_state.vreg,
-                regtype = utils.regtype_from_motion(op_state.motion),
-                visual = op_state.vmode,
-            },
-        })
+        reg_utils.get_reg_info(op_state)
+        reg_utils.set_reges(op_state)
     end
 
     -- NOTE: This cannot be handled purely through marks because of one column lines. Rather than

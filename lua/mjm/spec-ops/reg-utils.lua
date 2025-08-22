@@ -157,9 +157,15 @@ end
 -- TODO: If we do it this way, try to stay out of doing it as text entirely
 
 --- @param op_state op_state
---- @return reg_info[]
---- Returns an empty table if the black hole is passed to it
+--- @return nil
+--- Edit op_state.reg_info in place
+--- An empty table will be set if the black hole register is passed in
 function M.get_reg_info(op_state)
+    -- NOTE: op_state.reg_info should be nil'd when a new vreg_pre is set
+    if op_state.reg_info then
+        return
+    end
+
     -- TODO: Remove this. Right now though the other ops depend on the old method
     local reg_handler_ctx = {
         lines = op_state.lines,
@@ -171,7 +177,7 @@ function M.get_reg_info(op_state)
     local r = {} --- @type reg_info[]
 
     if vim.tbl_contains(reges, "_") then
-        return r
+        op_state.reg_info = {}
     end
 
     for _, reg in pairs(reges) do
@@ -183,7 +189,7 @@ function M.get_reg_info(op_state)
         table.insert(r, { reg = reg, lines = lines, type = type, vtype = vtype })
     end
 
-    return r
+    op_state.reg_info = r
 end
 
 --- @param op_state op_state
@@ -213,6 +219,19 @@ function M.set_reges(op_state)
     for _, reg in pairs(reg_info) do
         vim.fn.setreg(reg.reg, text, regtype)
     end
+
+    -- TODO: op_state needs to contain a fire TextYankPost flag
+    vim.api.nvim_exec_autocmds("TextYankPost", {
+        buffer = vim.api.nvim_get_current_buf(),
+        data = {
+            inclusive = true,
+            operator = op_state.op_type,
+            regcontents = op_state.lines,
+            regname = op_state.vreg,
+            regtype = utils.regtype_from_motion(op_state.motion),
+            visual = op_state.vmode,
+        },
+    })
 
     return true
 end

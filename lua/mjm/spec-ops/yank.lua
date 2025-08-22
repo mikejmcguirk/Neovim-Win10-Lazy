@@ -2,7 +2,6 @@ local get_utils = require("mjm.spec-ops.get-utils")
 local op_utils = require("mjm.spec-ops.op-utils")
 local reg_utils = require("mjm.spec-ops.reg-utils")
 local shared = require("mjm.spec-ops.shared")
-local utils = require("mjm.spec-ops.utils")
 
 local M = {}
 
@@ -32,11 +31,6 @@ local function eol()
     return "g@$"
 end
 
--- Lifted from echasnovski's mini.operators
--- TODO: Inconsistent behavior. If I do a yank after a delete, it doesn't properly cancel
--- the Redo, but if I do it after a paste it does
--- I also notice that, if I do the cancel after a default delete, it works, but not if I do it
--- after a spec-ops delete
 function M.setup(opts)
     opts = opts or {}
 
@@ -49,6 +43,14 @@ function M.setup(opts)
 
     op_state = op_utils.get_new_op_state(hl_group, hl_ns, hl_timeout, reg_handler, "y")
 
+    -- TODO: It feels like the flag could be stored in op_state, as you need a generalized
+    -- way to be able to call linewise ops. Though paste is an uncomfortable exception. You could
+    -- then use a closure to make sure the autocmd can update the flag
+    -- For the paste case, just make sure the option exists to not create the flag
+    -- You can then specify the group name in the setup. One issue here though is, this does
+    -- make the flag public, which it really should not be. This probably points then to
+    -- making a generalizable internal op state. But since we don't have data passing issues there,
+    -- that should wait a while
     vim.api.nvim_create_autocmd("ModeChanged", {
         group = vim.api.nvim_create_augroup("spec-ops_yank-flag", { clear = true }),
         pattern = "no*",
@@ -85,11 +87,17 @@ function M.setup(opts)
     end, { expr = true })
 end
 
+-- Lifted from echasnovski's mini.operators
+-- TODO: Inconsistent behavior. If I do a yank after a delete, it doesn't properly cancel
+-- the Redo, but if I do it after a paste it does
+-- I also notice that, if I do the cancel after a default delete, it works, but not if I do it
+-- after a spec-ops delete
 local cancel_redo = (function()
     local has_ffi, ffi = pcall(require, "ffi")
     if not has_ffi then
         return function() end
     end
+
     local has_cancel_redo = pcall(ffi.cdef, "void CancelRedo(void)")
     if not has_cancel_redo then
         return function() end
@@ -108,28 +116,10 @@ local function do_yank()
         return vim.notify(err or "Unknown error in do_get", vim.log.levels.ERROR)
     end
 
-    -- TODO: Good example of something that should be made explicit. We can see, obviously, that
-    -- we only get new reg_info if the current one is nil, but then it's like, where is that set?
-    -- Better to have a flag, because then you can gd and find where it's set
-    -- And then also put TextYankPost in here. The flag to fire it or not then needs to be
-    -- included in op_state
-    -- Do that and the TextYankPost flag after change is updated
-    op_state.reg_info = op_state.reg_info or reg_utils.get_reg_info(op_state)
+    reg_utils.get_reg_info(op_state)
     if not reg_utils.set_reges(op_state) then
         return
     end
-
-    vim.api.nvim_exec_autocmds("TextYankPost", {
-        buffer = vim.api.nvim_get_current_buf(),
-        data = {
-            inclusive = true,
-            operator = "y",
-            regcontents = op_state.lines,
-            regname = op_state.vreg,
-            regtype = utils.regtype_from_motion(op_state.motion),
-            visual = op_state.vmode,
-        },
-    })
 
     local cpoptions = vim.api.nvim_get_option_value("cpoptions", { scope = "local" })
     if not cpoptions:find("y") then
