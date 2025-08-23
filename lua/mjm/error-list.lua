@@ -122,7 +122,7 @@ end
 -- LOW: I doubt this is the best way to get the highest severity, as it requires two pulls
 -- from vim.diagnostic.get(). It might also be cleaner to use iter functions
 -- FUTURE: Consider using vim.diagnostic.setqflist if enough features are added
----@param opts? table{highest:boolean, err_only:boolean}
+---@param opts? {highest:boolean, err_only:boolean}
 ---@return nil
 local function all_diags_to_qflist(opts)
     opts = opts or {}
@@ -148,7 +148,7 @@ local function all_diags_to_qflist(opts)
     open_qflist()
 end
 
----@param opts? table{highest:boolean, err_only:boolean}
+---@param opts? {highest:boolean, err_only:boolean}
 ---@return nil
 local function buf_diags_to_loclist(opts)
     opts = opts or {}

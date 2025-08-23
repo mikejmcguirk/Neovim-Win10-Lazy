@@ -144,7 +144,7 @@ vim.api.nvim_create_autocmd({ "FileType" }, {
         vim.opt.formatoptions:remove("o")
 
         if not ev.match == "markdown" then
-            -- "r" in Markdown treats "- some text" as a comment and indents them
+            -- "r" in Markdown treats lines like "- some text" as comments and indents them
             vim.opt.formatoptions:append("r")
         end
     end,

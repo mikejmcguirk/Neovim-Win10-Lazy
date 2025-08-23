@@ -1,20 +1,8 @@
 vim.cmd.packadd({ vim.fn.escape("nvim-treesitter", " "), bang = true, magic = { file = false } })
+local text_objects = "nvim-treesitter-textobjects"
+vim.cmd.packadd({ vim.fn.escape(text_objects, " "), bang = true, magic = { file = false } })
 
-vim.cmd.packadd({
-    vim.fn.escape("nvim-treesitter-textobjects", " "),
-    bang = true,
-    magic = { file = false },
-})
-
-vim.cmd.packadd({
-    vim.fn.escape("nvim-treesitter-context", " "),
-    bang = true,
-    magic = { file = false },
-})
-
-local configs = require("nvim-treesitter.configs")
-
-configs.setup({
+require("nvim-treesitter.configs").setup({
     modules = {},
     ignore_install = {},
     auto_install = false,
@@ -67,13 +55,9 @@ configs.setup({
     },
 })
 
-local border = vim.api.nvim_get_hl(0, { name = "FloatBorder" })
-vim.api.nvim_set_hl(0, "TreesitterContextBottom", { underline = true, sp = border.fg })
--- TreesitterContextLineNumberBottom links to TreesitterContextBottom by default
-
--- Defer until the plugin is fully sourced
 vim.api.nvim_create_autocmd("VimEnter", {
     group = vim.api.nvim_create_augroup("run-tsupdate", { clear = true }),
+    once = true,
     pattern = "*",
     callback = function()
         vim.schedule_wrap(function()
