@@ -157,7 +157,7 @@ local groups = {
     IncSearch = { link = "Type" },
     LineNr = { fg = c.purple }, -- rnu
     LspInlayHint = { fg = c.aqua },
-    MatchParen = { sp = c.pink, underline = true },
+    MatchParen = { underline = true },
     MoreMsg = { fg = c.green },
     NonText = { fg = c.dark_purple_two },
     Normal = { fg = c.fg },
@@ -272,55 +272,67 @@ local groups = {
     -- ["@tag.delimiter"] = { fg = c.fg, bg = "NONE" },
 
     ---------------------
+    -- Treesitter: Lua --
+    ---------------------
+
+    -- Treesitter assumes all three-dash comments are documentation. Let Treesitter handle
+    -- default comment highlighting, then have semantic tokens fill in the annotations
+    ["@comment.documentation.lua"] = {},
+    -- Does not properly distinguish between globals and locals
+    ["@variable.lua"] = {},
+
+    ---------------------
     -- Semantic Tokens --
     ---------------------
 
-    ["@lsp.type.namespace"] = { link = "Number" },
-    ["@lsp.type.type"] = { link = "Type" },
-    ["@lsp.type.typeParameter"] = { link = "Type" },
     ["@lsp.type.class"] = { link = "Type" },
+    ["@lsp.type.decorator"] = { link = "Function" },
     ["@lsp.type.enum"] = { link = "Type" },
-    ["@lsp.type.interface"] = { link = "Type" },
-    ["@lsp.type.struct"] = { link = "Structure" },
-    ["@lsp.type.parameter"] = { link = "WarningMsg" },
-    ["@lsp.type.variable"] = { fg = c.fg },
-    ["@lsp.type.property"] = { fg = c.fg },
     ["@lsp.type.enumMember"] = { link = "Constant" },
     ["@lsp.type.function"] = { link = "Function" },
+    ["@lsp.type.interface"] = { link = "Type" },
+    ["@lsp.type.macro"] = { link = "PreProc" },
     ["@lsp.type.method"] = { link = "Function" },
-    ["@lsp.type.macro"] = { link = "Macro" },
-    ["@lsp.type.decorator"] = { link = "Function" },
-    ["@lsp.typemod.variable.defaultLibrary"] = { link = "Constant" },
-    ["@lsp.typemod.parameter.readyonly"] = { link = "Italic" },
-    ["@lsp.typemod.variable.readonly"] = { link = "Constant" },
-    ["@lsp.typemod.variable.global"] = { link = "Constant" },
-    ["@lsp.typemod.keyword.documentation"] = { link = "Statement" },
+    ["@lsp.type.namespace"] = { link = "Number" },
+    ["@lsp.type.parameter"] = { link = "WarningMsg" },
+    ["@lsp.type.property"] = { fg = c.fg },
+    ["@lsp.type.struct"] = { link = "Structure" },
+    ["@lsp.type.type"] = { link = "Type" },
+    ["@lsp.type.typeParameter"] = { link = "Type" },
+    ["@lsp.type.variable"] = { fg = c.fg },
     ["@lsp.typemod.class.documentation"] = { link = "Type" },
+    ["@lsp.typemod.keyword.documentation"] = { link = "Statement" },
     ["@lsp.typemod.property.readonly"] = { link = "Constant" },
+    ["@lsp.typemod.variable.defaultLibrary"] = { link = "Constant" },
+    ["@lsp.typemod.variable.global"] = { link = "Constant" },
+    ["@lsp.typemod.variable.readonly"] = { link = "Constant" },
 
-    ------------------
-    -- Lua Specific --
-    ------------------
+    --------------------------
+    -- Semantic Tokens: Lua --
+    --------------------------
 
-    -- Part one of a two-part Fluoromachine hack. LSP Semantic tokens do not distinguish between
-    -- constant (all-caps) variables and others. Clear out the Lua variable tokens by default
-    -- here, then use the autocmd below to re-apply them for constants
-    ["@lsp.type.variable.lua"] = {},
+    -- General note with Lua - Semantic tokens for keyword, parameter, and so on are used
+    -- to highlight comment annotations
+
+    ["@lsp.type.comment.lua"] = {}, -- Treesitter can properly handle basic comments
+    ["@lsp.type.method.lua"] = {}, -- Confusing when functions are used as variables
 }
 
 for k, v in pairs(groups) do
     vim.api.nvim_set_hl(0, k, v)
 end
 
+-- Fill-in un-recognized constants
+-- FUTURE: Could this be a TS Query? Though that might be slower since we already have the token
 vim.api.nvim_create_autocmd("LspTokenUpdate", {
-    callback = function(args)
-        local token = args.data.token
+    callback = function(ev)
+        local token = ev.data.token
         if token.type ~= "variable" or token.modifiers.readonly then
             return
         end
 
         local text = vim.api.nvim_buf_get_text(
-            args.buf,
+            ev.buf,
             token.line,
             token.start_col,
             token.line,
@@ -332,7 +344,7 @@ vim.api.nvim_create_autocmd("LspTokenUpdate", {
             return
         end
 
-        vim.lsp.semantic_tokens.highlight_token(token, args.buf, args.data.client_id, "@constant")
+        vim.lsp.semantic_tokens.highlight_token(token, ev.buf, ev.data.client_id, "Constant")
     end,
 })
 
