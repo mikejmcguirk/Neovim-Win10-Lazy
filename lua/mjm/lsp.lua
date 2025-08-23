@@ -28,9 +28,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         if client:supports_method(methods.textDocument_definition) then
             if ok then
-                vim.keymap.set("n", "gd", function()
-                    fzf_lua.lsp_definitions()
-                end, { buffer = buf })
+                vim.keymap.set("n", "gd", fzf_lua.lsp_definitions, { buffer = buf })
             else
                 vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })
             end
@@ -38,9 +36,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         if client:supports_method(methods.textDocument_declaration) then
             if ok then
-                vim.keymap.set("n", "gD", function()
-                    fzf_lua.lsp_declarations()
-                end, { buffer = buf })
+                vim.keymap.set("n", "gD", fzf_lua.lsp_declarations, { buffer = buf })
             else
                 vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = buf })
             end
@@ -63,9 +59,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         if client:supports_method(methods.textDocument_implementation) then
             if ok then
-                vim.keymap.set("n", "gI", function()
-                    fzf_lua.lsp_implementations()
-                end, { buffer = buf })
+                vim.keymap.set("n", "gI", fzf_lua.lsp_implementations, { buffer = buf })
             else
                 vim.keymap.set("n", "gI", vim.lsp.buf.implementation, { buffer = buf })
             end
@@ -101,9 +95,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         if client:supports_method(methods.textDocument_typeDefinition) then
             if ok then
-                vim.keymap.set("n", "grt", function()
-                    fzf_lua.lsp_typedefs()
-                end, { buffer = buf })
+                vim.keymap.set("n", "grt", fzf_lua.lsp_typedefs, { buffer = buf })
             else
                 vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { buffer = buf })
             end
@@ -111,9 +103,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         if client:supports_method(methods.textDocument_documentSymbol) then
             if ok then
-                vim.keymap.set("n", "gO", function()
-                    fzf_lua.lsp_document_symbols()
-                end, { buffer = buf })
+                vim.keymap.set("n", "gO", fzf_lua.lsp_document_symbols, { buffer = buf })
             else
                 vim.keymap.set("n", "gO", vim.lsp.buf.document_symbol, { buffer = buf })
             end
@@ -126,9 +116,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
         -- Kickstart mapping
         if client:supports_method(methods.workspace_symbol) then
             if ok then
-                vim.keymap.set("n", "gW", function()
-                    fzf_lua.lsp_live_workspace_symbols()
-                end, { buffer = buf })
+                vim.keymap.set("n", "gW", fzf_lua.lsp_live_workspace_symbols, { buffer = buf })
             else
                 vim.keymap.set("n", "gW", vim.lsp.buf.workspace_symbol, { buffer = buf })
             end
