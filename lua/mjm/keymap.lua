@@ -103,29 +103,24 @@ vim.keymap.set("i", "<M-e>", "<C-o>ze", { silent = true })
 vim.keymap.set("i", "<C-q>", "<C-S-v>")
 
 -------------------------
-
 -- Saving and Quitting --
-
--- FUTURE: Save `[`] marks. Cannot be done using an autocmd because they are altered before
--- BufWritePre. Calculate changes using Nvim LSP/Conform functions
--- Have had mixed luck with lockmarks + conform formatting. Sometimes conform adjusts the
--- marks properly, sometimes it doesn't
-
 -------------------------
+
+-- Using lockmarks for saves has to suffice
 
 -- Don't map ZQ. Running ZZ in vanilla Vim is a gaffe. ZQ not so much
 vim.keymap.set("n", "ZQ", "<nop>")
 
 vim.keymap.set("n", "ZZ", function()
     if ut.check_modifiable() then
-        vim.cmd("silent up")
+        vim.cmd("lockmarks silent up")
     end
 end)
 
 vim.keymap.set("n", "ZA", "<cmd>silent wa<cr>")
 vim.keymap.set("n", "ZI", "<cmd>wqa<cr>")
 vim.keymap.set("n", "ZR", function()
-    vim.cmd("silent wa")
+    vim.cmd("lockmarks silent wa")
     vim.cmd("restart")
 end)
 
@@ -135,7 +130,7 @@ vim.keymap.set("n", "ZX", function()
     end
 
     local status, result = pcall(function() ---@type boolean, unknown|nil
-        vim.cmd("silent up | so")
+        vim.cmd("lockmarks silent up | so")
     end)
 
     if status then
@@ -155,7 +150,7 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
             end
         end
 
-        local cmd = buf_wins > 1 and "silent up | q" or "silent up | bd"
+        local cmd = buf_wins > 1 and "lockmarks silent up | q" or "silent up | bd"
         local status, result = pcall(function() ---@type boolean, unknown|nil
             vim.cmd(cmd)
         end)
