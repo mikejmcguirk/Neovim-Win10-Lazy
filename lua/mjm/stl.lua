@@ -30,8 +30,8 @@ vim.api.nvim_create_autocmd("User", {
     end,
 })
 
--- Doing a full rebuild on all these events is hacky, but avoids weird edge cases
-vim.api.nvim_create_autocmd({ "WinEnter", "BufEnter", "BufWinEnter" }, {
+local rebuild_list = { "WinEnter", "BufEnter", "BufWinEnter", "LspAttach", "LspDetach" }
+vim.api.nvim_create_autocmd(rebuild_list, {
     group = stl_events,
     callback = function()
         stl_render.set_active_stl()
@@ -79,7 +79,7 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
     group = stl_events,
     callback = function(ev)
         stl_data.cache_diags(ev.buf, ev.data.diagnostics)
-        vim.cmd("redraws")
+        stl_render.set_active_stl()
     end,
 })
 

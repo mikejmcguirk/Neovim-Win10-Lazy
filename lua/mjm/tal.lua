@@ -35,6 +35,7 @@ local function build_harpoon_component(tal)
     if not list then
         return
     end
+
     local items = list.items
     if not items or #items < 1 then
         return

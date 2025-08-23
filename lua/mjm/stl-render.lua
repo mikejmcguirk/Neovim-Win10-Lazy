@@ -1,28 +1,28 @@
--- TODO: My philosophy on this was incorrect. When the STL is re-calculated dynamically, the
--- time to do so is creating flickering, most noticeable when you see blink.cmp windows
--- build in stages and the sizes of them flicker. Can also see cursor flicker when doing things
--- like entering insert mode. I think this is in part because statusline redraws activate
--- text lock. So what we need to do is take components that don't change much and do full
--- rebuilds on them. Git info is obvious, and probably diagnostics. Not sure about progress still
 -- TODO: When LSP progress messages send, elements A and B are shrunk to accomodate them
 -- Those elements should stay stable
 -- MAYBE: Could explore adding the char index. But it looks like I would need to compute that in
--- Lua, which might incur a performance cost
+-- Lua, which might incur a performance cost. Real time rendering has already been significantly
+-- cut back due to flickering
 -- MAYBE: Build inactive stl as a Lua function that takes the window number as a parameter
 -- Allows for showing diags
+-- FUTURE: The stl can be reduced to two colors by combining the filename with the git info and
+-- the % progress with the col info. But this might require adjusting what are currently the "c"
+-- sections. Also, right now the current aesthetic changes make telling inactive windows easier
+-- There's also the congruity with powerline. A simple fix might be though: make the "c" text
+-- string colored, but then white in inactive windows
 
 local M = {}
 
 local stl_data = require("mjm.stl-data")
 
+-- FUTURE: Hard icons to get out of because they're ergonomic
 local diag_icons = Has_Nerd_Font
         and { ERROR = "󰅚", WARN = "󰀪", INFO = "󰋽", HINT = "󰌶" }
     or { ERROR = "E:", WARN = "W:", INFO = "I:", HINT = "H:" }
 
-local format_icons = Has_Nerd_Font and { unix = "", dos = "", mac = "" }
-    or { unix = "unix", dos = "dos", mac = "mac" }
-
-local git_symbol = Has_Nerd_Font and " " or " "
+-- local format_icons = Has_Nerd_Font and { unix = "", dos = "", mac = "" }
+--     or { unix = "unix", dos = "dos", mac = "mac" }
+local format_icons = { unix = "unix", dos = "dos", mac = "mac" }
 
 local function get_section_hl(stl, section)
     local mode = stl_data.modes[vim.fn.mode()] or "norm"
@@ -30,13 +30,9 @@ local function get_section_hl(stl, section)
     table.insert(stl, "%#" .. hl .. "#")
 end
 
-function M.get_git_info()
-    return " " .. git_symbol .. (stl_data.head and string.format(" %s ", stl_data.head) or " ")
-end
-
 local function build_active_a(stl)
     local head_info = stl_data.head and string.format(" %s ", stl_data.head) or " "
-    table.insert(stl, " " .. git_symbol .. head_info)
+    table.insert(stl, head_info)
 end
 
 -- TODO: How to only add spacing for the %m option if it displays
@@ -44,29 +40,7 @@ local function build_active_b(stl)
     table.insert(stl, " %m %f ")
 end
 
--- TODO: Do not need to individually get the mode and buf for each diag
--- But wait to outline until architecture has re-settled in
-function M.get_diags(level)
-    local mode = stl_data.modes[vim.fn.mode()] or "norm"
-    if not vim.tbl_contains({ "norm", "vis", "cmd" }, mode) then
-        return ""
-    end
-
-    local buf = vim.api.nvim_get_current_buf()
-    local diag_counts = stl_data.diag_cache[tostring(buf)]
-    if not diag_counts then
-        return ""
-    end
-
-    local count = diag_counts[level]
-    if count == 0 then
-        return ""
-    end
-
-    return string.format("%s %d ", diag_icons[level], count)
-end
-
-function M.get_lsps()
+local function get_lsps()
     local buf = vim.api.nvim_get_current_buf()
     local clients = vim.lsp.get_clients({ bufnr = buf })
 
@@ -106,28 +80,47 @@ function M.get_progress()
 end
 
 local function build_active_c(stl)
-    -- The component elements contain a space after if they return a value
-    local err_hl = "%#DiagnosticError#" .. "%{v:lua.require'mjm.stl-render'.get_diags('ERROR')}%*"
-    local warn_hl = "%#DiagnosticWarn#" .. "%{v:lua.require'mjm.stl-render'.get_diags('WARN')}%*"
-    local info_hl = "%#DiagnosticInfo#" .. "%{v:lua.require'mjm.stl-render'.get_diags('INFO')}%*"
-    local hint_hl = "%#DiagnosticHint#" .. "%{v:lua.require'mjm.stl-render'.get_diags('HINT')}%*"
+    local diags = (function()
+        local mode = stl_data.modes[vim.fn.mode()] or "norm"
+        if not vim.tbl_contains({ "norm", "vis", "cmd" }, mode) then
+            return ""
+        end
 
-    local diags = err_hl .. warn_hl .. info_hl .. hint_hl
-    -- local diags = "%{v:lua.require'mjm.stl-render'.get_diags()} %*"
-    local lsp_count = "%{v:lua.require'mjm.stl-render'.get_lsps()}"
+        local buf = vim.api.nvim_get_current_buf()
+        local diag_counts = stl_data.diag_cache[tostring(buf)]
+        if not diag_counts then
+            return ""
+        end
+
+        local diag_str = vim.iter({ "Error", "Warn", "Info", "Hint" }):fold("", function(acc, l)
+            local upper_l = string.upper(l)
+            local count = diag_counts[upper_l]
+            if count < 1 then
+                return acc
+            end
+
+            return string.format("%s%%#Diagnostic%s#%s %d %%*", acc, l, diag_icons[upper_l], count)
+        end)
+
+        return diag_str
+    end)()
+
     local progress = "%{v:lua.require'mjm.stl-render'.get_progress()}"
 
-    table.insert(stl, " " .. diags .. lsp_count .. progress)
+    table.insert(stl, " " .. diags .. get_lsps() .. progress)
 end
 
--- TODO: Ain't no way there aren't built-ins for any of these
+-- FUTURE: Create events for encoding, format, and filetype changes to refresh stl
 local function build_active_x(stl)
-    local bufnr = vim.api.nvim_get_current_buf()
     local encoding = vim.api.nvim_get_option_value("encoding", { scope = "local" })
-    local format = vim.api.nvim_get_option_value("fileformat", { buf = bufnr })
-    local ft = vim.api.nvim_get_option_value("filetype", { buf = bufnr })
 
-    table.insert(stl, string.format("%s %s %s ", encoding, format_icons[format], ft))
+    local bufnr = vim.api.nvim_get_current_buf()
+    local format = vim.api.nvim_get_option_value("fileformat", { buf = bufnr })
+
+    local ft = vim.api.nvim_get_option_value("ft", { buf = bufnr })
+    local ft_str = ft == "" and "" or "| " .. ft .. " "
+
+    table.insert(stl, encoding .. " | " .. format_icons[format] .. " " .. ft_str)
 end
 
 local function build_active_y(stl)
@@ -148,6 +141,7 @@ function M.set_active_stl()
     build_active_b(stl)
     table.insert(stl, "%*")
 
+    table.insert(stl, "%<")
     get_section_hl(stl, "c")
     build_active_c(stl)
     table.insert(stl, "%*")
@@ -191,7 +185,7 @@ function M.set_inactive_stl(win)
 
     get_section_hl(stl, "b")
     local scroll_pct = require("mjm.stl-data").get_scroll_pct()
-    -- Unlike the active statusline, place the result here so it doesn't dynamically update
+    -- Unlike the active statusline, this should be a static value
     table.insert(stl, string.format(" %d%%%% ", scroll_pct))
     table.insert(stl, "%*")
 
