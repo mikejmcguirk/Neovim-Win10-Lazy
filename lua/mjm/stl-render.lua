@@ -10,6 +10,8 @@
 -- sections. Also, right now the current aesthetic changes make telling inactive windows easier
 -- There's also the congruity with powerline. A simple fix might be though: make the "c" text
 -- string colored, but then white in inactive windows
+-- TODO: Try the built-in diagnostics component. The autocmd runs anyway and you can pass in your
+-- own symbols
 
 local M = {}
 

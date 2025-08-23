@@ -7,8 +7,7 @@
 -- highlight vim as a global will never go away. But treesitter does distinguish, for example,
 -- between Rust functions and Rust macros
 
--- MAYBE: Underline diagnostics again. It felt a bit noisy, and I'd have to unwind some of
--- the hl linking below
+-- MAYBE: Underline diagnostics again. It felt a bit noisy
 
 local M = {}
 
@@ -141,6 +140,13 @@ local groups = {
     DiagnosticWarn = { fg = c.orange },
     DiagnosticInfo = { fg = c.green },
     DiagnosticHint = { fg = c.aqua },
+    -- Neovim's diagnostic publishing doesn't have a "no underline" option so these have to be
+    -- changed
+    -- PR: Feels like an easy change to make
+    DiagnosticUnderlineError = { link = "DiagnosticError" },
+    DiagnosticUnderlineWarn = { link = "DiagnosticWarn" },
+    DiagnosticUnderlineInfo = { link = "DiagnosticInfo" },
+    DiagnosticUnderlineHint = { link = "DiagnosticHint" },
     DiffAdd = { fg = c.black, bg = c.green },
     DiffChange = { fg = c.black, bg = c.orange },
     DiffDelete = { fg = c.black, bg = c.red },

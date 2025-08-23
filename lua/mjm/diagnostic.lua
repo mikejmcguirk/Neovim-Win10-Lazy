@@ -1,6 +1,6 @@
 local main_diag_cfg = {
-    severity_sort = true,
     float = { source = "always", border = Border },
+    severity_sort = true,
     signs = {
         severity = {
             min = vim.diagnostic.severity.HINT,
@@ -9,18 +9,18 @@ local main_diag_cfg = {
 } ---@type table
 
 local virtual_text_cfg = {
+    virtual_lines = false,
     virtual_text = {
         severity = {
             min = vim.diagnostic.severity.HINT,
         },
         current_line = true,
     },
-    virtual_lines = false,
 } ---@type table
 
 local virtual_lines_cfg = {
-    virtual_text = false,
     virtual_lines = { current_line = true },
+    virtual_text = false,
 } ---@type table
 
 local default_diag_cfg = vim.tbl_extend("force", main_diag_cfg, virtual_text_cfg)
