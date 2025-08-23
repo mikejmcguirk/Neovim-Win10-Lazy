@@ -27,6 +27,9 @@ local format_icons = { unix = "unix", dos = "dos", mac = "mac" }
 local function get_section_hl(stl, section)
     local mode = stl_data.modes[vim.fn.mode()] or "norm"
     local hl = stl_data[mode .. "-" .. section]
+    if not hl then
+        hl = stl_data["norm" .. "-" .. section]
+    end
     table.insert(stl, "%#" .. hl .. "#")
 end
 

@@ -35,12 +35,6 @@ local pack_spec = {
 
     { name = "flash.nvim", src = "https://github.com/folke/flash.nvim" },
 
-    {
-        name = "fluoromachine.nvim",
-        src = "https://github.com/maxmx03/fluoromachine.nvim",
-        version = "a5dc2cd",
-    },
-
     -- Requires nvim-tree-web-devicons
     { name = "fzf-lua", src = "https://github.com/ibhagwan/fzf-lua" },
 

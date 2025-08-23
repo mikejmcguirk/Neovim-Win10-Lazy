@@ -4,8 +4,9 @@ vim.api.nvim_set_option_value("mouse", "", { scope = "global" })
 vim.api.nvim_set_option_value("nu", true, { scope = "global" })
 vim.api.nvim_set_option_value("rnu", true, { scope = "global" })
 vim.api.nvim_set_option_value("nuw", 5, { scope = "global" })
-vim.api.nvim_set_option_value("scl", "yes:1", { scope = "global" })
 vim.api.nvim_set_option_value("cc", "100", { scope = "global" })
+vim.api.nvim_set_option_value("scl", "yes:1", { scope = "global" })
+vim.opt.fillchars:append({ eob = " " })
 
 local rnu_control = vim.api.nvim_create_augroup("rnu_control", { clear = true })
 

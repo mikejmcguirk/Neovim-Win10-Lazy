@@ -1,27 +1,18 @@
+local color = require("mjm.colorscheme")
 local M = {}
 
 ------------------
 --- Highlights ---
 ------------------
 
-local function darken_24bit(color, pct)
-    local r = bit.band(bit.rshift(color, 16), 0xFF)
-    local g = bit.band(bit.rshift(color, 8), 0xFF)
-    local b = bit.band(color, 0xFF)
-
-    r = math.max(0, math.floor(r * (1 - pct / 100)))
-    g = math.max(0, math.floor(g * (1 - pct / 100)))
-    b = math.max(0, math.floor(b * (1 - pct / 100)))
-
-    return bit.bor(bit.lshift(r, 16), bit.lshift(g, 8), b)
-end
+-- TODO: Since we now roll out own colorscheme, these should be created there
 
 local fg = vim.api.nvim_get_hl(0, { name = "Normal" }).fg
-local bg = vim.api.nvim_get_hl(0, { name = "ColorColumn" }).bg
+local bg = vim.api.nvim_get_hl(0, { name = "NonText" }).bg
 local hl_modes = {
     norm = vim.api.nvim_get_hl(0, { name = "String" }).fg,
-    ins = vim.api.nvim_get_hl(0, { name = "Identifier" }).fg,
-    vis = vim.api.nvim_get_hl(0, { name = "Boolean" }).fg,
+    ins = vim.api.nvim_get_hl(0, { name = "Function" }).fg,
+    vis = vim.api.nvim_get_hl(0, { name = "Number" }).fg,
     rep = vim.api.nvim_get_hl(0, { name = "Constant" }).fg,
     cmd = vim.api.nvim_get_hl(0, { name = "CurSearch" }).bg,
 }
@@ -34,7 +25,7 @@ for m, m_fg in pairs(hl_modes) do
     M[a] = group_a
 
     local b = string.format("%s%s", m, "-b")
-    local b_bg = darken_24bit(m_fg, 50)
+    local b_bg = color.darken_24bit(m_fg, 50)
     local group_b = string.format("%s%s", prefix, b)
     vim.api.nvim_set_hl(0, group_b, { fg = m_fg, bg = b_bg })
     M[b] = group_b

@@ -25,6 +25,8 @@ vim.keymap.set({ "n", "x" }, "<Space>", "<Nop>")
 vim.g.mapleader = " "
 vim.g.maplocaleader = " "
 
+require("mjm.colorscheme")
+
 local env_setup = vim.loop.hrtime()
 
 require("mjm.pack")
@@ -38,7 +40,6 @@ local pack_finish = vim.loop.hrtime()
 require("mjm.plugins.plenary")
 require("mjm.plugins.nvim-web-devicons")
 
-require("mjm.plugins.colorscheme")
 require("mjm.plugins.nvim-treesitter")
 
 require("mjm.plugins.nvim-lspconfig")
@@ -83,7 +84,7 @@ require("mjm.plugins.conform")
 require("mjm.plugins.dadbod")
 require("mjm.plugins.flash")
 require("mjm.plugins.git_signs")
-require("mjm.plugins.indent_highlight")
+require("mjm.plugins.ibl")
 require("mjm.plugins.lazydev")
 require("mjm.plugins.obsidian")
 require("mjm.plugins.quickscope")

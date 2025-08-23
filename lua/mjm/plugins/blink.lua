@@ -41,9 +41,9 @@ local function setup_blink()
                             end,
                             highlight = function(ctx)
                                 if ctx.kind then
-                                    return "CmpItemKind" .. ctx.kind
+                                    return "BlinkCmpKind" .. ctx.kind
                                 end
-                                return "CmpItemKindField"
+                                return "BlinkCmpKind"
                             end,
                         },
                         source_name = {
@@ -274,12 +274,45 @@ local function setup_blink()
         },
     })
 
-    local win_border = vim.api.nvim_get_hl(0, { name = "FloatBorder" })
-    -- PR: The fact I have to suppress these diagnostics feels like an issue
-    --- @diagnostic disable: param-type-mismatch
-    vim.api.nvim_set_hl(0, "BlinkCmpMenuBorder", win_border)
-    vim.api.nvim_set_hl(0, "BlinkCmpDocBorder", win_border)
-    vim.api.nvim_set_hl(0, "BlinkCmpSignatureHelpBorder", win_border)
+    local groups = {
+        BlinkCmpDocBorder = { link = "FloatBorder" },
+        BlinkCmpMenuBorder = { link = "FloatBorder" },
+        BlinkCmpSignatureHelpBorder = { link = "FloatBorder" },
+
+        CmpItemAbbrDeprecated = { link = "Comment" },
+        CmpItemAbbrMatch = { link = "IncSearch" },
+        CmpItemAbbrMatchFuzzy = { link = "IncSearch" },
+        CmpItemKindText = { link = "String" },
+        CmpItemKindMethod = { link = "Function" },
+        CmpItemKindFunction = { link = "Function" },
+        CmpItemKindConstructor = { link = "Special" },
+        CmpItemKindField = { link = "Normal" }, -- Not sure what @field links to
+        CmpItemKindVariable = { link = "Normal" },
+        CmpItemKindClass = { link = "Type" },
+        CmpItemKindInterface = { link = "Type" },
+        CmpItemKindModule = { link = "Type" },
+        CmpItemKindProperty = { link = "Normal" },
+        CmpItemKindUnit = { link = "Number" },
+        CmpItemKindValue = { link = "String" },
+        CmpItemKindEnum = { link = "Type" },
+        CmpItemKindKeyword = { link = "Special" },
+        CmpItemKindSnippet = { link = "Special" },
+        CmpItemKindColor = { link = "DiagnosticWarn" },
+        CmpItemKindFile = { link = "Normal" },
+        CmpItemKindReference = { link = "@text.reference" },
+        CmpItemKindFolder = { link = "Directory" },
+        CmpItemKindEnumMember = { link = "@constant" },
+        CmpItemKindConstant = { link = "@constant" },
+        CmpItemKindStruct = { link = "Structure" },
+        CmpItemKindEvent = { link = "@function" },
+        CmpItemKindOperator = { link = "@operator" },
+
+        BlinkCmpKindTypeParameter = { link = "Type" },
+    }
+
+    for k, v in pairs(groups) do
+        vim.api.nvim_set_hl(0, k, v)
+    end
 end
 
 vim.api.nvim_create_autocmd({ "CmdlineEnter", "InsertEnter" }, {

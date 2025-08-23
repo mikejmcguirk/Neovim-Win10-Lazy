@@ -1,3 +1,5 @@
+-- FUTURE: Because I just use this for the indentation ruler, actually feasible to re-create
+
 local function setup_ibl()
     local excluded_filetypes = {
         "help",
