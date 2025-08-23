@@ -4,15 +4,13 @@ local start = vim.loop.hrtime()
 -- Environment Setup --
 -----------------------
 
--- Avoid race conditions with nvim-tree
-vim.g.loaded_netrw = 1
-vim.g.loaded_netrwPlugin = 1
-vim.g.loaded_netrwSettings = 1
-
 vim.g.loaded_2html_plugin = 1
 vim.g.loaded_gzip = 1
 vim.g.loaded_matchit = 1
 -- vim.g.loaded_matchparen = 1 -- FUTURE: Lazy load
+vim.g.loaded_netrw = 1
+vim.g.loaded_netrwPlugin = 1
+vim.g.loaded_netrwSettings = 1
 vim.g.loaded_remote_plugins = 1
 vim.g.loaded_spellfile_plugin = 1
 vim.g.loaded_tarPlugin = 1
@@ -47,6 +45,7 @@ require("mjm.plugins.nvim-lspconfig")
 
 require("mjm.plugins.fzflua")
 require("mjm.plugins.harpoon")
+require("mjm.plugins.oil")
 
 require("mjm.plugins.blink") -- Setup is lazy, but add to path for LSP capabilities and compat
 

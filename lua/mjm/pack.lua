@@ -96,6 +96,9 @@ local pack_spec = {
     -- Depends on plenary
     { name = "obsidian.nvim", src = "https://github.com/epwalsh/obsidian.nvim" },
 
+    -- Depends on mini.icons or nvim-tree/nvim-web-devicons
+    { name = "oil.nvim", src = "https://github.com/stevearc/oil.nvim" },
+
     { name = "quick-scope", src = "https://github.com/unblevable/quick-scope" },
 
     { name = "undotree", src = "https://github.com/mbbill/undotree" },

@@ -338,6 +338,11 @@ vim.keymap.set({ "n", "x" }, "j", function()
     end
 end, { expr = true, silent = true })
 
+-- <C--> is used as the prefix for pragma/annotation/syntax mappings. Disable in normal and
+-- insert here so we don't fallback to defaults. Note that <C-v> literals still work
+vim.keymap.set("n", "<C-->", "<nop>")
+vim.keymap.set("i", "<C-->", "<nop>")
+
 vim.keymap.set({ "n", "x" }, "gg", "<nop>")
 vim.keymap.set("o", "gg", "<esc>")
 vim.keymap.set({ "n", "x", "o" }, "go", function()

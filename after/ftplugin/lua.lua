@@ -27,34 +27,34 @@ local function add_annotation(annotation)
     vim.cmd("startinsert!")
 end
 
-vim.keymap.set("n", "---", function()
+vim.keymap.set({ "n", "i" }, "<C-->-", function()
     add_annotation("")
 end, { buffer = true })
 
-vim.keymap.set("n", "--t", function()
+vim.keymap.set({ "n", "i" }, "<C-->t", function()
     add_annotation("@type")
 end, { buffer = true })
 
-vim.keymap.set("n", "--p", function()
+vim.keymap.set({ "n", "i" }, "<C-->p", function()
     add_annotation("@param")
 end, { buffer = true })
 
-vim.keymap.set("n", "--r", function()
+vim.keymap.set({ "n", "i" }, "<C-->r", function()
     add_annotation("@return")
 end, { buffer = true })
 
-vim.keymap.set("n", "--d", function()
+vim.keymap.set({ "n", "i" }, "<C-->d", function()
     add_annotation("@diagnostic")
 end, { buffer = true })
 
-vim.keymap.set("n", "--c", function()
+vim.keymap.set({ "n", "i" }, "<C-->c", function()
     add_annotation("@class")
 end, { buffer = true })
 
-vim.keymap.set("n", "--f", function()
+vim.keymap.set({ "n", "i" }, "<C-->f", function()
     add_annotation("@field")
 end, { buffer = true })
 
-vim.keymap.set("n", "--a", function()
+vim.keymap.set({ "n", "i" }, "<C-->a", function()
     add_annotation("[[@as")
 end, { buffer = true })

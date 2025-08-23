@@ -23,12 +23,14 @@ local no_match = {
     "help",
     "fzf",
     "query",
+    "",
 }
 
 -- When doing vim.fn.matchadd, the scopes seem to get mixed up between different windows
 -- By using the cmd, the highlights disappear on WinLeave as they should
 
-vim.api.nvim_create_autocmd({ "WinNew", "WinEnter" }, {
+-- NOTE: Removed WinNew from here. Unsure if it was needed
+vim.api.nvim_create_autocmd({ "WinEnter" }, {
     group = match_control,
     pattern = "*",
     callback = function(ev)
@@ -36,6 +38,11 @@ vim.api.nvim_create_autocmd({ "WinNew", "WinEnter" }, {
         local is_replace = string.match(vim.fn.mode(), "R")
         local bad_mode = is_insert or is_replace
         if bad_mode then
+            return
+        end
+
+        local buflisted = vim.api.nvim_get_option_value("buflisted", { buf = ev.buf })
+        if not buflisted then
             return
         end
 
@@ -49,6 +56,7 @@ vim.api.nvim_create_autocmd({ "WinNew", "WinEnter" }, {
         if is_no_match_buf then
             return
         end
+
         vim.cmd([[match EolSpace /\s\+$/]])
     end,
 })
