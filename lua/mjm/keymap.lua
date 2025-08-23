@@ -328,8 +328,32 @@ vim.keymap.set({ "n", "x", "o" }, "go", function()
     end
 end, { expr = true })
 
-vim.keymap.set({ "n", "x" }, "<C-u>", "<C-u>zz", { silent = true })
-vim.keymap.set({ "n", "x" }, "<C-d>", "<C-d>zz", { silent = true })
+-- Address cursorline flickering
+vim.keymap.set({ "n", "x" }, "<C-u>", function()
+    vim.api.nvim_set_option_value("lz", true, { scope = "global" })
+
+    local win = vim.api.nvim_get_current_win()
+    local cul = vim.api.nvim_get_option_value("cul", { win = win })
+    vim.api.nvim_set_option_value("cul", false, { win = win })
+
+    vim.cmd("norm! \21zz")
+    vim.api.nvim_set_option_value("cul", cul, { win = win })
+
+    vim.api.nvim_set_option_value("lz", false, { scope = "global" })
+end, { silent = true })
+
+vim.keymap.set({ "n", "x" }, "<C-d>", function()
+    vim.api.nvim_set_option_value("lz", true, { scope = "global" })
+
+    local win = vim.api.nvim_get_current_win()
+    local cul = vim.api.nvim_get_option_value("cul", { win = win })
+    vim.api.nvim_set_option_value("cul", false, { win = win })
+
+    vim.cmd("norm! \4zz")
+    vim.api.nvim_set_option_value("cul", cul, { win = win })
+
+    vim.api.nvim_set_option_value("lz", false, { scope = "global" })
+end, { silent = true })
 
 vim.keymap.set("n", "zT", function()
     vim.opt_local.scrolloff = 0
