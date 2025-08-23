@@ -72,6 +72,9 @@ vim.keymap.set("c", "<C-f>", "<right>")
 vim.keymap.set("c", "<M-b>", "<S-left>")
 vim.keymap.set("c", "<M-f>", "<S-right>")
 
+vim.keymap.set("c", "<M-p>", "<up>")
+vim.keymap.set("c", "<M-n>", "<down>")
+
 -----------------
 -- Insert Mode --
 -----------------
@@ -337,9 +340,6 @@ vim.keymap.set({ "n", "x", "o" }, "go", function()
         return "go"
     end
 end, { expr = true })
-
-vim.keymap.set("c", "<C-p>", "<up>")
-vim.keymap.set("c", "<C-n>", "<down>")
 
 vim.keymap.set({ "n", "x" }, "<C-u>", "<C-u>zz", { silent = true })
 vim.keymap.set({ "n", "x" }, "<C-d>", "<C-d>zz", { silent = true })

@@ -18,6 +18,12 @@ local function setup_blink()
     vim.keymap.set("i", "<M-s>", "<nop>")
 
     blink.setup({
+        cmdline = {
+            completion = { menu = { auto_show = true }, ghost_text = { enabled = false } },
+            enabled = true,
+            keymap = { preset = "inherit", ["<M-y>"] = false, ["<M-p>"] = false },
+            sources = { "cmdline" },
+        },
         completion = {
             accept = { auto_brackets = { enabled = true } },
             documentation = {
@@ -56,8 +62,8 @@ local function setup_blink()
         fuzzy = { sorts = { "exact", "score", "sort_text" } },
         keymap = {
             preset = "none",
-            ["<C-e>"] = false, -- Overwrites default <C-e> in cmd mode
-            ["<C-E>"] = false, -- Overwrites default <C-e> in cmd mode
+            ["<C-e>"] = false,
+            ["<C-E>"] = false,
             ["<C-p>"] = {
                 function(cmp)
                     cmp.select_prev({ auto_insert = false })
@@ -278,7 +284,7 @@ local function setup_blink()
     vim.api.nvim_set_hl(0, "BlinkCmpSignatureHelpBorder", win_border)
 end
 
-vim.api.nvim_create_autocmd("InsertEnter", {
+vim.api.nvim_create_autocmd({ "CmdlineEnter", "InsertEnter" }, {
     group = vim.api.nvim_create_augroup("setup-blink", { clear = true }),
     once = true,
     callback = function()
