@@ -53,7 +53,7 @@ oil.setup({
         ["_"] = false,
     },
     view_options = { show_hidden = true },
-    float = { border = "single" },
+    float = { border = "single", padding = 3 },
     ssh = { border = "single" },
     keymaps_help = { border = "single" },
 })

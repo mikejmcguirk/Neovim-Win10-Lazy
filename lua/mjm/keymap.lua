@@ -13,7 +13,7 @@ vim.keymap.set({ "x", "o" }, "<C-c>", "<esc>", { silent = true })
 vim.keymap.set("i", "<C-c>", "<esc>ze")
 
 vim.keymap.set("n", "<C-c>", function()
-    vim.cmd("echo ''")
+    print("")
     vim.cmd("noh")
     vim.lsp.buf.clear_references()
 
@@ -164,6 +164,7 @@ vim.keymap.set("n", "u", function()
     if not ut.check_modifiable() then
         return
     end
+
     vim.cmd("silent norm! " .. vim.v.count1 .. "u")
 end)
 
@@ -171,6 +172,7 @@ vim.keymap.set("n", "<C-r>", function()
     if not ut.check_modifiable() then
         return
     end
+
     vim.cmd("silent norm! " .. vim.v.count1 .. "\18")
 end)
 
