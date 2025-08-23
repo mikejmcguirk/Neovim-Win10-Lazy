@@ -1,10 +1,5 @@
 local ut = require("mjm.utils")
 
-local set_z_at_cursor = function()
-    local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-    vim.api.nvim_buf_set_mark(0, "z", row, col, {})
-end
-
 --------------------
 -- Mode Switching --
 --------------------
@@ -57,15 +52,9 @@ vim.keymap.set("n", "<M-R>", "gR", { silent = true })
 ------------------
 
 vim.keymap.set("c", "<C-a>", "<C-b>")
-
 vim.keymap.set("c", "<C-d>", "<Del>")
--- MAYBE: FIgure out how to do <M-d> if it's really needed
-vim.keymap.set(
-    "c",
-    "<C-k>",
-    "<c-\\>estrpart(getcmdline(), 0, getcmdpos()-1)<cr>",
-    { noremap = true }
-)
+-- MAYBE: Figure out how to do <M-d> if it's really needed
+vim.keymap.set("c", "<C-k>", "<c-\\>estrpart(getcmdline(), 0, getcmdpos()-1)<cr>")
 
 vim.keymap.set("c", "<C-b>", "<left>")
 vim.keymap.set("c", "<C-f>", "<right>")
@@ -78,8 +67,6 @@ vim.keymap.set("c", "<M-n>", "<down>")
 -----------------
 -- Insert Mode --
 -----------------
-
--- TODO: Does one-shot insert mode really not work on zero length lines? Never seen before
 
 -- Bash style typing
 vim.keymap.set("i", "<C-a>", "<C-o>I")
@@ -120,13 +107,11 @@ vim.keymap.set("n", "ZZ", function()
     end
 end)
 
-vim.keymap.set("n", "ZA", "<cmd>silent wa<cr>")
-vim.keymap.set("n", "ZI", "<cmd>wqa<cr>")
-vim.keymap.set("n", "ZR", function()
-    vim.cmd("lockmarks silent wa")
-    vim.cmd("restart")
-end)
+vim.keymap.set("n", "ZA", "<cmd>lockmarks silent wa<cr>")
+vim.keymap.set("n", "ZI", "<cmd>lockmarks wqa<cr>")
+vim.keymap.set("n", "ZR", "<cmd>lockmarks silent wa | restart<cr>")
 
+-- FUTURE: Can pare this down once extui is stabilized
 vim.keymap.set("n", "ZX", function()
     if not ut.check_modifiable() then
         return
@@ -164,9 +149,6 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
     end)
 end
 
-vim.keymap.set("n", "<C-z>", "<nop>")
-vim.keymap.set("n", "<C-S-z>", "<nop>")
-
 -- This trick mostly doesn't work because it also blocks any map in the layer below it, but
 -- anything under Z has to be manually mapped anyway, so this is fine
 vim.keymap.set("n", "Z", "<nop>")
@@ -174,6 +156,9 @@ vim.keymap.set("n", "Z", "<nop>")
 -------------------
 -- Undo and Redo --
 -------------------
+
+-- Needs to be a vim.cmd to use vim.v.count1
+-- FUTURE: The check_modifiable calls are to avoid enter errors. Can be removed when extui is ready
 
 vim.keymap.set("n", "u", function()
     if not ut.check_modifiable() then
@@ -410,7 +395,8 @@ local cap_motions_norm = {
 
 for _, map in pairs(cap_motions_norm) do
     vim.keymap.set("n", map, function()
-        set_z_at_cursor()
+        local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+        vim.api.nvim_buf_set_mark(0, "z", row, col, {})
         return map .. "`z"
     end, { silent = true, expr = true })
 end
@@ -424,7 +410,8 @@ local cap_motions_vis = {
 
 for _, map in pairs(cap_motions_vis) do
     vim.keymap.set("x", map, function()
-        set_z_at_cursor()
+        local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+        vim.api.nvim_buf_set_mark(0, "z", row, col, {})
         return map .. "`z"
     end, { silent = true, expr = true })
 end
