@@ -1,6 +1,6 @@
 -- NOTE: Various LSP maps use this to display references/symbols
 -- FUTURE: Turn :let g: into a picker
--- LOW: What makes asnc(?) messages not display?
+-- LOW: What makes async messages not display?
 
 vim.cmd.packadd({ vim.fn.escape("fzf-lua", " "), bang = true, magic = { file = false } })
 

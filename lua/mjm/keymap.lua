@@ -100,13 +100,11 @@ vim.keymap.set("i", "<C-q>", "<C-S-v>")
 
 -- Don't map ZQ. Running ZZ in vanilla Vim is a gaffe. ZQ not so much
 vim.keymap.set("n", "ZQ", "<nop>")
+-- This trick mostly doesn't work because it also blocks any map in the layer below it, but
+-- anything under Z has to be manually mapped anyway, so this is fine
+vim.keymap.set("n", "Z", "<nop>")
 
-vim.keymap.set("n", "ZZ", function()
-    if ut.check_modifiable() then
-        vim.cmd("lockmarks silent up")
-    end
-end)
-
+vim.keymap.set("n", "ZZ", "<cmd>lockmarks silent up<cr>")
 vim.keymap.set("n", "ZA", "<cmd>lockmarks silent wa<cr>")
 vim.keymap.set("n", "ZI", "<cmd>lockmarks wqa<cr>")
 vim.keymap.set("n", "ZR", "<cmd>lockmarks silent wa | restart<cr>")
@@ -149,53 +147,29 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
     end)
 end
 
--- This trick mostly doesn't work because it also blocks any map in the layer below it, but
--- anything under Z has to be manually mapped anyway, so this is fine
-vim.keymap.set("n", "Z", "<nop>")
-
 -------------------
 -- Undo and Redo --
 -------------------
 
--- Needs to be a vim.cmd to use vim.v.count1
--- FUTURE: The check_modifiable calls are to avoid enter errors. Can be removed when extui is ready
-
 vim.keymap.set("n", "u", function()
-    if not ut.check_modifiable() then
-        return
-    end
-
-    vim.cmd("silent norm! " .. vim.v.count1 .. "u")
-end)
+    return "<cmd>silent norm! " .. vim.v.count1 .. "u<cr>"
+end, { expr = true })
 
 vim.keymap.set("n", "<C-r>", function()
-    if not ut.check_modifiable() then
-        return
-    end
-
-    vim.cmd("silent norm! " .. vim.v.count1 .. "\18")
-end)
+    return "<cmd>silent norm! " .. vim.v.count1 .. "\18<cr>"
+end, { expr = true })
 
 ---------------------
 -- Window Movement --
 ---------------------
 
----@return boolean
-local is_tmux_zoomed = function()
-    return vim.fn.system("tmux display-message -p '#{window_zoomed_flag}'") == "1\n"
-end
-
-local tmux_cmd_map = {
-    ["h"] = "L",
-    ["j"] = "D",
-    ["k"] = "U",
-    ["l"] = "R",
-} ---@type table {[string]: string}
+---@type {[string]: string}
+local tmux_cmd_map = { ["h"] = "L", ["j"] = "D", ["k"] = "U", ["l"] = "R" }
 
 ---@param direction string
 ---@return nil
 local do_tmux_move = function(direction)
-    if is_tmux_zoomed() then
+    if vim.fn.system("tmux display-message -p '#{window_zoomed_flag}'") == "1\n" then
         return
     end
 
@@ -207,9 +181,7 @@ end
 ---@param nvim_cmd string
 ---@return nil
 local win_move_tmux = function(nvim_cmd)
-    ---@type boolean
-    local is_prompt = vim.api.nvim_get_option_value("buftype", { buf = 0 }) == "prompt"
-    if is_prompt then
+    if vim.api.nvim_get_option_value("buftype", { buf = 0 }) == "prompt" then
         do_tmux_move(nvim_cmd)
         return
     end
@@ -480,8 +452,7 @@ vim.keymap.set("n", "J", function()
     -- Done using a view instead of a mark to prevent visible screen shake
     local view = vim.fn.winsaveview() ---@type vim.fn.winsaveview.ret
     -- By default, [count]J joins one fewer lines than indicated by the relative line numbers
-    local count = vim.v.count1 + 1 ---@type integer
-    vim.cmd("norm! " .. count .. "J")
+    vim.cmd("norm! " .. vim.v.count1 + 1 .. "J")
     vim.fn.winrestview(view)
 end, { silent = true })
 
@@ -545,9 +516,8 @@ vim.keymap.set("n", "<C-j>", function()
         return
     end
 
-    local vcount1 = vim.v.count1 -- Need to grab this first
     local ok, err = pcall(function()
-        vim.cmd("m+" .. vcount1 .. " | norm! ==")
+        vim.cmd("m+" .. vim.v.count1 .. " | norm! ==")
     end)
 
     if not ok then
@@ -560,9 +530,8 @@ vim.keymap.set("n", "<C-k>", function()
         return
     end
 
-    local vcount1 = vim.v.count1 + 1 -- Since the base count to go up is -2
     local ok, err = pcall(function()
-        vim.cmd("m-" .. vcount1 .. " | norm! ==")
+        vim.cmd("m-" .. vim.v.count1 + 1 .. " | norm! ==")
     end)
 
     if not ok then
