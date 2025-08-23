@@ -105,8 +105,7 @@ vim.keymap.set("i", "<M-n>", "<nop>")
 vim.keymap.set("i", "<M-p>", "<nop>")
 vim.keymap.set("i", "<M-s>", "<nop>")
 
--- M-z is too much like ctrl-z
--- vim.keymap.set("i", "<M-z>", "<C-o>ze", { silent = true })
+vim.keymap.set("i", "<M-e>", "<C-o>ze", { silent = true })
 
 -- i_Ctrl-v always shows the simplified form of a key, Ctrl-Shift-v must be used to show the
 -- unsimplified form. Use this map since I have Ctrl-Shift-v as terminal paste
