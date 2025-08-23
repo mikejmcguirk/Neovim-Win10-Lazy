@@ -8,6 +8,15 @@ local blink = require("blink.cmp")
 vim.lsp.config("*", { capabilities = require("blink.cmp").get_lsp_capabilities(nil, true) })
 
 local function setup_blink()
+    -- Don't want any mis-fires
+    vim.keymap.set("i", "<C-y>", "<nop>")
+    vim.keymap.set("i", "<C-n>", "<nop>")
+    vim.keymap.set("i", "<C-p>", "<nop>")
+    vim.keymap.set("i", "<M-y>", "<nop>")
+    vim.keymap.set("i", "<M-n>", "<nop>")
+    vim.keymap.set("i", "<M-p>", "<nop>")
+    vim.keymap.set("i", "<M-s>", "<nop>")
+
     blink.setup({
         completion = {
             accept = { auto_brackets = { enabled = true } },

@@ -96,15 +96,6 @@ vim.keymap.set("i", "<M-f>", "<S-right>")
 vim.keymap.set("i", "<C-m>", "<C-d>")
 vim.keymap.set("i", "<cr>", "<cr>") -- Remove key simplification
 
--- Reserve for blink
-vim.keymap.set("i", "<C-y>", "<nop>")
-vim.keymap.set("i", "<C-n>", "<nop>")
-vim.keymap.set("i", "<C-p>", "<nop>")
-vim.keymap.set("i", "<M-y>", "<nop>")
-vim.keymap.set("i", "<M-n>", "<nop>")
-vim.keymap.set("i", "<M-p>", "<nop>")
-vim.keymap.set("i", "<M-s>", "<nop>")
-
 vim.keymap.set("i", "<M-e>", "<C-o>ze", { silent = true })
 
 -- i_Ctrl-v always shows the simplified form of a key, Ctrl-Shift-v must be used to show the
