@@ -433,9 +433,6 @@ end
 -- Yank, Change, Delete --
 --------------------------
 
--- TODO: The "backward" mappings seem to have gone missing. Do these need to be re-created? If so,
--- do them in omode
-
 vim.keymap.set({ "n", "x" }, "x", '"_x', { silent = true })
 vim.keymap.set("n", "X", '"_X', { silent = true })
 vim.keymap.set("x", "X", 'ygvV"_d<cmd>put!<cr>=`]', { silent = true })
@@ -476,7 +473,7 @@ vim.keymap.set("n", "J", function()
 end, { silent = true })
 
 -- FUTURE: Do this with the API so it's dot-repeatable
----@param opts? table(upward:boolean)
+---@param opts? {upward:boolean}
 ---@return nil
 local visual_move = function(opts)
     if not ut.check_modifiable() then
