@@ -1,11 +1,9 @@
+-- Source to automatically setup LSP capabilities and play nice with LazyDev
 vim.cmd.packadd({ vim.fn.escape("blink.cmp", " "), bang = true, magic = { file = false } })
+-- Must be sourced to work with Obsidian
 vim.cmd.packadd({ vim.fn.escape("blink.compat", " "), bang = true, magic = { file = false } })
 
 local ut = require("mjm.utils")
-
--- TODO: blink's plugin dir does this automatically. Still needed?
-local blink = require("blink.cmp")
-vim.lsp.config("*", { capabilities = require("blink.cmp").get_lsp_capabilities(nil, true) })
 
 local function setup_blink()
     -- Don't want any mis-fires
@@ -17,7 +15,7 @@ local function setup_blink()
     vim.keymap.set("i", "<M-p>", "<nop>")
     vim.keymap.set("i", "<M-s>", "<nop>")
 
-    blink.setup({
+    require("blink.cmp").setup({
         cmdline = {
             completion = { menu = { auto_show = true }, ghost_text = { enabled = false } },
             enabled = true,
