@@ -133,7 +133,9 @@ local function build_active_y(stl)
 end
 
 local function build_active_z(stl)
-    table.insert(stl, " %l/%L | %c | v:%v | %o ")
+    -- Only use virtcol component when necessary. Causes performance hit + cursor flicker
+    -- table.insert(stl, " %l/%L | %c | v:%v | %o ")
+    table.insert(stl, " %l/%L | %c | %o ")
 end
 function M.set_active_stl()
     local stl = {}
