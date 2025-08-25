@@ -47,7 +47,7 @@ vim.api.nvim_set_option_value("ffs", "unix,dos", { scope = "global" })
 vim.api.nvim_set_option_value("smd", false, { scope = "global" })
 vim.api.nvim_set_option_value("mls", 1, { scope = "global" })
 
-local blink_setting = "blinkon1000-blinkoff1000"
+local blink_setting = "blinkon1-blinkoff1"
 local block_cursor = "n:" .. blink_setting
 local ver_cursor = "i-c-ci:ver100-" .. blink_setting
 local hor_cursor = "v-r:hor100-" .. blink_setting
