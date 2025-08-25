@@ -10,39 +10,34 @@
 -- sections. Also, right now the current aesthetic changes make telling inactive windows easier
 -- There's also the congruity with powerline. A simple fix might be though: make the "c" text
 -- string colored, but then white in inactive windows
--- TODO: Try the built-in diagnostics component. The autocmd runs anyway and you can pass in your
--- own symbols
 
 local M = {}
 
-local stl_data = require("mjm.stl-data")
+function M.good_mode(mode)
+    if string.match(mode, "[csSiR]") then
+        return false
+    else
+        return true
+    end
+end
 
 -- FUTURE: Hard icons to get out of because they're ergonomic
-local diag_icons = Has_Nerd_Font
-        and { ERROR = "󰅚", WARN = "󰀪", INFO = "󰋽", HINT = "󰌶" }
-    or { ERROR = "E:", WARN = "W:", INFO = "I:", HINT = "H:" }
+local levels = { "Error", "Warn", "Info", "Hint" }
+local signs = Has_Nerd_Font and { "󰅚", "󰀪", "󰋽", "󰌶" } or { "E:", "W:", "I:", "H:" }
 
 -- local format_icons = Has_Nerd_Font and { unix = "", dos = "", mac = "" }
 --     or { unix = "unix", dos = "dos", mac = "mac" }
 local format_icons = { unix = "unix", dos = "dos", mac = "mac" }
 
-local function get_section_hl(stl, section)
-    local mode = stl_data.modes[vim.fn.mode()] or "norm"
-    local hl = stl_data[mode .. "-" .. section]
-    if not hl then
-        hl = stl_data["norm" .. "-" .. section]
-    end
-    table.insert(stl, "%#" .. hl .. "#")
-end
-
 local function build_active_a(stl)
-    local head_info = stl_data.head and string.format(" %s ", stl_data.head) or " "
-    table.insert(stl, head_info)
+    -- local head_info = stl_data.head and string.format(" %s ", stl_data.head) or " "
+    -- table.insert(stl, head_info)
+    table.insert(stl, " %#stl_a#%{FugitiveStatusline()}%*")
 end
 
 -- TODO: How to only add spacing for the %m option if it displays
-local function build_active_b(stl)
-    table.insert(stl, " %m %f ")
+local function build_active_b(stl, mode)
+    table.insert(stl, " %#stl_b# %m %f [" .. mode .. "] %*")
 end
 
 local function get_lsps()
@@ -50,69 +45,60 @@ local function get_lsps()
     local clients = vim.lsp.get_clients({ bufnr = buf })
 
     if clients and #clients >= 1 then
-        return string.format("[%d] ", #clients)
+        return string.format("[%d] %%<", #clients)
     else
-        return ""
+        return "%<"
     end
 end
 
-function M.get_progress()
-    if not stl_data.progress then
+-- NOTE: We are assuming in this function that we would not be given a progress message to
+-- render unless we were in a valid mode
+-- NOTE: This is, like the diags, fastering than caching
+local function get_progress(progress)
+    if not progress then
         return ""
     end
 
-    local mode = stl_data.modes[vim.fn.mode()] or "norm"
-    if not vim.tbl_contains({ "norm", "vis", "cmd" }, mode) then
-        return ""
-    end
-
-    local values = stl_data.progress.params.value
-
+    local values = progress.params.value
     local pct = (function()
         if values.kind == "end" then
             return "(Complete) "
         elseif values.percentage then
-            return string.format("%d%% ", values.percentage)
+            return string.format("%d%%%% ", values.percentage)
         else
             return ""
         end
     end)()
 
-    local name = vim.lsp.get_client_by_id(stl_data.progress.client_id).name
-    local message = stl_data.progress.msg and " - " .. values.msg or ""
+    local name = vim.lsp.get_client_by_id(progress.client_id).name
+    local message = progress.msg and " - " .. values.msg or ""
 
     return pct .. name .. ": " .. values.title .. message
 end
 
-local function build_active_c(stl)
+-- Put the LSP to the left of the diags so it canb e cut off on short windows
+local function build_active_c(stl, mode, progress)
+    -- This actually performs better than caching
     local diags = (function()
-        local mode = stl_data.modes[vim.fn.mode()] or "norm"
-        if not vim.tbl_contains({ "norm", "vis", "cmd" }, mode) then
+        if not M.good_mode(mode) then
             return ""
         end
 
-        local buf = vim.api.nvim_get_current_buf()
-        local diag_counts = stl_data.diag_cache[tostring(buf)]
-        if not diag_counts then
+        local counts = vim.diagnostic.count(0)
+        if not counts then
             return ""
         end
 
-        local diag_str = vim.iter({ "Error", "Warn", "Info", "Hint" }):fold("", function(acc, l)
-            local upper_l = string.upper(l)
-            local count = diag_counts[upper_l]
-            if count < 1 then
-                return acc
-            end
-
-            return string.format("%s%%#Diagnostic%s#%s %d %%*", acc, l, diag_icons[upper_l], count)
-        end)
+        local diag_str = vim.iter(pairs(counts))
+            :map(function(s, count)
+                return string.format("%%#Diagnostic%s#%s %d%%* ", levels[s], signs[s], count)
+            end)
+            :join("")
 
         return diag_str
     end)()
 
-    local progress = "%{v:lua.require'mjm.stl-render'.get_progress()}"
-
-    table.insert(stl, " " .. diags .. get_lsps() .. progress)
+    table.insert(stl, " %#stl_c#" .. get_lsps() .. diags .. get_progress(progress) .. "%*")
 end
 
 -- FUTURE: Create events for encoding, format, and filetype changes to refresh stl
@@ -123,51 +109,51 @@ local function build_active_x(stl)
     local format = vim.api.nvim_get_option_value("fileformat", { buf = bufnr })
 
     local ft = vim.api.nvim_get_option_value("ft", { buf = bufnr })
-    local ft_str = ft == "" and "" or "| " .. ft .. " "
+    local ft_str = ft == "" and "" or "| " .. ft
 
-    table.insert(stl, encoding .. " | " .. format_icons[format] .. " " .. ft_str)
+    local icons = format_icons[format]
+    table.insert(stl, "%#stl_c# " .. encoding .. " | " .. icons .. " " .. ft_str .. "%*")
+end
+
+function M.get_scroll_pct()
+    local win = vim.api.nvim_get_current_win()
+    local row = vim.api.nvim_win_get_cursor(win)[1]
+    local tot_rows = vim.api.nvim_buf_line_count(vim.api.nvim_win_get_buf(win))
+
+    if row == tot_rows then
+        return 100
+    end
+
+    local pct = math.floor(row / tot_rows * 100)
+    pct = math.min(pct, 99)
+    pct = math.max(pct, 1)
+    return pct
 end
 
 local function build_active_y(stl)
-    table.insert(stl, " %{v:lua.require'mjm.stl-data'.get_scroll_pct()}%% ")
+    table.insert(stl, " %#stl_b# %{v:lua.require'mjm.stl-render'.get_scroll_pct()}%% %*")
 end
 
 local function build_active_z(stl)
     -- Only use virtcol component when necessary. Causes performance hit + cursor flicker
     -- table.insert(stl, " %l/%L | %c | v:%v | %o ")
-    table.insert(stl, " %l/%L | %c | %o ")
+    table.insert(stl, " %#stl_a#%l/%L | %c | %o %*")
 end
-function M.set_active_stl()
+
+-- Re-add mode stuff
+function M.set_active_stl(progress)
     local stl = {}
+    local mode = vim.fn.mode(1)
 
-    get_section_hl(stl, "a")
     build_active_a(stl)
-    table.insert(stl, "%*")
+    build_active_b(stl, mode)
+    build_active_c(stl, mode, progress)
 
-    get_section_hl(stl, "b")
-    build_active_b(stl)
-    table.insert(stl, "%*")
+    table.insert(stl, "%=%*")
 
-    table.insert(stl, "%<")
-    get_section_hl(stl, "c")
-    build_active_c(stl)
-    table.insert(stl, "%*")
-
-    get_section_hl(stl, "c")
-    table.insert(stl, "%=")
-    table.insert(stl, "%*")
-
-    get_section_hl(stl, "c")
     build_active_x(stl)
-    table.insert(stl, "%*")
-
-    get_section_hl(stl, "b")
     build_active_y(stl)
-    table.insert(stl, "%*")
-
-    get_section_hl(stl, "a")
     build_active_z(stl)
-    table.insert(stl, "%*")
 
     local stl_str = table.concat(stl, "")
 
@@ -175,6 +161,8 @@ function M.set_active_stl()
     vim.api.nvim_set_option_value("stl", stl_str, { win = win })
 end
 
+--- @param win integer
+--- @return nil
 function M.set_inactive_stl(win)
     if not win then
         return vim.notify("No window provided to set_inactive_stl", vim.log.levels.WARN)
@@ -182,19 +170,12 @@ function M.set_inactive_stl(win)
 
     local stl = {}
 
-    get_section_hl(stl, "b")
-    table.insert(stl, " %m %t ")
-    table.insert(stl, "%*")
+    table.insert(stl, " %#stl_b#%m %t %*")
+    table.insert(stl, "%=%*")
 
-    get_section_hl(stl, "c")
-    table.insert(stl, "%=")
-    table.insert(stl, "%*")
-
-    get_section_hl(stl, "b")
-    local scroll_pct = require("mjm.stl-data").get_scroll_pct()
+    local scroll_pct = M.get_scroll_pct()
     -- Unlike the active statusline, this should be a static value
-    table.insert(stl, string.format(" %d%%%% ", scroll_pct))
-    table.insert(stl, "%*")
+    table.insert(stl, string.format(" %%#%d%%%% %%*", scroll_pct))
 
     vim.api.nvim_set_option_value("stl", table.concat(stl, ""), { win = win })
 end

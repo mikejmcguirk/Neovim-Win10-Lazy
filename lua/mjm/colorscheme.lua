@@ -8,7 +8,7 @@
 
 local M = {}
 
-function M.darken_24bit(color, pct)
+local function darken_24bit(color, pct)
     local r = bit.band(bit.rshift(color, 16), 0xFF)
     local g = bit.band(bit.rshift(color, 8), 0xFF)
     local b = bit.band(color, 0xFF)
@@ -259,6 +259,15 @@ vim.api.nvim_set_hl(0, "QuickScopeSecondary", {
     ctermbg = 207,
     ctermfg = 0,
 })
+
+local s_fg = vim.api.nvim_get_hl(0, { name = "String" }).fg
+local bg = vim.api.nvim_get_hl(0, { name = "NonText" }).bg
+local fg = vim.api.nvim_get_hl(0, { name = "Normal" }).fg
+
+vim.api.nvim_set_hl(0, "stl_a", { fg = s_fg, bg = bg })
+local b_bg = darken_24bit(s_fg, 50)
+vim.api.nvim_set_hl(0, "stl_b", { fg = s_fg, bg = b_bg })
+vim.api.nvim_set_hl(0, "stl_c", { fg = fg, bg = bg })
 
 return M
 

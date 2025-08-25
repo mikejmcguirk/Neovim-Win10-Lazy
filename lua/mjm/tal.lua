@@ -4,10 +4,9 @@ local M = {}
 local symbol = Has_Nerd_Font and "\u{1F751}" or "|"
 -- Alternatively, "\u{21CC}" (left over right harpoon)
 
-local stl_data = require("mjm.stl-data")
-local hl_active = stl_data["norm-b"]
-local hl_inactive = stl_data["norm-a"]
-local hl_separator = stl_data["norm-c"]
+local hl_active = "stl_b"
+local hl_inactive = "stl_a"
+local hl_separator = "stl_c"
 
 vim.o.showtabline = 2
 vim.o.tabline = "%!v:lua.require('mjm.tal').get_tal()"
