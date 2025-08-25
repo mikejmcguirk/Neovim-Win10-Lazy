@@ -1,3 +1,6 @@
+-- TODO: Weird issue where workspace update is triggered due to FzfLua require, and Semantic
+-- Tokens do not consistently refresh afterwards
+
 local ut = require("mjm.utils")
 
 vim.lsp.log.set_level(vim.log.levels.ERROR)

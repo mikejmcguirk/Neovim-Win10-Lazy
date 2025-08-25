@@ -11,7 +11,6 @@ vim.api.nvim_create_user_command("DBUI", function()
 
     require("mjm.pack").post_load("vim-dadbod")
     require("mjm.pack").post_load("vim-dadbod-ui")
-    require("mjm.pack").post_load("vim-dadbod-completion")
 
     vim.cmd("DBUI")
 end, {})

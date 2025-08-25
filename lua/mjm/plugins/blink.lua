@@ -2,6 +2,10 @@
 vim.cmd.packadd({ vim.fn.escape("blink.cmp", " "), bang = true, magic = { file = false } })
 -- Must be sourced to work with Obsidian
 vim.cmd.packadd({ vim.fn.escape("blink.compat", " "), bang = true, magic = { file = false } })
+-- Just do this here to avoid managing multiple load conditions. blink checkhealth fails
+-- if it can't find Dadbod completion
+local dadbod_cmp = "vim-dadbod-completion"
+vim.cmd.packadd({ vim.fn.escape(dadbod_cmp, " "), bang = true, magic = { file = false } })
 
 local ut = require("mjm.utils")
 

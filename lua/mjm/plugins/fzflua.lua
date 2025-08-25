@@ -246,6 +246,10 @@ fzf_lua.registers = function(opts)
     for _, r in ipairs(registers) do
         -- pcall in case of invalid data err E5108
         local _, contents = pcall(vim.fn.getreg, r)
+        if not contents then
+            return
+        end
+
         contents = register_escape_special(contents, opts.multiline and 2 or 1)
         local regtype = vim.fn.getregtype(r) or " "
         if (contents and #contents > 0) or not opts.ignore_empty then

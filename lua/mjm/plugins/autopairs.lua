@@ -23,8 +23,9 @@ local function setup_autopairs()
     -- Auto add commas after lua table entries
     npairs.add_rules({
         rule("{", "},", "lua"):with_pair(ts_conds.is_ts_node({ "table_constructor" })),
-        rule("'", "',", "lua"):with_pair(ts_conds.is_ts_node({ "table_constructor" })),
-        rule('"', '",', "lua"):with_pair(ts_conds.is_ts_node({ "table_constructor" })),
+        -- Triggers on comments after constructor lines
+        -- rule("'", "',", "lua"):with_pair(ts_conds.is_ts_node({ "table_constructor" })),
+        -- rule('"', '",', "lua"):with_pair(ts_conds.is_ts_node({ "table_constructor" })),
     })
 end
 
