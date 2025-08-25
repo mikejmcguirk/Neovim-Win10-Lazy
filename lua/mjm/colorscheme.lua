@@ -81,72 +81,71 @@ local groups = {
     DiffChange = { fg = c.black, bg = c.orange },
     DiffDelete = { fg = c.black, bg = c.red },
 
-    Added = { link = "DiagnosticInfo" }, -- (Default self-definition)
-    Changed = { link = "DiagnosticWarn" }, -- (Default self-definition)
-    Removed = { link = "DiagnosticError" }, -- (Default self-definition)
+    Added = { fg = c.light_green }, -- (Default self-definition)
+    Changed = { fg = c.orange }, -- (Default self-definition)
+    Removed = { fg = c.red }, -- (Default self-definition)
 
-    Error = { link = "DiagnosticError" }, --- (Default self-definition)
-    ErrorMsg = { link = "DiagnosticError" }, --- (Default self-definition)
-    WarningMsg = { link = "DiagnosticWarn" }, -- (Default self-definition)
-    MoreMsg = { link = "DiagnosticInfo" }, -- (Default self-definition)
-    Question = { link = "DiagnosticInfo" }, -- (Default self-definition)
+    Error = { fg = c.red }, --- (Default self-definition)
+    ErrorMsg = { fg = c.red }, --- (Default self-definition)
+    WarningMsg = { fg = c.orange }, -- (Default self-definition)
+    MoreMsg = { fg = c.light_green }, -- (Default self-definition)
+    Question = { fg = c.light_green }, -- (Default self-definition)
 
-    SpellBad = { link = "DiagnosticError" }, -- (Default self-definition)
-    SpellLocal = { link = "DiagnosticWarn" }, -- (Default self-definition)
-    SpellCap = { link = "DiagnosticInfo" }, -- (Default self-definition)
-    SpellRare = { link = "DiagnosticHint" }, -- (Default self-definition)
+    SpellBad = { fg = c.red }, -- (Default self-definition)
+    SpellLocal = { fg = c.orange }, -- (Default self-definition)
+    SpellCap = { fg = c.light_green }, -- (Default self-definition)
+    SpellRare = { fg = c.cyan }, -- (Default self-definition)
 
     --------------------------
     -- Other Related/Linked --
     --------------------------
 
     ColorColumn = { bg = c.dark_purple },
-    CursorLine = { link = "ColorColumn" }, -- (Default self-definition)
-    CursorColumn = { link = "CursorLine" }, -- (Default self-definition)
+    CursorLine = { bg = c.dark_purple }, -- (Default self-definition)
+    CursorColumn = { bg = c.dark_purple }, -- (Default self-definition)
 
     Comment = { fg = c.purple, italic = true },
-    Conceal = { link = "Comment" }, -- (Default self-definition)
+    Conceal = { fg = c.purple, italic = true }, -- (Default self-definition)
 
     Constant = { fg = c.red },
-    ["@lsp.typemod.variable.global"] = { link = "Constant" }, -- Default @lsp
-    ["@lsp.typemod.variable.defaultLibrary"] = { link = "Constant" }, -- Default @lsp
-    ["@variable.builtin"] = { link = "Constant" }, -- No default
+    ["@lsp.typemod.variable.global"] = { fg = c.red }, -- Default @lsp
+    ["@lsp.typemod.variable.defaultLibrary"] = { fg = c.red }, -- Default @lsp
+    ["@variable.builtin"] = { fg = c.red }, -- No default
 
     Delimiter = { fg = c.fg },
+    Normal = { fg = c.fg },
+    NormalFloat = { fg = c.fg }, -- Default self-definition
 
     Function = { fg = c.yellow },
-    ["@function.builtin"] = { link = "Function" }, -- Default link to Special
+    ["@function.builtin"] = { fg = c.yellow }, -- Default link to Special
 
     Identifier = { fg = c.fg },
-    ["@variable"] = { link = "Identifier" }, --- Default self-definition
+    ["@variable"] = { fg = c.fg }, --- Default self-definition
 
     NonText = { fg = c.dark_purple_two },
-    SpecialKey = { link = "NonText" }, --- Default self-definition
-
-    Normal = { fg = c.fg },
-    NormalFloat = { link = "Normal" }, -- Default self-definition
+    SpecialKey = { fg = c.dark_purple_two }, --- Default self-definition
 
     Number = { fg = c.cyan }, -- (Default link: Constant)
-    Boolean = { link = "Number" }, -- (Default link: Constant)
-    ["@lsp.typemod.boolean.injected"] = { link = "Boolean" }, -- Default @lsp
-    Character = { link = "Number" }, -- (Default link: Constant)
+    Boolean = { fg = c.cyan }, -- (Default link: Constant)
+    ["@lsp.typemod.boolean.injected"] = { fg = c.cyan }, -- Default @lsp
+    Character = { fg = c.cyan }, -- (Default link: Constant)
 
-    ["@module"] = { link = "Number" }, -- (Default link: Type)
-    ["@lsp.type.namespace"] = { link = "@module" }, -- (Default link: Type)
+    ["@module"] = { fg = c.cyan }, -- (Default link: Type)
+    ["@lsp.type.namespace"] = { fg = c.cyan }, -- (Default link: Type)
 
     ["@lsp.type.enumMember"] = { fg = c.cyan, italic = true }, -- (Default link: Type)
 
     Operator = { fg = c.pink },
-    ["@lsp.typemod.arithmetic.injected"] = { link = "Operator" }, --- Default link @lsp
-    ["@lsp.typemod.comparison.injected"] = { link = "Operator" }, --- Default link @lsp
+    ["@lsp.typemod.arithmetic.injected"] = { fg = c.pink }, --- Default link @lsp
+    ["@lsp.typemod.comparison.injected"] = { fg = c.pink }, --- Default link @lsp
 
     PreProc = { fg = c.pink, italic = true },
-    ["@function.macro"] = { link = "PreProc" }, -- Default link: Function
-    ["@lsp.type.macro"] = { link = "PreProc" }, -- (Default link: Constant)
-    ["@lsp.typemod.lifetime.injected"] = { link = "PreProc" }, -- (Default link: @lsp)
+    ["@function.macro"] = { fg = c.pink, italic = true }, -- Default link: Function
+    ["@lsp.type.macro"] = { fg = c.pink, italic = true }, -- (Default link: Constant)
+    ["@lsp.typemod.lifetime.injected"] = { fg = c.pink, italic = true }, -- (Default link: @lsp)
 
     Special = { fg = c.pink },
-    ["@lsp.typemod.attributeBracket.injected"] = { link = "Special" }, --- Default link @lsp
+    ["@lsp.typemod.attributeBracket.injected"] = { fg = c.pink }, --- Default link @lsp
 
     Statement = { fg = c.pink },
 
@@ -154,18 +153,18 @@ local groups = {
     ["@lsp.type.parameter"] = { fg = c.orange }, -- Default link: Identifier
 
     StatusLine = { fg = c.fg, bg = c.dark_purple_two },
-    StatusLineNC = { link = "StatusLine" }, -- (Default self-definition)
+    StatusLineNC = { fg = c.fg, bg = c.dark_purple_two }, -- (Default self-definition)
 
     String = { fg = c.light_purple },
 
     Type = { fg = c.light_green },
-    ["@lsp.type.builtinType"] = { link = "Type" }, -- Default link @lsp
+    ["@lsp.type.builtinType"] = { fg = c.light_green }, -- Default link @lsp
     --
     ["@lsp.type.typeAlias"] = { fg = c.light_green, italic = true },
-    ["@lsp.type.selfTypeKeyword"] = { link = "@lsp.type.typeAlias" }, -- Default link @lsp
+    ["@lsp.type.selfTypeKeyword"] = { fg = c.light_green, italic = true }, -- Default link @lsp
 
     WinSeparator = { fg = c.purple }, -- (Default link: Normal)
-    FloatBorder = { link = "WinSeparator" }, -- (Default link: NormalFloat)
+    FloatBorder = { fg = c.purple }, -- (Default link: NormalFloat)
 
     -----------------
     -- Other Stuff --
