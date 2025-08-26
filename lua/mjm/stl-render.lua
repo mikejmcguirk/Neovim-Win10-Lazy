@@ -21,9 +21,9 @@ function M.good_mode(mode)
     end
 end
 
--- FUTURE: Hard icons to get out of because they're ergonomic
 local levels = { "Error", "Warn", "Info", "Hint" }
-local signs = Has_Nerd_Font and { "󰅚", "󰀪", "󰋽", "󰌶" } or { "E:", "W:", "I:", "H:" }
+-- local signs = Has_Nerd_Font and { "󰅚", "󰀪", "󰋽", "󰌶" } or { "E:", "W:", "I:", "H:" }
+local signs = { "E:", "W:", "I:", "H:" }
 
 -- local format_icons = Has_Nerd_Font and { unix = "", dos = "", mac = "" }
 --     or { unix = "unix", dos = "dos", mac = "mac" }
@@ -91,7 +91,7 @@ local function build_active_c(stl, mode, progress)
 
         local diag_str = vim.iter(pairs(counts))
             :map(function(s, count)
-                return string.format("%%#Diagnostic%s#%s %d%%* ", levels[s], signs[s], count)
+                return string.format("%%#Diagnostic%s#%s%d%%* ", levels[s], signs[s], count)
             end)
             :join("")
 
