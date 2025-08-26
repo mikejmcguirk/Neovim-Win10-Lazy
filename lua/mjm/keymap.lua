@@ -425,7 +425,11 @@ vim.keymap.set("x", "X", 'ygvV"_d<cmd>put!<cr>=`]', { silent = true })
 -- FUTURE: These should remove trailing whitespace from the original line. The == should handle
 -- invalid leading whitespace on the new line
 vim.keymap.set("n", "dJ", "Do<esc>p==", { silent = true })
-vim.keymap.set("n", "dK", "DO<esc>p==", { silent = true })
+vim.keymap.set("n", "dK", function()
+    vim.api.nvim_set_option_value("lz", true, { scope = "global" })
+    vim.api.nvim_feedkeys("DO\27p==", "nix", false)
+    vim.api.nvim_set_option_value("lz", false, { scope = "global" })
+end)
 vim.keymap.set("n", "dm", "<cmd>delmarks!<cr>")
 
 -----------------------
