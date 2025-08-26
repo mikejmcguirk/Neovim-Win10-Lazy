@@ -40,7 +40,8 @@ local c = {
     cyan = "#98FFFB",
 
     light_green = "#C0FF98",
-    green = "#6F9655",
+    -- green = "#6F9655",
+    green = "#579964",
 
     orange = "#FFD298",
     dark_orange = "#967A55",
