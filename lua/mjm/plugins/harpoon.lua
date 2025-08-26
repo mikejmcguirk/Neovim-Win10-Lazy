@@ -13,8 +13,10 @@ harpoon:setup({
         },
     },
     default = {
-        -- When using the built-in select function, ftplugin settings fail to load
-        -- Issue does not occur if we use edit instead of bufload
+        -- The default select function uses bufload > nvim_set_current_buf
+        -- Per Fzflua's comments this "messes up" BufReadPost autocmds. This lines up with my
+        -- own observations. opt_locals that require buf and win context do not set
+        -- Use nvim_win_set_buf instead, which loads the buf if needed
         select = function(list_item, list, options)
             logger:log("config_default#select", list_item, list.name, options)
             if list_item == nil then
@@ -26,15 +28,11 @@ harpoon:setup({
                 return
             end
 
-            local bufnr = vim.fn.bufnr(list_item.value)
+            local prev_buflist = vim.api.nvim_list_bufs()
+            local bufnr = vim.fn.bufadd(list_item.value)
             if vim.api.nvim_get_current_buf() == bufnr then
                 vim.notify("Already in buffer")
                 return
-            end
-
-            local set_position = false
-            if bufnr == -1 then
-                set_position = true
             end
 
             options = options or {}
@@ -46,15 +44,15 @@ harpoon:setup({
                 vim.cmd("tabedit")
             end
 
-            vim.cmd("edit " .. list_item.value)
-            bufnr = vim.fn.bufnr(list_item.value)
+            vim.api.nvim_set_option_value("buflisted", true, { buf = bufnr })
+            vim.api.nvim_win_set_buf(0, bufnr)
 
-            if set_position then
-                local lines = vim.api.nvim_buf_line_count(bufnr)
+            if not vim.tbl_contains(prev_buflist, bufnr) then
+                local line_count = vim.api.nvim_buf_line_count(bufnr)
 
                 local edited = false
-                if list_item.context.row > lines then
-                    list_item.context.row = lines
+                if list_item.context.row > line_count then
+                    list_item.context.row = line_count
                     edited = true
                 end
 
@@ -111,7 +109,7 @@ for _ = 1, 10 do
 end
 
 -- Adapted from mike-jl/harpoonEx
-local function del_cur_buf()
+local function rm_cur_buf()
     local list = harpoon:list()
     if not list then
         return
@@ -139,5 +137,5 @@ local function del_cur_buf()
 end
 
 vim.keymap.set("n", "<leader>ar", function()
-    del_cur_buf()
+    rm_cur_buf()
 end, { desc = "Delete current file from Harpoon List" })
