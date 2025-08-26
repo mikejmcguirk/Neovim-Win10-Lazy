@@ -1,24 +1,14 @@
 -- TODO: When LSP progress messages send, elements A and B are shrunk to accomodate them
 -- Those elements should stay stable
--- MAYBE: Could explore adding the char index. But it looks like I would need to compute that in
--- Lua, which might incur a performance cost. Real time rendering has already been significantly
--- cut back due to flickering
+-- TODO: Truncate long filenames in split windows
+-- TODO: Build a character index component and keep it commented out alongside the virt col one
 -- MAYBE: Build inactive stl as a Lua function that takes the window number as a parameter
 -- Allows for showing diags
--- FUTURE: The stl can be reduced to two colors by combining the filename with the git info and
--- the % progress with the col info. But this might require adjusting what are currently the "c"
--- sections. Also, right now the current aesthetic changes make telling inactive windows easier
--- There's also the congruity with powerline. A simple fix might be though: make the "c" text
--- string colored, but then white in inactive windows
 
 local M = {}
 
-function M.good_mode(mode)
-    if string.match(mode, "[csSiR]") then
-        return false
-    else
-        return true
-    end
+function M.bad_mode(mode)
+    return string.match(mode, "[csSiR]")
 end
 
 local levels = { "Error", "Warn", "Info", "Hint" }
@@ -80,7 +70,7 @@ end
 local function build_active_c(stl, mode, progress)
     -- This actually performs better than caching
     local diags = (function()
-        if not M.good_mode(mode) then
+        if M.bad_mode(mode) then
             return ""
         end
 
@@ -140,7 +130,6 @@ local function build_active_z(stl)
     table.insert(stl, " %#stl_a#%l/%L | %c | %o %*")
 end
 
--- Re-add mode stuff
 function M.set_active_stl(progress)
     local stl = {}
     local mode = vim.fn.mode(1)
@@ -155,10 +144,8 @@ function M.set_active_stl(progress)
     build_active_y(stl)
     build_active_z(stl)
 
-    local stl_str = table.concat(stl, "")
-
     local win = vim.api.nvim_get_current_win()
-    vim.api.nvim_set_option_value("stl", stl_str, { win = win })
+    vim.api.nvim_set_option_value("stl", table.concat(stl, ""), { win = win })
 end
 
 --- @param win integer
@@ -166,6 +153,10 @@ end
 function M.set_inactive_stl(win)
     if not win then
         return vim.notify("No window provided to set_inactive_stl", vim.log.levels.WARN)
+    end
+
+    if not vim.api.nvim_win_is_valid(win) then
+        return
     end
 
     local stl = {}

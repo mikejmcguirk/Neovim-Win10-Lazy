@@ -1,28 +1,25 @@
--- FUTURE: Use nvim_redraw when it stops being experimental
-
-local M = {}
-
 local stl_render = require("mjm.stl-render")
 
-local stl_events = vim.api.nvim_create_augroup("stl-events", { clear = true })
--- Remove the default autocmd
+-- Not using the default diagnostics component. Remove its autocmd
 vim.api.nvim_del_augroup_by_name("nvim.diagnostic.status")
+local stl_events = vim.api.nvim_create_augroup("stl-events", { clear = true })
 
 vim.api.nvim_create_autocmd({ "UIEnter" }, {
     group = stl_events,
-    callback = function()
+    once = true,
+    callback = vim.schedule_wrap(function()
         stl_render.set_active_stl()
-    end,
+    end),
 })
 
-local rebuild_list = { "WinEnter", "BufEnter", "BufWinEnter", "LspAttach", "LspDetach" }
-vim.api.nvim_create_autocmd(rebuild_list, {
+vim.api.nvim_create_autocmd({ "WinEnter", "BufEnter", "BufWinEnter", "LspAttach", "LspDetach" }, {
     group = stl_events,
-    callback = function()
+    callback = vim.schedule_wrap(function()
         stl_render.set_active_stl()
-    end,
+    end),
 })
 
+-- Run immediately to avoid stl flicker
 vim.api.nvim_create_autocmd("WinLeave", {
     group = stl_events,
     callback = function()
@@ -38,8 +35,10 @@ vim.api.nvim_create_autocmd("LspProgress", {
         end
 
         local progress = vim.deepcopy(ev.data, true)
-        if stl_render.good_mode(vim.fn.mode(1)) then
-            stl_render.set_active_stl(progress)
+        if not stl_render.bad_mode(vim.fn.mode(1)) then
+            vim.schedule(function()
+                stl_render.set_active_stl(progress)
+            end)
         end
 
         if progress.params.value.kind == "end" then
@@ -54,18 +53,20 @@ vim.api.nvim_create_autocmd("LspProgress", {
 -- Now that we aren't caching though, feels unlikely to happen again
 vim.api.nvim_create_autocmd("DiagnosticChanged", {
     group = stl_events,
-    callback = function()
-        if stl_render.good_mode(vim.fn.mode(1)) then
+    callback = vim.schedule_wrap(function()
+        if not stl_render.bad_mode(vim.fn.mode(1)) then
             stl_render.set_active_stl()
         end
-    end,
+    end),
 })
 
+-- Seems to create more cursor flicker if schedule wrapped
+-- Very rough thesis is that some async event(s) are triggering spooky action at a distance that
+-- cause the gcr to blink out of rhythm. So adding an additional scheduled event here adds to
+-- the problem
 vim.api.nvim_create_autocmd("ModeChanged", {
     group = stl_events,
     callback = function()
         stl_render.set_active_stl()
     end,
 })
-
-return M
