@@ -170,12 +170,12 @@ function M.set_inactive_stl(win)
 
     local stl = {}
 
-    table.insert(stl, " %#stl_b#%m %t %*")
+    table.insert(stl, "%#stl_b#%m %t %*")
     table.insert(stl, "%=%*")
 
     local scroll_pct = M.get_scroll_pct()
     -- Unlike the active statusline, this should be a static value
-    table.insert(stl, string.format(" %%#%d%%%% %%*", scroll_pct))
+    table.insert(stl, string.format("%%#stl_b# %d%%%% %%*", scroll_pct))
 
     vim.api.nvim_set_option_value("stl", table.concat(stl, ""), { win = win })
 end
