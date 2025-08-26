@@ -108,6 +108,7 @@ local groups = {
     Conceal = { fg = c.purple, italic = true }, -- (Default self-definition)
 
     Constant = { fg = c.red },
+    ["@constant.builtin"] = { fg = c.red }, -- No default
     ["@lsp.typemod.variable.global"] = { fg = c.red }, -- Default @lsp
     ["@lsp.typemod.variable.defaultLibrary"] = { fg = c.red }, -- Default @lsp
     ["@variable.builtin"] = { fg = c.red }, -- No default
@@ -209,6 +210,7 @@ local groups = {
 
     ["@comment.documentation.lua"] = {}, -- Treesitter assumes all three-dash comments are docs
     ["@lsp.type.method.lua"] = {}, -- Confusing when functions are used as variables
+    ["@lsp.type.variable.lua"] = {}, -- Overwrites function calls
 }
 
 for k, v in pairs(groups) do
