@@ -16,7 +16,7 @@ local add_pragma = function(pragma)
     local row_0 = row_1 - 1
     local indent = ut.get_indent(row_1) or 0 ---@type integer
     local padding = string.rep(" ", indent) ---@type string
-    vim.api.nvim_buf_set_text(0, row_0, 0, row_0, 0, { padding .. pragma })
+    vim.api.nvim_buf_set_text(0, row_0, 0, row_0, #line, { padding .. pragma })
 
     line = vim.api.nvim_get_current_line() ---@type string
     local line_len_0 = #line - 1

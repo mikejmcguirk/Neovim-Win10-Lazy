@@ -13,9 +13,9 @@ local function add_annotation(annotation)
     if col_1 >= 3 and line:sub(col_1 - 2, col_1) == "---" then
         vim.api.nvim_buf_set_text(0, row_0, col_1, row_0, col_1, { annotation .. " " })
     elseif line:match("^%s*$") then -- All whitespace
-        local padding = string.rep(" ", ut.get_indent(row) or 0) ---@type string
+        local padding = string.rep("0", ut.get_indent(row) or 0) ---@type string
         local padded_annotation = padding .. "---" .. annotation .. " "
-        vim.api.nvim_buf_set_text(0, row_0, 0, row_0, 0, { padded_annotation })
+        vim.api.nvim_buf_set_text(0, row_0, 0, row_0, #line, { padded_annotation })
     elseif line:match("%s$") then -- Non-whitespace with trailing whitespace
         vim.api.nvim_buf_set_text(0, row_0, #line, row_0, #line, { "---" .. annotation .. " " })
     else -- Non-whitespace without trailing whitespace
