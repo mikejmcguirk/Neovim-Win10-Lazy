@@ -1,38 +1,28 @@
-local main_diag_cfg = {
-    float = { source = "always", border = Border },
+local diag_main_cfg = {
+    float = { source = true, border = Border },
     severity_sort = true,
-    signs = {
-        severity = {
-            min = vim.diagnostic.severity.HINT,
-        },
-    },
 } ---@type table
 
-local virtual_text_cfg = {
+local virt_text_cfg = {
     virtual_lines = false,
     virtual_text = {
-        severity = {
-            min = vim.diagnostic.severity.HINT,
-        },
         current_line = true,
     },
 } ---@type table
 
-local virtual_lines_cfg = {
+local virt_lines_cfg = {
     virtual_lines = { current_line = true },
     virtual_text = false,
 } ---@type table
 
-local default_diag_cfg = vim.tbl_extend("force", main_diag_cfg, virtual_text_cfg)
-local alt_diag_cfg = vim.tbl_extend("force", main_diag_cfg, virtual_lines_cfg)
-vim.diagnostic.config(default_diag_cfg)
+local diag_text_cfg = vim.tbl_extend("force", diag_main_cfg, virt_text_cfg)
+local diag_lines_cfg = vim.tbl_extend("force", diag_main_cfg, virt_lines_cfg)
+vim.diagnostic.config(diag_text_cfg)
+
+-- FUTURE: Not the right keymap since this isn't an LSP feature
 vim.keymap.set("n", "grd", function()
-    local current_config = vim.diagnostic.config() or {} ---@type vim.diagnostic.Opts
-    if current_config.virtual_lines == false then
-        vim.diagnostic.config(alt_diag_cfg)
-    else
-        vim.diagnostic.config(default_diag_cfg)
-    end
+    local cur_cfg = vim.diagnostic.config() or {}
+    vim.diagnostic.config((not cur_cfg.virtual_lines) and diag_lines_cfg or diag_text_cfg)
 end)
 
 local ut = require("mjm.utils")
