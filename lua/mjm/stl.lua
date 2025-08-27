@@ -67,6 +67,11 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
 vim.api.nvim_create_autocmd("ModeChanged", {
     group = stl_events,
     callback = function()
+        --- @diagnostic disable: undefined-field
+        if vim.v.event.new_mode == "r?" then
+            return
+        end
+
         stl_render.set_active_stl()
     end,
 })
