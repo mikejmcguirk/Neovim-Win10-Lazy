@@ -121,7 +121,7 @@ function M.get_scroll_pct()
 end
 
 local function build_active_y(stl)
-    table.insert(stl, " %#stl_b# %{v:lua.require'mjm.stl-render'.get_scroll_pct()}%% %*")
+    table.insert(stl, " %#stl_b# %p%% %*")
 end
 
 local function build_active_z(stl)
