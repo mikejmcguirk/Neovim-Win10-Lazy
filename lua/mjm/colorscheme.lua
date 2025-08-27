@@ -45,10 +45,10 @@ local groups = {
     DiagnosticHint = { fg = c.l_cyan },
 
     -- Can't link and add info, so just manually set
-    -- DiagnosticUnderlineError = { fg = c.l_red, underline = true },
-    -- DiagnosticUnderlineWarn = { fg = c.l_orange, underline = true },
-    -- DiagnosticUnderlineInfo = { fg = c.l_green, underline = true },
-    -- DiagnosticUnderlineHint = { fg = c.l_cyan, underline = true },
+    DiagnosticUnderlineError = { fg = c.l_red, underline = true },
+    DiagnosticUnderlineWarn = { fg = c.l_orange, underline = true },
+    DiagnosticUnderlineInfo = { fg = c.l_green, underline = true },
+    DiagnosticUnderlineHint = { fg = c.l_cyan, underline = true },
 
     -- Same here
     DiffAdd = { fg = c.black, bg = c.l_green },
