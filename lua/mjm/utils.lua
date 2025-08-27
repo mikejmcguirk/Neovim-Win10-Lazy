@@ -24,7 +24,7 @@ end
 
 ---@param bufnr? integer
 ---@return boolean
-M.check_modifiable = function(bufnr)
+function M.check_modifiable(bufnr)
     if vim.api.nvim_get_option_value("modifiable", { buf = bufnr or 0 }) then
         return true
     else
