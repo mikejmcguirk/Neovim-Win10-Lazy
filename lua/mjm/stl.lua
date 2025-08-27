@@ -7,11 +7,12 @@ local stl_events = vim.api.nvim_create_augroup("stl-events", { clear = true })
 vim.api.nvim_create_autocmd({ "UIEnter" }, {
     group = stl_events,
     once = true,
-    callback = vim.schedule_wrap(function()
-        stl_render.set_active_stl()
-    end),
+    callback = function()
+        vim.schedule(stl_render.set_active_stl)
+    end,
 })
 
+--Schedule wrap rather than schedule to get proper mode after leaving FzfLua
 vim.api.nvim_create_autocmd({ "WinEnter", "BufEnter", "BufWinEnter", "LspAttach", "LspDetach" }, {
     group = stl_events,
     callback = vim.schedule_wrap(function()
@@ -35,32 +36,29 @@ vim.api.nvim_create_autocmd("LspProgress", {
         end
 
         if ev.data.params.value.kind == "end" then
-            vim.defer_fn(function()
-                stl_render.set_active_stl()
-            end, 2250)
+            vim.defer_fn(stl_render.set_active_stl, 2250)
         end
 
         if not stl_render.bad_mode(vim.fn.mode(1)) then
             local progress = vim.deepcopy(ev.data, true)
-            vim.schedule(function()
-                stl_render.set_active_stl(progress)
-            end)
+            stl_render.set_active_stl(progress)
         end
     end,
 })
 
 -- TODO: nil argument error on GDelete
 -- Now that we aren't caching though, feels unlikely to happen again
+-- Run immediately to avoid acting on bad state
 vim.api.nvim_create_autocmd("DiagnosticChanged", {
     group = stl_events,
-    callback = vim.schedule_wrap(function()
+    callback = function()
         if not stl_render.bad_mode(vim.fn.mode(1)) then
             stl_render.set_active_stl()
         end
-    end),
+    end,
 })
 
--- Seems to create more cursor flicker if schedule wrapped
+-- Seems to create more cursor flicker if scheduled
 -- Very rough thesis is that some async event(s) are triggering spooky action at a distance that
 -- cause the gcr to blink out of rhythm. So adding an additional scheduled event here adds to
 -- the problem
