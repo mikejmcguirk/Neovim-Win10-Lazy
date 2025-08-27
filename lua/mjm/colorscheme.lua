@@ -43,6 +43,7 @@ local groups = {
     DiagnosticWarn = { fg = c.l_orange },
     DiagnosticInfo = { fg = c.l_green },
     DiagnosticHint = { fg = c.l_cyan },
+    DiagnosticUnnecessary = { underdashed = true }, -- Default link: Comment
 
     -- Can't link and add info, so just manually set
     DiagnosticUnderlineError = { fg = c.l_red, underline = true },
