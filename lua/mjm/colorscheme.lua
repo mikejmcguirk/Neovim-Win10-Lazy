@@ -3,61 +3,34 @@
 -- TODO: I can check this on Cinnamon, but I think some of the display issues I'm having are
 -- due to the lack of compositing
 
--- TODO: For completeness's sake, add in terminal colors. Should be able to match with my
--- ghostty config
-
-local M = {}
-
-local function darken_24bit(color, pct)
-    local r = bit.band(bit.rshift(color, 16), 0xFF)
-    local g = bit.band(bit.rshift(color, 8), 0xFF)
-    local b = bit.band(color, 0xFF)
-
-    r = math.max(0, math.floor(r * (1 - pct / 100)))
-    g = math.max(0, math.floor(g * (1 - pct / 100)))
-    b = math.max(0, math.floor(b * (1 - pct / 100)))
-
-    return bit.bor(bit.lshift(r, 16), bit.lshift(g, 8), b)
-end
-
-----------------------------------
--- The actual colorscheme setup --
-----------------------------------
-
-vim.cmd("hi clear")
-if vim.fn.exists("syntax_on") == 1 then
-    vim.cmd("syntax reset")
-end
-
--- TODO: The statusline would benefit from some kind of more distinct, maybe darker bg color
-
 local c = {
     -- https://www.sessions.edu/color-calculator/
     black = "#000000",
 
     fg = "#EFEFFD",
 
-    cyan = "#98FFFB",
+    l_cyan = "#98FFFB",
 
-    light_green = "#C0FF98",
-    -- green = "#6F9655",
+    l_green = "#C0FF98",
     green = "#579964",
 
-    orange = "#FFD298",
-    dark_orange = "#967A55",
-    dark_orange_fg = "#FFF0E0",
+    l_orange = "#FFD298",
+    orange = "#967A55",
+    orange_fg = "#FFF0E0",
 
-    pink = "#FF67D4",
+    l_pink = "#FF67D4",
+    pink = "#613852",
 
-    light_purple = "#D598FF",
+    l_purple = "#D598FF",
     purple = "#925393",
     bold_purple = "#492949",
-    dark_purple = "#251d2b",
-    dark_purple_two = "#2b2233",
+    d_purple = "#251d2b",
+    d_purple_two = "#2b2233",
+    d_purple_three = "#18131c", -- Darkened from dark purple
 
-    red = "#FF98B3",
+    l_red = "#FF98B3",
 
-    yellow = "#EDFF98",
+    l_yellow = "#EDFF98",
 }
 
 local groups = {
@@ -66,104 +39,114 @@ local groups = {
     -- Diagnostic Links --
     ----------------------
 
-    DiagnosticError = { fg = c.red },
-    DiagnosticWarn = { fg = c.orange },
-    DiagnosticInfo = { fg = c.light_green },
-    DiagnosticHint = { fg = c.cyan },
+    DiagnosticError = { fg = c.l_red },
+    DiagnosticWarn = { fg = c.l_orange },
+    DiagnosticInfo = { fg = c.l_green },
+    DiagnosticHint = { fg = c.l_cyan },
 
     -- Can't link and add info, so just manually set
-    DiagnosticUnderlineError = { fg = c.red, underline = true },
-    DiagnosticUnderlineWarn = { fg = c.orange, underline = true },
-    DiagnosticUnderlineInfo = { fg = c.light_green, underline = true },
-    DiagnosticUnderlineHint = { fg = c.cyan, underline = true },
+    -- DiagnosticUnderlineError = { fg = c.l_red, underline = true },
+    -- DiagnosticUnderlineWarn = { fg = c.l_orange, underline = true },
+    -- DiagnosticUnderlineInfo = { fg = c.l_green, underline = true },
+    -- DiagnosticUnderlineHint = { fg = c.l_cyan, underline = true },
 
     -- Same here
-    DiffAdd = { fg = c.black, bg = c.light_green },
-    DiffChange = { fg = c.black, bg = c.orange },
-    DiffDelete = { fg = c.black, bg = c.red },
+    DiffAdd = { fg = c.black, bg = c.l_green },
+    DiffChange = { fg = c.black, bg = c.l_orange },
+    DiffDelete = { fg = c.black, bg = c.l_red },
 
-    Added = { fg = c.light_green }, -- (Default self-definition)
-    Changed = { fg = c.orange }, -- (Default self-definition)
-    Removed = { fg = c.red }, -- (Default self-definition)
+    Added = { fg = c.l_green }, -- (Default self-definition)
+    Changed = { fg = c.l_orange }, -- (Default self-definition)
+    Removed = { fg = c.l_red }, -- (Default self-definition)
 
-    Error = { fg = c.red }, --- (Default self-definition)
-    ErrorMsg = { fg = c.red }, --- (Default self-definition)
-    WarningMsg = { fg = c.orange }, -- (Default self-definition)
-    MoreMsg = { fg = c.light_green }, -- (Default self-definition)
-    Question = { fg = c.light_green }, -- (Default self-definition)
+    Error = { fg = c.l_red }, --- (Default self-definition)
+    ErrorMsg = { fg = c.l_red }, --- (Default self-definition)
+    WarningMsg = { fg = c.l_orange }, -- (Default self-definition)
+    MoreMsg = { fg = c.l_green }, -- (Default self-definition)
+    Question = { fg = c.l_green }, -- (Default self-definition)
 
-    SpellBad = { fg = c.red }, -- (Default self-definition)
-    SpellLocal = { fg = c.orange }, -- (Default self-definition)
-    SpellCap = { fg = c.light_green }, -- (Default self-definition)
-    SpellRare = { fg = c.cyan }, -- (Default self-definition)
+    SpellBad = { fg = c.l_red }, -- (Default self-definition)
+    SpellLocal = { fg = c.l_orange }, -- (Default self-definition)
+    SpellCap = { fg = c.l_green }, -- (Default self-definition)
+    SpellRare = { fg = c.l_cyan }, -- (Default self-definition)
 
     --------------------------
     -- Other Related/Linked --
     --------------------------
 
-    ColorColumn = { bg = c.dark_purple },
-    CursorLine = { bg = c.dark_purple }, -- (Default self-definition)
-    CursorColumn = { bg = c.dark_purple }, -- (Default self-definition)
+    ColorColumn = { bg = c.d_purple },
+    CursorLine = { bg = c.d_purple }, -- (Default self-definition)
+    CursorColumn = { bg = c.d_purple }, -- (Default self-definition)
 
     Comment = { fg = c.purple, italic = true },
+    ["@comment"] = { fg = c.purple, italic = true }, --- Default link Comment
     Conceal = { fg = c.purple, italic = true }, -- (Default self-definition)
 
-    Constant = { fg = c.red },
-    ["@constant.builtin"] = { fg = c.red }, -- No default
-    ["@lsp.typemod.variable.global"] = { fg = c.red }, -- Default @lsp
-    ["@lsp.typemod.variable.defaultLibrary"] = { fg = c.red }, -- Default @lsp
-    ["@variable.builtin"] = { fg = c.red }, -- No default
+    Constant = { fg = c.l_red },
+    ["@constant.builtin"] = { fg = c.l_red }, -- No default
+    ["@lsp.typemod.variable.global"] = { fg = c.l_red }, -- Default @lsp
+    ["@lsp.typemod.variable.defaultLibrary"] = { fg = c.l_red }, -- Default @lsp
+    ["@variable.builtin"] = { fg = c.l_red }, -- No default
 
     Delimiter = { fg = c.fg },
     Normal = { fg = c.fg },
     NormalFloat = { fg = c.fg }, -- Default self-definition
 
-    Function = { fg = c.yellow },
-    ["@function.builtin"] = { fg = c.yellow }, -- Default link to Special
+    Function = { fg = c.l_yellow },
+    ["@function"] = { fg = c.l_yellow }, -- Default link to Function
+    ["@function.builtin"] = { fg = c.l_yellow }, -- Default link to Special
+    ["@function.call"] = { fg = c.l_yellow }, -- Default link Function
 
     Identifier = { fg = c.fg },
     ["@variable"] = { fg = c.fg }, --- Default self-definition
 
-    NonText = { fg = c.dark_purple_two },
-    SpecialKey = { fg = c.dark_purple_two }, --- Default self-definition
+    NonText = { fg = c.pink },
+    SpecialKey = { fg = c.pink }, --- Default self-definition
 
-    Number = { fg = c.cyan }, -- (Default link: Constant)
-    Boolean = { fg = c.cyan }, -- (Default link: Constant)
-    ["@lsp.typemod.boolean.injected"] = { fg = c.cyan }, -- Default @lsp
-    Character = { fg = c.cyan }, -- (Default link: Constant)
+    Number = { fg = c.l_cyan }, -- (Default link: Constant)
+    ["@number"] = { fg = c.l_cyan }, -- Default link Number
+    Boolean = { fg = c.l_cyan }, -- (Default link: Constant)
+    ["@lsp.typemod.boolean.injected"] = { fg = c.l_cyan }, -- Default @lsp
+    Character = { fg = c.l_cyan }, -- (Default link: Constant)
 
-    ["@module"] = { fg = c.cyan }, -- (Default link: Type)
-    ["@lsp.type.namespace"] = { fg = c.cyan }, -- (Default link: Type)
+    ["@module"] = { fg = c.l_cyan }, -- (Default link: Type)
+    ["@lsp.type.namespace"] = { fg = c.l_cyan }, -- (Default link: Type)
 
-    ["@lsp.type.enumMember"] = { fg = c.cyan, italic = true }, -- (Default link: Type)
+    ["@lsp.type.enumMember"] = { fg = c.l_cyan, italic = true }, -- (Default link: Type)
 
-    Operator = { fg = c.pink },
-    ["@lsp.typemod.arithmetic.injected"] = { fg = c.pink }, --- Default link @lsp
-    ["@lsp.typemod.comparison.injected"] = { fg = c.pink }, --- Default link @lsp
+    Operator = { fg = c.l_pink },
+    ["@lsp.typemod.arithmetic.injected"] = { fg = c.l_pink }, --- Default link @lsp
+    ["@lsp.typemod.comparison.injected"] = { fg = c.l_pink }, --- Default link @lsp
+    ["@operator"] = { fg = c.l_pink }, --- Default link Operator
 
-    PreProc = { fg = c.pink, italic = true },
-    ["@function.macro"] = { fg = c.pink, italic = true }, -- Default link: Function
-    ["@lsp.type.macro"] = { fg = c.pink, italic = true }, -- (Default link: Constant)
-    ["@lsp.typemod.lifetime.injected"] = { fg = c.pink, italic = true }, -- (Default link: @lsp)
+    PreProc = { fg = c.l_pink, italic = true },
+    ["@function.macro"] = { fg = c.l_pink, italic = true }, -- Default link: Function
 
-    Special = { fg = c.pink },
-    ["@lsp.typemod.attributeBracket.injected"] = { fg = c.pink }, --- Default link @lsp
+    ["@lsp.type.macro"] = { fg = c.l_pink, italic = true }, -- (Default link: Constant)
+    ["@lsp.typemod.lifetime.injected"] = { fg = c.l_pink, italic = true }, -- (Default link: @lsp)
 
-    Statement = { fg = c.pink },
+    Special = { fg = c.l_pink },
+    ["@constructor"] = { fg = c.l_pink }, --- Default link Special
+    ["@lsp.typemod.attributeBracket.injected"] = { fg = c.l_pink }, --- Default link @lsp
+
+    Statement = { fg = c.l_pink },
+    ["@keyword.function"] = {}, -- Default link statement
 
     ["@variable.parameter"] = {}, -- Only useful with an LSP to track scope
-    ["@lsp.type.parameter"] = { fg = c.orange }, -- Default link: Identifier
+    ["@lsp.type.parameter"] = { fg = c.l_orange }, -- Default link: Identifier
 
-    StatusLine = { fg = c.fg, bg = c.dark_purple_two },
-    StatusLineNC = { fg = c.fg, bg = c.dark_purple_two }, -- (Default self-definition)
+    StatusLine = { fg = c.fg, bg = c.d_purple_three },
+    StatusLineNC = { fg = c.fg, bg = c.d_purple_three }, -- (Default self-definition)
+    Tabline = { fg = c.fg, bg = c.d_purple_three }, -- (Default self-definition)
 
-    String = { fg = c.light_purple },
+    String = { fg = c.l_purple },
+    ["@string"] = { fg = c.l_purple }, -- Default link String
 
-    Type = { fg = c.light_green },
-    ["@lsp.type.builtinType"] = { fg = c.light_green }, -- Default link @lsp
+    Type = { fg = c.l_green },
+    ["@lsp.type.builtinType"] = { fg = c.l_green }, -- Default link @lsp
     --
-    ["@lsp.type.typeAlias"] = { fg = c.light_green, italic = true },
-    ["@lsp.type.selfTypeKeyword"] = { fg = c.light_green, italic = true }, -- Default link @lsp
+    ["@lsp.type.typeAlias"] = { fg = c.l_green, italic = true },
+    ["@lsp.type.selfTypeKeyword"] = { fg = c.l_green, italic = true }, -- Default link @lsp
 
     WinSeparator = { fg = c.purple }, -- (Default link: Normal)
     FloatBorder = { fg = c.purple }, -- (Default link: NormalFloat)
@@ -172,17 +155,17 @@ local groups = {
     -- Other Stuff --
     -----------------
 
-    CurSearch = { fg = c.black, bg = c.orange },
-    IncSearch = { fg = c.light_green },
+    CurSearch = { fg = c.black, bg = c.l_orange },
+    IncSearch = { fg = c.l_green },
     QuickFixLine = { bg = c.bold_purple },
-    Search = { fg = c.dark_orange_fg, bg = c.dark_orange },
+    Search = { fg = c.orange_fg, bg = c.orange },
     Visual = { bg = c.bold_purple },
 
-    Directory = { fg = c.light_green },
-    CursorLineNr = { fg = c.light_green },
+    Directory = { fg = c.l_green },
+    CursorLineNr = { fg = c.l_green },
     LineNr = { fg = c.purple }, -- rnu
-    Title = { fg = c.light_green },
-    Todo = { fg = c.light_green },
+    Title = { fg = c.l_green },
+    Todo = { fg = c.l_green },
 
     Folded = { fg = c.purple, bg = c.bold_purple },
     LspInlayHint = { fg = c.green, italic = true },
@@ -190,7 +173,7 @@ local groups = {
 
     Pmenu = { fg = c.fg },
     PmenuSel = { bg = c.bold_purple },
-    PmenuThumb = { bg = c.cyan },
+    PmenuThumb = { bg = c.l_cyan },
 
     Cursor = {}, --- (Default self-definition. I have reverse video cursor set in the terminal)
     EndOfBuffer = {}, -- (Default link: Non-text)
@@ -199,26 +182,68 @@ local groups = {
     NormalNC = {}, -- Causes performance issues (default setting)
     SignColumn = {}, -- Default self-definition
 
-    --------------
-    -- Personal --
-    --------------
-
-    EolSpace = { fg = c.cyan, bg = c.orange },
-
     ---------
     -- Lua --
     ---------
 
     ["@comment.documentation.lua"] = {}, -- Treesitter assumes all three-dash comments are docs
-    ["@lsp.type.method.lua"] = {}, -- Confusing when functions are used as variables
+    ["@lsp.type.function.lua"] = {}, -- Confusing when functions are used as variables
+    ["@lsp.type.method.lua"] = {}, -- Confusing when methods are used as variables
     ["@lsp.type.variable.lua"] = {}, -- Overwrites function calls
 }
+
+local function darken_hex(color, pct)
+    local r = tonumber(color:sub(2, 3), 16)
+    local g = tonumber(color:sub(4, 5), 16)
+    local b = tonumber(color:sub(6, 7), 16)
+
+    r = math.max(0, math.floor(r * (1 - pct / 100)))
+    g = math.max(0, math.floor(g * (1 - pct / 100)))
+    b = math.max(0, math.floor(b * (1 - pct / 100)))
+
+    return string.format("#%02X%02X%02X", r, g, b)
+end
+
+local function lighten_hex(color, percent)
+    local r = tonumber(color:sub(2, 3), 16)
+    local g = tonumber(color:sub(4, 5), 16)
+    local b = tonumber(color:sub(6, 7), 16)
+
+    r = math.min(255, math.floor(r * (1 + percent / 100)))
+    g = math.min(255, math.floor(g * (1 + percent / 100)))
+    b = math.min(255, math.floor(b * (1 + percent / 100)))
+
+    return string.format("#%02X%02X%02X", r, g, b)
+end
+
+vim.api.nvim_cmd({ cmd = "hi", args = { "clear" } }, {})
+vim.api.nvim_cmd({ cmd = "syntax", args = { "off" } }, {})
 
 for k, v in pairs(groups) do
     vim.api.nvim_set_hl(0, k, v)
 end
 
--- Fill-in un-recognized constants
+vim.api.nvim_set_var("terminal_color_0", c.black)
+vim.api.nvim_set_var("terminal_color_1", c.l_red)
+vim.api.nvim_set_var("terminal_color_2", c.l_purple)
+vim.api.nvim_set_var("terminal_color_3", c.l_orange)
+vim.api.nvim_set_var("terminal_color_4", c.l_cyan)
+vim.api.nvim_set_var("terminal_color_5", c.l_green)
+vim.api.nvim_set_var("terminal_color_6", c.l_yellow)
+vim.api.nvim_set_var("terminal_color_7", c.fg)
+
+vim.api.nvim_set_var("terminal_color_8", lighten_hex(c.black, 30))
+vim.api.nvim_set_var("terminal_color_9", darken_hex(c.l_red, 30))
+vim.api.nvim_set_var("terminal_color_10", darken_hex(c.l_purple, 30))
+vim.api.nvim_set_var("terminal_color_11", darken_hex(c.l_orange, 30))
+vim.api.nvim_set_var("terminal_color_12", darken_hex(c.l_cyan, 30))
+vim.api.nvim_set_var("terminal_color_13", darken_hex(c.l_green, 30))
+vim.api.nvim_set_var("terminal_color_14", darken_hex(c.l_yellow, 30))
+vim.api.nvim_set_var("terminal_color_15", darken_hex(c.fg, 30))
+
+vim.g.colors_name = "SimpleDelta"
+
+-- Fill-in un-recognized Lua constants
 vim.api.nvim_create_autocmd("LspTokenUpdate", {
     group = vim.api.nvim_create_augroup("lsp-token-fix", { clear = true }),
     pattern = "*.lua",
@@ -245,9 +270,7 @@ vim.api.nvim_create_autocmd("LspTokenUpdate", {
     end,
 })
 
-vim.g.colors_name = "SimpleDelta"
-
--- Works with the Quickscope plugin. Good hl_groups in general
+-- Used for QuickScope and Flash, so set here
 vim.api.nvim_set_hl(0, "QuickScopePrimary", {
     bg = vim.api.nvim_get_hl(0, { name = "Number" }).fg,
     fg = "#000000",
@@ -262,16 +285,25 @@ vim.api.nvim_set_hl(0, "QuickScopeSecondary", {
     ctermfg = 0,
 })
 
+local function darken_24bit(color, pct)
+    local r = bit.band(bit.rshift(color, 16), 0xFF)
+    local g = bit.band(bit.rshift(color, 8), 0xFF)
+    local b = bit.band(color, 0xFF)
+
+    r = math.max(0, math.floor(r * (1 - pct / 100)))
+    g = math.max(0, math.floor(g * (1 - pct / 100)))
+    b = math.max(0, math.floor(b * (1 - pct / 100)))
+
+    return bit.bor(bit.lshift(r, 16), bit.lshift(g, 8), b)
+end
+
+-- Post-calculating this is a bit dumb, but if I need to turn off the colorscheme for testing, I
+-- can just comment out the set calls and let this run without breaking the stl
 local s_fg = vim.api.nvim_get_hl(0, { name = "String" }).fg
 local bg = vim.api.nvim_get_hl(0, { name = "NonText" }).bg
-local fg = vim.api.nvim_get_hl(0, { name = "Normal" }).fg
-
 vim.api.nvim_set_hl(0, "stl_a", { fg = s_fg, bg = bg })
-local b_bg = darken_24bit(s_fg, 50)
-vim.api.nvim_set_hl(0, "stl_b", { fg = s_fg, bg = b_bg })
-vim.api.nvim_set_hl(0, "stl_c", { fg = fg, bg = bg })
-
-return M
+vim.api.nvim_set_hl(0, "stl_b", { fg = s_fg, bg = darken_24bit(s_fg, 50) })
+vim.api.nvim_set_hl(0, "stl_c", { fg = vim.api.nvim_get_hl(0, { name = "Normal" }).fg, bg = bg })
 
 ---------------------------------------------------
 -- Various utils lifted from Fluoromachine.nvim --
@@ -299,40 +331,4 @@ return M
 
 -- local function rgb_to_hex(red, green, blue)
 --     return string.format("#%02X%02X%02X", red, green, blue)
--- end
-
--- local function darken_hex(color, pct)
---     local r = tonumber(color:sub(2, 3), 16)
---     local g = tonumber(color:sub(4, 5), 16)
---     local b = tonumber(color:sub(6, 7), 16)
---
---     r = math.max(0, math.floor(r * (1 - pct / 100)))
---     g = math.max(0, math.floor(g * (1 - pct / 100)))
---     b = math.max(0, math.floor(b * (1 - pct / 100)))
---
---     return string.format("#%02X%02X%02X", r, g, b)
--- end
---
--- function M.darken_hex(color, pct)
---     local r = tonumber(color:sub(2, 3), 16)
---     local g = tonumber(color:sub(4, 5), 16)
---     local b = tonumber(color:sub(6, 7), 16)
---
---     r = math.max(0, math.floor(r * (1 - pct / 100)))
---     g = math.max(0, math.floor(g * (1 - pct / 100)))
---     b = math.max(0, math.floor(b * (1 - pct / 100)))
---
---     return string.format("#%02X%02X%02X", r, g, b)
--- end
-
--- local function lighten_hex(color, percent)
---     local r = tonumber(color:sub(2, 3), 16)
---     local g = tonumber(color:sub(4, 5), 16)
---     local b = tonumber(color:sub(6, 7), 16)
---
---     r = math.min(255, math.floor(r * (1 + percent / 100)))
---     g = math.min(255, math.floor(g * (1 + percent / 100)))
---     b = math.min(255, math.floor(b * (1 + percent / 100)))
---
---     return string.format("#%02X%02X%02X", r, g, b)
 -- end
