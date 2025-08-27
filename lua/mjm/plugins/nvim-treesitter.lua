@@ -19,6 +19,7 @@ require("nvim-treesitter.configs").setup({
         "c_sharp",
         "bash",
         "css",
+        "diff",
         "javascript",
         "json",
         "gitattributes",
