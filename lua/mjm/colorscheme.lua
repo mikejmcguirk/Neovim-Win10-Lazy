@@ -130,7 +130,7 @@ local groups = {
     ["@lsp.typemod.attributeBracket.injected"] = { fg = c.l_pink }, --- Default link @lsp
 
     Statement = { fg = c.l_pink },
-    ["@keyword.function"] = {}, -- Default link statement
+    ["@keyword.function"] = { fg = c.l_pink }, -- Default link statement
 
     ["@variable.parameter"] = {}, -- Only useful with an LSP to track scope
     ["@lsp.type.parameter"] = { fg = c.l_orange }, -- Default link: Identifier
