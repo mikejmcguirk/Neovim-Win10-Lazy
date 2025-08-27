@@ -3,6 +3,8 @@
 -- TODO: I can check this on Cinnamon, but I think some of the display issues I'm having are
 -- due to the lack of compositing
 
+vim.api.nvim_set_var("c_syntax_for_h", true)
+
 local c = {
     -- https://www.sessions.edu/color-calculator/
     black = "#000000",
