@@ -144,6 +144,7 @@ local groups = {
     ["@string"] = { fg = c.l_purple }, -- Default link String
 
     Type = { fg = c.l_green },
+    ["@type.builtin"] = { fg = c.l_green }, -- Default link Special
     ["@lsp.type.builtinType"] = { fg = c.l_green }, -- Default link @lsp
     --
     ["@lsp.type.typeAlias"] = { fg = c.l_green, italic = true },
