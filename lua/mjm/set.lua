@@ -83,9 +83,6 @@ vim.api.nvim_set_option_value("bk", false, { scope = "global" })
 vim.api.nvim_set_option_value("udf", true, { scope = "global" })
 vim.api.nvim_set_option_value("ut", 250, { scope = "global" })
 
-vim.api.nvim_set_option_value("list", true, { scope = "global" })
-vim.opt.listchars = { tab = "<–>", extends = "»", precedes = "«", nbsp = "␣", trail = "⣿" }
--- vim.opt.listchars = { eol = "↲", tab = "<–>", extends = "»", precedes = "«", nbsp = "␣" }
 vim.api.nvim_set_option_value("wrap", false, { scope = "global" })
 -- For fts where opt_local wrap is true
 vim.api.nvim_set_option_value("bri", true, { scope = "global" })
@@ -115,6 +112,27 @@ end
 
 set_cul("WinLeave", "", false)
 set_cul("WinEnter", "", true)
+
+-- For whatever reason, this global scope set works initially, but then the autocmds have to set
+-- by window
+vim.api.nvim_set_option_value("list", true, { scope = "global" })
+vim.opt.listchars = { tab = "<–>", extends = "»", precedes = "«", nbsp = "␣", trail = "⣿" }
+-- vim.opt.listchars = { eol = "↲", tab = "<–>", extends = "»", precedes = "«", nbsp = "␣" }
+
+local list_control = vim.api.nvim_create_augroup("list-control", { clear = true })
+vim.api.nvim_create_autocmd("InsertEnter", {
+    group = list_control,
+    callback = function()
+        vim.api.nvim_set_option_value("list", false, { win = vim.api.nvim_get_current_win() })
+    end,
+})
+
+vim.api.nvim_create_autocmd("InsertLeave", {
+    group = list_control,
+    callback = function()
+        vim.api.nvim_set_option_value("list", true, { win = vim.api.nvim_get_current_win() })
+    end,
+})
 
 ----------------
 
