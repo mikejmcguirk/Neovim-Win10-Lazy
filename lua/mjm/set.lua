@@ -83,8 +83,7 @@ vim.api.nvim_set_option_value("udf", true, { scope = "global" })
 vim.api.nvim_set_option_value("ut", 250, { scope = "global" })
 
 vim.api.nvim_set_option_value("list", true, { scope = "global" })
-vim.opt.listchars = { tab = "<–>", extends = "»", precedes = "«", nbsp = "␣" }
--- vim.opt.listchars = { tab = "<–>", extends = "»", precedes = "«", nbsp = "␣", trail = "⣿" }
+vim.opt.listchars = { tab = "<–>", extends = "»", precedes = "«", nbsp = "␣", trail = "⣿" }
 -- vim.opt.listchars = { eol = "↲", tab = "<–>", extends = "»", precedes = "«", nbsp = "␣" }
 vim.api.nvim_set_option_value("wrap", false, { scope = "global" })
 -- For fts where opt_local wrap is true
