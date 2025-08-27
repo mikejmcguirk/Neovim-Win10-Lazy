@@ -34,17 +34,17 @@ vim.api.nvim_create_autocmd("LspProgress", {
             return
         end
 
-        local progress = vim.deepcopy(ev.data, true)
-        if not stl_render.bad_mode(vim.fn.mode(1)) then
-            vim.schedule(function()
-                stl_render.set_active_stl(progress)
-            end)
-        end
-
-        if progress.params.value.kind == "end" then
+        if ev.data.params.value.kind == "end" then
             vim.defer_fn(function()
                 stl_render.set_active_stl()
             end, 2250)
+        end
+
+        if not stl_render.bad_mode(vim.fn.mode(1)) then
+            local progress = vim.deepcopy(ev.data, true)
+            vim.schedule(function()
+                stl_render.set_active_stl(progress)
+            end)
         end
     end,
 })
