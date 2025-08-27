@@ -12,12 +12,12 @@ vim.api.nvim_create_autocmd({ "UIEnter" }, {
     end,
 })
 
---Schedule wrap rather than schedule to get proper mode after leaving FzfLua
+-- No schedule because it does not update mode properly when leaving FzfLua
 vim.api.nvim_create_autocmd({ "WinEnter", "BufEnter", "BufWinEnter", "LspAttach", "LspDetach" }, {
     group = stl_events,
-    callback = vim.schedule_wrap(function()
+    callback = function()
         stl_render.set_active_stl()
-    end),
+    end,
 })
 
 -- Run immediately to avoid stl flicker
