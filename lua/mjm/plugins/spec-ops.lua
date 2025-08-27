@@ -4,9 +4,31 @@
 vim.cmd.packadd({ vim.fn.escape("spec-ops", " "), bang = true, magic = { file = false } })
 
 --- @module "spec-ops"
-vim.g.spec_ops = {
-    reg_handler = "target_only", --- @type SpecOpsRegHandlerOpt
+--- @type SpecOpsConfig
+local config = {
+    global = {
+        reg_handler = "target_only",
+    },
+    ops = {
+        change = {
+            enabled = true,
+        },
+        delete = {
+            enabled = true,
+        },
+        paste = {
+            enabled = true,
+        },
+        substitute = {
+            enabled = true,
+        },
+        yank = {
+            enabled = true,
+        },
+    },
 }
+
+vim.g.spec_ops = config
 
 ------------
 -- Change --
