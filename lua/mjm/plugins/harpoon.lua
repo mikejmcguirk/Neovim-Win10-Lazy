@@ -17,60 +17,63 @@ harpoon:setup({
         -- Per Fzflua's comments this "messes up" BufReadPost autocmds. This lines up with my
         -- own observations. opt_locals that require buf and win context do not set
         -- Use nvim_win_set_buf instead, which loads the buf if needed
-        select = function(list_item, list, options)
-            logger:log("config_default#select", list_item, list.name, options)
-            if list_item == nil then
+        select = function(list_item, list, opts)
+            logger:log("custom#select", list_item, list.name, opts)
+
+            if not list_item then
+                vim.notify("nil list_item")
                 return
             end
 
             if not vim.uv.fs_stat(list_item.value) then
-                vim.notify("File " .. list_item.value .. " Does not exist", vim.log.levels.WARN)
+                vim.notify(list_item.value .. " not found", vim.log.levels.WARN)
                 return
             end
 
-            local prev_buflist = vim.api.nvim_list_bufs()
-            local bufnr = vim.fn.bufadd(list_item.value)
-            if vim.api.nvim_get_current_buf() == bufnr then
+            local prev_bufs = vim.api.nvim_list_bufs() --- @type integer[]
+            local buf = vim.fn.bufadd(list_item.value) --- @type integer
+            if vim.api.nvim_get_current_buf() == buf then
                 vim.notify("Already in buffer")
                 return
             end
 
-            options = options or {}
-            if options.vsplit then
-                vim.cmd("vsplit")
-            elseif options.split then
-                vim.cmd("split")
-            elseif options.tabedit then
-                vim.cmd("tabedit")
+            opts = opts or {}
+            if opts.vsplit then
+                vim.api.nvim_cmd({ cmd = "vsplit" }, {})
+            elseif opts.split then
+                vim.api.nvim_cmd({ cmd = "split" }, {})
+            elseif opts.tabedit then
+                vim.api.nvim_cmd({ cmd = "tabedit" }, {})
             end
 
-            vim.api.nvim_set_option_value("buflisted", true, { buf = bufnr })
-            vim.api.nvim_win_set_buf(0, bufnr)
+            vim.api.nvim_set_option_value("buflisted", true, { buf = buf })
+            vim.api.nvim_win_set_buf(0, buf)
 
-            if not vim.tbl_contains(prev_buflist, bufnr) then
-                local line_count = vim.api.nvim_buf_line_count(bufnr)
+            if not vim.tbl_contains(prev_bufs, buf) then
+                list_item.context.row = list_item.context.row or 1
+                list_item.context.col = list_item.context.col or 0
 
-                local edited = false
+                local line_count = vim.api.nvim_buf_line_count(buf) --- @type integer
+                local updated = false --- @type boolean
                 if list_item.context.row > line_count then
                     list_item.context.row = line_count
-                    edited = true
+                    updated = true
                 end
 
-                local row = list_item.context.row
-                local row_text = vim.api.nvim_buf_get_lines(0, row - 1, row, false)
-                local col = #row_text[1]
+                local row = list_item.context.row --- @type integer
+                --- @type integer
+                local col = #vim.api.nvim_buf_get_lines(0, row - 1, row, false)[1]
 
                 if list_item.context.col > col then
                     list_item.context.col = col
-                    edited = true
+                    updated = true
                 end
 
-                vim.api.nvim_win_set_cursor(0, {
-                    list_item.context.row or 1,
-                    list_item.context.col or 0,
-                })
+                --- @type {[1]:integer, [2]:integer}
+                local cur_pos = { list_item.context.row, list_item.context.col }
+                vim.api.nvim_win_set_cursor(0, cur_pos)
 
-                if edited then
+                if updated then
                     extensions.extensions:emit(extensions.event_names.POSITION_UPDATED, {
                         list_item = list_item,
                     })
@@ -78,7 +81,7 @@ harpoon:setup({
             end
 
             extensions.extensions:emit(extensions.event_names.NAVIGATE, {
-                buffer = bufnr,
+                buffer = buf,
             })
         end,
     },

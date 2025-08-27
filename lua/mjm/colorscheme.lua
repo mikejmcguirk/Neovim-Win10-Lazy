@@ -148,6 +148,7 @@ local groups = {
     Type = { fg = c.l_green },
     ["@type.builtin"] = { fg = c.l_green }, -- Default link Special
     ["@lsp.type.builtinType"] = { fg = c.l_green }, -- Default link @lsp
+    ["@lsp.type.type"] = { fg = c.l_green }, -- Default link Type
     --
     ["@lsp.type.typeAlias"] = { fg = c.l_green, italic = true },
     ["@lsp.type.selfTypeKeyword"] = { fg = c.l_green, italic = true }, -- Default link @lsp
