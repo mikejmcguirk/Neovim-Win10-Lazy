@@ -25,7 +25,7 @@ vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
 local clear_conditions = {
     "BufEnter",
     "CmdlineEnter",
-    "InsertEnter",
+    -- "InsertEnter",
     "RecordingEnter",
     "TabLeave",
     "TabNewEntered",

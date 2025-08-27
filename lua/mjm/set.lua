@@ -45,6 +45,7 @@ vim.api.nvim_set_option_value("sr", true, { scope = "global" })
 vim.api.nvim_set_option_value("ffs", "unix,dos", { scope = "global" })
 
 vim.api.nvim_set_option_value("smd", false, { scope = "global" })
+vim.api.nvim_set_option_value("ru", false, { scope = "global" })
 vim.api.nvim_set_option_value("mls", 1, { scope = "global" })
 
 local blink_setting = "blinkon1-blinkoff1"
