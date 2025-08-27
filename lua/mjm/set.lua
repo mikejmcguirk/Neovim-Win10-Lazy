@@ -49,9 +49,9 @@ vim.api.nvim_set_option_value("ru", false, { scope = "global" })
 vim.api.nvim_set_option_value("mls", 1, { scope = "global" })
 
 local blink_setting = "blinkon1-blinkoff1"
-local block_cursor = "n:" .. blink_setting
-local ver_cursor = "i-c-ci:ver100-" .. blink_setting
-local hor_cursor = "v-r:hor100-" .. blink_setting
+local block_cursor = "n-o:block" .. blink_setting
+local ver_cursor = "i-sm-c-ci-t:ver100-" .. blink_setting
+local hor_cursor = "v-ve-r-cr:hor100-" .. blink_setting
 local gcr = block_cursor .. "," .. ver_cursor .. "," .. hor_cursor
 vim.api.nvim_set_option_value("gcr", gcr, { scope = "global" })
 
