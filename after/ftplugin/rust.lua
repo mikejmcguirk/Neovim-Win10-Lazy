@@ -1,6 +1,9 @@
 -- FUTURE: Worth exploring mrcjkb/rustaceanvim and rust-lang/rust.vim
 -- The former unlocks more features of rust-analyzer, the latter does some basic formatting
 
+-- TODO: It should apparently be possible to run make in Rust files and automatically have the
+-- build errors sent to the qf list
+
 vim.keymap.set("i", ";", ";<C-g>u", { silent = true })
 local ut = require("mjm.utils")
 
