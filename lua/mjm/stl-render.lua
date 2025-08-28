@@ -127,7 +127,7 @@ end
 local function build_active_z(stl)
     -- Only use virtcol component when necessary. Causes performance hit + cursor flicker
     -- table.insert(stl, " %l/%L | %c | v:%v | %o ")
-    table.insert(stl, " %#stl_a#%l/%L | %c | %o %*")
+    table.insert(stl, " %#stl_a#%l/%L | %c %*")
 end
 
 function M.set_active_stl(progress)
