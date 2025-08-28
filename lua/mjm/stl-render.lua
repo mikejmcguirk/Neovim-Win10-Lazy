@@ -25,7 +25,8 @@ local format_icons = { unix = "unix", dos = "dos", mac = "mac" }
 
 local function build_active_a(stl)
     -- TODO: Use gitsigns_status_dict
-    table.insert(stl, " %#stl_a#%{FugitiveStatusline()} %{get(b:,'gitsigns_status','')}%*")
+    -- table.insert(stl, " %#stl_a#%{FugitiveStatusline()} %{get(b:,'gitsigns_status','')}%*")
+    table.insert(stl, " %#stl_a#%{get(b:,'gitsigns_head','')} %{get(b:,'gitsigns_status','')}%*")
 end
 
 -- TODO: How to only add spacing for the %m option if it displays
