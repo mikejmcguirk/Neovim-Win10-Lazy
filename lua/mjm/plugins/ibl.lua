@@ -17,7 +17,7 @@ local function setup_ibl()
         indent = { char = indent_char },
         scope = { enabled = false, show_start = false, show_end = false },
         exclude = { filetypes = excluded_filetypes },
-        whitespace = { highlight = { "Normal" } },
+        whitespace = { highlight = { "NonText" } },
         debounce = 200,
     })
 end
