@@ -144,6 +144,22 @@ local groups = {
     WinSeparator = { fg = c.purple }, -- (Default link: Normal)
     FloatBorder = { link = "WinSeparator" }, -- (Default link: NormalFloat)
 
+    ["@markup.environment"] = { fg = c.l_purple },
+    ["@markup.heading"] = { link = "Title" },
+    ["@markup.italic"] = { fg = c.l_green, italic = true },
+    ["@markup.link"] = { fg = c.l_cyan },
+    ["@markup.link.label"] = { fg = c.l_cyan },
+    ["@markup.link.url"] = { fg = c.comment },
+    ["@markup.list"] = { fg = c.l_pink },
+    ["@markup.list.checked"] = { fg = c.l_green },
+    ["@markup.math"] = { link = "Operator" },
+    ["@markup.quote"] = { link = "Comment" },
+    ["@markup.raw"] = { link = "Comment" },
+    ["@markup.raw.block"] = { link = "Comment" },
+    ["@markup.strikethrough"] = { fg = c.l_yellow, strikethrough = true },
+    ["@markup.strong"] = { fg = c.l_red, bold = true },
+    ["@markup.underline"] = { link = "Underlined" },
+
     -----------------
     -- Other Stuff --
     -----------------
