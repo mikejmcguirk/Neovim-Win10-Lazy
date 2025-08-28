@@ -11,6 +11,10 @@ function M.bad_mode(mode)
     return string.match(mode, "[csSiR]")
 end
 
+-- local git_signs = { "added", "changed", "removed" }
+-- local git_hl = { "Info", "Warn", "Error" }
+-- local git_symbols = { "+", "~", "-" }
+
 local levels = { "Error", "Warn", "Info", "Hint" }
 -- local signs = Has_Nerd_Font and { "󰅚", "󰀪", "󰋽", "󰌶" } or { "E:", "W:", "I:", "H:" }
 local signs = { "E:", "W:", "I:", "H:" }
@@ -20,9 +24,8 @@ local signs = { "E:", "W:", "I:", "H:" }
 local format_icons = { unix = "unix", dos = "dos", mac = "mac" }
 
 local function build_active_a(stl)
-    -- local head_info = stl_data.head and string.format(" %s ", stl_data.head) or " "
-    -- table.insert(stl, head_info)
-    table.insert(stl, " %#stl_a#%{FugitiveStatusline()}%*")
+    -- TODO: Use gitsigns_status_dict
+    table.insert(stl, " %#stl_a#%{FugitiveStatusline()} %{get(b:,'gitsigns_status','')}%*")
 end
 
 -- TODO: How to only add spacing for the %m option if it displays
@@ -79,13 +82,11 @@ local function build_active_c(stl, mode, progress)
             return ""
         end
 
-        local diag_str = vim.iter(pairs(counts))
+        return vim.iter(pairs(counts))
             :map(function(s, count)
                 return string.format("%%#Diagnostic%s#%s%d%%* ", levels[s], signs[s], count)
             end)
             :join("")
-
-        return diag_str
     end)()
 
     table.insert(stl, " %#stl_c#" .. get_lsps() .. diags .. get_progress(progress) .. "%*")
