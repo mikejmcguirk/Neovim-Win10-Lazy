@@ -28,7 +28,7 @@ local function setup_gitsigns()
                 end
             end)
 
-            map("n", "]h", function()
+            map("n", "]C", function()
                 if vim.wo.diff then
                     vim.cmd.normal({ "]c", bang = true })
                 else
@@ -36,7 +36,7 @@ local function setup_gitsigns()
                 end
             end)
 
-            map("n", "[h", function()
+            map("n", "[C", function()
                 if vim.wo.diff then
                     vim.cmd.normal({ "[c", bang = true })
                 else
@@ -80,7 +80,7 @@ local function setup_gitsigns()
             -- Changed from default tw
             map("n", "<leader>hw", gitsigns.toggle_word_diff)
 
-            map({ "o", "x" }, "ih", gitsigns.select_hunk)
+            map({ "o", "x" }, "ic", gitsigns.select_hunk)
         end,
     })
 end
