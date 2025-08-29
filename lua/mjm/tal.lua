@@ -1,43 +1,27 @@
 local M = {}
 
--- Alchemical trident symbol
-local symbol = Has_Nerd_Font and "\u{1F751}" or "|"
+local symbol = Has_Nerd_Font and "\u{1F751}" or "|" -- Alchemical trident symbol
 -- Alternatively, "\u{21CC}" (left over right harpoon)
 
 local hl_active = "stl_b"
 local hl_inactive = "stl_a"
 local hl_separator = "stl_c"
 
-vim.o.showtabline = 2
-vim.o.tabline = "%!v:lua.require('mjm.tal').get_tal()"
-
-local function redraw_tal()
-    vim.cmd("redrawt")
-end
-
 local ok, harpoon = pcall(require, "harpoon")
-if ok then
-    harpoon:extend({
-        NAVIGATE = redraw_tal,
-        ADD = redraw_tal,
-        REMOVE = redraw_tal,
-        REPLACE = redraw_tal,
-    })
-end
 
 local function build_harpoon_component(tal)
     if not ok then
-        return
+        return ""
     end
 
     local list = harpoon:list()
     if not list then
-        return
+        return ""
     end
 
     local items = list.items
     if not items or #items < 1 then
-        return
+        return ""
     end
 
     local cur_buf_path = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":p")
@@ -62,9 +46,10 @@ local function build_harpoon_component(tal)
     table.insert(tal, "%*")
 end
 
-local function build_tab_component(tal)
+function M.build_tab_component()
     local cur_tab = vim.api.nvim_get_current_tabpage()
 
+    local tabs = {}
     for i, t in pairs(vim.api.nvim_list_tabpages()) do
         local hl_group = (cur_tab == t) and hl_active or hl_inactive
         local hl = string.format("%%#%s#", hl_group)
@@ -79,18 +64,39 @@ local function build_tab_component(tal)
             end
         end
 
-        table.insert(tal, string.format("%s %d%s ", hl, i, (has_modified and " [+]" or "")))
+        table.insert(tabs, string.format("%s %d%s ", hl, i, (has_modified and "[+]" or "")))
     end
+
+    return table.concat(tabs, "")
 end
 
-function M.get_tal()
+local function build_tal()
     local tal = {}
 
     build_harpoon_component(tal)
     table.insert(tal, string.format("%%#%s#%%=%%*", hl_separator))
-    build_tab_component(tal)
+    table.insert(tal, "%{%v:lua.require('mjm.tal').build_tab_component()%}%*")
 
-    return table.concat(tal)
+    vim.api.nvim_set_option_value("tal", table.concat(tal, ""), { scope = "global" })
 end
+
+-- if ok then
+--     harpoon:extend({
+--         NAVIGATE = build_tal,
+--         ADD = build_tal,
+--         REMOVE = build_tal,
+--         REPLACE = build_tal,
+--     })
+-- end
+
+vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
+    group = vim.api.nvim_create_augroup("tal-events", { clear = true }),
+    callback = function()
+        build_tal()
+    end,
+})
+
+vim.api.nvim_set_option_value("stal", 2, { scope = "global" })
+build_tal()
 
 return M
