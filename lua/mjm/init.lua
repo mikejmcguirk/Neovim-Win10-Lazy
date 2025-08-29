@@ -71,6 +71,7 @@ require("mjm.autocmd")
 require("mjm.lsp")
 require("mjm.stl")
 require("mjm.tal")
+require("mjm.treesitter")
 
 local config_set = vim.loop.hrtime()
 
