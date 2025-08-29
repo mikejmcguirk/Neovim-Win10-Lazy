@@ -3,8 +3,6 @@
 -- TODO: I can check this on Cinnamon, but I think some of the display issues I'm having are
 -- due to the lack of compositing
 
-vim.api.nvim_set_var("c_syntax_for_h", true)
-
 local c = {
     -- https://www.sessions.edu/color-calculator/
     black = "#000000",
@@ -227,7 +225,6 @@ local function lighten_hex(color, percent)
 end
 
 vim.api.nvim_cmd({ cmd = "hi", args = { "clear" } }, {})
-vim.api.nvim_cmd({ cmd = "syntax", args = { "off" } }, {})
 
 for k, v in pairs(groups) do
     vim.api.nvim_set_hl(0, k, v)
@@ -252,6 +249,9 @@ vim.api.nvim_set_var("terminal_color_14", darken_hex(c.l_yellow, 30))
 vim.api.nvim_set_var("terminal_color_15", darken_hex(c.fg, 30))
 
 vim.g.colors_name = "SimpleDelta"
+
+vim.api.nvim_cmd({ cmd = "syntax", args = { "off" } }, {})
+vim.api.nvim_set_var("c_syntax_for_h", true)
 
 -- Used for QuickScope and Flash, so set here
 vim.api.nvim_set_hl(0, "QuickScopePrimary", {

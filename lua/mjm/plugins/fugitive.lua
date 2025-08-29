@@ -1,3 +1,5 @@
+-- TODO: Bring the keymaps back
+
 vim.cmd.packadd({
     vim.fn.escape("vim-fugitive", " "),
     bang = true,
