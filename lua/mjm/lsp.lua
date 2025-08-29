@@ -172,7 +172,7 @@ vim.api.nvim_create_autocmd("BufUnload", {
 })
 
 vim.lsp.enable("bashls")
--- TODO: Apparently lua_ls has a code lens. Can use for testing
+-- TODO: See if this code lens can be used for testing
 vim.lsp.enable("lua_ls")
 vim.lsp.enable("taplo")
 

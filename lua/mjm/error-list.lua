@@ -131,7 +131,7 @@ local function all_diags_to_qflist(opts)
     local severity = opts.highest and ut.get_top_severity({ buf = nil })
         or {
             min = opts.err_only and vim.diagnostic.severity.ERROR or vim.diagnostic.severity.HINT,
-        } ---@type integer|table{min:integer}
+        } ---@type integer|{min:integer}
 
     ---@diagnostic disable: undefined-doc-name
     local raw_diags = vim.diagnostic.get(nil, { severity = severity }) ---@type vim.diagnostic[]
@@ -161,7 +161,7 @@ local function buf_diags_to_loclist(opts)
     local severity = opts.highest and ut.get_top_severity({ buf = buf })
         or {
             min = opts.err_only and vim.diagnostic.severity.ERROR or vim.diagnostic.severity.HINT,
-        } ---@type integer|table{min:integer}
+        } ---@type integer|{min:integer}
 
     ---@diagnostic disable: undefined-doc-name
     local raw_diags = vim.diagnostic.get(buf, { severity = severity }) ---@type vim.diagnostic[]
