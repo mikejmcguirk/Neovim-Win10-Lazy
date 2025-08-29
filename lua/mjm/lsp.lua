@@ -147,11 +147,16 @@ vim.api.nvim_create_autocmd("LspAttach", {
         vim.keymap.set("n", "grf", function()
             print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
         end, { buffer = buf })
+
+        vim.keymap.set("n", "grm", function()
+            vim.lsp.semantic_tokens.enable(not vim.lsp.semantic_tokens.is_enabled())
+        end, { buffer = buf })
     end,
 })
 
 local bad_token_types = {
     ["lua_ls"] = { "comment", "function", "method", "property" },
+    ["rust_analyzer"] = { "comment", "const", "keyword", "selfKeyword", "property" },
 }
 
 vim.api.nvim_create_autocmd("LspAttach", {
