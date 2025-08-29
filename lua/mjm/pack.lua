@@ -65,20 +65,15 @@ local pack_spec = {
         version = vim.version.range("^3.0.0"),
     },
 
-    -- {
-    --     name = "nvim-treesitter",
-    --     src = "https://github.com/nvim-treesitter/nvim-treesitter",
-    --     version = "main",
-    -- },
     {
         name = "nvim-treesitter",
         src = "https://github.com/nvim-treesitter/nvim-treesitter",
-        version = "master",
+        version = "main",
     },
     {
         name = "nvim-treesitter-textobjects",
         src = "https://github.com/nvim-treesitter/nvim-treesitter-textobjects",
-        version = "master",
+        version = "main",
     },
 
     { name = "nvim-ts-autotag", src = "https://github.com/windwp/nvim-ts-autotag" },

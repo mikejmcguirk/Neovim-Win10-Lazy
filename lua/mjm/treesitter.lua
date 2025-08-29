@@ -18,44 +18,44 @@ vim.keymap.set("n", "gtee", function()
     vim.api.nvim_cmd({ cmd = "EditQuery" }, {})
 end)
 
--- TODO: These are nvim-treesitter plugin commands. Re-create them
+-- TODO: Re-create these commands from the Treesitter master branch
 
-vim.keymap.set("n", "gtei", function()
-    if #vim.api.nvim_tabpage_list_wins(0) == 1 then
-        --- @diagnostic disable: missing-fields
-        vim.api.nvim_cmd({ cmd = "vsplit", mods = { split = "botright" } }, {})
-        vim.api.nvim_cmd({ cmd = "TSEditQuery", args = { "highlights" } }, {})
-    else
-        vim.api.nvim_cmd({ cmd = "TSEditQuery", args = { "highlights" } }, {})
-    end
-end)
-
-vim.keymap.set("n", "gten", function()
-    if #vim.api.nvim_tabpage_list_wins(0) == 1 then
-        --- @diagnostic disable: missing-fields
-        vim.api.nvim_cmd({ cmd = "vsplit", mods = { split = "botright" } }, {})
-        vim.api.nvim_cmd({ cmd = "TSEditQuery", args = { "indents" } }, {})
-    else
-        vim.api.nvim_cmd({ cmd = "TSEditQuery", args = { "indents" } }, {})
-    end
-end)
-
-vim.keymap.set("n", "gtej", function()
-    if #vim.api.nvim_tabpage_list_wins(0) == 1 then
-        --- @diagnostic disable: missing-fields
-        vim.api.nvim_cmd({ cmd = "vsplit", mods = { split = "botright" } }, {})
-        vim.api.nvim_cmd({ cmd = "TSEditQuery", args = { "injections" } }, {})
-    else
-        vim.api.nvim_cmd({ cmd = "TSEditQuery", args = { "injections" } }, {})
-    end
-end)
-
-vim.keymap.set("n", "gteo", function()
-    if #vim.api.nvim_tabpage_list_wins(0) == 1 then
-        --- @diagnostic disable: missing-fields
-        vim.api.nvim_cmd({ cmd = "vsplit", mods = { split = "botright" } }, {})
-        vim.api.nvim_cmd({ cmd = "TSEditQuery", args = { "folds" } }, {})
-    else
-        vim.api.nvim_cmd({ cmd = "TSEditQuery", args = { "folds" } }, {})
-    end
-end)
+-- vim.keymap.set("n", "gtei", function()
+--     if #vim.api.nvim_tabpage_list_wins(0) == 1 then
+--         --- @diagnostic disable: missing-fields
+--         vim.api.nvim_cmd({ cmd = "vsplit", mods = { split = "botright" } }, {})
+--         vim.api.nvim_cmd({ cmd = "TSEditQuery", args = { "highlights" } }, {})
+--     else
+--         vim.api.nvim_cmd({ cmd = "TSEditQuery", args = { "highlights" } }, {})
+--     end
+-- end)
+--
+-- vim.keymap.set("n", "gten", function()
+--     if #vim.api.nvim_tabpage_list_wins(0) == 1 then
+--         --- @diagnostic disable: missing-fields
+--         vim.api.nvim_cmd({ cmd = "vsplit", mods = { split = "botright" } }, {})
+--         vim.api.nvim_cmd({ cmd = "TSEditQuery", args = { "indents" } }, {})
+--     else
+--         vim.api.nvim_cmd({ cmd = "TSEditQuery", args = { "indents" } }, {})
+--     end
+-- end)
+--
+-- vim.keymap.set("n", "gtej", function()
+--     if #vim.api.nvim_tabpage_list_wins(0) == 1 then
+--         --- @diagnostic disable: missing-fields
+--         vim.api.nvim_cmd({ cmd = "vsplit", mods = { split = "botright" } }, {})
+--         vim.api.nvim_cmd({ cmd = "TSEditQuery", args = { "injections" } }, {})
+--     else
+--         vim.api.nvim_cmd({ cmd = "TSEditQuery", args = { "injections" } }, {})
+--     end
+-- end)
+--
+-- vim.keymap.set("n", "gteo", function()
+--     if #vim.api.nvim_tabpage_list_wins(0) == 1 then
+--         --- @diagnostic disable: missing-fields
+--         vim.api.nvim_cmd({ cmd = "vsplit", mods = { split = "botright" } }, {})
+--         vim.api.nvim_cmd({ cmd = "TSEditQuery", args = { "folds" } }, {})
+--     else
+--         vim.api.nvim_cmd({ cmd = "TSEditQuery", args = { "folds" } }, {})
+--     end
+-- end)
