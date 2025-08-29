@@ -141,24 +141,30 @@ end
 ---@return nil
 local function all_diags_to_qflist(opts)
     opts = opts or {}
-    -- Running vim.diagnostic.get() twice is not ideal, but better than hacking together
-    -- a manual diag filter
-    local severity = opts.highest and ut.get_top_severity({ buf = nil })
-        or {
-            min = opts.err_only and vim.diagnostic.severity.ERROR or vim.diagnostic.severity.HINT,
-        } ---@type integer|{min:integer}
+
+    local severity = (function()
+        if opts.highest then
+            return ut.get_top_severity({ buf = nil })
+        elseif opts.err_only then
+            return vim.diagnostic.severity.ERROR
+        else
+            return vim.diagnostic.severity.HINT
+        end
+    end)() ---@type integer|{min:integer}
 
     ---@diagnostic disable: undefined-doc-name
     local raw_diags = vim.diagnostic.get(nil, { severity = severity }) ---@type vim.diagnostic[]
     if #raw_diags == 0 then
         local name = opts.err_only and "errors" or "diagnostics" ---@type string
-        -- At least for now, will omit clearing the qflist
-        vim.cmd("cclose")
-        return vim.notify("No " .. name)
+        vim.api.nvim_cmd({ cmd = "ccl" }, {})
+
+        vim.notify("No " .. name)
+        return
     end
 
     local diags_for_qflist = vim.tbl_map(convert_diag, raw_diags) ---@type table
     assert(#raw_diags == #diags_for_qflist, "Coverted diags were filtered")
+
     vim.fn.setqflist(diags_for_qflist, "r")
     open_qflist()
 end
@@ -167,30 +173,39 @@ end
 ---@return nil
 local function buf_diags_to_loclist(opts)
     opts = opts or {}
+
     local win = vim.api.nvim_get_current_win() ---@type integer
     local buf = vim.api.nvim_win_get_buf(win) ---@type integer
     if not ut.check_modifiable(buf) then
         return
     end
 
-    local severity = opts.highest and ut.get_top_severity({ buf = buf })
-        or {
-            min = opts.err_only and vim.diagnostic.severity.ERROR or vim.diagnostic.severity.HINT,
-        } ---@type integer|{min:integer}
+    local severity = (function()
+        if opts.highest then
+            return ut.get_top_severity({ buf = buf })
+        elseif opts.err_only then
+            return vim.diagnostic.severity.ERROR
+        else
+            return vim.diagnostic.severity.HINT
+        end
+    end)() ---@type integer|{min:integer}
 
     ---@diagnostic disable: undefined-doc-name
     local raw_diags = vim.diagnostic.get(buf, { severity = severity }) ---@type vim.diagnostic[]
     if #raw_diags == 0 then
         local name = opts.err_only and "errors" or "diagnostics" ---@type string
-        -- At least for now, will omit clearing the loc list
-        vim.cmd("lclose")
-        return vim.notify("No " .. name)
+        vim.api.nvim_cmd({ cmd = "lcl" }, {})
+
+        vim.notify("No " .. name)
+        return
     end
 
     local diags_for_loclist = vim.tbl_map(convert_diag, raw_diags) ---@type table
     assert(#raw_diags == #diags_for_loclist, "Coverted diags were filtered")
+
     vim.fn.setloclist(win, diags_for_loclist, "r")
-    vim.cmd("cclose | lopen")
+    vim.api.nvim_cmd({ cmd = "ccl" }, {})
+    vim.api.nvim_cmd({ cmd = "lop" }, {})
 end
 
 vim.keymap.set("n", "yui", function()
