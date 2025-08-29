@@ -4,9 +4,9 @@ local function setup_autopairs()
     local cond = require("nvim-autopairs.conds")
     -- local ts_conds = require("nvim-autopairs.ts-conds")
 
-    -- npairs.setup({
-    --     check_ts = true,
-    -- })
+    npairs.setup({
+        check_ts = false,
+    })
 
     -- Autoclosing angle-brackets for generics
     -- NOTE: Just spot checking, this seems to adequately handle the main cases this
