@@ -196,6 +196,7 @@ local groups = {
     ---------
 
     ["@comment.documentation.lua"] = {}, -- Treesitter assumes all three-dash comments are docs
+    ["@lsp.type.comment.lua"] = {}, -- Treesitter can handle basic comments
     ["@lsp.type.function.lua"] = {}, -- Confusing when functions are used as variables
     ["@lsp.type.method.lua"] = {}, -- Confusing when methods are used as variables
     ["@lsp.type.variable.lua"] = {}, -- Overwrites function calls
@@ -251,33 +252,6 @@ vim.api.nvim_set_var("terminal_color_14", darken_hex(c.l_yellow, 30))
 vim.api.nvim_set_var("terminal_color_15", darken_hex(c.fg, 30))
 
 vim.g.colors_name = "SimpleDelta"
-
--- Fill-in un-recognized Lua constants
-vim.api.nvim_create_autocmd("LspTokenUpdate", {
-    group = vim.api.nvim_create_augroup("lsp-token-fix", { clear = true }),
-    pattern = "*.lua",
-    callback = function(ev)
-        local token = ev.data.token
-        if token.type ~= "variable" or token.modifiers.readonly then
-            return
-        end
-
-        local text = vim.api.nvim_buf_get_text(
-            ev.buf,
-            token.line,
-            token.start_col,
-            token.line,
-            token.end_col,
-            {}
-        )[1]
-
-        if text ~= string.upper(text) then
-            return
-        end
-
-        vim.lsp.semantic_tokens.highlight_token(token, ev.buf, ev.data.client_id, "Constant")
-    end,
-})
 
 -- Used for QuickScope and Flash, so set here
 vim.api.nvim_set_hl(0, "QuickScopePrimary", {

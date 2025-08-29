@@ -150,6 +150,46 @@ vim.api.nvim_create_autocmd("LspAttach", {
     end,
 })
 
+local bad_token_types = {
+    ["lua_ls"] = { "comment", "function", "method", "property" },
+}
+
+vim.api.nvim_create_autocmd("LspAttach", {
+    group = vim.api.nvim_create_augroup("token-filter", { clear = true }),
+    callback = function(ev)
+        local client = vim.lsp.get_client_by_id(ev.data.client_id)
+        if not client or not client.server_capabilities.semanticTokensProvider then
+            return
+        end
+
+        local found_client_name = false
+        for k, _ in pairs(bad_token_types) do
+            if k == client.name then
+                found_client_name = true
+                break
+            end
+        end
+
+        if not found_client_name then
+            return
+        end
+
+        local legend = client.server_capabilities.semanticTokensProvider.legend
+        local new_tokenTypes = {}
+
+        for _, typ in ipairs(legend.tokenTypes) do
+            if not vim.tbl_contains(bad_token_types[client.name], typ) then
+                table.insert(new_tokenTypes, typ)
+            else
+                table.insert(new_tokenTypes, false)
+            end
+        end
+
+        legend.tokenTypes = new_tokenTypes
+        vim.lsp.semantic_tokens.force_refresh(ev.buf)
+    end,
+})
+
 vim.api.nvim_create_autocmd("BufUnload", {
     group = lsp_group,
     callback = function(ev)

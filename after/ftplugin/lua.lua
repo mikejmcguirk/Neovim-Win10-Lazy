@@ -24,7 +24,7 @@ local function add_annotation(annotation)
     end
 
     -- Going into insert kills dot repeating anyway, so use the cmd instead of scheduling feedkeys
-    vim.cmd("startinsert!")
+    vim.api.nvim_cmd({ cmd = "startinsert", bang = true }, {})
 end
 
 vim.keymap.set({ "n", "i" }, "<C-->a", function()
