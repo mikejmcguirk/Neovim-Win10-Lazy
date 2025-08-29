@@ -319,7 +319,7 @@ local function setup_blink()
     end
 end
 
-vim.api.nvim_create_autocmd({ "CmdlineEnter", "InsertEnter" }, {
+vim.api.nvim_create_autocmd({ "CmdlineEnter", "BufReadPre", "BufNewFile" }, {
     group = vim.api.nvim_create_augroup("setup-blink", { clear = true }),
     once = true,
     callback = function()

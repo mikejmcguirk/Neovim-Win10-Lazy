@@ -8,11 +8,17 @@ local function load_ts_autotag()
     })
 end
 
-vim.api.nvim_create_autocmd("InsertEnter", {
+local fts = { "html", "xml" }
+vim.api.nvim_create_autocmd("FileType", {
     group = vim.api.nvim_create_augroup("load-ts-autotag", { clear = true }),
-    once = true,
-    callback = function()
+    callback = function(ev)
+        if not vim.tbl_contains(fts, ev.match) then
+            return
+        end
+
         require("mjm.pack").post_load("nvim-ts-autotag")
         load_ts_autotag()
+
+        vim.api.nvim_del_augroup_by_name("load-ts-autotag")
     end,
 })

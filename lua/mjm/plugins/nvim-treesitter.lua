@@ -1,3 +1,5 @@
+-- TODO: There is a main branch for ts-text-objects. Is it viable?
+
 vim.cmd.packadd({ vim.fn.escape("nvim-treesitter", " "), bang = true, magic = { file = false } })
 local text_objects = "nvim-treesitter-textobjects"
 vim.cmd.packadd({ vim.fn.escape(text_objects, " "), bang = true, magic = { file = false } })

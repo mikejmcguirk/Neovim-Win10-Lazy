@@ -1,3 +1,5 @@
+-- TODO: Delete if we don't need this back
+
 local function setup_ibl()
     local excluded_filetypes = {
         "help",
