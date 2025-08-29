@@ -106,11 +106,11 @@ vim.keymap.set("n", "Z", "<nop>")
 
 vim.keymap.set("n", "ZZ", "<cmd>lockmarks silent up<cr>")
 vim.keymap.set("n", "ZA", "<cmd>lockmarks silent wa<cr>")
-vim.keymap.set("n", "ZI", "<cmd>lockmarks wqa<cr>")
+vim.keymap.set("n", "ZC", "<cmd>lockmarks wqa<cr>")
 vim.keymap.set("n", "ZR", "<cmd>lockmarks silent wa | restart<cr>")
 
 -- FUTURE: Can pare this down once extui is stabilized
-vim.keymap.set("n", "ZX", function()
+vim.keymap.set("n", "ZS", function()
     if not ut.check_modifiable() then
         return
     end
