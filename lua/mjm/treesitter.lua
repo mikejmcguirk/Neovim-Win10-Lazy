@@ -1,3 +1,14 @@
+-- TODO: Implement Helix style Treesitter navigation. We would want
+-- - vie - Select current node
+-- - vae - Select parent node
+-- - [e and ]e navigate to next sibling (with wrap)
+-- - In visual, would add to select I think, but check Text Objects
+-- - A selection for next parent or previous parent
+-- - I think with ie, to start it would pull the lowest level node at the cursor, then ae would
+-- go up a level and ie would do down a level, like how an/in work
+-- https://github.com/drybalka/tree-climber.nvim
+-- https://github.com/David-Kunz/treesitter-unit
+
 vim.keymap.set("n", "gtt", function()
     if vim.treesitter.highlighter.active[vim.api.nvim_get_current_buf()] then
         vim.treesitter.stop()
@@ -7,10 +18,6 @@ vim.keymap.set("n", "gtt", function()
 end)
 
 vim.keymap.set("n", "gti", function()
-    vim.api.nvim_cmd({ cmd = "Inspect" }, {})
-end)
-
-vim.keymap.set("n", "gtI", function()
     vim.api.nvim_cmd({ cmd = "InspectTree" }, {})
 end)
 

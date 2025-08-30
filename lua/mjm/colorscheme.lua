@@ -250,6 +250,10 @@ vim.api.nvim_set_var("terminal_color_15", darken_hex(c.fg, 30))
 
 vim.g.colors_name = "SimpleDelta"
 
+vim.keymap.set("n", "gT", function()
+    vim.api.nvim_cmd({ cmd = "Inspect" }, {})
+end)
+
 vim.api.nvim_cmd({ cmd = "syntax", args = { "off" } }, {})
 vim.api.nvim_set_var("c_syntax_for_h", true)
 
