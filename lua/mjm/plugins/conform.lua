@@ -1,37 +1,28 @@
 local function setup_conform()
-    require("conform").setup({
-        formatters_by_ft = {
-            css = { "prettier" },
-            go = { "gofumpt" },
-            html = { "prettier" },
-            json = { "prettier" },
-            lua = { "stylua" },
-            python = { "ruff_format" },
-            rust = { "rustfmt" },
-            query = { "format-queries" },
-            sh = { "shfmt" },
-            toml = { "taplo" },
-        },
-    })
-
-    local valid_filetypes = {
-        "css",
-        "go",
-        "html",
-        "json",
-        "lua",
-        "python",
-        "rust",
-        "sh",
-        "toml",
+    --- @type table<string, conform.FiletypeFormatter>
+    local ft_config = {
+        css = { "prettier" },
+        go = { "gofumpt" },
+        html = { "prettier" },
+        json = { "prettier" },
+        lua = { "stylua" },
+        python = { "ruff_format" },
+        rust = { "rustfmt" },
+        query = { "format-queries" },
+        sh = { "shfmt" },
+        toml = { "taplo" },
     }
+
+    require("conform").setup({
+        formatters_by_ft = ft_config,
+    })
 
     vim.api.nvim_create_autocmd("BufWritePre", {
         group = vim.api.nvim_create_augroup("conformer", { clear = true }),
         pattern = "*",
         callback = function(ev)
             local ft = vim.api.nvim_get_option_value("filetype", { buf = ev.buf })
-            if not vim.tbl_contains(valid_filetypes, ft) then
+            if not vim.tbl_contains(vim.tbl_keys(ft_config), ft) then
                 return
             end
 
@@ -46,7 +37,7 @@ local function setup_conform()
 
     vim.api.nvim_create_autocmd("FileType", {
         group = vim.api.nvim_create_augroup("conform-formatexpr", { clear = true }),
-        pattern = valid_filetypes,
+        pattern = vim.tbl_keys(ft_config),
         callback = function(ev)
             local expr = "v:lua.require'conform'.formatexpr()"
             vim.api.nvim_set_option_value("formatexpr", expr, { buf = ev.buf })
