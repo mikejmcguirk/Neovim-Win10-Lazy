@@ -71,8 +71,14 @@ local function setup_objects()
         select = {
             lookahead = true,
             selection_modes = {
+                ["@comment.inner"] = "v",
+                ["@comment.outer"] = "v",
+                ["@function.inner"] = "v",
+                ["@function.outer"] = "v",
                 ["@parameter.inner"] = "v",
                 ["@parameter.outer"] = "v",
+                ["@preproc.inner"] = "v",
+                ["@preproc.outer"] = "v",
             },
             include_surrounding_whitespace = false,
         },
@@ -88,98 +94,72 @@ local function setup_objects()
                 return
             end
 
-            -- TODO: # For PreProcs. See builtin #[ #]
-            -- TODO: Check if the function queries also grab methods
-            -- TODO: Want to put in the swap mappings. Look at stuff like substitute,
-            -- mini.operators, and their related plugins to see what their conventions are
-            -- Also look at Abolish and its coerce mappings. Kinda thinking cx, maybe sx. But
-            -- want to get into a broader pattern here that other things can slot into
-            -- TODO: Use a table and a loop to do mappings. Don't just use one to do all options
-            -- because we might have a situation like GitSigns where the letters don't match.
-            -- Maybe use a separate table for mapping conventions
-
-            -- FUTURE: It would be useful to scan the textobjects.scm file for a relevant query
-            -- and map a vim.notify message if none is found
-
             ----------------
             -- Selections --
             ----------------
 
             local select = require(objects .. ".select")
+            local select_maps = {
+                -- Spot checking, the only language I've seen that has a @comment.inner is Python
+                { "i/", "@comment.inner" },
+                { "a/", "@comment.outer" },
+                { "im", "@function.inner" },
+                { "am", "@function.outer" },
+                { "i,", "@parameter.inner" },
+                { "a,", "@parameter.outer" },
+                { "i#", "@preproc.inner" },
+                { "a#", "@preproc.outer" },
+            }
 
-            -- Just spot checking, the only language I've seen that has a @comment.inner is Python
-            vim.keymap.set({ "x", "o" }, "i/", function()
-                select.select_textobject("@comment.inner", "textobjects")
-            end, { buffer = ev.buf })
-
-            vim.keymap.set({ "x", "o" }, "a/", function()
-                select.select_textobject("@comment.outer", "textobjects")
-            end, { buffer = ev.buf })
-
-            vim.keymap.set({ "x", "o" }, "im", function()
-                select.select_textobject("@function.inner", "textobjects")
-            end, { buffer = ev.buf })
-
-            vim.keymap.set({ "x", "o" }, "am", function()
-                select.select_textobject("@function.outer", "textobjects")
-            end, { buffer = ev.buf })
-
-            vim.keymap.set({ "x", "o" }, "i,", function()
-                select.select_textobject("@parameter.inner", "textobjects")
-            end, { buffer = ev.buf })
-
-            vim.keymap.set({ "x", "o" }, "a,", function()
-                select.select_textobject("@parameter.outer", "textobjects")
-            end, { buffer = ev.buf })
-
-            vim.keymap.set({ "x", "o" }, "i#", function()
-                select.select_textobject("@preproc.inner", "textobjects")
-            end, { buffer = ev.buf })
-
-            vim.keymap.set({ "x", "o" }, "a#", function()
-                select.select_textobject("@preproc.outer", "textobjects")
-            end, { buffer = ev.buf })
+            for _, m in pairs(select_maps) do
+                vim.keymap.set({ "x", "o" }, m[1], function()
+                    select.select_textobject(m[2], "textobjects")
+                end, { buffer = ev.buf })
+            end
 
             -----------
             -- Gotos --
             -----------
 
             local move = require(objects .. ".move")
+            local move_maps = {
+                { "[/", "]/", "@comment.outer" },
+                { "[m", "]m", "@function.outer" },
+                { "[,", "],", "@parameter.inner" },
+                { "[#", "]#", "@preproc.outer" },
+            }
 
-            -- Overwrite vim default
-            vim.keymap.set({ "n", "x", "o" }, "[/", function()
-                move.goto_previous_start("@comment.outer", "textobjects")
-            end, { buffer = ev.buf })
+            for _, m in pairs(move_maps) do
+                vim.keymap.set("n", m[1], function()
+                    move.goto_previous_start(m[3], "textobjects")
+                end, { buffer = ev.buf })
 
-            vim.keymap.set({ "n", "x", "o" }, "]/", function()
-                move.goto_next_start("@comment.outer", "textobjects")
-            end, { buffer = ev.buf })
+                vim.keymap.set("n", m[2], function()
+                    move.goto_next_start(m[3], "textobjects")
+                end, { buffer = ev.buf })
+            end
 
-            -- Overwrite vim default
-            vim.keymap.set({ "n", "x", "o" }, "[m", function()
-                move.goto_previous_start("@function.outer", "textobjects")
-            end, { buffer = ev.buf })
+            -----------
+            -- Swaps --
+            -----------
 
-            vim.keymap.set({ "n", "x", "o" }, "]m", function()
-                move.goto_next_start("@function.outer", "textobjects")
-            end, { buffer = ev.buf })
+            local swap = require(objects .. ".swap")
+            local swap_maps = {
+                { "[/", "]/", "@comment.outer" },
+                { "[m", "]m", "@function.outer" },
+                { "[,", "],", "@parameter.inner" },
+                { "[#", "]#", "@preproc.inner" },
+            }
 
-            vim.keymap.set({ "n", "x", "o" }, "[,", function()
-                move.goto_previous_start("@parameter.inner", "textobjects")
-            end, { buffer = ev.buf })
+            for _, m in pairs(swap_maps) do
+                vim.keymap.set("n", "cx" .. m[1], function()
+                    swap.swap_previous(m[3], "textobjects")
+                end, { buffer = ev.buf })
 
-            vim.keymap.set({ "n", "x", "o" }, "],", function()
-                move.goto_next_start("@parameter.inner", "textobjects")
-            end, { buffer = ev.buf })
-
-            -- Overwrite vim default
-            vim.keymap.set({ "n", "x", "o" }, "[#", function()
-                move.goto_previous_start("@preproc.outer", "textobjects")
-            end, { buffer = ev.buf })
-
-            vim.keymap.set({ "n", "x", "o" }, "]#", function()
-                move.goto_next_start("@preproc.outer", "textobjects")
-            end, { buffer = ev.buf })
+                vim.keymap.set("n", "cx" .. m[2], function()
+                    swap.swap_next(m[3], "textobjects")
+                end, { buffer = ev.buf })
+            end
         end,
     })
 end
