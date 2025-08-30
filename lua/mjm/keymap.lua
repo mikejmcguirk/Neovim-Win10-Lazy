@@ -352,19 +352,19 @@ vim.keymap.set("n", "n", "nzzzv")
 -- Text Objects --
 ------------------
 
-vim.keymap.set("o", "al", function()
+vim.keymap.set("o", "a_", function()
     vim.cmd("norm! ggVG")
 end, { silent = true })
 
-vim.keymap.set("x", "al", function()
+vim.keymap.set("x", "a_", function()
     vim.cmd("norm! ggoVG")
 end, { silent = true })
 
-vim.keymap.set("o", "il", function()
+vim.keymap.set("o", "i_", function()
     vim.cmd("norm! _v" .. vim.v.count1 .. "g_")
 end, { silent = true })
 
-vim.keymap.set("x", "il", function()
+vim.keymap.set("x", "i_", function()
     local keys = "g_o^o" .. vim.v.count .. "g_"
     vim.api.nvim_feedkeys(keys, "ni", false)
 end, { silent = true })
