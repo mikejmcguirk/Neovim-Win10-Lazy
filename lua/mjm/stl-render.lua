@@ -1,7 +1,4 @@
--- TODO: When LSP progress messages send, elements A and B are shrunk to accomodate them
--- Those elements should stay stable
--- TODO: Truncate long filenames in split windows
--- TODO: Build a character index component and keep it commented out alongside the virt col one
+-- LOW: Build a character index component and keep it commented out alongside the virt col one
 -- MAYBE: Build inactive stl as a Lua function that takes the window number as a parameter
 -- Allows for showing diags
 
@@ -29,9 +26,9 @@ local function build_active_a(stl)
     table.insert(stl, " %#stl_a#%{get(g:,'gitsigns_head','')} %{get(b:,'gitsigns_status','')}%*")
 end
 
--- TODO: How to only add spacing for the %m option if it displays
+-- LOW: How to only add spacing for the %m option if it displays
 local function build_active_b(stl, mode)
-    table.insert(stl, " %#stl_b# %m %f [" .. mode .. "] %*")
+    table.insert(stl, " %#stl_b# %m %<%f [" .. mode .. "] %*")
 end
 
 local function get_lsps()
