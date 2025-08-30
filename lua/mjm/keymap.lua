@@ -446,7 +446,7 @@ vim.keymap.set("n", "g?", "<nop>")
 
 -- FUTURE: I'm not sure why, but this properly handles being on the very top line
 -- This could also handle whitespace/comments/count/view, but is fine for now as a quick map
--- TODO: Find a better key for this
+-- LOW: Find a better key for this
 -- vim.keymap.set("n", "H", 'mzk_D"_ddA <esc>p`zze', { silent = true })
 vim.keymap.set("n", "J", function()
     if not ut.check_modifiable() then

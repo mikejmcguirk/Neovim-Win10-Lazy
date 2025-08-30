@@ -46,8 +46,6 @@ vim.api.nvim_create_autocmd("LspProgress", {
     end,
 })
 
--- TODO: nil argument error on GDelete
--- Now that we aren't caching though, feels unlikely to happen again
 -- Run immediately to avoid acting on bad state
 vim.api.nvim_create_autocmd("DiagnosticChanged", {
     group = stl_events,

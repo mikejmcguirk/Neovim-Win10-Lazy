@@ -1,5 +1,5 @@
--- TODO: Create a cmd to rename the current buffer
--- TODO: Create a command to delete the current buffer and Git delist it
+-- LOW: Create a cmd to rename the current buffer
+-- LOW: Create a command to delete the current buffer and Git delist it
 
 vim.api.nvim_create_user_command("We", "silent up | e", {}) -- Quick refresh if Treesitter bugs out
 

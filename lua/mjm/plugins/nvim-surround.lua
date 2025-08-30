@@ -1,4 +1,4 @@
--- TODO: If you post-load this plugin, it will create a keymap on "c" for change line in normal
+-- LOW: If you post-load this plugin, it will create a keymap on "c" for change line in normal
 -- mode. I don't see a "plugin" file in the code that it would source
 -- If I packadd! here and lazily run the setup function, this does not occur
 -- But it's worth understanding what's going on here
