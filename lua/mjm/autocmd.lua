@@ -19,8 +19,9 @@ local mjm_group = vim.api.nvim_create_augroup("mjm", { clear = true })
 vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
     group = mjm_group,
     pattern = ".bashrc_custom",
-    -- TODO: Should use nvim_cmd
-    command = "set filetype=sh",
+    callback = function()
+        vim.api.nvim_cmd({ cmd = "set", args = { "filetype=sh" } }, {})
+    end,
 })
 
 local clear_conditions = {
