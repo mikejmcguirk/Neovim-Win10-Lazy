@@ -478,7 +478,7 @@ local visual_move = function(opts)
     -- Get before leaving visual mode
     local vcount1 = vim.v.count1 + (opts.upward and 1 or 0) ---@type integer
     local cmd_start = opts.upward and "silent '<,'>m '<-" or "silent '<,'>m '>+"
-    vim.cmd('exec "silent norm! \\<esc>"') -- Force the '< and '> marks to update
+    vim.cmd("norm! \27") -- Update '< and '>
 
     local offset = 0 ---@type integer
     if vcount1 > 2 and opts.upward then
@@ -551,8 +551,38 @@ vim.keymap.set("x", "<C-k>", function()
     visual_move({ upward = true })
 end)
 
--- TODO: A cool extension of the add space unimpaired command would be to perform it on a visual
--- selection. Easier to add space around a multi-line paste
+-- LOW: You could make this an ofunc for dot-repeating
+-- FUTURE: Make a resolver for the "." and "v" getpos() values
+local function add_blank_visual(up)
+    vim.api.nvim_set_option_value("lz", true, { scope = "global" })
+
+    local vcount1 = vim.v.count1
+    vim.cmd("norm! \27") -- Update '< and '>
+
+    local mark = up and "<" or ">"
+    local row, col = unpack(vim.api.nvim_buf_get_mark(0, mark))
+    row = up and row or row + 1
+    local new_lines = {}
+    for _ = 1, vcount1 do
+        table.insert(new_lines, "")
+    end
+
+    vim.api.nvim_buf_set_lines(0, row - 1, row - 1, false, new_lines)
+
+    local new_row = up and row + #new_lines or row - 1
+    vim.api.nvim_buf_set_mark(0, mark, new_row, col, {})
+    vim.api.nvim_cmd({ cmd = "norm", args = { "gv" }, bang = true }, {})
+
+    vim.api.nvim_set_option_value("lz", false, { scope = "global" })
+end
+
+vim.keymap.set("x", "[<space>", function()
+    add_blank_visual(true)
+end)
+
+vim.keymap.set("x", "]<space>", function()
+    add_blank_visual()
+end)
 
 -- Done as a function to suppress a nag when shifting multiple lines
 ---@param opts? table
