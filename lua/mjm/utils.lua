@@ -2,6 +2,7 @@ local M = {}
 
 ---@param prompt string
 ---@return string
+---TODO: This should be an ok, msg pattern
 M.get_input = function(prompt)
     local pattern = nil ---@type string
     local _, result = pcall(function()

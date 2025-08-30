@@ -1,8 +1,5 @@
 -- NOTE: This is a bespoke version of Fluoromachine.nvim's delta theme
 
--- TODO: I can check this on Cinnamon, but I think some of the display issues I'm having are
--- due to the lack of compositing
-
 local c = {
     -- https://www.sessions.edu/color-calculator/
     black = "#000000",

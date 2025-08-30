@@ -24,7 +24,7 @@ local signs = { "E:", "W:", "I:", "H:" }
 local format_icons = { unix = "unix", dos = "dos", mac = "mac" }
 
 local function build_active_a(stl)
-    -- TODO: Use gitsigns_status_dict
+    -- LOW: Use gitsigns_status_dict
     -- table.insert(stl, " %#stl_a#%{FugitiveStatusline()} %{get(b:,'gitsigns_status','')}%*")
     table.insert(stl, " %#stl_a#%{get(g:,'gitsigns_head','')} %{get(b:,'gitsigns_status','')}%*")
 end
