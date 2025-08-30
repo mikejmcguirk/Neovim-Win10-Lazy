@@ -132,6 +132,14 @@ local function setup_objects()
                 select.select_textobject("@parameter.outer", "textobjects")
             end, { buffer = ev.buf })
 
+            vim.keymap.set({ "x", "o" }, "i#", function()
+                select.select_textobject("@preproc.inner", "textobjects")
+            end, { buffer = ev.buf })
+
+            vim.keymap.set({ "x", "o" }, "a#", function()
+                select.select_textobject("@preproc.outer", "textobjects")
+            end, { buffer = ev.buf })
+
             -----------
             -- Gotos --
             -----------
@@ -162,6 +170,15 @@ local function setup_objects()
 
             vim.keymap.set({ "n", "x", "o" }, "],", function()
                 move.goto_next_start("@parameter.inner", "textobjects")
+            end, { buffer = ev.buf })
+
+            -- Overwrite vim default
+            vim.keymap.set({ "n", "x", "o" }, "[#", function()
+                move.goto_previous_start("@preproc.outer", "textobjects")
+            end, { buffer = ev.buf })
+
+            vim.keymap.set({ "n", "x", "o" }, "]#", function()
+                move.goto_next_start("@preproc.outer", "textobjects")
             end, { buffer = ev.buf })
         end,
     })
