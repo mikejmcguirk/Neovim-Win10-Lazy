@@ -80,14 +80,14 @@ local function build_tal()
     vim.api.nvim_set_option_value("tal", table.concat(tal, ""), { scope = "global" })
 end
 
--- if ok then
---     harpoon:extend({
---         NAVIGATE = build_tal,
---         ADD = build_tal,
---         REMOVE = build_tal,
---         REPLACE = build_tal,
---     })
--- end
+if ok then
+    harpoon:extend({
+        -- NAVIGATE = build_tal,
+        ADD = build_tal,
+        REMOVE = build_tal,
+        REPLACE = build_tal,
+    })
+end
 
 vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter", "BufWritePost" }, {
     group = vim.api.nvim_create_augroup("tal-events", { clear = true }),
