@@ -1,4 +1,4 @@
--- LOW: Weird issue where workspace update is triggered due to FzfLua require, and Semantic
+-- LOW: Weird Issue where workspace update is triggered due to FzfLua require, and Semantic
 -- Tokens do not consistently refresh afterwards
 
 local ut = require("mjm.utils")
@@ -21,7 +21,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
         local buf = ev.buf ---@type integer
         local client = assert(vim.lsp.get_client_by_id(ev.data.client_id)) ---@type vim.lsp.Client
         local methods = vim.lsp.protocol.Methods ---@type table
-        local ok, fzf_lua = pcall(require, "fzf-lua")
+        local ok, fzf_lua = pcall(require, "fzf-lua") --- @type boolean, table
 
         -------------------------
         -- Overwrite vim defaults
@@ -157,7 +157,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 local bad_token_types = {
     ["lua_ls"] = { "comment", "function", "method", "property" },
     ["rust_analyzer"] = { "comment", "const", "keyword", "selfKeyword", "property" },
-}
+} --- @type {string: string[]}
 
 vim.api.nvim_create_autocmd("LspAttach", {
     group = vim.api.nvim_create_augroup("token-filter", { clear = true }),
@@ -198,18 +198,18 @@ vim.api.nvim_create_autocmd("LspAttach", {
 vim.api.nvim_create_autocmd("BufUnload", {
     group = lsp_group,
     callback = function(ev)
-        local bufnr = ev.buf ---@type integer
-        local clients = vim.lsp.get_clients({ bufnr = bufnr }) ---@type vim.lsp.Client[]
+        local buf = ev.buf ---@type integer
+        local clients = vim.lsp.get_clients({ bufnr = buf }) ---@type vim.lsp.Client[]
         if not clients or vim.tbl_isempty(clients) then
             return
         end
 
         for _, client in pairs(clients) do
-            local attached_buffers = vim.tbl_filter(function(buf_nbr)
-                return buf_nbr ~= bufnr
+            local attached_bufs = vim.tbl_filter(function(buf_nbr)
+                return buf_nbr ~= buf
             end, vim.tbl_keys(client.attached_buffers)) ---@type unknown[]
 
-            if vim.tbl_isempty(attached_buffers) then
+            if vim.tbl_isempty(attached_bufs) then
                 vim.lsp.stop_client(client.id)
             end
         end
@@ -217,29 +217,6 @@ vim.api.nvim_create_autocmd("BufUnload", {
 })
 
 vim.lsp.enable("bashls")
-vim.lsp.enable("lua_ls")
-vim.lsp.enable("taplo")
-
--- FUTURE: Figure out why code lens isn't working
-vim.lsp.config("rust_analyzer", {
-    settings = {
-        ["rust-analyzer"] = {
-            checkOnSave = true,
-            check = {
-                command = "clippy",
-            },
-            -- lens = {
-            --     enable = true,
-            --     run = { enable = true },
-            --     debug = { enable = true },
-            --     implementations = { enable = true },
-            --     references = { enable = true },
-            -- },
-        },
-    },
-})
-
-vim.lsp.enable("rust_analyzer")
 
 vim.lsp.enable("gopls")
 vim.lsp.enable("golangci_lint_ls")
@@ -247,40 +224,11 @@ vim.lsp.enable("golangci_lint_ls")
 vim.lsp.enable("html")
 vim.lsp.enable("cssls")
 
-vim.lsp.enable("ruff")
--- Ruff is not feature-complete enough to replace pylsp
-vim.lsp.config("pylsp", {
-    settings = {
-        pylsp = {
-            plugins = {
-                pycodestyle = {
-                    maxLineLength = 99,
-                    ignore = {
-                        "E201",
-                        "E202",
-                        "E203", -- Whitespace before ':' (Contradicts ruff formatter)
-                        "E211",
-                        "E225", -- Missing whitespace around operator
-                        "E226", -- Missing whitespace around arithmetic operator
-                        "E231", -- Missing whitespace after ,
-                        "E261",
-                        "E262",
-                        "E265",
-                        "E302",
-                        "E303",
-                        "E305",
-                        "E501",
-                        "E741", -- Ambiguous variable name
-                        "W291", -- Trailing whitespace
-                        "W292", -- No newline at end of file
-                        "W293",
-                        "W391",
-                        "W503", -- Line break after binary operator
-                    },
-                },
-            },
-        },
-    },
-})
+vim.lsp.enable("lua_ls")
 
+-- Ruff is not feature-complete enough to replace pylsp
 vim.lsp.enable("pylsp")
+vim.lsp.enable("ruff")
+
+vim.lsp.enable("rust_analyzer")
+vim.lsp.enable("taplo")
