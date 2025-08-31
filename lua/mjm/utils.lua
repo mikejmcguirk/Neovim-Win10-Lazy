@@ -23,6 +23,28 @@ M.get_input = function(prompt)
     return ""
 end
 
+function M.open_buf(file, opts)
+    local buf = vim.fn.bufadd(file)
+    if vim.api.nvim_get_current_buf() == buf then
+        vim.api.nvim_echo({ { "Already in buffer", "" } }, false, {})
+        return
+    end
+
+    opts = opts or {}
+    if opts.open == "vsplit" then
+        --- @diagnostic disable: missing-fields
+        vim.api.nvim_cmd({ cmd = "vsplit", mods = { split = "botright" } }, {})
+    elseif opts.open == "split" then
+        vim.api.nvim_cmd({ cmd = "split", mods = { split = "botright" } }, {})
+    elseif opts.open == "tabedit" then
+        vim.api.nvim_cmd({ cmd = "tabedit" }, {})
+    end
+
+    vim.api.nvim_set_option_value("buflisted", true, { buf = buf })
+    local win = opts.win or 0
+    vim.api.nvim_win_set_buf(win, buf)
+end
+
 ---@param bufnr? integer
 ---@return boolean
 function M.check_modifiable(bufnr)
