@@ -4,6 +4,7 @@
 -- https://github.com/kosayoda/nvim-lightbulb
 -- Show icon where code actions are available, but would need more aesthetic icon
 -- The nerd font lightbulb might suffice
+-- FUTURE: https://github.com/rockerBOO/awesome-neovim - So many plugins out there
 
 local M = {}
 
@@ -41,11 +42,6 @@ local pack_spec = {
     { name = "gitsigns.nvim", src = "https://github.com/lewis6991/gitsigns.nvim" },
 
     { name = "harpoon", src = "https://github.com/ThePrimeagen/harpoon", version = "harpoon2" },
-
-    {
-        name = "indent-blankline.nvim",
-        src = "https://github.com/lukas-reineke/indent-blankline.nvim",
-    },
 
     -- LOW: Replace with custom config
     -- { src = "https://github.com/folke/lazydev.nvim" },
