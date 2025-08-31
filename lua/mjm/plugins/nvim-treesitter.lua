@@ -36,14 +36,14 @@ local languages = {
 
 require("nvim-treesitter").install(languages)
 
+local ft_extensions = { "sh" }
+local fts = vim.tbl_extend("force", languages, ft_extensions)
+
 vim.api.nvim_create_autocmd({ "FileType" }, {
     group = vim.api.nvim_create_augroup("ts-start", { clear = true }),
-    pattern = "*",
+    pattern = fts,
     callback = function(ev)
-        if vim.tbl_contains(languages, ev.match) then
-            vim.treesitter.start()
-        end
-
+        vim.treesitter.start()
         local indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
         vim.api.nvim_buf_set_var(ev.buf, "indentexpr", indentexpr)
     end,
