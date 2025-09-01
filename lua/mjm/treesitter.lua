@@ -1,5 +1,3 @@
-local ut = require("mjm.utils")
-
 vim.keymap.set("n", "gtt", function()
     if vim.treesitter.highlighter.active[vim.api.nvim_get_current_buf()] then
         vim.treesitter.stop()
@@ -56,3 +54,23 @@ end)
 vim.keymap.set("n", "gtex", function()
     edit_query_file("textobjects")
 end)
+
+local disable_captures = vim.api.nvim_create_augroup("disable-captures", { clear = true })
+
+vim.api.nvim_create_autocmd("FileType", {
+    group = disable_captures,
+    pattern = "lua",
+    once = true,
+    callback = function()
+        local lua_hl = vim.treesitter.query.get("lua", "highlights")
+        if not lua_hl then
+            return
+        end
+
+        lua_hl.query:disable_capture("property")
+        lua_hl.query:disable_capture("spell")
+        lua_hl.query:disable_capture("variable")
+        lua_hl.query:disable_capture("variable.member")
+        lua_hl.query:disable_capture("variable.parameter")
+    end,
+})
