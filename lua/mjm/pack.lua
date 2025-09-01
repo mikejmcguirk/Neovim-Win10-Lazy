@@ -1,7 +1,4 @@
--- TODO: Doing a lot of restarting Neovim to enter the same windows I was in before to refresh
--- code changes. Build or download a plugin for session management
--- FUTURE:
--- https://github.com/kosayoda/nvim-lightbulb
+-- FUTURE: https://github.com/kosayoda/nvim-lightbulb
 -- Show icon where code actions are available, but would need more aesthetic icon
 -- The nerd font lightbulb might suffice
 -- FUTURE: https://github.com/rockerBOO/awesome-neovim - So many plugins out there
@@ -74,8 +71,36 @@ local pack_spec = {
 
 vim.pack.add(pack_spec, {})
 
-vim.keymap.set("n", "zqu", function()
+Map("n", "zqu", function()
     vim.pack.update()
+end)
+
+Map("n", "zqc", function()
+    if vim.fn.confirm("Remove inactive plugins?", "&Yes\n&No", 2) ~= 1 then
+        return
+    end
+
+    local inactive = vim.iter(pairs(vim.pack.get()))
+        :map(function(_, s)
+            return (not s.active) and s.spec.name or nil
+        end)
+        :totable() --- @type string[]
+
+    vim.pack.del(inactive)
+end)
+
+Map("n", "zqp", function()
+    if vim.fn.confirm("Purge all plugins?", "&Yes\n&No", 2) ~= 1 then
+        return
+    end
+
+    local plugins = vim.iter(pairs(vim.pack.get()))
+        :map(function(_, s)
+            return s.spec.name
+        end)
+        :totable() --- @type string[]
+
+    vim.pack.del(plugins)
 end)
 
 return M
