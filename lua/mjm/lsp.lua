@@ -154,7 +154,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
 local bad_token_types = {
     ["lua_ls"] = { "comment", "function", "method", "property" },
-    ["rust_analyzer"] = { "comment", "const", "keyword", "selfKeyword", "property" },
+    ["rust_analyzer"] = { "comment", "const", "namespace", "selfKeyword", "property" },
 } --- @type {string: string[]}
 
 vim.api.nvim_create_autocmd("LspAttach", {

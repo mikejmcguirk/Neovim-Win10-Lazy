@@ -55,27 +55,70 @@ vim.keymap.set("n", "gtex", function()
     edit_query_file("textobjects")
 end)
 
-local disable_captures = vim.api.nvim_create_augroup("disable-captures", { clear = true })
-
 vim.api.nvim_create_autocmd("FileType", {
-    group = disable_captures,
+    group = vim.api.nvim_create_augroup("lua-disable-captures", { clear = true }),
     pattern = "lua",
     once = true,
     callback = function()
-        local lua_hl = vim.treesitter.query.get("lua", "highlights")
-        if not lua_hl then
+        local hl_query = vim.treesitter.query.get("lua", "highlights")
+        if not hl_query then
             return
         end
 
-        lua_hl.query:disable_capture("comment.documentation")
-        lua_hl.query:disable_capture("function.builtin")
-        lua_hl.query:disable_capture("module.builtin")
-        lua_hl.query:disable_capture("property")
-        lua_hl.query:disable_capture("punctuation.bracket")
-        lua_hl.query:disable_capture("punctuation.delimiter")
-        lua_hl.query:disable_capture("spell")
-        lua_hl.query:disable_capture("variable")
-        lua_hl.query:disable_capture("variable.member")
-        lua_hl.query:disable_capture("variable.parameter")
+        hl_query.query:disable_capture("comment.documentation") -- Semantic tokens handle
+        hl_query.query:disable_capture("function.builtin")
+        hl_query.query:disable_capture("module.builtin")
+        hl_query.query:disable_capture("property")
+        hl_query.query:disable_capture("punctuation.bracket")
+        hl_query.query:disable_capture("punctuation.delimiter")
+        hl_query.query:disable_capture("spell")
+        hl_query.query:disable_capture("variable")
+        hl_query.query:disable_capture("variable.member")
+        hl_query.query:disable_capture("variable.parameter")
+    end,
+})
+
+vim.api.nvim_create_autocmd("FileType", {
+    group = vim.api.nvim_create_augroup("rust-disable-captures", { clear = true }),
+    pattern = "rust",
+    once = true,
+    callback = function()
+        local hl_query = vim.treesitter.query.get("rust", "highlights")
+        if not hl_query then
+            return
+        end
+
+        hl_query.query:disable_capture("constant.builtin") -- Semantic Tokens handle
+        hl_query.query:disable_capture("punctuation.delimiter")
+        hl_query.query:disable_capture("spell")
+        hl_query.query:disable_capture("variable")
+        hl_query.query:disable_capture("variable.member")
+        hl_query.query:disable_capture("variable.parameter")
+        hl_query.query:disable_capture("type.builtin")
+    end,
+})
+
+vim.api.nvim_create_autocmd("LspAttach", {
+    group = vim.api.nvim_create_augroup("rust-disable-captures-lsp", { clear = true }),
+    callback = function(ev)
+        local ft = vim.api.nvim_get_option_value("filetype", { buf = ev.buf })
+
+        if ft == "rust" then
+            local hl_query = vim.treesitter.query.get("rust", "highlights")
+            if not hl_query then
+                return
+            end
+
+            hl_query.query:disable_capture("function")
+            hl_query.query:disable_capture("function.call")
+            hl_query.query:disable_capture("function.macro")
+            hl_query.query:disable_capture("_identifier")
+            hl_query.query:disable_capture("keyword.debug")
+            hl_query.query:disable_capture("keyword.exception")
+            hl_query.query:disable_capture("string")
+            hl_query.query:disable_capture("type")
+
+            vim.api.nvim_del_augroup_by_name("rust-disable-captures-lsp")
+        end
     end,
 })

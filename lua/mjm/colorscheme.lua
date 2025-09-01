@@ -115,7 +115,9 @@ local groups = {
 
     PreProc = { fg = c.l_pink, italic = true },
     ["@function.macro"] = { link = "PreProc" }, -- Default link: Function
+    ["@preproc"] = { link = "PreProc" }, -- Custom TS Query
     ["@lsp.type.macro"] = { link = "PreProc" }, -- (Default link: Constant)
+    ["@lsp.typemod.derive.macro"] = { link = "PreProc" }, -- (Default link: @lsp)
     ["@lsp.typemod.lifetime.injected"] = { link = "PreProc" }, -- (Default link: @lsp)
 
     Special = { fg = c.l_pink },
@@ -131,6 +133,7 @@ local groups = {
     Tabline = { link = "StatusLine" }, -- (Default self-definition)
 
     String = { fg = c.l_purple },
+    ["@lsp.type.formatSpecifier"] = { fg = c.l_purple, italic = true },
 
     Type = { fg = c.l_green },
     ["@type.builtin"] = { link = "Type" }, -- Default link Special
