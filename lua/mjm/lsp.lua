@@ -18,7 +18,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
     callback = function(ev)
         local buf = ev.buf ---@type integer
         local client = assert(vim.lsp.get_client_by_id(ev.data.client_id)) ---@type vim.lsp.Client
-        local methods = vim.lsp.protocol.Methods ---@type table
+        local method = vim.lsp.protocol.Methods ---@type table
         local ok, fzf_lua = pcall(require, "fzf-lua") --- @type boolean, table
 
         -------------------------
@@ -27,27 +27,21 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         vim.keymap.set("n", "gr", "<nop>", { buffer = buf })
 
-        if client:supports_method(methods.textDocument_definition) then
-            if ok then
-                vim.keymap.set("n", "gd", fzf_lua.lsp_definitions, { buffer = buf })
-            else
-                vim.keymap.set("n", "gd", vim.lsp.buf.definition, { buffer = buf })
-            end
+        if client:supports_method(method.textDocument_definition) then
+            local def = ok and fzf_lua.lsp_definitions or vim.lsp.buf.definition
+            vim.keymap.set("n", "gd", def, { buffer = buf })
         end
 
-        if client:supports_method(methods.textDocument_declaration) then
-            if ok then
-                vim.keymap.set("n", "gD", fzf_lua.lsp_declarations, { buffer = buf })
-            else
-                vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { buffer = buf })
-            end
+        if client:supports_method(method.textDocument_declaration) then
+            local dec = ok and fzf_lua.lsp_declarations or vim.lsp.buf.declaration
+            vim.keymap.set("n", "gD", dec, { buffer = buf })
         end
 
         ------------------------------------------------------
         -- Recreate/replace Nvim defaults (:help lsp-defaults)
         ------------------------------------------------------
 
-        if client:supports_method(methods.textDocument_rename) then
+        if client:supports_method(method.textDocument_rename) then
             vim.keymap.set("n", "grn", function()
                 local input = require("mjm.utils").get_input("Rename: ")
                 if string.find(input, "%s") then
@@ -58,43 +52,44 @@ vim.api.nvim_create_autocmd("LspAttach", {
             end, { buffer = buf })
         end
 
-        if client:supports_method(methods.textDocument_implementation) then
-            if ok then
-                vim.keymap.set("n", "gI", fzf_lua.lsp_implementations, { buffer = buf })
-            else
-                vim.keymap.set("n", "gI", vim.lsp.buf.implementation, { buffer = buf })
-            end
+        if client:supports_method(method.textDocument_implementation) then
+            local impl = ok and fzf_lua.lsp_implementations or vim.lsp.buf.implementation
+            vim.keymap.set("n", "gI", impl, { buffer = buf })
         end
 
-        if client:supports_method(methods.textDocument_codeAction) then
+        if client:supports_method(method.textDocument_codeAction) then
             vim.keymap.set("n", "gra", vim.lsp.buf.code_action, { buffer = buf })
         end
 
-        if client:supports_method(methods.textDocument_references) then
-            if ok then
-                vim.keymap.set("n", "grr", function()
-                    fzf_lua.lsp_references({ includeDeclaration = false })
-                end, { buffer = buf })
-            else
-                vim.keymap.set("n", "grr", function()
-                    vim.lsp.buf.references({ includeDeclaration = false })
-                end, { buffer = buf })
-            end
+        if client:supports_method(method.textDocument_references) then
+            local ref = (function()
+                if ok then
+                    return function()
+                        fzf_lua.lsp_references({ includeDeclaration = false })
+                    end
+                else
+                    return function()
+                        vim.lsp.buf.references({ includeDeclaration = false })
+                    end
+                end
+            end)()
+
+            vim.keymap.set("n", "grr", ref, { buffer = buf })
         end
 
-        if client:supports_method(methods.textDocument_hover) then
+        if client:supports_method(method.textDocument_hover) then
             vim.keymap.set("n", "K", function()
                 vim.lsp.buf.hover({ border = Border })
             end, { buffer = buf })
         end
 
-        if client:supports_method(methods.textDocument_signatureHelp) then
+        if client:supports_method(method.textDocument_signatureHelp) then
             vim.keymap.set({ "i", "s" }, "<C-S>", function()
                 vim.lsp.buf.signature_help({ border = Border })
             end, { buffer = buf })
         end
 
-        if client:supports_method(methods.textDocument_typeDefinition) then
+        if client:supports_method(method.textDocument_typeDefinition) then
             if ok then
                 vim.keymap.set("n", "grt", fzf_lua.lsp_typedefs, { buffer = buf })
             else
@@ -102,7 +97,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
             end
         end
 
-        if client:supports_method(methods.textDocument_documentSymbol) then
+        if client:supports_method(method.textDocument_documentSymbol) then
             if ok then
                 vim.keymap.set("n", "gO", fzf_lua.lsp_document_symbols, { buffer = buf })
             else
@@ -110,31 +105,28 @@ vim.api.nvim_create_autocmd("LspAttach", {
             end
         end
 
-        --------
-        -- Other
-        --------
+        -----------
+        -- Other --
+        -----------
 
         -- Kickstart mapping
-        if client:supports_method(methods.workspace_symbol) then
-            if ok then
-                vim.keymap.set("n", "gW", fzf_lua.lsp_live_workspace_symbols, { buffer = buf })
-            else
-                vim.keymap.set("n", "gW", vim.lsp.buf.workspace_symbol, { buffer = buf })
-            end
+        if client:supports_method(method.workspace_symbol) then
+            local ws = ok and fzf_lua.lsp_live_workspace_symbols or vim.lsp.buf.workspace_symbol
+            vim.keymap.set("n", "gW", ws, { buffer = buf })
         end
 
         -- Patternful with the rest of the defaults
-        if client:supports_method(methods.textDocument_documentHighlight) then
+        if client:supports_method(method.textDocument_documentHighlight) then
             vim.keymap.set("n", "grh", vim.lsp.buf.document_highlight, { buffer = buf })
         end
 
-        if client:supports_method(methods.textDocument_inlayHint) then
+        if client:supports_method(method.textDocument_inlayHint) then
             vim.keymap.set("n", "grl", function()
                 vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ buffer = buf }))
             end)
         end
 
-        if client:supports_method(methods.textDocument_documentColor) then
+        if client:supports_method(method.textDocument_documentColor) then
             -- Maria Solano map (kinda)
             vim.keymap.set("n", "grc", function()
                 -- vim.lsp.document_color.color_presentation()
@@ -152,7 +144,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
     end,
 })
 
-local bad_token_types = {
+local token_filder = {
     ["lua_ls"] = { "comment", "function", "method", "property" },
     ["rust_analyzer"] = { "comment", "const", "namespace", "selfKeyword", "property" },
 } --- @type {string: string[]}
@@ -166,7 +158,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
 
         local found_client_name = false
-        for k, _ in pairs(bad_token_types) do
+        for k, _ in pairs(token_filder) do
             if k == client.name then
                 found_client_name = true
                 break
@@ -181,7 +173,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
         local new_tokenTypes = {}
 
         for _, typ in ipairs(legend.tokenTypes) do
-            if not vim.tbl_contains(bad_token_types[client.name], typ) then
+            if not vim.tbl_contains(token_filder[client.name], typ) then
                 table.insert(new_tokenTypes, typ)
             else
                 table.insert(new_tokenTypes, false)
