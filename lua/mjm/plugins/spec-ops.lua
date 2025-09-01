@@ -3,6 +3,9 @@
 -- The plugin/ file automatically sets up lazy loading
 vim.cmd.packadd({ vim.fn.escape("spec-ops", " "), bang = true, magic = { file = false } })
 
+-- TODO: There should be a set keymaps option on the table you can put your keymap sets into
+-- so they don't run until spec-ops initializes
+
 --- @module "spec-ops"
 --- @type SpecOpsConfig
 local config = {

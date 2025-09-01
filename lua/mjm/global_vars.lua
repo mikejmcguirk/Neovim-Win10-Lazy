@@ -1,7 +1,5 @@
--- NOTE: One of the first files loaded. Don't put plugin data here
-
-Scrolloff_Val = 6 ---@type integer
 Border = "single" ---@type string
+Highlight_Time = 175 --- @type integer
+Has_Nerd_Font = true --- @type boolean
+Scrolloff_Val = 6 ---@type integer
 SpellFile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add" ---@type string
-Highlight_Time = 175
-Has_Nerd_Font = true
