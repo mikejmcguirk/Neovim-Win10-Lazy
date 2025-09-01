@@ -32,6 +32,8 @@ local pack_spec = {
 
     { src = "https://github.com/nvim-mini/mini.jump2d" },
 
+    { src = "https://github.com/nvim-mini/mini.operators" },
+
     -- LOW: Replace with custom config
     -- { src = "https://github.com/folke/lazydev.nvim" },
     { src = "https://github.com/Jari27/lazydev.nvim", version = "deprecate_client_notify" },
