@@ -7,6 +7,7 @@ vim.api.nvim_set_option_value("fileformats", "unix,dos", { scope = "global" })
 vim.opt.jumpoptions:append("view")
 
 vim.api.nvim_set_option_value("backup", false, { scope = "global" })
+vim.api.nvim_set_option_value("writebackup", false, { scope = "global" })
 vim.api.nvim_set_option_value("swapfile", false, { scope = "global" })
 vim.api.nvim_set_option_value("undofile", true, { scope = "global" })
 vim.api.nvim_set_option_value("updatetime", 250, { scope = "global" })

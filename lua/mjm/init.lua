@@ -1,5 +1,3 @@
--- TODO: Can copy the logic I need out of here: https://github.com/Shatur/neovim-session-manager
-
 local start = vim.loop.hrtime()
 
 -----------
@@ -21,11 +19,12 @@ vim.g.loaded_tutor_mode_plugin = 1
 vim.g.loaded_zipPlugin = 1
 vim.g.loaded_zip = 1
 
-vim.keymap.set({ "n", "x" }, "<Space>", "<Nop>")
+require("mjm.global_vars")
+
+Map({ "n", "x" }, "<Space>", "<Nop>")
 vim.g.mapleader = " "
 vim.g.maplocaleader = " "
 
-require("mjm.global_vars")
 require("mjm.set")
 require("mjm.keymap")
 require("mjm.custom_cmd")
@@ -72,9 +71,13 @@ local eager_loaded = vim.loop.hrtime()
 -------------------------
 
 vim.g.db_ui_use_nerd_fonts = 1
+
 vim.g.qs_highlight_on_keys = { "f", "F", "t", "T" }
 vim.g.qs_max_chars = 9999
-vim.keymap.set("n", "<leader>u", vim.cmd.UndotreeToggle)
+vim.api.nvim_set_hl(0, "QuickScopePrimary", { reverse = true })
+vim.api.nvim_set_hl(0, "QuickScopeSecondary", { undercurl = true })
+
+Map("n", "<leader>u", vim.cmd.UndotreeToggle)
 
 require("mjm.plugins.autopairs")
 require("mjm.plugins.blink")
@@ -110,7 +113,7 @@ vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
 local lazy_loaded = vim.loop.hrtime()
 
 local to_env_setup = math.floor((env_setup - start) / 1e6 * 100) / 100
-local to_pack_finished = math.floor((pack_finish - start) / 1e6 * 100) / 100
+local to_pack_finish = math.floor((pack_finish - start) / 1e6 * 100) / 100
 local to_post_plugin_setup = math.floor((post_plugin_setup - start) / 1e6 * 100) / 100
 local to_eager_loaded = math.floor((eager_loaded - start) / 1e6 * 100) / 100
 local to_lazy_loaded = math.floor((lazy_loaded - start) / 1e6 * 100) / 100
@@ -127,7 +130,7 @@ vim.api.nvim_create_autocmd("UIEnter", {
 
         local headers = {
             { "Setup: ", to_env_setup },
-            { "Download/Register Plugins: ", to_pack_finished },
+            { "Download/Register Plugins: ", to_pack_finish },
             { "Post Plugin Setup: ", to_post_plugin_setup },
             { "Eager Plugin Init: ", to_eager_loaded },
             { "Lazy Plugin Init: ", to_lazy_loaded },
