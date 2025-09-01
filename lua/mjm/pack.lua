@@ -23,14 +23,14 @@ local pack_spec = {
 
     { src = "https://github.com/stevearc/conform.nvim" },
 
-    { src = "https://github.com/folke/flash.nvim" },
-
     -- Requires nvim-tree-web-devicons
     { src = "https://github.com/ibhagwan/fzf-lua" },
 
     { src = "https://github.com/lewis6991/gitsigns.nvim" },
 
     { src = "https://github.com/ThePrimeagen/harpoon", version = "harpoon2" },
+
+    { src = "https://github.com/nvim-mini/mini.jump2d" },
 
     -- LOW: Replace with custom config
     -- { src = "https://github.com/folke/lazydev.nvim" },
