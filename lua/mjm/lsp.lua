@@ -25,16 +25,16 @@ vim.api.nvim_create_autocmd("LspAttach", {
         -- Overwrite vim defaults
         -------------------------
 
-        vim.keymap.set("n", "gr", "<nop>", { buffer = buf })
+        Map("n", "gr", "<nop>", { buffer = buf })
 
         if client:supports_method(method.textDocument_definition) then
             local def = ok and fzf_lua.lsp_definitions or vim.lsp.buf.definition
-            vim.keymap.set("n", "gd", def, { buffer = buf })
+            Map("n", "gd", def, { buffer = buf })
         end
 
         if client:supports_method(method.textDocument_declaration) then
             local dec = ok and fzf_lua.lsp_declarations or vim.lsp.buf.declaration
-            vim.keymap.set("n", "gD", dec, { buffer = buf })
+            Map("n", "gD", dec, { buffer = buf })
         end
 
         ------------------------------------------------------
@@ -42,7 +42,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
         ------------------------------------------------------
 
         if client:supports_method(method.textDocument_rename) then
-            vim.keymap.set("n", "grn", function()
+            Map("n", "grn", function()
                 local input = require("mjm.utils").get_input("Rename: ")
                 if string.find(input, "%s") then
                     vim.notify(string.format("'%s' contains spaces", input))
@@ -54,11 +54,11 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         if client:supports_method(method.textDocument_implementation) then
             local impl = ok and fzf_lua.lsp_implementations or vim.lsp.buf.implementation
-            vim.keymap.set("n", "gI", impl, { buffer = buf })
+            Map("n", "gI", impl, { buffer = buf })
         end
 
         if client:supports_method(method.textDocument_codeAction) then
-            vim.keymap.set("n", "gra", vim.lsp.buf.code_action, { buffer = buf })
+            Map("n", "gra", vim.lsp.buf.code_action, { buffer = buf })
         end
 
         if client:supports_method(method.textDocument_references) then
@@ -74,34 +74,34 @@ vim.api.nvim_create_autocmd("LspAttach", {
                 end
             end)()
 
-            vim.keymap.set("n", "grr", ref, { buffer = buf })
+            Map("n", "grr", ref, { buffer = buf })
         end
 
         if client:supports_method(method.textDocument_hover) then
-            vim.keymap.set("n", "K", function()
+            Map("n", "K", function()
                 vim.lsp.buf.hover({ border = Border })
             end, { buffer = buf })
         end
 
         if client:supports_method(method.textDocument_signatureHelp) then
-            vim.keymap.set({ "i", "s" }, "<C-S>", function()
+            Map({ "i", "s" }, "<C-S>", function()
                 vim.lsp.buf.signature_help({ border = Border })
             end, { buffer = buf })
         end
 
         if client:supports_method(method.textDocument_typeDefinition) then
             if ok then
-                vim.keymap.set("n", "grt", fzf_lua.lsp_typedefs, { buffer = buf })
+                Map("n", "grt", fzf_lua.lsp_typedefs, { buffer = buf })
             else
-                vim.keymap.set("n", "grt", vim.lsp.buf.type_definition, { buffer = buf })
+                Map("n", "grt", vim.lsp.buf.type_definition, { buffer = buf })
             end
         end
 
         if client:supports_method(method.textDocument_documentSymbol) then
             if ok then
-                vim.keymap.set("n", "gO", fzf_lua.lsp_document_symbols, { buffer = buf })
+                Map("n", "gO", fzf_lua.lsp_document_symbols, { buffer = buf })
             else
-                vim.keymap.set("n", "gO", vim.lsp.buf.document_symbol, { buffer = buf })
+                Map("n", "gO", vim.lsp.buf.document_symbol, { buffer = buf })
             end
         end
 
@@ -112,76 +112,35 @@ vim.api.nvim_create_autocmd("LspAttach", {
         -- Kickstart mapping
         if client:supports_method(method.workspace_symbol) then
             local ws = ok and fzf_lua.lsp_live_workspace_symbols or vim.lsp.buf.workspace_symbol
-            vim.keymap.set("n", "gW", ws, { buffer = buf })
+            Map("n", "gW", ws, { buffer = buf })
         end
 
         -- Patternful with the rest of the defaults
         if client:supports_method(method.textDocument_documentHighlight) then
-            vim.keymap.set("n", "grh", vim.lsp.buf.document_highlight, { buffer = buf })
+            Map("n", "grh", vim.lsp.buf.document_highlight, { buffer = buf })
         end
 
         if client:supports_method(method.textDocument_inlayHint) then
-            vim.keymap.set("n", "grl", function()
+            Map("n", "grl", function()
                 vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ buffer = buf }))
             end)
         end
 
         if client:supports_method(method.textDocument_documentColor) then
             -- Maria Solano map (kinda)
-            vim.keymap.set("n", "grc", function()
+            Map("n", "grc", function()
                 -- vim.lsp.document_color.color_presentation()
                 vim.lsp.document_color.enable(not vim.lsp.document_color.is_enabled())
             end, { buffer = buf })
         end
 
-        vim.keymap.set("n", "grf", function()
+        Map("n", "grf", function()
             print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
         end, { buffer = buf })
 
-        vim.keymap.set("n", "grm", function()
+        Map("n", "grm", function()
             vim.lsp.semantic_tokens.enable(not vim.lsp.semantic_tokens.is_enabled())
         end, { buffer = buf })
-    end,
-})
-
-local token_filder = {
-    ["lua_ls"] = { "comment", "function", "method", "property" },
-    ["rust_analyzer"] = { "comment", "const", "namespace", "selfKeyword", "property" },
-} --- @type {string: string[]}
-
-vim.api.nvim_create_autocmd("LspAttach", {
-    group = vim.api.nvim_create_augroup("token-filter", { clear = true }),
-    callback = function(ev)
-        local client = vim.lsp.get_client_by_id(ev.data.client_id)
-        if (not client) or not client.server_capabilities.semanticTokensProvider then
-            return
-        end
-
-        local found_client_name = false
-        for k, _ in pairs(token_filder) do
-            if k == client.name then
-                found_client_name = true
-                break
-            end
-        end
-
-        if not found_client_name then
-            return
-        end
-
-        local legend = client.server_capabilities.semanticTokensProvider.legend
-        local new_tokenTypes = {}
-
-        for _, typ in ipairs(legend.tokenTypes) do
-            if not vim.tbl_contains(token_filder[client.name], typ) then
-                table.insert(new_tokenTypes, typ)
-            else
-                table.insert(new_tokenTypes, false)
-            end
-        end
-
-        legend.tokenTypes = new_tokenTypes
-        vim.lsp.semantic_tokens.force_refresh(ev.buf)
     end,
 })
 
@@ -211,9 +170,8 @@ vim.lsp.enable({
     "cssls",
     "golangci_lint_ls",
     "html",
-    -- TODO: Can the trailing whitespace diagnostic be disabled?
-    -- https://old.reddit.com/r/neovim/comments/1mdtr4g/emmylua_ls_is_supersnappy/ -- This might
-    -- be the way
+    -- FUTURE: https://old.reddit.com/r/neovim/comments/1mdtr4g/emmylua_ls_is_supersnappy/
+    -- This might be the way
     "lua_ls",
     -- Ruff is not feature-complete enough to replace pylsp
     "pylsp",
