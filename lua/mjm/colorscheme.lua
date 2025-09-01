@@ -77,9 +77,7 @@ local groups = {
     Delimiter = { link = "Normal" },
     Identifier = { link = "Normal" },
 
-    ["@variable"] = {}, --- Default self-definition
-    -- Can't eliminate at the token level because builtins depend on it
-    ["@lsp.type.variable"] = {}, --- Default link to normal
+    ["@variable"] = { link = "Normal" }, --- Default self-definition
 
     ColorColumn = { bg = c.d_purple },
     CursorLine = { link = "ColorColumn" }, -- (Default self-definition)
@@ -96,6 +94,7 @@ local groups = {
 
     Function = { fg = c.l_yellow },
     ["@function.builtin"] = { link = "Function" }, -- Default link to Special
+    ["@lsp.typemod.function.global"] = { link = "Constant" }, -- Default @lsp
 
     NonText = { fg = c.pink },
     SpecialKey = { link = "NonText" }, --- Default self-definition
@@ -126,14 +125,16 @@ local groups = {
     Statement = { fg = c.l_pink },
 
     ["@lsp.type.parameter"] = { fg = c.l_orange }, -- Default link: Identifier
-    ["@variable.parameter"] = {}, -- Only useful with an LSP to track scope
+    -- No linking because this hl group isn't used
+    ["@variable.parameter"] = { fg = c.l_orange },
 
     StatusLine = { fg = c.fg, bg = c.d_purple_three },
     StatusLineNC = { link = "StatusLine" }, -- (Default self-definition)
     Tabline = { link = "StatusLine" }, -- (Default self-definition)
 
     String = { fg = c.l_purple },
-    ["@lsp.type.formatSpecifier"] = { fg = c.l_purple, italic = true },
+    ["@string.escape"] = { fg = c.l_purple, italic = true },
+    ["@lsp.type.formatSpecifier"] = { link = "@string.escape" },
 
     Type = { fg = c.l_green },
     ["@type.builtin"] = { link = "Type" }, -- Default link Special
@@ -243,26 +244,11 @@ vim.api.nvim_set_var("terminal_color_15", darken_hex(c.fg, 30))
 
 vim.g.colors_name = "SimpleDelta"
 
-vim.keymap.set("n", "gT", function()
+Map("n", "gT", function()
     vim.api.nvim_cmd({ cmd = "Inspect" }, {})
 end)
 
 vim.api.nvim_set_var("c_syntax_for_h", true)
-
--- Used for QuickScope and Flash, so set here
-vim.api.nvim_set_hl(0, "QuickScopePrimary", {
-    bg = vim.api.nvim_get_hl(0, { name = "Number" }).fg,
-    fg = "#000000",
-    ctermbg = 14,
-    ctermfg = 0,
-})
-
-vim.api.nvim_set_hl(0, "QuickScopeSecondary", {
-    bg = vim.api.nvim_get_hl(0, { name = "Statement" }).fg,
-    fg = "#000000",
-    ctermbg = 207,
-    ctermfg = 0,
-})
 
 local function darken_24bit(color, pct)
     local r = bit.band(bit.rshift(color, 16), 0xFF)
