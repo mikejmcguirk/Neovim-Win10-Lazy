@@ -214,20 +214,18 @@ vim.api.nvim_create_autocmd("BufUnload", {
     end,
 })
 
-vim.lsp.enable("bashls")
-
-vim.lsp.enable("gopls")
-vim.lsp.enable("golangci_lint_ls")
-
-vim.lsp.enable("html")
-vim.lsp.enable("cssls")
-
--- TODO: Can the trailing whitespace diagnostic be disabled?
-vim.lsp.enable("lua_ls")
-
--- Ruff is not feature-complete enough to replace pylsp
-vim.lsp.enable("pylsp")
-vim.lsp.enable("ruff")
-
-vim.lsp.enable("rust_analyzer")
-vim.lsp.enable("taplo")
+vim.lsp.enable({
+    "bashls",
+    "cssls",
+    "golangci_lint_ls",
+    "html",
+    -- TODO: Can the trailing whitespace diagnostic be disabled?
+    -- https://old.reddit.com/r/neovim/comments/1mdtr4g/emmylua_ls_is_supersnappy/ -- This might
+    -- be the way
+    "lua_ls",
+    -- Ruff is not feature-complete enough to replace pylsp
+    "pylsp",
+    "ruff",
+    "rust_analyzer",
+    "taplo",
+})
