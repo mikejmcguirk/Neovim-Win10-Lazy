@@ -4,8 +4,6 @@
 -- FUTURE: the . function in vinegar to pre-populate the file at the end of the cmdline could be
 -- useful
 
-vim.cmd.packadd({ vim.fn.escape("oil.nvim", " "), bang = true, magic = { file = false } })
-
 local oil = require("oil")
 
 local function close_oil()
