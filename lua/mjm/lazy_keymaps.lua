@@ -56,7 +56,8 @@ vim.keymap.set("i", "<M-f>", "<S-right>")
 
 -- Since <C-d> is remapped
 vim.keymap.set("i", "<C-m>", "<C-d>")
-vim.keymap.set("i", "<cr>", "<cr>") -- Remove key simplification
+-- Since autopairs remaps this
+-- vim.keymap.set("i", "<cr>", "<cr>") -- Remove key simplification
 
 vim.keymap.set("i", "<M-e>", "<C-o>ze", { silent = true })
 
