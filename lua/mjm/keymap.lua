@@ -186,3 +186,18 @@ end
 
 vim.keymap.set("n", "<C-w>c", "<nop>")
 vim.keymap.set("n", "<C-w><C-c>", "<nop>")
+
+------------------
+-- Setting Maps --
+------------------
+
+vim.keymap.set("n", "\\d", function()
+    vim.diagnostic.enable(not vim.diagnostic.is_enabled())
+end)
+
+-- \D set in diagnostic.lua to toggle virtual lines
+
+vim.keymap.set("n", "\\s", function()
+    local is_spell = vim.api.nvim_get_option_value("spell", { win = 0 })
+    vim.api.nvim_set_option_value("spell", not is_spell, { win = 0 })
+end)
