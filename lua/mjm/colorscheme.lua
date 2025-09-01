@@ -247,7 +247,6 @@ vim.keymap.set("n", "gT", function()
     vim.api.nvim_cmd({ cmd = "Inspect" }, {})
 end)
 
-vim.api.nvim_cmd({ cmd = "syntax", args = { "off" } }, {})
 vim.api.nvim_set_var("c_syntax_for_h", true)
 
 -- Used for QuickScope and Flash, so set here

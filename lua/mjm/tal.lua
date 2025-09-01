@@ -30,12 +30,12 @@ local function build_harpoon_component(tal)
         local hl = string.format("%%#%s#", (t_path == cur_buf_path) and hl_active or hl_inactive)
 
         local modified = (function()
-            local t_bufnr = vim.fn.bufnr(t_path)
-            if t_bufnr == -1 then
+            local buf = vim.fn.bufnr(t_path)
+            if buf == -1 then
                 return ""
             end
 
-            return vim.api.nvim_get_option_value("modified", { buf = t_bufnr }) and "[+]" or ""
+            return vim.api.nvim_get_option_value("modified", { buf = buf }) and "[+]" or ""
         end)()
 
         local t_basename = vim.fs.basename(t.value)

@@ -1,5 +1,3 @@
-vim.api.nvim_set_option_value("syntax", "qf", { buf = 0 })
-
 vim.opt_local.colorcolumn = ""
 vim.o.buflisted = false
 
