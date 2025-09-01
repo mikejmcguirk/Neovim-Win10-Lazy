@@ -123,8 +123,8 @@ local groups = {
 
     Statement = { fg = c.l_pink },
 
-    ["@variable.parameter"] = {}, -- Only useful with an LSP to track scope
     ["@lsp.type.parameter"] = { fg = c.l_orange }, -- Default link: Identifier
+    ["@variable.parameter"] = {}, -- Only useful with an LSP to track scope
 
     StatusLine = { fg = c.fg, bg = c.d_purple_three },
     StatusLineNC = { link = "StatusLine" }, -- (Default self-definition)

@@ -67,7 +67,12 @@ vim.api.nvim_create_autocmd("FileType", {
             return
         end
 
+        lua_hl.query:disable_capture("comment.documentation")
+        lua_hl.query:disable_capture("function.builtin")
+        lua_hl.query:disable_capture("module.builtin")
         lua_hl.query:disable_capture("property")
+        lua_hl.query:disable_capture("punctuation.bracket")
+        lua_hl.query:disable_capture("punctuation.delimiter")
         lua_hl.query:disable_capture("spell")
         lua_hl.query:disable_capture("variable")
         lua_hl.query:disable_capture("variable.member")
