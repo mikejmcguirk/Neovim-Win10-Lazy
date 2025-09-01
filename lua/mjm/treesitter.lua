@@ -68,6 +68,7 @@ vim.api.nvim_create_autocmd("FileType", {
         hl_query.query:disable_capture("comment.documentation") -- Semantic tokens handle
         hl_query.query:disable_capture("function.builtin")
         hl_query.query:disable_capture("module.builtin")
+        hl_query.query:disable_capture("nospell")
         hl_query.query:disable_capture("property")
         hl_query.query:disable_capture("punctuation.bracket")
         hl_query.query:disable_capture("punctuation.delimiter")
@@ -98,6 +99,27 @@ vim.api.nvim_create_autocmd("FileType", {
     end,
 })
 
+vim.api.nvim_create_autocmd("FileType", {
+    group = vim.api.nvim_create_augroup("lua-disable-captures", { clear = true }),
+    pattern = "python",
+    once = true,
+    callback = function()
+        local hl_query = vim.treesitter.query.get("python", "highlights")
+        if not hl_query then
+            return
+        end
+
+        hl_query.query:disable_capture("punctuation.bracket")
+        hl_query.query:disable_capture("punctuation.delimiter")
+        hl_query.query:disable_capture("nospell")
+        hl_query.query:disable_capture("string.documentation")
+        hl_query.query:disable_capture("spell")
+        hl_query.query:disable_capture("variable")
+        hl_query.query:disable_capture("variable.member")
+        hl_query.query:disable_capture("variable.parameter")
+    end,
+})
+
 vim.api.nvim_create_autocmd("LspAttach", {
     group = vim.api.nvim_create_augroup("rust-disable-captures-lsp", { clear = true }),
     callback = function(ev)
@@ -115,6 +137,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
             hl_query.query:disable_capture("_identifier")
             hl_query.query:disable_capture("keyword.debug")
             hl_query.query:disable_capture("keyword.exception")
+            hl_query.query:disable_capture("nospell")
+            hl_query.query:disable_capture("spell")
             hl_query.query:disable_capture("string")
             hl_query.query:disable_capture("type")
 
