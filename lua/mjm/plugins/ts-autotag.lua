@@ -16,7 +16,6 @@ vim.api.nvim_create_autocmd("FileType", {
             return
         end
 
-        require("mjm.pack").post_load("nvim-ts-autotag")
         load_ts_autotag()
 
         vim.api.nvim_del_augroup_by_name("load-ts-autotag")

@@ -1,7 +1,3 @@
-local ut = require("mjm.utils")
-
-vim.cmd.packadd({ vim.fn.escape("cfilter", " "), bang = true, magic = { file = false } })
-
 -- Override default behavior where new windows get a copy of the previous window's loclist
 vim.api.nvim_create_autocmd("WinNew", {
     group = vim.api.nvim_create_augroup("del_new_loclist", { clear = true }),
@@ -13,7 +9,7 @@ vim.api.nvim_create_autocmd("WinNew", {
 
 ---@return nil
 local function open_qflist()
-    ut.close_all_loclists()
+    require("mjm.utils").close_all_loclists()
     --- @diagnostic disable: missing-fields
     vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
 end
@@ -81,7 +77,7 @@ end)
 
 for _, map in pairs({ "cuo", "cou" }) do
     vim.keymap.set("n", map, function()
-        ut.close_all_loclists()
+        require("mjm.utils").close_all_loclists()
         vim.api.nvim_cmd({ cmd = "ccl" }, {})
     end)
 end
@@ -144,7 +140,7 @@ local function all_diags_to_qflist(opts)
 
     local severity = (function()
         if opts.highest then
-            return ut.get_top_severity({ buf = nil })
+            return require("mjm.utils").get_top_severity({ buf = nil })
         elseif opts.err_only then
             return vim.diagnostic.severity.ERROR
         else
@@ -176,13 +172,13 @@ local function buf_diags_to_loclist(opts)
 
     local win = vim.api.nvim_get_current_win() ---@type integer
     local buf = vim.api.nvim_win_get_buf(win) ---@type integer
-    if not ut.check_modifiable(buf) then
+    if not require("mjm.utils").check_modifiable(buf) then
         return
     end
 
     local severity = (function()
         if opts.highest then
-            return ut.get_top_severity({ buf = buf })
+            return require("mjm.utils").get_top_severity({ buf = buf })
         elseif opts.err_only then
             return vim.diagnostic.severity.ERROR
         else
@@ -253,7 +249,7 @@ local function filter_wrapper(opts)
     end
 
     local action = opts.remove and "remove: " or "keep: " --- @type string
-    local pattern = ut.get_input(list .. " pattern to " .. action)
+    local pattern = require("mjm.utils").get_input(list .. " pattern to " .. action)
     if pattern ~= "" then
         local prefix = opts.loclist and "L" or "C" ---@type string
         vim.api.nvim_cmd({ cmd = prefix .. "filter", bang = opts.remove, args = { pattern } }, {})
@@ -287,7 +283,8 @@ local function grep_wrapper(opts)
         return vim.notify("Inside qf buffer")
     end
 
-    local pattern = opts.pattern or ut.get_input("Enter Grep Pattern: ") ---@type string
+    ---@type string
+    local pattern = opts.pattern or require("mjm.utils").get_input("Enter Grep Pattern: ")
     if pattern == "" and opts.pattern then
         return vim.notify("Empty grep pattern", vim.log.levels.WARN)
     elseif pattern == "" then

@@ -1,17 +1,15 @@
-local ut = require("mjm.utils")
-
 vim.cmd.packadd({ vim.fn.escape("vim-fugitive", " "), bang = true, magic = { file = false } })
 
 vim.api.nvim_create_autocmd("FileType", {
     group = vim.api.nvim_create_augroup("git-diff-ts", { clear = true }),
     pattern = "git",
     callback = function()
-        vim.api.nvim_cmd({ cmd = "set", args = { "filetype=diff" } }, {})
+        vim.api.nvim_cmd({ cmd = "set", args = { "filetype=gitdiff" } }, {})
     end,
 })
 
 vim.keymap.set("n", "<leader>gcam", function()
-    local msg = ut.get_input("Commit message (All): ")
+    local msg = require("mjm.utils").get_input("Commit message (All): ")
     if msg == "" then
         return
     end
@@ -24,7 +22,7 @@ vim.keymap.set("n", "<leader>gcan", function()
 end)
 
 vim.keymap.set("n", "<leader>gchm", function()
-    local msg = ut.get_input("Commit message: ")
+    local msg = require("mjm.utils").get_input("Commit message: ")
     if msg == "" then
         return
     end
@@ -43,7 +41,7 @@ local function open_diffs(staged)
         end
     end
 
-    ut.close_all_loclists()
+    require("mjm.utils").close_all_loclists()
     vim.api.nvim_cmd({ cmd = "ccl" }, {})
 
     local mods = { split = "botright" }

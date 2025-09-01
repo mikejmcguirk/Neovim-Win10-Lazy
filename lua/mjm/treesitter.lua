@@ -16,8 +16,9 @@ vim.keymap.set("n", "gtee", function()
     vim.api.nvim_cmd({ cmd = "EditQuery" }, {})
 end)
 
----@param query_group string
----Lifted from the old TS Master Branch
+--- @param query_group string
+--- @return nil
+--- Lifted from the old TS Master Branch
 local function edit_query_file(query_group)
     local lang = vim.api.nvim_get_option_value("filetype", { buf = 0 })
     local files = vim.treesitter.query.get_files(lang, query_group, nil)
@@ -26,11 +27,11 @@ local function edit_query_file(query_group)
         vim.api.nvim_echo({ { "No query file found", "" } }, false, {})
         return
     elseif #files == 1 then
-        ut.open_buf(files[1], { open = "vsplit" })
+        require("mjm.utils").open_buf(files[1], { open = "vsplit" })
     else
         vim.ui.select(files, { prompt = "Select a file:" }, function(file)
             if file then
-                ut.open_buf(file, { open = "vsplit" })
+                require("mjm.utils").open_buf(file, { open = "vsplit" })
             end
         end)
     end

@@ -2,12 +2,7 @@
 -- FUTURE: Turn :let g: into a picker
 -- LOW: What makes async messages not display?
 
-vim.cmd.packadd({ vim.fn.escape("fzf-lua", " "), bang = true, magic = { file = false } })
-
 local fzf_lua = require("fzf-lua")
-local utils = require("fzf-lua.utils")
-local core = require("fzf-lua.core")
-local config = require("fzf-lua.config")
 
 fzf_lua.setup({
     "telescope",
@@ -198,7 +193,7 @@ vim.keymap.set("n", "<leader>fds", fuzzy_spell_correct)
 -- But this doesn't show the "l"/"c" conversions like :registers does so needs more work
 -- Copy of the original code with vim.fn.getregtype() added
 fzf_lua.registers = function(opts)
-    opts = config.normalize_opts(opts, "registers")
+    opts = require("fzf-lua.config").normalize_opts(opts, "registers")
     if not opts then
         return
     end
@@ -234,12 +229,12 @@ fzf_lua.registers = function(opts)
         }
 
         for k, v in pairs(gsub_map) do
-            reg = reg:gsub(k, utils.ansi_codes.magenta(v))
+            reg = reg:gsub(k, require("fzf-lua.utils").ansi_codes.magenta(v))
         end
 
         return not nl and reg
             or nl == 2 and reg:gsub("\n$", "")
-            or reg:gsub("\n", utils.ansi_codes.magenta("\\n"))
+            or reg:gsub("\n", require("fzf-lua.utils").ansi_codes.magenta("\\n"))
     end
 
     local entries = {}
@@ -258,8 +253,8 @@ fzf_lua.registers = function(opts)
                 entries,
                 string.format(
                     "[%s] [%s] %s",
-                    utils.ansi_codes.yellow(r),
-                    utils.ansi_codes.blue(regtype),
+                    require("fzf-lua.utils").ansi_codes.yellow(r),
+                    require("fzf-lua.utils").ansi_codes.blue(regtype),
                     contents
                 )
             )
@@ -272,7 +267,7 @@ fzf_lua.registers = function(opts)
         return contents and register_escape_special(contents) or args[1]
     end
 
-    core.fzf_exec(entries, opts)
+    require("fzf-lua.core").fzf_exec(entries, opts)
 end
 
 vim.keymap.set("n", "<leader>fr", fzf_lua.registers)

@@ -1,14 +1,3 @@
--- Source to automatically setup LSP capabilities and play nice with LazyDev
-vim.cmd.packadd({ vim.fn.escape("blink.cmp", " "), bang = true, magic = { file = false } })
--- Must be sourced to work with Obsidian
-vim.cmd.packadd({ vim.fn.escape("blink.compat", " "), bang = true, magic = { file = false } })
--- Just do this here to avoid managing multiple load conditions. blink checkhealth fails
--- if it can't find Dadbod completion
-local dadbod_cmp = "vim-dadbod-completion"
-vim.cmd.packadd({ vim.fn.escape(dadbod_cmp, " "), bang = true, magic = { file = false } })
-
-local ut = require("mjm.utils")
-
 local function setup_blink()
     -- Don't want any mis-fires
     vim.keymap.set("i", "<C-y>", "<nop>")
@@ -168,6 +157,7 @@ local function setup_blink()
                     },
                     score_offset = -6,
                     transform_items = function(a, items)
+                        local ut = require("mjm.utils")
                         local prose_ft = { "text", "markdown" }
                         local ft = vim.api.nvim_get_option_value("filetype", { buf = 0 })
                         if not (vim.tbl_contains(prose_ft, ft) or ut.is_comment()) then
@@ -323,8 +313,6 @@ vim.api.nvim_create_autocmd({ "CmdlineEnter", "BufReadPre", "BufNewFile" }, {
     group = vim.api.nvim_create_augroup("setup-blink", { clear = true }),
     once = true,
     callback = function()
-        require("mjm.pack").post_load("friendly-snippets")
-
         setup_blink()
         --- @diagnostic disable: missing-parameter
         require("blink-compat").setup()

@@ -1,8 +1,6 @@
 -- LOW: Weird Issue where workspace update is triggered due to FzfLua require, and Semantic
 -- Tokens do not consistently refresh afterwards
 
-local ut = require("mjm.utils")
-
 vim.lsp.log.set_level(vim.log.levels.ERROR)
 
 -- By default, mapped in non-LSP buffers and without checking for LSP method support
@@ -51,7 +49,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         if client:supports_method(methods.textDocument_rename) then
             vim.keymap.set("n", "grn", function()
-                local input = ut.get_input("Rename: ")
+                local input = require("mjm.utils").get_input("Rename: ")
                 if string.find(input, "%s") then
                     vim.notify(string.format("'%s' contains spaces", input))
                 elseif #input > 0 then
@@ -224,6 +222,7 @@ vim.lsp.enable("golangci_lint_ls")
 vim.lsp.enable("html")
 vim.lsp.enable("cssls")
 
+-- TODO: Can the trailing whitespace diagnostic be disabled?
 vim.lsp.enable("lua_ls")
 
 -- Ruff is not feature-complete enough to replace pylsp

@@ -2,8 +2,6 @@
 -- Treesitter Parsers --
 ------------------------
 
-vim.cmd.packadd({ vim.fn.escape("nvim-treesitter", " "), bang = true, magic = { file = false } })
-
 local languages = {
     -- Mandatory
     "c",
@@ -168,7 +166,6 @@ vim.api.nvim_create_autocmd({ "BufNewFile", "BufReadPre" }, {
     group = vim.api.nvim_create_augroup("setup-objects", { clear = true }),
     once = true,
     callback = function()
-        require("mjm.pack").post_load(objects)
         setup_objects()
     end,
 })

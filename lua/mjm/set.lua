@@ -1,98 +1,86 @@
-vim.api.nvim_set_option_value("mouse", "", { scope = "global" })
+local set_group = vim.api.nvim_create_augroup("set-group", { clear = true })
 
--- On my monitors, for files under 10k lines, a centered vsplit will be on the color column
-vim.api.nvim_set_option_value("nu", true, { scope = "global" })
-vim.api.nvim_set_option_value("rnu", true, { scope = "global" })
-vim.api.nvim_set_option_value("nuw", 5, { scope = "global" })
-vim.api.nvim_set_option_value("cc", "100", { scope = "global" })
-vim.api.nvim_set_option_value("scl", "yes:1", { scope = "global" })
-vim.opt.fillchars:append({ eob = " " })
-
-local rnu_control = vim.api.nvim_create_augroup("rnu_control", { clear = true })
-
----@param event string|string[]
----@param pattern string
----@param value boolean
----@return nil
-local set_rnu = function(event, pattern, value)
-    vim.api.nvim_create_autocmd(event, {
-        group = rnu_control,
-        pattern = pattern,
-        callback = function(ev)
-            local win = vim.api.nvim_get_current_win()
-            vim.api.nvim_set_option_value("rnu", value, { win = win })
-            if ev.event == "CmdlineEnter" then
-                if not vim.tbl_contains({ "@", "-" }, vim.v.event.cmdtype) then
-                    vim.cmd("redraw")
-                end
-            end
-        end,
-    })
-end
-
--- Note: Need BufLeave/BufEnter for this to work when going into help. Seems like the autocmds run
--- before the buf is loaded, and rnu can't be set on Win Enter since there's no buffer
-set_rnu({ "WinLeave", "CmdlineEnter", "BufLeave" }, "*", false)
-set_rnu({ "WinEnter", "CmdlineLeave", "BufEnter" }, "*", true)
-
-vim.api.nvim_set_option_value("ts", 4, { scope = "global" })
-vim.api.nvim_set_option_value("sts", 4, { scope = "global" })
-vim.api.nvim_set_option_value("sw", 4, { scope = "global" })
-vim.api.nvim_set_option_value("et", true, { scope = "global" })
-vim.api.nvim_set_option_value("sr", true, { scope = "global" })
+vim.opt.mls = 1
+vim.opt.mouse = ""
+vim.opt.sb = true
+vim.opt.spr = true
 
 -- Override \r\n on Windows
-vim.api.nvim_set_option_value("ffs", "unix,dos", { scope = "global" })
+vim.opt.ffs = "unix,dos"
+vim.opt.jop:append("view")
 
-vim.api.nvim_set_option_value("smd", false, { scope = "global" })
-vim.api.nvim_set_option_value("ru", false, { scope = "global" })
-vim.api.nvim_set_option_value("mls", 1, { scope = "global" })
+vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
+    group = set_group,
+    pattern = ".bashrc_custom",
+    callback = function()
+        vim.api.nvim_cmd({ cmd = "set", args = { "filetype=sh" } }, {})
+    end,
+})
+
+vim.opt.bk = false
+vim.opt.swf = false
+vim.opt.udf = true
+vim.opt.ut = 250
+
+vim.api.nvim_create_autocmd({ "VimLeavePre" }, {
+    group = set_group,
+    pattern = "*",
+    callback = function()
+        vim.fn.setreg("/", nil)
+    end,
+})
+
+vim.opt.dictionary = vim.fn.expand("~/.local/bin/words/words_alpha.txt")
+vim.opt.spell = false
+vim.opt.spl = "en_us"
 
 local blink_setting = "blinkon1-blinkoff1"
-local block_cursor = "n-o:block" .. blink_setting
+local norm_cursor = "n:block" .. blink_setting
 local ver_cursor = "i-sm-c-ci-t:ver100-" .. blink_setting
-local hor_cursor = "v-ve-r-cr:hor100-" .. blink_setting
-local gcr = block_cursor .. "," .. ver_cursor .. "," .. hor_cursor
-vim.api.nvim_set_option_value("gcr", gcr, { scope = "global" })
+local hor_cursor = "o-v-ve-r-cr:hor100-" .. blink_setting
+local gcr = norm_cursor .. "," .. ver_cursor .. "," .. hor_cursor
+vim.opt.gcr = gcr
 
-vim.api.nvim_set_option_value("so", Scrolloff_Val, { scope = "global" })
-vim.opt.jumpoptions:append("view")
-vim.opt.matchpairs:append("<:>")
-vim.opt.cpoptions:append("W")
-vim.opt.cpoptions:append("Z")
+-- On my monitors, for files under 10k lines, a centered vsplit will be on the color column
+vim.opt.nu = true
+vim.opt.rnu = true
+vim.opt.cc = "100"
+vim.opt.nuw = 5
+vim.opt.scl = "yes:1"
 
-vim.api.nvim_set_option_value("bs", "indent,eol,nostop", { scope = "global" })
-vim.api.nvim_set_option_value("sel", "old", { scope = "global" })
-vim.api.nvim_set_option_value("si", true, { scope = "global" })
-
-vim.opt.shortmess:append("I")
-vim.opt.shortmess:append("W")
-vim.opt.shortmess:append("s")
-vim.opt.shortmess:append("r")
-
-vim.api.nvim_set_option_value("spr", true, { scope = "global" })
-vim.api.nvim_set_option_value("sb", true, { scope = "global" })
-
-vim.api.nvim_set_option_value("ic", true, { scope = "global" })
-vim.api.nvim_set_option_value("scs", true, { scope = "global" })
--- Don't want screen shifting while entering search/subsitute patterns
-vim.api.nvim_set_option_value("incsearch", false, { scope = "global" })
-
-vim.api.nvim_set_option_value("swf", false, { scope = "global" })
-vim.api.nvim_set_option_value("bk", false, { scope = "global" })
-vim.api.nvim_set_option_value("udf", true, { scope = "global" })
-vim.api.nvim_set_option_value("ut", 250, { scope = "global" })
-
-vim.api.nvim_set_option_value("wrap", false, { scope = "global" })
+-- https://github.com/neovim/neovim/issues/35575
+-- vim.opt.wrap = false
 -- For fts where opt_local wrap is true
-vim.api.nvim_set_option_value("bri", true, { scope = "global" })
-vim.api.nvim_set_option_value("lbr", true, { scope = "global" })
+vim.opt.bri = true
+vim.opt.lbr = true
 
-vim.api.nvim_set_option_value("spell", false, { scope = "global" })
-vim.api.nvim_set_option_value("spl", "en_us", { scope = "global" })
-vim.opt.dictionary = vim.fn.expand("~/.local/bin/words/words_alpha.txt")
+vim.opt.fillchars:append({ eob = " " })
+vim.opt.shortmess:append("I")
+vim.opt.smd = false
 
-vim.api.nvim_set_option_value("cul", true, { scope = "global" })
+local clear_conditions = {
+    "BufEnter",
+    "CmdlineEnter",
+    -- "InsertEnter",
+    "RecordingEnter",
+    "TabLeave",
+    "TabNewEntered",
+    "WinEnter",
+    "WinLeave",
+} ---@type string[]
+
+vim.api.nvim_create_autocmd(clear_conditions, {
+    group = set_group,
+    pattern = "*",
+    -- The highlight state is saved and restored when autocmds are triggered, so
+    -- schedule_wrap is used to trigger nohlsearch aftewards
+    -- See nohlsearch() help
+    callback = vim.schedule_wrap(function()
+        vim.cmd.nohlsearch()
+    end),
+})
+
+vim.opt.cul = true
 local cul_control = vim.api.nvim_create_augroup("cul_control", { clear = true })
 
 ---@param event string
@@ -112,27 +100,6 @@ end
 
 set_cul("WinLeave", "", false)
 set_cul("WinEnter", "", true)
-
--- For whatever reason, this global scope set works initially, but then the autocmds have to set
--- by window
-vim.api.nvim_set_option_value("list", true, { scope = "global" })
-vim.opt.listchars = { tab = "<–>", extends = "»", precedes = "«", nbsp = "␣", trail = "⣿" }
--- vim.opt.listchars = { eol = "↲", tab = "<–>", extends = "»", precedes = "«", nbsp = "␣" }
-
-local list_control = vim.api.nvim_create_augroup("list-control", { clear = true })
-vim.api.nvim_create_autocmd("InsertEnter", {
-    group = list_control,
-    callback = function()
-        vim.api.nvim_set_option_value("list", false, { win = vim.api.nvim_get_current_win() })
-    end,
-})
-
-vim.api.nvim_create_autocmd("InsertLeave", {
-    group = list_control,
-    callback = function()
-        vim.api.nvim_set_option_value("list", true, { win = vim.api.nvim_get_current_win() })
-    end,
-})
 
 ----------------
 

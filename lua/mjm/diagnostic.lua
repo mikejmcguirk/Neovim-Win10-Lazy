@@ -25,13 +25,18 @@ vim.keymap.set("n", "grd", function()
     vim.diagnostic.config((not cur_cfg.virtual_lines) and diag_lines_cfg or diag_text_cfg)
 end)
 
-local ut = require("mjm.utils")
 vim.keymap.set("n", "[w", function()
-    vim.diagnostic.jump({ count = -vim.v.count1, severity = ut.get_top_severity({ buf = 0 }) })
+    vim.diagnostic.jump({
+        count = -vim.v.count1,
+        severity = require("mjm.utils").get_top_severity({ buf = 0 }),
+    })
 end)
 
 vim.keymap.set("n", "]w", function()
-    vim.diagnostic.jump({ count = vim.v.count1, severity = ut.get_top_severity({ buf = 0 }) })
+    vim.diagnostic.jump({
+        count = vim.v.count1,
+        severity = require("mjm.utils").get_top_severity({ buf = 0 }),
+    })
 end)
 
 -- For whatever reason, [D/]D on my computer cause Neovim to lock up. Even when just using large
@@ -95,7 +100,7 @@ vim.keymap.set("n", "]D", function()
 end)
 
 vim.keymap.set("n", "[W", function()
-    local severity = ut.get_top_severity({ buf = 0 })
+    local severity = require("mjm.utils").get_top_severity({ buf = 0 })
     local diagnostic = get_first_or_last_diag({ severity = severity })
     if not diagnostic then
         return
@@ -106,7 +111,7 @@ vim.keymap.set("n", "[W", function()
 end)
 
 vim.keymap.set("n", "]W", function()
-    local severity = ut.get_top_severity({ buf = 0 })
+    local severity = require("mjm.utils").get_top_severity({ buf = 0 })
     local diagnostic = get_first_or_last_diag({ severity = severity, last = true })
     if not diagnostic then
         return

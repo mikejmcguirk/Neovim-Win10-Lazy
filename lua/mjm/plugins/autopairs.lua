@@ -33,7 +33,6 @@ vim.api.nvim_create_autocmd({ "BufNewFile", "BufReadPre" }, {
     group = vim.api.nvim_create_augroup("setup-autopairs", { clear = true }),
     once = true,
     callback = function()
-        require("mjm.pack").post_load("nvim-autopairs")
         setup_autopairs()
     end,
 })

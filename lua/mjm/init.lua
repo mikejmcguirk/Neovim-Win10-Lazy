@@ -1,13 +1,15 @@
+-- TODO: Can copy the logic I need out of here: https://github.com/Shatur/neovim-session-manager
+
 local start = vim.loop.hrtime()
 
------------------------
--- Environment Setup --
------------------------
+-----------
+-- Setup --
+-----------
 
 vim.g.loaded_2html_plugin = 1
 vim.g.loaded_gzip = 1
 vim.g.loaded_matchit = 1
-vim.g.loaded_matchparen = 1 -- FUTURE: Lazy load
+vim.g.loaded_matchparen = 1 -- MAYBE: Lazy load
 vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
 vim.g.loaded_netrwSettings = 1
@@ -19,85 +21,94 @@ vim.g.loaded_tutor_mode_plugin = 1
 vim.g.loaded_zipPlugin = 1
 vim.g.loaded_zip = 1
 
-require("mjm.global_vars")
-
 vim.keymap.set({ "n", "x" }, "<Space>", "<Nop>")
 vim.g.mapleader = " "
 vim.g.maplocaleader = " "
 
+require("mjm.global_vars")
+require("mjm.set")
+require("mjm.keymap")
+require("mjm.custom_cmd")
+
 require("mjm.colorscheme")
+
+require("mjm.stl")
 
 local env_setup = vim.loop.hrtime()
 
+-------------------------------
+-- Download/Register Plugins --
+-------------------------------
+
 require("mjm.pack")
+vim.cmd.packadd({ vim.fn.escape("cfilter", " "), bang = true, magic = { file = false } })
 
 local pack_finish = vim.loop.hrtime()
 
+----------------------------
+-- Plugin Dependent Setup --
+----------------------------
+
+require("mjm.tal") -- Requires Harpoon
+
+local post_plugin_setup = vim.loop.hrtime()
+
 --------------------------
--- Eager Loaded Plugins --
+-- Eager Initialization --
 --------------------------
 
-require("mjm.plugins.plenary")
-require("mjm.plugins.nvim-web-devicons")
-
-require("mjm.plugins.nvim-treesitter")
-
-require("mjm.plugins.nvim-lspconfig")
+require("mjm.plugins.nvim-treesitter") -- Text Objects Sets Up Lazily
 
 require("mjm.plugins.fzflua")
 require("mjm.plugins.harpoon")
 require("mjm.plugins.oil")
 
-require("mjm.plugins.blink") -- Setup is lazy, but add to path for LSP capabilities and compat
-
 require("mjm.plugins.fugitive")
-
--- Due to extra keymapping issue. Added to RTP, but setup lazily
-require("mjm.plugins.nvim-surround")
-require("mjm.plugins.spec-ops")
 
 local eager_loaded = vim.loop.hrtime()
 
-------------------------------
--- Standard Config Settings --
-------------------------------
-
-require("mjm.set")
-require("mjm.keymap")
-require("mjm.custom_cmd")
-require("mjm.diagnostic")
-require("mjm.error-list")
-require("mjm.autocmd")
-require("mjm.lsp")
-require("mjm.stl")
-require("mjm.tal")
-require("mjm.treesitter")
-
-local config_set = vim.loop.hrtime()
-
 -------------------------
--- Lazy Loaded Plugins --
+-- Lazy Initialization --
 -------------------------
 
-require("mjm.plugins.abolish")
+vim.g.db_ui_use_nerd_fonts = 1
+vim.g.qs_highlight_on_keys = { "f", "F", "t", "T" }
+vim.g.qs_max_chars = 9999
+vim.keymap.set("n", "<leader>u", vim.cmd.UndotreeToggle)
+
 require("mjm.plugins.autopairs")
+require("mjm.plugins.blink")
 require("mjm.plugins.conform")
-require("mjm.plugins.dadbod")
 require("mjm.plugins.flash")
 require("mjm.plugins.git_signs")
 require("mjm.plugins.lazydev")
+require("mjm.plugins.nvim-surround")
 require("mjm.plugins.obsidian")
-require("mjm.plugins.quickscope")
+require("mjm.plugins.spec-ops")
 require("mjm.plugins.ts-autotag")
-require("mjm.plugins.undotree")
 require("mjm.plugins.zen")
+
+vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
+    group = vim.api.nvim_create_augroup("mjm-lazy-load", { clear = true }),
+    once = true,
+    callback = function()
+        require("mjm.lazy_set")
+        require("mjm.lazy_keymaps")
+        require("mjm.error-list")
+        require("mjm.treesitter")
+
+        require("mjm.diagnostic")
+        require("mjm.lsp")
+        vim.api.nvim_del_augroup_by_name("nvim.diagnostic.status")
+    end,
+})
 
 local lazy_loaded = vim.loop.hrtime()
 
 local to_env_setup = math.floor((env_setup - start) / 1e6 * 100) / 100
 local to_pack_finished = math.floor((pack_finish - start) / 1e6 * 100) / 100
+local to_post_plugin_setup = math.floor((post_plugin_setup - start) / 1e6 * 100) / 100
 local to_eager_loaded = math.floor((eager_loaded - start) / 1e6 * 100) / 100
-local to_config_set = math.floor((config_set - start) / 1e6 * 100) / 100
 local to_lazy_loaded = math.floor((lazy_loaded - start) / 1e6 * 100) / 100
 
 vim.api.nvim_create_autocmd("UIEnter", {
@@ -111,11 +122,11 @@ vim.api.nvim_create_autocmd("UIEnter", {
         end
 
         local headers = {
-            { "Environment setup: ", to_env_setup },
-            { "vim.pack: ", to_pack_finished },
-            { "Eager Plugin Loading: ", to_eager_loaded },
-            { "Setup Config: ", to_config_set },
-            { "Setup Lazy Loading: ", to_lazy_loaded },
+            { "Setup: ", to_env_setup },
+            { "Download/Register Plugins", to_pack_finished },
+            { "Post Plugin Setup", to_post_plugin_setup },
+            { "Eager Plugin Init: ", to_eager_loaded },
+            { "Lazy Plugin Init: ", to_lazy_loaded },
             { "UI Enter: ", to_ui_enter },
         }
 
@@ -163,7 +174,6 @@ vim.api.nvim_create_autocmd("UIEnter", {
         for _, option in pairs(buf_opts) do
             vim.api.nvim_set_option_value(option[1], option[2], { buf = bufnr })
         end
-        vim.api.nvim_set_option_value("nu", true, { win = win })
 
         vim.api.nvim_create_autocmd("BufLeave", {
             group = vim.api.nvim_create_augroup("leave-greeter", { clear = true }),

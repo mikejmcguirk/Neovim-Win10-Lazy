@@ -1,8 +1,4 @@
-vim.cmd.packadd({ vim.fn.escape("harpoon", " "), bang = true, magic = { file = false } })
-
 local harpoon = require("harpoon")
-local logger = require("harpoon.logger")
-local extensions = require("harpoon.extensions")
 
 harpoon:setup({
     settings = {
@@ -17,7 +13,8 @@ harpoon:setup({
         -- or opt_local context correctly. nvim_set_current_buf() without bufload handles the
         -- load step correctly if needed
         select = function(list_item, list, opts)
-            logger:log("custom#select", list_item, list.name, opts)
+            local extensions = require("harpoon.extensions")
+            require("harpoon.logger"):log("custom#select", list_item, list.name, opts)
 
             if not list_item then
                 vim.notify("nil list_item")
@@ -135,6 +132,7 @@ local function rm_cur_buf()
     table.remove(list.items, idx)
     list._length = list._length - 1
 
+    local extensions = require("harpoon.extensions")
     extensions.extensions:emit(extensions.event_names.REMOVE)
 end
 
