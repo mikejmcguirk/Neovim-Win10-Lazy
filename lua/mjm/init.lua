@@ -85,6 +85,7 @@ require("mjm.plugins.lazydev")
 require("mjm.plugins.nvim-surround")
 require("mjm.plugins.obsidian")
 require("mjm.plugins.spec-ops")
+require("mjm.plugins.treesj")
 require("mjm.plugins.ts-autotag")
 require("mjm.plugins.zen")
 

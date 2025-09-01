@@ -55,6 +55,8 @@ local pack_spec = {
 
     { src = "https://github.com/unblevable/quick-scope" },
 
+    { src = "https://github.com/Wansmer/treesj" },
+
     { src = "https://github.com/mbbill/undotree" },
 
     { src = "https://github.com/tpope/vim-abolish" },
