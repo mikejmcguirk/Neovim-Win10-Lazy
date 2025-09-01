@@ -1,12 +1,12 @@
 local set_group = vim.api.nvim_create_augroup("set-group", { clear = true })
 
-vim.opt.mls = 1
-vim.opt.mouse = ""
-vim.opt.sb = true
-vim.opt.spr = true
+vim.api.nvim_set_option_value("mls", 1, { scope = "global" })
+vim.api.nvim_set_option_value("mouse", "", { scope = "global" })
+vim.api.nvim_set_option_value("sb", true, { scope = "global" })
+vim.api.nvim_set_option_value("spr", true, { scope = "global" })
 
 -- Override \r\n on Windows
-vim.opt.ffs = "unix,dos"
+vim.api.nvim_set_option_value("ffs", "unix,dos", { scope = "global" })
 vim.opt.jop:append("view")
 
 vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
@@ -17,10 +17,10 @@ vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
     end,
 })
 
-vim.opt.bk = false
-vim.opt.swf = false
-vim.opt.udf = true
-vim.opt.ut = 250
+vim.api.nvim_set_option_value("bk", false, { scope = "global" })
+vim.api.nvim_set_option_value("swf", false, { scope = "global" })
+vim.api.nvim_set_option_value("udf", true, { scope = "global" })
+vim.api.nvim_set_option_value("ut", 250, { scope = "global" })
 
 vim.api.nvim_create_autocmd({ "VimLeavePre" }, {
     group = set_group,
@@ -30,33 +30,34 @@ vim.api.nvim_create_autocmd({ "VimLeavePre" }, {
     end,
 })
 
-vim.opt.dictionary = vim.fn.expand("~/.local/bin/words/words_alpha.txt")
-vim.opt.spell = false
-vim.opt.spl = "en_us"
+local dict = vim.fn.expand("~/.local/bin/words/words_alpha.txt")
+vim.api.nvim_set_option_value("dictionary", dict, { scope = "global" })
+vim.api.nvim_set_option_value("spell", false, { scope = "global" })
+vim.api.nvim_set_option_value("spl", "en_us", { scope = "global" })
 
 local blink_setting = "blinkon1-blinkoff1"
 local norm_cursor = "n:block" .. blink_setting
 local ver_cursor = "i-sm-c-ci-t:ver100-" .. blink_setting
 local hor_cursor = "o-v-ve-r-cr:hor100-" .. blink_setting
 local gcr = norm_cursor .. "," .. ver_cursor .. "," .. hor_cursor
-vim.opt.gcr = gcr
+vim.api.nvim_set_option_value("gcr", gcr, { scope = "global" })
 
 -- On my monitors, for files under 10k lines, a centered vsplit will be on the color column
-vim.opt.nu = true
-vim.opt.rnu = true
-vim.opt.cc = "100"
-vim.opt.nuw = 5
-vim.opt.scl = "yes:1"
+vim.api.nvim_set_option_value("nu", true, { scope = "global" })
+vim.api.nvim_set_option_value("rnu", true, { scope = "global" })
+vim.api.nvim_set_option_value("cc", "100", { scope = "global" })
+vim.api.nvim_set_option_value("nuw", 5, { scope = "global" })
+vim.api.nvim_set_option_value("scl", "yes:1", { scope = "global" })
 
 -- https://github.com/neovim/neovim/issues/35575
--- vim.opt.wrap = false
+-- vim.api.nvim_set_option_value("wrap", false, { scope = "global" })
 -- For fts where opt_local wrap is true
-vim.opt.bri = true
-vim.opt.lbr = true
+vim.api.nvim_set_option_value("bri", true, { scope = "global" })
+vim.api.nvim_set_option_value("lbr", true, { scope = "global" })
 
 vim.opt.fillchars:append({ eob = " " })
 vim.opt.shortmess:append("I")
-vim.opt.smd = false
+vim.api.nvim_set_option_value("smd", false, { scope = "global" })
 
 local clear_conditions = {
     "BufEnter",
@@ -80,7 +81,7 @@ vim.api.nvim_create_autocmd(clear_conditions, {
     end),
 })
 
-vim.opt.cul = true
+vim.api.nvim_set_option_value("cul", true, { scope = "global" })
 local cul_control = vim.api.nvim_create_augroup("cul_control", { clear = true })
 
 ---@param event string
