@@ -112,7 +112,7 @@ local function setup_objects()
             }
 
             for _, m in pairs(select_maps) do
-                vim.keymap.set({ "x", "o" }, m[1], function()
+                Map({ "x", "o" }, m[1], function()
                     select.select_textobject(m[2], "textobjects")
                 end, { buffer = ev.buf })
             end
@@ -131,11 +131,11 @@ local function setup_objects()
             }
 
             for _, m in pairs(move_maps) do
-                vim.keymap.set("n", m[1], function()
+                Map("n", m[1], function()
                     move.goto_previous_start(m[3], "textobjects")
                 end, { buffer = ev.buf })
 
-                vim.keymap.set("n", m[2], function()
+                Map("n", m[2], function()
                     move.goto_next_start(m[3], "textobjects")
                 end, { buffer = ev.buf })
             end
@@ -146,19 +146,19 @@ local function setup_objects()
 
             local swap = require(objects .. ".swap")
             local swap_maps = {
-                { "[M", "]M", "@call.outer" },
-                { "[/", "]/", "@comment.outer" },
-                { "[m", "]m", "@function.outer" },
-                { "[,", "],", "@parameter.inner" },
-                { "[#", "]#", "@preproc.inner" },
+                { "(M", ")M", "@call.outer" },
+                { "(/", ")/", "@comment.outer" },
+                { "(m", ")m", "@function.outer" },
+                { "(,", "),", "@parameter.inner" },
+                { "(#", ")#", "@preproc.inner" },
             }
 
             for _, m in pairs(swap_maps) do
-                vim.keymap.set("n", "cx" .. m[1], function()
+                Map("n", m[1], function()
                     swap.swap_previous(m[3], "textobjects")
                 end, { buffer = ev.buf })
 
-                vim.keymap.set("n", "cx" .. m[2], function()
+                Map("n", m[2], function()
                     swap.swap_next(m[3], "textobjects")
                 end, { buffer = ev.buf })
             end
