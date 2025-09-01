@@ -123,8 +123,8 @@ vim.api.nvim_create_autocmd("UIEnter", {
 
         local headers = {
             { "Setup: ", to_env_setup },
-            { "Download/Register Plugins", to_pack_finished },
-            { "Post Plugin Setup", to_post_plugin_setup },
+            { "Download/Register Plugins: ", to_pack_finished },
+            { "Post Plugin Setup: ", to_post_plugin_setup },
             { "Eager Plugin Init: ", to_eager_loaded },
             { "Lazy Plugin Init: ", to_lazy_loaded },
             { "UI Enter: ", to_ui_enter },
