@@ -99,6 +99,8 @@ local function setup_objects()
             local select = require(objects .. ".select")
             local select_maps = {
                 -- Spot checking, the only language I've seen that has a @comment.inner is Python
+                { "iM", "@call.inner" },
+                { "aM", "@call.outer" },
                 { "i/", "@comment.inner" },
                 { "a/", "@comment.outer" },
                 { "im", "@function.inner" },
@@ -121,6 +123,7 @@ local function setup_objects()
 
             local move = require(objects .. ".move")
             local move_maps = {
+                { "[M", "]M", "@call.outer" },
                 { "[/", "]/", "@comment.outer" },
                 { "[m", "]m", "@function.outer" },
                 { "[,", "],", "@parameter.inner" },
@@ -143,6 +146,7 @@ local function setup_objects()
 
             local swap = require(objects .. ".swap")
             local swap_maps = {
+                { "[M", "]M", "@call.outer" },
                 { "[/", "]/", "@comment.outer" },
                 { "[m", "]m", "@function.outer" },
                 { "[,", "],", "@parameter.inner" },
