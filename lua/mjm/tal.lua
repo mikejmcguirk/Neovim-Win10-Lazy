@@ -89,7 +89,15 @@ if ok then
     })
 end
 
-vim.api.nvim_create_autocmd({ "CmdlineLeave", "BufEnter", "BufWinEnter", "BufWritePost" }, {
+local rebuild_events = {
+    "CmdlineLeave",
+    "BufEnter",
+    "BufModifiedSet",
+    "BufWinEnter",
+    "BufWritePost",
+}
+
+vim.api.nvim_create_autocmd(rebuild_events, {
     group = vim.api.nvim_create_augroup("tal-events", { clear = true }),
     callback = function()
         build_tal()
