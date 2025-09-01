@@ -56,10 +56,10 @@ oil.setup({
     keymaps_help = { border = "single" },
 })
 
-vim.keymap.set("n", "-", function()
+Map("n", "-", function()
     oil.open_float()
 end)
 
-vim.keymap.set("n", "+", function()
+Map("n", "+", function()
     oil.open_float(vim.fn.getcwd())
 end)

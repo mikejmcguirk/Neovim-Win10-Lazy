@@ -1,9 +1,9 @@
 vim.opt_local.colorcolumn = ""
 vim.o.buflisted = false
 
-vim.keymap.set("n", "q", "<cmd>q<cr>", { buffer = true })
+Map("n", "q", "<cmd>q<cr>", { buffer = true })
 
-vim.keymap.set("n", "dd", function()
+Map("n", "dd", function()
     local row = vim.api.nvim_win_get_cursor(0)[1]
     local cur_win = vim.api.nvim_get_current_win()
     local win_info = vim.fn.getwininfo(cur_win)[1]
@@ -20,7 +20,7 @@ vim.keymap.set("n", "dd", function()
     vim.cmd(":" .. tostring(row))
 end, { buffer = true })
 
-vim.keymap.set("n", "<C-cr>", function()
+Map("n", "<C-cr>", function()
     local row = vim.api.nvim_win_get_cursor(0)[1]
     local cur_win = vim.api.nvim_get_current_win()
     local win_info = vim.fn.getwininfo(cur_win)[1]
@@ -33,7 +33,7 @@ end, { buffer = true })
 
 local bad_maps = { "<C-o>", "<C-i>" }
 for _, map in pairs(bad_maps) do
-    vim.keymap.set("n", map, function()
+    Map("n", map, function()
         vim.notify("Currently in qf buffer")
     end, { buffer = true })
 end

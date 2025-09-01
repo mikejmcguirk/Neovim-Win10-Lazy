@@ -14,17 +14,17 @@ local function open_qflist()
     vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
 end
 
-vim.keymap.set("n", "cuc", function()
+Map("n", "cuc", function()
     vim.api.nvim_cmd({ cmd = "ccl" }, {})
 end)
 
-vim.keymap.set("n", "cup", function()
+Map("n", "cup", function()
     open_qflist()
 end)
 
-vim.keymap.set("n", "cuu", function()
+Map("n", "cuu", function()
     for _, w in ipairs(vim.fn.getwininfo()) do
-        if w.quickfix == 1 and w.loclist == 0 then
+        if w.quickfix == 1 and w.loclist == 0 and w.tabnr == vim.fn.tabpagenr() then
             vim.api.nvim_cmd({ cmd = "ccl" }, {})
             return
         end
@@ -33,11 +33,11 @@ vim.keymap.set("n", "cuu", function()
     open_qflist()
 end)
 
-vim.keymap.set("n", "coc", function()
+Map("n", "coc", function()
     vim.api.nvim_cmd({ cmd = "lcl" }, {})
 end)
 
-vim.keymap.set("n", "cop", function()
+Map("n", "cop", function()
     if vim.api.nvim_get_option_value("filetype", { buf = 0 }) == "qf" then
         vim.notify("Inside qf buffer")
         return
@@ -51,7 +51,7 @@ vim.keymap.set("n", "cop", function()
     end
 end)
 
-vim.keymap.set("n", "coo", function()
+Map("n", "coo", function()
     if vim.api.nvim_get_option_value("filetype", { buf = 0 }) == "qf" then
         return vim.notify("Inside qf buffer")
     end
@@ -76,28 +76,28 @@ vim.keymap.set("n", "coo", function()
 end)
 
 for _, map in pairs({ "cuo", "cou" }) do
-    vim.keymap.set("n", map, function()
+    Map("n", map, function()
         require("mjm.utils").close_all_loclists()
         vim.api.nvim_cmd({ cmd = "ccl" }, {})
     end)
 end
 
-vim.keymap.set("n", "duc", function()
+Map("n", "duc", function()
     vim.api.nvim_cmd({ cmd = "ccl" }, {})
     vim.fn.setqflist({}, "r")
 end)
 
-vim.keymap.set("n", "dua", function()
+Map("n", "dua", function()
     vim.api.nvim_cmd({ cmd = "ccl" }, {})
     vim.fn.setqflist({}, "f")
 end)
 
-vim.keymap.set("n", "doc", function()
+Map("n", "doc", function()
     vim.api.nvim_cmd({ cmd = "lcl" }, {})
     vim.fn.setloclist(vim.api.nvim_get_current_win(), {}, "r")
 end)
 
-vim.keymap.set("n", "doa", function()
+Map("n", "doa", function()
     vim.api.nvim_cmd({ cmd = "lcl" }, {})
     vim.fn.setloclist(vim.api.nvim_get_current_win(), {}, "f")
 end)
@@ -204,27 +204,27 @@ local function buf_diags_to_loclist(opts)
     vim.api.nvim_cmd({ cmd = "lop" }, {})
 end
 
-vim.keymap.set("n", "yui", function()
+Map("n", "yui", function()
     all_diags_to_qflist()
 end)
 
-vim.keymap.set("n", "yue", function()
+Map("n", "yue", function()
     all_diags_to_qflist({ err_only = true })
 end)
 
-vim.keymap.set("n", "yuh", function()
+Map("n", "yuh", function()
     all_diags_to_qflist({ highest = true })
 end)
 
-vim.keymap.set("n", "yoi", function()
+Map("n", "yoi", function()
     buf_diags_to_loclist()
 end)
 
-vim.keymap.set("n", "yoe", function()
+Map("n", "yoe", function()
     buf_diags_to_loclist({ err_only = true })
 end)
 
-vim.keymap.set("n", "yoh", function()
+Map("n", "yoh", function()
     buf_diags_to_loclist({ highest = true })
 end)
 
@@ -256,19 +256,19 @@ local function filter_wrapper(opts)
     end
 end
 
-vim.keymap.set("n", "duk", function()
+Map("n", "duk", function()
     filter_wrapper()
 end)
 
-vim.keymap.set("n", "dur", function()
+Map("n", "dur", function()
     filter_wrapper({ remove = true })
 end)
 
-vim.keymap.set("n", "dok", function()
+Map("n", "dok", function()
     filter_wrapper({ loclist = true })
 end)
 
-vim.keymap.set("n", "dor", function()
+Map("n", "dor", function()
     filter_wrapper({ loclist = true, remove = true })
 end)
 
@@ -319,35 +319,35 @@ local function grep_wrapper(opts)
     end
 end
 
-vim.keymap.set("n", "yugs", function()
+Map("n", "yugs", function()
     grep_wrapper({})
 end)
 
-vim.keymap.set("n", "yogs", function()
+Map("n", "yogs", function()
     grep_wrapper({ loclist = true })
 end)
 
-vim.keymap.set("n", "yugi", function()
+Map("n", "yugi", function()
     grep_wrapper({ insensitive = true })
 end)
 
-vim.keymap.set("n", "yogi", function()
+Map("n", "yogi", function()
     grep_wrapper({ insensitive = true, loclist = true })
 end)
 
-vim.keymap.set("n", "yugr", function()
+Map("n", "yugr", function()
     grep_wrapper({ pattern = last_grep })
 end)
 
-vim.keymap.set("n", "yogr", function()
+Map("n", "yogr", function()
     grep_wrapper({ pattern = last_lgrep, loclist = true })
 end)
 
-vim.keymap.set("n", "yugv", function()
+Map("n", "yugv", function()
     print(last_grep)
 end)
 
-vim.keymap.set("n", "yogv", function()
+Map("n", "yogv", function()
     print(last_lgrep)
 end)
 
@@ -382,7 +382,7 @@ local scroll_maps = {
 }
 
 for _, m in pairs(scroll_maps) do
-    vim.keymap.set("n", m[1], function()
+    Map("n", m[1], function()
         qf_scroll_wrapper(m[2], m[3])
     end)
 end

@@ -1,3 +1,5 @@
+-- TODO: The staging maps should fallback to fugitive if they fail, or at least exit
+-- gracefully
 local function setup_gitsigns()
     require("gitsigns").setup({
         signs = {

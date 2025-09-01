@@ -1,7 +1,7 @@
 -- FUTURE: Worth exploring mrcjkb/rustaceanvim and rust-lang/rust.vim
 -- The former unlocks more features of rust-analyzer, the latter does some basic formatting
 
-vim.keymap.set("i", ";", ";<C-g>u", { silent = true })
+Map("i", ";", ";<C-g>u", { silent = true })
 local ut = require("mjm.utils")
 
 ---@param pragma string
@@ -24,15 +24,15 @@ local add_pragma = function(pragma)
     vim.cmd("startinsert")
 end
 
-vim.keymap.set({ "n", "i" }, "<C-->d", function()
+Map({ "n", "i" }, "<C-->d", function()
     add_pragma("#[derive()]")
 end)
-vim.keymap.set({ "n", "i" }, "<C-->c", function()
+Map({ "n", "i" }, "<C-->c", function()
     add_pragma("#[cfg()]")
 end)
-vim.keymap.set({ "n", "i" }, "<C-->a", function()
+Map({ "n", "i" }, "<C-->a", function()
     add_pragma("#[allow()]")
 end)
-vim.keymap.set({ "n", "i" }, "<C-->e", function()
+Map({ "n", "i" }, "<C-->e", function()
     add_pragma("#[expect()]")
 end)

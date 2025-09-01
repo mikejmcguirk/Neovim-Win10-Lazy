@@ -5,4 +5,4 @@ vim.opt_local.tabstop = 4
 vim.opt_local.shiftwidth = 4
 vim.opt_local.softtabstop = 0
 
-vim.keymap.set("n", "<C-->e", "oif err!= nil {<cr>}<esc>O//<esc>")
+Map("n", "<C-->e", "oif err!= nil {<cr>}<esc>O//<esc>")

@@ -20,19 +20,19 @@ local diag_lines_cfg = vim.tbl_extend("force", diag_main_cfg, virt_lines_cfg)
 vim.diagnostic.config(diag_text_cfg)
 
 -- FUTURE: Not the right keymap since this isn't an LSP feature
-vim.keymap.set("n", "\\D", function()
+Map("n", "\\D", function()
     local cur_cfg = vim.diagnostic.config() or {}
     vim.diagnostic.config((not cur_cfg.virtual_lines) and diag_lines_cfg or diag_text_cfg)
 end)
 
-vim.keymap.set("n", "[<C-d>", function()
+Map("n", "[<C-d>", function()
     vim.diagnostic.jump({
         count = -vim.v.count1,
         severity = require("mjm.utils").get_top_severity({ buf = 0 }),
     })
 end)
 
-vim.keymap.set("n", "]<C-d>", function()
+Map("n", "]<C-d>", function()
     vim.diagnostic.jump({
         count = vim.v.count1,
         severity = require("mjm.utils").get_top_severity({ buf = 0 }),
@@ -79,7 +79,7 @@ local function get_first_or_last_diag(opts)
     return opts.last and diagnostics[#diagnostics] or diagnostics[1]
 end
 
-vim.keymap.set("n", "[D", function()
+Map("n", "[D", function()
     local diagnostic = get_first_or_last_diag()
     if not diagnostic then
         return
@@ -89,7 +89,7 @@ vim.keymap.set("n", "[D", function()
     })
 end)
 
-vim.keymap.set("n", "]D", function()
+Map("n", "]D", function()
     local diagnostic = get_first_or_last_diag({ last = true })
     if not diagnostic then
         return
@@ -99,7 +99,7 @@ vim.keymap.set("n", "]D", function()
     })
 end)
 
-vim.keymap.set("n", "[<M-d>", function()
+Map("n", "[<M-d>", function()
     local severity = require("mjm.utils").get_top_severity({ buf = 0 })
     local diagnostic = get_first_or_last_diag({ severity = severity })
     if not diagnostic then
@@ -110,7 +110,7 @@ vim.keymap.set("n", "[<M-d>", function()
     })
 end)
 
-vim.keymap.set("n", "]<M-d>", function()
+Map("n", "]<M-d>", function()
     local severity = require("mjm.utils").get_top_severity({ buf = 0 })
     local diagnostic = get_first_or_last_diag({ severity = severity, last = true })
     if not diagnostic then

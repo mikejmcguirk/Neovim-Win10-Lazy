@@ -8,7 +8,7 @@ vim.api.nvim_create_autocmd("FileType", {
     end,
 })
 
-vim.keymap.set("n", "<leader>gcam", function()
+Map("n", "<leader>gcam", function()
     local msg = require("mjm.utils").get_input("Commit message (All): ")
     if msg == "" then
         return
@@ -17,11 +17,11 @@ vim.keymap.set("n", "<leader>gcam", function()
     vim.api.nvim_cmd({ cmd = "Git", args = { 'commit -a -m "' .. msg .. '"' } }, {})
 end)
 
-vim.keymap.set("n", "<leader>gcan", function()
+Map("n", "<leader>gcan", function()
     vim.api.nvim_cmd({ cmd = "Git", args = { "commit -a" } }, {})
 end)
 
-vim.keymap.set("n", "<leader>gchm", function()
+Map("n", "<leader>gchm", function()
     local msg = require("mjm.utils").get_input("Commit message: ")
     if msg == "" then
         return
@@ -30,7 +30,7 @@ vim.keymap.set("n", "<leader>gchm", function()
     vim.api.nvim_cmd({ cmd = "Git", args = { 'commit -m "' .. msg .. '"' } }, {})
 end)
 
-vim.keymap.set("n", "<leader>gchn", function()
+Map("n", "<leader>gchn", function()
     vim.api.nvim_cmd({ cmd = "Git", args = { "commit" } }, {})
 end)
 
@@ -53,19 +53,19 @@ local function open_diffs(staged)
     end
 end
 
-vim.keymap.set("n", "<leader>gdd", function()
+Map("n", "<leader>gdd", function()
     open_diffs()
 end)
 
-vim.keymap.set("n", "<leader>gds", function()
+Map("n", "<leader>gds", function()
     open_diffs(true)
 end)
 
-vim.keymap.set("n", "<leader>ghU", function()
+Map("n", "<leader>ghU", function()
     local cur_buf = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":p")
     vim.system({ "git", "restore", "--staged", cur_buf }, nil)
 end)
 
-vim.keymap.set("n", "<leader>gp", function()
+Map("n", "<leader>gp", function()
     vim.api.nvim_cmd({ cmd = "Git", args = { "push" } }, {})
 end)

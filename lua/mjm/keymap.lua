@@ -1,4 +1,23 @@
-vim.keymap.set("n", "<C-c>", function()
+-- MAYBE: Make a convenience mapping for comment headings
+
+-------------
+-- Disable --
+-------------
+
+-- Cumbersome default functionality. Use for swaps as in Helix
+Map("n", "(", "<nop>")
+Map("n", ")", "<nop>")
+
+-- TODO: Some kind of pattern for interacting with the external system. Maybe g\. Needs to be
+-- hard enough to hit that it shouldn't be fat-fingered.
+-- - Rename buf (integrate with GDelete/LSP buf rename)
+-- - Delete buf from disk
+-- - Make + open qf
+-- - chmod
+-- - Session management: https://github.com/Shatur/neovim-session-manager
+-- - File export with pandoc, 2html, and whatever else
+
+Map("n", "<C-c>", function()
     print("")
     vim.cmd("noh")
     vim.lsp.buf.clear_references()
@@ -11,18 +30,18 @@ end, { expr = true, silent = true })
 -- Command Mode --
 ------------------
 
-vim.keymap.set("c", "<C-a>", "<C-b>")
-vim.keymap.set("c", "<C-d>", "<Del>")
+Map("c", "<C-a>", "<C-b>")
+Map("c", "<C-d>", "<Del>")
 -- MAYBE: Figure out how to do <M-d> if it's really needed
-vim.keymap.set("c", "<C-k>", "<c-\\>estrpart(getcmdline(), 0, getcmdpos()-1)<cr>")
+Map("c", "<C-k>", "<c-\\>estrpart(getcmdline(), 0, getcmdpos()-1)<cr>")
 
-vim.keymap.set("c", "<C-b>", "<left>")
-vim.keymap.set("c", "<C-f>", "<right>")
-vim.keymap.set("c", "<M-b>", "<S-left>")
-vim.keymap.set("c", "<M-f>", "<S-right>")
+Map("c", "<C-b>", "<left>")
+Map("c", "<C-f>", "<right>")
+Map("c", "<M-b>", "<S-left>")
+Map("c", "<M-f>", "<S-right>")
 
-vim.keymap.set("c", "<M-p>", "<up>")
-vim.keymap.set("c", "<M-n>", "<down>")
+Map("c", "<M-p>", "<up>")
+Map("c", "<M-n>", "<down>")
 
 -------------------------
 -- Saving and Quitting --
@@ -31,18 +50,18 @@ vim.keymap.set("c", "<M-n>", "<down>")
 -- Using lockmarks for saves has to suffice
 
 -- Don't map ZQ. Running ZZ in vanilla Vim is a gaffe. ZQ not so much
-vim.keymap.set("n", "ZQ", "<nop>")
+Map("n", "ZQ", "<nop>")
 -- This trick mostly doesn't work because it also blocks any map in the layer below it, but
 -- anything under Z has to be manually mapped anyway, so this is fine
-vim.keymap.set("n", "Z", "<nop>")
+Map("n", "Z", "<nop>")
 
-vim.keymap.set("n", "ZZ", "<cmd>lockmarks silent up<cr>")
-vim.keymap.set("n", "ZA", "<cmd>lockmarks silent wa<cr>")
-vim.keymap.set("n", "ZC", "<cmd>lockmarks wqa<cr>")
-vim.keymap.set("n", "ZR", "<cmd>lockmarks silent wa | restart<cr>")
+Map("n", "ZZ", "<cmd>lockmarks silent up<cr>")
+Map("n", "ZA", "<cmd>lockmarks silent wa<cr>")
+Map("n", "ZC", "<cmd>lockmarks wqa<cr>")
+Map("n", "ZR", "<cmd>lockmarks silent wa | restart<cr>")
 
 -- FUTURE: Can pare this down once extui is stabilized
-vim.keymap.set("n", "ZS", function()
+Map("n", "ZS", function()
     if not require("mjm.utils").check_modifiable() then
         return
     end
@@ -59,7 +78,7 @@ vim.keymap.set("n", "ZS", function()
 end)
 
 for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
-    vim.keymap.set("n", map, function()
+    Map("n", map, function()
         local buf = vim.api.nvim_get_current_buf() ---@type integer
         local buf_wins = 0 ---@type integer
         for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
@@ -82,8 +101,6 @@ end
 ---------------------
 -- Window Movement --
 ---------------------
----
----TODO if it already doesn't split should go into new window
 
 ---@type {[string]: string}
 local tmux_cmd_map = { ["h"] = "L", ["j"] = "D", ["k"] = "U", ["l"] = "R" }
@@ -122,16 +139,16 @@ end
 
 -- See tmux config (mikejmcguirk/dotfiles) for reasoning and how on C-S for this mapping
 for k, _ in pairs(tmux_cmd_map) do
-    vim.keymap.set("n", "<C-S-" .. k .. ">", function()
+    Map("n", "<C-S-" .. k .. ">", function()
         win_move_tmux(k)
     end)
 
-    vim.keymap.set("i", "<C-S-" .. k .. ">", function()
+    Map("i", "<C-S-" .. k .. ">", function()
         vim.cmd("stopinsert")
         win_move_tmux(k)
     end)
 
-    vim.keymap.set("x", "<C-S-" .. k .. ">", function()
+    Map("x", "<C-S-" .. k .. ">", function()
         vim.cmd("norm! \27")
         win_move_tmux(k)
     end)
@@ -144,35 +161,35 @@ local resize_win = function(cmd)
     end
 end
 
-vim.keymap.set("n", "<M-j>", function()
+Map("n", "<M-j>", function()
     resize_win("silent resize -2")
 end)
 
-vim.keymap.set("n", "<M-k>", function()
+Map("n", "<M-k>", function()
     resize_win("silent resize +2")
 end)
 
-vim.keymap.set("n", "<M-h>", function()
+Map("n", "<M-h>", function()
     resize_win("silent vertical resize -2")
 end)
 
-vim.keymap.set("n", "<M-l>", function()
+Map("n", "<M-l>", function()
     resize_win("silent vertical resize +2")
 end)
 
 -- Relies on a terminal protocol that can send <C-i> and <tab> separately
-vim.keymap.set("n", "<tab>", "gt")
-vim.keymap.set("n", "<S-tab>", "gT")
+Map("n", "<tab>", "gt")
+Map("n", "<S-tab>", "gT")
 -- See :h <tab> and https://github.com/neovim/neovim/pull/17932
 -- Note: This also applies to <cr>/<C-m> and <esc>/<C-[>
-vim.keymap.set("n", "<C-i>", "<C-i>") -- Unsimplify mapping
+Map("n", "<C-i>", "<C-i>") -- Unsimplify mapping
 
 local tab = 10
 for _ = 1, 10 do
     local this_tab = tab -- 10, 1, 2, 3, 4, 5, 6, 7, 8, 9
     local mod_tab = this_tab % 10 -- 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 
-    vim.keymap.set("n", string.format("<M-%s>", mod_tab), function()
+    Map("n", string.format("<M-%s>", mod_tab), function()
         local tabs = vim.api.nvim_list_tabpages()
         if #tabs < this_tab then
             return
@@ -184,20 +201,20 @@ for _ = 1, 10 do
     tab = mod_tab + 1
 end
 
-vim.keymap.set("n", "<C-w>c", "<nop>")
-vim.keymap.set("n", "<C-w><C-c>", "<nop>")
+Map("n", "<C-w>c", "<nop>")
+Map("n", "<C-w><C-c>", "<nop>")
 
 ------------------
 -- Setting Maps --
 ------------------
 
-vim.keymap.set("n", "\\d", function()
+Map("n", "\\d", function()
     vim.diagnostic.enable(not vim.diagnostic.is_enabled())
 end)
 
 -- \D set in diagnostic.lua to toggle virtual lines
 
-vim.keymap.set("n", "\\s", function()
+Map("n", "\\s", function()
     local is_spell = vim.api.nvim_get_option_value("spell", { win = 0 })
     vim.api.nvim_set_option_value("spell", not is_spell, { win = 0 })
 end)

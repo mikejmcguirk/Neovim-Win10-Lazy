@@ -173,7 +173,7 @@ local function load_obsidian()
     })
 
     -- This doesn't play nice with Obsidian's config table
-    vim.keymap.set("n", "<leader>sw", function()
+    Map("n", "<leader>sw", function()
         local year = os.date("%Y")
         local month = os.date("%m")
         local day = os.date("%d")
@@ -191,7 +191,6 @@ for _, event in pairs(note_paths) do
         once = true,
         callback = function()
             load_obsidian()
-
             vim.api.nvim_clear_autocmds({ group = obsidian_group })
         end,
     })

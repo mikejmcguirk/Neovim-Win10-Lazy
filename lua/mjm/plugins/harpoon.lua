@@ -83,11 +83,11 @@ harpoon:setup({
     },
 })
 
-vim.keymap.set("n", "<leader>ad", function()
+Map("n", "<leader>ad", function()
     harpoon:list():add()
 end)
 
-vim.keymap.set("n", "<leader>aa", function()
+Map("n", "<leader>aa", function()
     harpoon.ui:toggle_quick_menu(harpoon:list(), { height_in_lines = 10 })
 end)
 
@@ -96,7 +96,7 @@ for _ = 1, 10 do
     local this_mark = mark -- 10, 1, 2, 3, 4, 5, 6, 7, 8, 9
     local mod_mark = this_mark % 10 -- 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 
-    vim.keymap.set("n", string.format("<leader>%s", mod_mark), function()
+    Map("n", string.format("<leader>%s", mod_mark), function()
         if vim.api.nvim_get_option_value("filetype", { buf = 0 }) == "qf" then
             return vim.notify("Currently in qf buffer", vim.log.levels.WARN)
         end
@@ -136,6 +136,6 @@ local function rm_cur_buf()
     extensions.extensions:emit(extensions.event_names.REMOVE)
 end
 
-vim.keymap.set("n", "<leader>ar", function()
+Map("n", "<leader>ar", function()
     rm_cur_buf()
 end, { desc = "Delete current file from Harpoon List" })

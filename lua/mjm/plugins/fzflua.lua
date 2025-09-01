@@ -63,30 +63,30 @@ vim.api.nvim_set_hl(0, "FzfLuaHeaderText", { link = "Constant" })
 
 -- Obsidian pickers are set to "fa"
 
-vim.keymap.set("n", "<leader>ff", fzf_lua.resume)
+Map("n", "<leader>ff", fzf_lua.resume)
 
-vim.keymap.set("n", "<leader>fi", fzf_lua.files)
-vim.keymap.set("n", "<leader>fb", fzf_lua.buffers)
+Map("n", "<leader>fi", fzf_lua.files)
+Map("n", "<leader>fb", fzf_lua.buffers)
 
-vim.keymap.set("n", "<leader>fgf", fzf_lua.git_files)
-vim.keymap.set("n", "<leader>fgh", fzf_lua.git_hunks)
-vim.keymap.set("n", "<leader>fgs", fzf_lua.git_status)
-vim.keymap.set("n", "<leader>fgc", fzf_lua.git_commits)
+Map("n", "<leader>fgf", fzf_lua.git_files)
+Map("n", "<leader>fgh", fzf_lua.git_hunks)
+Map("n", "<leader>fgs", fzf_lua.git_status)
+Map("n", "<leader>fgc", fzf_lua.git_commits)
 
-vim.keymap.set("n", "<leader>fp", fzf_lua.grep)
-vim.keymap.set("n", "<leader>fe", fzf_lua.live_grep)
+Map("n", "<leader>fp", fzf_lua.grep)
+Map("n", "<leader>fe", fzf_lua.live_grep)
 
-vim.keymap.set("n", "<leader>fa", fzf_lua.autocmds)
-vim.keymap.set("n", "<leader>ft", fzf_lua.highlights)
-vim.keymap.set("n", "<leader>fk", fzf_lua.keymaps)
-vim.keymap.set("n", "<leader>fc", fzf_lua.command_history)
+Map("n", "<leader>fa", fzf_lua.autocmds)
+Map("n", "<leader>ft", fzf_lua.highlights)
+Map("n", "<leader>fk", fzf_lua.keymaps)
+Map("n", "<leader>fc", fzf_lua.command_history)
 -- LOW: Add a way to delete individual or all lists from here
-vim.keymap.set("n", "<leader>fu", fzf_lua.quickfix_stack)
-vim.keymap.set("n", "<leader>fo", fzf_lua.loclist_stack)
+Map("n", "<leader>fu", fzf_lua.quickfix_stack)
+Map("n", "<leader>fo", fzf_lua.loclist_stack)
 
-vim.keymap.set("n", "<leader>fs", fzf_lua.spellcheck)
-vim.keymap.set("n", "<leader>fw", fzf_lua.lsp_live_workspace_symbols)
-vim.keymap.set("n", "<leader>fh", function()
+Map("n", "<leader>fs", fzf_lua.spellcheck)
+Map("n", "<leader>fw", fzf_lua.lsp_live_workspace_symbols)
+Map("n", "<leader>fh", function()
     fzf_lua.helptags({
         fzf_opts = {
             ["--tiebreak"] = "begin,chunk,length",
@@ -95,7 +95,7 @@ vim.keymap.set("n", "<leader>fh", function()
 end)
 
 -- LOW: Re-add this back in
--- vim.keymap.set("n", "<leader>tl", function()
+-- Map("n", "<leader>tl", function()
 --     builtin.grep_string({
 --         prompt_title = "Help",
 --         search = "",
@@ -186,8 +186,8 @@ local function fuzzy_spell_correct()
     })
 end
 
-vim.keymap.set("n", "<leader>fdd", fuzzy_dict)
-vim.keymap.set("n", "<leader>fds", fuzzy_spell_correct)
+Map("n", "<leader>fdd", fuzzy_dict)
+Map("n", "<leader>fds", fuzzy_spell_correct)
 
 -- PR: This is an easy pull request to make so I don't have to hold onto bespoke code
 -- But this doesn't show the "l"/"c" conversions like :registers does so needs more work
@@ -270,4 +270,4 @@ fzf_lua.registers = function(opts)
     require("fzf-lua.core").fzf_exec(entries, opts)
 end
 
-vim.keymap.set("n", "<leader>fr", fzf_lua.registers)
+Map("n", "<leader>fr", fzf_lua.registers)
