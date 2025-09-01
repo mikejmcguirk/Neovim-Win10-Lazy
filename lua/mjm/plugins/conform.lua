@@ -50,5 +50,6 @@ vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
     once = true,
     callback = function()
         setup_conform()
+        vim.api.nvim_del_augroup_by_name("load-conform")
     end,
 })

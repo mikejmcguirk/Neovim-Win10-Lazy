@@ -1,12 +1,12 @@
 local function setup_blink()
     -- Don't want any mis-fires
-    vim.keymap.set("i", "<C-y>", "<nop>")
-    vim.keymap.set("i", "<C-n>", "<nop>")
-    vim.keymap.set("i", "<C-p>", "<nop>")
-    vim.keymap.set("i", "<M-y>", "<nop>")
-    vim.keymap.set("i", "<M-n>", "<nop>")
-    vim.keymap.set("i", "<M-p>", "<nop>")
-    vim.keymap.set("i", "<M-s>", "<nop>")
+    Map("i", "<C-y>", "<nop>")
+    Map("i", "<C-n>", "<nop>")
+    Map("i", "<C-p>", "<nop>")
+    Map("i", "<M-y>", "<nop>")
+    Map("i", "<M-n>", "<nop>")
+    Map("i", "<M-p>", "<nop>")
+    Map("i", "<M-s>", "<nop>")
 
     require("blink.cmp").setup({
         cmdline = {
@@ -316,6 +316,8 @@ vim.api.nvim_create_autocmd({ "CmdlineEnter", "BufReadPre", "BufNewFile" }, {
         setup_blink()
         --- @diagnostic disable: missing-parameter
         require("blink-compat").setup()
+
+        vim.api.nvim_del_augroup_by_name("setup-blink")
     end,
 })
 

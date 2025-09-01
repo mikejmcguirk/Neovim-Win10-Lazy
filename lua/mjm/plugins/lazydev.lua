@@ -13,5 +13,6 @@ vim.api.nvim_create_autocmd("FileType", {
     once = true,
     callback = function()
         load_lazydev()
+        vim.api.nvim_del_augroup_by_name("setup-lazydev")
     end,
 })

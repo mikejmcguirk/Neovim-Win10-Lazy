@@ -17,7 +17,6 @@ vim.api.nvim_create_autocmd("FileType", {
         end
 
         load_ts_autotag()
-
         vim.api.nvim_del_augroup_by_name("load-ts-autotag")
     end,
 })

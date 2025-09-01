@@ -98,7 +98,10 @@ vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
 
         require("mjm.diagnostic")
         require("mjm.lsp")
+        require("mjm.color_coordination")
+
         vim.api.nvim_del_augroup_by_name("nvim.diagnostic.status")
+        vim.api.nvim_del_augroup_by_name("mjm-lazy-load")
     end,
 })
 

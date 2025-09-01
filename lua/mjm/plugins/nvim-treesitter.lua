@@ -171,5 +171,6 @@ vim.api.nvim_create_autocmd({ "BufNewFile", "BufReadPre" }, {
     once = true,
     callback = function()
         setup_objects()
+        vim.api.nvim_del_augroup_by_name("setup-objects")
     end,
 })

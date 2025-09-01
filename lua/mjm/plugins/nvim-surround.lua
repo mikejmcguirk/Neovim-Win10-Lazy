@@ -3,5 +3,6 @@ vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
     once = true,
     callback = function()
         require("nvim-surround").setup({})
+        vim.api.nvim_del_augroup_by_name("load-nvim-surround")
     end,
 })

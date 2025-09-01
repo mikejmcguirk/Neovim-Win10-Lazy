@@ -9,7 +9,7 @@ local function setup_gitsigns()
             local function map(mode, l, r, opts)
                 opts = opts or {}
                 opts.buffer = bufnr
-                vim.keymap.set(mode, l, r, opts)
+                Map(mode, l, r, opts)
             end
 
             map("n", "]c", function()
@@ -90,5 +90,6 @@ vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
     once = true,
     callback = function()
         setup_gitsigns()
+        vim.api.nvim_del_augroup_by_name("load-gitsigns")
     end,
 })
