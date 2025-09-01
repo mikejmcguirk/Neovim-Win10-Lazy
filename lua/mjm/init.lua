@@ -92,7 +92,6 @@ vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
     group = vim.api.nvim_create_augroup("mjm-lazy-load", { clear = true }),
     once = true,
     callback = function()
-        require("mjm.lazy_set")
         require("mjm.lazy_keymaps")
         require("mjm.error-list")
         require("mjm.treesitter")
