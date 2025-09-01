@@ -41,8 +41,11 @@ function M.open_buf(file, opts)
     end
 
     vim.api.nvim_set_option_value("buflisted", true, { buf = buf })
-    local win = opts.win or 0
-    vim.api.nvim_win_set_buf(win, buf)
+    if opts.win then
+        vim.api.nvim_win_set_buf(opts.win, buf)
+    else
+        vim.api.nvim_set_current_buf(buf)
+    end
 end
 
 ---@param bufnr? integer
@@ -191,7 +194,7 @@ end
 -- Taken from nvim-overfly
 -- FUTURE: If I understand the Neovim repo code right, at some point a "highest" filter will be
 -- added to diagnostic jumping
----@param opts? table{buf:integer|nil}
+---@param opts? {buf:integer|nil}
 ---@return integer|nil
 function M.get_top_severity(opts)
     opts = opts or {}
@@ -226,7 +229,8 @@ end
 M.check_word_under_cursor = function()
     local word = vim.fn.expand("<cword>")
     if word == "" then
-        return vim.notify("No word under cursor", vim.log.levels.INFO)
+        vim.notify("No word under cursor", vim.log.levels.INFO)
+        return
     end
 
     local cmd = "wn " .. vim.fn.shellescape(word) .. " -over"

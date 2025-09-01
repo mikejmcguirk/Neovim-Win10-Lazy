@@ -13,10 +13,9 @@ harpoon:setup({
         },
     },
     default = {
-        -- The default select function uses bufload > nvim_set_current_buf
-        -- Per Fzflua's comments this "messes up" BufReadPost autocmds. This lines up with my
-        -- own observations. opt_locals that require buf and win context do not set
-        -- Use nvim_win_set_buf instead, which loads the buf if needed
+        -- The default select logic uses bufload(), which does not handle BufReadPost autocmds
+        -- or opt_local context correctly. nvim_set_current_buf() without bufload handles the
+        -- load step correctly if needed
         select = function(list_item, list, opts)
             logger:log("custom#select", list_item, list.name, opts)
 
@@ -47,7 +46,7 @@ harpoon:setup({
             end
 
             vim.api.nvim_set_option_value("buflisted", true, { buf = buf })
-            vim.api.nvim_win_set_buf(0, buf)
+            vim.api.nvim_set_current_buf(buf)
 
             if not vim.tbl_contains(prev_bufs, buf) then
                 list_item.context.row = list_item.context.row or 1
