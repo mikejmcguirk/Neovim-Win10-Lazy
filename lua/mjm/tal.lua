@@ -1,3 +1,12 @@
+-- FUTURE: Build out the harpoon tabline as a lua function that holds the current state in the
+-- background so that redraws of the tal don't have to perform all that logic on demand
+-- You should be able to feed it the highlight groups for customization, and then it should
+-- be possible to just drop the lua fn into any tabline plugin. If you make it based on what
+-- Neovim's doing, it requires too many assumptions about how Neovim's state changes occur
+-- Example: For buf modified post, should just get event buf, tick state, and redraw if it's
+-- on the tabline
+-- https://github.com/mike-jl/harpoonEx/blob/main/lua/lualine/components/harpoons/init.lua
+
 local M = {}
 
 local symbol = Has_Nerd_Font and "\u{1F751}" or "|" -- Alchemical trident symbol
@@ -89,18 +98,38 @@ if ok then
     })
 end
 
-local rebuild_events = {
-    "CmdlineLeave",
-    "BufEnter",
-    "BufModifiedSet",
-    "BufWinEnter",
-    "BufWritePost",
-}
+local tal_events = vim.api.nvim_create_augroup("tal-events", { clear = true })
 
-vim.api.nvim_create_autocmd(rebuild_events, {
-    group = vim.api.nvim_create_augroup("tal-events", { clear = true }),
+vim.api.nvim_create_autocmd({ "BufModifiedSet", "CmdlineLeave" }, {
+    group = tal_events,
     callback = function()
         build_tal()
+    end,
+})
+
+vim.api.nvim_create_autocmd("BufWritePost", {
+    group = tal_events,
+    callback = function()
+        -- Leave autocmd context so cur_buf is correct
+        vim.schedule(function()
+            build_tal()
+        end)
+    end,
+})
+
+vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
+    group = tal_events,
+    callback = function()
+        -- For edge case where you change Windows in insert mode. Wait for event to be over to
+        -- check mode fresh
+        vim.schedule(function()
+            -- Avoid rendering in autocompletion windows
+            if vim.fn.mode() == "i" then
+                return
+            end
+
+            build_tal()
+        end)
     end,
 })
 
