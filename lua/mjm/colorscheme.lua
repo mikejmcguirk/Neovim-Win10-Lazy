@@ -77,6 +77,8 @@ local groups = {
     Delimiter = { link = "Normal" },
     Identifier = { link = "Normal" },
     ["@variable"] = { link = "Identifier" }, --- Default self-definition
+    -- Can't eliminate at the token level because builtins depend on it
+    ["@lsp.type.variable"] = {}, --- Default link to normal
 
     ColorColumn = { bg = c.d_purple },
     CursorLine = { link = "ColorColumn" }, -- (Default self-definition)
@@ -185,16 +187,6 @@ local groups = {
     lCursor = {}, --- (Default self-definition. I have reverse video cursor set in the terminal)
     NormalNC = {}, -- Causes performance issues (default setting)
     SignColumn = {}, -- Default self-definition
-
-    ---------
-    -- Lua --
-    ---------
-
-    ["@comment.documentation.lua"] = {}, -- Treesitter assumes all three-dash comments are docs
-    ["@lsp.type.comment.lua"] = {}, -- Treesitter can handle basic comments
-    ["@lsp.type.function.lua"] = {}, -- Confusing when functions are used as variables
-    ["@lsp.type.method.lua"] = {}, -- Confusing when methods are used as variables
-    ["@lsp.type.variable.lua"] = {}, -- Overwrites function calls
 }
 
 local function darken_hex(color, pct)
