@@ -25,14 +25,14 @@ vim.keymap.set("n", "\\D", function()
     vim.diagnostic.config((not cur_cfg.virtual_lines) and diag_lines_cfg or diag_text_cfg)
 end)
 
-vim.keymap.set("n", "[w", function()
+vim.keymap.set("n", "[<C-d>", function()
     vim.diagnostic.jump({
         count = -vim.v.count1,
         severity = require("mjm.utils").get_top_severity({ buf = 0 }),
     })
 end)
 
-vim.keymap.set("n", "]w", function()
+vim.keymap.set("n", "]<C-d>", function()
     vim.diagnostic.jump({
         count = vim.v.count1,
         severity = require("mjm.utils").get_top_severity({ buf = 0 }),
@@ -99,7 +99,7 @@ vim.keymap.set("n", "]D", function()
     })
 end)
 
-vim.keymap.set("n", "[W", function()
+vim.keymap.set("n", "[<M-d>", function()
     local severity = require("mjm.utils").get_top_severity({ buf = 0 })
     local diagnostic = get_first_or_last_diag({ severity = severity })
     if not diagnostic then
@@ -110,7 +110,7 @@ vim.keymap.set("n", "[W", function()
     })
 end)
 
-vim.keymap.set("n", "]W", function()
+vim.keymap.set("n", "]<M-d>", function()
     local severity = require("mjm.utils").get_top_severity({ buf = 0 })
     local diagnostic = get_first_or_last_diag({ severity = severity, last = true })
     if not diagnostic then
