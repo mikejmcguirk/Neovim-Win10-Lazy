@@ -76,7 +76,8 @@ local groups = {
     NormalFloat = { link = "Normal" }, -- Default self-definition
     Delimiter = { link = "Normal" },
     Identifier = { link = "Normal" },
-    ["@variable"] = { link = "Identifier" }, --- Default self-definition
+
+    ["@variable"] = {}, --- Default self-definition
     -- Can't eliminate at the token level because builtins depend on it
     ["@lsp.type.variable"] = {}, --- Default link to normal
 
