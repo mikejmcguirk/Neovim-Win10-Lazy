@@ -79,6 +79,7 @@ vim.g.qs_max_chars = 9999
 vim.api.nvim_set_hl(0, "QuickScopePrimary", { reverse = true })
 vim.api.nvim_set_hl(0, "QuickScopeSecondary", { undercurl = true })
 
+vim.g.undotree_WindowLayout = 3
 Map("n", "<leader>u", vim.cmd.UndotreeToggle)
 
 require("mjm.plugins.autopairs")
