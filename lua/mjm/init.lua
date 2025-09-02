@@ -32,6 +32,7 @@ require("mjm.custom_cmd")
 require("mjm.colorscheme")
 
 require("mjm.stl")
+require("mjm.ext_tools")
 
 local env_setup = vim.loop.hrtime()
 

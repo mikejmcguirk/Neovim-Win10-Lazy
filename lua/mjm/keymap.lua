@@ -8,14 +8,6 @@
 Map("n", "(", "<nop>")
 Map("n", ")", "<nop>")
 
--- TODO: Some kind of pattern for interacting with the external system. Maybe g\. Needs to be
--- hard enough to hit that it shouldn't be fat-fingered.
--- - Rename buf (integrate with GDelete/LSP buf rename)
--- - Delete buf from disk
--- - Make + open qf
--- - chmod
--- - File export with pandoc, 2html, and whatever else
-
 Map("n", "<C-c>", function()
     print("")
     vim.cmd("noh")
