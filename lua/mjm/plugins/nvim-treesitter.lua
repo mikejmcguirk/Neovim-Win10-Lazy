@@ -72,20 +72,25 @@ local function get_vrange4()
     return { region[1][1][2], region[1][1][3], region[#region][2][2], region[#region][2][3] }
 end
 
-local function cursor_at_start()
+local function get_cursor_orientation()
     local vrange4 = get_vrange4()
     vrange4[2] = math.max(vrange4[2] - 1, 0)
     vrange4[4] = math.max(vrange4[4] - 1, 0)
 
     local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-    if row == vrange4[3] and col == vrange4[4] then
-        return false
+
+    local at_start = row == vrange4[1] and col == vrange4[2]
+    local at_fin = row == vrange4[3] and col == vrange4[4]
+    if at_start and not at_fin then
+        return "start"
+    elseif (not at_start) and at_fin then
+        return "fin"
     else
-        return true
+        return "center"
     end
 end
 
-Map("x", "<leader><leader>", cursor_at_start)
+Map("x", "<leader><leader>", get_cursor_orientation)
 
 local objects = "nvim-treesitter-textobjects"
 
@@ -186,27 +191,35 @@ local function setup_objects()
                 end, { buffer = ev.buf })
 
                 -- FUTURE: In theory, the better way to handle this is to have some sort of
-                -- lookahead rather than potentially performing a double-move if you cross over
+                -- lookahead rather than potentially performing a triple-move if you cross over
                 -- the origin of the visual selection
 
                 Map({ "x" }, m[1], function()
-                    if cursor_at_start() then
-                        move.goto_previous_start(m[3], "textobjects")
-                    else
+                    local orientation = get_cursor_orientation()
+
+                    if orientation == "end" then
                         move.goto_previous_end(m[3], "textobjects")
 
-                        if cursor_at_start() then
-                            move.goto_next_start(m[3], "textobjects")
+                        local new_orientation = get_cursor_orientation()
+                        if new_orientation == "start" then
+                            move.goto_next_end(m[3], "textobjects")
+                            move.goto_previous_start(m[3], "textobjects")
                         end
+                    else
+                        move.goto_previous_start(m[3], "textobjects")
                     end
                 end, { buffer = ev.buf })
 
                 Map("x", m[2], function()
-                    if cursor_at_start() then
+                    local orientation = get_cursor_orientation()
+
+                    if orientation == "start" then
                         move.goto_next_start(m[3], "textobjects")
 
-                        if not cursor_at_start() then
-                            move.goto_previous_end(m[3], "textobjects")
+                        local new_orientation = get_cursor_orientation()
+                        if new_orientation == "end" then
+                            move.goto_previous_start(m[3], "textobjects")
+                            move.goto_next_end(m[3], "textobjects")
                         end
                     else
                         move.goto_next_end(m[3], "textobjects")
