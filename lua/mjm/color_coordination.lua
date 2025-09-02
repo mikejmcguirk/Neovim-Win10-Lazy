@@ -138,6 +138,16 @@ local token_nop_rust = {
     "property", --- Default to Normal
 }
 
+------------
+-- vimdoc --
+------------
+
+-- Run eagerly to avoid inconsistent preview window appearance
+local vimdoc_query = vim.treesitter.query.get("vimdoc", "highlights")
+if vimdoc_query then
+    ts_nop_all(vimdoc_query)
+end
+
 ----------------------------------
 -- Setup Semantic Token Removal --
 ----------------------------------
