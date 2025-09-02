@@ -62,6 +62,31 @@ vim.api.nvim_create_autocmd("VimEnter", {
 -- Treesitter Text Objects --
 -----------------------------
 
+--- @return Range4
+local function get_vrange4()
+    local cur = vim.fn.getpos(".")
+    local fin = vim.fn.getpos("v")
+    local mode = vim.fn.mode()
+
+    local region = vim.fn.getregionpos(cur, fin, { type = mode, exclusive = false })
+    return { region[1][1][2], region[1][1][3], region[#region][2][2], region[#region][2][3] }
+end
+
+local function cursor_at_start()
+    local vrange4 = get_vrange4()
+    vrange4[2] = math.max(vrange4[2] - 1, 0)
+    vrange4[4] = math.max(vrange4[4] - 1, 0)
+
+    local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+    if row == vrange4[3] and col == vrange4[4] then
+        return false
+    else
+        return true
+    end
+end
+
+Map("x", "<leader><leader>", cursor_at_start)
+
 local objects = "nvim-treesitter-textobjects"
 
 local function setup_objects()
@@ -69,8 +94,12 @@ local function setup_objects()
         select = {
             lookahead = true,
             selection_modes = {
+                ["@call.inner"] = "v",
+                ["@call.outer"] = "v",
                 ["@comment.inner"] = "v",
                 ["@comment.outer"] = "v",
+                ["@conditional.inner"] = "v",
+                ["@conditional.outer"] = "v",
                 ["@function.inner"] = "v",
                 ["@function.outer"] = "v",
                 ["@parameter.inner"] = "v",
@@ -99,10 +128,16 @@ local function setup_objects()
             local select = require(objects .. ".select")
             local select_maps = {
                 -- Spot checking, the only language I've seen that has a @comment.inner is Python
+                { "is", "@assignment.rhs" },
+                { "as", "@assignment.outer" },
+                { "iS", "@assignment.lhs" },
+                { "aS", "@assignment.inner" },
                 { "iM", "@call.inner" },
                 { "aM", "@call.outer" },
                 { "i/", "@comment.inner" },
                 { "a/", "@comment.outer" },
+                { "io", "@conditional.inner" },
+                { "ao", "@conditional.outer" },
                 { "im", "@function.inner" },
                 { "am", "@function.outer" },
                 { "i,", "@parameter.inner" },
@@ -123,8 +158,11 @@ local function setup_objects()
 
             local move = require(objects .. ".move")
             local move_maps = {
+                { "[g", "]g", "@assignment.outer" }, --- Mismatch
+                { "[G", "]G", "@assignment.inner" }, --- Mismatch
                 { "[M", "]M", "@call.outer" },
                 { "[/", "]/", "@comment.outer" },
+                { "[o", "]o", "@conditional.outer" },
                 { "[m", "]m", "@function.outer" },
                 { "[,", "],", "@parameter.inner" },
                 { "[#", "]#", "@preproc.outer" },
@@ -138,6 +176,42 @@ local function setup_objects()
                 Map("n", m[2], function()
                     move.goto_next_start(m[3], "textobjects")
                 end, { buffer = ev.buf })
+
+                Map("o", m[1], function()
+                    move.goto_previous_start(m[3], "textobjects")
+                end, { buffer = ev.buf })
+
+                Map("o", m[2], function()
+                    move.goto_next_end(m[3], "textobjects")
+                end, { buffer = ev.buf })
+
+                -- FUTURE: In theory, the better way to handle this is to have some sort of
+                -- lookahead rather than potentially performing a double-move if you cross over
+                -- the origin of the visual selection
+
+                Map({ "x" }, m[1], function()
+                    if cursor_at_start() then
+                        move.goto_previous_start(m[3], "textobjects")
+                    else
+                        move.goto_previous_end(m[3], "textobjects")
+
+                        if cursor_at_start() then
+                            move.goto_next_start(m[3], "textobjects")
+                        end
+                    end
+                end, { buffer = ev.buf })
+
+                Map("x", m[2], function()
+                    if cursor_at_start() then
+                        move.goto_next_start(m[3], "textobjects")
+
+                        if not cursor_at_start() then
+                            move.goto_previous_end(m[3], "textobjects")
+                        end
+                    else
+                        move.goto_next_end(m[3], "textobjects")
+                    end
+                end, { buffer = ev.buf })
             end
 
             -----------
@@ -146,8 +220,11 @@ local function setup_objects()
 
             local swap = require(objects .. ".swap")
             local swap_maps = {
+                { "(g", ")g", "@assignment.outer" }, --- Mismatch
+                { "(G", ")G", "@assignment.inner" }, --- Mismatch
                 { "(M", ")M", "@call.outer" },
                 { "(/", ")/", "@comment.outer" },
+                { "(/", ")/", "@conditional.outer" },
                 { "(m", ")m", "@function.outer" },
                 { "(,", "),", "@parameter.inner" },
                 { "(#", ")#", "@preproc.inner" },
