@@ -191,18 +191,19 @@ local function setup_objects()
                 end, { buffer = ev.buf })
 
                 -- FUTURE: In theory, the better way to handle this is to have some sort of
-                -- lookahead rather than potentially performing a triple-move if you cross over
+                -- lookahead rather than potentially performing a double-move if you cross over
                 -- the origin of the visual selection
+                -- The current implementation can also make unexpectedly big moves, but my
+                -- attempt at walking back can cause the cursor to get stuck
 
                 Map({ "x" }, m[1], function()
                     local orientation = get_cursor_orientation()
 
-                    if orientation == "end" then
+                    if orientation == "fin" then
                         move.goto_previous_end(m[3], "textobjects")
 
                         local new_orientation = get_cursor_orientation()
                         if new_orientation == "start" then
-                            move.goto_next_end(m[3], "textobjects")
                             move.goto_previous_start(m[3], "textobjects")
                         end
                     else
@@ -217,8 +218,7 @@ local function setup_objects()
                         move.goto_next_start(m[3], "textobjects")
 
                         local new_orientation = get_cursor_orientation()
-                        if new_orientation == "end" then
-                            move.goto_previous_start(m[3], "textobjects")
+                        if new_orientation == "fin" then
                             move.goto_next_end(m[3], "textobjects")
                         end
                     else
