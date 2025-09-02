@@ -14,7 +14,6 @@ Map("n", ")", "<nop>")
 -- - Delete buf from disk
 -- - Make + open qf
 -- - chmod
--- - Session management: https://github.com/Shatur/neovim-session-manager
 -- - File export with pandoc, 2html, and whatever else
 
 Map("n", "<C-c>", function()

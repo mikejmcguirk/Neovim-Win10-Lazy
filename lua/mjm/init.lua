@@ -63,6 +63,7 @@ require("mjm.plugins.harpoon")
 require("mjm.plugins.oil")
 
 require("mjm.plugins.fugitive")
+require("mjm.plugins.session_manager")
 
 local eager_loaded = vim.loop.hrtime()
 
