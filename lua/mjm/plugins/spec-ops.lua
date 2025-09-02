@@ -7,6 +7,8 @@ vim.cmd.packadd({ vim.fn.escape("spec-ops", " "), bang = true, magic = { file = 
 -- so they don't run until spec-ops initializes
 -- TODO: The lazy load autocmd needs to remove itself after it's fired once, since the once
 -- option only covers the triggered condition
+-- return ':lua vim.fn.rename("' .. full_path .. '"), ("' .. full_path .. '")' .. ""
+-- TODO: On this line if you change before the period with C it snaps before the single quote
 
 --- @module "spec-ops"
 --- @type SpecOpsConfig

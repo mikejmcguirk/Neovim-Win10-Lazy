@@ -2,6 +2,9 @@
 -- MAYBE: Build inactive stl as a Lua function that takes the window number as a parameter
 -- Allows for showing diags
 
+-- https://github.com/neovim/neovim/commit/8a12a014666501398d51639e599426ae139494d6
+-- Exit LSP Progress from the statusline
+
 local M = {}
 
 function M.bad_mode(mode)
