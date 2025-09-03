@@ -297,6 +297,8 @@ end
 
 -- Adapted from mike-jl/harpoonEx
 -- # harpoon
+--- @param buf integer
+--- @return nil
 function M.harpoon_rm_buf(buf)
     local ok, harpoon = pcall(require, "harpoon")
     if (not ok) or not harpoon then
