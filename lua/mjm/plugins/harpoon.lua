@@ -108,5 +108,5 @@ for _ = 1, 10 do
 end
 
 Map("n", "<leader>ar", function()
-    require("mjm.utils").harpoon_rm_cur_buf()
+    require("mjm.utils").harpoon_rm_buf()
 end, { desc = "Delete current file from Harpoon List" })
