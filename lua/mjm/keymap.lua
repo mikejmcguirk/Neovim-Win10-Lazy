@@ -38,10 +38,6 @@ Map("c", "<M-n>", "<down>")
 -- Saving and Quitting --
 -------------------------
 
--- Using lockmarks for saves has to suffice
-
--- Don't map ZQ. Running ZZ in vanilla Vim is a gaffe. ZQ not so much
-Map("n", "ZQ", "<nop>")
 -- This trick mostly doesn't work because it also blocks any map in the layer below it, but
 -- anything under Z has to be manually mapped anyway, so this is fine
 Map("n", "Z", "<nop>")

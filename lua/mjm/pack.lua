@@ -58,6 +58,8 @@ local pack_spec = {
 
     { src = "https://github.com/mbbill/undotree" },
 
+    -- LOW: Nvim has a preview handler that would allow the Subvert command to be displayed like
+    -- the built-in substitute command
     { src = "https://github.com/tpope/vim-abolish" },
 
     { src = "https://github.com/tpope/vim-dadbod" },
