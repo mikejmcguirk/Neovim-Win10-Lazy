@@ -107,35 +107,6 @@ for _ = 1, 10 do
     mark = mod_mark + 1
 end
 
--- Adapted from mike-jl/harpoonEx
-local function rm_cur_buf()
-    local list = harpoon:list()
-    if not list then
-        return
-    end
-    local items = list.items
-
-    local buf = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":p")
-    local idx = nil
-    for i, t in pairs(items) do
-        local item = vim.fn.fnamemodify(t.value, ":p")
-        if buf == item then
-            idx = i
-            break
-        end
-    end
-
-    if not idx then
-        return
-    end
-
-    table.remove(list.items, idx)
-    list._length = list._length - 1
-
-    local extensions = require("harpoon.extensions")
-    extensions.extensions:emit(extensions.event_names.REMOVE)
-end
-
 Map("n", "<leader>ar", function()
-    rm_cur_buf()
+    require("mjm.utils").harpoon_rm_cur_buf()
 end, { desc = "Delete current file from Harpoon List" })

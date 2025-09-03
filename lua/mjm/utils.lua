@@ -295,4 +295,83 @@ function M.is_comment()
     end
 end
 
+-- Adapted from mike-jl/harpoonEx
+-- # harpoon
+function M.harpoon_rm_buf(buf)
+    local ok, harpoon = pcall(require, "harpoon")
+    if (not ok) or not harpoon then
+        vim.api.nvim_echo({ { "Unable to require harpoon", "ErrorMsg" } }, true, { err = true })
+    end
+
+    local list = harpoon:list()
+    if not list then
+        return
+    end
+
+    local items = list.items
+    buf = buf or 0
+    local full_bufname = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf), ":p")
+    local idx = nil
+
+    for i, t in pairs(items) do
+        local item = vim.fn.fnamemodify(t.value, ":p")
+        if full_bufname == item then
+            idx = i
+            break
+        end
+    end
+
+    if not idx then
+        return
+    end
+
+    table.remove(list.items, idx)
+    list._length = list._length - 1
+
+    local extensions = require("harpoon.extensions")
+    extensions.extensions:emit(extensions.event_names.REMOVE)
+end
+
+--- @param old_bufname string
+--- @param new_bufname string
+--- @return nil
+function M.harpoon_mv_buf(old_bufname, new_bufname)
+    local ok, harpoon = pcall(require, "harpoon")
+    if (not ok) or not harpoon then
+        vim.api.nvim_echo({ { "Unable to require harpoon", "ErrorMsg" } }, true, { err = true })
+    end
+
+    local list = harpoon:list()
+    if not list then
+        return
+    end
+
+    local items = list.items
+    if #items < 1 then
+        return
+    end
+
+    local full_old_bufname = vim.fn.fnamemodify(old_bufname, ":p")
+    local idx = nil
+
+    for i, t in pairs(items) do
+        local item = vim.fn.fnamemodify(t.value, ":p")
+        if item == full_old_bufname then
+            idx = i
+            break
+        end
+    end
+
+    if not idx then
+        return
+    end
+
+    local full_new_bufname = vim.fn.fnamemodify(new_bufname, ":p")
+    local relative_new_bufname = vim.fn.fnamemodify(full_new_bufname, ":.")
+    list.items[idx].value = relative_new_bufname
+
+    local extensions = require("harpoon.extensions")
+    extensions.extensions:emit(extensions.event_names.REMOVE)
+end
+
 return M
