@@ -4,6 +4,5 @@ Has_Nerd_Font = true --- @type boolean
 Scrolloff_Val = 6 ---@type integer
 SpellFile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add" ---@type string
 
-Map = function(m, lhs, rhs, opts)
-    vim.keymap.set(m, lhs, rhs, opts)
-end
+Cmd = vim.api.nvim_cmd
+Map = vim.keymap.set

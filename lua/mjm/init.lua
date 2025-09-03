@@ -107,8 +107,10 @@ vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
         require("mjm.lsp")
         require("mjm.color_coordination")
 
-        vim.api.nvim_del_augroup_by_name("nvim.diagnostic.status")
         vim.api.nvim_del_augroup_by_name("mjm-lazy-load")
+        -- Not being used, so no need for this to run in the background
+        -- Needs to be done here after diagnostics have actually been enabled
+        vim.api.nvim_del_augroup_by_name("nvim.diagnostic.status")
     end,
 })
 
