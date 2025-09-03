@@ -1,5 +1,3 @@
--- TODO: The staging maps should fallback to fugitive if they fail, or at least exit
--- gracefully
 local function setup_gitsigns()
     require("gitsigns").setup({
         signs = {
@@ -14,14 +12,6 @@ local function setup_gitsigns()
                 Map(mode, l, r, opts)
             end
 
-            map("n", "]c", function()
-                if vim.wo.diff then
-                    vim.cmd.normal({ "]c", bang = true })
-                else
-                    gitsigns.nav_hunk("next", { greedy = true })
-                end
-            end)
-
             map("n", "[c", function()
                 if vim.wo.diff then
                     vim.cmd.normal({ "[c", bang = true })
@@ -30,11 +20,11 @@ local function setup_gitsigns()
                 end
             end)
 
-            map("n", "]C", function()
+            map("n", "]c", function()
                 if vim.wo.diff then
                     vim.cmd.normal({ "]c", bang = true })
                 else
-                    gitsigns.nav_hunk("next", { greedy = true, target = "staged" })
+                    gitsigns.nav_hunk("next", { greedy = true })
                 end
             end)
 
@@ -42,7 +32,47 @@ local function setup_gitsigns()
                 if vim.wo.diff then
                     vim.cmd.normal({ "[c", bang = true })
                 else
+                    gitsigns.nav_hunk("first", { greedy = true })
+                end
+            end)
+
+            map("n", "]C", function()
+                if vim.wo.diff then
+                    vim.cmd.normal({ "]c", bang = true })
+                else
+                    gitsigns.nav_hunk("last", { greedy = true })
+                end
+            end)
+
+            map("n", "[<C-c>", function()
+                if vim.wo.diff then
+                    vim.cmd.normal({ "[c", bang = true })
+                else
                     gitsigns.nav_hunk("prev", { greedy = true, target = "staged" })
+                end
+            end)
+
+            map("n", "]<C-c>", function()
+                if vim.wo.diff then
+                    vim.cmd.normal({ "]c", bang = true })
+                else
+                    gitsigns.nav_hunk("next", { greedy = true, target = "staged" })
+                end
+            end)
+
+            map("n", "[<M-c>", function()
+                if vim.wo.diff then
+                    vim.cmd.normal({ "[c", bang = true })
+                else
+                    gitsigns.nav_hunk("first", { greedy = true, target = "staged" })
+                end
+            end)
+
+            map("n", "]<M-c>", function()
+                if vim.wo.diff then
+                    vim.cmd.normal({ "]c", bang = true })
+                else
+                    gitsigns.nav_hunk("last", { greedy = true, target = "staged" })
                 end
             end)
 
