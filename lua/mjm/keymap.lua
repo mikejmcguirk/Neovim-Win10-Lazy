@@ -46,6 +46,10 @@ Map("n", "ZQ", "<nop>")
 -- anything under Z has to be manually mapped anyway, so this is fine
 Map("n", "Z", "<nop>")
 
+Map("n", "ZQ", function()
+    vim.api.nvim_cmd({ cmd = "qall", bang = true }, {})
+end)
+
 Map("n", "ZZ", "<cmd>lockmarks silent up<cr>")
 Map("n", "ZA", "<cmd>lockmarks silent wa<cr>")
 Map("n", "ZC", "<cmd>lockmarks wqa<cr>")
