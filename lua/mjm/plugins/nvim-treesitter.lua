@@ -28,7 +28,7 @@ local languages = {
     "python",
     "rust",
     "sql",
-    "tmux",
+    -- "tmux", -- Errors on things that are correct
     "typescript",
 }
 
@@ -90,8 +90,6 @@ local function get_cursor_orientation()
     end
 end
 
-Map("x", "<leader><leader>", get_cursor_orientation)
-
 local objects = "nvim-treesitter-textobjects"
 
 local function setup_objects()
@@ -99,6 +97,8 @@ local function setup_objects()
         select = {
             lookahead = true,
             selection_modes = {
+                ["@assignment.inner"] = "v",
+                ["@assignment.outer"] = "v",
                 ["@call.inner"] = "v",
                 ["@call.outer"] = "v",
                 ["@comment.inner"] = "v",
@@ -107,10 +107,16 @@ local function setup_objects()
                 ["@conditional.outer"] = "v",
                 ["@function.inner"] = "v",
                 ["@function.outer"] = "v",
+                ["@loop.inner"] = "v",
+                ["@loop.outer"] = "v",
                 ["@parameter.inner"] = "v",
                 ["@parameter.outer"] = "v",
                 ["@preproc.inner"] = "v",
                 ["@preproc.outer"] = "v",
+                ["@return.inner"] = "v",
+                ["@return.outer"] = "v",
+                ["@string.inner"] = "v",
+                ["@string.outer"] = "v",
             },
             include_surrounding_whitespace = false,
         },
@@ -126,6 +132,33 @@ local function setup_objects()
                 return
             end
 
+            -- BUILTIN
+            -- [s] - Assignment
+            -- [f] - Call
+            -- [/] - Comment
+            -- [i] - Conditional
+            -- [m] - function definition
+            -- [o] - loop
+            -- [,] - Parameter
+            -- [.] - return
+            -- attribute
+            -- block
+            -- class
+            -- frame { minimal - r }
+            -- number
+            -- regex
+            -- scopename { minimal - e }
+            -- statement
+
+            -- CUSTOM:
+            -- [#] - PreProc
+            -- ["] - String (moves and swaps)
+            -- MAYBE: You could use [']' for bytes/characters, but that feels better for marks
+
+            -- PR: It would be cool to be able to move to the first and last objects
+            -- PR: If you're dealing with nested function calls, and you vaf, it will expand out
+            -- to the outer function rather than looking forward to the inner one
+
             ----------------
             -- Selections --
             ----------------
@@ -137,16 +170,20 @@ local function setup_objects()
                 { "as", "@assignment.outer" },
                 { "iS", "@assignment.lhs" },
                 { "aS", "@assignment.inner" },
-                { "iM", "@call.inner" },
-                { "aM", "@call.outer" },
+                { "if", "@call.inner" },
+                { "af", "@call.outer" },
                 { "i/", "@comment.inner" },
                 { "a/", "@comment.outer" },
-                { "io", "@conditional.inner" },
-                { "ao", "@conditional.outer" },
+                { "ii", "@conditional.inner" },
+                { "ai", "@conditional.outer" },
                 { "im", "@function.inner" },
                 { "am", "@function.outer" },
+                { "io", "@loop.inner" },
+                { "ao", "@loop.outer" },
                 { "i,", "@parameter.inner" },
                 { "a,", "@parameter.outer" },
+                { "i.", "@return.inner" },
+                { "a.", "@return.outer" },
                 { "i#", "@preproc.inner" },
                 { "a#", "@preproc.outer" },
             }
@@ -163,14 +200,27 @@ local function setup_objects()
 
             local move = require(objects .. ".move")
             local move_maps = {
-                { "[g", "]g", "@assignment.outer" }, --- Mismatch
-                { "[G", "]G", "@assignment.inner" }, --- Mismatch
-                { "[M", "]M", "@call.outer" },
+                { "[s", "]s", "@assignment.outer" },
+                { "[f", "]f", "@call.outer" },
                 { "[/", "]/", "@comment.outer" },
-                { "[o", "]o", "@conditional.outer" },
+                { "[i", "]i", "@conditional.outer" },
                 { "[m", "]m", "@function.outer" },
-                { "[,", "],", "@parameter.inner" },
+                { "[o", "]o", "@loop.outer" },
+                { "[,", "],", "@parameter.inner" }, -- To perform edits inside strings
                 { "[#", "]#", "@preproc.outer" },
+                { "[.", "].", "@return.outer" },
+                { '["', ']"', "@string.inner" }, -- To perform edits inside
+
+                { "[<C-s>", "]<C-s>", "@assignment.inner" },
+                { "[<C-f>", "]<C-f>", "@call.inner" },
+                { "[<C-/>", "]<C-/>", "@comment.inner" },
+                { "[<C-i>", "]<C-i>", "@conditional.inner" },
+                { "[<C-m>", "]<C-m>", "@function.inner" },
+                { "[<C-o>", "]<C-o>", "@loop.inner" },
+                { "[<C-,>", "]<C-,>", "@parameter.inner" },
+                { "[<C-3>", "]<C-3>", "@preproc.inner" },
+                { "[<C-.>", "]<C-.>", "@return.inner" },
+                { "[<C-'>", "]<C-'>", "@string.inner" },
             }
 
             for _, m in pairs(move_maps) do
@@ -194,7 +244,7 @@ local function setup_objects()
                 -- lookahead rather than potentially performing a double-move if you cross over
                 -- the origin of the visual selection
                 -- The current implementation can also make unexpectedly big moves, but my
-                -- attempt at walking back can cause the cursor to get stuck
+                -- attempts at walking back and redoing could cause the cursor to get stuck
 
                 Map({ "x" }, m[1], function()
                     local orientation = get_cursor_orientation()
@@ -231,16 +281,31 @@ local function setup_objects()
             -- Swaps --
             -----------
 
+            -- FUTURE: Would be cool if these accepted count
+
             local swap = require(objects .. ".swap")
             local swap_maps = {
-                { "(g", ")g", "@assignment.outer" }, --- Mismatch
-                { "(G", ")G", "@assignment.inner" }, --- Mismatch
-                { "(M", ")M", "@call.outer" },
+                { "(s", ")s", "@assignment.outer" },
+                { "(f", ")f", "@call.outer" },
                 { "(/", ")/", "@comment.outer" },
-                { "(/", ")/", "@conditional.outer" },
+                { "(i", ")i", "@conditional.outer" },
                 { "(m", ")m", "@function.outer" },
-                { "(,", "),", "@parameter.inner" },
-                { "(#", ")#", "@preproc.inner" },
+                { "(o", ")o", "@loop.outer" },
+                { "(,", "),", "@parameter.inner" }, -- Outer can break commas if swapped at end
+                { "(#", ")#", "@preproc.outer" },
+                { "(.", ").", "@return.outer" },
+                { '("', ')"', "@string.outer" },
+
+                { "(<C-s>", ")<C-s>", "@assignment.inner" },
+                { "(<C-f>", ")<C-f>", "@call.inner" },
+                { "(<C-/>", ")<C-/>", "@comment.inner" },
+                { "(<C-i>", ")<C-i>", "@conditional.inner" },
+                { "(<C-m>", ")<C-m>", "@function.inner" },
+                { "(<C-o>", ")<C-o>", "@loop.inner" },
+                { "(<C-,>", ")<C-,>", "@parameter.inner" },
+                { "(<C-3>", ")<C-3>", "@preproc.inner" },
+                { "(<C-.>", ")<C-.>", "@return.inner" },
+                { "(<C-'>", ")<C-'>", "@string.inner" },
             }
 
             for _, m in pairs(swap_maps) do

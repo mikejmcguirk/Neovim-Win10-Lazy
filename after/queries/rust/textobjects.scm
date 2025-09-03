@@ -1,5 +1,6 @@
 ; extends
 
+;PreProc
 (macro_definition) @preproc.outer
 
 (macro_definition
@@ -70,3 +71,12 @@
 (line_comment
   !outer
   !doc) @rust_comment_fix.outer
+
+; String
+(string_literal
+  .
+  ("\""
+    "\"") .) @string.outer @string.inner
+
+(string_literal
+  (string_content) @string.inner) @string.outer

@@ -437,3 +437,6 @@ end, { silent = true })
 
 -- I don't know a better place to put this
 Map("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true })
+
+Map("n", "[s", "[w")
+Map("n", "]s", "]w")
