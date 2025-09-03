@@ -1,6 +1,5 @@
 MjmStl = {}
 
--- TODO: H showing before I
 -- LOW: Build a character index component and keep it commented out alongside the virt col one
 -- MAYBE: Show diags in inactive windows
 
