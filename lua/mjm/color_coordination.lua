@@ -11,10 +11,6 @@ local ts_nop_all = function(hl_query)
     -- Doesn't capture injections, so just sits on top of comment
     hl_query.query:disable_capture("comment.documentation")
 
-    -- Don't need these
-    hl_query.query:disable_capture("nospell")
-    hl_query.query:disable_capture("spell")
-
     -- Allow to default to normal
     hl_query.query:disable_capture("punctuation.delimiter")
     hl_query.query:disable_capture("variable")
