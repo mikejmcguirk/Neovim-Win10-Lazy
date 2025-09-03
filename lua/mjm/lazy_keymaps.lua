@@ -157,6 +157,8 @@ end)
 
 Map("n", "'", "`")
 Map("n", "g'", "g`")
+Map("n", "['", "[`")
+Map("n", "]'", "]`")
 
 -- Not silent so that the search prompting displays properly
 Map("n", "/", "ms/")
