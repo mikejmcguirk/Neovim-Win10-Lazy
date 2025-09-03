@@ -239,23 +239,6 @@ local function setup_blink()
                     -- score_offset = 100,
                 },
                 lsp = { fallbacks = {} },
-                obsidian = {
-                    name = "obsidian",
-                    module = "blink.compat.source",
-                    score_offset = 2,
-                    -- opts = require("cmp_obsidian").new()
-                },
-                obsidian_new = {
-                    name = "obsidian_new",
-                    module = "blink.compat.source",
-                    score_offset = 3,
-                    -- opts = require("cmp_obsidian_new").new()
-                },
-                obsidian_tags = {
-                    name = "obsidian_tags",
-                    module = "blink.compat.source",
-                    -- opts = require("cmp_obsidian_tags").new()
-                },
                 path = {
                     opts = {
                         get_cwd = function(_)
@@ -315,8 +298,6 @@ vim.api.nvim_create_autocmd({ "CmdlineEnter", "BufReadPre", "BufNewFile" }, {
     callback = function()
         setup_blink()
         --- @diagnostic disable: missing-parameter
-        require("blink-compat").setup()
-
         vim.api.nvim_del_augroup_by_name("setup-blink")
     end,
 })

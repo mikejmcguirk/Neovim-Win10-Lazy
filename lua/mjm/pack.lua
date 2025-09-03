@@ -11,7 +11,6 @@ local pack_spec = {
     { src = "https://github.com/nvim-lua/plenary.nvim" },
 
     { src = "https://github.com/saghen/blink.cmp", version = vim.version.range("1.*") },
-    { src = "https://github.com/Saghen/blink.compat", version = vim.version.range("2.*") },
     { src = "https://github.com/rafamadriz/friendly-snippets" },
     { src = "https://github.com/kristijanhusak/vim-dadbod-completion" },
     -- Requires plenary
@@ -48,8 +47,7 @@ local pack_spec = {
 
     { src = "https://github.com/windwp/nvim-ts-autotag" },
 
-    -- Depends on plenary
-    { src = "https://github.com/epwalsh/obsidian.nvim" },
+    { src = "https://github.com/obsidian-nvim/obsidian.nvim" },
 
     -- Depends on mini.icons or nvim-tree/nvim-web-devicons
     { src = "https://github.com/stevearc/oil.nvim" },
