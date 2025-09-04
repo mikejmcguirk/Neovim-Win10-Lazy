@@ -144,8 +144,9 @@ local function mv_cur_buf(cargs)
             return
         end
 
-        local cmd = { cmd = "saveas", { escape_target }, bang = true, mods = { keepalt = true } }
-        vim.api.nvim_cmd(cmd, {})
+        local args = { escape_target }
+        local mods = { keepalt = true }
+        vim.api.nvim_cmd({ cmd = "saveas", args = args, bang = true, mods = mods }, {})
     end
 
     for _, b in pairs(vim.api.nvim_list_bufs()) do
