@@ -1,5 +1,7 @@
 MjmStl = {}
 
+vim.g.qf_disable_statusline = 1
+
 -- LOW: Build a character index component and keep it commented out alongside the virt col one
 -- MAYBE: Show diags in inactive windows
 
