@@ -297,9 +297,25 @@ end
 
 -- Adapted from mike-jl/harpoonEx
 -- # harpoon
---- @param buf integer
+--- @param opts {buf?: integer, bufname?: string}
 --- @return nil
-function M.harpoon_rm_buf(buf)
+function M.harpoon_rm_buf(opts)
+    opts = opts or {}
+
+    local full_bufname = (function()
+        if opts.bufname then
+            return vim.fn.fnamemodify(opts.bufname, ":p")
+        elseif opts.buf then
+            return vim.fn.fnamemodify(vim.api.nvim_buf_get_name(opts.buf), ":p")
+        else
+            return nil
+        end
+    end)()
+
+    if not full_bufname then
+        return
+    end
+
     local ok, harpoon = pcall(require, "harpoon")
     if (not ok) or not harpoon then
         vim.api.nvim_echo({ { "Unable to require harpoon", "ErrorMsg" } }, true, { err = true })
@@ -311,8 +327,6 @@ function M.harpoon_rm_buf(buf)
     end
 
     local items = list.items
-    buf = buf or 0
-    local full_bufname = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(buf), ":p")
     local idx = nil
 
     for i, t in pairs(items) do

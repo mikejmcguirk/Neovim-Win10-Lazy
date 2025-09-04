@@ -108,5 +108,6 @@ for _ = 1, 10 do
 end
 
 Map("n", "<leader>ar", function()
-    require("mjm.utils").harpoon_rm_buf()
+    local buf = vim.api.nvim_get_current_buf()
+    require("mjm.utils").harpoon_rm_buf({ buf = buf })
 end, { desc = "Delete current file from Harpoon List" })

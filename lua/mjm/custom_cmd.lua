@@ -69,7 +69,7 @@ local function del_cur_buf_from_disk(cargs)
         vim.api.nvim_buf_delete(buf, { force = true })
     end
 
-    require("mjm.utils").harpoon_rm_buf(buf)
+    require("mjm.utils").harpoon_rm_buf({ bufname = full_bufname })
 end
 
 vim.api.nvim_create_user_command("BKill", del_cur_buf_from_disk, {})
