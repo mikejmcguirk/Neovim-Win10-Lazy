@@ -101,6 +101,18 @@ vim.api.nvim_set_option_value("showmode", false, { scope = "global" })
 
 local set_group = vim.api.nvim_create_augroup("set-group", { clear = true })
 
+vim.api.nvim_create_autocmd("BufReadPost", {
+    group = set_group,
+    desc = "Go to the last location when opening a buffer",
+    callback = function(ev)
+        local mark = vim.api.nvim_buf_get_mark(ev.buf, '"')
+        local line_count = vim.api.nvim_buf_line_count(ev.buf)
+        if mark[1] < 1 or mark[1] > line_count then return end
+
+        Cmd({ cmd = "normal", args = { 'g`"zz' } }, {})
+    end,
+})
+
 vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
     group = set_group,
     pattern = ".bashrc_custom",

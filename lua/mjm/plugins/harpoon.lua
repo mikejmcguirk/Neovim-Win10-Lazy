@@ -1,5 +1,7 @@
 local harpoon = require("harpoon")
 
+-- NOTE: The navigation functionality has been removed from here. This should be done using the
+-- " mark saved in the Shada file
 harpoon:setup({
     settings = {
         save_on_toggle = true,
@@ -26,7 +28,6 @@ harpoon:setup({
                 return
             end
 
-            local prev_bufs = vim.api.nvim_list_bufs() --- @type integer[]
             local buf = vim.fn.bufadd(list_item.value) --- @type integer
             if vim.api.nvim_get_current_buf() == buf then
                 vim.notify("Already in buffer")
@@ -45,37 +46,6 @@ harpoon:setup({
             vim.api.nvim_set_option_value("buflisted", true, { buf = buf })
             vim.api.nvim_set_current_buf(buf)
 
-            if not vim.tbl_contains(prev_bufs, buf) then
-                list_item.context.row = list_item.context.row or 1
-                list_item.context.col = list_item.context.col or 0
-
-                local line_count = vim.api.nvim_buf_line_count(buf) --- @type integer
-                local updated = false --- @type boolean
-                if list_item.context.row > line_count then
-                    list_item.context.row = line_count
-                    updated = true
-                end
-
-                local row = list_item.context.row --- @type integer
-                --- @type integer
-                local col = #vim.api.nvim_buf_get_lines(0, row - 1, row, false)[1]
-
-                if list_item.context.col > col then
-                    list_item.context.col = col
-                    updated = true
-                end
-
-                --- @type {[1]:integer, [2]:integer}
-                local cur_pos = { list_item.context.row, list_item.context.col }
-                vim.api.nvim_win_set_cursor(0, cur_pos)
-
-                if updated then
-                    extensions.extensions:emit(extensions.event_names.POSITION_UPDATED, {
-                        list_item = list_item,
-                    })
-                end
-            end
-
             extensions.extensions:emit(extensions.event_names.NAVIGATE, {
                 buffer = buf,
             })
@@ -85,11 +55,8 @@ harpoon:setup({
 
 Map("n", "<leader>ad", function() harpoon:list():add() end)
 
-Map(
-    "n",
-    "<leader>aa",
-    function() harpoon.ui:toggle_quick_menu(harpoon:list(), { height_in_lines = 10 }) end
-)
+local t = function() harpoon.ui:toggle_quick_menu(harpoon:list(), { height_in_lines = 10 }) end
+Map("n", "<leader>aa", t)
 
 local mark = 10
 for _ = 1, 10 do
