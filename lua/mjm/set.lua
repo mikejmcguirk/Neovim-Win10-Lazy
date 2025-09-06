@@ -101,7 +101,7 @@ vim.api.nvim_set_option_value("showmode", false, { scope = "global" })
 
 local set_group = vim.api.nvim_create_augroup("set-group", { clear = true })
 
-vim.api.nvim_create_autocmd("BufReadPost", {
+vim.api.nvim_create_autocmd("BufWinEnter", {
     group = set_group,
     desc = "Go to the last location when opening a buffer",
     callback = function(ev)
