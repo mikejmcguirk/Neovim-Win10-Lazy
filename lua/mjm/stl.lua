@@ -25,17 +25,11 @@ vim.api.nvim_create_autocmd("LspProgress", {
             return
         end
 
-        if ev.data.params.value.kind == "end" then
-            vim.defer_fn(function()
-                progress_cache[ev.buf] = nil
-                Cmd({ cmd = "redraws" }, {})
-            end, 2250)
-        end
-
         local values = ev.data.params.value
+
         local pct = (function()
             if values.kind == "end" then
-                return "(Complete) "
+                return "(Complete) " -- End messages might not have a % value
             elseif values.percentage then
                 return string.format("%d%%%% ", values.percentage)
             else
@@ -51,6 +45,13 @@ vim.api.nvim_create_autocmd("LspProgress", {
 
         -- Don't create more textlock in insert mode
         if not is_bad_mode() then Cmd({ cmd = "redraws" }, {}) end
+
+        if ev.data.params.value.kind == "end" then
+            vim.defer_fn(function()
+                progress_cache[ev.buf] = nil
+                Cmd({ cmd = "redraws" }, {})
+            end, 2250)
+        end
     end,
 })
 
@@ -163,8 +164,9 @@ end
 
 function MjmStl.inactive() return "%#stl_b# %m %t %*%= %#stl_b# %p%% %*" end
 
-vim.g.qf_disable_statusline = 1
+vim.api.nvim_set_option_value("showmode", false, { scope = "global" })
+vim.api.nvim_set_var("qf_disable_statusline", 1)
 
--- Lifted from mini.statusline
 local eval = "(nvim_get_current_win()==#g:actual_curwin || &laststatus==3)"
-vim.go.statusline = "%{%" .. eval .. " ? v:lua.MjmStl.active() : v:lua.MjmStl.inactive()%}"
+local stl_str = "%{%" .. eval .. " ? v:lua.MjmStl.active() : v:lua.MjmStl.inactive()%}"
+vim.api.nvim_set_option_value("stl", stl_str, { scope = "global" })

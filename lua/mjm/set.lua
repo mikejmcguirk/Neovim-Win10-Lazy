@@ -95,7 +95,6 @@ vim.opt.shortmess:append("I") --- No intro message
 vim.opt.shortmess:append("W") --- No "written" notifications
 
 vim.api.nvim_set_option_value("ruler", false, { scope = "global" })
-vim.api.nvim_set_option_value("showmode", false, { scope = "global" })
 
 ----------------------
 -- Autocmd Controls --
