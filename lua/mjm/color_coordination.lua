@@ -38,9 +38,7 @@ vim.api.nvim_create_autocmd("FileType", {
     once = true,
     callback = function()
         local hl_query = vim.treesitter.query.get("lua", "highlights")
-        if not hl_query then
-            return
-        end
+        if not hl_query then return end
 
         ts_nop_all(hl_query)
 
@@ -69,9 +67,7 @@ vim.api.nvim_create_autocmd("FileType", {
     once = true,
     callback = function()
         local hl_query = vim.treesitter.query.get("python", "highlights")
-        if not hl_query then
-            return
-        end
+        if not hl_query then return end
 
         hl_query.query:disable_capture("punctuation.bracket")
         hl_query.query:disable_capture("string.documentation") -- Just masks string
@@ -88,9 +84,7 @@ vim.api.nvim_create_autocmd("FileType", {
     once = true,
     callback = function()
         local hl_query = vim.treesitter.query.get("rust", "highlights")
-        if not hl_query then
-            return
-        end
+        if not hl_query then return end
 
         -- Have to keep punctuation.bracket to mask operator highlights
         hl_query.query:disable_capture("type.builtin") -- Don't need to distinguish this
@@ -104,9 +98,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         if ft == "rust" then
             local hl_query = vim.treesitter.query.get("rust", "highlights")
-            if not hl_query then
-                return
-            end
+            if not hl_query then return end
 
             -- rust_analyzer contains built-in highlights for multiple types that should be
             -- left active due to injected highlights in comments. If an LSP attaches, disable
@@ -140,9 +132,7 @@ local token_nop_rust = {
 
 -- Run eagerly to avoid inconsistent preview window appearance
 local vimdoc_query = vim.treesitter.query.get("vimdoc", "highlights")
-if vimdoc_query then
-    ts_nop_all(vimdoc_query)
-end
+if vimdoc_query then ts_nop_all(vimdoc_query) end
 
 ----------------------------------
 -- Setup Semantic Token Removal --
@@ -157,9 +147,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
     group = vim.api.nvim_create_augroup("token-filter", { clear = true }),
     callback = function(ev)
         local client = vim.lsp.get_client_by_id(ev.data.client_id)
-        if (not client) or not client.server_capabilities.semanticTokensProvider then
-            return
-        end
+        if (not client) or not client.server_capabilities.semanticTokensProvider then return end
 
         local found_client_name = false
         for k, _ in pairs(token_filder) do
@@ -169,9 +157,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
             end
         end
 
-        if not found_client_name then
-            return
-        end
+        if not found_client_name then return end
 
         local legend = client.server_capabilities.semanticTokensProvider.legend
         local new_tokenTypes = {}

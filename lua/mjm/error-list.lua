@@ -2,9 +2,7 @@
 vim.api.nvim_create_autocmd("WinNew", {
     group = vim.api.nvim_create_augroup("del_new_loclist", { clear = true }),
     pattern = "*",
-    callback = function()
-        vim.fn.setloclist(0, {}, "f")
-    end,
+    callback = function() vim.fn.setloclist(0, {}, "f") end,
 })
 
 ---@return nil
@@ -14,13 +12,9 @@ local function open_qflist()
     vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
 end
 
-Map("n", "cuc", function()
-    vim.api.nvim_cmd({ cmd = "ccl" }, {})
-end)
+Map("n", "cuc", function() vim.api.nvim_cmd({ cmd = "ccl" }, {}) end)
 
-Map("n", "cup", function()
-    open_qflist()
-end)
+Map("n", "cup", function() open_qflist() end)
 
 Map("n", "cuu", function()
     for _, w in ipairs(vim.fn.getwininfo()) do
@@ -33,9 +27,7 @@ Map("n", "cuu", function()
     open_qflist()
 end)
 
-Map("n", "coc", function()
-    vim.api.nvim_cmd({ cmd = "lcl" }, {})
-end)
+Map("n", "coc", function() vim.api.nvim_cmd({ cmd = "lcl" }, {}) end)
 
 Map("n", "cop", function()
     if vim.api.nvim_get_option_value("filetype", { buf = 0 }) == "qf" then
@@ -172,9 +164,7 @@ local function buf_diags_to_loclist(opts)
 
     local win = vim.api.nvim_get_current_win() ---@type integer
     local buf = vim.api.nvim_win_get_buf(win) ---@type integer
-    if not require("mjm.utils").check_modifiable(buf) then
-        return
-    end
+    if not require("mjm.utils").check_modifiable(buf) then return end
 
     local severity = (function()
         if opts.highest then
@@ -204,29 +194,17 @@ local function buf_diags_to_loclist(opts)
     vim.api.nvim_cmd({ cmd = "lop" }, {})
 end
 
-Map("n", "yui", function()
-    all_diags_to_qflist()
-end)
+Map("n", "yui", function() all_diags_to_qflist() end)
 
-Map("n", "yue", function()
-    all_diags_to_qflist({ err_only = true })
-end)
+Map("n", "yue", function() all_diags_to_qflist({ err_only = true }) end)
 
-Map("n", "yuh", function()
-    all_diags_to_qflist({ highest = true })
-end)
+Map("n", "yuh", function() all_diags_to_qflist({ highest = true }) end)
 
-Map("n", "yoi", function()
-    buf_diags_to_loclist()
-end)
+Map("n", "yoi", function() buf_diags_to_loclist() end)
 
-Map("n", "yoe", function()
-    buf_diags_to_loclist({ err_only = true })
-end)
+Map("n", "yoe", function() buf_diags_to_loclist({ err_only = true }) end)
 
-Map("n", "yoh", function()
-    buf_diags_to_loclist({ highest = true })
-end)
+Map("n", "yoh", function() buf_diags_to_loclist({ highest = true }) end)
 
 ---@param opts? {loclist:boolean, remove:boolean}
 ---@return nil
@@ -263,21 +241,13 @@ local function filter_wrapper(opts)
     vim.api.nvim_cmd({ cmd = prefix .. "filter", bang = opts.remove, args = { pattern } }, {})
 end
 
-Map("n", "duk", function()
-    filter_wrapper()
-end)
+Map("n", "duk", function() filter_wrapper() end)
 
-Map("n", "dur", function()
-    filter_wrapper({ remove = true })
-end)
+Map("n", "dur", function() filter_wrapper({ remove = true }) end)
 
-Map("n", "dok", function()
-    filter_wrapper({ loclist = true })
-end)
+Map("n", "dok", function() filter_wrapper({ loclist = true }) end)
 
-Map("n", "dor", function()
-    filter_wrapper({ loclist = true, remove = true })
-end)
+Map("n", "dor", function() filter_wrapper({ loclist = true, remove = true }) end)
 
 local last_grep = nil
 local last_lgrep = nil
@@ -332,37 +302,21 @@ local function grep_wrapper(opts)
     end
 end
 
-Map("n", "yugs", function()
-    grep_wrapper({})
-end)
+Map("n", "yugs", function() grep_wrapper({}) end)
 
-Map("n", "yogs", function()
-    grep_wrapper({ loclist = true })
-end)
+Map("n", "yogs", function() grep_wrapper({ loclist = true }) end)
 
-Map("n", "yugi", function()
-    grep_wrapper({ insensitive = true })
-end)
+Map("n", "yugi", function() grep_wrapper({ insensitive = true }) end)
 
-Map("n", "yogi", function()
-    grep_wrapper({ insensitive = true, loclist = true })
-end)
+Map("n", "yogi", function() grep_wrapper({ insensitive = true, loclist = true }) end)
 
-Map("n", "yugr", function()
-    grep_wrapper({ pattern = last_grep })
-end)
+Map("n", "yugr", function() grep_wrapper({ pattern = last_grep }) end)
 
-Map("n", "yogr", function()
-    grep_wrapper({ pattern = last_lgrep, loclist = true })
-end)
+Map("n", "yogr", function() grep_wrapper({ pattern = last_lgrep, loclist = true }) end)
 
-Map("n", "yugv", function()
-    print(last_grep)
-end)
+Map("n", "yugv", function() print(last_grep) end)
 
-Map("n", "yogv", function()
-    print(last_lgrep)
-end)
+Map("n", "yogv", function() print(last_lgrep) end)
 
 local function qf_scroll_wrapper(main, alt)
     local cmd_opts = { cmd = main, count = vim.v.count1 }
@@ -395,7 +349,5 @@ local scroll_maps = {
 }
 
 for _, m in pairs(scroll_maps) do
-    Map("n", m[1], function()
-        qf_scroll_wrapper(m[2], m[3])
-    end)
+    Map("n", m[1], function() qf_scroll_wrapper(m[2], m[3]) end)
 end

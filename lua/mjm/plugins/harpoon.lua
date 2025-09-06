@@ -83,13 +83,13 @@ harpoon:setup({
     },
 })
 
-Map("n", "<leader>ad", function()
-    harpoon:list():add()
-end)
+Map("n", "<leader>ad", function() harpoon:list():add() end)
 
-Map("n", "<leader>aa", function()
-    harpoon.ui:toggle_quick_menu(harpoon:list(), { height_in_lines = 10 })
-end)
+Map(
+    "n",
+    "<leader>aa",
+    function() harpoon.ui:toggle_quick_menu(harpoon:list(), { height_in_lines = 10 }) end
+)
 
 local mark = 10
 for _ = 1, 10 do

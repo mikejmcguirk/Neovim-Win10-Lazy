@@ -19,19 +19,13 @@ local hl_separator = "stl_c"
 local ok, harpoon = pcall(require, "harpoon")
 
 local function build_harpoon_component(tal)
-    if not ok then
-        return ""
-    end
+    if not ok then return "" end
 
     local list = harpoon:list()
-    if not list then
-        return ""
-    end
+    if not list then return "" end
 
     local items = list.items
-    if not items or #items < 1 then
-        return ""
-    end
+    if not items or #items < 1 then return "" end
 
     local cur_buf_path = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":p")
     for i, t in pairs(items) do
@@ -40,9 +34,7 @@ local function build_harpoon_component(tal)
 
         local modified = (function()
             local buf = vim.fn.bufnr(t_path)
-            if buf == -1 then
-                return ""
-            end
+            if buf == -1 then return "" end
 
             return vim.api.nvim_get_option_value("modified", { buf = buf }) and "[+]" or ""
         end)()
@@ -102,18 +94,14 @@ local tal_events = vim.api.nvim_create_augroup("tal-events", { clear = true })
 
 vim.api.nvim_create_autocmd({ "BufModifiedSet", "CmdlineLeave" }, {
     group = tal_events,
-    callback = function()
-        build_tal()
-    end,
+    callback = function() build_tal() end,
 })
 
 vim.api.nvim_create_autocmd("BufWritePost", {
     group = tal_events,
     callback = function()
         -- Leave autocmd context so cur_buf is correct
-        vim.schedule(function()
-            build_tal()
-        end)
+        vim.schedule(function() build_tal() end)
     end,
 })
 
@@ -124,9 +112,7 @@ vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
         -- check mode fresh
         vim.schedule(function()
             -- Avoid rendering in autocompletion windows
-            if vim.fn.mode() == "i" then
-                return
-            end
+            if vim.fn.mode() == "i" then return end
 
             build_tal()
         end)

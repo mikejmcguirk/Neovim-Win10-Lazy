@@ -20,14 +20,8 @@ require("session_manager").setup({
     load_include_current = false,
 })
 
-Map("n", "g\\ss", function()
-    require("session_manager").save_current_session()
-end)
+Map("n", "g\\ss", function() require("session_manager").save_current_session() end)
 
-Map("n", "g\\sl", function()
-    require("session_manager").load_current_dir_session(false)
-end)
+Map("n", "g\\sl", function() require("session_manager").load_current_dir_session(false) end)
 
-Map("n", "g\\sd", function()
-    require("session_manager").delete_session()
-end)
+Map("n", "g\\sd", function() require("session_manager").delete_session() end)

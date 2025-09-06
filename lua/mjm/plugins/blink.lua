@@ -29,21 +29,15 @@ local function setup_blink()
                     components = {
                         kind = {
                             width = { max = 20 },
-                            text = function(ctx)
-                                return ctx.kind or ""
-                            end,
+                            text = function(ctx) return ctx.kind or "" end,
                             highlight = function(ctx)
-                                if ctx.kind then
-                                    return "BlinkCmpKind" .. ctx.kind
-                                end
+                                if ctx.kind then return "BlinkCmpKind" .. ctx.kind end
                                 return "BlinkCmpKind"
                             end,
                         },
                         source_name = {
                             width = { max = 20 },
-                            text = function(ctx)
-                                return "[" .. ctx.source_name .. "]"
-                            end,
+                            text = function(ctx) return "[" .. ctx.source_name .. "]" end,
                             highlight = "Comment",
                         },
                     },
@@ -56,14 +50,10 @@ local function setup_blink()
             ["<C-e>"] = false,
             ["<C-E>"] = false,
             ["<C-p>"] = {
-                function(cmp)
-                    cmp.select_prev({ auto_insert = false })
-                end,
+                function(cmp) cmp.select_prev({ auto_insert = false }) end,
             },
             ["<C-n>"] = {
-                function(cmp)
-                    cmp.select_next({ auto_insert = false })
-                end,
+                function(cmp) cmp.select_next({ auto_insert = false }) end,
             },
             ["<C-y>"] = { "select_and_accept" },
             ["<M-p>"] = { "scroll_documentation_up" },
@@ -150,9 +140,10 @@ local function setup_blink()
                     enabled = true,
                     opts = {
                         get_bufnrs = function()
-                            return vim.tbl_filter(function(bufnr)
-                                return vim.bo[bufnr].buftype == ""
-                            end, vim.api.nvim_list_bufs())
+                            return vim.tbl_filter(
+                                function(bufnr) return vim.bo[bufnr].buftype == "" end,
+                                vim.api.nvim_list_bufs()
+                            )
                         end,
                     },
                     score_offset = -6,
@@ -241,9 +232,7 @@ local function setup_blink()
                 lsp = { fallbacks = {} },
                 path = {
                     opts = {
-                        get_cwd = function(_)
-                            return vim.fn.getcwd()
-                        end,
+                        get_cwd = function(_) return vim.fn.getcwd() end,
                     },
                 },
                 -- snippets = { async = true },

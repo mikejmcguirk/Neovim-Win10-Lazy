@@ -86,13 +86,17 @@ Map("n", "<leader>fo", fzf_lua.loclist_stack)
 
 Map("n", "<leader>fs", fzf_lua.spellcheck)
 Map("n", "<leader>fw", fzf_lua.lsp_live_workspace_symbols)
-Map("n", "<leader>fh", function()
-    fzf_lua.helptags({
-        fzf_opts = {
-            ["--tiebreak"] = "begin,chunk,length",
-        },
-    })
-end)
+Map(
+    "n",
+    "<leader>fh",
+    function()
+        fzf_lua.helptags({
+            fzf_opts = {
+                ["--tiebreak"] = "begin,chunk,length",
+            },
+        })
+    end
+)
 
 -- LOW: Re-add this back in
 -- Map("n", "<leader>tl", function()
@@ -119,9 +123,7 @@ end
 
 local function fuzzy_spell_correct()
     local word = vim.fn.expand("<cword>"):lower() ---@type string
-    if word == "" then
-        return vim.notify("No word under cursor", vim.log.levels.WARN)
-    end
+    if word == "" then return vim.notify("No word under cursor", vim.log.levels.WARN) end
 
     local buf = vim.api.nvim_get_current_buf()
 
@@ -138,9 +140,7 @@ local function fuzzy_spell_correct()
         prompt = 'Suggestions for "' .. word .. '": ',
         actions = {
             ["default"] = function(selected, _)
-                if not selected or not selected[1] then
-                    return
-                end
+                if not selected or not selected[1] then return end
 
                 local line = vim.api.nvim_get_current_line()
                 local row_1, col_0 = unpack(vim.api.nvim_win_get_cursor(0))
@@ -194,9 +194,7 @@ Map("n", "<leader>fds", fuzzy_spell_correct)
 -- Copy of the original code with vim.fn.getregtype() added
 fzf_lua.registers = function(opts)
     opts = require("fzf-lua.config").normalize_opts(opts, "registers")
-    if not opts then
-        return
-    end
+    if not opts then return end
 
     local registers = { [["]], "_", "#", "=", "_", "/", "*", "+", ":", ".", "%" }
     for i = 0, 9 do
@@ -210,17 +208,13 @@ fzf_lua.registers = function(opts)
 
     if type(opts.filter) == "string" or type(opts.filter) == "function" then
         local filter = type(opts.filter) == "function" and opts.filter
-            or function(r)
-                return r:match(opts.filter) ~= nil
-            end
+            or function(r) return r:match(opts.filter) ~= nil end
 
         registers = vim.tbl_filter(filter, registers)
     end
 
     local function register_escape_special(reg, nl)
-        if not reg then
-            return
-        end
+        if not reg then return end
 
         local gsub_map = {
             ["\3"] = "^C", -- <C-c>
@@ -241,9 +235,7 @@ fzf_lua.registers = function(opts)
     for _, r in ipairs(registers) do
         -- pcall in case of invalid data err E5108
         local _, contents = pcall(vim.fn.getreg, r)
-        if not contents then
-            return
-        end
+        if not contents then return end
 
         contents = register_escape_special(contents, opts.multiline and 2 or 1)
         local regtype = vim.fn.getregtype(r) or " "

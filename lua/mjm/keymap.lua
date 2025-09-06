@@ -42,9 +42,7 @@ Map("c", "<M-n>", "<down>")
 -- anything under Z has to be manually mapped anyway, so this is fine
 Map("n", "Z", "<nop>")
 
-Map("n", "ZQ", function()
-    vim.api.nvim_cmd({ cmd = "qall", bang = true }, {})
-end)
+Map("n", "ZQ", function() vim.api.nvim_cmd({ cmd = "qall", bang = true }, {}) end)
 
 Map("n", "ZZ", "<cmd>lockmarks silent up<cr>")
 Map("n", "ZA", "<cmd>lockmarks silent wa<cr>")
@@ -53,17 +51,13 @@ Map("n", "ZR", "<cmd>lockmarks silent wa | restart<cr>")
 
 -- FUTURE: Can pare this down once extui is stabilized
 Map("n", "ZS", function()
-    if not require("mjm.utils").check_modifiable() then
-        return
-    end
+    if not require("mjm.utils").check_modifiable() then return end
 
     local status, result = pcall(function() ---@type boolean, unknown|nil
         vim.cmd("lockmarks silent up | so")
     end)
 
-    if status then
-        return
-    end
+    if status then return end
 
     vim.api.nvim_echo({ { result or "Unknown error on save and source" } }, true, { err = true })
 end)
@@ -73,9 +67,7 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
         local buf = vim.api.nvim_get_current_buf() ---@type integer
         local buf_wins = 0 ---@type integer
         for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-            if vim.api.nvim_win_get_buf(win) == buf then
-                buf_wins = buf_wins + 1
-            end
+            if vim.api.nvim_win_get_buf(win) == buf then buf_wins = buf_wins + 1 end
         end
 
         local cmd = buf_wins > 1 and "lockmarks silent up | q" or "silent up | bd"
@@ -99,13 +91,9 @@ local tmux_cmd_map = { ["h"] = "L", ["j"] = "D", ["k"] = "U", ["l"] = "R" }
 ---@param direction string
 ---@return nil
 local do_tmux_move = function(direction)
-    if vim.fn.system("tmux display-message -p '#{window_zoomed_flag}'") == "1\n" then
-        return
-    end
+    if vim.fn.system("tmux display-message -p '#{window_zoomed_flag}'") == "1\n" then return end
 
-    pcall(function()
-        vim.fn.system([[tmux select-pane -]] .. tmux_cmd_map[direction])
-    end)
+    pcall(function() vim.fn.system([[tmux select-pane -]] .. tmux_cmd_map[direction]) end)
 end
 
 ---@param nvim_cmd string
@@ -119,9 +107,7 @@ local win_move_tmux = function(nvim_cmd)
     local start_win = vim.fn.winnr() ---@type integer
     vim.cmd("wincmd " .. nvim_cmd)
 
-    if vim.fn.winnr() == start_win then
-        do_tmux_move(nvim_cmd)
-    end
+    if vim.fn.winnr() == start_win then do_tmux_move(nvim_cmd) end
 end
 
 -- tmux-navigator style window navigation
@@ -130,9 +116,7 @@ end
 
 -- See tmux config (mikejmcguirk/dotfiles) for reasoning and how on C-S for this mapping
 for k, _ in pairs(tmux_cmd_map) do
-    Map("n", "<C-S-" .. k .. ">", function()
-        win_move_tmux(k)
-    end)
+    Map("n", "<C-S-" .. k .. ">", function() win_move_tmux(k) end)
 
     Map("i", "<C-S-" .. k .. ">", function()
         vim.cmd("stopinsert")
@@ -152,21 +136,13 @@ local resize_win = function(cmd)
     end
 end
 
-Map("n", "<M-j>", function()
-    resize_win("silent resize -2")
-end)
+Map("n", "<M-j>", function() resize_win("silent resize -2") end)
 
-Map("n", "<M-k>", function()
-    resize_win("silent resize +2")
-end)
+Map("n", "<M-k>", function() resize_win("silent resize +2") end)
 
-Map("n", "<M-h>", function()
-    resize_win("silent vertical resize -2")
-end)
+Map("n", "<M-h>", function() resize_win("silent vertical resize -2") end)
 
-Map("n", "<M-l>", function()
-    resize_win("silent vertical resize +2")
-end)
+Map("n", "<M-l>", function() resize_win("silent vertical resize +2") end)
 
 -- Relies on a terminal protocol that can send <C-i> and <tab> separately
 Map("n", "<tab>", "gt")
@@ -182,9 +158,7 @@ for _ = 1, 10 do
 
     Map("n", string.format("<M-%s>", mod_tab), function()
         local tabs = vim.api.nvim_list_tabpages()
-        if #tabs < this_tab then
-            return
-        end
+        if #tabs < this_tab then return end
 
         vim.api.nvim_set_current_tabpage(tabs[this_tab])
     end)
@@ -199,9 +173,7 @@ Map("n", "<C-w><C-c>", "<nop>")
 -- Setting Maps --
 ------------------
 
-Map("n", "\\d", function()
-    vim.diagnostic.enable(not vim.diagnostic.is_enabled())
-end)
+Map("n", "\\d", function() vim.diagnostic.enable(not vim.diagnostic.is_enabled()) end)
 
 -- \D set in diagnostic.lua to toggle virtual lines
 

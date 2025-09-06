@@ -8,9 +8,7 @@ local diag_cache = {}
 local mode = "n" -- ModeChanged does not grab the initial set to normal mode
 local progress_cache = {}
 
-local is_bad_mode = function()
-    return string.match(mode, "[csSiR]")
-end
+local is_bad_mode = function() return string.match(mode, "[csSiR]") end
 
 -- Because evaluating the statusline initiates textlock, perform as much of the calculation
 -- outside the eval func as possible
@@ -20,9 +18,7 @@ local stl_events = vim.api.nvim_create_augroup("stl-events", { clear = true })
 vim.api.nvim_create_autocmd("LspProgress", {
     group = stl_events,
     callback = function(ev)
-        if (not ev.data) or not ev.data.client_id then
-            return
-        end
+        if (not ev.data) or not ev.data.client_id then return end
 
         if not vim.api.nvim_buf_is_valid(ev.buf) then
             progress_cache[ev.buf] = nil
@@ -54,9 +50,7 @@ vim.api.nvim_create_autocmd("LspProgress", {
         progress_cache[ev.buf] = str
 
         -- Don't create more textlock in insert mode
-        if not is_bad_mode() then
-            Cmd({ cmd = "redraws" }, {})
-        end
+        if not is_bad_mode() then Cmd({ cmd = "redraws" }, {}) end
     end,
 })
 
@@ -93,9 +87,7 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
 
         diag_cache[ev.buf] = diag_str or nil
 
-        if not is_bad_mode() then
-            Cmd({ cmd = "redraws" }, {})
-        end
+        if not is_bad_mode() then Cmd({ cmd = "redraws" }, {}) end
     end),
 })
 
@@ -103,9 +95,7 @@ vim.api.nvim_create_autocmd("ModeChanged", {
     group = stl_events,
     callback = function()
         --- @diagnostic disable: undefined-field
-        if vim.v.event.new_mode == mode then
-            return
-        end
+        if vim.v.event.new_mode == mode then return end
 
         mode = vim.v.event.new_mode
         Cmd({ cmd = "redraws" }, {})
@@ -173,9 +163,7 @@ function MjmStl.active()
     return table.concat(stl, "")
 end
 
-function MjmStl.inactive()
-    return "%#stl_b# %m %t %*%= %#stl_b# %p%% %*"
-end
+function MjmStl.inactive() return "%#stl_b# %m %t %*%= %#stl_b# %p%% %*" end
 
 vim.g.qf_disable_statusline = 1
 

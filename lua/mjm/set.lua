@@ -104,9 +104,7 @@ local set_group = vim.api.nvim_create_augroup("set-group", { clear = true })
 vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
     group = set_group,
     pattern = ".bashrc_custom",
-    callback = function()
-        vim.api.nvim_cmd({ cmd = "set", args = { "filetype=sh" } }, {})
-    end,
+    callback = function() vim.api.nvim_cmd({ cmd = "set", args = { "filetype=sh" } }, {}) end,
 })
 
 -- See help fo-table
@@ -114,9 +112,7 @@ vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
 vim.api.nvim_create_autocmd({ "FileType" }, {
     group = set_group,
     pattern = "*",
-    callback = function()
-        vim.opt.formatoptions:remove("o")
-    end,
+    callback = function() vim.opt.formatoptions:remove("o") end,
 })
 
 local clear_conditions = {
@@ -136,9 +132,7 @@ vim.api.nvim_create_autocmd(clear_conditions, {
     -- The highlight state is saved and restored when autocmds are triggered, so
     -- schedule_wrap is used to trigger nohlsearch aftewards
     -- See nohlsearch() help
-    callback = vim.schedule_wrap(function()
-        vim.cmd.nohlsearch()
-    end),
+    callback = vim.schedule_wrap(function() vim.cmd.nohlsearch() end),
 })
 
 vim.api.nvim_create_autocmd("WinEnter", {
@@ -187,9 +181,7 @@ vim.api.nvim_create_autocmd("CmdlineEnter", {
     group = set_group,
     callback = function()
         vim.api.nvim_set_option_value("rnu", false, { win = vim.api.nvim_get_current_win() })
-        if not vim.tbl_contains({ "@", "-" }, vim.v.event.cmdtype) then
-            vim.cmd("redraw")
-        end
+        if not vim.tbl_contains({ "@", "-" }, vim.v.event.cmdtype) then vim.cmd("redraw") end
     end,
 })
 
@@ -200,9 +192,7 @@ set_rnu({ "WinEnter", "CmdlineLeave", "BufEnter" }, "*", true)
 vim.api.nvim_create_autocmd({ "VimLeavePre" }, {
     group = set_group,
     pattern = "*",
-    callback = function()
-        vim.fn.setreg("/", nil)
-    end,
+    callback = function() vim.fn.setreg("/", nil) end,
 })
 
 ----------------

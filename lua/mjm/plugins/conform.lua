@@ -22,9 +22,7 @@ local function setup_conform()
         pattern = "*",
         callback = function(ev)
             local ft = vim.api.nvim_get_option_value("filetype", { buf = ev.buf })
-            if not vim.tbl_contains(vim.tbl_keys(ft_config), ft) then
-                return
-            end
+            if not vim.tbl_contains(vim.tbl_keys(ft_config), ft) then return end
 
             require("conform").format({
                 bufnr = ev.buf,
