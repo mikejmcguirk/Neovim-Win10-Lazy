@@ -1,7 +1,5 @@
 MjmStl = {}
 
-vim.g.qf_disable_statusline = 1
-
 -- LOW: Build a character index component and keep it commented out alongside the virt col one
 -- MAYBE: Show diags in inactive windows
 
@@ -147,15 +145,19 @@ function MjmStl.active()
 
     table.insert(stl, "%#stl_b# %m %<%f [" .. mode .. "] %*")
 
+    -- I leave update_in_insert for diags set to false. Additionally, DiagnosticChange events
+    -- cannot push redraws because they create text lock randomly in the middle of insert
+    -- You could just show the cached diag data, but it might be stale
     local diags = (not bad_mode) and (diag_cache[buf] or "") or ""
     local lsps = lsp_cache[buf] or ""
+    -- Annoying
     local progress = (progress_cache[buf] and not bad_mode) and progress_cache[buf] or ""
 
     table.insert(stl, " %#stl_c#" .. lsps .. " " .. diags .. " %<" .. progress .. "%*")
 
     table.insert(stl, "%=%*")
 
-    -- Running autocmds to cache buf options means parsing ou the autocmd and the stl redraw on
+    -- Running autocmds to cache buf options means parsing out the autocmd and the stl redraw on
     -- every autocomplete window. More robust to handle on the fly
     local encoding = vim.api.nvim_get_option_value("encoding", { scope = "global" })
     local format = vim.api.nvim_get_option_value("fileformat", { buf = buf })
@@ -174,6 +176,8 @@ end
 function MjmStl.inactive()
     return "%#stl_b# %m %t %*%= %#stl_b# %p%% %*"
 end
+
+vim.g.qf_disable_statusline = 1
 
 -- Lifted from mini.statusline
 local eval = "(nvim_get_current_win()==#g:actual_curwin || &laststatus==3)"
