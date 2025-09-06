@@ -74,8 +74,6 @@ local pack_spec = {
 vim.pack.add(pack_spec, {})
 
 Map("n", "zqc", function()
-    if vim.fn.confirm("Remove inactive plugins?", "&Yes\n&No", 2) ~= 1 then return end
-
     local inactive = vim.iter(pairs(vim.pack.get()))
         :map(function(_, s) return (not s.active) and s.spec.name or nil end)
         :totable() --- @type string[]
