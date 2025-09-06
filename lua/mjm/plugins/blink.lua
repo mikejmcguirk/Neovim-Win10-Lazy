@@ -22,6 +22,7 @@ local function setup_blink()
                 auto_show_delay_ms = 125,
                 window = { border = "single" },
             },
+            list = { max_items = 20 },
             menu = {
                 border = "single",
                 draw = {
@@ -233,11 +234,7 @@ local function setup_blink()
                     -- score_offset = 100,
                 },
                 lsp = { fallbacks = {} },
-                path = {
-                    opts = {
-                        get_cwd = function(_) return vim.fn.getcwd() end,
-                    },
-                },
+                path = { opts = { get_cwd = function(_) return vim.uv.cwd() end } },
                 -- snippets = { async = true },
             },
         },
@@ -309,8 +306,9 @@ vim.api.nvim_create_autocmd({ "CmdlineEnter", "BufReadPre", "BufNewFile" }, {
         vim.system(cmd, sys_opts, function(out)
             if out.code == 0 then
                 vim.schedule(function()
-                    local msg = "Fuzzy built successfully. Setting up blink..." --- @type string
-                    vim.api.nvim_echo({ { msg, "" } }, true, {})
+                    -- MAYBE: Substring the stderr to get the build time. Only print if it's high
+                    -- local msg = "Fuzzy built successfully. Setting up blink..." --- @type string
+                    -- vim.api.nvim_echo({ { msg, "" } }, true, {})
                     setup_blink()
                 end)
 
