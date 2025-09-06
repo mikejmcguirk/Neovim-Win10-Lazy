@@ -33,7 +33,5 @@ end, { buffer = true })
 
 local bad_maps = { "<C-o>", "<C-i>" }
 for _, map in pairs(bad_maps) do
-    Map("n", map, function()
-        vim.notify("Currently in qf buffer")
-    end, { buffer = true })
+    Map("n", map, function() vim.notify("Currently in qf buffer") end, { buffer = true })
 end

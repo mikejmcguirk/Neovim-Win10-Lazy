@@ -24,7 +24,5 @@ Map("n", "K", require("mjm.utils").check_word_under_cursor)
 vim.api.nvim_create_autocmd("BufWritePre", {
     group = vim.api.nvim_create_augroup("md_save", { clear = true }),
     pattern = "*.md",
-    callback = function(ev)
-        require("mjm.utils").fallback_formatter(ev.buf)
-    end,
+    callback = function(ev) require("mjm.utils").fallback_formatter(ev.buf) end,
 })

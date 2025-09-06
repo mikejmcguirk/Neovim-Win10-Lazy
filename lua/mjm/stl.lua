@@ -1,7 +1,5 @@
 MjmStl = {}
 
-vim.g.qf_disable_statusline = 1
-
 -- LOW: Build a character index component and keep it commented out alongside the virt col one
 -- MAYBE: Show diags in inactive windows
 
@@ -10,9 +8,7 @@ local diag_cache = {}
 local mode = "n" -- ModeChanged does not grab the initial set to normal mode
 local progress_cache = {}
 
-local is_bad_mode = function()
-    return string.match(mode, "[csSiR]")
-end
+local is_bad_mode = function() return string.match(mode, "[csSiR]") end
 
 -- Because evaluating the statusline initiates textlock, perform as much of the calculation
 -- outside the eval func as possible
@@ -22,9 +18,7 @@ local stl_events = vim.api.nvim_create_augroup("stl-events", { clear = true })
 vim.api.nvim_create_autocmd("LspProgress", {
     group = stl_events,
     callback = function(ev)
-        if (not ev.data) or not ev.data.client_id then
-            return
-        end
+        if (not ev.data) or not ev.data.client_id then return end
 
         if not vim.api.nvim_buf_is_valid(ev.buf) then
             progress_cache[ev.buf] = nil
@@ -56,9 +50,7 @@ vim.api.nvim_create_autocmd("LspProgress", {
         progress_cache[ev.buf] = str
 
         -- Don't create more textlock in insert mode
-        if not is_bad_mode() then
-            Cmd({ cmd = "redraws" }, {})
-        end
+        if not is_bad_mode() then Cmd({ cmd = "redraws" }, {}) end
     end,
 })
 
@@ -95,9 +87,7 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
 
         diag_cache[ev.buf] = diag_str or nil
 
-        if not is_bad_mode() then
-            Cmd({ cmd = "redraws" }, {})
-        end
+        if not is_bad_mode() then Cmd({ cmd = "redraws" }, {}) end
     end),
 })
 
@@ -105,9 +95,7 @@ vim.api.nvim_create_autocmd("ModeChanged", {
     group = stl_events,
     callback = function()
         --- @diagnostic disable: undefined-field
-        if vim.v.event.new_mode == mode then
-            return
-        end
+        if vim.v.event.new_mode == mode then return end
 
         mode = vim.v.event.new_mode
         Cmd({ cmd = "redraws" }, {})
@@ -147,15 +135,19 @@ function MjmStl.active()
 
     table.insert(stl, "%#stl_b# %m %<%f [" .. mode .. "] %*")
 
+    -- I leave update_in_insert for diags set to false. Additionally, DiagnosticChange events
+    -- cannot push redraws because they create text lock randomly in the middle of insert
+    -- You could just show the cached diag data, but it might be stale
     local diags = (not bad_mode) and (diag_cache[buf] or "") or ""
     local lsps = lsp_cache[buf] or ""
+    -- Annoying
     local progress = (progress_cache[buf] and not bad_mode) and progress_cache[buf] or ""
 
     table.insert(stl, " %#stl_c#" .. lsps .. " " .. diags .. " %<" .. progress .. "%*")
 
     table.insert(stl, "%=%*")
 
-    -- Running autocmds to cache buf options means parsing ou the autocmd and the stl redraw on
+    -- Running autocmds to cache buf options means parsing out the autocmd and the stl redraw on
     -- every autocomplete window. More robust to handle on the fly
     local encoding = vim.api.nvim_get_option_value("encoding", { scope = "global" })
     local format = vim.api.nvim_get_option_value("fileformat", { buf = buf })
@@ -169,9 +161,9 @@ function MjmStl.active()
     return table.concat(stl, "")
 end
 
-function MjmStl.inactive()
-    return "%#stl_b# %m %t %*%= %#stl_b# %p%% %*"
-end
+function MjmStl.inactive() return "%#stl_b# %m %t %*%= %#stl_b# %p%% %*" end
+
+vim.g.qf_disable_statusline = 1
 
 -- Lifted from mini.statusline
 local eval = "(nvim_get_current_win()==#g:actual_curwin || &laststatus==3)"

@@ -43,12 +43,21 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         if client:supports_method(method.textDocument_rename) then
             Map("n", "grn", function()
-                local input = require("mjm.utils").get_input("Rename: ")
-                if string.find(input, "%s") then
-                    vim.notify(string.format("'%s' contains spaces", input))
-                elseif #input > 0 then
-                    vim.lsp.buf.rename(input)
+                --- @type boolean, string
+                local ok_i, input = require("mjm.utils").get_input("Rename: ")
+                if not ok_i then
+                    local msg = input or "Unknown error getting input" --- @type string
+                    vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+                    return
+                elseif #input < 1 then
+                    return
+                elseif string.find(input, "%s") then
+                    local msg = string.format("'%s' contains spaces", input)
+                    vim.api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
+                    return
                 end
+
+                vim.lsp.buf.rename(input)
             end, { buffer = buf })
         end
 
@@ -64,13 +73,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
         if client:supports_method(method.textDocument_references) then
             local ref = (function()
                 if ok then
-                    return function()
-                        fzf_lua.lsp_references({ includeDeclaration = false })
-                    end
+                    return function() fzf_lua.lsp_references({ includeDeclaration = false }) end
                 else
-                    return function()
-                        vim.lsp.buf.references({ includeDeclaration = false })
-                    end
+                    return function() vim.lsp.buf.references({ includeDeclaration = false }) end
                 end
             end)()
 
@@ -78,15 +83,12 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
 
         if client:supports_method(method.textDocument_hover) then
-            Map("n", "K", function()
-                vim.lsp.buf.hover({ border = Border })
-            end, { buffer = buf })
+            Map("n", "K", function() vim.lsp.buf.hover({ border = Border }) end, { buffer = buf })
         end
 
         if client:supports_method(method.textDocument_signatureHelp) then
-            Map({ "i", "s" }, "<C-S>", function()
-                vim.lsp.buf.signature_help({ border = Border })
-            end, { buffer = buf })
+            local signature_help = function() vim.lsp.buf.signature_help({ border = Border }) end
+            Map({ "i", "s" }, "<C-S>", signature_help, { buffer = buf })
         end
 
         if client:supports_method(method.textDocument_typeDefinition) then
@@ -121,9 +123,10 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
 
         if client:supports_method(method.textDocument_inlayHint) then
-            Map("n", "grl", function()
+            local inlay_toggle = function()
                 vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ buffer = buf }))
-            end)
+            end
+            Map("n", "grl", inlay_toggle)
         end
 
         if client:supports_method(method.textDocument_documentColor) then
@@ -134,13 +137,13 @@ vim.api.nvim_create_autocmd("LspAttach", {
             end, { buffer = buf })
         end
 
-        Map("n", "grf", function()
-            print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
-        end, { buffer = buf })
+        local inspect_ws = function() print(vim.inspect(vim.lsp.buf.list_workspace_folders())) end
+        Map("n", "grf", inspect_ws, { buffer = buf })
 
-        Map("n", "grm", function()
+        local toggle_tokens = function()
             vim.lsp.semantic_tokens.enable(not vim.lsp.semantic_tokens.is_enabled())
-        end, { buffer = buf })
+        end
+        Map("n", "grm", toggle_tokens, { buffer = buf })
     end,
 })
 
@@ -149,18 +152,15 @@ vim.api.nvim_create_autocmd("BufUnload", {
     callback = function(ev)
         local buf = ev.buf ---@type integer
         local clients = vim.lsp.get_clients({ bufnr = buf }) ---@type vim.lsp.Client[]
-        if not clients or vim.tbl_isempty(clients) then
-            return
-        end
+        if not clients or vim.tbl_isempty(clients) then return end
 
         for _, client in pairs(clients) do
-            local attached_bufs = vim.tbl_filter(function(buf_nbr)
-                return buf_nbr ~= buf
-            end, vim.tbl_keys(client.attached_buffers)) ---@type unknown[]
+            local attached_bufs = vim.tbl_filter(
+                function(buf_nbr) return buf_nbr ~= buf end,
+                vim.tbl_keys(client.attached_buffers)
+            ) ---@type unknown[]
 
-            if vim.tbl_isempty(attached_bufs) then
-                vim.lsp.stop_client(client.id)
-            end
+            if vim.tbl_isempty(attached_bufs) then vim.lsp.stop_client(client.id) end
         end
     end,
 })

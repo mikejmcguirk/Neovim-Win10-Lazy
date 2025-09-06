@@ -35,9 +35,7 @@ oil.setup({
             function()
                 oil.save({ confirm = nil }, function(err)
                     if err then
-                        if err ~= "Canceled" then
-                            vim.notify(err, vim.log.levels.ERROR)
-                        end
+                        if err ~= "Canceled" then vim.notify(err, vim.log.levels.ERROR) end
 
                         return
                     end
@@ -56,10 +54,6 @@ oil.setup({
     keymaps_help = { border = "single" },
 })
 
-Map("n", "-", function()
-    oil.open_float()
-end)
+Map("n", "-", function() oil.open_float() end)
 
-Map("n", "+", function()
-    oil.open_float(vim.fn.getcwd())
-end)
+Map("n", "+", function() oil.open_float(vim.fn.getcwd()) end)

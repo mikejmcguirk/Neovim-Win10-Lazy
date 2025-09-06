@@ -73,36 +73,40 @@ local pack_spec = {
 
 vim.pack.add(pack_spec, {})
 
-Map("n", "zqu", function()
-    vim.pack.update()
-end)
-
 Map("n", "zqc", function()
-    if vim.fn.confirm("Remove inactive plugins?", "&Yes\n&No", 2) ~= 1 then
-        return
-    end
+    if vim.fn.confirm("Remove inactive plugins?", "&Yes\n&No", 2) ~= 1 then return end
 
     local inactive = vim.iter(pairs(vim.pack.get()))
-        :map(function(_, s)
-            return (not s.active) and s.spec.name or nil
-        end)
+        :map(function(_, s) return (not s.active) and s.spec.name or nil end)
         :totable() --- @type string[]
 
     vim.pack.del(inactive)
 end)
 
-Map("n", "zqp", function()
-    if vim.fn.confirm("Purge all plugins?", "&Yes\n&No", 2) ~= 1 then
+Map("n", "zqd", function()
+    local prompt = "Enter plugins to delete (space separated): " --- @type string
+    local ok, result = require("mjm.utils").get_input(prompt) --- @type boolean, string
+    if not ok then
+        local msg = result or "Unknown error getting input" --- @type string
+        vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+        return
+    elseif result == "" then
         return
     end
 
+    vim.pack.del(vim.split(result, " "))
+end)
+
+Map("n", "zqp", function()
+    if vim.fn.confirm("Purge all plugins?", "&Yes\n&No", 2) ~= 1 then return end
+
     local plugins = vim.iter(pairs(vim.pack.get()))
-        :map(function(_, s)
-            return s.spec.name
-        end)
+        :map(function(_, s) return s.spec.name end)
         :totable() --- @type string[]
 
     vim.pack.del(plugins)
 end)
+
+Map("n", "zqu", function() vim.pack.update() end)
 
 return M

@@ -3,42 +3,44 @@ vim.cmd.packadd({ vim.fn.escape("vim-fugitive", " "), bang = true, magic = { fil
 vim.api.nvim_create_autocmd("FileType", {
     group = vim.api.nvim_create_augroup("git-diff-ts", { clear = true }),
     pattern = "git",
-    callback = function()
-        vim.api.nvim_cmd({ cmd = "set", args = { "filetype=gitdiff" } }, {})
-    end,
+    callback = function() vim.api.nvim_cmd({ cmd = "set", args = { "filetype=gitdiff" } }, {}) end,
 })
 
 Map("n", "<leader>gcam", function()
-    local msg = require("mjm.utils").get_input("Commit message (All): ")
-    if msg == "" then
+    --- @type boolean, string
+    local ok, result = require("mjm.utils").get_input("Commit message (All): ")
+    if not ok then
+        local msg = result or "Unknown error getting input" --- @type string
+        vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+        return
+    elseif result == "" then
         return
     end
 
-    vim.api.nvim_cmd({ cmd = "Git", args = { 'commit -a -m "' .. msg .. '"' } }, {})
+    vim.api.nvim_cmd({ cmd = "Git", args = { 'commit -a -m "' .. result .. '"' } }, {})
 end)
 
-Map("n", "<leader>gcan", function()
-    vim.api.nvim_cmd({ cmd = "Git", args = { "commit -a" } }, {})
-end)
+local commit_all = function() vim.api.nvim_cmd({ cmd = "Git", args = { "commit -a" } }, {}) end
+Map("n", "<leader>gcan", commit_all)
 
 Map("n", "<leader>gchm", function()
-    local msg = require("mjm.utils").get_input("Commit message: ")
-    if msg == "" then
+    local ok, result = require("mjm.utils").get_input("Commit message: ") --- @type boolean, string
+    if not ok then
+        local msg = result or "Unknown error getting input" --- @type string
+        vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+        return
+    elseif result == "" then
         return
     end
 
-    vim.api.nvim_cmd({ cmd = "Git", args = { 'commit -m "' .. msg .. '"' } }, {})
+    vim.api.nvim_cmd({ cmd = "Git", args = { 'commit -m "' .. result .. '"' } }, {})
 end)
 
-Map("n", "<leader>gchn", function()
-    vim.api.nvim_cmd({ cmd = "Git", args = { "commit" } }, {})
-end)
+Map("n", "<leader>gchn", function() vim.api.nvim_cmd({ cmd = "Git", args = { "commit" } }, {}) end)
 
 local function open_diffs(staged)
     for _, w in ipairs(vim.fn.getwininfo()) do
-        if vim.api.nvim_get_option_value("filetype", { buf = w.bufnr }) == "diff" then
-            return
-        end
+        if vim.api.nvim_get_option_value("filetype", { buf = w.bufnr }) == "diff" then return end
     end
 
     require("mjm.utils").close_all_loclists()
@@ -53,19 +55,13 @@ local function open_diffs(staged)
     end
 end
 
-Map("n", "<leader>gdd", function()
-    open_diffs()
-end)
+Map("n", "<leader>gdd", function() open_diffs() end)
 
-Map("n", "<leader>gds", function()
-    open_diffs(true)
-end)
+Map("n", "<leader>gds", function() open_diffs(true) end)
 
 Map("n", "<leader>ghU", function()
     local cur_buf = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":p")
     vim.system({ "git", "restore", "--staged", cur_buf }, nil)
 end)
 
-Map("n", "<leader>gp", function()
-    vim.api.nvim_cmd({ cmd = "Git", args = { "push" } }, {})
-end)
+Map("n", "<leader>gp", function() vim.api.nvim_cmd({ cmd = "Git", args = { "push" } }, {}) end)

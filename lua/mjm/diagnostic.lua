@@ -25,19 +25,27 @@ Map("n", "\\D", function()
     vim.diagnostic.config((not cur_cfg.virtual_lines) and diag_lines_cfg or diag_text_cfg)
 end)
 
-Map("n", "[<C-d>", function()
-    vim.diagnostic.jump({
-        count = -vim.v.count1,
-        severity = require("mjm.utils").get_top_severity({ buf = 0 }),
-    })
-end)
+Map(
+    "n",
+    "[<C-d>",
+    function()
+        vim.diagnostic.jump({
+            count = -vim.v.count1,
+            severity = require("mjm.utils").get_top_severity({ buf = 0 }),
+        })
+    end
+)
 
-Map("n", "]<C-d>", function()
-    vim.diagnostic.jump({
-        count = vim.v.count1,
-        severity = require("mjm.utils").get_top_severity({ buf = 0 }),
-    })
-end)
+Map(
+    "n",
+    "]<C-d>",
+    function()
+        vim.diagnostic.jump({
+            count = vim.v.count1,
+            severity = require("mjm.utils").get_top_severity({ buf = 0 }),
+        })
+    end
+)
 
 -- For whatever reason, [D/]D on my computer cause Neovim to lock up. Even when just using large
 -- numbers for count, they don't reliably find the top and bottom diag. Instead, just search
@@ -57,21 +65,13 @@ local function get_first_or_last_diag(opts)
     end
 
     table.sort(diagnostics, function(a, b)
-        if a.lnum ~= b.lnum then
-            return a.lnum < b.lnum
-        end
+        if a.lnum ~= b.lnum then return a.lnum < b.lnum end
 
-        if a.severity ~= b.severity then
-            return a.severity < b.severity
-        end
+        if a.severity ~= b.severity then return a.severity < b.severity end
 
-        if a.end_lnum ~= b.end_lnum then
-            return a.end_lnum < b.end_lnum
-        end
+        if a.end_lnum ~= b.end_lnum then return a.end_lnum < b.end_lnum end
 
-        if a.col ~= b.col then
-            return a.col < b.col
-        end
+        if a.col ~= b.col then return a.col < b.col end
 
         return a.end_col < b.end_col
     end)
@@ -81,9 +81,7 @@ end
 
 Map("n", "[D", function()
     local diagnostic = get_first_or_last_diag()
-    if not diagnostic then
-        return
-    end
+    if not diagnostic then return end
     vim.diagnostic.jump({
         diagnostic = diagnostic,
     })
@@ -91,9 +89,7 @@ end)
 
 Map("n", "]D", function()
     local diagnostic = get_first_or_last_diag({ last = true })
-    if not diagnostic then
-        return
-    end
+    if not diagnostic then return end
     vim.diagnostic.jump({
         diagnostic = diagnostic,
     })
@@ -102,9 +98,7 @@ end)
 Map("n", "[<M-d>", function()
     local severity = require("mjm.utils").get_top_severity({ buf = 0 })
     local diagnostic = get_first_or_last_diag({ severity = severity })
-    if not diagnostic then
-        return
-    end
+    if not diagnostic then return end
     vim.diagnostic.jump({
         diagnostic = diagnostic,
     })
@@ -113,9 +107,7 @@ end)
 Map("n", "]<M-d>", function()
     local severity = require("mjm.utils").get_top_severity({ buf = 0 })
     local diagnostic = get_first_or_last_diag({ severity = severity, last = true })
-    if not diagnostic then
-        return
-    end
+    if not diagnostic then return end
     vim.diagnostic.jump({
         diagnostic = diagnostic,
     })

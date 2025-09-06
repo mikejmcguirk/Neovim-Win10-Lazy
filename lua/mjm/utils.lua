@@ -1,26 +1,15 @@
 local M = {}
 
----@param prompt string
----@return string
---- LOW: This should be an ok, msg pattern
-M.get_input = function(prompt)
-    local pattern = nil ---@type string
-    local _, result = pcall(function()
-        pattern = vim.fn.input(prompt)
-    end) ---@type boolean, unknown|nil
+--- @param prompt string
+--- @return boolean, string
+function M.get_input(prompt)
+    local ok, result = pcall(vim.fn.input, { prompt = prompt, cancelreturn = "" })
 
-    vim.cmd("echo ''")
-    if pattern then
-        return pattern
+    if (not ok) and result == "Keyboard interrupt" then
+        return true, ""
+    else
+        return ok, result
     end
-
-    if result == "Keyboard interrupt" then
-        return ""
-    end
-
-    local err_msg = result or "Failed to get user input, unknown error"
-    vim.api.nvim_echo({ { err_msg } }, true, { err = true })
-    return ""
 end
 
 function M.open_buf(file, opts)
@@ -91,9 +80,7 @@ local function fix_bookend_blanks(buf, start_idx, end_idx)
     local blank_line = (line == "") or line:match("^%s*$") ---@type any
     local last_line = vim.api.nvim_buf_line_count(buf) == 1 ---@type boolean
 
-    if last_line or not blank_line then
-        return
-    end
+    if last_line or not blank_line then return end
 
     vim.api.nvim_buf_set_lines(buf, start_idx, end_idx, false, {})
     fix_bookend_blanks(buf, start_idx, end_idx)
@@ -158,9 +145,7 @@ M.fallback_formatter = function(buf)
         local first_non_blank, _ = line:find("%S") or 1, nil ---@type integer, nil
         first_non_blank = first_non_blank - 1
         local extra_spaces = first_non_blank % shiftwidth ---@type unknown
-        if extra_spaces == 0 or not expandtab then
-            return
-        end
+        if extra_spaces == 0 or not expandtab then return end
 
         local half_shiftwidth = shiftwidth * 0.5 ---@type unknown
         local round_up = extra_spaces >= half_shiftwidth ---@type boolean
@@ -242,9 +227,7 @@ M.check_word_under_cursor = function()
     local lines = {}
     for line in output:gmatch("[^\n]+") do
         line = line:match("^%s*(.-)%s*$")
-        if line ~= "" then
-            table.insert(lines, line)
-        end
+        if line ~= "" then table.insert(lines, line) end
     end
 
     if #lines == 0 then
@@ -283,9 +266,7 @@ function M.is_comment()
     local row, col = unpack(vim.api.nvim_win_get_cursor(0))
     local start_col = col > 0 and col - 1 or col
     local node = lang_tree:node_for_range({ row - 1, start_col, row - 1, col })
-    if not node then
-        return false
-    end
+    if not node then return false end
 
     local comment_nodes = { "comment", "line_comment", "block_comment", "comment_content" }
     if vim.tbl_contains(comment_nodes, node:type()) then
@@ -312,9 +293,7 @@ function M.harpoon_rm_buf(opts)
         end
     end)()
 
-    if not full_bufname then
-        return
-    end
+    if not full_bufname then return end
 
     local ok, harpoon = pcall(require, "harpoon")
     if (not ok) or not harpoon then
@@ -322,9 +301,7 @@ function M.harpoon_rm_buf(opts)
     end
 
     local list = harpoon:list()
-    if not list then
-        return
-    end
+    if not list then return end
 
     local items = list.items
     local idx = nil
@@ -337,9 +314,7 @@ function M.harpoon_rm_buf(opts)
         end
     end
 
-    if not idx then
-        return
-    end
+    if not idx then return end
 
     table.remove(list.items, idx)
     list._length = list._length - 1
@@ -358,14 +333,10 @@ function M.harpoon_mv_buf(old_bufname, new_bufname)
     end
 
     local list = harpoon:list()
-    if not list then
-        return
-    end
+    if not list then return end
 
     local items = list.items
-    if #items < 1 then
-        return
-    end
+    if #items < 1 then return end
 
     local full_old_bufname = vim.fn.fnamemodify(old_bufname, ":p")
     local idx = nil
@@ -378,9 +349,7 @@ function M.harpoon_mv_buf(old_bufname, new_bufname)
         end
     end
 
-    if not idx then
-        return
-    end
+    if not idx then return end
 
     local full_new_bufname = vim.fn.fnamemodify(new_bufname, ":p")
     local relative_new_bufname = vim.fn.fnamemodify(full_new_bufname, ":.")

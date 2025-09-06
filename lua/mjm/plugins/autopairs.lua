@@ -11,14 +11,16 @@ local function setup_autopairs()
     -- Autoclosing angle-brackets for generics
     -- NOTE: Just spot checking, this seems to adequately handle the main cases this
     -- comes up in Rust
-    npairs.add_rule(rule("<", ">", {
-        -- Avoid conflicts with nvim-ts-autotag.
-        "-html",
-        "-javascriptreact",
-        "-typescriptreact",
-    }):with_pair(cond.before_regex("%a+:?:?$", 3)):with_move(function(opts)
-        return opts.char == ">"
-    end))
+    npairs.add_rule(
+        rule("<", ">", {
+            -- Avoid conflicts with nvim-ts-autotag.
+            "-html",
+            "-javascriptreact",
+            "-typescriptreact",
+        }):with_pair(cond.before_regex("%a+:?:?$", 3)):with_move(
+            function(opts) return opts.char == ">" end
+        )
+    )
 
     -- Auto add commas after lua table entries
     -- npairs.add_rules({
