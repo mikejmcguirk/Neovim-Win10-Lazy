@@ -170,6 +170,11 @@ local function setup_objects()
                 { "aS", "@assignment.inner" },
                 { "if", "@call.inner" },
                 { "af", "@call.outer" },
+                -- Vim uses agc and igc for its comment text objects. A kind of bigger issue though
+                -- is what echasnovski mentions about how it blanks out g operators, unless you
+                -- say that ig/ag are going to be a namespace for other things. This is not
+                -- necessarily bad though, as it would mean you could then map the LSP objects
+                -- to igrn/agrn. Though this is also a lot to type
                 { "i/", "@comment.inner" },
                 { "a/", "@comment.outer" },
                 { "ii", "@conditional.inner" },
