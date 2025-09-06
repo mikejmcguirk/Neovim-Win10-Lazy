@@ -249,11 +249,18 @@ local function filter_wrapper(opts)
     end
 
     local action = opts.remove and "remove: " or "keep: " --- @type string
-    local pattern = require("mjm.utils").get_input(list .. " pattern to " .. action)
-    if pattern ~= "" then
-        local prefix = opts.loclist and "L" or "C" ---@type string
-        vim.api.nvim_cmd({ cmd = prefix .. "filter", bang = opts.remove, args = { pattern } }, {})
+    local prompt = list .. " pattern to " .. action --- @type string
+    local ok, pattern = require("mjm.utils").get_input(prompt) --- @type boolean, string
+    if not ok then
+        local msg = pattern or "Unknown error getting input" --- @type string
+        vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+        return
+    elseif pattern == "" then
+        return
     end
+
+    local prefix = opts.loclist and "L" or "C" ---@type string
+    vim.api.nvim_cmd({ cmd = prefix .. "filter", bang = opts.remove, args = { pattern } }, {})
 end
 
 Map("n", "duk", function()
@@ -283,22 +290,28 @@ local function grep_wrapper(opts)
         return vim.notify("Inside qf buffer")
     end
 
-    ---@type string
-    local pattern = opts.pattern or require("mjm.utils").get_input("Enter Grep Pattern: ")
-    if pattern == "" and opts.pattern then
-        return vim.notify("Empty grep pattern", vim.log.levels.WARN)
+    local ok, pattern = (function()
+        if opts.pattern then
+            return true, opts.pattern
+        else
+            return require("mjm.utils").get_input("Enter Grep pattern: ")
+        end
+    end)() --- @type boolean, string
+
+    if not ok then
+        local msg = pattern or "Unknown error getting input" --- @type string
+        vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+        return
+    elseif pattern == "" and opts.pattern then
+        vim.api.nvim_echo({ { "Empty grep pattern", "WarningMsg" } }, true, {})
+        return
     elseif pattern == "" then
         return
     end
 
     local args = { pattern } ---@type table
-    if opts.insensitive then
-        table.insert(args, "-i")
-    end
-
-    if opts.loclist then
-        table.insert(args, "%")
-    end
+    if opts.insensitive then table.insert(args, "-i") end
+    if opts.loclist then table.insert(args, "%") end
 
     vim.api.nvim_cmd({
         args = args,

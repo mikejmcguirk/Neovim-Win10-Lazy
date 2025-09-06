@@ -1,26 +1,15 @@
 local M = {}
 
----@param prompt string
----@return string
---- LOW: This should be an ok, msg pattern
-M.get_input = function(prompt)
-    local pattern = nil ---@type string
-    local _, result = pcall(function()
-        pattern = vim.fn.input(prompt)
-    end) ---@type boolean, unknown|nil
+--- @param prompt string
+--- @return boolean, string
+function M.get_input(prompt)
+    local ok, result = pcall(vim.fn.input, { prompt = prompt, cancelreturn = "" })
 
-    vim.cmd("echo ''")
-    if pattern then
-        return pattern
+    if (not ok) and result == "Keyboard interrupt" then
+        return true, ""
+    else
+        return ok, result
     end
-
-    if result == "Keyboard interrupt" then
-        return ""
-    end
-
-    local err_msg = result or "Failed to get user input, unknown error"
-    vim.api.nvim_echo({ { err_msg } }, true, { err = true })
-    return ""
 end
 
 function M.open_buf(file, opts)

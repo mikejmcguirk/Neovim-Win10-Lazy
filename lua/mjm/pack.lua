@@ -85,9 +85,9 @@ end)
 
 Map("n", "zqd", function()
     local prompt = "Enter plugins to delete (space separated): " --- @type string
-    local ok, result = require("mjm.utils").get_input_updated(prompt) --- @type boolean, string
+    local ok, result = require("mjm.utils").get_input(prompt) --- @type boolean, string
     if not ok then
-        local msg = result or "Unknown error getting input"
+        local msg = result or "Unknown error getting input" --- @type string
         vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
         return
     elseif result == "" then

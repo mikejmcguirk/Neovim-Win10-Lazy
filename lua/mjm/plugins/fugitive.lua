@@ -9,12 +9,17 @@ vim.api.nvim_create_autocmd("FileType", {
 })
 
 Map("n", "<leader>gcam", function()
-    local msg = require("mjm.utils").get_input("Commit message (All): ")
-    if msg == "" then
+    --- @type boolean, string
+    local ok, result = require("mjm.utils").get_input("Commit message (All): ")
+    if not ok then
+        local msg = result or "Unknown error getting input" --- @type string
+        vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+        return
+    elseif result == "" then
         return
     end
 
-    vim.api.nvim_cmd({ cmd = "Git", args = { 'commit -a -m "' .. msg .. '"' } }, {})
+    vim.api.nvim_cmd({ cmd = "Git", args = { 'commit -a -m "' .. result .. '"' } }, {})
 end)
 
 Map("n", "<leader>gcan", function()
@@ -22,12 +27,16 @@ Map("n", "<leader>gcan", function()
 end)
 
 Map("n", "<leader>gchm", function()
-    local msg = require("mjm.utils").get_input("Commit message: ")
-    if msg == "" then
+    local ok, result = require("mjm.utils").get_input("Commit message: ") --- @type boolean, string
+    if not ok then
+        local msg = result or "Unknown error getting input" --- @type string
+        vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+        return
+    elseif result == "" then
         return
     end
 
-    vim.api.nvim_cmd({ cmd = "Git", args = { 'commit -m "' .. msg .. '"' } }, {})
+    vim.api.nvim_cmd({ cmd = "Git", args = { 'commit -m "' .. result .. '"' } }, {})
 end)
 
 Map("n", "<leader>gchn", function()

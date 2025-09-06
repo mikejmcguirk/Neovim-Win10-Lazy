@@ -43,12 +43,21 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         if client:supports_method(method.textDocument_rename) then
             Map("n", "grn", function()
-                local input = require("mjm.utils").get_input("Rename: ")
-                if string.find(input, "%s") then
-                    vim.notify(string.format("'%s' contains spaces", input))
-                elseif #input > 0 then
-                    vim.lsp.buf.rename(input)
+                --- @type boolean, string
+                local ok_i, input = require("mjm.utils").get_input("Rename: ")
+                if not ok_i then
+                    local msg = input or "Unknown error getting input" --- @type string
+                    vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+                    return
+                elseif #input < 1 then
+                    return
+                elseif string.find(input, "%s") then
+                    local msg = string.format("'%s' contains spaces", input)
+                    vim.api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
+                    return
                 end
+
+                vim.lsp.buf.rename(input)
             end, { buffer = buf })
         end
 
