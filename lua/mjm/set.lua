@@ -11,7 +11,9 @@ vim.api.nvim_set_option_value("writebackup", false, { scope = "global" })
 vim.api.nvim_set_option_value("swapfile", false, { scope = "global" })
 vim.api.nvim_set_option_value("undofile", true, { scope = "global" })
 vim.api.nvim_set_option_value("updatetime", 250, { scope = "global" })
-vim.api.nvim_set_option_value("shada", "'100,<50,s10,:1000,/100,@100,h", { scope = "global" })
+-- :h 'sd'
+local shada = [[<0,'100,/0,:1000,h]]
+vim.api.nvim_set_option_value("shada", shada, { scope = "global" })
 
 --------
 -- UI --
@@ -200,12 +202,6 @@ vim.api.nvim_create_autocmd("CmdlineEnter", {
 -- Note: Need BufLeave/BufEnter for this to work when going into help
 set_rnu({ "WinLeave", "BufLeave" }, "*", false)
 set_rnu({ "WinEnter", "CmdlineLeave", "BufEnter" }, "*", true)
-
-vim.api.nvim_create_autocmd({ "VimLeavePre" }, {
-    group = set_group,
-    pattern = "*",
-    callback = function() vim.fn.setreg("/", nil) end,
-})
 
 ----------------
 
