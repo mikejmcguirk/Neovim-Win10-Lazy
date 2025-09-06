@@ -12,8 +12,10 @@ fzf_lua.setup({
     },
     winopts = {
         border = Border,
+        width = 0.9,
         preview = {
-            border = Border,
+            horizontal = "right:56%",
+            winopts = { number = true },
         },
     },
     keymap = {
