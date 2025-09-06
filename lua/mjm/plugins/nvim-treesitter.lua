@@ -128,9 +128,7 @@ local function setup_objects()
     vim.api.nvim_create_autocmd("FileType", {
         group = vim.api.nvim_create_augroup("object-maps", { clear = true }),
         callback = function(ev)
-            if not vim.tbl_contains(languages, ev.match) then
-                return
-            end
+            if not vim.tbl_contains(languages, ev.match) then return end
 
             -- BUILTIN
             -- [s] - Assignment
@@ -172,6 +170,11 @@ local function setup_objects()
                 { "aS", "@assignment.inner" },
                 { "if", "@call.inner" },
                 { "af", "@call.outer" },
+                -- Vim uses agc and igc for its comment text objects. A kind of bigger issue though
+                -- is what echasnovski mentions about how it blanks out g operators, unless you
+                -- say that ig/ag are going to be a namespace for other things. This is not
+                -- necessarily bad though, as it would mean you could then map the LSP objects
+                -- to igrn/agrn. Though this is also a lot to type
                 { "i/", "@comment.inner" },
                 { "a/", "@comment.outer" },
                 { "ii", "@conditional.inner" },
@@ -189,9 +192,12 @@ local function setup_objects()
             }
 
             for _, m in pairs(select_maps) do
-                Map({ "x", "o" }, m[1], function()
-                    select.select_textobject(m[2], "textobjects")
-                end, { buffer = ev.buf })
+                Map(
+                    { "x", "o" },
+                    m[1],
+                    function() select.select_textobject(m[2], "textobjects") end,
+                    { buffer = ev.buf }
+                )
             end
 
             -----------
@@ -224,21 +230,33 @@ local function setup_objects()
             }
 
             for _, m in pairs(move_maps) do
-                Map("n", m[1], function()
-                    move.goto_previous_start(m[3], "textobjects")
-                end, { buffer = ev.buf })
+                Map(
+                    "n",
+                    m[1],
+                    function() move.goto_previous_start(m[3], "textobjects") end,
+                    { buffer = ev.buf }
+                )
 
-                Map("n", m[2], function()
-                    move.goto_next_start(m[3], "textobjects")
-                end, { buffer = ev.buf })
+                Map(
+                    "n",
+                    m[2],
+                    function() move.goto_next_start(m[3], "textobjects") end,
+                    { buffer = ev.buf }
+                )
 
-                Map("o", m[1], function()
-                    move.goto_previous_start(m[3], "textobjects")
-                end, { buffer = ev.buf })
+                Map(
+                    "o",
+                    m[1],
+                    function() move.goto_previous_start(m[3], "textobjects") end,
+                    { buffer = ev.buf }
+                )
 
-                Map("o", m[2], function()
-                    move.goto_next_end(m[3], "textobjects")
-                end, { buffer = ev.buf })
+                Map(
+                    "o",
+                    m[2],
+                    function() move.goto_next_end(m[3], "textobjects") end,
+                    { buffer = ev.buf }
+                )
 
                 -- FUTURE: In theory, the better way to handle this is to have some sort of
                 -- lookahead rather than potentially performing a double-move if you cross over
@@ -309,13 +327,19 @@ local function setup_objects()
             }
 
             for _, m in pairs(swap_maps) do
-                Map("n", m[1], function()
-                    swap.swap_previous(m[3], "textobjects")
-                end, { buffer = ev.buf })
+                Map(
+                    "n",
+                    m[1],
+                    function() swap.swap_previous(m[3], "textobjects") end,
+                    { buffer = ev.buf }
+                )
 
-                Map("n", m[2], function()
-                    swap.swap_next(m[3], "textobjects")
-                end, { buffer = ev.buf })
+                Map(
+                    "n",
+                    m[2],
+                    function() swap.swap_next(m[3], "textobjects") end,
+                    { buffer = ev.buf }
+                )
             end
         end,
     })

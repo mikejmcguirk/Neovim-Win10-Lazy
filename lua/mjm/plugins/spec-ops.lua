@@ -109,15 +109,15 @@ Map("x", "<M-d>", '"_<Plug>(SpecOpsDeleteVisual)')
 -- Yank --
 ----------
 
--- Map("o", "y", "<Plug>(SpecOpsYankLineObject)")
---
--- Map("n", "y", "<Plug>(SpecOpsYankOperator)")
--- Map("n", "Y", "<Plug>(SpecOpsYankEol)")
---
--- Map("n", "<M-y>", '"+<Plug>(SpecOpsYankOperator)')
--- Map("n", "<M-Y>", '"+<Plug>(SpecOpsYankEol)')
---
--- Map("x", "y", "<Plug>(SpecOpsYankVisual)")
--- Map("x", "Y", "<nop>")
---
--- Map("x", "<M-y>", '"+<Plug>(SpecOpsYankVisual)')
+Map("o", "y", "<Plug>(SpecOpsYankLineObject)")
+
+Map("n", "y", "<Plug>(SpecOpsYankOperator)")
+Map("n", "Y", "<Plug>(SpecOpsYankEol)")
+
+Map("n", "<M-y>", '"+<Plug>(SpecOpsYankOperator)')
+Map("n", "<M-Y>", '"+<Plug>(SpecOpsYankEol)')
+
+Map("x", "y", "<Plug>(SpecOpsYankVisual)")
+Map("x", "Y", "<nop>")
+
+Map("x", "<M-y>", '"+<Plug>(SpecOpsYankVisual)')

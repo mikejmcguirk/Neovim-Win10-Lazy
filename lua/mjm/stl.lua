@@ -164,9 +164,7 @@ function MjmStl.active()
     -- local ft_str = ft == "" and "" or "| " .. ft
     table.insert(stl, "%#stl_c# " .. encoding .. " | " .. fmt .. " | " .. ft .. " %*")
 
-    table.insert(stl, "%#stl_b# %p%% %*")
-
-    table.insert(stl, "%#stl_a# %l/%L | %c %*")
+    table.insert(stl, "%#stl_b# %p%% %*%#stl_a# %l/%L | %c %*")
 
     return table.concat(stl, "")
 end
