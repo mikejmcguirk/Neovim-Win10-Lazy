@@ -77,7 +77,7 @@ local groups = {
     Delimiter = { link = "Normal" },
     Identifier = { link = "Normal" },
 
-    ["@variable"] = { link = "Normal" }, --- Default self-definition
+    ["@variable"] = {}, --- Default self-definition
 
     ColorColumn = { bg = c.d_purple },
     CursorLine = { link = "ColorColumn" }, -- (Default self-definition)
@@ -88,9 +88,9 @@ local groups = {
 
     Constant = { fg = c.l_red },
     ["@constant.builtin"] = { link = "Constant" }, -- No default
-    ["@lsp.typemod.variable.global"] = { link = "Constant" }, -- Default @lsp
-    ["@lsp.typemod.variable.defaultLibrary"] = { link = "Constant" }, -- Default @lsp
     ["@variable.builtin"] = { link = "Constant" }, -- No default
+    ["@lsp.typemod.variable.defaultLibrary"] = { link = "Constant" }, -- Default @lsp
+    ["@lsp.typemod.variable.global"] = { link = "Constant" }, -- Default @lsp
 
     Function = { fg = c.l_yellow },
     ["@function.builtin"] = { link = "Function" }, -- Default link to Special
@@ -102,9 +102,9 @@ local groups = {
     Number = { fg = c.l_cyan }, -- (Default link: Constant)
     Boolean = { link = "Number" }, -- (Default link: Constant)
     Character = { link = "Number" }, -- (Default link: Constant)
+    ["@module"] = { link = "Number" }, -- (Default link: Type)
     ["@lsp.type.namespace"] = { link = "Number" }, -- (Default link: Type)
     ["@lsp.typemod.boolean.injected"] = { link = "Boolean" }, -- Default @lsp
-    ["@module"] = { link = "Number" }, -- (Default link: Type)
 
     ["@lsp.type.enumMember"] = { fg = c.l_cyan, italic = true }, -- (Default link: Type)
 
@@ -125,8 +125,7 @@ local groups = {
     Statement = { fg = c.l_pink },
 
     ["@lsp.type.parameter"] = { fg = c.l_orange }, -- Default link: Identifier
-    -- No linking because this hl group isn't used
-    ["@variable.parameter"] = { fg = c.l_orange },
+    ["@variable.parameter"] = { link = "@lsp.type.parameter" },
 
     StatusLine = { fg = c.fg, bg = c.d_purple_three },
     StatusLineNC = { link = "StatusLine" }, -- (Default self-definition)
@@ -146,6 +145,8 @@ local groups = {
     WinSeparator = { fg = c.purple }, -- (Default link: Normal)
     FloatBorder = { link = "WinSeparator" }, -- (Default link: NormalFloat)
 
+    -- LOW: Lifted from Fluoromachine because they look familiar, but I've not no thought into
+    -- the actual reasoning behind these
     ["@markup.environment"] = { fg = c.l_purple },
     ["@markup.heading"] = { link = "Title" },
     ["@markup.italic"] = { fg = c.l_green, italic = true },
@@ -172,8 +173,8 @@ local groups = {
     Search = { fg = c.orange_fg, bg = c.orange },
     Visual = { bg = c.bold_purple },
 
-    Directory = { fg = c.l_green },
     CursorLineNr = { fg = c.l_green },
+    Directory = { fg = c.l_green },
     LineNr = { fg = c.purple }, -- rnu
     Title = { fg = c.l_green },
     Todo = { fg = c.l_green },
@@ -188,10 +189,10 @@ local groups = {
 
     Cursor = {}, --- (Default self-definition. I have reverse video cursor set in the terminal)
     EndOfBuffer = {}, -- (Default link: Non-text)
-    FoldColumn = {}, -- (Default link: SignColumn)
     lCursor = {}, --- (Default self-definition. I have reverse video cursor set in the terminal)
     NormalNC = {}, -- Causes performance issues (default setting)
     SignColumn = {}, -- Default self-definition
+    -- FoldColumn = {}, -- (Default link: SignColumn)
 }
 
 local function darken_hex(color, pct)
@@ -218,7 +219,8 @@ local function lighten_hex(color, percent)
     return string.format("#%02X%02X%02X", r, g, b)
 end
 
-vim.api.nvim_cmd({ cmd = "hi", args = { "clear" } }, {})
+Cmd({ cmd = "hi", args = { "clear" } }, {})
+if vim.fn.exists("syntax_on") then Cmd({ cmd = "syntax", args = { "reset" } }, {}) end
 
 for k, v in pairs(groups) do
     vim.api.nvim_set_hl(0, k, v)
