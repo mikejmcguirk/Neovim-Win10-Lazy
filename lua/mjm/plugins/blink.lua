@@ -12,7 +12,12 @@ local function setup_blink()
         cmdline = {
             completion = { menu = { auto_show = true }, ghost_text = { enabled = false } },
             enabled = true,
-            keymap = { preset = "inherit", ["<M-y>"] = false, ["<M-p>"] = false },
+            keymap = {
+                preset = "inherit",
+                ["<M-y>"] = false,
+                ["<M-n>"] = false,
+                ["<M-p>"] = false,
+            },
             sources = { "cmdline" },
         },
         completion = {
