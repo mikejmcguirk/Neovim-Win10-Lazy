@@ -10,7 +10,8 @@ vim.api.nvim_set_option_value("backup", false, { scope = "global" })
 vim.api.nvim_set_option_value("writebackup", false, { scope = "global" })
 vim.api.nvim_set_option_value("swapfile", false, { scope = "global" })
 vim.api.nvim_set_option_value("undofile", true, { scope = "global" })
-vim.api.nvim_set_option_value("updatetime", 250, { scope = "global" })
+vim.api.nvim_set_option_value("updatetime", 300, { scope = "global" })
+
 -- :h 'sd'
 local shada = [[<0,'100,/0,:1000,h]]
 vim.api.nvim_set_option_value("shada", shada, { scope = "global" })
