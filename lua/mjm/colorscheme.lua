@@ -7,6 +7,7 @@ local c = {
     fg = "#EFEFFD",
 
     l_cyan = "#98FFFB",
+    cyan = "#558396",
 
     l_green = "#C0FF98",
     green = "#579964",
@@ -95,6 +96,8 @@ local groups = {
     Function = { fg = c.l_yellow },
     ["@function.builtin"] = { link = "Function" }, -- Default link to Special
     ["@lsp.typemod.function.global"] = { link = "Constant" }, -- Default @lsp
+
+    LspCodeLens = { fg = c.cyan },
 
     NonText = { fg = c.pink },
     SpecialKey = { link = "NonText" }, --- Default self-definition

@@ -3,7 +3,7 @@
 
 vim.lsp.log.set_level(vim.log.levels.ERROR)
 
--- By default, mapped in non-LSP buffers and without checking for LSP method support
+-- No need to map these in non-LSP buffers
 vim.keymap.del("n", "grn")
 vim.keymap.del("n", "gra")
 vim.keymap.del("n", "grr")
@@ -12,138 +12,245 @@ vim.keymap.del("n", "grt")
 vim.keymap.del("n", "gO")
 vim.keymap.del("i", "<C-S>")
 
+-------------------------
+-- Compute LSP Keymaps --
+-------------------------
+
+-- Trade a bit of RAM to only do this business once
+local ok, fzf_lua = pcall(require, "fzf-lua") --- @type boolean, table
+
+-- callHierarchy/incomingCalls
+local in_call = (function()
+    if ok then
+        return function() fzf_lua.lsp_incoming_calls({ jump1 = false }) end
+    else
+        return vim.lsp.buf.incoming_calls
+    end
+end)()
+
+-- callHierarchy/outgoingCalls
+local out_call = (function()
+    if ok then
+        return function() fzf_lua.lsp_outgoing_calls({ jump1 = false }) end
+    else
+        return vim.lsp.buf.outgoing_calls
+    end
+end)()
+
+-- textDocument/codeAction
+local code_action = ok and fzf_lua.lsp_code_actions or vim.lsp.buf.code_action
+
+-- textDocument/declaration
+local declaration = ok and fzf_lua.lsp_declarations or vim.lsp.buf.declaration
+local peek_declaration = (function()
+    if ok then
+        return function() fzf_lua.lsp_declarations({ jump1 = false }) end
+    else
+        return function() vim.api.nvim_echo({ { "FzfLua not available", "" } }, true, {}) end
+    end
+end)()
+
+-- textDocument/definition
+local definition = ok and fzf_lua.lsp_definitions or vim.lsp.buf.definition
+local peek_definition = (function()
+    if ok then
+        return function() fzf_lua.lsp_definitions({ jump1 = false }) end
+    else
+        return function() vim.api.nvim_echo({ { "FzfLua not available", "" } }, true, {}) end
+    end
+end)()
+
+-- textDocument/documentSymbol
+local symbols = ok and fzf_lua.lsp_document_symbols or vim.lsp.buf.document_symbol
+
+-- textDocument/implementation
+local implementation = ok and fzf_lua.lsp_implementations or vim.lsp.buf.implementation
+local peek_implementation = (function()
+    if ok then
+        return function() fzf_lua.lsp_implementations({ jump1 = false }) end
+    else
+        return function() vim.api.nvim_echo({ { "FzfLua not available", "" } }, true, {}) end
+    end
+end)()
+
+-- textDocument/references
+local references = (function()
+    if ok then
+        return function() fzf_lua.lsp_references({ includeDeclaration = false }) end
+    else
+        return function() vim.lsp.buf.references({ includeDeclaration = false }) end
+    end
+end)()
+
+local peek_references = (function()
+    if ok then
+        return function() fzf_lua.lsp_references({ includeDeclaration = false, jump1 = false }) end
+    else
+        return function() vim.api.nvim_echo({ { "FzfLua not available", "" } }, true, {}) end
+    end
+end)()
+
+-- textDocument/typeDefinition
+local typedef = ok and fzf_lua.lsp_typedefs or vim.lsp.buf.type_definition
+local peek_typedef = (function()
+    if ok then
+        return function() fzf_lua.lsp_typedefs({ jump1 = false }) end
+    else
+        local msg = "FzfLua not available"
+        return function() vim.api.nvim_echo({ { msg, "" } }, true, {}) end
+    end
+end)()
+
+-- workspace/symbol
+local workspace = ok and fzf_lua.lsp_live_workspace_symbols or vim.lsp.buf.workspace_symbol
+
 local lsp_group = vim.api.nvim_create_augroup("LSP_Augroup", { clear = true })
 vim.api.nvim_create_autocmd("LspAttach", {
     group = lsp_group,
     callback = function(ev)
-        local buf = ev.buf ---@type integer
-        local client = assert(vim.lsp.get_client_by_id(ev.data.client_id)) ---@type vim.lsp.Client
-        local method = vim.lsp.protocol.Methods ---@type table
-        local ok, fzf_lua = pcall(require, "fzf-lua") --- @type boolean, table
+        if not ev.data.client_id then return end
+        local client = vim.lsp.get_client_by_id(ev.data.client_id) --- @type vim.lsp.Client?
+        if not client then return end
 
-        -------------------------
-        -- Overwrite vim defaults
-        -------------------------
+        local buf = ev.buf ---@type integer
 
         Map("n", "gr", "<nop>", { buffer = buf })
 
-        if client:supports_method(method.textDocument_definition) then
-            local def = ok and fzf_lua.lsp_definitions or vim.lsp.buf.definition
-            Map("n", "gd", def, { buffer = buf })
+        -- MAYBE: Depending on how these are used, you could put incoming and outgoing calls on
+        -- separate mappings and use the capitals for jump1 = false
+
+        -- callHierarchy/incomingCalls
+        Map("n", "grc", in_call, { buffer = buf })
+
+        -- callHierarchy/outgoingCalls
+        Map("n", "grC", out_call, { buffer = buf })
+
+        -- textDocument/codeAction
+        Map("n", "gra", code_action, { buffer = buf })
+
+        -- textDocument/codeLens
+        if client:supports_method("textDocument/codeLens") then
+            -- Use CursorHold rather than TextChanged because otherwise a bunch of different
+            -- normal mode changes will produce a set of lenses with stale data
+            vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
+                buffer = ev.buf,
+                group = vim.api.nvim_create_augroup("refresh-lens", { clear = false }),
+                -- Bespoke module so I can render the lenses as virtual lines
+                callback = function()
+                    if vim.fn.mode() == "i" then return end
+                    require("mjm.codelens").refresh({ buf = ev.buf })
+                end,
+            })
         end
 
-        if client:supports_method(method.textDocument_declaration) then
-            local dec = ok and fzf_lua.lsp_declarations or vim.lsp.buf.declaration
-            Map("n", "gD", dec, { buffer = buf })
+        -- Use bespoke module because the lenses are cached there
+        Map("n", "grs", require("mjm.codelens").run)
+
+        -- textDocument/declaration
+        Map("n", "grd", declaration, { buffer = buf })
+        if client:supports_method("textDocument/declaration") then
+            Map("n", "grD", peek_declaration)
+        else
+            local msg = "LSP Server does not have capability textDocument/declaration"
+            Map("n", "grD", function() vim.api.nvim_echo({ { msg, "" } }, true, {}) end)
         end
 
-        ------------------------------------------------------
-        -- Recreate/replace Nvim defaults (:help lsp-defaults)
-        ------------------------------------------------------
-
-        if client:supports_method(method.textDocument_rename) then
-            Map("n", "grn", function()
-                --- @type boolean, string
-                local ok_i, input = require("mjm.utils").get_input("Rename: ")
-                if not ok_i then
-                    local msg = input or "Unknown error getting input" --- @type string
-                    vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
-                    return
-                elseif #input < 1 then
-                    return
-                elseif string.find(input, "%s") then
-                    local msg = string.format("'%s' contains spaces", input)
-                    vim.api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
-                    return
-                end
-
-                vim.lsp.buf.rename(input)
-            end, { buffer = buf })
+        -- textDocument/definition
+        if client:supports_method("textDocument/definition") then
+            Map("n", "gd", definition, { buffer = buf })
+            Map("n", "gD", peek_definition)
+        else
+            local msg = "LSP Server does not have capability textDocument/definition"
+            Map("n", "gD", function() vim.api.nvim_echo({ { msg, "" } }, true, {}) end)
         end
 
-        if client:supports_method(method.textDocument_implementation) then
-            local impl = ok and fzf_lua.lsp_implementations or vim.lsp.buf.implementation
-            Map("n", "gI", impl, { buffer = buf })
+        -- textDocument/documentColor
+        local color_toggle = function()
+            vim.lsp.document_color.enable(not vim.lsp.document_color.is_enabled())
         end
 
-        if client:supports_method(method.textDocument_codeAction) then
-            Map("n", "gra", vim.lsp.buf.code_action, { buffer = buf })
+        Map("n", "gro", color_toggle, { buffer = buf })
+        Map("n", "grO", vim.lsp.document_color.color_presentation, { buffer = buf })
+
+        -- textDocument/documentHighlight
+        Map("n", "grh", vim.lsp.buf.document_highlight, { buffer = buf })
+
+        -- textDocument/documentSymbol
+        Map("n", "gO", symbols, { buffer = buf })
+
+        -- textDocument/hover
+        Map("n", "K", function() vim.lsp.buf.hover({ border = Border }) end, { buffer = buf })
+
+        -- textDocument/implementation
+        Map("n", "gri", implementation)
+        if client:supports_method("textDocument/implementation") and ok then
+            Map("n", "grI", peek_implementation, { buffer = buf })
+        else
+            local msg = "LSP Server does not have capability textDocument/implementation"
+            Map("n", "grI", function() vim.api.nvim_echo({ { msg, "" } }, true, {}) end)
         end
 
-        if client:supports_method(method.textDocument_references) then
-            local ref = (function()
-                if ok then
-                    return function() fzf_lua.lsp_references({ includeDeclaration = false }) end
-                else
-                    return function() vim.lsp.buf.references({ includeDeclaration = false }) end
-                end
-            end)()
+        -- textDocument/inlayHint
+        local inlay_toggle = function()
+            vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ buffer = buf }))
+        end
+        Map("n", "grl", inlay_toggle)
 
-            Map("n", "grr", ref, { buffer = buf })
+        -- textDocument/references
+
+        Map("n", "grr", references, { buffer = buf })
+        local has_references = client:supports_method("textDocument/references")
+        if has_references and ok then
+            Map("n", "grR", peek_references, { buffer = buf })
+        else
+            local msg = "LSP Server does not have capability textDocument/references"
+            Map("n", "grR", function() vim.api.nvim_echo({ { msg, "" } }, true, {}) end)
         end
 
-        if client:supports_method(method.textDocument_hover) then
-            Map("n", "K", function() vim.lsp.buf.hover({ border = Border }) end, { buffer = buf })
-        end
-
-        if client:supports_method(method.textDocument_signatureHelp) then
-            local signature_help = function() vim.lsp.buf.signature_help({ border = Border }) end
-            Map({ "i", "s" }, "<C-S>", signature_help, { buffer = buf })
-        end
-
-        if client:supports_method(method.textDocument_typeDefinition) then
-            if ok then
-                Map("n", "grt", fzf_lua.lsp_typedefs, { buffer = buf })
-            else
-                Map("n", "grt", vim.lsp.buf.type_definition, { buffer = buf })
+        -- textDocument/rename
+        Map("n", "grn", function()
+            --- @type boolean, string
+            local ok_i, input = require("mjm.utils").get_input("Rename: ")
+            if not ok_i then
+                local msg = input or "Unknown error getting input" --- @type string
+                vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+                return
+            elseif #input < 1 then
+                return
+            elseif string.find(input, "%s") then
+                local msg = string.format("'%s' contains spaces", input)
+                vim.api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
+                return
             end
+
+            vim.lsp.buf.rename(input)
+        end, { buffer = buf })
+
+        -- textDocument/signatureHelp
+        local signature_help = function() vim.lsp.buf.signature_help({ border = Border }) end
+        Map({ "i", "s" }, "<C-S>", signature_help, { buffer = buf })
+
+        -- textDocument/typeDefinition
+        Map("n", "grt", typedef, { buffer = buf })
+        if client:supports_method("textDocument/typeDefinition") and ok then
+            Map("n", "grT", peek_typedef, { buffer = buf })
+        else
+            local msg = "LSP Server does not have capability textDocument/typeDefinition"
+            Map("n", "grT", function() vim.api.nvim_echo({ { msg, "" } }, true, {}) end)
         end
 
-        if client:supports_method(method.textDocument_documentSymbol) then
-            if ok then
-                Map("n", "gO", fzf_lua.lsp_document_symbols, { buffer = buf })
-            else
-                Map("n", "gO", vim.lsp.buf.document_symbol, { buffer = buf })
-            end
-        end
-
-        -----------
-        -- Other --
-        -----------
-
+        -- workspace/symbol
         -- Kickstart mapping
-        if client:supports_method(method.workspace_symbol) then
-            local ws = ok and fzf_lua.lsp_live_workspace_symbols or vim.lsp.buf.workspace_symbol
-            Map("n", "gW", ws, { buffer = buf })
-        end
-
-        -- Patternful with the rest of the defaults
-        if client:supports_method(method.textDocument_documentHighlight) then
-            Map("n", "grh", vim.lsp.buf.document_highlight, { buffer = buf })
-        end
-
-        if client:supports_method(method.textDocument_inlayHint) then
-            local inlay_toggle = function()
-                vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ buffer = buf }))
-            end
-            Map("n", "grl", inlay_toggle)
-        end
-
-        if client:supports_method(method.textDocument_documentColor) then
-            -- Maria Solano map (kinda)
-            Map("n", "grc", function()
-                -- vim.lsp.document_color.color_presentation()
-                vim.lsp.document_color.enable(not vim.lsp.document_color.is_enabled())
-            end, { buffer = buf })
-        end
-
-        local inspect_ws = function() print(vim.inspect(vim.lsp.buf.list_workspace_folders())) end
-        Map("n", "grf", inspect_ws, { buffer = buf })
+        Map("n", "gW", workspace, { buffer = buf })
 
         local toggle_tokens = function()
             vim.lsp.semantic_tokens.enable(not vim.lsp.semantic_tokens.is_enabled())
         end
+
         Map("n", "grm", toggle_tokens, { buffer = buf })
+
+        local inspect_ws = function() print(vim.inspect(vim.lsp.buf.list_workspace_folders())) end
+        Map("n", "grf", inspect_ws, { buffer = buf })
     end,
 })
 

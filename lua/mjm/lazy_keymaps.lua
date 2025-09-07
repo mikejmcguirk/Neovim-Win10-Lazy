@@ -21,9 +21,6 @@ for _, map in pairs({ "i", "a", "A" }) do
     end, { silent = true, expr = true })
 end
 
--- It is fine if this is over-written with LSP goto implementation
--- FUTURE: A corner case where this could be overwritten but should not be is marksman in
--- markdown files. Can look at that if I ever use that LSP again
 Map("n", "gI", "g^i")
 
 -- Because I remove "o" from the fo-table

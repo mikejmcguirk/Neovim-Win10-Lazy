@@ -2,6 +2,8 @@ MjmStl = {}
 
 -- LOW: Build a character index component and keep it commented out alongside the virt col one
 -- MAYBE: Show diags in inactive windows
+-- LOW: Weird behavior where if you open a buf, detach the LSP, then re-attach the LSP, the
+-- progress messages don't show correctly
 
 local lsp_cache = {}
 local diag_cache = {}
@@ -25,7 +27,16 @@ vim.api.nvim_create_autocmd("LspProgress", {
             return
         end
 
+        if ev.data.params.value.kind == "end" then
+            vim.defer_fn(function()
+                progress_cache[ev.buf] = nil
+                Cmd({ cmd = "redraws" }, {})
+            end, 2250)
+        end
+
         local values = ev.data.params.value
+        -- These happen a lot
+        if string.find(values.title, "Searching in files") then return end
 
         local pct = (function()
             if values.kind == "end" then
@@ -38,20 +49,13 @@ vim.api.nvim_create_autocmd("LspProgress", {
         end)()
 
         local name = vim.lsp.get_client_by_id(ev.data.client_id).name
-        local message = ev.data.msg and (" - " .. values.msg) or ""
 
+        local message = ev.data.msg and (" - " .. values.msg) or ""
         local str = pct .. name .. ": " .. values.title .. message
         progress_cache[ev.buf] = str
 
         -- Don't create more textlock in insert mode
         if not is_bad_mode() then Cmd({ cmd = "redraws" }, {}) end
-
-        if ev.data.params.value.kind == "end" then
-            vim.defer_fn(function()
-                progress_cache[ev.buf] = nil
-                Cmd({ cmd = "redraws" }, {})
-            end, 2250)
-        end
     end,
 })
 

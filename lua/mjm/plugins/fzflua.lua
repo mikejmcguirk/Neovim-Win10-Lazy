@@ -12,9 +12,9 @@ fzf_lua.setup({
     },
     winopts = {
         border = Border,
-        width = 0.9,
+        width = 0.91,
         preview = {
-            horizontal = "right:56%",
+            horizontal = "right:60%",
             winopts = { number = true },
         },
     },

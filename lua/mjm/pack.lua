@@ -38,6 +38,8 @@ local pack_spec = {
 
     { src = "https://github.com/windwp/nvim-autopairs" },
 
+    { src = "https://github.com/kosayoda/nvim-lightbulb" },
+
     { src = "https://github.com/neovim/nvim-lspconfig" },
 
     { src = "https://github.com/kylechui/nvim-surround", version = vim.version.range("^3.0.0") },
