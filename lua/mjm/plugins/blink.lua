@@ -309,6 +309,7 @@ vim.api.nvim_create_autocmd({ "CmdlineEnter", "BufReadPre", "BufNewFile" }, {
                     -- MAYBE: Substring the stderr to get the build time. Only print if it's high
                     -- local msg = "Fuzzy built successfully. Setting up blink..." --- @type string
                     -- vim.api.nvim_echo({ { msg, "" } }, true, {})
+                    vim.api.nvim_echo({ { "", "" } }, false, {})
                     setup_blink()
                 end)
 

@@ -67,24 +67,25 @@ vim.api.nvim_set_hl(0, "FzfLuaHeaderText", { link = "Constant" })
 
 Map("n", "<leader>ff", fzf_lua.resume)
 
-Map("n", "<leader>fi", fzf_lua.files)
 Map("n", "<leader>fb", fzf_lua.buffers)
+Map("n", "<leader>fi", fzf_lua.files)
 
+Map("n", "<leader>fgc", fzf_lua.git_commits)
 Map("n", "<leader>fgf", fzf_lua.git_files)
 Map("n", "<leader>fgh", fzf_lua.git_hunks)
 Map("n", "<leader>fgs", fzf_lua.git_status)
-Map("n", "<leader>fgc", fzf_lua.git_commits)
 
 Map("n", "<leader>fp", fzf_lua.grep)
 Map("n", "<leader>fe", fzf_lua.live_grep)
 
 Map("n", "<leader>fa", fzf_lua.autocmds)
+Map("n", "<leader>fc", fzf_lua.command_history)
 Map("n", "<leader>ft", fzf_lua.highlights)
 Map("n", "<leader>fk", fzf_lua.keymaps)
-Map("n", "<leader>fc", fzf_lua.command_history)
+
 -- LOW: Add a way to delete individual or all lists from here
-Map("n", "<leader>fu", fzf_lua.quickfix_stack)
 Map("n", "<leader>fo", fzf_lua.loclist_stack)
+Map("n", "<leader>fu", fzf_lua.quickfix_stack)
 
 local buf_marks = function()
     require("fzf-lua").marks({
@@ -95,18 +96,15 @@ end
 Map("n", "<leader>fm", buf_marks)
 Map("n", "<leader>fM", fzf_lua.marks)
 Map("n", "<leader>fs", fzf_lua.spellcheck)
-Map("n", "<leader>fw", fzf_lua.lsp_live_workspace_symbols)
-Map(
-    "n",
-    "<leader>fh",
-    function()
-        fzf_lua.helptags({
-            fzf_opts = {
-                ["--tiebreak"] = "begin,chunk,length",
-            },
-        })
-    end
-)
+
+local helptags = function()
+    fzf_lua.helptags({
+        fzf_opts = {
+            ["--tiebreak"] = "begin,chunk,length",
+        },
+    })
+end
+Map("n", "<leader>fh", helptags)
 
 -- LOW: Re-add this back in
 -- Map("n", "<leader>tl", function()
