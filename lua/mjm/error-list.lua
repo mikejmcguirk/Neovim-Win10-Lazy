@@ -318,18 +318,17 @@ Map("n", "yugv", function() print(last_grep) end)
 
 Map("n", "yogv", function() print(last_lgrep) end)
 
-local function qf_scroll_wrapper(main, alt)
-    local cmd_opts = { cmd = main, count = vim.v.count1 }
-    local ok, err = pcall(vim.api.nvim_cmd, cmd_opts, {})
+local function qf_scroll_wrapper(main, alt, end_err)
+    local main_with_count = vim.tbl_extend("force", main, { count = vim.v.count1 })
+    local ok, err = pcall(vim.api.nvim_cmd, main_with_count, {})
 
     if (not ok) and (err:match("E42") or err:match("E776")) then
         vim.notify(err:sub(#"Vim:" + 1))
         return
     end
 
-    if (not ok) and err:match("E553") then
-        local alt_opts = { cmd = alt }
-        ok, err = pcall(vim.api.nvim_cmd, alt_opts, {})
+    if (not ok) and err:match(end_err) then
+        ok, err = pcall(vim.api.nvim_cmd, alt, {})
     end
 
     if not ok then
@@ -342,12 +341,30 @@ local function qf_scroll_wrapper(main, alt)
 end
 
 local scroll_maps = {
-    { "[q", "cp", "cla" },
-    { "]q", "cn", "cr" },
-    { "[l", "lp", "lla" },
-    { "]l", "ln", "lr" },
+    { "[q", { cmd = "cprevious" }, { cmd = "clast" }, "E553" },
+    { "]q", { cmd = "cnext" }, { cmd = "crewind" }, "E553" },
+    { "[l", { cmd = "lprevious" }, { cmd = "llast" }, "E553" },
+    { "]l", { cmd = "lnext" }, { cmd = "lrewind" }, "E553" },
+    { "[<C-q>", { cmd = "cpfile" }, { cmd = "clast" }, "E553" },
+    { "]<C-q>", { cmd = "cnfile" }, { cmd = "crewind" }, "E553" },
+    { "[<C-l>", { cmd = "lpfile" }, { cmd = "llast" }, "E553" },
+    { "]<C-l>", { cmd = "lnfile" }, { cmd = "lrewind" }, "E553" },
+    {
+        "[<M-q>",
+        { cmd = "colder" },
+        { cmd = "execute", args = { "getqflist({'nr' : '$'}).nr . 'chistory'" } },
+        "E380",
+    },
+    { "]<M-q>", { cmd = "cnewer" }, { cmd = "chistory", count = 1 }, "E381" },
+    {
+        "[<M-l>",
+        { cmd = "lolder" },
+        { cmd = "execute", args = { "getloclist(0, {'nr' : '$'}).nr . 'lhistory'" } },
+        "E380",
+    },
+    { "]<M-l>", { cmd = "lnewer" }, { cmd = "lhistory", count = 1 }, "E381" },
 }
 
 for _, m in pairs(scroll_maps) do
-    Map("n", m[1], function() qf_scroll_wrapper(m[2], m[3]) end)
+    Map("n", m[1], function() qf_scroll_wrapper(m[2], m[3], m[4]) end)
 end
