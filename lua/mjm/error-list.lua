@@ -1,8 +1,31 @@
 -- Override default behavior where new windows get a copy of the previous window's loclist
+local loclist_group = vim.api.nvim_create_augroup("loclist-group", { clear = true })
+
 vim.api.nvim_create_autocmd("WinNew", {
-    group = vim.api.nvim_create_augroup("del_new_loclist", { clear = true }),
+    group = loclist_group,
     pattern = "*",
     callback = function() vim.fn.setloclist(0, {}, "f") end,
+})
+
+vim.api.nvim_create_autocmd("WinClosed", {
+    group = loclist_group,
+    callback = function(ev)
+        local win_id = tonumber(ev.match)
+        if not type(win_id) == "number" then return end
+
+        local config = vim.api.nvim_win_get_config(win_id)
+        if config.relative and config.relative ~= "" then return end
+
+        local wininfo = vim.fn.getwininfo(win_id)[1]
+        if wininfo.quickfix == 1 then return end
+
+        --- @diagnostic disable: param-type-mismatch
+        local qf_id = vim.fn.getloclist(win_id, { id = 0 }).id ---@type any
+        if qf_id == 0 then return end
+
+        vim.api.nvim_cmd({ cmd = "lcl" }, {})
+        vim.fn.setloclist(vim.api.nvim_get_current_win(), {}, "f")
+    end,
 })
 
 ---@return nil
