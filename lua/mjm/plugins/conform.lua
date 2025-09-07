@@ -1,18 +1,19 @@
-local function setup_conform()
-    --- @type table<string, conform.FiletypeFormatter>
-    local ft_config = {
-        css = { "prettier" },
-        go = { "gofumpt" },
-        html = { "prettier" },
-        json = { "prettier" },
-        lua = { "stylua" },
-        python = { "ruff_format" },
-        rust = { "rustfmt" },
-        query = { "format-queries" },
-        sh = { "shfmt" },
-        toml = { "taplo" },
-    }
+--- LOW: dprint looks like an interesting alternative
+--- @type table<string, conform.FiletypeFormatter>
+local ft_config = {
+    css = { "prettier" },
+    go = { "gofumpt" },
+    html = { "prettier" },
+    json = { "prettier" },
+    lua = { "stylua" },
+    python = { "ruff_format" },
+    rust = { "rustfmt" },
+    query = { "format-queries" },
+    sh = { "shfmt" },
+    toml = { "taplo" },
+}
 
+local function setup_conform()
     require("conform").setup({
         formatters_by_ft = ft_config,
     })
@@ -43,11 +44,14 @@ local function setup_conform()
     })
 end
 
-vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
+vim.api.nvim_create_autocmd("FileType", {
     group = vim.api.nvim_create_augroup("load-conform", { clear = true }),
-    once = true,
-    callback = function()
+    callback = function(ev)
+        if not vim.tbl_contains(vim.tbl_keys(ft_config), ev.match) then return end
+
         setup_conform()
+        vim.api.nvim_exec_autocmds("FileType", { group = "conform-formatexpr" })
+
         vim.api.nvim_del_augroup_by_name("load-conform")
     end,
 })
