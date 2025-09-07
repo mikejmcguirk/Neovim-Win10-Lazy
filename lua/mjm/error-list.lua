@@ -1,104 +1,338 @@
--- Override default behavior where new windows get a copy of the previous window's loclist
+----------------
+--- Autocmds ---
+----------------
+
+--- @type integer
 local loclist_group = vim.api.nvim_create_augroup("loclist-group", { clear = true })
 
+-- Start each window with a fresh loclist
 vim.api.nvim_create_autocmd("WinNew", {
     group = loclist_group,
     pattern = "*",
     callback = function() vim.fn.setloclist(0, {}, "f") end,
 })
 
+-- Clean up orphaned loclists
 vim.api.nvim_create_autocmd("WinClosed", {
     group = loclist_group,
     callback = function(ev)
-        local win_id = tonumber(ev.match)
-        if not type(win_id) == "number" then return end
+        local win = tonumber(ev.match) --- @type number?
+        if not type(win) == "number" then return end
 
-        local config = vim.api.nvim_win_get_config(win_id)
+        local config = vim.api.nvim_win_get_config(win) --- @type vim.api.keyset.win_config
         if config.relative and config.relative ~= "" then return end
 
-        local wininfo = vim.fn.getwininfo(win_id)[1]
-        if wininfo.quickfix == 1 then return end
+        local buf = vim.api.nvim_win_get_buf(win) --- @type integer
+        local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf }) --- @type string
+        if buftype == "quickfix" then return end
 
-        --- @diagnostic disable: param-type-mismatch
-        local qf_id = vim.fn.getloclist(win_id, { id = 0 }).id ---@type any
-        if qf_id == 0 then return end
-
-        vim.api.nvim_cmd({ cmd = "lcl" }, {})
-        vim.fn.setloclist(vim.api.nvim_get_current_win(), {}, "f")
+        local qf_id = vim.fn.getloclist(ev.match, { id = 0 }).id ---@type integer
+        -- Clean up loclists so that Nvim can purge them under the hood
+        require("mjm.utils").close_all_loclists(qf_id)
     end,
 })
 
----@return nil
-local function open_qflist()
-    require("mjm.utils").close_all_loclists()
-    --- @diagnostic disable: missing-fields
-    vim.api.nvim_cmd({ cmd = "copen", mods = { split = "botright" } }, {})
+----------------------------------
+--- Window Position Resolution ---
+----------------------------------
+
+--- @param win integer
+--- @return Range4|nil
+local function get_win_range4(win)
+    local pos = vim.api.nvim_win_get_position(win)
+    if pos[1] < 0 or pos[2] < 0 then return nil end
+
+    local height = vim.api.nvim_win_get_height(win)
+    local width = vim.api.nvim_win_get_width(win)
+    local bottom = pos[1] + height - 1
+    local right = pos[2] + width - 1
+
+    return { pos[1], pos[2], bottom, right }
 end
 
-Map("n", "cuc", function() vim.api.nvim_cmd({ cmd = "ccl" }, {}) end)
+--- @param win Range4
+--- @param other Range4
+--- @return boolean
+local function is_horizontal_overlap(win, other)
+    return math.max(win[2], other[2]) <= math.min(win[4], other[4])
+end
 
-Map("n", "cup", function() open_qflist() end)
+--- @param win integer
+--- @return boolean
+local function is_bottom(win)
+    local other_wins = vim.api.nvim_tabpage_list_wins(0) --- @type integer[]
+    if (not other_wins) or #other_wins < 2 then return true end
 
-Map("n", "cuu", function()
-    for _, w in ipairs(vim.fn.getwininfo()) do
-        if w.quickfix == 1 and w.loclist == 0 and w.tabnr == vim.fn.tabpagenr() then
-            vim.api.nvim_cmd({ cmd = "ccl" }, {})
+    local win_bounds = get_win_range4(win) --- @type Range4?
+    if not win_bounds then return false end
+
+    local function compare_wins(other_win)
+        if other_win == win then return true end
+
+        local other_bounds = get_win_range4(other_win) --- @type Range4?
+        if not other_bounds then return true end
+
+        if not is_horizontal_overlap(win_bounds, other_bounds) then return true end
+
+        if other_bounds[1] > win_bounds[1] then return false end
+
+        return true
+    end
+
+    for _, o in ipairs(other_wins) do
+        if not compare_wins(o) then return false end
+    end
+
+    return true
+end
+
+-------------------------------------
+--- Opening and Closing Functions ---
+-------------------------------------
+
+-- FUTURE:
+-- One nag still left here - If you enter the qf list scrolled far down, then move back to the
+-- original window, it will shift in order to stay within the bounds of scrolloff. It is
+-- theoretically possible to pull in the virtual line extmarks + the display widths of wrapped
+-- lines in order to calculate and pre-move the view in the old window so this doesn't happen. But
+-- at the moment the effort/value proposition is too far skewed the wrong way
+--
+-- An additional technical note is, right now the logic just spams winsaveviews at the bottom bufs
+-- to guard against screen shifting. While I'm not seeing a perf loss from this, it is sloppy
+-- In theory at least it should be possible to figure out which specific buffer it's acting on
+-- YOu could maybe pull and compare winsaveview returns after the fact, but I'm not sure if that's
+-- actually faster than what I'm doing right now
+--
+-- This logic is currently aimed at botright copens. Would need to be more flexible and precise
+-- in its methodology to be more broadly useful
+
+--- @param height? integer
+--- @return boolean
+local function open_qflist(height)
+    require("mjm.utils").close_all_loclists()
+
+    local wins = vim.api.nvim_tabpage_list_wins(0) --- @type integer[]
+    local views = {} --- @type vim.fn.winsaveview.ret|nil[]
+
+    local function win_check(wininfo)
+        if wininfo.quickfix == 1 and wininfo.loclist ~= 1 then return false end
+
+        --- @type vim.api.keyset.win_config
+        local config = vim.api.nvim_win_get_config(wininfo.winid)
+        if config.relative and config.relative ~= "" then return true end
+
+        if not is_bottom(wininfo.winid) then return true end
+
+        local get_view = function() views[wininfo.winid] = vim.fn.winsaveview() end
+        vim.api.nvim_win_call(wininfo.winid, get_view)
+
+        return true
+    end
+
+    for _, w in pairs(vim.api.nvim_tabpage_list_wins(0)) do
+        if not win_check(vim.fn.getwininfo(w)[1]) then return false end
+    end
+
+    height = height or 10
+    --- @diagnostic disable: missing-fields
+    vim.api.nvim_cmd({ cmd = "copen", count = height, mods = { split = "botright" } }, {})
+
+    local function adjust_view(w)
+        local view = views[w] --- @type vim.fn.winsaveview.ret|nil
+        if not view then return end
+
+        vim.api.nvim_win_call(w, function() vim.fn.winrestview(view) end)
+    end
+
+    for _, w in pairs(wins) do
+        adjust_view(w)
+    end
+
+    return true
+end
+
+--- @return boolean
+local function close_qflist()
+    local is_qf_here = false --- @type boolean
+    local views = {} --- @type vim.fn.winsaveview.ret|nil[]
+
+    local function win_check(wininfo)
+        if wininfo.quickfix == 1 and wininfo.loclist ~= 1 then
+            is_qf_here = true
             return
         end
+
+        --- @type vim.api.keyset.win_config
+        local config = vim.api.nvim_win_get_config(wininfo.winid)
+        if config.relative and config.relative ~= "" then return end
+
+        vim.api.nvim_win_call(
+            wininfo.winid,
+            function() views[wininfo.winid] = vim.fn.winsaveview() end
+        )
     end
 
-    open_qflist()
-end)
-
-Map("n", "coc", function() vim.api.nvim_cmd({ cmd = "lcl" }, {}) end)
-
-Map("n", "cop", function()
-    if vim.api.nvim_get_option_value("filetype", { buf = 0 }) == "qf" then
-        vim.notify("Inside qf buffer")
-        return
+    for _, w in pairs(vim.api.nvim_tabpage_list_wins(0)) do
+        local wininfo = vim.fn.getwininfo(w)[1] --- @type vim.fn.getwininfo.ret.item
+        win_check(wininfo)
     end
 
-    if not (vim.fn.getloclist(vim.api.nvim_get_current_win(), { id = 0 }).id == 0) then
-        vim.api.nvim_cmd({ cmd = "ccl" }, {})
-        vim.api.nvim_cmd({ cmd = "lop" }, {})
-    else
-        vim.notify("Window has no location list")
-    end
-end)
-
-Map("n", "coo", function()
-    if vim.api.nvim_get_option_value("filetype", { buf = 0 }) == "qf" then
-        return vim.notify("Inside qf buffer")
-    end
-
-    local qf_id = vim.fn.getloclist(vim.api.nvim_get_current_win(), { id = 0 }).id ---@type any
-    if qf_id == 0 then
-        vim.notify("Window has no location list")
-        return
-    end
-
-    for _, w in ipairs(vim.fn.getwininfo()) do
-        if w.quickfix == 1 and w.loclist == 1 then
-            if vim.fn.getloclist(w.winid, { id = 0 }).id == qf_id then
-                vim.api.nvim_cmd({ cmd = "lcl" }, {})
-                return
-            end
-        end
-    end
+    if not is_qf_here then return false end
 
     vim.api.nvim_cmd({ cmd = "ccl" }, {})
-    vim.api.nvim_cmd({ cmd = "lop" }, {})
+
+    local function adjust_wins(win)
+        local view = views[win] --- @type vim.fn.winsaveview.ret|nil
+        if not view then return end
+
+        if not is_bottom(win) then return end
+
+        if view then vim.api.nvim_win_call(win, function() vim.fn.winrestview(view) end) end
+    end
+
+    for _, w in pairs(vim.api.nvim_tabpage_list_wins(0)) do
+        adjust_wins(w)
+    end
+
+    return true
+end
+
+--- @param height? integer
+--- @return boolean
+local function open_loclist(height)
+    local win = vim.api.nvim_get_current_win() --- @type integer
+    local qf_id = vim.fn.getloclist(win, { id = 0 }).id ---@type integer
+    if qf_id == 0 then
+        vim.api.nvim_echo({ { "Window has no loclist", "" } }, false, {})
+        return false
+    end
+
+    local wins = vim.api.nvim_tabpage_list_wins(0) --- @type integer[]
+    local views = {} --- @type vim.fn.winsaveview.ret|nil[]
+    local fin_lines = {} --- @type integer[]
+
+    local function win_check(wininfo)
+        if wininfo.quickfix == 1 and wininfo.loclist ~= 1 and wininfo.winid == win then
+            vim.api.nvim_echo({ { "Cannot open loclist from quickfix window", "" } }, false, {})
+            return false
+        end
+
+        if wininfo.quickfix == 1 and wininfo.loclist == 1 then
+            local qf_id_wi = vim.fn.getloclist(wininfo.winid, { id = 0 }).id ---@type integer
+            if qf_id_wi == qf_id then return false end
+        end
+
+        local config = vim.api.nvim_win_get_config(wininfo.winid) --- @type vim.api.keyset.win_config
+        if config.relative and config.relative ~= "" then return true end
+
+        -- Because this opens belowright, only the origin window is affected
+        if (not wininfo.winid) == win then return true end
+
+        views[wininfo.winid] = vim.fn.winsaveview()
+
+        return true
+    end
+
+    for _, w in pairs(wins) do
+        if not win_check(vim.fn.getwininfo(w)[1]) then return false end
+    end
+
+    close_qflist()
+    --- @diagnostic disable: missing-fields
+    height = height or 10
+    vim.api.nvim_cmd({ cmd = "lop", count = height, mods = { split = "belowright" } }, {})
+
+    local function adjust_view(w)
+        local view = views[w] --- @type vim.fn.winsaveview.ret|nil
+        if not view then return end
+
+        vim.api.nvim_win_call(w, function() vim.fn.winrestview(view) end)
+    end
+
+    for _, w in pairs(wins) do
+        adjust_view(w)
+    end
+
+    return true
+end
+
+--- @return boolean
+local function close_loclist()
+    local win = vim.api.nvim_get_current_win() --- @type integer
+    local qf_id = vim.fn.getloclist(win, { id = 0 }).id ---@type any
+    if qf_id == 0 then
+        vim.api.nvim_echo({ { "Window has no loclist", "" } }, false, {})
+        return false
+    end
+
+    local views = {} --- @type vim.fn.winsaveview.ret|nil[]
+    local has_loclist_focus = false
+
+    local function win_check(wininfo)
+        if wininfo.quickfix == 1 and wininfo.loclist ~= 1 and wininfo.winid == win then
+            local msg = "Cannot close loclist from quickfix window"
+            vim.api.nvim_echo({ { msg, "" } }, false, {})
+            return false
+        end
+
+        local qf_id_wi = vim.fn.getloclist(wininfo.winid, { id = 0 }).id ---@type any
+        if qf_id_wi == qf_id then
+            has_loclist_focus = true
+            return true
+        end
+
+        --- @type vim.api.keyset.win_config
+        local config = vim.api.nvim_win_get_config(wininfo.winid)
+        if config.relative and config.relative ~= "" then return true end
+
+        vim.api.nvim_win_call(
+            wininfo.winid,
+            function() views[wininfo.winid] = vim.fn.winsaveview() end
+        )
+        return true
+    end
+
+    for _, w in pairs(vim.api.nvim_tabpage_list_wins(0)) do
+        if not win_check(vim.fn.getwininfo(w)[1]) then return false end
+    end
+
+    if not has_loclist_focus then return false end
+
+    vim.api.nvim_cmd({ cmd = "lcl" }, {})
+
+    for _, w in pairs(vim.api.nvim_tabpage_list_wins(0)) do
+        local view = views[w]
+        if view then vim.api.nvim_win_call(w, function() vim.fn.winrestview(view) end) end
+    end
+
+    return true
+end
+
+--------------------------------
+--- Opening and Closing Maps ---
+--------------------------------
+
+Map("n", "cuc", close_qflist)
+Map("n", "cup", open_qflist)
+Map("n", "cuu", function()
+    if not open_qflist() then close_qflist() end
+end)
+
+Map("n", "coc", close_loclist)
+Map("n", "cop", open_loclist)
+Map("n", "coo", function()
+    if not open_loclist() then close_loclist() end
 end)
 
 for _, map in pairs({ "cuo", "cou" }) do
     Map("n", map, function()
         require("mjm.utils").close_all_loclists()
-        vim.api.nvim_cmd({ cmd = "ccl" }, {})
+        close_qflist()
     end)
 end
 
 Map("n", "duc", function()
-    vim.api.nvim_cmd({ cmd = "ccl" }, {})
+    close_qflist()
     vim.fn.setqflist({}, "r")
 end)
 
@@ -108,12 +342,12 @@ Map("n", "dua", function()
 end)
 
 Map("n", "doc", function()
-    vim.api.nvim_cmd({ cmd = "lcl" }, {})
+    close_loclist()
     vim.fn.setloclist(vim.api.nvim_get_current_win(), {}, "r")
 end)
 
 Map("n", "doa", function()
-    vim.api.nvim_cmd({ cmd = "lcl" }, {})
+    close_loclist()
     vim.fn.setloclist(vim.api.nvim_get_current_win(), {}, "f")
 end)
 
@@ -317,8 +551,7 @@ local function grep_wrapper(opts)
 
     if opts.loclist then
         last_lgrep = pattern
-        vim.api.nvim_cmd({ cmd = "ccl" }, {})
-        vim.api.nvim_cmd({ cmd = "lop" }, {})
+        open_loclist()
     else
         last_grep = pattern
         open_qflist()
