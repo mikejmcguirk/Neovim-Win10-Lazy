@@ -86,6 +86,14 @@ Map("n", "<leader>fc", fzf_lua.command_history)
 Map("n", "<leader>fu", fzf_lua.quickfix_stack)
 Map("n", "<leader>fo", fzf_lua.loclist_stack)
 
+local buf_marks = function()
+    require("fzf-lua").marks({
+        marks = '[a-z"]',
+    })
+end
+
+Map("n", "<leader>fm", buf_marks)
+Map("n", "<leader>fM", fzf_lua.marks)
 Map("n", "<leader>fs", fzf_lua.spellcheck)
 Map("n", "<leader>fw", fzf_lua.lsp_live_workspace_symbols)
 Map(
