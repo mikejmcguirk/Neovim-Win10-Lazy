@@ -1,5 +1,7 @@
+vim.api.nvim_set_option_value("buflisted", false, { buf = 0 })
+
 vim.opt_local.colorcolumn = ""
-vim.o.buflisted = false
+vim.opt_local.list = false
 
 Map("n", "q", "<cmd>q<cr>", { buffer = true })
 

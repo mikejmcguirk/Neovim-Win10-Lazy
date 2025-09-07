@@ -1,12 +1,16 @@
 local hl_nop_all = {
+    -- Irrelevant without the LSP to determine scope
+    ["@variable.parameter"] = {},
     -- Can't eliminate at the token level because builtins and globals depend on it
     ["@lsp.type.variable"] = {}, --- Default link to normal
-}
+} --- @type {string: vim.api.keyset.highlight}
 
 for k, v in pairs(hl_nop_all) do
     vim.api.nvim_set_hl(0, k, v)
 end
 
+--- @param hl_query vim.treesitter.Query
+--- @return nil
 local ts_nop_all = function(hl_query)
     -- Doesn't capture injections, so just sits on top of comment
     hl_query.query:disable_capture("comment.documentation")
@@ -26,7 +30,7 @@ end
 local hl_nop_lua = {
     -- Can't disable at the token level because it's the root of function globals
     ["@lsp.type.function.lua"] = {}, -- Default link to function
-}
+} --- @type {string: vim.api.keyset.highlight}
 
 for k, v in pairs(hl_nop_lua) do
     vim.api.nvim_set_hl(0, k, v)
@@ -37,6 +41,7 @@ vim.api.nvim_create_autocmd("FileType", {
     pattern = "lua",
     once = true,
     callback = function()
+        --- @type vim.treesitter.Query?
         local hl_query = vim.treesitter.query.get("lua", "highlights")
         if not hl_query then return end
 
@@ -55,7 +60,7 @@ local token_nop_lua = {
     "comment", -- Treesitter handles
     "method", -- Treesitter handles
     "property", -- Can just be fg
-}
+} --- @type string[]
 
 ------------
 -- Python --
@@ -66,6 +71,7 @@ vim.api.nvim_create_autocmd("FileType", {
     pattern = "python",
     once = true,
     callback = function()
+        --- @type vim.treesitter.Query?
         local hl_query = vim.treesitter.query.get("python", "highlights")
         if not hl_query then return end
 
@@ -83,6 +89,7 @@ vim.api.nvim_create_autocmd("FileType", {
     pattern = "rust",
     once = true,
     callback = function()
+        --- @type vim.treesitter.Query?
         local hl_query = vim.treesitter.query.get("rust", "highlights")
         if not hl_query then return end
 
@@ -94,27 +101,27 @@ vim.api.nvim_create_autocmd("FileType", {
 vim.api.nvim_create_autocmd("LspAttach", {
     group = vim.api.nvim_create_augroup("rust-disable-captures-lsp", { clear = true }),
     callback = function(ev)
-        local ft = vim.api.nvim_get_option_value("filetype", { buf = ev.buf })
-
-        if ft == "rust" then
-            local hl_query = vim.treesitter.query.get("rust", "highlights")
-            if not hl_query then return end
-
-            -- rust_analyzer contains built-in highlights for multiple types that should be
-            -- left active due to injected highlights in comments. If an LSP attaches, disable
-            -- the TS queries
-            hl_query.query:disable_capture("constant.builtin")
-            hl_query.query:disable_capture("function")
-            hl_query.query:disable_capture("function.call")
-            hl_query.query:disable_capture("function.macro")
-            hl_query.query:disable_capture("_identifier")
-            hl_query.query:disable_capture("keyword.debug")
-            hl_query.query:disable_capture("keyword.exception")
-            hl_query.query:disable_capture("string")
-            hl_query.query:disable_capture("type")
-
-            vim.api.nvim_del_augroup_by_name("rust-disable-captures-lsp")
+        if not vim.api.nvim_get_option_value("filetype", { buf = ev.buf }) == "rust" then
+            return
         end
+
+        --- @type vim.treesitter.Query?
+        local hl_query = vim.treesitter.query.get("rust", "highlights")
+        if not hl_query then return end
+
+        -- rust_analyzer contains built-in highlights for multiple types that should be
+        -- left active for doc comments. If an LSP attaches, disable the TS queries
+        hl_query.query:disable_capture("constant.builtin")
+        hl_query.query:disable_capture("function")
+        hl_query.query:disable_capture("function.call")
+        hl_query.query:disable_capture("function.macro")
+        hl_query.query:disable_capture("_identifier")
+        hl_query.query:disable_capture("keyword.debug")
+        hl_query.query:disable_capture("keyword.exception")
+        hl_query.query:disable_capture("string")
+        hl_query.query:disable_capture("type")
+
+        vim.api.nvim_del_augroup_by_name("rust-disable-captures-lsp")
     end,
 })
 
@@ -124,21 +131,22 @@ local token_nop_rust = {
     "namespace", --- Handle with custom TS queries
     "selfKeyword",
     "property", --- Default to Normal
-}
+} --- @type string[]
 
 ------------
 -- vimdoc --
 ------------
 
+-- I'm not sure this was actually useful
 -- Run eagerly to avoid inconsistent preview window appearance
-local vimdoc_query = vim.treesitter.query.get("vimdoc", "highlights")
-if vimdoc_query then ts_nop_all(vimdoc_query) end
+-- local vimdoc_query = vim.treesitter.query.get("vimdoc", "highlights")
+-- if vimdoc_query then ts_nop_all(vimdoc_query) end
 
-----------------------------------
--- Setup Semantic Token Removal --
-----------------------------------
+----------------------------
+-- Semantic Token Removal --
+----------------------------
 
-local token_filder = {
+local token_filter = {
     ["lua_ls"] = token_nop_lua,
     ["rust_analyzer"] = token_nop_rust,
 } --- @type {string: string[]}
@@ -146,11 +154,11 @@ local token_filder = {
 vim.api.nvim_create_autocmd("LspAttach", {
     group = vim.api.nvim_create_augroup("token-filter", { clear = true }),
     callback = function(ev)
-        local client = vim.lsp.get_client_by_id(ev.data.client_id)
+        local client = vim.lsp.get_client_by_id(ev.data.client_id) --- @type vim.lsp.Client?
         if (not client) or not client.server_capabilities.semanticTokensProvider then return end
 
         local found_client_name = false
-        for k, _ in pairs(token_filder) do
+        for k, _ in pairs(token_filter) do
             if k == client.name then
                 found_client_name = true
                 break
@@ -159,11 +167,12 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         if not found_client_name then return end
 
+        --- @type lsp.SemanticTokensLegend
         local legend = client.server_capabilities.semanticTokensProvider.legend
-        local new_tokenTypes = {}
+        local new_tokenTypes = {} --- @type string[]
 
         for _, typ in ipairs(legend.tokenTypes) do
-            if not vim.tbl_contains(token_filder[client.name], typ) then
+            if not vim.tbl_contains(token_filter[client.name], typ) then
                 table.insert(new_tokenTypes, typ)
             else
                 -- The builtin semantic token handler checks the token names for truthiness

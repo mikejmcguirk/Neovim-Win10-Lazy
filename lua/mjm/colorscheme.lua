@@ -1,5 +1,6 @@
 -- NOTE: This is a bespoke version of Fluoromachine.nvim's delta theme
 
+--- @type {string: string}
 local c = {
     -- https://www.sessions.edu/color-calculator/
     black = "#000000",
@@ -31,6 +32,7 @@ local c = {
     l_yellow = "#EDFF98",
 }
 
+--- @type {string: vim.api.keyset.highlight}
 local groups = {
 
     ----------------------
@@ -148,14 +150,14 @@ local groups = {
     WinSeparator = { fg = c.purple }, -- (Default link: Normal)
     FloatBorder = { link = "WinSeparator" }, -- (Default link: NormalFloat)
 
-    -- LOW: Lifted from Fluoromachine because they look familiar, but I've not no thought into
+    -- LOW: Lifted from Fluoromachine because they look familiar, but I've put no thought into
     -- the actual reasoning behind these
     ["@markup.environment"] = { fg = c.l_purple },
     ["@markup.heading"] = { link = "Title" },
     ["@markup.italic"] = { fg = c.l_green, italic = true },
     ["@markup.link"] = { fg = c.l_cyan },
     ["@markup.link.label"] = { fg = c.l_cyan },
-    ["@markup.link.url"] = { fg = c.comment },
+    ["@markup.link.url"] = { fg = c.purple },
     ["@markup.list"] = { fg = c.l_pink },
     ["@markup.list.checked"] = { fg = c.l_green },
     ["@markup.math"] = { link = "Operator" },

@@ -6,6 +6,8 @@
 -- Example: For buf modified post, should just get event buf, tick state, and redraw if it's
 -- on the tabline
 -- https://github.com/mike-jl/harpoonEx/blob/main/lua/lualine/components/harpoons/init.lua
+-- Future thing: Harpoon gets the current dir from vim.looop.cwd() (would upgrade to vim.uv),
+-- if the directory is nil, it causes an enter error
 
 local M = {}
 
