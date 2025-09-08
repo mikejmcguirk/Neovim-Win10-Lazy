@@ -63,7 +63,7 @@ Map("x", "d", function()
     col = math.max(col, 0)
 
     vim.api.nvim_win_set_cursor(win, { row, col })
-end)
+end, { buffer = true })
 
 Map("n", "<C-cr>", function()
     local row = vim.api.nvim_win_get_cursor(0)[1]
