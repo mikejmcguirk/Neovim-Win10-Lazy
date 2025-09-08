@@ -12,19 +12,52 @@ function M.get_input(prompt)
     end
 end
 
-function M.open_buf(file, opts)
-    local buf = vim.fn.bufadd(file)
+--- @class mjm.OpenBufSource
+--- @field bufnr? integer
+--- @field file? string
+
+--- @class mjm.OpenBufOpts
+--- @field cur_pos? {[1]: integer, [2]: integer}
+--- @field open? "vsplit"|"split"|"tabedit"
+--- @field win? integer
+--- @field zz? boolean
+
+--- @param source mjm.OpenBufSource
+--- @param opts mjm.OpenBufOpts
+--- @return boolean
+--- Using bufload breaks BufReadPost autocmds and opt_local setup
+--- nvim_set_current_buf will load the buf properly if it needs to
+--- nvim_win_set_buf does the same, and also automatically moves the user into that window
+function M.open_buf(source, opts)
+    source = source or {}
+
+    local buf = (function()
+        if source.bufnr then
+            return source.bufnr
+        elseif source.file then
+            return vim.fn.bufadd(source.file)
+        else
+            return nil
+        end
+    end)()
+
+    if not buf then
+        local chunk = { "Unable to resolve buf in open_buf", "ErrorMsg" }
+        vim.api.nvim_echo({ chunk }, true, { err = true })
+        return false
+    end
+
     if vim.api.nvim_get_current_buf() == buf then
         vim.api.nvim_echo({ { "Already in buffer", "" } }, false, {})
-        return
+        return true
     end
 
     opts = opts or {}
     if opts.open == "vsplit" then
         --- @diagnostic disable: missing-fields
-        vim.api.nvim_cmd({ cmd = "vsplit", mods = { split = "botright" } }, {})
+        vim.api.nvim_cmd({ cmd = "vsplit" }, {})
     elseif opts.open == "split" then
-        vim.api.nvim_cmd({ cmd = "split", mods = { split = "botright" } }, {})
+        vim.api.nvim_cmd({ cmd = "split" }, {})
     elseif opts.open == "tabedit" then
         vim.api.nvim_cmd({ cmd = "tabedit" }, {})
     end
@@ -35,6 +68,11 @@ function M.open_buf(file, opts)
     else
         vim.api.nvim_set_current_buf(buf)
     end
+
+    if opts.cur_pos then vim.api.nvim_win_set_cursor(opts.win or 0, opts.cur_pos) end
+    if opts.zz then Cmd({ cmd = "normal", args = { "zz" }, bang = true }, {}) end
+
+    return true
 end
 
 ---@param bufnr? integer
