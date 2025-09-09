@@ -10,6 +10,7 @@ local diag_cache = {}
 local mode = "n" -- ModeChanged does not grab the initial set to normal mode
 local progress_cache = {}
 
+-- MAYBE: This has shown up in error-list now. Make a util?
 local is_bad_mode = function() return string.match(mode, "[csSiR]") end
 
 -- Because evaluating the statusline initiates textlock, perform as much of the calculation
@@ -158,15 +159,34 @@ function MjmStl.active()
     local format = vim.api.nvim_get_option_value("fileformat", { buf = buf })
     local fmt = format_icons[format]
     local ft = vim.api.nvim_get_option_value("ft", { buf = buf })
+    local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf })
+    if buftype == "" then
+        buftype = buftype
+    elseif buftype == "nofile" then
+        buftype = " [nf]"
+    elseif buftype == "nowrite" then
+        buftype = " [nw]"
+    else
+        buftype = "[" .. string.sub(buftype, 1, 1) .. "] "
+    end
     -- local ft_str = ft == "" and "" or "| " .. ft
-    table.insert(stl, "%#stl_c# " .. encoding .. " | " .. fmt .. " | " .. ft .. " %*")
+    table.insert(stl, "%#stl_c# " .. encoding .. " | " .. fmt .. " | " .. buftype .. ft .. " %*")
 
-    table.insert(stl, "%#stl_b# %p%% %*%#stl_a# %l/%L | %c %*")
+    local winnr = vim.fn.winnr()
+    local alt_win = vim.fn.winnr("#")
+    local alt_win_disp = (alt_win and alt_win ~= winnr) and (" | #" .. alt_win) or ""
+    table.insert(
+        stl,
+        "%#stl_b# [" .. winnr .. "] %p%%" .. alt_win_disp .. " %*%#stl_a# %l/%L | %c %*"
+    )
 
     return table.concat(stl, "")
 end
 
-function MjmStl.inactive() return "%#stl_b# %m %t %*%= %#stl_b# %p%% %*" end
+function MjmStl.inactive()
+    local winnr = vim.fn.winnr()
+    return "%#stl_b# %m %t %*%= %#stl_b# [" .. winnr .. "] %p%% %*"
+end
 
 vim.api.nvim_set_option_value("showmode", false, { scope = "global" })
 vim.api.nvim_set_var("qf_disable_statusline", 1)
