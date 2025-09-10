@@ -120,7 +120,7 @@ local function adjust_view(win, views)
     if not view then return end
     if not vim.api.nvim_win_is_valid(win) then return end
 
-    --- @type vim.fn.winsaveview.ret
+    --- @type integer
     local new_topline = vim.api.nvim_win_call(win, function() return vim.fn.line("w0") end)
     if view.topline == new_topline then return end
 
