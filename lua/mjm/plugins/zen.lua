@@ -27,16 +27,8 @@ local function load_zen()
                     pcall(function() vim.fn.system([[tmux set status on]]) end)
                 end,
             })
-
-            -- Avoid issue where you toggle NvimTree closed underneath the Zen window
-            Map("n", "<leader>nn", "<cmd>NvimTreeOpen<cr>")
-            -- Will close Zen but then focus on the Zen-creating buffer. Pointless
-            Map("n", "<leader>nf", "<nop>")
         end,
         on_close = function()
-            Map("n", "<leader>nn", "<cmd>NvimTreeToggle<cr>")
-            Map("n", "<leader>nf", "<cmd>NvimTreeFocus<cr>")
-
             pcall(function() vim.fn.system([[tmux set status on]]) end)
 
             vim.api.nvim_clear_autocmds({ group = "tmux_safety" })
