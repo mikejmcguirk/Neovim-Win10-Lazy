@@ -60,7 +60,10 @@ vim.api.nvim_set_option_value("switchbuf", "useopen,uselast", { scope = "global"
 -- Buffer Behavior --
 ---------------------
 
+-- https://github.com/neovim/neovim/pull/35536
 -- https://github.com/neovim/neovim/issues/35575
+-- Issue is better after this pull request, but not resolve. In this file I can see some
+-- global scope settings still whited out. Can do another test for the issue
 -- vim.api.nvim_set_option_value("wrap", false, { scope = "global" })
 -- For fts where opt_local wrap is true
 vim.api.nvim_set_option_value("breakindent", true, { scope = "global" })

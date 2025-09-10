@@ -48,7 +48,8 @@ local function load_obsidian()
         daily_notes = nil, -- Not sure about this one either
         disable_frontmatter = true, -- The aliasing creates inconsistent behavior with the GUI
         follow_url_func = nil,
-        footer = nil,
+        --- Causes weird ghosting effects with cmp windows
+        footer = { enabled = false },
         legacy_commands = false,
         markdown_link_func = nil,
         new_notes_location = "notes_subdir",
