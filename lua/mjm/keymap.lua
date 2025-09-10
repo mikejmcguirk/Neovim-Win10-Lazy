@@ -188,3 +188,8 @@ Map("n", "\\s", function()
     local is_spell = vim.api.nvim_get_option_value("spell", { win = 0 })
     vim.api.nvim_set_option_value("spell", not is_spell, { win = 0 })
 end)
+
+Map("n", "\\w", function()
+    local is_wrap = vim.api.nvim_get_option_value("wrap", { win = 0 })
+    vim.api.nvim_set_option_value("wrap", not is_wrap, { win = 0 })
+end)
