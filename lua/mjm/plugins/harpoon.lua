@@ -10,10 +10,8 @@ harpoon:setup({
             height = 10,
         },
     },
+    -- Using custom selection since the built-in uses bufload
     default = {
-        -- The default select logic uses bufload(), which does not handle BufReadPost autocmds
-        -- or opt_local context correctly. nvim_set_current_buf() without bufload handles the
-        -- load step correctly if needed
         select = function(list_item, list, opts)
             local extensions = require("harpoon.extensions")
             require("harpoon.logger"):log("custom#select", list_item, list.name, opts)
@@ -29,26 +27,13 @@ harpoon:setup({
             end
 
             local buf = vim.fn.bufadd(list_item.value) --- @type integer
-            if vim.api.nvim_get_current_buf() == buf then
-                vim.notify("Already in buffer")
-                return
+            local success = require("mjm.utils").open_buf({ bufnr = buf }, {})
+
+            if success then
+                extensions.extensions:emit(extensions.event_names.NAVIGATE, {
+                    buffer = buf,
+                })
             end
-
-            opts = opts or {}
-            if opts.vsplit then
-                vim.api.nvim_cmd({ cmd = "vsplit" }, {})
-            elseif opts.split then
-                vim.api.nvim_cmd({ cmd = "split" }, {})
-            elseif opts.tabedit then
-                vim.api.nvim_cmd({ cmd = "tabedit" }, {})
-            end
-
-            vim.api.nvim_set_option_value("buflisted", true, { buf = buf })
-            vim.api.nvim_set_current_buf(buf)
-
-            extensions.extensions:emit(extensions.event_names.NAVIGATE, {
-                buffer = buf,
-            })
         end,
     },
 })

@@ -12,13 +12,40 @@ function M.get_input(prompt)
     end
 end
 
+--- @param cur_pos {[1]: integer, [2]: integer}
+--- @param opts? {buf?: integer, set_pcmark?: boolean, win?: integer}
+--- @return nil
+function M.protected_set_cursor(cur_pos, opts)
+    opts = opts or {}
+    local buf = opts.buf or 0
+
+    local line_count = vim.api.nvim_buf_line_count(buf)
+    cur_pos[1] = math.min(cur_pos[1], line_count)
+    local row = cur_pos[1]
+    local set_line = vim.api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
+    cur_pos[2] = math.min(cur_pos[2], #set_line - 1)
+    cur_pos[2] = math.max(cur_pos[2], 0)
+
+    local win = opts.win or 0
+
+    if opts.set_pcmark then
+        local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(win))
+        vim.api.nvim_buf_set_mark(buf, "'", cur_row, cur_col, {})
+    end
+
+    vim.api.nvim_win_set_cursor(win, cur_pos)
+end
+
 --- @class mjm.OpenBufSource
 --- @field bufnr? integer
 --- @field file? string
 
 --- @class mjm.OpenBufOpts
+--- @field buftype? string
+--- @field clearjumps? boolean
 --- @field cur_pos? {[1]: integer, [2]: integer}
---- @field open? "vsplit"|"split"|"tabedit"
+--- @field force? boolean
+--- @field open? "vsplit"|"split"|"tabnew"
 --- @field win? integer
 --- @field zz? boolean
 
@@ -30,7 +57,6 @@ end
 --- nvim_win_set_buf does the same, and also automatically moves the user into that window
 function M.open_buf(source, opts)
     source = source or {}
-
     local buf = (function()
         if source.bufnr then
             return source.bufnr
@@ -47,7 +73,9 @@ function M.open_buf(source, opts)
         return false
     end
 
-    if vim.api.nvim_get_current_buf() == buf then
+    local cur_buf = vim.api.nvim_get_current_buf()
+    local same_buf = cur_buf == buf
+    if (not opts.force) and same_buf then
         vim.api.nvim_echo({ { "Already in buffer", "" } }, false, {})
         return true
     end
@@ -58,19 +86,30 @@ function M.open_buf(source, opts)
         vim.api.nvim_cmd({ cmd = "vsplit" }, {})
     elseif opts.open == "split" then
         vim.api.nvim_cmd({ cmd = "split" }, {})
-    elseif opts.open == "tabedit" then
-        vim.api.nvim_cmd({ cmd = "tabedit" }, {})
+    elseif opts.open == "tabnew" then
+        vim.api.nvim_cmd({ cmd = "tabnew" }, {})
     end
 
     vim.api.nvim_set_option_value("buflisted", true, { buf = buf })
-    if opts.win then
-        vim.api.nvim_win_set_buf(opts.win, buf)
-    else
-        vim.api.nvim_set_current_buf(buf)
+    if opts.buftype then vim.api.nvim_set_option_value("buftype", opts.buftype, { buf = buf }) end
+
+    if cur_buf ~= buf then
+        if opts.win then
+            vim.api.nvim_win_set_buf(opts.win, buf)
+        else
+            vim.api.nvim_set_current_buf(buf)
+        end
     end
 
-    if opts.cur_pos then vim.api.nvim_win_set_cursor(opts.win or 0, opts.cur_pos) end
+    if opts.cur_pos then
+        local win = opts.win or 0
+        M.protected_set_cursor(opts.cur_pos, { buf = buf, set_pcmark = same_buf, win = win })
+    end
+
+    if opts.clearjumps then Cmd({ cmd = "clearjumps" }, {}) end
     if opts.zz then Cmd({ cmd = "normal", args = { "zz" }, bang = true }, {}) end
+
+    Cmd({ cmd = "normal", args = { "zv" }, bang = true }, {})
 
     return true
 end
@@ -199,19 +238,6 @@ M.fallback_formatter = function(buf)
     for i, line in ipairs(lines) do
         format_line(i, line)
     end
-end
-
----@return boolean
-function M.close_all_loclists()
-    local closed_loc_list = false ---@type boolean
-    for _, win in ipairs(vim.fn.getwininfo()) do
-        if win.quickfix == 1 and win.loclist == 1 then
-            vim.api.nvim_win_close(win.winid, false)
-            closed_loc_list = true
-        end
-    end
-
-    return closed_loc_list
 end
 
 -- Taken from nvim-overfly
@@ -364,6 +390,7 @@ end
 --- @param old_bufname string
 --- @param new_bufname string
 --- @return nil
+--- # harpoon
 function M.harpoon_mv_buf(old_bufname, new_bufname)
     local ok, harpoon = pcall(require, "harpoon")
     if (not ok) or not harpoon then

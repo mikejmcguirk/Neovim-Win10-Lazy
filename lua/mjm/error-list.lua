@@ -1,3 +1,108 @@
+------------------
+-- CAPABILITIES --
+------------------
+
+--- TODO: Create a quickfixtextfuc that's as information rich as possible without being busy
+--- TODO: Filter keep/delete on as many fields as possible
+--- TODO: Sort on as many fields as possible (regular/capslock for asc/desc)
+--- TODO: Wrapper functions should make reasonable sorts as much as possible
+--- --- How to do with vimgrep though?
+--- TODO: Is there a better way to use grepprg?
+--- TODO: Re-sync contents
+--- TODO: Run/refresh from title. Wrappers should set it up properly
+--- --- Can get rid of redo grep map
+--- --- grepa might help with this
+--- TODO: More visibility for cdo/cfdo. Use bang by default?
+--- TODO: Filter based on regex. Maybe vim.regex'
+--- TODO: Wrapper functions should trigger window height updates. Resize cmd
+--- TODO: De-map split cmds in windows
+
+--- MAYBE: Treesitter/Semantic Token Highlighting
+--- MAYBE: Incremental preview of cdo/cfdo changes
+
+--------------
+-- STAYAWAY --
+--------------
+
+--- No attaching to buffers/creating persistent state
+--- No modifying buffers within the qflist
+--- No additional context type stuff. Previewer covers this
+--- No Fuzzy finding type stuff. FzfLua does this
+--- No annotations. Should be able to filter down to key items
+--- Dynamic behavior. Trouble has to create a whole async runtime and data model to manage this
+--- "Modernizing" the feel of the qflist. The old school feel is part of the charm
+
+--------------
+-- MAPPINGS --
+--------------
+
+--- Patterns:
+--- --- Modifiers on last key only. No recursive choices
+--- --- Lowercase creates new
+--- --- Uppercase replaces current
+--- --- Ctrl combines
+--- --- Alt can be used for some other idea
+--- --- Use count 1-0 to specify a specific stack position
+
+--- GENERAL BUFFER MAPS
+--- <leader>q for qf, <leader>l for loc
+--- qio - diagnostics (but creates anti-pattern since not toggle, and double top)
+--- qie - errors
+--- qiw - warnings
+--- qih - hint
+--- qii or qif - info
+--- qih? - highest severity
+--- view count of lists
+--- goto list number (unimpaired already does cycling)
+--- something like qd and qD for cdo and cfdo
+--- A way to copy lists, and maybe filtered copy
+--- A merge kinda like deep table extend where duplicates are filtered
+--- Or a merge that works like a XOR
+--- Some of these more complex ideas feel more like commands
+---
+--- QF BUFFER:
+--- p to toggle preview
+--- vim-qf-preview has some reasonable maps (r mainly) for previewer
+
+---------------
+-- RESOURCES --
+---------------
+
+-- RESOURCES
+-- https://github.com/romainl/vim-qf
+-- https://github.com/kevinhwang91/nvim-bqf
+-- https://github.com/arsham/listish.nvim
+-- https://github.com/itchyny/vim-qfedit -- Simple version of quicker
+-- https://github.com/mileszs/ack.vim
+-- https://github.com/stevearc/qf_helper.nvim
+
+-- PREVIEWERS:
+-- https://github.com/r0nsha/qfpreview.nvim
+-- https://github.com/bfrg/vim-qf-preview
+
+---------------------------
+-- qf jump function list --
+---------------------------
+
+-- qf_view_result
+-- ex_cc
+-- qf_jump
+-- qf_jump_newwin
+-- qf_jump_open_window
+-- jump_to_help_window
+-- qf_jump_to_usable_window
+-- qf_open_new_file_win
+-- qf_goto_win_with_ll_file
+-- qf_goto_win_with_qfl_file
+
+------------------------
+-- Other source notes --
+------------------------
+
+-- The vimgrep code is in quickfix.c. Functions often start with "vgr"
+
+local M = {}
+
 ----------------
 --- Autocmds ---
 ----------------

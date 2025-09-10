@@ -43,7 +43,7 @@ local function open_diffs(staged)
         if vim.api.nvim_get_option_value("filetype", { buf = w.bufnr }) == "diff" then return end
     end
 
-    require("mjm.utils").close_all_loclists()
+    require("mjm.error-list").close_all_loclists()
     vim.api.nvim_cmd({ cmd = "ccl" }, {})
 
     local mods = { split = "botright" }

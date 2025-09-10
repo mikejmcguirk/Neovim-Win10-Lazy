@@ -21,10 +21,10 @@ local function edit_query_file(query_group)
         vim.api.nvim_echo({ { "No query file found", "" } }, false, {})
         return
     elseif #files == 1 then
-        require("mjm.utils").open_buf(files[1], { open = "vsplit" })
+        require("mjm.utils").open_buf({ file = files[1] }, { open = "vsplit" })
     else
         vim.ui.select(files, { prompt = "Select a file:" }, function(file)
-            if file then require("mjm.utils").open_buf(file, { open = "vsplit" }) end
+            if file then require("mjm.utils").open_buf({ file = file }, { open = "vsplit" }) end
         end)
     end
 end
