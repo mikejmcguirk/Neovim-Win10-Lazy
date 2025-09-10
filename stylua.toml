@@ -1,5 +1,6 @@
+call_parentheses = "Always"
+collapse_simple_statement = "Always"
 column_width = 99
 indent_type = "Spaces"
 quote_style = "AutoPreferDouble"
-call_parentheses = "Always"
-collapse_simple_statement = "Always"
+syntax = "LuaJIT"
