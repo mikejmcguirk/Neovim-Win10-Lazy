@@ -393,7 +393,7 @@ local function all_diags_to_qflist(opts)
         elseif opts.err_only then
             return vim.diagnostic.severity.ERROR
         else
-            return vim.diagnostic.severity.HINT
+            return { min = vim.diagnostic.severity.HINT }
         end
     end)() ---@type integer|{min:integer}
 
@@ -429,7 +429,7 @@ local function buf_diags_to_loclist(opts)
         elseif opts.err_only then
             return vim.diagnostic.severity.ERROR
         else
-            return vim.diagnostic.severity.HINT
+            return { min = vim.diagnostic.severity.HINT }
         end
     end)() ---@type integer|{min:integer}
 
