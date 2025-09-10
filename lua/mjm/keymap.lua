@@ -1,4 +1,6 @@
+-- TODO: Remove all <C-S> and <M-S> mappings
 -- MAYBE: Make a convenience mapping for comment headings
+-- TODO: Look at how Neovim auto-generates its docs from strings
 
 -------------
 -- Disable --
@@ -23,6 +25,7 @@ end, { expr = true, silent = true })
 
 Map("c", "<C-a>", "<C-b>")
 Map("c", "<C-d>", "<Del>")
+Map("c", "<M-d>", "<S-right><Del>")
 -- MAYBE: Figure out how to do <M-d> if it's really needed
 Map("c", "<C-k>", "<c-\\>estrpart(getcmdline(), 0, getcmdpos()-1)<cr>")
 
@@ -37,6 +40,8 @@ Map("c", "<M-n>", "<down>")
 -------------------------
 -- Saving and Quitting --
 -------------------------
+
+-- TODO: Look at lockmarks again. Do a test conform format just by itself first
 
 -- This trick mostly doesn't work because it also blocks any map in the layer below it, but
 -- anything under Z has to be manually mapped anyway, so this is fine
@@ -62,6 +67,7 @@ Map("n", "ZS", function()
     vim.api.nvim_echo({ { result or "Unknown error on save and source" } }, true, { err = true })
 end)
 
+-- TODO: Noname buffers appearing when doing this out of other tabs
 for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
     Map("n", map, function()
         local buf = vim.api.nvim_get_current_buf() ---@type integer
@@ -99,6 +105,7 @@ end
 ---@param nvim_cmd string
 ---@return nil
 local win_move_tmux = function(nvim_cmd)
+    -- TODO: How to make this work in fzflua search
     if vim.api.nvim_get_option_value("buftype", { buf = 0 }) == "prompt" then
         do_tmux_move(nvim_cmd)
         return

@@ -1,6 +1,11 @@
--- NOTE: Various LSP maps use this to display references/symbols
--- FUTURE: Turn :let g: into a picker
--- LOW: What makes async messages not display?
+--- TODO: Move to gi mappings
+--- --- My gI map goes to <M-i>. Default gi can be lost
+--- giq and giQ for qflist and qf stack
+--- gil and giL for loclist and loclist stack
+--- --- Add logic to redirect to chistory and lhistory if fzflua not present
+--- TODO: Add #fzflua tag where needed
+--- FUTURE: Turn :let g: into a picker
+--- LOW: What makes async messages not display?
 
 local fzf_lua = require("fzf-lua")
 
@@ -106,6 +111,7 @@ local helptags = function()
 end
 Map("n", "<leader>fh", helptags)
 
+-- TODO: Helpgrep might assist us here. Can make go giH
 -- LOW: Re-add this back in
 -- Map("n", "<leader>tl", function()
 --     builtin.grep_string({

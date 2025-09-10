@@ -1,3 +1,7 @@
+-- SSH clipboard config
+-- https://github.com/tjdevries/config.nvim/blob/master/plugin/clipboard.lua
+-- vim.g.deprecation_warnings = true -- Pre-silence deprecation warnings
+
 -----------------------
 -- Internal Behavior --
 -----------------------

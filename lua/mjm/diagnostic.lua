@@ -19,7 +19,6 @@ local diag_text_cfg = vim.tbl_extend("force", diag_main_cfg, virt_text_cfg)
 local diag_lines_cfg = vim.tbl_extend("force", diag_main_cfg, virt_lines_cfg)
 vim.diagnostic.config(diag_text_cfg)
 
--- FUTURE: Not the right keymap since this isn't an LSP feature
 Map("n", "\\D", function()
     local cur_cfg = vim.diagnostic.config() or {}
     vim.diagnostic.config((not cur_cfg.virtual_lines) and diag_lines_cfg or diag_text_cfg)

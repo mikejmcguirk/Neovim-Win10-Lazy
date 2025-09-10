@@ -87,6 +87,10 @@ Map(
 -- Navigation --
 ----------------
 
+-- TODO:
+-- For jumps (here and gj/gk), jumps under a certain amount should not affect the jumplist
+-- Jumps over a certain amount should
+-- I'm not sure what options there are to respect here though
 Map({ "n", "x" }, "k", function()
     if vim.v.count == 0 then
         return "gk"

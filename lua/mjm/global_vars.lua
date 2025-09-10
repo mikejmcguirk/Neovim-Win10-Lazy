@@ -6,3 +6,5 @@ SpellFile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add" ---@type string
 
 Cmd = vim.api.nvim_cmd
 Map = vim.keymap.set
+
+-- TODO: create Set and Get for option values

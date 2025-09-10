@@ -50,6 +50,7 @@ for _ = 1, 10 do
 
     Map("n", string.format("<leader>%s", mod_mark), function()
         if vim.api.nvim_get_option_value("filetype", { buf = 0 }) == "qf" then
+            -- TODO: This should go to the alternate window instead
             return vim.notify("Currently in qf buffer", vim.log.levels.WARN)
         end
 

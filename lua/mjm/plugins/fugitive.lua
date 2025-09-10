@@ -1,3 +1,5 @@
+--- TODO: Move to gg mappings
+
 vim.cmd.packadd({ vim.fn.escape("vim-fugitive", " "), bang = true, magic = { file = false } })
 
 vim.api.nvim_create_autocmd("FileType", {
@@ -38,6 +40,7 @@ end)
 
 Map("n", "<leader>gchn", function() vim.api.nvim_cmd({ cmd = "Git", args = { "commit" } }, {}) end)
 
+-- TODO: diffs should not have listchars on
 local function open_diffs(staged)
     for _, w in ipairs(vim.fn.getwininfo()) do
         if vim.api.nvim_get_option_value("filetype", { buf = w.bufnr }) == "diff" then return end

@@ -1,3 +1,6 @@
+-- TODO: Map this to <leader>- along with the Rust and go mappings
+-- This is purely a userspace mapping
+
 local ut = require("mjm.utils")
 
 ---@param annotation string

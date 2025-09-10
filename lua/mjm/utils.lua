@@ -1,3 +1,6 @@
+-- From mini.jump2D. Extremely useful
+-- local max_width = vim.o.columns * math.max(vim.o.cmdheight - 1, 0) + vim.v.echospace
+
 local M = {}
 
 --- @param prompt string

@@ -1,3 +1,5 @@
+-- TODO: Consider getting a C lsp for reading code. I think clang is the one everyone uses
+
 -- LOW: Weird Issue where workspace update is triggered due to FzfLua require, and Semantic
 -- Tokens do not consistently refresh afterwards
 
@@ -196,8 +198,13 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end
         Map("n", "grl", inlay_toggle)
 
-        -- textDocument/references
+        -- textDocument/linkedEditingRange
+        -- FUTURE: The docs recommend trying this with html
+        -- if client:supports_method("textDocument/linkedEditingRange") then
+        --     vim.lsp.linked_editing_range.enable(true, { client_id = client.id })
+        -- end
 
+        -- textDocument/references
         Map("n", "grr", references, { buffer = buf })
         local has_references = client:supports_method("textDocument/references")
         if has_references and ok then
@@ -209,6 +216,11 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         -- textDocument/rename
         Map("n", "grn", function()
+            -- TODO: use a TS query to pull the current variable name. default to blank
+            -- I think you can update the input func to feedkeys in  an optional prompt
+            -- I'm not sure if default pretypes or is just what happens if you hit enter with
+            -- nothing
+
             --- @type boolean, string
             local ok_i, input = require("mjm.utils").get_input("Rename: ")
             if not ok_i then
@@ -241,6 +253,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         -- workspace/symbol
         -- Kickstart mapping
+        -- TODO: Think about this one. If we did grw, that gives us grw and grW. kickstart is the
+        -- only place I've seen this. Not that widespread?
         Map("n", "gW", workspace, { buffer = buf })
 
         local toggle_tokens = function()
