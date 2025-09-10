@@ -24,6 +24,7 @@ function M.protected_set_cursor(cur_pos, opts)
 
     local line_count = vim.api.nvim_buf_line_count(buf)
     cur_pos[1] = math.min(cur_pos[1], line_count)
+
     local row = cur_pos[1]
     local set_line = vim.api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
     cur_pos[2] = math.min(cur_pos[2], #set_line - 1)
