@@ -24,6 +24,8 @@ vim.api.nvim_set_option_value("shada", shada, { scope = "global" })
 -- UI --
 --------
 
+vim.api.nvim_set_var("no_plugin_maps", 1)
+
 vim.api.nvim_set_option_value("tabstop", 4, { scope = "global" })
 vim.api.nvim_set_option_value("softtabstop", 4, { scope = "global" })
 vim.api.nvim_set_option_value("shiftwidth", 4, { scope = "global" })
@@ -51,6 +53,8 @@ vim.api.nvim_set_option_value("scrolloff", Scrolloff_Val, { scope = "global" })
 
 vim.api.nvim_set_option_value("splitbelow", true, { scope = "global" })
 vim.api.nvim_set_option_value("splitright", true, { scope = "global" })
+-- For some reason, uselast needs to be manually set globally
+vim.api.nvim_set_option_value("switchbuf", "useopen,uselast", { scope = "global" })
 
 ---------------------
 -- Buffer Behavior --
@@ -101,6 +105,12 @@ vim.opt.shortmess:append("W") --- No "written" notifications
 
 vim.api.nvim_set_option_value("ruler", false, { scope = "global" })
 
+vim.filetype.add({
+    filename = {
+        [".bashrc_custom"] = "sh",
+    },
+})
+
 ----------------------
 -- Autocmd Controls --
 ----------------------
@@ -117,12 +127,6 @@ vim.api.nvim_create_autocmd("BufWinEnter", {
 
         Cmd({ cmd = "normal", args = { 'g`"zz' } }, {})
     end,
-})
-
-vim.api.nvim_create_autocmd({ "BufNewFile", "BufRead" }, {
-    group = set_group,
-    pattern = ".bashrc_custom",
-    callback = function() vim.api.nvim_cmd({ cmd = "set", args = { "filetype=sh" } }, {}) end,
 })
 
 -- See help fo-table
