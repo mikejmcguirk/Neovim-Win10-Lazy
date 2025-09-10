@@ -89,8 +89,10 @@ Map("n", "<leader>ft", fzf_lua.highlights)
 Map("n", "<leader>fk", fzf_lua.keymaps)
 
 -- LOW: Add a way to delete individual or all lists from here
-Map("n", "<leader>fo", fzf_lua.loclist_stack)
-Map("n", "<leader>fu", fzf_lua.quickfix_stack)
+Map("n", "<leader>fo", fzf_lua.loclist)
+Map("n", "<leader>fu", fzf_lua.quickfix)
+Map("n", "<leader>fO", fzf_lua.loclist_stack)
+Map("n", "<leader>fU", fzf_lua.quickfix_stack)
 
 local buf_marks = function()
     require("fzf-lua").marks({
