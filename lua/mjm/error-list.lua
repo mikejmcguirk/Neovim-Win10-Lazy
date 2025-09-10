@@ -107,19 +107,22 @@ local M = {}
 --- Autocmds ---
 ----------------
 
+-- FUTURE: View adjustments should take into account scrolloff and screenlines so that if the
+-- user re-enters the window, it doesn't shift to meet scrolloff requirements
+-- screenpos() ?
+-- screenrow() ?
+
 --- @param win integer
 --- @param views vim.fn.winsaveview.ret[]
 --- @return nil
---- TODO: Use row() cmd instead of pulling view twice
 local function adjust_view(win, views)
     local view = views[win] --- @type vim.fn.winsaveview.ret|nil
     if not view then return end
     if not vim.api.nvim_win_is_valid(win) then return end
 
     --- @type vim.fn.winsaveview.ret
-    local new_view = vim.api.nvim_win_call(win, function() return vim.fn.winsaveview() end)
-    if not new_view then return end
-    if view.topline == new_view.topline then return end
+    local new_topline = vim.api.nvim_win_call(win, function() return vim.fn.line("w0") end)
+    if view.topline == new_topline then return end
 
     vim.api.nvim_win_call(win, function() vim.fn.winrestview(view) end)
 end
@@ -206,9 +209,6 @@ end
 -------------------------------------
 --- Opening and Closing Functions ---
 -------------------------------------
-
--- FUTURE: View adjustments should take into account scrolloff and screenlines so that if the
--- user re-enters the window, it doesn't shift to meet scrolloff requirements
 
 local max_qf_height = 10
 
