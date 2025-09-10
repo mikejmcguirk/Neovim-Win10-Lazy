@@ -107,6 +107,11 @@ local M = {}
 --- Autocmds ---
 ----------------
 
+-- MAYBE: If you want to be fancy, for each of these qf open/close commands, you could have
+-- a generalized function for win_check, and pass in function handlers for different wintype
+-- conditions. Would allow for customization. But for the current case, I think the layers of
+-- wrappers would add complexity
+
 -- FUTURE: View adjustments should take into account scrolloff and screenlines so that if the
 -- user re-enters the window, it doesn't shift to meet scrolloff requirements
 -- screenpos() ?
@@ -141,22 +146,20 @@ function M.close_all_loclists(opts)
         local views = {} --- @type vim.fn.winsaveview.ret|nil[]
 
         for _, win in pairs(vim.api.nvim_tabpage_list_wins(tab)) do
-            --- TODO: Use win_gettype() for loclist and popup flags
-            local wininfo = vim.fn.getwininfo(win)[1] --- @type vim.fn.getwininfo.ret.item
-            if wininfo.quickfix == 1 and wininfo.loclist == 1 then
+            local wintype = vim.fn.win_gettype(win)
+            if wintype == "loclist" then
                 if opts.id then
                     local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
-                    if qf_id == opts.id then table.insert(loclist_wins, win) end
+                    if qf_id == opts.id then
+                        table.insert(loclist_wins, win)
+                    else
+                        views[win] = vim.api.nvim_win_call(win, vim.fn.winsaveview)
+                    end
                 else
                     table.insert(loclist_wins, win)
                 end
-            else
-                --- @type vim.api.keyset.win_config
-                local config = vim.api.nvim_win_get_config(wininfo.winid)
-                local relative = config.relative and config.relative ~= ""
-                if not relative then
-                    vim.api.nvim_win_call(win, function() views[win] = vim.fn.winsaveview() end)
-                end
+            elseif wintype == "" or wintype == "quickfix" then
+                views[win] = vim.api.nvim_win_call(win, vim.fn.winsaveview)
             end
         end
 
@@ -240,25 +243,27 @@ end
 function M.open_qflist(height)
     local wins = vim.api.nvim_tabpage_list_wins(0) --- @type integer[]
     local views = {} --- @type vim.fn.winsaveview.ret|nil[]
+    local is_loclist_open = false
 
-    local function win_check(wininfo)
-        if wininfo.quickfix == 1 and wininfo.loclist ~= 1 then return false end
+    local function win_check(win)
+        local wintype = vim.fn.win_gettype(win)
 
-        --- @type vim.api.keyset.win_config
-        local config = vim.api.nvim_win_get_config(wininfo.winid)
-        if config.relative and config.relative ~= "" then return true end
+        if wintype == "quickfix" then return false end
 
-        local get_view = function() views[wininfo.winid] = vim.fn.winsaveview() end
-        vim.api.nvim_win_call(wininfo.winid, get_view)
+        if wintype == "loclist" then
+            is_loclist_open = true
+            return true
+        end
 
+        if wintype == "" then views[win] = vim.api.nvim_win_call(win, vim.fn.winsaveview) end
         return true
     end
 
-    for _, w in pairs(vim.api.nvim_tabpage_list_wins(0)) do
-        if not win_check(vim.fn.getwininfo(w)[1]) then return false end
+    for _, win in pairs(vim.api.nvim_tabpage_list_wins(0)) do
+        if not win_check(win) then return false end
     end
 
-    M.close_all_loclists({ cur_tab = true })
+    if is_loclist_open then M.close_all_loclists({ cur_tab = true }) end
     local list_height = get_list_height({ height = height })
     --- @diagnostic disable: missing-fields
     vim.api.nvim_cmd({ cmd = "copen", count = list_height, mods = { split = "botright" } }, {})
@@ -275,25 +280,22 @@ function M.close_qflist()
     local is_qf_here = false --- @type boolean
     local views = {} --- @type vim.fn.winsaveview.ret|nil[]
 
-    local function win_check(wininfo)
-        if wininfo.quickfix == 1 and wininfo.loclist ~= 1 then
+    local function win_check(win)
+        local wintype = vim.fn.win_gettype(win)
+
+        if wintype == "quickfix" then
             is_qf_here = true
             return
         end
 
-        --- @type vim.api.keyset.win_config
-        local config = vim.api.nvim_win_get_config(wininfo.winid)
-        if config.relative and config.relative ~= "" then return end
+        local save_view = wintype == "" or wintype == "loclist"
+        if not save_view then return end
 
-        vim.api.nvim_win_call(
-            wininfo.winid,
-            function() views[wininfo.winid] = vim.fn.winsaveview() end
-        )
+        views[win] = vim.api.nvim_win_call(win, vim.fn.winsaveview)
     end
 
-    for _, w in pairs(vim.api.nvim_tabpage_list_wins(0)) do
-        local wininfo = vim.fn.getwininfo(w)[1] --- @type vim.fn.getwininfo.ret.item
-        win_check(wininfo)
+    for _, win in pairs(vim.api.nvim_tabpage_list_wins(0)) do
+        win_check(win)
     end
 
     if not is_qf_here then return false end
@@ -309,8 +311,8 @@ end
 --- @param height? integer
 --- @return boolean
 function M.open_loclist(height)
-    local win = vim.api.nvim_get_current_win() --- @type integer
-    local qf_id = vim.fn.getloclist(win, { id = 0 }).id ---@type integer
+    local cur_win = vim.api.nvim_get_current_win() --- @type integer
+    local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id ---@type integer
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Window has no loclist", "" } }, false, {})
         return false
@@ -318,35 +320,46 @@ function M.open_loclist(height)
 
     local wins = vim.api.nvim_tabpage_list_wins(0) --- @type integer[]
     local views = {} --- @type vim.fn.winsaveview.ret|nil[]
+    local qf_err = "Cannot open loclist from qf window"
+    local is_qf_open = false
 
-    local function win_check(wininfo)
-        if wininfo.quickfix == 1 and wininfo.loclist ~= 1 and wininfo.winid == win then
-            vim.api.nvim_echo({ { "Cannot open loclist from quickfix window", "" } }, false, {})
-            return false
+    local function win_check(win)
+        local wintype = vim.fn.win_gettype(win)
+
+        if wintype == "quickfix" then
+            if win == cur_win then
+                vim.api.nvim_echo({ { qf_err, "" } }, false, {})
+                return false
+            end
+
+            is_qf_open = true
+            return true
         end
 
-        if wininfo.quickfix == 1 and wininfo.loclist == 1 then
-            local qf_id_wi = vim.fn.getloclist(wininfo.winid, { id = 0 }).id ---@type integer
-            -- In a loclist window
-            if qf_id_wi == qf_id then return false end
+        if wintype == "loclist" then
+            if win == cur_win then
+                vim.api.nvim_echo({ { qf_err, "" } }, false, {})
+                return false
+            end
+
+            local win_qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id ---@type integer
+            if win_qf_id == qf_id then return false end
+
+            views[win] = vim.api.nvim_win_call(win, vim.fn.winsaveview)
+            return true
         end
 
-        --- @type vim.api.keyset.win_config
-        local config = vim.api.nvim_win_get_config(wininfo.winid)
-        if config.relative and config.relative ~= "" then return true end
-
-        views[wininfo.winid] = vim.fn.winsaveview()
-
+        if wintype == "" then views[win] = vim.api.nvim_win_call(win, vim.fn.winsaveview) end
         return true
     end
 
-    for _, w in pairs(wins) do
-        if not win_check(vim.fn.getwininfo(w)[1]) then return false end
+    for _, win in pairs(wins) do
+        if not win_check(win) then return false end
     end
 
-    M.close_qflist()
+    if is_qf_open then M.close_qflist() end
     --- @diagnostic disable: missing-fields
-    local list_height = get_list_height({ height = height, is_loclist = true, win = win })
+    local list_height = get_list_height({ height = height, is_loclist = true, win = cur_win })
     vim.api.nvim_cmd({ cmd = "lop", count = list_height }, {})
 
     for _, w in pairs(wins) do
@@ -356,47 +369,56 @@ function M.open_loclist(height)
     return true
 end
 
+-- PERF: Would it be faster to just iterate once to see if we have a loclist to close, then
+-- iterate again to get the info to save? Applies to all open/closes
+-- Maybe a way to think about it - How does each approach scale with a lot of windows?
+-- But then again, the practical case is ~1-4
+
 --- @return boolean
 function M.close_loclist()
-    local win = vim.api.nvim_get_current_win() --- @type integer
-    local qf_id = vim.fn.getloclist(win, { id = 0 }).id ---@type any
+    local cur_win = vim.api.nvim_get_current_win() --- @type integer
+    local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id ---@type any
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Window has no loclist", "" } }, false, {})
         return false
     end
 
     local views = {} --- @type vim.fn.winsaveview.ret|nil[]
-    local has_loclist_focus = false
+    local is_loclist_open = false
 
-    local function win_check(wininfo)
-        if wininfo.quickfix == 1 and wininfo.loclist ~= 1 and wininfo.winid == win then
-            local msg = "Cannot close loclist from quickfix window"
-            vim.api.nvim_echo({ { msg, "" } }, false, {})
-            return false
-        end
+    local function win_check(win)
+        local wintype = vim.fn.win_gettype(win)
+        if wintype == "quickfix" then
+            if win == cur_win then
+                local qf_err = "Cannot close loclist from a quickfix window"
+                vim.api.nvim_echo({ { qf_err, "" } }, false, {})
+                return false
+            end
 
-        local qf_id_wi = vim.fn.getloclist(wininfo.winid, { id = 0 }).id ---@type any
-        if qf_id_wi == qf_id then
-            has_loclist_focus = true
+            views[win] = vim.api.nvim_win_call(win, vim.fn.winsaveview)
             return true
         end
 
-        --- @type vim.api.keyset.win_config
-        local config = vim.api.nvim_win_get_config(wininfo.winid)
-        if config.relative and config.relative ~= "" then return true end
+        if wintype == "loclist" then
+            local win_qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id ---@type integer
+            if win_qf_id == qf_id then
+                is_loclist_open = true
+                return true
+            end
 
-        vim.api.nvim_win_call(
-            wininfo.winid,
-            function() views[wininfo.winid] = vim.fn.winsaveview() end
-        )
+            views[win] = vim.api.nvim_win_call(win, vim.fn.winsaveview)
+            return true
+        end
+
+        if wintype == "" then views[win] = vim.api.nvim_win_call(win, vim.fn.winsaveview) end
         return true
     end
 
-    for _, w in pairs(vim.api.nvim_tabpage_list_wins(0)) do
-        if not win_check(vim.fn.getwininfo(w)[1]) then return false end
+    for _, win in pairs(vim.api.nvim_tabpage_list_wins(0)) do
+        if not win_check(win) then return false end
     end
 
-    if not has_loclist_focus then return false end
+    if not is_loclist_open then return false end
 
     vim.api.nvim_cmd({ cmd = "lcl" }, {})
 
