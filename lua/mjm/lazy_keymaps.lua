@@ -24,14 +24,18 @@ end
 Map("n", "gI", "g^i")
 
 -- Because I remove "o" from the fo-table
-Map("n", "<M-o>", "A<cr>", { silent = true })
-Map("n", "<M-O>", "A<cr><esc>ddkPA ", { silent = true }) -- FUTURE: brittle
+-- LOW: Unmapped because of shift+alt. Unsure what a good alternative here is
+-- Map("n", "<M-o>", "A<cr>", { silent = true })
+-- Map("n", "<M-O>", "A<cr><esc>ddkPA ", { silent = true }) -- FUTURE: brittle
 
 Map("n", "v", "mvv", { silent = true })
 Map("n", "V", "mvV", { silent = true })
 
 Map("n", "<M-r>", "gr", { silent = true })
-Map("n", "<M-R>", "gR", { silent = true })
+-- LOW: Unmapped because of shift+alt. The default here is functionally okay, because it uses an
+-- unergonomic mapping for a relatively obscure functionality. Somewhat of an anti-pattern, but
+-- also fits in with stuff like gq/gQ
+-- Map("n", "<M-R>", "gR", { silent = true })
 
 -----------------
 -- Insert Mode --
