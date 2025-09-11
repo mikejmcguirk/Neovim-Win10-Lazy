@@ -91,15 +91,15 @@ end
 --- @param ctx QfOpenCtx
 --- @return nil
 local function get_loclist_data(ctx)
-    -- TODO: Unsure if the split functions properly save this
-    assert(vim.validate("ctx", ctx, "table"))
-    assert(ctx.list_win)
-    assert(vim.api.nvim_win_is_valid(ctx.list_win))
+    vim.validate("ctx", ctx, "table")
+    vim.validate("ctx.list_win", ctx.list_win, "number")
+    local is_win_valid = function() return vim.api.nvim_win_is_valid(ctx.list_win) end
+    vim.validate("ctx.list_win", ctx.list_win, is_win_valid)
 
     ctx = ctx or {}
 
     local count = vim.fn.getloclist(ctx.list_win, { nr = "$" }).nr --- @type integer
-    assert(count > 0)
+    vim.validate("count", count, function() return count > 0 end)
     ctx.cur_stack_nr = vim.fn.getloclist(ctx.list_win, { nr = 0 }).nr
 
     ctx.loclist_data = {}
@@ -114,16 +114,22 @@ end
 --- @param ctx QfOpenCtx
 --- @return nil
 local function set_loclist_data(ctx)
-    assert(ctx.cur_stack_nr)
-    assert(ctx.dest_win)
-    assert(ctx.list_win)
-    assert(vim.fn.getloclist(ctx.dest_win, { id = 0 }).id == 0)
+    vim.validate("ctx", ctx, "table")
+    vim.validate("ctx.cur_stack_nr", ctx.cur_stack_nr, "number")
+    vim.validate("ctx.dest_win", ctx.dest_win, "number")
+    local dest_qf_id = vim.fn.getloclist(ctx.dest_win, { id = 0 }).id
+    vim.validate("dest_qf_id", dest_qf_id, function() return dest_qf_id == 0 end)
+    vim.validate("ctx.list_win", ctx.list_win, "number")
+    vim.validate("ctx.loclist_data", ctx.loclist_data, "table")
+    vim.validate("ctx.loclist_data", ctx.loclist_data, function() return #ctx.loclist_data > 0 end)
+    local len_check = function() return ctx.cur_stack_nr <= #ctx.loclist_data end
+    vim.validate("ctx.cur_stack_nr", ctx.cur_stack_nr, len_check)
+
+    ctx = ctx or {}
 
     for _, data in ipairs(ctx.loclist_data) do
         vim.fn.setloclist(ctx.dest_win, {}, " ", data)
     end
-
-    assert(ctx.cur_stack_nr <= vim.fn.getloclist(ctx.list_win, { nr = "$" }).nr)
 
     --- @diagnostic disable: missing-fields
     --- @type vim.api.keyset.cmd
@@ -135,24 +141,25 @@ end
 --- @return integer|nil
 --- Emulation of qf_find_win_with_loclist/FOR_ALL_WINDOWS_IN_TAB
 local function find_loclist_win(ctx)
-    assert(vim.validate("ctx", ctx, "table"))
-    assert(ctx.list_winnr)
-    assert(ctx.qf_id)
-    assert(ctx.total_winnr)
+    vim.validate("ctx", ctx, "table")
+    vim.validate("ctx.qf_id", ctx.qf_id, "number")
+    vim.validate("ctx.qf_id", ctx.qf_id, function() return ctx.qf_id ~= 0 end)
+    vim.validate("ctx.total_winnr", ctx.total_winnr, "number")
+    vim.validate("ctx.total_winnr", ctx.total_winnr, function() return ctx.total_winnr > 0 end)
 
     ctx = ctx or {}
 
+    -- NOTE: If the loclist window is the only window, the loop logic will see this and return a
+    -- nil value. This is more logic, but less convoluted, than manually checking win count
     for i = 1, ctx.total_winnr do
-        if i ~= ctx.list_winnr then
-            local win = vim.fn.win_getid(i) --- @type integer
-            local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
+        local win = vim.fn.win_getid(i) --- @type integer
+        local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
 
-            if qf_id == ctx.qf_id then
-                local buf = vim.api.nvim_win_get_buf(win) --- @type integer
-                --- @type string
-                local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf })
-                if buftype ~= "quickfix" then return win end
-            end
+        if qf_id == ctx.qf_id then
+            local buf = vim.api.nvim_win_get_buf(win) --- @type integer
+            --- @type string
+            local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf })
+            if buftype ~= "quickfix" then return win end
         end
     end
 
