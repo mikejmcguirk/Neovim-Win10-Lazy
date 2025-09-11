@@ -353,6 +353,7 @@ function M.open_loclist(opts)
 
         if wintype == "quickfix" then
             if win == cur_win then
+                -- TODO: Prints when toggling
                 vim.api.nvim_echo({ { qf_err, "" } }, false, {})
                 return false
             end

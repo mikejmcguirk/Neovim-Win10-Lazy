@@ -19,6 +19,7 @@ local ts_nop_all = function(hl_query)
     hl_query.query:disable_capture("punctuation.delimiter")
     hl_query.query:disable_capture("variable")
     hl_query.query:disable_capture("variable.member")
+
     -- Without the LSP to analyze scope, this hl_group does not add value
     hl_query.query:disable_capture("variable.parameter")
 end
@@ -59,6 +60,7 @@ vim.api.nvim_create_autocmd("FileType", {
 local token_nop_lua = {
     "comment", -- Treesitter handles
     "method", -- Treesitter handles
+    -- TODO: Check this with a class like the TSHighlighter
     "property", -- Can just be fg
 } --- @type string[]
 
