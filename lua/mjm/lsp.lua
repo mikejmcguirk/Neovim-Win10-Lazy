@@ -136,12 +136,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
             -- normal mode changes will produce a set of lenses with stale data
             vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
                 buffer = ev.buf,
-                group = vim.api.nvim_create_augroup("refresh-lens", { clear = false }),
+                group = vim.api.nvim_create_augroup("refresh-lens", { clear = true }),
                 -- Bespoke module so I can render the lenses as virtual lines
-                callback = function()
-                    if vim.fn.mode() == "i" then return end
-                    require("mjm.codelens").refresh({ buf = ev.buf })
-                end,
+                callback = function() require("mjm.codelens").refresh({ buf = ev.buf }) end,
             })
         end
 
