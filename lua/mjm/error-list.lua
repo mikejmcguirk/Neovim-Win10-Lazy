@@ -91,6 +91,7 @@
 -- qf_jump_open_window
 -- jump_to_help_window
 -- qf_jump_to_usable_window
+-- qf_find_win_with_loclist
 -- qf_open_new_file_win
 -- qf_goto_win_with_ll_file
 -- qf_goto_win_with_qfl_file
@@ -130,6 +131,23 @@ local function adjust_view(win, views)
     if view.topline == new_topline then return end
 
     vim.api.nvim_win_call(win, function() vim.fn.winrestview(view) end)
+end
+
+local function restore_view(win, view)
+    if not vim.api.nvim_win_is_valid(win) then return end
+
+    --- @type integer
+    local new_topline = vim.api.nvim_win_call(win, function() return vim.fn.line("w0") end)
+    if view.topline == new_topline then return end
+
+    vim.api.nvim_win_call(win, function() vim.fn.winrestview(view) end)
+end
+
+-- TODO: Move everything to this function
+local function restore_views(views)
+    for win, view in pairs(views) do
+        restore_view(win, view)
+    end
 end
 
 ---@param opts? {id: integer, cur_tab: boolean}
@@ -238,9 +256,12 @@ local function get_list_height(opts)
     return list_height
 end
 
---- @param height? integer
+--- @param opts? {height:integer, keep_win:boolean}
 --- @return boolean
-function M.open_qflist(height)
+function M.open_qflist(opts)
+    opts = opts or {}
+
+    local cur_win = vim.api.nvim_get_current_win()
     local wins = vim.api.nvim_tabpage_list_wins(0) --- @type integer[]
     local views = {} --- @type vim.fn.winsaveview.ret|nil[]
     local is_loclist_open = false
@@ -264,12 +285,16 @@ function M.open_qflist(height)
     end
 
     if is_loclist_open then M.close_all_loclists({ cur_tab = true }) end
-    local list_height = get_list_height({ height = height })
+    local list_height = get_list_height({ height = opts.height })
     --- @diagnostic disable: missing-fields
     vim.api.nvim_cmd({ cmd = "copen", count = list_height, mods = { split = "botright" } }, {})
 
     for _, w in pairs(wins) do
         adjust_view(w, views)
+    end
+
+    if opts.keep_win and vim.api.nvim_win_is_valid(cur_win) then
+        vim.api.nvim_set_current_win(cur_win)
     end
 
     return true
@@ -308,9 +333,11 @@ function M.close_qflist()
     return true
 end
 
---- @param height? integer
+--- @param opts? {height: integer, keep_win: boolean}
 --- @return boolean
-function M.open_loclist(height)
+function M.open_loclist(opts)
+    opts = opts or {}
+
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id ---@type integer
     if qf_id == 0 then
@@ -359,11 +386,15 @@ function M.open_loclist(height)
 
     if is_qf_open then M.close_qflist() end
     --- @diagnostic disable: missing-fields
-    local list_height = get_list_height({ height = height, is_loclist = true, win = cur_win })
+    local list_height = get_list_height({ height = opts.height, is_loclist = true, win = cur_win })
     vim.api.nvim_cmd({ cmd = "lop", count = list_height }, {})
 
     for _, w in pairs(wins) do
         adjust_view(w, views)
+    end
+
+    if opts.keep_win and vim.api.nvim_win_is_valid(cur_win) then
+        vim.api.nvim_set_current_win(cur_win)
     end
 
     return true
@@ -425,6 +456,38 @@ function M.close_loclist()
     for _, w in pairs(vim.api.nvim_tabpage_list_wins(0)) do
         adjust_view(w, views)
     end
+
+    return true
+end
+
+-- TODO: Move this and its helper function to utils
+--- @return boolean
+function M.close_win_restview(list_win)
+    vim.validate("list_win", list_win, "number")
+
+    if not vim.api.nvim_win_is_valid(list_win) then
+        vim.api.nvim_echo({ { "Win " .. list_win .. " is invalid", "" } }, false, {})
+        return false
+    end
+
+    local views = {} --- @type vim.fn.winsaveview.ret|nil[]
+
+    local function win_check(win)
+        if win == list_win then return end
+
+        local wintype = vim.fn.win_gettype(win)
+        if wintype == "" or wintype == "quickfix" or wintype == "loclist" then
+            views[win] = vim.api.nvim_win_call(win, vim.fn.winsaveview)
+        end
+    end
+
+    for _, win in pairs(vim.api.nvim_tabpage_list_wins(0)) do
+        win_check(win)
+    end
+
+    vim.api.nvim_win_close(list_win, true)
+
+    restore_views(views)
 
     return true
 end
