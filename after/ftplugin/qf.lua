@@ -84,78 +84,70 @@ for _, map in pairs(bad_maps) do
     Map("n", map, function() vim.notify("Currently in qf buffer") end, { buffer = true })
 end
 
+-------------
+--- Types ---
+-------------
+
+--- @alias QfOpenMethod "split"|"tabnew"|"vsplit"
+
 ---------------------
 -- Qf Open Helpers --
 ---------------------
 
---- @param ctx QfOpenCtx
---- @return nil
-local function get_loclist_data(ctx)
-    vim.validate("ctx", ctx, "table")
-    vim.validate("ctx.list_win", ctx.list_win, "number")
-    local is_win_valid = function() return vim.api.nvim_win_is_valid(ctx.list_win) end
-    vim.validate("ctx.list_win", ctx.list_win, is_win_valid)
+--- @param list_win integer
+--- @return boolean, table|string, integer
+--- 2nd return is a table if ok, string with err if not
+local function get_loclist_data(list_win)
+    vim.validate("list_win", list_win, function() return vim.api.nvim_win_is_valid(list_win) end)
 
-    ctx = ctx or {}
+    local count = vim.fn.getloclist(list_win, { nr = "$" }).nr --- @type integer
+    if count < 1 then return false, "Loclist has a count less than one", 2 end
 
-    local count = vim.fn.getloclist(ctx.list_win, { nr = "$" }).nr --- @type integer
-    vim.validate("count", count, function() return count > 0 end)
-    ctx.cur_stack_nr = vim.fn.getloclist(ctx.list_win, { nr = 0 }).nr
-
-    ctx.loclist_data = {}
-
+    local cur_stack_nr = vim.fn.getloclist(list_win, { nr = 0 }).nr --- @type integer
+    local loclist_data = {}
     for i = 1, count do
-        --- @type table
-        local list = vim.fn.getloclist(ctx.list_win, { nr = i, all = true })
-        table.insert(ctx.loclist_data, list)
+        local list = vim.fn.getloclist(list_win, { nr = i, all = true }) --- @type table
+        table.insert(loclist_data, list)
     end
+
+    return true, loclist_data, cur_stack_nr
 end
 
---- @param ctx QfOpenCtx
+--- @param cur_stack_nr integer
+--- @param dest_win integer
+--- @param loclist_data table
 --- @return nil
-local function set_loclist_data(ctx)
-    vim.validate("ctx", ctx, "table")
-    vim.validate("ctx.cur_stack_nr", ctx.cur_stack_nr, "number")
-    vim.validate("ctx.dest_win", ctx.dest_win, "number")
-    local dest_qf_id = vim.fn.getloclist(ctx.dest_win, { id = 0 }).id
-    vim.validate("dest_qf_id", dest_qf_id, function() return dest_qf_id == 0 end)
-    vim.validate("ctx.list_win", ctx.list_win, "number")
-    vim.validate("ctx.loclist_data", ctx.loclist_data, "table")
-    vim.validate("ctx.loclist_data", ctx.loclist_data, function() return #ctx.loclist_data > 0 end)
-    local len_check = function() return ctx.cur_stack_nr <= #ctx.loclist_data end
-    vim.validate("ctx.cur_stack_nr", ctx.cur_stack_nr, len_check)
+local function set_loclist_data(cur_stack_nr, dest_win, loclist_data)
+    vim.validate("cur_stack_nr", cur_stack_nr, "number")
+    vim.validate("cur_stack_nr", cur_stack_nr, function() return cur_stack_nr > 0 end)
+    vim.validate("dest_win", dest_win, function() return vim.api.nvim_win_is_valid(dest_win) end)
+    vim.validate("loclist_data", loclist_data, "table")
+    vim.validate("cur_stack_nr", cur_stack_nr, function() return cur_stack_nr <= #loclist_data end)
 
-    ctx = ctx or {}
-
-    for _, data in ipairs(ctx.loclist_data) do
-        vim.fn.setloclist(ctx.dest_win, {}, " ", data)
+    for _, data in ipairs(loclist_data) do
+        vim.fn.setloclist(dest_win, {}, " ", data)
     end
 
     --- @diagnostic disable: missing-fields
     --- @type vim.api.keyset.cmd
-    local cmd = { cmd = "lhistory", count = ctx.cur_stack_nr, mods = { silent = true } }
-    vim.api.nvim_win_call(ctx.dest_win, function() vim.api.nvim_cmd(cmd, {}) end)
+    local cmd = { cmd = "lhistory", cur_stack_nr, mods = { silent = true } }
+    vim.api.nvim_win_call(dest_win, function() vim.api.nvim_cmd(cmd, {}) end)
 end
 
---- @param ctx QfOpenCtx
+--- @param qf_id integer
+--- @param total_winnr integer
 --- @return integer|nil
 --- Emulation of qf_find_win_with_loclist/FOR_ALL_WINDOWS_IN_TAB
-local function find_loclist_win(ctx)
-    vim.validate("ctx", ctx, "table")
-    vim.validate("ctx.qf_id", ctx.qf_id, "number")
-    vim.validate("ctx.qf_id", ctx.qf_id, function() return ctx.qf_id ~= 0 end)
-    vim.validate("ctx.total_winnr", ctx.total_winnr, "number")
-    vim.validate("ctx.total_winnr", ctx.total_winnr, function() return ctx.total_winnr > 0 end)
+local function find_loclist_win(qf_id, total_winnr)
+    vim.validate("qf_id", qf_id, "number")
+    vim.validate("qf_id", qf_id, function() return qf_id ~= 0 end)
+    vim.validate("total_winnr", total_winnr, "number")
+    vim.validate("total_winnr", total_winnr, function() return total_winnr > 0 end)
 
-    ctx = ctx or {}
-
-    -- NOTE: If the loclist window is the only window, the loop logic will see this and return a
-    -- nil value. This is more logic, but less convoluted, than manually checking win count
-    for i = 1, ctx.total_winnr do
+    for i = 1, total_winnr do
         local win = vim.fn.win_getid(i) --- @type integer
-        local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
 
-        if qf_id == ctx.qf_id then
+        if qf_id == qf_id then
             local buf = vim.api.nvim_win_get_buf(win) --- @type integer
             --- @type string
             local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf })
@@ -166,30 +158,33 @@ local function find_loclist_win(ctx)
     return nil
 end
 
---- @param ctx QfOpenCtx
+--- @param entry table
+--- @param open string
 --- @return nil
-local function qf_get_open_buf_opts(ctx)
-    ctx = ctx or {}
-    assert(ctx.entry)
+local function qf_get_open_buf_opts(entry, open)
+    vim.validate("entry", entry, "table")
+    vim.validate("open", open, "string")
 
-    local buf = ctx.entry.bufnr or vim.fn.bufadd(ctx.entry.bufname) --- @type integer
-    ctx.entry.bufnr = buf
-    ctx.buf_source = { bufnr = ctx.entry.bufnr }
+    local buf = entry.bufnr or vim.fn.bufadd(entry.bufname) --- @type integer
+    entry.bufnr = buf
+    local buf_source = { bufnr = entry.bufnr } --- @type mjm.OpenBufSource
 
-    local buftype = ctx.entry.type == "\1" and "help" or nil --- @type string|nil
-    local lnum = ctx.entry.lnum or nil --- @type integer|nil
+    local buftype = entry.type == "\1" and "help" or nil --- @type string|nil
+    local lnum = entry.lnum or nil --- @type integer|nil
     -- qf cols are one-indexed
-    local col = math.max(ctx.entry.col - 1, 0) or nil --- @type integer|nil
+    local col = math.max(entry.col - 1, 0) or nil --- @type integer|nil
     --- @type {[1]:integer, [2]: integer}|nil
     local cur_pos = (lnum and col) and { lnum, col } or nil
 
-    ctx.buf_opts = {
+    buf_opts = {
         buftype = buftype,
         clearjumps = true,
         cur_pos = cur_pos,
         force = true,
-        open = ctx.open == "tabnew" and ctx.open or nil,
+        open = open == "tabnew" and open or nil,
     }
+
+    return buf_source
 end
 
 --- @param ctx QfOpenCtx
