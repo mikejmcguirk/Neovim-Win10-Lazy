@@ -3,6 +3,8 @@
 ------------------
 
 --- TODO: Create a quickfixtextfuc that's as information rich as possible without being busy
+--- TODO: Grep for word
+--- https://github.com/stevearc/dotfiles/blob/master/.config/nvim/lua/plugins/quickfix.lua
 --- TODO: Filter keep/delete on as many fields as possible
 --- TODO: Sort on as many fields as possible (regular/capslock for asc/desc)
 --- TODO: Wrapper functions should make reasonable sorts as much as possible

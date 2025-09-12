@@ -102,7 +102,6 @@ local function get_loclist_data(list_win)
     vim.validate("list_win", list_win, function() return vim.api.nvim_win_is_valid(list_win) end)
 
     local count = vim.fn.getloclist(list_win, { nr = "$" }).nr --- @type integer
-    local cur_stack_nr = vim.fn.getloclist(list_win, { nr = 0 }).nr --- @type integer
     local loclist_data = {}
 
     for i = 1, count do
@@ -110,6 +109,7 @@ local function get_loclist_data(list_win)
         table.insert(loclist_data, list)
     end
 
+    local cur_stack_nr = vim.fn.getloclist(list_win, { nr = 0 }).nr --- @type integer
     return loclist_data, cur_stack_nr
 end
 
@@ -128,8 +128,8 @@ local function set_loclist_data(cur_stack_nr, dest_win, loclist_data)
         vim.fn.setloclist(dest_win, {}, " ", data)
     end
 
-    --- @diagnostic disable: missing-fields
     --- @type vim.api.keyset.cmd
+    --- @diagnostic disable-next-line: missing-fields
     local cmd = { cmd = "lhistory", count = cur_stack_nr, mods = { silent = true } }
     vim.api.nvim_win_call(dest_win, function() vim.api.nvim_cmd(cmd, {}) end)
 end
@@ -303,7 +303,7 @@ end
 --- @param finish QfFinishMethod
 --- @param list_win integer
 --- @return nil
-local function qf_open_default_dest(finish, list_win)
+local function qf_open_default_dest(list_win, finish)
     vim.validate("finish", finish, "string")
     vim.validate("list_win", list_win, function() return vim.api.nvim_win_is_valid(list_win) end)
     local is_cur_list_win = function() return vim.api.nvim_get_current_win() == list_win end
@@ -350,7 +350,7 @@ local function qf_direct_open(finish)
     if list_buftype ~= "quickfix" then return end
 
     if vim.v.count < 1 then
-        qf_open_default_dest(finish, list_win)
+        qf_open_default_dest(list_win, finish)
         return
     end
 
