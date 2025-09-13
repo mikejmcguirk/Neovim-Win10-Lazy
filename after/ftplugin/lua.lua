@@ -1,5 +1,6 @@
 -- TODO: Map this to <leader>- along with the Rust and go mappings
 -- This is purely a userspace mapping
+-- TODO: Add --- as a valid comment string
 
 local ut = require("mjm.utils")
 
