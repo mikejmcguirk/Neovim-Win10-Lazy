@@ -155,13 +155,16 @@ local function load_obsidian()
                 ---@type string
                 local cur_file_name = vim.fn.fnamemodify(cur_buf_name, ":t:r")
 
-                local ws = Obsidian.workspace
-                local ws_fname = ws.name
-                local img_dir = ws_fname .. "/" .. img_folder ---@type string
+                -- local ws = Obsidian.workspace
+                -- local ws_fname = ws.name
+                -- local img_dir = ws_fname .. "/" .. img_folder ---@type string
+                local img_dir = img_folder ---@type string
                 if vim.fn.isdirectory(img_dir) == 0 then vim.fn.mkdir(img_dir, "p") end
 
                 local pattern = img_dir .. "/" .. cur_file_name .. "*.png" ---@type string
+                vim.fn.confirm(pattern)
                 local files = vim.fn.glob(pattern, false, true) ---@type table
+                vim.fn.confirm(vim.inspect(files))
                 local count = #files ---@type integer
 
                 local padded_count = string.format("%03d", count) ---@type string
