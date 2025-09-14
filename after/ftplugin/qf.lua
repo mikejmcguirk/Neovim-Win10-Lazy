@@ -730,7 +730,17 @@ local function qf_split_tab(buf_source, buf_opts, list_win, finish, qf_id, is_lo
 
     local loclist_win = is_loclist and find_loclist_win(qf_id, list_win) or nil
 
-    vim.api.nvim_cmd({ cmd = "tabnew", range = { vim.fn.tabpagenr("$") } }, {})
+    local range = (function()
+        local tab_count = vim.fn.tabpagenr("$")
+
+        if vim.v.count > 0 then
+            return math.min(vim.v.count, tab_count)
+        else
+            return tab_count
+        end
+    end)()
+
+    vim.api.nvim_cmd({ cmd = "tabnew", range = { range } }, {})
     local dest_win = vim.api.nvim_get_current_win()
     require("mjm.utils").open_buf(buf_source, buf_opts)
 
@@ -825,18 +835,6 @@ local function validate_qf_open(list_win, open, finish)
 
     return true, nil
 end
---
--- -- TODO: I'm not sure we need the is_loclist flag if we can just check the qf_id
--- -- TODO: Need more consistent naming for window moves. dest_win in non-split opening is where
--- -- we go to open the file. Do you make the intermediary in the split func something else?
--- -- (probably).
--- -- TODO: The set_loclist_data was moved to dest_win. The loclist win vars are out. Fix in
--- -- this code
--- -- TODO: Turned off default zz in the buf open opts. Needs to be done manually at different
--- -- points
--- -- NOTE: The orphan loclist restoration behavior does not take place if a buf is opened in a
--- -- different tab
---
 
 local function qf_split(open, finish)
     local list_win = vim.api.nvim_get_current_win()
@@ -863,13 +861,6 @@ local function qf_split(open, finish)
         vim.api.nvim_echo({ { "No list entries", "" } }, false, {})
         return
     end
-
-    -- TODO: Come back to this
-    if vim.v.count > 0 then return end
-    -- local target_win = math.min(vim.v.count1, total_winnr)
-    -- local target_wintype = vim.fn.win_gettype(target_win)
-    -- if target_wintype ~= "" then return end
-    -- TODO: return to this. issue is orphan status
 
     local total_winnr = vim.fn.winnr("$") --- @type integer
     -- if vim.v.count > 0 and total_winnr <= 1 then return end
@@ -902,6 +893,18 @@ local function qf_split(open, finish)
     end
 
     local split_win, is_orphan_loclist = (function()
+        if vim.v.count > 0 then
+            local dest_winnr = math.min(vim.v.count, total_winnr)
+            local wintype = vim.fn.win_gettype(dest_winnr)
+
+            local loclist_win = is_loclist and find_loclist_win(qf_id, list_win) or nil
+
+            local win = wintype == "" and vim.fn.win_getid(dest_winnr) or nil
+            local orphan = loclist_win and false or true
+
+            return win, orphan
+        end
+
         if is_loclist then
             return qf_get_next_win_loclist(qf_id, list_win, total_winnr, entry)
         else
@@ -910,6 +913,8 @@ local function qf_split(open, finish)
     end)()
 
     if not split_win then
+        if vim.v.count > 0 then return end
+
         qf_split_full({
             list_win = list_win,
             buf_source = buf_source,
@@ -928,7 +933,7 @@ local function qf_split(open, finish)
 
     require("mjm.utils").open_buf(buf_source, buf_opts)
 
-    if is_orphan_loclist then
+    if is_loclist and is_orphan_loclist then
         qf_split_orphan_wrapup(list_win, dest_win)
         return
     end
