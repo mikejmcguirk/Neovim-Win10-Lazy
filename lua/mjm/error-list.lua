@@ -5,22 +5,34 @@
 --- TODO: Create a quickfixtextfuc that's as information rich as possible without being busy
 --- TODO: Grep for word
 --- https://github.com/stevearc/dotfiles/blob/master/.config/nvim/lua/plugins/quickfix.lua
---- TODO: Filter keep/delete on as many fields as possible
 --- TODO: Sort on as many fields as possible (regular/capslock for asc/desc)
 --- TODO: Wrapper functions should make reasonable sorts as much as possible
 --- --- How to do with vimgrep though?
 --- TODO: Is there a better way to use grepprg?
---- TODO: Re-sync contents
 --- TODO: Run/refresh from title. Wrappers should set it up properly
 --- --- Can get rid of redo grep map
 --- --- grepa might help with this
 --- TODO: More visibility for cdo/cfdo. Use bang by default?
---- TODO: Filter based on regex. Maybe vim.regex'
 --- TODO: Wrapper functions should trigger window height updates. Resize cmd
 --- TODO: De-map split cmds in windows
+--- --- kinda already done but should be explicit
 
 --- MAYBE: Treesitter/Semantic Token Highlighting
 --- MAYBE: Incremental preview of cdo/cfdo changes
+--- MAYBE: General cmd parsing: https://github.com/niuiic/quickfix.nvim
+
+--- SORTS:
+--- --- fname>lnum
+--- --- type>lnum
+--- --- diagnostics
+--- --- --- severity > fname > lnum
+--- --- --- fname > severity > lnum
+--- --- --- it seems reasonable these sorts could be built in to the cmds. severity by default
+--- --- --- it feels semi-logical then that you would have i to sort by severity and I to sort
+---         by fname, and then qiw would be warnings and up and qiW would be warnings only
+---         This breaks the no uppercasing before rule but also just feels logical
+--- --- --- and then under the general sort cmd, you would have generic fname, generic type, and
+---         then diagnostic specific sorts that convert the type
 
 --------------
 -- STAYAWAY --
@@ -61,6 +73,9 @@
 --- A merge kinda like deep table extend where duplicates are filtered
 --- Or a merge that works like a XOR
 --- Some of these more complex ideas feel more like commands
+---
+--- show current stack nr (chistory/lhistory)
+--- stack nr statusline component?
 ---
 --- QF BUFFER:
 --- p to toggle preview
@@ -754,48 +769,9 @@ Map("n", "yoe", function() buf_diags_to_loclist({ err_only = true }) end)
 
 Map("n", "yoh", function() buf_diags_to_loclist({ highest = true }) end)
 
----@param opts? {loclist:boolean, remove:boolean}
----@return nil
-local function filter_wrapper(opts)
-    opts = opts or {}
-
-    if opts.loclist and vim.fn.getloclist(vim.api.nvim_get_current_win(), { id = 0 }).id == 0 then
-        vim.notify("Current window has no location list")
-        return
-    end
-
-    local list = opts.loclist and "Location" or "Quickfix" ---@type string
-
-    if opts.loclist and #vim.fn.getloclist(vim.api.nvim_get_current_win()) <= 0 then
-        vim.notify(list .. " list is empty")
-        return
-    elseif (not opts.loclist) and #vim.fn.getqflist() <= 0 then
-        vim.notify(list .. " list is empty")
-        return
-    end
-
-    local action = opts.remove and "remove: " or "keep: " --- @type string
-    local prompt = list .. " pattern to " .. action --- @type string
-    local ok, pattern = require("mjm.utils").get_input(prompt) --- @type boolean, string
-    if not ok then
-        local msg = pattern or "Unknown error getting input" --- @type string
-        vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
-        return
-    elseif pattern == "" then
-        return
-    end
-
-    local prefix = opts.loclist and "L" or "C" ---@type string
-    vim.api.nvim_cmd({ cmd = prefix .. "filter", bang = opts.remove, args = { pattern } }, {})
-end
-
-Map("n", "duk", function() filter_wrapper() end)
-
-Map("n", "dur", function() filter_wrapper({ remove = true }) end)
-
-Map("n", "dok", function() filter_wrapper({ loclist = true }) end)
-
-Map("n", "dor", function() filter_wrapper({ loclist = true, remove = true }) end)
+------------
+--- Grep ---
+------------
 
 local last_grep = nil
 local last_lgrep = nil

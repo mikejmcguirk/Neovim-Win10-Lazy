@@ -99,6 +99,8 @@ require("mjm.plugins.treesj")
 require("mjm.plugins.ts-autotag")
 require("mjm.plugins.zen")
 
+-- TODO: In general, I'm not sure this was actually a good idea, as it makes the state management
+-- for the environment more complex
 vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
     group = vim.api.nvim_create_augroup("mjm-lazy-load", { clear = true }),
     once = true,
@@ -109,7 +111,10 @@ vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
         if ok then Cmd({ cmd = "FzfLua", args = { "register_ui_select" } }, {}) end
 
         require("mjm.lazy_keymaps")
+        -- TODO: I'm not sure these should be lazy, since you can work with the qflist on open
         require("mjm.error-list")
+        require("mjm.error-list-filter")
+        require("mjm.error-list-sort")
         require("mjm.treesitter")
 
         require("mjm.diagnostic")
