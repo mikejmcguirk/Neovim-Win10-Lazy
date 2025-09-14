@@ -1,4 +1,5 @@
 -- TODO: Default display masks error types
+-- TODO: filter dotfiles/hidden files
 
 local M = {}
 

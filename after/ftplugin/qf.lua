@@ -363,6 +363,20 @@ local function qf_open_default_dest(list_win, finish)
 
     local list_qf_id = vim.fn.getloclist(list_win, { id = 0 }).id --- @type integer
     local is_loclist = list_qf_id > 0
+
+    local list_size = (function()
+        if is_loclist then
+            return vim.fn.getloclist(list_win, { size = true }).size
+        else
+            return vim.fn.getqflist({ size = true }).size
+        end
+    end)() --- @type integer
+
+    if (not list_size) or list_size == 0 then
+        vim.api.nvim_echo({ { "No list entries", "" } }, false, {})
+        return
+    end
+
     local is_orphan_loclist = is_loclist and (not find_loclist_win(list_qf_id, list_win)) or false
     local total_winnr_pre = vim.fn.winnr("$")
 

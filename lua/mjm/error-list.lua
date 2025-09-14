@@ -121,6 +121,10 @@
 
 local M = {}
 
+-- NOTE: Incomplete qf maps are nop'd to prevent falling back to other maps
+vim.keymap.set("n", "<leader>q", "<nop>")
+vim.keymap.set("n", "<leader>l", "<nop>")
+
 ----------------
 --- Autocmds ---
 ----------------
