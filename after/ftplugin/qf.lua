@@ -196,7 +196,6 @@ local function qf_get_open_buf_opts(entry, open)
         clearjumps = true,
         cur_pos = cur_pos,
         force = true,
-        open = open == "tabnew" and open or nil,
     } --- @type mjm.OpenBufOpts
 
     return buf_source, buf_opts
@@ -669,6 +668,90 @@ local function qf_split_full(ctx)
 end
 
 --- @param list_win integer
+--- @param dest_win integer
+--- @param finish string
+local function qf_split_tab_handle_orphan(list_win, dest_win, finish)
+    vim.validate("list_win", list_win, "number")
+    local valid_win = function() return vim.api.nvim_win_is_valid(list_win) end
+    vim.validate("list_win", list_win, valid_win)
+    vim.validate("dest_win", dest_win, "number")
+    local is_cur_win = function() return dest_win == vim.api.nvim_get_current_win() end
+    vim.validate("dest_win", dest_win, is_cur_win)
+    vim.validate("finish", finish, "string")
+
+    local el = require("mjm.error-list")
+
+    local loclist_data, cur_stack_nr = get_loclist_data(list_win)
+    set_loclist_data(cur_stack_nr, dest_win, loclist_data)
+    el.close_win_restview(list_win)
+
+    if finish ~= "closeList" then
+        local open_opts = finish == "focusWin" and { keep_win = true } or nil
+        el.open_loclist(open_opts)
+    end
+
+    local zz_cmd = { cmd = "normal", args = { "zz" }, bang = true }
+    local zz = function() vim.api.nvim_cmd(zz_cmd, {}) end
+    vim.api.nvim_win_call(dest_win, zz)
+end
+
+--- @param buf_source table
+--- @param buf_opts table
+--- @param list_win integer
+--- @param finish string
+--- @param qf_id integer
+--- @param is_loclist boolean
+--- @return nil
+local function validate_qf_split_tab(buf_source, buf_opts, list_win, finish, qf_id, is_loclist)
+    vim.validate("buf_source", buf_source, "table")
+
+    vim.validate("buf_opts", buf_opts, "table")
+
+    vim.validate("list_win", list_win, "number")
+    local is_cur_win = function() return list_win == vim.api.nvim_get_current_win() end
+    vim.validate("dest_win", list_win, is_cur_win)
+
+    vim.validate("finish", finish, "string")
+
+    vim.validate("qf_id", qf_id, "number")
+
+    vim.validate("is_loclist", is_loclist, "boolean")
+end
+
+--- @param buf_source table
+--- @param buf_opts table
+--- @param list_win integer
+--- @param finish string
+--- @param qf_id integer
+--- @param is_loclist boolean
+--- @return nil
+local function qf_split_tab(buf_source, buf_opts, list_win, finish, qf_id, is_loclist)
+    validate_qf_split_tab(buf_source, buf_opts, list_win, finish, qf_id, is_loclist)
+
+    local loclist_win = is_loclist and find_loclist_win(qf_id, list_win) or nil
+
+    vim.api.nvim_cmd({ cmd = "tabnew", range = { vim.fn.tabpagenr("$") } }, {})
+    local dest_win = vim.api.nvim_get_current_win()
+    require("mjm.utils").open_buf(buf_source, buf_opts)
+
+    if (not loclist_win) and is_loclist then
+        qf_split_tab_handle_orphan(list_win, dest_win, finish)
+        return
+    end
+
+    if finish == "focusList" then
+        vim.api.nvim_set_current_win(list_win)
+        return
+    end
+
+    if finish == "closeList" then require("mjm.error-list").close_win_restview(list_win) end
+
+    local zz_cmd = { cmd = "normal", args = { "zz" }, bang = true }
+    local zz = function() vim.api.nvim_cmd(zz_cmd, {}) end
+    vim.api.nvim_win_call(dest_win, zz)
+end
+
+--- @param list_win integer
 --- @param open QfOpenMethod
 --- @param finish QfFinishMethod
 --- @return nil
@@ -782,8 +865,6 @@ local function qf_split(open, finish)
     end
 
     -- TODO: Come back to this
-    if open == "tabnew" then return end
-    -- TODO: Come back to this
     if vim.v.count > 0 then return end
     -- local target_win = math.min(vim.v.count1, total_winnr)
     -- local target_wintype = vim.fn.win_gettype(target_win)
@@ -792,7 +873,7 @@ local function qf_split(open, finish)
 
     local total_winnr = vim.fn.winnr("$") --- @type integer
     -- if vim.v.count > 0 and total_winnr <= 1 then return end
-    if total_winnr <= 1 then
+    if total_winnr <= 1 and open ~= "tabnew" then
         qf_split_single_win(list_win, open, finish)
         return
     end
@@ -813,6 +894,11 @@ local function qf_split(open, finish)
         vim.fn.setloclist(list_win, {}, "r", { idx = idx })
     else
         vim.fn.setqflist({}, "r", { idx = idx })
+    end
+
+    if open == "tabnew" then
+        qf_split_tab(buf_source, buf_opts, list_win, finish, qf_id, is_loclist)
+        return
     end
 
     local split_win, is_orphan_loclist = (function()
@@ -861,6 +947,6 @@ Map("n", "<C-s>", function() qf_split("split", "focusList") end, { buffer = 0 })
 Map("n", "v", function() qf_split("vsplit", "focusWin") end, { buffer = 0 })
 Map("n", "V", function() qf_split("vsplit", "closeList") end, { buffer = 0 })
 Map("n", "<C-v>", function() qf_split("vsplit", "focusList") end, { buffer = 0 })
--- Map("n", "x", function() qf_open_split("tabnew", "focusWin") end, { buffer = 0 })
--- Map("n", "X", function() qf_open_split("tabnew", "closeList") end, { buffer = 0 })
--- Map("n", "<C-x>", function() qf_open_split("tabnew", "focusList") end, { buffer = 0 })
+Map("n", "x", function() qf_split("tabnew", "focusWin") end, { buffer = 0 })
+Map("n", "X", function() qf_split("tabnew", "closeList") end, { buffer = 0 })
+Map("n", "<C-x>", function() qf_split("tabnew", "focusList") end, { buffer = 0 })
