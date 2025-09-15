@@ -516,7 +516,7 @@ local function qf_iter_winnr(list_winnr, total_winnr)
     if vim.api.nvim_get_var("ranch_validate") then
         vim.validate("list_winnr", list_winnr, "number")
         vim.validate("total_winnr", total_winnr, "number")
-        local total_valid = function() return total_winnr < vim.fn.winnr("$") end
+        local total_valid = function() return total_winnr <= vim.fn.winnr("$") end
         vim.validate("total_winnr", total_winnr, total_valid)
     end
 
@@ -571,7 +571,7 @@ local function qf_find_matching_buf(list_winnr, total_winnr, bufnr, usetab)
     if vim.api.nvim_get_var("ranch_validate") then
         vim.validate("list_winnr", list_winnr, "number")
         vim.validate("total_winnr", total_winnr, "number")
-        local total_valid = function() return total_winnr < vim.fn.winnr("$") end
+        local total_valid = function() return total_winnr <= vim.fn.winnr("$") end
         vim.validate("total_winnr", total_winnr, total_valid)
         local buf_valid = function() return vim.api.nvim_buf_is_valid(bufnr) end
         vim.validate("bufnr", bufnr, buf_valid)
@@ -608,7 +608,7 @@ end
 local function find_help_win(total_winnr)
     if vim.api.nvim_get_var("ranch_validate") then
         vim.validate("total_winnr", total_winnr, "number")
-        local total_valid = function() return total_winnr < vim.fn.winnr("$") end
+        local total_valid = function() return total_winnr <= vim.fn.winnr("$") end
         vim.validate("total_winnr", total_winnr, total_valid)
     end
 
@@ -637,7 +637,7 @@ local function qf_get_next_win_loclist(list_qf_id, list_win, total_winnr, entry)
         local list_valid = function() return vim.api.nvim_win_is_valid(list_win) end
         vim.validate("list_win", list_win, list_valid)
         vim.validate("total_winnr", total_winnr, "number")
-        local total_valid = function() return total_winnr < vim.fn.winnr("$") end
+        local total_valid = function() return total_winnr <= vim.fn.winnr("$") end
         vim.validate("total_winnr", total_winnr, total_valid)
         vim.validate("entry", entry, "table")
     end
@@ -672,7 +672,7 @@ local function qf_get_next_win(list_win, total_winnr, entry)
         local list_valid = function() return vim.api.nvim_win_is_valid(list_win) end
         vim.validate("list_win", list_win, list_valid)
         vim.validate("total_winnr", total_winnr, "number")
-        local total_valid = function() return total_winnr < vim.fn.winnr("$") end
+        local total_valid = function() return total_winnr <= vim.fn.winnr("$") end
         vim.validate("total_winnr", total_winnr, total_valid)
         vim.validate("entry", entry, "table")
     end
@@ -932,7 +932,7 @@ local function validate_qf_open(list_win, open, finish)
     end
 
     --- @type boolean
-    local valid_close = open == "focusWin" or open == "closeList" or open == "focusList"
+    local valid_close = finish == "focusWin" or finish == "closeList" or finish == "focusList"
     if not valid_close then
         --- @type [string, string]
         local chunk = { "Invalid close type " .. finish .. " in validate_qf_open", "ErrorMsg" }
