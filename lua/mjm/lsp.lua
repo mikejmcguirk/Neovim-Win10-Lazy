@@ -18,6 +18,8 @@ vim.keymap.del("i", "<C-S>")
 -- Compute LSP Keymaps --
 -------------------------
 
+-- TODO: Figure out how to open FzfLua outputs in a vsplit
+
 -- Trade a bit of RAM to only do this business once
 local ok, fzf_lua = pcall(require, "fzf-lua") --- @type boolean, table
 
@@ -132,8 +134,8 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         -- textDocument/codeLens
         if client:supports_method("textDocument/codeLens") then
-            -- Use CursorHold rather than TextChanged because otherwise a bunch of different
-            -- normal mode changes will produce a set of lenses with stale data
+            -- Lens updates are throttled so only one runs at a time. Updating on text change
+            -- increases the likelihood of lenses rendering with stale data
             vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
                 buffer = ev.buf,
                 group = vim.api.nvim_create_augroup("refresh-lens", { clear = true }),

@@ -97,6 +97,7 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
     end),
 })
 
+-- TODO: This doesn't catch leaving cmdmode after confirming a substitution
 vim.api.nvim_create_autocmd("ModeChanged", {
     group = stl_events,
     callback = function()

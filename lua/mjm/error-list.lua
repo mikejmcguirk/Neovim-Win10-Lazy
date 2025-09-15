@@ -15,19 +15,6 @@
 --- MAYBE: Incremental preview of cdo/cfdo changes
 --- MAYBE: General cmd parsing: https://github.com/niuiic/quickfix.nvim
 
---- SORTS:
---- --- fname>lnum
---- --- type>lnum
---- --- diagnostics
---- --- --- severity > fname > lnum
---- --- --- fname > severity > lnum
---- --- --- it seems reasonable these sorts could be built in to the cmds. severity by default
---- --- --- it feels semi-logical then that you would have i to sort by severity and I to sort
----         by fname, and then qiw would be warnings and up and qiW would be warnings only
----         This breaks the no uppercasing before rule but also just feels logical
---- --- --- and then under the general sort cmd, you would have generic fname, generic type, and
----         then diagnostic specific sorts that convert the type
-
 --------------
 -- STAYAWAY --
 --------------

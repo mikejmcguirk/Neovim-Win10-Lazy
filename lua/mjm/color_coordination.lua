@@ -37,6 +37,8 @@ for k, v in pairs(hl_nop_lua) do
     vim.api.nvim_set_hl(0, k, v)
 end
 
+-- MAYBE: Disable the default highlight constants and use a custom query so we aren't grabbing
+-- stuff like require
 vim.api.nvim_create_autocmd("FileType", {
     group = vim.api.nvim_create_augroup("lua-disable-captures", { clear = true }),
     pattern = "lua",

@@ -68,3 +68,5 @@ Map("n", "<leader>ghU", function()
 end)
 
 Map("n", "<leader>gp", function() vim.api.nvim_cmd({ cmd = "Git", args = { "push" } }, {}) end)
+
+--- git reset HEAD~1

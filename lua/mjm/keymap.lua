@@ -68,6 +68,7 @@ Map("n", "ZS", function()
 end)
 
 -- TODO: Noname buffers appearing when doing this out of other tabs
+-- TODO: Need more consistent behavior in terms of when windows close
 for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
     Map("n", map, function()
         local buf = vim.api.nvim_get_current_buf() ---@type integer
