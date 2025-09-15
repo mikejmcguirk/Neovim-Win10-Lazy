@@ -10,10 +10,20 @@
 --- TODO: Wrapper functions should trigger window height updates. Resize cmd
 --- TODO: De-map split cmds in windows
 --- --- kinda already done but should be explicit
+--- TODO: Copy list. no count = to next. Count = after list
+--- TODO: Use vim-grepper as an architectural base to build out the idea that, for the grep
+---     funcs, we want some kind of detection or choice for what grepprg to use. My rough idea
+---     is that there should be a default hierarchy of programs to prefer, and then the user
+---     can set a g:variable if they have a preferred choice. Ignore the vim defaults
+--- TODO: Go through everything and see what is and is not exposed
 
 --- MAYBE: Treesitter/Semantic Token Highlighting
 --- MAYBE: Incremental preview of cdo/cfdo changes
 --- MAYBE: General cmd parsing: https://github.com/niuiic/quickfix.nvim
+---
+--- MAYBE: https://github.com/Zeioth/compiler.nvim
+--- MAYBE: https://github.com/ahmedkhalf/project.nvim
+--- MAYBE: https://github.com/stevearc/overseer.nvim
 
 --------------
 -- STAYAWAY --
