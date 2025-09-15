@@ -154,11 +154,11 @@ vim.api.nvim_create_autocmd("UIEnter", {
         }
 
         local max_header_len = 0
-        for _, header in pairs(headers) do
+        for _, header in ipairs(headers) do
             if #header[1] > max_header_len then max_header_len = #header[1] end
         end
 
-        for i, header in pairs(headers) do
+        for i, header in ipairs(headers) do
             headers[i][1] = header[1] .. string.rep(" ", max_header_len - #header[1] + 2)
         end
 
@@ -170,7 +170,7 @@ vim.api.nvim_create_autocmd("UIEnter", {
             "",
         }
 
-        for _, header in pairs(headers) do
+        for _, header in ipairs(headers) do
             table.insert(lines, header[1] .. header[2] .. "ms")
         end
 

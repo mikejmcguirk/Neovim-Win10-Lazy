@@ -169,7 +169,7 @@ local function find_loclist_win(list_qf_id, list_win)
 
     local tabpage = vim.api.nvim_win_get_tabpage(list_win)
 
-    for _, win in pairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
         local win_qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
         if win_qf_id == list_qf_id then
             local buf = vim.api.nvim_win_get_buf(win) --- @type integer
@@ -590,9 +590,9 @@ local function qf_find_matching_buf(list_winnr, total_winnr, bufnr, usetab)
     if not usetab then return nil end
 
     local cur_tab = vim.api.nvim_get_current_tabpage() --- @type integer
-    for _, tab in pairs(vim.api.nvim_list_tabpages()) do
+    for _, tab in ipairs(vim.api.nvim_list_tabpages()) do
         if tab ~= cur_tab then
-            for _, win in pairs(vim.api.nvim_tabpage_list_wins(tab)) do
+            for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
                 local win_buf = vim.api.nvim_win_get_buf(win) --- @type integer
                 if win_buf == bufnr then return win end
             end

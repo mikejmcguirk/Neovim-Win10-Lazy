@@ -176,7 +176,7 @@ local function tab_kill()
     if confirm ~= 1 then return end
 
     local buffers = vim.fn.tabpagebuflist(vim.fn.tabpagenr())
-    for _, buf in ipairs(buffers) do
+    for _, buf in pairs(buffers) do
         if vim.api.nvim_buf_is_valid(buf) then vim.api.nvim_buf_delete(buf, { force = true }) end
     end
 end

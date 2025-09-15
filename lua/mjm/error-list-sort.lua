@@ -27,7 +27,7 @@ function M.qf_sort_wrapper(sort_func)
     end)() --- @type integer
 
     local qf_win = (function()
-        for _, win in pairs(vim.api.nvim_tabpage_list_wins(0)) do
+        for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
             if vim.fn.win_gettype(win) == "quickfix" then return win end
         end
 
@@ -66,7 +66,7 @@ function M.ll_sort_wrapper(sort_func)
     end)() --- @type integer
 
     local loclist_win = (function()
-        for _, win in pairs(vim.api.nvim_tabpage_list_wins(0)) do
+        for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
             if vim.fn.win_gettype(win) == "loclist" then return win end
         end
 

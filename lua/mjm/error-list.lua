@@ -161,11 +161,11 @@ function M.close_all_loclists(opts)
     local tabpages = opts.cur_tab and { vim.api.nvim_get_current_tabpage() }
         or vim.api.nvim_list_tabpages()
 
-    for _, tab in pairs(tabpages) do
+    for _, tab in ipairs(tabpages) do
         local loclist_wins = {} --- @type integer[]
         local views = {} --- @type vim.fn.winsaveview.ret|nil[]
 
-        for _, win in pairs(vim.api.nvim_tabpage_list_wins(tab)) do
+        for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
             local wintype = vim.fn.win_gettype(win)
             if wintype == "loclist" then
                 if opts.id then
@@ -189,7 +189,7 @@ function M.close_all_loclists(opts)
         end
 
         if #loclist_wins > 0 then
-            for _, w in pairs(vim.api.nvim_tabpage_list_wins(tab)) do
+            for _, w in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
                 adjust_view(w, views)
             end
         end
@@ -282,7 +282,7 @@ function M.open_qflist(opts)
         return true
     end
 
-    for _, win in pairs(vim.api.nvim_tabpage_list_wins(0)) do
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
         if not win_check(win) then return false end
     end
 
@@ -321,7 +321,7 @@ function M.close_qflist()
     local qf_win = nil --- @type integer
     local views = {} --- @type vim.fn.winsaveview.ret|nil[]
 
-    for _, win in pairs(vim.api.nvim_tabpage_list_wins(0)) do
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
         local checked_win = find_qf_wincheck(win, views)
         if checked_win then qf_win = checked_win end
     end
@@ -340,7 +340,7 @@ function M.resize_qflist()
     local qf_win = nil --- @type integer
     local views = {} --- @type vim.fn.winsaveview.ret|nil[]
 
-    for _, win in pairs(vim.api.nvim_tabpage_list_wins(0)) do
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
         local checked_win = find_qf_wincheck(win, views)
         if checked_win then qf_win = checked_win end
     end
@@ -463,7 +463,7 @@ function M.close_loclist()
     local views = {} --- @type vim.fn.winsaveview.ret|nil[]
     local loclist_win = nil --- @type integer
 
-    for _, win in pairs(vim.api.nvim_tabpage_list_wins(0)) do
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
         --- @type boolean, integer|nil
         local ok, found_win = find_loclist_wincheck(cur_win, qf_id, win, views)
 
@@ -491,7 +491,7 @@ function M.resize_loclist()
     local views = {} --- @type vim.fn.winsaveview.ret|nil[]
     local loclist_win = nil --- @type integer
 
-    for _, win in pairs(vim.api.nvim_tabpage_list_wins(0)) do
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
         --- @type boolean, integer|nil
         local ok, found_win = find_loclist_wincheck(cur_win, qf_id, win, views)
 
@@ -532,7 +532,7 @@ function M.close_win_restview(target_win)
     end
 
     local tabpage = vim.api.nvim_win_get_tabpage(target_win)
-    for _, win in pairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
         win_check(win)
     end
 
@@ -573,7 +573,7 @@ function M.resize_list_win(target_win)
     end
 
     local tabpage = vim.api.nvim_win_get_tabpage(target_win)
-    for _, win in pairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
+    for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tabpage)) do
         win_check(win)
     end
 

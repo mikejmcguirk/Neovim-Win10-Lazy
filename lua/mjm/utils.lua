@@ -378,7 +378,7 @@ function M.harpoon_rm_buf(opts)
     local items = list.items
     local idx = nil
 
-    for i, t in pairs(items) do
+    for i, t in ipairs(items) do
         local item = vim.fn.fnamemodify(t.value, ":p")
         if full_bufname == item then
             idx = i
@@ -414,7 +414,7 @@ function M.harpoon_mv_buf(old_bufname, new_bufname)
     local full_old_bufname = vim.fn.fnamemodify(old_bufname, ":p")
     local idx = nil
 
-    for i, t in pairs(items) do
+    for i, t in ipairs(items) do
         local item = vim.fn.fnamemodify(t.value, ":p")
         if item == full_old_bufname then
             idx = i

@@ -30,7 +30,7 @@ local function build_harpoon_component(tal)
     if not items or #items < 1 then return "" end
 
     local cur_buf_path = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":p")
-    for i, t in pairs(items) do
+    for i, t in ipairs(items) do
         local t_path = vim.fn.fnamemodify(t.value, ":p")
         local hl = string.format("%%#%s#", (t_path == cur_buf_path) and hl_active or hl_inactive)
 
@@ -53,13 +53,13 @@ function M.build_tab_component()
     local cur_tab = vim.api.nvim_get_current_tabpage()
 
     local tabs = {}
-    for i, t in pairs(vim.api.nvim_list_tabpages()) do
+    for i, t in ipairs(vim.api.nvim_list_tabpages()) do
         local hl_group = (cur_tab == t) and hl_active or hl_inactive
         local hl = string.format("%%#%s#", hl_group)
 
         local t_wins = vim.api.nvim_tabpage_list_wins(t)
         local has_modified = false
-        for _, w in pairs(t_wins) do
+        for _, w in ipairs(t_wins) do
             local bufnr = vim.api.nvim_win_get_buf(w)
             if vim.api.nvim_get_option_value("modified", { buf = bufnr }) then
                 has_modified = true
