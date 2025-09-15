@@ -4,6 +4,7 @@ vim.api.nvim_set_option_value("buflisted", false, { buf = 0 })
 
 vim.opt_local.colorcolumn = ""
 vim.opt_local.list = false
+vim.opt_local.winfixbuf = true
 
 Map("n", "<leader>q", function()
     local win = vim.api.nvim_get_current_win()
@@ -78,11 +79,6 @@ Map("x", "d", function()
 
     require("mjm.utils").protected_set_cursor({ row, col }, { set_pcmark = true, win = win })
 end, { buffer = true })
-
-local bad_maps = { "<C-o>", "<C-O>", "<C-i>", "<C-I>" }
-for _, map in pairs(bad_maps) do
-    Map("n", map, function() vim.notify("Currently in qf buffer") end, { buffer = true })
-end
 
 -------------
 --- Types ---

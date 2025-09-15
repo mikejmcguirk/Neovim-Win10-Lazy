@@ -49,12 +49,13 @@ for _ = 1, 10 do
     local mod_mark = this_mark % 10 -- 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 
     Map("n", string.format("<leader>%s", mod_mark), function()
-        if vim.api.nvim_get_option_value("filetype", { buf = 0 }) == "qf" then
-            -- TODO: This should go to the alternate window instead
-            return vim.notify("Currently in qf buffer", vim.log.levels.WARN)
-        end
+        local open_mark = function() harpoon:list():select(this_mark) end
+        local ok, result = pcall(open_mark)
 
-        harpoon:list():select(this_mark)
+        if not ok then
+            local chunk = { result or "Unknown error opening harpoon mark", "ErrorMsg" }
+            vim.api.nvim_echo({ chunk }, true, { err = true })
+        end
     end)
 
     mark = mod_mark + 1
