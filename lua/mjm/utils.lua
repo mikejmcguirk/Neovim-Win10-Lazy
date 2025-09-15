@@ -96,6 +96,10 @@ function M.open_buf(source, opts)
 
     vim.api.nvim_set_option_value("buflisted", true, { buf = buf })
     if opts.buftype then vim.api.nvim_set_option_value("buftype", opts.buftype, { buf = buf }) end
+    if opts.buftype == "help" then
+        local win = opts.win or vim.api.nvim_get_current_win()
+        vim.api.nvim_set_option_value("list", false, { win = win })
+    end
 
     if cur_buf ~= buf then
         if opts.win then

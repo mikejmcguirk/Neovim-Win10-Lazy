@@ -3,15 +3,9 @@
 ------------------
 
 --- TODO: Create a quickfixtextfuc that's as information rich as possible without being busy
---- TODO: Grep for word
---- https://github.com/stevearc/dotfiles/blob/master/.config/nvim/lua/plugins/quickfix.lua
---- TODO: Sort on as many fields as possible (regular/capslock for asc/desc)
 --- TODO: Wrapper functions should make reasonable sorts as much as possible
---- --- How to do with vimgrep though?
---- TODO: Is there a better way to use grepprg?
 --- TODO: Run/refresh from title. Wrappers should set it up properly
 --- --- Can get rid of redo grep map
---- --- grepa might help with this
 --- TODO: More visibility for cdo/cfdo. Use bang by default?
 --- TODO: Wrapper functions should trigger window height updates. Resize cmd
 --- TODO: De-map split cmds in windows

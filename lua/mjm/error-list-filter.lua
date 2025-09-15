@@ -1,5 +1,6 @@
 -- TODO: Default display masks error types
 -- TODO: filter dotfiles/hidden files
+-- TODO: incomplete cmd nops
 
 local M = {}
 
