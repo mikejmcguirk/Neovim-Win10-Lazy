@@ -174,37 +174,19 @@ local function grep_cwd()
     return true, { cmd_parts = cmd_parts, title = title }
 end
 
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>qgd",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_cwd, grep_b) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>qGd",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_cwd, grep_o) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>q<C-g>d",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_cwd, grep_m) end
-)
+local qgd = function() require("mjm.error-list-system").qf_sys_wrap(grep_cwd, grep_b) end
+vim.keymap.set({ "n", "x" }, "<leader>qgd", qgd)
+local qGd = function() require("mjm.error-list-system").qf_sys_wrap(grep_cwd, grep_o) end
+vim.keymap.set({ "n", "x" }, "<leader>qGd", qGd)
+local qCgd = function() require("mjm.error-list-system").qf_sys_wrap(grep_cwd, grep_m) end
+vim.keymap.set({ "n", "x" }, "<leader>q<C-g>d", qCgd)
 
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>lgd",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_cwd, lgrep_b) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>lGd",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_cwd, lgrep_o) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>l<C-g>d",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_cwd, lgrep_m) end
-)
+local lgd = function() require("mjm.error-list-system").qf_sys_wrap(grep_cwd, lgrep_b) end
+vim.keymap.set({ "n", "x" }, "<leader>lgd", lgd)
+local lGd = function() require("mjm.error-list-system").qf_sys_wrap(grep_cwd, lgrep_o) end
+vim.keymap.set({ "n", "x" }, "<leader>lGd", lGd)
+local lCgd = function() require("mjm.error-list-system").qf_sys_wrap(grep_cwd, lgrep_m) end
+vim.keymap.set({ "n", "x" }, "<leader>l<C-g>d", lCgd)
 
 --- @return boolean, QfRancherSystemIn
 local function grep_CWD()
@@ -241,37 +223,19 @@ local function grep_CWD()
     return true, { cmd_parts = cmd_parts, title = title }
 end
 
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>qgD",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_CWD, grep_b) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>qGD",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_CWD, grep_o) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>q<C-g>D",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_CWD, grep_m) end
-)
+local qgD = function() require("mjm.error-list-system").qf_sys_wrap(grep_CWD, grep_b) end
+vim.keymap.set({ "n", "x" }, "<leader>qgD", qgD)
+local qGD = function() require("mjm.error-list-system").qf_sys_wrap(grep_CWD, grep_o) end
+vim.keymap.set({ "n", "x" }, "<leader>qGD", qGD)
+local qCgD = function() require("mjm.error-list-system").qf_sys_wrap(grep_CWD, grep_m) end
+vim.keymap.set({ "n", "x" }, "<leader>q<C-g>D", qCgD)
 
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>lgD",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_CWD, lgrep_b) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>lGD",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_CWD, lgrep_o) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>l<C-g>D",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_CWD, lgrep_m) end
-)
+local lgD = function() require("mjm.error-list-system").qf_sys_wrap(grep_CWD, lgrep_b) end
+vim.keymap.set({ "n", "x" }, "<leader>lgD", lgD)
+local lGD = function() require("mjm.error-list-system").qf_sys_wrap(grep_CWD, lgrep_o) end
+vim.keymap.set({ "n", "x" }, "<leader>lGD", lGD)
+local lCgD = function() require("mjm.error-list-system").qf_sys_wrap(grep_CWD, lgrep_m) end
+vim.keymap.set({ "n", "x" }, "<leader>l<C-g>D", lCgD)
 
 local hgrep_b = { async = true, type = "\1", timeout = 2000 }
 local hgrep_o = { async = true, type = "\1", overwrite = true, timeout = 2000 }
@@ -320,37 +284,19 @@ local function grep_help()
     return true, { cmd_parts = cmd_parts, title = title }
 end
 
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>qgh",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_help, hgrep_b) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>qGh",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_help, hgrep_o) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>q<C-g>h",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_help, hgrep_m) end
-)
+local qgh = function() require("mjm.error-list-system").qf_sys_wrap(grep_help, hgrep_b) end
+vim.keymap.set({ "n", "x" }, "<leader>qgh", qgh)
+local qGh = function() require("mjm.error-list-system").qf_sys_wrap(grep_help, hgrep_o) end
+vim.keymap.set({ "n", "x" }, "<leader>qGh", qGh)
+local qCgh = function() require("mjm.error-list-system").qf_sys_wrap(grep_help, hgrep_m) end
+vim.keymap.set({ "n", "x" }, "<leader>q<C-g>h", qCgh)
 
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>lgh",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_help, hlgrep_b) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>lGh",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_help, hlgrep_o) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>l<C-g>h",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_help, hlgrep_m) end
-)
+local lgh = function() require("mjm.error-list-system").qf_sys_wrap(grep_help, hlgrep_b) end
+vim.keymap.set({ "n", "x" }, "<leader>lgh", lgh)
+local lGh = function() require("mjm.error-list-system").qf_sys_wrap(grep_help, hlgrep_o) end
+vim.keymap.set({ "n", "x" }, "<leader>lGh", lGh)
+local lCgh = function() require("mjm.error-list-system").qf_sys_wrap(grep_help, hlgrep_m) end
+vim.keymap.set({ "n", "x" }, "<leader>l<C-g>h", lCgh)
 
 --- @return boolean, QfRancherSystemIn
 local function grep_HELP()
@@ -391,37 +337,19 @@ local function grep_HELP()
     return true, { cmd_parts = cmd_parts, title = title }
 end
 
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>qgH",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_HELP, hgrep_b) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>qGH",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_HELP, hgrep_o) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>q<C-g>H",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_HELP, hgrep_m) end
-)
+local qgH = function() require("mjm.error-list-system").qf_sys_wrap(grep_HELP, hgrep_b) end
+vim.keymap.set({ "n", "x" }, "<leader>qgH", qgH)
+local qGH = function() require("mjm.error-list-system").qf_sys_wrap(grep_HELP, hgrep_o) end
+vim.keymap.set({ "n", "x" }, "<leader>qGH", qGH)
+local qCgH = function() require("mjm.error-list-system").qf_sys_wrap(grep_HELP, hgrep_m) end
+vim.keymap.set({ "n", "x" }, "<leader>q<C-g>H", qCgH)
 
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>lgH",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_HELP, hlgrep_b) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>lGH",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_HELP, hlgrep_o) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>l<C-g>H",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_HELP, hlgrep_m) end
-)
+local lgH = function() require("mjm.error-list-system").qf_sys_wrap(grep_HELP, hlgrep_b) end
+vim.keymap.set({ "n", "x" }, "<leader>lgH", lgH)
+local lGH = function() require("mjm.error-list-system").qf_sys_wrap(grep_HELP, hlgrep_o) end
+vim.keymap.set({ "n", "x" }, "<leader>lGH", lGH)
+local lCgH = function() require("mjm.error-list-system").qf_sys_wrap(grep_HELP, hlgrep_m) end
+vim.keymap.set({ "n", "x" }, "<leader>l<C-g>H", lCgH)
 
 --- @return boolean, QfRancherSystemIn
 local function grep_bufs()
@@ -472,21 +400,12 @@ local function grep_bufs()
     return true, { cmd_parts = cmd_parts, title = title }
 end
 
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>qgu",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_bufs, grep_b) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>qGu",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_bufs, grep_o) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>q<C-g>u",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_bufs, grep_m) end
-)
+local qgu = function() require("mjm.error-list-system").qf_sys_wrap(grep_bufs, grep_b) end
+vim.keymap.set({ "n", "x" }, "<leader>qgu", qgu)
+local qGu = function() require("mjm.error-list-system").qf_sys_wrap(grep_bufs, grep_o) end
+vim.keymap.set({ "n", "x" }, "<leader>qGu", qGu)
+local qCgu = function() require("mjm.error-list-system").qf_sys_wrap(grep_bufs, grep_m) end
+vim.keymap.set({ "n", "x" }, "<leader>q<C-g>u", qCgu)
 
 --- @return boolean, QfRancherSystemIn
 local function grep_BUFS()
@@ -537,21 +456,12 @@ local function grep_BUFS()
     return true, { cmd_parts = cmd_parts, title = title }
 end
 
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>qgU",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_BUFS, grep_b) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>qGU",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_BUFS, grep_o) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>q<C-g>U",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_BUFS, grep_m) end
-)
+local qgU = function() require("mjm.error-list-system").qf_sys_wrap(grep_BUFS, grep_b) end
+vim.keymap.set({ "n", "x" }, "<leader>qgU", qgU)
+local qGU = function() require("mjm.error-list-system").qf_sys_wrap(grep_BUFS, grep_o) end
+vim.keymap.set({ "n", "x" }, "<leader>qGU", qGU)
+local qCgU = function() require("mjm.error-list-system").qf_sys_wrap(grep_BUFS, grep_m) end
+vim.keymap.set({ "n", "x" }, "<leader>q<C-g>U", qCgU)
 
 --- @return boolean, QfRancherSystemIn
 local function grep_cbuf()
@@ -601,21 +511,12 @@ local function grep_cbuf()
     return true, { cmd_parts = cmd_parts, title = title }
 end
 
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>lgu",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_cbuf, lgrep_b) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>lGu",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_cbuf, lgrep_m) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>l<C-g>u",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_cbuf, lgrep_m) end
-)
+local lgu = function() require("mjm.error-list-system").qf_sys_wrap(grep_cbuf, lgrep_b) end
+vim.keymap.set({ "n", "x" }, "<leader>lgu", lgu)
+local lGu = function() require("mjm.error-list-system").qf_sys_wrap(grep_cbuf, lgrep_m) end
+vim.keymap.set({ "n", "x" }, "<leader>lGu", lGu)
+local lCgu = function() require("mjm.error-list-system").qf_sys_wrap(grep_cbuf, lgrep_m) end
+vim.keymap.set({ "n", "x" }, "<leader>l<C-g>u", lCgu)
 
 --- @return boolean, QfRancherSystemIn
 local function grep_CBUF()
@@ -665,18 +566,9 @@ local function grep_CBUF()
     return true, { cmd_parts = cmd_parts, title = title }
 end
 
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>lgU",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_CBUF, lgrep_b) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>lGU",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_CBUF, lgrep_o) end
-)
-vim.keymap.set(
-    { "n", "x" },
-    "<leader>l<C-g>U",
-    function() require("mjm.error-list-system").qf_sys_wrap(grep_CBUF, lgrep_m) end
-)
+local lgU = function() require("mjm.error-list-system").qf_sys_wrap(grep_CBUF, lgrep_b) end
+vim.keymap.set({ "n", "x" }, "<leader>lgU", lgU)
+local lGU = function() require("mjm.error-list-system").qf_sys_wrap(grep_CBUF, lgrep_o) end
+vim.keymap.set({ "n", "x" }, "<leader>lGU", lGU)
+local lCgU = function() require("mjm.error-list-system").qf_sys_wrap(grep_CBUF, lgrep_m) end
+vim.keymap.set({ "n", "x" }, "<leader>l<C-g>U", lCgU)
