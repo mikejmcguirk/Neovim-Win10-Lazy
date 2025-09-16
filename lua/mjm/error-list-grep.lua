@@ -12,8 +12,6 @@
 -- option
 -- ..ad\\f40+$':-# @=,!;%^&&*()_{}/ /4304\'""?`9$343%$ ^adfadf[ad)[(
 
-vim.api.nvim_set_var("qf_rancher_grepprg", "rg")
-
 -------------
 --- Types ---
 -------------
@@ -28,66 +26,11 @@ vim.api.nvim_set_var("qf_rancher_grepprg", "rg")
 --- @field smart_case? boolean
 --- @field literal? boolean
 
-------------------
---- Grep Funcs ---
-------------------
+---------------------------
+--- Grep Prg Management ---
+---------------------------
 
---- @return boolean, string[]|[string, string]
---- Assumes that it is being called in visual mode with a valid mode parameter
-local function get_visual_pattern(mode)
-    local start_pos = vim.fn.getpos(".")
-    local end_pos = vim.fn.getpos("v")
-    local region = vim.fn.getregion(start_pos, end_pos, { type = mode })
-
-    local lines = {}
-    local is_single_line = #region == 1
-
-    if is_single_line then
-        local trimmed = region[1]:gsub("^%s*(.-)%s*$", "%1")
-        if trimmed == "" then return false, { "get_visual_pattern: Empty selection", "" } end
-        table.insert(lines, trimmed)
-    else
-        lines = region
-
-        local has_valid_line = false
-        for _, line in ipairs(lines) do
-            if line ~= "" then
-                has_valid_line = true
-                break
-            end
-        end
-
-        if not has_valid_line then return false, { "get_visual_pattern: Empty selection", "" } end
-    end
-
-    vim.api.nvim_cmd({ cmd = "normal", args = { "\27" }, bang = true }, {})
-    return true, lines
-end
-
---- @return boolean, string[]|QfRancherSystemIn
-local function get_grep_pattern(prompt)
-    local mode = vim.fn.mode()
-    local is_visual = mode == "v" or mode == "V" or mode == "\22"
-
-    if is_visual then
-        local ok, pattern = get_visual_pattern(mode)
-        if not ok then return false, { err_chunk = pattern, err_msg_hist = false } end
-        return true, pattern
-    end
-
-    local ok, pattern = pcall(vim.fn.input, { prompt = prompt, cancelreturn = "" })
-    if (ok and pattern == "") or ((not ok) and pattern == "Keyboard interrupt") then
-        return false, { err_chunk = { "", "" }, err_msg_hist = false }
-    end
-
-    if not ok then
-        --- @type [string, string]
-        local chunk = { pattern or "Unknown error getting input", "ErrorMsg" }
-        return false, { err_chunk = chunk, err_msg_hist = true }
-    end
-
-    return true, vim.split(pattern, "\\n")
-end
+vim.api.nvim_set_var("qf_rancher_grepprg", "rg")
 
 -- local function grep_escape(text)
 -- return text:gsub("([%.%^%$%*%+%?%(%)%[%]%{%}%|%\\])", "\\%1")
@@ -219,14 +162,28 @@ local function get_rg_cmd_parts(pattern, location, opts)
 end
 
 --- @return boolean, QfRancherGrepCmdFun|[string,string]
+--- TODO: Run a validity check for the grep program once. An additional filesystem call should not
+--- be run on each grep
 local function get_grep_cmd()
     local qf_rancher_grepprg = vim.api.nvim_get_var("qf_rancher_grepprg")
 
     if qf_rancher_grepprg == "rg" then
+        -- if vim.fn.executable("rg") ~= 1 then
+        --     return false, { "get_grep_cmd: rg is not executable", "ErrorMsg" }
+        -- end
+
         return true, get_rg_cmd_parts
     elseif qf_rancher_grepprg == "grep" then
+        -- if vim.fn.executable("grep") ~= 1 then
+        --     return false, { "get_grep_cmd: grep is not executable", "ErrorMsg" }
+        -- end
+
         return true, get_grep_cmd_parts
     elseif qf_rancher_grepprg == "findstr" then
+        -- if vim.fn.executable("findstr") ~= 1 then
+        --     return false, { "get_grep_cmd: findstr is not executable", "ErrorMsg" }
+        -- end
+
         return true, get_findstr_cmd_parts
     end
 
@@ -239,6 +196,67 @@ local function get_grep_cmd()
     end
 
     return false, { "get_grep_cmd: No valid grep program found", "" }
+end
+
+----------------
+-- Grep Funcs --
+----------------
+
+--- @return boolean, string[]|[string, string]
+--- Assumes that it is being called in visual mode with a valid mode parameter
+local function get_visual_pattern(mode)
+    local start_pos = vim.fn.getpos(".")
+    local end_pos = vim.fn.getpos("v")
+    local region = vim.fn.getregion(start_pos, end_pos, { type = mode })
+
+    local lines = {}
+    local is_single_line = #region == 1
+
+    if is_single_line then
+        local trimmed = region[1]:gsub("^%s*(.-)%s*$", "%1")
+        if trimmed == "" then return false, { "get_visual_pattern: Empty selection", "" } end
+        table.insert(lines, trimmed)
+    else
+        lines = region
+
+        local has_valid_line = false
+        for _, line in ipairs(lines) do
+            if line ~= "" then
+                has_valid_line = true
+                break
+            end
+        end
+
+        if not has_valid_line then return false, { "get_visual_pattern: Empty selection", "" } end
+    end
+
+    vim.api.nvim_cmd({ cmd = "normal", args = { "\27" }, bang = true }, {})
+    return true, lines
+end
+
+--- @return boolean, string[]|QfRancherSystemIn
+local function get_grep_pattern(prompt)
+    local mode = vim.fn.mode()
+    local is_visual = mode == "v" or mode == "V" or mode == "\22"
+
+    if is_visual then
+        local ok, pattern = get_visual_pattern(mode)
+        if not ok then return false, { err_chunk = pattern, err_msg_hist = false } end
+        return true, pattern
+    end
+
+    local ok, pattern = pcall(vim.fn.input, { prompt = prompt, cancelreturn = "" })
+    if (ok and pattern == "") or ((not ok) and pattern == "Keyboard interrupt") then
+        return false, { err_chunk = { "", "" }, err_msg_hist = false }
+    end
+
+    if not ok then
+        --- @type [string, string]
+        local chunk = { pattern or "Unknown error getting input", "ErrorMsg" }
+        return false, { err_chunk = chunk, err_msg_hist = true }
+    end
+
+    return true, vim.split(pattern, "\\n")
 end
 
 --- @param loc_fun QfRancherGrepLocFun

@@ -16,10 +16,16 @@
 ---     is that there should be a default hierarchy of programs to prefer, and then the user
 ---     can set a g:variable if they have a preferred choice. Ignore the vim defaults
 --- TODO: Go through everything and see what is and is not exposed
+--- TODO: If the list is already open, an open command should not trigger a re-size. I had ideas
+--- about this in other commands, but a manual resize should just be triggered
+--- TODO: Have some kind of shortcut to make the list taller. Make sure it preserves view
+---     Was thinking qq for toggle, qQ for resize, maybe q<c-Q> to make bigger?
 
 --- MAYBE: Treesitter/Semantic Token Highlighting
 --- MAYBE: Incremental preview of cdo/cfdo changes
 --- MAYBE: General cmd parsing: https://github.com/niuiic/quickfix.nvim
+--- MAYBE: Publish qf items as diagnostics
+---     Semi related, but it would be cool to run make or a test and have the diagnostics publish
 ---
 --- MAYBE: https://github.com/Zeioth/compiler.nvim
 --- MAYBE: https://github.com/ahmedkhalf/project.nvim
@@ -27,6 +33,7 @@
 
 --- DOCUMENT: Buf greps use external grep
 --- DOCUMENT: qf Buf Grep is all bufs, ll Buf Grep is current buf only
+--- DOCUMENT: rg handles true multi-line greps. For programs that don't, or is used as a fallback
 
 --------------
 -- STAYAWAY --
@@ -767,79 +774,6 @@ Map("n", "yoe", function() buf_diags_to_loclist({ err_only = true }) end)
 
 Map("n", "yoh", function() buf_diags_to_loclist({ highest = true }) end)
 
-------------
---- Grep ---
-------------
-
-local last_grep = nil
-local last_lgrep = nil
-
----@param opts table
----@return nil
-local function grep_wrapper(opts)
-    opts = opts or {}
-    if opts.loclist and vim.api.nvim_get_option_value("filetype", { buf = 0 }) == "qf" then
-        return vim.notify("Inside qf buffer")
-    end
-
-    local ok, pattern = (function()
-        if opts.pattern then
-            return true, opts.pattern
-        else
-            return require("mjm.utils").get_input("Enter Grep pattern: ")
-        end
-    end)() --- @type boolean, string
-
-    if not ok then
-        local msg = pattern or "Unknown error getting input" --- @type string
-        vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
-        return
-    elseif pattern == "" and opts.pattern then
-        vim.api.nvim_echo({ { "Empty grep pattern", "WarningMsg" } }, true, {})
-        return
-    elseif pattern == "" then
-        return
-    end
-
-    local args = { pattern } ---@type table
-    if opts.insensitive then table.insert(args, "-i") end
-    if opts.loclist then table.insert(args, "%") end
-
-    vim.api.nvim_cmd({
-        args = args,
-        bang = true,
-        cmd = opts.loclist and "lgrep" or "grep",
-        --- @diagnostic disable: missing-fields
-        mods = { emsg_silent = true },
-        magic = opts.loclist and { file = true } or {},
-    }, {})
-
-    if opts.loclist then
-        last_lgrep = pattern
-        M.open_loclist()
-    else
-        last_grep = pattern
-        M.open_qflist()
-    end
-end
-
-Map("n", "yugs", function() grep_wrapper({}) end)
-
-Map("n", "yogs", function() grep_wrapper({ loclist = true }) end)
-
-Map("n", "yugi", function() grep_wrapper({ insensitive = true }) end)
-
-Map("n", "yogi", function() grep_wrapper({ insensitive = true, loclist = true }) end)
-
-Map("n", "yugr", function() grep_wrapper({ pattern = last_grep }) end)
-
-Map("n", "yogr", function() grep_wrapper({ pattern = last_lgrep, loclist = true }) end)
-
-Map("n", "yugv", function() print(last_grep) end)
-
-Map("n", "yogv", function() print(last_lgrep) end)
-
--- TODO: Put code in here to resize the qflist for the list history ones
 local function qf_scroll_wrapper(main, alt, end_err)
     local main_with_count = vim.tbl_extend("force", main, { count = vim.v.count1 })
     local ok, err = pcall(vim.api.nvim_cmd, main_with_count, {})
