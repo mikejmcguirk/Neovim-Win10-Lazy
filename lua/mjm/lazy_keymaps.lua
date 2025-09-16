@@ -75,19 +75,13 @@ Map("i", "<C-q>", "<C-S-v>")
 -- Undo and Redo --
 -------------------
 
-Map(
-    "n",
-    "u",
-    function() return "<cmd>silent norm! " .. vim.v.count1 .. "u<cr>" end,
-    { expr = true }
-)
+Map("n", "u", function()
+    return "<cmd>silent norm! " .. vim.v.count1 .. "u<cr>"
+end, { expr = true })
 
-Map(
-    "n",
-    "<C-r>",
-    function() return "<cmd>silent norm! " .. vim.v.count1 .. "\18<cr>" end,
-    { expr = true }
-)
+Map("n", "<C-r>", function()
+    return "<cmd>silent norm! " .. vim.v.count1 .. "\18<cr>"
+end, { expr = true })
 
 ----------------
 -- Navigation --
@@ -183,11 +177,17 @@ Map("n", "n", "nzzzv")
 -- Text Objects --
 ------------------
 
-Map("o", "a_", function() vim.cmd("norm! ggVG") end, { silent = true })
+Map("o", "a_", function()
+    vim.cmd("norm! ggVG")
+end, { silent = true })
 
-Map("x", "a_", function() vim.cmd("norm! ggoVG") end, { silent = true })
+Map("x", "a_", function()
+    vim.cmd("norm! ggoVG")
+end, { silent = true })
 
-Map("o", "i_", function() vim.cmd("norm! _v" .. vim.v.count1 .. "g_") end, { silent = true })
+Map("o", "i_", function()
+    vim.cmd("norm! _v" .. vim.v.count1 .. "g_")
+end, { silent = true })
 
 Map("x", "i_", function()
     local keys = "g_o^o" .. vim.v.count .. "g_"
@@ -282,7 +282,9 @@ Map("n", "g?", "<nop>")
 -- LOW: Find a better key for this
 -- Map("n", "H", 'mzk_D"_ddA <esc>p`zze', { silent = true })
 Map("n", "J", function()
-    if not require("mjm.utils").check_modifiable() then return end
+    if not require("mjm.utils").check_modifiable() then
+        return
+    end
 
     -- Done using a view instead of a mark to prevent visible screen shake
     local view = vim.fn.winsaveview() ---@type vim.fn.winsaveview.ret
@@ -295,10 +297,14 @@ end, { silent = true })
 ---@param opts? {upward:boolean}
 ---@return nil
 local visual_move = function(opts)
-    if not require("mjm.utils").check_modifiable() then return end
+    if not require("mjm.utils").check_modifiable() then
+        return
+    end
 
     local cur_mode = vim.api.nvim_get_mode().mode ---@type string
-    if cur_mode ~= "V" and cur_mode ~= "Vs" then return vim.notify("Not in visual line mode") end
+    if cur_mode ~= "V" and cur_mode ~= "Vs" then
+        return vim.notify("Not in visual line mode")
+    end
 
     vim.opt.lazyredraw = true
     opts = opts or {}
@@ -343,9 +349,13 @@ Map(
 )
 
 Map("n", "<C-j>", function()
-    if not require("mjm.utils").check_modifiable() then return end
+    if not require("mjm.utils").check_modifiable() then
+        return
+    end
 
-    local ok, err = pcall(function() vim.cmd("m+" .. vim.v.count1 .. " | norm! ==") end)
+    local ok, err = pcall(function()
+        vim.cmd("m+" .. vim.v.count1 .. " | norm! ==")
+    end)
 
     if not ok then
         vim.api.nvim_echo({ { err or "Unknown error in normal move" } }, true, { err = true })
@@ -353,18 +363,26 @@ Map("n", "<C-j>", function()
 end)
 
 Map("n", "<C-k>", function()
-    if not require("mjm.utils").check_modifiable() then return end
+    if not require("mjm.utils").check_modifiable() then
+        return
+    end
 
-    local ok, err = pcall(function() vim.cmd("m-" .. vim.v.count1 + 1 .. " | norm! ==") end)
+    local ok, err = pcall(function()
+        vim.cmd("m-" .. vim.v.count1 + 1 .. " | norm! ==")
+    end)
 
     if not ok then
         vim.api.nvim_echo({ { err or "Unknown error in normal move" } }, true, { err = true })
     end
 end)
 
-Map("x", "<C-j>", function() visual_move() end)
+Map("x", "<C-j>", function()
+    visual_move()
+end)
 
-Map("x", "<C-k>", function() visual_move({ upward = true }) end)
+Map("x", "<C-k>", function()
+    visual_move({ upward = true })
+end)
 
 -- LOW: You could make this an ofunc for dot-repeating
 -- FUTURE: Make a resolver for the "." and "v" getpos() values
@@ -391,9 +409,13 @@ local function add_blank_visual(up)
     vim.api.nvim_set_option_value("lz", false, { scope = "global" })
 end
 
-Map("x", "[<space>", function() add_blank_visual(true) end)
+Map("x", "[<space>", function()
+    add_blank_visual(true)
+end)
 
-Map("x", "]<space>", function() add_blank_visual() end)
+Map("x", "]<space>", function()
+    add_blank_visual()
+end)
 
 -- Done as a function to suppress a nag when shifting multiple lines
 ---@param opts? table
@@ -414,9 +436,13 @@ local visual_indent = function(opts)
     vim.opt.lazyredraw = false
 end
 
-Map("x", "<", function() visual_indent({ back = true }) end, { silent = true })
+Map("x", "<", function()
+    visual_indent({ back = true })
+end, { silent = true })
 
-Map("x", ">", function() visual_indent() end, { silent = true })
+Map("x", ">", function()
+    visual_indent()
+end, { silent = true })
 
 -- I don't know a better place to put this
 Map("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true })

@@ -108,7 +108,9 @@ vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
         vim.api.nvim_del_augroup_by_name("mjm-lazy-load")
 
         local ok, _ = pcall(require, "fzf-lua") --- @type boolean, table
-        if ok then Cmd({ cmd = "FzfLua", args = { "register_ui_select" } }, {}) end
+        if ok then
+            Cmd({ cmd = "FzfLua", args = { "register_ui_select" } }, {})
+        end
 
         require("mjm.lazy_keymaps")
         -- TODO: I'm not sure these should be lazy, since you can work with the qflist on open
@@ -143,7 +145,9 @@ vim.api.nvim_create_autocmd("UIEnter", {
         local ui_enter = vim.loop.hrtime()
         local to_ui_enter = math.floor((ui_enter - start) / 1e6 * 100) / 100
 
-        if vim.fn.argc() > 0 or vim.fn.line2byte("$") ~= -1 or vim.bo.modified then return end
+        if vim.fn.argc() > 0 or vim.fn.line2byte("$") ~= -1 or vim.bo.modified then
+            return
+        end
 
         local headers = {
             { "Setup: ", to_env_setup },
@@ -156,7 +160,9 @@ vim.api.nvim_create_autocmd("UIEnter", {
 
         local max_header_len = 0
         for _, header in ipairs(headers) do
-            if #header[1] > max_header_len then max_header_len = #header[1] end
+            if #header[1] > max_header_len then
+                max_header_len = #header[1]
+            end
         end
 
         for i, header in ipairs(headers) do
@@ -203,7 +209,9 @@ vim.api.nvim_create_autocmd("UIEnter", {
             once = true,
             callback = function()
                 -- Treesitter fails in the next buffer if not scheduled wrapped
-                vim.schedule_wrap(function() vim.api.nvim_buf_delete(bufnr, { force = true }) end)
+                vim.schedule_wrap(function()
+                    vim.api.nvim_buf_delete(bufnr, { force = true })
+                end)
             end,
         })
     end,

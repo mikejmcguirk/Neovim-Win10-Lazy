@@ -6,7 +6,9 @@ local function setup_treesj()
     })
 
     Map("n", "gs", require("treesj").toggle)
-    Map("n", "gS", function() require("treesj").split({ split = { recursive = true } }) end)
+    Map("n", "gS", function()
+        require("treesj").split({ split = { recursive = true } })
+    end)
 end
 
 vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {

@@ -12,9 +12,13 @@ local M = {}
 --- @param pattern string
 --- @return boolean
 local function is_filter_smartcase(pattern)
-    if not vim.api.nvim_get_option_value("smartcase", { scope = "global" }) then return false end
+    if not vim.api.nvim_get_option_value("smartcase", { scope = "global" }) then
+        return false
+    end
 
-    if string.lower(pattern) ~= pattern then return false end
+    if string.lower(pattern) ~= pattern then
+        return false
+    end
 
     return true
 end
@@ -35,7 +39,9 @@ function M.qf_filter_wrapper(prompt, filter_func)
     --- @type boolean, string
     local ok, result = pcall(vim.fn.input, { prompt = prompt, cancelreturn = "" })
     if not ok then
-        if result == "Keyboard interrupt" then return end
+        if result == "Keyboard interrupt" then
+            return
+        end
         --- @type [string, string]
         local chunk = { result or "Unknown error getting input", "ErrorMsg" }
         vim.api.nvim_echo({ chunk }, true, { err = true })
@@ -54,7 +60,9 @@ function M.qf_filter_wrapper(prompt, filter_func)
 
     local qf_win = (function()
         for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-            if vim.fn.win_gettype(win) == "quickfix" then return win end
+            if vim.fn.win_gettype(win) == "quickfix" then
+                return win
+            end
         end
 
         return nil
@@ -74,16 +82,22 @@ function M.qf_filter_wrapper(prompt, filter_func)
             view.lnum = view.lnum - 1
         end
 
-        if keep then table.insert(new_items, t) end
+        if keep then
+            table.insert(new_items, t)
+        end
     end
 
     vim.fn.setqflist({}, "u", { nr = list_nr, items = new_items })
     if qf_win and view then
         view.topline = math.max(view.topline, 0)
-        vim.api.nvim_win_call(qf_win, function() vim.fn.winrestview(view) end)
+        vim.api.nvim_win_call(qf_win, function()
+            vim.fn.winrestview(view)
+        end)
     end
 
-    if qf_win then require("mjm.error-list").resize_list_win(qf_win) end
+    if qf_win then
+        require("mjm.error-list").resize_list_win(qf_win)
+    end
 end
 
 --- @param prompt string
@@ -106,7 +120,9 @@ function M.ll_filter_wrapper(prompt, filter_func)
     --- @type boolean, string
     local ok, result = pcall(vim.fn.input, { prompt = prompt, cancelreturn = "" })
     if not ok then
-        if result == "Keyboard interrupt" then return end
+        if result == "Keyboard interrupt" then
+            return
+        end
         --- @type [string, string]
         local chunk = { result or "Unknown error getting input", "ErrorMsg" }
         vim.api.nvim_echo({ chunk }, true, { err = true })
@@ -127,7 +143,9 @@ function M.ll_filter_wrapper(prompt, filter_func)
         for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
             local win_qf_id = vim.fn.getloclist(win, { id = 0 }).id
             if win_qf_id == qf_id then
-                if vim.fn.win_gettype(win) == "loclist" then return win end
+                if vim.fn.win_gettype(win) == "loclist" then
+                    return win
+                end
             end
         end
 
@@ -148,16 +166,22 @@ function M.ll_filter_wrapper(prompt, filter_func)
             view.lnum = view.lnum - 1
         end
 
-        if keep then table.insert(new_items, t) end
+        if keep then
+            table.insert(new_items, t)
+        end
     end
 
     vim.fn.setloclist(cur_win, {}, "u", { nr = list_nr, items = new_items })
     if loclist_win and view then
         view.topline = math.max(view.topline, 0)
-        vim.api.nvim_win_call(loclist_win, function() vim.fn.winrestview(view) end)
+        vim.api.nvim_win_call(loclist_win, function()
+            vim.fn.winrestview(view)
+        end)
     end
 
-    if loclist_win then require("mjm.error-list").resize_list_win(loclist_win) end
+    if loclist_win then
+        require("mjm.error-list").resize_list_win(loclist_win)
+    end
 end
 
 -----------------------
@@ -171,7 +195,9 @@ end
 local function filter_keep_emu(item, pattern, opts)
     opts = opts or {}
 
-    if not item.bufnr then return false end
+    if not item.bufnr then
+        return false
+    end
 
     local fname = vim.fn.bufname(item.bufnr)
     local compare_fname = opts.smartcase and string.lower(fname) or fname
@@ -190,7 +216,9 @@ end
 local function filter_remove_emu(item, pattern, opts)
     opts = opts or {}
 
-    if not item.bufnr then return false end
+    if not item.bufnr then
+        return false
+    end
 
     local fname = vim.fn.bufname(item.bufnr)
     local compare_fname = opts.smartcase and string.lower(fname) or fname
@@ -237,17 +265,25 @@ local function filter_remove_emu_regex(item, pattern, opts)
 end
 
 local keep_filter = "Enter pattern to keep: "
-local qf_emu_keep = function() M.qf_filter_wrapper(keep_filter, filter_keep_emu) end
+local qf_emu_keep = function()
+    M.qf_filter_wrapper(keep_filter, filter_keep_emu)
+end
 vim.keymap.set("n", "<leader>qkf", qf_emu_keep)
 
-local ll_emu_keep = function() M.ll_filter_wrapper(keep_filter, filter_keep_emu) end
+local ll_emu_keep = function()
+    M.ll_filter_wrapper(keep_filter, filter_keep_emu)
+end
 vim.keymap.set("n", "<leader>lkf", ll_emu_keep)
 
 local rm_filter = "Enter pattern to remove: "
-local qf_emu_rem = function() M.qf_filter_wrapper(rm_filter, filter_remove_emu) end
+local qf_emu_rem = function()
+    M.qf_filter_wrapper(rm_filter, filter_remove_emu)
+end
 vim.keymap.set("n", "<leader>qrf", qf_emu_rem)
 
-local ll_emu_rem = function() M.ll_filter_wrapper(rm_filter, filter_remove_emu) end
+local ll_emu_rem = function()
+    M.ll_filter_wrapper(rm_filter, filter_remove_emu)
+end
 vim.keymap.set("n", "<leader>lrf", ll_emu_rem)
 
 local qf_emu_keep_regex = function()
@@ -281,7 +317,9 @@ vim.keymap.set("n", "<leader>lrF", ll_emu_rem_regex)
 local function filter_keep_fname(item, pattern, opts)
     opts = opts or {}
 
-    if not item.bufnr then return false end
+    if not item.bufnr then
+        return false
+    end
 
     local fname = vim.fn.bufname(item.bufnr)
     local compare_text = opts.smartcase and string.lower(fname) or fname
@@ -295,7 +333,9 @@ end
 local function filter_remove_fname(item, pattern, opts)
     opts = opts or {}
 
-    if not item.bufnr then return false end
+    if not item.bufnr then
+        return false
+    end
 
     local fname = vim.fn.bufname(item.bufnr)
     local compare_text = opts.smartcase and string.lower(fname) or fname
@@ -309,7 +349,9 @@ end
 local function filter_keep_fname_regex(item, pattern, opts)
     opts = opts or {}
 
-    if not item.bufnr then return false end
+    if not item.bufnr then
+        return false
+    end
     local fname = vim.fn.bufname(item.bufnr)
 
     local regex = vim.regex(pattern)
@@ -326,7 +368,9 @@ end
 local function filter_remove_fname_regex(item, pattern, opts)
     opts = opts or {}
 
-    if not item.bufnr then return false end
+    if not item.bufnr then
+        return false
+    end
     local fname = vim.fn.bufname(item.bufnr)
 
     local regex = vim.regex(pattern)
@@ -337,17 +381,25 @@ local function filter_remove_fname_regex(item, pattern, opts)
 end
 
 local keep_msg = "Enter filename to keep: "
-local qf_fname_keep = function() M.qf_filter_wrapper(keep_msg, filter_keep_fname) end
+local qf_fname_keep = function()
+    M.qf_filter_wrapper(keep_msg, filter_keep_fname)
+end
 vim.keymap.set("n", "<leader>qki", qf_fname_keep)
 
-local ll_fname_keep = function() M.ll_filter_wrapper(keep_msg, filter_keep_fname) end
+local ll_fname_keep = function()
+    M.ll_filter_wrapper(keep_msg, filter_keep_fname)
+end
 vim.keymap.set("n", "<leader>lki", ll_fname_keep)
 
 local rm_msg = "Enter filename to remove: "
-local qf_fname_rem = function() M.qf_filter_wrapper(rm_msg, filter_remove_fname) end
+local qf_fname_rem = function()
+    M.qf_filter_wrapper(rm_msg, filter_remove_fname)
+end
 vim.keymap.set("n", "<leader>qri", qf_fname_rem)
 
-local ll_fname_rem = function() M.ll_filter_wrapper(rm_msg, filter_remove_fname) end
+local ll_fname_rem = function()
+    M.ll_filter_wrapper(rm_msg, filter_remove_fname)
+end
 vim.keymap.set("n", "<leader>lri", ll_fname_rem)
 
 local qf_fname_keep_regex = function()
@@ -424,16 +476,24 @@ local function filter_remove_text_regex(item, pattern, opts)
     return keep
 end
 
-local qf_txt_keep = function() M.qf_filter_wrapper("Enter text to keep: ", filter_keep_text) end
+local qf_txt_keep = function()
+    M.qf_filter_wrapper("Enter text to keep: ", filter_keep_text)
+end
 vim.keymap.set("n", "<leader>qke", qf_txt_keep)
 
-local ll_txt_keep = function() M.ll_filter_wrapper("Enter text to keep: ", filter_keep_text) end
+local ll_txt_keep = function()
+    M.ll_filter_wrapper("Enter text to keep: ", filter_keep_text)
+end
 vim.keymap.set("n", "<leader>lke", ll_txt_keep)
 
-local qf_txt_rem = function() M.qf_filter_wrapper("Enter text to remove: ", filter_remove_text) end
+local qf_txt_rem = function()
+    M.qf_filter_wrapper("Enter text to remove: ", filter_remove_text)
+end
 vim.keymap.set("n", "<leader>qre", qf_txt_rem)
 
-local ll_txt_rem = function() M.ll_filter_wrapper("Enter text to remove: ", filter_remove_text) end
+local ll_txt_rem = function()
+    M.ll_filter_wrapper("Enter text to remove: ", filter_remove_text)
+end
 vim.keymap.set("n", "<leader>lre", ll_txt_rem)
 
 local qf_txt_keep_regex = function()
@@ -510,16 +570,24 @@ local function filter_remove_type_regex(item, pattern, opts)
     return keep
 end
 
-local qf_typ_keep = function() M.qf_filter_wrapper("Enter type to keep: ", filter_keep_type) end
+local qf_typ_keep = function()
+    M.qf_filter_wrapper("Enter type to keep: ", filter_keep_type)
+end
 vim.keymap.set("n", "<leader>qkt", qf_typ_keep)
 
-local ll_typ_keep = function() M.ll_filter_wrapper("Enter type to keep: ", filter_keep_type) end
+local ll_typ_keep = function()
+    M.ll_filter_wrapper("Enter type to keep: ", filter_keep_type)
+end
 vim.keymap.set("n", "<leader>lkt", ll_typ_keep)
 
-local qf_typ_rem = function() M.qf_filter_wrapper("Enter type to remove: ", filter_remove_type) end
+local qf_typ_rem = function()
+    M.qf_filter_wrapper("Enter type to remove: ", filter_remove_type)
+end
 vim.keymap.set("n", "<leader>qrt", qf_typ_rem)
 
-local ll_typ_rem = function() M.ll_filter_wrapper("Enter type to remove: ", filter_remove_type) end
+local ll_typ_rem = function()
+    M.ll_filter_wrapper("Enter type to remove: ", filter_remove_type)
+end
 vim.keymap.set("n", "<leader>lrt", ll_typ_rem)
 
 local qf_typ_keep_regex = function()
@@ -607,10 +675,14 @@ end
 vim.keymap.set("n", "<leader>lkl", ll_lnum_keep)
 
 local lnum_rm = "Enter line number to remove: "
-local qf_lnum_rem = function() M.qf_filter_wrapper(lnum_rm, filter_remove_lnum) end
+local qf_lnum_rem = function()
+    M.qf_filter_wrapper(lnum_rm, filter_remove_lnum)
+end
 vim.keymap.set("n", "<leader>qrl", qf_lnum_rem)
 
-local ll_lnum_rem = function() M.ll_filter_wrapper(lnum_rm, filter_remove_lnum) end
+local ll_lnum_rem = function()
+    M.ll_filter_wrapper(lnum_rm, filter_remove_lnum)
+end
 vim.keymap.set("n", "<leader>lrl", ll_lnum_rem)
 
 local qf_lnum_keep_regex = function()

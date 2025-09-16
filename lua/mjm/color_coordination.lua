@@ -46,7 +46,9 @@ vim.api.nvim_create_autocmd("FileType", {
     callback = function()
         --- @type vim.treesitter.Query?
         local hl_query = vim.treesitter.query.get("lua", "highlights")
-        if not hl_query then return end
+        if not hl_query then
+            return
+        end
 
         ts_nop_all(hl_query)
 
@@ -77,7 +79,9 @@ vim.api.nvim_create_autocmd("FileType", {
     callback = function()
         --- @type vim.treesitter.Query?
         local hl_query = vim.treesitter.query.get("python", "highlights")
-        if not hl_query then return end
+        if not hl_query then
+            return
+        end
 
         hl_query.query:disable_capture("punctuation.bracket")
         hl_query.query:disable_capture("string.documentation") -- Just masks string
@@ -95,7 +99,9 @@ vim.api.nvim_create_autocmd("FileType", {
     callback = function()
         --- @type vim.treesitter.Query?
         local hl_query = vim.treesitter.query.get("rust", "highlights")
-        if not hl_query then return end
+        if not hl_query then
+            return
+        end
 
         -- Have to keep punctuation.bracket to mask operator highlights
         hl_query.query:disable_capture("type.builtin") -- Don't need to distinguish this
@@ -111,7 +117,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         --- @type vim.treesitter.Query?
         local hl_query = vim.treesitter.query.get("rust", "highlights")
-        if not hl_query then return end
+        if not hl_query then
+            return
+        end
 
         -- rust_analyzer contains built-in highlights for multiple types that should be
         -- left active for doc comments. If an LSP attaches, disable the TS queries
@@ -159,7 +167,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
     group = vim.api.nvim_create_augroup("token-filter", { clear = true }),
     callback = function(ev)
         local client = vim.lsp.get_client_by_id(ev.data.client_id) --- @type vim.lsp.Client?
-        if (not client) or not client.server_capabilities.semanticTokensProvider then return end
+        if (not client) or not client.server_capabilities.semanticTokensProvider then
+            return
+        end
 
         local found_client_name = false
         for k, _ in pairs(token_filter) do
@@ -169,7 +179,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
             end
         end
 
-        if not found_client_name then return end
+        if not found_client_name then
+            return
+        end
 
         --- @type lsp.SemanticTokensLegend
         local legend = client.server_capabilities.semanticTokensProvider.legend

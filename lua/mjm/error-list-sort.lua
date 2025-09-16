@@ -16,7 +16,9 @@ function M.qf_sort_wrapper(sort_func)
         return
     end
 
-    if list_size == 1 then return end
+    if list_size == 1 then
+        return
+    end
 
     local list_nr = (function()
         if vim.v.count > 0 then
@@ -28,7 +30,9 @@ function M.qf_sort_wrapper(sort_func)
 
     local qf_win = (function()
         for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-            if vim.fn.win_gettype(win) == "quickfix" then return win end
+            if vim.fn.win_gettype(win) == "quickfix" then
+                return win
+            end
         end
 
         return nil
@@ -42,7 +46,9 @@ function M.qf_sort_wrapper(sort_func)
 
     if qf_win and view then
         view.topline = math.max(view.topline, 0)
-        vim.api.nvim_win_call(qf_win, function() vim.fn.winrestview(view) end)
+        vim.api.nvim_win_call(qf_win, function()
+            vim.fn.winrestview(view)
+        end)
     end
 end
 
@@ -55,7 +61,9 @@ function M.ll_sort_wrapper(sort_func)
         return
     end
 
-    if list_size == 1 then return end
+    if list_size == 1 then
+        return
+    end
 
     local list_nr = (function()
         if vim.v.count > 0 then
@@ -67,7 +75,9 @@ function M.ll_sort_wrapper(sort_func)
 
     local loclist_win = (function()
         for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-            if vim.fn.win_gettype(win) == "loclist" then return win end
+            if vim.fn.win_gettype(win) == "loclist" then
+                return win
+            end
         end
 
         return nil
@@ -81,7 +91,9 @@ function M.ll_sort_wrapper(sort_func)
 
     if loclist_win and view then
         view.topline = math.max(view.topline, 0)
-        vim.api.nvim_win_call(loclist_win, function() vim.fn.winrestview(view) end)
+        vim.api.nvim_win_call(loclist_win, function()
+            vim.fn.winrestview(view)
+        end)
     end
 end
 
@@ -93,98 +105,158 @@ end
 -- TODO: probably outline the line number checks, since you can just return false
 
 function M.sort_fname_asc(a, b)
-    if (not a) or not b then return false end
+    if (not a) or not b then
+        return false
+    end
 
     if a.bufnr and b.bufnr then
         local fname_a = vim.fn.bufname(a.bufnr)
         local fname_b = vim.fn.bufname(b.bufnr)
 
-        if (fname_a and fname_b) and fname_a ~= fname_b then return fname_a < fname_b end
+        if (fname_a and fname_b) and fname_a ~= fname_b then
+            return fname_a < fname_b
+        end
     end
 
-    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then return a.lnum < b.lnum end
-    if (a.col and b.col) and a.col ~= b.col then return a.col < b.col end
+    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then
+        return a.lnum < b.lnum
+    end
+    if (a.col and b.col) and a.col ~= b.col then
+        return a.col < b.col
+    end
     if (a.end_lnum and b.end_lnum) and a.end_lnum ~= b.end_lnum then
         return a.end_lnum < b.end_lnum
     end
-    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then return a.end_col < b.end_col end
+    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then
+        return a.end_col < b.end_col
+    end
 
     return false
 end
 
 function M.sort_fname_desc(a, b)
-    if (not a) or not b then return false end
+    if (not a) or not b then
+        return false
+    end
 
     if a.bufnr and b.bufnr then
         local fname_a = vim.fn.bufname(a.bufnr)
         local fname_b = vim.fn.bufname(b.bufnr)
 
-        if (fname_a and fname_b) and fname_a ~= fname_b then return fname_a < fname_b end
+        if (fname_a and fname_b) and fname_a ~= fname_b then
+            return fname_a < fname_b
+        end
     end
 
-    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then return a.lnum > b.lnum end
-    if (a.col and b.col) and a.col ~= b.col then return a.col > b.col end
+    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then
+        return a.lnum > b.lnum
+    end
+    if (a.col and b.col) and a.col ~= b.col then
+        return a.col > b.col
+    end
     if (a.end_lnum and b.end_lnum) and a.end_lnum ~= b.end_lnum then
         return a.end_lnum > b.end_lnum
     end
-    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then return a.end_col > b.end_col end
+    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then
+        return a.end_col > b.end_col
+    end
 
     return false
 end
 
-vim.keymap.set("n", "<leader>qof", function() M.qf_sort_wrapper(M.sort_fname_asc) end)
-vim.keymap.set("n", "<leader>qoF", function() M.qf_sort_wrapper(M.sort_fname_desc) end)
-vim.keymap.set("n", "<leader>lof", function() M.ll_sort_wrapper(M.sort_fname_asc) end)
-vim.keymap.set("n", "<leader>loF", function() M.ll_sort_wrapper(M.sort_fname_desc) end)
+vim.keymap.set("n", "<leader>qof", function()
+    M.qf_sort_wrapper(M.sort_fname_asc)
+end)
+vim.keymap.set("n", "<leader>qoF", function()
+    M.qf_sort_wrapper(M.sort_fname_desc)
+end)
+vim.keymap.set("n", "<leader>lof", function()
+    M.ll_sort_wrapper(M.sort_fname_asc)
+end)
+vim.keymap.set("n", "<leader>loF", function()
+    M.ll_sort_wrapper(M.sort_fname_desc)
+end)
 
 function M.sort_type_asc(a, b)
-    if (not a) or not b then return false end
+    if (not a) or not b then
+        return false
+    end
 
-    if (a.type and b.type) and a.type ~= b.type then return a.type < b.type end
+    if (a.type and b.type) and a.type ~= b.type then
+        return a.type < b.type
+    end
 
     if a.bufnr and b.bufnr then
         local fname_a = vim.fn.bufname(a.bufnr)
         local fname_b = vim.fn.bufname(b.bufnr)
 
-        if (fname_a and fname_b) and fname_a ~= fname_b then return fname_a < fname_b end
+        if (fname_a and fname_b) and fname_a ~= fname_b then
+            return fname_a < fname_b
+        end
     end
 
-    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then return a.lnum < b.lnum end
-    if (a.col and b.col) and a.col ~= b.col then return a.col < b.col end
+    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then
+        return a.lnum < b.lnum
+    end
+    if (a.col and b.col) and a.col ~= b.col then
+        return a.col < b.col
+    end
     if (a.end_lnum and b.end_lnum) and a.end_lnum ~= b.end_lnum then
         return a.end_lnum < b.end_lnum
     end
-    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then return a.end_col < b.end_col end
+    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then
+        return a.end_col < b.end_col
+    end
 
     return false
 end
 
 function M.sort_type_desc(a, b)
-    if (not a) or not b then return false end
+    if (not a) or not b then
+        return false
+    end
 
-    if (a.type and b.type) and a.type ~= b.type then return a.type > b.type end
+    if (a.type and b.type) and a.type ~= b.type then
+        return a.type > b.type
+    end
 
     if a.bufnr and b.bufnr then
         local fname_a = vim.fn.bufname(a.bufnr)
         local fname_b = vim.fn.bufname(b.bufnr)
 
-        if (fname_a and fname_b) and fname_a ~= fname_b then return fname_a > fname_b end
+        if (fname_a and fname_b) and fname_a ~= fname_b then
+            return fname_a > fname_b
+        end
     end
 
-    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then return a.lnum > b.lnum end
-    if (a.col and b.col) and a.col ~= b.col then return a.col > b.col end
+    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then
+        return a.lnum > b.lnum
+    end
+    if (a.col and b.col) and a.col ~= b.col then
+        return a.col > b.col
+    end
     if (a.end_lnum and b.end_lnum) and a.end_lnum ~= b.end_lnum then
         return a.end_lnum > b.end_lnum
     end
-    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then return a.end_col > b.end_col end
+    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then
+        return a.end_col > b.end_col
+    end
 
     return false
 end
 
-vim.keymap.set("n", "<leader>qot", function() M.qf_sort_wrapper(M.sort_type_asc) end)
-vim.keymap.set("n", "<leader>qoT", function() M.qf_sort_wrapper(M.sort_type_desc) end)
-vim.keymap.set("n", "<leader>lot", function() M.ll_sort_wrapper(M.sort_type_asc) end)
-vim.keymap.set("n", "<leader>loT", function() M.ll_sort_wrapper(M.sort_type_desc) end)
+vim.keymap.set("n", "<leader>qot", function()
+    M.qf_sort_wrapper(M.sort_type_asc)
+end)
+vim.keymap.set("n", "<leader>qoT", function()
+    M.qf_sort_wrapper(M.sort_type_desc)
+end)
+vim.keymap.set("n", "<leader>lot", function()
+    M.ll_sort_wrapper(M.sort_type_asc)
+end)
+vim.keymap.set("n", "<leader>loT", function()
+    M.ll_sort_wrapper(M.sort_type_desc)
+end)
 
 ------------------------
 --- Diagnostic Sorts ---
@@ -200,7 +272,9 @@ local severity_map = {
 } ---@type table<string, integer>
 
 function M.sort_severity_asc(a, b)
-    if (not a) or not b then return false end
+    if (not a) or not b then
+        return false
+    end
 
     if a.type and b.type then
         local severity_a = severity_map[a.type] or nil
@@ -215,21 +289,31 @@ function M.sort_severity_asc(a, b)
         local fname_a = vim.fn.bufname(a.bufnr)
         local fname_b = vim.fn.bufname(b.bufnr)
 
-        if (fname_a and fname_b) and fname_a ~= fname_b then return fname_a < fname_b end
+        if (fname_a and fname_b) and fname_a ~= fname_b then
+            return fname_a < fname_b
+        end
     end
 
-    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then return a.lnum < b.lnum end
-    if (a.col and b.col) and a.col ~= b.col then return a.col < b.col end
+    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then
+        return a.lnum < b.lnum
+    end
+    if (a.col and b.col) and a.col ~= b.col then
+        return a.col < b.col
+    end
     if (a.end_lnum and b.end_lnum) and a.end_lnum ~= b.end_lnum then
         return a.end_lnum < b.end_lnum
     end
-    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then return a.end_col < b.end_col end
+    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then
+        return a.end_col < b.end_col
+    end
 
     return false
 end
 
 function M.sort_severity_desc(a, b)
-    if (not a) or not b then return false end
+    if (not a) or not b then
+        return false
+    end
 
     if a.type and b.type then
         local severity_a = severity_map[a.type] or nil
@@ -244,32 +328,52 @@ function M.sort_severity_desc(a, b)
         local fname_a = vim.fn.bufname(a.bufnr)
         local fname_b = vim.fn.bufname(b.bufnr)
 
-        if (fname_a and fname_b) and fname_a ~= fname_b then return fname_a > fname_b end
+        if (fname_a and fname_b) and fname_a ~= fname_b then
+            return fname_a > fname_b
+        end
     end
 
-    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then return a.lnum > b.lnum end
-    if (a.col and b.col) and a.col ~= b.col then return a.col > b.col end
+    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then
+        return a.lnum > b.lnum
+    end
+    if (a.col and b.col) and a.col ~= b.col then
+        return a.col > b.col
+    end
     if (a.end_lnum and b.end_lnum) and a.end_lnum ~= b.end_lnum then
         return a.end_lnum > b.end_lnum
     end
-    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then return a.end_col > b.end_col end
+    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then
+        return a.end_col > b.end_col
+    end
 
     return false
 end
 
-vim.keymap.set("n", "<leader>qois", function() M.qf_sort_wrapper(M.sort_severity_asc) end)
-vim.keymap.set("n", "<leader>qoiS", function() M.qf_sort_wrapper(M.sort_severity_desc) end)
-vim.keymap.set("n", "<leader>lois", function() M.ll_sort_wrapper(M.sort_severity_asc) end)
-vim.keymap.set("n", "<leader>loiS", function() M.ll_sort_wrapper(M.sort_severity_desc) end)
+vim.keymap.set("n", "<leader>qois", function()
+    M.qf_sort_wrapper(M.sort_severity_asc)
+end)
+vim.keymap.set("n", "<leader>qoiS", function()
+    M.qf_sort_wrapper(M.sort_severity_desc)
+end)
+vim.keymap.set("n", "<leader>lois", function()
+    M.ll_sort_wrapper(M.sort_severity_asc)
+end)
+vim.keymap.set("n", "<leader>loiS", function()
+    M.ll_sort_wrapper(M.sort_severity_desc)
+end)
 
 function M.sort_diag_fname_asc(a, b)
-    if (not a) or not b then return false end
+    if (not a) or not b then
+        return false
+    end
 
     if a.bufnr and b.bufnr then
         local fname_a = vim.fn.bufname(a.bufnr)
         local fname_b = vim.fn.bufname(b.bufnr)
 
-        if (fname_a and fname_b) and fname_a ~= fname_b then return fname_a < fname_b end
+        if (fname_a and fname_b) and fname_a ~= fname_b then
+            return fname_a < fname_b
+        end
     end
 
     if a.type and b.type then
@@ -281,24 +385,34 @@ function M.sort_diag_fname_asc(a, b)
         end
     end
 
-    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then return a.lnum < b.lnum end
-    if (a.col and b.col) and a.col ~= b.col then return a.col < b.col end
+    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then
+        return a.lnum < b.lnum
+    end
+    if (a.col and b.col) and a.col ~= b.col then
+        return a.col < b.col
+    end
     if (a.end_lnum and b.end_lnum) and a.end_lnum ~= b.end_lnum then
         return a.end_lnum < b.end_lnum
     end
-    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then return a.end_col < b.end_col end
+    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then
+        return a.end_col < b.end_col
+    end
 
     return false
 end
 
 function M.sort_diag_fname_desc(a, b)
-    if (not a) or not b then return false end
+    if (not a) or not b then
+        return false
+    end
 
     if a.bufnr and b.bufnr then
         local fname_a = vim.fn.bufname(a.bufnr)
         local fname_b = vim.fn.bufname(b.bufnr)
 
-        if (fname_a and fname_b) and fname_a ~= fname_b then return fname_a > fname_b end
+        if (fname_a and fname_b) and fname_a ~= fname_b then
+            return fname_a > fname_b
+        end
     end
 
     if a.type and b.type then
@@ -310,19 +424,33 @@ function M.sort_diag_fname_desc(a, b)
         end
     end
 
-    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then return a.lnum > b.lnum end
-    if (a.col and b.col) and a.col ~= b.col then return a.col > b.col end
+    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then
+        return a.lnum > b.lnum
+    end
+    if (a.col and b.col) and a.col ~= b.col then
+        return a.col > b.col
+    end
     if (a.end_lnum and b.end_lnum) and a.end_lnum ~= b.end_lnum then
         return a.end_lnum > b.end_lnum
     end
-    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then return a.end_col > b.end_col end
+    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then
+        return a.end_col > b.end_col
+    end
 
     return false
 end
 
-vim.keymap.set("n", "<leader>qoif", function() M.qf_sort_wrapper(M.sort_diag_fname_asc) end)
-vim.keymap.set("n", "<leader>qoiF", function() M.qf_sort_wrapper(M.sort_diag_fname_desc) end)
-vim.keymap.set("n", "<leader>loif", function() M.ll_sort_wrapper(M.sort_diag_fname_asc) end)
-vim.keymap.set("n", "<leader>loiF", function() M.ll_sort_wrapper(M.sort_diag_fname_desc) end)
+vim.keymap.set("n", "<leader>qoif", function()
+    M.qf_sort_wrapper(M.sort_diag_fname_asc)
+end)
+vim.keymap.set("n", "<leader>qoiF", function()
+    M.qf_sort_wrapper(M.sort_diag_fname_desc)
+end)
+vim.keymap.set("n", "<leader>loif", function()
+    M.ll_sort_wrapper(M.sort_diag_fname_asc)
+end)
+vim.keymap.set("n", "<leader>loiF", function()
+    M.ll_sort_wrapper(M.sort_diag_fname_desc)
+end)
 
 return M

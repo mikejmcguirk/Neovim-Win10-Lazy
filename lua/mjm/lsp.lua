@@ -27,7 +27,9 @@ local ok, fzf_lua = pcall(require, "fzf-lua") --- @type boolean, table
 -- callHierarchy/incomingCalls
 local in_call = (function()
     if ok then
-        return function() fzf_lua.lsp_incoming_calls({ jump1 = false }) end
+        return function()
+            fzf_lua.lsp_incoming_calls({ jump1 = false })
+        end
     else
         return vim.lsp.buf.incoming_calls
     end
@@ -36,7 +38,9 @@ end)()
 -- callHierarchy/outgoingCalls
 local out_call = (function()
     if ok then
-        return function() fzf_lua.lsp_outgoing_calls({ jump1 = false }) end
+        return function()
+            fzf_lua.lsp_outgoing_calls({ jump1 = false })
+        end
     else
         return vim.lsp.buf.outgoing_calls
     end
@@ -49,9 +53,13 @@ local code_action = ok and fzf_lua.lsp_code_actions or vim.lsp.buf.code_action
 local declaration = ok and fzf_lua.lsp_declarations or vim.lsp.buf.declaration
 local peek_declaration = (function()
     if ok then
-        return function() fzf_lua.lsp_declarations({ jump1 = false }) end
+        return function()
+            fzf_lua.lsp_declarations({ jump1 = false })
+        end
     else
-        return function() vim.api.nvim_echo({ { "FzfLua not available", "" } }, true, {}) end
+        return function()
+            vim.api.nvim_echo({ { "FzfLua not available", "" } }, true, {})
+        end
     end
 end)()
 
@@ -59,9 +67,13 @@ end)()
 local definition = ok and fzf_lua.lsp_definitions or vim.lsp.buf.definition
 local peek_definition = (function()
     if ok then
-        return function() fzf_lua.lsp_definitions({ jump1 = false }) end
+        return function()
+            fzf_lua.lsp_definitions({ jump1 = false })
+        end
     else
-        return function() vim.api.nvim_echo({ { "FzfLua not available", "" } }, true, {}) end
+        return function()
+            vim.api.nvim_echo({ { "FzfLua not available", "" } }, true, {})
+        end
     end
 end)()
 
@@ -72,26 +84,38 @@ local symbols = ok and fzf_lua.lsp_document_symbols or vim.lsp.buf.document_symb
 local implementation = ok and fzf_lua.lsp_implementations or vim.lsp.buf.implementation
 local peek_implementation = (function()
     if ok then
-        return function() fzf_lua.lsp_implementations({ jump1 = false }) end
+        return function()
+            fzf_lua.lsp_implementations({ jump1 = false })
+        end
     else
-        return function() vim.api.nvim_echo({ { "FzfLua not available", "" } }, true, {}) end
+        return function()
+            vim.api.nvim_echo({ { "FzfLua not available", "" } }, true, {})
+        end
     end
 end)()
 
 -- textDocument/references
 local references = (function()
     if ok then
-        return function() fzf_lua.lsp_references({ includeDeclaration = false }) end
+        return function()
+            fzf_lua.lsp_references({ includeDeclaration = false })
+        end
     else
-        return function() vim.lsp.buf.references({ includeDeclaration = false }) end
+        return function()
+            vim.lsp.buf.references({ includeDeclaration = false })
+        end
     end
 end)()
 
 local peek_references = (function()
     if ok then
-        return function() fzf_lua.lsp_references({ includeDeclaration = false, jump1 = false }) end
+        return function()
+            fzf_lua.lsp_references({ includeDeclaration = false, jump1 = false })
+        end
     else
-        return function() vim.api.nvim_echo({ { "FzfLua not available", "" } }, true, {}) end
+        return function()
+            vim.api.nvim_echo({ { "FzfLua not available", "" } }, true, {})
+        end
     end
 end)()
 
@@ -99,10 +123,14 @@ end)()
 local typedef = ok and fzf_lua.lsp_typedefs or vim.lsp.buf.type_definition
 local peek_typedef = (function()
     if ok then
-        return function() fzf_lua.lsp_typedefs({ jump1 = false }) end
+        return function()
+            fzf_lua.lsp_typedefs({ jump1 = false })
+        end
     else
         local msg = "FzfLua not available"
-        return function() vim.api.nvim_echo({ { msg, "" } }, true, {}) end
+        return function()
+            vim.api.nvim_echo({ { msg, "" } }, true, {})
+        end
     end
 end)()
 
@@ -113,9 +141,13 @@ local lsp_group = vim.api.nvim_create_augroup("LSP_Augroup", { clear = true })
 vim.api.nvim_create_autocmd("LspAttach", {
     group = lsp_group,
     callback = function(ev)
-        if not ev.data.client_id then return end
+        if not ev.data.client_id then
+            return
+        end
         local client = vim.lsp.get_client_by_id(ev.data.client_id) --- @type vim.lsp.Client?
-        if not client then return end
+        if not client then
+            return
+        end
 
         local buf = ev.buf ---@type integer
 
@@ -141,7 +173,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
                 buffer = ev.buf,
                 group = vim.api.nvim_create_augroup("refresh-lens", { clear = true }),
                 -- Bespoke module so I can render the lenses as virtual lines
-                callback = function() require("mjm.codelens").refresh({ buf = ev.buf }) end,
+                callback = function()
+                    require("mjm.codelens").refresh({ buf = ev.buf })
+                end,
             })
         end
 
@@ -154,7 +188,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
             Map("n", "grD", peek_declaration)
         else
             local msg = "LSP Server does not have capability textDocument/declaration"
-            Map("n", "grD", function() vim.api.nvim_echo({ { msg, "" } }, true, {}) end)
+            Map("n", "grD", function()
+                vim.api.nvim_echo({ { msg, "" } }, true, {})
+            end)
         end
 
         -- textDocument/definition
@@ -163,7 +199,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
             Map("n", "gD", peek_definition)
         else
             local msg = "LSP Server does not have capability textDocument/definition"
-            Map("n", "gD", function() vim.api.nvim_echo({ { msg, "" } }, true, {}) end)
+            Map("n", "gD", function()
+                vim.api.nvim_echo({ { msg, "" } }, true, {})
+            end)
         end
 
         -- textDocument/documentColor
@@ -181,7 +219,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
         Map("n", "gO", symbols, { buffer = buf })
 
         -- textDocument/hover
-        Map("n", "K", function() vim.lsp.buf.hover({ border = Border }) end, { buffer = buf })
+        Map("n", "K", function()
+            vim.lsp.buf.hover({ border = Border })
+        end, { buffer = buf })
 
         -- textDocument/implementation
         Map("n", "gri", implementation)
@@ -189,7 +229,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
             Map("n", "grI", peek_implementation, { buffer = buf })
         else
             local msg = "LSP Server does not have capability textDocument/implementation"
-            Map("n", "grI", function() vim.api.nvim_echo({ { msg, "" } }, true, {}) end)
+            Map("n", "grI", function()
+                vim.api.nvim_echo({ { msg, "" } }, true, {})
+            end)
         end
 
         -- textDocument/inlayHint
@@ -211,7 +253,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
             Map("n", "grR", peek_references, { buffer = buf })
         else
             local msg = "LSP Server does not have capability textDocument/references"
-            Map("n", "grR", function() vim.api.nvim_echo({ { msg, "" } }, true, {}) end)
+            Map("n", "grR", function()
+                vim.api.nvim_echo({ { msg, "" } }, true, {})
+            end)
         end
 
         -- textDocument/rename
@@ -239,7 +283,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
         end, { buffer = buf })
 
         -- textDocument/signatureHelp
-        local signature_help = function() vim.lsp.buf.signature_help({ border = Border }) end
+        local signature_help = function()
+            vim.lsp.buf.signature_help({ border = Border })
+        end
         Map({ "i", "s" }, "<C-S>", signature_help, { buffer = buf })
 
         -- textDocument/typeDefinition
@@ -248,7 +294,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
             Map("n", "grT", peek_typedef, { buffer = buf })
         else
             local msg = "LSP Server does not have capability textDocument/typeDefinition"
-            Map("n", "grT", function() vim.api.nvim_echo({ { msg, "" } }, true, {}) end)
+            Map("n", "grT", function()
+                vim.api.nvim_echo({ { msg, "" } }, true, {})
+            end)
         end
 
         -- workspace/symbol
@@ -263,7 +311,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         Map("n", "grm", toggle_tokens, { buffer = buf })
 
-        local inspect_ws = function() print(vim.inspect(vim.lsp.buf.list_workspace_folders())) end
+        local inspect_ws = function()
+            print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
+        end
         Map("n", "grf", inspect_ws, { buffer = buf })
     end,
 })
@@ -273,15 +323,18 @@ vim.api.nvim_create_autocmd("BufUnload", {
     callback = function(ev)
         local buf = ev.buf ---@type integer
         local clients = vim.lsp.get_clients({ bufnr = buf }) ---@type vim.lsp.Client[]
-        if not clients or vim.tbl_isempty(clients) then return end
+        if not clients or vim.tbl_isempty(clients) then
+            return
+        end
 
         for _, client in pairs(clients) do
-            local attached_bufs = vim.tbl_filter(
-                function(buf_nbr) return buf_nbr ~= buf end,
-                vim.tbl_keys(client.attached_buffers)
-            ) ---@type unknown[]
+            local attached_bufs = vim.tbl_filter(function(buf_nbr)
+                return buf_nbr ~= buf
+            end, vim.tbl_keys(client.attached_buffers)) ---@type unknown[]
 
-            if vim.tbl_isempty(attached_bufs) then vim.lsp.stop_client(client.id) end
+            if vim.tbl_isempty(attached_bufs) then
+                vim.lsp.stop_client(client.id)
+            end
         end
     end,
 })

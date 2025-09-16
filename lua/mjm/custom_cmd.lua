@@ -6,7 +6,9 @@
 --- have a scenario where this config is loaded without Git. But bad in principle
 --- Mitigated by checking for a head, but now we have a dependency
 local function is_git_tracked(path)
-    if not vim.g.gitsigns_head then return false end
+    if not vim.g.gitsigns_head then
+        return false
+    end
 
     local cmd = { "git", "ls-files", "--error-unmatch", "--", path }
     local output = vim.system(cmd):wait()
@@ -33,7 +35,9 @@ end
 
 local function del_cur_buf_from_disk(cargs)
     local buf, bufname = get_cur_buf()
-    if (not buf) or not bufname then return end
+    if (not buf) or not bufname then
+        return
+    end
 
     if not cargs.bang then
         if vim.api.nvim_get_option_value("modified", { buf = buf }) then
@@ -72,7 +76,9 @@ vim.api.nvim_create_user_command("BKill", del_cur_buf_from_disk, {})
 
 local function do_mkdir(path)
     local mkdir = vim.system({ "mkdir", "-p", path }):wait()
-    if mkdir.code == 0 then return true end
+    if mkdir.code == 0 then
+        return true
+    end
 
     local err = mkdir.stderr or ("Cannot open " .. path)
     vim.api.nvim_echo({ { err, "ErrorMsg" } }, true, { err = true })
@@ -89,7 +95,9 @@ local function mv_cur_buf(cargs)
     end
 
     local buf, bufname = get_cur_buf()
-    if (not buf) or not bufname then return end
+    if (not buf) or not bufname then
+        return
+    end
 
     if not cargs.bang then
         if vim.api.nvim_get_option_value("modified", { buf = buf }) then
@@ -113,7 +121,9 @@ local function mv_cur_buf(cargs)
     local escape_target = vim.fn.fnameescape(full_target)
     local full_bufname = vim.fn.fnamemodify(bufname, ":p")
     local escape_bufname = vim.fn.fnameescape(full_bufname)
-    if escape_target == escape_bufname then return end
+    if escape_target == escape_bufname then
+        return
+    end
 
     do_mkdir(vim.fn.fnamemodify(escape_target, ":h"))
     local is_tracked = is_git_tracked(escape_bufname)
@@ -154,17 +164,17 @@ local function close_floats()
     for _, win in pairs(vim.fn.getwininfo()) do
         local id = win.winid
         local config = vim.api.nvim_win_get_config(id)
-        if config.relative and config.relative ~= "" then vim.api.nvim_win_close(id, false) end
+        if config.relative and config.relative ~= "" then
+            vim.api.nvim_win_close(id, false)
+        end
     end
 end
 
 vim.api.nvim_create_user_command("CloseFloats", close_floats, {})
 
-vim.api.nvim_create_user_command(
-    "Parse",
-    function(cargs) print(vim.inspect(vim.api.nvim_parse_cmd(cargs.args, {}))) end,
-    { nargs = "+" }
-)
+vim.api.nvim_create_user_command("Parse", function(cargs)
+    print(vim.inspect(vim.api.nvim_parse_cmd(cargs.args, {})))
+end, { nargs = "+" })
 
 local function tab_kill()
     local confirm = vim.fn.confirm(
@@ -173,11 +183,15 @@ local function tab_kill()
         2
     )
 
-    if confirm ~= 1 then return end
+    if confirm ~= 1 then
+        return
+    end
 
     local buffers = vim.fn.tabpagebuflist(vim.fn.tabpagenr())
     for _, buf in pairs(buffers) do
-        if vim.api.nvim_buf_is_valid(buf) then vim.api.nvim_buf_delete(buf, { force = true }) end
+        if vim.api.nvim_buf_is_valid(buf) then
+            vim.api.nvim_buf_delete(buf, { force = true })
+        end
     end
 end
 

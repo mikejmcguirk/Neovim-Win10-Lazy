@@ -55,17 +55,23 @@ end
 
 --- @param win? integer
 local function get_getlist(win)
-    if not win then return vim.fn.getqflist end
+    if not win then
+        return vim.fn.getqflist
+    end
 
     return function(what)
-        if not what then return vim.fn.getloclist(win) end
+        if not what then
+            return vim.fn.getloclist(win)
+        end
 
         return vim.fn.getloclist(win, what)
     end
 end
 
 local function get_setlist(win)
-    if not win then return vim.fn.setqflist end
+    if not win then
+        return vim.fn.setqflist
+    end
 
     return function(dict, a, b)
         local action, what
@@ -145,7 +151,9 @@ end
 function M.qf_sys_wrap(get_cmd_parts, opts)
     --- @type boolean, QfRancherSystemIn|nil
     local ok, system_in = resolve_cmd_parts(get_cmd_parts)
-    if (not ok) or not system_in then return end --- Errors printed in resolve_cmd_parts
+    if (not ok) or not system_in then
+        return
+    end --- Errors printed in resolve_cmd_parts
 
     opts = opts or {}
     local cur_win = opts.loclist and vim.api.nvim_get_current_win() or nil
@@ -210,7 +218,9 @@ function M.qf_sys_wrap(get_cmd_parts, opts)
 
     if opts.async then
         vim.system(system_in.cmd_parts, { text = true }, function(obj)
-            vim.schedule(function() handle_result(obj) end)
+            vim.schedule(function()
+                handle_result(obj)
+            end)
         end)
     else
         local obj = vim.system(system_in.cmd_parts, { text = true }):wait(opts.timeout or 2000)

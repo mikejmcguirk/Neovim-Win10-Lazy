@@ -225,7 +225,9 @@ local function lighten_hex(color, percent)
 end
 
 Cmd({ cmd = "hi", args = { "clear" } }, {})
-if vim.fn.exists("syntax_on") then Cmd({ cmd = "syntax", args = { "reset" } }, {}) end
+if vim.fn.exists("syntax_on") then
+    Cmd({ cmd = "syntax", args = { "reset" } }, {})
+end
 
 for k, v in pairs(groups) do
     vim.api.nvim_set_hl(0, k, v)
@@ -251,7 +253,9 @@ vim.api.nvim_set_var("terminal_color_15", darken_hex(c.fg, 30))
 
 vim.g.colors_name = "SimpleDelta"
 
-Map("n", "gT", function() vim.api.nvim_cmd({ cmd = "Inspect" }, {}) end)
+Map("n", "gT", function()
+    vim.api.nvim_cmd({ cmd = "Inspect" }, {})
+end)
 
 vim.api.nvim_set_var("c_syntax_for_h", true)
 

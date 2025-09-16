@@ -34,22 +34,42 @@ local function add_annotation(annotation)
     vim.api.nvim_cmd({ cmd = "startinsert", bang = true }, {})
 end
 
-Map({ "n", "i" }, "<C-->a", function() add_annotation("[[@as") end, { buffer = true })
+Map({ "n", "i" }, "<C-->a", function()
+    add_annotation("[[@as")
+end, { buffer = true })
 
-Map({ "n", "i" }, "<C-->c", function() add_annotation("@class") end, { buffer = true })
+Map({ "n", "i" }, "<C-->c", function()
+    add_annotation("@class")
+end, { buffer = true })
 
-Map({ "n", "i" }, "<C-->d", function() add_annotation("@diagnostic") end, { buffer = true })
+Map({ "n", "i" }, "<C-->d", function()
+    add_annotation("@diagnostic")
+end, { buffer = true })
 
-Map({ "n", "i" }, "<C-->f", function() add_annotation("@field") end, { buffer = true })
+Map({ "n", "i" }, "<C-->f", function()
+    add_annotation("@field")
+end, { buffer = true })
 
-Map({ "n", "i" }, "<C-->l", function() add_annotation("@alias") end, { buffer = true })
+Map({ "n", "i" }, "<C-->l", function()
+    add_annotation("@alias")
+end, { buffer = true })
 
-Map({ "n", "i" }, "<C-->m", function() add_annotation("@module") end, { buffer = true })
+Map({ "n", "i" }, "<C-->m", function()
+    add_annotation("@module")
+end, { buffer = true })
 
-Map({ "n", "i" }, "<C-->p", function() add_annotation("@param") end, { buffer = true })
+Map({ "n", "i" }, "<C-->p", function()
+    add_annotation("@param")
+end, { buffer = true })
 
-Map({ "n", "i" }, "<C-->r", function() add_annotation("@return") end, { buffer = true })
+Map({ "n", "i" }, "<C-->r", function()
+    add_annotation("@return")
+end, { buffer = true })
 
-Map({ "n", "i" }, "<C-->t", function() add_annotation("@type") end, { buffer = true })
+Map({ "n", "i" }, "<C-->t", function()
+    add_annotation("@type")
+end, { buffer = true })
 
-Map({ "n", "i" }, "<C-->-", function() add_annotation("") end, { buffer = true })
+Map({ "n", "i" }, "<C-->-", function()
+    add_annotation("")
+end, { buffer = true })

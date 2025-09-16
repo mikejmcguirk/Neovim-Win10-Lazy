@@ -14,7 +14,9 @@ local function load_jump2d()
         silent = true,
     })
 
-    Map("n", "<cr>", function() jump2d.start(jump2d.builtin_opts.word_start) end)
+    Map("n", "<cr>", function()
+        jump2d.start(jump2d.builtin_opts.word_start)
+    end)
 
     vim.api.nvim_set_hl(0, "MiniJump2dSpot", { reverse = true })
     vim.api.nvim_set_hl(0, "MiniJump2dSpotAhead", { reverse = true })

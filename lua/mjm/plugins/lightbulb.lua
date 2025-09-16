@@ -35,14 +35,18 @@ vim.api.nvim_create_autocmd("LspAttach", {
         vim.api.nvim_create_autocmd({ "InsertEnter", "WinLeave" }, {
             group = lb_buf_group,
             desc = "lua require('nvim-lightbulb').clear_lightbulb()",
-            callback = function() require("nvim-lightbulb").clear_lightbulb(ev.buf) end,
+            callback = function()
+                require("nvim-lightbulb").clear_lightbulb(ev.buf)
+            end,
         })
 
         vim.api.nvim_create_autocmd("LspDetach", {
             group = lb_buf_group,
             buffer = ev.buf,
             desc = "Detach code action lightbulb",
-            callback = function() pcall(vim.api.nvim_del_augroup_by_name, group_name) end,
+            callback = function()
+                pcall(vim.api.nvim_del_augroup_by_name, group_name)
+            end,
         })
     end,
 })

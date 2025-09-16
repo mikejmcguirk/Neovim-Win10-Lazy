@@ -11,7 +11,9 @@ local mode = "n" -- ModeChanged does not grab the initial set to normal mode
 local progress_cache = {}
 
 -- MAYBE: This has shown up in error-list now. Make a util?
-local is_bad_mode = function() return string.match(mode, "[csSiR]") end
+local is_bad_mode = function()
+    return string.match(mode, "[csSiR]")
+end
 
 -- Because evaluating the statusline initiates textlock, perform as much of the calculation
 -- outside the eval func as possible
@@ -21,7 +23,9 @@ local stl_events = vim.api.nvim_create_augroup("stl-events", { clear = true })
 vim.api.nvim_create_autocmd("LspProgress", {
     group = stl_events,
     callback = function(ev)
-        if (not ev.data) or not ev.data.client_id then return end
+        if (not ev.data) or not ev.data.client_id then
+            return
+        end
 
         if not vim.api.nvim_buf_is_valid(ev.buf) then
             progress_cache[ev.buf] = nil
@@ -37,7 +41,9 @@ vim.api.nvim_create_autocmd("LspProgress", {
 
         local values = ev.data.params.value
         -- These happen a lot
-        if string.find(values.title, "Searching in files") then return end
+        if string.find(values.title, "Searching in files") then
+            return
+        end
 
         local pct = (function()
             if values.kind == "end" then
@@ -56,7 +62,9 @@ vim.api.nvim_create_autocmd("LspProgress", {
         progress_cache[ev.buf] = str
 
         -- Don't create more textlock in insert mode
-        if not is_bad_mode() then Cmd({ cmd = "redraws" }, {}) end
+        if not is_bad_mode() then
+            Cmd({ cmd = "redraws" }, {})
+        end
     end,
 })
 
@@ -93,7 +101,9 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
 
         diag_cache[ev.buf] = diag_str or nil
 
-        if not is_bad_mode() then Cmd({ cmd = "redraws" }, {}) end
+        if not is_bad_mode() then
+            Cmd({ cmd = "redraws" }, {})
+        end
     end),
 })
 
@@ -102,7 +112,9 @@ vim.api.nvim_create_autocmd("ModeChanged", {
     group = stl_events,
     callback = function()
         --- @diagnostic disable: undefined-field
-        if vim.v.event.new_mode == mode then return end
+        if vim.v.event.new_mode == mode then
+            return
+        end
 
         mode = vim.v.event.new_mode
         Cmd({ cmd = "redraws" }, {})

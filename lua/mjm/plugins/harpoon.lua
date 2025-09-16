@@ -38,9 +38,13 @@ harpoon:setup({
     },
 })
 
-Map("n", "<leader>ad", function() harpoon:list():add() end)
+Map("n", "<leader>ad", function()
+    harpoon:list():add()
+end)
 
-local t = function() harpoon.ui:toggle_quick_menu(harpoon:list(), { height_in_lines = 10 }) end
+local t = function()
+    harpoon.ui:toggle_quick_menu(harpoon:list(), { height_in_lines = 10 })
+end
 Map("n", "<leader>aa", t)
 
 local mark = 10
@@ -49,7 +53,9 @@ for _ = 1, 10 do
     local mod_mark = this_mark % 10 -- 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 
     Map("n", string.format("<leader>%s", mod_mark), function()
-        local open_mark = function() harpoon:list():select(this_mark) end
+        local open_mark = function()
+            harpoon:list():select(this_mark)
+        end
         local ok, result = pcall(open_mark)
 
         if not ok then

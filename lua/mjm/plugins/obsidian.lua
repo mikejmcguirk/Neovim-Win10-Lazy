@@ -95,58 +95,33 @@ local function load_obsidian()
             -- Don't need the conditional operator in Markdown, so the [o ]o defaults can stay
             vim.keymap.del("n", "<CR>", { buffer = ev.buf })
 
-            Map(
-                "n",
-                "gf",
-                function() return obsidian.util.smart_action() end,
-                { buffer = ev.buf, expr = true }
-            )
+            Map("n", "gf", function()
+                return obsidian.util.smart_action()
+            end, { buffer = ev.buf, expr = true })
 
-            Map(
-                "n",
-                "<leader>ss",
-                function()
-                    vim.api.nvim_cmd({ cmd = "Obsidian", args = { "follow_link", "hsplit" } }, {})
-                end,
-                { buffer = ev.buf }
-            )
+            Map("n", "<leader>ss", function()
+                vim.api.nvim_cmd({ cmd = "Obsidian", args = { "follow_link", "hsplit" } }, {})
+            end, { buffer = ev.buf })
 
-            Map(
-                "n",
-                "<leader>sv",
-                function()
-                    vim.api.nvim_cmd({ cmd = "Obsidian", args = { "follow_link", "vsplit" } }, {})
-                end,
-                { buffer = ev.buf }
-            )
+            Map("n", "<leader>sv", function()
+                vim.api.nvim_cmd({ cmd = "Obsidian", args = { "follow_link", "vsplit" } }, {})
+            end, { buffer = ev.buf })
 
-            Map(
-                "n",
-                "<leader>so",
-                function() vim.api.nvim_cmd({ cmd = "Obsidian", args = { "open" } }, {}) end,
-                { buffer = ev.buf }
-            )
+            Map("n", "<leader>so", function()
+                vim.api.nvim_cmd({ cmd = "Obsidian", args = { "open" } }, {})
+            end, { buffer = ev.buf })
 
-            Map(
-                "n",
-                "<leader>fab",
-                function() vim.api.nvim_cmd({ cmd = "Obsidian", args = { "backliknks" } }, {}) end,
-                { buffer = ev.buf }
-            )
+            Map("n", "<leader>fab", function()
+                vim.api.nvim_cmd({ cmd = "Obsidian", args = { "backliknks" } }, {})
+            end, { buffer = ev.buf })
 
-            Map(
-                "n",
-                "<leader>fal",
-                function() vim.api.nvim_cmd({ cmd = "Obsidian", args = { "links" } }, {}) end,
-                { buffer = ev.buf }
-            )
+            Map("n", "<leader>fal", function()
+                vim.api.nvim_cmd({ cmd = "Obsidian", args = { "links" } }, {})
+            end, { buffer = ev.buf })
 
-            Map(
-                "n",
-                "<leader>sr",
-                function() vim.api.nvim_cmd({ cmd = "Obsidian", args = { "rename" } }, {}) end,
-                { buffer = ev.buf }
-            )
+            Map("n", "<leader>sr", function()
+                vim.api.nvim_cmd({ cmd = "Obsidian", args = { "rename" } }, {})
+            end, { buffer = ev.buf })
 
             Map("n", "<leader>si", function()
                 -- FUTURE: Make this work with Windows
@@ -159,7 +134,9 @@ local function load_obsidian()
                 -- local ws_fname = ws.name
                 -- local img_dir = ws_fname .. "/" .. img_folder ---@type string
                 local img_dir = img_folder ---@type string
-                if vim.fn.isdirectory(img_dir) == 0 then vim.fn.mkdir(img_dir, "p") end
+                if vim.fn.isdirectory(img_dir) == 0 then
+                    vim.fn.mkdir(img_dir, "p")
+                end
 
                 local pattern = img_dir .. "/" .. cur_file_name .. "*.png" ---@type string
                 vim.fn.confirm(pattern)
@@ -179,9 +156,9 @@ local function load_obsidian()
                     made_newline = true
                 end
 
-                local status, result = pcall(
-                    function() vim.cmd("Obsidian paste_img " .. filename) end
-                )
+                local status, result = pcall(function()
+                    vim.cmd("Obsidian paste_img " .. filename)
+                end)
 
                 if status then
                     -- For reasons I'm unsure of, if you PasteImg, then PasteImg again

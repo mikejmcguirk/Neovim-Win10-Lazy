@@ -145,24 +145,42 @@ vim.keymap.set("n", "<leader>l", "<nop>")
 --- @return nil
 local function adjust_view(win, views)
     local view = views[win] --- @type vim.fn.winsaveview.ret|nil
-    if not view then return end
-    if not vim.api.nvim_win_is_valid(win) then return end
+    if not view then
+        return
+    end
+    if not vim.api.nvim_win_is_valid(win) then
+        return
+    end
 
     --- @type integer
-    local new_topline = vim.api.nvim_win_call(win, function() return vim.fn.line("w0") end)
-    if view.topline == new_topline then return end
+    local new_topline = vim.api.nvim_win_call(win, function()
+        return vim.fn.line("w0")
+    end)
+    if view.topline == new_topline then
+        return
+    end
 
-    vim.api.nvim_win_call(win, function() vim.fn.winrestview(view) end)
+    vim.api.nvim_win_call(win, function()
+        vim.fn.winrestview(view)
+    end)
 end
 
 local function restore_view(win, view)
-    if not vim.api.nvim_win_is_valid(win) then return end
+    if not vim.api.nvim_win_is_valid(win) then
+        return
+    end
 
     --- @type integer
-    local new_topline = vim.api.nvim_win_call(win, function() return vim.fn.line("w0") end)
-    if view.topline == new_topline then return end
+    local new_topline = vim.api.nvim_win_call(win, function()
+        return vim.fn.line("w0")
+    end)
+    if view.topline == new_topline then
+        return
+    end
 
-    vim.api.nvim_win_call(win, function() vim.fn.winrestview(view) end)
+    vim.api.nvim_win_call(win, function()
+        vim.fn.winrestview(view)
+    end)
 end
 
 -- TODO: Move everything to this function
@@ -261,7 +279,9 @@ local max_qf_height = 10
 local function get_list_height(opts)
     opts = opts or {}
 
-    if opts.height then return opts.height end
+    if opts.height then
+        return opts.height
+    end
 
     opts.win = opts.win or 0
     local size = (function()
@@ -291,22 +311,30 @@ function M.open_qflist(opts)
     local function win_check(win)
         local wintype = vim.fn.win_gettype(win)
 
-        if wintype == "quickfix" then return false end
+        if wintype == "quickfix" then
+            return false
+        end
 
         if wintype == "loclist" then
             is_loclist_open = true
             return true
         end
 
-        if wintype == "" then views[win] = vim.api.nvim_win_call(win, vim.fn.winsaveview) end
+        if wintype == "" then
+            views[win] = vim.api.nvim_win_call(win, vim.fn.winsaveview)
+        end
         return true
     end
 
     for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-        if not win_check(win) then return false end
+        if not win_check(win) then
+            return false
+        end
     end
 
-    if is_loclist_open then M.close_all_loclists({ cur_tab = true }) end
+    if is_loclist_open then
+        M.close_all_loclists({ cur_tab = true })
+    end
     local list_height = get_list_height({ height = opts.height })
     --- @diagnostic disable: missing-fields
     vim.api.nvim_cmd({ cmd = "copen", count = list_height, mods = { split = "botright" } }, {})
@@ -328,10 +356,14 @@ end
 local function find_qf_wincheck(win, views)
     local wintype = vim.fn.win_gettype(win)
 
-    if wintype == "quickfix" then return win end
+    if wintype == "quickfix" then
+        return win
+    end
 
     local save_view = wintype == "" or wintype == "loclist"
-    if not save_view then return end
+    if not save_view then
+        return
+    end
 
     views[win] = vim.api.nvim_win_call(win, vim.fn.winsaveview)
 end
@@ -343,10 +375,14 @@ function M.close_qflist()
 
     for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
         local checked_win = find_qf_wincheck(win, views)
-        if checked_win then qf_win = checked_win end
+        if checked_win then
+            qf_win = checked_win
+        end
     end
 
-    if not qf_win then return false end
+    if not qf_win then
+        return false
+    end
 
     vim.api.nvim_win_close(qf_win, true)
 
@@ -362,10 +398,14 @@ function M.resize_qflist()
 
     for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
         local checked_win = find_qf_wincheck(win, views)
-        if checked_win then qf_win = checked_win end
+        if checked_win then
+            qf_win = checked_win
+        end
     end
 
-    if not qf_win then return false end
+    if not qf_win then
+        return false
+    end
 
     local height = get_list_height({ win = qf_win })
     ---@diagnostic disable-next-line: param-type-mismatch
@@ -414,21 +454,29 @@ function M.open_loclist(opts)
             end
 
             local win_qf_id = vim.fn.getloclist(win, { id = 0 }).id ---@type integer
-            if win_qf_id == qf_id then return false end
+            if win_qf_id == qf_id then
+                return false
+            end
 
             views[win] = vim.api.nvim_win_call(win, vim.fn.winsaveview)
             return true
         end
 
-        if wintype == "" then views[win] = vim.api.nvim_win_call(win, vim.fn.winsaveview) end
+        if wintype == "" then
+            views[win] = vim.api.nvim_win_call(win, vim.fn.winsaveview)
+        end
         return true
     end
 
     for _, win in pairs(wins) do
-        if not win_check(win) then return false end
+        if not win_check(win) then
+            return false
+        end
     end
 
-    if is_qf_open then M.close_qflist() end
+    if is_qf_open then
+        M.close_qflist()
+    end
     --- @diagnostic disable: missing-fields
     local list_height = get_list_height({ height = opts.height, is_loclist = true, win = cur_win })
     vim.api.nvim_cmd({ cmd = "lop", count = list_height }, {})
@@ -463,11 +511,15 @@ local function find_loclist_wincheck(cur_win, qf_id, win, views)
 
     if wintype == "loclist" then
         local win_qf_id = vim.fn.getloclist(win, { id = 0 }).id ---@type integer
-        if win_qf_id == qf_id then return true, win end
+        if win_qf_id == qf_id then
+            return true, win
+        end
     end
 
     local should_save_view = wintype == "" or wintype == "quickfix" or wintype == "loclist"
-    if should_save_view then views[win] = vim.api.nvim_win_call(win, vim.fn.winsaveview) end
+    if should_save_view then
+        views[win] = vim.api.nvim_win_call(win, vim.fn.winsaveview)
+    end
     return true, nil
 end
 
@@ -487,11 +539,17 @@ function M.close_loclist()
         --- @type boolean, integer|nil
         local ok, found_win = find_loclist_wincheck(cur_win, qf_id, win, views)
 
-        if not ok then return false end
-        if found_win then loclist_win = found_win end
+        if not ok then
+            return false
+        end
+        if found_win then
+            loclist_win = found_win
+        end
     end
 
-    if not loclist_win then return false end
+    if not loclist_win then
+        return false
+    end
     vim.api.nvim_win_close(loclist_win, true)
 
     restore_views(views)
@@ -515,11 +573,17 @@ function M.resize_loclist()
         --- @type boolean, integer|nil
         local ok, found_win = find_loclist_wincheck(cur_win, qf_id, win, views)
 
-        if not ok then return false end
-        if found_win then loclist_win = found_win end
+        if not ok then
+            return false
+        end
+        if found_win then
+            loclist_win = found_win
+        end
     end
 
-    if not type(loclist_win) == "integer" then return false end
+    if not type(loclist_win) == "integer" then
+        return false
+    end
     local height = get_list_height({ is_loclist = true, win = loclist_win })
     ---@diagnostic disable-next-line: param-type-mismatch
     vim.api.nvim_win_set_height(loclist_win, height)
@@ -543,7 +607,9 @@ function M.close_win_restview(target_win)
     local views = {} --- @type vim.fn.winsaveview.ret|nil[]
 
     local function win_check(win)
-        if win == target_win then return end
+        if win == target_win then
+            return
+        end
 
         local wintype = vim.fn.win_gettype(win)
         if wintype == "" or wintype == "quickfix" or wintype == "loclist" then
@@ -584,7 +650,9 @@ function M.resize_list_win(target_win)
     local views = {} --- @type vim.fn.winsaveview.ret|nil[]
 
     local function win_check(win)
-        if win == target_win then return end
+        if win == target_win then
+            return
+        end
 
         local wintype = vim.fn.win_gettype(win)
         if wintype == "" or wintype == "quickfix" or wintype == "loclist" then
@@ -614,7 +682,9 @@ end
 Map("n", "cuc", M.close_qflist)
 Map("n", "cup", M.open_qflist)
 Map("n", "cuu", function()
-    if not M.open_qflist() then M.close_qflist() end
+    if not M.open_qflist() then
+        M.close_qflist()
+    end
 end)
 
 Map("n", "<leader>qQ", M.resize_qflist)
@@ -622,7 +692,9 @@ Map("n", "<leader>qQ", M.resize_qflist)
 Map("n", "coc", M.close_loclist)
 Map("n", "cop", M.open_loclist)
 Map("n", "coo", function()
-    if not M.open_loclist() then M.close_loclist() end
+    if not M.open_loclist() then
+        M.close_loclist()
+    end
 end)
 
 Map("n", "<leader>lL", M.resize_loclist)
@@ -732,7 +804,9 @@ local function buf_diags_to_loclist(opts)
 
     local win = vim.api.nvim_get_current_win() ---@type integer
     local buf = vim.api.nvim_win_get_buf(win) ---@type integer
-    if not require("mjm.utils").check_modifiable(buf) then return end
+    if not require("mjm.utils").check_modifiable(buf) then
+        return
+    end
 
     local severity = (function()
         if opts.highest then
@@ -762,17 +836,29 @@ local function buf_diags_to_loclist(opts)
     vim.api.nvim_cmd({ cmd = "lop" }, {})
 end
 
-Map("n", "yui", function() all_diags_to_qflist() end)
+Map("n", "yui", function()
+    all_diags_to_qflist()
+end)
 
-Map("n", "yue", function() all_diags_to_qflist({ err_only = true }) end)
+Map("n", "yue", function()
+    all_diags_to_qflist({ err_only = true })
+end)
 
-Map("n", "yuh", function() all_diags_to_qflist({ highest = true }) end)
+Map("n", "yuh", function()
+    all_diags_to_qflist({ highest = true })
+end)
 
-Map("n", "yoi", function() buf_diags_to_loclist() end)
+Map("n", "yoi", function()
+    buf_diags_to_loclist()
+end)
 
-Map("n", "yoe", function() buf_diags_to_loclist({ err_only = true }) end)
+Map("n", "yoe", function()
+    buf_diags_to_loclist({ err_only = true })
+end)
 
-Map("n", "yoh", function() buf_diags_to_loclist({ highest = true }) end)
+Map("n", "yoh", function()
+    buf_diags_to_loclist({ highest = true })
+end)
 
 local function qf_scroll_wrapper(main, alt, end_err)
     local main_with_count = vim.tbl_extend("force", main, { count = vim.v.count1 })
@@ -823,7 +909,9 @@ local scroll_maps = {
 }
 
 for _, m in pairs(scroll_maps) do
-    Map("n", m[1], function() qf_scroll_wrapper(m[2], m[3], m[4]) end)
+    Map("n", m[1], function()
+        qf_scroll_wrapper(m[2], m[3], m[4])
+    end)
 end
 
 return M

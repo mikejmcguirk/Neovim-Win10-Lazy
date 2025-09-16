@@ -13,7 +13,9 @@ local function load_zen()
         },
         on_open = function()
             -- Just pcall anything tmux related so we don't have issues on non-tmux setups
-            pcall(function() vim.fn.system([[tmux set status off]]) end)
+            pcall(function()
+                vim.fn.system([[tmux set status off]])
+            end)
 
             -- In case clear on toggle off doesn't run for some reason
             vim.api.nvim_clear_autocmds({ group = "tmux_safety" })
@@ -24,12 +26,16 @@ local function load_zen()
                 once = true,
                 pattern = "*",
                 callback = function()
-                    pcall(function() vim.fn.system([[tmux set status on]]) end)
+                    pcall(function()
+                        vim.fn.system([[tmux set status on]])
+                    end)
                 end,
             })
         end,
         on_close = function()
-            pcall(function() vim.fn.system([[tmux set status on]]) end)
+            pcall(function()
+                vim.fn.system([[tmux set status on]])
+            end)
 
             vim.api.nvim_clear_autocmds({ group = "tmux_safety" })
         end,

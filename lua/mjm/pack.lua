@@ -86,7 +86,9 @@ vim.pack.add(pack_spec, {})
 
 Map("n", "zqc", function()
     local inactive = vim.iter(pairs(vim.pack.get()))
-        :map(function(_, s) return (not s.active) and s.spec.name or nil end)
+        :map(function(_, s)
+            return (not s.active) and s.spec.name or nil
+        end)
         :totable() --- @type string[]
 
     vim.pack.del(inactive)
@@ -107,15 +109,21 @@ Map("n", "zqd", function()
 end)
 
 Map("n", "zqp", function()
-    if vim.fn.confirm("Purge all plugins?", "&Yes\n&No", 2) ~= 1 then return end
+    if vim.fn.confirm("Purge all plugins?", "&Yes\n&No", 2) ~= 1 then
+        return
+    end
 
     local plugins = vim.iter(pairs(vim.pack.get()))
-        :map(function(_, s) return s.spec.name end)
+        :map(function(_, s)
+            return s.spec.name
+        end)
         :totable() --- @type string[]
 
     vim.pack.del(plugins)
 end)
 
-Map("n", "zqu", function() vim.pack.update() end)
+Map("n", "zqu", function()
+    vim.pack.update()
+end)
 
 return M

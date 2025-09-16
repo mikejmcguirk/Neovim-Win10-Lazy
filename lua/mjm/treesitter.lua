@@ -6,9 +6,13 @@ Map("n", "gtt", function()
     end
 end)
 
-Map("n", "gti", function() vim.api.nvim_cmd({ cmd = "InspectTree" }, {}) end)
+Map("n", "gti", function()
+    vim.api.nvim_cmd({ cmd = "InspectTree" }, {})
+end)
 
-Map("n", "gtee", function() vim.api.nvim_cmd({ cmd = "EditQuery" }, {}) end)
+Map("n", "gtee", function()
+    vim.api.nvim_cmd({ cmd = "EditQuery" }, {})
+end)
 
 --- @param query_group string
 --- @return nil
@@ -24,17 +28,29 @@ local function edit_query_file(query_group)
         require("mjm.utils").open_buf({ file = files[1] }, { open = "vsplit" })
     else
         vim.ui.select(files, { prompt = "Select a file:" }, function(file)
-            if file then require("mjm.utils").open_buf({ file = file }, { open = "vsplit" }) end
+            if file then
+                require("mjm.utils").open_buf({ file = file }, { open = "vsplit" })
+            end
         end)
     end
 end
 
-Map("n", "gteo", function() edit_query_file("folds") end)
+Map("n", "gteo", function()
+    edit_query_file("folds")
+end)
 
-Map("n", "gtei", function() edit_query_file("highlights") end)
+Map("n", "gtei", function()
+    edit_query_file("highlights")
+end)
 
-Map("n", "gten", function() edit_query_file("indents") end)
+Map("n", "gten", function()
+    edit_query_file("indents")
+end)
 
-Map("n", "gtej", function() edit_query_file("injections") end)
+Map("n", "gtej", function()
+    edit_query_file("injections")
+end)
 
-Map("n", "gtex", function() edit_query_file("textobjects") end)
+Map("n", "gtex", function()
+    edit_query_file("textobjects")
+end)
