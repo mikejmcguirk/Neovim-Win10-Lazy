@@ -97,6 +97,96 @@ end
 --- @param location string[]
 --- @param opts? QfRancherGrepOpts
 --- @return boolean, string[]|[string,string]
+--- NOTE: I do not run Windows
+local function get_findstr_cmd_parts(pattern, location, opts)
+    if not pattern then
+        return false, { "No pattern provided to build findstr cmd parts", "ErrorMsg" }
+    end
+
+    if not location then
+        return false, { "No location provided to build findstr cmd parts", "ErrorMsg" }
+    end
+
+    -- Recursive, line num, offset, skip non-printable
+    local cmd = { "findstr", "/S", "/N", "/O", "/P" }
+
+    opts = opts or {}
+    if opts.smart_case then
+        local has_upper = false
+        for _, p in ipairs(pattern) do
+            if p:match("%u") then
+                has_upper = true
+                break
+            end
+        end
+        if not has_upper then table.insert(cmd, "/I") end
+    end
+
+    if not opts.literal then table.insert(cmd, "/R") end
+
+    if opts.literal then
+        for _, pat in ipairs(pattern) do
+            table.insert(cmd, '/C:"' .. pat .. '"')
+        end
+    else
+        local pat_str = #pattern > 1 and table.concat(pattern, "|") or pattern[1]
+        table.insert(cmd, '"' .. pat_str .. '"') -- Quote for spaces/special chars
+    end
+
+    vim.list_extend(cmd, location)
+
+    return true, cmd
+end
+
+--- @param pattern string[]
+--- @param location string[]
+--- @param opts? QfRancherGrepOpts
+--- @return boolean, string[]|[string,string]
+local function get_grep_cmd_parts(pattern, location, opts)
+    if not pattern then
+        return false, { "No pattern provided to build grep cmd parts", "ErrorMsg" }
+    end
+
+    if not location then
+        return false, { "No location provided to build grep cmd parts", "ErrorMsg" }
+    end
+
+    --- recursive search, print filenames, ignore binary files, print line numbers
+    local cmd = { "grep", "-rHIn" }
+
+    opts = opts or {}
+    if opts.smart_case then
+        local has_upper = false
+        for _, p in ipairs(pattern) do
+            if p:match("%u") then
+                has_upper = true
+                break
+            end
+        end
+
+        if not has_upper then table.insert(cmd, "-i") end --- ignore case
+    end
+
+    if opts.literal then
+        table.insert(cmd, "-F") --- fixed strings
+    else
+        table.insert(cmd, "-E") --- extended regex
+    end
+
+    table.insert(cmd, "--") --- no more flags
+
+    local pat_str = #pattern > 1 and table.concat(pattern, "|") or pattern[1]
+    table.insert(cmd, pat_str)
+
+    vim.list_extend(cmd, location)
+
+    return true, cmd
+end
+
+--- @param pattern string[]
+--- @param location string[]
+--- @param opts? QfRancherGrepOpts
+--- @return boolean, string[]|[string,string]
 local function get_rg_cmd_parts(pattern, location, opts)
     if not pattern then
         return false, { "No pattern provided to build rg cmd parts", "ErrorMsg" }
@@ -106,21 +196,22 @@ local function get_rg_cmd_parts(pattern, location, opts)
         return false, { "No location provided to build rg cmd parts", "ErrorMsg" }
     end
 
-    local cmd = { "rg", "--vimgrep", "-uu" } --- @type string[]
-    if vim.fn.has("win32") == 1 then vim.list_extend(cmd, { "--crlf" }) end
+    --- print each result on its own line, disrespect gitignore
+    local cmd = { "rg", "--vimgrep", "-u" } --- @type string[]
+    if vim.fn.has("win32") == 1 then table.insert(cmd, "--crlf") end
 
     opts = opts or {}
     -- rg's case sensitive flag (-s) is enabled by default
-    if opts.smart_case then vim.list_extend(cmd, { "-S" }) end
-    if opts.literal then vim.list_extend(cmd, { "-F" }) end
+    if opts.smart_case then table.insert(cmd, "-S") end
+    if opts.literal then table.insert(cmd, "-F") end
 
-    if #pattern > 1 then vim.list_extend(cmd, { "-U" }) end
+    if #pattern > 1 then table.insert(cmd, "-U") end --- multiline mode
 
-    vim.list_extend(cmd, { "--" })
+    table.insert(cmd, "--") --- no more flags
 
     local newline = opts.literal and "\n" or "\\n" --- @type string
     local pat_str = #pattern > 1 and table.concat(pattern, newline) or pattern[1] --- @type string
-    vim.list_extend(cmd, { pat_str })
+    table.insert(cmd, pat_str)
 
     vim.list_extend(cmd, location)
 
@@ -131,9 +222,21 @@ end
 local function get_grep_cmd()
     local qf_rancher_grepprg = vim.api.nvim_get_var("qf_rancher_grepprg")
 
-    if qf_rancher_grepprg == "rg" then return true, get_rg_cmd_parts end
+    if qf_rancher_grepprg == "rg" then
+        return true, get_rg_cmd_parts
+    elseif qf_rancher_grepprg == "grep" then
+        return true, get_grep_cmd_parts
+    elseif qf_rancher_grepprg == "findstr" then
+        return true, get_findstr_cmd_parts
+    end
 
-    if vim.fn.executable("rg") == 1 then return true, get_rg_cmd_parts end
+    if vim.fn.executable("rg") == 1 then
+        return true, get_rg_cmd_parts
+    elseif vim.fn.executable("grep") == 1 then
+        return true, get_grep_cmd_parts
+    elseif vim.fn.has("win32") == 1 and vim.fn.executable("findstr") == 1 then
+        return true, get_findstr_cmd_parts
+    end
 
     return false, { "get_grep_cmd: No valid grep program found", "" }
 end
