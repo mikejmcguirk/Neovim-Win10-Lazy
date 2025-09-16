@@ -161,10 +161,9 @@ function M.qf_sys_wrap(get_cmd_parts, opts)
 
     local function handle_result(obj)
         if obj.code ~= 0 then
-            local cmd = obj.cmd or "Unknown cmd"
-            local code = obj.code or "N/A"
-            local err = obj.stderr or "No stderr output"
-            local msg = cmd .. " failed. Code: " .. code .. ", Error: " .. err
+            local code = obj.code and "Exit code: " .. obj.code or ""
+            local err = (obj.stderr and #obj.stderr > 0) and "Error: " .. obj.stderr or ""
+            local msg = code .. " " .. err
 
             vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
             return

@@ -1,28 +1,36 @@
---- TODO: document that the buf greps use external grep
---- TODO: We have enough examples now of different greps to abstract the parts out
---- TODO: test with default grep. findstr kinda out of luck
---- TODO: multilines work as an or grep but would be better as a true multiline
---- TODO: make sure all ripgrep queries have -U flag and greps have -E
---- TODO: A problem with the escaping is now we can't actually do regex to search for things
---- TODO: For some reason ignore case is not ignoring case
+--- TODO: The keymaps should sync up with the filter/sort/diag maps
 
--- From vim-grepper
--- " Escaping test line:
--- " ..ad\\f40+$':-# @=,!;%^&&*()_{}/ /4304\'""?`9$343%$ ^adfadf[ad)[(
--- TODO: fails
+--- MAYBE: Smart/ignore case can be rolled under the same option for grepprgs that don't
+--- support it
+
+--- FUTURE: Potentially use rg's built-in globbing. But don't want to create inconsistencies with
+--- other grep cmds
+--- FUTURE: If this can be done, use cmd literal for title
+
+-- Escaping test line from From vim-grepper
+-- Make sure to query the text part specifically. The comment dashw will make it interpret as an
+-- option
+-- ..ad\\f40+$':-# @=,!;%^&&*()_{}/ /4304\'""?`9$343%$ ^adfadf[ad)[(
+
+vim.api.nvim_set_var("qf_rancher_grepprg", "rg")
 
 -------------
 --- Types ---
 -------------
 
---- MAYBE: If grep opts build up, turn then imto a class
 --- @alias QfRancherGrepCmdFun fun(
 --- table: string[], table: string[], table)
 --- :boolean, string[]|[string, string]
+---
+--- @alias QfRancherGrepLocFun fun():boolean, string[]|[string, string]
+---
+--- @class QfRancherGrepOpts
+--- @field smart_case? boolean
+--- @field literal? boolean
 
---------------------
---- Grep Helpers ---
---------------------
+------------------
+--- Grep Funcs ---
+------------------
 
 --- @return boolean, string[]|[string, string]
 --- Assumes that it is being called in visual mode with a valid mode parameter
@@ -81,30 +89,38 @@ local function get_grep_pattern(prompt)
     return true, vim.split(pattern, "\\n")
 end
 
-local function grep_escape(text) return text:gsub("([%.%^%$%*%+%?%(%)%[%]%{%}%|%\\])", "\\%1") end
+-- local function grep_escape(text)
+-- return text:gsub("([%.%^%$%*%+%?%(%)%[%]%{%}%|%\\])", "\\%1")
+-- end
 
---- @param raw_pattern string[]
+--- @param pattern string[]
 --- @param location string[]
---- @param opts? {ignore_case:boolean}
+--- @param opts? QfRancherGrepOpts
 --- @return boolean, string[]|[string,string]
-local function get_rg_cmd_parts(raw_pattern, location, opts)
-    local cmd = { "rg", "--vimgrep", "-uu", "-U" }
-
-    opts = opts or {}
-
-    if opts.ignore_case then vim.list_extend(cmd, { "--ignore-case" }) end
-
-    if not raw_pattern then
+local function get_rg_cmd_parts(pattern, location, opts)
+    if not pattern then
         return false, { "No pattern provided to build rg cmd parts", "ErrorMsg" }
     end
-
-    local escape_lines = vim.tbl_map(grep_escape, raw_pattern)
-    local pat_str = #escape_lines > 1 and { table.concat(escape_lines, "\\n") } or escape_lines
-    vim.list_extend(cmd, pat_str)
 
     if not location then
         return false, { "No location provided to build rg cmd parts", "ErrorMsg" }
     end
+
+    local cmd = { "rg", "--vimgrep", "-uu" } --- @type string[]
+    if vim.fn.has("win32") == 1 then vim.list_extend(cmd, { "--crlf" }) end
+
+    opts = opts or {}
+    -- rg's case sensitive flag (-s) is enabled by default
+    if opts.smart_case then vim.list_extend(cmd, { "-S" }) end
+    if opts.literal then vim.list_extend(cmd, { "-F" }) end
+
+    if #pattern > 1 then vim.list_extend(cmd, { "-U" }) end
+
+    vim.list_extend(cmd, { "--" })
+
+    local newline = opts.literal and "\n" or "\\n" --- @type string
+    local pat_str = #pattern > 1 and table.concat(pattern, newline) or pattern[1] --- @type string
+    vim.list_extend(cmd, { pat_str })
 
     vim.list_extend(cmd, location)
 
@@ -113,34 +129,19 @@ end
 
 --- @return boolean, QfRancherGrepCmdFun|[string,string]
 local function get_grep_cmd()
-    if vim.fn.executable("rg") ~= 1 then
-        return false, { "get_grep_cmd: Only rg is currently supported", "" }
-    end
+    local qf_rancher_grepprg = vim.api.nvim_get_var("qf_rancher_grepprg")
 
-    return true, get_rg_cmd_parts
+    if qf_rancher_grepprg == "rg" then return true, get_rg_cmd_parts end
+
+    if vim.fn.executable("rg") == 1 then return true, get_rg_cmd_parts end
+
+    return false, { "get_grep_cmd: No valid grep program found", "" }
 end
 
----------------------
---- Grep Commands ---
----------------------
-
-vim.keymap.set({ "n", "x" }, "<leader>qg", "<nop>")
-vim.keymap.set({ "n", "x" }, "<leader>qG", "<nop>")
-vim.keymap.set({ "n", "x" }, "<leader>q<C-g>", "<nop>")
-vim.keymap.set({ "n", "x" }, "<leader>lg", "<nop>")
-vim.keymap.set({ "n", "x" }, "<leader>lG", "<nop>")
-vim.keymap.set({ "n", "x" }, "<leader>l<C-g>", "<nop>")
-
-local grep_b = { async = true, timeout = 2000 }
-local grep_o = { async = true, overwrite = true, timeout = 2000 }
-local grep_m = { async = true, merge = true, timeout = 2000 }
-
-local lgrep_b = { async = true, loclist = true, timeout = 2000 }
-local lgrep_o = { async = true, loclist = true, overwrite = true, timeout = 2000 }
-local lgrep_m = { async = true, loclist = true, merge = true, timeout = 2000 }
-
+--- @param loc_fun QfRancherGrepLocFun
+--- @param grep_opts? QfRancherGrepOpts
 --- @return boolean, QfRancherSystemIn
-local function grep_cwd()
+local function grep_master(loc_fun, prompt, grep_opts)
     local ok, grep_cmd = get_grep_cmd() --- @type boolean, QfRancherGrepCmdFun|[string,string]
     if (not ok) or type(grep_cmd) ~= "function" then
         --- @type [string, string]
@@ -150,8 +151,13 @@ local function grep_cwd()
         return false, { err_chunk = err_chunk, err_msg_hist = true }
     end
 
-    local cwd = vim.fn.getcwd() --- @type string
-    local prompt = "Grep (" .. cwd .. "): " --- @type string
+    local ok_b, buf_files = loc_fun() --- @type boolean, string[]|[string,string]
+    if not ok_b then
+        --- @type [string, string]
+        local backup_chunk = { "grep_cbuf: Unknown error getting grep location", "ErrorMsg" }
+        local err_chunk = buf_files or backup_chunk --- @type [string,string]
+        return false, { err_chunk = err_chunk, err_msg_hist = true }
+    end
 
     local ok_l, raw_pat = get_grep_pattern(prompt) --- @type boolean, string[]|QfRancherSystemIn
     if not ok_l or type(raw_pat) ~= "table" then
@@ -162,16 +168,56 @@ local function grep_cwd()
         return false, { err_chunk = err_chunk, err_msg_hist = err_msg_hist or true }
     end
 
-    -- TODO: Test that feeding cwd this way works
+    grep_opts = grep_opts or {}
+
     --- @type boolean, string[]|[string,string]
-    local ok_c, cmd_parts = grep_cmd(raw_pat, { cwd }, { ignore_case = true })
+    local ok_c, cmd_parts = grep_cmd(raw_pat, buf_files, grep_opts)
     if not ok_c then
         local err_chunk = cmd_parts or { "grep_cbuf: Unknown error getting cmd parts", "ErrorMsg" }
         return false, { err_chunk = err_chunk, err_msg_hist = true }
     end
 
-    local title = 'Grep "' .. raw_pat[1] .. '" in ' .. cwd --- @type string
+    local disp_pattern = #raw_pat > 1 and table.concat(raw_pat, " | ") or raw_pat[1]
+    local disp_location = #buf_files == 1 and vim.fn.fnamemodify(buf_files[1], ":t")
+        or (#buf_files .. " files")
+    local title = string.format('Grep "%s" in %s', disp_pattern, disp_location)
+
     return true, { cmd_parts = cmd_parts, title = title }
+end
+
+---------------------
+--- Grep Commands ---
+---------------------
+
+-- Don't fall back to defaults
+vim.keymap.set({ "n", "x" }, "<leader>qg", "<nop>")
+vim.keymap.set({ "n", "x" }, "<leader>qG", "<nop>")
+vim.keymap.set({ "n", "x" }, "<leader>q<C-g>", "<nop>")
+vim.keymap.set({ "n", "x" }, "<leader>lg", "<nop>")
+vim.keymap.set({ "n", "x" }, "<leader>lG", "<nop>")
+vim.keymap.set({ "n", "x" }, "<leader>l<C-g>", "<nop>")
+
+--- @type QfRancherSystemOpts
+local grep_b = { async = true, timeout = 2000 }
+--- @type QfRancherSystemOpts
+local grep_o = { async = true, overwrite = true, timeout = 2000 }
+--- @type QfRancherSystemOpts
+local grep_m = { async = true, merge = true, timeout = 2000 }
+
+--- @type QfRancherSystemOpts
+local lgrep_b = { async = true, loclist = true, timeout = 2000 }
+--- @type QfRancherSystemOpts
+local lgrep_o = { async = true, loclist = true, overwrite = true, timeout = 2000 }
+--- @type QfRancherSystemOpts
+local lgrep_m = { async = true, loclist = true, merge = true, timeout = 2000 }
+
+--- @type QfRancherGrepLocFun
+local function get_cwd_tbl() return true, { vim.fn.getcwd() } end
+
+--- @return boolean, QfRancherSystemIn
+local function grep_cwd()
+    local prompt = "CWD Grep: " --- @type string
+    return grep_master(get_cwd_tbl, prompt, { literal = true, smart_case = true })
 end
 
 local qgd = function() require("mjm.error-list-system").qf_sys_wrap(grep_cwd, grep_b) end
@@ -190,37 +236,8 @@ vim.keymap.set({ "n", "x" }, "<leader>l<C-g>d", lCgd)
 
 --- @return boolean, QfRancherSystemIn
 local function grep_CWD()
-    local ok, grep_cmd = get_grep_cmd() --- @type boolean, QfRancherGrepCmdFun|[string,string]
-    if (not ok) or type(grep_cmd) ~= "function" then
-        --- @type [string, string]
-        local backup_chunk = { "grep_cbuf: Unknown error getting grep cmd", "ErrorMsg" }
-        --- @type [string, string]
-        local err_chunk = type(grep_cmd) ~= "function" and grep_cmd or backup_chunk
-        return false, { err_chunk = err_chunk, err_msg_hist = true }
-    end
-
-    local cwd = vim.fn.getcwd() --- @type string
-    local prompt = "Grep (" .. cwd .. "): " --- @type string
-
-    local ok_l, raw_pat = get_grep_pattern(prompt) --- @type boolean, string[]|QfRancherSystemIn
-    if not ok_l or type(raw_pat) ~= "table" then
-        --- @type [string, string]
-        local backup_chunk = { "grep_cbuf: Unknown error getting grep pattern", "ErrorMsg" }
-        local err_chunk = raw_pat.err_chunk or backup_chunk --- @type [string,string]
-        local err_msg_hist = raw_pat.err_msg_hist == false and false or true --- @type boolean
-        return false, { err_chunk = err_chunk, err_msg_hist = err_msg_hist or true }
-    end
-
-    -- TODO: Test that feeding cwd this way works
-    --- @type boolean, string[]|[string,string]
-    local ok_c, cmd_parts = grep_cmd(raw_pat, { cwd })
-    if not ok_c then
-        local err_chunk = cmd_parts or { "grep_cbuf: Unknown error getting cmd parts", "ErrorMsg" }
-        return false, { err_chunk = err_chunk, err_msg_hist = true }
-    end
-
-    local title = 'Grep "' .. raw_pat[1] .. '" in ' .. cwd --- @type string
-    return true, { cmd_parts = cmd_parts, title = title }
+    local prompt = "CWD Grep (case-sensitive): " --- @type string
+    return grep_master(get_cwd_tbl, prompt, { literal = true })
 end
 
 local qgD = function() require("mjm.error-list-system").qf_sys_wrap(grep_CWD, grep_b) end
@@ -237,51 +254,55 @@ vim.keymap.set({ "n", "x" }, "<leader>lGD", lGD)
 local lCgD = function() require("mjm.error-list-system").qf_sys_wrap(grep_CWD, lgrep_m) end
 vim.keymap.set({ "n", "x" }, "<leader>l<C-g>D", lCgD)
 
+--- @return boolean, QfRancherSystemIn
+local function grep_cwdX()
+    local prompt = "CWD Grep (regex): " --- @type string
+    return grep_master(get_cwd_tbl, prompt)
+end
+
+local qgCd = function() require("mjm.error-list-system").qf_sys_wrap(grep_cwdX, grep_b) end
+vim.keymap.set({ "n", "x" }, "<leader>qg<C-d>", qgCd)
+local qGCd = function() require("mjm.error-list-system").qf_sys_wrap(grep_cwdX, grep_o) end
+vim.keymap.set({ "n", "x" }, "<leader>qG<C-d>", qGCd)
+local qCgCd = function() require("mjm.error-list-system").qf_sys_wrap(grep_cwdX, grep_m) end
+vim.keymap.set({ "n", "x" }, "<leader>q<C-g><C-d>", qCgCd)
+
+local lgCd = function() require("mjm.error-list-system").qf_sys_wrap(grep_cwdX, lgrep_b) end
+vim.keymap.set({ "n", "x" }, "<leader>lg<C-d>", lgCd)
+local lGCd = function() require("mjm.error-list-system").qf_sys_wrap(grep_cwdX, lgrep_o) end
+vim.keymap.set({ "n", "x" }, "<leader>lG<C-d>", lGCd)
+local lCgCd = function() require("mjm.error-list-system").qf_sys_wrap(grep_cwdX, lgrep_m) end
+vim.keymap.set({ "n", "x" }, "<leader>l<C-g><C-d>", lCgCd)
+
+--- @type QfRancherGrepLocFun
+local function get_helpdirs()
+    local doc_files = vim.api.nvim_get_runtime_file("doc/*.txt", true) --- @type string[]
+    if #doc_files == 0 then
+        local chunk = { "No doc files found", "ErrorMsg" } --- @type [string,string]
+        return false, chunk
+    end
+
+    return true, doc_files
+end
+
+--- @type QfRancherSystemOpts
 local hgrep_b = { async = true, type = "\1", timeout = 2000 }
+--- @type QfRancherSystemOpts
 local hgrep_o = { async = true, type = "\1", overwrite = true, timeout = 2000 }
+--- @type QfRancherSystemOpts
 local hgrep_m = { async = true, type = "\1", merge = true, timeout = 2000 }
 
+--- @type QfRancherSystemOpts
 local hlgrep_b = { async = true, type = "\1", loclist = true, timeout = 2000 }
+--- @type QfRancherSystemOpts
 local hlgrep_o = { async = true, type = "\1", loclist = true, overwrite = true, timeout = 2000 }
+--- @type QfRancherSystemOpts
 local hlgrep_m = { async = true, type = "\1", loclist = true, merge = true, timeout = 2000 }
 
 --- @return boolean, QfRancherSystemIn
 local function grep_help()
-    local ok, grep_cmd = get_grep_cmd() --- @type boolean, QfRancherGrepCmdFun|[string,string]
-    if (not ok) or type(grep_cmd) ~= "function" then
-        --- @type [string, string]
-        local backup_chunk = { "grep_cbuf: Unknown error getting grep cmd", "ErrorMsg" }
-        --- @type [string, string]
-        local err_chunk = type(grep_cmd) ~= "function" and grep_cmd or backup_chunk
-        return false, { err_chunk = err_chunk, err_msg_hist = true }
-    end
-
-    local doc_files = vim.api.nvim_get_runtime_file("doc/*.txt", true) --- @type string[]
-    if #doc_files == 0 then
-        local chunk = { "No doc files found", "ErrorMsg" } --- @type [string,string]
-        return false, { err_chunk = chunk, err_msg_hist = true }
-    end
-
     local prompt = "Help Grep: " --- @type string
-
-    local ok_l, raw_pat = get_grep_pattern(prompt) --- @type boolean, string[]|QfRancherSystemIn
-    if not ok_l or type(raw_pat) ~= "table" then
-        --- @type [string, string]
-        local backup_chunk = { "grep_cbuf: Unknown error getting grep pattern", "ErrorMsg" }
-        local err_chunk = raw_pat.err_chunk or backup_chunk --- @type [string,string]
-        local err_msg_hist = raw_pat.err_msg_hist == false and false or true --- @type boolean
-        return false, { err_chunk = err_chunk, err_msg_hist = err_msg_hist or true }
-    end
-
-    --- @type boolean, string[]|[string,string]
-    local ok_c, cmd_parts = grep_cmd(raw_pat, doc_files, { ignore_case = true })
-    if not ok_c then
-        local err_chunk = cmd_parts or { "grep_cbuf: Unknown error getting cmd parts", "ErrorMsg" }
-        return false, { err_chunk = err_chunk, err_msg_hist = true }
-    end
-
-    local title = 'Grep "' .. raw_pat[1] .. '" in docs' --- @type string
-    return true, { cmd_parts = cmd_parts, title = title }
+    return grep_master(get_helpdirs, prompt, { literal = true, smart_case = true })
 end
 
 local qgh = function() require("mjm.error-list-system").qf_sys_wrap(grep_help, hgrep_b) end
@@ -300,41 +321,8 @@ vim.keymap.set({ "n", "x" }, "<leader>l<C-g>h", lCgh)
 
 --- @return boolean, QfRancherSystemIn
 local function grep_HELP()
-    local ok, grep_cmd = get_grep_cmd() --- @type boolean, QfRancherGrepCmdFun|[string,string]
-    if (not ok) or type(grep_cmd) ~= "function" then
-        --- @type [string, string]
-        local backup_chunk = { "grep_cbuf: Unknown error getting grep cmd", "ErrorMsg" }
-        --- @type [string, string]
-        local err_chunk = type(grep_cmd) ~= "function" and grep_cmd or backup_chunk
-        return false, { err_chunk = err_chunk, err_msg_hist = true }
-    end
-
-    local doc_files = vim.api.nvim_get_runtime_file("doc/*.txt", true) --- @type string[]
-    if #doc_files == 0 then
-        local chunk = { "No doc files found", "ErrorMsg" } --- @type [string,string]
-        return false, { err_chunk = chunk, err_msg_hist = true }
-    end
-
-    local prompt = "Help Grep: " --- @type string
-
-    local ok_l, raw_pat = get_grep_pattern(prompt) --- @type boolean, string[]|QfRancherSystemIn
-    if not ok_l or type(raw_pat) ~= "table" then
-        --- @type [string, string]
-        local backup_chunk = { "grep_cbuf: Unknown error getting grep pattern", "ErrorMsg" }
-        local err_chunk = raw_pat.err_chunk or backup_chunk --- @type [string,string]
-        local err_msg_hist = raw_pat.err_msg_hist == false and false or true --- @type boolean
-        return false, { err_chunk = err_chunk, err_msg_hist = err_msg_hist or true }
-    end
-
-    --- @type boolean, string[]|[string,string]
-    local ok_c, cmd_parts = grep_cmd(raw_pat, doc_files)
-    if not ok_c then
-        local err_chunk = cmd_parts or { "grep_cbuf: Unknown error getting cmd parts", "ErrorMsg" }
-        return false, { err_chunk = err_chunk, err_msg_hist = true }
-    end
-
-    local title = 'Grep "' .. raw_pat[1] .. '" in docs' --- @type string
-    return true, { cmd_parts = cmd_parts, title = title }
+    local prompt = "Help Grep (case-sensitive): " --- @type string
+    return grep_master(get_helpdirs, prompt, { literal = true })
 end
 
 local qgH = function() require("mjm.error-list-system").qf_sys_wrap(grep_HELP, hgrep_b) end
@@ -352,52 +340,54 @@ local lCgH = function() require("mjm.error-list-system").qf_sys_wrap(grep_HELP, 
 vim.keymap.set({ "n", "x" }, "<leader>l<C-g>H", lCgH)
 
 --- @return boolean, QfRancherSystemIn
-local function grep_bufs()
-    local ok, grep_cmd = get_grep_cmd() --- @type boolean, QfRancherGrepCmdFun|[string,string]
-    if (not ok) or type(grep_cmd) ~= "function" then
-        --- @type [string, string]
-        local backup_chunk = { "grep_cbuf: Unknown error getting grep cmd", "ErrorMsg" }
-        --- @type [string, string]
-        local err_chunk = type(grep_cmd) ~= "function" and grep_cmd or backup_chunk
-        return false, { err_chunk = err_chunk, err_msg_hist = true }
-    end
+local function grep_helpX()
+    local prompt = "Help Grep (regex): " --- @type string
+    return grep_master(get_helpdirs, prompt)
+end
 
+local qgCh = function() require("mjm.error-list-system").qf_sys_wrap(grep_helpX, grep_b) end
+vim.keymap.set({ "n", "x" }, "<leader>qg<C-h>", qgCh)
+local qGCh = function() require("mjm.error-list-system").qf_sys_wrap(grep_helpX, grep_o) end
+vim.keymap.set({ "n", "x" }, "<leader>qG<C-h>", qGCh)
+local qCgCh = function() require("mjm.error-list-system").qf_sys_wrap(grep_helpX, grep_m) end
+vim.keymap.set({ "n", "x" }, "<leader>q<C-g><C-h>", qCgCh)
+
+local lgCh = function() require("mjm.error-list-system").qf_sys_wrap(grep_helpX, lgrep_b) end
+vim.keymap.set({ "n", "x" }, "<leader>lg<C-h>", lgCh)
+local lGCh = function() require("mjm.error-list-system").qf_sys_wrap(grep_helpX, lgrep_o) end
+vim.keymap.set({ "n", "x" }, "<leader>lG<C-h>", lGCh)
+local lCgCh = function() require("mjm.error-list-system").qf_sys_wrap(grep_helpX, lgrep_m) end
+vim.keymap.set({ "n", "x" }, "<leader>l<C-g><C-h>", lCgCh)
+
+--- @type QfRancherGrepLocFun
+local function get_buflist()
     local bufs = vim.api.nvim_list_bufs() --- @type integer[]
-    local buf_files = {} --- @type string[]
-    for _, buf in ipairs(bufs) do
-        local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf }) --- @type string
+    local fnames = {} --- @type string[]
+
+    for _, buf in pairs(bufs) do
         --- @type boolean
         local buflisted = vim.api.nvim_get_option_value("buflisted", { buf = buf })
+
+        local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf }) --- @type string
+
         local fname = vim.api.nvim_buf_get_name(buf) --- @type string
         local readable = vim.fn.filereadable(fname) == 1 --- @type boolean
-        if buflisted and buftype == "" and readable then table.insert(buf_files, fname) end
+
+        if buflisted and buftype == "" and readable then table.insert(fnames, fname) end
     end
 
-    if #buf_files == 0 then
+    if #fnames == 0 then
         local chunk = { "No valid bufs found", "ErrorMsg" } --- @type [string,string]
-        return false, { err_chunk = chunk, err_msg_hist = true }
+        return false, chunk
     end
 
-    local prompt = "Grep Bufs: " --- @type string
+    return true, fnames
+end
 
-    local ok_l, raw_pat = get_grep_pattern(prompt) --- @type boolean, string[]|QfRancherSystemIn
-    if not ok_l or type(raw_pat) ~= "table" then
-        --- @type [string, string]
-        local backup_chunk = { "grep_cbuf: Unknown error getting grep pattern", "ErrorMsg" }
-        local err_chunk = raw_pat.err_chunk or backup_chunk --- @type [string,string]
-        local err_msg_hist = raw_pat.err_msg_hist == false and false or true --- @type boolean
-        return false, { err_chunk = err_chunk, err_msg_hist = err_msg_hist or true }
-    end
-
-    --- @type boolean, string[]|[string,string]
-    local ok_c, cmd_parts = grep_cmd(raw_pat, buf_files, { ignore_case = true })
-    if not ok_c then
-        local err_chunk = cmd_parts or { "grep_cbuf: Unknown error getting cmd parts", "ErrorMsg" }
-        return false, { err_chunk = err_chunk, err_msg_hist = true }
-    end
-
-    local title = 'Grep "' .. raw_pat[1] .. '" in current buf' --- @type string
-    return true, { cmd_parts = cmd_parts, title = title }
+--- @return boolean, QfRancherSystemIn
+local function grep_bufs()
+    local prompt = "Buf Grep: "
+    return grep_master(get_buflist, prompt, { literal = true, smart_case = true })
 end
 
 local qgu = function() require("mjm.error-list-system").qf_sys_wrap(grep_bufs, grep_b) end
@@ -409,51 +399,8 @@ vim.keymap.set({ "n", "x" }, "<leader>q<C-g>u", qCgu)
 
 --- @return boolean, QfRancherSystemIn
 local function grep_BUFS()
-    local ok, grep_cmd = get_grep_cmd() --- @type boolean, QfRancherGrepCmdFun|[string,string]
-    if (not ok) or type(grep_cmd) ~= "function" then
-        --- @type [string, string]
-        local backup_chunk = { "grep_cbuf: Unknown error getting grep cmd", "ErrorMsg" }
-        --- @type [string, string]
-        local err_chunk = type(grep_cmd) ~= "function" and grep_cmd or backup_chunk
-        return false, { err_chunk = err_chunk, err_msg_hist = true }
-    end
-
-    local bufs = vim.api.nvim_list_bufs() --- @type integer[]
-    local buf_files = {} --- @type string[]
-    for _, buf in ipairs(bufs) do
-        local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf }) --- @type string
-        --- @type boolean
-        local buflisted = vim.api.nvim_get_option_value("buflisted", { buf = buf })
-        local fname = vim.api.nvim_buf_get_name(buf) --- @type string
-        local readable = vim.fn.filereadable(fname) == 1 --- @type boolean
-        if buflisted and buftype == "" and readable then table.insert(buf_files, fname) end
-    end
-
-    if #buf_files == 0 then
-        local chunk = { "No valid bufs found", "ErrorMsg" } --- @type [string,string]
-        return false, { err_chunk = chunk, err_msg_hist = true }
-    end
-
-    local prompt = "Grep Bufs (case sensitive): " --- @type string
-
-    local ok_l, raw_pat = get_grep_pattern(prompt) --- @type boolean, string[]|QfRancherSystemIn
-    if not ok_l or type(raw_pat) ~= "table" then
-        --- @type [string, string]
-        local backup_chunk = { "grep_cbuf: Unknown error getting grep pattern", "ErrorMsg" }
-        local err_chunk = raw_pat.err_chunk or backup_chunk --- @type [string,string]
-        local err_msg_hist = raw_pat.err_msg_hist == false and false or true --- @type boolean
-        return false, { err_chunk = err_chunk, err_msg_hist = err_msg_hist or true }
-    end
-
-    --- @type boolean, string[]|[string,string]
-    local ok_c, cmd_parts = grep_cmd(raw_pat, buf_files)
-    if not ok_c then
-        local err_chunk = cmd_parts or { "grep_cbuf: Unknown error getting cmd parts", "ErrorMsg" }
-        return false, { err_chunk = err_chunk, err_msg_hist = true }
-    end
-
-    local title = 'Grep "' .. raw_pat[1] .. '" in current buf' --- @type string
-    return true, { cmd_parts = cmd_parts, title = title }
+    local prompt = "Buf Grep (case-sensitive): "
+    return grep_master(get_buflist, prompt, { literal = true })
 end
 
 local qgU = function() require("mjm.error-list-system").qf_sys_wrap(grep_BUFS, grep_b) end
@@ -464,16 +411,20 @@ local qCgU = function() require("mjm.error-list-system").qf_sys_wrap(grep_BUFS, 
 vim.keymap.set({ "n", "x" }, "<leader>q<C-g>U", qCgU)
 
 --- @return boolean, QfRancherSystemIn
-local function grep_cbuf()
-    local ok, grep_cmd = get_grep_cmd() --- @type boolean, QfRancherGrepCmdFun|[string,string]
-    if (not ok) or type(grep_cmd) ~= "function" then
-        --- @type [string, string]
-        local backup_chunk = { "grep_cbuf: Unknown error getting grep cmd", "ErrorMsg" }
-        --- @type [string, string]
-        local err_chunk = type(grep_cmd) ~= "function" and grep_cmd or backup_chunk
-        return false, { err_chunk = err_chunk, err_msg_hist = true }
-    end
+local function grep_bufsX()
+    local prompt = "Buf Grep (regex): " --- @type string
+    return grep_master(get_buflist, prompt)
+end
 
+local qgCu = function() require("mjm.error-list-system").qf_sys_wrap(grep_bufsX, grep_b) end
+vim.keymap.set({ "n", "x" }, "<leader>qg<C-u>", qgCu)
+local qGCu = function() require("mjm.error-list-system").qf_sys_wrap(grep_bufsX, grep_o) end
+vim.keymap.set({ "n", "x" }, "<leader>qG<C-u>", qGCu)
+local qCgCu = function() require("mjm.error-list-system").qf_sys_wrap(grep_bufsX, grep_m) end
+vim.keymap.set({ "n", "x" }, "<leader>q<C-g><C-u>", qCgCu)
+
+--- @type QfRancherGrepLocFun
+local function get_cur_buf_fname()
     local buf = vim.api.nvim_get_current_buf() --- @type integer
     local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf }) --- @type string
     local good_buftype = buftype == "" or buftype == "help" --- @type boolean
@@ -484,86 +435,29 @@ local function grep_cbuf()
     if not (buflisted and good_buftype and good_file) then
         --- @type [string,string]
         local chunk = { "Current buffer is not a valid file", "ErrorMsg" }
-        return false, { err_chunk = chunk, err_msg_hist = true }
+        return false, chunk
     end
 
-    local buf_files = { fname } --- @type string[]
+    return true, { fname }
+end
 
-    local prompt = "Grep Current Buf: " --- @type string
-
-    local ok_l, raw_pat = get_grep_pattern(prompt) --- @type boolean, string[]|QfRancherSystemIn
-    if not ok_l or type(raw_pat) ~= "table" then
-        --- @type [string, string]
-        local backup_chunk = { "grep_cbuf: Unknown error getting grep pattern", "ErrorMsg" }
-        local err_chunk = raw_pat.err_chunk or backup_chunk --- @type [string,string]
-        local err_msg_hist = raw_pat.err_msg_hist == false and false or true --- @type boolean
-        return false, { err_chunk = err_chunk, err_msg_hist = err_msg_hist or true }
-    end
-
-    --- @type boolean, string[]|[string,string]
-    local ok_c, cmd_parts = grep_cmd(raw_pat, buf_files, { ignore_case = true })
-    if not ok_c then
-        local err_chunk = cmd_parts or { "grep_cbuf: Unknown error getting cmd parts", "ErrorMsg" }
-        return false, { err_chunk = err_chunk, err_msg_hist = true }
-    end
-
-    local title = 'Grep "' .. raw_pat[1] .. '" in current buf' --- @type string
-    return true, { cmd_parts = cmd_parts, title = title }
+--- @return boolean, QfRancherSystemIn
+local function grep_cbuf()
+    local prompt = "Current Buf Grep: " --- @type string
+    return grep_master(get_cur_buf_fname, prompt, { literal = true, smart_case = true })
 end
 
 local lgu = function() require("mjm.error-list-system").qf_sys_wrap(grep_cbuf, lgrep_b) end
 vim.keymap.set({ "n", "x" }, "<leader>lgu", lgu)
-local lGu = function() require("mjm.error-list-system").qf_sys_wrap(grep_cbuf, lgrep_m) end
+local lGu = function() require("mjm.error-list-system").qf_sys_wrap(grep_cbuf, lgrep_o) end
 vim.keymap.set({ "n", "x" }, "<leader>lGu", lGu)
 local lCgu = function() require("mjm.error-list-system").qf_sys_wrap(grep_cbuf, lgrep_m) end
 vim.keymap.set({ "n", "x" }, "<leader>l<C-g>u", lCgu)
 
 --- @return boolean, QfRancherSystemIn
 local function grep_CBUF()
-    local ok, grep_cmd = get_grep_cmd() --- @type boolean, QfRancherGrepCmdFun|[string,string]
-    if (not ok) or type(grep_cmd) ~= "function" then
-        --- @type [string, string]
-        local backup_chunk = { "grep_cbuf: Unknown error getting grep cmd", "ErrorMsg" }
-        --- @type [string, string]
-        local err_chunk = type(grep_cmd) ~= "function" and grep_cmd or backup_chunk
-        return false, { err_chunk = err_chunk, err_msg_hist = true }
-    end
-
-    local buf = vim.api.nvim_get_current_buf() --- @type integer
-    local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf }) --- @type string
-    local good_buftype = buftype == "" or buftype == "help" --- @type boolean
-    local buflisted = vim.api.nvim_get_option_value("buflisted", { buf = buf }) --- @type boolean
-    local fname = vim.api.nvim_buf_get_name(buf) --- @type string
-    local readable = vim.fn.filereadable(fname) == 1 --- @type boolean
-    local good_file = fname ~= "" and readable --- @type boolean
-    if not (buflisted and good_buftype and good_file) then
-        --- @type [string,string]
-        local chunk = { "Current buffer is not a valid file", "ErrorMsg" }
-        return false, { err_chunk = chunk, err_msg_hist = true }
-    end
-
-    local buf_files = { fname } --- @type string[]
-
-    local prompt = "Grep Current Buf (case sensitive): " --- @type string
-
-    local ok_l, raw_pat = get_grep_pattern(prompt) --- @type boolean, string[]|QfRancherSystemIn
-    if not ok_l or type(raw_pat) ~= "table" then
-        --- @type [string, string]
-        local backup_chunk = { "grep_cbuf: Unknown error getting grep pattern", "ErrorMsg" }
-        local err_chunk = raw_pat.err_chunk or backup_chunk --- @type [string,string]
-        local err_msg_hist = raw_pat.err_msg_hist == false and false or true --- @type boolean
-        return false, { err_chunk = err_chunk, err_msg_hist = err_msg_hist or true }
-    end
-
-    --- @type boolean, string[]|[string,string]
-    local ok_c, cmd_parts = grep_cmd(raw_pat, buf_files)
-    if not ok_c then
-        local err_chunk = cmd_parts or { "grep_cbuf: Unknown error getting cmd parts", "ErrorMsg" }
-        return false, { err_chunk = err_chunk, err_msg_hist = true }
-    end
-
-    local title = 'Grep "' .. raw_pat[1] .. '" in current buf' --- @type string
-    return true, { cmd_parts = cmd_parts, title = title }
+    local prompt = "Current Buf Grep (case-sensitive): " --- @type string
+    return grep_master(get_cur_buf_fname, prompt, { literal = true })
 end
 
 local lgU = function() require("mjm.error-list-system").qf_sys_wrap(grep_CBUF, lgrep_b) end
@@ -572,3 +466,16 @@ local lGU = function() require("mjm.error-list-system").qf_sys_wrap(grep_CBUF, l
 vim.keymap.set({ "n", "x" }, "<leader>lGU", lGU)
 local lCgU = function() require("mjm.error-list-system").qf_sys_wrap(grep_CBUF, lgrep_m) end
 vim.keymap.set({ "n", "x" }, "<leader>l<C-g>U", lCgU)
+
+--- @return boolean, QfRancherSystemIn
+local function grep_cbufX()
+    local prompt = "Current Buf Grep (regex): " --- @type string
+    return grep_master(get_cur_buf_fname, prompt)
+end
+
+local lgCu = function() require("mjm.error-list-system").qf_sys_wrap(grep_cbufX, lgrep_b) end
+vim.keymap.set({ "n", "x" }, "<leader>lg<C-u>", lgCu)
+local lGCu = function() require("mjm.error-list-system").qf_sys_wrap(grep_cbufX, lgrep_o) end
+vim.keymap.set({ "n", "x" }, "<leader>lG<C-u>", lGCu)
+local lCgCu = function() require("mjm.error-list-system").qf_sys_wrap(grep_cbufX, lgrep_m) end
+vim.keymap.set({ "n", "x" }, "<leader>l<C-g><C-u>", lCgCu)

@@ -25,6 +25,9 @@
 --- MAYBE: https://github.com/ahmedkhalf/project.nvim
 --- MAYBE: https://github.com/stevearc/overseer.nvim
 
+--- DOCUMENT: Buf greps use external grep
+--- DOCUMENT: qf Buf Grep is all bufs, ll Buf Grep is current buf only
+
 --------------
 -- STAYAWAY --
 --------------
