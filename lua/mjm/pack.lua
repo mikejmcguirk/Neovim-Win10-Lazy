@@ -12,6 +12,7 @@
 -- More efficient scope
 -- MAYBE: https://github.com/toppair/peek.nvim -- Markdown preview
 -- MAYBE: Look at the multicursor plugin SteveArc uses. It seems to be the most mature project
+-- MAYBE: https://github.com/Bilal2453/luvit-meta
 
 local M = {}
 
@@ -41,8 +42,7 @@ local pack_spec = {
     { src = "https://github.com/nvim-mini/mini.operators" },
 
     -- LOW: Replace with custom config
-    -- { src = "https://github.com/folke/lazydev.nvim" },
-    { src = "https://github.com/Jari27/lazydev.nvim", version = "deprecate_client_notify" },
+    { src = "https://github.com/folke/lazydev.nvim" },
 
     { src = "https://github.com/Shatur/neovim-session-manager" },
 
@@ -77,7 +77,6 @@ local pack_spec = {
     { src = "https://github.com/tpope/vim-dadbod" },
     { src = "https://github.com/kristijanhusak/vim-dadbod-ui" },
 
-    -- NOTE: The FugitiveChanged event is used for statusline updates
     { src = "https://github.com/tpope/vim-fugitive" },
 
     { src = "https://github.com/folke/zen-mode.nvim" },
