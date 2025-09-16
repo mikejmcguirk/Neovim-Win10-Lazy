@@ -2,6 +2,8 @@
 -- Mode Switching --
 --------------------
 
+-- TODO: Test mapping <C-c> to <esc> in replace mode to avoid inserting <C-c> literals
+
 -- Mapping <C-c> to <esc> in cmd mode causes <C-C> to accept commands rather than cancel them
 -- omapped so that Quickscope highlighting properly exits
 Map({ "x", "o" }, "<C-c>", "<esc>", { silent = true })

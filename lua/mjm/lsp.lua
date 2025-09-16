@@ -6,6 +6,7 @@
 vim.lsp.log.set_level(vim.log.levels.ERROR)
 
 -- No need to map these in non-LSP buffers
+-- TODO: mini.operators has a check to see if certain maps exist before deleting them
 vim.keymap.del("n", "grn")
 vim.keymap.del("n", "gra")
 vim.keymap.del("n", "grr")

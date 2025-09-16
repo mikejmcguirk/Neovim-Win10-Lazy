@@ -158,6 +158,7 @@ local function setup_objects()
             -- to the outer function rather than looking forward to the inner one
 
             -- TODO: Lua text objects to check for unary expressions
+            -- TODO: text object for table keys/values
             -- MAYBE: Text object for function call name. Or, more generally, a way to extract
             -- the arguments from a function call and have them exist separately
 
