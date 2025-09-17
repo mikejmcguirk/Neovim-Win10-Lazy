@@ -4,21 +4,37 @@ local start = vim.loop.hrtime()
 -- Setup --
 -----------
 
-vim.g.loaded_2html_plugin = 1
-vim.g.did_install_default_menus = 1
-vim.g.loaded_gzip = 1
-vim.g.loaded_matchit = 1
-vim.g.loaded_matchparen = 1 -- MAYBE: Lazy load
-vim.g.loaded_netrw = 1
-vim.g.loaded_netrwPlugin = 1
-vim.g.loaded_netrwSettings = 1
-vim.g.loaded_remote_plugins = 1
-vim.g.loaded_spellfile_plugin = 1
-vim.g.loaded_tarPlugin = 1
-vim.g.loaded_tar = 1
-vim.g.loaded_tutor_mode_plugin = 1
-vim.g.loaded_zipPlugin = 1
-vim.g.loaded_zip = 1
+--- :h standard-plugin-list
+--- Disabling these has a non-trivial effect on startup time
+
+--- LOW: No need to change now, but the 2html plguin appears to have been re-written in Lua, and
+--- on load only creates an autocmd. Might be useful
+vim.api.nvim_set_var("loaded_2html_plugin", 1)
+vim.api.nvim_set_var("did_install_default_menus", 1)
+vim.api.nvim_set_var("loaded_gzip", 1)
+vim.api.nvim_set_var("loaded_man", 1)
+vim.api.nvim_set_var("loaded_matchit", 1)
+vim.api.nvim_set_var("loaded_matchparen", 1) -- MAYBE: Lazy load
+vim.api.nvim_set_var("loaded_netrw", 1)
+vim.api.nvim_set_var("loaded_netrwPlugin", 1)
+vim.api.nvim_set_var("loaded_netrwSettings", 1)
+vim.api.nvim_set_var("loaded_remote_plugins", 1)
+vim.api.nvim_set_var("loaded_shada_plugin", 1)
+vim.api.nvim_set_var("loaded_spellfile_plugin", 1)
+vim.api.nvim_set_var("loaded_tar", 1)
+vim.api.nvim_set_var("loaded_tarPlugin", 1)
+vim.api.nvim_set_var("loaded_tutor_mode_plugin", 1)
+vim.api.nvim_set_var("loaded_zip", 1)
+vim.api.nvim_set_var("loaded_zipPlugin", 1)
+
+-- I have xsel on my system
+local ok, termfeatures = pcall(vim.api.nvim_get_var, "termfeatures")
+if not ok then
+    termfeatures = {}
+end
+
+termfeatures.osc52 = false
+vim.api.nvim_set_var("termfeatures", termfeatures)
 
 require("mjm.global_vars")
 
@@ -41,7 +57,8 @@ local env_setup = vim.loop.hrtime()
 -------------------------------
 
 require("mjm.pack")
-vim.cmd.packadd({ vim.fn.escape("cfilter", " "), bang = true, magic = { file = false } })
+--- Use qf-rancher instead
+--- vim.cmd.packadd({ vim.fn.escape("cfilter", " "), bang = true, magic = { file = false } })
 
 local pack_finish = vim.loop.hrtime()
 
@@ -107,8 +124,8 @@ vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
     callback = function()
         vim.api.nvim_del_augroup_by_name("mjm-lazy-load")
 
-        local ok, _ = pcall(require, "fzf-lua") --- @type boolean, table
-        if ok then
+        local ok_f, _ = pcall(require, "fzf-lua") --- @type boolean, table
+        if ok_f then
             Cmd({ cmd = "FzfLua", args = { "register_ui_select" } }, {})
         end
 
