@@ -1,3 +1,9 @@
+--- LOW: An operator that copies text to a line. The first count would be the line to goto, and the
+--- second count would be the motion could. So you would do 14gz3j to move 3j lines to line 14
+--- The motion should detect if rnu is on, and do the line placements based on relative number
+--- jumps if so. The issue though is that rnu is absolute value both ways. Could do gz gZ for
+--- different directions, but feels hacky
+
 --------------------
 -- Mode Switching --
 --------------------
