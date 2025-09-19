@@ -163,6 +163,8 @@ local function setup_objects()
             -- TODO: text object for table keys/values
             -- MAYBE: Text object for function call name. Or, more generally, a way to extract
             -- the arguments from a function call and have them exist separately
+            -- TODO: A text object for individual elements of a conditional. This actually
+            -- comes up a lot
 
             ----------------
             -- Selections --

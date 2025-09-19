@@ -260,10 +260,9 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
         -- textDocument/rename
         Map("n", "grn", function()
-            -- TODO: use a TS query to pull the current variable name. default to blank
-            -- I think you can update the input func to feedkeys in  an optional prompt
-            -- I'm not sure if default pretypes or is just what happens if you hit enter with
-            -- nothing
+            -- TODO: use grN for pre-filled rename (default behavior)
+            -- TODO: It would be cool to show incremental progress on rename. I know there is a
+            -- plugin that does this
 
             --- @type boolean, string
             local ok_i, input = require("mjm.utils").get_input("Rename: ")

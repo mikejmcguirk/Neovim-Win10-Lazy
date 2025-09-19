@@ -142,6 +142,8 @@ vim.api.nvim_create_autocmd({ "LspAttach", "LspDetach" }, {
 local format_icons = { unix = "unix", dos = "dos", mac = "mac" }
 
 function MjmStl.active()
+    -- TODO: pre-allocate the stl table with nils. Worth because this runs on every keystroke
+    -- TODO: shave off heap allocations wherever possible
     local stl = {}
     local buf = vim.api.nvim_get_current_buf()
     local bad_mode = is_bad_mode()
@@ -166,8 +168,12 @@ function MjmStl.active()
 
     table.insert(stl, "%=%*")
 
-    -- Running autocmds to cache buf options means parsing out the autocmd and the stl redraw on
-    -- every autocomplete window. More robust to handle on the fly
+    -- As far as I can tell, since every autocomplete window creates a new buffer that needs to
+    -- be checked/filtered out, it would take more compute to maintain a cache of bufopts than it
+    -- takes to simply keep re-pulling the options
+    -- TODO: Encoding seems like an exception to this
+    -- MAYBE: Since the stl is tied to the window, it might be possible to win_call the buf opts
+    -- and cache them on certain events
     local encoding = vim.api.nvim_get_option_value("encoding", { scope = "global" })
     local format = vim.api.nvim_get_option_value("fileformat", { buf = buf })
     local fmt = format_icons[format]

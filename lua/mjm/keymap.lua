@@ -10,6 +10,10 @@
 Map("n", "(", "<nop>")
 Map("n", ")", "<nop>")
 
+-- I use this as a prefix for inserting boilerplate code. Don't want this falling back to other
+-- behavior on timeout
+Map("n", "<leader>-", "<nop>")
+
 Map("n", "<C-c>", function()
     print("")
     vim.cmd("noh")

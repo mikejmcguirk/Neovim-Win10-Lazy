@@ -109,11 +109,7 @@ vim.opt.shortmess:append("W") --- No "written" notifications
 
 vim.api.nvim_set_option_value("ruler", false, { scope = "global" })
 
-vim.filetype.add({
-    filename = {
-        [".bashrc_custom"] = "sh",
-    },
-})
+vim.filetype.add({ filename = { [".bashrc_custom"] = "sh" } })
 
 ----------------------
 -- Autocmd Controls --

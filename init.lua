@@ -1,5 +1,7 @@
 require("mjm")
 
+--- PR: Fix the missing fields error in nvim_cmd mods tables
+
 -- https://github.com/folke/dot/tree/master/nvim
 -- https://github.com/stevearc/dotfiles/tree/master/.config/nvim
 -- https://github.com/b0o/nvim-conf/tree/main

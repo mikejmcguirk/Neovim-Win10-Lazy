@@ -19,6 +19,8 @@ local diag_text_cfg = vim.tbl_extend("force", diag_main_cfg, virt_text_cfg)
 local diag_lines_cfg = vim.tbl_extend("force", diag_main_cfg, virt_lines_cfg)
 vim.diagnostic.config(diag_text_cfg)
 
+-- TODO: map to show err only or top severity only
+-- TODO: map to show config status. should apply to other \ maps as well
 Map("n", "\\D", function()
     local cur_cfg = vim.diagnostic.config() or {}
     vim.diagnostic.config((not cur_cfg.virtual_lines) and diag_lines_cfg or diag_text_cfg)

@@ -13,6 +13,7 @@
 -- MAYBE: https://github.com/toppair/peek.nvim -- Markdown preview
 -- MAYBE: Look at the multicursor plugin SteveArc uses. It seems to be the most mature project
 -- MAYBE: https://github.com/Bilal2453/luvit-meta
+-- https://github.com/andymass/vim-matchup - Replace matchparen + good motions
 
 local M = {}
 
