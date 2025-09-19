@@ -34,42 +34,42 @@ local function add_annotation(annotation)
     vim.api.nvim_cmd({ cmd = "startinsert", bang = true }, {})
 end
 
-Map({ "n", "i" }, "<C-->a", function()
+Map("n", "<leader>-a", function()
     add_annotation("[[@as")
 end, { buffer = true })
 
-Map({ "n", "i" }, "<C-->c", function()
+Map("n", "<leader>-c", function()
     add_annotation("@class")
 end, { buffer = true })
 
-Map({ "n", "i" }, "<C-->d", function()
+Map("n", "<leader>-d", function()
     add_annotation("@diagnostic")
 end, { buffer = true })
 
-Map({ "n", "i" }, "<C-->f", function()
+Map("n", "<leader>-f", function()
     add_annotation("@field")
 end, { buffer = true })
 
-Map({ "n", "i" }, "<C-->l", function()
+Map("n", "<leader>-l", function()
     add_annotation("@alias")
 end, { buffer = true })
 
-Map({ "n", "i" }, "<C-->m", function()
+Map("n", "<leader>-m", function()
     add_annotation("@module")
 end, { buffer = true })
 
-Map({ "n", "i" }, "<C-->p", function()
+Map("n", "<leader>-p", function()
     add_annotation("@param")
 end, { buffer = true })
 
-Map({ "n", "i" }, "<C-->r", function()
+Map("n", "<leader>-r", function()
     add_annotation("@return")
 end, { buffer = true })
 
-Map({ "n", "i" }, "<C-->t", function()
+Map("n", "<leader>-t", function()
     add_annotation("@type")
 end, { buffer = true })
 
-Map({ "n", "i" }, "<C-->-", function()
+Map("n", "<leader>--", function()
     add_annotation("")
 end, { buffer = true })
