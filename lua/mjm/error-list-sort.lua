@@ -9,6 +9,9 @@ vim.keymap.set("n", "<leader>qo", "<nop>")
 --- Wrapper Funcs ---
 ---------------------
 
+-- TODO: With the getlist and setlist funcs, I think these can be consolidated into
+-- one piece of logic. Tough though because we do need to do the loclist check here
+
 function M.qf_sort_wrapper(sort_func)
     local list_size = vim.fn.getqflist({ size = true }).size --- @type integer
     if (not list_size) or list_size == 0 then
@@ -264,11 +267,11 @@ end)
 
 vim.keymap.set("n", "<leader>qoi", "<nop>")
 
-local severity_map = {
-    E = 1,
-    W = 2,
-    I = 3,
-    H = 4,
+local severity_unmap = {
+    E = vim.diagnostic.severity.ERROR,
+    W = vim.diagnostic.severity.WARN,
+    I = vim.diagnostic.severity.INFO,
+    H = vim.diagnostic.severity.HINT,
 } ---@type table<string, integer>
 
 function M.sort_severity_asc(a, b)
@@ -277,8 +280,8 @@ function M.sort_severity_asc(a, b)
     end
 
     if a.type and b.type then
-        local severity_a = severity_map[a.type] or nil
-        local severity_b = severity_map[b.type] or nil
+        local severity_a = severity_unmap[a.type] or nil
+        local severity_b = severity_unmap[b.type] or nil
 
         if (severity_a and severity_b) and severity_a ~= severity_b then
             return severity_a < severity_b
@@ -316,9 +319,8 @@ function M.sort_severity_desc(a, b)
     end
 
     if a.type and b.type then
-        local severity_a = severity_map[a.type] or nil
-        local severity_b = severity_map[b.type] or nil
-
+        local severity_a = severity_unmap[a.type] or nil
+        local severity_b = severity_unmap[b.type] or nil
         if (severity_a and severity_b) and severity_a ~= severity_b then
             return severity_a > severity_b
         end
@@ -327,7 +329,6 @@ function M.sort_severity_desc(a, b)
     if a.bufnr and b.bufnr then
         local fname_a = vim.fn.bufname(a.bufnr)
         local fname_b = vim.fn.bufname(b.bufnr)
-
         if (fname_a and fname_b) and fname_a ~= fname_b then
             return fname_a > fname_b
         end
@@ -336,12 +337,15 @@ function M.sort_severity_desc(a, b)
     if (a.lnum and b.lnum) and a.lnum ~= b.lnum then
         return a.lnum > b.lnum
     end
+
     if (a.col and b.col) and a.col ~= b.col then
         return a.col > b.col
     end
+
     if (a.end_lnum and b.end_lnum) and a.end_lnum ~= b.end_lnum then
         return a.end_lnum > b.end_lnum
     end
+
     if (a.end_col and b.end_col) and a.end_col ~= b.end_col then
         return a.end_col > b.end_col
     end
@@ -352,12 +356,15 @@ end
 vim.keymap.set("n", "<leader>qois", function()
     M.qf_sort_wrapper(M.sort_severity_asc)
 end)
+
 vim.keymap.set("n", "<leader>qoiS", function()
     M.qf_sort_wrapper(M.sort_severity_desc)
 end)
+
 vim.keymap.set("n", "<leader>lois", function()
     M.ll_sort_wrapper(M.sort_severity_asc)
 end)
+
 vim.keymap.set("n", "<leader>loiS", function()
     M.ll_sort_wrapper(M.sort_severity_desc)
 end)
@@ -370,32 +377,33 @@ function M.sort_diag_fname_asc(a, b)
     if a.bufnr and b.bufnr then
         local fname_a = vim.fn.bufname(a.bufnr)
         local fname_b = vim.fn.bufname(b.bufnr)
-
         if (fname_a and fname_b) and fname_a ~= fname_b then
             return fname_a < fname_b
-        end
-    end
-
-    if a.type and b.type then
-        local severity_a = severity_map[a.type] or nil
-        local severity_b = severity_map[b.type] or nil
-
-        if (severity_a and severity_b) and severity_a ~= severity_b then
-            return severity_a < severity_b
         end
     end
 
     if (a.lnum and b.lnum) and a.lnum ~= b.lnum then
         return a.lnum < b.lnum
     end
+
     if (a.col and b.col) and a.col ~= b.col then
         return a.col < b.col
     end
+
     if (a.end_lnum and b.end_lnum) and a.end_lnum ~= b.end_lnum then
         return a.end_lnum < b.end_lnum
     end
+
     if (a.end_col and b.end_col) and a.end_col ~= b.end_col then
         return a.end_col < b.end_col
+    end
+
+    if a.type and b.type then
+        local severity_a = severity_unmap[a.type] or 4
+        local severity_b = severity_unmap[b.type] or 4
+        if (severity_a and severity_b) and severity_a ~= severity_b then
+            return severity_a < severity_b
+        end
     end
 
     return false
@@ -409,32 +417,33 @@ function M.sort_diag_fname_desc(a, b)
     if a.bufnr and b.bufnr then
         local fname_a = vim.fn.bufname(a.bufnr)
         local fname_b = vim.fn.bufname(b.bufnr)
-
         if (fname_a and fname_b) and fname_a ~= fname_b then
             return fname_a > fname_b
-        end
-    end
-
-    if a.type and b.type then
-        local severity_a = severity_map[a.type] or nil
-        local severity_b = severity_map[b.type] or nil
-
-        if (severity_a and severity_b) and severity_a ~= severity_b then
-            return severity_a > severity_b
         end
     end
 
     if (a.lnum and b.lnum) and a.lnum ~= b.lnum then
         return a.lnum > b.lnum
     end
+
     if (a.col and b.col) and a.col ~= b.col then
         return a.col > b.col
     end
+
     if (a.end_lnum and b.end_lnum) and a.end_lnum ~= b.end_lnum then
         return a.end_lnum > b.end_lnum
     end
+
     if (a.end_col and b.end_col) and a.end_col ~= b.end_col then
         return a.end_col > b.end_col
+    end
+
+    if a.type and b.type then
+        local severity_a = severity_unmap[a.type] or 4
+        local severity_b = severity_unmap[b.type] or 4
+        if (severity_a and severity_b) and severity_a ~= severity_b then
+            return severity_a > severity_b
+        end
     end
 
     return false
@@ -443,12 +452,15 @@ end
 vim.keymap.set("n", "<leader>qoif", function()
     M.qf_sort_wrapper(M.sort_diag_fname_asc)
 end)
+
 vim.keymap.set("n", "<leader>qoiF", function()
     M.qf_sort_wrapper(M.sort_diag_fname_desc)
 end)
+
 vim.keymap.set("n", "<leader>loif", function()
     M.ll_sort_wrapper(M.sort_diag_fname_asc)
 end)
+
 vim.keymap.set("n", "<leader>loiF", function()
     M.ll_sort_wrapper(M.sort_diag_fname_desc)
 end)

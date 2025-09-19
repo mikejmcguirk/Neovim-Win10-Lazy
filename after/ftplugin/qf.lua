@@ -1,10 +1,20 @@
+-- TODO: use apis to open windows and do wincmds where possible
+-- TODO: validations fail when trying to open with a preview window open
+-- can get to happen in loclist diag opening
+
 vim.api.nvim_set_var("qf_rancher_validate", true)
 
 vim.api.nvim_set_option_value("buflisted", false, { buf = 0 })
 
 vim.opt_local.colorcolumn = ""
 vim.opt_local.list = false
-vim.opt_local.winfixbuf = true
+-- TODO: Restore this. Currently off for testing
+-- vim.opt_local.winfixbuf = true
+
+vim.keymap.set("n", "<C-w>v", "<nop>", { buffer = true })
+vim.keymap.set("n", "<C-w><C-v>", "<nop>", { buffer = true })
+vim.keymap.set("n", "<C-w>s", "<nop>", { buffer = true })
+vim.keymap.set("n", "<C-w><C-s>", "<nop>", { buffer = true })
 
 Map("n", "<leader>q", function()
     local win = vim.api.nvim_get_current_win()
@@ -85,6 +95,18 @@ Map("x", "d", function()
 
     require("mjm.utils").protected_set_cursor({ row, col }, { set_pcmark = true, win = win })
 end, { buffer = true })
+
+-- TODO: p should be toggle, they maybe P for force open and <C-p> for force close. but maybe
+-- there are better ideas
+-- IMO <C-j> and <C-k> should be scrolling the window
+-- TODO: look at other plugins for ideas on this
+Map("n", "p", function()
+    require("mjm.error-list-preview").toggle_preview_win()
+end, { buffer = true })
+
+-- Map("n", "P", function()
+--     require("mjm.error-list-preview").close_preview_win()
+-- end, { buffer = true })
 
 -------------
 --- Types ---
@@ -176,9 +198,11 @@ local function find_loclist_win(list_qf_id, list_win)
         vim.validate("list_qf_id", list_qf_id, function()
             return list_qf_id > 0
         end)
+
         local is_valid = function()
             return vim.api.nvim_win_is_valid(list_win)
         end
+
         vim.validate("list_win", list_win, is_valid)
         local list_buf = vim.api.nvim_win_get_buf(list_win)
         local list_buftype = vim.api.nvim_get_option_value("buftype", { buf = list_buf })
@@ -300,11 +324,9 @@ local function qf_open_finish(dest_win, finish, list_win)
         require("mjm.error-list").close_win_restview(list_win)
     end
 
-    local zz_cmd = { cmd = "normal", args = { "zz" }, bang = true }
-    local zz = function()
-        vim.api.nvim_cmd(zz_cmd, {})
-    end
-    vim.api.nvim_win_call(dest_win, zz)
+    vim.api.nvim_win_call(dest_win, function()
+        vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
+    end)
 
     if finish == "focusList" then
         vim.api.nvim_set_current_win(list_win)
@@ -606,10 +628,9 @@ local function qf_iter_winnr(list_winnr, total_winnr)
     if vim.api.nvim_get_var("qf_rancher_validate") then
         vim.validate("list_winnr", list_winnr, "number")
         vim.validate("total_winnr", total_winnr, "number")
-        local total_valid = function()
+        vim.validate("total_winnr", total_winnr, function()
             return total_winnr <= vim.fn.winnr("$")
-        end
-        vim.validate("total_winnr", total_winnr, total_valid)
+        end)
     end
 
     local other_winnr = list_winnr --- @type integer
@@ -620,6 +641,7 @@ local function qf_iter_winnr(list_winnr, total_winnr)
         if other_winnr <= 0 then
             other_winnr = total_winnr
         end
+
         if other_winnr == list_winnr then
             return nil
         end
@@ -640,14 +662,14 @@ end
 --- @return integer|nil
 local function qf_find_alt_win(list_win)
     if vim.api.nvim_get_var("qf_rancher_validate") then
-        local list_valid = function()
+        vim.validate("list_win", list_win, function()
             return vim.api.nvim_win_is_valid(list_win)
-        end
-        vim.validate("list_win", list_win, list_valid)
-        local is_cur_list_win = function()
+        end)
+
+        vim.validate("list_win", list_win, function()
             return vim.api.nvim_get_current_win() == list_win
-        end
-        vim.validate("list_win", list_win, is_cur_list_win)
+        end)
+
         local list_wintype = vim.fn.win_gettype(list_win)
         vim.validate("list_win", list_win, function()
             return list_wintype == "quickfix"
@@ -657,6 +679,7 @@ local function qf_find_alt_win(list_win)
     local alt_winnr = vim.api.nvim_win_call(list_win, function()
         return vim.fn.winnr("#")
     end)
+
     local alt_win = vim.fn.win_getid(alt_winnr) --- @type integer
     if alt_win == list_win then
         return nil
@@ -678,15 +701,16 @@ end
 local function qf_find_matching_buf(list_winnr, total_winnr, bufnr, usetab)
     if vim.api.nvim_get_var("qf_rancher_validate") then
         vim.validate("list_winnr", list_winnr, "number")
+
         vim.validate("total_winnr", total_winnr, "number")
-        local total_valid = function()
+        vim.validate("total_winnr", total_winnr, function()
             return total_winnr <= vim.fn.winnr("$")
-        end
-        vim.validate("total_winnr", total_winnr, total_valid)
-        local buf_valid = function()
+        end)
+
+        vim.validate("bufnr", bufnr, function()
             return vim.api.nvim_buf_is_valid(bufnr)
-        end
-        vim.validate("bufnr", bufnr, buf_valid)
+        end)
+
         vim.validate("usetab", usetab, "boolean")
     end
 
@@ -726,10 +750,9 @@ end
 local function find_help_win(total_winnr)
     if vim.api.nvim_get_var("qf_rancher_validate") then
         vim.validate("total_winnr", total_winnr, "number")
-        local total_valid = function()
+        vim.validate("total_winnr", total_winnr, function()
             return total_winnr <= vim.fn.winnr("$")
-        end
-        vim.validate("total_winnr", total_winnr, total_valid)
+        end)
     end
 
     for i = 1, total_winnr do
@@ -753,20 +776,20 @@ end
 local function qf_get_next_win_loclist(list_qf_id, list_win, total_winnr, entry)
     if vim.api.nvim_get_var("qf_rancher_validate") then
         vim.validate("list_qf_id", list_qf_id, "number")
-        local loc_qf = function()
+        vim.validate("list_qf_id", list_qf_id, function()
             return list_qf_id > 0
-        end
-        vim.validate("list_qf_id", list_qf_id, loc_qf)
+        end)
+
         vim.validate("list_win", list_win, "number")
-        local list_valid = function()
+        vim.validate("list_win", list_win, function()
             return vim.api.nvim_win_is_valid(list_win)
-        end
-        vim.validate("list_win", list_win, list_valid)
+        end)
+
         vim.validate("total_winnr", total_winnr, "number")
-        local total_valid = function()
+        vim.validate("total_winnr", total_winnr, function()
             return total_winnr <= vim.fn.winnr("$")
-        end
-        vim.validate("total_winnr", total_winnr, total_valid)
+        end)
+
         vim.validate("entry", entry, "table")
     end
 
@@ -915,11 +938,9 @@ local function qf_split_full(ctx)
         end
     end
 
-    local zz_cmd = { cmd = "normal", args = { "zz" }, bang = true }
-    local zz = function()
-        vim.api.nvim_cmd(zz_cmd, {})
-    end
-    vim.api.nvim_win_call(dest_win, zz)
+    vim.api.nvim_win_call(dest_win, function()
+        vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
+    end)
 end
 
 --- @param list_win integer
@@ -952,11 +973,9 @@ local function qf_split_tab_handle_orphan(list_win, dest_win, finish)
         el.open_loclist(open_opts)
     end
 
-    local zz_cmd = { cmd = "normal", args = { "zz" }, bang = true }
-    local zz = function()
-        vim.api.nvim_cmd(zz_cmd, {})
-    end
-    vim.api.nvim_win_call(dest_win, zz)
+    vim.api.nvim_win_call(dest_win, function()
+        vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
+    end)
 end
 
 --- @param buf_source table
@@ -1019,18 +1038,15 @@ local function qf_split_tab(buf_source, buf_opts, list_win, finish, qf_id, is_lo
 
     if finish == "focusList" then
         vim.api.nvim_set_current_win(list_win)
-        return
     end
 
     if finish == "closeList" then
         require("mjm.error-list").close_win_restview(list_win)
     end
 
-    local zz_cmd = { cmd = "normal", args = { "zz" }, bang = true }
-    local zz = function()
-        vim.api.nvim_cmd(zz_cmd, {})
-    end
-    vim.api.nvim_win_call(dest_win, zz)
+    vim.api.nvim_win_call(dest_win, function()
+        vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
+    end)
 end
 
 --- @param list_win integer
@@ -1090,6 +1106,8 @@ local function qf_split_single_win(list_win, open, finish)
     if finish == "focusList" then
         vim.api.nvim_set_current_win(list_win)
     end
+
+    -- TODO: Don't we need to zz here?
 end
 
 --- @param list_win integer
@@ -1220,6 +1238,7 @@ local function qf_split(open, finish)
             open = open,
             finish = finish,
         })
+
         return
     end
 
@@ -1237,6 +1256,7 @@ local function qf_split(open, finish)
     if finish == "focusList" then
         vim.api.nvim_set_current_win(list_win)
     end
+
     if finish == "closeList" then
         require("mjm.error-list").close_win_restview(list_win)
     end
@@ -1245,6 +1265,7 @@ local function qf_split(open, finish)
     local zz = function()
         vim.api.nvim_cmd(zz_cmd, {})
     end
+
     vim.api.nvim_win_call(dest_win, zz)
 end
 
@@ -1254,9 +1275,11 @@ end
 Map("n", "s", function()
     qf_split("split", "focusWin")
 end, { buffer = true })
+
 Map("n", "S", function()
     qf_split("split", "closeList")
 end, { buffer = true })
+
 Map("n", "<C-s>", function()
     qf_split("split", "focusList")
 end, { buffer = true })
@@ -1264,9 +1287,11 @@ end, { buffer = true })
 Map("n", "v", function()
     qf_split("vsplit", "focusWin")
 end, { buffer = true })
+
 Map("n", "V", function()
     qf_split("vsplit", "closeList")
 end, { buffer = true })
+
 Map("n", "<C-v>", function()
     qf_split("vsplit", "focusList")
 end, { buffer = true })
@@ -1274,9 +1299,11 @@ end, { buffer = true })
 Map("n", "x", function()
     qf_split("tabnew", "focusWin")
 end, { buffer = true })
+
 Map("n", "X", function()
     qf_split("tabnew", "closeList")
 end, { buffer = true })
+
 Map("n", "<C-x>", function()
     qf_split("tabnew", "focusList")
 end, { buffer = true })

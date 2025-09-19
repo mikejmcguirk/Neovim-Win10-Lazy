@@ -186,6 +186,14 @@ function M.qf_sys_wrap(get_cmd_parts, opts)
             end
         end
 
+        -- TODO: I have this copied over to the diags module as well
+        -- It seems like what we want is a separate bit of code in a utils module or something to
+        -- handle setting to the list. So you would want the formatted items, the list type,
+        -- the win number, and the action, and then that can be calculated
+        -- Especially relevant when you start dealing with cases like copies, or more complex
+        -- add logic into blanks
+        -- TODO: outline anyway, but also it should not be possible to both merge and overwrite
+        -- though I'm not sure it hurts anything so iunno. Or maybe it should be an enum
         if opts.merge then
             local cur_list = getlist({ nr = list_nr, items = true })
             qf_dict.items = merge_qf_lists(cur_list.items, qf_dict.items)

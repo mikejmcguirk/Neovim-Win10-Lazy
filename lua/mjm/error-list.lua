@@ -4,23 +4,27 @@
 
 --- TODO: Create a quickfixtextfuc that's as information rich as possible without being busy
 --- TODO: Wrapper functions should make reasonable sorts as much as possible
---- TODO: Run/refresh from title. Wrappers should set it up properly
---- --- Can get rid of redo grep map
 --- TODO: More visibility for cdo/cfdo. Use bang by default?
 --- TODO: Wrapper functions should trigger window height updates. Resize cmd
---- TODO: De-map split cmds in windows
---- --- kinda already done but should be explicit
 --- TODO: Copy list. no count = to next. Count = after list
---- TODO: Use vim-grepper as an architectural base to build out the idea that, for the grep
----     funcs, we want some kind of detection or choice for what grepprg to use. My rough idea
----     is that there should be a default hierarchy of programs to prefer, and then the user
----     can set a g:variable if they have a preferred choice. Ignore the vim defaults
 --- TODO: Go through everything and see what is and is not exposed
 --- TODO: If the list is already open, an open command should not trigger a re-size. I had ideas
 --- about this in other commands, but a manual resize should just be triggered
 --- TODO: Have some kind of shortcut to make the list taller. Make sure it preserves view
 ---     Was thinking qq for toggle, qQ for resize, maybe q<c-Q> to make bigger?
+--- TODO: Once the actual commands to map are finalized, create plugs
+--- TODO: Go thorugh this file and get all old functionalities. Need wrap commands and
+--- state management. Note history should adjust height
+--- Maybe grep shouldn't be e, because deleting lists is going to be a common op, probably need
+--- qe and le to be available.  qd suks. ll sucks.  qt and lt not that great.
+--- A reversal of this though is that if you have qie as diag errors, then accidently doing qe
+--- would be unfortunate. It might be relevant to put qd as the map and then not map anything
+--- else to d
+--- Feels roughly like qd for delete current/count list and qD to delete all. But also a potential
+--- fat finger. Maybe have separate keys for current and specific lists
+--- TODO: look at the issue/PR lists for the various qf plugins to see what people want
 
+--- MAYBE: Should open/close cmds also run wincmd =?
 --- MAYBE: Treesitter/Semantic Token Highlighting
 --- MAYBE: Incremental preview of cdo/cfdo changes
 --- MAYBE: General cmd parsing: https://github.com/niuiic/quickfix.nvim
@@ -351,6 +355,7 @@ function M.close_qflist()
 end
 
 --- @return boolean
+-- TODO: This should take in a height value. Make sure to update get_resizelist when added
 function M.resize_qflist()
     local qf_win = nil --- @type integer|nil
     local views = {} --- @type vim.fn.winsaveview.ret[]
@@ -644,136 +649,6 @@ end)
 Map("n", "doa", function()
     M.close_loclist()
     vim.fn.setloclist(vim.api.nvim_get_current_win(), {}, "f")
-end)
-
-local severity_map = {
-    [vim.diagnostic.severity.ERROR] = "E",
-    [vim.diagnostic.severity.WARN] = "W",
-    [vim.diagnostic.severity.INFO] = "I",
-    [vim.diagnostic.severity.HINT] = "H",
-} ---@type table<integer, string>
-
----@param d table
----@return table
-local function convert_diag(d)
-    d = d or {}
-
-    local source = d.source and d.source .. ": " or "" ---@type string
-    local message = d.message or "" ---@type string
-
-    return {
-        bufnr = d.bufnr,
-        col = d.col and (d.col + 1) or nil,
-        end_col = d.end_col and (d.end_col + 1) or nil,
-        end_lnum = d.end_lnum and (d.end_lnum + 1) or nil,
-        filename = vim.fn.bufname(d.bufnr),
-        lnum = d.lnum + 1,
-        nr = tonumber(d.code), -- TODO: Unsure how this formats
-        text = source .. message,
-        type = severity_map[d.severity],
-        valid = 1,
-    }
-end
-
---- PERF: For highest severity, use diagnostic.get once then iterate manually. Can avoid a lot
---- of logic that way
----@param opts? {highest:boolean, err_only:boolean}
----@return nil
-local function all_diags_to_qflist(opts)
-    opts = opts or {}
-
-    local severity = (function()
-        if opts.highest then
-            return require("mjm.utils").get_top_severity({ buf = nil })
-        elseif opts.err_only then
-            return vim.diagnostic.severity.ERROR
-        else
-            return { min = vim.diagnostic.severity.HINT }
-        end
-    end)() ---@type integer|{min:integer}
-
-    ---@diagnostic disable: undefined-doc-name
-    local raw_diags = vim.diagnostic.get(nil, { severity = severity }) ---@type vim.diagnostic[]
-    if #raw_diags == 0 then
-        local name = opts.err_only and "errors" or "diagnostics" ---@type string
-        vim.api.nvim_cmd({ cmd = "ccl" }, {})
-
-        vim.notify("No " .. name)
-        return
-    end
-
-    local diags_for_qflist = vim.tbl_map(convert_diag, raw_diags) ---@type table
-    assert(#raw_diags == #diags_for_qflist, "Coverted diags were filtered")
-
-    -- This guarantees being at the end of the stack and a new qflist. Does push down
-    -- Stick with this behavior, then have yUi or whatever be overwrite current
-    vim.fn.setqflist({}, " ", { nr = "$" })
-    -- vim.fn.setqflist({}, "r", { title = "get_diags" })
-    vim.fn.setqflist(diags_for_qflist, "a")
-    M.open_qflist()
-end
-
----@param opts? {highest:boolean, err_only:boolean}
----@return nil
-local function buf_diags_to_loclist(opts)
-    opts = opts or {}
-
-    local win = vim.api.nvim_get_current_win() ---@type integer
-    local buf = vim.api.nvim_win_get_buf(win) ---@type integer
-    if not require("mjm.utils").check_modifiable(buf) then
-        return
-    end
-
-    local severity = (function()
-        if opts.highest then
-            return require("mjm.utils").get_top_severity({ buf = buf })
-        elseif opts.err_only then
-            return vim.diagnostic.severity.ERROR
-        else
-            return { min = vim.diagnostic.severity.HINT }
-        end
-    end)() ---@type integer|{min:integer}
-
-    ---@diagnostic disable: undefined-doc-name
-    local raw_diags = vim.diagnostic.get(buf, { severity = severity }) ---@type vim.diagnostic[]
-    if #raw_diags == 0 then
-        local name = opts.err_only and "errors" or "diagnostics" ---@type string
-        vim.api.nvim_cmd({ cmd = "lcl" }, {})
-
-        vim.notify("No " .. name)
-        return
-    end
-
-    local diags_for_loclist = vim.tbl_map(convert_diag, raw_diags) ---@type table
-    assert(#raw_diags == #diags_for_loclist, "Coverted diags were filtered")
-
-    vim.fn.setloclist(win, diags_for_loclist, "r")
-    vim.api.nvim_cmd({ cmd = "ccl" }, {})
-    vim.api.nvim_cmd({ cmd = "lop" }, {})
-end
-
-Map("n", "yui", function()
-    all_diags_to_qflist()
-end)
-
-Map("n", "yue", function()
-    all_diags_to_qflist({ err_only = true })
-end)
-
-Map("n", "yuh", function()
-    all_diags_to_qflist({ highest = true })
-end)
-
-Map("n", "yoi", function()
-    buf_diags_to_loclist()
-end)
-
-Map("n", "yoe", function()
-    buf_diags_to_loclist({ err_only = true })
-end)
-
-Map("n", "yoh", function()
-    buf_diags_to_loclist({ highest = true })
 end)
 
 local function qf_scroll_wrapper(main, alt, end_err)

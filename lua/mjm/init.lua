@@ -136,6 +136,7 @@ vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
         require("mjm.error-list-sort")
         require("mjm.error-list-system")
         require("mjm.error-list-grep")
+        require("mjm.error-list-diag")
         require("mjm.treesitter")
 
         require("mjm.diagnostic")
