@@ -87,6 +87,7 @@ local M = {}
 --- Config ---
 --------------
 
+-- TODO: Allow for customizing as many of the winopts as possible. Stuff like winblend
 -- TODO: The autocmd for this should resolve in the "plugin" file. I don't see the need for the
 -- autocmd to run if it does nothing
 vim.api.nvim_set_var("qf_rancher_preview_autoshow", false)
@@ -154,6 +155,7 @@ local function create_autocmds()
         callback = function(ev)
             local cur_win = vim.api.nvim_get_current_win()
             if cur_win == qf_win and ev.buf ~= qf_buf then
+                -- TODO: I think this is firing when I'm leaving the qflist
                 clear_session_data()
             end
         end,
@@ -325,6 +327,7 @@ end
 --- @param bufnr integer
 --- @param item table
 --- @return Range4
+-- TODO: This needs to handle the virtual column case in addition to the byte col case
 local function get_hl_range(bufnr, item)
     local row = item.lnum >= 0 and item.lnum - 1 or 0
     local start_line = vim.api.nvim_buf_get_lines(bufnr, row, row + 1, false)[1]
@@ -393,6 +396,88 @@ end
 ------------------------------
 --- Window Opening/Closing ---
 ------------------------------
+
+local function win_position()
+    if not qf_win then
+        return
+    end
+
+    local good_top = true
+    local good_right = true
+    local good_left = true
+    local good_bottom = true
+
+    local win_pos = vim.api.nvim_win_get_position(qf_win)
+    -- screen height of the window not including stl and cmd bars
+    local win_height = vim.api.nvim_win_get_height(qf_win)
+    --total screen cols not including border
+    local win_width = vim.api.nvim_win_get_width(qf_win)
+    local lines = vim.api.nvim_get_option_value("lines", { scope = "global" })
+    local columns = vim.api.nvim_get_option_value("columns", { scope = "global" })
+
+    -- local space_above = win_pos[1] -
+    local side_padding = 7
+    local good_width = 79
+    local horizontal_width = win_width - (side_padding * 2)
+    if horizontal_width < good_width then
+        good_top = false
+        good_bottom = false
+    end
+
+    local top_room = win_pos[1] - 1
+    local vert_padding = 3
+    local good_height = 27
+    local available_top = top_room - (vert_padding * 2)
+
+    -- TODO: check above and below first, then left and right, then do screenrow()
+    -- TODO: calculate this differently with wider win
+    if available_top < good_height then
+        good_top = false
+    end
+
+    -- TODO: setting the value then checking it feels unnecessary
+    if good_top then
+        -- render on top
+    end
+
+    local right_room = columns - (win_pos[2] + win_width)
+    local avail_right = right_room - (side_padding * 2)
+    if avail_right < good_width then
+        good_right = false
+    end
+
+    if good_right then
+        -- render over there, but we still need to figure out if we're anchoring to the top
+        -- or bottom of the list
+    end
+
+    local left_room = win_pos[1] - 1
+    if left_room < good_width then
+        good_left = false
+    end
+
+    if good_left then
+        -- render to the left, but we need to figure out top or bottom anchor
+    end
+
+    local bottom_room = lines - (win_pos[2] + win_height - 1) - (vert_padding * 2)
+    if bottom_room < good_height then
+        good_bottom = false
+    end
+
+    if good_bottom then
+        -- put it below the list
+    end
+
+    -- local okay_width =
+
+    --- Preferences:
+    --- - Enough lines on top
+    --- - Enough lines on the right
+    --- - Enough lines to the left
+    --- - Enough lines below
+    --- - screen fill
+end
 
 local function get_hl_group()
     local default_hl = "CurSearch"
@@ -538,14 +623,16 @@ function M.open_preview_win()
         return
     end
 
+    win_position()
+
     local win_config = {
         border = get_border(),
         relative = "win",
         win = qf_win,
-        height = 30,
-        width = 80,
-        row = -35,
-        col = 2,
+        height = 27,
+        width = 96,
+        row = -31,
+        col = 7,
         focusable = false,
     }
 
