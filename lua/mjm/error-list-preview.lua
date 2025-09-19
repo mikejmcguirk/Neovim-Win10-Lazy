@@ -292,6 +292,7 @@ local function set_preview_winopts(bufnr)
         return
     end
 
+    vim.api.nvim_set_option_value("cc", "", { win = preview_win })
     vim.api.nvim_set_option_value("cul", true, { win = preview_win })
 
     vim.api.nvim_set_option_value("fdc", "0", { win = preview_win })
@@ -415,10 +416,107 @@ local function win_position()
     end
 
     local win_pos = vim.api.nvim_win_get_position(qf_win)
+    -- note that the height input to the win config does not include the border
     local win_height = vim.api.nvim_win_get_height(qf_win)
     local win_width = vim.api.nvim_win_get_width(qf_win)
     local lines = vim.api.nvim_get_option_value("lines", { scope = "global" })
     local columns = vim.api.nvim_get_option_value("columns", { scope = "global" })
+
+    local padding = 1
+    local min_height = 6 + (padding * 2)
+    local max_height = 24
+    local border = get_border()
+    min_height = border ~= "none" and min_height + 2 or min_height
+    local min_width = 79 + (padding * 2)
+    local border_width = border ~= "none" and 2 or 0
+    min_width = min_width + border_width
+
+    local base_settings = { border = border, win = qf_win, focusable = false }
+
+    local avail_above = win_pos[1] - 1
+    local avail_left = math.max(win_pos[2], 0)
+    local avail_right = math.max(columns - (win_pos[2] + win_width), 0)
+
+    if avail_above >= min_height then
+        local avail_width = win_width - (padding * 2) - border_width
+        local popup_height = avail_above - (padding * 2) - border_width
+        popup_height = math.min(popup_height, max_height)
+        if avail_width >= min_width then
+            return vim.tbl_extend("force", base_settings, {
+                relative = "win",
+                win = qf_win,
+                height = popup_height,
+                row = (popup_height + 4) * -1,
+                width = avail_width,
+                col = 1,
+            })
+        else
+            local width_diff = min_width - avail_width
+            local half_diff = math.floor(width_diff * 0.5)
+            local r_shift = math.max(half_diff - avail_left, 0)
+            local l_shift = math.max(half_diff - avail_right, 0)
+
+            vim.fn.confirm(
+                "half diff: "
+                    .. half_diff
+                    .. ", avail_left: "
+                    .. avail_left
+                    .. ", avail_right: "
+                    .. avail_right
+            )
+            vim.fn.confirm("r shift: " .. r_shift .. ", l shift: " .. l_shift)
+            -- TODO: add truncation if right spill is too big.
+            return vim.tbl_extend("force", base_settings, {
+                relative = "win",
+                win = qf_win,
+                height = popup_height,
+                row = (popup_height + 4) * -1,
+                width = min_width,
+                -- TODO: the col is apparently absolute
+                col = (half_diff * -1) + r_shift - l_shift + 1,
+                -- col = (half_diff * -1) + r_shift + 1,
+            })
+        end
+    end
+
+    local avail_below = lines - (win_pos[1] + win_height - 1)
+    if avail_below >= min_height then
+        local avail_width = win_width - (padding * 2) - border_width
+        if avail_width >= min_width then
+            -- do relative to qf_win's top left. basically as in the demo version
+        else
+            -- the list needs to be centered below the qf_win, spilling over the eges
+        end
+    end
+
+    -- TODO: go right or left based on splitright
+    if avail_right >= min_width then
+        local avail_height = win_height + (padding * 2) - border_width
+        if avail_height >= min_height then
+            -- relative to the top of the qf_win
+        else
+            -- the list needs to spill over. also need to determine if we snap to the top or bottom
+            -- of the win, like the right click menu
+        end
+    end
+
+    if avail_left >= min_width then
+        local avail_height = win_height + (padding * 2) - border_width
+        if avail_height >= min_height then
+            -- relative to the top of the qf_win
+        else
+            -- the list needs to spill over. also need to determine if we snap to the top or bottom
+            -- of the win, like the right click menu
+        end
+    end
+
+    local screenrow = vim.fn.screenrow() --- @type integer
+    local half_way = lines * 0.5
+    if screenrow <= half_way then
+        -- create above
+    else
+        -- create below
+    end
 end
 
 local function get_hl_group()
@@ -564,18 +662,24 @@ function M.open_preview_win()
         return
     end
 
-    win_position()
+    -- local win_config = {
+    --     border = get_border(),
+    --     relative = "win",
+    --     win = qf_win,
+    --     height = 6,
+    --     row = -10,
+    --     -- height = 24,
+    --     -- row = -28,
+    --     width = 102,
+    --     col = 1,
+    --     focusable = false,
+    -- }
 
-    local win_config = {
-        border = get_border(),
-        relative = "win",
-        win = qf_win,
-        height = 24,
-        width = 102,
-        row = -28,
-        col = 1,
-        focusable = false,
-    }
+    local win_config = win_position()
+    if not win_config then
+        clear_session_data()
+        return
+    end
 
     preview_win = vim.api.nvim_open_win(preview_buf, false, win_config)
     decorate_window(preview_buf, did_ftdetect, item)
