@@ -49,7 +49,7 @@ vim.api.nvim_set_option_value("mouse", "", { scope = "global" })
 vim.api.nvim_set_option_value("modelines", 1, { scope = "global" })
 
 vim.api.nvim_set_option_value("selection", "old", { scope = "global" })
-vim.api.nvim_set_option_value("scrolloff", Scrolloff_Val, { scope = "global" })
+vim.api.nvim_set_option_value("so", Scrolloff_Val, { scope = "global" })
 
 vim.api.nvim_set_option_value("splitbelow", true, { scope = "global" })
 vim.api.nvim_set_option_value("splitright", true, { scope = "global" })
@@ -94,11 +94,11 @@ local listchars = "tab:<->,extends:»,precedes:«,nbsp:␣,trail:⣿"
 vim.api.nvim_set_option_value("listchars", listchars, { scope = "global" })
 
 -- On my monitors, for files under 10k lines, a centered vsplit will be on the color column
-vim.api.nvim_set_option_value("number", true, { scope = "global" })
-vim.api.nvim_set_option_value("relativenumber", true, { scope = "global" })
-vim.api.nvim_set_option_value("colorcolumn", "100", { scope = "global" })
-vim.api.nvim_set_option_value("numberwidth", 5, { scope = "global" })
-vim.api.nvim_set_option_value("signcolumn", "yes:1", { scope = "global" })
+vim.api.nvim_set_option_value("nu", true, { scope = "global" })
+vim.api.nvim_set_option_value("rnu", true, { scope = "global" })
+vim.api.nvim_set_option_value("cc", "100", { scope = "global" })
+vim.api.nvim_set_option_value("nuw", 5, { scope = "global" })
+vim.api.nvim_set_option_value("scl", "yes:1", { scope = "global" })
 
 vim.api.nvim_set_option_value("cursorline", true, { scope = "global" })
 
