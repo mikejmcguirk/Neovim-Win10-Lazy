@@ -398,90 +398,31 @@ end
 ------------------------------
 
 local function win_position()
+    --- TODO: Open strategy:
+    --- - Check in order: top, bottom, right, left
+    --- - If the direction can be used at all, use it
+    --- - Try to fit if possible
+    --- - If no fits are possible, use half-fill based on screenpos
+    --- - The dimensions/spacing I have right now are the target. The one-padding IMO helps with
+    --- numberline confusion, and the height is enough to breathe a bit while still feeling
+    --- compact. The min width IMO is 79. Anything else is unreadable. Unsure yet about
+    --- min height. Thinking like five but need to do observations. So if you can fit the
+    --- minimum in a direction, use the minimum. Remember though that the calculations need to
+    --- account for the border. I *think* the win config does that but need to test with no
+    --- border
     if not qf_win then
         return
     end
 
-    local good_top = true
-    local good_right = true
-    local good_left = true
-    local good_bottom = true
-
     local win_pos = vim.api.nvim_win_get_position(qf_win)
-    -- screen height of the window not including stl and cmd bars
     local win_height = vim.api.nvim_win_get_height(qf_win)
-    --total screen cols not including border
     local win_width = vim.api.nvim_win_get_width(qf_win)
     local lines = vim.api.nvim_get_option_value("lines", { scope = "global" })
     local columns = vim.api.nvim_get_option_value("columns", { scope = "global" })
-
-    -- local space_above = win_pos[1] -
-    local side_padding = 7
-    local good_width = 79
-    local horizontal_width = win_width - (side_padding * 2)
-    if horizontal_width < good_width then
-        good_top = false
-        good_bottom = false
-    end
-
-    local top_room = win_pos[1] - 1
-    local vert_padding = 3
-    local good_height = 27
-    local available_top = top_room - (vert_padding * 2)
-
-    -- TODO: check above and below first, then left and right, then do screenrow()
-    -- TODO: calculate this differently with wider win
-    if available_top < good_height then
-        good_top = false
-    end
-
-    -- TODO: setting the value then checking it feels unnecessary
-    if good_top then
-        -- render on top
-    end
-
-    local right_room = columns - (win_pos[2] + win_width)
-    local avail_right = right_room - (side_padding * 2)
-    if avail_right < good_width then
-        good_right = false
-    end
-
-    if good_right then
-        -- render over there, but we still need to figure out if we're anchoring to the top
-        -- or bottom of the list
-    end
-
-    local left_room = win_pos[1] - 1
-    if left_room < good_width then
-        good_left = false
-    end
-
-    if good_left then
-        -- render to the left, but we need to figure out top or bottom anchor
-    end
-
-    local bottom_room = lines - (win_pos[2] + win_height - 1) - (vert_padding * 2)
-    if bottom_room < good_height then
-        good_bottom = false
-    end
-
-    if good_bottom then
-        -- put it below the list
-    end
-
-    -- local okay_width =
-
-    --- Preferences:
-    --- - Enough lines on top
-    --- - Enough lines on the right
-    --- - Enough lines to the left
-    --- - Enough lines below
-    --- - screen fill
 end
 
 local function get_hl_group()
     local default_hl = "CurSearch"
-
     local ok_g, g_hl = pcall(vim.api.nvim_get_var, "qf_rancher_preview_hl_group")
     if not ok_g then
         return default_hl
@@ -629,10 +570,10 @@ function M.open_preview_win()
         border = get_border(),
         relative = "win",
         win = qf_win,
-        height = 27,
-        width = 96,
-        row = -31,
-        col = 7,
+        height = 24,
+        width = 102,
+        row = -28,
+        col = 1,
         focusable = false,
     }
 
