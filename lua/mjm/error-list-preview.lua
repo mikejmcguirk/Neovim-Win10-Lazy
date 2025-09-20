@@ -399,18 +399,6 @@ end
 ------------------------------
 
 local function win_position()
-    --- TODO: Open strategy:
-    --- - Check in order: top, bottom, right, left
-    --- - If the direction can be used at all, use it
-    --- - Try to fit if possible
-    --- - If no fits are possible, use half-fill based on screenpos
-    --- - The dimensions/spacing I have right now are the target. The one-padding IMO helps with
-    --- numberline confusion, and the height is enough to breathe a bit while still feeling
-    --- compact. The min width IMO is 79. Anything else is unreadable. Unsure yet about
-    --- min height. Thinking like five but need to do observations. So if you can fit the
-    --- minimum in a direction, use the minimum. Remember though that the calculations need to
-    --- account for the border. I *think* the win config does that but need to test with no
-    --- border
     if not qf_win then
         return
     end
@@ -431,22 +419,25 @@ local function win_position()
     local border_width = border ~= "none" and 2 or 0
     min_width = min_width + border_width
 
-    local base_settings = { border = border, win = qf_win, focusable = false }
+    local base_settings = { border = border, focusable = false }
 
     local avail_above = win_pos[1] - 1
+    local avail_below = lines - (win_pos[1] + win_height - 1)
     local avail_left = math.max(win_pos[2], 0)
     local avail_right = math.max(columns - (win_pos[2] + win_width), 0)
+    local avail_width = win_width - (padding * 2) - border_width
+    local avail_height = win_height - (padding * 2) - border_width
 
     if avail_above >= min_height then
-        local avail_width = win_width - (padding * 2) - border_width
         local popup_height = avail_above - (padding * 2) - border_width
         popup_height = math.min(popup_height, max_height)
+        local row = (popup_height + 3) * -1
         if avail_width >= min_width then
             return vim.tbl_extend("force", base_settings, {
                 relative = "win",
                 win = qf_win,
                 height = popup_height,
-                row = (popup_height + 4) * -1,
+                row = row,
                 width = avail_width,
                 col = 1,
             })
@@ -456,66 +447,122 @@ local function win_position()
             local r_shift = math.max(half_diff - avail_left, 0)
             local l_shift = math.max(half_diff - avail_right, 0)
 
-            vim.fn.confirm(
-                "half diff: "
-                    .. half_diff
-                    .. ", avail_left: "
-                    .. avail_left
-                    .. ", avail_right: "
-                    .. avail_right
-            )
-            vim.fn.confirm("r shift: " .. r_shift .. ", l shift: " .. l_shift)
-            -- TODO: add truncation if right spill is too big.
             return vim.tbl_extend("force", base_settings, {
                 relative = "win",
                 win = qf_win,
                 height = popup_height,
-                row = (popup_height + 4) * -1,
-                width = min_width,
-                -- TODO: the col is apparently absolute
+                row = row,
+                width = math.min(min_width, columns),
                 col = (half_diff * -1) + r_shift - l_shift + 1,
-                -- col = (half_diff * -1) + r_shift + 1,
             })
         end
     end
 
-    local avail_below = lines - (win_pos[1] + win_height - 1)
     if avail_below >= min_height then
-        local avail_width = win_width - (padding * 2) - border_width
+        local popup_height = avail_below - (padding * 2) - border_width
+        popup_height = math.min(popup_height, max_height)
+        local row = win_height + 1
         if avail_width >= min_width then
-            -- do relative to qf_win's top left. basically as in the demo version
+            return vim.tbl_extend("force", base_settings, {
+                relative = "win",
+                win = qf_win,
+                height = popup_height,
+                row = row,
+                width = avail_width,
+                col = 1,
+            })
         else
-            -- the list needs to be centered below the qf_win, spilling over the eges
+            local width_diff = min_width - avail_width
+            local half_diff = math.floor(width_diff * 0.5)
+            local r_shift = math.max(half_diff - avail_left, 0)
+            local l_shift = math.max(half_diff - avail_right, 0)
+
+            return vim.tbl_extend("force", base_settings, {
+                relative = "win",
+                win = qf_win,
+                height = popup_height,
+                row = row,
+                width = math.min(min_width, columns),
+                col = (half_diff * -1) + r_shift - l_shift + 1,
+            })
         end
     end
 
     -- TODO: go right or left based on splitright
     if avail_right >= min_width then
-        local avail_height = win_height + (padding * 2) - border_width
+        local col = win_pos[2] + win_width + 2
         if avail_height >= min_height then
-            -- relative to the top of the qf_win
+            return vim.tbl_extend("force", base_settings, {
+                relative = "win",
+                win = qf_win,
+                height = math.min(avail_height, max_height),
+                row = 0,
+                width = avail_width,
+                col = col,
+            })
         else
-            -- the list needs to spill over. also need to determine if we snap to the top or bottom
-            -- of the win, like the right click menu
+            local height_diff = min_height - avail_height
+            local half_diff = math.floor(height_diff * 0.5)
+            local u_shift = math.max(half_diff - avail_above, 0)
+            local d_shift = math.max(half_diff - avail_below, 0)
+
+            return vim.tbl_extend("force", base_settings, {
+                relative = "win",
+                win = qf_win,
+                height = math.min(min_height, lines),
+                row = (half_diff * -1) - u_shift + d_shift - 1,
+                width = avail_width,
+                col = col,
+            })
         end
     end
 
     if avail_left >= min_width then
-        local avail_height = win_height + (padding * 2) - border_width
+        local col = (avail_width + 4) * -1
         if avail_height >= min_height then
-            -- relative to the top of the qf_win
+            return vim.tbl_extend("force", base_settings, {
+                relative = "win",
+                win = qf_win,
+                height = math.min(avail_height, max_height),
+                row = 0,
+                width = avail_width,
+                col = col,
+            })
         else
-            -- the list needs to spill over. also need to determine if we snap to the top or bottom
-            -- of the win, like the right click menu
+            local height_diff = min_height - avail_height
+            local half_diff = math.floor(height_diff * 0.5)
+            local u_shift = math.max(half_diff - avail_above, 0)
+            local d_shift = math.max(half_diff - avail_below, 0)
+
+            return vim.tbl_extend("force", base_settings, {
+                relative = "win",
+                win = qf_win,
+                height = math.min(min_height, lines),
+                row = (half_diff * -1) - u_shift + d_shift - 1,
+                width = avail_width,
+                col = col,
+            })
         end
     end
 
     local screenrow = vim.fn.screenrow() --- @type integer
-    local half_way = lines * 0.5
+    local half_way = lines * 0.5 --- @type number
     if screenrow <= half_way then
-        -- create above
+        return vim.tbl_extend("force", base_settings, {
+            relative = "tabline",
+            height = math.floor(lines * 0.5),
+            row = math.floor(lines * 0.5),
+            width = columns - 4,
+            col = 1,
+        })
     else
-        -- create below
+        return vim.tbl_extend("force", base_settings, {
+            relative = "tabline",
+            height = math.floor(lines * 0.5),
+            row = 0,
+            width = columns - 4,
+            col = 1,
+        })
     end
 end
 
