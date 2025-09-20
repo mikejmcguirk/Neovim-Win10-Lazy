@@ -41,6 +41,17 @@ local augroup = vim.api.nvim_create_augroup(augroup_name, { clear = true })
 -------------------------
 
 local function clear_session_data()
+    if preview_win and vim.api.nvim_win_is_valid(preview_win) then
+        local ok_w, result = pcall(function()
+            vim.api.nvim_win_close(preview_win, true)
+        end)
+
+        if not ok_w then
+            local msg = result or "Unknown error closing preview win"
+            vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+        end
+    end
+
     for _, bufnr in pairs(buf_cache) do
         if vim.api.nvim_buf_is_valid(bufnr) then
             vim.api.nvim_buf_clear_namespace(bufnr, hl_ns, 0, -1)
@@ -327,153 +338,176 @@ end
 --- Window Opening/Closing ---
 ------------------------------
 
+--- @param base_cfg table
+--- @param e_lines integer
+--- @param e_cols integer
+--- @param padding integer
+--- @param preview_border_width integer
+local function get_fallback_win_config(base_cfg, e_lines, e_cols, padding, preview_border_width)
+    local fallback_base = vim.tbl_extend("force", base_cfg, {
+        relative = "tabline",
+        height = math.floor(e_lines * 0.4),
+        width = e_cols - (padding * 2) - preview_border_width,
+        col = 1,
+    }) --- @type table
+
+    local screenrow = vim.fn.screenrow() --- @type integer
+    local half_way = e_lines * 0.5 --- @type number
+    if screenrow <= half_way then
+        return vim.tbl_extend("force", fallback_base, { row = math.floor(e_lines * 0.6) })
+    else
+        return vim.tbl_extend("force", fallback_base, { row = 0 })
+    end
+end
+
 --- @return table|nil
 local function get_win_config()
     if not qf_win then
         return nil
     end
 
-    local win_pos = vim.api.nvim_win_get_position(qf_win)
-    local win_height = vim.api.nvim_win_get_height(qf_win)
-    local win_width = vim.api.nvim_win_get_width(qf_win)
-    local lines = vim.api.nvim_get_option_value("lines", { scope = "global" })
-    local columns = vim.api.nvim_get_option_value("columns", { scope = "global" })
+    local qf_pos = vim.api.nvim_win_get_position(qf_win)
+    local qf_height = vim.api.nvim_win_get_height(qf_win)
+    local qf_width = vim.api.nvim_win_get_width(qf_win)
+    local e_lines = vim.api.nvim_get_option_value("lines", { scope = "global" })
+    local e_cols = vim.api.nvim_get_option_value("columns", { scope = "global" })
 
-    local padding = 1
-    local min_height = 6
-    local max_height = 24
     local border = get_border()
-    min_height = border ~= "none" and min_height + 2 or min_height
-    local min_width = 79 + (padding * 2)
-    local border_width = border ~= "none" and 2 or 0
-    min_width = min_width + border_width
+    local preview_border_width = border ~= "none" and 2 or 0
+    local vim_border = 1
+    local padding = 1
 
-    local base_settings = { border = border, focusable = false }
-    local win_settings = vim.tbl_extend("force", base_settings, { relative = "win", win = qf_win })
+    -- Window width and height only account for the inside of the window, not its borders. For
+    -- consistency, track the target internal size of the window separately from the space needed
+    -- to render the window plus the borders and padding
+    local min_height = 6
+    local min_y_space = min_height + preview_border_width
+    local max_height = 24
+    -- MAYBE: For left/right previews, no padding on top looks better. Same for below previews
+    -- For top previews, can go either way on padding. Would be neat to have more fine-grain
+    -- control. But for now, just say no vertical padding for consistency
+    local min_width = 79
+    local min_x_space = min_width + (padding * 2) + preview_border_width
 
-    local avail_above = win_pos[1] - 1
-    local avail_left = math.max(win_pos[2], 0)
-    local avail_right = math.max(columns - (win_pos[2] + win_width), 0)
-    local avail_width = win_width - (padding * 2) - border_width
+    local base_cfg = { border = border, focusable = false }
+    local win_cfg = vim.tbl_extend("force", base_cfg, { relative = "win", win = qf_win })
 
-    if avail_above >= min_height then
-        local popup_height = avail_above - border_width
-        popup_height = math.min(popup_height, max_height)
-        local row = (popup_height + 3) * -1
-        if avail_width >= min_width then
-            return vim.tbl_extend("force", win_settings, {
-                height = popup_height,
+    local avail_y_above = math.max(qf_pos[1] - vim_border - 1, 0)
+    -- If space is available to the left or right, the vim border has to be there
+    local avail_x_left = math.max(qf_pos[2] - vim_border, 0)
+    local avail_x_right = math.max(e_cols - (qf_pos[2] + qf_width + vim_border), 0)
+    local avail_width = qf_width - (padding * 2) - preview_border_width
+    local avail_e_width = e_cols - (padding * 2) - preview_border_width
+
+    local function cfg_vert_spill(height, row)
+        local x_diff = min_x_space - qf_width
+        local half_diff = math.ceil(x_diff * 0.5)
+        local r_shift = math.max(half_diff - avail_x_left, 0)
+        local l_shift = math.max(half_diff - avail_x_right, 0)
+        return vim.tbl_extend("force", win_cfg, {
+            height = height,
+            row = row,
+            width = math.min(min_width, avail_e_width),
+            col = (half_diff * -1) + r_shift - l_shift + 1,
+        })
+    end
+
+    -- Design note: Prefer rendering previews with spill into other wins to keep the direction
+    -- they appear as consistent as possible
+    if avail_y_above >= min_y_space then
+        local height = avail_y_above - preview_border_width
+        height = math.min(height, max_height)
+        local row = (height + preview_border_width + vim_border) * -1
+        if qf_width >= min_x_space then
+            return vim.tbl_extend("force", win_cfg, {
+                height = height,
                 row = row,
                 width = avail_width,
                 col = 1,
             })
         else
-            local width_diff = min_width - avail_width
-            local half_diff = math.floor(width_diff * 0.5)
-            local r_shift = math.max(half_diff - avail_left, 0)
-            local l_shift = math.max(half_diff - avail_right, 0)
-
-            return vim.tbl_extend("force", win_settings, {
-                height = popup_height,
-                row = row,
-                width = math.min(min_width, columns),
-                col = (half_diff * -1) + r_shift - l_shift + 1,
-            })
+            return cfg_vert_spill(height, row)
         end
     end
 
-    local avail_below = lines - (win_pos[1] + win_height - 1)
-    if avail_below >= min_height then
-        local popup_height = avail_below - border_width
-        popup_height = math.min(popup_height, max_height)
-        local row = win_height + 1
-        if avail_width >= min_width then
-            return vim.tbl_extend("force", win_settings, {
-                height = popup_height,
+    local avail_y_below = e_lines - (qf_pos[1] + qf_height + vim_border + 1)
+    if avail_y_below >= min_y_space then
+        local height = avail_y_below - preview_border_width
+        height = math.min(height, max_height)
+        local row = qf_height + vim_border
+        if qf_width >= min_x_space then
+            return vim.tbl_extend("force", win_cfg, {
+                height = height,
                 row = row,
                 width = avail_width,
                 col = 1,
             })
         else
-            local width_diff = min_width - avail_width
-            local half_diff = math.floor(width_diff * 0.5)
-            local r_shift = math.max(half_diff - avail_left, 0)
-            local l_shift = math.max(half_diff - avail_right, 0)
-
-            return vim.tbl_extend("force", win_settings, {
-                height = popup_height,
-                row = row,
-                width = math.min(min_width, columns),
-                col = (half_diff * -1) + r_shift - l_shift + 1,
-            })
+            return cfg_vert_spill(height, row)
         end
     end
 
-    local avail_height = win_height - border_width
-    -- TODO: go right or left based on splitright
-    if avail_right >= min_width then
-        local col = win_pos[2] + win_width + 2
-        local width = avail_right - (padding * 2) - border_width - 1
-        if avail_height >= min_height then
-            return vim.tbl_extend("force", win_settings, {
-                height = math.min(avail_height, max_height),
+    local avail_height = qf_height - (padding * 2) - preview_border_width
+    local avail_e_lines = e_lines - preview_border_width
+    local side_height = math.min(avail_height, max_height)
+    local function cfg_hor_spill(width, col)
+        local y_diff = min_y_space - qf_height
+        local half_diff = math.floor(y_diff * 0.5)
+        local u_shift = math.max(half_diff - avail_y_above, 0)
+        local d_shift = math.max(half_diff - avail_y_below, 0)
+        return vim.tbl_extend("force", win_cfg, {
+            height = math.min(min_height, avail_e_lines),
+            row = (half_diff * -1) - u_shift + d_shift - 1,
+            width = width,
+            col = col,
+        })
+    end
+
+    local function open_left()
+        local col = (qf_pos[2] - vim_border) * -1
+        local width = avail_x_left - (padding * 2) - preview_border_width
+        if qf_height >= min_y_space then
+            return vim.tbl_extend("force", win_cfg, {
+                height = side_height,
                 row = 0,
                 width = width,
                 col = col,
             })
         else
-            local height_diff = min_height - avail_height
-            local half_diff = math.floor(height_diff * 0.5)
-            local u_shift = math.max(half_diff - avail_above, 0)
-            local d_shift = math.max(half_diff - avail_below, 0)
-
-            return vim.tbl_extend("force", win_settings, {
-                height = math.min(min_height, lines),
-                row = (half_diff * -1) - u_shift + d_shift - 1,
-                width = width,
-                col = col,
-            })
+            return cfg_hor_spill(width, col)
         end
     end
 
-    if avail_left >= min_width then
-        local col = (win_pos[2] - 1) * -1
-        local width = avail_left - (padding * 2) - border_width - 1
-        if avail_height >= min_height then
-            return vim.tbl_extend("force", win_settings, {
-                height = math.min(avail_height, max_height),
+    local function open_right()
+        local col = qf_pos[2] + qf_width + vim_border + padding
+        local width = avail_x_right - (padding * 2) - preview_border_width
+        if qf_height >= min_y_space then
+            return vim.tbl_extend("force", win_cfg, {
+                height = side_height,
                 row = 0,
                 width = width,
                 col = col,
             })
         else
-            local height_diff = min_height - avail_height
-            local half_diff = math.floor(height_diff * 0.5)
-            local u_shift = math.max(half_diff - avail_above, 0)
-            local d_shift = math.max(half_diff - avail_below, 0)
-            return vim.tbl_extend("force", win_settings, {
-                height = math.min(min_height, lines),
-                row = (half_diff * -1) - u_shift + d_shift - 1,
-                width = width,
-                col = col,
-            })
+            return cfg_hor_spill(width, col)
         end
     end
 
-    local fallback_base = vim.tbl_extend("force", base_settings, {
-        relative = "tabline",
-        height = math.floor(lines * 0.4),
-        width = columns - (padding * 2) - border_width,
-        col = 1,
-    })
-
-    local screenrow = vim.fn.screenrow() --- @type integer
-    local half_way = lines * 0.5 --- @type number
-    if screenrow <= half_way then
-        return vim.tbl_extend("force", fallback_base, { row = math.floor(lines * 0.6) })
+    if vim.api.nvim_get_option_value("splitright", { scope = "global" }) then
+        if avail_x_right >= min_x_space then
+            return open_right()
+        elseif avail_x_left >= min_x_space then
+            return open_left()
+        end
     else
-        return vim.tbl_extend("force", fallback_base, { row = 0 })
+        if avail_x_left >= min_x_space then
+            return open_left()
+        elseif avail_x_right >= min_x_space then
+            return open_right()
+        end
     end
+
+    return get_fallback_win_config(base_cfg, e_lines, e_cols, padding, preview_border_width)
 end
 
 function M.update_preview_win_pos()
@@ -515,13 +549,12 @@ end
 
 -- TODO: bad naming
 local function decorate_window(preview_buf, did_ftdetect, item)
-    local hl_range = get_hl_range(preview_buf, item)
     vim.api.nvim_buf_clear_namespace(preview_buf, hl_ns, 0, -1)
-    local hl_group = get_hl_group()
+    local hl_range = get_hl_range(preview_buf, item)
     vim.hl.range(
         preview_buf,
         hl_ns,
-        hl_group,
+        get_hl_group(),
         { hl_range[1], hl_range[2] },
         { hl_range[3], hl_range[4] },
         {}
