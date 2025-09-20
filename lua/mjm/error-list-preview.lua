@@ -3,86 +3,6 @@
 
 local M = {}
 
--- TODO: Need to know where qf win is relative to other windows so we can open win in proper place
--- TODO: Need to handle resizing the qf win
---- TODO: the window size should be set relative to the current list. there's the horizontal/
---- vertical/top/bottom issue, but also the width. If the list (qf) takes up the whole width,
---- the preview should also get the full width. For smaller lists, smaller previews
---- TEST: For super small windows, what happens with scrolloff? Can Nvim resolve scrolloff values
---- that are too small?
-
------------------------------
---- r0nsha qfpreview code ---
------------------------------
-
--- ---@param qfwin number
--- ---@return number,number
--- local function get_aligned_col_width(qfwin)
---   local has_border = vim.o.winborder ~= "none"
---   local col = vim.api.nvim_win_get_position(qfwin)[2]
---   local width = vim.api.nvim_win_get_width(qfwin)
---
---   if not has_border then
---     return col, width
---   end
---
---   if (col + width) == vim.o.columns then
---     return col + 1, width - 1
---   elseif col == 0 then
---     return col, width - 1
---   else
---     return col - 1, width
---   end
--- end
-
--- NOTE: statusline compensation
--- ---@param qfwin number
--- ---@return vim.api.keyset.win_config
--- function Preview:win_config(qfwin)
---   local has_border = vim.o.winborder ~= "none"
---   local border_width = has_border and 2 or 0
---   local col, width = get_aligned_col_width(qfwin)
---
---   if self.config.ui.height == "fill" then
---     local statusline_height = vim.o.laststatus == 0 and 0 or 1
---     local height = vim.o.lines - vim.api.nvim_win_get_height(qfwin) - vim.o.cmdheight - border_width - statusline_height
---
---     if height < 0 then
---       height = 15
---     end
---
---     return {
---       relative = "editor",
---       width = width,
---       height = height,
---       row = 0,
---       col = col,
---       focusable = false,
---     }
---   end
---
---   local height = self.config.ui.height or 15
---
---   return {
---     relative = "win",
---     win = vim.api.nvim_get_current_win(),
---     width = width,
---     height = height,
---     row = -1 * height - border_width,
---     col = col,
---     focusable = false,
---   }
--- end
-
--------------------------
---- bqf preview stuff ---
--------------------------
-
---- TODO: Need to handle relative position of Qf to Nvim boundaries
--- https://github.com/kevinhwang91/nvim-bqf/blob/main/lua/bqf/preview/floatwin.lua
--- Lots of position resolution in here
---- https://github.com/kevinhwang91/nvim-bqf/blob/main/lua/bqf/preview/handler.lua
-
 --------------
 --- Config ---
 --------------
@@ -187,6 +107,15 @@ local function create_autocmds()
             local cur_win = vim.api.nvim_get_current_win()
             if cur_win == qf_win then
                 M.close_preview_win()
+            end
+        end,
+    })
+
+    vim.api.nvim_create_autocmd("WinResized", {
+        group = augroup,
+        callback = function()
+            if preview_win then
+                M.update_preview_win_pos()
             end
         end,
     })
@@ -398,20 +327,20 @@ end
 --- Window Opening/Closing ---
 ------------------------------
 
-local function win_position()
+--- @return table|nil
+local function get_win_config()
     if not qf_win then
-        return
+        return nil
     end
 
     local win_pos = vim.api.nvim_win_get_position(qf_win)
-    -- note that the height input to the win config does not include the border
     local win_height = vim.api.nvim_win_get_height(qf_win)
     local win_width = vim.api.nvim_win_get_width(qf_win)
     local lines = vim.api.nvim_get_option_value("lines", { scope = "global" })
     local columns = vim.api.nvim_get_option_value("columns", { scope = "global" })
 
     local padding = 1
-    local min_height = 6 + (padding * 2)
+    local min_height = 6
     local max_height = 24
     local border = get_border()
     min_height = border ~= "none" and min_height + 2 or min_height
@@ -420,22 +349,19 @@ local function win_position()
     min_width = min_width + border_width
 
     local base_settings = { border = border, focusable = false }
+    local win_settings = vim.tbl_extend("force", base_settings, { relative = "win", win = qf_win })
 
     local avail_above = win_pos[1] - 1
-    local avail_below = lines - (win_pos[1] + win_height - 1)
     local avail_left = math.max(win_pos[2], 0)
     local avail_right = math.max(columns - (win_pos[2] + win_width), 0)
     local avail_width = win_width - (padding * 2) - border_width
-    local avail_height = win_height - (padding * 2) - border_width
 
     if avail_above >= min_height then
-        local popup_height = avail_above - (padding * 2) - border_width
+        local popup_height = avail_above - border_width
         popup_height = math.min(popup_height, max_height)
         local row = (popup_height + 3) * -1
         if avail_width >= min_width then
-            return vim.tbl_extend("force", base_settings, {
-                relative = "win",
-                win = qf_win,
+            return vim.tbl_extend("force", win_settings, {
                 height = popup_height,
                 row = row,
                 width = avail_width,
@@ -447,9 +373,7 @@ local function win_position()
             local r_shift = math.max(half_diff - avail_left, 0)
             local l_shift = math.max(half_diff - avail_right, 0)
 
-            return vim.tbl_extend("force", base_settings, {
-                relative = "win",
-                win = qf_win,
+            return vim.tbl_extend("force", win_settings, {
                 height = popup_height,
                 row = row,
                 width = math.min(min_width, columns),
@@ -458,14 +382,13 @@ local function win_position()
         end
     end
 
+    local avail_below = lines - (win_pos[1] + win_height - 1)
     if avail_below >= min_height then
-        local popup_height = avail_below - (padding * 2) - border_width
+        local popup_height = avail_below - border_width
         popup_height = math.min(popup_height, max_height)
         local row = win_height + 1
         if avail_width >= min_width then
-            return vim.tbl_extend("force", base_settings, {
-                relative = "win",
-                win = qf_win,
+            return vim.tbl_extend("force", win_settings, {
                 height = popup_height,
                 row = row,
                 width = avail_width,
@@ -477,9 +400,7 @@ local function win_position()
             local r_shift = math.max(half_diff - avail_left, 0)
             local l_shift = math.max(half_diff - avail_right, 0)
 
-            return vim.tbl_extend("force", base_settings, {
-                relative = "win",
-                win = qf_win,
+            return vim.tbl_extend("force", win_settings, {
                 height = popup_height,
                 row = row,
                 width = math.min(min_width, columns),
@@ -488,16 +409,16 @@ local function win_position()
         end
     end
 
+    local avail_height = win_height - border_width
     -- TODO: go right or left based on splitright
     if avail_right >= min_width then
         local col = win_pos[2] + win_width + 2
+        local width = avail_right - (padding * 2) - border_width - 1
         if avail_height >= min_height then
-            return vim.tbl_extend("force", base_settings, {
-                relative = "win",
-                win = qf_win,
+            return vim.tbl_extend("force", win_settings, {
                 height = math.min(avail_height, max_height),
                 row = 0,
-                width = avail_width,
+                width = width,
                 col = col,
             })
         else
@@ -506,26 +427,23 @@ local function win_position()
             local u_shift = math.max(half_diff - avail_above, 0)
             local d_shift = math.max(half_diff - avail_below, 0)
 
-            return vim.tbl_extend("force", base_settings, {
-                relative = "win",
-                win = qf_win,
+            return vim.tbl_extend("force", win_settings, {
                 height = math.min(min_height, lines),
                 row = (half_diff * -1) - u_shift + d_shift - 1,
-                width = avail_width,
+                width = width,
                 col = col,
             })
         end
     end
 
     if avail_left >= min_width then
-        local col = (avail_width + 4) * -1
+        local col = (win_pos[2] - 1) * -1
+        local width = avail_left - (padding * 2) - border_width - 1
         if avail_height >= min_height then
-            return vim.tbl_extend("force", base_settings, {
-                relative = "win",
-                win = qf_win,
+            return vim.tbl_extend("force", win_settings, {
                 height = math.min(avail_height, max_height),
                 row = 0,
-                width = avail_width,
+                width = width,
                 col = col,
             })
         else
@@ -533,37 +451,44 @@ local function win_position()
             local half_diff = math.floor(height_diff * 0.5)
             local u_shift = math.max(half_diff - avail_above, 0)
             local d_shift = math.max(half_diff - avail_below, 0)
-
-            return vim.tbl_extend("force", base_settings, {
-                relative = "win",
-                win = qf_win,
+            return vim.tbl_extend("force", win_settings, {
                 height = math.min(min_height, lines),
                 row = (half_diff * -1) - u_shift + d_shift - 1,
-                width = avail_width,
+                width = width,
                 col = col,
             })
         end
     end
 
+    local fallback_base = vim.tbl_extend("force", base_settings, {
+        relative = "tabline",
+        height = math.floor(lines * 0.4),
+        width = columns - (padding * 2) - border_width,
+        col = 1,
+    })
+
     local screenrow = vim.fn.screenrow() --- @type integer
     local half_way = lines * 0.5 --- @type number
     if screenrow <= half_way then
-        return vim.tbl_extend("force", base_settings, {
-            relative = "tabline",
-            height = math.floor(lines * 0.5),
-            row = math.floor(lines * 0.5),
-            width = columns - 4,
-            col = 1,
-        })
+        return vim.tbl_extend("force", fallback_base, { row = math.floor(lines * 0.6) })
     else
-        return vim.tbl_extend("force", base_settings, {
-            relative = "tabline",
-            height = math.floor(lines * 0.5),
-            row = 0,
-            width = columns - 4,
-            col = 1,
-        })
+        return vim.tbl_extend("force", fallback_base, { row = 0 })
     end
+end
+
+function M.update_preview_win_pos()
+    if not preview_win then
+        clear_session_data()
+        return
+    end
+
+    local win_config = get_win_config()
+    if not win_config then
+        clear_session_data()
+        return
+    end
+
+    vim.api.nvim_win_set_config(preview_win, win_config)
 end
 
 local function get_hl_group()
@@ -663,6 +588,13 @@ function M._update_win()
         return
     end
 
+    local win_config = get_win_config()
+    if not win_config then
+        clear_session_data()
+        return
+    end
+
+    vim.api.nvim_win_set_config(preview_win, win_config)
     vim.api.nvim_win_set_buf(preview_win, preview_buf)
     decorate_window(preview_buf, did_ftdetect, item)
 end
@@ -709,20 +641,7 @@ function M.open_preview_win()
         return
     end
 
-    -- local win_config = {
-    --     border = get_border(),
-    --     relative = "win",
-    --     win = qf_win,
-    --     height = 6,
-    --     row = -10,
-    --     -- height = 24,
-    --     -- row = -28,
-    --     width = 102,
-    --     col = 1,
-    --     focusable = false,
-    -- }
-
-    local win_config = win_position()
+    local win_config = get_win_config()
     if not win_config then
         clear_session_data()
         return
