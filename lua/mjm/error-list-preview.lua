@@ -1,4 +1,10 @@
---- Credits:
+--- TODO: Go through this and determine what should be exposed, "private exposed", and private
+--- TODO: I'm not sure what the mapping is, but there should be a way to trigger a re-position
+
+--- FUTURE: Should be possible to scroll the preview window. See
+--- https://github.com/bfrg/vim-qf-preview for relevant controls
+
+--- CREDITS:
 --- - https://github.com/r0nsha/qfpreview.nvim
 
 local M = {}
@@ -7,34 +13,38 @@ local M = {}
 --- Config ---
 --------------
 
--- TODO: Allow for customizing as many of the winopts as possible. Stuff like winblend
+local hl_ns = vim.api.nvim_create_namespace("qf-rancher-preview-hl")
+
+-- DOCUMENT: This highlight group
+local hl_name = "QfRancherHighlightItem"
+local cur_hl = vim.api.nvim_get_hl(0, { name = hl_name })
+if (not cur_hl) or #vim.tbl_keys(cur_hl) == 0 then
+    -- DOCUMENT: That this links to CurSearch by default
+    vim.api.nvim_set_hl(0, hl_name, { link = "CurSearch" })
+end
+
 -- TODO: The autocmd for this should resolve in the "plugin" file. I don't see the need for the
 -- autocmd to run if it does nothing
 vim.api.nvim_set_var("qf_rancher_preview_autoshow", false)
 -- vim.api.nvim_set_var("qf_rancher_preview_border", "single")
--- vim.api.nvim_set_var("qf_rancher_preview_hl_group", "IncSearch")
 vim.api.nvim_set_var("qf_rancher_preview_show_title", false)
 -- vim.api.nvim_set_var("qf_rancher_preview_title_pos", "center")
 vim.api.nvim_set_var("qf_rancher_preview_use_global_so", false)
 vim.api.nvim_set_var("qf_rancher_preview_use_global_siso", false)
+-- vim.api.nvim_set_var("qf_rancher_preview_winblend", 0)
 
 ---------------------
 --- Session State ---
 ---------------------
 
-local hl_ns = vim.api.nvim_create_namespace("qf-rancher-preview-hl")
+local augroup_name = "qf-rancher-preview-group"
+local augroup = vim.api.nvim_create_augroup(augroup_name, { clear = true })
 
 local preview_win = nil
 local buf_cache = {}
+local extmark_cache = {}
 local qf_buf = nil
 local qf_win = nil
-
-vim.keymap.set("n", "<leader><leader>", function()
-    print(vim.inspect(buf_cache))
-end)
-
-local augroup_name = "qf-rancher-preview-group"
-local augroup = vim.api.nvim_create_augroup(augroup_name, { clear = true })
 
 -------------------------
 --- Session Functions ---
@@ -52,15 +62,21 @@ local function clear_session_data()
         end
     end
 
+    for bufnr, extmark in pairs(extmark_cache) do
+        if vim.api.nvim_buf_is_valid(bufnr) then
+            vim.api.nvim_buf_del_extmark(bufnr, hl_ns, extmark)
+        end
+    end
+
     for _, bufnr in pairs(buf_cache) do
         if vim.api.nvim_buf_is_valid(bufnr) then
-            vim.api.nvim_buf_clear_namespace(bufnr, hl_ns, 0, -1)
             vim.api.nvim_buf_delete(bufnr, { force = true })
         end
     end
 
     preview_win = nil
     buf_cache = {}
+    extmark_cache = {}
     qf_buf = nil
     qf_win = nil
 
@@ -86,7 +102,6 @@ local function create_autocmds()
         callback = function(ev)
             local cur_win = vim.api.nvim_get_current_win()
             if cur_win == qf_win and ev.buf ~= qf_buf then
-                -- TODO: I think this is firing when I'm leaving the qflist
                 clear_session_data()
             end
         end,
@@ -94,9 +109,8 @@ local function create_autocmds()
 
     vim.api.nvim_create_autocmd("WinClosed", {
         group = augroup,
-        callback = function()
-            local cur_win = vim.api.nvim_get_current_win()
-            if cur_win == qf_win then
+        callback = function(ev)
+            if tonumber(ev.match) == qf_win then
                 clear_session_data()
             end
         end,
@@ -126,7 +140,7 @@ local function create_autocmds()
         group = augroup,
         callback = function()
             if preview_win then
-                M.update_preview_win_pos()
+                M._update_preview_win_pos()
             end
         end,
     })
@@ -226,6 +240,17 @@ local function get_so()
     end
 end
 
+local function get_winblend()
+    local ok, winblend = pcall(vim.api.nvim_get_var, "qf_rancher_preview_winblend")
+    local valid_winblend = ok
+        and winblend
+        and type(winblend) == "number"
+        and winblend >= 0
+        and winblend <= 100
+
+    return valid_winblend and winblend or 0
+end
+
 local function set_preview_winopts(bufnr)
     if not preview_win then
         clear_session_data()
@@ -246,7 +271,7 @@ local function set_preview_winopts(bufnr)
 
     vim.api.nvim_set_option_value("spell", false, { win = preview_win })
 
-    vim.api.nvim_set_option_value("winblend", 0, { win = preview_win })
+    vim.api.nvim_set_option_value("winblend", get_winblend(), { win = preview_win })
 
     vim.api.nvim_set_option_value("so", get_so(), { win = preview_win })
     vim.api.nvim_set_option_value("siso", get_siso(), { win = preview_win })
@@ -268,22 +293,60 @@ end
 --- @param bufnr integer
 --- @param item table
 --- @return Range4
--- TODO: This needs to handle the virtual column case in addition to the byte col case
 local function get_hl_range(bufnr, item)
     local row = item.lnum >= 0 and item.lnum - 1 or 0
     local start_line = vim.api.nvim_buf_get_lines(bufnr, row, row + 1, false)[1]
-    local col = item.col > 0 and item.col - 1 or 0
+    local start_line_len_0 = math.max(#start_line - 1, 0)
+    local col = (function()
+        if item.col <= 0 then
+            return 0
+        end
+
+        -- PR: The documentation says "if true" but it's actually a number value. But double check
+        -- the source
+        if item.vcol == 1 and preview_win then
+            -- FUTURE: Might be more accurately handled with a binary search on
+            -- vim.fn.strdisplaywidth(). But I have not seen one of these in the wild
+            local byte_col = vim.fn.virtcol2col(preview_win, item.lnum, item.col)
+            return math.max(byte_col - 1, 0)
+        end
+
+        return math.min(item.col - 1, start_line_len_0)
+    end)()
 
     local fin_row = item.end_lnum > 0 and item.end_lnum - 1 or row
     local fin_line = (function()
         if fin_row ~= row then
-            return vim.api.nvim_buf_get_lines(bufnr, fin_row, fin_row + 1, false)
+            return vim.api.nvim_buf_get_lines(bufnr, fin_row, fin_row + 1, false)[1]
         else
             return start_line
         end
     end)()
 
-    local fin_col = item.end_col > 0 and item.end_col - 1 or #fin_line
+    local fin_col = (function()
+        if item.end_col <= 0 then
+            return #fin_line
+        end
+
+        if item.vcol == 1 and preview_win then
+            -- FUTURE: Might be more accurately handled with a binary search on
+            -- vim.fn.strdisplaywidth(). But I have not seen one of these in the wild
+            local byte_col = vim.fn.virtcol2col(preview_win, item.end_lnum, item.end_col)
+            local byte_idx = byte_col - 1
+            local utf_idx = vim.str_utfindex(fin_line, "utf-16", byte_idx, false)
+            local ex_byte = vim.str_byteindex(fin_line, "utf-16", utf_idx + 1, false)
+
+            return math.max(ex_byte, 0)
+        end
+
+        -- Fix diagnostic end_cols. Unsure how this works in other cases
+        local end_idx = math.min(item.end_col, #fin_line)
+        if not (fin_row == row and end_idx == col + 1) then
+            end_idx = math.max(end_idx - 1, 0)
+        end
+
+        return end_idx
+    end)()
 
     return { row, col, fin_row, fin_col }
 end
@@ -510,7 +573,7 @@ local function get_win_config()
     return get_fallback_win_config(base_cfg, e_lines, e_cols, padding, preview_border_width)
 end
 
-function M.update_preview_win_pos()
+function M._update_preview_win_pos()
     if not preview_win then
         clear_session_data()
         return
@@ -525,41 +588,24 @@ function M.update_preview_win_pos()
     vim.api.nvim_win_set_config(preview_win, win_config)
 end
 
-local function get_hl_group()
-    local default_hl = "CurSearch"
-    local ok_g, g_hl = pcall(vim.api.nvim_get_var, "qf_rancher_preview_hl_group")
-    if not ok_g then
-        return default_hl
-    end
-
-    local hl_group = (function()
-        if type(g_hl) == "string" then
-            return vim.api.nvim_get_hl(0, { name = g_hl })
-        elseif type(g_hl) == "number" then
-            return vim.api.nvim_get_hl(0, { id = g_hl })
-        end
-    end)()
-
-    if (not hl_group) or #vim.tbl_keys(hl_group) == 0 then
-        return default_hl
-    else
-        return g_hl
-    end
-end
-
--- TODO: bad naming
 local function decorate_window(preview_buf, did_ftdetect, item)
-    vim.api.nvim_buf_clear_namespace(preview_buf, hl_ns, 0, -1)
     local hl_range = get_hl_range(preview_buf, item)
-    vim.hl.range(
-        preview_buf,
-        hl_ns,
-        get_hl_group(),
-        { hl_range[1], hl_range[2] },
-        { hl_range[3], hl_range[4] },
-        {}
-    )
+    if extmark_cache[preview_buf] then
+        vim.api.nvim_buf_del_extmark(preview_buf, hl_ns, extmark_cache[preview_buf])
+        extmark_cache[preview_buf] = nil
+    end
 
+    extmark_cache[preview_buf] =
+        vim.api.nvim_buf_set_extmark(preview_buf, hl_ns, hl_range[1], hl_range[2], {
+            hl_group = "QfRancherHighlightItem",
+            end_row = hl_range[3],
+            end_col = hl_range[4],
+            priority = 200,
+            strict = false,
+        })
+
+    -- NOTE: The preview buf is not associated with a file, so the original bufnr needs to be
+    -- passed in for ftdetect and tite
     if not did_ftdetect then
         local ft = vim.filetype.match({ buf = item.bufnr })
         vim.api.nvim_set_option_value("filetype", ft, { buf = preview_buf })
@@ -572,8 +618,6 @@ local function decorate_window(preview_buf, did_ftdetect, item)
 
     -- PERF: It's not necessary to set all of these winopts every time the window is updated,
     -- but it is also robust and I am not seeing a perf cost from doing so
-    -- NOTE: The preview buf is not associated with a file, so the original bufnr needs to be
-    -- passed in to get the bufname for titles
     set_preview_winopts(item.bufnr)
     vim.api.nvim_win_set_cursor(preview_win, { item.lnum, item.col - 1 })
     vim.api.nvim_win_call(preview_win, function()
