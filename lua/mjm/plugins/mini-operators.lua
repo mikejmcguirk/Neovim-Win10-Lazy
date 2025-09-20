@@ -1,3 +1,5 @@
+-- TODO: s is a global map, which interferes with qflist s mapping
+
 local function load_mini_operators()
     require("mini.operators").setup({
         evaluate = {
@@ -5,10 +7,10 @@ local function load_mini_operators()
             func = nil,
         },
         -- FUTURE: Unsure how to map something like this to ()
-        -- exchange = {
-        --     prefix = "cx",
-        --     reindent_linewise = true,
-        -- },
+        exchange = {
+            prefix = "",
+            reindent_linewise = true,
+        },
         multiply = {
             prefix = "gm",
         },
@@ -17,7 +19,7 @@ local function load_mini_operators()
             reindent_linewise = true,
         },
         sort = {
-            prefix = "gg",
+            prefix = "",
         },
     })
 end
