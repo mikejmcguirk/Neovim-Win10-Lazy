@@ -1,18 +1,23 @@
+--- FUTURE: Create updated quickfixtextfunc
+
 ------------------
 -- CAPABILITIES --
 ------------------
 
---- TODO: Create a quickfixtextfuc that's as information rich as possible without being busy
---- TODO: Wrapper functions should make reasonable sorts as much as possible
+--- GLOBAL CHECKLIST:
+--- - Do all functions have a reasonable default sort?
+--- - Are window height updates triggered where appropriate?
+--- - Are the public/"private exposed"/private settings correct?
+--- - Does everything have a plug?
+--- - Do maps and plugs have desc fields?
+
 --- TODO: More visibility for cdo/cfdo. Use bang by default?
---- TODO: Wrapper functions should trigger window height updates. Resize cmd
+--- TODO: Resize cmd
 --- TODO: Copy list. no count = to next. Count = after list
---- TODO: Go through everything and see what is and is not exposed
 --- TODO: If the list is already open, an open command should not trigger a re-size. I had ideas
 --- about this in other commands, but a manual resize should just be triggered
 --- TODO: Have some kind of shortcut to make the list taller. Make sure it preserves view
 ---     Was thinking qq for toggle, qQ for resize, maybe q<c-Q> to make bigger?
---- TODO: Once the actual commands to map are finalized, create plugs
 --- TODO: Go thorugh this file and get all old functionalities. Need wrap commands and
 --- state management. Note history should adjust height
 --- Maybe grep shouldn't be e, because deleting lists is going to be a common op, probably need
@@ -25,7 +30,6 @@
 --- TODO: look at the issue/PR lists for the various qf plugins to see what people want
 
 --- MAYBE: Should open/close cmds also run wincmd =?
---- MAYBE: Treesitter/Semantic Token Highlighting
 --- MAYBE: Incremental preview of cdo/cfdo changes
 --- MAYBE: General cmd parsing: https://github.com/niuiic/quickfix.nvim
 --- MAYBE: Publish qf items as diagnostics
@@ -54,14 +58,6 @@
 --------------
 -- MAPPINGS --
 --------------
-
---- Patterns:
---- --- Modifiers on last key only. No recursive choices
---- --- Lowercase creates new
---- --- Uppercase replaces current
---- --- Ctrl combines
---- --- Alt can be used for some other idea
---- --- Use count 1-0 to specify a specific stack position
 
 --- GENERAL BUFFER MAPS
 --- <leader>q for qf, <leader>l for loc
@@ -106,6 +102,12 @@
 -- qf jump function list --
 ---------------------------
 
+-- TODO: The ftplugin maps should be moved to their own file, and a g_variable in the plugin's
+-- ftplugin file should determine if they are mapped. Put this function documentation in the
+-- file to ftplugin map
+-- TODO: The g variable should either map the defaults or not. Plug mappings/documentation can be
+-- provided if the user wants to do it custom
+
 -- qf_view_result
 -- ex_cc
 -- qf_jump
@@ -127,8 +129,62 @@
 local M = {}
 
 -- NOTE: Incomplete qf maps are nop'd to prevent falling back to other maps
-vim.keymap.set("n", "<leader>q", "<nop>")
-vim.keymap.set("n", "<leader>l", "<nop>")
+local nofallback_desc = "Prevent fallback to other mappings"
+vim.api.nvim_set_keymap("n", "<leader>q", "<nop>", { noremap = true, desc = nofallback_desc })
+vim.api.nvim_set_keymap("n", "<leader>l", "<nop>", { noremap = true, desc = nofallback_desc })
+
+--- @param win integer
+--- @return boolean, [string, string]|nil
+local function protected_win_close(win)
+    if not vim.api.nvim_win_is_valid(win) then
+        return false, { "Window " .. win .. " is invalid", "WarningMsg" }
+    end
+
+    local tabpage_list = vim.api.nvim_list_tabpages()
+    local win_tabpage = vim.api.nvim_win_get_tabpage(win)
+    local tab_wins = vim.api.nvim_tabpage_list_wins(win_tabpage)
+    if #tabpage_list == 1 and #tab_wins == 1 then
+        return false, { "Cannot close the last window", "" }
+    end
+
+    local ok, err = vim.api.nvim_win_close(win, true)
+    if not ok then
+        local msg = err or ("Unknown error closing window " .. win)
+        return false, { msg, "ErrorMsg" }
+    end
+
+    return true
+end
+
+--- @param win integer
+--- @return boolean
+local function close_qf_win(win, print_errors)
+    local ok, err = protected_win_close(win) --- @type boolean, [string, string]|nil
+    if ok then
+        return true
+    end
+
+    if err == "Cannot close the last window" then
+        local buf = vim.api.nvim_win_get_buf(win) --- @type integer
+        if not vim.api.nvim_buf_is_valid(buf) then
+            local msg = "Bufnr " .. buf .. " in window " .. win .. " is not valid" --- @type string
+            vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+        end
+
+        vim.api.nvim_buf_delete(buf, {})
+        return true
+    end
+
+    if not print_errors then
+        return false
+    end
+
+    --- @type string
+    local msg = (err and err[1]) and err[1] or "Unknown error in protected_win_close"
+    local hl = (err and err[2]) and err[2] or "ErrorMsg" --- @type string
+    vim.api.nvim_echo({ { msg, hl } }, true, { err = true })
+    return false
+end
 
 ----------------
 --- Autocmds ---
@@ -150,10 +206,11 @@ local function restore_view(win, view)
     end
 
     --- @type integer
-    local new_topline = vim.api.nvim_win_call(win, function()
+    local cur_topline = vim.api.nvim_win_call(win, function()
         return vim.fn.line("w0")
     end)
-    if view.topline == new_topline then
+
+    if view.topline == cur_topline then
         return
     end
 
@@ -162,7 +219,6 @@ local function restore_view(win, view)
     end)
 end
 
--- TODO: Move everything to this function
 local function restore_views(views)
     for win, view in pairs(views) do
         restore_view(win, view)
@@ -200,8 +256,8 @@ function M.close_all_loclists(opts)
             end
         end
 
-        for _, wl in pairs(loclist_wins) do
-            vim.api.nvim_win_close(wl, false)
+        for _, lwin in pairs(loclist_wins) do
+            close_qf_win(lwin, false)
             closed_loc_list = true
         end
 
@@ -213,6 +269,7 @@ function M.close_all_loclists(opts)
     return closed_loc_list
 end
 
+-- TODO: There should be a setting for whether or not to turn these autocmds on
 --- @type integer
 -- local loclist_group = vim.api.nvim_create_augroup("loclist-group", { clear = true })
 
@@ -348,7 +405,7 @@ function M.close_qflist()
         return false
     end
 
-    vim.api.nvim_win_close(qf_win, true)
+    close_qf_win(qf_win, true)
     restore_views(views)
 
     return true
@@ -481,7 +538,7 @@ function M.close_loclist()
         return false
     end
 
-    vim.api.nvim_win_close(loclist_win, true)
+    close_qf_win(loclist_win, true)
     restore_views(views)
     return true
 end
@@ -517,12 +574,10 @@ function M.resize_loclist()
     return true
 end
 
--- TODO: Move this and its helper function to utils
 --- @return boolean
 function M.close_win_restview(target_win)
     vim.validate("target_win", target_win, "number")
 
-    -- TODO: Should throw up error to handle
     if not vim.api.nvim_win_is_valid(target_win) then
         vim.api.nvim_echo({ { "Win " .. target_win .. " is invalid", "" } }, false, {})
         return false
@@ -545,7 +600,7 @@ function M.close_win_restview(target_win)
         win_check(win)
     end
 
-    vim.api.nvim_win_close(target_win, true)
+    close_qf_win(target_win, true)
     restore_views(views)
     return true
 end
