@@ -10,6 +10,7 @@
 --- - Are the public/"private exposed"/private settings correct?
 --- - Does everything have a plug?
 --- - Do maps and plugs have desc fields?
+--- - Are all functions fully annotated?
 
 --- TODO: More visibility for cdo/cfdo. Use bang by default?
 --- TODO: Resize cmd
@@ -60,13 +61,6 @@
 --------------
 
 --- GENERAL BUFFER MAPS
---- <leader>q for qf, <leader>l for loc
---- qio - diagnostics (but creates anti-pattern since not toggle, and double top)
---- qie - errors
---- qiw - warnings
---- qih - hint
---- qii or qif - info
---- qih? - highest severity
 --- view count of lists
 --- goto list number (unimpaired already does cycling)
 --- something like qd and qD for cdo and cfdo
@@ -98,28 +92,6 @@
 -- https://github.com/r0nsha/qfpreview.nvim
 -- https://github.com/bfrg/vim-qf-preview
 
----------------------------
--- qf jump function list --
----------------------------
-
--- TODO: The ftplugin maps should be moved to their own file, and a g_variable in the plugin's
--- ftplugin file should determine if they are mapped. Put this function documentation in the
--- file to ftplugin map
--- TODO: The g variable should either map the defaults or not. Plug mappings/documentation can be
--- provided if the user wants to do it custom
-
--- qf_view_result
--- ex_cc
--- qf_jump
--- qf_jump_newwin
--- qf_jump_open_window
--- jump_to_help_window
--- qf_jump_to_usable_window
--- qf_find_win_with_loclist
--- qf_open_new_file_win
--- qf_goto_win_with_ll_file
--- qf_goto_win_with_qfl_file
-
 ------------------------
 -- Other source notes --
 ------------------------
@@ -147,7 +119,7 @@ local function protected_win_close(win)
         return false, { "Cannot close the last window", "" }
     end
 
-    local ok, err = vim.api.nvim_win_close(win, true)
+    local ok, err = pcall(vim.api.nvim_win_close, win, true)
     if not ok then
         local msg = err or ("Unknown error closing window " .. win)
         return false, { msg, "ErrorMsg" }
@@ -169,6 +141,7 @@ local function close_qf_win(win, print_errors)
         if not vim.api.nvim_buf_is_valid(buf) then
             local msg = "Bufnr " .. buf .. " in window " .. win .. " is not valid" --- @type string
             vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+            return false
         end
 
         vim.api.nvim_buf_delete(buf, {})
@@ -608,10 +581,10 @@ end
 --- @param target_win integer
 --- @return boolean
 --- TODO: I'm not convinced this needs to be three separate functions
+--- I had a note on how to handle this somewhere
 function M.resize_list_win(target_win)
     vim.validate("list_win", target_win, "number")
 
-    -- TODO: Should throw up error to handle
     if not vim.api.nvim_win_is_valid(target_win) then
         vim.api.nvim_echo({ { "Win " .. target_win .. " is invalid", "" } }, false, {})
         return false
@@ -655,37 +628,67 @@ end
 --- Opening and Closing Maps ---
 --------------------------------
 
-Map("n", "cuc", M.close_qflist)
-Map("n", "cup", M.open_qflist)
-Map("n", "cuu", function()
-    if not M.open_qflist() then
-        M.close_qflist()
-    end
-end)
+vim.api.nvim_set_keymap("n", "<leader>qo", "", {
+    noremap = true,
+    desc = "Open the quickfix list",
+    callback = M.open_qflist,
+})
 
-Map("n", "<leader>qQ", M.resize_qflist)
+vim.api.nvim_set_keymap("n", "<leader>qp", "", {
+    noremap = true,
+    desc = "Close the quickfix list",
+    callback = M.close_qflist,
+})
 
-Map("n", "coc", M.close_loclist)
-Map("n", "cop", M.open_loclist)
-Map("n", "coo", function()
-    if not M.open_loclist() then
-        M.close_loclist()
-    end
-end)
+vim.api.nvim_set_keymap("n", "<leader>qq", "", {
+    noremap = true,
+    desc = "Toggle the quickfix list",
+    callback = function()
+        if not M.open_qflist() then
+            M.close_qflist()
+        end
+    end,
+})
 
-Map("n", "<leader>lL", M.resize_loclist)
+vim.api.nvim_set_keymap("n", "<leader>qQ", "", {
+    noremap = true,
+    desc = "Resize the quickfix list",
+    callback = M.resize_qflist,
+})
 
-for _, map in pairs({ "cuo", "cou" }) do
-    Map("n", map, function()
-        M.close_all_loclists()
-        M.close_qflist()
-    end)
-end
+vim.api.nvim_set_keymap("n", "<leader>lo", "", {
+    noremap = true,
+    desc = "Open the location list",
+    callback = M.open_loclist,
+})
+
+vim.api.nvim_set_keymap("n", "<leader>lp", "", {
+    noremap = true,
+    desc = "Close the location list",
+    callback = M.close_loclist,
+})
+
+vim.api.nvim_set_keymap("n", "<leader>ll", "", {
+    noremap = true,
+    desc = "Toggle the location list",
+    callback = function()
+        if not M.open_loclist() then
+            M.close_loclist()
+        end
+    end,
+})
+
+vim.api.nvim_set_keymap("n", "<leader>lL", "", {
+    noremap = true,
+    desc = "Resize the location list",
+    callback = M.resize_loclist,
+})
 
 ----------------------
 -- State Management --
 ----------------------
 
+-- TODO: Throw these in the module with the copy and merge functions
 Map("n", "duc", function()
     M.close_qflist()
     vim.fn.setqflist({}, "r")
@@ -729,6 +732,9 @@ local function qf_scroll_wrapper(main, alt, end_err)
     vim.cmd("norm! zz")
 end
 
+-- TODO: I can't put alt maps in rancher
+-- Probably the best idea is to put in <> as history maps into the Qf ftplugin. This is
+-- patternful with other plugins. Can check those and unimpaired as well
 local scroll_maps = {
     { "[q", { cmd = "cprevious" }, { cmd = "clast" }, "E553" },
     { "]q", { cmd = "cnext" }, { cmd = "crewind" }, "E553" },
