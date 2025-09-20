@@ -1,14 +1,12 @@
--- TODO: use apis to open windows and do wincmds where possible
--- TODO: validations fail when trying to open with a preview window open
--- can get to happen in loclist diag opening
-
 vim.api.nvim_set_var("qf_rancher_validate", true)
 
+-- TODO: In the Rancher ftplugin file, setting the qf options should be done under a g value
+-- DOCUMENT: Which options are set
 vim.api.nvim_set_option_value("buflisted", false, { buf = 0 })
-
-vim.opt_local.colorcolumn = ""
-vim.opt_local.list = false
+vim.api.nvim_set_option_value("cc", "", { scope = "local" })
+vim.api.nvim_set_option_value("list", false, { scope = "local" })
 -- TODO: Restore this. Currently off for testing
+-- Or maybe not. I have splits disabled, so if the qf win is the only window, we're stuck
 -- vim.opt_local.winfixbuf = true
 
 vim.keymap.set("n", "<C-w>v", "<nop>", { buffer = true })
@@ -16,6 +14,7 @@ vim.keymap.set("n", "<C-w><C-v>", "<nop>", { buffer = true })
 vim.keymap.set("n", "<C-w>s", "<nop>", { buffer = true })
 vim.keymap.set("n", "<C-w><C-s>", "<nop>", { buffer = true })
 
+-- TODO: update this
 Map("n", "<leader>q", function()
     local win = vim.api.nvim_get_current_win()
     local wintype = vim.fn.win_gettype(win)
@@ -24,6 +23,7 @@ Map("n", "<leader>q", function()
     end
 end, { buffer = true })
 
+-- TODO: update this
 Map("n", "<leader>l", function()
     local win = vim.api.nvim_get_current_win()
     local wintype = vim.fn.win_gettype(win)
@@ -66,7 +66,13 @@ local function get_vrange4()
     return { region[1][1][2], region[1][1][3], region[#region][2][2], region[#region][2][3] }
 end
 
--- TODO: Not sure what the right map for visual mode here is
+local norm_desc = "qf-rancher enter visual mode"
+vim.api.nvim_buf_set_keymap(0, "n", "i", "v", { noremap = true, desc = norm_desc })
+local line_desc = "qf-rancher enter visual line mode"
+vim.api.nvim_buf_set_keymap(0, "n", "I", "V", { noremap = true, desc = line_desc })
+local block_desc = "qf-rancher enter visual block mode"
+vim.api.nvim_buf_set_keymap(0, "n", "<C-i>", "<C-v>", { noremap = true, desc = block_desc })
+
 Map("x", "d", function()
     local mode = string.sub(vim.api.nvim_get_mode().mode, 1, 1) ---@type string
     if mode ~= "V" then
@@ -96,17 +102,21 @@ Map("x", "d", function()
     require("mjm.utils").protected_set_cursor({ row, col }, { set_pcmark = true, win = win })
 end, { buffer = true })
 
--- TODO: p should be toggle, they maybe P for force open and <C-p> for force close. but maybe
--- there are better ideas
--- IMO <C-j> and <C-k> should be scrolling the window
--- TODO: look at other plugins for ideas on this
-Map("n", "p", function()
-    require("mjm.error-list-preview").toggle_preview_win()
-end, { buffer = true })
+vim.api.nvim_buf_set_keymap(0, "n", "p", "", {
+    noremap = true,
+    callback = function()
+        require("mjm.error-list-preview").toggle_preview_win()
+    end,
+    desc = "Toggle the qf preview window",
+})
 
--- Map("n", "P", function()
---     require("mjm.error-list-preview").close_preview_win()
--- end, { buffer = true })
+vim.api.nvim_buf_set_keymap(0, "n", "P", "", {
+    noremap = true,
+    callback = function()
+        require("mjm.error-list-preview").update_preview_win_pos()
+    end,
+    desc = "Manually trigger a preview window position adjustment",
+})
 
 -------------
 --- Types ---
@@ -193,7 +203,7 @@ end
 --- @param list_win integer
 --- @return integer|nil
 local function find_loclist_win(list_qf_id, list_win)
-    if vim.api.nvim_get_var("ranch_valid") then
+    if vim.api.nvim_get_var("qf_rancher_validate") then
         vim.validate("list_qf_id", list_qf_id, "number")
         vim.validate("list_qf_id", list_qf_id, function()
             return list_qf_id > 0
@@ -445,7 +455,7 @@ local function qf_open_default_dest(list_win, finish)
         vim.validate("list_win", list_win, is_cur_list_win)
         local list_wintype = vim.fn.win_gettype(list_win)
         vim.validate("list_win", list_win, function()
-            return list_wintype == "quickfix"
+            return list_wintype == "quickfix" or list_wintype == "loclist"
         end)
     end
 
@@ -849,7 +859,7 @@ local function qf_get_next_win(list_win, total_winnr, entry)
 
     --- @type string
     local switchbuf = vim.api.nvim_get_option_value("switchbuf", { scope = "global" })
-    local usetab = string.match(switchbuf, "usetab") --- @type boolean
+    local usetab = string.match(switchbuf, "usetab") or false --- @type boolean
 
     --- @type integer|nil
     local win = qf_find_matching_buf(list_winnr, total_winnr, entry.bufnr, usetab)
@@ -913,6 +923,7 @@ local function qf_split_full(ctx)
     local split_type = cmd == "vnew" and "splitright" or "splitbelow" --- @type string
     local split = vim.api.nvim_get_option_value(split_type, { scope = "global" }) --- @type boolean
     local mods = { split = (split and "botright" or "topleft") } --- @type {split:string}
+    -- FUTURE: This should use the API. Would give more control over window scope as well
     vim.api.nvim_cmd({ cmd = cmd, mods = mods }, {})
     local dest_win = vim.api.nvim_get_current_win()
 
@@ -1077,6 +1088,7 @@ local function qf_split_single_win(list_win, open, finish)
     end
 
     vim.api.nvim_cmd({ cmd = "normal", args = { "\r" }, bang = true }, {})
+    local dest_win = vim.api.nvim_get_current_win()
 
     -- Ignore splitbelow here. The new window should not open below the list
     local args = (function()
@@ -1107,7 +1119,10 @@ local function qf_split_single_win(list_win, open, finish)
         vim.api.nvim_set_current_win(list_win)
     end
 
-    -- TODO: Don't we need to zz here?
+    local zz_cmd = { cmd = "normal", args = { "zz" }, bang = true }
+    vim.api.nvim_win_call(dest_win, function()
+        vim.api.nvim_cmd(zz_cmd, {})
+    end)
 end
 
 --- @param list_win integer
@@ -1243,6 +1258,7 @@ local function qf_split(open, finish)
     end
 
     vim.api.nvim_set_current_win(split_win)
+    -- FUTURE: This should use the API. Would give more control over window scope as well
     vim.api.nvim_cmd({ cmd = open }, {})
     local dest_win = vim.api.nvim_get_current_win()
 
@@ -1262,15 +1278,10 @@ local function qf_split(open, finish)
     end
 
     local zz_cmd = { cmd = "normal", args = { "zz" }, bang = true }
-    local zz = function()
+    vim.api.nvim_win_call(dest_win, function()
         vim.api.nvim_cmd(zz_cmd, {})
-    end
-
-    vim.api.nvim_win_call(dest_win, zz)
+    end)
 end
-
--- TODO: Need to figure out issue with s being mapped to substitute in here. Causes conflict with
--- split mapping
 
 Map("n", "s", function()
     qf_split("split", "focusWin")
