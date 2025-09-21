@@ -638,7 +638,7 @@ function M._update_win()
     end
 
     local is_loclist = listtype == "loclist"
-    local cur_list = require("mjm.error-list-util").get_win_getlist(qf_win, is_loclist)()
+    local cur_list = require("mjm.error-list-util").get_getlist(qf_win, is_loclist)()
     if #cur_list < 1 then
         clear_session_data()
         return
@@ -689,7 +689,7 @@ function M.open_preview_win()
     end
 
     local is_loclist = listtype == "loclist"
-    local cur_list = require("mjm.error-list-util").get_win_getlist(qf_win, is_loclist)()
+    local cur_list = require("mjm.error-list-util").get_getlist(qf_win, is_loclist)()
     if #cur_list < 1 then
         return
     end

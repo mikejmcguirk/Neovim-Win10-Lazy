@@ -101,7 +101,7 @@ local function diags_to_list(opts)
     local converted_diags = vim.tbl_map(convert_diag, raw_diags) ---@type table[]
 
     local eu = require("mjm.error-list-util")
-    local getlist = eu.get_win_getlist(cur_win)
+    local getlist = eu.get_getlist(cur_win, opts.is_loclist)
     opts.set_action = opts.set_action or "new"
     local list_nr = eu.get_list_nr(getlist, opts.set_action)
 
