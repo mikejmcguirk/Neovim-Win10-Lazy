@@ -6,8 +6,6 @@
 --- but that creates complexities around how you prioritize the different options. Omitting since
 --- for now this is a hypothetical use case
 
--- TODO: I'm not sure we're read for this level of abstraction
-
 --- @class QfRancherDiagToListOpts
 --- @field set_action? QfRancherSetlistAction
 --- @field is_loclist? boolean
@@ -28,8 +26,7 @@ end
 
 -- PERF: Could pre-allocate the return table, but I don't see a consistent solution for how to
 -- handle for lengths only known at runtime in LuaJIT/5.1. Should not matter in practice
--- TODO: expose this function
-local function get_filtered_diags_by_severity(diags)
+local function filter_diags_by_severity(diags)
     local top_severity = get_top_severity(diags)
     return vim.tbl_filter(function(diag)
         return diag.severity == top_severity
@@ -98,8 +95,7 @@ local function diags_to_list(opts)
     end
 
     if opts.top_severity then
-        -- TODO: Expose this function so I can use it in my diag unimpaired maps
-        raw_diags = get_filtered_diags_by_severity(raw_diags)
+        raw_diags = filter_diags_by_severity(raw_diags)
     end
 
     local converted_diags = vim.tbl_map(convert_diag, raw_diags) ---@type table[]
@@ -114,8 +110,6 @@ local function diags_to_list(opts)
         converted_diags = eu.merge_qf_lists(converted_diags, cur_list.items)
     end
 
-    -- TODO: I'm not sure sorting by diag level first is that helpful, because you can use
-    -- the type filters if you want to see a particular one. Sort by line number?
     --- PERF: Right now, the diag severities are mapped to the qf types, then un-mapped again
     --- in the sort function. In theory, the types should be put into the list items as raw
     --- values, the converted on sort. In practice, this creates complexity + room for error

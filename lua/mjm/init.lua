@@ -132,6 +132,7 @@ vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
         require("mjm.lazy_keymaps")
         -- TODO: I'm not sure these should be lazy, since you can work with the qflist on open
         require("mjm.error-list")
+        require("mjm.error-list-open")
         require("mjm.error-list-filter")
         require("mjm.error-list-sort")
         require("mjm.error-list-system")

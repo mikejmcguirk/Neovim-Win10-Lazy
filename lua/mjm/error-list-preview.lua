@@ -1,5 +1,4 @@
 --- TODO: Go through this and determine what should be exposed, "private exposed", and private
---- TODO: I'm not sure what the mapping is, but there should be a way to trigger a re-position
 
 --- FUTURE: Should be possible to scroll the preview window. See
 --- https://github.com/bfrg/vim-qf-preview for relevant controls
@@ -140,7 +139,7 @@ local function create_autocmds()
         group = augroup,
         callback = function()
             if preview_win then
-                M._update_preview_win_pos()
+                M.update_preview_win_pos()
             end
         end,
     })
@@ -573,7 +572,7 @@ local function get_win_config()
     return get_fallback_win_config(base_cfg, e_lines, e_cols, padding, preview_border_width)
 end
 
-function M._update_preview_win_pos()
+function M.update_preview_win_pos()
     if not preview_win then
         clear_session_data()
         return
@@ -653,12 +652,13 @@ function M._update_win()
 
     local item = cur_list[line]
     local bufnr = item.bufnr
-    local preview_buf = buf_cache[bufnr]
-    local did_ftdetect = true
-    if not preview_buf then
-        did_ftdetect = false
-        preview_buf = get_preview_buf(bufnr)
-    end
+    local preview_buf, did_ftdetect = (function()
+        if buf_cache[bufnr] then
+            return buf_cache[bufnr], true
+        else
+            return get_preview_buf(bufnr), false
+        end
+    end)()
 
     if not preview_buf then
         clear_session_data()
