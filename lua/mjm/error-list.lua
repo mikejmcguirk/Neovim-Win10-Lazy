@@ -136,7 +136,7 @@ local function close_qf_win(win, print_errors)
         return true
     end
 
-    if err == "Cannot close the last window" then
+    if err and err[1] == "Cannot close the last window" then
         local buf = vim.api.nvim_win_get_buf(win) --- @type integer
         if not vim.api.nvim_buf_is_valid(buf) then
             local msg = "Bufnr " .. buf .. " in window " .. win .. " is not valid" --- @type string
@@ -254,6 +254,7 @@ end
 -- })
 
 -- TODO: This does not work when the llist is the last window. Maybe purge and bufdel
+-- update - Use protected close
 -- Clean up orphaned loclists
 -- vim.api.nvim_create_autocmd("WinClosed", {
 --     group = loclist_group,
@@ -305,19 +306,23 @@ local function get_list_height(opts)
     return list_height
 end
 
---- @param opts? {height:integer, keep_win:boolean}
+--- @param opts? {height:integer, keep_win:boolean, force_resize: boolean}
 --- @return boolean
 function M.open_qflist(opts)
     opts = opts or {}
-
     local cur_win = opts.keep_win and vim.api.nvim_get_current_win() or -1 --- @type integer
     local views = {} --- @type vim.fn.winsaveview.ret|nil[]
     local is_loclist_open = false --- @type boolean
+    local qf_win = nil --- @type integer
 
     local function win_check(win)
         local wintype = vim.fn.win_gettype(win) --- @type string
         if wintype == "quickfix" then
-            return false
+            if opts.force_resize then
+                qf_win = win
+            else
+                return false
+            end
         elseif wintype == "loclist" then
             is_loclist_open = true
         elseif wintype == "" then
@@ -333,6 +338,12 @@ function M.open_qflist(opts)
         end
     end
 
+    if qf_win and opts.force_resize then
+        M.resize_list_win(qf_win)
+        restore_views(views)
+        return false
+    end
+
     if is_loclist_open then
         M.close_all_loclists({ cur_tab = true })
     end
@@ -340,9 +351,7 @@ function M.open_qflist(opts)
     local list_height = get_list_height({ height = opts.height }) --- @type integer
     --- @diagnostic disable: missing-fields
     vim.api.nvim_cmd({ cmd = "copen", count = list_height, mods = { split = "botright" } }, {})
-
     restore_views(views)
-
     if vim.api.nvim_win_is_valid(cur_win) then
         vim.api.nvim_set_current_win(cur_win)
     end
@@ -406,7 +415,7 @@ function M.resize_qflist()
     return true
 end
 
---- @param opts? {height: integer, keep_win: boolean}
+--- @param opts? {height: integer, keep_win: boolean, force_resize: boolean}
 --- @return boolean
 function M.open_loclist(opts)
     opts = opts or {}
@@ -420,9 +429,9 @@ function M.open_loclist(opts)
 
     local views = {} --- @type vim.fn.winsaveview.ret[]
     local qf_win = nil --- @type integer|nil
+    local ll_win = nil --- @type integer
     local function win_check(win)
         local wintype = vim.fn.win_gettype(win)
-
         if wintype == "quickfix" then
             qf_win = win
             return true
@@ -443,6 +452,12 @@ function M.open_loclist(opts)
         if not win_check(win) then
             return false
         end
+    end
+
+    if ll_win and opts.force_resize then
+        M.resize_list_win(ll_win)
+        restore_views(views)
+        return false
     end
 
     if qf_win then
@@ -550,7 +565,6 @@ end
 --- @return boolean
 function M.close_win_restview(target_win)
     vim.validate("target_win", target_win, "number")
-
     if not vim.api.nvim_win_is_valid(target_win) then
         vim.api.nvim_echo({ { "Win " .. target_win .. " is invalid", "" } }, false, {})
         return false
