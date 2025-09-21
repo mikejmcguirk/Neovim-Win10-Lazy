@@ -109,8 +109,8 @@ Map("n", "zqd", function()
     vim.pack.del(vim.split(result, " "))
 end)
 
-Map("n", "zqp", function()
-    if vim.fn.confirm("Purge all plugins?", "&Yes\n&No", 2) ~= 1 then
+Map("n", "zqD", function()
+    if vim.fn.confirm("Delete all plugins?", "&Yes\n&No", 2) ~= 1 then
         return
     end
 
