@@ -15,11 +15,20 @@ function M.get_listtype(win)
     return (wintype == "quickfix" or wintype == "loclist") and wintype or nil
 end
 
---- @param is_loclist? boolean
---- @param win? integer
---- If is_loclist is true and no win is provided, will default to current window
-function M.get_getlist(is_loclist, win)
-    if not is_loclist then
+--- @param win integer
+--- @param get_loclist boolean
+--- @return fun(table):any|nil
+function M.get_getlist(win, get_loclist)
+    vim.validate("get_loclist", get_loclist, "boolean")
+    vim.validate("win", win, "number")
+    vim.validate("win", win, function()
+        return vim.api.nvim_win_is_valid(win)
+    end)
+
+    local wintype = vim.fn.win_gettype(win)
+    local is_quickfix_win = wintype == "qflist"
+    local cannot_have_loclist = not (wintype == "" or wintype == "loclist")
+    if (not get_loclist) or is_quickfix_win or cannot_have_loclist then
         return vim.fn.getqflist
     end
 

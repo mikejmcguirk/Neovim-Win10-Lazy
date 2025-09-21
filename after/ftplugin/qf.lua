@@ -20,6 +20,9 @@
 -- qf_goto_win_with_ll_file
 -- qf_goto_win_with_qfl_file
 
+-- TODO: The various checks for this var fail if it's not set since they use API calls. I'm fine
+-- with writing a protected var call, but need to look at the vim.g code to see if I'm doing
+-- more silly stuff than that
 vim.api.nvim_set_var("qf_rancher_validate", true)
 
 -- TODO: In the Rancher ftplugin file, setting the qf options should be done under a g value
