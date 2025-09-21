@@ -7,3 +7,10 @@ vim.cmd.packadd({ vim.fn.escape("specialist.nvim", " "), bang = true, magic = { 
 -- TODO: @param
 -- if you cw on the p it takes you before the @
 -- and with ] from end of line
+-- TODO:
+-- some line: ?
+-- stuff
+-- cw before the ? mark, it will go down to the next line and grab the --
+-- TODO:
+-- stuff, "other stuff"
+-- do ca" in other stuff. goes before the comma. I'm not even sure that one's me

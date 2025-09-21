@@ -1,3 +1,25 @@
+---------------------------
+-- qf jump function list --
+---------------------------
+
+-- TODO: The ftplugin maps should be moved to their own file, and a g_variable in the plugin's
+-- ftplugin file should determine if they are mapped. Put this function documentation in the
+-- file to ftplugin map
+-- TODO: The g variable should either map the defaults or not. Plug mappings/documentation can be
+-- provided if the user wants to do it custom
+
+-- qf_view_result
+-- ex_cc
+-- qf_jump
+-- qf_jump_newwin
+-- qf_jump_open_window
+-- jump_to_help_window
+-- qf_jump_to_usable_window
+-- qf_find_win_with_loclist
+-- qf_open_new_file_win
+-- qf_goto_win_with_ll_file
+-- qf_goto_win_with_qfl_file
+
 vim.api.nvim_set_var("qf_rancher_validate", true)
 
 -- TODO: In the Rancher ftplugin file, setting the qf options should be done under a g value

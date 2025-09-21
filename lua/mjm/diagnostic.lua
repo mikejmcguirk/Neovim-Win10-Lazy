@@ -26,6 +26,9 @@ Map("n", "\\D", function()
     vim.diagnostic.config((not cur_cfg.virtual_lines) and diag_lines_cfg or diag_text_cfg)
 end)
 
+-- TODO: Is it possible to get out of the current top_severity function? The problem is it
+-- doesn't actually save us a diagnostic_get in this case
+
 Map("n", "[<C-d>", function()
     vim.diagnostic.jump({
         count = -vim.v.count1,
@@ -99,6 +102,8 @@ Map("n", "]D", function()
         diagnostic = diagnostic,
     })
 end)
+
+-- TODO: Potentially better case for using the updated severity filtering
 
 Map("n", "[<M-d>", function()
     local severity = require("mjm.utils").get_top_severity({ buf = 0 })
