@@ -1,20 +1,8 @@
 --- FUTURE: Create updated quickfixtextfunc
 --- - The default masks error types
 
---- TODO: Copy list. no count = to next. Count = after list
---- TODO: I'm wondering if it's a better pattern to use the open hotkey on an open list to
---- resize. This opens up qQ for something else
---- TODO: Have some kind of shortcut to make the list taller. Make sure it preserves view
----     Was thinking qq for toggle, qQ for resize, maybe q<c-Q> to make bigger?
 --- TODO: Go thorugh this file and get all old functionalities. Need wrap commands and
 --- state management. Note history should adjust height
---- Maybe grep shouldn't be e, because deleting lists is going to be a common op, probably need
---- qe and le to be available.  qd suks. ll sucks.  qt and lt not that great.
---- A reversal of this though is that if you have qie as diag errors, then accidently doing qe
---- would be unfortunate. It might be relevant to put qd as the map and then not map anything
---- else to d
---- Feels roughly like qd for delete current/count list and qD to delete all. But also a potential
---- fat finger. Maybe have separate keys for current and specific lists
 --- TODO: look at the issue/PR lists for the various qf plugins to see what people want
 --- TODO: commands:
 --- - is there a way to make cabove/cbelow useful? or maybe cbefore/cafter
@@ -179,7 +167,10 @@ local M = {}
 -- State Management --
 ----------------------
 
--- TODO: Throw these in the module with the copy and merge functions
+-- TODO: Should have these maps in Rancher
+-- TODO: Related to these, add a copy map
+-- MAYBE: Could have a map to merge lists as well, but that gets complicated for a niche use case
+
 Map("n", "duc", function()
     M.close_qflist()
     vim.fn.setqflist({}, "r")
