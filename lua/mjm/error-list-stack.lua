@@ -1,5 +1,6 @@
 local M = {}
 
+-- TODO: Producing the same behavior as wrapping sub
 local function wrapping_add(x, y, min_val, max_val)
     local period = max_val - min_val + 1
     return ((x - min_val + y) % period) + min_val
@@ -12,6 +13,10 @@ end
 
 -- TODO: The logic between the history commands seems similar enough that you could pass an
 -- is_loclist option in and use each function for both listtypes
+
+-- FUTURE: Would be neat to have commands that let you specify lists to add into one another,
+-- or the ability to overwrite one list with another. But I'm not sure if the cost/benefit
+-- analysis works out ATM
 
 function M.q_older(count)
     vim.validate("count", count, "number")
@@ -79,6 +84,39 @@ function M.q_history(count)
     vim.api.nvim_cmd({ cmd = "chistory", count = count }, {})
     local elo = require("mjm.error-list-open")
     elo.resize_qflist()
+end
+
+function M.q_del(count)
+    vim.validate("count", count, "number")
+    vim.validate("count", count, function()
+        return count >= 0
+    end)
+
+    local stack_len = vim.fn.getqflist({ nr = "$" }).nr
+    if stack_len < 1 then
+        vim.api.nvim_echo({ { "No items in quickix stack", "" } }, false, {})
+        return
+    end
+
+    if count < 1 then
+        vim.fn.setqflist({}, "r")
+        return
+    end
+
+    -- TODO: This error could be a bit better
+    if count > stack_len then
+        vim.api.nvim_echo({ { "Invalid count " .. count, "" } }, false, {})
+        return
+    end
+
+    vim.fn.setqflist({}, "r", { items = {}, nr = count, title = "" })
+    local elo = require("mjm.error-list-open")
+    elo.resize_qflist()
+end
+
+function M.q_del_all()
+    vim.fn.setqflist({}, "f")
+    require("mjm.error-list-open").close_qflist()
 end
 
 function M.l_older(count)
@@ -170,6 +208,61 @@ function M.l_history(count)
     elo.resize_loclist()
 end
 
+function M.l_del(count)
+    vim.validate("count", count, "number")
+    vim.validate("count", count, function()
+        return count >= 0
+    end)
+
+    local cur_win = vim.api.nvim_get_current_win()
+    local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id
+    if qf_id == 0 then
+        vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
+        return
+    end
+
+    local stack_len = vim.fn.getloclist(cur_win, { nr = "$" }).nr
+    if stack_len < 1 then
+        vim.api.nvim_echo({ { "No items in loclist stack", "" } }, false, {})
+        return
+    end
+
+    if count < 1 then
+        vim.fn.setloclist(cur_win, {}, "r")
+        return
+    end
+
+    -- TODO: This error could be a bit better
+    if count > stack_len then
+        vim.api.nvim_echo({ { "Invalid count " .. count, "" } }, false, {})
+        return
+    end
+
+    vim.fn.setloclist(cur_win, {}, "r", { items = {}, nr = count, title = "" })
+    local elo = require("mjm.error-list-open")
+    elo.resize_loclist()
+end
+
+--- MAYBE: You could have this be a sub-function of l_del. Lets you re-use cur_win code
+
+-- TODO: Close loclist since it's wiped. Same for qf
+function M.l_del_all()
+    local cur_win = vim.api.nvim_get_current_win()
+    local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id
+    if qf_id == 0 then
+        vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
+        return
+    end
+
+    vim.fn.setloclist(cur_win, {}, "f")
+    local elo = require("mjm.error-list-open")
+    -- TODO: This points to a problem I've seen in a few places. We are relying on the window
+    -- scope to be correct so we get the same qfid in close_loclist that we had earlier
+    -- The better solution is, for loclist identification, create a helper function that gets
+    -- the qf_id and the win_id. That way we have the data available for more flexible use cases
+    elo.close_loclist()
+end
+
 -----------------
 --- Plug Maps ---
 -----------------
@@ -198,6 +291,22 @@ vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-qf-history)", "<nop>", {
     end,
 })
 
+vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-qf-del)", "<nop>", {
+    noremap = true,
+    desc = "<Plug> Delete a list from the quickfix stack",
+    callback = function()
+        M.q_del(vim.v.count)
+    end,
+})
+
+vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-qf-del-all)", "<nop>", {
+    noremap = true,
+    desc = "<Plug> Delete all items from the quickfix stack",
+    callback = function()
+        M.q_del_all()
+    end,
+})
+
 vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-ll-older)", "<nop>", {
     noremap = true,
     desc = "<Plug> Go to an older location list",
@@ -222,6 +331,22 @@ vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-ll-history)", "<nop>", {
     end,
 })
 
+vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-ll-del)", "<nop>", {
+    noremap = true,
+    desc = "<Plug> Delete a list from the loclist stack",
+    callback = function()
+        M.l_del(vim.v.count)
+    end,
+})
+
+vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-ll-del-all)", "<nop>", {
+    noremap = true,
+    desc = "<Plug> Delete all items from the loclist stack",
+    callback = function()
+        M.l_del_all()
+    end,
+})
+
 --------------------
 --- Default Maps ---
 --------------------
@@ -242,6 +367,16 @@ if vim.g.qfrancher_setdefaultmaps then
         desc = "View or jump within the quickfix history",
     })
 
+    vim.api.nvim_set_keymap("n", "<leader>qe", "<Plug>(qf-rancher-qf-del)", {
+        noremap = true,
+        desc = "Delete a list from the quickfix stack",
+    })
+
+    vim.api.nvim_set_keymap("n", "<leader>qE", "<Plug>(qf-rancher-qf-del-all)", {
+        noremap = true,
+        desc = "Delete all items from the quickfix stack",
+    })
+
     vim.api.nvim_set_keymap("n", "<leader>l[", "<Plug>(qf-rancher-ll-older)", {
         noremap = true,
         desc = "Go to an older loclist",
@@ -255,6 +390,16 @@ if vim.g.qfrancher_setdefaultmaps then
     vim.api.nvim_set_keymap("n", "<leader>lL", "<Plug>(qf-rancher-ll-history)", {
         noremap = true,
         desc = "View or jump within the loclist history",
+    })
+
+    vim.api.nvim_set_keymap("n", "<leader>le", "<Plug>(qf-rancher-ll-del)", {
+        noremap = true,
+        desc = "Delete a list from the loclist stack",
+    })
+
+    vim.api.nvim_set_keymap("n", "<leader>lE", "<Plug>(qf-rancher-ll-del-all)", {
+        noremap = true,
+        desc = "<Plug> Delete all items from the loclist stack",
     })
 end
 
@@ -278,6 +423,20 @@ if vim.g.qfrancher_setdefaultcmds then
         M.q_history(count)
     end, { count = 0 })
 
+    -- DOCUMENT: "all" overrides count
+    -- NOTE: Ideally, a count would override the "all" arg, in order to default to safer behavior,
+    -- but the dict sent to the callback includes a count of 0 whether it was explicitly passed or
+    -- not. Since a count of 0 can be explicitly passed, only overriding a count > 0 is convoluted
+    vim.api.nvim_create_user_command("Qdelete", function(arg)
+        if arg.args == "all" then
+            M.q_del_all()
+            return
+        end
+
+        local count = arg.count >= 0 and arg.count or 0
+        M.q_del(count)
+    end, { count = 0, nargs = "?" })
+
     vim.api.nvim_create_user_command("Lolder", function(arg)
         local count = arg.count > 0 and arg.count or 1
         M.l_older(count)
@@ -292,6 +451,20 @@ if vim.g.qfrancher_setdefaultcmds then
         local count = arg.count >= 0 and arg.count or 0
         M.l_history(count)
     end, { count = 0 })
+
+    -- DOCUMENT: "all" overrides count
+    -- NOTE: Ideally, a count would override the "all" arg, in order to default to safer behavior,
+    -- but the dict sent to the callback includes a count of 0 whether it was explicitly passed or
+    -- not. Since a count of 0 can be explicitly passed, only overriding a count > 0 is convoluted
+    vim.api.nvim_create_user_command("Ldelete", function(arg)
+        if arg.args == "all" then
+            M.l_del_all()
+            return
+        end
+
+        local count = arg.count >= 0 and arg.count or 0
+        M.l_del(count)
+    end, { count = 0, nargs = "?" })
 end
 
 return M

@@ -1,6 +1,8 @@
 --- FUTURE: Create updated quickfixtextfunc
 --- - The default masks error types
 
+--- TODO: Throughout the project, change any "merge" verbiage to "add" to align with vimgrepadd
+--- and caddbuffer
 --- TODO: Go thorugh this file and get all old functionalities. Need wrap commands and
 --- state management. Note history should adjust height
 --- TODO: look at the issue/PR lists for the various qf plugins to see what people want
@@ -12,7 +14,6 @@
 --- - I think we kind of have :filter covered but investigate
 --- - clist?
 --- - cwindow/cbottom
---- - colder/cnewer (instead of just chistory)
 --- - you could do grep cmds like vimgrepadd or you could do Qgrepmerge for example
 ---
 --- TODO: :h :make_markprg
