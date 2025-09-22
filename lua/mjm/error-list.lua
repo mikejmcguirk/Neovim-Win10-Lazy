@@ -1,7 +1,3 @@
-------------------
--- CAPABILITIES --
-------------------
-
 --- FUTURE: Create updated quickfixtextfunc
 --- - The default masks error types
 
@@ -98,6 +94,31 @@
 -- PREVIEWERS:
 -- https://github.com/r0nsha/qfpreview.nvim
 -- https://github.com/bfrg/vim-qf-preview
+
+-----------------------
+-- Config/Validation --
+-----------------------
+
+-- TODO: For now, I'm not adding config for the default maps. I have a feeling like I should
+-- because there are so many. But, because there are so many, that also adds complication to any
+-- boilerplate options to configure them, to the point where I'm not sure it's less complicated
+-- than just promoting the plug mappings
+
+---@diagnostic disable-next-line: undefined-field
+local g_qfrancher_setdefaultmaps = vim.g.qfrancher_setdefaultmaps
+if g_qfrancher_setdefaultmaps then
+    vim.validate("g_qfrancher_setdefaultmaps", g_qfrancher_setdefaultmaps, "boolean")
+else
+    vim.api.nvim_set_var("qfrancher_setdefaultmaps", true)
+end
+
+---@diagnostic disable-next-line: undefined-field
+local g_qfrancher_setdefaultcmds = vim.g.qfrancher_setdefaultcmds
+if g_qfrancher_setdefaultcmds then
+    vim.validate("g_qfrancher_setdefaultcmds", g_qfrancher_setdefaultcmds, "boolean")
+else
+    vim.api.nvim_set_var("qfrancher_setdefaultcmds", true)
+end
 
 ------------------------
 -- Other source notes --

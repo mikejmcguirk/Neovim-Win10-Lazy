@@ -140,21 +140,23 @@ local function get_list_height(list_win, is_ll)
 end
 
 --- @param list_win integer
---- @param is_ll? boolean
+--- @param opts? {height?:integer, is_loclist?:boolean}
 --- @return nil
-local function resize_list(list_win, is_ll)
-    vim.validate("is_ll", is_ll, { "boolean", "nil" })
+local function resize_list(list_win, opts)
+    opts = opts or {}
+    vim.validate("opts.is_ll", opts.is_loclist, { "boolean", "nil" })
+    vim.validate("opts.height", opts.height, { "number", "nil" })
     vim.validate("win", list_win, "number")
     vim.validate("list_win", list_win, function()
         return vim.api.nvim_win_is_valid(list_win)
     end)
 
-    if is_ll == nil then
+    if opts.is_loclist == nil then
         local wintype = vim.fn.win_gettype(list_win)
-        is_ll = wintype == "loclist"
+        opts.is_loclist = wintype == "loclist"
     end
 
-    local list_height = get_list_height(list_win, is_ll)
+    local list_height = opts.height or get_list_height(list_win, opts.is_loclist)
     vim.api.nvim_win_set_height(list_win, list_height)
 end
 
@@ -223,6 +225,7 @@ end
 --- - keep_win: On completion, return focus to the calling win
 function M.open_qflist(opts)
     opts = opts or {}
+    vim.validate("opts.height", opts.height, { "nil", "number" })
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local wins = vim.api.nvim_tabpage_list_wins(0) --- @type integer[]
     local qf_win, _ = find_qf_win(wins) --- @type integer|nil
@@ -238,13 +241,12 @@ function M.open_qflist(opts)
     local views = get_views(wins) --- @type vim.fn.winsaveview.ret[]
     if qf_win and opts.always_resize then
         local ll_views = get_views(ll_wins) --- @type vim.fn.winsaveview.ret[]
-        resize_list(qf_win, false)
+        resize_list(qf_win, { is_loclist = false, height = opts.height })
         restore_views(views)
         restore_views(ll_views)
         return false
     end
 
-    vim.validate("opts.height", opts.height, { "nil", "number" })
     pclose_wins(ll_wins)
     local height = opts.height and opts.height or get_list_height(cur_win, false) --- @type integer
     --- @diagnostic disable: missing-fields
@@ -281,7 +283,7 @@ function M.resize_qflist()
 
     table.remove(wins, qf_idx)
     local views = get_views(wins) --- @type vim.fn.winsaveview.ret[]
-    resize_list(qf_win, false)
+    resize_list(qf_win, { is_loclist = false })
     restore_views(views)
 end
 
@@ -289,6 +291,7 @@ end
 --- @return boolean
 function M.open_loclist(opts)
     opts = opts or {}
+    vim.validate("opts.height", opts.height, { "nil", "number" })
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id ---@type integer
     if qf_id == 0 then
@@ -314,12 +317,11 @@ function M.open_loclist(opts)
             vim.list_extend(views, qf_view)
         end
 
-        resize_list(ll_win, true)
+        resize_list(ll_win, { is_loclist = true, height = opts.height })
         restore_views(views)
         return false
     end
 
-    vim.validate("opts.height", opts.height, { "nil", "number" })
     if qf_win then
         pwin_close({ bwipeout = true, force = true, win = qf_win })
     end
@@ -373,7 +375,7 @@ function M.resize_loclist()
         return false
     end
 
-    resize_list(ll_win, true)
+    resize_list(ll_win, { is_loclist = true })
     restore_views(views)
     return true
 end
@@ -382,8 +384,7 @@ end
 
 --- @param list_win integer
 --- @return boolean
--- TODO: rename to just close_list_win
-function M.close_win_restview(list_win)
+function M.close_list_win(list_win)
     vim.validate("list_win", list_win, "number")
     vim.validate("list_win", list_win, function()
         return vim.api.nvim_win_is_valid(list_win)
@@ -429,49 +430,27 @@ end
 --- Plug Maps ---
 -----------------
 
-vim.api.nvim_set_keymap("n", "<Plug>(QfRancherOpenQfList)", "<nop>", {
+-- DOCUMENT: How the open maps double as resizers. Note that this follows the built-in cmd
+-- behavior
+
+vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-open-qf-list)", "<nop>", {
     noremap = true,
     desc = "<Plug> Open the quickfix list",
     callback = function()
         local height = vim.v.count > 0 and vim.v.count or nil
-        M.open_qflist({ height = height })
+        M.open_qflist({ always_resize = true, height = height })
     end,
 })
 
-------------
---- Cmds ---
-------------
-
--- TODO: The cmds should be gated behind a g:var
-
-vim.api.nvim_create_user_command("Qopen", function(arg)
-    local count = arg.count > 0 and arg.count or nil
-    M.open_qflist({ height = count })
-end, { count = 0 })
-
---------------------
---- Default Maps ---
---------------------
-
-local nofallback_desc = "Prevent fallback to other mappings"
-vim.api.nvim_set_keymap("n", "<leader>q", "<nop>", { noremap = true, desc = nofallback_desc })
-vim.api.nvim_set_keymap("n", "<leader>l", "<nop>", { noremap = true, desc = nofallback_desc })
-
-vim.api.nvim_set_keymap("n", "<leader>qp", "<Plug>(QfRancherOpenQfList)", {
+vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-close-qf-list)", "<nop>", {
     noremap = true,
-    desc = "Open the quickfix list",
-})
-
--- TODO: This is the sort map
-vim.api.nvim_set_keymap("n", "<leader>qo", "", {
-    noremap = true,
-    desc = "Close the quickfix list",
+    desc = "<Plug> Close the quickfix list",
     callback = M.close_qflist,
 })
 
-vim.api.nvim_set_keymap("n", "<leader>qq", "", {
+vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-toggle-qf-list)", "<nop>", {
     noremap = true,
-    desc = "Toggle the quickfix list",
+    desc = "<Plug> Toggle the quickfix list",
     callback = function()
         if not M.open_qflist() then
             M.close_qflist()
@@ -479,27 +458,24 @@ vim.api.nvim_set_keymap("n", "<leader>qq", "", {
     end,
 })
 
-vim.api.nvim_set_keymap("n", "<leader>qQ", "", {
+vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-open-loclist)", "<nop>", {
     noremap = true,
-    desc = "Resize the quickfix list",
-    callback = M.resize_qflist,
+    desc = "<Plug> Open the location list",
+    callback = function()
+        local height = vim.v.count > 0 and vim.v.count or nil
+        M.open_loclist({ always_resize = true, height = height })
+    end,
 })
 
-vim.api.nvim_set_keymap("n", "<leader>lp", "", {
+vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-close-loclist)", "<nop>", {
     noremap = true,
-    desc = "Open the location list",
-    callback = M.open_loclist,
-})
-
-vim.api.nvim_set_keymap("n", "<leader>lo", "", {
-    noremap = true,
-    desc = "Close the location list",
+    desc = "<Plug> Close the location list",
     callback = M.close_loclist,
 })
 
-vim.api.nvim_set_keymap("n", "<leader>ll", "", {
+vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-toggle-loclist)", "<nop>", {
     noremap = true,
-    desc = "Toggle the location list",
+    desc = "<Plug> Toggle the location list",
     callback = function()
         if not M.open_loclist() then
             M.close_loclist()
@@ -507,10 +483,65 @@ vim.api.nvim_set_keymap("n", "<leader>ll", "", {
     end,
 })
 
-vim.api.nvim_set_keymap("n", "<leader>lL", "", {
-    noremap = true,
-    desc = "Resize the location list",
-    callback = M.resize_loclist,
-})
+--------------------
+--- Default Maps ---
+--------------------
+
+---@diagnostic disable-next-line: undefined-field
+if vim.g.qfrancher_setdefaultmaps then
+    local nofallback_desc = "Prevent fallback to other mappings"
+    vim.api.nvim_set_keymap("n", "<leader>q", "<nop>", { noremap = true, desc = nofallback_desc })
+    vim.api.nvim_set_keymap("n", "<leader>l", "<nop>", { noremap = true, desc = nofallback_desc })
+
+    vim.api.nvim_set_keymap("n", "<leader>qp", "<Plug>(qf-rancher-open-qf-list)", {
+        noremap = true,
+        desc = "Open the quickfix list",
+    })
+
+    vim.api.nvim_set_keymap("n", "<leader>qo", "<Plug>(qf-rancher-close-qf-list)", {
+        noremap = true,
+        desc = "Close the quickfix list",
+    })
+
+    vim.api.nvim_set_keymap("n", "<leader>qq", "<Plug>(qf-rancher-toggle-qf-list)", {
+        noremap = true,
+        desc = "Toggle the quickfix list",
+    })
+
+    vim.api.nvim_set_keymap("n", "<leader>lp", "<Plug>(qf-rancher-open-loclist)", {
+        noremap = true,
+        desc = "Open the location list",
+    })
+
+    vim.api.nvim_set_keymap("n", "<leader>lo", "<Plug>(qf-rancher-close-loclist)", {
+        noremap = true,
+        desc = "Close the location list",
+    })
+
+    vim.api.nvim_set_keymap("n", "<leader>ll", "<Plug>(qf-rancher-toggle-loclist)", {
+        noremap = true,
+        desc = "Toggle the location list",
+    })
+end
+
+------------
+--- Cmds ---
+------------
+
+---@diagnostic disable-next-line: undefined-field
+if vim.g.qfrancher_setdefaultcmds then
+    vim.api.nvim_create_user_command("Qopen", function(arg)
+        local count = arg.count > 0 and arg.count or nil
+        M.open_qflist({ always_resize = true, height = count })
+    end, { count = 0 })
+
+    vim.api.nvim_create_user_command("Lopen", function(arg)
+        local count = arg.count > 0 and arg.count or nil
+        M.open_loclist({ always_resize = true, height = count })
+    end, { count = 0 })
+
+    vim.api.nvim_create_user_command("Qclose", M.close_qflist, {})
+    vim.api.nvim_create_user_command("Lclose", M.close_loclist, {})
+end
 
 return M
