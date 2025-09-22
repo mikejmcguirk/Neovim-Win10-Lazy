@@ -15,6 +15,7 @@
 --- TODO: Seeing weird stuff in the lL resize and greps where resize isn't working. My guess is
 --- it's the issue I figured before about loclist id acquisition, and we need to use the updated
 --- system function
+--- TODO: But then why isn't qQ resizing?
 
 local M = {}
 

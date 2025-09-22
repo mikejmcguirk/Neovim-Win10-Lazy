@@ -57,7 +57,6 @@ function M.qf_filter_wrapper(prompt, filter_func)
     end
 
     local smartcase = is_filter_smartcase(result) --- @type boolean
-
     local list_nr = (function()
         if vim.v.count > 0 then
             return math.min(vim.v.count, vim.fn.getqflist({ nr = "$" }).nr)
@@ -80,7 +79,6 @@ function M.qf_filter_wrapper(prompt, filter_func)
     --- @type vim.fn.winsaveview.ret|nil
     local view = qf_win and vim.api.nvim_win_call(qf_win, vim.fn.winsaveview) or nil
     local row = view and view.lnum or 0 --- @type integer
-
     local list = vim.fn.getqflist({ nr = list_nr, all = true }) --- @type table
     local new_items = {} --- @type table
     for i, t in ipairs(list.items) do
@@ -210,12 +208,12 @@ local function filter_keep_emu(item, pattern, opts)
 
     local fname = vim.fn.bufname(item.bufnr)
     local compare_fname = opts.smartcase and string.lower(fname) or fname
-    local match_fname = string.match(compare_fname, pattern)
+    local find_fname = string.find(compare_fname, pattern, 1, true)
 
     local compare_text = opts.smartcase and string.lower(item.text) or item.text
-    local match_text = string.match(compare_text, pattern)
+    local find_text = string.find(compare_text, pattern, 1, true)
 
-    return (match_fname or match_text) and true or false
+    return (find_fname or find_text) and true or false
 end
 
 --- @param item table
@@ -231,12 +229,12 @@ local function filter_remove_emu(item, pattern, opts)
 
     local fname = vim.fn.bufname(item.bufnr)
     local compare_fname = opts.smartcase and string.lower(fname) or fname
-    local match_fname = string.match(compare_fname, pattern)
+    local find_fname = string.find(compare_fname, pattern, 1, true)
 
     local compare_text = opts.smartcase and string.lower(item.text) or item.text
-    local match_text = string.match(compare_text, pattern)
+    local find_text = string.find(compare_text, pattern, 1, true)
 
-    return not (match_fname or match_text) and true or false
+    return not (find_fname or find_text) and true or false
 end
 
 --- @param item table
@@ -332,7 +330,7 @@ local function filter_keep_fname(item, pattern, opts)
 
     local fname = vim.fn.bufname(item.bufnr)
     local compare_text = opts.smartcase and string.lower(fname) or fname
-    return string.match(compare_text, pattern)
+    return string.find(compare_text, pattern, 1, true) ~= nil
 end
 
 --- @param item table
@@ -348,7 +346,7 @@ local function filter_remove_fname(item, pattern, opts)
 
     local fname = vim.fn.bufname(item.bufnr)
     local compare_text = opts.smartcase and string.lower(fname) or fname
-    return not string.match(compare_text, pattern)
+    return not string.find(compare_text, pattern, 1, true)
 end
 
 --- @param item table
@@ -443,7 +441,7 @@ local function filter_keep_text(item, pattern, opts)
     opts = opts or {}
 
     local compare_text = opts.smartcase and string.lower(item.text) or item.text
-    return string.match(compare_text, pattern)
+    return string.find(compare_text, pattern, 1, true) ~= nil
 end
 
 --- @param item table
@@ -454,7 +452,7 @@ local function filter_remove_text(item, pattern, opts)
     opts = opts or {}
 
     local compare_text = opts.smartcase and string.lower(item.text) or item.text
-    return not string.match(compare_text, pattern)
+    return not string.find(compare_text, pattern, 1, true)
 end
 
 --- @param item table
@@ -537,7 +535,7 @@ local function filter_keep_type(item, pattern, opts)
     opts = opts or {}
 
     local compare_text = opts.smartcase and string.lower(item.type) or item.type
-    return string.match(compare_text, pattern)
+    return string.find(compare_text, pattern, 1, true) ~= nil
 end
 
 --- @param item table
@@ -548,7 +546,7 @@ local function filter_remove_type(item, pattern, opts)
     opts = opts or {}
 
     local compare_text = opts.smartcase and string.lower(item.type) or item.type
-    return not string.match(compare_text, pattern)
+    return not string.find(compare_text, pattern, 1, true)
 end
 
 --- @param item table
@@ -631,7 +629,7 @@ local function filter_keep_lnum(item, pattern, opts)
     opts = opts or {}
 
     local compare_lnum = opts.smartcase and string.lower(item.lnum) or item.lnum
-    return string.match(compare_lnum, pattern)
+    return string.find(compare_lnum, pattern, 1, true) ~= nil
 end
 
 --- @param item table
@@ -642,7 +640,7 @@ local function filter_remove_lnum(item, pattern, opts)
     opts = opts or {}
 
     local compare_lnum = opts.smartcase and string.lower(item.lnum) or item.lnum
-    return not string.match(compare_lnum, pattern)
+    return not string.find(compare_lnum, pattern, 1, true)
 end
 
 --- @param item table

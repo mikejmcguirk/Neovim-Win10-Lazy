@@ -355,14 +355,14 @@ local grep_b = { async = true, timeout = 2000 }
 --- @type QfRancherSystemOpts
 local grep_o = { async = true, overwrite = true, timeout = 2000 }
 --- @type QfRancherSystemOpts
-local grep_m = { async = true, merge = true, timeout = 2000 }
+local grep_m = { async = true, add = true, timeout = 2000 }
 
 --- @type QfRancherSystemOpts
 local lgrep_b = { async = true, loclist = true, timeout = 2000 }
 --- @type QfRancherSystemOpts
 local lgrep_o = { async = true, loclist = true, overwrite = true, timeout = 2000 }
 --- @type QfRancherSystemOpts
-local lgrep_m = { async = true, loclist = true, merge = true, timeout = 2000 }
+local lgrep_m = { async = true, loclist = true, add = true, timeout = 2000 }
 
 --- @type QfRancherGrepLocFun
 local function get_cwd_tbl()
@@ -472,14 +472,14 @@ local hgrep_b = { async = true, type = "\1", timeout = 2000 }
 --- @type QfRancherSystemOpts
 local hgrep_o = { async = true, type = "\1", overwrite = true, timeout = 2000 }
 --- @type QfRancherSystemOpts
-local hgrep_m = { async = true, type = "\1", merge = true, timeout = 2000 }
+local hgrep_m = { async = true, type = "\1", add = true, timeout = 2000 }
 
 --- @type QfRancherSystemOpts
 local hlgrep_b = { async = true, type = "\1", loclist = true, timeout = 2000 }
 --- @type QfRancherSystemOpts
 local hlgrep_o = { async = true, type = "\1", loclist = true, overwrite = true, timeout = 2000 }
 --- @type QfRancherSystemOpts
-local hlgrep_m = { async = true, type = "\1", loclist = true, merge = true, timeout = 2000 }
+local hlgrep_m = { async = true, type = "\1", loclist = true, add = true, timeout = 2000 }
 
 --- @return boolean, QfRancherSystemIn
 local function grep_help()

@@ -8,7 +8,7 @@
 
 local M = {}
 
---- @alias QfRancherSetlistAction "merge"|"new"|"overwrite"
+--- @alias QfRancherSetlistAction "add"|"new"|"overwrite"
 
 -- TODO: Replace the system functions with these
 
@@ -188,7 +188,7 @@ end
 --- @return integer|string
 function M.get_list_nr(getlist, action)
     if vim.v.count < 1 then
-        local replace = action == "overwrite" or action == "merge"
+        local replace = action == "overwrite" or action == "add"
         return replace and getlist({ nr = 0 }).nr or "$"
     else
         -- TODO: Double check that this works in the new list case

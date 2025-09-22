@@ -66,12 +66,6 @@ local function convert_diag(d)
     }
 end
 
--- what diag level
--- create new, overwrite, merge
--- if there is a count
--- what list it goes to
--- buf diags or all diags
-
 --- @param opts? QfRancherDiagToListOpts
 --- NOTE: To get all diagnostics, avoid passing in a severity opt. If vim.diagnostic.get does not
 --- receive a severity option, it will simply compare all diagnostics to true, whereas if it
@@ -113,7 +107,7 @@ local function diags_to_list(opts)
     opts.set_action = opts.set_action or "new"
     local list_nr = eu.get_list_nr(getlist, opts.set_action)
 
-    if opts.set_action == "merge" then
+    if opts.set_action == "add" then
         local cur_list = getlist({ nr = list_nr, items = true })
         converted_diags = eu.merge_qf_lists(converted_diags, cur_list.items)
     end
@@ -124,7 +118,7 @@ local function diags_to_list(opts)
     --- Unsure if there's a worthwhile performance gain here, though this is a hot loop
     table.sort(converted_diags, require("mjm.error-list-sort").sort_diag_fname_asc)
     local setlist = eu.get_setlist(opts.is_loclist, cur_win)
-    local is_replace = opts.set_action == "merge" or opts.set_action == "overwrite"
+    local is_replace = opts.set_action == "add" or opts.set_action == "overwrite"
     local action = is_replace and "r" or " "
     -- TODO: more specific title based on query
     local title = "Diagnostics"
@@ -144,7 +138,7 @@ local function diags_to_list(opts)
     -- even with more fixed code, we are setting heigh twice, which is inefficient/cound create
     -- flicker
     local did_openlist = eu.get_openlist(opts.is_loclist)()
-    if opts.set_action == "merge" or opts.set_action == "overwrite" then
+    if opts.set_action == "add" or opts.set_action == "overwrite" then
         -- TODO: Also set if number? I forget if this is automatic
         if opts.is_loclist then
             vim.cmd(list_nr .. "lhistory")
@@ -184,7 +178,7 @@ end
 -- qg (should be qe!) is grep, and so on. Okay so you offer the ability to change the middle
 -- prefix. Sure.
 -- But now do you offer the ability to change what the derivations of the prefix mean? right now,
--- lowercase is new, uppercase is overwrite, and ctrl is merge. The config for that would be
+-- lowercase is new, uppercase is overwrite, and ctrl is add. The config for that would be
 -- complicated to write, and I have a feeling that, for a user to understand it, would be more
 -- work than just doing their own plug mappings
 -- And I also feel that way about the individual commands and their meanings
@@ -266,39 +260,39 @@ vim.keymap.set("n", "<leader>qIt", function()
 end)
 
 vim.keymap.set("n", "<leader>q<C-i>n", function()
-    diags_to_list({ set_action = "merge" })
+    diags_to_list({ set_action = "add" })
 end)
 
 vim.keymap.set("n", "<leader>q<C-i>f", function()
-    diags_to_list({ set_action = "merge", min_severity = vim.diagnostic.severity.INFO })
+    diags_to_list({ set_action = "add", min_severity = vim.diagnostic.severity.INFO })
 end)
 
 vim.keymap.set("n", "<leader>q<C-i>w", function()
-    diags_to_list({ set_action = "merge", min_severity = vim.diagnostic.severity.WARN })
+    diags_to_list({ set_action = "add", min_severity = vim.diagnostic.severity.WARN })
 end)
 
 vim.keymap.set("n", "<leader>q<C-i>e", function()
-    diags_to_list({ set_action = "merge", min_severity = vim.diagnostic.severity.ERROR })
+    diags_to_list({ set_action = "add", min_severity = vim.diagnostic.severity.ERROR })
 end)
 
 vim.keymap.set("n", "<leader>q<C-i>N", function()
-    diags_to_list({ set_action = "merge", severity = vim.diagnostic.severity.HINT })
+    diags_to_list({ set_action = "add", severity = vim.diagnostic.severity.HINT })
 end)
 
 vim.keymap.set("n", "<leader>q<C-i>F", function()
-    diags_to_list({ set_action = "merge", severity = vim.diagnostic.severity.INFO })
+    diags_to_list({ set_action = "add", severity = vim.diagnostic.severity.INFO })
 end)
 
 vim.keymap.set("n", "<leader>q<C-i>W", function()
-    diags_to_list({ set_action = "merge", severity = vim.diagnostic.severity.WARN })
+    diags_to_list({ set_action = "add", severity = vim.diagnostic.severity.WARN })
 end)
 
 vim.keymap.set("n", "<leader>q<C-i>E", function()
-    diags_to_list({ set_action = "merge", severity = vim.diagnostic.severity.ERROR })
+    diags_to_list({ set_action = "add", severity = vim.diagnostic.severity.ERROR })
 end)
 
 vim.keymap.set("n", "<leader>q<C-i>t", function()
-    diags_to_list({ set_action = "merge", top_severity = true })
+    diags_to_list({ set_action = "add", top_severity = true })
 end)
 
 vim.keymap.set("n", "<leader>lin", function()
@@ -402,13 +396,13 @@ vim.keymap.set("n", "<leader>lIt", function()
 end)
 
 vim.keymap.set("n", "<leader>l<C-i>n", function()
-    diags_to_list({ is_loclist = true, set_action = "merge" })
+    diags_to_list({ is_loclist = true, set_action = "add" })
 end)
 
 vim.keymap.set("n", "<leader>l<C-i>f", function()
     diags_to_list({
         is_loclist = true,
-        set_action = "merge",
+        set_action = "add",
         min_severity = vim.diagnostic.severity.INFO,
     })
 end)
@@ -416,7 +410,7 @@ end)
 vim.keymap.set("n", "<leader>l<C-i>w", function()
     diags_to_list({
         is_loclist = true,
-        set_action = "merge",
+        set_action = "add",
         min_severity = vim.diagnostic.severity.WARN,
     })
 end)
@@ -424,7 +418,7 @@ end)
 vim.keymap.set("n", "<leader>l<C-i>e", function()
     diags_to_list({
         is_loclist = true,
-        set_action = "merge",
+        set_action = "add",
         min_severity = vim.diagnostic.severity.ERROR,
     })
 end)
@@ -432,7 +426,7 @@ end)
 vim.keymap.set("n", "<leader>l<C-i>N", function()
     diags_to_list({
         is_loclist = true,
-        set_action = "merge",
+        set_action = "add",
         severity = vim.diagnostic.severity.HINT,
     })
 end)
@@ -440,7 +434,7 @@ end)
 vim.keymap.set("n", "<leader>l<C-i>F", function()
     diags_to_list({
         is_loclist = true,
-        set_action = "merge",
+        set_action = "add",
         severity = vim.diagnostic.severity.INFO,
     })
 end)
@@ -448,7 +442,7 @@ end)
 vim.keymap.set("n", "<leader>l<C-i>W", function()
     diags_to_list({
         is_loclist = true,
-        set_action = "merge",
+        set_action = "add",
         severity = vim.diagnostic.severity.WARN,
     })
 end)
@@ -456,11 +450,11 @@ end)
 vim.keymap.set("n", "<leader>l<C-i>E", function()
     diags_to_list({
         is_loclist = true,
-        set_action = "merge",
+        set_action = "add",
         severity = vim.diagnostic.severity.ERROR,
     })
 end)
 
 vim.keymap.set("n", "<leader>l<C-i>t", function()
-    diags_to_list({ is_loclist = true, set_action = "merge", top_severity = true })
+    diags_to_list({ is_loclist = true, set_action = "add", top_severity = true })
 end)

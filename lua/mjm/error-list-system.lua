@@ -21,7 +21,7 @@ local M = {}
 --- @class QfRancherSystemOpts
 --- @field async? boolean
 --- @field loclist? boolean
---- @field merge? boolean
+--- @field add? boolean
 --- @field overwrite? boolean
 --- @field timeout? integer
 --- @field type? string
@@ -140,7 +140,7 @@ local function get_list_nr(getlist, opts)
     opts = opts or {}
 
     if vim.v.count < 1 then
-        if opts.overwrite or opts.merge then
+        if opts.overwrite or opts.add then
             return getlist({ nr = 0 }).nr
         else
             return "$"
@@ -201,9 +201,9 @@ function M.qf_sys_wrap(get_cmd_parts, opts)
         -- the win number, and the action, and then that can be calculated
         -- Especially relevant when you start dealing with cases like copies, or more complex
         -- add logic into blanks
-        -- TODO: outline anyway, but also it should not be possible to both merge and overwrite
+        -- TODO: outline anyway, but also it should not be possible to both add and overwrite
         -- though I'm not sure it hurts anything so iunno. Or maybe it should be an enum
-        if opts.merge then
+        if opts.add then
             local cur_list = getlist({ nr = list_nr, items = true })
             qf_dict.items = merge_qf_lists(cur_list.items, qf_dict.items)
         end
@@ -211,7 +211,7 @@ function M.qf_sys_wrap(get_cmd_parts, opts)
         table.sort(qf_dict.items, require("mjm.error-list-sort").sort_fname_asc)
         local title = type(system_in.title) == "string" and system_in.title or ""
         local setlist = get_setlist(cur_win)
-        local action = (opts.merge or opts.overwrite) and "r" or " "
+        local action = (opts.add or opts.overwrite) and "r" or " "
         setlist({}, action, { items = qf_dict.items, nr = list_nr, title = title })
 
         -- TODO: do a getopen thing here too
@@ -224,7 +224,7 @@ function M.qf_sys_wrap(get_cmd_parts, opts)
         end
 
         -- TODO: need a wrapper for these that resizes
-        if opts.overwrite or opts.merge then
+        if opts.overwrite or opts.add then
             if opts.loclist then
                 vim.cmd(list_nr .. "lhistory")
             else

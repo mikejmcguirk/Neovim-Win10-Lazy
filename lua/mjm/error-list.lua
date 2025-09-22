@@ -32,7 +32,6 @@
 --- syntactic sugar on top of the original cmd
 
 --- TODO: Touchup/cleanup
---- - Throughout the project, change any "merge" verbiage to "add" verbiage
 --- - Saw feature request for current file entries first. This does not fit in with how I
 --- want things organized, but does raise point that loclist mappings should be available where
 --- possible to focus current buf
