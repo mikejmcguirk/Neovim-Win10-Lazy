@@ -15,25 +15,33 @@ function M.get_listtype(win)
     return (wintype == "quickfix" or wintype == "loclist") and wintype or nil
 end
 
---- @param win integer
---- @param get_loclist boolean
+--- @param opts {get_loclist?:boolean, win?:integer}
 --- @return fun(table):any|nil
-function M.get_getlist(win, get_loclist)
-    vim.validate("get_loclist", get_loclist, "boolean")
-    vim.validate("win", win, "number")
-    vim.validate("win", win, function()
-        return vim.api.nvim_win_is_valid(win)
-    end)
+--- If no win is provided, the current win is used as a fallback
+--- If no get_loclist value is provided or it is false, getqflist is always returned
+--- If a win is provided but it cannot have a loclist, getqflist is returned
+function M.get_getlist(opts)
+    opts = opts or {}
+    vim.validate("opts.get_loclist", opts.get_loclist, { "boolean", "nil" })
+    vim.validate("opts.win", opts.win, { "nil", "number" })
+    if opts.win then
+        vim.validate("opts.win", opts.win, function()
+            return vim.api.nvim_win_is_valid(opts.win)
+        end)
+    end
 
+    if not opts.get_loclist then
+        return vim.fn.getqflist
+    end
+
+    local win = opts.win or vim.api.nvim_get_current_win()
     local wintype = vim.fn.win_gettype(win)
-    local is_quickfix_win = wintype == "qflist"
-    local cannot_have_loclist = not (wintype == "" or wintype == "loclist")
-    if (not get_loclist) or is_quickfix_win or cannot_have_loclist then
+    local can_have_loclist = wintype == "" or wintype == "loclist"
+    if not can_have_loclist then
         return vim.fn.getqflist
     end
 
     return function(what)
-        win = win or vim.api.nvim_get_current_win()
         return what and vim.fn.getloclist(win, what) or vim.fn.getloclist(win)
     end
 end

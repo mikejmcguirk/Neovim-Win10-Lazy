@@ -631,14 +631,15 @@ function M._update_win()
         return
     end
 
-    local listtype = require("mjm.error-list-util").get_listtype(qf_win)
+    local eu = require("mjm.error-list-util")
+    local listtype = eu.get_listtype(qf_win)
     if not listtype then
         clear_session_data()
         return
     end
 
-    local is_loclist = listtype == "loclist"
-    local cur_list = require("mjm.error-list-util").get_getlist(qf_win, is_loclist)()
+    local is_ll = listtype == "loclist"
+    local cur_list = eu.get_getlist({ win = qf_win, get_loclist = is_ll })()
     if #cur_list < 1 then
         clear_session_data()
         return
@@ -681,15 +682,16 @@ function M.open_preview_win()
         return
     end
 
+    local eu = require("mjm.error-list-util")
     local cur_win = vim.api.nvim_get_current_win()
-    local listtype = require("mjm.error-list-util").get_listtype(cur_win)
+    local listtype = eu.get_listtype(cur_win)
     if not listtype then
         clear_session_data()
         return
     end
 
-    local is_loclist = listtype == "loclist"
-    local cur_list = require("mjm.error-list-util").get_getlist(qf_win, is_loclist)()
+    local is_ll = listtype == "loclist"
+    local cur_list = eu.get_getlist({ win = qf_win, get_loclist = is_ll })()
     if #cur_list < 1 then
         return
     end

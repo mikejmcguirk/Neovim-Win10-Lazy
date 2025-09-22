@@ -93,19 +93,28 @@ local function restore_views(views)
     end
 end
 
--- TODO: need close all loclists
-
 local max_qf_height = 10
 
 -- LOW: This should work without nowrap
 
---- @param win integer
+--- @param list_win integer
 --- @param is_ll? boolean
 --- @return integer
 --- This assumes nowrap
-local function get_list_height(win, is_ll)
-    vim.validate("win", win, "number")
-    local getlist = require("mjm.error-list-util").get_getlist({ win = win, get_loclist = is_ll })
+local function get_list_height(list_win, is_ll)
+    vim.validate("is_ll", is_ll, { "boolean", "nil" })
+    vim.validate("win", list_win, "number")
+    vim.validate("list_win", list_win, function()
+        return vim.api.nvim_win_is_valid(list_win)
+    end)
+
+    if is_ll == nil then
+        local wintype = vim.fn.win_gettype(list_win)
+        is_ll = wintype == "loclist"
+    end
+
+    local eu = require("mjm.error-list-util")
+    local getlist = eu.get_getlist({ win = list_win, get_loclist = is_ll })
     local cur_size = getlist({ size = true }).size
 
     local list_height = math.min(cur_size, max_qf_height)
@@ -113,12 +122,23 @@ local function get_list_height(win, is_ll)
     return list_height
 end
 
---- @param win integer
---- @param is_ll boolean
+--- @param list_win integer
+--- @param is_ll? boolean
 --- @return nil
-local function resize_list(win, is_ll)
-    local list_height = get_list_height(win, is_ll)
-    vim.api.nvim_win_set_height(win, list_height)
+local function resize_list(list_win, is_ll)
+    vim.validate("is_ll", is_ll, { "boolean", "nil" })
+    vim.validate("win", list_win, "number")
+    vim.validate("list_win", list_win, function()
+        return vim.api.nvim_win_is_valid(list_win)
+    end)
+
+    if is_ll == nil then
+        local wintype = vim.fn.win_gettype(list_win)
+        is_ll = wintype == "loclist"
+    end
+
+    local list_height = get_list_height(list_win, is_ll)
+    vim.api.nvim_win_set_height(list_win, list_height)
 end
 
 --- @param wins integer[]
@@ -313,9 +333,7 @@ local function get_ll_close_resize_info()
         return false, nil, nil
     end
 
-    table.remove(wins, ll_idx)
     local views = get_views(wins) --- @type vim.fn.winsaveview.ret[]
-
     return true, ll_win, views
 end
 
@@ -340,6 +358,30 @@ function M.resize_loclist()
 
     resize_list(ll_win, true)
     restore_views(views)
+    return true
+end
+
+-- MAYBE: Have all resize functions feed into this one
+
+--- @param list_win integer
+--- @return boolean
+function M.resize_list_win(list_win)
+    vim.validate("list_win", list_win, "number")
+    vim.validate("list_win", list_win, function()
+        return vim.api.nvim_win_is_valid(list_win)
+    end)
+
+    vim.validate("list_win", list_win, function()
+        local wintype = vim.fn.win_gettype(list_win)
+        return wintype == "qflist" or wintype == "loclist"
+    end)
+
+    local win_tabpage = vim.api.nvim_win_get_tabpage(list_win) --- @type integer
+    local wins = vim.api.nvim_tabpage_list_wins(win_tabpage) --- @type integer[]
+    local views = get_views(wins) --- @type vim.fn.winsaveview.ret[]
+    resize_list(list_win)
+    restore_views(views)
+
     return true
 end
 
