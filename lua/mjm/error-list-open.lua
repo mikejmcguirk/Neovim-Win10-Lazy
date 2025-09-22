@@ -5,6 +5,8 @@
 --- - Check that all mappings have plugs and cmds
 --- - Check that all maps/cmds/plugs have desc fieldss
 --- - Check that all functions have annotations and documentation
+--- - Check that the qf and loclist versions are both properly built for purpose. Should be able
+---     to use the loclist function for buf/win specific info
 ---
 --- TODO: If there are no entries in the list, the open cmd should close the window
 --- MAYBE: the open functions could imitate cwindow behavior and not open if there are no entries
@@ -16,6 +18,7 @@
 --- it's the issue I figured before about loclist id acquisition, and we need to use the updated
 --- system function
 --- TODO: But then why isn't qQ resizing?
+--- TODO: Customize qfopen behavior. Shouldn't have to botright if you don't want to
 
 local M = {}
 
@@ -25,6 +28,7 @@ local M = {}
 
 --- @class QfRancherOpenOpts
 --- @field always_resize? boolean
+--- @field suppress_errors? boolean
 --- @field height? integer
 --- @field keep_win? boolean
 
@@ -124,6 +128,7 @@ end
 local max_qf_height = 10
 
 -- LOW: This should work without nowrap
+-- TODO: This does not work for some reason, but then it does on always_resize
 
 --- @param list_win integer
 --- @param is_ll? boolean
@@ -250,12 +255,19 @@ function M.open_qflist(opts)
     end, wins)
 
     local views = get_views(wins) --- @type vim.fn.winsaveview.ret[]
-    if qf_win and opts.always_resize then
-        local ll_views = get_views(ll_wins) --- @type vim.fn.winsaveview.ret[]
-        resize_list(qf_win, { is_loclist = false, height = opts.height })
-        restore_views(views)
-        restore_views(ll_views)
-        return false
+    if qf_win then
+        if not require("mjm.error-list-util").has_any_qflist() then
+            M.close_list_win(qf_win)
+            return false
+        end
+
+        if opts.always_resize then
+            local ll_views = get_views(ll_wins) --- @type vim.fn.winsaveview.ret[]
+            resize_list(qf_win, { is_loclist = false, height = opts.height })
+            restore_views(views)
+            restore_views(ll_views)
+            return false
+        end
     end
 
     pclose_wins(ll_wins)
@@ -303,10 +315,14 @@ end
 function M.open_loclist(opts)
     opts = opts or {}
     vim.validate("opts.height", opts.height, { "nil", "number" })
+    vim.validate("opts.suppress_errors", opts.suppress_errors, { "boolean", "nil" })
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id ---@type integer
     if qf_id == 0 then
-        vim.api.nvim_echo({ { "Window has no loclist", "" } }, false, {})
+        if not opts.suppress_errors then
+            vim.api.nvim_echo({ { "Window has no loclist", "" } }, false, {})
+        end
+
         return false
     end
 
@@ -322,15 +338,22 @@ function M.open_loclist(opts)
     end
 
     local views = get_views(wins) --- @type vim.fn.winsaveview.ret[]
-    if ll_win and opts.always_resize then
-        if qf_win then
-            local qf_view = get_views({ qf_win }) --- @type vim.fn.winsaveview.ret[]
-            vim.list_extend(views, qf_view)
+    if ll_win then
+        if not require("mjm.error-list-util").has_any_loclist({ win = cur_win }) then
+            M.close_list_win(ll_win)
+            return false
         end
 
-        resize_list(ll_win, { is_loclist = true, height = opts.height })
-        restore_views(views)
-        return false
+        if opts.always_resize then
+            if qf_win then
+                local qf_view = get_views({ qf_win }) --- @type vim.fn.winsaveview.ret[]
+                vim.list_extend(views, qf_view)
+            end
+
+            resize_list(ll_win, { is_loclist = true, height = opts.height })
+            restore_views(views)
+            return false
+        end
     end
 
     if qf_win then
@@ -348,33 +371,34 @@ function M.open_loclist(opts)
     return true
 end
 
---- @return boolean, integer|nil, vim.fn.winsaveview.ret[]|nil
-local function get_ll_close_resize_info()
+--- @return boolean
+function M.close_loclist()
+    local ll_wins = {}
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id ---@type integer
     if qf_id == 0 then
-        vim.api.nvim_echo({ { "Window has no loclist", "" } }, false, {})
-        return false, nil, nil
+        local orphan_ll_wins = require("mjm.error-list-util").find_orphan_loclists()
+        if #orphan_ll_wins > 0 then
+            vim.list_extend(ll_wins, orphan_ll_wins)
+        else
+            vim.api.nvim_echo({ { "Window has no loclist", "" } }, false, {})
+            return false
+        end
     end
 
     local wins = vim.api.nvim_tabpage_list_wins(0) --- @type integer[]
     local ll_win, ll_idx = find_ll_win_by_id(wins, qf_id) --- @type integer|nil
-    if (not ll_win) or not ll_idx then
-        return false, nil, nil
-    end
-
-    local views = get_views(wins) --- @type vim.fn.winsaveview.ret[]
-    return true, ll_win, views
-end
-
---- @return boolean
-function M.close_loclist()
-    local ok, ll_win, views = get_ll_close_resize_info()
-    if (not ok) or not ll_win or not views then
+    if ((not ll_win) or not ll_idx) and #ll_wins < 1 then
         return false
     end
 
-    pwin_close({ bwipeout = true, force = true, win = ll_win })
+    table.insert(ll_wins, ll_win)
+    wins = vim.tbl_filter(function(w)
+        return not vim.tbl_contains(ll_wins, w)
+    end, wins)
+
+    local views = get_views(wins) --- @type vim.fn.winsaveview.ret[]
+    pclose_wins(ll_wins)
     restore_views(views)
     return true
 end
@@ -384,10 +408,20 @@ end
 
 --- @return boolean
 function M.resize_loclist()
-    local ok, ll_win, views = get_ll_close_resize_info()
-    if (not ok) or not ll_win or not views then
+    local cur_win = vim.api.nvim_get_current_win() --- @type integer
+    local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id ---@type integer
+    if qf_id == 0 then
+        vim.api.nvim_echo({ { "Window has no loclist", "" } }, false, {})
         return false
     end
+
+    local wins = vim.api.nvim_tabpage_list_wins(0) --- @type integer[]
+    local ll_win, ll_idx = find_ll_win_by_id(wins, qf_id) --- @type integer|nil
+    if (not ll_win) or not ll_idx then
+        return false
+    end
+
+    local views = get_views(wins) --- @type vim.fn.winsaveview.ret[]
 
     resize_list(ll_win, { is_loclist = true })
     restore_views(views)
@@ -395,6 +429,8 @@ function M.resize_loclist()
 end
 
 -- MAYBE: You could use these two functions as the end path for any close or resize function
+-- PERF: If you arrive at this function in the middle of another window management function, you
+-- might need to re-pull the views
 
 --- @param list_win integer
 --- @return boolean
@@ -487,11 +523,19 @@ vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-close-loclist)", "<nop>", {
     callback = M.close_loclist,
 })
 
+-- NOTE: A bit of jank here - Errors in the open function are suppressed so we don't get a
+-- "window has no loclist" message before checking for orphans in the close function. If there is
+-- indeed no loclist, the close function correctly reports as such, but it's not intuitive
+-- that only the close function would report on global context. But also the only way to handle
+-- edge cases around orphan loclists without handling it twice or without some kind of mediator
+-- function
+-- MAYBE: If the loclist code gets more complicated, some kind of overall loclist state becomes
+-- more relevant
 vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-toggle-loclist)", "<nop>", {
     noremap = true,
     desc = "<Plug> Toggle the location list",
     callback = function()
-        if not M.open_loclist() then
+        if not M.open_loclist({ suppress_errors = true }) then
             M.close_loclist()
         end
     end,

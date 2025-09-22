@@ -5,6 +5,8 @@
 --- - Check that all mappings have plugs and cmds
 --- - Check that all maps/cmds/plugs have desc fieldss
 --- - Check that all functions have annotations and documentation
+--- - Check that the qf and loclist versions are both properly built for purpose. Should be able
+---     to use the loclist function for buf/win specific info
 
 local M = {}
 
@@ -92,6 +94,23 @@ function M.find_qf_win(opts)
     return nil
 end
 
+--- @return boolean
+function M.has_any_qflist()
+    local max_nr = vim.fn.getqflist({ nr = "$" }).nr --- @type integer
+    if max_nr == 0 then
+        return false
+    end
+
+    for i = 1, max_nr do
+        local size = vim.fn.getqflist({ nr = i, size = 0 }).size --- @type integer
+        if size > 0 then
+            return true
+        end
+    end
+
+    return false
+end
+
 --- @param opts {win:integer}
 --- @return integer, integer|nil
 --- Get loclist information for a window
@@ -109,6 +128,64 @@ function M.get_loclist_info(opts)
     end
 
     return qf_id, find_loclist_window(win, qf_id)
+end
+
+--- @param opts {win?:integer}
+--- @return boolean
+function M.has_any_loclist(opts)
+    opts = opts or {}
+    vim.validate("opts.win", opts.win, { "nil", "number" })
+    local win = opts.win or vim.api.nvim_get_current_win() --- @type integer
+
+    local max_nr = vim.fn.getloclist(win, { nr = "$" }).nr --- @type integer
+    if max_nr == 0 then
+        return false
+    end
+
+    for i = 1, max_nr do
+        local size = vim.fn.getloclist(win, { nr = i, size = 0 }).size --- @type integer
+        if size > 0 then
+            return true
+        end
+    end
+
+    return false
+end
+
+-- TODO: Could this be used in the ftplugin maps?
+
+--- @param opts?{tabpage?:integer}
+--- @return integer[]
+function M.find_orphan_loclists(opts)
+    opts = opts or {}
+    vim.validate("opts.tabpage", opts.tabpage, { "nil", "number" })
+    local tabpage = opts.tabpage or vim.api.nvim_get_current_tabpage() --- @type integer
+    local tab_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
+
+    local orphans = {} --- @type integer[]
+    for _, win in pairs(tab_wins) do
+        if vim.fn.win_gettype(win) == "loclist" then
+            local qf_id = vim.fn.getloclist(win, { id = 0 }).id
+            if qf_id == 0 then
+                table.insert(orphans, win)
+            else
+                local is_orphan = true
+                for _, inner_win in pairs(tab_wins) do
+                    local iw_qf_id = vim.fn.getloclist(inner_win, { id = 0 }).id
+                    if inner_win ~= win and iw_qf_id == qf_id then
+                        is_orphan = false
+                        break
+                    end
+                end
+
+                if is_orphan then
+                    table.insert(orphans, win)
+                end
+            end
+        end
+    end
+
+    return orphans
 end
 
 -- NOTE: It is simpler in theory to only pass the win value to the getlist and setlist functions,

@@ -14,3 +14,7 @@ vim.cmd.packadd({ vim.fn.escape("specialist.nvim", " "), bang = true, magic = { 
 -- TODO:
 -- stuff, "other stuff"
 -- do ca" in other stuff. goes before the comma. I'm not even sure that one's me
+-- TODO: because the maps create on bufreadpre, if I open a harpoon dialog, dd doesn't work
+-- I doubt harpoon is the only use case for this type of thing
+-- The issue right now is that the plug maps are made before the underlying data is ready, I
+-- think. Because If a plug map doesn't find anything, I think it just moves on gracefully

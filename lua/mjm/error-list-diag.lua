@@ -5,6 +5,8 @@
 --- - Check that all mappings have plugs and cmds
 --- - Check that all maps/cmds/plugs have desc fieldss
 --- - Check that all functions have annotations and documentation
+--- - Check that the qf and loclist versions are both properly built for purpose. Should be able
+---     to use the loclist function for buf/win specific info
 
 -------------
 --- Types ---

@@ -31,13 +31,6 @@
 --- FUTURE: I would like to do something with cdo/cfdo, but I'm not sure what that isn't just
 --- syntactic sugar on top of the original cmd
 
---- TODO: Touchup/cleanup
---- - Saw feature request for current file entries first. This does not fit in with how I
---- want things organized, but does raise point that loclist mappings should be available where
---- possible to focus current buf
---- - Allow customizing of how the qfopens. Should not have to use botright if you don't
---- want to
----
 --- DOCUMENT: Buf greps use external grep
 --- DOCUMENT: qf Buf Grep is all bufs, ll Buf Grep is current buf only
 --- DOCUMENT: rg handles true multi-line greps. For programs that don't, or is used as a fallback
