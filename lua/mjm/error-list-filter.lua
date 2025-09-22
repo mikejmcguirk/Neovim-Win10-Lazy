@@ -96,7 +96,7 @@ function M.qf_filter_wrapper(prompt, filter_func)
     end
 
     if qf_win then
-        require("mjm.error-list").resize_list_win(qf_win)
+        require("mjm.error-list-open").resize_list_win(qf_win)
     end
 end
 
@@ -180,7 +180,7 @@ function M.ll_filter_wrapper(prompt, filter_func)
     end
 
     if loclist_win then
-        require("mjm.error-list").resize_list_win(loclist_win)
+        require("mjm.error-list-open").resize_list_win(loclist_win)
     end
 end
 

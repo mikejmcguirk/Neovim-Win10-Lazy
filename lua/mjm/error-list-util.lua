@@ -128,15 +128,15 @@ end
 --- @param is_loclist boolean
 --- @return fun(table):boolean
 function M.get_openlist(is_loclist)
-    local el = require("mjm.error-list")
+    local elo = require("mjm.error-list-open")
 
     if is_loclist then
         return function(opts)
-            return el.open_loclist(opts)
+            return elo.open_loclist(opts)
         end
     else
         return function(opts)
-            return el.open_qflist(opts)
+            return elo.open_qflist(opts)
         end
     end
 end
@@ -144,15 +144,15 @@ end
 --- @param is_loclist boolean
 --- @return fun(table):boolean
 function M.get_resizelist(is_loclist)
-    local el = require("mjm.error-list")
+    local elo = require("mjm.error-list-open")
 
     if is_loclist then
         return function()
-            return el.resize_loclist()
+            return elo.resize_loclist()
         end
     else
         return function()
-            return el.resize_qflist()
+            return elo.resize_qflist()
         end
     end
 end

@@ -1,5 +1,13 @@
 local M = {}
 
+-----------
+-- Types --
+-----------
+
+--- @class QfRancherOpenOpts
+--- @field always_resize? boolean
+--- @field keep_win? boolean
+
 --- @class QfRancherPWinCloseOpts
 --- @field bdel? boolean
 --- @field bwipeout? boolean
@@ -72,7 +80,7 @@ end
 --- @param wins integer[]
 --- @return nil
 local function pclose_wins(wins)
-    for _, win in wins do
+    for _, win in pairs(wins) do
         pwin_close({ bwipeout = true, force = true, win = win })
     end
 end
@@ -199,16 +207,13 @@ local function get_views(wins)
     return views
 end
 
---- @class QfRancherOpenOpts
---- @field always_resize boolean
---- @field keep_win boolean
-
---- @param opts QfRancherOpenOpts
+--- @param opts? QfRancherOpenOpts
 --- @return boolean
 --- opts:
 --- - always_resize: If the qf window is already open, it will be resized
 --- - keep_win: On completion, return focus to the calling win
 function M.open_qflist(opts)
+    opts = opts or {}
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local wins = vim.api.nvim_tabpage_list_wins(0) --- @type integer[]
     local qf_win, _ = find_qf_win(wins) --- @type integer|nil
@@ -270,9 +275,10 @@ function M.resize_qflist()
     restore_views(views)
 end
 
---- @param opts QfRancherOpenOpts
+--- @param opts? QfRancherOpenOpts
 --- @return boolean
 function M.open_loclist(opts)
+    opts = opts or {}
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id ---@type integer
     if qf_id == 0 then
@@ -361,7 +367,30 @@ function M.resize_loclist()
     return true
 end
 
--- MAYBE: Have all resize functions feed into this one
+-- MAYBE: You could use these two functions as the end path for any close or resize function
+
+--- @param list_win integer
+--- @return boolean
+-- TODO: rename to just close_list_win
+function M.close_win_restview(list_win)
+    vim.validate("list_win", list_win, "number")
+    vim.validate("list_win", list_win, function()
+        return vim.api.nvim_win_is_valid(list_win)
+    end)
+
+    vim.validate("list_win", list_win, function()
+        local wintype = vim.fn.win_gettype(list_win)
+        return wintype == "qflist" or wintype == "loclist"
+    end)
+
+    local win_tabpage = vim.api.nvim_win_get_tabpage(list_win) --- @type integer
+    local wins = vim.api.nvim_tabpage_list_wins(win_tabpage) --- @type integer[]
+    local views = get_views(wins) --- @type vim.fn.winsaveview.ret[]
+    pwin_close({ bwipeout = true, force = true, win = list_win })
+    restore_views(views)
+
+    return true
+end
 
 --- @param list_win integer
 --- @return boolean
@@ -384,5 +413,70 @@ function M.resize_list_win(list_win)
 
     return true
 end
+
+--------------
+-- Mappings --
+--------------
+
+local nofallback_desc = "Prevent fallback to other mappings"
+vim.api.nvim_set_keymap("n", "<leader>q", "<nop>", { noremap = true, desc = nofallback_desc })
+vim.api.nvim_set_keymap("n", "<leader>l", "<nop>", { noremap = true, desc = nofallback_desc })
+
+vim.api.nvim_set_keymap("n", "<leader>qp", "", {
+    noremap = true,
+    desc = "Open the quickfix list",
+    callback = M.open_qflist,
+})
+
+-- TODO: This is the sort map
+vim.api.nvim_set_keymap("n", "<leader>qo", "", {
+    noremap = true,
+    desc = "Close the quickfix list",
+    callback = M.close_qflist,
+})
+
+vim.api.nvim_set_keymap("n", "<leader>qq", "", {
+    noremap = true,
+    desc = "Toggle the quickfix list",
+    callback = function()
+        if not M.open_qflist() then
+            M.close_qflist()
+        end
+    end,
+})
+
+vim.api.nvim_set_keymap("n", "<leader>qQ", "", {
+    noremap = true,
+    desc = "Resize the quickfix list",
+    callback = M.resize_qflist,
+})
+
+vim.api.nvim_set_keymap("n", "<leader>lp", "", {
+    noremap = true,
+    desc = "Open the location list",
+    callback = M.open_loclist,
+})
+
+vim.api.nvim_set_keymap("n", "<leader>lo", "", {
+    noremap = true,
+    desc = "Close the location list",
+    callback = M.close_loclist,
+})
+
+vim.api.nvim_set_keymap("n", "<leader>ll", "", {
+    noremap = true,
+    desc = "Toggle the location list",
+    callback = function()
+        if not M.open_loclist() then
+            M.close_loclist()
+        end
+    end,
+})
+
+vim.api.nvim_set_keymap("n", "<leader>lL", "", {
+    noremap = true,
+    desc = "Resize the location list",
+    callback = M.resize_loclist,
+})
 
 return M

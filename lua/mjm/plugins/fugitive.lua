@@ -55,7 +55,7 @@ local function open_diffs(staged)
     end
 
     -- TODO: Re-implement this
-    -- require("mjm.error-list").close_all_loclists()
+    -- require("mjm.error-list-open").close_all_loclists()
     vim.api.nvim_cmd({ cmd = "ccl" }, {})
 
     local mods = { split = "botright" }

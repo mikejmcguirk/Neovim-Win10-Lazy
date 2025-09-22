@@ -207,11 +207,11 @@ function M.qf_sys_wrap(get_cmd_parts, opts)
 
         -- TODO: do a getopen thing here too
         -- TODO: if either of these return false, do a resize instead
-        local el = require("mjm.error-list")
+        local elo = require("mjm.error-list-open")
         if opts.loclist then
-            el.open_loclist()
+            elo.open_loclist()
         else
-            el.open_qflist()
+            elo.open_qflist()
         end
 
         -- TODO: need a wrapper for these that resizes
