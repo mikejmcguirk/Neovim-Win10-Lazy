@@ -1,3 +1,11 @@
+--- TODO:
+--- - Check that all functions have reasonable default sorts
+--- - Check that window height updates are triggered where appropriate
+--- - Check that functions have proper visibility
+--- - Check that all mappings have plugs and cmds
+--- - Check that all maps/cmds/plugs have desc fieldss
+--- - Check that all functions have annotations and documentation
+
 local M = {}
 
 -- TODO: Producing the same behavior as wrapping sub
@@ -279,7 +287,7 @@ vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-qf-newer)", "<nop>", {
     noremap = true,
     desc = "<Plug> Go to a newer qflist",
     callback = function()
-        M.q_older(vim.v.count1)
+        M.q_newer(vim.v.count1)
     end,
 })
 
@@ -319,7 +327,7 @@ vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-ll-newer)", "<nop>", {
     noremap = true,
     desc = "<Plug> Go to a newer location list",
     callback = function()
-        M.l_older(vim.v.count1)
+        M.l_newer(vim.v.count1)
     end,
 })
 
