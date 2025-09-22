@@ -111,38 +111,42 @@ vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-qf-history)", "<nop>", {
 --- Default Maps ---
 --------------------
 
-vim.api.nvim_set_keymap("n", "<leader>q[", "<Plug>(qf-rancher-qf-older)", {
-    noremap = true,
-    desc = "Go to an older qflist",
-})
+if vim.g.qfrancher_setdefaulsmaps then
+    vim.api.nvim_set_keymap("n", "<leader>q[", "<Plug>(qf-rancher-qf-older)", {
+        noremap = true,
+        desc = "Go to an older qflist",
+    })
 
-vim.api.nvim_set_keymap("n", "<leader>q]", "<Plug>(qf-rancher-qf-newer)", {
-    noremap = true,
-    desc = "Go to a newer qflist",
-})
+    vim.api.nvim_set_keymap("n", "<leader>q]", "<Plug>(qf-rancher-qf-newer)", {
+        noremap = true,
+        desc = "Go to a newer qflist",
+    })
 
-vim.api.nvim_set_keymap("n", "<leader>qQ", "<Plug>(qf-rancher-qf-history)", {
-    noremap = true,
-    desc = "View or jump within the quickfix history",
-})
+    vim.api.nvim_set_keymap("n", "<leader>qQ", "<Plug>(qf-rancher-qf-history)", {
+        noremap = true,
+        desc = "View or jump within the quickfix history",
+    })
+end
 
 ------------
 --- Cmds ---
 ------------
 
-vim.api.nvim_create_user_command("Qolder", function(arg)
-    local count = arg.count > 0 and arg.count or 1
-    M.q_older(count)
-end, { count = 0 })
+if vim.g.qfrancher_setdefaultcmds then
+    vim.api.nvim_create_user_command("Qolder", function(arg)
+        local count = arg.count > 0 and arg.count or 1
+        M.q_older(count)
+    end, { count = 0 })
 
-vim.api.nvim_create_user_command("Qnewer", function(arg)
-    local count = arg.count > 0 and arg.count or 1
-    M.q_newer(count)
-end, { count = 0 })
+    vim.api.nvim_create_user_command("Qnewer", function(arg)
+        local count = arg.count > 0 and arg.count or 1
+        M.q_newer(count)
+    end, { count = 0 })
 
-vim.api.nvim_create_user_command("Qhistory", function(arg)
-    local count = arg.count >= 0 and arg.count or 0
-    M.q_history(count)
-end, { count = 0 })
+    vim.api.nvim_create_user_command("Qhistory", function(arg)
+        local count = arg.count >= 0 and arg.count or 0
+        M.q_history(count)
+    end, { count = 0 })
+end
 
 return M
