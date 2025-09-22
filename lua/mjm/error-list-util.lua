@@ -36,6 +36,7 @@ function M.wrapping_sub(x, y, min, max)
     return ((x - y - min) % period) + min
 end
 
+--- @param win integer
 --- @param qf_id integer
 --- @return integer|nil
 local function find_loclist_window(win, qf_id)
@@ -53,7 +54,7 @@ local function find_loclist_window(win, qf_id)
             local t_win_buf = vim.api.nvim_win_get_buf(t_win) --- @type integer
             --- @type string
             local t_win_buftype = vim.api.nvim_get_option_value("buftype", { buf = t_win_buf })
-            if t_win_buftype == "qf" then
+            if t_win_buftype == "quickfix" then
                 return t_win
             end
         end

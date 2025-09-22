@@ -13,6 +13,7 @@ local M = {}
 -- TODO: Right now we have qQ, which is resize and change list without jump, and we have q<C-q>
 -- which does that and also jumps to the list. It feels like qQ should be the one that jumps
 -- and q<C-q> the one that doesn't
+--      And it turns out qQ doesn't even resize so now I'm really not sure why I have both
 
 function M.q_prev(count1)
     vim.validate("count", count1, "number")
