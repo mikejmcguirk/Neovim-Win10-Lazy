@@ -1,3 +1,11 @@
+--- TODO:
+--- - Check that all functions have reasonable default sorts
+--- - Check that window height updates are triggered where appropriate
+--- - Check that functions have proper visibility
+--- - Check that all mappings have plugs and cmds
+--- - Check that all maps/cmds/plugs have desc fieldss
+--- - Check that all functions have annotations and documentation
+
 local M = {}
 
 -----------
@@ -6,6 +14,7 @@ local M = {}
 
 --- @class QfRancherOpenOpts
 --- @field always_resize? boolean
+--- @field height? integer
 --- @field keep_win? boolean
 
 --- @class QfRancherPWinCloseOpts
@@ -235,8 +244,9 @@ function M.open_qflist(opts)
         return false
     end
 
+    vim.validate("opts.height", opts.height, { "nil", "number" })
     pclose_wins(ll_wins)
-    local height = get_list_height(cur_win, false) --- @type integer
+    local height = opts.height and opts.height or get_list_height(cur_win, false) --- @type integer
     --- @diagnostic disable: missing-fields
     vim.api.nvim_cmd({ cmd = "copen", count = height, mods = { split = "botright" } }, {})
     restore_views(views)
@@ -309,11 +319,12 @@ function M.open_loclist(opts)
         return false
     end
 
+    vim.validate("opts.height", opts.height, { "nil", "number" })
     if qf_win then
         pwin_close({ bwipeout = true, force = true, win = qf_win })
     end
 
-    local height = get_list_height(cur_win, false) --- @type integer
+    local height = opts.height and opts.height or get_list_height(cur_win, false) --- @type integer
     --- @diagnostic disable: missing-fields
     vim.api.nvim_cmd({ cmd = "lopen", count = height, mods = { split = "botright" } }, {})
     restore_views(views)
@@ -414,18 +425,41 @@ function M.resize_list_win(list_win)
     return true
 end
 
---------------
--- Mappings --
---------------
+-----------------
+--- Plug Maps ---
+-----------------
+
+vim.api.nvim_set_keymap("n", "<Plug>(QfRancherOpenQfList)", "<nop>", {
+    noremap = true,
+    desc = "<Plug> Open the quickfix list",
+    callback = function()
+        local height = vim.v.count > 0 and vim.v.count or nil
+        M.open_qflist({ height = height })
+    end,
+})
+
+------------
+--- Cmds ---
+------------
+
+-- TODO: The cmds should be gated behind a g:var
+
+vim.api.nvim_create_user_command("Qopen", function(arg)
+    local count = arg.count > 0 and arg.count or nil
+    M.open_qflist({ height = count })
+end, { count = 0 })
+
+--------------------
+--- Default Maps ---
+--------------------
 
 local nofallback_desc = "Prevent fallback to other mappings"
 vim.api.nvim_set_keymap("n", "<leader>q", "<nop>", { noremap = true, desc = nofallback_desc })
 vim.api.nvim_set_keymap("n", "<leader>l", "<nop>", { noremap = true, desc = nofallback_desc })
 
-vim.api.nvim_set_keymap("n", "<leader>qp", "", {
+vim.api.nvim_set_keymap("n", "<leader>qp", "<Plug>(QfRancherOpenQfList)", {
     noremap = true,
     desc = "Open the quickfix list",
-    callback = M.open_qflist,
 })
 
 -- TODO: This is the sort map

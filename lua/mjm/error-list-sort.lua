@@ -1,9 +1,18 @@
+--- TODO:
+--- - Check that all functions have reasonable default sorts
+--- - Check that window height updates are triggered where appropriate
+--- - Check that functions have proper visibility
+--- - Check that all mappings have plugs and cmds
+--- - Check that all maps/cmds/plugs have desc fieldss
+--- - Check that all functions have annotations and documentation
+
 -- TODO: The hotkeys here need to line up with the filter functions and the get functions
 -- TODO: Do I resize on sort?
 
 local M = {}
 
-vim.keymap.set("n", "<leader>qo", "<nop>")
+vim.keymap.set("n", "<leader>qt", "<nop>")
+vim.keymap.set("n", "<leader>lt", "<nop>")
 
 ---------------------
 --- Wrapper Funcs ---
@@ -167,16 +176,16 @@ function M.sort_fname_desc(a, b)
     return false
 end
 
-vim.keymap.set("n", "<leader>qof", function()
+vim.keymap.set("n", "<leader>qtf", function()
     M.qf_sort_wrapper(M.sort_fname_asc)
 end)
-vim.keymap.set("n", "<leader>qoF", function()
+vim.keymap.set("n", "<leader>qtF", function()
     M.qf_sort_wrapper(M.sort_fname_desc)
 end)
-vim.keymap.set("n", "<leader>lof", function()
+vim.keymap.set("n", "<leader>ltf", function()
     M.ll_sort_wrapper(M.sort_fname_asc)
 end)
-vim.keymap.set("n", "<leader>loF", function()
+vim.keymap.set("n", "<leader>ltF", function()
     M.ll_sort_wrapper(M.sort_fname_desc)
 end)
 
@@ -248,16 +257,16 @@ function M.sort_type_desc(a, b)
     return false
 end
 
-vim.keymap.set("n", "<leader>qot", function()
+vim.keymap.set("n", "<leader>qtt", function()
     M.qf_sort_wrapper(M.sort_type_asc)
 end)
-vim.keymap.set("n", "<leader>qoT", function()
+vim.keymap.set("n", "<leader>qtT", function()
     M.qf_sort_wrapper(M.sort_type_desc)
 end)
-vim.keymap.set("n", "<leader>lot", function()
+vim.keymap.set("n", "<leader>ltt", function()
     M.ll_sort_wrapper(M.sort_type_asc)
 end)
-vim.keymap.set("n", "<leader>loT", function()
+vim.keymap.set("n", "<leader>ltT", function()
     M.ll_sort_wrapper(M.sort_type_desc)
 end)
 
@@ -265,7 +274,8 @@ end)
 --- Diagnostic Sorts ---
 ------------------------
 
-vim.keymap.set("n", "<leader>qoi", "<nop>")
+vim.keymap.set("n", "<leader>qti", "<nop>")
+vim.keymap.set("n", "<leader>lti", "<nop>")
 
 local severity_unmap = {
     E = vim.diagnostic.severity.ERROR,
@@ -353,19 +363,19 @@ function M.sort_severity_desc(a, b)
     return false
 end
 
-vim.keymap.set("n", "<leader>qois", function()
+vim.keymap.set("n", "<leader>qtis", function()
     M.qf_sort_wrapper(M.sort_severity_asc)
 end)
 
-vim.keymap.set("n", "<leader>qoiS", function()
+vim.keymap.set("n", "<leader>qtiS", function()
     M.qf_sort_wrapper(M.sort_severity_desc)
 end)
 
-vim.keymap.set("n", "<leader>lois", function()
+vim.keymap.set("n", "<leader>ltis", function()
     M.ll_sort_wrapper(M.sort_severity_asc)
 end)
 
-vim.keymap.set("n", "<leader>loiS", function()
+vim.keymap.set("n", "<leader>ltiS", function()
     M.ll_sort_wrapper(M.sort_severity_desc)
 end)
 
@@ -449,19 +459,19 @@ function M.sort_diag_fname_desc(a, b)
     return false
 end
 
-vim.keymap.set("n", "<leader>qoif", function()
+vim.keymap.set("n", "<leader>qtif", function()
     M.qf_sort_wrapper(M.sort_diag_fname_asc)
 end)
 
-vim.keymap.set("n", "<leader>qoiF", function()
+vim.keymap.set("n", "<leader>qtiF", function()
     M.qf_sort_wrapper(M.sort_diag_fname_desc)
 end)
 
-vim.keymap.set("n", "<leader>loif", function()
+vim.keymap.set("n", "<leader>ltif", function()
     M.ll_sort_wrapper(M.sort_diag_fname_asc)
 end)
 
-vim.keymap.set("n", "<leader>loiF", function()
+vim.keymap.set("n", "<leader>ltiF", function()
     M.ll_sort_wrapper(M.sort_diag_fname_desc)
 end)
 

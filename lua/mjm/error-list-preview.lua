@@ -1,4 +1,10 @@
---- TODO: Go through this and determine what should be exposed, "private exposed", and private
+--- TODO:
+--- - Check that all functions have reasonable default sorts
+--- - Check that window height updates are triggered where appropriate
+--- - Check that functions have proper visibility
+--- - Check that all mappings have plugs and cmds
+--- - Check that all maps/cmds/plugs have desc fieldss
+--- - Check that all functions have annotations and documentation
 
 --- FUTURE: Should be possible to scroll the preview window. See
 --- https://github.com/bfrg/vim-qf-preview for relevant controls

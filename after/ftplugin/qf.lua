@@ -7,6 +7,7 @@
 -- file to ftplugin map
 -- TODO: The g variable should either map the defaults or not. Plug mappings/documentation can be
 -- provided if the user wants to do it custom
+-- TODO: Set nowait here and in other buffer keymaps
 
 -- qf_view_result
 -- ex_cc

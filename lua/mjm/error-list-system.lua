@@ -1,3 +1,11 @@
+--- TODO:
+--- - Check that all functions have reasonable default sorts
+--- - Check that window height updates are triggered where appropriate
+--- - Check that functions have proper visibility
+--- - Check that all mappings have plugs and cmds
+--- - Check that all maps/cmds/plugs have desc fieldss
+--- - Check that all functions have annotations and documentation
+
 local M = {}
 
 -------------
@@ -53,6 +61,7 @@ local function merge_qf_lists(a, b)
     return merged
 end
 
+-- TODO: THere's a reference here to remove
 --- @param win? integer
 local function get_getlist(win)
     if not win then

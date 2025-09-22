@@ -1,22 +1,13 @@
---- FUTURE: Create updated quickfixtextfunc
-
 ------------------
 -- CAPABILITIES --
 ------------------
 
---- GLOBAL CHECKLIST:
---- - Do all functions have a reasonable default sort?
---- - Are window height updates triggered where appropriate?
---- - Are the public/"private exposed"/private settings correct?
---- - Does everything have a plug?
---- - Do maps and plugs have desc fields?
---- - Are all functions fully annotated?
+--- FUTURE: Create updated quickfixtextfunc
+--- - The default masks error types
 
---- TODO: More visibility for cdo/cfdo. Use bang by default?
---- TODO: Resize cmd
 --- TODO: Copy list. no count = to next. Count = after list
---- TODO: If the list is already open, an open command should not trigger a re-size. I had ideas
---- about this in other commands, but a manual resize should just be triggered
+--- TODO: I'm wondering if it's a better pattern to use the open hotkey on an open list to
+--- resize. This opens up qQ for something else
 --- TODO: Have some kind of shortcut to make the list taller. Make sure it preserves view
 ---     Was thinking qq for toggle, qQ for resize, maybe q<c-Q> to make bigger?
 --- TODO: Go thorugh this file and get all old functionalities. Need wrap commands and
@@ -29,6 +20,22 @@
 --- Feels roughly like qd for delete current/count list and qD to delete all. But also a potential
 --- fat finger. Maybe have separate keys for current and specific lists
 --- TODO: look at the issue/PR lists for the various qf plugins to see what people want
+--- TODO: commands:
+--- - is there a way to make cabove/cbelow useful? or maybe cbefore/cafter
+--- - the various cfile commands
+--- - caddbuffer/cgetbuffer
+--- - cexpr
+--- - I think we kind of have :filter covered but investigate
+--- - clist?
+--- - cwindow/cbottom
+--- - colder/cnewer (instead of just chistory)
+--- - you could do grep cmds like vimgrepadd or you could do Qgrepmerge for example
+---
+--- TODO: :h :make_markprg
+---
+--- MAYBE: <C-w><Cr> is open a new window and jump to error. Feels like useful pattern for
+--- ftplugin maps. But it's not the ack pattern, so hard to say what's right here
+--- TODO: :h compiler-select. But how much does this overlap with the compiler plugin?
 
 --- MAYBE: Should open/close cmds also run wincmd =?
 --- MAYBE: Incremental preview of cdo/cfdo changes
