@@ -139,9 +139,7 @@ local function load_obsidian()
                 end
 
                 local pattern = img_dir .. "/" .. cur_file_name .. "*.png" ---@type string
-                vim.fn.confirm(pattern)
                 local files = vim.fn.glob(pattern, false, true) ---@type table
-                vim.fn.confirm(vim.inspect(files))
                 local count = #files ---@type integer
 
                 local padded_count = string.format("%03d", count) ---@type string
