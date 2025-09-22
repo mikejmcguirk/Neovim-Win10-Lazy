@@ -5,6 +5,12 @@
 --- - Check that all mappings have plugs and cmds
 --- - Check that all maps/cmds/plugs have desc fieldss
 --- - Check that all functions have annotations and documentation
+---
+--- TODO: If there are no entries in the list, the open cmd should close the window
+--- MAYBE: the open functions could imitate cwindow behavior and not open if there are no entries
+--- The loclist already does this. With the quickfix window, it's inherently somewhat weird
+--- In both cases, what if the current list doesn't have items, but other lists in the stack do?
+--- Do you have to manually track down a full list? Applies to the above to do as well
 
 local M = {}
 

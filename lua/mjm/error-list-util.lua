@@ -14,6 +14,26 @@ local M = {}
 
 -- TODO: Where possible, replace loclist finding functions throughout the plugin with the below
 
+--- @param x integer
+--- @param y integer
+--- @param min integer
+--- @param max integer
+--- @return integer
+function M.wrapping_add(x, y, min, max)
+    local period = max - min + 1 --- @type integer
+    return ((x - min + y) % period) + min
+end
+
+--- @param x integer
+--- @param y integer
+--- @param min integer
+--- @param max integer
+--- @return integer
+function M.wrapping_sub(x, y, min, max)
+    local period = max - min + 1 --- @type integer
+    return ((x - y - min) % period) + min
+end
+
 --- @param qf_id integer
 --- @return integer|nil
 local function find_loclist_window(win, qf_id)
@@ -34,6 +54,38 @@ local function find_loclist_window(win, qf_id)
             if t_win_buftype == "qf" then
                 return t_win
             end
+        end
+    end
+
+    return nil
+end
+
+-- TODO replace the function in open with this one
+
+--- @param opts?{tabpage?: integer, win?:integer}
+--- @return integer|nil
+function M.find_qf_win(opts)
+    opts = opts or {}
+    vim.validate("opts.tabpage", opts.tabpage, "number")
+    vim.validate("opts.win", opts.win, "number")
+    if opts.tabpage then
+        local tab_wins = vim.api.nvim_tabpage_list_wins(opts.tabpage)
+        for _, win in pairs(tab_wins) do
+            if vim.fn.win_gettype(win) == "quickfix" then
+                return win
+            end
+        end
+
+        return nil
+    end
+
+    -- TODO: This logic can be compresse
+    local win = opts.win or vim.api.nvim_get_current_win()
+    local win_tabpage = vim.api.nvim_win_get_tabpage(win)
+    local tab_wins = vim.api.nvim_tabpage_list_wins(win_tabpage)
+    for _, t_win in pairs(tab_wins) do
+        if vim.fn.win_gettype(t_win) == "quickfix" then
+            return t_win
         end
     end
 

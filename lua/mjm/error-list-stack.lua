@@ -5,21 +5,15 @@
 --- - Check that all mappings have plugs and cmds
 --- - Check that all maps/cmds/plugs have desc fieldss
 --- - Check that all functions have annotations and documentation
+---
+--- TODO: For any cases in here where a count is entered higher than the total, assuming there is
+--- at least one list, then clamp the count to the max list nr rather than erroring
+--- TODO: Whether or not to open the list should be an option
+--- TODO: Name any count1s as count1s
 
 local M = {}
 
--- TODO: Producing the same behavior as wrapping sub
-local function wrapping_add(x, y, min_val, max_val)
-    local period = max_val - min_val + 1
-    return ((x - min_val + y) % period) + min_val
-end
-
-local function wrapping_sub(x, y, min_val, max_val)
-    local period = max_val - min_val + 1
-    return ((x - y - min_val) % period) + min_val
-end
-
--- TODO: The logic between the history commands seems similar enough that you could pass an
+-- MAYBE: The logic between the history commands seems similar enough that you could pass an
 -- is_loclist option in and use each function for both listtypes
 
 -- FUTURE: Would be neat to have commands that let you specify lists to add into one another,
@@ -34,12 +28,13 @@ function M.q_older(count)
 
     local stack_len = vim.fn.getqflist({ nr = "$" }).nr
     if stack_len < 1 then
-        vim.api.nvim_echo({ { "No items in quickix stack", "" } }, false, {})
+        vim.api.nvim_echo({ { "No items in quickfix stack", "" } }, false, {})
         return
     end
 
     local cur_stack_nr = vim.fn.getqflist({ nr = 0 }).nr
-    local new_stack_nr = wrapping_sub(cur_stack_nr, count, 1, stack_len)
+    local eu = require("mjm.error-list-util")
+    local new_stack_nr = eu.wrapping_sub(cur_stack_nr, count, 1, stack_len)
 
     vim.api.nvim_cmd({ cmd = "chistory", count = new_stack_nr }, {})
     local elo = require("mjm.error-list-open")
@@ -54,12 +49,13 @@ function M.q_newer(count)
 
     local stack_len = vim.fn.getqflist({ nr = "$" }).nr
     if stack_len < 1 then
-        vim.api.nvim_echo({ { "No items in quickix stack", "" } }, false, {})
+        vim.api.nvim_echo({ { "No items in quickfix stack", "" } }, false, {})
         return
     end
 
     local cur_stack_nr = vim.fn.getqflist({ nr = 0 }).nr
-    local new_stack_nr = wrapping_add(cur_stack_nr, count, 1, stack_len)
+    local eu = require("mjm.error-list-util")
+    local new_stack_nr = eu.wrapping_add(cur_stack_nr, count, 1, stack_len)
 
     vim.api.nvim_cmd({ cmd = "chistory", count = new_stack_nr }, {})
     local elo = require("mjm.error-list-open")
@@ -74,7 +70,7 @@ function M.q_history(count)
 
     local stack_len = vim.fn.getqflist({ nr = "$" }).nr
     if stack_len < 1 then
-        vim.api.nvim_echo({ { "No items in quickix stack", "" } }, false, {})
+        vim.api.nvim_echo({ { "No items in quickfix stack", "" } }, false, {})
         return
     end
 
@@ -134,7 +130,8 @@ function M.l_older(count)
     end)
 
     local cur_win = vim.api.nvim_get_current_win()
-    local qf_id, ll_win = require("mjm.error-list-util").get_loclist_info({ win = cur_win })
+    local eu = require("mjm.error-list-util")
+    local qf_id, ll_win = eu.get_loclist_info({ win = cur_win })
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
         return
@@ -147,7 +144,7 @@ function M.l_older(count)
     end
 
     local cur_stack_nr = vim.fn.getloclist(cur_win, { nr = 0 }).nr
-    local new_stack_nr = wrapping_sub(cur_stack_nr, count, 1, stack_len)
+    local new_stack_nr = eu.wrapping_sub(cur_stack_nr, count, 1, stack_len)
 
     vim.api.nvim_cmd({ cmd = "lhistory", count = new_stack_nr }, {})
     if ll_win then
@@ -175,7 +172,8 @@ function M.l_newer(count)
     end
 
     local cur_stack_nr = vim.fn.getloclist(cur_win, { nr = 0 }).nr
-    local new_stack_nr = wrapping_add(cur_stack_nr, count, 1, stack_len)
+    local eu = require("mjm.error-list-util")
+    local new_stack_nr = eu.wrapping_add(cur_stack_nr, count, 1, stack_len)
 
     vim.api.nvim_cmd({ cmd = "lhistory", count = new_stack_nr }, {})
     if ll_win then

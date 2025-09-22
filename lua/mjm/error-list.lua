@@ -1,72 +1,63 @@
 --- FUTURE: Create updated quickfixtextfunc
 --- - The default masks error types
-
---- TODO: Throughout the project, change any "merge" verbiage to "add" to align with vimgrepadd
---- and caddbuffer
---- TODO: Go thorugh this file and get all old functionalities. Need wrap commands and
---- state management. Note history should adjust height
---- TODO: look at the issue/PR lists for the various qf plugins to see what people want
---- TODO: commands:
---- - is there a way to make cabove/cbelow useful? or maybe cbefore/cafter
---- - the various cfile commands
---- - caddbuffer/cgetbuffer
+--- FUTURE: Commands to handle:
 --- - cexpr
---- - I think we kind of have :filter covered but investigate
---- - clist?
---- - cwindow/cbottom
---- - you could do grep cmds like vimgrepadd or you could do Qgrepmerge for example
----
---- TODO: :h :make_markprg
----
---- MAYBE: <C-w><Cr> is open a new window and jump to error. Feels like useful pattern for
---- ftplugin maps. But it's not the ack pattern, so hard to say what's right here
---- TODO: :h compiler-select. But how much does this overlap with the compiler plugin?
+--- - cbuffer/cgetbuffer/caddbuffer
+--- - cfile
+--- - clist
+--- - cabove/cbelow
+---     - It's tough to make these helpful without some sort of visual feedback, implying that you
+---     would need a way to push qf entries to virtual text extmarks so they could be navigated.
+---     This risks tripping over LSP diagnostics. Nvim alreaddy has diagnostic navigation
+---     features built in, and this would be a tough feature to implement for an uncertain
+---     use case
+--- FUTURE: I think it would be good to enhance the ability to use the qflist to handle compiler
+--- and testing errors. But I'm not experienced enough with the ecosystem to know what gaps there
+--- are to fill. Some stuff I know is out there:
+--- - https://github.com/Zeioth/compiler.nvim
+--- - https://github.com/ahmedkhalf/project.nvim
+--- - https://github.com/stevearc/overseer.nvim
+--- - :h :make_makeprg
+--- - :h compiler-select
+--- FUTURE: Show ts-context info in preview wins
+--- FUTURE: Allow customizing windows to skip when looking for open targets:
+---     https://github.com/kevinhwang91/nvim-bqf/issues/78
+--- FUTURE: Test with the old nvim-treesitter master branch
+--- FUTURE: Incremental preview of cdo/cfdo changes
+--- FUTURE: General cmd parsing: https://github.com/niuiic/quickfix.nvim - This is obviously a
+---     good idea, but I'm not sure what the specific use case is so I'm not sure how to build it
+--- FUTURE: I would like to do something with cdo/cfdo, but I'm not sure what that isn't just
+--- syntactic sugar on top of the original cmd
 
---- MAYBE: Should open/close cmds also run wincmd =?
---- MAYBE: Incremental preview of cdo/cfdo changes
---- MAYBE: General cmd parsing: https://github.com/niuiic/quickfix.nvim
 --- MAYBE: Publish qf items as diagnostics
 ---     Semi related, but it would be cool to run make or a test and have the diagnostics publish
+
+--- TODO: Touchup/cleanup
+--- - Throughout the project, change any "merge" verbiage to "add" verbiage
+--- - Saw feature request for current file entries first. This does not fit in with how I
+--- want things organized, but does raise point that loclist mappings should be available where
+--- possible to focus current buf
+--- - Allow customizing of how the qfopens. Should not have to use botright if you don't
+--- want to
 ---
---- MAYBE: https://github.com/Zeioth/compiler.nvim
---- MAYBE: https://github.com/ahmedkhalf/project.nvim
---- MAYBE: https://github.com/stevearc/overseer.nvim
+--- TODO: Additional modules
+--- - Updated wrapping unimpaired maps
+--- - Add an optional autocmd to close Vim if the qf/llist window is the last one. I think you
+--- would need to put it on a defer_fn since the old win is still in the layout on WinClosed
+--- - mapping for jumping to the list window (qw?)
 
 --- DOCUMENT: Buf greps use external grep
 --- DOCUMENT: qf Buf Grep is all bufs, ll Buf Grep is current buf only
 --- DOCUMENT: rg handles true multi-line greps. For programs that don't, or is used as a fallback
-
---------------
--- STAYAWAY --
---------------
-
---- No attaching to buffers/creating persistent state
---- No modifying buffers within the qflist
---- No additional context type stuff. Previewer covers this
---- No Fuzzy finding type stuff. FzfLua does this
---- No annotations. Should be able to filter down to key items
---- Dynamic behavior. Trouble has to create a whole async runtime and data model to manage this
---- "Modernizing" the feel of the qflist. The old school feel is part of the charm
-
---------------
--- MAPPINGS --
---------------
-
---- GENERAL BUFFER MAPS
---- view count of lists
---- goto list number (unimpaired already does cycling)
---- something like qd and qD for cdo and cfdo
---- A way to copy lists, and maybe filtered copy
---- A merge kinda like deep table extend where duplicates are filtered
---- Or a merge that works like a XOR
---- Some of these more complex ideas feel more like commands
----
---- show current stack nr (chistory/lhistory)
---- stack nr statusline component?
----
---- QF BUFFER:
---- p to toggle preview
---- vim-qf-preview has some reasonable maps (r mainly) for previewer
+--- DOCUMENT: The following are non-goals:
+--- - Creating persistent state beyond what is necessary to make the preview win work
+--- - Modifying buffers within the qflist
+--- - Providing additional context within the list itself. Covered by the preview win
+--- - No Fuzzy finding type stuff. FzfLua does this. And as far as I know, all the major finders
+---     have the ability to search the qflists
+--- - No annotations. Should be able to filter down to key items
+--- - Dynamic behavior. Trouble has to create a whole async runtime and data model to manage this
+--- - "Modernizing" the feel of the qflist. The old school feel is part of the charm
 
 ---------------
 -- RESOURCES --
@@ -79,6 +70,7 @@
 -- https://github.com/itchyny/vim-qfedit -- Simple version of quicker
 -- https://github.com/mileszs/ack.vim
 -- https://github.com/stevearc/qf_helper.nvim
+-- https://github.com/niuiic/quickfix.nvim
 
 -- PREVIEWERS:
 -- https://github.com/r0nsha/qfpreview.nvim

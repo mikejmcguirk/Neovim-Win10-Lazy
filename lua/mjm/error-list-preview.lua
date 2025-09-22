@@ -5,6 +5,12 @@
 --- - Check that all mappings have plugs and cmds
 --- - Check that all maps/cmds/plugs have desc fieldss
 --- - Check that all functions have annotations and documentation
+---
+--- TODO: It should be possible to customize the kind of marking for the actual qf text
+--- - Use cursor column to show column
+--- - Use visual mode highlighting of the row
+--- TODO: The highlight should be toggleable
+--- TODO: The number line should show by default, but be toggleable
 
 --- FUTURE: Should be possible to scroll the preview window. See
 --- https://github.com/bfrg/vim-qf-preview for relevant controls
