@@ -164,34 +164,6 @@ local M = {}
 --     end,
 -- })
 
-----------------------
--- State Management --
-----------------------
-
--- TODO: Should have these maps in Rancher
--- TODO: Related to these, add a copy map
--- MAYBE: Could have a map to merge lists as well, but that gets complicated for a niche use case
-
-Map("n", "duc", function()
-    M.close_qflist()
-    vim.fn.setqflist({}, "r")
-end)
-
-Map("n", "dua", function()
-    vim.api.nvim_cmd({ cmd = "ccl" }, {})
-    vim.fn.setqflist({}, "f")
-end)
-
-Map("n", "doc", function()
-    M.close_loclist()
-    vim.fn.setloclist(vim.api.nvim_get_current_win(), {}, "r")
-end)
-
-Map("n", "doa", function()
-    M.close_loclist()
-    vim.fn.setloclist(vim.api.nvim_get_current_win(), {}, "f")
-end)
-
 local function qf_scroll_wrapper(main, alt, end_err)
     local main_with_count = vim.tbl_extend("force", main, { count = vim.v.count1 })
     local ok, err = pcall(vim.api.nvim_cmd, main_with_count, {})
