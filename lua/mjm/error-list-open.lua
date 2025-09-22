@@ -368,6 +368,9 @@ function M.close_loclist()
     return true
 end
 
+-- TODO: Because this function does not take a win-id, you're stuck with the current win
+-- So far this is not an issue, but a low-hanging-fruit robustness upgrade
+
 --- @return boolean
 function M.resize_loclist()
     local ok, ll_win, views = get_ll_close_resize_info()
