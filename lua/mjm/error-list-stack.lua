@@ -126,7 +126,7 @@ function M.l_older(count)
     end)
 
     local cur_win = vim.api.nvim_get_current_win()
-    local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id
+    local qf_id, ll_win = require("mjm.error-list-util").get_loclist_info({ win = cur_win })
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
         return
@@ -142,8 +142,9 @@ function M.l_older(count)
     local new_stack_nr = wrapping_sub(cur_stack_nr, count, 1, stack_len)
 
     vim.api.nvim_cmd({ cmd = "lhistory", count = new_stack_nr }, {})
-    local elo = require("mjm.error-list-open")
-    elo.resize_loclist()
+    if ll_win then
+        require("mjm.error-list-open").resize_list_win(ll_win)
+    end
 end
 
 function M.l_newer(count)
@@ -153,7 +154,7 @@ function M.l_newer(count)
     end)
 
     local cur_win = vim.api.nvim_get_current_win()
-    local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id
+    local qf_id, ll_win = require("mjm.error-list-util").get_loclist_info({ win = cur_win })
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
         return
@@ -169,8 +170,9 @@ function M.l_newer(count)
     local new_stack_nr = wrapping_add(cur_stack_nr, count, 1, stack_len)
 
     vim.api.nvim_cmd({ cmd = "lhistory", count = new_stack_nr }, {})
-    local elo = require("mjm.error-list-open")
-    elo.resize_loclist()
+    if ll_win then
+        require("mjm.error-list-open").resize_list_win(ll_win)
+    end
 end
 
 function M.l_history(count)
@@ -180,7 +182,7 @@ function M.l_history(count)
     end)
 
     local cur_win = vim.api.nvim_get_current_win()
-    local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id
+    local qf_id, ll_win = require("mjm.error-list-util").get_loclist_info({ win = cur_win })
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
         return
@@ -204,8 +206,9 @@ function M.l_history(count)
     end
 
     vim.api.nvim_cmd({ cmd = "lhistory", count = count }, {})
-    local elo = require("mjm.error-list-open")
-    elo.resize_loclist()
+    if ll_win then
+        require("mjm.error-list-open").resize_list_win(ll_win)
+    end
 end
 
 function M.l_del(count)
@@ -215,7 +218,7 @@ function M.l_del(count)
     end)
 
     local cur_win = vim.api.nvim_get_current_win()
-    local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id
+    local qf_id, ll_win = require("mjm.error-list-util").get_loclist_info({ win = cur_win })
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
         return
@@ -239,28 +242,25 @@ function M.l_del(count)
     end
 
     vim.fn.setloclist(cur_win, {}, "r", { items = {}, nr = count, title = "" })
-    local elo = require("mjm.error-list-open")
-    elo.resize_loclist()
+    if ll_win then
+        require("mjm.error-list-open").resize_list_win(ll_win)
+    end
 end
 
 --- MAYBE: You could have this be a sub-function of l_del. Lets you re-use cur_win code
 
--- TODO: Close loclist since it's wiped. Same for qf
 function M.l_del_all()
     local cur_win = vim.api.nvim_get_current_win()
-    local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id
+    local qf_id, ll_win = require("mjm.error-list-util").get_loclist_info({ win = cur_win })
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
         return
     end
 
     vim.fn.setloclist(cur_win, {}, "f")
-    local elo = require("mjm.error-list-open")
-    -- TODO: This points to a problem I've seen in a few places. We are relying on the window
-    -- scope to be correct so we get the same qfid in close_loclist that we had earlier
-    -- The better solution is, for loclist identification, create a helper function that gets
-    -- the qf_id and the win_id. That way we have the data available for more flexible use cases
-    elo.close_loclist()
+    if ll_win then
+        require("mjm.error-list-open").close_list_win(ll_win)
+    end
 end
 
 -----------------

@@ -12,6 +12,53 @@ local M = {}
 
 -- TODO: Replace the system functions with these
 
+-- TODO: Where possible, replace loclist finding functions throughout the plugin with the below
+
+--- @param qf_id integer
+--- @return integer|nil
+local function find_loclist_window(win, qf_id)
+    vim.validate("qf_id", qf_id, "number")
+    vim.validate("win", win, "number")
+    vim.validate("win", win, function()
+        return vim.api.nvim_win_is_valid(win)
+    end)
+
+    local win_tabpage = vim.api.nvim_win_get_tabpage(win) --- @type integer
+    local win_tabpage_wins = vim.api.nvim_tabpage_list_wins(win_tabpage) --- @type integer[]
+    for _, t_win in pairs(win_tabpage_wins) do
+        local tw_qf_id = vim.fn.getloclist(t_win, { id = 0 }).id --- @type integer
+        if tw_qf_id == qf_id then
+            local t_win_buf = vim.api.nvim_win_get_buf(t_win) --- @type integer
+            --- @type string
+            local t_win_buftype = vim.api.nvim_get_option_value("buftype", { buf = t_win_buf })
+            if t_win_buftype == "qf" then
+                return t_win
+            end
+        end
+    end
+
+    return nil
+end
+
+--- @param opts {win:integer}
+--- @return integer, integer|nil
+--- Get loclist information for a window
+--- Opts:
+--- - win: The window to check loclist information for
+--- Returns:
+--- - the qf_id and the open loclist winid, if it exists
+function M.get_loclist_info(opts)
+    opts = opts or {}
+    vim.validate("opts.win", opts.win, { "nil", "number" })
+    local win = opts.win or vim.api.nvim_get_current_win() --- @type integer
+    local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
+    if qf_id == 0 then
+        return qf_id, nil
+    end
+
+    return qf_id, find_loclist_window(win, qf_id)
+end
+
 -- NOTE: It is simpler in theory to only pass the win value to the getlist and setlist functions,
 -- returning the qflist functions if win is nil. But this forces contrivance upstream
 
