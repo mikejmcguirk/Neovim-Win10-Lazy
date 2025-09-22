@@ -11,6 +11,10 @@
 --- The loclist already does this. With the quickfix window, it's inherently somewhat weird
 --- In both cases, what if the current list doesn't have items, but other lists in the stack do?
 --- Do you have to manually track down a full list? Applies to the above to do as well
+---
+--- TODO: Seeing weird stuff in the lL resize and greps where resize isn't working. My guess is
+--- it's the issue I figured before about loclist id acquisition, and we need to use the updated
+--- system function
 
 local M = {}
 
@@ -401,7 +405,7 @@ function M.close_list_win(list_win)
 
     vim.validate("list_win", list_win, function()
         local wintype = vim.fn.win_gettype(list_win)
-        return wintype == "qflist" or wintype == "loclist"
+        return wintype == "quickfix" or wintype == "loclist"
     end)
 
     local win_tabpage = vim.api.nvim_win_get_tabpage(list_win) --- @type integer
@@ -423,7 +427,7 @@ function M.resize_list_win(list_win)
 
     vim.validate("list_win", list_win, function()
         local wintype = vim.fn.win_gettype(list_win)
-        return wintype == "qflist" or wintype == "loclist"
+        return wintype == "quickfix" or wintype == "loclist"
     end)
 
     local win_tabpage = vim.api.nvim_win_get_tabpage(list_win) --- @type integer

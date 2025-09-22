@@ -66,6 +66,7 @@ function M.qf_filter_wrapper(prompt, filter_func)
         end
     end)() --- @type integer
 
+    -- TODO: I have a util fn for this
     local qf_win = (function()
         for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
             if vim.fn.win_gettype(win) == "quickfix" then

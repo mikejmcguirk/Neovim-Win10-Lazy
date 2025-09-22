@@ -66,8 +66,8 @@ end
 --- @return integer|nil
 function M.find_qf_win(opts)
     opts = opts or {}
-    vim.validate("opts.tabpage", opts.tabpage, "number")
-    vim.validate("opts.win", opts.win, "number")
+    vim.validate("opts.tabpage", opts.tabpage, { "nil", "number" })
+    vim.validate("opts.win", opts.win, { "nil", "number" })
     if opts.tabpage then
         local tab_wins = vim.api.nvim_tabpage_list_wins(opts.tabpage)
         for _, win in pairs(tab_wins) do

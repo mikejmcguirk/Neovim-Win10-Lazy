@@ -1,3 +1,5 @@
+--- FUTURE: Add the ability to publish qf items as diagnostics. It feels like a blocker to a lot of
+--- other useful ideas
 --- FUTURE: Create updated quickfixtextfunc
 --- - The default masks error types
 --- FUTURE: Commands to handle:
@@ -29,9 +31,6 @@
 --- FUTURE: I would like to do something with cdo/cfdo, but I'm not sure what that isn't just
 --- syntactic sugar on top of the original cmd
 
---- MAYBE: Publish qf items as diagnostics
----     Semi related, but it would be cool to run make or a test and have the diagnostics publish
-
 --- TODO: Touchup/cleanup
 --- - Throughout the project, change any "merge" verbiage to "add" verbiage
 --- - Saw feature request for current file entries first. This does not fit in with how I
@@ -40,12 +39,6 @@
 --- - Allow customizing of how the qfopens. Should not have to use botright if you don't
 --- want to
 ---
---- TODO: Additional modules
---- - Updated wrapping unimpaired maps
---- - Add an optional autocmd to close Vim if the qf/llist window is the last one. I think you
---- would need to put it on a defer_fn since the old win is still in the layout on WinClosed
---- - mapping for jumping to the list window (qw?)
-
 --- DOCUMENT: Buf greps use external grep
 --- DOCUMENT: qf Buf Grep is all bufs, ll Buf Grep is current buf only
 --- DOCUMENT: rg handles true multi-line greps. For programs that don't, or is used as a fallback
@@ -156,6 +149,8 @@ local M = {}
 --     end,
 -- })
 
+-- TODO: Once I have rancher setup as a plugin, create custom maps to its history cycling and
+-- get rid of this
 local function qf_scroll_wrapper(main, alt, end_err)
     local main_with_count = vim.tbl_extend("force", main, { count = vim.v.count1 })
     local ok, err = pcall(vim.api.nvim_cmd, main_with_count, {})
@@ -179,18 +174,7 @@ local function qf_scroll_wrapper(main, alt, end_err)
     vim.cmd("norm! zz")
 end
 
--- TODO: I can't put alt maps in rancher
--- Probably the best idea is to put in <> as history maps into the Qf ftplugin. This is
--- patternful with other plugins. Can check those and unimpaired as well
 local scroll_maps = {
-    { "[q", { cmd = "cprevious" }, { cmd = "clast" }, "E553" },
-    { "]q", { cmd = "cnext" }, { cmd = "crewind" }, "E553" },
-    { "[l", { cmd = "lprevious" }, { cmd = "llast" }, "E553" },
-    { "]l", { cmd = "lnext" }, { cmd = "lrewind" }, "E553" },
-    { "[<C-q>", { cmd = "cpfile" }, { cmd = "clast" }, "E553" },
-    { "]<C-q>", { cmd = "cnfile" }, { cmd = "crewind" }, "E553" },
-    { "[<C-l>", { cmd = "lpfile" }, { cmd = "llast" }, "E553" },
-    { "]<C-l>", { cmd = "lnfile" }, { cmd = "lrewind" }, "E553" },
     {
         "[<M-q>",
         { cmd = "colder" },
