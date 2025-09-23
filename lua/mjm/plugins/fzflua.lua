@@ -291,3 +291,11 @@ fzf_lua.registers = function(opts)
 end
 
 Map("n", "<leader>fr", fzf_lua.registers)
+
+vim.api.nvim_create_autocmd("VimEnter", {
+    group = vim.api.nvim_create_augroup("fzf-lua-register-ui-select", { clear = true }),
+    once = true,
+    callback = function()
+        Cmd({ cmd = "FzfLua", args = { "register_ui_select" } }, {})
+    end,
+})
