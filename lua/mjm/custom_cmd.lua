@@ -72,7 +72,9 @@ local function del_cur_buf_from_disk(cargs)
     require("mjm.utils").harpoon_rm_buf({ bufname = full_bufname })
 end
 
-vim.api.nvim_create_user_command("BKill", del_cur_buf_from_disk, {})
+vim.api.nvim_create_user_command("BKill", function(cargs)
+    del_cur_buf_from_disk(cargs)
+end, { bang = true })
 
 local function do_mkdir(path)
     local mkdir = vim.system({ "mkdir", "-p", path }):wait()
@@ -158,7 +160,9 @@ local function mv_cur_buf(cargs)
     require("mjm.utils").harpoon_mv_buf(escape_bufname, escape_target)
 end
 
-vim.api.nvim_create_user_command("BMove", mv_cur_buf, { nargs = 1, complete = "file_in_path" })
+vim.api.nvim_create_user_command("BMove", function(cargs)
+    mv_cur_buf(cargs)
+end, { bang = true, nargs = 1, complete = "file_in_path" })
 
 local function close_floats()
     for _, win in pairs(vim.fn.getwininfo()) do
