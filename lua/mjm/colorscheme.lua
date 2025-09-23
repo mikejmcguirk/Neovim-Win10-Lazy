@@ -165,7 +165,7 @@ local groups = {
     ["@markup.raw"] = { link = "Comment" },
     ["@markup.raw.block"] = { link = "Comment" },
     ["@markup.strikethrough"] = { fg = c.l_yellow, strikethrough = true },
-    ["@markup.strong"] = { fg = c.l_red, bold = true },
+    ["@markup.strong"] = { fg = c.l_green, bold = true },
     ["@markup.underline"] = { link = "Underlined" },
 
     -----------------
