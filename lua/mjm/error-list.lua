@@ -65,6 +65,9 @@
 -- Config/Validation --
 -----------------------
 
+-- Personal setting. Default is false in line with Nvim
+vim.api.nvim_set_var("g_qfrancher_autoopenchanges", true)
+
 -- TODO: For now, I'm not adding config for the default maps. I have a feeling like I should
 -- because there are so many. But, because there are so many, that also adds complication to any
 -- boilerplate options to configure them, to the point where I'm not sure it's less complicated
@@ -84,6 +87,13 @@ if g_qfrancher_setdefaultcmds then
     vim.validate("g_qfrancher_setdefaultcmds", g_qfrancher_setdefaultcmds, "boolean")
 else
     vim.api.nvim_set_var("qfrancher_setdefaultcmds", true)
+end
+
+local g_qfrancher_autoopenchanges = vim.g.g_qfrancher_autoopenchanges
+if g_qfrancher_autoopenchanges then
+    vim.validate("g_qfrancher_autoopenchanges", g_qfrancher_autoopenchanges, "boolean")
+else
+    vim.api.nvim_set_var("g_qfrancher_autoopenchanges", false)
 end
 
 ------------------------
