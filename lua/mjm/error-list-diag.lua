@@ -139,6 +139,17 @@ local function diags_to_list(opts)
     -- height for the current list but not the next one, which creates unpleasing results. But
     -- even with more fixed code, we are setting heigh twice, which is inefficient/cound create
     -- flicker
+    -- TODO: To address a bunch of concerns previously laid out here:
+    --- - This function is currently only designed to be used in the cmdline or as a hotkey, not as
+    ---     something for scripting. If that changes, we can deal with it then
+    --- - From a data standpoint, cur_win is stored at the very beginning
+    --- - This function does not need to handle the complexities of orphaned loclists. If there's
+    ---     no qf_id, move on
+    --- - It is possible to use the funtions toget and set loclists if one does not currently exist
+    --- TODO: Create a get_gethistory function similar to get_getlist. This should only be run if
+    --- we are changing stack windows
+    --- TODO: The history command should be fun *before* we run the open function
+    --- TODO: The open functions now handle sizing internally with the always_resize option
     local did_openlist = eu.get_openlist(opts.is_loclist)()
     if opts.set_action == "add" or opts.set_action == "overwrite" then
         -- TODO: Also set if number? I forget if this is automatic
@@ -171,25 +182,17 @@ local function diags_to_list(opts)
     -- how to work through them without creating a contrived, and I worry premature, abstraction
 end
 
--- TODO: Almost 300 lines of setting keymaps is in poor taste
--- Gets to broader issue: The push right now in plugins is to provide plugin maps and not defaults,
--- but even if you provide a default config to copy, will still be *a lot* of maps across all
--- functions. Need to not only provide defaults, but a few days of customizing them, because
--- doing it custom is a non-trivial lift.
--- You need global enable/disable, as well as enable/disable for each broad category (diags,
--- grep, filter, sort). You also need global settings for the lsit prefix (<leaderq/<leader>l)
--- Where things get tricker then is the sub commands. Right now we are roughly saying qi is diag,
--- qg (should be qe!) is grep, and so on. Okay so you offer the ability to change the middle
--- prefix. Sure.
--- But now do you offer the ability to change what the derivations of the prefix mean? right now,
--- lowercase is new, uppercase is overwrite, and ctrl is add. The config for that would be
--- complicated to write, and I have a feeling that, for a user to understand it, would be more
--- work than just doing their own plug mappings
--- And I also feel that way about the individual commands and their meanings
-
 --- MAYBE: Ideas for ctrl-diag_type mappings:
 --- --- Min severity + sort by type > lnum (sort maps already exist though)
 --- --- Use the diag type as the max severity
+---
+--- TODO: Naming conventions:
+--- - Qdiag
+--- - Qdiagadd
+--- - Qdiagreplace (?)
+--- - Qdiag top (top severity)
+--- - Qdiag info (min severity info)
+--- - Qdiag info only (only show info)
 
 vim.keymap.set("n", "<leader>qin", function()
     diags_to_list()

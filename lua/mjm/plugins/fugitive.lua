@@ -27,8 +27,8 @@ end)
 local commit_all = function()
     vim.api.nvim_cmd({ cmd = "Git", args = { "commit -a" } }, {})
 end
-Map("n", "<leader>gcan", commit_all)
 
+Map("n", "<leader>gcan", commit_all)
 Map("n", "<leader>gchm", function()
     local ok, result = require("mjm.utils").get_input("Commit message: ") --- @type boolean, string
     if not ok then
@@ -84,4 +84,5 @@ Map("n", "<leader>gp", function()
     vim.api.nvim_cmd({ cmd = "Git", args = { "push" } }, {})
 end)
 
+-- TODO: I use this enough that it should be a map. It should check for what the current branch is
 --- git reset HEAD~1

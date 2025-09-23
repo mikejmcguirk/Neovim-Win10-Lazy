@@ -10,6 +10,15 @@
 
 --- MAYBE: Smart/ignore case can be rolled under the same option for grepprgs that don't
 --- support it
+---
+--- TODO: From a load structuring standpoint, this file points to a couple interesting things
+--- The first is that we might actually want to have a separate default keymaps file to require
+--- This means that we can go with requiring only one module to setup keymaps, rather than
+--- having to require and cache every individual file, saving startup time. The other is being
+--- more specific about which keymaps are setup and when. In this file, help grep and CWD grep
+--- need to be setup right away. But buf grep can wait until a buf is actually opened. Or, the
+--- diagnostic greps, I don't think, need to be setup until we actually open a buf
+--- Check how this acts though after loading in from mksession
 
 --- FUTURE: Potentially use rg's built-in globbing. But don't want to create inconsistencies with
 --- other grep cmds

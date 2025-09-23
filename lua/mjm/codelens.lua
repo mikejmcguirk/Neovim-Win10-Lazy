@@ -153,6 +153,7 @@ end
 -- The extmark options, conceptually, are simple enough. Just let the user pass in their own
 -- table. You I guess could check in the table for virtual lines and then add whitespace, but
 -- that's awkward
+-- Better solution - Do it like the diagnostic config
 local function display_line_lenses(bufnr, ns, line, lenses)
     local chunks = {}
     local num_lenses = #lenses

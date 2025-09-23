@@ -12,6 +12,7 @@
 -- TODO: incomplete cmd nops
 -- TODO: filter anything without a line/col number
 -- TODO: Add filtering for diagnostic severity
+-- DOCUMENT: This replaces the cfilter plugin, so that does not have to be pack added
 
 local M = {}
 
