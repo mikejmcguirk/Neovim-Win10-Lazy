@@ -1,5 +1,3 @@
-local start = vim.uv.hrtime()
-
 --- TODO: For loading efficiency:
 --- - Setting up lazy loaded files here is the wrong choice. The purpose of this file is to setup
 --- everything that is available once the load step is complete. Deferring here adds gotchas
@@ -7,9 +5,23 @@ local start = vim.uv.hrtime()
 --- - To look at keymaps for example, some stuff in there indeed does not to be set until
 --- BufReadPre, but that decision needs to be made in the keymaps file, not here
 
+local start = vim.uv.hrtime()
+
 -----------
 -- Setup --
 -----------
+
+_G.Border = "single" ---@type string
+_G.Has_Nerd_Font = true --- @type boolean
+_G.Highlight_Time = 175 --- @type integer
+_G.Scrolloff_Val = 6 ---@type integer
+_G.SpellFile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add" ---@type string
+
+_G.ApiMap = vim.api.nvim_set_keymap
+_G.Augroup = vim.api.nvim_create_augroup
+_G.Autocmd = vim.api.nvim_create_autocmd
+_G.Cmd = vim.api.nvim_cmd
+_G.Map = vim.keymap.set
 
 --- :h standard-plugin-list
 --- Disabling these has a non-trivial effect on startup time
@@ -39,19 +51,19 @@ local termfeatures = vim.g.termfeatures or {}
 termfeatures.osc52 = false
 vim.api.nvim_set_var("termfeatures", termfeatures)
 
-_G.Border = "single" ---@type string
-_G.Has_Nerd_Font = true --- @type boolean
-_G.Highlight_Time = 175 --- @type integer
-_G.Scrolloff_Val = 6 ---@type integer
-_G.SpellFile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add" ---@type string
-
-_G.ApiMap = vim.api.nvim_set_keymap
-_G.Cmd = vim.api.nvim_cmd
-_G.Map = vim.keymap.set
-
 Map({ "n", "x" }, "<Space>", "<Nop>")
 vim.g.mapleader = " "
 vim.g.maplocaleader = " "
+
+-- Unsimplify mappings
+-- See :h <tab> and https://github.com/neovim/neovim/pull/17932
+-- NOTE: For this to work in Tmux, that config has to be handled separately
+ApiMap("n", "<C-i>", "<C-i>", { noremap = true })
+ApiMap("n", "<tab>", "<tab>", { noremap = true })
+ApiMap("n", "<C-m>", "<C-m>", { noremap = true })
+ApiMap("n", "<cr>", "<cr>", { noremap = true })
+ApiMap("n", "<C-[>", "<C-[>", { noremap = true })
+ApiMap("n", "<esc>", "<esc>", { noremap = true })
 
 -- TODO: I'm fine with keymap being its own file since that handles a specific concern, but then
 -- I think as many files as possible should be rolled into set. The concerns are conceptually, but
@@ -177,7 +189,9 @@ vim.api.nvim_create_autocmd("UIEnter", {
         local ui_enter = vim.uv.hrtime()
         local to_ui_enter = math.floor((ui_enter - start) / 1e6 * 100) / 100
 
-        if vim.fn.argc() > 0 or vim.fn.line2byte("$") ~= -1 or vim.bo.modified then
+        local cur_buf = vim.api.nvim_get_current_buf()
+        local modified = vim.api.nvim_get_option_value("modified", { buf = cur_buf })
+        if vim.fn.argc() > 0 or vim.fn.line2byte("$") ~= -1 or modified then
             return
         end
 

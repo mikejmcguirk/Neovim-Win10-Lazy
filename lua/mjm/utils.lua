@@ -60,6 +60,11 @@ end
 --- nvim_set_current_buf will load the buf properly if it needs to
 --- nvim_win_set_buf does the same, and also automatically moves the user into that window
 function M.open_buf(source, opts)
+    --- TODO: Scenario:
+    --- - Create a new tab. It will contain a noname buffer
+    --- - Use this to open a buf
+    --- - The noname buffer will still be there
+    --- - This does not happen when using :edit
     source = source or {}
     local buf = (function()
         if source.bufnr then
