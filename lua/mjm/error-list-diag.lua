@@ -76,12 +76,7 @@ end
 local function diags_to_list(opts)
     opts = opts or {}
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
-    --- MAYBE: It makes this function less flexible if sending to a location list automatically
-    --- restricts to current buf. But given that I'm not sure what the use case is for how win
-    --- and buf specfic options would be used, I don't want to create contrived logic to handle
-    --- hypotheticals
     local buf = opts.is_loclist and vim.api.nvim_win_get_buf(cur_win) or nil --- @type integer|nil
-
     local severity = (function()
         if opts.severity then
             return opts.severity
@@ -90,8 +85,7 @@ local function diags_to_list(opts)
         end
     end)() --- @type integer|{min:integer}|nil
 
-    --- @type vim.Diagnostic[]
-    local raw_diags = vim.diagnostic.get(buf, { severity = severity })
+    local raw_diags = vim.diagnostic.get(buf, { severity = severity }) --- @type vim.Diagnostic[]
     if #raw_diags == 0 then
         -- TODO: Print more specific messages based on severity opts
         vim.api.nvim_echo({ { "No diagnostics", "" } }, false, {})
@@ -103,12 +97,10 @@ local function diags_to_list(opts)
     end
 
     local converted_diags = vim.tbl_map(convert_diag, raw_diags) ---@type table[]
-
     local eu = require("mjm.error-list-util")
     local getlist = eu.get_getlist({ win = cur_win, get_loclist = opts.is_loclist })
     opts.set_action = opts.set_action or "new"
     local list_nr = eu.get_list_nr(getlist, opts.set_action)
-
     if opts.set_action == "add" then
         local cur_list = getlist({ nr = list_nr, items = true })
         converted_diags = eu.merge_qf_lists(converted_diags, cur_list.items)
@@ -122,8 +114,7 @@ local function diags_to_list(opts)
     local setlist = eu.get_setlist(opts.is_loclist, cur_win)
     local is_replace = opts.set_action == "add" or opts.set_action == "overwrite"
     local action = is_replace and "r" or " "
-    -- TODO: more specific title based on query
-    local title = "Diagnostics"
+    local title = "vim.diagnostic.get()"
     setlist({}, action, { items = converted_diags, nr = list_nr, title = title })
     -- vim.fn.setqflist({}, " ", { items = converted_diags, nr = list_nr, title = title })
 
