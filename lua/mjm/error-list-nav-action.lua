@@ -8,8 +8,8 @@ local M = {}
 --- - Check that the qf and loclist versions are both properly built for purpose. Should be able
 ---     to use the loclist function for buf/win specific info
 
--- TODO: Have an option for opening the list on cmd execution
--- TODO: Lots of repeated code here, including maybe with the stack module
+--- LOW: Lots of opportunity for function composition here
+
 -- TODO: Right now we have qQ, which is resize and change list without jump, and we have q<C-q>
 -- which does that and also jumps to the list. It feels like qQ should be the one that jumps
 -- and q<C-q> the one that doesn't
@@ -163,10 +163,10 @@ function M.q_jump(count)
     end
 end
 
-function M.l_prev(count)
-    vim.validate("count", count, "number")
-    vim.validate("count", count, function()
-        return count > 0
+function M.l_prev(count1)
+    vim.validate("count1", count1, "number")
+    vim.validate("count1", count1, function()
+        return count1 > 0
     end)
 
     local cur_win = vim.api.nvim_get_current_win()
@@ -185,8 +185,8 @@ function M.l_prev(count)
     end
 
     local cur_idx = vim.fn.getloclist(cur_win, { nr = cur_stack_nr, idx = 0 }).idx
-    local new_idx = eu.wrapping_sub(cur_idx, count, 1, size)
-    local ok, result = vim.api.nvim_cmd({ cmd = "ll", count = new_idx }, {})
+    local new_idx = eu.wrapping_sub(cur_idx, count1, 1, size)
+    local ok, result = vim.api.nvim_cmd({ cmd = "ll", count1 = new_idx }, {})
     if ok then
         vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
         return
@@ -196,10 +196,10 @@ function M.l_prev(count)
     vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
 end
 
-function M.l_next(count)
-    vim.validate("count", count, "number")
-    vim.validate("count", count, function()
-        return count > 0
+function M.l_next(count1)
+    vim.validate("count1", count1, "number")
+    vim.validate("count1", count1, function()
+        return count1 > 0
     end)
 
     local cur_win = vim.api.nvim_get_current_win()
@@ -218,8 +218,8 @@ function M.l_next(count)
     end
 
     local cur_idx = vim.fn.getloclist(cur_win, { nr = cur_stack_nr, idx = 0 }).idx
-    local new_idx = eu.wrapping_add(cur_idx, count, 1, size)
-    local ok, result = vim.api.nvim_cmd({ cmd = "ll", count = new_idx }, {})
+    local new_idx = eu.wrapping_add(cur_idx, count1, 1, size)
+    local ok, result = vim.api.nvim_cmd({ cmd = "ll", count1 = new_idx }, {})
     if ok then
         vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
         return
@@ -229,10 +229,10 @@ function M.l_next(count)
     vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
 end
 
-function M.l_l(count)
-    vim.validate("count", count, "number")
-    vim.validate("count", count, function()
-        return count > 0
+function M.l_l(count1)
+    vim.validate("count1", count1, "number")
+    vim.validate("count1", count1, function()
+        return count1 > 0
     end)
 
     local cur_win = vim.api.nvim_get_current_win()
@@ -250,20 +250,20 @@ function M.l_l(count)
         return
     end
 
-    count = math.min(count, size)
-    local ok, result = vim.api.nvim_cmd({ cmd = "ll", count = count }, {})
+    count1 = math.min(count1, size)
+    local ok, result = vim.api.nvim_cmd({ cmd = "ll", count1 = count1 }, {})
     if ok then
         vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
         return
     end
 
-    local msg = result or ("Unknown error displaying list entry " .. count)
+    local msg = result or ("Unknown error displaying list entry " .. count1)
     vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
 end
 
 function M.l_pfile(count1)
-    vim.validate("count", count1, "number")
-    vim.validate("count", count1, function()
+    vim.validate("count1", count1, "number")
+    vim.validate("count1", count1, function()
         return count1 > 0
     end)
 
@@ -295,8 +295,8 @@ function M.l_pfile(count1)
 end
 
 function M.l_nfile(count1)
-    vim.validate("count", count1, "number")
-    vim.validate("count", count1, function()
+    vim.validate("count1", count1, "number")
+    vim.validate("count1", count1, function()
         return count1 > 0
     end)
 
