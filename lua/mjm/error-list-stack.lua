@@ -7,25 +7,19 @@
 --- - Check that all functions have annotations and documentation
 --- - Check that the qf and loclist versions are both properly built for purpose. Should be able
 ---     to use the loclist function for buf/win specific info
----
---- TODO: For any cases in here where a count is entered higher than the total, assuming there is
---- at least one list, then clamp the count to the max list nr rather than erroring
---- TODO: Whether or not to open the list should be an option
---- TODO: Name any count1s as count1s
 
 local M = {}
 
--- MAYBE: The logic between the history commands seems similar enough that you could pass an
--- is_loclist option in and use each function for both listtypes
+-- LOW: A lot of opportunity for function composition in here
 
 -- FUTURE: Would be neat to have commands that let you specify lists to add into one another,
 -- or the ability to overwrite one list with another. But I'm not sure if the cost/benefit
 -- analysis works out ATM
 
-function M.q_older(count)
-    vim.validate("count", count, "number")
-    vim.validate("count", count, function()
-        return count > 0
+function M.q_older(count1)
+    vim.validate("count1", count1, "number")
+    vim.validate("count1", count1, function()
+        return count1 > 0
     end)
 
     local stack_len = vim.fn.getqflist({ nr = "$" }).nr
@@ -36,17 +30,17 @@ function M.q_older(count)
 
     local cur_stack_nr = vim.fn.getqflist({ nr = 0 }).nr
     local eu = require("mjm.error-list-util")
-    local new_stack_nr = eu.wrapping_sub(cur_stack_nr, count, 1, stack_len)
+    local new_stack_nr = eu.wrapping_sub(cur_stack_nr, count1, 1, stack_len)
 
     vim.api.nvim_cmd({ cmd = "chistory", count = new_stack_nr }, {})
     local elo = require("mjm.error-list-open")
     elo.resize_qflist()
 end
 
-function M.q_newer(count)
-    vim.validate("count", count, "number")
-    vim.validate("count", count, function()
-        return count > 0
+function M.q_newer(count1)
+    vim.validate("count1", count1, "number")
+    vim.validate("count1", count1, function()
+        return count1 > 0
     end)
 
     local stack_len = vim.fn.getqflist({ nr = "$" }).nr
@@ -57,9 +51,9 @@ function M.q_newer(count)
 
     local cur_stack_nr = vim.fn.getqflist({ nr = 0 }).nr
     local eu = require("mjm.error-list-util")
-    local new_stack_nr = eu.wrapping_add(cur_stack_nr, count, 1, stack_len)
+    local new_stack_nr = eu.wrapping_add(cur_stack_nr, count1, 1, stack_len)
 
-    vim.api.nvim_cmd({ cmd = "chistory", count = new_stack_nr }, {})
+    vim.api.nvim_cmd({ cmd = "chistory", count1 = new_stack_nr }, {})
     local elo = require("mjm.error-list-open")
     elo.resize_qflist()
 end
@@ -81,12 +75,7 @@ function M.q_history(count)
         return
     end
 
-    -- TODO: This error could be a bit better
-    if count > stack_len then
-        vim.api.nvim_echo({ { "Invalid count " .. count, "" } }, false, {})
-        return
-    end
-
+    count = math.min(count, stack_len)
     vim.api.nvim_cmd({ cmd = "chistory", count = count }, {})
     local elo = require("mjm.error-list-open")
     elo.resize_qflist()
@@ -109,12 +98,7 @@ function M.q_del(count)
         return
     end
 
-    -- TODO: This error could be a bit better
-    if count > stack_len then
-        vim.api.nvim_echo({ { "Invalid count " .. count, "" } }, false, {})
-        return
-    end
-
+    count = math.min(count, stack_len)
     vim.fn.setqflist({}, "r", { items = {}, nr = count, title = "" })
     local elo = require("mjm.error-list-open")
     elo.resize_qflist()
@@ -125,10 +109,10 @@ function M.q_del_all()
     require("mjm.error-list-open").close_qflist()
 end
 
-function M.l_older(count)
-    vim.validate("count", count, "number")
-    vim.validate("count", count, function()
-        return count > 0
+function M.l_older(count1)
+    vim.validate("count1", count1, "number")
+    vim.validate("count1", count1, function()
+        return count1 > 0
     end)
 
     local cur_win = vim.api.nvim_get_current_win()
@@ -146,18 +130,18 @@ function M.l_older(count)
     end
 
     local cur_stack_nr = vim.fn.getloclist(cur_win, { nr = 0 }).nr
-    local new_stack_nr = eu.wrapping_sub(cur_stack_nr, count, 1, stack_len)
+    local new_stack_nr = eu.wrapping_sub(cur_stack_nr, count1, 1, stack_len)
 
-    vim.api.nvim_cmd({ cmd = "lhistory", count = new_stack_nr }, {})
+    vim.api.nvim_cmd({ cmd = "lhistory", count1 = new_stack_nr }, {})
     if ll_win then
         require("mjm.error-list-open").resize_list_win(ll_win)
     end
 end
 
-function M.l_newer(count)
-    vim.validate("count", count, "number")
-    vim.validate("count", count, function()
-        return count > 0
+function M.l_newer(count1)
+    vim.validate("count1", count1, "number")
+    vim.validate("count1", count1, function()
+        return count1 > 0
     end)
 
     local cur_win = vim.api.nvim_get_current_win()
@@ -175,9 +159,8 @@ function M.l_newer(count)
 
     local cur_stack_nr = vim.fn.getloclist(cur_win, { nr = 0 }).nr
     local eu = require("mjm.error-list-util")
-    local new_stack_nr = eu.wrapping_add(cur_stack_nr, count, 1, stack_len)
-
-    vim.api.nvim_cmd({ cmd = "lhistory", count = new_stack_nr }, {})
+    local new_stack_nr = eu.wrapping_add(cur_stack_nr, count1, 1, stack_len)
+    vim.api.nvim_cmd({ cmd = "lhistory", count1 = new_stack_nr }, {})
     if ll_win then
         require("mjm.error-list-open").resize_list_win(ll_win)
     end
@@ -207,12 +190,7 @@ function M.l_history(count)
         return
     end
 
-    -- TODO: This error could be a bit better
-    if count > stack_len then
-        vim.api.nvim_echo({ { "Invalid count " .. count, "" } }, false, {})
-        return
-    end
-
+    count = math.min(count, stack_len)
     vim.api.nvim_cmd({ cmd = "lhistory", count = count }, {})
     if ll_win then
         require("mjm.error-list-open").resize_list_win(ll_win)
@@ -243,12 +221,7 @@ function M.l_del(count)
         return
     end
 
-    -- TODO: This error could be a bit better
-    if count > stack_len then
-        vim.api.nvim_echo({ { "Invalid count " .. count, "" } }, false, {})
-        return
-    end
-
+    count = math.min(count, stack_len)
     vim.fn.setloclist(cur_win, {}, "r", { items = {}, nr = count, title = "" })
     if ll_win then
         require("mjm.error-list-open").resize_list_win(ll_win)

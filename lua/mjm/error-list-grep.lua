@@ -8,8 +8,6 @@
 --- - Check that the qf and loclist versions are both properly built for purpose. Should be able
 ---     to use the loclist function for buf/win specific info
 
---- TODO: The keymaps should sync up with the filter/sort/diag maps
-
 --- MAYBE: Smart/ignore case can be rolled under the same option for grepprgs that don't
 --- support it
 
@@ -18,8 +16,6 @@
 --- FUTURE: If this can be done, use cmd literal for title
 
 -- Escaping test line from From vim-grepper
--- Make sure to query the text part specifically. The comment dashw will make it interpret as an
--- option
 -- ..ad\\f40+$':-# @=,!;%^&&*()_{}/ /4304\'""?`9$343%$ ^adfadf[ad)[(
 
 -------------
@@ -187,28 +183,31 @@ local function get_rg_cmd_parts(pattern, location, opts)
     return true, cmd
 end
 
+--- PERF: Running a validity check on each grep is wasteful. But, technically, the grepprg is
+--- a part of the external environment and it can change. Also, This is a module that I think has
+--- a lot of potential to grow and change in the future, so I'm fine with the architecture favoring
+--- but loose and robust so it can be refined based on more advanced use cases
+
 --- @return boolean, QfRancherGrepCmdFun|[string,string]
---- TODO: Run a validity check for the grep program once. An additional filesystem call should not
---- be run on each grep
 local function get_grep_cmd()
     local qf_rancher_grepprg = vim.api.nvim_get_var("qf_rancher_grepprg")
 
     if qf_rancher_grepprg == "rg" then
-        -- if vim.fn.executable("rg") ~= 1 then
-        --     return false, { "get_grep_cmd: rg is not executable", "ErrorMsg" }
-        -- end
+        if vim.fn.executable("rg") ~= 1 then
+            return false, { "get_grep_cmd: rg is not executable", "ErrorMsg" }
+        end
 
         return true, get_rg_cmd_parts
     elseif qf_rancher_grepprg == "grep" then
-        -- if vim.fn.executable("grep") ~= 1 then
-        --     return false, { "get_grep_cmd: grep is not executable", "ErrorMsg" }
-        -- end
+        if vim.fn.executable("grep") ~= 1 then
+            return false, { "get_grep_cmd: grep is not executable", "ErrorMsg" }
+        end
 
         return true, get_grep_cmd_parts
     elseif qf_rancher_grepprg == "findstr" then
-        -- if vim.fn.executable("findstr") ~= 1 then
-        --     return false, { "get_grep_cmd: findstr is not executable", "ErrorMsg" }
-        -- end
+        if vim.fn.executable("findstr") ~= 1 then
+            return false, { "get_grep_cmd: findstr is not executable", "ErrorMsg" }
+        end
 
         return true, get_findstr_cmd_parts
     end

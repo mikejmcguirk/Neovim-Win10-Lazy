@@ -149,6 +149,8 @@ local function diags_to_list(opts)
         end
     end
 
+    -- TODO: This contains the only reference to resize loclist. Getting rid of this would let us
+    -- get rid of two functions
     if not did_openlist then
         eu.get_resizelist(opts.is_loclist)()
     end

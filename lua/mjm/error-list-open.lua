@@ -8,13 +8,18 @@
 --- - Check that the qf and loclist versions are both properly built for purpose. Should be able
 ---     to use the loclist function for buf/win specific info
 ---
---- TODO: If there are no entries in the list, the open cmd should close the window
---- MAYBE: the open functions could imitate cwindow behavior and not open if there are no entries
---- The loclist already does this. With the quickfix window, it's inherently somewhat weird
---- In both cases, what if the current list doesn't have items, but other lists in the stack do?
---- Do you have to manually track down a full list? Applies to the above to do as well
----
---- TODO: Customize qfopen behavior. Shouldn't have to botright if you don't want to
+--- MAYBE: For opening the lists, there are two ideas you could integrate:
+--- - If there are no active lists, the list doesn't open
+--- - If you open to a blank list, it will automatically find a non-blank one
+--- Because the first one is such a big change from the default behavior, it would have to be
+--- behind an option. Also a really bad place to make mistakes in the code. Still, worth
+--- considering if opening blank lists becomes too much of a nag
+--- For the second, would need to work with chistory/lhistory more to know if it's a good idea
+--- MAYBE: Allow customizing where the qflist opens. But since botright is the default, and a good
+--- one, leaving as is
+
+-- DOCUMENT: How the open maps double as resizers. Note that this follows the built-in cmd
+-- behavior
 
 local M = {}
 
@@ -124,7 +129,6 @@ end
 local max_qf_height = 10
 
 -- LOW: This should work without nowrap
--- TODO: This does not work for some reason, but then it does on always_resize
 
 --- @param list_win integer
 --- @param is_ll? boolean
@@ -405,9 +409,6 @@ function M.close_loclist()
     return true
 end
 
--- TODO: Because this function does not take a win-id, you're stuck with the current win
--- So far this is not an issue, but a low-hanging-fruit robustness upgrade
-
 --- @return boolean
 function M.resize_loclist()
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
@@ -481,9 +482,6 @@ end
 -----------------
 --- Plug Maps ---
 -----------------
-
--- DOCUMENT: How the open maps double as resizers. Note that this follows the built-in cmd
--- behavior
 
 vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-open-qf-list)", "<nop>", {
     noremap = true,
