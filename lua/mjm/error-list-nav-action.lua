@@ -8,19 +8,18 @@ local M = {}
 --- - Check that the qf and loclist versions are both properly built for purpose. Should be able
 ---     to use the loclist function for buf/win specific info
 
---- LOW: Lots of opportunity for function composition here
+--- TODO: Hold on refactoring the jump functions until I know what we're doing with them. Still
+--- need to figure out how they co-exist with the qQ mapping
 
--- TODO: Right now we have qQ, which is resize and change list without jump, and we have q<C-q>
--- which does that and also jumps to the list. It feels like qQ should be the one that jumps
--- and q<C-q> the one that doesn't
---      And it turns out qQ doesn't even resize so now I'm really not sure why I have both
-
-function M.q_prev(count1)
-    vim.validate("count", count1, "number")
-    vim.validate("count", count1, function()
-        return count1 > 0
+local function validate_count(count)
+    vim.validate("count", count, "number")
+    vim.validate("count", count, function()
+        return count > 0
     end)
+end
 
+local function get_qf_new_idx(count1, is_prev)
+    validate_count(count1)
     local cur_stack_nr = vim.fn.getqflist({ nr = 0 }).nr
     local size = vim.fn.getqflist({ nr = cur_stack_nr, size = 0 }).size
     if size < 1 then
@@ -30,8 +29,15 @@ function M.q_prev(count1)
 
     local cur_idx = vim.fn.getqflist({ nr = cur_stack_nr, idx = 0 }).idx
     local eu = require("mjm.error-list-util")
-    local new_idx = eu.wrapping_sub(cur_idx, count1, 1, size)
-    local ok, result = vim.api.nvim_cmd({ cmd = "cc", count = new_idx }, {})
+    if is_prev then
+        return eu.wrapping_sub(cur_idx, count1, 1, size)
+    else
+        return eu.wrapping_add(cur_idx, count1, 1, size)
+    end
+end
+
+local function goto_list_entry(new_idx, cmd)
+    local ok, result = vim.api.nvim_cmd({ cmd = cmd, count = new_idx }, {})
     if ok then
         vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
         return
@@ -39,40 +45,20 @@ function M.q_prev(count1)
 
     local msg = result or ("Unknown error displaying list entry " .. new_idx)
     vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+end
+
+function M.q_prev(count1)
+    local new_idx = get_qf_new_idx(count1, true)
+    goto_list_entry(new_idx, "cc")
 end
 
 function M.q_next(count1)
-    vim.validate("count", count1, "number")
-    vim.validate("count", count1, function()
-        return count1 > 0
-    end)
-
-    local cur_stack_nr = vim.fn.getqflist({ nr = 0 }).nr
-    local size = vim.fn.getqflist({ nr = cur_stack_nr, size = 0 }).size
-    if size < 1 then
-        vim.api.nvim_echo({ { "No items in quickfix list", "" } }, false, {})
-        return
-    end
-
-    local cur_idx = vim.fn.getqflist({ nr = cur_stack_nr, idx = 0 }).idx
-    local eu = require("mjm.error-list-util")
-    local new_idx = eu.wrapping_add(cur_idx, count1, 1, size)
-    local ok, result = vim.api.nvim_cmd({ cmd = "cc", count = new_idx }, {})
-    if ok then
-        vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
-        return
-    end
-
-    local msg = result or ("Unknown error displaying list entry " .. new_idx)
-    vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+    local new_idx = get_qf_new_idx(count1, false)
+    goto_list_entry(new_idx, "cc")
 end
 
 function M.q_q(count1)
-    vim.validate("count1", count1, "number")
-    vim.validate("count1", count1, function()
-        return count1 > 0
-    end)
-
+    validate_count(count1)
     local cur_stack_nr = vim.fn.getqflist({ nr = 0 }).nr
     local size = vim.fn.getqflist({ nr = cur_stack_nr, size = 0 }).size
     if size < 1 then
@@ -81,31 +67,20 @@ function M.q_q(count1)
     end
 
     count1 = math.min(count1, size)
-    local ok, result = vim.api.nvim_cmd({ cmd = "cc", count = count1 }, {})
-    if ok then
-        vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
-        return
-    end
-
-    local msg = result or ("Unknown error displaying list entry " .. count1)
-    vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+    goto_list_entry(count1, "cc")
 end
 
 -- DOCUMENT: The cn/cpfile logic does not have the same level of wrapping logic as the cc wrapper
-function M.q_pfile(count1)
-    vim.validate("count", count1, "number")
-    vim.validate("count", count1, function()
-        return count1 > 0
-    end)
-
-    local ok, err = pcall(vim.api.nvim_cmd, { cmd = "cpfile", count = count1 }, {})
+local function file_nav_wrap(count1, cmd, backup_cmd)
+    validate_count(count1)
+    local ok, err = pcall(vim.api.nvim_cmd, { cmd = cmd, count = count1 }, {})
     if (not ok) and (err:match("E42") or err:match("E776")) then
         vim.notify(err:sub(#"Vim:" + 1))
         return
     end
 
     if (not ok) and err:match("E553") then
-        ok, err = pcall(vim.api.nvim_cmd, { cmd = "clast" }, {})
+        ok, err = pcall(vim.api.nvim_cmd, { cmd = backup_cmd }, {})
     end
 
     if not ok then
@@ -115,39 +90,18 @@ function M.q_pfile(count1)
     end
 
     vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
+end
+
+function M.q_pfile(count1)
+    file_nav_wrap(count1, "cpfile", "clast")
 end
 
 function M.q_nfile(count1)
-    vim.validate("count", count1, "number")
-    vim.validate("count", count1, function()
-        return count1 > 0
-    end)
-
-    local ok, err = pcall(vim.api.nvim_cmd, { cmd = "cnfile", count = count1 }, {})
-    if (not ok) and (err:match("E42") or err:match("E776")) then
-        vim.notify(err:sub(#"Vim:" + 1))
-        return
-    end
-
-    if (not ok) and err:match("E553") then
-        ok, err = pcall(vim.api.nvim_cmd, { cmd = "crewind" }, {})
-    end
-
-    if not ok then
-        local msg = err and err:sub(#"Vim:" + 1) or "Unknown qf file error"
-        vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
-        return
-    end
-
-    vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
+    file_nav_wrap(count1, "cnfile", "crewind")
 end
 
 function M.q_jump(count)
-    vim.validate("count", count, "number")
-    vim.validate("count", count, function()
-        return count >= 0
-    end)
-
+    validate_count(count)
     local cur_stack_nr = vim.fn.getqflist({ nr = 0 }).nr
     local max_stack_nr = vim.fn.getqflist({ nr = "$" }).nr
     count = math.min(count, max_stack_nr)
@@ -163,12 +117,8 @@ function M.q_jump(count)
     end
 end
 
-function M.l_prev(count1)
-    vim.validate("count1", count1, "number")
-    vim.validate("count1", count1, function()
-        return count1 > 0
-    end)
-
+local function get_ll_new_idx(count1, is_prev)
+    validate_count(count1)
     local cur_win = vim.api.nvim_get_current_win()
     local eu = require("mjm.error-list-util")
     local qf_id, _ = eu.get_loclist_info({ win = cur_win })
@@ -180,61 +130,30 @@ function M.l_prev(count1)
     local cur_stack_nr = vim.fn.getloclist(cur_win, { nr = 0 }).nr
     local size = vim.fn.getloclist(cur_win, { nr = cur_stack_nr, size = 0 }).size
     if size < 1 then
-        vim.api.nvim_echo({ { "No items in quickfix list", "" } }, false, {})
+        vim.api.nvim_echo({ { "No items in the location list", "" } }, false, {})
         return
     end
 
     local cur_idx = vim.fn.getloclist(cur_win, { nr = cur_stack_nr, idx = 0 }).idx
-    local new_idx = eu.wrapping_sub(cur_idx, count1, 1, size)
-    local ok, result = vim.api.nvim_cmd({ cmd = "ll", count1 = new_idx }, {})
-    if ok then
-        vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
-        return
+    if is_prev then
+        return eu.wrapping_sub(cur_idx, count1, 1, size)
+    else
+        return eu.wrapping_add(cur_idx, count1, 1, size)
     end
+end
 
-    local msg = result or ("Unknown error displaying list entry " .. new_idx)
-    vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+function M.l_prev(count1)
+    local new_idx = get_ll_new_idx(count1, true)
+    goto_list_entry(new_idx, "ll")
 end
 
 function M.l_next(count1)
-    vim.validate("count1", count1, "number")
-    vim.validate("count1", count1, function()
-        return count1 > 0
-    end)
-
-    local cur_win = vim.api.nvim_get_current_win()
-    local eu = require("mjm.error-list-util")
-    local qf_id, _ = eu.get_loclist_info({ win = cur_win })
-    if qf_id == 0 then
-        vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
-        return
-    end
-
-    local cur_stack_nr = vim.fn.getloclist(cur_win, { nr = 0 }).nr
-    local size = vim.fn.getloclist(cur_win, { nr = cur_stack_nr, size = 0 }).size
-    if size < 1 then
-        vim.api.nvim_echo({ { "No items in quickfix list", "" } }, false, {})
-        return
-    end
-
-    local cur_idx = vim.fn.getloclist(cur_win, { nr = cur_stack_nr, idx = 0 }).idx
-    local new_idx = eu.wrapping_add(cur_idx, count1, 1, size)
-    local ok, result = vim.api.nvim_cmd({ cmd = "ll", count1 = new_idx }, {})
-    if ok then
-        vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
-        return
-    end
-
-    local msg = result or ("Unknown error displaying list entry " .. new_idx)
-    vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+    local new_idx = get_ll_new_idx(count1, false)
+    goto_list_entry(new_idx, "ll")
 end
 
 function M.l_l(count1)
-    vim.validate("count1", count1, "number")
-    vim.validate("count1", count1, function()
-        return count1 > 0
-    end)
-
+    validate_count(count1)
     local cur_win = vim.api.nvim_get_current_win()
     local eu = require("mjm.error-list-util")
     local qf_id, _ = eu.get_loclist_info({ win = cur_win })
@@ -251,22 +170,10 @@ function M.l_l(count1)
     end
 
     count1 = math.min(count1, size)
-    local ok, result = vim.api.nvim_cmd({ cmd = "ll", count1 = count1 }, {})
-    if ok then
-        vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
-        return
-    end
-
-    local msg = result or ("Unknown error displaying list entry " .. count1)
-    vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+    goto_list_entry(count1, "ll")
 end
 
 function M.l_pfile(count1)
-    vim.validate("count1", count1, "number")
-    vim.validate("count1", count1, function()
-        return count1 > 0
-    end)
-
     local cur_win = vim.api.nvim_get_current_win()
     local eu = require("mjm.error-list-util")
     local qf_id, _ = eu.get_loclist_info({ win = cur_win })
@@ -275,31 +182,10 @@ function M.l_pfile(count1)
         return
     end
 
-    local ok, err = pcall(vim.api.nvim_cmd, { cmd = "lpfile", count = count1 }, {})
-    if (not ok) and (err:match("E42") or err:match("E776")) then
-        vim.notify(err:sub(#"Vim:" + 1))
-        return
-    end
-
-    if (not ok) and err:match("E553") then
-        ok, err = pcall(vim.api.nvim_cmd, { cmd = "llast" }, {})
-    end
-
-    if not ok then
-        local msg = err and err:sub(#"Vim:" + 1) or "Unknown loclist file error"
-        vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
-        return
-    end
-
-    vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
+    file_nav_wrap(count1, "lpfile", "llast")
 end
 
 function M.l_nfile(count1)
-    vim.validate("count1", count1, "number")
-    vim.validate("count1", count1, function()
-        return count1 > 0
-    end)
-
     local cur_win = vim.api.nvim_get_current_win()
     local eu = require("mjm.error-list-util")
     local qf_id, _ = eu.get_loclist_info({ win = cur_win })
@@ -308,31 +194,11 @@ function M.l_nfile(count1)
         return
     end
 
-    local ok, err = pcall(vim.api.nvim_cmd, { cmd = "lnfile", count = count1 }, {})
-    if (not ok) and (err:match("E42") or err:match("E776")) then
-        vim.notify(err:sub(#"Vim:" + 1))
-        return
-    end
-
-    if (not ok) and err:match("E553") then
-        ok, err = pcall(vim.api.nvim_cmd, { cmd = "lrewind" }, {})
-    end
-
-    if not ok then
-        local msg = err and err:sub(#"Vim:" + 1) or "Unknown loclist file error"
-        vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
-        return
-    end
-
-    vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
+    file_nav_wrap(count1, "lnfile", "lrewind")
 end
 
 function M.l_jump(count)
-    vim.validate("count", count, "number")
-    vim.validate("count", count, function()
-        return count >= 0
-    end)
-
+    validate_count(count)
     local cur_win = vim.api.nvim_get_current_win()
     local eu = require("mjm.error-list-util")
     local qf_id, ll_win = eu.get_loclist_info({ win = cur_win })
@@ -540,9 +406,9 @@ if vim.g.qfrancher_setdefaultcmds then
         M.l_next(count)
     end, { count = 0 })
 
-    vim.api.nvim_create_user_command("Lq", function(arg)
+    vim.api.nvim_create_user_command("Ll", function(arg)
         local count = arg.count > 0 and arg.count or 1
-        M.l_q(count)
+        M.l_l(count)
     end, { count = 0 })
 
     vim.api.nvim_create_user_command("Lpfile", function(arg)
