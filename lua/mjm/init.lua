@@ -1,6 +1,8 @@
 local start = vim.uv.hrtime()
 
--- LOW: If we end up having to do enough before running pack, can add another hrtime
+-------------------
+--- Before Pack ---
+-------------------
 
 _G.Border = "single" ---@type string
 _G.GetOpt = vim.api.nvim_get_option_value
@@ -16,6 +18,8 @@ _G.Augroup = vim.api.nvim_create_augroup
 _G.Autocmd = vim.api.nvim_create_autocmd
 _G.Cmd = vim.api.nvim_cmd
 _G.Map = vim.keymap.set
+
+local pre_pack = vim.uv.hrtime()
 
 -------------------------------
 -- Download/Register Plugins --
@@ -85,11 +89,7 @@ local eager_loaded = vim.uv.hrtime()
 -- Post-plugin Setup --
 -----------------------
 
-require("mjm.lsp")
-require("mjm.treesitter") -- TODO: this probably doesn't need to be post-plugin
 require("mjm.tal") -- Requires Harpoon
-
-local post_plugin_setup = vim.uv.hrtime()
 
 -------------------------
 -- Lazy Initialization --
@@ -118,10 +118,10 @@ require("mjm.plugins.zen")
 
 local lazy_loaded = vim.uv.hrtime()
 
+local to_pre_pack = math.floor((pre_pack - start) / 1e6 * 100) / 100
 local to_pack_finish = math.floor((pack_finish - start) / 1e6 * 100) / 100
 local to_env_setup = math.floor((env_setup - start) / 1e6 * 100) / 100
 local to_eager_loaded = math.floor((eager_loaded - start) / 1e6 * 100) / 100
-local to_post_plugin_setup = math.floor((post_plugin_setup - start) / 1e6 * 100) / 100
 local to_lazy_loaded = math.floor((lazy_loaded - start) / 1e6 * 100) / 100
 
 vim.api.nvim_create_autocmd("UIEnter", {
@@ -137,10 +137,10 @@ vim.api.nvim_create_autocmd("UIEnter", {
         end
 
         local headers = {
+            { "Pre-Pack Setup: ", to_pre_pack },
             { "Download/Register Plugins: ", to_pack_finish },
             { "Setup: ", to_env_setup },
             { "Eager Plugin Init: ", to_eager_loaded },
-            { "Post Plugin Setup: ", to_post_plugin_setup },
             { "Lazy Plugin Init: ", to_lazy_loaded },
             { "UI Enter: ", to_ui_enter },
         }
