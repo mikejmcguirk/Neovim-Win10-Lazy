@@ -10,6 +10,8 @@ done for everything. Maybe use defer require?
 when certain maps need to be required at all
 - Any load behavior needs to be checked against mksession
 - I think we use qQ as our view or jump, rather than q<C-q>. Merge the two in nav action and stack
+- I have the maps file as a separate file for now simply for sanity, but in order to save a
+require it might be best to just put it in plugin.lua
 
 ---------------------
 --- DOCUMENTATION ---
@@ -108,6 +110,10 @@ TODO:
 - Check that all maps/cmds/plugs have desc fieldss
 - Check that all functions have annotations and documentation
 - Check that the qf and loclist versions are both properly built for purpose. Should be able to use the loclist function for buf/win specific info
+- Make the maps file navigable
+- I think putting everything in one file is the simplest way to avoid perf issues, but for
+individual groups of maps, hide what is possible behind autocmds rather than doing all maps
+eagerly on startup
 
 MAYBE
 
@@ -146,3 +152,11 @@ TODO
 - Check that the qf and loclist versions are both properly built for purpose. Should be able to use the loclist function for buf/win specific info
 
 - Hold on refactoring the jump functions until I know what we're doing with them. Still need to figure out how they co-exist with the qQ mapping
+
+--------------
+--- SYSTEM ---
+--------------
+
+TODO
+
+- Don't pass in the cmd_parts function. Just pass in the cmd parts

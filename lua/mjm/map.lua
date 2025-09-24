@@ -714,6 +714,8 @@ Autocmd({ "BufReadPre", "BufNewFile" }, {
     end,
 })
 
+-- TODO: I'm pretty sure this is causing flicker on first cmdline entrance. But this also only
+-- happens if I do it from the starting window
 local function map_on_cmdlineenter()
     ApiMap("c", "<C-a>", "<C-b>", { noremap = true })
     ApiMap("c", "<C-d>", "<Del>", { noremap = true })

@@ -61,6 +61,21 @@
 -- https://github.com/r0nsha/qfpreview.nvim
 -- https://github.com/bfrg/vim-qf-preview
 
+--- https://github.com/tjdevries/lazy-require.nvim/blob/master/lua/lazy-require.lua
+--- @param require_path string
+--- @return table
+function _G.Qfr_Defer_Require(require_path)
+    return setmetatable({}, {
+        __index = function(_, key)
+            return require(require_path)[key]
+        end,
+
+        __newindex = function(_, key, value)
+            require(require_path)[key] = value
+        end,
+    })
+end
+
 -----------------------
 -- Config/Validation --
 -----------------------
@@ -96,9 +111,7 @@ else
     vim.api.nvim_set_var("g_qfrancher_autoopenchanges", false)
 end
 
-if vim.g.qfrancher_setdefaultmaps then
-    require("mjm.error-list-maps")
-end
+require("mjm.error-list-maps")
 
 ------------------------
 -- Other source notes --

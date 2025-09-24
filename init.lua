@@ -11,3 +11,9 @@ require("mjm")
 --
 -- export NVIM_APPNAME=some-other-thing
 -- will then look in .config/some-other-thing for config
+
+-----------------
+--- RESOURCES ---
+-----------------
+
+--- https://github.com/tjdevries/lazy-require.nvim

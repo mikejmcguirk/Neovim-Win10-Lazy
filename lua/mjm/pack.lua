@@ -14,6 +14,7 @@
 -- MAYBE: Look at the multicursor plugin SteveArc uses. It seems to be the most mature project
 -- MAYBE: https://github.com/Bilal2453/luvit-meta
 -- https://github.com/andymass/vim-matchup - Replace matchparen + good motions
+-- MAYBE: Previewer for a lot of things: https://github.com/OXY2DEV/markview.nvim
 
 local M = {}
 
