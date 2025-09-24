@@ -292,265 +292,270 @@ Autocmd(clear_conditions, {
 --- Colorscheme ---
 -------------------
 
+Cmd({ cmd = "hi", args = { "clear" } }, {})
+if vim.fn.exists("syntax_on") then
+    Cmd({ cmd = "syntax", args = { "reset" } }, {})
+end
+
 -- NOTE: This is a bespoke version of Fluoromachine.nvim's delta theme
+-- https://www.sessions.edu/color-calculator/
+local black = "#000000" --- @type string
+local fg = "#EFEFFD" --- @type string
+local l_cyan = "#98FFFB" --- @type string
+local cyan = "#558396" --- @type string
+local l_green = "#C0FF98" --- @type string
+local green = "#579964" --- @type string
+local l_orange = "#FFD298" --- @type string
+local orange = "#967A55" --- @type string
+local orange_fg = "#FFF0E0" --- @type string
+local l_pink = "#FF67D4" --- @type string
+local pink = "#613852" --- @type string
+local l_purple = "#D598FF" --- @type string
+local purple = "#925393" --- @type string
+local bold_purple = "#492949" --- @type string
+local d_purple = "#251d2b" --- @type string
+-- local d_purple_two = "#2b2233" --- @type string
+-- Darkened from dark purple
+local d_purple_three = "#18131c" --- @type string
+local l_red = "#FF98B3" --- @type string
+local l_yellow = "#EDFF98" --- @type string
+
+--- @param old_hl string
+--- @param cfg_ext table
+local function hl_extend(old_hl, cfg_ext)
+    local old_cfg = GetHl(0, { name = old_hl })
+    return vim.tbl_extend("force", old_cfg, cfg_ext)
+end
+
+----------------------------
+-- Diagnostics and Status --
+----------------------------
+
+SetHl(0, "DiagnosticError", { fg = l_red })
+SetHl(0, "DiagnosticWarn", { fg = l_orange })
+SetHl(0, "DiagnosticInfo", { fg = l_green })
+SetHl(0, "DiagnosticHint", { fg = l_cyan })
+SetHl(0, "DiagnosticUnnecessary", { underdashed = true }) -- Default link: Comment
+
+SetHl(0, "DiagnosticUnderlineError", hl_extend("DiagnosticError", { underline = true }))
+SetHl(0, "DiagnosticUnderlineWarn", hl_extend("DiagnosticWarn", { underline = true }))
+SetHl(0, "DiagnosticUnderlineInfo", hl_extend("DiagnosticInfo", { underline = true }))
+SetHl(0, "DiagnosticUnderlineHint", hl_extend("DiagnosticHint", { underline = true }))
+
+-- Same here
+SetHl(0, "DiffAdd", { fg = black, bg = l_green })
+SetHl(0, "DiffChange", { fg = black, bg = l_orange })
+SetHl(0, "DiffDelete", { fg = black, bg = l_red })
 
-local c = {
-    -- https://www.sessions.edu/color-calculator/
-    black = "#000000",
+SetHl(0, "Added", { link = "DiagnosticInfo" }) -- (Default self-definition)
+SetHl(0, "Changed", { link = "DiagnosticWarn" }) -- (Default self-definition)
+SetHl(0, "Removed", { link = "DiagnosticError" }) -- (Default self-definition)
 
-    fg = "#EFEFFD",
+SetHl(0, "Error", { link = "DiagnosticError" }) --- (Default self-definition)
+SetHl(0, "ErrorMsg", { link = "DiagnosticError" }) --- (Default self-definition)
+SetHl(0, "WarningMsg", { link = "DiagnosticWarn" }) -- (Default self-definition)
+SetHl(0, "MoreMsg", { link = "DiagnosticInfo" }) -- (Default self-definition)
+SetHl(0, "Question", { link = "DiagnosticInfo" }) -- (Default self-definition)
 
-    l_cyan = "#98FFFB",
-    cyan = "#558396",
+SetHl(0, "SpellBad", { link = "DiagnosticError" }) -- (Default self-definition)
+SetHl(0, "SpellLocal", { link = "DiagnosticWarn" }) -- (Default self-definition)
+SetHl(0, "SpellCap", { link = "DiagnosticInfo" }) -- (Default self-definition)
+SetHl(0, "SpellRare", { link = "DiagnosticHint" }) -- (Default self-definition)
 
-    l_green = "#C0FF98",
-    green = "#579964",
+---------------
+-- Normal/Fg --
+---------------
 
-    l_orange = "#FFD298",
-    orange = "#967A55",
-    orange_fg = "#FFF0E0",
+SetHl(0, "Normal", { fg = fg })
 
-    l_pink = "#FF67D4",
-    pink = "#613852",
+SetHl(0, "Delimiter", {})
+SetHl(0, "Identifier", {})
+SetHl(0, "NormalFloat", {}) -- Default self-definition
+SetHl(0, "NormalNC", {}) -- Causes performance issues (default setting)
 
-    l_purple = "#D598FF",
-    purple = "#925393",
-    bold_purple = "#492949",
-    d_purple = "#251d2b",
-    d_purple_two = "#2b2233",
-    d_purple_three = "#18131c", -- Darkened from dark purple
+SetHl(0, "@variable", {}) --- Default self-definition
+-- Meaningless without an LSP to determine scope
+SetHl(0, "@variable.paramter", {}) --- Default self-definition
+SetHl(0, "@variable.property", {}) --- Default self-definition
 
-    l_red = "#FF98B3",
+-- Can't eliminate at the token level because builtins and globals depend on it
+SetHl(0, "@lsp.type.variable", {})
 
-    l_yellow = "#EDFF98",
-} --- @type {string: string}
+--------------------
+--- Special Text ---
+--------------------
 
---- @type {string: vim.api.keyset.highlight}
-local groups = {
+SetHl(0, "Comment", { fg = purple, italic = true })
+SetHl(0, "Conceal", { link = "Comment" }) -- (Default self-definition)
 
-    ----------------------------
-    -- Diagnostics and Status --
-    ----------------------------
+SetHl(0, "LspCodeLens", { fg = cyan })
 
-    DiagnosticError = { fg = c.l_red },
-    DiagnosticWarn = { fg = c.l_orange },
-    DiagnosticInfo = { fg = c.l_green },
-    DiagnosticHint = { fg = c.l_cyan },
-    DiagnosticUnnecessary = { underdashed = true }, -- Default link: Comment
+SetHl(0, "NonText", { fg = pink })
+SetHl(0, "SpecialKey", { link = "NonText" }) --- Default self-definition
 
-    -- Can't link and add info, so just manually set
-    DiagnosticUnderlineError = { fg = c.l_red, underline = true },
-    DiagnosticUnderlineWarn = { fg = c.l_orange, underline = true },
-    DiagnosticUnderlineInfo = { fg = c.l_green, underline = true },
-    DiagnosticUnderlineHint = { fg = c.l_cyan, underline = true },
+SetHl(0, "Folded", { fg = purple, bg = bold_purple })
 
-    -- Same here
-    DiffAdd = { fg = c.black, bg = c.l_green },
-    DiffChange = { fg = c.black, bg = c.l_orange },
-    DiffDelete = { fg = c.black, bg = c.l_red },
+SetHl(0, "LspInlayHint", { fg = green, italic = true })
 
-    Added = { link = "DiagnosticInfo" }, -- (Default self-definition)
-    Changed = { link = "DiagnosticWarn" }, -- (Default self-definition)
-    Removed = { link = "DiagnosticError" }, -- (Default self-definition)
+SetHl(0, "EndOfBuffer", {}) -- (Default link: Non-text)
 
-    Error = { link = "DiagnosticError" }, --- (Default self-definition)
-    ErrorMsg = { link = "DiagnosticError" }, --- (Default self-definition)
-    WarningMsg = { link = "DiagnosticWarn" }, -- (Default self-definition)
-    MoreMsg = { link = "DiagnosticInfo" }, -- (Default self-definition)
-    Question = { link = "DiagnosticInfo" }, -- (Default self-definition)
+----------------------------------
+--- Builtins/Constants/Globals ---
+----------------------------------
 
-    SpellBad = { link = "DiagnosticError" }, -- (Default self-definition)
-    SpellLocal = { link = "DiagnosticWarn" }, -- (Default self-definition)
-    SpellCap = { link = "DiagnosticInfo" }, -- (Default self-definition)
-    SpellRare = { link = "DiagnosticHint" }, -- (Default self-definition)
+--- LOW: The "self" keyword should be italicized since it is an alias for the current object
 
-    ---------------
-    -- Normal/Fg --
-    ---------------
+SetHl(0, "Constant", { fg = l_red })
 
-    Normal = { fg = c.fg },
+SetHl(0, "@constant.builtin", { link = "Constant" }) -- No default
+SetHl(0, "@variable.builtin", { link = "Constant" }) -- No default
 
-    Delimiter = {},
-    Identifier = {},
-    NormalFloat = {}, -- Default self-definition
-    NormalNC = {}, -- Causes performance issues (default setting)
+SetHl(0, "@lsp.typemod.function.global", { link = "Constant" }) -- Default @lsp
+SetHl(0, "@lsp.typemod.variable.defaultLibrary", { link = "Constant" }) -- Default @lsp
+SetHl(0, "@lsp.typemod.variable.global", { link = "Constant" }) -- Default @lsp
 
-    ["@variable"] = {}, --- Default self-definition
+-----------------
+--- Functions ---
+-----------------
 
-    --------------------
-    --- Special Text ---
-    --------------------
+SetHl(0, "Function", { fg = l_yellow })
 
-    Comment = { fg = c.purple, italic = true },
-    Conceal = { link = "Comment" }, -- (Default self-definition)
+SetHl(0, "@function.builtin", { link = "Function" }) -- Default link to Special
 
-    LspCodeLens = { fg = c.cyan },
+--------------------------------------
+--- Numbers/Booleans/Chars/Modules ---
+--------------------------------------
 
-    NonText = { fg = c.pink },
-    SpecialKey = { link = "NonText" }, --- Default self-definition
+SetHl(0, "Number", { fg = l_cyan }) -- (Default link: Constant)
 
-    Folded = { fg = c.purple, bg = c.bold_purple },
+SetHl(0, "Boolean", { link = "Number" }) -- (Default link: Constant)
+SetHl(0, "Character", { link = "Number" }) -- (Default link: Constant)
 
-    LspInlayHint = { fg = c.green, italic = true },
+SetHl(0, "@module", { link = "Number" }) -- (Default link: Type)
 
-    EndOfBuffer = {}, -- (Default link: Non-text)
+SetHl(0, "@lsp.type.namespace", { link = "Number" }) -- (Default link: Type)
+SetHl(0, "@lsp.typemod.boolean.injected", { link = "Boolean" }) -- Default @lsp
 
-    ----------------------------------
-    --- Builtins/Constants/Globals ---
-    ----------------------------------
+SetHl(0, "@lsp.type.enumMember", hl_extend("Number", { italic = true })) -- (Default link: Type)
 
-    --- LOW: The "self" keyword should be italicized since it is an alias for the current object
+-------------------------------------------
+--- Operators/PreProc/Statement/Special ---
+-------------------------------------------
 
-    Constant = { fg = c.l_red },
+SetHl(0, "Operator", { fg = l_pink })
 
-    ["@constant.builtin"] = { link = "Constant" }, -- No default
-    ["@variable.builtin"] = { link = "Constant" }, -- No default
+SetHl(0, "@lsp.typemod.arithmetiinjected", { link = "Operator" }) --- Default link @lsp
+SetHl(0, "@lsp.typemod.comparison.injected", { link = "Operator" }) --- Default link @lsp
 
-    ["@lsp.typemod.function.global"] = { link = "Constant" }, -- Default @lsp
-    ["@lsp.typemod.variable.defaultLibrary"] = { link = "Constant" }, -- Default @lsp
-    ["@lsp.typemod.variable.global"] = { link = "Constant" }, -- Default @lsp
+SetHl(0, "PreProc", { fg = l_pink, italic = true })
 
-    -----------------
-    --- Functions ---
-    -----------------
+SetHl(0, "@function.macro", { link = "PreProc" }) -- Default link: Function
+SetHl(0, "@preproc", { link = "PreProc" }) -- Custom TS Query
 
-    Function = { fg = c.l_yellow },
+SetHl(0, "@lsp.type.macro", { link = "PreProc" }) -- (Default link: Constant)
+SetHl(0, "@lsp.typemod.derive.macro", { link = "PreProc" }) -- (Default link: @lsp)
+SetHl(0, "@lsp.typemod.lifetime.injected", { link = "PreProc" }) -- (Default link: @lsp)
 
-    ["@function.builtin"] = { link = "Function" }, -- Default link to Special
+SetHl(0, "Special", { fg = l_pink })
 
-    --------------------------------------
-    --- Numbers/Booleans/Chars/Modules ---
-    --------------------------------------
+SetHl(0, "@lsp.typemod.attributeBracket.injected", { link = "Special" }) --- Default link @lsp
 
-    Number = { fg = c.l_cyan }, -- (Default link: Constant)
+SetHl(0, "Statement", { fg = l_pink })
 
-    Boolean = { link = "Number" }, -- (Default link: Constant)
-    Character = { link = "Number" }, -- (Default link: Constant)
+------------------
+--- Parameters ---
+------------------
 
-    ["@module"] = { link = "Number" }, -- (Default link: Type)
+SetHl(0, "@variable.parameter", { link = "@lsp.type.parameter" })
 
-    ["@lsp.type.namespace"] = { link = "Number" }, -- (Default link: Type)
-    ["@lsp.typemod.boolean.injected"] = { link = "Boolean" }, -- Default @lsp
+SetHl(0, "@lsp.type.parameter", { fg = l_orange }) -- Default link: Identifier
 
-    ["@lsp.type.enumMember"] = { fg = c.l_cyan, italic = true }, -- (Default link: Type)
+--------------
+--- String ---
+--------------
 
-    -------------------------------------------
-    --- Operators/PreProc/Statement/Special ---
-    -------------------------------------------
+SetHl(0, "String", { fg = l_purple })
 
-    Operator = { fg = c.l_pink },
+SetHl(0, "@string.escape", { fg = l_purple, italic = true })
 
-    ["@lsp.typemod.arithmetic.injected"] = { link = "Operator" }, --- Default link @lsp
-    ["@lsp.typemod.comparison.injected"] = { link = "Operator" }, --- Default link @lsp
+SetHl(0, "@lsp.type.formatSpecifier", { link = "@string.escape" })
 
-    PreProc = { fg = c.l_pink, italic = true },
+-------------
+--- Types ---
+-------------
 
-    ["@function.macro"] = { link = "PreProc" }, -- Default link: Function
-    ["@preproc"] = { link = "PreProc" }, -- Custom TS Query
+SetHl(0, "Type", { fg = l_green })
 
-    ["@lsp.type.macro"] = { link = "PreProc" }, -- (Default link: Constant)
-    ["@lsp.typemod.derive.macro"] = { link = "PreProc" }, -- (Default link: @lsp)
-    ["@lsp.typemod.lifetime.injected"] = { link = "PreProc" }, -- (Default link: @lsp)
+SetHl(0, "@type.builtin", { link = "Type" }) -- Default link Special
 
-    Special = { fg = c.l_pink },
+SetHl(0, "@lsp.type.builtinType", { link = "Type" }) -- Default link @lsp
 
-    ["@lsp.typemod.attributeBracket.injected"] = { link = "Special" }, --- Default link @lsp
+SetHl(0, "@lsp.type.typeAlias", hl_extend("Type", { italic = true }))
 
-    Statement = { fg = c.l_pink },
+SetHl(0, "@lsp.type.selfTypeKeyword", { link = "@lsp.type.typeAlias" }) -- Default link @lsp
 
-    ------------------
-    --- Parameters ---
-    ------------------
+----------
+--- UI ---
+----------
 
-    ["@variable.parameter"] = { link = "@lsp.type.parameter" },
+SetHl(0, "CurSearch", { fg = black, bg = l_orange })
+SetHl(0, "IncSearch", { fg = l_green })
+SetHl(0, "Search", { fg = orange_fg, bg = orange })
 
-    ["@lsp.type.parameter"] = { fg = c.l_orange }, -- Default link: Identifier
+SetHl(0, "QuickFixLine", { bg = bold_purple })
 
-    --------------
-    --- String ---
-    --------------
+SetHl(0, "Visual", { bg = bold_purple })
 
-    String = { fg = c.l_purple },
+SetHl(0, "CursorLineNr", { fg = l_green })
+SetHl(0, "Directory", { fg = l_green })
+SetHl(0, "LineNr", { fg = purple }) -- rnu
+SetHl(0, "Title", { fg = l_green })
+SetHl(0, "Todo", { fg = l_green })
 
-    ["@string.escape"] = { fg = c.l_purple, italic = true },
+SetHl(0, "MatchParen", { underline = true })
 
-    ["@lsp.type.formatSpecifier"] = { link = "@string.escape" },
+SetHl(0, "Pmenu", { fg = fg })
+SetHl(0, "PmenuSel", { bg = bold_purple })
+SetHl(0, "PmenuThumb", { bg = l_cyan })
 
-    -------------
-    --- Types ---
-    -------------
+SetHl(0, "ColorColumn", { bg = d_purple })
+SetHl(0, "CursorLine", { link = "ColorColumn" }) -- (Default self-definition)
+SetHl(0, "CursorColumn", { link = "ColorColumn" }) -- (Default self-definition)
 
-    Type = { fg = c.l_green },
+SetHl(0, "WinSeparator", { fg = purple }) -- (Default link: Normal)
+SetHl(0, "FloatBorder", { link = "WinSeparator" }) -- (Default link: NormalFloat)
 
-    ["@type.builtin"] = { link = "Type" }, -- Default link Special
+SetHl(0, "StatusLine", { fg = fg, bg = d_purple_three })
+SetHl(0, "StatusLineNC", { link = "StatusLine" }) -- (Default self-definition)
+SetHl(0, "Tabline", { link = "StatusLine" }) -- (Default self-definition)
 
-    ["@lsp.type.builtinType"] = { link = "Type" }, -- Default link @lsp
+--- (Default self-definition. I have reverse video cursor set in the terminal)
+SetHl(0, "Cursor", {})
+--- (Default self-definition. I have reverse video cursor set in the terminal)
+SetHl(0, "lCursor", {})
+SetHl(0, "SignColumn", {}) -- Default self-definition
 
-    ["@lsp.type.typeAlias"] = { fg = c.l_green, italic = true },
+--------------
+--- Markup ---
+--------------
 
-    ["@lsp.type.selfTypeKeyword"] = { link = "@lsp.type.typeAlias" }, -- Default link @lsp
-
-    ----------
-    --- UI ---
-    ----------
-
-    CurSearch = { fg = c.black, bg = c.l_orange },
-    IncSearch = { fg = c.l_green },
-    Search = { fg = c.orange_fg, bg = c.orange },
-
-    QuickFixLine = { bg = c.bold_purple },
-
-    Visual = { bg = c.bold_purple },
-
-    CursorLineNr = { fg = c.l_green },
-    Directory = { fg = c.l_green },
-    LineNr = { fg = c.purple }, -- rnu
-    Title = { fg = c.l_green },
-    Todo = { fg = c.l_green },
-
-    MatchParen = { underline = true },
-
-    Pmenu = { fg = c.fg },
-    PmenuSel = { bg = c.bold_purple },
-    PmenuThumb = { bg = c.l_cyan },
-
-    ColorColumn = { bg = c.d_purple },
-    CursorLine = { link = "ColorColumn" }, -- (Default self-definition)
-    CursorColumn = { link = "ColorColumn" }, -- (Default self-definition)
-
-    WinSeparator = { fg = c.purple }, -- (Default link: Normal)
-    FloatBorder = { link = "WinSeparator" }, -- (Default link: NormalFloat)
-
-    StatusLine = { fg = c.fg, bg = c.d_purple_three },
-    StatusLineNC = { link = "StatusLine" }, -- (Default self-definition)
-    Tabline = { link = "StatusLine" }, -- (Default self-definition)
-
-    Cursor = {}, --- (Default self-definition. I have reverse video cursor set in the terminal)
-    lCursor = {}, --- (Default self-definition. I have reverse video cursor set in the terminal)
-    SignColumn = {}, -- Default self-definition
-
-    --------------
-    --- Markup ---
-    --------------
-
-    -- LOW: Lifted from Fluoromachine because they look familiar, but I've put no thought into
-    -- the actual reasoning behind these
-    ["@markup.environment"] = { fg = c.l_purple },
-    ["@markup.heading"] = { link = "Title" },
-    ["@markup.italic"] = { fg = c.l_green, italic = true },
-    ["@markup.link"] = { fg = c.l_cyan },
-    ["@markup.link.label"] = { fg = c.l_cyan },
-    ["@markup.link.url"] = { fg = c.purple },
-    ["@markup.list"] = { fg = c.l_pink },
-    ["@markup.list.checked"] = { fg = c.l_green },
-    ["@markup.math"] = { link = "Operator" },
-    ["@markup.quote"] = { link = "Comment" },
-    ["@markup.raw"] = { link = "Comment" },
-    ["@markup.raw.block"] = { link = "Comment" },
-    ["@markup.strikethrough"] = { fg = c.l_yellow, strikethrough = true },
-    ["@markup.strong"] = { fg = c.l_green, bold = true },
-    ["@markup.underline"] = { link = "Underlined" },
-}
+-- LOW: Lifted from Fluoromachine because they look familiar, but I've put no thought into
+-- the actual reasoning behind these
+SetHl(0, "@markup.environment", { fg = l_purple })
+SetHl(0, "@markup.heading", { link = "Title" })
+SetHl(0, "@markup.italic", { fg = l_green, italic = true })
+SetHl(0, "@markup.link", { fg = l_cyan })
+SetHl(0, "@markup.link.label", { fg = l_cyan })
+SetHl(0, "@markup.link.url", { fg = purple })
+SetHl(0, "@markup.list", { fg = l_pink })
+SetHl(0, "@markup.list.checked", { fg = l_green })
+SetHl(0, "@markup.math", { link = "Operator" })
+SetHl(0, "@markup.quote", { link = "Comment" })
+SetHl(0, "@markup.raw", { link = "Comment" })
+SetHl(0, "@markup.raw.block", { link = "Comment" })
+SetHl(0, "@markup.strikethrough", { fg = l_yellow, strikethrough = true })
+SetHl(0, "@markup.strong", { fg = l_green, bold = true })
+SetHl(0, "@markup.underline", { link = "Underlined" })
 
 local function darken_hex(color, pct)
     local r = tonumber(color:sub(2, 3), 16)
@@ -576,32 +581,23 @@ local function lighten_hex(color, percent)
     return string.format("#%02X%02X%02X", r, g, b)
 end
 
-Cmd({ cmd = "hi", args = { "clear" } }, {})
-if vim.fn.exists("syntax_on") then
-    Cmd({ cmd = "syntax", args = { "reset" } }, {})
-end
+Gset("terminal_color_0", black)
+Gset("terminal_color_1", l_red)
+Gset("terminal_color_2", l_purple)
+Gset("terminal_color_3", l_orange)
+Gset("terminal_color_4", l_cyan)
+Gset("terminal_color_5", l_green)
+Gset("terminal_color_6", l_yellow)
+Gset("terminal_color_7", fg)
 
-for k, v in pairs(groups) do
-    vim.api.nvim_set_hl(0, k, v)
-end
-
-Gset("terminal_color_0", c.black)
-Gset("terminal_color_1", c.l_red)
-Gset("terminal_color_2", c.l_purple)
-Gset("terminal_color_3", c.l_orange)
-Gset("terminal_color_4", c.l_cyan)
-Gset("terminal_color_5", c.l_green)
-Gset("terminal_color_6", c.l_yellow)
-Gset("terminal_color_7", c.fg)
-
-Gset("terminal_color_8", lighten_hex(c.black, 30))
-Gset("terminal_color_9", darken_hex(c.l_red, 30))
-Gset("terminal_color_10", darken_hex(c.l_purple, 30))
-Gset("terminal_color_11", darken_hex(c.l_orange, 30))
-Gset("terminal_color_12", darken_hex(c.l_cyan, 30))
-Gset("terminal_color_13", darken_hex(c.l_green, 30))
-Gset("terminal_color_14", darken_hex(c.l_yellow, 30))
-Gset("terminal_color_15", darken_hex(c.fg, 30))
+Gset("terminal_color_8", lighten_hex(black, 30))
+Gset("terminal_color_9", darken_hex(l_red, 30))
+Gset("terminal_color_10", darken_hex(l_purple, 30))
+Gset("terminal_color_11", darken_hex(l_orange, 30))
+Gset("terminal_color_12", darken_hex(l_cyan, 30))
+Gset("terminal_color_13", darken_hex(l_green, 30))
+Gset("terminal_color_14", darken_hex(l_yellow, 30))
+Gset("terminal_color_15", darken_hex(fg, 30))
 
 Gset("colors_name", "SimpleDelta")
 
@@ -623,24 +619,10 @@ local function darken_24bit(color, pct)
     return bit.bor(bit.lshift(r, 16), bit.lshift(g, 8), b)
 end
 
--- Post-calculating this is a bit dumb, but if I need to turn off the colorscheme for testing, I
--- can just comment out the set calls and let this run without breaking the stl
-local s_fg = vim.api.nvim_get_hl(0, { name = "String" }).fg
-local bg = vim.api.nvim_get_hl(0, { name = "NonText" }).bg
-vim.api.nvim_set_hl(0, "stl_a", { fg = s_fg, bg = bg })
-vim.api.nvim_set_hl(0, "stl_b", { fg = s_fg, bg = darken_24bit(s_fg, 50) })
-vim.api.nvim_set_hl(0, "stl_c", { fg = vim.api.nvim_get_hl(0, { name = "Normal" }).fg, bg = bg })
-
-local hl_nop_all = {
-    -- Irrelevant without the LSP to determine scope
-    ["@variable.parameter"] = {},
-    -- Can't eliminate at the token level because builtins and globals depend on it
-    ["@lsp.type.variable"] = {}, --- Default link to normal
-} --- @type {string: vim.api.keyset.highlight}
-
-for k, v in pairs(hl_nop_all) do
-    vim.api.nvim_set_hl(0, k, v)
-end
+SetHl(0, "stl_a", { link = "String" })
+local s_fg = GetHl(0, { name = "String" }).fg
+SetHl(0, "stl_b", { fg = s_fg, bg = darken_24bit(s_fg, 50) })
+SetHl(0, "stl_c", { link = "Normal" })
 
 --- @param hl_query vim.treesitter.Query
 --- @return nil
@@ -653,7 +635,7 @@ local ts_nop_all = function(hl_query)
     hl_query.query:disable_capture("variable")
     hl_query.query:disable_capture("variable.member")
 
-    -- Without the LSP to analyze scope, this hl_group does not add value
+    -- Meaningless without an LSP to analyze scope
     hl_query.query:disable_capture("variable.parameter")
 end
 
@@ -661,14 +643,8 @@ end
 -- Lua --
 ---------
 
-local hl_nop_lua = {
-    -- Can't disable at the token level because it's the root of function globals
-    ["@lsp.type.function.lua"] = {}, -- Default link to function
-} --- @type {string: vim.api.keyset.highlight}
-
-for k, v in pairs(hl_nop_lua) do
-    vim.api.nvim_set_hl(0, k, v)
-end
+-- Can't disable at the token level because it's the root of function globals
+SetHl(0, "@lsp.type.function.lua", {})
 
 -- MAYBE: Disable the default highlight constants and use a custom query so we aren't grabbing
 -- stuff like require
@@ -691,6 +667,8 @@ Autocmd("FileType", {
         hl_query.query:disable_capture("module.builtin")
         hl_query.query:disable_capture("property")
         hl_query.query:disable_capture("punctuation.bracket")
+
+        vim.api.nvim_del_augroup_by_name("lua-disable-captures")
     end,
 })
 
@@ -716,6 +694,7 @@ Autocmd("FileType", {
             return
         end
 
+        ts_nop_all(hl_query)
         hl_query.query:disable_capture("punctuation.bracket")
         hl_query.query:disable_capture("string.documentation") -- Just masks string
     end,
@@ -736,6 +715,7 @@ Autocmd("FileType", {
             return
         end
 
+        ts_nop_all(hl_query)
         -- Have to keep punctuation.bracket to mask operator highlights
         hl_query.query:disable_capture("type.builtin") -- Don't need to distinguish this
     end,

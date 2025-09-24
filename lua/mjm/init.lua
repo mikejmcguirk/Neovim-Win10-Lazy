@@ -18,6 +18,8 @@ _G.Augroup = vim.api.nvim_create_augroup
 _G.Autocmd = vim.api.nvim_create_autocmd
 _G.Cmd = vim.api.nvim_cmd
 _G.Map = vim.keymap.set
+_G.SetHl = vim.api.nvim_set_hl
+_G.GetHl = vim.api.nvim_get_hl
 
 local pre_pack = vim.uv.hrtime()
 
