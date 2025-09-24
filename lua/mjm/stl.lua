@@ -107,6 +107,10 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
     end),
 })
 
+-- Delete the default diagnostics status caching.
+-- NOTE: This must be run after diagnostics have been configured
+vim.api.nvim_del_augroup_by_name("nvim.diagnostic.status")
+
 -- TODO: This doesn't catch leaving cmdmode after confirming a substitution
 vim.api.nvim_create_autocmd("ModeChanged", {
     group = stl_events,

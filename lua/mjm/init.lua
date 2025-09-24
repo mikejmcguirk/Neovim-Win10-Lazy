@@ -74,10 +74,8 @@ require("mjm.set")
 require("mjm.map")
 
 require("mjm.stl")
-require("mjm.diagnostic")
 -- Not being used, so no need for this to run in the background
 -- Needs to be done here after diagnostics have actually been enabled
-vim.api.nvim_del_augroup_by_name("nvim.diagnostic.status")
 
 require("mjm.error-list") -- Do this first because it sets up g vars
 require("mjm.error-list-open")
