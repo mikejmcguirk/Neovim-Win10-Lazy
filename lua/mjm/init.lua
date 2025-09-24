@@ -74,8 +74,6 @@ require("mjm.set")
 require("mjm.keymap")
 require("mjm.custom_cmd")
 
-require("mjm.colorscheme")
-
 require("mjm.stl")
 require("mjm.diagnostic")
 -- Not being used, so no need for this to run in the background
