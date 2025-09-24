@@ -1,3 +1,6 @@
+-- TODO: When treesitter is on, [s]s work for some buffers but not others. This feels like
+-- intended behavior, but how to modify?
+
 Map("n", "gtt", function()
     if vim.treesitter.highlighter.active[vim.api.nvim_get_current_buf()] then
         vim.treesitter.stop()

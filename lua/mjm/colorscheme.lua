@@ -1,6 +1,9 @@
+-------------------
+--- Colorscheme ---
+-------------------
+
 -- NOTE: This is a bespoke version of Fluoromachine.nvim's delta theme
 
---- @type {string: string}
 local c = {
     -- https://www.sessions.edu/color-calculator/
     black = "#000000",
@@ -30,14 +33,14 @@ local c = {
     l_red = "#FF98B3",
 
     l_yellow = "#EDFF98",
-}
+} --- @type {string: string}
 
 --- @type {string: vim.api.keyset.highlight}
 local groups = {
 
-    ----------------------
-    -- Diagnostic Links --
-    ----------------------
+    ----------------------------
+    -- Diagnostics and Status --
+    ----------------------------
 
     DiagnosticError = { fg = c.l_red },
     DiagnosticWarn = { fg = c.l_orange },
@@ -71,16 +74,18 @@ local groups = {
     SpellCap = { link = "DiagnosticInfo" }, -- (Default self-definition)
     SpellRare = { link = "DiagnosticHint" }, -- (Default self-definition)
 
-    --------------------------
-    -- Other Related/Linked --
-    --------------------------
+    ---------------
+    -- Normal/Fg --
+    ---------------
 
     Normal = { fg = c.fg },
     NormalFloat = { link = "Normal" }, -- Default self-definition
     Delimiter = { link = "Normal" },
     Identifier = { link = "Normal" },
 
-    ["@variable"] = {}, --- Default self-definition
+    ---------------
+    --- UI Trim ---
+    ---------------
 
     ColorColumn = { bg = c.d_purple },
     CursorLine = { link = "ColorColumn" }, -- (Default self-definition)
@@ -89,11 +94,25 @@ local groups = {
     Comment = { fg = c.purple, italic = true },
     Conceal = { link = "Comment" }, -- (Default self-definition)
 
+    -------------------------
+    --- Disable Rendering ---
+    -------------------------
+
+    ["@variable"] = {}, --- Default self-definition
+
+    -----------------
+    --- Constants ---
+    -----------------
+
     Constant = { fg = c.l_red },
     ["@constant.builtin"] = { link = "Constant" }, -- No default
     ["@variable.builtin"] = { link = "Constant" }, -- No default
     ["@lsp.typemod.variable.defaultLibrary"] = { link = "Constant" }, -- Default @lsp
     ["@lsp.typemod.variable.global"] = { link = "Constant" }, -- Default @lsp
+
+    -----------------
+    --- Functions ---
+    -----------------
 
     Function = { fg = c.l_yellow },
     ["@function.builtin"] = { link = "Function" }, -- Default link to Special
@@ -104,6 +123,10 @@ local groups = {
     NonText = { fg = c.pink },
     SpecialKey = { link = "NonText" }, --- Default self-definition
 
+    --------------------------------------
+    --- Numbers/Booleans/Chars/Modules ---
+    --------------------------------------
+
     Number = { fg = c.l_cyan }, -- (Default link: Constant)
     Boolean = { link = "Number" }, -- (Default link: Constant)
     Character = { link = "Number" }, -- (Default link: Constant)
@@ -112,6 +135,10 @@ local groups = {
     ["@lsp.typemod.boolean.injected"] = { link = "Boolean" }, -- Default @lsp
 
     ["@lsp.type.enumMember"] = { fg = c.l_cyan, italic = true }, -- (Default link: Type)
+
+    -------------------------------------------
+    --- Operators/PreProc/Statement/Special ---
+    -------------------------------------------
 
     Operator = { fg = c.l_pink },
     ["@lsp.typemod.arithmetic.injected"] = { link = "Operator" }, --- Default link @lsp
@@ -129,16 +156,24 @@ local groups = {
 
     Statement = { fg = c.l_pink },
 
+    ------------------
+    --- Parameters ---
+    ------------------
+
     ["@lsp.type.parameter"] = { fg = c.l_orange }, -- Default link: Identifier
     ["@variable.parameter"] = { link = "@lsp.type.parameter" },
 
-    StatusLine = { fg = c.fg, bg = c.d_purple_three },
-    StatusLineNC = { link = "StatusLine" }, -- (Default self-definition)
-    Tabline = { link = "StatusLine" }, -- (Default self-definition)
+    --------------
+    --- String ---
+    --------------
 
     String = { fg = c.l_purple },
     ["@string.escape"] = { fg = c.l_purple, italic = true },
     ["@lsp.type.formatSpecifier"] = { link = "@string.escape" },
+
+    -------------
+    --- Types ---
+    -------------
 
     Type = { fg = c.l_green },
     ["@type.builtin"] = { link = "Type" }, -- Default link Special
@@ -147,8 +182,20 @@ local groups = {
     ["@lsp.type.typeAlias"] = { fg = c.l_green, italic = true },
     ["@lsp.type.selfTypeKeyword"] = { link = "@lsp.type.typeAlias" }, -- Default link @lsp
 
+    ----------
+    --- UI ---
+    ----------
+
     WinSeparator = { fg = c.purple }, -- (Default link: Normal)
     FloatBorder = { link = "WinSeparator" }, -- (Default link: NormalFloat)
+
+    StatusLine = { fg = c.fg, bg = c.d_purple_three },
+    StatusLineNC = { link = "StatusLine" }, -- (Default self-definition)
+    Tabline = { link = "StatusLine" }, -- (Default self-definition)
+
+    --------------
+    --- Markup ---
+    --------------
 
     -- LOW: Lifted from Fluoromachine because they look familiar, but I've put no thought into
     -- the actual reasoning behind these
