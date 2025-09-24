@@ -1,20 +1,14 @@
---- TODO: For loading efficiency:
---- - Setting up lazy loaded files here is the wrong choice. The purpose of this file is to setup
---- everything that is available once the load step is complete. Deferring here adds gotchas
---- - Every require adds startup time. Good to remove requires, or hide requires behind autocmds
---- - To look at keymaps for example, some stuff in there indeed does not to be set until
---- BufReadPre, but that decision needs to be made in the keymaps file, not here
-
 local start = vim.uv.hrtime()
 
------------
--- Setup --
------------
+-- LOW: If we end up having to do enough before running pack, can add another hrtime
 
 _G.Border = "single" ---@type string
+_G.GetOpt = vim.api.nvim_get_option_value
+_G.Gset = vim.api.nvim_set_var
 _G.Has_Nerd_Font = true --- @type boolean
 _G.Highlight_Time = 175 --- @type integer
 _G.Scrolloff_Val = 6 ---@type integer
+_G.SetOpt = vim.api.nvim_set_option_value
 _G.SpellFile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add" ---@type string
 
 _G.ApiMap = vim.api.nvim_set_keymap
@@ -23,59 +17,22 @@ _G.Autocmd = vim.api.nvim_create_autocmd
 _G.Cmd = vim.api.nvim_cmd
 _G.Map = vim.keymap.set
 
---- :h standard-plugin-list
---- Disabling these has a non-trivial effect on startup time
+-------------------------------
+-- Download/Register Plugins --
+-------------------------------
 
---- LOW: No need to change now, but the 2html plugin appears to have been re-written in Lua, and
---- on load only creates an autocmd. Might be useful
-vim.api.nvim_set_var("loaded_2html_plugin", 1)
-vim.api.nvim_set_var("did_install_default_menus", 1)
-vim.api.nvim_set_var("loaded_gzip", 1)
-vim.api.nvim_set_var("loaded_man", 1)
-vim.api.nvim_set_var("loaded_matchit", 1)
-vim.api.nvim_set_var("loaded_matchparen", 1)
-vim.api.nvim_set_var("loaded_netrw", 1)
-vim.api.nvim_set_var("loaded_netrwPlugin", 1)
-vim.api.nvim_set_var("loaded_netrwSettings", 1)
-vim.api.nvim_set_var("loaded_remote_plugins", 1)
-vim.api.nvim_set_var("loaded_shada_plugin", 1)
-vim.api.nvim_set_var("loaded_spellfile_plugin", 1)
-vim.api.nvim_set_var("loaded_tar", 1)
-vim.api.nvim_set_var("loaded_tarPlugin", 1)
-vim.api.nvim_set_var("loaded_tutor_mode_plugin", 1)
-vim.api.nvim_set_var("loaded_zip", 1)
-vim.api.nvim_set_var("loaded_zipPlugin", 1)
+--- Only downloads plugins/adds them to RTP
+require("mjm.pack")
 
--- I have xsel on my system
-local termfeatures = vim.g.termfeatures or {}
-termfeatures.osc52 = false
-vim.api.nvim_set_var("termfeatures", termfeatures)
+local pack_finish = vim.uv.hrtime()
 
-Map({ "n", "x" }, "<Space>", "<Nop>")
-vim.g.mapleader = " "
-vim.g.maplocaleader = " "
+-----------
+-- Setup --
+-----------
 
--- Unsimplify mappings
--- See :h <tab> and https://github.com/neovim/neovim/pull/17932
--- NOTE: For this to work in Tmux, that config has to be handled separately
-ApiMap("n", "<C-i>", "<C-i>", { noremap = true })
-ApiMap("n", "<tab>", "<tab>", { noremap = true })
-ApiMap("n", "<C-m>", "<C-m>", { noremap = true })
-ApiMap("n", "<cr>", "<cr>", { noremap = true })
-ApiMap("n", "<C-[>", "<C-[>", { noremap = true })
-ApiMap("n", "<esc>", "<esc>", { noremap = true })
-
--- TODO: I'm fine with keymap being its own file since that handles a specific concern, but then
--- I think as many files as possible should be rolled into set. The concerns are conceptually, but
--- not all that technically seperable. Will probably make easier to manage startup sequencing
--- Plus we want to get away from the "plugin" mentality as much as possible. a colorscheme is just
--- a list of settings, for example. It's not a "plugin" in the spiritual sense
 require("mjm.set")
 require("mjm.map")
-
 require("mjm.stl")
--- Not being used, so no need for this to run in the background
--- Needs to be done here after diagnostics have actually been enabled
 
 require("mjm.error-list") -- Do this first because it sets up g vars
 require("mjm.error-list-open")
@@ -88,16 +45,6 @@ require("mjm.error-list-grep")
 require("mjm.error-list-diag")
 
 local env_setup = vim.uv.hrtime()
-
--------------------------------
--- Download/Register Plugins --
--------------------------------
-
--- TODO: This should be as early in the setup as possible since all this does is bring
--- everything into the RTP
-require("mjm.pack")
-
-local pack_finish = vim.uv.hrtime()
 
 ---------------------------------
 -- Eager Plugin Initialization --
@@ -171,8 +118,8 @@ require("mjm.plugins.zen")
 
 local lazy_loaded = vim.uv.hrtime()
 
-local to_env_setup = math.floor((env_setup - start) / 1e6 * 100) / 100
 local to_pack_finish = math.floor((pack_finish - start) / 1e6 * 100) / 100
+local to_env_setup = math.floor((env_setup - start) / 1e6 * 100) / 100
 local to_eager_loaded = math.floor((eager_loaded - start) / 1e6 * 100) / 100
 local to_post_plugin_setup = math.floor((post_plugin_setup - start) / 1e6 * 100) / 100
 local to_lazy_loaded = math.floor((lazy_loaded - start) / 1e6 * 100) / 100
@@ -190,8 +137,8 @@ vim.api.nvim_create_autocmd("UIEnter", {
         end
 
         local headers = {
-            { "Setup: ", to_env_setup },
             { "Download/Register Plugins: ", to_pack_finish },
+            { "Setup: ", to_env_setup },
             { "Eager Plugin Init: ", to_eager_loaded },
             { "Post Plugin Setup: ", to_post_plugin_setup },
             { "Lazy Plugin Init: ", to_lazy_loaded },

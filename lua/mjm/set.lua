@@ -1,60 +1,108 @@
--- SSH clipboard config
+-- LOW: SSH clipboard config
 -- https://github.com/tjdevries/config.nvim/blob/master/plugin/clipboard.lua
--- vim.g.deprecation_warnings = true -- Pre-silence deprecation warnings
+-- MAYBE: vim.g.deprecation_warnings = true -- Pre-silence deprecation warnings
+
+local set_group = Augroup("set-group", { clear = true })
+local global_scope = { scope = "global" }
+local noremap = { noremap = true }
+
+-------------------
+--- Global Vars ---
+-------------------
+
+Gset("no_plugin_maps", 1)
+
+--- :h standard-plugin-list
+--- Disabling these has a non-trivial effect on startup time
+--- LOW: No need to change now, but the 2html plugin appears to have been re-written in Lua, and
+--- on load only creates an autocmd. Might be useful
+Gset("loaded_2html_plugin", 1)
+Gset("did_install_default_menus", 1)
+Gset("loaded_gzip", 1)
+Gset("loaded_man", 1)
+Gset("loaded_matchit", 1)
+Gset("loaded_matchparen", 1)
+Gset("loaded_netrw", 1)
+Gset("loaded_netrwPlugin", 1)
+Gset("loaded_netrwSettings", 1)
+Gset("loaded_remote_plugins", 1)
+Gset("loaded_shada_plugin", 1)
+Gset("loaded_spellfile_plugin", 1)
+Gset("loaded_tar", 1)
+Gset("loaded_tarPlugin", 1)
+Gset("loaded_tutor_mode_plugin", 1)
+Gset("loaded_zip", 1)
+Gset("loaded_zipPlugin", 1)
+
+-- I have xsel on my system
+local termfeatures = vim.g.termfeatures or {}
+termfeatures.osc52 = false
+Gset("termfeatures", termfeatures)
+
+Map({ "n", "x" }, "<Space>", "<Nop>")
+Gset("mapleader", " ")
+Gset("maplocalleader", " ")
 
 -----------------------
 -- Internal Behavior --
 -----------------------
 
--- Override \r\n on Windows
-vim.api.nvim_set_option_value("fileformats", "unix,dos", { scope = "global" })
-vim.opt.jumpoptions:append("view")
+SetOpt("fileformats", "unix,dos", global_scope)
+SetOpt("jop", "clean,view", global_scope)
 
-vim.api.nvim_set_option_value("backup", false, { scope = "global" })
-vim.api.nvim_set_option_value("writebackup", false, { scope = "global" })
-vim.api.nvim_set_option_value("swapfile", false, { scope = "global" })
-vim.api.nvim_set_option_value("undofile", true, { scope = "global" })
-vim.api.nvim_set_option_value("updatetime", 300, { scope = "global" })
+SetOpt("swapfile", false, global_scope)
+SetOpt("undofile", true, global_scope)
+SetOpt("updatetime", 300, global_scope)
 
 -- :h 'sd'
-local shada = [[<0,'100,/0,:1000,h]]
-vim.api.nvim_set_option_value("shada", shada, { scope = "global" })
+SetOpt("sd", [[<0,'100,/0,:1000,h]], global_scope)
+
+-- Unsimplify mappings
+-- See :h <tab> and https://github.com/neovim/neovim/pull/17932
+-- NOTE: For this to work in Tmux, that config has to be handled separately
+ApiMap("n", "<C-i>", "<C-i>", noremap)
+ApiMap("n", "<tab>", "<tab>", noremap)
+ApiMap("n", "<C-m>", "<C-m>", noremap)
+ApiMap("n", "<cr>", "<cr>", noremap)
+ApiMap("n", "<C-[>", "<C-[>", noremap)
+ApiMap("n", "<esc>", "<esc>", noremap)
 
 --------
 -- UI --
 --------
 
-vim.api.nvim_set_var("no_plugin_maps", 1)
+SetOpt("mouse", "", global_scope)
 
-vim.api.nvim_set_option_value("tabstop", 4, { scope = "global" })
-vim.api.nvim_set_option_value("softtabstop", 4, { scope = "global" })
-vim.api.nvim_set_option_value("shiftwidth", 4, { scope = "global" })
-vim.api.nvim_set_option_value("expandtab", true, { scope = "global" })
-vim.api.nvim_set_option_value("shiftround", true, { scope = "global" })
+SetOpt("backspace", "indent,eol,nostop", global_scope)
+SetOpt("mps", GetOpt("mps", global_scope) .. ",<:>", { scope = "global" })
 
-vim.api.nvim_set_option_value("backspace", "indent,eol,nostop", { scope = "global" })
+--- W - Don't overwrite readonly files
+--- Z - Don't reset readonly with W!
+SetOpt("cpo", GetOpt("cpo", global_scope) .. "WZ", { scope = "global" })
+SetOpt("modelines", 1, global_scope)
 
-vim.opt.cpoptions:append("W") -- Don't overwrite readonly files
-vim.opt.cpoptions:append("Z") -- Don't reset readonly with w!
-
-vim.api.nvim_set_option_value("ignorecase", true, { scope = "global" })
-vim.api.nvim_set_option_value("smartcase", true, { scope = "global" })
+SetOpt("ignorecase", true, global_scope)
+SetOpt("smartcase", true, global_scope)
 -- Don't want screen shifting while entering search/subsitute patterns
-vim.api.nvim_set_option_value("incsearch", false, { scope = "global" })
+SetOpt("incsearch", false, global_scope)
 
-vim.opt.matchpairs:append("<:>")
+SetOpt("selection", "old", global_scope)
+SetOpt("so", Scrolloff_Val, global_scope)
 
-vim.api.nvim_set_option_value("mouse", "", { scope = "global" })
-
-vim.api.nvim_set_option_value("modelines", 1, { scope = "global" })
-
-vim.api.nvim_set_option_value("selection", "old", { scope = "global" })
-vim.api.nvim_set_option_value("so", Scrolloff_Val, { scope = "global" })
-
-vim.api.nvim_set_option_value("splitbelow", true, { scope = "global" })
-vim.api.nvim_set_option_value("splitright", true, { scope = "global" })
+SetOpt("splitbelow", true, global_scope)
+SetOpt("splitright", true, global_scope)
 -- For some reason, uselast needs to be manually set globally
-vim.api.nvim_set_option_value("switchbuf", "useopen,uselast", { scope = "global" })
+SetOpt("switchbuf", "useopen,uselast", global_scope)
+
+--------------------------
+--- Text Input/Display ---
+--------------------------
+
+SetOpt("tabstop", 4, global_scope)
+SetOpt("softtabstop", 4, global_scope)
+SetOpt("shiftwidth", 4, global_scope)
+SetOpt("expandtab", true, global_scope)
+SetOpt("shiftround", true, global_scope)
 
 ---------------------
 -- Buffer Behavior --
@@ -65,59 +113,140 @@ vim.api.nvim_set_option_value("switchbuf", "useopen,uselast", { scope = "global"
 -- Issue is better after this pull request, but not resolve. In this file I can see some
 -- global scope settings still whited out.
 -- TODO: Test this again with a minimal config
--- vim.api.nvim_set_option_value("wrap", false, { scope = "global" })
+-- SetOpt("wrap", false, global_scope)
 -- For fts where opt_local wrap is true
-vim.api.nvim_set_option_value("breakindent", true, { scope = "global" })
-vim.api.nvim_set_option_value("linebreak", true, { scope = "global" })
-vim.api.nvim_set_option_value("smartindent", true, { scope = "global" })
+SetOpt("breakindent", true, global_scope)
+SetOpt("linebreak", true, global_scope)
+SetOpt("smartindent", true, global_scope)
 
 local dict = vim.fn.expand("~/.local/bin/words/words_alpha.txt")
-vim.api.nvim_set_option_value("dictionary", dict, { scope = "global" })
-vim.api.nvim_set_option_value("spell", false, { scope = "global" })
-vim.api.nvim_set_option_value("spelllang", "en_us", { scope = "global" })
+SetOpt("dictionary", dict, global_scope)
+SetOpt("spell", false, global_scope)
+SetOpt("spelllang", "en_us", global_scope)
 
 ----------------
 -- Aesthetics --
 ----------------
 
-vim.opt.fillchars:append({ eob = " " })
+SetOpt("fcs", "eob: ", global_scope)
 
 local blink_setting = "blinkon1-blinkoff1"
 local norm_cursor = "n:block" .. blink_setting
 local ver_cursor = "i-sm-c-ci-t:ver100-" .. blink_setting
 local hor_cursor = "o-v-ve-r-cr:hor100-" .. blink_setting
 local gcr = norm_cursor .. "," .. ver_cursor .. "," .. hor_cursor
-vim.api.nvim_set_option_value("guicursor", gcr, { scope = "global" })
+SetOpt("guicursor", gcr, global_scope)
 
-vim.api.nvim_set_option_value("list", true, { scope = "global" })
-local listchars = "tab:<->,extends:»,precedes:«,nbsp:␣,trail:⣿"
-vim.api.nvim_set_option_value("listchars", listchars, { scope = "global" })
+--- a - All abbreviations
+--- s - No search hit top/bottom messages
+--- I - No intro message
+--- W - No "written" notifications
+SetOpt("shm", GetOpt("shm", global_scope) .. "asIW", { scope = "global" })
 
--- On my monitors, for files under 10k lines, a centered vsplit will be on the color column
-vim.api.nvim_set_option_value("nu", true, { scope = "global" })
-vim.api.nvim_set_option_value("rnu", true, { scope = "global" })
-vim.api.nvim_set_option_value("cc", "100", { scope = "global" })
-vim.api.nvim_set_option_value("nuw", 5, { scope = "global" })
-vim.api.nvim_set_option_value("scl", "yes:1", { scope = "global" })
-
-vim.api.nvim_set_option_value("cursorline", true, { scope = "global" })
-
-vim.opt.shortmess:append("a") --- Abbreviations
-vim.opt.shortmess:append("s") --- No search hit top/bottom messages
-vim.opt.shortmess:append("I") --- No intro message
-vim.opt.shortmess:append("W") --- No "written" notifications
-
-vim.api.nvim_set_option_value("ruler", false, { scope = "global" })
+SetOpt("ru", false, global_scope)
 
 vim.filetype.add({ filename = { [".bashrc_custom"] = "sh" } })
+
+------------------
+--- Cursorline ---
+------------------
+
+SetOpt("cul", true, global_scope)
+Autocmd("WinEnter", {
+    group = set_group,
+    callback = function()
+        SetOpt("cul", true, { win = vim.api.nvim_get_current_win() })
+    end,
+})
+
+Autocmd("WinLeave", {
+    group = set_group,
+    callback = function()
+        SetOpt("cul", false, { win = vim.api.nvim_get_current_win() })
+    end,
+})
+
+----------------------
+--- Format Options ---
+----------------------
+
+-- See help fo-table
+-- Since multiple runtime ftplugin files set formatoptions, correct here
+Autocmd({ "FileType" }, {
+    group = set_group,
+    pattern = "*",
+    callback = function(ev)
+        local fo = GetOpt("fo", { buf = ev.buf })
+        local new_fo = string.gsub(fo, "o", "")
+        SetOpt("fo", new_fo, { buf = ev.buf })
+    end,
+})
+
+-----------------
+--- Listchars ---
+-----------------
+
+SetOpt("list", true, global_scope)
+SetOpt("lcs", "tab:<->,extends:»,precedes:«,nbsp:␣,trail:⣿", global_scope)
+Autocmd("InsertEnter", {
+    group = set_group,
+    callback = function()
+        SetOpt("list", false, { win = vim.api.nvim_get_current_win() })
+    end,
+})
+
+Autocmd("InsertLeave", {
+    group = set_group,
+    callback = function()
+        SetOpt("list", true, { win = vim.api.nvim_get_current_win() })
+    end,
+})
+
+------------------
+--- Numberline ---
+------------------
+
+-- On my monitors, for files under 10k lines, a centered vsplit will be on the color column
+SetOpt("nu", true, global_scope)
+SetOpt("rnu", true, global_scope)
+SetOpt("cc", "100", global_scope)
+SetOpt("nuw", 5, global_scope)
+SetOpt("scl", "yes:1", global_scope)
+
+---@param event string|string[]
+---@param pattern string
+---@param value boolean
+---@return nil
+local set_rnu = function(event, pattern, value)
+    Autocmd(event, {
+        group = set_group,
+        pattern = pattern,
+        callback = function()
+            SetOpt("rnu", value, { win = vim.api.nvim_get_current_win() })
+        end,
+    })
+end
+
+Autocmd("CmdlineEnter", {
+    group = set_group,
+    callback = function()
+        SetOpt("rnu", false, { win = vim.api.nvim_get_current_win() })
+        if not vim.tbl_contains({ "@", "-" }, vim.v.event.cmdtype) then
+            vim.cmd("redraw")
+        end
+    end,
+})
+
+-- LOW: Would this work with BufWinEnter instead?
+-- Note: Need BufLeave/BufEnter for this to work when going into help
+set_rnu({ "WinLeave", "BufLeave" }, "*", false)
+set_rnu({ "WinEnter", "CmdlineLeave", "BufEnter" }, "*", true)
 
 ----------------------
 -- Autocmd Controls --
 ----------------------
 
-local set_group = vim.api.nvim_create_augroup("set-group", { clear = true })
-
-vim.api.nvim_create_autocmd("BufWinEnter", {
+Autocmd("BufWinEnter", {
     group = set_group,
     desc = "Go to the last location when opening a buffer",
     callback = function(ev)
@@ -128,16 +257,6 @@ vim.api.nvim_create_autocmd("BufWinEnter", {
         end
 
         Cmd({ cmd = "normal", args = { 'g`"zz' } }, {})
-    end,
-})
-
--- See help fo-table
--- Since multiple runtime ftplugin files set formatoptions, correct here
-vim.api.nvim_create_autocmd({ "FileType" }, {
-    group = set_group,
-    pattern = "*",
-    callback = function()
-        vim.opt.formatoptions:remove("o")
     end,
 })
 
@@ -152,7 +271,7 @@ local clear_conditions = {
     "WinLeave",
 } ---@type string[]
 
-vim.api.nvim_create_autocmd(clear_conditions, {
+Autocmd(clear_conditions, {
     group = set_group,
     pattern = "*",
     -- The highlight state is saved and restored when autocmds are triggered, so
@@ -162,62 +281,6 @@ vim.api.nvim_create_autocmd(clear_conditions, {
         vim.cmd.nohlsearch()
     end),
 })
-
-vim.api.nvim_create_autocmd("WinEnter", {
-    group = set_group,
-    callback = function()
-        vim.api.nvim_set_option_value("cul", true, { win = vim.api.nvim_get_current_win() })
-    end,
-})
-
-vim.api.nvim_create_autocmd("WinLeave", {
-    group = set_group,
-    callback = function()
-        vim.api.nvim_set_option_value("cul", false, { win = vim.api.nvim_get_current_win() })
-    end,
-})
-
-vim.api.nvim_create_autocmd("InsertEnter", {
-    group = set_group,
-    callback = function()
-        vim.api.nvim_set_option_value("list", false, { win = vim.api.nvim_get_current_win() })
-    end,
-})
-
-vim.api.nvim_create_autocmd("InsertLeave", {
-    group = set_group,
-    callback = function()
-        vim.api.nvim_set_option_value("list", true, { win = vim.api.nvim_get_current_win() })
-    end,
-})
-
----@param event string|string[]
----@param pattern string
----@param value boolean
----@return nil
-local set_rnu = function(event, pattern, value)
-    vim.api.nvim_create_autocmd(event, {
-        group = set_group,
-        pattern = pattern,
-        callback = function()
-            vim.api.nvim_set_option_value("rnu", value, { win = vim.api.nvim_get_current_win() })
-        end,
-    })
-end
-
-vim.api.nvim_create_autocmd("CmdlineEnter", {
-    group = set_group,
-    callback = function()
-        vim.api.nvim_set_option_value("rnu", false, { win = vim.api.nvim_get_current_win() })
-        if not vim.tbl_contains({ "@", "-" }, vim.v.event.cmdtype) then
-            vim.cmd("redraw")
-        end
-    end,
-})
-
--- Note: Need BufLeave/BufEnter for this to work when going into help
-set_rnu({ "WinLeave", "BufLeave" }, "*", false)
-set_rnu({ "WinEnter", "CmdlineLeave", "BufEnter" }, "*", true)
 
 ----------------
 
@@ -522,31 +585,31 @@ for k, v in pairs(groups) do
     vim.api.nvim_set_hl(0, k, v)
 end
 
-vim.api.nvim_set_var("terminal_color_0", c.black)
-vim.api.nvim_set_var("terminal_color_1", c.l_red)
-vim.api.nvim_set_var("terminal_color_2", c.l_purple)
-vim.api.nvim_set_var("terminal_color_3", c.l_orange)
-vim.api.nvim_set_var("terminal_color_4", c.l_cyan)
-vim.api.nvim_set_var("terminal_color_5", c.l_green)
-vim.api.nvim_set_var("terminal_color_6", c.l_yellow)
-vim.api.nvim_set_var("terminal_color_7", c.fg)
+Gset("terminal_color_0", c.black)
+Gset("terminal_color_1", c.l_red)
+Gset("terminal_color_2", c.l_purple)
+Gset("terminal_color_3", c.l_orange)
+Gset("terminal_color_4", c.l_cyan)
+Gset("terminal_color_5", c.l_green)
+Gset("terminal_color_6", c.l_yellow)
+Gset("terminal_color_7", c.fg)
 
-vim.api.nvim_set_var("terminal_color_8", lighten_hex(c.black, 30))
-vim.api.nvim_set_var("terminal_color_9", darken_hex(c.l_red, 30))
-vim.api.nvim_set_var("terminal_color_10", darken_hex(c.l_purple, 30))
-vim.api.nvim_set_var("terminal_color_11", darken_hex(c.l_orange, 30))
-vim.api.nvim_set_var("terminal_color_12", darken_hex(c.l_cyan, 30))
-vim.api.nvim_set_var("terminal_color_13", darken_hex(c.l_green, 30))
-vim.api.nvim_set_var("terminal_color_14", darken_hex(c.l_yellow, 30))
-vim.api.nvim_set_var("terminal_color_15", darken_hex(c.fg, 30))
+Gset("terminal_color_8", lighten_hex(c.black, 30))
+Gset("terminal_color_9", darken_hex(c.l_red, 30))
+Gset("terminal_color_10", darken_hex(c.l_purple, 30))
+Gset("terminal_color_11", darken_hex(c.l_orange, 30))
+Gset("terminal_color_12", darken_hex(c.l_cyan, 30))
+Gset("terminal_color_13", darken_hex(c.l_green, 30))
+Gset("terminal_color_14", darken_hex(c.l_yellow, 30))
+Gset("terminal_color_15", darken_hex(c.fg, 30))
 
-vim.g.colors_name = "SimpleDelta"
+Gset("colors_name", "SimpleDelta")
 
 Map("n", "gT", function()
     vim.api.nvim_cmd({ cmd = "Inspect" }, {})
 end)
 
-vim.api.nvim_set_var("c_syntax_for_h", true)
+Gset("c_syntax_for_h", true)
 
 local function darken_24bit(color, pct)
     local r = bit.band(bit.rshift(color, 16), 0xFF)
@@ -609,7 +672,7 @@ end
 
 -- MAYBE: Disable the default highlight constants and use a custom query so we aren't grabbing
 -- stuff like require
-vim.api.nvim_create_autocmd("FileType", {
+Autocmd("FileType", {
     group = vim.api.nvim_create_augroup("lua-disable-captures", { clear = true }),
     pattern = "lua",
     once = true,
@@ -642,7 +705,7 @@ local token_nop_lua = {
 -- Python --
 ------------
 
-vim.api.nvim_create_autocmd("FileType", {
+Autocmd("FileType", {
     group = vim.api.nvim_create_augroup("python-disable-captures", { clear = true }),
     pattern = "python",
     once = true,
@@ -662,7 +725,7 @@ vim.api.nvim_create_autocmd("FileType", {
 -- Rust --
 ----------
 
-vim.api.nvim_create_autocmd("FileType", {
+Autocmd("FileType", {
     group = vim.api.nvim_create_augroup("rust-disable-captures", { clear = true }),
     pattern = "rust",
     once = true,
@@ -678,7 +741,7 @@ vim.api.nvim_create_autocmd("FileType", {
     end,
 })
 
-vim.api.nvim_create_autocmd("LspAttach", {
+Autocmd("LspAttach", {
     group = vim.api.nvim_create_augroup("rust-disable-captures-lsp", { clear = true }),
     callback = function(ev)
         if not vim.api.nvim_get_option_value("filetype", { buf = ev.buf }) == "rust" then
@@ -733,7 +796,7 @@ local token_filter = {
     ["rust_analyzer"] = token_nop_rust,
 } --- @type {string: string[]}
 
-vim.api.nvim_create_autocmd("LspAttach", {
+Autocmd("LspAttach", {
     group = vim.api.nvim_create_augroup("token-filter", { clear = true }),
     callback = function(ev)
         local client = vim.lsp.get_client_by_id(ev.data.client_id) --- @type vim.lsp.Client?
