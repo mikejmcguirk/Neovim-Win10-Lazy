@@ -147,24 +147,25 @@ SetOpt("ru", false, global_scope)
 
 vim.filetype.add({ filename = { [".bashrc_custom"] = "sh" } })
 
+--- @param event string|string[]
+--- @param opt string
+--- @param val any
+local function autoset_winopt(event, opt, val)
+    Autocmd(event, {
+        group = set_group,
+        callback = function()
+            SetOpt(opt, val, { win = vim.api.nvim_get_current_win() })
+        end,
+    })
+end
+
 ------------------
 --- Cursorline ---
 ------------------
 
 SetOpt("cul", true, global_scope)
-Autocmd("WinEnter", {
-    group = set_group,
-    callback = function()
-        SetOpt("cul", true, { win = vim.api.nvim_get_current_win() })
-    end,
-})
-
-Autocmd("WinLeave", {
-    group = set_group,
-    callback = function()
-        SetOpt("cul", false, { win = vim.api.nvim_get_current_win() })
-    end,
-})
+autoset_winopt("WinEnter", "cul", true)
+autoset_winopt("WinLeave", "cul", false)
 
 ----------------------
 --- Format Options ---
@@ -188,19 +189,8 @@ Autocmd({ "FileType" }, {
 
 SetOpt("list", true, global_scope)
 SetOpt("lcs", "tab:<->,extends:»,precedes:«,nbsp:␣,trail:⣿", global_scope)
-Autocmd("InsertEnter", {
-    group = set_group,
-    callback = function()
-        SetOpt("list", false, { win = vim.api.nvim_get_current_win() })
-    end,
-})
-
-Autocmd("InsertLeave", {
-    group = set_group,
-    callback = function()
-        SetOpt("list", true, { win = vim.api.nvim_get_current_win() })
-    end,
-})
+autoset_winopt("InsertEnter", "list", true)
+autoset_winopt("InsertLeave", "list", false)
 
 ------------------
 --- Numberline ---
@@ -212,21 +202,6 @@ SetOpt("rnu", true, global_scope)
 SetOpt("cc", "100", global_scope)
 SetOpt("nuw", 5, global_scope)
 SetOpt("scl", "yes:1", global_scope)
-
----@param event string|string[]
----@param pattern string
----@param value boolean
----@return nil
-local set_rnu = function(event, pattern, value)
-    Autocmd(event, {
-        group = set_group,
-        pattern = pattern,
-        callback = function()
-            SetOpt("rnu", value, { win = vim.api.nvim_get_current_win() })
-        end,
-    })
-end
-
 Autocmd("CmdlineEnter", {
     group = set_group,
     callback = function()
@@ -238,9 +213,9 @@ Autocmd("CmdlineEnter", {
 })
 
 -- LOW: Would this work with BufWinEnter instead?
--- Note: Need BufLeave/BufEnter for this to work when going into help
-set_rnu({ "WinLeave", "BufLeave" }, "*", false)
-set_rnu({ "WinEnter", "CmdlineLeave", "BufEnter" }, "*", true)
+-- Need BufLeave/BufEnter for this to work when going into help
+autoset_winopt({ "WinLeave", "BufLeave" }, "rnu", false)
+autoset_winopt({ "WinEnter", "CmdlineLeave", "BufEnter" }, "rnu", true)
 
 ----------------------
 -- Autocmd Controls --
@@ -293,7 +268,7 @@ Autocmd(clear_conditions, {
 -------------------
 
 Cmd({ cmd = "hi", args = { "clear" } }, {})
-if vim.fn.exists("syntax_on") then
+if vim.g.syntax_on == 1 then
     Cmd({ cmd = "syntax", args = { "reset" } }, {})
 end
 
@@ -589,7 +564,6 @@ Gset("terminal_color_4", l_cyan)
 Gset("terminal_color_5", l_green)
 Gset("terminal_color_6", l_yellow)
 Gset("terminal_color_7", fg)
-
 Gset("terminal_color_8", lighten_hex(black, 30))
 Gset("terminal_color_9", darken_hex(l_red, 30))
 Gset("terminal_color_10", darken_hex(l_purple, 30))
@@ -635,7 +609,7 @@ local ts_nop_all = function(hl_query)
     hl_query.query:disable_capture("variable")
     hl_query.query:disable_capture("variable.member")
 
-    -- Meaningless without an LSP to analyze scope
+    -- Extraneous without an LSP to analyze scope
     hl_query.query:disable_capture("variable.parameter")
 end
 
@@ -718,13 +692,15 @@ Autocmd("FileType", {
         ts_nop_all(hl_query)
         -- Have to keep punctuation.bracket to mask operator highlights
         hl_query.query:disable_capture("type.builtin") -- Don't need to distinguish this
+
+        vim.api.nvim_del_augroup_by_name("rust-disable-captures")
     end,
 })
 
 Autocmd("LspAttach", {
     group = vim.api.nvim_create_augroup("rust-disable-captures-lsp", { clear = true }),
     callback = function(ev)
-        if not vim.api.nvim_get_option_value("filetype", { buf = ev.buf }) == "rust" then
+        if vim.api.nvim_get_option_value("filetype", { buf = ev.buf }) ~= "rust" then
             return
         end
 
@@ -815,6 +791,69 @@ Autocmd("LspAttach", {
         vim.lsp.semantic_tokens.force_refresh(ev.buf)
     end,
 })
+
+------------------------------
+--- Treesitter Interaction ---
+------------------------------
+
+-- TODO: When treesitter is on, [s]s work for some buffers but not others. This feels like
+-- intended behavior, but how to modify?
+
+Map("n", "gtt", function()
+    if vim.treesitter.highlighter.active[vim.api.nvim_get_current_buf()] then
+        vim.treesitter.stop()
+    else
+        vim.treesitter.start()
+    end
+end)
+
+Map("n", "gti", function()
+    vim.api.nvim_cmd({ cmd = "InspectTree" }, {})
+end)
+
+Map("n", "gtee", function()
+    vim.api.nvim_cmd({ cmd = "EditQuery" }, {})
+end)
+
+--- @param query_group string
+--- @return nil
+--- Lifted from the old TS Master Branch
+local function edit_query_file(query_group)
+    local lang = vim.api.nvim_get_option_value("filetype", { buf = 0 })
+    local files = vim.treesitter.query.get_files(lang, query_group, nil)
+    if #files == 0 then
+        vim.api.nvim_echo({ { "No query file found", "" } }, false, {})
+        return
+    elseif #files == 1 then
+        require("mjm.utils").open_buf({ file = files[1] }, { open = "vsplit" })
+    else
+        vim.ui.select(files, { prompt = "Select a file:" }, function(file)
+            if file then
+                require("mjm.utils").open_buf({ file = file }, { open = "vsplit" })
+            end
+        end)
+    end
+end
+
+Map("n", "gteo", function()
+    edit_query_file("folds")
+end)
+
+Map("n", "gtei", function()
+    edit_query_file("highlights")
+end)
+
+Map("n", "gten", function()
+    edit_query_file("indents")
+end)
+
+Map("n", "gtej", function()
+    edit_query_file("injections")
+end)
+
+Map("n", "gtex", function()
+    edit_query_file("textobjects")
+end)
 
 ---------------------------------------------------
 -- Various utils lifted from Fluoromachine.nvim --
@@ -980,69 +1019,6 @@ Autocmd({ "BufReadPre", "BufNewFile" }, {
         vim.api.nvim_del_augroup_by_name("diag-keymap-setup")
     end,
 })
-
-------------------------------
---- Treesitter Interaction ---
-------------------------------
-
--- TODO: When treesitter is on, [s]s work for some buffers but not others. This feels like
--- intended behavior, but how to modify?
-
-Map("n", "gtt", function()
-    if vim.treesitter.highlighter.active[vim.api.nvim_get_current_buf()] then
-        vim.treesitter.stop()
-    else
-        vim.treesitter.start()
-    end
-end)
-
-Map("n", "gti", function()
-    vim.api.nvim_cmd({ cmd = "InspectTree" }, {})
-end)
-
-Map("n", "gtee", function()
-    vim.api.nvim_cmd({ cmd = "EditQuery" }, {})
-end)
-
---- @param query_group string
---- @return nil
---- Lifted from the old TS Master Branch
-local function edit_query_file(query_group)
-    local lang = vim.api.nvim_get_option_value("filetype", { buf = 0 })
-    local files = vim.treesitter.query.get_files(lang, query_group, nil)
-    if #files == 0 then
-        vim.api.nvim_echo({ { "No query file found", "" } }, false, {})
-        return
-    elseif #files == 1 then
-        require("mjm.utils").open_buf({ file = files[1] }, { open = "vsplit" })
-    else
-        vim.ui.select(files, { prompt = "Select a file:" }, function(file)
-            if file then
-                require("mjm.utils").open_buf({ file = file }, { open = "vsplit" })
-            end
-        end)
-    end
-end
-
-Map("n", "gteo", function()
-    edit_query_file("folds")
-end)
-
-Map("n", "gtei", function()
-    edit_query_file("highlights")
-end)
-
-Map("n", "gten", function()
-    edit_query_file("indents")
-end)
-
-Map("n", "gtej", function()
-    edit_query_file("injections")
-end)
-
-Map("n", "gtex", function()
-    edit_query_file("textobjects")
-end)
 
 -----------------
 --- LSP Setup ---
