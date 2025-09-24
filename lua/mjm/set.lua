@@ -2,8 +2,7 @@
 -- https://github.com/tjdevries/config.nvim/blob/master/plugin/clipboard.lua
 -- MAYBE: vim.g.deprecation_warnings = true -- Pre-silence deprecation warnings
 
--- local set_group = Augroup("set-group", { clear = true })
-require("mjm.global_settings").set_globals(set_group)
+require("mjm.global_settings")
 
 -------------------
 --- Colorscheme ---
