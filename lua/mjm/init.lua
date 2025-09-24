@@ -71,7 +71,7 @@ ApiMap("n", "<esc>", "<esc>", { noremap = true })
 -- Plus we want to get away from the "plugin" mentality as much as possible. a colorscheme is just
 -- a list of settings, for example. It's not a "plugin" in the spiritual sense
 require("mjm.set")
-require("mjm.keymap")
+require("mjm.map")
 
 require("mjm.stl")
 require("mjm.diagnostic")
