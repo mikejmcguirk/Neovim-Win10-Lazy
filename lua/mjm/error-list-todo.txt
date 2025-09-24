@@ -1,0 +1,145 @@
+--------------------
+--- PROJECT WIDE ---
+--------------------
+
+TODO
+
+- Maybe put all keymaps into one file so only one needs to be required. Perhaps also think about
+when certain maps need to be required at all
+- Any load behavior needs to be checked against mksession
+
+---------------------
+--- DOCUMENTATION ---
+---------------------
+
+- The filter provides a replacement for the cfilter plugin, so that no longer needs to be added
+- The cn/cpfile logic does not have the same level of wrapping logic as the cc wrapper
+- The open functions double as resizers, as per the built-in cmd behavior
+
+-------------------
+--- DIAGNOSTICS ---
+-------------------
+
+TODO
+
+- Check that all functions have reasonable default sorts
+- Check that window height updates are triggered where appropriate
+- Check that functions have proper visibility
+- Check that all mappings have plugs and cmds
+- Check that all maps/cmds/plugs have desc fieldss
+- Check that all functions have annotations and documentation
+- Check that the qf and loclist versions are both properly built for purpose. Should be able to use the loclist function for buf/win specific info
+
+MAYBE
+
+- You could allow passing win and buf options so this option could be called in scripts, but that creates complexities around how you prioritize the different options. Omitting since for now this is a hypothetical use case
+- Ideas for ctrl+diag_type mappings:
+    - Min severity + sort by type > lnum (sort maps already exist though)
+    - Use the diag type as the max severity
+
+LOW
+
+- Print specific "no diagnostics" messages based on the opts
+
+PERF
+
+- The diagnostic severities are mapped when the raw diags are converted, then de-mapped when sorting. Would be faster to not map initially, then do a mapping pass after sorting
+
+--------------
+--- FILTER ---
+--------------
+
+TODO
+
+- Check that all functions have reasonable default sorts
+- Check that window height updates are triggered where appropriate
+- Check that functions have proper visibility
+- Check that all mappings have plugs and cmds
+- Check that all maps/cmds/plugs have desc fieldss
+- Check that all functions have annotations and documentation
+- Check that the qf and loclist versions are both properly built for purpose. Should be able to use the loclist function for buf/win specific info
+- Filter dotfiles/hidden files
+- Filter on diagnostic severity
+
+LOW
+
+- Filter anything without a line/col number
+
+------------
+--- GREP ---
+------------
+
+TODO
+
+- Check that all functions have reasonable default sorts
+- Check that window height updates are triggered where appropriate
+- Check that functions have proper visibility
+- Check that all mappings have plugs and cmds
+- Check that all maps/cmds/plugs have desc fieldss
+- Check that all functions have annotations and documentation
+- Check that the qf and loclist versions are both properly built for purpose. Should be able to use the loclist function for buf/win specific info
+- For the title, use the base command without the specific files/dirs being searched
+
+MAYBE
+
+- Smart/ignore case can be rolled under the same option for grepprgs that don't
+support it
+
+FUTURE
+
+- Potentially use rg's built-in globbing, allowing for the cmd literal to be used in the title
+
+PERF
+
+- Is it necessary to check the executable status of the grepprg every time?
+
+------------
+--- OPEN ---
+------------
+
+TODO:
+- Check that all functions have reasonable default sorts
+- Check that window height updates are triggered where appropriate
+- Check that functions have proper visibility
+- Check that all mappings have plugs and cmds
+- Check that all maps/cmds/plugs have desc fieldss
+- Check that all functions have annotations and documentation
+- Check that the qf and loclist versions are both properly built for purpose. Should be able to use the loclist function for buf/win specific info
+
+MAYBE
+
+For opening the lists, there are two ideas you could integrate:
+- If there are no active lists, the list doesn't open
+- If you open to a blank list, it will automatically find a non-blank one
+Because the first one is such a big change from the default behavior, it would have to be
+behind an option. Also a really bad place to make mistakes in the code. Still, worth
+considering if opening blank lists becomes too much of a nag
+For the second, would need to work with chistory/lhistory more to know if it's a good idea
+
+- Allow customizing where the qflist opens. But since botright is the default, and a good
+one, leaving as is
+
+- Use more function composition without the module
+
+LOW
+
+- Make get_list_height work without nowrap
+
+PERF
+
+- Depending on which functiosn go together, might pull win views twice
+
+------------------
+--- NAV ACTION ---
+------------------
+
+TODO
+
+- Check that window height updates are triggered where appropriate
+- Check that functions have proper visibility
+- Check that all mappings have plugs and cmds
+- Check that all maps/cmds/plugs have desc fieldss
+- Check that all functions have annotations and documentation
+- Check that the qf and loclist versions are both properly built for purpose. Should be able to use the loclist function for buf/win specific info
+
+- Hold on refactoring the jump functions until I know what we're doing with them. Still need to figure out how they co-exist with the qQ mapping

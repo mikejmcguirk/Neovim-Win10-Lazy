@@ -1,20 +1,6 @@
---- TODO:
---- - Check that all functions have reasonable default sorts
---- - Check that window height updates are triggered where appropriate
---- - Check that functions have proper visibility
---- - Check that all mappings have plugs and cmds
---- - Check that all maps/cmds/plugs have desc fieldss
---- - Check that all functions have annotations and documentation
---- - Check that the qf and loclist versions are both properly built for purpose. Should be able
----     to use the loclist function for buf/win specific info
-
 -------------
 --- Types ---
 -------------
-
---- MAYBE: You could allow passing win and buf options so this option could be called in scripts,
---- but that creates complexities around how you prioritize the different options. Omitting since
---- for now this is a hypothetical use case
 
 --- @class QfRancherDiagToListOpts
 --- @field set_action? QfRancherSetlistAction
@@ -34,9 +20,7 @@ local function get_top_severity(diags)
     return severity
 end
 
--- PERF: Could pre-allocate the return table, but I don't see a consistent solution for how to
--- handle for lengths only known at runtime in LuaJIT/5.1. Should not matter in practice
-local function filter_diags_by_severity(diags)
+local function filter_diags_top_severity(diags)
     local top_severity = get_top_severity(diags)
     return vim.tbl_filter(function(diag)
         return diag.severity == top_severity
@@ -87,13 +71,12 @@ local function diags_to_list(opts)
 
     local raw_diags = vim.diagnostic.get(buf, { severity = severity }) --- @type vim.Diagnostic[]
     if #raw_diags == 0 then
-        -- TODO: Print more specific messages based on severity opts
         vim.api.nvim_echo({ { "No diagnostics", "" } }, false, {})
         return
     end
 
     if opts.top_severity then
-        raw_diags = filter_diags_by_severity(raw_diags)
+        raw_diags = filter_diags_top_severity(raw_diags)
     end
 
     local converted_diags = vim.tbl_map(convert_diag, raw_diags) ---@type table[]
@@ -106,76 +89,19 @@ local function diags_to_list(opts)
         converted_diags = eu.merge_qf_lists(converted_diags, cur_list.items)
     end
 
-    --- PERF: Right now, the diag severities are mapped to the qf types, then un-mapped again
-    --- in the sort function. In theory, the types should be put into the list items as raw
-    --- values, the converted on sort. In practice, this creates complexity + room for error
-    --- Unsure if there's a worthwhile performance gain here, though this is a hot loop
     table.sort(converted_diags, require("mjm.error-list-sort").sort_diag_fname_asc)
     local setlist = eu.get_setlist(opts.is_loclist, cur_win)
     local is_replace = opts.set_action == "add" or opts.set_action == "overwrite"
     local action = is_replace and "r" or " "
     local title = "vim.diagnostic.get()"
     setlist({}, action, { items = converted_diags, nr = list_nr, title = title })
-    -- vim.fn.setqflist({}, " ", { items = converted_diags, nr = list_nr, title = title })
 
-    -- TODO: This is silly because we have to scan the wins for the open and then scan again, and
-    -- build the views table, for the resize. One option, that's concise but somewhat unclear, is
-    -- to allow the open function to perform a resize if it finds an open win. For clarity, the
-    -- default behavior can function as a pure open, and then the resize functions can basically
-    -- serve as option wrappers for the open. Another is for the open function to return the win
-    -- if found, but I have no idea what the implications of that would be. The first solution is
-    -- a bit design patterny, but also seems like the simplest
-    -- An additional issue here is, because history is run after this, you get one set height
-    -- for the current open, and then we move to history. Right now, this means we are setting
-    -- height for the current list but not the next one, which creates unpleasing results. But
-    -- even with more fixed code, we are setting heigh twice, which is inefficient/cound create
-    -- flicker
-    -- TODO: To address a bunch of concerns previously laid out here:
-    --- - This function is currently only designed to be used in the cmdline or as a hotkey, not as
-    ---     something for scripting. If that changes, we can deal with it then
-    --- - From a data standpoint, cur_win is stored at the very beginning
-    --- - This function does not need to handle the complexities of orphaned loclists. If there's
-    ---     no qf_id, move on
-    --- - It is possible to use the funtions toget and set loclists if one does not currently exist
-    --- TODO: Create a get_gethistory function similar to get_getlist. This should only be run if
-    --- we are changing stack windows
-    --- TODO: The history command should be fun *before* we run the open function
-    --- TODO: The open functions now handle sizing internally with the always_resize option
-    local did_openlist = eu.get_openlist(opts.is_loclist)()
     if opts.set_action == "add" or opts.set_action == "overwrite" then
-        -- TODO: Also set if number? I forget if this is automatic
-        if opts.is_loclist then
-            vim.cmd(list_nr .. "lhistory")
-        else
-            vim.cmd(list_nr .. "chistory")
-        end
+        require("mjm.error-list-stack").get_history(opts.is_loclist)(list_nr)
     end
 
-    -- TODO: This contains the only reference to resize loclist. Getting rid of this would let us
-    -- get rid of two functions
-    if not did_openlist then
-        eu.get_resizelist(opts.is_loclist)()
-    end
-
-    -- TODO:
-    -- an issue with modularizing the write functions is - is there anything we can do to early
-    -- exit before we go through the business of working the diags?
-    -- an additional issue is, AFAIK, the system functions send, or at least get, a full dict of
-    -- qf values, whereas this one is just the items
-    -- And even if that's not true, if we're thinking about how to create the abstraction, it then
-    -- needs to be able to handle any type of qf data it throws at it and be able to perform the
-    -- proper sets. And you need to be able to send a dict of the various actions you want to throw
-    -- at it.
-    -- It is definitely correct to throw the various pieces of logic for setting into a utils
-    -- folder so they are composable pieces for other functions. But I'm less and less convinced
-    -- that actually turning the qf writing into a separate module is correct, because there are
-    -- a lot of theoretical corner cases to handle and not enough concrete examples to point to
-    -- how to work through them without creating a contrived, and I worry premature, abstraction
+    eu.get_openlist(opts.is_loclist)({ always_resize = true })
 end
-
---- MAYBE: Ideas for ctrl-diag_type mappings:
---- --- Min severity + sort by type > lnum (sort maps already exist though)
---- --- Use the diag type as the max severity
 ---
 --- TODO: Naming conventions:
 --- - Qdiag

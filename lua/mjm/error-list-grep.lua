@@ -1,29 +1,3 @@
---- TODO:
---- - Check that all functions have reasonable default sorts
---- - Check that window height updates are triggered where appropriate
---- - Check that functions have proper visibility
---- - Check that all mappings have plugs and cmds
---- - Check that all maps/cmds/plugs have desc fieldss
---- - Check that all functions have annotations and documentation
---- - Check that the qf and loclist versions are both properly built for purpose. Should be able
----     to use the loclist function for buf/win specific info
-
---- MAYBE: Smart/ignore case can be rolled under the same option for grepprgs that don't
---- support it
----
---- TODO: From a load structuring standpoint, this file points to a couple interesting things
---- The first is that we might actually want to have a separate default keymaps file to require
---- This means that we can go with requiring only one module to setup keymaps, rather than
---- having to require and cache every individual file, saving startup time. The other is being
---- more specific about which keymaps are setup and when. In this file, help grep and CWD grep
---- need to be setup right away. But buf grep can wait until a buf is actually opened. Or, the
---- diagnostic greps, I don't think, need to be setup until we actually open a buf
---- Check how this acts though after loading in from mksession
-
---- FUTURE: Potentially use rg's built-in globbing. But don't want to create inconsistencies with
---- other grep cmds
---- FUTURE: If this can be done, use cmd literal for title
-
 -- Escaping test line from From vim-grepper
 -- ..ad\\f40+$':-# @=,!;%^&&*()_{}/ /4304\'""?`9$343%$ ^adfadf[ad)[(
 
@@ -191,11 +165,6 @@ local function get_rg_cmd_parts(pattern, location, opts)
 
     return true, cmd
 end
-
---- PERF: Running a validity check on each grep is wasteful. But, technically, the grepprg is
---- a part of the external environment and it can change. Also, This is a module that I think has
---- a lot of potential to grow and change in the future, so I'm fine with the architecture favoring
---- but loose and robust so it can be refined based on more advanced use cases
 
 --- @return boolean, QfRancherGrepCmdFun|[string,string]
 local function get_grep_cmd()

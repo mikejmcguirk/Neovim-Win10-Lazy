@@ -244,6 +244,14 @@ function M.l_del_all()
     end
 end
 
+function M.get_history(is_loclist)
+    if is_loclist then
+        return M.l_history
+    else
+        return M.q_history
+    end
+end
+
 -----------------
 --- Plug Maps ---
 -----------------

@@ -1,26 +1,3 @@
---- TODO:
---- - Check that all functions have reasonable default sorts
---- - Check that window height updates are triggered where appropriate
---- - Check that functions have proper visibility
---- - Check that all mappings have plugs and cmds
---- - Check that all maps/cmds/plugs have desc fieldss
---- - Check that all functions have annotations and documentation
---- - Check that the qf and loclist versions are both properly built for purpose. Should be able
----     to use the loclist function for buf/win specific info
----
---- MAYBE: For opening the lists, there are two ideas you could integrate:
---- - If there are no active lists, the list doesn't open
---- - If you open to a blank list, it will automatically find a non-blank one
---- Because the first one is such a big change from the default behavior, it would have to be
---- behind an option. Also a really bad place to make mistakes in the code. Still, worth
---- considering if opening blank lists becomes too much of a nag
---- For the second, would need to work with chistory/lhistory more to know if it's a good idea
---- MAYBE: Allow customizing where the qflist opens. But since botright is the default, and a good
---- one, leaving as is
-
--- DOCUMENT: How the open maps double as resizers. Note that this follows the built-in cmd
--- behavior
-
 local M = {}
 
 -----------
@@ -127,8 +104,6 @@ local function restore_views(views)
 end
 
 local max_qf_height = 10
-
--- LOW: This should work without nowrap
 
 --- @param list_win integer
 --- @param is_ll? boolean
@@ -310,10 +285,6 @@ function M.resize_qflist()
     restore_views(views)
 end
 
---- LOW: A better way to handle the open and resize issue is - If the open function finds an open
---- window, it should return that window before gathering the views so it can be passed directly
---- to a resize function
-
 --- @param opts? QfRancherOpenOpts
 --- @return boolean
 function M.open_loclist(opts)
@@ -431,10 +402,6 @@ function M.resize_loclist()
     return true
 end
 
--- MAYBE: You could use these two functions as the end path for any close or resize function
--- PERF: If you arrive at this function in the middle of another window management function, you
--- might need to re-pull the views
-
 --- @param list_win integer
 --- @return boolean
 function M.close_list_win(list_win)
@@ -529,8 +496,6 @@ vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-close-loclist)", "<nop>", {
 -- that only the close function would report on global context. But also the only way to handle
 -- edge cases around orphan loclists without handling it twice or without some kind of mediator
 -- function
--- MAYBE: If the loclist code gets more complicated, some kind of overall loclist state becomes
--- more relevant
 vim.api.nvim_set_keymap("n", "<Plug>(qf-rancher-toggle-loclist)", "<nop>", {
     noremap = true,
     desc = "<Plug> Toggle the location list",

@@ -1,19 +1,3 @@
---- TODO:
---- - Check that all functions have reasonable default sorts
---- - Check that window height updates are triggered where appropriate
---- - Check that functions have proper visibility
---- - Check that all mappings have plugs and cmds
---- - Check that all maps/cmds/plugs have desc fieldss
---- - Check that all functions have annotations and documentation
---- - Check that the qf and loclist versions are both properly built for purpose. Should be able
----     to use the loclist function for buf/win specific info
-
--- TODO: filter dotfiles/hidden files
--- TODO: incomplete cmd nops
--- TODO: filter anything without a line/col number
--- TODO: Add filtering for diagnostic severity
--- DOCUMENT: This replaces the cfilter plugin, so that does not have to be pack added
-
 local M = {}
 
 -------------------------
@@ -68,17 +52,8 @@ function M.qf_filter_wrapper(prompt, filter_func)
         end
     end)() --- @type integer
 
-    -- TODO: I have a util fn for this
-    local qf_win = (function()
-        for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-            if vim.fn.win_gettype(win) == "quickfix" then
-                return win
-            end
-        end
-
-        return nil
-    end)() --- @type integer
-
+    local eu = require("mjm.error-list-util")
+    local qf_win = eu.find_qf_win() --- @type integer|nil
     --- @type vim.fn.winsaveview.ret|nil
     local view = qf_win and vim.api.nvim_win_call(qf_win, vim.fn.winsaveview) or nil
     local row = view and view.lnum or 0 --- @type integer

@@ -1,16 +1,5 @@
 local M = {}
 
---- - Check that window height updates are triggered where appropriate
---- - Check that functions have proper visibility
---- - Check that all mappings have plugs and cmds
---- - Check that all maps/cmds/plugs have desc fieldss
---- - Check that all functions have annotations and documentation
---- - Check that the qf and loclist versions are both properly built for purpose. Should be able
----     to use the loclist function for buf/win specific info
-
---- TODO: Hold on refactoring the jump functions until I know what we're doing with them. Still
---- need to figure out how they co-exist with the qQ mapping
-
 local function validate_count(count)
     vim.validate("count", count, "number")
     vim.validate("count", count, function()
@@ -70,7 +59,6 @@ function M.q_q(count1)
     goto_list_entry(count1, "cc")
 end
 
--- DOCUMENT: The cn/cpfile logic does not have the same level of wrapping logic as the cc wrapper
 local function file_nav_wrap(count1, cmd, backup_cmd)
     validate_count(count1)
     local ok, err = pcall(vim.api.nvim_cmd, { cmd = cmd, count = count1 }, {})
