@@ -4,9 +4,12 @@
 
 TODO
 
+- Not totally sure how to map commands. If they're in a separate file, then requires need to be
+done for everything. Maybe use defer require?
 - Maybe put all keymaps into one file so only one needs to be required. Perhaps also think about
 when certain maps need to be required at all
 - Any load behavior needs to be checked against mksession
+- I think we use qQ as our view or jump, rather than q<C-q>. Merge the two in nav action and stack
 
 ---------------------
 --- DOCUMENTATION ---

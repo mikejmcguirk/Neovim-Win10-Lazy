@@ -96,6 +96,10 @@ else
     vim.api.nvim_set_var("g_qfrancher_autoopenchanges", false)
 end
 
+if vim.g.qfrancher_setdefaultmaps then
+    require("mjm.error-list-maps")
+end
+
 ------------------------
 -- Other source notes --
 ------------------------
