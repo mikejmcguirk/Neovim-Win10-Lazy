@@ -72,7 +72,6 @@ ApiMap("n", "<esc>", "<esc>", { noremap = true })
 -- a list of settings, for example. It's not a "plugin" in the spiritual sense
 require("mjm.set")
 require("mjm.keymap")
-require("mjm.custom_cmd")
 
 require("mjm.stl")
 require("mjm.diagnostic")
@@ -143,7 +142,6 @@ local eager_loaded = vim.uv.hrtime()
 
 require("mjm.lsp")
 require("mjm.treesitter") -- TODO: this probably doesn't need to be post-plugin
-require("mjm.color_coordination") -- TODO: this probably doesn't need to be post-plugin
 require("mjm.tal") -- Requires Harpoon
 
 local post_plugin_setup = vim.uv.hrtime()
