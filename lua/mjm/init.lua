@@ -37,6 +37,7 @@ local pack_finish = vim.uv.hrtime()
 require("mjm.set")
 require("mjm.map")
 require("mjm.stl")
+require("mjm.tal")
 
 require("mjm.error-list") -- Do this first because it sets up g vars
 require("mjm.error-list-open")
@@ -84,12 +85,6 @@ ApiMap("n", "<leader>u", "<nop>", {
 })
 
 local eager_loaded = vim.uv.hrtime()
-
------------------------
--- Post-plugin Setup --
------------------------
-
-require("mjm.tal") -- Requires Harpoon
 
 -------------------------
 -- Lazy Initialization --

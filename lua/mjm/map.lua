@@ -880,11 +880,9 @@ local function mv_cur_buf(cargs)
         return
     end
 
-    if not cargs.bang then
-        if vim.api.nvim_get_option_value("modified", { buf = buf }) then
-            vim.api.nvim_echo({ { "Buf is modified", "" } }, false, {})
-            return
-        end
+    if (not cargs.bang) and vim.api.nvim_get_option_value("modified", { buf = buf }) then
+        vim.api.nvim_echo({ { "Buf is modified", "" } }, false, {})
+        return
     end
 
     local target = (function()
