@@ -1,6 +1,8 @@
 -- TODO: Remove all <C-S> and <M-S> mappings
 -- TODO: Look at how Neovim auto-generates its docs from strings
 
+local noremap = { noremap = true }
+
 -------------
 -- Disable --
 -------------
@@ -420,9 +422,10 @@ local function map_on_bufreadpre()
     end
 
     -- TODO: Where does this go when FzfLua is mapped to gi? <M-i>?
-    Map("n", "gI", "g^i")
+    ApiMap("n", "gI", "g^i", noremap)
     -- NOTE: At least for now, keep the default gR mapping
-    Map("n", "<M-r>", "gr", { silent = true })
+    ApiMap("n", "<M-r>", "gr", noremap)
+    ApiMap("n", "gr", "<nop>", noremap)
 
     -------------------
     -- Undo and Redo --
