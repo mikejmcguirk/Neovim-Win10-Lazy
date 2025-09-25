@@ -7,15 +7,13 @@ local M = {}
 --- @param pattern string
 --- @return boolean
 local function is_filter_smartcase(pattern)
-    if not vim.api.nvim_get_option_value("smartcase", { scope = "global" }) then
+    --- @type boolean
+    local smartcase = vim.api.nvim_get_option_value("smartcase", { scope = "global" })
+    if smartcase and string.lower(pattern) == pattern then
+        return true
+    else
         return false
     end
-
-    if string.lower(pattern) ~= pattern then
-        return false
-    end
-
-    return true
 end
 
 --- @class QfRancherFilterOpts
@@ -222,7 +220,7 @@ end
 local function filter_keep_emu_regex(item, pattern, opts)
     opts = opts or {}
 
-    local regex = vim.regex(pattern)
+    local regex = vim.regex(pattern) --- @type vim.regex
 
     local fname = item.bufnr and vim.fn.bufname(item.bufnr) or nil
     local f_start, f_fin = fname and regex:match_str(fname) or nil, nil
@@ -239,7 +237,7 @@ end
 local function filter_remove_emu_regex(item, pattern, opts)
     opts = opts or {}
 
-    local regex = vim.regex(pattern)
+    local regex = vim.regex(pattern) --- @type vim.regex
 
     local fname = item.bufnr and vim.fn.bufname(item.bufnr) or nil
     local f_start, f_fin = fname and regex:match_str(fname) or nil, nil

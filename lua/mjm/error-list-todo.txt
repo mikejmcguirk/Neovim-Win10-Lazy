@@ -66,10 +66,15 @@ TODO
 - Check that the qf and loclist versions are both properly built for purpose. Should be able to use the loclist function for buf/win specific info
 - Filter dotfiles/hidden files
 - Filter on diagnostic severity
+- The regex maps should be on ctrl like grep. And then caps can be case sensitive
 
 LOW
 
 - Filter anything without a line/col number
+
+DOCUMENT
+
+- Filter smartcase respects the smartcase opt
 
 ----------------
 --- FTPLUGIN ---
