@@ -249,47 +249,37 @@ local function filter_remove_emu_regex(item, pattern, opts)
     return (not ((f_start and f_fin) or (t_start and t_fin))) and true or false
 end
 
-local keep_filter = "Enter pattern to keep: "
-local qf_emu_keep = function()
-    M.qf_filter_wrapper(keep_filter, filter_keep_emu)
-end
-vim.keymap.set("n", "<leader>qkl", qf_emu_keep)
+vim.keymap.set("n", "<leader>qkl", function()
+    M.qf_filter_wrapper("Enter pattern to keep: ", filter_keep_emu)
+end)
 
-local ll_emu_keep = function()
-    M.ll_filter_wrapper(keep_filter, filter_keep_emu)
-end
-vim.keymap.set("n", "<leader>lkl", ll_emu_keep)
+vim.keymap.set("n", "<leader>lkl", function()
+    M.ll_filter_wrapper("Enter pattern to keep: ", filter_keep_emu)
+end)
 
-local rm_filter = "Enter pattern to remove: "
-local qf_emu_rem = function()
-    M.qf_filter_wrapper(rm_filter, filter_remove_emu)
-end
-vim.keymap.set("n", "<leader>qrl", qf_emu_rem)
+vim.keymap.set("n", "<leader>qrl", function()
+    M.qf_filter_wrapper("Enter pattern to remove: ", filter_remove_emu)
+end)
 
-local ll_emu_rem = function()
-    M.ll_filter_wrapper(rm_filter, filter_remove_emu)
-end
-vim.keymap.set("n", "<leader>lrl", ll_emu_rem)
+vim.keymap.set("n", "<leader>lrl", function()
+    M.ll_filter_wrapper("Enter pattern to remove: ", filter_remove_emu)
+end)
 
-local qf_emu_keep_regex = function()
+vim.keymap.set("n", "<leader>qkL", function()
     M.qf_filter_wrapper("Enter pattern to keep (Regex): ", filter_keep_emu_regex)
-end
-vim.keymap.set("n", "<leader>qkL", qf_emu_keep_regex)
+end)
 
-local ll_emu_keep_regex = function()
+vim.keymap.set("n", "<leader>lkL", function()
     M.ll_filter_wrapper("Enter pattern to keep (Regex): ", filter_keep_emu_regex)
-end
-vim.keymap.set("n", "<leader>lkL", ll_emu_keep_regex)
+end)
 
-local qf_emu_rem_regex = function()
+vim.keymap.set("n", "<leader>qrL", function()
     M.qf_filter_wrapper("Enter pattern to remove (Regex): ", filter_remove_emu_regex)
-end
-vim.keymap.set("n", "<leader>qrL", qf_emu_rem_regex)
+end)
 
-local ll_emu_rem_regex = function()
+vim.keymap.set("n", "<leader>lrL", function()
     M.ll_filter_wrapper("Enter pattern to remove (Regex): ", filter_remove_emu_regex)
-end
-vim.keymap.set("n", "<leader>lrL", ll_emu_rem_regex)
+end)
 
 --------------
 -- Filename --
@@ -365,47 +355,37 @@ local function filter_remove_fname_regex(item, pattern, opts)
     return keep
 end
 
-local keep_msg = "Enter filename to keep: "
-local qf_fname_keep = function()
-    M.qf_filter_wrapper(keep_msg, filter_keep_fname)
-end
-vim.keymap.set("n", "<leader>qkf", qf_fname_keep)
+vim.keymap.set("n", "<leader>qkf", function()
+    M.qf_filter_wrapper("Enter filename to keep: ", filter_keep_fname)
+end)
 
-local ll_fname_keep = function()
-    M.ll_filter_wrapper(keep_msg, filter_keep_fname)
-end
-vim.keymap.set("n", "<leader>lkf", ll_fname_keep)
+vim.keymap.set("n", "<leader>lkf", function()
+    M.ll_filter_wrapper("Enter filename to keep: ", filter_keep_fname)
+end)
 
-local rm_msg = "Enter filename to remove: "
-local qf_fname_rem = function()
-    M.qf_filter_wrapper(rm_msg, filter_remove_fname)
-end
-vim.keymap.set("n", "<leader>qrf", qf_fname_rem)
+vim.keymap.set("n", "<leader>qrf", function()
+    M.qf_filter_wrapper("Enter filename to remove: ", filter_remove_fname)
+end)
 
-local ll_fname_rem = function()
-    M.ll_filter_wrapper(rm_msg, filter_remove_fname)
-end
-vim.keymap.set("n", "<leader>lrf", ll_fname_rem)
+vim.keymap.set("n", "<leader>lrf", function()
+    M.ll_filter_wrapper("Enter filename to remove: ", filter_remove_fname)
+end)
 
-local qf_fname_keep_regex = function()
+vim.keymap.set("n", "<leader>qkF", function()
     M.qf_filter_wrapper("Enter filename to keep (Regex): ", filter_keep_fname_regex)
-end
-vim.keymap.set("n", "<leader>qkF", qf_fname_keep_regex)
+end)
 
-local ll_fname_keep_regex = function()
+vim.keymap.set("n", "<leader>lkF", function()
     M.ll_filter_wrapper("Enter filename to keep (Regex): ", filter_keep_fname_regex)
-end
-vim.keymap.set("n", "<leader>lkF", ll_fname_keep_regex)
+end)
 
-local qf_fname_rem_regex = function()
+vim.keymap.set("n", "<leader>qrF", function()
     M.qf_filter_wrapper("Enter filename to remove (Regex): ", filter_remove_fname_regex)
-end
-vim.keymap.set("n", "<leader>qrF", qf_fname_rem_regex)
+end)
 
-local ll_fname_rem_regex = function()
+vim.keymap.set("n", "<leader>lrF", function()
     M.ll_filter_wrapper("Enter filename to remove (Regex): ", filter_remove_fname_regex)
-end
-vim.keymap.set("n", "<leader>lrF", ll_fname_rem_regex)
+end)
 
 ----------
 -- Text --
@@ -461,45 +441,37 @@ local function filter_remove_text_regex(item, pattern, opts)
     return keep
 end
 
-local qf_txt_keep = function()
+vim.keymap.set("n", "<leader>qke", function()
     M.qf_filter_wrapper("Enter text to keep: ", filter_keep_text)
-end
-vim.keymap.set("n", "<leader>qke", qf_txt_keep)
+end)
 
-local ll_txt_keep = function()
+vim.keymap.set("n", "<leader>lke", function()
     M.ll_filter_wrapper("Enter text to keep: ", filter_keep_text)
-end
-vim.keymap.set("n", "<leader>lke", ll_txt_keep)
+end)
 
-local qf_txt_rem = function()
+vim.keymap.set("n", "<leader>qre", function()
     M.qf_filter_wrapper("Enter text to remove: ", filter_remove_text)
-end
-vim.keymap.set("n", "<leader>qre", qf_txt_rem)
+end)
 
-local ll_txt_rem = function()
+vim.keymap.set("n", "<leader>lre", function()
     M.ll_filter_wrapper("Enter text to remove: ", filter_remove_text)
-end
-vim.keymap.set("n", "<leader>lre", ll_txt_rem)
+end)
 
-local qf_txt_keep_regex = function()
+vim.keymap.set("n", "<leader>qkE", function()
     M.qf_filter_wrapper("Enter text to keep (Regex): ", filter_keep_text_regex)
-end
-vim.keymap.set("n", "<leader>qkE", qf_txt_keep_regex)
+end)
 
-local ll_txt_keep_regex = function()
+vim.keymap.set("n", "<leader>lkE", function()
     M.ll_filter_wrapper("Enter text to keep (Regex): ", filter_keep_text_regex)
-end
-vim.keymap.set("n", "<leader>lkE", ll_txt_keep_regex)
+end)
 
-local qf_txt_rem_regex = function()
+vim.keymap.set("n", "<leader>qrE", function()
     M.qf_filter_wrapper("Enter text to remove (Regex): ", filter_remove_text_regex)
-end
-vim.keymap.set("n", "<leader>qrE", qf_txt_rem_regex)
+end)
 
-local ll_txt_rem_regex = function()
+vim.keymap.set("n", "<leader>lrE", function()
     M.ll_filter_wrapper("Enter text to remove (Regex): ", filter_remove_text_regex)
-end
-vim.keymap.set("n", "<leader>lrE", ll_txt_rem_regex)
+end)
 
 ----------
 -- Type --
@@ -555,45 +527,37 @@ local function filter_remove_type_regex(item, pattern, opts)
     return keep
 end
 
-local qf_typ_keep = function()
+vim.keymap.set("n", "<leader>qkt", function()
     M.qf_filter_wrapper("Enter type to keep: ", filter_keep_type)
-end
-vim.keymap.set("n", "<leader>qkt", qf_typ_keep)
+end)
 
-local ll_typ_keep = function()
+vim.keymap.set("n", "<leader>lkt", function()
     M.ll_filter_wrapper("Enter type to keep: ", filter_keep_type)
-end
-vim.keymap.set("n", "<leader>lkt", ll_typ_keep)
+end)
 
-local qf_typ_rem = function()
+vim.keymap.set("n", "<leader>qrt", function()
     M.qf_filter_wrapper("Enter type to remove: ", filter_remove_type)
-end
-vim.keymap.set("n", "<leader>qrt", qf_typ_rem)
+end)
 
-local ll_typ_rem = function()
+vim.keymap.set("n", "<leader>lrt", function()
     M.ll_filter_wrapper("Enter type to remove: ", filter_remove_type)
-end
-vim.keymap.set("n", "<leader>lrt", ll_typ_rem)
+end)
 
-local qf_typ_keep_regex = function()
+vim.keymap.set("n", "<leader>qkT", function()
     M.qf_filter_wrapper("Enter type to keep (Regex): ", filter_keep_type_regex)
-end
-vim.keymap.set("n", "<leader>qkT", qf_typ_keep_regex)
+end)
 
-local ll_typ_keep_regex = function()
+vim.keymap.set("n", "<leader>lkT", function()
     M.ll_filter_wrapper("Enter type to keep (Regex): ", filter_keep_type_regex)
-end
-vim.keymap.set("n", "<leader>lkT", ll_typ_keep_regex)
+end)
 
-local qf_typ_rem_regex = function()
+vim.keymap.set("n", "<leader>qrT", function()
     M.qf_filter_wrapper("Enter type to remove (Regex): ", filter_remove_type_regex)
-end
-vim.keymap.set("n", "<leader>qrT", qf_typ_rem_regex)
+end)
 
-local ll_typ_rem_regex = function()
+vim.keymap.set("n", "<leader>lrT", function()
     M.ll_filter_wrapper("Enter type to remove (Regex): ", filter_remove_type_regex)
-end
-vim.keymap.set("n", "<leader>lrT", ll_typ_rem_regex)
+end)
 
 -----------------
 -- Line Number --
@@ -649,45 +613,36 @@ local function filter_remove_lnum_regex(item, pattern, opts)
     return keep
 end
 
-local qf_lnum_keep = function()
+vim.keymap.set("n", "<leader>qkn", function()
     M.qf_filter_wrapper("Enter line number to keep: ", filter_keep_lnum)
-end
-vim.keymap.set("n", "<leader>qkn", qf_lnum_keep)
+end)
 
-local ll_lnum_keep = function()
+vim.keymap.set("n", "<leader>lkn", function()
     M.ll_filter_wrapper("Enter line number to keep: ", filter_keep_lnum)
-end
-vim.keymap.set("n", "<leader>lkn", ll_lnum_keep)
+end)
 
-local lnum_rm = "Enter line number to remove: "
-local qf_lnum_rem = function()
-    M.qf_filter_wrapper(lnum_rm, filter_remove_lnum)
-end
-vim.keymap.set("n", "<leader>qrn", qf_lnum_rem)
+vim.keymap.set("n", "<leader>qrn", function()
+    M.qf_filter_wrapper("Enter line number to remove: ", filter_remove_lnum)
+end)
 
-local ll_lnum_rem = function()
-    M.ll_filter_wrapper(lnum_rm, filter_remove_lnum)
-end
-vim.keymap.set("n", "<leader>lrn", ll_lnum_rem)
+vim.keymap.set("n", "<leader>lrn", function()
+    M.ll_filter_wrapper("Enter line number to remove: ", filter_remove_lnum)
+end)
 
-local qf_lnum_keep_regex = function()
+vim.keymap.set("n", "<leader>qkN", function()
     M.qf_filter_wrapper("Enter line number to keep (Regex): ", filter_keep_lnum_regex)
-end
-vim.keymap.set("n", "<leader>qkN", qf_lnum_keep_regex)
+end)
 
-local ll_lnum_keep_regex = function()
+vim.keymap.set("n", "<leader>lkN", function()
     M.ll_filter_wrapper("Enter line number to keep (Regex): ", filter_keep_lnum_regex)
-end
-vim.keymap.set("n", "<leader>lkN", ll_lnum_keep_regex)
+end)
 
-local qf_lnum_rem_regex = function()
+vim.keymap.set("n", "<leader>qrN", function()
     M.qf_filter_wrapper("Enter line number to remove (Regex): ", filter_remove_lnum_regex)
-end
-vim.keymap.set("n", "<leader>qrN", qf_lnum_rem_regex)
+end)
 
-local ll_lnum_rem_regex = function()
+vim.keymap.set("n", "<leader>lrN", function()
     M.ll_filter_wrapper("Enter line number to remove (Regex): ", filter_remove_lnum_regex)
-end
-vim.keymap.set("n", "<leader>lrN", ll_lnum_rem_regex)
+end)
 
 return M
