@@ -269,6 +269,66 @@ nxmap("<leader>lG<C-d>", "<Plug>(qf-rancher-lgrep-helpX-r)", lghelpXr_desc)
 local lghelpXa_desc = "Grep the docs (with regex), add to loclist"
 nxmap("<leader>l<C-g><C-d>", "<Plug>(qf-rancher-lgrep-helpX-a)", lghelpXa_desc)
 
+pnxmap("<Plug>(qf-rancher-grep-bufs-n)", "<Plug> Grep the BUFS, new qflist", function()
+    eg.grep_bufs_n()
+end)
+
+pnxmap("<Plug>(qf-rancher-grep-bufs-r)", "<Plug> Grep the BUFS, replace qflist", function()
+    eg.grep_bufs_r()
+end)
+
+pnxmap("<Plug>(qf-rancher-grep-bufs-a)", "<Plug> Grep the BUFS, add to qflist", function()
+    eg.grep_bufs_a()
+end)
+
+nxmap("<leader>qgd", "<Plug>(qf-rancher-grep-bufs-n)", "Grep the BUFS, new qflist")
+nxmap("<leader>qGd", "<Plug>(qf-rancher-grep-bufs-r)", "Grep the BUFS, replace qflist")
+nxmap("<leader>q<C-g>d", "<Plug>(qf-rancher-grep-bufs-a)", "Grep the BUFS, add to qflist")
+
+local pgBUFSn_desc = "<Plug> Grep the BUFS (case-sensitive), new qflist"
+pnxmap("<Plug>(qf-rancher-grep-BUFS-n)", pgBUFSn_desc, function()
+    eg.grep_BUFS_n()
+end)
+
+local pgBUFSr_desc = "<Plug> Grep the BUFS (case-sensitive), replace qflist"
+pnxmap("<Plug>(qf-rancher-grep-BUFS-r)", pgBUFSr_desc, function()
+    eg.grep_BUFS_r()
+end)
+
+local pgBUFSa_desc = "<Plug> Grep the BUFS (case-sensitive), add to qflist"
+pnxmap("<Plug>(qf-rancher-grep-BUFS-a)", pgBUFSa_desc, function()
+    eg.grep_BUFS_a()
+end)
+
+local gBUFSn_desc = "Grep the BUFS (case-sensitive), new qflist"
+nxmap("<leader>qgD", "<Plug>(qf-rancher-grep-BUFS-n)", gBUFSn_desc)
+local gBUFSr_desc = "Grep the BUFS (case-sensitive), replace qflist"
+nxmap("<leader>qGU", "<Plug>(qf-rancher-grep-BUFS-r)", gBUFSr_desc)
+local gBUFSa_desc = "Grep the BUFS (case-sensitive), add to qflist"
+nxmap("<leader>q<C-g>U", "<Plug>(qf-rancher-grep-BUFS-a)", gBUFSa_desc)
+
+local pgbufsXn_desc = "<Plug> Grep the bufsX (case-sensitive), new qflist"
+pnxmap("<Plug>(qf-rancher-grep-bufsX-n)", pgbufsXn_desc, function()
+    eg.grep_bufsX_n()
+end)
+
+local pgbufsXr_desc = "<Plug> Grep the bufsX (with regex), replace qflist"
+pnxmap("<Plug>(qf-rancher-grep-bufsX-r)", pgbufsXr_desc, function()
+    eg.grep_bufsX_r()
+end)
+
+local pgbufsXa_desc = "<Plug> Grep the bufsX (with regex), add to qflist"
+pnxmap("<Plug>(qf-rancher-grep-bufsX-a)", pgbufsXa_desc, function()
+    eg.grep_bufsX_a()
+end)
+
+local gbufsXn_desc = "Grep the bufsX (with regex), new qflist"
+nxmap("<leader>qg<C-u>", "<Plug>(qf-rancher-grep-bufsX-n)", gbufsXn_desc)
+local gbufsXr_desc = "Grep the bufsX (with regex), replace qflist"
+nxmap("<leader>qG<C-u>", "<Plug>(qf-rancher-grep-bufsX-r)", gbufsXr_desc)
+local gbufsXa_desc = "Grep the bufsX (with regex), add to qflist"
+nxmap("<leader>q<C-g><C-u>", "<Plug>(qf-rancher-grep-bufsX-a)", gbufsXa_desc)
+
 -------------------------
 --- OPEN_CLOSE_TOGGLE ---
 -------------------------
