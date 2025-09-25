@@ -1,10 +1,3 @@
--- TODO: Map this to <leader>- along with the Rust and go mappings
--- TODO: But then how to map in insert mode? Would be good to have an "insert leader" key that
--- can be used to get into other mappings
--- This is purely a userspace mapping
--- TODO: Add --- as a valid comment string
--- TODO: Do a map in here for comment headings
-
 local ut = require("mjm.utils")
 
 ---@param annotation string

@@ -108,7 +108,6 @@ SetOpt("shiftround", true, global_scope)
 -- https://github.com/neovim/neovim/issues/35575
 -- Issue is better after this pull request, but not resolve. In this file I can see some
 -- global scope settings still whited out.
--- TODO: Test this again with a minimal config
 -- SetOpt("wrap", false, global_scope)
 -- For fts where opt_local wrap is true
 SetOpt("breakindent", true, global_scope)

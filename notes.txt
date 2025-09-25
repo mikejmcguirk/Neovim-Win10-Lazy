@@ -1,0 +1,76 @@
+------------
+--- TODO ---
+------------
+
+- Try mapping <C-c> to escape in replace mode so that we don't accidently input those literal characters
+- Create keymappings to open and close tabs. Cannot use <M-tab> because windows
+- Look into how to autogenerate vimdoc
+- Remove all <C-s> and <M-s> mappings
+- Mini.operators has a check for seeing if keymaps exist. Use that for the LSP deletes, and wherever else it's appropriate
+- Test the highlighter failure issue again. Can see breakage in global_settings.lua, but need updated minimal repro. Wrap setting has more info
+- Figure out a "leader" mapping that can be used in insert mode
+- Create a diagnostic settings mapping to show errors only or top severity only
+- A \ map to show config status
+- Move getting top severity to the updated function
+- Add --- as a valid lua comment string
+- Create mappings for comment headings
+- Look for any get_var code and use the built-in dict accessors
+- Figure out how to open FzfLua in a vsplit
+- Look into how to make the built-in LSP commands always send to the qflist. Looks like there's an
+"on list" opt that handles this
+- The gW LSP map feels like it can be mapped to grw instead. Opens up the gw/gW namespace for other things
+- Do more testing on lockmarks/Conform behavior
+- tmux-navigation does not work in FzfLua prompt buffers
+- Test lazy tab mappings with mksession
+- Look into how the jump list works, including options, so we can customize what types of jumps add to it. Obvious
+example - j/k jumps over a certain length should go into the jumplist
+- After mapping FzfLua to gi, where do the default gi/gI mappings go? What about my custom screenlinewise start of line mapping?
+- Why do I get cmdline flicker if I do it before entering the first real buf? Was thinking its the onCmdLine maps, but it doesn't happen if you do it for the first time in a real buf
+- Move Fugitive to gg mappings
+
+-------------
+--- MAYBE ---
+-------------
+
+- Get a C LSP for reading code
+- SSH Clipboard config - https://github.com/tjdevries/config.nvim/blob/master/plugin/clipboard.lua
+
+-----------
+--- LOW ---
+-----------
+
+- Look into why [s]s works in some buffer types but not others. Is this configuable?
+- Why do Semantic Tokens not trigger properly after LazyDev does a workspace update?
+- Unwind lazy plugin loading where possible
+
+--------------
+--- FUTURE ---
+--------------
+
+- Look into emmylua
+
+-----------
+--- PRS ---
+-----------
+
+- Fix the "missing fields" errors in the nvim_cmd keysets
+
+------------------------
+--- DOTFILE STALKING ---
+------------------------
+
+-- https://github.com/folke/dot/tree/master/nvim
+-- https://github.com/stevearc/dotfiles/tree/master/.config/nvim
+-- https://github.com/b0o/nvim-conf/tree/main
+
+-----------------
+--- RESOURCES ---
+-----------------
+
+- https://github.com/tjdevries/lazy-require.nvim
+
+-------------------
+--- OTHER NOTES ---
+-------------------
+
+- export NVIM_APPNAME=some-other-thing will make the config .config/some-other-thing

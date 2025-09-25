@@ -1,13 +1,7 @@
--- TODO: Figure out how to open FzfLua outputs in a vsplit
--- TODO: Do the built-in commands have a way to always send to the qf/loclist?
--- In declaration at least, there's the on_list opt, which comes from a subfunction used across
--- a bunch of different commands. So it seems like that can be built
-
 local M = {}
 
 function M.del_defaults()
     -- No need to map these in non-LSP buffers
-    -- TODO: mini.operators has a check to see if certain maps exist before deleting them
     vim.keymap.del("n", "grn")
     vim.keymap.del("n", "gra")
     vim.keymap.del("n", "grr")
@@ -219,8 +213,6 @@ function M.set_lsp_maps(ev, cmds)
 
     --- workspace/symbol ---
     -- Kickstart mapping
-    -- TODO: Think about this one. If we did grw, that gives us grw and grW. kickstart is the
-    -- only place I've seen this. Not that widespread?
     Map("n", "gW", cmds.workspace, { buffer = buf })
 
     --- Other ---

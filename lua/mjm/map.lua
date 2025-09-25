@@ -1,6 +1,3 @@
--- TODO: Remove all <C-S> and <M-S> mappings
--- TODO: Look at how Neovim auto-generates its docs from strings
-
 local noremap = { noremap = true }
 
 -------------
@@ -27,8 +24,6 @@ end, { expr = true, silent = true })
 -------------------------
 -- Saving and Quitting --
 -------------------------
-
--- TODO: Do more testing on lockmarks/conform behavior
 
 -- Works for Z because all default functionality is overwritten
 Map("n", "Z", "<nop>")
@@ -115,7 +110,6 @@ end
 ---@param nvim_cmd string
 ---@return nil
 local win_move_tmux = function(nvim_cmd)
-    -- TODO: How to make this work in fzflua search
     if vim.api.nvim_get_option_value("buftype", { buf = 0 }) == "prompt" then
         do_tmux_move(nvim_cmd)
         return
@@ -193,10 +187,6 @@ ApiMap("n", "<M-l>", "<nop>", {
 ApiMap("n", "<C-w>c", "<nop>", { noremap = true })
 ApiMap("n", "<C-w><C-c>", "<nop>", { noremap = true })
 
--- TODO: Need a map to make and close tabs
--- Note that, because Windows, <M-tab> is a no go
--- Relies on a terminal protocol that can send <C-i> and <tab> separately
--- LOW: Test this with mksession
 Autocmd("TabNew", {
     group = Augroup("map-tab-navigation", { clear = true }),
     once = true,
@@ -233,9 +223,6 @@ Autocmd("TabNew", {
 
 -- d is used in diagnostic.lua
 
--- TODO: Unsure where the issue is, but for filetypes where I don't have spell on by default,
--- doing this does not allow the [s]s keys to work. Doesn't even work with set spell. But it's
--- doing something because [s]s produces an error if spell is off, and the error doesn't appear
 ApiMap("n", "\\s", "<nop>", {
     noremap = true,
     callback = function()
@@ -251,9 +238,6 @@ ApiMap("n", "\\w", "<nop>", {
         vim.api.nvim_set_option_value("wrap", not is_wrap, { win = 0 })
     end,
 })
-
--- TODO: The Old "Lazy Keymaps" are below. Some of this can indeed be hidden behind an autocmd, but
--- that actually needs to be gone through
 
 --- LOW: An operator that copies text to a line. The first count would be the line to goto, and the
 --- second count would be the motion. So you would do 14gz3j to move 3j lines to line 14
@@ -276,10 +260,6 @@ Map("n", "V", "mvV", { silent = true })
 -- Navigation --
 ----------------
 
--- TODO:
--- For jumps (here and gj/gk), jumps under a certain amount should not affect the jumplist
--- Jumps over a certain amount should
--- I'm not sure what options there are to respect here though
 Map({ "n", "x" }, "k", function()
     if vim.v.count == 0 then
         return "gk"
@@ -399,7 +379,6 @@ local function map_on_bufreadpre()
     --------------------
 
     -- Mapping <C-c> to <esc> in cmd mode causes <C-C> to accept commands rather than cancel them
-    -- TODO: Test mapping <C-c> to <esc> in replace mode to avoid inserting <C-c> literals
 
     -- Deal with default behavior where you type just to the bound of a window, so Nvim scrolls to
     -- the next column so you can see what you're typing, but then you exit insert mode, meaning
@@ -421,7 +400,6 @@ local function map_on_bufreadpre()
         })
     end
 
-    -- TODO: Where does this go when FzfLua is mapped to gi? <M-i>?
     ApiMap("n", "gI", "g^i", noremap)
     -- NOTE: At least for now, keep the default gR mapping
     ApiMap("n", "<M-r>", "gr", noremap)

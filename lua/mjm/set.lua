@@ -1,7 +1,3 @@
--- LOW: SSH clipboard config
--- https://github.com/tjdevries/config.nvim/blob/master/plugin/clipboard.lua
--- MAYBE: vim.g.deprecation_warnings = true -- Pre-silence deprecation warnings
-
 require("mjm.global_settings")
 
 -------------------
@@ -42,8 +38,6 @@ end
 -- Can't disable at the token level because it's the root of function globals
 SetHl(0, "@lsp.type.function.lua", {})
 
--- MAYBE: Disable the default highlight constants and use a custom query so we aren't grabbing
--- stuff like require
 Autocmd("FileType", {
     group = vim.api.nvim_create_augroup("lua-disable-captures", { clear = true }),
     pattern = "lua",
@@ -71,7 +65,6 @@ Autocmd("FileType", {
 local token_nop_lua = {
     "comment", -- Treesitter handles
     "method", -- Treesitter handles
-    -- TODO: Check this with a class like the TSHighlighter
     "property", -- Can just be fg
 } --- @type string[]
 
@@ -218,9 +211,6 @@ Autocmd("LspAttach", {
 --- Treesitter Interaction ---
 ------------------------------
 
--- TODO: When treesitter is on, [s]s work for some buffers but not others. This feels like
--- intended behavior, but how to modify?
-
 Map("n", "gtt", function()
     if vim.treesitter.highlighter.active[vim.api.nvim_get_current_buf()] then
         vim.treesitter.stop()
@@ -309,17 +299,12 @@ ApiMap("n", "\\d", "<nop>", {
     end,
 })
 
--- TODO: map to show err only or top severity only
--- TODO: map to show config status. should apply to other \ maps as well
 Map("n", "\\D", function()
     local cur_cfg = vim.diagnostic.config() or {}
     vim.diagnostic.config((not cur_cfg.virtual_lines) and diag_lines_cfg or diag_text_cfg)
 end)
 
 local function on_bufreadpre()
-    -- TODO: Is it possible to get out of the current top_severity function? The problem is it
-    -- doesn't actually save us a diagnostic_get in this case
-
     Map("n", "[<C-d>", function()
         vim.diagnostic.jump({
             count = -vim.v.count1,
@@ -334,9 +319,7 @@ local function on_bufreadpre()
         })
     end)
 
-    -- For whatever reason, [D/]D on my computer cause Neovim to lock up. Even when just using
-    -- large numbers for count, they don't reliably find the top and bottom diag. Instead, just
-    -- search for the first/last diag manually and jump to it
+    -- [D/]D cause my computer to lockup
     local function get_first_or_last_diag(opts)
         opts = opts or {}
         local diagnostics = opts.severity and vim.diagnostic.get(0, { severity = opts.severity })
@@ -382,8 +365,6 @@ local function on_bufreadpre()
         end
     end)
 
-    -- TODO: Potentially better case for using the updated severity filtering
-
     Map("n", "[<M-d>", function()
         local severity = require("mjm.utils").get_top_severity({ buf = 0 })
         local diagnostic = get_first_or_last_diag({ severity = severity })
@@ -417,10 +398,6 @@ Autocmd({ "BufReadPre", "BufNewFile" }, {
 ---------
 -- LSP --
 ---------
-
--- TODO: Consider getting a C lsp for reading code. I think clang is the one everyone uses
--- LOW: Weird Issue where workspace update is triggered due to FzfLua require, and Semantic
--- Tokens do not consistently refresh afterwards
 
 vim.lsp.log.set_level(vim.log.levels.ERROR)
 
@@ -470,8 +447,6 @@ vim.lsp.enable({
     "cssls",
     "html",
     --- Lua ---
-    -- FUTURE: This might be the way
-    -- https://old.reddit.com/r/neovim/comments/1mdtr4g/emmylua_ls_is_supersnappy/
     "lua_ls",
     --- Python ---
     -- Ruff is not feature-complete enough to replace pylsp

@@ -92,12 +92,6 @@ local eager_loaded = vim.uv.hrtime()
 -- Lazy Initialization --
 -------------------------
 
--- LOW: Want to unwind this, as this isn't really how the startup is supposed to work. In practice
--- though, it's going to be a question of impact on startup time. Something like jump2d is
--- probably fine to do during startup, because it only requires one file. Whereas if a plugin's
--- setup function recursively requires a bunch of files, then hack the startup we must
--- More specifically, for any plugin that's manually lazy loaded, there should be a commented
--- reason why, rather than lazy loading being the default assumption
 require("mjm.plugins.autopairs")
 require("mjm.plugins.blink")
 require("mjm.plugins.conform")
