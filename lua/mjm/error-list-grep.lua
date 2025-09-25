@@ -42,11 +42,11 @@ local function get_findstr_cmd_parts(pattern, location, opts)
     end
 
     -- Recursive, line num, offset, skip non-printable
-    local cmd = { "findstr", "/S", "/N", "/O", "/P" }
+    local cmd = { "findstr", "/S", "/N", "/O", "/P" } --- @type string[]
 
     opts = opts or {}
     if opts.smart_case then
-        local has_upper = false
+        local has_upper = false --- @type boolean
         for _, p in ipairs(pattern) do
             if p:match("%u") then
                 has_upper = true
@@ -91,11 +91,11 @@ local function get_grep_cmd_parts(pattern, location, opts)
     end
 
     --- recursive search, print filenames, ignore binary files, print line numbers
-    local cmd = { "grep", "-rHIn" }
+    local cmd = { "grep", "-rHIn" } --- @type string[]
 
     opts = opts or {}
     if opts.smart_case then
-        local has_upper = false
+        local has_upper = false --- @type boolean
         for _, p in ipairs(pattern) do
             if p:match("%u") then
                 has_upper = true
@@ -116,7 +116,7 @@ local function get_grep_cmd_parts(pattern, location, opts)
 
     table.insert(cmd, "--") --- no more flags
 
-    local pat_str = #pattern > 1 and table.concat(pattern, "|") or pattern[1]
+    local pat_str = #pattern > 1 and table.concat(pattern, "|") or pattern[1] --- @type string
     table.insert(cmd, pat_str)
 
     vim.list_extend(cmd, location)
@@ -162,7 +162,6 @@ local function get_rg_cmd_parts(pattern, location, opts)
     local newline = opts.literal and "\n" or "\\n" --- @type string
     local pat_str = #pattern > 1 and table.concat(pattern, newline) or pattern[1] --- @type string
     table.insert(cmd, pat_str)
-
     vim.list_extend(cmd, location)
 
     return true, cmd
@@ -296,10 +295,12 @@ local function get_grep_parts(grep_location, prompt, grep_opts)
         return false, nil
     end
 
+    --- @type string
     local disp_pattern = #raw_pat > 1 and table.concat(raw_pat, " | ") or raw_pat[1]
+    --- @type string
     local disp_location = #grep_location == 1 and vim.fn.fnamemodify(grep_location[1], ":t")
         or (#grep_location .. " files")
-    local title = string.format('Grep "%s" in %s', disp_pattern, disp_location)
+    local title = string.format('Grep "%s" in %s', disp_pattern, disp_location) --- @type string
 
     return true, { cmd_parts = cmd_parts, title = title }
 end

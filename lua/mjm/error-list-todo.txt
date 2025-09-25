@@ -12,6 +12,7 @@ when certain maps need to be required at all
 - I think we use qQ as our view or jump, rather than q<C-q>. Merge the two in nav action and stack
 - I have the maps file as a separate file for now simply for sanity, but in order to save a
 require it might be best to just put it in plugin.lua
+- Purely internal stuff should not involve error handling
 
 ---------------------
 --- DOCUMENTATION ---
