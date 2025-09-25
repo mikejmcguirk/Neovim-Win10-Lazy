@@ -412,37 +412,37 @@ function M.lgrep_CWD_a()
 end
 
 --- @return boolean, QfRancherSystemIn
-local function grep_cwdX()
-    return get_grep_parts(get_cwd_tbl, "CWD Grep (regex): ")
-end
-
--- local function grep_cwdX(sys_opts)
---     do_grep(get_cwd_tbl, "CWD Grep (regex): ", {}, sys_opts or {})
+-- local function grep_cwdX()
+--     return get_grep_parts(get_cwd_tbl, "CWD Grep (regex): ")
 -- end
 
-vim.keymap.set({ "n", "x" }, "<leader>qg<C-d>", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_cwdX, grep_n)
-end)
+local function grep_cwdX(sys_opts)
+    do_grep(get_cwd_tbl, "CWD Grep (regex): ", {}, sys_opts or {})
+end
 
-vim.keymap.set({ "n", "x" }, "<leader>qG<C-d>", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_cwdX, grep_r)
-end)
+function M.grep_cwdX_n()
+    grep_cwdX(grep_n)
+end
 
-vim.keymap.set({ "n", "x" }, "<leader>q<C-g><C-d>", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_cwdX, grep_a)
-end)
+function M.grep_cwdX_r()
+    grep_cwdX(grep_r)
+end
 
-vim.keymap.set({ "n", "x" }, "<leader>lg<C-d>", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_cwdX, lgrep_n)
-end)
+function M.grep_cwdX_a()
+    grep_cwdX(grep_a)
+end
 
-vim.keymap.set({ "n", "x" }, "<leader>lG<C-d>", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_cwdX, lgrep_r)
-end)
+function M.lgrep_cwdX_n()
+    grep_cwdX(lgrep_n)
+end
 
-vim.keymap.set({ "n", "x" }, "<leader>l<C-g><C-d>", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_cwdX, lgrep_a)
-end)
+function M.lgrep_cwdX_r()
+    grep_cwdX(lgrep_r)
+end
+
+function M.lgrep_cwdX_a()
+    grep_cwdX(lgrep_a)
+end
 
 --- @type QfRancherGrepLocFun
 local function get_helpdirs()

@@ -97,17 +97,60 @@ pnxmap("<Plug>(qf-rancher-lgrep-CWD-a)", plgCWDa_desc, function()
     eg.lgrep_CWD_a()
 end)
 
-nxmap("<leader>qgd", "<Plug>(qf-rancher-grep-CWD-n)", "Grep the CWD (case-sensitive), new qflist")
+nxmap("<leader>qgD", "<Plug>(qf-rancher-grep-CWD-n)", "Grep the CWD (case-sensitive), new qflist")
 local gCWDr_desc = "Grep the CWD (case-sensitive), replace qflist"
-nxmap("<leader>qGd", "<Plug>(qf-rancher-grep-CWD-r)", gCWDr_desc)
+nxmap("<leader>qGD", "<Plug>(qf-rancher-grep-CWD-r)", gCWDr_desc)
 local gCWDa_desc = "Grep the CWD (case-sensitive), add to qflist"
-nxmap("<leader>q<C-g>d", "<Plug>(qf-rancher-grep-CWD-a)", gCWDa_desc)
+nxmap("<leader>q<C-g>D", "<Plug>(qf-rancher-grep-CWD-a)", gCWDa_desc)
 local lgCWDn_desc = "Grep the CWD (case-sensitive), new loclist"
-nxmap("<leader>lgd", "<Plug>(qf-rancher-lgrep-CWD-n)", lgCWDn_desc)
+nxmap("<leader>lgD", "<Plug>(qf-rancher-lgrep-CWD-n)", lgCWDn_desc)
 local lgCWDr_desc = "Grep the CWD (case-sensitive), replace loclist"
-nxmap("<leader>lGd", "<Plug>(qf-rancher-lgrep-CWD-r)", lgCWDr_desc)
+nxmap("<leader>lGD", "<Plug>(qf-rancher-lgrep-CWD-r)", lgCWDr_desc)
 local lgCWDa_desc = "Grep the CWD (case-sensitive), add to loclist"
-nxmap("<leader>l<C-g>d", "<Plug>(qf-rancher-lgrep-CWD-a)", lgCWDa_desc)
+nxmap("<leader>l<C-g>D", "<Plug>(qf-rancher-lgrep-CWD-a)", lgCWDa_desc)
+
+local pgcwdXn_desc = "<Plug> Grep the cwdX (case-sensitive), new qflist"
+pnxmap("<Plug>(qf-rancher-grep-cwdX-n)", pgcwdXn_desc, function()
+    eg.grep_cwdX_n()
+end)
+
+local pgcwdXr_desc = "<Plug> Grep the cwdX (with regex), replace qflist"
+pnxmap("<Plug>(qf-rancher-grep-cwdX-r)", pgcwdXr_desc, function()
+    eg.grep_cwdX_r()
+end)
+
+local pgcwdXa_desc = "<Plug> Grep the cwdX (with regex), add to qflist"
+pnxmap("<Plug>(qf-rancher-grep-cwdX-a)", pgcwdXa_desc, function()
+    eg.grep_cwdX_a()
+end)
+
+local plgcwdXn_desc = "<Plug> Grep the cwdX (with regex), new list"
+pnxmap("<Plug>(qf-rancher-lgrep-cwdX-n)", plgcwdXn_desc, function()
+    eg.lgrep_cwdX_n()
+end)
+
+local plgcwdXr_desc = "<Plug> Grep the cwdX (with regex), replace list"
+pnxmap("<Plug>(qf-rancher-lgrep-cwdX-r)", plgcwdXr_desc, function()
+    eg.lgrep_cwdX_r()
+end)
+
+local plgcwdXa_desc = "<Plug> Grep the cwdX (with regex), add to list"
+pnxmap("<Plug>(qf-rancher-lgrep-cwdX-a)", plgcwdXa_desc, function()
+    eg.lgrep_cwdX_a()
+end)
+
+local gcwdXn_desc = "Grep the cwdX (with regex), new qflist"
+nxmap("<leader>qg<C-d>", "<Plug>(qf-rancher-grep-cwdX-n)", gcwdXn_desc)
+local gcwdXr_desc = "Grep the cwdX (with regex), replace qflist"
+nxmap("<leader>qG<C-d>", "<Plug>(qf-rancher-grep-cwdX-r)", gcwdXr_desc)
+local gcwdXa_desc = "Grep the cwdX (with regex), add to qflist"
+nxmap("<leader>q<C-g><C-d>", "<Plug>(qf-rancher-grep-cwdX-a)", gcwdXa_desc)
+local lgcwdXn_desc = "Grep the cwdX (with regex), new loclist"
+nxmap("<leader>lg<C-d>", "<Plug>(qf-rancher-lgrep-cwdX-n)", lgcwdXn_desc)
+local lgcwdXr_desc = "Grep the cwdX (with regex), replace loclist"
+nxmap("<leader>lG<C-d>", "<Plug>(qf-rancher-lgrep-cwdX-r)", lgcwdXr_desc)
+local lgcwdXa_desc = "Grep the cwdX (with regex), add to loclist"
+nxmap("<leader>l<C-g><C-d>", "<Plug>(qf-rancher-lgrep-cwdX-a)", lgcwdXa_desc)
 
 -------------------------
 --- OPEN_CLOSE_TOGGLE ---
