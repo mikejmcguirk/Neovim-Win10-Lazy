@@ -635,7 +635,7 @@ function M.grep_bufsX_a()
 end
 
 --- @type QfRancherGrepLocFun
-local function get_cur_buf_fname()
+local function get_cur_buf()
     local buf = vim.api.nvim_get_current_buf() --- @type integer
 
     local buflisted = vim.api.nvim_get_option_value("buflisted", { buf = buf }) --- @type boolean
@@ -656,58 +656,58 @@ local function get_cur_buf_fname()
     return true, { fname }
 end
 
---- @return boolean, QfRancherSystemIn
-local function grep_cbuf()
-    local prompt = "Current Buf Grep: " --- @type string
-    return get_grep_parts(get_cur_buf_fname, prompt, { literal = true, smart_case = true })
+--- @param sys_opts QfRancherSystemOpts
+--- @return nil
+local function grep_cbuf(sys_opts)
+    do_grep(get_cur_buf, "Buf Grep: ", { literal = true, smart_case = true }, sys_opts or {})
 end
 
-vim.keymap.set({ "n", "x" }, "<leader>lgu", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_cbuf, lgrep_n)
-end)
-
-vim.keymap.set({ "n", "x" }, "<leader>lGu", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_cbuf, lgrep_r)
-end)
-
-vim.keymap.set({ "n", "x" }, "<leader>l<C-g>u", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_cbuf, lgrep_a)
-end)
-
---- @return boolean, QfRancherSystemIn
-local function grep_CBUF()
-    local prompt = "Current Buf Grep (case-sensitive): " --- @type string
-    return get_grep_parts(get_cur_buf_fname, prompt, { literal = true })
+function M.grep_cbuf_n()
+    grep_cbuf(lgrep_n)
 end
 
-vim.keymap.set({ "n", "x" }, "<leader>lgU", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_CBUF, lgrep_n)
-end)
-
-vim.keymap.set({ "n", "x" }, "<leader>lGU", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_CBUF, lgrep_r)
-end)
-
-vim.keymap.set({ "n", "x" }, "<leader>l<C-g>U", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_CBUF, lgrep_a)
-end)
-
---- @return boolean, QfRancherSystemIn
-local function grep_cbufX()
-    local prompt = "Current Buf Grep (regex): " --- @type string
-    return get_grep_parts(get_cur_buf_fname, prompt)
+function M.grep_cbuf_r()
+    grep_cbuf(lgrep_r)
 end
 
-vim.keymap.set({ "n", "x" }, "<leader>lg<C-u>", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_cbufX, lgrep_n)
-end)
+function M.grep_cbuf_a()
+    grep_cbuf(lgrep_a)
+end
 
-vim.keymap.set({ "n", "x" }, "<leader>lG<C-u>", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_cbufX, lgrep_r)
-end)
+--- @param sys_opts QfRancherSystemOpts
+--- @return nil
+local function grep_CBUF(sys_opts)
+    do_grep(get_cur_buf, "Buf Grep (case-sensitive): ", { literal = true }, sys_opts or {})
+end
 
-vim.keymap.set({ "n", "x" }, "<leader>l<C-g><C-u>", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_cbufX, lgrep_a)
-end)
+function M.grep_CBUF_n()
+    grep_CBUF(lgrep_n)
+end
+
+function M.grep_CBUF_r()
+    grep_CBUF(lgrep_r)
+end
+
+function M.grep_CBUF_a()
+    grep_CBUF(lgrep_a)
+end
+
+--- @param sys_opts QfRancherSystemOpts
+--- @return nil
+local function grep_cbufX(sys_opts)
+    do_grep(get_cur_buf, "Buf Grep (regex): ", {}, sys_opts or {})
+end
+
+function M.grep_cbufX_n()
+    grep_cbufX(lgrep_n)
+end
+
+function M.grep_cbufX_r()
+    grep_cbufX(lgrep_r)
+end
+
+function M.grep_cbufX_a()
+    grep_cbufX(lgrep_a)
+end
 
 return M
