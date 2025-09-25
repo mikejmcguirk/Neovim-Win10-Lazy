@@ -107,6 +107,7 @@ example - j/k jumps over a certain length should go into the jumplist
     --     vim.lsp.linked_editing_range.enable(true, { client_id = client.id })
     -- end
 - The Fzf dictionary pickers should merge results from all dictionaries
+- Stop using the Telescope preset in FzfLua
 
 -----------
 --- PRS ---

@@ -84,24 +84,21 @@ Map("n", "<leader>fu", fzf_lua.quickfix)
 Map("n", "<leader>fO", fzf_lua.loclist_stack)
 Map("n", "<leader>fU", fzf_lua.quickfix_stack)
 
-local buf_marks = function()
-    require("fzf-lua").marks({
+Map("n", "<leader>fm", function()
+    fzf_lua.marks({
         marks = '[a-z"]',
     })
-end
-
-Map("n", "<leader>fm", buf_marks)
+end)
 Map("n", "<leader>fM", fzf_lua.marks)
 Map("n", "<leader>fs", fzf_lua.spellcheck)
 
-local helptags = function()
+Map("n", "<leader>fh", function()
     fzf_lua.helptags({
         fzf_opts = {
             ["--tiebreak"] = "begin,chunk,length",
         },
     })
-end
-Map("n", "<leader>fh", helptags)
+end)
 
 local function fuzzy_dict()
     --- @diagnostic disable: undefined-field
