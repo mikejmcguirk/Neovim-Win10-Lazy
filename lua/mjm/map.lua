@@ -287,29 +287,27 @@ end, { expr = true })
 
 --- LOW: Use nvim_cmd
 -- Address cursorline flickering
+-- Purposefully does not implement the default count mechanic in <C-u>/<C-d>, as it is painful to
+-- accidently hit
 Map({ "n", "x" }, "<C-u>", function()
     vim.api.nvim_set_option_value("lz", true, { scope = "global" })
-
     local win = vim.api.nvim_get_current_win()
     local cul = vim.api.nvim_get_option_value("cul", { win = win })
     vim.api.nvim_set_option_value("cul", false, { win = win })
 
-    vim.cmd("norm! \21zz")
+    Cmd({ cmd = "normal", args = { "\21zz" }, bang = true }, {})
     vim.api.nvim_set_option_value("cul", cul, { win = win })
-
     vim.api.nvim_set_option_value("lz", false, { scope = "global" })
 end, { silent = true })
 
 Map({ "n", "x" }, "<C-d>", function()
     vim.api.nvim_set_option_value("lz", true, { scope = "global" })
-
     local win = vim.api.nvim_get_current_win()
     local cul = vim.api.nvim_get_option_value("cul", { win = win })
     vim.api.nvim_set_option_value("cul", false, { win = win })
 
-    vim.cmd("norm! \4zz")
+    Cmd({ cmd = "normal", args = { "\4zz" }, bang = true }, {})
     vim.api.nvim_set_option_value("cul", cul, { win = win })
-
     vim.api.nvim_set_option_value("lz", false, { scope = "global" })
 end, { silent = true })
 
