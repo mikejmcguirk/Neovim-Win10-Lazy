@@ -105,7 +105,7 @@ local function setup_blink()
             },
         },
 
-        -- PR: If the sources option is a function, and dictionary is one of the possible sources,
+        -- If the sources option is a function, and dictionary is one of the possible sources,
         -- what can happen is that the dictionary can spawn an fzf process that is not closed.
         -- The easiest way to observe this is by typing "let's" repeatedly. This issue seems to
         -- occur when the dictionary runs out of sources. Even without the dynamic source config,
@@ -326,9 +326,6 @@ vim.api.nvim_create_autocmd({ "CmdlineEnter", "BufReadPre", "BufNewFile" }, {
         vim.system(cmd, sys_opts, function(out)
             if out.code == 0 then
                 vim.schedule(function()
-                    -- MAYBE: Substring the stderr to get the build time. Only print if it's high
-                    -- local msg = "Fuzzy built successfully. Setting up blink..." --- @type string
-                    -- vim.api.nvim_echo({ { msg, "" } }, true, {})
                     vim.api.nvim_echo({ { "", "" } }, false, {})
                     setup_blink()
                 end)

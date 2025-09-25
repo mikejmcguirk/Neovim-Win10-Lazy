@@ -1,9 +1,3 @@
--- MAYBE: stevearc does not recommend lazy loading because of the difficulty of handing all
--- the cases. Can see why in terms of stuff like edit. On the other hand, it doesn't look like
--- anything in the code precludes doing this
--- FUTURE: the . function in vinegar to pre-populate the file at the end of the cmdline could be
--- useful
-
 local oil = require("oil")
 
 local function close_oil()

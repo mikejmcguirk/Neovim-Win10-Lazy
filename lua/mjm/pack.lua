@@ -1,21 +1,3 @@
--- FUTURE: https://github.com/rockerBOO/awesome-neovim - So many plugins out there
--- FUTURE: https://github.com/nvim-neotest/neotest
--- FUTURE: https://github.com/mrcjkb/rustaceanvim
--- FUTURE: Dap setup?
--- https://github.com/tjdevries/config.nvim/blob/master/lua/custom/plugins/dap.lua
--- MAYBE: For dbs
--- https://github.com/kndndrj/nvim-dbee
--- MAYBE: https://github.com/smjonas/inc-rename.nvim
--- MAYBE: https://github.com/folke/snacks.nvim/blob/main/lua/snacks/indent.lua#L219
--- More efficient indent guide
--- https://github.com/folke/snacks.nvim/blob/main/lua/snacks/scope.lua
--- More efficient scope
--- MAYBE: https://github.com/toppair/peek.nvim -- Markdown preview
--- MAYBE: Look at the multicursor plugin SteveArc uses. It seems to be the most mature project
--- MAYBE: https://github.com/Bilal2453/luvit-meta
--- https://github.com/andymass/vim-matchup - Replace matchparen + good motions
--- MAYBE: Previewer for a lot of things: https://github.com/OXY2DEV/markview.nvim
-
 local M = {}
 
 local pack_spec = {

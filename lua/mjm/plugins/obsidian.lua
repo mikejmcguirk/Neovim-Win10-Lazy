@@ -89,8 +89,6 @@ local function load_obsidian()
     vim.api.nvim_create_autocmd("User", {
         pattern = "ObsidianNoteEnter",
         callback = function(ev)
-            -- PR: Currently writes keymaps indiscriminately. Should be option to disable default
-            -- maps
             -- Delete the <CR> map because this overwrites Jump2D
             -- Don't need the conditional operator in Markdown, so the [o ]o defaults can stay
             vim.keymap.del("n", "<CR>", { buffer = ev.buf })

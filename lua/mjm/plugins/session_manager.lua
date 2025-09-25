@@ -1,5 +1,3 @@
--- PR: Uses deprecated nvim_buf_set_option
-
 local config = require("session_manager.config")
 local path = require("plenary.path")
 

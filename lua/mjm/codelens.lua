@@ -149,7 +149,6 @@ end
 ---@param ns integer
 ---@param line integer
 ---@param lenses lsp.CodeLens[] Lenses that start at `line`
--- PR: The user should be able to customize this
 -- The extmark options, conceptually, are simple enough. Just let the user pass in their own
 -- table. You I guess could check in the table for virtual lines and then add whitespace, but
 -- that's awkward

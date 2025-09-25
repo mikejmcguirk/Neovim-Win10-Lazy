@@ -94,14 +94,11 @@ function M.set_lsp_maps(ev, cmds)
 
     local buf = ev.buf ---@type integer
 
-    -- MAYBE: Depending on how these are used, you could put incoming and outgoing calls on
-    -- separate mappings and use the capitals for jump1 = false
-
     --- callHierarchy/incomingCalls ---
-    Map("n", "grc", cmds.in_call, { buffer = buf })
+    Map("n", "grc", cmds.in_call, { buffer = buf, jump1 = false })
 
     --- callHierarchy/outgoingCalls ---
-    Map("n", "grC", cmds.out_call, { buffer = buf })
+    Map("n", "grC", cmds.out_call, { buffer = buf, jump1 = false })
 
     --- textDocument/codeAction ---
     Map("n", "gra", cmds.code_action, { buffer = buf })

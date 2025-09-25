@@ -1,10 +1,3 @@
--- MAYBE: This looks fairly simple to do yourself, but I don't want to put in the effort + add
--- maintenance cost unless this ends up being something I use a lot
--- Don't want to make that determination until testing in other languages
--- https://github.com/MariaSolOs/dotfiles/blob/main/.config/nvim/lua/lightbulb.lua
--- Something useful to do would be to update the drawing of the lightbulb when the LSP request
--- completes
-
 require("nvim-lightbulb").setup({
     autocmd = { enabled = false },
     code_lenses = false,

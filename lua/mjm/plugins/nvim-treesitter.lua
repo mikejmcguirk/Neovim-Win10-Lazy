@@ -52,7 +52,6 @@ vim.api.nvim_create_autocmd("VimEnter", {
     pattern = "*",
     callback = function()
         vim.schedule(function()
-            -- PR: Don't need the "all parsers up-to-date" message
             vim.cmd("TSUpdate")
         end)
     end,

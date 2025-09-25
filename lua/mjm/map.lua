@@ -473,7 +473,6 @@ local function map_on_bufreadpre()
     -- Text Manipulation --
     -----------------------
 
-    -- MAYBE: I'm not convinced this is a good mapping, but can't think of anything else that fits
     Map("n", "<M-s>", ":'<,'>s/\\%V")
     Map("x", "<M-s>", ":s/\\%V")
 
@@ -678,7 +677,6 @@ local function map_on_cmdlineenter()
     ApiMap("c", "<C-a>", "<C-b>", { noremap = true })
     ApiMap("c", "<C-d>", "<Del>", { noremap = true })
 
-    -- MAYBE: Figure out how to do <M-d> if it's really needed
     Map("c", "<C-k>", "<c-\\>estrpart(getcmdline(), 0, getcmdpos()-1)<cr>")
     ApiMap("c", "<C-b>", "<left>", { noremap = true })
     ApiMap("c", "<C-f>", "<right>", { noremap = true })
