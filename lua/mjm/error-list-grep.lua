@@ -383,33 +383,33 @@ function M.lgrep_cwd_a()
 end
 
 --- @return boolean, QfRancherSystemIn
-local function grep_CWD()
-    return get_grep_parts(get_cwd_tbl, "CWD Grep (case-sensitive): ", { literal = true })
+local function grep_CWD(sys_opts)
+    do_grep(get_cwd_tbl, "CWD Grep (case-sensitive): ", { literal = true }, sys_opts or {})
 end
 
-vim.keymap.set({ "n", "x" }, "<leader>qgD", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_CWD, grep_n)
-end)
+function M.grep_CWD_n()
+    grep_CWD(grep_n)
+end
 
-vim.keymap.set({ "n", "x" }, "<leader>qGD", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_CWD, grep_r)
-end)
+function M.grep_CWD_r()
+    grep_CWD(grep_r)
+end
 
-vim.keymap.set({ "n", "x" }, "<leader>q<C-g>D", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_CWD, grep_a)
-end)
+function M.grep_CWD_a()
+    grep_CWD(grep_a)
+end
 
-vim.keymap.set({ "n", "x" }, "<leader>lgD", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_CWD, lgrep_n)
-end)
+function M.lgrep_CWD_n()
+    grep_CWD(lgrep_n)
+end
 
-vim.keymap.set({ "n", "x" }, "<leader>lGD", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_CWD, lgrep_r)
-end)
+function M.lgrep_CWD_r()
+    grep_CWD(lgrep_r)
+end
 
-vim.keymap.set({ "n", "x" }, "<leader>l<C-g>D", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_CWD, lgrep_a)
-end)
+function M.lgrep_CWD_a()
+    grep_CWD(lgrep_a)
+end
 
 --- @return boolean, QfRancherSystemIn
 local function grep_cwdX()

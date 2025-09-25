@@ -67,6 +67,48 @@ nxmap("<leader>lgd", "<Plug>(qf-rancher-lgrep-cwd-n)", "Grep the CWD, new loclis
 nxmap("<leader>lGd", "<Plug>(qf-rancher-lgrep-cwd-r)", "Grep the CWD, replace loclist")
 nxmap("<leader>l<C-g>d", "<Plug>(qf-rancher-lgrep-cwd-a)", "Grep the CWD, add to loclist")
 
+local pgCWDn_desc = "<Plug> Grep the CWD (case-sensitive), new qflist"
+pnxmap("<Plug>(qf-rancher-grep-CWD-n)", pgCWDn_desc, function()
+    eg.grep_CWD_n()
+end)
+
+local pgCWDr_desc = "<Plug> Grep the CWD (case-sensitive), replace qflist"
+pnxmap("<Plug>(qf-rancher-grep-CWD-r)", pgCWDr_desc, function()
+    eg.grep_CWD_r()
+end)
+
+local pgCWDa_desc = "<Plug> Grep the CWD (case-sensitive), add to qflist"
+pnxmap("<Plug>(qf-rancher-grep-CWD-a)", pgCWDa_desc, function()
+    eg.grep_CWD_a()
+end)
+
+local plgCWDn_desc = "<Plug> Grep the CWD (case-sensitive), new list"
+pnxmap("<Plug>(qf-rancher-lgrep-CWD-n)", plgCWDn_desc, function()
+    eg.lgrep_CWD_n()
+end)
+
+local plgCWDr_desc = "<Plug> Grep the CWD (case-sensitive), replace list"
+pnxmap("<Plug>(qf-rancher-lgrep-CWD-r)", plgCWDr_desc, function()
+    eg.lgrep_CWD_r()
+end)
+
+local plgCWDa_desc = "<Plug> Grep the CWD (case-sensitive), add to list"
+pnxmap("<Plug>(qf-rancher-lgrep-CWD-a)", plgCWDa_desc, function()
+    eg.lgrep_CWD_a()
+end)
+
+nxmap("<leader>qgd", "<Plug>(qf-rancher-grep-CWD-n)", "Grep the CWD (case-sensitive), new qflist")
+local gCWDr_desc = "Grep the CWD (case-sensitive), replace qflist"
+nxmap("<leader>qGd", "<Plug>(qf-rancher-grep-CWD-r)", gCWDr_desc)
+local gCWDa_desc = "Grep the CWD (case-sensitive), add to qflist"
+nxmap("<leader>q<C-g>d", "<Plug>(qf-rancher-grep-CWD-a)", gCWDa_desc)
+local lgCWDn_desc = "Grep the CWD (case-sensitive), new loclist"
+nxmap("<leader>lgd", "<Plug>(qf-rancher-lgrep-CWD-n)", lgCWDn_desc)
+local lgCWDr_desc = "Grep the CWD (case-sensitive), replace loclist"
+nxmap("<leader>lGd", "<Plug>(qf-rancher-lgrep-CWD-r)", lgCWDr_desc)
+local lgCWDa_desc = "Grep the CWD (case-sensitive), add to loclist"
+nxmap("<leader>l<C-g>d", "<Plug>(qf-rancher-lgrep-CWD-a)", lgCWDa_desc)
+
 -------------------------
 --- OPEN_CLOSE_TOGGLE ---
 -------------------------
