@@ -416,6 +416,10 @@ local function grep_cwdX()
     return get_grep_parts(get_cwd_tbl, "CWD Grep (regex): ")
 end
 
+-- local function grep_cwdX(sys_opts)
+--     do_grep(get_cwd_tbl, "CWD Grep (regex): ", {}, sys_opts or {})
+-- end
+
 vim.keymap.set({ "n", "x" }, "<leader>qg<C-d>", function()
     require("mjm.error-list-system").qf_sys_wrap(grep_cwdX, grep_n)
 end)
