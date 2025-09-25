@@ -930,3 +930,8 @@ end
 vim.api.nvim_create_user_command("TabKill", tab_kill, {})
 
 vim.api.nvim_create_user_command("We", "silent up | e", {}) -- Quick refresh if Treesitter bugs out
+
+vim.api.nvim_create_user_command("Termcode", function(cargs)
+    local replaced = vim.api.nvim_replace_termcodes(cargs.args, true, true, true)
+    print(vim.inspect(replaced))
+end, { nargs = "+" })
