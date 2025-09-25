@@ -382,7 +382,8 @@ function M.lgrep_cwd_a()
     grep_cwd(lgrep_a)
 end
 
---- @return boolean, QfRancherSystemIn
+--- @param sys_opts QfRancherSystemOpts
+--- @return nil
 local function grep_CWD(sys_opts)
     do_grep(get_cwd_tbl, "CWD Grep (case-sensitive): ", { literal = true }, sys_opts or {})
 end
@@ -411,11 +412,8 @@ function M.lgrep_CWD_a()
     grep_CWD(lgrep_a)
 end
 
---- @return boolean, QfRancherSystemIn
--- local function grep_cwdX()
---     return get_grep_parts(get_cwd_tbl, "CWD Grep (regex): ")
--- end
-
+--- @param sys_opts QfRancherSystemOpts
+--- @return nil
 local function grep_cwdX(sys_opts)
     do_grep(get_cwd_tbl, "CWD Grep (regex): ", {}, sys_opts or {})
 end
@@ -456,105 +454,108 @@ local function get_helpdirs()
 end
 
 --- @type QfRancherSystemOpts
-local hgrep_b = { async = true, type = "\1", timeout = 2000 }
+local hgrep_n = { async = true, type = "\1", timeout = 2000 }
 --- @type QfRancherSystemOpts
-local hgrep_o = { async = true, type = "\1", overwrite = true, timeout = 2000 }
+local hgrep_r = { async = true, type = "\1", overwrite = true, timeout = 2000 }
 --- @type QfRancherSystemOpts
-local hgrep_m = { async = true, type = "\1", add = true, timeout = 2000 }
+local hgrep_a = { async = true, type = "\1", add = true, timeout = 2000 }
 
 --- @type QfRancherSystemOpts
-local hlgrep_b = { async = true, type = "\1", loclist = true, timeout = 2000 }
+local hlgrep_n = { async = true, type = "\1", loclist = true, timeout = 2000 }
 --- @type QfRancherSystemOpts
-local hlgrep_o = { async = true, type = "\1", loclist = true, overwrite = true, timeout = 2000 }
+local hlgrep_r = { async = true, type = "\1", loclist = true, overwrite = true, timeout = 2000 }
 --- @type QfRancherSystemOpts
-local hlgrep_m = { async = true, type = "\1", loclist = true, add = true, timeout = 2000 }
+local hlgrep_a = { async = true, type = "\1", loclist = true, add = true, timeout = 2000 }
 
---- @return boolean, QfRancherSystemIn
-local function grep_help()
-    return get_grep_parts(get_helpdirs, "Help Grep: ", { literal = true, smart_case = true })
+--- @param sys_opts QfRancherSystemOpts
+--- @return nil
+local function grep_help(sys_opts)
+    do_grep(get_helpdirs, "Help Grep: ", { literal = true, smart_case = true }, sys_opts or {})
 end
 
-vim.keymap.set({ "n", "x" }, "<leader>qgh", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_help, hgrep_b)
-end)
-
-vim.keymap.set({ "n", "x" }, "<leader>qGh", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_help, hgrep_o)
-end)
-
-vim.keymap.set({ "n", "x" }, "<leader>q<C-g>h", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_help, hgrep_m)
-end)
-
-vim.keymap.set({ "n", "x" }, "<leader>lgh", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_help, hlgrep_b)
-end)
-
-vim.keymap.set({ "n", "x" }, "<leader>lGh", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_help, hlgrep_o)
-end)
-
-vim.keymap.set({ "n", "x" }, "<leader>l<C-g>h", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_help, hlgrep_m)
-end)
-
---- @return boolean, QfRancherSystemIn
-local function grep_HELP()
-    return get_grep_parts(get_helpdirs, "Help Grep (case-sensitive): ", { literal = true })
+function M.grep_help_n()
+    grep_help(hgrep_n)
 end
 
-vim.keymap.set({ "n", "x" }, "<leader>qgH", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_HELP, hgrep_b)
-end)
-
-vim.keymap.set({ "n", "x" }, "<leader>qGH", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_HELP, hgrep_o)
-end)
-
-vim.keymap.set({ "n", "x" }, "<leader>q<C-g>H", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_HELP, hgrep_m)
-end)
-
-vim.keymap.set({ "n", "x" }, "<leader>lgH", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_HELP, hlgrep_b)
-end)
-
-vim.keymap.set({ "n", "x" }, "<leader>lGH", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_HELP, hlgrep_o)
-end)
-
-vim.keymap.set({ "n", "x" }, "<leader>l<C-g>H", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_HELP, hlgrep_m)
-end)
-
---- @return boolean, QfRancherSystemIn
-local function grep_helpX()
-    return get_grep_parts(get_helpdirs, "Help Grep (regex): ")
+function M.grep_help_r()
+    grep_help(hgrep_r)
 end
 
-vim.keymap.set({ "n", "x" }, "<leader>qg<C-h>", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_helpX, grep_n)
-end)
+function M.grep_help_a()
+    grep_help(hgrep_a)
+end
 
-vim.keymap.set({ "n", "x" }, "<leader>qG<C-h>", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_helpX, grep_r)
-end)
+function M.lgrep_help_n()
+    grep_help(hlgrep_n)
+end
 
-vim.keymap.set({ "n", "x" }, "<leader>q<C-g><C-h>", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_helpX, grep_a)
-end)
+function M.lgrep_help_r()
+    grep_help(hlgrep_r)
+end
 
-vim.keymap.set({ "n", "x" }, "<leader>lg<C-h>", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_helpX, lgrep_n)
-end)
+function M.lgrep_help_a()
+    grep_help(hlgrep_a)
+end
 
-vim.keymap.set({ "n", "x" }, "<leader>lG<C-h>", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_helpX, lgrep_r)
-end)
+--- @param sys_opts QfRancherSystemOpts
+--- @return nil
+local function grep_HELP(sys_opts)
+    do_grep(get_helpdirs, "Help Grep (case-sensitive): ", { literal = true }, sys_opts or {})
+end
 
-vim.keymap.set({ "n", "x" }, "<leader>l<C-g><C-h>", function()
-    require("mjm.error-list-system").qf_sys_wrap(grep_helpX, lgrep_a)
-end)
+function M.grep_HELP_n()
+    grep_HELP(hgrep_n)
+end
+
+function M.grep_HELP_r()
+    grep_HELP(hgrep_r)
+end
+
+function M.grep_HELP_a()
+    grep_HELP(hgrep_a)
+end
+
+function M.lgrep_HELP_n()
+    grep_HELP(hlgrep_n)
+end
+
+function M.lgrep_HELP_r()
+    grep_HELP(hlgrep_r)
+end
+
+function M.lgrep_HELP_a()
+    grep_HELP(hlgrep_a)
+end
+
+--- @param sys_opts QfRancherSystemOpts
+--- @return nil
+local function grep_helpX(sys_opts)
+    do_grep(get_helpdirs, "HELP Grep (regex): ", {}, sys_opts or {})
+end
+
+function M.grep_helpX_n()
+    grep_helpX(hgrep_n)
+end
+
+function M.grep_helpX_r()
+    grep_helpX(hgrep_r)
+end
+
+function M.grep_helpX_a()
+    grep_helpX(hgrep_a)
+end
+
+function M.lgrep_helpX_n()
+    grep_helpX(hlgrep_n)
+end
+
+function M.lgrep_helpX_r()
+    grep_helpX(hlgrep_r)
+end
+
+function M.lgrep_helpX_a()
+    grep_helpX(hlgrep_a)
+end
 
 --- @type QfRancherGrepLocFun
 local function get_buflist()

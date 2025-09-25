@@ -152,6 +152,123 @@ nxmap("<leader>lG<C-d>", "<Plug>(qf-rancher-lgrep-cwdX-r)", lgcwdXr_desc)
 local lgcwdXa_desc = "Grep the cwdX (with regex), add to loclist"
 nxmap("<leader>l<C-g><C-d>", "<Plug>(qf-rancher-lgrep-cwdX-a)", lgcwdXa_desc)
 
+pnxmap("<Plug>(qf-rancher-grep-help-n)", "<Plug> Grep the docs, new qflist", function()
+    eg.grep_help_n()
+end)
+
+pnxmap("<Plug>(qf-rancher-grep-help-r)", "<Plug> Grep the docs, replace qflist", function()
+    eg.grep_help_r()
+end)
+
+pnxmap("<Plug>(qf-rancher-grep-help-a)", "<Plug> Grep the docs, add to qflist", function()
+    eg.grep_help_a()
+end)
+
+pnxmap("<Plug>(qf-rancher-lgrep-help-n)", "<Plug> Grep the docs, new list", function()
+    eg.lgrep_help_n()
+end)
+
+pnxmap("<Plug>(qf-rancher-lgrep-help-r)", "<Plug> Grep the docs, replace list", function()
+    eg.lgrep_help_r()
+end)
+
+pnxmap("<Plug>(qf-rancher-lgrep-help-a)", "<Plug> Grep the docs, add to list", function()
+    eg.lgrep_help_a()
+end)
+
+nxmap("<leader>qgh", "<Plug>(qf-rancher-grep-help-n)", "Grep the docs, new qflist")
+nxmap("<leader>qGh", "<Plug>(qf-rancher-grep-help-r)", "Grep the docs, replace qflist")
+nxmap("<leader>q<C-g>h", "<Plug>(qf-rancher-grep-help-a)", "Grep the docs, add to qflist")
+nxmap("<leader>lgh", "<Plug>(qf-rancher-lgrep-help-n)", "Grep the docs, new loclist")
+nxmap("<leader>lGh", "<Plug>(qf-rancher-lgrep-help-r)", "Grep the docs, replace loclist")
+nxmap("<leader>l<C-g>h", "<Plug>(qf-rancher-lgrep-help-a)", "Grep the docs, add to loclist")
+
+local pgHELPn_desc = "<Plug> Grep the docs (case-sensitive), new qflist"
+pnxmap("<Plug>(qf-rancher-grep-HELP-n)", pgHELPn_desc, function()
+    eg.grep_HELP_n()
+end)
+
+local pgHELPr_desc = "<Plug> Grep the docs (case-sensitive), replace qflist"
+pnxmap("<Plug>(qf-rancher-grep-HELP-r)", pgHELPr_desc, function()
+    eg.grep_HELP_r()
+end)
+
+local pgHELPa_desc = "<Plug> Grep the docs (case-sensitive), add to qflist"
+pnxmap("<Plug>(qf-rancher-grep-HELP-a)", pgHELPa_desc, function()
+    eg.grep_HELP_a()
+end)
+
+local plgHELPn_desc = "<Plug> Grep the docs (case-sensitive), new list"
+pnxmap("<Plug>(qf-rancher-lgrep-HELP-n)", plgHELPn_desc, function()
+    eg.lgrep_HELP_n()
+end)
+
+local plgHELPr_desc = "<Plug> Grep the docs (case-sensitive), replace list"
+pnxmap("<Plug>(qf-rancher-lgrep-HELP-r)", plgHELPr_desc, function()
+    eg.lgrep_HELP_r()
+end)
+
+local plgHELPa_desc = "<Plug> Grep the docs (case-sensitive), add to list"
+pnxmap("<Plug>(qf-rancher-lgrep-HELP-a)", plgHELPa_desc, function()
+    eg.lgrep_HELP_a()
+end)
+
+local gHELPn_desc = "Grep the docs (case-sensitive), new qflist"
+nxmap("<leader>qgH", "<Plug>(qf-rancher-grep-HELP-n)", gHELPn_desc)
+local gHELPr_desc = "Grep the docs (case-sensitive), replace qflist"
+nxmap("<leader>qGH", "<Plug>(qf-rancher-grep-HELP-r)", gHELPr_desc)
+local gHELPa_desc = "Grep the docs (case-sensitive), add to qflist"
+nxmap("<leader>q<C-g>H", "<Plug>(qf-rancher-grep-HELP-a)", gHELPa_desc)
+local lgHELPn_desc = "Grep the docs (case-sensitive), new loclist"
+nxmap("<leader>lgH", "<Plug>(qf-rancher-lgrep-HELP-n)", lgHELPn_desc)
+local lgHELPr_desc = "Grep the docs (case-sensitive), replace loclist"
+nxmap("<leader>lGH", "<Plug>(qf-rancher-lgrep-HELP-r)", lgHELPr_desc)
+local lgHELPa_desc = "Grep the docs (case-sensitive), add to loclist"
+nxmap("<leader>l<C-g>H", "<Plug>(qf-rancher-lgrep-HELP-a)", lgHELPa_desc)
+
+local pghelpXn_desc = "<Plug> Grep the docs (case-sensitive), new qflist"
+pnxmap("<Plug>(qf-rancher-grep-helpX-n)", pghelpXn_desc, function()
+    eg.grep_helpX_n()
+end)
+
+local pghelpXr_desc = "<Plug> Grep the docs (with regex), replace qflist"
+pnxmap("<Plug>(qf-rancher-grep-helpX-r)", pghelpXr_desc, function()
+    eg.grep_helpX_r()
+end)
+
+local pghelpXa_desc = "<Plug> Grep the docs (with regex), add to qflist"
+pnxmap("<Plug>(qf-rancher-grep-helpX-a)", pghelpXa_desc, function()
+    eg.grep_helpX_a()
+end)
+
+local plghelpXn_desc = "<Plug> Grep the docs (with regex), new list"
+pnxmap("<Plug>(qf-rancher-lgrep-helpX-n)", plghelpXn_desc, function()
+    eg.lgrep_helpX_n()
+end)
+
+local plghelpXr_desc = "<Plug> Grep the docs (with regex), replace list"
+pnxmap("<Plug>(qf-rancher-lgrep-helpX-r)", plghelpXr_desc, function()
+    eg.lgrep_helpX_r()
+end)
+
+local plghelpXa_desc = "<Plug> Grep the docs (with regex), add to list"
+pnxmap("<Plug>(qf-rancher-lgrep-helpX-a)", plghelpXa_desc, function()
+    eg.lgrep_helpX_a()
+end)
+
+local ghelpXn_desc = "Grep the docs (with regex), new qflist"
+nxmap("<leader>qg<C-d>", "<Plug>(qf-rancher-grep-helpX-n)", ghelpXn_desc)
+local ghelpXr_desc = "Grep the docs (with regex), replace qflist"
+nxmap("<leader>qG<C-d>", "<Plug>(qf-rancher-grep-helpX-r)", ghelpXr_desc)
+local ghelpXa_desc = "Grep the docs (with regex), add to qflist"
+nxmap("<leader>q<C-g><C-d>", "<Plug>(qf-rancher-grep-helpX-a)", ghelpXa_desc)
+local lghelpXn_desc = "Grep the docs (with regex), new loclist"
+nxmap("<leader>lg<C-d>", "<Plug>(qf-rancher-lgrep-helpX-n)", lghelpXn_desc)
+local lghelpXr_desc = "Grep the docs (with regex), replace loclist"
+nxmap("<leader>lG<C-d>", "<Plug>(qf-rancher-lgrep-helpX-r)", lghelpXr_desc)
+local lghelpXa_desc = "Grep the docs (with regex), add to loclist"
+nxmap("<leader>l<C-g><C-d>", "<Plug>(qf-rancher-lgrep-helpX-a)", lghelpXa_desc)
+
 -------------------------
 --- OPEN_CLOSE_TOGGLE ---
 -------------------------
