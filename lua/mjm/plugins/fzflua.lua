@@ -1,12 +1,3 @@
---- TODO: Move to gi mappings
---- --- My gI map goes to <M-i>. Default gi can be lost
---- giq and giQ for qflist and qf stack
---- gil and giL for loclist and loclist stack
---- --- Add logic to redirect to chistory and lhistory if fzflua not present
---- TODO: Add #fzflua tag where needed
---- FUTURE: Turn :let g: into a picker
---- LOW: What makes async messages not display?
-
 local fzf_lua = require("fzf-lua")
 
 fzf_lua.setup({
@@ -88,7 +79,6 @@ Map("n", "<leader>fc", fzf_lua.command_history)
 Map("n", "<leader>ft", fzf_lua.highlights)
 Map("n", "<leader>fk", fzf_lua.keymaps)
 
--- LOW: Add a way to delete individual or all lists from here
 Map("n", "<leader>fo", fzf_lua.loclist)
 Map("n", "<leader>fu", fzf_lua.quickfix)
 Map("n", "<leader>fO", fzf_lua.loclist_stack)
@@ -113,19 +103,7 @@ local helptags = function()
 end
 Map("n", "<leader>fh", helptags)
 
--- TODO: Helpgrep might assist us here. Can make go giH
--- LOW: Re-add this back in
--- Map("n", "<leader>tl", function()
---     builtin.grep_string({
---         prompt_title = "Help",
---         search = "",
---         search_dirs = vim.api.nvim_get_runtime_file("doc/*.txt", true),
---         only_sort_text = true,
---     })
--- end)
-
 local function fuzzy_dict()
-    -- FUTURE: This should merge the results form all dictionary files
     --- @diagnostic disable: undefined-field
     local dict_file = vim.opt.dictionary:get()[1]
     local file = io.open(dict_file, "r")
@@ -145,7 +123,6 @@ local function fuzzy_spell_correct()
 
     local buf = vim.api.nvim_get_current_buf()
 
-    -- FUTURE: This should merge the results form all dictionary files
     --- @diagnostic disable: undefined-field
     local dict_file = vim.opt.dictionary:get()[1]
     local file = io.open(dict_file, "r")

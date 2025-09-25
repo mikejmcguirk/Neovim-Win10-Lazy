@@ -10,8 +10,6 @@ Gset("no_plugin_maps", 1)
 
 --- :h standard-plugin-list
 --- Disabling these has a non-trivial effect on startup time
---- LOW: No need to change now, but the 2html plugin appears to have been re-written in Lua,
---- and on load only creates an autocmd. Might be useful
 Gset("loaded_2html_plugin", 1)
 Gset("did_install_default_menus", 1)
 Gset("loaded_gzip", 1)
@@ -207,8 +205,6 @@ Autocmd("CmdlineEnter", {
     end,
 })
 
--- LOW: Would this work with BufWinEnter instead?
--- Need BufLeave/BufEnter for this to work when going into help
 autoset_winopt({ "WinLeave", "BufLeave" }, "rnu", false)
 autoset_winopt({ "WinEnter", "CmdlineLeave", "BufEnter" }, "rnu", true)
 

@@ -1,5 +1,3 @@
--- TODO: s is a global map, which interferes with qflist s mapping
-
 local function load_mini_operators()
     require("mini.operators").setup({
         evaluate = {

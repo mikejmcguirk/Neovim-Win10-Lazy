@@ -107,8 +107,6 @@ function M.set_highlights()
     --- Builtins/Constants/Globals ---
     ----------------------------------
 
-    --- LOW: The "self" keyword should be italicized since it is an alias for the current object
-
     SetHl(0, "Constant", { fg = l_red })
 
     SetHl(0, "@constant.builtin", { link = "Constant" }) -- No default
@@ -243,8 +241,6 @@ function M.set_highlights()
     --- Markup ---
     --------------
 
-    -- LOW: Lifted from Fluoromachine because they look familiar, but I've put no thought into
-    -- the actual reasoning behind these
     SetHl(0, "@markup.environment", { fg = l_purple })
     SetHl(0, "@markup.heading", { link = "Title" })
     SetHl(0, "@markup.italic", { fg = l_green, italic = true })

@@ -1,16 +1,10 @@
 MjmStl = {}
 
--- LOW: Build a character index component and keep it commented out alongside the virt col one
--- MAYBE: Show diags in inactive windows
--- LOW: Weird behavior where if you open a buf, detach the LSP, then re-attach the LSP, the
--- progress messages don't show correctly
-
 local lsp_cache = {}
 local diag_cache = {}
 local mode = "n" -- ModeChanged does not grab the initial set to normal mode
 local progress_cache = {}
 
--- MAYBE: This has shown up in error-list now. Make a util?
 local is_bad_mode = function()
     return string.match(mode, "[csSiR]")
 end
@@ -111,7 +105,6 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
 -- NOTE: This must be run after diagnostics have been configured
 vim.api.nvim_del_augroup_by_name("nvim.diagnostic.status")
 
--- TODO: This doesn't catch leaving cmdmode after confirming a substitution
 vim.api.nvim_create_autocmd("ModeChanged", {
     group = stl_events,
     callback = function()
@@ -146,8 +139,6 @@ vim.api.nvim_create_autocmd({ "LspAttach", "LspDetach" }, {
 local format_icons = { unix = "unix", dos = "dos", mac = "mac" }
 
 function MjmStl.active()
-    -- TODO: pre-allocate the stl table with nils. Worth because this runs on every keystroke
-    -- TODO: shave off heap allocations wherever possible
     local stl = {}
     local buf = vim.api.nvim_get_current_buf()
     local bad_mode = is_bad_mode()
@@ -172,12 +163,6 @@ function MjmStl.active()
 
     table.insert(stl, "%=%*")
 
-    -- As far as I can tell, since every autocomplete window creates a new buffer that needs to
-    -- be checked/filtered out, it would take more compute to maintain a cache of bufopts than it
-    -- takes to simply keep re-pulling the options
-    -- TODO: Encoding seems like an exception to this
-    -- MAYBE: Since the stl is tied to the window, it might be possible to win_call the buf opts
-    -- and cache them on certain events
     local encoding = vim.api.nvim_get_option_value("encoding", { scope = "global" })
     local format = vim.api.nvim_get_option_value("fileformat", { buf = buf })
     local fmt = format_icons[format]

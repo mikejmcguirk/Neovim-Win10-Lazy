@@ -153,18 +153,6 @@ local function setup_objects()
             -- CUSTOM:
             -- [#] - PreProc
             -- ["] - String (moves and swaps)
-            -- MAYBE: You could use [']' for bytes/characters, but that feels better for marks
-
-            -- PR: It would be cool to be able to move to the first and last objects
-            -- PR: If you're dealing with nested function calls, and you vaf, it will expand out
-            -- to the outer function rather than looking forward to the inner one
-
-            -- TODO: Lua text objects to check for unary expressions
-            -- TODO: text object for table keys/values
-            -- MAYBE: Text object for function call name. Or, more generally, a way to extract
-            -- the arguments from a function call and have them exist separately
-            -- TODO: A text object for individual elements of a conditional. This actually
-            -- comes up a lot
 
             ----------------
             -- Selections --
@@ -210,10 +198,6 @@ local function setup_objects()
             -- Gotos --
             -----------
 
-            -- TODO: Use capitalization to affect whether you go to the start of the end
-            -- Normal mode is simple - [m]m cycle starts, [M]M ends
-            -- Presumably you can use this for operator pending as well
-            -- Might be best for visual mode as well. Reduces bespoke logic
             local move = require(objects .. ".move")
             local move_maps = {
                 { "[s", "]s", "@assignment.outer" },

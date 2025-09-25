@@ -124,7 +124,6 @@ local function load_obsidian()
             end, { buffer = ev.buf })
 
             Map("n", "<leader>si", function()
-                -- FUTURE: Make this work with Windows
                 ---@type string
                 local cur_buf_name = vim.api.nvim_buf_get_name(0)
                 ---@type string
@@ -145,10 +144,8 @@ local function load_obsidian()
                 local padded_count = string.format("%03d", count) ---@type string
                 local filename = cur_file_name .. "_" .. padded_count ---@type string
 
-                -- LOW: The handling for this is contrived
                 local made_newline = false
                 if not string.match(vim.api.nvim_get_current_line(), "^%s*$") then
-                    -- LOW: This could use feedkeys nix instead
                     vim.cmd("norm! o")
                     vim.cmd("stopinsert")
                     made_newline = true

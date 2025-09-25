@@ -1,4 +1,3 @@
---- LOW: dprint looks like an interesting alternative
 --- @type table<string, conform.FiletypeFormatter>
 local ft_config = {
     css = { "prettier" },

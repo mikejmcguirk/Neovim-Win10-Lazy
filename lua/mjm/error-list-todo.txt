@@ -13,6 +13,7 @@ when certain maps need to be required at all
 - I have the maps file as a separate file for now simply for sanity, but in order to save a
 require it might be best to just put it in plugin.lua
 - Purely internal stuff should not involve error handling
+- Create a way to send the quickfix list to a normal buffer, and allow specifying which elements you want to bring over. Found this use case when trying to move over todo list stuff
 
 ---------------------
 --- DOCUMENTATION ---
@@ -103,6 +104,7 @@ TODO
 -- Qgrep/Lgrep
 -- new/add/replace (no option is add)
 -- buf/help/cwd
+- Partly a documentation thing and partly a code thing, more clarity around when smartcase is used. Do we have a control for smartcase vs case insensitive?
 
 MAYBE
 

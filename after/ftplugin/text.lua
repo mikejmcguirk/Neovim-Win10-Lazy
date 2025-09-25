@@ -1,5 +1,3 @@
--- LOW: Make a thesaurus picker
-
 vim.opt_local.colorcolumn = ""
 vim.opt_local.cursorlineopt = "screenline"
 vim.opt_local.wrap = true

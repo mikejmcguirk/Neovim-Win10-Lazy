@@ -161,10 +161,6 @@ function M.set_lsp_maps(ev, cmds)
     end)
 
     -- textDocument/linkedEditingRange
-    -- FUTURE: The docs recommend trying this with html
-    -- if client:supports_method("textDocument/linkedEditingRange") then
-    --     vim.lsp.linked_editing_range.enable(true, { client_id = client.id })
-    -- end
 
     --- textDocument/references ---
     Map("n", "grr", cmds.references, { buffer = buf })
@@ -172,10 +168,6 @@ function M.set_lsp_maps(ev, cmds)
 
     --- textDocument/rename ---
     Map("n", "grn", function()
-        -- LOW: The plugin I'm aware of that does incremental rename is a re-implementation of
-        -- the renaming functionality. Don't want to do that. Would want to make something that
-        -- gets the rename first then passes to the built-in
-
         --- @type boolean, string
         local ok_i, input = require("mjm.utils").get_input("Rename: ")
         if not ok_i then
@@ -216,7 +208,6 @@ function M.set_lsp_maps(ev, cmds)
     Map("n", "gW", cmds.workspace, { buffer = buf })
 
     --- Other ---
-    --- LOW: Figure out which method this is behind
     Map("n", "grm", function()
         vim.lsp.semantic_tokens.enable(not vim.lsp.semantic_tokens.is_enabled())
     end, { buffer = buf })

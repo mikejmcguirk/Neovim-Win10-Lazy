@@ -3,8 +3,6 @@
 -- https://github.com/rust-lang/rust-analyzer/tree/5b852da4c3852d030ebca67746980bc0288a85ec/editors/code
 -- https://github.com/rust-lang/rust-analyzer/blob/5b852da4c3852d030ebca67746980bc0288a85ec/editors/code/src/client.ts#L307-L329
 
--- LOW: Testing this with "run" it just makes Nvim lock up. Would be nice to have this, but it
--- can't be a blocker
 -- vim.lsp.commands["rust-analyzer.runSingle"] = function(command)
 --     local r = command.arguments[1]
 --     local cmd = { "cargo", unpack(r.args.cargoArgs) }

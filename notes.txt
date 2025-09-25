@@ -2,6 +2,7 @@
 --- TODO ---
 ------------
 
+- Move MAYBE, FUTURE, and PR notes all into here
 - Try mapping <C-c> to escape in replace mode so that we don't accidently input those literal characters
 - Create keymappings to open and close tabs. Cannot use <M-tab> because windows
 - Look into how to autogenerate vimdoc
@@ -27,33 +28,93 @@ example - j/k jumps over a certain length should go into the jumplist
 - After mapping FzfLua to gi, where do the default gi/gI mappings go? What about my custom screenlinewise start of line mapping?
 - Why do I get cmdline flicker if I do it before entering the first real buf? Was thinking its the onCmdLine maps, but it doesn't happen if you do it for the first time in a real buf
 - Move Fugitive to gg mappings
-
--------------
---- MAYBE ---
--------------
-
-- Get a C LSP for reading code
-- SSH Clipboard config - https://github.com/tjdevries/config.nvim/blob/master/plugin/clipboard.lua
+- Turn off listchars in git diffs
+- Close all lists when opening git diffs
+- Map "git reset HEAD~1"
+- map FzfLua to gi
+    - giq and giQ for qflist and qfstack
+    - qil and qiL for loclist and loclist stack
+        (qil is prime real estate though, but consistent with [l]l)
+- Tag plugin usage in the config with #
+- Turn :let g: into an FzfPicker
+    - Are g/w/b vars really not already pickers though?
+- Set nowait in certain buffer local keymaps
+- TS Text Objects:
+    - Unary expressions in lua
+    - Table keys/values
+    - Function call name
+    - Function call arguments
+    - Individual elements in a conditional
+- the stl new mode autocmd does not catch leaving cmd mode after confirming a substitution
+- the stl render table should be pre-allocated with nils. Not a hot loop per se, but runs on every keystroke
+- in general, scan the stl code for where heap allocs can be removed
 
 -----------
 --- LOW ---
 -----------
 
+- Get a C LSP for reading code
+- SSH Clipboard config - https://github.com/tjdevries/config.nvim/blob/master/plugin/clipboard.lua
+- Do the SteveArc mapping for text objects where capitals are the end and lowercase is the start (or vice-versa)
+- consider a better way to render buffer info. maybe use wintype so it can be pulled with autocmds. It might be possible to pull encoding statically
+- Show diagnostics in inactive windows
 - Look into why [s]s works in some buffer types but not others. Is this configuable?
 - Why do Semantic Tokens not trigger properly after LazyDev does a workspace update?
 - Unwind lazy plugin loading where possible
-
---------------
---- FUTURE ---
---------------
-
+- Implement helpgrep in FzfLua
+    -- Map("n", "<leader>tl", function()
+    --     builtin.grep_string({
+    --         prompt_title = "Help",
+    --         search = "",
+    --         search_dirs = vim.api.nvim_get_runtime_file("doc/*.txt", true),
+    --         only_sort_text = true,
+    --     })
+    -- end)
+- For CSS, try styelint (stylelint.io)
+- Open harpoons in a vsplit from their menu with ctrl-s like Oil
+- General issue - We have the oil UI convention based on the assumption that we want to text edit inside the block and then we have the Qf/Ack convention which assumes we can't edit. A lot of design patterns. How to winnow down
+- Make an Fzf Thesaurus picker
+- Try to find a way to make the Rust analyzer "run" LSP feature work
+    - Really though, can't this all just be built out to work directly with vim.system, rather than using the LSP as an intermediary?
+- Italicize the self keyword in highlighting, since it's an alias for the current object
+- Make the markup colorscheme make sense
+- Get out of LazyDev
+- Redo the subvert command using the nvim cmd preview handler. Would allow getting out of Abolish
+    - Does this plugin not already exist?
+- Investigate dprint as a prettier alternative
+- Make Obsidian paste image work with Windows
+    - Really though, since we want to exit Obsidian anyway, the bigger idea is - How do we re-implement paste image to begin with
+- Bigger question/theme is document exporting. Maybe use pandoc. 2html? Plugin? Manual implementation?
+- For rnu control, can BufwinEnter be used instead of BufEnter? Issue seems to be with help windows
+- Would like a way of having an incremental rename preview for LSP renames. The plugin, from what I can tell, does a full re-implementation of rename, which I don't want
+- Which lsp method is Semantic token behind, because there are like three of them
+- vim.system should be used for tmux pane switching, but unsure how to handle what happens if tmux is missing
+- An operator that copies text to a line. The first count would be the line to goto, and the second count would be the motion. So you would do 14gz3j to move 3j lines to line 14 The motion should detect if rnu is on, and do the line placements based on relative number jumps if so. The issue though is that rnu is absolute value both ways. Could do gz gZ for different directions, but feels hacky
+- It would be better to be able to delete qf/loclists from FzfLua. Maybe it's possible. When I looked at this before I didn't really understand how the stack worked, particularly the limitation that you cannot delete individual lists, only clear them, but you can delete the whole stack for real
+- Built a character index component for the stl
+- If you open a buf, detach the LSP, then re-attach it, progress messages don't show properly
+    - (in general LSP progress has been the biggest challenge here)
+- Maybe make a "bad mode" util since it's in stl and error-list
+- In the maps file, use the ApiMaps and move out of vim.cmd
+- Find a viable keymap for this and make it more robust to edge cases:
+    -- Map("n", "H", 'mzk_D"_ddA <esc>p`zze', { silent = true })
+- For the <> visual mode re-indentation, it might be possible to do it without leaving visual mode by using getregionpos and the "."/"v" positions. If re-indentation dot repeats by default, potentially make it an ofunc so that can be done. Could be a specialist thing too
+- Have the custom commands check if Git is present
+- Have the custom commands interact with Git without using Fugitive or Gitsigns
 - Look into emmylua
+- For textDocument/linkedEditingRange, the docs recommend trying with html:
+    -- if client:supports_method("textDocument/linkedEditingRange") then
+    --     vim.lsp.linked_editing_range.enable(true, { client_id = client.id })
+    -- end
+- The Fzf dictionary pickers should merge results from all dictionaries
 
 -----------
 --- PRS ---
 -----------
 
 - Fix the "missing fields" errors in the nvim_cmd keysets
+- First and last of a TS Text Object
+- Function call text object tends to expand outward rather than looking inward
 
 ------------------------
 --- DOTFILE STALKING ---

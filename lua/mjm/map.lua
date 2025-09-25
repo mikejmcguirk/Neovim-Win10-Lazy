@@ -100,8 +100,6 @@ local do_tmux_move = function(direction)
         return
     end
 
-    -- LOW: It would be better to use vim.system here as well as in the above. But would need to
-    -- experiment and see how that handles tmux being missing
     pcall(function()
         vim.fn.system([[tmux select-pane -]] .. tmux_cmd_map[direction])
     end)
@@ -239,12 +237,6 @@ ApiMap("n", "\\w", "<nop>", {
     end,
 })
 
---- LOW: An operator that copies text to a line. The first count would be the line to goto, and the
---- second count would be the motion. So you would do 14gz3j to move 3j lines to line 14
---- The motion should detect if rnu is on, and do the line placements based on relative number
---- jumps if so. The issue though is that rnu is absolute value both ways. Could do gz gZ for
---- different directions, but feels hacky
-
 --------------------
 -- Mode Switching --
 --------------------
@@ -285,7 +277,6 @@ Map({ "n", "x", "o" }, "go", function()
     end
 end, { expr = true })
 
---- LOW: Use nvim_cmd
 -- Address cursorline flickering
 -- Purposefully does not implement the default count mechanic in <C-u>/<C-d>, as it is painful to
 -- accidently hit
@@ -407,7 +398,6 @@ local function map_on_bufreadpre()
     -- Undo and Redo --
     -------------------
 
-    --- LOW: Use ApiMap/nvim_cmd
     Map("n", "u", function()
         return "<cmd>silent norm! " .. vim.v.count1 .. "u<cr>"
     end, { expr = true })
@@ -499,10 +489,6 @@ local function map_on_bufreadpre()
 
     Map("n", "g?", "<nop>")
 
-    -- FUTURE: I'm not sure why, but this properly handles being on the very top line
-    -- This could also handle whitespace/comments/count/view, but is fine for now as a quick map
-    -- LOW: Find a better key for this
-    -- Map("n", "H", 'mzk_D"_ddA <esc>p`zze', { silent = true })
     Map("n", "J", function()
         if not require("mjm.utils").check_modifiable() then
             return
@@ -610,8 +596,6 @@ local function map_on_bufreadpre()
         visual_move({ upward = true })
     end)
 
-    -- LOW: You could make this an ofunc for dot-repeating
-    -- FUTURE: Make a resolver for the "." and "v" getpos() values
     local function add_blank_visual(up)
         vim.api.nvim_set_option_value("lz", true, { scope = "global" })
 
@@ -690,8 +674,6 @@ Autocmd({ "BufReadPre", "BufNewFile" }, {
     end,
 })
 
--- TODO: I'm pretty sure this is causing flicker on first cmdline entrance. But this also only
--- happens if I do it from the starting window
 local function map_on_cmdlineenter()
     ApiMap("c", "<C-a>", "<C-b>", { noremap = true })
     ApiMap("c", "<C-d>", "<Del>", { noremap = true })
@@ -758,13 +740,8 @@ Autocmd("InsertEnter", {
 --- Custom Cmds ---
 -------------------
 
--- LOW: Create pandoc exports for current buf
-
 --- @param path string
 --- @return boolean
---- LOW: vim.system enter errors if it can't run the command. Since vim.pack uses git, shouldn't
---- have a scenario where this config is loaded without Git. But bad in principle
---- Mitigated by checking for a head, but now we have a dependency
 local function is_git_tracked(path)
     if not vim.g.gitsigns_head then
         return false
@@ -810,7 +787,6 @@ local function del_cur_buf_from_disk(cargs)
     local is_tracked = is_git_tracked(full_bufname)
 
     if is_tracked then
-        -- LOW: You don't need Fugitive for this
         -- # Fugitive
         local gdelete = { cmd = "GDelete", bang = true }
         local ok, err = pcall(vim.api.nvim_cmd, gdelete, {})
@@ -888,7 +864,6 @@ local function mv_cur_buf(cargs)
     do_mkdir(vim.fn.fnamemodify(escape_target, ":h"))
     local is_tracked = is_git_tracked(escape_bufname)
     if is_tracked then
-        -- LOW: Don't need Fugitive for this
         -- # Fugitive
         local gmove = { cmd = "GMove", args = { escape_target } }
         local ok, err = pcall(vim.api.nvim_cmd, gmove, {})

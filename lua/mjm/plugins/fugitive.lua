@@ -46,17 +46,12 @@ Map("n", "<leader>gchn", function()
     vim.api.nvim_cmd({ cmd = "Git", args = { "commit" } }, {})
 end)
 
--- TODO: diffs should not have listchars on
 local function open_diffs(staged)
     for _, w in ipairs(vim.fn.getwininfo()) do
         if vim.api.nvim_get_option_value("filetype", { buf = w.bufnr }) == "diff" then
             return
         end
     end
-
-    -- TODO: Re-implement this
-    -- require("mjm.error-list-open").close_all_loclists()
-    vim.api.nvim_cmd({ cmd = "ccl" }, {})
 
     local mods = { split = "botright" }
     if staged then
@@ -83,6 +78,3 @@ end)
 Map("n", "<leader>gp", function()
     vim.api.nvim_cmd({ cmd = "Git", args = { "push" } }, {})
 end)
-
--- TODO: I use this enough that it should be a map. It should check for what the current branch is
---- git reset HEAD~1

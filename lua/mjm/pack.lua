@@ -43,7 +43,6 @@ local pack_spec = {
 
     { src = "https://github.com/nvim-mini/mini.operators" },
 
-    -- LOW: Replace with custom config
     { src = "https://github.com/folke/lazydev.nvim" },
 
     { src = "https://github.com/Shatur/neovim-session-manager" },
@@ -72,8 +71,6 @@ local pack_spec = {
 
     { src = "https://github.com/mbbill/undotree" },
 
-    -- LOW: Nvim has a preview handler that would allow the Subvert command to be displayed like
-    -- the built-in substitute command
     { src = "https://github.com/tpope/vim-abolish" },
 
     { src = "https://github.com/tpope/vim-dadbod" },
