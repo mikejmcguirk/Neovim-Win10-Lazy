@@ -210,15 +210,13 @@ end
 --- @return boolean, string[]
 --- Assumes that it is being called in visual mode with a valid mode parameter
 local function get_visual_pattern(mode)
-    local start_pos = vim.fn.getpos(".")
-    local end_pos = vim.fn.getpos("v")
-    local region = vim.fn.getregion(start_pos, end_pos, { type = mode })
+    local start_pos = vim.fn.getpos(".") --- @type Range4
+    local end_pos = vim.fn.getpos("v") --- @type Range4
+    local region = vim.fn.getregion(start_pos, end_pos, { type = mode }) --- @type string[]
 
-    local lines = {}
-    local is_single_line = #region == 1
-
-    if is_single_line then
-        local trimmed = region[1]:gsub("^%s*(.-)%s*$", "%1")
+    local lines = {} --- @type string[]
+    if #region == 1 then
+        local trimmed = region[1]:gsub("^%s*(.-)%s*$", "%1") --- @type string
         if trimmed == "" then
             return false, { "get_visual_pattern: Empty selection", "" }
         end
@@ -226,8 +224,7 @@ local function get_visual_pattern(mode)
         table.insert(lines, trimmed)
     else
         lines = region
-
-        local has_valid_line = false
+        local has_valid_line = false --- @type boolean
         for _, line in ipairs(lines) do
             if line ~= "" then
                 has_valid_line = true
@@ -246,22 +243,21 @@ end
 
 --- @return boolean, string[]
 local function get_grep_pattern(prompt)
-    local mode = vim.fn.mode()
-    local is_visual = mode == "v" or mode == "V" or mode == "\22"
+    local mode = vim.fn.mode() --- @type string
+    local is_visual = mode == "v" or mode == "V" or mode == "\22" --- @type boolean
 
     if is_visual then
         return get_visual_pattern(mode)
     end
 
+    --- @type boolean, string
     local ok, pattern = pcall(vim.fn.input, { prompt = prompt, cancelreturn = "" })
     if (ok and pattern == "") or ((not ok) and pattern == "Keyboard interrupt") then
-        return false, { err_chunk = { "", "" }, err_msg_hist = false }
+        return false, { "", "" }
     end
 
     if not ok then
-        --- @type [string, string]
-        local chunk = { pattern or "Unknown error getting input", "ErrorMsg" }
-        return false, { err_chunk = chunk, err_msg_hist = true }
+        return false, { (pattern or "Unknown error getting input"), "ErrorMsg" }
     end
 
     return true, vim.split(pattern, "\\n")
@@ -277,7 +273,8 @@ local function get_grep_parts(grep_location, prompt, grep_opts)
         local backup_chunk = { "grep_cbuf: Unknown error getting grep cmd", "ErrorMsg" }
         --- @type [string, string]
         local err_chunk = type(grep_cmd) ~= "function" and grep_cmd or backup_chunk
-        return false, { err_chunk = err_chunk, err_msg_hist = true }
+        vim.api.nvim_echo({ err_chunk }, true, { err = true })
+        return false, nil
     end
 
     local ok_l, raw_pat = get_grep_pattern(prompt) --- @type boolean, string[]
@@ -286,6 +283,7 @@ local function get_grep_parts(grep_location, prompt, grep_opts)
         local backup_chunk = { "grep_cbuf: Unknown error getting grep pattern", "ErrorMsg" }
         local err_chunk = raw_pat or backup_chunk --- @type [string,string]
         vim.api.nvim_echo({ err_chunk }, true, { err = true })
+        return false, nil
     end
 
     grep_opts = grep_opts or {}

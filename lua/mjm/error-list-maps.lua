@@ -27,10 +27,6 @@ end
 --- GREP ---
 ------------
 
--- Qgrep/Lgrep
--- new/add/replace (no option is add)
--- buf/help/cwd
-
 nxmap("<leader>qg", "<nop>", "Avoid falling back to defaults")
 nxmap("<leader>qG", "<nop>", "Avoid falling back to defaults")
 nxmap("<leader>q<C-g>", "<nop>", "Avoid falling back to defaults")

@@ -93,6 +93,10 @@ TODO
 - Check that the qf and loclist versions are both properly built for purpose. Should be able to use the loclist function for buf/win specific info
 - For the title, use the base command without the specific files/dirs being searched
 - The current code does not properly handle ctrl c input canceling
+- Need a way to make cmds work. Rough template:
+-- Qgrep/Lgrep
+-- new/add/replace (no option is add)
+-- buf/help/cwd
 
 MAYBE
 
