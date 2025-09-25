@@ -16,8 +16,6 @@ local M = {}
 
 --- @class QfRancherSystemIn
 --- @field cmd_parts? string[]
---- @field err_chunk? [string, string]
---- @field err_msg_hist? boolean
 --- @field title? string
 
 --- @class QfRancherSystemOpts
@@ -103,38 +101,6 @@ local function get_setlist(win)
     end
 end
 
---- @param get_cmd_parts fun():boolean, QfRancherSystemIn
---- @return boolean, QfRancherSystemIn|nil
-local function resolve_cmd_parts(get_cmd_parts)
-    if type(get_cmd_parts) ~= "function" then
-        local chunk = { "No function provided to get cmd parts", "ErrorMsg" }
-        vim.api.nvim_echo({ chunk }, true, { err = true })
-        return false, nil
-    end
-
-    local ok, system_in = get_cmd_parts()
-
-    if not ok then
-        local chunk = system_in.err_chunk or { "Unknown error getting command parts", "ErrorMsg" }
-        vim.api.nvim_echo({ chunk }, system_in.err_msg_hist or true, { err = true })
-        return false, nil
-    end
-
-    if type(system_in.cmd_parts) ~= "table" then
-        local chunk = { "No cmd parts table provided from input function", "ErrorMsg" }
-        vim.api.nvim_echo({ chunk }, true, { err = true })
-        return false, nil
-    end
-
-    if #system_in.cmd_parts < 1 then
-        local chunk = { "cmd_parts empty in qf_system_wrapper", "ErrorMsg" }
-        vim.api.nvim_echo({ chunk }, true, { err = true })
-        return false, nil
-    end
-
-    return true, system_in
-end
-
 --- @param getlist function
 --- @param opts table
 --- @return integer|string
@@ -153,19 +119,13 @@ local function get_list_nr(getlist, opts)
 end
 
 ----------------------
---- System Wrapper ---
 ----------------------
 
---- @param get_cmd_parts fun():boolean, QfRancherSystemIn
+--- System Wrapper ---
+--- @param system_in QfRancherSystemIn
 --- @param opts QfRancherSystemOpts
 --- @return nil
-function M.qf_sys_wrap(get_cmd_parts, opts)
-    --- @type boolean, QfRancherSystemIn|nil
-    local ok, system_in = resolve_cmd_parts(get_cmd_parts)
-    if (not ok) or not system_in then
-        return
-    end --- Errors printed in resolve_cmd_parts
-
+function M.qf_sys_wrap(system_in, opts)
     opts = opts or {}
     local cur_win = opts.loclist and vim.api.nvim_get_current_win() or nil
     local cur_wintype = cur_win and vim.fn.win_gettype(cur_win) or nil

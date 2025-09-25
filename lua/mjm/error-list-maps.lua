@@ -6,12 +6,66 @@ local pmap = function(lhs, desc, cb)
     vim.api.nvim_set_keymap("n", lhs, "<nop>", { noremap = true, desc = desc, callback = cb })
 end
 
+local pnxmap = function(lhs, desc, cb)
+    vim.api.nvim_set_keymap("n", lhs, "<nop>", { noremap = true, desc = desc, callback = cb })
+    vim.api.nvim_set_keymap("x", lhs, "<nop>", { noremap = true, desc = desc, callback = cb })
+end
+
 local map = function(mode, lhs, rhs, desc)
     vim.api.nvim_set_keymap(mode, lhs, rhs, {
         noremap = true,
         desc = desc,
     })
 end
+
+local nxmap = function(lhs, rhs, desc)
+    map("n", lhs, rhs, desc)
+    map("x", lhs, rhs, desc)
+end
+
+------------
+--- GREP ---
+------------
+
+vim.keymap.set({ "n", "x" }, "<leader>qg", "<nop>")
+vim.keymap.set({ "n", "x" }, "<leader>qG", "<nop>")
+vim.keymap.set({ "n", "x" }, "<leader>q<C-g>", "<nop>")
+vim.keymap.set({ "n", "x" }, "<leader>lg", "<nop>")
+vim.keymap.set({ "n", "x" }, "<leader>lG", "<nop>")
+vim.keymap.set({ "n", "x" }, "<leader>l<C-g>", "<nop>")
+
+local eg = Qfr_Defer_Require("mjm.error-list-grep")
+
+pnxmap("<Plug>(qf-rancher-grep-cwd-n)", "<Plug> Grep the CWD, new qflist", function()
+    eg.grep_cwd_n()
+end)
+
+pnxmap("<Plug>(qf-rancher-grep-cwd-r)", "<Plug> Grep the CWD, replace qflist", function()
+    eg.grep_cwd_r()
+end)
+
+pnxmap("<Plug>(qf-rancher-grep-cwd-a)", "<Plug> Grep the CWD, add to qflist", function()
+    eg.grep_cwd_a()
+end)
+
+pnxmap("<Plug>(qf-rancher-lgrep-cwd-n)", "<Plug> Grep the CWD, new list", function()
+    eg.lgrep_cwd_n()
+end)
+
+pnxmap("<Plug>(qf-rancher-lgrep-cwd-r)", "<Plug> Grep the CWD, replace list", function()
+    eg.lgrep_cwd_r()
+end)
+
+pnxmap("<Plug>(qf-rancher-lgrep-cwd-a)", "<Plug> Grep the CWD, add to list", function()
+    eg.lgrep_cwd_a()
+end)
+
+nxmap("<leader>qgd", "<Plug>(qf-rancher-grep-cwd-n)", "Grep the CWD, new qflist")
+nxmap("<leader>qGd", "<Plug>(qf-rancher-grep-cwd-r)", "Grep the CWD, replace qflist")
+nxmap("<leader>q<C-g>d", "<Plug>(qf-rancher-grep-cwd-a)", "Grep the CWD, add to qflist")
+nxmap("<leader>lgd", "<Plug>(qf-rancher-lgrep-cwd-n)", "Grep the CWD, new loclist")
+nxmap("<leader>lGd", "<Plug>(qf-rancher-lgrep-cwd-r)", "Grep the CWD, replace loclist")
+nxmap("<leader>l<C-g>d", "<Plug>(qf-rancher-lgrep-cwd-a)", "Grep the CWD, add to loclist")
 
 -------------------------
 --- OPEN_CLOSE_TOGGLE ---
@@ -280,7 +334,6 @@ if vim.g.qfrancher_setdefaultcmds then
         es.q_history(count)
     end, { count = 0 })
 
-    -- DOCUMENT: "all" overrides count
     -- NOTE: Ideally, a count would override the "all" arg, in order to default to safer behavior,
     -- but the dict sent to the callback includes a count of 0 whether it was explicitly passed or
     -- not. Since a count of 0 can be explicitly passed, only overriding a count > 0 is convoluted
@@ -309,7 +362,6 @@ if vim.g.qfrancher_setdefaultcmds then
         es.l_history(count)
     end, { count = 0 })
 
-    -- DOCUMENT: "all" overrides count
     -- NOTE: Ideally, a count would override the "all" arg, in order to default to safer behavior,
     -- but the dict sent to the callback includes a count of 0 whether it was explicitly passed or
     -- not. Since a count of 0 can be explicitly passed, only overriding a count > 0 is convoluted

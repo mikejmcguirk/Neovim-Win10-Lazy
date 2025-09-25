@@ -70,6 +70,14 @@ LOW
 
 - Filter anything without a line/col number
 
+----------------
+--- FTPLUGIN ---
+----------------
+
+TODO
+
+- When doing qq inside of a location list, fails on validate
+
 ------------
 --- GREP ---
 ------------
@@ -84,6 +92,7 @@ TODO
 - Check that all functions have annotations and documentation
 - Check that the qf and loclist versions are both properly built for purpose. Should be able to use the loclist function for buf/win specific info
 - For the title, use the base command without the specific files/dirs being searched
+- The current code does not properly handle ctrl c input canceling
 
 MAYBE
 
@@ -152,6 +161,13 @@ TODO
 - Check that the qf and loclist versions are both properly built for purpose. Should be able to use the loclist function for buf/win specific info
 
 - Hold on refactoring the jump functions until I know what we're doing with them. Still need to figure out how they co-exist with the qQ mapping
+- If you do [q]q on an empty list, it enter errors
+
+-------------
+--- STACK ---
+-------------
+
+--- Document - For the delete commands, all overrides count
 
 --------------
 --- SYSTEM ---
