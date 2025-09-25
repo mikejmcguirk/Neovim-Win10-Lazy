@@ -27,12 +27,16 @@ end
 --- GREP ---
 ------------
 
-vim.keymap.set({ "n", "x" }, "<leader>qg", "<nop>")
-vim.keymap.set({ "n", "x" }, "<leader>qG", "<nop>")
-vim.keymap.set({ "n", "x" }, "<leader>q<C-g>", "<nop>")
-vim.keymap.set({ "n", "x" }, "<leader>lg", "<nop>")
-vim.keymap.set({ "n", "x" }, "<leader>lG", "<nop>")
-vim.keymap.set({ "n", "x" }, "<leader>l<C-g>", "<nop>")
+-- Qgrep/Lgrep
+-- new/add/replace (no option is add)
+-- buf/help/cwd
+
+nxmap("<leader>qg", "<nop>", "Avoid falling back to defaults")
+nxmap("<leader>qG", "<nop>", "Avoid falling back to defaults")
+nxmap("<leader>q<C-g>", "<nop>", "Avoid falling back to defaults")
+nxmap("<leader>lg", "<nop>", "Avoid falling back to defaults")
+nxmap("<leader>lG", "<nop>", "Avoid falling back to defaults")
+nxmap("<leader>l<C-g>", "<nop>", "Avoid falling back to defaults")
 
 local eg = Qfr_Defer_Require("mjm.error-list-grep")
 
@@ -59,13 +63,6 @@ end)
 pnxmap("<Plug>(qf-rancher-lgrep-cwd-a)", "<Plug> Grep the CWD, add to list", function()
     eg.lgrep_cwd_a()
 end)
-
-nxmap("<leader>qgd", "<Plug>(qf-rancher-grep-cwd-n)", "Grep the CWD, new qflist")
-nxmap("<leader>qGd", "<Plug>(qf-rancher-grep-cwd-r)", "Grep the CWD, replace qflist")
-nxmap("<leader>q<C-g>d", "<Plug>(qf-rancher-grep-cwd-a)", "Grep the CWD, add to qflist")
-nxmap("<leader>lgd", "<Plug>(qf-rancher-lgrep-cwd-n)", "Grep the CWD, new loclist")
-nxmap("<leader>lGd", "<Plug>(qf-rancher-lgrep-cwd-r)", "Grep the CWD, replace loclist")
-nxmap("<leader>l<C-g>d", "<Plug>(qf-rancher-lgrep-cwd-a)", "Grep the CWD, add to loclist")
 
 local pgCWDn_desc = "<Plug> Grep the CWD (case-sensitive), new qflist"
 pnxmap("<Plug>(qf-rancher-grep-CWD-n)", pgCWDn_desc, function()
@@ -97,18 +94,6 @@ pnxmap("<Plug>(qf-rancher-lgrep-CWD-a)", plgCWDa_desc, function()
     eg.lgrep_CWD_a()
 end)
 
-nxmap("<leader>qgD", "<Plug>(qf-rancher-grep-CWD-n)", "Grep the CWD (case-sensitive), new qflist")
-local gCWDr_desc = "Grep the CWD (case-sensitive), replace qflist"
-nxmap("<leader>qGD", "<Plug>(qf-rancher-grep-CWD-r)", gCWDr_desc)
-local gCWDa_desc = "Grep the CWD (case-sensitive), add to qflist"
-nxmap("<leader>q<C-g>D", "<Plug>(qf-rancher-grep-CWD-a)", gCWDa_desc)
-local lgCWDn_desc = "Grep the CWD (case-sensitive), new loclist"
-nxmap("<leader>lgD", "<Plug>(qf-rancher-lgrep-CWD-n)", lgCWDn_desc)
-local lgCWDr_desc = "Grep the CWD (case-sensitive), replace loclist"
-nxmap("<leader>lGD", "<Plug>(qf-rancher-lgrep-CWD-r)", lgCWDr_desc)
-local lgCWDa_desc = "Grep the CWD (case-sensitive), add to loclist"
-nxmap("<leader>l<C-g>D", "<Plug>(qf-rancher-lgrep-CWD-a)", lgCWDa_desc)
-
 local pgcwdXn_desc = "<Plug> Grep the cwdX (case-sensitive), new qflist"
 pnxmap("<Plug>(qf-rancher-grep-cwdX-n)", pgcwdXn_desc, function()
     eg.grep_cwdX_n()
@@ -139,19 +124,6 @@ pnxmap("<Plug>(qf-rancher-lgrep-cwdX-a)", plgcwdXa_desc, function()
     eg.lgrep_cwdX_a()
 end)
 
-local gcwdXn_desc = "Grep the cwdX (with regex), new qflist"
-nxmap("<leader>qg<C-d>", "<Plug>(qf-rancher-grep-cwdX-n)", gcwdXn_desc)
-local gcwdXr_desc = "Grep the cwdX (with regex), replace qflist"
-nxmap("<leader>qG<C-d>", "<Plug>(qf-rancher-grep-cwdX-r)", gcwdXr_desc)
-local gcwdXa_desc = "Grep the cwdX (with regex), add to qflist"
-nxmap("<leader>q<C-g><C-d>", "<Plug>(qf-rancher-grep-cwdX-a)", gcwdXa_desc)
-local lgcwdXn_desc = "Grep the cwdX (with regex), new loclist"
-nxmap("<leader>lg<C-d>", "<Plug>(qf-rancher-lgrep-cwdX-n)", lgcwdXn_desc)
-local lgcwdXr_desc = "Grep the cwdX (with regex), replace loclist"
-nxmap("<leader>lG<C-d>", "<Plug>(qf-rancher-lgrep-cwdX-r)", lgcwdXr_desc)
-local lgcwdXa_desc = "Grep the cwdX (with regex), add to loclist"
-nxmap("<leader>l<C-g><C-d>", "<Plug>(qf-rancher-lgrep-cwdX-a)", lgcwdXa_desc)
-
 pnxmap("<Plug>(qf-rancher-grep-help-n)", "<Plug> Grep the docs, new qflist", function()
     eg.grep_help_n()
 end)
@@ -175,13 +147,6 @@ end)
 pnxmap("<Plug>(qf-rancher-lgrep-help-a)", "<Plug> Grep the docs, add to list", function()
     eg.lgrep_help_a()
 end)
-
-nxmap("<leader>qgh", "<Plug>(qf-rancher-grep-help-n)", "Grep the docs, new qflist")
-nxmap("<leader>qGh", "<Plug>(qf-rancher-grep-help-r)", "Grep the docs, replace qflist")
-nxmap("<leader>q<C-g>h", "<Plug>(qf-rancher-grep-help-a)", "Grep the docs, add to qflist")
-nxmap("<leader>lgh", "<Plug>(qf-rancher-lgrep-help-n)", "Grep the docs, new loclist")
-nxmap("<leader>lGh", "<Plug>(qf-rancher-lgrep-help-r)", "Grep the docs, replace loclist")
-nxmap("<leader>l<C-g>h", "<Plug>(qf-rancher-lgrep-help-a)", "Grep the docs, add to loclist")
 
 local pgHELPn_desc = "<Plug> Grep the docs (case-sensitive), new qflist"
 pnxmap("<Plug>(qf-rancher-grep-HELP-n)", pgHELPn_desc, function()
@@ -213,19 +178,6 @@ pnxmap("<Plug>(qf-rancher-lgrep-HELP-a)", plgHELPa_desc, function()
     eg.lgrep_HELP_a()
 end)
 
-local gHELPn_desc = "Grep the docs (case-sensitive), new qflist"
-nxmap("<leader>qgH", "<Plug>(qf-rancher-grep-HELP-n)", gHELPn_desc)
-local gHELPr_desc = "Grep the docs (case-sensitive), replace qflist"
-nxmap("<leader>qGH", "<Plug>(qf-rancher-grep-HELP-r)", gHELPr_desc)
-local gHELPa_desc = "Grep the docs (case-sensitive), add to qflist"
-nxmap("<leader>q<C-g>H", "<Plug>(qf-rancher-grep-HELP-a)", gHELPa_desc)
-local lgHELPn_desc = "Grep the docs (case-sensitive), new loclist"
-nxmap("<leader>lgH", "<Plug>(qf-rancher-lgrep-HELP-n)", lgHELPn_desc)
-local lgHELPr_desc = "Grep the docs (case-sensitive), replace loclist"
-nxmap("<leader>lGH", "<Plug>(qf-rancher-lgrep-HELP-r)", lgHELPr_desc)
-local lgHELPa_desc = "Grep the docs (case-sensitive), add to loclist"
-nxmap("<leader>l<C-g>H", "<Plug>(qf-rancher-lgrep-HELP-a)", lgHELPa_desc)
-
 local pghelpXn_desc = "<Plug> Grep the docs (case-sensitive), new qflist"
 pnxmap("<Plug>(qf-rancher-grep-helpX-n)", pghelpXn_desc, function()
     eg.grep_helpX_n()
@@ -256,19 +208,6 @@ pnxmap("<Plug>(qf-rancher-lgrep-helpX-a)", plghelpXa_desc, function()
     eg.lgrep_helpX_a()
 end)
 
-local ghelpXn_desc = "Grep the docs (with regex), new qflist"
-nxmap("<leader>qg<C-h>", "<Plug>(qf-rancher-grep-helpX-n)", ghelpXn_desc)
-local ghelpXr_desc = "Grep the docs (with regex), replace qflist"
-nxmap("<leader>qG<C-h>", "<Plug>(qf-rancher-grep-helpX-r)", ghelpXr_desc)
-local ghelpXa_desc = "Grep the docs (with regex), add to qflist"
-nxmap("<leader>q<C-g><C-h>", "<Plug>(qf-rancher-grep-helpX-a)", ghelpXa_desc)
-local lghelpXn_desc = "Grep the docs (with regex), new loclist"
-nxmap("<leader>lg<C-h>", "<Plug>(qf-rancher-lgrep-helpX-n)", lghelpXn_desc)
-local lghelpXr_desc = "Grep the docs (with regex), replace loclist"
-nxmap("<leader>lG<C-h>", "<Plug>(qf-rancher-lgrep-helpX-r)", lghelpXr_desc)
-local lghelpXa_desc = "Grep the docs (with regex), add to loclist"
-nxmap("<leader>l<C-g><C-h>", "<Plug>(qf-rancher-lgrep-helpX-a)", lghelpXa_desc)
-
 pnxmap("<Plug>(qf-rancher-grep-bufs-n)", "<Plug> Grep open bufs, new qflist", function()
     eg.grep_bufs_n()
 end)
@@ -280,10 +219,6 @@ end)
 pnxmap("<Plug>(qf-rancher-grep-bufs-a)", "<Plug> Grep open bufs, add to qflist", function()
     eg.grep_bufs_a()
 end)
-
-nxmap("<leader>qgu", "<Plug>(qf-rancher-grep-bufs-n)", "Grep open bufs, new qflist")
-nxmap("<leader>qGu", "<Plug>(qf-rancher-grep-bufs-r)", "Grep open bufs, replace qflist")
-nxmap("<leader>q<C-g>u", "<Plug>(qf-rancher-grep-bufs-a)", "Grep open bufs, add to qflist")
 
 local pgBUFSn_desc = "<Plug> Grep open bufs (case-sensitive), new qflist"
 pnxmap("<Plug>(qf-rancher-grep-BUFS-n)", pgBUFSn_desc, function()
@@ -300,13 +235,6 @@ pnxmap("<Plug>(qf-rancher-grep-BUFS-a)", pgBUFSa_desc, function()
     eg.grep_BUFS_a()
 end)
 
-local gBUFSn_desc = "Grep open bufs (case-sensitive), new qflist"
-nxmap("<leader>qgU", "<Plug>(qf-rancher-grep-BUFS-n)", gBUFSn_desc)
-local gBUFSr_desc = "Grep open bufs (case-sensitive), replace qflist"
-nxmap("<leader>qGU", "<Plug>(qf-rancher-grep-BUFS-r)", gBUFSr_desc)
-local gBUFSa_desc = "Grep open bufs (case-sensitive), add to qflist"
-nxmap("<leader>q<C-g>U", "<Plug>(qf-rancher-grep-BUFS-a)", gBUFSa_desc)
-
 local pgbufsXn_desc = "<Plug> Grep open bufs (case-sensitive), new qflist"
 pnxmap("<Plug>(qf-rancher-grep-bufsX-n)", pgbufsXn_desc, function()
     eg.grep_bufsX_n()
@@ -322,13 +250,6 @@ pnxmap("<Plug>(qf-rancher-grep-bufsX-a)", pgbufsXa_desc, function()
     eg.grep_bufsX_a()
 end)
 
-local gbufsXn_desc = "Grep open bufs (with regex), new qflist"
-nxmap("<leader>qg<C-u>", "<Plug>(qf-rancher-grep-bufsX-n)", gbufsXn_desc)
-local gbufsXr_desc = "Grep open bufs (with regex), replace qflist"
-nxmap("<leader>qG<C-u>", "<Plug>(qf-rancher-grep-bufsX-r)", gbufsXr_desc)
-local gbufsXa_desc = "Grep open bufs (with regex), add to qflist"
-nxmap("<leader>q<C-g><C-u>", "<Plug>(qf-rancher-grep-bufsX-a)", gbufsXa_desc)
-
 pnxmap("<Plug>(qf-rancher-grep-cbuf-n)", "<Plug> Grep cur buf, new loclist", function()
     eg.grep_cbuf_n()
 end)
@@ -340,10 +261,6 @@ end)
 pnxmap("<Plug>(qf-rancher-grep-cbuf-a)", "<Plug> Grep cur buf, add to loclist", function()
     eg.grep_cbuf_a()
 end)
-
-nxmap("<leader>lgu", "<Plug>(qf-rancher-grep-cbuf-n)", "Grep cur buf, new loclist")
-nxmap("<leader>lGu", "<Plug>(qf-rancher-grep-cbuf-r)", "Grep cur buf, replace loclist")
-nxmap("<leader>l<C-g>u", "<Plug>(qf-rancher-grep-cbuf-a)", "Grep cur buf, add to loclist")
 
 local pgCBUFn_desc = "<Plug> Grep cur buf (case-sensitive), new loclist"
 pnxmap("<Plug>(qf-rancher-grep-CBUF-n)", pgCBUFn_desc, function()
@@ -360,13 +277,6 @@ pnxmap("<Plug>(qf-rancher-grep-CBUF-a)", pgCBUFa_desc, function()
     eg.grep_CBUF_a()
 end)
 
-local gCBUFn_desc = "Grep cur buf (case-sensitive), new loclist"
-nxmap("<leader>lgD", "<Plug>(qf-rancher-grep-CBUF-n)", gCBUFn_desc)
-local gCBUFr_desc = "Grep cur buf (case-sensitive), replace loclist"
-nxmap("<leader>lGU", "<Plug>(qf-rancher-grep-CBUF-r)", gCBUFr_desc)
-local gCBUFa_desc = "Grep cur buf (case-sensitive), add to loclist"
-nxmap("<leader>l<C-g>U", "<Plug>(qf-rancher-grep-CBUF-a)", gCBUFa_desc)
-
 local pgcbufXn_desc = "<Plug> Grep cur buf (case-sensitive), new loclist"
 pnxmap("<Plug>(qf-rancher-grep-cbufX-n)", pgcbufXn_desc, function()
     eg.grep_cbufX_n()
@@ -382,12 +292,118 @@ pnxmap("<Plug>(qf-rancher-grep-cbufX-a)", pgcbufXa_desc, function()
     eg.grep_cbufX_a()
 end)
 
-local gcbufXn_desc = "Grep cur buf (with regex), new loclist"
-nxmap("<leader>lg<C-u>", "<Plug>(qf-rancher-grep-cbufX-n)", gcbufXn_desc)
-local gcbufXr_desc = "Grep cur buf (with regex), replace loclist"
-nxmap("<leader>lG<C-u>", "<Plug>(qf-rancher-grep-cbufX-r)", gcbufXr_desc)
-local gcbufXa_desc = "Grep cur buf (with regex), add to loclist"
-nxmap("<leader>l<C-g><C-u>", "<Plug>(qf-rancher-grep-cbufX-a)", gcbufXa_desc)
+if vim.g.qfrancher_setdefaultmaps then
+    nxmap("<leader>qgd", "<Plug>(qf-rancher-grep-cwd-n)", "Grep the CWD, new qflist")
+    nxmap("<leader>qGd", "<Plug>(qf-rancher-grep-cwd-r)", "Grep the CWD, replace qflist")
+    nxmap("<leader>q<C-g>d", "<Plug>(qf-rancher-grep-cwd-a)", "Grep the CWD, add to qflist")
+    nxmap("<leader>lgd", "<Plug>(qf-rancher-lgrep-cwd-n)", "Grep the CWD, new loclist")
+    nxmap("<leader>lGd", "<Plug>(qf-rancher-lgrep-cwd-r)", "Grep the CWD, replace loclist")
+    nxmap("<leader>l<C-g>d", "<Plug>(qf-rancher-lgrep-cwd-a)", "Grep the CWD, add to loclist")
+
+    local gCWDn_desc = "Grep the CWD (case-sensitive), new qflist"
+    nxmap("<leader>qgD", "<Plug>(qf-rancher-grep-CWD-n)", gCWDn_desc)
+    local gCWDr_desc = "Grep the CWD (case-sensitive), replace qflist"
+    nxmap("<leader>qGD", "<Plug>(qf-rancher-grep-CWD-r)", gCWDr_desc)
+    local gCWDa_desc = "Grep the CWD (case-sensitive), add to qflist"
+    nxmap("<leader>q<C-g>D", "<Plug>(qf-rancher-grep-CWD-a)", gCWDa_desc)
+    local lgCWDn_desc = "Grep the CWD (case-sensitive), new loclist"
+    nxmap("<leader>lgD", "<Plug>(qf-rancher-lgrep-CWD-n)", lgCWDn_desc)
+    local lgCWDr_desc = "Grep the CWD (case-sensitive), replace loclist"
+    nxmap("<leader>lGD", "<Plug>(qf-rancher-lgrep-CWD-r)", lgCWDr_desc)
+    local lgCWDa_desc = "Grep the CWD (case-sensitive), add to loclist"
+    nxmap("<leader>l<C-g>D", "<Plug>(qf-rancher-lgrep-CWD-a)", lgCWDa_desc)
+
+    local gcwdXn_desc = "Grep the cwdX (with regex), new qflist"
+    nxmap("<leader>qg<C-d>", "<Plug>(qf-rancher-grep-cwdX-n)", gcwdXn_desc)
+    local gcwdXr_desc = "Grep the cwdX (with regex), replace qflist"
+    nxmap("<leader>qG<C-d>", "<Plug>(qf-rancher-grep-cwdX-r)", gcwdXr_desc)
+    local gcwdXa_desc = "Grep the cwdX (with regex), add to qflist"
+    nxmap("<leader>q<C-g><C-d>", "<Plug>(qf-rancher-grep-cwdX-a)", gcwdXa_desc)
+    local lgcwdXn_desc = "Grep the cwdX (with regex), new loclist"
+    nxmap("<leader>lg<C-d>", "<Plug>(qf-rancher-lgrep-cwdX-n)", lgcwdXn_desc)
+    local lgcwdXr_desc = "Grep the cwdX (with regex), replace loclist"
+    nxmap("<leader>lG<C-d>", "<Plug>(qf-rancher-lgrep-cwdX-r)", lgcwdXr_desc)
+    local lgcwdXa_desc = "Grep the cwdX (with regex), add to loclist"
+    nxmap("<leader>l<C-g><C-d>", "<Plug>(qf-rancher-lgrep-cwdX-a)", lgcwdXa_desc)
+
+    nxmap("<leader>qgh", "<Plug>(qf-rancher-grep-help-n)", "Grep the docs, new qflist")
+    nxmap("<leader>qGh", "<Plug>(qf-rancher-grep-help-r)", "Grep the docs, replace qflist")
+    nxmap("<leader>q<C-g>h", "<Plug>(qf-rancher-grep-help-a)", "Grep the docs, add to qflist")
+    nxmap("<leader>lgh", "<Plug>(qf-rancher-lgrep-help-n)", "Grep the docs, new loclist")
+    nxmap("<leader>lGh", "<Plug>(qf-rancher-lgrep-help-r)", "Grep the docs, replace loclist")
+    nxmap("<leader>l<C-g>h", "<Plug>(qf-rancher-lgrep-help-a)", "Grep the docs, add to loclist")
+
+    local gHELPn_desc = "Grep the docs (case-sensitive), new qflist"
+    nxmap("<leader>qgH", "<Plug>(qf-rancher-grep-HELP-n)", gHELPn_desc)
+    local gHELPr_desc = "Grep the docs (case-sensitive), replace qflist"
+    nxmap("<leader>qGH", "<Plug>(qf-rancher-grep-HELP-r)", gHELPr_desc)
+    local gHELPa_desc = "Grep the docs (case-sensitive), add to qflist"
+    nxmap("<leader>q<C-g>H", "<Plug>(qf-rancher-grep-HELP-a)", gHELPa_desc)
+    local lgHELPn_desc = "Grep the docs (case-sensitive), new loclist"
+    nxmap("<leader>lgH", "<Plug>(qf-rancher-lgrep-HELP-n)", lgHELPn_desc)
+    local lgHELPr_desc = "Grep the docs (case-sensitive), replace loclist"
+    nxmap("<leader>lGH", "<Plug>(qf-rancher-lgrep-HELP-r)", lgHELPr_desc)
+    local lgHELPa_desc = "Grep the docs (case-sensitive), add to loclist"
+    nxmap("<leader>l<C-g>H", "<Plug>(qf-rancher-lgrep-HELP-a)", lgHELPa_desc)
+
+    local ghelpXn_desc = "Grep the docs (with regex), new qflist"
+    nxmap("<leader>qg<C-h>", "<Plug>(qf-rancher-grep-helpX-n)", ghelpXn_desc)
+    local ghelpXr_desc = "Grep the docs (with regex), replace qflist"
+    nxmap("<leader>qG<C-h>", "<Plug>(qf-rancher-grep-helpX-r)", ghelpXr_desc)
+    local ghelpXa_desc = "Grep the docs (with regex), add to qflist"
+    nxmap("<leader>q<C-g><C-h>", "<Plug>(qf-rancher-grep-helpX-a)", ghelpXa_desc)
+    local lghelpXn_desc = "Grep the docs (with regex), new loclist"
+    nxmap("<leader>lg<C-h>", "<Plug>(qf-rancher-lgrep-helpX-n)", lghelpXn_desc)
+    local lghelpXr_desc = "Grep the docs (with regex), replace loclist"
+    nxmap("<leader>lG<C-h>", "<Plug>(qf-rancher-lgrep-helpX-r)", lghelpXr_desc)
+    local lghelpXa_desc = "Grep the docs (with regex), add to loclist"
+    nxmap("<leader>l<C-g><C-h>", "<Plug>(qf-rancher-lgrep-helpX-a)", lghelpXa_desc)
+
+    vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
+        group = vim.api.nvim_create_augroup("qfrancher-buf-grep-maps", { clear = true }),
+        once = true,
+        callback = function()
+            nxmap("<leader>qgu", "<Plug>(qf-rancher-grep-bufs-n)", "Grep open bufs, new qflist")
+            local gbufsr_desc = "Grep open bufs, replace qflist"
+            nxmap("<leader>qGu", "<Plug>(qf-rancher-grep-bufs-r)", gbufsr_desc)
+            local gbufsa_desc = "Grep open bufs, add to qflist"
+            nxmap("<leader>q<C-g>u", "<Plug>(qf-rancher-grep-bufs-a)", gbufsa_desc)
+
+            local gBUFSn_desc = "Grep open bufs (case-sensitive), new qflist"
+            nxmap("<leader>qgU", "<Plug>(qf-rancher-grep-BUFS-n)", gBUFSn_desc)
+            local gBUFSr_desc = "Grep open bufs (case-sensitive), replace qflist"
+            nxmap("<leader>qGU", "<Plug>(qf-rancher-grep-BUFS-r)", gBUFSr_desc)
+            local gBUFSa_desc = "Grep open bufs (case-sensitive), add to qflist"
+            nxmap("<leader>q<C-g>U", "<Plug>(qf-rancher-grep-BUFS-a)", gBUFSa_desc)
+
+            local gbufsXn_desc = "Grep open bufs (with regex), new qflist"
+            nxmap("<leader>qg<C-u>", "<Plug>(qf-rancher-grep-bufsX-n)", gbufsXn_desc)
+            local gbufsXr_desc = "Grep open bufs (with regex), replace qflist"
+            nxmap("<leader>qG<C-u>", "<Plug>(qf-rancher-grep-bufsX-r)", gbufsXr_desc)
+            local gbufsXa_desc = "Grep open bufs (with regex), add to qflist"
+            nxmap("<leader>q<C-g><C-u>", "<Plug>(qf-rancher-grep-bufsX-a)", gbufsXa_desc)
+
+            nxmap("<leader>lgu", "<Plug>(qf-rancher-grep-cbuf-n)", "Grep cur buf, new loclist")
+            nxmap("<leader>lGu", "<Plug>(qf-rancher-grep-cbuf-r)", "Grep cur buf, replace loclist")
+            local gcbufa_desc = "Grep cur buf, add to loclist"
+            nxmap("<leader>l<C-g>u", "<Plug>(qf-rancher-grep-cbuf-a)", gcbufa_desc)
+
+            local gCBUFn_desc = "Grep cur buf (case-sensitive), new loclist"
+            nxmap("<leader>lgD", "<Plug>(qf-rancher-grep-CBUF-n)", gCBUFn_desc)
+            local gCBUFr_desc = "Grep cur buf (case-sensitive), replace loclist"
+            nxmap("<leader>lGU", "<Plug>(qf-rancher-grep-CBUF-r)", gCBUFr_desc)
+            local gCBUFa_desc = "Grep cur buf (case-sensitive), add to loclist"
+            nxmap("<leader>l<C-g>U", "<Plug>(qf-rancher-grep-CBUF-a)", gCBUFa_desc)
+
+            local gcbufXn_desc = "Grep cur buf (with regex), new loclist"
+            nxmap("<leader>lg<C-u>", "<Plug>(qf-rancher-grep-cbufX-n)", gcbufXn_desc)
+            local gcbufXr_desc = "Grep cur buf (with regex), replace loclist"
+            nxmap("<leader>lG<C-u>", "<Plug>(qf-rancher-grep-cbufX-r)", gcbufXr_desc)
+            local gcbufXa_desc = "Grep cur buf (with regex), add to loclist"
+            nxmap("<leader>l<C-g><C-u>", "<Plug>(qf-rancher-grep-cbufX-a)", gcbufXa_desc)
+        end,
+    })
+end
 
 -------------------------
 --- OPEN_CLOSE_TOGGLE ---
