@@ -8,19 +8,6 @@ local noremap = { noremap = true }
 ApiMap("n", "(", "<nop>", { noremap = true })
 ApiMap("n", ")", "<nop>", { noremap = true })
 
-------------
---- MISC ---
-------------
-
-Map("n", "<C-c>", function()
-    print("")
-    vim.cmd("noh")
-    vim.lsp.buf.clear_references()
-
-    -- Allows <C-c> to exit commands with a count. Also eliminates command line nag
-    return "<esc>"
-end, { expr = true, silent = true })
-
 -------------------------
 -- Saving and Quitting --
 -------------------------
@@ -238,12 +225,21 @@ ApiMap("n", "\\w", "<nop>", {
 })
 
 --------------------
--- Mode Switching --
+-- MODE SWITCHING --
 --------------------
 
+-- NOTE: could not get set lmap "\3\27" to work
+Map("n", "<C-c>", function()
+    print("")
+    vim.cmd("noh")
+    vim.lsp.buf.clear_references()
+
+    -- Allows <C-c> to exit commands with a count. Also eliminates command line nag
+    return "<esc>"
+end, { expr = true, silent = true })
+
 --- omapped so that Quickscope highlighting properly exits
-ApiMap("o", "<C-c>", "<esc>", { noremap = true })
-ApiMap("x", "<C-c>", "<esc>", { noremap = true })
+Map({ "o", "x" }, "<C-c>", "<esc>")
 
 Map("n", "v", "mvv", { silent = true })
 Map("n", "V", "mvV", { silent = true })
@@ -372,6 +368,7 @@ local function map_on_bufreadpre()
     -- Deal with default behavior where you type just to the bound of a window, so Nvim scrolls to
     -- the next column so you can see what you're typing, but then you exit insert mode, meaning
     -- the character no longer can exist, but Neovim still has you scrolled to the side
+    -- NOTE: This also applies to replace mode, but not single replace char
     ApiMap("i", "<C-c>", "<esc>ze", { noremap = true })
 
     -- "S" enters insert with the proper indent. "I" left on default behavior

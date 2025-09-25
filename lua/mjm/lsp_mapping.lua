@@ -95,10 +95,10 @@ function M.set_lsp_maps(ev, cmds)
     local buf = ev.buf ---@type integer
 
     --- callHierarchy/incomingCalls ---
-    Map("n", "grc", cmds.in_call, { buffer = buf, jump1 = false })
+    Map("n", "grc", cmds.in_call, { buffer = buf })
 
     --- callHierarchy/outgoingCalls ---
-    Map("n", "grC", cmds.out_call, { buffer = buf, jump1 = false })
+    Map("n", "grC", cmds.out_call, { buffer = buf })
 
     --- textDocument/codeAction ---
     Map("n", "gra", cmds.code_action, { buffer = buf })
