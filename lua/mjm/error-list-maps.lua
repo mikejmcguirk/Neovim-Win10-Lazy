@@ -23,9 +23,45 @@ local nxmap = function(lhs, rhs, desc)
     map("x", lhs, rhs, desc)
 end
 
+-------------------
+--- System Opts ---
+-------------------
+
+--- @type QfRancherSystemOpts
+local sys_new = { async = true, timeout = 4000 }
+--- @type QfRancherSystemOpts
+local sys_replace = { async = true, replace = true, timeout = 4000 }
+--- @type QfRancherSystemOpts
+local sys_add = { async = true, add = true, timeout = 4000 }
+
+--- @type QfRancherSystemOpts
+local sys_lnew = { async = true, loclist = true, timeout = 4000 }
+--- @type QfRancherSystemOpts
+local sys_lreplace = { async = true, loclist = true, replace = true, timeout = 4000 }
+--- @type QfRancherSystemOpts
+local sys_ladd = { async = true, loclist = true, add = true, timeout = 4000 }
+
+--- @type QfRancherSystemOpts
+local sys_help_new = { async = true, type = "\1", timeout = 4000 }
+--- @type QfRancherSystemOpts
+local sys_help_replace = { async = true, type = "\1", replace = true, timeout = 4000 }
+--- @type QfRancherSystemOpts
+local sys_help_add = { async = true, type = "\1", add = true, timeout = 4000 }
+
+--- @type QfRancherSystemOpts
+local sys_help_lnew = { async = true, type = "\1", loclist = true, timeout = 4000 }
+--- @type QfRancherSystemOpts
+local sys_help_lreplace =
+    { async = true, type = "\1", loclist = true, replace = true, timeout = 4000 }
+--- @type QfRancherSystemOpts
+local sys_help_ladd = { async = true, type = "\1", loclist = true, add = true, timeout = 4000 }
+
 ------------
 --- GREP ---
 ------------
+
+local grep_smart_case = { literal = true, smart_case = true }
+local grep_case_sensitive = { literal = true }
 
 nxmap("<leader>qg", "<nop>", "Avoid falling back to defaults")
 nxmap("<leader>qG", "<nop>", "Avoid falling back to defaults")
@@ -37,255 +73,255 @@ nxmap("<leader>l<C-g>", "<nop>", "Avoid falling back to defaults")
 local eg = Qfr_Defer_Require("mjm.error-list-grep")
 
 pnxmap("<Plug>(qf-rancher-grep-cwd-n)", "<Plug> Grep the CWD, new qflist", function()
-    eg.grep_cwd_n()
+    eg.grep_cwd(grep_smart_case, sys_new)
 end)
 
 pnxmap("<Plug>(qf-rancher-grep-cwd-r)", "<Plug> Grep the CWD, replace qflist", function()
-    eg.grep_cwd_r()
+    eg.grep_cwd(grep_smart_case, sys_replace)
 end)
 
 pnxmap("<Plug>(qf-rancher-grep-cwd-a)", "<Plug> Grep the CWD, add to qflist", function()
-    eg.grep_cwd_a()
+    eg.grep_cwd(grep_smart_case, sys_add)
 end)
 
-pnxmap("<Plug>(qf-rancher-lgrep-cwd-n)", "<Plug> Grep the CWD, new list", function()
-    eg.lgrep_cwd_n()
+pnxmap("<Plug>(qf-rancher-lgrep-cwd-n)", "<Plug> Grep the CWD, new loclist", function()
+    eg.grep_cwd(grep_smart_case, sys_lnew)
 end)
 
-pnxmap("<Plug>(qf-rancher-lgrep-cwd-r)", "<Plug> Grep the CWD, replace list", function()
-    eg.lgrep_cwd_r()
+pnxmap("<Plug>(qf-rancher-lgrep-cwd-r)", "<Plug> Grep the CWD, replace loclist", function()
+    eg.grep_cwd(grep_smart_case, sys_lreplace)
 end)
 
-pnxmap("<Plug>(qf-rancher-lgrep-cwd-a)", "<Plug> Grep the CWD, add to list", function()
-    eg.lgrep_cwd_a()
+pnxmap("<Plug>(qf-rancher-lgrep-cwd-a)", "<Plug> Grep the CWD, add to loclist", function()
+    eg.grep_cwd(grep_smart_case, sys_ladd)
 end)
 
 local pgCWDn_desc = "<Plug> Grep the CWD (case-sensitive), new qflist"
 pnxmap("<Plug>(qf-rancher-grep-CWD-n)", pgCWDn_desc, function()
-    eg.grep_CWD_n()
+    eg.grep_cwd(grep_case_sensitive, sys_new)
 end)
 
 local pgCWDr_desc = "<Plug> Grep the CWD (case-sensitive), replace qflist"
 pnxmap("<Plug>(qf-rancher-grep-CWD-r)", pgCWDr_desc, function()
-    eg.grep_CWD_r()
+    eg.grep_cwd(grep_case_sensitive, sys_replace)
 end)
 
 local pgCWDa_desc = "<Plug> Grep the CWD (case-sensitive), add to qflist"
 pnxmap("<Plug>(qf-rancher-grep-CWD-a)", pgCWDa_desc, function()
-    eg.grep_CWD_a()
+    eg.grep_cwd(grep_case_sensitive, sys_add)
 end)
 
-local plgCWDn_desc = "<Plug> Grep the CWD (case-sensitive), new list"
+local plgCWDn_desc = "<Plug> Grep the CWD (case-sensitive), new loclist"
 pnxmap("<Plug>(qf-rancher-lgrep-CWD-n)", plgCWDn_desc, function()
-    eg.lgrep_CWD_n()
+    eg.grep_cwd(grep_case_sensitive, sys_lnew)
 end)
 
-local plgCWDr_desc = "<Plug> Grep the CWD (case-sensitive), replace list"
+local plgCWDr_desc = "<Plug> Grep the CWD (case-sensitive), replace loclist"
 pnxmap("<Plug>(qf-rancher-lgrep-CWD-r)", plgCWDr_desc, function()
-    eg.lgrep_CWD_r()
+    eg.grep_cwd(grep_case_sensitive, sys_lreplace)
 end)
 
-local plgCWDa_desc = "<Plug> Grep the CWD (case-sensitive), add to list"
+local plgCWDa_desc = "<Plug> Grep the CWD (case-sensitive), add to loclist"
 pnxmap("<Plug>(qf-rancher-lgrep-CWD-a)", plgCWDa_desc, function()
-    eg.lgrep_CWD_a()
+    eg.grep_cwd(grep_case_sensitive, sys_ladd)
 end)
 
 local pgcwdXn_desc = "<Plug> Grep the cwdX (case-sensitive), new qflist"
 pnxmap("<Plug>(qf-rancher-grep-cwdX-n)", pgcwdXn_desc, function()
-    eg.grep_cwdX_n()
+    eg.grep_cwd({}, sys_new)
 end)
 
 local pgcwdXr_desc = "<Plug> Grep the cwdX (with regex), replace qflist"
 pnxmap("<Plug>(qf-rancher-grep-cwdX-r)", pgcwdXr_desc, function()
-    eg.grep_cwdX_r()
+    eg.grep_cwd({}, sys_replace)
 end)
 
 local pgcwdXa_desc = "<Plug> Grep the cwdX (with regex), add to qflist"
 pnxmap("<Plug>(qf-rancher-grep-cwdX-a)", pgcwdXa_desc, function()
-    eg.grep_cwdX_a()
+    eg.grep_cwd({}, sys_add)
 end)
 
-local plgcwdXn_desc = "<Plug> Grep the cwdX (with regex), new list"
+local plgcwdXn_desc = "<Plug> Grep the cwd (with regex), new loclist"
 pnxmap("<Plug>(qf-rancher-lgrep-cwdX-n)", plgcwdXn_desc, function()
-    eg.lgrep_cwdX_n()
+    eg.grep_cwd({}, sys_lnew)
 end)
 
-local plgcwdXr_desc = "<Plug> Grep the cwdX (with regex), replace list"
+local plgcwdXr_desc = "<Plug> Grep the cwd (with regex), replace loclist"
 pnxmap("<Plug>(qf-rancher-lgrep-cwdX-r)", plgcwdXr_desc, function()
-    eg.lgrep_cwdX_r()
+    eg.grep_cwd({}, sys_lreplace)
 end)
 
-local plgcwdXa_desc = "<Plug> Grep the cwdX (with regex), add to list"
+local plgcwdXa_desc = "<Plug> Grep the cwd (with regex), add to loclist"
 pnxmap("<Plug>(qf-rancher-lgrep-cwdX-a)", plgcwdXa_desc, function()
-    eg.lgrep_cwdX_a()
+    eg.grep_cwd({}, sys_ladd)
 end)
 
 pnxmap("<Plug>(qf-rancher-grep-help-n)", "<Plug> Grep the docs, new qflist", function()
-    eg.grep_help_n()
+    eg.grep_help(grep_smart_case, sys_help_new)
 end)
 
 pnxmap("<Plug>(qf-rancher-grep-help-r)", "<Plug> Grep the docs, replace qflist", function()
-    eg.grep_help_r()
+    eg.grep_help(grep_smart_case, sys_help_replace)
 end)
 
 pnxmap("<Plug>(qf-rancher-grep-help-a)", "<Plug> Grep the docs, add to qflist", function()
-    eg.grep_help_a()
+    eg.grep_help(grep_smart_case, sys_help_add)
 end)
 
-pnxmap("<Plug>(qf-rancher-lgrep-help-n)", "<Plug> Grep the docs, new list", function()
-    eg.lgrep_help_n()
+pnxmap("<Plug>(qf-rancher-lgrep-help-n)", "<Plug> Grep the docs, new loclist", function()
+    eg.grep_help(grep_smart_case, sys_help_lnew)
 end)
 
-pnxmap("<Plug>(qf-rancher-lgrep-help-r)", "<Plug> Grep the docs, replace list", function()
-    eg.lgrep_help_r()
+pnxmap("<Plug>(qf-rancher-lgrep-help-r)", "<Plug> Grep the docs, replace loclist", function()
+    eg.grep_help(grep_smart_case, sys_help_lreplace)
 end)
 
-pnxmap("<Plug>(qf-rancher-lgrep-help-a)", "<Plug> Grep the docs, add to list", function()
-    eg.lgrep_help_a()
+pnxmap("<Plug>(qf-rancher-lgrep-help-a)", "<Plug> Grep the docs, add to loclist", function()
+    eg.grep_help(grep_smart_case, sys_help_ladd)
 end)
 
 local pgHELPn_desc = "<Plug> Grep the docs (case-sensitive), new qflist"
 pnxmap("<Plug>(qf-rancher-grep-HELP-n)", pgHELPn_desc, function()
-    eg.grep_HELP_n()
+    eg.grep_help(grep_case_sensitive, sys_help_new)
 end)
 
 local pgHELPr_desc = "<Plug> Grep the docs (case-sensitive), replace qflist"
 pnxmap("<Plug>(qf-rancher-grep-HELP-r)", pgHELPr_desc, function()
-    eg.grep_HELP_r()
+    eg.grep_help(grep_case_sensitive, sys_help_replace)
 end)
 
 local pgHELPa_desc = "<Plug> Grep the docs (case-sensitive), add to qflist"
 pnxmap("<Plug>(qf-rancher-grep-HELP-a)", pgHELPa_desc, function()
-    eg.grep_HELP_a()
+    eg.grep_help(grep_case_sensitive, sys_help_add)
 end)
 
-local plgHELPn_desc = "<Plug> Grep the docs (case-sensitive), new list"
+local plgHELPn_desc = "<Plug> Grep the docs (case-sensitive), new loclist"
 pnxmap("<Plug>(qf-rancher-lgrep-HELP-n)", plgHELPn_desc, function()
-    eg.lgrep_HELP_n()
+    eg.grep_help(grep_case_sensitive, sys_help_lnew)
 end)
 
-local plgHELPr_desc = "<Plug> Grep the docs (case-sensitive), replace list"
+local plgHELPr_desc = "<Plug> Grep the docs (case-sensitive), replace loclist"
 pnxmap("<Plug>(qf-rancher-lgrep-HELP-r)", plgHELPr_desc, function()
-    eg.lgrep_HELP_r()
+    eg.grep_help(grep_case_sensitive, sys_help_lreplace)
 end)
 
-local plgHELPa_desc = "<Plug> Grep the docs (case-sensitive), add to list"
+local plgHELPa_desc = "<Plug> Grep the docs (case-sensitive), add to loclist"
 pnxmap("<Plug>(qf-rancher-lgrep-HELP-a)", plgHELPa_desc, function()
-    eg.lgrep_HELP_a()
+    eg.grep_help(grep_case_sensitive, sys_help_ladd)
 end)
 
-local pghelpXn_desc = "<Plug> Grep the docs (case-sensitive), new qflist"
+local pghelpXn_desc = "<Plug> Grep the docs (with regen), new qflist"
 pnxmap("<Plug>(qf-rancher-grep-helpX-n)", pghelpXn_desc, function()
-    eg.grep_helpX_n()
+    eg.grep_help({}, sys_help_new)
 end)
 
 local pghelpXr_desc = "<Plug> Grep the docs (with regex), replace qflist"
 pnxmap("<Plug>(qf-rancher-grep-helpX-r)", pghelpXr_desc, function()
-    eg.grep_helpX_r()
+    eg.grep_help({}, sys_help_replace)
 end)
 
 local pghelpXa_desc = "<Plug> Grep the docs (with regex), add to qflist"
 pnxmap("<Plug>(qf-rancher-grep-helpX-a)", pghelpXa_desc, function()
-    eg.grep_helpX_a()
+    eg.grep_help({}, sys_help_add)
 end)
 
-local plghelpXn_desc = "<Plug> Grep the docs (with regex), new list"
+local plghelpXn_desc = "<Plug> Grep the docs (with regex), new loclist"
 pnxmap("<Plug>(qf-rancher-lgrep-helpX-n)", plghelpXn_desc, function()
-    eg.lgrep_helpX_n()
+    eg.grep_help({}, sys_help_lnew)
 end)
 
-local plghelpXr_desc = "<Plug> Grep the docs (with regex), replace list"
+local plghelpXr_desc = "<Plug> Grep the docs (with regex), replace loclist"
 pnxmap("<Plug>(qf-rancher-lgrep-helpX-r)", plghelpXr_desc, function()
-    eg.lgrep_helpX_r()
+    eg.grep_help({}, sys_help_lreplace)
 end)
 
-local plghelpXa_desc = "<Plug> Grep the docs (with regex), add to list"
+local plghelpXa_desc = "<Plug> Grep the docs (with regex), add to loclist"
 pnxmap("<Plug>(qf-rancher-lgrep-helpX-a)", plghelpXa_desc, function()
-    eg.lgrep_helpX_a()
+    eg.grep_help(grep_smart_case, sys_help_ladd)
 end)
 
 pnxmap("<Plug>(qf-rancher-grep-bufs-n)", "<Plug> Grep open bufs, new qflist", function()
-    eg.grep_bufs_n()
+    eg.grep_bufs(grep_smart_case, sys_new)
 end)
 
 pnxmap("<Plug>(qf-rancher-grep-bufs-r)", "<Plug> Grep open bufs, replace qflist", function()
-    eg.grep_bufs_r()
+    eg.grep_bufs(grep_smart_case, sys_replace)
 end)
 
 pnxmap("<Plug>(qf-rancher-grep-bufs-a)", "<Plug> Grep open bufs, add to qflist", function()
-    eg.grep_bufs_a()
+    eg.grep_bufs(grep_smart_case, sys_add)
 end)
 
 local pgBUFSn_desc = "<Plug> Grep open bufs (case-sensitive), new qflist"
 pnxmap("<Plug>(qf-rancher-grep-BUFS-n)", pgBUFSn_desc, function()
-    eg.grep_BUFS_n()
+    eg.grep_bufs(grep_case_sensitive, sys_new)
 end)
 
 local pgBUFSr_desc = "<Plug> Grep open bufs (case-sensitive), replace qflist"
 pnxmap("<Plug>(qf-rancher-grep-BUFS-r)", pgBUFSr_desc, function()
-    eg.grep_BUFS_r()
+    eg.grep_bufs(grep_case_sensitive, sys_replace)
 end)
 
 local pgBUFSa_desc = "<Plug> Grep open bufs (case-sensitive), add to qflist"
 pnxmap("<Plug>(qf-rancher-grep-BUFS-a)", pgBUFSa_desc, function()
-    eg.grep_BUFS_a()
+    eg.grep_bufs(grep_case_sensitive, sys_add)
 end)
 
 local pgbufsXn_desc = "<Plug> Grep open bufs (case-sensitive), new qflist"
 pnxmap("<Plug>(qf-rancher-grep-bufsX-n)", pgbufsXn_desc, function()
-    eg.grep_bufsX_n()
+    eg.grep_bufs({}, sys_new)
 end)
 
 local pgbufsXr_desc = "<Plug> Grep open bufs (with regex), replace qflist"
 pnxmap("<Plug>(qf-rancher-grep-bufsX-r)", pgbufsXr_desc, function()
-    eg.grep_bufsX_r()
+    eg.grep_bufs({}, sys_replace)
 end)
 
 local pgbufsXa_desc = "<Plug> Grep open bufs (with regex), add to qflist"
 pnxmap("<Plug>(qf-rancher-grep-bufsX-a)", pgbufsXa_desc, function()
-    eg.grep_bufsX_a()
+    eg.grep_bufs({}, sys_add)
 end)
 
 pnxmap("<Plug>(qf-rancher-grep-cbuf-n)", "<Plug> Grep cur buf, new loclist", function()
-    eg.grep_cbuf_n()
+    eg.grep_cbuf(grep_smart_case, sys_lnew)
 end)
 
 pnxmap("<Plug>(qf-rancher-grep-cbuf-r)", "<Plug> Grep cur buf, replace loclist", function()
-    eg.grep_cbuf_r()
+    eg.grep_cbuf(grep_smart_case, sys_lreplace)
 end)
 
 pnxmap("<Plug>(qf-rancher-grep-cbuf-a)", "<Plug> Grep cur buf, add to loclist", function()
-    eg.grep_cbuf_a()
+    eg.grep_cbuf(grep_smart_case, sys_ladd)
 end)
 
 local pgCBUFn_desc = "<Plug> Grep cur buf (case-sensitive), new loclist"
 pnxmap("<Plug>(qf-rancher-grep-CBUF-n)", pgCBUFn_desc, function()
-    eg.grep_CBUF_n()
+    eg.grep_cbuf(grep_case_sensitive, sys_lnew)
 end)
 
 local pgCBUFr_desc = "<Plug> Grep cur buf (case-sensitive), replace loclist"
 pnxmap("<Plug>(qf-rancher-grep-CBUF-r)", pgCBUFr_desc, function()
-    eg.grep_CBUF_r()
+    eg.grep_cbuf(grep_case_sensitive, sys_lreplace)
 end)
 
 local pgCBUFa_desc = "<Plug> Grep cur buf (case-sensitive), add to loclist"
 pnxmap("<Plug>(qf-rancher-grep-CBUF-a)", pgCBUFa_desc, function()
-    eg.grep_CBUF_a()
+    eg.grep_cbuf(grep_case_sensitive, sys_ladd)
 end)
 
 local pgcbufXn_desc = "<Plug> Grep cur buf (case-sensitive), new loclist"
 pnxmap("<Plug>(qf-rancher-grep-cbufX-n)", pgcbufXn_desc, function()
-    eg.grep_cbufX_n()
+    eg.grep_cbuf({}, sys_lnew)
 end)
 
 local pgcbufXr_desc = "<Plug> Grep cur buf (with regex), replace loclist"
 pnxmap("<Plug>(qf-rancher-grep-cbufX-r)", pgcbufXr_desc, function()
-    eg.grep_cbufX_r()
+    eg.grep_cbuf({}, sys_lreplace)
 end)
 
 local pgcbufXa_desc = "<Plug> Grep cur buf (with regex), add to loclist"
 pnxmap("<Plug>(qf-rancher-grep-cbufX-a)", pgcbufXa_desc, function()
-    eg.grep_cbufX_a()
+    eg.grep_cbuf({}, sys_ladd)
 end)
 
 if vim.g.qfrancher_setdefaultmaps then
@@ -401,6 +437,109 @@ if vim.g.qfrancher_setdefaultmaps then
     })
 end
 
+local function find_matches(cargs, matches)
+    cargs.fargs = cargs.fargs or {}
+    for _, arg in ipairs(cargs.fargs) do
+        if matches[arg] then
+            return matches[arg]
+        end
+    end
+
+    return matches.default
+end
+
+if vim.g.qfrancher_setdefaultcmds then
+    vim.api.nvim_create_user_command("Qgrep", function(cargs)
+        cargs = cargs or {}
+
+        local types = { help = "help", buf = "buf", cwd = "cwd", default = "cwd" }
+        local type = find_matches(cargs, types)
+
+        local grep_options = {
+            casesensitive = grep_case_sensitive,
+            regex = {},
+            smartcase = grep_smart_case,
+            default = grep_smart_case,
+        }
+
+        local grep_opts = find_matches(cargs, grep_options)
+        for _, arg in ipairs(cargs.fargs) do
+            if string.sub(arg, 1, 1) == "/" then
+                local pattern = string.sub(arg, 2)
+                grep_opts = vim.tbl_deep_extend("force", grep_opts, { pattern = pattern })
+                break
+            end
+        end
+
+        local sys_opts = (function()
+            for _, arg in ipairs(cargs.fargs) do
+                if arg == "add" then
+                    return type == "help" and sys_help_add or sys_add
+                elseif arg == "replace" then
+                    return type == "help" and sys_help_replace or sys_replace
+                elseif arg == "new" then
+                    return type == "help" and sys_help_new or sys_new
+                end
+
+                return type == "help" and sys_help_new or sys_new
+            end
+        end)()
+
+        if type == "help" then
+            eg.grep_help(grep_opts, sys_opts)
+        elseif type == "buf" then
+            eg.grep_bufs(grep_opts, sys_opts)
+        else
+            eg.grep_cwd(grep_opts, sys_opts)
+        end
+    end, { nargs = "*" })
+
+    vim.api.nvim_create_user_command("Lgrep", function(cargs)
+        cargs = cargs or {}
+
+        local types = { help = "help", buf = "buf", cwd = "cwd", default = "cwd" }
+        local type = find_matches(cargs, types)
+
+        local grep_options = {
+            casesensitive = grep_case_sensitive,
+            regex = {},
+            smartcase = grep_smart_case,
+            default = grep_smart_case,
+        }
+
+        local grep_opts = find_matches(cargs.fargs, grep_options)
+        for _, arg in ipairs(cargs.fargs) do
+            if arg:match("^/") then
+                local pattern = string.sub(arg, 2)
+                grep_opts = vim.tbl_extend("force", grep_opts, { pattern = pattern })
+                break
+            end
+        end
+
+        local sys_opts = (function()
+            for _, arg in ipairs(cargs.fargs) do
+                if arg == "add" then
+                    return type == "help" and sys_help_ladd or sys_ladd
+                elseif arg == "replace" then
+                    return type == "help" and sys_help_lreplace or sys_lreplace
+                elseif arg == "new" then
+                    return type == "help" and sys_help_lnew or sys_lnew
+                end
+
+                return type == "help" and sys_help_lnew or sys_lnew
+            end
+        end)()
+
+        if type == "help" then
+            eg.grep_help(grep_opts, sys_opts)
+        elseif type == "buf" then
+            eg.grep_bufs(grep_opts, sys_opts)
+        else
+            eg.grep_cwd(grep_opts, sys_opts)
+        end
+    end, { nargs = "*" })
+end
+
 -------------------------
 --- OPEN_CLOSE_TOGGLE ---
 -------------------------
@@ -451,13 +590,15 @@ if vim.g.qfrancher_setdefaultmaps then
 end
 
 if vim.g.qfrancher_setdefaultcmds then
-    vim.api.nvim_create_user_command("Qopen", function(arg)
-        local count = arg.count > 0 and arg.count or nil
+    vim.api.nvim_create_user_command("Qopen", function(cargs)
+        cargs = cargs or {}
+        local count = cargs.count > 0 and cargs.count or nil
         eo.open_qflist({ always_resize = true, height = count })
     end, { count = 0 })
 
-    vim.api.nvim_create_user_command("Lopen", function(arg)
-        local count = arg.count > 0 and arg.count or nil
+    vim.api.nvim_create_user_command("Lopen", function(cargs)
+        cargs = cargs or {}
+        local count = cargs.count > 0 and cargs.count or nil
         eo.open_loclist({ always_resize = true, height = count })
     end, { count = 0 })
 
@@ -531,63 +672,75 @@ if vim.g.qfrancher_setdefaultmaps then
 end
 
 if vim.g.qfrancher_setdefaultcmds then
-    vim.api.nvim_create_user_command("Qprev", function(arg)
-        local count = arg.count > 0 and arg.count or 1
+    vim.api.nvim_create_user_command("Qprev", function(cargs)
+        cargs = cargs or {}
+        local count = cargs.count > 0 and cargs.count or 1
         en.q_prev(count)
     end, { count = 0 })
 
-    vim.api.nvim_create_user_command("Qnext", function(arg)
-        local count = arg.count > 0 and arg.count or 1
+    vim.api.nvim_create_user_command("Qnext", function(cargs)
+        cargs = cargs or {}
+        local count = cargs.count > 0 and cargs.count or 1
         en.q_next(count)
     end, { count = 0 })
 
-    vim.api.nvim_create_user_command("Qq", function(arg)
-        local count = arg.count > 0 and arg.count or 1
+    vim.api.nvim_create_user_command("Qq", function(cargs)
+        cargs = cargs or {}
+        local count = cargs.count > 0 and cargs.count or 1
         en.q_q(count)
     end, { count = 0 })
 
-    vim.api.nvim_create_user_command("Qpfile", function(arg)
-        local count = arg.count > 0 and arg.count or 1
+    vim.api.nvim_create_user_command("Qpfile", function(cargs)
+        cargs = cargs or {}
+        local count = cargs.count > 0 and cargs.count or 1
         en.q_pfile(count)
     end, { count = 0 })
 
-    vim.api.nvim_create_user_command("Qnfile", function(arg)
-        local count = arg.count > 0 and arg.count or 1
+    vim.api.nvim_create_user_command("Qnfile", function(cargs)
+        cargs = cargs or {}
+        local count = cargs.count > 0 and cargs.count or 1
         en.q_nfile(count)
     end, { count = 0 })
 
-    vim.api.nvim_create_user_command("Qjump", function(arg)
-        local count = arg.count >= 0 and arg.count or 0
+    vim.api.nvim_create_user_command("Qjump", function(cargs)
+        cargs = cargs or {}
+        local count = cargs.count >= 0 and cargs.count or 0
         en.q_jump(count)
     end, { count = 0 })
 
-    vim.api.nvim_create_user_command("Lprev", function(arg)
-        local count = arg.count > 0 and arg.count or 1
+    vim.api.nvim_create_user_command("Lprev", function(cargs)
+        cargs = cargs or {}
+        local count = cargs.count > 0 and cargs.count or 1
         en.l_prev(count)
     end, { count = 0 })
 
-    vim.api.nvim_create_user_command("Lnext", function(arg)
-        local count = arg.count > 0 and arg.count or 1
+    vim.api.nvim_create_user_command("Lnext", function(cargs)
+        cargs = cargs or {}
+        local count = cargs.count > 0 and cargs.count or 1
         en.l_next(count)
     end, { count = 0 })
 
-    vim.api.nvim_create_user_command("Ll", function(arg)
-        local count = arg.count > 0 and arg.count or 1
+    vim.api.nvim_create_user_command("Ll", function(cargs)
+        cargs = cargs or {}
+        local count = cargs.count > 0 and cargs.count or 1
         en.l_l(count)
     end, { count = 0 })
 
-    vim.api.nvim_create_user_command("Lpfile", function(arg)
-        local count = arg.count > 0 and arg.count or 1
+    vim.api.nvim_create_user_command("Lpfile", function(cargs)
+        cargs = cargs or {}
+        local count = cargs.count > 0 and cargs.count or 1
         en.l_pfile(count)
     end, { count = 0 })
 
-    vim.api.nvim_create_user_command("Lnfile", function(arg)
-        local count = arg.count > 0 and arg.count or 1
+    vim.api.nvim_create_user_command("Lnfile", function(cargs)
+        cargs = cargs or {}
+        local count = cargs.count > 0 and cargs.count or 1
         en.l_nfile(count)
     end, { count = 0 })
 
-    vim.api.nvim_create_user_command("Ljump", function(arg)
-        local count = arg.count >= 0 and arg.count or 0
+    vim.api.nvim_create_user_command("Ljump", function(cargs)
+        cargs = cargs or {}
+        local count = cargs.count >= 0 and cargs.count or 0
         en.l_jump(count)
     end, { count = 0 })
 end
@@ -653,59 +806,75 @@ if vim.g.qfrancher_setdefaultmaps then
 end
 
 if vim.g.qfrancher_setdefaultcmds then
-    vim.api.nvim_create_user_command("Qolder", function(arg)
-        local count = arg.count > 0 and arg.count or 1
+    vim.api.nvim_create_user_command("Qolder", function(cargs)
+        cargs = cargs or {}
+
+        local count = cargs.count > 0 and cargs.count or 1
         es.q_older(count)
     end, { count = 0 })
 
-    vim.api.nvim_create_user_command("Qnewer", function(arg)
-        local count = arg.count > 0 and arg.count or 1
+    vim.api.nvim_create_user_command("Qnewer", function(cargs)
+        cargs = cargs or {}
+
+        local count = cargs.count > 0 and cargs.count or 1
         es.q_newer(count)
     end, { count = 0 })
 
-    vim.api.nvim_create_user_command("Qhistory", function(arg)
-        local count = arg.count >= 0 and arg.count or 0
+    vim.api.nvim_create_user_command("Qhistory", function(cargs)
+        cargs = cargs or {}
+
+        local count = cargs.count >= 0 and cargs.count or 0
         es.q_history(count)
     end, { count = 0 })
 
     -- NOTE: Ideally, a count would override the "all" arg, in order to default to safer behavior,
     -- but the dict sent to the callback includes a count of 0 whether it was explicitly passed or
     -- not. Since a count of 0 can be explicitly passed, only overriding a count > 0 is convoluted
-    vim.api.nvim_create_user_command("Qdelete", function(arg)
-        if arg.args == "all" then
+    vim.api.nvim_create_user_command("Qdelete", function(cargs)
+        cargs = cargs or {}
+
+        if cargs.args == "all" then
             es.q_del_all()
             return
         end
 
-        local count = arg.count >= 0 and arg.count or 0
+        local count = cargs.count >= 0 and cargs.count or 0
         es.q_del(count)
     end, { count = 0, nargs = "?" })
 
-    vim.api.nvim_create_user_command("Lolder", function(arg)
-        local count = arg.count > 0 and arg.count or 1
+    vim.api.nvim_create_user_command("Lolder", function(cargs)
+        cargs = cargs or {}
+
+        local count = cargs.count > 0 and cargs.count or 1
         es.l_older(count)
     end, { count = 0 })
 
-    vim.api.nvim_create_user_command("Lnewer", function(arg)
-        local count = arg.count > 0 and arg.count or 1
+    vim.api.nvim_create_user_command("Lnewer", function(cargs)
+        cargs = cargs or {}
+
+        local count = cargs.count > 0 and cargs.count or 1
         es.l_newer(count)
     end, { count = 0 })
 
-    vim.api.nvim_create_user_command("Lhistory", function(arg)
-        local count = arg.count >= 0 and arg.count or 0
+    vim.api.nvim_create_user_command("Lhistory", function(cargs)
+        cargs = cargs or {}
+
+        local count = cargs.count >= 0 and cargs.count or 0
         es.l_history(count)
     end, { count = 0 })
 
     -- NOTE: Ideally, a count would override the "all" arg, in order to default to safer behavior,
     -- but the dict sent to the callback includes a count of 0 whether it was explicitly passed or
     -- not. Since a count of 0 can be explicitly passed, only overriding a count > 0 is convoluted
-    vim.api.nvim_create_user_command("Ldelete", function(arg)
-        if arg.args == "all" then
+    vim.api.nvim_create_user_command("Ldelete", function(cargs)
+        cargs = cargs or {}
+
+        if cargs.args == "all" then
             es.l_del_all()
             return
         end
 
-        local count = arg.count >= 0 and arg.count or 0
+        local count = cargs.count >= 0 and cargs.count or 0
         es.l_del(count)
     end, { count = 0, nargs = "?" })
 end

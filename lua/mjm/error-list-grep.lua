@@ -12,8 +12,9 @@
 --- @alias QfRancherGrepLocFun fun():boolean, string[]|[string, string]
 ---
 --- @class QfRancherGrepOpts
---- @field smart_case? boolean
 --- @field literal? boolean
+--- @field pattern? string
+--- @field smart_case? boolean
 
 local M = {}
 
@@ -259,7 +260,8 @@ local function get_grep_pattern(prompt)
         return false, { (pattern or "Unknown error getting input"), "ErrorMsg" }
     end
 
-    return true, vim.split(pattern, "\\n")
+    local split_pattern = vim.split(pattern, "\\n")
+    return true, split_pattern
 end
 
 --- @param grep_location string[]
@@ -269,23 +271,30 @@ local function get_grep_parts(grep_location, prompt, grep_opts)
     local ok, grep_cmd = get_grep_cmd() --- @type boolean, QfRancherGrepCmdFun|[string,string]
     if (not ok) or type(grep_cmd) ~= "function" then
         --- @type [string, string]
-        local backup_chunk = { "grep_cbuf: Unknown error getting grep cmd", "ErrorMsg" }
+        local backup_chunk = { "Unknown error getting grep cmd", "ErrorMsg" }
         --- @type [string, string]
         local err_chunk = type(grep_cmd) ~= "function" and grep_cmd or backup_chunk
         vim.api.nvim_echo({ err_chunk }, true, { err = true })
         return false, nil
     end
 
-    local ok_l, raw_pat = get_grep_pattern(prompt) --- @type boolean, string[]
+    grep_opts = grep_opts or {}
+    -- vim.fn.confirm(vim.inspect(grep_opts))
+    local ok_l, raw_pat = (function()
+        if grep_opts.pattern and type(grep_opts.pattern) == "string" then
+            return true, { grep_opts.pattern }
+        else
+            return get_grep_pattern(prompt)
+        end
+    end)() --- @type boolean, string[]
+
     if not ok_l then
         --- @type [string, string]
-        local backup_chunk = { "grep_cbuf: Unknown error getting grep pattern", "ErrorMsg" }
+        local backup_chunk = { "Unknown error getting grep pattern", "ErrorMsg" }
         local err_chunk = raw_pat or backup_chunk --- @type [string,string]
         vim.api.nvim_echo({ err_chunk }, true, { err = true })
         return false, nil
     end
-
-    grep_opts = grep_opts or {}
 
     --- @type boolean, string[]
     local ok_c, cmd_parts = grep_cmd(raw_pat, grep_location, grep_opts)
@@ -296,12 +305,7 @@ local function get_grep_parts(grep_location, prompt, grep_opts)
     end
 
     --- @type string
-    local disp_pattern = #raw_pat > 1 and table.concat(raw_pat, " | ") or raw_pat[1]
-    --- @type string
-    local disp_location = #grep_location == 1 and vim.fn.fnamemodify(grep_location[1], ":t")
-        or (#grep_location .. " files")
-    local title = string.format('Grep "%s" in %s', disp_pattern, disp_location) --- @type string
-
+    local title = "Grep" --- @type string
     return true, { cmd_parts = cmd_parts, title = title }
 end
 
@@ -323,8 +327,6 @@ local function do_grep(grep_loc_fn, prompt, grep_opts, sys_opts)
     local ok_s, system_in = get_grep_parts(grep_location, prompt, grep_opts)
     if ok_s and system_in then
         require("mjm.error-list-system").qf_sys_wrap(system_in, sys_opts)
-    else
-        vim.api.nvim_echo({ { "Unable to get grep parts", "ErrorMsg" } }, true, { err = true })
     end
 end
 
@@ -332,113 +334,25 @@ end
 --- Grep Commands ---
 ---------------------
 
---- @type QfRancherSystemOpts
-local grep_n = { async = true, timeout = 2000 }
---- @type QfRancherSystemOpts
-local grep_r = { async = true, overwrite = true, timeout = 2000 }
---- @type QfRancherSystemOpts
-local grep_a = { async = true, add = true, timeout = 2000 }
-
---- @type QfRancherSystemOpts
-local lgrep_n = { async = true, loclist = true, timeout = 2000 }
---- @type QfRancherSystemOpts
-local lgrep_r = { async = true, loclist = true, overwrite = true, timeout = 2000 }
---- @type QfRancherSystemOpts
-local lgrep_a = { async = true, loclist = true, add = true, timeout = 2000 }
-
 --- @type QfRancherGrepLocFun
 local function get_cwd_tbl()
     return true, { vim.fn.getcwd() }
 end
 
---- @param sys_opts QfRancherSystemOpts
---- @return nil
-local function grep_cwd(sys_opts)
-    do_grep(get_cwd_tbl, "CWD Grep: ", { literal = true, smart_case = true }, sys_opts or {})
-end
+function M.grep_cwd(grep_opts, sys_opts)
+    grep_opts = grep_opts or {}
+    sys_opts = sys_opts or {}
+    local prompt = (function()
+        if not grep_opts.literal then
+            return "CWD Grep (regex): "
+        elseif grep_opts.literal and grep_opts.smart_case then
+            return "CWD Grep: "
+        else
+            return "CWD Grep (case sensitive): "
+        end
+    end)()
 
-function M.grep_cwd_n()
-    grep_cwd(grep_n)
-end
-
-function M.grep_cwd_r()
-    grep_cwd(grep_r)
-end
-
-function M.grep_cwd_a()
-    grep_cwd(grep_a)
-end
-
-function M.lgrep_cwd_n()
-    grep_cwd(lgrep_n)
-end
-
-function M.lgrep_cwd_r()
-    grep_cwd(lgrep_r)
-end
-
-function M.lgrep_cwd_a()
-    grep_cwd(lgrep_a)
-end
-
---- @param sys_opts QfRancherSystemOpts
---- @return nil
-local function grep_CWD(sys_opts)
-    do_grep(get_cwd_tbl, "CWD Grep (case-sensitive): ", { literal = true }, sys_opts or {})
-end
-
-function M.grep_CWD_n()
-    grep_CWD(grep_n)
-end
-
-function M.grep_CWD_r()
-    grep_CWD(grep_r)
-end
-
-function M.grep_CWD_a()
-    grep_CWD(grep_a)
-end
-
-function M.lgrep_CWD_n()
-    grep_CWD(lgrep_n)
-end
-
-function M.lgrep_CWD_r()
-    grep_CWD(lgrep_r)
-end
-
-function M.lgrep_CWD_a()
-    grep_CWD(lgrep_a)
-end
-
---- @param sys_opts QfRancherSystemOpts
---- @return nil
-local function grep_cwdX(sys_opts)
-    do_grep(get_cwd_tbl, "CWD Grep (regex): ", {}, sys_opts or {})
-end
-
-function M.grep_cwdX_n()
-    grep_cwdX(grep_n)
-end
-
-function M.grep_cwdX_r()
-    grep_cwdX(grep_r)
-end
-
-function M.grep_cwdX_a()
-    grep_cwdX(grep_a)
-end
-
-function M.lgrep_cwdX_n()
-    grep_cwdX(lgrep_n)
-end
-
-function M.lgrep_cwdX_r()
-    grep_cwdX(lgrep_r)
-end
-
-function M.lgrep_cwdX_a()
-    grep_cwdX(lgrep_a)
+    do_grep(get_cwd_tbl, prompt, grep_opts or {}, sys_opts or {})
 end
 
 --- @type QfRancherGrepLocFun
@@ -452,108 +366,20 @@ local function get_helpdirs()
     return true, doc_files
 end
 
---- @type QfRancherSystemOpts
-local hgrep_n = { async = true, type = "\1", timeout = 2000 }
---- @type QfRancherSystemOpts
-local hgrep_r = { async = true, type = "\1", overwrite = true, timeout = 2000 }
---- @type QfRancherSystemOpts
-local hgrep_a = { async = true, type = "\1", add = true, timeout = 2000 }
+function M.grep_help(grep_opts, sys_opts)
+    grep_opts = grep_opts or {}
+    sys_opts = sys_opts or {}
+    local prompt = (function()
+        if not grep_opts.literal then
+            return "Help Grep (regex): "
+        elseif grep_opts.literal and grep_opts.smart_case then
+            return "Help Grep: "
+        else
+            return "Help Grep (case sensitive): "
+        end
+    end)()
 
---- @type QfRancherSystemOpts
-local hlgrep_n = { async = true, type = "\1", loclist = true, timeout = 2000 }
---- @type QfRancherSystemOpts
-local hlgrep_r = { async = true, type = "\1", loclist = true, overwrite = true, timeout = 2000 }
---- @type QfRancherSystemOpts
-local hlgrep_a = { async = true, type = "\1", loclist = true, add = true, timeout = 2000 }
-
---- @param sys_opts QfRancherSystemOpts
---- @return nil
-local function grep_help(sys_opts)
-    do_grep(get_helpdirs, "Help Grep: ", { literal = true, smart_case = true }, sys_opts or {})
-end
-
-function M.grep_help_n()
-    grep_help(hgrep_n)
-end
-
-function M.grep_help_r()
-    grep_help(hgrep_r)
-end
-
-function M.grep_help_a()
-    grep_help(hgrep_a)
-end
-
-function M.lgrep_help_n()
-    grep_help(hlgrep_n)
-end
-
-function M.lgrep_help_r()
-    grep_help(hlgrep_r)
-end
-
-function M.lgrep_help_a()
-    grep_help(hlgrep_a)
-end
-
---- @param sys_opts QfRancherSystemOpts
---- @return nil
-local function grep_HELP(sys_opts)
-    do_grep(get_helpdirs, "Help Grep (case-sensitive): ", { literal = true }, sys_opts or {})
-end
-
-function M.grep_HELP_n()
-    grep_HELP(hgrep_n)
-end
-
-function M.grep_HELP_r()
-    grep_HELP(hgrep_r)
-end
-
-function M.grep_HELP_a()
-    grep_HELP(hgrep_a)
-end
-
-function M.lgrep_HELP_n()
-    grep_HELP(hlgrep_n)
-end
-
-function M.lgrep_HELP_r()
-    grep_HELP(hlgrep_r)
-end
-
-function M.lgrep_HELP_a()
-    grep_HELP(hlgrep_a)
-end
-
---- @param sys_opts QfRancherSystemOpts
---- @return nil
-local function grep_helpX(sys_opts)
-    do_grep(get_helpdirs, "HELP Grep (regex): ", {}, sys_opts or {})
-end
-
-function M.grep_helpX_n()
-    grep_helpX(hgrep_n)
-end
-
-function M.grep_helpX_r()
-    grep_helpX(hgrep_r)
-end
-
-function M.grep_helpX_a()
-    grep_helpX(hgrep_a)
-end
-
-function M.lgrep_helpX_n()
-    grep_helpX(hlgrep_n)
-end
-
-function M.lgrep_helpX_r()
-    grep_helpX(hlgrep_r)
-end
-
-function M.lgrep_helpX_a()
-    grep_helpX(hlgrep_a)
+    do_grep(get_helpdirs, prompt, grep_opts or {}, sys_opts or {})
 end
 
 --- @type QfRancherGrepLocFun
@@ -579,58 +405,20 @@ local function get_buflist()
     return true, fnames
 end
 
---- @param sys_opts QfRancherSystemOpts
---- @return nil
-local function grep_bufs(sys_opts)
-    do_grep(get_buflist, "Buf Grep: ", { literal = true, smart_case = true }, sys_opts or {})
-end
+function M.grep_bufs(grep_opts, sys_opts)
+    grep_opts = grep_opts or {}
+    sys_opts = sys_opts or {}
+    local prompt = (function()
+        if not grep_opts.literal then
+            return "Buf Grep (regex): "
+        elseif grep_opts.literal and grep_opts.smart_case then
+            return "Buf Grep: "
+        else
+            return "Buf Grep (case sensitive): "
+        end
+    end)()
 
-function M.grep_bufs_n()
-    grep_bufs(grep_n)
-end
-
-function M.grep_bufs_r()
-    grep_bufs(grep_r)
-end
-
-function M.grep_bufs_a()
-    grep_bufs(grep_a)
-end
-
---- @param sys_opts QfRancherSystemOpts
---- @return nil
-local function grep_BUFS(sys_opts)
-    do_grep(get_buflist, "Buf Grep (case-sensitive): ", { literal = true }, sys_opts or {})
-end
-
-function M.grep_BUFS_n()
-    grep_BUFS(grep_n)
-end
-
-function M.grep_BUFS_r()
-    grep_BUFS(grep_r)
-end
-
-function M.grep_BUFS_a()
-    grep_BUFS(grep_a)
-end
-
---- @param sys_opts QfRancherSystemOpts
---- @return nil
-local function grep_bufsX(sys_opts)
-    do_grep(get_buflist, "Buf Grep (regex): ", {}, sys_opts or {})
-end
-
-function M.grep_bufsX_n()
-    grep_bufsX(grep_n)
-end
-
-function M.grep_bufsX_r()
-    grep_bufsX(grep_r)
-end
-
-function M.grep_bufsX_a()
-    grep_bufsX(grep_a)
+    do_grep(get_buflist, prompt, grep_opts or {}, sys_opts or {})
 end
 
 --- @type QfRancherGrepLocFun
@@ -655,58 +443,20 @@ local function get_cur_buf()
     return true, { fname }
 end
 
---- @param sys_opts QfRancherSystemOpts
---- @return nil
-local function grep_cbuf(sys_opts)
-    do_grep(get_cur_buf, "Buf Grep: ", { literal = true, smart_case = true }, sys_opts or {})
-end
+function M.grep_cbuf(grep_opts, sys_opts)
+    grep_opts = grep_opts or {}
+    sys_opts = sys_opts or {}
+    local prompt = (function()
+        if not grep_opts.literal then
+            return "Current Buf Grep (regex): "
+        elseif grep_opts.literal and grep_opts.smart_case then
+            return "Current Buf Grep: "
+        else
+            return "Current Buf Grep (case sensitive): "
+        end
+    end)()
 
-function M.grep_cbuf_n()
-    grep_cbuf(lgrep_n)
-end
-
-function M.grep_cbuf_r()
-    grep_cbuf(lgrep_r)
-end
-
-function M.grep_cbuf_a()
-    grep_cbuf(lgrep_a)
-end
-
---- @param sys_opts QfRancherSystemOpts
---- @return nil
-local function grep_CBUF(sys_opts)
-    do_grep(get_cur_buf, "Buf Grep (case-sensitive): ", { literal = true }, sys_opts or {})
-end
-
-function M.grep_CBUF_n()
-    grep_CBUF(lgrep_n)
-end
-
-function M.grep_CBUF_r()
-    grep_CBUF(lgrep_r)
-end
-
-function M.grep_CBUF_a()
-    grep_CBUF(lgrep_a)
-end
-
---- @param sys_opts QfRancherSystemOpts
---- @return nil
-local function grep_cbufX(sys_opts)
-    do_grep(get_cur_buf, "Buf Grep (regex): ", {}, sys_opts or {})
-end
-
-function M.grep_cbufX_n()
-    grep_cbufX(lgrep_n)
-end
-
-function M.grep_cbufX_r()
-    grep_cbufX(lgrep_r)
-end
-
-function M.grep_cbufX_a()
-    grep_cbufX(lgrep_a)
+    do_grep(get_cur_buf, prompt, grep_opts or {}, sys_opts or {})
 end
 
 return M

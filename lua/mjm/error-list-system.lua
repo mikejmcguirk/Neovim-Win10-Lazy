@@ -22,7 +22,7 @@ local M = {}
 --- @field async? boolean
 --- @field loclist? boolean
 --- @field add? boolean
---- @field overwrite? boolean
+--- @field replace? boolean
 --- @field timeout? integer
 --- @field type? string
 
@@ -173,7 +173,7 @@ function M.qf_sys_wrap(system_in, opts)
         table.sort(qf_dict.items, require("mjm.error-list-sort").sort_fname_asc)
         local title = type(system_in.title) == "string" and system_in.title or ""
         local setlist = get_setlist(cur_win)
-        local action = (opts.add or opts.overwrite) and "r" or " "
+        local action = (opts.add or opts.replace) and "r" or " "
         setlist({}, action, { items = qf_dict.items, nr = list_nr, title = title })
 
         -- TODO: do a getopen thing here too
@@ -186,7 +186,7 @@ function M.qf_sys_wrap(system_in, opts)
         end
 
         -- TODO: need a wrapper for these that resizes
-        if opts.overwrite or opts.add then
+        if opts.replace or opts.add then
             if opts.loclist then
                 vim.cmd(list_nr .. "lhistory")
             else
