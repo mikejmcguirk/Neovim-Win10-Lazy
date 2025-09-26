@@ -2,7 +2,6 @@
 --- TODO ---
 ------------
 
-- Try mapping <C-c> to escape in replace mode so that we don't accidently input those literal characters
 - Create keymappings to open and close tabs. Cannot use <M-tab> because windows
 - Look into how to autogenerate vimdoc
 - Remove all <C-s> and <M-s> mappings
