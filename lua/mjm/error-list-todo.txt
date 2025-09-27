@@ -110,6 +110,7 @@ TODO
 -- new/add/replace (no option is add)
 -- buf/help/cwd
 - Partly a documentation thing and partly a code thing, more clarity around when smartcase is used. Do we have a control for smartcase vs case insensitive?
+- If a grep command is run with '<'> marks, those positions should be used to do the grep. Really should apply to any set of marks
 
 MAYBE
 

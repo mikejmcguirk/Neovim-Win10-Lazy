@@ -150,20 +150,122 @@ local rancher_keymaps = {
     },
     {
         modes = { "n" },
-        plug = "<Plug>(qf-rancher-qfilter-cfilter-n)",
+        plug = "<Plug>(qf-rancher-qfilter-keep-cfilter-n)",
         map = "<leader>qkl",
-        desc = "Filter Qflist with Cfilter emulation. Create new list on count. Case insensitive/smartcase",
+        desc = "Filter Qflist to keep with Cfilter emulation. Create new list on count. "
+            .. "Case insensitive/smartcase",
         callback = function()
             ef.cfilter(false, { insensitive = true, keep = true }, { action = "new" })
         end,
     },
     {
         modes = { "n" },
-        plug = "<Plug>(qf-rancher-qfilter-cfilter-r)",
+        plug = "<Plug>(qf-rancher-qfilter-keep-cfilter-r)",
         map = "<leader>qKl",
-        desc = "Filter Qflist with Cfilter emulation. Replace list with count. Case insensitive/smartcase",
+        desc = "Filter Qflist to keep with Cfilter emulation. Replace list with count. "
+            .. "Case insensitive/smartcase",
         callback = function()
             ef.cfilter(false, { insensitive = true, keep = true }, { action = "replace" })
+        end,
+    },
+    {
+        modes = { "n" },
+        plug = "<Plug>(qf-rancher-qfilter-keep-cfilter-a)",
+        map = "<leader>q<C-k>l",
+        desc = "Filter Qflist to keep with Cfilter emulation. Mege list with count. "
+            .. "Case insensitive/smartcase",
+        callback = function()
+            ef.cfilter(false, { insensitive = true, keep = true }, { action = "merge" })
+        end,
+    },
+    {
+        modes = { "n" },
+        plug = "<Plug>(qf-rancher-lfilter-keep-cfilter-n)",
+        map = "<leader>lkl",
+        desc = "Filter loclist to keep with Cfilter emulation. Create new list on count. "
+            .. "Case insensitive/smartcase",
+        callback = function()
+            ef.cfilter(true, { insensitive = true, keep = true }, { action = "new" })
+        end,
+    },
+    {
+        modes = { "n" },
+        plug = "<Plug>(qf-rancher-lfilter-keep-cfilter-r)",
+        map = "<leader>qKl",
+        desc = "Filter loclist to keep with Cfilter emulation. Replace list with count. "
+            .. "Case insensitive/smartcase",
+        callback = function()
+            ef.cfilter(true, { insensitive = true, keep = true }, { action = "replace" })
+        end,
+    },
+    {
+        modes = { "n" },
+        plug = "<Plug>(qf-rancher-lfilter-keep-cfilter-a)",
+        map = "<leader>q<C-k>l",
+        desc = "Filter loclist to keep with Cfilter emulation. Mege list with count. "
+            .. "Case insensitive/smartcase",
+        callback = function()
+            ef.cfilter(true, { insensitive = true, keep = true }, { action = "merge" })
+        end,
+    },
+    {
+        modes = { "n" },
+        plug = "<Plug>(qf-rancher-qfilter-remove-cfilter-n)",
+        map = "<leader>qkr",
+        desc = "Filter Qflist to remove with Cfilter emulation. Create new list on count. "
+            .. "Case insensitive/smartcase",
+        callback = function()
+            ef.cfilter(false, { insensitive = true, keep = false }, { action = "new" })
+        end,
+    },
+    {
+        modes = { "n" },
+        plug = "<Plug>(qf-rancher-qfilter-remove-cfilter-r)",
+        map = "<leader>qKr",
+        desc = "Filter Qflist to remove with Cfilter emulation. Replace list with count. "
+            .. "Case insensitive/smartcase",
+        callback = function()
+            ef.cfilter(false, { insensitive = true, keep = false }, { action = "replace" })
+        end,
+    },
+    {
+        modes = { "n" },
+        plug = "<Plug>(qf-rancher-qfilter-remove-cfilter-a)",
+        map = "<leader>q<C-k>r",
+        desc = "Filter Qflist to remove with Cfilter emulation. Mege list with count. "
+            .. "Case insensitive/smartcase",
+        callback = function()
+            ef.cfilter(false, { insensitive = true, keep = false }, { action = "merge" })
+        end,
+    },
+    {
+        modes = { "n" },
+        plug = "<Plug>(qf-rancher-lfilter-remove-cfilter-n)",
+        map = "<leader>lkr",
+        desc = "Filter loclist to remove with Cfilter emulation. Create new list on count. "
+            .. "Case insensitive/smartcase",
+        callback = function()
+            ef.cfilter(true, { insensitive = true, keep = false }, { action = "new" })
+        end,
+    },
+    {
+        modes = { "n" },
+        plug = "<Plug>(qf-rancher-lfilter-remove-cfilter-r)",
+        map = "<leader>qKr",
+        desc = "Filter loclist to remove with Cfilter emulation. Replace list with count. "
+            .. "Case insensitive/smartcase",
+        callback = function()
+            ef.cfilter(true, { insensitive = true, keep = false }, { action = "replace" })
+        end,
+    },
+    {
+        modes = { "n" },
+        plug = "<Plug>(qf-rancher-lfilter-remove-cfilter-a)",
+        map = "<leader>q<C-k>r",
+        desc = "Filter loclist to remove with Cfilter emulation. Mege list with count. "
+            .. "Case insensitive/smartcase",
+        callback = function()
+            ef.cfilter(true, { insensitive = true, keep = false }, { action = "merge" })
         end,
     },
 
@@ -975,6 +1077,9 @@ if vim.g.qfrancher_setdefaultmaps then
             })
         end
     end
+
+    -- Since the plug logic remaps "<nop>", undo that here
+    vim.keymap.del("n", "<nop>")
 end
 
 ------------
