@@ -111,6 +111,15 @@ else
     vim.api.nvim_set_var("g_qfrancher_autoopenchanges", false)
 end
 
+-- Document that nil is the default state and evaluated differently. nil falls back to the vim
+-- smartcase option. False overrides it
+local g_qfrancher_use_smartcase = vim.g.qfrancher_use_smartcase
+if g_qfrancher_use_smartcase ~= nil then
+    vim.validate("qfrancher_use_smartcase", g_qfrancher_use_smartcase, "boolean")
+else
+    vim.api.nvim_set_var("qfrancher_use_smartcase", nil)
+end
+
 require("mjm.error-list-maps")
 
 ------------------------

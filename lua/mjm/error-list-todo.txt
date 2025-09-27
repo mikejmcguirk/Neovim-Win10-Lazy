@@ -14,6 +14,7 @@ when certain maps need to be required at all
 require it might be best to just put it in plugin.lua
 - Purely internal stuff should not involve error handling
 - Create a way to send the quickfix list to a normal buffer, and allow specifying which elements you want to bring over. Found this use case when trying to move over todo list stuff
+- Make a way to copy lists. The filter code should mostly get you there
 
 ---------------------
 --- DOCUMENTATION ---
@@ -68,6 +69,7 @@ TODO
 - Filter dotfiles/hidden files
 - Filter on diagnostic severity
 - The regex maps should be on ctrl like grep. And then caps can be case sensitive
+- TODO: Improve title
 
 LOW
 
@@ -76,6 +78,9 @@ LOW
 DOCUMENT
 
 - Filter smartcase respects the smartcase opt
+- If no count is entered, the current list will be replaced with the filtered list. If a count
+is specified, a new, replacement, or add list will be created at the count as specified. The
+source list for the filter is always the current one
 
 ----------------
 --- FTPLUGIN ---

@@ -6,7 +6,7 @@ return {
             diagnostics = { disable = { "trailing-space" } },
             -- Use stylua
             format = { enable = false },
-            hint = { enable = true },
+            hint = { arrayIndex = "Enable", enable = true, semicolon = "Disable" },
             runtime = { version = "LuaJIT" },
         },
     },

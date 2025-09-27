@@ -39,7 +39,7 @@ end
 --- @param win integer
 --- @param qf_id integer
 --- @return integer|nil
-local function find_loclist_window(win, qf_id)
+local function find_loclist_win(win, qf_id)
     vim.validate("qf_id", qf_id, "number")
     vim.validate("win", win, "number")
     vim.validate("win", win, function()
@@ -71,28 +71,38 @@ function M.find_qf_win(opts)
     opts = opts or {}
     vim.validate("opts.tabpage", opts.tabpage, { "nil", "number" })
     vim.validate("opts.win", opts.win, { "nil", "number" })
-    if opts.tabpage then
-        local tab_wins = vim.api.nvim_tabpage_list_wins(opts.tabpage)
-        for _, win in pairs(tab_wins) do
-            if vim.fn.win_gettype(win) == "quickfix" then
-                return win
-            end
+
+    local tabpage = (function()
+        if opts.tabpage then
+            return opts.tabpage
         end
 
-        return nil
-    end
+        local win = opts.win or vim.api.nvim_get_current_win()
+        return vim.api.nvim_win_get_tabpage(win)
+    end)()
 
-    -- TODO: This logic can be compresse
-    local win = opts.win or vim.api.nvim_get_current_win()
-    local win_tabpage = vim.api.nvim_win_get_tabpage(win)
-    local tab_wins = vim.api.nvim_tabpage_list_wins(win_tabpage)
-    for _, t_win in pairs(tab_wins) do
-        if vim.fn.win_gettype(t_win) == "quickfix" then
-            return t_win
+    local tab_wins = vim.api.nvim_tabpage_list_wins(tabpage)
+    for _, win in pairs(tab_wins) do
+        if vim.fn.win_gettype(win) == "quickfix" then
+            return win
         end
     end
 
     return nil
+end
+
+--- @param is_loclist boolean
+--- @param opts?{tabpage?: integer, win?:integer}
+--- @return integer|nil
+function M.find_list_win(is_loclist, opts)
+    vim.validate("is_loclist", is_loclist, "boolean")
+    vim.validate("opts", opts, { "nil", "table" })
+
+    if is_loclist then
+        return M.find_loclist_win(opts)
+    else
+        return M.find_qf_win(opts)
+    end
 end
 
 --- @return boolean
@@ -128,7 +138,7 @@ function M.get_loclist_info(opts)
         return qf_id, nil
     end
 
-    return qf_id, find_loclist_window(win, qf_id)
+    return qf_id, find_loclist_win(win, qf_id)
 end
 
 --- @param opts {win?:integer}
@@ -199,6 +209,9 @@ function M.get_listtype(win)
     local wintype = vim.fn.win_gettype(win)
     return (wintype == "quickfix" or wintype == "loclist") and wintype or nil
 end
+
+--- TODO: I'm not convinced it's good that we fallback to qflist. Could lead to unintentional
+--- open. I think I would prefer a nil exit
 
 --- @param opts {get_loclist?:boolean, win?:integer}
 --- @return fun(table):any|nil
@@ -340,6 +353,128 @@ function M.get_resizelist(is_loclist)
             return elo.resize_qflist()
         end
     end
+end
+
+function M.validate_action(action)
+    return action == "new" or action == "replace" or action == "add"
+end
+
+--- @param getlist function
+--- @return integer|string
+function M.get_dest_list_nr(getlist, action)
+    vim.validate("action", action, "string")
+    vim.validate("action", action, function()
+        return M.validate_action(action)
+    end)
+
+    if vim.v.count >= 1 then
+        return math.min(vim.v.count, getlist({ nr = "$" }).nr)
+    end
+
+    if action == "overwrite" or action == "merge" then
+        return getlist({ nr = 0 }).nr
+    end
+
+    return "$"
+end
+
+--- @param prompt string
+--- @return string|nil
+function M.get_input(prompt)
+    vim.validate("prompt", prompt, "string")
+    local ok, pattern = pcall(vim.fn.input, { prompt = prompt, cancelreturn = "" })
+    if ok then
+        return pattern
+    end
+
+    if pattern == "Keyboard interrupt" then
+        return nil
+    end
+
+    local chunk = { (pattern or "Unknown error getting input"), "ErrorMsg" }
+    vim.api.nvim_echo({ chunk }, true, { err = true })
+    return nil
+end
+
+--- @param old_list table
+--- @param opts? {new_list_nr?: integer|string, new_list_items?: table[], new_title?:string}
+--- @return table
+function M.get_new_list(old_list, opts)
+    opts = opts or {}
+    vim.validate("old_list", old_list, "table")
+    vim.validate("opts", opts, { "nil", "table" })
+    vim.validate("opts.new_list_nr", opts.new_list_nr, { "nil", "number", "string" })
+    vim.validate("opts.new_list_items", opts.new_list_items, { "nil", "table" })
+    vim.validate("opts.new_title", opts.new_title, { "nil", "string" })
+
+    local items = opts.new_list_items or old_list.items
+    local list_nr = opts.new_list_nr or old_list.nr
+    local title = opts.new_title or old_list.title
+
+    return {
+        context = old_list.context,
+        idx = old_list.idx,
+        items = items,
+        nr = list_nr,
+        quickfixtextfunc = old_list.quickfixtextfunc,
+        title = title,
+    }
+end
+
+--- @param getlist function
+--- @param setlist function
+--- @param start_list_nr integer|string
+--- @return nil
+function M.cycle_lists_down(getlist, setlist, start_list_nr)
+    vim.validate("getlist", getlist, "callable")
+    vim.validate("setlist", setlist, "callable")
+    vim.validate("start_list_nr", start_list_nr, "number")
+    vim.validate("start_list_nr", start_list_nr, function()
+        return start_list_nr >= 1
+    end)
+
+    local max_nr = getlist({ nr = "$" }).nr --- @type integer
+    assert(start_list_nr <= max_nr)
+
+    for i = start_list_nr, 2, -1 do
+        local list = getlist({ nr = i, all = true }) --- @type table
+        local new_list = M.get_new_list(list, { new_list_nr = i - 1 })
+        setlist({}, "r", new_list)
+    end
+end
+
+--- @param getlist function
+--- @param setlist function
+--- @param dest_list_nr integer|string
+--- @param new_items table[]
+--- @param action string
+--- @param title string
+--- @return nil
+function M.set_list_items(getlist, setlist, dest_list_nr, new_items, action, title)
+    vim.validate("getlist", getlist, "callable")
+    vim.validate("setlist", setlist, "callable")
+    vim.validate("dest_list_nr", dest_list_nr, { "number", "string" })
+    vim.validate("new_items", new_items, "table")
+    vim.validate("title", title, "string")
+    vim.validate("action", action, "string")
+    vim.validate("action", action, function()
+        return M.validate_action(action)
+    end)
+
+    -- For adds, we are assuming the new_items contain the merged list
+    local replace = action == "replace" or action == "add"
+    if replace then
+        setlist({}, "u", { items = new_items, nr = dest_list_nr, title = title })
+        return
+    end
+
+    if dest_list_nr == "$" then
+        setlist({}, " ", { items = new_items, nr = dest_list_nr, title = title })
+        return
+    end
+
+    M.cycle_lists_down(getlist, setlist, dest_list_nr)
+    setlist({}, "r", { items = new_items, nr = dest_list_nr, title = title })
 end
 
 return M
