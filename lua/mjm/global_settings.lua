@@ -182,8 +182,8 @@ Autocmd({ "FileType" }, {
 
 SetOpt("list", true, global_scope)
 SetOpt("lcs", "tab:<->,extends:»,precedes:«,nbsp:␣,trail:⣿", global_scope)
-autoset_winopt("InsertEnter", "list", true)
-autoset_winopt("InsertLeave", "list", false)
+autoset_winopt("InsertEnter", "list", false)
+autoset_winopt("InsertLeave", "list", true)
 
 ------------------
 --- Numberline ---
