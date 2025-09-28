@@ -1,17 +1,5 @@
 local M = {}
 
---- TODO: The design pattern here, for all the maps, is:
---- - YOu call a function like this:
----     require("module").function({}, {}, {})
---- - the first table is arbitrary values, so you can do something like keep = true
---- for whatever reason, having to specify "cfilter" or "filename" as an option to be converted
---- by the module seems silly. But having to do cfilter_keep and cfilter_remove separately also
---- seems silly. Couldn't tell you why
---- - The second table is the input opts, so stuff like smartcase, sensitive, or regex
---- - The last table is output opts, so stuff like list movements
---- - Having the output opts be variable (for example, including system settings) seems ok so
---- long as the output state doesn't mutate
-
 -------------
 --- TYPES ---
 -------------
@@ -59,15 +47,25 @@ local function resolve_prompt(filter_info, filter_opts, input_type)
     return name .. enter_prompt .. " (" .. type .. "): "
 end
 
---- @param pattern string
---- @param input_type QfRancherInputType
---- @return string, QfRancherInputType, vim.regex|nil
-local function get_predicate_info(pattern, input_type)
+--- @param filter_info QfRancherFilterInfo
+--- @param filter_opts QfRancherFilterOpts
+--- @param input_opts QfRancherInputOpts
+--- @return string|nil, QfRancherInputType|nil, vim.regex|nil
+local function get_predicate_info(filter_info, filter_opts, input_opts)
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
+
+    local input_type = eu.resolve_input_type(input_opts.input_type) --- @type QfRancherInputType
+    local pattern = input_opts.pattern and input_opts.pattern
+        or eu.get_input(resolve_prompt(filter_info, filter_opts, input_type)) --- @type string|nil
+    if not pattern then
+        return nil, nil, nil
+    end
+
     if input_type == "regex" then
         return pattern, input_type, vim.regex(pattern)
     end
 
-    local lower_pattern = string.lower(pattern)
+    local lower_pattern = string.lower(pattern) --- @type string
     if input_type == "insensitive" then
         return lower_pattern, input_type, nil
     end
@@ -89,7 +87,6 @@ end
 --- settings
 local function validate_filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
     vim.validate("filter_info", filter_info, "table")
-
     vim.validate("filter_info.name", filter_info.name, { "nil", "string" })
     vim.validate("filter_info.func", filter_info.func, "callable")
 
@@ -128,44 +125,34 @@ function M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
     validate_filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
 
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-
-    local cur_win = vim.api.nvim_get_current_win() --- @type integer
-    local is_loclist = output_opts.is_loclist and true or false
-    --- @type function
-    local getlist = eu.get_getlist({ get_loclist = is_loclist, win = cur_win })
-    local cur_list_size = getlist({ size = true }).size --- @type integer
-    if (not cur_list_size) or cur_list_size == 0 then
+    local getlist = eu.get_getlist({ is_loclist = output_opts.is_loclist }) --- @type function
+    local cur_list = getlist({ all = true }) --- @type table
+    if cur_list.size == 0 then
         vim.api.nvim_echo({ { "No entries to filter", "" } }, false, {})
         return
     end
 
-    --- @type integer|nil
-    local list_win = eu.find_list_win(is_loclist, { win = cur_win })
-    --- @type vim.fn.winsaveview.ret|nil
-    local view = list_win and vim.api.nvim_win_call(list_win, vim.fn.winsaveview) or nil
-    local row = view and view.lnum or 0 --- @type integer
-
-    --- @type string
-    local action = (output_opts.action and vim.v.count > 0) and output_opts.action or "replace"
-    local dest_list_nr = eu.get_dest_list_nr(getlist, action) --- @type string|integer
-    local old_list = getlist({ nr = dest_list_nr, all = true }) --- @type table
-
-    local input_type = eu.resolve_input_type(input_opts.input_type) --- @type QfRancherInputType
-    local pattern = input_opts.pattern and input_opts.pattern
-        or eu.get_input(resolve_prompt(filter_info, filter_opts, input_type)) --- @type string|nil
-    if not pattern then
+    --- @return string|nil, QfRancherInputType|nil, vim.regex|nil
+    local pattern, input_type, regex = get_predicate_info(filter_info, filter_opts, input_opts)
+    if (not pattern) or not input_type then
         return
     end
 
-    local regex
-    --- @type string, QfRancherInputType, vim.regex|nil
-    pattern, input_type, regex = get_predicate_info(pattern, input_type)
-    local keep = filter_opts.keep --- @type boolean
-    local new_items, view_rows_removed =
-        filter_info.func(old_list.items, pattern, keep, input_type, row, regex)
+    local action = output_opts.action or "new" --- @type QfRancherAction
+    local dest_list_nr = eu.get_dest_list_nr(getlist, action) --- @type integer
+    local list_win = eu.find_list_win(output_opts.is_loclist) --- @type integer|nil
+    local view = (list_win and dest_list_nr == cur_list.nr)
+            and vim.api.nvim_win_call(list_win, vim.fn.winsaveview)
+        or nil --- @type vim.fn.winsaveview.ret|nil
 
-    local setlist = eu.get_setlist(is_loclist) --- @type function
+    local view_row = view and view.lnum or 0 --- @type integer
+    --- @type table[], integer
+    local new_items, view_rows_removed =
+        filter_info.func(cur_list.items, pattern, filter_opts.keep, input_type, view_row, regex)
+
+    local setlist = eu.get_setlist(output_opts.is_loclist) --- @type function
     eu.set_list_items(getlist, setlist, dest_list_nr, new_items, action, "Filter")
+
     if list_win and view then
         view.topline = math.max(view.topline - view_rows_removed, 0)
         view.lnum = math.max(view.lnum - view_rows_removed, 1)
@@ -174,7 +161,7 @@ function M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
         end)
     end
 
-    eu.get_openlist(is_loclist)({ always_resize = true })
+    eu.get_openlist(output_opts.is_loclist)({ always_resize = true })
 end
 
 -----------------------

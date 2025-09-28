@@ -44,6 +44,8 @@ local es = Qfr_Defer_Require("mjm.error-list-stack")
 local grep_smart_case = { literal = true, smart_case = true }
 local grep_case_sensitive = { literal = true }
 
+-- TODO: Obvious issue here is that it only handles the Cfilter case, but I think I can make it
+-- work
 local vimsmart = { input_type = "vimsmart" }
 local sensitive = { input_type = "sensitive" }
 local regex = { input_type = "regex" }

@@ -122,7 +122,7 @@ local function get_list_height(list_win, is_ll)
     end
 
     local eu = require("mjm.error-list-util")
-    local getlist = eu.get_getlist({ win = list_win, get_loclist = is_ll })
+    local getlist = eu.get_getlist({ win = list_win, is_loclist = is_ll })
     local cur_size = getlist({ size = true }).size
 
     local list_height = math.min(cur_size, max_qf_height)

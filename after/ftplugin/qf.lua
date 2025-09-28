@@ -8,6 +8,7 @@
 -- TODO: The g variable should either map the defaults or not. Plug mappings/documentation can be
 -- provided if the user wants to do it custom
 -- TODO: Set nowait here and in other buffer keymaps
+-- MAYBE: show stack nr in qf statusline
 
 -- qf_view_result
 -- ex_cc

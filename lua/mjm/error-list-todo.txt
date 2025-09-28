@@ -19,6 +19,8 @@ require it might be best to just put it in plugin.lua
 - Should be able to control if you want your regex to be case sensitive or not. Would be good alt
 maps but compatibilty and such
 - Document what regex is used where. Ext programs use their regex. Filter stuff uses vim regex
+- In general, titling is weak
+- When grepping specific buf to replace, get error invalid $chistory. Bad buf numbering
 
 ---------------------
 --- DOCUMENTATION ---

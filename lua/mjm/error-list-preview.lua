@@ -653,7 +653,7 @@ function M._update_win()
     end
 
     local is_ll = listtype == "loclist"
-    local cur_list = eu.get_getlist({ win = qf_win, get_loclist = is_ll })()
+    local cur_list = eu.get_getlist({ win = qf_win, is_loclist = is_ll })()
     if #cur_list < 1 then
         clear_session_data()
         return
@@ -705,7 +705,7 @@ function M.open_preview_win()
     end
 
     local is_ll = listtype == "loclist"
-    local cur_list = eu.get_getlist({ win = qf_win, get_loclist = is_ll })()
+    local cur_list = eu.get_getlist({ win = qf_win, is_loclist = is_ll })()
     if #cur_list < 1 then
         return
     end

@@ -215,17 +215,14 @@ function M.get_listtype(win)
     return (wintype == "quickfix" or wintype == "loclist") and wintype or nil
 end
 
---- TODO: I'm not convinced it's good that we fallback to qflist. Could lead to unintentional
---- open. I think I would prefer a nil exit
-
---- @param opts {get_loclist?:boolean, win?:integer}
+--- @param opts {is_loclist?:boolean, win?:integer}
 --- @return fun(table):any|nil
 --- If no win is provided, the current win is used as a fallback
 --- If no get_loclist value is provided or it is false, getqflist is always returned
 --- If a win is provided but it cannot have a loclist, getqflist is returned
 function M.get_getlist(opts)
     opts = opts or {}
-    vim.validate("opts.get_loclist", opts.get_loclist, { "boolean", "nil" })
+    vim.validate("opts.get_loclist", opts.is_loclist, { "boolean", "nil" })
     vim.validate("opts.win", opts.win, { "nil", "number" })
     if opts.win then
         vim.validate("opts.win", opts.win, function()
@@ -233,7 +230,7 @@ function M.get_getlist(opts)
         end)
     end
 
-    if not opts.get_loclist then
+    if not opts.is_loclist then
         return vim.fn.getqflist
     end
 
@@ -417,7 +414,8 @@ function M.resolve_input_type(input)
 end
 
 --- @param getlist function
---- @return integer|string
+--- @param action QfRancherAction
+--- @return integer
 function M.get_dest_list_nr(getlist, action)
     vim.validate("action", action, "string")
     vim.validate("action", action, function()
@@ -432,7 +430,7 @@ function M.get_dest_list_nr(getlist, action)
         return getlist({ nr = 0 }).nr
     end
 
-    return "$"
+    return getlist({ nr = "$" }).nr
 end
 
 --- @param prompt string
@@ -502,7 +500,7 @@ end
 
 --- @param getlist function
 --- @param setlist function
---- @param dest_list_nr integer|string
+--- @param dest_list_nr integer
 --- @param new_items table[]
 --- @param action string
 --- @param title string
@@ -518,14 +516,25 @@ function M.set_list_items(getlist, setlist, dest_list_nr, new_items, action, tit
         return M.validate_action(action)
     end)
 
-    -- For adds, we are assuming the new_items contain the merged list
-    local replace = action == "replace" or action == "add"
-    if replace then
-        setlist({}, "u", { items = new_items, nr = dest_list_nr, title = title })
+    if action == "replace" then
+        local old_list = getlist({ nr = dest_list_nr, all = true })
+        local new_list =
+            M.get_new_list(old_list, { new_list_items = new_items, new_title = title })
+        setlist({}, "r", new_list)
         return
     end
 
-    if dest_list_nr == "$" then
+    if action == "merge" then
+        local old_list = getlist({ nr = dest_list_nr, all = true })
+        local new_list_items = M.merge_qf_lists(old_list.items, new_items)
+        local new_list =
+            M.get_new_list(old_list, { new_list_items = new_list_items, new_title = title })
+        setlist({}, "u", new_list)
+        return
+    end
+
+    local max_list_nr = getlist({ nr = "$" }).nr
+    if dest_list_nr == max_list_nr then
         setlist({}, " ", { items = new_items, nr = dest_list_nr, title = title })
         return
     end
