@@ -24,7 +24,7 @@
 -- TODO: The various checks for this var fail if it's not set since they use API calls. I'm fine
 -- with writing a protected var call, but need to look at the vim.g code to see if I'm doing
 -- more silly stuff than that
-vim.api.nvim_set_var("qf_rancher_validate", true)
+-- vim.api.nvim_set_var("qf_rancher_debug_assertions", true)
 
 -- TODO: In the Rancher ftplugin file, setting the qf options should be done under a g value
 -- DOCUMENT: Which options are set
@@ -168,7 +168,7 @@ vim.api.nvim_buf_set_keymap(0, "n", "P", "", {
 --- @return table, integer
 --- LOW: Return order here is not the same as input order in set_loclist_data
 local function get_loclist_data(list_win)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         local is_valid = function()
             return vim.api.nvim_win_is_valid(list_win)
         end
@@ -197,7 +197,7 @@ end
 --- @param loclist_data table
 --- @return nil
 local function set_loclist_data(cur_stack_nr, dest_win, loclist_data)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         vim.validate("cur_stack_nr", cur_stack_nr, "number")
         vim.validate("cur_stack_nr", cur_stack_nr, function()
             return cur_stack_nr > 0
@@ -229,7 +229,7 @@ end
 --- @param list_win integer
 --- @return integer|nil
 local function find_loclist_win(list_qf_id, list_win)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         vim.validate("list_qf_id", list_qf_id, "number")
         vim.validate("list_qf_id", list_qf_id, function()
             return list_qf_id > 0
@@ -267,7 +267,7 @@ end
 --- @param open? QfOpenMethod
 --- @return mjm.OpenBufSource, mjm.OpenBufOpts
 local function qf_get_open_buf_opts(entry, open)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         vim.validate("entry", entry, "table")
         vim.validate("open", open, { "nil", "string" })
     end
@@ -296,7 +296,7 @@ end
 --- @param is_loclist boolean
 --- @return boolean, table|string, integer
 local function get_entry_on_cursor(list_win, is_loclist)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         local is_valid = function()
             return vim.api.nvim_win_is_valid(list_win)
         end
@@ -337,7 +337,7 @@ end
 --- @param list_win integer
 --- @return nil
 local function qf_open_finish(dest_win, finish, list_win)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         local dest_valid = function()
             return vim.api.nvim_win_is_valid(dest_win)
         end
@@ -373,7 +373,7 @@ end
 --- @param finish QfFinishMethod
 --- @return nil
 local function qf_open_handle_loclist(dest_win, list_win, list_qf_id, finish)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         local dest_valid = function()
             return vim.api.nvim_win_is_valid(dest_win)
         end
@@ -437,7 +437,7 @@ end
 --- @param dest_win integer
 --- @return nil
 local function qf_open_default_dest_orphan_loclist(dest_win, finish)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         local dest_valid = function()
             return vim.api.nvim_win_is_valid(dest_win)
         end
@@ -469,7 +469,7 @@ end
 --- @param list_win integer
 --- @return nil
 local function qf_open_default_dest(list_win, finish)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         vim.validate("finish", finish, "string")
         local list_valid = function()
             return vim.api.nvim_win_is_valid(list_win)
@@ -535,7 +535,7 @@ end
 --- @param finish QfFinishMethod
 --- @return nil
 local function qf_direct_open(finish)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         vim.validate("finish", finish, "string")
     end
 
@@ -621,7 +621,7 @@ end, { buffer = true })
 --- @param finish string
 --- @return nil
 local function qf_split_orphan_wrapup(list_win, dest_win, finish)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         local dest_valid = function()
             return vim.api.nvim_win_is_valid(dest_win)
         end
@@ -661,7 +661,7 @@ end
 --- Emulation of source fallback for qflist/loclist search
 --- Assumes proper tab context
 local function qf_iter_winnr(list_winnr, total_winnr)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         vim.validate("list_winnr", list_winnr, "number")
         vim.validate("total_winnr", total_winnr, "number")
         vim.validate("total_winnr", total_winnr, function()
@@ -697,7 +697,7 @@ end
 --- @param list_win integer
 --- @return integer|nil
 local function qf_find_alt_win(list_win)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         vim.validate("list_win", list_win, function()
             return vim.api.nvim_win_is_valid(list_win)
         end)
@@ -735,7 +735,7 @@ end
 --- Emulation of built-in qf logic
 --- Assumes proper tab context
 local function qf_find_matching_buf(list_winnr, total_winnr, bufnr, usetab)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         vim.validate("list_winnr", list_winnr, "number")
 
         vim.validate("total_winnr", total_winnr, "number")
@@ -784,7 +784,7 @@ end
 --- @return integer|nil
 --- Assumes Neovim is in the proper tab context
 local function find_help_win(total_winnr)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         vim.validate("total_winnr", total_winnr, "number")
         vim.validate("total_winnr", total_winnr, function()
             return total_winnr <= vim.fn.winnr("$")
@@ -810,7 +810,7 @@ end
 --- @param entry table
 --- @return integer|nil, boolean
 local function qf_get_next_win_loclist(list_qf_id, list_win, total_winnr, entry)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         vim.validate("list_qf_id", list_qf_id, "number")
         vim.validate("list_qf_id", list_qf_id, function()
             return list_qf_id > 0
@@ -860,7 +860,7 @@ end
 --- @param entry table
 --- @return integer|nil
 local function qf_get_next_win(list_win, total_winnr, entry)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         vim.validate("list_win", list_win, "number")
         local list_valid = function()
             return vim.api.nvim_win_is_valid(list_win)
@@ -939,7 +939,7 @@ end
 --- @param ctx QfOpenSplitFullCtx
 --- @return nil
 local function qf_split_full(ctx)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         assert(vim.fn.winnr("$") > 1)
         validate_qf_split_full_ctx(ctx)
     end
@@ -985,7 +985,7 @@ end
 --- @param finish string
 --- @return nil
 local function qf_split_tab_handle_orphan(list_win, dest_win, finish)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         vim.validate("list_win", list_win, "number")
         local valid_win = function()
             return vim.api.nvim_win_is_valid(list_win)
@@ -1048,7 +1048,7 @@ end
 --- @param is_loclist boolean
 --- @return nil
 local function qf_split_tab(buf_source, buf_opts, list_win, finish, qf_id, is_loclist)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         validate_qf_split_tab(buf_source, buf_opts, list_win, finish, qf_id, is_loclist)
     end
 
@@ -1091,7 +1091,7 @@ end
 --- @param finish QfFinishMethod
 --- @return nil
 local function qf_split_single_win(list_win, open, finish)
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         assert(vim.fn.winnr("$") == 1)
         local list_valid = function()
             return vim.api.nvim_win_is_valid(list_win)
@@ -1186,7 +1186,7 @@ end
 local function qf_split(open, finish)
     local list_win = vim.api.nvim_get_current_win()
 
-    if vim.api.nvim_get_var("qf_rancher_validate") then
+    if vim.api.nvim_get_var("qf_rancher_debug_assertions") then
         --- @type boolean, [string, string]|nil
         local ok, err_chunk = validate_qf_open(list_win, open, finish)
         if not ok then

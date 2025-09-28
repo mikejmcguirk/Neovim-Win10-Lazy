@@ -8,6 +8,7 @@
 --- - Check that the qf and loclist versions are both properly built for purpose. Should be able
 ---     to use the loclist function for buf/win specific info
 
+--- @class QfRancherUtils
 local M = {}
 
 --- @alias QfRancherSetlistAction "add"|"new"|"overwrite"
@@ -37,14 +38,16 @@ function M.wrapping_sub(x, y, min, max)
 end
 
 --- @param win integer
---- @param qf_id integer
+--- @param qf_id? integer
 --- @return integer|nil
-local function find_loclist_win(win, qf_id)
-    vim.validate("qf_id", qf_id, "number")
+function M.find_loclist_win(win, qf_id)
+    vim.validate("qf_id", qf_id, { "nil", "number" })
     vim.validate("win", win, "number")
     vim.validate("win", win, function()
         return vim.api.nvim_win_is_valid(win)
     end)
+
+    qf_id = qf_id or vim.fn.getloclist(win, { id = 0 })
 
     local win_tabpage = vim.api.nvim_win_get_tabpage(win) --- @type integer
     local win_tabpage_wins = vim.api.nvim_tabpage_list_wins(win_tabpage) --- @type integer[]
@@ -95,11 +98,13 @@ end
 --- @param opts?{tabpage?: integer, win?:integer}
 --- @return integer|nil
 function M.find_list_win(is_loclist, opts)
+    opts = opts or {}
     vim.validate("is_loclist", is_loclist, "boolean")
     vim.validate("opts", opts, { "nil", "table" })
 
     if is_loclist then
-        return M.find_loclist_win(opts)
+        local win = opts.win or vim.api.nvim_get_current_win()
+        return M.find_loclist_win(win)
     else
         return M.find_qf_win(opts)
     end
@@ -138,7 +143,7 @@ function M.get_loclist_info(opts)
         return qf_id, nil
     end
 
-    return qf_id, find_loclist_win(win, qf_id)
+    return qf_id, M.find_loclist_win(win, qf_id)
 end
 
 --- @param opts {win?:integer}
@@ -355,8 +360,60 @@ function M.get_resizelist(is_loclist)
     end
 end
 
+--- @param action QfRancherAction
+--- @return boolean
 function M.validate_action(action)
     return action == "new" or action == "replace" or action == "add"
+end
+
+--- @param input QfRancherInputType
+--- @return boolean
+function M.validate_input_type(input)
+    return input == "insensitive"
+        or input == "regex"
+        or input == "sensitive"
+        or input == "smart"
+        or input == "vimsmart"
+end
+
+--- @param input QfRancherInputType
+--- @return string
+--- NOTE: This function assumes that an API input of "vimsmart" has already been resolved
+function M.get_display_input_type(input)
+    if input == "regex" then
+        return "Regex"
+    elseif input == "sensitive" then
+        return "Case Sensitive"
+    elseif input == "smart" then
+        return "Smartcase"
+    else
+        return "Case Insensitive"
+    end
+end
+
+--- @param input QfRancherInputType|nil
+--- @return QfRancherInputType
+function M.resolve_input_type(input)
+    if not input then
+        return "sensitive"
+    end
+
+    if input ~= "vimsmart" then
+        return input
+    end
+
+    if vim.g.qf_rancher_use_smartcase == true then
+        return "smart"
+    -- Specifically compare with boolean false to ignore nils
+    elseif vim.g.qf_rancher_use_smartcase == false then
+        return "insensitive"
+    end
+
+    if vim.api.nvim_get_option_value("smartcase", { scope = "global" }) then
+        return "smart"
+    end
+
+    return "insensitive"
 end
 
 --- @param getlist function

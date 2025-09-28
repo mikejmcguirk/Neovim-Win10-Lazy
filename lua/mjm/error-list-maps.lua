@@ -44,7 +44,117 @@ local es = Qfr_Defer_Require("mjm.error-list-stack")
 local grep_smart_case = { literal = true, smart_case = true }
 local grep_case_sensitive = { literal = true }
 
-local rancher_keymaps = {
+local vimsmart = { input_type = "vimsmart" }
+local sensitive = { input_type = "sensitive" }
+local regex = { input_type = "regex" }
+
+local list_types = {
+    { prefix = "q", filter_type = "qfilter", listname = "qflist", is_loclist = false },
+    { prefix = "l", filter_type = "lfilter", listname = "loclist", is_loclist = true },
+}
+
+local actions = {
+    { name = "keep", action_key = "k", keep = true, desc_action = "keep" },
+    { name = "remove", action_key = "r", keep = false, desc_action = "remove" },
+}
+
+local ops = {
+    {
+        name = "n",
+        action = "new",
+        desc_mod = "Create new list on count. ",
+        map_mod = function(action_key)
+            return action_key:lower()
+        end,
+    },
+    {
+        name = "r",
+        action = "replace",
+        desc_mod = "Replace list with count. ",
+        map_mod = function(action_key)
+            return action_key:upper()
+        end,
+    },
+    {
+        name = "a",
+        action = "add",
+        desc_mod = "Add to list with count. ",
+        map_mod = function(action_key)
+            return "<C-" .. action_key:lower() .. ">"
+        end,
+    },
+}
+
+local match_types = {
+    { name = "smart", suffix = "l", arg = vimsmart, desc_extra = "Case insensitive/smartcase" },
+    { name = "sensitive", suffix = "L", arg = sensitive, desc_extra = "Case sensitive" },
+    { name = "regex", suffix = "<c-l>", arg = regex, desc_extra = "Uses regex" },
+}
+
+local rancher_keymaps = {}
+
+for _, list in ipairs(list_types) do
+    for _, action in ipairs(actions) do
+        for _, op in ipairs(ops) do
+            for _, match in ipairs(match_types) do
+                local map = "<leader>"
+                    .. list.prefix
+                    .. op.map_mod(action.action_key)
+                    .. match.suffix
+                local plug = "<Plug>(qf-rancher-"
+                    .. list.filter_type
+                    .. "-"
+                    .. action.name
+                    .. "-"
+                    .. op.name
+                    .. "-cfilter-"
+                    .. match.name
+                    .. ")"
+                local desc = "Filter "
+                    .. action.desc_action
+                    .. " from "
+                    .. list.listname
+                    .. " with Cfilter emulation. "
+                    .. op.desc_mod
+                    .. match.desc_extra
+                local op_obj = { action = op.action, is_loclist = list.is_loclist }
+                local callback = function()
+                    ef.cfilter({ keep = action.keep }, match.arg, op_obj)
+                end
+                table.insert(rancher_keymaps, {
+                    modes = { "n" },
+                    plug = plug,
+                    map = map,
+                    desc = desc,
+                    callback = callback,
+                })
+            end
+        end
+    end
+end
+
+for _, km in ipairs(rancher_keymaps) do
+    for _, mode in ipairs(km.modes) do
+        vim.api.nvim_set_keymap(mode, km.plug, "", {
+            callback = km.callback,
+            desc = km.desc,
+            noremap = true,
+        })
+    end
+end
+
+if vim.g.qf_rancher_set_default_maps then
+    for _, km in ipairs(rancher_keymaps) do
+        for _, mode in ipairs(km.modes) do
+            vim.api.nvim_set_keymap(mode, km.map, km.plug, {
+                desc = km.desc,
+                noremap = true,
+            })
+        end
+    end
+end
+
+local big_rancher_keymaps = {
     {
         modes = { "n", "x" },
         plug = "<nop>",
@@ -147,126 +257,6 @@ local rancher_keymaps = {
         map = "<leader>l<c-r>",
         desc = "Avoid falling back to defaults",
         callback = nil,
-    },
-    {
-        modes = { "n" },
-        plug = "<Plug>(qf-rancher-qfilter-keep-cfilter-n)",
-        map = "<leader>qkl",
-        desc = "Filter Qflist to keep with Cfilter emulation. Create new list on count. "
-            .. "Case insensitive/smartcase",
-        callback = function()
-            ef.cfilter(false, { insensitive = true, keep = true }, { action = "new" })
-        end,
-    },
-    {
-        modes = { "n" },
-        plug = "<Plug>(qf-rancher-qfilter-keep-cfilter-r)",
-        map = "<leader>qKl",
-        desc = "Filter Qflist to keep with Cfilter emulation. Replace list with count. "
-            .. "Case insensitive/smartcase",
-        callback = function()
-            ef.cfilter(false, { insensitive = true, keep = true }, { action = "replace" })
-        end,
-    },
-    {
-        modes = { "n" },
-        plug = "<Plug>(qf-rancher-qfilter-keep-cfilter-a)",
-        map = "<leader>q<C-k>l",
-        desc = "Filter Qflist to keep with Cfilter emulation. Mege list with count. "
-            .. "Case insensitive/smartcase",
-        callback = function()
-            ef.cfilter(false, { insensitive = true, keep = true }, { action = "merge" })
-        end,
-    },
-    {
-        modes = { "n" },
-        plug = "<Plug>(qf-rancher-lfilter-keep-cfilter-n)",
-        map = "<leader>lkl",
-        desc = "Filter loclist to keep with Cfilter emulation. Create new list on count. "
-            .. "Case insensitive/smartcase",
-        callback = function()
-            ef.cfilter(true, { insensitive = true, keep = true }, { action = "new" })
-        end,
-    },
-    {
-        modes = { "n" },
-        plug = "<Plug>(qf-rancher-lfilter-keep-cfilter-r)",
-        map = "<leader>qKl",
-        desc = "Filter loclist to keep with Cfilter emulation. Replace list with count. "
-            .. "Case insensitive/smartcase",
-        callback = function()
-            ef.cfilter(true, { insensitive = true, keep = true }, { action = "replace" })
-        end,
-    },
-    {
-        modes = { "n" },
-        plug = "<Plug>(qf-rancher-lfilter-keep-cfilter-a)",
-        map = "<leader>q<C-k>l",
-        desc = "Filter loclist to keep with Cfilter emulation. Mege list with count. "
-            .. "Case insensitive/smartcase",
-        callback = function()
-            ef.cfilter(true, { insensitive = true, keep = true }, { action = "merge" })
-        end,
-    },
-    {
-        modes = { "n" },
-        plug = "<Plug>(qf-rancher-qfilter-remove-cfilter-n)",
-        map = "<leader>qkr",
-        desc = "Filter Qflist to remove with Cfilter emulation. Create new list on count. "
-            .. "Case insensitive/smartcase",
-        callback = function()
-            ef.cfilter(false, { insensitive = true, keep = false }, { action = "new" })
-        end,
-    },
-    {
-        modes = { "n" },
-        plug = "<Plug>(qf-rancher-qfilter-remove-cfilter-r)",
-        map = "<leader>qKr",
-        desc = "Filter Qflist to remove with Cfilter emulation. Replace list with count. "
-            .. "Case insensitive/smartcase",
-        callback = function()
-            ef.cfilter(false, { insensitive = true, keep = false }, { action = "replace" })
-        end,
-    },
-    {
-        modes = { "n" },
-        plug = "<Plug>(qf-rancher-qfilter-remove-cfilter-a)",
-        map = "<leader>q<C-k>r",
-        desc = "Filter Qflist to remove with Cfilter emulation. Mege list with count. "
-            .. "Case insensitive/smartcase",
-        callback = function()
-            ef.cfilter(false, { insensitive = true, keep = false }, { action = "merge" })
-        end,
-    },
-    {
-        modes = { "n" },
-        plug = "<Plug>(qf-rancher-lfilter-remove-cfilter-n)",
-        map = "<leader>lkr",
-        desc = "Filter loclist to remove with Cfilter emulation. Create new list on count. "
-            .. "Case insensitive/smartcase",
-        callback = function()
-            ef.cfilter(true, { insensitive = true, keep = false }, { action = "new" })
-        end,
-    },
-    {
-        modes = { "n" },
-        plug = "<Plug>(qf-rancher-lfilter-remove-cfilter-r)",
-        map = "<leader>qKr",
-        desc = "Filter loclist to remove with Cfilter emulation. Replace list with count. "
-            .. "Case insensitive/smartcase",
-        callback = function()
-            ef.cfilter(true, { insensitive = true, keep = false }, { action = "replace" })
-        end,
-    },
-    {
-        modes = { "n" },
-        plug = "<Plug>(qf-rancher-lfilter-remove-cfilter-a)",
-        map = "<leader>q<C-k>r",
-        desc = "Filter loclist to remove with Cfilter emulation. Mege list with count. "
-            .. "Case insensitive/smartcase",
-        callback = function()
-            ef.cfilter(true, { insensitive = true, keep = false }, { action = "merge" })
-        end,
     },
 
     ------------
@@ -1058,7 +1048,7 @@ local rancher_keymaps = {
     },
 }
 
-for _, km in ipairs(rancher_keymaps) do
+for _, km in ipairs(big_rancher_keymaps) do
     for _, mode in ipairs(km.modes) do
         vim.api.nvim_set_keymap(mode, km.plug, "<nop>", {
             callback = km.callback,
@@ -1068,8 +1058,8 @@ for _, km in ipairs(rancher_keymaps) do
     end
 end
 
-if vim.g.qfrancher_setdefaultmaps then
-    for _, km in ipairs(rancher_keymaps) do
+if vim.g.qf_rancher_set_default_maps then
+    for _, km in ipairs(big_rancher_keymaps) do
         for _, mode in ipairs(km.modes) do
             vim.api.nvim_set_keymap(mode, km.map, km.plug, {
                 desc = km.desc,
@@ -1097,7 +1087,7 @@ local function find_matches(cargs, matches)
     return matches.default
 end
 
-if vim.g.qfrancher_setdefaultcmds then
+if vim.g.qf_rancher_set_default_cmds then
     vim.api.nvim_create_user_command("Qgrep", function(cargs)
         cargs = cargs or {}
 
@@ -1193,7 +1183,7 @@ end
 --- OPEN_CLOSE_TOGGLE ---
 -------------------------
 
-if vim.g.qfrancher_setdefaultcmds then
+if vim.g.qf_rancher_set_default_cmds then
     vim.api.nvim_create_user_command("Qopen", function(cargs)
         cargs = cargs or {}
         local count = cargs.count > 0 and cargs.count or nil
@@ -1219,7 +1209,7 @@ end
 --- NAV_ACTION ---
 ------------------
 
-if vim.g.qfrancher_setdefaultcmds then
+if vim.g.qf_rancher_set_default_cmds then
     vim.api.nvim_create_user_command("Qprev", function(cargs)
         cargs = cargs or {}
         local count = cargs.count > 0 and cargs.count or 1
@@ -1297,7 +1287,7 @@ end
 --- STACK ---
 -------------
 
-if vim.g.qfrancher_setdefaultcmds then
+if vim.g.qf_rancher_set_default_cmds then
     vim.api.nvim_create_user_command("Qolder", function(cargs)
         cargs = cargs or {}
 

@@ -15,6 +15,10 @@ require it might be best to just put it in plugin.lua
 - Purely internal stuff should not involve error handling
 - Create a way to send the quickfix list to a normal buffer, and allow specifying which elements you want to bring over. Found this use case when trying to move over todo list stuff
 - Make a way to copy lists. The filter code should mostly get you there
+- Make the autoopen changes var actually do something
+- Should be able to control if you want your regex to be case sensitive or not. Would be good alt
+maps but compatibilty and such
+- Document what regex is used where. Ext programs use their regex. Filter stuff uses vim regex
 
 ---------------------
 --- DOCUMENTATION ---
@@ -59,6 +63,7 @@ PERF
 
 TODO
 
+- The wrapper function should not be public
 - Check that all functions have reasonable default sorts
 - Check that window height updates are triggered where appropriate
 - Check that functions have proper visibility
@@ -111,6 +116,7 @@ TODO
 -- buf/help/cwd
 - Partly a documentation thing and partly a code thing, more clarity around when smartcase is used. Do we have a control for smartcase vs case insensitive?
 - If a grep command is run with '<'> marks, those positions should be used to do the grep. Really should apply to any set of marks
+- what what grepprg you're using in the prompt
 
 MAYBE
 

@@ -1,48 +1,137 @@
 local M = {}
 
+--- TODO: The design pattern here, for all the maps, is:
+--- - YOu call a function like this:
+---     require("module").function({}, {}, {})
+--- - the first table is arbitrary values, so you can do something like keep = true
+--- for whatever reason, having to specify "cfilter" or "filename" as an option to be converted
+--- by the module seems silly. But having to do cfilter_keep and cfilter_remove separately also
+--- seems silly. Couldn't tell you why
+--- - The second table is the input opts, so stuff like smartcase, sensitive, or regex
+--- - The last table is output opts, so stuff like list movements
+--- - Having the output opts be variable (for example, including system settings) seems ok so
+--- long as the output state doesn't mutate
+
+-------------
+--- TYPES ---
+-------------
+
+--- @alias QfRancherAction "new"|"replace"|"add"
+--- @alias QfRancherInputType "insensitive"|"regex"|"sensitive"|"smart"|"vimsmart"
+--- @alias QfRancherFilterFunc fun(
+--- table, string, boolean, QfRancherInputType, integer, vim.regex): table[], integer
+
+--- @class QfRancherFilterInfo
+--- @field name? string
+--- @field func QfRancherFilterFunc
+
+--- @class QfRancherFilterOpts
+--- @field keep? boolean
+
+--- @class QfRancherFilterPredicateOpts
+--- @field bufnr? integer
+--- @field keep boolean
+--- @field pattern? string
+--- @field regex? vim.regex
+--- @field text? string
+
+--- TODO: These should be moved to a general file
+
+--- @class QfRancherInputOpts
+--- @field input_type? QfRancherInputType
+--- @field pattern? string
+---
+--- @class QfRancherOutputOpts
+--- @field action? QfRancherAction
+--- @field is_loclist? boolean
+---
 -------------------------
 --- Wrapper Functions ---
 -------------------------
 
---- @alias QfRancherAction "new"|"replace"|"add"
+--- @param filter_info QfRancherFilterInfo
+--- @param filter_opts QfRancherFilterOpts
+--- @param input_type QfRancherInputType
+local function resolve_prompt(filter_info, filter_opts, input_type)
+    local name = filter_info.name and filter_info.name .. " - " or ""
+    local enter_prompt = filter_opts.keep and "Enter pattern to keep" or "Enter pattern to remove"
+    local type = require("mjm.error-list-util").get_display_input_type(input_type)
+    return name .. enter_prompt .. " (" .. type .. "): "
+end
 
---- @return boolean
-local function resolve_smartcase()
-    local g_use_smartcase = vim.g.qfrancher_use_smartcase
-    if g_use_smartcase ~= nil and g_use_smartcase ~= vim.NIL then
-        return vim.g.qfrancher_use_smartcase
+--- @param pattern string
+--- @param input_type QfRancherInputType
+--- @return string, QfRancherInputType, vim.regex|nil
+local function get_predicate_info(pattern, input_type)
+    if input_type == "regex" then
+        return pattern, input_type, vim.regex(pattern)
+    end
+
+    local lower_pattern = string.lower(pattern)
+    if input_type == "insensitive" then
+        return lower_pattern, input_type, nil
+    end
+
+    -- Handle case sensitive and smartcase together
+    if input_type == "sensitive" or lower_pattern ~= pattern then
+        return pattern, "sensitive", nil
     else
-        return vim.api.nvim_get_option_value("smartcase", { scope = "global" })
+        return lower_pattern, input_type, nil
     end
 end
 
---- @class QfRancherFilterOpts
---- @field keep? boolean
---- @field regex? vim.regex
---- @field insensitive? boolean
---- @field smartcase? boolean
---- @field use_regex? boolean
----
---- @alias QfRancherFilterFunc fun(table, string, QfRancherFilterOpts): boolean
-
---- @param is_loclist boolean
---- @param filter_func QfRancherFilterFunc
+--- @param filter_info QfRancherFilterInfo
 --- @param filter_opts QfRancherFilterOpts
---- @param opts{action?: QfRancherAction, pattern?:string, prompt?:string }
+--- @param input_opts QfRancherInputOpts
+--- @param output_opts QfRancherOutputOpts
 --- @return nil
-function M.all_filter_wrapper(is_loclist, filter_func, filter_opts, opts)
-    opts = opts or {}
-    vim.validate("is_loclist", is_loclist, "boolean")
-    vim.validate("filter_func", filter_func, "callable")
+--- NOTE: Since the inputs come from API calls, perform all validations regardless of debug
+--- settings
+local function validate_filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
+    vim.validate("filter_info", filter_info, "table")
+
+    vim.validate("filter_info.name", filter_info.name, { "nil", "string" })
+    vim.validate("filter_info.func", filter_info.func, "callable")
+
     vim.validate("filter_opts", filter_opts, "table")
     vim.validate("filter_opts.keep", filter_opts.keep, { "boolean", "nil" })
-    vim.validate("filter_opts.insensitive", filter_opts.insensitive, { "boolean", "nil" })
-    vim.validate("opts.action", opts.action, { "nil", "string" })
-    vim.validate("opts.pattern", opts.pattern, { "nil", "string" })
-    vim.validate("opts.prompt", opts.prompt, { "nil", "string" })
 
-    local cur_win = vim.api.nvim_get_current_win()
-    local eu = require("mjm.error-list-util")
+    vim.validate("input_opts", input_opts, "table")
+    vim.validate("input_opts.pattern", input_opts.pattern, { "nil", "string" })
+    vim.validate("input_opts.input_type", input_opts.input_type, { "nil", "string" })
+    if type(input_opts.input_type) == "string" then
+        vim.validate("input_opts.input_type", input_opts.input_type, function()
+            return require("mjm.error-list-util").validate_input_type(input_opts.input_type)
+        end)
+    end
+
+    vim.validate("output_opts", output_opts, "table")
+    vim.validate("output_opts.is_loclist", output_opts.is_loclist, { "nil", "boolean" })
+    vim.validate("output_opts.action", output_opts.action, { "nil", "string" })
+    if type(output_opts.action) == "string" then
+        vim.validate("action", output_opts.action, function()
+            return require("mjm.error-list-util").validate_action(output_opts.action)
+        end)
+    end
+end
+
+--- @param filter_info QfRancherFilterInfo
+--- @param filter_opts QfRancherFilterOpts
+--- @param input_opts QfRancherInputOpts
+--- @param output_opts QfRancherOutputOpts
+--- @return nil
+function M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
+    filter_info = filter_info or {}
+    filter_opts = filter_opts or {}
+    input_opts = input_opts or {}
+    output_opts = output_opts or {}
+    validate_filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
+
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
+
+    local cur_win = vim.api.nvim_get_current_win() --- @type integer
+    local is_loclist = output_opts.is_loclist and true or false
+    --- @type function
     local getlist = eu.get_getlist({ get_loclist = is_loclist, win = cur_win })
     local cur_list_size = getlist({ size = true }).size --- @type integer
     if (not cur_list_size) or cur_list_size == 0 then
@@ -50,42 +139,36 @@ function M.all_filter_wrapper(is_loclist, filter_func, filter_opts, opts)
         return
     end
 
-    --- @type string|nil
-    local pattern = opts.pattern and opts.pattern
-        or eu.get_input(opts.prompt or "Enter filter pattern")
-    if not pattern then
-        return
-    end
-
-    local list_win = eu.find_list_win(is_loclist, { win = cur_win }) --- @type integer|nil
+    --- @type integer|nil
+    local list_win = eu.find_list_win(is_loclist, { win = cur_win })
     --- @type vim.fn.winsaveview.ret|nil
     local view = list_win and vim.api.nvim_win_call(list_win, vim.fn.winsaveview) or nil
     local row = view and view.lnum or 0 --- @type integer
 
-    local action = opts.action or "replace"
-    action = vim.v.count > 0 and action or "replace"
+    --- @type string
+    local action = (output_opts.action and vim.v.count > 0) and output_opts.action or "replace"
     local dest_list_nr = eu.get_dest_list_nr(getlist, action) --- @type string|integer
+    local old_list = getlist({ nr = dest_list_nr, all = true }) --- @type table
 
-    local old_list = vim.fn.getqflist({ nr = dest_list_nr, all = true }) --- @type table
-    local new_items = {} --- @type table
-    filter_opts = filter_opts or {}
-    filter_opts.regex = filter_opts.use_regex and vim.regex(pattern) or nil --- @type vim.regex|nil
-    filter_opts.smartcase = resolve_smartcase() --- @type boolean
-    for i, t in ipairs(old_list.items) do
-        local keep = filter_func(t, pattern, filter_opts) --- @type boolean
-        if keep then
-            table.insert(new_items, t)
-        elseif i < row and view then
-            view.topline = view.topline - 1
-            view.lnum = view.lnum - 1
-        end
+    local input_type = eu.resolve_input_type(input_opts.input_type) --- @type QfRancherInputType
+    local pattern = input_opts.pattern and input_opts.pattern
+        or eu.get_input(resolve_prompt(filter_info, filter_opts, input_type)) --- @type string|nil
+    if not pattern then
+        return
     end
 
-    local setlist = eu.get_setlist(is_loclist)
+    local regex
+    --- @type string, QfRancherInputType, vim.regex|nil
+    pattern, input_type, regex = get_predicate_info(pattern, input_type)
+    local keep = filter_opts.keep --- @type boolean
+    local new_items, view_rows_removed =
+        filter_info.func(old_list.items, pattern, keep, input_type, row, regex)
+
+    local setlist = eu.get_setlist(is_loclist) --- @type function
     eu.set_list_items(getlist, setlist, dest_list_nr, new_items, action, "Filter")
     if list_win and view then
-        view.topline = math.max(view.topline, 0)
-        view.lnum = math.max(view.lnum, 1)
+        view.topline = math.max(view.topline - view_rows_removed, 0)
+        view.lnum = math.max(view.lnum - view_rows_removed, 1)
         vim.api.nvim_win_call(list_win, function()
             vim.fn.winrestview(view)
         end)
@@ -94,234 +177,158 @@ function M.all_filter_wrapper(is_loclist, filter_func, filter_opts, opts)
     eu.get_openlist(is_loclist)({ always_resize = true })
 end
 
---- In order for this to work in a sane way from the mappings file, we need to be able to feed
---- in the action and the casing. It should also be possible to pre-specify the pattern
---- define smartcase beforehand
 -----------------------
 -- Cfilter Emulation --
 -----------------------
 
---- @param item table
---- @param pattern string
---- @param opts QfRancherFilterOpts
+--- @param opts QfRancherFilterPredicateOpts
 --- @return boolean
-local function cfilter_keep(item, pattern, opts)
+local function cfilter_regex(opts)
     opts = opts or {}
 
-    if not item.bufnr then
+    if opts.regex:match_str(opts.text) then
+        return opts.keep
+    end
+
+    if not opts.bufnr then
         return false
     end
 
-    local fname = vim.fn.bufname(item.bufnr)
-    local compare_fname = opts.insensitive and string.lower(fname) or fname
-    local find_fname = string.find(compare_fname, pattern, 1, true)
+    local bufname = vim.fn.bufname(opts.bufnr)
+    if opts.regex:match_str(bufname) then
+        return opts.keep
+    end
 
-    local compare_text = opts.insensitive and string.lower(item.text) or item.text
-    local find_text = string.find(compare_text, pattern, 1, true)
-
-    return (find_fname or find_text) and true or false
+    return not opts.keep
 end
 
---- @param item table
---- @param pattern string
---- @param opts QfRancherFilterOpts
+--- @param opts QfRancherFilterPredicateOpts
 --- @return boolean
-local function cfilter_remove(item, pattern, opts)
+--- NOTE: Assumes pattern is all lowercase
+local function cfilter_insensitive(opts)
     opts = opts or {}
 
-    if not item.bufnr then
+    local lower_text = string.lower(opts.text)
+    if string.find(lower_text, opts.pattern, 1, true) ~= nil then
+        return opts.keep
+    end
+
+    if not opts.bufnr then
         return false
     end
 
-    local fname = vim.fn.bufname(item.bufnr)
-    local compare_fname = opts.insensitive and string.lower(fname) or fname
-    local find_fname = string.find(compare_fname, pattern, 1, true)
-
-    local compare_text = opts.insensitive and string.lower(item.text) or item.text
-    local find_text = string.find(compare_text, pattern, 1, true)
-
-    return not (find_fname or find_text) and true or false
+    local lower_bufname = string.lower(vim.fn.bufname(opts.bufnr))
+    if string.find(lower_bufname, opts.pattern, 1, true) ~= nil then
+        return opts.keep
+    else
+        return not opts.keep
+    end
 end
 
---- @param item table
---- @param pattern string
---- @param opts QfRancherFilterOpts
+--- @param opts QfRancherFilterPredicateOpts
 --- @return boolean
-local function cfilter_keep_regex(item, pattern, opts)
+local function cfilter_sensitive(opts)
     opts = opts or {}
 
-    local regex = vim.regex(pattern) --- @type vim.regex
+    if string.find(opts.text, opts.pattern, 1, true) ~= nil then
+        return opts.keep
+    end
 
-    local fname = item.bufnr and vim.fn.bufname(item.bufnr) or nil
-    local f_start, f_fin = fname and regex:match_str(fname) or nil, nil
+    if not opts.bufnr then
+        return false
+    end
 
-    local t_start, t_fin = item.text and regex:match_str(item.text) or nil, nil
+    local bufname = vim.fn.bufname(opts.bufnr)
+    if string.find(bufname, opts.pattern, 1, true) ~= nil then
+        return opts.keep
+    end
 
-    return ((f_start and f_fin) or (t_start and t_fin)) and true or false
+    return not opts.keep
 end
 
---- @param item table
+--- @param input_type QfRancherInputType
 --- @param pattern string
---- @param opts QfRancherFilterOpts
---- @return boolean
-local function cfilter_remove_regex(item, pattern, opts)
-    opts = opts or {}
-
-    local regex = vim.regex(pattern) --- @type vim.regex
-
-    local fname = item.bufnr and vim.fn.bufname(item.bufnr) or nil
-    local f_start, f_fin = fname and regex:match_str(fname) or nil, nil
-
-    local t_start, t_fin = item.text and regex:match_str(item.text) or nil, nil
-
-    return (not ((f_start and f_fin) or (t_start and t_fin))) and true or false
-end
-
---- @param pattern string
---- @param text string
---- @param opts QfRancherFilterOpts
---- @return boolean
-local function do_literal(pattern, text, opts)
+--- @param keep boolean
+--- @param regex vim.regex|nil
+--- @return function
+local function get_cfilter_predicate(input_type, pattern, keep, regex)
     vim.validate("pattern", pattern, "string")
-    vim.validate("text", text, "string")
-    vim.validate("opts.insensitive", opts.insensitive, "boolean")
-    vim.validate("opts.smartcase", opts.smartcase, "boolean")
-
-    if not (opts.insensitive or opts.smartcase) then
-        return string.find(text, pattern, 1, true) ~= nil
-    end
-
-    if opts.smartcase then
-        local smart_text = string.lower(pattern) == pattern and string.lower(text) or text
-        return string.find(smart_text, pattern, 1, true) ~= nil
-    end
-
-    return string.find(text, pattern, 1, true) ~= nil
-end
-
---- @param text string
---- @param regex vim.regex
---- @return boolean
-local function do_regex(text, regex)
-    local start, fin = regex:match_str(text)
-    return start ~= nil and fin ~= nil
-end
-
---- @param item table
---- @param pattern string
---- @param opts QfRancherFilterOpts
---- @return boolean
-local function cfilter_both(item, pattern, opts)
-    opts = opts or {}
-    vim.validate("item", item, "table")
-    vim.validate("pattern", pattern, "string")
-    vim.validate("opts.keep", opts.keep, { "boolean", "nil" })
-    vim.validate("opts.regex", opts.regex, { "nil", "table" })
-    vim.validate("opts.insensitive", opts.insensitive, { "boolean", "nil" })
-    vim.validate("opts.smartcase", opts.smartcase, { "boolean" })
-
-    if not item.bufnr then
-        return false
-    end
-
-    local has_text = opts.regex and do_regex(item.text, opts.regex)
-        or do_literal(pattern, item.text, opts)
-    if has_text then
-        return opts.keep and has_text or not has_text
-    end
-
-    local bufname = vim.fn.bufname(item.bufnr)
-    local has_bufname = opts.regex and do_regex(bufname, opts.regex)
-        or do_literal(pattern, bufname, opts)
-    if has_bufname and opts.keep then
-        return true
-    end
-
-    return false
-end
-
-local function validate_filter_input(is_loclist, filter_opts, opts)
-    vim.validate("is_loclist", is_loclist, "boolean")
-    vim.validate("filter_opts", filter_opts, "table")
-    vim.validate("filter_opts.keep", filter_opts.keep, { "boolean", "nil" })
-    vim.validate("filter_opts.regex", filter_opts.regex, { "nil" })
-    vim.validate("filter_opts.insensitive", filter_opts.insensitive, { "boolean", "nil" })
-    vim.validate("filter_opts.use_regex", filter_opts.use_regex, { "boolean", "nil" })
-    vim.validate("opts", opts, "table")
-    vim.validate("opts.pattern", opts.pattern, { "nil", "string" })
-    vim.validate("opts.prompt", opts.prompt, { "nil", "string" })
-    vim.validate("opts.action", opts.action, { "nil", "string" })
-    if type(opts.action) == "string" then
-        vim.validate("action", opts.action, function()
-            return require("mjm.error-list-util").validate_action(opts.action)
+    vim.validate("keep", keep, "boolean")
+    vim.validate("regex", regex, { "nil", "userdata" })
+    vim.validate("input_type", input_type, "string")
+    if type(input_type) == "string" then
+        vim.validate("input_type", input_type, function()
+            return require("mjm.error-list-util").validate_input_type(input_type)
         end)
     end
+
+    if input_type == "regex" and regex then
+        return cfilter_regex
+    end
+
+    if input_type == "sensitive" then
+        return cfilter_sensitive
+    end
+
+    assert(string.lower(pattern) == pattern)
+    return cfilter_insensitive
 end
 
--- pass in opts.insensitive. determine smartcase later
--- pass in the cfilter opts, so we're determining smartcase, all caps, etc here
--- and also pass in action here
---- @param is_loclist boolean
+--- @param items table[]
+--- @param pattern string
+--- @param keep boolean
+--- @param input_type string
+--- @param view_row integer
+--- @param regex? table
+--- @return table[], integer
+local function cfilter_func(items, pattern, keep, input_type, view_row, regex)
+    vim.validate("items", items, "table")
+    vim.validate("pattern", pattern, "string")
+    vim.validate("keep", keep, "boolean")
+    vim.validate("view_row", view_row, "number")
+    vim.validate("regex", regex, { "nil", "userdata" })
+    vim.validate("input_type", input_type, "string")
+    if type(input_type) == "string" then
+        vim.validate("input_type", input_type, function()
+            return require("mjm.error-list-util").validate_input_type(input_type)
+        end)
+    end
+
+    local predicate = get_cfilter_predicate(input_type, pattern, keep, regex)
+    local view_rows_removed = 0
+    local new_items = {}
+    for i, item in ipairs(items) do
+        local keep_this = predicate({
+            bufnr = item.bufnr,
+            keep = keep,
+            pattern = pattern,
+            regex = regex,
+            text = item.text,
+        })
+
+        if keep_this then
+            table.insert(new_items, item)
+        elseif i < view_row then
+            view_rows_removed = view_rows_removed + 1
+        end
+    end
+
+    return new_items, view_rows_removed
+end
+
+local cfilter_info = { name = "Cfilter", func = cfilter_func }
+
 --- @param filter_opts QfRancherFilterOpts
---- @param opts{action?: QfRancherAction, pattern?:string, prompt?:string }
-function M.cfilter(is_loclist, filter_opts, opts)
+--- @param input_opts QfRancherInputOpts
+--- @param output_opts QfRancherOutputOpts
+--- NOTE: Don't do data validation here. This is just a pass through between API callers and the
+--- filer_wrapper function
+function M.cfilter(filter_opts, input_opts, output_opts)
     filter_opts = filter_opts or {}
-    opts = opts or {}
-    validate_filter_input(is_loclist, filter_opts, opts)
-
-    opts.prompt = (function()
-        if opts.prompt then
-            return opts.prompt
-        end
-
-        local prompt
-        if filter_opts.keep then
-            prompt = "Enter Cfilter pattern to keep"
-        else
-            prompt = "Enter Cfilter pattern to remove"
-        end
-
-        if filter_opts.use_regex then
-            prompt = prompt .. " (Regex)"
-        elseif not filter_opts.insensitive then
-            prompt = prompt .. " (Case Sensitive)"
-        end
-
-        prompt = prompt .. ": "
-
-        return prompt
-    end)()
-
-    M.all_filter_wrapper(is_loclist, cfilter_both, filter_opts, opts)
+    input_opts = input_opts or {}
+    output_opts = output_opts or {}
+    M.filter_wrapper(cfilter_info, filter_opts, input_opts, output_opts)
 end
-
-vim.keymap.set("n", "<leader>lkl", function()
-    M.ll_filter_wrapper("Enter pattern to keep: ", cfilter_keep)
-end)
-
-vim.keymap.set("n", "<leader>qrl", function()
-    M.all_filter_wrapper("Enter pattern to remove: ", cfilter_remove)
-end)
-
-vim.keymap.set("n", "<leader>lrl", function()
-    M.ll_filter_wrapper("Enter pattern to remove: ", cfilter_remove)
-end)
-
-vim.keymap.set("n", "<leader>qkL", function()
-    M.all_filter_wrapper("Enter pattern to keep (Regex): ", cfilter_keep_regex)
-end)
-
-vim.keymap.set("n", "<leader>lkL", function()
-    M.ll_filter_wrapper("Enter pattern to keep (Regex): ", cfilter_keep_regex)
-end)
-
-vim.keymap.set("n", "<leader>qrL", function()
-    M.all_filter_wrapper("Enter pattern to remove (Regex): ", cfilter_remove_regex)
-end)
-
-vim.keymap.set("n", "<leader>lrL", function()
-    M.ll_filter_wrapper("Enter pattern to remove (Regex): ", cfilter_remove_regex)
-end)
 
 --------------
 -- Filename --
@@ -398,7 +405,7 @@ local function filter_remove_fname_regex(item, pattern, opts)
 end
 
 vim.keymap.set("n", "<leader>qkf", function()
-    M.all_filter_wrapper("Enter filename to keep: ", filter_keep_fname)
+    M.filter_wrapper("Enter filename to keep: ", filter_keep_fname)
 end)
 
 vim.keymap.set("n", "<leader>lkf", function()
@@ -406,7 +413,7 @@ vim.keymap.set("n", "<leader>lkf", function()
 end)
 
 vim.keymap.set("n", "<leader>qrf", function()
-    M.all_filter_wrapper("Enter filename to remove: ", filter_remove_fname)
+    M.filter_wrapper("Enter filename to remove: ", filter_remove_fname)
 end)
 
 vim.keymap.set("n", "<leader>lrf", function()
@@ -414,7 +421,7 @@ vim.keymap.set("n", "<leader>lrf", function()
 end)
 
 vim.keymap.set("n", "<leader>qkF", function()
-    M.all_filter_wrapper("Enter filename to keep (Regex): ", filter_keep_fname_regex)
+    M.filter_wrapper("Enter filename to keep (Regex): ", filter_keep_fname_regex)
 end)
 
 vim.keymap.set("n", "<leader>lkF", function()
@@ -422,7 +429,7 @@ vim.keymap.set("n", "<leader>lkF", function()
 end)
 
 vim.keymap.set("n", "<leader>qrF", function()
-    M.all_filter_wrapper("Enter filename to remove (Regex): ", filter_remove_fname_regex)
+    M.filter_wrapper("Enter filename to remove (Regex): ", filter_remove_fname_regex)
 end)
 
 vim.keymap.set("n", "<leader>lrF", function()
@@ -484,7 +491,7 @@ local function filter_remove_text_regex(item, pattern, opts)
 end
 
 vim.keymap.set("n", "<leader>qke", function()
-    M.all_filter_wrapper("Enter text to keep: ", filter_keep_text)
+    M.filter_wrapper("Enter text to keep: ", filter_keep_text)
 end)
 
 vim.keymap.set("n", "<leader>lke", function()
@@ -492,7 +499,7 @@ vim.keymap.set("n", "<leader>lke", function()
 end)
 
 vim.keymap.set("n", "<leader>qre", function()
-    M.all_filter_wrapper("Enter text to remove: ", filter_remove_text)
+    M.filter_wrapper("Enter text to remove: ", filter_remove_text)
 end)
 
 vim.keymap.set("n", "<leader>lre", function()
@@ -500,7 +507,7 @@ vim.keymap.set("n", "<leader>lre", function()
 end)
 
 vim.keymap.set("n", "<leader>qkE", function()
-    M.all_filter_wrapper("Enter text to keep (Regex): ", filter_keep_text_regex)
+    M.filter_wrapper("Enter text to keep (Regex): ", filter_keep_text_regex)
 end)
 
 vim.keymap.set("n", "<leader>lkE", function()
@@ -508,7 +515,7 @@ vim.keymap.set("n", "<leader>lkE", function()
 end)
 
 vim.keymap.set("n", "<leader>qrE", function()
-    M.all_filter_wrapper("Enter text to remove (Regex): ", filter_remove_text_regex)
+    M.filter_wrapper("Enter text to remove (Regex): ", filter_remove_text_regex)
 end)
 
 vim.keymap.set("n", "<leader>lrE", function()
@@ -570,7 +577,7 @@ local function filter_remove_type_regex(item, pattern, opts)
 end
 
 vim.keymap.set("n", "<leader>qkt", function()
-    M.all_filter_wrapper("Enter type to keep: ", filter_keep_type)
+    M.filter_wrapper("Enter type to keep: ", filter_keep_type)
 end)
 
 vim.keymap.set("n", "<leader>lkt", function()
@@ -578,7 +585,7 @@ vim.keymap.set("n", "<leader>lkt", function()
 end)
 
 vim.keymap.set("n", "<leader>qrt", function()
-    M.all_filter_wrapper("Enter type to remove: ", filter_remove_type)
+    M.filter_wrapper("Enter type to remove: ", filter_remove_type)
 end)
 
 vim.keymap.set("n", "<leader>lrt", function()
@@ -586,7 +593,7 @@ vim.keymap.set("n", "<leader>lrt", function()
 end)
 
 vim.keymap.set("n", "<leader>qkT", function()
-    M.all_filter_wrapper("Enter type to keep (Regex): ", filter_keep_type_regex)
+    M.filter_wrapper("Enter type to keep (Regex): ", filter_keep_type_regex)
 end)
 
 vim.keymap.set("n", "<leader>lkT", function()
@@ -594,7 +601,7 @@ vim.keymap.set("n", "<leader>lkT", function()
 end)
 
 vim.keymap.set("n", "<leader>qrT", function()
-    M.all_filter_wrapper("Enter type to remove (Regex): ", filter_remove_type_regex)
+    M.filter_wrapper("Enter type to remove (Regex): ", filter_remove_type_regex)
 end)
 
 vim.keymap.set("n", "<leader>lrT", function()
@@ -656,7 +663,7 @@ local function filter_remove_lnum_regex(item, pattern, opts)
 end
 
 vim.keymap.set("n", "<leader>qkn", function()
-    M.all_filter_wrapper("Enter line number to keep: ", filter_keep_lnum)
+    M.filter_wrapper("Enter line number to keep: ", filter_keep_lnum)
 end)
 
 vim.keymap.set("n", "<leader>lkn", function()
@@ -664,7 +671,7 @@ vim.keymap.set("n", "<leader>lkn", function()
 end)
 
 vim.keymap.set("n", "<leader>qrn", function()
-    M.all_filter_wrapper("Enter line number to remove: ", filter_remove_lnum)
+    M.filter_wrapper("Enter line number to remove: ", filter_remove_lnum)
 end)
 
 vim.keymap.set("n", "<leader>lrn", function()
@@ -672,7 +679,7 @@ vim.keymap.set("n", "<leader>lrn", function()
 end)
 
 vim.keymap.set("n", "<leader>qkN", function()
-    M.all_filter_wrapper("Enter line number to keep (Regex): ", filter_keep_lnum_regex)
+    M.filter_wrapper("Enter line number to keep (Regex): ", filter_keep_lnum_regex)
 end)
 
 vim.keymap.set("n", "<leader>lkN", function()
@@ -680,7 +687,7 @@ vim.keymap.set("n", "<leader>lkN", function()
 end)
 
 vim.keymap.set("n", "<leader>qrN", function()
-    M.all_filter_wrapper("Enter line number to remove (Regex): ", filter_remove_lnum_regex)
+    M.filter_wrapper("Enter line number to remove (Regex): ", filter_remove_lnum_regex)
 end)
 
 vim.keymap.set("n", "<leader>lrN", function()

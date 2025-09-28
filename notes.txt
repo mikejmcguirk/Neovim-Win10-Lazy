@@ -2,6 +2,7 @@
 --- TODO ---
 ------------
 
+- When entering a new buffer, because there's no " mark, an error shows. Can probably fix by checking the result of get_mark
 - Create keymappings to open and close tabs. Cannot use <M-tab> because windows
 - Look into how to autogenerate vimdoc
 - Remove all <C-s> and <M-s> mappings
