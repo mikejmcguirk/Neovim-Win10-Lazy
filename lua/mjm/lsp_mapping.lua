@@ -2,13 +2,13 @@ local M = {}
 
 function M.del_defaults()
     -- No need to map these in non-LSP buffers
+    -- NOTE: "K" is mapped automatically when the LSP attaches, not unconditionally
     vim.keymap.del("n", "grn")
     vim.keymap.del("n", "gra")
     vim.keymap.del("n", "grr")
     vim.keymap.del("n", "gri")
     vim.keymap.del("n", "grt")
     vim.keymap.del("n", "gO")
-    vim.keymap.del("n", "K")
     vim.keymap.del("i", "<C-S>")
 end
 
