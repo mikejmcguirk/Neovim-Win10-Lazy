@@ -8,6 +8,7 @@ function M.del_defaults()
     vim.keymap.del("n", "gri")
     vim.keymap.del("n", "grt")
     vim.keymap.del("n", "gO")
+    vim.keymap.del("n", "K")
     vim.keymap.del("i", "<C-S>")
 end
 
