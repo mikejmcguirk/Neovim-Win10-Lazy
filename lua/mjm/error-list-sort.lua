@@ -533,7 +533,6 @@ function M.sort_fname_diag_desc(a, b)
     return checked_lcol_severity ~= nil and checked_lcol_severity or false
 end
 
--- The first sort will be the default for the Qsort/Lsort cmds
 local sorts = {
     fname = { asc_func = M.sort_fname_asc, desc_func = M.sort_fname_desc }, --- f
     fname_diag = {

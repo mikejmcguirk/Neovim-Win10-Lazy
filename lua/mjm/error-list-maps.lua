@@ -7,6 +7,7 @@
 --------------------------
 
 local actions = { "new", "replace", "add" }
+local default_action = "new"
 
 -------------------
 --- System Opts ---
@@ -796,14 +797,14 @@ end
 --- SORT CMDS ---
 -----------------
 
-local function check_arg(fargs, valid_args)
+local function check_arg(fargs, valid_args, default)
     for _, arg in ipairs(fargs) do
         if vim.tbl_contains(valid_args, arg) then
             return arg
         end
     end
 
-    return valid_args[1]
+    return default
 end
 
 local function sort_cmd(cargs, is_loclist)
@@ -812,10 +813,11 @@ local function sort_cmd(cargs, is_loclist)
 
     local sorts = require("mjm.error-list-sort").get_sort_names()
     assert(#sorts > 1, "No sort functions available")
-    local sort_func = check_arg(fargs, sorts)
+    local sort_func = check_arg(fargs, sorts, "fname")
 
-    local dir = check_arg(fargs, { "asc", "desc" })
-    local action = check_arg(fargs, actions)
+    local dir = check_arg(fargs, { "asc", "desc" }, "asc")
+    local action = check_arg(fargs, actions, default_action)
+    vim.fn.confirm("func: " .. sort_func .. ", dir: " .. dir .. ", action" .. action)
 
     et.sort(sort_func, { dir = dir }, { action = action, is_loclist = is_loclist })
 end
