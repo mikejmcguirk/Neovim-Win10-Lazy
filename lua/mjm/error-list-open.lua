@@ -217,6 +217,7 @@ end
 function M.open_qflist(opts)
     opts = opts or {}
     vim.validate("opts.height", opts.height, { "nil", "number" })
+    opts.height = (opts.height and opts.height > 0) and opts.height or nil
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local wins = vim.api.nvim_tabpage_list_wins(0) --- @type integer[]
     local qf_win, _ = find_qf_win(wins) --- @type integer|nil
@@ -246,9 +247,8 @@ function M.open_qflist(opts)
     end
 
     pclose_wins(ll_wins)
-    local height = opts.height and opts.height or get_list_height(cur_win, false) --- @type integer
     --- @diagnostic disable: missing-fields
-    vim.api.nvim_cmd({ cmd = "copen", count = height, mods = { split = "botright" } }, {})
+    vim.api.nvim_cmd({ cmd = "copen", count = opts.height, mods = { split = "botright" } }, {})
     restore_views(views)
     if opts.keep_win then
         vim.api.nvim_set_current_win(cur_win)
@@ -272,6 +272,12 @@ function M.close_qflist()
     return true
 end
 
+function M.toggle_qflist()
+    if not M.open_qflist() then
+        M.close_qflist()
+    end
+end
+
 function M.resize_qflist()
     local wins = vim.api.nvim_tabpage_list_wins(0) --- @type integer[]
     local qf_win, qf_idx = find_qf_win(wins) --- @type integer|nil, integer|nil
@@ -290,6 +296,7 @@ end
 function M.open_loclist(opts)
     opts = opts or {}
     vim.validate("opts.height", opts.height, { "nil", "number" })
+    opts.height = (opts.height and opts.height > 0) and opts.height or nil
     vim.validate("opts.suppress_errors", opts.suppress_errors, { "boolean", "nil" })
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local eu = require("mjm.error-list-util")
@@ -378,6 +385,12 @@ function M.close_loclist()
     pclose_wins(ll_wins)
     restore_views(views)
     return true
+end
+
+function M.toggle_loclist()
+    if not M.open_loclist({ suppress_errors = true }) then
+        M.close_loclist()
+    end
 end
 
 --- @return boolean

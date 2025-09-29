@@ -44,7 +44,7 @@ require("mjm.tal")
 require("mjm.error-list") -- Do this first because it sets up g vars
 -- require("mjm.error-list-open")
 -- require("mjm.error-list-stack")
-require("mjm.error-list-filter")
+-- require("mjm.error-list-filter")
 -- require("mjm.error-list-nav-action")
 require("mjm.error-list-sort")
 require("mjm.error-list-system")

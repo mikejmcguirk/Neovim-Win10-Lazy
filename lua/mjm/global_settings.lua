@@ -212,7 +212,7 @@ autoset_winopt({ "WinEnter", "CmdlineLeave", "BufEnter" }, "rnu", true)
 -- Autocmd Controls --
 ----------------------
 
-Autocmd("BufWinEnter", {
+Autocmd("BufReadPre", {
     group = set_group,
     desc = "Go to the last location when opening a buffer",
     callback = function(ev)

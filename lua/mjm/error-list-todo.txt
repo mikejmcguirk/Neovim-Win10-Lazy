@@ -23,6 +23,11 @@ maps but compatibilty and such
 - When grepping specific buf to replace, get error invalid $chistory. Bad buf numbering
 - When everything is actually in the final directory structure, do one last check to make sure no eager requires happen
 - For the various modules, if you make a custom filter, it should be possible to register it so it can be used as a command. You should be able to do Qfilter myFilter and it should work
+- The current method of building keymaps could be improved, either by generating the file and/or using a DoD approach to build using a "struct of arrays" rather than the current "array of structs"
+
+MAYBE
+
+If we get to 1k keymaps, I'll look at how to do a DoD setup. I think what you would need to do is autogen the file so that way you know everything is correct
 
 ---------------------
 --- DOCUMENTATION ---

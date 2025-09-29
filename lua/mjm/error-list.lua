@@ -98,6 +98,7 @@ end
 -- Personal setting. Default is false in line with Nvim
 vim.api.nvim_set_var("qf_rancher_auto_open_changes", true)
 vim.api.nvim_set_var("qf_rancher_debug_assertions", true)
+-- vim.api.nvim_set_var("qf_rancher_set_default_maps", false)
 
 -- TODO: For now, I'm not adding config for the default maps. I have a feeling like I should
 -- because there are so many. But, because there are so many, that also adds complication to any
