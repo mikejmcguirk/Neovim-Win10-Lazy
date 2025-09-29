@@ -44,11 +44,11 @@ local es = Qfr_Defer_Require("mjm.error-list-stack")
 local grep_smart_case = { literal = true, smart_case = true }
 local grep_case_sensitive = { literal = true }
 
--- TODO: Obvious issue here is that it only handles the Cfilter case, but I think I can make it
--- work
-local vimsmart = { input_type = "vimsmart" }
-local sensitive = { input_type = "sensitive" }
-local regex = { input_type = "regex" }
+local match_types = {
+    { name = "smart", input_type = "vimsmart", desc_extra = "Case insensitive/smartcase" },
+    { name = "sensitive", input_type = "sensitive", desc_extra = "Case sensitive" },
+    { name = "regex", input_type = "regex", desc_extra = "Uses regex" },
+}
 
 local list_types = {
     { prefix = "q", filter_type = "qfilter", listname = "qflist", is_loclist = false },
@@ -87,61 +87,115 @@ local ops = {
     },
 }
 
-local match_types = {
-    { name = "smart", suffix = "l", arg = vimsmart, desc_extra = "Case insensitive/smartcase" },
-    { name = "sensitive", suffix = "L", arg = sensitive, desc_extra = "Case sensitive" },
-    { name = "regex", suffix = "<c-l>", arg = regex, desc_extra = "Uses regex" },
+local modes = { "n", "x" }
+
+local commands = {
+    {
+        name = "cfilter",
+        plug_name = "cfilter",
+        desc_name = "Cfilter",
+        ef_func = ef.cfilter,
+        suffixes = { smart = "l", sensitive = "L", regex = "<c-l>" },
+    },
+    {
+        name = "fname",
+        plug_name = "fname",
+        desc_name = "Fname",
+        ef_func = ef.fname,
+        suffixes = { smart = "f", sensitive = "F", regex = "<c-f>" },
+    },
+    {
+        name = "text",
+        plug_name = "text",
+        desc_name = "Text",
+        ef_func = ef.text,
+        suffixes = { smart = "e", sensitive = "E", regex = "<c-e>" },
+    },
+    {
+        name = "type",
+        plug_name = "type",
+        desc_name = "Type",
+        ef_func = ef.type,
+        suffixes = { smart = "t", sensitive = "T", regex = "<c-t>" },
+    },
+    {
+        name = "lnum",
+        plug_name = "lnum",
+        desc_name = "Lnum",
+        ef_func = ef.lnum,
+        suffixes = { smart = "n", sensitive = "N", regex = "<c-n>" },
+    },
 }
 
 local rancher_keymaps = {}
+
+local make_map = function(list, op, suffix, action)
+    return "<leader>" .. list.prefix .. op.map_mod(action.action_key) .. suffix
+end
+
+local make_plug = function(list, action, op, match, cmd)
+    local inner_plug = list.filter_type
+        .. "-"
+        .. action.name
+        .. "-"
+        .. op.name
+        .. "-"
+        .. cmd.plug_name
+        .. "-"
+        .. match.name
+    return "<Plug>(qf-rancher-" .. inner_plug .. ")"
+end
 
 for _, list in ipairs(list_types) do
     for _, action in ipairs(actions) do
         for _, op in ipairs(ops) do
             for _, match in ipairs(match_types) do
-                local map = "<leader>"
-                    .. list.prefix
-                    .. op.map_mod(action.action_key)
-                    .. match.suffix
-                local plug = "<Plug>(qf-rancher-"
-                    .. list.filter_type
-                    .. "-"
-                    .. action.name
-                    .. "-"
-                    .. op.name
-                    .. "-cfilter-"
-                    .. match.name
-                    .. ")"
-                local desc = "Filter "
-                    .. action.desc_action
-                    .. " from "
-                    .. list.listname
-                    .. " with Cfilter emulation. "
-                    .. op.desc_mod
-                    .. match.desc_extra
-                local op_obj = { action = op.action, is_loclist = list.is_loclist }
-                local callback = function()
-                    ef.cfilter({ keep = action.keep }, match.arg, op_obj)
+                for _, cmd in ipairs(commands) do
+                    local suffix = cmd.suffixes[match.name]
+                    local map = make_map(list, op, suffix, action)
+                    local plug = make_plug(list, action, op, match, cmd)
+                    local desc = "Filter "
+                        .. action.desc_action
+                        .. " from "
+                        .. list.listname
+                        .. " with "
+                        .. cmd.desc_name
+                        .. " emulation. "
+                        .. op.desc_mod
+                        .. match.desc_extra
+                    local op_obj = { action = op.action, is_loclist = list.is_loclist }
+                    local callback = function()
+                        cmd.ef_func(
+                            { keep = action.keep },
+                            { input_type = match.input_type },
+                            op_obj
+                        )
+                    end
+
+                    for _, mode in ipairs(modes) do
+                        vim.api.nvim_set_keymap(mode, plug, "", {
+                            callback = callback,
+                            desc = desc,
+                            noremap = true,
+                            silent = true,
+                        })
+                        vim.api.nvim_set_keymap(mode, map, plug, {
+                            noremap = false,
+                            silent = true,
+                            desc = desc,
+                        })
+                    end
+
+                    table.insert(rancher_keymaps, {
+                        modes = modes,
+                        plug = plug,
+                        map = map,
+                        desc = desc,
+                        callback = callback,
+                    })
                 end
-                table.insert(rancher_keymaps, {
-                    modes = { "n" },
-                    plug = plug,
-                    map = map,
-                    desc = desc,
-                    callback = callback,
-                })
             end
         end
-    end
-end
-
-for _, km in ipairs(rancher_keymaps) do
-    for _, mode in ipairs(km.modes) do
-        vim.api.nvim_set_keymap(mode, km.plug, "", {
-            callback = km.callback,
-            desc = km.desc,
-            noremap = true,
-        })
     end
 end
 

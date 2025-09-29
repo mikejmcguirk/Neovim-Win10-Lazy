@@ -279,12 +279,7 @@ end)
 vim.keymap.set("n", "<leader>qti", "<nop>")
 vim.keymap.set("n", "<leader>lti", "<nop>")
 
-local severity_unmap = {
-    E = vim.diagnostic.severity.ERROR,
-    W = vim.diagnostic.severity.WARN,
-    I = vim.diagnostic.severity.INFO,
-    H = vim.diagnostic.severity.HINT,
-} ---@type table<string, integer>
+local eu = Qfr_Defer_Require("mjm.error-list-util")
 
 function M.sort_severity_asc(a, b)
     if (not a) or not b then
@@ -292,8 +287,8 @@ function M.sort_severity_asc(a, b)
     end
 
     if a.type and b.type then
-        local severity_a = severity_unmap[a.type] or nil
-        local severity_b = severity_unmap[b.type] or nil
+        local severity_a = eu.severity_unmap[a.type] or nil
+        local severity_b = eu.severity_unmap[b.type] or nil
 
         if (severity_a and severity_b) and severity_a ~= severity_b then
             return severity_a < severity_b
@@ -331,8 +326,8 @@ function M.sort_severity_desc(a, b)
     end
 
     if a.type and b.type then
-        local severity_a = severity_unmap[a.type] or nil
-        local severity_b = severity_unmap[b.type] or nil
+        local severity_a = eu.severity_unmap[a.type] or nil
+        local severity_b = eu.severity_unmap[b.type] or nil
         if (severity_a and severity_b) and severity_a ~= severity_b then
             return severity_a > severity_b
         end
@@ -411,8 +406,8 @@ function M.sort_diag_fname_asc(a, b)
     end
 
     if a.type and b.type then
-        local severity_a = severity_unmap[a.type] or 4
-        local severity_b = severity_unmap[b.type] or 4
+        local severity_a = eu.severity_unmap[a.type] or 4
+        local severity_b = eu.severity_unmap[b.type] or 4
         if (severity_a and severity_b) and severity_a ~= severity_b then
             return severity_a < severity_b
         end
@@ -451,8 +446,8 @@ function M.sort_diag_fname_desc(a, b)
     end
 
     if a.type and b.type then
-        local severity_a = severity_unmap[a.type] or 4
-        local severity_b = severity_unmap[b.type] or 4
+        local severity_a = eu.severity_unmap[a.type] or 4
+        local severity_b = eu.severity_unmap[b.type] or 4
         if (severity_a and severity_b) and severity_a ~= severity_b then
             return severity_a > severity_b
         end

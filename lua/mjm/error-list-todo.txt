@@ -21,6 +21,7 @@ maps but compatibilty and such
 - Document what regex is used where. Ext programs use their regex. Filter stuff uses vim regex
 - In general, titling is weak
 - When grepping specific buf to replace, get error invalid $chistory. Bad buf numbering
+- When everything is actually in the final directory structure, do one last check to make sure no eager requires happen
 
 ---------------------
 --- DOCUMENTATION ---
@@ -77,6 +78,9 @@ TODO
 - Filter on diagnostic severity
 - The regex maps should be on ctrl like grep. And then caps can be case sensitive
 - TODO: Improve title
+- Should work in visual/cmd mode on a range. Can highlight a word or phrase or whatever
+- It would be good to outline the looping logic, since it's the same in basically every function, but I don't know how to make the predicate table work because it's unique to each one, and you can't just like do it the first time because it's per item. I suppose you could store the table externally and then do like a thing that takes in the predicate function, new items, whatever. But it creates a rather tacky "helper" function that takes in a lot of data from the caller
+- For the public API, show making diagnostic filters as examples
 
 LOW
 

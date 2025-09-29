@@ -3,6 +3,13 @@
 
 local M = {}
 
+M.severity_unmap = {
+    E = vim.diagnostic.severity.ERROR,
+    W = vim.diagnostic.severity.WARN,
+    I = vim.diagnostic.severity.INFO,
+    H = vim.diagnostic.severity.HINT,
+} ---@type table<string, integer>
+
 --- @param prompt string
 --- @return boolean, string
 function M.get_input(prompt)

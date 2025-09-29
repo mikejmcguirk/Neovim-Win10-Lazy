@@ -61,6 +61,21 @@
 -- https://github.com/r0nsha/qfpreview.nvim
 -- https://github.com/bfrg/vim-qf-preview
 
+-------------
+--- TYPES ---
+-------------
+
+--- @alias QfRancherAction "new"|"replace"|"add"
+--- @alias QfRancherInputType "insensitive"|"regex"|"sensitive"|"smart"|"vimsmart"
+
+--- @class QfRancherInputOpts
+--- @field input_type? QfRancherInputType
+--- @field pattern? string
+---
+--- @class QfRancherOutputOpts
+--- @field action? QfRancherAction
+--- @field is_loclist? boolean
+
 --- https://github.com/tjdevries/lazy-require.nvim/blob/master/lua/lazy-require.lua
 --- @param require_path string
 --- @return table
