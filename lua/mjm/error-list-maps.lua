@@ -40,6 +40,7 @@ local eg = Qfr_Defer_Require("mjm.error-list-grep")
 local en = Qfr_Defer_Require("mjm.error-list-nav-action")
 local eo = Qfr_Defer_Require("mjm.error-list-open")
 local es = Qfr_Defer_Require("mjm.error-list-stack")
+local et = Qfr_Defer_Require("mjm.error-list-sort")
 
 local grep_smart_case = { literal = true, smart_case = true }
 local grep_case_sensitive = { literal = true }
@@ -406,6 +407,28 @@ local rancher_keymaps = {
     { nn, pqfr.."-ll-pfile)", "[<C-l>",      "Go to the previous loclist file", function() en.l_pfile(vim.v.count1) end },
     { nn, pqfr.."-ll-nfile)", "]<C-l>",      "Go to the next loclist file",     function() en.l_nfile(vim.v.count1) end },
     { nn, pqfr.."-ll-jump)",  lp .. "<C-l>", "Jump to the loclist",             function() en.l_jump(vim.v.count) end },
+
+    ------------
+    --- SORT ---
+    ------------
+
+    { nn, pqfr.."-qsort-n-fname-asc)",       qp.."tf",  "Qsort by fname asc"..n,       function() et.sort("fname", { dir = "asc" }, { action = "new", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-n-fname-desc)",      qp.."tF",  "Qsort by fname desc"..n,      function() et.sort("fname", { dir = "desc" }, { action = "new", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-n-fname-diag-asc)",  qp.."tif", "Qsort by fname_diag asc"..n,  function() et.sort("fname_diag", { dir = "asc" }, { action = "new", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-n-fname-diag-desc)", qp.."tiF", "Qsort by fname_diag desc"..n, function() et.sort("fname_diag", { dir = "desc" }, { action = "new", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-n-severity-asc)",    qp.."tis", "Qsort by severity asc"..n,    function() et.sort("severity", { dir = "asc" }, { action = "new", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-n-severity-desc)",   qp.."tiS", "Qsort by severity desc"..n,   function() et.sort("severity", { dir = "desc" }, { action = "new", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-n-type-asc)",        qp.."tt",  "Qsort by type asc"..n,        function() et.sort("type", { dir = "asc" }, { action = "new", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-n-type-desc)",       qp.."tT",  "Qsort by type desc"..n,       function() et.sort("type", { dir = "desc" }, { action = "new", is_loclist = false }) end },
+
+    { nn, pqfr.."-lsort-n-fname-asc)",       lp.."tf",  "Lsort by fname asc"..n,       function() et.sort("fname", { dir = "asc" }, { action = "new", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-n-fname-desc)",      lp.."tF",  "Lsort by fname desc"..n,      function() et.sort("fname", { dir = "desc" }, { action = "new", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-n-fname-diag-asc)",  lp.."tif", "Lsort by fname_diag asc"..n,  function() et.sort("fname_diag", { dir = "asc" }, { action = "new", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-n-fname-diag-desc)", lp.."tiF", "Lsort by fname_diag desc"..n, function() et.sort("fname_diag", { dir = "desc" }, { action = "new", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-n-severity-asc)",    lp.."tis", "Lsort by severity asc"..n,    function() et.sort("severity", { dir = "asc" }, { action = "new", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-n-severity-desc)",   lp.."tiS", "Lsort by severity desc"..n,   function() et.sort("severity", { dir = "desc" }, { action = "new", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-n-type-asc)",        lp.."tt",  "Lsort by type asc"..n,        function() et.sort("type", { dir = "asc" }, { action = "new", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-n-type-desc)",       lp.."tT",  "Lsort by type desc"..n,       function() et.sort("type", { dir = "desc" }, { action = "new", is_loclist = true }) end },
 
     -------------
     --- STACK ---

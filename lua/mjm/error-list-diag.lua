@@ -89,7 +89,7 @@ local function diags_to_list(opts)
         converted_diags = eu.merge_qf_lists(converted_diags, cur_list.items)
     end
 
-    table.sort(converted_diags, require("mjm.error-list-sort").sort_diag_fname_asc)
+    table.sort(converted_diags, require("mjm.error-list-sort").sort_fname_severity_desc)
     local setlist = eu.get_setlist(opts.is_loclist, cur_win)
     local is_replace = opts.set_action == "add" or opts.set_action == "overwrite"
     local action = is_replace and "r" or " "

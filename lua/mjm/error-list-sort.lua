@@ -503,7 +503,7 @@ end
 
 --- @type QfRancherSortPredicate
 --- Sort by fname ascending, falling back to line/col info asc then diagnostic severity asc
-function M.sort_fname_severity_asc(a, b)
+function M.sort_fname_diag_asc(a, b)
     if (not a) or not b then
         return false
     end
@@ -519,7 +519,7 @@ end
 
 --- @type QfRancherSortPredicate
 --- Sort by fname descending, falling back to line/col info asc then diagnostic severity asc
-function M.sort_fname_severity_desc(a, b)
+function M.sort_fname_diag_desc(a, b)
     if (not a) or not b then
         return false
     end
@@ -533,12 +533,11 @@ function M.sort_fname_severity_desc(a, b)
     return checked_lcol_severity ~= nil and checked_lcol_severity or false
 end
 
---- qt/lt
 local sorts = {
     fname = { asc_func = M.sort_fname_asc, desc_func = M.sort_fname_desc }, --- f
-    fname_severity = {
-        asc_func = M.sort_fname_severity_asc,
-        desc_func = M.sort_fname_severity_desc,
+    fname_diag = {
+        asc_func = M.sort_fname_diag_asc,
+        desc_func = M.sort_fname_diag_desc,
     }, --- if
     severity = { asc_func = M.sort_severity_asc, desc_func = M.sort_severity_desc }, --- is
     type = { asc_func = M.sort_type_asc, desc_func = M.sort_type_desc }, --- t
@@ -592,7 +591,7 @@ end
 --- - action? "new"|"replace"|"add" - Create a new list, replace a pre-existing one, or add a new
 ---     one
 --- - is_loclist? boolean - Whether to filter against a location list
-function M.registered_sort(name, sort_opts, output_opts)
+function M.sort(name, sort_opts, output_opts)
     M._sort_wrapper(sorts[name], sort_opts, output_opts)
 end
 
