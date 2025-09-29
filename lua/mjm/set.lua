@@ -14,7 +14,7 @@ if vim.g.syntax_on == 1 then
     Cmd({ cmd = "syntax", args = { "reset" } }, {})
 end
 
-require("mjm.colorscheme").set_highlights()
+require("mjm.colorscheme")
 
 --- @param hl_query vim.treesitter.Query
 --- @return nil
@@ -27,8 +27,9 @@ local ts_nop_all = function(hl_query)
     hl_query.query:disable_capture("variable")
     hl_query.query:disable_capture("variable.member")
 
-    -- Extraneous without an LSP to analyze scope
-    hl_query.query:disable_capture("variable.parameter")
+    -- Parameters were previously disabled here, but in Lua, the Semantic tokens do not color
+    -- function parameters with the parameter type. Rather than create a complicated system of
+    -- checks, and in the name of consistency, just let treesitter be on this one
 end
 
 ---------
