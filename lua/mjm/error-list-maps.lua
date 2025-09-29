@@ -210,6 +210,69 @@ if vim.g.qf_rancher_set_default_maps then
     end
 end
 
+local filter_funcs = {
+    cfilter = ef.cfilter,
+    fname = ef.fname,
+    lnum = ef.lnum,
+    type = ef.type,
+    text = ef.text,
+}
+
+local function create_filter_command(is_loclist)
+    return function(cmd_opts)
+        local action = "new"
+        local filter_name = "cfilter"
+        local pattern = nil
+        local action_set = false
+        local filter_set = false
+        local pattern_set = false
+
+        for _, arg in ipairs(cmd_opts.fargs) do
+            if not action_set and vim.tbl_contains({ "new", "add", "merge" }, arg) then
+                action = (arg == "merge") and "add" or arg
+                action_set = true
+            elseif
+                not filter_set
+                and vim.tbl_contains({ "cfilter", "fname", "lnum", "type", "text" }, arg)
+            then
+                filter_name = arg
+                filter_set = true
+            elseif not pattern_set and vim.startswith(arg, "/") then
+                pattern = arg:sub(2)
+                pattern_set = true
+            end
+        end
+
+        local keep = not cmd_opts.bang
+        local filter_func = filter_funcs[filter_name]
+        if not filter_func then
+            vim.api.nvim_echo(
+                { { "Invalid filter type: " .. filter_name, "ErrorMsg" } },
+                true,
+                { err = true }
+            )
+            return
+        end
+
+        local filter_opts = { keep = keep }
+        local input_opts = { input_type = pattern and "regex" or "vimsmart", pattern = pattern }
+        local output_opts = { is_loclist = is_loclist, action = action }
+
+        filter_func(filter_opts, input_opts, output_opts)
+    end
+end
+
+vim.api.nvim_create_user_command(
+    "Qfilter",
+    create_filter_command(false),
+    { bang = true, count = true, nargs = "*" }
+)
+vim.api.nvim_create_user_command(
+    "Lfilter",
+    create_filter_command(true),
+    { bang = true, count = true, nargs = "*" }
+)
+
 local big_rancher_keymaps = {
     {
         modes = { "n", "x" },

@@ -246,6 +246,41 @@ function M.get_getlist(opts)
     end
 end
 
+--- @param mode string
+--- @return boolean, string[]
+--- Assumes that it is being called in visual mode with a valid mode parameter
+function M.get_visual_pattern(mode)
+    local start_pos = vim.fn.getpos(".") --- @type Range4
+    local end_pos = vim.fn.getpos("v") --- @type Range4
+    local region = vim.fn.getregion(start_pos, end_pos, { type = mode }) --- @type string[]
+
+    local lines = {} --- @type string[]
+    if #region == 1 then
+        local trimmed = region[1]:gsub("^%s*(.-)%s*$", "%1") --- @type string
+        if trimmed == "" then
+            return false, { "get_visual_pattern: Empty selection", "" }
+        end
+
+        table.insert(lines, trimmed)
+    else
+        lines = region
+        local has_valid_line = false --- @type boolean
+        for _, line in ipairs(lines) do
+            if line ~= "" then
+                has_valid_line = true
+                break
+            end
+        end
+
+        if not has_valid_line then
+            return false, { "get_visual_pattern: Empty selection", "" }
+        end
+    end
+
+    vim.api.nvim_cmd({ cmd = "normal", args = { "\27" }, bang = true }, {})
+    return true, lines
+end
+
 --- @param is_loclist? boolean
 --- @param win? integer
 --- If is_loclist is true and no win is provided, will default to current window

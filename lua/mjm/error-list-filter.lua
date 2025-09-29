@@ -37,14 +37,40 @@ end
 
 --- @param filter_info QfRancherFilterInfo
 --- @param filter_opts QfRancherFilterOpts
+--- @param input_type QfRancherInputType
+--- @return string|nil
+local function get_pattern(pattern, filter_info, filter_opts, input_type)
+    if pattern then
+        return pattern
+    end
+
+    local eu = require("mjm.error-list-util")
+    local mode = vim.fn.mode() --- @type string
+    local is_visual = mode == "v" or mode == "V" or mode == "\22" --- @type boolean
+    if is_visual then
+        local ok, vis_pattern = eu.get_visual_pattern(mode)
+        if ok then
+            return table.concat(vis_pattern, "\n")
+        else
+            return nil
+        end
+    end
+
+    local prompt = resolve_prompt(filter_info, filter_opts, input_type)
+    local input = eu.get_input(prompt)
+    return input
+end
+
+--- @param filter_info QfRancherFilterInfo
+--- @param filter_opts QfRancherFilterOpts
 --- @param input_opts QfRancherInputOpts
 --- @return QfRancherInputType|nil, string|nil, vim.regex|nil
 local function get_predicate_info(filter_info, filter_opts, input_opts)
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
 
     local input_type = eu.resolve_input_type(input_opts.input_type) --- @type QfRancherInputType
-    local pattern = input_opts.pattern and input_opts.pattern
-        or eu.get_input(resolve_prompt(filter_info, filter_opts, input_type)) --- @type string|nil
+    --- @type string|nil
+    local pattern = get_pattern(input_opts.pattern, filter_info, filter_opts, input_type)
     if not pattern then
         return nil, nil, nil
     end
@@ -467,7 +493,7 @@ end
 --- @type QfRancherPredicateFunc
 local function lnum_regex(opts)
     opts = opts or {}
-    if opts.regex:match_str(opts.item.lnum) then
+    if opts.regex:match_str(tostring(opts.item.lnum)) then
         return opts.keep
     else
         return not opts.keep
@@ -478,7 +504,17 @@ end
 --- @return boolean
 local function lnum_sensitive(opts)
     opts = opts or {}
-    if string.find(opts.item.lnum, opts.pattern, 1, true) ~= nil then
+    if tostring(opts.item.lnum) == opts.pattern then
+        return opts.keep
+    else
+        return not opts.keep
+    end
+end
+
+--- @type QfRancherPredicateFunc
+local function lnum_insensitive(opts)
+    opts = opts or {}
+    if string.find(tostring(opts.item.lnum), opts.pattern, 1, true) ~= nil then
         return opts.keep
     else
         return not opts.keep
@@ -487,7 +523,7 @@ end
 
 local lnum_info = {
     name = "lnum",
-    insensitive_func = lnum_sensitive,
+    insensitive_func = lnum_insensitive,
     sensitive_func = lnum_sensitive,
     regex_func = lnum_regex,
 }
@@ -495,8 +531,9 @@ local lnum_info = {
 --- @param filter_opts QfRancherFilterOpts
 --- @param input_opts QfRancherInputOpts
 --- @param output_opts QfRancherOutputOpts
---- NOTE: Don't do data validation here. This is just a pass through between API callers and the
---- filer_wrapper function
+--- The case insensitive version will return any lnums that contain the search pattern
+--- The case sensitive version will only return exact matches with the pattern
+--- Regex functions as usual
 function M.lnum(filter_opts, input_opts, output_opts)
     M.filter_wrapper(lnum_info, filter_opts, input_opts, output_opts)
 end

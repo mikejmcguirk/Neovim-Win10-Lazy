@@ -22,6 +22,7 @@ maps but compatibilty and such
 - In general, titling is weak
 - When grepping specific buf to replace, get error invalid $chistory. Bad buf numbering
 - When everything is actually in the final directory structure, do one last check to make sure no eager requires happen
+- For the various modules, if you make a custom filter, it should be possible to register it so it can be used as a command. You should be able to do Qfilter myFilter and it should work
 
 ---------------------
 --- DOCUMENTATION ---
@@ -30,6 +31,7 @@ maps but compatibilty and such
 - The filter provides a replacement for the cfilter plugin, so that no longer needs to be added
 - The cn/cpfile logic does not have the same level of wrapping logic as the cc wrapper
 - The open functions double as resizers, as per the built-in cmd behavior
+- None of the commands accept ranges
 
 -------------------
 --- DIAGNOSTICS ---
