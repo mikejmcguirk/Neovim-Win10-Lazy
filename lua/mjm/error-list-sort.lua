@@ -8,468 +8,592 @@
 --- - Check that the qf and loclist versions are both properly built for purpose. Should be able
 ---     to use the loclist function for buf/win specific info
 
--- TODO: The hotkeys here need to line up with the filter functions and the get functions
--- TODO: Do I resize on sort?
-
 local M = {}
 
-vim.keymap.set("n", "<leader>qt", "<nop>")
-vim.keymap.set("n", "<leader>lt", "<nop>")
+-------------
+--- Types ---
+-------------
 
----------------------
---- Wrapper Funcs ---
----------------------
+--- @alias QfRancherSortPredicate fun(table, table): boolean
 
--- TODO: With the getlist and setlist funcs, I think these can be consolidated into
--- one piece of logic. Tough though because we do need to do the loclist check here
+--- @class QfRancherSortInfo
+--- @field asc_func QfRancherSortPredicate
+--- @field desc_func QfRancherSortPredicate
 
-function M.qf_sort_wrapper(sort_func)
-    local list_size = vim.fn.getqflist({ size = true }).size --- @type integer
-    if (not list_size) or list_size == 0 then
-        vim.api.nvim_echo({ { "No list entries", "" } }, false, {})
+--- @alias QfRancherSortDir "asc"|"desc"
+
+--- @class QfRancherSortOpts
+--- @field dir? QfRancherSortDir
+
+---------------
+--- Wrapper ---
+---------------
+
+--- @param sort_info QfRancherSortInfo
+--- @param sort_opts QfRancherSortOpts
+--- @param output_opts QfRancherOutputOpts
+--- @return nil
+function M._sort_wrapper(sort_info, sort_opts, output_opts)
+    -- TODO: add data validation
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
+    local getlist = eu.get_getlist({ is_loclist = output_opts.is_loclist }) --- @type function
+    local cur_list = getlist({ all = true }) --- @type table
+    if cur_list.size < 1 then
+        vim.api.nvim_echo({ { "Not enough entries to sort", "" } }, false, {})
         return
     end
 
-    if list_size == 1 then
-        return
-    end
+    local dest_list_nr = eu.get_dest_list_nr(getlist, output_opts.action) --- @type integer
+    local list_win = eu.find_list_win(output_opts.is_loclist) --- @type integer|nil
+    local view = (list_win and dest_list_nr == cur_list.nr)
+            and vim.api.nvim_win_call(list_win, vim.fn.winsaveview)
+        or nil --- @type vim.fn.winsaveview.ret|nil
 
-    local list_nr = (function()
-        if vim.v.count > 0 then
-            return math.min(vim.v.count, vim.fn.getqflist({ nr = "$" }).nr)
-        else
-            return vim.fn.getqflist({ nr = 0 }).nr
-        end
-    end)() --- @type integer
+    local predicate = sort_opts.dir and sort_opts.dir == "asc" and sort_info.asc_func
+        or sort_info.desc_func
 
-    local qf_win = (function()
-        for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-            if vim.fn.win_gettype(win) == "quickfix" then
-                return win
-            end
-        end
+    table.sort(cur_list.items, predicate)
+    local setlist = eu.get_setlist(output_opts.is_loclist) --- @type function
+    eu.set_list_items(getlist, setlist, dest_list_nr, cur_list.items, output_opts.action, "Filter")
 
-        return nil
-    end)() --- @type integer
-
-    local view = qf_win and vim.api.nvim_win_call(qf_win, vim.fn.winsaveview) or nil
-
-    local list = vim.fn.getqflist({ nr = list_nr, items = true }) --- @type table
-    table.sort(list.items, sort_func)
-    vim.fn.setqflist({}, "r", { nr = list_nr, items = list.items })
-
-    if qf_win and view then
-        view.topline = math.max(view.topline, 0)
-        vim.api.nvim_win_call(qf_win, function()
+    -- TODO: Test if this is actually necessary
+    if list_win and view then
+        vim.api.nvim_win_call(list_win, function()
             vim.fn.winrestview(view)
         end)
     end
+
+    eu.get_openlist(output_opts.is_loclist)({ always_resize = true })
 end
 
-function M.ll_sort_wrapper(sort_func)
-    local cur_win = vim.api.nvim_get_current_win()
+------------------
+--- Sort Parts ---
+------------------
 
-    local list_size = vim.fn.getloclist(cur_win, { size = true }).size --- @type integer
-    if (not list_size) or list_size == 0 then
-        vim.api.nvim_echo({ { "No list entries", "" } }, false, {})
-        return
+--- @param a table
+--- @param b table
+--- @return string|nil, string|nil
+local function get_fnames(a, b)
+    if not (a.bufnr and b.bufnr) then
+        return nil, nil
     end
 
-    if list_size == 1 then
-        return
-    end
+    local fname_a = vim.fn.bufname(a.bufnr)
+    local fname_b = vim.fn.bufname(b.bufnr)
+    return fname_a, fname_b
+end
 
-    local list_nr = (function()
-        if vim.v.count > 0 then
-            return math.min(vim.v.count, vim.fn.getloclist(cur_win, { nr = "$" }).nr)
-        else
-            return vim.fn.getloclist(cur_win, { nr = 0 }).nr
-        end
-    end)() --- @type integer
-
-    local loclist_win = (function()
-        for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-            if vim.fn.win_gettype(win) == "loclist" then
-                return win
-            end
-        end
-
+--- @param a table
+--- @param b table
+--- @return boolean|nil
+local function check_fname_asc(a, b)
+    local fname_a, fname_b = get_fnames(a, b)
+    if not (fname_a and fname_b) then
         return nil
-    end)() --- @type integer
+    end
 
-    local view = loclist_win and vim.api.nvim_win_call(loclist_win, vim.fn.winsaveview) or nil
-
-    local list = vim.fn.getloclist(cur_win, { nr = list_nr, items = true }) --- @type table
-    table.sort(list.items, sort_func)
-    vim.fn.setloclist(cur_win, {}, "r", { nr = list_nr, items = list.items })
-
-    if loclist_win and view then
-        view.topline = math.max(view.topline, 0)
-        vim.api.nvim_win_call(loclist_win, function()
-            vim.fn.winrestview(view)
-        end)
+    if fname_a == fname_b then
+        return nil
+    else
+        return fname_a < fname_b
     end
 end
 
--------------------
---- Basic Sorts ---
--------------------
+--- @param a table
+--- @param b table
+--- @return boolean|nil
+local function check_fname_desc(a, b)
+    local fname_a, fname_b = get_fnames(a, b)
+    if not (fname_a and fname_b) then
+        return nil
+    end
 
--- TODO: Do I underline the sort wrappers? Not sure if I want to make guarantees about these
--- TODO: probably outline the line number checks, since you can just return false
+    if fname_a == fname_b then
+        return nil
+    else
+        return fname_a > fname_b
+    end
+end
 
+--- @param a table
+--- @param b table
+--- @return boolean|nil
+local function check_lnum_asc(a, b)
+    local lnum_a, lnum_b = a.lnum, b.lnum
+    if not (lnum_a and lnum_b) then
+        return nil
+    end
+
+    if lnum_a == lnum_b then
+        return nil
+    else
+        return lnum_a < lnum_b
+    end
+end
+
+-- --- @param a table
+-- --- @param b table
+-- --- @return boolean|nil
+-- local function check_lnum_desc(a, b)
+--     local lnum_a, lnum_b = a.lnum, b.lnum
+--     if not (lnum_a and lnum_b) then
+--         return nil
+--     end
+--
+--     if lnum_a == lnum_b then
+--         return nil
+--     else
+--         return lnum_a > lnum_b
+--     end
+-- end
+
+--- @param a table
+--- @param b table
+--- @return boolean|nil
+local function check_col_asc(a, b)
+    local col_a, col_b = a.col, b.col
+    if not (col_a and col_b) then
+        return nil
+    end
+
+    if col_a == col_b then
+        return nil
+    else
+        return col_a < col_b
+    end
+end
+
+-- --- @param a table
+-- --- @param b table
+-- --- @return boolean|nil
+-- local function check_col_desc(a, b)
+--     local col_a, col_b = a.col, b.col
+--     if not (col_a and col_b) then
+--         return nil
+--     end
+--
+--     if col_a == col_b then
+--         return nil
+--     else
+--         return col_a > col_b
+--     end
+-- end
+
+--- @param a table
+--- @param b table
+--- @return boolean|nil
+local function check_end_lnum_asc(a, b)
+    local end_lnum_a, end_lnum_b = a.end_lnum, b.end_lnum
+    if not (end_lnum_a and end_lnum_b) then
+        return nil
+    end
+
+    if end_lnum_a == end_lnum_b then
+        return nil
+    else
+        return end_lnum_a < end_lnum_b
+    end
+end
+
+-- --- @param a table
+-- --- @param b table
+-- --- @return boolean|nil
+-- local function check_end_lnum_desc(a, b)
+--     local end_lnum_a, end_lnum_b = a.end_lnum, b.end_lnum
+--     if not (end_lnum_a and end_lnum_b) then
+--         return nil
+--     end
+--
+--     if end_lnum_a == end_lnum_b then
+--         return nil
+--     else
+--         return end_lnum_a > end_lnum_b
+--     end
+-- end
+
+--- @param a table
+--- @param b table
+--- @return boolean|nil
+local function check_end_col_asc(a, b)
+    local end_col_a, end_col_b = a.end_col, b.end_col
+    if not (end_col_a and end_col_b) then
+        return nil
+    end
+
+    if end_col_a == end_col_b then
+        return nil
+    else
+        return end_col_a < end_col_b
+    end
+end
+
+-- --- @param a table
+-- --- @param b table
+-- --- @return boolean|nil
+-- local function check_end_col_desc(a, b)
+--     local end_col_a, end_col_b = a.end_col, b.end_col
+--     if not (end_col_a and end_col_b) then
+--         return nil
+--     end
+--
+--     if end_col_a == end_col_b then
+--         return nil
+--     else
+--         return end_col_a > end_col_b
+--     end
+-- end
+
+--- @param a table
+--- @param b table
+--- @return boolean|nil
+local function check_lcol_asc(a, b)
+    local checked_lnum = check_lnum_asc(a, b) --- @type boolean|nil
+    if checked_lnum ~= nil then
+        return checked_lnum
+    end
+
+    local checked_col = check_col_asc(a, b) --- @type boolean|nil
+    if checked_col ~= nil then
+        return checked_col
+    end
+
+    local checked_end_lnum = check_end_lnum_asc(a, b) --- @type boolean|nil
+    if checked_end_lnum ~= nil then
+        return checked_end_lnum
+    end
+
+    return check_end_col_asc(a, b) -- Return the nil here if we get it
+end
+
+--- @param a table
+--- @param b table
+--- @return boolean|nil
+local function check_fname_lcol_asc(a, b)
+    local checked_fname = check_fname_asc(a, b)
+    if checked_fname ~= nil then
+        return checked_fname
+    end
+
+    return check_lcol_asc(a, b) -- Allow the nil to pass through
+end
+
+-- --- @param a table
+-- --- @param b table
+-- --- @return boolean|nil
+-- local function check_lcol_desc(a, b)
+--     local checked_lnum = check_lnum_desc(a, b) --- @type boolean|nil
+--     if checked_lnum ~= nil then
+--         return checked_lnum
+--     end
+--
+--     local checked_col = check_col_desc(a, b) --- @type boolean|nil
+--     if checked_col ~= nil then
+--         return checked_col
+--     end
+--
+--     local checked_end_lnum = check_end_lnum_desc(a, b) --- @type boolean|nil
+--     if checked_end_lnum ~= nil then
+--         return checked_end_lnum
+--     end
+--
+--     return check_end_col_desc(a, b) -- Return the nil here if we get it
+-- end
+
+--- @param a table
+--- @param b table
+--- @return boolean|nil
+local function check_type_asc(a, b)
+    local type_a, type_b = a.type, b.type
+    if not (type_a and type_b) then
+        return nil
+    end
+
+    if type_a == type_b then
+        return nil
+    else
+        return type_a < type_b
+    end
+end
+
+--- @param a table
+--- @param b table
+--- @return boolean|nil
+local function check_type_desc(a, b)
+    local type_a, type_b = a.type, b.type
+    if not (type_a and type_b) then
+        return nil
+    end
+
+    if type_a == type_b then
+        return nil
+    else
+        return type_a > type_b
+    end
+end
+
+--- @param a table
+--- @param b table
+--- @return boolean|nil
+local function check_lcol_type_asc(a, b)
+    local checked_lcol = check_lcol_asc(a, b)
+    if checked_lcol ~= nil then
+        return checked_lcol
+    end
+
+    return check_type_asc(a, b) -- Allow the nil to pass through
+end
+
+--- @param a table
+--- @param b table
+--- @return string|nil, string|nil
+local function get_severities(a, b)
+    if not (a.type and b.type) then
+        return nil, nil
+    end
+
+    local eu = require("mjm.error-list-util")
+    local severity_a = eu.severity_unmap[a.type] or nil
+    local severity_b = eu.severity_unmap[b.type] or nil
+    return severity_a, severity_b
+end
+
+--- @param a table
+--- @param b table
+--- @return boolean|nil
+local function check_severity_asc(a, b)
+    local severity_a, severity_b = get_severities(a, b)
+    if not (severity_a and severity_b) then
+        return nil
+    end
+
+    if severity_a == severity_b then
+        return nil
+    else
+        return severity_a < severity_b
+    end
+end
+
+--- @param a table
+--- @param b table
+--- @return boolean|nil
+local function check_severity_desc(a, b)
+    local severity_a, severity_b = get_severities(a, b)
+    if not (severity_a and severity_b) then
+        return nil
+    end
+
+    if severity_a == severity_b then
+        return nil
+    else
+        return severity_a > severity_b
+    end
+end
+
+--- @param a table
+--- @param b table
+--- @return boolean|nil
+local function check_lcol_severity_asc(a, b)
+    local checked_lcol = check_lcol_asc(a, b)
+    if checked_lcol ~= nil then
+        return checked_lcol
+    end
+
+    return check_severity_asc(a, b) -- Allow the nil to pass through
+end
+
+-----------------
+--- Sort Info ---
+-----------------
+
+--- @type QfRancherSortPredicate
+--- Sort list items in ascending order by fname. Fall back to line/col info asc then type asc
 function M.sort_fname_asc(a, b)
     if (not a) or not b then
         return false
     end
 
-    if a.bufnr and b.bufnr then
-        local fname_a = vim.fn.bufname(a.bufnr)
-        local fname_b = vim.fn.bufname(b.bufnr)
-
-        if (fname_a and fname_b) and fname_a ~= fname_b then
-            return fname_a < fname_b
-        end
+    local checked_fname = check_fname_asc(a, b)
+    if checked_fname ~= nil then
+        return checked_fname
     end
 
-    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then
-        return a.lnum < b.lnum
-    end
-    if (a.col and b.col) and a.col ~= b.col then
-        return a.col < b.col
-    end
-    if (a.end_lnum and b.end_lnum) and a.end_lnum ~= b.end_lnum then
-        return a.end_lnum < b.end_lnum
-    end
-    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then
-        return a.end_col < b.end_col
-    end
-
-    return false
+    local checked_lcol_type = check_lcol_type_asc(a, b)
+    return checked_lcol_type ~= nil and checked_lcol_type or false
 end
 
+--- @type QfRancherSortPredicate
+--- Sort list items in descending order by fname. Fall back to line/col info asc then type asc
 function M.sort_fname_desc(a, b)
     if (not a) or not b then
         return false
     end
 
-    if a.bufnr and b.bufnr then
-        local fname_a = vim.fn.bufname(a.bufnr)
-        local fname_b = vim.fn.bufname(b.bufnr)
-
-        if (fname_a and fname_b) and fname_a ~= fname_b then
-            return fname_a < fname_b
-        end
+    local checked_fname = check_fname_desc(a, b)
+    if checked_fname ~= nil then
+        return checked_fname
     end
 
-    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then
-        return a.lnum > b.lnum
-    end
-    if (a.col and b.col) and a.col ~= b.col then
-        return a.col > b.col
-    end
-    if (a.end_lnum and b.end_lnum) and a.end_lnum ~= b.end_lnum then
-        return a.end_lnum > b.end_lnum
-    end
-    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then
-        return a.end_col > b.end_col
-    end
-
-    return false
+    local checked_lcol_type = check_lcol_type_asc(a, b)
+    return checked_lcol_type ~= nil and checked_lcol_type or false
 end
 
-vim.keymap.set("n", "<leader>qtf", function()
-    M.qf_sort_wrapper(M.sort_fname_asc)
-end)
-vim.keymap.set("n", "<leader>qtF", function()
-    M.qf_sort_wrapper(M.sort_fname_desc)
-end)
-vim.keymap.set("n", "<leader>ltf", function()
-    M.ll_sort_wrapper(M.sort_fname_asc)
-end)
-vim.keymap.set("n", "<leader>ltF", function()
-    M.ll_sort_wrapper(M.sort_fname_desc)
-end)
-
+--- @type QfRancherSortPredicate
+--- Sort list items in ascending order by type. Fall back to fname asc then line/col info asc
 function M.sort_type_asc(a, b)
     if (not a) or not b then
         return false
     end
 
-    if (a.type and b.type) and a.type ~= b.type then
-        return a.type < b.type
+    local checked_type = check_type_asc(a, b)
+    if checked_type ~= nil then
+        return checked_type
     end
 
-    if a.bufnr and b.bufnr then
-        local fname_a = vim.fn.bufname(a.bufnr)
-        local fname_b = vim.fn.bufname(b.bufnr)
-
-        if (fname_a and fname_b) and fname_a ~= fname_b then
-            return fname_a < fname_b
-        end
-    end
-
-    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then
-        return a.lnum < b.lnum
-    end
-    if (a.col and b.col) and a.col ~= b.col then
-        return a.col < b.col
-    end
-    if (a.end_lnum and b.end_lnum) and a.end_lnum ~= b.end_lnum then
-        return a.end_lnum < b.end_lnum
-    end
-    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then
-        return a.end_col < b.end_col
-    end
-
-    return false
+    local checked_fname_lcol = check_fname_lcol_asc(a, b)
+    return checked_fname_lcol ~= nil and checked_fname_lcol or false
 end
 
+--- @type QfRancherSortPredicate
+--- Sort list items in descending order by type. Fall back to fname asc then line/col info asc
 function M.sort_type_desc(a, b)
     if (not a) or not b then
         return false
     end
 
-    if (a.type and b.type) and a.type ~= b.type then
-        return a.type > b.type
+    local checked_type = check_type_desc(a, b)
+    if checked_type ~= nil then
+        return checked_type
     end
 
-    if a.bufnr and b.bufnr then
-        local fname_a = vim.fn.bufname(a.bufnr)
-        local fname_b = vim.fn.bufname(b.bufnr)
-
-        if (fname_a and fname_b) and fname_a ~= fname_b then
-            return fname_a > fname_b
-        end
-    end
-
-    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then
-        return a.lnum > b.lnum
-    end
-    if (a.col and b.col) and a.col ~= b.col then
-        return a.col > b.col
-    end
-    if (a.end_lnum and b.end_lnum) and a.end_lnum ~= b.end_lnum then
-        return a.end_lnum > b.end_lnum
-    end
-    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then
-        return a.end_col > b.end_col
-    end
-
-    return false
+    local checked_fname_lcol = check_fname_lcol_asc(a, b)
+    return checked_fname_lcol ~= nil and checked_fname_lcol or false
 end
 
-vim.keymap.set("n", "<leader>qtt", function()
-    M.qf_sort_wrapper(M.sort_type_asc)
-end)
-vim.keymap.set("n", "<leader>qtT", function()
-    M.qf_sort_wrapper(M.sort_type_desc)
-end)
-vim.keymap.set("n", "<leader>ltt", function()
-    M.ll_sort_wrapper(M.sort_type_asc)
-end)
-vim.keymap.set("n", "<leader>ltT", function()
-    M.ll_sort_wrapper(M.sort_type_desc)
-end)
-
-------------------------
---- Diagnostic Sorts ---
-------------------------
-
-vim.keymap.set("n", "<leader>qti", "<nop>")
-vim.keymap.set("n", "<leader>lti", "<nop>")
-
-local eu = Qfr_Defer_Require("mjm.error-list-util")
-
+--- @type QfRancherSortPredicate
+--- Sort by diagnostic severity ascending. Fall back to fname asc, then line/col info asc
 function M.sort_severity_asc(a, b)
     if (not a) or not b then
         return false
     end
 
-    if a.type and b.type then
-        local severity_a = eu.severity_unmap[a.type] or nil
-        local severity_b = eu.severity_unmap[b.type] or nil
-
-        if (severity_a and severity_b) and severity_a ~= severity_b then
-            return severity_a < severity_b
-        end
+    local checked_severity = check_severity_asc(a, b)
+    if checked_severity ~= nil then
+        return checked_severity
     end
 
-    if a.bufnr and b.bufnr then
-        local fname_a = vim.fn.bufname(a.bufnr)
-        local fname_b = vim.fn.bufname(b.bufnr)
-
-        if (fname_a and fname_b) and fname_a ~= fname_b then
-            return fname_a < fname_b
-        end
-    end
-
-    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then
-        return a.lnum < b.lnum
-    end
-    if (a.col and b.col) and a.col ~= b.col then
-        return a.col < b.col
-    end
-    if (a.end_lnum and b.end_lnum) and a.end_lnum ~= b.end_lnum then
-        return a.end_lnum < b.end_lnum
-    end
-    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then
-        return a.end_col < b.end_col
-    end
-
-    return false
+    local checked_fname_lcol = check_fname_lcol_asc(a, b)
+    return checked_fname_lcol ~= nil and checked_fname_lcol or false
 end
 
+--- @type QfRancherSortPredicate
+--- Sort by diagnostic severity descending. Fall back to fname asc, then line/col info asc
 function M.sort_severity_desc(a, b)
     if (not a) or not b then
         return false
     end
 
-    if a.type and b.type then
-        local severity_a = eu.severity_unmap[a.type] or nil
-        local severity_b = eu.severity_unmap[b.type] or nil
-        if (severity_a and severity_b) and severity_a ~= severity_b then
-            return severity_a > severity_b
-        end
+    local checked_severity = check_severity_desc(a, b)
+    if checked_severity ~= nil then
+        return checked_severity
     end
 
-    if a.bufnr and b.bufnr then
-        local fname_a = vim.fn.bufname(a.bufnr)
-        local fname_b = vim.fn.bufname(b.bufnr)
-        if (fname_a and fname_b) and fname_a ~= fname_b then
-            return fname_a > fname_b
-        end
-    end
-
-    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then
-        return a.lnum > b.lnum
-    end
-
-    if (a.col and b.col) and a.col ~= b.col then
-        return a.col > b.col
-    end
-
-    if (a.end_lnum and b.end_lnum) and a.end_lnum ~= b.end_lnum then
-        return a.end_lnum > b.end_lnum
-    end
-
-    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then
-        return a.end_col > b.end_col
-    end
-
-    return false
+    local checked_fname_lcol = check_fname_lcol_asc(a, b)
+    return checked_fname_lcol ~= nil and checked_fname_lcol or false
 end
 
-vim.keymap.set("n", "<leader>qtis", function()
-    M.qf_sort_wrapper(M.sort_severity_asc)
-end)
-
-vim.keymap.set("n", "<leader>qtiS", function()
-    M.qf_sort_wrapper(M.sort_severity_desc)
-end)
-
-vim.keymap.set("n", "<leader>ltis", function()
-    M.ll_sort_wrapper(M.sort_severity_asc)
-end)
-
-vim.keymap.set("n", "<leader>ltiS", function()
-    M.ll_sort_wrapper(M.sort_severity_desc)
-end)
-
-function M.sort_diag_fname_asc(a, b)
+--- @type QfRancherSortPredicate
+--- Sort by fname ascending, falling back to line/col info asc then diagnostic severity asc
+function M.sort_fname_severity_asc(a, b)
     if (not a) or not b then
         return false
     end
 
-    if a.bufnr and b.bufnr then
-        local fname_a = vim.fn.bufname(a.bufnr)
-        local fname_b = vim.fn.bufname(b.bufnr)
-        if (fname_a and fname_b) and fname_a ~= fname_b then
-            return fname_a < fname_b
-        end
+    local checked_fname = check_fname_asc(a, b)
+    if checked_fname ~= nil then
+        return checked_fname
     end
 
-    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then
-        return a.lnum < b.lnum
-    end
-
-    if (a.col and b.col) and a.col ~= b.col then
-        return a.col < b.col
-    end
-
-    if (a.end_lnum and b.end_lnum) and a.end_lnum ~= b.end_lnum then
-        return a.end_lnum < b.end_lnum
-    end
-
-    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then
-        return a.end_col < b.end_col
-    end
-
-    if a.type and b.type then
-        local severity_a = eu.severity_unmap[a.type] or 4
-        local severity_b = eu.severity_unmap[b.type] or 4
-        if (severity_a and severity_b) and severity_a ~= severity_b then
-            return severity_a < severity_b
-        end
-    end
-
-    return false
+    local checked_lcol_severity = check_lcol_severity_asc(a, b)
+    return checked_lcol_severity ~= nil and checked_lcol_severity or false
 end
 
-function M.sort_diag_fname_desc(a, b)
+--- @type QfRancherSortPredicate
+--- Sort by fname descending, falling back to line/col info asc then diagnostic severity asc
+function M.sort_fname_severity_desc(a, b)
     if (not a) or not b then
         return false
     end
 
-    if a.bufnr and b.bufnr then
-        local fname_a = vim.fn.bufname(a.bufnr)
-        local fname_b = vim.fn.bufname(b.bufnr)
-        if (fname_a and fname_b) and fname_a ~= fname_b then
-            return fname_a > fname_b
-        end
+    local checked_fname = check_fname_desc(a, b)
+    if checked_fname ~= nil then
+        return checked_fname
     end
 
-    if (a.lnum and b.lnum) and a.lnum ~= b.lnum then
-        return a.lnum > b.lnum
-    end
-
-    if (a.col and b.col) and a.col ~= b.col then
-        return a.col > b.col
-    end
-
-    if (a.end_lnum and b.end_lnum) and a.end_lnum ~= b.end_lnum then
-        return a.end_lnum > b.end_lnum
-    end
-
-    if (a.end_col and b.end_col) and a.end_col ~= b.end_col then
-        return a.end_col > b.end_col
-    end
-
-    if a.type and b.type then
-        local severity_a = eu.severity_unmap[a.type] or 4
-        local severity_b = eu.severity_unmap[b.type] or 4
-        if (severity_a and severity_b) and severity_a ~= severity_b then
-            return severity_a > severity_b
-        end
-    end
-
-    return false
+    local checked_lcol_severity = check_lcol_severity_asc(a, b)
+    return checked_lcol_severity ~= nil and checked_lcol_severity or false
 end
 
-vim.keymap.set("n", "<leader>qtif", function()
-    M.qf_sort_wrapper(M.sort_diag_fname_asc)
-end)
+--- qt/lt
+local sorts = {
+    fname = { asc_func = M.sort_fname_asc, desc_func = M.sort_fname_desc }, --- f
+    fname_severity = {
+        asc_func = M.sort_fname_severity_asc,
+        desc_func = M.sort_fname_severity_desc,
+    }, --- if
+    severity = { asc_func = M.sort_severity_asc, desc_func = M.sort_severity_desc }, --- is
+    type = { asc_func = M.sort_type_asc, desc_func = M.sort_type_desc }, --- t
+} --- @type table<string, QfRancherSortInfo>
 
-vim.keymap.set("n", "<leader>qtiF", function()
-    M.qf_sort_wrapper(M.sort_diag_fname_desc)
-end)
+--- @param name string
+--- @param asc_func QfRancherSortPredicate
+--- @param desc_func QfRancherSortPredicate
+--- Add your own sort. Can be accessed using Qsort or Lsort
+--- name: The name the sort is accessed with
+--- asc_func: Predicate to sort ascending. Takes two quickfix items. Returns boolean
+--- asc_func: Predicate to sort descending. Takes two quickfix items. Returns boolean
+function M.register_sort(name, asc_func, desc_func)
+    sorts[name] = { asc_func = asc_func, desc_func = desc_func }
+end
 
-vim.keymap.set("n", "<leader>ltif", function()
-    M.ll_sort_wrapper(M.sort_diag_fname_asc)
-end)
+--- @param name string
+--- Clears the function name from the registered sorts
+function M.clear_sort(name)
+    sorts[name] = nil
+end
 
-vim.keymap.set("n", "<leader>ltiF", function()
-    M.ll_sort_wrapper(M.sort_diag_fname_desc)
-end)
+--- @param asc_func QfRancherSortPredicate
+--- @param desc_func QfRancherSortPredicate
+--- @param sort_opts QfRancherSortOpts
+--- @param output_opts QfRancherOutputOpts
+--- @return nil
+--- Run a sort without registering it
+--- asc_func: Predicate to sort ascending. Takes two quickfix items. Returns boolean
+--- asc_func: Predicate to sort descending. Takes two quickfix items. Returns boolean
+--- sort_opts:
+--- - dir?: "asc"|"desc" Defaults to "asc"
+--- output_opts
+--- - action? "new"|"replace"|"add" - Create a new list, replace a pre-existing one, or add a new
+---     one
+--- - is_loclist? boolean - Whether to filter against a location list
+function M.adhoc_sort(asc_func, desc_func, sort_opts, output_opts)
+    local sort_info = { asc_func = asc_func, desc_func = desc_func } --- @type QfRancherSortInfo
+    M._sort_wrapper(sort_info, sort_opts, output_opts)
+end
+
+--- @param name string
+--- @param sort_opts QfRancherSortOpts
+--- @param output_opts QfRancherOutputOpts
+--- @return nil
+--- Run a registered sort
+--- name: The registered name of the sort to run
+--- sort_opts:
+--- - dir?: "asc"|"desc" Defaults to "asc"
+--- output_opts
+--- - action? "new"|"replace"|"add" - Create a new list, replace a pre-existing one, or add a new
+---     one
+--- - is_loclist? boolean - Whether to filter against a location list
+function M.registered_sort(name, sort_opts, output_opts)
+    M._sort_wrapper(sorts[name], sort_opts, output_opts)
+end
 
 return M

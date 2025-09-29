@@ -47,6 +47,7 @@ example - j/k jumps over a certain length should go into the jumplist
 - the stl new mode autocmd does not catch leaving cmd mode after confirming a substitution
 - the stl render table should be pre-allocated with nils. Not a hot loop per se, but runs on every keystroke
 - in general, scan the stl code for where heap allocs can be removed
+- create EchoText, EchoWarn, and EchoErr helpers
 
 -----------
 --- LOW ---

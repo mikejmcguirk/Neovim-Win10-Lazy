@@ -17,6 +17,13 @@ local M = {}
 
 -- TODO: Where possible, replace loclist finding functions throughout the plugin with the below
 
+M.severity_unmap = {
+    E = vim.diagnostic.severity.ERROR,
+    W = vim.diagnostic.severity.WARN,
+    I = vim.diagnostic.severity.INFO,
+    H = vim.diagnostic.severity.HINT,
+} ---@type table<string, integer>
+
 --- @param x integer
 --- @param y integer
 --- @param min integer
@@ -562,6 +569,7 @@ function M.set_list_items(getlist, setlist, dest_list_nr, new_items, action, tit
     if action == "merge" then
         local old_list = getlist({ nr = dest_list_nr, all = true })
         local new_list_items = M.merge_qf_lists(old_list.items, new_items)
+        --- TODO: Add a sort here
         local new_list =
             M.get_new_list(old_list, { new_list_items = new_list_items, new_title = title })
         setlist({}, "u", new_list)

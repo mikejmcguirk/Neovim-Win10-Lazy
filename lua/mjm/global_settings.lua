@@ -214,15 +214,14 @@ autoset_winopt({ "WinEnter", "CmdlineLeave", "BufEnter" }, "rnu", true)
 
 Autocmd("BufReadPre", {
     group = set_group,
-    desc = "Go to the last location when opening a buffer",
+    desc = "Go to the last cursor position when opening a buffer",
     callback = function(ev)
         local mark = vim.api.nvim_buf_get_mark(ev.buf, '"')
-        local line_count = vim.api.nvim_buf_line_count(ev.buf)
-        if mark[1] < 1 or mark[1] > line_count then
+        if mark[1] < 1 or mark[1] > vim.api.nvim_buf_line_count(ev.buf) then
             return
         end
 
-        Cmd({ cmd = "normal", args = { 'g`"zz' } }, {})
+        Cmd({ cmd = "normal", args = { 'g`"zz' }, bang = true }, {})
     end,
 })
 

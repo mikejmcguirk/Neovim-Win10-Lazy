@@ -89,6 +89,8 @@ local rancher_keymaps = {
     { nx, "<nop>", "<leader>l<c-k>", "Avoid falling back to defaults", nil },
     { nx, "<nop>", "<leader>l<c-r>", "Avoid falling back to defaults", nil },
 
+    --- Cfilter ---
+
     { nx, pqfr.."-Qfilter-n-cfilter)",   qp.."kl",         "Qfilter cfilter"..n..sc,  function() ef.cfilter({ keep = true }, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
     { nx, pqfr.."-Qfilter-r-cfilter)",   qp.."Kl",         "Qfilter cfilter"..r..sc,  function() ef.cfilter({ keep = true }, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
     { nx, pqfr.."-Qfilter-a-cfilter)",   qp.."<C-k>l",     "Qfilter cfilter"..a..sc,  function() ef.cfilter({ keep = true }, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
@@ -130,6 +132,8 @@ local rancher_keymaps = {
     { nx, pqfr.."-Lfilter!-n-cfilterX)", lp.."r<C-l>",     "Lfilter! cfilter"..n..rx, function() ef.cfilter({ keep = false }, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
     { nx, pqfr.."-Lfilter!-r-cfilterX)", lp.."R<C-l>",     "Lfilter! cfilter"..r..rx, function() ef.cfilter({ keep = false }, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
     { nx, pqfr.."-Lfilter!-a-cfilterX)", lp.."<C-r><C-l>", "Lfilter! cfilter"..a..rx, function() ef.cfilter({ keep = false }, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
+
+    --- Fname ---
 
     { nx, pqfr.."-Qfilter-n-fname)",     qp.."kf",         "Qfilter fname"..n..sc,    function() ef.fname({ keep = true }, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
     { nx, pqfr.."-Qfilter-r-fname)",     qp.."Kf",         "Qfilter fname"..r..sc,    function() ef.fname({ keep = true }, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
@@ -173,6 +177,8 @@ local rancher_keymaps = {
     { nx, pqfr.."-Lfilter!-r-fnameX)",   lp.."R<C-f>",     "Lfilter! fname"..r..rx,   function() ef.fname({ keep = false }, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
     { nx, pqfr.."-Lfilter!-a-fnameX)",   lp.."<C-r><C-f>", "Lfilter! fname"..a..rx,   function() ef.fname({ keep = false }, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
 
+    --- Text ---
+
     { nx, pqfr.."-Qfilter-n-text)",      qp.."ke",         "Qfilter text"..n..sc,     function() ef.text({ keep = true }, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
     { nx, pqfr.."-Qfilter-r-text)",      qp.."Ke",         "Qfilter text"..r..sc,     function() ef.text({ keep = true }, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
     { nx, pqfr.."-Qfilter-a-text)",      qp.."<C-k>e",     "Qfilter text"..a..sc,     function() ef.text({ keep = true }, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
@@ -215,6 +221,8 @@ local rancher_keymaps = {
     { nx, pqfr.."-Lfilter!-r-textX)",    lp.."R<C-e>",     "Lfilter! text"..r..rx,    function() ef.text({ keep = false }, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
     { nx, pqfr.."-Lfilter!-a-textX)",    lp.."<C-r><C-e>", "Lfilter! text"..a..rx,    function() ef.text({ keep = false }, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
 
+    --- Lnum ---
+
     { nx, pqfr.."-Qfilter-n-lnum)",      qp.."kn",         "Qfilter lnum"..n..sc,     function() ef.lnum({ keep = true }, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
     { nx, pqfr.."-Qfilter-r-lnum)",      qp.."Kn",         "Qfilter lnum"..r..sc,     function() ef.lnum({ keep = true }, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
     { nx, pqfr.."-Qfilter-a-lnum)",      qp.."<C-k>n",     "Qfilter lnum"..a..sc,     function() ef.lnum({ keep = true }, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
@@ -256,6 +264,8 @@ local rancher_keymaps = {
     { nx, pqfr.."-Lfilter!-n-lnumX)",    lp.."r<C-n>",     "Lfilter! lnum"..n..rx,    function() ef.lnum({ keep = false }, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
     { nx, pqfr.."-Lfilter!-r-lnumX)",    lp.."R<C-n>",     "Lfilter! lnum"..r..rx,    function() ef.lnum({ keep = false }, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
     { nx, pqfr.."-Lfilter!-a-lnumX)",    lp.."<C-r><C-n>", "Lfilter! lnum"..a..rx,    function() ef.lnum({ keep = false }, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
+
+    --- Type ---
 
     { nx, pqfr.."-Qfilter-n-type)",      qp.."kt",         "Qfilter type"..n..sc,     function() ef.type({ keep = true }, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
     { nx, pqfr.."-Qfilter-r-type)",      qp.."Kt",         "Qfilter type"..r..sc,     function() ef.type({ keep = true }, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
@@ -311,7 +321,7 @@ local rancher_keymaps = {
     { nx, "<nop>", "<leader>l<c-g>", "Avoid falling back to defaults", nil },
 
     -- TODO: Might be able to move the prefixes back to char literals, but wait until Grep API is final
-    { nx, pqfr.."-grep-n-cwd)",    qp.."gd",         "Qgrep cwd, new"..sc,           function() eg.grep_cwd(grep_smart_case, sys_new) end }, 
+    { nx, pqfr.."-grep-n-cwd)",    qp.."gd",         "Qgrep cwd, new"..sc,           function() eg.grep_cwd(grep_smart_case, sys_new) end },
     { nx, pqfr.."-grep-r-cwd)",    qp.."Gd",         "Qgrep cwd, replace"..sc,       function() eg.grep_cwd(grep_smart_case, sys_replace) end },
     { nx, pqfr.."-grep-a-cwd)",    qp.."<C-g>d",     "Qgrep cwd, add"..sc,           function() eg.grep_cwd(grep_smart_case, sys_add) end },
     { nx, pqfr.."-grep-n-CWD)",    qp.."gD",         "Qgrep cwd, new"..cs,           function() eg.grep_cwd(grep_case_sensitive, sys_new) end },
