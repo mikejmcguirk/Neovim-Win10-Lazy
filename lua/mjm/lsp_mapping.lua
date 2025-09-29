@@ -105,12 +105,12 @@ function M.set_lsp_maps(ev, cmds)
     Map("n", "gra", cmds.code_action, { buffer = buf })
 
     --- textDocument/codeLens ---
-    if client:supports_method("textDocument/codeLens") then
+    local function start_codelens(bufnr)
         -- Lens updates are throttled so only one runs at a time. Updating on text change
         -- increases the likelihood of lenses rendering with stale data
-        vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
-            buffer = ev.buf,
-            group = vim.api.nvim_create_augroup("refresh-lens", { clear = true }),
+        Autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
+            buffer = bufnr,
+            group = Augroup("mjm-refresh-lens", { clear = true }),
             -- Bespoke module so I can render the lenses as virtual lines
             callback = function()
                 require("mjm.codelens").refresh({ buf = ev.buf })
@@ -118,8 +118,43 @@ function M.set_lsp_maps(ev, cmds)
         })
     end
 
+    local function stop_codelens()
+        vim.api.nvim_del_augroup_by_name("mjm-refresh-lens")
+        -- Use bespoke module because that's where the caches are
+        require("mjm.codelens").clear()
+    end
+
+    local function restart_codelens()
+        local clients = vim.lsp.get_clients() --- @type vim.lsp.Client[]
+        for _, c in ipairs(clients) do
+            if c:supports_method("textDocument/codeLens") then
+                local attached_bufs = c.attached_buffers --- @type table<integer, true>
+                for k, v in pairs(attached_bufs) do
+                    if v then
+                        start_codelens(k)
+                    end
+                end
+            end
+        end
+    end
+
+    local function toggle_codelens()
+        --- @type boolean, vim.api.keyset.get_autocmds.ret[]
+        local ok, autocmds = pcall(vim.api.nvim_get_autocmds, { group = "mjm-refresh-lens" })
+        if ok and #autocmds > 0 then
+            stop_codelens()
+        else
+            restart_codelens()
+        end
+    end
+
+    if client:supports_method("textDocument/codeLens") then
+        start_codelens(ev.buf)
+    end
+
     -- Use bespoke module because the lenses are cached there
-    Map("n", "grs", require("mjm.codelens").run)
+    Map("n", "grs", toggle_codelens)
+    Map("n", "grS", require("mjm.codelens").run)
 
     --- textDocument/declaration ---
     Map("n", "grd", cmds.declaration, { buffer = buf })
