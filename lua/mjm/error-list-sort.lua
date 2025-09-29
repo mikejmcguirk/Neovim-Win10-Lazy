@@ -533,6 +533,7 @@ function M.sort_fname_diag_desc(a, b)
     return checked_lcol_severity ~= nil and checked_lcol_severity or false
 end
 
+-- The first sort will be the default for the Qsort/Lsort cmds
 local sorts = {
     fname = { asc_func = M.sort_fname_asc, desc_func = M.sort_fname_desc }, --- f
     fname_diag = {
@@ -542,6 +543,10 @@ local sorts = {
     severity = { asc_func = M.sort_severity_asc, desc_func = M.sort_severity_desc }, --- is
     type = { asc_func = M.sort_type_asc, desc_func = M.sort_type_desc }, --- t
 } --- @type table<string, QfRancherSortInfo>
+
+function M.get_sort_names()
+    return vim.tbl_keys(sorts)
+end
 
 --- @param name string
 --- @param asc_func QfRancherSortPredicate
@@ -557,6 +562,11 @@ end
 --- @param name string
 --- Clears the function name from the registered sorts
 function M.clear_sort(name)
+    if #vim.tbl_keys(sorts) <= 1 then
+        vim.api.nvim_echo({ { "Cannot remove the last sort method" } }, false, {})
+        return
+    end
+
     sorts[name] = nil
 end
 

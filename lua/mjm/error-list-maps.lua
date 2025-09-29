@@ -2,6 +2,12 @@
 --- anonymous functions. If you pass, for example, eo.closeqflist as a function reference, eo
 --- needs to be evaluated at command creation, defeating the purpose of the defer require
 
+--------------------------
+--- Map and Cmd Pieces ---
+--------------------------
+
+local actions = { "new", "replace", "add" }
+
 -------------------
 --- System Opts ---
 -------------------
@@ -790,10 +796,37 @@ end
 --- SORT CMDS ---
 -----------------
 
--- fname, fname_diag, severity, type
--- asc/desc
--- new/replace/add
--- Qsort Lsort
+local function check_arg(fargs, valid_args)
+    for _, arg in ipairs(fargs) do
+        if vim.tbl_contains(valid_args, arg) then
+            return arg
+        end
+    end
+
+    return valid_args[1]
+end
+
+local function sort_cmd(cargs, is_loclist)
+    cargs = cargs or {}
+    local fargs = cargs.fargs
+
+    local sorts = require("mjm.error-list-sort").get_sort_names()
+    assert(#sorts > 1, "No sort functions available")
+    local sort_func = check_arg(fargs, sorts)
+
+    local dir = check_arg(fargs, { "asc", "desc" })
+    local action = check_arg(fargs, actions)
+
+    et.sort(sort_func, { dir = dir }, { action = action, is_loclist = is_loclist })
+end
+
+vim.api.nvim_create_user_command("Qsort", function(cargs)
+    sort_cmd(cargs, false)
+end, { nargs = "*" })
+
+vim.api.nvim_create_user_command("Lsort", function(cargs)
+    sort_cmd(cargs, true)
+end, { nargs = "*" })
 
 -------------
 --- STACK ---
