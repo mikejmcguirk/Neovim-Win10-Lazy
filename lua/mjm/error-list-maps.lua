@@ -412,23 +412,59 @@ local rancher_keymaps = {
     --- SORT ---
     ------------
 
-    { nn, pqfr.."-qsort-n-fname-asc)",       qp.."tf",  "Qsort by fname asc"..n,       function() et.sort("fname", { dir = "asc" }, { action = "new", is_loclist = false }) end },
-    { nn, pqfr.."-qsort-n-fname-desc)",      qp.."tF",  "Qsort by fname desc"..n,      function() et.sort("fname", { dir = "desc" }, { action = "new", is_loclist = false }) end },
-    { nn, pqfr.."-qsort-n-fname-diag-asc)",  qp.."tif", "Qsort by fname_diag asc"..n,  function() et.sort("fname_diag", { dir = "asc" }, { action = "new", is_loclist = false }) end },
-    { nn, pqfr.."-qsort-n-fname-diag-desc)", qp.."tiF", "Qsort by fname_diag desc"..n, function() et.sort("fname_diag", { dir = "desc" }, { action = "new", is_loclist = false }) end },
-    { nn, pqfr.."-qsort-n-severity-asc)",    qp.."tis", "Qsort by severity asc"..n,    function() et.sort("severity", { dir = "asc" }, { action = "new", is_loclist = false }) end },
-    { nn, pqfr.."-qsort-n-severity-desc)",   qp.."tiS", "Qsort by severity desc"..n,   function() et.sort("severity", { dir = "desc" }, { action = "new", is_loclist = false }) end },
-    { nn, pqfr.."-qsort-n-type-asc)",        qp.."tt",  "Qsort by type asc"..n,        function() et.sort("type", { dir = "asc" }, { action = "new", is_loclist = false }) end },
-    { nn, pqfr.."-qsort-n-type-desc)",       qp.."tT",  "Qsort by type desc"..n,       function() et.sort("type", { dir = "desc" }, { action = "new", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-n-fname-asc)",       qp.."tf",  "Qsort by fname asc"..n,           function() et.sort("fname", { dir = "asc" }, { action = "new", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-n-fname-desc)",      qp.."tF",  "Qsort by fname desc"..n,          function() et.sort("fname", { dir = "desc" }, { action = "new", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-n-fname-diag-asc)",  qp.."tif", "Qsort by fname_diag asc"..n,      function() et.sort("fname_diag", { dir = "asc" }, { action = "new", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-n-fname-diag-desc)", qp.."tiF", "Qsort by fname_diag desc"..n,     function() et.sort("fname_diag", { dir = "desc" }, { action = "new", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-n-severity-asc)",    qp.."tis", "Qsort by severity asc"..n,        function() et.sort("severity", { dir = "asc" }, { action = "new", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-n-severity-desc)",   qp.."tiS", "Qsort by severity desc"..n,       function() et.sort("severity", { dir = "desc" }, { action = "new", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-n-type-asc)",        qp.."tt",  "Qsort by type asc"..n,            function() et.sort("type", { dir = "asc" }, { action = "new", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-n-type-desc)",       qp.."tT",  "Qsort by type desc"..n,           function() et.sort("type", { dir = "desc" }, { action = "new", is_loclist = false }) end },
 
-    { nn, pqfr.."-lsort-n-fname-asc)",       lp.."tf",  "Lsort by fname asc"..n,       function() et.sort("fname", { dir = "asc" }, { action = "new", is_loclist = true }) end },
-    { nn, pqfr.."-lsort-n-fname-desc)",      lp.."tF",  "Lsort by fname desc"..n,      function() et.sort("fname", { dir = "desc" }, { action = "new", is_loclist = true }) end },
-    { nn, pqfr.."-lsort-n-fname-diag-asc)",  lp.."tif", "Lsort by fname_diag asc"..n,  function() et.sort("fname_diag", { dir = "asc" }, { action = "new", is_loclist = true }) end },
-    { nn, pqfr.."-lsort-n-fname-diag-desc)", lp.."tiF", "Lsort by fname_diag desc"..n, function() et.sort("fname_diag", { dir = "desc" }, { action = "new", is_loclist = true }) end },
-    { nn, pqfr.."-lsort-n-severity-asc)",    lp.."tis", "Lsort by severity asc"..n,    function() et.sort("severity", { dir = "asc" }, { action = "new", is_loclist = true }) end },
-    { nn, pqfr.."-lsort-n-severity-desc)",   lp.."tiS", "Lsort by severity desc"..n,   function() et.sort("severity", { dir = "desc" }, { action = "new", is_loclist = true }) end },
-    { nn, pqfr.."-lsort-n-type-asc)",        lp.."tt",  "Lsort by type asc"..n,        function() et.sort("type", { dir = "asc" }, { action = "new", is_loclist = true }) end },
-    { nn, pqfr.."-lsort-n-type-desc)",       lp.."tT",  "Lsort by type desc"..n,       function() et.sort("type", { dir = "desc" }, { action = "new", is_loclist = true }) end },
+    { nn, pqfr.."-qsort-r-fname-asc)",       qp.."Tf",  "Qsort by fname asc"..r,           function() et.sort("fname", { dir = "asc" }, { action = "replace", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-r-fname-desc)",      qp.."TF",  "Qsort by fname desc"..r,          function() et.sort("fname", { dir = "desc" }, { action = "replace", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-r-fname-diag-asc)",  qp.."Tif", "Qsort by fname_diag asc"..r,      function() et.sort("fname_diag", { dir = "asc" }, { action = "replace", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-r-fname-diag-desc)", qp.."TiF", "Qsort by fname_diag desc"..r,     function() et.sort("fname_diag", { dir = "desc" }, { action = "replace", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-r-severity-asc)",    qp.."Tis", "Qsort by severity asc"..r,        function() et.sort("severity", { dir = "asc" }, { action = "replace", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-r-severity-desc)",   qp.."TiS", "Qsort by severity desc"..r,       function() et.sort("severity", { dir = "desc" }, { action = "replace", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-r-type-asc)",        qp.."Tt",  "Qsort by type asc"..r,            function() et.sort("type", { dir = "asc" }, { action = "replace", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-r-type-desc)",       qp.."TT",  "Qsort by type desc"..r,           function() et.sort("type", { dir = "desc" }, { action = "replace", is_loclist = false }) end },
+
+    { nn, pqfr.."-qsort-a-fname-asc)",       qp.."<C-t>f",  "Qsort by fname asc"..a,       function() et.sort("fname", { dir = "asc" }, { action = "add", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-a-fname-desc)",      qp.."<C-t>F",  "Qsort by fname desc"..a,      function() et.sort("fname", { dir = "desc" }, { action = "add", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-a-fname-diag-asc)",  qp.."<C-t>if", "Qsort by fname_diag asc"..a,  function() et.sort("fname_diag", { dir = "asc" }, { action = "add", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-a-fname-diag-desc)", qp.."<C-t>iF", "Qsort by fname_diag desc"..a, function() et.sort("fname_diag", { dir = "desc" }, { action = "add", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-a-severity-asc)",    qp.."<C-t>is", "Qsort by severity asc"..a,    function() et.sort("severity", { dir = "asc" }, { action = "add", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-a-severity-desc)",   qp.."<C-t>iS", "Qsort by severity desc"..a,   function() et.sort("severity", { dir = "desc" }, { action = "add", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-a-type-asc)",        qp.."<C-t>t",  "Qsort by type asc"..a,        function() et.sort("type", { dir = "asc" }, { action = "add", is_loclist = false }) end },
+    { nn, pqfr.."-qsort-a-type-desc)",       qp.."<C-t>T",  "Qsort by type desc"..a,       function() et.sort("type", { dir = "desc" }, { action = "add", is_loclist = false }) end },
+
+    { nn, pqfr.."-lsort-n-fname-asc)",       lp.."tf",  "Lsort by fname asc"..n,           function() et.sort("fname", { dir = "asc" }, { action = "new", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-n-fname-desc)",      lp.."tF",  "Lsort by fname desc"..n,          function() et.sort("fname", { dir = "desc" }, { action = "new", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-n-fname-diag-asc)",  lp.."tif", "Lsort by fname_diag asc"..n,      function() et.sort("fname_diag", { dir = "asc" }, { action = "new", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-n-fname-diag-desc)", lp.."tiF", "Lsort by fname_diag desc"..n,     function() et.sort("fname_diag", { dir = "desc" }, { action = "new", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-n-severity-asc)",    lp.."tis", "Lsort by severity asc"..n,        function() et.sort("severity", { dir = "asc" }, { action = "new", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-n-severity-desc)",   lp.."tiS", "Lsort by severity desc"..n,       function() et.sort("severity", { dir = "desc" }, { action = "new", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-n-type-asc)",        lp.."tt",  "Lsort by type asc"..n,            function() et.sort("type", { dir = "asc" }, { action = "new", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-n-type-desc)",       lp.."tT",  "Lsort by type desc"..n,           function() et.sort("type", { dir = "desc" }, { action = "new", is_loclist = true }) end },
+
+    { nn, pqfr.."-lsort-r-fname-asc)",       lp.."Tf",  "Lsort by fname asc"..r,           function() et.sort("fname", { dir = "asc" }, { action = "replace", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-r-fname-desc)",      lp.."TF",  "Lsort by fname desc"..r,          function() et.sort("fname", { dir = "desc" }, { action = "replace", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-r-fname-diag-asc)",  lp.."Tif", "Lsort by fname_diag asc"..r,      function() et.sort("fname_diag", { dir = "asc" }, { action = "replace", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-r-fname-diag-desc)", lp.."TiF", "Lsort by fname_diag desc"..r,     function() et.sort("fname_diag", { dir = "desc" }, { action = "replace", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-r-severity-asc)",    lp.."Tis", "Lsort by severity asc"..r,        function() et.sort("severity", { dir = "asc" }, { action = "replace", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-r-severity-desc)",   lp.."TiS", "Lsort by severity desc"..r,       function() et.sort("severity", { dir = "desc" }, { action = "replace", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-r-type-asc)",        lp.."Tt",  "Lsort by type asc"..r,            function() et.sort("type", { dir = "asc" }, { action = "replace", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-r-type-desc)",       lp.."TT",  "Lsort by type desc"..r,           function() et.sort("type", { dir = "desc" }, { action = "replace", is_loclist = true }) end },
+
+    { nn, pqfr.."-lsort-a-fname-asc)",       lp.."<C-t>f",  "Lsort by fname asc"..a,       function() et.sort("fname", { dir = "asc" }, { action = "add", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-a-fname-desc)",      lp.."<C-t>F",  "Lsort by fname desc"..a,      function() et.sort("fname", { dir = "desc" }, { action = "add", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-a-fname-diag-asc)",  lp.."<C-t>if", "Lsort by fname_diag asc"..a,  function() et.sort("fname_diag", { dir = "asc" }, { action = "add", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-a-fname-diag-desc)", lp.."<C-t>iF", "Lsort by fname_diag desc"..a, function() et.sort("fname_diag", { dir = "desc" }, { action = "add", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-a-severity-asc)",    lp.."<C-t>is", "Lsort by severity asc"..a,    function() et.sort("severity", { dir = "asc" }, { action = "add", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-a-severity-desc)",   lp.."<C-t>iS", "Lsort by severity desc"..a,   function() et.sort("severity", { dir = "desc" }, { action = "add", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-a-type-asc)",        lp.."<C-t>t",  "Lsort by type asc"..a,        function() et.sort("type", { dir = "asc" }, { action = "add", is_loclist = true }) end },
+    { nn, pqfr.."-lsort-a-type-desc)",       lp.."<C-t>T",  "Lsort by type desc"..a,       function() et.sort("type", { dir = "desc" }, { action = "add", is_loclist = true }) end },
 
     -------------
     --- STACK ---
@@ -749,6 +785,15 @@ if vim.g.qf_rancher_set_default_cmds then
         en.l_jump(count)
     end, { count = 0 })
 end
+
+-----------------
+--- SORT CMDS ---
+-----------------
+
+-- fname, fname_diag, severity, type
+-- asc/desc
+-- new/replace/add
+-- Qsort Lsort
 
 -------------
 --- STACK ---
