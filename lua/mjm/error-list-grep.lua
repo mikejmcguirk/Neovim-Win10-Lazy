@@ -1,428 +1,397 @@
 -- Escaping test line from From vim-grepper
 -- ..ad\\f40+$':-# @=,!;%^&&*()_{}/ /4304\'""?`9$343%$ ^adfadf[ad)[(
 
+local M = {}
+
 -------------
 --- Types ---
 -------------
 
---- @alias QfRancherGrepCmdFun fun(
---- table: string[], table: string[], table)
---- :boolean, string[]|[string, string]
+--- @alias QfRancherGrepLocFunc fun():string[]
 ---
---- @alias QfRancherGrepLocFun fun():boolean, string[]|[string, string]
----
---- @class QfRancherGrepOpts
---- @field literal? boolean
---- @field pattern? string
---- @field smart_case? boolean
+--- @alias QfRancherGrepLocs string[]
+--- @alias QfRancherGrepPartsFunc fun(string, string, QfRancherGrepLocs):string[]
 
-local M = {}
+--- @class QfRancherGrepInfo
+--- @field name string
+--- @field list_item_type string|nil
+--- @field location_func function
 
----------------------------
---- Grep Prg Management ---
----------------------------
+--------------------------
+--- Grepprg/Grep Parts ---
+--------------------------
 
-vim.api.nvim_set_var("qf_rancher_grepprg", "rg")
-
--- local function grep_escape(text)
--- return text:gsub("([%.%^%$%*%+%?%(%)%[%]%{%}%|%\\])", "\\%1")
--- end
-
---- @param pattern string[]
---- @param location string[]
---- @param opts? QfRancherGrepOpts
---- @return boolean, string[]|[string,string]
---- NOTE: I do not run Windows
-local function get_findstr_cmd_parts(pattern, location, opts)
-    if not pattern then
-        return false, { "No pattern provided to build findstr cmd parts", "ErrorMsg" }
+--- @param locations string[]
+local function validate_locations(locations)
+    vim.validate("locations", locations, "table")
+    if #locations < 1 then
+        return false
     end
 
-    if not location then
-        return false, { "No location provided to build findstr cmd parts", "ErrorMsg" }
-    end
-
-    -- Recursive, line num, offset, skip non-printable
-    local cmd = { "findstr", "/S", "/N", "/O", "/P" } --- @type string[]
-
-    opts = opts or {}
-    if opts.smart_case then
-        local has_upper = false --- @type boolean
-        for _, p in ipairs(pattern) do
-            if p:match("%u") then
-                has_upper = true
-                break
-            end
-        end
-
-        if not has_upper then
-            table.insert(cmd, "/I")
+    for _, location in ipairs(locations) do
+        if type(location) ~= "string" then
+            return false
         end
     end
 
-    if not opts.literal then
-        table.insert(cmd, "/R")
-    end
-
-    if opts.literal then
-        for _, pat in ipairs(pattern) do
-            table.insert(cmd, '/C:"' .. pat .. '"')
-        end
-    else
-        local pat_str = #pattern > 1 and table.concat(pattern, "|") or pattern[1]
-        table.insert(cmd, '"' .. pat_str .. '"') -- Quote for spaces/special chars
-    end
-
-    vim.list_extend(cmd, location)
-
-    return true, cmd
+    return true
 end
 
---- @param pattern string[]
---- @param location string[]
---- @param opts? QfRancherGrepOpts
---- @return boolean, string[]|[string,string]
-local function get_grep_cmd_parts(pattern, location, opts)
-    if not pattern then
-        return false, { "No pattern provided to build grep cmd parts", "ErrorMsg" }
-    end
-
-    if not location then
-        return false, { "No location provided to build grep cmd parts", "ErrorMsg" }
-    end
-
-    --- recursive search, print filenames, ignore binary files, print line numbers
-    local cmd = { "grep", "-rHIn" } --- @type string[]
-
-    opts = opts or {}
-    if opts.smart_case then
-        local has_upper = false --- @type boolean
-        for _, p in ipairs(pattern) do
-            if p:match("%u") then
-                has_upper = true
-                break
-            end
-        end
-
-        if not has_upper then
-            table.insert(cmd, "-i")
-        end --- ignore case
-    end
-
-    if opts.literal then
-        table.insert(cmd, "-F") --- fixed strings
-    else
-        table.insert(cmd, "-E") --- extended regex
-    end
-
-    table.insert(cmd, "--") --- no more flags
-
-    local pat_str = #pattern > 1 and table.concat(pattern, "|") or pattern[1] --- @type string
-    table.insert(cmd, pat_str)
-
-    vim.list_extend(cmd, location)
-
-    return true, cmd
+--- @return string[]
+local function get_base_parts_rg()
+    return { "rg", "--vimgrep", "-uu" }
 end
 
---- @param pattern string[]
---- @param location string[]
---- @param opts? QfRancherGrepOpts
---- @return boolean, string[]|[string,string]
-local function get_rg_cmd_parts(pattern, location, opts)
-    if not pattern then
-        return false, { "No pattern provided to build rg cmd parts", "ErrorMsg" }
-    end
+local function get_base_parts_grep()
+    -- Or, -rHn --binary-files=without-match
+    return { "grep", "--recursive", "--with-filename", "--line-number", "-I" }
+end
 
-    if not location then
-        return false, { "No location provided to build rg cmd parts", "ErrorMsg" }
-    end
+--- @type QfRancherGrepPartsFunc
+--- The pattern param, unlike the field in input opts, is post-prompting/visual mode checking
+local function get_full_parts_rg(pattern, input_type, locations)
+    vim.validate("pattern", pattern, "string")
+    vim.validate("input_type", input_type, "string")
+    vim.validate("locations", locations, function()
+        return validate_locations(locations)
+    end)
 
-    --- print each result on its own line, disrespect gitignore
-    local cmd = { "rg", "--vimgrep", "-u" } --- @type string[]
+    local cmd = get_base_parts_rg()
     if vim.fn.has("win32") == 1 then
         table.insert(cmd, "--crlf")
     end
 
+    if input_type == "smart" then
+        table.insert(cmd, "--smart-case") --- or "-S"
+    elseif input_type == "insensitive" then
+        table.insert(cmd, "--ignore-case") --- or "-i"
+    end
+
+    if input_type ~= "regex" then
+        table.insert(cmd, "--fixed-strings") --- or "-F"
+    end
+
+    if string.find(pattern, "\n", 1, true) ~= nil then
+        table.insert(cmd, "--multiline") --- or "-U"
+        -- TODO: Revisit if this is necessary
+        -- if input_type ~= "regex" then
+        --     pattern = string.gsub(pattern, "\n", "\\n")
+        -- end
+    end
+
+    table.insert(cmd, "--")
+    table.insert(cmd, pattern)
+    vim.list_extend(cmd, locations)
+
+    return cmd
+end
+
+--- @type QfRancherGrepPartsFunc
+--- The pattern param, unlike the field in input opts, is post-prompting/visual mode checking
+local function get_full_parts_grep(pattern, input_type, locations)
+    vim.validate("pattern", pattern, "string")
+    vim.validate("input_type", input_type, "string")
+    vim.validate("locations", locations, function()
+        return validate_locations(locations)
+    end)
+
+    local cmd = get_base_parts_grep() --- @type string[]
+
+    if input_type == "regex" then
+        table.insert(cmd, "--extended-regexp") --- or "-E"
+    else
+        table.insert(cmd, "--fixed-strings") --- or "-F"
+    end
+
+    local smartcase = input_type == "smart" and string.lower(pattern) == pattern --- @type boolean
+    if smartcase or input_type == "insensitive" then
+        table.insert(cmd, "--ignore-case") --- or "-i"
+    end
+
+    table.insert(cmd, "--")
+
+    -- No multiline mode in vanilla grep, so fall back to an or comparison
+    pattern = string.gsub(pattern, "\n", "|")
+    table.insert(cmd, pattern)
+    vim.list_extend(cmd, locations)
+
+    return cmd
+end
+
+local get_base_parts = {
+    grep = get_base_parts_grep,
+    rg = get_base_parts_rg,
+}
+
+local get_full_parts = {
+    grep = get_full_parts_grep,
+    rg = get_full_parts_rg,
+}
+
+--- @class QfRancherGetGrepPartsOpts
+--- @field base_only? boolean
+--- @field pattern? string
+--- @field input_type? QfRancherInputType
+--- @field locations? string[]
+
+--- @param opts? QfRancherGetGrepPartsOpts
+--- @return string[]
+local function get_grep_parts(opts)
     opts = opts or {}
-    -- rg's case sensitive flag (-s) is enabled by default
-    if opts.smart_case then
-        table.insert(cmd, "-S")
+    vim.validate("opts", opts, "table")
+    vim.validate("opts.base_only", opts.base_only, { "boolean", "nil" })
+    vim.validate("opts.pattern", opts.pattern, { "nil", "string" })
+    vim.validate("opts.input_type", opts.input_type, { "nil", "string" })
+    vim.validate("opts.locations", opts.locations, { "nil", "table" })
+
+    -- Set to rg by default
+    local grep_cmd = vim.g.qf_rancher_grepprg
+    if opts.base_only then
+        return get_base_parts[grep_cmd]()
     end
 
-    if opts.literal then
-        table.insert(cmd, "-F")
+    if vim.fn.executable(grep_cmd) ~= 1 then
+        local chunk = { grep_cmd .. " is not executable", "ErrorMsg" }
+        vim.api.nvim_echo({ chunk }, true, { err = true })
+        return {}
     end
 
-    if #pattern > 1 then
-        table.insert(cmd, "-U")
-    end --- multiline mode
-
-    table.insert(cmd, "--") --- no more flags
-
-    local newline = opts.literal and "\n" or "\\n" --- @type string
-    local pat_str = #pattern > 1 and table.concat(pattern, newline) or pattern[1] --- @type string
-    table.insert(cmd, pat_str)
-    vim.list_extend(cmd, location)
-
-    return true, cmd
+    return get_full_parts[grep_cmd](opts.pattern, opts.input_type, opts.locations)
 end
 
---- @return boolean, QfRancherGrepCmdFun|[string,string]
-local function get_grep_cmd()
-    local qf_rancher_grepprg = vim.g.qf_rancher_grepprg
+--------------------------
+--- Main Grep Function ---
+--------------------------
 
-    if qf_rancher_grepprg == "rg" then
-        if vim.fn.executable("rg") ~= 1 then
-            return false, { "get_grep_cmd: rg is not executable", "ErrorMsg" }
-        end
+--- @param grep_info QfRancherGrepInfo
+--- @param input_type QfRancherInputType
+local function get_prompt(grep_info, input_type)
+    local eu = require("mjm.error-list-util")
 
-        return true, get_rg_cmd_parts
-    elseif qf_rancher_grepprg == "grep" then
-        if vim.fn.executable("grep") ~= 1 then
-            return false, { "get_grep_cmd: grep is not executable", "ErrorMsg" }
-        end
+    vim.validate("grep_info", grep_info, "table")
+    vim.validate("grep_info.name", grep_info.name, "string")
+    vim.validate("input_type", input_type, function()
+        return eu.validate_input_type(input_type)
+    end)
 
-        return true, get_grep_cmd_parts
-    elseif qf_rancher_grepprg == "findstr" then
-        if vim.fn.executable("findstr") ~= 1 then
-            return false, { "get_grep_cmd: findstr is not executable", "ErrorMsg" }
-        end
+    local display_type = eu.get_display_input_type(input_type)
+    local grepprg = vim.g.qf_rancher_grepprg or ""
 
-        return true, get_findstr_cmd_parts
-    end
-
-    if vim.fn.executable("rg") == 1 then
-        return true, get_rg_cmd_parts
-    elseif vim.fn.executable("grep") == 1 then
-        return true, get_grep_cmd_parts
-    elseif vim.fn.has("win32") == 1 and vim.fn.executable("findstr") == 1 then
-        return true, get_findstr_cmd_parts
-    end
-
-    return false, { "get_grep_cmd: No valid grep program found", "" }
+    -- TODO: actually look at this and adjust
+    return "[" .. grepprg .. "] " .. grep_info.name .. " Grep (" .. display_type .. "): "
 end
 
-----------------
--- Grep Funcs --
-----------------
-
---- @return boolean, string[]
-local function get_grep_pattern(prompt)
-    local mode = vim.fn.mode() --- @type string
-    local is_visual = mode == "v" or mode == "V" or mode == "\22" --- @type boolean
-
-    if is_visual then
-        return require("mjm.error-list-util").get_visual_pattern(mode)
-    end
-
-    --- @type boolean, string
-    local ok, pattern = pcall(vim.fn.input, { prompt = prompt, cancelreturn = "" })
-    if (ok and pattern == "") or ((not ok) and pattern == "Keyboard interrupt") then
-        return false, { "", "" }
-    end
-
-    if not ok then
-        return false, { (pattern or "Unknown error getting input"), "ErrorMsg" }
-    end
-
-    local split_pattern = vim.split(pattern, "\\n")
-    return true, split_pattern
-end
-
---- @param grep_location string[]
---- @param grep_opts? QfRancherGrepOpts
---- @return boolean, QfRancherSystemIn|nil
-local function get_grep_parts(grep_location, prompt, grep_opts)
-    local ok, grep_cmd = get_grep_cmd() --- @type boolean, QfRancherGrepCmdFun|[string,string]
-    if (not ok) or type(grep_cmd) ~= "function" then
-        --- @type [string, string]
-        local backup_chunk = { "Unknown error getting grep cmd", "ErrorMsg" }
-        --- @type [string, string]
-        local err_chunk = type(grep_cmd) ~= "function" and grep_cmd or backup_chunk
-        vim.api.nvim_echo({ err_chunk }, true, { err = true })
-        return false, nil
-    end
-
-    grep_opts = grep_opts or {}
-    -- vim.fn.confirm(vim.inspect(grep_opts))
-    local ok_l, raw_pat = (function()
-        if grep_opts.pattern and type(grep_opts.pattern) == "string" then
-            return true, { grep_opts.pattern }
-        else
-            return get_grep_pattern(prompt)
-        end
-    end)() --- @type boolean, string[]
-
-    if not ok_l then
-        --- @type [string, string]
-        local backup_chunk = { "Unknown error getting grep pattern", "ErrorMsg" }
-        local err_chunk = raw_pat or backup_chunk --- @type [string,string]
-        vim.api.nvim_echo({ err_chunk }, true, { err = true })
-        return false, nil
-    end
-
-    --- @type boolean, string[]
-    local ok_c, cmd_parts = grep_cmd(raw_pat, grep_location, grep_opts)
-    if not ok_c then
-        local err_chunk = cmd_parts or { "Unknown error getting cmd parts", "ErrorMsg" }
-        vim.api.nvim_echo({ err_chunk }, true, { err = true })
-        return false, nil
-    end
-
-    --- @type string
-    local title = "Grep" --- @type string
-    return true, { cmd_parts = cmd_parts, title = title }
-end
-
---- @param grep_loc_fn  QfRancherGrepLocFun
---- @param prompt string
---- @param grep_opts QfRancherGrepOpts
---- @param sys_opts QfRancherSystemOpts
+--- @param grep_info QfRancherGrepInfo
+--- @param input_opts QfRancherInputOpts
+--- @param output_opts QfRancherOutputOpts
 --- @return nil
-local function do_grep(grep_loc_fn, prompt, grep_opts, sys_opts)
-    local ok, grep_location = grep_loc_fn() --- @type boolean, string[]|[string,string]
-    if not ok then
-        --- @type [string,string]
-        local err_chunk = grep_location or { "Unknown error getting grep location", "ErrorMsg" }
-        vim.api.nvim_echo({ err_chunk }, true, { err = true })
+local function clean_do_grep_input(grep_info, system_opts, input_opts, output_opts)
+    vim.validate("grep_info", grep_info, "table")
+    vim.validate("grep_info.location_func", grep_info.location_func, "callable")
+
+    vim.validate("system_opts", system_opts, function()
+        return require("mjm.error-list-system").validate_system_opts(system_opts)
+    end)
+
+    local eu = require("mjm.error-list-util")
+    eu.validate_input_opts(input_opts)
+    eu.validate_output_opts(output_opts)
+end
+
+--- @param grep_info QfRancherGrepInfo
+--- @param input_opts QfRancherInputOpts
+--- @param output_opts QfRancherOutputOpts
+--- @return nil
+function M._do_grep(grep_info, system_opts, input_opts, output_opts)
+    clean_do_grep_input(grep_info, system_opts, input_opts, output_opts)
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
+    if not eu.check_loclist_output(output_opts) then
         return
     end
 
-    --- @type boolean, QfRancherSystemIn|nil
-    local ok_s, system_in = get_grep_parts(grep_location, prompt, grep_opts)
-    if ok_s and system_in then
-        require("mjm.error-list-system").qf_sys_wrap(system_in, sys_opts)
+    local locations = grep_info.location_func() --- @type string[]
+    if #locations < 1 then
+        return
     end
+
+    local input_type = eu.resolve_input_type(input_opts.input_type) --- @type QfRancherInputType
+    local prompt = get_prompt(grep_info, input_type)
+    local pattern = eu.resolve_pattern(prompt, input_opts) --- @type string|nil
+    if not pattern then
+        return
+    end
+
+    local grep_parts_opts = { pattern = pattern, input_type = input_type, locations = locations }
+    local grep_parts = get_grep_parts(grep_parts_opts) --- @type string[]
+    if #grep_parts < 1 then
+        return
+    end
+
+    system_opts.cmd_parts = grep_parts
+    local title_parts = get_grep_parts({ base_only = true })
+    output_opts.title = table.concat(title_parts, " ")
+    -- TODO: A bit of an oddity because it can also be set in output_opts. So in a sense we're
+    -- creating a mandatory overwrite. ANtipattern
+    output_opts.list_item_type = grep_info.list_item_type
+
+    require("mjm.error-list-system").system_do(system_opts, output_opts)
+
+    -- TODO: I could be mis-understanding, but I think we have what we need to go to system now
+    -- And I do want to rewrite it from scratch for two reasons. The first is that the conditions
+    -- that allowed this to be successful should also exist there.
+    -- The second relates to the list type issue specifically. It's an incredibly awkward thing
+    -- to deal with and I don't want to have to deal with old assumptions
+    -- The third is that trying to sort of shuffle everything to the new API I think will be hard
 end
 
----------------------
---- Grep Commands ---
----------------------
+------------------
+--- API Pieces ---
+------------------
 
---- @type QfRancherGrepLocFun
-local function get_cwd_tbl()
-    return true, { vim.fn.getcwd() }
+--- @type QfRancherGrepLocFunc
+local function get_cwd()
+    return { vim.fn.getcwd() }
 end
 
-function M.grep_cwd(grep_opts, sys_opts)
-    grep_opts = grep_opts or {}
-    sys_opts = sys_opts or {}
-    local prompt = (function()
-        if not grep_opts.literal then
-            return "CWD Grep (regex): "
-        elseif grep_opts.literal and grep_opts.smart_case then
-            return "CWD Grep: "
-        else
-            return "CWD Grep (case sensitive): "
-        end
-    end)()
-
-    do_grep(get_cwd_tbl, prompt, grep_opts or {}, sys_opts or {})
-end
-
---- @type QfRancherGrepLocFun
-local function get_helpdirs()
+--- @type QfRancherGrepLocFunc
+local function get_help_dirs()
     local doc_files = vim.api.nvim_get_runtime_file("doc/*.txt", true) --- @type string[]
     if #doc_files == 0 then
-        local chunk = { "No doc files found", "ErrorMsg" } --- @type [string,string]
-        return false, chunk
+        vim.api.nvim_echo({ { "No doc files found", "ErrorMsg" } }, true, { err = true })
     end
 
-    return true, doc_files
+    return doc_files
 end
 
-function M.grep_help(grep_opts, sys_opts)
-    grep_opts = grep_opts or {}
-    sys_opts = sys_opts or {}
-    local prompt = (function()
-        if not grep_opts.literal then
-            return "Help Grep (regex): "
-        elseif grep_opts.literal and grep_opts.smart_case then
-            return "Help Grep: "
-        else
-            return "Help Grep (case sensitive): "
-        end
-    end)()
-
-    do_grep(get_helpdirs, prompt, grep_opts or {}, sys_opts or {})
-end
-
---- @type QfRancherGrepLocFun
+--- @type QfRancherGrepLocFunc
 local function get_buflist()
-    local bufs = vim.api.nvim_list_bufs() --- @type integer[]
+    local bufnrs = vim.api.nvim_list_bufs() --- @type integer[]
     local fnames = {} --- @type string[]
-    for _, buf in pairs(bufs) do
+
+    for _, buf in pairs(bufnrs) do
         --- @type boolean
         local buflisted = vim.api.nvim_get_option_value("buflisted", { buf = buf })
         local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf }) --- @type string
         local fname = vim.api.nvim_buf_get_name(buf) --- @type string
         local readable = vim.fn.filereadable(fname) == 1 --- @type boolean
+
         if buflisted and buftype == "" and readable then
             table.insert(fnames, fname)
         end
     end
 
     if #fnames == 0 then
-        local chunk = { "No valid bufs found", "ErrorMsg" } --- @type [string,string]
-        return false, chunk
+        vim.api.nvim_echo({ { "No valid bufs found", "ErrorMsg" } }, true, { err = true })
     end
 
-    return true, fnames
+    return fnames
 end
 
-function M.grep_bufs(grep_opts, sys_opts)
-    grep_opts = grep_opts or {}
-    sys_opts = sys_opts or {}
-    local prompt = (function()
-        if not grep_opts.literal then
-            return "Buf Grep (regex): "
-        elseif grep_opts.literal and grep_opts.smart_case then
-            return "Buf Grep: "
-        else
-            return "Buf Grep (case sensitive): "
-        end
-    end)()
-
-    do_grep(get_buflist, prompt, grep_opts or {}, sys_opts or {})
-end
-
---- @type QfRancherGrepLocFun
+--- @type QfRancherGrepLocFunc
 local function get_cur_buf()
     local buf = vim.api.nvim_get_current_buf() --- @type integer
 
     local buflisted = vim.api.nvim_get_option_value("buflisted", { buf = buf }) --- @type boolean
+    if not buflisted then
+        vim.api.nvim_echo({ { "Cur buf is not listed", "ErrorMsg" } }, true, { err = true })
+        return {}
+    end
 
     local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf }) --- @type string
     local good_buftype = buftype == "" or buftype == "help" --- @type boolean
-
-    local fname = vim.api.nvim_buf_get_name(buf) --- @type string
-    local readable = vim.fn.filereadable(fname) == 1 --- @type boolean
-    local good_file = fname ~= "" and readable --- @type boolean
-
-    if not (buflisted and good_buftype and good_file) then
-        --- @type [string,string]
-        local chunk = { "Current buffer is not a valid file", "ErrorMsg" }
-        return false, chunk
+    if not good_buftype then
+        local chunk = { "Buftype " .. buftype .. " is not valid", "ErrorMsg" }
+        vim.api.nvim_echo({ chunk }, true, { err = true })
+        return {}
     end
 
-    return true, { fname }
+    local fname = vim.api.nvim_buf_get_name(buf) --- @type string
+    --- Given that vim.fn.filereadable already goes right to the uv loop to check the file system,
+    --- I'm not sure what advantage manually rolling with vim.system would give me
+    local readable = vim.fn.filereadable(fname) == 1 --- @type boolean
+    local good_file = fname ~= "" and readable --- @type boolean
+    if buflisted and good_buftype and good_file then
+        return { fname }
+    else
+        --- @type [string,string]
+        local chunk = { "Current buffer is not a valid file", "ErrorMsg" }
+        vim.api.nvim_echo({ chunk }, true, { err = true })
+        return {}
+    end
 end
 
-function M.grep_cbuf(grep_opts, sys_opts)
-    grep_opts = grep_opts or {}
-    sys_opts = sys_opts or {}
-    local prompt = (function()
-        if not grep_opts.literal then
-            return "Current Buf Grep (regex): "
-        elseif grep_opts.literal and grep_opts.smart_case then
-            return "Current Buf Grep: "
-        else
-            return "Current Buf Grep (case sensitive): "
-        end
-    end)()
+local greps = {
+    cwd = { name = "CWD", list_item_type = nil, location_func = get_cwd },
+    help = { name = "Help", list_item_type = "\1", location_func = get_help_dirs },
+    bufs = { name = "Buf", list_item_type = nil, location_func = get_buflist },
+    cbuf = { name = "Cur Buf", list_item_type = nil, location_func = get_cur_buf },
+} --- @type QfRancherGrepInfo[]
 
-    do_grep(get_cur_buf, prompt, grep_opts or {}, sys_opts or {})
+--- @param name string
+--- @param system_opts QfRancherSystemOpts
+--- @param input_opts QfRancherInputOpts
+--- @param output_opts QfRancherOutputOpts
+--- @return nil
+function M.grep(name, system_opts, input_opts, output_opts)
+    local grep_info = greps[name]
+    if not grep_info then
+        return
+    end
+
+    M._do_grep(grep_info, system_opts, input_opts, output_opts)
 end
 
 return M
+
+----------------
+
+--------------
+--- # TODO ---
+--------------
+
+--- Global checklist:
+--- - Check that all functions have reasonable default sorts
+--- - Check that window height updates are triggered where appropriate
+--- - Check that functions have proper visibility
+--- - Check that all mappings have plugs and cmds
+--- - Check that all maps/cmds/plugs have desc fieldss
+--- - Check that all functions have annotations and documentation
+--- - Check that loclist functions are appropriate (ex: all bufs vs. cbuf)
+---
+--- - It should be possible to setup and register your own grep sources. This would be helpful
+--- for people who want to use more niche programs, and it would make it easier for users to test
+--- and then send in PRs for programs like findstr and ack that I would like to support but
+--- don't really mean a means to. Note here that it's actually important then that the source
+--- to use is controlled from the g-var, because it keeps the logic dis-entangled from which
+--- source you're grepping from
+
+-------------
+--- # MID ---
+-------------
+
+--- Support ack. I think it's on Linux. Given that vim-ack is a kind of anscestor of the mappings
+---     in the ftplugin, it feels disrespectful not to include it
+
+-------------
+--- # LOW ---
+-------------
+
+--- Filesystem grep
+--- Use globbing for locations instead of passing potentially triple digit amounts of arguments
+--- Could look at vim-grepper to see how it supports certain grepprgs
+--- Cache the executable status of the grepprg. Issues:
+--- - relative to how little time this check takes to run, a lot of state to keep track of
+--- - how do you trigger re-checks?
+--- - If you have a good status, under what circumstances might it fail? How do you check it to
+---     a bad status
+
+-----------------------
+--- # DOCUMENTATION ---
+-----------------------
+
+--- Only rg and grep are currently supported
+--- - I am not in Windows so I cannot test findstr
+--- - Ack should be on the roadmap
+--- - I am open to PRs on this
+--- It is intended behavior that cbuf grep can work on help files, but all bufs will not pull from
+---     help files

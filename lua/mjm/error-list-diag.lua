@@ -81,7 +81,13 @@ local function diags_to_list(opts)
 
     local converted_diags = vim.tbl_map(convert_diag, raw_diags) ---@type table[]
     local eu = require("mjm.error-list-util")
-    local getlist = eu.get_getlist({ win = cur_win, is_loclist = opts.is_loclist })
+    -- TODO: This should use the output opts convention
+    -- TODO: Because of nil, run earlier
+    local getlist = eu.get_getlist({ loclist_source_win = cur_win, is_loclist = opts.is_loclist })
+    if not getlist then
+        return
+    end
+
     opts.set_action = opts.set_action or "new"
     local list_nr = eu.get_list_nr(getlist, opts.set_action)
     if opts.set_action == "add" then
@@ -90,7 +96,13 @@ local function diags_to_list(opts)
     end
 
     table.sort(converted_diags, require("mjm.error-list-sort").sort_fname_severity_desc)
-    local setlist = eu.get_setlist(opts.is_loclist, cur_win)
+    -- TODO: This should use the output opts convention
+    local setlist = eu.get_setlist({ loclist_source_win = cur_win, is_loclist = opts.is_loclist })
+    -- TODO: Because of nil, needs to be handled earlier
+    if not setlist then
+        return
+    end
+
     local is_replace = opts.set_action == "add" or opts.set_action == "overwrite"
     local action = is_replace and "r" or " "
     local title = "vim.diagnostic.get()"

@@ -473,6 +473,7 @@ local function map_on_bufreadpre()
     Map("n", "<M-s>", ":'<,'>s/\\%V")
     Map("x", "<M-s>", ":s/\\%V")
 
+    -- TODO: Make a map of this in visual mode that uses the same syntax but without %
     -- Credit ThePrimeagen
     Map("n", "g%", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
 

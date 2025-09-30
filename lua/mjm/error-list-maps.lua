@@ -9,6 +9,19 @@
 local actions = { "new", "replace", "add" }
 local default_action = "new"
 
+local sys_async = { async = true, timeout = 4000 } --- @type QfRancherSystemOpts
+
+local in_vimsmart = { input_type = "vimsmart" } --- @type QfRancherInputOpts
+local in_sensitive = { input_type = "sensitive" } --- @type QfRancherInputOpts
+local in_regex = { input_type = "regex" } --- @type QfRancherInputOpts
+
+local qflist_new = { is_loclist = false, action = "new" } --- @type QfRancherOutputOpts
+local qflist_replace = { is_loclist = false, action = "replace" } --- @type QfRancherOutputOpts
+local qflist_add = { is_loclist = false, action = "add" } --- @type QfRancherOutputOpts
+local llist_new = { is_loclist = true, action = "new" } --- @type QfRancherOutputOpts
+local llist_replace = { is_loclist = true, action = "replace" } --- @type QfRancherOutputOpts
+local llist_add = { is_loclist = true, action = "add" } --- @type QfRancherOutputOpts
+
 -------------------
 --- System Opts ---
 -------------------
@@ -332,65 +345,65 @@ local rancher_keymaps = {
     { nx, "<nop>", "<leader>l<c-g>", "Avoid falling back to defaults", nil },
 
     -- TODO: Might be able to move the prefixes back to char literals, but wait until Grep API is final
-    { nx, pqfr.."-grep-n-cwd)",    qp.."gd",         "Qgrep cwd, new"..sc,           function() eg.grep_cwd(grep_smart_case, sys_new) end },
-    { nx, pqfr.."-grep-r-cwd)",    qp.."Gd",         "Qgrep cwd, replace"..sc,       function() eg.grep_cwd(grep_smart_case, sys_replace) end },
-    { nx, pqfr.."-grep-a-cwd)",    qp.."<C-g>d",     "Qgrep cwd, add"..sc,           function() eg.grep_cwd(grep_smart_case, sys_add) end },
-    { nx, pqfr.."-grep-n-CWD)",    qp.."gD",         "Qgrep cwd, new"..cs,           function() eg.grep_cwd(grep_case_sensitive, sys_new) end },
-    { nx, pqfr.."-grep-r-CWD)",    qp.."GD",         "Qgrep cwd, replace"..cs,       function() eg.grep_cwd(grep_case_sensitive, sys_replace) end },
-    { nx, pqfr.."-grep-a-CWD)",    qp.."<C-g>D",     "Qgrep cwd, add"..cs,           function() eg.grep_cwd(grep_case_sensitive, sys_add) end },
-    { nx, pqfr.."-grep-n-cwdX)",   qp.."g<C-d>",     "Qgrep cwd, new"..rx,           function() eg.grep_cwd({}, sys_new) end },
-    { nx, pqfr.."-grep-r-cwdX)",   qp.."G<C-d>",     "Qgrep cwd, replace"..rx,       function() eg.grep_cwd({}, sys_replace) end },
-    { nx, pqfr.."-grep-a-cwdX)",   qp.."<C-g><C-d>", "Qgrep cwd, add"..rx,           function() eg.grep_cwd({}, sys_add) end },
+    { nx, pqfr.."-grep-n-cwd)",    qp.."gd",         "Qgrep cwd, new"..sc,           function() eg.grep("cwd", sys_async, in_vimsmart, qflist_new) end },
+    { nx, pqfr.."-grep-r-cwd)",    qp.."Gd",         "Qgrep cwd, replace"..sc,       function() eg.grep("cwd", sys_async, in_vimsmart, qflist_replace) end },
+    { nx, pqfr.."-grep-a-cwd)",    qp.."<C-g>d",     "Qgrep cwd, add"..sc,           function() eg.grep("cwd", sys_async, in_vimsmart, qflist_add) end },
+    { nx, pqfr.."-grep-n-CWD)",    qp.."gD",         "Qgrep cwd, new"..cs,           function() eg.grep("cwd", sys_async, in_sensitive, qflist_new) end },
+    { nx, pqfr.."-grep-r-CWD)",    qp.."GD",         "Qgrep cwd, replace"..cs,       function() eg.grep("cwd", sys_async, in_sensitive, qflist_replace) end },
+    { nx, pqfr.."-grep-a-CWD)",    qp.."<C-g>D",     "Qgrep cwd, add"..cs,           function() eg.grep("cwd", sys_async, in_sensitive, qflist_add) end },
+    { nx, pqfr.."-grep-n-cwdX)",   qp.."g<C-d>",     "Qgrep cwd, new"..rx,           function() eg.grep("cwd", sys_async, in_regex, qflist_new) end },
+    { nx, pqfr.."-grep-r-cwdX)",   qp.."G<C-d>",     "Qgrep cwd, replace"..rx,       function() eg.grep("cwd", sys_async, in_regex, qflist_replace) end },
+    { nx, pqfr.."-grep-a-cwdX)",   qp.."<C-g><C-d>", "Qgrep cwd, add"..rx,           function() eg.grep("cwd", sys_async, in_regex, qflist_add) end },
 
-    { nx, pqfr.."-lgrep-n-cwd)",   lp.."gd",         "Lgrep cwd, new"..sc,           function() eg.grep_cwd(grep_smart_case, sys_lnew) end },
-    { nx, pqfr.."-lgrep-r-cwd)",   lp.."Gd",         "Lgrep cwd, replace"..sc,       function() eg.grep_cwd(grep_smart_case, sys_lreplace) end },
-    { nx, pqfr.."-lgrep-a-cwd)",   lp.."<C-g>d",     "Lgrep cwd, add"..sc,           function() eg.grep_cwd(grep_smart_case, sys_ladd) end },
-    { nx, pqfr.."-lgrep-n-CWD)",   lp.."gD",         "Lgrep cwd, new"..cs,           function() eg.grep_cwd(grep_case_sensitive, sys_lnew) end },
-    { nx, pqfr.."-lgrep-r-CWD)",   lp.."GD",         "Lgrep cwd, replace"..cs,       function() eg.grep_cwd(grep_case_sensitive, sys_lreplace) end },
-    { nx, pqfr.."-lgrep-a-CWD)",   lp.."<C-g>D",     "Lgrep cwd, add"..cs,           function() eg.grep_cwd(grep_case_sensitive, sys_ladd) end },
-    { nx, pqfr.."-lgrep-n-cwdX)",  lp.."g<C-d>",     "Lgrep cwd, new"..rx,           function() eg.grep_cwd({}, sys_lnew) end },
-    { nx, pqfr.."-lgrep-r-cwdX)",  lp.."G<C-d>",     "Lgrep cwd, replace"..rx,       function() eg.grep_cwd({}, sys_lreplace) end },
-    { nx, pqfr.."-lgrep-a-cwdX)",  lp.."<C-g><C-d>", "Lgrep cwd, add"..rx,           function() eg.grep_cwd({}, sys_ladd) end },
+    { nx, pqfr.."-lgrep-n-cwd)",   lp.."gd",         "Lgrep cwd, new"..sc,           function() eg.grep("cwd", sys_async, in_vimsmart, llist_new) end },
+    { nx, pqfr.."-lgrep-r-cwd)",   lp.."Gd",         "Lgrep cwd, replace"..sc,       function() eg.grep("cwd", sys_async, in_vimsmart, llist_replace) end },
+    { nx, pqfr.."-lgrep-a-cwd)",   lp.."<C-g>d",     "Lgrep cwd, add"..sc,           function() eg.grep("cwd", sys_async, in_vimsmart, llist_add) end },
+    { nx, pqfr.."-lgrep-n-CWD)",   lp.."gD",         "Lgrep cwd, new"..cs,           function() eg.grep("cwd", sys_async, in_sensitive, llist_new) end },
+    { nx, pqfr.."-lgrep-r-CWD)",   lp.."GD",         "Lgrep cwd, replace"..cs,       function() eg.grep("cwd", sys_async, in_sensitive, llist_replace) end },
+    { nx, pqfr.."-lgrep-a-CWD)",   lp.."<C-g>D",     "Lgrep cwd, add"..cs,           function() eg.grep("cwd", sys_async, in_sensitive, llist_add) end },
+    { nx, pqfr.."-lgrep-n-cwdX)",  lp.."g<C-d>",     "Lgrep cwd, new"..rx,           function() eg.grep("cwd", sys_async, in_regex, llist_new) end },
+    { nx, pqfr.."-lgrep-r-cwdX)",  lp.."G<C-d>",     "Lgrep cwd, replace"..rx,       function() eg.grep("cwd", sys_async, in_regex, llist_replace) end },
+    { nx, pqfr.."-lgrep-a-cwdX)",  lp.."<C-g><C-d>", "Lgrep cwd, add"..rx,           function() eg.grep("cwd", sys_async, in_regex, llist_add) end },
 
-    { nx, pqfr.."-grep-n-help)",   qp.."gh",         "Qgrep docs, new"..sc,          function() eg.grep_help(grep_smart_case, sys_help_new) end },
-    { nx, pqfr.."-grep-r-help)",   qp.."Gh",         "Qgrep docs, replace"..sc,      function() eg.grep_help(grep_smart_case, sys_help_replace) end },
-    { nx, pqfr.."-grep-a-help)",   qp.."<C-g>h",     "Qgrep docs, add"..sc,          function() eg.grep_help(grep_smart_case, sys_help_add) end },
-    { nx, pqfr.."-grep-n-HELP)",   qp.."gH",         "Qgrep docs, new"..cs,          function() eg.grep_help(grep_case_sensitive, sys_help_new) end },
-    { nx, pqfr.."-grep-r-HELP)",   qp.."GH",         "Qgrep docs, replace"..cs,      function() eg.grep_help(grep_case_sensitive, sys_help_replace) end },
-    { nx, pqfr.."-grep-a-HELP)",   qp.."<C-g>H",     "Qgrep docs, add"..cs,          function() eg.grep_help(grep_case_sensitive, sys_help_add) end },
-    { nx, pqfr.."-grep-n-helpX)",  qp.."g<C-h>",     "Qgrep docs, new"..rx,          function() eg.grep_help({}, sys_help_new) end },
-    { nx, pqfr.."-grep-r-helpX)",  qp.."G<C-h>",     "Qgrep docs, replace"..rx,      function() eg.grep_help({}, sys_help_replace) end },
-    { nx, pqfr.."-grep-a-helpX)",  qp.."<C-g><C-h>", "Qgrep docs, add"..rx,          function() eg.grep_help({}, sys_help_add) end },
+    { nx, pqfr.."-grep-n-help)",   qp.."gh",         "Qgrep docs, new"..sc,          function() eg.grep("help", sys_async, in_vimsmart, sys_help_new) end },
+    { nx, pqfr.."-grep-r-help)",   qp.."Gh",         "Qgrep docs, replace"..sc,      function() eg.grep("help", sys_async, in_vimsmart, sys_help_replace) end },
+    { nx, pqfr.."-grep-a-help)",   qp.."<C-g>h",     "Qgrep docs, add"..sc,          function() eg.grep("help", sys_async, in_vimsmart, sys_help_add) end },
+    { nx, pqfr.."-grep-n-HELP)",   qp.."gH",         "Qgrep docs, new"..cs,          function() eg.grep("help", sys_async, in_sensitive, sys_help_new) end },
+    { nx, pqfr.."-grep-r-HELP)",   qp.."GH",         "Qgrep docs, replace"..cs,      function() eg.grep("help", sys_async, in_sensitive, sys_help_replace) end },
+    { nx, pqfr.."-grep-a-HELP)",   qp.."<C-g>H",     "Qgrep docs, add"..cs,          function() eg.grep("help", sys_async, in_sensitive, sys_help_add) end },
+    { nx, pqfr.."-grep-n-helpX)",  qp.."g<C-h>",     "Qgrep docs, new"..rx,          function() eg.grep("help", sys_async, in_regex, sys_help_new) end },
+    { nx, pqfr.."-grep-r-helpX)",  qp.."G<C-h>",     "Qgrep docs, replace"..rx,      function() eg.grep("help", sys_async, in_regex, sys_help_replace) end },
+    { nx, pqfr.."-grep-a-helpX)",  qp.."<C-g><C-h>", "Qgrep docs, add"..rx,          function() eg.grep("help", sys_async, in_regex, sys_help_add) end },
 
-    { nx, pqfr.."-lgrep-n-help)",  lp.."gh",         "Lgrep docs, new"..sc,          function() eg.grep_help(grep_smart_case, sys_help_lnew) end },
-    { nx, pqfr.."-lgrep-r-help)",  lp.."Gh",         "Lgrep docs, replace"..sc,      function() eg.grep_help(grep_smart_case, sys_help_lreplace) end },
-    { nx, pqfr.."-lgrep-a-help)",  lp.."<C-g>h",     "Lgrep docs, add"..sc,          function() eg.grep_help(grep_smart_case, sys_help_ladd) end },
-    { nx, pqfr.."-lgrep-n-HELP)",  lp.."gH",         "Lgrep docs, new"..cs,          function() eg.grep_help(grep_case_sensitive, sys_help_lnew) end },
-    { nx, pqfr.."-lgrep-r-HELP)",  lp.."GH",         "Lgrep docs, replace"..cs,      function() eg.grep_help(grep_case_sensitive, sys_help_lreplace) end },
-    { nx, pqfr.."-lgrep-a-HELP)",  lp.."<C-g>H",     "Lgrep docs, add"..cs,          function() eg.grep_help(grep_case_sensitive, sys_help_ladd) end },
-    { nx, pqfr.."-lgrep-n-helpX)", lp.."g<C-h>",     "Lgrep docs, new"..rx,          function() eg.grep_help({}, sys_help_lnew) end },
-    { nx, pqfr.."-lgrep-r-helpX)", lp.."G<C-h>",     "Lgrep docs, replace"..rx,      function() eg.grep_help({}, sys_help_lreplace) end },
-    { nx, pqfr.."-lgrep-a-helpX)", lp.."<C-g><C-h>", "Lgrep docs, add"..rx,          function() eg.grep_help(grep_smart_case, sys_help_ladd) end },
+    { nx, pqfr.."-lgrep-n-help)",  lp.."gh",         "Lgrep docs, new"..sc,          function() eg.grep("help", sys_async, in_vimsmart, sys_help_lnew) end },
+    { nx, pqfr.."-lgrep-r-help)",  lp.."Gh",         "Lgrep docs, replace"..sc,      function() eg.grep("help", sys_async, in_vimsmart, sys_help_lreplace) end },
+    { nx, pqfr.."-lgrep-a-help)",  lp.."<C-g>h",     "Lgrep docs, add"..sc,          function() eg.grep("help", sys_async, in_vimsmart, sys_help_ladd) end },
+    { nx, pqfr.."-lgrep-n-HELP)",  lp.."gH",         "Lgrep docs, new"..cs,          function() eg.grep("help", sys_async, in_sensitive, sys_help_lnew) end },
+    { nx, pqfr.."-lgrep-r-HELP)",  lp.."GH",         "Lgrep docs, replace"..cs,      function() eg.grep("help", sys_async, in_sensitive, sys_help_lreplace) end },
+    { nx, pqfr.."-lgrep-a-HELP)",  lp.."<C-g>H",     "Lgrep docs, add"..cs,          function() eg.grep("help", sys_async, in_sensitive, sys_help_ladd) end },
+    { nx, pqfr.."-lgrep-n-helpX)", lp.."g<C-h>",     "Lgrep docs, new"..rx,          function() eg.grep("help", sys_async, in_regex, sys_help_lnew) end },
+    { nx, pqfr.."-lgrep-r-helpX)", lp.."G<C-h>",     "Lgrep docs, replace"..rx,      function() eg.grep("help", sys_async, in_regex, sys_help_lreplace) end },
+    { nx, pqfr.."-lgrep-a-helpX)", lp.."<C-g><C-h>", "Lgrep docs, add"..rx,          function() eg.grep("help", sys_async, in_vimsmart, sys_help_ladd) end },
 
-    { nx, pqfr.."-grep-n-bufs)",   qp.."gu",         "Qgrep open bufs, new"..sc,     function() eg.grep_bufs(grep_smart_case, sys_new) end },
-    { nx, pqfr.."-grep-r-bufs)",   qp.."Gu",         "Qgrep open bufs, replace"..sc, function() eg.grep_bufs(grep_smart_case, sys_replace) end },
-    { nx, pqfr.."-grep-a-bufs)",   qp.."<C-g>u",     "Qgrep open bufs, add"..sc,     function() eg.grep_bufs(grep_smart_case, sys_add) end },
-    { nx, pqfr.."-grep-n-BUFS)",   qp.."gU",         "Qgrep open bufs, new"..cs,     function() eg.grep_bufs(grep_case_sensitive, sys_new) end },
-    { nx, pqfr.."-grep-r-BUFS)",   qp.."GU",         "Qgrep open bufs, replace"..cs, function() eg.grep_bufs(grep_case_sensitive, sys_replace) end },
-    { nx, pqfr.."-grep-a-BUFS)",   qp.."<C-g>U",     "Qgrep open bufs, add"..cs,     function() eg.grep_bufs(grep_case_sensitive, sys_add) end },
-    { nx, pqfr.."-grep-n-bufsX)",  qp.."g<C-u>",     "Qgrep open bufs, new"..rx,     function() eg.grep_bufs({}, sys_new) end },
-    { nx, pqfr.."-grep-r-bufsX)",  qp.."G<C-u>",     "Qgrep open bufs, replace"..rx, function() eg.grep_bufs({}, sys_replace) end },
-    { nx, pqfr.."-grep-a-bufsX)",  qp.."<C-g><C-u>", "Qgrep open bufs, add"..rx,     function() eg.grep_bufs({}, sys_add) end },
+    { nx, pqfr.."-grep-n-bufs)",   qp.."gu",         "Qgrep open bufs, new"..sc,     function() eg.grep("bufs", sys_async, in_vimsmart, qflist_new) end },
+    { nx, pqfr.."-grep-r-bufs)",   qp.."Gu",         "Qgrep open bufs, replace"..sc, function() eg.grep("bufs", sys_async, in_vimsmart, qflist_replace) end },
+    { nx, pqfr.."-grep-a-bufs)",   qp.."<C-g>u",     "Qgrep open bufs, add"..sc,     function() eg.grep("bufs", sys_async, in_vimsmart, qflist_add) end },
+    { nx, pqfr.."-grep-n-BUFS)",   qp.."gU",         "Qgrep open bufs, new"..cs,     function() eg.grep("bufs", sys_async, in_sensitive, qflist_new) end },
+    { nx, pqfr.."-grep-r-BUFS)",   qp.."GU",         "Qgrep open bufs, replace"..cs, function() eg.grep("bufs", sys_async, in_sensitive, qflist_replace) end },
+    { nx, pqfr.."-grep-a-BUFS)",   qp.."<C-g>U",     "Qgrep open bufs, add"..cs,     function() eg.grep("bufs", sys_async, in_sensitive, qflist_add) end },
+    { nx, pqfr.."-grep-n-bufsX)",  qp.."g<C-u>",     "Qgrep open bufs, new"..rx,     function() eg.grep("bufs", sys_async, in_regex, qflist_new) end },
+    { nx, pqfr.."-grep-r-bufsX)",  qp.."G<C-u>",     "Qgrep open bufs, replace"..rx, function() eg.grep("bufs", sys_async, in_regex, qflist_replace) end },
+    { nx, pqfr.."-grep-a-bufsX)",  qp.."<C-g><C-u>", "Qgrep open bufs, add"..rx,     function() eg.grep("bufs", sys_async, in_regex, qflist_add) end },
 
-    { nx, pqfr.."-lgrep-n-cbuf)",  lp.."gu",         "Lgrep cur buf, new"..sc,       function() eg.grep_cbuf(grep_smart_case, sys_lnew) end },
-    { nx, pqfr.."-lgrep-r-cbuf)",  lp.."Gu",         "Lgrep cur buf, replace"..sc,   function() eg.grep_cbuf(grep_smart_case, sys_lreplace) end },
-    { nx, pqfr.."-lgrep-a-cbuf)",  lp.."<C-g>u",     "Lgrep cur buf, add"..sc,       function() eg.grep_cbuf(grep_smart_case, sys_ladd) end },
-    { nx, pqfr.."-lgrep-n-CBUF)",  lp.."gU",         "Lgrep cur buf, new"..cs,       function() eg.grep_cbuf(grep_case_sensitive, sys_lnew) end },
-    { nx, pqfr.."-lgrep-r-CBUF)",  lp.."GU",         "Lgrep cur buf, replace"..cs,   function() eg.grep_cbuf(grep_case_sensitive, sys_lreplace) end },
-    { nx, pqfr.."-lgrep-a-CBUF)",  lp.."<C-g>U",     "Lgrep cur buf, add"..cs,       function() eg.grep_cbuf(grep_case_sensitive, sys_ladd) end },
-    { nx, pqfr.."-lgrep-n-cbufX)", lp.."g<C-u>",     "Lgrep cur buf, new"..rx,       function() eg.grep_cbuf({}, sys_lnew) end },
-    { nx, pqfr.."-lgrep-r-cbufX)", lp.."G<C-u>",     "Lgrep cur buf, replace"..rx,   function() eg.grep_cbuf({}, sys_lreplace) end },
-    { nx, pqfr.."-lgrep-a-cbufX)", lp.."<C-g><C-u>", "Lgrep cur buf, add"..rx,       function() eg.grep_cbuf({}, sys_ladd) end },
+    { nx, pqfr.."-lgrep-n-cbuf)",  lp.."gu",         "Lgrep cur buf, new"..sc,       function() eg.grep("cbuf", sys_async, in_vimsmart, llist_new) end },
+    { nx, pqfr.."-lgrep-r-cbuf)",  lp.."Gu",         "Lgrep cur buf, replace"..sc,   function() eg.grep("cbuf", sys_async, in_vimsmart, llist_replace) end },
+    { nx, pqfr.."-lgrep-a-cbuf)",  lp.."<C-g>u",     "Lgrep cur buf, add"..sc,       function() eg.grep("cbuf", sys_async, in_vimsmart, llist_add) end },
+    { nx, pqfr.."-lgrep-n-CBUF)",  lp.."gU",         "Lgrep cur buf, new"..cs,       function() eg.grep("cbuf", sys_async, in_sensitive, llist_new) end },
+    { nx, pqfr.."-lgrep-r-CBUF)",  lp.."GU",         "Lgrep cur buf, replace"..cs,   function() eg.grep("cbuf", sys_async, in_sensitive, llist_replace) end },
+    { nx, pqfr.."-lgrep-a-CBUF)",  lp.."<C-g>U",     "Lgrep cur buf, add"..cs,       function() eg.grep("cbuf", sys_async, in_sensitive, llist_add) end },
+    { nx, pqfr.."-lgrep-n-cbufX)", lp.."g<C-u>",     "Lgrep cur buf, new"..rx,       function() eg.grep("cbuf", sys_async, in_regex, llist_new) end },
+    { nx, pqfr.."-lgrep-r-cbufX)", lp.."G<C-u>",     "Lgrep cur buf, replace"..rx,   function() eg.grep("cbuf", sys_async, in_regex, llist_replace) end },
+    { nx, pqfr.."-lgrep-a-cbufX)", lp.."<C-g><C-u>", "Lgrep cur buf, add"..rx,       function() eg.grep("cbuf", sys_async, in_regex, llist_add) end },
 
     -------------------------
     --- OPEN/CLOSE/RESIZE ---

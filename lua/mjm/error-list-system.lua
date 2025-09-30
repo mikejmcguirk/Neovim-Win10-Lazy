@@ -1,4 +1,123 @@
---- TODO:
+local M = {}
+
+-------------
+--- TYPES ---
+-------------
+
+--- @class QfRancherSystemOpts
+--- @field async? boolean
+--- @field cmd_parts? string[]
+--- @field timeout? integer
+
+-------------------
+--- MODULE INFO ---
+-------------------
+
+local default_async = true
+local default_timeout = 4000
+
+-----------------
+--- SYSTEM DO ---
+-----------------
+
+function M.validate_system_opts(system_opts)
+    system_opts = system_opts or {}
+    vim.validate("system_opts", system_opts, "table")
+
+    vim.validate("system_opts.cmd_parts", system_opts.cmd_parts, { "nil", "table" })
+    vim.validate("system_opts.async", system_opts.async, { "boolean", "nil" })
+    system_opts.async = system_opts.async == nil and default_async or system_opts.async
+    vim.validate("system_opts.timeout", system_opts.timeout, { "nil", "number" })
+    system_opts.timeout = system_opts.timeout == nil and default_timeout or system_opts.timeout
+
+    return true
+end
+
+local function validate_system_do(system_opts, output_opts)
+    system_opts = system_opts or {}
+    output_opts = output_opts or {}
+
+    local eu = require("mjm.error-list-util")
+
+    vim.validate("system_opts", system_opts, function()
+        return M.validate_system_opts()
+    end)
+
+    vim.validate("system_opts.cmd_parts", system_opts.cmd_parts, "table")
+    eu.check_str_list(system_opts.cmd_parts)
+
+    eu.validate_output_opts(output_opts)
+end
+
+--- @param obj vim.SystemCompleted
+--- @param output_opts QfRancherOutputOpts
+local function handle_output(obj, output_opts)
+    if obj.code ~= 0 then
+        local code = obj.code and "Exit code: " .. obj.code or ""
+        local err = (obj.stderr and #obj.stderr > 0) and "Error: " .. obj.stderr or ""
+        local msg = code .. " " .. err
+
+        vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+        return
+    end
+
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
+    if not eu.check_loclist_output(output_opts) then
+        return
+    end
+
+    local lines = vim.split(obj.stdout or "", "\n", { trimempty = true }) --- @type string[]
+    local qf_dict = vim.fn.getqflist({ lines = lines }) --- @type {items: table[]}
+    if output_opts.list_item_type then
+        for _, item in pairs(qf_dict.items) do
+            item.type = output_opts.list_item_type
+        end
+    end
+
+    if output_opts.action ~= "add" then
+        table.sort(qf_dict, require("mjm.error-list-sort")._sort_fname_asc)
+    end
+
+    eu.set_list_items({ new_items = qf_dict.items }, output_opts)
+
+    -- TODO: There should be an output opts function that handles opening the list afterwards
+    -- So like, see if it's open, maybe resize it, do history to move to the right one, and
+    -- so on. It's repeated logic that only needs to be written once
+    local elo = require("mjm.error-list-open")
+    if output_opts.is_loclist then
+        elo.open_loclist()
+    else
+        elo.open_qflist()
+    end
+end
+
+--- @param system_opts QfRancherSystemOpts
+--- @param output_opts QfRancherOutputOpts
+--- @return nil
+function M.system_do(system_opts, output_opts)
+    validate_system_do(system_opts, output_opts)
+
+    local vim_system_opts = { text = true, timeout = system_opts.timeout or default_timeout }
+    if system_opts.async then
+        vim.system(system_opts.cmd_parts, vim_system_opts, function(obj)
+            vim.schedule(function()
+                handle_output(obj, output_opts)
+            end)
+        end)
+    else
+        local obj = vim.system(system_opts.cmd_parts, vim_system_opts)
+            :wait(system_opts.timeout or default_timeout)
+        handle_output(obj, output_opts)
+    end
+end
+
+return M
+
+--------------
+--- # TODO ---
+--------------
+
+--- Global Checklist:
 --- - Check that all functions have reasonable default sorts
 --- - Check that window height updates are triggered where appropriate
 --- - Check that functions have proper visibility
@@ -7,204 +126,3 @@
 --- - Check that all functions have annotations and documentation
 --- - Check that the qf and loclist versions are both properly built for purpose. Should be able
 ---     to use the loclist function for buf/win specific info
-
-local M = {}
-
--------------
---- Types ---
--------------
-
---- @class QfRancherSystemIn
---- @field cmd_parts? string[]
---- @field title? string
-
---- @class QfRancherSystemOpts
---- @field async? boolean
---- @field loclist? boolean
---- @field add? boolean
---- @field replace? boolean
---- @field timeout? integer
---- @field type? string
-
-----------------------
---- System Helpers ---
-----------------------
-
-local function get_qf_key(entry)
-    local fname = entry.filename or ""
-    local lnum = tostring(entry.lnum or 0)
-    local col = tostring(entry.col or 0)
-    return fname .. ":" .. lnum .. ":" .. col
-end
-
-local function merge_qf_lists(a, b)
-    local merged = {}
-    local seen = {}
-
-    local x = #a > #b and a or b
-    local y = #a > #b and b or a
-
-    for _, entry in ipairs(x) do
-        local key = get_qf_key(entry)
-        seen[key] = true
-        table.insert(merged, entry)
-    end
-
-    for _, entry in ipairs(y) do
-        local key = get_qf_key(entry)
-        if not seen[key] then
-            seen[key] = true
-            table.insert(merged, entry)
-        end
-    end
-
-    return merged
-end
-
--- TODO: THere's a reference here to remove
---- @param win? integer
-local function get_getlist(win)
-    if not win then
-        return vim.fn.getqflist
-    end
-
-    return function(what)
-        if not what then
-            return vim.fn.getloclist(win)
-        end
-
-        return vim.fn.getloclist(win, what)
-    end
-end
-
-local function get_setlist(win)
-    if not win then
-        return vim.fn.setqflist
-    end
-
-    return function(dict, a, b)
-        local action, what
-        if type(a) == "table" then
-            action = ""
-            what = a
-        elseif type(a) == "string" and a ~= "" or a == "" then
-            action = a
-            what = b or {}
-        elseif a == nil then
-            action = ""
-            what = b or {}
-        else
-            error("Invalid action: must be a non-nil string")
-        end
-
-        vim.fn.setloclist(win, dict, action, what)
-    end
-end
-
---- @param getlist function
---- @param opts table
---- @return integer|string
-local function get_list_nr(getlist, opts)
-    opts = opts or {}
-
-    if vim.v.count < 1 then
-        if opts.overwrite or opts.add then
-            return getlist({ nr = 0 }).nr
-        else
-            return "$"
-        end
-    else
-        return math.min(vim.v.count, getlist({ nr = "$" }).nr)
-    end
-end
-
-----------------------
-----------------------
-
---- System Wrapper ---
---- @param system_in QfRancherSystemIn
---- @param opts QfRancherSystemOpts
---- @return nil
-function M.qf_sys_wrap(system_in, opts)
-    opts = opts or {}
-    local cur_win = opts.loclist and vim.api.nvim_get_current_win() or nil
-    local cur_wintype = cur_win and vim.fn.win_gettype(cur_win) or nil
-    if opts.loclist and cur_wintype == "quickfix" then
-        local chunk = { "Cannot create a loclist in a quickfix window", "" }
-        vim.api.nvim_echo({ chunk }, false, {})
-        return
-    end
-
-    local getlist = get_getlist(cur_win)
-    local list_nr = get_list_nr(getlist, opts) --- @type integer|string
-
-    local function handle_result(obj)
-        if obj.code ~= 0 then
-            local code = obj.code and "Exit code: " .. obj.code or ""
-            local err = (obj.stderr and #obj.stderr > 0) and "Error: " .. obj.stderr or ""
-            local msg = code .. " " .. err
-
-            vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
-            return
-        end
-
-        local lines = vim.split(obj.stdout or "", "\n", { trimempty = true })
-        local qf_dict = vim.fn.getqflist({ lines = lines })
-
-        if opts.type then
-            for _, item in pairs(qf_dict.items) do
-                item.type = opts.type
-            end
-        end
-
-        -- TODO: I have this copied over to the diags module as well
-        -- It seems like what we want is a separate bit of code in a utils module or something to
-        -- handle setting to the list. So you would want the formatted items, the list type,
-        -- the win number, and the action, and then that can be calculated
-        -- Especially relevant when you start dealing with cases like copies, or more complex
-        -- add logic into blanks
-        -- TODO: outline anyway, but also it should not be possible to both add and overwrite
-        -- though I'm not sure it hurts anything so iunno. Or maybe it should be an enum
-        if opts.add then
-            local cur_list = getlist({ nr = list_nr, items = true })
-            qf_dict.items = merge_qf_lists(cur_list.items, qf_dict.items)
-        end
-
-        table.sort(qf_dict.items, require("mjm.error-list-sort").sort_fname_asc)
-        local title = type(system_in.title) == "string" and system_in.title or ""
-        local setlist = get_setlist(cur_win)
-        local action = (opts.add or opts.replace) and "r" or " "
-        setlist({}, action, { items = qf_dict.items, nr = list_nr, title = title })
-
-        -- TODO: do a getopen thing here too
-        -- TODO: if either of these return false, do a resize instead
-        local elo = require("mjm.error-list-open")
-        if opts.loclist then
-            elo.open_loclist()
-        else
-            elo.open_qflist()
-        end
-
-        -- TODO: need a wrapper for these that resizes
-        if opts.replace or opts.add then
-            if opts.loclist then
-                vim.cmd(list_nr .. "lhistory")
-            else
-                vim.cmd(list_nr .. "chistory")
-            end
-        end
-    end
-
-    if opts.async then
-        vim.system(system_in.cmd_parts, { text = true }, function(obj)
-            vim.schedule(function()
-                handle_result(obj)
-            end)
-        end)
-    else
-        local obj = vim.system(system_in.cmd_parts, { text = true }):wait(opts.timeout or 2000)
-        handle_result(obj)
-    end
-end
-
-return M

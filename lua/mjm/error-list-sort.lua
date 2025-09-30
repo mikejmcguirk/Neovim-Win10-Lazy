@@ -58,20 +58,8 @@ local function clean_wrapper_input(sort_info, sort_opts, output_opts)
         sort_opts.dir = "asc"
     end
 
-    vim.validate("output_opts", output_opts, "table")
-    vim.validate("output_opts.is_loclist", output_opts.is_loclist, { "nil", "boolean" })
-    output_opts.is_loclist = output_opts.is_loclist == nil and false or output_opts.is_loclist
-    vim.validate("output_opts.action", output_opts.action, { "nil", "string" })
-    if type(output_opts.action) == "string" then
-        vim.validate("action", output_opts.action, function()
-            return require("mjm.error-list-util").validate_action(output_opts.action)
-        end)
-    else
-        output_opts.action = "new" --- Cfilter default
-    end
-
-    vim.validate("output_opts.count", output_opts.count, { "nil", "number" })
-    output_opts.count = output_opts.count or 0
+    local eu = require("mjm.error-list-util")
+    eu.validate_output_opts(output_opts)
 end
 
 --- @param sort_info QfRancherSortInfo
@@ -82,13 +70,22 @@ function M._sort_wrapper(sort_info, sort_opts, output_opts)
     clean_wrapper_input(sort_info, sort_opts, output_opts)
 
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    local getlist = eu.get_getlist({ is_loclist = output_opts.is_loclist }) --- @type function
+    if not eu.check_loclist_output(output_opts) then
+        return
+    end
+
+    local getlist = eu.get_getlist(output_opts) --- @type function|nil
+    if not getlist then
+        return
+    end
+
     local cur_list = getlist({ all = true }) --- @type table
     if cur_list.size < 1 then
         vim.api.nvim_echo({ { "Not enough entries to sort", "" } }, false, {})
         return
     end
 
+    -- TODO: Reudandant var, but unsure of how to handle view check
     local dest_list_nr = eu.get_dest_list_nr(getlist, output_opts) --- @type integer
     local list_win = eu.find_list_win(output_opts.is_loclist) --- @type integer|nil
     local view = (list_win and dest_list_nr == cur_list.nr)
@@ -99,8 +96,15 @@ function M._sort_wrapper(sort_info, sort_opts, output_opts)
         or sort_info.desc_func
 
     table.sort(cur_list.items, predicate)
-    local setlist = eu.get_setlist(output_opts.is_loclist) --- @type function
-    eu.set_list_items(getlist, setlist, dest_list_nr, cur_list.items, output_opts.action, "Filter")
+    local setlist = eu.get_setlist(output_opts) --- @type function
+    -- TODO: Because of nil, handle earlier
+    if not setlist then
+        return
+    end
+
+    output_opts.title = cur_list.title
+    local set_list_opts = { getlist = getlist, setlist = setlist, new_items = cur_list.items }
+    eu.set_list_items(set_list_opts, output_opts)
 
     -- TODO: Test if this is actually necessary
     if list_win and view then
@@ -451,25 +455,28 @@ end
 --- Sort Info ---
 -----------------
 
+--- TODO: A couple situations out there that need these for merge/sort. Biggest one is set list
+--- items
+
 --- @type QfRancherSortPredicate
 --- Sort list items in ascending order by fname. Fall back to line/col info asc then type asc
-function M.sort_fname_asc(a, b)
+function M._sort_fname_asc(a, b)
     if (not a) or not b then
         return false
     end
 
-    local checked_fname = check_fname_asc(a, b)
+    local checked_fname = check_fname_asc(a, b) --- @type boolean|nil
     if type(checked_fname) == "boolean" then
         return checked_fname
     end
 
-    local checked_lcol_type = check_lcol_type_asc(a, b)
-    return checked_lcol_type == nil and false or checked_lcol_type
+    local checked_lcol_type = check_lcol_type_asc(a, b) --- @type boolean|nil
+    return type(checked_lcol_type) == "boolean" and checked_lcol_type or false
 end
 
 --- @type QfRancherSortPredicate
 --- Sort list items in descending order by fname. Fall back to line/col info asc then type asc
-function M.sort_fname_desc(a, b)
+function M._sort_fname_desc(a, b)
     if (not a) or not b then
         return false
     end
@@ -480,12 +487,12 @@ function M.sort_fname_desc(a, b)
     end
 
     local checked_lcol_type = check_lcol_type_asc(a, b)
-    return checked_lcol_type == nil and false or checked_lcol_type
+    return type(checked_lcol_type) == "boolean" and checked_lcol_type or false
 end
 
 --- @type QfRancherSortPredicate
 --- Sort list items in ascending order by type. Fall back to fname asc then line/col info asc
-function M.sort_type_asc(a, b)
+function M._sort_type_asc(a, b)
     if (not a) or not b then
         return false
     end
@@ -496,12 +503,12 @@ function M.sort_type_asc(a, b)
     end
 
     local checked_fname_lcol = check_fname_lcol_asc(a, b)
-    return checked_fname_lcol == nil and false or checked_fname_lcol
+    return type(checked_fname_lcol) == "boolean" and checked_fname_lcol or false
 end
 
 --- @type QfRancherSortPredicate
 --- Sort list items in descending order by type. Fall back to fname asc then line/col info asc
-function M.sort_type_desc(a, b)
+function M._sort_type_desc(a, b)
     if (not a) or not b then
         return false
     end
@@ -512,12 +519,12 @@ function M.sort_type_desc(a, b)
     end
 
     local checked_fname_lcol = check_fname_lcol_asc(a, b)
-    return checked_fname_lcol == nil and false or checked_fname_lcol
+    return type(checked_fname_lcol) == "boolean" and checked_fname_lcol or false
 end
 
 --- @type QfRancherSortPredicate
 --- Sort by diagnostic severity ascending. Fall back to fname asc, then line/col info asc
-function M.sort_severity_asc(a, b)
+function M._sort_severity_asc(a, b)
     if (not a) or not b then
         return false
     end
@@ -528,12 +535,13 @@ function M.sort_severity_asc(a, b)
     end
 
     local checked_fname_lcol = check_fname_lcol_asc(a, b)
-    return checked_fname_lcol == nil and false or checked_fname_lcol
+    checked_fname_lcol = checked_fname_lcol == nil and false or checked_fname_lcol
+    return type(checked_fname_lcol) == "boolean" and checked_fname_lcol or false
 end
 
 --- @type QfRancherSortPredicate
 --- Sort by diagnostic severity descending. Fall back to fname asc, then line/col info asc
-function M.sort_severity_desc(a, b)
+function M._sort_severity_desc(a, b)
     if (not a) or not b then
         return false
     end
@@ -544,12 +552,12 @@ function M.sort_severity_desc(a, b)
     end
 
     local checked_fname_lcol = check_fname_lcol_asc(a, b)
-    return checked_fname_lcol == nil and false or checked_fname_lcol
+    return type(checked_fname_lcol) == "boolean" and checked_fname_lcol or false
 end
 
 --- @type QfRancherSortPredicate
 --- Sort by fname ascending, falling back to line/col info asc then diagnostic severity asc
-function M.sort_fname_diag_asc(a, b)
+function M._sort_fname_diag_asc(a, b)
     if (not a) or not b then
         return false
     end
@@ -560,12 +568,12 @@ function M.sort_fname_diag_asc(a, b)
     end
 
     local checked_lcol_severity = check_lcol_severity_asc(a, b)
-    return checked_lcol_severity == nil and false or checked_lcol_severity
+    return type(checked_lcol_severity) == "boolean" and checked_lcol_severity or false
 end
 
 --- @type QfRancherSortPredicate
 --- Sort by fname descending, falling back to line/col info asc then diagnostic severity asc
-function M.sort_fname_diag_desc(a, b)
+function M._sort_fname_diag_desc(a, b)
     if (not a) or not b then
         return false
     end
@@ -576,17 +584,17 @@ function M.sort_fname_diag_desc(a, b)
     end
 
     local checked_lcol_severity = check_lcol_severity_asc(a, b)
-    return checked_lcol_severity == nil and false or checked_lcol_severity
+    return type(checked_lcol_severity) == "boolean" and checked_lcol_severity or false
 end
 
 local sorts = {
-    fname = { asc_func = M.sort_fname_asc, desc_func = M.sort_fname_desc }, --- f
+    fname = { asc_func = M._sort_fname_asc, desc_func = M._sort_fname_desc }, --- f
     fname_diag = {
-        asc_func = M.sort_fname_diag_asc,
-        desc_func = M.sort_fname_diag_desc,
+        asc_func = M._sort_fname_diag_asc,
+        desc_func = M._sort_fname_diag_desc,
     }, --- if
-    severity = { asc_func = M.sort_severity_asc, desc_func = M.sort_severity_desc }, --- is
-    type = { asc_func = M.sort_type_asc, desc_func = M.sort_type_desc }, --- t
+    severity = { asc_func = M._sort_severity_asc, desc_func = M._sort_severity_desc }, --- is
+    type = { asc_func = M._sort_type_asc, desc_func = M._sort_type_desc }, --- t
 } --- @type table<string, QfRancherSortInfo>
 
 function M.get_sort_names()

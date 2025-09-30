@@ -39,6 +39,7 @@ end
 --- @param filter_opts QfRancherFilterOpts
 --- @param input_type QfRancherInputType
 --- @return string|nil
+--- TODO: move this to the code in the util file
 local function get_pattern(pattern, filter_info, filter_opts, input_type)
     if pattern then
         return pattern
@@ -157,31 +158,9 @@ local function clean_wrapper_input(filter_info, filter_opts, input_opts, output_
     vim.validate("filter_opts.keep", filter_opts.keep, { "boolean", "nil" })
     filter_opts.keep = filter_opts.keep == nil and true or filter_opts.keep
 
-    vim.validate("input_opts", input_opts, "table")
-    vim.validate("input_opts.pattern", input_opts.pattern, { "nil", "string" })
-    vim.validate("input_opts.input_type", input_opts.input_type, { "nil", "string" })
-    if type(input_opts.input_type) == "string" then
-        vim.validate("input_opts.input_type", input_opts.input_type, function()
-            return require("mjm.error-list-util").validate_input_type(input_opts.input_type)
-        end)
-    else
-        input_opts.input_type = "vimsmart"
-    end
-
-    vim.validate("output_opts", output_opts, "table")
-    vim.validate("output_opts.is_loclist", output_opts.is_loclist, { "nil", "boolean" })
-    output_opts.is_loclist = output_opts.is_loclist == nil and false or output_opts.is_loclist
-    vim.validate("output_opts.action", output_opts.action, { "nil", "string" })
-    if type(output_opts.action) == "string" then
-        vim.validate("action", output_opts.action, function()
-            return require("mjm.error-list-util").validate_action(output_opts.action)
-        end)
-    else
-        output_opts.action = "new" --- Cfilter default
-    end
-
-    vim.validate("output_opts.count", output_opts.count, { "nil", "number" })
-    output_opts.count = output_opts.count or 0
+    local eu = require("mjm.error-list-util")
+    eu.validate_input_opts(input_opts)
+    eu.validate_output_opts(output_opts)
 end
 
 --- @param filter_info QfRancherFilterInfo
@@ -193,13 +172,27 @@ function M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
     clean_wrapper_input(filter_info, filter_opts, input_opts, output_opts)
 
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    local getlist = eu.get_getlist({ is_loclist = output_opts.is_loclist }) --- @type function
+    if not eu.check_loclist_output(output_opts) then
+        return
+    end
+
+    local getlist = eu.get_getlist(output_opts) --- @type function|nil
+    if not getlist then
+        return
+    end
+
     local cur_list = getlist({ all = true }) --- @type table
     if cur_list.size == 0 then
         vim.api.nvim_echo({ { "No entries to filter", "" } }, false, {})
         return
     end
 
+    -- TODO: Redundant with upated set_list_items, but unsure how to get rid of this because
+    -- it blocks the unnecessary saving of a view. But, since saving the view is the typical
+    -- case, maybe this isn't worth the check. The big issue anyway, AFAIK, is restoring the view
+    -- rather than saving it
+    -- TODO: This is a kind of slop that's starting to creep up in the code in general, where
+    -- vestigal pieces of data are accumulating. Clean these out
     local dest_list_nr = eu.get_dest_list_nr(getlist, output_opts) --- @type integer
     local list_win = eu.find_list_win(output_opts.is_loclist) --- @type integer|nil
     local view = (list_win and dest_list_nr == cur_list.nr)
@@ -219,8 +212,15 @@ function M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
     local new_items, view_rows_removed =
         iter_with_predicate(predicate, cur_list.items, pattern, filter_opts.keep, view_row, regex)
 
-    local setlist = eu.get_setlist(output_opts.is_loclist) --- @type function
-    eu.set_list_items(getlist, setlist, dest_list_nr, new_items, output_opts.action, "Filter")
+    --- @type function
+    local setlist = eu.get_setlist(output_opts)
+    -- TODO: Because of nil, need to handle earlier
+    if not setlist then
+        return
+    end
+
+    output_opts.title = "Filter" -- TODO: This can be improved
+    eu.set_list_items({ getlist = getlist, setlist = setlist, new_items = new_items }, output_opts)
 
     if list_win and view then
         view.topline = math.max(view.topline - view_rows_removed, 0)

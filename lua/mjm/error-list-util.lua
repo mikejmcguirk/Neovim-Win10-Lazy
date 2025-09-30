@@ -1,19 +1,7 @@
---- TODO:
---- - Check that all functions have reasonable default sorts
---- - Check that window height updates are triggered where appropriate
---- - Check that functions have proper visibility
---- - Check that all mappings have plugs and cmds
---- - Check that all maps/cmds/plugs have desc fieldss
---- - Check that all functions have annotations and documentation
---- - Check that the qf and loclist versions are both properly built for purpose. Should be able
----     to use the loclist function for buf/win specific info
-
 --- @class QfRancherUtils
 local M = {}
 
 --- @alias QfRancherSetlistAction "add"|"new"|"overwrite"
-
--- TODO: Replace the system functions with these
 
 -- TODO: Where possible, replace loclist finding functions throughout the plugin with the below
 
@@ -222,30 +210,69 @@ function M.get_listtype(win)
     return (wintype == "quickfix" or wintype == "loclist") and wintype or nil
 end
 
---- @param opts {is_loclist?:boolean, win?:integer}
---- @return fun(table):any|nil
+--- TODO: I like the source_win function being distinct from the check function because it
+--- separates the concern of checking the is_loclist var. Might be incorrect on this though
+--- TODO: What I'm less certain on - It makes sense to print the error here because we have the
+--- wintype, but this makes the function less generalizable. The kind of obvious solution is to
+--- add a suppress messages opt, but I'm not sure if that's best. Table until I see how this
+--- is used more
+
+--- @param win integer
+--- @return boolean
+function M.source_win_can_have_loclist(win)
+    vim.validate("win", win, "number")
+    vim.validate("win", win, function()
+        return vim.api.nvim_win_is_valid(win)
+    end)
+
+    local wintype = vim.fn.win_gettype(win) --- @type string
+    --- If you do getloclist or setloclist on either the source window or a window containing the
+    --- loclist buf, they will both write to the loclist, so both types are acceptable here
+    if wintype == "" or wintype == "loclist" then
+        return true
+    end
+
+    --- @type string
+    local text = "Window " .. win .. " with type " .. wintype .. " cannot contain a location list"
+    local chunk = { text } --- @type string[]
+    vim.api.nvim_echo({ chunk }, true, { err = true })
+    return false
+end
+
+--- @param output_opts QfRancherOutputOpts
+--- @return nil
+function M.check_loclist_output(output_opts)
+    if not output_opts.is_loclist then
+        return true
+    end
+
+    -- source_win_can_have_loclist will print the appropriate error
+    return M.source_win_can_have_loclist(output_opts.loclist_source_win)
+end
+
+--- @param output_opts QfRancherOutputOpts
+--- @return nil|fun(table):any|nil
 --- If no win is provided, the current win is used as a fallback
 --- If no get_loclist value is provided or it is false, getqflist is always returned
 --- If a win is provided but it cannot have a loclist, getqflist is returned
-function M.get_getlist(opts)
-    opts = opts or {}
-    vim.validate("opts.get_loclist", opts.is_loclist, { "boolean", "nil" })
-    vim.validate("opts.win", opts.win, { "nil", "number" })
-    if opts.win then
-        vim.validate("opts.win", opts.win, function()
-            return vim.api.nvim_win_is_valid(opts.win)
+--- TODO: Is it viable here to assertion fail on the can have loclist check? It does make this
+--- function less flexible
+--- TODO: Go through references to this function and verify they handle nils
+function M.get_getlist(output_opts)
+    output_opts = output_opts or {}
+    if vim.g.qf_rancher_debug_assertions then
+        vim.validate("output_opts", output_opts, function()
+            return M.validate_output_opts(output_opts)
         end)
     end
 
-    if not opts.is_loclist then
+    if not output_opts.is_loclist then
         return vim.fn.getqflist
     end
 
-    local win = opts.win or vim.api.nvim_get_current_win()
-    local wintype = vim.fn.win_gettype(win)
-    local can_have_loclist = wintype == "" or wintype == "loclist"
-    if not can_have_loclist then
-        return vim.fn.getqflist
+    local win = output_opts.loclist_source_win or vim.api.nvim_get_current_win()
+    if not M.source_win_can_have_loclist(win) then
+        return nil
     end
 
     return function(what)
@@ -256,6 +283,7 @@ end
 --- @param mode string
 --- @return boolean, string[]
 --- Assumes that it is being called in visual mode with a valid mode parameter
+--- TODO: Deprecate this function
 function M.get_visual_pattern(mode)
     local start_pos = vim.fn.getpos(".") --- @type Range4
     local end_pos = vim.fn.getpos("v") --- @type Range4
@@ -288,12 +316,102 @@ function M.get_visual_pattern(mode)
     return true, lines
 end
 
---- @param is_loclist? boolean
---- @param win? integer
---- If is_loclist is true and no win is provided, will default to current window
-function M.get_setlist(is_loclist, win)
-    if not is_loclist then
+--- @param prompt string
+--- @return string|nil
+function M.get_input(prompt)
+    vim.validate("prompt", prompt, "string")
+
+    local ok, pattern = pcall(vim.fn.input, { prompt = prompt, cancelreturn = "" })
+    if ok then
+        return pattern
+    end
+
+    if pattern == "Keyboard interrupt" then
+        return nil
+    end
+
+    local chunk = { (pattern or "Unknown error getting input"), "ErrorMsg" }
+    vim.api.nvim_echo({ chunk }, true, { err = true })
+    return nil
+end
+
+--- @param mode string
+--- @return string|nil
+--- Assumes that it is being called in visual mode with a valid mode parameter
+function M.get_visual_pattern_str(mode)
+    vim.validate("mode", mode, "string")
+    vim.validate("mode", mode, function()
+        return mode == "v" or mode == "V" or mode == "\22"
+    end)
+
+    local start_pos = vim.fn.getpos(".") --- @type Range4
+    local end_pos = vim.fn.getpos("v") --- @type Range4
+    local region = vim.fn.getregion(start_pos, end_pos, { type = mode }) --- @type string[]
+    if #region < 1 then
+        return nil
+    end
+
+    if #region == 1 then
+        local trimmed = region[1]:gsub("^%s*(.-)%s*$", "%1") --- @type string
+        if trimmed == "" then
+            vim.api.nvim_echo({ { "get_visual_pattern: Empty selection", "" } }, false, {})
+            return nil
+        end
+
+        return trimmed
+    end
+
+    for _, line in ipairs(region) do
+        if line ~= "" then
+            vim.api.nvim_cmd({ cmd = "normal", args = { "\27" }, bang = true }, {})
+            -- TODO: I don't know if this is the right way to handle the possibility of literal
+            -- and non- literal grep strings
+            return table.concat(region, "\n")
+        end
+    end
+
+    vim.api.nvim_echo({ { "get_visual_pattern: Empty selection", "" } }, false, {})
+    return nil
+end
+
+--- @param prompt string
+--- @param input_opts QfRancherInputOpts
+--- @return string|nil
+function M.resolve_pattern(prompt, input_opts)
+    vim.validate("prompt", prompt, "string")
+    vim.validate("input_opts", input_opts, "table")
+    vim.validate("input_opts.pattern", input_opts.pattern, { "nil", "string" })
+
+    if input_opts.pattern then
+        return input_opts.pattern
+    end
+
+    local mode = vim.fn.mode() --- @type string
+    local is_visual = mode == "v" or mode == "V" or mode == "\22" --- @type boolean
+    if is_visual then
+        return M.get_visual_pattern_str(mode)
+    end
+
+    return M.get_input(prompt)
+end
+
+--- @param output_opts QfRancherOutputOpts
+--- @return function|nil
+function M.get_setlist(output_opts)
+    output_opts = output_opts or {}
+    if vim.g.qf_rancher_debug_assertions then
+        vim.validate("output_opts", output_opts, function()
+            return M.validate_output_opts(output_opts)
+        end)
+    end
+
+    if not output_opts.is_loclist then
         return vim.fn.setqflist
+    end
+
+    local win = output_opts.loclist_source_win or vim.api.nvim_get_current_win()
+    if not M.source_win_can_have_loclist(win) then
+        return nil
     end
 
     return function(dict, a, b)
@@ -311,13 +429,13 @@ function M.get_setlist(is_loclist, win)
             error("Invalid action: must be a non-nil string")
         end
 
-        win = win or vim.api.nvim_get_current_win()
         vim.fn.setloclist(win, dict, action, what)
     end
 end
 
 -- TODO: For new lists, this should scan to see if there is an empty list available before the
 -- end
+-- TODO: I think this is outdated. Find where it's being used and remove
 --- @param getlist fun(integer, table)|fun(table)
 --- @param action string
 --- @return integer|string
@@ -399,20 +517,94 @@ function M.get_resizelist(is_loclist)
     end
 end
 
+--- @param table string[]
+--- @return nil
+--- TODO: There is a bespoke version of this out there somewhere
+function M.check_str_list(table)
+    if type(table) ~= "table" then
+        return false
+    end
+
+    assert(type(table) == "table", "List is not a table")
+    assert(#table > 0, "Table has no entries")
+
+    for k, v in ipairs(table) do
+        assert(type(k) == "number", "Key " .. vim.inspect(k) .. " is not a number")
+        assert(type(v) == "string", "Item " .. vim.inspect(v) .. " is not a string")
+    end
+end
+
 --- @param action QfRancherAction
 --- @return boolean
 function M.validate_action(action)
     return action == "new" or action == "replace" or action == "add"
 end
 
---- @param input QfRancherInputType
+--- @param input_type QfRancherInputType
 --- @return boolean
-function M.validate_input_type(input)
-    return input == "insensitive"
-        or input == "regex"
-        or input == "sensitive"
-        or input == "smart"
-        or input == "vimsmart"
+function M.validate_input_type(input_type)
+    vim.validate("input_type", input_type, "string")
+    return input_type == "insensitive"
+        or input_type == "regex"
+        or input_type == "sensitive"
+        or input_type == "smart"
+        or input_type == "vimsmart"
+end
+
+--- @param input_opts QfRancherInputOpts
+function M.validate_input_opts(input_opts)
+    vim.validate("input_opts", input_opts, "table")
+    -- Allow nil input patterns to pass through. Each function should resolve individually
+    vim.validate("input_opts.pattern", input_opts.pattern, { "nil", "string" })
+    -- Since input type never *should* be blank, fix nils here
+    vim.validate("input_opts.input_type", input_opts.input_type, { "nil", "string" })
+    if type(input_opts.input_type) == "string" then
+        vim.validate("input_opts.input_type", input_opts.input_type, function()
+            return require("mjm.error-list-util").validate_input_type(input_opts.input_type)
+        end)
+    else
+        input_opts.input_type = "vimsmart"
+    end
+end
+
+--- @param output_opts QfRancherOutputOpts
+function M.validate_output_opts(output_opts)
+    vim.validate("output_opts", output_opts, "table")
+
+    vim.validate("output_opts.is_loclist", output_opts.is_loclist, { "nil", "boolean" })
+    output_opts.is_loclist = output_opts.is_loclist == nil and false or output_opts.is_loclist
+    vim.validate(
+        "output_opts.loclist_source_win",
+        output_opts.loclist_source_win,
+        { "nil", "number" }
+    )
+
+    -- If the caller does not specify, assume that it's for the current window
+    output_opts.loclist_source_win = output_opts.loclist_source_win == nil
+            and vim.api.nvim_get_current_win()
+        or output_opts.loclist_source_win
+
+    vim.validate("output_opts.action", output_opts.action, { "nil", "string" })
+    if type(output_opts.action) == "string" then
+        vim.validate("action", output_opts.action, function()
+            return require("mjm.error-list-util").validate_action(output_opts.action)
+        end)
+    else
+        -- Set the default here for consistency
+        output_opts.action = "new" --- Cfilter default
+    end
+
+    -- Set a consistent default here as well to avoid having a bunch of different count handling
+    -- methods
+    vim.validate("output_opts.count", output_opts.count, { "nil", "number" })
+    output_opts.count = output_opts.count or 0
+
+    -- Leave nil titles be here, as each function might have its own way of assigning one
+    vim.validate("output_opts.title", output_opts.title, { "nil", "string" })
+
+    -- Leave nil here. We assume that, if the list_item_type is nil, we don't want to perform a
+    -- manual edit. Individual functions might have their own ways of setting this up
+    vim.validate("output_opts.list_item_type", output_opts.list_item_type, { "nil", "string" })
 end
 
 --- @param input QfRancherInputType
@@ -461,17 +653,16 @@ end
 function M.get_dest_list_nr(getlist, output_opts)
     output_opts = output_opts or {}
 
-    vim.validate("output_opts", output_opts, "table")
-    vim.validate("output_opts", output_opts.count, "number")
-    vim.validate("output_opts.action", output_opts.action, "string")
-    vim.validate("output_opts.action", output_opts.action, function()
-        return M.validate_action(output_opts.action)
-    end)
+    if vim.g.qf_rancher_debug_assertions then
+        vim.validate("output_opts", output_opts, function()
+            return M.validate_output_opts(output_opts)
+        end)
+    end
 
     local count = output_opts.count > 0 and output_opts.count or 0
     count = (output_opts.count < 1 and vim.v.count > 0) and vim.v.count or 0
     if count > 0 then
-        return math.min(vim.v.count, getlist({ nr = "$" }).nr)
+        return math.min(count, getlist({ nr = "$" }).nr)
     end
 
     if output_opts.action == "overwrite" or output_opts.action == "merge" then
@@ -479,24 +670,6 @@ function M.get_dest_list_nr(getlist, output_opts)
     end
 
     return getlist({ nr = "$" }).nr
-end
-
---- @param prompt string
---- @return string|nil
-function M.get_input(prompt)
-    vim.validate("prompt", prompt, "string")
-    local ok, pattern = pcall(vim.fn.input, { prompt = prompt, cancelreturn = "" })
-    if ok then
-        return pattern
-    end
-
-    if pattern == "Keyboard interrupt" then
-        return nil
-    end
-
-    local chunk = { (pattern or "Unknown error getting input"), "ErrorMsg" }
-    vim.api.nvim_echo({ chunk }, true, { err = true })
-    return nil
 end
 
 --- @param old_list table
@@ -546,50 +719,97 @@ function M.cycle_lists_down(getlist, setlist, start_list_nr)
     end
 end
 
---- @param getlist function
---- @param setlist function
---- @param dest_list_nr integer
---- @param new_items table[]
---- @param action string
---- @param title string
---- @return nil
-function M.set_list_items(getlist, setlist, dest_list_nr, new_items, action, title)
-    vim.validate("getlist", getlist, "callable")
-    vim.validate("setlist", setlist, "callable")
-    vim.validate("dest_list_nr", dest_list_nr, { "number", "string" })
-    vim.validate("new_items", new_items, "table")
-    vim.validate("title", title, "string")
-    vim.validate("action", action, "string")
-    vim.validate("action", action, function()
-        return M.validate_action(action)
-    end)
+--- @class QfRancherSetOpts
+--- @field getlist? function
+--- @field setlist? function
+--- @field new_items table[]
 
-    if action == "replace" then
+--- @param set_opts QfRancherSetOpts
+--- @param output_opts QfRancherOutputOpts
+--- @return nil
+function M.set_list_items(set_opts, output_opts)
+    set_opts = set_opts or {}
+
+    if vim.g.qf_rancher_debug_assertions then
+        vim.validate("set_opts", set_opts, "table")
+        vim.validate("set_opts.getlist", set_opts.getlist, { "callable", "nil" })
+        vim.validate("set_opts.setlist", set_opts.setlist, { "callable", "nil" })
+
+        vim.validate("output_opts", output_opts, function()
+            return M.validate_output_opts(output_opts)
+        end)
+    end
+
+    local getlist = set_opts.getlist or M.get_getlist(output_opts)
+    if not getlist then
+        return
+    end
+
+    local setlist = set_opts.setlist or M.get_setlist(output_opts)
+    if not setlist then
+        return
+    end
+
+    local dest_list_nr = M.get_dest_list_nr(getlist, output_opts)
+
+    -- TODO: Basically trying to address that if we have an empty list, the action doesn't matter
+    -- and we're just making a new one. But then we kinda repeat the logic in the new case
+    -- Feels hacky right now
+    local max_list_nr = getlist({ nr = "$" }).nr
+    if max_list_nr == 0 then
+        setlist({}, " ", { items = set_opts.new_items, nr = "$", title = output_opts.title })
+        return
+    end
+
+    if output_opts.action == "replace" then
         local old_list = getlist({ nr = dest_list_nr, all = true })
-        local new_list =
-            M.get_new_list(old_list, { new_list_items = new_items, new_title = title })
+        local new_list = M.get_new_list(
+            old_list,
+            { new_list_items = set_opts.new_items, new_title = output_opts.title }
+        )
         setlist({}, "r", new_list)
         return
     end
 
-    if action == "merge" then
+    if output_opts.action == "add" then
         local old_list = getlist({ nr = dest_list_nr, all = true })
-        local new_list_items = M.merge_qf_lists(old_list.items, new_items)
-        --- TODO: Add a sort here
-        local new_list =
-            M.get_new_list(old_list, { new_list_items = new_list_items, new_title = title })
+        local new_list_items = M.merge_qf_lists(old_list.items, set_opts.new_items)
+        --- NOTE: We simply have to assume here that calling functions know the sort is performed
+        --- here and don't do one redundantly
+        --- TODO: This does not properly handle diagnostics. I guess you could have a field in
+        --- output_opts that says if the output list is supposed to be diagnostics
+        --- TODO: This is also awkward if we're coming in from a sort. Probably need to have a
+        --- sort predicate in the output opts, which is a lot but it will work
+        table.sort(new_list_items, require("mjm.error-list-sort")._sort_fname_asc)
+        local new_list = M.get_new_list(
+            old_list,
+            { new_list_items = new_list_items, new_title = output_opts.title }
+        )
         setlist({}, "u", new_list)
         return
     end
 
-    local max_list_nr = getlist({ nr = "$" }).nr
     if dest_list_nr == max_list_nr then
-        setlist({}, " ", { items = new_items, nr = dest_list_nr, title = title })
+        setlist(
+            {},
+            " ",
+            { items = set_opts.new_items, nr = dest_list_nr, title = output_opts.title }
+        )
         return
     end
 
     M.cycle_lists_down(getlist, setlist, dest_list_nr)
-    setlist({}, "r", { items = new_items, nr = dest_list_nr, title = title })
+    setlist({}, "r", { items = set_opts.new_items, nr = dest_list_nr, title = output_opts.title })
 end
 
 return M
+
+--- TODO:
+--- - Check that all functions have reasonable default sorts
+--- - Check that window height updates are triggered where appropriate
+--- - Check that functions have proper visibility
+--- - Check that all mappings have plugs and cmds
+--- - Check that all maps/cmds/plugs have desc fieldss
+--- - Check that all functions have annotations and documentation
+--- - Check that the qf and loclist versions are both properly built for purpose. Should be able
+---     to use the loclist function for buf/win specific info

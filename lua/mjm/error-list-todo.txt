@@ -1,3 +1,5 @@
+Use the bottom strategy for posting notes rather than the top
+
 --------------------
 --- PROJECT WIDE ---
 --------------------
@@ -112,42 +114,6 @@ source list for the filter is always the current one
 TODO
 
 - When doing qq inside of a location list, fails on validate
-
-------------
---- GREP ---
-------------
-
-TODO
-
-- Check that all functions have reasonable default sorts
-- Check that window height updates are triggered where appropriate
-- Check that functions have proper visibility
-- Check that all mappings have plugs and cmds
-- Check that all maps/cmds/plugs have desc fieldss
-- Check that all functions have annotations and documentation
-- Check that the qf and loclist versions are both properly built for purpose. Should be able to use the loclist function for buf/win specific info
-- For the title, use the base command without the specific files/dirs being searched
-- The current code does not properly handle ctrl c input canceling
-- Need a way to make cmds work. Rough template:
--- Qgrep/Lgrep
--- new/add/replace (no option is add)
--- buf/help/cwd
-- Partly a documentation thing and partly a code thing, more clarity around when smartcase is used. Do we have a control for smartcase vs case insensitive?
-- If a grep command is run with '<'> marks, those positions should be used to do the grep. Really should apply to any set of marks
-- what what grepprg you're using in the prompt
-
-MAYBE
-
-- Smart/ignore case can be rolled under the same option for grepprgs that don't
-support it
-
-FUTURE
-
-- Potentially use rg's built-in globbing, allowing for the cmd literal to be used in the title
-
-PERF
-
-- Is it necessary to check the executable status of the grepprg every time?
 
 ------------
 --- OPEN ---
