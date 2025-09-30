@@ -74,6 +74,7 @@
 ---
 --- @class QfRancherOutputOpts
 --- @field action? QfRancherAction
+--- @field count? integer
 --- @field is_loclist? boolean
 
 --- https://github.com/tjdevries/lazy-require.nvim/blob/master/lua/lazy-require.lua

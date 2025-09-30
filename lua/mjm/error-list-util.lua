@@ -456,19 +456,25 @@ function M.resolve_input_type(input)
 end
 
 --- @param getlist function
---- @param action QfRancherAction
+--- @param output_opts QfRancherOutputOpts
 --- @return integer
-function M.get_dest_list_nr(getlist, action)
-    vim.validate("action", action, "string")
-    vim.validate("action", action, function()
-        return M.validate_action(action)
+function M.get_dest_list_nr(getlist, output_opts)
+    output_opts = output_opts or {}
+
+    vim.validate("output_opts", output_opts, "table")
+    vim.validate("output_opts", output_opts.count, "number")
+    vim.validate("output_opts.action", output_opts.action, "string")
+    vim.validate("output_opts.action", output_opts.action, function()
+        return M.validate_action(output_opts.action)
     end)
 
-    if vim.v.count >= 1 then
+    local count = output_opts.count > 0 and output_opts.count or 0
+    count = (output_opts.count < 1 and vim.v.count > 0) and vim.v.count or 0
+    if count > 0 then
         return math.min(vim.v.count, getlist({ nr = "$" }).nr)
     end
 
-    if action == "overwrite" or action == "merge" then
+    if output_opts.action == "overwrite" or output_opts.action == "merge" then
         return getlist({ nr = 0 }).nr
     end
 

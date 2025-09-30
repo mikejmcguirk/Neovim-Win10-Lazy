@@ -29,12 +29,58 @@ local M = {}
 --- Wrapper ---
 ---------------
 
+--- @param dir QfRancherSortDir
+--- @return boolean
+local function validate_sort_dir(dir)
+    return dir == "asc" or dir == "desc"
+end
+
+--- @param sort_info QfRancherSortInfo
+--- @param sort_opts QfRancherSortOpts
+--- @param output_opts QfRancherOutputOpts
+--- @return nil
+local function clean_wrapper_input(sort_info, sort_opts, output_opts)
+    sort_info = sort_info or {}
+    sort_opts = sort_opts or {}
+    output_opts = output_opts or {}
+
+    vim.validate("sort_info", sort_info, "table")
+    vim.validate("sort_info.asc_func", sort_info.asc_func, "callable")
+    vim.validate("sort_info.desc_func", sort_info.desc_func, "callable")
+
+    vim.validate("sort_opts", sort_opts, "table")
+    vim.validate("sort_opts.dir", sort_opts.dir, { "nil", "string" })
+    if type(sort_opts.dir) == "string" then
+        vim.validate("sort_opts.dir", sort_opts.dir, function()
+            return validate_sort_dir(sort_opts.dir)
+        end)
+    else
+        sort_opts.dir = "asc"
+    end
+
+    vim.validate("output_opts", output_opts, "table")
+    vim.validate("output_opts.is_loclist", output_opts.is_loclist, { "nil", "boolean" })
+    output_opts.is_loclist = output_opts.is_loclist == nil and false or output_opts.is_loclist
+    vim.validate("output_opts.action", output_opts.action, { "nil", "string" })
+    if type(output_opts.action) == "string" then
+        vim.validate("action", output_opts.action, function()
+            return require("mjm.error-list-util").validate_action(output_opts.action)
+        end)
+    else
+        output_opts.action = "new" --- Cfilter default
+    end
+
+    vim.validate("output_opts.count", output_opts.count, { "nil", "number" })
+    output_opts.count = output_opts.count or 0
+end
+
 --- @param sort_info QfRancherSortInfo
 --- @param sort_opts QfRancherSortOpts
 --- @param output_opts QfRancherOutputOpts
 --- @return nil
 function M._sort_wrapper(sort_info, sort_opts, output_opts)
-    -- TODO: add data validation
+    clean_wrapper_input(sort_info, sort_opts, output_opts)
+
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
     local getlist = eu.get_getlist({ is_loclist = output_opts.is_loclist }) --- @type function
     local cur_list = getlist({ all = true }) --- @type table
@@ -43,7 +89,7 @@ function M._sort_wrapper(sort_info, sort_opts, output_opts)
         return
     end
 
-    local dest_list_nr = eu.get_dest_list_nr(getlist, output_opts.action) --- @type integer
+    local dest_list_nr = eu.get_dest_list_nr(getlist, output_opts) --- @type integer
     local list_win = eu.find_list_win(output_opts.is_loclist) --- @type integer|nil
     local view = (list_win and dest_list_nr == cur_list.nr)
             and vim.api.nvim_win_call(list_win, vim.fn.winsaveview)
@@ -248,17 +294,17 @@ end
 --- @return boolean|nil
 local function check_lcol_asc(a, b)
     local checked_lnum = check_lnum_asc(a, b) --- @type boolean|nil
-    if checked_lnum ~= nil then
+    if type(checked_lnum) == "boolean" then
         return checked_lnum
     end
 
     local checked_col = check_col_asc(a, b) --- @type boolean|nil
-    if checked_col ~= nil then
+    if type(checked_col) == "boolean" then
         return checked_col
     end
 
     local checked_end_lnum = check_end_lnum_asc(a, b) --- @type boolean|nil
-    if checked_end_lnum ~= nil then
+    if type(checked_end_lnum) == "boolean" then
         return checked_end_lnum
     end
 
@@ -270,7 +316,7 @@ end
 --- @return boolean|nil
 local function check_fname_lcol_asc(a, b)
     local checked_fname = check_fname_asc(a, b)
-    if checked_fname ~= nil then
+    if type(checked_fname) == "boolean" then
         return checked_fname
     end
 
@@ -282,17 +328,17 @@ end
 -- --- @return boolean|nil
 -- local function check_lcol_desc(a, b)
 --     local checked_lnum = check_lnum_desc(a, b) --- @type boolean|nil
---     if checked_lnum ~= nil then
+--     if type(checked_lnum) == "boolean" then
 --         return checked_lnum
 --     end
 --
 --     local checked_col = check_col_desc(a, b) --- @type boolean|nil
---     if checked_col ~= nil then
+--     if type(checked_col) == "boolean" then
 --         return checked_col
 --     end
 --
 --     local checked_end_lnum = check_end_lnum_desc(a, b) --- @type boolean|nil
---     if checked_end_lnum ~= nil then
+--     if type(checked_end_lnum) == "boolean" then
 --         return checked_end_lnum
 --     end
 --
@@ -336,7 +382,7 @@ end
 --- @return boolean|nil
 local function check_lcol_type_asc(a, b)
     local checked_lcol = check_lcol_asc(a, b)
-    if checked_lcol ~= nil then
+    if type(checked_lcol) == "boolean" then
         return checked_lcol
     end
 
@@ -394,7 +440,7 @@ end
 --- @return boolean|nil
 local function check_lcol_severity_asc(a, b)
     local checked_lcol = check_lcol_asc(a, b)
-    if checked_lcol ~= nil then
+    if type(checked_lcol) == "boolean" then
         return checked_lcol
     end
 
@@ -413,12 +459,12 @@ function M.sort_fname_asc(a, b)
     end
 
     local checked_fname = check_fname_asc(a, b)
-    if checked_fname ~= nil then
+    if type(checked_fname) == "boolean" then
         return checked_fname
     end
 
     local checked_lcol_type = check_lcol_type_asc(a, b)
-    return checked_lcol_type ~= nil and checked_lcol_type or false
+    return checked_lcol_type == nil and false or checked_lcol_type
 end
 
 --- @type QfRancherSortPredicate
@@ -429,12 +475,12 @@ function M.sort_fname_desc(a, b)
     end
 
     local checked_fname = check_fname_desc(a, b)
-    if checked_fname ~= nil then
+    if type(checked_fname) == "boolean" then
         return checked_fname
     end
 
     local checked_lcol_type = check_lcol_type_asc(a, b)
-    return checked_lcol_type ~= nil and checked_lcol_type or false
+    return checked_lcol_type == nil and false or checked_lcol_type
 end
 
 --- @type QfRancherSortPredicate
@@ -445,12 +491,12 @@ function M.sort_type_asc(a, b)
     end
 
     local checked_type = check_type_asc(a, b)
-    if checked_type ~= nil then
+    if type(checked_type) == "boolean" then
         return checked_type
     end
 
     local checked_fname_lcol = check_fname_lcol_asc(a, b)
-    return checked_fname_lcol ~= nil and checked_fname_lcol or false
+    return checked_fname_lcol == nil and false or checked_fname_lcol
 end
 
 --- @type QfRancherSortPredicate
@@ -461,12 +507,12 @@ function M.sort_type_desc(a, b)
     end
 
     local checked_type = check_type_desc(a, b)
-    if checked_type ~= nil then
+    if type(checked_type) == "boolean" then
         return checked_type
     end
 
     local checked_fname_lcol = check_fname_lcol_asc(a, b)
-    return checked_fname_lcol ~= nil and checked_fname_lcol or false
+    return checked_fname_lcol == nil and false or checked_fname_lcol
 end
 
 --- @type QfRancherSortPredicate
@@ -477,12 +523,12 @@ function M.sort_severity_asc(a, b)
     end
 
     local checked_severity = check_severity_asc(a, b)
-    if checked_severity ~= nil then
+    if type(checked_severity) == "boolean" then
         return checked_severity
     end
 
     local checked_fname_lcol = check_fname_lcol_asc(a, b)
-    return checked_fname_lcol ~= nil and checked_fname_lcol or false
+    return checked_fname_lcol == nil and false or checked_fname_lcol
 end
 
 --- @type QfRancherSortPredicate
@@ -493,12 +539,12 @@ function M.sort_severity_desc(a, b)
     end
 
     local checked_severity = check_severity_desc(a, b)
-    if checked_severity ~= nil then
+    if type(checked_severity) == "boolean" then
         return checked_severity
     end
 
     local checked_fname_lcol = check_fname_lcol_asc(a, b)
-    return checked_fname_lcol ~= nil and checked_fname_lcol or false
+    return checked_fname_lcol == nil and false or checked_fname_lcol
 end
 
 --- @type QfRancherSortPredicate
@@ -509,12 +555,12 @@ function M.sort_fname_diag_asc(a, b)
     end
 
     local checked_fname = check_fname_asc(a, b)
-    if checked_fname ~= nil then
+    if type(checked_fname) == "boolean" then
         return checked_fname
     end
 
     local checked_lcol_severity = check_lcol_severity_asc(a, b)
-    return checked_lcol_severity ~= nil and checked_lcol_severity or false
+    return checked_lcol_severity == nil and false or checked_lcol_severity
 end
 
 --- @type QfRancherSortPredicate
@@ -525,12 +571,12 @@ function M.sort_fname_diag_desc(a, b)
     end
 
     local checked_fname = check_fname_desc(a, b)
-    if checked_fname ~= nil then
+    if type(checked_fname) == "boolean" then
         return checked_fname
     end
 
     local checked_lcol_severity = check_lcol_severity_asc(a, b)
-    return checked_lcol_severity ~= nil and checked_lcol_severity or false
+    return checked_lcol_severity == nil and false or checked_lcol_severity
 end
 
 local sorts = {
@@ -601,6 +647,9 @@ end
 ---     one
 --- - is_loclist? boolean - Whether to filter against a location list
 function M.sort(name, sort_opts, output_opts)
+    if not sorts[name] then
+        vim.api.nvim_echo({ { "Invalid sort", "ErrorMsg" } }, true, { err = true })
+    end
     M._sort_wrapper(sorts[name], sort_opts, output_opts)
 end
 

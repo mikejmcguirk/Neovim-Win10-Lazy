@@ -155,7 +155,7 @@ local function clean_wrapper_input(filter_info, filter_opts, input_opts, output_
 
     vim.validate("filter_opts", filter_opts, "table")
     vim.validate("filter_opts.keep", filter_opts.keep, { "boolean", "nil" })
-    filter_opts.keep = filter_opts.keep or true
+    filter_opts.keep = filter_opts.keep == nil and true or filter_opts.keep
 
     vim.validate("input_opts", input_opts, "table")
     vim.validate("input_opts.pattern", input_opts.pattern, { "nil", "string" })
@@ -170,7 +170,7 @@ local function clean_wrapper_input(filter_info, filter_opts, input_opts, output_
 
     vim.validate("output_opts", output_opts, "table")
     vim.validate("output_opts.is_loclist", output_opts.is_loclist, { "nil", "boolean" })
-    output_opts.is_loclist = output_opts.is_loclist or false
+    output_opts.is_loclist = output_opts.is_loclist == nil and false or output_opts.is_loclist
     vim.validate("output_opts.action", output_opts.action, { "nil", "string" })
     if type(output_opts.action) == "string" then
         vim.validate("action", output_opts.action, function()
@@ -179,6 +179,9 @@ local function clean_wrapper_input(filter_info, filter_opts, input_opts, output_
     else
         output_opts.action = "new" --- Cfilter default
     end
+
+    vim.validate("output_opts.count", output_opts.count, { "nil", "number" })
+    output_opts.count = output_opts.count or 0
 end
 
 --- @param filter_info QfRancherFilterInfo
@@ -197,7 +200,7 @@ function M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
         return
     end
 
-    local dest_list_nr = eu.get_dest_list_nr(getlist, output_opts.action) --- @type integer
+    local dest_list_nr = eu.get_dest_list_nr(getlist, output_opts) --- @type integer
     local list_win = eu.find_list_win(output_opts.is_loclist) --- @type integer|nil
     local view = (list_win and dest_list_nr == cur_list.nr)
             and vim.api.nvim_win_call(list_win, vim.fn.winsaveview)
@@ -296,22 +299,6 @@ local function cfilter_sensitive(opts)
     end
 end
 
-local cfilter_info = {
-    name = "Cfilter",
-    insensitive_func = cfilter_insensitive,
-    sensitive_func = cfilter_sensitive,
-    regex_func = cfilter_regex,
-}
-
---- @param filter_opts QfRancherFilterOpts
---- @param input_opts QfRancherInputOpts
---- @param output_opts QfRancherOutputOpts
---- NOTE: Don't do data validation here. This is just a pass through between API callers and the
---- filer_wrapper function
-function M.cfilter(filter_opts, input_opts, output_opts)
-    M.filter_wrapper(cfilter_info, filter_opts, input_opts, output_opts)
-end
-
 --------------
 -- Filename --
 --------------
@@ -365,17 +352,6 @@ local function fname_sensitive(opts)
     end
 end
 
-local fname_info = {
-    name = "Filename",
-    insensitive_func = fname_insensitive,
-    sensitive_func = fname_sensitive,
-    regex_func = fname_regex,
-}
-
-function M.fname(filter_opts, input_opts, output_opts)
-    M.filter_wrapper(fname_info, filter_opts, input_opts, output_opts)
-end
-
 ----------
 -- Text --
 ----------
@@ -413,22 +389,6 @@ local function text_sensitive(opts)
     else
         return not opts.keep
     end
-end
-
-local text_info = {
-    name = "Text",
-    insensitive_func = text_insensitive,
-    sensitive_func = text_sensitive,
-    regex_func = text_regex,
-}
-
---- @param filter_opts QfRancherFilterOpts
---- @param input_opts QfRancherInputOpts
---- @param output_opts QfRancherOutputOpts
---- NOTE: Don't do data validation here. This is just a pass through between API callers and the
---- filer_wrapper function
-function M.text(filter_opts, input_opts, output_opts)
-    M.filter_wrapper(text_info, filter_opts, input_opts, output_opts)
 end
 
 ----------
@@ -470,22 +430,6 @@ local function type_sensitive(opts)
     end
 end
 
-local type_info = {
-    name = "type",
-    insensitive_func = type_insensitive,
-    sensitive_func = type_sensitive,
-    regex_func = type_regex,
-}
-
---- @param filter_opts QfRancherFilterOpts
---- @param input_opts QfRancherInputOpts
---- @param output_opts QfRancherOutputOpts
---- NOTE: Don't do data validation here. This is just a pass through between API callers and the
---- filer_wrapper function
-function M.type(filter_opts, input_opts, output_opts)
-    M.filter_wrapper(type_info, filter_opts, input_opts, output_opts)
-end
-
 -----------------
 -- Line Number --
 -----------------
@@ -521,32 +465,100 @@ local function lnum_insensitive(opts)
     end
 end
 
-local lnum_info = {
-    name = "lnum",
-    insensitive_func = lnum_insensitive,
-    sensitive_func = lnum_sensitive,
-    regex_func = lnum_regex,
+local filters = {
+    cfilter = {
+        name = "Cfilter",
+        insensitive_func = cfilter_insensitive,
+        sensitive_func = cfilter_sensitive,
+        regex_func = cfilter_regex,
+    },
+    fname = {
+        name = "Filename",
+        insensitive_func = fname_insensitive,
+        sensitive_func = fname_sensitive,
+        regex_func = fname_regex,
+    },
+    lnum = {
+        name = "lnum",
+        insensitive_func = lnum_insensitive,
+        sensitive_func = lnum_sensitive,
+        regex_func = lnum_regex,
+    },
+    text = {
+        name = "Text",
+        insensitive_func = text_insensitive,
+        sensitive_func = text_sensitive,
+        regex_func = text_regex,
+    },
+    type = {
+        name = "type",
+        insensitive_func = type_insensitive,
+        sensitive_func = type_sensitive,
+        regex_func = type_regex,
+    },
 }
 
+function M.get_filter_names()
+    return vim.tbl_keys(filters)
+end
+
+-----------
+--- API ---
+-----------
+
+--- Run a registered filter
+--- name: Name of the filter to use
+--- filter_opts
+--- - keep? boolean - Whether to keep items that match the predicate function
+--- input_opts
+--- - input_type? "insensitive"|"regex"|"sensitive"|"smart"|"vimsmart" - How to interpret the
+---     input for matching
+--- - pattern? string - the pattern to match against
+--- output_opts
+--- - action? "new"|"replace"|"add" - Create a new list, replace a pre-existing one, or add a new
+---     one
+--- - is_loclist? boolean - Whether to filter against a location list
 --- @param filter_opts QfRancherFilterOpts
 --- @param input_opts QfRancherInputOpts
 --- @param output_opts QfRancherOutputOpts
---- The case insensitive version will return any lnums that contain the search pattern
---- The case sensitive version will only return exact matches with the pattern
---- Regex functions as usual
-function M.lnum(filter_opts, input_opts, output_opts)
-    M.filter_wrapper(lnum_info, filter_opts, input_opts, output_opts)
+--- @return nil
+function M.filter(name, filter_opts, input_opts, output_opts)
+    if not filters[name] then
+        vim.api.nvim_echo({ { "Invalid filter", "ErrorMsg" } }, true, { err = true })
+    end
+
+    M.filter_wrapper(filters[name], filter_opts, input_opts, output_opts)
 end
 
--------------------
---- General API ---
--------------------
+--- Register a filter to be used with the Qfilter/Lfilter commands. The filter will be registered
+--- under the name in the filter info
+--- filter_info:
+--- - name? string - The display name of your filter
+--- - insensitive_func - The predicate function used for case insensitive comparisons
+--- - regex_func - The predicate function used for regex comparisons
+--- - sensitive_func - The predicate function used for case sensitive comparisons
+--- @param filter_info QfRancherFilterInfo
+function M.register_filter(filter_info)
+    filters[filter_info.name] = filter_info
+end
+
+--- @param name string
+--- Clears the function name from the registered sorts
+function M.clear_filter(name)
+    if #vim.tbl_keys(filters) <= 1 then
+        vim.api.nvim_echo({ { "Cannot remove the last filter method" } }, false, {})
+        return
+    end
+
+    filters[name] = nil
+end
 
 --- @param filter_info QfRancherFilterInfo
 --- @param filter_opts QfRancherFilterOpts
 --- @param input_opts QfRancherInputOpts
 --- @param output_opts QfRancherOutputOpts
---- Create your own filter.
+--- @return nil
+--- Run a filter without registering it
 --- filter_info:
 --- - name? string - The display name of your filter
 --- - insensitive_func - The predicate function used for case insensitive comparisons
@@ -562,7 +574,7 @@ end
 --- - action? "new"|"replace"|"add" - Create a new list, replace a pre-existing one, or add a new
 ---     one
 --- - is_loclist? boolean - Whether to filter against a location list
-function M.filter(filter_info, filter_opts, input_opts, output_opts)
+function M.adhoc_filter(filter_info, filter_opts, input_opts, output_opts)
     M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
 end
 

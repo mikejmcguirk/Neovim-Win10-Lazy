@@ -67,6 +67,9 @@ local n = ", new"
 local r = ", replace"
 local a = ", add"
 
+local keep = { keep = true }
+local nokeep = { keep = false }
+
 --- The keymaps need to all be set here to avoid eagerly requiring other modules
 --- I have not been able to find a way to build the list at runtime without it being hard to read
 --- and non-trivially affecting startup time
@@ -99,223 +102,223 @@ local rancher_keymaps = {
 
     --- Cfilter ---
 
-    { nx, pqfr.."-Qfilter-n-cfilter)",   qp.."kl",         "Qfilter cfilter"..n..sc,  function() ef.cfilter({ keep = true }, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-r-cfilter)",   qp.."Kl",         "Qfilter cfilter"..r..sc,  function() ef.cfilter({ keep = true }, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-a-cfilter)",   qp.."<C-k>l",     "Qfilter cfilter"..a..sc,  function() ef.cfilter({ keep = true }, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-n-cfilter)",  qp.."rl",         "Qfilter! cfilter"..n..sc, function() ef.cfilter({ keep = false }, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-r-cfilter)",  qp.."Rl",         "Qfilter! cfilter"..r..sc, function() ef.cfilter({ keep = false }, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-a-cfilter)",  qp.."<C-r>l",     "Qfilter! cfilter"..a..sc, function() ef.cfilter({ keep = false }, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-n-cfilter)",   qp.."kl",         "Qfilter cfilter"..n..sc,  function() ef.filter("cfilter", keep, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-r-cfilter)",   qp.."Kl",         "Qfilter cfilter"..r..sc,  function() ef.filter("cfilter", keep, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-a-cfilter)",   qp.."<C-k>l",     "Qfilter cfilter"..a..sc,  function() ef.filter("cfilter", keep, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-n-cfilter)",  qp.."rl",         "Qfilter! cfilter"..n..sc, function() ef.filter("cfilter", nokeep, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-r-cfilter)",  qp.."Rl",         "Qfilter! cfilter"..r..sc, function() ef.filter("cfilter", nokeep, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-a-cfilter)",  qp.."<C-r>l",     "Qfilter! cfilter"..a..sc, function() ef.filter("cfilter", nokeep, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
 
-    { nx, pqfr.."-Qfilter-n-CFILTER)",   qp.."kL",         "Qfilter cfilter"..n..cs,  function() ef.cfilter({ keep = true }, { input_type = "sensitive" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-r-CFILTER)",   qp.."KL",         "Qfilter cfilter"..r..cs,  function() ef.cfilter({ keep = true }, { input_type = "sensitive" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-a-CFILTER)",   qp.."<C-k>L",     "Qfilter cfilter"..a..cs,  function() ef.cfilter({ keep = true }, { input_type = "sensitive" }, { action = "add", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-n-CFILTER)",  qp.."rL",         "Qfilter! cfilter"..n..cs, function() ef.cfilter({ keep = false }, { input_type = "sensitive" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-r-CFILTER)",  qp.."RL",         "Qfilter! cfilter"..r..cs, function() ef.cfilter({ keep = false }, { input_type = "sensitive" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-a-CFILTER)",  qp.."<C-r>L",     "Qfilter! cfilter"..a..cs, function() ef.cfilter({ keep = false }, { input_type = "sensitive" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-n-CFILTER)",   qp.."kL",         "Qfilter cfilter"..n..cs,  function() ef.filter("cfilter", keep, { input_type = "sensitive" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-r-CFILTER)",   qp.."KL",         "Qfilter cfilter"..r..cs,  function() ef.filter("cfilter", keep, { input_type = "sensitive" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-a-CFILTER)",   qp.."<C-k>L",     "Qfilter cfilter"..a..cs,  function() ef.filter("cfilter", keep, { input_type = "sensitive" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-n-CFILTER)",  qp.."rL",         "Qfilter! cfilter"..n..cs, function() ef.filter("cfilter", nokeep, { input_type = "sensitive" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-r-CFILTER)",  qp.."RL",         "Qfilter! cfilter"..r..cs, function() ef.filter("cfilter", nokeep, { input_type = "sensitive" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-a-CFILTER)",  qp.."<C-r>L",     "Qfilter! cfilter"..a..cs, function() ef.filter("cfilter", nokeep, { input_type = "sensitive" }, { action = "add", is_loclist = false }) end},
 
-    { nx, pqfr.."-Qfilter-n-cfilterX)",  qp.."k<C-l>",     "Qfilter cfilter"..n..rx,  function() ef.cfilter({ keep = true }, { input_type = "regex" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-r-cfilterX)",  qp.."K<C-l>",     "Qfilter cfilter"..r..rx,  function() ef.cfilter({ keep = true }, { input_type = "regex" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-a-cfilterX)",  qp.."<C-k><C-l>", "Qfilter cfilter"..a..rx,  function() ef.cfilter({ keep = true }, { input_type = "regex" }, { action = "add", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-n-cfilterX)", qp.."r<C-l>",     "Qfilter! cfilter"..n..rx, function() ef.cfilter({ keep = false }, { input_type = "regex" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-r-cfilterX)", qp.."R<C-l>",     "Qfilter! cfilter"..r..rx, function() ef.cfilter({ keep = false }, { input_type = "regex" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-a-cfilterX)", qp.."<C-r><C-l>", "Qfilter! cfilter"..a..rx, function() ef.cfilter({ keep = false }, { input_type = "regex" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-n-cfilterX)",  qp.."k<C-l>",     "Qfilter cfilter"..n..rx,  function() ef.filter("cfilter", keep, { input_type = "regex" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-r-cfilterX)",  qp.."K<C-l>",     "Qfilter cfilter"..r..rx,  function() ef.filter("cfilter", keep, { input_type = "regex" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-a-cfilterX)",  qp.."<C-k><C-l>", "Qfilter cfilter"..a..rx,  function() ef.filter("cfilter", keep, { input_type = "regex" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-n-cfilterX)", qp.."r<C-l>",     "Qfilter! cfilter"..n..rx, function() ef.filter("cfilter", nokeep, { input_type = "regex" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-r-cfilterX)", qp.."R<C-l>",     "Qfilter! cfilter"..r..rx, function() ef.filter("cfilter", nokeep, { input_type = "regex" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-a-cfilterX)", qp.."<C-r><C-l>", "Qfilter! cfilter"..a..rx, function() ef.filter("cfilter", nokeep, { input_type = "regex" }, { action = "add", is_loclist = false }) end},
 
-    { nx, pqfr.."-Lfilter-n-cfilter)",   lp.."kl",         "Lfilter cfilter"..n..sc,  function() ef.cfilter({ keep = true }, { input_type = "vimsmart" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-r-cfilter)",   lp.."Kl",         "Lfilter cfilter"..r..sc,  function() ef.cfilter({ keep = true }, { input_type = "vimsmart" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-a-cfilter)",   lp.."<C-k>l",     "Lfilter cfilter"..a..sc,  function() ef.cfilter({ keep = true }, { input_type = "vimsmart" }, { action = "add", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-n-cfilter)",  lp.."rl",         "Lfilter! cfilter"..n..sc, function() ef.cfilter({ keep = false }, { input_type = "vimsmart" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-r-cfilter)",  lp.."Rl",         "Lfilter! cfilter"..r..sc, function() ef.cfilter({ keep = false }, { input_type = "vimsmart" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-a-cfilter)",  lp.."<C-r>l",     "Lfilter! cfilter"..a..sc, function() ef.cfilter({ keep = false }, { input_type = "vimsmart" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-n-cfilter)",   lp.."kl",         "Lfilter cfilter"..n..sc,  function() ef.filter("cfilter", keep, { input_type = "vimsmart" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-r-cfilter)",   lp.."Kl",         "Lfilter cfilter"..r..sc,  function() ef.filter("cfilter", keep, { input_type = "vimsmart" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-a-cfilter)",   lp.."<C-k>l",     "Lfilter cfilter"..a..sc,  function() ef.filter("cfilter", keep, { input_type = "vimsmart" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-n-cfilter)",  lp.."rl",         "Lfilter! cfilter"..n..sc, function() ef.filter("cfilter", nokeep, { input_type = "vimsmart" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-r-cfilter)",  lp.."Rl",         "Lfilter! cfilter"..r..sc, function() ef.filter("cfilter", nokeep, { input_type = "vimsmart" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-a-cfilter)",  lp.."<C-r>l",     "Lfilter! cfilter"..a..sc, function() ef.filter("cfilter", nokeep, { input_type = "vimsmart" }, { action = "add", is_loclist = true }) end},
 
-    { nx, pqfr.."-Lfilter-n-CFILTER)",   lp.."kL",         "Lfilter cfilter"..n..cs,  function() ef.cfilter({ keep = true }, { input_type = "sensitive" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-r-CFILTER)",   lp.."KL",         "Lfilter cfilter"..r..cs,  function() ef.cfilter({ keep = true }, { input_type = "sensitive" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-a-CFILTER)",   lp.."<C-k>L",     "Lfilter cfilter"..a..cs,  function() ef.cfilter({ keep = true }, { input_type = "sensitive" }, { action = "add", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-n-CFILTER)",  lp.."rL",         "Lfilter! cfilter"..n..cs, function() ef.cfilter({ keep = false }, { input_type = "sensitive" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-r-CFILTER)",  lp.."RL",         "Lfilter! cfilter"..r..cs, function() ef.cfilter({ keep = false }, { input_type = "sensitive" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-a-CFILTER)",  lp.."<C-r>L",     "Lfilter! cfilter"..a..cs, function() ef.cfilter({ keep = false }, { input_type = "sensitive" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-n-CFILTER)",   lp.."kL",         "Lfilter cfilter"..n..cs,  function() ef.filter("cfilter", keep, { input_type = "sensitive" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-r-CFILTER)",   lp.."KL",         "Lfilter cfilter"..r..cs,  function() ef.filter("cfilter", keep, { input_type = "sensitive" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-a-CFILTER)",   lp.."<C-k>L",     "Lfilter cfilter"..a..cs,  function() ef.filter("cfilter", keep, { input_type = "sensitive" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-n-CFILTER)",  lp.."rL",         "Lfilter! cfilter"..n..cs, function() ef.filter("cfilter", nokeep, { input_type = "sensitive" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-r-CFILTER)",  lp.."RL",         "Lfilter! cfilter"..r..cs, function() ef.filter("cfilter", nokeep, { input_type = "sensitive" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-a-CFILTER)",  lp.."<C-r>L",     "Lfilter! cfilter"..a..cs, function() ef.filter("cfilter", nokeep, { input_type = "sensitive" }, { action = "add", is_loclist = true }) end},
 
-    { nx, pqfr.."-Lfilter-n-cfilterX)",  lp.."k<C-l>",     "Lfilter cfilter"..n..rx,  function() ef.cfilter({ keep = true }, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-r-cfilterX)",  lp.."K<C-l>",     "Lfilter cfilter"..r..rx,  function() ef.cfilter({ keep = true }, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-a-cfilterX)",  lp.."<C-k><C-l>", "Lfilter cfilter"..a..rx,  function() ef.cfilter({ keep = true }, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-n-cfilterX)", lp.."r<C-l>",     "Lfilter! cfilter"..n..rx, function() ef.cfilter({ keep = false }, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-r-cfilterX)", lp.."R<C-l>",     "Lfilter! cfilter"..r..rx, function() ef.cfilter({ keep = false }, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-a-cfilterX)", lp.."<C-r><C-l>", "Lfilter! cfilter"..a..rx, function() ef.cfilter({ keep = false }, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-n-cfilterX)",  lp.."k<C-l>",     "Lfilter cfilter"..n..rx,  function() ef.filter("cfilter", keep, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-r-cfilterX)",  lp.."K<C-l>",     "Lfilter cfilter"..r..rx,  function() ef.filter("cfilter", keep, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-a-cfilterX)",  lp.."<C-k><C-l>", "Lfilter cfilter"..a..rx,  function() ef.filter("cfilter", keep, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-n-cfilterX)", lp.."r<C-l>",     "Lfilter! cfilter"..n..rx, function() ef.filter("cfilter", nokeep, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-r-cfilterX)", lp.."R<C-l>",     "Lfilter! cfilter"..r..rx, function() ef.filter("cfilter", nokeep, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-a-cfilterX)", lp.."<C-r><C-l>", "Lfilter! cfilter"..a..rx, function() ef.filter("cfilter", nokeep, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
 
     --- Fname ---
 
-    { nx, pqfr.."-Qfilter-n-fname)",     qp.."kf",         "Qfilter fname"..n..sc,    function() ef.fname({ keep = true }, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-r-fname)",     qp.."Kf",         "Qfilter fname"..r..sc,    function() ef.fname({ keep = true }, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-a-fname)",     qp.."<C-k>f",     "Qfilter fname"..a..sc,    function() ef.fname({ keep = true }, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-n-fname)",    qp.."rf",         "Qfilter! fname"..n..sc,   function() ef.fname({ keep = false }, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-r-fname)",    qp.."Rf",         "Qfilter! fname"..r..sc,   function() ef.fname({ keep = false }, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-a-fname)",    qp.."<C-r>f",     "Qfilter! fname"..a..sc,   function() ef.fname({ keep = false }, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-n-fname)",     qp.."kf",         "Qfilter fname"..n..sc,    function() ef.filter("fname", keep, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-r-fname)",     qp.."Kf",         "Qfilter fname"..r..sc,    function() ef.filter("fname", keep, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-a-fname)",     qp.."<C-k>f",     "Qfilter fname"..a..sc,    function() ef.filter("fname", keep, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-n-fname)",    qp.."rf",         "Qfilter! fname"..n..sc,   function() ef.filter("fname", nokeep, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-r-fname)",    qp.."Rf",         "Qfilter! fname"..r..sc,   function() ef.filter("fname", nokeep, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-a-fname)",    qp.."<C-r>f",     "Qfilter! fname"..a..sc,   function() ef.filter("fname", nokeep, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
 
-    { nx, pqfr.."-Qfilter-n-FNAME)",     qp.."kF",         "Qfilter fname"..n..cs,    function() ef.fname({ keep = true }, { input_type = "sensitive" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-r-FNAME)",     qp.."KF",         "Qfilter fname"..r..cs,    function() ef.fname({ keep = true }, { input_type = "sensitive" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-a-FNAME)",     qp.."<C-k>F",     "Qfilter fname"..a..cs,    function() ef.fname({ keep = true }, { input_type = "sensitive" }, { action = "add", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-n-FNAME)",    qp.."rF",         "Qfilter! fname"..n..cs,   function() ef.fname({ keep = false }, { input_type = "sensitive" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-r-FNAME)",    qp.."RF",         "Qfilter! fname"..r..cs,   function() ef.fname({ keep = false }, { input_type = "sensitive" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-a-FNAME)",    qp.."<C-r>F",     "Qfilter! fname"..a..cs,   function() ef.fname({ keep = false }, { input_type = "sensitive" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-n-FNAME)",     qp.."kF",         "Qfilter fname"..n..cs,    function() ef.filter("fname", keep, { input_type = "sensitive" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-r-FNAME)",     qp.."KF",         "Qfilter fname"..r..cs,    function() ef.filter("fname", keep, { input_type = "sensitive" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-a-FNAME)",     qp.."<C-k>F",     "Qfilter fname"..a..cs,    function() ef.filter("fname", keep, { input_type = "sensitive" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-n-FNAME)",    qp.."rF",         "Qfilter! fname"..n..cs,   function() ef.filter("fname", nokeep, { input_type = "sensitive" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-r-FNAME)",    qp.."RF",         "Qfilter! fname"..r..cs,   function() ef.filter("fname", nokeep, { input_type = "sensitive" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-a-FNAME)",    qp.."<C-r>F",     "Qfilter! fname"..a..cs,   function() ef.filter("fname", nokeep, { input_type = "sensitive" }, { action = "add", is_loclist = false }) end},
 
-    { nx, pqfr.."-Qfilter-n-fnameX)",    qp.."k<C-f>",     "Qfilter fname"..n..rx,    function() ef.fname({ keep = true }, { input_type = "regex" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-r-fnameX)",    qp.."K<C-f>",     "Qfilter fname"..r..rx,    function() ef.fname({ keep = true }, { input_type = "regex" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-a-fnameX)",    qp.."<C-k><C-f>", "Qfilter fname"..a..rx,    function() ef.fname({ keep = true }, { input_type = "regex" }, { action = "add", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-n-fnameX)",   qp.."r<C-f>",     "Qfilter! fname"..n..rx,   function() ef.fname({ keep = false }, { input_type = "regex" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-r-fnameX)",   qp.."R<C-f>",     "Qfilter! fname"..r..rx,   function() ef.fname({ keep = false }, { input_type = "regex" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-a-fnameX)",   qp.."<C-r><C-f>", "Qfilter! fname"..a..rx,   function() ef.fname({ keep = false }, { input_type = "regex" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-n-fnameX)",    qp.."k<C-f>",     "Qfilter fname"..n..rx,    function() ef.filter("fname", keep, { input_type = "regex" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-r-fnameX)",    qp.."K<C-f>",     "Qfilter fname"..r..rx,    function() ef.filter("fname", keep, { input_type = "regex" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-a-fnameX)",    qp.."<C-k><C-f>", "Qfilter fname"..a..rx,    function() ef.filter("fname", keep, { input_type = "regex" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-n-fnameX)",   qp.."r<C-f>",     "Qfilter! fname"..n..rx,   function() ef.filter("fname", nokeep, { input_type = "regex" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-r-fnameX)",   qp.."R<C-f>",     "Qfilter! fname"..r..rx,   function() ef.filter("fname", nokeep, { input_type = "regex" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-a-fnameX)",   qp.."<C-r><C-f>", "Qfilter! fname"..a..rx,   function() ef.filter("fname", nokeep, { input_type = "regex" }, { action = "add", is_loclist = false }) end},
 
-    { nx, pqfr.."-Lfilter-n-fname)",     lp.."kf",         "Lfilter fname"..n..sc,    function() ef.fname({ keep = true }, { input_type = "vimsmart" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-r-fname)",     lp.."Kf",         "Lfilter fname"..r..sc,    function() ef.fname({ keep = true }, { input_type = "vimsmart" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-a-fname)",     lp.."<C-k>f",     "Lfilter fname"..a..sc,    function() ef.fname({ keep = true }, { input_type = "vimsmart" }, { action = "add", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-n-fname)",    lp.."rf",         "Lfilter! fname"..n..sc,   function() ef.fname({ keep = false }, { input_type = "vimsmart" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-r-fname)",    lp.."Rf",         "Lfilter! fname"..r..sc,   function() ef.fname({ keep = false }, { input_type = "vimsmart" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-a-fname)",    lp.."<C-r>f",     "Lfilter! fname"..a..sc,   function() ef.fname({ keep = false }, { input_type = "vimsmart" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-n-fname)",     lp.."kf",         "Lfilter fname"..n..sc,    function() ef.filter("fname", keep, { input_type = "vimsmart" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-r-fname)",     lp.."Kf",         "Lfilter fname"..r..sc,    function() ef.filter("fname", keep, { input_type = "vimsmart" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-a-fname)",     lp.."<C-k>f",     "Lfilter fname"..a..sc,    function() ef.filter("fname", keep, { input_type = "vimsmart" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-n-fname)",    lp.."rf",         "Lfilter! fname"..n..sc,   function() ef.filter("fname", nokeep, { input_type = "vimsmart" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-r-fname)",    lp.."Rf",         "Lfilter! fname"..r..sc,   function() ef.filter("fname", nokeep, { input_type = "vimsmart" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-a-fname)",    lp.."<C-r>f",     "Lfilter! fname"..a..sc,   function() ef.filter("fname", nokeep, { input_type = "vimsmart" }, { action = "add", is_loclist = true }) end},
 
-    { nx, pqfr.."-Lfilter-n-FNAME)",     lp.."kF",         "Lfilter fname"..n..cs,    function() ef.fname({ keep = true }, { input_type = "sensitive" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-r-FNAME)",     lp.."KF",         "Lfilter fname"..r..cs,    function() ef.fname({ keep = true }, { input_type = "sensitive" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-a-FNAME)",     lp.."<C-k>F",     "Lfilter fname"..a..cs,    function() ef.fname({ keep = true }, { input_type = "sensitive" }, { action = "add", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-n-FNAME)",    lp.."rF",         "Lfilter! fname"..n..cs,   function() ef.fname({ keep = false }, { input_type = "sensitive" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-r-FNAME)",    lp.."RF",         "Lfilter! fname"..r..cs,   function() ef.fname({ keep = false }, { input_type = "sensitive" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-a-FNAME)",    lp.."<C-r>F",     "Lfilter! fname"..a..cs,   function() ef.fname({ keep = false }, { input_type = "sensitive" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-n-FNAME)",     lp.."kF",         "Lfilter fname"..n..cs,    function() ef.filter("fname", keep, { input_type = "sensitive" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-r-FNAME)",     lp.."KF",         "Lfilter fname"..r..cs,    function() ef.filter("fname", keep, { input_type = "sensitive" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-a-FNAME)",     lp.."<C-k>F",     "Lfilter fname"..a..cs,    function() ef.filter("fname", keep, { input_type = "sensitive" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-n-FNAME)",    lp.."rF",         "Lfilter! fname"..n..cs,   function() ef.filter("fname", nokeep, { input_type = "sensitive" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-r-FNAME)",    lp.."RF",         "Lfilter! fname"..r..cs,   function() ef.filter("fname", nokeep, { input_type = "sensitive" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-a-FNAME)",    lp.."<C-r>F",     "Lfilter! fname"..a..cs,   function() ef.filter("fname", nokeep, { input_type = "sensitive" }, { action = "add", is_loclist = true }) end},
 
-    { nx, pqfr.."-Lfilter-n-fnameX)",    lp.."k<C-f>",     "Lfilter fname"..n..rx,    function() ef.fname({ keep = true }, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-r-fnameX)",    lp.."K<C-f>",     "Lfilter fname"..r..rx,    function() ef.fname({ keep = true }, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-a-fnameX)",    lp.."<C-k><C-f>", "Lfilter fname"..a..rx,    function() ef.fname({ keep = true }, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-n-fnameX)",   lp.."r<C-f>",     "Lfilter! fname"..n..rx,   function() ef.fname({ keep = false }, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-r-fnameX)",   lp.."R<C-f>",     "Lfilter! fname"..r..rx,   function() ef.fname({ keep = false }, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-a-fnameX)",   lp.."<C-r><C-f>", "Lfilter! fname"..a..rx,   function() ef.fname({ keep = false }, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-n-fnameX)",    lp.."k<C-f>",     "Lfilter fname"..n..rx,    function() ef.filter("fname", keep, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-r-fnameX)",    lp.."K<C-f>",     "Lfilter fname"..r..rx,    function() ef.filter("fname", keep, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-a-fnameX)",    lp.."<C-k><C-f>", "Lfilter fname"..a..rx,    function() ef.filter("fname", keep, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-n-fnameX)",   lp.."r<C-f>",     "Lfilter! fname"..n..rx,   function() ef.filter("fname", nokeep, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-r-fnameX)",   lp.."R<C-f>",     "Lfilter! fname"..r..rx,   function() ef.filter("fname", nokeep, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-a-fnameX)",   lp.."<C-r><C-f>", "Lfilter! fname"..a..rx,   function() ef.filter("fname", nokeep, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
 
     --- Text ---
 
-    { nx, pqfr.."-Qfilter-n-text)",      qp.."ke",         "Qfilter text"..n..sc,     function() ef.text({ keep = true }, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-r-text)",      qp.."Ke",         "Qfilter text"..r..sc,     function() ef.text({ keep = true }, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-a-text)",      qp.."<C-k>e",     "Qfilter text"..a..sc,     function() ef.text({ keep = true }, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-n-text)",     qp.."re",         "Qfilter! text"..n..sc,    function() ef.text({ keep = false }, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-r-text)",     qp.."Re",         "Qfilter! text"..r..sc,    function() ef.text({ keep = false }, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-a-text)",     qp.."<C-r>e",     "Qfilter! text"..a..sc,    function() ef.text({ keep = false }, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-n-text)",      qp.."ke",         "Qfilter text"..n..sc,     function() ef.filter("text", keep, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-r-text)",      qp.."Ke",         "Qfilter text"..r..sc,     function() ef.filter("text", keep, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-a-text)",      qp.."<C-k>e",     "Qfilter text"..a..sc,     function() ef.filter("text", keep, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-n-text)",     qp.."re",         "Qfilter! text"..n..sc,    function() ef.filter("text", nokeep, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-r-text)",     qp.."Re",         "Qfilter! text"..r..sc,    function() ef.filter("text", nokeep, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-a-text)",     qp.."<C-r>e",     "Qfilter! text"..a..sc,    function() ef.filter("text", nokeep, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
 
-    { nx, pqfr.."-Qfilter-n-TEXT)",      qp.."kE",         "Qfilter text"..n..cs,     function() ef.text({ keep = true }, { input_type = "sensitive" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-r-TEXT)",      qp.."KE",         "Qfilter text"..r..cs,     function() ef.text({ keep = true }, { input_type = "sensitive" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-a-TEXT)",      qp.."<C-k>E",     "Qfilter text"..a..cs,     function() ef.text({ keep = true }, { input_type = "sensitive" }, { action = "add", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-n-TEXT)",     qp.."rE",         "Qfilter! text"..n..cs,    function() ef.text({ keep = false }, { input_type = "sensitive" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-r-TEXT)",     qp.."RE",         "Qfilter! text"..r..cs,    function() ef.text({ keep = false }, { input_type = "sensitive" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-a-TEXT)",     qp.."<C-r>E",     "Qfilter! text"..a..cs,    function() ef.text({ keep = false }, { input_type = "sensitive" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-n-TEXT)",      qp.."kE",         "Qfilter text"..n..cs,     function() ef.filter("text", keep, { input_type = "sensitive" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-r-TEXT)",      qp.."KE",         "Qfilter text"..r..cs,     function() ef.filter("text", keep, { input_type = "sensitive" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-a-TEXT)",      qp.."<C-k>E",     "Qfilter text"..a..cs,     function() ef.filter("text", keep, { input_type = "sensitive" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-n-TEXT)",     qp.."rE",         "Qfilter! text"..n..cs,    function() ef.filter("text", nokeep, { input_type = "sensitive" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-r-TEXT)",     qp.."RE",         "Qfilter! text"..r..cs,    function() ef.filter("text", nokeep, { input_type = "sensitive" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-a-TEXT)",     qp.."<C-r>E",     "Qfilter! text"..a..cs,    function() ef.filter("text", nokeep, { input_type = "sensitive" }, { action = "add", is_loclist = false }) end},
 
-    { nx, pqfr.."-Qfilter-n-textX)",     qp.."k<C-e>",     "Qfilter text"..n..rx,     function() ef.text({ keep = true }, { input_type = "regex" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-r-textX)",     qp.."K<C-e>",     "Qfilter text"..r..rx,     function() ef.text({ keep = true }, { input_type = "regex" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-a-textX)",     qp.."<C-k><C-e>", "Qfilter text"..a..rx,     function() ef.text({ keep = true }, { input_type = "regex" }, { action = "add", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-n-textX)",    qp.."r<C-e>",     "Qfilter! text"..n..rx,    function() ef.text({ keep = false }, { input_type = "regex" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-r-textX)",    qp.."R<C-e>",     "Qfilter! text"..r..rx,    function() ef.text({ keep = false }, { input_type = "regex" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-a-textX)",    qp.."<C-r><C-e>", "Qfilter! text"..a..rx,    function() ef.text({ keep = false }, { input_type = "regex" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-n-textX)",     qp.."k<C-e>",     "Qfilter text"..n..rx,     function() ef.filter("text", keep, { input_type = "regex" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-r-textX)",     qp.."K<C-e>",     "Qfilter text"..r..rx,     function() ef.filter("text", keep, { input_type = "regex" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-a-textX)",     qp.."<C-k><C-e>", "Qfilter text"..a..rx,     function() ef.filter("text", keep, { input_type = "regex" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-n-textX)",    qp.."r<C-e>",     "Qfilter! text"..n..rx,    function() ef.filter("text", nokeep, { input_type = "regex" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-r-textX)",    qp.."R<C-e>",     "Qfilter! text"..r..rx,    function() ef.filter("text", nokeep, { input_type = "regex" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-a-textX)",    qp.."<C-r><C-e>", "Qfilter! text"..a..rx,    function() ef.filter("text", nokeep, { input_type = "regex" }, { action = "add", is_loclist = false }) end},
 
-    { nx, pqfr.."-Lfilter-n-text)",      lp.."ke",         "Lfilter text"..n..sc,     function() ef.text({ keep = true }, { input_type = "vimsmart" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-r-text)",      lp.."Ke",         "Lfilter text"..r..sc,     function() ef.text({ keep = true }, { input_type = "vimsmart" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-a-text)",      lp.."<C-k>e",     "Lfilter text"..a..sc,     function() ef.text({ keep = true }, { input_type = "vimsmart" }, { action = "add", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-n-text)",     lp.."re",         "Lfilter! text"..n..sc,    function() ef.text({ keep = false }, { input_type = "vimsmart" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-r-text)",     lp.."Re",         "Lfilter! text"..r..sc,    function() ef.text({ keep = false }, { input_type = "vimsmart" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-a-text)",     lp.."<C-r>e",     "Lfilter! text"..a..sc,    function() ef.text({ keep = false }, { input_type = "vimsmart" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-n-text)",      lp.."ke",         "Lfilter text"..n..sc,     function() ef.filter("text", keep, { input_type = "vimsmart" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-r-text)",      lp.."Ke",         "Lfilter text"..r..sc,     function() ef.filter("text", keep, { input_type = "vimsmart" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-a-text)",      lp.."<C-k>e",     "Lfilter text"..a..sc,     function() ef.filter("text", keep, { input_type = "vimsmart" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-n-text)",     lp.."re",         "Lfilter! text"..n..sc,    function() ef.filter("text", nokeep, { input_type = "vimsmart" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-r-text)",     lp.."Re",         "Lfilter! text"..r..sc,    function() ef.filter("text", nokeep, { input_type = "vimsmart" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-a-text)",     lp.."<C-r>e",     "Lfilter! text"..a..sc,    function() ef.filter("text", nokeep, { input_type = "vimsmart" }, { action = "add", is_loclist = true }) end},
 
-    { nx, pqfr.."-Lfilter-n-TEXT)",      lp.."kE",         "Lfilter text"..n..cs,     function() ef.text({ keep = true }, { input_type = "sensitive" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-r-TEXT)",      lp.."KE",         "Lfilter text"..r..cs,     function() ef.text({ keep = true }, { input_type = "sensitive" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-a-TEXT)",      lp.."<C-k>E",     "Lfilter text"..a..cs,     function() ef.text({ keep = true }, { input_type = "sensitive" }, { action = "add", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-n-TEXT)",     lp.."rE",         "Lfilter! text"..n..cs,    function() ef.text({ keep = false }, { input_type = "sensitive" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-r-TEXT)",     lp.."RE",         "Lfilter! text"..r..cs,    function() ef.text({ keep = false }, { input_type = "sensitive" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-a-TEXT)",     lp.."<C-r>E",     "Lfilter! text"..a..cs,    function() ef.text({ keep = false }, { input_type = "sensitive" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-n-TEXT)",      lp.."kE",         "Lfilter text"..n..cs,     function() ef.filter("text", keep, { input_type = "sensitive" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-r-TEXT)",      lp.."KE",         "Lfilter text"..r..cs,     function() ef.filter("text", keep, { input_type = "sensitive" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-a-TEXT)",      lp.."<C-k>E",     "Lfilter text"..a..cs,     function() ef.filter("text", keep, { input_type = "sensitive" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-n-TEXT)",     lp.."rE",         "Lfilter! text"..n..cs,    function() ef.filter("text", nokeep, { input_type = "sensitive" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-r-TEXT)",     lp.."RE",         "Lfilter! text"..r..cs,    function() ef.filter("text", nokeep, { input_type = "sensitive" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-a-TEXT)",     lp.."<C-r>E",     "Lfilter! text"..a..cs,    function() ef.filter("text", nokeep, { input_type = "sensitive" }, { action = "add", is_loclist = true }) end},
 
-    { nx, pqfr.."-Lfilter-n-textX)",     lp.."k<C-e>",     "Lfilter text"..n..rx,     function() ef.text({ keep = true }, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-r-textX)",     lp.."K<C-e>",     "Lfilter text"..r..rx,     function() ef.text({ keep = true }, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-a-textX)",     lp.."<C-k><C-e>", "Lfilter text"..a..rx,     function() ef.text({ keep = true }, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-n-textX)",    lp.."r<C-e>",     "Lfilter! text"..n..rx,    function() ef.text({ keep = false }, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-r-textX)",    lp.."R<C-e>",     "Lfilter! text"..r..rx,    function() ef.text({ keep = false }, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-a-textX)",    lp.."<C-r><C-e>", "Lfilter! text"..a..rx,    function() ef.text({ keep = false }, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-n-textX)",     lp.."k<C-e>",     "Lfilter text"..n..rx,     function() ef.filter("text", keep, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-r-textX)",     lp.."K<C-e>",     "Lfilter text"..r..rx,     function() ef.filter("text", keep, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-a-textX)",     lp.."<C-k><C-e>", "Lfilter text"..a..rx,     function() ef.filter("text", keep, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-n-textX)",    lp.."r<C-e>",     "Lfilter! text"..n..rx,    function() ef.filter("text", nokeep, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-r-textX)",    lp.."R<C-e>",     "Lfilter! text"..r..rx,    function() ef.filter("text", nokeep, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-a-textX)",    lp.."<C-r><C-e>", "Lfilter! text"..a..rx,    function() ef.filter("text", nokeep, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
 
     --- Lnum ---
 
-    { nx, pqfr.."-Qfilter-n-lnum)",      qp.."kn",         "Qfilter lnum"..n..sc,     function() ef.lnum({ keep = true }, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-r-lnum)",      qp.."Kn",         "Qfilter lnum"..r..sc,     function() ef.lnum({ keep = true }, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-a-lnum)",      qp.."<C-k>n",     "Qfilter lnum"..a..sc,     function() ef.lnum({ keep = true }, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-n-lnum)",     qp.."rn",         "Qfilter! lnum"..n..sc,    function() ef.lnum({ keep = false }, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-r-lnum)",     qp.."Rn",         "Qfilter! lnum"..r..sc,    function() ef.lnum({ keep = false }, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-a-lnum)",     qp.."<C-r>n",     "Qfilter! lnum"..a..sc,    function() ef.lnum({ keep = false }, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-n-lnum)",      qp.."kn",         "Qfilter lnum"..n..sc,     function() ef.filter("lnum", keep, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-r-lnum)",      qp.."Kn",         "Qfilter lnum"..r..sc,     function() ef.filter("lnum", keep, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-a-lnum)",      qp.."<C-k>n",     "Qfilter lnum"..a..sc,     function() ef.filter("lnum", keep, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-n-lnum)",     qp.."rn",         "Qfilter! lnum"..n..sc,    function() ef.filter("lnum", nokeep, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-r-lnum)",     qp.."Rn",         "Qfilter! lnum"..r..sc,    function() ef.filter("lnum", nokeep, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-a-lnum)",     qp.."<C-r>n",     "Qfilter! lnum"..a..sc,    function() ef.filter("lnum", nokeep, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
 
-    { nx, pqfr.."-Qfilter-n-LNUM)",      qp.."kN",         "Qfilter lnum"..n..cs,     function() ef.lnum({ keep = true }, { input_type = "sensitive" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-r-LNUM)",      qp.."KN",         "Qfilter lnum"..r..cs,     function() ef.lnum({ keep = true }, { input_type = "sensitive" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-a-LNUM)",      qp.."<C-k>N",     "Qfilter lnum"..a..cs,     function() ef.lnum({ keep = true }, { input_type = "sensitive" }, { action = "add", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-n-LNUM)",     qp.."rN",         "Qfilter! lnum"..n..cs,    function() ef.lnum({ keep = false }, { input_type = "sensitive" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-r-LNUM)",     qp.."RN",         "Qfilter! lnum"..r..cs,    function() ef.lnum({ keep = false }, { input_type = "sensitive" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-a-LNUM)",     qp.."<C-r>N",     "Qfilter! lnum"..a..cs,    function() ef.lnum({ keep = false }, { input_type = "sensitive" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-n-LNUM)",      qp.."kN",         "Qfilter lnum"..n..cs,     function() ef.filter("lnum", keep, { input_type = "sensitive" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-r-LNUM)",      qp.."KN",         "Qfilter lnum"..r..cs,     function() ef.filter("lnum", keep, { input_type = "sensitive" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-a-LNUM)",      qp.."<C-k>N",     "Qfilter lnum"..a..cs,     function() ef.filter("lnum", keep, { input_type = "sensitive" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-n-LNUM)",     qp.."rN",         "Qfilter! lnum"..n..cs,    function() ef.filter("lnum", nokeep, { input_type = "sensitive" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-r-LNUM)",     qp.."RN",         "Qfilter! lnum"..r..cs,    function() ef.filter("lnum", nokeep, { input_type = "sensitive" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-a-LNUM)",     qp.."<C-r>N",     "Qfilter! lnum"..a..cs,    function() ef.filter("lnum", nokeep, { input_type = "sensitive" }, { action = "add", is_loclist = false }) end},
 
-    { nx, pqfr.."-Qfilter-n-lnumX)",     qp.."k<C-n>",     "Qfilter lnum"..n..rx,     function() ef.lnum({ keep = true }, { input_type = "regex" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-r-lnumX)",     qp.."K<C-n>",     "Qfilter lnum"..r..rx,     function() ef.lnum({ keep = true }, { input_type = "regex" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-a-lnumX)",     qp.."<C-k><C-n>", "Qfilter lnum"..a..rx,     function() ef.lnum({ keep = true }, { input_type = "regex" }, { action = "add", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-n-lnumX)",    qp.."r<C-n>",     "Qfilter! lnum"..n..rx,    function() ef.lnum({ keep = false }, { input_type = "regex" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-r-lnumX)",    qp.."R<C-n>",     "Qfilter! lnum"..r..rx,    function() ef.lnum({ keep = false }, { input_type = "regex" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-a-lnumX)",    qp.."<C-r><C-n>", "Qfilter! lnum"..a..rx,    function() ef.lnum({ keep = false }, { input_type = "regex" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-n-lnumX)",     qp.."k<C-n>",     "Qfilter lnum"..n..rx,     function() ef.filter("lnum", keep, { input_type = "regex" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-r-lnumX)",     qp.."K<C-n>",     "Qfilter lnum"..r..rx,     function() ef.filter("lnum", keep, { input_type = "regex" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-a-lnumX)",     qp.."<C-k><C-n>", "Qfilter lnum"..a..rx,     function() ef.filter("lnum", keep, { input_type = "regex" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-n-lnumX)",    qp.."r<C-n>",     "Qfilter! lnum"..n..rx,    function() ef.filter("lnum", nokeep, { input_type = "regex" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-r-lnumX)",    qp.."R<C-n>",     "Qfilter! lnum"..r..rx,    function() ef.filter("lnum", nokeep, { input_type = "regex" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-a-lnumX)",    qp.."<C-r><C-n>", "Qfilter! lnum"..a..rx,    function() ef.filter("lnum", nokeep, { input_type = "regex" }, { action = "add", is_loclist = false }) end},
 
-    { nx, pqfr.."-Lfilter-n-lnum)",      lp.."kn",         "Lfilter lnum"..n..sc,     function() ef.lnum({ keep = true }, { input_type = "vimsmart" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-r-lnum)",      lp.."Kn",         "Lfilter lnum"..r..sc,     function() ef.lnum({ keep = true }, { input_type = "vimsmart" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-a-lnum)",      lp.."<C-k>n",     "Lfilter lnum"..a..sc,     function() ef.lnum({ keep = true }, { input_type = "vimsmart" }, { action = "add", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-n-lnum)",     lp.."rn",         "Lfilter! lnum"..n..sc,    function() ef.lnum({ keep = false }, { input_type = "vimsmart" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-r-lnum)",     lp.."Rn",         "Lfilter! lnum"..r..sc,    function() ef.lnum({ keep = false }, { input_type = "vimsmart" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-a-lnum)",     lp.."<C-r>n",     "Lfilter! lnum"..a..sc,    function() ef.lnum({ keep = false }, { input_type = "vimsmart" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-n-lnum)",      lp.."kn",         "Lfilter lnum"..n..sc,     function() ef.filter("lnum", keep, { input_type = "vimsmart" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-r-lnum)",      lp.."Kn",         "Lfilter lnum"..r..sc,     function() ef.filter("lnum", keep, { input_type = "vimsmart" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-a-lnum)",      lp.."<C-k>n",     "Lfilter lnum"..a..sc,     function() ef.filter("lnum", keep, { input_type = "vimsmart" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-n-lnum)",     lp.."rn",         "Lfilter! lnum"..n..sc,    function() ef.filter("lnum", nokeep, { input_type = "vimsmart" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-r-lnum)",     lp.."Rn",         "Lfilter! lnum"..r..sc,    function() ef.filter("lnum", nokeep, { input_type = "vimsmart" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-a-lnum)",     lp.."<C-r>n",     "Lfilter! lnum"..a..sc,    function() ef.filter("lnum", nokeep, { input_type = "vimsmart" }, { action = "add", is_loclist = true }) end},
 
-    { nx, pqfr.."-Lfilter-n-LNUM)",      lp.."kN",         "Lfilter lnum"..n..cs,     function() ef.lnum({ keep = true }, { input_type = "sensitive" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-r-LNUM)",      lp.."KN",         "Lfilter lnum"..r..cs,     function() ef.lnum({ keep = true }, { input_type = "sensitive" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-a-LNUM)",      lp.."<C-k>N",     "Lfilter lnum"..a..cs,     function() ef.lnum({ keep = true }, { input_type = "sensitive" }, { action = "add", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-n-LNUM)",     lp.."rN",         "Lfilter! lnum"..n..cs,    function() ef.lnum({ keep = false }, { input_type = "sensitive" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-r-LNUM)",     lp.."RN",         "Lfilter! lnum"..r..cs,    function() ef.lnum({ keep = false }, { input_type = "sensitive" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-a-LNUM)",     lp.."<C-r>N",     "Lfilter! lnum"..a..cs,    function() ef.lnum({ keep = false }, { input_type = "sensitive" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-n-LNUM)",      lp.."kN",         "Lfilter lnum"..n..cs,     function() ef.filter("lnum", keep, { input_type = "sensitive" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-r-LNUM)",      lp.."KN",         "Lfilter lnum"..r..cs,     function() ef.filter("lnum", keep, { input_type = "sensitive" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-a-LNUM)",      lp.."<C-k>N",     "Lfilter lnum"..a..cs,     function() ef.filter("lnum", keep, { input_type = "sensitive" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-n-LNUM)",     lp.."rN",         "Lfilter! lnum"..n..cs,    function() ef.filter("lnum", nokeep, { input_type = "sensitive" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-r-LNUM)",     lp.."RN",         "Lfilter! lnum"..r..cs,    function() ef.filter("lnum", nokeep, { input_type = "sensitive" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-a-LNUM)",     lp.."<C-r>N",     "Lfilter! lnum"..a..cs,    function() ef.filter("lnum", nokeep, { input_type = "sensitive" }, { action = "add", is_loclist = true }) end},
 
-    { nx, pqfr.."-Lfilter-n-lnumX)",     lp.."k<C-n>",     "Lfilter lnum"..n..rx,     function() ef.lnum({ keep = true }, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-r-lnumX)",     lp.."K<C-n>",     "Lfilter lnum"..r..rx,     function() ef.lnum({ keep = true }, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-a-lnumX)",     lp.."<C-k><C-n>", "Lfilter lnum"..a..rx,     function() ef.lnum({ keep = true }, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-n-lnumX)",    lp.."r<C-n>",     "Lfilter! lnum"..n..rx,    function() ef.lnum({ keep = false }, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-r-lnumX)",    lp.."R<C-n>",     "Lfilter! lnum"..r..rx,    function() ef.lnum({ keep = false }, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-a-lnumX)",    lp.."<C-r><C-n>", "Lfilter! lnum"..a..rx,    function() ef.lnum({ keep = false }, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-n-lnumX)",     lp.."k<C-n>",     "Lfilter lnum"..n..rx,     function() ef.filter("lnum", keep, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-r-lnumX)",     lp.."K<C-n>",     "Lfilter lnum"..r..rx,     function() ef.filter("lnum", keep, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-a-lnumX)",     lp.."<C-k><C-n>", "Lfilter lnum"..a..rx,     function() ef.filter("lnum", keep, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-n-lnumX)",    lp.."r<C-n>",     "Lfilter! lnum"..n..rx,    function() ef.filter("lnum", nokeep, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-r-lnumX)",    lp.."R<C-n>",     "Lfilter! lnum"..r..rx,    function() ef.filter("lnum", nokeep, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-a-lnumX)",    lp.."<C-r><C-n>", "Lfilter! lnum"..a..rx,    function() ef.filter("lnum", nokeep, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
 
     --- Type ---
 
-    { nx, pqfr.."-Qfilter-n-type)",      qp.."kt",         "Qfilter type"..n..sc,     function() ef.type({ keep = true }, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-r-type)",      qp.."Kt",         "Qfilter type"..r..sc,     function() ef.type({ keep = true }, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-a-type)",      qp.."<C-k>t",     "Qfilter type"..a..sc,     function() ef.type({ keep = true }, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-n-type)",     qp.."rt",         "Qfilter! type"..n..sc,    function() ef.type({ keep = false }, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-r-type)",     qp.."Rt",         "Qfilter! type"..r..sc,    function() ef.type({ keep = false }, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-a-type)",     qp.."<C-r>t",     "Qfilter! type"..a..sc,    function() ef.type({ keep = false }, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-n-type)",      qp.."kt",         "Qfilter type"..n..sc,     function() ef.filter("type", keep, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-r-type)",      qp.."Kt",         "Qfilter type"..r..sc,     function() ef.filter("type", keep, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-a-type)",      qp.."<C-k>t",     "Qfilter type"..a..sc,     function() ef.filter("type", keep, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-n-type)",     qp.."rt",         "Qfilter! type"..n..sc,    function() ef.filter("type", nokeep, { input_type = "vimsmart" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-r-type)",     qp.."Rt",         "Qfilter! type"..r..sc,    function() ef.filter("type", nokeep, { input_type = "vimsmart" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-a-type)",     qp.."<C-r>t",     "Qfilter! type"..a..sc,    function() ef.filter("type", nokeep, { input_type = "vimsmart" }, { action = "add", is_loclist = false }) end},
 
-    { nx, pqfr.."-Qfilter-n-TYPE)",      qp.."kT",         "Qfilter type"..n..cs,     function() ef.type({ keep = true }, { input_type = "sensitive" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-r-TYPE)",      qp.."KT",         "Qfilter type"..r..cs,     function() ef.type({ keep = true }, { input_type = "sensitive" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-a-TYPE)",      qp.."<C-k>T",     "Qfilter type"..a..cs,     function() ef.type({ keep = true }, { input_type = "sensitive" }, { action = "add", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-n-TYPE)",     qp.."rT",         "Qfilter! type"..n..cs,    function() ef.type({ keep = false }, { input_type = "sensitive" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-r-TYPE)",     qp.."RT",         "Qfilter! type"..r..cs,    function() ef.type({ keep = false }, { input_type = "sensitive" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-a-TYPE)",     qp.."<C-r>T",     "Qfilter! type"..a..cs,    function() ef.type({ keep = false }, { input_type = "sensitive" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-n-TYPE)",      qp.."kT",         "Qfilter type"..n..cs,     function() ef.filter("type", keep, { input_type = "sensitive" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-r-TYPE)",      qp.."KT",         "Qfilter type"..r..cs,     function() ef.filter("type", keep, { input_type = "sensitive" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-a-TYPE)",      qp.."<C-k>T",     "Qfilter type"..a..cs,     function() ef.filter("type", keep, { input_type = "sensitive" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-n-TYPE)",     qp.."rT",         "Qfilter! type"..n..cs,    function() ef.filter("type", nokeep, { input_type = "sensitive" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-r-TYPE)",     qp.."RT",         "Qfilter! type"..r..cs,    function() ef.filter("type", nokeep, { input_type = "sensitive" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-a-TYPE)",     qp.."<C-r>T",     "Qfilter! type"..a..cs,    function() ef.filter("type", nokeep, { input_type = "sensitive" }, { action = "add", is_loclist = false }) end},
 
-    { nx, pqfr.."-Qfilter-n-typeX)",     qp.."k<C-t>",     "Qfilter type"..n..rx,     function() ef.type({ keep = true }, { input_type = "regex" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-r-typeX)",     qp.."K<C-t>",     "Qfilter type"..r..rx,     function() ef.type({ keep = true }, { input_type = "regex" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter-a-typeX)",     qp.."<C-k><C-t>", "Qfilter type"..a..rx,     function() ef.type({ keep = true }, { input_type = "regex" }, { action = "add", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-n-typeX)",    qp.."r<C-t>",     "Qfilter! type"..n..rx,    function() ef.type({ keep = false }, { input_type = "regex" }, { action = "new", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-r-typeX)",    qp.."R<C-t>",     "Qfilter! type"..r..rx,    function() ef.type({ keep = false }, { input_type = "regex" }, { action = "replace", is_loclist = false }) end},
-    { nx, pqfr.."-Qfilter!-a-typeX)",    qp.."<C-r><C-t>", "Qfilter! type"..a..rx,    function() ef.type({ keep = false }, { input_type = "regex" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-n-typeX)",     qp.."k<C-t>",     "Qfilter type"..n..rx,     function() ef.filter("type", keep, { input_type = "regex" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-r-typeX)",     qp.."K<C-t>",     "Qfilter type"..r..rx,     function() ef.filter("type", keep, { input_type = "regex" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter-a-typeX)",     qp.."<C-k><C-t>", "Qfilter type"..a..rx,     function() ef.filter("type", keep, { input_type = "regex" }, { action = "add", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-n-typeX)",    qp.."r<C-t>",     "Qfilter! type"..n..rx,    function() ef.filter("type", nokeep, { input_type = "regex" }, { action = "new", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-r-typeX)",    qp.."R<C-t>",     "Qfilter! type"..r..rx,    function() ef.filter("type", nokeep, { input_type = "regex" }, { action = "replace", is_loclist = false }) end},
+    { nx, pqfr.."-Qfilter!-a-typeX)",    qp.."<C-r><C-t>", "Qfilter! type"..a..rx,    function() ef.filter("type", nokeep, { input_type = "regex" }, { action = "add", is_loclist = false }) end},
 
-    { nx, pqfr.."-Lfilter-n-type)",      lp.."kt",         "Lfilter type"..n..sc,     function() ef.type({ keep = true }, { input_type = "vimsmart" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-r-type)",      lp.."Kt",         "Lfilter type"..r..sc,     function() ef.type({ keep = true }, { input_type = "vimsmart" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-a-type)",      lp.."<C-k>t",     "Lfilter type"..a..sc,     function() ef.type({ keep = true }, { input_type = "vimsmart" }, { action = "add", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-n-type)",     lp.."rt",         "Lfilter! type"..n..sc,    function() ef.type({ keep = false }, { input_type = "vimsmart" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-r-type)",     lp.."Rt",         "Lfilter! type"..r..sc,    function() ef.type({ keep = false }, { input_type = "vimsmart" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-a-type)",     lp.."<C-r>t",     "Lfilter! type"..a..sc,    function() ef.type({ keep = false }, { input_type = "vimsmart" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-n-type)",      lp.."kt",         "Lfilter type"..n..sc,     function() ef.filter("type", keep, { input_type = "vimsmart" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-r-type)",      lp.."Kt",         "Lfilter type"..r..sc,     function() ef.filter("type", keep, { input_type = "vimsmart" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-a-type)",      lp.."<C-k>t",     "Lfilter type"..a..sc,     function() ef.filter("type", keep, { input_type = "vimsmart" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-n-type)",     lp.."rt",         "Lfilter! type"..n..sc,    function() ef.filter("type", nokeep, { input_type = "vimsmart" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-r-type)",     lp.."Rt",         "Lfilter! type"..r..sc,    function() ef.filter("type", nokeep, { input_type = "vimsmart" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-a-type)",     lp.."<C-r>t",     "Lfilter! type"..a..sc,    function() ef.filter("type", nokeep, { input_type = "vimsmart" }, { action = "add", is_loclist = true }) end},
 
-    { nx, pqfr.."-Lfilter-n-TYPE)",      lp.."kT",         "Lfilter type"..n..cs,     function() ef.type({ keep = true }, { input_type = "sensitive" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-r-TYPE)",      lp.."KT",         "Lfilter type"..r..cs,     function() ef.type({ keep = true }, { input_type = "sensitive" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-a-TYPE)",      lp.."<C-k>T",     "Lfilter type"..a..cs,     function() ef.type({ keep = true }, { input_type = "sensitive" }, { action = "add", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-n-TYPE)",     lp.."rT",         "Lfilter! type"..n..cs,    function() ef.type({ keep = false }, { input_type = "sensitive" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-r-TYPE)",     lp.."RT",         "Lfilter! type"..r..cs,    function() ef.type({ keep = false }, { input_type = "sensitive" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-a-TYPE)",     lp.."<C-r>T",     "Lfilter! type"..a..cs,    function() ef.type({ keep = false }, { input_type = "sensitive" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-n-TYPE)",      lp.."kT",         "Lfilter type"..n..cs,     function() ef.filter("type", keep, { input_type = "sensitive" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-r-TYPE)",      lp.."KT",         "Lfilter type"..r..cs,     function() ef.filter("type", keep, { input_type = "sensitive" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-a-TYPE)",      lp.."<C-k>T",     "Lfilter type"..a..cs,     function() ef.filter("type", keep, { input_type = "sensitive" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-n-TYPE)",     lp.."rT",         "Lfilter! type"..n..cs,    function() ef.filter("type", nokeep, { input_type = "sensitive" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-r-TYPE)",     lp.."RT",         "Lfilter! type"..r..cs,    function() ef.filter("type", nokeep, { input_type = "sensitive" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-a-TYPE)",     lp.."<C-r>T",     "Lfilter! type"..a..cs,    function() ef.filter("type", nokeep, { input_type = "sensitive" }, { action = "add", is_loclist = true }) end},
 
-    { nx, pqfr.."-Lfilter-n-typeX)",     lp.."k<C-t>",     "Lfilter type"..n..rx,     function() ef.type({ keep = true }, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-r-typeX)",     lp.."K<C-t>",     "Lfilter type"..r..rx,     function() ef.type({ keep = true }, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter-a-typeX)",     lp.."<C-k><C-t>", "Lfilter type"..a..rx,     function() ef.type({ keep = true }, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-n-typeX)",    lp.."r<C-t>",     "Lfilter! type"..n..rx,    function() ef.type({ keep = false }, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-r-typeX)",    lp.."R<C-t>",     "Lfilter! type"..r..rx,    function() ef.type({ keep = false }, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
-    { nx, pqfr.."-Lfilter!-a-typeX)",    lp.."<C-r><C-t>", "Lfilter! type"..a..rx,    function() ef.type({ keep = false }, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-n-typeX)",     lp.."k<C-t>",     "Lfilter type"..n..rx,     function() ef.filter("type", keep, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-r-typeX)",     lp.."K<C-t>",     "Lfilter type"..r..rx,     function() ef.filter("type", keep, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter-a-typeX)",     lp.."<C-k><C-t>", "Lfilter type"..a..rx,     function() ef.filter("type", keep, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-n-typeX)",    lp.."r<C-t>",     "Lfilter! type"..n..rx,    function() ef.filter("type", nokeep, { input_type = "regex" }, { action = "new", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-r-typeX)",    lp.."R<C-t>",     "Lfilter! type"..r..rx,    function() ef.filter("type", nokeep, { input_type = "regex" }, { action = "replace", is_loclist = true }) end},
+    { nx, pqfr.."-Lfilter!-a-typeX)",    lp.."<C-r><C-t>", "Lfilter! type"..a..rx,    function() ef.filter("type", nokeep, { input_type = "regex" }, { action = "add", is_loclist = true }) end},
 
     ------------
     --- GREP ---
@@ -419,6 +422,13 @@ local rancher_keymaps = {
     --- SORT ---
     ------------
 
+    { nn, "<nop>", "<leader>qt",     "Avoid falling back to defaults", nil },
+    { nn, "<nop>", "<leader>qT",     "Avoid falling back to defaults", nil },
+    { nn, "<nop>", "<leader>q<C-t>", "Avoid falling back to defaults", nil },
+    { nn, "<nop>", "<leader>lt",     "Avoid falling back to defaults", nil },
+    { nn, "<nop>", "<leader>lT",     "Avoid falling back to defaults", nil },
+    { nn, "<nop>", "<leader>l<C-t>", "Avoid falling back to defaults", nil },
+
     { nn, pqfr.."-qsort-n-fname-asc)",       qp.."tf",  "Qsort by fname asc"..n,           function() et.sort("fname", { dir = "asc" }, { action = "new", is_loclist = false }) end },
     { nn, pqfr.."-qsort-n-fname-desc)",      qp.."tF",  "Qsort by fname desc"..n,          function() et.sort("fname", { dir = "desc" }, { action = "new", is_loclist = false }) end },
     { nn, pqfr.."-qsort-n-fname-diag-asc)",  qp.."tif", "Qsort by fname_diag asc"..n,      function() et.sort("fname_diag", { dir = "asc" }, { action = "new", is_loclist = false }) end },
@@ -516,70 +526,59 @@ end
 --- FILTER ---
 --------------
 
-local function create_filter_command(is_loclist)
-    return function(cmd_opts)
-        local filter_funcs = {
-            cfilter = ef.cfilter,
-            fname = ef.fname,
-            lnum = ef.lnum,
-            type = ef.type,
-            text = ef.text,
-        }
-
-        local action = "new"
-        local filter_name = "cfilter"
-        local pattern = nil
-        local action_set = false
-        local filter_set = false
-        local pattern_set = false
-
-        for _, arg in ipairs(cmd_opts.fargs) do
-            if not action_set and vim.tbl_contains({ "new", "add", "merge" }, arg) then
-                action = (arg == "merge") and "add" or arg
-                action_set = true
-            elseif
-                not filter_set
-                and vim.tbl_contains({ "cfilter", "fname", "lnum", "type", "text" }, arg)
-            then
-                filter_name = arg
-                filter_set = true
-            elseif not pattern_set and vim.startswith(arg, "/") then
-                pattern = arg:sub(2)
-                pattern_set = true
-            end
+local function check_arg(fargs, valid_args, default)
+    for _, arg in ipairs(fargs) do
+        if vim.tbl_contains(valid_args, arg) then
+            return arg
         end
-
-        local keep = not cmd_opts.bang
-        local filter_func = filter_funcs[filter_name]
-        if not filter_func then
-            vim.api.nvim_echo(
-                { { "Invalid filter type: " .. filter_name, "ErrorMsg" } },
-                true,
-                { err = true }
-            )
-            return
-        end
-
-        local filter_opts = { keep = keep }
-        local input_opts = { input_type = pattern and "regex" or "vimsmart", pattern = pattern }
-        local output_opts = { is_loclist = is_loclist, action = action }
-
-        filter_func(filter_opts, input_opts, output_opts)
     end
+
+    return default
 end
 
-if vim.g.qf_rancher_set_default_cmds then
-    vim.api.nvim_create_user_command(
-        "Qfilter",
-        create_filter_command(false),
-        { bang = true, count = true, nargs = "*" }
-    )
+local function find_pattern(fargs)
+    for _, arg in ipairs(fargs) do
+        if vim.startswith(arg, "/") then
+            return arg
+        end
+    end
 
-    vim.api.nvim_create_user_command(
-        "Lfilter",
-        create_filter_command(true),
-        { bang = true, count = true, nargs = "*" }
-    )
+    return nil
+end
+
+--- @param cargs vim.api.keyset.create_user_command.command_args
+--- @param is_loclist boolean
+--- @return nil
+local function filter_cmd(cargs, is_loclist)
+    cargs = cargs or {}
+    local fargs = cargs.fargs
+
+    local filters = ef.get_filter_names()
+    assert(#filters > 1, "No filter functions available")
+    local filter_func = check_arg(fargs, filters, "cfilter")
+
+    local keep_this = not cargs.bang
+    local action = check_arg(fargs, actions, default_action)
+    local pattern = find_pattern(fargs)
+    local count = cargs.count > 0 and cargs.count or nil
+
+    local filter_opts = { keep = keep_this }
+    -- TODO: is this right the right way to handle input type?
+    local input_opts = { input_type = pattern and "regex" or "vimsmart", pattern = pattern }
+    local output_opts = { is_loclist = is_loclist, action = action, count = count }
+
+    ef.filter(filter_func, filter_opts, input_opts, output_opts)
+end
+
+-- TODO: filter and sort do not actually have a way to use count to set a dest list nr
+if vim.g.qf_rancher_set_default_cmds then
+    vim.api.nvim_create_user_command("Qfilter", function(cargs)
+        filter_cmd(cargs, false)
+    end, { bang = true, count = true, nargs = "*" })
+
+    vim.api.nvim_create_user_command("Lfilter", function(cargs)
+        filter_cmd(cargs, true)
+    end, { bang = true, count = true, nargs = "*" })
 end
 
 ------------
@@ -797,16 +796,6 @@ end
 --- SORT CMDS ---
 -----------------
 
-local function check_arg(fargs, valid_args, default)
-    for _, arg in ipairs(fargs) do
-        if vim.tbl_contains(valid_args, arg) then
-            return arg
-        end
-    end
-
-    return default
-end
-
 local function sort_cmd(cargs, is_loclist)
     cargs = cargs or {}
     local fargs = cargs.fargs
@@ -817,18 +806,20 @@ local function sort_cmd(cargs, is_loclist)
 
     local dir = check_arg(fargs, { "asc", "desc" }, "asc")
     local action = check_arg(fargs, actions, default_action)
-    vim.fn.confirm("func: " .. sort_func .. ", dir: " .. dir .. ", action" .. action)
+    local count = cargs.count > 0 and cargs.count or nil
 
-    et.sort(sort_func, { dir = dir }, { action = action, is_loclist = is_loclist })
+    et.sort(sort_func, { dir = dir }, { action = action, count = count, is_loclist = is_loclist })
 end
 
-vim.api.nvim_create_user_command("Qsort", function(cargs)
-    sort_cmd(cargs, false)
-end, { nargs = "*" })
+if vim.g.qf_rancher_set_default_cmds then
+    vim.api.nvim_create_user_command("Qsort", function(cargs)
+        sort_cmd(cargs, false)
+    end, { nargs = "*" })
 
-vim.api.nvim_create_user_command("Lsort", function(cargs)
-    sort_cmd(cargs, true)
-end, { nargs = "*" })
+    vim.api.nvim_create_user_command("Lsort", function(cargs)
+        sort_cmd(cargs, true)
+    end, { nargs = "*" })
+end
 
 -------------
 --- STACK ---
