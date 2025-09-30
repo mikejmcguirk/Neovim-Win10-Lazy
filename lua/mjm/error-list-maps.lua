@@ -522,68 +522,9 @@ if vim.g.qf_rancher_set_default_maps then
     -- vim.keym.del("n", "<nop>")
 end
 
---------------
---- FILTER ---
---------------
-
-local function check_arg(fargs, valid_args, default)
-    for _, arg in ipairs(fargs) do
-        if vim.tbl_contains(valid_args, arg) then
-            return arg
-        end
-    end
-
-    return default
-end
-
-local function find_pattern(fargs)
-    for _, arg in ipairs(fargs) do
-        if vim.startswith(arg, "/") then
-            return arg
-        end
-    end
-
-    return nil
-end
-
---- @param cargs vim.api.keyset.create_user_command.command_args
---- @param is_loclist boolean
---- @return nil
-local function filter_cmd(cargs, is_loclist)
-    cargs = cargs or {}
-    local fargs = cargs.fargs
-
-    local filters = ef.get_filter_names()
-    assert(#filters > 1, "No filter functions available")
-    local filter_func = check_arg(fargs, filters, "cfilter")
-
-    local keep_this = not cargs.bang
-    local action = check_arg(fargs, actions, default_action)
-    local pattern = find_pattern(fargs)
-    local count = cargs.count > 0 and cargs.count or nil
-
-    local filter_opts = { keep = keep_this }
-    -- TODO: is this right the right way to handle input type?
-    local input_opts = { input_type = pattern and "regex" or "vimsmart", pattern = pattern }
-    local output_opts = { is_loclist = is_loclist, action = action, count = count }
-
-    ef.filter(filter_func, filter_opts, input_opts, output_opts)
-end
-
--- TODO: filter and sort do not actually have a way to use count to set a dest list nr
-if vim.g.qf_rancher_set_default_cmds then
-    vim.api.nvim_create_user_command("Qfilter", function(cargs)
-        filter_cmd(cargs, false)
-    end, { bang = true, count = true, nargs = "*" })
-
-    vim.api.nvim_create_user_command("Lfilter", function(cargs)
-        filter_cmd(cargs, true)
-    end, { bang = true, count = true, nargs = "*" })
-end
-
-------------
---- GREP ---
-------------
+----------------
+--- GREP CMD ---
+----------------
 
 local function find_matches(cargs, matches)
     cargs.fargs = cargs.fargs or {}
@@ -688,11 +629,68 @@ if vim.g.qf_rancher_set_default_cmds then
     end, { nargs = "*" })
 end
 
--------------------------
---- OPEN_CLOSE_TOGGLE ---
--------------------------
-
 if vim.g.qf_rancher_set_default_cmds then
+    local function check_arg(fargs, valid_args, default)
+        for _, arg in ipairs(fargs) do
+            if vim.tbl_contains(valid_args, arg) then
+                return arg
+            end
+        end
+
+        return default
+    end
+
+    local function find_pattern(fargs)
+        for _, arg in ipairs(fargs) do
+            if vim.startswith(arg, "/") then
+                return arg
+            end
+        end
+
+        return nil
+    end
+
+    --------------
+    --- FILTER ---
+    --------------
+
+    --- @param cargs vim.api.keyset.create_user_command.command_args
+    --- @param is_loclist boolean
+    --- @return nil
+    local function filter_cmd(cargs, is_loclist)
+        cargs = cargs or {}
+        local fargs = cargs.fargs
+
+        local filters = ef.get_filter_names()
+        assert(#filters > 1, "No filter functions available")
+        local filter_func = check_arg(fargs, filters, "cfilter")
+
+        local keep_this = not cargs.bang
+        local action = check_arg(fargs, actions, default_action)
+        local pattern = find_pattern(fargs)
+        local count = cargs.count > 0 and cargs.count or nil
+
+        local filter_opts = { keep = keep_this }
+        -- TODO: is this right the right way to handle input type?
+        local input_opts = { input_type = pattern and "regex" or "vimsmart", pattern = pattern }
+        local output_opts = { is_loclist = is_loclist, action = action, count = count }
+
+        ef.filter(filter_func, filter_opts, input_opts, output_opts)
+    end
+
+    -- TODO: filter and sort do not actually have a way to use count to set a dest list nr
+    vim.api.nvim_create_user_command("Qfilter", function(cargs)
+        filter_cmd(cargs, false)
+    end, { bang = true, count = true, nargs = "*" })
+
+    vim.api.nvim_create_user_command("Lfilter", function(cargs)
+        filter_cmd(cargs, true)
+    end, { bang = true, count = true, nargs = "*" })
+
+    -------------------------
+    --- OPEN_CLOSE_TOGGLE ---
+    -------------------------
+
     vim.api.nvim_create_user_command("Qopen", function(cargs)
         cargs = cargs or {}
         local count = cargs.count > 0 and cargs.count or nil
@@ -712,13 +710,11 @@ if vim.g.qf_rancher_set_default_cmds then
     vim.api.nvim_create_user_command("Lclose", function()
         eo.close_loclist()
     end, {})
-end
 
-------------------
---- NAV_ACTION ---
-------------------
+    ------------------
+    --- NAV_ACTION ---
+    ------------------
 
-if vim.g.qf_rancher_set_default_cmds then
     vim.api.nvim_create_user_command("Qprev", function(cargs)
         cargs = cargs or {}
         local count = cargs.count > 0 and cargs.count or 1
@@ -790,28 +786,30 @@ if vim.g.qf_rancher_set_default_cmds then
         local count = cargs.count >= 0 and cargs.count or 0
         en.l_jump(count)
     end, { count = 0 })
-end
 
------------------
---- SORT CMDS ---
------------------
+    -----------------
+    --- SORT CMDS ---
+    -----------------
 
-local function sort_cmd(cargs, is_loclist)
-    cargs = cargs or {}
-    local fargs = cargs.fargs
+    local function sort_cmd(cargs, is_loclist)
+        cargs = cargs or {}
+        local fargs = cargs.fargs
 
-    local sorts = require("mjm.error-list-sort").get_sort_names()
-    assert(#sorts > 1, "No sort functions available")
-    local sort_func = check_arg(fargs, sorts, "fname")
+        local sorts = require("mjm.error-list-sort").get_sort_names()
+        assert(#sorts > 1, "No sort functions available")
+        local sort_func = check_arg(fargs, sorts, "fname")
 
-    local dir = check_arg(fargs, { "asc", "desc" }, "asc")
-    local action = check_arg(fargs, actions, default_action)
-    local count = cargs.count > 0 and cargs.count or nil
+        local dir = check_arg(fargs, { "asc", "desc" }, "asc")
+        local action = check_arg(fargs, actions, default_action)
+        local count = cargs.count > 0 and cargs.count or nil
 
-    et.sort(sort_func, { dir = dir }, { action = action, count = count, is_loclist = is_loclist })
-end
+        et.sort(
+            sort_func,
+            { dir = dir },
+            { action = action, count = count, is_loclist = is_loclist }
+        )
+    end
 
-if vim.g.qf_rancher_set_default_cmds then
     vim.api.nvim_create_user_command("Qsort", function(cargs)
         sort_cmd(cargs, false)
     end, { nargs = "*" })
@@ -819,13 +817,11 @@ if vim.g.qf_rancher_set_default_cmds then
     vim.api.nvim_create_user_command("Lsort", function(cargs)
         sort_cmd(cargs, true)
     end, { nargs = "*" })
-end
 
--------------
---- STACK ---
--------------
+    -------------
+    --- STACK ---
+    -------------
 
-if vim.g.qf_rancher_set_default_cmds then
     vim.api.nvim_create_user_command("Qolder", function(cargs)
         cargs = cargs or {}
 
