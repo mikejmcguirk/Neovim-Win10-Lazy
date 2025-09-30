@@ -170,7 +170,7 @@ end
 
 --- @return boolean, QfRancherGrepCmdFun|[string,string]
 local function get_grep_cmd()
-    local qf_rancher_grepprg = vim.api.nvim_get_var("qf_rancher_grepprg")
+    local qf_rancher_grepprg = vim.g.qf_rancher_grepprg
 
     if qf_rancher_grepprg == "rg" then
         if vim.fn.executable("rg") ~= 1 then

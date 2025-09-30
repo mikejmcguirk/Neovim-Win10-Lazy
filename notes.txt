@@ -2,8 +2,6 @@
 --- TODO ---
 ------------
 
-- When entering a new buffer, because there's no " mark, an error shows. Can probably fix by checking the result of get_mark
-- Create keymappings to open and close tabs. Cannot use <M-tab> because windows
 - Look into how to autogenerate vimdoc
 - Remove all <C-s> and <M-s> mappings
 - Mini.operators has a check for seeing if keymaps exist. Use that for the LSP deletes, and wherever else it's appropriate
@@ -14,7 +12,6 @@
 - Move getting top severity to the updated function
 - Add --- as a valid lua comment string
 - Create mappings for comment headings
-- Look for any get_var code and use the built-in dict accessors
 - Figure out how to open FzfLua in a vsplit
 - Look into how to make the built-in LSP commands always send to the qflist. Looks like there's an
 "on list" opt that handles this
@@ -48,6 +45,9 @@ example - j/k jumps over a certain length should go into the jumplist
 - the stl render table should be pre-allocated with nils. Not a hot loop per se, but runs on every keystroke
 - in general, scan the stl code for where heap allocs can be removed
 - create EchoText, EchoWarn, and EchoErr helpers
+- Create keymappings to open and close tabs. Cannot use <M-tab> because windows
+    - Also want to handle tabonly
+    - ctrl tab isn't good because <C-tab> and <C-S-tab> are used for tab cycling in some terminals
 
 -----------
 --- LOW ---

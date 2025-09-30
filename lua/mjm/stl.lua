@@ -143,10 +143,10 @@ function MjmStl.active()
     local buf = vim.api.nvim_get_current_buf()
     local bad_mode = is_bad_mode()
 
-    local ok_h, head = pcall(vim.api.nvim_get_var, "gitsigns_head")
-    head = ok_h and head or ""
-    local ok_d, diffs = pcall(vim.api.nvim_buf_get_var, buf, "gitsigns_status")
-    diffs = ok_d and diffs or ""
+    local head = vim.g.gitsigns_head
+    head = head or ""
+    local diffs = vim.g.gitsigns_status
+    diffs = diffs or ""
     table.insert(stl, "%#stl_a# " .. head .. " " .. diffs .. "%* ")
 
     table.insert(stl, "%#stl_b# %m %<%f [" .. mode .. "] %*")

@@ -185,8 +185,8 @@ end
 -- PR: This feels like something you could put into vim.validate
 local valid_borders = { "bold", "double", "none", "rounded", "shadow", "single", "solid" }
 local function get_border()
-    local ok, g_border = pcall(vim.api.nvim_get_var, "qf_rancher_preview_border")
-    if not ok then
+    local g_border = vim.g.qf_rancher_preview_border
+    if not g_border then
         local winborder = vim.api.nvim_get_option_value("winborder", { scope = "global" })
         if winborder ~= "" then
             return winborder
@@ -218,8 +218,8 @@ local function get_border()
 end
 
 local function get_title_pos()
-    local ok, g_title = pcall(vim.api.nvim_get_var, "qf_rancher_preview_title_pos")
-    if ok and g_title == "left" or g_title == "center" or g_title == "right" then
+    local g_title = vim.g.qf_rancher_preview_title_pos
+    if g_title == "left" or g_title == "center" or g_title == "right" then
         return g_title
     end
 
@@ -227,17 +227,12 @@ local function get_title_pos()
 end
 
 local function should_show_title()
-    local ok, g_title = pcall(vim.api.nvim_get_var, "qf_rancher_preview_show_title")
-    if ok and g_title == false then
-        return false
-    else
-        return true
-    end
+    return vim.g.qf_rancher_preview_show_title
 end
 
 local function get_siso()
-    local ok, use_siso = pcall(vim.api.nvim_get_var, "qf_rancher_preview_use_global_siso")
-    if ok and type(use_siso) == "boolean" and use_siso == true then
+    local use_siso = vim.g.qf_rancher_preview_use_global_siso
+    if use_siso then
         return vim.api.nvim_get_option_value("siso", { scope = "global" })
     else
         return 6
@@ -245,8 +240,8 @@ local function get_siso()
 end
 
 local function get_so()
-    local ok, use_so = pcall(vim.api.nvim_get_var, "qf_rancher_preview_use_global_so")
-    if ok and type(use_so) == "boolean" and use_so == true then
+    local use_so = vim.g.qf_rancher_preview_use_global_so
+    if use_so then
         return vim.api.nvim_get_option_value("so", { scope = "global" })
     else
         return 6
@@ -254,9 +249,8 @@ local function get_so()
 end
 
 local function get_winblend()
-    local ok, winblend = pcall(vim.api.nvim_get_var, "qf_rancher_preview_winblend")
-    local valid_winblend = ok
-        and winblend
+    local winblend = vim.g.qf_rancher_preview_winblend
+    local valid_winblend = winblend
         and type(winblend) == "number"
         and winblend >= 0
         and winblend <= 100
