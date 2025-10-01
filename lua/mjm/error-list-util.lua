@@ -1,6 +1,24 @@
 --- @class QfRancherUtils
 local M = {}
 
+--- @param count integer
+--- @return nil
+function M._validate_count(count)
+    vim.validate("count", count, "number")
+    vim.validate("count", count, function()
+        return count >= 0
+    end)
+end
+
+--- @param count1 integer
+--- @return nil
+function M._validate_count1(count1)
+    vim.validate("count", count1, "number")
+    vim.validate("count", count1, function()
+        return count1 >= 0
+    end)
+end
+
 M._severity_map = {
     [vim.diagnostic.severity.ERROR] = "E",
     [vim.diagnostic.severity.WARN] = "W",

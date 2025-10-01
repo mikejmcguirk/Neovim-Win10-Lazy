@@ -7,32 +7,6 @@ local M = {}
 local no_qf_items = "No items in quickfix stack"
 local no_ll_items = "No items in loclist stack"
 
---- TODO: No location list should be some kind of broader module state from open
-
-------------------------
---- Helper Functions ---
-------------------------
-
--- TODO: put these in utils since they can also be used by nav_action
-
---- @param count1 integer
---- @return nil
-local function validate_count1(count1)
-    vim.validate("count", count1, "number")
-    vim.validate("count", count1, function()
-        return count1 >= 0
-    end)
-end
-
---- @param count integer
---- @return nil
-local function validate_count(count)
-    vim.validate("count", count, "number")
-    vim.validate("count", count, function()
-        return count >= 0
-    end)
-end
-
 -----------------------
 --- Stack Functions ---
 -----------------------
@@ -44,7 +18,7 @@ end
 --- @param arithmetic function
 --- @return nil
 local function q_change_history(count1, arithmetic)
-    validate_count1(count1)
+    require("mjm.error-list-util")._validate_count1(count1)
 
     local stack_len = vim.fn.getqflist({ nr = "$" }).nr --- @type integer
     if stack_len < 1 then
@@ -74,7 +48,7 @@ end
 --- @param count integer
 --- @return nil
 function M._q_history(count)
-    validate_count(count)
+    require("mjm.error-list-util")._validate_count(count)
 
     local stack_len = vim.fn.getqflist({ nr = "$" }).nr --- @type integer
     if stack_len < 1 then
@@ -89,7 +63,7 @@ end
 --- @param count integer
 --- @return nil
 function M._q_del(count)
-    validate_count(count)
+    require("mjm.error-list-util")._validate_count(count)
 
     local stack_len = vim.fn.getqflist({ nr = "$" }).nr --- @type integer
     if stack_len < 1 then
@@ -120,7 +94,7 @@ end
 --- @param arithmetic function
 --- @return nil
 local function l_change_history(count1, arithmetic)
-    validate_count1(count1)
+    require("mjm.error-list-util")._validate_count1(count1)
 
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id --- @type integer
@@ -158,7 +132,7 @@ end
 --- @param count integer
 --- @return nil
 function M._l_history(count)
-    validate_count(count)
+    require("mjm.error-list-util")._validate_count(count)
 
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id --- @type integer
@@ -180,7 +154,7 @@ end
 --- @param count integer
 --- @return nil
 function M._l_del(count)
-    validate_count(count)
+    require("mjm.error-list-util")._validate_count(count)
 
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id --- @type integer
