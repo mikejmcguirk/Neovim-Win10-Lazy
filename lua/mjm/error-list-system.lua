@@ -87,7 +87,7 @@ local function handle_output(obj, output_opts)
     if output_opts.is_loclist then
         elo.open_loclist()
     else
-        elo.open_qflist()
+        elo._open_qflist()
     end
 end
 

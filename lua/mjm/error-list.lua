@@ -45,6 +45,8 @@ vim.api.nvim_set_var("qf_rancher_debug_assertions", true)
 -- because there are so many. But, because there are so many, that also adds complication to any
 -- boilerplate options to configure them, to the point where I'm not sure it's less complicated
 -- than just promoting the plug mappings
+--
+-- TODO: Put the options into a table and iterate through them
 
 if type(vim.g.qf_rancher_set_default_maps) ~= "boolean" then
     vim.api.nvim_set_var("qf_rancher_set_default_maps", true)
@@ -58,12 +60,21 @@ if type(vim.g.qf_rancher_auto_open_changes) ~= "boolean" then
     vim.api.nvim_set_var("qf_rancher_auto_open_changes", false)
 end
 
-if type(vim.g.qfrancher_debug_assertions) ~= "boolean" then
+if type(vim.g.qf_rancher_debug_assertions) ~= "boolean" then
     vim.api.nvim_set_var("qf_rancher_debug_assertions", false)
 end
 
 if type(vim.g.qf_rancher_grepprg) ~= "string" then
     vim.api.nvim_set_var("qf_rancher_grepprg", "rg")
+end
+
+-- DOCUMENT:
+-- - If splitkeep is set to screen or topline, that will take precedence
+-- - If splitkeep is set for cursor, and this option is true, rancher will save and restore views
+-- where necessary
+-- - If this is off and splitkeep is set for cursor, you get Nvim default behavior
+if type(vim.g.qf_rancher_always_save_views) ~= "boolean" then
+    vim.api.nvim_set_var("qf_rancher_always_save_views", true)
 end
 
 -- Document that nil is the default state and evaluated differently. nil falls back to the vim

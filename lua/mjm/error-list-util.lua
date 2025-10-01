@@ -74,7 +74,7 @@ end
 --- @param win integer
 --- @param qf_id? integer
 --- @return integer|nil
-local function find_loclist_win(win, qf_id)
+function M.find_loclist_win(win, qf_id)
     if vim.g.qf_rancher_debug_assertions then
         vim.validate("qf_id", qf_id, { "nil", "number" })
         vim.validate("win", win, "number")
@@ -106,25 +106,24 @@ local function find_loclist_win(win, qf_id)
     return nil
 end
 
---- @param opts?{tabpage?: integer, win?:integer}
+--- @param opts?{tabpage?: integer, win?:integer, tabpage_wins?:integer[]}
 --- @return integer|nil
 function M._find_qf_win(opts)
     opts = opts or {}
-    vim.validate("opts.tabpage", opts.tabpage, { "nil", "number" })
-    vim.validate("opts.win", opts.win, { "nil", "number" })
+    if vim.g.qf_rancher_debug_assertions then
+        vim.validate("opts.win", opts.win, { "nil", "number" })
+        vim.validate("opts.tabpage", opts.tabpage, { "nil", "number" })
+        vim.validate("opts.tabpage_wins", opts.tabpage, { "nil", "table" })
+    end
 
-    local tabpage = (function()
-        if opts.tabpage then
-            return opts.tabpage
-        end
+    --- LOW: Does not feel like the most efficient way to do this. Could also yield weird results
+    --- if more than one opt is specified
+    local win = opts.win or vim.api.nvim_get_current_win()
+    local tabpage = opts.tabpage or vim.api.nvim_win_get_tabpage(win)
+    local tabpage_wins = opts.tabpage_wins or vim.api.nvim_tabpage_list_wins(tabpage)
 
-        local win = opts.win or vim.api.nvim_get_current_win()
-        return vim.api.nvim_win_get_tabpage(win)
-    end)() --- @type integer
-
-    local tab_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
-    for _, win in pairs(tab_wins) do
-        if vim.fn.win_gettype(win) == "quickfix" then
+    for _, t_win in ipairs(tabpage_wins) do
+        if vim.fn.win_gettype(t_win) == "quickfix" then
             return win
         end
     end
@@ -143,7 +142,7 @@ function M._find_list_win(output_opts)
     if output_opts.is_loclist then
         --- @type integer
         local win = output_opts.loclist_source_win or vim.api.nvim_get_current_win()
-        return find_loclist_win(win)
+        return M.find_loclist_win(win)
     else
         return M._find_qf_win()
     end
@@ -186,7 +185,7 @@ function M._get_loclist_info(opts)
         return qf_id, nil
     end
 
-    return qf_id, find_loclist_win(win, qf_id)
+    return qf_id, M.find_loclist_win(win, qf_id)
 end
 
 --- @param opts {win?:integer}
@@ -444,7 +443,7 @@ function M._get_openlist(is_loclist)
         end
     else
         return function(opts)
-            return elo.open_qflist(opts)
+            return elo._open_qflist(opts)
         end
     end
 end
@@ -474,7 +473,7 @@ end
 
 --- @param input_type QfRancherInputType
 --- @return boolean
-local function validate_input_type(input_type)
+function M.validate_input_type(input_type)
     vim.validate("input_type", input_type, "string")
     return input_type == "insensitive"
         or input_type == "regex"
@@ -493,7 +492,7 @@ function M.validate_input_opts(input_opts)
     -- Since input type never *should* be blank, fix nils here
     vim.validate("input_opts.input_type", input_opts.input_type, { "nil", "string" })
     if type(input_opts.input_type) == "string" then
-        validate_input_type(input_opts.input_type)
+        M.validate_input_type(input_opts.input_type)
     else
         input_opts.input_type = "vimsmart"
     end
@@ -732,6 +731,18 @@ function M.set_list_items(set_opts, output_opts)
 
     M.cycle_lists_down(getlist, setlist, dest_list_nr)
     setlist({}, "r", { items = set_opts.new_items, nr = dest_list_nr, title = output_opts.title })
+
+    if not vim.g.qf_rancher_auto_open_changes then
+        return
+    end
+
+    M._get_openlist(output_opts.is_loclist)({ always_resize = true })
+    local cur_list = getlist({ nr = 0 }).nr
+    if cur_list == dest_list_nr then
+        return
+    end
+
+    require("mjm.error-list-stack")._get_gethistory(output_opts.is_loclist)(dest_list_nr)
 end
 
 return M

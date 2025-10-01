@@ -244,7 +244,7 @@ function M.l_del_all()
     end
 end
 
-function M.get_history(is_loclist)
+function M._get_gethistory(is_loclist)
     if is_loclist then
         return M.l_history
     else

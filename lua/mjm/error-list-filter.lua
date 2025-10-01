@@ -161,12 +161,23 @@ function M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
         return
     end
 
+    local setlist = eu._get_setlist(output_opts) --- @type function|nil
+    if not setlist then
+        return
+    end
+
     -- TODO: Redundant with upated set_list_items, but unsure how to get rid of this because
     -- it blocks the unnecessary saving of a view. But, since saving the view is the typical
     -- case, maybe this isn't worth the check. The big issue anyway, AFAIK, is restoring the view
     -- rather than saving it
     -- TODO: This is a kind of slop that's starting to creep up in the code in general, where
     -- vestigal pieces of data are accumulating. Clean these out
+    --
+    -- TODO: There might be a better way to do this - Filtering the list can resize it, or if
+    -- we switch to a new list, that can also cause a resize. So we would want to store views
+    -- in that chain somehow. So it would be something like, we make a views table here and pass
+    -- it through to the opening function. You could do something where, when getting views, you
+    -- check the views list to see if the win is already there.
     local dest_list_nr = eu._get_dest_list_nr(getlist, output_opts) --- @type integer
     local list_win = eu._find_list_win(output_opts) --- @type integer|nil
     local view = (list_win and dest_list_nr == cur_list.nr)
@@ -186,13 +197,6 @@ function M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
     local new_items, view_rows_removed =
         iter_with_predicate(predicate, cur_list.items, pattern, filter_opts.keep, view_row, regex)
 
-    --- @type function
-    local setlist = eu._get_setlist(output_opts)
-    -- TODO: Because of nil, need to handle earlier
-    if not setlist then
-        return
-    end
-
     output_opts.title = "Filter" -- TODO: This can be improved
     eu.set_list_items({ getlist = getlist, setlist = setlist, new_items = new_items }, output_opts)
 
@@ -203,8 +207,6 @@ function M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
             vim.fn.winrestview(view)
         end)
     end
-
-    eu._get_openlist(output_opts.is_loclist)({ always_resize = true })
 end
 
 -----------------------

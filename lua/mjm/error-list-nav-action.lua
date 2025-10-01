@@ -95,7 +95,7 @@ function M.q_jump(count)
     count = math.min(count, max_stack_nr)
     local qf_win = require("mjm.error-list-util")._find_qf_win()
     if not qf_win then
-        require("mjm.error-list-open").open_qflist()
+        require("mjm.error-list-open")._open_qflist()
     else
         vim.api.nvim_set_current_win(qf_win)
     end

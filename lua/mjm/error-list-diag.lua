@@ -176,11 +176,3 @@ function M.diags(name, output_opts)
 end
 
 return M
-
-----------------
-
--------------
---- TODO: ---
--------------
-
---- This whole file and its mappings need to be moved to the new mapping system/API

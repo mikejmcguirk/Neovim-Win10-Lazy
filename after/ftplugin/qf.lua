@@ -972,7 +972,7 @@ local function qf_split_full(ctx)
         if ctx.is_loclist then
             elo.open_loclist(open_opts)
         else
-            elo.open_qflist(open_opts)
+            elo._open_qflist(open_opts)
         end
     end
 
