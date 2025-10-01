@@ -199,7 +199,7 @@ function M.l_jump(count)
     local max_stack_nr = vim.fn.getloclist(cur_win, { nr = "$" }).nr
     count = math.min(count, max_stack_nr)
     if not ll_win then
-        require("mjm.error-list-open").open_loclist()
+        require("mjm.error-list-open")._open_loclist()
     else
         vim.api.nvim_set_current_win(ll_win)
     end

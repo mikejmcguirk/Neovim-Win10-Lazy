@@ -71,6 +71,10 @@ function M.check_loclist_output(output_opts)
     return source_win_can_have_loclist(output_opts.loclist_source_win)
 end
 
+--- TODO: I'm wondering if for functions like this it's better to have a few smaller, more easily
+--- parsable functions. The get loclist by qf_id below is basically the same length as this, but
+--- infinitely more readable
+
 --- @param win integer
 --- @param qf_id? integer
 --- @return integer|nil
@@ -99,6 +103,37 @@ function M.find_loclist_win(win, qf_id)
             local t_win_buftype = vim.api.nvim_get_option_value("buftype", { buf = t_win_buf })
             if t_win_buftype == "quickfix" then
                 return t_win
+            end
+        end
+    end
+
+    return nil
+end
+
+--- @param qf_id integer
+--- @param opts {win?: integer, tabpage?: integer, tabpage_wins?: integer[]}
+function M._find_loclist_win_by_qf_id(qf_id, opts)
+    opts = opts or {}
+    if vim.g.qf_rancher_debug_assertions then
+        vim.validate("qf_id", qf_id, "number")
+        vim.validate("opts", opts, { "nil", "table" })
+
+        if type(opts) == "table" then
+            vim.validate("opts.win", opts.win, { "nil", "number" })
+            vim.validate("opts.tabpage", opts.tabpage, { "nil", "number" })
+            vim.validate("opts.tabpage_wins", opts.tabpage_wins, { "nil", "table" })
+        end
+    end
+
+    local win = opts.win or vim.api.nvim_get_current_win()
+    local tabpage = opts.tabpage or vim.api.nvim_win_get_tabpage(win)
+    local tabpage_wins = opts.tabpage_wins or vim.api.nvim_tabpage_list_wins(tabpage)
+
+    for _, t_win in ipairs(tabpage_wins) do
+        if vim.fn.win_gettype(t_win) == "loclist" then
+            local tw_qf_id = vim.fn.getloclist(t_win, { id = 0 }).id
+            if tw_qf_id == qf_id then
+                return win
             end
         end
     end
@@ -211,24 +246,26 @@ function M._has_any_loclist(opts)
     return false
 end
 
---- @param opts?{tabpage?:integer}
+--- @param opts?{tabpage?:integer, tabpage_wins?: integer[]}
 --- @return integer[]
 function M._find_orphan_loclists(opts)
     opts = opts or {}
     vim.validate("opts.tabpage", opts.tabpage, { "nil", "number" })
+    vim.validate("opts.tabpage_wins", opts.tabpage_wins, { "nil", "table" })
 
     local tabpage = opts.tabpage or vim.api.nvim_get_current_tabpage() --- @type integer
-    local tab_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
+    --- @type integer[]
+    local tabpage_wins = opts.tabpage_wins or vim.api.nvim_tabpage_list_wins(tabpage)
 
     local orphans = {} --- @type integer[]
-    for _, win in pairs(tab_wins) do
+    for _, win in pairs(tabpage_wins) do
         if vim.fn.win_gettype(win) == "loclist" then
             local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
             if qf_id == 0 then
                 table.insert(orphans, win)
             else
                 local is_orphan = true --- @type boolean
-                for _, inner_win in pairs(tab_wins) do
+                for _, inner_win in pairs(tabpage_wins) do
                     local iw_qf_id = vim.fn.getloclist(inner_win, { id = 0 }).id --- @type integer
                     if inner_win ~= win and iw_qf_id == qf_id then
                         is_orphan = false
@@ -439,7 +476,7 @@ function M._get_openlist(is_loclist)
 
     if is_loclist then
         return function(opts)
-            return elo.open_loclist(opts)
+            return elo._open_loclist(opts)
         end
     else
         return function(opts)

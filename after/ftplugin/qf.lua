@@ -46,7 +46,7 @@ Map("n", "<leader>qo", function()
     local win = vim.api.nvim_get_current_win()
     local wintype = vim.fn.win_gettype(win)
     if wintype == "quickfix" then
-        require("mjm.error-list-open").close_list_win(win)
+        require("mjm.error-list-open")._close_list_win(win)
     end
 end, { buffer = true })
 
@@ -54,14 +54,14 @@ Map("n", "<leader>lo", function()
     local win = vim.api.nvim_get_current_win()
     local wintype = vim.fn.win_gettype(win)
     if wintype == "loclist" then
-        require("mjm.error-list-open").close_list_win(win)
+        require("mjm.error-list-open")._close_list_win(win)
     end
 end, { buffer = true })
 
 -- TODO: validation error occurs when doing this
 Map("n", "q", function()
     local win = vim.api.nvim_get_current_win()
-    require("mjm.error-list-open").close_list_win(win)
+    require("mjm.error-list-open")._close_list_win(win)
 end, { buffer = true })
 
 Map("n", "dd", function()
@@ -358,7 +358,7 @@ local function qf_open_finish(dest_win, finish, list_win)
         --- For loclists, specifically closing the list win is necessary because we might have
         --- opened to a window not associated with the origin loclist, meaning lclose would do
         --- nothing. This function also handles the qflist case, so no need to differentiate
-        require("mjm.error-list-open").close_list_win(list_win)
+        require("mjm.error-list-open")._close_list_win(list_win)
     end
 
     vim.api.nvim_win_call(dest_win, function()
@@ -414,13 +414,13 @@ local function qf_open_handle_loclist(dest_win, list_win, list_qf_id, finish)
     --- @type table, integer
     local loclist_data, qf_stack_nr = get_loclist_data(list_win)
     local elo = require("mjm.error-list-open")
-    elo.close_list_win(list_win)
+    elo._close_list_win(list_win)
     set_loclist_data(qf_stack_nr, dest_win, loclist_data)
 
     if finish == "focusList" then
-        elo.open_loclist()
+        elo._open_loclist()
     elseif finish == "focusWin" then
-        elo.open_loclist({ keep_win = true })
+        elo._open_loclist({ keep_win = true })
     end
 
     --- @diagnostic disable: missing-fields
@@ -450,10 +450,10 @@ local function qf_open_default_dest_orphan_loclist(dest_win, finish)
     end
 
     local elo = require("mjm.error-list-open")
-    elo.close_loclist()
+    elo._close_loclist()
 
     if finish ~= "closeList" then
-        elo.open_loclist()
+        elo._open_loclist()
     end
     if finish == "focusWin" then
         vim.api.nvim_set_current_win(dest_win)
@@ -517,9 +517,9 @@ local function qf_open_default_dest(list_win, finish)
 
     local elo = require("mjm.error-list-open")
     if finish == "closeList" then
-        elo.close_list_win(list_win)
+        elo._close_list_win(list_win)
     elseif total_winnr_pre == 1 then
-        elo.resize_list_win(list_win)
+        elo._resize_list_win(list_win)
     end
 
     if finish == "focusList" then
@@ -642,11 +642,11 @@ local function qf_split_orphan_wrapup(list_win, dest_win, finish)
     set_loclist_data(cur_stack_nr, dest_win, loclist_data)
 
     local elo = require("mjm.error-list-open")
-    elo.close_list_win(list_win)
+    elo._close_list_win(list_win)
 
     if finish ~= "closeList" then
         local open_opts = finish == "focusWin" and { keep_win = true } or nil
-        elo.open_loclist(open_opts)
+        elo._open_loclist(open_opts)
     end
 
     local zz_cmd = { cmd = "normal", args = { "zz" }, bang = true }
@@ -965,12 +965,12 @@ local function qf_split_full(ctx)
     -- above the list. Move the list to emulate this behavior
     -- Spacing for horitzontal splits is a bit better if the close is done after splitting
     local elo = require("mjm.error-list-open")
-    elo.close_list_win(ctx.list_win)
+    elo._close_list_win(ctx.list_win)
 
     if ctx.finish ~= "closeList" then
         local open_opts = ctx.finish == "focusWin" and { keep_win = true } or nil
         if ctx.is_loclist then
-            elo.open_loclist(open_opts)
+            elo._open_loclist(open_opts)
         else
             elo._open_qflist(open_opts)
         end
@@ -1004,11 +1004,11 @@ local function qf_split_tab_handle_orphan(list_win, dest_win, finish)
 
     local loclist_data, cur_stack_nr = get_loclist_data(list_win)
     set_loclist_data(cur_stack_nr, dest_win, loclist_data)
-    elo.close_list_win(list_win)
+    elo._close_list_win(list_win)
 
     if finish ~= "closeList" then
         local open_opts = finish == "focusWin" and { keep_win = true } or nil
-        elo.open_loclist(open_opts)
+        elo._open_loclist(open_opts)
     end
 
     vim.api.nvim_win_call(dest_win, function()
@@ -1079,7 +1079,7 @@ local function qf_split_tab(buf_source, buf_opts, list_win, finish, qf_id, is_lo
     end
 
     if finish == "closeList" then
-        require("mjm.error-list-open").close_list_win(list_win)
+        require("mjm.error-list-open")._close_list_win(list_win)
     end
 
     vim.api.nvim_win_call(dest_win, function()
@@ -1134,12 +1134,12 @@ local function qf_split_single_win(list_win, open, finish)
 
     local elo = require("mjm.error-list-open")
     if finish == "closeList" then
-        elo.close_list_win(list_win)
+        elo._close_list_win(list_win)
         return
     end
 
     if open == "split" then
-        elo.resize_list_win(list_win)
+        elo._resize_list_win(list_win)
     end
 
     if finish == "focusList" then
@@ -1301,7 +1301,7 @@ local function qf_split(open, finish)
     end
 
     if finish == "closeList" then
-        require("mjm.error-list-open").close_list_win(list_win)
+        require("mjm.error-list-open")._close_list_win(list_win)
     end
 
     local zz_cmd = { cmd = "normal", args = { "zz" }, bang = true }

@@ -85,7 +85,7 @@ local function handle_output(obj, output_opts)
     -- so on. It's repeated logic that only needs to be written once
     local elo = require("mjm.error-list-open")
     if output_opts.is_loclist then
-        elo.open_loclist()
+        elo._open_loclist()
     else
         elo._open_qflist()
     end

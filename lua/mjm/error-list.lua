@@ -68,6 +68,10 @@ if type(vim.g.qf_rancher_grepprg) ~= "string" then
     vim.api.nvim_set_var("qf_rancher_grepprg", "rg")
 end
 
+if type(vim.g.qf_rancher_qfsplit) ~= "string" then
+    vim.api.nvim_set_var("qf_rancher_qfsplit", "botright")
+end
+
 -- DOCUMENT:
 -- - If splitkeep is set to screen or topline, that will take precedence
 -- - If splitkeep is set for cursor, and this option is true, rancher will save and restore views

@@ -489,12 +489,12 @@ local rancher_keymaps = {
     --- OPEN/CLOSE/RESIZE ---
     -------------------------
 
-    { nn, pqfr.."-open-qf-list)",   qp.."p", "Open the quickfix list",   function() eo.open_qflist({ always_resize = true, height = vim.v.count }) end },
-    { nn, pqfr.."-close-qf-list)",  qp.."o", "Close the quickfix list",  function() eo.close_qflist() end },
-    { nn, pqfr.."-toggle-qf-list)", qp.."q", "Toggle the quickfix list", function() eo.toggle_qflist()  end },
-    { nn, pqfr.."-open-loclist)",   lp.."p", "Open the location list",   function() eo.open_loclist({ always_resize = true, height = vim.v.count }) end },
-    { nn, pqfr.."-close-loclist)",  lp.."o", "Close the location list",  function() eo.close_loclist() end },
-    { nn, pqfr.."-toggle-loclist)", lp.."l", "Toggle the location list", function() eo.toggle_loclist() end },
+    { nn, pqfr.."-open-qf-list)",   qp.."p", "Open the quickfix list",   function() eo._open_qflist({ always_resize = true, height = vim.v.count }) end },
+    { nn, pqfr.."-close-qf-list)",  qp.."o", "Close the quickfix list",  function() eo._close_qflist() end },
+    { nn, pqfr.."-toggle-qf-list)", qp.."q", "Toggle the quickfix list", function() eo._toggle_qflist()  end },
+    { nn, pqfr.."-open-loclist)",   lp.."p", "Open the location list",   function() eo._open_loclist({ always_resize = true, height = vim.v.count }) end },
+    { nn, pqfr.."-close-loclist)",  lp.."o", "Close the location list",  function() eo._close_loclist() end },
+    { nn, pqfr.."-toggle-loclist)", lp.."l", "Toggle the location list", function() eo._toggle_loclist() end },
 
     ------------------
     --- NAVIGATION ---
@@ -787,21 +787,29 @@ if vim.g.qf_rancher_set_default_cmds then
     vim.api.nvim_create_user_command("Qopen", function(cargs)
         cargs = cargs or {}
         local count = cargs.count > 0 and cargs.count or nil
-        eo.open_qflist({ always_resize = true, height = count })
+        eo._open_qflist({ always_resize = true, height = count })
     end, { count = 0 })
 
     vim.api.nvim_create_user_command("Lopen", function(cargs)
         cargs = cargs or {}
         local count = cargs.count > 0 and cargs.count or nil
-        eo.open_loclist({ always_resize = true, height = count })
+        eo._open_loclist({ always_resize = true, height = count })
     end, { count = 0 })
 
     vim.api.nvim_create_user_command("Qclose", function()
-        eo.close_qflist()
+        eo._close_qflist()
     end, {})
 
     vim.api.nvim_create_user_command("Lclose", function()
-        eo.close_loclist()
+        eo._close_loclist()
+    end, {})
+
+    vim.api.nvim_create_user_command("Qtoggle", function()
+        eo._toggle_qflist()
+    end, {})
+
+    vim.api.nvim_create_user_command("Ltoggle", function()
+        eo._toggle_loclist()
     end, {})
 
     ------------------

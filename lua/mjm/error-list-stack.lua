@@ -34,7 +34,7 @@ function M.q_older(count1)
 
     vim.api.nvim_cmd({ cmd = "chistory", count = new_stack_nr }, {})
     local elo = require("mjm.error-list-open")
-    elo.resize_qflist()
+    elo._resize_qflist()
 end
 
 function M.q_newer(count1)
@@ -55,7 +55,7 @@ function M.q_newer(count1)
 
     vim.api.nvim_cmd({ cmd = "chistory", count1 = new_stack_nr }, {})
     local elo = require("mjm.error-list-open")
-    elo.resize_qflist()
+    elo._resize_qflist()
 end
 
 function M.q_history(count)
@@ -78,7 +78,7 @@ function M.q_history(count)
     count = math.min(count, stack_len)
     vim.api.nvim_cmd({ cmd = "chistory", count = count }, {})
     local elo = require("mjm.error-list-open")
-    elo.resize_qflist()
+    elo._resize_qflist()
 end
 
 function M.q_del(count)
@@ -101,12 +101,12 @@ function M.q_del(count)
     count = math.min(count, stack_len)
     vim.fn.setqflist({}, "r", { items = {}, nr = count, title = "" })
     local elo = require("mjm.error-list-open")
-    elo.resize_qflist()
+    elo._resize_qflist()
 end
 
 function M.q_del_all()
     vim.fn.setqflist({}, "f")
-    require("mjm.error-list-open").close_qflist()
+    require("mjm.error-list-open")._close_qflist()
 end
 
 function M.l_older(count1)
@@ -134,7 +134,7 @@ function M.l_older(count1)
 
     vim.api.nvim_cmd({ cmd = "lhistory", count1 = new_stack_nr }, {})
     if ll_win then
-        require("mjm.error-list-open").resize_list_win(ll_win)
+        require("mjm.error-list-open")._resize_list_win(ll_win)
     end
 end
 
@@ -162,7 +162,7 @@ function M.l_newer(count1)
     local new_stack_nr = eu._wrapping_add(cur_stack_nr, count1, 1, stack_len)
     vim.api.nvim_cmd({ cmd = "lhistory", count1 = new_stack_nr }, {})
     if ll_win then
-        require("mjm.error-list-open").resize_list_win(ll_win)
+        require("mjm.error-list-open")._resize_list_win(ll_win)
     end
 end
 
@@ -193,7 +193,7 @@ function M.l_history(count)
     count = math.min(count, stack_len)
     vim.api.nvim_cmd({ cmd = "lhistory", count = count }, {})
     if ll_win then
-        require("mjm.error-list-open").resize_list_win(ll_win)
+        require("mjm.error-list-open")._resize_list_win(ll_win)
     end
 end
 
@@ -224,7 +224,7 @@ function M.l_del(count)
     count = math.min(count, stack_len)
     vim.fn.setloclist(cur_win, {}, "r", { items = {}, nr = count, title = "" })
     if ll_win then
-        require("mjm.error-list-open").resize_list_win(ll_win)
+        require("mjm.error-list-open")._resize_list_win(ll_win)
     end
 end
 
@@ -240,7 +240,7 @@ function M.l_del_all()
 
     vim.fn.setloclist(cur_win, {}, "f")
     if ll_win then
-        require("mjm.error-list-open").close_list_win(ll_win)
+        require("mjm.error-list-open")._close_list_win(ll_win)
     end
 end
 
