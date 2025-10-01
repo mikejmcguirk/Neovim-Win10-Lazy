@@ -177,9 +177,12 @@ end
 
 return M
 
-----------------
+-------------
+--- TODO: ---
+-------------
 
---- TODO:
+--- Audit all files except ftplugin for bad/old API usage
+--- Add in the util func for opening based on outputopts. Put it behind a gvar
 
 --- - I have filter and sort right now set to use new list as their default, in line with how
 --- Cfilter works. And that should actually be the default. But I am thinking there might need

@@ -96,7 +96,7 @@ function M._sort_wrapper(sort_info, sort_opts, output_opts)
         or sort_info.desc_func
 
     table.sort(cur_list.items, predicate)
-    local setlist = eu.get_setlist(output_opts) --- @type function
+    local setlist = eu.get_setlist(output_opts) --- @type function|nil
     -- TODO: Because of nil, handle earlier
     if not setlist then
         return
@@ -393,17 +393,19 @@ local function check_lcol_type_asc(a, b)
     return check_type_asc(a, b) -- Allow the nil to pass through
 end
 
+---@type table<string, integer>
+local severity_unmap = require("mjm.error-list-util").severity_unmap
+
 --- @param a table
 --- @param b table
---- @return string|nil, string|nil
+--- @return integer|nil, integer|nil
 local function get_severities(a, b)
     if not (a.type and b.type) then
         return nil, nil
     end
 
-    local eu = require("mjm.error-list-util")
-    local severity_a = eu.severity_unmap[a.type] or nil
-    local severity_b = eu.severity_unmap[b.type] or nil
+    local severity_a = severity_unmap[a.type] or nil
+    local severity_b = severity_unmap[b.type] or nil
     return severity_a, severity_b
 end
 

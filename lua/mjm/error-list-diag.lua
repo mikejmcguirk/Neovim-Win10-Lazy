@@ -27,12 +27,7 @@ local function filter_diags_top_severity(diags)
     end, diags)
 end
 
-local severity_map = {
-    [vim.diagnostic.severity.ERROR] = "E",
-    [vim.diagnostic.severity.WARN] = "W",
-    [vim.diagnostic.severity.INFO] = "I",
-    [vim.diagnostic.severity.HINT] = "H",
-} ---@type table<integer, string>
+local severity_map = require("mjm.error-list-util").severity_map ---@type table<integer, string>
 
 ---@param d vim.Diagnostic
 ---@return table

@@ -1,10 +1,6 @@
 --- @class QfRancherUtils
 local M = {}
 
---- @alias QfRancherSetlistAction "add"|"new"|"overwrite"
-
--- TODO: Where possible, replace loclist finding functions throughout the plugin with the below
-
 M.severity_unmap = {
     E = vim.diagnostic.severity.ERROR,
     W = vim.diagnostic.severity.WARN,
