@@ -545,6 +545,7 @@ end
 
 --- @param qf_id integer
 --- @param tabpage integer
+--- @return nil
 function M._resize_llist_by_qf_id_and_tabpage(qf_id, tabpage)
     vim.validate("qf_id", qf_id, "number")
     vim.validate("tabpage", tabpage, "number")
@@ -564,6 +565,7 @@ end
 
 --- @param qf_id integer
 --- @param tabpage integer
+--- @return nil
 function M._close_llist_by_qf_id_and_tabpage(qf_id, tabpage)
     vim.validate("qf_id", qf_id, "number")
     vim.validate("tabpage", tabpage, "number")
