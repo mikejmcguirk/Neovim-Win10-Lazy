@@ -133,7 +133,10 @@ end
 local resize_win = function(cmd)
     local wintype = vim.fn.win_gettype(vim.api.nvim_get_current_win())
     if wintype == "" or wintype == "quickfix" or wintype == "loclist" then
+        local old_spk = vim.api.nvim_get_option_value("splitkeep", { scope = "global" })
+        vim.api.nvim_set_option_value("spk", "topline", { scope = "global" })
         Cmd(cmd, {})
+        vim.api.nvim_set_option_value("spk", old_spk, { scope = "global" })
     end
 end
 
