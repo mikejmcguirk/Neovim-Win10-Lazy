@@ -1,6 +1,13 @@
 --- @class QfRancherUtils
 local M = {}
 
+M.severity_map = {
+    [vim.diagnostic.severity.ERROR] = "E",
+    [vim.diagnostic.severity.WARN] = "W",
+    [vim.diagnostic.severity.INFO] = "I",
+    [vim.diagnostic.severity.HINT] = "H",
+} ---@type table<integer, string>
+
 M.severity_unmap = {
     E = vim.diagnostic.severity.ERROR,
     W = vim.diagnostic.severity.WARN,
