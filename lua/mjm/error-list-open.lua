@@ -426,23 +426,36 @@ function M._toggle_qflist()
     end
 end
 
--- TODO: This is currently around for the benefit of the stack file. Maybe just get rid of this
--- and always use qfopen. Depends more broadly on what I want to do with the resize funcs
-function M._resize_qflist()
-    local wins = vim.api.nvim_tabpage_list_wins(0) --- @type integer[]
-    local eu = require("mjm.error-list-util")
-    local qf_win = eu._find_qf_win() --- @type integer|nil, integer|nil
-    if not qf_win then
-        return false
+function M._resize_all_qf_wins()
+    local tabpages = vim.api.nvim_list_tabpages()
+    for _, tabpage in ipairs(tabpages) do
+        local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage)
+        for _, win in ipairs(tabpage_wins) do
+            local wintype = vim.fn.win_gettype(win)
+            if wintype == "quickfix" then
+                resize_qf_win(win, nil, { tabpage_wins = tabpage_wins })
+            end
+        end
     end
+end
 
-    wins = vim.tbl_filter(function(w)
-        return w ~= qf_win
-    end, wins)
+--- @param qf_id integer
+--- @param tabpage integer
+function M._resize_llist_by_qf_id_and_tabpage(qf_id, tabpage)
+    vim.validate("qf_id", qf_id, "number")
+    vim.validate("tabpage", tabpage, "number")
 
-    local views = get_views(wins) --- @type vim.fn.winsaveview.ret[]
-    resize_list_win(qf_win, { is_loclist = false })
-    restore_views(views)
+    local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
+    for _, win in ipairs(tabpage_wins) do
+        local wintype = vim.fn.win_gettype(win)
+        if wintype == "loclist" then
+            local w_qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
+            if w_qf_id == qf_id then
+                resize_ll_win(win, nil, { tabpage_wins = tabpage_wins })
+                break
+            end
+        end
+    end
 end
 
 --- - always_resize?: If the qf window is already open, it will be resized
@@ -547,32 +560,6 @@ function M._toggle_loclist()
     if not M._open_loclist({ suppress_errors = true }) then
         M._close_loclist()
     end
-end
-
---- This has no references, not even the stack file (unlike resize qflist). Feels like it should
---- be killed, but unsure, again, what height abstractions to keep
-
---- @return boolean
-function M._resize_loclist()
-    local cur_win = vim.api.nvim_get_current_win() --- @type integer
-    local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id ---@type integer
-    if qf_id == 0 then
-        vim.api.nvim_echo({ { "Window has no loclist", "" } }, false, {})
-        return false
-    end
-
-    local wins = vim.api.nvim_tabpage_list_wins(0) --- @type integer[]
-    local eu = require("mjm.error-list-util")
-    local ll_win = eu.find_loclist_win(cur_win, qf_id) --- @type integer|nil
-    if not ll_win then
-        return false
-    end
-
-    local views = get_views(wins) --- @type vim.fn.winsaveview.ret[]
-
-    resize_list_win(ll_win, { is_loclist = true })
-    restore_views(views)
-    return true
 end
 
 --- @param list_win integer

@@ -159,7 +159,7 @@ function M._find_qf_win(opts)
 
     for _, t_win in ipairs(tabpage_wins) do
         if vim.fn.win_gettype(t_win) == "quickfix" then
-            return win
+            return t_win
         end
     end
 

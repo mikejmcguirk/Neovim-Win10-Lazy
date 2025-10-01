@@ -256,6 +256,7 @@ return M
 ------------
 
 --- It would be better if cmd marks produced rows and columns
+--- Wintype is currently just an or enum. Should be an alias so it can be annotated
 
 ---------------
 -- RESOURCES --
