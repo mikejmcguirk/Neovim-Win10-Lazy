@@ -254,7 +254,7 @@ Map({ "n", "x" }, "{", function()
     vim.api.nvim_cmd(cmd, {})
 end)
 
-Map({ "n", "x" }, "{", function()
+Map({ "n", "x" }, "}", function()
     local args = vim.v.count1 .. "}"
     local cmd = { cmd = "normal", args = { args }, bang = true, mods = { keepjumps = true } }
     vim.api.nvim_cmd(cmd, {})
