@@ -504,12 +504,10 @@ local rancher_keymaps = {
     { nn, pqfr.."-qf-next)",  "]q",          "Go to a later qf entry",          function() en.q_next(vim.v.count1) end },
     { nn, pqfr.."-qf-pfile)", "[<C-q>",      "Go to the previous qf file",      function() en.q_pfile(vim.v.count1) end },
     { nn, pqfr.."-qf-nfile)", "]<C-q>",      "Go to the next qf file",          function() en.q_nfile(vim.v.count1) end },
-    { nn, pqfr.."-qf-jump)",  qp .."<C-q>",  "Jump to the qflist",              function() en.q_jump(vim.v.count) end },
     { nn, pqfr.."-ll-prev)",  "[l",          "Go to a previous loclist entry",  function() en.l_prev(vim.v.count1) end },
     { nn, pqfr.."-ll-next)",  "]l",          "Go to a later loclist entry",     function() en.l_next(vim.v.count1) end },
     { nn, pqfr.."-ll-pfile)", "[<C-l>",      "Go to the previous loclist file", function() en.l_pfile(vim.v.count1) end },
     { nn, pqfr.."-ll-nfile)", "]<C-l>",      "Go to the next loclist file",     function() en.l_nfile(vim.v.count1) end },
-    { nn, pqfr.."-ll-jump)",  lp .. "<C-l>", "Jump to the loclist",             function() en.l_jump(vim.v.count) end },
 
     ------------
     --- SORT ---
@@ -580,16 +578,18 @@ local rancher_keymaps = {
     --- STACK ---
     -------------
 
-    { nn, pqfr.."-qf-older)",   qp.."[", "Go to an older qflist",                    function() es.q_older(vim.v.count1) end },
-    { nn, pqfr.."-qf-newer)",   qp.."]", "Go to a newer qflist",                     function() es.q_newer(vim.v.count1) end },
-    { nn, pqfr.."-qf-history)", qp.."Q", "View or jump within the quickfix history", function() es.q_history(vim.v.count) end },
-    { nn, pqfr.."-qf-del)",     qp.."e", "Delete a list from the quickfix stack",    function() es.q_del(vim.v.count) end },
-    { nn, pqfr.."-qf-del-all)", qp.."E", "Delete all items from the quickfix stack", function() es.q_del_all() end },
-    { nn, pqfr.."-ll-older)",   lp.."[", "Go to an older location list",             function() es.l_older(vim.v.count1) end },
-    { nn, pqfr.."-ll-newer)",   lp.."]", "Go to a newer location list",              function() es.l_newer(vim.v.count1) end },
-    { nn, pqfr.."-ll-history)", lp.."L", "View or jump within the loclist history",  function() es.l_history(vim.v.count) end },
-    { nn, pqfr.."-ll-del)",     lp.."e", "Delete a list from the loclist stack",     function() es.l_del(vim.v.count) end },
-    { nn, pqfr.."-ll-del-all)", lp.."E", "Delete all items from the loclist stack",  function() es.l_del_all() end },
+    { nn, pqfr.."-qf-older)",        qp.."[", "Go to an older qflist",                         function() es._q_older(vim.v.count1) end },
+    { nn, pqfr.."-qf-newer)",        qp.."]", "Go to a newer qflist",                          function() es._q_newer({ count1 = vim.v.count1 }) end },
+    { nn, pqfr.."-qf-history)",      qp.."Q", "View or jump within the quickfix history",      function() es._q_history({ always_open = true, count1 = vim.v.count1 }) end },
+    { nn, pqfr.."-qf-history-open)", qp.."<C-q>", "Open and jump within the quickfix history", function() es._q_history(vim.v.count) end },
+    { nn, pqfr.."-qf-del)",          qp.."e", "Delete a list from the quickfix stack",         function() es._q_del(vim.v.count) end },
+    { nn, pqfr.."-qf-del-all)",      qp.."E", "Delete all items from the quickfix stack",      function() es._q_del_all() end },
+    { nn, pqfr.."-ll-older)",        lp.."[", "Go to an older location list",                  function() es._l_older(vim.v.count1) end },
+    { nn, pqfr.."-ll-newer)",        lp.."]", "Go to a newer location list",                   function() es._l_newer(vim.v.count1) end },
+    { nn, pqfr.."-ll-history)",      lp.."L", "View or jump within the loclist history",       function() es._l_history({ count1 = vim.v.count1 }) end },
+    { nn, pqfr.."-ll-history-open)", lp.."<C-l>", "Open and jump within the loclist history",  function() es._l_history({ always_open = true, count1 = vim.v.count1 }) end },
+    { nn, pqfr.."-ll-del)",          lp.."e", "Delete a list from the loclist stack",          function() es._l_del(vim.v.count) end },
+    { nn, pqfr.."-ll-del-all)",      lp.."E", "Delete all items from the loclist stack",       function() es._l_del_all() end },
 }
 
 for _, map in ipairs(rancher_keymaps) do
@@ -816,6 +816,8 @@ if vim.g.qf_rancher_set_default_cmds then
     --- NAV_ACTION ---
     ------------------
 
+    -- TODO: There's a very obvious opportunity here, and in other places here, to do this
+    -- with a table iteration
     vim.api.nvim_create_user_command("Qprev", function(cargs)
         cargs = cargs or {}
         local count = cargs.count > 0 and cargs.count or 1
@@ -846,12 +848,6 @@ if vim.g.qf_rancher_set_default_cmds then
         en.q_nfile(count)
     end, { count = 0 })
 
-    vim.api.nvim_create_user_command("Qjump", function(cargs)
-        cargs = cargs or {}
-        local count = cargs.count >= 0 and cargs.count or 0
-        en.q_jump(count)
-    end, { count = 0 })
-
     vim.api.nvim_create_user_command("Lprev", function(cargs)
         cargs = cargs or {}
         local count = cargs.count > 0 and cargs.count or 1
@@ -880,12 +876,6 @@ if vim.g.qf_rancher_set_default_cmds then
         cargs = cargs or {}
         local count = cargs.count > 0 and cargs.count or 1
         en.l_nfile(count)
-    end, { count = 0 })
-
-    vim.api.nvim_create_user_command("Ljump", function(cargs)
-        cargs = cargs or {}
-        local count = cargs.count >= 0 and cargs.count or 0
-        en.l_jump(count)
     end, { count = 0 })
 
     -----------------
@@ -940,8 +930,8 @@ if vim.g.qf_rancher_set_default_cmds then
     vim.api.nvim_create_user_command("Qhistory", function(cargs)
         cargs = cargs or {}
 
-        local count = cargs.count >= 0 and cargs.count or 0
-        es.q_history(count)
+        local count1 = cargs.count > 0 and cargs.count or nil --- @type integer|nil
+        es.q_history({ count1 = count1 })
     end, { count = 0 })
 
     -- NOTE: Ideally, a count would override the "all" arg, in order to default to safer behavior,
@@ -976,7 +966,8 @@ if vim.g.qf_rancher_set_default_cmds then
     vim.api.nvim_create_user_command("Lhistory", function(cargs)
         cargs = cargs or {}
 
-        local count = cargs.count >= 0 and cargs.count or 0
+        local count = cargs.count > 0 and cargs.count or nil
+        -- TODO: change this once l_history uses opts
         es.l_history(count)
     end, { count = 0 })
 

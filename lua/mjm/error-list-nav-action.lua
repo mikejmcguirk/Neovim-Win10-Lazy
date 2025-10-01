@@ -169,27 +169,6 @@ function M.q_nfile(count1)
     file_nav_wrap(count1, "cnfile", "crewind")
 end
 
--- TODO: I think the jump commands are the ones with the redundancy issues right?
-
---- @param count integer
---- @return nil
-function M.q_jump(count)
-    require("mjm.error-list-util")._validate_count(count)
-    local cur_stack_nr = vim.fn.getqflist({ nr = 0 }).nr --- @type integer
-    local max_stack_nr = vim.fn.getqflist({ nr = "$" }).nr --- @type integer
-    count = math.min(count, max_stack_nr)
-    local qf_win = require("mjm.error-list-util")._find_qf_win() --- @type integer|nil
-    if not qf_win then
-        require("mjm.error-list-open")._open_qflist()
-    else
-        vim.api.nvim_set_current_win(qf_win)
-    end
-
-    if count > 0 and max_stack_nr > 0 and count ~= cur_stack_nr then
-        require("mjm.error-list-stack").q_history(count)
-    end
-end
-
 --- @param win? integer
 --- @return integer|nil, integer|nil, integer|nil
 local function get_cur_ll_info(win)
@@ -265,7 +244,8 @@ function M.l_l(count1)
     goto_list_entry(count1, "ll")
 end
 
---- TODO: This needs to accept count
+--- TODO: This needs to accept count. The [L ]L mappings will call this without a count, but the
+--- cmd needs to be available with a count to emulate the defaults
 function M.l_rewind()
     --- @type integer|nil, integer|nil, integer|nil
     local qf_id, cur_stack_nr, size = get_cur_ll_info()
@@ -309,38 +289,6 @@ function M.l_nfile(count1)
     end
 
     file_nav_wrap(count1, "lnfile", "lrewind")
-end
-
---- TODO: this function is a mess
---- TODO: And I think it's also a redundancy one
-
-function M.l_jump(count)
-    require("mjm.error-list-util")._validate_count(count)
-
-    local cur_win = vim.api.nvim_get_current_win() --- @type integer
-    -- TODO: This abstraction is bad because it like mingles two things, we should get the
-    -- qf id first, and then get the ll_win if we need it. It's more lines but it's more clear
-    -- what is happening and why
-    -- TODO: annotate everything after this is fixed
-    local eu = require("mjm.error-list-util")
-    local qf_id, ll_win = eu._get_loclist_info({ win = cur_win })
-    if qf_id == 0 then
-        vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
-        return
-    end
-
-    local cur_stack_nr = vim.fn.getloclist(cur_win, { nr = 0 }).nr
-    local max_stack_nr = vim.fn.getloclist(cur_win, { nr = "$" }).nr
-    count = math.min(count, max_stack_nr)
-    if not ll_win then
-        require("mjm.error-list-open")._open_loclist()
-    else
-        vim.api.nvim_set_current_win(ll_win)
-    end
-
-    if count > 0 and count ~= cur_stack_nr then
-        require("mjm.error-list-stack").l_history(count)
-    end
 end
 
 return M

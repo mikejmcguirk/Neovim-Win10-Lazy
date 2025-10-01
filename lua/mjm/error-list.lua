@@ -221,6 +221,12 @@ return M
 ---
 --- Check the file for any vim.fn.confirm
 
+-----------
+--- MID ---
+-----------
+
+--- Make resizing configurable
+
 -------------
 --- # LOW ---
 -------------

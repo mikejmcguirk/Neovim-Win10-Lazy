@@ -91,6 +91,9 @@ local function handle_output(obj, output_opts)
     end
 end
 
+-- TODO: This needs to be a public API so that way people can use it to build cmd line extensions
+-- off of it
+
 --- @param system_opts QfRancherSystemOpts
 --- @param output_opts QfRancherOutputOpts
 --- @return nil
