@@ -439,25 +439,6 @@ function M._resize_all_qf_wins()
     end
 end
 
---- @param qf_id integer
---- @param tabpage integer
-function M._resize_llist_by_qf_id_and_tabpage(qf_id, tabpage)
-    vim.validate("qf_id", qf_id, "number")
-    vim.validate("tabpage", tabpage, "number")
-
-    local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
-    for _, win in ipairs(tabpage_wins) do
-        local wintype = vim.fn.win_gettype(win)
-        if wintype == "loclist" then
-            local w_qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
-            if w_qf_id == qf_id then
-                resize_ll_win(win, nil, { tabpage_wins = tabpage_wins })
-                break
-            end
-        end
-    end
-end
-
 --- - always_resize?: If the qf window is already open, it will be resized
 --- - height?: Set the height the list should be sized to
 --- - keep_win?: On completion, return focus to the calling win
@@ -562,9 +543,50 @@ function M._toggle_loclist()
     end
 end
 
+--- @param qf_id integer
+--- @param tabpage integer
+function M._resize_llist_by_qf_id_and_tabpage(qf_id, tabpage)
+    vim.validate("qf_id", qf_id, "number")
+    vim.validate("tabpage", tabpage, "number")
+
+    local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
+    for _, win in ipairs(tabpage_wins) do
+        local wintype = vim.fn.win_gettype(win)
+        if wintype == "loclist" then
+            local w_qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
+            if w_qf_id == qf_id then
+                resize_ll_win(win, nil, { tabpage_wins = tabpage_wins })
+                break
+            end
+        end
+    end
+end
+
+--- @param qf_id integer
+--- @param tabpage integer
+function M._close_llist_by_qf_id_and_tabpage(qf_id, tabpage)
+    vim.validate("qf_id", qf_id, "number")
+    vim.validate("tabpage", tabpage, "number")
+
+    local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
+    for _, win in ipairs(tabpage_wins) do
+        local wintype = vim.fn.win_gettype(win)
+        if wintype == "loclist" then
+            local w_qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
+            if w_qf_id == qf_id then
+                M._close_list_win(win)
+                break
+            end
+        end
+    end
+end
+
 --- @param list_win integer
+--- @param opts? {tabpage?: integer, tabpage_wins?: integer[]}
 --- @return boolean
-function M._close_list_win(list_win)
+function M._close_list_win(list_win, opts)
+    opts = opts or {}
+
     if vim.g.qf_rancher_debug_assertions then
         vim.validate("list_win", list_win, "number")
         vim.validate("list_win", list_win, function()
@@ -575,10 +597,15 @@ function M._close_list_win(list_win)
             local wintype = vim.fn.win_gettype(list_win)
             return wintype == "quickfix" or wintype == "loclist"
         end)
+
+        vim.validate("opts", opts, { "nil", "table" })
+        vim.validate("opts.tabpage", opts.tabpage, { "nil", "number" })
+        vim.validate("opts.tabpage_wins", opts.tabpage_wins, { "nil", "table" })
     end
 
-    local win_tabpage = vim.api.nvim_win_get_tabpage(list_win) --- @type integer
-    local tabpage_wins = vim.api.nvim_tabpage_list_wins(win_tabpage) --- @type integer[]
+    local win_tabpage = opts.tabpage or vim.api.nvim_win_get_tabpage(list_win) --- @type integer
+    --- @type integer[]
+    local tabpage_wins = opts.tabpage_wins or vim.api.nvim_tabpage_list_wins(win_tabpage)
     tabpage_wins = vim.tbl_filter(function(win)
         return win ~= list_win
     end, tabpage_wins)
