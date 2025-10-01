@@ -186,6 +186,9 @@ Autocmd("TabNew", {
 
 -- d is used in diagnostic.lua
 
+-- Prevent falling back to defaults
+ApiMap("n", "\\", "<nop>", noremap)
+
 ApiMap("n", "\\s", "<nop>", {
     noremap = true,
     callback = function()
