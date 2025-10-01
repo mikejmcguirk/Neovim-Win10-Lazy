@@ -49,23 +49,8 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
             Cmd({ cmd = "update", mods = { lockmarks = true, silent = true } }, {})
             pcall(vim.api.nvim_win_close, cur_win, false)
 
-            local function find_buf(buf)
-                local tabpages = vim.api.nvim_list_tabpages()
-                for _, tab in pairs(tabpages) do
-                    local wins = vim.api.nvim_tabpage_list_wins(tab)
-                    for _, win in pairs(wins) do
-                        local win_buf = vim.api.nvim_win_get_buf(win)
-                        if win_buf == buf then
-                            return true
-                        end
-                    end
-                end
-
-                return false
-            end
-
             vim.schedule(function()
-                if not find_buf(cur_buf) then
+                if #vim.fn.win_findbuf(cur_buf) < 1 then
                     vim.api.nvim_buf_delete(cur_buf, {})
                 end
             end)
