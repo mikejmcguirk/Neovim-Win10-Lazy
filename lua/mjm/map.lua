@@ -127,37 +127,25 @@ local resize_win = function(cmd)
     end
 end
 
-ApiMap("n", "<M-h>", "<nop>", {
-    noremap = true,
-    callback = function()
-        ---@diagnostic disable-next-line: missing-fields
-        resize_win({ cmd = "resize", args = { "-2" }, mods = { silent = true, vertical = true } })
-    end,
-})
+Map("n", "<M-h>", function()
+    ---@diagnostic disable-next-line: missing-fields
+    resize_win({ cmd = "resize", args = { "-2" }, mods = { silent = true, vertical = true } })
+end)
 
-ApiMap("n", "<M-j>", "<nop>", {
-    noremap = true,
-    callback = function()
-        ---@diagnostic disable-next-line: missing-fields
-        resize_win({ cmd = "resize", args = { "-2" }, mods = { silent = true } })
-    end,
-})
+Map("n", "<M-j>", function()
+    ---@diagnostic disable-next-line: missing-fields
+    resize_win({ cmd = "resize", args = { "-2" }, mods = { silent = true } })
+end)
 
-ApiMap("n", "<M-k>", "<nop>", {
-    noremap = true,
-    callback = function()
-        ---@diagnostic disable-next-line: missing-fields
-        resize_win({ cmd = "resize", args = { "+2" }, mods = { silent = true } })
-    end,
-})
+Map("n", "<M-k>", function()
+    ---@diagnostic disable-next-line: missing-fields
+    resize_win({ cmd = "resize", args = { "+2" }, mods = { silent = true } })
+end)
 
-ApiMap("n", "<M-l>", "<nop>", {
-    noremap = true,
-    callback = function()
-        ---@diagnostic disable-next-line: missing-fields
-        resize_win({ cmd = "resize", args = { "+2" }, mods = { silent = true, vertical = true } })
-    end,
-})
+Map("n", "<M-l>", function()
+    ---@diagnostic disable-next-line: missing-fields
+    resize_win({ cmd = "resize", args = { "+2" }, mods = { silent = true, vertical = true } })
+end)
 
 ApiMap("n", "<C-w>c", "<nop>", { noremap = true })
 ApiMap("n", "<C-w><C-c>", "<nop>", { noremap = true })
@@ -238,91 +226,63 @@ Map("n", "V", "mvV", { silent = true })
 -- Navigation --
 ----------------
 
-NXMap("H", "<nop>", {
-    noremap = true,
-    callback = function()
-        ---@diagnostic disable-next-line: missing-fields
-        local cmd = { cmd = "normal", args = { "H" }, bang = true, mods = { keepjumps = true } }
-        vim.api.nvim_cmd(cmd, {})
-    end,
-})
+--- Keep these from adding to the jumplist. :h jump-motions
 
-NXMap("M", "<nop>", {
-    noremap = true,
-    callback = function()
-        ---@diagnostic disable-next-line: missing-fields
-        local cmd = { cmd = "normal", args = { "M" }, bang = true, mods = { keepjumps = true } }
-        vim.api.nvim_cmd(cmd, {})
-    end,
-})
+Map({ "n", "x" }, "H", function()
+    local cmd = { cmd = "normal", args = { "H" }, bang = true, mods = { keepjumps = true } }
+    vim.api.nvim_cmd(cmd, {})
+end)
 
-NXMap("L", "<nop>", {
-    noremap = true,
-    callback = function()
-        ---@diagnostic disable-next-line: missing-fields
-        local cmd = { cmd = "normal", args = { "L" }, bang = true, mods = { keepjumps = true } }
-        vim.api.nvim_cmd(cmd, {})
-    end,
-})
+Map({ "n", "x" }, "M", function()
+    local cmd = { cmd = "normal", args = { "M" }, bang = true, mods = { keepjumps = true } }
+    vim.api.nvim_cmd(cmd, {})
+end)
 
-NXMap("%", "<nop>", {
-    noremap = true,
-    callback = function()
-        ---@diagnostic disable-next-line: missing-fields
-        local cmd = { cmd = "normal", args = { "%" }, bang = true, mods = { keepjumps = true } }
-        vim.api.nvim_cmd(cmd, {})
-    end,
-})
+Map({ "n", "x" }, "L", function()
+    local cmd = { cmd = "normal", args = { "L" }, bang = true, mods = { keepjumps = true } }
+    vim.api.nvim_cmd(cmd, {})
+end)
 
-NXMap("{", "<nop>", {
-    noremap = true,
-    callback = function()
-        ---@diagnostic disable-next-line: missing-fields
-        local args = vim.v.count1 .. "{"
-        local cmd = { cmd = "normal", args = { args }, bang = true, mods = { keepjumps = true } }
-        vim.api.nvim_cmd(cmd, {})
-    end,
-})
+Map({ "n", "x" }, "%", function()
+    local cmd = { cmd = "normal", args = { "%" }, bang = true, mods = { keepjumps = true } }
+    vim.api.nvim_cmd(cmd, {})
+end)
 
-NXMap("}", "<nop>", {
-    noremap = true,
-    callback = function()
-        ---@diagnostic disable-next-line: missing-fields
-        local args = vim.v.count1 .. "}"
-        local cmd = { cmd = "normal", args = { args }, bang = true, mods = { keepjumps = true } }
-        vim.api.nvim_cmd(cmd, {})
-    end,
-})
+Map({ "n", "x" }, "{", function()
+    local args = vim.v.count1 .. "{"
+    local cmd = { cmd = "normal", args = { args }, bang = true, mods = { keepjumps = true } }
+    vim.api.nvim_cmd(cmd, {})
+end)
+
+Map({ "n", "x" }, "{", function()
+    local args = vim.v.count1 .. "}"
+    local cmd = { cmd = "normal", args = { args }, bang = true, mods = { keepjumps = true } }
+    vim.api.nvim_cmd(cmd, {})
+end)
 
 --- NOTE: the pcmark has to be set through the m command rather than the API in order to actually
 --- modify the jumplist
-Map({ "n", "x" }, "k", function()
-    if vim.v.count == 0 then
-        return "gk"
-    end
-
-    local lines = vim.api.nvim_get_option_value("lines", { scope = "global" })
-    if vim.v.count >= lines then
-        return "m'" .. vim.v.count1 .. "k"
-    end
-
-    return "k"
-end, { expr = true, silent = true })
-
 Map({ "n", "x" }, "j", function()
     if vim.v.count == 0 then
         return "gj"
-    end
-
-    local lines = vim.api.nvim_get_option_value("lines", { scope = "global" })
-    if vim.v.count >= lines then
+    elseif vim.v.count >= vim.api.nvim_get_option_value("lines", { scope = "global" }) then
         return "m'" .. vim.v.count1 .. "j"
+    else
+        return "j"
     end
-
-    return "j"
 end, { expr = true, silent = true })
 
-Map("o", "gg", "<esc>")
+Map({ "n", "x" }, "k", function()
+    if vim.v.count == 0 then
+        return "gk"
+    elseif vim.v.count >= vim.api.nvim_get_option_value("lines", { scope = "global" }) then
+        return "m'" .. vim.v.count1 .. "k"
+    else
+        return "k"
+    end
+end, { expr = true, silent = true })
+
+ApiMap("o", "gg", "<esc>", noremap)
 Map({ "n", "x", "o" }, "go", function()
     if vim.v.count < 1 then
         return "gg" -- I have startofline off, so this keeps cursor position
