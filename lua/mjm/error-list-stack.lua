@@ -30,7 +30,7 @@ function M.q_older(count1)
 
     local cur_stack_nr = vim.fn.getqflist({ nr = 0 }).nr
     local eu = require("mjm.error-list-util")
-    local new_stack_nr = eu.wrapping_sub(cur_stack_nr, count1, 1, stack_len)
+    local new_stack_nr = eu._wrapping_sub(cur_stack_nr, count1, 1, stack_len)
 
     vim.api.nvim_cmd({ cmd = "chistory", count = new_stack_nr }, {})
     local elo = require("mjm.error-list-open")
@@ -51,7 +51,7 @@ function M.q_newer(count1)
 
     local cur_stack_nr = vim.fn.getqflist({ nr = 0 }).nr
     local eu = require("mjm.error-list-util")
-    local new_stack_nr = eu.wrapping_add(cur_stack_nr, count1, 1, stack_len)
+    local new_stack_nr = eu._wrapping_add(cur_stack_nr, count1, 1, stack_len)
 
     vim.api.nvim_cmd({ cmd = "chistory", count1 = new_stack_nr }, {})
     local elo = require("mjm.error-list-open")
@@ -117,7 +117,7 @@ function M.l_older(count1)
 
     local cur_win = vim.api.nvim_get_current_win()
     local eu = require("mjm.error-list-util")
-    local qf_id, ll_win = eu.get_loclist_info({ win = cur_win })
+    local qf_id, ll_win = eu._get_loclist_info({ win = cur_win })
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
         return
@@ -130,7 +130,7 @@ function M.l_older(count1)
     end
 
     local cur_stack_nr = vim.fn.getloclist(cur_win, { nr = 0 }).nr
-    local new_stack_nr = eu.wrapping_sub(cur_stack_nr, count1, 1, stack_len)
+    local new_stack_nr = eu._wrapping_sub(cur_stack_nr, count1, 1, stack_len)
 
     vim.api.nvim_cmd({ cmd = "lhistory", count1 = new_stack_nr }, {})
     if ll_win then
@@ -145,7 +145,7 @@ function M.l_newer(count1)
     end)
 
     local cur_win = vim.api.nvim_get_current_win()
-    local qf_id, ll_win = require("mjm.error-list-util").get_loclist_info({ win = cur_win })
+    local qf_id, ll_win = require("mjm.error-list-util")._get_loclist_info({ win = cur_win })
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
         return
@@ -159,7 +159,7 @@ function M.l_newer(count1)
 
     local cur_stack_nr = vim.fn.getloclist(cur_win, { nr = 0 }).nr
     local eu = require("mjm.error-list-util")
-    local new_stack_nr = eu.wrapping_add(cur_stack_nr, count1, 1, stack_len)
+    local new_stack_nr = eu._wrapping_add(cur_stack_nr, count1, 1, stack_len)
     vim.api.nvim_cmd({ cmd = "lhistory", count1 = new_stack_nr }, {})
     if ll_win then
         require("mjm.error-list-open").resize_list_win(ll_win)
@@ -173,7 +173,7 @@ function M.l_history(count)
     end)
 
     local cur_win = vim.api.nvim_get_current_win()
-    local qf_id, ll_win = require("mjm.error-list-util").get_loclist_info({ win = cur_win })
+    local qf_id, ll_win = require("mjm.error-list-util")._get_loclist_info({ win = cur_win })
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
         return
@@ -204,7 +204,7 @@ function M.l_del(count)
     end)
 
     local cur_win = vim.api.nvim_get_current_win()
-    local qf_id, ll_win = require("mjm.error-list-util").get_loclist_info({ win = cur_win })
+    local qf_id, ll_win = require("mjm.error-list-util")._get_loclist_info({ win = cur_win })
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
         return
@@ -232,7 +232,7 @@ end
 
 function M.l_del_all()
     local cur_win = vim.api.nvim_get_current_win()
-    local qf_id, ll_win = require("mjm.error-list-util").get_loclist_info({ win = cur_win })
+    local qf_id, ll_win = require("mjm.error-list-util")._get_loclist_info({ win = cur_win })
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
         return

@@ -74,7 +74,7 @@ function M._sort_wrapper(sort_info, sort_opts, output_opts)
         return
     end
 
-    local getlist = eu.get_getlist(output_opts) --- @type function|nil
+    local getlist = eu._get_getlist(output_opts) --- @type function|nil
     if not getlist then
         return
     end
@@ -86,8 +86,8 @@ function M._sort_wrapper(sort_info, sort_opts, output_opts)
     end
 
     -- TODO: Reudandant var, but unsure of how to handle view check
-    local dest_list_nr = eu.get_dest_list_nr(getlist, output_opts) --- @type integer
-    local list_win = eu.find_list_win(output_opts.is_loclist) --- @type integer|nil
+    local dest_list_nr = eu._get_dest_list_nr(getlist, output_opts) --- @type integer
+    local list_win = eu._find_list_win(output_opts) --- @type integer|nil
     local view = (list_win and dest_list_nr == cur_list.nr)
             and vim.api.nvim_win_call(list_win, vim.fn.winsaveview)
         or nil --- @type vim.fn.winsaveview.ret|nil
@@ -96,7 +96,7 @@ function M._sort_wrapper(sort_info, sort_opts, output_opts)
         or sort_info.desc_func
 
     table.sort(cur_list.items, predicate)
-    local setlist = eu.get_setlist(output_opts) --- @type function|nil
+    local setlist = eu._get_setlist(output_opts) --- @type function|nil
     -- TODO: Because of nil, handle earlier
     if not setlist then
         return
@@ -113,7 +113,7 @@ function M._sort_wrapper(sort_info, sort_opts, output_opts)
         end)
     end
 
-    eu.get_openlist(output_opts.is_loclist)({ always_resize = true })
+    eu._get_openlist(output_opts.is_loclist)({ always_resize = true })
 end
 
 ------------------
@@ -394,7 +394,7 @@ local function check_lcol_type_asc(a, b)
 end
 
 ---@type table<string, integer>
-local severity_unmap = require("mjm.error-list-util").severity_unmap
+local severity_unmap = require("mjm.error-list-util")._severity_unmap
 
 --- @param a table
 --- @param b table

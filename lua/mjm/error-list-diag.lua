@@ -1,14 +1,20 @@
+local M = {}
+
 -------------
 --- Types ---
 -------------
 
+--- @alias QfRancherSeverityType "min"|"only"|"top"
+--- @alias QfRancherDiagInfo {sev_type: QfRancherSeverityType, level: vim.diagnostic.Severity}
+
 --- @class QfRancherDiagToListOpts
---- @field set_action? QfRancherSetlistAction
 --- @field is_loclist? boolean
 --- @field min_severity? integer
 --- @field severity? integer
 --- @field top_severity? boolean
 
+--- @param diags vim.Diagnostic[]
+--- @return integer
 local function get_top_severity(diags)
     local severity = vim.diagnostic.severity.HINT --- @type integer
     for _, diag in pairs(diags) do
@@ -20,6 +26,8 @@ local function get_top_severity(diags)
     return severity
 end
 
+--- @param diags vim.Diagnostic[]
+--- @return vim.Diagnostic[]
 local function filter_diags_top_severity(diags)
     local top_severity = get_top_severity(diags)
     return vim.tbl_filter(function(diag)
@@ -27,7 +35,7 @@ local function filter_diags_top_severity(diags)
     end, diags)
 end
 
-local severity_map = require("mjm.error-list-util").severity_map ---@type table<integer, string>
+local severity_map = require("mjm.error-list-util")._severity_map ---@type table<integer, string>
 
 ---@param d vim.Diagnostic
 ---@return table
@@ -47,70 +55,98 @@ local function convert_diag(d)
     }
 end
 
---- @param opts? QfRancherDiagToListOpts
+--- @param diag_info QfRancherDiagInfo
+--- @return vim.diagnostic.GetOpts
+local function get_diagnostic_opt(diag_info)
+    if vim.g.qf_rancher_debug_assertions then
+        vim.validate("diag_info", diag_info, "table")
+        vim.validate("diag_info.sev_type", diag_info.sev_type, { "nil", "string" })
+        vim.validate("diag_info.level", diag_info.level, { "nil", "number" })
+    end
+
+    local type = diag_info.sev_type or "min" --- @type QfRancherSeverityType
+    if type == "top" then
+        return { severity = nil }
+    end
+
+    local level = diag_info.level or vim.diagnostic.severity.HINT
+    assert(level >= 1 and level <= 4, "Diagnostic severity " .. level .. " is invalid")
+
+    if type == "min" and level == vim.diagnostic.severity.HINT then
+        return { severity = nil }
+    end
+
+    if type == "only" then
+        return { severity = { min = level } }
+    else
+        return { severity = level }
+    end
+end
+
+local function validate_diags_to_list(diag_info, output_opts)
+    vim.validate("diag_info", diag_info, "table")
+    vim.validate("diag_info.sev_type", diag_info.sev_type, { "nil", "string" })
+    vim.validate("diag_info.level", diag_info.level, { "nil", "number" })
+
+    local eu = require("mjm.error-list-util")
+    eu.validate_output_opts(output_opts)
+end
+
+--- @param diag_info QfRancherDiagInfo
+--- @param output_opts QfRancherOutputOpts
 --- NOTE: To get all diagnostics, avoid passing in a severity opt. If vim.diagnostic.get does not
 --- receive a severity option, it will simply compare all diagnostics to true, whereas if it
 --- is given a severity filter, even a permissive one, each diag has to be compared against it
 --- NOTE: severity overrides min_severity. Either can be mixed with top_severity
-local function diags_to_list(opts)
-    opts = opts or {}
-    local cur_win = vim.api.nvim_get_current_win() --- @type integer
-    local buf = opts.is_loclist and vim.api.nvim_win_get_buf(cur_win) or nil --- @type integer|nil
-    local severity = (function()
-        if opts.severity then
-            return opts.severity
-        elseif opts.min_severity then
-            return { min = opts.min_severity }
-        end
-    end)() --- @type integer|{min:integer}|nil
+local function diags_to_list(diag_info, output_opts)
+    diag_info = diag_info or {}
+    output_opts = output_opts or {}
+    validate_diags_to_list(diag_info, output_opts)
 
-    local raw_diags = vim.diagnostic.get(buf, { severity = severity }) --- @type vim.Diagnostic[]
+    local cur_win = vim.api.nvim_get_current_win() --- @type integer
+    output_opts.loclist_source_win = cur_win
+    local eu = require("mjm.error-list-util")
+    if not eu.check_loclist_output(output_opts) then
+        return
+    end
+
+    local getlist = eu._get_getlist(output_opts)
+    if not getlist then
+        return
+    end
+
+    local setlist = eu._get_setlist(output_opts)
+    if not setlist then
+        return
+    end
+
+    --- @type integer|nil
+    local buf = output_opts.is_loclist and vim.api.nvim_win_get_buf(cur_win) or nil
+    local get_opts = get_diagnostic_opt(diag_info) --- @type vim.diagnostic.GetOpts
+
+    local raw_diags = vim.diagnostic.get(buf, get_opts) --- @type vim.Diagnostic[]
     if #raw_diags == 0 then
         vim.api.nvim_echo({ { "No diagnostics", "" } }, false, {})
         return
     end
 
-    if opts.top_severity then
+    if diag_info.sev_type == "top" then
         raw_diags = filter_diags_top_severity(raw_diags)
     end
 
     local converted_diags = vim.tbl_map(convert_diag, raw_diags) ---@type table[]
-    local eu = require("mjm.error-list-util")
-    -- TODO: This should use the output opts convention
-    -- TODO: Because of nil, run earlier
-    local getlist = eu.get_getlist({ loclist_source_win = cur_win, is_loclist = opts.is_loclist })
-    if not getlist then
-        return
-    end
+    table.sort(converted_diags, require("mjm.error-list-sort")._sort_fname_diag_asc)
+    local set_opts = { getlist = getlist, setlist = setlist, new_items = converted_diags }
+    output_opts.title = "vim.diagnostic.get()"
+    eu.set_list_items(set_opts, output_opts)
 
-    opts.set_action = opts.set_action or "new"
-    local list_nr = eu.get_list_nr(getlist, opts.set_action)
-    if opts.set_action == "add" then
-        local cur_list = getlist({ nr = list_nr, items = true })
-        converted_diags = eu.merge_qf_lists(converted_diags, cur_list.items)
-    end
-
-    table.sort(converted_diags, require("mjm.error-list-sort").sort_fname_severity_desc)
-    -- TODO: This should use the output opts convention
-    local setlist = eu.get_setlist({ loclist_source_win = cur_win, is_loclist = opts.is_loclist })
-    -- TODO: Because of nil, needs to be handled earlier
-    if not setlist then
-        return
-    end
-
-    local is_replace = opts.set_action == "add" or opts.set_action == "overwrite"
-    local action = is_replace and "r" or " "
-    local title = "vim.diagnostic.get()"
-    setlist({}, action, { items = converted_diags, nr = list_nr, title = title })
-
-    if opts.set_action == "add" or opts.set_action == "overwrite" then
-        require("mjm.error-list-stack").get_history(opts.is_loclist)(list_nr)
-    end
-
-    eu.get_openlist(opts.is_loclist)({ always_resize = true })
+    -- and then same issue as in grep - this should be a helper function as well
+    -- or even better, so we don't have to goof with the data as much, just make it an opt for
+    -- set_list_items
+    eu._get_openlist(output_opts.is_loclist)({ always_resize = true })
 end
----
---- TODO: Naming conventions:
+
+--- TODO: Cmd Naming conventions:
 --- - Qdiag
 --- - Qdiagadd
 --- - Qdiagreplace (?)
@@ -118,274 +154,33 @@ end
 --- - Qdiag info (min severity info)
 --- - Qdiag info only (only show info)
 
-vim.keymap.set("n", "<leader>qin", function()
-    diags_to_list()
-end)
+local diag_queries = {
+    hint = { sev_type = "min", level = vim.diagnostic.severity.HINT },
+    info = { sev_type = "min", level = vim.diagnostic.severity.INFO },
+    warn = { sev_type = "min", level = vim.diagnostic.severity.WARN },
+    error = { sev_type = "min", level = vim.diagnostic.severity.ERROR },
+    hint_only = { sev_type = "only", level = vim.diagnostic.severity.HINT },
+    info_only = { sev_type = "only", level = vim.diagnostic.severity.INFO },
+    warn_only = { sev_type = "only", level = vim.diagnostic.severity.WARN },
+    error_only = { sev_type = "only", level = vim.diagnostic.severity.ERROR },
+    top = { sev_type = "top", level = nil },
+} --- @type table <string, QfRancherDiagInfo>
 
-vim.keymap.set("n", "<leader>qif", function()
-    diags_to_list({ min_severity = vim.diagnostic.severity.INFO })
-end)
+function M.diags(name, output_opts)
+    local diag_info = diag_queries[name]
+    if not diag_info then
+        vim.api.nvim_echo({ { "No diagnostic query " .. name, "ErrorMsg" } }, true, { err = true })
+    end
 
-vim.keymap.set("n", "<leader>qiw", function()
-    diags_to_list({ min_severity = vim.diagnostic.severity.WARN })
-end)
+    diags_to_list(diag_info, output_opts)
+end
 
-vim.keymap.set("n", "<leader>qie", function()
-    diags_to_list({ min_severity = vim.diagnostic.severity.ERROR })
-end)
+return M
 
-vim.keymap.set("n", "<leader>qiN", function()
-    diags_to_list({ severity = vim.diagnostic.severity.HINT })
-end)
+----------------
 
-vim.keymap.set("n", "<leader>qiF", function()
-    diags_to_list({ severity = vim.diagnostic.severity.INFO })
-end)
+-------------
+--- TODO: ---
+-------------
 
-vim.keymap.set("n", "<leader>qiW", function()
-    diags_to_list({ severity = vim.diagnostic.severity.WARN })
-end)
-
-vim.keymap.set("n", "<leader>qiE", function()
-    diags_to_list({ severity = vim.diagnostic.severity.ERROR })
-end)
-
-vim.keymap.set("n", "<leader>qit", function()
-    diags_to_list({ top_severity = true })
-end)
-
-vim.keymap.set("n", "<leader>qIn", function()
-    diags_to_list({ set_action = "overwrite" })
-end)
-
-vim.keymap.set("n", "<leader>qIf", function()
-    diags_to_list({ set_action = "overwrite", min_severity = vim.diagnostic.severity.INFO })
-end)
-
-vim.keymap.set("n", "<leader>qIw", function()
-    diags_to_list({ set_action = "overwrite", min_severity = vim.diagnostic.severity.WARN })
-end)
-
-vim.keymap.set("n", "<leader>qIe", function()
-    diags_to_list({ set_action = "overwrite", min_severity = vim.diagnostic.severity.ERROR })
-end)
-
-vim.keymap.set("n", "<leader>qIN", function()
-    diags_to_list({ set_action = "overwrite", severity = vim.diagnostic.severity.HINT })
-end)
-
-vim.keymap.set("n", "<leader>qIF", function()
-    diags_to_list({ set_action = "overwrite", severity = vim.diagnostic.severity.INFO })
-end)
-
-vim.keymap.set("n", "<leader>qIW", function()
-    diags_to_list({ set_action = "overwrite", severity = vim.diagnostic.severity.WARN })
-end)
-
-vim.keymap.set("n", "<leader>qIE", function()
-    diags_to_list({ set_action = "overwrite", severity = vim.diagnostic.severity.ERROR })
-end)
-
-vim.keymap.set("n", "<leader>qIt", function()
-    diags_to_list({ set_action = "overwrite", top_severity = true })
-end)
-
-vim.keymap.set("n", "<leader>q<C-i>n", function()
-    diags_to_list({ set_action = "add" })
-end)
-
-vim.keymap.set("n", "<leader>q<C-i>f", function()
-    diags_to_list({ set_action = "add", min_severity = vim.diagnostic.severity.INFO })
-end)
-
-vim.keymap.set("n", "<leader>q<C-i>w", function()
-    diags_to_list({ set_action = "add", min_severity = vim.diagnostic.severity.WARN })
-end)
-
-vim.keymap.set("n", "<leader>q<C-i>e", function()
-    diags_to_list({ set_action = "add", min_severity = vim.diagnostic.severity.ERROR })
-end)
-
-vim.keymap.set("n", "<leader>q<C-i>N", function()
-    diags_to_list({ set_action = "add", severity = vim.diagnostic.severity.HINT })
-end)
-
-vim.keymap.set("n", "<leader>q<C-i>F", function()
-    diags_to_list({ set_action = "add", severity = vim.diagnostic.severity.INFO })
-end)
-
-vim.keymap.set("n", "<leader>q<C-i>W", function()
-    diags_to_list({ set_action = "add", severity = vim.diagnostic.severity.WARN })
-end)
-
-vim.keymap.set("n", "<leader>q<C-i>E", function()
-    diags_to_list({ set_action = "add", severity = vim.diagnostic.severity.ERROR })
-end)
-
-vim.keymap.set("n", "<leader>q<C-i>t", function()
-    diags_to_list({ set_action = "add", top_severity = true })
-end)
-
-vim.keymap.set("n", "<leader>lin", function()
-    diags_to_list({ is_loclist = true })
-end)
-
-vim.keymap.set("n", "<leader>lif", function()
-    diags_to_list({ is_loclist = true, min_severity = vim.diagnostic.severity.INFO })
-end)
-
-vim.keymap.set("n", "<leader>liw", function()
-    diags_to_list({ is_loclist = true, min_severity = vim.diagnostic.severity.WARN })
-end)
-
-vim.keymap.set("n", "<leader>lie", function()
-    diags_to_list({ is_loclist = true, min_severity = vim.diagnostic.severity.ERROR })
-end)
-
-vim.keymap.set("n", "<leader>liN", function()
-    diags_to_list({ is_loclist = true, severity = vim.diagnostic.severity.HINT })
-end)
-
-vim.keymap.set("n", "<leader>liF", function()
-    diags_to_list({ is_loclist = true, severity = vim.diagnostic.severity.INFO })
-end)
-
-vim.keymap.set("n", "<leader>liW", function()
-    diags_to_list({ is_loclist = true, severity = vim.diagnostic.severity.WARN })
-end)
-
-vim.keymap.set("n", "<leader>liE", function()
-    diags_to_list({ is_loclist = true, severity = vim.diagnostic.severity.ERROR })
-end)
-
-vim.keymap.set("n", "<leader>lit", function()
-    diags_to_list({ is_loclist = true, top_severity = true })
-end)
-
-vim.keymap.set("n", "<leader>lIn", function()
-    diags_to_list({ is_loclist = true, set_action = "overwrite" })
-end)
-
-vim.keymap.set("n", "<leader>lIf", function()
-    diags_to_list({
-        is_loclist = true,
-        set_action = "overwrite",
-        min_severity = vim.diagnostic.severity.INFO,
-    })
-end)
-
-vim.keymap.set("n", "<leader>lIw", function()
-    diags_to_list({
-        is_loclist = true,
-        set_action = "overwrite",
-        min_severity = vim.diagnostic.severity.WARN,
-    })
-end)
-
-vim.keymap.set("n", "<leader>lIe", function()
-    diags_to_list({
-        is_loclist = true,
-        set_action = "overwrite",
-        min_severity = vim.diagnostic.severity.ERROR,
-    })
-end)
-
-vim.keymap.set("n", "<leader>lIN", function()
-    diags_to_list({
-        is_loclist = true,
-        set_action = "overwrite",
-        severity = vim.diagnostic.severity.HINT,
-    })
-end)
-
-vim.keymap.set("n", "<leader>lIF", function()
-    diags_to_list({
-        is_loclist = true,
-        set_action = "overwrite",
-        severity = vim.diagnostic.severity.INFO,
-    })
-end)
-
-vim.keymap.set("n", "<leader>lIW", function()
-    diags_to_list({
-        is_loclist = true,
-        set_action = "overwrite",
-        severity = vim.diagnostic.severity.WARN,
-    })
-end)
-
-vim.keymap.set("n", "<leader>lIE", function()
-    diags_to_list({
-        is_loclist = true,
-        set_action = "overwrite",
-        severity = vim.diagnostic.severity.ERROR,
-    })
-end)
-
-vim.keymap.set("n", "<leader>lIt", function()
-    diags_to_list({ is_loclist = true, set_action = "overwrite", top_severity = true })
-end)
-
-vim.keymap.set("n", "<leader>l<C-i>n", function()
-    diags_to_list({ is_loclist = true, set_action = "add" })
-end)
-
-vim.keymap.set("n", "<leader>l<C-i>f", function()
-    diags_to_list({
-        is_loclist = true,
-        set_action = "add",
-        min_severity = vim.diagnostic.severity.INFO,
-    })
-end)
-
-vim.keymap.set("n", "<leader>l<C-i>w", function()
-    diags_to_list({
-        is_loclist = true,
-        set_action = "add",
-        min_severity = vim.diagnostic.severity.WARN,
-    })
-end)
-
-vim.keymap.set("n", "<leader>l<C-i>e", function()
-    diags_to_list({
-        is_loclist = true,
-        set_action = "add",
-        min_severity = vim.diagnostic.severity.ERROR,
-    })
-end)
-
-vim.keymap.set("n", "<leader>l<C-i>N", function()
-    diags_to_list({
-        is_loclist = true,
-        set_action = "add",
-        severity = vim.diagnostic.severity.HINT,
-    })
-end)
-
-vim.keymap.set("n", "<leader>l<C-i>F", function()
-    diags_to_list({
-        is_loclist = true,
-        set_action = "add",
-        severity = vim.diagnostic.severity.INFO,
-    })
-end)
-
-vim.keymap.set("n", "<leader>l<C-i>W", function()
-    diags_to_list({
-        is_loclist = true,
-        set_action = "add",
-        severity = vim.diagnostic.severity.WARN,
-    })
-end)
-
-vim.keymap.set("n", "<leader>l<C-i>E", function()
-    diags_to_list({
-        is_loclist = true,
-        set_action = "add",
-        severity = vim.diagnostic.severity.ERROR,
-    })
-end)
-
-vim.keymap.set("n", "<leader>l<C-i>t", function()
-    diags_to_list({ is_loclist = true, set_action = "add", top_severity = true })
-end)
+--- This whole file and its mappings need to be moved to the new mapping system/API

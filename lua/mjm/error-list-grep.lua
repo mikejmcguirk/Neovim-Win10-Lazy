@@ -174,7 +174,7 @@ local function get_prompt(grep_info, input_type)
         return eu.validate_input_type(input_type)
     end)
 
-    local display_type = eu.get_display_input_type(input_type)
+    local display_type = eu._get_display_input_type(input_type)
     local grepprg = vim.g.qf_rancher_grepprg or ""
 
     -- TODO: actually look at this and adjust
@@ -214,9 +214,9 @@ function M._do_grep(grep_info, system_opts, input_opts, output_opts)
         return
     end
 
-    local input_type = eu.resolve_input_type(input_opts.input_type) --- @type QfRancherInputType
+    local input_type = eu._resolve_input_type(input_opts.input_type) --- @type QfRancherInputType
     local prompt = get_prompt(grep_info, input_type)
-    local pattern = eu.resolve_pattern(prompt, input_opts) --- @type string|nil
+    local pattern = eu._resolve_pattern(prompt, input_opts) --- @type string|nil
     if not pattern then
         return
     end
@@ -340,6 +340,8 @@ function M.grep(name, system_opts, input_opts, output_opts)
 
     M._do_grep(grep_info, system_opts, input_opts, output_opts)
 end
+
+--- TODO: Make the rest of the API
 
 return M
 

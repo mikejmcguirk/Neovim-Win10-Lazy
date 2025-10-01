@@ -28,38 +28,12 @@ local M = {}
 --- @param filter_info QfRancherFilterInfo
 --- @param filter_opts QfRancherFilterOpts
 --- @param input_type QfRancherInputType
+--- @return string
 local function resolve_prompt(filter_info, filter_opts, input_type)
     local name = filter_info.name and filter_info.name .. " - " or ""
     local enter_prompt = filter_opts.keep and "Enter pattern to keep" or "Enter pattern to remove"
-    local type = require("mjm.error-list-util").get_display_input_type(input_type)
+    local type = require("mjm.error-list-util")._get_display_input_type(input_type)
     return name .. enter_prompt .. " (" .. type .. "): "
-end
-
---- @param filter_info QfRancherFilterInfo
---- @param filter_opts QfRancherFilterOpts
---- @param input_type QfRancherInputType
---- @return string|nil
---- TODO: move this to the code in the util file
-local function get_pattern(pattern, filter_info, filter_opts, input_type)
-    if pattern then
-        return pattern
-    end
-
-    local eu = require("mjm.error-list-util")
-    local mode = vim.fn.mode() --- @type string
-    local is_visual = mode == "v" or mode == "V" or mode == "\22" --- @type boolean
-    if is_visual then
-        local ok, vis_pattern = eu.get_visual_pattern(mode)
-        if ok then
-            return table.concat(vis_pattern, "\n")
-        else
-            return nil
-        end
-    end
-
-    local prompt = resolve_prompt(filter_info, filter_opts, input_type)
-    local input = eu.get_input(prompt)
-    return input
 end
 
 --- @param filter_info QfRancherFilterInfo
@@ -69,9 +43,9 @@ end
 local function get_predicate_info(filter_info, filter_opts, input_opts)
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
 
-    local input_type = eu.resolve_input_type(input_opts.input_type) --- @type QfRancherInputType
-    --- @type string|nil
-    local pattern = get_pattern(input_opts.pattern, filter_info, filter_opts, input_type)
+    local input_type = eu._resolve_input_type(input_opts.input_type) --- @type QfRancherInputType
+    local prompt = resolve_prompt(filter_info, filter_opts, input_type) --- @type string
+    local pattern = eu._resolve_pattern(prompt, input_opts)
     if not pattern then
         return nil, nil, nil
     end
@@ -176,7 +150,7 @@ function M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
         return
     end
 
-    local getlist = eu.get_getlist(output_opts) --- @type function|nil
+    local getlist = eu._get_getlist(output_opts) --- @type function|nil
     if not getlist then
         return
     end
@@ -193,8 +167,8 @@ function M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
     -- rather than saving it
     -- TODO: This is a kind of slop that's starting to creep up in the code in general, where
     -- vestigal pieces of data are accumulating. Clean these out
-    local dest_list_nr = eu.get_dest_list_nr(getlist, output_opts) --- @type integer
-    local list_win = eu.find_list_win(output_opts.is_loclist) --- @type integer|nil
+    local dest_list_nr = eu._get_dest_list_nr(getlist, output_opts) --- @type integer
+    local list_win = eu._find_list_win(output_opts) --- @type integer|nil
     local view = (list_win and dest_list_nr == cur_list.nr)
             and vim.api.nvim_win_call(list_win, vim.fn.winsaveview)
         or nil --- @type vim.fn.winsaveview.ret|nil
@@ -213,7 +187,7 @@ function M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
         iter_with_predicate(predicate, cur_list.items, pattern, filter_opts.keep, view_row, regex)
 
     --- @type function
-    local setlist = eu.get_setlist(output_opts)
+    local setlist = eu._get_setlist(output_opts)
     -- TODO: Because of nil, need to handle earlier
     if not setlist then
         return
@@ -230,7 +204,7 @@ function M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
         end)
     end
 
-    eu.get_openlist(output_opts.is_loclist)({ always_resize = true })
+    eu._get_openlist(output_opts.is_loclist)({ always_resize = true })
 end
 
 -----------------------

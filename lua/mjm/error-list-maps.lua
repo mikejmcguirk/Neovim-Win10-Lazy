@@ -55,6 +55,7 @@ local sys_help_lreplace =
 --- @type QfRancherSystemOpts
 local sys_help_ladd = { async = true, type = "\1", loclist = true, add = true, timeout = 4000 }
 
+local ed = Qfr_Defer_Require("mjm.error-list-diag")
 local ef = Qfr_Defer_Require("mjm.error-list-filter")
 local eg = Qfr_Defer_Require("mjm.error-list-grep")
 local en = Qfr_Defer_Require("mjm.error-list-nav-action")
@@ -94,6 +95,85 @@ local nokeep = { keep = false }
 local rancher_keymaps = {
     { nx, "<nop>", "<leader>q", "Avoid falling back to defaults", nil },
     { nx, "<nop>", "<leader>l", "Avoid falling back to defaults", nil },
+
+    -------------------
+    --- DIAGNOSTICS ---
+    -------------------
+
+    { nx, "<nop>", "<leader>qi", "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>li", "Avoid falling back to defaults", nil },
+
+    { nn, pqfr.. "Qdiags-n-hint",  qp.."in", "All buffer diagnostics min hint"..n,         function() ed.diags("hint", { action = "new", is_loclist = false }) end },
+    { nn, pqfr.. "Qdiags-n-info",  qp.."if", "All buffer diagnostics min info"..n,         function() ed.diags("info", { action = "new", is_loclist = false }) end },
+    { nn, pqfr.. "Qdiags-n-warn",  qp.."iw", "All buffer diagnostics min warn"..n,         function() ed.diags("warn", { action = "new" , is_loclist = false}) end },
+    { nn, pqfr.. "Qdiags-n-error", qp.."ie", "All buffer diagnostics min error"..n,        function() ed.diags("error", { action = "new", is_loclist = false}) end },
+    { nn, pqfr.. "Qdiags-n-top",   qp.."it", "All buffer diagnostics top severity"..n,     function() ed.diags("top", { action = "new", is_loclist = false }) end },
+
+    { nn, pqfr.. "Ldiags-n-hint",  lp.."in", "Cur win diagnostics min hint"..n,            function() ed.diags("hint", { action = "new", is_loclist = true }) end },
+    { nn, pqfr.. "Ldiags-n-info",  lp.."if", "Cur win diagnostics min info"..n,            function() ed.diags("info", { action = "new", is_loclist = true }) end },
+    { nn, pqfr.. "Ldiags-n-warn",  lp.."iw", "Cur win diagnostics min warn"..n,            function() ed.diags("warn", { action = "new" , is_loclist = true}) end },
+    { nn, pqfr.. "Ldiags-n-error", lp.."ie", "Cur win diagnostics min error"..n,           function() ed.diags("error", { action = "new", is_loclist = true}) end },
+    { nn, pqfr.. "Ldiags-n-top",   lp.."it", "Cur win diagnostics top severity"..n,        function() ed.diags("top", { action = "new", is_loclist = true }) end },
+
+    { nn, pqfr.. "Qdiags-r-hint",  qp.."In", "All buffer diagnostics min hint"..r,         function() ed.diags("hint", { action = "replace", is_loclist = false }) end },
+    { nn, pqfr.. "Qdiags-r-info",  qp.."If", "All buffer diagnostics min info"..r,         function() ed.diags("info", { action = "replace", is_loclist = false }) end },
+    { nn, pqfr.. "Qdiags-r-warn",  qp.."Iw", "All buffer diagnostics min warn"..r,         function() ed.diags("warn", { action = "replace" , is_loclist = false}) end },
+    { nn, pqfr.. "Qdiags-r-error", qp.."Ie", "All buffer diagnostics min error"..r,        function() ed.diags("error", { action = "replace", is_loclist = false}) end },
+    { nn, pqfr.. "Qdiags-r-top",   qp.."It", "All buffer diagnostics top severity"..r,     function() ed.diags("top", { action = "replace", is_loclist = false }) end },
+
+    { nn, pqfr.. "Ldiags-r-hint",  lp.."In", "Cur win diagnostics min hint"..r,            function() ed.diags("hint", { action = "replace", is_loclist = true }) end },
+    { nn, pqfr.. "Ldiags-r-info",  lp.."If", "Cur win diagnostics min info"..r,            function() ed.diags("info", { action = "replace", is_loclist = true }) end },
+    { nn, pqfr.. "Ldiags-r-warn",  lp.."Iw", "Cur win diagnostics min warn"..r,            function() ed.diags("warn", { action = "replace" , is_loclist = true}) end },
+    { nn, pqfr.. "Ldiags-r-error", lp.."Ie", "Cur win diagnostics min error"..r,           function() ed.diags("error", { action = "replace", is_loclist = true}) end },
+    { nn, pqfr.. "Ldiags-r-top",   lp.."It", "Cur win diagnostics top severity"..r,        function() ed.diags("top", { action = "replace", is_loclist = true }) end },
+
+    { nn, pqfr.. "Qdiags-a-hint",  qp.."<C-i>n", "All buffer diagnostics min hint"..a,     function() ed.diags("hint", { action = "add", is_loclist = false }) end },
+    { nn, pqfr.. "Qdiags-a-info",  qp.."<C-i>f", "All buffer diagnostics min info"..a,     function() ed.diags("info", { action = "add", is_loclist = false }) end },
+    { nn, pqfr.. "Qdiags-a-warn",  qp.."<C-i>w", "All buffer diagnostics min warn"..a,     function() ed.diags("warn", { action = "add" , is_loclist = false}) end },
+    { nn, pqfr.. "Qdiags-a-error", qp.."<C-i>e", "All buffer diagnostics min error"..a,    function() ed.diags("error", { action = "add", is_loclist = false}) end },
+    { nn, pqfr.. "Qdiags-a-top",   qp.."<C-i>t", "All buffer diagnostics top severity"..a, function() ed.diags("top", { action = "add", is_loclist = false }) end },
+
+    { nn, pqfr.. "Ldiags-a-hint",  lp.."<C-i>n", "Cur win diagnostics min hint"..a,        function() ed.diags("hint", { action = "add", is_loclist = true }) end },
+    { nn, pqfr.. "Ldiags-a-info",  lp.."<C-i>f", "Cur win diagnostics min info"..a,        function() ed.diags("info", { action = "add", is_loclist = true }) end },
+    { nn, pqfr.. "Ldiags-a-warn",  lp.."<C-i>w", "Cur win diagnostics min warn"..a,        function() ed.diags("warn", { action = "add" , is_loclist = true}) end },
+    { nn, pqfr.. "Ldiags-a-error", lp.."<C-i>e", "Cur win diagnostics min error"..a,       function() ed.diags("error", { action = "add", is_loclist = true}) end },
+    { nn, pqfr.. "Ldiags-a-top",   lp.."<C-i>t", "Cur win diagnostics top severity"..a,    function() ed.diags("top", { action = "add", is_loclist = true }) end },
+
+    { nn, pqfr.. "Qdiags-n-HINT",  qp.."iN", "All buffer diagnostics only hint"..n,        function() ed.diags("hint_only", { action = "new", is_loclist = false }) end },
+    { nn, pqfr.. "Qdiags-n-INFO",  qp.."iF", "All buffer diagnostics only info"..n,        function() ed.diags("info_only", { action = "new", is_loclist = false }) end },
+    { nn, pqfr.. "Qdiags-n-WARN",  qp.."iW", "All buffer diagnostics only warn"..n,        function() ed.diags("warn_only", { action = "new" , is_loclist = false}) end },
+    { nn, pqfr.. "Qdiags-n-ERROR", qp.."iE", "All buffer diagnostics only error"..n,       function() ed.diags("error_only", { action = "new", is_loclist = false}) end },
+    { nn, pqfr.. "Qdiags-n-TOP",   qp.."iT", "All buffer diagnostics top severity"..n,     function() ed.diags("top", { action = "new", is_loclist = false }) end },
+
+    { nn, pqfr.. "Ldiags-n-HINT",  lp.."iN", "Cur win diagnostics only hint"..n,           function() ed.diags("hint_only", { action = "new", is_loclist = true }) end },
+    { nn, pqfr.. "Ldiags-n-INFO",  lp.."iF", "Cur win diagnostics only info"..n,           function() ed.diags("info_only", { action = "new", is_loclist = true }) end },
+    { nn, pqfr.. "Ldiags-n-WARN",  lp.."iW", "Cur win diagnostics only warn"..n,           function() ed.diags("warn_only", { action = "new" , is_loclist = true}) end },
+    { nn, pqfr.. "Ldiags-n-ERROR", lp.."iE", "Cur win diagnostics only error"..n,          function() ed.diags("error_only", { action = "new", is_loclist = true}) end },
+    { nn, pqfr.. "Ldiags-n-TOP",   lp.."iT", "Cur win diagnostics top severity"..n,        function() ed.diags("top", { action = "new", is_loclist = true }) end },
+
+    { nn, pqfr.. "Qdiags-r-HINT",  qp.."IN", "All buffer diagnostics only hint"..r,        function() ed.diags("hint_only", { action = "replace", is_loclist = false }) end },
+    { nn, pqfr.. "Qdiags-r-INFO",  qp.."IF", "All buffer diagnostics only info"..r,        function() ed.diags("info_only", { action = "replace", is_loclist = false }) end },
+    { nn, pqfr.. "Qdiags-r-WARN",  qp.."IW", "All buffer diagnostics only warn"..r,        function() ed.diags("warn_only", { action = "replace" , is_loclist = false}) end },
+    { nn, pqfr.. "Qdiags-r-ERROR", qp.."IE", "All buffer diagnostics only error"..r,       function() ed.diags("error_only", { action = "replace", is_loclist = false}) end },
+    { nn, pqfr.. "Qdiags-r-TOP",   qp.."IT", "All buffer diagnostics top severity"..r,     function() ed.diags("top", { action = "replace", is_loclist = false }) end },
+
+    { nn, pqfr.. "Ldiags-r-HINT",  lp.."IN", "Cur win diagnostics only hint"..r,           function() ed.diags("hint_only", { action = "replace", is_loclist = true }) end },
+    { nn, pqfr.. "Ldiags-r-INFO",  lp.."IF", "Cur win diagnostics only info"..r,           function() ed.diags("info_only", { action = "replace", is_loclist = true }) end },
+    { nn, pqfr.. "Ldiags-r-WARN",  lp.."IW", "Cur win diagnostics only warn"..r,           function() ed.diags("warn_only", { action = "replace" , is_loclist = true}) end },
+    { nn, pqfr.. "Ldiags-r-ERROR", lp.."IE", "Cur win diagnostics only error"..r,          function() ed.diags("error_only", { action = "replace", is_loclist = true}) end },
+    { nn, pqfr.. "Ldiags-r-TOP",   lp.."IT", "Cur win diagnostics top severity"..r,        function() ed.diags("top", { action = "replace", is_loclist = true }) end },
+
+    { nn, pqfr.. "Qdiags-a-HINT",  qp.."<C-i>N", "All buffer diagnostics only hint"..a,    function() ed.diags("hint_only", { action = "add", is_loclist = false }) end },
+    { nn, pqfr.. "Qdiags-a-INFO",  qp.."<C-i>F", "All buffer diagnostics only info"..a,    function() ed.diags("info_only", { action = "add", is_loclist = false }) end },
+    { nn, pqfr.. "Qdiags-a-WARN",  qp.."<C-i>W", "All buffer diagnostics only warn"..a,    function() ed.diags("warn_only", { action = "add" , is_loclist = false}) end },
+    { nn, pqfr.. "Qdiags-a-ERROR", qp.."<C-i>E", "All buffer diagnostics only error"..a,   function() ed.diags("error_only", { action = "add", is_loclist = false}) end },
+    { nn, pqfr.. "Qdiags-a-TOP",   qp.."<C-i>T", "All buffer diagnostics top severity"..a, function() ed.diags("top", { action = "add", is_loclist = false }) end },
+
+    { nn, pqfr.. "Ldiags-a-HINT",  lp.."<C-i>N", "Cur win diagnostics only hint"..a,       function() ed.diags("hint_only", { action = "add", is_loclist = true }) end },
+    { nn, pqfr.. "Ldiags-a-INFO",  lp.."<C-i>F", "Cur win diagnostics only info"..a,       function() ed.diags("info_only", { action = "add", is_loclist = true }) end },
+    { nn, pqfr.. "Ldiags-a-WARN",  lp.."<C-i>W", "Cur win diagnostics only warn"..a,       function() ed.diags("warn_only", { action = "add" , is_loclist = true}) end },
+    { nn, pqfr.. "Ldiags-a-ERROR", lp.."<C-i>E", "Cur win diagnostics only error"..a,      function() ed.diags("error_only", { action = "add", is_loclist = true}) end },
+    { nn, pqfr.. "Ldiags-a-TOP",   lp.."<C-i>T", "Cur win diagnostics top severity"..a,    function() ed.diags("top", { action = "add", is_loclist = true }) end },
 
     --------------
     --- FILTER ---

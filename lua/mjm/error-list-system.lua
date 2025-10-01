@@ -44,7 +44,7 @@ local function validate_system_do(system_opts, output_opts)
     end)
 
     vim.validate("system_opts.cmd_parts", system_opts.cmd_parts, "table")
-    eu.check_str_list(system_opts.cmd_parts)
+    eu._check_str_list(system_opts.cmd_parts)
 
     eu.validate_output_opts(output_opts)
 end

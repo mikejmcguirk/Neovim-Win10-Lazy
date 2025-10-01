@@ -123,8 +123,8 @@ local function get_list_height(list_win, is_ll)
 
     local eu = require("mjm.error-list-util")
     -- TODO: Do we get here with output opts? Might be overly elaborate for this case
-    local getlist = eu.get_getlist({ loclist_source_win = list_win, is_loclist = is_ll })
-    local cur_size = getlist({ size = true }).size
+    local getlist = eu._get_getlist({ loclist_source_win = list_win, is_loclist = is_ll })
+    local cur_size = getlist and getlist({ size = true }).size or max_qf_height
 
     local list_height = math.min(cur_size, max_qf_height)
     list_height = math.max(list_height, 1)
@@ -150,19 +150,6 @@ local function resize_list(list_win, opts)
 
     local list_height = opts.height or get_list_height(list_win, opts.is_loclist)
     vim.api.nvim_win_set_height(list_win, list_height)
-end
-
---- @param wins integer[]
---- @return integer|nil, integer|nil
-local function find_qf_win(wins)
-    for i, win in ipairs(wins) do
-        local wintype = vim.fn.win_gettype(win) --- @type string
-        if wintype == "quickfix" then
-            return win, i
-        end
-    end
-
-    return nil
 end
 
 --- @param wins integer[]
@@ -221,7 +208,8 @@ function M.open_qflist(opts)
     opts.height = (opts.height and opts.height > 0) and opts.height or nil
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local wins = vim.api.nvim_tabpage_list_wins(0) --- @type integer[]
-    local qf_win, _ = find_qf_win(wins) --- @type integer|nil
+    local eu = require("mjm.error-list-util")
+    local qf_win = eu._find_qf_win() --- @type integer|nil
     if qf_win and not opts.always_resize then
         return false
     end
@@ -233,7 +221,7 @@ function M.open_qflist(opts)
 
     local views = get_views(wins) --- @type vim.fn.winsaveview.ret[]
     if qf_win then
-        if not require("mjm.error-list-util").has_any_qflist() then
+        if not require("mjm.error-list-util")._has_any_qflist() then
             M.close_list_win(qf_win)
             return false
         end
@@ -261,12 +249,16 @@ end
 --- @return boolean
 function M.close_qflist()
     local wins = vim.api.nvim_tabpage_list_wins(0) --- @type integer[]
-    local qf_win, qf_idx = find_qf_win(wins) --- @type integer|nil, integer|nil
-    if (not qf_win) or not qf_idx then
+    local eu = require("mjm.error-list-util")
+    local qf_win = eu._find_qf_win() --- @type integer|nil, integer|nil
+    if not qf_win then
         return false
     end
 
-    table.remove(wins, qf_idx)
+    wins = vim.tbl_filter(function(w)
+        return w ~= qf_win
+    end, wins)
+
     local views = get_views(wins) --- @type vim.fn.winsaveview.ret[]
     pwin_close({ bwipeout = true, force = true, win = qf_win })
     restore_views(views)
@@ -281,12 +273,16 @@ end
 
 function M.resize_qflist()
     local wins = vim.api.nvim_tabpage_list_wins(0) --- @type integer[]
-    local qf_win, qf_idx = find_qf_win(wins) --- @type integer|nil, integer|nil
-    if (not qf_win) or not qf_idx then
+    local eu = require("mjm.error-list-util")
+    local qf_win = eu._find_qf_win() --- @type integer|nil, integer|nil
+    if not qf_win then
         return false
     end
 
-    table.remove(wins, qf_idx)
+    wins = vim.tbl_filter(function(w)
+        return w ~= qf_win
+    end, wins)
+
     local views = get_views(wins) --- @type vim.fn.winsaveview.ret[]
     resize_list(qf_win, { is_loclist = false })
     restore_views(views)
@@ -301,7 +297,7 @@ function M.open_loclist(opts)
     vim.validate("opts.suppress_errors", opts.suppress_errors, { "boolean", "nil" })
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local eu = require("mjm.error-list-util")
-    local qf_id, ll_win = eu.get_loclist_info({ win = cur_win }) --- @type integer,integer|nil
+    local qf_id, ll_win = eu._get_loclist_info({ win = cur_win }) --- @type integer,integer|nil
     if qf_id == 0 then
         if not opts.suppress_errors then
             vim.api.nvim_echo({ { "Window has no loclist", "" } }, false, {})
@@ -311,7 +307,7 @@ function M.open_loclist(opts)
     end
 
     if ll_win then
-        if not eu.has_any_loclist({ win = cur_win }) then
+        if not eu._has_any_loclist({ win = cur_win }) then
             M.close_list_win(ll_win)
             return false
         end
@@ -322,9 +318,12 @@ function M.open_loclist(opts)
     end
 
     local wins = vim.api.nvim_tabpage_list_wins(0) --- @type integer[]
-    local qf_win, qf_idx = find_qf_win(wins) --- @type integer|nil, integer|nil
-    if qf_idx then
-        table.remove(wins, qf_idx)
+    local qf_win = eu._find_qf_win() --- @type integer|nil
+    if qf_win then
+        -- TODO: Not the best way to handle this
+        wins = vim.tbl_filter(function(w)
+            return w ~= qf_win
+        end, wins)
     end
 
     local views = get_views(wins) --- @type vim.fn.winsaveview.ret[]
@@ -362,7 +361,7 @@ function M.close_loclist()
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id ---@type integer
     if qf_id == 0 then
-        local orphan_ll_wins = require("mjm.error-list-util").find_orphan_loclists()
+        local orphan_ll_wins = require("mjm.error-list-util")._find_orphan_loclists()
         if #orphan_ll_wins > 0 then
             vim.list_extend(ll_wins, orphan_ll_wins)
         else
