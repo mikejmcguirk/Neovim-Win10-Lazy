@@ -251,20 +251,32 @@ Map("n", "V", "mvV", { silent = true })
 -- Navigation --
 ----------------
 
+--- NOTE: the pcmark has to be set through the m command rather than the API in order to actually
+--- modify the jumplist
 Map({ "n", "x" }, "k", function()
     if vim.v.count == 0 then
         return "gk"
-    else
-        return "k"
     end
+
+    local lines = vim.api.nvim_get_option_value("lines", { scope = "global" })
+    if vim.v.count >= lines then
+        return "m'" .. vim.v.count1 .. "k"
+    end
+
+    return "k"
 end, { expr = true, silent = true })
 
 Map({ "n", "x" }, "j", function()
     if vim.v.count == 0 then
         return "gj"
-    else
-        return "j"
     end
+
+    local lines = vim.api.nvim_get_option_value("lines", { scope = "global" })
+    if vim.v.count >= lines then
+        return "m'" .. vim.v.count1 .. "j"
+    end
+
+    return "j"
 end, { expr = true, silent = true })
 
 Map("o", "gg", "<esc>")
