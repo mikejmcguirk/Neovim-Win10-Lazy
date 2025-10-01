@@ -50,7 +50,9 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
             pcall(vim.api.nvim_win_close, cur_win, false)
 
             vim.schedule(function()
-                if #vim.fn.win_findbuf(cur_buf) < 1 then
+                local buf_wins = vim.fn.win_findbuf(cur_buf)
+                local buf_list = vim.api.nvim_list_bufs()
+                if #buf_wins < 1 and vim.tbl_contains(buf_list, cur_buf) then
                     vim.api.nvim_buf_delete(cur_buf, {})
                 end
             end)
