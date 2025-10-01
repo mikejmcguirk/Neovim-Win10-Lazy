@@ -34,6 +34,9 @@ function M.protected_set_cursor(cur_pos, opts)
 
     if opts.set_pcmark then
         local cur_row, cur_col = unpack(vim.api.nvim_win_get_cursor(win))
+        -- TODO: This does not actually update the jump list. But then, because this function
+        -- is based on the idea that it can be fired remotely, just setting the PC mark from
+        -- a normal command doesn't necessarily do what we want
         vim.api.nvim_buf_set_mark(buf, "'", cur_row, cur_col, {})
     end
 
@@ -103,6 +106,7 @@ function M.open_buf(source, opts)
     if opts.buftype then
         vim.api.nvim_set_option_value("buftype", opts.buftype, { buf = buf })
     end
+
     if opts.buftype == "help" then
         local win = opts.win or vim.api.nvim_get_current_win()
         vim.api.nvim_set_option_value("list", false, { win = win })

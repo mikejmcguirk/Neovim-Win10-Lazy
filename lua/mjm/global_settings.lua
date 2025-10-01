@@ -42,7 +42,7 @@ Gset("maplocalleader", " ")
 -----------------------
 
 SetOpt("fileformats", "unix,dos", global_scope)
-SetOpt("jop", "clean,view", global_scope)
+SetOpt("jop", "stack,clean,view", global_scope)
 
 SetOpt("swapfile", false, global_scope)
 SetOpt("undofile", true, global_scope)

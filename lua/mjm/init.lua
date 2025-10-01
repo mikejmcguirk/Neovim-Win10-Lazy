@@ -21,6 +21,14 @@ _G.Map = vim.keymap.set
 _G.SetHl = vim.api.nvim_set_hl
 _G.GetHl = vim.api.nvim_get_hl
 
+--- @param lhs string
+--- @param rhs string
+--- @param opts vim.api.keyset.keymap
+function _G.NXMap(lhs, rhs, opts)
+    vim.api.nvim_set_keymap("n", lhs, rhs, opts)
+    vim.api.nvim_set_keymap("x", lhs, rhs, opts)
+end
+
 local pre_pack = vim.uv.hrtime()
 
 -------------------------------
