@@ -278,6 +278,35 @@ NXMap("L", "<nop>", {
     end,
 })
 
+NXMap("%", "<nop>", {
+    noremap = true,
+    callback = function()
+        ---@diagnostic disable-next-line: missing-fields
+        local cmd = { cmd = "normal", args = { "%" }, bang = true, mods = { keepjumps = true } }
+        vim.api.nvim_cmd(cmd, {})
+    end,
+})
+
+NXMap("{", "<nop>", {
+    noremap = true,
+    callback = function()
+        ---@diagnostic disable-next-line: missing-fields
+        local args = vim.v.count1 .. "{"
+        local cmd = { cmd = "normal", args = { args }, bang = true, mods = { keepjumps = true } }
+        vim.api.nvim_cmd(cmd, {})
+    end,
+})
+
+NXMap("}", "<nop>", {
+    noremap = true,
+    callback = function()
+        ---@diagnostic disable-next-line: missing-fields
+        local args = vim.v.count1 .. "}"
+        local cmd = { cmd = "normal", args = { args }, bang = true, mods = { keepjumps = true } }
+        vim.api.nvim_cmd(cmd, {})
+    end,
+})
+
 --- NOTE: the pcmark has to be set through the m command rather than the API in order to actually
 --- modify the jumplist
 Map({ "n", "x" }, "k", function()
