@@ -15,6 +15,20 @@ local M = {}
 local no_qf_stack = "Quickfix stack is empty"
 local no_ll_stack = "Loclist stack is empty"
 
+------------------------
+--- Helper Functions ---
+------------------------
+
+--- This seems to properly emulate what happens when you run setqflist({}, "r") on the current
+--- list_nr
+
+--- @param count integer
+--- @return vim.fn.setqflist.what
+local function get_del_list_data(count)
+    require("mjm.error-list-util")._validate_count(count)
+    return { context = {}, idx = 0, items = {}, nr = count, title = "" }
+end
+
 -----------------------
 --- Stack Functions ---
 -----------------------
@@ -92,6 +106,11 @@ function M._q_history(opts)
     end
 end
 
+--- NOTE: For q_del and l_del, accept vim.v.count and treat zero as the current list. This
+--- aligns with the convnetion of setqflist/setloclist. This also aligns with the expectation that
+--- pressing the hotkey without a count would delete the current list, and allows vim.v.count
+--- to be passed through cleanly
+
 --- @param count integer
 --- @return nil
 function M._q_del(count)
@@ -103,23 +122,22 @@ function M._q_del(count)
         return
     end
 
-    if count < 1 then
-        vim.fn.setqflist({}, "r")
-        return
-    end
-
     local cur_stack_nr = vim.fn.getqflist({ nr = 0 }).nr --- @type integer
     count = math.min(count, stack_len)
-    -- TODO: Is there not a better way to do this?
-    vim.fn.setqflist({}, "r", { items = {}, nr = count, title = "" })
-    if count == cur_stack_nr then
+    if count < 1 then
+        vim.fn.setqflist({}, "r") --- Don't use bespoke behavior unnecessarily
+    else
+        vim.fn.setqflist({}, "r", get_del_list_data(count))
+    end
+
+    if count == 0 or count == cur_stack_nr then
         require("mjm.error-list-open")._resize_all_qf_wins()
     end
 end
 
 function M._q_del_all()
-    vim.fn.setqflist({}, "f")
     require("mjm.error-list-open")._close_qflist()
+    vim.fn.setqflist({}, "f")
 end
 
 --- @param count1 integer
@@ -222,16 +240,18 @@ function M._l_del(count)
         return
     end
 
+    local cur_stack_nr = vim.fn.getloclist(cur_win, { nr = 0 }).nr --- @type integer
+    count = math.min(count, stack_len)
     if count < 1 then
         vim.fn.setloclist(cur_win, {}, "r")
-        return
+    else
+        vim.fn.setloclist(cur_win, {}, "r", get_del_list_data(count))
     end
 
-    count = math.min(count, stack_len)
-    -- TODO: like with qf - seems like an awkward way to do this
-    vim.fn.setloclist(cur_win, {}, "r", { items = {}, nr = count, title = "" })
-    local tabpage = vim.api.nvim_win_get_tabpage(cur_win)
-    require("mjm.error-list-open")._resize_llist_by_qf_id_and_tabpage(qf_id, tabpage)
+    if count == 0 or count == cur_stack_nr then
+        local tabpage = vim.api.nvim_win_get_tabpage(cur_win) --- @type integer
+        require("mjm.error-list-open")._resize_llist_by_qf_id_and_tabpage(qf_id, tabpage)
+    end
 end
 
 --- @return nil
