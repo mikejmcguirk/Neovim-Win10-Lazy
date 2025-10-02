@@ -58,7 +58,7 @@ local sys_help_lreplace =
 --- @type QfRancherSystemOpts
 local sys_help_ladd = { async = true, type = "\1", loclist = true, add = true, timeout = 4000 }
 
-local ed = Qfr_Defer_Require("mjm.error-list-diag")
+local ed = Qfr_Defer_Require("mjm.error-list-diag") --- @type QfRancherDiagnostics
 local ef = Qfr_Defer_Require("mjm.error-list-filter")
 local eg = Qfr_Defer_Require("mjm.error-list-grep")
 local en = Qfr_Defer_Require("mjm.error-list-nav-action") --- @type QfRancherNav

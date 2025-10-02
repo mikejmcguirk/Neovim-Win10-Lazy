@@ -1,3 +1,4 @@
+--- @class QfRancherDiagnostics
 local M = {}
 
 -------------
@@ -88,10 +89,6 @@ end
 
 --- @param diag_info QfRancherDiagInfo
 --- @param output_opts QfRancherOutputOpts
---- NOTE: To get all diagnostics, avoid passing in a severity opt. If vim.diagnostic.get does not
---- receive a severity option, it will simply compare all diagnostics to true, whereas if it
---- is given a severity filter, even a permissive one, each diag has to be compared against it
---- NOTE: severity overrides min_severity. Either can be mixed with top_severity
 local function diags_to_list(diag_info, output_opts)
     diag_info = diag_info or {}
     output_opts = output_opts or {}
@@ -100,7 +97,7 @@ local function diags_to_list(diag_info, output_opts)
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     output_opts.loclist_source_win = cur_win
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if not eu._validate_loclist_output(output_opts) then
+    if not eu._is_loclist_output_valid(output_opts) then
         return
     end
 
