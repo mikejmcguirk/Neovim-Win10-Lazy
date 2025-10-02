@@ -19,6 +19,7 @@ local pack_spec = {
 
     { src = "https://github.com/lewis6991/gitsigns.nvim" },
 
+    --- Requires plenary
     { src = "https://github.com/ThePrimeagen/harpoon", version = "harpoon2" },
 
     { src = "https://github.com/nvim-mini/mini.jump2d" },
@@ -27,6 +28,7 @@ local pack_spec = {
 
     { src = "https://github.com/folke/lazydev.nvim" },
 
+    --- Requires plenary
     { src = "https://github.com/Shatur/neovim-session-manager" },
 
     { src = "https://github.com/windwp/nvim-autopairs" },
@@ -44,7 +46,7 @@ local pack_spec = {
 
     { src = "https://github.com/obsidian-nvim/obsidian.nvim" },
 
-    -- Depends on mini.icons or nvim-tree/nvim-web-devicons
+    -- Requires mini.icons or nvim-tree/nvim-web-devicons
     { src = "https://github.com/stevearc/oil.nvim" },
 
     { src = "https://github.com/unblevable/quick-scope" },

@@ -8,6 +8,9 @@
 -- https://github.com/mike-jl/harpoonEx/blob/main/lua/lualine/components/harpoons/init.lua
 -- Future thing: Harpoon gets the current dir from vim.looop.cwd() (would upgrade to vim.uv),
 -- if the directory is nil, it causes an enter error
+--
+--- TODO: It should be possible to use \t to toggle the tabline. That toggle should also enable/
+--- disable the underlying harpoon logic, and toggling it on should do a reload of the tal state
 
 local M = {}
 

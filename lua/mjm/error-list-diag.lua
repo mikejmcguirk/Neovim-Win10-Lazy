@@ -7,16 +7,10 @@ local M = {}
 --- @alias QfRancherSeverityType "min"|"only"|"top"
 --- @alias QfRancherDiagInfo {sev_type: QfRancherSeverityType, level: vim.diagnostic.Severity}
 
---- @class QfRancherDiagToListOpts
---- @field is_loclist? boolean
---- @field min_severity? integer
---- @field severity? integer
---- @field top_severity? boolean
-
 --- @param diags vim.Diagnostic[]
 --- @return integer
 local function get_top_severity(diags)
-    local severity = vim.diagnostic.severity.HINT --- @type integer
+    local severity = vim.diagnostic.severity.HINT --- @type vim.diagnostic.Severity
     for _, diag in pairs(diags) do
         if diag.severity < severity then
             severity = diag.severity
@@ -29,7 +23,7 @@ end
 --- @param diags vim.Diagnostic[]
 --- @return vim.Diagnostic[]
 local function filter_diags_top_severity(diags)
-    local top_severity = get_top_severity(diags)
+    local top_severity = get_top_severity(diags) --- @type vim.diagnostic.Severity
     return vim.tbl_filter(function(diag)
         return diag.severity == top_severity
     end, diags)
@@ -41,6 +35,7 @@ local severity_map = require("mjm.error-list-util")._severity_map ---@type table
 ---@return table
 local function convert_diag(d)
     d = d or {}
+
     local source = d.source and d.source .. ": " or "" ---@type string
     return {
         bufnr = d.bufnr,
@@ -62,24 +57,23 @@ local function get_diagnostic_opt(diag_info)
         vim.validate("diag_info", diag_info, "table")
         vim.validate("diag_info.sev_type", diag_info.sev_type, { "nil", "string" })
         vim.validate("diag_info.level", diag_info.level, { "nil", "number" })
+        if type(diag_info.level) == "number" then
+            local msg = "Diagnostic severity " .. diag_info.level .. " is invalid"
+            assert(diag_info.level >= 1 and diag_info.level <= 4, msg)
+        end
     end
 
     local type = diag_info.sev_type or "min" --- @type QfRancherSeverityType
-    if type == "top" then
-        return { severity = nil }
-    end
-
-    local level = diag_info.level or vim.diagnostic.severity.HINT
-    assert(level >= 1 and level <= 4, "Diagnostic severity " .. level .. " is invalid")
-
-    if type == "min" and level == vim.diagnostic.severity.HINT then
-        return { severity = nil }
-    end
-
+    local level = diag_info.level or vim.diagnostic.severity.HINT --- @type vim.diagnostic.Severity
     if type == "only" then
-        return { severity = { min = level } }
-    else
         return { severity = level }
+    end
+
+    local min_hint = type == "min" and level == vim.diagnostic.severity.HINT --- @type boolean
+    if min_hint or type == "top" then
+        return { severity = nil }
+    else
+        return { severity = { min = level } }
     end
 end
 
@@ -105,17 +99,17 @@ local function diags_to_list(diag_info, output_opts)
 
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     output_opts.loclist_source_win = cur_win
-    local eu = require("mjm.error-list-util")
-    if not eu.check_loclist_output(output_opts) then
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
+    if not eu._validate_loclist_output(output_opts) then
         return
     end
 
-    local getlist = eu._get_getlist(output_opts)
+    local getlist = eu._get_getlist(output_opts) --- @type function|nil
     if not getlist then
         return
     end
 
-    local setlist = eu._get_setlist(output_opts)
+    local setlist = eu._get_setlist(output_opts) --- @type function|nil
     if not setlist then
         return
     end
@@ -136,14 +130,10 @@ local function diags_to_list(diag_info, output_opts)
 
     local converted_diags = vim.tbl_map(convert_diag, raw_diags) ---@type table[]
     table.sort(converted_diags, require("mjm.error-list-sort")._sort_fname_diag_asc)
+    --- @type QfRancherSetOpts
     local set_opts = { getlist = getlist, setlist = setlist, new_items = converted_diags }
     output_opts.title = "vim.diagnostic.get()"
     eu.set_list_items(set_opts, output_opts)
-
-    -- and then same issue as in grep - this should be a helper function as well
-    -- or even better, so we don't have to goof with the data as much, just make it an opt for
-    -- set_list_items
-    eu._get_openlist(output_opts.is_loclist)({ always_resize = true })
 end
 
 --- TODO: Cmd Naming conventions:

@@ -88,7 +88,7 @@ end
 
 --- @param output_opts QfRancherOutputOpts
 --- @return nil
-function M.check_loclist_output(output_opts)
+function M._validate_loclist_output(output_opts)
     if not output_opts.is_loclist then
         return true
     end
