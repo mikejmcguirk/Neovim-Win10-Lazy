@@ -659,6 +659,8 @@ return M
 -- - Check that all maps/cmds/plugs have desc fieldss
 -- - Check that all functions have annotations and documentation
 -- - Check that the qf and loclist versions are both properly built for purpose.
+--
+-- All resizing operations should respect the g option and splitkeep
 
 -----------
 --- MID ---

@@ -6,7 +6,7 @@ local M = {}
 -------------
 
 --- @class QfRancherHistoryOpts
---- @field count1? integer
+--- @field count? integer
 --- @field always_open? boolean
 
 -------------------
@@ -26,7 +26,10 @@ local no_ll_stack = "Loclist stack is empty" --- @type string
 --- @param count integer
 --- @return vim.fn.setqflist.what
 local function get_del_list_data(count)
-    require("mjm.error-list-util")._validate_count(count)
+    if vim.g.qf_rancher_debug_assertions then
+        require("mjm.error-list-util")._validate_count(count)
+    end
+
     return { context = {}, idx = 0, items = {}, nr = count, title = "" }
 end
 
@@ -41,7 +44,9 @@ end
 --- @param arithmetic function
 --- @return nil
 local function q_change_history(count1, arithmetic)
-    require("mjm.error-list-util")._validate_count1(count1)
+    if vim.g.qf_rancher_debug_assertions then
+        require("mjm.error-list-util")._validate_count1(count1)
+    end
 
     local stack_len = vim.fn.getqflist({ nr = "$" }).nr --- @type integer
     if stack_len < 1 then
@@ -56,16 +61,18 @@ local function q_change_history(count1, arithmetic)
     require("mjm.error-list-open")._resize_all_qf_wins()
 end
 
---- @param count1 integer
+--- @param count integer
 --- @return nil
-function M._q_older(count1)
-    q_change_history(count1, require("mjm.error-list-util")._wrapping_sub)
+function M._q_older(count)
+    count = require("mjm.error-list-util")._count_to_count1()
+    q_change_history(count, require("mjm.error-list-util")._wrapping_sub)
 end
 
---- @param count1 integer
+--- @param count integer
 --- @return nil
-function M._q_newer(count1)
-    q_change_history(count1, require("mjm.error-list-util")._wrapping_add)
+function M._q_newer(count)
+    count = require("mjm.error-list-util")._count_to_count1()
+    q_change_history(count, require("mjm.error-list-util")._wrapping_add)
 end
 
 --- NOTE: For chistory and lhistory, a zero and one count behave the same
@@ -79,9 +86,9 @@ function M._q_history(opts)
     if vim.g.qf_rancher_debug_assertions then
         vim.validate("opts", opts, "table")
         vim.validate("opts.always_open", opts.always_open, { "boolean", "nil" })
-        vim.validate("opts.count1", opts.count1, { "nil", "number" })
-        if type(opts.count1) == "number" then
-            require("mjm.error-list-util")._validate_count1(opts.count1)
+        vim.validate("opts.count", opts.count, { "nil", "number" })
+        if type(opts.count) == "number" then
+            require("mjm.error-list-util")._validate_count(opts.count)
         end
     end
 
@@ -92,7 +99,7 @@ function M._q_history(opts)
     end
 
     --- @type integer|nil
-    local adj_count = opts.count1 > 0 and math.min(opts.count1, stack_len) or nil
+    local adj_count = opts.count > 0 and math.min(opts.count, stack_len) or nil
     local cur_list_nr = vim.fn.getqflist({ nr = 0 }).nr --- @type integer
     vim.api.nvim_cmd({ cmd = "chistory", count = adj_count }, {})
 
@@ -105,11 +112,6 @@ function M._q_history(opts)
         eo._open_qflist({ keep_win = true, suppress_errors = true })
     end
 end
-
---- NOTE: For q_del and l_del, accept vim.v.count and treat zero as the current list. This
---- aligns with the convention of setqflist/setloclist. This also aligns with the expectation that
---- pressing the hotkey without a count would delete the current list, and allows vim.v.count
---- to be passed through cleanly
 
 --- @param count integer
 --- @return nil
@@ -171,16 +173,18 @@ local function l_change_history(count1, arithmetic)
     require("mjm.error-list-open")._resize_llist_by_qf_id_and_tabpage(qf_id, tabpage)
 end
 
---- @param count1 integer
+--- @param count integer
 --- @return nil
-function M._l_older(count1)
-    l_change_history(count1, require("mjm.error-list-util")._wrapping_sub)
+function M._l_older(count)
+    count = require("mjm.error-list-util")._count_to_count1()
+    l_change_history(count, require("mjm.error-list-util")._wrapping_sub)
 end
 
---- @param count1 integer
+--- @param count integer
 --- @return nil
-function M._l_newer(count1)
-    l_change_history(count1, require("mjm.error-list-util")._wrapping_add)
+function M._l_newer(count)
+    count = require("mjm.error-list-util")._count_to_count1()
+    l_change_history(count, require("mjm.error-list-util")._wrapping_add)
 end
 
 --- @param opts QfRancherHistoryOpts
@@ -190,9 +194,9 @@ function M._l_history(opts)
     if vim.g.qf_rancher_debug_assertions then
         vim.validate("opts", opts, "table")
         vim.validate("opts.always_open", opts.always_open, { "boolean", "nil" })
-        vim.validate("opts.count1", opts.count1, { "nil", "number" })
-        if type(opts.count1) == "number" then
-            require("mjm.error-list-util")._validate_count1(opts.count1)
+        vim.validate("opts.count1", opts.count, { "nil", "number" })
+        if type(opts.count) == "number" then
+            require("mjm.error-list-util")._validate_count1(opts.count)
         end
     end
 
@@ -210,7 +214,7 @@ function M._l_history(opts)
     end
 
     --- @type integer|nil
-    local adj_count = opts.count1 > 0 and math.min(opts.count1, stack_len) or nil
+    local adj_count = opts.count > 0 and math.min(opts.count, stack_len) or nil
     local cur_list_nr = vim.fn.getloclist(cur_win, { nr = 0 }).nr --- @type integer
     vim.api.nvim_cmd({ cmd = "lhistory", count = adj_count }, {})
 
@@ -293,7 +297,7 @@ return M
 --- TODO ---
 ------------
 
---- Needs testing
+--- Deep audit/testing
 
 -----------
 --- MID ---

@@ -1,4 +1,25 @@
+--- @class QfRancherNav
 local M = {}
+
+-------------------
+--- MODULE DATA ---
+-------------------
+
+local empty_qf_list = "No items in quickfix list"
+
+---------------------
+--- NAV FUNCTIONS ---
+---------------------
+
+--- @return integer
+local function get_cur_qf_list_size()
+    local size = vim.fn.getqflist({ size = 0 }).size --- @type integer
+    if size < 1 then
+        vim.api.nvim_echo({ { empty_qf_list, "" } }, false, {})
+    end
+
+    return size
+end
 
 --- @param count1 integer
 --- @param arithmetic function
@@ -7,14 +28,12 @@ local function get_qf_new_idx(count1, arithmetic)
     require("mjm.error-list-util")._validate_count1(count1)
     vim.validate("arithmetic", arithmetic, "callable")
 
-    local cur_stack_nr = vim.fn.getqflist({ nr = 0 }).nr --- @type integer
-    local size = vim.fn.getqflist({ nr = cur_stack_nr, size = 0 }).size --- @type integer
+    local size = get_cur_qf_list_size() --- @type integer
     if size < 1 then
-        vim.api.nvim_echo({ { "No items in quickfix list", "" } }, false, {})
         return nil
     end
 
-    local cur_idx = vim.fn.getqflist({ nr = cur_stack_nr, idx = 0 }).idx --- @type integer
+    local cur_idx = vim.fn.getqflist({ idx = 0 }).idx --- @type integer
     return arithmetic(cur_idx, count1, 1, size)
 end
 
@@ -32,81 +51,83 @@ local function goto_list_entry(new_idx, cmd)
         return
     end
 
-    local msg = result or ("Unknown error displaying list entry " .. new_idx)
+    local msg = result or ("Unknown error displaying list entry " .. new_idx) --- @type string
     vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
 end
 
---- @param count1 integer
+--- @param count integer
 --- @return nil
-function M.q_prev(count1)
+function M._q_prev(count)
+    count = require("mjm.error-list-util")._count_to_count1()
+
     --- @type integer|nil
-    local new_idx = get_qf_new_idx(count1, require("mjm.error-list-util")._wrapping_sub)
+    local new_idx = get_qf_new_idx(count, require("mjm.error-list-util")._wrapping_sub)
     if new_idx then
         goto_list_entry(new_idx, "cc")
     end
 end
 
---- @param count1 integer
+--- @param count integer
 --- @return nil
-function M.q_next(count1)
+function M._q_next(count)
+    count = require("mjm.error-list-util")._count_to_count1()
+
     --- @type integer|nil
-    local new_idx = get_qf_new_idx(count1, require("mjm.error-list-util")._wrapping_add)
+    local new_idx = get_qf_new_idx(count, require("mjm.error-list-util")._wrapping_add)
     if new_idx then
         goto_list_entry(new_idx, "cc")
     end
 end
 
---- @param count1 integer
+--- DOCUMENT: That Qq with no count goes to current entry, which is a difference from :cc
+---     this also applies to :Ll / :ll
+
+--- @param count integer
 --- @return nil
 -- Meant for cmd mapping only
-function M.q_q(count1)
-    require("mjm.error-list-util")._validate_count1(count1)
-
-    local cur_stack_nr = vim.fn.getqflist({ nr = 0 }).nr --- @type integer
-    local size = vim.fn.getqflist({ nr = cur_stack_nr, size = 0 }).size --- @type integer
-    if size < 1 then
-        vim.api.nvim_echo({ { "No items in quickfix list", "" } }, false, {})
-        return
-    end
-
-    count1 = math.min(count1, size)
-    goto_list_entry(count1, "cc")
-end
-
--- TODO: For rewind and last, the idea is we eat counts less than one in order to goto the
--- beginning by default. But I'm not sure if this properly mimicks doing 0chistory vs chistory
--- Would need to check the cargs to see what count passes when hitting 0 vs not entering one
-
---- @param count integer
---- @return nil
-function M.q_rewind(count)
+function M._q_q(count)
     require("mjm.error-list-util")._validate_count(count)
 
-    local cur_stack_nr = vim.fn.getqflist({ nr = 0 }).nr --- @type integer
-    local size = vim.fn.getqflist({ nr = cur_stack_nr, size = 0 }).size --- @type integer
+    local size = get_cur_qf_list_size() --- @type integer
     if size < 1 then
-        vim.api.nvim_echo({ { "No items in quickfix list", "" } }, false, {})
         return
     end
 
-    local adj_count = count >= 1 and count or nil
-    vim.api.nvim_cmd({ cmd = "crewind", count = adj_count }, {})
+    if count == 0 then
+        local cur_win = vim.api.nvim_get_current_win() --- @type integer
+        local wintype = vim.fn.win_gettype(cur_win) --- @type string
+        if wintype == "quickfix" then
+            local row = vim.api.nvim_win_get_cursor(cur_win)[1] --- @type integer
+            count = math.min(row, size)
+        else
+            local idx = vim.fn.getqflist({ idx = 0 }).idx --- @type integer
+            count = idx
+        end
+    end
+
+    goto_list_entry(count, "cc")
 end
 
 --- @param count integer
 --- @return nil
-function M.q_last(count)
+function M._q_rewind(count)
     require("mjm.error-list-util")._validate_count(count)
 
-    local cur_stack_nr = vim.fn.getqflist({ nr = 0 }).nr --- @type integer
-    local size = vim.fn.getqflist({ nr = cur_stack_nr, size = 0 }).size --- @type integer
-    if size < 1 then
-        vim.api.nvim_echo({ { "No items in quickfix list", "" } }, false, {})
-        return
+    if get_cur_qf_list_size() >= 1 then
+        local adj_count = count >= 1 and count or nil --- @type integer|nil
+        vim.api.nvim_cmd({ cmd = "crewind", count = adj_count }, {})
     end
+end
 
-    local adj_count = count >= 1 and count or nil
-    vim.api.nvim_cmd({ cmd = "clast", count = adj_count }, {})
+--- @param count integer
+--- @return nil
+function M._q_last(count)
+    require("mjm.error-list-util")._validate_count(count)
+
+    if get_cur_qf_list_size() >= 1 then
+        local adj_count = count >= 1 and count or nil --- @type integer|nil
+        vim.api.nvim_cmd({ cmd = "clast", count = adj_count }, {})
+    end
 end
 
 --- @param count1 integer
@@ -143,49 +164,43 @@ local function file_nav_wrap(count1, cmd, backup_cmd)
     vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
 end
 
---- @param count1 integer
+--- @param count integer
 --- @return nil
-function M.q_pfile(count1)
-    local cur_stack_nr = vim.fn.getqflist({ nr = 0 }).nr --- @type integer
-    local size = vim.fn.getqflist({ nr = cur_stack_nr, size = 0 }).size --- @type integer
-    if size < 1 then
-        vim.api.nvim_echo({ { "No items in quickfix list", "" } }, false, {})
-        return nil
-    end
+function M._q_pfile(count)
+    count = require("mjm.error-list-util")._count_to_count1()
 
-    file_nav_wrap(count1, "cpfile", "clast")
+    if get_cur_qf_list_size() >= 1 then
+        file_nav_wrap(count, "cpfile", "clast")
+    end
 end
 
---- @param count1 integer
+--- @param count integer
 --- @return nil
-function M.q_nfile(count1)
-    local cur_stack_nr = vim.fn.getqflist({ nr = 0 }).nr --- @type integer
-    local size = vim.fn.getqflist({ nr = cur_stack_nr, size = 0 }).size --- @type integer
-    if size < 1 then
-        vim.api.nvim_echo({ { "No items in quickfix list", "" } }, false, {})
-        return nil
-    end
+function M._q_nfile(count)
+    count = require("mjm.error-list-util")._count_to_count1()
 
-    file_nav_wrap(count1, "cnfile", "crewind")
+    if get_cur_qf_list_size() >= 1 then
+        file_nav_wrap(count, "cnfile", "crewind")
+    end
 end
 
 --- @param win? integer
 --- @return integer|nil, integer|nil, integer|nil
-local function get_cur_ll_info(win)
+local function _get_cur_ll_info(win)
     vim.validate("win", win, { "nil", "number" })
 
     local cur_win = win or vim.api.nvim_get_current_win() --- @type integer
     local qf_id = vim.fn.getloclist(cur_win, { nr = 0 }).nr --- @type integer
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
-        return nil, nil
+        return nil, nil, nil
     end
 
     local cur_stack_nr = vim.fn.getloclist(cur_win, { nr = 0 }).nr --- @type integer
     local size = vim.fn.getloclist(cur_win, { nr = cur_stack_nr, size = 0 }).size --- @type integer
     if size < 1 then
         vim.api.nvim_echo({ { "No items in the location list", "" } }, false, {})
-        return nil, nil
+        return nil, nil, nil
     end
 
     return qf_id, cur_stack_nr, size
@@ -199,7 +214,7 @@ local function get_ll_new_idx(count1, arithmetic)
 
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     --- @type integer|nil, integer|nil, integer|nil
-    local qf_id, cur_stack_nr, size = get_cur_ll_info(cur_win)
+    local qf_id, cur_stack_nr, size = _get_cur_ll_info(cur_win)
     if not (qf_id and cur_stack_nr and size) then
         return
     end
@@ -209,86 +224,112 @@ local function get_ll_new_idx(count1, arithmetic)
     return arithmetic(cur_idx, count1, 1, size)
 end
 
---- @param count1 integer
+--- @param count integer
 --- @return nil
-function M.l_prev(count1)
+function M._l_prev(count)
+    count = require("mjm.error-list-util")._count_to_count1()
+
     --- @type integer|nil
-    local new_idx = get_ll_new_idx(count1, require("mjm.error-list-util")._wrapping_sub)
+    local new_idx = get_ll_new_idx(count, require("mjm.error-list-util")._wrapping_sub)
     if new_idx then
         goto_list_entry(new_idx, "ll")
     end
 end
 
---- @param count1 integer
+--- @param count integer
 --- @return nil
-function M.l_next(count1)
+function M._l_next(count)
+    count = require("mjm.error-list-util")._count_to_count1()
+
     --- @type integer|nil
-    local new_idx = get_ll_new_idx(count1, require("mjm.error-list-util")._wrapping_add)
+    local new_idx = get_ll_new_idx(count, require("mjm.error-list-util")._wrapping_add)
     if new_idx then
         goto_list_entry(new_idx, "ll")
     end
 end
 
---- @param count1 integer
+--- @param count integer
 --- @return nil
-function M.l_l(count1)
-    require("mjm.error-list-util")._validate_count1(count1)
+function M._l_l(count)
+    require("mjm.error-list-util")._validate_count(count)
 
+    local cur_win = vim.api.nvim_get_current_win() --- @type integer
     --- @type integer|nil, integer|nil, integer|nil
-    local qf_id, cur_stack_nr, size = get_cur_ll_info()
+    local qf_id, cur_stack_nr, size = _get_cur_ll_info(cur_win)
     if not (qf_id and cur_stack_nr and size) then
         return
     end
 
-    count1 = math.min(count1, size)
-    goto_list_entry(count1, "ll")
-end
-
---- TODO: This needs to accept count. The [L ]L mappings will call this without a count, but the
---- cmd needs to be available with a count to emulate the defaults
-function M.l_rewind()
-    --- @type integer|nil, integer|nil, integer|nil
-    local qf_id, cur_stack_nr, size = get_cur_ll_info()
-    if not (qf_id and cur_stack_nr and size) then
-        return
+    if count == 0 then
+        local wintype = vim.fn.win_gettype(cur_win) --- @type string
+        if wintype == "loclist" then
+            local row = vim.api.nvim_win_get_cursor(cur_win)[1] --- @type integer
+            count = math.min(row, size)
+        else
+            local idx = vim.fn.getloclist(cur_win, { idx = 0 }).idx --- @type integer
+            count = idx
+        end
     end
 
-    vim.api.nvim_cmd({ cmd = "crewind" }, {})
+    goto_list_entry(count, "ll")
 end
 
---- TODO: This needs to accept count
-function M.l_last()
-    --- @type integer|nil, integer|nil, integer|nil
-    local qf_id, cur_stack_nr, size = get_cur_ll_info()
-    if not (qf_id and cur_stack_nr and size) then
-        return
-    end
-
-    vim.api.nvim_cmd({ cmd = "clast" }, {})
-end
-
---- @param count1 integer
+--- @param count integer
 --- @return nil
-function M.l_pfile(count1)
+function M._l_rewind(count)
+    require("mjm.error-list-util")._validate_count(count)
+
     --- @type integer|nil, integer|nil, integer|nil
-    local qf_id, cur_stack_nr, size = get_cur_ll_info()
+    local qf_id, cur_stack_nr, size = _get_cur_ll_info()
     if not (qf_id and cur_stack_nr and size) then
         return
     end
 
-    file_nav_wrap(count1, "lpfile", "llast")
+    local adj_count = count >= 1 and count or nil --- @type integer|nil
+    vim.api.nvim_cmd({ cmd = "lrewind", count = adj_count }, {})
 end
 
---- @param count1 integer
+--- @param count integer
 --- @return nil
-function M.l_nfile(count1)
+function M._l_last(count)
+    require("mjm.error-list-util")._validate_count(count)
+
     --- @type integer|nil, integer|nil, integer|nil
-    local qf_id, cur_stack_nr, size = get_cur_ll_info()
+    local qf_id, cur_stack_nr, size = _get_cur_ll_info()
     if not (qf_id and cur_stack_nr and size) then
         return
     end
 
-    file_nav_wrap(count1, "lnfile", "lrewind")
+    local adj_count = count >= 1 and count or nil --- @type integer|nil
+    vim.api.nvim_cmd({ cmd = "llast", count = adj_count }, {})
+end
+
+--- @param count integer
+--- @return nil
+function M._l_pfile(count)
+    count = require("mjm.error-list-util")._count_to_count1()
+
+    --- @type integer|nil, integer|nil, integer|nil
+    local qf_id, cur_stack_nr, size = _get_cur_ll_info()
+    if not (qf_id and cur_stack_nr and size) then
+        return
+    end
+
+    file_nav_wrap(count, "lpfile", "llast")
+end
+
+--- @param count integer
+--- @return nil
+function M._l_nfile(count)
+    count = require("mjm.error-list-util")._count_to_count1()
+
+    --- @type integer|nil, integer|nil, integer|nil
+    local qf_id, cur_stack_nr, size = _get_cur_ll_info()
+    if not (qf_id and cur_stack_nr and size) then
+        return
+    end
+
+    file_nav_wrap(count, "lnfile", "lrewind")
 end
 
 return M
@@ -297,10 +338,4 @@ return M
 --- TODO ---
 ------------
 
---- Map the rewind and last functions, plus make cmds for them
-
-------------
---- TEST ---
-------------
-
---- Make sure that the count1s are behaving the way I think they would
+--- Deep auditing/testing

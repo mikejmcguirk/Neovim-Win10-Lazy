@@ -15,8 +15,16 @@ end
 function M._validate_count1(count1)
     vim.validate("count", count1, "number")
     vim.validate("count", count1, function()
-        return count1 >= 0
+        return count1 >= 1
     end)
+end
+
+function M._count_to_count1(count)
+    if vim.g.qf_rancher_debug_assertions then
+        M._validate_count(count)
+    end
+
+    return math.max(count, 1)
 end
 
 M._severity_map = {
