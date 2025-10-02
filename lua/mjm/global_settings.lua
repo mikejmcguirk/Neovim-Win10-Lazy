@@ -88,6 +88,8 @@ SetOpt("splitright", true, global_scope)
 -- For some reason, uselast needs to be manually set globally
 SetOpt("switchbuf", "useopen,uselast", global_scope)
 
+SetOpt("foldenable", false, global_scope)
+
 --------------------------
 --- Text Input/Display ---
 --------------------------
