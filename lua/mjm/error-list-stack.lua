@@ -1,3 +1,4 @@
+--- @class QfRancherStack
 local M = {}
 
 -------------
@@ -12,8 +13,8 @@ local M = {}
 --- Module Data ---
 -------------------
 
-local no_qf_stack = "Quickfix stack is empty"
-local no_ll_stack = "Loclist stack is empty"
+local no_qf_stack = "Quickfix stack is empty" --- @type string
+local no_ll_stack = "Loclist stack is empty" --- @type string
 
 ------------------------
 --- Helper Functions ---
@@ -94,20 +95,19 @@ function M._q_history(opts)
     local adj_count = opts.count1 > 0 and math.min(opts.count1, stack_len) or nil
     local cur_list_nr = vim.fn.getqflist({ nr = 0 }).nr --- @type integer
     vim.api.nvim_cmd({ cmd = "chistory", count = adj_count }, {})
-    local list_nr_after = vim.fn.getqflist({ nr = 0 }).nr --- @type integer
 
-    local eo = require("mjm.error-list-open")
-    if cur_list_nr ~= list_nr_after then
+    local eo = require("mjm.error-list-open") --- @type QfRancherOpen
+    if cur_list_nr ~= adj_count then
         eo._resize_all_qf_wins()
     end
 
     if opts.always_open then
-        eo._open_qflist({ suppress_errors = true })
+        eo._open_qflist({ keep_win = true, suppress_errors = true })
     end
 end
 
 --- NOTE: For q_del and l_del, accept vim.v.count and treat zero as the current list. This
---- aligns with the convnetion of setqflist/setloclist. This also aligns with the expectation that
+--- aligns with the convention of setqflist/setloclist. This also aligns with the expectation that
 --- pressing the hotkey without a count would delete the current list, and allows vim.v.count
 --- to be passed through cleanly
 
@@ -137,7 +137,11 @@ end
 
 function M._q_del_all()
     require("mjm.error-list-open")._close_qflist()
-    vim.fn.setqflist({}, "f")
+    if vim.fn.getqflist({ nr = "$" }).nr < 1 then
+        vim.api.nvim_echo({ { no_qf_stack, "" } }, false, {})
+    else
+        vim.fn.setqflist({}, "f")
+    end
 end
 
 --- @param count1 integer
@@ -209,16 +213,15 @@ function M._l_history(opts)
     local adj_count = opts.count1 > 0 and math.min(opts.count1, stack_len) or nil
     local cur_list_nr = vim.fn.getloclist(cur_win, { nr = 0 }).nr --- @type integer
     vim.api.nvim_cmd({ cmd = "lhistory", count = adj_count }, {})
-    local list_nr_after = vim.fn.getloclist(cur_win, { nr = 0 }).nr --- @type integer
 
-    local eo = require("mjm.error-list-open")
-    if cur_list_nr ~= list_nr_after then
+    local eo = require("mjm.error-list-open") --- @type QfRancherOpen
+    if cur_list_nr ~= adj_count then
         local tabpage = vim.api.nvim_win_get_tabpage(cur_win)
         eo._resize_llist_by_qf_id_and_tabpage(qf_id, tabpage)
     end
 
     if opts.always_open then
-        eo._open_loclist({ suppress_errors = true })
+        eo._open_loclist({ keep_win = true, suppress_errors = true })
     end
 end
 
@@ -256,21 +259,27 @@ end
 
 --- @return nil
 function M._l_del_all()
-    local cur_win = vim.api.nvim_get_current_win()
-    local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id
+    local cur_win = vim.api.nvim_get_current_win() --- @type integer
+    local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id --- @type integer
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
         return
     end
 
-    vim.fn.setloclist(cur_win, {}, "f")
-    local tabpage = vim.api.nvim_win_get_tabpage(cur_win)
+    if vim.fn.getloclist(cur_win, { nr = "$" }).nr < 1 then
+        vim.api.nvim_echo({ { no_ll_stack, "" } }, false, {})
+    else
+        vim.fn.setloclist(cur_win, {}, "f")
+    end
+
+    local tabpage = vim.api.nvim_win_get_tabpage(cur_win) --- @type integer
     require("mjm.error-list-open")._close_llist_by_qf_id_and_tabpage(qf_id, tabpage)
 end
 
 --- @param is_loclist boolean
---- @return nil
+--- @return function
 function M._get_gethistory(is_loclist)
+    vim.validate("is_loclist", is_loclist, "boolean")
     if is_loclist then
         return M._l_history
     else
@@ -280,16 +289,19 @@ end
 
 return M
 
---- TODO:
---- - Check that window height updates are triggered where appropriate
---- - Check that functions have proper visibility
---- - Check that all mappings have plugs and cmds
---- - Check that all maps/cmds/plugs have desc fieldss
---- - Check that all functions have annotations and documentation
+------------
+--- TODO ---
+------------
+
+--- Needs testing
+
+-----------
+--- MID ---
+-----------
 
 -----------
 --- LOW ---
 -----------
 
---- Commands to copy/merge/overwrite lists explicitly. Canc urrently backdoor your way into this
---- with sort. Would want more solid use case before builing out separately
+--- Commands to copy/merge/overwrite lists explicitly. Can currently backdoor your way into this
+---     with sort. Would want more solid use case before builing out separately

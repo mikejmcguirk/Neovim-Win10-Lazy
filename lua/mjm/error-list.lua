@@ -72,6 +72,11 @@ if type(vim.g.qf_rancher_qfsplit) ~= "string" then
     vim.api.nvim_set_var("qf_rancher_qfsplit", "botright")
 end
 
+--- TODO: Should have some level of flexibility for defining when the list auto opens and when
+--- it does not. Right now I'm doing everything based on a combination of what I remember of
+--- the default behavior and personal taste, but should do deeper dive into defaults to figure out
+--- what those expectations are + what are the logical deviation points
+
 -- DOCUMENT:
 -- - If splitkeep is set to screen or topline, that will take precedence
 -- - If splitkeep is set for cursor, and this option is true, rancher will save and restore views

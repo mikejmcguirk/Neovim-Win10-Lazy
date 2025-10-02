@@ -59,8 +59,8 @@ local ed = Qfr_Defer_Require("mjm.error-list-diag")
 local ef = Qfr_Defer_Require("mjm.error-list-filter")
 local eg = Qfr_Defer_Require("mjm.error-list-grep")
 local en = Qfr_Defer_Require("mjm.error-list-nav-action")
-local eo = Qfr_Defer_Require("mjm.error-list-open")
-local es = Qfr_Defer_Require("mjm.error-list-stack")
+local eo = Qfr_Defer_Require("mjm.error-list-open") --- @type QfRancherOpen
+local es = Qfr_Defer_Require("mjm.error-list-stack") --- @type QfRancherStack
 local et = Qfr_Defer_Require("mjm.error-list-sort")
 
 local grep_smart_case = { literal = true, smart_case = true }
@@ -579,9 +579,9 @@ local rancher_keymaps = {
     -------------
 
     { nn, pqfr.."-qf-older)",        qp.."[", "Go to an older qflist",                         function() es._q_older(vim.v.count1) end },
-    { nn, pqfr.."-qf-newer)",        qp.."]", "Go to a newer qflist",                          function() es._q_newer({ count1 = vim.v.count1 }) end },
-    { nn, pqfr.."-qf-history)",      qp.."Q", "View or jump within the quickfix history",      function() es._q_history({ always_open = true, count1 = vim.v.count1 }) end },
-    { nn, pqfr.."-qf-history-open)", qp.."<C-q>", "Open and jump within the quickfix history", function() es._q_history(vim.v.count) end },
+    { nn, pqfr.."-qf-newer)",        qp.."]", "Go to a newer qflist",                          function() es._q_newer(vim.v.count1) end },
+    { nn, pqfr.."-qf-history)",      qp.."Q", "View or jump within the quickfix history",      function() es._q_history({ count1 = vim.v.count1 }) end },
+    { nn, pqfr.."-qf-history-open)", qp.."<C-q>", "Open and jump within the quickfix history", function() es._q_history({ always_open = true, count1 = vim.v.count1 }) end },
     { nn, pqfr.."-qf-del)",          qp.."e", "Delete a list from the quickfix stack",         function() es._q_del(vim.v.count) end },
     { nn, pqfr.."-qf-del-all)",      qp.."E", "Delete all items from the quickfix stack",      function() es._q_del_all() end },
     { nn, pqfr.."-ll-older)",        lp.."[", "Go to an older location list",                  function() es._l_older(vim.v.count1) end },
@@ -915,24 +915,21 @@ if vim.g.qf_rancher_set_default_cmds then
 
     vim.api.nvim_create_user_command("Qolder", function(cargs)
         cargs = cargs or {}
-
-        local count = cargs.count > 0 and cargs.count or 1
-        es.q_older(count)
-    end, { count = 0 })
+        local count1 = cargs.count > 0 and cargs.count or 1
+        es._q_older(count1)
+    end, { count = 0, desc = "Go to an older qflist" })
 
     vim.api.nvim_create_user_command("Qnewer", function(cargs)
         cargs = cargs or {}
-
-        local count = cargs.count > 0 and cargs.count or 1
-        es.q_newer(count)
-    end, { count = 0 })
+        local count1 = cargs.count > 0 and cargs.count or 1
+        es._q_newer(count1)
+    end, { count = 0, desc = "Go to a newer qflist" })
 
     vim.api.nvim_create_user_command("Qhistory", function(cargs)
         cargs = cargs or {}
-
         local count1 = cargs.count > 0 and cargs.count or nil --- @type integer|nil
-        es.q_history({ count1 = count1 })
-    end, { count = 0 })
+        es._q_history({ count1 = count1 })
+    end, { count = 0, desc = "View or jump within the quickfix history" })
 
     -- NOTE: Ideally, a count would override the "all" arg, in order to default to safer behavior,
     -- but the dict sent to the callback includes a count of 0 whether it was explicitly passed or
@@ -941,35 +938,31 @@ if vim.g.qf_rancher_set_default_cmds then
         cargs = cargs or {}
 
         if cargs.args == "all" then
-            es.q_del_all()
+            es._q_del_all()
             return
         end
 
         local count = cargs.count >= 0 and cargs.count or 0
-        es.q_del(count)
-    end, { count = 0, nargs = "?" })
+        es._q_del(count)
+    end, { count = 0, nargs = "?", desc = "Delete one or all lists from the quickfix stack" })
 
     vim.api.nvim_create_user_command("Lolder", function(cargs)
         cargs = cargs or {}
-
-        local count = cargs.count > 0 and cargs.count or 1
-        es.l_older(count)
-    end, { count = 0 })
+        local count1 = cargs.count > 0 and cargs.count or 1
+        es._l_older(count1)
+    end, { count = 0, desc = "Go to an older location list" })
 
     vim.api.nvim_create_user_command("Lnewer", function(cargs)
         cargs = cargs or {}
-
-        local count = cargs.count > 0 and cargs.count or 1
-        es.l_newer(count)
-    end, { count = 0 })
+        local count1 = cargs.count > 0 and cargs.count or 1
+        es._l_newer(count1)
+    end, { count = 0, desc = "Go to a newer location list" })
 
     vim.api.nvim_create_user_command("Lhistory", function(cargs)
         cargs = cargs or {}
-
-        local count = cargs.count > 0 and cargs.count or nil
-        -- TODO: change this once l_history uses opts
-        es.l_history(count)
-    end, { count = 0 })
+        local count1 = cargs.count > 0 and cargs.count or nil
+        es._l_history({ count1 = count1 })
+    end, { count = 0, desc = "View or jump within the loclist history" })
 
     -- NOTE: Ideally, a count would override the "all" arg, in order to default to safer behavior,
     -- but the dict sent to the callback includes a count of 0 whether it was explicitly passed or
@@ -978,11 +971,11 @@ if vim.g.qf_rancher_set_default_cmds then
         cargs = cargs or {}
 
         if cargs.args == "all" then
-            es.l_del_all()
+            es._l_del_all()
             return
         end
 
         local count = cargs.count >= 0 and cargs.count or 0
-        es.l_del(count)
-    end, { count = 0, nargs = "?" })
+        es._l_del(count)
+    end, { count = 0, nargs = "?", desc = "Delete one or all lists from the loclist stack" })
 end
