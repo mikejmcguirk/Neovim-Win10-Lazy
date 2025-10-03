@@ -152,7 +152,7 @@ local function diags_to_list(diag_info, diag_opts, output_opts)
     --- @type QfRancherSetOpts
     local set_opts = { getlist = getlist, setlist = setlist, new_items = converted_diags }
     output_opts.title = "vim.diagnostic.get()"
-    eu.set_list_items(set_opts, output_opts)
+    eu._set_list_items(set_opts, output_opts)
 end
 
 local diag_queries = {
@@ -160,6 +160,7 @@ local diag_queries = {
     info = { level = vim.diagnostic.severity.INFO },
     warn = { level = vim.diagnostic.severity.WARN },
     error = { level = vim.diagnostic.severity.ERROR },
+    --- TODO: The way top maps are done is inconsistent
     top = { level = nil },
 } --- @type table <string, QfRancherDiagInfo>
 

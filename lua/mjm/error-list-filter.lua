@@ -198,7 +198,10 @@ function M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
         iter_with_predicate(predicate, cur_list.items, pattern, filter_opts.keep, view_row, regex)
 
     output_opts.title = "Filter" -- TODO: This can be improved
-    eu.set_list_items({ getlist = getlist, setlist = setlist, new_items = new_items }, output_opts)
+    eu._set_list_items(
+        { getlist = getlist, setlist = setlist, new_items = new_items },
+        output_opts
+    )
 
     if list_win and view then
         view.topline = math.max(view.topline - view_rows_removed, 0)

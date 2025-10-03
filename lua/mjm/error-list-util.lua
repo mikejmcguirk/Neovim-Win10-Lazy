@@ -724,7 +724,7 @@ end
 --- @param set_opts QfRancherSetOpts
 --- @param output_opts QfRancherOutputOpts
 --- @return nil
-function M.set_list_items(set_opts, output_opts)
+function M._set_list_items(set_opts, output_opts)
     set_opts = set_opts or {}
     if vim.g.qf_rancher_debug_assertions then
         vim.validate("set_opts", set_opts, "table")

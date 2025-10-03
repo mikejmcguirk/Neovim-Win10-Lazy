@@ -107,7 +107,11 @@ local rancher_keymaps = {
     -------------------
 
     { nx, "<nop>", "<leader>qi", "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>qI", "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>q<C-i>", "Avoid falling back to defaults", nil },
     { nx, "<nop>", "<leader>li", "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>lI", "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>l<C-i>", "Avoid falling back to defaults", nil },
 
     { nn, pqfr.. "Qdiags-n-hint",  qp.."in", "All buffer diagnostics min hint"..n,         function() ed.diags("hint", { sev_type = "min" }, { action = "new", is_loclist = false }) end },
     { nn, pqfr.. "Qdiags-n-info",  qp.."if", "All buffer diagnostics min info"..n,         function() ed.diags("info", { sev_type = "min" }, { action = "new", is_loclist = false }) end },
@@ -149,31 +153,31 @@ local rancher_keymaps = {
     { nn, pqfr.. "Qdiags-n-INFO",  qp.."iF", "All buffer diagnostics only info"..n,        function() ed.diags("info", { sev_type = "only" }, { action = "new", is_loclist = false }) end },
     { nn, pqfr.. "Qdiags-n-WARN",  qp.."iW", "All buffer diagnostics only warn"..n,        function() ed.diags("warn", { sev_type = "only" }, { action = "new" , is_loclist = false}) end },
     { nn, pqfr.. "Qdiags-n-ERROR", qp.."iE", "All buffer diagnostics only error"..n,       function() ed.diags("error", { sev_type = "only" }, { action = "new", is_loclist = false}) end },
-    { nn, pqfr.. "Qdiags-n-TOP",   qp.."iT", "All buffer diagnostics top severity"..n,     function() ed.diags("top", { action = "new", is_loclist = false }) end },
+    { nn, pqfr.. "Qdiags-n-TOP",   qp.."iT", "All buffer diagnostics top severity"..n,     function() ed.diags("top", { sev_type = "top" }, { action = "new", is_loclist = false }) end },
 
     { nn, pqfr.. "Ldiags-n-HINT",  lp.."iN", "Cur buf diagnostics only hint"..n,           function() ed.diags("hint", { sev_type = "only" }, { action = "new", is_loclist = true }) end },
     { nn, pqfr.. "Ldiags-n-INFO",  lp.."iF", "Cur buf diagnostics only info"..n,           function() ed.diags("info", { sev_type = "only" }, { action = "new", is_loclist = true }) end },
     { nn, pqfr.. "Ldiags-n-WARN",  lp.."iW", "Cur buf diagnostics only warn"..n,           function() ed.diags("warn", { sev_type = "only" }, { action = "new" , is_loclist = true}) end },
     { nn, pqfr.. "Ldiags-n-ERROR", lp.."iE", "Cur buf diagnostics only error"..n,          function() ed.diags("error", { sev_type = "only" }, { action = "new", is_loclist = true}) end },
-    { nn, pqfr.. "Ldiags-n-TOP",   lp.."iT", "Cur buf diagnostics top severity"..n,        function() ed.diags("top", { action = "new", is_loclist = true }) end },
+    { nn, pqfr.. "Ldiags-n-TOP",   lp.."iT", "Cur buf diagnostics top severity"..n,        function() ed.diags("top", { sev_type = "top" }, { action = "new", is_loclist = true }) end },
 
     { nn, pqfr.. "Qdiags-r-HINT",  qp.."IN", "All buffer diagnostics only hint"..r,        function() ed.diags("hint", { sev_type = "only" }, { action = "replace", is_loclist = false }) end },
     { nn, pqfr.. "Qdiags-r-INFO",  qp.."IF", "All buffer diagnostics only info"..r,        function() ed.diags("info", { sev_type = "only" }, { action = "replace", is_loclist = false }) end },
     { nn, pqfr.. "Qdiags-r-WARN",  qp.."IW", "All buffer diagnostics only warn"..r,        function() ed.diags("warn", { sev_type = "only" }, { action = "replace" , is_loclist = false}) end },
     { nn, pqfr.. "Qdiags-r-ERROR", qp.."IE", "All buffer diagnostics only error"..r,       function() ed.diags("error", { sev_type = "only" }, { action = "replace", is_loclist = false}) end },
-    { nn, pqfr.. "Qdiags-r-TOP",   qp.."IT", "All buffer diagnostics top severity"..r,     function() ed.diags("top", { action = "replace", is_loclist = false }) end },
+    { nn, pqfr.. "Qdiags-r-TOP",   qp.."IT", "All buffer diagnostics top severity"..r,     function() ed.diags("top", { sev_type = "top" }, { action = "replace", is_loclist = false }) end },
 
     { nn, pqfr.. "Ldiags-r-HINT",  lp.."IN", "Cur buf diagnostics only hint"..r,           function() ed.diags("hint", { sev_type = "only" }, { action = "replace", is_loclist = true }) end },
     { nn, pqfr.. "Ldiags-r-INFO",  lp.."IF", "Cur buf diagnostics only info"..r,           function() ed.diags("info", { sev_type = "only" }, { action = "replace", is_loclist = true }) end },
     { nn, pqfr.. "Ldiags-r-WARN",  lp.."IW", "Cur buf diagnostics only warn"..r,           function() ed.diags("warn", { sev_type = "only" }, { action = "replace" , is_loclist = true}) end },
     { nn, pqfr.. "Ldiags-r-ERROR", lp.."IE", "Cur buf diagnostics only error"..r,          function() ed.diags("error", { sev_type = "only" }, { action = "replace", is_loclist = true}) end },
-    { nn, pqfr.. "Ldiags-r-TOP",   lp.."IT", "Cur buf diagnostics top severity"..r,        function() ed.diags("top", { action = "replace", is_loclist = true }) end },
+    { nn, pqfr.. "Ldiags-r-TOP",   lp.."IT", "Cur buf diagnostics top severity"..r,        function() ed.diags("top", { sev_type = "top" }, { action = "replace", is_loclist = true }) end },
 
     { nn, pqfr.. "Qdiags-a-HINT",  qp.."<C-i>N", "All buffer diagnostics only hint"..a,    function() ed.diags("hint", { sev_type = "only" }, { action = "add", is_loclist = false }) end },
     { nn, pqfr.. "Qdiags-a-INFO",  qp.."<C-i>F", "All buffer diagnostics only info"..a,    function() ed.diags("info", { sev_type = "only" }, { action = "add", is_loclist = false }) end },
     { nn, pqfr.. "Qdiags-a-WARN",  qp.."<C-i>W", "All buffer diagnostics only warn"..a,    function() ed.diags("warn", { sev_type = "only" }, { action = "add" , is_loclist = false}) end },
     { nn, pqfr.. "Qdiags-a-ERROR", qp.."<C-i>E", "All buffer diagnostics only error"..a,   function() ed.diags("error", { sev_type = "only" }, { action = "add", is_loclist = false}) end },
-    { nn, pqfr.. "Qdiags-a-TOP",   qp.."<C-i>T", "All buffer diagnostics top severity"..a, function() ed.diags("top", { action = "add", is_loclist = false }) end },
+    { nn, pqfr.. "Qdiags-a-TOP",   qp.."<C-i>T", "All buffer diagnostics top severity"..a, function() ed.diags("top", { sev_type = "top" }, { action = "add", is_loclist = false }) end },
 
     { nn, pqfr.. "Ldiags-a-HINT",  lp.."<C-i>N", "Cur buf diagnostics only hint"..a,       function() ed.diags("hint", { sev_type = "only" }, { action = "add", is_loclist = true }) end },
     { nn, pqfr.. "Ldiags-a-INFO",  lp.."<C-i>F", "Cur buf diagnostics only info"..a,       function() ed.diags("info", { sev_type = "only" }, { action = "add", is_loclist = true }) end },
@@ -765,6 +769,8 @@ if vim.g.qf_rancher_set_default_cmds then
     --- FILTER ---
     --------------
 
+    --- TODO: Move check_arg to util, move filter_cmd to Filter file
+
     --- @param cargs vim.api.keyset.create_user_command.command_args
     --- @param is_loclist boolean
     --- @return nil
@@ -789,14 +795,13 @@ if vim.g.qf_rancher_set_default_cmds then
         ef.filter(filter_func, filter_opts, input_opts, output_opts)
     end
 
-    -- TODO: filter and sort do not actually have a way to use count to set a dest list nr
     vim.api.nvim_create_user_command("Qfilter", function(cargs)
         filter_cmd(cargs, false)
-    end, { bang = true, count = true, nargs = "*" })
+    end, { bang = true, count = true, nargs = "*", desc = "Sort quickfix items" })
 
     vim.api.nvim_create_user_command("Lfilter", function(cargs)
         filter_cmd(cargs, true)
-    end, { bang = true, count = true, nargs = "*" })
+    end, { bang = true, count = true, nargs = "*", desc = "Sort loclist items" })
 
     -------------------------
     --- OPEN_CLOSE_TOGGLE ---

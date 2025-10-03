@@ -58,7 +58,7 @@ end
 --- @param sort_opts QfRancherSortOpts
 --- @param output_opts QfRancherOutputOpts
 --- @return nil
-function M._sort_wrapper(sort_info, sort_opts, output_opts)
+local function sort_wrapper(sort_info, sort_opts, output_opts)
     validate_sort_wrapper_input(sort_info, sort_opts, output_opts)
     sort_opts.dir = sort_opts.dir or "asc"
 
@@ -104,7 +104,7 @@ function M._sort_wrapper(sort_info, sort_opts, output_opts)
     --- be between placing the items and final open anyway (or, at the very least, their logic is
     --- intermingled), maybe it's better to break opening the result into its own logic
     local set_list_opts = { getlist = getlist, setlist = setlist, new_items = cur_list.items }
-    eu.set_list_items(set_list_opts, output_opts)
+    eu._set_list_items(set_list_opts, output_opts)
 
     -- if list_win and view then
     --     vim.api.nvim_win_call(list_win, function()
@@ -517,7 +517,7 @@ end
 --- @return nil
 function M.adhoc_sort(asc_func, desc_func, sort_opts, output_opts)
     local sort_info = { asc_func = asc_func, desc_func = desc_func } --- @type QfRancherSortInfo
-    M._sort_wrapper(sort_info, sort_opts, output_opts)
+    sort_wrapper(sort_info, sort_opts, output_opts)
 end
 
 --- Run a registered sort
@@ -538,7 +538,7 @@ function M.sort(name, sort_opts, output_opts)
         vim.api.nvim_echo({ { "Invalid sort", "ErrorMsg" } }, true, { err = true })
     end
 
-    M._sort_wrapper(sort_info, sort_opts, output_opts)
+    sort_wrapper(sort_info, sort_opts, output_opts)
 end
 
 return M
@@ -547,8 +547,4 @@ return M
 --- TODO ---
 ------------
 
---- Check that window height updates are triggered where appropriate
---- Check that functions have proper visibility
---- Check that all mappings have plugs and cmds
 --- Do the cmd map refactoring
---- Check that all maps/cmds/plugs have desc fieldss
