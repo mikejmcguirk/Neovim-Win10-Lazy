@@ -134,7 +134,7 @@ local function clean_wrapper_input(filter_info, filter_opts, input_opts, output_
 
     local eu = require("mjm.error-list-util")
     eu.validate_input_opts(input_opts)
-    eu.validate_output_opts(output_opts)
+    eu._validate_output_opts(output_opts)
 end
 
 --- @param filter_info QfRancherFilterInfo
@@ -146,7 +146,7 @@ function M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
     clean_wrapper_input(filter_info, filter_opts, input_opts, output_opts)
 
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if not eu.check_loclist_output(output_opts) then
+    if not eu._is_valid_loclist_output(output_opts) then
         return
     end
 

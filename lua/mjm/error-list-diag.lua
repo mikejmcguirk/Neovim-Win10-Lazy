@@ -7,8 +7,14 @@ local M = {}
 
 --- @alias QfRancherSeverityType "min"|"only"|"top"
 
---- @alias QfRancherDiagInfo { level: vim.diagnostic.Severity}
---- @alias QfRancherDiagOpts { sev_type: QfRancherSeverityType}
+--- @alias QfRancherDiagInfo { level: vim.diagnostic.Severity|nil }
+--- @alias QfRancherDiagOpts { sev_type: QfRancherSeverityType }
+
+------------------------
+--- HELPER FUNCTIONS ---
+------------------------
+
+--- LOW: This and tbl_filter do not feel like the most efficient way to do this
 
 --- @param diags vim.Diagnostic[]
 --- @return integer
@@ -32,6 +38,8 @@ local function filter_diags_top_severity(diags)
     end, diags)
 end
 
+--- LOW: I think that, for something that is checked in a hot loop, this is faster than having
+--- to re-require it every iteration. Could check for fastest method though
 local severity_map = require("mjm.error-list-util")._severity_map ---@type table<integer, string>
 
 ---@param d vim.Diagnostic
@@ -40,6 +48,7 @@ local function convert_diag(d)
     d = d or {}
 
     local source = d.source and d.source .. ": " or "" ---@type string
+
     return {
         bufnr = d.bufnr,
         col = d.col and (d.col + 1) or nil,
@@ -61,7 +70,7 @@ local function get_getopts(diag_info, diag_opts)
         vim.validate("diag_info", diag_info, "table")
         vim.validate("diag_info.level", diag_info.level, { "nil", "number" })
         vim.validate("diag_opts", diag_opts, "table")
-        vim.validate("diag_opts.sev_type", diag_opts.sev_type, { "nil", "string" })
+        vim.validate("diag_opts.sev_type", diag_opts.sev_type, "string")
         if type(diag_info.level) == "number" then
             local msg = "Diagnostic severity " .. diag_info.level .. " is invalid"
             assert(diag_info.level >= 1 and diag_info.level <= 4, msg)
@@ -69,13 +78,13 @@ local function get_getopts(diag_info, diag_opts)
     end
 
     local level = diag_info.level or vim.diagnostic.severity.HINT --- @type vim.diagnostic.Severity
-    local type = diag_opts.sev_type or "min" --- @type QfRancherSeverityType
-    if type == "only" then
+    if diag_opts.sev_type == "only" then
         return { severity = level }
     end
 
-    local min_hint = type == "min" and level == vim.diagnostic.severity.HINT --- @type boolean
-    if min_hint or type == "top" then
+    --- @type boolean
+    local min_hint = diag_opts.sev_type == "min" and level == vim.diagnostic.severity.HINT
+    if min_hint or diag_opts.sev_type == "top" then
         return { severity = nil }
     else
         return { severity = { min = level } }
@@ -84,19 +93,23 @@ end
 
 --- @param diag_info QfRancherDiagInfo
 --- @param output_opts QfRancherOutputOpts
+--- @return nil
 local function validate_diags_to_list(diag_info, diag_opts, output_opts)
     vim.validate("diag_info", diag_info, "table")
     vim.validate("diag_info.level", diag_info.level, { "nil", "number" })
     vim.validate("diag_opts", diag_opts, "table")
-    vim.validate("diag_opts.sev_type", diag_opts.sev_type, { "nil", "string" })
+    vim.validate("diag_opts.sev_type", diag_opts.sev_type, "string")
 
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    eu.validate_output_opts(output_opts)
+    require("mjm.error-list-util")._validate_output_opts(output_opts)
 end
+
+--- LOW: The title could be more descriptive, but as it it aligns with how titles are constructed
+--- by default
 
 --- @param diag_info QfRancherDiagInfo
 --- @param diag_opts QfRancherDiagOpts
 --- @param output_opts QfRancherOutputOpts
+--- @return nil
 local function diags_to_list(diag_info, diag_opts, output_opts)
     diag_info = diag_info or {}
     diag_opts = diag_opts or {}
@@ -139,7 +152,6 @@ local function diags_to_list(diag_info, diag_opts, output_opts)
     --- @type QfRancherSetOpts
     local set_opts = { getlist = getlist, setlist = setlist, new_items = converted_diags }
     output_opts.title = "vim.diagnostic.get()"
-    --- TODO: This is sending to the list but not opening
     eu.set_list_items(set_opts, output_opts)
 end
 
@@ -148,28 +160,31 @@ local diag_queries = {
     info = { level = vim.diagnostic.severity.INFO },
     warn = { level = vim.diagnostic.severity.WARN },
     error = { level = vim.diagnostic.severity.ERROR },
+    top = { level = nil },
 } --- @type table <string, QfRancherDiagInfo>
 
 --- @param name string
 --- @param output_opts QfRancherOutputOpts
 function M.diags(name, diag_opts, output_opts)
-    local diag_info = diag_queries[name]
+    local diag_info = diag_queries[name] --- @type QfRancherDiagInfo|nil
     if not diag_info then
         vim.api.nvim_echo({ { "No diagnostic query " .. name, "ErrorMsg" } }, true, { err = true })
+        return
     end
 
     diags_to_list(diag_info, diag_opts, output_opts)
 end
 
-local sev_types = { "min", "only", "top" }
+local sev_types = { "min", "only", "top" } --- @type string[]
 
---- TODO: I have just this outline for now because it's simple, but will need to change when
+--- TODO: I have just this outlined for now because it's simple, but will need to change when
 --- the cmd stuff is moved to the util file. Stuff like actions and the loop/check logic can
 --- go there, but then the diag specific pieces would hang out here. And the cmd creation itself
---- would go into the maps/plugin file
+--- would go into the maps/plugin file. Want to move over filter/grep/sort first since they are
+--- more complicated
 
 local function make_diag_cmd(cargs, is_loclist)
-    local fargs = cargs.fargs
+    local fargs = cargs.fargs --- @type string[]
 
     local sev_type = "min"
     for _, arg in ipairs(fargs) do
@@ -180,9 +195,7 @@ local function make_diag_cmd(cargs, is_loclist)
     end
 
     local diag_opts = { sev_type = sev_type } --- @type QfRancherDiagOpts
-
     local actions = { "new", "replace", "add" } --- @type QfRancherAction[]
-
     local action = "new" --- @type QfRancherAction
     for _, arg in ipairs(fargs) do
         if vim.tbl_contains(actions, arg) then
@@ -212,9 +225,6 @@ local function make_diag_cmd(cargs, is_loclist)
     diags_to_list(diag_info, diag_opts, output_opts)
 end
 
---- TODO: This is.... okay function naming because it's accurate, but then you have l_history and
---- q_history which are maps so it feels inconsistent
-
 function M._q_diag(cargs)
     make_diag_cmd(cargs, false)
 end
@@ -223,12 +233,10 @@ function M._l_diag(cargs)
     make_diag_cmd(cargs, true)
 end
 
-vim.api.nvim_create_user_command("Qdiag", function(cargs)
-    M._q_diag(cargs)
-end, { nargs = "*", desc = "Query diagnostics into the Quickfix list" })
-
-vim.api.nvim_create_user_command("Ldiag", function(cargs)
-    M._l_diag(cargs)
-end, { nargs = "*", desc = "Query diagnostics into the Location list" })
-
 return M
+
+------------
+--- TODO ---
+------------
+
+--- Deeper auditing/testing

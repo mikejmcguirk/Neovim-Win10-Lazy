@@ -197,7 +197,7 @@ end
 function M._find_list_win(output_opts)
     output_opts = output_opts or {}
     if vim.g.qf_rancher_debug_assertions then
-        M.validate_output_opts(output_opts)
+        M._validate_output_opts(output_opts)
     end
 
     if output_opts.is_loclist then
@@ -330,7 +330,7 @@ end
 function M._get_getlist(output_opts)
     output_opts = output_opts or {}
     if vim.g.qf_rancher_debug_assertions then
-        M.validate_output_opts(output_opts)
+        M._validate_output_opts(output_opts)
     end
 
     if not output_opts.is_loclist then
@@ -428,7 +428,7 @@ end
 function M._get_setlist(output_opts)
     output_opts = output_opts or {}
     if vim.g.qf_rancher_debug_assertions then
-        M.validate_output_opts(output_opts)
+        M._validate_output_opts(output_opts)
     end
 
     if not output_opts.is_loclist then
@@ -566,7 +566,7 @@ end
 -- thing
 
 --- @param output_opts QfRancherOutputOpts
-function M.validate_output_opts(output_opts)
+function M._validate_output_opts(output_opts)
     vim.validate("output_opts", output_opts, "table")
 
     vim.validate("output_opts.is_loclist", output_opts.is_loclist, { "nil", "boolean" })
@@ -652,7 +652,7 @@ function M._get_dest_list_nr(getlist, output_opts)
     output_opts = output_opts or {}
 
     if vim.g.qf_rancher_debug_assertions then
-        M.validate_output_opts(output_opts)
+        M._validate_output_opts(output_opts)
     end
 
     local count = output_opts.count > 0 and output_opts.count or 0
@@ -725,15 +725,15 @@ end
 --- @return nil
 function M.set_list_items(set_opts, output_opts)
     set_opts = set_opts or {}
-
     if vim.g.qf_rancher_debug_assertions then
         vim.validate("set_opts", set_opts, "table")
         vim.validate("set_opts.getlist", set_opts.getlist, { "callable", "nil" })
         vim.validate("set_opts.setlist", set_opts.setlist, { "callable", "nil" })
 
-        M.validate_output_opts(output_opts)
+        M._validate_output_opts(output_opts)
     end
 
+    --- TODO: Why are we allowing this through again?
     local getlist = set_opts.getlist or M._get_getlist(output_opts)
     if not getlist then
         return
@@ -746,26 +746,21 @@ function M.set_list_items(set_opts, output_opts)
 
     local dest_list_nr = M._get_dest_list_nr(getlist, output_opts)
 
+    --- TODO: Really bad chained else statement, because the logic is hard to follow
     -- TODO: Basically trying to address that if we have an empty list, the action doesn't matter
     -- and we're just making a new one. But then we kinda repeat the logic in the new case
     -- Feels hacky right now
     local max_list_nr = getlist({ nr = "$" }).nr
     if max_list_nr == 0 then
         setlist({}, " ", { items = set_opts.new_items, nr = "$", title = output_opts.title })
-        return
-    end
-
-    if output_opts.action == "replace" then
+    elseif output_opts.action == "replace" then
         local old_list = getlist({ nr = dest_list_nr, all = true })
         local new_list = get_new_list(
             old_list,
             { new_list_items = set_opts.new_items, new_title = output_opts.title }
         )
         setlist({}, "r", new_list)
-        return
-    end
-
-    if output_opts.action == "add" then
+    elseif output_opts.action == "add" then
         local old_list = getlist({ nr = dest_list_nr, all = true })
         local new_list_items = M._merge_qf_lists(old_list.items, set_opts.new_items)
         --- NOTE: We simply have to assume here that calling functions know the sort is performed
@@ -780,20 +775,16 @@ function M.set_list_items(set_opts, output_opts)
             { new_list_items = new_list_items, new_title = output_opts.title }
         )
         setlist({}, "u", new_list)
-        return
-    end
-
-    if dest_list_nr == max_list_nr then
-        setlist(
-            {},
-            " ",
+    elseif dest_list_nr == max_list_nr then
+        local new_list =
             { items = set_opts.new_items, nr = dest_list_nr, title = output_opts.title }
-        )
-        return
+        setlist({}, " ", new_list)
+    else
+        M.cycle_lists_down(getlist, setlist, dest_list_nr)
+        local new_list =
+            { items = set_opts.new_items, nr = dest_list_nr, title = output_opts.title }
+        setlist({}, "r", new_list)
     end
-
-    M.cycle_lists_down(getlist, setlist, dest_list_nr)
-    setlist({}, "r", { items = set_opts.new_items, nr = dest_list_nr, title = output_opts.title })
 
     if not vim.g.qf_rancher_auto_open_changes then
         return
@@ -805,7 +796,11 @@ function M.set_list_items(set_opts, output_opts)
         return
     end
 
-    require("mjm.error-list-stack")._get_gethistory(output_opts.is_loclist)(dest_list_nr)
+    --- TODO: add a silent option to qhistory and lhistory so we can make moves in commands like
+    --- this without getting nags
+    require("mjm.error-list-stack")._get_gethistory(output_opts.is_loclist)({
+        count = dest_list_nr,
+    })
 end
 
 return M

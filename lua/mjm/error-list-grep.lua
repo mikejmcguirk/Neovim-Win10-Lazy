@@ -195,7 +195,7 @@ local function clean_do_grep_input(grep_info, system_opts, input_opts, output_op
 
     local eu = require("mjm.error-list-util")
     eu.validate_input_opts(input_opts)
-    eu.validate_output_opts(output_opts)
+    eu._validate_output_opts(output_opts)
 end
 
 --- @param grep_info QfRancherGrepInfo

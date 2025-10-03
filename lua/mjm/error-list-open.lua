@@ -28,12 +28,17 @@ local max_qf_height = 10
 --- HELPER FUNCS ---
 --------------------
 
+--- TODO: See how this issue affects the pwinclose behavior
+--- https://github.com/neovim/neovim/pull/33402
+
 -- TODO: Make a Neovim tools repo and put this function in here. Make sure that repo is all local
 -- functions so it can't just be pulled lazily as a dep
 -- TODO: This might need expanded on. I'd need to check the source for cclose, but as of right
 -- now I think when I run this the unlisted buffer is just left to hang out. Would also need
 -- to look into what happens to a buf by default when its last window closes if it's unlisted
 -- But worth noting too that qf bufs being unlisted is not default behavior
+-- Shorter version: DO I need to bwipeout the qf buffer? Or rather, should this function have an
+-- option to bdel or bwipeout the underlying buffer
 
 --- Checks that the provided window is valid. If the provided window is the last one, deletes the
 --- buffer instead

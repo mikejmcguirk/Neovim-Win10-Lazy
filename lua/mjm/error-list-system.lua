@@ -46,7 +46,7 @@ local function validate_system_do(system_opts, output_opts)
     vim.validate("system_opts.cmd_parts", system_opts.cmd_parts, "table")
     eu._check_str_list(system_opts.cmd_parts)
 
-    eu.validate_output_opts(output_opts)
+    eu._validate_output_opts(output_opts)
 end
 
 --- @param obj vim.SystemCompleted
@@ -62,7 +62,7 @@ local function handle_output(obj, output_opts)
     end
 
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if not eu.check_loclist_output(output_opts) then
+    if not eu._is_valid_loclist_output(output_opts) then
         return
     end
 
@@ -83,12 +83,12 @@ local function handle_output(obj, output_opts)
     -- TODO: There should be an output opts function that handles opening the list afterwards
     -- So like, see if it's open, maybe resize it, do history to move to the right one, and
     -- so on. It's repeated logic that only needs to be written once
-    local elo = require("mjm.error-list-open")
-    if output_opts.is_loclist then
-        elo._open_loclist()
-    else
-        elo._open_qflist()
-    end
+    -- local elo = require("mjm.error-list-open")
+    -- if output_opts.is_loclist then
+    --     elo._open_loclist()
+    -- else
+    --     elo._open_qflist()
+    -- end
 end
 
 -- TODO: This needs to be a public API so that way people can use it to build cmd line extensions

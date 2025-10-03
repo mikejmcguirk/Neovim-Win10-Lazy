@@ -386,7 +386,8 @@ local function get_preview_buf(bufnr)
 
         local bufname = vim.fn.bufname(bufnr)
         local full_path = vim.fn.fnamemodify(bufname, ":p")
-        if not vim.fn.filereadable(full_path) then
+        -- TODO: Look for places where this is treated like a boolean
+        if vim.fn.filereadable(full_path) == 1 then
             return { "Unable to read file " .. full_path }
         end
 

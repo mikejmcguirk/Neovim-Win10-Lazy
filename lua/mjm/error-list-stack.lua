@@ -194,9 +194,9 @@ function M._l_history(opts)
     if vim.g.qf_rancher_debug_assertions then
         vim.validate("opts", opts, "table")
         vim.validate("opts.always_open", opts.always_open, { "boolean", "nil" })
-        vim.validate("opts.count1", opts.count, { "nil", "number" })
+        vim.validate("opts.count", opts.count, { "nil", "number" })
         if type(opts.count) == "number" then
-            require("mjm.error-list-util")._validate_count1(opts.count)
+            require("mjm.error-list-util")._validate_count(opts.count)
         end
     end
 
@@ -283,7 +283,7 @@ end
 --- @param is_loclist boolean
 --- @return function
 function M._get_gethistory(is_loclist)
-    vim.validate("is_loclist", is_loclist, "boolean")
+    vim.validate("is_loclist", is_loclist, { "boolean", "nil" })
     if is_loclist then
         return M._l_history
     else

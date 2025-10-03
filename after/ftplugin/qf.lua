@@ -665,6 +665,8 @@ local function qf_iter_winnr(list_winnr, total_winnr)
     if vim.g.qf_rancher_debug_assertions then
         vim.validate("list_winnr", list_winnr, "number")
         vim.validate("total_winnr", total_winnr, "number")
+        --- TODO: Not sure this is right because of differing window context. Maybe just win_call
+        --- on winnr? Unsure
         vim.validate("total_winnr", total_winnr, function()
             return total_winnr <= vim.fn.winnr("$")
         end)

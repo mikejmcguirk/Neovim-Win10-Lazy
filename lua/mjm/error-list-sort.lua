@@ -60,7 +60,7 @@ local function clean_wrapper_input(sort_info, sort_opts, output_opts)
     end
 
     local eu = require("mjm.error-list-util")
-    eu.validate_output_opts(output_opts)
+    eu._validate_output_opts(output_opts)
 end
 
 --- @param sort_info QfRancherSortInfo
@@ -71,7 +71,7 @@ function M._sort_wrapper(sort_info, sort_opts, output_opts)
     clean_wrapper_input(sort_info, sort_opts, output_opts)
 
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if not eu.check_loclist_output(output_opts) then
+    if not eu._is_valid_loclist_output(output_opts) then
         return
     end
 
