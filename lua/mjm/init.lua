@@ -47,7 +47,6 @@ local pack_finish = vim.uv.hrtime()
 require("mjm.set")
 require("mjm.map")
 require("mjm.stl")
-require("mjm.tal")
 
 require("mjm.error-list") -- Do this first because it sets up g vars
 -- require("mjm.error-list-open")
@@ -57,7 +56,7 @@ require("mjm.error-list") -- Do this first because it sets up g vars
 require("mjm.error-list-sort")
 require("mjm.error-list-system")
 require("mjm.error-list-grep")
-require("mjm.error-list-diag")
+-- require("mjm.error-list-diag")
 
 local env_setup = vim.uv.hrtime()
 
@@ -70,6 +69,12 @@ require("mjm.plugins.nvim-treesitter") -- Text Objects Sets Up Lazily
 require("mjm.plugins.fzflua")
 
 require("mjm.plugins.harpoon")
+--- LOW: This module requires harpoon to setup the tabline display. For some reason, if this is
+--- done before the harpoon module, the setup funciton in the harpoon module will not run properly
+--- Curious as to why
+--- LOW: Re-add the post-plugin timer section
+require("mjm.tal")
+
 require("mjm.plugins.oil")
 
 require("mjm.plugins.fugitive")

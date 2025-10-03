@@ -42,10 +42,9 @@ Map("n", "<leader>ad", function()
     harpoon:list():add()
 end)
 
-local t = function()
+Map("n", "<leader>aa", function()
     harpoon.ui:toggle_quick_menu(harpoon:list(), { height_in_lines = 10 })
-end
-Map("n", "<leader>aa", t)
+end)
 
 local mark = 10
 for _ = 1, 10 do
@@ -56,8 +55,8 @@ for _ = 1, 10 do
         local open_mark = function()
             harpoon:list():select(this_mark)
         end
-        local ok, result = pcall(open_mark)
 
+        local ok, result = pcall(open_mark)
         if not ok then
             local chunk = { result or "Unknown error opening harpoon mark", "ErrorMsg" }
             vim.api.nvim_echo({ chunk }, true, { err = true })
