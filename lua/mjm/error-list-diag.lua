@@ -143,14 +143,6 @@ local function diags_to_list(diag_info, diag_opts, output_opts)
     eu.set_list_items(set_opts, output_opts)
 end
 
---- TODO: Cmd Naming conventions:
---- - Qdiag
---- - Qdiagadd
---- - Qdiagreplace (?)
---- - Qdiag top (top severity)
---- - Qdiag info (min severity info)
---- - Qdiag info only (only show info)
-
 local diag_queries = {
     hint = { level = vim.diagnostic.severity.HINT },
     info = { level = vim.diagnostic.severity.INFO },
