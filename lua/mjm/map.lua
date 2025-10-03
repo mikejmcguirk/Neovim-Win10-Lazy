@@ -291,7 +291,11 @@ Map({ "n", "x" }, "k", function()
 end, { expr = true, silent = true })
 
 ApiMap("o", "gg", "<esc>", noremap)
-Map({ "n", "x", "o" }, "go", function()
+Map("o", "go", function()
+    return vim.v.count < 1 and "gg" or "go"
+end, { expr = true })
+
+Map({ "n", "x" }, "go", function()
     -- gg Retains cursor position since I have startofline off
     return vim.v.count < 1 and "m'gg" or "m'" .. vim.v.count1 .. "go"
 end, { expr = true })
