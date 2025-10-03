@@ -114,7 +114,9 @@ function M.open_buf(source, opts)
 
     if cur_buf ~= buf then
         if opts.win then
-            vim.api.nvim_win_set_buf(opts.win, buf)
+            vim.api.nvim_win_call(opts.win, function()
+                vim.api.nvim_set_current_buf(buf)
+            end)
         else
             vim.api.nvim_set_current_buf(buf)
         end
