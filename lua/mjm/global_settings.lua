@@ -214,7 +214,8 @@ autoset_winopt({ "WinEnter", "CmdlineLeave", "BufEnter" }, "rnu", true)
 -- Autocmd Controls --
 ----------------------
 
-Autocmd("BufReadPre", {
+--- BufReadPre does not work reliably with FzfLua or my Harpoon open script
+Autocmd("BufReadPost", {
     group = set_group,
     desc = "Go to the last cursor position when opening a buffer",
     callback = function(ev)
@@ -248,6 +249,46 @@ Autocmd(clear_conditions, {
         vim.cmd.nohlsearch()
     end),
 })
+
+-- Autocmd("VimLeavePre", {
+--     group = set_group,
+--     callback = function()
+--         local seen = {}
+--         local cur_tabpage = vim.api.nvim_get_current_tabpage() --- @type integer
+--         local tabpages = vim.api.nvim_list_tabpages()
+--
+--         --- Per :h tab-ID, it is documented behavior that list_tabpages returns the tab pages in
+--         --- the order they are displayed
+--         for i, tabpage in ipairs(tabpages) do
+--             --- On the other hand, while I feel like I read somewhere list_wins returns the wins
+--             --- in winnr order, this is not documented behavior, so need to get that info
+--             --- separately
+--             local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage)
+--             local max_winnr = vim.api.nvim_win_call(tabpage_wins[1], function()
+--                 return vim.fn.winnr("$")
+--             end) --- @type integer
+--
+--             for j = max_winnr, 1, -1 do
+--                 local win = vim.fn.win_getid(j, i)
+--                 local win_buf = vim.api.nvim_win_get_buf(win)
+--
+--                 if (not seen[win_buf]) or tabpage == cur_tabpage then
+--                     seen[win_buf] = true
+--
+--                     local buftype = vim.api.nvim_get_option_value("buftype", { buf = win_buf })
+--                     local bufname = vim.fn.bufname(win_buf)
+--                     local full_path = vim.fn.fnamemodify(bufname, ":p")
+--                     local readable = vim.fn.filereadable(full_path) == 0
+--
+--                     if buftype == "" and readable then
+--                         local row, col = unpack(vim.api.nvim_win_get_cursor(win))
+--                         vim.api.nvim_buf_set_mark(win_buf, '"', row, col, {})
+--                     end
+--                 end
+--             end
+--         end
+--     end,
+-- })
 
 -- vim.opt.lazyredraw = false -- Causes unpredictable problems
 -- vim.opt.startofline = false -- Makes gg/G feel weird

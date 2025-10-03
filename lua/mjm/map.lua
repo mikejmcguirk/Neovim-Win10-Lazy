@@ -53,7 +53,12 @@ for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
                 local buf_wins = vim.fn.win_findbuf(cur_buf)
                 local buf_list = vim.api.nvim_list_bufs()
                 if #buf_wins < 1 and vim.tbl_contains(buf_list, cur_buf) then
-                    vim.api.nvim_buf_delete(cur_buf, {})
+                    --- https://github.com/neovim/neovim/pull/33402
+                    --- When nvim_buf_delete is run without the unload flag, it goes beyond
+                    --- deleting the buffer into deleting shada state, including the '"' mark
+                    --- TODO: Whenever nvim_buf_del is created, use that for deleting buffers
+                    vim.api.nvim_set_option_value("buflisted", false, { buf = cur_buf })
+                    vim.api.nvim_buf_delete(cur_buf, { unload = true })
                 end
             end)
         end,
@@ -342,6 +347,9 @@ Map("n", "n", "nzzzv")
 ------------------
 -- Text Objects --
 ------------------
+
+--- MID: These can be re-written as functions. For omode, get the current line. For vmode, can use
+--- getregionpos to get the boundaries and extend by count appropriately
 
 Map("o", "a_", function()
     vim.cmd("norm! ggVG")
