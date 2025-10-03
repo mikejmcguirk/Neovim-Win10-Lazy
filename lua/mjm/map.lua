@@ -287,11 +287,8 @@ end, { expr = true, silent = true })
 
 ApiMap("o", "gg", "<esc>", noremap)
 Map({ "n", "x", "o" }, "go", function()
-    if vim.v.count < 1 then
-        return "gg" -- I have startofline off, so this keeps cursor position
-    else
-        return "go"
-    end
+    -- gg Retains cursor position since I have startofline off
+    return vim.v.count < 1 and "m'gg" or "m'" .. vim.v.count1 .. "go"
 end, { expr = true })
 
 -- Address cursorline flickering
