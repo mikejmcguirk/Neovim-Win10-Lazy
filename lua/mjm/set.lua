@@ -16,6 +16,9 @@ end
 
 require("mjm.colorscheme")
 
+--- MID: If you have a function as a parameter, then pass that function as a parameter again, the
+--- function var will be fg instead of parameter color
+
 --- @param hl_query vim.treesitter.Query
 --- @return nil
 local ts_nop_all = function(hl_query)

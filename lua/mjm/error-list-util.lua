@@ -104,7 +104,7 @@ end
 --- @param win integer
 --- @param qf_id? integer
 --- @return integer|nil
-function M.find_loclist_win(win, qf_id)
+function M._find_loclist_win(win, qf_id)
     if vim.g.qf_rancher_debug_assertions then
         vim.validate("qf_id", qf_id, { "nil", "number" })
         vim.validate("win", win, "number")
@@ -203,7 +203,7 @@ function M._find_list_win(output_opts)
     if output_opts.is_loclist then
         --- @type integer
         local win = output_opts.loclist_source_win or vim.api.nvim_get_current_win()
-        return M.find_loclist_win(win)
+        return M._find_loclist_win(win)
     else
         return M._find_qf_win()
     end
@@ -246,7 +246,7 @@ function M._get_loclist_info(opts)
         return qf_id, nil
     end
 
-    return qf_id, M.find_loclist_win(win, qf_id)
+    return qf_id, M._find_loclist_win(win, qf_id)
 end
 
 --- @param opts {win?:integer}
@@ -527,6 +527,8 @@ function M._check_str_list(table)
         assert(type(v) == "string", "Item " .. vim.inspect(v) .. " is not a string")
     end
 end
+
+--- TODO: Obvious cut point - Put the validations into their own file
 
 --- @param action QfRancherAction
 --- @return boolean
