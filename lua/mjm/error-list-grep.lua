@@ -205,7 +205,7 @@ end
 function M._do_grep(grep_info, system_opts, input_opts, output_opts)
     clean_do_grep_input(grep_info, system_opts, input_opts, output_opts)
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if not eu.check_loclist_output(output_opts) then
+    if not eu._is_valid_loclist_output(output_opts) then
         return
     end
 
@@ -373,6 +373,7 @@ return M
 
 --- Support ack. I think it's on Linux. Given that vim-ack is a kind of anscestor of the mappings
 ---     in the ftplugin, it feels disrespectful not to include it
+--- Grep specific file. Can either be a built-in or shown as a recipe
 
 -------------
 --- # LOW ---

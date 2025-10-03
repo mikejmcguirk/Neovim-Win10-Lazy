@@ -6,7 +6,9 @@ local M = {}
 -------------
 
 --- @alias QfRancherSeverityType "min"|"only"|"top"
---- @alias QfRancherDiagInfo {sev_type: QfRancherSeverityType, level: vim.diagnostic.Severity}
+
+--- @alias QfRancherDiagInfo { level: vim.diagnostic.Severity}
+--- @alias QfRancherDiagOpts { sev_type: QfRancherSeverityType}
 
 --- @param diags vim.Diagnostic[]
 --- @return integer
@@ -52,20 +54,22 @@ local function convert_diag(d)
 end
 
 --- @param diag_info QfRancherDiagInfo
+--- @param diag_opts QfRancherDiagOpts
 --- @return vim.diagnostic.GetOpts
-local function get_diagnostic_opt(diag_info)
+local function get_getopts(diag_info, diag_opts)
     if vim.g.qf_rancher_debug_assertions then
         vim.validate("diag_info", diag_info, "table")
-        vim.validate("diag_info.sev_type", diag_info.sev_type, { "nil", "string" })
         vim.validate("diag_info.level", diag_info.level, { "nil", "number" })
+        vim.validate("diag_opts", diag_opts, "table")
+        vim.validate("diag_opts.sev_type", diag_opts.sev_type, { "nil", "string" })
         if type(diag_info.level) == "number" then
             local msg = "Diagnostic severity " .. diag_info.level .. " is invalid"
             assert(diag_info.level >= 1 and diag_info.level <= 4, msg)
         end
     end
 
-    local type = diag_info.sev_type or "min" --- @type QfRancherSeverityType
     local level = diag_info.level or vim.diagnostic.severity.HINT --- @type vim.diagnostic.Severity
+    local type = diag_opts.sev_type or "min" --- @type QfRancherSeverityType
     if type == "only" then
         return { severity = level }
     end
@@ -78,26 +82,31 @@ local function get_diagnostic_opt(diag_info)
     end
 end
 
-local function validate_diags_to_list(diag_info, output_opts)
+--- @param diag_info QfRancherDiagInfo
+--- @param output_opts QfRancherOutputOpts
+local function validate_diags_to_list(diag_info, diag_opts, output_opts)
     vim.validate("diag_info", diag_info, "table")
-    vim.validate("diag_info.sev_type", diag_info.sev_type, { "nil", "string" })
     vim.validate("diag_info.level", diag_info.level, { "nil", "number" })
+    vim.validate("diag_opts", diag_opts, "table")
+    vim.validate("diag_opts.sev_type", diag_opts.sev_type, { "nil", "string" })
 
-    local eu = require("mjm.error-list-util")
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
     eu.validate_output_opts(output_opts)
 end
 
 --- @param diag_info QfRancherDiagInfo
+--- @param diag_opts QfRancherDiagOpts
 --- @param output_opts QfRancherOutputOpts
-local function diags_to_list(diag_info, output_opts)
+local function diags_to_list(diag_info, diag_opts, output_opts)
     diag_info = diag_info or {}
+    diag_opts = diag_opts or {}
     output_opts = output_opts or {}
-    validate_diags_to_list(diag_info, output_opts)
+    validate_diags_to_list(diag_info, diag_opts, output_opts)
 
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     output_opts.loclist_source_win = cur_win
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if not eu._is_loclist_output_valid(output_opts) then
+    if not eu._is_valid_loclist_output(output_opts) then
         return
     end
 
@@ -113,15 +122,15 @@ local function diags_to_list(diag_info, output_opts)
 
     --- @type integer|nil
     local buf = output_opts.is_loclist and vim.api.nvim_win_get_buf(cur_win) or nil
-    local get_opts = get_diagnostic_opt(diag_info) --- @type vim.diagnostic.GetOpts
+    local getopts = get_getopts(diag_info, diag_opts) --- @type vim.diagnostic.GetOpts
 
-    local raw_diags = vim.diagnostic.get(buf, get_opts) --- @type vim.Diagnostic[]
+    local raw_diags = vim.diagnostic.get(buf, getopts) --- @type vim.Diagnostic[]
     if #raw_diags == 0 then
         vim.api.nvim_echo({ { "No diagnostics", "" } }, false, {})
         return
     end
 
-    if diag_info.sev_type == "top" then
+    if diag_opts.sev_type == "top" then
         raw_diags = filter_diags_top_severity(raw_diags)
     end
 
@@ -130,6 +139,7 @@ local function diags_to_list(diag_info, output_opts)
     --- @type QfRancherSetOpts
     local set_opts = { getlist = getlist, setlist = setlist, new_items = converted_diags }
     output_opts.title = "vim.diagnostic.get()"
+    --- TODO: This is sending to the list but not opening
     eu.set_list_items(set_opts, output_opts)
 end
 
@@ -142,24 +152,91 @@ end
 --- - Qdiag info only (only show info)
 
 local diag_queries = {
-    hint = { sev_type = "min", level = vim.diagnostic.severity.HINT },
-    info = { sev_type = "min", level = vim.diagnostic.severity.INFO },
-    warn = { sev_type = "min", level = vim.diagnostic.severity.WARN },
-    error = { sev_type = "min", level = vim.diagnostic.severity.ERROR },
-    hint_only = { sev_type = "only", level = vim.diagnostic.severity.HINT },
-    info_only = { sev_type = "only", level = vim.diagnostic.severity.INFO },
-    warn_only = { sev_type = "only", level = vim.diagnostic.severity.WARN },
-    error_only = { sev_type = "only", level = vim.diagnostic.severity.ERROR },
-    top = { sev_type = "top", level = nil },
+    hint = { level = vim.diagnostic.severity.HINT },
+    info = { level = vim.diagnostic.severity.INFO },
+    warn = { level = vim.diagnostic.severity.WARN },
+    error = { level = vim.diagnostic.severity.ERROR },
 } --- @type table <string, QfRancherDiagInfo>
 
-function M.diags(name, output_opts)
+--- @param name string
+--- @param output_opts QfRancherOutputOpts
+function M.diags(name, diag_opts, output_opts)
     local diag_info = diag_queries[name]
     if not diag_info then
         vim.api.nvim_echo({ { "No diagnostic query " .. name, "ErrorMsg" } }, true, { err = true })
     end
 
-    diags_to_list(diag_info, output_opts)
+    diags_to_list(diag_info, diag_opts, output_opts)
 end
+
+local sev_types = { "min", "only", "top" }
+
+--- TODO: I have just this outline for now because it's simple, but will need to change when
+--- the cmd stuff is moved to the util file. Stuff like actions and the loop/check logic can
+--- go there, but then the diag specific pieces would hang out here. And the cmd creation itself
+--- would go into the maps/plugin file
+
+local function make_diag_cmd(cargs, is_loclist)
+    local fargs = cargs.fargs
+
+    local sev_type = "min"
+    for _, arg in ipairs(fargs) do
+        if vim.tbl_contains(sev_types, arg) then
+            sev_type = arg
+            break
+        end
+    end
+
+    local diag_opts = { sev_type = sev_type } --- @type QfRancherDiagOpts
+
+    local actions = { "new", "replace", "add" } --- @type QfRancherAction[]
+
+    local action = "new" --- @type QfRancherAction
+    for _, arg in ipairs(fargs) do
+        if vim.tbl_contains(actions, arg) then
+            action = arg
+            break
+        end
+    end
+
+    local output_opts = { action = action, is_loclist = is_loclist } --- @type QfRancherOutputOpts
+
+    local name = "hint" --- @type string
+    local names = vim.tbl_keys(diag_queries) --- @type string[]
+
+    for _, arg in ipairs(fargs) do
+        if vim.tbl_contains(names, arg) then
+            name = arg
+            break
+        end
+    end
+
+    local diag_info = diag_queries[name] --- @type QfRancherDiagInfo
+    if not diag_info then
+        vim.api.nvim_echo({ { "No diagnostic query " .. name, "ErrorMsg" } }, true, { err = true })
+        return
+    end
+
+    diags_to_list(diag_info, diag_opts, output_opts)
+end
+
+--- TODO: This is.... okay function naming because it's accurate, but then you have l_history and
+--- q_history which are maps so it feels inconsistent
+
+function M._q_diag(cargs)
+    make_diag_cmd(cargs, false)
+end
+
+function M._l_diag(cargs)
+    make_diag_cmd(cargs, true)
+end
+
+vim.api.nvim_create_user_command("Qdiag", function(cargs)
+    M._q_diag(cargs)
+end, { nargs = "*", desc = "Query diagnostics into the Quickfix list" })
+
+vim.api.nvim_create_user_command("Ldiag", function(cargs)
+    M._l_diag(cargs)
+end, { nargs = "*", desc = "Query diagnostics into the Location list" })
 
 return M

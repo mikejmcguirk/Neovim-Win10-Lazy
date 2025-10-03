@@ -88,7 +88,7 @@ end
 
 --- @param output_opts QfRancherOutputOpts
 --- @return nil
-function M._is_loclist_output_valid(output_opts)
+function M._is_valid_loclist_output(output_opts)
     if not output_opts.is_loclist then
         return true
     end
@@ -819,3 +819,9 @@ return M
 --- - Check that all functions have annotations and documentation
 --- - Check that the qf and loclist versions are both properly built for purpose. Should be able
 ---     to use the loclist function for buf/win specific info
+
+--------------
+--- FUTURE ---
+--------------
+
+--- If this file gets to 1k lines, split it
