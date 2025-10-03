@@ -159,9 +159,16 @@ Autocmd("TabNew", {
     group = Augroup("map-tab-navigation", { clear = true }),
     once = true,
     callback = function()
+        --- MID: Missing cmds:
+        --- - tabclose
+        --- - tabnew
+        --- - tabmove
+        --- - tabonly
+        --- Leaves ctrl-tab/ctrl-shift-tab open
         ApiMap("n", "<tab>", "gt", { noremap = true })
         ApiMap("n", "<S-tab>", "gT", { noremap = true })
         local tab = 10
+        --- TODO: Appears I might need to manually send these down thru tmux
         for _ = 1, 10 do
             -- Otherwise a closure is formed around tab
             local this_tab = tab -- 10, 1, 2, 3, 4, 5, 6, 7, 8, 9

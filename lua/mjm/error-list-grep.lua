@@ -194,7 +194,7 @@ local function clean_do_grep_input(grep_info, system_opts, input_opts, output_op
     end)
 
     local eu = require("mjm.error-list-util")
-    eu.validate_input_opts(input_opts)
+    eu._validate_input_opts(input_opts)
     eu._validate_output_opts(output_opts)
 end
 

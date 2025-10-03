@@ -78,7 +78,18 @@ local function handle_output(obj, output_opts)
         table.sort(qf_dict, require("mjm.error-list-sort")._sort_fname_asc)
     end
 
-    eu._set_list_items({ new_items = qf_dict.items }, output_opts)
+    local getlist = eu._get_getlist(output_opts)
+    if not getlist then
+        return
+    end
+
+    local setlist = eu._get_setlist(output_opts)
+    if not setlist then
+        return
+    end
+
+    local set_opts = { new_items = qf_dict.items, getlist = getlist, setlist = setlist }
+    eu._set_list_items(set_opts, output_opts)
 
     -- TODO: There should be an output opts function that handles opening the list afterwards
     -- So like, see if it's open, maybe resize it, do history to move to the right one, and

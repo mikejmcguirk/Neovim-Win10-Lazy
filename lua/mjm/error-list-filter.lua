@@ -116,12 +116,7 @@ end
 --- @param input_opts QfRancherInputOpts
 --- @param output_opts QfRancherOutputOpts
 --- @return nil
-local function clean_wrapper_input(filter_info, filter_opts, input_opts, output_opts)
-    filter_info = filter_info or {}
-    filter_opts = filter_opts or {}
-    input_opts = input_opts or {}
-    output_opts = output_opts or {}
-
+local function validate_wrapper_input(filter_info, filter_opts, input_opts, output_opts)
     vim.validate("filter_info", filter_info, "table")
     vim.validate("filter_info.insensitive_func", filter_info.insensitive_func, "callable")
     vim.validate("filter_info.name", filter_info.name, { "nil", "string" })
@@ -130,11 +125,21 @@ local function clean_wrapper_input(filter_info, filter_opts, input_opts, output_
 
     vim.validate("filter_opts", filter_opts, "table")
     vim.validate("filter_opts.keep", filter_opts.keep, { "boolean", "nil" })
-    filter_opts.keep = filter_opts.keep == nil and true or filter_opts.keep
 
     local eu = require("mjm.error-list-util")
-    eu.validate_input_opts(input_opts)
+    eu._validate_input_opts(input_opts)
     eu._validate_output_opts(output_opts)
+end
+
+--- TODO: Keeping this for now because I don't know how things shake out after the output
+--- validation is broken up
+--- @param filter_info QfRancherFilterInfo
+--- @param filter_opts QfRancherFilterOpts
+--- @param input_opts QfRancherInputOpts
+--- @param output_opts QfRancherOutputOpts
+--- @return nil
+local function clean_wrapper_input(filter_info, filter_opts, input_opts, output_opts)
+    filter_opts.keep = filter_opts.keep == nil and true or filter_opts.keep
 end
 
 --- @param filter_info QfRancherFilterInfo
@@ -143,6 +148,11 @@ end
 --- @param output_opts QfRancherOutputOpts
 --- @return nil
 function M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
+    filter_info = filter_info or {}
+    filter_opts = filter_opts or {}
+    input_opts = input_opts or {}
+    output_opts = output_opts or {}
+    validate_wrapper_input(filter_info, filter_opts, input_opts, output_opts)
     clean_wrapper_input(filter_info, filter_opts, input_opts, output_opts)
 
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
@@ -521,8 +531,8 @@ function M.register_filter(filter_info)
     filters[filter_info.name] = filter_info
 end
 
---- @param name string
 --- Clears the function name from the registered sorts
+--- @param name string
 function M.clear_filter(name)
     if #vim.tbl_keys(filters) <= 1 then
         vim.api.nvim_echo({ { "Cannot remove the last filter method" } }, false, {})
@@ -532,11 +542,6 @@ function M.clear_filter(name)
     filters[name] = nil
 end
 
---- @param filter_info QfRancherFilterInfo
---- @param filter_opts QfRancherFilterOpts
---- @param input_opts QfRancherInputOpts
---- @param output_opts QfRancherOutputOpts
---- @return nil
 --- Run a filter without registering it
 --- filter_info:
 --- - name? string - The display name of your filter
@@ -553,6 +558,11 @@ end
 --- - action? "new"|"replace"|"add" - Create a new list, replace a pre-existing one, or add a new
 ---     one
 --- - is_loclist? boolean - Whether to filter against a location list
+--- @param filter_info QfRancherFilterInfo
+--- @param filter_opts QfRancherFilterOpts
+--- @param input_opts QfRancherInputOpts
+--- @param output_opts QfRancherOutputOpts
+--- @return nil
 function M.adhoc_filter(filter_info, filter_opts, input_opts, output_opts)
     M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
 end

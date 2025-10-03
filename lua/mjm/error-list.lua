@@ -11,11 +11,11 @@
 ---
 --- @class QfRancherOutputOpts
 --- @field action? QfRancherAction
---- @field count? integer
---- @field is_loclist? boolean
+--- @field count? integer|nil
+--- @field is_loclist? boolean|nil
 --- @field loclist_source_win? integer
---- @field list_item_type? string
---- @field title? string
+--- @field list_item_type? string|nil
+--- @field title? string|nil
 
 --- https://github.com/tjdevries/lazy-require.nvim/blob/master/lua/lazy-require.lua
 --- @param require_path string
