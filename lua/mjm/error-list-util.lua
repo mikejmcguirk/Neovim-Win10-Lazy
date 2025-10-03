@@ -650,7 +650,6 @@ end
 --- @return integer
 function M._get_dest_list_nr(getlist, output_opts)
     output_opts = output_opts or {}
-
     if vim.g.qf_rancher_debug_assertions then
         M._validate_output_opts(output_opts)
     end
@@ -776,9 +775,12 @@ function M.set_list_items(set_opts, output_opts)
         )
         setlist({}, "u", new_list)
     elseif dest_list_nr == max_list_nr then
+        --- TODO: I think this is right but it's unclear
         local new_list =
             { items = set_opts.new_items, nr = dest_list_nr, title = output_opts.title }
         setlist({}, " ", new_list)
+        --- TODO: incredibly hacky
+        dest_list_nr = getlist({ nr = "$" }).nr
     else
         M.cycle_lists_down(getlist, setlist, dest_list_nr)
         local new_list =
@@ -796,10 +798,10 @@ function M.set_list_items(set_opts, output_opts)
         return
     end
 
-    --- TODO: add a silent option to qhistory and lhistory so we can make moves in commands like
-    --- this without getting nags
+    --- TODO: This does not necessarily need to be run all the time I don't think
     require("mjm.error-list-stack")._get_gethistory(output_opts.is_loclist)({
         count = dest_list_nr,
+        silent = true,
     })
 end
 

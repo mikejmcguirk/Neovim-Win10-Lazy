@@ -6,8 +6,9 @@ local M = {}
 -------------
 
 --- @class QfRancherHistoryOpts
---- @field count? integer
 --- @field always_open? boolean
+--- @field count? integer
+--- @field silent? boolean
 
 -------------------
 --- Module Data ---
@@ -78,19 +79,26 @@ end
 --- NOTE: For chistory and lhistory, a zero and one count behave the same
 --- In order to reduce conditional logic, treat counts below 1 here as invalid, using a nil
 --- count to run history simply as a listing
+---
+
+--- @param hist_opts QfRancherHistoryOpts
+local function validate_history_opts(hist_opts)
+    if vim.g.qf_rancher_debug_assertions then
+        vim.validate("hist_opts", hist_opts, "table")
+        vim.validate("hist_opts.always_open", hist_opts.always_open, { "boolean", "nil" })
+        vim.validate("hist_opts.silent", hist_opts.silent, { "boolean", "nil" })
+        vim.validate("hist_opts.count", hist_opts.count, { "nil", "number" })
+        if type(hist_opts.count) == "number" then
+            require("mjm.error-list-util")._validate_count(hist_opts.count)
+        end
+    end
+end
 
 --- @param opts QfRancherHistoryOpts
 --- @return nil
 function M._q_history(opts)
     opts = opts or {}
-    if vim.g.qf_rancher_debug_assertions then
-        vim.validate("opts", opts, "table")
-        vim.validate("opts.always_open", opts.always_open, { "boolean", "nil" })
-        vim.validate("opts.count", opts.count, { "nil", "number" })
-        if type(opts.count) == "number" then
-            require("mjm.error-list-util")._validate_count(opts.count)
-        end
-    end
+    validate_history_opts(opts)
 
     local stack_len = vim.fn.getqflist({ nr = "$" }).nr --- @type integer
     if stack_len < 1 then
@@ -101,7 +109,9 @@ function M._q_history(opts)
     --- @type integer|nil
     local adj_count = opts.count > 0 and math.min(opts.count, stack_len) or nil
     local cur_list_nr = vim.fn.getqflist({ nr = 0 }).nr --- @type integer
-    vim.api.nvim_cmd({ cmd = "chistory", count = adj_count }, {})
+    local silent = opts.silent and true or false
+    ---@diagnostic disable-next-line: missing-fields
+    vim.api.nvim_cmd({ cmd = "chistory", count = adj_count, mods = { silent = silent } }, {})
 
     local eo = require("mjm.error-list-open") --- @type QfRancherOpen
     if cur_list_nr ~= adj_count then
@@ -191,14 +201,7 @@ end
 --- @return nil
 function M._l_history(opts)
     opts = opts or {}
-    if vim.g.qf_rancher_debug_assertions then
-        vim.validate("opts", opts, "table")
-        vim.validate("opts.always_open", opts.always_open, { "boolean", "nil" })
-        vim.validate("opts.count", opts.count, { "nil", "number" })
-        if type(opts.count) == "number" then
-            require("mjm.error-list-util")._validate_count(opts.count)
-        end
-    end
+    validate_history_opts(opts)
 
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id --- @type integer
@@ -216,7 +219,9 @@ function M._l_history(opts)
     --- @type integer|nil
     local adj_count = opts.count > 0 and math.min(opts.count, stack_len) or nil
     local cur_list_nr = vim.fn.getloclist(cur_win, { nr = 0 }).nr --- @type integer
-    vim.api.nvim_cmd({ cmd = "lhistory", count = adj_count }, {})
+    local silent = opts.silent and true or false
+    ---@diagnostic disable-next-line: missing-fields
+    vim.api.nvim_cmd({ cmd = "lhistory", count = adj_count, mods = { silent = silent } }, {})
 
     local eo = require("mjm.error-list-open") --- @type QfRancherOpen
     if cur_list_nr ~= adj_count then
