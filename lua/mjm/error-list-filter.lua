@@ -568,3 +568,9 @@ function M.adhoc_filter(filter_info, filter_opts, input_opts, output_opts)
 end
 
 return M
+
+------------
+--- TODO ---
+------------
+
+--- Make a filer for only valid error lines. (buf_is_valid or fname_is_valid) and (lnum or pattern)

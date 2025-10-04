@@ -514,14 +514,8 @@ end
 --- @param table string[]
 --- @return nil
 --- TODO: There is a bespoke version of this out there somewhere
-function M._check_str_list(table)
-    if type(table) ~= "table" then
-        return false
-    end
-
-    assert(type(table) == "table", "List is not a table")
-    assert(#table > 0, "Table has no entries")
-
+function M._is_valid_str_list(table)
+    vim.validate("table", table, "table")
     for k, v in ipairs(table) do
         assert(type(k) == "number", "Key " .. vim.inspect(k) .. " is not a number")
         assert(type(v) == "string", "Item " .. vim.inspect(v) .. " is not a string")
@@ -532,7 +526,12 @@ end
 
 --- @param action QfRancherAction
 --- @return nil
-function M._validate_action(action) end
+function M._validate_action(action)
+    vim.validate("action", action, "string")
+    vim.validate("action", action, function()
+        return action == "new" or action == "replace" or action == "add"
+    end)
+end
 
 --- @param input_type QfRancherInputType
 --- @return boolean
