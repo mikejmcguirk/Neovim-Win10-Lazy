@@ -35,19 +35,20 @@ local function create_add_list_what(old_all, new_what)
     return vim.tbl_extend("force", new_what, add_what)
 end
 
---- @param list_nr integer
+--- @param what QfRancherWhat
 --- @return nil
-local function cycle_lists_down(win, list_nr)
+local function cycle_lists_down(what)
     if vim.g.qf_rancher_debug_assertions then
-        local ev = require("mjm.error-list-validation")
-        ev._validate_win(win, true)
-        ev._validate_list_nr(list_nr, false)
-        assert(list_nr <= M._get_list_stack_len(win))
+        require("mjm.error-list-validation")._validate_what_strict(what)
     end
 
-    for i = 1, list_nr - 1 do
-        local next_list = M._get_list(win, i + 1, { all = true })
-        M._set_list(win, i, "replace", next_list)
+    for i = 1, what.nr - 1 do
+        local next_list = M._get_list(what.user_data.list_win, i + 1, { all = true })
+        local next_what = vim.tbl_deep_extend("force", next_list, {
+            user_data = { action = "replace" },
+            nr = i,
+        })
+        M._set_list(next_what)
     end
 end
 
@@ -82,15 +83,12 @@ end
 --- TODO: The code needs to be strict about the fact that the "$" list nr is only to be used for
 --- internal purposes, and not within the general business logic
 
-local function validate_set_list(win, list_nr, action, what)
+local function validate_set_list(what)
     local ev = require("mjm.error-list-validation")
-    ev._validate_win(win, true)
-    ev._validate_list_nr(list_nr, false)
-    ev._validate_action(action)
     ev._validate_what_strict(what)
+    --- TODO: Add new validation here for the what user_data section
     vim.validate("what.id", what.id, "nil")
     vim.validate("what.lines", what.lines, "nil")
-    vim.validate("what.nr", what.nr, "nil")
 end
 
 ------------------
@@ -133,36 +131,37 @@ end
 --- @param win integer|nil
 --- @param list_nr integer
 --- @param action QfRancherAction
---- @param what vim.fn.setqflist.what
+--- @param what QfRancherWhat
 --- @return integer
-function M._set_list(win, list_nr, action, what)
+function M._set_list(what)
     what = what or {}
-    validate_set_list(win, list_nr, action, what)
+    validate_set_list(what)
 
-    local stack_len = M._get_list_stack_len(win) --- @type integer
+    local stack_len = M._get_list_stack_len(what.user_data.win) --- @type integer
     if stack_len == 0 then
-        return do_set_list(win, "$", " ", what)
+        return do_set_list(what.user_data.win, "$", " ", what)
     end
 
     local what_set = vim.deepcopy(what, true) --- @type vim.fn.setqflist.what
-    local set_list_nr = list_nr == 0 and M._get_cur_stack_nr(win) or list_nr --- @type integer
+    --- @type integer
+    local set_list_nr = what.nr == 0 and M._get_cur_stack_nr(what.user_data.list_win) or what.nr
     set_list_nr = math.min(set_list_nr, stack_len) --- @type integer
 
-    if action == "new" and set_list_nr < stack_len then
-        cycle_lists_down(win, set_list_nr)
-        return do_set_list(win, set_list_nr, "r", what_set)
+    if what.user_data.action == "new" and set_list_nr < stack_len then
+        cycle_lists_down(what.user_data.list_win, set_list_nr)
+        return do_set_list(what.user_data.list_win, set_list_nr, "r", what_set)
     end
 
-    if action == "add" then
-        local cur_list = M._get_list(win, set_list_nr, { all = true }) --- @type table
+    if what.user_data.action == "add" then
+        local cur_list = M._get_list(what.user_data.list_win, set_list_nr, { all = true }) --- @type table
         what_set = create_add_list_what(cur_list, what_set)
     end
 
-    if action == "add" or action == "replace" then
-        return do_set_list(win, set_list_nr, "r", what_set)
+    if what.user_data.action == "add" or what.user_data.action == "replace" then
+        return do_set_list(what.user_data.list_win, set_list_nr, "r", what_set)
     end
 
-    return do_set_list(win, "$", " ", what_set)
+    return do_set_list(what.user_data.list_win, "$", " ", what_set)
 end
 
 --- LOW: Create a type and validation for the getqflist return
@@ -226,11 +225,20 @@ end
 
 return M
 
+------------
+--- TODO ---
+------------
+
+--- Add a what userdata option to save and restore the view of the current list_win
+
 -----------
 --- MID ---
 -----------
 
 --- Tighter validation for qf entries. Issue is how to handle multi-line errors like from compilers
+--- The view should have a functionality similar to the filter view saving, where the idx and
+--- view can be moved up based on the change in list size. The problem is knowing which rows were
+--- removed above the row/idx, which I'm not sure you can do without re-comparing the lists
 
 ----------
 --- PR ---

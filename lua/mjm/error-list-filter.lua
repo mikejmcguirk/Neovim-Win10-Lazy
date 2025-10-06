@@ -162,12 +162,7 @@ function M.filter_wrapper(filter_info, filter_opts, input_opts, what)
         title = "Filter", --- TODO: Improve title
     }) --- @type QfRancherWhat
 
-    et._set_list(
-        what_set.user_data.list_win,
-        what_set.user_data.nr,
-        what_set.user_data.action,
-        what_set
-    )
+    et._set_list(what_set)
 end
 
 -----------------------

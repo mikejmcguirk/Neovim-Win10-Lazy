@@ -79,14 +79,13 @@ local function handle_output(obj, what)
         table.sort(qf_dict, require("mjm.error-list-sort")._sort_fname_asc)
     end
 
-    local et = require("mjm.error-list-tools") --- @type QfRancherTools
-    local new_what = et._create_what_table({
+    local what_set = vim.tbl_deep_extend("force", what, {
         items = qf_dict.items,
         title = what.title,
-    }) --- @type vim.fn.setqflist.what
-    local what_set = vim.tbl_deep_extend("keep", new_what, what)
+    }) --- @type QfRancherWhat
 
-    et._set_list(what.user_data.list_win, what.nr, what.user_data.action, what_set)
+    local et = require("mjm.error-list-tools") --- @type QfRancherTools
+    et._set_list(what_set)
 
     -- TODO: There should be an output opts function that handles opening the list afterwards
     -- So like, see if it's open, maybe resize it, do history to move to the right one, and

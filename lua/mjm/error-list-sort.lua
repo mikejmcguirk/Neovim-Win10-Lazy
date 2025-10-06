@@ -101,7 +101,7 @@ local function sort_wrapper(sort_info, sort_opts, what)
         title = cur_list.title,
         user_data = { diag_sort = true },
     })
-    et._set_list(what_set.user_data.list_win, what_set.nr, what_set.user_data.action, what_set)
+    et._set_list(what_set)
 
     -- if list_win and view then
     --     vim.api.nvim_win_call(list_win, function()

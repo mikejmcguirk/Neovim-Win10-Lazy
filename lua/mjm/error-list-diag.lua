@@ -142,14 +142,13 @@ local function diags_to_list(diag_info, diag_opts, what)
     table.sort(converted_diags, require("mjm.error-list-sort")._sort_fname_diag_asc)
 
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
-    local what = et._create_what_table({
+    local what_set = vim.tbl_deep_extend("force", what, {
         items = converted_diags,
         title = "vim.diagnostic.get()",
         user_data = { diag_sort = true },
-    }) --- @type vim.fn.setqflist.what
+    }) --- @type QfRancherWhat
 
-    local set_win = what.use_loclist and cur_win or nil --- @type integer|nil
-    et._set_list(set_win, what.count, what.action, what)
+    et._set_list(what_set)
 end
 
 local diag_queries = {
