@@ -1,29 +1,8 @@
 --- @class QfRancherUtils
 local M = {}
 
---- @param count integer
---- @return nil
-function M._validate_count(count)
-    vim.validate("count", count, "number")
-    vim.validate("count", count, function()
-        return count >= 0
-    end)
-end
-
---- @param count1 integer
---- @return nil
-function M._validate_count1(count1)
-    vim.validate("count", count1, "number")
-    vim.validate("count", count1, function()
-        return count1 >= 1
-    end)
-end
-
 function M._count_to_count1(count)
-    if vim.g.qf_rancher_debug_assertions then
-        M._validate_count(count)
-    end
-
+    require("mjm.error-list-validation")._validate_count(count)
     return math.max(count, 1)
 end
 
@@ -89,7 +68,7 @@ end
 --- @param output_opts QfRancherOutputOpts
 --- @return nil
 function M._is_valid_loclist_output(output_opts)
-    if not output_opts.is_loclist then
+    if not output_opts.use_loclist then
         return true
     end
 
@@ -200,7 +179,7 @@ function M._find_list_win(output_opts)
         M._validate_output_opts(output_opts)
     end
 
-    if output_opts.is_loclist then
+    if output_opts.use_loclist then
         --- @type integer
         local win = output_opts.loclist_source_win or vim.api.nvim_get_current_win()
         return M._find_loclist_win(win)
@@ -333,7 +312,7 @@ function M._get_getlist(output_opts)
         M._validate_output_opts(output_opts)
     end
 
-    if not output_opts.is_loclist then
+    if not output_opts.use_loclist then
         return vim.fn.getqflist
     end
 
@@ -431,7 +410,7 @@ function M._get_setlist(output_opts)
         M._validate_output_opts(output_opts)
     end
 
-    if not output_opts.is_loclist then
+    if not output_opts.use_loclist then
         return vim.fn.setqflist
     end
 
@@ -467,6 +446,8 @@ local function get_qf_key(entry)
     local col = tostring(entry.col or 0)
     return fname .. ":" .. lnum .. ":" .. col
 end
+
+--- MAYBE: Move into tools file
 
 --- @param a table
 --- @param b table
@@ -522,17 +503,6 @@ function M._is_valid_str_list(table)
     end
 end
 
---- TODO: Obvious cut point - Put the validations into their own file
-
---- @param action QfRancherAction
---- @return nil
-function M._validate_action(action)
-    vim.validate("action", action, "string")
-    vim.validate("action", action, function()
-        return action == "new" or action == "replace" or action == "add"
-    end)
-end
-
 --- @param input_type QfRancherInputType
 --- @return boolean
 function M.validate_input_type(input_type)
@@ -560,9 +530,7 @@ function M._validate_input_opts(input_opts)
     end
 end
 
--- TODO: Need to change this so that the cleaning doesn't actualy happen here. Because this
--- function is re-used so much, only want to ensure state is correct. Cleanup should be its own
--- thing
+--- TODO: Move this to validations if the "output_opts" construct is still around
 
 --- @param output_opts QfRancherOutputOpts
 --- @return nil
@@ -576,7 +544,7 @@ function M._validate_output_opts(output_opts)
     end)
 
     vim.validate("output_opts.count", output_opts.count, { "nil", "number" })
-    vim.validate("output_opts.is_loclist", output_opts.is_loclist, { "nil", "boolean" })
+    vim.validate("output_opts.is_loclist", output_opts.use_loclist, { "nil", "boolean" })
     vim.validate(
         "output_opts.loclist_source_win",
         output_opts.loclist_source_win,
@@ -594,7 +562,7 @@ function M._clean_output_opts(output_opts)
     --- TODO: Need to look at how this is used and see if it's correct. I think the idea is
     --- everything pipes into set_items, but there are ex_cmds where we want nil counts
     output_opts.count = output_opts.count or 0
-    output_opts.is_loclist = output_opts.is_loclist == nil and false or output_opts.is_loclist
+    output_opts.use_loclist = output_opts.use_loclist == nil and false or output_opts.use_loclist
     --- TODO: Unsure if this is correct. If we want to manually set a source win, we can obviously
     --- do that on top of this, but that then makes this wasteful
     output_opts.loclist_source_win = output_opts.loclist_source_win == nil
@@ -664,222 +632,6 @@ function M._get_dest_list_nr(getlist, output_opts)
     end
 
     return getlist({ nr = "$" }).nr
-end
-
---- TODO:
---- if we don't provide an old list, then return a what table with the new list items, and the
---- title set to what's in output opts
---- If an old list is provided, then we do the metadata merging below
---- The reason for merging both into one function is because looking at the code and trying to
---- decide which function to use is confusing and adds boilerplate
---- On the other hand "get_new_what" and "get_add_what" might be perfectly fine
---- The issue is the amount of data
---- Just passing the old list as one of the vars is correct
---- Another source of confusion here is the new list nr. This function is saying, "let's take
---- a new list and merge it with an old one. Let's return the what table we need to merge them"
---- And this function does that by making decisions about which data to keep from the old list
---- and which data to keep from the old one
---- Part of the problem is a bad data representation on the part of Vim. When you run getlist,
---- you get an individual list that hold sthe list_nr. But that list_nr doesn't belong to the list,
---- it belongs to the stack, but there is no way to get the stack level info. You have to get
---- pieces of the stack level info by getting the individual lists
---- This I think is a big part of what is throwing me for loops when writing this, and something
---- to maybe deal with using abstractions
---- Theoretically, "nr" would not be part of the list info table. The setlist code would be like:
---- setqflist(list_nr, list_data)
---- setloclist(qf_id, list_nr, list_data)
---- (This actually gets into yet another issue, which is how setloclist is identified by win
---- instead of qf_id, with qf_id as a subfield. Even worse is this is not how loclists work
---- internally. Internally. Loclists are identified by a reference, and you check wins to see
---- if they hold that reference. The functional representation is backwards from the internals)
---- Part of me knows that making a new list-tools module and trying to create syntactic sugar
---- on top of the vim.fns is going to have unforeseen consequences. But dealing with the
---- contorted data representations offered for the lists has also been the most consistent source
---- of boilerplate and logical confusion. And the ftplugin code and dealing with orphans still
---- looms. I also think that, since getting and setting lists does not run in hot paths, we have
---- a lot of flexibilty to write code that prioritizes data managment
---- The other thing is, rather than doing a bunch of if checking inline to map my actions to
---- the vim.fn actions, the tools would handle that
---- So basically what you need is this function:
---- _set_qflist(list_nr, rancher_action, what)
---- But there's still more conceptual confusion to unwind about the what table
---- DEFAULT ACTIONS:
---- - a: straight up miss on my part. It might be easier to use this then sort it. But need to
---- test to see what metadata is preserved
---- - r/u: AFAIK this only replaces the items by default, so we need to pass in context manually
---- - f: mass clear. Should be a separate function with close added in
---- - " " - This is the new list creation. This is only useful if you have your list_nr set to
---- "$", because it shuffles everything down in the background. Otherwise, if you place in the
---- middle of the list, it frees everything after
---- One data note - For my data representation, we should stick with only dealing with list_nrs
---- numerically. We can convert to "$" in the set step. One thing that's weird is the set nrs and
---- the list length. Saying list len 0 is empty is fine, and avoids unnecessary difference with the
---- defaults. But then how do we handle destination numbers? The inputs for destination numbers
---- are going to be counts from 0 to intmax. High numbers can be reduced silently. You can treat
---- 0 as "end of list", which matches with how cmds and maps will work, but that creates problems
---- with commands where nil is different from zero. I think though what I started with in the
---- stack module is correct, which is that we should treat count cleanly for as long as possible,
---- only resolving the meaning of zero where it needs to be resolved, rather than trying to play
---- with it early. Because then it's easy for any util function to assume "if the user passed in
---- zero, I'm going to get it without issues" and handle as needed. This would also mean, in the
---- broader code, not allowing nil counts. Which would require changes but I think makes
---- assumptions that are easier to reason about
---- TODO: Need to go through the what keys. Broad thoughts are nr belongs to the stack,
---- textfunc and lines need to be separate utils (setqflist being for both setting and
---- conversion is confusing). Unsure how to handle id. context/idx/items/lines/title belong to
---- the individual list
-
---- @param old_list table
---- @param opts? {new_list_nr?: integer|string, new_list_items?: table[], new_title?:string}
---- @return table
-local function get_what_tbl(old_list, opts)
-    opts = opts or {}
-    vim.validate("old_list", old_list, "table")
-    vim.validate("opts", opts, { "nil", "table" })
-    vim.validate("opts.new_list_nr", opts.new_list_nr, { "nil", "number", "string" })
-    vim.validate("opts.new_list_items", opts.new_list_items, { "nil", "table" })
-    vim.validate("opts.new_title", opts.new_title, { "nil", "string" })
-
-    local items = opts.new_list_items or old_list.items
-    local list_nr = opts.new_list_nr or old_list.nr
-    local title = opts.new_title or old_list.title
-
-    return {
-        context = old_list.context,
-        idx = old_list.idx,
-        items = items,
-        nr = list_nr,
-        quickfixtextfunc = old_list.quickfixtextfunc,
-        title = title,
-    }
-end
-
---- @param getlist function
---- @param setlist function
---- @param start_list_nr integer|string
---- @return nil
-function M.cycle_lists_down(getlist, setlist, start_list_nr)
-    vim.validate("getlist", getlist, "callable")
-    vim.validate("setlist", setlist, "callable")
-    vim.validate("start_list_nr", start_list_nr, "number")
-    vim.validate("start_list_nr", start_list_nr, function()
-        return start_list_nr >= 1
-    end)
-
-    local max_nr = getlist({ nr = "$" }).nr --- @type integer
-    assert(start_list_nr <= max_nr)
-
-    for i = start_list_nr, 2, -1 do
-        local list = getlist({ nr = i, all = true }) --- @type table
-        local new_list = get_what_tbl(list, { new_list_nr = i - 1 })
-        setlist({}, "r", new_list)
-    end
-end
-
---- @class QfRancherSetOpts
---- @field getlist? function
---- @field setlist? function
---- @field new_items table[]
-
---- @param set_opts QfRancherSetOpts
---- @param output_opts QfRancherOutputOpts
---- @return nil
-function M._set_list_items(set_opts, output_opts)
-    set_opts = set_opts or {}
-    output_opts = output_opts or {}
-
-    if vim.g.qf_rancher_debug_assertions then
-        vim.validate("set_opts", set_opts, "table")
-        vim.validate("set_opts.new_items", set_opts.new_items, "table")
-        vim.validate("set_opts.getlist", set_opts.getlist, { "callable", "nil" })
-        vim.validate("set_opts.setlist", set_opts.setlist, { "callable", "nil" })
-
-        M._validate_output_opts(output_opts)
-    end
-
-    local dest_list_nr = M._get_dest_list_nr(set_opts.getlist, output_opts)
-
-    --- Cases:
-    --- - List is empty. Must be a new append
-    --- - Therefore, we know that all remaining cases must have at least one listnr
-    --- - Replace, overwrite an old list
-    --- - Merge, get, merge, then overwrite an old list
-    --- - New at end - Use built-in logic for append
-    --- - New in middoe - Bespoke logic to insert within
-
-    --- TODO: Really bad chained else statement, because the logic is hard to follow
-    -- TODO: Basically trying to address that if we have an empty list, the action doesn't matter
-    -- and we're just making a new one. But then we kinda repeat the logic in the new case
-    -- Feels hacky right now
-    --
-    local max_list_nr = set_opts.getlist({ nr = "$" }).nr
-
-    if output_opts.action == "add" then
-        --- TODO: It feels more organized here to make a seprate new_list var, then use this
-        --- check simply to merge the lists, knowing we'll add in later
-        --- TODO: I "know" what get_new_list does, but it is intuitively unclear. There is also
-        --- a confusion in here where, the purpose of this function really is to resolve how
-        --- setlist is done relative to the action. But there is a second thread of logic in here
-        --- about determining the "what" table, which is a non-trivial amount of boilerplate
-        --- NOTE: We simply have to assume here that calling functions know the sort is performed
-        --- here and don't do one redundantly
-        --- TODO: This does not properly handle diagnostics. I guess you could have a field in
-        --- output_opts that says if the output list is supposed to be diagnostics
-        --- TODO: This is also awkward if we're coming in from a sort. Probably need to have a
-        --- sort predicate in the output opts, which is a lot but it will work
-        local old_list = set_opts.getlist({ nr = dest_list_nr, all = true })
-        local new_list_items = M._merge_qf_lists(old_list.items, set_opts.new_items)
-        table.sort(new_list_items, require("mjm.error-list-sort")._sort_fname_asc)
-        local new_list = get_what_tbl(
-            old_list,
-            { new_list_items = new_list_items, new_title = output_opts.title }
-        )
-        set_opts.getlist({}, "u", new_list)
-    end
-
-    if output_opts.action == "replace" then
-        local old_list = set_opts.getlist({ nr = dest_list_nr, all = true })
-        local new_list = get_what_tbl(
-            old_list,
-            { new_list_items = set_opts.new_items, new_title = output_opts.title }
-        )
-        set_opts.getlist({}, "r", new_list)
-    elseif output_opts.action == "add" then
-    elseif dest_list_nr == max_list_nr then
-        --- TODO: I think this is right but it's unclear
-        local new_list =
-            { items = set_opts.new_items, nr = dest_list_nr, title = output_opts.title }
-        set_opts.getlist({}, " ", new_list)
-        --- TODO: incredibly hacky
-        dest_list_nr = set_opts.getlist({ nr = "$" }).nr
-    else
-        M.cycle_lists_down(set_opts.getlist, set_opts.getlist, dest_list_nr)
-        local new_list =
-            { items = set_opts.new_items, nr = dest_list_nr, title = output_opts.title }
-        set_opts.getlist({}, "r", new_list)
-    end
-
-    local what = { items = set_opts.new_items, nr = "$", title = output_opts.title }
-    set_opts.getlist({}, " ", what)
-
-    --- TODO: This needs to be outlined
-    -- if not vim.g.qf_rancher_auto_open_changes then
-    --     return
-    -- end
-    --
-    -- M._get_openlist(output_opts.is_loclist)({ always_resize = true })
-    -- local cur_list = set_opts.getlist({ nr = 0 }).nr
-    -- if cur_list == dest_list_nr then
-    --     return
-    -- end
-    --
-    -- --- TODO: This does not necessarily need to be run all the time I don't think
-    -- require("mjm.error-list-stack")._get_gethistory(output_opts.is_loclist)({
-    --     count = dest_list_nr,
-    --     silent = true,
-    -- })
-
-    --- TODO: Should return the dest_list_nr so the caller can open it
 end
 
 return M

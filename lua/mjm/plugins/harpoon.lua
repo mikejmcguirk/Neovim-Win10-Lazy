@@ -21,7 +21,7 @@ harpoon:setup({
                 return
             end
 
-            if not vim.uv.fs_stat(list_item.value) then
+            if not vim.uv.fs_access(list_item.value, 4) then
                 vim.notify(list_item.value .. " not found", vim.log.levels.WARN)
                 return
             end

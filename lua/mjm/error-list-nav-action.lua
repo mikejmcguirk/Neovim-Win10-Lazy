@@ -25,7 +25,7 @@ end
 --- @param arithmetic function
 --- @return integer|nil
 local function get_qf_new_idx(count1, arithmetic)
-    require("mjm.error-list-util")._validate_count1(count1)
+    require("mjm.error-list-validation")._validate_count1(count1)
     vim.validate("arithmetic", arithmetic, "callable")
 
     local size = get_cur_qf_list_size() --- @type integer
@@ -86,7 +86,7 @@ end
 --- @return nil
 -- Meant for cmd mapping only
 function M._q_q(count)
-    require("mjm.error-list-util")._validate_count(count)
+    require("mjm.error-list-validation")._validate_count(count)
 
     local size = get_cur_qf_list_size() --- @type integer
     if size < 1 then
@@ -111,8 +111,7 @@ end
 --- @param count integer
 --- @return nil
 function M._q_rewind(count)
-    require("mjm.error-list-util")._validate_count(count)
-
+    require("mjm.error-list-validation")._validate_count(count)
     if get_cur_qf_list_size() >= 1 then
         local adj_count = count >= 1 and count or nil --- @type integer|nil
         vim.api.nvim_cmd({ cmd = "crewind", count = adj_count }, {})
@@ -122,8 +121,7 @@ end
 --- @param count integer
 --- @return nil
 function M._q_last(count)
-    require("mjm.error-list-util")._validate_count(count)
-
+    require("mjm.error-list-validation")._validate_count(count)
     if get_cur_qf_list_size() >= 1 then
         local adj_count = count >= 1 and count or nil --- @type integer|nil
         vim.api.nvim_cmd({ cmd = "clast", count = adj_count }, {})
@@ -136,7 +134,7 @@ end
 --- @return nil
 local function file_nav_wrap(count1, cmd, backup_cmd)
     if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-util")._validate_count1(count1)
+        require("mjm.error-list-validation")._validate_count1(count1)
         vim.validate("cmd", cmd, "string")
         vim.validate("backup_cmd", backup_cmd, "string")
     end
@@ -210,7 +208,7 @@ end
 --- @param arithmetic function
 --- @return integer|nil
 local function get_ll_new_idx(count1, arithmetic)
-    require("mjm.error-list-util")._validate_count1(count1)
+    require("mjm.error-list-validation")._validate_count1(count1)
 
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     --- @type integer|nil, integer|nil, integer|nil
@@ -251,7 +249,7 @@ end
 --- @param count integer
 --- @return nil
 function M._l_l(count)
-    require("mjm.error-list-util")._validate_count(count)
+    require("mjm.error-list-validation")._validate_count(count)
 
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     --- @type integer|nil, integer|nil, integer|nil
@@ -277,7 +275,7 @@ end
 --- @param count integer
 --- @return nil
 function M._l_rewind(count)
-    require("mjm.error-list-util")._validate_count(count)
+    require("mjm.error-list-validation")._validate_count(count)
 
     --- @type integer|nil, integer|nil, integer|nil
     local qf_id, cur_stack_nr, size = _get_cur_ll_info()
@@ -292,7 +290,7 @@ end
 --- @param count integer
 --- @return nil
 function M._l_last(count)
-    require("mjm.error-list-util")._validate_count(count)
+    require("mjm.error-list-validation")._validate_count(count)
 
     --- @type integer|nil, integer|nil, integer|nil
     local qf_id, cur_stack_nr, size = _get_cur_ll_info()

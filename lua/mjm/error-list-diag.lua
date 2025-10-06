@@ -43,7 +43,7 @@ end
 local severity_map = require("mjm.error-list-util")._severity_map ---@type table<integer, string>
 
 ---@param d vim.Diagnostic
----@return table
+---@return vim.quickfix.entry
 local function convert_diag(d)
     d = d or {}
 
@@ -134,7 +134,7 @@ local function diags_to_list(diag_info, diag_opts, output_opts)
     end
 
     --- @type integer|nil
-    local buf = output_opts.is_loclist and vim.api.nvim_win_get_buf(cur_win) or nil
+    local buf = output_opts.use_loclist and vim.api.nvim_win_get_buf(cur_win) or nil
     local getopts = get_getopts(diag_info, diag_opts) --- @type vim.diagnostic.GetOpts
 
     local raw_diags = vim.diagnostic.get(buf, getopts) --- @type vim.Diagnostic[]
@@ -147,12 +147,18 @@ local function diags_to_list(diag_info, diag_opts, output_opts)
         raw_diags = filter_diags_top_severity(raw_diags)
     end
 
-    local converted_diags = vim.tbl_map(convert_diag, raw_diags) ---@type table[]
+    local converted_diags = vim.tbl_map(convert_diag, raw_diags) ---@type vim.quickfix.entry[]
     table.sort(converted_diags, require("mjm.error-list-sort")._sort_fname_diag_asc)
-    --- @type QfRancherSetOpts
-    local set_opts = { getlist = getlist, setlist = setlist, new_items = converted_diags }
-    output_opts.title = "vim.diagnostic.get()"
-    eu._set_list_items(set_opts, output_opts)
+
+    local et = require("mjm.error-list-tools") --- @type QfRancherTools
+    local what = et._create_what_table({
+        items = converted_diags,
+        title = "vim.diagnostic.get()",
+        user_data = { diag_sort = true },
+    }) --- @type vim.fn.setqflist.what
+
+    local set_win = output_opts.use_loclist and cur_win or nil --- @type integer|nil
+    et._set_list(set_win, output_opts.count, output_opts.action, what)
 end
 
 local diag_queries = {
@@ -205,7 +211,7 @@ local function make_diag_cmd(cargs, is_loclist)
         end
     end
 
-    local output_opts = { action = action, is_loclist = is_loclist } --- @type QfRancherOutputOpts
+    local output_opts = { action = action, use_loclist = is_loclist } --- @type QfRancherOutputOpts
 
     local name = "hint" --- @type string
     local names = vim.tbl_keys(diag_queries) --- @type string[]

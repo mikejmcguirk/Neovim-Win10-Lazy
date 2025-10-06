@@ -28,7 +28,7 @@ local no_ll_stack = "Loclist stack is empty" --- @type string
 --- @return vim.fn.setqflist.what
 local function get_del_list_data(count)
     if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-util")._validate_count(count)
+        require("mjm.error-list-validation")._validate_count(count)
     end
 
     return { context = {}, idx = 0, items = {}, nr = count, title = "" }
@@ -46,7 +46,7 @@ end
 --- @return nil
 local function q_change_history(count1, arithmetic)
     if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-util")._validate_count1(count1)
+        require("mjm.error-list-validation")._validate_count1(count1)
     end
 
     local stack_len = vim.fn.getqflist({ nr = "$" }).nr --- @type integer
@@ -89,7 +89,7 @@ local function validate_history_opts(hist_opts)
         vim.validate("hist_opts.silent", hist_opts.silent, { "boolean", "nil" })
         vim.validate("hist_opts.count", hist_opts.count, { "nil", "number" })
         if type(hist_opts.count) == "number" then
-            require("mjm.error-list-util")._validate_count(hist_opts.count)
+            require("mjm.error-list-validation")._validate_count(hist_opts.count)
         end
     end
 end
@@ -126,7 +126,7 @@ end
 --- @param count integer
 --- @return nil
 function M._q_del(count)
-    require("mjm.error-list-util")._validate_count(count)
+    require("mjm.error-list-validation")._validate_count(count)
 
     local stack_len = vim.fn.getqflist({ nr = "$" }).nr --- @type integer
     if stack_len < 1 then
@@ -160,7 +160,7 @@ end
 --- @param arithmetic function
 --- @return nil
 local function l_change_history(count1, arithmetic)
-    require("mjm.error-list-util")._validate_count1(count1)
+    require("mjm.error-list-validation")._validate_count1(count1)
 
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id --- @type integer
@@ -180,7 +180,7 @@ local function l_change_history(count1, arithmetic)
 
     vim.api.nvim_cmd({ cmd = "lhistory", count1 = new_stack_nr }, {})
     local tabpage = vim.api.nvim_win_get_tabpage(cur_win) --- @type integer
-    require("mjm.error-list-open")._resize_llist_by_qf_id_and_tabpage(qf_id, tabpage)
+    require("mjm.error-list-open")._resize_llists_by_qf_id_and_tabpage(qf_id, tabpage)
 end
 
 --- @param count integer
@@ -226,7 +226,7 @@ function M._l_history(opts)
     local eo = require("mjm.error-list-open") --- @type QfRancherOpen
     if cur_list_nr ~= adj_count then
         local tabpage = vim.api.nvim_win_get_tabpage(cur_win)
-        eo._resize_llist_by_qf_id_and_tabpage(qf_id, tabpage)
+        eo._resize_llists_by_qf_id_and_tabpage(qf_id, tabpage)
     end
 
     if opts.always_open then
@@ -237,7 +237,7 @@ end
 --- @param count integer
 --- @return nil
 function M._l_del(count)
-    require("mjm.error-list-util")._validate_count(count)
+    require("mjm.error-list-validation")._validate_count(count)
 
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id --- @type integer
@@ -262,7 +262,7 @@ function M._l_del(count)
 
     if count == 0 or count == cur_stack_nr then
         local tabpage = vim.api.nvim_win_get_tabpage(cur_win) --- @type integer
-        require("mjm.error-list-open")._resize_llist_by_qf_id_and_tabpage(qf_id, tabpage)
+        require("mjm.error-list-open")._resize_llists_by_qf_id_and_tabpage(qf_id, tabpage)
     end
 end
 
@@ -282,7 +282,7 @@ function M._l_del_all()
     end
 
     local tabpage = vim.api.nvim_win_get_tabpage(cur_win) --- @type integer
-    require("mjm.error-list-open")._close_llist_by_qf_id_and_tabpage(qf_id, tabpage)
+    require("mjm.error-list-open")._close_llists_by_qf_id_and_tabpage(qf_id, tabpage)
 end
 
 --- @param is_loclist boolean

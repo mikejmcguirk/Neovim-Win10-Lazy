@@ -171,11 +171,6 @@ function M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
         return
     end
 
-    local setlist = eu._get_setlist(output_opts) --- @type function|nil
-    if not setlist then
-        return
-    end
-
     -- TODO: Redundant with upated set_list_items, but unsure how to get rid of this because
     -- it blocks the unnecessary saving of a view. But, since saving the view is the typical
     -- case, maybe this isn't worth the check. The big issue anyway, AFAIK, is restoring the view
@@ -207,16 +202,21 @@ function M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
     local new_items, view_rows_removed =
         iter_with_predicate(predicate, cur_list.items, pattern, filter_opts.keep, view_row, regex)
 
-    output_opts.title = "Filter" -- TODO: This can be improved
-    eu._set_list_items(
-        { getlist = getlist, setlist = setlist, new_items = new_items },
-        output_opts
-    )
+    local et = require("mjm.error-list-tools") --- @type QfRancherTools
+    local what = et._create_what_table({
+        items = new_items,
+        title = "Filter", --- TODO: Improve title
+    }) --- @type vim.fn.setqflist.what
 
-    if list_win and view then
+    --- TODO: I'm not sure if using current win here is right
+    --- @type integer|nil
+    local set_win = output_opts.use_loclist and vim.api.nvim_get_current_win() or nil
+    et._set_list(set_win, output_opts.count, output_opts.action, what)
+
+    if set_win and view then
         view.topline = math.max(view.topline - view_rows_removed, 0)
         view.lnum = math.max(view.lnum - view_rows_removed, 1)
-        vim.api.nvim_win_call(list_win, function()
+        vim.api.nvim_win_call(set_win, function()
             vim.fn.winrestview(view)
         end)
     end

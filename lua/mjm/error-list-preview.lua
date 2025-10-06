@@ -386,8 +386,8 @@ local function get_preview_buf(bufnr)
 
         local bufname = vim.fn.bufname(bufnr)
         local full_path = vim.fn.fnamemodify(bufname, ":p")
-        -- TODO: Look for places where this is treated like a boolean
-        if vim.fn.filereadable(full_path) == 1 then
+        -- TODO: Replace other filereadable calls with this
+        if vim.uv.fs_access(full_path, 4) then
             return { "Unable to read file " .. full_path }
         end
 
@@ -649,7 +649,7 @@ function M._update_win()
 
     local is_ll = listtype == "loclist"
     -- TODO: Not sure output_opts is correct here but can look
-    local cur_list = eu._get_getlist({ loclist_source_win = qf_win, is_loclist = is_ll })()
+    local cur_list = eu._get_getlist({ loclist_source_win = qf_win, use_loclist = is_ll })()
     if #cur_list < 1 then
         clear_session_data()
         return
@@ -702,7 +702,7 @@ function M.open_preview_win()
 
     local is_ll = listtype == "loclist"
     -- TODO: not sure output opts is correct here but can look
-    local cur_list = eu._get_getlist({ loclist_source_win = qf_win, is_loclist = is_ll })()
+    local cur_list = eu._get_getlist({ loclist_source_win = qf_win, use_loclist = is_ll })()
     if #cur_list < 1 then
         return
     end

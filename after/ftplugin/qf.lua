@@ -519,7 +519,8 @@ local function qf_open_default_dest(list_win, finish)
     if finish == "closeList" then
         elo._close_list_win(list_win)
     elseif total_winnr_pre == 1 then
-        elo._resize_list_win(list_win)
+        --- Killed function
+        -- elo._resize_list_win(list_win)
     end
 
     if finish == "focusList" then
@@ -1140,9 +1141,10 @@ local function qf_split_single_win(list_win, open, finish)
         return
     end
 
-    if open == "split" then
-        elo._resize_list_win(list_win)
-    end
+    -- if open == "split" then
+    --- TODO: killed function
+    -- elo._resize_list_win(list_win)
+    -- end
 
     if finish == "focusList" then
         vim.api.nvim_set_current_win(list_win)

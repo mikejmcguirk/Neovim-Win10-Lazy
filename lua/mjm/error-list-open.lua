@@ -127,59 +127,6 @@ local function restore_views(views)
     end
 end
 
---- MID: It would be better if this were able to account for screenlines
---- TODO: Make a map/command (qP?) that opens the list to max height
---- TODO: this function is confusing come back to it
-
---- @param list_win integer
---- @param is_ll? boolean
---- @return integer
---- This assumes nowrap
-local function get_list_win_height(list_win, is_ll)
-    vim.validate("is_ll", is_ll, { "boolean", "nil" })
-    vim.validate("win", list_win, "number")
-    vim.validate("list_win", list_win, function()
-        return vim.api.nvim_win_is_valid(list_win)
-    end)
-
-    if is_ll == nil then
-        local wintype = vim.fn.win_gettype(list_win)
-        is_ll = wintype == "loclist"
-    end
-
-    local eu = require("mjm.error-list-util")
-    -- TODO: Do we get here with output opts? Might be overly elaborate for this case
-    local getlist = eu._get_getlist({ loclist_source_win = list_win, is_loclist = is_ll })
-    local cur_size = getlist and getlist({ size = true }).size or max_qf_height
-
-    local list_height = math.min(cur_size, max_qf_height)
-    list_height = math.max(list_height, 1)
-    return list_height
-end
-
--- TODO: this function is not clear in terms of what it is for and how it works
-
---- @param list_win integer
---- @param opts? {height?:integer, is_loclist?:boolean}
---- @return nil
-local function resize_list_win(list_win, opts)
-    opts = opts or {}
-    vim.validate("opts.is_ll", opts.is_loclist, { "boolean", "nil" })
-    vim.validate("opts.height", opts.height, { "number", "nil" })
-    vim.validate("win", list_win, "number")
-    vim.validate("list_win", list_win, function()
-        return vim.api.nvim_win_is_valid(list_win)
-    end)
-
-    if opts.is_loclist == nil then
-        local wintype = vim.fn.win_gettype(list_win)
-        opts.is_loclist = wintype == "loclist"
-    end
-
-    local list_height = opts.height or get_list_win_height(list_win, opts.is_loclist)
-    vim.api.nvim_win_set_height(list_win, list_height)
-end
-
 --- @param wins integer[]
 --- @return integer[]
 local function find_ll_wins(wins)
@@ -445,6 +392,19 @@ function M._resize_all_qf_wins()
     end
 end
 
+function M._close_all_qf_wins()
+    local tabpages = vim.api.nvim_list_tabpages()
+    for _, tabpage in ipairs(tabpages) do
+        local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage)
+        for _, win in ipairs(tabpage_wins) do
+            local wintype = vim.fn.win_gettype(win)
+            if wintype == "quickfix" then
+                M._close_list_win(win, { tabpage_wins = tabpage_wins })
+            end
+        end
+    end
+end
+
 --- - always_resize?: If the qf window is already open, it will be resized
 --- - height?: Set the height the list should be sized to
 --- - keep_win?: On completion, return focus to the calling win
@@ -552,7 +512,7 @@ end
 --- @param qf_id integer
 --- @param tabpage integer
 --- @return nil
-function M._resize_llist_by_qf_id_and_tabpage(qf_id, tabpage)
+function M._resize_llists_by_qf_id_and_tabpage(qf_id, tabpage)
     vim.validate("qf_id", qf_id, "number")
     vim.validate("tabpage", tabpage, "number")
 
@@ -563,7 +523,6 @@ function M._resize_llist_by_qf_id_and_tabpage(qf_id, tabpage)
             local w_qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
             if w_qf_id == qf_id then
                 resize_ll_win(win, nil, { tabpage_wins = tabpage_wins })
-                break
             end
         end
     end
@@ -572,7 +531,7 @@ end
 --- @param qf_id integer
 --- @param tabpage integer
 --- @return nil
-function M._close_llist_by_qf_id_and_tabpage(qf_id, tabpage)
+function M._close_llists_by_qf_id_and_tabpage(qf_id, tabpage)
     vim.validate("qf_id", qf_id, "number")
     vim.validate("tabpage", tabpage, "number")
 
@@ -583,9 +542,17 @@ function M._close_llist_by_qf_id_and_tabpage(qf_id, tabpage)
             local w_qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
             if w_qf_id == qf_id then
                 M._close_list_win(win)
-                break
             end
         end
+    end
+end
+
+--- @param qf_id integer
+--- @return nil
+function M._close_all_loclists_by_qf_id(qf_id)
+    local tabpages = vim.api.nvim_list_tabpages()
+    for _, tabpage in ipairs(tabpages) do
+        M._close_llists_by_qf_id_and_tabpage(qf_id, tabpage)
     end
 end
 
@@ -625,30 +592,6 @@ function M._close_list_win(list_win, opts)
     return true
 end
 
---- Used in stack for loclists and used in the ftplugin mappings
-
---- @param list_win integer
---- @return boolean
-function M._resize_list_win(list_win)
-    vim.validate("list_win", list_win, "number")
-    vim.validate("list_win", list_win, function()
-        return vim.api.nvim_win_is_valid(list_win)
-    end)
-
-    vim.validate("list_win", list_win, function()
-        local wintype = vim.fn.win_gettype(list_win)
-        return wintype == "quickfix" or wintype == "loclist"
-    end)
-
-    local win_tabpage = vim.api.nvim_win_get_tabpage(list_win) --- @type integer
-    local wins = vim.api.nvim_tabpage_list_wins(win_tabpage) --- @type integer[]
-    local views = get_views(wins) --- @type vim.fn.winsaveview.ret[]
-    resize_list_win(list_win)
-    restore_views(views)
-
-    return true
-end
-
 return M
 
 ------------
@@ -666,6 +609,8 @@ return M
 -- - Check that the qf and loclist versions are both properly built for purpose.
 --
 -- All resizing operations should respect the g option and splitkeep
+-- Add <leader>qP / <leader>lP as maps to set the list to max size
+-- Make the various list sizing functions account for screen height
 
 -----------
 --- MID ---

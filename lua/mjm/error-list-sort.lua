@@ -92,8 +92,10 @@ local function sort_wrapper(sort_info, sort_opts, output_opts)
     local predicate = sort_opts.dir and sort_opts.dir == "asc" and sort_info.asc_func
         or sort_info.desc_func
 
-    table.sort(cur_list.items, predicate)
+    local new_items = vim.deepcopy(cur_list.items, false)
+    table.sort(new_items, predicate)
     output_opts.title = cur_list.title
+
     --- TODO: This needs to take a flag for if it should save a view. In this case, even though
     --- we're just replacing, we're bumped to line 1, so we need to save a view. If we're just
     --- adding new items (grep/diag), we usually don't need to save a view, though perhaps we
@@ -103,8 +105,18 @@ local function sort_wrapper(sort_info, sort_opts, output_opts)
     --- we can avoid having to create spooky action at a distance. Since the view handling has to
     --- be between placing the items and final open anyway (or, at the very least, their logic is
     --- intermingled), maybe it's better to break opening the result into its own logic
-    local set_list_opts = { getlist = getlist, setlist = setlist, new_items = cur_list.items }
-    eu._set_list_items(set_list_opts, output_opts)
+
+    local et = require("mjm.error-list-tools") --- @type QfRancherTools
+    local what = et._create_what_table({
+        items = new_items,
+        title = cur_list.title,
+        user_data = { diag_sort = true },
+    }) --- @type vim.fn.setqflist.what
+
+    --- TODO: Is current win right?
+    --- @type integer|nil
+    local set_win = output_opts.use_loclist and vim.api.nvim_get_current_win() or nil
+    et._set_list(set_win, output_opts.count, output_opts.action, what)
 
     -- if list_win and view then
     --     vim.api.nvim_win_call(list_win, function()
@@ -112,7 +124,7 @@ local function sort_wrapper(sort_info, sort_opts, output_opts)
     --     end)
     -- end
 
-    eu._get_openlist(output_opts.is_loclist)({ always_resize = true })
+    eu._get_openlist(output_opts.use_loclist)({ always_resize = true })
 end
 
 ------------------
