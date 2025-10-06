@@ -122,6 +122,14 @@ function M._create_what_table(opts)
     return what
 end
 
+--- TODO: Since we're using the what table to carry the sort info down for diags anyway, just do
+--- all sorting here. This removes the issue of calling functions having to reason about when
+--- this function sorts. Instead, they can pass a sort to the what table and assume the
+--- underlying logic is correctly handled
+--- TODO: This creates an oddity though because the what.nr field can hold the "$" value
+--- TODO: Since list_win and action both have to be carried down through what, really, this
+--- should just take what
+
 --- @param win integer|nil
 --- @param list_nr integer
 --- @param action QfRancherAction
@@ -161,6 +169,8 @@ end
 --- MID: Need to make a validation for the what items that can handle zero values to get the
 --- current values
 --- TODO: Maybe restrict the validation for the get_qflist what table
+---
+--- TODO: Another issue with using list.nr for these inputs
 
 --- @param win integer|nil
 --- @param list_nr integer

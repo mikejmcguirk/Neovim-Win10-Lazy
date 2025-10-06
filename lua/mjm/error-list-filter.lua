@@ -1,3 +1,4 @@
+--- @class QfRancherFilter
 local M = {}
 
 -------------
@@ -87,36 +88,25 @@ end
 --- @param items table[]
 --- @param pattern string
 --- @param keep boolean
---- @param view_row integer
 --- @param regex? table
---- @return table[], integer
-local function iter_with_predicate(predicate, items, pattern, keep, view_row, regex)
-    local view_rows_removed = 0 --- @type integer
-    local new_items = {} --- @type table[]
-    for i, item in ipairs(items) do
-        local predicate_opts = {
+--- @return table[]
+local function iter_with_predicate(predicate, items, pattern, keep, regex)
+    return vim.tbl_filter(function(t)
+        return predicate({
             keep = keep,
             pattern = pattern,
             regex = regex,
-            item = item,
-        } --- @type QfRancherPredicateOpts
-
-        if predicate(predicate_opts) then
-            table.insert(new_items, item)
-        elseif i < view_row then
-            view_rows_removed = view_rows_removed + 1
-        end
-    end
-
-    return new_items, view_rows_removed
+            item = t,
+        })
+    end, items)
 end
 
 --- @param filter_info QfRancherFilterInfo
 --- @param filter_opts QfRancherFilterOpts
 --- @param input_opts QfRancherInputOpts
---- @param output_opts QfRancherOutputOpts
+--- @param what QfRancherWhat
 --- @return nil
-local function validate_wrapper_input(filter_info, filter_opts, input_opts, output_opts)
+local function validate_wrapper_input(filter_info, filter_opts, input_opts, what)
     vim.validate("filter_info", filter_info, "table")
     vim.validate("filter_info.insensitive_func", filter_info.insensitive_func, "callable")
     vim.validate("filter_info.name", filter_info.name, { "nil", "string" })
@@ -128,66 +118,32 @@ local function validate_wrapper_input(filter_info, filter_opts, input_opts, outp
 
     local eu = require("mjm.error-list-util")
     eu._validate_input_opts(input_opts)
-    eu._validate_output_opts(output_opts)
-end
-
---- TODO: Keeping this for now because I don't know how things shake out after the output
---- validation is broken up
---- @param filter_info QfRancherFilterInfo
---- @param filter_opts QfRancherFilterOpts
---- @param input_opts QfRancherInputOpts
---- @param output_opts QfRancherOutputOpts
---- @return nil
-local function clean_wrapper_input(filter_info, filter_opts, input_opts, output_opts)
-    filter_opts.keep = filter_opts.keep == nil and true or filter_opts.keep
+    require("mjm.error-list-validation")._validate_what_strict(what)
 end
 
 --- @param filter_info QfRancherFilterInfo
 --- @param filter_opts QfRancherFilterOpts
 --- @param input_opts QfRancherInputOpts
---- @param output_opts QfRancherOutputOpts
+--- @param what QfRancherWhat
 --- @return nil
-function M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
+function M.filter_wrapper(filter_info, filter_opts, input_opts, what)
     filter_info = filter_info or {}
     filter_opts = filter_opts or {}
     input_opts = input_opts or {}
-    output_opts = output_opts or {}
-    validate_wrapper_input(filter_info, filter_opts, input_opts, output_opts)
-    clean_wrapper_input(filter_info, filter_opts, input_opts, output_opts)
+    what = what or {}
+    validate_wrapper_input(filter_info, filter_opts, input_opts, what)
 
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if not eu._is_valid_loclist_output(output_opts) then
+    if not eu._win_can_have_loclist(what.user_data.list_win) then
         return
     end
 
-    local getlist = eu._get_getlist(output_opts) --- @type function|nil
-    if not getlist then
-        return
-    end
-
-    local cur_list = getlist({ all = true }) --- @type table
+    local et = require("mjm.error-list-tools") --- @type QfRancherTools
+    local cur_list = et._get_list(what.user_data.list_win, what.nr, what) --- @type table
     if cur_list.size == 0 then
         vim.api.nvim_echo({ { "No entries to filter", "" } }, false, {})
         return
     end
-
-    -- TODO: Redundant with upated set_list_items, but unsure how to get rid of this because
-    -- it blocks the unnecessary saving of a view. But, since saving the view is the typical
-    -- case, maybe this isn't worth the check. The big issue anyway, AFAIK, is restoring the view
-    -- rather than saving it
-    -- TODO: This is a kind of slop that's starting to creep up in the code in general, where
-    -- vestigal pieces of data are accumulating. Clean these out
-    --
-    -- TODO: There might be a better way to do this - Filtering the list can resize it, or if
-    -- we switch to a new list, that can also cause a resize. So we would want to store views
-    -- in that chain somehow. So it would be something like, we make a views table here and pass
-    -- it through to the opening function. You could do something where, when getting views, you
-    -- check the views list to see if the win is already there.
-    local dest_list_nr = eu._get_dest_list_nr(getlist, output_opts) --- @type integer
-    local list_win = eu._find_list_win(output_opts) --- @type integer|nil
-    local view = (list_win and dest_list_nr == cur_list.nr)
-            and vim.api.nvim_win_call(list_win, vim.fn.winsaveview)
-        or nil --- @type vim.fn.winsaveview.ret|nil
 
     --- @type QfRancherInputType|nil, string|nil, vim.regex|nil
     local input_type, pattern, regex = get_predicate_info(filter_info, filter_opts, input_opts)
@@ -197,29 +153,21 @@ function M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
 
     --- @type QfRancherPredicateFunc
     local predicate = get_predicate(filter_info, input_type, pattern, regex)
-    local view_row = view and view.lnum or 0 --- @type integer
     --- @type table[], integer
-    local new_items, view_rows_removed =
-        iter_with_predicate(predicate, cur_list.items, pattern, filter_opts.keep, view_row, regex)
+    local new_items =
+        iter_with_predicate(predicate, cur_list.items, pattern, filter_opts.keep, regex)
 
-    local et = require("mjm.error-list-tools") --- @type QfRancherTools
-    local what = et._create_what_table({
+    local what_set = vim.tbl_deep_extend("force", what, {
         items = new_items,
         title = "Filter", --- TODO: Improve title
-    }) --- @type vim.fn.setqflist.what
+    }) --- @type QfRancherWhat
 
-    --- TODO: I'm not sure if using current win here is right
-    --- @type integer|nil
-    local set_win = output_opts.use_loclist and vim.api.nvim_get_current_win() or nil
-    et._set_list(set_win, output_opts.count, output_opts.action, what)
-
-    if set_win and view then
-        view.topline = math.max(view.topline - view_rows_removed, 0)
-        view.lnum = math.max(view.lnum - view_rows_removed, 1)
-        vim.api.nvim_win_call(set_win, function()
-            vim.fn.winrestview(view)
-        end)
-    end
+    et._set_list(
+        what_set.user_data.list_win,
+        what_set.user_data.nr,
+        what_set.user_data.action,
+        what_set
+    )
 end
 
 -----------------------
@@ -503,20 +451,20 @@ end
 --- - input_type? "insensitive"|"regex"|"sensitive"|"smart"|"vimsmart" - How to interpret the
 ---     input for matching
 --- - pattern? string - the pattern to match against
---- output_opts
+--- what.user_data
 --- - action? "new"|"replace"|"add" - Create a new list, replace a pre-existing one, or add a new
 ---     one
---- - is_loclist? boolean - Whether to filter against a location list
+--- - list_win? integer - If not nil, output to that window's location list
 --- @param filter_opts QfRancherFilterOpts
 --- @param input_opts QfRancherInputOpts
---- @param output_opts QfRancherOutputOpts
+--- @param what QfRancherWhat
 --- @return nil
-function M.filter(name, filter_opts, input_opts, output_opts)
+function M.filter(name, filter_opts, input_opts, what)
     if not filters[name] then
         vim.api.nvim_echo({ { "Invalid filter", "ErrorMsg" } }, true, { err = true })
     end
 
-    M.filter_wrapper(filters[name], filter_opts, input_opts, output_opts)
+    M.filter_wrapper(filters[name], filter_opts, input_opts, what)
 end
 
 --- Register a filter to be used with the Qfilter/Lfilter commands. The filter will be registered
@@ -554,17 +502,53 @@ end
 --- - input_type? "insensitive"|"regex"|"sensitive"|"smart"|"vimsmart" - How to interpret the
 ---     input for matching
 --- - pattern? string - the pattern to match against
---- output_opts
+--- what.user_data
 --- - action? "new"|"replace"|"add" - Create a new list, replace a pre-existing one, or add a new
 ---     one
---- - is_loclist? boolean - Whether to filter against a location list
+--- - list_win? integer - If not nil, output to that window's location list
 --- @param filter_info QfRancherFilterInfo
 --- @param filter_opts QfRancherFilterOpts
 --- @param input_opts QfRancherInputOpts
---- @param output_opts QfRancherOutputOpts
+--- @param what QfRancherWhat
 --- @return nil
-function M.adhoc_filter(filter_info, filter_opts, input_opts, output_opts)
-    M.filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
+function M.adhoc_filter(filter_info, filter_opts, input_opts, what)
+    M.filter_wrapper(filter_info, filter_opts, input_opts, what)
+end
+
+--- @param cargs vim.api.keyset.create_user_command.command_args
+--- @param list_win? integer
+--- @return nil
+local function filter_cmd(cargs, list_win)
+    cargs = cargs or {}
+    local fargs = cargs.fargs
+
+    local filter_names = M.get_filter_names()
+    assert(#filter_names > 1, "No filter functions available")
+
+    local eu = require("mjm.error-list-util")
+    local filter_func = eu._check_cmd_arg(fargs, filter_names, "cfilter")
+    local ev = require("mjm.error-list-validation")
+    local keep_this = not cargs.bang
+    local action = eu._check_cmd_arg(fargs, ev._actions, ev._default_action)
+    local pattern = eu._find_cmd_pattern(fargs)
+    local count = cargs.count > 0 and cargs.count or nil
+
+    local filter_opts = { keep = keep_this }
+    -- TODO: is this right the right way to handle input type?
+    local input_opts = { input_type = pattern and "regex" or "vimsmart", pattern = pattern }
+    local what = { nr = count, user_data = { action = action, list_win = list_win } }
+
+    M.filter(filter_func, filter_opts, input_opts, what)
+end
+
+--- @param cargs vim.api.keyset.create_user_command.command_args
+function M._q_filter(cargs)
+    filter_cmd(cargs, nil)
+end
+
+--- @param cargs vim.api.keyset.create_user_command.command_args
+function M._l_filter(cargs)
+    filter_cmd(cargs, vim.api.nvim_get_current_win())
 end
 
 return M

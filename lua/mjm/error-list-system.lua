@@ -33,9 +33,9 @@ function M.validate_system_opts(system_opts)
     return true
 end
 
-local function validate_system_do(system_opts, output_opts)
+local function validate_system_do(system_opts, what)
     system_opts = system_opts or {}
-    output_opts = output_opts or {}
+    what = what or {}
 
     local eu = require("mjm.error-list-util")
 
@@ -46,12 +46,12 @@ local function validate_system_do(system_opts, output_opts)
     vim.validate("system_opts.cmd_parts", system_opts.cmd_parts, "table")
     eu._is_valid_str_list(system_opts.cmd_parts)
 
-    eu._validate_output_opts(output_opts)
+    require("mjm.error-list-validation")._validate_what_strict(what)
 end
 
 --- @param obj vim.SystemCompleted
---- @param output_opts QfRancherOutputOpts
-local function handle_output(obj, output_opts)
+--- @param what QfRancherWhat
+local function handle_output(obj, what)
     if obj.code ~= 0 then
         local code = obj.code and "Exit code: " .. obj.code or ""
         local err = (obj.stderr and #obj.stderr > 0) and "Error: " .. obj.stderr or ""
@@ -62,38 +62,37 @@ local function handle_output(obj, output_opts)
     end
 
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if not eu._is_valid_loclist_output(output_opts) then
+    if not eu._win_can_have_loclist(what.user_data.list_win) then
         return
     end
 
     local lines = vim.split(obj.stdout or "", "\n", { trimempty = true }) --- @type string[]
     local qf_dict = vim.fn.getqflist({ lines = lines }) --- @type {items: table[]}
-    if output_opts.list_item_type then
+    if what.user_data.list_item_type then
         for _, item in pairs(qf_dict.items) do
-            item.type = output_opts.list_item_type
+            item.type = what.user_data.list_item_type
         end
     end
 
-    if output_opts.action ~= "add" then
+    --- TODO: Remove this when sorting is wholly moved to _set_list
+    if what.user_data.action ~= "add" then
         table.sort(qf_dict, require("mjm.error-list-sort")._sort_fname_asc)
     end
 
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
-    local what = et._create_what_table({
+    local new_what = et._create_what_table({
         items = qf_dict.items,
-        title = output_opts.title,
+        title = what.title,
     }) --- @type vim.fn.setqflist.what
+    local what_set = vim.tbl_deep_extend("keep", new_what, what)
 
-    --- TODO: Unsure if current win is correct
-    --- @type integer|nil
-    local set_win = output_opts.use_loclist and vim.api.nvim_get_current_win() or nil
-    et._set_list(set_win, output_opts.count, output_opts.action, what)
+    et._set_list(what.user_data.list_win, what.nr, what.user_data.action, what_set)
 
     -- TODO: There should be an output opts function that handles opening the list afterwards
     -- So like, see if it's open, maybe resize it, do history to move to the right one, and
     -- so on. It's repeated logic that only needs to be written once
     -- local elo = require("mjm.error-list-open")
-    -- if output_opts.is_loclist then
+    -- if what.is_loclist then
     --     elo._open_loclist()
     -- else
     --     elo._open_qflist()
@@ -104,22 +103,22 @@ end
 -- off of it
 
 --- @param system_opts QfRancherSystemOpts
---- @param output_opts QfRancherOutputOpts
+--- @param what QfRancherWhat
 --- @return nil
-function M.system_do(system_opts, output_opts)
-    validate_system_do(system_opts, output_opts)
+function M.system_do(system_opts, what)
+    validate_system_do(system_opts, what)
 
     local vim_system_opts = { text = true, timeout = system_opts.timeout or default_timeout }
     if system_opts.async then
         vim.system(system_opts.cmd_parts, vim_system_opts, function(obj)
             vim.schedule(function()
-                handle_output(obj, output_opts)
+                handle_output(obj, what)
             end)
         end)
     else
         local obj = vim.system(system_opts.cmd_parts, vim_system_opts)
             :wait(system_opts.timeout or default_timeout)
-        handle_output(obj, output_opts)
+        handle_output(obj, what)
     end
 end
 

@@ -31,12 +31,12 @@ end
 
 --- @param sort_info QfRancherSortInfo
 --- @param sort_opts QfRancherSortOpts
---- @param output_opts QfRancherOutputOpts
+--- @param what QfRancherWhat
 --- @return nil
-local function validate_sort_wrapper_input(sort_info, sort_opts, output_opts)
+local function validate_sort_wrapper_input(sort_info, sort_opts, what)
     sort_info = sort_info or {}
     sort_opts = sort_opts or {}
-    output_opts = output_opts or {}
+    what = what or {}
 
     vim.validate("sort_info", sort_info, "table")
     vim.validate("sort_info.asc_func", sort_info.asc_func, "callable")
@@ -50,41 +50,31 @@ local function validate_sort_wrapper_input(sort_info, sort_opts, output_opts)
         end)
     end
 
-    local eu = require("mjm.error-list-util")
-    eu._validate_output_opts(output_opts)
+    require("mjm.error-list-validation")._validate_what_strict(what)
 end
 
 --- @param sort_info QfRancherSortInfo
 --- @param sort_opts QfRancherSortOpts
---- @param output_opts QfRancherOutputOpts
+--- @param what QfRancherWhat
 --- @return nil
-local function sort_wrapper(sort_info, sort_opts, output_opts)
-    validate_sort_wrapper_input(sort_info, sort_opts, output_opts)
+local function sort_wrapper(sort_info, sort_opts, what)
+    validate_sort_wrapper_input(sort_info, sort_opts, what)
     sort_opts.dir = sort_opts.dir or "asc"
 
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if not eu._is_valid_loclist_output(output_opts) then
+    if not eu._win_can_have_loclist(what.user_data.list_win) then
         return
     end
 
-    local getlist = eu._get_getlist(output_opts) --- @type function|nil
-    if not getlist then
-        return
-    end
-
-    local cur_list = getlist({ all = true }) --- @type table
+    local et = require("mjm.error-list-tools") --- @type QfRancherTools
+    local cur_list = et._get_list(what.user_data.list_win, what.nr, nil) --- @type table
     if cur_list.size < 1 then
         vim.api.nvim_echo({ { "Not enough entries to sort", "" } }, false, {})
         return
     end
 
-    local setlist = eu._get_setlist(output_opts) --- @type function|nil
-    if not setlist then
-        return
-    end
-
-    -- local dest_list_nr = eu._get_dest_list_nr(getlist, output_opts) --- @type integer
-    -- local list_win = eu._find_list_win(output_opts) --- @type integer|nil
+    -- local dest_list_nr = eu._get_dest_list_nr(getlist, what) --- @type integer
+    -- local list_win = eu._find_list_win(what) --- @type integer|nil
     -- local view = (list_win and dest_list_nr == cur_list.nr)
     --         and vim.api.nvim_win_call(list_win, vim.fn.winsaveview)
     --     or nil --- @type vim.fn.winsaveview.ret|nil
@@ -94,7 +84,7 @@ local function sort_wrapper(sort_info, sort_opts, output_opts)
 
     local new_items = vim.deepcopy(cur_list.items, false)
     table.sort(new_items, predicate)
-    output_opts.title = cur_list.title
+    what.title = cur_list.title
 
     --- TODO: This needs to take a flag for if it should save a view. In this case, even though
     --- we're just replacing, we're bumped to line 1, so we need to save a view. If we're just
@@ -106,17 +96,12 @@ local function sort_wrapper(sort_info, sort_opts, output_opts)
     --- be between placing the items and final open anyway (or, at the very least, their logic is
     --- intermingled), maybe it's better to break opening the result into its own logic
 
-    local et = require("mjm.error-list-tools") --- @type QfRancherTools
-    local what = et._create_what_table({
+    local what_set = vim.tbl_deep_extend("force", what, {
         items = new_items,
         title = cur_list.title,
         user_data = { diag_sort = true },
-    }) --- @type vim.fn.setqflist.what
-
-    --- TODO: Is current win right?
-    --- @type integer|nil
-    local set_win = output_opts.use_loclist and vim.api.nvim_get_current_win() or nil
-    et._set_list(set_win, output_opts.count, output_opts.action, what)
+    })
+    et._set_list(what_set.user_data.list_win, what_set.nr, what_set.user_data.action, what_set)
 
     -- if list_win and view then
     --     vim.api.nvim_win_call(list_win, function()
@@ -124,7 +109,9 @@ local function sort_wrapper(sort_info, sort_opts, output_opts)
     --     end)
     -- end
 
-    eu._get_openlist(output_opts.use_loclist)({ always_resize = true })
+    --- TODO: This function needs to be changed
+    local use_loclist = what_set.user_data.list_win and true or false
+    eu._get_openlist(use_loclist)({ always_resize = true })
 end
 
 ------------------
@@ -518,39 +505,39 @@ end
 --- asc_func: Predicate to sort descending. Takes two quickfix items. Returns boolean
 --- sort_opts:
 --- - dir?: "asc"|"desc" Defaults to "asc"
---- output_opts
+--- what
 --- - action? "new"|"replace"|"add" - Create a new list, replace a pre-existing one, or add a new
 ---     one
 --- - is_loclist? boolean - Whether to filter against a location list
 --- @param asc_func QfRancherSortPredicate
 --- @param desc_func QfRancherSortPredicate
 --- @param sort_opts QfRancherSortOpts
---- @param output_opts QfRancherOutputOpts
+--- @param what QfRancherWhat
 --- @return nil
-function M.adhoc_sort(asc_func, desc_func, sort_opts, output_opts)
+function M.adhoc_sort(asc_func, desc_func, sort_opts, what)
     local sort_info = { asc_func = asc_func, desc_func = desc_func } --- @type QfRancherSortInfo
-    sort_wrapper(sort_info, sort_opts, output_opts)
+    sort_wrapper(sort_info, sort_opts, what)
 end
 
 --- Run a registered sort
 --- name: The registered name of the sort to run
 --- sort_opts:
 --- - dir?: "asc"|"desc" Defaults to "asc"
---- output_opts
+--- what
 --- - action? "new"|"replace"|"add" - Create a new list, replace a pre-existing one, or add a new
 ---     one
 --- - is_loclist? boolean - Whether to filter against a location list
 --- @param name string
 --- @param sort_opts QfRancherSortOpts
---- @param output_opts QfRancherOutputOpts
+--- @param what QfRancherWhat
 --- @return nil
-function M.sort(name, sort_opts, output_opts)
+function M.sort(name, sort_opts, what)
     local sort_info = sorts[name] --- @type QfRancherSortInfo
     if not sort_info then
         vim.api.nvim_echo({ { "Invalid sort", "ErrorMsg" } }, true, { err = true })
     end
 
-    sort_wrapper(sort_info, sort_opts, output_opts)
+    sort_wrapper(sort_info, sort_opts, what)
 end
 
 return M

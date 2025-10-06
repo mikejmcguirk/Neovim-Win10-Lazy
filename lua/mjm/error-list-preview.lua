@@ -384,8 +384,7 @@ local function get_preview_buf(bufnr)
             return vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
         end
 
-        local bufname = vim.fn.bufname(bufnr)
-        local full_path = vim.fn.fnamemodify(bufname, ":p")
+        local full_path = vim.api.nvim_buf_get_name(bufnr)
         -- TODO: Replace other filereadable calls with this
         if vim.uv.fs_access(full_path, 4) then
             return { "Unable to read file " .. full_path }
@@ -648,7 +647,7 @@ function M._update_win()
     end
 
     local is_ll = listtype == "loclist"
-    -- TODO: Not sure output_opts is correct here but can look
+    -- TODO: Move this over to the tools module
     local cur_list = eu._get_getlist({ loclist_source_win = qf_win, use_loclist = is_ll })()
     if #cur_list < 1 then
         clear_session_data()

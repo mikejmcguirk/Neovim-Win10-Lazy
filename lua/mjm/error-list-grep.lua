@@ -183,9 +183,9 @@ end
 
 --- @param grep_info QfRancherGrepInfo
 --- @param input_opts QfRancherInputOpts
---- @param output_opts QfRancherOutputOpts
+--- @param what QfRancherWhat
 --- @return nil
-local function clean_do_grep_input(grep_info, system_opts, input_opts, output_opts)
+local function clean_do_grep_input(grep_info, system_opts, input_opts, what)
     vim.validate("grep_info", grep_info, "table")
     vim.validate("grep_info.location_func", grep_info.location_func, "callable")
 
@@ -195,17 +195,17 @@ local function clean_do_grep_input(grep_info, system_opts, input_opts, output_op
 
     local eu = require("mjm.error-list-util")
     eu._validate_input_opts(input_opts)
-    eu._validate_output_opts(output_opts)
+    require("mjm.error-list-validation")._validate_what_strict(what)
 end
 
 --- @param grep_info QfRancherGrepInfo
 --- @param input_opts QfRancherInputOpts
---- @param output_opts QfRancherOutputOpts
+--- @param what QfRancherWhat
 --- @return nil
-function M._do_grep(grep_info, system_opts, input_opts, output_opts)
-    clean_do_grep_input(grep_info, system_opts, input_opts, output_opts)
+function M._do_grep(grep_info, system_opts, input_opts, what)
+    clean_do_grep_input(grep_info, system_opts, input_opts, what)
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if not eu._is_valid_loclist_output(output_opts) then
+    if not eu._win_can_have_loclist(what.user_data.list_win) then
         return
     end
 
@@ -229,19 +229,12 @@ function M._do_grep(grep_info, system_opts, input_opts, output_opts)
 
     system_opts.cmd_parts = grep_parts
     local title_parts = get_grep_parts({ base_only = true })
-    output_opts.title = table.concat(title_parts, " ")
-    -- TODO: A bit of an oddity because it can also be set in output_opts. So in a sense we're
+    what.title = table.concat(title_parts, " ")
+    -- TODO: A bit of an oddity because it can also be set in what. So in a sense we're
     -- creating a mandatory overwrite. ANtipattern
-    output_opts.list_item_type = grep_info.list_item_type
+    what.user_data.list_item_type = grep_info.list_item_type
 
-    require("mjm.error-list-system").system_do(system_opts, output_opts)
-
-    -- TODO: I could be mis-understanding, but I think we have what we need to go to system now
-    -- And I do want to rewrite it from scratch for two reasons. The first is that the conditions
-    -- that allowed this to be successful should also exist there.
-    -- The second relates to the list type issue specifically. It's an incredibly awkward thing
-    -- to deal with and I don't want to have to deal with old assumptions
-    -- The third is that trying to sort of shuffle everything to the new API I think will be hard
+    require("mjm.error-list-system").system_do(system_opts, what)
 end
 
 ------------------
@@ -306,11 +299,9 @@ local function get_cur_buf()
     end
 
     local fname = vim.api.nvim_buf_get_name(buf) --- @type string
-    --- Given that vim.fn.filereadable already goes right to the uv loop to check the file system,
-    --- I'm not sure what advantage manually rolling with vim.system would give me
-    local readable = vim.fn.filereadable(fname) == 1 --- @type boolean
-    local good_file = fname ~= "" and readable --- @type boolean
-    if buflisted and good_buftype and good_file then
+    local fs_access = vim.uv.fs_access(fname, 4) --- @type boolean|nil
+    local good_file = fname ~= "" and fs_access == true --- @type boolean
+    if good_file then
         return { fname }
     else
         --- @type [string,string]
@@ -330,15 +321,15 @@ local greps = {
 --- @param name string
 --- @param system_opts QfRancherSystemOpts
 --- @param input_opts QfRancherInputOpts
---- @param output_opts QfRancherOutputOpts
+--- @param what QfRancherWhat
 --- @return nil
-function M.grep(name, system_opts, input_opts, output_opts)
+function M.grep(name, system_opts, input_opts, what)
     local grep_info = greps[name]
     if not grep_info then
         return
     end
 
-    M._do_grep(grep_info, system_opts, input_opts, output_opts)
+    M._do_grep(grep_info, system_opts, input_opts, what)
 end
 
 --- TODO: Make the rest of the API

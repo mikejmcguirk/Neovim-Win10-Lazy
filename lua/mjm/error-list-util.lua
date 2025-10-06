@@ -6,6 +6,41 @@ function M._count_to_count1(count)
     return math.max(count, 1)
 end
 
+--- @param fargs string[]
+--- @return string|nil
+function M._find_cmd_pattern(fargs)
+    if vim.g.qf_rancher_debug_assertions then
+        M._is_valid_str_list(fargs)
+    end
+
+    for _, arg in ipairs(fargs) do
+        if vim.startswith(arg, "/") then
+            return arg
+        end
+    end
+
+    return nil
+end
+
+--- @param fargs string[]
+--- @param valid_args string[]
+--- @param default string
+function M._check_cmd_arg(fargs, valid_args, default)
+    if vim.g.qf_rancher_debug_assertions then
+        M._is_valid_str_list(fargs)
+        M._is_valid_str_list(valid_args)
+        vim.validate("default", default, "string")
+    end
+
+    for _, arg in ipairs(fargs) do
+        if vim.tbl_contains(valid_args, arg) then
+            return arg
+        end
+    end
+
+    return default
+end
+
 M._severity_map = {
     [vim.diagnostic.severity.ERROR] = "E",
     [vim.diagnostic.severity.WARN] = "W",
@@ -40,40 +75,20 @@ function M._wrapping_sub(x, y, min, max)
     return ((x - y - min) % period) + min
 end
 
---- MID: Keeping this function split out in case we need a direct check without the output_opts
---- check. Leaving error printing here because it is used in every case
-
 --- @param win integer
 --- @return boolean
-local function source_win_can_have_loclist(win)
-    vim.validate("win", win, "number")
-    vim.validate("win", win, function()
-        return vim.api.nvim_win_is_valid(win)
-    end)
+function M._win_can_have_loclist(win)
+    require("mjm.error-list-validation")._validate_win(win, false)
 
     local wintype = vim.fn.win_gettype(win) --- @type string
-    --- If you do getloclist or setloclist on either the source window or a window containing the
-    --- loclist buf, they will both write to the loclist, so both types are acceptable here
     if wintype == "" or wintype == "loclist" then
         return true
     end
 
     --- @type string
     local text = "Window " .. win .. " with type " .. wintype .. " cannot contain a location list"
-    local chunk = { text } --- @type string[]
-    vim.api.nvim_echo({ chunk }, true, { err = true })
+    vim.api.nvim_echo({ { text, "ErrorMsg" } }, true, { err = true })
     return false
-end
-
---- @param output_opts QfRancherOutputOpts
---- @return nil
-function M._is_valid_loclist_output(output_opts)
-    if not output_opts.use_loclist then
-        return true
-    end
-
-    -- source_win_can_have_loclist will print the appropriate error
-    return source_win_can_have_loclist(output_opts.loclist_source_win)
 end
 
 --- TODO: I'm wondering if for functions like this it's better to have a few smaller, more easily
@@ -92,7 +107,7 @@ function M._find_loclist_win(win, qf_id)
         end)
 
         vim.validate("win", win, function()
-            return source_win_can_have_loclist(win)
+            return M._win_can_have_loclist(win)
         end)
     end
 
@@ -169,23 +184,6 @@ function M._find_qf_win(opts)
     end
 
     return nil
-end
-
---- @param output_opts? QfRancherOutputOpts
---- @return integer|nil
-function M._find_list_win(output_opts)
-    output_opts = output_opts or {}
-    if vim.g.qf_rancher_debug_assertions then
-        M._validate_output_opts(output_opts)
-    end
-
-    if output_opts.use_loclist then
-        --- @type integer
-        local win = output_opts.loclist_source_win or vim.api.nvim_get_current_win()
-        return M._find_loclist_win(win)
-    else
-        return M._find_qf_win()
-    end
 end
 
 --- LOW: For this and _has_any_loclist, you can pass a getlist function and make them the same
@@ -301,31 +299,6 @@ function M._get_listtype(win)
     return (wintype == "quickfix" or wintype == "loclist") and wintype or nil
 end
 
---- @param output_opts QfRancherOutputOpts
---- @return nil|fun(table):any|nil
---- If no win is provided, the current win is used as a fallback
---- If no get_loclist value is provided or it is false, getqflist is always returned
---- If a win is provided but it cannot have a loclist, nil is returned
-function M._get_getlist(output_opts)
-    output_opts = output_opts or {}
-    if vim.g.qf_rancher_debug_assertions then
-        M._validate_output_opts(output_opts)
-    end
-
-    if not output_opts.use_loclist then
-        return vim.fn.getqflist
-    end
-
-    local win = output_opts.loclist_source_win or vim.api.nvim_get_current_win() --- @type integer
-    if not source_win_can_have_loclist(win) then
-        return nil
-    end
-
-    return function(what)
-        return what and vim.fn.getloclist(win, what) or vim.fn.getloclist(win)
-    end
-end
-
 --- @param prompt string
 --- @return string|nil
 local function get_input(prompt)
@@ -400,42 +373,6 @@ function M._resolve_pattern(prompt, input_opts)
     end
 
     return get_input(prompt)
-end
-
---- @param output_opts QfRancherOutputOpts
---- @return function|nil
-function M._get_setlist(output_opts)
-    output_opts = output_opts or {}
-    if vim.g.qf_rancher_debug_assertions then
-        M._validate_output_opts(output_opts)
-    end
-
-    if not output_opts.use_loclist then
-        return vim.fn.setqflist
-    end
-
-    local win = output_opts.loclist_source_win or vim.api.nvim_get_current_win()
-    if not source_win_can_have_loclist(win) then
-        return nil
-    end
-
-    return function(dict, a, b)
-        local action, what
-        if type(a) == "table" then
-            action = ""
-            what = a
-        elseif type(a) == "string" and a ~= "" or a == "" then
-            action = a
-            what = b or {}
-        elseif a == nil then
-            action = ""
-            what = b or {}
-        else
-            error("Invalid action: must be a non-nil string")
-        end
-
-        vim.fn.setloclist(win, dict, action, what)
-    end
 end
 
 --- @param entry table
@@ -530,46 +467,6 @@ function M._validate_input_opts(input_opts)
     end
 end
 
---- TODO: Move this to validations if the "output_opts" construct is still around
-
---- @param output_opts QfRancherOutputOpts
---- @return nil
-function M._validate_output_opts(output_opts)
-    vim.validate("output_opts", output_opts, "table")
-    vim.validate("output_opts.action", output_opts.action, "string")
-    vim.validate("output_opts.action", output_opts.action, function()
-        return output_opts.action == "new"
-            or output_opts.action == "replace"
-            or output_opts.action == "add"
-    end)
-
-    vim.validate("output_opts.count", output_opts.count, { "nil", "number" })
-    vim.validate("output_opts.is_loclist", output_opts.use_loclist, { "nil", "boolean" })
-    vim.validate(
-        "output_opts.loclist_source_win",
-        output_opts.loclist_source_win,
-        { "nil", "number" }
-    )
-
-    vim.validate("output_opts.list_item_type", output_opts.list_item_type, { "nil", "string" })
-    vim.validate("output_opts.title", output_opts.title, { "nil", "string" })
-end
-
---- @param output_opts QfRancherOutputOpts
---- @return nil
-function M._clean_output_opts(output_opts)
-    M._validate_output_opts(output_opts)
-    --- TODO: Need to look at how this is used and see if it's correct. I think the idea is
-    --- everything pipes into set_items, but there are ex_cmds where we want nil counts
-    output_opts.count = output_opts.count or 0
-    output_opts.use_loclist = output_opts.use_loclist == nil and false or output_opts.use_loclist
-    --- TODO: Unsure if this is correct. If we want to manually set a source win, we can obviously
-    --- do that on top of this, but that then makes this wasteful
-    output_opts.loclist_source_win = output_opts.loclist_source_win == nil
-            and vim.api.nvim_get_current_win()
-        or output_opts.loclist_source_win
-end
-
 --- @param input QfRancherInputType
 --- @return string
 --- NOTE: This function assumes that an API input of "vimsmart" has already been resolved
@@ -608,30 +505,6 @@ function M._resolve_input_type(input)
     end
 
     return "insensitive"
-end
-
---- TODO: I would like to remove the external reference to this in the filter file, then maybe
---- this would be re-inlined into the set list function
---- @param getlist function
---- @param output_opts QfRancherOutputOpts
---- @return integer
-function M._get_dest_list_nr(getlist, output_opts)
-    output_opts = output_opts or {}
-    if vim.g.qf_rancher_debug_assertions then
-        M._validate_output_opts(output_opts)
-    end
-
-    local count = output_opts.count > 0 and output_opts.count or 0
-    count = (output_opts.count < 1 and vim.v.count > 0) and vim.v.count or 0
-    if count > 0 then
-        return math.min(count, getlist({ nr = "$" }).nr)
-    end
-
-    if output_opts.action == "overwrite" or output_opts.action == "merge" then
-        return getlist({ nr = 0 }).nr
-    end
-
-    return getlist({ nr = "$" }).nr
 end
 
 return M

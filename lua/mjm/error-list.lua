@@ -17,6 +17,16 @@
 --- @field list_item_type? string|nil
 --- @field title? string|nil --- TODO: Nix this
 
+--- TODO: Submit a PR to have the built-in annotation fixed so this can be removed
+
+--- @class QfRancherWhat : vim.fn.setqflist.what
+--- @field user_data? any
+
+--- @class QfRancherUserData
+--- @field action? QfRancherAction
+--- @field list_item_type? string
+--- @field list_win? integer
+
 --- https://github.com/tjdevries/lazy-require.nvim/blob/master/lua/lazy-require.lua
 --- @param require_path string
 --- @return table
@@ -210,7 +220,6 @@ return M
 --- stack seems cumbersome. And I don't want to just say "use the plug mappings" because there are
 --- over 300 keymaps. It's not feasible
 --- - Properly use the title output option everywhere
---- - Properly use the output_opts count where relevant
 ---
 --- - For the keymaps, there has to be a way to edit how they're set from g vars. There are too
 --- many maps to rely on plugs
@@ -242,16 +251,7 @@ return M
 ---     cmd to accept marks but then just ignoring them, but I think that then is deceptive toward
 ---     the user. The vim normal mode command just falls through. But since the greps can
 ---     work from visual marks, that feels more deceptive
---- You could have operations that pull from one list type and write to the other, for example
----     taking the elements form the qflist, sorting, then sending to the loclist. Youl could use
----     an is_loclist value with a source window in input_opts
---- - For the cmd UI, you could do something likst Qsort toloclist or Lsort toqflist. But I'm not
----     sure how you do it as a hotkey
---- - This also introduces significant complexity in the input opts. You have to validate the
----     input opts, which should be fine, but then you have to cross-validate with output_opts,
----     which breaks a lot of current assumptions, and makes certain types of implicit logic
----     impossible
---- - This feels like something not to attempt without a strong use case
+--- Operations that move loclists over to qflists and vice-versa
 
 -----------------------
 --- # DOCUMENTATION ---

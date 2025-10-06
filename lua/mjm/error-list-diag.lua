@@ -92,15 +92,16 @@ local function get_getopts(diag_info, diag_opts)
 end
 
 --- @param diag_info QfRancherDiagInfo
---- @param output_opts QfRancherOutputOpts
+--- @param diag_opts QfRancherDiagOpts
+--- @param what vim.fn.setqflist.what
 --- @return nil
-local function validate_diags_to_list(diag_info, diag_opts, output_opts)
+local function validate_diags_to_list(diag_info, diag_opts, what)
     vim.validate("diag_info", diag_info, "table")
     vim.validate("diag_info.level", diag_info.level, { "nil", "number" })
     vim.validate("diag_opts", diag_opts, "table")
     vim.validate("diag_opts.sev_type", diag_opts.sev_type, "string")
 
-    require("mjm.error-list-util")._validate_output_opts(output_opts)
+    require("mjm.error-list-validation")._validate_what(what)
 end
 
 --- LOW: The title could be more descriptive, but as it it aligns with how titles are constructed
@@ -108,33 +109,23 @@ end
 
 --- @param diag_info QfRancherDiagInfo
 --- @param diag_opts QfRancherDiagOpts
---- @param output_opts QfRancherOutputOpts
+--- @param what QfRancherWhat
 --- @return nil
-local function diags_to_list(diag_info, diag_opts, output_opts)
+local function diags_to_list(diag_info, diag_opts, what)
     diag_info = diag_info or {}
     diag_opts = diag_opts or {}
-    output_opts = output_opts or {}
-    validate_diags_to_list(diag_info, diag_opts, output_opts)
+    what = what or {}
+    validate_diags_to_list(diag_info, diag_opts, what)
 
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
-    output_opts.loclist_source_win = cur_win
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if not eu._is_valid_loclist_output(output_opts) then
-        return
-    end
-
-    local getlist = eu._get_getlist(output_opts) --- @type function|nil
-    if not getlist then
-        return
-    end
-
-    local setlist = eu._get_setlist(output_opts) --- @type function|nil
-    if not setlist then
+    if not eu._win_can_have_loclist(what.user_data.list_win) then
         return
     end
 
     --- @type integer|nil
-    local buf = output_opts.use_loclist and vim.api.nvim_win_get_buf(cur_win) or nil
+    ---@diagnostic disable-next-line: undefined-field
+    local buf = what.list_win and vim.api.nvim_win_get_buf(cur_win) or nil
     local getopts = get_getopts(diag_info, diag_opts) --- @type vim.diagnostic.GetOpts
 
     local raw_diags = vim.diagnostic.get(buf, getopts) --- @type vim.Diagnostic[]
@@ -157,8 +148,8 @@ local function diags_to_list(diag_info, diag_opts, output_opts)
         user_data = { diag_sort = true },
     }) --- @type vim.fn.setqflist.what
 
-    local set_win = output_opts.use_loclist and cur_win or nil --- @type integer|nil
-    et._set_list(set_win, output_opts.count, output_opts.action, what)
+    local set_win = what.use_loclist and cur_win or nil --- @type integer|nil
+    et._set_list(set_win, what.count, what.action, what)
 end
 
 local diag_queries = {
@@ -171,15 +162,16 @@ local diag_queries = {
 } --- @type table <string, QfRancherDiagInfo>
 
 --- @param name string
---- @param output_opts QfRancherOutputOpts
-function M.diags(name, diag_opts, output_opts)
+--- @param diag_opts QfRancherDiagOpts
+--- @param what QfRancherWhat
+function M.diags(name, diag_opts, what)
     local diag_info = diag_queries[name] --- @type QfRancherDiagInfo|nil
     if not diag_info then
         vim.api.nvim_echo({ { "No diagnostic query " .. name, "ErrorMsg" } }, true, { err = true })
         return
     end
 
-    diags_to_list(diag_info, diag_opts, output_opts)
+    diags_to_list(diag_info, diag_opts, what)
 end
 
 local sev_types = { "min", "only", "top" } --- @type string[]
@@ -190,7 +182,12 @@ local sev_types = { "min", "only", "top" } --- @type string[]
 --- would go into the maps/plugin file. Want to move over filter/grep/sort first since they are
 --- more complicated
 
-local function make_diag_cmd(cargs, is_loclist)
+--- @param cargs vim.api.keyset.create_user_command.command_args
+--- @param list_win? integer
+--- @return nil
+local function make_diag_cmd(cargs, list_win)
+    require("mjm.error-list-validation")._validate_win(list_win, true)
+
     local fargs = cargs.fargs --- @type string[]
 
     local sev_type = "min"
@@ -211,11 +208,10 @@ local function make_diag_cmd(cargs, is_loclist)
         end
     end
 
-    local output_opts = { action = action, use_loclist = is_loclist } --- @type QfRancherOutputOpts
+    local what = { user_data = { action = action, list_win = list_win } } --- @type QfRancherWhat
 
     local name = "hint" --- @type string
     local names = vim.tbl_keys(diag_queries) --- @type string[]
-
     for _, arg in ipairs(fargs) do
         if vim.tbl_contains(names, arg) then
             name = arg
@@ -229,15 +225,15 @@ local function make_diag_cmd(cargs, is_loclist)
         return
     end
 
-    diags_to_list(diag_info, diag_opts, output_opts)
+    diags_to_list(diag_info, diag_opts, what)
 end
 
 function M._q_diag(cargs)
-    make_diag_cmd(cargs, false)
+    make_diag_cmd(cargs, nil)
 end
 
 function M._l_diag(cargs)
-    make_diag_cmd(cargs, true)
+    make_diag_cmd(cargs, vim.api.nvim_get_current_win())
 end
 
 return M

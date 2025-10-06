@@ -1,6 +1,9 @@
 --- @class QfRancherValidation
 local M = {}
 
+M._actions = { "new", "replace", "add" }
+M._default_action = "new"
+
 --- @param count integer
 --- @return nil
 function M._validate_count(count)
@@ -183,11 +186,6 @@ function M._validate_what_strict(what)
             return what.idx >= 0
         end)
     end
-
-    --- Internally, Quickfix data (entries, title, etc.) are stored as a subset of the Quickfix
-    --- list number. Get closer to that representation here by not allowing stack data to be
-    --- co-mingled with individual list data
-    vim.validate("what.nr", what.nr, "nil")
 end
 
 --- @param action QfRancherAction
@@ -209,3 +207,5 @@ return M
 --- Project wide thing: Where should validations be behind the g var and when should they not?
 ---     Anything from an API needs to have a validation layer. Not sure what else or how much
 ---     further you should go in than the initial calls
+--- Rename this to something that suggests it is what governs the data types. Move the types here
+--- as well
