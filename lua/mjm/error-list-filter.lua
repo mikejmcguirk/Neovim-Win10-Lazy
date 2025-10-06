@@ -113,6 +113,8 @@ function M._filter_wrapper(filter_info, filter_opts, input_opts, what)
     et._set_list(what_set)
 end
 
+--- NOTE: In line with Cfilter and the C code, bufname() is used for checking filenames
+
 -----------------------
 -- Cfilter Emulation --
 -----------------------

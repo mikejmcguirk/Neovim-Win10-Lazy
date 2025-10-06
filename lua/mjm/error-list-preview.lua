@@ -385,7 +385,6 @@ local function get_preview_buf(bufnr)
         end
 
         local full_path = vim.api.nvim_buf_get_name(bufnr)
-        -- TODO: Replace other filereadable calls with this
         if vim.uv.fs_access(full_path, 4) then
             return { "Unable to read file " .. full_path }
         end

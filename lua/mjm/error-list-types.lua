@@ -148,7 +148,7 @@ function M._validate_qf_item_strict(item)
     if type(item.filename) == "string" then
         vim.validate("item.filename", item.filename, function()
             local full_path = vim.fn.fnamemodify(item.filename, ":p")
-            return vim.fn.filereadable(full_path) == 1
+            return vim.uv.fs_access(full_path, 4) == true
         end)
     end
 
@@ -283,6 +283,29 @@ end
 --- @field regex? vim.regex
 
 --- @alias QfRancherPredicateFunc fun(QfRancherPredicateOpts):boolean
+
+------------------
+--- GREP TYPES ---
+------------------
+
+--- @alias QfRancherGrepLocFunc fun():string[]
+---
+--- @alias QfRancherGrepLocs string[]
+--- @alias QfRancherGrepPartsFunc fun(string, string, QfRancherGrepLocs):string[]
+
+--- @class QfRancherGrepInfo
+--- @field name string
+--- @field list_item_type string|nil
+--- @field location_func fun():string[]
+
+--- @param grep_info QfRancherGrepInfo
+--- @return nil
+function M._validate_grep_info(grep_info)
+    vim.validate("grep_info", grep_info, "table")
+    vim.validate("grep_info.name", grep_info.name, "string")
+    vim.validate("grep_info.list_item_type", grep_info.list_item_type, { "nil", "string" })
+    vim.validate("location_func", grep_info.location_func, "callable")
+end
 
 --------------------
 --- SYSTEM TYPES ---

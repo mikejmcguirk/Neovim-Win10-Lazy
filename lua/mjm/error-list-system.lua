@@ -37,7 +37,7 @@ local function handle_output(obj, what)
     end
 
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if not eu._win_can_have_loclist(what.user_data.list_win) then
+    if what.user_data.list_win and not eu._win_can_have_loclist(what.user_data.list_win) then
         return
     end
 
