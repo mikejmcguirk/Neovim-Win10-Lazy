@@ -1,52 +1,27 @@
 local M = {}
 
--------------
---- TYPES ---
--------------
-
---- @class QfRancherSystemOpts
---- @field async? boolean
---- @field cmd_parts? string[]
---- @field timeout? integer
-
 -------------------
 --- MODULE INFO ---
 -------------------
 
-local default_async = true
+--- TODO: Should be in types module
 local default_timeout = 4000
 
 -----------------
 --- SYSTEM DO ---
 -----------------
 
-function M.validate_system_opts(system_opts)
-    system_opts = system_opts or {}
-    vim.validate("system_opts", system_opts, "table")
-
-    vim.validate("system_opts.cmd_parts", system_opts.cmd_parts, { "nil", "table" })
-    vim.validate("system_opts.async", system_opts.async, { "boolean", "nil" })
-    system_opts.async = system_opts.async == nil and default_async or system_opts.async
-    vim.validate("system_opts.timeout", system_opts.timeout, { "nil", "number" })
-    system_opts.timeout = system_opts.timeout == nil and default_timeout or system_opts.timeout
-
-    return true
-end
-
 local function validate_system_do(system_opts, what)
     system_opts = system_opts or {}
     what = what or {}
 
     local eu = require("mjm.error-list-util")
+    local ey = require("mjm.error-list-types")
 
-    vim.validate("system_opts", system_opts, function()
-        return M.validate_system_opts()
-    end)
-
-    vim.validate("system_opts.cmd_parts", system_opts.cmd_parts, "table")
+    ey._validate_system_opts(system_opts)
     eu._is_valid_str_list(system_opts.cmd_parts)
 
-    require("mjm.error-list-types")._validate_what_strict(what)
+    ey._validate_what_strict(what)
 end
 
 --- @param obj vim.SystemCompleted
@@ -108,16 +83,16 @@ function M.system_do(system_opts, what)
     validate_system_do(system_opts, what)
 
     local vim_system_opts = { text = true, timeout = system_opts.timeout or default_timeout }
-    if system_opts.async then
+    if system_opts.sync then
+        local obj = vim.system(system_opts.cmd_parts, vim_system_opts)
+            :wait(system_opts.timeout or default_timeout)
+        handle_output(obj, what)
+    else
         vim.system(system_opts.cmd_parts, vim_system_opts, function(obj)
             vim.schedule(function()
                 handle_output(obj, what)
             end)
         end)
-    else
-        local obj = vim.system(system_opts.cmd_parts, vim_system_opts)
-            :wait(system_opts.timeout or default_timeout)
-        handle_output(obj, what)
     end
 end
 

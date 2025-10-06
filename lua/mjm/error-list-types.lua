@@ -59,41 +59,6 @@ end
 --- @field list_win? integer
 --- @field sort_func? QfRancherSortPredicate
 
---------------------
---- FILTER TYPES ---
---------------------
-
---- @class QfRancherFilterInfo
---- @field name string
---- @field insensitive_func QfRancherPredicateFunc
---- @field regex_func QfRancherPredicateFunc
---- @field sensitive_func QfRancherPredicateFunc
-
---- @param filter_info QfRancherFilterInfo
-function M._validate_filter_info(filter_info)
-    vim.validate("filter_info", filter_info, "table")
-    vim.validate("filter_info.name", filter_info.name, "string")
-    vim.validate("filter_info.insensitive_func", filter_info.insensitive_func, "callable")
-    vim.validate("filter_info.regex_func", filter_info.regex_func, "callable")
-    vim.validate("filter_info.sensitive_func", filter_info.sensitive_func, "callable")
-end
-
---- @class QfRancherFilterOpts
---- @field keep? boolean
-
-function M._validate_filter_opts(filter_opts)
-    vim.validate("filter_opts", filter_opts, "table")
-    vim.validate("filter_opts.keep", filter_opts.keep, { "boolean", "nil" })
-end
-
---- @class QfRancherPredicateOpts
---- @field item table
---- @field keep boolean
---- @field pattern? string
---- @field regex? vim.regex
-
---- @alias QfRancherPredicateFunc fun(QfRancherPredicateOpts):boolean
-
 M._actions = { "new", "replace", "add" }
 M._default_action = "new"
 
@@ -282,6 +247,60 @@ function M._validate_what_strict(what)
             return what.idx >= 0
         end)
     end
+end
+
+--------------------
+--- FILTER TYPES ---
+--------------------
+
+--- @class QfRancherFilterInfo
+--- @field name string
+--- @field insensitive_func QfRancherPredicateFunc
+--- @field regex_func QfRancherPredicateFunc
+--- @field sensitive_func QfRancherPredicateFunc
+
+--- @param filter_info QfRancherFilterInfo
+function M._validate_filter_info(filter_info)
+    vim.validate("filter_info", filter_info, "table")
+    vim.validate("filter_info.name", filter_info.name, "string")
+    vim.validate("filter_info.insensitive_func", filter_info.insensitive_func, "callable")
+    vim.validate("filter_info.regex_func", filter_info.regex_func, "callable")
+    vim.validate("filter_info.sensitive_func", filter_info.sensitive_func, "callable")
+end
+
+--- @class QfRancherFilterOpts
+--- @field keep? boolean
+
+function M._validate_filter_opts(filter_opts)
+    vim.validate("filter_opts", filter_opts, "table")
+    vim.validate("filter_opts.keep", filter_opts.keep, { "boolean", "nil" })
+end
+
+--- @class QfRancherPredicateOpts
+--- @field item table
+--- @field keep boolean
+--- @field pattern? string
+--- @field regex? vim.regex
+
+--- @alias QfRancherPredicateFunc fun(QfRancherPredicateOpts):boolean
+
+--------------------
+--- SYSTEM TYPES ---
+--------------------
+
+--- @class QfRancherSystemOpts
+--- @field sync? boolean
+--- @field cmd_parts? string[]
+--- @field timeout? integer
+
+--- @param system_opts QfRancherSystemOpts
+--- @return nil
+function M._validate_system_opts(system_opts)
+    vim.validate("system_opts", system_opts, "table")
+
+    vim.validate("system_opts.cmd_parts", system_opts.cmd_parts, { "nil", "table" })
+    vim.validate("system_opts.sync", system_opts.sync, { "boolean", "nil" })
+    vim.validate("system_opts.timeout", system_opts.timeout, { "nil", "number" })
 end
 
 return M

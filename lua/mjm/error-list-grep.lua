@@ -21,22 +21,6 @@ local M = {}
 --- Grepprg/Grep Parts ---
 --------------------------
 
---- @param locations string[]
-local function validate_locations(locations)
-    vim.validate("locations", locations, "table")
-    if #locations < 1 then
-        return false
-    end
-
-    for _, location in ipairs(locations) do
-        if type(location) ~= "string" then
-            return false
-        end
-    end
-
-    return true
-end
-
 --- @return string[]
 local function get_base_parts_rg()
     return { "rg", "--vimgrep", "-uu" }
@@ -52,9 +36,7 @@ end
 local function get_full_parts_rg(pattern, input_type, locations)
     vim.validate("pattern", pattern, "string")
     vim.validate("input_type", input_type, "string")
-    vim.validate("locations", locations, function()
-        return validate_locations(locations)
-    end)
+    require("mjm.error-list-util")._is_valid_str_list(locations)
 
     local cmd = get_base_parts_rg()
     if vim.fn.has("win32") == 1 then
@@ -91,9 +73,7 @@ end
 local function get_full_parts_grep(pattern, input_type, locations)
     vim.validate("pattern", pattern, "string")
     vim.validate("input_type", input_type, "string")
-    vim.validate("locations", locations, function()
-        return validate_locations(locations)
-    end)
+    require("mjm.error-list-util")._is_valid_str_list(locations)
 
     local cmd = get_base_parts_grep() --- @type string[]
 
@@ -167,18 +147,16 @@ end
 --- @param grep_info QfRancherGrepInfo
 --- @param input_type QfRancherInputType
 local function get_prompt(grep_info, input_type)
-    local eu = require("mjm.error-list-util")
+    if vim.g.qf_rancher_debug_assertions then
+        vim.validate("grep_info", grep_info, "table")
+        vim.validate("grep_info.name", grep_info.name, "string")
+        require("mjm.error-list-types")._validate_input_type(input_type)
+    end
 
-    vim.validate("grep_info", grep_info, "table")
-    vim.validate("grep_info.name", grep_info.name, "string")
-    vim.validate("input_type", input_type, function()
-        return eu.validate_input_type(input_type)
-    end)
-
-    local display_type = eu._get_display_input_type(input_type)
+    local display_type = require("mjm.error-list-util")._get_display_input_type(input_type)
     local grepprg = vim.g.qf_rancher_grepprg or ""
 
-    -- TODO: actually look at this and adjust
+    -- LOW: This could be better
     return "[" .. grepprg .. "] " .. grep_info.name .. " Grep (" .. display_type .. "): "
 end
 
@@ -189,10 +167,7 @@ end
 local function clean_do_grep_input(grep_info, system_opts, input_opts, what)
     vim.validate("grep_info", grep_info, "table")
     vim.validate("grep_info.location_func", grep_info.location_func, "callable")
-
-    vim.validate("system_opts", system_opts, function()
-        return require("mjm.error-list-system").validate_system_opts(system_opts)
-    end)
+    require("mjm.error-list-types")._validate_system_opts(system_opts)
 
     require("mjm.error-list-types")._validate_input_opts(input_opts)
     require("mjm.error-list-types")._validate_what_strict(what)
@@ -216,7 +191,8 @@ function M._do_grep(grep_info, system_opts, input_opts, what)
 
     local input_type = eu._resolve_input_type(input_opts.input_type) --- @type QfRancherInputType
     local prompt = get_prompt(grep_info, input_type)
-    local pattern = eu._resolve_pattern(prompt, input_opts) --- @type string|nil
+    --- @type string|nil
+    local pattern = eu._resolve_pattern(prompt, input_opts.pattern, input_type)
     if not pattern then
         return
     end
