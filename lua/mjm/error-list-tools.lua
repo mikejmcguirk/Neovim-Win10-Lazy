@@ -10,18 +10,19 @@ local M = {}
 ------------------------
 
 --- @param old_all table
---- @param new_what vim.fn.setqflist.what
+--- @param new_what QfRancherWhat
 local function create_add_list_what(old_all, new_what)
+    --- @type vim.quickfix.entry[]
     local items = require("mjm.error-list-util")._merge_qf_lists(old_all.items, new_what.items)
-    local es = require("mjm.error-list-sort")
-    ---@diagnostic disable-next-line: undefined-field
-    local sort_func = new_what.user_data.diag_sort == true and es._sort_fname_asc
-        or es._sort_fname_diag_asc
+    local es = require("mjm.error-list-sort") --- @type QfRancherSort
+    --- @type QfRancherSortPredicate
+    local sort_func = new_what.user_data.sort_func or es._sort_fname_asc
     table.sort(items, sort_func)
 
-    local idx = new_what.idx or old_all.idx or nil
-    idx = math.min(idx, #items)
+    local idx = new_what.idx or old_all.idx or nil --- @type integer|nil
+    idx = idx and math.min(idx, #items)
 
+    --- TODO: Why can't this be a tbl_extend?
     local add_what = M._create_what_table({
         context = new_what.context or old_all.context or {},
         efm = old_all.efm or new_what.efm or nil,
@@ -43,7 +44,7 @@ local function cycle_lists_down(what)
     end
 
     for i = 1, what.nr - 1 do
-        local next_list = M._get_list(what.user_data.list_win, i + 1, { all = true })
+        local next_list = M._get_list_all(what.user_data.list_win, what.nr)
         local next_what = vim.tbl_deep_extend("force", next_list, {
             user_data = { action = "replace" },
             nr = i,
@@ -142,7 +143,7 @@ function M._set_list(what)
         return do_set_list(what.user_data.win, "$", " ", what)
     end
 
-    local what_set = vim.deepcopy(what, true) --- @type vim.fn.setqflist.what
+    local what_set = vim.deepcopy(what, true) --- @type QfRancherWhat
     --- @type integer
     local set_list_nr = what.nr == 0 and M._get_cur_stack_nr(what.user_data.list_win) or what.nr
     set_list_nr = math.min(set_list_nr, stack_len) --- @type integer
@@ -153,7 +154,7 @@ function M._set_list(what)
     end
 
     if what.user_data.action == "add" then
-        local cur_list = M._get_list(what.user_data.list_win, set_list_nr, { all = true }) --- @type table
+        local cur_list = M._get_list_all(what.user_data.list_win, what.nr) --- @type table
         what_set = create_add_list_what(cur_list, what_set)
     end
 
@@ -172,24 +173,23 @@ end
 --- TODO: Another issue with using list.nr for these inputs
 
 --- @param win integer|nil
---- @param list_nr integer
---- @param what table
+--- @param nr integer
 --- @return table
-function M._get_list(win, list_nr, what)
+function M._get_list_all(win, nr)
     if vim.g.qf_rancher_debug_assertions then
         local ev = require("mjm.error-list-validation")
         ev._validate_win(win, true)
-        ev._validate_list_nr(list_nr, false)
+        ev._validate_list_nr(nr, false)
     end
 
-    local what_get = vim.tbl_extend("force", what, { nr = list_nr })
     if win then
-        return vim.fn.getloclist(win, what_get)
+        return vim.fn.getloclist(win, { nr = nr, all = true })
     else
-        return vim.fn.getqflist(what_get)
+        return vim.fn.getqflist({ nr = nr, all = true })
     end
 end
 
+--- TODO: Use in qE/lE
 --- @return nil
 function M._clear_list_stack(win)
     if not win then

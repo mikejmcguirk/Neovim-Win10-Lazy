@@ -148,6 +148,7 @@ local function diags_to_list(diag_info, diag_opts, what)
         user_data = { diag_sort = true },
     }) --- @type QfRancherWhat
 
+    what_set.user_data.sort_func = require("mjm.error-list-sort")._sort_fname_diag_asc()
     et._set_list(what_set)
 end
 
