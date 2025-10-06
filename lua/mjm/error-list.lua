@@ -20,12 +20,14 @@
 --- TODO: Submit a PR to have the built-in annotation fixed so this can be removed
 
 --- @class QfRancherWhat : vim.fn.setqflist.what
+--- @field nr integer|"$"
 --- @field user_data? any
 
 --- @class QfRancherUserData
 --- @field action? QfRancherAction
 --- @field list_item_type? string
 --- @field list_win? integer
+--- @field sort_func? QfRancherSortPredicate
 
 --- https://github.com/tjdevries/lazy-require.nvim/blob/master/lua/lazy-require.lua
 --- @param require_path string

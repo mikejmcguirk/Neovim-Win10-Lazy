@@ -63,22 +63,18 @@ local function resolve_list_nr(win, list_nr)
         or vim.fn.getqflist({ nr = list_nr }).nr
 end
 
---- @param win integer|nil
---- @param list_nr integer|"$"
 --- @param setlist_action "r"|" "|"a"|"f"|"u"
---- @param what vim.fn.setqflist.what
-local function do_set_list(win, list_nr, setlist_action, what)
+--- @param what QfRancherWhat
+local function do_set_list(setlist_action, what)
     local ev = require("mjm.error-list-validation")
-    ev._validate_win(win, true)
-    ev._validate_list_nr(list_nr, true)
     vim.validate("setlist_action", setlist_action, "string")
-    ev._validate_what(what)
+    ev._validate_what_strict(what)
 
     local what_set = vim.deepcopy(what, true)
-    what_set = vim.tbl_extend("force", what_set, { nr = list_nr })
-    local result = win and vim.fn.setloclist(win, {}, "r", what_set)
+    local result = what.user_data.list_win
+            and vim.fn.setloclist(what.user_data.list_win, {}, "r", what_set)
         or vim.fn.setqflist({}, "r", what_set) --- @type integer
-    return result == -1 and result or resolve_list_nr(win, list_nr)
+    return result == -1 and result or resolve_list_nr(what.user_data.list_win, what.nr)
 end
 
 --- TODO: The code needs to be strict about the fact that the "$" list nr is only to be used for
@@ -129,9 +125,6 @@ end
 --- TODO: Since list_win and action both have to be carried down through what, really, this
 --- should just take what
 
---- @param win integer|nil
---- @param list_nr integer
---- @param action QfRancherAction
 --- @param what QfRancherWhat
 --- @return integer
 function M._set_list(what)
@@ -140,17 +133,17 @@ function M._set_list(what)
 
     local stack_len = M._get_list_stack_len(what.user_data.win) --- @type integer
     if stack_len == 0 then
-        return do_set_list(what.user_data.win, "$", " ", what)
+        return do_set_list(" ", what)
     end
 
     local what_set = vim.deepcopy(what, true) --- @type QfRancherWhat
-    --- @type integer
+    --- @type integer|"$"
     local set_list_nr = what.nr == 0 and M._get_cur_stack_nr(what.user_data.list_win) or what.nr
-    set_list_nr = math.min(set_list_nr, stack_len) --- @type integer
+    set_list_nr = type(set_list_nr) == "number" and math.min(set_list_nr, stack_len) or set_list_nr
 
     if what.user_data.action == "new" and set_list_nr < stack_len then
-        cycle_lists_down(what.user_data.list_win, set_list_nr)
-        return do_set_list(what.user_data.list_win, set_list_nr, "r", what_set)
+        cycle_lists_down(what_set)
+        return do_set_list("r", what_set)
     end
 
     if what.user_data.action == "add" then
@@ -159,10 +152,10 @@ function M._set_list(what)
     end
 
     if what.user_data.action == "add" or what.user_data.action == "replace" then
-        return do_set_list(what.user_data.list_win, set_list_nr, "r", what_set)
+        return do_set_list("r", what_set)
     end
 
-    return do_set_list(what.user_data.list_win, "$", " ", what_set)
+    return do_set_list(" ", what_set)
 end
 
 --- LOW: Create a type and validation for the getqflist return
@@ -173,7 +166,7 @@ end
 --- TODO: Another issue with using list.nr for these inputs
 
 --- @param win integer|nil
---- @param nr integer
+--- @param nr integer|"$"
 --- @return table
 function M._get_list_all(win, nr)
     if vim.g.qf_rancher_debug_assertions then
