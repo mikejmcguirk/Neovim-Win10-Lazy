@@ -101,7 +101,7 @@ local function validate_diags_to_list(diag_info, diag_opts, what)
     vim.validate("diag_opts", diag_opts, "table")
     vim.validate("diag_opts.sev_type", diag_opts.sev_type, "string")
 
-    require("mjm.error-list-validation")._validate_what(what)
+    require("mjm.error-list-types")._validate_what(what)
 end
 
 --- LOW: The title could be more descriptive, but as it it aligns with how titles are constructed
@@ -186,7 +186,7 @@ local sev_types = { "min", "only", "top" } --- @type string[]
 --- @param list_win? integer
 --- @return nil
 local function make_diag_cmd(cargs, list_win)
-    require("mjm.error-list-validation")._validate_win(list_win, true)
+    require("mjm.error-list-types")._validate_win(list_win, true)
 
     local fargs = cargs.fargs --- @type string[]
 

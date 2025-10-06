@@ -118,7 +118,7 @@ local function validate_wrapper_input(filter_info, filter_opts, input_opts, what
 
     local eu = require("mjm.error-list-util")
     eu._validate_input_opts(input_opts)
-    require("mjm.error-list-validation")._validate_what_strict(what)
+    require("mjm.error-list-types")._validate_what_strict(what)
 end
 
 --- @param filter_info QfRancherFilterInfo
@@ -522,7 +522,7 @@ local function filter_cmd(cargs, list_win)
 
     local eu = require("mjm.error-list-util")
     local filter_func = eu._check_cmd_arg(fargs, filter_names, "cfilter")
-    local ev = require("mjm.error-list-validation")
+    local ev = require("mjm.error-list-types")
     local keep_this = not cargs.bang
     local action = eu._check_cmd_arg(fargs, ev._actions, ev._default_action)
     local pattern = eu._find_cmd_pattern(fargs)

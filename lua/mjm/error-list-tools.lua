@@ -40,7 +40,7 @@ end
 --- @return nil
 local function cycle_lists_down(what)
     if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-validation")._validate_what_strict(what)
+        require("mjm.error-list-types")._validate_what_strict(what)
     end
 
     for i = 1, what.nr - 1 do
@@ -56,7 +56,7 @@ end
 --- @param win integer|nil
 --- @param list_nr integer|string
 local function resolve_list_nr(win, list_nr)
-    local ev = require("mjm.error-list-validation")
+    local ev = require("mjm.error-list-types")
     ev._validate_win(win, true)
     ev._validate_list_nr(list_nr, true)
     return win and vim.fn.getloclist(win, { nr = list_nr }).nr
@@ -66,7 +66,7 @@ end
 --- @param setlist_action "r"|" "|"a"|"f"|"u"
 --- @param what QfRancherWhat
 local function do_set_list(setlist_action, what)
-    local ev = require("mjm.error-list-validation")
+    local ev = require("mjm.error-list-types")
     vim.validate("setlist_action", setlist_action, "string")
     ev._validate_what_strict(what)
 
@@ -81,7 +81,7 @@ end
 --- internal purposes, and not within the general business logic
 
 local function validate_set_list(what)
-    local ev = require("mjm.error-list-validation")
+    local ev = require("mjm.error-list-types")
     ev._validate_what_strict(what)
     --- TODO: Add new validation here for the what user_data section
     vim.validate("what.id", what.id, "nil")
@@ -111,7 +111,7 @@ function M._create_what_table(opts)
     what.user_data = opts.user_data or nil
 
     if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-validation")._validate_what_strict(what)
+        require("mjm.error-list-types")._validate_what_strict(what)
     end
 
     return what
@@ -170,7 +170,7 @@ end
 --- @return table
 function M._get_list_all(win, nr)
     if vim.g.qf_rancher_debug_assertions then
-        local ev = require("mjm.error-list-validation")
+        local ev = require("mjm.error-list-types")
         ev._validate_win(win, true)
         ev._validate_list_nr(nr, false)
     end

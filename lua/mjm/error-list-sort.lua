@@ -50,7 +50,7 @@ local function validate_sort_wrapper_input(sort_info, sort_opts, what)
         end)
     end
 
-    require("mjm.error-list-validation")._validate_what_strict(what)
+    require("mjm.error-list-types")._validate_what_strict(what)
 end
 
 --- @param sort_info QfRancherSortInfo

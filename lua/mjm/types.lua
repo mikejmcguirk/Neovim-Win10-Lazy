@@ -1,6 +1,33 @@
 --- @class QfRancherValidation
 local M = {}
 
+--- @alias QfRancherAction "new"|"replace"|"add"
+--- @alias QfRancherInputType "insensitive"|"regex"|"sensitive"|"smart"|"vimsmart"
+
+--- @class QfRancherInputOpts
+--- @field input_type? QfRancherInputType
+--- @field pattern? string
+---
+--- @class QfRancherOutputOpts
+--- @field action? QfRancherAction
+--- @field count? integer|nil
+--- @field use_loclist? boolean|nil
+--- @field loclist_source_win? integer --- TODO: But why though?
+--- @field list_item_type? string|nil
+--- @field title? string|nil --- TODO: Nix this
+
+--- TODO: Submit a PR to have the built-in annotation fixed so this can be removed
+
+--- @class QfRancherWhat : vim.fn.setqflist.what
+--- @field nr integer|"$"
+--- @field user_data? any
+
+--- @class QfRancherUserData
+--- @field action? QfRancherAction
+--- @field list_item_type? string
+--- @field list_win? integer
+--- @field sort_func? QfRancherSortPredicate
+
 M._actions = { "new", "replace", "add" }
 M._default_action = "new"
 

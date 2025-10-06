@@ -46,7 +46,7 @@ local function validate_system_do(system_opts, what)
     vim.validate("system_opts.cmd_parts", system_opts.cmd_parts, "table")
     eu._is_valid_str_list(system_opts.cmd_parts)
 
-    require("mjm.error-list-validation")._validate_what_strict(what)
+    require("mjm.error-list-types")._validate_what_strict(what)
 end
 
 --- @param obj vim.SystemCompleted

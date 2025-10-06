@@ -2,33 +2,6 @@
 --- TYPES ---
 -------------
 
---- @alias QfRancherAction "new"|"replace"|"add"
---- @alias QfRancherInputType "insensitive"|"regex"|"sensitive"|"smart"|"vimsmart"
-
---- @class QfRancherInputOpts
---- @field input_type? QfRancherInputType
---- @field pattern? string
----
---- @class QfRancherOutputOpts
---- @field action? QfRancherAction
---- @field count? integer|nil
---- @field use_loclist? boolean|nil
---- @field loclist_source_win? integer --- TODO: But why though?
---- @field list_item_type? string|nil
---- @field title? string|nil --- TODO: Nix this
-
---- TODO: Submit a PR to have the built-in annotation fixed so this can be removed
-
---- @class QfRancherWhat : vim.fn.setqflist.what
---- @field nr integer|"$"
---- @field user_data? any
-
---- @class QfRancherUserData
---- @field action? QfRancherAction
---- @field list_item_type? string
---- @field list_win? integer
---- @field sort_func? QfRancherSortPredicate
-
 --- https://github.com/tjdevries/lazy-require.nvim/blob/master/lua/lazy-require.lua
 --- @param require_path string
 --- @return table
@@ -103,12 +76,6 @@ end
 vim.validate("qf_rancher_use_smartcase", vim.g.qf_rancher_use_smartcase, { "boolean", "nil" })
 
 require("mjm.error-list-maps")
-
-------------------------
--- Other source notes --
-------------------------
-
--- The vimgrep code is in quickfix.c. Functions often start with "vgr"
 
 local M = {}
 
@@ -242,6 +209,12 @@ return M
 -----------
 
 --- Make resizing configurable
+--- A problem with cdo is, say you make changes on a couple lines, then realizes you're better off
+---     just using cdo to run a substitute command, you will get enter errors on the entries you
+---     already changed. It would be better if cdo/cfdo ran in protected mode, perhaps showing
+---     the errors afterwards. Unsure though if there's a way to properly capture context so
+---     you can run each command pcalled individually, or if you have to do a nvim_cmd cdo and
+---     run that whole thing in the pcall
 
 -------------
 --- # LOW ---

@@ -2,7 +2,7 @@
 local M = {}
 
 function M._count_to_count1(count)
-    require("mjm.error-list-validation")._validate_count(count)
+    require("mjm.error-list-types")._validate_count(count)
     return math.max(count, 1)
 end
 
@@ -78,7 +78,7 @@ end
 --- @param win integer
 --- @return boolean
 function M._win_can_have_loclist(win)
-    require("mjm.error-list-validation")._validate_win(win, false)
+    require("mjm.error-list-types")._validate_win(win, false)
 
     local wintype = vim.fn.win_gettype(win) --- @type string
     if wintype == "" or wintype == "loclist" then
