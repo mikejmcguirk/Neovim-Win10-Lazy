@@ -9,6 +9,10 @@ local M = {}
 --- HELPER FUNCTIONS ---
 ------------------------
 
+local function use_old(var, var_type)
+    return type(var) == var_type and var or nil
+end
+
 --- @param old_all table
 --- @param new_what QfRancherWhat
 local function create_add_list_what(old_all, new_what)
@@ -22,15 +26,15 @@ local function create_add_list_what(old_all, new_what)
     local idx = new_what.idx or old_all.idx or nil --- @type integer|nil
     idx = idx and math.min(idx, #items)
 
-    --- TODO: Why can't this be a tbl_extend?
     local add_what = M._create_what_table({
-        context = new_what.context or old_all.context or {},
-        efm = old_all.efm or new_what.efm or nil,
+        context = new_what.context or use_old(old_all.context, "table") or {},
+        efm = new_what.efm or use_old(old_all.efm, "string") or nil,
         idx = idx,
         items = items,
-        lines = nil,
-        quickfixtextfunc = new_what.quickfixtextfunc or old_all.quickfixtextfunc or nil,
-        title = new_what.title or old_all.title or nil,
+        quickfixtextfunc = new_what.quickfixtextfunc
+            or use_old(old_all.quickfixtextfunc, "function")
+            or nil,
+        title = new_what.title or use_old(old_all.title, "string") or nil,
     })
 
     return vim.tbl_extend("force", new_what, add_what)
@@ -72,8 +76,8 @@ local function do_set_list(setlist_action, what)
 
     local what_set = vim.deepcopy(what, true)
     local result = what.user_data.list_win
-            and vim.fn.setloclist(what.user_data.list_win, {}, "r", what_set)
-        or vim.fn.setqflist({}, "r", what_set) --- @type integer
+            and vim.fn.setloclist(what.user_data.list_win, {}, setlist_action, what_set)
+        or vim.fn.setqflist({}, setlist_action, what_set) --- @type integer
     return result == -1 and result or resolve_list_nr(what.user_data.list_win, what.nr)
 end
 
@@ -121,9 +125,8 @@ end
 --- all sorting here. This removes the issue of calling functions having to reason about when
 --- this function sorts. Instead, they can pass a sort to the what table and assume the
 --- underlying logic is correctly handled
---- TODO: This creates an oddity though because the what.nr field can hold the "$" value
---- TODO: Since list_win and action both have to be carried down through what, really, this
---- should just take what
+
+--- MID: The way the set_nr is handled in here feels sloppy
 
 --- @param what QfRancherWhat
 --- @return integer
@@ -131,17 +134,21 @@ function M._set_list(what)
     what = what or {}
     validate_set_list(what)
 
+    local what_set = vim.deepcopy(what, true) --- @type QfRancherWhat
     local stack_len = M._get_list_stack_len(what.user_data.win) --- @type integer
     if stack_len == 0 then
-        return do_set_list(" ", what)
+        what_set.nr = "$"
+        return do_set_list(" ", what_set)
     end
 
-    local what_set = vim.deepcopy(what, true) --- @type QfRancherWhat
-    --- @type integer|"$"
-    local set_list_nr = what.nr == 0 and M._get_cur_stack_nr(what.user_data.list_win) or what.nr
-    set_list_nr = type(set_list_nr) == "number" and math.min(set_list_nr, stack_len) or set_list_nr
+    --- MID: Why does this diagnostic fire here?
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    local set_list_nr = type(what.nr) == "number" and what.nr or stack_len --- @type integer
+    set_list_nr = set_list_nr == 0 and M._get_cur_stack_nr(what.user_data.list_win) or set_list_nr
+    set_list_nr = math.min(set_list_nr, stack_len) or set_list_nr
 
     if what.user_data.action == "new" and set_list_nr < stack_len then
+        what_set.nr = set_list_nr
         cycle_lists_down(what_set)
         return do_set_list("r", what_set)
     end
@@ -152,9 +159,11 @@ function M._set_list(what)
     end
 
     if what.user_data.action == "add" or what.user_data.action == "replace" then
+        what_set.nr = set_list_nr
         return do_set_list("r", what_set)
     end
 
+    what_set.nr = "$"
     return do_set_list(" ", what_set)
 end
 

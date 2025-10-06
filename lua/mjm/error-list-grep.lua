@@ -61,7 +61,7 @@ local function get_full_parts_rg(pattern, input_type, locations)
         table.insert(cmd, "--crlf")
     end
 
-    if input_type == "smart" then
+    if input_type == "smartcase" then
         table.insert(cmd, "--smart-case") --- or "-S"
     elseif input_type == "insensitive" then
         table.insert(cmd, "--ignore-case") --- or "-i"
@@ -103,7 +103,8 @@ local function get_full_parts_grep(pattern, input_type, locations)
         table.insert(cmd, "--fixed-strings") --- or "-F"
     end
 
-    local smartcase = input_type == "smart" and string.lower(pattern) == pattern --- @type boolean
+    --- @type boolean
+    local smartcase = input_type == "smartcase" and string.lower(pattern) == pattern
     if smartcase or input_type == "insensitive" then
         table.insert(cmd, "--ignore-case") --- or "-i"
     end
@@ -193,8 +194,7 @@ local function clean_do_grep_input(grep_info, system_opts, input_opts, what)
         return require("mjm.error-list-system").validate_system_opts(system_opts)
     end)
 
-    local eu = require("mjm.error-list-util")
-    eu._validate_input_opts(input_opts)
+    require("mjm.error-list-types")._validate_input_opts(input_opts)
     require("mjm.error-list-types")._validate_what_strict(what)
 end
 

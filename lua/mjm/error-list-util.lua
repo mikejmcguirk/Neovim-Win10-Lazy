@@ -78,6 +78,10 @@ end
 --- @param win integer
 --- @return boolean
 function M._win_can_have_loclist(win)
+    if not win then
+        return false
+    end
+
     require("mjm.error-list-types")._validate_win(win, false)
 
     local wintype = vim.fn.win_gettype(win) --- @type string
@@ -355,15 +359,18 @@ local function get_visual_pattern(mode)
 end
 
 --- @param prompt string
---- @param input_opts QfRancherInputOpts
+--- @param input_pattern string|nil
+--- @param input_type QfRancherInputType
 --- @return string|nil
-function M._resolve_pattern(prompt, input_opts)
-    vim.validate("prompt", prompt, "string")
-    vim.validate("input_opts", input_opts, "table")
-    vim.validate("input_opts.pattern", input_opts.pattern, { "nil", "string" })
+function M._resolve_pattern(prompt, input_pattern, input_type)
+    if vim.g.qf_rancher_debug_assertions then
+        vim.validate("prompt", prompt, "string")
+        vim.validate("input_pattern", input_pattern, { "nil", "string" })
+        require("mjm.error-list-types")._validate_input_type(input_type)
+    end
 
-    if input_opts.pattern then
-        return input_opts.pattern
+    if input_pattern then
+        return input_pattern
     end
 
     local mode = vim.fn.mode() --- @type string
@@ -372,7 +379,8 @@ function M._resolve_pattern(prompt, input_opts)
         return get_visual_pattern(mode)
     end
 
-    return get_input(prompt)
+    local pattern = get_input(prompt) --- @type string|nil
+    return pattern and input_type == "insensitive" and string.lower(pattern) or pattern
 end
 
 --- @param entry table
@@ -440,33 +448,6 @@ function M._is_valid_str_list(table)
     end
 end
 
---- @param input_type QfRancherInputType
---- @return boolean
-function M.validate_input_type(input_type)
-    vim.validate("input_type", input_type, "string")
-    return input_type == "insensitive"
-        or input_type == "regex"
-        or input_type == "sensitive"
-        or input_type == "smart"
-        or input_type == "vimsmart"
-end
-
--- TODO: similar issue here where this should only be for validation, not changing
-
---- @param input_opts QfRancherInputOpts
-function M._validate_input_opts(input_opts)
-    vim.validate("input_opts", input_opts, "table")
-    -- Allow nil input patterns to pass through. Each function should resolve individually
-    vim.validate("input_opts.pattern", input_opts.pattern, { "nil", "string" })
-    -- Since input type never *should* be blank, fix nils here
-    vim.validate("input_opts.input_type", input_opts.input_type, { "nil", "string" })
-    if type(input_opts.input_type) == "string" then
-        M.validate_input_type(input_opts.input_type)
-    else
-        input_opts.input_type = "vimsmart"
-    end
-end
-
 --- @param input QfRancherInputType
 --- @return string
 --- NOTE: This function assumes that an API input of "vimsmart" has already been resolved
@@ -475,36 +456,33 @@ function M._get_display_input_type(input)
         return "Regex"
     elseif input == "sensitive" then
         return "Case Sensitive"
-    elseif input == "smart" then
+    elseif input == "smartcase" then
         return "Smartcase"
     else
         return "Case Insensitive"
     end
 end
 
---- @param input QfRancherInputType|nil
+--- @param input QfRancherInputType
 --- @return QfRancherInputType
 function M._resolve_input_type(input)
-    if not input then
-        return "sensitive"
-    end
+    require("mjm.error-list-types")._validate_input_type(input)
 
     if input ~= "vimsmart" then
         return input
     end
 
     if vim.g.qf_rancher_use_smartcase == true then
-        return "smart"
-    -- Specifically compare with boolean false to ignore nils
+        return "smartcase"
     elseif vim.g.qf_rancher_use_smartcase == false then
         return "insensitive"
     end
 
     if vim.api.nvim_get_option_value("smartcase", { scope = "global" }) then
-        return "smart"
+        return "smartcase"
+    else
+        return "insensitive"
     end
-
-    return "insensitive"
 end
 
 return M

@@ -2,12 +2,42 @@
 local M = {}
 
 --- @alias QfRancherAction "new"|"replace"|"add"
---- @alias QfRancherInputType "insensitive"|"regex"|"sensitive"|"smart"|"vimsmart"
+
+--- @param action QfRancherAction
+--- @return nil
+function M._validate_action(action)
+    vim.validate("action", action, "string")
+    vim.validate("action", action, function()
+        return action == "new" or action == "replace" or action == "add"
+    end)
+end
+
+--- @alias QfRancherInputType "insensitive"|"regex"|"sensitive"|"smartcase"|"vimsmart"
+
+--- @type string[]
+local input_types = { "insensitive", "regex", "sensitive", "smartcase", "vimsmart" }
+M._default_input_type = "vimsmart"
+M._cmd_input_types = vim.tbl_filter(function(t)
+    return t ~= "vimsmart"
+end, input_types)
+
+function M._validate_input_type(input)
+    vim.validate("input", input, "string")
+    vim.validate("input", input, function()
+        return vim.tbl_contains(input_types, input)
+    end)
+end
 
 --- @class QfRancherInputOpts
 --- @field input_type? QfRancherInputType
 --- @field pattern? string
----
+
+function M._validate_input_opts(input_opts)
+    vim.validate("input_opts", input_opts, "table")
+    M._validate_input_type(input_opts.input_type)
+    vim.validate("input_opts.pattern", input_opts.pattern, { "nil", "string" })
+end
+
 --- @class QfRancherOutputOpts
 --- @field action? QfRancherAction
 --- @field count? integer|nil
@@ -16,10 +46,11 @@ local M = {}
 --- @field list_item_type? string|nil
 --- @field title? string|nil --- TODO: Nix this
 
---- TODO: Submit a PR to have the built-in annotation fixed so this can be removed
+--- TODO: The what annotation does not allow for the user_data field. This makes sense since it is
+--- not ready by setqflist, but makes working with the data a pain. See how quickfix.c handles
+--- it internally. Maybe submit PR
 
 --- @class QfRancherWhat : vim.fn.setqflist.what
---- @field nr integer|"$"
 --- @field user_data? any
 
 --- @class QfRancherUserData
@@ -27,6 +58,41 @@ local M = {}
 --- @field list_item_type? string
 --- @field list_win? integer
 --- @field sort_func? QfRancherSortPredicate
+
+--------------------
+--- FILTER TYPES ---
+--------------------
+
+--- @class QfRancherFilterInfo
+--- @field name string
+--- @field insensitive_func QfRancherPredicateFunc
+--- @field regex_func QfRancherPredicateFunc
+--- @field sensitive_func QfRancherPredicateFunc
+
+--- @param filter_info QfRancherFilterInfo
+function M._validate_filter_info(filter_info)
+    vim.validate("filter_info", filter_info, "table")
+    vim.validate("filter_info.name", filter_info.name, "string")
+    vim.validate("filter_info.insensitive_func", filter_info.insensitive_func, "callable")
+    vim.validate("filter_info.regex_func", filter_info.regex_func, "callable")
+    vim.validate("filter_info.sensitive_func", filter_info.sensitive_func, "callable")
+end
+
+--- @class QfRancherFilterOpts
+--- @field keep? boolean
+
+function M._validate_filter_opts(filter_opts)
+    vim.validate("filter_opts", filter_opts, "table")
+    vim.validate("filter_opts.keep", filter_opts.keep, { "boolean", "nil" })
+end
+
+--- @class QfRancherPredicateOpts
+--- @field item table
+--- @field keep boolean
+--- @field pattern? string
+--- @field regex? vim.regex
+
+--- @alias QfRancherPredicateFunc fun(QfRancherPredicateOpts):boolean
 
 M._actions = { "new", "replace", "add" }
 M._default_action = "new"
@@ -97,7 +163,8 @@ function M._validate_qf_item(item)
     vim.validate("item.nr", item.nr, { "nil", "number" })
     vim.validate("item.text", item.text, { "nil", "string" })
     vim.validate("item.type", item.type, { "nil", "string" })
-    vim.validate("item.valid", item.valid, { "boolean", "nil" })
+    --- MID: Figure out what the proper validation for this is
+    -- vim.validate("item.valid", item.valid, { "boolean", "nil" })
 end
 
 --- Validate qf items more strictly.
@@ -120,27 +187,29 @@ function M._validate_qf_item_strict(item)
         end)
     end
 
+    --- NOTE: While qf rows and cols are one indexed, 0 is used to represent non-values
+
     if type(item.lnum) == "number" then
         vim.validate("item.lnum", item.lnum, function()
-            return item.lnum >= 1
+            return item.lnum >= 0
         end)
     end
 
     if type(item.end_lnum) == "number" then
         vim.validate("item.end_lnum", item.end_lnum, function()
-            return item.end_lnum >= 1
+            return item.end_lnum >= 0
         end)
     end
 
     if type(item.col) == "number" then
         vim.validate("item.col", item.col, function()
-            return item.col >= 1
+            return item.col >= 0
         end)
     end
 
     if type(item.end_col) == "number" then
         vim.validate("item.end_col", item.end_col, function()
-            return item.end_col >= 1
+            return item.end_col >= 0
         end)
     end
 
@@ -148,7 +217,7 @@ function M._validate_qf_item_strict(item)
 
     if type(item.type) == "string" then
         vim.validate("item.type", item.type, function()
-            return #item.type == 1
+            return #item.type <= 1
         end)
     end
 end
@@ -162,7 +231,7 @@ function M._validate_what(what)
     vim.validate("what.efm", what.efm, { "nil", "string" })
     vim.validate("what.id", what.id, { "nil", "number" })
 
-    --- While Nvim can handle an idx of "$" for the last entry, the annotation only allows for
+    --- While Nvim can handle an idx of "$" for the last idx, the annotation only allows for
     --- integer types. Only allow numbers here for consistency
     vim.validate("what.idx", what.idx, { "nil", "number" })
     vim.validate("what.items", what.items, { "nil", "table" })
@@ -213,15 +282,6 @@ function M._validate_what_strict(what)
             return what.idx >= 0
         end)
     end
-end
-
---- @param action QfRancherAction
---- @return nil
-function M._validate_action(action)
-    vim.validate("action", action, "string")
-    vim.validate("action", action, function()
-        return action == "new" or action == "replace" or action == "add"
-    end)
 end
 
 return M

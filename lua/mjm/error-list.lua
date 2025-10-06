@@ -233,7 +233,7 @@ return M
 -----------------------
 
 --- How smartcase works by default (the "vimsmart" thing). Does it make sense?
----     Have to document this in the more general sense with "smart" and "insensitive" also as
+---     Have to document this in the more general sense with "smartcase" and "insensitive" also as
 ---     options
 --- Use of marks is not supported in cmds because they are row only
 
