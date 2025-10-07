@@ -259,12 +259,10 @@ function M._validate_filter_opts(filter_opts)
 end
 
 --- @class QfRancherPredicateOpts
---- @field item table
---- @field keep boolean
 --- @field pattern? string
 --- @field regex? vim.regex
 
---- @alias QfRancherPredicateFunc fun(QfRancherPredicateOpts):boolean
+--- @alias QfRancherPredicateFunc fun(vim.qflist.entry, boolean, QfRancherPredicateOpts):boolean
 
 ------------------
 --- GREP TYPES ---

@@ -101,8 +101,9 @@ function M._filter_wrapper(filter_info, filter_opts, input_opts, what)
 
     --- @type QfRancherPredicateFunc
     local predicate = get_predicate(filter_info, input_type, regex)
+    local keep = filter_opts.keep
     local new_items = vim.tbl_filter(function(t)
-        return predicate({ keep = filter_opts.keep, pattern = pattern, regex = regex, item = t })
+        return predicate(t, keep, { pattern = pattern, regex = regex })
     end, cur_list.items) --- @type vim.quickfix.entry[]
 
     local what_set = vim.tbl_deep_extend("force", what, {
@@ -120,11 +121,20 @@ function M._filter_wrapper(filter_info, filter_opts, input_opts, what)
 end
 
 --- NOTE: In line with Cfilter and the C code, bufname() is used for checking filenames
+--- NOTE: x and y or z ternaries only work if y is truthy. Because keep can be either, don't use
+---     ternaries here
+--- LOW: Would like to eliminate the opts table from these functions entirely, but I'm not sure
+---     what a less contrived way is to handle the possibilty of both pattern and regex being
+---     sent to the predicate function
 
 -------------------------
 --- BOILERPLATE LOGIC ---
 -------------------------
 
+--- @param regex vim.regex
+--- @param comparison string
+--- @param keep boolean
+--- @return boolean
 local function regex_boilerplate(regex, comparison, keep)
     if regex:match_str(comparison) then
         return keep
@@ -133,6 +143,10 @@ local function regex_boilerplate(regex, comparison, keep)
     end
 end
 
+--- @param pattern string
+--- @param comparison string
+--- @param keep boolean
+--- @return boolean
 local function insensitive_boilerplate(pattern, comparison, keep)
     local lower = string.lower(comparison) --- @type string
     if string.find(lower, pattern, 1, true) then
@@ -142,6 +156,10 @@ local function insensitive_boilerplate(pattern, comparison, keep)
     end
 end
 
+--- @param pattern string
+--- @param comparison string
+--- @param keep boolean
+--- @return boolean
 local function sensitive_boilerplate(pattern, comparison, keep)
     if string.find(comparison, pattern, 1, true) then
         return keep
@@ -155,46 +173,46 @@ end
 -----------------------
 
 --- @type QfRancherPredicateFunc
-local function cfilter_regex(opts)
+local function cfilter_regex(item, keep, opts)
     opts = opts or {}
-    if regex_boilerplate(opts.regex, opts.item.text, opts.keep) == opts.keep then
-        return opts.keep
+    if regex_boilerplate(opts.regex, item.text, keep) == keep then
+        return keep
     end
 
-    if not opts.item.bufnr then
+    if not item.bufnr then
         return false
     end
 
-    return regex_boilerplate(opts.regex, vim.fn.bufname(opts.item.bufnr), opts.keep)
+    return regex_boilerplate(opts.regex, vim.fn.bufname(item.bufnr), keep)
 end
 
 --- @type QfRancherPredicateFunc
 --- NOTE: Assumes pattern is all lowercase
-local function cfilter_insensitive(opts)
+local function cfilter_insensitive(item, keep, opts)
     opts = opts or {}
-    if insensitive_boilerplate(opts.pattern, opts.item.text, opts.keep) == opts.keep then
-        return opts.keep
+    if insensitive_boilerplate(opts.pattern, item.text, keep) == keep then
+        return keep
     end
 
-    if not opts.item.bufnr then
+    if not item.bufnr then
         return false
     end
 
-    return insensitive_boilerplate(opts.pattern, vim.fn.bufname(opts.item.bufnr), opts.keep)
+    return insensitive_boilerplate(opts.pattern, vim.fn.bufname(item.bufnr), keep)
 end
 
 --- @type QfRancherPredicateFunc
-local function cfilter_sensitive(opts)
+local function cfilter_sensitive(item, keep, opts)
     opts = opts or {}
-    if sensitive_boilerplate(opts.pattern, opts.item.text, opts.keep) == opts.keep then
-        return opts.keep
+    if sensitive_boilerplate(opts.pattern, item.text, keep) == keep then
+        return keep
     end
 
     if not opts.bufnr then
         return false
     end
 
-    return sensitive_boilerplate(opts.pattern, vim.fn.bufname(opts.item.bufnr), opts.keep)
+    return sensitive_boilerplate(opts.pattern, vim.fn.bufname(item.bufnr), keep)
 end
 
 --------------
@@ -202,34 +220,34 @@ end
 --------------
 
 --- @type QfRancherPredicateFunc
-local function fname_regex(opts)
+local function fname_regex(item, keep, opts)
     opts = opts or {}
-    if not opts.item.bufnr then
+    if not item.bufnr then
         return false
     end
 
-    return regex_boilerplate(opts.regex, vim.fn.bufname(opts.item.bufnr), opts.keep)
+    return regex_boilerplate(opts.regex, vim.fn.bufname(item.bufnr), keep)
 end
 
 --- @type QfRancherPredicateFunc
 --- NOTE: Assumes pattern is all lowercase
-local function fname_insensitive(opts)
+local function fname_insensitive(item, keep, opts)
     opts = opts or {}
-    if not opts.item.bufnr then
+    if not item.bufnr then
         return false
     end
 
-    return insensitive_boilerplate(opts.pattern, vim.fn.bufname(opts.item.bufnr), opts.keep)
+    return insensitive_boilerplate(opts.pattern, vim.fn.bufname(item.bufnr), keep)
 end
 
 --- @type QfRancherPredicateFunc
-local function fname_sensitive(opts)
+local function fname_sensitive(item, keep, opts)
     opts = opts or {}
-    if not opts.item.bufnr then
+    if not item.bufnr then
         return false
     end
 
-    return sensitive_boilerplate(opts.pattern, vim.fn.bufname(opts.item.bufnr), opts.keep)
+    return sensitive_boilerplate(opts.pattern, vim.fn.bufname(item.bufnr), keep)
 end
 
 ----------
@@ -237,22 +255,22 @@ end
 ----------
 
 --- @type QfRancherPredicateFunc
-local function text_regex(opts)
+local function text_regex(item, keep, opts)
     opts = opts or {}
-    return regex_boilerplate(opts.regex, opts.item.text, opts.keep)
+    return regex_boilerplate(opts.regex, item.text, keep)
 end
 
 --- @type QfRancherPredicateFunc
 --- NOTE: Assumes pattern is all lowercase
-local function text_insensitive(opts)
+local function text_insensitive(item, keep, opts)
     opts = opts or {}
-    return insensitive_boilerplate(opts.pattern, opts.item.text, opts.keep)
+    return insensitive_boilerplate(opts.pattern, item.text, keep)
 end
 
 --- @type QfRancherPredicateFunc
-local function text_sensitive(opts)
+local function text_sensitive(item, keep, opts)
     opts = opts or {}
-    return sensitive_boilerplate(opts.pattern, opts.item.text, opts.keep)
+    return sensitive_boilerplate(opts.pattern, item.text, keep)
 end
 
 ----------
@@ -260,23 +278,22 @@ end
 ----------
 
 --- @type QfRancherPredicateFunc
-local function type_regex(opts)
+local function type_regex(item, keep, opts)
     opts = opts or {}
-    return regex_boilerplate(opts.regex, opts.item.type, opts.keep)
+    return regex_boilerplate(opts.regex, item.type, keep)
+end
+
+--- NOTE: Assumes pattern is all lowercase
+--- @type QfRancherPredicateFunc
+local function type_insensitive(item, keep, opts)
+    opts = opts or {}
+    return insensitive_boilerplate(opts.pattern, item.type, keep)
 end
 
 --- @type QfRancherPredicateFunc
---- NOTE: Assumes pattern is all lowercase
-local function type_insensitive(opts)
+local function type_sensitive(item, keep, opts)
     opts = opts or {}
-    return insensitive_boilerplate(opts.pattern, opts.item.type, opts.keep)
-end
-
---- @param opts QfRancherPredicateOpts
---- @return boolean
-local function type_sensitive(opts)
-    opts = opts or {}
-    return sensitive_boilerplate(opts.pattern, opts.item.type, opts.keep)
+    return sensitive_boilerplate(opts.pattern, item.type, keep)
 end
 
 -----------------
@@ -284,26 +301,26 @@ end
 -----------------
 
 --- @type QfRancherPredicateFunc
-local function lnum_regex(opts)
+local function lnum_regex(item, keep, opts)
     opts = opts or {}
-    return regex_boilerplate(opts.regex, tostring(opts.item.lnum), opts.keep)
+    return regex_boilerplate(opts.regex, tostring(item.lnum), keep)
 end
 
 --- DOCUMENT: This compares exactly, vs the insensitive, which works like a contains function
 --- @type QfRancherPredicateFunc
-local function lnum_sensitive(opts)
+local function lnum_sensitive(item, keep, opts)
     opts = opts or {}
-    if tostring(opts.item.lnum) == opts.pattern then
-        return opts.keep
+    if tostring(item.lnum) == opts.pattern then
+        return keep
     else
-        return not opts.keep
+        return not keep
     end
 end
 
 --- @type QfRancherPredicateFunc
-local function lnum_insensitive(opts)
+local function lnum_insensitive(item, keep, opts)
     opts = opts or {}
-    return insensitive_boilerplate(opts.pattern, tostring(opts.item.lnum), opts.keep)
+    return insensitive_boilerplate(opts.pattern, tostring(item.lnum), keep)
 end
 
 local filters = {
