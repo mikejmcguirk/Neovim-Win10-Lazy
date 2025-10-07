@@ -1,7 +1,3 @@
--------------
---- TYPES ---
--------------
-
 --- https://github.com/tjdevries/lazy-require.nvim/blob/master/lua/lazy-require.lua
 --- @param require_path string
 --- @return table
@@ -203,11 +199,17 @@ return M
 --- in contexts where you don't expect it to come up
 ---
 --- Check the file for any vim.fn.confirm
+--- Check that no eager requires happen on startup
+--- DOuble check that all view saving sufficiently respects splitkeep/g:vars
+--- Make sure g variables are doing what they should be
 
 -----------
 --- MID ---
 -----------
 
+--- Look into running more functionality through the default Qf commands given that they're tied
+---     to the QuickFixCmd autocmds
+--- Also look into what events we can use those autocmds to drive
 --- Make resizing configurable
 --- A problem with cdo is, say you make changes on a couple lines, then realizes you're better off
 ---     just using cdo to run a substitute command, you will get enter errors on the entries you
@@ -215,10 +217,37 @@ return M
 ---     the errors afterwards. Unsure though if there's a way to properly capture context so
 ---     you can run each command pcalled individually, or if you have to do a nvim_cmd cdo and
 ---     run that whole thing in the pcall
+--- Publish Qf items as diagnostics. Would make other ideas more useful
+--- Commands to handle:
+--- - cexpr
+--- - cbuffer/cgetbuffer/caddbuffer
+--- - cfile
+--- - clist
+--- - cabove/cbelow
+---     - It's tough to make these helpful without some sort of visual feedback, implying that you
+---     would need a way to push qf entries to virtual text extmarks so they could be navigated.
+---     This risks tripping over LSP diagnostics. Nvim alreaddy has diagnostic navigation
+---     features built in, and this would be a tough feature to implement for an uncertain
+---     use case
+--- How to make the list more useful with compilers. Possible starting points:
+--- - https://github.com/Zeioth/compiler.nvim
+--- - https://github.com/ahmedkhalf/project.nvim
+--- - https://github.com/stevearc/overseer.nvim
+--- - :h :make_makeprg
+--- - :h compiler-select
+--- The open mappings and such should work in visual mode
+--- Make a way to explicitly copy/replace/merge whole lists. This can be hacked with fitler, but
+---     that means guaranteeting how an empty pattern behaves, which seems like an unnecessary
+---     limitation
+--- Look into the idea of brdiging lists between the loclist and qflists
+--- Take all Qf entries and send their ranges to a normal buffer
+--- - Could also send greps to normal buffers
+---     - Implies a broader idea of what greps can do outside the error lists
+--- - Could also writes bufs to the qflist
 
--------------
---- # LOW ---
--------------
+-----------
+--- LOW ---
+-----------
 
 --- Something awkward is that, because marks are not supported, you cannot run any cmds from
 ---     visual mode without manually removing the marks with <C-u>. This adds friction to running
@@ -227,16 +256,47 @@ return M
 ---     the user. The vim normal mode command just falls through. But since the greps can
 ---     work from visual marks, that feels more deceptive
 --- Operations that move loclists over to qflists and vice-versa
+--- Better error format? The masking of errors in particular is annoying
+--- Show ts-context info in preview wins
+--- Allow customizing windows to skip when looking for open targets:
+---     https://github.com/kevinhwang91/nvim-bqf/issues/78
+--- Test with the old nvim-treesitter master branch
+--- Incremental preview of cdo/cfdo changes
+--- A better way of handling cdo/cfo so you don't get spammed with enter errors
+--- General cmd parsing: https://github.com/niuiic/quickfix.nvim
+--- If 1k keymaps, autogen a DoD setup. Would actually save time
+--- Use a g:var to control regex case sensitivity
+--- Test load behavior against mksession
 
 ----------------
 --- DOCUMENT ---
 ----------------
 
+--- The new/add/replace behavior
 --- How smartcase works by default (the "vimsmart" thing). Does it make sense?
 ---     Have to document this in the more general sense with "smartcase" and "insensitive" also as
 ---     options
 --- Use of marks is not supported in cmds because they are row only
 --- In the commands, a count of zero is treated as a no count
+--- DOCUMENT: Buf greps use external grep
+--- DOCUMENT: qf Buf Grep is all bufs, ll Buf Grep is current buf only
+--- DOCUMENT: rg handles true multi-line greps. For programs that don't, or is used as a fallback
+--- DOCUMENT: The following are non-goals:
+--- - Creating persistent state beyond what is necessary to make the preview win work
+--- - Modifying buffers within the qflist
+--- - Providing additional context within the list itself. Covered by the preview win
+--- - No Fuzzy finding type stuff. FzfLua does this. And as far as I know, all the major finders
+---     have the ability to search the qflists
+--- - No annotations. Should be able to filter down to key items
+--- - Dynamic behavior. Trouble has to create a whole async runtime and data model to manage this
+--- - "Modernizing" the feel of the qflist. The old school feel is part of the charm
+--- Cmds don't accept ranges
+--- The open functions double as resizers, as per the default cmd behavior
+--- cn/cpfile does not have the same level of wrapping logic as cc
+--- underline functions are not supported
+--- What types of regex are used where. Grep cmds have their own regex. Regex filters use
+---     vim regex
+--- Note that vim regex is case sensitive by default(right?)
 
 ------------
 --- PR ---
@@ -258,55 +318,8 @@ return M
 -- https://github.com/mileszs/ack.vim
 -- https://github.com/stevearc/qf_helper.nvim
 -- https://github.com/niuiic/quickfix.nvim
+-- https://github.com/mhinz/vim-grepper
 
 -- PREVIEWERS:
 -- https://github.com/r0nsha/qfpreview.nvim
 -- https://github.com/bfrg/vim-qf-preview
-
---------------
-
---- FUTURE: Add the ability to publish qf items as diagnostics. It feels like a blocker to a lot of
---- other useful ideas
---- FUTURE: Create updated quickfixtextfunc
---- - The default masks error types
---- FUTURE: Commands to handle:
---- - cexpr
---- - cbuffer/cgetbuffer/caddbuffer
---- - cfile
---- - clist
---- - cabove/cbelow
----     - It's tough to make these helpful without some sort of visual feedback, implying that you
----     would need a way to push qf entries to virtual text extmarks so they could be navigated.
----     This risks tripping over LSP diagnostics. Nvim alreaddy has diagnostic navigation
----     features built in, and this would be a tough feature to implement for an uncertain
----     use case
---- FUTURE: I think it would be good to enhance the ability to use the qflist to handle compiler
---- and testing errors. But I'm not experienced enough with the ecosystem to know what gaps there
---- are to fill. Some stuff I know is out there:
---- - https://github.com/Zeioth/compiler.nvim
---- - https://github.com/ahmedkhalf/project.nvim
---- - https://github.com/stevearc/overseer.nvim
---- - :h :make_makeprg
---- - :h compiler-select
---- FUTURE: Show ts-context info in preview wins
---- FUTURE: Allow customizing windows to skip when looking for open targets:
----     https://github.com/kevinhwang91/nvim-bqf/issues/78
---- FUTURE: Test with the old nvim-treesitter master branch
---- FUTURE: Incremental preview of cdo/cfdo changes
---- FUTURE: General cmd parsing: https://github.com/niuiic/quickfix.nvim - This is obviously a
----     good idea, but I'm not sure what the specific use case is so I'm not sure how to build it
---- FUTURE: I would like to do something with cdo/cfdo, but I'm not sure what that isn't just
---- syntactic sugar on top of the original cmd
-
---- DOCUMENT: Buf greps use external grep
---- DOCUMENT: qf Buf Grep is all bufs, ll Buf Grep is current buf only
---- DOCUMENT: rg handles true multi-line greps. For programs that don't, or is used as a fallback
---- DOCUMENT: The following are non-goals:
---- - Creating persistent state beyond what is necessary to make the preview win work
---- - Modifying buffers within the qflist
---- - Providing additional context within the list itself. Covered by the preview win
---- - No Fuzzy finding type stuff. FzfLua does this. And as far as I know, all the major finders
----     have the ability to search the qflists
---- - No annotations. Should be able to filter down to key items
---- - Dynamic behavior. Trouble has to create a whole async runtime and data model to manage this
---- - "Modernizing" the feel of the qflist. The old school feel is part of the charm

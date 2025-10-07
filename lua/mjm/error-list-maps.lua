@@ -843,6 +843,7 @@ if vim.g.qf_rancher_set_default_cmds then
         es._l_history(cargs.count, {})
     end, { count = 0, desc = "View or jump within the loclist history" })
 
+    --- DOCUMENT: The all override behavior
     -- NOTE: Ideally, a count would override the "all" arg, in order to default to safer behavior,
     -- but the dict sent to the callback includes a count of 0 whether it was explicitly passed or
     -- not. Since a count of 0 can be explicitly passed, only overriding a count > 0 is convoluted

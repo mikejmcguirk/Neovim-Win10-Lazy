@@ -469,10 +469,19 @@ return M
 
 --- Make a filer for only valid error lines. (buf_is_valid or fname_is_valid) and (lnum or pattern)
 --- - With this, make an additional entry validation to check for valid errors only
+--- Make a filter for dotfiles/hidden files
+--- do qkie and so on syntactic sugar mappings for diagnostics
 
 -----------
 --- LOW ---
 -----------
 
 --- Depending on how some of the more niche sorts are used, add different default sorts to the
----     filter_opts field.
+---     filter_opts field
+--- Look again and how Cfilter works
+
+----------------
+--- DOCUMENT ---
+----------------
+
+---Document specifically that a cfilter emulation is available
