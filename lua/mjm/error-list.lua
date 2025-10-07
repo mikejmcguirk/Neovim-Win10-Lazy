@@ -228,17 +228,18 @@ return M
 ---     work from visual marks, that feels more deceptive
 --- Operations that move loclists over to qflists and vice-versa
 
------------------------
---- # DOCUMENTATION ---
------------------------
+----------------
+--- DOCUMENT ---
+----------------
 
 --- How smartcase works by default (the "vimsmart" thing). Does it make sense?
 ---     Have to document this in the more general sense with "smartcase" and "insensitive" also as
 ---     options
 --- Use of marks is not supported in cmds because they are row only
+--- In the commands, a count of zero is treated as a no count
 
 ------------
---- # PR ---
+--- PR ---
 ------------
 
 --- It would be better if cmd marks produced rows and columns

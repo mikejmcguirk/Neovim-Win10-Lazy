@@ -27,6 +27,13 @@ end
 --- @param regex vim.regex|nil
 --- @return QfRancherPredicateFunc
 local function get_predicate(filter_info, input_type, regex)
+    if vim.g.qf_rancher_debug_assertions then
+        local ey = require("mjm.error-list-types")
+        ey._validate_filter_info(filter_info)
+        ey._validate_input_type(input_type)
+        --- LOW: How to validate the regex
+    end
+
     if input_type == "regex" and regex then
         return filter_info.regex_func
     elseif input_type == "sensitive" then
@@ -87,7 +94,7 @@ function M._filter_wrapper(filter_info, filter_opts, input_opts, what)
     local lower_pattern = string.lower(pattern) --- @type string
     --- LOW: The real issue here is that the predicate types are a distinct thing
     if input_type == "smartcase" then
-        local is_smart_pattern = lower_pattern == pattern
+        local is_smart_pattern = lower_pattern == pattern --- @type boolean
         input_type = is_smart_pattern and "insensitive" or "sensitive"
         pattern = is_smart_pattern and lower_pattern or pattern
     end
@@ -95,23 +102,17 @@ function M._filter_wrapper(filter_info, filter_opts, input_opts, what)
     --- @type QfRancherPredicateFunc
     local predicate = get_predicate(filter_info, input_type, regex)
     local new_items = vim.tbl_filter(function(t)
-        return predicate({
-            keep = filter_opts.keep,
-            pattern = pattern,
-            regex = regex,
-            item = t,
-        })
+        return predicate({ keep = filter_opts.keep, pattern = pattern, regex = regex, item = t })
     end, cur_list.items) --- @type vim.quickfix.entry[]
 
     local what_set = vim.tbl_deep_extend("force", what, {
         items = new_items,
-        title = "Filter", --- TODO: Improve title
+        title = filter_info.name .. " filter: /" .. pattern,
     }) --- @type QfRancherWhat
 
-    local dest_nr = et._set_list(what_set)
+    local dest_nr = et._set_list(what_set) --- @type integer
     if vim.g.qf_rancher_auto_open_changes then
-        require("mjm.error-list-stack")._history({
-            count = dest_nr,
+        require("mjm.error-list-stack")._history(what_set.user_data.list_win, dest_nr, {
             silent = true,
             always_open = true,
         })
@@ -127,7 +128,6 @@ end
 --- @type QfRancherPredicateFunc
 local function cfilter_regex(opts)
     opts = opts or {}
-
     if opts.regex:match_str(opts.item.text) then
         return opts.keep
     end
@@ -136,7 +136,7 @@ local function cfilter_regex(opts)
         return false
     end
 
-    local bufname = vim.fn.bufname(opts.item.bufnr)
+    local bufname = vim.fn.bufname(opts.item.bufnr) --- @type string
     return opts.regex:match_str(bufname) and opts.keep or not opts.keep
 end
 
@@ -144,8 +144,7 @@ end
 --- NOTE: Assumes pattern is all lowercase
 local function cfilter_insensitive(opts)
     opts = opts or {}
-
-    local lower_text = string.lower(opts.item.text)
+    local lower_text = string.lower(opts.item.text) --- @type string
     if string.find(lower_text, opts.pattern, 1, true) ~= nil then
         return opts.keep
     end
@@ -154,14 +153,13 @@ local function cfilter_insensitive(opts)
         return false
     end
 
-    local lower_bufname = string.lower(vim.fn.bufname(opts.item.bufnr))
+    local lower_bufname = string.lower(vim.fn.bufname(opts.item.bufnr)) --- @type string
     return string.find(lower_bufname, opts.pattern, 1, true) ~= nil and opts.keep or not opts.keep
 end
 
 --- @type QfRancherPredicateFunc
 local function cfilter_sensitive(opts)
     opts = opts or {}
-
     if string.find(opts.item.text, opts.pattern, 1, true) ~= nil then
         return opts.keep
     end
@@ -170,7 +168,7 @@ local function cfilter_sensitive(opts)
         return false
     end
 
-    local bufname = vim.fn.bufname(opts.item.bufnr)
+    local bufname = vim.fn.bufname(opts.item.bufnr) --- @type string
     return string.find(bufname, opts.pattern, 1, true) ~= nil and opts.keep or not opts.keep
 end
 
@@ -178,20 +176,18 @@ end
 -- Filename --
 --------------
 
---- @param opts QfRancherPredicateOpts
---- @return boolean
+--- @type QfRancherPredicateFunc
 local function fname_regex(opts)
     opts = opts or {}
     if not opts.item.bufnr then
         return false
     end
 
-    local bufname = vim.fn.bufname(opts.item.bufnr)
+    local bufname = vim.fn.bufname(opts.item.bufnr) --- @type string
     return opts.regex:match_str(bufname) and opts.keep or not opts.keep
 end
 
---- @param opts QfRancherPredicateOpts
---- @return boolean
+--- @type QfRancherPredicateFunc
 --- NOTE: Assumes pattern is all lowercase
 local function fname_insensitive(opts)
     opts = opts or {}
@@ -199,19 +195,18 @@ local function fname_insensitive(opts)
         return false
     end
 
-    local lower_bufname = string.lower(vim.fn.bufname(opts.item.bufnr))
+    local lower_bufname = string.lower(vim.fn.bufname(opts.item.bufnr)) --- @type string
     return string.find(lower_bufname, opts.pattern, 1, true) and opts.keep or not opts.keep
 end
 
---- @param opts QfRancherPredicateOpts
---- @return boolean
+--- @type QfRancherPredicateFunc
 local function fname_sensitive(opts)
     opts = opts or {}
     if not opts.item.bufnr then
         return false
     end
 
-    local bufname = vim.fn.bufname(opts.item.bufnr)
+    local bufname = vim.fn.bufname(opts.item.bufnr) --- @type string
     return string.find(bufname, opts.pattern, 1, true) and opts.keep or not opts.keep
 end
 
@@ -219,24 +214,21 @@ end
 -- Text --
 ----------
 
---- @param opts QfRancherPredicateOpts
---- @return boolean
+--- @type QfRancherPredicateFunc
 local function text_regex(opts)
     opts = opts or {}
     return opts.regex:match_str(opts.item.text) and opts.keep or not opts.keep
 end
 
---- @param opts QfRancherPredicateOpts
---- @return boolean
+--- @type QfRancherPredicateFunc
 --- NOTE: Assumes pattern is all lowercase
 local function text_insensitive(opts)
     opts = opts or {}
-    local lower_text = string.lower(opts.item.text)
+    local lower_text = string.lower(opts.item.text) --- @type string
     return string.find(lower_text, opts.pattern, 1, true) and opts.keep or not opts.keep
 end
 
---- @param opts QfRancherPredicateOpts
---- @return boolean
+--- @type QfRancherPredicateFunc
 local function text_sensitive(opts)
     opts = opts or {}
     return string.find(opts.item.text, opts.pattern, 1, true) and opts.keep or not opts.keep
@@ -246,19 +238,17 @@ end
 -- Type --
 ----------
 
---- @param opts QfRancherPredicateOpts
---- @return boolean
+--- @type QfRancherPredicateFunc
 local function type_regex(opts)
     opts = opts or {}
     return opts.regex:match_str(opts.item.type) and opts.keep or not opts.keep
 end
 
---- @param opts QfRancherPredicateOpts
---- @return boolean
+--- @type QfRancherPredicateFunc
 --- NOTE: Assumes pattern is all lowercase
 local function type_insensitive(opts)
     opts = opts or {}
-    local lower_type = string.lower(opts.item.type)
+    local lower_type = string.lower(opts.item.type) --- @type string
     return string.find(lower_type, opts.pattern, 1, true) and opts.keep or not opts.keep
 end
 
@@ -280,8 +270,7 @@ local function lnum_regex(opts)
 end
 
 --- DOCUMENT: This compares exactly, vs the insensitive, which works like a contains function
---- @param opts QfRancherPredicateOpts
---- @return boolean
+--- @type QfRancherPredicateFunc
 local function lnum_sensitive(opts)
     opts = opts or {}
     return tostring(opts.item.lnum) == opts.pattern and opts.keep or not opts.keep
@@ -290,6 +279,7 @@ end
 --- @type QfRancherPredicateFunc
 local function lnum_insensitive(opts)
     opts = opts or {}
+    --- @type integer|nil
     local found = string.find(tostring(opts.item.lnum), opts.pattern, 1, true)
     return found and opts.keep or not opts.keep
 end
@@ -308,7 +298,7 @@ local filters = {
         regex_func = fname_regex,
     },
     lnum = {
-        name = "lnum",
+        name = "Lnum",
         insensitive_func = lnum_insensitive,
         sensitive_func = lnum_sensitive,
         regex_func = lnum_regex,
@@ -320,13 +310,14 @@ local filters = {
         regex_func = text_regex,
     },
     type = {
-        name = "type",
+        name = "Type",
         insensitive_func = type_insensitive,
         sensitive_func = type_sensitive,
         regex_func = type_regex,
     },
-}
+} --- @type table<string, QfRancherFilterInfo>
 
+--- @return string[]
 function M.get_filter_names()
     return vim.tbl_keys(filters)
 end
@@ -335,6 +326,7 @@ end
 --- API ---
 -----------
 
+--- @param name string
 --- @param filter_opts QfRancherFilterOpts
 --- @param input_opts QfRancherInputOpts
 --- @param what QfRancherWhat
@@ -356,12 +348,15 @@ end
 --- - regex_func - The predicate function used for regex comparisons
 --- - sensitive_func - The predicate function used for case sensitive comparisons
 --- @param filter_info QfRancherFilterInfo
+--- @return nil
 function M.register_filter(filter_info)
     filters[filter_info.name] = filter_info
 end
 
 --- Clears the function name from the registered sorts
+--- DOCUMENT: How this works
 --- @param name string
+--- @return nil
 function M.clear_filter(name)
     if #vim.tbl_keys(filters) <= 1 then
         vim.api.nvim_echo({ { "Cannot remove the last filter method" } }, false, {})
@@ -376,33 +371,38 @@ end
 --- @return nil
 local function filter_cmd(cargs, list_win)
     cargs = cargs or {}
+    local fargs = cargs.fargs --- @type string[]
 
-    local fargs = cargs.fargs
-
-    local filter_names = M.get_filter_names()
+    local filter_names = M.get_filter_names() --- @type string[]
     assert(#filter_names > 1, "No filter functions available")
-    local eu = require("mjm.error-list-util")
-    local filter_name = eu._check_cmd_arg(fargs, filter_names, "cfilter")
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
+    local filter_name = eu._check_cmd_arg(fargs, filter_names, "cfilter") --- @type string
 
-    local filter_opts = { keep = not cargs.bang }
+    local filter_opts = { keep = not cargs.bang } --- @type QfRancherFilterOpts
 
-    local ey = require("mjm.error-list-types")
+    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
+    --- @type QfRancherInputType
     local input_type = eu._check_cmd_arg(fargs, ey._cmd_input_types, ey._default_input_type)
-    local pattern = eu._find_cmd_pattern(fargs)
+    local pattern = eu._find_cmd_pattern(fargs) --- @type string|nil
+    --- @type QfRancherInputOpts
     local input_opts = { input_type = input_type, pattern = pattern }
 
+    --- @type QfRancherAction
     local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action)
+    --- @type QfRancherWhat
     local what = { nr = cargs.count, user_data = { action = action, list_win = list_win } }
 
     M._filter(filter_name, filter_opts, input_opts, what)
 end
 
 --- @param cargs vim.api.keyset.create_user_command.command_args
+--- @return nil
 function M._q_filter(cargs)
     filter_cmd(cargs, nil)
 end
 
 --- @param cargs vim.api.keyset.create_user_command.command_args
+--- @return nil
 function M._l_filter(cargs)
     filter_cmd(cargs, vim.api.nvim_get_current_win())
 end
@@ -413,15 +413,7 @@ return M
 --- TODO ---
 ------------
 
---- Global Checklist:
---- - Check that all functions have reasonable default sorts
---- - Check that window height updates are triggered where appropriate
---- - Check that functions have proper visibility
---- - Check that all mappings have plugs and cmds
---- - Check that all maps/cmds/plugs have desc fieldss
---- - Check that all functions have annotations and documentation
---- - Check that the qf and loclist versions are both properly built for purpose. Should be able
----     to use the loclist function for buf/win specific info
+--- Tests
 
 -----------
 --- MID ---
@@ -429,3 +421,10 @@ return M
 
 --- Make a filer for only valid error lines. (buf_is_valid or fname_is_valid) and (lnum or pattern)
 --- - With this, make an additional entry validation to check for valid errors only
+
+-----------
+--- LOW ---
+-----------
+
+--- Depending on how some of the more niche sorts are used, add different default sorts to the
+---     filter_opts field.

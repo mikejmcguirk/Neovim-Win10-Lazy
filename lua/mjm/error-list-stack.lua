@@ -7,7 +7,6 @@ local M = {}
 
 --- @class QfRancherHistoryOpts
 --- @field always_open? boolean
---- @field count? integer
 --- @field silent? boolean
 
 -------------------
@@ -76,38 +75,36 @@ function M._q_newer(count)
     q_change_history(count, require("mjm.error-list-util")._wrapping_add)
 end
 
---- NOTE: For chistory and lhistory, a zero and one count behave the same
---- In order to reduce conditional logic, treat counts below 1 here as invalid, using a nil
---- count to run history simply as a listing
----
-
 --- @param hist_opts QfRancherHistoryOpts
 local function validate_history_opts(hist_opts)
     if vim.g.qf_rancher_debug_assertions then
         vim.validate("hist_opts", hist_opts, "table")
         vim.validate("hist_opts.always_open", hist_opts.always_open, { "boolean", "nil" })
         vim.validate("hist_opts.silent", hist_opts.silent, { "boolean", "nil" })
-        vim.validate("hist_opts.count", hist_opts.count, { "nil", "number" })
-        if type(hist_opts.count) == "number" then
-            require("mjm.error-list-types")._validate_count(hist_opts.count)
-        end
     end
 end
 
+--- TODO: Both histories do a weird thing where the window like shakes when you do it but
+--- doesn't like change or anything it's weird
+--- TODO: With the tools functions, it should be possible to combine more logic
+
 --- @param opts QfRancherHistoryOpts
 --- @return nil
-function M._q_history(opts)
+function M._q_history(count, opts)
     opts = opts or {}
+    --- TODO: Move into types. Have a sub function here that calls the types function and checks
+    --- count as well
     validate_history_opts(opts)
 
-    local stack_len = vim.fn.getqflist({ nr = "$" }).nr --- @type integer
+    local et = require("mjm.error-list-tools")
+    local stack_len = et._get_max_list_nr(nil) --- @type integer
     if stack_len < 1 then
         vim.api.nvim_echo({ { no_qf_stack, "" } }, false, {})
         return
     end
 
     --- @type integer|nil
-    local adj_count = opts.count > 0 and math.min(opts.count, stack_len) or nil
+    local adj_count = count > 0 and math.min(count, stack_len) or nil
     local cur_list_nr = vim.fn.getqflist({ nr = 0 }).nr --- @type integer
     local silent = opts.silent and true or false
     ---@diagnostic disable-next-line: missing-fields
@@ -119,7 +116,7 @@ function M._q_history(opts)
     end
 
     if opts.always_open then
-        eo._open_qflist({ keep_win = true, suppress_errors = true })
+        eo._open_qflist({ always_resize = true, keep_win = true, suppress_errors = true })
     end
 end
 
@@ -197,30 +194,30 @@ function M._l_newer(count)
     l_change_history(count, require("mjm.error-list-util")._wrapping_add)
 end
 
---- TODO: This should take a win param
-
 --- @param opts QfRancherHistoryOpts
 --- @return nil
-function M._l_history(opts)
+function M._l_history(win, count, opts)
     opts = opts or {}
+    --- TODO: This should be in types
     validate_history_opts(opts)
 
-    local cur_win = vim.api.nvim_get_current_win() --- @type integer
+    local cur_win = win or vim.api.nvim_get_current_win() --- @type integer
     local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id --- @type integer
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
         return
     end
 
-    local stack_len = vim.fn.getloclist(cur_win, { nr = "$" }).nr --- @type integer
+    local et = require("mjm.error-list-tools")
+    local stack_len = et._get_max_list_nr(cur_win) --- @type integer
     if stack_len < 1 then
         vim.api.nvim_echo({ { no_ll_stack, "" } }, false, {})
         return
     end
 
     --- @type integer|nil
-    local adj_count = opts.count > 0 and math.min(opts.count, stack_len) or nil
-    local cur_list_nr = vim.fn.getloclist(cur_win, { nr = 0 }).nr --- @type integer
+    local adj_count = count > 0 and math.min(count, stack_len) or nil
+    local cur_list_nr = et._get_cur_list_nr(cur_win) --- @type integer
     local silent = opts.silent and true or false
     ---@diagnostic disable-next-line: missing-fields
     vim.api.nvim_cmd({ cmd = "lhistory", count = adj_count, mods = { silent = silent } }, {})
@@ -232,7 +229,7 @@ function M._l_history(opts)
     end
 
     if opts.always_open then
-        eo._open_loclist({ keep_win = true, suppress_errors = true })
+        eo._open_loclist({ always_resize = true, keep_win = true, suppress_errors = true })
     end
 end
 
@@ -298,11 +295,11 @@ function M._get_gethistory(is_loclist)
     end
 end
 
-function M._history(win, opts)
+function M._history(win, count, opts)
     if win then
-        M._l_history(opts)
+        M._l_history(win, count, opts)
     else
-        M._q_history(opts)
+        M._q_history(count, opts)
     end
 end
 

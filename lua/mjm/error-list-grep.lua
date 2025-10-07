@@ -325,11 +325,13 @@ local function grep_cmd(cargs, list_win)
 end
 
 --- @param cargs vim.api.keyset.create_user_command.command_args
+--- @return nil
 function M._q_grep(cargs)
     grep_cmd(cargs, nil)
 end
 
 --- @param cargs vim.api.keyset.create_user_command.command_args
+--- @return nil
 function M._l_grep(cargs)
     grep_cmd(cargs, vim.api.nvim_get_current_win())
 end

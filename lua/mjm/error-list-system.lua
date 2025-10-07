@@ -54,8 +54,7 @@ local function handle_output(obj, what)
     local dest_nr = et._set_list(what_set)
 
     if vim.g.qf_rancher_auto_open_changes then
-        require("mjm.error-list-stack")._history(list_win, {
-            count = dest_nr,
+        require("mjm.error-list-stack")._history(list_win, dest_nr, {
             silent = true,
             always_open = true,
         })
