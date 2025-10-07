@@ -1,16 +1,12 @@
 local M = {}
 
--------------------
---- MODULE INFO ---
--------------------
-
---- TODO: Should be in types module
-local default_timeout = 4000
-
 -----------------
 --- SYSTEM DO ---
 -----------------
 
+--- @param system_opts QfRancherSystemOpts
+--- @param what QfRancherWhat
+--- @return nil
 local function validate_system_do(system_opts, what)
     local eu = require("mjm.error-list-util")
     local ey = require("mjm.error-list-types")
@@ -23,14 +19,15 @@ end
 --- @param what QfRancherWhat
 local function handle_output(obj, what)
     if obj.code ~= 0 then
+        --- @type string
         local err = (obj.stderr and #obj.stderr > 0) and "Error: " .. obj.stderr or ""
-        local msg = (obj.code and "Exit code: " .. obj.code or "") .. " " .. err
+        local msg = (obj.code and "Exit code: " .. obj.code or "") .. " " .. err --- @type string
         vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
         return
     end
 
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    local list_win = what.user_data.list_win
+    local list_win = what.user_data.list_win --- @type integer
     if list_win and not eu._win_can_have_loclist(list_win) then
         return
     end
@@ -43,15 +40,10 @@ local function handle_output(obj, what)
         end
     end
 
-    --- TODO: Remove this when sorting is wholly moved to _set_list
-    if what.user_data.action ~= "add" then
-        table.sort(qf_dict, require("mjm.error-list-sort")._sort_fname_asc)
-    end
-
     --- @type QfRancherWhat
     local what_set = vim.tbl_deep_extend("force", what, { items = qf_dict.items })
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
-    local dest_nr = et._set_list(what_set)
+    local dest_nr = et._set_list(what_set) --- @type integer
 
     if vim.g.qf_rancher_auto_open_changes then
         require("mjm.error-list-stack")._history(list_win, dest_nr, {
@@ -61,8 +53,7 @@ local function handle_output(obj, what)
     end
 end
 
--- TODO: This needs to be a public API so that way people can use it to build cmd line extensions
--- off of it
+--- DOCUMENT: How to use this
 
 --- @param system_opts QfRancherSystemOpts
 --- @param what QfRancherWhat
@@ -72,10 +63,11 @@ function M.system_do(system_opts, what)
     what = what or {}
     validate_system_do(system_opts, what)
 
-    local vim_system_opts = { text = true, timeout = system_opts.timeout or default_timeout }
+    local ey = require("mjm.error-list-types")
+    local vim_system_opts = { text = true, timeout = system_opts.timeout or ey._default_timeout }
     if system_opts.sync then
         local obj = vim.system(system_opts.cmd_parts, vim_system_opts)
-            :wait(system_opts.timeout or default_timeout)
+            :wait(system_opts.timeout or ey._default_timeout)
         handle_output(obj, what)
     else
         vim.system(system_opts.cmd_parts, vim_system_opts, function(obj)
@@ -92,12 +84,4 @@ return M
 --- TODO ---
 ------------
 
---- Global Checklist:
---- - Check that all functions have reasonable default sorts
---- - Check that window height updates are triggered where appropriate
---- - Check that functions have proper visibility
---- - Check that all mappings have plugs and cmds
---- - Check that all maps/cmds/plugs have desc fieldss
---- - Check that all functions have annotations and documentation
---- - Check that the qf and loclist versions are both properly built for purpose. Should be able
----     to use the loclist function for buf/win specific info
+--- Tests

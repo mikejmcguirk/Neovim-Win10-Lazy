@@ -87,6 +87,8 @@ end
 --- TODO: Both histories do a weird thing where the window like shakes when you do it but
 --- doesn't like change or anything it's weird
 --- TODO: With the tools functions, it should be possible to combine more logic
+--- TODO: Should be able to set if you want to do keep_win on the open. For stuff like greps
+--- you want to jump in, but for history cycling not so much
 
 --- @param opts QfRancherHistoryOpts
 --- @return nil

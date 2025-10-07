@@ -306,10 +306,11 @@ local function grep_cmd(cargs, list_win)
 
     local ey = require("mjm.error-list-types") --- @type QfRancherTypes
     --- @type "sync"|"async"
-    local sync = eu._check_cmd_arg(fargs, ey._sync_opts, ey._default_sync_opt)
+    local sync_str = eu._check_cmd_arg(fargs, ey._sync_opts, ey._default_sync_opt)
+    local sync = sync_str == "sync" and true or false --- @type boolean
     --- MID: Should be able to set the timeout from the cmd
     --- @type QfRancherSystemOpts
-    local system_opts = { sync = (sync == "sync" and true or false), timeout = 4000 }
+    local system_opts = { sync = sync, timeout = ey._default_timeout }
 
     --- @type QfRancherInputType
     local input_type = eu._check_cmd_arg(fargs, ey._cmd_input_types, ey._default_input_type)

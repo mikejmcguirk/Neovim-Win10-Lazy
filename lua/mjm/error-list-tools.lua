@@ -23,10 +23,6 @@ local function create_add_list_what(new_what)
 
     --- @type vim.quickfix.entry[]
     local items = require("mjm.error-list-util")._merge_qf_lists(old_all.items, new_what.items)
-    local es = require("mjm.error-list-sort") --- @type QfRancherSort
-    --- TODO: If sort is moved somewhere else, this would be removed or moved
-    table.sort(items, new_what.user_data.sort_func or es._sort_fname_asc)
-
     local idx = new_what.idx or old_all.idx or nil --- @type integer|nil
     idx = idx and math.min(idx, #items)
 
@@ -85,10 +81,16 @@ local function do_set_list(setlist_action, what)
         ey._validate_what(what)
     end
 
-    local list_win = what.user_data.list_win --- @type integer|nil
+    local what_set = vim.deepcopy(what, true)
+    local es = require("mjm.error-list-sort") --- @type QfRancherSort
+    --- LOW: Are there conditions at which we shouldn't sort? Should it be possible to set
+    --- the sort_func to vim.NIL selectively to ignore it?
+    table.sort(what_set.items, what_set.user_data.sort_func or es._sort_fname_asc)
+
+    local list_win = what_set.user_data.list_win --- @type integer|nil
     local max_nr_before = M._get_max_list_nr(list_win) --- @type integer
-    local result = list_win and vim.fn.setloclist(list_win, {}, setlist_action, what)
-        or vim.fn.setqflist({}, setlist_action, what) --- @type integer
+    local result = list_win and vim.fn.setloclist(list_win, {}, setlist_action, what_set)
+        or vim.fn.setqflist({}, setlist_action, what_set) --- @type integer
 
     if result == -1 then
         --- MID: Have not seen this come up unless there's some other code error. If it does,
@@ -98,12 +100,12 @@ local function do_set_list(setlist_action, what)
 
     --- MID: There is no need to get max_nr_before again here. But I want to wait to fix it in
     --- case a more organic solution arises than passing an "append" parameter
-    if setlist_action == " " and what.nr == max_nr_before then
+    if setlist_action == " " and what_set.nr == max_nr_before then
         local max_nr_after = M._get_max_list_nr(list_win) --- @type integer
-        return math.min(what.nr + 1, max_nr_after)
+        return math.min(what_set.nr + 1, max_nr_after)
     end
 
-    return what.nr > 0 and what.nr or 1
+    return what_set.nr > 0 and what_set.nr or 1
 end
 
 --- @param what QfRancherWhat

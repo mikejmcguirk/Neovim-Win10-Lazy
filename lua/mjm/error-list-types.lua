@@ -305,6 +305,7 @@ end
 
 M._sync_opts = { "sync", "async" }
 M._default_sync_opt = "async"
+M._default_timeout = 4000
 
 return M
 
