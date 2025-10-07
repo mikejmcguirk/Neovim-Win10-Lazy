@@ -50,7 +50,7 @@ local function validate_sort_wrapper_input(sort_info, sort_opts, what)
         end)
     end
 
-    require("mjm.error-list-types")._validate_what_strict(what)
+    require("mjm.error-list-types")._validate_what(what)
 end
 
 --- @param sort_info QfRancherSortInfo
@@ -70,7 +70,7 @@ local function sort_wrapper(sort_info, sort_opts, what)
     --- @type QfRancherWhat
     local get_list_what =
         { all = true, nr = 0, user_data = { list_win = what.user_data.list_win } }
-    local cur_list = et._get_list_all(what.user_data.list_win, what.nr) --- @type table
+    local cur_list = et._get_all(what.user_data.list_win, what.nr) --- @type table
     if cur_list.size < 1 then
         vim.api.nvim_echo({ { "Not enough entries to sort", "" } }, false, {})
         return

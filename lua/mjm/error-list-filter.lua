@@ -43,11 +43,16 @@ end
 --- @param what QfRancherWhat
 --- @return nil
 local function validate_wrapper_input(filter_info, filter_opts, input_opts, what)
+    filter_info = filter_info or {}
+    filter_opts = filter_opts or {}
+    input_opts = input_opts or {}
+    what = what or {}
+
     local ey = require("mjm.error-list-types")
     ey._validate_filter_info(filter_info)
     ey._validate_filter_opts(filter_opts)
     ey._validate_input_opts(input_opts)
-    ey._validate_what_strict(what)
+    ey._validate_what(what)
 end
 
 --- @param filter_info QfRancherFilterInfo
@@ -56,21 +61,16 @@ end
 --- @param what QfRancherWhat
 --- @return nil
 function M._filter_wrapper(filter_info, filter_opts, input_opts, what)
-    filter_info = filter_info or {}
-    filter_opts = filter_opts or {}
-    input_opts = input_opts or {}
-    what = what or {}
     validate_wrapper_input(filter_info, filter_opts, input_opts, what)
 
-    local list_win = what.user_data.list_win
+    local list_win = what.user_data.list_win --- @type integer|nil
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-
     if list_win and not eu._win_can_have_loclist(what.user_data.list_win) then
         return
     end
 
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
-    local cur_list = et._get_list_all(what.user_data.list_win, what.nr) --- @type table
+    local cur_list = et._get_all(list_win, what.nr) --- @type table
     if cur_list.size == 0 then
         vim.api.nvim_echo({ { "No entries to filter", "" } }, false, {})
         return
@@ -86,7 +86,7 @@ function M._filter_wrapper(filter_info, filter_opts, input_opts, what)
 
     local regex = input_type == "regex" and vim.regex(pattern) or nil --- @type vim.regex|nil
     local lower_pattern = string.lower(pattern) --- @type string
-    --- LOW: The real issue is that the predicate types are a distinct thing
+    --- LOW: The real issue here is that the predicate types are a distinct thing
     if input_type == "smartcase" then
         local is_smart_pattern = lower_pattern == pattern
         input_type = is_smart_pattern and "insensitive" or "sensitive"
@@ -109,8 +109,14 @@ function M._filter_wrapper(filter_info, filter_opts, input_opts, what)
         title = "Filter", --- TODO: Improve title
     }) --- @type QfRancherWhat
 
-    --- TODO: Should check for auto open and potentially do so
-    et._set_list(what_set)
+    local dest_nr = et._set_list(what_set)
+    if vim.g.qf_rancher_auto_open_changes then
+        require("mjm.error-list-stack")._history({
+            count = dest_nr,
+            silent = true,
+            always_open = true,
+        })
+    end
 end
 
 --- NOTE: In line with Cfilter and the C code, bufname() is used for checking filenames
@@ -409,3 +415,4 @@ return M
 -----------
 
 --- Make a filer for only valid error lines. (buf_is_valid or fname_is_valid) and (lnum or pattern)
+--- - With this, make an additional entry validation to check for valid errors only

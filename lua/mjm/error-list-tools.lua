@@ -1,187 +1,182 @@
 --- @class QfRancherTools
 local M = {}
 
--------------
---- TYPES ---
--------------
-
 ------------------------
 --- HELPER FUNCTIONS ---
 ------------------------
 
+--- @param var any
+--- @param var_type string
+--- @return boolean
 local function use_old(var, var_type)
     return type(var) == var_type and var or nil
 end
 
---- @param old_all table
 --- @param new_what QfRancherWhat
-local function create_add_list_what(old_all, new_what)
+--- @return QfRancherWhat
+local function create_add_list_what(new_what)
+    if vim.g.qf_rancher_debug_assertions then
+        require("mjm.error-list-types")._validate_what(new_what)
+    end
+
+    local old_all = M._get_all(new_what.user_data.list_win, new_what.nr)
+
     --- @type vim.quickfix.entry[]
     local items = require("mjm.error-list-util")._merge_qf_lists(old_all.items, new_what.items)
     local es = require("mjm.error-list-sort") --- @type QfRancherSort
-    --- @type QfRancherSortPredicate
-    local sort_func = new_what.user_data.sort_func or es._sort_fname_asc
-    table.sort(items, sort_func)
+    --- TODO: If sort is moved somewhere else, this would be removed or moved
+    table.sort(items, new_what.user_data.sort_func or es._sort_fname_asc)
 
     local idx = new_what.idx or old_all.idx or nil --- @type integer|nil
     idx = idx and math.min(idx, #items)
 
-    local add_what = M._create_what_table({
+    local add_what = {
         context = new_what.context or use_old(old_all.context, "table") or {},
-        efm = new_what.efm or use_old(old_all.efm, "string") or nil,
+        efm = new_what.efm or use_old(old_all.efm, "string"),
         idx = idx,
         items = items,
+        nr = new_what.nr,
         quickfixtextfunc = new_what.quickfixtextfunc
-            or use_old(old_all.quickfixtextfunc, "function")
-            or nil,
-        title = new_what.title or use_old(old_all.title, "string") or nil,
-    })
+            or use_old(old_all.quickfixtextfunc, "function"),
+        title = new_what.title or use_old(old_all.title, "string"),
+        user_data = new_what.user_data or nil,
+    } --- @type QfRancherWhat
 
-    return vim.tbl_extend("force", new_what, add_what)
+    if vim.g.qf_rancher_debug_assertions then
+        require("mjm.error-list-types")._validate_what(add_what)
+    end
+
+    return add_what
 end
 
 --- @param what QfRancherWhat
 --- @return nil
 local function cycle_lists_down(what)
-    if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_what_strict(what)
-    end
+    --- Always assert because this is a destructive, looping operation
+    require("mjm.error-list-types")._validate_what(what)
+    assert(what.nr > 0)
+    local list_win = what.user_data.list_win --- @type integer|nil
+    assert(what.nr < M._get_max_list_nr(list_win))
 
     for i = 1, what.nr - 1 do
-        local next_list = M._get_list_all(what.user_data.list_win, what.nr)
-        local next_what = vim.tbl_deep_extend("force", next_list, {
-            user_data = { action = "replace" },
+        local next_list = M._get_all(list_win, i + 1) --- @type table
+        local next_what = {
+            context = use_old(next_list.context, "table") or {},
+            efm = use_old(next_list.efm, "string"),
+            idx = use_old(next_list.idx, "number"),
+            items = use_old(next_list.items, "table"),
             nr = i,
-        })
+            quickfixtextfunc = use_old(next_list.quickfixtextgfunc, "function"),
+            title = use_old(next_list.title, "string"),
+            user_data = { action = "replace", list_win = list_win },
+        } --- @type QfRancherWhat
+
         M._set_list(next_what)
     end
 end
 
---- @param win integer|nil
---- @param list_nr integer|string
-local function resolve_list_nr(win, list_nr)
-    local ev = require("mjm.error-list-types")
-    ev._validate_win(win, true)
-    ev._validate_list_nr(list_nr, true)
-    return win and vim.fn.getloclist(win, { nr = list_nr }).nr
-        or vim.fn.getqflist({ nr = list_nr }).nr
-end
-
 --- @param setlist_action "r"|" "|"a"|"f"|"u"
 --- @param what QfRancherWhat
+--- @return integer
 local function do_set_list(setlist_action, what)
-    local ev = require("mjm.error-list-types")
-    vim.validate("setlist_action", setlist_action, "string")
-    ev._validate_what_strict(what)
+    if vim.g.qf_rancher_debug_assertions then
+        local ey = require("mjm.error-list-types")
+        ey._validate_setlist_action(setlist_action)
+        ey._validate_what(what)
+    end
 
-    local what_set = vim.deepcopy(what, true)
-    local result = what.user_data.list_win
-            and vim.fn.setloclist(what.user_data.list_win, {}, setlist_action, what_set)
-        or vim.fn.setqflist({}, setlist_action, what_set) --- @type integer
-    return result == -1 and result or resolve_list_nr(what.user_data.list_win, what.nr)
+    local list_win = what.user_data.list_win --- @type integer|nil
+    local max_nr_before = M._get_max_list_nr(list_win) --- @type integer
+    local result = list_win and vim.fn.setloclist(list_win, {}, setlist_action, what)
+        or vim.fn.setqflist({}, setlist_action, what) --- @type integer
+
+    if result == -1 then
+        --- MID: Have not seen this come up unless there's some other code error. If it does,
+        --- write error handling
+        return result
+    end
+
+    --- MID: There is no need to get max_nr_before again here. But I want to wait to fix it in
+    --- case a more organic solution arises than passing an "append" parameter
+    if setlist_action == " " and what.nr == max_nr_before then
+        local max_nr_after = M._get_max_list_nr(list_win) --- @type integer
+        return math.min(what.nr + 1, max_nr_after)
+    end
+
+    return what.nr > 0 and what.nr or 1
 end
 
---- TODO: The code needs to be strict about the fact that the "$" list nr is only to be used for
---- internal purposes, and not within the general business logic
+--- @param what QfRancherWhat
+--- @return nil
+local function validate_and_clean_set_list(what)
+    what = what or {}
 
-local function validate_set_list(what)
     local ev = require("mjm.error-list-types")
-    ev._validate_what_strict(what)
+    ev._validate_what(what)
     --- TODO: Add new validation here for the what user_data section
-    vim.validate("what.id", what.id, "nil")
-    vim.validate("what.lines", what.lines, "nil")
+    --- A note here is that the validation for validity and the validation for performing the
+    --- set are different. It is valid for every value to be nil. But for set, action at least
+    --- must be present. You can do a cleanup, but I think allowing fallback on everything creates
+    --- confusing assumptions
+
+    what.id = nil
+    what.lines = nil
 end
 
 ------------------
 --- LIST TOOLS ---
 ------------------
 
---- @param opts vim.fn.setqflist.what
---- @return vim.fn.setqflist.what
-function M._create_what_table(opts)
-    opts = opts or {}
-    local what = {}
-
-    what.context = opts.context or {}
-    what.efm = opts.efm or nil
-    what.id = nil
-    what.idx = opts.idx or nil
-    what.items = opts.items or nil
-    what.lines = opts.lines or nil
-    what.nr = nil
-    what.quickfixtextfunc = opts.quickfixtextfunc or nil
-    what.title = opts.title or ""
-    ---@diagnostic disable-next-line: undefined-field
-    what.user_data = opts.user_data or nil
-
-    if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_what_strict(what)
-    end
-
-    return what
-end
-
 --- TODO: Since we're using the what table to carry the sort info down for diags anyway, just do
 --- all sorting here. This removes the issue of calling functions having to reason about when
 --- this function sorts. Instead, they can pass a sort to the what table and assume the
 --- underlying logic is correctly handled
-
---- MID: The way the set_nr is handled in here feels sloppy
-
+---
 --- @param what QfRancherWhat
 --- @return integer
 function M._set_list(what)
-    what = what or {}
-    validate_set_list(what)
+    validate_and_clean_set_list(what)
 
     local what_set = vim.deepcopy(what, true) --- @type QfRancherWhat
-    local stack_len = M._get_list_stack_len(what.user_data.win) --- @type integer
-    if stack_len == 0 then
-        what_set.nr = "$"
+    local list_win = what.user_data.list_win --- @type integer|nil
+    local action = what.user_data.action --- @type QfRancherAction
+
+    local max_nr = M._get_max_list_nr(list_win) --- @type integer
+    if max_nr == 0 then
+        what_set.nr = max_nr
         return do_set_list(" ", what_set)
     end
 
-    --- MID: Why does this diagnostic fire here?
-    ---@diagnostic disable-next-line: assign-type-mismatch
-    local set_list_nr = type(what.nr) == "number" and what.nr or stack_len --- @type integer
-    set_list_nr = set_list_nr == 0 and M._get_cur_stack_nr(what.user_data.list_win) or set_list_nr
-    set_list_nr = math.min(set_list_nr, stack_len) or set_list_nr
+    what_set.nr = math.min(what_set.nr, max_nr)
+    if what_set.nr == 0 then
+        what_set.nr = action == "new" and max_nr or M._get_cur_list_nr(list_win)
+    end
 
-    if what.user_data.action == "new" and set_list_nr < stack_len then
-        what_set.nr = set_list_nr
+    if what_set.nr == max_nr and action == "new" then
+        return do_set_list(" ", what_set)
+    end
+
+    assert(what_set.nr > 0)
+    if action == "add" then
+        what_set = create_add_list_what(what_set)
+    elseif action == "new" then
         cycle_lists_down(what_set)
-        return do_set_list("r", what_set)
     end
 
-    if what.user_data.action == "add" then
-        local cur_list = M._get_list_all(what.user_data.list_win, what.nr) --- @type table
-        what_set = create_add_list_what(cur_list, what_set)
-    end
-
-    if what.user_data.action == "add" or what.user_data.action == "replace" then
-        what_set.nr = set_list_nr
-        return do_set_list("r", what_set)
-    end
-
-    what_set.nr = "$"
-    return do_set_list(" ", what_set)
+    return do_set_list("r", what_set)
 end
 
---- LOW: Create a type and validation for the getqflist return
---- MID: Need to make a validation for the what items that can handle zero values to get the
---- current values
---- TODO: Maybe restrict the validation for the get_qflist what table
----
---- TODO: Another issue with using list.nr for these inputs
+--- NOTE: Prefer making new functions here rather than passing the what table down to get data.
+--- Using the what table for getting and setting makes managing it more complicated
 
 --- @param win integer|nil
---- @param nr integer|"$"
+--- @param nr integer
 --- @return table
-function M._get_list_all(win, nr)
+function M._get_all(win, nr)
     if vim.g.qf_rancher_debug_assertions then
         local ev = require("mjm.error-list-types")
         ev._validate_win(win, true)
-        ev._validate_list_nr(nr, false)
+        ev._validate_list_nr(nr)
     end
 
     if win then
@@ -191,23 +186,13 @@ function M._get_list_all(win, nr)
     end
 end
 
---- TODO: Use in qE/lE
---- @return nil
-function M._clear_list_stack(win)
-    if not win then
-        vim.fn.setqflist({}, "f")
-        require("mjm.error-list-open")._close_all_qf_wins()
-        return
-    end
-
-    local qf_id = vim.fn.getloclist(win, { id = 0 }).id
-    vim.fn.setloclsit(win, {}, "f")
-    require("mjm.error-list-open")._close_all_loclists_by_qf_id(qf_id)
-end
-
 --- @param win integer|nil
 --- @return integer
-function M._get_cur_stack_nr(win)
+function M._get_cur_list_nr(win)
+    if vim.g.qf_rancher_debug_assertions then
+        require("mjm.error-list-types")._validate_win(win, true)
+    end
+
     if win then
         return vim.fn.getloclist(win, { nr = 0 }).nr
     else
@@ -217,12 +202,37 @@ end
 
 --- @param win integer|nil
 --- @return integer
-function M._get_list_stack_len(win)
+function M._get_max_list_nr(win)
+    if vim.g.qf_rancher_debug_assertions then
+        require("mjm.error-list-types")._validate_win(win, true)
+    end
+
     if win then
         return vim.fn.getloclist(win, { nr = "$" }).nr
     else
         return vim.fn.getqflist({ nr = "$" }).nr
     end
+end
+
+--- TODO: Use in qE/lE
+--- @param win integer|nil
+--- @return nil
+function M._clear_stack(win)
+    if vim.g.qf_rancher_debug_assertions then
+        require("mjm.error-list-types")._validate_win(win, true)
+    end
+
+    local eo = require("mjm.error-list-open")
+
+    if not win then
+        vim.fn.setqflist({}, "f")
+        eo._close_all_qf_wins()
+        return
+    end
+
+    local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
+    vim.fn.setloclist(win, {}, "f")
+    eo._close_all_loclists_by_qf_id(qf_id)
 end
 
 return M
@@ -231,19 +241,19 @@ return M
 --- TODO ---
 ------------
 
---- Add a what userdata option to save and restore the view of the current list_win
+--- Add a what user_data option to save and restore the view of the current list_win
 
 -----------
 --- MID ---
 -----------
 
---- Tighter validation for qf entries. Issue is how to handle multi-line errors like from compilers
 --- The view should have a functionality similar to the filter view saving, where the idx and
---- view can be moved up based on the change in list size. The problem is knowing which rows were
---- removed above the row/idx, which I'm not sure you can do without re-comparing the lists
+---     view can be moved up based on the change in list size. The problem is knowing which rows
+---     were removed above the row/idx, which I'm not sure you can do without re-comparing the
+---     lists. You can also pass this down as userdata, but this gets us back to the original
+---     problem where callers are maintaining their own records of the list in addition to the
+---     set function
 
 ----------
 --- PR ---
 ----------
-
---- Update the what annotation to inclucde the user_data field

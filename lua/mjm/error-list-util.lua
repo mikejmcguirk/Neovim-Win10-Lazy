@@ -1,6 +1,8 @@
 --- @class QfRancherUtils
 local M = {}
 
+--- @param count integer
+--- return integer
 function M._count_to_count1(count)
     require("mjm.error-list-types")._validate_count(count)
     return math.max(count, 1)

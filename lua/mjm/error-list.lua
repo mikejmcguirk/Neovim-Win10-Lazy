@@ -243,6 +243,7 @@ return M
 
 --- It would be better if cmd marks produced rows and columns
 --- Wintype is currently just an or enum. Should be an alias so it can be annotated
+--- It should be possible to output vimgrep to a list so it can be used by internal scripting
 
 ---------------
 -- RESOURCES --

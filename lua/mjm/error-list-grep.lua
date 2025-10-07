@@ -126,7 +126,7 @@ local function validate_do_grep_inputs(grep_info, system_opts, input_opts, what)
     ey._validate_grep_info(grep_info)
     ey._validate_system_opts(system_opts)
     ey._validate_input_opts(input_opts)
-    ey._validate_what_strict(what)
+    ey._validate_what(what)
 end
 
 --- @param grep_info QfRancherGrepInfo

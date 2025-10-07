@@ -65,14 +65,14 @@ end
 --- @param count integer
 --- @return nil
 function M._q_older(count)
-    count = require("mjm.error-list-util")._count_to_count1()
+    count = require("mjm.error-list-util")._count_to_count1(count)
     q_change_history(count, require("mjm.error-list-util")._wrapping_sub)
 end
 
 --- @param count integer
 --- @return nil
 function M._q_newer(count)
-    count = require("mjm.error-list-util")._count_to_count1()
+    count = require("mjm.error-list-util")._count_to_count1(count)
     q_change_history(count, require("mjm.error-list-util")._wrapping_add)
 end
 
@@ -186,16 +186,18 @@ end
 --- @param count integer
 --- @return nil
 function M._l_older(count)
-    count = require("mjm.error-list-util")._count_to_count1()
+    count = require("mjm.error-list-util")._count_to_count1(count)
     l_change_history(count, require("mjm.error-list-util")._wrapping_sub)
 end
 
 --- @param count integer
 --- @return nil
 function M._l_newer(count)
-    count = require("mjm.error-list-util")._count_to_count1()
+    count = require("mjm.error-list-util")._count_to_count1(count)
     l_change_history(count, require("mjm.error-list-util")._wrapping_add)
 end
+
+--- TODO: This should take a win param
 
 --- @param opts QfRancherHistoryOpts
 --- @return nil
@@ -293,6 +295,14 @@ function M._get_gethistory(is_loclist)
         return M._l_history
     else
         return M._q_history
+    end
+end
+
+function M._history(win, opts)
+    if win then
+        M._l_history(opts)
+    else
+        M._q_history(opts)
     end
 end
 

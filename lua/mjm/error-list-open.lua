@@ -405,6 +405,7 @@ function M._close_all_qf_wins()
     end
 end
 
+--- TODO: Needs to take win/nil as the first arg
 --- - always_resize?: If the qf window is already open, it will be resized
 --- - height?: Set the height the list should be sized to
 --- - keep_win?: On completion, return focus to the calling win
@@ -507,6 +508,12 @@ function M._toggle_loclist()
     if not M._open_loclist({ suppress_errors = true }) then
         M._close_loclist()
     end
+end
+
+--- @param win? integer
+--- @param opts QfRancherOpenOpts
+function M._open_list(win, opts)
+    return win and M._open_loclist(opts) or M._open_qflist(opts)
 end
 
 --- @param qf_id integer

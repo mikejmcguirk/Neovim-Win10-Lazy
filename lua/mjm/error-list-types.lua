@@ -1,4 +1,4 @@
---- @class QfRancherValidation
+--- @class QfRancherTypes
 local M = {}
 
 --- @alias QfRancherAction "new"|"replace"|"add"
@@ -46,11 +46,14 @@ end
 --- @field list_item_type? string|nil
 --- @field title? string|nil --- TODO: Nix this
 
---- TODO: The what annotation does not allow for the user_data field. This makes sense since it is
---- not ready by setqflist, but makes working with the data a pain. See how quickfix.c handles
---- it internally. Maybe submit PR
+--- PR: The builtin what annotation does not contain the user_data field. On one hand, this makes
+--- sense because it is not atually read by setqflist. On the other, it means the field cannot
+--- be used without suppressing diagnostics. Double-check how the field is read internally, but
+--- feels like something that should be added
+--- NOTE: Handling the "$" nr value adds significant complexity. Disallow here
 
 --- @class QfRancherWhat : vim.fn.setqflist.what
+--- @field nr integer
 --- @field user_data? any
 
 --- @class QfRancherUserData
@@ -94,57 +97,44 @@ function M._validate_win(win, allow_nil)
 end
 
 --- @param list_nr integer|string
---- @param allow_symbol? boolean
 --- @return nil
-function M._validate_list_nr(list_nr, allow_symbol)
-    local validator = allow_symbol == true and { "number", "string" } or "number"
-    vim.validate("list_nr", list_nr, validator)
-    if type(list_nr) == "number" then
-        vim.validate("list_nr", list_nr, function()
-            return list_nr >= 0
-        end)
-    elseif type(list_nr) == "string" then
-        vim.validate("list_nbr", list_nr, function()
-            return list_nr == "$"
-        end)
-    end
+function M._validate_list_nr(list_nr)
+    vim.validate("list_nr", list_nr, "number")
+    vim.validate("list_nr", list_nr, function()
+        return list_nr >= 0
+    end)
 end
 
---- Validate qf items as per the vim.quickfix.entry annotation
---- @param item vim.quickfix.entry
---- @return nil
-function M._validate_qf_item(item)
-    vim.validate("item", item, "table")
+--- MID: If this value starts being used in more places, consider making an alias for it rather
+--- than add-hoc annotation enums
 
-    vim.validate("item.bufnr", item.bufnr, { "nil", "number" })
-    vim.validate("item.filename", item.filename, { "nil", "string" })
-    vim.validate("item.module", item.module, { "nil", "string" })
-    vim.validate("item.lnum", item.lnum, { "nil", "number" })
-    vim.validate("item.end_lnum", item.end_lnum, { "nil", "number" })
-    vim.validate("item.pattern", item.pattern, { "nil", "string" })
-    vim.validate("item.col", item.col, { "nil", "number" })
-    vim.validate("item.vcol", item.vcol, { "nil", "number" })
-    vim.validate("item.end_col", item.end_col, { "nil", "number" })
-    vim.validate("item.nr", item.nr, { "nil", "number" })
-    vim.validate("item.text", item.text, { "nil", "string" })
-    vim.validate("item.type", item.type, { "nil", "string" })
-    --- MID: Figure out what the proper validation for this is
-    -- vim.validate("item.valid", item.valid, { "boolean", "nil" })
+--- @param setlist_action "r"|" "|"a"|"f"|"u"
+--- @return nil
+function M._validate_setlist_action(setlist_action)
+    vim.validate("setlist_action", setlist_action, "string")
+    vim.validate("setlist_action", setlist_action, function()
+        return setlist_action == "r"
+            or setlist_action == " "
+            or setlist_action == "a"
+            or setlist_action == "f"
+            or setlist_action == "u"
+    end)
 end
 
---- Validate qf items more strictly.
---- NOTE: Does not include the base validation against the annotation
 --- NOTE: This is designed for entries used to set qflists. The entries from getqflist() are
 --- not exactly the same
 --- @param item vim.quickfix.entry
 --- @return nil
-function M._validate_qf_item_strict(item)
+function M.validate_list_item(item)
+    vim.validate("item", item, "table")
+    vim.validate("item.bufnr", item.bufnr, { "nil", "number" })
     if type(item.bufnr) == "number" then
         vim.validate("item.bufnr", item.bufnr, function()
             return vim.api.nvim_buf_is_valid(item.bufnr)
         end)
     end
 
+    vim.validate("item.filename", item.filename, { "nil", "string" })
     if type(item.filename) == "string" then
         vim.validate("item.filename", item.filename, function()
             local full_path = vim.fn.fnamemodify(item.filename, ":p")
@@ -152,57 +142,80 @@ function M._validate_qf_item_strict(item)
         end)
     end
 
-    --- NOTE: While qf rows and cols are one indexed, 0 is used to represent non-values
+    vim.validate("item.module", item.module, { "nil", "string" })
 
-    if type(item.lnum) == "number" then
-        vim.validate("item.lnum", item.lnum, function()
-            return item.lnum >= 0
-        end)
-    end
-
-    if type(item.end_lnum) == "number" then
-        vim.validate("item.end_lnum", item.end_lnum, function()
-            return item.end_lnum >= 0
-        end)
-    end
-
-    if type(item.col) == "number" then
-        vim.validate("item.col", item.col, function()
-            return item.col >= 0
-        end)
-    end
-
-    if type(item.end_col) == "number" then
-        vim.validate("item.end_col", item.end_col, function()
-            return item.end_col >= 0
-        end)
-    end
-
-    --- LOW: Is there any validation to do on nr?
+    vim.validate("item.nr", item.nr, { "nil", "number" })
+    vim.validate("item.pattern", item.pattern, { "nil", "string" })
+    vim.validate("item.vcol", item.vcol, { "nil", "number" })
+    vim.validate("item.text", item.text, { "nil", "string" })
+    vim.validate("item.type", item.type, { "nil", "string" })
+    --- MID: Figure out what the proper validation for this is
+    -- vim.validate("item.valid", item.valid, { "boolean", "nil" })
 
     if type(item.type) == "string" then
         vim.validate("item.type", item.type, function()
             return #item.type <= 1
         end)
     end
+
+    --- NOTE: While qf rows and cols are one indexed, 0 is used to represent non-values
+
+    vim.validate("item.lnum", item.lnum, { "nil", "number" })
+    if type(item.lnum) == "number" then
+        vim.validate("item.lnum", item.lnum, function()
+            return item.lnum >= 0
+        end)
+    end
+
+    vim.validate("item.end_lnum", item.end_lnum, { "nil", "number" })
+    if type(item.end_lnum) == "number" then
+        vim.validate("item.end_lnum", item.end_lnum, function()
+            return item.end_lnum >= 0
+        end)
+    end
+
+    vim.validate("item.col", item.col, { "nil", "number" })
+    if type(item.col) == "number" then
+        vim.validate("item.col", item.col, function()
+            return item.col >= 0
+        end)
+    end
+
+    vim.validate("item.end_col", item.end_col, { "nil", "number" })
+    if type(item.end_col) == "number" then
+        vim.validate("item.end_col", item.end_col, function()
+            return item.end_col >= 0
+        end)
+    end
 end
 
---- Validates what against the vim.fn.setqflist.what annotation
---- @param what vim.fn.setqflist.what
+--- @param what QfRancherWhat
 --- @return nil
 function M._validate_what(what)
     vim.validate("what", what, "table")
     vim.validate("what.context", what.context, { "nil", "table" })
     vim.validate("what.efm", what.efm, { "nil", "string" })
     vim.validate("what.id", what.id, { "nil", "number" })
+    if type(what.id) == "number" then
+        vim.validate("what.id", what.id, function()
+            return what.id >= 0
+        end)
+    end
 
     --- While Nvim can handle an idx of "$" for the last idx, the annotation only allows for
     --- integer types. Only allow numbers here for consistency
     vim.validate("what.idx", what.idx, { "nil", "number" })
+    if type(what.idx) == "number" then
+        vim.validate("what.idx", what.idx, function()
+            return what.idx >= 0
+        end)
+    end
+
     vim.validate("what.items", what.items, { "nil", "table" })
     if vim.g.qf_rancher_debug_assertions and type(what.items) == "table" then
+        --- TODO: Consolidate these
         for _, item in ipairs(what.items) do
-            M._validate_qf_item(item)
+            M.validate_list_item(item)
         end
     end
 
@@ -211,42 +224,9 @@ function M._validate_what(what)
         require("mjm.error-list-util")._is_valid_str_list(what.lines)
     end
 
-    vim.validate("what.nr", what.nr, { "nil", "number", "string" })
-    --- "$" is the only string entry allowed in the annotation for nr
-    if type(what.nr) == "string" then
-        vim.validate("what.nr", what.nr, function()
-            return what.nr == "$"
-        end)
-    end
-
+    M._validate_list_nr(what.nr)
     vim.validate("what.quickfixtextfunc", what.quickfixtextfunc, { "callable", "nil" })
     vim.validate("what.title", what.title, { "nil", "string" })
-end
-
---- Validate what tables based on more specific criteria
---- @param what vim.fn.setqflist.what
---- @return nil
-function M._validate_what_strict(what)
-    M._validate_what(what)
-
-    if vim.g.qf_rancher_debug_assertions and type(what.items) == "table" then
-        for _, item in pairs(what.items) do
-            M._validate_qf_item_strict(item)
-        end
-    end
-
-    if type(what.id) == "number" then
-        vim.validate("what.id", what.id, function()
-            return what.id >= 0
-        end)
-    end
-
-    --- Negative idx values do not exist
-    if type(what.idx) == "number" then
-        vim.validate("what.idx", what.idx, function()
-            return what.idx >= 0
-        end)
-    end
 end
 
 --------------------
@@ -338,3 +318,9 @@ return M
 ---     further you should go in than the initial calls
 --- Rename this to something that suggests it is what governs the data types. Move the types here
 --- as well
+
+-----------
+--- LOW ---
+-----------
+
+--- Create a type and validation for getqflist returns
