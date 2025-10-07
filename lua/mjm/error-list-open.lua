@@ -139,10 +139,9 @@ local function get_views(wins)
     return views
 end
 
---- TODO: There is a very obvious opportunity to merge these two height functions, but given the
---- previous issues with the resizing abstractions making no sense, going to wait. It seems like
---- you could do a "resize_list_win" abstraction, which I technically already have, but I don't
---- know what other cases we're addressing. And there's the stack abstraction as well
+--- TODO: For these functions, two objectives:
+--- - The duplicate logic is sloppy and tasteless
+--- - Has the same tabpage scoping issues with the finding opts we looked at before
 
 --- @param win integer
 --- @param height integer|nil
@@ -214,49 +213,59 @@ end
 
 --- @param qf_win integer
 --- @param height? integer
---- @param opts? {tabpage?: integer, tabpage_wins?:integer[]}
+--- @param opts? {tabpage_wins?:integer[]}
 --- @return nil
 local function resize_qf_win(qf_win, height, opts)
     opts = opts or {}
 
     if vim.g.qf_rancher_debug_assertions then
-        vim.validate("qf_win", qf_win, "number")
-        vim.validate("qf_win", qf_win, function()
-            return vim.api.nvim_win_is_valid(qf_win)
-        end)
+        local ey = require("mjm.error-list-types")
+        ey._validate_win(qf_win, false)
 
+        --- TODO: Add an "is_quickfix_win" validation
+        --- Same with is_loclist_win
         local wintype = vim.fn.win_gettype(qf_win)
         local qf = wintype == "quickfix"
         assert(qf, "qf_win " .. qf_win .. "has a non quickfix type: " .. wintype)
 
-        vim.validate("opts.tabpage", opts.tabpage, { "nil", "number" })
-        vim.validate("opts.tabpage_wins", opts.tabpage, { "nil", "table" })
+        vim.validate("opts.tabpage_wins", opts.tabpage_wins, { "nil", "table" })
     end
 
-    --- LOW: Awkward for the same reasons as the _find_qf_win util
-    local tabpage = opts.tabpage or vim.api.nvim_win_get_tabpage(qf_win)
-    local tabpage_wins = opts.tabpage_wins or vim.api.nvim_tabpage_list_wins(tabpage)
+    local tabpage_wins = opts.tabpage_wins
+        or vim.api.nvim_tabpage_list_wins(vim.api.nvim_win_get_tabpage(qf_win))
     tabpage_wins = vim.tbl_filter(function(win)
         return win ~= qf_win
     end, tabpage_wins)
 
     local views = get_views(tabpage_wins)
-
     local resolved_height = resolve_qf_height(height)
     vim.api.nvim_win_set_height(qf_win, resolved_height)
-
     restore_views(views)
 end
 
---- @param open_opts QfRancherOpenOpts
---- Assumes that validation has already been run
-local function clean_open_opts(open_opts)
-    open_opts.always_resize = open_opts.always_resize == nil and false or open_opts.always_resize
-    open_opts.height = (open_opts.height and open_opts.height > 0) and open_opts.height or nil
-    open_opts.keep_win = open_opts.keep_win == nil and false or open_opts.keep_win
-    open_opts.suppress_errors = open_opts.suppress_errors == nil and false
-        or open_opts.suppress_errors
+--- @param opts QfRancherOpenOpts
+local function clean_open_opts(opts)
+    require("mjm.error-list-types")._validate_open_opts(opts)
+
+    if opts.always_resize == nil then
+        opts.always_resize = false
+    end
+
+    if opts.height and opts.height < 1 then
+        opts.height = nil
+    end
+
+    if opts.keep_win == nil then
+        opts.keep_win = false
+    end
+
+    if opts.suppress_errors == nil then
+        opts.suppress_errors = false
+    end
 end
+
+--- TODO: Re-organize so opens/closes and such are together. Easier to find commonalities between
+--- qf and loclist code
 
 ----------------------------
 --- Open/Close Functions ---
@@ -266,7 +275,6 @@ end
 --- @return boolean
 function M._open_qflist(opts)
     opts = opts or {}
-    require("mjm.error-list-types")._validate_open_opts(opts)
     clean_open_opts(opts)
 
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
@@ -338,18 +346,16 @@ function M._toggle_qflist()
     end
 end
 
+--- TODO: Remake this to have variable scope
+
 function M._resize_all_qf_wins()
-    local tabpages = vim.api.nvim_list_tabpages()
-    for _, tabpage in ipairs(tabpages) do
-        local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage)
-        for _, win in ipairs(tabpage_wins) do
-            local wintype = vim.fn.win_gettype(win)
-            if wintype == "quickfix" then
-                resize_qf_win(win, nil, { tabpage_wins = tabpage_wins })
-            end
-        end
+    local qf_wins = require("mjm.error-list-util")._get_qf_wins({ all_tabpages = true })
+    for _, win in ipairs(qf_wins) do
+        resize_qf_win(win, nil, {})
     end
 end
+
+--- TODO: Remake this to have variable scope
 
 function M._close_all_qf_wins()
     local tabpages = vim.api.nvim_list_tabpages()
@@ -364,11 +370,8 @@ function M._close_all_qf_wins()
     end
 end
 
---- TODO: Needs to take win/nil as the first arg
---- - always_resize?: If the qf window is already open, it will be resized
---- - height?: Set the height the list should be sized to
---- - keep_win?: On completion, return focus to the calling win
---- - suppress_errors?: Do not display error messages
+--- MID: It would be better if this took win as its first arg
+
 --- @param opts? QfRancherOpenOpts
 --- @return boolean
 function M._open_loclist(opts)
@@ -475,6 +478,8 @@ function M._open_list(win, opts)
     return win and M._open_loclist(opts) or M._open_qflist(opts)
 end
 
+--- TODO: Use the new window finding logic
+
 --- @param qf_id integer
 --- @param tabpage integer
 --- @return nil
@@ -492,6 +497,18 @@ function M._resize_llists_by_qf_id_and_tabpage(qf_id, tabpage)
             end
         end
     end
+end
+
+--- TODO: This points to me that the tabpage scoping opts should be a type that is used
+--- more universally
+--- Before we get into attacking the ftplugin code again, we need to go through everything and
+--- make it conform to this standard
+
+--- @param win integer
+--- @param opts QfRancherTabpageOpts
+function M._resize_loclists_by_win(win, opts)
+    opts = opts or {}
+    require("mjm.error-list-util")._get_loclist_wins_by_win(win, opts)
 end
 
 --- @param qf_id integer
@@ -562,8 +579,6 @@ return M
 
 --- In any resizing function, we should check if we actually resized. Don't restore views if
 ---     we didn't
---- Come back to this file after going through everything else. There are resize functions I'm
----     not sure we need
 
 -- - Check that window height updates are triggered where appropriate
 -- - Check that functions have proper visibility

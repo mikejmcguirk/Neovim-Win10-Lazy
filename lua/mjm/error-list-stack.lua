@@ -1,14 +1,6 @@
 --- @class QfRancherStack
 local M = {}
 
--------------
---- TYPES ---
--------------
-
---- @class QfRancherHistoryOpts
---- @field always_open? boolean
---- @field silent? boolean
-
 -------------------
 --- Module Data ---
 -------------------
@@ -20,9 +12,6 @@ local no_ll_stack = "Loclist stack is empty" --- @type string
 --- Helper Functions ---
 ------------------------
 
---- This seems to properly emulate what happens when you run setqflist({}, "r") on the current
---- list_nr
-
 --- @param count integer
 --- @return vim.fn.setqflist.what
 local function get_del_list_data(count)
@@ -30,97 +19,170 @@ local function get_del_list_data(count)
         require("mjm.error-list-types")._validate_count(count)
     end
 
+    --- TODO: Have a bunch of examples I can use to make this better
     return { context = {}, idx = 0, items = {}, nr = count, title = "" }
 end
 
------------------------
---- Stack Functions ---
------------------------
+--- @param win integer|nil
+--- @return nil
+local function resize_after_hist_change(win)
+    local eo = require("mjm.error-list-open")
+    if win then
+        eo._resize_loclists_by_win(win, { tabpage = vim.api.nvim_get_current_tabpage() })
+    else
+        eo._resize_all_qf_wins()
+    end
+end
 
---- NOTE: The qf stack number is the same in all tabs. If a change is made to chistory, check
---- all tabpages for an open qf window to resize
+-------------------
+--- OLDER/NEWER ---
+-------------------
 
---- @param count1 integer
+--- @param win integer|nil
+--- @param count integer
 --- @param arithmetic function
 --- @return nil
-local function q_change_history(count1, arithmetic)
+local function change_history(win, count, arithmetic)
     if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_count1(count1)
+        local ey = require("mjm.error-list-types")
+        ey._validate_win(win, true)
+        ey._validate_count(count)
+        vim.validate("arithmetic", arithmetic, "callable")
     end
 
-    local stack_len = vim.fn.getqflist({ nr = "$" }).nr --- @type integer
+    local et = require("mjm.error-list-tools") --- @type QfRancherTools
+    local stack_len = et._get_max_list_nr(win) --- @type integer
     if stack_len < 1 then
-        vim.api.nvim_echo({ { no_qf_stack, "" } }, false, {})
+        vim.api.nvim_echo({ { "Stack is empty", "" } }, false, {})
         return
     end
 
-    local cur_stack_nr = vim.fn.getqflist({ nr = 0 }).nr --- @type integer
-    local new_stack_nr = arithmetic(cur_stack_nr, count1, 1, stack_len) --- @type integer
+    local cur_list_nr = et._get_cur_list_nr(win) --- @type integer
+    local count1 = require("mjm.error-list-util")._count_to_count1(count) --- @type integer
+    local new_list_nr = arithmetic(cur_list_nr, count1, 1, stack_len) --- @type integer
 
-    vim.api.nvim_cmd({ cmd = "chistory", count = new_stack_nr }, {})
-    require("mjm.error-list-open")._resize_all_qf_wins()
+    local cmd = win and "lhistory" or "chistory" --- @type string
+    vim.api.nvim_cmd({ cmd = cmd, count = new_list_nr }, {})
+    if vim.g.qf_rancher_debug_assertions then
+        local list_nr_after = et._get_cur_list_nr(win)
+        assert(new_list_nr == list_nr_after)
+    end
+
+    if cur_list_nr ~= new_list_nr then
+        resize_after_hist_change(win)
+    end
 end
 
 --- @param count integer
 --- @return nil
 function M._q_older(count)
-    count = require("mjm.error-list-util")._count_to_count1(count)
-    q_change_history(count, require("mjm.error-list-util")._wrapping_sub)
+    change_history(nil, count, require("mjm.error-list-util")._wrapping_sub)
 end
 
 --- @param count integer
 --- @return nil
 function M._q_newer(count)
-    count = require("mjm.error-list-util")._count_to_count1(count)
-    q_change_history(count, require("mjm.error-list-util")._wrapping_add)
+    change_history(nil, count, require("mjm.error-list-util")._wrapping_add)
 end
 
---- @param hist_opts QfRancherHistoryOpts
-local function validate_history_opts(hist_opts)
-    if vim.g.qf_rancher_debug_assertions then
-        vim.validate("hist_opts", hist_opts, "table")
-        vim.validate("hist_opts.always_open", hist_opts.always_open, { "boolean", "nil" })
-        vim.validate("hist_opts.silent", hist_opts.silent, { "boolean", "nil" })
-    end
-end
-
---- TODO: Both histories do a weird thing where the window like shakes when you do it but
---- doesn't like change or anything it's weird
---- TODO: With the tools functions, it should be possible to combine more logic
---- TODO: Should be able to set if you want to do keep_win on the open. For stuff like greps
---- you want to jump in, but for history cycling not so much
-
---- @param opts QfRancherHistoryOpts
+--- @param count integer
+--- @param arithmetic function
 --- @return nil
-function M._q_history(count, opts)
-    opts = opts or {}
-    --- TODO: Move into types. Have a sub function here that calls the types function and checks
-    --- count as well
-    validate_history_opts(opts)
-
-    local et = require("mjm.error-list-tools")
-    local stack_len = et._get_max_list_nr(nil) --- @type integer
-    if stack_len < 1 then
-        vim.api.nvim_echo({ { no_qf_stack, "" } }, false, {})
+local function l_change_history(count, arithmetic)
+    local cur_win = vim.api.nvim_get_current_win() --- @type integer
+    local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id --- @type integer
+    if qf_id == 0 then
+        vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
         return
     end
 
-    --- @type integer|nil
-    local adj_count = count > 0 and math.min(count, stack_len) or nil
-    local cur_list_nr = vim.fn.getqflist({ nr = 0 }).nr --- @type integer
-    local silent = opts.silent and true or false
-    ---@diagnostic disable-next-line: missing-fields
-    vim.api.nvim_cmd({ cmd = "chistory", count = adj_count, mods = { silent = silent } }, {})
+    change_history(cur_win, count, arithmetic)
+end
 
-    local eo = require("mjm.error-list-open") --- @type QfRancherOpen
+--- @param count integer
+--- @return nil
+function M._l_older(count)
+    l_change_history(count, require("mjm.error-list-util")._wrapping_sub)
+end
+
+--- @param count integer
+--- @return nil
+function M._l_newer(count)
+    l_change_history(count, require("mjm.error-list-util")._wrapping_add)
+end
+
+---------------
+--- HISTORY ---
+---------------
+
+--- TODO: Both histories do a weird thing where the window like shakes when you do it but
+--- doesn't like change or anything it's weird
+
+--- @param win integer|nil
+--- @param count integer
+--- @param opts QfRancherHistoryOpts
+--- @return nil
+local function history(win, count, opts)
+    if vim.g.qf_rancher_debug_assertions then
+        local ey = require("mjm.error-list-types")
+        ey._validate_win(win, true)
+        ey._validate_count(count)
+        ey._validate_history_opts(opts)
+    end
+
+    local et = require("mjm.error-list-tools") --- @type QfRancherTools
+    local stack_len = et._get_max_list_nr(win) --- @type integer
+    if stack_len < 1 then
+        vim.api.nvim_echo({ { "Stack is empty", "" } }, false, {})
+        return
+    end
+
+    local cur_list_nr = et._get_cur_list_nr(win) --- @type integer
+    local cmd = win and "lhistory" or "chistory" --- @type string
+    local adj_count = count > 0 and math.min(count, stack_len) or nil --- @type integer|nil
+    ---@diagnostic disable-next-line: missing-fields
+    vim.api.nvim_cmd({ cmd = cmd, count = adj_count, mods = { silent = opts.silent } }, {})
+    if vim.g.qf_rancher_debug_assertions then
+        local list_nr_after = et._get_cur_list_nr(win)
+        assert(adj_count == list_nr_after)
+    end
+
     if cur_list_nr ~= adj_count then
-        eo._resize_all_qf_wins()
+        resize_after_hist_change(win)
     end
 
     if opts.always_open then
-        eo._open_qflist({ always_resize = true, keep_win = true, suppress_errors = true })
+        local open_opts = { keep_win = opts.keep_win, suppress_errors = true }
+        require("mjm.error-list-open")._open_list(win, open_opts)
     end
 end
+
+--- @param count integer
+--- @param opts QfRancherHistoryOpts
+--- @return nil
+function M._q_history(count, opts)
+    history(nil, count, opts)
+end
+
+--- @param win integer
+--- @param opts QfRancherHistoryOpts
+--- @return nil
+function M._l_history(win, count, opts)
+    local ey = require("mjm.error-list-types")
+    ey._validate_win(win, false)
+
+    local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
+    if qf_id == 0 then
+        vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
+        return
+    end
+
+    history(win, count, opts)
+end
+
+----------------
+--- DELETION ---
+----------------
 
 --- @param count integer
 --- @return nil
@@ -152,86 +214,6 @@ function M._q_del_all()
         vim.api.nvim_echo({ { no_qf_stack, "" } }, false, {})
     else
         vim.fn.setqflist({}, "f")
-    end
-end
-
---- @param count1 integer
---- @param arithmetic function
---- @return nil
-local function l_change_history(count1, arithmetic)
-    require("mjm.error-list-types")._validate_count1(count1)
-
-    local cur_win = vim.api.nvim_get_current_win() --- @type integer
-    local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id --- @type integer
-    if qf_id == 0 then
-        vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
-        return
-    end
-
-    local stack_len = vim.fn.getloclist(cur_win, { nr = "$" }).nr --- @type integer
-    if stack_len < 1 then
-        vim.api.nvim_echo({ { no_ll_stack, "" } }, false, {})
-        return
-    end
-
-    local cur_stack_nr = vim.fn.getloclist(cur_win, { nr = 0 }).nr --- @type integer
-    local new_stack_nr = arithmetic(cur_stack_nr, count1, 1, stack_len) --- @type integer
-
-    vim.api.nvim_cmd({ cmd = "lhistory", count1 = new_stack_nr }, {})
-    local tabpage = vim.api.nvim_win_get_tabpage(cur_win) --- @type integer
-    require("mjm.error-list-open")._resize_llists_by_qf_id_and_tabpage(qf_id, tabpage)
-end
-
---- @param count integer
---- @return nil
-function M._l_older(count)
-    count = require("mjm.error-list-util")._count_to_count1(count)
-    l_change_history(count, require("mjm.error-list-util")._wrapping_sub)
-end
-
---- @param count integer
---- @return nil
-function M._l_newer(count)
-    count = require("mjm.error-list-util")._count_to_count1(count)
-    l_change_history(count, require("mjm.error-list-util")._wrapping_add)
-end
-
---- @param opts QfRancherHistoryOpts
---- @return nil
-function M._l_history(win, count, opts)
-    opts = opts or {}
-    --- TODO: This should be in types
-    validate_history_opts(opts)
-
-    local cur_win = win or vim.api.nvim_get_current_win() --- @type integer
-    local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id --- @type integer
-    if qf_id == 0 then
-        vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
-        return
-    end
-
-    local et = require("mjm.error-list-tools")
-    local stack_len = et._get_max_list_nr(cur_win) --- @type integer
-    if stack_len < 1 then
-        vim.api.nvim_echo({ { no_ll_stack, "" } }, false, {})
-        return
-    end
-
-    --- @type integer|nil
-    local adj_count = count > 0 and math.min(count, stack_len) or nil
-    local cur_list_nr = et._get_cur_list_nr(cur_win) --- @type integer
-    local silent = opts.silent and true or false
-    ---@diagnostic disable-next-line: missing-fields
-    vim.api.nvim_cmd({ cmd = "lhistory", count = adj_count, mods = { silent = silent } }, {})
-
-    local eo = require("mjm.error-list-open") --- @type QfRancherOpen
-    if cur_list_nr ~= adj_count then
-        local tabpage = vim.api.nvim_win_get_tabpage(cur_win)
-        eo._resize_llists_by_qf_id_and_tabpage(qf_id, tabpage)
-    end
-
-    if opts.always_open then
-        eo._open_loclist({ always_resize = true, keep_win = true, suppress_errors = true })
     end
 end
 
@@ -311,6 +293,8 @@ return M
 --- TODO ---
 ------------
 
+--- Because a lot of the functions have changed, go through the maps and cmds and make sure they
+--- are correct
 --- Deep audit/testing
 
 -----------

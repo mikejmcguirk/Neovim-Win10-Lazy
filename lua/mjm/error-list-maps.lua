@@ -623,6 +623,14 @@ local rancher_keymaps = {
     --- STACK ---
     -------------
 
+    --- DOCUMENT: older/newer are meant for cycling. so 2<leader>q[ will go back two lists
+    --- The history commands are meant for targeting specific lists. So 2<leader>qQ will go to
+    --- list two
+    --- NOTE: For history, the open command is the more cumbersome map of the two. This is to
+    --- align with the default behavior, where history only changes the list_nr, but does not
+    --- open. If, in field testing, there are more cases where we want to open the list than
+    --- just change, this can be swapped
+
     { nn, pqfr.."-qf-older)",        qp.."[", "Go to an older qflist",                         function() es._q_older(vim.v.count) end },
     { nn, pqfr.."-qf-newer)",        qp.."]", "Go to a newer qflist",                          function() es._q_newer(vim.v.count) end },
     { nn, pqfr.."-qf-history)",      qp.."Q", "View or jump within the quickfix history",      function() es._q_history(vim.v.count, {}) end },

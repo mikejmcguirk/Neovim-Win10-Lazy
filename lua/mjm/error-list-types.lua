@@ -229,6 +229,25 @@ function M._validate_what(what)
     vim.validate("what.title", what.title, { "nil", "string" })
 end
 
+----------------------------
+--- WINDOW FINDING TYPES ---
+----------------------------
+
+--- TODO: Some_tabpages should be tabpages
+
+--- @class QfRancherTabpageOpts
+--- @field tabpage? integer
+--- @field some_tabpages? integer[]
+--- @field all_tabpages? boolean
+
+--- @param opts QfRancherTabpageOpts
+function M._validate_tabpage_opts(opts)
+    vim.validate("opts", opts, "table")
+    vim.validate("opts.tabpage", opts.tabpage, { "nil", "number" })
+    vim.validate("opts.some_tabpages", opts.some_tabpages, { "nil", "table" })
+    vim.validate("opts.all_tabpages", opts.all_tabpages, { "boolean", "nil" })
+end
+
 ------------------
 --- DIAG TYPES ---
 ------------------
@@ -408,6 +427,24 @@ end
 M._sync_opts = { "sync", "async" }
 M._default_sync_opt = "async"
 M._default_timeout = 4000
+
+-------------------
+--- STACK TYPES ---
+-------------------
+
+--- @class QfRancherHistoryOpts
+--- @field always_open? boolean
+--- @field keep_win? boolean
+--- @field silent? boolean
+
+--- @param opts QfRancherHistoryOpts
+--- @return nil
+function M._validate_history_opts(opts)
+    vim.validate("opts", opts, "table")
+    vim.validate("opts.always_open", opts.always_open, { "boolean", "nil" })
+    vim.validate("opts.keep_win", opts.keep_win, { "boolean", "nil" })
+    vim.validate("opts.silent", opts.silent, { "boolean", "nil" })
+end
 
 return M
 
