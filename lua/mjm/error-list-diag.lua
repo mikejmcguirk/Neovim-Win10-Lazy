@@ -57,17 +57,6 @@ end
 --- @param diag_opts QfRancherDiagOpts
 --- @return vim.diagnostic.GetOpts
 local function get_getopts(diag_info, diag_opts)
-    if vim.g.qf_rancher_debug_assertions then
-        vim.validate("diag_info", diag_info, "table")
-        vim.validate("diag_info.level", diag_info.level, { "nil", "number" })
-        vim.validate("diag_opts", diag_opts, "table")
-        vim.validate("diag_opts.sev_type", diag_opts.sev_type, "string")
-        if type(diag_info.level) == "number" then
-            local msg = "Diagnostic severity " .. diag_info.level .. " is invalid"
-            assert(diag_info.level >= 1 and diag_info.level <= 4, msg)
-        end
-    end
-
     local level = diag_info.level or vim.diagnostic.severity.HINT --- @type vim.diagnostic.Severity
     if diag_opts.sev_type == "only" then
         return { severity = level }
@@ -84,18 +73,20 @@ end
 
 --- @param diag_info QfRancherDiagInfo
 --- @param diag_opts QfRancherDiagOpts
---- @param what vim.fn.setqflist.what
+--- @param what QfRancherWhat
 --- @return nil
 local function validate_diags_to_list(diag_info, diag_opts, what)
-    vim.validate("diag_info", diag_info, "table")
-    vim.validate("diag_info.level", diag_info.level, { "nil", "number" })
-    vim.validate("diag_opts", diag_opts, "table")
-    vim.validate("diag_opts.sev_type", diag_opts.sev_type, "string")
+    diag_info = diag_info or {}
+    diag_opts = diag_opts or {}
+    what = what or {}
 
+    local ey = require("mjm.error-list-types")
+    ey._validate_diag_info(diag_info)
+    ey._validate_diag_opts(diag_opts)
     require("mjm.error-list-types")._validate_what(what)
 end
 
---- LOW: The title could be more descriptive, but as it it aligns with how titles are constructed
+--- LOW: The title could be more descriptive, but as iT it aligns with how titles are constructed
 --- by default
 
 --- @param diag_info QfRancherDiagInfo
@@ -103,24 +94,24 @@ end
 --- @param what QfRancherWhat
 --- @return nil
 local function diags_to_list(diag_info, diag_opts, what)
-    diag_info = diag_info or {}
-    diag_opts = diag_opts or {}
-    what = what or {}
     validate_diags_to_list(diag_info, diag_opts, what)
 
-    local cur_win = vim.api.nvim_get_current_win() --- @type integer
+    local src_win = what.user_data.src_win
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if not eu._win_can_have_loclist(what.user_data.src_win) then
+    if what.user_data.src_win and not eu._win_can_have_loclist(what.user_data.src_win) then
+        local msg = "Win " .. src_win .. " cannot have a location list"
+        vim.api.nvim_echo({ { msg, "" } }, false, {})
         return
     end
 
     --- @type integer|nil
     ---@diagnostic disable-next-line: undefined-field
-    local buf = what.src_win and vim.api.nvim_win_get_buf(cur_win) or nil
+    local buf = src_win and vim.api.nvim_win_get_buf(src_win) or nil
     local getopts = get_getopts(diag_info, diag_opts) --- @type vim.diagnostic.GetOpts
 
     local raw_diags = vim.diagnostic.get(buf, getopts) --- @type vim.Diagnostic[]
     if #raw_diags == 0 then
+        --- LOW: Could be more specific
         vim.api.nvim_echo({ { "No diagnostics", "" } }, false, {})
         return
     end
@@ -136,19 +127,27 @@ local function diags_to_list(diag_info, diag_opts, what)
     local what_set = vim.tbl_deep_extend("force", what, {
         items = converted_diags,
         title = "vim.diagnostic.get()",
-        user_data = { diag_sort = true },
+        user_data = { sort_func = require("mjm.error-list-sort")._sort_fname_diag_asc },
     }) --- @type QfRancherWhat
 
-    what_set.user_data.sort_func = require("mjm.error-list-sort")._sort_fname_diag_asc()
-    et._set_list(what_set)
+    local dest_nr = et._set_list(what_set) --- @type integer
+    if vim.g.qf_rancher_auto_open_changes and dest_nr > 0 then
+        require("mjm.error-list-stack")._history(src_win, dest_nr, {
+            silent = true,
+            always_open = true,
+        })
+    end
 end
+
+--- LOW: The top map is bad because you have to set it here and then with the diag opts to make
+--- top severity happen. Either the naming should be more clear or the architecture should be
+--- changed somehow
 
 local diag_queries = {
     hint = { level = vim.diagnostic.severity.HINT },
     info = { level = vim.diagnostic.severity.INFO },
     warn = { level = vim.diagnostic.severity.WARN },
     error = { level = vim.diagnostic.severity.ERROR },
-    --- TODO: The way top maps are done is inconsistent
     top = { level = nil },
 } --- @type table <string, QfRancherDiagInfo>
 
@@ -164,12 +163,6 @@ function M.diags(name, diag_opts, what)
 
     diags_to_list(diag_info, diag_opts, what)
 end
-
---- TODO: I have just this outlined for now because it's simple, but will need to change when
---- the cmd stuff is moved to the util file. Stuff like actions and the loop/check logic can
---- go there, but then the diag specific pieces would hang out here. And the cmd creation itself
---- would go into the maps/plugin file. Want to move over filter/grep/sort first since they are
---- more complicated
 
 --- @param src_win? integer
 --- @param cargs vim.api.keyset.create_user_command.command_args
@@ -214,3 +207,9 @@ return M
 ------------
 
 --- Deeper auditing/testing
+
+-----------
+--- LOW ---
+-----------
+
+--- Add extensibility to this module

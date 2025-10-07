@@ -29,6 +29,8 @@ local function handle_output(obj, what)
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
     local src_win = what.user_data.src_win --- @type integer
     if src_win and not eu._win_can_have_loclist(src_win) then
+        local msg = "Win " .. src_win .. " cannot have a location list"
+        vim.api.nvim_echo({ { msg, "" } }, false, {})
         return
     end
 

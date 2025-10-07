@@ -144,6 +144,8 @@ function M._do_grep(grep_info, system_opts, input_opts, what)
 
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
     if what.user_data.src_win and not eu._win_can_have_loclist(what.user_data.src_win) then
+        local msg = "Win " .. what.user_data.src_win .. " cannot have a location list"
+        vim.api.nvim_echo({ { msg, "" } }, false, {})
         return
     end
 

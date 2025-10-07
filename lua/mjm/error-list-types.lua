@@ -237,8 +237,31 @@ end
 
 M._sev_types = { "min", "only", "top" } --- @type QfRancherSeverityType[]
 
+--- @param sev_type QfRancherSeverityType
+--- @return nil
+function M._validate_sev_type(sev_type)
+    vim.validate("sev_type", sev_type, function()
+        return sev_type == "min" or sev_type == "only" or sev_type == "top"
+    end)
+end
+
 --- @alias QfRancherDiagInfo { level: vim.diagnostic.Severity|nil }
 --- @alias QfRancherDiagOpts { sev_type: QfRancherSeverityType }
+
+--- @param diag_info QfRancherDiagInfo
+--- @return nil
+function M._validate_diag_info(diag_info)
+    vim.validate("diag_info", diag_info, "table")
+    vim.validate("diag_info.level", diag_info.level, { "nil", "number" })
+end
+
+--- @param diag_opts QfRancherDiagOpts
+--- @return nil
+function M._validate_diag_opts(diag_opts)
+    vim.validate("diag_opts", diag_opts, "table")
+    vim.validate("diag_opts.sev_type", diag_opts.sev_type, "string")
+    M._validate_sev_type(diag_opts.sev_type)
+end
 
 --------------------
 --- FILTER TYPES ---

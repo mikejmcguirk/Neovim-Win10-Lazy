@@ -72,6 +72,8 @@ function M._filter_wrapper(filter_info, filter_opts, input_opts, what)
     local src_win = what.user_data.src_win --- @type integer|nil
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
     if src_win and not eu._win_can_have_loclist(what.user_data.src_win) then
+        local msg = "Win " .. src_win .. " cannot have a location list"
+        vim.api.nvim_echo({ { msg, "" } }, false, {})
         return
     end
 
