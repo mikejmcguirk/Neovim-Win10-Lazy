@@ -315,7 +315,7 @@ function M._open_qflist(opts)
     local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
 
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    local qf_win = eu._find_qf_win({ tabpage_wins = tabpage_wins }) --- @type integer|nil
+    local qf_win = eu._get_qf_win({ tabpage = tabpage }) --- @type integer|nil
     if qf_win then
         if opts.always_resize then
             resize_qf_win(qf_win, opts.height, { tabpage_wins = tabpage_wins })
@@ -358,7 +358,7 @@ function M._close_qflist()
 
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
     --- @type integer|nil
-    local qf_win = eu._find_qf_win({ tabpage_wins = tabpage_wins })
+    local qf_win = eu._get_qf_win({ tabpage = tabpage })
     if not qf_win then
         return false
     end
@@ -446,7 +446,7 @@ function M._open_loclist(opts)
         end
     end
 
-    local qf_win = eu._find_qf_win({ tabpage_wins = tabpage_wins }) --- @type integer|nil
+    local qf_win = eu._get_qf_win({ tabpage = tabpage }) --- @type integer|nil
     if qf_win then
         tabpage_wins = vim.tbl_filter(function(win)
             return win ~= qf_win

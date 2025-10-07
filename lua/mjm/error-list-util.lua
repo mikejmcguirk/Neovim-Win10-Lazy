@@ -226,66 +226,6 @@ function M._get_list_win(win, opts)
     end
 end
 
---- TODO: Similar issue to the above. What scope are we looking at. Purely based on the code,
---- it's a specific tabpage based on the win, but it's very silly
-
---- @param opts?{tabpage?: integer, win?:integer, tabpage_wins?:integer[]}
---- @return integer|nil
-function M._find_qf_win(opts)
-    opts = opts or {}
-    if vim.g.qf_rancher_debug_assertions then
-        vim.validate("opts.win", opts.win, { "nil", "number" })
-        vim.validate("opts.tabpage", opts.tabpage, { "nil", "number" })
-        vim.validate("opts.tabpage_wins", opts.tabpage, { "nil", "table" })
-    end
-
-    --- LOW: Does not feel like the most efficient way to do this. Could also yield weird results
-    --- if more than one opt is specified
-    local win = opts.win or vim.api.nvim_get_current_win()
-    local tabpage = opts.tabpage or vim.api.nvim_win_get_tabpage(win)
-    local tabpage_wins = opts.tabpage_wins or vim.api.nvim_tabpage_list_wins(tabpage)
-
-    for _, t_win in ipairs(tabpage_wins) do
-        if vim.fn.win_gettype(t_win) == "quickfix" then
-            return t_win
-        end
-    end
-
-    return nil
-end
-
-function M._find_qf_win_in_cur_tabpage()
-    local tabpage = vim.api.nvim_get_current_tabpage()
-    local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage)
-    for _, win in ipairs(tabpage_wins) do
-        if vim.fn.win_gettype(win) == "quickfix" then
-            return win
-        end
-    end
-
-    return nil
-end
-
---- LOW: For this and _has_any_loclist, you can pass a getlist function and make them the same
---- thing
-
---- @return boolean
-function M._has_any_qflist()
-    local max_nr = vim.fn.getqflist({ nr = "$" }).nr --- @type integer
-    if max_nr == 0 then
-        return false
-    end
-
-    for i = 1, max_nr do
-        local size = vim.fn.getqflist({ nr = i, size = 0 }).size --- @type integer
-        if size > 0 then
-            return true
-        end
-    end
-
-    return false
-end
-
 --- @param opts?{tabpage?:integer, tabpage_wins?: integer[]}
 --- @return integer[]
 function M._find_orphan_loclists(opts)
@@ -452,22 +392,6 @@ function M._merge_qf_lists(a, b)
     end
 
     return merged
-end
-
---- @param is_loclist boolean
---- @return fun(table):boolean
-function M._get_openlist(is_loclist)
-    local elo = require("mjm.error-list-open")
-
-    if is_loclist then
-        return function(opts)
-            return elo._open_loclist(opts)
-        end
-    else
-        return function(opts)
-            return elo._open_qflist(opts)
-        end
-    end
 end
 
 --- @param table string[]
