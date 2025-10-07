@@ -256,12 +256,14 @@ function M.get_grep_names()
     return vim.tbl_keys(greps)
 end
 
+--- DOCUMENT: This. necessary to run your grep
+
 --- @param name string
 --- @param system_opts QfRancherSystemOpts
 --- @param input_opts QfRancherInputOpts
 --- @param what QfRancherWhat
 --- @return nil
-function M._grep(name, system_opts, input_opts, what)
+function M.grep(name, system_opts, input_opts, what)
     local grep_info = greps[name] --- @type QfRancherGrepInfo|nil
     if grep_info then
         M._do_grep(grep_info, system_opts, input_opts, what)
@@ -282,8 +284,13 @@ end
 --- DOCUMENT: How this works
 --- @param name string
 --- @return nil
-function M.remove_grep(name)
+function M.clear_grep(name)
     vim.validate("name", name, "string")
+    if #vim.tbl_keys(greps) <= 1 then
+        vim.api.nvim_echo({ { "Cannot remove the last grep method" } }, false, {})
+        return
+    end
+
     if greps[name] then
         greps[name] = nil
         vim.api.nvim_echo({ { name .. " removed from grep list", "" } }, true, {})
@@ -292,10 +299,10 @@ function M.remove_grep(name)
     end
 end
 
---- @param cargs vim.api.keyset.create_user_command.command_args
 --- @param list_win? integer
+--- @param cargs vim.api.keyset.create_user_command.command_args
 --- @return nil
-local function grep_cmd(cargs, list_win)
+local function grep_cmd(list_win, cargs)
     cargs = cargs or {}
     local fargs = cargs.fargs --- @type string[]
 
@@ -322,19 +329,19 @@ local function grep_cmd(cargs, list_win)
     --- @type QfRancherWhat
     local what = { nr = cargs.count, user_data = { action = action, list_win = list_win } }
 
-    M._grep(grep_name, system_opts, input_opts, what)
+    M.grep(grep_name, system_opts, input_opts, what)
 end
 
 --- @param cargs vim.api.keyset.create_user_command.command_args
 --- @return nil
 function M._q_grep(cargs)
-    grep_cmd(cargs, nil)
+    grep_cmd(nil, cargs)
 end
 
 --- @param cargs vim.api.keyset.create_user_command.command_args
 --- @return nil
 function M._l_grep(cargs)
-    grep_cmd(cargs, vim.api.nvim_get_current_win())
+    grep_cmd(vim.api.nvim_get_current_win(), cargs)
 end
 
 return M

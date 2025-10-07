@@ -26,67 +26,49 @@ end
 --- @return nil
 local function sort_wrapper(sort_info, sort_opts, what)
     validate_sort_wrapper_input(sort_info, sort_opts, what)
-    sort_opts.dir = sort_opts.dir or "asc"
 
+    --- TODO: This should check for an open list so it can't run silently
+    local src_win = what.user_data.list_win --- @type integer|nil
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if not eu._win_can_have_loclist(what.user_data.list_win) then
+    if src_win and not eu._win_can_have_loclist(what.user_data.list_win) then
         return
     end
 
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
-    --- @type QfRancherWhat
-    local get_list_what =
-        { all = true, nr = 0, user_data = { list_win = what.user_data.list_win } }
-    local cur_list = et._get_all(what.user_data.list_win, what.nr) --- @type table
+    local cur_list = et._get_all(src_win, what.nr) --- @type table
     if cur_list.size < 1 then
         vim.api.nvim_echo({ { "Not enough entries to sort", "" } }, false, {})
         return
     end
 
-    -- local dest_list_nr = eu._get_dest_list_nr(getlist, what) --- @type integer
-    -- local list_win = eu._find_list_win(what) --- @type integer|nil
-    -- local view = (list_win and dest_list_nr == cur_list.nr)
-    --         and vim.api.nvim_win_call(list_win, vim.fn.winsaveview)
-    --     or nil --- @type vim.fn.winsaveview.ret|nil
-
-    local predicate = sort_opts.dir and sort_opts.dir == "asc" and sort_info.asc_func
-        or sort_info.desc_func
-
-    local new_items = vim.deepcopy(cur_list.items, false)
-    table.sort(new_items, predicate)
-    what.title = cur_list.title
-
-    --- TODO: This needs to take a flag for if it should save a view. In this case, even though
-    --- we're just replacing, we're bumped to line 1, so we need to save a view. If we're just
-    --- adding new items (grep/diag), we usually don't need to save a view, though perhaps we
-    --- should if we're merging into the list we're looking at. Filter is an interesting case
-    --- beause it uses custom logic. Perhaps there the view needs to be passed down
-    --- Another possibility is - set_list should go back to only handling placing the qf items, and
-    --- we can avoid having to create spooky action at a distance. Since the view handling has to
-    --- be between placing the items and final open anyway (or, at the very least, their logic is
-    --- intermingled), maybe it's better to break opening the result into its own logic
-
+    --- @type QfRancherSortPredicate
+    local new_items = vim.deepcopy(cur_list.items, false) --- @type vim.quickfix.entry[]
+    local predicate = sort_opts.dir == "asc" and sort_info.asc_func or sort_info.desc_func
     local what_set = vim.tbl_deep_extend("force", what, {
+        context = type(cur_list.context) == "table" and cur_list.context or what.context,
+        efm = cur_list.efm or what.efm,
         items = new_items,
-        title = cur_list.title,
-        user_data = { diag_sort = true },
-    })
-    et._set_list(what_set)
+        quickfixtextfunc = type(cur_list.quickfixtextfunc == "function")
+                and cur_list.quickfixtextfunc
+            or what.quickfixtextfunc,
+        title = cur_list.title or what.title,
+        user_data = { sort_func = predicate },
+    }) --- @type QfRancherWhat
 
-    -- if list_win and view then
-    --     vim.api.nvim_win_call(list_win, function()
-    --         vim.fn.winrestview(view)
-    --     end)
-    -- end
-
-    --- TODO: This function needs to be changed
-    local use_loclist = what_set.user_data.list_win and true or false
-    eu._get_openlist(use_loclist)({ always_resize = true })
+    local dest_nr = et._set_list(what_set) --- @type integer
+    if vim.g.qf_rancher_auto_open_changes then
+        require("mjm.error-list-stack")._history(what_set.user_data.list_win, dest_nr, {
+            silent = true,
+            always_open = true,
+        })
+    end
 end
 
 ------------------
 --- Sort Parts ---
 ------------------
+
+--- TODO: The line numbering in the sorts is wrong
 
 --- @type QfRancherCheckFunc
 local function check_asc(a, b)
@@ -297,7 +279,7 @@ end
 --- @param b table
 --- @return boolean|nil
 local function check_lcol_severity(a, b, check)
-    local checked_lcol = check_lcol(a, b, check)
+    local checked_lcol = check_lcol(a, b, check) --- @type boolean|nil
     if type(checked_lcol) == "boolean" then
         return checked_lcol
     end
@@ -330,12 +312,12 @@ function M._sort_fname_desc(a, b)
         return false
     end
 
-    local checked_fname = check_fname(a, b, check_desc)
+    local checked_fname = check_fname(a, b, check_desc) --- @type boolean|nil
     if type(checked_fname) == "boolean" then
         return checked_fname
     end
 
-    local checked_lcol_type = check_lcol_type(a, b, check_asc)
+    local checked_lcol_type = check_lcol_type(a, b, check_asc) --- @type boolean|nil
     return type(checked_lcol_type) == "boolean" and checked_lcol_type or false
 end
 
@@ -345,12 +327,12 @@ function M._sort_type_asc(a, b)
         return false
     end
 
-    local checked_type = check_type(a, b, check_asc)
+    local checked_type = check_type(a, b, check_asc) --- @type boolean|nil
     if type(checked_type) == "boolean" then
         return checked_type
     end
 
-    local checked_fname_lcol = check_fname_lcol(a, b, check_asc)
+    local checked_fname_lcol = check_fname_lcol(a, b, check_asc) --- @type boolean|nil
     return type(checked_fname_lcol) == "boolean" and checked_fname_lcol or false
 end
 
@@ -360,12 +342,12 @@ function M._sort_type_desc(a, b)
         return false
     end
 
-    local checked_type = check_type(a, b, check_desc)
+    local checked_type = check_type(a, b, check_desc) --- @type boolean|nil
     if type(checked_type) == "boolean" then
         return checked_type
     end
 
-    local checked_fname_lcol = check_fname_lcol(a, b, check_asc)
+    local checked_fname_lcol = check_fname_lcol(a, b, check_asc) --- @type boolean|nil
     return type(checked_fname_lcol) == "boolean" and checked_fname_lcol or false
 end
 
@@ -375,12 +357,12 @@ function M._sort_severity_asc(a, b)
         return false
     end
 
-    local checked_severity = check_severity(a, b, check_asc)
+    local checked_severity = check_severity(a, b, check_asc) --- @type boolean|nil
     if type(checked_severity) == "boolean" then
         return checked_severity
     end
 
-    local checked_fname_lcol = check_fname_lcol(a, b, check_asc)
+    local checked_fname_lcol = check_fname_lcol(a, b, check_asc) --- @type boolean|nil
     checked_fname_lcol = checked_fname_lcol == nil and false or checked_fname_lcol
     return type(checked_fname_lcol) == "boolean" and checked_fname_lcol or false
 end
@@ -391,12 +373,12 @@ function M._sort_severity_desc(a, b)
         return false
     end
 
-    local checked_severity = check_severity(a, b, check_desc)
+    local checked_severity = check_severity(a, b, check_desc) --- @type boolean|nil
     if type(checked_severity) == "boolean" then
         return checked_severity
     end
 
-    local checked_fname_lcol = check_fname_lcol(a, b, check_asc)
+    local checked_fname_lcol = check_fname_lcol(a, b, check_asc) --- @type boolean|nil
     return type(checked_fname_lcol) == "boolean" and checked_fname_lcol or false
 end
 
@@ -406,12 +388,12 @@ function M._sort_fname_diag_asc(a, b)
         return false
     end
 
-    local checked_fname = check_fname(a, b, check_asc)
+    local checked_fname = check_fname(a, b, check_asc) --- @type boolean|nil
     if type(checked_fname) == "boolean" then
         return checked_fname
     end
 
-    local checked_lcol_severity = check_lcol_severity(a, b, check_asc)
+    local checked_lcol_severity = check_lcol_severity(a, b, check_asc) --- @type boolean|nil
     return type(checked_lcol_severity) == "boolean" and checked_lcol_severity or false
 end
 
@@ -421,12 +403,12 @@ function M._sort_fname_diag_desc(a, b)
         return false
     end
 
-    local checked_fname = check_fname(a, b, check_desc)
+    local checked_fname = check_fname(a, b, check_desc) --- @type boolean|nil
     if type(checked_fname) == "boolean" then
         return checked_fname
     end
 
-    local checked_lcol_severity = check_lcol_severity(a, b, check_asc)
+    local checked_lcol_severity = check_lcol_severity(a, b, check_asc) --- @type boolean|nil
     return type(checked_lcol_severity) == "boolean" and checked_lcol_severity or false
 end
 
@@ -436,18 +418,19 @@ end
 
 local sorts = {
     fname = { asc_func = M._sort_fname_asc, desc_func = M._sort_fname_desc },
-    fname_diag = {
-        asc_func = M._sort_fname_diag_asc,
-        desc_func = M._sort_fname_diag_desc,
-    },
+    fname_diag = { asc_func = M._sort_fname_diag_asc, desc_func = M._sort_fname_diag_desc },
     severity = { asc_func = M._sort_severity_asc, desc_func = M._sort_severity_desc },
     type = { asc_func = M._sort_type_asc, desc_func = M._sort_type_desc },
 } --- @type table<string, QfRancherSortInfo>
 
+--- DOCUMENT: this
+
+--- @return string[]
 function M.get_sort_names()
     return vim.tbl_keys(sorts)
 end
 
+--- DOCUMENT: Improve this?
 --- Add your own sort. Can be accessed using Qsort or Lsort
 --- name: The name the sort is accessed with
 --- asc_func: Predicate to sort ascending. Takes two quickfix items. Returns boolean
@@ -455,6 +438,7 @@ end
 --- @param name string
 --- @param asc_func QfRancherSortPredicate
 --- @param desc_func QfRancherSortPredicate
+--- @return nil
 function M.register_sort(name, asc_func, desc_func)
     sorts[name] = { asc_func = asc_func, desc_func = desc_func }
 end
@@ -467,26 +451,12 @@ function M.clear_sort(name)
         return
     end
 
-    sorts[name] = nil
-end
-
---- Run a sort without registering it
---- asc_func: Predicate to sort ascending. Takes two quickfix items. Returns boolean
---- asc_func: Predicate to sort descending. Takes two quickfix items. Returns boolean
---- sort_opts:
---- - dir?: "asc"|"desc" Defaults to "asc"
---- what
---- - action? "new"|"replace"|"add" - Create a new list, replace a pre-existing one, or add a new
----     one
---- - is_loclist? boolean - Whether to filter against a location list
---- @param asc_func QfRancherSortPredicate
---- @param desc_func QfRancherSortPredicate
---- @param sort_opts QfRancherSortOpts
---- @param what QfRancherWhat
---- @return nil
-function M.adhoc_sort(asc_func, desc_func, sort_opts, what)
-    local sort_info = { asc_func = asc_func, desc_func = desc_func } --- @type QfRancherSortInfo
-    sort_wrapper(sort_info, sort_opts, what)
+    if sorts[name] then
+        sorts[name] = nil
+        vim.api.nvim_echo({ { name .. " removed from sort list", "" } }, true, {})
+    else
+        vim.api.nvim_echo({ { name .. " is not a registered sort", "" } }, true, {})
+    end
 end
 
 --- Run a registered sort
@@ -508,6 +478,34 @@ function M.sort(name, sort_opts, what)
     end
 
     sort_wrapper(sort_info, sort_opts, what)
+end
+
+local function sort_cmd(list_win, cargs)
+    cargs = cargs or {}
+    local fargs = cargs.fargs
+
+    local sort_names = require("mjm.error-list-sort").get_sort_names()
+    assert(#sort_names > 1, "No sort functions available")
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
+    local sort_name = eu._check_cmd_arg(fargs, sort_names, "fname") --- @type string
+
+    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
+    local dir = eu._check_cmd_arg(fargs, { "asc", "desc" }, "asc") --- @type QfRancherSortDir
+
+    --- @type QfRancherAction
+    local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action)
+    --- @type QfRancherWhat
+    local what = { nr = cargs.count, user_data = { action = action, list_win = list_win } }
+
+    M.sort(sort_name, { dir = dir }, what)
+end
+
+M._q_sort = function(cargs)
+    sort_cmd(nil, cargs)
+end
+
+M._l_sort = function(cargs)
+    sort_cmd(vim.api.nvim_get_current_win(), cargs)
 end
 
 return M
