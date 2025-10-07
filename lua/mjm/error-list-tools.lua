@@ -5,6 +5,44 @@ local M = {}
 --- HELPER FUNCTIONS ---
 ------------------------
 
+--- @param entry table
+--- @return string
+local function get_qf_key(entry)
+    local fname = entry.filename or ""
+    local lnum = tostring(entry.lnum or 0)
+    local col = tostring(entry.col or 0)
+    return fname .. ":" .. lnum .. ":" .. col
+end
+
+--- MAYBE: Move into tools file
+
+--- @param a table
+--- @param b table
+--- @return table
+local function merge_qf_lists(a, b)
+    local merged = {}
+    local seen = {}
+
+    local x = #a > #b and a or b
+    local y = #a > #b and b or a
+
+    for _, entry in ipairs(x) do
+        local key = get_qf_key(entry)
+        seen[key] = true
+        table.insert(merged, entry)
+    end
+
+    for _, entry in ipairs(y) do
+        local key = get_qf_key(entry)
+        if not seen[key] then
+            seen[key] = true
+            table.insert(merged, entry)
+        end
+    end
+
+    return merged
+end
+
 --- @param var any
 --- @param var_type string
 --- @return boolean
@@ -22,7 +60,7 @@ local function create_add_list_what(new_what)
     local old_all = M._get_all(new_what.user_data.src_win, new_what.nr)
 
     --- @type vim.quickfix.entry[]
-    local items = require("mjm.error-list-util")._merge_qf_lists(old_all.items, new_what.items)
+    local items = merge_qf_lists(old_all.items, new_what.items)
     local idx = new_what.idx or old_all.idx or nil --- @type integer|nil
     idx = idx and math.min(idx, #items)
 

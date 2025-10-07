@@ -356,47 +356,8 @@ function M._resolve_pattern(prompt, input_pattern, input_type)
     return pattern and input_type == "insensitive" and string.lower(pattern) or pattern
 end
 
---- @param entry table
---- @return string
-local function get_qf_key(entry)
-    local fname = entry.filename or ""
-    local lnum = tostring(entry.lnum or 0)
-    local col = tostring(entry.col or 0)
-    return fname .. ":" .. lnum .. ":" .. col
-end
-
---- MAYBE: Move into tools file
-
---- @param a table
---- @param b table
---- @return table
-function M._merge_qf_lists(a, b)
-    local merged = {}
-    local seen = {}
-
-    local x = #a > #b and a or b
-    local y = #a > #b and b or a
-
-    for _, entry in ipairs(x) do
-        local key = get_qf_key(entry)
-        seen[key] = true
-        table.insert(merged, entry)
-    end
-
-    for _, entry in ipairs(y) do
-        local key = get_qf_key(entry)
-        if not seen[key] then
-            seen[key] = true
-            table.insert(merged, entry)
-        end
-    end
-
-    return merged
-end
-
 --- @param table string[]
 --- @return nil
---- TODO: There is a bespoke version of this out there somewhere
 function M._is_valid_str_list(table)
     vim.validate("table", table, "table")
     for k, v in ipairs(table) do
@@ -444,7 +405,10 @@ end
 
 return M
 
---- TODO:
+------------
+--- TODO ---
+------------
+
 --- - Check that all functions have reasonable default sorts
 --- - Check that window height updates are triggered where appropriate
 --- - Check that functions have proper visibility
@@ -453,9 +417,3 @@ return M
 --- - Check that all functions have annotations and documentation
 --- - Check that the qf and loclist versions are both properly built for purpose. Should be able
 ---     to use the loclist function for buf/win specific info
-
---------------
---- FUTURE ---
---------------
-
---- If this file gets to 1k lines, split it
