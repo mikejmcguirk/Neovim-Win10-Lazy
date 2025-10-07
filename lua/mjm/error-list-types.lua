@@ -284,6 +284,50 @@ function M._validate_grep_info(grep_info)
     vim.validate("location_func", grep_info.location_func, "callable")
 end
 
+------------------
+--- SORT TYPES ---
+------------------
+
+--- @alias QfRancherSortPredicate fun(table, table): boolean
+
+--- @class QfRancherSortInfo
+--- @field asc_func QfRancherSortPredicate
+--- @field desc_func QfRancherSortPredicate
+
+--- @param sort_info QfRancherSortInfo
+--- @return nil
+function M._validate_sort_info(sort_info)
+    vim.validate("sort_info", sort_info, "table")
+    vim.validate("sort_info.asc_func", sort_info.asc_func, "callable")
+    vim.validate("sort_info.desc_func", sort_info.desc_func, "callable")
+end
+
+--- @alias QfRancherSortDir "asc"|"desc"
+
+--- @param dir QfRancherSortDir
+--- @return nil
+function M._validate_sort_dir(dir)
+    vim.validate("dir", dir, function()
+        return dir == "asc" or dir == "desc"
+    end)
+end
+
+--- @class QfRancherSortOpts
+--- @field dir QfRancherSortDir
+
+--- @param sort_opts QfRancherSortOpts
+--- @return nil
+function M._validate_sort_opts(sort_opts)
+    vim.validate("sort_opts", sort_opts, "table")
+    vim.validate("sort_opts.dir", sort_opts.dir, "string")
+    if type(sort_opts.dir) == "string" then
+        M._validate_sort_dir(sort_opts.dir)
+    end
+end
+
+--- @alias QfRancherSortable string|integer
+--- @alias QfRancherCheckFunc fun(QfRancherSortable, QfRancherSortable):boolean
+
 --------------------
 --- SYSTEM TYPES ---
 --------------------

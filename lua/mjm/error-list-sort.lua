@@ -1,33 +1,9 @@
 --- @class QfRancherSort
 local M = {}
 
--------------
---- Types ---
--------------
-
---- @alias QfRancherSortPredicate fun(table, table): boolean
-
---- @class QfRancherSortInfo
---- @field asc_func QfRancherSortPredicate
---- @field desc_func QfRancherSortPredicate
-
---- @alias QfRancherSortDir "asc"|"desc"
-
---- @class QfRancherSortOpts
---- @field dir? QfRancherSortDir
----
---- @alias QfRancherSortable string|integer
---- @alias QfRancherCheckFunc fun(QfRancherSortable, QfRancherSortable):boolean
-
 ---------------
 --- Wrapper ---
 ---------------
-
---- @param dir QfRancherSortDir
---- @return boolean
-local function validate_sort_dir(dir)
-    return dir == "asc" or dir == "desc"
-end
 
 --- @param sort_info QfRancherSortInfo
 --- @param sort_opts QfRancherSortOpts
@@ -38,19 +14,10 @@ local function validate_sort_wrapper_input(sort_info, sort_opts, what)
     sort_opts = sort_opts or {}
     what = what or {}
 
-    vim.validate("sort_info", sort_info, "table")
-    vim.validate("sort_info.asc_func", sort_info.asc_func, "callable")
-    vim.validate("sort_info.desc_func", sort_info.desc_func, "callable")
-
-    vim.validate("sort_opts", sort_opts, "table")
-    vim.validate("sort_opts.dir", sort_opts.dir, { "nil", "string" })
-    if type(sort_opts.dir) == "string" then
-        vim.validate("sort_opts.dir", sort_opts.dir, function()
-            return validate_sort_dir(sort_opts.dir)
-        end)
-    end
-
-    require("mjm.error-list-types")._validate_what(what)
+    local ey = require("mjm.error-list-types")
+    ey._validate_sort_info(sort_info)
+    ey._validate_sort_opts(sort_opts)
+    ey._validate_what(what)
 end
 
 --- @param sort_info QfRancherSortInfo
