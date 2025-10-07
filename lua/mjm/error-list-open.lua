@@ -175,6 +175,8 @@ local function resolve_qf_height(height)
     return size
 end
 
+--- TODO: This has the old, weird tabpage logic in it
+
 --- @param ll_win integer
 --- @param height? integer
 --- @param opts? {tabpage?: integer, tabpage_wins?:integer[]}
@@ -346,30 +348,6 @@ function M._toggle_qflist()
     end
 end
 
---- TODO: Remake this to have variable scope
-
-function M._resize_all_qf_wins()
-    local qf_wins = require("mjm.error-list-util")._get_qf_wins({ all_tabpages = true })
-    for _, win in ipairs(qf_wins) do
-        resize_qf_win(win, nil, {})
-    end
-end
-
---- TODO: Remake this to have variable scope
-
-function M._close_all_qf_wins()
-    local tabpages = vim.api.nvim_list_tabpages()
-    for _, tabpage in ipairs(tabpages) do
-        local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage)
-        for _, win in ipairs(tabpage_wins) do
-            local wintype = vim.fn.win_gettype(win)
-            if wintype == "quickfix" then
-                M._close_list_win(win, { tabpage_wins = tabpage_wins })
-            end
-        end
-    end
-end
-
 --- MID: It would be better if this took win as its first arg
 
 --- @param opts? QfRancherOpenOpts
@@ -478,66 +456,7 @@ function M._open_list(win, opts)
     return win and M._open_loclist(opts) or M._open_qflist(opts)
 end
 
---- TODO: Use the new window finding logic
-
---- @param qf_id integer
---- @param tabpage integer
---- @return nil
-function M._resize_llists_by_qf_id_and_tabpage(qf_id, tabpage)
-    vim.validate("qf_id", qf_id, "number")
-    vim.validate("tabpage", tabpage, "number")
-
-    local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
-    for _, win in ipairs(tabpage_wins) do
-        local wintype = vim.fn.win_gettype(win)
-        if wintype == "loclist" then
-            local w_qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
-            if w_qf_id == qf_id then
-                resize_ll_win(win, nil, { tabpage_wins = tabpage_wins })
-            end
-        end
-    end
-end
-
---- TODO: This points to me that the tabpage scoping opts should be a type that is used
---- more universally
---- Before we get into attacking the ftplugin code again, we need to go through everything and
---- make it conform to this standard
-
---- @param win integer
---- @param opts QfRancherTabpageOpts
-function M._resize_loclists_by_win(win, opts)
-    opts = opts or {}
-    require("mjm.error-list-util")._get_loclist_wins_by_win(win, opts)
-end
-
---- @param qf_id integer
---- @param tabpage integer
---- @return nil
-function M._close_llists_by_qf_id_and_tabpage(qf_id, tabpage)
-    vim.validate("qf_id", qf_id, "number")
-    vim.validate("tabpage", tabpage, "number")
-
-    local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
-    for _, win in ipairs(tabpage_wins) do
-        local wintype = vim.fn.win_gettype(win)
-        if wintype == "loclist" then
-            local w_qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
-            if w_qf_id == qf_id then
-                M._close_list_win(win)
-            end
-        end
-    end
-end
-
---- @param qf_id integer
---- @return nil
-function M._close_all_loclists_by_qf_id(qf_id)
-    local tabpages = vim.api.nvim_list_tabpages()
-    for _, tabpage in ipairs(tabpages) do
-        M._close_llists_by_qf_id_and_tabpage(qf_id, tabpage)
-    end
-end
+--- TODO: More of the weird tabpage wins syntax here
 
 --- @param list_win integer
 --- @param opts? {tabpage?: integer, tabpage_wins?: integer[]}
@@ -569,6 +488,97 @@ function M._close_list_win(list_win, opts)
     restore_views(views)
 
     return true
+end
+
+-----------------------
+--- BULK OPERATIONS ---
+-----------------------
+
+--- @param opts QfRancherTabpageOpts
+function M._close_qflists(opts)
+    if vim.g.qf_rancher_debug_assertions then
+        local ey = require("mjm.error-list-types")
+        ey._validate_tabpage_opts(opts)
+    end
+
+    local qflists = require("mjm.error-list-util")._get_qf_wins(opts)
+    for _, list in qflists do
+        M._close_list_win(list)
+    end
+end
+
+--- TODO: Remake this to have variable scope
+
+function M._resize_all_qf_wins()
+    local qf_wins = require("mjm.error-list-util")._get_qf_wins({ all_tabpages = true })
+    for _, win in ipairs(qf_wins) do
+        resize_qf_win(win, nil, {})
+    end
+end
+
+--- @param win integer
+--- @param opts QfRancherTabpageOpts
+--- @return nil
+function M._resize_loclists_by_win(win, opts)
+    if vim.g.qf_rancher_debug_assertions then
+        local ey = require("mjm.error-list-types")
+        ey._validate_win(win, false)
+        ey._validate_tabpage_opts(opts)
+    end
+
+    local llists = require("mjm.error-list-util")._get_loclist_wins_by_win(win, opts)
+    for _, list in ipairs(llists) do
+        resize_ll_win(list)
+    end
+end
+
+-- --- @param qf_id integer
+-- --- @param opts QfRancherTabpageOpts
+-- --- @return nil
+-- function M._resize_loclists_by_qf_id(qf_id, opts)
+--     if vim.g.qf_rancher_debug_assertions then
+--         local ey = require("mjm.error-list-types")
+--         ey._validate_qf_id(qf_id)
+--         ey._validate_tabpage_opts(opts)
+--     end
+--
+--     local llists = require("mjm.error-list-util")._get_loclist_wins_by_qf_id(qf_id, opts)
+--     for _, list in ipairs(llists) do
+--         resize_ll_win(list)
+--     end
+-- end
+
+-- --- @param win integer
+-- --- @param opts QfRancherTabpageOpts
+-- --- @return nil
+-- function M._close_loclists_by_win(win, opts)
+--     if vim.g.qf_rancher_debug_assertions then
+--         local ey = require("mjm.error-list-types")
+--         ey._validate_win(win, false)
+--         ey._validate_tabpage_opts(opts)
+--     end
+--
+--     local llists = require("mjm.error-list-util")._get_loclist_wins_by_win(win, opts)
+--     --- TODO: Make a little close list wins iterator
+--     for _, list in ipairs(llists) do
+--         M._close_list_win(list)
+--     end
+-- end
+
+--- @param qf_id integer
+--- @param opts QfRancherTabpageOpts
+--- @return nil
+function M._close_loclists_by_qf_id(qf_id, opts)
+    if vim.g.qf_rancher_debug_assertions then
+        local ey = require("mjm.error-list-types")
+        ey._validate_qf_id(qf_id)
+        ey._validate_tabpage_opts(opts)
+    end
+
+    local llists = require("mjm.error-list-util")._get_loclist_wins_by_qf_id(qf_id, opts)
+    for _, list in ipairs(llists) do
+        M._close_list_win(list)
+    end
 end
 
 return M

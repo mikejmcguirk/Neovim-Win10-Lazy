@@ -207,15 +207,6 @@ function M._q_del(count)
     end
 end
 
-function M._q_del_all()
-    require("mjm.error-list-open")._close_qflist()
-    if vim.fn.getqflist({ nr = "$" }).nr < 1 then
-        vim.api.nvim_echo({ { no_qf_stack, "" } }, false, {})
-    else
-        vim.fn.setqflist({}, "f")
-    end
-end
-
 --- @param count integer
 --- @return nil
 function M._l_del(count)
@@ -244,28 +235,55 @@ function M._l_del(count)
 
     if count == 0 or count == cur_stack_nr then
         local tabpage = vim.api.nvim_win_get_tabpage(cur_win) --- @type integer
-        require("mjm.error-list-open")._resize_llists_by_qf_id_and_tabpage(qf_id, tabpage)
+        -- require("mjm.error-list-open")._resize_llists_by_qf_id_and_tabpage(qf_id, tabpage)
     end
 end
 
+------------------
+--- DELETE ALL ---
+------------------
+
+function M._q_del_all()
+    if vim.fn.getqflist({ nr = "$" }).nr < 1 then
+        vim.api.nvim_echo({ { no_qf_stack, "" } }, false, {})
+    else
+        vim.fn.setqflist({}, "f")
+    end
+
+    require("mjm.error-list-open")._close_qflists({ all_tabpages = true })
+end
+
+--- @param win integer
 --- @return nil
-function M._l_del_all()
-    local cur_win = vim.api.nvim_get_current_win() --- @type integer
-    local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id --- @type integer
+function M._l_del_all(win)
+    require("mjm.error-list-types")._validate_win(win, false)
+
+    local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
         return
     end
 
-    if vim.fn.getloclist(cur_win, { nr = "$" }).nr < 1 then
+    if vim.fn.getloclist(win, { nr = "$" }).nr < 1 then
         vim.api.nvim_echo({ { no_ll_stack, "" } }, false, {})
     else
-        vim.fn.setloclist(cur_win, {}, "f")
+        vim.fn.setloclist(win, {}, "f")
     end
 
-    local tabpage = vim.api.nvim_win_get_tabpage(cur_win) --- @type integer
-    require("mjm.error-list-open")._close_llists_by_qf_id_and_tabpage(qf_id, tabpage)
+    require("mjm.error-list-open")._close_loclists_by_qf_id(qf_id, { all_tabpages = true })
 end
+
+-- function M._del_all(win)
+--     if vim.g.qf_rancher_debug_assertions then
+--         require("mjm.error-list-types")._validate_win(win, true)
+--     end
+--
+--     if win then
+--         M._l_del_all(win)
+--     else
+--         M._q_del_all()
+--     end
+-- end
 
 return M
 

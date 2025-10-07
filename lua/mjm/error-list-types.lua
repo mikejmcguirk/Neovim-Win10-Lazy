@@ -96,6 +96,17 @@ function M._validate_win(win, allow_nil)
     end
 end
 
+--- TODO: Use this where needed
+
+--- @param qf_id integer|nil
+--- @return nil
+function M._validate_qf_id(qf_id)
+    vim.validate("qf_id", qf_id, "number")
+    vim.validate("qf_id", qf_id, function()
+        return qf_id >= 0
+    end)
+end
+
 --- @param list_nr integer|string
 --- @return nil
 function M._validate_list_nr(list_nr)

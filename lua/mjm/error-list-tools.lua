@@ -257,27 +257,6 @@ function M._get_max_list_nr(win)
     end
 end
 
---- TODO: Use in qE/lE
---- @param win integer|nil
---- @return nil
-function M._clear_stack(win)
-    if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_win(win, true)
-    end
-
-    local eo = require("mjm.error-list-open")
-
-    if not win then
-        vim.fn.setqflist({}, "f")
-        eo._close_all_qf_wins()
-        return
-    end
-
-    local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
-    vim.fn.setloclist(win, {}, "f")
-    eo._close_all_loclists_by_qf_id(qf_id)
-end
-
 return M
 
 ------------
