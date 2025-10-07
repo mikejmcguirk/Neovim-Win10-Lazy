@@ -115,9 +115,6 @@ end
 --- HISTORY ---
 ---------------
 
---- TODO: Both histories do a weird thing where the window like shakes when you do it but
---- doesn't like change or anything it's weird
-
 --- @param win integer|nil
 --- @param count integer
 --- @param opts QfRancherHistoryOpts
@@ -143,8 +140,10 @@ local function history(win, count, opts)
     ---@diagnostic disable-next-line: missing-fields
     vim.api.nvim_cmd({ cmd = cmd, count = adj_count, mods = { silent = opts.silent } }, {})
     if vim.g.qf_rancher_debug_assertions then
-        local list_nr_after = et._get_cur_list_nr(win)
-        assert(adj_count == list_nr_after)
+        if adj_count then
+            local list_nr_after = et._get_cur_list_nr(win)
+            assert(adj_count == list_nr_after)
+        end
     end
 
     if cur_list_nr ~= adj_count then

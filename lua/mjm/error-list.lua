@@ -120,6 +120,9 @@ local function qf_scroll_wrapper(main, alt, end_err)
         return
     end
 
+    -- TODO: Whenever I make my maps of the history commands, don't include zz in them
+    -- Since history changes are selection of the lists rather than the items in them, zz is
+    -- confusing behavior
     vim.cmd("norm! zz")
 end
 
