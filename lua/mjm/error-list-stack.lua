@@ -119,7 +119,7 @@ end
 --- @param count integer
 --- @param opts QfRancherHistoryOpts
 --- @return nil
-local function history(win, count, opts)
+function M._history(win, count, opts)
     if vim.g.qf_rancher_debug_assertions then
         local ey = require("mjm.error-list-types")
         ey._validate_win(win, true)
@@ -160,7 +160,7 @@ end
 --- @param opts QfRancherHistoryOpts
 --- @return nil
 function M._q_history(count, opts)
-    history(nil, count, opts)
+    M._history(nil, count, opts)
 end
 
 --- @param win integer
@@ -176,7 +176,7 @@ function M._l_history(win, count, opts)
         return
     end
 
-    history(win, count, opts)
+    M._history(win, count, opts)
 end
 
 ----------------
@@ -275,14 +275,6 @@ function M._get_gethistory(is_loclist)
         return M._l_history
     else
         return M._q_history
-    end
-end
-
-function M._history(win, count, opts)
-    if win then
-        M._l_history(win, count, opts)
-    else
-        M._q_history(count, opts)
     end
 end
 
