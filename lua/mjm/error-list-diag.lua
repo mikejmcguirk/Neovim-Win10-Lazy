@@ -119,13 +119,13 @@ local function diags_to_list(diag_info, diag_opts, what)
 
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if not eu._win_can_have_loclist(what.user_data.list_win) then
+    if not eu._win_can_have_loclist(what.user_data.src_win) then
         return
     end
 
     --- @type integer|nil
     ---@diagnostic disable-next-line: undefined-field
-    local buf = what.list_win and vim.api.nvim_win_get_buf(cur_win) or nil
+    local buf = what.src_win and vim.api.nvim_win_get_buf(cur_win) or nil
     local getopts = get_getopts(diag_info, diag_opts) --- @type vim.diagnostic.GetOpts
 
     local raw_diags = vim.diagnostic.get(buf, getopts) --- @type vim.Diagnostic[]
@@ -183,10 +183,10 @@ local sev_types = { "min", "only", "top" } --- @type string[]
 --- more complicated
 
 --- @param cargs vim.api.keyset.create_user_command.command_args
---- @param list_win? integer
+--- @param src_win? integer
 --- @return nil
-local function make_diag_cmd(cargs, list_win)
-    require("mjm.error-list-types")._validate_win(list_win, true)
+local function make_diag_cmd(cargs, src_win)
+    require("mjm.error-list-types")._validate_win(src_win, true)
 
     local fargs = cargs.fargs --- @type string[]
 
@@ -208,7 +208,7 @@ local function make_diag_cmd(cargs, list_win)
         end
     end
 
-    local what = { user_data = { action = action, list_win = list_win } } --- @type QfRancherWhat
+    local what = { user_data = { action = action, src_win = src_win } } --- @type QfRancherWhat
 
     local name = "hint" --- @type string
     local names = vim.tbl_keys(diag_queries) --- @type string[]

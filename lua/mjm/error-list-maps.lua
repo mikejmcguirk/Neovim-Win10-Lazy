@@ -24,7 +24,7 @@ local in_regex = { input_type = "regex" } --- @type QfRancherInputOpts
 local function new_qflist()
     local what = { nr = vim.v.count } --- @type QfRancherWhat
     --- @type QfRancherUserData
-    local user_data = { action = "new", list_win = nil }
+    local user_data = { action = "new", src_win = nil }
     what.user_data = user_data
     return what
 end
@@ -33,7 +33,7 @@ end
 local function replace_qflist()
     local what = { nr = vim.v.count } --- @type QfRancherWhat
     --- @type QfRancherUserData
-    local user_data = { action = "replace", list_win = nil }
+    local user_data = { action = "replace", src_win = nil }
     what.user_data = user_data
     return what
 end
@@ -42,7 +42,7 @@ end
 local function add_qflist()
     local what = { nr = vim.v.count } --- @type QfRancherWhat
     --- @type QfRancherUserData
-    local user_data = { action = "add", list_win = nil }
+    local user_data = { action = "add", src_win = nil }
     what.user_data = user_data
     return what
 end
@@ -51,7 +51,7 @@ end
 local function new_loclist()
     local what = { nr = vim.v.count } --- @type QfRancherWhat
     --- @type QfRancherUserData
-    local user_data = { action = "new", list_win = vim.api.nvim_get_current_win() }
+    local user_data = { action = "new", src_win = vim.api.nvim_get_current_win() }
     what.user_data = user_data
     return what
 end
@@ -60,7 +60,7 @@ end
 local function replace_loclist()
     local what = { nr = vim.v.count } --- @type QfRancherWhat
     --- @type QfRancherUserData
-    local user_data = { action = "replace", list_win = vim.api.nvim_get_current_win() }
+    local user_data = { action = "replace", src_win = vim.api.nvim_get_current_win() }
     what.user_data = user_data
     return what
 end
@@ -69,7 +69,7 @@ end
 local function add_loclist()
     local what = { nr = vim.v.count } --- @type QfRancherWhat
     --- @type QfRancherUserData
-    local user_data = { action = "add", list_win = vim.api.nvim_get_current_win() }
+    local user_data = { action = "add", src_win = vim.api.nvim_get_current_win() }
     what.user_data = user_data
     return what
 end

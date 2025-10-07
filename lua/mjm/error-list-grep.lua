@@ -143,7 +143,7 @@ function M._do_grep(grep_info, system_opts, input_opts, what)
     validate_do_grep_inputs(grep_info, system_opts, input_opts, what)
 
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if what.user_data.list_win and not eu._win_can_have_loclist(what.user_data.list_win) then
+    if what.user_data.src_win and not eu._win_can_have_loclist(what.user_data.src_win) then
         return
     end
 
@@ -299,10 +299,10 @@ function M.clear_grep(name)
     end
 end
 
---- @param list_win? integer
+--- @param src_win? integer
 --- @param cargs vim.api.keyset.create_user_command.command_args
 --- @return nil
-local function grep_cmd(list_win, cargs)
+local function grep_cmd(src_win, cargs)
     cargs = cargs or {}
     local fargs = cargs.fargs --- @type string[]
 
@@ -327,7 +327,7 @@ local function grep_cmd(list_win, cargs)
     --- @type QfRancherAction
     local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action)
     --- @type QfRancherWhat
-    local what = { nr = cargs.count, user_data = { action = action, list_win = list_win } }
+    local what = { nr = cargs.count, user_data = { action = action, src_win = src_win } }
 
     M.grep(grep_name, system_opts, input_opts, what)
 end

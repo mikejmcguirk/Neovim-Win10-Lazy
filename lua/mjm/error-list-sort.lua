@@ -28,9 +28,9 @@ local function sort_wrapper(sort_info, sort_opts, what)
     validate_sort_wrapper_input(sort_info, sort_opts, what)
 
     --- TODO: This should check for an open list so it can't run silently
-    local src_win = what.user_data.list_win --- @type integer|nil
+    local src_win = what.user_data.src_win --- @type integer|nil
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if src_win and not eu._win_can_have_loclist(what.user_data.list_win) then
+    if src_win and not eu._win_can_have_loclist(what.user_data.src_win) then
         return
     end
 
@@ -57,7 +57,7 @@ local function sort_wrapper(sort_info, sort_opts, what)
 
     local dest_nr = et._set_list(what_set) --- @type integer
     if vim.g.qf_rancher_auto_open_changes then
-        require("mjm.error-list-stack")._history(what_set.user_data.list_win, dest_nr, {
+        require("mjm.error-list-stack")._history(what_set.user_data.src_win, dest_nr, {
             silent = true,
             always_open = true,
         })
@@ -480,7 +480,7 @@ function M.sort(name, sort_opts, what)
     sort_wrapper(sort_info, sort_opts, what)
 end
 
-local function sort_cmd(list_win, cargs)
+local function sort_cmd(src_win, cargs)
     cargs = cargs or {}
     local fargs = cargs.fargs
 
@@ -495,7 +495,7 @@ local function sort_cmd(list_win, cargs)
     --- @type QfRancherAction
     local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action)
     --- @type QfRancherWhat
-    local what = { nr = cargs.count, user_data = { action = action, list_win = list_win } }
+    local what = { nr = cargs.count, user_data = { action = action, src_win = src_win } }
 
     M.sort(sort_name, { dir = dir }, what)
 end

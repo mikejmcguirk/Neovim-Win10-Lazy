@@ -69,14 +69,14 @@ end
 function M._filter_wrapper(filter_info, filter_opts, input_opts, what)
     validate_wrapper_input(filter_info, filter_opts, input_opts, what)
 
-    local list_win = what.user_data.list_win --- @type integer|nil
+    local src_win = what.user_data.src_win --- @type integer|nil
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if list_win and not eu._win_can_have_loclist(what.user_data.list_win) then
+    if src_win and not eu._win_can_have_loclist(what.user_data.src_win) then
         return
     end
 
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
-    local cur_list = et._get_all(list_win, what.nr) --- @type table
+    local cur_list = et._get_all(src_win, what.nr) --- @type table
     if cur_list.size == 0 then
         vim.api.nvim_echo({ { "No entries to filter", "" } }, false, {})
         return
@@ -113,7 +113,7 @@ function M._filter_wrapper(filter_info, filter_opts, input_opts, what)
 
     local dest_nr = et._set_list(what_set) --- @type integer
     if vim.g.qf_rancher_auto_open_changes then
-        require("mjm.error-list-stack")._history(what_set.user_data.list_win, dest_nr, {
+        require("mjm.error-list-stack")._history(what_set.user_data.src_win, dest_nr, {
             silent = true,
             always_open = true,
         })
@@ -413,9 +413,9 @@ function M.clear_filter(name)
 end
 
 --- @param cargs vim.api.keyset.create_user_command.command_args
---- @param list_win? integer
+--- @param src_win? integer
 --- @return nil
-local function filter_cmd(cargs, list_win)
+local function filter_cmd(cargs, src_win)
     cargs = cargs or {}
     local fargs = cargs.fargs --- @type string[]
 
@@ -436,7 +436,7 @@ local function filter_cmd(cargs, list_win)
     --- @type QfRancherAction
     local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action)
     --- @type QfRancherWhat
-    local what = { nr = cargs.count, user_data = { action = action, list_win = list_win } }
+    local what = { nr = cargs.count, user_data = { action = action, src_win = src_win } }
 
     M.filter(filter_name, filter_opts, input_opts, what)
 end

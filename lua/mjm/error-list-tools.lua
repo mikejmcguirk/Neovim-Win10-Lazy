@@ -19,7 +19,7 @@ local function create_add_list_what(new_what)
         require("mjm.error-list-types")._validate_what(new_what)
     end
 
-    local old_all = M._get_all(new_what.user_data.list_win, new_what.nr)
+    local old_all = M._get_all(new_what.user_data.src_win, new_what.nr)
 
     --- @type vim.quickfix.entry[]
     local items = require("mjm.error-list-util")._merge_qf_lists(old_all.items, new_what.items)
@@ -51,11 +51,11 @@ local function cycle_lists_down(what)
     --- Always assert because this is a destructive, looping operation
     require("mjm.error-list-types")._validate_what(what)
     assert(what.nr > 0)
-    local list_win = what.user_data.list_win --- @type integer|nil
-    assert(what.nr < M._get_max_list_nr(list_win))
+    local src_win = what.user_data.src_win --- @type integer|nil
+    assert(what.nr < M._get_max_list_nr(src_win))
 
     for i = 1, what.nr - 1 do
-        local next_list = M._get_all(list_win, i + 1) --- @type table
+        local next_list = M._get_all(src_win, i + 1) --- @type table
         local next_what = {
             context = use_old(next_list.context, "table") or {},
             efm = use_old(next_list.efm, "string"),
@@ -64,7 +64,7 @@ local function cycle_lists_down(what)
             nr = i,
             quickfixtextfunc = use_old(next_list.quickfixtextgfunc, "function"),
             title = use_old(next_list.title, "string"),
-            user_data = { action = "replace", list_win = list_win },
+            user_data = { action = "replace", src_win = src_win },
         } --- @type QfRancherWhat
 
         M._set_list(next_what)
@@ -87,9 +87,9 @@ local function do_set_list(setlist_action, what)
     --- the sort_func to vim.NIL selectively to ignore it?
     table.sort(what_set.items, what_set.user_data.sort_func or es._sort_fname_asc)
 
-    local list_win = what_set.user_data.list_win --- @type integer|nil
-    local max_nr_before = M._get_max_list_nr(list_win) --- @type integer
-    local result = list_win and vim.fn.setloclist(list_win, {}, setlist_action, what_set)
+    local src_win = what_set.user_data.src_win --- @type integer|nil
+    local max_nr_before = M._get_max_list_nr(src_win) --- @type integer
+    local result = src_win and vim.fn.setloclist(src_win, {}, setlist_action, what_set)
         or vim.fn.setqflist({}, setlist_action, what_set) --- @type integer
 
     if result == -1 then
@@ -101,7 +101,7 @@ local function do_set_list(setlist_action, what)
     --- MID: There is no need to get max_nr_before again here. But I want to wait to fix it in
     --- case a more organic solution arises than passing an "append" parameter
     if setlist_action == " " and what_set.nr == max_nr_before then
-        local max_nr_after = M._get_max_list_nr(list_win) --- @type integer
+        local max_nr_after = M._get_max_list_nr(src_win) --- @type integer
         return math.min(what_set.nr + 1, max_nr_after)
     end
 
@@ -140,10 +140,10 @@ function M._set_list(what)
     validate_and_clean_set_list(what)
 
     local what_set = vim.deepcopy(what, true) --- @type QfRancherWhat
-    local list_win = what.user_data.list_win --- @type integer|nil
+    local src_win = what.user_data.src_win --- @type integer|nil
     local action = what.user_data.action --- @type QfRancherAction
 
-    local max_nr = M._get_max_list_nr(list_win) --- @type integer
+    local max_nr = M._get_max_list_nr(src_win) --- @type integer
     if max_nr == 0 then
         what_set.nr = max_nr
         return do_set_list(" ", what_set)
@@ -151,7 +151,7 @@ function M._set_list(what)
 
     what_set.nr = math.min(what_set.nr, max_nr)
     if what_set.nr == 0 then
-        what_set.nr = action == "new" and max_nr or M._get_cur_list_nr(list_win)
+        what_set.nr = action == "new" and max_nr or M._get_cur_list_nr(src_win)
     end
 
     if what_set.nr == max_nr and action == "new" then
@@ -243,7 +243,7 @@ return M
 --- TODO ---
 ------------
 
---- Add a what user_data option to save and restore the view of the current list_win
+--- Add a what user_data option to save and restore the view of the current src_win
 
 -----------
 --- MID ---

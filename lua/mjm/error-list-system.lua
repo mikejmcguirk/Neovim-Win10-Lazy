@@ -27,8 +27,8 @@ local function handle_output(obj, what)
     end
 
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    local list_win = what.user_data.list_win --- @type integer
-    if list_win and not eu._win_can_have_loclist(list_win) then
+    local src_win = what.user_data.src_win --- @type integer
+    if src_win and not eu._win_can_have_loclist(src_win) then
         return
     end
 
@@ -46,7 +46,7 @@ local function handle_output(obj, what)
     local dest_nr = et._set_list(what_set) --- @type integer
 
     if vim.g.qf_rancher_auto_open_changes then
-        require("mjm.error-list-stack")._history(list_win, dest_nr, {
+        require("mjm.error-list-stack")._history(src_win, dest_nr, {
             silent = true,
             always_open = true,
         })
