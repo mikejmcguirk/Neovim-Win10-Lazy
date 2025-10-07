@@ -17,63 +17,39 @@ end
 -- Config/Validation --
 -----------------------
 
+--- TODO: These are my personal settings. Get out of here
 -- Personal setting. Default is false in line with Nvim
 vim.api.nvim_set_var("qf_rancher_auto_open_changes", true)
 vim.api.nvim_set_var("qf_rancher_debug_assertions", true)
 -- vim.api.nvim_set_var("qf_rancher_set_default_maps", false)
 
--- TODO: For now, I'm not adding config for the default maps. I have a feeling like I should
--- because there are so many. But, because there are so many, that also adds complication to any
--- boilerplate options to configure them, to the point where I'm not sure it's less complicated
--- than just promoting the plug mappings
---
--- TODO: Put the options into a table and iterate through them
+--- TODO: Make sure the options actually do what they're supposed to
+--- DOCUMENT: What these vars do
+local g_vars = {
+    { "qf_rancher_auto_open_changes", "boolean", false },
+    -- DOCUMENT:
+    -- - If splitkeep is set to screen or topline, that will take precedence
+    -- - If splitkeep is set for cursor, and this option is true, rancher will save and restore
+    --      views where necessary
+    -- - If this is off and splitkeep is set for cursor, you get Nvim default behavior
+    { "qf_rancher_always_save_views", "boolean", true },
+    { "qf_rancher_debug_assertions", "boolean", false },
+    { "qf_rancher_grepprg", "string", "rg" },
+    { "qf_rancher_qfsplit", "string", "botright" },
+    { "qf_rancher_set_default_maps", "boolean", true },
+    { "qf_rancher_set_default_cmds", "boolean", true },
+    { "qf_rancher_use_smartcase", "boolean", true },
+} --- @type {[1]:string, [2]:string, [3]:any}
 
-if type(vim.g.qf_rancher_set_default_maps) ~= "boolean" then
-    vim.api.nvim_set_var("qf_rancher_set_default_maps", true)
+for _, var in ipairs(g_vars) do
+    if type(vim.g[var[1]]) ~= var[2] then
+        vim.api.nvim_set_var(var[1], var[3])
+    end
 end
 
-if type(vim.g.qf_rancher_set_default_cmds) ~= "boolean" then
-    vim.api.nvim_set_var("qf_rancher_set_default_cmds", true)
-end
-
-if type(vim.g.qf_rancher_auto_open_changes) ~= "boolean" then
-    vim.api.nvim_set_var("qf_rancher_auto_open_changes", false)
-end
-
-if type(vim.g.qf_rancher_debug_assertions) ~= "boolean" then
-    vim.api.nvim_set_var("qf_rancher_debug_assertions", false)
-end
-
-if type(vim.g.qf_rancher_grepprg) ~= "string" then
-    vim.api.nvim_set_var("qf_rancher_grepprg", "rg")
-end
-
-if type(vim.g.qf_rancher_qfsplit) ~= "string" then
-    vim.api.nvim_set_var("qf_rancher_qfsplit", "botright")
-end
-
---- TODO: Should have some level of flexibility for defining when the list auto opens and when
---- it does not. Right now I'm doing everything based on a combination of what I remember of
---- the default behavior and personal taste, but should do deeper dive into defaults to figure out
---- what those expectations are + what are the logical deviation points
-
--- DOCUMENT:
--- - If splitkeep is set to screen or topline, that will take precedence
--- - If splitkeep is set for cursor, and this option is true, rancher will save and restore views
--- where necessary
--- - If this is off and splitkeep is set for cursor, you get Nvim default behavior
-if type(vim.g.qf_rancher_always_save_views) ~= "boolean" then
-    vim.api.nvim_set_var("qf_rancher_always_save_views", true)
-end
-
--- Document that nil is the default state and evaluated differently. nil falls back to the vim
--- smartcase option. False overrides it
-vim.validate("qf_rancher_use_smartcase", vim.g.qf_rancher_use_smartcase, { "boolean", "nil" })
-
+--- TODO: It seems like this file is effectively the /plugin file, so this will have to be moved
+--- in here
 require("mjm.error-list-maps")
-
-local M = {}
 
 ----------------
 --- Autocmds ---
@@ -170,8 +146,6 @@ for _, m in pairs(scroll_maps) do
     end)
 end
 
-return M
-
 -------------
 --- TODO: ---
 -------------
@@ -184,7 +158,6 @@ return M
 --- to be a way to not do that. Having to do qGf to sort by filename without pollutting the
 --- stack seems cumbersome. And I don't want to just say "use the plug mappings" because there are
 --- over 300 keymaps. It's not feasible
---- - Properly use the title output option everywhere
 ---
 --- - For the keymaps, there has to be a way to edit how they're set from g vars. There are too
 --- many maps to rely on plugs

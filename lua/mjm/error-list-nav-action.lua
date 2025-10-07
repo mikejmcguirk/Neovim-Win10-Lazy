@@ -337,3 +337,4 @@ return M
 ------------
 
 --- Deep auditing/testing
+--- [q]q enter errors
