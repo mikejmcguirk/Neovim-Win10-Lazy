@@ -48,7 +48,7 @@ local function sort_wrapper(sort_info, sort_opts, what)
         context = type(cur_list.context) == "table" and cur_list.context or what.context,
         efm = cur_list.efm or what.efm,
         items = new_items,
-        quickfixtextfunc = type(cur_list.quickfixtextfunc == "function")
+        quickfixtextfunc = type(cur_list.quickfixtextfunc) == "function"
                 and cur_list.quickfixtextfunc
             or what.quickfixtextfunc,
         title = cur_list.title or what.title,
@@ -68,7 +68,7 @@ end
 --- Sort Parts ---
 ------------------
 
---- TODO: The line numbering in the sorts is wrong
+--- NOTE: Do not use ternaries here, as it causes logical errors
 
 --- @type QfRancherCheckFunc
 local function check_asc(a, b)
@@ -78,6 +78,22 @@ end
 --- @type QfRancherCheckFunc
 local function check_desc(a, b)
     return a > b
+end
+
+--- @param a any
+--- @param b any
+--- @param check QfRancherCheckFunc
+--- @return boolean|nil
+local function a_b_check(a, b, check)
+    if not (a and b) then
+        return nil
+    end
+
+    if a == b then
+        return nil
+    else
+        return check(a, b)
+    end
 end
 
 --- @param a table
@@ -99,83 +115,7 @@ end
 --- @return boolean|nil
 local function check_fname(a, b, check)
     local fname_a, fname_b = get_fnames(a, b) --- @type string|nil, string|nil
-    if not (fname_a and fname_b) then
-        return nil
-    end
-
-    if fname_a == fname_b then
-        return nil
-    else
-        return check(fname_a, fname_b)
-    end
-end
-
---- @param a table
---- @param b table
---- @param check QfRancherCheckFunc
---- @return boolean|nil
-local function check_lnum(a, b, check)
-    local lnum_a, lnum_b = a.lnum, b.lnum --- @type integer|nil, integer|nil
-    if not (lnum_a and lnum_b) then
-        return nil
-    end
-
-    if lnum_a == lnum_b then
-        return nil
-    else
-        check(lnum_a, lnum_b)
-    end
-end
-
---- @param a table
---- @param b table
---- @param check QfRancherCheckFunc
---- @return boolean|nil
-local function check_col(a, b, check)
-    local col_a, col_b = a.col, b.col --- @type integer|nil, integer|nil
-    if not (col_a and col_b) then
-        return nil
-    end
-
-    if col_a == col_b then
-        return nil
-    else
-        return check(col_a, col_b)
-    end
-end
-
---- @param a table
---- @param b table
---- @param check QfRancherCheckFunc
---- @return boolean|nil
-local function check_end_lnum(a, b, check)
-    local end_lnum_a, end_lnum_b = a.end_lnum, b.end_lnum --- @type integer|nil, integer|nil
-    if not (end_lnum_a and end_lnum_b) then
-        return nil
-    end
-
-    if end_lnum_a == end_lnum_b then
-        return nil
-    else
-        return check(end_lnum_a, end_lnum_b)
-    end
-end
-
---- @param a table
---- @param b table
---- @param check QfRancherCheckFunc
---- @return boolean|nil
-local function check_end_col_asc(a, b, check)
-    local end_col_a, end_col_b = a.end_col, b.end_col --- @type integer|nil, integer|nil
-    if not (end_col_a and end_col_b) then
-        return nil
-    end
-
-    if end_col_a == end_col_b then
-        return nil
-    else
-        return check(end_col_a, end_col_b)
-    end
+    return a_b_check(fname_a, fname_b, check)
 end
 
 --- @param a table
@@ -183,22 +123,22 @@ end
 --- @param check QfRancherCheckFunc
 --- @return boolean|nil
 local function check_lcol(a, b, check)
-    local checked_lnum = check_lnum(a, b, check) --- @type boolean|nil
+    local checked_lnum = a_b_check(a.lnum, b.lnum, check) --- @type boolean|nil
     if type(checked_lnum) == "boolean" then
         return checked_lnum
     end
 
-    local checked_col = check_col(a, b, check) --- @type boolean|nil
+    local checked_col = a_b_check(a.col, b.col, check) --- @type boolean|nil
     if type(checked_col) == "boolean" then
         return checked_col
     end
 
-    local checked_end_lnum = check_end_lnum(a, b, check) --- @type boolean|nil
+    local checked_end_lnum = a_b_check(a.end_lnum, b.end_lnum, check) --- @type boolean|nil
     if type(checked_end_lnum) == "boolean" then
         return checked_end_lnum
     end
 
-    return check_end_col_asc(a, b, check) -- Return the nil here if we get it
+    return a_b_check(a.end_col, b.end_col, check) -- Return the nil here if we get it
 end
 
 --- @param a table
@@ -217,30 +157,13 @@ end
 --- @param b table
 --- @param check QfRancherCheckFunc
 --- @return boolean|nil
-local function check_type(a, b, check)
-    local type_a, type_b = a.type, b.type --- @type string|nil, string|nil
-    if not (type_a and type_b) then
-        return nil
-    end
-
-    if type_a == type_b then
-        return nil
-    else
-        return check(type_a, type_b)
-    end
-end
-
---- @param a table
---- @param b table
---- @param check QfRancherCheckFunc
---- @return boolean|nil
 local function check_lcol_type(a, b, check)
     local checked_lcol = check_lcol(a, b, check) --- @type boolean|nil
     if type(checked_lcol) == "boolean" then
         return checked_lcol
     end
 
-    return check_type(a, b, check) -- Allow the nil to pass through
+    return a_b_check(a.type, b.type, check)
 end
 
 ---@type table<string, integer>
@@ -264,15 +187,7 @@ end
 --- @return boolean|nil
 local function check_severity(a, b, check)
     local severity_a, severity_b = get_severities(a, b) --- @type integer|nil, integer|nil
-    if not (severity_a and severity_b) then
-        return nil
-    end
-
-    if severity_a == severity_b then
-        return nil
-    else
-        return check(severity_a, severity_b)
-    end
+    return a_b_check(severity_a, severity_b, check)
 end
 
 --- @param a table
@@ -291,125 +206,133 @@ end
 --- Sort Info ---
 -----------------
 
---- @type QfRancherSortPredicate
-function M._sort_fname_asc(a, b)
-    if (not a) or not b then
+--- @param a vim.quickfix.entry
+--- @param b vim.quickfix.entry
+--- @param check QfRancherCheckFunc
+--- @return boolean
+local function sort_fname(a, b, check)
+    if not (a and b) then
         return false
     end
 
-    local checked_fname = check_fname(a, b, check_asc) --- @type boolean|nil
+    local checked_fname = check_fname(a, b, check) --- @type boolean|nil
     if type(checked_fname) == "boolean" then
         return checked_fname
     end
 
     local checked_lcol_type = check_lcol_type(a, b, check_asc) --- @type boolean|nil
-    return type(checked_lcol_type) == "boolean" and checked_lcol_type or false
+    if type(checked_lcol_type) == "boolean" then
+        return checked_lcol_type
+    else
+        return false
+    end
+end
+
+--- @type QfRancherSortPredicate
+function M._sort_fname_asc(a, b)
+    return sort_fname(a, b, check_asc)
 end
 
 --- @type QfRancherSortPredicate
 function M._sort_fname_desc(a, b)
-    if (not a) or not b then
+    return sort_fname(a, b, check_desc)
+end
+
+--- @param a vim.quickfix.entry
+--- @param b vim.quickfix.entry
+--- @param check QfRancherCheckFunc
+--- @return boolean
+local function sort_type(a, b, check)
+    if not (a and b) then
         return false
     end
 
-    local checked_fname = check_fname(a, b, check_desc) --- @type boolean|nil
-    if type(checked_fname) == "boolean" then
-        return checked_fname
+    local checked_type = a_b_check(a.type, b.type, check) --- @type boolean|nil
+    if type(checked_type) == "boolean" then
+        return checked_type
     end
 
-    local checked_lcol_type = check_lcol_type(a, b, check_asc) --- @type boolean|nil
-    return type(checked_lcol_type) == "boolean" and checked_lcol_type or false
+    local checked_fname_lcol = check_fname_lcol(a, b, check_asc) --- @type boolean|nil
+    if type(checked_fname_lcol) == "boolean" then
+        return checked_fname_lcol
+    else
+        return false
+    end
 end
 
 --- @type QfRancherSortPredicate
 function M._sort_type_asc(a, b)
-    if (not a) or not b then
-        return false
-    end
-
-    local checked_type = check_type(a, b, check_asc) --- @type boolean|nil
-    if type(checked_type) == "boolean" then
-        return checked_type
-    end
-
-    local checked_fname_lcol = check_fname_lcol(a, b, check_asc) --- @type boolean|nil
-    return type(checked_fname_lcol) == "boolean" and checked_fname_lcol or false
+    return sort_type(a, b, check_asc)
 end
 
 --- @type QfRancherSortPredicate
 function M._sort_type_desc(a, b)
-    if (not a) or not b then
-        return false
-    end
-
-    local checked_type = check_type(a, b, check_desc) --- @type boolean|nil
-    if type(checked_type) == "boolean" then
-        return checked_type
-    end
-
-    local checked_fname_lcol = check_fname_lcol(a, b, check_asc) --- @type boolean|nil
-    return type(checked_fname_lcol) == "boolean" and checked_fname_lcol or false
+    return sort_type(a, b, check_desc)
 end
 
---- @type QfRancherSortPredicate
-function M._sort_severity_asc(a, b)
-    if (not a) or not b then
+--- @param a vim.quickfix.entry
+--- @param b vim.quickfix.entry
+--- @param check QfRancherCheckFunc
+--- @return boolean
+local function sort_severity(a, b, check)
+    if not (a and b) then
         return false
     end
 
-    local checked_severity = check_severity(a, b, check_asc) --- @type boolean|nil
+    local checked_severity = check_severity(a, b, check) --- @type boolean|nil
     if type(checked_severity) == "boolean" then
         return checked_severity
     end
 
     local checked_fname_lcol = check_fname_lcol(a, b, check_asc) --- @type boolean|nil
     checked_fname_lcol = checked_fname_lcol == nil and false or checked_fname_lcol
-    return type(checked_fname_lcol) == "boolean" and checked_fname_lcol or false
+    if type(checked_fname_lcol) == "boolean" then
+        return checked_fname_lcol
+    else
+        return false
+    end
+end
+
+--- @type QfRancherSortPredicate
+function M._sort_severity_asc(a, b)
+    return sort_severity(a, b, check_asc)
 end
 
 --- @type QfRancherSortPredicate
 function M._sort_severity_desc(a, b)
-    if (not a) or not b then
+    return sort_severity(a, b, check_desc)
+end
+
+--- @param a vim.quickfix.entry
+--- @param b vim.quickfix.entry
+--- @param check QfRancherCheckFunc
+--- @return boolean
+local function sort_diag_fname(a, b, check)
+    if not (a and b) then
         return false
     end
 
-    local checked_severity = check_severity(a, b, check_desc) --- @type boolean|nil
-    if type(checked_severity) == "boolean" then
-        return checked_severity
+    local checked_fname = check_fname(a, b, check) --- @type boolean|nil
+    if type(checked_fname) == "boolean" then
+        return checked_fname
     end
 
-    local checked_fname_lcol = check_fname_lcol(a, b, check_asc) --- @type boolean|nil
-    return type(checked_fname_lcol) == "boolean" and checked_fname_lcol or false
+    local checked_lcol_severity = check_lcol_severity(a, b, check_asc) --- @type boolean|nil
+    if type(checked_lcol_severity) == "boolean" then
+        return checked_lcol_severity
+    else
+        return false
+    end
 end
 
 --- @type QfRancherSortPredicate
 function M._sort_fname_diag_asc(a, b)
-    if (not a) or not b then
-        return false
-    end
-
-    local checked_fname = check_fname(a, b, check_asc) --- @type boolean|nil
-    if type(checked_fname) == "boolean" then
-        return checked_fname
-    end
-
-    local checked_lcol_severity = check_lcol_severity(a, b, check_asc) --- @type boolean|nil
-    return type(checked_lcol_severity) == "boolean" and checked_lcol_severity or false
+    return sort_diag_fname(a, b, check_asc)
 end
 
 --- @type QfRancherSortPredicate
 function M._sort_fname_diag_desc(a, b)
-    if (not a) or not b then
-        return false
-    end
-
-    local checked_fname = check_fname(a, b, check_desc) --- @type boolean|nil
-    if type(checked_fname) == "boolean" then
-        return checked_fname
-    end
-
-    local checked_lcol_severity = check_lcol_severity(a, b, check_asc) --- @type boolean|nil
-    return type(checked_lcol_severity) == "boolean" and checked_lcol_severity or false
+    return sort_diag_fname(a, b, check_desc)
 end
 
 -----------
