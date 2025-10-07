@@ -267,17 +267,6 @@ function M._l_del_all()
     require("mjm.error-list-open")._close_llists_by_qf_id_and_tabpage(qf_id, tabpage)
 end
 
---- @param is_loclist boolean
---- @return function
-function M._get_gethistory(is_loclist)
-    vim.validate("is_loclist", is_loclist, { "boolean", "nil" })
-    if is_loclist then
-        return M._l_history
-    else
-        return M._q_history
-    end
-end
-
 return M
 
 ------------
