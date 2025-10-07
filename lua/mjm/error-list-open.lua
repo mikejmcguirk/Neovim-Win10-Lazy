@@ -431,7 +431,7 @@ function M._open_loclist(opts)
     local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
     local eu = require("mjm.error-list-util")
     --- @type integer|nil
-    local ll_win = eu._find_loclist_win_by_qf_id(qf_id, { tabpage_wins = tabpage_wins })
+    local ll_win = eu._get_loclist_win_by_qf_id(qf_id, { tabpage_wins = tabpage_wins })
     if ll_win then
         if opts.always_resize then
             resize_ll_win(ll_win, opts.height, { tabpage_wins = tabpage_wins })
@@ -488,7 +488,7 @@ function M._close_loclist()
         end
     end
 
-    local ll_win = eu._find_loclist_win_by_qf_id(qf_id, { tabpage_wins = tabpage_wins })
+    local ll_win = eu._get_loclist_win_by_qf_id(qf_id, { tabpage = tabpage })
     if (not ll_win) and #ll_wins < 1 then
         return false
     end

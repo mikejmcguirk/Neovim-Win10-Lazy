@@ -101,20 +101,11 @@ end
 --- feels like a simple way to handle normal cases. Unsure if I want to conflate cleanup logic
 --- in here
 
---- @param win integer
+--- @param qf_id integer
 --- @param opts {tabpage?: integer, some_tabpages?: integer[], all_tabpages?:boolean}
 --- @return integer|nil
-function M._get_loclist_win_by_win(win, opts)
+local function get_loclist_win(qf_id, opts)
     opts = opts or {}
-    if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_win(win, false)
-        vim.validate("opts", opts, "table")
-        vim.validate("opts.tabpage", opts.tabpage, { "nil", "number" })
-        vim.validate("opts.some_tabpages", opts.some_tabpages, { "nil", "table" })
-        vim.validate("opts.all_tabpages", opts.all_tabpages, { "boolean", "nil" })
-    end
-
-    local qf_id = vim.fn.getloclist(win, { id = 0 }) --- @type integer
     if qf_id == 0 then
         return nil
     end
@@ -127,7 +118,7 @@ function M._get_loclist_win_by_win(win, opts)
         elseif opts.tabpage then
             return { opts.tabpage }
         else
-            return { vim.api.nvim_win_get_tabpage(win) }
+            return { vim.api.nvim_get_current_tabpage() }
         end
     end)() --- @type integer[]
 
@@ -157,40 +148,35 @@ function M._get_loclist_win_by_win(win, opts)
     return nil
 end
 
---- TODO: There's a specific problem that needs to be solved where the caller already has the
---- tabpage wins, so we don't want to get them again, but that creates a weird side-case in
---- a find function scoped by tabpages. As shown above, the logic for which tabpages to look at
---- scopes cleanly
+--- @param win integer
+--- @param opts {tabpage?: integer, some_tabpages?: integer[], all_tabpages?:boolean}
+--- @return integer|nil
+function M._get_loclist_win_by_win(win, opts)
+    if vim.g.qf_rancher_debug_assertions then
+        require("mjm.error-list-types")._validate_win(win, false)
+        vim.validate("opts", opts, "table")
+        vim.validate("opts.tabpage", opts.tabpage, { "nil", "number" })
+        vim.validate("opts.some_tabpages", opts.some_tabpages, { "nil", "table" })
+        vim.validate("opts.all_tabpages", opts.all_tabpages, { "boolean", "nil" })
+    end
+
+    local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
+    return get_loclist_win(qf_id, opts)
+end
 
 --- @param qf_id integer
---- @param opts {win?: integer, tabpage?: integer, tabpage_wins?: integer[]}
-function M._find_loclist_win_by_qf_id(qf_id, opts)
-    opts = opts or {}
+--- @param opts {tabpage?: integer, some_tabpages?: integer[], all_tabpages?:boolean}
+--- @return integer|nil
+function M._get_loclist_win_by_qf_id(qf_id, opts)
     if vim.g.qf_rancher_debug_assertions then
         vim.validate("qf_id", qf_id, "number")
-        vim.validate("opts", opts, { "nil", "table" })
-
-        if type(opts) == "table" then
-            vim.validate("opts.win", opts.win, { "nil", "number" })
-            vim.validate("opts.tabpage", opts.tabpage, { "nil", "number" })
-            vim.validate("opts.tabpage_wins", opts.tabpage_wins, { "nil", "table" })
-        end
+        vim.validate("opts", opts, "table")
+        vim.validate("opts.tabpage", opts.tabpage, { "nil", "number" })
+        vim.validate("opts.some_tabpages", opts.some_tabpages, { "nil", "table" })
+        vim.validate("opts.all_tabpages", opts.all_tabpages, { "boolean", "nil" })
     end
 
-    local win = opts.win or vim.api.nvim_get_current_win()
-    local tabpage = opts.tabpage or vim.api.nvim_win_get_tabpage(win)
-    local tabpage_wins = opts.tabpage_wins or vim.api.nvim_tabpage_list_wins(tabpage)
-
-    for _, t_win in ipairs(tabpage_wins) do
-        if vim.fn.win_gettype(t_win) == "loclist" then
-            local tw_qf_id = vim.fn.getloclist(t_win, { id = 0 }).id
-            if tw_qf_id == qf_id then
-                return win
-            end
-        end
-    end
-
-    return nil
+    return get_loclist_win(qf_id, opts)
 end
 
 --- @param opts {tabpage?: integer, some_tabpages?: integer[], all_tabpages?:boolean}

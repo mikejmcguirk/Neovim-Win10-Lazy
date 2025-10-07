@@ -34,12 +34,6 @@ local function sort_wrapper(sort_info, sort_opts, what)
         return
     end
 
-    if not eu._get_list_win(src_win, { tabpage = vim.api.nvim_get_current_tabpage() }) then
-        local list = src_win and "Loclist" or "Qflist" --- @type string
-        vim.api.nvim_echo({ { list .. " not open", "" } }, false, {})
-        return
-    end
-
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
     local cur_list = et._get_all(src_win, what.nr) --- @type table
     if cur_list.size < 1 then
@@ -47,9 +41,15 @@ local function sort_wrapper(sort_info, sort_opts, what)
         return
     end
 
+    if not eu._get_list_win(src_win, {}) then
+        local list = src_win and "Loclist" or "Qflist" --- @type string
+        vim.api.nvim_echo({ { list .. " not open", "" } }, false, {})
+        return
+    end
+
     --- @type QfRancherSortPredicate
-    local new_items = vim.deepcopy(cur_list.items, false) --- @type vim.quickfix.entry[]
     local predicate = sort_opts.dir == "asc" and sort_info.asc_func or sort_info.desc_func
+    local new_items = vim.deepcopy(cur_list.items, false) --- @type vim.quickfix.entry[]
     local what_set = vim.tbl_deep_extend("force", what, {
         context = type(cur_list.context) == "table" and cur_list.context or what.context,
         efm = cur_list.efm or what.efm,
@@ -424,7 +424,7 @@ local function sort_cmd(src_win, cargs)
     --- @type QfRancherAction
     local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action)
     --- @type QfRancherWhat
-    local what = { nr = cargs.count, user_data = { action = action, src_win = src_win } }
+    local what = { nr = 0, user_data = { action = action, src_win = src_win } }
 
     M.sort(sort_name, { dir = dir }, what)
 end
@@ -443,4 +443,4 @@ return M
 --- TODO ---
 ------------
 
---- Do the cmd map refactoring
+--- Testing

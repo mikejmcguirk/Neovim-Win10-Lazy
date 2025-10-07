@@ -798,11 +798,11 @@ if vim.g.qf_rancher_set_default_cmds then
     -----------------
 
     vim.api.nvim_create_user_command("Qsort", function(cargs)
-        es._q_sort(cargs)
+        et._q_sort(cargs)
     end, { nargs = "*" })
 
     vim.api.nvim_create_user_command("Lsort", function(cargs)
-        es._l_sort(cargs)
+        et._l_sort(cargs)
     end, { nargs = "*" })
 
     -------------
