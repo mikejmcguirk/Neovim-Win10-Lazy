@@ -27,10 +27,16 @@ end
 local function sort_wrapper(sort_info, sort_opts, what)
     validate_sort_wrapper_input(sort_info, sort_opts, what)
 
-    --- TODO: This should check for an open list so it can't run silently
     local src_win = what.user_data.src_win --- @type integer|nil
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
     if src_win and not eu._win_can_have_loclist(what.user_data.src_win) then
+        vim.api.nvim_echo({ { "Window has no loclist", "" } }, false, {})
+        return
+    end
+
+    if not eu._get_list_win(src_win, { tabpage = vim.api.nvim_get_current_tabpage() }) then
+        local list = src_win and "Loclist" or "Qflist" --- @type string
+        vim.api.nvim_echo({ { list .. " not open", "" } }, false, {})
         return
     end
 

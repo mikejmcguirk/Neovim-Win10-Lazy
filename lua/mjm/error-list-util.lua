@@ -97,37 +97,58 @@ function M._win_can_have_loclist(win)
     return false
 end
 
---- TODO: I'm wondering if for functions like this it's better to have a few smaller, more easily
---- parsable functions. The get loclist by qf_id below is basically the same length as this, but
---- infinitely more readable
+--- TODO: There are cases where you need to gather all loclist wins to handle edge cases. This
+--- feels like a simple way to handle normal cases. Unsure if I want to conflate cleanup logic
+--- in here
 
 --- @param win integer
---- @param qf_id? integer
+--- @param opts {tabpage?: integer, some_tabpages?: integer[], all_tabpages?:boolean}
 --- @return integer|nil
-function M._find_loclist_win(win, qf_id)
+function M._get_loclist_win_by_win(win, opts)
+    opts = opts or {}
     if vim.g.qf_rancher_debug_assertions then
-        vim.validate("qf_id", qf_id, { "nil", "number" })
-        vim.validate("win", win, "number")
-        vim.validate("win", win, function()
-            return vim.api.nvim_win_is_valid(win)
-        end)
-
-        vim.validate("win", win, function()
-            return M._win_can_have_loclist(win)
-        end)
+        require("mjm.error-list-types")._validate_win(win, false)
+        vim.validate("opts", opts, "table")
+        vim.validate("opts.tabpage", opts.tabpage, { "nil", "number" })
+        vim.validate("opts.some_tabpages", opts.some_tabpages, { "nil", "table" })
+        vim.validate("opts.all_tabpages", opts.all_tabpages, { "boolean", "nil" })
     end
 
-    qf_id = qf_id or vim.fn.getloclist(win, { id = 0 }) --- @type integer
+    local qf_id = vim.fn.getloclist(win, { id = 0 }) --- @type integer
+    if qf_id == 0 then
+        return nil
+    end
 
-    local win_tabpage = vim.api.nvim_win_get_tabpage(win) --- @type integer
-    local win_tabpage_wins = vim.api.nvim_tabpage_list_wins(win_tabpage) --- @type integer[]
-    for _, t_win in ipairs(win_tabpage_wins) do
+    local tabpages = (function()
+        if opts.all_tabpages then
+            return vim.api.nvim_list_tabpages()
+        elseif opts.some_tabpages then
+            return opts.some_tabpages
+        elseif opts.tabpage then
+            return { opts.tabpage }
+        else
+            return { vim.api.nvim_win_get_tabpage(win) }
+        end
+    end)() --- @type integer[]
+
+    local function check_win(t_win)
         local tw_qf_id = vim.fn.getloclist(t_win, { id = 0 }).id --- @type integer
-        if tw_qf_id == qf_id then
-            local t_win_buf = vim.api.nvim_win_get_buf(t_win) --- @type integer
-            --- @type string
-            local t_win_buftype = vim.api.nvim_get_option_value("buftype", { buf = t_win_buf })
-            if t_win_buftype == "quickfix" then
+        if tw_qf_id ~= qf_id then
+            return false
+        end
+
+        local t_win_buf = vim.api.nvim_win_get_buf(t_win) --- @type integer
+        --- @type string
+        local t_win_buftype = vim.api.nvim_get_option_value("buftype", { buf = t_win_buf })
+        if t_win_buftype == "quickfix" then
+            return t_win
+        end
+    end
+
+    for _, tabpage in ipairs(tabpages) do
+        local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
+        for _, t_win in ipairs(tabpage_wins) do
+            if check_win(t_win) then
                 return t_win
             end
         end
@@ -135,6 +156,11 @@ function M._find_loclist_win(win, qf_id)
 
     return nil
 end
+
+--- TODO: There's a specific problem that needs to be solved where the caller already has the
+--- tabpage wins, so we don't want to get them again, but that creates a weird side-case in
+--- a find function scoped by tabpages. As shown above, the logic for which tabpages to look at
+--- scopes cleanly
 
 --- @param qf_id integer
 --- @param opts {win?: integer, tabpage?: integer, tabpage_wins?: integer[]}
@@ -167,6 +193,56 @@ function M._find_loclist_win_by_qf_id(qf_id, opts)
     return nil
 end
 
+--- @param opts {tabpage?: integer, some_tabpages?: integer[], all_tabpages?:boolean}
+--- @return integer|nil
+function M._get_qf_win(opts)
+    opts = opts or {}
+    if vim.g.qf_rancher_debug_assertions then
+        vim.validate("opts", opts, "table")
+        vim.validate("opts.tabpage", opts.tabpage, { "nil", "number" })
+        vim.validate("opts.some_tabpages", opts.some_tabpages, { "nil", "table" })
+        vim.validate("opts.all_tabpages", opts.all_tabpages, { "boolean", "nil" })
+    end
+
+    local tabpages = (function()
+        if opts.all_tabpages then
+            return vim.api.nvim_list_tabpages()
+        elseif opts.some_tabpages then
+            return opts.some_tabpages
+        elseif opts.tabpage then
+            return { opts.tabpage }
+        else
+            return { vim.api.nvim_get_current_tabpage() }
+        end
+    end)() --- @type integer[]
+
+    for _, tabpage in ipairs(tabpages) do
+        local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
+        for _, t_win in ipairs(tabpage_wins) do
+            local wintype = vim.fn.win_gettype(t_win)
+            if wintype == "quickfix" then
+                return t_win
+            end
+        end
+    end
+
+    return nil
+end
+
+--- @param win integer|nil
+--- @param opts {tabpage?: integer, some_tabpages?: integer[], all_tabpages?:boolean}
+--- @return integer|nil
+function M._get_list_win(win, opts)
+    if win then
+        return M._get_loclist_win_by_win(win, opts)
+    else
+        return M._get_qf_win(opts)
+    end
+end
+
+--- TODO: Similar issue to the above. What scope are we looking at. Purely based on the code,
+--- it's a specific tabpage based on the win, but it's very silly
+
 --- @param opts?{tabpage?: integer, win?:integer, tabpage_wins?:integer[]}
 --- @return integer|nil
 function M._find_qf_win(opts)
@@ -192,6 +268,18 @@ function M._find_qf_win(opts)
     return nil
 end
 
+function M._find_qf_win_in_cur_tabpage()
+    local tabpage = vim.api.nvim_get_current_tabpage()
+    local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage)
+    for _, win in ipairs(tabpage_wins) do
+        if vim.fn.win_gettype(win) == "quickfix" then
+            return win
+        end
+    end
+
+    return nil
+end
+
 --- LOW: For this and _has_any_loclist, you can pass a getlist function and make them the same
 --- thing
 
@@ -204,49 +292,6 @@ function M._has_any_qflist()
 
     for i = 1, max_nr do
         local size = vim.fn.getqflist({ nr = i, size = 0 }).size --- @type integer
-        if size > 0 then
-            return true
-        end
-    end
-
-    return false
-end
-
---- @param opts {win?:integer}
---- @return integer, integer|nil
---- Get loclist information for a window
---- Opts:
---- - win: The window to check loclist information for
---- Returns:
---- - the qf_id and the open loclist winid, if it exists
-function M._get_loclist_info(opts)
-    opts = opts or {}
-    vim.validate("opts.win", opts.win, { "nil", "number" })
-
-    local win = opts.win or vim.api.nvim_get_current_win() --- @type integer
-    local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
-    if qf_id == 0 then
-        return qf_id, nil
-    end
-
-    return qf_id, M._find_loclist_win(win, qf_id)
-end
-
---- @param opts {win?:integer}
---- @return boolean
-function M._has_any_loclist(opts)
-    opts = opts or {}
-    vim.validate("opts.win", opts.win, { "nil", "number" })
-
-    local win = opts.win or vim.api.nvim_get_current_win() --- @type integer
-
-    local max_nr = vim.fn.getloclist(win, { nr = "$" }).nr --- @type integer
-    if max_nr == 0 then
-        return false
-    end
-
-    for i = 1, max_nr do
-        local size = vim.fn.getloclist(win, { nr = i, size = 0 }).size --- @type integer
         if size > 0 then
             return true
         end
