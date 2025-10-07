@@ -16,8 +16,7 @@ local function get_prompt(name, keep, input_type)
         require("mjm.error-list-types")._validate_input_type(input_type)
     end
 
-    --- @type string
-    local enter_prompt = "Enter pattern to " .. (keep and "keep" or "remove")
+    local enter_prompt = "Enter pattern to " .. (keep and "keep" or "remove") --- @type string
     --- @type string
     local type = require("mjm.error-list-util")._get_display_input_type(input_type)
     return name .. ": " .. enter_prompt .. " (" .. type .. "): "
@@ -409,6 +408,20 @@ function M._l_filter(cargs)
 end
 
 return M
+
+------------
+--- TODO ---
+------------
+
+--- Global Checklist:
+--- - Check that all functions have reasonable default sorts
+--- - Check that window height updates are triggered where appropriate
+--- - Check that functions have proper visibility
+--- - Check that all mappings have plugs and cmds
+--- - Check that all maps/cmds/plugs have desc fieldss
+--- - Check that all functions have annotations and documentation
+--- - Check that the qf and loclist versions are both properly built for purpose. Should be able
+---     to use the loclist function for buf/win specific info
 
 -----------
 --- MID ---

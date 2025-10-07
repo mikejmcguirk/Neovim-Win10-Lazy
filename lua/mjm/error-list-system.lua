@@ -89,9 +89,9 @@ end
 
 return M
 
---------------
---- # TODO ---
---------------
+------------
+--- TODO ---
+------------
 
 --- Global Checklist:
 --- - Check that all functions have reasonable default sorts

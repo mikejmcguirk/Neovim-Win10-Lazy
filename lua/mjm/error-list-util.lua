@@ -17,7 +17,7 @@ function M._find_cmd_pattern(fargs)
 
     for _, arg in ipairs(fargs) do
         if vim.startswith(arg, "/") then
-            return arg
+            return string.sub(arg, 2) or ""
         end
     end
 

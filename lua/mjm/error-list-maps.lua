@@ -86,7 +86,7 @@ end
 
 local ed = Qfr_Defer_Require("mjm.error-list-diag") --- @type QfRancherDiagnostics
 local ef = Qfr_Defer_Require("mjm.error-list-filter") --- @type QfRancherFilter
-local eg = Qfr_Defer_Require("mjm.error-list-grep")
+local eg = Qfr_Defer_Require("mjm.error-list-grep") --- @type QfRancherGrep
 local en = Qfr_Defer_Require("mjm.error-list-nav-action") --- @type QfRancherNav
 local eo = Qfr_Defer_Require("mjm.error-list-open") --- @type QfRancherOpen
 local es = Qfr_Defer_Require("mjm.error-list-stack") --- @type QfRancherStack
@@ -686,6 +686,18 @@ if vim.g.qf_rancher_set_default_cmds then
     vim.api.nvim_create_user_command("Lfilter", function(cargs)
         ef._l_filter(cargs)
     end, { bang = true, count = true, nargs = "*", desc = "Sort loclist items" })
+
+    --------------
+    --- GREP ---
+    --------------
+
+    vim.api.nvim_create_user_command("Qgrep", function(cargs)
+        eg._q_grep(cargs)
+    end, { count = true, nargs = "*", desc = "Grep to the quickfix list" })
+
+    vim.api.nvim_create_user_command("Lgrep", function(cargs)
+        eg._l_grep(cargs)
+    end, { count = true, nargs = "*", desc = "Grep to the location list" })
 
     -------------------------
     --- OPEN_CLOSE_TOGGLE ---

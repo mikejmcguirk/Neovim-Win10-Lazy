@@ -268,9 +268,6 @@ end
 --- GREP TYPES ---
 ------------------
 
---- @alias QfRancherGrepLocFunc fun():string[]
----
---- @alias QfRancherGrepLocs string[]
 --- @alias QfRancherGrepPartsFunc fun(string, string, QfRancherGrepLocs):string[]
 
 --- @class QfRancherGrepInfo
@@ -305,6 +302,9 @@ function M._validate_system_opts(system_opts)
     vim.validate("system_opts.sync", system_opts.sync, { "boolean", "nil" })
     vim.validate("system_opts.timeout", system_opts.timeout, { "nil", "number" })
 end
+
+M._sync_opts = { "sync", "async" }
+M._default_sync_opt = "async"
 
 return M
 

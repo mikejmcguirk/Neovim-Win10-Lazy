@@ -1,6 +1,7 @@
 -- Escaping test line from From vim-grepper
 -- ..ad\\f40+$':-# @=,!;%^&&*()_{}/ /4304\'""?`9$343%$ ^adfadf[ad)[(
 
+--- @class QfRancherGrep
 local M = {}
 
 --------------------------
@@ -32,10 +33,6 @@ local function get_full_parts_rg(pattern, input_type, locations)
 
     if string.find(pattern, "\n", 1, true) ~= nil then
         table.insert(cmd, "--multiline") --- or "-U"
-        -- TODO: Revisit if this is necessary
-        -- if input_type ~= "regex" then
-        --     pattern = string.gsub(pattern, "\n", "\\n")
-        -- end
     end
 
     table.insert(cmd, "--")
@@ -47,7 +44,7 @@ end
 
 --- @type QfRancherGrepPartsFunc
 local function get_full_parts_grep(pattern, input_type, locations)
-    local cmd = base_parts.grep --- @type string[]
+    local cmd = vim.deepcopy(base_parts.grep) --- @type string[]
 
     if input_type == "regex" then
         table.insert(cmd, "--extended-regexp") --- or "-E"
@@ -62,9 +59,9 @@ local function get_full_parts_grep(pattern, input_type, locations)
     end
 
     table.insert(cmd, "--")
-    -- No multiline mode in vanilla grep, so fall back to an or comparison
-    pattern = string.gsub(pattern, "\n", "|")
-    table.insert(cmd, pattern)
+    -- No multiline mode in vanilla grep, so fall back to or comparison
+    local sub_pattern = string.gsub(pattern, "\n", "|")
+    table.insert(cmd, sub_pattern)
     vim.list_extend(cmd, locations)
 
     return cmd
@@ -86,7 +83,8 @@ local function get_grep_parts(pattern, input_type, locations)
         require("mjm.error-list-util")._is_valid_str_list(locations)
     end
 
-    local grep_cmd = vim.g.qf_rancher_grepprg
+    vim.validate("g:qf_rancher_grepprg", vim.g.qf_rancher_grepprg, "string")
+    local grep_cmd = vim.g.qf_rancher_grepprg --- @type string
     if vim.fn.executable(grep_cmd) ~= 1 then
         local chunk = { grep_cmd .. " is not executable", "ErrorMsg" }
         vim.api.nvim_echo({ chunk }, true, { err = true })
@@ -102,6 +100,7 @@ end
 
 --- @param grep_info QfRancherGrepInfo
 --- @param input_type QfRancherInputType
+--- @return string
 local function get_prompt(grep_info, input_type)
     if vim.g.qf_rancher_debug_assertions then
         local ey = require("mjm.error-list-types")
@@ -109,8 +108,9 @@ local function get_prompt(grep_info, input_type)
         ey._validate_input_type(input_type)
     end
 
+    --- @type string
     local display_type = require("mjm.error-list-util")._get_display_input_type(input_type)
-    local grepprg = vim.g.qf_rancher_grepprg or ""
+    local grepprg = vim.g.qf_rancher_grepprg or "" --- @type string
 
     -- LOW: This could be better
     return "[" .. grepprg .. "] " .. grep_info.name .. " Grep (" .. display_type .. "): "
@@ -122,6 +122,11 @@ end
 --- @param what QfRancherWhat
 --- @return nil
 local function validate_do_grep_inputs(grep_info, system_opts, input_opts, what)
+    grep_info = grep_info or {}
+    system_opts = system_opts or {}
+    input_opts = input_opts or {}
+    what = what or {}
+
     local ey = require("mjm.error-list-types")
     ey._validate_grep_info(grep_info)
     ey._validate_system_opts(system_opts)
@@ -135,10 +140,6 @@ end
 --- @param what QfRancherWhat
 --- @return nil
 function M._do_grep(grep_info, system_opts, input_opts, what)
-    grep_info = grep_info or {}
-    system_opts = system_opts or {}
-    input_opts = input_opts or {}
-    what = what or {}
     validate_do_grep_inputs(grep_info, system_opts, input_opts, what)
 
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
@@ -152,24 +153,21 @@ function M._do_grep(grep_info, system_opts, input_opts, what)
     end
 
     local input_type = eu._resolve_input_type(input_opts.input_type) --- @type QfRancherInputType
-    local prompt = get_prompt(grep_info, input_type)
+    local prompt = get_prompt(grep_info, input_type) --- @type string
     --- @type string|nil
     local pattern = eu._resolve_pattern(prompt, input_opts.pattern, input_type)
     if not pattern then
         return
     end
 
-    local grep_parts = get_grep_parts(pattern, input_type, locations) --- @type string[]
-    if #grep_parts < 1 then
+    local full_system_opts = vim.deepcopy(system_opts, true) --- @type QfRancherSystemOpts
+    full_system_opts.cmd_parts = get_grep_parts(pattern, input_type, locations)
+    if #full_system_opts.cmd_parts < 1 then
         return
     end
 
-    local full_system_opts = vim.deepcopy(system_opts, true)
-    full_system_opts.cmd_parts = grep_parts
-    -- vim.fn.confirm(vim.inspect(grep_parts))
-
-    local what_set = vim.deepcopy(what, true)
-    local title_parts = base_parts[vim.g.qf_rancher_grepprg]
+    local what_set = vim.deepcopy(what, true) --- @type QfRancherWhat
+    local title_parts = base_parts[vim.g.qf_rancher_grepprg] --- @type string[]
     what_set.title = table.concat(title_parts, " ")
     what_set.user_data.list_item_type = grep_info.list_item_type
         or what_set.user_data.list_item_type
@@ -214,7 +212,7 @@ local function get_buflist()
     end
 
     if #fnames == 0 then
-        vim.api.nvim_echo({ { "No valid bufs found", "ErrorMsg" } }, true, { err = true })
+        vim.api.nvim_echo({ { "No valid bufs found", "" } }, false, {})
     end
 
     return fnames
@@ -224,29 +222,23 @@ end
 local function get_cur_buf()
     local buf = vim.api.nvim_get_current_buf() --- @type integer
 
-    local buflisted = vim.api.nvim_get_option_value("buflisted", { buf = buf }) --- @type boolean
-    if not buflisted then
-        vim.api.nvim_echo({ { "Cur buf is not listed", "ErrorMsg" } }, true, { err = true })
+    if not vim.api.nvim_get_option_value("buflisted", { buf = buf }) then
+        vim.api.nvim_echo({ { "Cur buf is not listed", "" } }, false, {})
         return {}
     end
 
     local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf }) --- @type string
-    local good_buftype = buftype == "" or buftype == "help" --- @type boolean
-    if not good_buftype then
-        local chunk = { "Buftype " .. buftype .. " is not valid", "ErrorMsg" }
-        vim.api.nvim_echo({ chunk }, true, { err = true })
+    if not (buftype == "" or buftype == "help") then
+        vim.api.nvim_echo({ { "Buftype " .. buftype .. " is not valid", "" } }, false, {})
         return {}
     end
 
     local fname = vim.api.nvim_buf_get_name(buf) --- @type string
     local fs_access = vim.uv.fs_access(fname, 4) --- @type boolean|nil
-    local good_file = fname ~= "" and fs_access == true --- @type boolean
-    if good_file then
+    if fname ~= "" and fs_access == true then
         return { fname }
     else
-        --- @type [string,string]
-        local chunk = { "Current buffer is not a valid file", "ErrorMsg" }
-        vim.api.nvim_echo({ chunk }, true, { err = true })
+        vim.api.nvim_echo({ { "Current buffer is not a valid file", "" } }, false, {})
         return {}
     end
 end
@@ -259,19 +251,88 @@ local greps = {
     cbuf = { name = "Cur Buf", list_item_type = nil, location_func = get_cur_buf },
 } --- @type QfRancherGrepInfo[]
 
+--- @return string[]
+function M.get_grep_names()
+    return vim.tbl_keys(greps)
+end
+
 --- @param name string
 --- @param system_opts QfRancherSystemOpts
 --- @param input_opts QfRancherInputOpts
 --- @param what QfRancherWhat
 --- @return nil
-function M.grep(name, system_opts, input_opts, what)
-    local grep_info = greps[name]
+function M._grep(name, system_opts, input_opts, what)
+    local grep_info = greps[name] --- @type QfRancherGrepInfo|nil
     if grep_info then
         M._do_grep(grep_info, system_opts, input_opts, what)
+    else
+        local chunk = { "Grep " .. name .. " is not registered", "ErrorMsg" }
+        vim.api.nvim_echo({ chunk }, true, { err = true })
     end
 end
 
---- TODO: Make the rest of the API
+--- DOCUMENT: How this works
+--- @param grep_info QfRancherGrepInfo
+--- @return nil
+function M.register_grep(grep_info)
+    require("mjm.error-list-types")._validate_grep_info(grep_info)
+    greps.grep_info.name = grep_info
+end
+
+--- DOCUMENT: How this works
+--- @param name string
+--- @return nil
+function M.remove_grep(name)
+    vim.validate("name", name, "string")
+    if greps[name] then
+        greps[name] = nil
+        vim.api.nvim_echo({ { name .. " removed from grep list", "" } }, true, {})
+    else
+        vim.api.nvim_echo({ { name .. " is not a registered grep", "" } }, true, {})
+    end
+end
+
+--- @param cargs vim.api.keyset.create_user_command.command_args
+--- @param list_win? integer
+--- @return nil
+local function grep_cmd(cargs, list_win)
+    cargs = cargs or {}
+    local fargs = cargs.fargs --- @type string[]
+
+    local grep_names = M.get_grep_names() --- @type string[]
+    assert(#grep_names > 1, "No grep commands available")
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
+    local grep_name = eu._check_cmd_arg(fargs, grep_names, "cwd") --- @type string
+
+    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
+    --- @type "sync"|"async"
+    local sync = eu._check_cmd_arg(fargs, ey._sync_opts, ey._default_sync_opt)
+    --- MID: Should be able to set the timeout from the cmd
+    --- @type QfRancherSystemOpts
+    local system_opts = { sync = (sync == "sync" and true or false), timeout = 4000 }
+
+    --- @type QfRancherInputType
+    local input_type = eu._check_cmd_arg(fargs, ey._cmd_input_types, ey._default_input_type)
+    local pattern = eu._find_cmd_pattern(fargs) --- @type string|nil
+    local input_opts = { input_type = input_type, pattern = pattern } --- @type QfRancherInputOpts
+
+    --- @type QfRancherAction
+    local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action)
+    --- @type QfRancherWhat
+    local what = { nr = cargs.count, user_data = { action = action, list_win = list_win } }
+
+    M._grep(grep_name, system_opts, input_opts, what)
+end
+
+--- @param cargs vim.api.keyset.create_user_command.command_args
+function M._q_grep(cargs)
+    grep_cmd(cargs, nil)
+end
+
+--- @param cargs vim.api.keyset.create_user_command.command_args
+function M._l_grep(cargs)
+    grep_cmd(cargs, vim.api.nvim_get_current_win())
+end
 
 return M
 
@@ -279,21 +340,13 @@ return M
 --- # TODO ---
 --------------
 
---- Global checklist:
---- - Check that all functions have reasonable default sorts
---- - Check that window height updates are triggered where appropriate
---- - Check that functions have proper visibility
---- - Check that all mappings have plugs and cmds
---- - Check that all maps/cmds/plugs have desc fieldss
---- - Check that all functions have annotations and documentation
---- - Check that loclist functions are appropriate (ex: all bufs vs. cbuf)
+--- Add tests
 
 -------------
 --- # MID ---
 -------------
 
 --- Grep specific file. Can either be a built-in or shown as a recipe
---- Add the ability to create and register grep sources
 
 -------------
 --- # LOW ---
@@ -307,6 +360,8 @@ return M
 --- - how do you trigger re-checks?
 --- - If you have a good status, under what circumstances might it fail? How do you check it for
 ---     a bad status?
+--- Support changes to the grepprg itself, like turning off recursive grepping, or specifying the
+---     grepprg in a command or map
 
 -----------------------
 --- # DOCUMENTATION ---
