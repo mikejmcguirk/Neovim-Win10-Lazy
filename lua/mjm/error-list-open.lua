@@ -249,15 +249,6 @@ local function resize_qf_win(qf_win, height, opts)
 end
 
 --- @param open_opts QfRancherOpenOpts
-local function validate_open_opts(open_opts)
-    vim.validate("open_opts", open_opts, "table")
-    vim.validate("open_opts.always_resize", open_opts.always_resize, { "boolean", "nil" })
-    vim.validate("open_opts.height", open_opts.height, { "nil", "number" })
-    vim.validate("open_opts.keep_win", open_opts.keep_win, { "boolean", "nil" })
-    vim.validate("open_opts.suppress_errors", open_opts.suppress_errors, { "boolean", "nil" })
-end
-
---- @param open_opts QfRancherOpenOpts
 --- Assumes that validation has already been run
 local function clean_open_opts(open_opts)
     open_opts.always_resize = open_opts.always_resize == nil and false or open_opts.always_resize
@@ -275,7 +266,7 @@ end
 --- @return boolean
 function M._open_qflist(opts)
     opts = opts or {}
-    validate_open_opts(opts)
+    require("mjm.error-list-types")._validate_open_opts(opts)
     clean_open_opts(opts)
 
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
@@ -382,7 +373,7 @@ end
 --- @return boolean
 function M._open_loclist(opts)
     opts = opts or {}
-    validate_open_opts(opts)
+    require("mjm.error-list-types")._validate_open_opts(opts)
     clean_open_opts(opts)
 
     local cur_win = vim.api.nvim_get_current_win() --- @type integer

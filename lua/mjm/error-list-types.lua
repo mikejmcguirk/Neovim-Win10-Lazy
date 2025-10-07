@@ -326,6 +326,16 @@ end
 --- @field keep_win? boolean
 --- @field suppress_errors? boolean
 
+--- @param open_opts QfRancherOpenOpts
+--- @return nil
+function M._validate_open_opts(open_opts)
+    vim.validate("open_opts", open_opts, "table")
+    vim.validate("open_opts.always_resize", open_opts.always_resize, { "boolean", "nil" })
+    vim.validate("open_opts.height", open_opts.height, { "nil", "number" })
+    vim.validate("open_opts.keep_win", open_opts.keep_win, { "boolean", "nil" })
+    vim.validate("open_opts.suppress_errors", open_opts.suppress_errors, { "boolean", "nil" })
+end
+
 --- @class QfRancherPWinCloseOpts
 --- @field bdel? boolean
 --- @field bwipeout? boolean
