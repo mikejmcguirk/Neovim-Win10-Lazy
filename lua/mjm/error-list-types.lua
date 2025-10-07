@@ -317,6 +317,22 @@ function M._validate_grep_info(grep_info)
 end
 
 ------------------
+--- OPEN TYPES ---
+------------------
+
+--- @class QfRancherOpenOpts
+--- @field always_resize? boolean
+--- @field height? integer
+--- @field keep_win? boolean
+--- @field suppress_errors? boolean
+
+--- @class QfRancherPWinCloseOpts
+--- @field bdel? boolean
+--- @field bwipeout? boolean
+--- @field force? boolean
+--- @field print_errors? boolean
+
+------------------
 --- SORT TYPES ---
 ------------------
 

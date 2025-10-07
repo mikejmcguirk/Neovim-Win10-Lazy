@@ -1,23 +1,6 @@
 --- @class QfRancherOpen
 local M = {}
 
------------
--- TYPES --
------------
-
---- @class QfRancherOpenOpts
---- @field always_resize? boolean
---- @field height? integer
---- @field keep_win? boolean
---- @field suppress_errors? boolean
-
---- @class QfRancherPWinCloseOpts
---- @field bdel? boolean
---- @field bwipeout? boolean
---- @field force? boolean
---- @field print_errors? boolean
---- @field win? integer
-
 -------------------
 --- MODULE DATA ---
 -------------------
@@ -28,33 +11,13 @@ local max_qf_height = 10
 --- HELPER FUNCS ---
 --------------------
 
---- TODO: See how this issue affects the pwinclose behavior
---- https://github.com/neovim/neovim/pull/33402
-
--- TODO: Make a Neovim tools repo and put this function in here. Make sure that repo is all local
--- functions so it can't just be pulled lazily as a dep
--- TODO: This might need expanded on. I'd need to check the source for cclose, but as of right
--- now I think when I run this the unlisted buffer is just left to hang out. Would also need
--- to look into what happens to a buf by default when its last window closes if it's unlisted
--- But worth noting too that qf bufs being unlisted is not default behavior
--- Shorter version: DO I need to bwipeout the qf buffer? Or rather, should this function have an
--- option to bdel or bwipeout the underlying buffer
-
---- Checks that the provided window is valid. If the provided window is the last one, deletes the
---- buffer instead
---- Opts:
---- - buf_delete: (default false) Delist the buffer in addition to unloading it
---- - buf_wipeout: (default false) Perform bwipeout on a deleted buffer. Overrides buf_delete
---- - force: (default false) Ignore unsaved changes
---- - print_errors: (default true) Print error messages
---- - win: (default current win) The window to close
+--- @param win integer
 --- @param opts QfRancherPWinCloseOpts
 --- @return boolean, [string, string]|nil
-local function pwin_close(opts)
+local function pwin_close(win, opts)
     opts = opts or {}
-    vim.validate("opts.win", opts.win, { "nil", "number" })
+    vim.validate("win", win, "number")
 
-    local win = opts.win or vim.api.nvim_get_current_win() --- @type integer
     if not vim.api.nvim_win_is_valid(win) then
         local chunk = { "Window " .. win .. " is invalid", "ErrorMsg" }
         if opts.print_errors then
@@ -68,6 +31,8 @@ local function pwin_close(opts)
     local tabpages = vim.api.nvim_list_tabpages() --- @type integer[]
     local win_tabpage = vim.api.nvim_win_get_tabpage(win) --- @type integer
     local win_tabpage_wins = vim.api.nvim_tabpage_list_wins(win_tabpage) --- @type integer[]
+    local buf = vim.api.nvim_win_get_buf(win) --- @type integer
+
     if #tabpages > 1 or #win_tabpage_wins > 1 then
         local ok, err = pcall(vim.api.nvim_win_close, win, force) --- @type boolean, any
         if not ok then
@@ -80,10 +45,17 @@ local function pwin_close(opts)
             return false, { msg, "ErrorMsg" }
         end
 
+        local buf_wins = vim.fn.win_findbuf(buf)
+        local buf_list = vim.api.nvim_list_bufs()
+        if #buf_wins < 1 and vim.tbl_contains(buf_list, buf) then
+            --- TODO: Add in the opt usage once the Bwipeout issue is fixed
+            vim.api.nvim_set_option_value("buflisted", false, { buf = buf })
+            vim.api.nvim_buf_delete(buf, { unload = true })
+        end
+
         return true, nil
     end
 
-    local buf = vim.api.nvim_win_get_buf(win) --- @type integer
     if not vim.api.nvim_buf_is_valid(buf) then
         local msg = "Bufnr " .. buf .. " in window " .. win .. " is not valid" --- @type string
         local chunk = { msg, "ErrorMsg" } --- @type [string, string]
@@ -107,7 +79,7 @@ end
 --- @return nil
 local function pclose_wins(wins)
     for _, win in pairs(wins) do
-        pwin_close({ bwipeout = true, force = true, win = win })
+        pwin_close(win, { bdel = true, force = true })
     end
 end
 
@@ -364,7 +336,7 @@ function M._close_qflist()
     end, tabpage_wins)
 
     local views = get_views(tabpage_wins) --- @type vim.fn.winsaveview.ret[]
-    pwin_close({ bwipeout = true, force = true, win = qf_win })
+    pwin_close(qf_win, { bdel = true, force = true })
     restore_views(views)
     return true
 end
@@ -451,7 +423,7 @@ function M._open_loclist(opts)
 
     local views = get_views(tabpage_wins) --- @type vim.fn.winsaveview.ret[]
     if qf_win then
-        pwin_close({ bwipeout = true, force = true, win = qf_win })
+        pwin_close(qf_win, { bdel = true, force = true })
     end
 
     local height = resolve_ll_height(cur_win, opts.height)
@@ -585,7 +557,7 @@ function M._close_list_win(list_win, opts)
     end, tabpage_wins)
 
     local views = get_views(tabpage_wins) --- @type vim.fn.winsaveview.ret[]
-    pwin_close({ bwipeout = true, force = true, win = list_win })
+    pwin_close(list_win, { bdel = true, force = true })
     restore_views(views)
 
     return true
@@ -597,7 +569,8 @@ return M
 --- TODO ---
 ------------
 
---- In any resizing function, we should check if we actually resized
+--- In any resizing function, we should check if we actually resized. Don't restore views if
+---     we didn't
 --- Come back to this file after going through everything else. There are resize functions I'm
 ---     not sure we need
 
@@ -618,9 +591,14 @@ return M
 
 --- Implement a feature where, if you open list to a blank one, do a wrapping search forward or
 ---     backward for a list with items
+--- - Or less obstrusively, showing history on blank lists or a statusline component
+--- https://github.com/neovim/neovim/pull/33402 - When this request goes through, for Nvim
+---     versions that have it, use Bufwipeout behavior by default in Pwinclose. It shouldn't
+---     matter for qf wins, but as of right now, bwipeout affects Shada state
 
 -----------
 --- LOW ---
 -----------
 
---- - Make get_list_height work without nowrap
+--- Make get_list_height work without nowrap
+--- Make a Neovim tools repo that has the pwin close function
