@@ -9,9 +9,12 @@ local M = {}
 --- @return string
 local function get_qf_key(entry)
     local fname = entry.filename or ""
+    local type = entry.type or ""
     local lnum = tostring(entry.lnum or 0)
     local col = tostring(entry.col or 0)
-    return fname .. ":" .. lnum .. ":" .. col
+    local end_lnum = tostring(entry.end_lnum or 0)
+    local end_col = tostring(entry.end_col or 0)
+    return fname .. ":" .. type .. ":" .. lnum .. ":" .. col .. ":" .. end_lnum .. ":" .. end_col
 end
 
 --- MAYBE: Move into tools file

@@ -229,6 +229,17 @@ function M._validate_what(what)
     vim.validate("what.title", what.title, { "nil", "string" })
 end
 
+------------------
+--- DIAG TYPES ---
+------------------
+
+--- @alias QfRancherSeverityType "min"|"only"|"top"
+
+M._sev_types = { "min", "only", "top" } --- @type QfRancherSeverityType[]
+
+--- @alias QfRancherDiagInfo { level: vim.diagnostic.Severity|nil }
+--- @alias QfRancherDiagOpts { sev_type: QfRancherSeverityType }
+
 --------------------
 --- FILTER TYPES ---
 --------------------

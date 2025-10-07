@@ -299,10 +299,6 @@ end
 --- Open/Close Functions ---
 ----------------------------
 
---- - always_resize?: If the qf window is already open, it will be resized
---- - height?: Set the height the list should be sized to
---- - keep_win?: On completion, return focus to the calling win
---- - suppress_errors?: Do not display error messages
 --- @param opts? QfRancherOpenOpts
 --- @return boolean
 function M._open_qflist(opts)
@@ -339,8 +335,8 @@ function M._open_qflist(opts)
     pclose_wins(ll_wins)
     local height = resolve_qf_height(opts.height)
 
-    --- @diagnostic disable: missing-fields
     local qfsplit = vim.g.qf_rancher_qfsplit -- TODO: Validate this
+    --- @diagnostic disable: missing-fields
     vim.api.nvim_cmd({ cmd = "copen", count = height, mods = { split = qfsplit } }, {})
     restore_views(views)
     if opts.keep_win then
@@ -570,11 +566,7 @@ function M._close_list_win(list_win, opts)
     opts = opts or {}
 
     if vim.g.qf_rancher_debug_assertions then
-        vim.validate("list_win", list_win, "number")
-        vim.validate("list_win", list_win, function()
-            return vim.api.nvim_win_is_valid(list_win)
-        end)
-
+        require("mjm.error-list-types")._validate_win(list_win)
         vim.validate("list_win", list_win, function()
             local wintype = vim.fn.win_gettype(list_win)
             return wintype == "quickfix" or wintype == "loclist"
@@ -605,6 +597,7 @@ return M
 --- TODO ---
 ------------
 
+--- In any resizing function, we should check if we actually resized
 --- Come back to this file after going through everything else. There are resize functions I'm
 ---     not sure we need
 

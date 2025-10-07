@@ -1,15 +1,6 @@
 --- @class QfRancherDiagnostics
 local M = {}
 
--------------
---- Types ---
--------------
-
---- @alias QfRancherSeverityType "min"|"only"|"top"
-
---- @alias QfRancherDiagInfo { level: vim.diagnostic.Severity|nil }
---- @alias QfRancherDiagOpts { sev_type: QfRancherSeverityType }
-
 ------------------------
 --- HELPER FUNCTIONS ---
 ------------------------
@@ -174,66 +165,46 @@ function M.diags(name, diag_opts, what)
     diags_to_list(diag_info, diag_opts, what)
 end
 
-local sev_types = { "min", "only", "top" } --- @type string[]
-
 --- TODO: I have just this outlined for now because it's simple, but will need to change when
 --- the cmd stuff is moved to the util file. Stuff like actions and the loop/check logic can
 --- go there, but then the diag specific pieces would hang out here. And the cmd creation itself
 --- would go into the maps/plugin file. Want to move over filter/grep/sort first since they are
 --- more complicated
 
---- @param cargs vim.api.keyset.create_user_command.command_args
 --- @param src_win? integer
+--- @param cargs vim.api.keyset.create_user_command.command_args
 --- @return nil
-local function make_diag_cmd(cargs, src_win)
+local function make_diag_cmd(src_win, cargs)
     require("mjm.error-list-types")._validate_win(src_win, true)
-
     local fargs = cargs.fargs --- @type string[]
 
-    local sev_type = "min"
-    for _, arg in ipairs(fargs) do
-        if vim.tbl_contains(sev_types, arg) then
-            sev_type = arg
-            break
-        end
-    end
-
-    local diag_opts = { sev_type = sev_type } --- @type QfRancherDiagOpts
-    local actions = { "new", "replace", "add" } --- @type QfRancherAction[]
-    local action = "new" --- @type QfRancherAction
-    for _, arg in ipairs(fargs) do
-        if vim.tbl_contains(actions, arg) then
-            action = arg
-            break
-        end
-    end
-
-    local what = { user_data = { action = action, src_win = src_win } } --- @type QfRancherWhat
-
-    local name = "hint" --- @type string
+    local eu = require("mjm.error-list-util")
     local names = vim.tbl_keys(diag_queries) --- @type string[]
-    for _, arg in ipairs(fargs) do
-        if vim.tbl_contains(names, arg) then
-            name = arg
-            break
-        end
-    end
-
+    local name = eu._check_cmd_arg(fargs, names, "hint")
     local diag_info = diag_queries[name] --- @type QfRancherDiagInfo
     if not diag_info then
         vim.api.nvim_echo({ { "No diagnostic query " .. name, "ErrorMsg" } }, true, { err = true })
         return
     end
 
+    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
+    local sev_type = eu._check_cmd_arg(fargs, ey._sev_types, "min")
+    local diag_opts = { sev_type = sev_type } --- @type QfRancherDiagOpts
+
+    --- @type QfRancherAction
+    local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action)
+    --- @type QfRancherWhat
+    local what = { nr = cargs.count, user_data = { action = action, src_win = src_win } }
+
     diags_to_list(diag_info, diag_opts, what)
 end
 
 function M._q_diag(cargs)
-    make_diag_cmd(cargs, nil)
+    make_diag_cmd(nil, cargs)
 end
 
 function M._l_diag(cargs)
-    make_diag_cmd(cargs, vim.api.nvim_get_current_win())
+    make_diag_cmd(vim.api.nvim_get_current_win(), cargs)
 end
 
 return M

@@ -664,16 +664,14 @@ end
 --- CMDS ---
 ------------
 
---- TODO: Re-create the Grep cmd
-
 if vim.g.qf_rancher_set_default_cmds then
     vim.api.nvim_create_user_command("Qdiag", function(cargs)
         ed._q_diag(cargs)
-    end, { nargs = "*", desc = "Query all diagnostics into the Quickfix list" })
+    end, { count = 0, nargs = "*", desc = "Get all diagnostics for the Quickfix list" })
 
     vim.api.nvim_create_user_command("Ldiag", function(cargs)
         ed._l_diag(cargs)
-    end, { nargs = "*", desc = "Query current buf diagnostics into the Location list" })
+    end, { count = 0, nargs = "*", desc = "Get current buf diagnostics for the Location list" })
 
     --------------
     --- FILTER ---
