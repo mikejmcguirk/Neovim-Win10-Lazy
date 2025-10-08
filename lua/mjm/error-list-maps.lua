@@ -509,10 +509,10 @@ local rancher_keymaps = {
     --- OPEN/CLOSE/RESIZE ---
     -------------------------
 
-    { nn, pqfr.."-open-qf-list)",   qp.."p", "Open the quickfix list",   function() eo._open_qflist({ always_resize = true, height = vim.v.count }) end },
+    { nn, pqfr.."-open-qf-list)",   qp.."p", "Open the quickfix list",   function() eo._open_qflist({ always_resize = true, height = vim.v.count, print_errs = true }) end },
     { nn, pqfr.."-close-qf-list)",  qp.."o", "Close the quickfix list",  function() eo._close_qflist() end },
     { nn, pqfr.."-toggle-qf-list)", qp.."q", "Toggle the quickfix list", function() eo._toggle_qflist()  end },
-    { nn, pqfr.."-open-loclist)",   lp.."p", "Open the location list",   function() eo._open_loclist({ always_resize = true, height = vim.v.count }) end },
+    { nn, pqfr.."-open-loclist)",   lp.."p", "Open the location list",   function() eo._open_loclist({ always_resize = true, height = vim.v.count, print_errs = true }) end },
     { nn, pqfr.."-close-loclist)",  lp.."o", "Close the location list",  function() eo._close_loclist() end },
     { nn, pqfr.."-toggle-loclist)", lp.."l", "Toggle the location list", function() eo._toggle_loclist() end },
 
@@ -697,6 +697,8 @@ if vim.g.qf_rancher_set_default_cmds then
     --- GREP ---
     --------------
 
+    -- TODO: Are these correct? If so, should be renamed with _cmd at the end
+
     vim.api.nvim_create_user_command("Qgrep", function(cargs)
         eg._q_grep(cargs)
     end, { count = true, nargs = "*", desc = "Grep to the quickfix list" })
@@ -709,16 +711,18 @@ if vim.g.qf_rancher_set_default_cmds then
     --- OPEN_CLOSE_TOGGLE ---
     -------------------------
 
+    --- TODO: Move the cmd logic into the open module
+
     vim.api.nvim_create_user_command("Qopen", function(cargs)
         cargs = cargs or {}
         local count = cargs.count > 0 and cargs.count or nil
-        eo._open_qflist({ always_resize = true, height = count })
+        eo._open_qflist({ always_resize = true, height = count, print_errs = true })
     end, { count = 0 })
 
     vim.api.nvim_create_user_command("Lopen", function(cargs)
         cargs = cargs or {}
         local count = cargs.count > 0 and cargs.count or nil
-        eo._open_loclist({ always_resize = true, height = count })
+        eo._open_loclist({ always_resize = true, height = count, print_errs = true })
     end, { count = 0 })
 
     vim.api.nvim_create_user_command("Qclose", function()

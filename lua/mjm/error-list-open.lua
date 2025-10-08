@@ -42,7 +42,7 @@ local function pwin_close(win, opts)
 
     if not vim.api.nvim_win_is_valid(win) then
         local msg = "Window " .. win .. " is invalid"
-        checked_echo(msg, opts.print_errors, true)
+        checked_echo(msg, opts.print_errs, true)
         return false, { msg, "ErrorMsg" }
     end
 
@@ -55,7 +55,7 @@ local function pwin_close(win, opts)
         local ok, err = pcall(vim.api.nvim_win_close, win, opts.force) --- @type boolean, any
         if not ok then
             local msg = err or ("Unknown error closing window " .. win) --- @type string
-            checked_echo(msg, opts.print_errors, true)
+            checked_echo(msg, opts.print_errs, true)
             return false, { msg, "ErrorMsg" }
         end
 
@@ -73,7 +73,7 @@ local function pwin_close(win, opts)
 
     if not vim.api.nvim_buf_is_valid(buf) then
         local msg = "Bufnr " .. buf .. " in window " .. win .. " is not valid" --- @type string
-        checked_echo(msg, opts.print_errors, true)
+        checked_echo(msg, opts.print_errs, true)
         return false, { msg, "ErrorMsg" }
     end
 
@@ -219,8 +219,8 @@ local function clean_open_opts(opts)
         opts.keep_win = false
     end
 
-    if opts.suppress_errors == nil then
-        opts.suppress_errors = false
+    if opts.print_errs == nil then
+        opts.print_errs = false
     end
 end
 
@@ -232,11 +232,11 @@ end
 --- @param opts QfRancherOpenOpts
 --- @param tabpage integer
 --- @return boolean
-local function handle_open_list(list_win, opts, tabpage)
+local function handle_open_listwin(list_win, opts, tabpage)
     if opts.always_resize then
         resize_list_win(list_win, opts.height, { tabpage = tabpage })
     else
-        checked_echo("List win is already open", not opts.suppress_errors, false)
+        checked_echo("List win is already open", opts.print_errs, false)
     end
 
     return false
@@ -267,7 +267,7 @@ function M._open_qflist(opts)
     local qf_win = eu._get_qf_win({ tabpage = tabpage }) --- @type integer|nil
 
     if qf_win then
-        return handle_open_list(qf_win, opts, tabpage)
+        return handle_open_listwin(qf_win, opts, tabpage)
     end
 
     local ll_wins = eu._get_all_loclist_wins({ tabpage = tabpage }) --- @type integer[]
@@ -297,7 +297,7 @@ function M._open_loclist(opts)
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id --- @type integer
     if qf_id == 0 then
-        checked_echo("Window has no location list", not opts.suppress_errors, false)
+        checked_echo("Window has no location list", opts.print_errs, false)
         return false
     end
 
@@ -305,7 +305,7 @@ function M._open_loclist(opts)
     local eu = require("mjm.error-list-util")
     local ll_win = eu._get_ll_win_by_qf_id(qf_id, { tabpage = tabpage }) --- @type integer|nil
     if ll_win then
-        return handle_open_list(ll_win, opts, tabpage)
+        return handle_open_listwin(ll_win, opts, tabpage)
     end
 
     local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
@@ -396,14 +396,14 @@ end
 
 --- @return nil
 function M._toggle_qflist()
-    if not M._open_qflist({ suppress_errors = true }) then
+    if not M._open_qflist() then
         M._close_qflist()
     end
 end
 
 --- @return nil
 function M._toggle_loclist()
-    if not M._open_loclist({ suppress_errors = true }) then
+    if not M._open_loclist({}) then
         M._close_loclist()
     end
 end

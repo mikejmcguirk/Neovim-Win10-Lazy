@@ -378,7 +378,7 @@ end
 --- @field always_resize? boolean
 --- @field height? integer
 --- @field keep_win? boolean
---- @field suppress_errors? boolean
+--- @field print_errs? boolean
 
 --- @param open_opts QfRancherOpenOpts
 --- @return nil
@@ -387,19 +387,19 @@ function M._validate_open_opts(open_opts)
     vim.validate("open_opts.always_resize", open_opts.always_resize, { "boolean", "nil" })
     vim.validate("open_opts.height", open_opts.height, { "nil", "number" })
     vim.validate("open_opts.keep_win", open_opts.keep_win, { "boolean", "nil" })
-    vim.validate("open_opts.suppress_errors", open_opts.suppress_errors, { "boolean", "nil" })
+    vim.validate("open_opts.print_errs", open_opts.print_errs, { "boolean", "nil" })
 end
 
 --- @class QfRancherPWinCloseOpts
 --- @field force? boolean
---- @field print_errors? boolean
+--- @field print_errs? boolean
 
 --- @param opts QfRancherPWinCloseOpts
 --- @return nil
 function M._validate_pwin_close_opts(opts)
     vim.validate("opts", opts, "table")
     vim.validate("opts.force", opts.force, { "boolean", "nil" })
-    vim.validate("opts.print_errors", opts.print_errors, { "boolean", "nil" })
+    vim.validate("opts.print_errs", opts.print_errs, { "boolean", "nil" })
 end
 
 ------------------

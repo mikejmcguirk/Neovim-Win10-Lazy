@@ -1,6 +1,9 @@
 --- @class QfRancherStack
 local M = {}
 
+--- TODO: <leader>qQ is showing the last member of the stack, not the current one
+--- TODO: <leader>q<C-q> is not jumping to the stack number it displays
+
 ------------------------
 --- Helper Functions ---
 ------------------------
@@ -154,7 +157,7 @@ function M._history(win, count, opts)
     end
 
     if opts.always_open then
-        local open_opts = { keep_win = opts.keep_win, suppress_errors = true }
+        local open_opts = { keep_win = opts.keep_win }
         require("mjm.error-list-open")._open_list(win, open_opts)
     end
 end
