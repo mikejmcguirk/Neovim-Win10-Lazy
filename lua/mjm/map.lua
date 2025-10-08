@@ -553,7 +553,7 @@ local function map_on_bufreadpre()
 
     -- Has to be literally opening the cmdline or else the visual selection goes haywire
     local eval_cmd = ":s/\\%V.*\\%V./\\=eval(submatch(0))/<CR>"
-    Map("x", "<C-=>", eval_cmd({ noremap = true, silent = true }))
+    Map("x", "<C-=>", eval_cmd, { noremap = true, silent = true })
 
     Map("n", "<C-j>", function()
         if not require("mjm.utils").check_modifiable() then
