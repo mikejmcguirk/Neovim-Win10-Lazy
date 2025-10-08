@@ -237,7 +237,7 @@ local function handle_open_list(list_win, opts, tabpage)
     if opts.always_resize then
         resize_list_win(list_win, opts.height, { tabpage = tabpage })
     else
-        checked_echo("Loclist win is already open", opts.suppress_errors)
+        checked_echo("List win is already open", opts.suppress_errors)
     end
 
     return false
