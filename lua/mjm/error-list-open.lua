@@ -198,6 +198,7 @@ local function resize_list_win(list_win, height, opts)
 end
 
 --- @param opts QfRancherOpenOpts
+--- @return nil
 local function clean_open_opts(opts)
     require("mjm.error-list-types")._validate_open_opts(opts)
 
@@ -222,12 +223,19 @@ end
 --- OPEN ---
 ------------
 
+--- @param msg string
+--- @param suppress boolean
+--- @return nil
 local function checked_echo(msg, suppress)
     if not suppress then
         vim.api.nvim_echo({ { msg, "" } }, false, {})
     end
 end
 
+--- @param list_win integer
+--- @param opts QfRancherOpenOpts
+--- @param tabpage integer
+--- @return boolean
 local function handle_open_list(list_win, opts, tabpage)
     if opts.always_resize then
         resize_list_win(list_win, opts.height, { tabpage = tabpage })
@@ -241,11 +249,14 @@ end
 --- @param views vim.fn.winsaveview.ret[]
 --- @param keep_win boolean
 --- @param cur_win integer
+--- @return boolean
 local function open_cleanup(views, keep_win, cur_win)
     restore_views(views)
     if keep_win then
         vim.api.nvim_set_current_win(cur_win)
     end
+
+    return true
 end
 
 --- @param opts? QfRancherOpenOpts
@@ -276,9 +287,7 @@ function M._open_qflist(opts)
     local qfsplit = vim.g.qf_rancher_qfsplit or "botright"
     --- @diagnostic disable: missing-fields
     vim.api.nvim_cmd({ cmd = "copen", count = height, mods = { split = qfsplit } }, {})
-    open_cleanup(views, opts.keep_win, cur_win)
-
-    return true
+    return open_cleanup(views, opts.keep_win, cur_win)
 end
 
 --- MID: It would be better if this took win as its first arg
@@ -319,19 +328,18 @@ function M._open_loclist(opts)
 
     --- @diagnostic disable: missing-fields
     vim.api.nvim_cmd({ cmd = "lopen", count = height }, {})
-    open_cleanup(views, opts.keep_win, cur_win)
-
-    return true
+    return open_cleanup(views, opts.keep_win, cur_win)
 end
 
 --- @param win? integer
 --- @param opts QfRancherOpenOpts
+--- @return boolean
 function M._open_list(win, opts)
     --- NOTE: Because these functions return booleans, cannot use the Lua ternary
     if win then
-        M._open_loclist(opts)
+        return M._open_loclist(opts)
     else
-        M._open_qflist(opts)
+        return M._open_qflist(opts)
     end
 end
 
@@ -390,12 +398,14 @@ function M._close_loclist()
     return true
 end
 
+--- @return nil
 function M._toggle_qflist()
     if not M._open_qflist({ suppress_errors = true }) then
         M._close_qflist()
     end
 end
 
+--- @return nil
 function M._toggle_loclist()
     if not M._open_loclist({ suppress_errors = true }) then
         M._close_loclist()
@@ -428,6 +438,7 @@ end
 -----------------------
 
 --- @param opts QfRancherTabpageOpts
+--- @return nil
 function M._close_qfwins(opts)
     if vim.g.qf_rancher_debug_assertions then
         local ey = require("mjm.error-list-types")
@@ -441,6 +452,7 @@ function M._close_qfwins(opts)
 end
 
 --- @param opts QfRancherTabpageOpts
+--- @return nil
 function M._resize_qfwins(opts)
     if vim.g.qf_rancher_debug_assertions then
         local ey = require("mjm.error-list-types")
