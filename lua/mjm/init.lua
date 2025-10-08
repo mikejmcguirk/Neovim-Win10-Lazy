@@ -89,11 +89,22 @@ vim.api.nvim_set_var("qs_max_chars", 9999)
 vim.api.nvim_set_hl(0, "QuickScopePrimary", { reverse = true })
 vim.api.nvim_set_hl(0, "QuickScopeSecondary", { undercurl = true })
 
---- TODO: Use the new built-in undotree
 vim.api.nvim_set_var("undotree_WindowLayout", 3)
 -- This doesn't really need to be setup until BufReadPre, but Undotree itself autoloads well and
 -- gating this map behind an autocmd would add more startup time than just setting it
 Map("n", "<leader>u", "<cmd>UndotreeToggle<cr>")
+
+-- TODO: Wait for https://github.com/neovim/neovim/pull/36091
+-- vim.cmd("packadd nvim.undotree")
+-- Map("n", "<leader>u", function()
+--     local win_width = vim.api.nvim_win_get_width(vim.api.nvim_get_current_win())
+--     local open_width = math.floor(win_width * 0.3)
+--     open_width = math.max(open_width, 30)
+--     local command = open_width .. "vnew"
+--
+--     ---@diagnostic disable-next-line: missing-fields
+--     require("undotree").open({ command = command })
+-- end)
 
 local eager_loaded = vim.uv.hrtime()
 
