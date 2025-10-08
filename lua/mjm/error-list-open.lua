@@ -11,20 +11,39 @@ local max_qf_height = 10
 --- HELPER FUNCS ---
 --------------------
 
+--- @param msg string
+--- @param print_msgs boolean
+--- @param is_err boolean
+--- @return nil
+local function checked_echo(msg, print_msgs, is_err)
+    if not print_msgs then
+        return
+    end
+
+    if is_err then
+        vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+    else
+        vim.api.nvim_echo({ { msg, "" } }, false, {})
+    end
+end
+
+-- TODO: https://github.com/neovim/neovim/pull/33402
+-- Add variable buf removal behavior back into this function once this is resolved
+
 --- @param win integer
 --- @param opts QfRancherPWinCloseOpts
 --- @return boolean, [string, string]|nil
 local function pwin_close(win, opts)
-    opts = opts or {}
-    vim.validate("win", win, "number")
+    if vim.g.qf_rancher_debug_assertions then
+        local ey = require("mjm.error-list-types")
+        ey._validate_win(win, false)
+        ey._validate_pwin_close_opts(opts)
+    end
 
     if not vim.api.nvim_win_is_valid(win) then
-        local chunk = { "Window " .. win .. " is invalid", "ErrorMsg" }
-        if opts.print_errors then
-            vim.api.nvim_echo({ chunk }, true, { err = true })
-        end
-
-        return false, chunk
+        local msg = "Window " .. win .. " is invalid"
+        checked_echo(msg, opts.print_errors, true)
+        return false, { msg, "ErrorMsg" }
     end
 
     local force = opts.force and true or false --- @type boolean
@@ -37,11 +56,7 @@ local function pwin_close(win, opts)
         local ok, err = pcall(vim.api.nvim_win_close, win, force) --- @type boolean, any
         if not ok then
             local msg = err or ("Unknown error closing window " .. win) --- @type string
-            local chunk = { msg, "ErrorMsg" } --- @type [string, string]
-            if opts.print_errors then
-                vim.api.nvim_echo({ chunk }, true, { err = true })
-            end
-
+            checked_echo(msg, opts.print_errors, true)
             return false, { msg, "ErrorMsg" }
         end
 
@@ -49,9 +64,8 @@ local function pwin_close(win, opts)
             local buf_wins = vim.fn.win_findbuf(buf)
             local buf_list = vim.api.nvim_list_bufs()
             if #buf_wins < 1 and vim.tbl_contains(buf_list, buf) then
-                --- TODO: Add in the opt usage once the Bwipeout issue is fixed
                 vim.api.nvim_set_option_value("buflisted", false, { buf = buf })
-                vim.api.nvim_buf_delete(buf, { unload = true })
+                vim.api.nvim_buf_delete(buf, { unload = true, force = force })
             end
         end)
 
@@ -60,20 +74,12 @@ local function pwin_close(win, opts)
 
     if not vim.api.nvim_buf_is_valid(buf) then
         local msg = "Bufnr " .. buf .. " in window " .. win .. " is not valid" --- @type string
-        local chunk = { msg, "ErrorMsg" } --- @type [string, string]
-        if opts.print_errors then
-            vim.api.nvim_echo({ chunk }, true, { err = true })
-        end
-
-        return false, chunk
+        checked_echo(msg, opts.print_errors, true)
+        return false, { msg, "ErrorMsg" }
     end
 
-    local buf_delete_opts = opts.bwipeout and { force = force } or { force = force, unload = true }
-    if opts.bdel and not opts.bwipeout then
-        vim.api.nvim_set_option_value("buflisted", false, { buf = buf })
-    end
-
-    vim.api.nvim_buf_delete(buf, buf_delete_opts)
+    vim.api.nvim_set_option_value("buflisted", false, { buf = buf })
+    vim.api.nvim_buf_delete(buf, { unload = true, force = force })
     return true, nil
 end
 
@@ -81,7 +87,7 @@ end
 --- @return nil
 local function pclose_wins(wins)
     for _, win in pairs(wins) do
-        pwin_close(win, { bdel = true, force = true })
+        pwin_close(win, { force = true })
     end
 end
 
@@ -223,15 +229,6 @@ end
 --- OPEN ---
 ------------
 
---- @param msg string
---- @param suppress boolean
---- @return nil
-local function checked_echo(msg, suppress)
-    if not suppress then
-        vim.api.nvim_echo({ { msg, "" } }, false, {})
-    end
-end
-
 --- @param list_win integer
 --- @param opts QfRancherOpenOpts
 --- @param tabpage integer
@@ -240,7 +237,7 @@ local function handle_open_list(list_win, opts, tabpage)
     if opts.always_resize then
         resize_list_win(list_win, opts.height, { tabpage = tabpage })
     else
-        checked_echo("List win is already open", opts.suppress_errors)
+        checked_echo("List win is already open", not opts.suppress_errors, false)
     end
 
     return false
@@ -301,7 +298,7 @@ function M._open_loclist(opts)
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id --- @type integer
     if qf_id == 0 then
-        checked_echo("Window has no location list", opts.suppress_errors)
+        checked_echo("Window has no location list", not opts.suppress_errors, false)
         return false
     end
 
@@ -323,7 +320,7 @@ function M._open_loclist(opts)
     local views = get_views(tabpage_wins) --- @type vim.fn.winsaveview.ret[]
     local height = resolve_height_for_list(cur_win, opts.height) --- @type integer
     if qf_win then
-        pwin_close(qf_win, { bdel = true, force = true })
+        pwin_close(qf_win, { force = true })
     end
 
     --- @diagnostic disable: missing-fields
@@ -365,7 +362,7 @@ function M._close_qflist()
     end, tabpage_wins)
 
     local views = get_views(tabpage_wins) --- @type vim.fn.winsaveview.ret[]
-    pwin_close(qf_win, { bdel = true, force = true })
+    pwin_close(qf_win, { force = true })
     restore_views(views)
     return true
 end
@@ -427,7 +424,7 @@ function M._close_win_save_views(win)
     end, tabpage_wins)
 
     local views = get_views(tabpage_wins) --- @type vim.fn.winsaveview.ret[]
-    pwin_close(win, { bdel = true, force = true })
+    pwin_close(win, { force = true })
     restore_views(views)
 
     return true

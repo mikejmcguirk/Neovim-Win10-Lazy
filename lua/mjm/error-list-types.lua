@@ -372,6 +372,8 @@ end
 --- OPEN TYPES ---
 ------------------
 
+--- TODO: This should be print errs (easier to check truthy value)
+
 --- @class QfRancherOpenOpts
 --- @field always_resize? boolean
 --- @field height? integer
@@ -389,10 +391,16 @@ function M._validate_open_opts(open_opts)
 end
 
 --- @class QfRancherPWinCloseOpts
---- @field bdel? boolean
---- @field bwipeout? boolean
 --- @field force? boolean
 --- @field print_errors? boolean
+
+--- @param opts QfRancherPWinCloseOpts
+--- @return nil
+function M._validate_pwin_close_opts(opts)
+    vim.validate("opts", opts, "table")
+    vim.validate("opts.force", opts.force, { "boolean", "nil" })
+    vim.validate("opts.print_errors", opts.print_errors, { "boolean", "nil" })
+end
 
 ------------------
 --- SORT TYPES ---
