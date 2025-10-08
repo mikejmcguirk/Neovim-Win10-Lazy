@@ -182,7 +182,7 @@ end
 --- DOuble check that all view saving sufficiently respects splitkeep/g:vars
 --- Make sure g variables are doing what they should be
 --- Audit everything for handling of 0 location lists. These are still-open loclist windows where
----     the stack has been wiped
+---     the stack has been wiped. The wintype will still be "loclist"
 
 -----------
 --- MID ---

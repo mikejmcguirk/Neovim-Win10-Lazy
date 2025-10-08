@@ -272,6 +272,34 @@ function M._get_list_size(win, nr)
         or vim.fn.getqflist({ nr = adj_nr, size = 0 }).size
 end
 
+--- TODO: Duplicate logic with getting the size
+
+--- @param win integer|nil
+--- @return integer|nil
+function M._get_list_idx(win, nr)
+    if vim.g.qf_rancher_debug_assertions then
+        require("mjm.error-list-types")._validate_win(win, true)
+    end
+
+    if win then
+        local qf_id = vim.fn.getloclist(win, { id = 0 }).id
+        if qf_id == 0 then
+            vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
+            return nil
+        end
+    end
+
+    local max_nr = M._get_max_list_nr(win)
+    if max_nr == 0 then
+        vim.api.nvim_echo({ { "No list stack", "" } }, false, {})
+        return nil
+    end
+
+    local adj_nr = math.min(nr, max_nr)
+    return win and vim.fn.getloclist(win, { nr = adj_nr, idx = 0 }).idx
+        or vim.fn.getqflist({ nr = adj_nr, idx = 0 }).idx
+end
+
 --- NOTE: For the delete functions, we want to return the list_nr that was deleted, 0 for the
 --- whole stack, and -1 on failure
 

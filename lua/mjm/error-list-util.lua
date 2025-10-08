@@ -198,6 +198,19 @@ end
 --- MISC ---
 ------------
 
+--- @param win integer
+--- @param todo function
+--- @return any
+function M._locwin_check(win, todo)
+    local qf_id = vim.fn.getloclist(win, { id = 0 }).id
+    if qf_id == 0 then
+        vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
+        return
+    end
+
+    return todo()
+end
+
 --- @param x integer
 --- @param y integer
 --- @param min integer

@@ -526,12 +526,12 @@ local rancher_keymaps = {
     { nn, pqfr.."-qf-last)",  "]Q",          "Go to the last qf entry",         function() en._q_last(vim.v.count) end },
     { nn, pqfr.."-qf-pfile)", "[<C-q>",      "Go to the previous qf file",      function() en._q_pfile(vim.v.count) end },
     { nn, pqfr.."-qf-nfile)", "]<C-q>",      "Go to the next qf file",          function() en._q_nfile(vim.v.count) end },
-    { nn, pqfr.."-ll-prev)",  "[l",          "Go to a previous loclist entry",  function() en._l_prev(vim.v.count) end },
-    { nn, pqfr.."-ll-next)",  "]l",          "Go to a later loclist entry",     function() en._l_next(vim.v.count) end },
-    { nn, pqfr.."-ll-rewind)","[L",          "Go to the first loclist entry",   function() en._l_rewind(vim.v.count) end },
-    { nn, pqfr.."-ll-last)",  "]L",          "Go to the last loclist entry",    function() en._l_last(vim.v.count) end },
-    { nn, pqfr.."-ll-pfile)", "[<C-l>",      "Go to the previous loclist file", function() en._l_pfile(vim.v.count) end },
-    { nn, pqfr.."-ll-nfile)", "]<C-l>",      "Go to the next loclist file",     function() en._l_nfile(vim.v.count) end },
+    { nn, pqfr.."-ll-prev)",  "[l",          "Go to a previous loclist entry",  function() en._l_prev(vim.api.nvim_get_current_win(), vim.v.count) end },
+    { nn, pqfr.."-ll-next)",  "]l",          "Go to a later loclist entry",     function() en._l_next(vim.api.nvim_get_current_win(), vim.v.count) end },
+    { nn, pqfr.."-ll-rewind)","[L",          "Go to the first loclist entry",   function() en._l_rewind(vim.api.nvim_get_current_win(), vim.v.count) end },
+    { nn, pqfr.."-ll-last)",  "]L",          "Go to the last loclist entry",    function() en._l_last(vim.api.nvim_get_current_win(), vim.v.count) end },
+    { nn, pqfr.."-ll-pfile)", "[<C-l>",      "Go to the previous loclist file", function() en._l_pfile(vim.api.nvim_get_current_win(), vim.v.count) end },
+    { nn, pqfr.."-ll-nfile)", "]<C-l>",      "Go to the next loclist file",     function() en._l_nfile(vim.api.nvim_get_current_win(), vim.v.count) end },
 
     ------------
     --- SORT ---
@@ -743,60 +743,61 @@ if vim.g.qf_rancher_set_default_cmds then
 
     -- TODO: There's a very obvious opportunity here, and in other places here, to do this
     -- with a table iteration
+
     vim.api.nvim_create_user_command("Qprev", function(cargs)
-        en._q_prev(cargs.count)
+        en._q_prev_cmd(cargs)
     end, { count = 0, desc = "Go to a previous qf entry" })
 
     vim.api.nvim_create_user_command("Qnext", function(cargs)
-        en._q_next(cargs.count)
+        en._q_next_cmd(cargs)
     end, { count = 0, desc = "Go to a later qf entry" })
 
     vim.api.nvim_create_user_command("Qrewind", function(cargs)
-        en._q_rewind(cargs.count)
+        en._q_rewind_cmd(cargs)
     end, { count = 0, desc = "Go to the first or count qf entry" })
 
     vim.api.nvim_create_user_command("Qlast", function(cargs)
-        en._q_last(cargs.count)
+        en._q_last_cmd(cargs)
     end, { count = 0, desc = "Go to the last or count qf entry" })
 
     vim.api.nvim_create_user_command("Qq", function(cargs)
-        en._q_q(cargs.count)
+        en._q_q_cmd(cargs)
     end, { count = 0, desc = "Go to the current qf entry" })
 
     vim.api.nvim_create_user_command("Qpfile", function(cargs)
-        en._q_pfile(cargs.count)
+        en._q_pfile_cmd(cargs)
     end, { count = 0, desc = "Go to the previous qf file" })
 
     vim.api.nvim_create_user_command("Qnfile", function(cargs)
-        en._q_nfile(cargs.count)
+        en._q_nfile_cmd(cargs)
     end, { count = 0, desc = "Go to the next qf file" })
 
     vim.api.nvim_create_user_command("Lprev", function(cargs)
-        en._l_prev(cargs.count)
+        en._l_prev_cmd(cargs)
     end, { count = 0, desc = "Go to a previous loclist entry" })
 
     vim.api.nvim_create_user_command("Lnext", function(cargs)
-        en._l_next(cargs.count)
+        en._l_next_cmd(cargs)
     end, { count = 0, desc = "Go to a later loclist entry" })
 
     vim.api.nvim_create_user_command("Lrewind", function(cargs)
-        en._l_rewind(cargs.count)
+        en._l_rewind_cmd(cargs)
     end, { count = 0, desc = "Go to the first or count loclist entry" })
 
     vim.api.nvim_create_user_command("Llast", function(cargs)
-        en._l_last(cargs.count)
+        en._l_last_cmd(cargs)
     end, { count = 0, desc = "Go to the last or count loclist entry" })
 
     vim.api.nvim_create_user_command("Ll", function(cargs)
-        en._l_l(cargs.count)
+        en._l_l_cmd(cargs)
     end, { count = 0, desc = "Go to the current loclist entry" })
 
     vim.api.nvim_create_user_command("Lpfile", function(cargs)
-        en._l_pfile(cargs.count)
+        en._l_pfile_cmd(cargs)
     end, { count = 0, desc = "Go to the previous loclist file" })
 
     vim.api.nvim_create_user_command("Lnfile", function(cargs)
-        en._l_nfile(cargs.count)
+        en._l_nfile_cmd(cargs)
     end, { count = 0, desc = "Go to the next loclist file" })
 
     -----------------
