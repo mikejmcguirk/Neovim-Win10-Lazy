@@ -46,14 +46,13 @@ local function pwin_close(win, opts)
         return false, { msg, "ErrorMsg" }
     end
 
-    local force = opts.force and true or false --- @type boolean
     local tabpages = vim.api.nvim_list_tabpages() --- @type integer[]
     local win_tabpage = vim.api.nvim_win_get_tabpage(win) --- @type integer
     local win_tabpage_wins = vim.api.nvim_tabpage_list_wins(win_tabpage) --- @type integer[]
     local buf = vim.api.nvim_win_get_buf(win) --- @type integer
 
     if #tabpages > 1 or #win_tabpage_wins > 1 then
-        local ok, err = pcall(vim.api.nvim_win_close, win, force) --- @type boolean, any
+        local ok, err = pcall(vim.api.nvim_win_close, win, opts.force) --- @type boolean, any
         if not ok then
             local msg = err or ("Unknown error closing window " .. win) --- @type string
             checked_echo(msg, opts.print_errors, true)
@@ -65,7 +64,7 @@ local function pwin_close(win, opts)
             local buf_list = vim.api.nvim_list_bufs()
             if #buf_wins < 1 and vim.tbl_contains(buf_list, buf) then
                 vim.api.nvim_set_option_value("buflisted", false, { buf = buf })
-                vim.api.nvim_buf_delete(buf, { unload = true, force = force })
+                vim.api.nvim_buf_delete(buf, { unload = true, force = opts.force })
             end
         end)
 
@@ -79,7 +78,7 @@ local function pwin_close(win, opts)
     end
 
     vim.api.nvim_set_option_value("buflisted", false, { buf = buf })
-    vim.api.nvim_buf_delete(buf, { unload = true, force = force })
+    vim.api.nvim_buf_delete(buf, { unload = true, force = opts.force })
     return true, nil
 end
 
