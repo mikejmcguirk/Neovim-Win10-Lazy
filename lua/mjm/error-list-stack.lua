@@ -83,13 +83,9 @@ end
 --- @param arithmetic function
 --- @return nil
 local function l_change_history(win, count, arithmetic)
-    local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
-    if qf_id == 0 then
-        vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
-        return
-    end
-
-    change_history(win, count, arithmetic)
+    require("mjm.error-list-util")._locwin_check(win, function()
+        change_history(win, count, arithmetic)
+    end)
 end
 
 --- @param win integer
@@ -177,13 +173,9 @@ function M._l_history(win, count, opts)
     local ey = require("mjm.error-list-types")
     ey._validate_win(win, false)
 
-    local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
-    if qf_id == 0 then
-        vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
-        return
-    end
-
-    M._history(win, count, opts)
+    require("mjm.error-list-util")._locwin_check(win, function()
+        M._history(win, count, opts)
+    end)
 end
 
 --- @param cargs vim.api.keyset.create_user_command.command_args
@@ -238,15 +230,9 @@ end
 --- @param count integer
 --- @return nil
 function M._l_del(win, count)
-    require("mjm.error-list-types")._validate_count(count)
-
-    local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
-    if qf_id == 0 then
-        vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
-        return
-    end
-
-    M._del(win, count)
+    require("mjm.error-list-util")._locwin_check(win, function()
+        M._del(win, count)
+    end)
 end
 
 ------------------

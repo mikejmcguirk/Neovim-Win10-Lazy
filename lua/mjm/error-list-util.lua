@@ -202,6 +202,10 @@ end
 --- @param todo function
 --- @return any
 function M._locwin_check(win, todo)
+    if vim.g.qf_rancher_debug_assertions then
+        require("mjm.error-list-types")._validate_win(win, false)
+    end
+
     local qf_id = vim.fn.getloclist(win, { id = 0 }).id
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
