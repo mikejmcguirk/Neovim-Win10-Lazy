@@ -14,14 +14,12 @@ ApiMap("n", ")", "<nop>", { noremap = true })
 
 -- Works for Z because all default functionality is overwritten
 Map("n", "Z", "<nop>")
-Map("n", "ZQ", function()
-    Cmd({ cmd = "qall", bang = true }, {})
-end)
-
-Map("n", "ZZ", "<cmd>lockmarks silent up<cr>")
 Map("n", "ZA", "<cmd>lockmarks silent wa<cr>")
 Map("n", "ZC", "<cmd>lockmarks wqa<cr>")
 Map("n", "ZR", "<cmd>lockmarks silent wa | restart<cr>")
+Map("n", "ZQ", "<cmd>qall!<cr>")
+Map("n", "ZZ", "<cmd>lockmarks silent up<cr>")
+
 -- FUTURE: Can pare this down once extui is stabilized
 Map("n", "ZS", function()
     if not require("mjm.utils").check_modifiable() then
@@ -32,11 +30,10 @@ Map("n", "ZS", function()
         vim.cmd("lockmarks silent up | so")
     end)
 
-    if status then
-        return
+    if not status then
+        local msg = result or "Unknown error on save and source"
+        vim.api.nvim_echo({ { msg } }, true, { err = true })
     end
-
-    vim.api.nvim_echo({ { result or "Unknown error on save and source" } }, true, { err = true })
 end)
 
 for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
@@ -72,16 +69,21 @@ end
 ---@type {[string]: string}
 local tmux_cmd_map = { ["h"] = "L", ["j"] = "D", ["k"] = "U", ["l"] = "R" }
 
----@param direction string
+---@param dir string
 ---@return nil
-local do_tmux_move = function(direction)
-    if vim.fn.system("tmux display-message -p '#{window_zoomed_flag}'") == "1\n" then
+local do_tmux_move = function(dir)
+    if vim.fn.getenv("TMUX") == vim.NIL then
         return
     end
 
-    pcall(function()
-        vim.fn.system([[tmux select-pane -]] .. tmux_cmd_map[direction])
-    end)
+    local zoom_cmd = { "tmux", "display-message", "-p", "#{window_zoomed_flag}" }
+    local result = vim.system(zoom_cmd, { text = true }):wait()
+    if result.code == 0 and result.stdout == "1\n" then
+        return
+    end
+
+    local cmd_parts = { "tmux", "select-pane", "-" .. tmux_cmd_map[dir] }
+    vim.system(cmd_parts, { text = true, timeout = 1000 })
 end
 
 ---@param nvim_cmd string
@@ -92,10 +94,10 @@ local win_move_tmux = function(nvim_cmd)
         return
     end
 
-    local start_win = vim.fn.winnr() ---@type integer
+    local start_win = vim.api.nvim_get_current_win() ---@type integer
     vim.cmd("wincmd " .. nvim_cmd)
 
-    if vim.fn.winnr() == start_win then
+    if vim.api.nvim_get_current_win() == start_win then
         do_tmux_move(nvim_cmd)
     end
 end
@@ -155,42 +157,36 @@ end)
 ApiMap("n", "<C-w>c", "<nop>", { noremap = true })
 ApiMap("n", "<C-w><C-c>", "<nop>", { noremap = true })
 
-Autocmd("TabNew", {
-    group = Augroup("map-tab-navigation", { clear = true }),
-    once = true,
-    callback = function()
-        --- MID: Missing cmds:
-        --- - tabclose
-        --- - tabnew
-        --- - tabmove
-        --- - tabonly
-        --- Leaves ctrl-tab/ctrl-shift-tab open
-        ApiMap("n", "<tab>", "gt", { noremap = true })
-        ApiMap("n", "<S-tab>", "gT", { noremap = true })
-        local tab = 10
-        --- TODO: Appears I might need to manually send these down thru tmux
-        for _ = 1, 10 do
-            -- Otherwise a closure is formed around tab
-            local this_tab = tab -- 10, 1, 2, 3, 4, 5, 6, 7, 8, 9
-            local mod_tab = this_tab % 10 -- 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
-            ApiMap("n", string.format("<M-%d>", mod_tab), "<nop>", {
-                noremap = true,
-                callback = function()
-                    local tabs = vim.api.nvim_list_tabpages()
-                    if #tabs < this_tab then
-                        return
-                    end
+--- MID: Missing cmds:
+--- - tabclose
+--- - tabnew
+--- - tabmove
+--- - tabonly
 
-                    vim.api.nvim_set_current_tabpage(tabs[this_tab])
-                end,
-            })
+--- Leaves ctrl-tab/ctrl-shift-tab open
+ApiMap("n", "<tab>", "gt", { noremap = true })
+ApiMap("n", "<S-tab>", "gT", { noremap = true })
 
-            tab = mod_tab + 1
-        end
+--- TODO: Appears I might need to manually send these down thru tmux
+local tab = 10
+for _ = 1, 10 do
+    -- Otherwise a closure is formed around tab
+    local this_tab = tab -- 10, 1, 2, 3, 4, 5, 6, 7, 8, 9
+    local mod_tab = this_tab % 10 -- 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
+    ApiMap("n", string.format("<M-%d>", mod_tab), "<nop>", {
+        noremap = true,
+        callback = function()
+            local tabs = vim.api.nvim_list_tabpages()
+            if #tabs < this_tab then
+                return
+            end
 
-        vim.api.nvim_del_augroup_by_name("map-tab-navigation")
-    end,
-})
+            vim.api.nvim_set_current_tabpage(tabs[this_tab])
+        end,
+    })
+
+    tab = mod_tab + 1
+end
 
 ------------------
 -- Setting Maps --
@@ -201,21 +197,15 @@ Autocmd("TabNew", {
 -- Prevent falling back to defaults
 ApiMap("n", "\\", "<nop>", noremap)
 
-ApiMap("n", "\\s", "<nop>", {
-    noremap = true,
-    callback = function()
-        local is_spell = vim.api.nvim_get_option_value("spell", { win = 0 })
-        vim.api.nvim_set_option_value("spell", not is_spell, { win = 0 })
-    end,
-})
+Map("n", "\\s", function()
+    local is_spell = vim.api.nvim_get_option_value("spell", { win = 0 })
+    vim.api.nvim_set_option_value("spell", not is_spell, { win = 0 })
+end)
 
-ApiMap("n", "\\w", "<nop>", {
-    noremap = true,
-    callback = function()
-        local is_wrap = vim.api.nvim_get_option_value("wrap", { win = 0 })
-        vim.api.nvim_set_option_value("wrap", not is_wrap, { win = 0 })
-    end,
-})
+Map("n", "\\w", function()
+    local is_wrap = vim.api.nvim_get_option_value("wrap", { win = 0 })
+    vim.api.nvim_set_option_value("wrap", not is_wrap, { win = 0 })
+end)
 
 --------------------
 -- MODE SWITCHING --
@@ -234,8 +224,9 @@ end, { expr = true, silent = true })
 --- omapped so that Quickscope highlighting properly exits
 Map({ "o", "x" }, "<C-c>", "<esc>")
 
-Map("n", "v", "mvv", { silent = true })
-Map("n", "V", "mvV", { silent = true })
+ApiMap("n", "v", "mvv", noremap)
+ApiMap("n", "V", "mvV", noremap)
+ApiMap("n", "<C-v>", "mv<C-v>", noremap)
 
 ----------------
 -- Navigation --
@@ -243,25 +234,10 @@ Map("n", "V", "mvV", { silent = true })
 
 --- Keep these from adding to the jumplist. :h jump-motions
 
-Map({ "n", "x" }, "H", function()
-    local cmd = { cmd = "normal", args = { "H" }, bang = true, mods = { keepjumps = true } }
-    vim.api.nvim_cmd(cmd, {})
-end)
-
-Map({ "n", "x" }, "M", function()
-    local cmd = { cmd = "normal", args = { "M" }, bang = true, mods = { keepjumps = true } }
-    vim.api.nvim_cmd(cmd, {})
-end)
-
-Map({ "n", "x" }, "L", function()
-    local cmd = { cmd = "normal", args = { "L" }, bang = true, mods = { keepjumps = true } }
-    vim.api.nvim_cmd(cmd, {})
-end)
-
-Map({ "n", "x" }, "%", function()
-    local cmd = { cmd = "normal", args = { "%" }, bang = true, mods = { keepjumps = true } }
-    vim.api.nvim_cmd(cmd, {})
-end)
+Map({ "n", "x" }, "H", "<cmd>keepjumps norm! H<cr>")
+Map({ "n", "x" }, "L", "<cmd>keepjumps norm! L<cr>")
+Map({ "n", "x" }, "M", "<cmd>keepjumps norm! M<cr>")
+Map({ "n", "x" }, "%", "<cmd>keepjumps norm! %<cr>")
 
 Map({ "n", "x" }, "{", function()
     local args = vim.v.count1 .. "{"
@@ -362,13 +338,8 @@ Map("n", "n", "nzzzv")
 --- MID: These can be re-written as functions. For omode, get the current line. For vmode, can use
 --- getregionpos to get the boundaries and extend by count appropriately
 
-Map("o", "a_", function()
-    vim.cmd("norm! ggVG")
-end, { silent = true })
-
-Map("x", "a_", function()
-    vim.cmd("norm! ggoVG")
-end, { silent = true })
+Map("o", "a_", "<cmd>norm! ggVG<cr>", { silent = true })
+Map("x", "a_", "<cmd>norm! ggoVG<cr>", { silent = true })
 
 Map("o", "i_", function()
     vim.cmd("norm! _v" .. vim.v.count1 .. "g_")
@@ -410,17 +381,13 @@ local function map_on_bufreadpre()
 
     -- "S" enters insert with the proper indent. "I" left on default behavior
     for _, map in pairs({ "i", "a", "A" }) do
-        ApiMap("n", map, "<nop>", {
-            expr = true,
-            silent = true,
-            callback = function()
-                if string.match(vim.api.nvim_get_current_line(), "^%s*$") then
-                    return '"_S'
-                else
-                    return map
-                end
-            end,
-        })
+        Map("n", map, function()
+            if string.match(vim.api.nvim_get_current_line(), "^%s*$") then
+                return '"_S'
+            else
+                return map
+            end
+        end, { expr = true })
     end
 
     ApiMap("n", "gI", "g^i", noremap)
@@ -531,7 +498,7 @@ local function map_on_bufreadpre()
         -- Done using a view instead of a mark to prevent visible screen shake
         local view = vim.fn.winsaveview() ---@type vim.fn.winsaveview.ret
         -- By default, [count]J joins one fewer lines than indicated by the relative line numbers
-        vim.cmd("norm! " .. vim.v.count1 + 1 .. "J")
+        vim.api.nvim_cmd({ cmd = "norm", args = { vim.v.count1 + 1 .. "J" }, bang = true }, {})
         vim.fn.winrestview(view)
     end, { silent = true })
 
@@ -545,10 +512,11 @@ local function map_on_bufreadpre()
 
         local cur_mode = vim.api.nvim_get_mode().mode ---@type string
         if cur_mode ~= "V" and cur_mode ~= "Vs" then
-            return vim.notify("Not in visual line mode")
+            vim.api.nvim_echo({ { "Not in visual line mode", "" } }, false, {})
+            return
         end
 
-        vim.opt.lazyredraw = true
+        vim.api.nvim_set_option_value("lz", true, { scope = "global" })
         opts = opts or {}
         -- Get before leaving visual mode
         local vcount1 = vim.v.count1 + (opts.upward and 1 or 0) ---@type integer
@@ -575,24 +543,17 @@ local function map_on_bufreadpre()
             vim.api.nvim_buf_set_mark(0, "]", row_1, end_col, {})
             vim.cmd("silent norm! `[=`]")
         elseif offset_count > 1 then
-            vim.api.nvim_echo(
-                { { result or "Unknown error in visual_move" } },
-                true,
-                { err = true }
-            )
+            local msg = result or "Unknown error in visual_move"
+            vim.api.nvim_echo({ { msg } }, true, { err = true })
         end
 
-        vim.cmd("norm! gv")
-        vim.opt.lazyredraw = false
+        vim.api.nvim_cmd({ cmd = "norm", args = { "gv" }, bang = true }, {})
+        vim.api.nvim_set_option_value("lz", false, { scope = "global" })
     end
 
-    Map(
-        "x",
-        "<C-=>",
-        -- Has to be literally opening the cmdline or else the visual selection goes haywire
-        ":s/\\%V.*\\%V./\\=eval(submatch(0))/<CR>",
-        { noremap = true, silent = true }
-    )
+    -- Has to be literally opening the cmdline or else the visual selection goes haywire
+    local eval_cmd = ":s/\\%V.*\\%V./\\=eval(submatch(0))/<CR>"
+    Map("x", "<C-=>", eval_cmd({ noremap = true, silent = true }))
 
     Map("n", "<C-j>", function()
         if not require("mjm.utils").check_modifiable() then
@@ -709,17 +670,17 @@ Autocmd({ "BufReadPre", "BufNewFile" }, {
 })
 
 local function map_on_cmdlineenter()
-    ApiMap("c", "<C-a>", "<C-b>", { noremap = true })
-    ApiMap("c", "<C-d>", "<Del>", { noremap = true })
+    ApiMap("c", "<C-a>", "<C-b>", noremap)
+    ApiMap("c", "<C-d>", "<Del>", noremap)
 
     Map("c", "<C-k>", "<c-\\>estrpart(getcmdline(), 0, getcmdpos()-1)<cr>")
-    ApiMap("c", "<C-b>", "<left>", { noremap = true })
-    ApiMap("c", "<C-f>", "<right>", { noremap = true })
-    ApiMap("c", "<M-b>", "<S-left>", { noremap = true })
-    ApiMap("c", "<M-f>", "<S-right>", { noremap = true })
+    ApiMap("c", "<C-b>", "<left>", noremap)
+    ApiMap("c", "<C-f>", "<right>", noremap)
+    ApiMap("c", "<M-b>", "<S-left>", noremap)
+    ApiMap("c", "<M-f>", "<S-right>", noremap)
 
-    ApiMap("c", "<M-p>", "<up>", { noremap = true })
-    ApiMap("c", "<M-n>", "<down>", { noremap = true })
+    ApiMap("c", "<M-p>", "<up>", noremap)
+    ApiMap("c", "<M-n>", "<down>", noremap)
 end
 
 Autocmd("CmdlineEnter", {
@@ -733,25 +694,25 @@ Autocmd("CmdlineEnter", {
 
 local function map_on_insertenter()
     -- Bash style typing
-    ApiMap("i", "<C-a>", "<C-o>I", { noremap = true })
-    ApiMap("i", "<C-e>", "<End>", { noremap = true })
-    ApiMap("i", "<C-b>", "<left>", { noremap = true })
-    ApiMap("i", "<C-f>", "<right>", { noremap = true })
-    ApiMap("i", "<M-b>", "<S-left>", { noremap = true })
-    ApiMap("i", "<M-f>", "<S-right>", { noremap = true })
+    ApiMap("i", "<C-a>", "<C-o>I", noremap)
+    ApiMap("i", "<C-e>", "<End>", noremap)
+    ApiMap("i", "<C-b>", "<left>", noremap)
+    ApiMap("i", "<C-f>", "<right>", noremap)
+    ApiMap("i", "<M-b>", "<S-left>", noremap)
+    ApiMap("i", "<M-f>", "<S-right>", noremap)
 
-    ApiMap("i", "<C-d>", "<Del>", { noremap = true })
-    ApiMap("i", "<M-d>", "<C-g>u<C-o>dw", { noremap = true })
-    ApiMap("i", "<C-k>", "<C-g>u<C-o>D", { noremap = true })
-    ApiMap("i", "<C-l>", "<esc>u", { noremap = true })
+    ApiMap("i", "<C-d>", "<Del>", noremap)
+    ApiMap("i", "<M-d>", "<C-g>u<C-o>dw", noremap)
+    ApiMap("i", "<C-k>", "<C-g>u<C-o>D", noremap)
+    ApiMap("i", "<C-l>", "<esc>u", noremap)
 
     -- Since <C-d> is remapped
-    ApiMap("i", "<C-m>", "<C-d>", { noremap = true })
+    ApiMap("i", "<C-m>", "<C-d>", noremap)
 
-    ApiMap("i", "<M-j>", "<down>", { noremap = true })
-    ApiMap("i", "<M-k>", "<up>", { noremap = true })
+    ApiMap("i", "<M-j>", "<down>", noremap)
+    ApiMap("i", "<M-k>", "<up>", noremap)
 
-    ApiMap("i", "<M-e>", "<C-o>ze", { noremap = true, silent = true })
+    ApiMap("i", "<M-e>", "<C-o>ze", noremap)
 
     -- i_Ctrl-v always shows the simplified form of a key, Ctrl-Shift-v must be used to show the
     -- unsimplified form. Use this map since I have Ctrl-Shift-v as terminal paste

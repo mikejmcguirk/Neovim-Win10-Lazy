@@ -18,3 +18,4 @@ vim.cmd.packadd({ vim.fn.escape("specialist.nvim", " "), bang = true, magic = { 
 -- I doubt harpoon is the only use case for this type of thing
 -- The issue right now is that the plug maps are made before the underlying data is ready, I
 -- think. Because If a plug map doesn't find anything, I think it just moves on gracefully
+-- TODO: dj on the last line does not delete the current one. Unsure if this is default or not
