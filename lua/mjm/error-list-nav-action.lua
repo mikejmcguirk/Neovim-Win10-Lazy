@@ -17,7 +17,7 @@ local function get_list_new_idx(win, count, arithmetic)
         vim.validate("arithmetic", arithmetic, "callable")
     end
 
-    local count1 = require("mjm.error-list-util")._count_to_count1(count) --- @type integer|nil
+    local count1 = require("mjm.error-list-types")._count_to_count1(count) --- @type integer|nil
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
     local size = et._get_list_size(win, 0) --- @type integer|nil
     if not size or size < 1 then
@@ -287,7 +287,7 @@ local function file_nav_wrap(win, count, cmd, backup_cmd)
         return nil
     end
 
-    local adj_count = require("mjm.error-list-util")._count_to_count1(count) --- @type integer
+    local adj_count = require("mjm.error-list-types")._count_to_count1(count) --- @type integer
 
     --- @type boolean, string
     local ok, err = pcall(vim.api.nvim_cmd, { cmd = cmd, count = adj_count }, {})

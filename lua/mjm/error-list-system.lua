@@ -8,10 +8,9 @@ local M = {}
 --- @param what QfRancherWhat
 --- @return nil
 local function validate_system_do(system_opts, what)
-    local eu = require("mjm.error-list-util")
     local ey = require("mjm.error-list-types")
     ey._validate_system_opts(system_opts)
-    eu._is_valid_str_list(system_opts.cmd_parts)
+    ey._is_valid_str_list(system_opts.cmd_parts)
     ey._validate_what(what)
 end
 

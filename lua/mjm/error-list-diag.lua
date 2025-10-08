@@ -31,7 +31,7 @@ end
 
 --- LOW: I think that, for something that is checked in a hot loop, this is faster than having
 --- to re-require it every iteration. Could check for fastest method though
-local severity_map = require("mjm.error-list-util")._severity_map ---@type table<integer, string>
+local severity_map = require("mjm.error-list-types")._severity_map ---@type table<integer, string>
 
 ---@param d vim.Diagnostic
 ---@return vim.quickfix.entry

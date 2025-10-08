@@ -80,7 +80,7 @@ local function get_grep_parts(pattern, input_type, locations)
     if vim.g.qf_rancher_debug_assertions then
         vim.validate("pattern", pattern, "string")
         vim.validate("input_type", input_type, "string")
-        require("mjm.error-list-util")._is_valid_str_list(locations)
+        require("mjm.error-list-types")._is_valid_str_list(locations)
     end
 
     vim.validate("g:qf_rancher_grepprg", vim.g.qf_rancher_grepprg, "string")

@@ -1,39 +1,6 @@
 --- @class QfRancherUtils
 local M = {}
 
---- TODO: Move these to types
-
---- @param count integer
---- return integer
-function M._count_to_count1(count)
-    require("mjm.error-list-types")._validate_count(count)
-    return math.max(count, 1)
-end
-
-M._severity_map = {
-    [vim.diagnostic.severity.ERROR] = "E",
-    [vim.diagnostic.severity.WARN] = "W",
-    [vim.diagnostic.severity.INFO] = "I",
-    [vim.diagnostic.severity.HINT] = "H",
-} ---@type table<integer, string>
-
-M._severity_unmap = {
-    E = vim.diagnostic.severity.ERROR,
-    W = vim.diagnostic.severity.WARN,
-    I = vim.diagnostic.severity.INFO,
-    H = vim.diagnostic.severity.HINT,
-} ---@type table<string, integer>
-
---- @param table string[]
---- @return nil
-function M._is_valid_str_list(table)
-    vim.validate("table", table, "table")
-    for k, v in ipairs(table) do
-        assert(type(k) == "number", "Key " .. vim.inspect(k) .. " is not a number")
-        assert(type(v) == "string", "Item " .. vim.inspect(v) .. " is not a string")
-    end
-end
-
 -----------------
 --- CMD UTILS ---
 -----------------
@@ -42,7 +9,7 @@ end
 --- @return string|nil
 function M._find_cmd_pattern(fargs)
     if vim.g.qf_rancher_debug_assertions then
-        M._is_valid_str_list(fargs)
+        require("mjm.error-list-types")._is_valid_str_list(fargs)
     end
 
     for _, arg in ipairs(fargs) do
@@ -59,8 +26,9 @@ end
 --- @param default string
 function M._check_cmd_arg(fargs, valid_args, default)
     if vim.g.qf_rancher_debug_assertions then
-        M._is_valid_str_list(fargs)
-        M._is_valid_str_list(valid_args)
+        local ey = require("mjm.error-list-types")
+        ey._is_valid_str_list(fargs)
+        ey._is_valid_str_list(valid_args)
         vim.validate("default", default, "string")
     end
 

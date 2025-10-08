@@ -174,7 +174,7 @@ local function check_lcol_type(a, b, check)
 end
 
 ---@type table<string, integer>
-local severity_unmap = require("mjm.error-list-util")._severity_unmap
+local severity_unmap = require("mjm.error-list-types")._severity_unmap
 
 --- @param a table
 --- @param b table

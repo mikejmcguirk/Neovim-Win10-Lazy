@@ -221,6 +221,7 @@ end
 
 --- TODO: Re-organize so opens/closes and such are together. Easier to find commonalities between
 --- qf and loclist code
+--- TODO: When opening an empty qflist, a no list stack msg shows
 
 ------------
 --- OPEN ---

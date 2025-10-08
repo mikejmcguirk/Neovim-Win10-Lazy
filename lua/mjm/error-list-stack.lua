@@ -40,7 +40,7 @@ local function change_history(win, count, arithmetic)
     end
 
     local cur_list_nr = et._get_cur_list_nr(win) --- @type integer
-    local count1 = require("mjm.error-list-util")._count_to_count1(count) --- @type integer
+    local count1 = require("mjm.error-list-types")._count_to_count1(count) --- @type integer
     local new_list_nr = arithmetic(cur_list_nr, count1, 1, stack_len) --- @type integer
 
     local cmd = win and "lhistory" or "chistory" --- @type string
