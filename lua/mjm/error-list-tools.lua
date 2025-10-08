@@ -323,7 +323,7 @@ function M._del_all(win)
             return result
         end
 
-        eo._close_qflists({ all_tabpages = true })
+        eo.close_qfwins({ all_tabpages = true })
         return 0
     end
 

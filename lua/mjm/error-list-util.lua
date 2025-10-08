@@ -276,7 +276,7 @@ end
 --- lists to do some operation on, it should call this to get the list, then run the operation
 --- If we find cases we can't handle, we need to expand or break out these functions as needed
 
-local function resolve_tabpages(opts)
+function M._resolve_tabpages(opts)
     if vim.g.qf_rancher_debug_assertions then
         require("mjm.error-list-types")._validate_tabpage_opts(opts)
     end
@@ -319,7 +319,7 @@ local function get_loclist_wins(qf_id, opts)
         return wins
     end
 
-    local tabpages = resolve_tabpages(opts) --- @type integer[]
+    local tabpages = M._resolve_tabpages(opts) --- @type integer[]
     for _, tabpage in ipairs(tabpages) do
         local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
         for _, t_win in ipairs(tabpage_wins) do
@@ -344,7 +344,7 @@ local function get_loclist_win(qf_id, opts)
         return nil
     end
 
-    local tabpages = resolve_tabpages(opts) --- @type integer[]
+    local tabpages = M._resolve_tabpages(opts) --- @type integer[]
     for _, tabpage in ipairs(tabpages) do
         local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
         for _, t_win in ipairs(tabpage_wins) do
@@ -404,9 +404,28 @@ end
 
 --- @param opts QfRancherTabpageOpts
 --- @return integer[]
+function M._get_all_loclist_wins(opts)
+    local ll_wins = {}
+    local tabpages = M._resolve_tabpages(opts)
+
+    for _, tabpage in ipairs(tabpages) do
+        local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage)
+        for _, win in ipairs(tabpage_wins) do
+            local wintype = vim.fn.win_gettype(win)
+            if wintype == "loclist" then
+                table.insert(ll_wins, win)
+            end
+        end
+    end
+
+    return ll_wins
+end
+
+--- @param opts QfRancherTabpageOpts
+--- @return integer[]
 function M._get_qf_wins(opts)
     local wins = {}
-    local tabpages = resolve_tabpages(opts) --- @type integer[]
+    local tabpages = M._resolve_tabpages(opts) --- @type integer[]
 
     for _, tabpage in ipairs(tabpages) do
         local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
@@ -424,7 +443,7 @@ end
 --- @param opts QfRancherTabpageOpts
 --- @return integer|nil
 function M._get_qf_win(opts)
-    local tabpages = resolve_tabpages(opts) --- @type integer[]
+    local tabpages = M._resolve_tabpages(opts) --- @type integer[]
 
     for _, tabpage in ipairs(tabpages) do
         local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
