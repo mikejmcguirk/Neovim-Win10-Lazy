@@ -253,6 +253,8 @@ end
 --- DOCUMENT ---
 ----------------
 
+--- When writing the plugin description, don't focus on overly pastoral ranching imagery, as the
+--- poitn of the Quickfix list is to be quick
 --- The new/add/replace behavior
 --- How smartcase works by default (the "vimsmart" thing). Does it make sense?
 ---     Have to document this in the more general sense with "smartcase" and "insensitive" also as

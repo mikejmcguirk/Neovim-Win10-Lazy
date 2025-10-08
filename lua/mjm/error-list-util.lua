@@ -223,6 +223,8 @@ function M._win_can_have_loclist(win)
     return false
 end
 
+--- TODO: Only used in preview. Feels unnecessary
+
 --- @param win integer|nil
 --- @return string|nil
 function M._get_listtype(win)
@@ -437,16 +439,16 @@ function M._get_list_win(win, opts)
     end
 end
 
---- @param win integer|nil
---- @param opts QfRancherTabpageOpts
---- @return integer[]
-function M._get_list_wins(win, opts)
-    if win then
-        return M._get_loclist_wins_by_win(win, opts)
-    else
-        return M._get_qf_wins(opts)
-    end
-end
+-- --- @param win integer|nil
+-- --- @param opts QfRancherTabpageOpts
+-- --- @return integer[]
+-- function M._get_list_wins(win, opts)
+--     if win then
+--         return M._get_loclist_wins_by_win(win, opts)
+--     else
+--         return M._get_qf_wins(opts)
+--     end
+-- end
 
 -- TODO: Generalize out this function
 

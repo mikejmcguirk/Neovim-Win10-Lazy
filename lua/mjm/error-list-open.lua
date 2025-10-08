@@ -227,6 +227,32 @@ end
 --- OPEN ---
 ------------
 
+local function checked_echo(msg, suppress)
+    if not suppress then
+        vim.api.nvim_echo({ { msg, "" } }, false, {})
+    end
+end
+
+local function handle_open_list(list_win, opts, tabpage)
+    if opts.always_resize then
+        resize_list_win(list_win, opts.height, { tabpage = tabpage })
+    else
+        checked_echo("Loclist win is already open", opts.suppress_errors)
+    end
+
+    return false
+end
+
+--- @param views vim.fn.winsaveview.ret[]
+--- @param keep_win boolean
+--- @param cur_win integer
+local function open_cleanup(views, keep_win, cur_win)
+    restore_views(views)
+    if keep_win then
+        vim.api.nvim_set_current_win(cur_win)
+    end
+end
+
 --- @param opts? QfRancherOpenOpts
 --- @return boolean
 function M._open_qflist(opts)
@@ -235,25 +261,15 @@ function M._open_qflist(opts)
 
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local tabpage = vim.api.nvim_win_get_tabpage(cur_win) --- @type integer
-    local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
-
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
     local qf_win = eu._get_qf_win({ tabpage = tabpage }) --- @type integer|nil
-    if qf_win then
-        if opts.always_resize then
-            resize_list_win(qf_win, opts.height, { tabpage = tabpage })
-            return true
-        else
-            if not opts.suppress_errors then
-                local chunk = { "Qflist already open", "" } --- @type [string, string]
-                vim.api.nvim_echo({ chunk }, false, {})
-            end
 
-            return false
-        end
+    if qf_win then
+        return handle_open_list(qf_win, opts, tabpage)
     end
 
     local ll_wins = eu._get_all_loclist_wins({ tabpage = tabpage }) --- @type integer[]
+    local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
     tabpage_wins = vim.tbl_filter(function(win)
         return not vim.tbl_contains(ll_wins, win)
     end, tabpage_wins)
@@ -262,13 +278,10 @@ function M._open_qflist(opts)
     pclose_wins(ll_wins)
     local height = resolve_height_for_list(nil, opts.height)
 
-    local qfsplit = vim.g.qf_rancher_qfsplit -- TODO: Validate this
+    local qfsplit = vim.g.qf_rancher_qfsplit or "botright"
     --- @diagnostic disable: missing-fields
     vim.api.nvim_cmd({ cmd = "copen", count = height, mods = { split = qfsplit } }, {})
-    restore_views(views)
-    if opts.keep_win then
-        vim.api.nvim_set_current_win(cur_win)
-    end
+    open_cleanup(views, opts.keep_win, cur_win)
 
     return true
 end
@@ -279,38 +292,23 @@ end
 --- @return boolean
 function M._open_loclist(opts)
     opts = opts or {}
-    require("mjm.error-list-types")._validate_open_opts(opts)
     clean_open_opts(opts)
 
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id --- @type integer
     if qf_id == 0 then
-        if not opts.suppress_errors then
-            vim.api.nvim_echo({ { "Window has no loclist", "" } }, false, {})
-        end
-
+        checked_echo("Window has no location list", opts.suppress_errors)
         return false
     end
 
     local tabpage = vim.api.nvim_win_get_tabpage(cur_win) --- @type integer
-    local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
     local eu = require("mjm.error-list-util")
-    --- @type integer|nil
-    local ll_win = eu._get_loclist_win_by_qf_id(qf_id, { tabpage_wins = tabpage_wins })
+    local ll_win = eu._get_ll_win_by_qf_id(qf_id, { tabpage = tabpage }) --- @type integer|nil
     if ll_win then
-        if opts.always_resize then
-            resize_list_win(ll_win, opts.height, { tabpage = tabpage })
-            return true
-        else
-            if not opts.suppress_errors then
-                local chunk = { "Loclist is already open", "" } --- @type [string, string]
-                vim.api.nvim_echo({ chunk }, false, {})
-            end
-
-            return false
-        end
+        return handle_open_list(ll_win, opts, tabpage)
     end
 
+    local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
     local qf_win = eu._get_qf_win({ tabpage = tabpage }) --- @type integer|nil
     if qf_win then
         tabpage_wins = vim.tbl_filter(function(win)
@@ -319,17 +317,14 @@ function M._open_loclist(opts)
     end
 
     local views = get_views(tabpage_wins) --- @type vim.fn.winsaveview.ret[]
+    local height = resolve_height_for_list(cur_win, opts.height) --- @type integer
     if qf_win then
         pwin_close(qf_win, { bdel = true, force = true })
     end
 
-    local height = resolve_height_for_list(cur_win, opts.height)
     --- @diagnostic disable: missing-fields
     vim.api.nvim_cmd({ cmd = "lopen", count = height }, {})
-    restore_views(views)
-    if opts.keep_win then
-        vim.api.nvim_set_current_win(cur_win)
-    end
+    open_cleanup(views, opts.keep_win, cur_win)
 
     return true
 end
@@ -391,7 +386,7 @@ function M._close_loclist()
         end
     end
 
-    local ll_win = eu._get_loclist_win_by_qf_id(qf_id, { tabpage = tabpage })
+    local ll_win = eu._get_ll_win_by_qf_id(qf_id, { tabpage = tabpage })
     if (not ll_win) and #ll_wins < 1 then
         return false
     end
@@ -445,7 +440,7 @@ end
 -----------------------
 
 --- @param opts QfRancherTabpageOpts
-function M.close_qfwins(opts)
+function M._close_qfwins(opts)
     if vim.g.qf_rancher_debug_assertions then
         local ey = require("mjm.error-list-types")
         ey._validate_tabpage_opts(opts)
@@ -458,7 +453,7 @@ function M.close_qfwins(opts)
 end
 
 --- @param opts QfRancherTabpageOpts
-function M.resize_qfwins(opts)
+function M._resize_qfwins(opts)
     if vim.g.qf_rancher_debug_assertions then
         local ey = require("mjm.error-list-types")
         ey._validate_tabpage_opts(opts)
