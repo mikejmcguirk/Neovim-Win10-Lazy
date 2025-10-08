@@ -453,38 +453,32 @@ end
 --- @param win? integer
 --- @param opts QfRancherOpenOpts
 function M._open_list(win, opts)
-    return win and M._open_loclist(opts) or M._open_qflist(opts)
+    --- NOTE: Because these functions return booleans, cannot use the Lua ternary
+    if win then
+        M._open_loclist(opts)
+    else
+        M._open_qflist(opts)
+    end
 end
 
 --- TODO: More of the weird tabpage wins syntax here
 
---- @param list_win integer
---- @param opts? {tabpage?: integer, tabpage_wins?: integer[]}
+--- @param win integer
 --- @return boolean
-function M._close_list_win(list_win, opts)
-    opts = opts or {}
-
+function M._close_win_save_views(win)
     if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_win(list_win)
-        vim.validate("list_win", list_win, function()
-            local wintype = vim.fn.win_gettype(list_win)
-            return wintype == "quickfix" or wintype == "loclist"
-        end)
-
-        vim.validate("opts", opts, { "nil", "table" })
-        vim.validate("opts.tabpage", opts.tabpage, { "nil", "number" })
-        vim.validate("opts.tabpage_wins", opts.tabpage_wins, { "nil", "table" })
+        local ey = require("mjm.error-list-types")
+        ey._validate_win(win, false)
     end
 
-    local win_tabpage = opts.tabpage or vim.api.nvim_win_get_tabpage(list_win) --- @type integer
-    --- @type integer[]
-    local tabpage_wins = opts.tabpage_wins or vim.api.nvim_tabpage_list_wins(win_tabpage)
-    tabpage_wins = vim.tbl_filter(function(win)
-        return win ~= list_win
+    local tabpage = vim.api.nvim_win_get_tabpage(win) --- @type integer
+    local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
+    tabpage_wins = vim.tbl_filter(function(t_win)
+        return t_win ~= win
     end, tabpage_wins)
 
     local views = get_views(tabpage_wins) --- @type vim.fn.winsaveview.ret[]
-    pwin_close(list_win, { bdel = true, force = true })
+    pwin_close(win, { bdel = true, force = true })
     restore_views(views)
 
     return true
@@ -502,8 +496,8 @@ function M._close_qflists(opts)
     end
 
     local qflists = require("mjm.error-list-util")._get_qf_wins(opts)
-    for _, list in qflists do
-        M._close_list_win(list)
+    for _, list in ipairs(qflists) do
+        M._close_win_save_views(list)
     end
 end
 
@@ -577,7 +571,7 @@ function M._close_loclists_by_qf_id(qf_id, opts)
 
     local llists = require("mjm.error-list-util")._get_loclist_wins_by_qf_id(qf_id, opts)
     for _, list in ipairs(llists) do
-        M._close_list_win(list)
+        M._close_win_save_views(list)
     end
 end
 

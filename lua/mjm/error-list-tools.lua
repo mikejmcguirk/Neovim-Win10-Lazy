@@ -222,11 +222,8 @@ function M._get_all(win, nr)
         ev._validate_list_nr(nr)
     end
 
-    if win then
-        return vim.fn.getloclist(win, { nr = nr, all = true })
-    else
-        return vim.fn.getqflist({ nr = nr, all = true })
-    end
+    return win and vim.fn.getloclist(win, { nr = nr, all = true })
+        or vim.fn.getqflist({ nr = nr, all = true })
 end
 
 --- @param win integer|nil
@@ -236,11 +233,7 @@ function M._get_cur_list_nr(win)
         require("mjm.error-list-types")._validate_win(win, true)
     end
 
-    if win then
-        return vim.fn.getloclist(win, { nr = 0 }).nr
-    else
-        return vim.fn.getqflist({ nr = 0 }).nr
-    end
+    return win and vim.fn.getloclist(win, { nr = 0 }).nr or vim.fn.getqflist({ nr = 0 }).nr
 end
 
 --- @param win integer|nil
@@ -250,11 +243,147 @@ function M._get_max_list_nr(win)
         require("mjm.error-list-types")._validate_win(win, true)
     end
 
-    if win then
-        return vim.fn.getloclist(win, { nr = "$" }).nr
-    else
-        return vim.fn.getqflist({ nr = "$" }).nr
+    return win and vim.fn.getloclist(win, { nr = "$" }).nr or vim.fn.getqflist({ nr = "$" }).nr
+end
+
+--- @param win integer|nil
+--- @return integer|nil
+function M._get_list_size(win, nr)
+    if vim.g.qf_rancher_debug_assertions then
+        require("mjm.error-list-types")._validate_win(win, true)
     end
+
+    if win then
+        local qf_id = vim.fn.getloclist(win, { id = 0 }).id
+        if qf_id == 0 then
+            vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
+            return nil
+        end
+    end
+
+    local max_nr = M._get_max_list_nr(win)
+    if max_nr == 0 then
+        vim.api.nvim_echo({ { "No list stack", "" } }, false, {})
+        return nil
+    end
+
+    local adj_nr = math.min(nr, max_nr)
+    return win and vim.fn.getloclist(win, { nr = adj_nr, size = 0 }).size
+        or vim.fn.getqflist({ nr = adj_nr, size = 0 }).size
+end
+
+--- NOTE: For the delete functions, we want to return the list_nr that was deleted, 0 for the
+--- whole stack, and -1 on failure
+
+--- @param win integer|nil
+--- @return integer
+function M._del_all(win)
+    if vim.g.qf_rancher_debug_assertions then
+        require("mjm.error-list-types")._validate_win(win, true)
+    end
+
+    local max_nr = M._get_cur_list_nr(win)
+    if max_nr < 1 then
+        vim.api.nvim_echo({ { "No list stack", "" } }, false, {})
+        return -1
+    end
+
+    local eo = require("mjm.error-list-open")
+    if not win then
+        local result = vim.fn.setqflist({}, "f")
+        if result == -1 then
+            return result
+        end
+
+        eo._close_qflists({ all_tabpages = true })
+        return 0
+    end
+
+    --- MAYBE: Make an option for whether or not to automatically close the list window after
+    --- deleting the stack. Biggest issue is that an open loclist window without a stack
+    --- (qf_id == 0) is stale data. And there's no reason for the qflist to behave inconsistently
+
+    local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
+    if qf_id == 0 then
+        vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
+        return -1
+    end
+
+    --- @type integer|nil
+    local ll_win = require("mjm.error-list-util")._get_loclist_win_by_qf_id(qf_id, {})
+    local result = vim.fn.setloclist(win, {}, "f")
+    if result == -1 then
+        return result
+    else
+        if ll_win then
+            eo._close_win_save_views(ll_win)
+        end
+
+        --- Should not happen, but clear out junk data
+        eo._close_loclists_by_qf_id(qf_id, { all_tabpages = true })
+        return 0
+    end
+end
+
+--- TODO: Test if at this point my list deletion actually purges more than the default
+
+--- @param win integer|nil
+--- @param count integer
+--- @return integer
+function M._del_list(win, count)
+    if vim.g.qf_rancher_debug_assertions then
+        local ey = require("mjm.error-list-types")
+        ey._validate_win(win, true)
+        ey._validate_count(count)
+    end
+
+    if win and vim.fn.getloclist(win, { id = 0 }).id == 0 then
+        vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
+        return -1
+    end
+
+    local max_nr = M._get_max_list_nr(win) --- @type integer
+    if max_nr == 0 then
+        vim.api.nvim_echo({ { "Stack is empty", "" } }, false, {})
+        return -1
+    end
+
+    local adj_count = math.min(count, max_nr)
+    local cur_list_nr = M._get_cur_list_nr(win) --- @type integer
+    adj_count = adj_count == 0 and cur_list_nr or adj_count
+    if vim.g.qf_rancher_del_all_if_empty then
+        local max_other_size = 0
+        for i = 1, max_nr do
+            if i ~= adj_count then
+                local this_size = M._get_list_size(win, i)
+                max_other_size = this_size > max_other_size and this_size or max_other_size
+            end
+        end
+
+        if max_nr == 1 or max_other_size == 0 then
+            return M._del_all(win)
+        end
+    end
+
+    if adj_count == cur_list_nr then
+        local result = win and vim.fn.setloclist(win, {}, "r") or vim.fn.setqflist({}, "r")
+        return result == -1 and result or adj_count
+    end
+
+    local del_list_data = {
+        context = {},
+        efm = "",
+        idx = 0,
+        items = {},
+        nr = adj_count,
+        quickfixtextfunc = nil,
+        title = "",
+        user_data = nil,
+    }
+
+    local result = win and vim.fn.setloclist(win, {}, "r", del_list_data)
+        or vim.fn.setqflist({}, "r", del_list_data)
+    return result == -1 and result or adj_count
 end
 
 return M

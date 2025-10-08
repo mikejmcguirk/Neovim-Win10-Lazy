@@ -17,6 +17,8 @@ end
 -- Config/Validation --
 -----------------------
 
+--- LOW: Add a g:var to handle closing behavior when lists are deleted
+
 --- TODO: These are my personal settings. Get out of here
 -- Personal setting. Default is false in line with Nvim
 vim.api.nvim_set_var("qf_rancher_auto_open_changes", true)
@@ -34,6 +36,7 @@ local g_vars = {
     -- - If this is off and splitkeep is set for cursor, you get Nvim default behavior
     { "qf_rancher_always_save_views", "boolean", true },
     { "qf_rancher_debug_assertions", "boolean", false },
+    { "qf_rancher_del_all_if_empty", "boolean", true },
     { "qf_rancher_grepprg", "string", "rg" },
     { "qf_rancher_qfsplit", "string", "botright" },
     { "qf_rancher_set_default_maps", "boolean", true },
@@ -178,6 +181,8 @@ end
 --- Check that no eager requires happen on startup
 --- DOuble check that all view saving sufficiently respects splitkeep/g:vars
 --- Make sure g variables are doing what they should be
+--- Audit everything for handling of 0 location lists. These are still-open loclist windows where
+---     the stack has been wiped
 
 -----------
 --- MID ---

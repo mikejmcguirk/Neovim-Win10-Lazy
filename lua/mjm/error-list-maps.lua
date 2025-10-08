@@ -637,12 +637,12 @@ local rancher_keymaps = {
     { nn, pqfr.."-qf-history-open)", qp.."<C-q>", "Open and jump within the quickfix history", function() es._q_history(vim.v.count, { always_open = true }) end },
     { nn, pqfr.."-qf-del)",          qp.."e", "Delete a list from the quickfix stack",         function() es._q_del(vim.v.count) end },
     { nn, pqfr.."-qf-del-all)",      qp.."E", "Delete all items from the quickfix stack",      function() es._q_del_all() end },
-    { nn, pqfr.."-ll-older)",        lp.."[", "Go to an older location list",                  function() es._l_older(vim.v.count) end },
-    { nn, pqfr.."-ll-newer)",        lp.."]", "Go to a newer location list",                   function() es._l_newer(vim.v.count) end },
+    { nn, pqfr.."-ll-older)",        lp.."[", "Go to an older location list",                  function() es._l_older(vim.api.nvim_get_current_win(), vim.v.count) end },
+    { nn, pqfr.."-ll-newer)",        lp.."]", "Go to a newer location list",                   function() es._l_newer(vim.api.nvim_get_current_win(), vim.v.count) end },
     { nn, pqfr.."-ll-history)",      lp.."L", "View or jump within the loclist history",       function() es._l_history(vim.api.nvim_get_current_win(), vim.v.count, {}) end },
     { nn, pqfr.."-ll-history-open)", lp.."<C-l>", "Open and jump within the loclist history",  function() es._l_history(vim.api.nvim_get_current_win(), vim.v.count, { always_open = true }) end },
-    { nn, pqfr.."-ll-del)",          lp.."e", "Delete a list from the loclist stack",          function() es._l_del(vim.v.count) end },
-    { nn, pqfr.."-ll-del-all)",      lp.."E", "Delete all items from the loclist stack",       function() es._l_del_all() end },
+    { nn, pqfr.."-ll-del)",          lp.."e", "Delete a list from the loclist stack",          function() es._l_del(vim.api.nvim_get_current_win(), vim.v.count) end },
+    { nn, pqfr.."-ll-del-all)",      lp.."E", "Delete all items from the loclist stack",       function() es._l_del_all(vim.api.nvim_get_current_win()) end },
 }
 
 for _, map in ipairs(rancher_keymaps) do
@@ -816,39 +816,34 @@ if vim.g.qf_rancher_set_default_cmds then
     -------------
 
     vim.api.nvim_create_user_command("Qolder", function(cargs)
-        es._q_older(cargs.count)
+        es._q_older_cmd(cargs)
     end, { count = 0, desc = "Go to an older qflist" })
 
     vim.api.nvim_create_user_command("Qnewer", function(cargs)
-        es._q_newer(cargs.count)
+        es._q_newer_cmd(cargs)
     end, { count = 0, desc = "Go to a newer qflist" })
 
     vim.api.nvim_create_user_command("Qhistory", function(cargs)
-        es._q_history(cargs.count, {})
+        es._q_history_cmd(cargs)
     end, { count = 0, desc = "View or jump within the quickfix history" })
 
     -- NOTE: Ideally, a count would override the "all" arg, in order to default to safer behavior,
     -- but the dict sent to the callback includes a count of 0 whether it was explicitly passed or
     -- not. Since a count of 0 can be explicitly passed, only overriding a count > 0 is convoluted
     vim.api.nvim_create_user_command("Qdelete", function(cargs)
-        if cargs.args == "all" then
-            es._q_del_all()
-            return
-        end
-
-        es._q_del(cargs.count)
+        es._q_delete_cmd(cargs)
     end, { count = 0, nargs = "?", desc = "Delete one or all lists from the quickfix stack" })
 
     vim.api.nvim_create_user_command("Lolder", function(cargs)
-        es._l_older(cargs.count)
+        es._l_older_cmd(cargs)
     end, { count = 0, desc = "Go to an older location list" })
 
     vim.api.nvim_create_user_command("Lnewer", function(cargs)
-        es._l_newer(cargs.count)
+        es._l_newer_cmd(cargs)
     end, { count = 0, desc = "Go to a newer location list" })
 
     vim.api.nvim_create_user_command("Lhistory", function(cargs)
-        es._l_history(cargs.count, {})
+        es._l_history_cmd(cargs)
     end, { count = 0, desc = "View or jump within the loclist history" })
 
     --- DOCUMENT: The all override behavior
@@ -856,11 +851,6 @@ if vim.g.qf_rancher_set_default_cmds then
     -- but the dict sent to the callback includes a count of 0 whether it was explicitly passed or
     -- not. Since a count of 0 can be explicitly passed, only overriding a count > 0 is convoluted
     vim.api.nvim_create_user_command("Ldelete", function(cargs)
-        if cargs.args == "all" then
-            es._l_del_all()
-            return
-        end
-
-        es._l_del(cargs.count)
+        es._l_delete_cmd(cargs)
     end, { count = 0, nargs = "?", desc = "Delete one or all lists from the loclist stack" })
 end

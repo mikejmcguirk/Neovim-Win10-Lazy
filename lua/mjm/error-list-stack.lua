@@ -1,31 +1,13 @@
 --- @class QfRancherStack
 local M = {}
 
--------------------
---- Module Data ---
--------------------
-
-local no_qf_stack = "Quickfix stack is empty" --- @type string
-local no_ll_stack = "Loclist stack is empty" --- @type string
-
 ------------------------
 --- Helper Functions ---
 ------------------------
 
---- @param count integer
---- @return vim.fn.setqflist.what
-local function get_del_list_data(count)
-    if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_count(count)
-    end
-
-    --- TODO: Have a bunch of examples I can use to make this better
-    return { context = {}, idx = 0, items = {}, nr = count, title = "" }
-end
-
 --- @param win integer|nil
 --- @return nil
-local function resize_after_hist_change(win)
+local function resize_after_stack_change(win)
     local eo = require("mjm.error-list-open")
     if win then
         eo._resize_loclists_by_win(win, { tabpage = vim.api.nvim_get_current_tabpage() })
@@ -69,7 +51,7 @@ local function change_history(win, count, arithmetic)
     end
 
     if cur_list_nr ~= new_list_nr then
-        resize_after_hist_change(win)
+        resize_after_stack_change(win)
     end
 end
 
@@ -85,30 +67,55 @@ function M._q_newer(count)
     change_history(nil, count, require("mjm.error-list-util")._wrapping_add)
 end
 
+--- @param cargs vim.api.keyset.create_user_command.command_args
+--- @return nil
+function M._q_older_cmd(cargs)
+    M._q_older(cargs.count)
+end
+
+--- @param cargs vim.api.keyset.create_user_command.command_args
+--- @return nil
+function M._q_newer_cmd(cargs)
+    M._q_newer(cargs.count)
+end
+
 --- @param count integer
 --- @param arithmetic function
 --- @return nil
-local function l_change_history(count, arithmetic)
-    local cur_win = vim.api.nvim_get_current_win() --- @type integer
-    local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id --- @type integer
+local function l_change_history(win, count, arithmetic)
+    local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
         return
     end
 
-    change_history(cur_win, count, arithmetic)
+    change_history(win, count, arithmetic)
 end
 
+--- @param win integer
 --- @param count integer
 --- @return nil
-function M._l_older(count)
-    l_change_history(count, require("mjm.error-list-util")._wrapping_sub)
+function M._l_older(win, count)
+    l_change_history(win, count, require("mjm.error-list-util")._wrapping_sub)
 end
 
+--- @param win integer
 --- @param count integer
 --- @return nil
-function M._l_newer(count)
-    l_change_history(count, require("mjm.error-list-util")._wrapping_add)
+function M._l_newer(win, count)
+    l_change_history(win, count, require("mjm.error-list-util")._wrapping_add)
+end
+
+--- @param cargs vim.api.keyset.create_user_command.command_args
+--- @return nil
+function M._l_older_cmd(cargs)
+    M._l_older(vim.api.nvim_get_current_win(), cargs.count)
+end
+
+--- @param cargs vim.api.keyset.create_user_command.command_args
+--- @return nil
+function M._l_newer_cmd(cargs)
+    M._l_newer(vim.api.nvim_get_current_win(), cargs.count)
 end
 
 ---------------
@@ -147,7 +154,7 @@ function M._history(win, count, opts)
     end
 
     if cur_list_nr ~= adj_count then
-        resize_after_hist_change(win)
+        resize_after_stack_change(win)
     end
 
     if opts.always_open then
@@ -179,84 +186,59 @@ function M._l_history(win, count, opts)
     M._history(win, count, opts)
 end
 
+--- @param cargs vim.api.keyset.create_user_command.command_args
+--- @return nil
+function M._q_history_cmd(cargs)
+    M._q_history(cargs.count, {})
+end
+
+--- @param cargs vim.api.keyset.create_user_command.command_args
+--- @return nil
+function M._l_history_cmd(cargs)
+    M._l_history(vim.api.nvim_get_current_win(), cargs.count, {})
+end
+
 ----------------
 --- DELETION ---
 ----------------
 
+--- @param win? integer
+--- @param count integer
+--- @return nil
+function M._del(win, count)
+    if vim.g.qf_rancher_debug_assertions then
+        local ey = require("mjm.error-list-types")
+        ey._validate_win(win, true)
+        ey._validate_count(count)
+    end
+
+    local et = require("mjm.error-list-tools") --- @type QfRancherTools
+    local result = et._del_list(win, count)
+    if result == -1 or result == 0 then
+        return
+    end
+
+    local cur_list_nr = et._get_cur_list_nr(win)
+    if vim.g.qf_rancher_debug_assertions then
+        local target = count == 0 and cur_list_nr or count --- @type integer
+        assert(result == target)
+    end
+
+    if result == cur_list_nr then
+        resize_after_stack_change(win)
+    end
+end
+
 --- @param count integer
 --- @return nil
 function M._q_del(count)
-    require("mjm.error-list-types")._validate_count(count)
-
-    local stack_len = vim.fn.getqflist({ nr = "$" }).nr --- @type integer
-    if stack_len < 1 then
-        vim.api.nvim_echo({ { no_qf_stack, "" } }, false, {})
-        return
-    end
-
-    local cur_stack_nr = vim.fn.getqflist({ nr = 0 }).nr --- @type integer
-    count = math.min(count, stack_len)
-    if count < 1 then
-        vim.fn.setqflist({}, "r") --- Don't use bespoke behavior unnecessarily
-    else
-        vim.fn.setqflist({}, "r", get_del_list_data(count))
-    end
-
-    if count == 0 or count == cur_stack_nr then
-        require("mjm.error-list-open")._resize_all_qf_wins()
-    end
+    M._del(nil, count)
 end
 
 --- @param count integer
 --- @return nil
-function M._l_del(count)
+function M._l_del(win, count)
     require("mjm.error-list-types")._validate_count(count)
-
-    local cur_win = vim.api.nvim_get_current_win() --- @type integer
-    local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id --- @type integer
-    if qf_id == 0 then
-        vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
-        return
-    end
-
-    local stack_len = vim.fn.getloclist(cur_win, { nr = "$" }).nr --- @type integer
-    if stack_len < 1 then
-        vim.api.nvim_echo({ { no_ll_stack, "" } }, false, {})
-        return
-    end
-
-    local cur_stack_nr = vim.fn.getloclist(cur_win, { nr = 0 }).nr --- @type integer
-    count = math.min(count, stack_len)
-    if count < 1 then
-        vim.fn.setloclist(cur_win, {}, "r")
-    else
-        vim.fn.setloclist(cur_win, {}, "r", get_del_list_data(count))
-    end
-
-    if count == 0 or count == cur_stack_nr then
-        local tabpage = vim.api.nvim_win_get_tabpage(cur_win) --- @type integer
-        -- require("mjm.error-list-open")._resize_llists_by_qf_id_and_tabpage(qf_id, tabpage)
-    end
-end
-
-------------------
---- DELETE ALL ---
-------------------
-
-function M._q_del_all()
-    if vim.fn.getqflist({ nr = "$" }).nr < 1 then
-        vim.api.nvim_echo({ { no_qf_stack, "" } }, false, {})
-    else
-        vim.fn.setqflist({}, "f")
-    end
-
-    require("mjm.error-list-open")._close_qflists({ all_tabpages = true })
-end
-
---- @param win integer
---- @return nil
-function M._l_del_all(win)
-    require("mjm.error-list-types")._validate_win(win, false)
 
     local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
     if qf_id == 0 then
@@ -264,26 +246,53 @@ function M._l_del_all(win)
         return
     end
 
-    if vim.fn.getloclist(win, { nr = "$" }).nr < 1 then
-        vim.api.nvim_echo({ { no_ll_stack, "" } }, false, {})
-    else
-        vim.fn.setloclist(win, {}, "f")
-    end
-
-    require("mjm.error-list-open")._close_loclists_by_qf_id(qf_id, { all_tabpages = true })
+    M._del(win, count)
 end
 
+------------------
+--- DELETE ALL ---
+------------------
+
+--- NOTE: The _del_all tools function contains the necessary validations
+
+--- @return nil
+function M._q_del_all()
+    require("mjm.error-list-tools")._del_all()
+end
+
+--- @param win integer
+--- @return nil
+function M._l_del_all(win)
+    require("mjm.error-list-tools")._del_all(win)
+end
+
+-- --- @param win integer
+-- --- @return nil
 -- function M._del_all(win)
---     if vim.g.qf_rancher_debug_assertions then
---         require("mjm.error-list-types")._validate_win(win, true)
---     end
---
---     if win then
---         M._l_del_all(win)
---     else
---         M._q_del_all()
---     end
+--     require("mjm.error-list-tools")._del_all(win)
 -- end
+
+--- @param cargs vim.api.keyset.create_user_command.command_args
+--- @return nil
+function M._q_delete_cmd(cargs)
+    if cargs.args == "all" then
+        M._q_del_all()
+        return
+    end
+
+    M._q_del(cargs.count)
+end
+
+--- @param cargs vim.api.keyset.create_user_command.command_args
+--- @return nil
+function M._l_delete_cmd(cargs)
+    if cargs.args == "all" then
+        M._l_del_all(vim.api.nvim_get_current_win())
+        return
+    end
+
+    M._l_del(vim.api.nvim_get_current_win(), cargs.count)
+end
 
 return M
 
@@ -302,6 +311,3 @@ return M
 -----------
 --- LOW ---
 -----------
-
---- Commands to copy/merge/overwrite lists explicitly. Can currently backdoor your way into this
----     with sort. Would want more solid use case before builing out separately
