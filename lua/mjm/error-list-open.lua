@@ -184,7 +184,6 @@ local function resize_list_win(list_win, height, opts)
 
     local views = {}
     local tabpages = require("mjm.error-list-util")._resolve_tabpages(opts)
-
     for _, tabpage in ipairs(tabpages) do
         local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
         tabpage_wins = vim.tbl_filter(function(win)
@@ -218,10 +217,6 @@ local function clean_open_opts(opts)
         opts.suppress_errors = false
     end
 end
-
---- TODO: Re-organize so opens/closes and such are together. Easier to find commonalities between
---- qf and loclist code
---- TODO: When opening an empty qflist, a no list stack msg shows
 
 ------------
 --- OPEN ---
@@ -370,28 +365,21 @@ end
 --- @return boolean
 function M._close_loclist()
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
-    local tabpage = vim.api.nvim_win_get_tabpage(cur_win) --- @type integer
-    local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
-    local ll_wins = {}
-
-    local eu = require("mjm.error-list-util")
+    local wintype = vim.fn.win_gettype(cur_win)
     local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id ---@type integer
-    if qf_id == 0 then
-        local orphan_ll_wins = eu._find_orphan_loclists({ tabpage_wins = tabpage_wins })
-        if #orphan_ll_wins > 0 then
-            vim.list_extend(ll_wins, orphan_ll_wins)
-        else
-            vim.api.nvim_echo({ { "Window has no loclist", "" } }, false, {})
-            return false
-        end
-    end
-
-    local ll_win = eu._get_ll_win_by_qf_id(qf_id, { tabpage = tabpage })
-    if (not ll_win) and #ll_wins < 1 then
+    if qf_id == 0 and wintype ~= "loclist" then
+        vim.api.nvim_echo({ { "Window has no loclist", "" } }, false, {})
         return false
     end
 
-    table.insert(ll_wins, ll_win)
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
+    local tabpage = vim.api.nvim_win_get_tabpage(cur_win) --- @type integer
+    local ll_wins = eu._get_loclist_wins_by_qf_id(qf_id, { tabpage = tabpage }) --- @type integer[]
+    if #ll_wins < 1 then
+        return false
+    end
+
+    local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
     tabpage_wins = vim.tbl_filter(function(win)
         return not vim.tbl_contains(ll_wins, win)
     end, tabpage_wins)

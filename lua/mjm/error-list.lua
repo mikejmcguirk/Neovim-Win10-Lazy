@@ -156,6 +156,13 @@ end
 --- TODO: ---
 -------------
 
+--- Orphan loclist handling:
+--- - Grouping arbitrarily with other commands produces confusing behavior
+--- - The autocmd to close associated loclists should be enabled by default
+--- - Any close cmd needs to check if the window type is loclist so it can run in orphans
+--- - The lE purge needs to properly handle orphans
+--- - The autocmd to prevent loclists from moving should be enabled by default
+
 --- Audit all files except ftplugin for bad/old API usage
 --- Add in the util func for opening based on outputopts. Put it behind a gvar
 

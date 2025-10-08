@@ -12,7 +12,7 @@ local function resize_after_stack_change(win)
     if win then
         eo._resize_loclists_by_win(win, { tabpage = vim.api.nvim_get_current_tabpage() })
     else
-        eo.resize_qfwins({ all_tabpages = true })
+        eo._resize_qfwins({ all_tabpages = true })
     end
 end
 

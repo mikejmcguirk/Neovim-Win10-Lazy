@@ -247,10 +247,13 @@ function M._get_max_list_nr(win)
 end
 
 --- @param win integer|nil
+--- @param nr integer
 --- @return integer|nil
 function M._get_list_size(win, nr)
     if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_win(win, true)
+        local ey = require("mjm.error-list-types")
+        ey._validate_win(win, true)
+        ey._validate_list_nr(nr)
     end
 
     if win then
@@ -263,7 +266,7 @@ function M._get_list_size(win, nr)
 
     local max_nr = M._get_max_list_nr(win)
     if max_nr == 0 then
-        vim.api.nvim_echo({ { "No list stack", "" } }, false, {})
+        -- vim.api.nvim_echo({ { "No list stack", "" } }, false, {})
         return nil
     end
 
@@ -275,10 +278,13 @@ end
 --- TODO: Duplicate logic with getting the size
 
 --- @param win integer|nil
+--- @param nr integer
 --- @return integer|nil
 function M._get_list_idx(win, nr)
     if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_win(win, true)
+        local ey = require("mjm.error-list-types")
+        ey._validate_win(win, true)
+        ey._validate_list_nr(nr)
     end
 
     if win then
@@ -323,7 +329,7 @@ function M._del_all(win)
             return result
         end
 
-        eo.close_qfwins({ all_tabpages = true })
+        eo._close_qfwins({ all_tabpages = true })
         return 0
     end
 
@@ -338,7 +344,7 @@ function M._del_all(win)
     end
 
     --- @type integer|nil
-    local ll_win = require("mjm.error-list-util")._get_loclist_win_by_qf_id(qf_id, {})
+    local ll_win = require("mjm.error-list-util")._get_ll_win_by_qf_id(qf_id, {})
     local result = vim.fn.setloclist(win, {}, "f")
     if result == -1 then
         return result

@@ -262,6 +262,9 @@ function M._resolve_tabpages(opts)
     end
 end
 
+--- @param qf_id integer
+--- @param t_win integer
+--- @return boolean
 local function check_win(qf_id, t_win)
     local tw_qf_id = vim.fn.getloclist(t_win, { id = 0 }).id --- @type integer
     if tw_qf_id ~= qf_id then
@@ -272,23 +275,23 @@ local function check_win(qf_id, t_win)
     --- @type string
     local t_win_buftype = vim.api.nvim_get_option_value("buftype", { buf = t_win_buf })
     if t_win_buftype == "quickfix" then
-        return t_win
+        return true
     end
+
+    return false
 end
+
+--- If searching for wins by qf_id, passing a zero id is allowed so that orphans can be checked
 
 --- @param qf_id integer
 --- @param opts {tabpage?: integer, some_tabpages?: integer[], all_tabpages?:boolean}
 --- @return integer[]
 local function get_loclist_wins(qf_id, opts)
     if vim.g.qf_rancher_debug_assertions then
-        vim.validate("qf_id", qf_id, "number")
+        require("mjm.error-list-types")._validate_qf_id(qf_id)
     end
 
-    local wins = {}
-    if qf_id == 0 then
-        return wins
-    end
-
+    local wins = {} --- @type integer[]
     local tabpages = M._resolve_tabpages(opts) --- @type integer[]
     for _, tabpage in ipairs(tabpages) do
         local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
@@ -308,10 +311,6 @@ end
 local function get_loclist_win(qf_id, opts)
     if vim.g.qf_rancher_debug_assertions then
         vim.validate("qf_id", qf_id, "number")
-    end
-
-    if qf_id == 0 then
-        return nil
     end
 
     local tabpages = M._resolve_tabpages(opts) --- @type integer[]
@@ -336,19 +335,17 @@ function M._get_loclist_win_by_win(win, opts)
     end
 
     local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
+    if qf_id == 0 then
+        return nil
+    end
+
     return get_loclist_win(qf_id, opts)
 end
-
---- TODO: A possible solution for finding orphans would be to move the qf_id check to the
---- get win_by_win function and allow any qf_id here to find zeroes. I think though there's more
---- recursion than that. So maybe you need a top level function that calls these functions
---- multiple times. But then the qf_id passthrough might still be necessary
---- If we do that, must document that the by_qf_id function does not check for zero
 
 --- @param qf_id integer
 --- @param opts QfRancherTabpageOpts
 --- @return integer|nil
-function M._get_loclist_win_by_qf_id(qf_id, opts)
+function M._get_ll_win_by_qf_id(qf_id, opts)
     return get_loclist_win(qf_id, opts)
 end
 
@@ -362,6 +359,10 @@ function M._get_loclist_wins_by_win(win, opts)
     end
 
     local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
+    if qf_id == 0 then
+        return {}
+    end
+
     return get_loclist_wins(qf_id, opts)
 end
 
