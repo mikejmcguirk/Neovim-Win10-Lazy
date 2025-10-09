@@ -340,14 +340,14 @@ end
 --- @param cargs vim.api.keyset.create_user_command.command_args
 --- @return nil
 function M._open_qflist_cmd(cargs)
-    local count = cargs.count > 0 and cargs.count or nil
+    local count = cargs.count > 0 and cargs.count or nil --- @type integer|nil
     M._open_qflist({ always_resize = true, height = count, print_errs = true })
 end
 
 --- @param cargs vim.api.keyset.create_user_command.command_args
 --- @return nil
 function M._open_loclist_cmd(cargs)
-    local count = cargs.count > 0 and cargs.count or nil
+    local count = cargs.count > 0 and cargs.count or nil --- @type integer|nil
     M._open_loclist({ always_resize = true, height = count, print_errs = true })
 end
 
