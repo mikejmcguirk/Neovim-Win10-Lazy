@@ -208,6 +208,20 @@ function M.validate_list_item(item)
     end
 end
 
+--- @param user_data QfRancherUserData
+--- @return nil
+function M._validate_user_data(user_data)
+    vim.validate("user_data", user_data, "table")
+    vim.validate("user_data.action", user_data.action, { "nil", "string" })
+    if type(user_data.action) == "string" then
+        M._validate_action(user_data.action)
+    end
+
+    vim.validate("user_data.list_item_type", user_data.list_item_type, { "nil", "string" })
+    vim.validate("user_data.src_win", user_data.src_win, { "nil", "number" })
+    vim.validate("user_data.sort_func", user_data.sort_func, { "callable", "nil" })
+end
+
 --- @param what QfRancherWhat
 --- @return nil
 function M._validate_what(what)
@@ -245,6 +259,10 @@ function M._validate_what(what)
     M._validate_list_nr(what.nr)
     vim.validate("what.quickfixtextfunc", what.quickfixtextfunc, { "callable", "nil" })
     vim.validate("what.title", what.title, { "nil", "string" })
+
+    if type(what.user_data) == "table" then
+        M._validate_user_data(what.user_data)
+    end
 end
 
 ----------------------------

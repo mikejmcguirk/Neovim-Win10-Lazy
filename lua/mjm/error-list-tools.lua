@@ -8,35 +8,33 @@ local M = {}
 --- @param entry table
 --- @return string
 local function get_qf_key(entry)
-    local fname = entry.filename or ""
-    local type = entry.type or ""
-    local lnum = tostring(entry.lnum or 0)
-    local col = tostring(entry.col or 0)
-    local end_lnum = tostring(entry.end_lnum or 0)
-    local end_col = tostring(entry.end_col or 0)
+    local fname = entry.filename or "" --- @type string
+    local type = entry.type or "" --- @type string
+    local lnum = tostring(entry.lnum or 0) --- @type string
+    local col = tostring(entry.col or 0) --- @type string
+    local end_lnum = tostring(entry.end_lnum or 0) --- @type string
+    local end_col = tostring(entry.end_col or 0) --- @type string
     return fname .. ":" .. type .. ":" .. lnum .. ":" .. col .. ":" .. end_lnum .. ":" .. end_col
 end
 
---- MAYBE: Move into tools file
-
---- @param a table
---- @param b table
---- @return table
+--- @param a vim.quickfix.entry[]
+--- @param b vim.quickfix.entry[]
+--- @return vim.quickfix.entry[]
 local function merge_qf_lists(a, b)
-    local merged = {}
-    local seen = {}
+    local merged = {} --- @type table<string, boolean>
+    local seen = {} --- @type table<string, boolean>
 
-    local x = #a > #b and a or b
-    local y = #a > #b and b or a
+    local x = #a > #b and a or b --- @type vim.quickfix.entry[]
+    local y = #a > #b and b or a --- @type vim.quickfix.entry
 
     for _, entry in ipairs(x) do
-        local key = get_qf_key(entry)
+        local key = get_qf_key(entry) --- @type string
         seen[key] = true
         table.insert(merged, entry)
     end
 
     for _, entry in ipairs(y) do
-        local key = get_qf_key(entry)
+        local key = get_qf_key(entry) --- @type string
         if not seen[key] then
             seen[key] = true
             table.insert(merged, entry)
@@ -60,10 +58,9 @@ local function create_add_list_what(new_what)
         require("mjm.error-list-types")._validate_what(new_what)
     end
 
-    local old_all = M._get_all(new_what.user_data.src_win, new_what.nr)
+    local old_all = M._get_all(new_what.user_data.src_win, new_what.nr) --- @type table
 
-    --- @type vim.quickfix.entry[]
-    local items = merge_qf_lists(old_all.items, new_what.items)
+    local items = merge_qf_lists(old_all.items, new_what.items) --- @type vim.quickfix.entry[]
     local idx = new_what.idx or old_all.idx or nil --- @type integer|nil
     idx = idx and math.min(idx, #items)
 
@@ -117,12 +114,12 @@ end
 --- @return integer
 local function do_set_list(setlist_action, what)
     if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types")
+        local ey = require("mjm.error-list-types") --- @type QfRancherTypes
         ey._validate_setlist_action(setlist_action)
         ey._validate_what(what)
     end
 
-    local what_set = vim.deepcopy(what, true)
+    local what_set = vim.deepcopy(what, true) --- @type QfRancherWhat
     local es = require("mjm.error-list-sort") --- @type QfRancherSort
     --- LOW: Are there conditions at which we shouldn't sort? Should it be possible to set
     --- the sort_func to vim.NIL selectively to ignore it?
@@ -152,16 +149,7 @@ end
 --- @param what QfRancherWhat
 --- @return nil
 local function validate_and_clean_set_list(what)
-    what = what or {}
-
-    local ev = require("mjm.error-list-types")
-    ev._validate_what(what)
-    --- TODO: Add new validation here for the what user_data section
-    --- A note here is that the validation for validity and the validation for performing the
-    --- set are different. It is valid for every value to be nil. But for set, action at least
-    --- must be present. You can do a cleanup, but I think allowing fallback on everything creates
-    --- confusing assumptions
-
+    require("mjm.error-list-types")._validate_what(what)
     what.id = nil
     what.lines = nil
 end
@@ -170,11 +158,6 @@ end
 --- LIST TOOLS ---
 ------------------
 
---- TODO: Since we're using the what table to carry the sort info down for diags anyway, just do
---- all sorting here. This removes the issue of calling functions having to reason about when
---- this function sorts. Instead, they can pass a sort to the what table and assume the
---- underlying logic is correctly handled
----
 --- @param what QfRancherWhat
 --- @return integer
 function M._set_list(what)
@@ -246,62 +229,66 @@ function M._get_max_list_nr(win)
     return win and vim.fn.getloclist(win, { nr = "$" }).nr or vim.fn.getqflist({ nr = "$" }).nr
 end
 
+--- MID: If we have to make another getlist query, do some kind of more unified interface
+--- The simplest solution is a getlist function that takes an integer|nil win value
+--- The issue is handling the nr validation. This can be done with a tbl_extend, but feels
+--- contrived. Also the issue of getting back a specific property. Can handle with
+--- something like return list_info[property]
+
 --- @param win integer|nil
 --- @param nr integer
 --- @return integer|nil
 function M._get_list_size(win, nr)
     if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types")
+        local ey = require("mjm.error-list-types") --- @type QfRancherTypes
         ey._validate_win(win, true)
         ey._validate_list_nr(nr)
     end
 
     if win then
-        local qf_id = vim.fn.getloclist(win, { id = 0 }).id
+        local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
         if qf_id == 0 then
             vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
             return nil
         end
     end
 
-    local max_nr = M._get_max_list_nr(win)
+    local max_nr = M._get_max_list_nr(win) --- @type integer
     if max_nr == 0 then
         -- vim.api.nvim_echo({ { "No list stack", "" } }, false, {})
         return nil
     end
 
-    local adj_nr = math.min(nr, max_nr)
+    local adj_nr = math.min(nr, max_nr) --- @type integer
     return win and vim.fn.getloclist(win, { nr = adj_nr, size = 0 }).size
         or vim.fn.getqflist({ nr = adj_nr, size = 0 }).size
 end
-
---- TODO: Duplicate logic with getting the size
 
 --- @param win integer|nil
 --- @param nr integer
 --- @return integer|nil
 function M._get_list_idx(win, nr)
     if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types")
+        local ey = require("mjm.error-list-types") --- @type QfRancherTypes
         ey._validate_win(win, true)
         ey._validate_list_nr(nr)
     end
 
     if win then
-        local qf_id = vim.fn.getloclist(win, { id = 0 }).id
+        local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
         if qf_id == 0 then
             vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
             return nil
         end
     end
 
-    local max_nr = M._get_max_list_nr(win)
+    local max_nr = M._get_max_list_nr(win) --- @type integer
     if max_nr == 0 then
-        vim.api.nvim_echo({ { "No list stack", "" } }, false, {})
+        -- vim.api.nvim_echo({ { "No list stack", "" } }, false, {})
         return nil
     end
 
-    local adj_nr = math.min(nr, max_nr)
+    local adj_nr = math.min(nr, max_nr) --- @type integer
     return win and vim.fn.getloclist(win, { nr = adj_nr, idx = 0 }).idx
         or vim.fn.getqflist({ nr = adj_nr, idx = 0 }).idx
 end
@@ -316,15 +303,15 @@ function M._del_all(win)
         require("mjm.error-list-types")._validate_win(win, true)
     end
 
-    local max_nr = M._get_cur_list_nr(win)
+    local max_nr = M._get_cur_list_nr(win) --- @type integer
     if max_nr < 1 then
         vim.api.nvim_echo({ { "No list stack", "" } }, false, {})
         return -1
     end
 
-    local eo = require("mjm.error-list-open")
+    local eo = require("mjm.error-list-open") --- @type QfRancherOpen
     if not win then
-        local result = vim.fn.setqflist({}, "f")
+        local result = vim.fn.setqflist({}, "f") --- @type integer
         if result == -1 then
             return result
         end
@@ -345,7 +332,7 @@ function M._del_all(win)
 
     --- @type integer|nil
     local ll_win = require("mjm.error-list-util")._get_ll_win_by_qf_id(qf_id, {})
-    local result = vim.fn.setloclist(win, {}, "f")
+    local result = vim.fn.setloclist(win, {}, "f") --- @type integer
     if result == -1 then
         return result
     else
@@ -353,13 +340,11 @@ function M._del_all(win)
             eo._close_win_save_views(ll_win)
         end
 
-        --- Should not happen, but clear out junk data
+        --- Should not happen, but verify no junk data
         eo._close_loclists_by_qf_id(qf_id, { all_tabpages = true })
         return 0
     end
 end
-
---- TODO: Test if at this point my list deletion actually purges more than the default
 
 --- @param win integer|nil
 --- @param count integer
@@ -382,15 +367,16 @@ function M._del_list(win, count)
         return -1
     end
 
-    local adj_count = math.min(count, max_nr)
+    local adj_count = math.min(count, max_nr) --- @type integer
     local cur_list_nr = M._get_cur_list_nr(win) --- @type integer
     adj_count = adj_count == 0 and cur_list_nr or adj_count
     if vim.g.qf_rancher_del_all_if_empty then
-        local max_other_size = 0
+        local max_other_size = 0 --- @type integer
         for i = 1, max_nr do
             if i ~= adj_count then
-                local this_size = M._get_list_size(win, i)
-                max_other_size = this_size > max_other_size and this_size or max_other_size
+                local this_size = M._get_list_size(win, i) --- @type integer|nil
+                max_other_size = (this_size and this_size > max_other_size) and this_size
+                    or max_other_size
             end
         end
 
@@ -399,7 +385,9 @@ function M._del_list(win, count)
         end
     end
 
+    -- MID: This doesn't purge title
     if adj_count == cur_list_nr then
+        --- @type integer
         local result = win and vim.fn.setloclist(win, {}, "r") or vim.fn.setqflist({}, "r")
         return result == -1 and result or adj_count
     end
@@ -413,10 +401,10 @@ function M._del_list(win, count)
         quickfixtextfunc = nil,
         title = "",
         user_data = nil,
-    }
+    } --- @type QfRancherWhat
 
     local result = win and vim.fn.setloclist(win, {}, "r", del_list_data)
-        or vim.fn.setqflist({}, "r", del_list_data)
+        or vim.fn.setqflist({}, "r", del_list_data) --- @type integer
     return result == -1 and result or adj_count
 end
 
