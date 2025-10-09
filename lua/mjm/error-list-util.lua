@@ -258,6 +258,8 @@ function M._resolve_tabpages(opts)
     end
 end
 
+-- NOTE: Used in hot loops. No validations here
+
 --- @param qf_id integer
 --- @param t_win integer
 --- @return boolean
@@ -280,11 +282,13 @@ end
 --- If searching for wins by qf_id, passing a zero id is allowed so that orphans can be checked
 
 --- @param qf_id integer
---- @param opts {tabpage?: integer, some_tabpages?: integer[], all_tabpages?:boolean}
+--- @param opts QfRancherTabpageOpts
 --- @return integer[]
 local function get_loclist_wins(qf_id, opts)
     if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_qf_id(qf_id)
+        local ey = require("mjm.error-list-types")
+        ey._validate_qf_id(qf_id)
+        ey._validate_tabpage_opts(opts)
     end
 
     local wins = {} --- @type integer[]
@@ -302,11 +306,13 @@ local function get_loclist_wins(qf_id, opts)
 end
 
 --- @param qf_id integer
---- @param opts {tabpage?: integer, some_tabpages?: integer[], all_tabpages?:boolean}
+--- @param opts QfRancherTabpageOpts
 --- @return integer|nil
 local function get_loclist_win(qf_id, opts)
     if vim.g.qf_rancher_debug_assertions then
-        vim.validate("qf_id", qf_id, "number")
+        local ey = require("mjm.error-list-types")
+        ey._validate_qf_id(qf_id)
+        ey._validate_tabpage_opts(opts)
     end
 
     local tabpages = M._resolve_tabpages(opts) --- @type integer[]

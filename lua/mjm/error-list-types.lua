@@ -106,8 +106,6 @@ function M._validate_win(win, allow_nil)
     end
 end
 
---- TODO: Use this where needed
-
 --- @param qf_id integer|nil
 --- @return nil
 function M._validate_qf_id(qf_id)
