@@ -160,6 +160,7 @@ end
 --- TODO: ---
 -------------
 
+--- Cmd prefix customization
 --- Orphan loclist handling:
 --- - Grouping arbitrarily with other commands produces confusing behavior
 --- - The autocmd to close associated loclists should be enabled by default

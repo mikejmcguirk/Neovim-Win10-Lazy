@@ -336,13 +336,13 @@ end
 
 --- @param cargs vim.api.keyset.create_user_command.command_args
 --- @return nil
-function M._q_grep(cargs)
+function M._q_grep_cmd(cargs)
     grep_cmd(nil, cargs)
 end
 
 --- @param cargs vim.api.keyset.create_user_command.command_args
 --- @return nil
-function M._l_grep(cargs)
+function M._l_grep_cmd(cargs)
     grep_cmd(vim.api.nvim_get_current_win(), cargs)
 end
 

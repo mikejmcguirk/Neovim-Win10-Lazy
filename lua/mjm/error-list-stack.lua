@@ -260,6 +260,8 @@ end
 --     require("mjm.error-list-tools")._del_all(win)
 -- end
 
+--- DOCUMENT: All overrides count
+
 --- @param cargs vim.api.keyset.create_user_command.command_args
 --- @return nil
 function M._q_delete_cmd(cargs)
@@ -288,9 +290,8 @@ return M
 --- TODO ---
 ------------
 
---- Because a lot of the functions have changed, go through the maps and cmds and make sure they
---- are correct
---- Deep audit/testing
+--- Testing
+--- Docs
 
 -----------
 --- MID ---
