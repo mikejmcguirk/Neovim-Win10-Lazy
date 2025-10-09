@@ -109,6 +109,7 @@ function M._filter_wrapper(filter_info, filter_opts, input_opts, what)
     end, cur_list.items) --- @type vim.quickfix.entry[]
 
     local what_set = vim.tbl_deep_extend("force", what, {
+        idx = math.min(#new_items, cur_list.idx),
         items = new_items,
         title = filter_info.name .. " filter: /" .. pattern,
     }) --- @type QfRancherWhat
