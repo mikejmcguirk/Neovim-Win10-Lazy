@@ -5,6 +5,8 @@ local M = {}
 --- MODULE DATA ---
 -------------------
 
+--- NOTE: If you set an impossible height, Nvim will clamp it to the available area - 1
+--- This value is for aesthetic/sanity purposes
 local max_qf_height = 10
 
 --------------------
