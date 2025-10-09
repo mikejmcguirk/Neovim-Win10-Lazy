@@ -64,6 +64,7 @@ Map("n", "q", function()
     require("mjm.error-list-open")._close_win_save_views(win)
 end, { buffer = true })
 
+-- TODO: Reset the idx value here as well
 Map("n", "dd", function()
     local win = vim.api.nvim_get_current_win()
     local row, col = unpack(vim.api.nvim_win_get_cursor(win))

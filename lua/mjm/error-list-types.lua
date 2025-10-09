@@ -490,12 +490,8 @@ return M
 --- TODO ---
 ------------
 
---- Put all validations in here
---- Project wide thing: Where should validations be behind the g var and when should they not?
----     Anything from an API needs to have a validation layer. Not sure what else or how much
----     further you should go in than the initial calls
---- Rename this to something that suggests it is what governs the data types. Move the types here
---- as well
+--- Tests
+--- Documentation
 
 -----------
 --- LOW ---

@@ -26,7 +26,7 @@ end
 --- @param default string
 function M._check_cmd_arg(fargs, valid_args, default)
     if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types")
+        local ey = require("mjm.error-list-types") --- @type QfRancherTypes
         ey._is_valid_str_list(fargs)
         ey._is_valid_str_list(valid_args)
         vim.validate("default", default, "string")
@@ -123,6 +123,7 @@ end
 local function get_input(prompt)
     vim.validate("prompt", prompt, "string")
 
+    --- @type boolean, string
     local ok, pattern = pcall(vim.fn.input, { prompt = prompt, cancelreturn = "" })
     if ok then
         return pattern
@@ -132,7 +133,7 @@ local function get_input(prompt)
         return nil
     end
 
-    local chunk = { (pattern or "Unknown error getting input"), "ErrorMsg" }
+    local chunk = { (pattern or "Unknown error getting input"), "ErrorMsg" } --- @type string[]
     vim.api.nvim_echo({ chunk }, true, { err = true })
     return nil
 end
@@ -159,7 +160,7 @@ function M._resolve_pattern(prompt, input_pattern, input_type)
     end
 
     local pattern = get_input(prompt) --- @type string|nil
-    return pattern and input_type == "insensitive" and string.lower(pattern) or pattern
+    return (pattern and input_type == "insensitive") and string.lower(pattern) or pattern
 end
 
 ------------
@@ -174,7 +175,7 @@ function M._locwin_check(win, todo)
         require("mjm.error-list-types")._validate_win(win, false)
     end
 
-    local qf_id = vim.fn.getloclist(win, { id = 0 }).id
+    local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
         return
@@ -210,9 +211,11 @@ function M._win_can_have_loclist(win)
         return false
     end
 
-    require("mjm.error-list-types")._validate_win(win, false)
+    if vim.g.qf_rancher_debug_assertions then
+        require("mjm.error-list-types")._validate_win(win, false)
+    end
 
-    local wintype = vim.fn.win_gettype(win) --- @type string
+    local wintype = vim.fn.win_gettype(win)
     if wintype == "" or wintype == "loclist" then
         return true
     end
@@ -223,7 +226,7 @@ function M._win_can_have_loclist(win)
     return false
 end
 
---- TODO: Only used in preview. Feels unnecessary
+--- TODO: Only used in preview. Feels unnecessary. Or at least move there
 
 --- @param win integer|nil
 --- @return string|nil
@@ -233,7 +236,7 @@ function M._get_listtype(win)
         assert(vim.api.nvim_win_is_valid(win))
     end
 
-    win = win or vim.api.nvim_get_current_win()
+    win = win or vim.api.nvim_get_current_win() --- @type integer
     local wintype = vim.fn.win_gettype(win) --- @type string
     return (wintype == "quickfix" or wintype == "loclist") and wintype or nil
 end
@@ -242,6 +245,8 @@ end
 --- WINDOW FINDING ---
 ----------------------
 
+--- @param opts QfRancherTabpageOpts
+--- @return integer[]
 function M._resolve_tabpages(opts)
     if vim.g.qf_rancher_debug_assertions then
         require("mjm.error-list-types")._validate_tabpage_opts(opts)
@@ -310,7 +315,7 @@ end
 --- @return integer|nil
 local function get_loclist_win(qf_id, opts)
     if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types")
+        local ey = require("mjm.error-list-types") --- @type QfRancherTypes
         ey._validate_qf_id(qf_id)
         ey._validate_tabpage_opts(opts)
     end
@@ -339,9 +344,9 @@ function M._get_loclist_win_by_win(win, opts)
     local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
     if qf_id == 0 then
         return nil
+    else
+        return get_loclist_win(qf_id, opts)
     end
-
-    return get_loclist_win(qf_id, opts)
 end
 
 --- @param qf_id integer
@@ -378,11 +383,11 @@ end
 --- @param opts QfRancherTabpageOpts
 --- @return integer[]
 function M._get_all_loclist_wins(opts)
-    local ll_wins = {}
-    local tabpages = M._resolve_tabpages(opts)
+    local ll_wins = {} --- @type integer[]
+    local tabpages = M._resolve_tabpages(opts) --- @type integer[]
 
     for _, tabpage in ipairs(tabpages) do
-        local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage)
+        local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
         for _, win in ipairs(tabpage_wins) do
             local wintype = vim.fn.win_gettype(win)
             if wintype == "loclist" then
@@ -397,7 +402,7 @@ end
 --- @param opts QfRancherTabpageOpts
 --- @return integer[]
 function M._get_qf_wins(opts)
-    local wins = {}
+    local wins = {} --- @type integer[]
     local tabpages = M._resolve_tabpages(opts) --- @type integer[]
 
     for _, tabpage in ipairs(tabpages) do
@@ -459,11 +464,5 @@ return M
 --- TODO ---
 ------------
 
---- - Check that all functions have reasonable default sorts
---- - Check that window height updates are triggered where appropriate
---- - Check that functions have proper visibility
---- - Check that all mappings have plugs and cmds
---- - Check that all maps/cmds/plugs have desc fieldss
---- - Check that all functions have annotations and documentation
---- - Check that the qf and loclist versions are both properly built for purpose. Should be able
----     to use the loclist function for buf/win specific info
+--- Tests
+--- Docs

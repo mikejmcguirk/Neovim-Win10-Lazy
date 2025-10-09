@@ -168,8 +168,8 @@ end
 --- - The lE purge needs to properly handle orphans
 --- - The autocmd to prevent loclists from moving should be enabled by default
 --- Check validations for what should and should not be behind g vars. General rule - If it's
---- a public API or right behind one, should be validated. Same with functions that can cause
---- real issues if they go wrong (list cycling is the most obvious example)
+---     a public API or right behind one, should be validated. Same with functions that can cause
+---     real issues if they go wrong (list cycling is the most obvious example)
 
 --- Audit all files except ftplugin for bad/old API usage
 --- Add in the util func for opening based on outputopts. Put it behind a gvar
