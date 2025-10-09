@@ -13,6 +13,10 @@ function _G.Qfr_Defer_Require(require_path)
     })
 end
 
+-- NOTE: If you set an impossible height, Nvim will clamp it to the available area - 1
+-- This value is for aesthetic/sanity purposes
+_G.QFR_MAX_HEIGHT = 10
+
 -----------------------
 -- Config/Validation --
 -----------------------

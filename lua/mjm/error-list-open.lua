@@ -1,14 +1,6 @@
 --- @class QfRancherOpen
 local M = {}
 
--------------------
---- MODULE DATA ---
--------------------
-
---- NOTE: If you set an impossible height, Nvim will clamp it to the available area - 1
---- This value is for aesthetic/sanity purposes
-local max_qf_height = 10
-
 --------------------
 --- HELPER FUNCS ---
 --------------------
@@ -149,11 +141,11 @@ local function resolve_height_for_list(win, height)
 
     local size = require("mjm.error-list-tools")._get_list_size(win, 0) --- @type integer|nil
     if not size then
-        return max_qf_height
+        return QFR_MAX_HEIGHT
     end
 
     size = math.max(size, 1)
-    size = math.min(size, max_qf_height)
+    size = math.min(size, QFR_MAX_HEIGHT)
     return size
 end
 
@@ -337,6 +329,8 @@ function M._open_list(win, opts)
     end
 end
 
+-- MID: Add a "max" or "maxheight" arg, or maybe use bang, to open to max height from the cmd
+
 --- @param cargs vim.api.keyset.create_user_command.command_args
 --- @return nil
 function M._open_qflist_cmd(cargs)
@@ -444,6 +438,11 @@ end
 --- BULK OPERATIONS ---
 -----------------------
 
+--- LOW: For these operations, and anything similar in utils, the closing/saving should be done on
+--- a per tabpage basis rather than a per listwin basis, so that for tabs where multiple
+--- location lists are opened, the views can be saed and restored once. Low priority because the
+--- most likely case of this issue occuring, opening a QfList, already works this way
+
 --- @param opts QfRancherTabpageOpts
 --- @return nil
 function M._close_qfwins(opts)
@@ -546,9 +545,6 @@ return M
 --- TODO ---
 ------------
 
--- - Check that window height updates are triggered where appropriate
--- - Check that the qf and loclist versions are both properly built for purpose.
---
 -- All resizing operations should respect the g option and splitkeep
 -- Add <leader>qP / <leader>lP as maps to set the list to max size
 -- Make the various list sizing functions account for screen height

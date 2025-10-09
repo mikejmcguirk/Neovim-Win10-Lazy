@@ -509,12 +509,14 @@ local rancher_keymaps = {
     --- OPEN/CLOSE/RESIZE ---
     -------------------------
 
-    { nn, pqfr.."-open-qf-list)",   qp.."p", "Open the quickfix list",   function() eo._open_qflist({ always_resize = true, height = vim.v.count, print_errs = true }) end },
-    { nn, pqfr.."-close-qf-list)",  qp.."o", "Close the quickfix list",  function() eo._close_qflist() end },
-    { nn, pqfr.."-toggle-qf-list)", qp.."q", "Toggle the quickfix list", function() eo._toggle_qflist()  end },
-    { nn, pqfr.."-open-loclist)",   lp.."p", "Open the location list",   function() eo._open_loclist({ always_resize = true, height = vim.v.count, print_errs = true }) end },
-    { nn, pqfr.."-close-loclist)",  lp.."o", "Close the location list",  function() eo._close_loclist() end },
-    { nn, pqfr.."-toggle-loclist)", lp.."l", "Toggle the location list", function() eo._toggle_loclist() end },
+    { nn, pqfr.."-open-qf-list)",     qp.."p", "Open the quickfix list",               function() eo._open_qflist({ always_resize = true, height = vim.v.count, print_errs = true }) end },
+    { nn, pqfr.."-open-qf-list-max)", qp.."P", "Open the quickfix list to max height", function() eo._open_qflist({ always_resize = true, height = QFR_MAX_HEIGHT, print_errs = true }) end },
+    { nn, pqfr.."-close-qf-list)",    qp.."o", "Close the quickfix list",              function() eo._close_qflist() end },
+    { nn, pqfr.."-toggle-qf-list)",   qp.."q", "Toggle the quickfix list",             function() eo._toggle_qflist()  end },
+    { nn, pqfr.."-open-loclist)",     lp.."p", "Open the location list",               function() eo._open_loclist({ always_resize = true, height = vim.v.count, print_errs = true }) end },
+    { nn, pqfr.."-open-loclist-max)", lp.."P", "Open the location list to max height", function() eo._open_loclist({ always_resize = true, height = QFR_MAX_HEIGHT, print_errs = true }) end },
+    { nn, pqfr.."-close-loclist)",    lp.."o", "Close the location list",              function() eo._close_loclist() end },
+    { nn, pqfr.."-toggle-loclist)",   lp.."l", "Toggle the location list",             function() eo._toggle_loclist() end },
 
     ------------------
     --- NAVIGATION ---
