@@ -228,7 +228,7 @@ end
 --- @param opts QfRancherOpenOpts
 --- @param tabpage integer
 --- @return boolean
-local function handle_open_listwin(list_win, opts, tabpage)
+local function handle_open_list_win(list_win, opts, tabpage)
     if opts.always_resize then
         resize_list_win(list_win, opts.height, { tabpage = tabpage })
     else
@@ -263,7 +263,7 @@ function M._open_qflist(opts)
     local qf_win = eu._get_qf_win({ tabpage = tabpage }) --- @type integer|nil
 
     if qf_win then
-        return handle_open_listwin(qf_win, opts, tabpage)
+        return handle_open_list_win(qf_win, opts, tabpage)
     end
 
     local ll_wins = eu._get_all_loclist_wins({ tabpage = tabpage }) --- @type integer[]
@@ -301,7 +301,7 @@ function M._open_loclist(opts)
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
     local ll_win = eu._get_ll_win_by_qf_id(qf_id, { tabpage = tabpage }) --- @type integer|nil
     if ll_win then
-        return handle_open_listwin(ll_win, opts, tabpage)
+        return handle_open_list_win(ll_win, opts, tabpage)
     end
 
     local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
@@ -333,6 +333,20 @@ function M._open_list(win, opts)
     else
         return M._open_qflist(opts)
     end
+end
+
+--- @param cargs vim.api.keyset.create_user_command.command_args
+--- @return nil
+function M._open_qflist_cmd(cargs)
+    local count = cargs.count > 0 and cargs.count or nil
+    M._open_qflist({ always_resize = true, height = count, print_errs = true })
+end
+
+--- @param cargs vim.api.keyset.create_user_command.command_args
+--- @return nil
+function M._open_loclist_cmd(cargs)
+    local count = cargs.count > 0 and cargs.count or nil
+    M._open_loclist({ always_resize = true, height = count, print_errs = true })
 end
 
 -------------
@@ -531,8 +545,6 @@ return M
 ------------
 
 -- - Check that window height updates are triggered where appropriate
--- - Check that all mappings have plugs and cmds
--- - Check that all maps/cmds/plugs have desc fieldss
 -- - Check that the qf and loclist versions are both properly built for purpose.
 --
 -- All resizing operations should respect the g option and splitkeep

@@ -711,35 +711,32 @@ if vim.g.qf_rancher_set_default_cmds then
     --- OPEN_CLOSE_TOGGLE ---
     -------------------------
 
-    --- TODO: Move the cmd logic into the open module
+    --- NOTE: If actual opts or logic are added to the close/toggle cmds, put that in the open
+    --- module and call an exposed funtion here
 
     vim.api.nvim_create_user_command("Qopen", function(cargs)
-        cargs = cargs or {}
-        local count = cargs.count > 0 and cargs.count or nil
-        eo._open_qflist({ always_resize = true, height = count, print_errs = true })
-    end, { count = 0 })
+        eo._open_qflist_cmd(cargs)
+    end, { count = 0, desck = "Open the Quickfix list" })
 
     vim.api.nvim_create_user_command("Lopen", function(cargs)
-        cargs = cargs or {}
-        local count = cargs.count > 0 and cargs.count or nil
-        eo._open_loclist({ always_resize = true, height = count, print_errs = true })
-    end, { count = 0 })
+        eo._open_loclist_cmd(cargs)
+    end, { count = 0, desc = "Open the Location List" })
 
     vim.api.nvim_create_user_command("Qclose", function()
         eo._close_qflist()
-    end, {})
+    end, { desck = "Close the Quickfix list" })
 
     vim.api.nvim_create_user_command("Lclose", function()
         eo._close_loclist()
-    end, {})
+    end, { desc = "Close the Location List" })
 
     vim.api.nvim_create_user_command("Qtoggle", function()
         eo._toggle_qflist()
-    end, {})
+    end, { desc = "Toggle the Quickfix list" })
 
     vim.api.nvim_create_user_command("Ltoggle", function()
         eo._toggle_loclist()
-    end, {})
+    end, { desc = "Toggle the Location List" })
 
     ------------------
     --- NAV_ACTION ---
