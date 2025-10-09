@@ -716,7 +716,7 @@ if vim.g.qf_rancher_set_default_cmds then
 
     vim.api.nvim_create_user_command("Qopen", function(cargs)
         eo._open_qflist_cmd(cargs)
-    end, { count = 0, desck = "Open the Quickfix list" })
+    end, { count = 0, desc = "Open the Quickfix list" })
 
     vim.api.nvim_create_user_command("Lopen", function(cargs)
         eo._open_loclist_cmd(cargs)
@@ -724,7 +724,7 @@ if vim.g.qf_rancher_set_default_cmds then
 
     vim.api.nvim_create_user_command("Qclose", function()
         eo._close_qflist()
-    end, { desck = "Close the Quickfix list" })
+    end, { desc = "Close the Quickfix list" })
 
     vim.api.nvim_create_user_command("Lclose", function()
         eo._close_loclist()
