@@ -9,7 +9,7 @@ local M = {}
 --- @return string|nil
 function M._find_cmd_pattern(fargs)
     if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._is_valid_str_list(fargs)
+        require("mjm.error-list-types")._validate_str_list(fargs)
     end
 
     for _, arg in ipairs(fargs) do
@@ -27,8 +27,8 @@ end
 function M._check_cmd_arg(fargs, valid_args, default)
     if vim.g.qf_rancher_debug_assertions then
         local ey = require("mjm.error-list-types") --- @type QfRancherTypes
-        ey._is_valid_str_list(fargs)
-        ey._is_valid_str_list(valid_args)
+        ey._validate_str_list(fargs)
+        ey._validate_str_list(valid_args)
         vim.validate("default", default, "string")
     end
 
