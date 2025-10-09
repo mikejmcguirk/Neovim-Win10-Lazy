@@ -21,7 +21,7 @@ local function checked_echo(msg, print_msgs, is_err)
     end
 end
 
--- TODO: https://github.com/neovim/neovim/pull/33402
+-- MID: https://github.com/neovim/neovim/pull/33402
 -- Add variable buf removal behavior/wipeout back into this function once this is resolved
 
 --- @param win integer

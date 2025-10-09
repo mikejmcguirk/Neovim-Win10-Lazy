@@ -242,10 +242,6 @@ end
 --- WINDOW FINDING ---
 ----------------------
 
---- TODO: Apply these utils to any sort of window finding operation. So if we want to gether
---- lists to do some operation on, it should call this to get the list, then run the operation
---- If we find cases we can't handle, we need to expand or break out these functions as needed
-
 function M._resolve_tabpages(opts)
     if vim.g.qf_rancher_debug_assertions then
         require("mjm.error-list-types")._validate_tabpage_opts(opts)
@@ -450,45 +446,6 @@ end
 --         return M._get_qf_wins(opts)
 --     end
 -- end
-
--- TODO: Generalize out this function
-
---- @param opts?{tabpage?:integer, tabpage_wins?: integer[]}
---- @return integer[]
-function M._find_orphan_loclists(opts)
-    opts = opts or {}
-    vim.validate("opts.tabpage", opts.tabpage, { "nil", "number" })
-    vim.validate("opts.tabpage_wins", opts.tabpage_wins, { "nil", "table" })
-
-    local tabpage = opts.tabpage or vim.api.nvim_get_current_tabpage() --- @type integer
-    --- @type integer[]
-    local tabpage_wins = opts.tabpage_wins or vim.api.nvim_tabpage_list_wins(tabpage)
-
-    local orphans = {} --- @type integer[]
-    for _, win in pairs(tabpage_wins) do
-        if vim.fn.win_gettype(win) == "loclist" then
-            local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
-            if qf_id == 0 then
-                table.insert(orphans, win)
-            else
-                local is_orphan = true --- @type boolean
-                for _, inner_win in pairs(tabpage_wins) do
-                    local iw_qf_id = vim.fn.getloclist(inner_win, { id = 0 }).id --- @type integer
-                    if inner_win ~= win and iw_qf_id == qf_id then
-                        is_orphan = false
-                        break
-                    end
-                end
-
-                if is_orphan then
-                    table.insert(orphans, win)
-                end
-            end
-        end
-    end
-
-    return orphans
-end
 
 return M
 

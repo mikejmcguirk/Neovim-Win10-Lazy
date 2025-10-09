@@ -38,13 +38,15 @@ function M._validate_input_opts(input_opts)
     vim.validate("input_opts.pattern", input_opts.pattern, { "nil", "string" })
 end
 
+--- TODO: The loclist source win field is used in two places in the preview module. Remove those
+--- then cut from here
+
 --- @class QfRancherOutputOpts
 --- @field action? QfRancherAction
 --- @field count? integer|nil
 --- @field use_loclist? boolean|nil
---- @field loclist_source_win? integer --- TODO: But why though?
+--- @field loclist_source_win? integer
 --- @field list_item_type? string|nil
---- @field title? string|nil --- TODO: Nix this
 
 --- PR: The builtin what annotation does not contain the user_data field. On one hand, this makes
 --- sense because it is not atually read by setqflist. On the other, it means the field cannot
@@ -232,7 +234,6 @@ function M._validate_what(what)
 
     vim.validate("what.items", what.items, { "nil", "table" })
     if vim.g.qf_rancher_debug_assertions and type(what.items) == "table" then
-        --- TODO: Consolidate these
         for _, item in ipairs(what.items) do
             M.validate_list_item(item)
         end
@@ -371,8 +372,6 @@ end
 ------------------
 --- OPEN TYPES ---
 ------------------
-
---- TODO: This should be print errs (easier to check truthy value)
 
 --- @class QfRancherOpenOpts
 --- @field always_resize? boolean

@@ -368,7 +368,7 @@ end
 --- API ---
 -----------
 
---- TODO: Document this. Needed if you want to map your filter
+--- DOCUMENT: this. Needed if you want to map your filter
 
 --- @param name string
 --- @param filter_opts QfRancherFilterOpts
@@ -463,6 +463,7 @@ return M
 ------------
 
 --- Tests
+--- Docs
 
 -----------
 --- MID ---
