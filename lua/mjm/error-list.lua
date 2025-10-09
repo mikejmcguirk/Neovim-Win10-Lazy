@@ -17,6 +17,15 @@ end
 -- This value is for aesthetic/sanity purposes
 _G.QFR_MAX_HEIGHT = 10
 
+-- Autocmd("BufEnter", {
+--     group = Augroup("rancher-test", { clear = true }),
+--     callback = function(ev)
+--         -- vim.fn.confirm(vim.inspect(ev))
+--         local ft = vim.bo[ev.buf].buftype
+--         vim.fn.confirm(ft)
+--     end,
+-- })
+
 -----------------------
 -- Config/Validation --
 -----------------------

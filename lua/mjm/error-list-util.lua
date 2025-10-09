@@ -241,6 +241,22 @@ function M._get_listtype(win)
     return (wintype == "quickfix" or wintype == "loclist") and wintype or nil
 end
 
+--- @param win integer
+--- @return boolean
+function M._win_is_list(win)
+    if vim.g.qf_rancher_debug_assertions then
+        require("mjm.error-list-types")._validate_win(win, false)
+    end
+
+    local buf = vim.api.nvim_win_get_buf(win) --- @type integer
+    local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf }) --- @type string
+    if buftype == "quickfix" then
+        return true
+    else
+        return false
+    end
+end
+
 ----------------------
 --- WINDOW FINDING ---
 ----------------------

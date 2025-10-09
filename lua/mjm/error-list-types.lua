@@ -85,7 +85,7 @@ end
 
 --- @param table string[]
 --- @return nil
-function M._is_valid_str_list(table)
+function M._validate_str_list(table)
     vim.validate("table", table, "table")
     for k, v in ipairs(table) do
         assert(type(k) == "number", "Key " .. vim.inspect(k) .. " is not a number")
@@ -253,7 +253,7 @@ function M._validate_what(what)
 
     vim.validate("what.lines", what.lines, { "nil", "table" })
     if type(what.lines) == "table" then
-        M._is_valid_str_list(what.lines)
+        M._validate_str_list(what.lines)
     end
 
     M._validate_list_nr(what.nr)
@@ -413,6 +413,55 @@ function M._validate_pwin_close_opts(opts)
     vim.validate("opts", opts, "table")
     vim.validate("opts.force", opts.force, { "boolean", "nil" })
     vim.validate("opts.print_errs", opts.print_errs, { "boolean", "nil" })
+end
+
+---------------------
+--- PREVIEW TYPES ---
+---------------------
+
+-- :h 'winborder'
+-- PR: This feels like something you could put into vim.validate. Or at least a type annotation
+
+--- @alias QfRancherBorder ""|"bold"|"double"|"none"|"rounded"|"shadow"|"single"|"solid"|string[]
+
+--- @type string[]
+local valid_borders = { "", "bold", "double", "none", "rounded", "shadow", "single", "solid" }
+
+--- @param border QfRancherBorder
+function M._validate_border(border)
+    vim.validate("border", border, { "string", "table" })
+    if type(border) == "string" then
+        vim.validate("border", border, function()
+            return vim.tbl_contains(valid_borders, border)
+        end)
+    elseif type(border) == "table" then
+        M._validate_str_list(border)
+        vim.validate("border", border, function()
+            return #border == 8
+        end)
+    end
+end
+
+function M._is_valid_border(border)
+    if type(border) == "string" then
+        return vim.tbl_contains(valid_borders, border)
+    end
+
+    if type(border) ~= "table" then
+        return false
+    end
+
+    if #border ~= 8 then
+        return false
+    end
+
+    for _, segment in pairs(border) do
+        if type(segment) ~= "string" then
+            return false
+        end
+    end
+
+    return true
 end
 
 ------------------

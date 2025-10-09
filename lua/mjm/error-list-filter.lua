@@ -128,7 +128,7 @@ end
 --- NOTE: x and y or z ternaries only work if y is truthy. Because keep can be either, don't use
 ---     ternaries here
 --- LOW: Would like to eliminate the opts table from these functions entirely, but I'm not sure
----     what a less contrived way is to handle the possibilty of both pattern and regex being
+---     what a less contrived way is to handle the possibilty of either pattern or regex being
 ---     sent to the predicate function
 
 -------------------------
