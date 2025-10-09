@@ -14,6 +14,7 @@ _G.SetOpt = vim.api.nvim_set_option_value
 _G.SpellFile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add" ---@type string
 
 _G.ApiMap = vim.api.nvim_set_keymap
+_G.BufApiMap = vim.api.nvim_buf_set_keymap
 _G.Augroup = vim.api.nvim_create_augroup
 _G.Autocmd = vim.api.nvim_create_autocmd
 _G.Cmd = vim.api.nvim_cmd
