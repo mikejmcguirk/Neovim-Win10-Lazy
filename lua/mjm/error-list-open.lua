@@ -22,7 +22,7 @@ local function checked_echo(msg, print_msgs, is_err)
 end
 
 -- TODO: https://github.com/neovim/neovim/pull/33402
--- Add variable buf removal behavior back into this function once this is resolved
+-- Add variable buf removal behavior/wipeout back into this function once this is resolved
 
 --- @param win integer
 --- @param opts QfRancherPWinCloseOpts
@@ -148,8 +148,6 @@ local function resolve_height_for_list(win, height)
     size = math.min(size, QFR_MAX_HEIGHT)
     return size
 end
-
---- TODO: Does the hight have to be capped at the total display lines in Vim?
 
 --- @param list_win integer
 --- @param height integer|nil
@@ -545,10 +543,6 @@ return M
 --- TODO ---
 ------------
 
--- All resizing operations should respect the g option and splitkeep
--- Add <leader>qP / <leader>lP as maps to set the list to max size
--- Make the various list sizing functions account for screen height
---
 -- Tests
 -- Docs
 
