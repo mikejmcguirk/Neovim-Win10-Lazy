@@ -74,6 +74,11 @@ local function add_loclist()
     return what
 end
 
+--- @return integer
+local function cur_win()
+    return vim.api.nvim_get_current_win()
+end
+
 local ed = Qfr_Defer_Require("mjm.error-list-diag") --- @type QfRancherDiagnostics
 local ef = Qfr_Defer_Require("mjm.error-list-filter") --- @type QfRancherFilter
 local eg = Qfr_Defer_Require("mjm.error-list-grep") --- @type QfRancherGrep
@@ -528,12 +533,12 @@ local rancher_keymaps = {
     { nn, pqfr.."-qf-last)",  "]Q",          "Go to the last qf entry",         function() en._q_last(vim.v.count) end },
     { nn, pqfr.."-qf-pfile)", "[<C-q>",      "Go to the previous qf file",      function() en._q_pfile(vim.v.count) end },
     { nn, pqfr.."-qf-nfile)", "]<C-q>",      "Go to the next qf file",          function() en._q_nfile(vim.v.count) end },
-    { nn, pqfr.."-ll-prev)",  "[l",          "Go to a previous loclist entry",  function() en._l_prev(vim.api.nvim_get_current_win(), vim.v.count) end },
-    { nn, pqfr.."-ll-next)",  "]l",          "Go to a later loclist entry",     function() en._l_next(vim.api.nvim_get_current_win(), vim.v.count) end },
-    { nn, pqfr.."-ll-rewind)","[L",          "Go to the first loclist entry",   function() en._l_rewind(vim.api.nvim_get_current_win(), vim.v.count) end },
-    { nn, pqfr.."-ll-last)",  "]L",          "Go to the last loclist entry",    function() en._l_last(vim.api.nvim_get_current_win(), vim.v.count) end },
-    { nn, pqfr.."-ll-pfile)", "[<C-l>",      "Go to the previous loclist file", function() en._l_pfile(vim.api.nvim_get_current_win(), vim.v.count) end },
-    { nn, pqfr.."-ll-nfile)", "]<C-l>",      "Go to the next loclist file",     function() en._l_nfile(vim.api.nvim_get_current_win(), vim.v.count) end },
+    { nn, pqfr.."-ll-prev)",  "[l",          "Go to a previous loclist entry",  function() en._l_prev(cur_win(), vim.v.count) end },
+    { nn, pqfr.."-ll-next)",  "]l",          "Go to a later loclist entry",     function() en._l_next(cur_win(), vim.v.count) end },
+    { nn, pqfr.."-ll-rewind)","[L",          "Go to the first loclist entry",   function() en._l_rewind(cur_win(), vim.v.count) end },
+    { nn, pqfr.."-ll-last)",  "]L",          "Go to the last loclist entry",    function() en._l_last(cur_win(), vim.v.count) end },
+    { nn, pqfr.."-ll-pfile)", "[<C-l>",      "Go to the previous loclist file", function() en._l_pfile(cur_win(), vim.v.count) end },
+    { nn, pqfr.."-ll-nfile)", "]<C-l>",      "Go to the next loclist file",     function() en._l_nfile(cur_win(), vim.v.count) end },
 
     ------------
     --- SORT ---
@@ -635,16 +640,16 @@ local rancher_keymaps = {
 
     { nn, pqfr.."-qf-older)",        qp.."[", "Go to an older qflist",                         function() es._q_older(vim.v.count) end },
     { nn, pqfr.."-qf-newer)",        qp.."]", "Go to a newer qflist",                          function() es._q_newer(vim.v.count) end },
-    { nn, pqfr.."-qf-history)",      qp.."Q", "View or jump within the quickfix history",      function() es._q_history(vim.v.count, {}) end },
-    { nn, pqfr.."-qf-history-open)", qp.."<C-q>", "Open and jump within the quickfix history", function() es._q_history(vim.v.count, { always_open = true }) end },
+    { nn, pqfr.."-qf-history)",      qp.."Q", "View or jump within the quickfix history",      function() es._q_history(vim.v.count, { default = "current" }) end },
+    { nn, pqfr.."-qf-history-open)", qp.."<C-q>", "Open and jump within the quickfix history", function() es._q_history(vim.v.count, { always_open = true, default = "current" }) end },
     { nn, pqfr.."-qf-del)",          qp.."e", "Delete a list from the quickfix stack",         function() es._q_del(vim.v.count) end },
     { nn, pqfr.."-qf-del-all)",      qp.."E", "Delete all items from the quickfix stack",      function() es._q_del_all() end },
-    { nn, pqfr.."-ll-older)",        lp.."[", "Go to an older location list",                  function() es._l_older(vim.api.nvim_get_current_win(), vim.v.count) end },
-    { nn, pqfr.."-ll-newer)",        lp.."]", "Go to a newer location list",                   function() es._l_newer(vim.api.nvim_get_current_win(), vim.v.count) end },
-    { nn, pqfr.."-ll-history)",      lp.."L", "View or jump within the loclist history",       function() es._l_history(vim.api.nvim_get_current_win(), vim.v.count, {}) end },
-    { nn, pqfr.."-ll-history-open)", lp.."<C-l>", "Open and jump within the loclist history",  function() es._l_history(vim.api.nvim_get_current_win(), vim.v.count, { always_open = true }) end },
-    { nn, pqfr.."-ll-del)",          lp.."e", "Delete a list from the loclist stack",          function() es._l_del(vim.api.nvim_get_current_win(), vim.v.count) end },
-    { nn, pqfr.."-ll-del-all)",      lp.."E", "Delete all items from the loclist stack",       function() es._l_del_all(vim.api.nvim_get_current_win()) end },
+    { nn, pqfr.."-ll-older)",        lp.."[", "Go to an older location list",                  function() es._l_older(cur_win(), vim.v.count) end },
+    { nn, pqfr.."-ll-newer)",        lp.."]", "Go to a newer location list",                   function() es._l_newer(cur_win(), vim.v.count) end },
+    { nn, pqfr.."-ll-history)",      lp.."L", "View or jump within the loclist history",       function() es._l_history(cur_win(), vim.v.count, { default = "current" }) end },
+    { nn, pqfr.."-ll-history-open)", lp.."<C-l>", "Open and jump within the loclist history",  function() es._l_history(cur_win(), vim.v.count, { always_open = true, default = "current" }) end },
+    { nn, pqfr.."-ll-del)",          lp.."e", "Delete a list from the loclist stack",          function() es._l_del(cur_win(), vim.v.count) end },
+    { nn, pqfr.."-ll-del-all)",      lp.."E", "Delete all items from the loclist stack",       function() es._l_del_all(cur_win()) end },
 }
 
 for _, map in ipairs(rancher_keymaps) do

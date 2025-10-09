@@ -48,8 +48,9 @@ local function handle_output(obj, what)
 
     if vim.g.qf_rancher_auto_open_changes then
         require("mjm.error-list-stack")._history(src_win, dest_nr, {
-            silent = true,
             always_open = true,
+            default = "current",
+            silent = true,
         })
     end
 end

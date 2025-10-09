@@ -475,6 +475,7 @@ M._default_timeout = 4000
 
 --- @class QfRancherHistoryOpts
 --- @field always_open? boolean
+--- @field default? "all"|"current"
 --- @field keep_win? boolean
 --- @field silent? boolean
 
@@ -482,6 +483,7 @@ M._default_timeout = 4000
 --- @return nil
 function M._validate_history_opts(opts)
     vim.validate("opts", opts, "table")
+    vim.validate("opts.default", opts.default, { "nil", "string" })
     vim.validate("opts.always_open", opts.always_open, { "boolean", "nil" })
     vim.validate("opts.keep_win", opts.keep_win, { "boolean", "nil" })
     vim.validate("opts.silent", opts.silent, { "boolean", "nil" })

@@ -1,9 +1,6 @@
 --- @class QfRancherStack
 local M = {}
 
---- TODO: <leader>qQ is showing the last member of the stack, not the current one
---- TODO: <leader>q<C-q> is not jumping to the stack number it displays
-
 ------------------------
 --- Helper Functions ---
 ------------------------
@@ -121,6 +118,8 @@ end
 --- HISTORY ---
 ---------------
 
+-- DOCUMENT: By default, the keymap version will print the current list
+
 --- @param win integer|nil
 --- @param count integer
 --- @param opts QfRancherHistoryOpts
@@ -142,7 +141,8 @@ function M._history(win, count, opts)
 
     local cur_list_nr = et._get_cur_list_nr(win) --- @type integer
     local cmd = win and "lhistory" or "chistory" --- @type string
-    local adj_count = count > 0 and math.min(count, stack_len) or nil --- @type integer|nil
+    local default = opts.default == "current" and cur_list_nr or nil --- @type integer|nil
+    local adj_count = count > 0 and math.min(count, stack_len) or default --- @type integer|nil
     ---@diagnostic disable-next-line: missing-fields
     vim.api.nvim_cmd({ cmd = cmd, count = adj_count, mods = { silent = opts.silent } }, {})
     if vim.g.qf_rancher_debug_assertions then
@@ -157,8 +157,7 @@ function M._history(win, count, opts)
     end
 
     if opts.always_open then
-        local open_opts = { keep_win = opts.keep_win }
-        require("mjm.error-list-open")._open_list(win, open_opts)
+        require("mjm.error-list-open")._open_list(win, { keep_win = opts.keep_win })
     end
 end
 
@@ -184,13 +183,13 @@ end
 --- @param cargs vim.api.keyset.create_user_command.command_args
 --- @return nil
 function M._q_history_cmd(cargs)
-    M._q_history(cargs.count, {})
+    M._q_history(cargs.count, { default = "all" })
 end
 
 --- @param cargs vim.api.keyset.create_user_command.command_args
 --- @return nil
 function M._l_history_cmd(cargs)
-    M._l_history(vim.api.nvim_get_current_win(), cargs.count, {})
+    M._l_history(vim.api.nvim_get_current_win(), cargs.count, { default = "all" })
 end
 
 ----------------

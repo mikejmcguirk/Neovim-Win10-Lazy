@@ -133,8 +133,9 @@ local function diags_to_list(diag_info, diag_opts, what)
     local dest_nr = et._set_list(what_set) --- @type integer
     if vim.g.qf_rancher_auto_open_changes and dest_nr > 0 then
         require("mjm.error-list-stack")._history(src_win, dest_nr, {
-            silent = true,
             always_open = true,
+            default = "current",
+            silent = true,
         })
     end
 end

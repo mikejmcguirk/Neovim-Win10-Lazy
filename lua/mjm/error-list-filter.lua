@@ -116,8 +116,9 @@ function M._filter_wrapper(filter_info, filter_opts, input_opts, what)
     local dest_nr = et._set_list(what_set) --- @type integer
     if vim.g.qf_rancher_auto_open_changes then
         require("mjm.error-list-stack")._history(what_set.user_data.src_win, dest_nr, {
-            silent = true,
             always_open = true,
+            default = "current",
+            silent = true,
         })
     end
 end
