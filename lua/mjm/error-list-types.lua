@@ -251,18 +251,16 @@ end
 --- WINDOW FINDING TYPES ---
 ----------------------------
 
---- TODO: Some_tabpages should be tabpages
-
 --- @class QfRancherTabpageOpts
 --- @field tabpage? integer
---- @field some_tabpages? integer[]
+--- @field tabpages? integer[]
 --- @field all_tabpages? boolean
 
 --- @param opts QfRancherTabpageOpts
 function M._validate_tabpage_opts(opts)
     vim.validate("opts", opts, "table")
     vim.validate("opts.tabpage", opts.tabpage, { "nil", "number" })
-    vim.validate("opts.some_tabpages", opts.some_tabpages, { "nil", "table" })
+    vim.validate("opts.tabpages", opts.tabpages, { "nil", "table" })
     vim.validate("opts.all_tabpages", opts.all_tabpages, { "boolean", "nil" })
 end
 

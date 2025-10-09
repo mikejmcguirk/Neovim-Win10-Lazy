@@ -249,8 +249,8 @@ function M._resolve_tabpages(opts)
 
     if opts.all_tabpages then
         return vim.api.nvim_list_tabpages()
-    elseif opts.some_tabpages then
-        return opts.some_tabpages
+    elseif opts.tabpages then
+        return opts.tabpages
     elseif opts.tabpage then
         return { opts.tabpage }
     else
@@ -329,7 +329,7 @@ local function get_loclist_win(qf_id, opts)
 end
 
 --- @param win integer
---- @param opts {tabpage?: integer, some_tabpages?: integer[], all_tabpages?:boolean}
+--- @param opts QfRancherTabpageOpts
 --- @return integer|nil
 function M._get_loclist_win_by_win(win, opts)
     if vim.g.qf_rancher_debug_assertions then
