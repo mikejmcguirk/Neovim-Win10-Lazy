@@ -70,3 +70,5 @@ Map("n", "<leader>ar", function()
     local buf = vim.api.nvim_get_current_buf()
     require("mjm.utils").harpoon_rm_buf({ buf = buf })
 end, { desc = "Delete current file from Harpoon List" })
+
+-- https://github.com/neovim/neovim/issues/32546 - Data storage

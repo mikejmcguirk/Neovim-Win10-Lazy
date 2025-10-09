@@ -49,15 +49,7 @@ require("mjm.set")
 require("mjm.map")
 require("mjm.stl")
 
-require("mjm.error-list") -- Do this first because it sets up g vars
--- require("mjm.error-list-open")
--- require("mjm.error-list-stack")
--- require("mjm.error-list-filter")
--- require("mjm.error-list-nav-action")
-require("mjm.error-list-sort")
-require("mjm.error-list-system")
-require("mjm.error-list-grep")
--- require("mjm.error-list-diag")
+require("mjm.error-list")
 
 local env_setup = vim.uv.hrtime()
 
@@ -82,30 +74,7 @@ require("mjm.plugins.fugitive")
 require("mjm.plugins.session_manager")
 
 require("mjm.plugins.lightbulb")
-
-vim.api.nvim_set_var("db_ui_use_nerd_fonts", 1)
-
-vim.api.nvim_set_var("qs_highlight_on_keys", { "f", "F", "t", "T" })
-vim.api.nvim_set_var("qs_max_chars", 9999)
-vim.api.nvim_set_hl(0, "QuickScopePrimary", { reverse = true })
-vim.api.nvim_set_hl(0, "QuickScopeSecondary", { undercurl = true })
-
-vim.api.nvim_set_var("undotree_WindowLayout", 3)
--- This doesn't really need to be setup until BufReadPre, but Undotree itself autoloads well and
--- gating this map behind an autocmd would add more startup time than just setting it
-Map("n", "<leader>u", "<cmd>UndotreeToggle<cr>")
-
--- TODO: Wait for https://github.com/neovim/neovim/pull/36091
--- vim.cmd("packadd nvim.undotree")
--- Map("n", "<leader>u", function()
---     local win_width = vim.api.nvim_win_get_width(vim.api.nvim_get_current_win())
---     local open_width = math.floor(win_width * 0.3)
---     open_width = math.max(open_width, 30)
---     local command = open_width .. "vnew"
---
---     ---@diagnostic disable-next-line: missing-fields
---     require("undotree").open({ command = command })
--- end)
+require("mjm.plugins.misc")
 
 local eager_loaded = vim.uv.hrtime()
 

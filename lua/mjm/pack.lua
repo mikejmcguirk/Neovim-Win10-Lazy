@@ -53,8 +53,6 @@ local pack_spec = {
 
     { src = "https://github.com/Wansmer/treesj" },
 
-    { src = "https://github.com/mbbill/undotree" },
-
     { src = "https://github.com/tpope/vim-abolish" },
 
     { src = "https://github.com/tpope/vim-dadbod" },
@@ -66,6 +64,8 @@ local pack_spec = {
 }
 
 vim.pack.add(pack_spec, {})
+
+vim.api.nvim_cmd({ cmd = "packadd", args = { "nvim.undotree" }, bang = true }, {})
 
 Map("n", "zqc", function()
     local inactive = vim.iter(pairs(vim.pack.get()))
