@@ -122,16 +122,18 @@ local function create_autocmds()
         end,
     })
 
-    -- TODO: Test with FzfLua/Blink/Harpoon to see if this is necessary
-    -- vim.api.nvim_create_autocmd("WinEnter", {
-    --     group = group,
-    --     callback = function()
-    --         local cur_win = vim.api.nvim_get_current_win()
-    --         if cur_win ~= old_bad_qf_win then
-    --             M.close_preview_win()
-    --         end
-    --     end,
-    -- })
+    vim.api.nvim_create_autocmd("WinEnter", {
+        group = group,
+        callback = function()
+            local cur_win = vim.api.nvim_get_current_win()
+            for _, win in pairs(wins) do
+                if win ~= cur_win then
+                    M.close_preview_win(win)
+                    wins[win] = -1
+                end
+            end
+        end,
+    })
 
     vim.api.nvim_create_autocmd("WinLeave", {
         group = group,
@@ -550,7 +552,7 @@ end
 
 function M._update_preview_win_pos(qf_win)
     local preview_win = wins[qf_win]
-    if preview_win then
+    if preview_win and preview_win > -1 then
         M.update_preview_win_pos(qf_win, preview_win)
     end
 end
@@ -622,7 +624,7 @@ function M.update_preview_win(cur_win, preview_win)
     end
 
     local line = vim.fn.line(".") --- @type integer
-    if line > #cur_list then
+    if line > #cur_list.items then
         clear_session_data()
         return
     end
@@ -690,14 +692,12 @@ function M.open_preview_win()
     end)() --- @type integer|nil, boolean
 
     if not preview_buf then
-        vim.fn.confirm("no preview buf")
         clear_session_data()
         return
     end
 
     local win_config = get_win_config(qf_win) --- @type vim.api.keyset.win_config|nil
     if not win_config then
-        vim.fn.confirm("no win config")
         clear_session_data()
         return
     end
@@ -730,8 +730,9 @@ end
 
 function M.toggle_preview_win()
     -- TODO: Weird repeated getting of the current win
-    local cur_win = vim.api.nvim_get_current_win()
-    if wins[cur_win] then
+    local cur_win = vim.api.nvim_get_current_win() --- @type integer
+    local preview_win = wins[cur_win] --- @type integer|nil
+    if preview_win and preview_win > 0 then
         M.close_preview_win(cur_win)
     else
         M.open_preview_win()
