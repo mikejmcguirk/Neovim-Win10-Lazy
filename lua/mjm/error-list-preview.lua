@@ -112,7 +112,7 @@ local function create_autocmds()
     vim.api.nvim_create_autocmd("WinClosed", {
         group = group,
         callback = function(ev)
-            local closed_win = tonumber(ev.match)
+            local closed_win = tonumber(ev.match) --- @type number|nil
             if closed_win ~= nil then
                 wins[closed_win] = nil
             end
@@ -137,7 +137,7 @@ local function create_autocmds()
     vim.api.nvim_create_autocmd("WinLeave", {
         group = group,
         callback = function()
-            local exit_win = vim.api.nvim_get_current_win()
+            local exit_win = vim.api.nvim_get_current_win() --- @type integer
             if wins[exit_win] then
                 M.close_preview_win(exit_win)
                 wins[exit_win] = -1
@@ -148,8 +148,8 @@ local function create_autocmds()
     vim.api.nvim_create_autocmd("WinResized", {
         group = group,
         callback = function()
-            local resized_win = vim.api.nvim_get_current_win()
-            local preview_win = wins[resized_win]
+            local resized_win = vim.api.nvim_get_current_win() --- @type integer
+            local preview_win = wins[resized_win] --- @type integer|nil
             if preview_win and preview_win > 0 then
                 M.update_preview_win_pos(preview_win)
             end
@@ -177,13 +177,18 @@ local function get_border()
     return ey._is_valid_border(g_border) and g_border or "single"
 end
 
+-- TODO: I'm not sure how strictly we should enforce types. Whatever it is though it needs to be
+-- uniform throughout the project
+
+--- @return string
 local function get_title_pos()
-    local g_title = vim.g.qf_rancher_preview_title_pos
-    if g_title == "left" or g_title == "center" or g_title == "right" then
-        return g_title
-    else
-        return "left"
-    end
+    local g_title = vim.g.qf_rancher_preview_title_pos --- @type string|any
+    vim.validate("g_title", g_title, "string")
+
+    local is_str = type(g_title) == "string" --- @type boolean
+    return (is_str and (g_title == "left" or g_title == "center" or g_title == "right"))
+            and g_title
+        or "left"
 end
 
 local function get_siso()
@@ -199,45 +204,46 @@ local function get_so()
 end
 
 local function get_winblend()
-    local winblend = vim.g.qf_rancher_preview_winblend
+    local winblend = vim.g.qf_rancher_preview_winblend --- @type number
+    vim.validate("winblend", winblend, { "number" })
     local valid_winblend = winblend
         and type(winblend) == "number"
         and winblend >= 0
-        and winblend <= 100
+        and winblend <= 100 --- @type boolean
 
     return valid_winblend and winblend or 0
 end
 
-local function set_preview_winopts(bufnr)
+local function set_preview_winopts(win, bufnr)
     if not old_bad_preview_win then
         clear_session_data()
         return
     end
 
-    vim.api.nvim_set_option_value("cc", "", { win = old_bad_preview_win })
-    vim.api.nvim_set_option_value("cul", true, { win = old_bad_preview_win })
+    vim.api.nvim_set_option_value("cc", "", { win = win })
+    vim.api.nvim_set_option_value("cul", true, { win = win })
 
-    vim.api.nvim_set_option_value("fdc", "0", { win = old_bad_preview_win })
-    vim.api.nvim_set_option_value("fdm", "manual", { win = old_bad_preview_win })
+    vim.api.nvim_set_option_value("fdc", "0", { win = win })
+    vim.api.nvim_set_option_value("fdm", "manual", { win = win })
 
-    vim.api.nvim_set_option_value("list", false, { win = old_bad_preview_win })
+    vim.api.nvim_set_option_value("list", false, { win = win })
 
-    vim.api.nvim_set_option_value("nu", true, { win = old_bad_preview_win })
-    vim.api.nvim_set_option_value("rnu", false, { win = old_bad_preview_win })
-    vim.api.nvim_set_option_value("scl", "no", { win = old_bad_preview_win })
+    vim.api.nvim_set_option_value("nu", true, { win = win })
+    vim.api.nvim_set_option_value("rnu", false, { win = win })
+    vim.api.nvim_set_option_value("scl", "no", { win = win })
 
-    vim.api.nvim_set_option_value("spell", false, { win = old_bad_preview_win })
+    vim.api.nvim_set_option_value("spell", false, { win = win })
 
-    vim.api.nvim_set_option_value("winblend", get_winblend(), { win = old_bad_preview_win })
+    vim.api.nvim_set_option_value("winblend", get_winblend(), { win = win })
 
-    vim.api.nvim_set_option_value("so", get_so(), { win = old_bad_preview_win })
-    vim.api.nvim_set_option_value("siso", get_siso(), { win = old_bad_preview_win })
+    vim.api.nvim_set_option_value("so", get_so(), { win = win })
+    vim.api.nvim_set_option_value("siso", get_siso(), { win = win })
 
     -- TODO: Should not be here
     if vim.g.qf_rancher_preview_show_title then
         local preview_bufname = vim.fn.bufname(bufnr)
         local relative_fname = vim.fn.fnamemodify(preview_bufname, ":.")
-        vim.api.nvim_win_set_config(old_bad_preview_win, {
+        vim.api.nvim_win_set_config(win, {
             title = relative_fname,
             title_pos = get_title_pos(),
         })
@@ -248,10 +254,11 @@ end
 --- Buf Setup ---
 -----------------
 
+--- @param win integer
 --- @param bufnr integer
 --- @param item table
 --- @return Range4
-local function get_hl_range(bufnr, item)
+local function get_hl_range(win, bufnr, item)
     local row = item.lnum >= 0 and item.lnum - 1 or 0
     local start_line = vim.api.nvim_buf_get_lines(bufnr, row, row + 1, false)[1]
     local start_line_len_0 = math.max(#start_line - 1, 0)
@@ -262,10 +269,10 @@ local function get_hl_range(bufnr, item)
 
         -- PR: The documentation says "if true" but it's actually a number value. But double check
         -- the source
-        if item.vcol == 1 and old_bad_preview_win then
+        if item.vcol == 1 and win then
             -- FUTURE: Might be more accurately handled with a binary search on
             -- vim.fn.strdisplaywidth(). But I have not seen one of these in the wild
-            local byte_col = vim.fn.virtcol2col(old_bad_preview_win, item.lnum, item.col)
+            local byte_col = vim.fn.virtcol2col(win, item.lnum, item.col)
             return math.max(byte_col - 1, 0)
         end
 
@@ -281,10 +288,10 @@ local function get_hl_range(bufnr, item)
             return #fin_line
         end
 
-        if item.vcol == 1 and old_bad_preview_win then
+        if item.vcol == 1 and win then
             -- FUTURE: Might be more accurately handled with a binary search on
             -- vim.fn.strdisplaywidth(). But I have not seen one of these in the wild
-            local byte_col = vim.fn.virtcol2col(old_bad_preview_win, item.end_lnum, item.end_col)
+            local byte_col = vim.fn.virtcol2col(win, item.end_lnum, item.end_col)
             local byte_idx = byte_col - 1
             local utf_idx = vim.str_utfindex(fin_line, "utf-16", byte_idx, false)
             local ex_byte = vim.str_byteindex(fin_line, "utf-16", utf_idx + 1, false)
@@ -336,12 +343,11 @@ local function get_preview_buf(bufnr)
         end
 
         -- MAYBE: Add bigfile protection
+        -- TODO: Is this better done through uv?
         return vim.fn.readfile(full_path, "")
-    end)() --- @type string[]|nil
+    end)() or { "Unable to read lines for bufnr " .. bufnr } --- @type string[]|nil
 
-    lines = lines or { "Unable to read lines for bufnr " .. bufnr }
-
-    local preview_buf = vim.api.nvim_create_buf(false, false)
+    local preview_buf = vim.api.nvim_create_buf(false, false) --- @type integer
     vim.api.nvim_buf_set_lines(preview_buf, 0, 0, false, lines)
     set_preview_buf_opts(preview_buf)
 
