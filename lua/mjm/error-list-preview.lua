@@ -672,10 +672,21 @@ function M.update_preview_win(cur_win, preview_win)
 end
 
 --- @return nil
+-- TODO: This should take the qf_win value so we know the context going in
 function M.open_preview_win()
     local qf_win = vim.api.nvim_get_current_win() --- @type integer
-    if wins[qf_win] and wins[qf_win] > 0 then
-        return
+    for _, win in vim.tbl_keys(wins) do
+        if win == qf_win and wins[win] > 0 then
+            return
+        end
+
+        -- TODO: Trying to handle the idea that we only want one preview win open at once
+        -- Also not totally sure how to handle disposing of state after win is closed. Is -1
+        -- sufficient, or does the win actually need to be nil'd? Like, I think we have both
+        -- -1 and #tbl_keys < 1 criteria in the file
+        if win ~= qf_win and wins[win] > 0 then
+            M.close_preview_win(win)
+        end
     end
 
     local wintype = vim.fn.win_gettype(qf_win)
