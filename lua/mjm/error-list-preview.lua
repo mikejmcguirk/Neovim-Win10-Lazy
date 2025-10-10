@@ -1,12 +1,13 @@
 local M = {}
 
 --- TODO: Add a debounce timer
+--- Do hrtime on an open and see how long it takes
 
 --------------
 --- Config ---
 --------------
 
-local hl_ns = vim.api.nvim_create_namespace("qf-rancher-preview-hl")
+local hl_ns = vim.api.nvim_create_namespace("qf-rancher-preview-hl") --- @type integer
 
 -- DOCUMENT: This highlight group
 local hl_name = "QfRancherHighlightItem" --- @type string
@@ -60,7 +61,9 @@ local function clear_session_data()
     bufs = {}
     extmarks = {}
 
+    --- @type vim.api.keyset.get_autocmds.ret[]
     local autocmds = vim.api.nvim_get_autocmds({ group = group })
+
     for _, a in pairs(autocmds) do
         vim.api.nvim_del_autocmd(a.id)
     end
@@ -79,6 +82,7 @@ local function check_session_validity()
     return #qf_wins > 0 or #ll_wins > 0
 end
 
+--- @return nil
 local function create_autocmds()
     if #vim.api.nvim_get_autocmds({ group = group }) > 0 then
         return
@@ -192,18 +196,21 @@ local function get_title_pos()
         or "left"
 end
 
+--- @return nil
 local function get_siso()
     return vim.g.qf_rancher_preview_use_global_siso
             and vim.api.nvim_get_option_value("siso", { scope = "global" })
         or 6
 end
 
+--- @return nil
 local function get_so()
     return vim.g.qf_rancher_preview_use_global_so
             and vim.api.nvim_get_option_value("so", { scope = "global" })
         or 6
 end
 
+--- @return nil
 local function get_winblend()
     local winblend = vim.g.qf_rancher_preview_winblend --- @type number
     vim.validate("winblend", winblend, { "number" })
@@ -215,6 +222,9 @@ local function get_winblend()
     return valid_winblend and winblend or 0
 end
 
+--- @param preview_win integer
+--- @param bufnr integer
+--- @return nil
 local function set_preview_winopts(preview_win, bufnr)
     vim.api.nvim_set_option_value("cc", "", { win = preview_win })
     vim.api.nvim_set_option_value("cul", true, { win = preview_win })
@@ -309,6 +319,8 @@ local function get_hl_range(win, bufnr, item)
     return { row, col, fin_row, fin_col }
 end
 
+--- @param buf integer
+--- @return nil
 local function set_preview_buf_opts(buf)
     vim.api.nvim_set_option_value("buflisted", false, { buf = buf })
     -- Set a non-"" buftype to prevent LSPs from attaching
@@ -530,6 +542,7 @@ local function get_win_config(qf_win)
     return get_fallback_win_config(base_cfg, e_lines, e_cols, padding, preview_border_width)
 end
 
+--- @param qf_win integer
 --- @param preview_win integer
 --- @return nil
 function M.update_preview_win_pos(qf_win, preview_win)
@@ -550,6 +563,8 @@ function M.update_preview_win_pos(qf_win, preview_win)
     vim.api.nvim_win_set_config(preview_win, win_config)
 end
 
+--- @param qf_win integer
+--- @return nil
 function M._update_preview_win_pos(qf_win)
     local preview_win = wins[qf_win]
     if preview_win and preview_win > -1 then
@@ -561,7 +576,7 @@ end
 --- @param preview_buf integer
 --- @param did_ftdetect boolean
 --- @param item vim.quickfix.entry
---- @nil
+--- @return nil
 local function decorate_window(preview_win, preview_buf, did_ftdetect, item)
     local hl_range = get_hl_range(preview_win, preview_buf, item) --- @type Range4
     if extmarks[preview_buf] then
@@ -656,6 +671,7 @@ function M.update_preview_win(cur_win, preview_win)
     decorate_window(preview_win, preview_buf, did_ftdetect, item)
 end
 
+--- @return nil
 function M.open_preview_win()
     local qf_win = vim.api.nvim_get_current_win() --- @type integer
     if wins[qf_win] and wins[qf_win] > 0 then
@@ -728,6 +744,7 @@ function M.close_preview_win(qf_win)
     end
 end
 
+--- @return nil
 function M.toggle_preview_win()
     -- TODO: Weird repeated getting of the current win
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
