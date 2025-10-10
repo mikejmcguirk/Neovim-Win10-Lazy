@@ -1,5 +1,7 @@
 local M = {}
 
+--- TODO: Add a debounce timer
+
 --------------
 --- Config ---
 --------------
@@ -22,7 +24,7 @@ vim.api.nvim_set_var("qf_rancher_preview_show_title", false)
 -- vim.api.nvim_set_var("qf_rancher_preview_title_pos", "center")
 vim.api.nvim_set_var("qf_rancher_preview_use_global_so", false)
 vim.api.nvim_set_var("qf_rancher_preview_use_global_siso", false)
--- vim.api.nvim_set_var("qf_rancher_preview_winblend", 0)
+vim.api.nvim_set_var("qf_rancher_preview_winblend", 0)
 
 ---------------------
 --- Session State ---
@@ -30,9 +32,6 @@ vim.api.nvim_set_var("qf_rancher_preview_use_global_siso", false)
 
 local group_name = "qf-rancher-preview-group" --- @type string
 local group = vim.api.nvim_create_augroup(group_name, { clear = true }) --- @type integer
-
-local old_bad_preview_win = nil --- @type integer|nil
-local old_bad_qf_win = nil --- @type integer|nil
 
 local wins = {} --- @type integer[]
 local bufs = {} --- @type integer[]
@@ -91,7 +90,7 @@ local function create_autocmds()
             local cur_win = vim.api.nvim_get_current_win() --- @type integer
             local preview_win = wins[cur_win] --- @type integer|nil
             if preview_win and preview_win > 0 then
-                M.update_preview_win(preview_win)
+                M.update_preview_win(cur_win, preview_win)
             end
         end,
     })
@@ -151,7 +150,7 @@ local function create_autocmds()
             local resized_win = vim.api.nvim_get_current_win() --- @type integer
             local preview_win = wins[resized_win] --- @type integer|nil
             if preview_win and preview_win > 0 then
-                M.update_preview_win_pos(preview_win)
+                M.update_preview_win_pos(resized_win, preview_win)
             end
         end,
     })
@@ -214,36 +213,31 @@ local function get_winblend()
     return valid_winblend and winblend or 0
 end
 
-local function set_preview_winopts(win, bufnr)
-    if not old_bad_preview_win then
-        clear_session_data()
-        return
-    end
+local function set_preview_winopts(preview_win, bufnr)
+    vim.api.nvim_set_option_value("cc", "", { win = preview_win })
+    vim.api.nvim_set_option_value("cul", true, { win = preview_win })
 
-    vim.api.nvim_set_option_value("cc", "", { win = win })
-    vim.api.nvim_set_option_value("cul", true, { win = win })
+    vim.api.nvim_set_option_value("fdc", "0", { win = preview_win })
+    vim.api.nvim_set_option_value("fdm", "manual", { win = preview_win })
 
-    vim.api.nvim_set_option_value("fdc", "0", { win = win })
-    vim.api.nvim_set_option_value("fdm", "manual", { win = win })
+    vim.api.nvim_set_option_value("list", false, { win = preview_win })
 
-    vim.api.nvim_set_option_value("list", false, { win = win })
+    vim.api.nvim_set_option_value("nu", true, { win = preview_win })
+    vim.api.nvim_set_option_value("rnu", false, { win = preview_win })
+    vim.api.nvim_set_option_value("scl", "no", { win = preview_win })
 
-    vim.api.nvim_set_option_value("nu", true, { win = win })
-    vim.api.nvim_set_option_value("rnu", false, { win = win })
-    vim.api.nvim_set_option_value("scl", "no", { win = win })
+    vim.api.nvim_set_option_value("spell", false, { win = preview_win })
 
-    vim.api.nvim_set_option_value("spell", false, { win = win })
+    vim.api.nvim_set_option_value("winblend", get_winblend(), { win = preview_win })
 
-    vim.api.nvim_set_option_value("winblend", get_winblend(), { win = win })
-
-    vim.api.nvim_set_option_value("so", get_so(), { win = win })
-    vim.api.nvim_set_option_value("siso", get_siso(), { win = win })
+    vim.api.nvim_set_option_value("so", get_so(), { win = preview_win })
+    vim.api.nvim_set_option_value("siso", get_siso(), { win = preview_win })
 
     -- TODO: Should not be here
     if vim.g.qf_rancher_preview_show_title then
         local preview_bufname = vim.fn.bufname(bufnr)
         local relative_fname = vim.fn.fnamemodify(preview_bufname, ":.")
-        vim.api.nvim_win_set_config(win, {
+        vim.api.nvim_win_set_config(preview_win, {
             title = relative_fname,
             title_pos = get_title_pos(),
         })
@@ -259,9 +253,9 @@ end
 --- @param item table
 --- @return Range4
 local function get_hl_range(win, bufnr, item)
-    local row = item.lnum >= 0 and item.lnum - 1 or 0
-    local start_line = vim.api.nvim_buf_get_lines(bufnr, row, row + 1, false)[1]
-    local start_line_len_0 = math.max(#start_line - 1, 0)
+    local row = item.lnum >= 0 and item.lnum - 1 or 0 --- @type integer
+    local start_line = vim.api.nvim_buf_get_lines(bufnr, row, row + 1, false)[1] --- @type string
+    local start_line_len_0 = math.max(#start_line - 1, 0) --- @type integer
     local col = (function()
         if item.col <= 0 then
             return 0
@@ -272,16 +266,16 @@ local function get_hl_range(win, bufnr, item)
         if item.vcol == 1 and win then
             -- FUTURE: Might be more accurately handled with a binary search on
             -- vim.fn.strdisplaywidth(). But I have not seen one of these in the wild
-            local byte_col = vim.fn.virtcol2col(win, item.lnum, item.col)
+            local byte_col = vim.fn.virtcol2col(win, item.lnum, item.col) --- @type integer
             return math.max(byte_col - 1, 0)
         end
 
         return math.min(item.col - 1, start_line_len_0)
-    end)()
+    end)() --- @type integer
 
-    local fin_row = item.end_lnum > 0 and item.end_lnum - 1 or row
+    local fin_row = item.end_lnum > 0 and item.end_lnum - 1 or row --- @type integer
     local fin_line = fin_row == row and start_line
-        or vim.api.nvim_buf_get_lines(bufnr, fin_row, fin_row + 1, false)[1]
+        or vim.api.nvim_buf_get_lines(bufnr, fin_row, fin_row + 1, false)[1] --- @type string
 
     local fin_col = (function()
         if item.end_col <= 0 then
@@ -291,16 +285,18 @@ local function get_hl_range(win, bufnr, item)
         if item.vcol == 1 and win then
             -- FUTURE: Might be more accurately handled with a binary search on
             -- vim.fn.strdisplaywidth(). But I have not seen one of these in the wild
-            local byte_col = vim.fn.virtcol2col(win, item.end_lnum, item.end_col)
-            local byte_idx = byte_col - 1
+            local byte_col = vim.fn.virtcol2col(win, item.end_lnum, item.end_col) --- @type integer
+            local byte_idx = byte_col - 1 --- @type integer
+            --- @type integer
             local utf_idx = vim.str_utfindex(fin_line, "utf-16", byte_idx, false)
+            --- @type integer
             local ex_byte = vim.str_byteindex(fin_line, "utf-16", utf_idx + 1, false)
 
             return math.max(ex_byte, 0)
         end
 
         -- Fix diagnostic end_cols. Unsure how this works in other cases
-        local end_idx = math.min(item.end_col, #fin_line)
+        local end_idx = math.min(item.end_col, #fin_line) --- @type integer
         if not (fin_row == row and end_idx == col + 1) then
             end_idx = math.max(end_idx - 1, 0)
         end
@@ -337,7 +333,7 @@ local function get_preview_buf(bufnr)
             return vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
         end
 
-        local full_path = vim.api.nvim_buf_get_name(bufnr)
+        local full_path = vim.api.nvim_buf_get_name(bufnr) --- @type string
         if not vim.uv.fs_access(full_path, 4) then
             return { "Unable to read file " .. full_path }
         end
@@ -382,15 +378,12 @@ local function get_fallback_win_config(base_cfg, e_lines, e_cols, padding, previ
     end
 end
 
+--- @param qf_win integer
 --- @return vim.api.keyset.win_config|nil
-local function get_win_config()
-    if not old_bad_qf_win then
-        return nil
-    end
-
-    local qf_pos = vim.api.nvim_win_get_position(old_bad_qf_win) --- @type [integer, integer]
-    local qf_height = vim.api.nvim_win_get_height(old_bad_qf_win) --- @type integer
-    local qf_width = vim.api.nvim_win_get_width(old_bad_qf_win) --- @type integer
+local function get_win_config(qf_win)
+    local qf_pos = vim.api.nvim_win_get_position(qf_win) --- @type [integer, integer]
+    local qf_height = vim.api.nvim_win_get_height(qf_win) --- @type integer
+    local qf_width = vim.api.nvim_win_get_width(qf_win) --- @type integer
     local e_lines = vim.api.nvim_get_option_value("lines", { scope = "global" }) --- @type integer
     local e_cols = vim.api.nvim_get_option_value("columns", { scope = "global" }) --- @type integer
 
@@ -411,9 +404,10 @@ local function get_win_config()
 
     local base_cfg = { border = border, focusable = false } --- @type vim.api.keyset.win_config
     --- @type vim.api.keyset.win_config
-    local win_cfg = vim.tbl_extend("force", base_cfg, { relative = "win", win = old_bad_qf_win })
+    local win_cfg = vim.tbl_extend("force", base_cfg, { relative = "win", win = qf_win })
 
     local avail_y_above = math.max(qf_pos[1] - vim_border - 1, 0) --- @type integer
+    local avail_y_below = e_lines - (qf_pos[1] + qf_height + vim_border + 1) --- @type integer
     -- If space is available to the left or right, the vim border has to be there
     local avail_x_left = math.max(qf_pos[2] - vim_border, 0) --- @type integer
     --- @type integer
@@ -455,7 +449,6 @@ local function get_win_config()
         end
     end
 
-    local avail_y_below = e_lines - (qf_pos[1] + qf_height + vim_border + 1) --- @type integer
     if avail_y_below >= min_y_space then
         local height = avail_y_below - preview_border_width --- @type integer
         height = math.min(height, MAX_HEIGHT) --- @type integer
@@ -476,10 +469,10 @@ local function get_win_config()
     local avail_e_lines = e_lines - preview_border_width --- @type integer
     local side_height = math.min(avail_height, MAX_HEIGHT) --- @type integer
     local function cfg_hor_spill(width, col)
-        local y_diff = min_y_space - qf_height
-        local half_diff = math.floor(y_diff * 0.5)
-        local u_shift = math.max(half_diff - avail_y_above, 0)
-        local d_shift = math.max(half_diff - avail_y_below, 0)
+        local y_diff = min_y_space - qf_height --- @type integer
+        local half_diff = math.floor(y_diff * 0.5) --- @type integer
+        local u_shift = math.max(half_diff - avail_y_above, 0) --- @type integer
+        local d_shift = math.max(half_diff - avail_y_below, 0) --- @type integer
         return vim.tbl_extend("force", win_cfg, {
             height = math.min(MIN_HEIGHT, avail_e_lines),
             row = (half_diff * -1) - u_shift + d_shift - 1,
@@ -537,7 +530,7 @@ end
 
 --- @param preview_win integer
 --- @return nil
-function M.update_preview_win_pos(preview_win)
+function M.update_preview_win_pos(qf_win, preview_win)
     if not vim.api.nvim_win_is_valid(preview_win) then
         local msg = "Preview win " .. preview_win .. " is invalid" --- @type string
         vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
@@ -545,7 +538,7 @@ function M.update_preview_win_pos(preview_win)
         return
     end
 
-    local win_config = get_win_config()
+    local win_config = get_win_config(qf_win)
     if not win_config then
         clear_session_data()
         return
@@ -555,12 +548,20 @@ function M.update_preview_win_pos(preview_win)
     vim.api.nvim_win_set_config(preview_win, win_config)
 end
 
+function M._update_preview_win_pos(qf_win)
+    local preview_win = wins[qf_win]
+    if preview_win then
+        M.update_preview_win_pos(qf_win, preview_win)
+    end
+end
+
+--- @param preview_win integer
 --- @param preview_buf integer
 --- @param did_ftdetect boolean
 --- @param item vim.quickfix.entry
 --- @nil
-local function decorate_window(preview_buf, did_ftdetect, item)
-    local hl_range = get_hl_range(preview_buf, item) --- @type Range4
+local function decorate_window(preview_win, preview_buf, did_ftdetect, item)
+    local hl_range = get_hl_range(preview_win, preview_buf, item) --- @type Range4
     if extmarks[preview_buf] then
         vim.api.nvim_buf_del_extmark(preview_buf, hl_ns, extmarks[preview_buf])
         extmarks[preview_buf] = nil
@@ -582,42 +583,41 @@ local function decorate_window(preview_buf, did_ftdetect, item)
         vim.api.nvim_set_option_value("filetype", ft, { buf = preview_buf })
     end
 
-    if not old_bad_preview_win then
+    if not preview_win then
         clear_session_data()
         return
     end
 
     --- TODO: Separate the winopts that need to be set every time (title, and whatever else) vs.
     --- the ones that don't
-    set_preview_winopts(item.bufnr)
-    vim.api.nvim_win_set_cursor(old_bad_preview_win, { item.lnum, item.col - 1 })
-    vim.api.nvim_win_call(old_bad_preview_win, function()
+    set_preview_winopts(preview_win, item.bufnr)
+    vim.api.nvim_win_set_cursor(preview_win, { item.lnum, item.col - 1 })
+    vim.api.nvim_win_call(preview_win, function()
         vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
         vim.api.nvim_cmd({ cmd = "normal", args = { "ze" }, bang = true }, {})
     end)
 end
 
+--- @param cur_win integer
+--- @param preview_win integer
 --- @return nil
-function M.update_preview_win(preview_win)
-    if not (old_bad_preview_win and old_bad_qf_win) then
-        clear_session_data()
-        return
+function M.update_preview_win(cur_win, preview_win)
+    if vim.g.qf_rancher_debug_assertions then
+        local ey = require("mjm.error-list-types") --- @type QfRancherTypes
+        ey._validate_win(cur_win, false)
+        ey._validate_win(preview_win, false)
     end
 
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    local listtype = eu._get_listtype(old_bad_qf_win)
-    if not listtype then
+    local wintype = vim.fn.win_gettype(cur_win)
+    local is_loclist = wintype == "loclist" --- @type boolean
+    local is_qflist = wintype == "quickfix" --- @type boolean
+    if not (is_loclist or is_qflist) then
         clear_session_data()
-        return
     end
 
-    -- TODO: Get and store the loclist info when building the session
-    local is_ll = listtype == "loclist"
-    -- TODO: Move this over to the tools module
-    local cur_list =
-        eu._get_getlist({ loclist_source_win = old_bad_qf_win, use_loclist = is_ll })()
-    if #cur_list < 1 then
-        clear_session_data()
+    local win_for_get = is_loclist and cur_win or nil --- @type integer|nil
+    local cur_list = require("mjm.error-list-tools")._get_all(win_for_get, 0) --- @type table
+    if #cur_list.items < 1 then
         return
     end
 
@@ -627,7 +627,7 @@ function M.update_preview_win(preview_win)
         return
     end
 
-    local item = cur_list[line] --- @type vim.quickfix.entry
+    local item = cur_list.items[line] --- @type vim.quickfix.entry
     local bufnr = item.bufnr --- @type integer
     local preview_buf, did_ftdetect = (function()
         if bufs[bufnr] then
@@ -635,77 +635,78 @@ function M.update_preview_win(preview_win)
         else
             return get_preview_buf(bufnr), false
         end
-    end)()
+    end)() --- @type integer|nil, boolean
 
     if not preview_buf then
+        -- TODO: Do we fully bail here? Why would this happen?
         clear_session_data()
         return
     end
 
-    local win_config = get_win_config() --- @type vim.api.keyset.win_config|nil
+    local win_config = get_win_config(cur_win) --- @type vim.api.keyset.win_config|nil
     if not win_config then
         clear_session_data()
         return
     end
 
-    vim.api.nvim_win_set_config(old_bad_preview_win, win_config)
-    vim.api.nvim_win_set_buf(old_bad_preview_win, preview_buf)
-    decorate_window(preview_buf, did_ftdetect, item)
+    vim.api.nvim_win_set_config(preview_win, win_config)
+    vim.api.nvim_win_set_buf(preview_win, preview_buf)
+    decorate_window(preview_win, preview_buf, did_ftdetect, item)
 end
 
 function M.open_preview_win()
-    if old_bad_preview_win then
+    local qf_win = vim.api.nvim_get_current_win() --- @type integer
+    if wins[qf_win] and wins[qf_win] > 0 then
         return
     end
 
-    --- TODO: Some general confusion in this function and others
-    --- The first thing we should do is see if there's a session and build the info from it
-    --- Why are we potentially creating a session each time?
+    local wintype = vim.fn.win_gettype(qf_win)
+    local is_loclist = wintype == "loclist" --- @type boolean
+    local is_qflist = wintype == "quickfix" --- @type boolean
+    if not (is_loclist or is_qflist) then
+        clear_session_data()
+    end
 
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    local cur_win = vim.api.nvim_get_current_win() --- @type integer
-    if not eu._win_is_list(cur_win) then
+    local win_for_get = is_loclist and qf_win or nil --- @type integer|nil
+    local cur_list = require("mjm.error-list-tools")._get_all(win_for_get, 0) --- @type table
+    if #cur_list.items < 1 then
+        return
+    end
+
+    local line = vim.fn.line(".") --- @type integer
+    if line > #cur_list.items then
         clear_session_data()
         return
     end
 
-    local is_ll = listtype == "loclist"
-    -- TODO: not sure output opts is correct here but can look
-    local cur_list =
-        eu._get_getlist({ loclist_source_win = old_bad_qf_win, use_loclist = is_ll })()
-    if #cur_list < 1 then
-        return
-    end
-
-    local line = vim.fn.line(".")
-    if line > #cur_list then
-        clear_session_data()
-        return
-    end
-
-    create_autocmds()
-
-    local bufnr = item.bufnr
-    local preview_buf = bufs[bufnr]
-    local did_ftdetect = true
-    if not preview_buf then
-        did_ftdetect = false
-        preview_buf = get_preview_buf(bufnr)
-    end
+    local item = cur_list.items[line] --- @type vim.quickfix.entry
+    local bufnr = item.bufnr --- @type integer
+    local preview_buf, did_ftdetect = (function()
+        if bufs[bufnr] then
+            return bufs[bufnr], true
+        else
+            return get_preview_buf(bufnr), false
+        end
+    end)() --- @type integer|nil, boolean
 
     if not preview_buf then
+        vim.fn.confirm("no preview buf")
         clear_session_data()
         return
     end
 
-    local win_config = get_win_config()
+    local win_config = get_win_config(qf_win) --- @type vim.api.keyset.win_config|nil
     if not win_config then
+        vim.fn.confirm("no win config")
         clear_session_data()
         return
     end
 
-    old_bad_preview_win = vim.api.nvim_open_win(preview_buf, false, win_config)
-    decorate_window(preview_buf, did_ftdetect, item)
+    wins[qf_win] = vim.api.nvim_open_win(preview_buf, false, win_config)
+    decorate_window(wins[qf_win], preview_buf, did_ftdetect, item)
+
+    -- TODO: I think this works
+    create_autocmds()
 end
 
 --- @param qf_win integer
@@ -716,19 +717,22 @@ function M.close_preview_win(qf_win)
         vim.validate("qf_win", qf_win, "number")
     end
 
-    if not old_bad_preview_win then
+    if not wins[qf_win] then
         return
     end
 
-    local preview_win = wins[qf_win]
+    local preview_win = wins[qf_win] --- @type integer|nil
     if preview_win and vim.api.nvim_win_is_valid(preview_win) then
         vim.api.nvim_win_close(preview_win, true)
+        wins[qf_win] = nil
     end
 end
 
 function M.toggle_preview_win()
-    if old_bad_preview_win then
-        M.close_preview_win()
+    -- TODO: Weird repeated getting of the current win
+    local cur_win = vim.api.nvim_get_current_win()
+    if wins[cur_win] then
+        M.close_preview_win(cur_win)
     else
         M.open_preview_win()
     end

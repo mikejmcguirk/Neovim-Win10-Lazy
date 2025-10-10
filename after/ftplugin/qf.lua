@@ -141,7 +141,8 @@ vim.api.nvim_buf_set_keymap(0, "n", "p", "", {
 vim.api.nvim_buf_set_keymap(0, "n", "P", "", {
     noremap = true,
     callback = function()
-        require("mjm.error-list-preview").update_preview_win_pos()
+        local cur_win = vim.api.nvim_get_current_win() --- @type integer
+        require("mjm.error-list-preview")._update_preview_win_pos(cur_win)
     end,
     desc = "Manually trigger a preview window position adjustment",
 })
