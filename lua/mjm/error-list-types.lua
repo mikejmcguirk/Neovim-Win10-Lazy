@@ -110,17 +110,6 @@ function M._validate_win(win, allow_nil)
     end
 end
 
--- TODO: Check usages of this. We don't want to use this where we aren't sure if the buf is valid
-
---- @param buf integer
---- @return nil
-function M._validate_buf(buf)
-    vim.validate("buf", buf, "number")
-    vim.validate("buf", buf, function()
-        return vim.api.nvim_buf_is_valid(buf)
-    end)
-end
-
 --- @param qf_id integer|nil
 --- @return nil
 function M._validate_qf_id(qf_id)
@@ -556,6 +545,19 @@ return M
 ------------
 --- TODO ---
 ------------
+
+--- A general note on validation and typing - We want to use validations as much as possible
+---     to make Lua behave like a typed language as much as possible. The exception is in hot loops
+---     where the cost of the data validations adds up. We want to save the debug assertions for
+---     testing logic and/or edge cases. We also do not want to use data validation for logical
+---     checking, such as if a buf is valid. When dealing with actual logic, we need to think about
+---     why the logic might fail and handle accordingly. Project wide audit
+---     Also on this topic, a problem is you can have a chain of functions where a value is
+---         validated multiple times. This is unfortunate, but it also saves the issue of having
+---         to reason about where in the chain the validation is happening. The compromise here is:
+---         only do validations where data is *used*, not in functions where data is just
+---         passed through. This will not help in cases where data is used at multiple steps, but
+---         provides some performance relief
 
 --- Tests
 --- Documentation

@@ -325,11 +325,13 @@ end
 --- @param buf integer
 --- @return integer
 local function create_preview_buf(buf)
-    if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_buf(buf)
-    end
+    vim.validate("buf", buf, "number")
 
     local lines = (function()
+        if not vim.api.nvim_buf_is_valid(buf) then
+            return
+        end
+
         if vim.api.nvim_buf_is_loaded(buf) then
             return vim.api.nvim_buf_get_lines(buf, 0, -1, false)
         end
@@ -340,9 +342,8 @@ local function create_preview_buf(buf)
         end
 
         -- MAYBE: Add bigfile protection
-        -- TODO: Do this using uv async
         return vim.fn.readfile(full_path, "")
-    end)() or { "Unable to read lines for bufnr " .. buf } --- @type string[]|nil
+    end)() or { "Unable to read lines for bufnr " .. buf } --- @type string[]
 
     -- TODO: Is setting nomodelines correct here?
     local preview_buf = vim.api.nvim_create_buf(false, false) --- @type integer
@@ -362,9 +363,7 @@ end
 --- @param buf integer
 --- @return integer|nil
 local function get_preview_buf(buf)
-    if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_buf(buf)
-    end
+    vim.validate("buf", buf, "number")
 
     if not bufs[buf] then
         local preview_buf = create_preview_buf(buf) --- @type integer

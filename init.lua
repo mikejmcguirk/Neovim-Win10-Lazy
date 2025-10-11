@@ -3,6 +3,12 @@ require("mjm")
 -- TODO: Move the notes back into the files. Was bad, friction creating idea
 -- TODO: https://github.com/neovim/neovim/issues/36081 - I might be able to get this
 
+-----------
+--- LOW ---
+-----------
+
+--- How does Fugitive do line wrap in commit buffers?
+
 ------------------------
 --- DOTFILE STALKING ---
 ------------------------
