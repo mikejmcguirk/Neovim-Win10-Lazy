@@ -257,6 +257,92 @@ function M._win_is_list(win)
     end
 end
 
+--- @param msg string
+--- @param print_msgs boolean
+--- @param is_err boolean
+--- @return nil
+function M._checked_echo(msg, print_msgs, is_err)
+    if not print_msgs then
+        return
+    end
+
+    if is_err then
+        vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+    else
+        vim.api.nvim_echo({ { msg, "" } }, false, {})
+    end
+end
+
+-- TODO: Go through usages of this and update to handle new params/separate buf logic
+-- TODO: For this and other similar situations, since nvim_win_close errors on bad data anyway,
+--  do we need a separate validation?
+-- TODO: Returns buffer to handle. Conceptually, makes sense inasmuch as, if we close a win return
+--  the buf, if we don't close a win, don't return a buf. But if we're in the last win, we also
+--  want to return the buf so it can be closed. Or is it better to say/think - return the buf
+--  if the win is valid
+
+--- @param win integer
+--- @param force boolean
+--- @return integer
+function M._pwin_close(win, force)
+    vim.validate("win", win, "number")
+    vim.validate("force", force, "boolean")
+
+    if not vim.api.nvim_win_is_valid(win) then
+        return -1
+    end
+
+    local tabpages = vim.api.nvim_list_tabpages() --- @type integer[]
+    local win_tabpage = vim.api.nvim_win_get_tabpage(win) --- @type integer
+    local win_tabpage_wins = vim.api.nvim_tabpage_list_wins(win_tabpage) --- @type integer[]
+    local buf = vim.api.nvim_win_get_buf(win) --- @type integer
+
+    if #tabpages > 1 or #win_tabpage_wins > 1 then
+        vim.api.nvim_win_close(win, force)
+        local ok, _ = pcall(vim.api.nvim_win_close, win, force)
+        if not ok then
+            return -1
+        end
+    end
+
+    return buf
+end
+
+-- MID: https://github.com/neovim/neovim/pull/33402
+-- Redo this once this issue is resolved
+
+--- @param buf integer
+--- @param force boolean
+--- @param wipeout boolean
+--- @return nil
+function M._pbuf_rm(buf, force, wipeout)
+    vim.validate("buf", buf, "number")
+    vim.validate("force", force, "boolean")
+    vim.validate("wipeout", wipeout, "boolean")
+
+    if not vim.api.nvim_buf_is_valid(buf) then
+        return
+    end
+
+    if not wipeout then
+        vim.api.nvim_set_option_value("buflisted", false, { buf = buf })
+    end
+
+    local delete_opts = wipeout and { force = force } or { force = force, unload = true }
+    pcall(vim.api.nvim_buf_delete, delete_opts)
+end
+
+--- @param win integer
+--- @param force boolean
+--- @param wipeout boolean
+--- @return nil
+function M._pclose_and_rm(win, force, wipeout)
+    local buf = M._pwin_close(win, force)
+    if buf > 0 then
+        M._pbuf_rm(buf, force, wipeout)
+    end
+end
+
 ----------------------
 --- WINDOW FINDING ---
 ----------------------

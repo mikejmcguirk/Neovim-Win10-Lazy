@@ -308,6 +308,8 @@ Map("n", "\\D", function()
     vim.diagnostic.config((not cur_cfg.virtual_lines) and diag_lines_cfg or diag_text_cfg)
 end)
 
+-- TODO/PR - Set pcmark when doing a diagnostic jump
+
 local function on_bufreadpre()
     Map("n", "[<C-d>", function()
         vim.diagnostic.jump({

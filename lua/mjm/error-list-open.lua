@@ -5,85 +5,6 @@ local M = {}
 --- HELPER FUNCS ---
 --------------------
 
---- @param msg string
---- @param print_msgs boolean
---- @param is_err boolean
---- @return nil
-local function checked_echo(msg, print_msgs, is_err)
-    if not print_msgs then
-        return
-    end
-
-    if is_err then
-        vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
-    else
-        vim.api.nvim_echo({ { msg, "" } }, false, {})
-    end
-end
-
--- MID: https://github.com/neovim/neovim/pull/33402
--- Add variable buf removal behavior/wipeout back into this function once this is resolved
-
---- @param win integer
---- @param opts QfRancherPWinCloseOpts
---- @return boolean, [string, string]|nil
-local function pwin_close(win, opts)
-    if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types") --- @type QfRancherTypes
-        ey._validate_win(win, false)
-        ey._validate_pwin_close_opts(opts)
-    end
-
-    if not vim.api.nvim_win_is_valid(win) then
-        local msg = "Window " .. win .. " is invalid" --- @type string
-        checked_echo(msg, opts.print_errs, true)
-        return false, { msg, "ErrorMsg" }
-    end
-
-    local tabpages = vim.api.nvim_list_tabpages() --- @type integer[]
-    local win_tabpage = vim.api.nvim_win_get_tabpage(win) --- @type integer
-    local win_tabpage_wins = vim.api.nvim_tabpage_list_wins(win_tabpage) --- @type integer[]
-    local buf = vim.api.nvim_win_get_buf(win) --- @type integer
-
-    if #tabpages > 1 or #win_tabpage_wins > 1 then
-        local ok, err = pcall(vim.api.nvim_win_close, win, opts.force) --- @type boolean, any
-        if not ok then
-            local msg = err or ("Unknown error closing window " .. win) --- @type string
-            checked_echo(msg, opts.print_errs, true)
-            return false, { msg, "ErrorMsg" }
-        end
-
-        vim.schedule(function()
-            local buf_wins = vim.fn.win_findbuf(buf) --- @type integer[]
-            local buf_list = vim.api.nvim_list_bufs() --- @type integer[]
-            if #buf_wins < 1 and vim.tbl_contains(buf_list, buf) then
-                vim.api.nvim_set_option_value("buflisted", false, { buf = buf })
-                vim.api.nvim_buf_delete(buf, { unload = true, force = opts.force })
-            end
-        end)
-
-        return true, nil
-    end
-
-    if not vim.api.nvim_buf_is_valid(buf) then
-        local msg = "Bufnr " .. buf .. " in window " .. win .. " is not valid" --- @type string
-        checked_echo(msg, opts.print_errs, true)
-        return false, { msg, "ErrorMsg" }
-    end
-
-    vim.api.nvim_set_option_value("buflisted", false, { buf = buf })
-    vim.api.nvim_buf_delete(buf, { unload = true, force = opts.force })
-    return true, nil
-end
-
---- @param wins integer[]
---- @return nil
-local function pclose_wins(wins)
-    for _, win in pairs(wins) do
-        pwin_close(win, { force = true })
-    end
-end
-
 --- @param views vim.fn.winsaveview.ret[]
 --- @return nil
 local function restore_views(views)
@@ -224,7 +145,8 @@ local function handle_open_list_win(list_win, opts, tabpage)
     if opts.always_resize then
         resize_list_win(list_win, opts.height, { tabpage = tabpage })
     else
-        checked_echo("List win is already open", opts.print_errs, false)
+        local eu = require("mjm.error-list-util")
+        eu._checked_echo("List win is already open", opts.print_errs, false)
     end
 
     return false
@@ -265,9 +187,11 @@ function M._open_qflist(opts)
     end, tabpage_wins)
 
     local views = get_views(tabpage_wins) --- @type vim.fn.winsaveview.ret[]
-    pclose_wins(ll_wins)
-    local height = resolve_height_for_list(nil, opts.height)
+    for _, ll_win in ipairs(ll_wins) do
+        eu._pclose_and_rm(ll_win, true, true)
+    end
 
+    local height = resolve_height_for_list(nil, opts.height)
     local qfsplit = vim.g.qf_rancher_qfsplit or "botright" --- @type string
     --- @diagnostic disable: missing-fields
     vim.api.nvim_cmd({ cmd = "copen", count = height, mods = { split = qfsplit } }, {})
@@ -285,7 +209,8 @@ function M._open_loclist(opts)
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local qf_id = vim.fn.getloclist(cur_win, { id = 0 }).id --- @type integer
     if qf_id == 0 then
-        checked_echo("Window has no location list", opts.print_errs, false)
+        local eu = require("mjm.error-list-util")
+        eu._checked_echo("Window has no location list", opts.print_errs, false)
         return false
     end
 
@@ -307,7 +232,7 @@ function M._open_loclist(opts)
     local views = get_views(tabpage_wins) --- @type vim.fn.winsaveview.ret[]
     local height = resolve_height_for_list(cur_win, opts.height) --- @type integer
     if qf_win then
-        pwin_close(qf_win, { force = true })
+        require("mjm.error-list-util")._pclose_and_rm(qf_win, true, true)
     end
 
     --- @diagnostic disable: missing-fields
@@ -364,7 +289,7 @@ function M._close_qflist()
     end, tabpage_wins)
 
     local views = get_views(tabpage_wins) --- @type vim.fn.winsaveview.ret[]
-    pwin_close(qf_win, { force = true })
+    require("mjm.error-list-util")._pclose_and_rm(qf_win, true, true)
     restore_views(views)
     return true
 end
@@ -392,7 +317,10 @@ function M._close_loclist()
     end, tabpage_wins)
 
     local views = get_views(tabpage_wins) --- @type vim.fn.winsaveview.ret[]
-    pclose_wins(ll_wins)
+    for _, ll_win in ipairs(ll_wins) do
+        eu._pclose_and_rm(ll_win, true, true)
+    end
+
     restore_views(views)
     return true
 end
@@ -426,7 +354,7 @@ function M._close_win_save_views(win)
     end, tabpage_wins)
 
     local views = get_views(tabpage_wins) --- @type vim.fn.winsaveview.ret[]
-    pwin_close(win, { force = true })
+    require("mjm.error-list-util")._pclose_and_rm(win, true, true)
     restore_views(views)
 
     return true

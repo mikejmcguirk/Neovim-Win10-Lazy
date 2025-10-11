@@ -47,9 +47,8 @@ end)
 
 --- @return nil
 local function clear_session_data()
-    -- TODO: Use PWin close
     if preview_win and vim.api.nvim_win_is_valid(preview_win) then
-        vim.api.nvim_win_close(preview_win, true)
+        require("mjm.error-list-util")._pwin_close(preview_win, true)
     end
 
     -- TEST: That this deletes the extmarks as well
@@ -759,8 +758,7 @@ end
 -- TODO: Make local
 function M.close_preview_win()
     if preview_win and vim.api.nvim_win_is_valid(preview_win) then
-        -- TODO: Use pwin close
-        vim.api.nvim_win_close(preview_win, true)
+        require("mjm.error-list-util")._pwin_close(preview_win, true)
         qf_win = nil
         preview_win = nil
     end

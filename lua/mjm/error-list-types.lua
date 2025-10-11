@@ -94,6 +94,9 @@ function M._validate_str_list(table)
     end
 end
 
+-- TODO: Check usages of this to see where a simple vim.validate, or maybe not validating at all,
+-- is sufficient
+
 --- @param win integer|nil
 --- @param allow_nil? boolean
 --- @return nil
@@ -107,7 +110,9 @@ function M._validate_win(win, allow_nil)
     end
 end
 
---- @param buf integer|nil
+-- TODO: Check usages of this. We don't want to use this where we aren't sure if the buf is valid
+
+--- @param buf integer
 --- @return nil
 function M._validate_buf(buf)
     vim.validate("buf", buf, "number")
@@ -411,18 +416,6 @@ function M._validate_open_opts(open_opts)
     vim.validate("open_opts.height", open_opts.height, { "nil", "number" })
     vim.validate("open_opts.keep_win", open_opts.keep_win, { "boolean", "nil" })
     vim.validate("open_opts.print_errs", open_opts.print_errs, { "boolean", "nil" })
-end
-
---- @class QfRancherPWinCloseOpts
---- @field force? boolean
---- @field print_errs? boolean
-
---- @param opts QfRancherPWinCloseOpts
---- @return nil
-function M._validate_pwin_close_opts(opts)
-    vim.validate("opts", opts, "table")
-    vim.validate("opts.force", opts.force, { "boolean", "nil" })
-    vim.validate("opts.print_errs", opts.print_errs, { "boolean", "nil" })
 end
 
 ---------------------
