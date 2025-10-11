@@ -169,6 +169,8 @@ end
 --- TODO: ---
 -------------
 
+--- Go through everything and be strict on data validation, including stuff that comes from the
+---     user. We should only handle bad results from exterior programs
 --- Cmd prefix customization
 --- Orphan loclist handling:
 --- - Grouping arbitrarily with other commands produces confusing behavior

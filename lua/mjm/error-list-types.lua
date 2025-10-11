@@ -83,6 +83,7 @@ function M._count_to_count1(count)
     return math.max(count, 1)
 end
 
+-- TODO: Use the vim.islist validation here
 --- @param table string[]
 --- @return nil
 function M._validate_str_list(table)
@@ -104,6 +105,15 @@ function M._validate_win(win, allow_nil)
             return vim.api.nvim_win_is_valid(win)
         end)
     end
+end
+
+--- @param buf integer|nil
+--- @return nil
+function M._validate_buf(buf)
+    vim.validate("buf", buf, "number")
+    vim.validate("buf", buf, function()
+        return vim.api.nvim_buf_is_valid(buf)
+    end)
 end
 
 --- @param qf_id integer|nil
@@ -442,26 +452,23 @@ function M._validate_border(border)
     end
 end
 
-function M._is_valid_border(border)
-    if type(border) == "string" then
-        return vim.tbl_contains(valid_borders, border)
-    end
+-- TODO: is there already an alias for this?
+--- @alias QfRancherTitlePos "left"|"center"|"right"
 
-    if type(border) ~= "table" then
-        return false
-    end
+--- @param title_pos string
+--- @return nil
+function M._validate_title_pos(title_pos)
+    vim.validate("title_pos", title_pos, "string")
+    vim.validate("title_pos", title_pos, function()
+        return title_pos == "left" or title_pos == "center" or title_pos == "right"
+    end)
+end
 
-    if #border ~= 8 then
-        return false
-    end
-
-    for _, segment in pairs(border) do
-        if type(segment) ~= "string" then
-            return false
-        end
-    end
-
-    return true
+function M._validate_winblend(winblend)
+    vim.validate("winblend", winblend, "number")
+    vim.validate("winblend", winblend, function()
+        return winblend >= 0 and winblend <= 100
+    end)
 end
 
 ------------------
