@@ -110,3 +110,25 @@ Map("n", "zqu", function()
 end)
 
 return M
+
+-------------------------
+--- POTENTIAL PLUGINS ---
+-------------------------
+
+-- https://github.com/rockerBOO/awesome-neovim - So many plugins out there
+-- https://github.com/nvim-neotest/neotest
+-- https://github.com/mrcjkb/rustaceanvim
+-- Dap setup?
+--    - https://github.com/tjdevries/config.nvim/blob/master/lua/custom/plugins/dap.lua
+-- For dbs
+--    - https://github.com/kndndrj/nvim-dbee
+-- https://github.com/smjonas/inc-rename.nvim
+-- https://github.com/folke/snacks.nvim/blob/main/lua/snacks/indent.lua#L219
+--    - More efficient indent guide
+-- https://github.com/folke/snacks.nvim/blob/main/lua/snacks/scope.lua
+--    - More efficient scope
+-- https://github.com/toppair/peek.nvim -- Markdown preview
+-- Look at the multicursor plugin SteveArc uses. It seems to be the most mature project
+-- https://github.com/Bilal2453/luvit-meta
+-- https://github.com/andymass/vim-matchup - Replace matchparen + good motions
+-- Previewer for a lot of things: https://github.com/OXY2DEV/markview.nvim
