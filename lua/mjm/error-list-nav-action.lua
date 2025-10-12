@@ -10,14 +10,12 @@ local M = {}
 --- @param arithmetic function
 --- @return integer|nil
 local function get_list_new_idx(win, count, arithmetic)
-    if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types")
-        ey._validate_win(win, true)
-        ey._validate_count(count)
-        vim.validate("arithmetic", arithmetic, "callable")
-    end
+    local ey = require("mjm.error-list-types")
+    ey._validate_uint(win, true)
+    ey._validate_uint(count)
+    vim.validate("arithmetic", arithmetic, "callable")
 
-    local count1 = require("mjm.error-list-types")._count_to_count1(count) --- @type integer|nil
+    local count1 = require("mjm.error-list-util")._count_to_count1(count) --- @type integer|nil
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
     local size = et._get_list_size(win, 0) --- @type integer|nil
     if not size or size < 1 then
@@ -126,31 +124,31 @@ end
 --- DOCUMENT: That Qq with no count goes to current entry, which is a difference from :cc
 ---     this also applies to :Ll / :ll
 
---- @param win integer|nil
+--- @param src_win integer|nil
 --- @param count integer
 --- @return nil
-local function goto_specific_idx(win, count)
+local function goto_specific_idx(src_win, count)
     local ey = require("mjm.error-list-types")
-    ey._validate_win(win, true)
-    ey._validate_count(count)
+    ey._validate_win(src_win, true)
+    ey._validate_uint(count)
 
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
-    local size = et._get_list_size(win, 0) --- @type integer|nil
+    local size = et._get_list_size(src_win, 0) --- @type integer|nil
     if not size or size < 1 then
         return nil
     end
 
-    local cmd = win and "ll" or "cc" --- @type string
+    local cmd = src_win and "ll" or "cc" --- @type string
     if count > 0 then
         local adj_count = math.min(count, size) --- @type integer
         goto_list_entry(adj_count, cmd)
         return
     end
 
-    local cur_win = win or vim.api.nvim_get_current_win() --- @type integer
+    local cur_win = src_win or vim.api.nvim_get_current_win() --- @type integer
     local wintype = vim.fn.win_gettype(cur_win)
-    local in_loclist = type(win) == "number" and wintype == "loclist" --- @type boolean
-    local in_qflist = (not win) and wintype == "quickfix" --- @type boolean
+    local in_loclist = type(src_win) == "number" and wintype == "loclist" --- @type boolean
+    local in_qflist = (not src_win) and wintype == "quickfix" --- @type boolean
     if in_loclist or in_qflist then
         local row = vim.api.nvim_win_get_cursor(cur_win)[1] --- @type integer
         local adj_count = math.min(row, size) --- @type integer
@@ -158,7 +156,7 @@ local function goto_specific_idx(win, count)
         return
     end
 
-    local cur_idx = et._get_list_idx(win, 0) --- @type integer|nil
+    local cur_idx = et._get_list_idx(src_win, 0) --- @type integer|nil
     if not cur_idx then
         return nil
     end
@@ -203,7 +201,7 @@ end
 --- @return nil
 local function bookends(count, cmd)
     if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_count(count)
+        require("mjm.error-list-types")._validate_uint(count)
         vim.validate("cmd", cmd, "string")
     end
 
@@ -276,7 +274,7 @@ end
 --- @return nil
 local function file_nav_wrap(win, count, cmd, backup_cmd)
     if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_count(count)
+        require("mjm.error-list-types")._validate_uint(count)
         vim.validate("cmd", cmd, "string")
         vim.validate("backup_cmd", backup_cmd, "string")
     end
@@ -287,7 +285,7 @@ local function file_nav_wrap(win, count, cmd, backup_cmd)
         return nil
     end
 
-    local adj_count = require("mjm.error-list-types")._count_to_count1(count) --- @type integer
+    local adj_count = require("mjm.error-list-util")._count_to_count1(count) --- @type integer
 
     --- @type boolean, string
     local ok, err = pcall(vim.api.nvim_cmd, { cmd = cmd, count = adj_count }, {})

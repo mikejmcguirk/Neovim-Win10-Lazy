@@ -4,6 +4,12 @@ require("mjm")
 -- TODO: https://github.com/neovim/neovim/issues/36081 - I might be able to get this
 
 -----------
+--- MID ---
+-----------
+
+-- https://github.com/neovim/neovim/pull/35448 -- Could be easier way to handle this
+
+-----------
 --- LOW ---
 -----------
 

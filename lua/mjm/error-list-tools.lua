@@ -195,38 +195,31 @@ end
 --- NOTE: Prefer making new functions here rather than passing the what table down to get data.
 --- Using the what table for getting and setting makes managing it more complicated
 
---- @param win integer|nil
+--- @param src_win integer|nil
 --- @param nr integer
 --- @return table
-function M._get_all(win, nr)
-    if vim.g.qf_rancher_debug_assertions then
-        local ev = require("mjm.error-list-types")
-        ev._validate_win(win, true)
-        ev._validate_list_nr(nr)
-    end
+function M._get_all(src_win, nr)
+    local ev = require("mjm.error-list-types")
+    ev._validate_win(src_win, true)
+    ev._validate_uint(nr)
 
-    return win and vim.fn.getloclist(win, { nr = nr, all = true })
+    return src_win and vim.fn.getloclist(src_win, { nr = nr, all = true })
         or vim.fn.getqflist({ nr = nr, all = true })
 end
 
---- @param win integer|nil
+--- @param src_win integer|nil
 --- @return integer
-function M._get_cur_list_nr(win)
-    if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_win(win, true)
-    end
-
-    return win and vim.fn.getloclist(win, { nr = 0 }).nr or vim.fn.getqflist({ nr = 0 }).nr
+function M._get_cur_list_nr(src_win)
+    require("mjm.error-list-types")._validate_win(src_win, true)
+    return src_win and vim.fn.getloclist(src_win, { nr = 0 }).nr or vim.fn.getqflist({ nr = 0 }).nr
 end
 
---- @param win integer|nil
+--- @param src_win integer|nil
 --- @return integer
-function M._get_max_list_nr(win)
-    if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_win(win, true)
-    end
-
-    return win and vim.fn.getloclist(win, { nr = "$" }).nr or vim.fn.getqflist({ nr = "$" }).nr
+function M._get_max_list_nr(src_win)
+    require("mjm.error-list-types")._validate_win(src_win, true)
+    return src_win and vim.fn.getloclist(src_win, { nr = "$" }).nr
+        or vim.fn.getqflist({ nr = "$" }).nr
 end
 
 --- MID: If we have to make another getlist query, do some kind of more unified interface
@@ -235,96 +228,80 @@ end
 --- contrived. Also the issue of getting back a specific property. Can handle with
 --- something like return list_info[property]
 
---- @param win integer|nil
+--- @param src_win integer|nil
 --- @param nr integer
 --- @return integer|nil
-function M._get_list_size(win, nr)
-    if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types") --- @type QfRancherTypes
-        ey._validate_win(win, true)
-        ey._validate_list_nr(nr)
-    end
+function M._get_list_size(src_win, nr)
+    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
+    ey._validate_win(src_win, true)
+    ey._validate_uint(nr)
 
-    if win then
-        local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
+    if src_win then
+        local qf_id = vim.fn.getloclist(src_win, { id = 0 }).id --- @type integer
         if qf_id == 0 then
             vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
             return nil
         end
     end
 
-    local max_nr = M._get_max_list_nr(win) --- @type integer
+    local max_nr = M._get_max_list_nr(src_win) --- @type integer
     if max_nr == 0 then
         -- vim.api.nvim_echo({ { "No list stack", "" } }, false, {})
         return nil
     end
 
     local adj_nr = math.min(nr, max_nr) --- @type integer
-    return win and vim.fn.getloclist(win, { nr = adj_nr, size = 0 }).size
+    return src_win and vim.fn.getloclist(src_win, { nr = adj_nr, size = 0 }).size
         or vim.fn.getqflist({ nr = adj_nr, size = 0 }).size
 end
 
---- @param win integer|nil
+--- @param src_win integer|nil
 --- @param nr integer
 --- @return integer|nil
-function M._get_list_idx(win, nr)
-    if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types") --- @type QfRancherTypes
-        ey._validate_win(win, true)
-        ey._validate_list_nr(nr)
-    end
+function M._get_list_idx(src_win, nr)
+    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
+    ey._validate_win(src_win, true)
+    ey._validate_uint(nr)
 
-    if win then
-        local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
+    if src_win then
+        local qf_id = vim.fn.getloclist(src_win, { id = 0 }).id --- @type integer
         if qf_id == 0 then
             vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
             return nil
         end
     end
 
-    local max_nr = M._get_max_list_nr(win) --- @type integer
+    local max_nr = M._get_max_list_nr(src_win) --- @type integer
     if max_nr == 0 then
         -- vim.api.nvim_echo({ { "No list stack", "" } }, false, {})
         return nil
     end
 
     local adj_nr = math.min(nr, max_nr) --- @type integer
-    return win and vim.fn.getloclist(win, { nr = adj_nr, idx = 0 }).idx
+    return src_win and vim.fn.getloclist(src_win, { nr = adj_nr, idx = 0 }).idx
         or vim.fn.getqflist({ nr = adj_nr, idx = 0 }).idx
 end
 
 --- NOTE: For the delete functions, we want to return the list_nr that was deleted, 0 for the
 --- whole stack, and -1 on failure
 
---- @param win integer|nil
+--- @param src_win integer|nil
 --- @return integer
-function M._del_all(win)
-    if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_win(win, true)
-    end
-
-    local max_nr = M._get_cur_list_nr(win) --- @type integer
-    if max_nr < 1 then
-        vim.api.nvim_echo({ { "No list stack", "" } }, false, {})
-        return -1
-    end
+function M._del_all(src_win)
+    require("mjm.error-list-types")._validate_win(src_win, true)
 
     local eo = require("mjm.error-list-open") --- @type QfRancherOpen
-    if not win then
+
+    if not src_win then
         local result = vim.fn.setqflist({}, "f") --- @type integer
-        if result == -1 then
-            return result
+        if result == 0 then
+            eo._close_qfwins({ all_tabpages = true })
         end
 
-        eo._close_qfwins({ all_tabpages = true })
-        return 0
+        return result
     end
 
-    --- MAYBE: Make an option for whether or not to automatically close the list window after
-    --- deleting the stack. Biggest issue is that an open loclist window without a stack
-    --- (qf_id == 0) is stale data. And there's no reason for the qflist to behave inconsistently
-
-    local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
+    local qf_id = vim.fn.getloclist(src_win, { id = 0 }).id --- @type integer
     if qf_id == 0 then
         vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
         return -1
@@ -332,7 +309,7 @@ function M._del_all(win)
 
     --- @type integer|nil
     local ll_win = require("mjm.error-list-util")._get_ll_win_by_qf_id(qf_id, {})
-    local result = vim.fn.setloclist(win, {}, "f") --- @type integer
+    local result = vim.fn.setloclist(src_win, {}, "f") --- @type integer
     if result == -1 then
         return result
     else
@@ -346,49 +323,47 @@ function M._del_all(win)
     end
 end
 
---- @param win integer|nil
+--- @param src_win integer|nil
 --- @param count integer
 --- @return integer
-function M._del_list(win, count)
-    if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types")
-        ey._validate_win(win, true)
-        ey._validate_count(count)
-    end
+function M._del_list(src_win, count)
+    local ey = require("mjm.error-list-types")
+    ey._validate_win(src_win, true)
+    ey._validate_uint(count)
 
-    if win and vim.fn.getloclist(win, { id = 0 }).id == 0 then
+    if src_win and vim.fn.getloclist(src_win, { id = 0 }).id == 0 then
         vim.api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
         return -1
     end
 
-    local max_nr = M._get_max_list_nr(win) --- @type integer
+    local max_nr = M._get_max_list_nr(src_win) --- @type integer
     if max_nr == 0 then
         vim.api.nvim_echo({ { "Stack is empty", "" } }, false, {})
         return -1
     end
 
     local adj_count = math.min(count, max_nr) --- @type integer
-    local cur_list_nr = M._get_cur_list_nr(win) --- @type integer
+    local cur_list_nr = M._get_cur_list_nr(src_win) --- @type integer
     adj_count = adj_count == 0 and cur_list_nr or adj_count
     if vim.g.qf_rancher_del_all_if_empty then
         local max_other_size = 0 --- @type integer
         for i = 1, max_nr do
             if i ~= adj_count then
-                local this_size = M._get_list_size(win, i) --- @type integer|nil
+                local this_size = M._get_list_size(src_win, i) --- @type integer|nil
                 max_other_size = (this_size and this_size > max_other_size) and this_size
                     or max_other_size
             end
         end
 
         if max_nr == 1 or max_other_size == 0 then
-            return M._del_all(win)
+            return M._del_all(src_win)
         end
     end
 
     -- MID: This doesn't purge title
     if adj_count == cur_list_nr then
         --- @type integer
-        local result = win and vim.fn.setloclist(win, {}, "r") or vim.fn.setqflist({}, "r")
+        local result = src_win and vim.fn.setloclist(src_win, {}, "r") or vim.fn.setqflist({}, "r")
         return result == -1 and result or adj_count
     end
 
@@ -403,7 +378,7 @@ function M._del_list(win, count)
         user_data = nil,
     } --- @type QfRancherWhat
 
-    local result = win and vim.fn.setloclist(win, {}, "r", del_list_data)
+    local result = src_win and vim.fn.setloclist(src_win, {}, "r", del_list_data)
         or vim.fn.setqflist({}, "r", del_list_data) --- @type integer
     return result == -1 and result or adj_count
 end

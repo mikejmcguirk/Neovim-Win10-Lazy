@@ -165,11 +165,13 @@ function M.diags(name, diag_opts, what)
     diags_to_list(diag_info, diag_opts, what)
 end
 
---- @param src_win? integer
+--- @param src_win integer|nil
 --- @param cargs vim.api.keyset.create_user_command.command_args
 --- @return nil
 local function make_diag_cmd(src_win, cargs)
-    require("mjm.error-list-types")._validate_win(src_win, true)
+    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
+    ey.validate_optional_uint(src_win)
+
     local fargs = cargs.fargs --- @type string[]
 
     local eu = require("mjm.error-list-util")
@@ -181,7 +183,6 @@ local function make_diag_cmd(src_win, cargs)
         return
     end
 
-    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
     local sev_type = eu._check_cmd_arg(fargs, ey._sev_types, "min")
     local diag_opts = { sev_type = sev_type } --- @type QfRancherDiagOpts
 

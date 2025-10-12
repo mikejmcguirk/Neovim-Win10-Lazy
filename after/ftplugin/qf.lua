@@ -1351,3 +1351,9 @@ end, { buffer = true })
 Map("n", "<C-x>", function()
     qf_split("tabnew", "focusList")
 end, { buffer = true })
+
+------------
+--- TODO ---
+------------
+
+--- These cmds need to create jumplist entries. How does FzfLua do it?

@@ -20,38 +20,36 @@ end
 --- OLDER/NEWER ---
 -------------------
 
---- @param win integer|nil
+--- @param src_win integer|nil
 --- @param count integer
 --- @param arithmetic function
 --- @return nil
-local function change_history(win, count, arithmetic)
-    if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types")
-        ey._validate_win(win, true)
-        ey._validate_count(count)
-        vim.validate("arithmetic", arithmetic, "callable")
-    end
+local function change_history(src_win, count, arithmetic)
+    local ey = require("mjm.error-list-types")
+    ey._validate_win(src_win, true)
+    ey._validate_uint(count)
+    vim.validate("arithmetic", arithmetic, "callable")
 
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
-    local stack_len = et._get_max_list_nr(win) --- @type integer
+    local stack_len = et._get_max_list_nr(src_win) --- @type integer
     if stack_len < 1 then
         vim.api.nvim_echo({ { "Stack is empty", "" } }, false, {})
         return
     end
 
-    local cur_list_nr = et._get_cur_list_nr(win) --- @type integer
-    local count1 = require("mjm.error-list-types")._count_to_count1(count) --- @type integer
+    local cur_list_nr = et._get_cur_list_nr(src_win) --- @type integer
+    local count1 = require("mjm.error-list-util")._count_to_count1(count) --- @type integer
     local new_list_nr = arithmetic(cur_list_nr, count1, 1, stack_len) --- @type integer
 
-    local cmd = win and "lhistory" or "chistory" --- @type string
+    local cmd = src_win and "lhistory" or "chistory" --- @type string
     vim.api.nvim_cmd({ cmd = cmd, count = new_list_nr }, {})
     if vim.g.qf_rancher_debug_assertions then
-        local list_nr_after = et._get_cur_list_nr(win)
+        local list_nr_after = et._get_cur_list_nr(src_win)
         assert(new_list_nr == list_nr_after)
     end
 
     if cur_list_nr ~= new_list_nr then
-        resize_after_stack_change(win)
+        resize_after_stack_change(src_win)
     end
 end
 
@@ -120,44 +118,42 @@ end
 
 -- DOCUMENT: By default, the keymap version will print the current list
 
---- @param win integer|nil
+--- @param src_win integer|nil
 --- @param count integer
 --- @param opts QfRancherHistoryOpts
 --- @return nil
-function M._history(win, count, opts)
-    if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types")
-        ey._validate_win(win, true)
-        ey._validate_count(count)
-        ey._validate_history_opts(opts)
-    end
+function M._history(src_win, count, opts)
+    local ey = require("mjm.error-list-types")
+    ey._validate_win(src_win, true)
+    ey._validate_uint(count)
+    ey._validate_history_opts(opts)
 
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
-    local stack_len = et._get_max_list_nr(win) --- @type integer
+    local stack_len = et._get_max_list_nr(src_win) --- @type integer
     if stack_len < 1 then
         vim.api.nvim_echo({ { "Stack is empty", "" } }, false, {})
         return
     end
 
-    local cur_list_nr = et._get_cur_list_nr(win) --- @type integer
-    local cmd = win and "lhistory" or "chistory" --- @type string
+    local cur_list_nr = et._get_cur_list_nr(src_win) --- @type integer
+    local cmd = src_win and "lhistory" or "chistory" --- @type string
     local default = opts.default == "current" and cur_list_nr or nil --- @type integer|nil
     local adj_count = count > 0 and math.min(count, stack_len) or default --- @type integer|nil
     ---@diagnostic disable-next-line: missing-fields
     vim.api.nvim_cmd({ cmd = cmd, count = adj_count, mods = { silent = opts.silent } }, {})
     if vim.g.qf_rancher_debug_assertions then
         if adj_count then
-            local list_nr_after = et._get_cur_list_nr(win)
+            local list_nr_after = et._get_cur_list_nr(src_win)
             assert(adj_count == list_nr_after)
         end
     end
 
     if cur_list_nr ~= adj_count then
-        resize_after_stack_change(win)
+        resize_after_stack_change(src_win)
     end
 
     if opts.always_open then
-        require("mjm.error-list-open")._open_list(win, { keep_win = opts.keep_win })
+        require("mjm.error-list-open")._open_list(src_win, { keep_win = opts.keep_win })
     end
 end
 
@@ -172,9 +168,7 @@ end
 --- @param opts QfRancherHistoryOpts
 --- @return nil
 function M._l_history(win, count, opts)
-    local ey = require("mjm.error-list-types")
-    ey._validate_win(win, false)
-
+    require("mjm.error-list-types")._validate_win(win, false)
     require("mjm.error-list-util")._locwin_check(win, function()
         M._history(win, count, opts)
     end)
@@ -196,30 +190,28 @@ end
 --- DELETION ---
 ----------------
 
---- @param win? integer
+--- @param src_win integer|nil
 --- @param count integer
 --- @return nil
-function M._del(win, count)
-    if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types")
-        ey._validate_win(win, true)
-        ey._validate_count(count)
-    end
+function M._del(src_win, count)
+    local ey = require("mjm.error-list-types")
+    ey._validate_win(src_win, true)
+    ey._validate_uint(count)
 
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
-    local result = et._del_list(win, count)
+    local result = et._del_list(src_win, count)
     if result == -1 or result == 0 then
         return
     end
 
-    local cur_list_nr = et._get_cur_list_nr(win)
+    local cur_list_nr = et._get_cur_list_nr(src_win)
     if vim.g.qf_rancher_debug_assertions then
         local target = count == 0 and cur_list_nr or count --- @type integer
         assert(result == target)
     end
 
     if result == cur_list_nr then
-        resize_after_stack_change(win)
+        resize_after_stack_change(src_win)
     end
 end
 
@@ -290,12 +282,20 @@ return M
 --- TODO ---
 ------------
 
+--- Make qe/qE/q<C-e> del/del+close/del_all. Add an option for whether or not close should be
+--- the preferred option (so qe would close, qE would keep open). This pattern would probably
+--- apply to other things as well, like empty diag lists
+
 --- Testing
 --- Docs
 
 -----------
 --- MID ---
 -----------
+
+-- Create a clean stack cmd/map that removes empty stacks and shifts down the remainders. You
+-- should then be able to use the default setqflist " " behavior to delete the tail. You can then
+-- make auto-consolidation a non-default option
 
 -----------
 --- LOW ---

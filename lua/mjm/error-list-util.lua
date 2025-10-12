@@ -171,9 +171,7 @@ end
 --- @param todo function
 --- @return any
 function M._locwin_check(win, todo)
-    if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_win(win, false)
-    end
+    require("mjm.error-list-types")._validate_win(win, false)
 
     local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
     if qf_id == 0 then
@@ -182,6 +180,13 @@ function M._locwin_check(win, todo)
     end
 
     return todo()
+end
+
+--- @param count integer
+--- @return integer
+function M._count_to_count1(count)
+    require("mjm.error-list-types")._validate_uint(count)
+    return math.max(count, 1)
 end
 
 --- @param x integer
@@ -207,12 +212,9 @@ end
 --- @param win integer
 --- @return boolean
 function M._win_can_have_loclist(win)
+    require("mjm.error-list-types")._validate_win(win, true)
     if not win then
         return false
-    end
-
-    if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_win(win, false)
     end
 
     local wintype = vim.fn.win_gettype(win)
@@ -239,22 +241,6 @@ function M._get_listtype(win)
     win = win or vim.api.nvim_get_current_win() --- @type integer
     local wintype = vim.fn.win_gettype(win) --- @type string
     return (wintype == "quickfix" or wintype == "loclist") and wintype or nil
-end
-
---- @param win integer
---- @return boolean
-function M._win_is_list(win)
-    if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_win(win, false)
-    end
-
-    local buf = vim.api.nvim_win_get_buf(win) --- @type integer
-    local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf }) --- @type string
-    if buftype == "quickfix" then
-        return true
-    else
-        return false
-    end
 end
 
 --- @param msg string
@@ -393,11 +379,9 @@ end
 --- @param opts QfRancherTabpageOpts
 --- @return integer[]
 local function get_loclist_wins(qf_id, opts)
-    if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types")
-        ey._validate_qf_id(qf_id)
-        ey._validate_tabpage_opts(opts)
-    end
+    local ey = require("mjm.error-list-types")
+    ey._validate_uint(qf_id)
+    ey._validate_tabpage_opts(opts)
 
     local wins = {} --- @type integer[]
     local tabpages = M._resolve_tabpages(opts) --- @type integer[]
@@ -417,11 +401,9 @@ end
 --- @param opts QfRancherTabpageOpts
 --- @return integer|nil
 local function get_loclist_win(qf_id, opts)
-    if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types") --- @type QfRancherTypes
-        ey._validate_qf_id(qf_id)
-        ey._validate_tabpage_opts(opts)
-    end
+    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
+    ey._validate_uint(qf_id)
+    ey._validate_tabpage_opts(opts)
 
     local tabpages = M._resolve_tabpages(opts) --- @type integer[]
     for _, tabpage in ipairs(tabpages) do
@@ -440,9 +422,7 @@ end
 --- @param opts QfRancherTabpageOpts
 --- @return integer|nil
 function M._get_loclist_win_by_win(win, opts)
-    if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_win(win, false)
-    end
+    require("mjm.error-list-types")._validate_win(win, false)
 
     local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
     if qf_id == 0 then
@@ -463,10 +443,7 @@ end
 --- @param opts QfRancherTabpageOpts
 --- @return integer[]
 function M._get_loclist_wins_by_win(win, opts)
-    if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types")
-        ey._validate_win(win, false)
-    end
+    require("mjm.error-list-types")._validate_win(win, false)
 
     local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
     if qf_id == 0 then

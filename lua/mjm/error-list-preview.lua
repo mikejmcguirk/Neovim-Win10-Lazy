@@ -325,7 +325,7 @@ end
 --- @param buf integer
 --- @return integer
 local function create_preview_buf(buf)
-    vim.validate("buf", buf, "number")
+    require("mjm.-error-list-types")._is_uint(buf)
 
     local lines = (function()
         if not vim.api.nvim_buf_is_valid(buf) then
@@ -363,7 +363,7 @@ end
 --- @param buf integer
 --- @return integer|nil
 local function get_preview_buf(buf)
-    vim.validate("buf", buf, "number")
+    require("mjm.-error-list-types")._is_uint(buf)
 
     if not bufs[buf] then
         local preview_buf = create_preview_buf(buf) --- @type integer
@@ -634,21 +634,9 @@ end
 
 --- @return nil
 function M.update_preview_win()
-    if not qf_win then
-        clear_session_data()
-        return
-    end
-
-    if not preview_win then
-        clear_session_data()
-        return
-    end
-
-    if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types") --- @type QfRancherTypes
-        ey._validate_win(qf_win, false)
-        ey._validate_win(preview_win, false)
-    end
+    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
+    ey._validate_win(qf_win, false)
+    ey._validate_win(preview_win, false)
 
     local wintype = vim.fn.win_gettype(qf_win)
     local is_loclist = wintype == "loclist" --- @type boolean

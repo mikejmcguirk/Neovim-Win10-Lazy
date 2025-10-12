@@ -169,6 +169,8 @@ end
 --- TODO: ---
 -------------
 
+--- Function audit - Is the win variable a src_win, list_win, something else? Don't just pass
+---     "win" as a variable, as it is not necessarily clear what the win is supposed to be
 --- Go through everything and be strict on data validation, including stuff that comes from the
 ---     user. We should only handle bad results from exterior programs
 --- Cmd prefix customization
