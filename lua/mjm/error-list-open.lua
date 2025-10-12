@@ -70,13 +70,10 @@ end
 
 --- @param list_win integer
 --- @param height integer|nil
---- @param opts QfRancherTabpageOpts
 --- @return nil
-local function resize_list_win(list_win, height, opts)
-    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
-    ey._validate_win(list_win, false)
+local function resize_list_win(list_win, height)
+    require("mjm.error-list-types")._validate_list_win(list_win)
     vim.validate("height", height, "number", true)
-    ey._validate_tabpage_opts(opts)
 
     local list_wintype = vim.fn.win_gettype(list_win)
     local is_loclist = list_wintype == "loclist" --- @type boolean
@@ -86,23 +83,19 @@ local function resize_list_win(list_win, height, opts)
     end
 
     local old_height = vim.api.nvim_win_get_height(list_win) --- @type integer
-    local win_param = is_loclist and list_win or nil --- @type integer|nil
-    local new_height = resolve_height_for_list(win_param, height) --- @type integer
+    local src_win = is_loclist and list_win or nil --- @type integer|nil
+    local new_height = resolve_height_for_list(src_win, height) --- @type integer
     if old_height == new_height then
         return
     end
 
-    local views = {}
-    local tabpages = require("mjm.error-list-util")._resolve_tabpages(opts) --- @type integer[]
-    for _, tabpage in ipairs(tabpages) do
-        local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
-        tabpage_wins = vim.tbl_filter(function(win)
-            return win ~= list_win
-        end, tabpage_wins)
+    local tabpage = vim.api.nvim_win_get_tabpage(list_win)
+    local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
+    tabpage_wins = vim.tbl_filter(function(win)
+        return win ~= list_win
+    end, tabpage_wins)
 
-        vim.list_extend(views, get_views(tabpage_wins))
-    end
-
+    local views = get_views(tabpage_wins) --- @type vim.fn.winsaveview.ret[]
     vim.api.nvim_win_set_height(list_win, new_height)
     restore_views(views)
 end
@@ -135,11 +128,12 @@ end
 
 --- @param list_win integer
 --- @param opts QfRancherOpenOpts
---- @param tabpage integer
 --- @return boolean
-local function handle_open_list_win(list_win, opts, tabpage)
+local function handle_open_list_win(list_win, opts)
+    clean_open_opts(opts)
+
     if opts.always_resize then
-        resize_list_win(list_win, opts.height, { tabpage = tabpage })
+        resize_list_win(list_win, opts.height)
     else
         local eu = require("mjm.error-list-util")
         eu._checked_echo("List win is already open", opts.print_errs, false)
@@ -170,10 +164,10 @@ function M._open_qflist(opts)
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
     local tabpage = vim.api.nvim_win_get_tabpage(cur_win) --- @type integer
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    local qf_win = eu._get_qf_win({ tabpage = tabpage }) --- @type integer|nil
+    local list_win = eu._get_qf_win({ tabpage = tabpage }) --- @type integer|nil
 
-    if qf_win then
-        return handle_open_list_win(qf_win, opts, tabpage)
+    if list_win then
+        return handle_open_list_win(list_win, opts)
     end
 
     local ll_wins = eu._get_all_loclist_wins({ tabpage = tabpage }) --- @type integer[]
@@ -214,7 +208,7 @@ function M._open_loclist(opts)
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
     local ll_win = eu._get_ll_win_by_qf_id(qf_id, { tabpage = tabpage }) --- @type integer|nil
     if ll_win then
-        return handle_open_list_win(ll_win, opts, tabpage)
+        return handle_open_list_win(ll_win, opts)
     end
 
     local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
@@ -338,8 +332,7 @@ end
 --- @param win integer
 --- @return boolean
 function M._close_win_save_views(win)
-    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
-    ey._validate_win(win, false)
+    require("mjm.error-list-types")._validate_win(win, false)
 
     local tabpage = vim.api.nvim_win_get_tabpage(win) --- @type integer
     local tabpage_wins = vim.api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
@@ -388,7 +381,7 @@ function M._resize_qfwins(opts)
     local qfwins = require("mjm.error-list-util")._get_qf_wins(opts) --- @type integer[]
     for _, win in ipairs(qfwins) do
         local tabpage = vim.api.nvim_win_get_tabpage(win) --- @type integer
-        resize_list_win(win, nil, { tabpage = tabpage })
+        resize_list_win(win, nil)
     end
 end
 
@@ -404,7 +397,7 @@ function M._resize_loclists_by_win(win, opts)
     local loclists = require("mjm.error-list-util")._get_loclist_wins_by_win(win, opts)
     for _, list_win in ipairs(loclists) do
         local tabpage = vim.api.nvim_win_get_tabpage(list_win) --- @type integer
-        resize_list_win(list_win, nil, { tabpage = tabpage })
+        resize_list_win(list_win, nil)
     end
 end
 

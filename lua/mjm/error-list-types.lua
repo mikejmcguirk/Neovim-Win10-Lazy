@@ -135,6 +135,18 @@ function M._validate_win(win, optional)
     end
 end
 
+--- @param list_win integer
+--- @return nil
+function M._validate_list_win(list_win)
+    M._validate_win(list_win, false)
+    local list_win_buf = vim.api.nvim_win_get_buf(list_win) --- @type integer
+    --- @type string
+    local buftype = vim.api.nvim_get_option_value("buftype", { buf = list_win_buf })
+    vim.validate("buftype", buftype, function()
+        return buftype == "quickfix"
+    end, "Buftype must be quickfix")
+end
+
 --- MID: If this value starts being used in more places, consider making an alias for it rather
 --- than add-hoc annotation enums
 

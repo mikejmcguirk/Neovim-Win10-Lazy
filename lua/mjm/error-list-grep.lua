@@ -360,6 +360,8 @@ return M
 -------------
 
 --- Grep specific file. Can either be a built-in or shown as a recipe
+--- Partly a grep, partly a filter, but grep based on treesitter node name. e.g. I should be
+---     able to grep all parameters
 
 -------------
 --- # LOW ---
