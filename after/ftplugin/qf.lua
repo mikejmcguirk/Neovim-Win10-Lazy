@@ -133,7 +133,8 @@ end, { buffer = true })
 vim.api.nvim_buf_set_keymap(0, "n", "p", "", {
     noremap = true,
     callback = function()
-        require("mjm.error-list-preview").toggle_preview_win()
+        local cur_win = vim.api.nvim_get_current_win()
+        require("mjm.error-list-preview").toggle_preview_win(cur_win)
     end,
     desc = "Toggle the qf preview window",
 })
@@ -141,8 +142,7 @@ vim.api.nvim_buf_set_keymap(0, "n", "p", "", {
 vim.api.nvim_buf_set_keymap(0, "n", "P", "", {
     noremap = true,
     callback = function()
-        local cur_win = vim.api.nvim_get_current_win() --- @type integer
-        require("mjm.error-list-preview")._update_preview_win_pos(cur_win)
+        require("mjm.error-list-preview").update_preview_win_pos()
     end,
     desc = "Manually trigger a preview window position adjustment",
 })

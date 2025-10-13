@@ -228,21 +228,6 @@ function M._win_can_have_loclist(win)
     return false
 end
 
---- TODO: Only used in preview. Feels unnecessary. Or at least move there
-
---- @param win integer|nil
---- @return string|nil
-function M._get_listtype(win)
-    vim.validate("win", win, { "nil", "number" })
-    if type(win) == "number" then
-        assert(vim.api.nvim_win_is_valid(win))
-    end
-
-    win = win or vim.api.nvim_get_current_win() --- @type integer
-    local wintype = vim.fn.win_gettype(win) --- @type string
-    return (wintype == "quickfix" or wintype == "loclist") and wintype or nil
-end
-
 --- @param msg string
 --- @param print_msgs boolean
 --- @param is_err boolean
@@ -271,8 +256,12 @@ end
 --- @param force boolean
 --- @return integer
 function M._pwin_close(win, force)
-    vim.validate("win", win, "number")
+    require("mjm.error-list-types")._validate_uint(win, true)
     vim.validate("force", force, "boolean")
+
+    if not win then
+        return -1
+    end
 
     if not vim.api.nvim_win_is_valid(win) then
         return -1
@@ -292,6 +281,28 @@ function M._pwin_close(win, force)
     end
 
     return buf
+end
+
+-- TODO: Does this handle 0 len bufs?
+-- LOW: Validate cur_pos
+
+--- @param win integer
+--- @param cur_pos {[1]: integer, [2]: integer}
+--- @return nil
+function M._protected_set_cursor(win, cur_pos)
+    require("mjm.error-list-types")._validate_win(win)
+
+    local win_buf = vim.api.nvim_win_get_buf(win)
+
+    local line_count = vim.api.nvim_buf_line_count(win_buf)
+    cur_pos[1] = math.min(cur_pos[1], line_count)
+
+    local row = cur_pos[1]
+    local set_line = vim.api.nvim_buf_get_lines(win_buf, row - 1, row, false)[1]
+    cur_pos[2] = math.min(cur_pos[2], #set_line - 1)
+    cur_pos[2] = math.max(cur_pos[2], 0)
+
+    vim.api.nvim_win_set_cursor(win, cur_pos)
 end
 
 -- MID: https://github.com/neovim/neovim/pull/33402

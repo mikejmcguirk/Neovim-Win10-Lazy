@@ -817,6 +817,8 @@ local function do_mkdir(path)
     return false
 end
 
+-- MID: Use vim.fs.normalize?
+
 --- @param cargs vim.api.keyset.create_user_command.command_args
 --- @return nil
 local function mv_cur_buf(cargs)

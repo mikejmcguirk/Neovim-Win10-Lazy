@@ -208,6 +208,17 @@ function M._get_all(src_win, nr)
 end
 
 --- @param src_win integer|nil
+--- @param nr integer
+--- @return vim.quickfix.entry[]
+function M._get_items(src_win, nr)
+    local ev = require("mjm.error-list-types")
+    ev._validate_win(src_win, true)
+    ev._validate_uint(nr)
+
+    return src_win and vim.fn.getloclist(src_win) or vim.fn.getqflist()
+end
+
+--- @param src_win integer|nil
 --- @return integer
 function M._get_cur_list_nr(src_win)
     require("mjm.error-list-types")._validate_win(src_win, true)

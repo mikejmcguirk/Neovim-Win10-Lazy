@@ -19,6 +19,8 @@ require("mjm.colorscheme")
 --- MID: If you have a function as a parameter, then pass that function as a parameter again, the
 --- function var will be fg instead of parameter color
 
+--- LOW: Create a custom TS query for self aliases that's italicized constant
+
 --- @param hl_query vim.treesitter.Query
 --- @return nil
 local ts_nop_all = function(hl_query)

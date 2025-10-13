@@ -28,7 +28,7 @@ function M._validate_what(what)
     vim.validate("what.items", what.items, "table", true)
     if vim.g.qf_rancher_debug_assertions and type(what.items) == "table" then
         for _, item in ipairs(what.items) do
-            M.validate_list_item(item)
+            M._validate_list_item(item)
         end
     end
 
@@ -129,22 +129,45 @@ function M._validate_win(win, optional)
     if type(win) == "number" then
         vim.validate("win", win, function()
             return vim.api.nvim_win_is_valid(win)
-        end)
+        end, "Win " .. win .. " is not valid")
     else
         error("Win is not a number or nil")
     end
 end
 
---- @param list_win integer
+--- @param buf integer|nil
+--- @param optional? boolean
 --- @return nil
-function M._validate_list_win(list_win)
-    M._validate_win(list_win, false)
+function M._validate_buf(buf, optional)
+    M._validate_uint(buf, optional)
+    if optional and type(buf) == "nil" then
+        return
+    end
+
+    if type(buf) == "number" then
+        vim.validate("buf", buf, function()
+            return vim.api.nvim_buf_is_valid(buf)
+        end)
+    else
+        error("buf is not a number or nil")
+    end
+end
+
+--- @param list_win integer
+--- @param optional? boolean
+--- @return nil
+function M._validate_list_win(list_win, optional)
+    M._validate_win(list_win, optional)
+    if optional and type(list_win) == "nil" then
+        return
+    end
+
     local list_win_buf = vim.api.nvim_win_get_buf(list_win) --- @type integer
     --- @type string
     local buftype = vim.api.nvim_get_option_value("buftype", { buf = list_win_buf })
     vim.validate("buftype", buftype, function()
         return buftype == "quickfix"
-    end, "Buftype must be quickfix")
+    end, optional, "Buftype must be quickfix")
 end
 
 --- MID: If this value starts being used in more places, consider making an alias for it rather
@@ -167,7 +190,7 @@ end
 --- not exactly the same
 --- @param item vim.quickfix.entry
 --- @return nil
-function M.validate_list_item(item)
+function M._validate_list_item(item)
     vim.validate("item", item, "table")
 
     vim.validate("item.bufnr", item.bufnr, "number", true)
