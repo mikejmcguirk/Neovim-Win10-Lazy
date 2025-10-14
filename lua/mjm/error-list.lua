@@ -36,6 +36,7 @@ _G.QFR_MAX_HEIGHT = 10
 -- Personal setting. Default is false in line with Nvim
 vim.api.nvim_set_var("qf_rancher_auto_open_changes", true)
 vim.api.nvim_set_var("qf_rancher_debug_assertions", true)
+vim.api.nvim_set_var("qf_rancher_preview_debounce", 50)
 -- vim.api.nvim_set_var("qf_rancher_set_default_maps", false)
 
 --- TODO: Make sure the options actually do what they're supposed to
@@ -53,6 +54,7 @@ local g_vars = {
     { "qf_rancher_grepprg", { "string" }, "rg" },
     --- TODO: Needs to accept table
     { "qf_rancher_preview_border", { "string", "table" }, "single" },
+    { "qf_rancher_preview_debounce", { "number" }, 100 },
     { "qf_rancher_preview_show_title", { "boolean" }, true },
     { "qf_rancher_preview_title_pos", { "string" }, "left" },
     { "qf_rancher_preview_winblend", { "number" }, 0 },

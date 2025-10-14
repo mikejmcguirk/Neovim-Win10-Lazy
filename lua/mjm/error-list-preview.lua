@@ -69,7 +69,7 @@ end
 --- @param self QfRancherPreviewState
 --- @return boolean
 function preview_state:is_open()
-    validate_state(self.list_win, self.preview_win)
+    -- Don't validate state here, or else the list_win check can fail on buf changes
     return is_preview_open(self.list_win, self.preview_win)
 end
 
@@ -129,6 +129,9 @@ local function has_no_list_wins()
 
     return #qf_wins == 0 and #ll_wins == 0
 end
+
+-- TODO: Need to handle if the list changes in place, or history is used to change the stack nr
+-- Might also need to handle nav actions
 
 --- @return nil
 local function create_autocmds()
@@ -203,15 +206,17 @@ local function get_border()
     if g_border then
         require("mjm.error-list-types")._validate_border(g_border)
         return g_border
-    else
+    elseif vim.fn.has("nvim-0.11") then
         local winborder = vim.api.nvim_get_option_value("winborder", { scope = "global" })
         return winborder ~= "" and winborder or "single"
+    else
+        return "single"
     end
 end
 
---- @param buf integer
+--- @param preview_buf integer
 --- @return nil
-local function set_preview_win_title(buf)
+local function set_preview_win_title(preview_buf)
     assert(preview_state:is_open())
     local g_show_title = vim.g.qf_rancher_preview_show_title --- @type boolean|nil
     vim.validate("g_show_title", g_show_title, "boolean", true)
@@ -228,9 +233,9 @@ local function set_preview_win_title(buf)
         return
     end
 
-    local preview_name = vim.api.nvim_buf_get_name(buf) --- @type string
-    local relative_name = vim.fn.fnamemodify(preview_name, ":.")
-    local title_pos = g_title_pos and g_title_pos or "left"
+    local preview_name = vim.api.nvim_buf_get_name(preview_buf) --- @type string
+    local relative_name = vim.fn.fnamemodify(preview_name, ":.") --- @type string
+    local title_pos = g_title_pos and g_title_pos or "left" --- @type string
     vim.api.nvim_win_set_config(preview_state.preview_win, {
         title = relative_name,
         title_pos = title_pos,
@@ -273,7 +278,7 @@ local function get_win_cfg(list_win)
 
     local border = get_border() --- @type string|string[]
     local preview_border_width = border ~= "none" and 2 or 0 --- @type integer
-    local vim_border = 1 --- @type integer
+    local vim_separator = 1 --- @type integer
     local padding = 1 --- @type integer
 
     -- Window width and height only account for the inside of the window, not its borders. For
@@ -290,12 +295,12 @@ local function get_win_cfg(list_win)
     --- @type vim.api.keyset.win_config
     local win_cfg = vim.tbl_extend("force", base_cfg, { relative = "win", win = list_win })
 
-    local avail_y_above = math.max(qf_pos[1] - vim_border - 1, 0) --- @type integer
-    local avail_y_below = e_lines - (qf_pos[1] + qf_height + vim_border + 1) --- @type integer
+    local avail_y_above = math.max(qf_pos[1] - vim_separator - 1, 0) --- @type integer
+    local avail_y_below = e_lines - (qf_pos[1] + qf_height + vim_separator + 1) --- @type integer
     -- If space is available to the left or right, the vim border has to be there
-    local avail_x_left = math.max(qf_pos[2] - vim_border, 0) --- @type integer
+    local avail_x_left = math.max(qf_pos[2] - vim_separator, 0) --- @type integer
     --- @type integer
-    local avail_x_right = math.max(e_cols - (qf_pos[2] + qf_width + vim_border), 0)
+    local avail_x_right = math.max(e_cols - (qf_pos[2] + qf_width + vim_separator), 0)
     local avail_width = qf_width - (padding * 2) - preview_border_width --- @type integer
     local avail_e_width = e_cols - (padding * 2) - preview_border_width --- @type integer
 
@@ -320,7 +325,7 @@ local function get_win_cfg(list_win)
     if avail_y_above >= min_y_space then
         local height = avail_y_above - preview_border_width --- @type integer
         height = math.min(height, MAX_HEIGHT) --- @type integer
-        local row = (height + preview_border_width + vim_border) * -1 --- @type integer
+        local row = (height + preview_border_width + vim_separator) * -1 --- @type integer
         if qf_width >= min_x_space then
             return vim.tbl_extend("force", win_cfg, {
                 height = height,
@@ -336,7 +341,7 @@ local function get_win_cfg(list_win)
     if avail_y_below >= min_y_space then
         local height = avail_y_below - preview_border_width --- @type integer
         height = math.min(height, MAX_HEIGHT) --- @type integer
-        local row = qf_height + vim_border --- @type integer
+        local row = qf_height + vim_separator --- @type integer
         if qf_width >= min_x_space then
             return vim.tbl_extend("force", win_cfg, {
                 height = height,
@@ -366,7 +371,7 @@ local function get_win_cfg(list_win)
     end
 
     local function open_left()
-        local col = (qf_pos[2] - vim_border) * -1 --- @type integer
+        local col = (qf_pos[2] - vim_separator) * -1 --- @type integer
         local width = avail_x_left - (padding * 2) - preview_border_width --- @type integer
         if qf_height >= min_y_space then
             return vim.tbl_extend("force", win_cfg, {
@@ -381,7 +386,7 @@ local function get_win_cfg(list_win)
     end
 
     local function open_right()
-        local col = qf_pos[2] + qf_width + vim_border + padding --- @type integer
+        local col = qf_pos[2] + qf_width + vim_separator + padding --- @type integer
         local width = avail_x_right - (padding * 2) - preview_border_width --- @type integer
         if qf_height >= min_y_space then
             return vim.tbl_extend("force", win_cfg, {
@@ -546,7 +551,7 @@ local function setup_hls(item_buf, preview_buf)
     --- @type vim.treesitter.LanguageTree?
     local parser = vim.treesitter.get_parser(preview_buf, item_lang, { error = false })
     if parser then
-        vim.treesitter.start(preview_buf, item_lang)
+        pcall(vim.treesitter.start, preview_buf, item_lang)
     else
         vim.api.nvim_set_option_value("syntax", item_ft, { buf = preview_buf })
     end
@@ -575,6 +580,8 @@ local function create_preview_buf_from_lines(item_buf, lines)
     return preview_buf
 end
 
+-- TODO: Handle/avoid stale preview data
+
 --- @param item vim.quickfix.entry
 --- @return nil
 local function setup_preview_buf(item)
@@ -584,6 +591,10 @@ local function setup_preview_buf(item)
 
     if not bufs[item.bufnr] then
         local lines = (function()
+            if not item.bufnr then
+                return { "No bufnr for list entry" }
+            end
+
             if not vim.api.nvim_buf_is_valid(item.bufnr) then
                 return { item.bufnr .. " is not valid" }
             end
@@ -610,10 +621,30 @@ end
 --- OPEN/CLOSE/UPDATE ---
 -------------------------
 
+local queued_update = false
+local timer = vim.uv.new_timer()
+
+local function at_timer_end()
+    if queued_update then
+        queued_update = false
+        vim.schedule_wrap(M._update_preview_win_buf)
+    end
+end
+
 --- @return nil
 function M._update_preview_win_buf()
-    assert(preview_state:is_open())
-    assert(preview_state:is_cur_list_win(vim.api.nvim_get_current_win()))
+    if timer and timer:get_due_in() > 0 then
+        queued_update = true
+        return
+    end
+
+    if not preview_state:is_open() then
+        return
+    end
+
+    if not preview_state:is_cur_list_win(vim.api.nvim_get_current_win()) then
+        return
+    end
 
     local wintype = vim.fn.win_gettype(preview_state.list_win)
     local is_loclist = wintype == "loclist" --- @type boolean
@@ -628,10 +659,6 @@ function M._update_preview_win_buf()
     assert(line <= #items)
 
     local item = items[line] --- @type vim.quickfix.entry
-    if not item.bufnr then
-        return
-    end
-
     setup_preview_buf(item)
     vim.api.nvim_win_set_buf(preview_state.preview_win, bufs[item.bufnr])
     set_preview_win_title(bufs[item.bufnr])
@@ -642,6 +669,10 @@ function M._update_preview_win_buf()
         vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
         vim.api.nvim_cmd({ cmd = "normal", args = { "ze" }, bang = true }, {})
     end)
+
+    if timer then
+        timer:start(100, 0, at_timer_end)
+    end
 end
 
 --- @param do_zzze? boolean
@@ -694,10 +725,6 @@ function M.open_preview_win(list_win)
     assert(line <= #items)
 
     local item = items[line] --- @type vim.quickfix.entry
-    if not item.bufnr then
-        return
-    end
-
     setup_preview_buf(item)
     local win_cfg = get_win_cfg(list_win) --- @type vim.api.keyset.win_config
     local preview_win = create_preview_win(win_cfg, bufs[item.bufnr])
@@ -712,6 +739,10 @@ function M.open_preview_win(list_win)
 
     set_preview_win_title(bufs[item.bufnr])
     create_autocmds()
+
+    if timer then
+        timer:start(100, 0, at_timer_end)
+    end
 end
 
 --- @return nil
@@ -745,7 +776,7 @@ return M
 --- TODO ---
 ------------
 
---- Do a Grok audit on this module when complete. It's self-contained enough that it should work
+--- Add a debounce for updating the preview win. For large bufs, can get choppy
 
 --- Check that all functions have reasonable default sorts
 --- Check that window height updates are triggered where appropriate
@@ -760,6 +791,7 @@ return M
 
 --- If the file has to be read fresh, that should be handled async
 --- - Study Lua co-routines, built-in async lib, and lewis's async lib
+--- Allow one open preview win per tabpage
 
 -----------
 --- LOW ---
