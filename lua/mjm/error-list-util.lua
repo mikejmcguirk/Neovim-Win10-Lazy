@@ -256,12 +256,8 @@ end
 --- @param force boolean
 --- @return integer
 function M._pwin_close(win, force)
-    require("mjm.error-list-types")._validate_uint(win, true)
+    require("mjm.error-list-types")._validate_uint(win)
     vim.validate("force", force, "boolean")
-
-    if not win then
-        return -1
-    end
 
     if not vim.api.nvim_win_is_valid(win) then
         return -1
@@ -270,20 +266,19 @@ function M._pwin_close(win, force)
     local tabpages = vim.api.nvim_list_tabpages() --- @type integer[]
     local win_tabpage = vim.api.nvim_win_get_tabpage(win) --- @type integer
     local win_tabpage_wins = vim.api.nvim_tabpage_list_wins(win_tabpage) --- @type integer[]
-    local buf = vim.api.nvim_win_get_buf(win) --- @type integer
-
-    if #tabpages > 1 or #win_tabpage_wins > 1 then
-        vim.api.nvim_win_close(win, force)
-        local ok, _ = pcall(vim.api.nvim_win_close, win, force)
-        if not ok then
-            return -1
-        end
+    if #tabpages == 1 and #win_tabpage_wins == 1 then
+        return -1
     end
 
-    return buf
+    local buf = vim.api.nvim_win_get_buf(win) --- @type integer
+    local ok, _ = pcall(vim.api.nvim_win_close, win, force) --- @type boolean, nil
+    if not ok then
+        return -1
+    else
+        return buf
+    end
 end
 
--- TODO: Does this handle 0 len bufs?
 -- LOW: Validate cur_pos
 
 --- @param win integer
@@ -292,17 +287,18 @@ end
 function M._protected_set_cursor(win, cur_pos)
     require("mjm.error-list-types")._validate_win(win)
 
-    local win_buf = vim.api.nvim_win_get_buf(win)
+    local adj_cur_pos = cur_pos --- @type {[1]: integer, [2]: integer}
+    local win_buf = vim.api.nvim_win_get_buf(win) --- @type integer
 
-    local line_count = vim.api.nvim_buf_line_count(win_buf)
-    cur_pos[1] = math.min(cur_pos[1], line_count)
+    local line_count = vim.api.nvim_buf_line_count(win_buf) --- @type integer
+    adj_cur_pos[1] = math.min(adj_cur_pos[1], line_count)
 
-    local row = cur_pos[1]
-    local set_line = vim.api.nvim_buf_get_lines(win_buf, row - 1, row, false)[1]
-    cur_pos[2] = math.min(cur_pos[2], #set_line - 1)
-    cur_pos[2] = math.max(cur_pos[2], 0)
+    local row = adj_cur_pos[1] --- @type integer
+    local set_line = vim.api.nvim_buf_get_lines(win_buf, row - 1, row, false)[1] --- @type string
+    adj_cur_pos[2] = math.min(adj_cur_pos[2], #set_line - 1)
+    adj_cur_pos[2] = math.max(adj_cur_pos[2], 0)
 
-    vim.api.nvim_win_set_cursor(win, cur_pos)
+    vim.api.nvim_win_set_cursor(win, adj_cur_pos)
 end
 
 -- MID: https://github.com/neovim/neovim/pull/33402
@@ -313,7 +309,7 @@ end
 --- @param wipeout boolean
 --- @return nil
 function M._pbuf_rm(buf, force, wipeout)
-    vim.validate("buf", buf, "number")
+    require("mjm.error-list-types")._validate_uint(buf)
     vim.validate("force", force, "boolean")
     vim.validate("wipeout", wipeout, "boolean")
 
@@ -338,6 +334,63 @@ function M._pclose_and_rm(win, force, wipeout)
     local buf = M._pwin_close(win, force)
     if buf > 0 then
         M._pbuf_rm(buf, force, wipeout)
+    end
+end
+
+-- PR: Why can't this be a part of Nvim core?
+-- MID: This could be a binary search instead
+-- TODO: Test
+
+--- @param vcol integer
+--- @param line string
+--- @return boolean, integer, integer
+function M._vcol_to_byte_bounds(vcol, line)
+    require("mjm.error-list-types")._validate_uint(vcol)
+    vim.validate("line", line, "string")
+
+    if vcol == 0 or #line <= 1 then
+        return true, 0, 0
+    end
+
+    local max_vcol = vim.fn.strdisplaywidth(line) --- @type integer
+    if vcol > max_vcol then
+        return false, 0, 0
+    end
+
+    local charlen = vim.fn.strcharlen(line) --- @type integer
+    for char_idx = 0, charlen - 1 do
+        local start_byte = vim.fn.byteidx(line, char_idx) --- @type integer
+        if start_byte == -1 then
+            return false, 0, 0
+        end
+
+        local char = vim.fn.strcharpart(line, char_idx, 1, true) --- @type string
+        local fin_byte = start_byte + #char - 1 --- @type integer
+
+        local test_str = line:sub(1, fin_byte + 1) --- @type string
+        local test_vcol = vim.fn.strdisplaywidth(test_str) --- @type integer
+        if test_vcol >= vcol then
+            return true, start_byte, fin_byte
+        end
+    end
+
+    return false, 0, 0
+end
+
+-- TODO: Test
+
+--- @param vcol integer
+--- @param line string
+--- @return integer
+function M._vcol_to_end__col(vcol, line)
+    require("mjm.error-list-types")._validate_uint(vcol)
+    vim.validate("line", line, "string")
+
+    local ok, _, fin_byte = M._vcol_to_byte_bounds(vcol, line) --- @type boolean, integer
+    if ok then
+        return math.min(fin_byte + 1, #line)
+    else
+        return #line
     end
 end
 

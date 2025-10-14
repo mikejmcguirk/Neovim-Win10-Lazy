@@ -41,24 +41,29 @@ vim.api.nvim_set_var("qf_rancher_debug_assertions", true)
 --- TODO: Make sure the options actually do what they're supposed to
 --- DOCUMENT: What these vars do
 local g_vars = {
-    { "qf_rancher_auto_open_changes", "boolean", false },
+    { "qf_rancher_auto_open_changes", { "boolean" }, false },
     -- DOCUMENT:
     -- - If splitkeep is set to screen or topline, that will take precedence
     -- - If splitkeep is set for cursor, and this option is true, rancher will save and restore
     --      views where necessary
     -- - If this is off and splitkeep is set for cursor, you get Nvim default behavior
-    { "qf_rancher_always_save_views", "boolean", true },
-    { "qf_rancher_debug_assertions", "boolean", false },
-    { "qf_rancher_del_all_if_empty", "boolean", true },
-    { "qf_rancher_grepprg", "string", "rg" },
-    { "qf_rancher_qfsplit", "string", "botright" },
-    { "qf_rancher_set_default_maps", "boolean", true },
-    { "qf_rancher_set_default_cmds", "boolean", true },
-    { "qf_rancher_use_smartcase", "boolean", true },
-} --- @type {[1]:string, [2]:string, [3]:any}
+    { "qf_rancher_always_save_views", { "boolean" }, true },
+    { "qf_rancher_debug_assertions", { "boolean" }, false },
+    { "qf_rancher_del_all_if_empty", { "boolean" }, true },
+    { "qf_rancher_grepprg", { "string" }, "rg" },
+    --- TODO: Needs to accept table
+    { "qf_rancher_preview_border", { "string", "table" }, "single" },
+    { "qf_rancher_preview_show_title", { "boolean" }, true },
+    { "qf_rancher_preview_title_pos", { "string" }, "left" },
+    { "qf_rancher_preview_winblend", { "number" }, 0 },
+    { "qf_rancher_qfsplit", { "string" }, "botright" },
+    { "qf_rancher_set_default_maps", { "boolean" }, true },
+    { "qf_rancher_set_default_cmds", { "boolean" }, true },
+    { "qf_rancher_use_smartcase", { "boolean" }, true },
+} --- @type {[1]:string, [2]:string[], [3]:any}
 
 for _, var in ipairs(g_vars) do
-    if type(vim.g[var[1]]) ~= var[2] then
+    if not vim.tbl_contains(var[2], type(vim.g[var[1]])) then
         vim.api.nvim_set_var(var[1], var[3])
     end
 end

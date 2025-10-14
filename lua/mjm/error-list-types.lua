@@ -67,6 +67,8 @@ function M._validate_user_data(user_data)
     vim.validate("user_data.sort_func", user_data.sort_func, "callable", true)
 end
 
+-- LOW: Add validation for win config
+
 ------------------
 --- PRIMITIVES ---
 ------------------

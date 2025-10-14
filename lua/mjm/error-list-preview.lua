@@ -1,24 +1,10 @@
-local M = {}
-
 ---------------
 --- CREDITS ---
 ---------------
 
 --- https://github.com/r0nsha/qfpreview.nvim
 
---------------
---- CONFIG ---
---------------
-
--- NOTE: This whole section should be moved to the /plugin file
-
--- TODO: The autocmd for this should resolve in the "plugin" file. I don't see the need for the
--- autocmd to run if it does nothing
-vim.api.nvim_set_var("qf_rancher_preview_autoshow", false)
--- vim.api.nvim_set_var("qf_rancher_preview_border", "single")
-vim.api.nvim_set_var("qf_rancher_preview_show_title", false)
--- vim.api.nvim_set_var("qf_rancher_preview_title_pos", "center")
-vim.api.nvim_set_var("qf_rancher_preview_winblend", 0)
+local M = {}
 
 -------------------
 --- MODULE DATA ---
@@ -59,14 +45,14 @@ end
 --- @param list_win integer
 --- @param preview_win integer
 --- @return boolean
-local function preview_open(list_win, preview_win)
+local function is_preview_open(list_win, preview_win)
     return type(list_win) == "number" and type(preview_win) == "number"
 end
 
 --- @param list_win integer
 --- @param preview_win integer
 --- @return boolean
-local function preview_closed(list_win, preview_win)
+local function is_preview_closed(list_win, preview_win)
     return type(list_win) == "nil" and type(preview_win) == "nil"
 end
 
@@ -74,8 +60,17 @@ end
 --- @param preview_win integer
 --- @return nil
 local function validate_state(list_win, preview_win)
-    require("mjm.error-list-types")._validate_list_win(list_win, true)
-    assert(preview_open(list_win, preview_win) or preview_closed(list_win, preview_win))
+    local ey = require("mjm.error-list-types")
+    ey._validate_list_win(list_win, true)
+    ey._validate_win(list_win, true)
+    assert(is_preview_open(list_win, preview_win) or is_preview_closed(list_win, preview_win))
+end
+
+--- @param self QfRancherPreviewState
+--- @return boolean
+function preview_state:is_open()
+    validate_state(self.list_win, self.preview_win)
+    return is_preview_open(self.list_win, self.preview_win)
 end
 
 --- @param self QfRancherPreviewState
@@ -85,25 +80,9 @@ function preview_state:clear()
     self.list_win = nil
 end
 
---- @return nil
-function preview_state:close_and_clear()
-    validate_state(self.list_win, self.preview_win)
-
-    require("mjm.error-list-util")._pwin_close(self.preview_win, true)
-    self.preview_win = nil
-    self.list_win = nil
-end
-
 --- @param self QfRancherPreviewState
 --- @return boolean
-function preview_state:is_open()
-    validate_state(self.list_win, self.preview_win)
-    return preview_open(self.list_win, self.preview_win)
-end
-
---- @param self QfRancherPreviewState
---- @return boolean
-function preview_state:is_list_win(win)
+function preview_state:is_cur_list_win(win)
     validate_state(self.list_win, self.preview_win)
     return win == self.list_win
 end
@@ -117,13 +96,19 @@ local group = vim.api.nvim_create_augroup(group_name, {}) --- @type integer
 local SCROLLOFF = 6
 
 --- @return nil
-local function clear_session_data()
-    preview_state:close_and_clear()
+local function close_and_clear()
+    if preview_state:is_open() then
+        require("mjm.error-list-util")._pwin_close(preview_state.preview_win, true)
+        preview_state:clear()
+    end
+end
 
-    for _, bufnr in pairs(bufs) do
-        if vim.api.nvim_buf_is_valid(bufnr) then
-            vim.api.nvim_buf_delete(bufnr, { force = true })
-        end
+--- @return nil
+local function clear_session_data()
+    close_and_clear()
+
+    for _, buf in pairs(bufs) do
+        require("mjm.error-list-util")._pbuf_rm(buf, true, true)
     end
 
     bufs = {}
@@ -154,7 +139,7 @@ local function create_autocmds()
     vim.api.nvim_create_autocmd("CursorMoved", {
         group = group,
         callback = function()
-            if preview_state:is_list_win(vim.api.nvim_get_current_win()) then
+            if preview_state:is_cur_list_win(vim.api.nvim_get_current_win()) then
                 M._update_preview_win_buf()
             end
         end,
@@ -169,8 +154,6 @@ local function create_autocmds()
         end,
     })
 
-    -- TODO: This does not handle the case where the built-in open script is used, and the other
-    -- type of window is closed first
     vim.api.nvim_create_autocmd("WinClosed", {
         group = group,
         callback = function()
@@ -187,7 +170,7 @@ local function create_autocmds()
     vim.api.nvim_create_autocmd("WinEnter", {
         group = group,
         callback = function()
-            if not preview_state:is_list_win(vim.api.nvim_get_current_win()) then
+            if not preview_state:is_cur_list_win(vim.api.nvim_get_current_win()) then
                 M._close_preview_win()
             end
         end,
@@ -196,7 +179,7 @@ local function create_autocmds()
     vim.api.nvim_create_autocmd("WinLeave", {
         group = group,
         callback = function()
-            if preview_state:is_list_win(vim.api.nvim_get_current_win()) then
+            if preview_state:is_cur_list_win(vim.api.nvim_get_current_win()) then
                 M._close_preview_win()
             end
         end,
@@ -226,45 +209,32 @@ local function get_border()
     end
 end
 
---- @return string
-local function get_title_pos()
-    local g_title = vim.g.qf_rancher_preview_title_pos --- @type string|nil
-    if g_title then
-        require("mjm.error-list-types")._validate_title_pos(g_title)
-        return g_title
-    else
-        return "left"
-    end
-end
-
---- @return integer
-local function get_winblend()
-    local g_winblend = vim.g.qf_rancher_preview_winblend --- @type number
-    if g_winblend then
-        require("mjm.error-list-types")._validate_winblend(g_winblend)
-        return g_winblend
-    else
-        return 0
-    end
-end
-
 --- @param buf integer
 --- @return nil
 local function set_preview_win_title(buf)
     assert(preview_state:is_open())
+    local g_show_title = vim.g.qf_rancher_preview_show_title --- @type boolean|nil
+    vim.validate("g_show_title", g_show_title, "boolean", true)
+    local g_title_pos = vim.g.qf_rancher_preview_title_pos --- @type string|nil
+    if g_title_pos then
+        require("mjm.error-list-types")._validate_title_pos(g_title_pos)
+    end
 
-    if vim.g.qf_rancher_preview_show_title then
-        local preview_bufname = vim.fn.bufname(buf)
-        local relative_fname = vim.fn.fnamemodify(preview_bufname, ":.")
-        vim.api.nvim_win_set_config(preview_state.preview_win, {
-            title = relative_fname,
-            title_pos = get_title_pos(),
-        })
-    else
+    if not g_show_title then
         vim.api.nvim_win_set_config(preview_state.preview_win, {
             title = nil,
         })
+
+        return
     end
+
+    local preview_name = vim.api.nvim_buf_get_name(buf) --- @type string
+    local relative_name = vim.fn.fnamemodify(preview_name, ":.")
+    local title_pos = g_title_pos and g_title_pos or "left"
+    vim.api.nvim_win_set_config(preview_state.preview_win, {
+        title = relative_name,
+        title_pos = title_pos,
+    })
 end
 
 --- @param base_cfg table
@@ -279,7 +249,7 @@ local function get_fallback_win_config(base_cfg, e_lines, e_cols, padding, previ
         height = math.floor(e_lines * 0.4),
         width = e_cols - (padding * 2) - preview_border_width,
         col = 1,
-    }) --- @type table
+    }) --- @type vim.api.keyset.win_config
 
     local screenrow = vim.fn.screenrow() --- @type integer
     local half_way = e_lines * 0.5 --- @type number
@@ -446,8 +416,13 @@ end
 --- @param preview_buf integer
 --- @return integer
 local function create_preview_win(win_cfg, preview_buf)
-    -- LOW: Add validation for win_cfg
+    vim.validate("win_cfg", win_cfg, "table")
     require("mjm.error-list-types")._validate_buf(preview_buf)
+
+    local g_winblend = vim.g.qf_rancher_preview_winblend --- @type number|nil
+    if g_winblend then
+        require("mjm.error-list-types")._validate_winblend(g_winblend)
+    end
 
     local preview_win = vim.api.nvim_open_win(preview_buf, false, win_cfg) --- @type integer
 
@@ -465,7 +440,8 @@ local function create_preview_win(win_cfg, preview_buf)
 
     vim.api.nvim_set_option_value("spell", false, { win = preview_win })
 
-    vim.api.nvim_set_option_value("winblend", get_winblend(), { win = preview_win })
+    local winblend = g_winblend and g_winblend or 0 --- @type integer
+    vim.api.nvim_set_option_value("winblend", winblend, { win = preview_win })
 
     vim.api.nvim_set_option_value("so", SCROLLOFF, { win = preview_win })
     vim.api.nvim_set_option_value("siso", SCROLLOFF, { win = preview_win })
@@ -477,71 +453,59 @@ end
 --- BUF SETUP ---
 -----------------
 
---- @param bufnr integer
+--- @param preview_buf integer
 --- @param item table
 --- @return Range4
-local function range_qf_to_zero_(bufnr, item)
+local function range_qf_to_zero_(preview_buf, item)
     local ey = require("mjm.error-list-types")
-    ey._validate_buf(bufnr)
+    ey._validate_buf(preview_buf)
     ey._validate_list_item(item)
 
-    local row = item.lnum >= 0 and item.lnum - 1 or 0 --- @type integer
-    local start_line = vim.api.nvim_buf_get_lines(bufnr, row, row + 1, false)[1] --- @type string
-    local start_line_len_0 = math.max(#start_line - 1, 0) --- @type integer
+    local eu = require("mjm.error-list-util")
+    local row = item.lnum > 0 and item.lnum - 1 or 0 --- @type integer
+    row = math.min(row, vim.api.nvim_buf_line_count(preview_buf) - 1)
+
+    --- @type string
+    local start_line = vim.api.nvim_buf_get_lines(preview_buf, row, row + 1, false)[1]
     local col = (function()
         if item.col <= 0 then
             return 0
         end
 
-        --- TODO: This needs to be a strdisplaywidth binary search since we don't want to
-        --- guarantee the preview win is available here
-        -- PR: The documentation says "if true" but it's actually a number value. But double check
-        -- the source
-        -- if item.vcol == 1 and preview_win then
-        --     -- FUTURE: Might be more accurately handled with a binary search on
-        --     -- vim.fn.strdisplaywidth(). But I have not seen one of these in the wild
-        --     local byte_col = vim.fn.virtcol2col(preview_win, item.lnum, item.col) --- @type integer
-        --     return math.max(byte_col - 1, 0)
-        -- end
-
-        return math.min(item.col - 1, start_line_len_0)
+        if item.vcol == 1 then
+            --- @type boolean, integer, integer
+            local _, start_byte, _ = eu._vcol_to_byte_bounds(item.col, start_line)
+            return start_byte
+        else
+            return math.min(item.col - 1, #start_line - 1)
+        end
     end)() --- @type integer
 
     local fin_row = item.end_lnum > 0 and item.end_lnum - 1 or row --- @type integer
-    local fin_line = fin_row == row and start_line
-        or vim.api.nvim_buf_get_lines(bufnr, fin_row, fin_row + 1, false)[1] --- @type string
+    fin_row = math.max(fin_row, row)
 
-    local fin_col = (function()
+    --- @type string
+    local fin_line = fin_row == row and start_line
+        or vim.api.nvim_buf_get_lines(preview_buf, fin_row, fin_row + 1, false)[1]
+    local fin_col_ = (function()
         if item.end_col <= 0 then
             return #fin_line
         end
 
-        -- Needs to be a vim.fn.strdisplaywidth binary search
-        -- if item.vcol == 1 and preview_win then
-        --     -- FUTURE: Might be more accurately handled with a binary search on
-        --     -- vim.fn.strdisplaywidth(). But I have not seen one of these in the wild
-        --     --- @type integer
-        --     local byte_col = vim.fn.virtcol2col(preview_win, item.end_lnum, item.end_col)
-        --     local byte_idx = byte_col - 1 --- @type integer
-        --     --- @type integer
-        --     local utf_idx = vim.str_utfindex(fin_line, "utf-16", byte_idx, false)
-        --     --- @type integer
-        --     local ex_byte = vim.str_byteindex(fin_line, "utf-16", utf_idx + 1, false)
-        --
-        --     return math.max(ex_byte, 0)
-        -- end
-
-        -- Fix diagnostic end_cols. Unsure how this works in other cases
-        local end_idx = math.min(item.end_col, #fin_line) --- @type integer
-        -- TODO: Confusing
-        if not (fin_row == row and end_idx == col + 1) then
-            end_idx = math.max(end_idx - 1, 0)
+        if item.vcol == 1 then
+            return eu._vcol_to_end__col(item.col, fin_line)
         end
 
-        return end_idx
-    end)()
+        -- Diagnostic end_col values are end_exclusive
+        local end_idx_ = math.min(item.end_col - 1, #fin_line) --- @type integer
+        if fin_row == row and end_idx_ == col then
+            end_idx_ = end_idx_ + 1
+        end
 
-    return { row, col, fin_row, fin_col }
+        return end_idx_
+    end)() --- @type integer
+
+    return { row, col, fin_row, fin_col_ }
 end
 
 --- @param preview_buf integer
@@ -649,7 +613,7 @@ end
 --- @return nil
 function M._update_preview_win_buf()
     assert(preview_state:is_open())
-    assert(preview_state:is_list_win(vim.api.nvim_get_current_win()))
+    assert(preview_state:is_cur_list_win(vim.api.nvim_get_current_win()))
 
     local wintype = vim.fn.win_gettype(preview_state.list_win)
     local is_loclist = wintype == "loclist" --- @type boolean
@@ -672,7 +636,7 @@ function M._update_preview_win_buf()
     vim.api.nvim_win_set_buf(preview_state.preview_win, bufs[item.bufnr])
     set_preview_win_title(bufs[item.bufnr])
 
-    local eu = require("mjm.error-list-util")
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
     eu._protected_set_cursor(preview_state.preview_win, { item.lnum, item.col - 1 })
     vim.api.nvim_win_call(preview_state.preview_win, function()
         vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
@@ -687,7 +651,7 @@ function M._update_preview_win_pos(do_zzze)
         return
     end
 
-    assert(preview_state:is_list_win(vim.api.nvim_get_current_win()))
+    assert(preview_state:is_cur_list_win(vim.api.nvim_get_current_win()))
     vim.validate("do_zzze", do_zzze, "boolean", true)
 
     local win_cfg = get_win_cfg(preview_state.list_win) --- @type vim.api.keyset.win_config
@@ -753,8 +717,7 @@ end
 --- @return nil
 function M._close_preview_win()
     if preview_state:is_open() then
-        require("mjm.error-list-util")._pwin_close(preview_state.preview_win, true)
-        preview_state:close_and_clear()
+        close_and_clear()
     end
 end
 
@@ -805,3 +768,4 @@ return M
 --- Customize how error is emphasized. Cursor row/column? Visual line on lnum?
 --- Add scrolling to preview win
 ---     See https://github.com/bfrg/vim-qf-preview for relevant controls
+--- Add an option to autoshow the preview
