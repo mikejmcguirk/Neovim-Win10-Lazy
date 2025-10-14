@@ -303,8 +303,10 @@ function M.get_top_severity(opts)
     end
 end
 
+-- TODO: This should use vim.system and open the win in the callback
+
 ---@return nil
-M.check_word_under_cursor = function()
+function M.check_word_under_cursor()
     local word = vim.fn.expand("<cword>")
     if word == "" then
         vim.notify("No word under cursor", vim.log.levels.INFO)

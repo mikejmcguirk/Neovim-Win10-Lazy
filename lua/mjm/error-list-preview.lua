@@ -130,8 +130,7 @@ local function has_no_list_wins()
     return #qf_wins == 0 and #ll_wins == 0
 end
 
--- TODO: Need to handle if the list changes in place, or history is used to change the stack nr
--- Might also need to handle nav actions
+-- MID: Figure out what events history and filter are triggering
 
 --- @return nil
 local function create_autocmds()
@@ -214,15 +213,19 @@ local function get_border()
     end
 end
 
---- @param preview_buf integer
+--- @param item_buf integer
 --- @return nil
-local function set_preview_win_title(preview_buf)
+local function set_preview_win_title(item_buf)
     assert(preview_state:is_open())
     local g_show_title = vim.g.qf_rancher_preview_show_title --- @type boolean|nil
     vim.validate("g_show_title", g_show_title, "boolean", true)
     local g_title_pos = vim.g.qf_rancher_preview_title_pos --- @type string|nil
     if g_title_pos then
         require("mjm.error-list-types")._validate_title_pos(g_title_pos)
+    end
+
+    if not vim.api.nvim_buf_is_valid(item_buf) then
+        return
     end
 
     if not g_show_title then
@@ -233,7 +236,7 @@ local function set_preview_win_title(preview_buf)
         return
     end
 
-    local preview_name = vim.api.nvim_buf_get_name(preview_buf) --- @type string
+    local preview_name = vim.api.nvim_buf_get_name(item_buf) --- @type string
     local relative_name = vim.fn.fnamemodify(preview_name, ":.") --- @type string
     local title_pos = g_title_pos and g_title_pos or "left" --- @type string
     vim.api.nvim_win_set_config(preview_state.preview_win, {
@@ -661,7 +664,7 @@ function M._update_preview_win_buf()
     local item = items[line] --- @type vim.quickfix.entry
     setup_preview_buf(item)
     vim.api.nvim_win_set_buf(preview_state.preview_win, bufs[item.bufnr])
-    set_preview_win_title(bufs[item.bufnr])
+    set_preview_win_title(item.bufnr)
 
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
     eu._protected_set_cursor(preview_state.preview_win, { item.lnum, item.col - 1 })
@@ -737,7 +740,7 @@ function M.open_preview_win(list_win)
         vim.api.nvim_cmd({ cmd = "normal", args = { "ze" }, bang = true }, {})
     end)
 
-    set_preview_win_title(bufs[item.bufnr])
+    set_preview_win_title(item.bufnr)
     create_autocmds()
 
     if timer then
@@ -775,8 +778,6 @@ return M
 ------------
 --- TODO ---
 ------------
-
---- Add a debounce for updating the preview win. For large bufs, can get choppy
 
 --- Check that all functions have reasonable default sorts
 --- Check that window height updates are triggered where appropriate

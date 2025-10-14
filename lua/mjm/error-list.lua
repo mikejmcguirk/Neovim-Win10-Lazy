@@ -37,6 +37,7 @@ _G.QFR_MAX_HEIGHT = 10
 vim.api.nvim_set_var("qf_rancher_auto_open_changes", true)
 vim.api.nvim_set_var("qf_rancher_debug_assertions", true)
 vim.api.nvim_set_var("qf_rancher_preview_debounce", 50)
+vim.api.nvim_set_var("qf_rancher_preview_show_title", false)
 -- vim.api.nvim_set_var("qf_rancher_set_default_maps", false)
 
 --- TODO: Make sure the options actually do what they're supposed to
