@@ -82,7 +82,7 @@ local function get_grep_parts(pattern, input_type, locations)
     require("mjm.error-list-types")._validate_list(locations, { type = "string" })
 
     --- @type string
-    local grep_cmd = require("mjm-error-list-utils")._get_g_var("qf_rancher_grepprg")
+    local grep_cmd = require("mjm.error-list-util")._get_g_var("qf_rancher_grepprg")
     if vim.fn.executable(grep_cmd) ~= 1 then
         local chunk = { grep_cmd .. " is not executable", "ErrorMsg" }
         vim.api.nvim_echo({ chunk }, true, { err = true })

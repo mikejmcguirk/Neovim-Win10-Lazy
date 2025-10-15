@@ -352,7 +352,7 @@ function M._del_list(src_win, count)
     local adj_count = math.min(count, max_nr) --- @type integer
     local cur_list_nr = M._get_cur_list_nr(src_win) --- @type integer
     adj_count = adj_count == 0 and cur_list_nr or adj_count
-    if require("mjm-error-list-util")._get_g_var("qf_rancher_del_all_if_empty") then
+    if require("mjm.error-list-util")._get_g_var("qf_rancher_del_all_if_empty") then
         local max_other_size = 0 --- @type integer
         for i = 1, max_nr do
             if i ~= adj_count then
