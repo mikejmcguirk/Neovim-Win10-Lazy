@@ -239,14 +239,6 @@ function M._checked_echo(msg, print_msgs, is_err)
     end
 end
 
--- TODO: Go through usages of this and update to handle new params/separate buf logic
--- TODO: For this and other similar situations, since nvim_win_close errors on bad data anyway,
---  do we need a separate validation?
--- TODO: Returns buffer to handle. Conceptually, makes sense inasmuch as, if we close a win return
---  the buf, if we don't close a win, don't return a buf. But if we're in the last win, we also
---  want to return the buf so it can be closed. Or is it better to say/think - return the buf
---  if the win is valid
-
 --- @param win integer
 --- @param force boolean
 --- @return integer
@@ -339,7 +331,6 @@ end
 
 -- PR: Why can't this be a part of Nvim core?
 -- MID: This could be a binary search instead
--- TODO: Test
 
 --- @param vcol integer
 --- @param line string
@@ -391,11 +382,6 @@ function M._vcol_to_end_col_(vcol, line)
         return #line
     end
 end
-
--- TODO: Use this for all g_var calls
--- TODO: I am not sure where to define whether or not certain vars allow nils. On one hand,
--- centralization makes sense because it makes documentation easier. On the other, it makes
--- type annotations more difficult as well. Right now winborder is the use case
 
 --- @param g_var string
 --- @param allow_nil? boolean

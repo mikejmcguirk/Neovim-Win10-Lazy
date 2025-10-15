@@ -112,9 +112,6 @@ end
 -- MID: Perhaps create a separate validation for stack nrs limiting to between 0-10
 -- How a huge deal since clamping is easy, but would enforce more type consistency
 
--- TODO: Check usages of this to see where a simple vim.validate, or maybe not validating at all,
--- is sufficient
-
 --- @param win integer|nil
 --- @param optional? boolean
 --- @return nil
@@ -164,8 +161,6 @@ local function validate_validate_list_opts(opts)
     vim.validate("opts.optional", opts.optional, "boolean", true)
     vim.validate("opts.type", opts.type, "string", true)
 end
-
--- TODO: Replace is_str_list with this
 
 --- @param list table
 --- @param opts? QfRancherValidateListOpts
