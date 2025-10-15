@@ -204,11 +204,17 @@ local function bookends(count, cmd)
     vim.validate("cmd", cmd, "string")
 
     local adj_count = count >= 1 and count or nil --- @type integer|nil
+    --- @type boolean, string
     local ok, err = pcall(vim.api.nvim_cmd, { cmd = cmd, count = adj_count }, {})
-    -- TODO: Check that this fixes the enter error problem on no entries
-    if not ok then
-        local msg = err:sub(#"Vim:" + 1) --- @type string
+    if ok then
+        return
+    end
+
+    local msg = err:sub(#"Vim:" + 1) --- @type string
+    if string.find(err, "E42", 1, true) then
         vim.api.nvim_echo({ { msg, "" } }, false, {})
+    else
+        vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
     end
 end
 
@@ -277,7 +283,7 @@ end
 --- @return nil
 local function file_nav_wrap(src_win, count, cmd, backup_cmd)
     local ey = require("mjm.error-list-types")
-    ey.validate_win(src_win, true)
+    ey._validate_win(src_win, true)
     ey._validate_uint(count)
     vim.validate("cmd", cmd, "string")
     vim.validate("backup_cmd", backup_cmd, "string")
@@ -372,8 +378,6 @@ return M
 ------------
 --- TODO ---
 ------------
-
---- qrewind enter errors if there are no items. I assume this is true for last and loclist
 
 --- Testing
 --- Docs
