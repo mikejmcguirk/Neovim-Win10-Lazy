@@ -47,6 +47,9 @@ _G._QFR_G_VAR_MAP = {
     qf_rancher_always_save_views = { { "boolean" }, true },
     qf_rancher_debug_assertions = { { "boolean" }, false },
     qf_rancher_del_all_if_empty = { { "boolean" }, true },
+    qf_rancher_ftplugin_demap = { { "boolean" }, true },
+    qf_rancher_ftplugin_keymap = { { "boolean" }, true },
+    qf_rancher_ftplugin_set_opts = { { "boolean" }, true },
     qf_rancher_grepprg = { { "string" }, "rg" },
     --- TODO: Needs to accept table
     qf_rancher_preview_border = { { "string", "table" }, "single" },
@@ -255,6 +258,9 @@ end
 --- - Could also send greps to normal buffers
 ---     - Implies a broader idea of what greps can do outside the error lists
 --- - Could also writes bufs to the qflist
+--- https://github.com/gabrielpoca/replacer.nvim - For edits and bulk changes, this seems to be
+---     the way, where you put the Qflist into edit mode, and then re-integrate the changes
+---     in a save step
 
 -----------
 --- LOW ---

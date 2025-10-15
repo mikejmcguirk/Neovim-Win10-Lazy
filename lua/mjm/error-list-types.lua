@@ -173,7 +173,7 @@ function M._validate_list(list, opts)
 
     vim.validate("list", list, vim.islist, "Must be a valid list")
 
-    if opts.type then
+    if opts.type and require("mjm.error-list-util")._get_g_var("qf_rancher_debug_assertions") then
         vim.validate("list", list, function()
             for _, value in ipairs(list) do
                 if type(value) ~= opts.type then
@@ -584,11 +584,6 @@ return M
 ------------
 --- TODO ---
 ------------
-
---- Use validation primarily for type integrity. Use assertions for stuff that would hurt perf or
---- is more logic based
---- Don't validate types that are only passed through
---- Do accept multiple validations, to avoid reasoning about where validation happens
 
 --- Tests
 --- Documentation
