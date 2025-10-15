@@ -65,7 +65,7 @@ function M._resolve_input_type(input)
         return input
     end
 
-    local smartcase = require("mjm.error-list-util")._get_g_var("qf_rancher_use_smartcase")
+    local smartcase = M._get_g_var("qf_rancher_use_smartcase")
     if smartcase == true then
         return "smartcase"
     elseif smartcase == false then
@@ -383,6 +383,10 @@ function M._vcol_to_end_col_(vcol, line)
     end
 end
 
+-- NOTE: Handle all validation here with built-ins to avoid looping code
+-- TODO: The table validation really should be done during initialization, and since it refers
+-- to a static, non-advertised constant, should be gated behind a g_var
+
 --- @param g_var string
 --- @param allow_nil? boolean
 --- @return any
@@ -392,10 +396,21 @@ function M._get_g_var(g_var, allow_nil)
 
     local g_var_data = _QFR_G_VAR_MAP[g_var] --- @type {[1]:string[], [2]:any}
 
-    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
-    ey._validate_list(g_var_data, { len = 2 })
-    ey._validate_list(g_var_data[1], { type = "string" })
-    vim.validate("g_var_default", g_var_data[2], function()
+    vim.validate("g_var_data", g_var_data, function()
+        return #g_var_data == 2
+    end, "G var table info should containt two elements")
+
+    vim.validate("g_var_data[1]", g_var_data[1], function()
+        for _, value in pairs(g_var_data[1]) do
+            if type(value) ~= "string" then
+                return false
+            end
+        end
+
+        return true
+    end, "G var table info should containt two elements")
+
+    vim.validate("g_var_data[2]", g_var_data[2], function()
         return type(g_var_data[2]) ~= "nil"
     end, "G var defaults canot be nil")
 
