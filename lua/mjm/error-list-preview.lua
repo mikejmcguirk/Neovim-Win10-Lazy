@@ -4,6 +4,10 @@
 
 --- https://github.com/r0nsha/qfpreview.nvim
 
+local eu = Qfr_Defer_Require("mjm.error-list-util") --- @type QfRancherUtils
+local et = Qfr_Defer_Require("mjm.error-list-tools") --- @type QfRancherTools
+local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
+
 local M = {}
 
 -------------------
@@ -34,7 +38,6 @@ local preview_state = {
 --- @param preview_win integer
 --- @return nil
 function preview_state:set(list_win, preview_win)
-    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
     ey._validate_list_win(list_win)
     ey._validate_win(preview_win)
 
@@ -46,7 +49,6 @@ end
 --- @param preview_win integer
 --- @return boolean
 local function is_preview_open(list_win, preview_win)
-    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
     return ey._is_uint(list_win) and ey._is_uint(preview_win)
 end
 
@@ -61,7 +63,6 @@ end
 --- @param preview_win integer
 --- @return nil
 local function validate_state(list_win, preview_win)
-    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
     ey._validate_list_win(list_win, true)
     ey._validate_win(preview_win, true)
     assert(is_preview_open(list_win, preview_win) or is_preview_closed(list_win, preview_win))
@@ -99,7 +100,7 @@ local SCROLLOFF = 6 --- @type integer
 --- @return nil
 local function close_and_clear()
     if preview_state:is_open() then
-        require("mjm.error-list-util")._pwin_close(preview_state.preview_win, true)
+        eu._pwin_close(preview_state.preview_win, true)
         preview_state:clear()
     end
 end
@@ -109,7 +110,7 @@ local function clear_session_data()
     close_and_clear()
 
     for _, buf in pairs(bufs) do
-        require("mjm.error-list-util")._pbuf_rm(buf, true, true)
+        eu._pbuf_rm(buf, true, true)
     end
 
     bufs = {}
@@ -124,7 +125,6 @@ end
 
 --- @return boolean
 local function has_no_list_wins()
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
     local qf_wins = eu._get_qf_wins({ all_tabpages = true }) --- @type integer[]
     local ll_wins = eu._get_all_loclist_wins({ all_tabpages = true }) --- @type integer[]
 
@@ -237,14 +237,13 @@ end
 local function get_title_cfg(item_buf)
     -- Do not assert item_buf is not nil because nils are valid in qf entries
     -- Do not assert that item_buf is valid since a buf can be wiped after the list is created
-    require("mjm.error-list-types")._validate_uint(item_buf, true)
+    ey._validate_uint(item_buf, true)
 
-    if not (item_buf and vim.api.nvim_buf_is_valid(item_buf)) then
-        return { title = "No buffer" }
+    if not eu._get_g_var("qf_rancher_preview_show_title") then
+        return { title = nil }
     end
 
-    local eu = require("mjm.error-list-util") --- @type  QfRancherUtils
-    if not eu._get_g_var("qf_rancher_preview_show_title") then
+    if not (item_buf and vim.api.nvim_buf_is_valid(item_buf)) then
         return { title = "No buffer" }
     end
 
@@ -257,7 +256,7 @@ end
 --- @return QfRancherBorder
 local function get_winborder()
     --- @type QfRancherBorder|nil
-    local border = require("mjm.error-list-util")._get_g_var("qf_rancher_preview_border", true)
+    local border = eu._get_g_var("qf_rancher_preview_border", true)
     if border then
         return border
     end
@@ -306,8 +305,8 @@ end
 --- @param item_buf? integer
 --- @return vim.api.keyset.win_config
 local function get_win_cfg(list_win, item_buf)
-    require("mjm.error-list-types")._validate_list_win(list_win)
-    require("mjm.error-list-types")._validate_uint(item_buf, true)
+    ey._validate_list_win(list_win)
+    ey._validate_uint(item_buf, true)
 
     local list_win_pos = vim.api.nvim_win_get_position(list_win) --- @type [integer, integer]
     local list_win_height = vim.api.nvim_win_get_height(list_win) --- @type integer
@@ -465,7 +464,7 @@ end
 --- @return integer
 local function create_preview_win(win_cfg, preview_buf)
     vim.validate("win_cfg", win_cfg, "table")
-    require("mjm.error-list-types")._validate_buf(preview_buf)
+    ey._validate_buf(preview_buf)
 
     local preview_win = vim.api.nvim_open_win(preview_buf, false, win_cfg) --- @type integer
 
@@ -484,7 +483,7 @@ local function create_preview_win(win_cfg, preview_buf)
     vim.api.nvim_set_option_value("spell", false, { win = preview_win })
 
     --- @type integer
-    local g_winblend = require("mjm.error-list-util")._get_g_var("qf_rancher_preview_winblend")
+    local g_winblend = eu._get_g_var("qf_rancher_preview_winblend")
     vim.api.nvim_set_option_value("winblend", g_winblend, { win = preview_win })
 
     vim.api.nvim_set_option_value("so", SCROLLOFF, { win = preview_win })
@@ -501,11 +500,8 @@ end
 --- @param item table
 --- @return Range4
 local function range_qf_to_zero_(preview_buf, item)
-    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
     ey._validate_buf(preview_buf)
     ey._validate_list_item(item)
-
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
 
     local row = item.lnum > 0 and item.lnum - 1 or 0 --- @type integer
     row = math.min(row, vim.api.nvim_buf_line_count(preview_buf) - 1)
@@ -579,7 +575,7 @@ end
 --- @param preview_buf integer
 --- @return nil
 local function set_preview_buf_opts(preview_buf)
-    require("mjm.error-list-types")._validate_buf(preview_buf)
+    ey._validate_buf(preview_buf)
 
     vim.api.nvim_set_option_value("buflisted", false, { buf = preview_buf })
     -- NOTE: Setting a non-"" buftype prevents LSPs from attaching
@@ -607,7 +603,7 @@ end
 --- @return string[]
 local function get_lines(item_buf)
     -- Do not assert that item_buf is valid since a buf can be wiped after the list is created
-    require("mjm.error-list-types")._validate_uint(item_buf)
+    ey._validate_uint(item_buf)
 
     if not vim.api.nvim_buf_is_valid(item_buf) then
         return { item_buf .. " is not valid" }
@@ -629,8 +625,8 @@ end
 --- @return nil
 local function update_preview_buf(item_buf)
     -- This function should only called because of a changedtick update in a known valid buffer
-    require("mjm.error-list-types")._validate_buf(item_buf, true)
-    require("mjm.error-list-types")._validate_buf(bufs[item_buf], true)
+    ey._validate_buf(item_buf, true)
+    ey._validate_buf(bufs[item_buf], true)
 
     local lines = get_lines(item_buf) --- @type string[]
     vim.api.nvim_set_option_value("modifiable", true, { buf = bufs[item_buf] })
@@ -641,7 +637,7 @@ end
 --- @param item_buf integer
 --- @return integer
 local function get_mtime(item_buf)
-    require("mjm.error-list-types")._validate_buf(item_buf)
+    ey._validate_buf(item_buf)
 
     local item_buf_full_path = vim.api.nvim_buf_get_name(item_buf) --- @type string
     local stat = vim.uv.fs_stat(item_buf_full_path) --- @type uv.fs_stat.result|nil
@@ -653,8 +649,8 @@ end
 --- @return nil
 local function create_preview_buf_from_lines(item_buf, lines)
     -- Do not assert that item_buf is valid since a buf can be wiped after the list is created
-    require("mjm.error-list-types")._validate_uint(item_buf)
-    require("mjm.error-list-types")._validate_list(lines, { type = "string" })
+    ey._validate_uint(item_buf)
+    ey._validate_list(lines, { type = "string" })
 
     local preview_buf = vim.api.nvim_create_buf(false, true) --- @type integer
     vim.api.nvim_buf_set_lines(preview_buf, 0, 0, false, lines)
@@ -692,7 +688,7 @@ end
 --- @param item vim.quickfix.entry
 --- @return integer
 local function get_preview_buf(item)
-    require("mjm.error-list-types")._validate_list_item(item)
+    ey._validate_list_item(item)
 
     if not item.bufnr then
         return create_fallback_buf()
@@ -741,17 +737,24 @@ local function at_timer_end()
     end
 end
 
+local function start_timer()
+    timer = timer or vim.uv.new_timer()
+    if timer then
+        timer:start(eu._get_g_var("qf_rancher_preview_debounce"), 0, at_timer_end)
+    end
+end
+
 --- @param list_win integer
 --- @return vim.quickfix.entry|nil
 local function get_list_item(list_win)
-    require("mjm.error-list-types")._validate_list_win(list_win)
+    ey._validate_list_win(list_win)
 
     local wintype = vim.fn.win_gettype(list_win)
     local is_loclist = wintype == "loclist" --- @type boolean
     local src_win = is_loclist and list_win or nil --- @type integer|nil
 
     --- @type vim.quickfix.entry[]
-    local items = require("mjm.error-list-tools")._get_items(src_win, 0)
+    local items = et._get_list_items(src_win, 0)
     if #items < 1 then
         return nil
     end
@@ -807,14 +810,10 @@ function M._update_preview_win_buf()
     vim.api.nvim_win_set_buf(preview_state.preview_win, preview_buf)
     vim.api.nvim_win_set_config(preview_state.preview_win, get_title_cfg(item.bufnr))
 
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
     eu._protected_set_cursor(preview_state.preview_win, qf_pos_to_cur_pos(item.lnum, item.col))
     adjust_preview_win_scroll()
 
-    timer = timer or vim.uv.new_timer()
-    if timer then
-        timer:start(eu._get_g_var("qf_rancher_preview_debounce"), 0, at_timer_end)
-    end
+    start_timer()
 end
 
 --- @return nil
@@ -836,7 +835,7 @@ function M.open_preview_win(list_win)
         return
     end
 
-    require("mjm.error-list-types")._validate_list_win(list_win)
+    ey._validate_list_win(list_win)
 
     local item = get_list_item(list_win) --- @type vim.quickfix.entry|nil
     if not item then
@@ -849,15 +848,11 @@ function M.open_preview_win(list_win)
     local preview_win = create_preview_win(win_cfg, preview_buf)
     preview_state:set(list_win, preview_win)
 
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
     eu._protected_set_cursor(preview_state.preview_win, qf_pos_to_cur_pos(item.lnum, item.col))
     adjust_preview_win_scroll()
     create_autocmds()
 
-    timer = timer or vim.uv.new_timer()
-    if timer then
-        timer:start(eu._get_g_var("qf_rancher_preview_debounce"), 0, at_timer_end)
-    end
+    start_timer()
 end
 
 --- @return nil
@@ -868,7 +863,7 @@ end
 --- @param list_win integer
 --- @return nil
 function M.toggle_preview_win(list_win)
-    require("mjm.error-list-types")._validate_list_win(list_win)
+    ey._validate_list_win(list_win)
 
     local was_open = preview_state:is_open() --- @type boolean
     local start_list_win = preview_state.list_win --- @type integer|nil
@@ -888,6 +883,9 @@ return M
 ------------
 --- TODO ---
 ------------
+
+--- Testing
+--- Docs
 
 -----------
 --- MID ---
