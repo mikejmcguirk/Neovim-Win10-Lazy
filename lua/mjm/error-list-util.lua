@@ -8,9 +8,7 @@ local M = {}
 --- @param fargs string[]
 --- @return string|nil
 function M._find_cmd_pattern(fargs)
-    if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_str_list(fargs)
-    end
+    require("mjm.error-list-types")._validate_list(fargs, { type = "string" })
 
     for _, arg in ipairs(fargs) do
         if vim.startswith(arg, "/") then
@@ -25,12 +23,10 @@ end
 --- @param valid_args string[]
 --- @param default string
 function M._check_cmd_arg(fargs, valid_args, default)
-    if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types") --- @type QfRancherTypes
-        ey._validate_str_list(fargs)
-        ey._validate_str_list(valid_args)
-        vim.validate("default", default, "string")
-    end
+    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
+    ey._validate_list(fargs, { type = "string" })
+    ey._validate_list(valid_args, { type = "string" })
+    vim.validate("default", default, "string")
 
     for _, arg in ipairs(fargs) do
         if vim.tbl_contains(valid_args, arg) then
@@ -69,9 +65,10 @@ function M._resolve_input_type(input)
         return input
     end
 
-    if vim.g.qf_rancher_use_smartcase == true then
+    local smartcase = require("mjm.error-list-util")._get_g_var("qf_rancher_use_smartcase")
+    if smartcase == true then
         return "smartcase"
-    elseif vim.g.qf_rancher_use_smartcase == false then
+    elseif smartcase == false then
         return "insensitive"
     end
 
@@ -143,11 +140,9 @@ end
 --- @param input_type QfRancherInputType
 --- @return string|nil
 function M._resolve_pattern(prompt, input_pattern, input_type)
-    if vim.g.qf_rancher_debug_assertions then
-        vim.validate("prompt", prompt, "string")
-        vim.validate("input_pattern", input_pattern, { "nil", "string" })
-        require("mjm.error-list-types")._validate_input_type(input_type)
-    end
+    vim.validate("prompt", prompt, "string")
+    vim.validate("input_pattern", input_pattern, "string", true)
+    require("mjm.error-list-types")._validate_input_type(input_type)
 
     if input_pattern then
         return input_pattern
@@ -437,9 +432,7 @@ end
 --- @param opts QfRancherTabpageOpts
 --- @return integer[]
 function M._resolve_tabpages(opts)
-    if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_tabpage_opts(opts)
-    end
+    require("mjm.error-list-types")._validate_tabpage_opts(opts)
 
     if opts.all_tabpages then
         return vim.api.nvim_list_tabpages()

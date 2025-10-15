@@ -63,7 +63,7 @@ local function sort_wrapper(sort_info, sort_opts, what)
     }) --- @type QfRancherWhat
 
     local dest_nr = et._set_list(what_set) --- @type integer
-    if vim.g.qf_rancher_auto_open_changes then
+    if eu._get_g_var("qf_rancher_auto_open_changes") then
         require("mjm.error-list-stack")._history(what_set.user_data.src_win, dest_nr, {
             always_open = true,
             default = "current",

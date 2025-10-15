@@ -77,14 +77,12 @@ local get_full_parts = {
 --- @param locations string[]
 --- @return string[]
 local function get_grep_parts(pattern, input_type, locations)
-    if vim.g.qf_rancher_debug_assertions then
-        vim.validate("pattern", pattern, "string")
-        vim.validate("input_type", input_type, "string")
-        require("mjm.error-list-types")._validate_str_list(locations)
-    end
+    vim.validate("pattern", pattern, "string")
+    vim.validate("input_type", input_type, "string")
+    require("mjm.error-list-types")._validate_list(locations, { type = "string" })
 
-    vim.validate("g:qf_rancher_grepprg", vim.g.qf_rancher_grepprg, "string")
-    local grep_cmd = vim.g.qf_rancher_grepprg --- @type string
+    --- @type string
+    local grep_cmd = require("mjm-error-list-utils")._get_g_var("qf_rancher_grepprg")
     if vim.fn.executable(grep_cmd) ~= 1 then
         local chunk = { grep_cmd .. " is not executable", "ErrorMsg" }
         vim.api.nvim_echo({ chunk }, true, { err = true })
@@ -102,15 +100,13 @@ end
 --- @param input_type QfRancherInputType
 --- @return string
 local function get_prompt(grep_info, input_type)
-    if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types")
-        ey._validate_grep_info(grep_info)
-        ey._validate_input_type(input_type)
-    end
+    local ey = require("mjm.error-list-types")
+    ey._validate_grep_info(grep_info)
+    ey._validate_input_type(input_type)
 
-    --- @type string
-    local display_type = require("mjm.error-list-util")._get_display_input_type(input_type)
-    local grepprg = vim.g.qf_rancher_grepprg or "" --- @type string
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
+    local display_type = eu._get_display_input_type(input_type) --- @type string
+    local grepprg = eu._get_g_var("qf_rancher_grepprg") --- @type string
 
     -- LOW: This could be better
     return "[" .. grepprg .. "] " .. grep_info.name .. " Grep (" .. display_type .. "): "
@@ -169,7 +165,8 @@ function M._do_grep(grep_info, system_opts, input_opts, what)
     end
 
     local what_set = vim.deepcopy(what, true) --- @type QfRancherWhat
-    local title_parts = base_parts[vim.g.qf_rancher_grepprg] --- @type string[]
+    local grepprg = eu._get_g_var("qf_rancher_grepprg") --- @type string
+    local title_parts = base_parts[grepprg] --- @type string[]
     what_set.title = table.concat(title_parts, " ")
     what_set.user_data.list_item_type = grep_info.list_item_type
         or what_set.user_data.list_item_type

@@ -26,7 +26,8 @@ function M._validate_what(what)
     M._validate_uint(what.id, true)
     M._validate_uint(what.idx, true)
     vim.validate("what.items", what.items, "table", true)
-    if vim.g.qf_rancher_debug_assertions and type(what.items) == "table" then
+    local eu = require("mjm.error-list-util")
+    if eu._get_g_var("qf_rancher_debug_assertions") and type(what.items) == "table" then
         for _, item in ipairs(what.items) do
             M._validate_list_item(item)
         end

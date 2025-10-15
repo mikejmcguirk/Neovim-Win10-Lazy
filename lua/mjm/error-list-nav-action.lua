@@ -200,13 +200,16 @@ end
 --- @param cmd string
 --- @return nil
 local function bookends(count, cmd)
-    if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_uint(count)
-        vim.validate("cmd", cmd, "string")
-    end
+    require("mjm.error-list-types")._validate_uint(count)
+    vim.validate("cmd", cmd, "string")
 
     local adj_count = count >= 1 and count or nil --- @type integer|nil
-    vim.api.nvim_cmd({ cmd = cmd, count = adj_count }, {})
+    local ok, err = pcall(vim.api.nvim_cmd, { cmd = cmd, count = adj_count }, {})
+    -- TODO: Check that this fixes the enter error problem on no entries
+    if not ok then
+        local msg = err:sub(#"Vim:" + 1) --- @type string
+        vim.api.nvim_echo({ { msg, "" } }, false, {})
+    end
 end
 
 --- @param count integer
@@ -267,20 +270,20 @@ end
 --- NAV WRAPS ---
 -----------------
 
---- @param win integer|nil
+--- @param src_win integer|nil
 --- @param count integer
 --- @param cmd string
 --- @param backup_cmd string
 --- @return nil
-local function file_nav_wrap(win, count, cmd, backup_cmd)
-    if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_uint(count)
-        vim.validate("cmd", cmd, "string")
-        vim.validate("backup_cmd", backup_cmd, "string")
-    end
+local function file_nav_wrap(src_win, count, cmd, backup_cmd)
+    local ey = require("mjm.error-list-types")
+    ey.validate_win(src_win, true)
+    ey._validate_uint(count)
+    vim.validate("cmd", cmd, "string")
+    vim.validate("backup_cmd", backup_cmd, "string")
 
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
-    local size = et._get_list_size(win, 0) --- @type integer|nil
+    local size = et._get_list_size(src_win, 0) --- @type integer|nil
     if not size or size < 1 then
         return nil
     end

@@ -131,7 +131,7 @@ local function diags_to_list(diag_info, diag_opts, what)
     }) --- @type QfRancherWhat
 
     local dest_nr = et._set_list(what_set) --- @type integer
-    if vim.g.qf_rancher_auto_open_changes and dest_nr > 0 then
+    if eu._get_g_var("qf_rancher_auto_open_changes") and dest_nr > 0 then
         require("mjm.error-list-stack")._history(src_win, dest_nr, {
             always_open = true,
             default = "current",
@@ -170,7 +170,7 @@ end
 --- @return nil
 local function make_diag_cmd(src_win, cargs)
     local ey = require("mjm.error-list-types") --- @type QfRancherTypes
-    ey.validate_optional_uint(src_win)
+    ey._validate_win(src_win, true)
 
     local fargs = cargs.fargs --- @type string[]
 

@@ -10,11 +10,9 @@ local M = {}
 --- @param input_type QfRancherInputType
 --- @return string
 local function get_prompt(name, keep, input_type)
-    if vim.g.qf_rancher_debug_assertions then
-        vim.validate("name", name, "string")
-        vim.validate("keep", keep, "boolean")
-        require("mjm.error-list-types")._validate_input_type(input_type)
-    end
+    vim.validate("name", name, "string")
+    vim.validate("keep", keep, "boolean")
+    require("mjm.error-list-types")._validate_input_type(input_type)
 
     local enter_prompt = "Enter pattern to " .. (keep and "keep" or "remove") --- @type string
     --- @type string
@@ -27,12 +25,10 @@ end
 --- @param regex vim.regex|nil
 --- @return QfRancherPredicateFunc
 local function get_predicate(filter_info, input_type, regex)
-    if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types")
-        ey._validate_filter_info(filter_info)
-        ey._validate_input_type(input_type)
-        --- LOW: Validate regex
-    end
+    local ey = require("mjm.error-list-types")
+    ey._validate_filter_info(filter_info)
+    ey._validate_input_type(input_type)
+    --- LOW: Validate regex
 
     if input_type == "regex" and regex then
         return filter_info.regex_func
@@ -115,7 +111,7 @@ function M._filter_wrapper(filter_info, filter_opts, input_opts, what)
     }) --- @type QfRancherWhat
 
     local dest_nr = et._set_list(what_set) --- @type integer
-    if vim.g.qf_rancher_auto_open_changes then
+    if eu._get_g_var("qf_rancher_auto_open_changes") then
         require("mjm.error-list-stack")._history(what_set.user_data.src_win, dest_nr, {
             always_open = true,
             default = "current",

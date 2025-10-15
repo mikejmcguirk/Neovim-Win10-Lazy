@@ -54,9 +54,7 @@ end
 --- @param new_what QfRancherWhat
 --- @return QfRancherWhat
 local function create_add_list_what(new_what)
-    if vim.g.qf_rancher_debug_assertions then
-        require("mjm.error-list-types")._validate_what(new_what)
-    end
+    require("mjm.error-list-types")._validate_what(new_what)
 
     local old_all = M._get_all(new_what.user_data.src_win, new_what.nr) --- @type table
 
@@ -76,7 +74,7 @@ local function create_add_list_what(new_what)
         user_data = new_what.user_data or nil,
     } --- @type QfRancherWhat
 
-    if vim.g.qf_rancher_debug_assertions then
+    if require("mjm.error-list-util")._get_g_var("qf_rancher_debug_assertions") then
         require("mjm.error-list-types")._validate_what(add_what)
     end
 
@@ -113,11 +111,9 @@ end
 --- @param what QfRancherWhat
 --- @return integer
 local function do_set_list(setlist_action, what)
-    if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types") --- @type QfRancherTypes
-        ey._validate_setlist_action(setlist_action)
-        ey._validate_what(what)
-    end
+    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
+    ey._validate_setlist_action(setlist_action)
+    ey._validate_what(what)
 
     local what_set = vim.deepcopy(what, true) --- @type QfRancherWhat
     local es = require("mjm.error-list-sort") --- @type QfRancherSort
@@ -356,7 +352,7 @@ function M._del_list(src_win, count)
     local adj_count = math.min(count, max_nr) --- @type integer
     local cur_list_nr = M._get_cur_list_nr(src_win) --- @type integer
     adj_count = adj_count == 0 and cur_list_nr or adj_count
-    if vim.g.qf_rancher_del_all_if_empty then
+    if require("mjm-error-list-util")._get_g_var("qf_rancher_del_all_if_empty") then
         local max_other_size = 0 --- @type integer
         for i = 1, max_nr do
             if i ~= adj_count then

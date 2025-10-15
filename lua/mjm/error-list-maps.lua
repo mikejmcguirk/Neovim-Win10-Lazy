@@ -635,6 +635,7 @@ for _, map in ipairs(rancher_keymaps) do
     end
 end
 
+-- Don't use the util g_var wrapper here to avoid a require
 if vim.g.qf_rancher_set_default_maps then
     for _, map in ipairs(rancher_keymaps) do
         for _, mode in ipairs(map[1]) do
@@ -650,6 +651,7 @@ end
 --- CMDS ---
 ------------
 
+-- Don't use the util g_var wrapper here to avoid a require
 if vim.g.qf_rancher_set_default_cmds then
     -------------
     --- DIAGS ---

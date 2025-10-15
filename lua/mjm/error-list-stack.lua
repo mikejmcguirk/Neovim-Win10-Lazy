@@ -43,7 +43,7 @@ local function change_history(src_win, count, arithmetic)
 
     local cmd = src_win and "lhistory" or "chistory" --- @type string
     vim.api.nvim_cmd({ cmd = cmd, count = new_list_nr }, {})
-    if vim.g.qf_rancher_debug_assertions then
+    if require("mjm.error-list-util")._get_g_var("qf_rancher_debug_assertions") then
         local list_nr_after = et._get_cur_list_nr(src_win)
         assert(new_list_nr == list_nr_after)
     end
@@ -141,7 +141,7 @@ function M._history(src_win, count, opts)
     local adj_count = count > 0 and math.min(count, stack_len) or default --- @type integer|nil
     ---@diagnostic disable-next-line: missing-fields
     vim.api.nvim_cmd({ cmd = cmd, count = adj_count, mods = { silent = opts.silent } }, {})
-    if vim.g.qf_rancher_debug_assertions then
+    if require("mjm.error-list-util")._get_g_var("qf_rancher_debug_assertions") then
         if adj_count then
             local list_nr_after = et._get_cur_list_nr(src_win)
             assert(adj_count == list_nr_after)
@@ -205,7 +205,7 @@ function M._del(src_win, count)
     end
 
     local cur_list_nr = et._get_cur_list_nr(src_win)
-    if vim.g.qf_rancher_debug_assertions then
+    if require("mjm.error-list-util")._get_g_var("qf_rancher_debug_assertions") then
         local target = count == 0 and cur_list_nr or count --- @type integer
         assert(result == target)
     end

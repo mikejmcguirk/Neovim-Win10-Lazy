@@ -25,7 +25,7 @@ end
 --- @return vim.fn.winsaveview.ret[]
 local function get_views(wins)
     local views = {} --- @type vim.fn.winsaveview.ret[]
-    if vim.g.qf_rancher_always_save_views == false then
+    if require("mjm.error-list-util")._get_g_var("qf_rancher_always_save_views") == false then
         return views
     end
 
@@ -182,9 +182,9 @@ function M._open_qflist(opts)
     end
 
     local height = resolve_height_for_list(nil, opts.height)
-    local qfsplit = vim.g.qf_rancher_qfsplit or "botright" --- @type string
+    local split = eu._get_g_var("qf_rancher_qfsplit") --- @type string
     --- @diagnostic disable: missing-fields
-    vim.api.nvim_cmd({ cmd = "copen", count = height, mods = { split = qfsplit } }, {})
+    vim.api.nvim_cmd({ cmd = "copen", count = height, mods = { split = split } }, {})
     return open_cleanup(views, opts.keep_win, cur_win)
 end
 
@@ -359,13 +359,10 @@ end
 --- @param opts QfRancherTabpageOpts
 --- @return nil
 function M._close_qfwins(opts)
-    if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types") --- @type QfRancherTypes
-        ey._validate_tabpage_opts(opts)
-    end
+    require("mjm.error-list-types")._validate_tabpage_opts(opts)
 
-    local qflists = require("mjm.error-list-util")._get_qf_wins(opts) --- @type integer[]
-    for _, list in ipairs(qflists) do
+    local qfwins = require("mjm.error-list-util")._get_qf_wins(opts) --- @type integer[]
+    for _, list in ipairs(qfwins) do
         M._close_win_save_views(list)
     end
 end
@@ -373,15 +370,11 @@ end
 --- @param opts QfRancherTabpageOpts
 --- @return nil
 function M._resize_qfwins(opts)
-    if vim.g.qf_rancher_debug_assertions then
-        local ey = require("mjm.error-list-types") --- @type QfRancherTypes
-        ey._validate_tabpage_opts(opts)
-    end
+    require("mjm.error-list-types")._validate_tabpage_opts(opts)
 
     local qfwins = require("mjm.error-list-util")._get_qf_wins(opts) --- @type integer[]
-    for _, win in ipairs(qfwins) do
-        local tabpage = vim.api.nvim_win_get_tabpage(win) --- @type integer
-        resize_list_win(win, nil)
+    for _, list in ipairs(qfwins) do
+        resize_list_win(list, nil)
     end
 end
 

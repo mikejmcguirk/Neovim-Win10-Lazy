@@ -46,7 +46,7 @@ local function handle_output(obj, what)
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
     local dest_nr = et._set_list(what_set) --- @type integer
 
-    if vim.g.qf_rancher_auto_open_changes then
+    if eu._get_g_var("qf_rancher_auto_open_changes") then
         require("mjm.error-list-stack")._history(src_win, dest_nr, {
             always_open = true,
             default = "current",
