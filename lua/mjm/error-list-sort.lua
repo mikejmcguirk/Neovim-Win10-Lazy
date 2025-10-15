@@ -36,7 +36,7 @@ local function sort_wrapper(sort_info, sort_opts, what)
     end
 
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
-    local cur_list = et._get_all(src_win, what.nr) --- @type table
+    local cur_list = et._get_list_all(src_win, what.nr) --- @type table
     if cur_list.size < 1 then
         vim.api.nvim_echo({ { "Not enough entries to sort", "" } }, false, {})
         return

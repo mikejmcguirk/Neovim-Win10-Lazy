@@ -56,7 +56,7 @@ end
 local function create_add_list_what(new_what)
     require("mjm.error-list-types")._validate_what(new_what)
 
-    local old_all = M._get_all(new_what.user_data.src_win, new_what.nr) --- @type table
+    local old_all = M._get_list_all(new_what.user_data.src_win, new_what.nr) --- @type table
 
     local items = merge_qf_lists(old_all.items, new_what.items) --- @type vim.quickfix.entry[]
     local idx = new_what.idx or old_all.idx or nil --- @type integer|nil
@@ -91,7 +91,7 @@ local function cycle_lists_down(what)
     assert(what.nr < M._get_max_list_nr(src_win))
 
     for i = 1, what.nr - 1 do
-        local next_list = M._get_all(src_win, i + 1) --- @type table
+        local next_list = M._get_list_all(src_win, i + 1) --- @type table
         local next_what = {
             context = use_old(next_list.context, "table") or {},
             efm = use_old(next_list.efm, "string"),
@@ -194,7 +194,7 @@ end
 --- @param src_win integer|nil
 --- @param nr integer
 --- @return table
-function M._get_all(src_win, nr)
+function M._get_list_all(src_win, nr)
     local ev = require("mjm.error-list-types")
     ev._validate_win(src_win, true)
     ev._validate_uint(nr)
@@ -206,7 +206,7 @@ end
 --- @param src_win integer|nil
 --- @param nr integer
 --- @return vim.quickfix.entry[]
-function M._get_items(src_win, nr)
+function M._get_list_items(src_win, nr)
     local ev = require("mjm.error-list-types")
     ev._validate_win(src_win, true)
     ev._validate_uint(nr)

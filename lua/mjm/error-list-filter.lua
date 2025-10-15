@@ -74,7 +74,7 @@ function M._filter_wrapper(filter_info, filter_opts, input_opts, what)
     end
 
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
-    local cur_list = et._get_all(src_win, what.nr) --- @type table
+    local cur_list = et._get_list_all(src_win, what.nr) --- @type table
     if cur_list.size == 0 then
         vim.api.nvim_echo({ { "No entries to filter", "" } }, false, {})
         return
