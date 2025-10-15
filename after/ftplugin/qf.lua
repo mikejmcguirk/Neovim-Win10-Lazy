@@ -1,14 +1,21 @@
-local eu = require("mjm.error-list-util")
+local eo = Qfr_Defer_Require("mjm.error-list-open") --- @type QfRancherOpen
+local ep = Qfr_Defer_Require("mjm.error-list-preview") --- @type QfRancherPreview
+local es = Qfr_Defer_Require("mjm.error-list-stack") --- @type QfRancherStack
+local et = Qfr_Defer_Require("mjm.error-list-tools") --- @type QfRancherTools
+local eu = Qfr_Defer_Require("mjm.error-list-util") --- @type QfRancherUtils
+local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
+
+-- NOTE: Avoid using the util g_var function during setup to avoid eager requires
 
 -- DOCUMENT: Which options are set
-if eu._get_g_var("qf_rancher_ftplugin_set_opts") then
+if vim.g.qf_rancher_ftplugin_set_opts then
     vim.api.nvim_set_option_value("buflisted", false, { buf = 0 })
     vim.api.nvim_set_option_value("cc", "", { scope = "local" })
     vim.api.nvim_set_option_value("list", false, { scope = "local" })
 end
 
 -- TODO: Document which defaults are removed
-if eu._get_g_var("qf_rancher_ftplugin_demap") then
+if vim.g.qf_rancher_ftplugin_demap then
     vim.api.nvim_buf_set_keymap(0, "n", "<C-w>v", "<nop>", { noremap = true })
     vim.api.nvim_buf_set_keymap(0, "n", "<C-w><C-v>", "<nop>", { noremap = true })
     vim.api.nvim_buf_set_keymap(0, "n", "<C-w>s", "<nop>", { noremap = true })
@@ -18,11 +25,13 @@ if eu._get_g_var("qf_rancher_ftplugin_demap") then
     vim.api.nvim_buf_set_keymap(0, "n", "<C-o>", "<nop>", { noremap = true })
 end
 
-if not eu._get_g_var("qf_rancher_ftplugin_keymap") then
+if not vim.g.qf_rancher_ftplugin_keymap then
     return
 end
 
 -- TODO: These maps need to respect the qf_prefix
+-- NOTE: Cannot use simple ternaries to chose between qflist and loclist maps because the
+-- function literals would be evaluated during setup, causing eager requires
 
 local loading_wintype = vim.fn.win_gettype(0)
 local loading_loclist = loading_wintype == "loclist"
@@ -30,21 +39,20 @@ local list_prefix = loading_loclist and "l" or "q"
 
 vim.keymap.set("n", "<leader>" .. list_prefix .. "o", function()
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
-    require("mjm.error-list-open")._close_win_save_views(cur_win)
+    eo._close_win_save_views(cur_win)
 end, { buffer = true, desc = "Close the list" })
 
 vim.keymap.set("n", "q", function()
     local cur_win = vim.api.nvim_get_current_win() --- @type integer
-    require("mjm.error-list-open")._close_win_save_views(cur_win)
+    eo._close_win_save_views(cur_win)
 end, { buffer = true, desc = "Close the list" })
 
 vim.keymap.set("n", "dd", function()
     local list_win = vim.api.nvim_get_current_win() --- @type integer
-    require("mjm.error-list-types")._validate_list_win(list_win) --- @type QfRancherTypes
+    ey._validate_list_win(list_win) --- @type QfRancherTypes
 
     local wintype = vim.fn.win_gettype(list_win)
     local src_win = wintype == "loclist" and list_win or nil --- @type integer|nil
-    local et = require("mjm.error-list-tools") --- @type QfRancherTools
     local list_dict = et._get_list_all(src_win, 0) --- @type table
     if #list_dict.items < 1 then
         return
@@ -56,40 +64,40 @@ vim.keymap.set("n", "dd", function()
     eu._protected_set_cursor(0, { row, col })
 end, { buffer = true, desc = "Delete the current list line" })
 
--- TODO: Make plug mappings
-
 vim.keymap.set("n", "p", function()
     local cur_win = vim.api.nvim_get_current_win()
-    require("mjm.error-list-preview").toggle_preview_win(cur_win)
+    ep.toggle_preview_win(cur_win)
 end, { buffer = true, desc = "Open the preview win" })
 
 vim.keymap.set("n", "P", function()
-    require("mjm.error-list-preview").update_preview_win_pos()
+    ep.update_preview_win_pos()
 end, { buffer = true, desc = "Open the preview win" })
 
 if loading_loclist then
     vim.keymap.set("n", "<", function()
         local cur_win = vim.api.nvim_get_current_win()
-        require("mjm.error-list-stack")._l_older(cur_win, vim.v.count)
+        es._l_older(cur_win, vim.v.count)
     end, { buffer = true, desc = "Goto older loclist history" })
 
     vim.keymap.set("n", ">", function()
         local cur_win = vim.api.nvim_get_current_win()
-        require("mjm.error-list-stack")._l_newer(cur_win, vim.v.count)
+        es._l_newer(cur_win, vim.v.count)
     end, { buffer = true, desc = "Goto newer loclist history" })
 else
     vim.keymap.set("n", "<", function()
-        require("mjm.error-list-stack")._q_older(vim.v.count)
+        es._q_older(vim.v.count)
     end, { buffer = true, desc = "Goto older qflist history" })
 
     vim.keymap.set("n", ">", function()
-        require("mjm.error-list-stack")._q_newer(vim.v.count)
+        es._q_newer(vim.v.count)
     end, { buffer = true, desc = "Goto newer qflist history" })
 end
 
 -------------
 --- Types ---
 -------------
+
+-- TODO: Move this to types module
 
 --- @alias QfOpenMethod "split"|"tabnew"|"vsplit"
 --- @alias QfFinishMethod "closeList"|"focusList"|"focusWin"
@@ -106,6 +114,8 @@ end
 ---------------------
 -- Qf Open Helpers --
 ---------------------
+
+-- TODO: This is in tools
 
 --- @param list_win integer
 --- @return table, integer
@@ -134,6 +144,8 @@ local function get_loclist_data(list_win)
     local cur_stack_nr = vim.fn.getloclist(list_win, { nr = 0 }).nr --- @type integer
     return loclist_data, cur_stack_nr
 end
+
+-- TODO: This is in tool
 
 --- @param cur_stack_nr integer
 --- @param dest_win integer
@@ -167,6 +179,8 @@ local function set_loclist_data(cur_stack_nr, dest_win, loclist_data)
         vim.api.nvim_cmd(cmd, {})
     end)
 end
+
+-- TODO: This is in utils
 
 --- @param list_qf_id integer
 --- @param list_win integer
@@ -300,7 +314,7 @@ local function qf_open_finish(dest_win, finish, list_win)
         --- For loclists, specifically closing the list win is necessary because we might have
         --- opened to a window not associated with the origin loclist, meaning lclose would do
         --- nothing. This function also handles the qflist case, so no need to differentiate
-        require("mjm.error-list-open")._close_win_save_views(list_win)
+        eo._close_win_save_views(list_win)
     end
 
     vim.api.nvim_win_call(dest_win, function()
@@ -355,14 +369,13 @@ local function qf_open_handle_loclist(dest_win, list_win, list_qf_id, finish)
 
     --- @type table, integer
     local loclist_data, qf_stack_nr = get_loclist_data(list_win)
-    local elo = require("mjm.error-list-open")
-    elo._close_win_save_views(list_win)
+    eo._close_win_save_views(list_win)
     set_loclist_data(qf_stack_nr, dest_win, loclist_data)
 
     if finish == "focusList" then
-        elo._open_loclist()
+        eo._open_loclist()
     elseif finish == "focusWin" then
-        elo._open_loclist({ keep_win = true })
+        eo._open_loclist({ keep_win = true })
     end
 
     --- @diagnostic disable: missing-fields
@@ -374,172 +387,221 @@ local function qf_open_handle_loclist(dest_win, list_win, list_qf_id, finish)
     vim.api.nvim_win_call(dest_win, zz)
 end
 
--- Because the built-in "\r" functionality was used to go to the loclist entry, the orphaned
--- loclist will be re-bound internally to the new window. Still close and re-open the loclist so
--- it will be visually aligned with its new home win, but no manual bookkeeping is necessary
---- @param dest_win integer
---- @return nil
-local function qf_open_default_dest_orphan_loclist(dest_win, finish)
-    if vim.g.qf_rancher_debug_assertions then
-        local dest_valid = function()
-            return vim.api.nvim_win_is_valid(dest_win)
+-- TODO: I have to imagine this fn can be used for the split opens as well
+
+--- @class QfRancherFindWinInTabOpts
+--- @field bufnr? integer
+--- @field last_winnr? integer
+--- @field skip_last? boolean
+
+--- @param tabnr integer
+--- @param dest_buftype string
+--- @param opts QfRancherFindWinInTabOpts
+--- @return integer|nil
+local function find_win_in_tab(tabnr, dest_buftype, opts)
+    ey._validate_uint(tabnr)
+    vim.validate("dest_wintype", dest_buftype, "string")
+    -- TODO: Outline this validation
+    vim.validate("opts", opts, "table")
+    vim.validate("opts.bufnr", opts.bufnr, "number", true)
+    ey._validate_uint(opts.bufnr, true)
+    ey._validate_uint(opts.last_winnr, true)
+    vim.validate("opts.skip_last_winnr", opts.skip_last, "boolean", true)
+
+    -- LOW: It would be better to use the API to pull the tabpage wins and iterate that way, but
+    -- (a) I don't think it's documented behavior that list_wins pulls the wins in winnr order
+    -- (b) I'm not sure what the underlying logic is for which windows are given a winnr
+    local max_winnr = vim.fn.tabpagewinnr(tabnr, "$") --- @type integer
+    local last_winnr = opts.last_winnr or 1 --- @type integer
+    local test_winnr = last_winnr --- @type integer
+
+    for _ = 1, 100 do
+        test_winnr = test_winnr - 1
+        if test_winnr <= 0 then
+            test_winnr = max_winnr
         end
-        vim.validate("dest_win", dest_win, dest_valid)
-        local is_cur_dest_win = function()
-            return vim.api.nvim_get_current_win() == dest_win
+
+        if test_winnr == last_winnr and opts.skip_last then
+            break
         end
-        vim.validate("dest_win", dest_win, is_cur_dest_win)
+
+        -- Convert now because win_gettype does not allow specifying a tab context
+        local win = vim.fn.win_getid(test_winnr, tabnr)
+        local wintype = vim.fn.win_gettype(win)
+        local win_buf = vim.api.nvim_win_get_buf(win) --- @type integer
+        local win_buftype = vim.api.nvim_get_option_value("buftype", { buf = win_buf })
+        local has_buf = (function()
+            if not opts.bufnr then
+                return true
+            else
+                return win_buf == opts.bufnr
+            end
+        end)() --- @type boolean
+
+        -- NOTE: Being permissive or restrictive about the dest_wintype can, in theory, create
+        -- different edge cases. I think the restrictive approach provides the more predictable
+        -- starting point to add edge case handling on top of
+        local valid_buf = has_buf and win_buftype == dest_buftype
+        if wintype == "" and valid_buf then
+            return win
+        end
+
+        if test_winnr == last_winnr then
+            break
+        end
     end
 
-    local elo = require("mjm.error-list-open")
-    elo._close_loclist()
-
-    if finish ~= "closeList" then
-        elo._open_loclist()
-    end
-    if finish == "focusWin" then
-        vim.api.nvim_set_current_win(dest_win)
-    end
-
-    local zz_cmd = { cmd = "normal", args = { "zz" }, bang = true }
-    local zz = function()
-        vim.api.nvim_cmd(zz_cmd, {})
-    end
-    vim.api.nvim_win_call(dest_win, zz)
+    return nil
 end
 
---- @param finish QfFinishMethod
 --- @param list_win integer
---- @return nil
-local function qf_open_default_dest(list_win, finish)
-    if vim.g.qf_rancher_debug_assertions then
-        vim.validate("finish", finish, "string")
-        local list_valid = function()
-            return vim.api.nvim_win_is_valid(list_win)
+--- @param dest_buftype string
+--- @param buf integer
+--- @return integer|nil
+local function get_dest_win(list_win, dest_buftype, buf)
+    ey._validate_list_win(list_win)
+    vim.validate("dest_buftype", dest_buftype, "string")
+    ey._validate_buf(buf)
+
+    local list_win_tabpage = vim.api.nvim_win_get_tabpage(list_win) --- @type integer
+    local list_win_tabnr = vim.api.nvim_tabpage_get_number(list_win_tabpage) --- @type integer
+
+    if vim.v.count > 1 then
+        -- TODO: This is the same logic as alt_win
+        local max_winnr = vim.fn.tabpagewinnr(list_win_tabnr, "$") --- @type integer
+        local adj_count = math.min(vim.v.count, max_winnr) --- @type integer
+        local target_win = vim.fn.win_getid(adj_count, list_win_tabnr) --- @type integer
+        local target_wintype = vim.fn.win_gettype(target_win)
+        local target_win_buf = vim.api.nvim_win_get_buf(target_win) --- @type integer
+        --- @type string
+        local target_buftype = vim.api.nvim_get_option_value("buftype", { buf = target_win_buf })
+        if target_wintype == "" and target_buftype == dest_buftype then
+            return target_win
         end
-        vim.validate("list_win", list_win, list_valid)
-        local is_cur_list_win = function()
-            return vim.api.nvim_get_current_win() == list_win
+    end
+
+    --- @type string
+    local switchbuf = vim.api.nvim_get_option_value("switchbuf", { scope = "global" })
+    local list_winnr = vim.api.nvim_win_get_number(list_win) --- @type integer
+
+    if string.find(switchbuf, "useopen", 1, true) then
+        --- @type integer|nil
+        local tabpage_win = find_win_in_tab(
+            list_win_tabnr,
+            dest_buftype,
+            { bufnr = buf, last_winnr = list_winnr, skip_last = true }
+        )
+
+        if tabpage_win then
+            return tabpage_win
         end
-        vim.validate("list_win", list_win, is_cur_list_win)
-        local list_wintype = vim.fn.win_gettype(list_win)
-        vim.validate("list_win", list_win, function()
-            return list_wintype == "quickfix" or list_wintype == "loclist"
-        end)
     end
 
-    local list_qf_id = vim.fn.getloclist(list_win, { id = 0 }).id --- @type integer
-    local is_loclist = list_qf_id > 0
+    if string.find(switchbuf, "usetab", 1, true) then
+        local test_tabnr = list_win_tabnr --- @type integer
+        local max_tabnr = vim.fn.tabpagenr("$") --- @type integer
 
-    local list_size = (function()
-        if is_loclist then
-            return vim.fn.getloclist(list_win, { size = true }).size
-        else
-            return vim.fn.getqflist({ size = true }).size
+        for _ = 1, 100 do
+            test_tabnr = test_tabnr + 1
+            if test_tabnr > max_tabnr then
+                test_tabnr = 1
+            end
+
+            if test_tabnr == list_win_tabnr then
+                break
+            end
+
+            local tabpage_win = find_win_in_tab(test_tabnr, dest_buftype, { bufnr = buf })
+            if tabpage_win then
+                return tabpage_win
+            end
         end
-    end)() --- @type integer
-
-    if (not list_size) or list_size == 0 then
-        vim.api.nvim_echo({ { "No list entries", "" } }, false, {})
-        return
     end
 
-    local is_orphan_loclist = is_loclist and (not find_loclist_win(list_qf_id, list_win)) or false
-    local total_winnr_pre = vim.fn.winnr("$")
-
-    vim.api.nvim_cmd({ cmd = "normal", args = { "\r" }, bang = true }, {})
-
-    local dest_win = vim.api.nvim_get_current_win()
-    local dest_qf_id = vim.fn.getloclist(dest_win, { id = 0 }).id
-
-    if is_orphan_loclist and dest_qf_id == list_qf_id then
-        qf_open_default_dest_orphan_loclist(dest_win, finish)
-        return
+    if string.find(switchbuf, "uselast", 1, true) then
+        local alt_winnr = vim.fn.tabpagewinnr(list_win_tabnr, "#") --- @type integer
+        local alt_win = vim.fn.win_getid(alt_winnr, list_win_tabnr) --- @type integer
+        local alt_wintype = vim.fn.win_gettype(alt_winnr) --- @type string
+        local alt_win_buf = vim.api.nvim_win_get_buf(alt_win) --- @type integer
+        --- @type string
+        local alt_buftype = vim.api.nvim_get_option_value("buftype", { buf = alt_win_buf })
+        if alt_wintype == "" and alt_buftype == dest_buftype then
+            return vim.fn.win_getid(alt_winnr, list_win_tabnr)
+        end
     end
 
-    local elo = require("mjm.error-list-open")
-    if finish == "closeList" then
-        elo._close_win_save_views(list_win)
-    elseif total_winnr_pre == 1 then
-        --- Killed function
-        -- elo._resize_list_win(list_win)
-    end
+    local fallback_win = find_win_in_tab(
+        list_win_tabnr,
+        dest_buftype,
+        { last_winnr = list_winnr, skip_last = true }
+    )
 
-    if finish == "focusList" then
-        vim.api.nvim_set_current_win(list_win)
+    if fallback_win then
+        return fallback_win
+    else
+        return nil
     end
-
-    local zz_cmd = { cmd = "normal", args = { "zz" }, bang = true }
-    local zz = function()
-        vim.api.nvim_cmd(zz_cmd, {})
-    end
-    vim.api.nvim_win_call(dest_win, zz)
 end
+
+-- DOCUMENT: switchbuf behavior for direct open:
+-- useopen is respected and given first priority
+-- usetab is respected and given next priority
+-- uselast is respected and given next priority
+-- split, vsplit, and newtab are not respected
 
 --- @param finish QfFinishMethod
 --- @return nil
 local function qf_direct_open(finish)
-    if vim.g.qf_rancher_debug_assertions then
-        vim.validate("finish", finish, "string")
-    end
+    vim.validate("finish", finish, "string")
 
     local list_win = vim.api.nvim_get_current_win() --- @type integer
-    local list_buf = vim.api.nvim_win_get_buf(list_win) --- @type integer
-    --- @type string
-    local list_buftype = vim.api.nvim_get_option_value("buftype", { buf = list_buf })
-    if list_buftype ~= "quickfix" then
+    if not ey._is_in_list_win(list_win) then
+        vim.api.nvim_echo({ { "Not inside a list window", "" } }, false, {})
         return
     end
 
-    if vim.v.count < 1 then
-        qf_open_default_dest(list_win, finish)
+    -- TODO: Thinking broadly - There's a boilerplate step in opening a list item where we have
+    -- to determine if opening is even possible, then there's the actual opening. If we find that
+    -- we need to fallback to a split open, we don't want to do the boilerplate again. Is there
+    -- a way to split the validation and opening into separate functions? How much of that logic
+    -- can be shared between the direct and split opens?
+    local wintype = vim.fn.win_gettype(list_win)
+    local src_win = wintype == "loclist" and list_win or nil --- @type integer|nil
+    local items = et._get_list_items(src_win, 0) --- @type vim.quickfix.entry[]
+    if #items < 1 then
         return
     end
 
-    local total_winnr = vim.fn.winnr("$") --- @type integer
-    local dest_winnr = math.min(vim.v.count1, total_winnr) --- @type integer
-
-    local dest_wintype = vim.fn.win_gettype(dest_winnr) --- @type string
-    if dest_wintype ~= "" then
-        vim.api.nvim_echo({ { "Destination win type not empty", "" } }, false, {})
+    local line = vim.fn.line(".") --- @type integer
+    local item = items[line] --- @type vim.quickfix.entry
+    if not (item.bufnr and vim.api.nvim_buf_is_valid(item.bufnr)) then
+        vim.api.nvim_echo({ { "List item bufnr is invalid", "ErrorMsg" } }, true, { err = true })
         return
     end
 
-    local dest_win = vim.fn.win_getid(dest_winnr) --- @type integer
-    local dest_buf = vim.api.nvim_win_get_buf(dest_win) --- @type integer
-    --- @type string
-    local dest_buftype = vim.api.nvim_get_option_value("buftype", { buf = dest_buf })
-    if dest_buftype ~= "" then
-        vim.api.nvim_echo({ { "Destination buftype not empty", "" } }, false, {})
+    local dest_buftype = item.type == "\1" and "help" or "" --- @type string
+    local dest_win = get_dest_win(list_win, dest_buftype, item.bufnr) --- @type integer|nil
+    if not dest_win then
+        -- TODO: This needs to be a split. Branch off into that logic
+        vim.api.nvim_echo({ { "No available dest win. Needs to be a split", "" } }, false, {})
         return
     end
 
-    local list_qf_id = vim.fn.getloclist(list_win, { id = 0 }).id --- @type integer
-    local is_loclist = list_qf_id ~= 0 --- @type boolean
-
-    --- @type boolean, table|string, integer
-    local ok, entry, idx = get_entry_on_cursor(list_win, is_loclist)
-    if (not ok) or type(entry) ~= "table" then
-        entry = type(entry) == "string" and entry or "Unknown error getting list entry"
-        local hl = idx == 1 and "ErrorMsg" or ""
-        vim.api.nvim_echo({ { entry, hl } }, false, { err = true })
-        return
-    end
+    -- TODO: Opening the buf should not require this much logic
 
     --- @type mjm.OpenBufSource, mjm.OpenBufOpts
-    local buf_source, buf_opts = qf_get_open_buf_opts(entry)
-    if is_loclist then
-        vim.fn.setloclist(list_win, {}, "r", { idx = idx })
-    else
-        vim.fn.setqflist({}, "r", { idx = idx })
-    end
+    local buf_source, buf_opts = qf_get_open_buf_opts(item)
+    et._set_list({ nr = 0, idx = line })
 
     vim.api.nvim_set_current_win(dest_win)
+    -- TODO: Need a built-for-purpose version of this
     if not require("mjm.utils").open_buf(buf_source, buf_opts) then
         return
     end
 
-    if is_loclist then
+    -- This is where things get silly because of orphan loclist handling
+
+    if wintype == "loclist" then
         qf_open_handle_loclist(dest_win, list_win, list_qf_id, finish)
     else
         qf_open_finish(dest_win, finish, list_win)
@@ -584,12 +646,11 @@ local function qf_split_orphan_wrapup(list_win, dest_win, finish)
     local loclist_data, cur_stack_nr = get_loclist_data(list_win)
     set_loclist_data(cur_stack_nr, dest_win, loclist_data)
 
-    local elo = require("mjm.error-list-open")
-    elo._close_win_save_views(list_win)
+    eo._close_win_save_views(list_win)
 
     if finish ~= "closeList" then
         local open_opts = finish == "focusWin" and { keep_win = true } or nil
-        elo._open_loclist(open_opts)
+        eo._open_loclist(open_opts)
     end
 
     local zz_cmd = { cmd = "normal", args = { "zz" }, bang = true }
@@ -899,6 +960,7 @@ local function qf_split_full(ctx)
     vim.api.nvim_cmd({ cmd = cmd, mods = mods }, {})
     local dest_win = vim.api.nvim_get_current_win()
 
+    -- TODO: Need a rancher version of this
     require("mjm.utils").open_buf(ctx.buf_source, ctx.buf_opts)
 
     if ctx.is_orphan_loclist then
@@ -909,15 +971,14 @@ local function qf_split_full(ctx)
     -- By default, if a valid window cannot be found for an enter open, it will open directly
     -- above the list. Move the list to emulate this behavior
     -- Spacing for horitzontal splits is a bit better if the close is done after splitting
-    local elo = require("mjm.error-list-open")
-    elo._close_win_save_views(ctx.list_win)
+    eo._close_win_save_views(ctx.list_win)
 
     if ctx.finish ~= "closeList" then
         local open_opts = ctx.finish == "focusWin" and { keep_win = true } or nil
         if ctx.is_loclist then
-            elo._open_loclist(open_opts)
+            eo._open_loclist(open_opts)
         else
-            elo._open_qflist(open_opts)
+            eo._open_qflist(open_opts)
         end
     end
 
@@ -945,15 +1006,13 @@ local function qf_split_tab_handle_orphan(list_win, dest_win, finish)
         vim.validate("finish", finish, "string")
     end
 
-    local elo = require("mjm.error-list-open")
-
     local loclist_data, cur_stack_nr = get_loclist_data(list_win)
     set_loclist_data(cur_stack_nr, dest_win, loclist_data)
-    elo._close_win_save_views(list_win)
+    eo._close_win_save_views(list_win)
 
     if finish ~= "closeList" then
         local open_opts = finish == "focusWin" and { keep_win = true } or nil
-        elo._open_loclist(open_opts)
+        eo._open_loclist(open_opts)
     end
 
     vim.api.nvim_win_call(dest_win, function()
@@ -1012,6 +1071,7 @@ local function qf_split_tab(buf_source, buf_opts, list_win, finish, qf_id, is_lo
 
     vim.api.nvim_cmd({ cmd = "tabnew", range = { range } }, {})
     local dest_win = vim.api.nvim_get_current_win()
+    -- TODO: need a rancher version of this
     require("mjm.utils").open_buf(buf_source, buf_opts)
 
     if (not loclist_win) and is_loclist then
@@ -1024,7 +1084,7 @@ local function qf_split_tab(buf_source, buf_opts, list_win, finish, qf_id, is_lo
     end
 
     if finish == "closeList" then
-        require("mjm.error-list-open")._close_win_save_views(list_win)
+        eo._close_win_save_views(list_win)
     end
 
     vim.api.nvim_win_call(dest_win, function()
@@ -1077,9 +1137,8 @@ local function qf_split_single_win(list_win, open, finish)
 
     vim.api.nvim_cmd({ cmd = "wincmd", args = args }, {})
 
-    local elo = require("mjm.error-list-open")
     if finish == "closeList" then
-        elo._close_win_save_views(list_win)
+        eo._close_win_save_views(list_win)
         return
     end
 
@@ -1235,6 +1294,7 @@ local function qf_split(open, finish)
     vim.api.nvim_cmd({ cmd = open }, {})
     local dest_win = vim.api.nvim_get_current_win()
 
+    -- TODO: Need a rancher version of this
     require("mjm.utils").open_buf(buf_source, buf_opts)
 
     if is_loclist and is_orphan_loclist then
@@ -1247,7 +1307,7 @@ local function qf_split(open, finish)
     end
 
     if finish == "closeList" then
-        require("mjm.error-list-open")._close_win_save_views(list_win)
+        eo._close_win_save_views(list_win)
     end
 
     local zz_cmd = { cmd = "normal", args = { "zz" }, bang = true }
@@ -1296,6 +1356,7 @@ end, { buffer = true })
 --- TODO ---
 ------------
 
+--- Make plug maps for everything
 --- These cmds need to create jumplist entries. How does FzfLua do it?
 --- Create plug mappings
 --- These bufmappings should use nowait

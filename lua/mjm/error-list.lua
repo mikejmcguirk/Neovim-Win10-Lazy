@@ -174,6 +174,8 @@ end
 --- TODO: ---
 -------------
 
+--- Put a confirm statement in every project file. It should be possible to open Nvim and then
+--- a list without eager requiring other modules
 --- Function audit - Is the win variable a src_win, list_win, something else? Don't just pass
 ---     "win" as a variable, as it is not necessarily clear what the win is supposed to be
 --- Go through everything and be strict on data validation, including stuff that comes from the
@@ -221,6 +223,8 @@ end
 --- MID ---
 -----------
 
+--- Unsure how to deal with wintype annotations. Ideally they would be aliased in the core
+---     codebase. Unsure if I should make my own alias here or not
 --- Look into running more functionality through the default Qf commands given that they're tied
 ---     to the QuickFixCmd autocmds
 --- Also look into what events we can use those autocmds to drive

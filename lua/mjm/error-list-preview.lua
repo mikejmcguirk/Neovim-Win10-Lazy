@@ -8,6 +8,7 @@ local eu = Qfr_Defer_Require("mjm.error-list-util") --- @type QfRancherUtils
 local et = Qfr_Defer_Require("mjm.error-list-tools") --- @type QfRancherTools
 local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
 
+--- @class QfRancherPreview
 local M = {}
 
 -------------------
@@ -743,6 +744,9 @@ local function start_timer()
         timer:start(eu._get_g_var("qf_rancher_preview_debounce"), 0, at_timer_end)
     end
 end
+
+-- TODO: I think you can put this into utils and then also use it in the ftplugin file. But
+-- write out the ftplugin stuff first before doing so
 
 --- @param list_win integer
 --- @return vim.quickfix.entry|nil

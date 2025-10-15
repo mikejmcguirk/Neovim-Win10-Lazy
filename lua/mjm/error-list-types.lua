@@ -222,6 +222,20 @@ function M._validate_list_win(list_win, optional)
     end, optional, "Buftype must be quickfix")
 end
 
+-- TODO: There are a bunch of these kinds of functions that have less to do with data typing and
+-- more to do with state. Utils file getting bloated. Maybe new module
+
+--- @param list_win integer
+--- @return boolean
+function M._is_in_list_win(list_win)
+    M._validate_win(list_win)
+
+    local list_win_buf = vim.api.nvim_win_get_buf(list_win) --- @type integer
+    --- @type string
+    local buftype = vim.api.nvim_get_option_value("buftype", { buf = list_win_buf })
+    return buftype == "quickfix"
+end
+
 --- MID: If this value starts being used in more places, consider making an alias for it rather
 --- than add-hoc annotation enums
 
