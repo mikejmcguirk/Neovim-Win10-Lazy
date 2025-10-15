@@ -10,7 +10,7 @@ local M = {}
 local function validate_system_do(system_opts, what)
     local ey = require("mjm.error-list-types")
     ey._validate_system_opts(system_opts)
-    ey._validate_str_list(system_opts.cmd_parts)
+    ey._validate_list(system_opts.cmd_parts, { type = "string" })
     ey._validate_what(what)
 end
 

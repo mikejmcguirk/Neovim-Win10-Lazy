@@ -33,13 +33,7 @@ function M._validate_what(what)
         end
     end
 
-    -- TODO: This should just be validate_str_list and that function should have an optional
-    -- boolean. Or maybe you can just use the vim.list validator
-    vim.validate("what.lines", what.lines, "table", true)
-    if type(what.lines) == "table" then
-        M._validate_str_list(what.lines)
-    end
-
+    M._validate_list(what.lines, { optional = true, type = "string" })
     M._validate_uint(what.nr)
     vim.validate("what.quickfixtextfunc", what.quickfixtextfunc, "callable", true)
     vim.validate("what.title", what.title, "string", true)
@@ -109,19 +103,6 @@ function M._validate_int(num, optional)
     vim.validate("num", num, function()
         return num % 1 == 0
     end, optional, "Num is not an integer")
-end
-
--- TODO: Use the vim.islist validation here
--- TODO: Add an optional flag here
---- @param table string[]
---- @return nil
-function M._validate_str_list(table)
-    vim.validate("table", table, "table")
-    for k, v in ipairs(table) do
-        -- TODO: Validate elements are strings before printing concated errors
-        assert(type(k) == "number", "Key " .. vim.inspect(k) .. " is not a number")
-        assert(type(v) == "string", "Item " .. vim.inspect(v) .. " is not a string")
-    end
 end
 
 -----------------
