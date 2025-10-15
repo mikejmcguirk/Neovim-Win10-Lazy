@@ -82,25 +82,18 @@ local nokeep = { keep = false }
 --- The keymaps need to all be set here to avoid eagerly requiring other modules
 --- I have not been able to find a way to build the list at runtime without it being hard to read
 --- and non-trivially affecting startup time
+--- TODO: Need to have settable options for mappings
+
+--- Mode(s), Plug Map, User Map, Desc, Action
 
 --- @alias QfRancherMapData{[1]:string[], [2]:string, [3]:string, [4]: string, [5]: function}
 
 -- stylua: ignore
 --- @type QfRancherMapData[]
 local rancher_keymaps = {
-    { nx, "<nop>", "<leader>q", "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>l", "Avoid falling back to defaults", nil },
-
     -------------------
     --- DIAGNOSTICS ---
     -------------------
-
-    { nx, "<nop>", "<leader>qi", "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>qI", "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>q<C-i>", "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>li", "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>lI", "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>l<C-i>", "Avoid falling back to defaults", nil },
 
     { nn, pqfr.. "Qdiags-n-hint",  qp.."in", "All buffer diagnostics min hint"..n,         function() ed.diags("hint", { sev_type = "min" }, new_qflist()) end },
     { nn, pqfr.. "Qdiags-n-info",  qp.."if", "All buffer diagnostics min info"..n,         function() ed.diags("info", { sev_type = "min" }, new_qflist()) end },
@@ -177,20 +170,6 @@ local rancher_keymaps = {
     --------------
     --- FILTER ---
     --------------
-
-    { nx, "<nop>", "<leader>qk",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>qr",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>qK",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>qR",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>q<c-k>", "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>q<c-r>", "Avoid falling back to defaults", nil },
-
-    { nx, "<nop>", "<leader>lk",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>lr",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>lK",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>lR",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>l<c-k>", "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>l<c-r>", "Avoid falling back to defaults", nil },
 
     --- Cfilter ---
 
@@ -416,13 +395,6 @@ local rancher_keymaps = {
     --- GREP ---
     ------------
 
-    { nx, "<nop>", "<leader>qg",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>qG",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>q<c-g>", "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>lg",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>lG",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>l<c-g>", "Avoid falling back to defaults", nil },
-
     { nx, pqfr.."-grep-n-cwd)",    qp.."gd",         "Qgrep cwd, new"..sc,           function() eg.grep("cwd", sys_opt, in_vimsmart, new_qflist()) end },
     { nx, pqfr.."-grep-r-cwd)",    qp.."Gd",         "Qgrep cwd, replace"..sc,       function() eg.grep("cwd", sys_opt, in_vimsmart, replace_qflist()) end },
     { nx, pqfr.."-grep-a-cwd)",    qp.."<C-g>d",     "Qgrep cwd, add"..sc,           function() eg.grep("cwd", sys_opt, in_vimsmart, add_qflist()) end },
@@ -516,13 +488,6 @@ local rancher_keymaps = {
     ------------
     --- SORT ---
     ------------
-
-    { nn, "<nop>", "<leader>qt",     "Avoid falling back to defaults", nil },
-    { nn, "<nop>", "<leader>qT",     "Avoid falling back to defaults", nil },
-    { nn, "<nop>", "<leader>q<C-t>", "Avoid falling back to defaults", nil },
-    { nn, "<nop>", "<leader>lt",     "Avoid falling back to defaults", nil },
-    { nn, "<nop>", "<leader>lT",     "Avoid falling back to defaults", nil },
-    { nn, "<nop>", "<leader>l<C-t>", "Avoid falling back to defaults", nil },
 
     --- DOCUMENT: This breaks the usual pattern by simply replacing the list
     --- LOW: Keeping the mappings simple here so we're just sorting in place. If use cases come up
@@ -625,6 +590,67 @@ local rancher_keymaps = {
     { nn, pqfr.."-ll-del-all)",      lp.."E", "Delete all items from the loclist stack",       function() es._l_del_all(cur_win()) end },
 }
 
+--- NOTE: This table needs to be separate or else the plug mapping pass will map "<nop>", which
+--- causes multiple problems
+
+-- stylua: ignore
+--- @type QfRancherMapData[]
+local rancher_keymap_default_rm = {
+    { nx, "<nop>", "<leader>q", "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>l", "Avoid falling back to defaults", nil },
+
+    -------------------
+    --- DIAGNOSTICS ---
+    -------------------
+
+    { nx, "<nop>", "<leader>qi",     "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>qI",     "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>q<C-i>", "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>li",     "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>lI",     "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>l<C-i>", "Avoid falling back to defaults", nil },
+
+    --------------
+    --- FILTER ---
+    --------------
+
+    { nx, "<nop>", "<leader>qk",     "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>qr",     "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>qK",     "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>qR",     "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>q<c-k>", "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>q<c-r>", "Avoid falling back to defaults", nil },
+
+    { nx, "<nop>", "<leader>lk",     "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>lr",     "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>lK",     "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>lR",     "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>l<c-k>", "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>l<c-r>", "Avoid falling back to defaults", nil },
+
+    ------------
+    --- GREP ---
+    ------------
+
+    { nx, "<nop>", "<leader>qg",     "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>qG",     "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>q<c-g>", "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>lg",     "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>lG",     "Avoid falling back to defaults", nil },
+    { nx, "<nop>", "<leader>l<c-g>", "Avoid falling back to defaults", nil },
+
+    ------------
+    --- SORT ---
+    ------------
+
+    { nn, "<nop>", "<leader>qt",     "Avoid falling back to defaults", nil },
+    { nn, "<nop>", "<leader>qT",     "Avoid falling back to defaults", nil },
+    { nn, "<nop>", "<leader>q<C-t>", "Avoid falling back to defaults", nil },
+    { nn, "<nop>", "<leader>lt",     "Avoid falling back to defaults", nil },
+    { nn, "<nop>", "<leader>lT",     "Avoid falling back to defaults", nil },
+    { nn, "<nop>", "<leader>l<C-t>", "Avoid falling back to defaults", nil },
+}
+
 for _, map in ipairs(rancher_keymaps) do
     for _, mode in ipairs(map[1]) do
         vim.api.nvim_set_keymap(mode, map[2], "", {
@@ -638,6 +664,15 @@ end
 -- Don't use the util g_var wrapper here to avoid a require
 if vim.g.qf_rancher_set_default_maps then
     for _, map in ipairs(rancher_keymaps) do
+        for _, mode in ipairs(map[1]) do
+            vim.api.nvim_set_keymap(mode, map[3], map[2], {
+                desc = map[4],
+                noremap = true,
+            })
+        end
+    end
+
+    for _, map in ipairs(rancher_keymap_default_rm) do
         for _, mode in ipairs(map[1]) do
             vim.api.nvim_set_keymap(mode, map[3], map[2], {
                 desc = map[4],
