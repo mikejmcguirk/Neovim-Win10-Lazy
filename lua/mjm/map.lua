@@ -13,12 +13,12 @@ ApiMap("n", ")", "<nop>", { noremap = true })
 -------------------------
 
 -- Works for Z because all default functionality is overwritten
-Map("n", "Z", "<nop>")
-Map("n", "ZA", "<cmd>lockmarks silent wa<cr>")
-Map("n", "ZC", "<cmd>lockmarks wqa<cr>")
-Map("n", "ZR", "<cmd>lockmarks silent wa | restart<cr>")
-Map("n", "ZQ", "<cmd>qall!<cr>")
-Map("n", "ZZ", "<cmd>lockmarks silent up<cr>")
+ApiMap("n", "Z", "<nop>", { noremap = true })
+ApiMap("n", "ZA", "<cmd>lockmarks silent wa<cr>", { noremap = true })
+ApiMap("n", "ZC", "<cmd>lockmarks wqa<cr>", { noremap = true })
+ApiMap("n", "ZR", "<cmd>lockmarks silent wa | restart<cr>", { noremap = true })
+ApiMap("n", "ZQ", "<cmd>qall!<cr>", { noremap = true })
+ApiMap("n", "ZZ", "<cmd>lockmarks silent up<cr>", { noremap = true })
 
 -- FUTURE: Can pare this down once extui is stabilized
 Map("n", "ZS", function()
