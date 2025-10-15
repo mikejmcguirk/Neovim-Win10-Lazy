@@ -349,6 +349,7 @@ return M
 --- # TODO ---
 --------------
 
+--- This still does not properly resize the list window
 --- Add tests
 --- Docs
 

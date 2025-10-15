@@ -1,153 +1,91 @@
----------------------------
--- qf jump function list --
----------------------------
+local eu = require("mjm.error-list-util")
 
--- TODO: The ftplugin maps should be moved to their own file, and a g_variable in the plugin's
--- ftplugin file should determine if they are mapped. Put this function documentation in the
--- file to ftplugin map
--- TODO: The g variable should either map the defaults or not. Plug mappings/documentation can be
--- provided if the user wants to do it custom
--- TODO: Set nowait here and in other buffer keymaps
--- MAYBE: show stack nr in qf statusline
-
--- qf_view_result
--- ex_cc
--- qf_jump
--- qf_jump_newwin
--- qf_jump_open_window
--- jump_to_help_window
--- qf_jump_to_usable_window
--- qf_find_win_with_loclist
--- qf_open_new_file_win
--- qf_goto_win_with_ll_file
--- qf_goto_win_with_qfl_file
-
--- TODO: The various checks for this var fail if it's not set since they use API calls. I'm fine
--- with writing a protected var call, but need to look at the vim.g code to see if I'm doing
--- more silly stuff than that
--- vim.api.nvim_set_var("qf_rancher_debug_assertions", true)
-
--- TODO: In the Rancher ftplugin file, setting the qf options should be done under a g value
 -- DOCUMENT: Which options are set
-vim.api.nvim_set_option_value("buflisted", false, { buf = 0 })
-vim.api.nvim_set_option_value("cc", "", { scope = "local" })
-vim.api.nvim_set_option_value("list", false, { scope = "local" })
--- TODO: Restore this. Currently off for testing
--- Or maybe not. I have splits disabled, so if the qf win is the only window, we're stuck
--- vim.opt_local.winfixbuf = true
-
-vim.keymap.set("n", "<C-w>v", "<nop>", { buffer = true })
-vim.keymap.set("n", "<C-w><C-v>", "<nop>", { buffer = true })
-vim.keymap.set("n", "<C-w>s", "<nop>", { buffer = true })
-vim.keymap.set("n", "<C-w><C-s>", "<nop>", { buffer = true })
-
--- TODO: update this
-Map("n", "<leader>qo", function()
-    local win = vim.api.nvim_get_current_win()
-    local wintype = vim.fn.win_gettype(win)
-    if wintype == "quickfix" then
-        require("mjm.error-list-open")._close_win_save_views(win)
-    end
-end, { buffer = true })
-
-Map("n", "<leader>lo", function()
-    local win = vim.api.nvim_get_current_win()
-    local wintype = vim.fn.win_gettype(win)
-    if wintype == "loclist" then
-        require("mjm.error-list-open")._close_win_save_views(win)
-    end
-end, { buffer = true })
-
--- TODO: validation error occurs when doing this
-Map("n", "q", function()
-    local win = vim.api.nvim_get_current_win()
-    require("mjm.error-list-open")._close_win_save_views(win)
-end, { buffer = true })
-
--- TODO: Reset the idx value here as well
-Map("n", "dd", function()
-    local win = vim.api.nvim_get_current_win()
-    local row, col = unpack(vim.api.nvim_win_get_cursor(win))
-    local wininfo = vim.fn.getwininfo(win)[1]
-
-    local is_loclist = wininfo.quickfix == 1 and wininfo.loclist == 1
-    local list = is_loclist and vim.fn.getloclist(win) or vim.fn.getqflist()
-    table.remove(list, row)
-
-    if is_loclist then
-        vim.fn.setloclist(win, list, "r")
-    else
-        vim.fn.setqflist(list, "r")
-    end
-
-    require("mjm.utils").protected_set_cursor({ row, col }, { set_pcmark = true, win = win })
-end, { buffer = true })
-
---- @return Range4
---- MAYBE: Copied from the nvim-treesitter file. One dupe now. Maybe outline
-local function get_vrange4()
-    local cur = vim.fn.getpos(".")
-    local fin = vim.fn.getpos("v")
-    local mode = vim.fn.mode()
-
-    local region = vim.fn.getregionpos(cur, fin, { type = mode, exclusive = false })
-    return { region[1][1][2], region[1][1][3], region[#region][2][2], region[#region][2][3] }
+if eu._get_g_var("qf_rancher_ftplugin_set_opts") then
+    vim.api.nvim_set_option_value("buflisted", false, { buf = 0 })
+    vim.api.nvim_set_option_value("cc", "", { scope = "local" })
+    vim.api.nvim_set_option_value("list", false, { scope = "local" })
 end
 
-local norm_desc = "qf-rancher enter visual mode"
-vim.api.nvim_buf_set_keymap(0, "n", "i", "v", { noremap = true, desc = norm_desc })
-local line_desc = "qf-rancher enter visual line mode"
-vim.api.nvim_buf_set_keymap(0, "n", "I", "V", { noremap = true, desc = line_desc })
-local block_desc = "qf-rancher enter visual block mode"
-vim.api.nvim_buf_set_keymap(0, "n", "<C-i>", "<C-v>", { noremap = true, desc = block_desc })
+-- TODO: Document which defaults are removed
+if eu._get_g_var("qf_rancher_ftplugin_demap") then
+    vim.api.nvim_buf_set_keymap(0, "n", "<C-w>v", "<nop>", { noremap = true })
+    vim.api.nvim_buf_set_keymap(0, "n", "<C-w><C-v>", "<nop>", { noremap = true })
+    vim.api.nvim_buf_set_keymap(0, "n", "<C-w>s", "<nop>", { noremap = true })
+    vim.api.nvim_buf_set_keymap(0, "n", "<C-w><C-s>", "<nop>", { noremap = true })
 
-Map("x", "d", function()
-    local mode = string.sub(vim.api.nvim_get_mode().mode, 1, 1) ---@type string
-    if mode ~= "V" then
+    vim.api.nvim_buf_set_keymap(0, "n", "<C-i>", "<nop>", { noremap = true })
+    vim.api.nvim_buf_set_keymap(0, "n", "<C-o>", "<nop>", { noremap = true })
+end
+
+if not eu._get_g_var("qf_rancher_ftplugin_keymap") then
+    return
+end
+
+-- TODO: These maps need to respect the qf_prefix
+
+local loading_wintype = vim.fn.win_gettype(0)
+local loading_loclist = loading_wintype == "loclist"
+local list_prefix = loading_loclist and "l" or "q"
+
+vim.keymap.set("n", "<leader>" .. list_prefix .. "o", function()
+    local cur_win = vim.api.nvim_get_current_win() --- @type integer
+    require("mjm.error-list-open")._close_win_save_views(cur_win)
+end, { buffer = true, desc = "Close the list" })
+
+vim.keymap.set("n", "q", function()
+    local cur_win = vim.api.nvim_get_current_win() --- @type integer
+    require("mjm.error-list-open")._close_win_save_views(cur_win)
+end, { buffer = true, desc = "Close the list" })
+
+vim.keymap.set("n", "dd", function()
+    local list_win = vim.api.nvim_get_current_win() --- @type integer
+    require("mjm.error-list-types")._validate_list_win(list_win) --- @type QfRancherTypes
+
+    local wintype = vim.fn.win_gettype(list_win)
+    local src_win = wintype == "loclist" and list_win or nil --- @type integer|nil
+    local et = require("mjm.error-list-tools") --- @type QfRancherTools
+    local list_dict = et._get_list_all(src_win, 0) --- @type table
+    if #list_dict.items < 1 then
         return
     end
 
-    local vrange_4 = get_vrange4()
-    Cmd({ cmd = "normal", args = { "\27" }, bang = true }, {})
-    Cmd({ cmd = "normal", args = { vrange_4[1] .. "G" }, bang = true }, {})
-
-    local win = vim.api.nvim_get_current_win()
-    local row, col = unpack(vim.api.nvim_win_get_cursor(win))
-    local win_info = vim.fn.getwininfo(win)[1]
-
-    local is_loclist = win_info.quickfix == 1 and win_info.loclist == 1
-    local list = is_loclist and vim.fn.getloclist(win) or vim.fn.getqflist()
-    for i = vrange_4[3], vrange_4[1], -1 do
-        table.remove(list, i)
-    end
-
-    if is_loclist then
-        vim.fn.setloclist(win, list, "r")
-    else
-        vim.fn.setqflist(list, "r")
-    end
-
-    require("mjm.utils").protected_set_cursor({ row, col }, { set_pcmark = true, win = win })
-end, { buffer = true })
+    local row, col = unpack(vim.api.nvim_win_get_cursor(list_win)) --- @type integer, integer
+    table.remove(list_dict, row)
+    et._set_list({ nr = 0, items = list_dict.items, idx = list_dict.idx })
+    eu._protected_set_cursor(0, { row, col })
+end, { buffer = true, desc = "Delete the current list line" })
 
 -- TODO: Make plug mappings
 
-vim.api.nvim_buf_set_keymap(0, "n", "p", "", {
-    noremap = true,
-    callback = function()
-        local cur_win = vim.api.nvim_get_current_win()
-        require("mjm.error-list-preview").toggle_preview_win(cur_win)
-    end,
-    desc = "Toggle the qf preview window",
-})
+vim.keymap.set("n", "p", function()
+    local cur_win = vim.api.nvim_get_current_win()
+    require("mjm.error-list-preview").toggle_preview_win(cur_win)
+end, { buffer = true, desc = "Open the preview win" })
 
-vim.api.nvim_buf_set_keymap(0, "n", "P", "", {
-    noremap = true,
-    callback = function()
-        require("mjm.error-list-preview").update_preview_win_pos()
-    end,
-    desc = "Manually trigger a preview window position adjustment",
-})
+vim.keymap.set("n", "P", function()
+    require("mjm.error-list-preview").update_preview_win_pos()
+end, { buffer = true, desc = "Open the preview win" })
+
+if loading_loclist then
+    vim.keymap.set("n", "<", function()
+        local cur_win = vim.api.nvim_get_current_win()
+        require("mjm.error-list-stack")._l_older(cur_win, vim.v.count)
+    end, { buffer = true, desc = "Goto older loclist history" })
+
+    vim.keymap.set("n", ">", function()
+        local cur_win = vim.api.nvim_get_current_win()
+        require("mjm.error-list-stack")._l_newer(cur_win, vim.v.count)
+    end, { buffer = true, desc = "Goto newer loclist history" })
+else
+    vim.keymap.set("n", "<", function()
+        require("mjm.error-list-stack")._q_older(vim.v.count)
+    end, { buffer = true, desc = "Goto older qflist history" })
+
+    vim.keymap.set("n", ">", function()
+        require("mjm.error-list-stack")._q_newer(vim.v.count)
+    end, { buffer = true, desc = "Goto newer qflist history" })
+end
 
 -------------
 --- Types ---
@@ -1359,3 +1297,23 @@ end, { buffer = true })
 ------------
 
 --- These cmds need to create jumplist entries. How does FzfLua do it?
+--- Create plug mappings
+--- These bufmappings should use nowait
+---
+--- Add undo_ftplugin b variable fn
+
+------------------
+--- REFERENCES ---
+------------------
+
+-- qf_view_result
+-- ex_cc
+-- qf_jump
+-- qf_jump_newwin
+-- qf_jump_open_window
+-- jump_to_help_window
+-- qf_jump_to_usable_window
+-- qf_find_win_with_loclist
+-- qf_open_new_file_win
+-- qf_goto_win_with_ll_file
+-- qf_goto_win_with_qfl_file
