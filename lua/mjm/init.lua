@@ -184,3 +184,9 @@ vim.api.nvim_create_autocmd("UIEnter", {
         })
     end,
 })
+
+------------
+--- TODO ---
+------------
+
+--- Bisecting has become impractical due to how config elements are spread out

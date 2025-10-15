@@ -282,10 +282,6 @@ return M
 --- TODO ---
 ------------
 
---- Make qe/qE/q<C-e> del/del+close/del_all. Add an option for whether or not close should be
---- the preferred option (so qe would close, qE would keep open). This pattern would probably
---- apply to other things as well, like empty diag lists
-
 --- Testing
 --- Docs
 

@@ -69,6 +69,7 @@ Map("n", "<leader>fi", fzf_lua.files)
 Map("n", "<leader>fgc", fzf_lua.git_commits)
 Map("n", "<leader>fgf", fzf_lua.git_files)
 Map("n", "<leader>fgh", fzf_lua.git_hunks)
+-- MID: Why does this not jump? Turning off " jumps doesn't change this
 Map("n", "<leader>fgs", fzf_lua.git_status)
 
 Map("n", "<leader>fp", fzf_lua.grep)

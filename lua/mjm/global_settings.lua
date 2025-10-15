@@ -214,7 +214,8 @@ autoset_winopt({ "WinEnter", "CmdlineLeave", "BufEnter" }, "rnu", true)
 -- Autocmd Controls --
 ----------------------
 
---- BufReadPre does not work reliably with FzfLua or my Harpoon open script
+-- BufReadPre does not work reliably with FzfLua or my Harpoon open script
+-- MID: It is probably worth understanding the load process for both of them
 Autocmd("BufReadPost", {
     group = set_group,
     desc = "Go to the last cursor position when opening a buffer",

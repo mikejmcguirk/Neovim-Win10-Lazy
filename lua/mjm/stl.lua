@@ -189,6 +189,8 @@ function MjmStl.active()
     return table.concat(stl, "")
 end
 
+-- TODO: How to do qf statusline that shows stack nr
+
 function MjmStl.inactive()
     local winnr = vim.fn.winnr()
     return "%#stl_b# %m %t %*%= %#stl_b# [" .. winnr .. "] %p%% %*"

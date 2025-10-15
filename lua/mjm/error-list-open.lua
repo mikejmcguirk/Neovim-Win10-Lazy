@@ -126,6 +126,10 @@ end
 --- OPEN ---
 ------------
 
+-- TODO: If the list is already open, the cmd should jump to the list win
+-- Creates problem because you might want to jump without resizing
+-- Also creates problem for toggling
+
 --- @param list_win integer
 --- @param opts QfRancherOpenOpts
 --- @return boolean
