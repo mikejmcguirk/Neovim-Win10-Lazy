@@ -279,15 +279,20 @@ function M._pwin_close(win, force)
     end
 end
 
--- LOW: Validate cur_pos
-
 --- @param win integer
 --- @param cur_pos {[1]: integer, [2]: integer}
 --- @return nil
 function M._protected_set_cursor(win, cur_pos)
-    require("mjm.error-list-types")._validate_win(win)
+    local ey = require("mjm.error-list-types")
+    ey._validate_uint(win)
 
-    local adj_cur_pos = cur_pos --- @type {[1]: integer, [2]: integer}
+    if not vim.api.nvim_win_is_valid(win) then
+        return
+    end
+
+    ey._validate_cur_pos(cur_pos)
+
+    local adj_cur_pos = vim.deepcopy(cur_pos, true) --- @type {[1]: integer, [2]: integer}
     local win_buf = vim.api.nvim_win_get_buf(win) --- @type integer
 
     local line_count = vim.api.nvim_buf_line_count(win_buf) --- @type integer
@@ -377,13 +382,11 @@ function M._vcol_to_byte_bounds(vcol, line)
     return false, 0, 0
 end
 
--- TODO: Test
-
 --- @param vcol integer
 --- @param line string
 --- @return integer
-function M._vcol_to_end__col(vcol, line)
-    require("mjm.error-list-types")._validate_uint(vcol)
+function M._vcol_to_end_col_(vcol, line)
+    require("mjm.error-list-types")._validate_uint(vcol) --- @type QfRancherTypes
     vim.validate("line", line, "string")
 
     local ok, _, fin_byte = M._vcol_to_byte_bounds(vcol, line) --- @type boolean, integer
@@ -391,6 +394,39 @@ function M._vcol_to_end__col(vcol, line)
         return math.min(fin_byte + 1, #line)
     else
         return #line
+    end
+end
+
+-- TODO: Use this for all g_var calls
+-- TODO: I am not sure where to define whether or not certain vars allow nils. On one hand,
+-- centralization makes sense because it makes documentation easier. On the other, it makes
+-- type annotations more difficult as well. Right now winborder is the use case
+
+--- @param g_var string
+--- @param allow_nil? boolean
+--- @return any
+function M._get_g_var(g_var, allow_nil)
+    vim.validate("g_var", g_var, "string")
+    vim.validate("allow_nil", allow_nil, "boolean", true)
+
+    local g_var_data = _QFR_G_VAR_MAP[g_var] --- @type {[1]:string[], [2]:any}
+
+    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
+    ey._validate_list(g_var_data, { len = 2 })
+    ey._validate_list(g_var_data[1], { type = "string" })
+    vim.validate("g_var_default", g_var_data[2], function()
+        return type(g_var_data[2]) ~= "nil"
+    end, "G var defaults canot be nil")
+
+    local cur_g_val = vim.g[g_var] --- @type any
+    if allow_nil and type(cur_g_val) == "nil" then
+        return nil
+    end
+
+    if vim.tbl_contains(g_var_data[1], type(cur_g_val)) then
+        return cur_g_val
+    else
+        return g_var_data[2]
     end
 end
 

@@ -1,3 +1,7 @@
+-------------------------
+--- GLOBAL UTILS/VARS ---
+-------------------------
+
 --- https://github.com/tjdevries/lazy-require.nvim/blob/master/lua/lazy-require.lua
 --- @param require_path string
 --- @return table
@@ -17,15 +21,6 @@ end
 -- This value is for aesthetic/sanity purposes
 _G.QFR_MAX_HEIGHT = 10
 
--- Autocmd("BufEnter", {
---     group = Augroup("rancher-test", { clear = true }),
---     callback = function(ev)
---         -- vim.fn.confirm(vim.inspect(ev))
---         local ft = vim.bo[ev.buf].buftype
---         vim.fn.confirm(ft)
---     end,
--- })
-
 -----------------------
 -- Config/Validation --
 -----------------------
@@ -42,32 +37,35 @@ vim.api.nvim_set_var("qf_rancher_preview_show_title", false)
 
 --- TODO: Make sure the options actually do what they're supposed to
 --- DOCUMENT: What these vars do
-local g_vars = {
-    { "qf_rancher_auto_open_changes", { "boolean" }, false },
+_G._QFR_G_VAR_MAP = {
+    qf_rancher_auto_open_changes = { { "boolean" }, false },
     -- DOCUMENT:
     -- - If splitkeep is set to screen or topline, that will take precedence
     -- - If splitkeep is set for cursor, and this option is true, rancher will save and restore
     --      views where necessary
     -- - If this is off and splitkeep is set for cursor, you get Nvim default behavior
-    { "qf_rancher_always_save_views", { "boolean" }, true },
-    { "qf_rancher_debug_assertions", { "boolean" }, false },
-    { "qf_rancher_del_all_if_empty", { "boolean" }, true },
-    { "qf_rancher_grepprg", { "string" }, "rg" },
+    qf_rancher_always_save_views = { { "boolean" }, true },
+    qf_rancher_debug_assertions = { { "boolean" }, false },
+    qf_rancher_del_all_if_empty = { { "boolean" }, true },
+    qf_rancher_grepprg = { { "string" }, "rg" },
     --- TODO: Needs to accept table
-    { "qf_rancher_preview_border", { "string", "table" }, "single" },
-    { "qf_rancher_preview_debounce", { "number" }, 100 },
-    { "qf_rancher_preview_show_title", { "boolean" }, true },
-    { "qf_rancher_preview_title_pos", { "string" }, "left" },
-    { "qf_rancher_preview_winblend", { "number" }, 0 },
-    { "qf_rancher_qfsplit", { "string" }, "botright" },
-    { "qf_rancher_set_default_maps", { "boolean" }, true },
-    { "qf_rancher_set_default_cmds", { "boolean" }, true },
-    { "qf_rancher_use_smartcase", { "boolean" }, true },
-} --- @type {[1]:string, [2]:string[], [3]:any}
+    qf_rancher_preview_border = { { "string", "table" }, "single" },
+    -- DOCUMENT: Default is 100 to accomodate slower systems/HDs. 50 should be fine if you have an
+    -- SSD/reasonably fast computer. Below that more risk of things getting choppy
+    qf_rancher_preview_debounce = { { "number" }, 100 },
+    qf_rancher_preview_show_title = { { "boolean" }, true },
+    qf_rancher_preview_title_pos = { { "string" }, "left" },
+    qf_rancher_preview_winblend = { { "number" }, 0 },
+    qf_rancher_qfsplit = { { "string" }, "botright" },
+    qf_rancher_set_default_maps = { { "boolean" }, true },
+    qf_rancher_set_default_cmds = { { "boolean" }, true },
+    qf_rancher_use_smartcase = { { "boolean" }, true },
+} --- @type table<string, {[1]:string[], [2]: any}>
 
-for _, var in ipairs(g_vars) do
-    if not vim.tbl_contains(var[2], type(vim.g[var[1]])) then
-        vim.api.nvim_set_var(var[1], var[3])
+for k, v in pairs(_QFR_G_VAR_MAP) do
+    local cur_g_val = vim.g[k] --- @type any
+    if not vim.tbl_contains(v[1], type(cur_g_val)) then
+        vim.api.nvim_set_var(k, v[2])
     end
 end
 

@@ -73,17 +73,31 @@ end
 --- PRIMITIVES ---
 ------------------
 
---- @param num integer|nil
+--- @param n integer|nil
 --- @param optional? boolean
 --- @return nil
-function M._validate_uint(num, optional)
-    vim.validate("num", num, "number", optional)
-    vim.validate("num", num, function()
-        return num % 1 == 0
+function M._validate_uint(n, optional)
+    vim.validate("num", n, "number", optional)
+    vim.validate("num", n, function()
+        return n % 1 == 0
     end, optional, "Num is not an integer")
-    vim.validate("num", num, function()
-        return num >= 0
+    vim.validate("num", n, function()
+        return n >= 0
     end, optional, "Num is less than zero")
+end
+
+--- @param n integer
+--- @return boolean
+function M._is_uint(n)
+    if type(n) ~= "number" then
+        return false
+    end
+
+    if n < 0 then
+        return false
+    end
+
+    return n % 1 == 0
 end
 
 --- @param num integer|nil
@@ -123,11 +137,11 @@ end
 --- @param optional? boolean
 --- @return nil
 function M._validate_win(win, optional)
-    M._validate_uint(win, optional)
     if optional and type(win) == "nil" then
         return
     end
 
+    M._validate_uint(win)
     if type(win) == "number" then
         vim.validate("win", win, function()
             return vim.api.nvim_win_is_valid(win)
@@ -153,6 +167,65 @@ function M._validate_buf(buf, optional)
     else
         error("buf is not a number or nil")
     end
+end
+
+--- @class QfRancherValidateListOpts
+--- @field len? integer
+--- @field optional? boolean
+--- @field type? string
+
+--- @param opts QfRancherValidateListOpts
+--- @return nil
+local function validate_validate_list_opts(opts)
+    vim.validate("opts", opts, "table")
+    M._validate_uint(opts.len, true)
+    vim.validate("opts.optional", opts.optional, "boolean", true)
+    vim.validate("opts.type", opts.type, "string", true)
+end
+
+-- TODO: Replace is_str_list with this
+
+--- @param list table
+--- @param opts? QfRancherValidateListOpts
+function M._validate_list(list, opts)
+    opts = opts or {}
+    validate_validate_list_opts(opts)
+    if (not list) and opts.optional then
+        return
+    end
+
+    vim.validate("list", list, vim.islist, "Must be a valid list")
+
+    if opts.type then
+        vim.validate("list", list, function()
+            for _, value in ipairs(list) do
+                if type(value) ~= opts.type then
+                    return false
+                end
+
+                return true
+            end
+        end, "List values must be type " .. opts.type)
+    end
+
+    if opts.len then
+        vim.validate("list", list, function()
+            return #list == opts.len
+        end, "List length must be " .. opts.len)
+    end
+end
+
+--- @param cur_pos {[1]: integer, [2]: integer}
+--- @return nil
+function M._validate_cur_pos(cur_pos)
+    M._validate_list(cur_pos, { len = 2, type = "number" })
+
+    M._validate_uint(cur_pos[1])
+    vim.validate("row", cur_pos[1], function()
+        return cur_pos[1] >= 1
+    end, "Cursor row must be >= 1")
+
+    M._validate_uint(cur_pos[2])
 end
 
 --- @param list_win integer
@@ -244,10 +317,10 @@ M._severity_unmap = {
 -- :h 'winborder'
 -- PR: This feels like something you could put into vim.validate. Or at least a type annotation
 
---- @alias QfRancherBorder ""|"bold"|"double"|"none"|"rounded"|"shadow"|"single"|"solid"|string[]
+--- @alias QfRancherBorder "double"|"none"|"rounded"|"shadow"|"single"|"solid"|string[]
 
 --- @type string[]
-local valid_borders = { "", "bold", "double", "none", "rounded", "shadow", "single", "solid" }
+local valid_borders = { "double", "none", "rounded", "shadow", "single", "solid" }
 
 --- @param border QfRancherBorder
 function M._validate_border(border)
@@ -257,23 +330,11 @@ function M._validate_border(border)
             return vim.tbl_contains(valid_borders, border)
         end)
     elseif type(border) == "table" then
-        M._validate_str_list(border)
-        vim.validate("border", border, function()
-            return #border == 8
-        end)
+        M._validate_list(border, { len = 8, type = "string" })
     end
 end
 
 --- @alias QfRancherTitlePos "left"|"center"|"right"
-
---- @param title_pos string
---- @return nil
-function M._validate_title_pos(title_pos)
-    vim.validate("title_pos", title_pos, "string")
-    vim.validate("title_pos", title_pos, function()
-        return title_pos == "left" or title_pos == "center" or title_pos == "right"
-    end)
-end
 
 --- @param winblend integer
 --- @return nil

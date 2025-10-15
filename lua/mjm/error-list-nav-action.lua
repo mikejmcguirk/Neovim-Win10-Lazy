@@ -370,5 +370,7 @@ return M
 --- TODO ---
 ------------
 
+--- qrewind enter errors if there are no items. I assume this is true for last and loclist
+
 --- Testing
 --- Docs

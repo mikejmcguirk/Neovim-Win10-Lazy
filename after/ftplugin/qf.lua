@@ -130,6 +130,8 @@ Map("x", "d", function()
     require("mjm.utils").protected_set_cursor({ row, col }, { set_pcmark = true, win = win })
 end, { buffer = true })
 
+-- TODO: Make plug mappings
+
 vim.api.nvim_buf_set_keymap(0, "n", "p", "", {
     noremap = true,
     callback = function()
