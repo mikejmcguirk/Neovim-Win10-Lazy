@@ -250,6 +250,11 @@ function M._set_stack(src_win, stack)
         local what = vim.deepcopy(list) --- @type table
         M._set_list(src_win, what)
     end
+
+    if eu._get_g_var("qf_rancher_debug_assertions") then
+        local max_nr = vim.fn.getloclist(src_win, { nr = "$" }).nr
+        assert(#stack == max_nr)
+    end
 end
 
 --- @param what_return table

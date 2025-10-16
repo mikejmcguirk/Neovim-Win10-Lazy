@@ -506,6 +506,30 @@ function M._validate_open_opts(open_opts)
     vim.validate("open_opts.print_errs", open_opts.print_errs, "boolean", true)
 end
 
+--- @alias QfRancherOpenMethod "split"|"tabnew"|"vsplit"
+local valid_opens = { "split", "tabnew", "vsplit" }
+
+--- @alias QfRancherFinishMethod "closeList"|"focusList"|"focusWin"
+local valid_finishes = { "closeList", "focusList", "focusWin" }
+
+--- @param open QfRancherOpenMethod
+--- @return nil
+function M._validate_open_method(open)
+    vim.validate("open", open, "string")
+    vim.validate("open", open, function()
+        return vim.tbl_contains(valid_opens, open)
+    end, "Open method of " .. open .. " is invalid")
+end
+
+--- @param finish QfRancherFinishMethod
+--- @return nil
+function M._validate_finish_method(finish)
+    vim.validate("finish", finish, "string")
+    vim.validate("finish", finish, function()
+        return vim.tbl_contains(valid_finishes, finish)
+    end, "Finish method of " .. finish .. " is invalid")
+end
+
 ------------------
 --- SORT TYPES ---
 ------------------
