@@ -134,18 +134,14 @@ end
 
 --- @return nil
 local function checked_session_clear()
-    if has_no_list_wins() then
-        clear_session_data()
-    end
+    if has_no_list_wins() then clear_session_data() end
 end
 
 local checked_clear_idle_handle = nil --- @type uv.uv_idle_t|nil
 
 --- @return nil
 local function checked_clear_when_idle()
-    if checked_clear_idle_handle then
-        return
-    end
+    if checked_clear_idle_handle then return end
 
     checked_clear_idle_handle = vim.uv.new_idle()
     if not checked_clear_idle_handle then
@@ -169,9 +165,7 @@ end
 
 --- @return nil
 local function create_autocmds()
-    if #vim.api.nvim_get_autocmds({ group = group }) > 0 then
-        return
-    end
+    if #vim.api.nvim_get_autocmds({ group = group }) > 0 then return end
 
     assert(preview_state:is_open())
 
@@ -240,9 +234,7 @@ local function get_title_cfg(item_buf)
     -- Do not assert that item_buf is valid since a buf can be wiped after the list is created
     ey._validate_uint(item_buf, true)
 
-    if not eu._get_g_var("qf_rancher_preview_show_title") then
-        return { title = nil }
-    end
+    if not eu._get_g_var("qf_rancher_preview_show_title") then return { title = nil } end
 
     if not (item_buf and vim.api.nvim_buf_is_valid(item_buf)) then
         return { title = "No buffer" }
@@ -258,9 +250,7 @@ end
 local function get_winborder()
     --- @type QfRancherBorder|nil
     local border = eu._get_g_var("qf_rancher_preview_border", true)
-    if border then
-        return border
-    end
+    if border then return border end
 
     local winborder = vim.fn.has("nvim-0.11")
             and vim.api.nvim_get_option_value("winborder", { global = true })
@@ -510,9 +500,7 @@ local function range_qf_to_zero_(preview_buf, item)
     --- @type string
     local start_line = vim.api.nvim_buf_get_lines(preview_buf, row, row + 1, false)[1]
     local col = (function()
-        if item.col <= 0 then
-            return 0
-        end
+        if item.col <= 0 then return 0 end
 
         if item.vcol == 1 then
             --- @type boolean, integer, integer
@@ -530,18 +518,12 @@ local function range_qf_to_zero_(preview_buf, item)
     local fin_line = fin_row == row and start_line
         or vim.api.nvim_buf_get_lines(preview_buf, fin_row, fin_row + 1, false)[1]
     local fin_col_ = (function()
-        if item.end_col <= 0 then
-            return #fin_line
-        end
+        if item.end_col <= 0 then return #fin_line end
 
-        if item.vcol == 1 then
-            return eu._vcol_to_end_col_(item.col, fin_line)
-        end
+        if item.vcol == 1 then return eu._vcol_to_end_col_(item.col, fin_line) end
 
         local end_idx_ = math.min(item.end_col - 1, #fin_line) --- @type integer
-        if fin_row == row and end_idx_ == col then
-            end_idx_ = end_idx_ + 1
-        end
+        if fin_row == row and end_idx_ == col then end_idx_ = end_idx_ + 1 end
 
         return end_idx_
     end)() --- @type integer
@@ -606,18 +588,14 @@ local function get_lines(item_buf)
     -- Do not assert that item_buf is valid since a buf can be wiped after the list is created
     ey._validate_uint(item_buf)
 
-    if not vim.api.nvim_buf_is_valid(item_buf) then
-        return { item_buf .. " is not valid" }
-    end
+    if not vim.api.nvim_buf_is_valid(item_buf) then return { item_buf .. " is not valid" } end
 
     if vim.api.nvim_buf_is_loaded(item_buf) then
         return vim.api.nvim_buf_get_lines(item_buf, 0, -1, false)
     end
 
     local full_path = vim.api.nvim_buf_get_name(item_buf) --- @type string
-    if vim.uv.fs_access(full_path, 4) then
-        return vim.fn.readfile(full_path, "")
-    end
+    if vim.uv.fs_access(full_path, 4) then return vim.fn.readfile(full_path, "") end
 
     return { "Unable to read lines for bufnr " .. item_buf }
 end
@@ -657,9 +635,7 @@ local function create_preview_buf_from_lines(item_buf, lines)
     vim.api.nvim_buf_set_lines(preview_buf, 0, 0, false, lines)
     set_preview_buf_opts(preview_buf)
 
-    if not vim.api.nvim_buf_is_valid(item_buf) then
-        return preview_buf
-    end
+    if not vim.api.nvim_buf_is_valid(item_buf) then return preview_buf end
 
     local src_changedtick = vim.api.nvim_buf_get_changedtick(item_buf) --- @type integer
     vim.api.nvim_buf_set_var(preview_buf, "src_changedtick", src_changedtick)
@@ -691,9 +667,7 @@ end
 local function get_preview_buf(item)
     ey._validate_list_item(item)
 
-    if not item.bufnr then
-        return create_fallback_buf()
-    end
+    if not item.bufnr then return create_fallback_buf() end
 
     if not bufs[item.bufnr] then
         local lines = get_lines(item.bufnr) --- @type string[]
@@ -740,9 +714,7 @@ end
 
 local function start_timer()
     timer = timer or vim.uv.new_timer()
-    if timer then
-        timer:start(eu._get_g_var("qf_rancher_preview_debounce"), 0, at_timer_end)
-    end
+    if timer then timer:start(eu._get_g_var("qf_rancher_preview_debounce"), 0, at_timer_end) end
 end
 
 -- TODO: I think you can put this into utils and then also use it in the ftplugin file. But
@@ -759,35 +731,10 @@ local function get_list_item(list_win)
 
     --- @type vim.quickfix.entry[]
     local items = et._get_list_items(src_win, 0)
-    if #items < 1 then
-        return nil
-    end
+    if #items < 1 then return nil end
 
     local line = vim.fn.line(".") --- @type integer
     return items[line]
-end
-
---- @param item_lnum integer
---- @param item_col integer
---- @return {[1]:integer, [2]:integer}
-local function qf_pos_to_cur_pos(item_lnum, item_col)
-    local row = math.max(item_lnum, 1) --- @type integer
-    local col = item_col - 1 --- @type integer
-    col = math.max(col, 0)
-
-    return { row, col }
-end
-
---- @return nil
-local function adjust_preview_win_scroll()
-    if not preview_state:is_open() then
-        return
-    end
-
-    vim.api.nvim_win_call(preview_state.preview_win, function()
-        vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
-        vim.api.nvim_cmd({ cmd = "normal", args = { "ze" }, bang = true }, {})
-    end)
 end
 
 --- @return nil
@@ -797,54 +744,42 @@ function M._update_preview_win_buf()
         return
     end
 
-    if not preview_state:is_open() then
-        return
-    end
+    if not preview_state:is_open() then return end
 
-    if not preview_state:is_cur_list_win(vim.api.nvim_get_current_win()) then
-        return
-    end
+    if not preview_state:is_cur_list_win(vim.api.nvim_get_current_win()) then return end
 
     local item = get_list_item(preview_state.list_win) --- @type vim.quickfix.entry|nil
-    if not item then
-        return
-    end
+    if not item then return end
 
     local preview_buf = get_preview_buf(item) --- @type integer
     vim.api.nvim_win_set_buf(preview_state.preview_win, preview_buf)
     vim.api.nvim_win_set_config(preview_state.preview_win, get_title_cfg(item.bufnr))
 
-    eu._protected_set_cursor(preview_state.preview_win, qf_pos_to_cur_pos(item.lnum, item.col))
-    adjust_preview_win_scroll()
+    eu._protected_set_cursor(preview_state.preview_win, eu._qf_pos_to_cur_pos(item.lnum, item.col))
+    eu._do_zzze(preview_state.preview_win)
 
     start_timer()
 end
 
 --- @return nil
 function M.update_preview_win_pos()
-    if not preview_state:is_open() then
-        return
-    end
+    if not preview_state:is_open() then return end
 
     local win_cfg = get_win_cfg(preview_state.list_win) --- @type vim.api.keyset.win_config
     vim.api.nvim_win_set_config(preview_state.preview_win, win_cfg)
 
-    adjust_preview_win_scroll()
+    eu._do_zzze(preview_state.preview_win)
 end
 
 --- @param list_win integer
 --- @return nil
 function M.open_preview_win(list_win)
-    if preview_state:is_open() then
-        return
-    end
+    if preview_state:is_open() then return end
 
     ey._validate_list_win(list_win)
 
     local item = get_list_item(list_win) --- @type vim.quickfix.entry|nil
-    if not item then
-        return
-    end
+    if not item then return end
 
     -- Do this first in anticipation of future async file read
     local preview_buf = get_preview_buf(item) --- @type integer
@@ -852,8 +787,8 @@ function M.open_preview_win(list_win)
     local preview_win = create_preview_win(win_cfg, preview_buf)
     preview_state:set(list_win, preview_win)
 
-    eu._protected_set_cursor(preview_state.preview_win, qf_pos_to_cur_pos(item.lnum, item.col))
-    adjust_preview_win_scroll()
+    eu._protected_set_cursor(preview_state.preview_win, eu._qf_pos_to_cur_pos(item.lnum, item.col))
+    eu._do_zzze(preview_state.preview_win)
     create_autocmds()
 
     start_timer()
@@ -871,9 +806,7 @@ function M.toggle_preview_win(list_win)
 
     local was_open = preview_state:is_open() --- @type boolean
     local start_list_win = preview_state.list_win --- @type integer|nil
-    if was_open then
-        M.close_preview_win()
-    end
+    if was_open then M.close_preview_win() end
 
     if was_open and list_win == start_list_win then
         return

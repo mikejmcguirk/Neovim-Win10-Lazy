@@ -12,9 +12,7 @@ local M = {}
 local function get_top_severity(diags)
     local severity = vim.diagnostic.severity.HINT --- @type vim.diagnostic.Severity
     for _, diag in pairs(diags) do
-        if diag.severity < severity then
-            severity = diag.severity
-        end
+        if diag.severity < severity then severity = diag.severity end
     end
 
     return severity
@@ -58,9 +56,7 @@ end
 --- @return vim.diagnostic.GetOpts
 local function get_getopts(diag_info, diag_opts)
     local level = diag_info.level or vim.diagnostic.severity.HINT --- @type vim.diagnostic.Severity
-    if diag_opts.sev_type == "only" then
-        return { severity = level }
-    end
+    if diag_opts.sev_type == "only" then return { severity = level } end
 
     --- @type boolean
     local min_hint = diag_opts.sev_type == "min" and level == vim.diagnostic.severity.HINT
@@ -96,9 +92,11 @@ end
 local function diags_to_list(diag_info, diag_opts, what)
     validate_diags_to_list(diag_info, diag_opts, what)
 
+    -- TODO: Do we want to be passing src_win in user data like this? It's ended up being a piece
+    -- of context that needs to be passed explicitly
     local src_win = what.user_data.src_win
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if what.user_data.src_win and not eu._win_can_have_loclist(what.user_data.src_win) then
+    if src_win and not eu._win_can_have_loclist(what.user_data.src_win) then
         local msg = "Win " .. src_win .. " cannot have a location list"
         vim.api.nvim_echo({ { msg, "" } }, false, {})
         return
@@ -116,9 +114,7 @@ local function diags_to_list(diag_info, diag_opts, what)
         return
     end
 
-    if diag_opts.sev_type == "top" then
-        raw_diags = filter_diags_top_severity(raw_diags)
-    end
+    if diag_opts.sev_type == "top" then raw_diags = filter_diags_top_severity(raw_diags) end
 
     local converted_diags = vim.tbl_map(convert_diag, raw_diags) ---@type vim.quickfix.entry[]
     table.sort(converted_diags, require("mjm.error-list-sort")._sort_fname_diag_asc)
@@ -130,7 +126,7 @@ local function diags_to_list(diag_info, diag_opts, what)
         user_data = { sort_func = require("mjm.error-list-sort")._sort_fname_diag_asc },
     }) --- @type QfRancherWhat
 
-    local dest_nr = et._set_list(what_set) --- @type integer
+    local dest_nr = et._set_list(src_win, what_set) --- @type integer
     if eu._get_g_var("qf_rancher_auto_open_changes") and dest_nr > 0 then
         require("mjm.error-list-stack")._history(src_win, dest_nr, {
             always_open = true,

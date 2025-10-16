@@ -62,9 +62,9 @@ local function sort_wrapper(sort_info, sort_opts, what)
         user_data = { sort_func = predicate },
     }) --- @type QfRancherWhat
 
-    local dest_nr = et._set_list(what_set) --- @type integer
+    local dest_nr = et._set_list(src_win, what_set) --- @type integer
     if eu._get_g_var("qf_rancher_auto_open_changes") then
-        require("mjm.error-list-stack")._history(what_set.user_data.src_win, dest_nr, {
+        require("mjm.error-list-stack")._history(src_win, dest_nr, {
             always_open = true,
             default = "current",
             silent = true,
@@ -93,9 +93,7 @@ end
 --- @param check QfRancherCheckFunc
 --- @return boolean|nil
 local function a_b_check(a, b, check)
-    if not (a and b) then
-        return nil
-    end
+    if not (a and b) then return nil end
 
     if a == b then
         return nil
@@ -108,9 +106,7 @@ end
 --- @param b table
 --- @return string|nil, string|nil
 local function get_fnames(a, b)
-    if not (a.bufnr and b.bufnr) then
-        return nil, nil
-    end
+    if not (a.bufnr and b.bufnr) then return nil, nil end
 
     local fname_a = vim.fn.bufname(a.bufnr) --- @type string|nil
     local fname_b = vim.fn.bufname(b.bufnr) --- @type string|nil
@@ -132,19 +128,13 @@ end
 --- @return boolean|nil
 local function check_lcol(a, b, check)
     local checked_lnum = a_b_check(a.lnum, b.lnum, check) --- @type boolean|nil
-    if type(checked_lnum) == "boolean" then
-        return checked_lnum
-    end
+    if type(checked_lnum) == "boolean" then return checked_lnum end
 
     local checked_col = a_b_check(a.col, b.col, check) --- @type boolean|nil
-    if type(checked_col) == "boolean" then
-        return checked_col
-    end
+    if type(checked_col) == "boolean" then return checked_col end
 
     local checked_end_lnum = a_b_check(a.end_lnum, b.end_lnum, check) --- @type boolean|nil
-    if type(checked_end_lnum) == "boolean" then
-        return checked_end_lnum
-    end
+    if type(checked_end_lnum) == "boolean" then return checked_end_lnum end
 
     return a_b_check(a.end_col, b.end_col, check) -- Return the nil here if we get it
 end
@@ -154,9 +144,7 @@ end
 --- @return boolean|nil
 local function check_fname_lcol(a, b, check)
     local checked_fname = check_fname(a, b, check) --- @type boolean|nil
-    if type(checked_fname) == "boolean" then
-        return checked_fname
-    end
+    if type(checked_fname) == "boolean" then return checked_fname end
 
     return check_lcol(a, b, check) -- Allow the nil to pass through
 end
@@ -167,9 +155,7 @@ end
 --- @return boolean|nil
 local function check_lcol_type(a, b, check)
     local checked_lcol = check_lcol(a, b, check) --- @type boolean|nil
-    if type(checked_lcol) == "boolean" then
-        return checked_lcol
-    end
+    if type(checked_lcol) == "boolean" then return checked_lcol end
 
     return a_b_check(a.type, b.type, check)
 end
@@ -181,9 +167,7 @@ local severity_unmap = require("mjm.error-list-types")._severity_unmap
 --- @param b table
 --- @return integer|nil, integer|nil
 local function get_severities(a, b)
-    if not (a.type and b.type) then
-        return nil, nil
-    end
+    if not (a.type and b.type) then return nil, nil end
 
     local severity_a = severity_unmap[a.type] or nil --- @type integer|nil
     local severity_b = severity_unmap[b.type] or nil --- @type integer|nil
@@ -203,9 +187,7 @@ end
 --- @return boolean|nil
 local function check_lcol_severity(a, b, check)
     local checked_lcol = check_lcol(a, b, check) --- @type boolean|nil
-    if type(checked_lcol) == "boolean" then
-        return checked_lcol
-    end
+    if type(checked_lcol) == "boolean" then return checked_lcol end
 
     return check_severity(a, b, check) -- Allow the nil to pass through
 end
@@ -219,14 +201,10 @@ end
 --- @param check QfRancherCheckFunc
 --- @return boolean
 local function sort_fname(a, b, check)
-    if not (a and b) then
-        return false
-    end
+    if not (a and b) then return false end
 
     local checked_fname = check_fname(a, b, check) --- @type boolean|nil
-    if type(checked_fname) == "boolean" then
-        return checked_fname
-    end
+    if type(checked_fname) == "boolean" then return checked_fname end
 
     local checked_lcol_type = check_lcol_type(a, b, check_asc) --- @type boolean|nil
     if type(checked_lcol_type) == "boolean" then
@@ -251,14 +229,10 @@ end
 --- @param check QfRancherCheckFunc
 --- @return boolean
 local function sort_type(a, b, check)
-    if not (a and b) then
-        return false
-    end
+    if not (a and b) then return false end
 
     local checked_type = a_b_check(a.type, b.type, check) --- @type boolean|nil
-    if type(checked_type) == "boolean" then
-        return checked_type
-    end
+    if type(checked_type) == "boolean" then return checked_type end
 
     local checked_fname_lcol = check_fname_lcol(a, b, check_asc) --- @type boolean|nil
     if type(checked_fname_lcol) == "boolean" then
@@ -283,14 +257,10 @@ end
 --- @param check QfRancherCheckFunc
 --- @return boolean
 local function sort_severity(a, b, check)
-    if not (a and b) then
-        return false
-    end
+    if not (a and b) then return false end
 
     local checked_severity = check_severity(a, b, check) --- @type boolean|nil
-    if type(checked_severity) == "boolean" then
-        return checked_severity
-    end
+    if type(checked_severity) == "boolean" then return checked_severity end
 
     local checked_fname_lcol = check_fname_lcol(a, b, check_asc) --- @type boolean|nil
     checked_fname_lcol = checked_fname_lcol == nil and false or checked_fname_lcol
@@ -316,14 +286,10 @@ end
 --- @param check QfRancherCheckFunc
 --- @return boolean
 local function sort_diag_fname(a, b, check)
-    if not (a and b) then
-        return false
-    end
+    if not (a and b) then return false end
 
     local checked_fname = check_fname(a, b, check) --- @type boolean|nil
-    if type(checked_fname) == "boolean" then
-        return checked_fname
-    end
+    if type(checked_fname) == "boolean" then return checked_fname end
 
     local checked_lcol_severity = check_lcol_severity(a, b, check_asc) --- @type boolean|nil
     if type(checked_lcol_severity) == "boolean" then

@@ -48,9 +48,7 @@ local function change_history(src_win, count, arithmetic)
         assert(new_list_nr == list_nr_after)
     end
 
-    if cur_list_nr ~= new_list_nr then
-        resize_after_stack_change(src_win)
-    end
+    if cur_list_nr ~= new_list_nr then resize_after_stack_change(src_win) end
 end
 
 --- @param count integer
@@ -148,9 +146,7 @@ function M._history(src_win, count, opts)
         end
     end
 
-    if cur_list_nr ~= adj_count then
-        resize_after_stack_change(src_win)
-    end
+    if cur_list_nr ~= adj_count then resize_after_stack_change(src_win) end
 
     if opts.always_open then
         require("mjm.error-list-open")._open_list(src_win, { keep_win = opts.keep_win })
@@ -200,9 +196,7 @@ function M._del(src_win, count)
 
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
     local result = et._del_list(src_win, count)
-    if result == -1 or result == 0 then
-        return
-    end
+    if result == -1 or result == 0 then return end
 
     local cur_list_nr = et._get_cur_list_nr(src_win)
     if require("mjm.error-list-util")._get_g_var("qf_rancher_debug_assertions") then
@@ -210,9 +204,7 @@ function M._del(src_win, count)
         assert(result == target)
     end
 
-    if result == cur_list_nr then
-        resize_after_stack_change(src_win)
-    end
+    if result == cur_list_nr then resize_after_stack_change(src_win) end
 end
 
 --- @param count integer
@@ -237,13 +229,13 @@ end
 
 --- @return nil
 function M._q_del_all()
-    require("mjm.error-list-tools")._del_all()
+    require("mjm.error-list-tools")._del_all(nil, true)
 end
 
 --- @param win integer
 --- @return nil
 function M._l_del_all(win)
-    require("mjm.error-list-tools")._del_all(win)
+    require("mjm.error-list-tools")._del_all(win, true)
 end
 
 -- --- @param win integer

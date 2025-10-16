@@ -360,6 +360,10 @@ return M
 --- Grep specific file. Can either be a built-in or shown as a recipe
 --- Partly a grep, partly a filter, but grep based on treesitter node name. e.g. I should be
 ---     able to grep all parameters
+--- Mid: Each grepprg should be a module, and there should be a defined set of functions
+---     that each grepprg should have. Essentially, defining an interface and then having
+---     modules that fulfill it. I don't know if you use a literal interface module, but that's
+---     the conceptual idea
 
 -------------
 --- # LOW ---

@@ -44,8 +44,7 @@ local function handle_output(obj, what)
     --- @type QfRancherWhat
     local what_set = vim.tbl_deep_extend("force", what, { items = qf_dict.items })
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
-    local dest_nr = et._set_list(what_set) --- @type integer
-
+    local dest_nr = et._set_list(src_win, what_set) --- @type integer
     if eu._get_g_var("qf_rancher_auto_open_changes") then
         require("mjm.error-list-stack")._history(src_win, dest_nr, {
             always_open = true,

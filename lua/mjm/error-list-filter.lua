@@ -84,9 +84,7 @@ function M._filter_wrapper(filter_info, filter_opts, input_opts, what)
     local prompt = get_prompt(filter_info.name, filter_opts.keep, input_type) --- @type string
     --- @type string|nil
     local pattern = eu._resolve_pattern(prompt, input_opts.pattern, input_type)
-    if not pattern then
-        return
-    end
+    if not pattern then return end
 
     local regex = input_type == "regex" and vim.regex(pattern) or nil --- @type vim.regex|nil
     local lower_pattern = string.lower(pattern) --- @type string
@@ -110,7 +108,7 @@ function M._filter_wrapper(filter_info, filter_opts, input_opts, what)
         title = filter_info.name .. " filter: /" .. pattern,
     }) --- @type QfRancherWhat
 
-    local dest_nr = et._set_list(what_set) --- @type integer
+    local dest_nr = et._set_list(src_win, what_set) --- @type integer
     if eu._get_g_var("qf_rancher_auto_open_changes") then
         require("mjm.error-list-stack")._history(what_set.user_data.src_win, dest_nr, {
             always_open = true,
@@ -175,13 +173,9 @@ end
 --- @type QfRancherPredicateFunc
 local function cfilter_regex(item, keep, opts)
     opts = opts or {}
-    if regex_boilerplate(opts.regex, item.text, keep) == keep then
-        return keep
-    end
+    if regex_boilerplate(opts.regex, item.text, keep) == keep then return keep end
 
-    if not item.bufnr then
-        return false
-    end
+    if not item.bufnr then return false end
 
     return regex_boilerplate(opts.regex, vim.fn.bufname(item.bufnr), keep)
 end
@@ -190,13 +184,9 @@ end
 --- NOTE: Assumes pattern is all lowercase
 local function cfilter_insensitive(item, keep, opts)
     opts = opts or {}
-    if insensitive_boilerplate(opts.pattern, item.text, keep) == keep then
-        return keep
-    end
+    if insensitive_boilerplate(opts.pattern, item.text, keep) == keep then return keep end
 
-    if not item.bufnr then
-        return false
-    end
+    if not item.bufnr then return false end
 
     return insensitive_boilerplate(opts.pattern, vim.fn.bufname(item.bufnr), keep)
 end
@@ -204,13 +194,9 @@ end
 --- @type QfRancherPredicateFunc
 local function cfilter_sensitive(item, keep, opts)
     opts = opts or {}
-    if sensitive_boilerplate(opts.pattern, item.text, keep) == keep then
-        return keep
-    end
+    if sensitive_boilerplate(opts.pattern, item.text, keep) == keep then return keep end
 
-    if not opts.bufnr then
-        return false
-    end
+    if not opts.bufnr then return false end
 
     return sensitive_boilerplate(opts.pattern, vim.fn.bufname(item.bufnr), keep)
 end
@@ -222,9 +208,7 @@ end
 --- @type QfRancherPredicateFunc
 local function fname_regex(item, keep, opts)
     opts = opts or {}
-    if not item.bufnr then
-        return false
-    end
+    if not item.bufnr then return false end
 
     return regex_boilerplate(opts.regex, vim.fn.bufname(item.bufnr), keep)
 end
@@ -233,9 +217,7 @@ end
 --- NOTE: Assumes pattern is all lowercase
 local function fname_insensitive(item, keep, opts)
     opts = opts or {}
-    if not item.bufnr then
-        return false
-    end
+    if not item.bufnr then return false end
 
     return insensitive_boilerplate(opts.pattern, vim.fn.bufname(item.bufnr), keep)
 end
@@ -243,9 +225,7 @@ end
 --- @type QfRancherPredicateFunc
 local function fname_sensitive(item, keep, opts)
     opts = opts or {}
-    if not item.bufnr then
-        return false
-    end
+    if not item.bufnr then return false end
 
     return sensitive_boilerplate(opts.pattern, vim.fn.bufname(item.bufnr), keep)
 end

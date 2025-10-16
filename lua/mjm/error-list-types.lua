@@ -37,9 +37,7 @@ function M._validate_what(what)
     M._validate_uint(what.nr)
     vim.validate("what.quickfixtextfunc", what.quickfixtextfunc, "callable", true)
     vim.validate("what.title", what.title, "string", true)
-    if type(what.user_data) == "table" then
-        M._validate_user_data(what.user_data)
-    end
+    if type(what.user_data) == "table" then M._validate_user_data(what.user_data) end
 end
 
 --- @class QfRancherUserData
@@ -53,9 +51,7 @@ end
 function M._validate_user_data(user_data)
     vim.validate("user_data", user_data, "table")
     vim.validate("user_data.action", user_data.action, "string", true)
-    if type(user_data.action) == "string" then
-        M._validate_action(user_data.action)
-    end
+    if type(user_data.action) == "string" then M._validate_action(user_data.action) end
 
     vim.validate("user_data.list_item_type", user_data.list_item_type, "string", true)
     vim.validate("user_data.src_win", user_data.src_win, "number", true)
@@ -84,13 +80,9 @@ end
 --- @param n integer
 --- @return boolean
 function M._is_uint(n)
-    if type(n) ~= "number" then
-        return false
-    end
+    if type(n) ~= "number" then return false end
 
-    if n < 0 then
-        return false
-    end
+    if n < 0 then return false end
 
     return n % 1 == 0
 end
@@ -116,9 +108,7 @@ end
 --- @param optional? boolean
 --- @return nil
 function M._validate_win(win, optional)
-    if optional and type(win) == "nil" then
-        return
-    end
+    if optional and type(win) == "nil" then return end
 
     M._validate_uint(win)
     if type(win) == "number" then
@@ -135,9 +125,7 @@ end
 --- @return nil
 function M._validate_buf(buf, optional)
     M._validate_uint(buf, optional)
-    if optional and type(buf) == "nil" then
-        return
-    end
+    if optional and type(buf) == "nil" then return end
 
     if type(buf) == "number" then
         vim.validate("buf", buf, function()
@@ -167,18 +155,14 @@ end
 function M._validate_list(list, opts)
     opts = opts or {}
     validate_validate_list_opts(opts)
-    if (not list) and opts.optional then
-        return
-    end
+    if (not list) and opts.optional then return end
 
     vim.validate("list", list, vim.islist, "Must be a valid list")
 
     if opts.type and require("mjm.error-list-util")._get_g_var("qf_rancher_debug_assertions") then
         vim.validate("list", list, function()
             for _, value in ipairs(list) do
-                if type(value) ~= opts.type then
-                    return false
-                end
+                if type(value) ~= opts.type then return false end
 
                 return true
             end
@@ -210,9 +194,7 @@ end
 --- @return nil
 function M._validate_list_win(list_win, optional)
     M._validate_win(list_win, optional)
-    if optional and type(list_win) == "nil" then
-        return
-    end
+    if optional and type(list_win) == "nil" then return end
 
     local list_win_buf = vim.api.nvim_win_get_buf(list_win) --- @type integer
     --- @type string
@@ -397,6 +379,24 @@ function M._validate_tabpage_opts(opts)
     vim.validate("opts.all_tabpages", opts.all_tabpages, "boolean", true)
 end
 
+--- @class QfRancherBufOpenOpts
+--- @field buftype? string
+--- @field clearjumps? boolean
+--- @field goto_win? boolean
+--- @field skip_set_cur_pos? boolean
+--- @field skip_zzze? boolean
+--- @field win? integer
+
+function M._validate_open_buf_opts(opts)
+    vim.validate("opts", opts, "table")
+    vim.validate("opts.buftype", opts.buftype, "string", true)
+    vim.validate("opts.clearjumps", opts.clearjumps, "boolean", true)
+    vim.validate("opts.goto_win", opts.goto_win, "boolean", true)
+    vim.validate("opts.skip_set_cur_pos", opts.skip_set_cur_pos, "boolean", true)
+    vim.validate("opts.skip_zzze", opts.skip_zzze, "boolean", true)
+    M._validate_uint(opts.win, true)
+end
+
 ---------------------------
 --- CUSTOM TYPES - DIAG ---
 ---------------------------
@@ -542,9 +542,7 @@ end
 function M._validate_sort_opts(sort_opts)
     vim.validate("sort_opts", sort_opts, "table")
     vim.validate("sort_opts.dir", sort_opts.dir, "string")
-    if type(sort_opts.dir) == "string" then
-        M._validate_sort_dir(sort_opts.dir)
-    end
+    if type(sort_opts.dir) == "string" then M._validate_sort_dir(sort_opts.dir) end
 end
 
 --- @alias QfRancherSortable string|integer

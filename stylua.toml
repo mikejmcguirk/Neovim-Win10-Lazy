@@ -1,4 +1,5 @@
 call_parentheses = "Always"
+collapse_simple_statement = "ConditionalOnly"
 column_width = 99
 indent_type = "Spaces"
 quote_style = "AutoPreferDouble"
