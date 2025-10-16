@@ -71,7 +71,7 @@ function M._validate_find_win_in_tab_opts(opts)
     vim.validate("opts", opts, "table")
     M._validate_uint(opts.bufnr, true)
     M._validate_uint(opts.fin_winnr, true)
-    vim.validate("opts.skip_last_winnr", opts.skip_winnr, "boolean", true)
+    vim.validate("opts.skip_winnr", opts.skip_winnr, "number", true)
 end
 
 ------------------

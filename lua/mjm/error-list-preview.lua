@@ -470,6 +470,7 @@ local function create_preview_win(win_cfg, preview_buf)
     vim.api.nvim_set_option_value("nu", true, { win = preview_win })
     vim.api.nvim_set_option_value("rnu", false, { win = preview_win })
     vim.api.nvim_set_option_value("scl", "no", { win = preview_win })
+    vim.api.nvim_set_option_value("stc", "", { win = preview_win })
 
     vim.api.nvim_set_option_value("spell", false, { win = preview_win })
 
@@ -716,9 +717,6 @@ local function start_timer()
     timer = timer or vim.uv.new_timer()
     if timer then timer:start(eu._get_g_var("qf_rancher_preview_debounce"), 0, at_timer_end) end
 end
-
--- TODO: I think you can put this into utils and then also use it in the ftplugin file. But
--- write out the ftplugin stuff first before doing so
 
 --- @param list_win integer
 --- @return vim.quickfix.entry|nil

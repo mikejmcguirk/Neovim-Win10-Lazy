@@ -419,8 +419,7 @@ function M._open_item_to_win(item, opts)
     local win = opts.win or api.nvim_get_current_win() --- @type integer
     if not api.nvim_win_is_valid(win) then return false end
 
-    local cur_buf = api.nvim_win_get_buf(win) --- @type integer
-    local already_open = cur_buf == buf --- @type boolean
+    local already_open = api.nvim_win_get_buf(win) == buf --- @type boolean
     api.nvim_set_option_value("buflisted", true, { buf = buf })
     if opts.buftype then api.nvim_set_option_value("buftype", opts.buftype, { buf = buf }) end
 
@@ -429,14 +428,20 @@ function M._open_item_to_win(item, opts)
     --     api.nvim_set_option_value("list", false, { win = win })
     -- end
 
-    if cur_buf ~= buf then
+    if not already_open then
         api.nvim_win_call(win, function()
             -- NOTE: This loads the buf if necessary. Do not use bufload
             api.nvim_set_current_buf(buf)
         end)
     end
 
-    if already_open and not opts.skip_set_cur_pos and not opts.clearjumps then
+    if opts.clearjumps then
+        api.nvim_win_call(win, function()
+            api.nvim_cmd({ cmd = "clearjumps" }, {})
+        end)
+    end
+
+    if already_open and not opts.skip_set_cur_pos then
         vim.api.nvim_buf_call(buf, function()
             api.nvim_cmd({ cmd = "normal", args = { "m'" }, bang = true }, {})
         end)
@@ -447,16 +452,12 @@ function M._open_item_to_win(item, opts)
         M._protected_set_cursor(win, cur_pos)
     end
 
-    if opts.clearjumps then
-        api.nvim_win_call(win, function()
-            api.nvim_cmd({ cmd = "clearjumps" }, {})
-        end)
-    end
-
     if not opts.skip_zzze then M._do_zzze(win) end
     api.nvim_win_call(win, function()
         api.nvim_cmd({ cmd = "normal", args = { "zv" }, bang = true }, {})
     end)
+
+    if opts.goto_win then vim.api.nvim_set_current_win(win) end
 
     return true
 end
