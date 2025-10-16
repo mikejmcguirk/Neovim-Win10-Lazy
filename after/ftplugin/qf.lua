@@ -6,13 +6,14 @@ local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
 local api = vim.api
 local fn = vim.fn
 
--- NOTE: Avoid using the util g_var function during setup to avoid eager requires
+-- NOTE: To avoid requires, don't use util g_var function
 
 -- DOCUMENT: Which options are set
 if vim.g.qf_rancher_ftplugin_set_opts then
     api.nvim_set_option_value("buflisted", false, { buf = 0 })
     api.nvim_set_option_value("cc", "", { scope = "local" })
     api.nvim_set_option_value("list", false, { scope = "local" })
+    api.nvim_set_option_value("spell", false, { scope = "local" })
 end
 
 -- DOCUMENT: which defaults are removed
@@ -66,21 +67,6 @@ else
     local q_newer = "<Plug>(qf-rancher-qf-newer)"
     vim.keymap.set("n", ">", q_newer, { buffer = true, desc = "Go to a newer qflist" })
 end
-
--------------
---- Types ---
--------------
-
--- TODO: Try to get rid of this
-
---- @class QfOpenSplitFullCtx
---- @field list_win integer
---- @field buf_source mjm.OpenBufSource
---- @field buf_opts mjm.OpenBufOpts
---- @field is_loclist boolean
---- @field is_orphan_loclist boolean
---- @field open QfRancherOpenMethod
---- @field finish QfRancherFinishMethod
 
 ---------------------
 -- Qf Open Helpers --

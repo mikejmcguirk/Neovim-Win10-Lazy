@@ -11,6 +11,8 @@ local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
 --- @class QfRancherPreview
 local M = {}
 
+local set_opt = vim.api.nvim_set_option_value
+
 -------------------
 --- MODULE DATA ---
 -------------------
@@ -459,27 +461,27 @@ local function create_preview_win(win_cfg, preview_buf)
 
     local preview_win = vim.api.nvim_open_win(preview_buf, false, win_cfg) --- @type integer
 
-    vim.api.nvim_set_option_value("cc", "", { win = preview_win })
-    vim.api.nvim_set_option_value("cul", true, { win = preview_win })
+    set_opt("cc", "", { win = preview_win })
+    set_opt("cul", true, { win = preview_win })
 
-    vim.api.nvim_set_option_value("fdc", "0", { win = preview_win })
-    vim.api.nvim_set_option_value("fdm", "manual", { win = preview_win })
+    set_opt("fdc", "0", { win = preview_win })
+    set_opt("fdm", "manual", { win = preview_win })
 
-    vim.api.nvim_set_option_value("list", false, { win = preview_win })
+    set_opt("list", false, { win = preview_win })
 
-    vim.api.nvim_set_option_value("nu", true, { win = preview_win })
-    vim.api.nvim_set_option_value("rnu", false, { win = preview_win })
-    vim.api.nvim_set_option_value("scl", "no", { win = preview_win })
-    vim.api.nvim_set_option_value("stc", "", { win = preview_win })
+    set_opt("nu", true, { win = preview_win })
+    set_opt("rnu", false, { win = preview_win })
+    set_opt("scl", "no", { win = preview_win })
+    set_opt("stc", "", { win = preview_win })
 
-    vim.api.nvim_set_option_value("spell", false, { win = preview_win })
+    set_opt("spell", false, { win = preview_win })
 
     --- @type integer
     local g_winblend = eu._get_g_var("qf_rancher_preview_winblend")
-    vim.api.nvim_set_option_value("winblend", g_winblend, { win = preview_win })
+    set_opt("winblend", g_winblend, { win = preview_win })
 
-    vim.api.nvim_set_option_value("so", SCROLLOFF, { win = preview_win })
-    vim.api.nvim_set_option_value("siso", SCROLLOFF, { win = preview_win })
+    set_opt("so", SCROLLOFF, { win = preview_win })
+    set_opt("siso", SCROLLOFF, { win = preview_win })
 
     return preview_win
 end
@@ -561,20 +563,20 @@ end
 local function set_preview_buf_opts(preview_buf)
     ey._validate_buf(preview_buf)
 
-    vim.api.nvim_set_option_value("buflisted", false, { buf = preview_buf })
+    set_opt("buflisted", false, { buf = preview_buf })
     -- NOTE: Setting a non-"" buftype prevents LSPs from attaching
-    vim.api.nvim_set_option_value("buftype", "nofile", { buf = preview_buf })
-    vim.api.nvim_set_option_value("modifiable", false, { buf = preview_buf })
-    vim.api.nvim_set_option_value("readonly", true, { buf = preview_buf })
-    vim.api.nvim_set_option_value("swapfile", false, { buf = preview_buf })
-    vim.api.nvim_set_option_value("undofile", false, { buf = preview_buf })
+    set_opt("buftype", "nofile", { buf = preview_buf })
+    set_opt("modifiable", false, { buf = preview_buf })
+    set_opt("readonly", true, { buf = preview_buf })
+    set_opt("swapfile", false, { buf = preview_buf })
+    set_opt("undofile", false, { buf = preview_buf })
 end
 
 --- @return integer
 local function create_fallback_buf()
     local buf = vim.api.nvim_create_buf(false, true) --- @type integer
 
-    vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
+    set_opt("bufhidden", "wipe", { buf = buf })
     set_preview_buf_opts(buf)
 
     local lines = { "No bufnr for this list entry" } --- @type string[]
@@ -609,9 +611,9 @@ local function update_preview_buf(item_buf)
     ey._validate_buf(bufs[item_buf], true)
 
     local lines = get_lines(item_buf) --- @type string[]
-    vim.api.nvim_set_option_value("modifiable", true, { buf = bufs[item_buf] })
+    set_opt("modifiable", true, { buf = bufs[item_buf] })
     pcall(vim.api.nvim_buf_set_lines, bufs[item_buf], 0, -1, false, lines)
-    vim.api.nvim_set_option_value("modifiable", false, { buf = bufs[item_buf] })
+    set_opt("modifiable", false, { buf = bufs[item_buf] })
 end
 
 --- @param item_buf integer
@@ -645,7 +647,7 @@ local function create_preview_buf_from_lines(item_buf, lines)
     local item_ft = vim.api.nvim_get_option_value("filetype", { buf = item_buf }) --- @type string
     item_ft = item_ft ~= "" and item_ft or (vim.filetype.match({ buf = item_buf }) or "")
     if item_ft == "" then
-        vim.api.nvim_set_option_value("syntax", item_ft, { buf = preview_buf })
+        set_opt("syntax", item_ft, { buf = preview_buf })
         return preview_buf
     end
 
@@ -657,7 +659,7 @@ local function create_preview_buf_from_lines(item_buf, lines)
     if vim.treesitter.get_parser(preview_buf, item_lang, { error = false }) then
         pcall(vim.treesitter.start, preview_buf, item_lang)
     else
-        vim.api.nvim_set_option_value("syntax", item_ft, { buf = preview_buf })
+        set_opt("syntax", item_ft, { buf = preview_buf })
     end
 
     return preview_buf

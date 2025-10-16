@@ -35,8 +35,10 @@ vim.api.nvim_set_var("qf_rancher_preview_debounce", 50)
 vim.api.nvim_set_var("qf_rancher_preview_show_title", false)
 -- vim.api.nvim_set_var("qf_rancher_set_default_maps", false)
 
+--- TODO: For stuff like winblend, use actual validator functions
 --- TODO: Make sure the options actually do what they're supposed to
 --- DOCUMENT: What these vars do
+
 _G._QFR_G_VAR_MAP = {
     qf_rancher_auto_open_changes = { { "boolean" }, false },
     -- DOCUMENT:
