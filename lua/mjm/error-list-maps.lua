@@ -67,9 +67,7 @@ local en = Qfr_Defer_Require("mjm.error-list-nav-action") --- @type QfRancherNav
 local eo = Qfr_Defer_Require("mjm.error-list-open") --- @type QfRancherOpen
 local ep = Qfr_Defer_Require("mjm.error-list-preview") --- @type QfRancherPreview
 local es = Qfr_Defer_Require("mjm.error-list-sort") --- @type QfRancherSort
-local et = Qfr_Defer_Require("mjm.error-list-tools") --- @type QfRancherTools
-local eu = Qfr_Defer_Require("mjm.error-list-util") --- @type QfRancherUtils
-local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
+-- local et = Qfr_Defer_Require("mjm.error-list-tools") --- @type QfRancherTools
 
 local nn = { "n" }
 local nx = { "n", "x" }
@@ -479,14 +477,14 @@ local rancher_keymaps = {
     --- NAVIGATION ---
     ------------------
 
-    { nn, pqfr.."-qf-prev)",  "[q",          "Go to a previous qf entry",       function() en._q_prev(vim.v.count) end },
-    { nn, pqfr.."-qf-next)",  "]q",          "Go to a later qf entry",          function() en._q_next(vim.v.count) end },
+    { nn, pqfr.."-qf-prev)",  "[q",          "Go to a previous qf entry",       function() en._q_prev(vim.v.count, {}) end },
+    { nn, pqfr.."-qf-next)",  "]q",          "Go to a later qf entry",          function() en._q_next(vim.v.count, {}) end },
     { nn, pqfr.."-qf-rewind)","[Q",          "Go to the first qf entry",        function() en._q_rewind(vim.v.count) end },
     { nn, pqfr.."-qf-last)",  "]Q",          "Go to the last qf entry",         function() en._q_last(vim.v.count) end },
     { nn, pqfr.."-qf-pfile)", "[<C-q>",      "Go to the previous qf file",      function() en._q_pfile(vim.v.count) end },
     { nn, pqfr.."-qf-nfile)", "]<C-q>",      "Go to the next qf file",          function() en._q_nfile(vim.v.count) end },
-    { nn, pqfr.."-ll-prev)",  "[l",          "Go to a previous loclist entry",  function() en._l_prev(cur_win(), vim.v.count) end },
-    { nn, pqfr.."-ll-next)",  "]l",          "Go to a later loclist entry",     function() en._l_next(cur_win(), vim.v.count) end },
+    { nn, pqfr.."-ll-prev)",  "[l",          "Go to a previous loclist entry",  function() en._l_prev(cur_win(), vim.v.count, {}) end },
+    { nn, pqfr.."-ll-next)",  "]l",          "Go to a later loclist entry",     function() en._l_next(cur_win(), vim.v.count, {}) end },
     { nn, pqfr.."-ll-rewind)","[L",          "Go to the first loclist entry",   function() en._l_rewind(cur_win(), vim.v.count) end },
     { nn, pqfr.."-ll-last)",  "]L",          "Go to the last loclist entry",    function() en._l_last(cur_win(), vim.v.count) end },
     { nn, pqfr.."-ll-pfile)", "[<C-l>",      "Go to the previous loclist file", function() en._l_pfile(cur_win(), vim.v.count) end },
@@ -517,14 +515,14 @@ local rancher_keymaps = {
     { nn, pqfr.."-lsort-r-type-asc)",        lp.."tt",  "Lsort by type asc"..r,            function() es.sort("type", { dir = "asc" }, replace_loclist()) end },
     { nn, pqfr.."-lsort-r-type-desc)",       lp.."tT",  "Lsort by type desc"..r,           function() es.sort("type", { dir = "desc" }, replace_loclist()) end },
 
-    -- { nn, pqfr.."-qsort-n-fname-asc)",       qp.."tf",  "Qsort by fname asc"..n,           function() et.sort("fname", { dir = "asc" }, new_qflist()) end },
-    -- { nn, pqfr.."-qsort-n-fname-desc)",      qp.."tF",  "Qsort by fname desc"..n,          function() et.sort("fname", { dir = "desc" }, new_qflist()) end },
-    -- { nn, pqfr.."-qsort-n-fname-diag-asc)",  qp.."tif", "Qsort by fname_diag asc"..n,      function() et.sort("fname_diag", { dir = "asc" }, new_qflist()) end },
-    -- { nn, pqfr.."-qsort-n-fname-diag-desc)", qp.."tiF", "Qsort by fname_diag desc"..n,     function() et.sort("fname_diag", { dir = "desc" }, new_qflist()) end },
-    -- { nn, pqfr.."-qsort-n-severity-asc)",    qp.."tis", "Qsort by severity asc"..n,        function() et.sort("severity", { dir = "asc" }, new_qflist()) end },
-    -- { nn, pqfr.."-qsort-n-severity-desc)",   qp.."tiS", "Qsort by severity desc"..n,       function() et.sort("severity", { dir = "desc" }, new_qflist()) end },
-    -- { nn, pqfr.."-qsort-n-type-asc)",        qp.."tt",  "Qsort by type asc"..n,            function() et.sort("type", { dir = "asc" }, new_qflist()) end },
-    -- { nn, pqfr.."-qsort-n-type-desc)",       qp.."tT",  "Qsort by type desc"..n,           function() et.sort("type", { dir = "desc" }, new_qflist()) end },
+    -- { nn, pqfr.."-qsort-n-fname-asc)",       qp.."tf",  "Qsort by fname asc"..n,           function() es.sort("fname", { dir = "asc" }, new_qflist()) end },
+    -- { nn, pqfr.."-qsort-n-fname-desc)",      qp.."tF",  "Qsort by fname desc"..n,          function() es.sort("fname", { dir = "desc" }, new_qflist()) end },
+    -- { nn, pqfr.."-qsort-n-fname-diag-asc)",  qp.."tif", "Qsort by fname_diag asc"..n,      function() es.sort("fname_diag", { dir = "asc" }, new_qflist()) end },
+    -- { nn, pqfr.."-qsort-n-fname-diag-desc)", qp.."tiF", "Qsort by fname_diag desc"..n,     function() es.sort("fname_diag", { dir = "desc" }, new_qflist()) end },
+    -- { nn, pqfr.."-qsort-n-severity-asc)",    qp.."tis", "Qsort by severity asc"..n,        function() es.sort("severity", { dir = "asc" }, new_qflist()) end },
+    -- { nn, pqfr.."-qsort-n-severity-desc)",   qp.."tiS", "Qsort by severity desc"..n,       function() es.sort("severity", { dir = "desc" }, new_qflist()) end },
+    -- { nn, pqfr.."-qsort-n-type-asc)",        qp.."tt",  "Qsort by type asc"..n,            function() es.sort("type", { dir = "asc" }, new_qflist()) end },
+    -- { nn, pqfr.."-qsort-n-type-desc)",       qp.."tT",  "Qsort by type desc"..n,           function() es.sort("type", { dir = "desc" }, new_qflist()) end },
     --
     { nn, pqfr.."-qsort-r-fname-asc)",       qp.."Tf",  "Qsort by fname asc"..r,           function() es.sort("fname", { dir = "asc" }, replace_qflist()) end },
     { nn, pqfr.."-qsort-r-fname-desc)",      qp.."TF",  "Qsort by fname desc"..r,          function() es.sort("fname", { dir = "desc" }, replace_qflist()) end },
@@ -535,23 +533,23 @@ local rancher_keymaps = {
     { nn, pqfr.."-qsort-r-type-asc)",        qp.."Tt",  "Qsort by type asc"..r,            function() es.sort("type", { dir = "asc" }, replace_qflist()) end },
     { nn, pqfr.."-qsort-r-type-desc)",       qp.."TT",  "Qsort by type desc"..r,           function() es.sort("type", { dir = "desc" }, replace_qflist()) end },
 
-    -- { nn, pqfr.."-qsort-a-fname-asc)",       qp.."<C-t>f",  "Qsort by fname asc"..a,       function() et.sort("fname", { dir = "asc" }, add_qflist()) end },
-    -- { nn, pqfr.."-qsort-a-fname-desc)",      qp.."<C-t>F",  "Qsort by fname desc"..a,      function() et.sort("fname", { dir = "desc" }, add_qflist()) end },
-    -- { nn, pqfr.."-qsort-a-fname-diag-asc)",  qp.."<C-t>if", "Qsort by fname_diag asc"..a,  function() et.sort("fname_diag", { dir = "asc" }, add_qflist()) end },
-    -- { nn, pqfr.."-qsort-a-fname-diag-desc)", qp.."<C-t>iF", "Qsort by fname_diag desc"..a, function() et.sort("fname_diag", { dir = "desc" }, add_qflist()) end },
-    -- { nn, pqfr.."-qsort-a-severity-asc)",    qp.."<C-t>is", "Qsort by severity asc"..a,    function() et.sort("severity", { dir = "asc" }, add_qflist()) end },
-    -- { nn, pqfr.."-qsort-a-severity-desc)",   qp.."<C-t>iS", "Qsort by severity desc"..a,   function() et.sort("severity", { dir = "desc" }, add_qflist()) end },
-    -- { nn, pqfr.."-qsort-a-type-asc)",        qp.."<C-t>t",  "Qsort by type asc"..a,        function() et.sort("type", { dir = "asc" }, add_qflist()) end },
-    -- { nn, pqfr.."-qsort-a-type-desc)",       qp.."<C-t>T",  "Qsort by type desc"..a,       function() et.sort("type", { dir = "desc" }, add_qflist()) end },
+    -- { nn, pqfr.."-qsort-a-fname-asc)",       qp.."<C-t>f",  "Qsort by fname asc"..a,       function() es.sort("fname", { dir = "asc" }, add_qflist()) end },
+    -- { nn, pqfr.."-qsort-a-fname-desc)",      qp.."<C-t>F",  "Qsort by fname desc"..a,      function() es.sort("fname", { dir = "desc" }, add_qflist()) end },
+    -- { nn, pqfr.."-qsort-a-fname-diag-asc)",  qp.."<C-t>if", "Qsort by fname_diag asc"..a,  function() es.sort("fname_diag", { dir = "asc" }, add_qflist()) end },
+    -- { nn, pqfr.."-qsort-a-fname-diag-desc)", qp.."<C-t>iF", "Qsort by fname_diag desc"..a, function() es.sort("fname_diag", { dir = "desc" }, add_qflist()) end },
+    -- { nn, pqfr.."-qsort-a-severity-asc)",    qp.."<C-t>is", "Qsort by severity asc"..a,    function() es.sort("severity", { dir = "asc" }, add_qflist()) end },
+    -- { nn, pqfr.."-qsort-a-severity-desc)",   qp.."<C-t>iS", "Qsort by severity desc"..a,   function() es.sort("severity", { dir = "desc" }, add_qflist()) end },
+    -- { nn, pqfr.."-qsort-a-type-asc)",        qp.."<C-t>t",  "Qsort by type asc"..a,        function() es.sort("type", { dir = "asc" }, add_qflist()) end },
+    -- { nn, pqfr.."-qsort-a-type-desc)",       qp.."<C-t>T",  "Qsort by type desc"..a,       function() es.sort("type", { dir = "desc" }, add_qflist()) end },
     --
-    -- { nn, pqfr.."-lsort-n-fname-asc)",       lp.."tf",  "Lsort by fname asc"..n,           function() et.sort("fname", { dir = "asc" }, new_loclist()) end },
-    -- { nn, pqfr.."-lsort-n-fname-desc)",      lp.."tF",  "Lsort by fname desc"..n,          function() et.sort("fname", { dir = "desc" }, new_loclist()) end },
-    -- { nn, pqfr.."-lsort-n-fname-diag-asc)",  lp.."tif", "Lsort by fname_diag asc"..n,      function() et.sort("fname_diag", { dir = "asc" }, new_loclist()) end },
-    -- { nn, pqfr.."-lsort-n-fname-diag-desc)", lp.."tiF", "Lsort by fname_diag desc"..n,     function() et.sort("fname_diag", { dir = "desc" }, new_loclist()) end },
-    -- { nn, pqfr.."-lsort-n-severity-asc)",    lp.."tis", "Lsort by severity asc"..n,        function() et.sort("severity", { dir = "asc" }, new_loclist()) end },
-    -- { nn, pqfr.."-lsort-n-severity-desc)",   lp.."tiS", "Lsort by severity desc"..n,       function() et.sort("severity", { dir = "desc" }, new_loclist()) end },
-    -- { nn, pqfr.."-lsort-n-type-asc)",        lp.."tt",  "Lsort by type asc"..n,            function() et.sort("type", { dir = "asc" }, new_loclist()) end },
-    -- { nn, pqfr.."-lsort-n-type-desc)",       lp.."tT",  "Lsort by type desc"..n,           function() et.sort("type", { dir = "desc" }, new_loclist()) end },
+    -- { nn, pqfr.."-lsort-n-fname-asc)",       lp.."tf",  "Lsort by fname asc"..n,           function() es.sort("fname", { dir = "asc" }, new_loclist()) end },
+    -- { nn, pqfr.."-lsort-n-fname-desc)",      lp.."tF",  "Lsort by fname desc"..n,          function() es.sort("fname", { dir = "desc" }, new_loclist()) end },
+    -- { nn, pqfr.."-lsort-n-fname-diag-asc)",  lp.."tif", "Lsort by fname_diag asc"..n,      function() es.sort("fname_diag", { dir = "asc" }, new_loclist()) end },
+    -- { nn, pqfr.."-lsort-n-fname-diag-desc)", lp.."tiF", "Lsort by fname_diag desc"..n,     function() es.sort("fname_diag", { dir = "desc" }, new_loclist()) end },
+    -- { nn, pqfr.."-lsort-n-severity-asc)",    lp.."tis", "Lsort by severity asc"..n,        function() es.sort("severity", { dir = "asc" }, new_loclist()) end },
+    -- { nn, pqfr.."-lsort-n-severity-desc)",   lp.."tiS", "Lsort by severity desc"..n,       function() es.sort("severity", { dir = "desc" }, new_loclist()) end },
+    -- { nn, pqfr.."-lsort-n-type-asc)",        lp.."tt",  "Lsort by type asc"..n,            function() es.sort("type", { dir = "asc" }, new_loclist()) end },
+    -- { nn, pqfr.."-lsort-n-type-desc)",       lp.."tT",  "Lsort by type desc"..n,           function() es.sort("type", { dir = "desc" }, new_loclist()) end },
     --
     { nn, pqfr.."-lsort-r-fname-asc)",       lp.."Tf",  "Lsort by fname asc"..r,           function() es.sort("fname", { dir = "asc" }, replace_loclist()) end },
     { nn, pqfr.."-lsort-r-fname-desc)",      lp.."TF",  "Lsort by fname desc"..r,          function() es.sort("fname", { dir = "desc" }, replace_loclist()) end },
@@ -562,14 +560,14 @@ local rancher_keymaps = {
     { nn, pqfr.."-lsort-r-type-asc)",        lp.."Tt",  "Lsort by type asc"..r,            function() es.sort("type", { dir = "asc" }, replace_loclist()) end },
     { nn, pqfr.."-lsort-r-type-desc)",       lp.."TT",  "Lsort by type desc"..r,           function() es.sort("type", { dir = "desc" }, replace_loclist()) end },
 
-    -- { nn, pqfr.."-lsort-a-fname-asc)",       lp.."<C-t>f",  "Lsort by fname asc"..a,       function() et.sort("fname", { dir = "asc" }, add_loclist()) end },
-    -- { nn, pqfr.."-lsort-a-fname-desc)",      lp.."<C-t>F",  "Lsort by fname desc"..a,      function() et.sort("fname", { dir = "desc" }, add_loclist()) end },
-    -- { nn, pqfr.."-lsort-a-fname-diag-asc)",  lp.."<C-t>if", "Lsort by fname_diag asc"..a,  function() et.sort("fname_diag", { dir = "asc" }, add_loclist()) end },
-    -- { nn, pqfr.."-lsort-a-fname-diag-desc)", lp.."<C-t>iF", "Lsort by fname_diag desc"..a, function() et.sort("fname_diag", { dir = "desc" }, add_loclist()) end },
-    -- { nn, pqfr.."-lsort-a-severity-asc)",    lp.."<C-t>is", "Lsort by severity asc"..a,    function() et.sort("severity", { dir = "asc" }, add_loclist()) end },
-    -- { nn, pqfr.."-lsort-a-severity-desc)",   lp.."<C-t>iS", "Lsort by severity desc"..a,   function() et.sort("severity", { dir = "desc" }, add_loclist()) end },
-    -- { nn, pqfr.."-lsort-a-type-asc)",        lp.."<C-t>t",  "Lsort by type asc"..a,        function() et.sort("type", { dir = "asc" }, add_loclist()) end },
-    -- { nn, pqfr.."-lsort-a-type-desc)",       lp.."<C-t>T",  "Lsort by type desc"..a,       function() et.sort("type", { dir = "desc" }, add_loclist()) end },
+    -- { nn, pqfr.."-lsort-a-fname-asc)",       lp.."<C-t>f",  "Lsort by fname asc"..a,       function() es.sort("fname", { dir = "asc" }, add_loclist()) end },
+    -- { nn, pqfr.."-lsort-a-fname-desc)",      lp.."<C-t>F",  "Lsort by fname desc"..a,      function() es.sort("fname", { dir = "desc" }, add_loclist()) end },
+    -- { nn, pqfr.."-lsort-a-fname-diag-asc)",  lp.."<C-t>if", "Lsort by fname_diag asc"..a,  function() es.sort("fname_diag", { dir = "asc" }, add_loclist()) end },
+    -- { nn, pqfr.."-lsort-a-fname-diag-desc)", lp.."<C-t>iF", "Lsort by fname_diag desc"..a, function() es.sort("fname_diag", { dir = "desc" }, add_loclist()) end },
+    -- { nn, pqfr.."-lsort-a-severity-asc)",    lp.."<C-t>is", "Lsort by severity asc"..a,    function() es.sort("severity", { dir = "asc" }, add_loclist()) end },
+    -- { nn, pqfr.."-lsort-a-severity-desc)",   lp.."<C-t>iS", "Lsort by severity desc"..a,   function() es.sort("severity", { dir = "desc" }, add_loclist()) end },
+    -- { nn, pqfr.."-lsort-a-type-asc)",        lp.."<C-t>t",  "Lsort by type asc"..a,        function() es.sort("type", { dir = "asc" }, add_loclist()) end },
+    -- { nn, pqfr.."-lsort-a-type-desc)",       lp.."<C-t>T",  "Lsort by type desc"..a,       function() es.sort("type", { dir = "desc" }, add_loclist()) end },
 
     -------------
     --- STACK ---
@@ -704,6 +702,66 @@ end, { desc = "Toggle the preview win" })
 vim.keymap.set("n", pqfr .. "-list-update-preview-pos)", function()
     ep.update_preview_win_pos()
 end, { desc = "Update the preview win position" })
+
+vim.keymap.set("n", pqfr .. "-list-open-direct-focuswin)", function()
+    ei._direct_open("focusWin")
+end, { desc = "Open a list item and focus on it" })
+
+vim.keymap.set("n", pqfr .. "-list-open-direct-closelist)", function()
+    ei._direct_open("closeList")
+end, { desc = "Open a list item then close the list" })
+
+vim.keymap.set("n", pqfr .. "-list-open-direct-focuslist)", function()
+    ei._direct_open("focusList")
+end, { desc = "Open a list item, keep list focus" })
+
+vim.keymap.set("n", pqfr .. "-list-open-split-focuswin)", function()
+    ei._split_open("split", "focusWin")
+end, { desc = "Open a list item in a split and focus on it" })
+
+vim.keymap.set("n", pqfr .. "-list-open-split-closelist)", function()
+    ei._split_open("split", "closeList")
+end, { desc = "Open a list item in a split then close the list" })
+
+vim.keymap.set("n", pqfr .. "-list-open-split-focuslist)", function()
+    ei._split_open("split", "focusList")
+end, { desc = "Open a list item in a split, keep list focus" })
+
+vim.keymap.set("n", pqfr .. "-list-open-vsplit-focuswin)", function()
+    ei._split_open("vsplit", "focusWin")
+end, { desc = "Open a list item in a vsplit and focus on it" })
+
+vim.keymap.set("n", pqfr .. "-list-open-vsplit-closelist)", function()
+    ei._split_open("vsplit", "closeList")
+end, { desc = "Open a list item in a vsplit then close the list" })
+
+vim.keymap.set("n", pqfr .. "-list-open-vsplit-focuslist)", function()
+    ei._split_open("vsplit", "focusList")
+end, { desc = "Open a list item in a vsplit, keep list focus" })
+
+vim.keymap.set("n", pqfr .. "-list-open-tabnew-focuswin)", function()
+    ei._tabnew_open("focusWin")
+end, { desc = "Open a list item in a new tab and focus on it" })
+
+vim.keymap.set("n", pqfr .. "-list-open-tabnew-focuslist)", function()
+    ei._tabnew_open("focusList")
+end, { desc = "Open a list item in a new tab, keep list focus" })
+
+-- vim.keymap.set("n", pqfr .. "-list-qf-prev)", function()
+--     ei._list_prev(nil, vim.v.count, { keep_win = true })
+-- end, { desc = "Go to a previous qf entry, keep window focus" })
+--
+-- vim.keymap.set("n", pqfr .. "-list-qf-next)", function()
+--     ei._list_next(nil, vim.v.count, { keep_win = true })
+-- end, { desc = "Go to a later qf entry, keep window focus" })
+--
+-- vim.keymap.set("n", pqfr .. "-list-ll-prev)", function()
+--     ei._list_prev(cur_win(), vim.v.count, { keep_win = true })
+-- end, { desc = "Go to a previous loclist entry, keep window focus" })
+--
+-- vim.keymap.set("n", pqfr .. "-list-ll-next)", function()
+--     ei._list_next(cur_win(), vim.v.count, { keep_win = true })
+-- end, { desc = "Go to a later loclist entry, keep window focus" })
 
 ------------
 --- CMDS ---

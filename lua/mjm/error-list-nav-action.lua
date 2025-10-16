@@ -1,6 +1,11 @@
 --- @class QfRancherNav
 local M = {}
 
+local eu = Qfr_Defer_Require("mjm.error-list-util") --- @type QfRancherUtils
+local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
+
+local api = vim.api
+
 -----------------
 --- PREV/NEXT ---
 -----------------
@@ -10,110 +15,134 @@ local M = {}
 --- @param arithmetic function
 --- @return integer|nil
 local function get_list_new_idx(win, count, arithmetic)
-    local ey = require("mjm.error-list-types")
-    ey._validate_uint(win, true)
+    ey._validate_win(win, true)
     ey._validate_uint(count)
     vim.validate("arithmetic", arithmetic, "callable")
 
-    local count1 = require("mjm.error-list-util")._count_to_count1(count) --- @type integer|nil
+    local count1 = eu._count_to_count1(count) --- @type integer|nil
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
     local size = et._get_list_size(win, 0) --- @type integer|nil
-    if not size or size < 1 then
-        return nil
-    end
+    if not size or size < 1 then return nil end
 
     local cur_idx = et._get_list_idx(win, 0) --- @type integer|nil
-    if not cur_idx then
-        return nil
-    end
+    if not cur_idx then return nil end
 
     return arithmetic(cur_idx, count1, 1, size)
 end
 
 --- @param new_idx integer
 --- @param cmd string
---- @return nil
-local function goto_list_entry(new_idx, cmd)
-    vim.validate("new_idx", new_idx, "number")
+--- @param opts table
+--- @return boolean
+local function goto_list_entry(new_idx, cmd, opts)
+    ey._validate_uint(new_idx)
     vim.validate("cmd", cmd, "string")
+    vim.validate("opts", opts, "table")
 
     --- @type boolean, string
     local ok, result = pcall(vim.api.nvim_cmd, { cmd = cmd, count = new_idx }, {})
     if ok then
-        vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
-        return
+        eu._do_zzze(api.nvim_get_current_win())
+        return true
     end
 
     local msg = result or ("Unknown error displaying list entry " .. new_idx) --- @type string
     vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+    return false
 end
 
 --- @param count integer
---- @return nil
-function M._q_prev(count)
+--- @param opts table
+--- @return boolean
+function M._q_prev(count, opts)
     --- @type integer|nil
-    local new_idx = get_list_new_idx(nil, count, require("mjm.error-list-util")._wrapping_sub)
-    if new_idx then
-        goto_list_entry(new_idx, "cc")
-    end
+    local new_idx = get_list_new_idx(nil, count, eu._wrapping_sub)
+    if new_idx then return goto_list_entry(new_idx, "cc", opts) end
+    return false
 end
 
 --- @param count integer
---- @return nil
-function M._q_next(count)
+--- @param opts table
+--- @return boolean
+function M._q_next(count, opts)
     --- @type integer|nil
-    local new_idx = get_list_new_idx(nil, count, require("mjm.error-list-util")._wrapping_add)
-    if new_idx then
-        goto_list_entry(new_idx, "cc")
-    end
+    local new_idx = get_list_new_idx(nil, count, eu._wrapping_add)
+    if new_idx then return goto_list_entry(new_idx, "cc", opts) end
+    return false
 end
 
+--- @param src_win integer
 --- @param count integer
---- @return nil
-function M._l_prev(win, count)
-    require("mjm.error-list-util")._locwin_check(win, function()
+--- @param opts table
+--- @return boolean
+function M._l_prev(src_win, count, opts)
+    return eu._locwin_check(src_win, function()
         --- @type integer|nil
-        local new_idx = get_list_new_idx(win, count, require("mjm.error-list-util")._wrapping_sub)
-        if new_idx then
-            goto_list_entry(new_idx, "ll")
-        end
+        local new_idx = get_list_new_idx(src_win, count, eu._wrapping_sub)
+        if new_idx then goto_list_entry(new_idx, "ll", opts) end
     end)
 end
 
+--- @param src_win integer
 --- @param count integer
---- @return nil
-function M._l_next(win, count)
-    require("mjm.error-list-util")._locwin_check(win, function()
+--- @param opts table
+--- @return boolean
+function M._l_next(src_win, count, opts)
+    return eu._locwin_check(src_win, function()
         --- @type integer|nil
-        local new_idx = get_list_new_idx(win, count, require("mjm.error-list-util")._wrapping_add)
-        if new_idx then
-            goto_list_entry(new_idx, "ll")
-        end
+        local new_idx = get_list_new_idx(src_win, count, eu._wrapping_add)
+        if new_idx then goto_list_entry(new_idx, "ll", opts) end
     end)
+end
+
+--- @param src_win integer|nil
+--- @param count integer
+--- @param opts table
+--- @return boolean
+function M._prev(src_win, count, opts)
+    ey._validate_win(src_win, true)
+    if src_win then
+        return M._l_prev(src_win, count, opts)
+    else
+        return M._q_prev(count, opts)
+    end
+end
+
+--- @param src_win integer|nil
+--- @param count integer
+--- @param opts table
+--- @return boolean
+function M._next(src_win, count, opts)
+    ey._validate_win(src_win, true)
+    if src_win then
+        return M._l_next(src_win, count, opts)
+    else
+        return M._q_next(count, opts)
+    end
 end
 
 --- @param cargs vim.api.keyset.create_user_command.command_args
 --- @return nil
 function M._q_prev_cmd(cargs)
-    M._q_prev(cargs.count)
+    M._q_prev(cargs.count, {})
 end
 
 --- @param cargs vim.api.keyset.create_user_command.command_args
 --- @return nil
 function M._q_next_cmd(cargs)
-    M._q_next(cargs.count)
+    M._q_next(cargs.count, {})
 end
 
 --- @param cargs vim.api.keyset.create_user_command.command_args
 --- @return nil
 function M._l_prev_cmd(cargs)
-    M._l_prev(vim.api.nvim_get_current_win(), cargs.count)
+    M._l_prev(vim.api.nvim_get_current_win(), cargs.count, {})
 end
 
 --- @param cargs vim.api.keyset.create_user_command.command_args
 --- @return nil
 function M._l_next_cmd(cargs)
-    M._l_next(vim.api.nvim_get_current_win(), cargs.count)
+    M._l_next(vim.api.nvim_get_current_win(), cargs.count, {})
 end
 
 -----------------
@@ -128,20 +157,17 @@ end
 --- @param count integer
 --- @return nil
 local function goto_specific_idx(src_win, count)
-    local ey = require("mjm.error-list-types")
     ey._validate_win(src_win, true)
     ey._validate_uint(count)
 
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
     local size = et._get_list_size(src_win, 0) --- @type integer|nil
-    if not size or size < 1 then
-        return nil
-    end
+    if not size or size < 1 then return nil end
 
     local cmd = src_win and "ll" or "cc" --- @type string
     if count > 0 then
         local adj_count = math.min(count, size) --- @type integer
-        goto_list_entry(adj_count, cmd)
+        goto_list_entry(adj_count, cmd, {})
         return
     end
 
@@ -152,16 +178,14 @@ local function goto_specific_idx(src_win, count)
     if in_loclist or in_qflist then
         local row = vim.api.nvim_win_get_cursor(cur_win)[1] --- @type integer
         local adj_count = math.min(row, size) --- @type integer
-        goto_list_entry(adj_count, cmd)
+        goto_list_entry(adj_count, cmd, {})
         return
     end
 
     local cur_idx = et._get_list_idx(src_win, 0) --- @type integer|nil
-    if not cur_idx then
-        return nil
-    end
+    if not cur_idx then return nil end
 
-    goto_list_entry(cur_idx, cmd)
+    goto_list_entry(cur_idx, cmd, {})
 end
 
 --- @param count integer
@@ -175,7 +199,7 @@ end
 --- @param count integer
 --- @return nil
 function M._l_l(win, count)
-    require("mjm.error-list-util")._locwin_check(win, function()
+    eu._locwin_check(win, function()
         goto_specific_idx(win, count)
     end)
 end
@@ -206,9 +230,7 @@ local function bookends(count, cmd)
     local adj_count = count >= 1 and count or nil --- @type integer|nil
     --- @type boolean, string
     local ok, err = pcall(vim.api.nvim_cmd, { cmd = cmd, count = adj_count }, {})
-    if ok then
-        return
-    end
+    if ok then return end
 
     local msg = err:sub(#"Vim:" + 1) --- @type string
     if string.find(err, "E42", 1, true) then
@@ -234,7 +256,7 @@ end
 --- @param count integer
 --- @return nil
 function M._l_rewind(win, count)
-    require("mjm.error-list-util")._locwin_check(win, function()
+    eu._locwin_check(win, function()
         bookends(count, "lrewind")
     end)
 end
@@ -243,7 +265,7 @@ end
 --- @param count integer
 --- @return nil
 function M._l_last(win, count)
-    require("mjm.error-list-util")._locwin_check(win, function()
+    eu._locwin_check(win, function()
         bookends(count, "llast")
     end)
 end
@@ -282,7 +304,6 @@ end
 --- @param backup_cmd string
 --- @return nil
 local function file_nav_wrap(src_win, count, cmd, backup_cmd)
-    local ey = require("mjm.error-list-types")
     ey._validate_win(src_win, true)
     ey._validate_uint(count)
     vim.validate("cmd", cmd, "string")
@@ -290,11 +311,9 @@ local function file_nav_wrap(src_win, count, cmd, backup_cmd)
 
     local et = require("mjm.error-list-tools") --- @type QfRancherTools
     local size = et._get_list_size(src_win, 0) --- @type integer|nil
-    if not size or size < 1 then
-        return nil
-    end
+    if not size or size < 1 then return nil end
 
-    local adj_count = require("mjm.error-list-util")._count_to_count1(count) --- @type integer
+    local adj_count = eu._count_to_count1(count) --- @type integer
 
     --- @type boolean, string
     local ok, err = pcall(vim.api.nvim_cmd, { cmd = cmd, count = adj_count }, {})
@@ -335,7 +354,7 @@ end
 --- @param count integer
 --- @return nil
 function M._l_pfile(win, count)
-    require("mjm.error-list-util")._locwin_check(win, function()
+    eu._locwin_check(win, function()
         file_nav_wrap(win, count, "lpfile", "llast")
     end)
 end
@@ -344,7 +363,7 @@ end
 --- @param count integer
 --- @return nil
 function M._l_nfile(win, count)
-    require("mjm.error-list-util")._locwin_check(win, function()
+    eu._locwin_check(win, function()
         file_nav_wrap(win, count, "lnfile", "lrewind")
     end)
 end

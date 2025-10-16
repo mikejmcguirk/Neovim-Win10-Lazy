@@ -275,6 +275,7 @@ end
 --- https://github.com/gabrielpoca/replacer.nvim - For edits and bulk changes, this seems to be
 ---     the way, where you put the Qflist into edit mode, and then re-integrate the changes
 ---     in a save step
+---     https://github.com/stefandtw/quickfix-reflector.vim - A similar take
 
 -----------
 --- LOW ---

@@ -203,7 +203,7 @@ function M._validate_cur_pos(cur_pos)
     M._validate_uint(cur_pos[2])
 end
 
---- @param list_win integer
+--- @param list_win integer|nil
 --- @param optional? boolean
 --- @return nil
 function M._validate_list_win(list_win, optional)

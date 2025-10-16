@@ -1,7 +1,5 @@
 --- TODO: Move to gg mappings
 
-vim.cmd.packadd({ vim.fn.escape("vim-fugitive", " "), bang = true, magic = { file = false } })
-
 vim.api.nvim_create_autocmd("FileType", {
     group = vim.api.nvim_create_augroup("git-diff-ts", { clear = true }),
     pattern = "git",
@@ -48,9 +46,7 @@ end)
 
 local function open_diffs(staged)
     for _, w in ipairs(vim.fn.getwininfo()) do
-        if vim.api.nvim_get_option_value("filetype", { buf = w.bufnr }) == "diff" then
-            return
-        end
+        if vim.api.nvim_get_option_value("filetype", { buf = w.bufnr }) == "diff" then return end
     end
 
     local mods = { split = "botright" }
@@ -78,3 +74,5 @@ end)
 Map("n", "<leader>gp", function()
     vim.api.nvim_cmd({ cmd = "Git", args = { "push" } }, {})
 end)
+
+-- git reset --soft HEAD~1

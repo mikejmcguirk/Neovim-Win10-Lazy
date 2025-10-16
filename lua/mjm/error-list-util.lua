@@ -390,6 +390,8 @@ function M._qf_pos_to_cur_pos(item_lnum, item_col)
 end
 
 -- TODO: Put this in preview module
+-- TODO: By centralizing all zzze here, you can add a skip_zzze g_var for users who don't like
+-- that behavior
 
 --- @param win integer
 --- @return nil
