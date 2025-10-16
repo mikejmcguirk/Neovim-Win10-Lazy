@@ -203,7 +203,7 @@ end
 -- because "get_what" could also be the result of the get statement
 -- "response_what" is accurate but long. Check the docs
 
---- @param src_win integer
+--- @param src_win integer|nil
 --- @param what table
 --- @return any
 function M._get_list(src_win, what)

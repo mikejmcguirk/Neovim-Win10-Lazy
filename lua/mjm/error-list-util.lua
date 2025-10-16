@@ -654,7 +654,7 @@ function M._find_loclist_origin(list_win, opts)
         for _, win in ipairs(tabpage_wins) do
             local win_qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
             local win_wintype = vim.fn.win_gettype(win)
-            if win_qf_id == qf_id and win_wintype ~= "loclist" then return win end
+            if win_qf_id == qf_id and win_wintype == "" then return win end
         end
     end
 
