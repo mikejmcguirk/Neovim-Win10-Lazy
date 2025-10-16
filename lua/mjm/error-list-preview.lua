@@ -800,7 +800,7 @@ end
 --- @param list_win integer
 --- @return nil
 function M.toggle_preview_win(list_win)
-    ey._validate_list_win(list_win)
+    if not ey._is_in_list_win(list_win) then return end
 
     local was_open = preview_state:is_open() --- @type boolean
     local start_list_win = preview_state.list_win --- @type integer|nil

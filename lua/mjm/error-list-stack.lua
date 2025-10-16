@@ -20,6 +20,10 @@ end
 --- OLDER/NEWER ---
 -------------------
 
+-- TODO: This command centers the view on the current idx. If you are scrolled in the list but
+-- the idx is off screen, it will center the view on that idx. Save and restore view if
+-- cur_stack_nr does not change
+
 --- @param src_win integer|nil
 --- @param count integer
 --- @param arithmetic function

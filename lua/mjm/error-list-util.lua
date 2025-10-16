@@ -236,11 +236,7 @@ function M._pwin_close(win, force)
 
     local buf = api.nvim_win_get_buf(win) --- @type integer
     local ok, _ = pcall(api.nvim_win_close, win, force) --- @type boolean, nil
-    if not ok then
-        return -1
-    else
-        return buf
-    end
+    return ok and buf or -1
 end
 
 --- @param win integer

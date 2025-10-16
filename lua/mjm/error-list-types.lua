@@ -229,7 +229,10 @@ function M._is_in_list_win(list_win)
     local list_win_buf = vim.api.nvim_win_get_buf(list_win) --- @type integer
     --- @type string
     local buftype = vim.api.nvim_get_option_value("buftype", { buf = list_win_buf })
-    return buftype == "quickfix"
+
+    if buftype == "quickfix" then return true end
+    vim.api.nvim_echo({ { "Window " .. list_win .. " is not a list", "" } }, false, {})
+    return false
 end
 
 --- MID: If this value starts being used in more places, consider making an alias for it rather

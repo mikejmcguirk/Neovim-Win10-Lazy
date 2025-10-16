@@ -5,6 +5,8 @@
 --- anonymous functions. If you pass, for example, eo.closeqflist as a function reference, eo
 --- needs to be evaluated at command creation
 
+local api = vim.api
+
 --------------------------
 --- Map and Cmd Pieces ---
 --------------------------
@@ -23,7 +25,7 @@ end
 
 --- @return integer
 local function cur_win()
-    return vim.api.nvim_get_current_win()
+    return api.nvim_get_current_win()
 end
 
 --- @return QfRancherWhat
@@ -56,13 +58,18 @@ local function add_loclist()
     return get_what("add", cur_win())
 end
 
+local ea = Qfr_Defer_Require("mjm.error-list-stack") --- @type QfRancherStack
 local ed = Qfr_Defer_Require("mjm.error-list-diag") --- @type QfRancherDiagnostics
 local ef = Qfr_Defer_Require("mjm.error-list-filter") --- @type QfRancherFilter
+local ei = Qfr_Defer_Require("mjm.error-list-filetype-funcs") --- @type QfRancherFiletypeFuncs
 local eg = Qfr_Defer_Require("mjm.error-list-grep") --- @type QfRancherGrep
 local en = Qfr_Defer_Require("mjm.error-list-nav-action") --- @type QfRancherNav
 local eo = Qfr_Defer_Require("mjm.error-list-open") --- @type QfRancherOpen
-local es = Qfr_Defer_Require("mjm.error-list-stack") --- @type QfRancherStack
-local et = Qfr_Defer_Require("mjm.error-list-sort") --- @type QfRancherSort
+local ep = Qfr_Defer_Require("mjm.error-list-preview") --- @type QfRancherPreview
+local es = Qfr_Defer_Require("mjm.error-list-sort") --- @type QfRancherSort
+local et = Qfr_Defer_Require("mjm.error-list-tools") --- @type QfRancherTools
+local eu = Qfr_Defer_Require("mjm.error-list-util") --- @type QfRancherUtils
+local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
 
 local nn = { "n" }
 local nx = { "n", "x" }
@@ -463,10 +470,10 @@ local rancher_keymaps = {
     { nn, pqfr.."-open-qf-list-max)", qp.."P", "Open the quickfix list to max height", function() eo._open_qflist({ always_resize = true, height = QFR_MAX_HEIGHT, print_errs = true }) end },
     { nn, pqfr.."-close-qf-list)",    qp.."o", "Close the quickfix list",              function() eo._close_qflist() end },
     { nn, pqfr.."-toggle-qf-list)",   qp.."q", "Toggle the quickfix list",             function() eo._toggle_qflist()  end },
-    { nn, pqfr.."-open-loclist)",     lp.."p", "Open the location list",               function() eo._open_loclist({ always_resize = true, height = vim.v.count, print_errs = true }) end },
-    { nn, pqfr.."-open-loclist-max)", lp.."P", "Open the location list to max height", function() eo._open_loclist({ always_resize = true, height = QFR_MAX_HEIGHT, print_errs = true }) end },
-    { nn, pqfr.."-close-loclist)",    lp.."o", "Close the location list",              function() eo._close_loclist() end },
-    { nn, pqfr.."-toggle-loclist)",   lp.."l", "Toggle the location list",             function() eo._toggle_loclist() end },
+    { nn, pqfr.."-open-loclist)",     lp.."p", "Open the location list",               function() eo._open_loclist(cur_win(), { always_resize = true, height = vim.v.count, print_errs = true }) end },
+    { nn, pqfr.."-open-loclist-max)", lp.."P", "Open the location list to max height", function() eo._open_loclist(cur_win(), { always_resize = true, height = QFR_MAX_HEIGHT, print_errs = true }) end },
+    { nn, pqfr.."-close-loclist)",    lp.."o", "Close the location list",              function() eo._close_loclist(cur_win()) end },
+    { nn, pqfr.."-toggle-loclist)",   lp.."l", "Toggle the location list",             function() eo._toggle_loclist(cur_win()) end },
 
     ------------------
     --- NAVIGATION ---
@@ -492,23 +499,23 @@ local rancher_keymaps = {
     --- DOCUMENT: This breaks the usual pattern by simply replacing the list
     --- LOW: Keeping the mappings simple here so we're just sorting in place. If use cases come up
     --- where adding and replacing lists is necessary, can unlock those maps
-    { nn, pqfr.."-qsort-r-fname-asc)",       qp.."tf",  "Qsort by fname asc"..r,           function() et.sort("fname", { dir = "asc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-fname-desc)",      qp.."tF",  "Qsort by fname desc"..r,          function() et.sort("fname", { dir = "desc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-fname-diag-asc)",  qp.."tif", "Qsort by fname_diag asc"..r,      function() et.sort("fname_diag", { dir = "asc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-fname-diag-desc)", qp.."tiF", "Qsort by fname_diag desc"..r,     function() et.sort("fname_diag", { dir = "desc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-severity-asc)",    qp.."tis", "Qsort by severity asc"..r,        function() et.sort("severity", { dir = "asc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-severity-desc)",   qp.."tiS", "Qsort by severity desc"..r,       function() et.sort("severity", { dir = "desc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-type-asc)",        qp.."tt",  "Qsort by type asc"..r,            function() et.sort("type", { dir = "asc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-type-desc)",       qp.."tT",  "Qsort by type desc"..r,           function() et.sort("type", { dir = "desc" }, replace_qflist()) end },
+    { nn, pqfr.."-qsort-r-fname-asc)",       qp.."tf",  "Qsort by fname asc"..r,           function() es.sort("fname", { dir = "asc" }, replace_qflist()) end },
+    { nn, pqfr.."-qsort-r-fname-desc)",      qp.."tF",  "Qsort by fname desc"..r,          function() es.sort("fname", { dir = "desc" }, replace_qflist()) end },
+    { nn, pqfr.."-qsort-r-fname-diag-asc)",  qp.."tif", "Qsort by fname_diag asc"..r,      function() es.sort("fname_diag", { dir = "asc" }, replace_qflist()) end },
+    { nn, pqfr.."-qsort-r-fname-diag-desc)", qp.."tiF", "Qsort by fname_diag desc"..r,     function() es.sort("fname_diag", { dir = "desc" }, replace_qflist()) end },
+    { nn, pqfr.."-qsort-r-severity-asc)",    qp.."tis", "Qsort by severity asc"..r,        function() es.sort("severity", { dir = "asc" }, replace_qflist()) end },
+    { nn, pqfr.."-qsort-r-severity-desc)",   qp.."tiS", "Qsort by severity desc"..r,       function() es.sort("severity", { dir = "desc" }, replace_qflist()) end },
+    { nn, pqfr.."-qsort-r-type-asc)",        qp.."tt",  "Qsort by type asc"..r,            function() es.sort("type", { dir = "asc" }, replace_qflist()) end },
+    { nn, pqfr.."-qsort-r-type-desc)",       qp.."tT",  "Qsort by type desc"..r,           function() es.sort("type", { dir = "desc" }, replace_qflist()) end },
 
-    { nn, pqfr.."-lsort-r-fname-asc)",       lp.."tf",  "Lsort by fname asc"..r,           function() et.sort("fname", { dir = "asc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-fname-desc)",      lp.."tF",  "Lsort by fname desc"..r,          function() et.sort("fname", { dir = "desc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-fname-diag-asc)",  lp.."tif", "Lsort by fname_diag asc"..r,      function() et.sort("fname_diag", { dir = "asc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-fname-diag-desc)", lp.."tiF", "Lsort by fname_diag desc"..r,     function() et.sort("fname_diag", { dir = "desc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-severity-asc)",    lp.."tis", "Lsort by severity asc"..r,        function() et.sort("severity", { dir = "asc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-severity-desc)",   lp.."tiS", "Lsort by severity desc"..r,       function() et.sort("severity", { dir = "desc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-type-asc)",        lp.."tt",  "Lsort by type asc"..r,            function() et.sort("type", { dir = "asc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-type-desc)",       lp.."tT",  "Lsort by type desc"..r,           function() et.sort("type", { dir = "desc" }, replace_loclist()) end },
+    { nn, pqfr.."-lsort-r-fname-asc)",       lp.."tf",  "Lsort by fname asc"..r,           function() es.sort("fname", { dir = "asc" }, replace_loclist()) end },
+    { nn, pqfr.."-lsort-r-fname-desc)",      lp.."tF",  "Lsort by fname desc"..r,          function() es.sort("fname", { dir = "desc" }, replace_loclist()) end },
+    { nn, pqfr.."-lsort-r-fname-diag-asc)",  lp.."tif", "Lsort by fname_diag asc"..r,      function() es.sort("fname_diag", { dir = "asc" }, replace_loclist()) end },
+    { nn, pqfr.."-lsort-r-fname-diag-desc)", lp.."tiF", "Lsort by fname_diag desc"..r,     function() es.sort("fname_diag", { dir = "desc" }, replace_loclist()) end },
+    { nn, pqfr.."-lsort-r-severity-asc)",    lp.."tis", "Lsort by severity asc"..r,        function() es.sort("severity", { dir = "asc" }, replace_loclist()) end },
+    { nn, pqfr.."-lsort-r-severity-desc)",   lp.."tiS", "Lsort by severity desc"..r,       function() es.sort("severity", { dir = "desc" }, replace_loclist()) end },
+    { nn, pqfr.."-lsort-r-type-asc)",        lp.."tt",  "Lsort by type asc"..r,            function() es.sort("type", { dir = "asc" }, replace_loclist()) end },
+    { nn, pqfr.."-lsort-r-type-desc)",       lp.."tT",  "Lsort by type desc"..r,           function() es.sort("type", { dir = "desc" }, replace_loclist()) end },
 
     -- { nn, pqfr.."-qsort-n-fname-asc)",       qp.."tf",  "Qsort by fname asc"..n,           function() et.sort("fname", { dir = "asc" }, new_qflist()) end },
     -- { nn, pqfr.."-qsort-n-fname-desc)",      qp.."tF",  "Qsort by fname desc"..n,          function() et.sort("fname", { dir = "desc" }, new_qflist()) end },
@@ -519,14 +526,14 @@ local rancher_keymaps = {
     -- { nn, pqfr.."-qsort-n-type-asc)",        qp.."tt",  "Qsort by type asc"..n,            function() et.sort("type", { dir = "asc" }, new_qflist()) end },
     -- { nn, pqfr.."-qsort-n-type-desc)",       qp.."tT",  "Qsort by type desc"..n,           function() et.sort("type", { dir = "desc" }, new_qflist()) end },
     --
-    { nn, pqfr.."-qsort-r-fname-asc)",       qp.."Tf",  "Qsort by fname asc"..r,           function() et.sort("fname", { dir = "asc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-fname-desc)",      qp.."TF",  "Qsort by fname desc"..r,          function() et.sort("fname", { dir = "desc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-fname-diag-asc)",  qp.."Tif", "Qsort by fname_diag asc"..r,      function() et.sort("fname_diag", { dir = "asc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-fname-diag-desc)", qp.."TiF", "Qsort by fname_diag desc"..r,     function() et.sort("fname_diag", { dir = "desc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-severity-asc)",    qp.."Tis", "Qsort by severity asc"..r,        function() et.sort("severity", { dir = "asc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-severity-desc)",   qp.."TiS", "Qsort by severity desc"..r,       function() et.sort("severity", { dir = "desc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-type-asc)",        qp.."Tt",  "Qsort by type asc"..r,            function() et.sort("type", { dir = "asc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-type-desc)",       qp.."TT",  "Qsort by type desc"..r,           function() et.sort("type", { dir = "desc" }, replace_qflist()) end },
+    { nn, pqfr.."-qsort-r-fname-asc)",       qp.."Tf",  "Qsort by fname asc"..r,           function() es.sort("fname", { dir = "asc" }, replace_qflist()) end },
+    { nn, pqfr.."-qsort-r-fname-desc)",      qp.."TF",  "Qsort by fname desc"..r,          function() es.sort("fname", { dir = "desc" }, replace_qflist()) end },
+    { nn, pqfr.."-qsort-r-fname-diag-asc)",  qp.."Tif", "Qsort by fname_diag asc"..r,      function() es.sort("fname_diag", { dir = "asc" }, replace_qflist()) end },
+    { nn, pqfr.."-qsort-r-fname-diag-desc)", qp.."TiF", "Qsort by fname_diag desc"..r,     function() es.sort("fname_diag", { dir = "desc" }, replace_qflist()) end },
+    { nn, pqfr.."-qsort-r-severity-asc)",    qp.."Tis", "Qsort by severity asc"..r,        function() es.sort("severity", { dir = "asc" }, replace_qflist()) end },
+    { nn, pqfr.."-qsort-r-severity-desc)",   qp.."TiS", "Qsort by severity desc"..r,       function() es.sort("severity", { dir = "desc" }, replace_qflist()) end },
+    { nn, pqfr.."-qsort-r-type-asc)",        qp.."Tt",  "Qsort by type asc"..r,            function() es.sort("type", { dir = "asc" }, replace_qflist()) end },
+    { nn, pqfr.."-qsort-r-type-desc)",       qp.."TT",  "Qsort by type desc"..r,           function() es.sort("type", { dir = "desc" }, replace_qflist()) end },
 
     -- { nn, pqfr.."-qsort-a-fname-asc)",       qp.."<C-t>f",  "Qsort by fname asc"..a,       function() et.sort("fname", { dir = "asc" }, add_qflist()) end },
     -- { nn, pqfr.."-qsort-a-fname-desc)",      qp.."<C-t>F",  "Qsort by fname desc"..a,      function() et.sort("fname", { dir = "desc" }, add_qflist()) end },
@@ -546,14 +553,14 @@ local rancher_keymaps = {
     -- { nn, pqfr.."-lsort-n-type-asc)",        lp.."tt",  "Lsort by type asc"..n,            function() et.sort("type", { dir = "asc" }, new_loclist()) end },
     -- { nn, pqfr.."-lsort-n-type-desc)",       lp.."tT",  "Lsort by type desc"..n,           function() et.sort("type", { dir = "desc" }, new_loclist()) end },
     --
-    { nn, pqfr.."-lsort-r-fname-asc)",       lp.."Tf",  "Lsort by fname asc"..r,           function() et.sort("fname", { dir = "asc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-fname-desc)",      lp.."TF",  "Lsort by fname desc"..r,          function() et.sort("fname", { dir = "desc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-fname-diag-asc)",  lp.."Tif", "Lsort by fname_diag asc"..r,      function() et.sort("fname_diag", { dir = "asc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-fname-diag-desc)", lp.."TiF", "Lsort by fname_diag desc"..r,     function() et.sort("fname_diag", { dir = "desc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-severity-asc)",    lp.."Tis", "Lsort by severity asc"..r,        function() et.sort("severity", { dir = "asc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-severity-desc)",   lp.."TiS", "Lsort by severity desc"..r,       function() et.sort("severity", { dir = "desc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-type-asc)",        lp.."Tt",  "Lsort by type asc"..r,            function() et.sort("type", { dir = "asc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-type-desc)",       lp.."TT",  "Lsort by type desc"..r,           function() et.sort("type", { dir = "desc" }, replace_loclist()) end },
+    { nn, pqfr.."-lsort-r-fname-asc)",       lp.."Tf",  "Lsort by fname asc"..r,           function() es.sort("fname", { dir = "asc" }, replace_loclist()) end },
+    { nn, pqfr.."-lsort-r-fname-desc)",      lp.."TF",  "Lsort by fname desc"..r,          function() es.sort("fname", { dir = "desc" }, replace_loclist()) end },
+    { nn, pqfr.."-lsort-r-fname-diag-asc)",  lp.."Tif", "Lsort by fname_diag asc"..r,      function() es.sort("fname_diag", { dir = "asc" }, replace_loclist()) end },
+    { nn, pqfr.."-lsort-r-fname-diag-desc)", lp.."TiF", "Lsort by fname_diag desc"..r,     function() es.sort("fname_diag", { dir = "desc" }, replace_loclist()) end },
+    { nn, pqfr.."-lsort-r-severity-asc)",    lp.."Tis", "Lsort by severity asc"..r,        function() es.sort("severity", { dir = "asc" }, replace_loclist()) end },
+    { nn, pqfr.."-lsort-r-severity-desc)",   lp.."TiS", "Lsort by severity desc"..r,       function() es.sort("severity", { dir = "desc" }, replace_loclist()) end },
+    { nn, pqfr.."-lsort-r-type-asc)",        lp.."Tt",  "Lsort by type asc"..r,            function() es.sort("type", { dir = "asc" }, replace_loclist()) end },
+    { nn, pqfr.."-lsort-r-type-desc)",       lp.."TT",  "Lsort by type desc"..r,           function() es.sort("type", { dir = "desc" }, replace_loclist()) end },
 
     -- { nn, pqfr.."-lsort-a-fname-asc)",       lp.."<C-t>f",  "Lsort by fname asc"..a,       function() et.sort("fname", { dir = "asc" }, add_loclist()) end },
     -- { nn, pqfr.."-lsort-a-fname-desc)",      lp.."<C-t>F",  "Lsort by fname desc"..a,      function() et.sort("fname", { dir = "desc" }, add_loclist()) end },
@@ -576,18 +583,18 @@ local rancher_keymaps = {
     --- open. If, in field testing, there are more cases where we want to open the list than
     --- just change, this can be swapped
 
-    { nn, pqfr.."-qf-older)",        qp.."[", "Go to an older qflist",                         function() es._q_older(vim.v.count) end },
-    { nn, pqfr.."-qf-newer)",        qp.."]", "Go to a newer qflist",                          function() es._q_newer(vim.v.count) end },
-    { nn, pqfr.."-qf-history)",      qp.."Q", "View or jump within the quickfix history",      function() es._q_history(vim.v.count, { default = "current" }) end },
-    { nn, pqfr.."-qf-history-open)", qp.."<C-q>", "Open and jump within the quickfix history", function() es._q_history(vim.v.count, { always_open = true, default = "current" }) end },
-    { nn, pqfr.."-qf-del)",          qp.."e", "Delete a list from the quickfix stack",         function() es._q_del(vim.v.count) end },
-    { nn, pqfr.."-qf-del-all)",      qp.."E", "Delete all items from the quickfix stack",      function() es._q_del_all() end },
-    { nn, pqfr.."-ll-older)",        lp.."[", "Go to an older location list",                  function() es._l_older(cur_win(), vim.v.count) end },
-    { nn, pqfr.."-ll-newer)",        lp.."]", "Go to a newer location list",                   function() es._l_newer(cur_win(), vim.v.count) end },
-    { nn, pqfr.."-ll-history)",      lp.."L", "View or jump within the loclist history",       function() es._l_history(cur_win(), vim.v.count, { default = "current" }) end },
-    { nn, pqfr.."-ll-history-open)", lp.."<C-l>", "Open and jump within the loclist history",  function() es._l_history(cur_win(), vim.v.count, { always_open = true, default = "current" }) end },
-    { nn, pqfr.."-ll-del)",          lp.."e", "Delete a list from the loclist stack",          function() es._l_del(cur_win(), vim.v.count) end },
-    { nn, pqfr.."-ll-del-all)",      lp.."E", "Delete all items from the loclist stack",       function() es._l_del_all(cur_win()) end },
+    { nn, pqfr.."-qf-older)",        qp.."[", "Go to an older qflist",                         function() ea._q_older(vim.v.count) end },
+    { nn, pqfr.."-qf-newer)",        qp.."]", "Go to a newer qflist",                          function() ea._q_newer(vim.v.count) end },
+    { nn, pqfr.."-qf-history)",      qp.."Q", "View or jump within the quickfix history",      function() ea._q_history(vim.v.count, { default = "current" }) end },
+    { nn, pqfr.."-qf-history-open)", qp.."<C-q>", "Open and jump within the quickfix history", function() ea._q_history(vim.v.count, { always_open = true, default = "current" }) end },
+    { nn, pqfr.."-qf-del)",          qp.."e", "Delete a list from the quickfix stack",         function() ea._q_del(vim.v.count) end },
+    { nn, pqfr.."-qf-del-all)",      qp.."E", "Delete all items from the quickfix stack",      function() ea._q_del_all() end },
+    { nn, pqfr.."-ll-older)",        lp.."[", "Go to an older location list",                  function() ea._l_older(cur_win(), vim.v.count) end },
+    { nn, pqfr.."-ll-newer)",        lp.."]", "Go to a newer location list",                   function() ea._l_newer(cur_win(), vim.v.count) end },
+    { nn, pqfr.."-ll-history)",      lp.."L", "View or jump within the loclist history",       function() ea._l_history(cur_win(), vim.v.count, { default = "current" }) end },
+    { nn, pqfr.."-ll-history-open)", lp.."<C-l>", "Open and jump within the loclist history",  function() ea._l_history(cur_win(), vim.v.count, { always_open = true, default = "current" }) end },
+    { nn, pqfr.."-ll-del)",          lp.."e", "Delete a list from the loclist stack",          function() ea._l_del(cur_win(), vim.v.count) end },
+    { nn, pqfr.."-ll-del-all)",      lp.."E", "Delete all items from the loclist stack",       function() ea._l_del_all(cur_win()) end },
 }
 
 --- NOTE: This table needs to be separate or else the plug mapping pass will map "<nop>", which
@@ -653,7 +660,7 @@ local rancher_keymap_default_rm = {
 
 for _, map in ipairs(rancher_keymaps) do
     for _, mode in ipairs(map[1]) do
-        vim.api.nvim_set_keymap(mode, map[2], "", {
+        api.nvim_set_keymap(mode, map[2], "", {
             callback = map[5],
             desc = map[4],
             noremap = true,
@@ -665,7 +672,7 @@ end
 if vim.g.qf_rancher_set_default_maps then
     for _, map in ipairs(rancher_keymaps) do
         for _, mode in ipairs(map[1]) do
-            vim.api.nvim_set_keymap(mode, map[3], map[2], {
+            api.nvim_set_keymap(mode, map[3], map[2], {
                 desc = map[4],
                 noremap = true,
             })
@@ -674,13 +681,29 @@ if vim.g.qf_rancher_set_default_maps then
 
     for _, map in ipairs(rancher_keymap_default_rm) do
         for _, mode in ipairs(map[1]) do
-            vim.api.nvim_set_keymap(mode, map[3], map[2], {
+            api.nvim_set_keymap(mode, map[3], map[2], {
                 desc = map[4],
                 noremap = true,
             })
         end
     end
 end
+
+---------------------
+--- FTPLUGIN MAPS ---
+---------------------
+
+vim.keymap.set("n", pqfr .. "-list-del-one)", function()
+    ei._del_one_list_item()
+end, { desc = "Delete the current list line" })
+
+vim.keymap.set("n", pqfr .. "-list-toggle-preview)", function()
+    ep.toggle_preview_win(api.nvim_get_current_win())
+end, { desc = "Toggle the preview win" })
+
+vim.keymap.set("n", pqfr .. "-list-update-preview-pos)", function()
+    ep.update_preview_win_pos()
+end, { desc = "Update the preview win position" })
 
 ------------
 --- CMDS ---
@@ -692,11 +715,11 @@ if vim.g.qf_rancher_set_default_cmds then
     --- DIAGS ---
     -------------
 
-    vim.api.nvim_create_user_command("Qdiag", function(cargs)
+    api.nvim_create_user_command("Qdiag", function(cargs)
         ed._q_diag(cargs)
     end, { count = 0, nargs = "*", desc = "Get all diagnostics for the Quickfix list" })
 
-    vim.api.nvim_create_user_command("Ldiag", function(cargs)
+    api.nvim_create_user_command("Ldiag", function(cargs)
         ed._l_diag(cargs)
     end, { count = 0, nargs = "*", desc = "Get current buf diagnostics for the Location list" })
 
@@ -704,11 +727,11 @@ if vim.g.qf_rancher_set_default_cmds then
     --- FILTER ---
     --------------
 
-    vim.api.nvim_create_user_command("Qfilter", function(cargs)
+    api.nvim_create_user_command("Qfilter", function(cargs)
         ef._q_filter(cargs)
     end, { bang = true, count = true, nargs = "*", desc = "Sort quickfix items" })
 
-    vim.api.nvim_create_user_command("Lfilter", function(cargs)
+    api.nvim_create_user_command("Lfilter", function(cargs)
         ef._l_filter(cargs)
     end, { bang = true, count = true, nargs = "*", desc = "Sort loclist items" })
 
@@ -716,11 +739,11 @@ if vim.g.qf_rancher_set_default_cmds then
     --- GREP ---
     --------------
 
-    vim.api.nvim_create_user_command("Qgrep", function(cargs)
+    api.nvim_create_user_command("Qgrep", function(cargs)
         eg._q_grep_cmd(cargs)
     end, { count = true, nargs = "*", desc = "Grep to the quickfix list" })
 
-    vim.api.nvim_create_user_command("Lgrep", function(cargs)
+    api.nvim_create_user_command("Lgrep", function(cargs)
         eg._l_grep_cmd(cargs)
     end, { count = true, nargs = "*", desc = "Grep to the location list" })
 
@@ -731,87 +754,88 @@ if vim.g.qf_rancher_set_default_cmds then
     --- NOTE: If actual opts or logic are added to the close/toggle cmds, put that in the open
     --- module and call an exposed funtion here
 
-    vim.api.nvim_create_user_command("Qopen", function(cargs)
+    api.nvim_create_user_command("Qopen", function(cargs)
         eo._open_qflist_cmd(cargs)
     end, { count = 0, desc = "Open the Quickfix list" })
 
-    vim.api.nvim_create_user_command("Lopen", function(cargs)
+    api.nvim_create_user_command("Lopen", function(cargs)
         eo._open_loclist_cmd(cargs)
     end, { count = 0, desc = "Open the Location List" })
 
-    vim.api.nvim_create_user_command("Qclose", function()
+    api.nvim_create_user_command("Qclose", function()
         eo._close_qflist()
     end, { desc = "Close the Quickfix list" })
 
-    vim.api.nvim_create_user_command("Lclose", function()
-        eo._close_loclist()
+    -- TODO: Bring all these into the open file
+    api.nvim_create_user_command("Lclose", function()
+        eo._close_loclist(api.nvim_get_current_win())
     end, { desc = "Close the Location List" })
 
-    vim.api.nvim_create_user_command("Qtoggle", function()
+    api.nvim_create_user_command("Qtoggle", function()
         eo._toggle_qflist()
     end, { desc = "Toggle the Quickfix list" })
 
-    vim.api.nvim_create_user_command("Ltoggle", function()
-        eo._toggle_loclist()
+    api.nvim_create_user_command("Ltoggle", function()
+        eo._toggle_loclist(api.nvim_get_current_win())
     end, { desc = "Toggle the Location List" })
 
     ------------------
     --- NAV/ACTION ---
     ------------------
 
-    vim.api.nvim_create_user_command("Qprev", function(cargs)
+    api.nvim_create_user_command("Qprev", function(cargs)
         en._q_prev_cmd(cargs)
     end, { count = 0, desc = "Go to a previous qf entry" })
 
-    vim.api.nvim_create_user_command("Qnext", function(cargs)
+    api.nvim_create_user_command("Qnext", function(cargs)
         en._q_next_cmd(cargs)
     end, { count = 0, desc = "Go to a later qf entry" })
 
-    vim.api.nvim_create_user_command("Qrewind", function(cargs)
+    api.nvim_create_user_command("Qrewind", function(cargs)
         en._q_rewind_cmd(cargs)
     end, { count = 0, desc = "Go to the first or count qf entry" })
 
-    vim.api.nvim_create_user_command("Qlast", function(cargs)
+    api.nvim_create_user_command("Qlast", function(cargs)
         en._q_last_cmd(cargs)
     end, { count = 0, desc = "Go to the last or count qf entry" })
 
-    vim.api.nvim_create_user_command("Qq", function(cargs)
+    api.nvim_create_user_command("Qq", function(cargs)
         en._q_q_cmd(cargs)
     end, { count = 0, desc = "Go to the current qf entry" })
 
-    vim.api.nvim_create_user_command("Qpfile", function(cargs)
+    api.nvim_create_user_command("Qpfile", function(cargs)
         en._q_pfile_cmd(cargs)
     end, { count = 0, desc = "Go to the previous qf file" })
 
-    vim.api.nvim_create_user_command("Qnfile", function(cargs)
+    api.nvim_create_user_command("Qnfile", function(cargs)
         en._q_nfile_cmd(cargs)
     end, { count = 0, desc = "Go to the next qf file" })
 
-    vim.api.nvim_create_user_command("Lprev", function(cargs)
+    api.nvim_create_user_command("Lprev", function(cargs)
         en._l_prev_cmd(cargs)
     end, { count = 0, desc = "Go to a previous loclist entry" })
 
-    vim.api.nvim_create_user_command("Lnext", function(cargs)
+    api.nvim_create_user_command("Lnext", function(cargs)
         en._l_next_cmd(cargs)
     end, { count = 0, desc = "Go to a later loclist entry" })
 
-    vim.api.nvim_create_user_command("Lrewind", function(cargs)
+    api.nvim_create_user_command("Lrewind", function(cargs)
         en._l_rewind_cmd(cargs)
     end, { count = 0, desc = "Go to the first or count loclist entry" })
 
-    vim.api.nvim_create_user_command("Llast", function(cargs)
+    api.nvim_create_user_command("Llast", function(cargs)
         en._l_last_cmd(cargs)
     end, { count = 0, desc = "Go to the last or count loclist entry" })
 
-    vim.api.nvim_create_user_command("Ll", function(cargs)
+    api.nvim_create_user_command("Ll", function(cargs)
         en._l_l_cmd(cargs)
     end, { count = 0, desc = "Go to the current loclist entry" })
 
-    vim.api.nvim_create_user_command("Lpfile", function(cargs)
+    api.nvim_create_user_command("Lpfile", function(cargs)
         en._l_pfile_cmd(cargs)
     end, { count = 0, desc = "Go to the previous loclist file" })
 
-    vim.api.nvim_create_user_command("Lnfile", function(cargs)
+    api.nvim_create_user_command("Lnfile", function(cargs)
         en._l_nfile_cmd(cargs)
     end, { count = 0, desc = "Go to the next loclist file" })
 
@@ -819,47 +843,47 @@ if vim.g.qf_rancher_set_default_cmds then
     --- SORT ---
     ------------
 
-    vim.api.nvim_create_user_command("Qsort", function(cargs)
-        et._q_sort(cargs)
+    api.nvim_create_user_command("Qsort", function(cargs)
+        es._q_sort(cargs)
     end, { nargs = "*" })
 
-    vim.api.nvim_create_user_command("Lsort", function(cargs)
-        et._l_sort(cargs)
+    api.nvim_create_user_command("Lsort", function(cargs)
+        es._l_sort(cargs)
     end, { nargs = "*" })
 
     -------------
     --- STACK ---
     -------------
 
-    vim.api.nvim_create_user_command("Qolder", function(cargs)
-        es._q_older_cmd(cargs)
+    api.nvim_create_user_command("Qolder", function(cargs)
+        ea._q_older_cmd(cargs)
     end, { count = 0, desc = "Go to an older qflist" })
 
-    vim.api.nvim_create_user_command("Qnewer", function(cargs)
-        es._q_newer_cmd(cargs)
+    api.nvim_create_user_command("Qnewer", function(cargs)
+        ea._q_newer_cmd(cargs)
     end, { count = 0, desc = "Go to a newer qflist" })
 
-    vim.api.nvim_create_user_command("Qhistory", function(cargs)
-        es._q_history_cmd(cargs)
+    api.nvim_create_user_command("Qhistory", function(cargs)
+        ea._q_history_cmd(cargs)
     end, { count = 0, desc = "View or jump within the quickfix history" })
 
-    vim.api.nvim_create_user_command("Qdelete", function(cargs)
-        es._q_delete_cmd(cargs)
+    api.nvim_create_user_command("Qdelete", function(cargs)
+        ea._q_delete_cmd(cargs)
     end, { count = 0, nargs = "?", desc = "Delete one or all lists from the quickfix stack" })
 
-    vim.api.nvim_create_user_command("Lolder", function(cargs)
-        es._l_older_cmd(cargs)
+    api.nvim_create_user_command("Lolder", function(cargs)
+        ea._l_older_cmd(cargs)
     end, { count = 0, desc = "Go to an older location list" })
 
-    vim.api.nvim_create_user_command("Lnewer", function(cargs)
-        es._l_newer_cmd(cargs)
+    api.nvim_create_user_command("Lnewer", function(cargs)
+        ea._l_newer_cmd(cargs)
     end, { count = 0, desc = "Go to a newer location list" })
 
-    vim.api.nvim_create_user_command("Lhistory", function(cargs)
-        es._l_history_cmd(cargs)
+    api.nvim_create_user_command("Lhistory", function(cargs)
+        ea._l_history_cmd(cargs)
     end, { count = 0, desc = "View or jump within the loclist history" })
 
-    vim.api.nvim_create_user_command("Ldelete", function(cargs)
-        es._l_delete_cmd(cargs)
+    api.nvim_create_user_command("Ldelete", function(cargs)
+        ea._l_delete_cmd(cargs)
     end, { count = 0, nargs = "?", desc = "Delete one or all lists from the loclist stack" })
 end

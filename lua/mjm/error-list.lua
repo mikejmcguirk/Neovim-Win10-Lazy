@@ -47,11 +47,16 @@ _G._QFR_G_VAR_MAP = {
     qf_rancher_always_save_views = { { "boolean" }, true },
     qf_rancher_debug_assertions = { { "boolean" }, false },
     qf_rancher_del_all_if_empty = { { "boolean" }, true },
+
     qf_rancher_ftplugin_demap = { { "boolean" }, true },
     qf_rancher_ftplugin_keymap = { { "boolean" }, true },
     qf_rancher_ftplugin_set_opts = { { "boolean" }, true },
+
     qf_rancher_grepprg = { { "string" }, "rg" },
-    --- TODO: Needs to accept table
+
+    qf_rancher_map_ll_prefix = { { "string" }, "l" },
+    qf_rancher_map_qf_prefix = { { "string" }, "q" },
+
     qf_rancher_preview_border = { { "string", "table" }, "single" },
     -- DOCUMENT: Default is 100 to accomodate slower systems/HDs. 50 should be fine if you have an
     -- SSD/reasonably fast computer. Below that more risk of things getting choppy
@@ -67,9 +72,7 @@ _G._QFR_G_VAR_MAP = {
 
 for k, v in pairs(_QFR_G_VAR_MAP) do
     local cur_g_val = vim.g[k] --- @type any
-    if not vim.tbl_contains(v[1], type(cur_g_val)) then
-        vim.api.nvim_set_var(k, v[2])
-    end
+    if not vim.tbl_contains(v[1], type(cur_g_val)) then vim.api.nvim_set_var(k, v[2]) end
 end
 
 --- TODO: It seems like this file is effectively the /plugin file, so this will have to be moved
@@ -174,6 +177,11 @@ end
 --- TODO: ---
 -------------
 
+--- For validation and such, the g variables should be as generous as possible with user error,
+---     the actual API stuff should be strict
+--- For organizing the module opts, the module specific input opts should be tied specifically to
+---     the command. This is your conceptual anchor. With that, I think we can consider the
+---     APIs and such more baked in
 --- Put a confirm statement in every project file. It should be possible to open Nvim and then
 --- a list without eager requiring other modules
 --- Function audit - Is the win variable a src_win, list_win, something else? Don't just pass

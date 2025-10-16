@@ -1,11 +1,10 @@
 local eo = Qfr_Defer_Require("mjm.error-list-open") --- @type QfRancherOpen
-local ep = Qfr_Defer_Require("mjm.error-list-preview") --- @type QfRancherPreview
-local es = Qfr_Defer_Require("mjm.error-list-stack") --- @type QfRancherStack
 local et = Qfr_Defer_Require("mjm.error-list-tools") --- @type QfRancherTools
 local eu = Qfr_Defer_Require("mjm.error-list-util") --- @type QfRancherUtils
 local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
 
 local api = vim.api
+local fn = vim.fn
 
 -- NOTE: Avoid using the util g_var function during setup to avoid eager requires
 
@@ -16,7 +15,7 @@ if vim.g.qf_rancher_ftplugin_set_opts then
     api.nvim_set_option_value("list", false, { scope = "local" })
 end
 
--- TODO: Document which defaults are removed
+-- DOCUMENT: which defaults are removed
 if vim.g.qf_rancher_ftplugin_demap then
     api.nvim_buf_set_keymap(0, "n", "<C-w>v", "<nop>", { noremap = true })
     api.nvim_buf_set_keymap(0, "n", "<C-w><C-v>", "<nop>", { noremap = true })
@@ -33,60 +32,39 @@ if not vim.g.qf_rancher_ftplugin_keymap then return end
 -- NOTE: Cannot use simple ternaries to chose between qflist and loclist maps because the
 -- function literals would be evaluated during setup, causing eager requires
 
-local loading_wintype = vim.fn.win_gettype(0)
-local loading_loclist = loading_wintype == "loclist" --- @type boolean
-local list_prefix = loading_loclist and "l" or "q" --- @type string
+local in_loclist = fn.win_gettype(0) == "loclist" --- @type boolean
+local ll_prefix = vim.g.qf_rancher_map_ll_prefix or "l" --- @type string
+ll_prefix = type(ll_prefix) == "string" and ll_prefix or "l"
+local qf_prefix = vim.g.qf_rancher_map_qf_prefix or "q" --- @type string
+qf_prefix = type(qf_prefix) == "string" and qf_prefix or "q"
+local list_prefix = in_loclist and ll_prefix or qf_prefix --- @type string
 
-vim.keymap.set("n", "<leader>" .. list_prefix .. "o", function()
-    eo._close_win_save_views(api.nvim_get_current_win())
-end, { buffer = true, desc = "Close the list" })
+for _, lhs in ipairs({ "<leader>" .. list_prefix .. "o", "q" }) do
+    vim.keymap.set("n", lhs, function()
+        local src_win = in_loclist and api.nvim_get_current_win() or nil --- @type integer|nil
+        eo._close_list(src_win)
+    end, { buffer = true, desc = "Close the list" })
+end
 
-vim.keymap.set("n", "q", function()
-    eo._close_win_save_views(api.nvim_get_current_win())
-end, { buffer = true, desc = "Close the list" })
+local del_one = "<Plug>(qf-rancher-list-del-one)"
+vim.keymap.set("n", "dd", del_one, { buffer = true, desc = "Delete the current list line" })
 
-vim.keymap.set("n", "dd", function()
-    local list_win = api.nvim_get_current_win() --- @type integer
-    ey._validate_list_win(list_win) --- @type QfRancherTypes
+local toggle_preview = "<Plug>(qf-rancher-list-toggle-preview)"
+vim.keymap.set("n", "p", toggle_preview, { buffer = true, desc = "Toggle the preview win" })
 
-    local wintype = vim.fn.win_gettype(list_win)
-    local src_win = wintype == "loclist" and list_win or nil --- @type integer|nil
-    local list_dict = et._get_list(src_win, { all = true }) --- @type table
-    if #list_dict.items < 1 then return end
+local update_preview = "<Plug>(qf-rancher-list-update-preview-pos)"
+vim.keymap.set("n", "P", update_preview, { buffer = true, desc = "Open the preview win" })
 
-    local row, col = unpack(api.nvim_win_get_cursor(list_win)) --- @type integer, integer
-    table.remove(list_dict.items, row)
-    et._set_list(src_win, { nr = 0, items = list_dict.items, idx = list_dict.idx })
-    eu._protected_set_cursor(0, { row, col })
-end, { buffer = true, desc = "Delete the current list line" })
-
-vim.keymap.set("n", "p", function()
-    local cur_win = api.nvim_get_current_win()
-    ep.toggle_preview_win(cur_win)
-end, { buffer = true, desc = "Open the preview win" })
-
-vim.keymap.set("n", "P", function()
-    ep.update_preview_win_pos()
-end, { buffer = true, desc = "Open the preview win" })
-
-if loading_loclist then
-    vim.keymap.set("n", "<", function()
-        local cur_win = api.nvim_get_current_win()
-        es._l_older(cur_win, vim.v.count)
-    end, { buffer = true, desc = "Goto older loclist history" })
-
-    vim.keymap.set("n", ">", function()
-        local cur_win = api.nvim_get_current_win()
-        es._l_newer(cur_win, vim.v.count)
-    end, { buffer = true, desc = "Goto newer loclist history" })
+if in_loclist then
+    local l_older = "<Plug>(qf-rancher-ll-older)"
+    vim.keymap.set("n", "<", l_older, { buffer = true, desc = "Go to an older location list" })
+    local l_newer = "<Plug>(qf-rancher-ll-newer)"
+    vim.keymap.set("n", ">", l_newer, { buffer = true, desc = "Go to a newer location list" })
 else
-    vim.keymap.set("n", "<", function()
-        es._q_older(vim.v.count)
-    end, { buffer = true, desc = "Goto older qflist history" })
-
-    vim.keymap.set("n", ">", function()
-        es._q_newer(vim.v.count)
-    end, { buffer = true, desc = "Goto newer qflist history" })
+    local q_older = "<Plug>(qf-rancher-qf-older)"
+    vim.keymap.set("n", "<", q_older, { buffer = true, desc = "Go to an older qflist" })
+    local q_newer = "<Plug>(qf-rancher-qf-newer)"
+    vim.keymap.set("n", ">", q_newer, { buffer = true, desc = "Go to a newer qflist" })
 end
 
 -------------
@@ -119,7 +97,7 @@ local function get_list_item(src_win)
     local items = et._get_list(src_win, { nr = 0, items = true }).items
     if #items < 1 then return nil, nil end
 
-    local line = vim.fn.line(".") --- @type integer
+    local line = fn.line(".") --- @type integer
     local item = items[line] --- @type vim.quickfix.entry
     if item.bufnr and api.nvim_buf_is_valid(item.bufnr) then return item, line end
 
@@ -135,7 +113,7 @@ local function get_list_info()
         return nil, nil, false
     end
 
-    local is_loclist = vim.fn.win_gettype(list_win) == "loclist" --- @type boolean
+    local is_loclist = fn.win_gettype(list_win) == "loclist" --- @type boolean
     local src_win = is_loclist and list_win or nil --- @type integer|nil
 
     local loclist_origin_win = (is_loclist and src_win)
@@ -161,7 +139,7 @@ local function handle_orphan(list_win, dest_win, finish)
         if finish == "focusList" then assert(cur_win == list_win) end
     end
 
-    local dest_win_qf_id = vim.fn.getloclist(dest_win, { id = 0 }).id
+    local dest_win_qf_id = fn.getloclist(dest_win, { id = 0 }).id
     if dest_win_qf_id > 0 then
         if finish == "closeList" then eo._close_win_save_views(list_win) end
         return
@@ -183,40 +161,36 @@ local function handle_orphan(list_win, dest_win, finish)
     -- Cannot ensure proper context with nvim_win_call because open_loclist is meant
     -- to use lopen to move to the list win if keep_win is false
     api.nvim_set_current_win(dest_win)
-    eo._open_loclist({ keep_win = keep_win })
+    eo._open_loclist(dest_win, { keep_win = keep_win })
 
     if eu._get_g_var("qf_rancher_debug_assertions") then
         local cur_win = api.nvim_get_current_win() --- @type integer
         if finish == "focusWin" then assert(cur_win == dest_win) end
-        if finish == "focusList" then assert(vim.fn.win_gettype(cur_win) == "loclist") end
+        if finish == "focusList" then assert(fn.win_gettype(cur_win) == "loclist") end
     end
 end
 
 --- @param win integer
 --- @param dest_buftype string
---- @param bufnr? integer
+--- @param buf? integer
 --- @return boolean
 --- NOTE: Because this runs in loops, skip validation
-local function is_valid_dest_win(win, dest_buftype, bufnr)
-    local wintype = vim.fn.win_gettype(win)
+local function is_valid_dest_win(win, dest_buftype, buf)
+    local wintype = fn.win_gettype(win)
 
     local win_buf = api.nvim_win_get_buf(win) --- @type integer
-    local win_buftype = api.nvim_get_option_value("buftype", { buf = win_buf })
+    local win_buftype = api.nvim_get_option_value("buftype", { buf = win_buf }) --- @type string
     local has_buf = (function()
-        if not bufnr then
+        if not buf then
             return true
         else
-            return win_buf == bufnr
+            return win_buf == buf
         end
     end)() --- @type boolean
 
-    -- NOTE: Being permissive or restrictive about the dest_wintype can, in theory, create
-    -- different edge cases. I think the restrictive approach provides the more predictable
-    -- starting point to add edge case handling on top of
-    local valid_buf = has_buf and win_buftype == dest_buftype
-    if wintype == "" and valid_buf then return true end
-
-    return false
+    -- NOTE: Prefer being too restrictive about allowed wins. Handle edge cases as they come up
+    local valid_buf = has_buf and win_buftype == dest_buftype --- @type boolean
+    return wintype == "" and valid_buf
 end
 
 --- @param tabnr integer
@@ -228,13 +202,13 @@ local function find_win_in_tab(tabnr, dest_buftype, opts)
     vim.validate("dest_buftype", dest_buftype, "string")
     ey._validate_find_win_in_tab_opts(opts)
 
-    local max_winnr = vim.fn.tabpagewinnr(tabnr, "$") --- @type integer
+    local max_winnr = fn.tabpagewinnr(tabnr, "$") --- @type integer
     local skip_winnr = opts.skip_winnr --- @type integer|nil
 
     for i = 1, max_winnr do
         if i ~= skip_winnr then
             -- Convert now because win_gettype does not support tab context
-            local win = vim.fn.win_getid(i, tabnr)
+            local win = fn.win_getid(i, tabnr)
             if is_valid_dest_win(win, dest_buftype, opts.bufnr) then return win end
         end
     end
@@ -250,7 +224,7 @@ local function find_win_in_tabs(list_tabnr, dest_buftype, buf)
     ey._validate_uint(buf, true)
 
     local test_tabnr = list_tabnr --- @type integer
-    local max_tabnr = vim.fn.tabpagenr("$") --- @type integer
+    local max_tabnr = fn.tabpagenr("$") --- @type integer
 
     for _ = 1, 100 do
         test_tabnr = test_tabnr + 1
@@ -274,7 +248,7 @@ local function find_win_in_tab_reverse(tabnr, dest_buftype, opts)
     vim.validate("dest_buftype", dest_buftype, "string")
     ey._validate_find_win_in_tab_opts(opts)
 
-    local max_winnr = vim.fn.tabpagewinnr(tabnr, "$") --- @type integer
+    local max_winnr = fn.tabpagewinnr(tabnr, "$") --- @type integer
     local fin_winnr = opts.fin_winnr or 1 --- @type integer
     local test_winnr = fin_winnr --- @type integer
     local skip_winnr = opts.skip_winnr --- @type integer|nil
@@ -284,7 +258,7 @@ local function find_win_in_tab_reverse(tabnr, dest_buftype, opts)
         if test_winnr <= 0 then test_winnr = max_winnr end
         if test_winnr ~= skip_winnr then
             -- Convert now because win_gettype does not support tab context
-            local win = vim.fn.win_getid(test_winnr, tabnr)
+            local win = fn.win_getid(test_winnr, tabnr)
             if is_valid_dest_win(win, dest_buftype, opts.bufnr) then return win end
         end
 
@@ -296,18 +270,16 @@ end
 
 --- @param list_tabnr integer
 --- @param dest_buftype string
---- @param buf? integer
 --- @return integer|nil
-local function get_count_win(list_tabnr, dest_buftype, buf)
+local function get_count_win(list_tabnr, dest_buftype)
     ey._validate_uint(list_tabnr)
     vim.validate("dest_buftype", dest_buftype, "string")
-    ey._validate_uint(buf, true)
 
-    local max_winnr = vim.fn.tabpagewinnr(list_tabnr, "$") --- @type integer
+    local max_winnr = fn.tabpagewinnr(list_tabnr, "$") --- @type integer
     local adj_count = math.min(vim.v.count, max_winnr) --- @type integer
-    local target_win = vim.fn.win_getid(adj_count, list_tabnr) --- @type integer
+    local target_win = fn.win_getid(adj_count, list_tabnr) --- @type integer
 
-    if is_valid_dest_win(target_win, dest_buftype, buf) then return target_win end
+    if is_valid_dest_win(target_win, dest_buftype) then return target_win end
     api.nvim_echo({ { "Winnr " .. adj_count .. " is not valid", "" } }, false, {})
     return nil
 end
@@ -325,7 +297,7 @@ local function get_ll_dest_win(list_win, dest_buftype, buf)
     local list_tabnr = api.nvim_tabpage_get_number(list_tabpage) --- @type integer
 
     if vim.v.count > 0 then
-        local count_win = get_count_win(list_tabnr, dest_buftype, buf)
+        local count_win = get_count_win(list_tabnr, dest_buftype)
         if count_win then return true, count_win end
         return false, nil
     end
@@ -365,7 +337,7 @@ local function get_qf_dest_win(list_win, dest_buftype, buf)
     local list_tabnr = api.nvim_tabpage_get_number(list_tabpage) --- @type integer
 
     if vim.v.count > 0 then
-        local count_win = get_count_win(list_tabnr, dest_buftype, buf)
+        local count_win = get_count_win(list_tabnr, dest_buftype)
         if count_win then return true, count_win end
         return false, nil
     end
@@ -390,8 +362,8 @@ local function get_qf_dest_win(list_win, dest_buftype, buf)
     end
 
     if string.find(switchbuf, "uselast", 1, true) then
-        local alt_winnr = vim.fn.tabpagewinnr(list_tabnr, "#") --- @type integer
-        local alt_win = vim.fn.win_getid(alt_winnr, list_tabnr) --- @type integer
+        local alt_winnr = fn.tabpagewinnr(list_tabnr, "#") --- @type integer
+        local alt_win = fn.win_getid(alt_winnr, list_tabnr) --- @type integer
         if is_valid_dest_win(alt_win, dest_buftype, buf) then return true, alt_win end
     end
 
@@ -538,7 +510,7 @@ local function open_new_tab(finish)
     local item, line = get_list_item(src_win) --- @type vim.quickfix.entry|nil, integer|nil
     if not (item and line) then return end
 
-    local tab_count = vim.fn.tabpagenr("$") --- @type integer
+    local tab_count = fn.tabpagenr("$") --- @type integer
     --- @type integer
     local range = vim.v.count > 0 and math.min(vim.v.count, tab_count) or tab_count
     local dest_buftype = item.type == "\1" and "help" or "" --- @type string
