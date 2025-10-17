@@ -1,13 +1,13 @@
 ---@mod Diags Sends diags to the qf list
 
---- @class QfRancherDiagnostics
+---@class QfRancherDiagnostics
 local Diags = {}
 
-local ea = Qfr_Defer_Require("mjm.error-list-stack") --- @type QfRancherStack
-local es = Qfr_Defer_Require("mjm.error-list-sort") --- @type QfRancherSort
-local et = Qfr_Defer_Require("mjm.error-list-tools") --- @type QfRancherTools
-local eu = Qfr_Defer_Require("mjm.error-list-util") --- @type QfRancherUtil
-local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
+local ea = Qfr_Defer_Require("mjm.error-list-stack") ---@type QfRancherStack
+local es = Qfr_Defer_Require("mjm.error-list-sort") ---@type QfRancherSort
+local et = Qfr_Defer_Require("mjm.error-list-tools") ---@type QfRancherTools
+local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfRancherUtil
+local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfRancherTypes
 
 -- HELPER FUNCTIONS --
 
@@ -16,7 +16,7 @@ local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
 ---@param diags vim.Diagnostic[]
 ---@return vim.Diagnostic[]
 local function filter_diags_top_severity(diags)
-    local top_severity = vim.diagnostic.severity.HINT --- @type vim.diagnostic.Severity
+    local top_severity = vim.diagnostic.severity.HINT ---@type vim.diagnostic.Severity
     for _, diag in ipairs(diags) do
         if diag.severity < top_severity then top_severity = diag.severity end
     end
@@ -55,10 +55,10 @@ end
 local function get_getopts(diag_opts)
     ey._validate_diag_opts(diag_opts)
 
-    local level = diag_opts.level or vim.diagnostic.severity.HINT --- @type vim.diagnostic.Severity
+    local level = diag_opts.level or vim.diagnostic.severity.HINT ---@type vim.diagnostic.Severity
     if diag_opts.filter == "only" then return { severity = level } end
 
-    --- @type boolean
+    ---@type boolean
     local min_hint = diag_opts.filter == "min" and level == vim.diagnostic.severity.HINT
     if min_hint or diag_opts.filter == "top" then
         return { severity = nil }
@@ -78,14 +78,14 @@ function Diags.diags_to_list(diag_opts, what)
     ey._validate_diag_opts(diag_opts)
     ey._validate_what(what)
 
-    local src_win = what.user_data.src_win --- @type integer
+    local src_win = what.user_data.src_win ---@type integer
     if src_win and not eu._valid_win_for_loclist(src_win) then return end
 
-    local buf = src_win and vim.api.nvim_win_get_buf(src_win) or nil --- @type integer|nil
-    local getopts = get_getopts(diag_opts) --- @type vim.diagnostic.GetOpts
-    local raw_diags = vim.diagnostic.get(buf, getopts) --- @type vim.Diagnostic[]
+    local buf = src_win and vim.api.nvim_win_get_buf(src_win) or nil ---@type integer|nil
+    local getopts = get_getopts(diag_opts) ---@type vim.diagnostic.GetOpts
+    local raw_diags = vim.diagnostic.get(buf, getopts) ---@type vim.Diagnostic[]
 
-    local plural = ey._plural_severity_map[diag_opts.level] or "diagnostics" --- @type string
+    local plural = ey._plural_severity_map[diag_opts.level] or "diagnostics" ---@type string
     if #raw_diags == 0 then
         vim.api.nvim_echo({ { "No " .. plural, "" } }, false, {})
         return
@@ -98,9 +98,9 @@ function Diags.diags_to_list(diag_opts, what)
         items = converted_diags,
         title = "vim.diagnostic.get() " .. diag_opts.filter .. " " .. plural,
         user_data = { sort_func = es._sort_fname_diag_asc },
-    }) --- @type QfRancherWhat
+    }) ---@type QfRancherWhat
 
-    local dest_nr = et._set_list(src_win, what_set) --- @type integer
+    local dest_nr = et._set_list(src_win, what_set) ---@type integer
     if eu._get_g_var("qf_rancher_auto_open_changes") and dest_nr > 0 then
         ea._history(src_win, dest_nr, {
             always_open = true,
@@ -116,7 +116,7 @@ local level_map = {
     warn = vim.diagnostic.severity.WARN,
     error = vim.diagnostic.severity.ERROR,
     top = nil,
-} --- @type table <string, vim.diagnostic.Severity>
+} ---@type table <string, vim.diagnostic.Severity>
 
 ---@param src_win integer|nil
 ---@param cargs vim.api.keyset.create_user_command.command_args
@@ -124,17 +124,17 @@ local level_map = {
 local function make_diag_cmd(src_win, cargs)
     ey._validate_win(src_win, true)
 
-    local fargs = cargs.fargs --- @type string[]
+    local fargs = cargs.fargs ---@type string[]
 
-    local levels = vim.tbl_keys(level_map) --- @type string[]
-    local level = eu._check_cmd_arg(fargs, levels, "hint") --- @type string
-    local sev_filter = eu._check_cmd_arg(fargs, ey._sev_filters, "min") --- @type string
+    local levels = vim.tbl_keys(level_map) ---@type string[]
+    local level = eu._check_cmd_arg(fargs, levels, "hint") ---@type string
+    local sev_filter = eu._check_cmd_arg(fargs, ey._sev_filters, "min") ---@type string
 
-    local diag_opts = { level = level_map[level], filter = sev_filter } --- @type QfRancherDiagOpts
+    local diag_opts = { level = level_map[level], filter = sev_filter } ---@type QfRancherDiagOpts
 
-    --- @type QfRancherAction
+    ---@type QfRancherAction
     local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action)
-    --- @type QfRancherWhat
+    ---@type QfRancherWhat
     local what = { nr = cargs.count, user_data = { action = action, src_win = src_win } }
 
     Diags.diags_to_list(diag_opts, what)
