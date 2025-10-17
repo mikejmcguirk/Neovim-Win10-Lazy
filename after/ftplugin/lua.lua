@@ -3,7 +3,6 @@ local ut = require("mjm.utils")
 ---@param annotation string
 ---@return nil
 local function add_annotation(annotation)
-    annotation = annotation == "" and annotation or " " .. annotation
     local row, col = unpack(vim.api.nvim_win_get_cursor(0)) ---@type integer, integer
     local row_0 = row - 1 ---@type integer
     local col_1 = col + 1 ---@type integer
@@ -41,6 +40,10 @@ end, { buffer = true })
 
 Map("n", "<leader>-f", function()
     add_annotation("@field")
+end, { buffer = true })
+
+Map("n", "<leader>-i", function()
+    add_annotation("@private")
 end, { buffer = true })
 
 Map("n", "<leader>-l", function()
