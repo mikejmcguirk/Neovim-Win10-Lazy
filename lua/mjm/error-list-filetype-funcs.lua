@@ -16,9 +16,13 @@ local fn = vim.fn
 --- @return nil
 function M._del_one_list_item()
     local list_win = api.nvim_get_current_win() --- @type integer
-    if not ey._is_in_list_win(list_win) then return end
+    local wintype = fn.win_gettype(list_win)
+    if not (wintype == "quickfix" or wintype == "loclist") then
+        api.nvim_echo({ { "Not inside a list window", "" } }, false, {})
+        return
+    end
 
-    local src_win = fn.win_gettype(list_win) == "loclist" and list_win or nil --- @type integer|nil
+    local src_win = wintype == "loclist" and list_win or nil --- @type integer|nil
     local list = et._get_list(src_win, { nr = 0, all = true }) --- @type table
     if #list.items < 1 then return end
 
@@ -34,29 +38,51 @@ function M._del_one_list_item()
     eu._protected_set_cursor(0, { row, col })
 end
 
+function M._visual_del()
+    local list_win = api.nvim_get_current_win() --- @type integer
+    local wintype = fn.win_gettype(list_win)
+    if not (wintype == "quickfix" or wintype == "loclist") then
+        api.nvim_echo({ { "Not inside a list window", "" } }, false, {})
+        return
+    end
+
+    local mode = string.sub(api.nvim_get_mode().mode, 1, 1) ---@type string
+    if mode ~= "V" then
+        api.nvim_echo({ { "Must be in visual line mode", "" } }, false, {})
+        return
+    end
+
+    local src_win = wintype == "loclist" and list_win or nil --- @type integer|nil
+    local list = et._get_list(src_win, { nr = 0, all = true }) --- @type table
+    if #list.items < 1 then return end
+    local col = vim.api.nvim_win_get_cursor(list_win)[2] --- @type integer
+
+    local cur = fn.getpos(".") --- @type table
+    local fin = fn.getpos("v") --- @type table
+    --- @type table
+    local region = fn.getregionpos(cur, fin, { type = mode, exclusive = false })
+
+    --- @type Range4
+    local vrange_4 =
+        { region[1][1][2], region[1][1][3], region[#region][2][2], region[#region][2][3] }
+    api.nvim_cmd({ cmd = "normal", args = { "\27" }, bang = true }, {})
+    for i = vrange_4[3], vrange_4[1], -1 do
+        table.remove(list.items, i)
+    end
+
+    et._set_list(src_win, {
+        nr = 0,
+        items = list.items,
+        idx = list.idx,
+        user_data = { action = "replace" },
+    })
+
+    eu._protected_set_cursor(0, { vrange_4[1], col })
+end
+
 -------------------------
 --- LIST OPEN HELPERS ---
 -------------------------
-
---- @return integer|nil, integer|nil, boolean
-local function get_list_info()
-    local list_win = api.nvim_get_current_win() --- @type integer
-    if not ey._is_in_list_win(list_win) then
-        api.nvim_echo({ { "Not inside a list window", "" } }, false, {})
-        return nil, nil, false
-    end
-
-    local is_loclist = fn.win_gettype(list_win) == "loclist" --- @type boolean
-    local src_win = is_loclist and list_win or nil --- @type integer|nil
-
-    local loclist_origin_win = (is_loclist and src_win)
-            and eu._find_loclist_origin(src_win, { all_tabpages = true })
-        or nil --- @type integer|nil
-
-    local is_orphan = is_loclist and not loclist_origin_win --- @type boolean
-
-    return list_win, src_win, is_orphan
-end
 
 --- @param list_win integer
 --- @param buf_win integer
@@ -126,6 +152,8 @@ local function find_win_in_tab(tabnr, dest_buftype, opts)
             if is_valid_dest_win(win, dest_buftype, opts.bufnr) then return win end
         end
     end
+
+    return nil
 end
 
 --- @param list_tabnr integer
@@ -172,7 +200,7 @@ local function find_win_in_tab_reverse(tabnr, dest_buftype, opts)
         if test_winnr <= 0 then test_winnr = max_winnr end
         if test_winnr ~= skip_winnr then
             -- Convert now because win_gettype does not support tab context
-            local win = fn.win_getid(test_winnr, tabnr)
+            local win = fn.win_getid(test_winnr, tabnr) --- @type integer
             if is_valid_dest_win(win, dest_buftype, opts.bufnr) then return win end
         end
 
@@ -200,12 +228,16 @@ end
 
 --- @param list_win integer
 --- @param dest_buftype string
---- @param buf? integer
+--- @param buf integer
+--- @param is_loclist boolean
+--- @param loclist_origin? integer
 --- @return boolean, integer|nil
-local function get_ll_dest_win(list_win, dest_buftype, buf)
+local function get_dest_win(list_win, dest_buftype, buf, is_loclist, loclist_origin)
     ey._validate_list_win(list_win)
     vim.validate("dest_buftype", dest_buftype, "string")
-    ey._validate_uint(buf, true)
+    ey._validate_buf(buf)
+    vim.validate("is_loclist", is_loclist, "boolean")
+    ey._validate_win(loclist_origin, true)
 
     local list_tabpage = api.nvim_win_get_tabpage(list_win) --- @type integer
     local list_tabnr = api.nvim_tabpage_get_number(list_tabpage) --- @type integer
@@ -216,53 +248,18 @@ local function get_ll_dest_win(list_win, dest_buftype, buf)
         return false, nil
     end
 
-    if dest_buftype == "help" then return true, find_win_in_tab(list_tabnr, dest_buftype, {}) end
-
-    --- @type integer|nil
-    local loclist_origin = eu._find_loclist_origin(list_win, { tabpage = list_tabpage })
-    if loclist_origin then return true, loclist_origin end
-
     local list_winnr = api.nvim_win_get_number(list_win) --- @type integer
-    --- @type QfRancherFindWinInTabOpts
-    local find_buf_opts = { bufnr = buf, skip_winnr = list_winnr }
-    --- @type integer|nil
-    local tabpage_buf_win = find_win_in_tab(list_tabnr, dest_buftype, find_buf_opts)
-    if tabpage_buf_win then return true, tabpage_buf_win end
-
-    --- @type QfRancherFindWinInTabOpts
-    local find_opts = { fin_winnr = list_winnr, skip_winnr = list_winnr }
-    --- @type integer|nil
-    local fallback_win = find_win_in_tab_reverse(list_tabnr, dest_buftype, find_opts)
-
-    if fallback_win then return true, fallback_win end
-    return true, nil
-end
-
---- @param list_win integer
---- @param dest_buftype string
---- @param buf? integer
---- @return boolean, integer|nil
-local function get_qf_dest_win(list_win, dest_buftype, buf)
-    ey._validate_list_win(list_win)
-    vim.validate("dest_buftype", dest_buftype, "string")
-    ey._validate_uint(buf, true)
-
-    local list_tabpage = api.nvim_win_get_tabpage(list_win) --- @type integer
-    local list_tabnr = api.nvim_tabpage_get_number(list_tabpage) --- @type integer
-
-    if vim.v.count > 0 then
-        local count_win = get_count_win(list_tabnr, dest_buftype)
-        if count_win then return true, count_win end
-        return false, nil
+    if dest_buftype == "help" then
+        return true, find_win_in_tab(list_tabnr, dest_buftype, { skip_winnr = list_winnr })
     end
 
-    if dest_buftype == "help" then return true, find_win_in_tab(list_tabnr, dest_buftype, {}) end
+    if is_loclist and loclist_origin then return true, loclist_origin end
 
-    --- @type string
-    local switchbuf = api.nvim_get_option_value("switchbuf", { scope = "global" })
-    local list_winnr = api.nvim_win_get_number(list_win) --- @type integer
+    local switchbuf = not is_loclist
+            and api.nvim_get_option_value("switchbuf", { scope = "global" })
+        or nil --- @type string
 
-    if string.find(switchbuf, "useopen", 1, true) then
+    if string.find(switchbuf, "useopen", 1, true) or is_loclist then
         --- @type QfRancherFindWinInTabOpts
         local find_opts = { bufnr = buf, skip_winnr = list_winnr }
         --- @type integer|nil
@@ -270,12 +267,12 @@ local function get_qf_dest_win(list_win, dest_buftype, buf)
         if tabpage_buf_win then return true, tabpage_buf_win end
     end
 
-    if string.find(switchbuf, "usetab", 1, true) then
+    if string.find(switchbuf, "usetab", 1, true) and not is_loclist then
         local usetab_win = find_win_in_tabs(list_tabnr, dest_buftype, buf) --- @type integer|nil
         if usetab_win then return true, usetab_win end
     end
 
-    if string.find(switchbuf, "uselast", 1, true) then
+    if string.find(switchbuf, "uselast", 1, true) and not is_loclist then
         local alt_winnr = fn.tabpagewinnr(list_tabnr, "#") --- @type integer
         local alt_win = fn.win_getid(alt_winnr, list_tabnr) --- @type integer
         if is_valid_dest_win(alt_win, dest_buftype, buf) then return true, alt_win end
@@ -378,18 +375,27 @@ function M._open_item_from_list(split, finish, idx_func)
     ey._validate_finish_method(finish)
     vim.validate("idx_func", idx_func, "callable")
 
-    --- @type integer|nil, integer|nil, boolean
-    local list_win, src_win, is_orphan = get_list_info()
-    if not list_win then return end
+    local list_win = api.nvim_get_current_win() --- @type integer
+    if not ey._is_in_list_win(list_win) then
+        api.nvim_echo({ { "Not inside a list window", "" } }, false, {})
+        return
+    end
+
+    local is_loclist = fn.win_gettype(list_win) == "loclist" --- @type boolean
+    local src_win = is_loclist and list_win or nil --- @type integer|nil
+    local loclist_origin = (is_loclist and src_win)
+            and eu._find_loclist_origin(src_win, { all_tabpages = true })
+        or nil --- @type integer|nil
+
+    local is_orphan = is_loclist and not loclist_origin --- @type boolean
 
     local item, idx = idx_func(src_win) --- @type vim.quickfix.entry|nil, integer|nil
     if not (item and item.bufnr and item.type and idx) then return end
 
     local dest_buftype = item.type == "\1" and "help" or "" --- @type string
-    local ok, dest_win = (function()
-        if src_win then return get_ll_dest_win(list_win, dest_buftype, item.bufnr) end
-        return get_qf_dest_win(list_win, dest_buftype, item.bufnr)
-    end)() --- @type boolean, integer|nil
+    --- @type boolean, integer|nil
+    local ok, dest_win =
+        get_dest_win(list_win, dest_buftype, item.bufnr, is_loclist, loclist_origin)
 
     if not ok then return end
 
@@ -470,24 +476,15 @@ end
 
 return M
 
--- TODO: Re-add the multi-line visual delete
--- TODO: Create stevearc's {} maps for scrolling in the list
-
--- MID: This file is essentially a set of funcs to re-create the list-opening behavior plus a
--- couple different ways to access them. It would be good to generalize and factor these out,
--- including the autocmd firing, so that they can be applied to other funcs, such as performing
--- list nav without losing window focus
-
------------
--- MAYBE --
------------
+-- TODO: docs
+-- TODO: tests
 
 -- MAYBE: For some of the context switching, eventignore could be useful. But very bad if we error
 -- with that option on
 
-------------------
---- REFERENCES ---
-------------------
+----------------
+-- REFERENCES --
+----------------
 
 -- qf_view_result
 -- ex_cc

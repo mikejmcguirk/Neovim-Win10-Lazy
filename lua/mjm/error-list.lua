@@ -179,6 +179,7 @@ end
 --- TODO: ---
 -------------
 
+-- Formatting: api/fn/other long names. defer require
 --- For validation and such, the g variables should be as generous as possible with user error,
 ---     the actual API stuff should be strict
 --- For organizing the module opts, the module specific input opts should be tied specifically to

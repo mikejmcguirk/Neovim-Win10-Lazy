@@ -412,7 +412,7 @@ function M._validate_open_buf_opts(opts)
     vim.validate("opts.goto_win", opts.goto_win, "boolean", true)
     vim.validate("opts.skip_set_cur_pos", opts.skip_set_cur_pos, "boolean", true)
     vim.validate("opts.skip_zzze", opts.skip_zzze, "boolean", true)
-    M._validate_uint(opts.win, true)
+    M._validate_win(opts.win, true)
 end
 
 ---------------------------

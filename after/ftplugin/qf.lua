@@ -45,6 +45,7 @@ for _, lhs in ipairs({ "<leader>" .. list_prefix .. list_prefix, "q" }) do
 end
 
 bufmap_plug("n", "dd", "<Plug>(qf-rancher-list-del-one)", "Delete the current list line")
+bufmap_plug("x", "d", "<Plug>(qf-rancher-list-visual-del)", "Delete a visual line selection")
 
 bufmap_plug("n", "p", "<Plug>(qf-rancher-list-toggle-preview)", "Toggle the preview win")
 bufmap_plug("n", "P", "<Plug>(qf-rancher-list-update-preview-pos)", "Open the preview win")

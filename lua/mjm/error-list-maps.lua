@@ -695,6 +695,10 @@ vim.keymap.set("n", pqfr .. "-list-del-one)", function()
     ei._del_one_list_item()
 end, { desc = "Delete the current list line" })
 
+vim.keymap.set("x", pqfr .. "-list-visual-del)", function()
+    ei._visual_del()
+end, { desc = "Delete a visual line selection" })
+
 vim.keymap.set("n", pqfr .. "-list-toggle-preview)", function()
     ep.toggle_preview_win(api.nvim_get_current_win())
 end, { desc = "Toggle the preview win" })

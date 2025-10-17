@@ -504,11 +504,7 @@ function M._open_item_to_win(item, opts)
     local already_open = api.nvim_win_get_buf(win) == buf --- @type boolean
     api.nvim_set_option_value("buflisted", true, { buf = buf })
     if opts.buftype then api.nvim_set_option_value("buftype", opts.buftype, { buf = buf }) end
-
-    -- TODO: See if this is actually necessary
-    -- if opts.buftype == "help" then
-    --     api.nvim_set_option_value("list", false, { win = win })
-    -- end
+    if opts.buftype == "help" then api.nvim_set_option_value("list", false, { win = win }) end
 
     if not already_open then
         api.nvim_win_call(win, function()
@@ -530,6 +526,7 @@ function M._open_item_to_win(item, opts)
     end
 
     if not opts.skip_set_cur_pos then
+        --- @type {[1]:integer, [2]:integer}
         local cur_pos = M._qf_pos_to_cur_pos(item.lnum, item.col)
         M._protected_set_cursor(win, cur_pos)
     end
