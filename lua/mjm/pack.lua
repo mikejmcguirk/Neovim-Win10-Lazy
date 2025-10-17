@@ -92,9 +92,7 @@ Map("n", "zqd", function()
 end)
 
 Map("n", "zqD", function()
-    if vim.fn.confirm("Delete all plugins?", "&Yes\n&No", 2) ~= 1 then
-        return
-    end
+    if vim.fn.confirm("Delete all plugins?", "&Yes\n&No", 2) ~= 1 then return end
 
     local plugins = vim.iter(pairs(vim.pack.get()))
         :map(function(_, s)

@@ -1,5 +1,7 @@
+---@mod Diags Sends diags to the qf list
+
 --- @class QfRancherDiagnostics
-local M = {}
+local Diags = {}
 
 local ea = Qfr_Defer_Require("mjm.error-list-stack") --- @type QfRancherStack
 local es = Qfr_Defer_Require("mjm.error-list-sort") --- @type QfRancherSort
@@ -7,14 +9,12 @@ local et = Qfr_Defer_Require("mjm.error-list-tools") --- @type QfRancherTools
 local eu = Qfr_Defer_Require("mjm.error-list-util") --- @type QfRancherUtil
 local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
 
-----------------------
 -- HELPER FUNCTIONS --
-----------------------
 
 -- LOW: This and tbl_filter do not feel like the most efficient way to do this
 
---- @param diags vim.Diagnostic[]
---- @return vim.Diagnostic[]
+---@param diags vim.Diagnostic[]
+---@return vim.Diagnostic[]
 local function filter_diags_top_severity(diags)
     local top_severity = vim.diagnostic.severity.HINT --- @type vim.diagnostic.Severity
     for _, diag in ipairs(diags) do
@@ -31,9 +31,9 @@ local severity_map = ey._severity_map ---@type table<integer, string>
 
 -- LOW: Come up with a way to specify a custom conversion function
 
---- @param d vim.Diagnostic
---- @return vim.quickfix.entry
---- NOTE: Hot loop. No validation
+---@param d vim.Diagnostic
+---@return vim.quickfix.entry
+---NOTE: Hot loop. No validation
 local function convert_diag(d)
     local source = d.source and d.source .. ": " or "" ---@type string
 
@@ -50,8 +50,8 @@ local function convert_diag(d)
     }
 end
 
---- @param diag_opts QfRancherDiagOpts
---- @return vim.diagnostic.GetOpts
+---@param diag_opts QfRancherDiagOpts
+---@return vim.diagnostic.GetOpts
 local function get_getopts(diag_opts)
     ey._validate_diag_opts(diag_opts)
 
@@ -67,14 +67,14 @@ local function get_getopts(diag_opts)
     end
 end
 
---- Convert diagnostics into list entries
+---Convert diagnostics into list entries
 ---
---- @param diag_opts QfRancherDiagOpts Options dict:
---- - filter: (string) "min", "only", or "top" severity
---- - level: vim.diagnostic.Severity
---- @param what QfRancherWhat
---- @return nil
-function M.diags_to_list(diag_opts, what)
+---@param diag_opts QfRancherDiagOpts Options dict:
+---- filter: (string) "min", "only", or "top" severity
+---- level: vim.diagnostic.Severity
+---@param what QfRancherWhat
+---@return nil
+function Diags.diags_to_list(diag_opts, what)
     ey._validate_diag_opts(diag_opts)
     ey._validate_what(what)
 
@@ -118,9 +118,9 @@ local level_map = {
     top = nil,
 } --- @type table <string, vim.diagnostic.Severity>
 
---- @param src_win integer|nil
---- @param cargs vim.api.keyset.create_user_command.command_args
---- @return nil
+---@param src_win integer|nil
+---@param cargs vim.api.keyset.create_user_command.command_args
+---@return nil
 local function make_diag_cmd(src_win, cargs)
     ey._validate_win(src_win, true)
 
@@ -137,25 +137,24 @@ local function make_diag_cmd(src_win, cargs)
     --- @type QfRancherWhat
     local what = { nr = cargs.count, user_data = { action = action, src_win = src_win } }
 
-    M.diags_to_list(diag_opts, what)
+    Diags.diags_to_list(diag_opts, what)
 end
 
---- @param cargs vim.api.keyset.create_user_command.command_args
---- @return nil
-function M._q_diag(cargs)
+---@private
+---@param cargs vim.api.keyset.create_user_command.command_args
+---@return nil
+function Diags._q_diag(cargs)
     make_diag_cmd(nil, cargs)
 end
 
---- @param cargs vim.api.keyset.create_user_command.command_args
---- @return nil
-function M._l_diag(cargs)
+---@private
+---@param cargs vim.api.keyset.create_user_command.command_args
+---@return nil
+function Diags._l_diag(cargs)
     make_diag_cmd(vim.api.nvim_get_current_win(), cargs)
 end
 
-return M
+return Diags
+---@export Diags
 
-----------
--- TODO --
-----------
-
--- Testing
+-- TODO: Add tests

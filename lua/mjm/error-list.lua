@@ -179,6 +179,9 @@ end
 --- TODO: ---
 -------------
 
+-- lemmy cmd: lemmy-help -l "compact" names > output
+-- Make sure the luarc for the project has the disabled private diag for docs. Also want to
+-- not have the trailing space one
 -- Unsure where to document the what opts, since they are the same for each function
 -- Doc sanitation. Remove unnecessary doc strings
 -- For anything with one reference, merge it in
