@@ -9,7 +9,6 @@
 --- TODO ---
 ------------
 
-- Look into how to autogenerate vimdoc
 - Remove all <C-s> and <M-s> mappings
 - Mini.operators has a check for seeing if keymaps exist. Use that for the LSP deletes, and wherever else it's appropriate
 - Test the highlighter failure issue again. Can see breakage in global_settings.lua, but need updated minimal repro. Wrap setting has more info

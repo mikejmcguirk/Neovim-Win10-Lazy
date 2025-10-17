@@ -1,5 +1,13 @@
 -- NOTE: This is a bespoke version of Fluoromachine.nvim's delta theme
 
+Gset("c_syntax_for_h", true)
+Map("n", "gT", function()
+    vim.api.nvim_cmd({ cmd = "Inspect" }, {})
+end)
+
+Cmd({ cmd = "hi", args = { "clear" } }, {})
+if vim.g.syntax_on == 1 then Cmd({ cmd = "syntax", args = { "reset" } }, {}) end
+
 -- https://www.sessions.edu/color-calculator/
 local black = "#000000" --- @type string
 local fg = "#EFEFFD" --- @type string
@@ -314,6 +322,28 @@ SetHl(0, "stl_b", { fg = s_fg, bg = darken_24bit(s_fg, 50) })
 SetHl(0, "stl_c", { link = "Normal" })
 
 Gset("colors_name", "SimpleDelta")
+
+---------
+-- Lua --
+---------
+
+-- MAYBE: Create a custom hl query for self as italicized constant. Obvious since self is an
+-- alias for the instance object. But also one of my last namespaces
+
+SetHl(0, "@lsp.type.function.lua", {})
+Autocmd("FileType", {
+    group = vim.api.nvim_create_augroup("lua-disable-captures", { clear = true }),
+    pattern = "lua",
+    once = true,
+    callback = function()
+        --- @type vim.treesitter.Query?
+        local hl_query = vim.treesitter.query.get("lua", "highlights")
+        if not hl_query then return end
+
+        hl_query.query:disable_capture("function") -- Confusing when functions are used as vars
+        vim.api.nvim_del_augroup_by_name("lua-disable-captures")
+    end,
+})
 
 -- function M.decimal_to_hash(decimal_value)
 --     local hex_value = string.format("%x", decimal_value)

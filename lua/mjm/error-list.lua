@@ -179,6 +179,7 @@ end
 --- TODO: ---
 -------------
 
+-- Do I make all the type annotations Qfr?
 -- lemmy cmd: lemmy-help -l "compact" names > output
 -- Make sure the luarc for the project has the disabled private diag for docs. Also want to
 -- not have the trailing space one

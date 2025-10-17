@@ -503,9 +503,11 @@ function M._open_item_to_win(item, opts)
 
     local already_open = api.nvim_win_get_buf(win) == buf --- @type boolean
     api.nvim_set_option_value("buflisted", true, { buf = buf })
-    if opts.buftype then api.nvim_set_option_value("buftype", opts.buftype, { buf = buf }) end
-    if opts.buftype == "help" then api.nvim_set_option_value("list", false, { win = win }) end
+    if opts.buftype == "help" then
+        api.nvim_set_option_value("buftype", opts.buftype, { buf = buf })
+    end
 
+    -- TODO: Implement prepare_help_buffer
     if not already_open then
         api.nvim_win_call(win, function()
             -- NOTE: This loads the buf if necessary. Do not use bufload

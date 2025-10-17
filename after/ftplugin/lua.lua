@@ -38,6 +38,10 @@ Map("n", "<leader>-d", function()
     add_annotation("@diagnostic")
 end, { buffer = true })
 
+Map("n", "<leader>-e", function()
+    add_annotation("@export")
+end, { buffer = true })
+
 Map("n", "<leader>-f", function()
     add_annotation("@field")
 end, { buffer = true })
@@ -51,7 +55,7 @@ Map("n", "<leader>-l", function()
 end, { buffer = true })
 
 Map("n", "<leader>-m", function()
-    add_annotation("@module")
+    add_annotation("@mod")
 end, { buffer = true })
 
 Map("n", "<leader>-p", function()

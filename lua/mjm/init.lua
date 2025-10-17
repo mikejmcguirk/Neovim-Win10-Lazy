@@ -45,6 +45,7 @@ local pack_finish = vim.uv.hrtime()
 -- Setup --
 -----------
 
+require("mjm.colorscheme")
 require("mjm.set")
 require("mjm.map")
 require("mjm.stl")
@@ -113,9 +114,7 @@ vim.api.nvim_create_autocmd("UIEnter", {
 
         local cur_buf = vim.api.nvim_get_current_buf()
         local modified = vim.api.nvim_get_option_value("modified", { buf = cur_buf })
-        if vim.fn.argc() > 0 or vim.fn.line2byte("$") ~= -1 or modified then
-            return
-        end
+        if vim.fn.argc() > 0 or vim.fn.line2byte("$") ~= -1 or modified then return end
 
         local headers = {
             { "Pre-Pack Setup: ", to_pre_pack },
@@ -128,9 +127,7 @@ vim.api.nvim_create_autocmd("UIEnter", {
 
         local max_header_len = 0
         for _, header in ipairs(headers) do
-            if #header[1] > max_header_len then
-                max_header_len = #header[1]
-            end
+            if #header[1] > max_header_len then max_header_len = #header[1] end
         end
 
         for i, header in ipairs(headers) do
