@@ -1,7 +1,7 @@
 --- @class QfRancherNav
 local M = {}
 
-local eu = Qfr_Defer_Require("mjm.error-list-util") --- @type QfRancherUtils
+local eu = Qfr_Defer_Require("mjm.error-list-util") --- @type QfRancherUtil
 local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
 
 local api = vim.api

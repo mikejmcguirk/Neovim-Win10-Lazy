@@ -116,7 +116,7 @@ function M._open_qflist(opts)
 
     local cur_win = api.nvim_get_current_win() --- @type integer
     local tabpage = api.nvim_win_get_tabpage(cur_win) --- @type integer
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtil
     local list_win = eu._get_qf_win({ tabpage = tabpage }) --- @type integer|nil
 
     if list_win then return handle_open_list_win(list_win, opts) end
@@ -156,7 +156,7 @@ function M._open_loclist(src_win, opts)
     end
 
     local tabpage = api.nvim_win_get_tabpage(src_win) --- @type integer
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtil
     local ll_win = eu._get_loclist_win_by_qf_id(qf_id, { tabpage = tabpage }) --- @type integer|nil
     if ll_win then return handle_open_list_win(ll_win, opts) end
 
@@ -216,7 +216,7 @@ function M._close_qflist()
     local cur_win = api.nvim_get_current_win() --- @type integer
     local tabpage = api.nvim_win_get_tabpage(cur_win) --- @type integer
 
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtil
     local qf_win = eu._get_qf_win({ tabpage = tabpage }) --- @type integer|nil
     if not qf_win then return false end
 
@@ -243,7 +243,7 @@ function M._close_loclist(src_win)
         return false
     end
 
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtil
     local tabpage = api.nvim_win_get_tabpage(src_win) --- @type integer
     local ll_wins = eu._get_ll_wins_by_qf_id(qf_id, { tabpage = tabpage }) --- @type integer[]
     if #ll_wins < 1 then return false end

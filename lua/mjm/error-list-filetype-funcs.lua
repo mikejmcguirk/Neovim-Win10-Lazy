@@ -3,7 +3,7 @@ local M = {}
 
 local eo = Qfr_Defer_Require("mjm.error-list-open") --- @type QfRancherOpen
 local et = Qfr_Defer_Require("mjm.error-list-tools") --- @type QfRancherTools
-local eu = Qfr_Defer_Require("mjm.error-list-util") --- @type QfRancherUtils
+local eu = Qfr_Defer_Require("mjm.error-list-util") --- @type QfRancherUtil
 local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
 
 local api = vim.api

@@ -179,6 +179,10 @@ end
 --- TODO: ---
 -------------
 
+-- Unsure where to document the what opts, since they are the same for each function
+-- Doc sanitation. Remove unnecessary doc strings
+-- For anything with one reference, merge it in
+-- Use the command mentality throughout
 -- Formatting: api/fn/other long names. defer require
 --- For validation and such, the g variables should be as generous as possible with user error,
 ---     the actual API stuff should be strict

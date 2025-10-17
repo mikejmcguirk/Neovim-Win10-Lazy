@@ -28,8 +28,8 @@ local function sort_wrapper(sort_info, sort_opts, what)
     validate_sort_wrapper_input(sort_info, sort_opts, what)
 
     local src_win = what.user_data.src_win --- @type integer|nil
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if src_win and not eu._win_can_have_loclist(what.user_data.src_win) then
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtil
+    if src_win and not eu._valid_win_for_loclist(what.user_data.src_win) then
         local msg = "Win " .. src_win .. " cannot have a location list"
         vim.api.nvim_echo({ { msg, "" } }, false, {})
         return
@@ -383,7 +383,7 @@ local function sort_cmd(src_win, cargs)
 
     local sort_names = require("mjm.error-list-sort").get_sort_names()
     assert(#sort_names > 1, "No sort functions available")
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtil
     local sort_name = eu._check_cmd_arg(fargs, sort_names, "fname") --- @type string
 
     local ey = require("mjm.error-list-types") --- @type QfRancherTypes

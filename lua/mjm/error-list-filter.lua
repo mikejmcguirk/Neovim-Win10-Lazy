@@ -66,8 +66,8 @@ function M._filter_wrapper(filter_info, filter_opts, input_opts, what)
     validate_wrapper_input(filter_info, filter_opts, input_opts, what)
 
     local src_win = what.user_data.src_win --- @type integer|nil
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if src_win and not eu._win_can_have_loclist(what.user_data.src_win) then
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtil
+    if src_win and not eu._valid_win_for_loclist(what.user_data.src_win) then
         local msg = "Win " .. src_win .. " cannot have a location list"
         vim.api.nvim_echo({ { msg, "" } }, false, {})
         return
@@ -401,7 +401,7 @@ local function filter_cmd(cargs, src_win)
 
     local filter_names = M.get_filter_names() --- @type string[]
     assert(#filter_names > 1, "No filter functions available")
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtil
     local filter_name = eu._check_cmd_arg(fargs, filter_names, "cfilter") --- @type string
 
     local filter_opts = { keep = not cargs.bang } --- @type QfRancherFilterOpts

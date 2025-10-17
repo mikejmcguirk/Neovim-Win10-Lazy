@@ -177,9 +177,9 @@ function M._validate_list(list, opts)
         vim.validate("list", list, function()
             for _, value in ipairs(list) do
                 if type(value) ~= opts.type then return false end
-
-                return true
             end
+
+            return true
         end, "List values must be type " .. opts.type)
     end
 
@@ -296,6 +296,13 @@ M._severity_map = {
     [vim.diagnostic.severity.WARN] = "W",
     [vim.diagnostic.severity.INFO] = "I",
     [vim.diagnostic.severity.HINT] = "H",
+} ---@type table<integer, string>
+
+M._plural_severity_map = {
+    [vim.diagnostic.severity.ERROR] = "errors",
+    [vim.diagnostic.severity.WARN] = "warnings",
+    [vim.diagnostic.severity.INFO] = "info",
+    [vim.diagnostic.severity.HINT] = "hints",
 } ---@type table<integer, string>
 
 M._severity_unmap = {
@@ -419,36 +426,30 @@ end
 --- CUSTOM TYPES - DIAG ---
 ---------------------------
 
---- @alias QfRancherSeverityType "min"|"only"|"top"
+--- @alias QfRancherSeverityFilter "min"|"only"|"top"
 
-M._sev_types = { "min", "only", "top" } --- @type QfRancherSeverityType[]
+M._sev_filters = { "min", "only", "top" } --- @type QfRancherSeverityFilter[]
 
---- @param sev_type QfRancherSeverityType
+--- @param filter QfRancherSeverityFilter
 --- @return nil
-function M._validate_sev_type(sev_type)
-    vim.validate("sev_type", sev_type, "string")
-    vim.validate("sev_type", sev_type, function()
-        return sev_type == "min" or sev_type == "only" or sev_type == "top"
-    end, "Severity type " .. sev_type .. " is invalid")
+function M._validate_sev_type(filter)
+    vim.validate("filter", filter, "string")
+    vim.validate("filter", filter, function()
+        return vim.tbl_contains(M._sev_filters, filter)
+    end, "Severity filter " .. filter .. " is invalid")
 end
 
---- @alias QfRancherDiagInfo { level: vim.diagnostic.Severity|nil }
-
---- @param diag_info QfRancherDiagInfo
---- @return nil
-function M._validate_diag_info(diag_info)
-    vim.validate("diag_info", diag_info, "table")
-    vim.validate("diag_info.level", diag_info.level, "number", true)
-end
-
---- @alias QfRancherDiagOpts { sev_type: QfRancherSeverityType }
+--- @class QfRancherDiagOpts
+--- @field filter QfRancherSeverityFilter
+--- @field level? vim.diagnostic.Severity
 
 --- @param diag_opts QfRancherDiagOpts
 --- @return nil
 function M._validate_diag_opts(diag_opts)
     vim.validate("diag_opts", diag_opts, "table")
-    vim.validate("diag_opts.sev_type", diag_opts.sev_type, "string")
-    M._validate_sev_type(diag_opts.sev_type)
+    vim.validate("diag_opts.level", diag_opts.level, "number", true)
+    vim.validate("diag_opts.sev_type", diag_opts.filter, "string")
+    M._validate_sev_type(diag_opts.filter)
 end
 
 ------------------------------

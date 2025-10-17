@@ -17,9 +17,7 @@ local base_parts = {
 local function get_full_parts_rg(pattern, input_type, locations)
     local cmd = vim.deepcopy(base_parts.rg, true) --- @type string[]
 
-    if vim.fn.has("win32") == 1 then
-        table.insert(cmd, "--crlf")
-    end
+    if vim.fn.has("win32") == 1 then table.insert(cmd, "--crlf") end
 
     if input_type == "smartcase" then
         table.insert(cmd, "--smart-case") --- or "-S"
@@ -104,7 +102,7 @@ local function get_prompt(grep_info, input_type)
     ey._validate_grep_info(grep_info)
     ey._validate_input_type(input_type)
 
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtil
     local display_type = eu._get_display_input_type(input_type) --- @type string
     local grepprg = eu._get_g_var("qf_rancher_grepprg") --- @type string
 
@@ -138,31 +136,25 @@ end
 function M._do_grep(grep_info, system_opts, input_opts, what)
     validate_do_grep_inputs(grep_info, system_opts, input_opts, what)
 
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    if what.user_data.src_win and not eu._win_can_have_loclist(what.user_data.src_win) then
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtil
+    if what.user_data.src_win and not eu._valid_win_for_loclist(what.user_data.src_win) then
         local msg = "Win " .. what.user_data.src_win .. " cannot have a location list"
         vim.api.nvim_echo({ { msg, "" } }, false, {})
         return
     end
 
     local locations = grep_info.location_func() --- @type string[]
-    if #locations < 1 then
-        return
-    end
+    if #locations < 1 then return end
 
     local input_type = eu._resolve_input_type(input_opts.input_type) --- @type QfRancherInputType
     local prompt = get_prompt(grep_info, input_type) --- @type string
     --- @type string|nil
     local pattern = eu._resolve_pattern(prompt, input_opts.pattern, input_type)
-    if not pattern then
-        return
-    end
+    if not pattern then return end
 
     local full_system_opts = vim.deepcopy(system_opts, true) --- @type QfRancherSystemOpts
     full_system_opts.cmd_parts = get_grep_parts(pattern, input_type, locations)
-    if #full_system_opts.cmd_parts < 1 then
-        return
-    end
+    if #full_system_opts.cmd_parts < 1 then return end
 
     local what_set = vim.deepcopy(what, true) --- @type QfRancherWhat
     local grepprg = eu._get_g_var("qf_rancher_grepprg") --- @type string
@@ -205,14 +197,10 @@ local function get_buflist()
         local fname = vim.api.nvim_buf_get_name(buf) --- @type string
         local readable = vim.uv.fs_access(fname, 4) --- @type boolean|nil
 
-        if buflisted and buftype == "" and readable then
-            table.insert(fnames, fname)
-        end
+        if buflisted and buftype == "" and readable then table.insert(fnames, fname) end
     end
 
-    if #fnames == 0 then
-        vim.api.nvim_echo({ { "No valid bufs found", "" } }, false, {})
-    end
+    if #fnames == 0 then vim.api.nvim_echo({ { "No valid bufs found", "" } }, false, {}) end
 
     return fnames
 end
@@ -307,7 +295,7 @@ local function grep_cmd(src_win, cargs)
 
     local grep_names = M.get_grep_names() --- @type string[]
     assert(#grep_names > 1, "No grep commands available")
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtils
+    local eu = require("mjm.error-list-util") --- @type QfRancherUtil
     local grep_name = eu._check_cmd_arg(fargs, grep_names, "cwd") --- @type string
 
     local ey = require("mjm.error-list-types") --- @type QfRancherTypes

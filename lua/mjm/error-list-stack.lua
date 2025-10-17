@@ -1,6 +1,11 @@
 --- @class QfRancherStack
 local M = {}
 
+local eo = Qfr_Defer_Require("mjm.error-list-open") --- @type QfRancherOpen
+local et = Qfr_Defer_Require("mjm.error-list-tools") --- @type QfRancherTools
+local eu = Qfr_Defer_Require("mjm.error-list-util") --- @type QfRancherUtil
+local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
+
 ------------------------
 --- Helper Functions ---
 ------------------------
@@ -8,7 +13,6 @@ local M = {}
 --- @param win integer|nil
 --- @return nil
 local function resize_after_stack_change(win)
-    local eo = require("mjm.error-list-open")
     if win then
         eo._resize_loclists_by_win(win, { tabpage = vim.api.nvim_get_current_tabpage() })
     else
@@ -29,12 +33,10 @@ end
 --- @param arithmetic function
 --- @return nil
 local function change_history(src_win, count, arithmetic)
-    local ey = require("mjm.error-list-types")
     ey._validate_win(src_win, true)
     ey._validate_uint(count)
     vim.validate("arithmetic", arithmetic, "callable")
 
-    local et = require("mjm.error-list-tools") --- @type QfRancherTools
     local stack_len = et._get_max_list_nr(src_win) --- @type integer
     if stack_len < 1 then
         vim.api.nvim_echo({ { "Stack is empty", "" } }, false, {})
@@ -42,12 +44,12 @@ local function change_history(src_win, count, arithmetic)
     end
 
     local cur_list_nr = et._get_cur_list_nr(src_win) --- @type integer
-    local count1 = require("mjm.error-list-util")._count_to_count1(count) --- @type integer
+    local count1 = eu._count_to_count1(count) --- @type integer
     local new_list_nr = arithmetic(cur_list_nr, count1, 1, stack_len) --- @type integer
 
     local cmd = src_win and "lhistory" or "chistory" --- @type string
     vim.api.nvim_cmd({ cmd = cmd, count = new_list_nr }, {})
-    if require("mjm.error-list-util")._get_g_var("qf_rancher_debug_assertions") then
+    if eu._get_g_var("qf_rancher_debug_assertions") then
         local list_nr_after = et._get_cur_list_nr(src_win)
         assert(new_list_nr == list_nr_after)
     end
@@ -58,13 +60,13 @@ end
 --- @param count integer
 --- @return nil
 function M._q_older(count)
-    change_history(nil, count, require("mjm.error-list-util")._wrapping_sub)
+    change_history(nil, count, eu._wrapping_sub)
 end
 
 --- @param count integer
 --- @return nil
 function M._q_newer(count)
-    change_history(nil, count, require("mjm.error-list-util")._wrapping_add)
+    change_history(nil, count, eu._wrapping_add)
 end
 
 --- @param cargs vim.api.keyset.create_user_command.command_args
@@ -83,7 +85,7 @@ end
 --- @param arithmetic function
 --- @return nil
 local function l_change_history(win, count, arithmetic)
-    require("mjm.error-list-util")._locwin_check(win, function()
+    eu._locwin_check(win, function()
         change_history(win, count, arithmetic)
     end)
 end
@@ -92,14 +94,14 @@ end
 --- @param count integer
 --- @return nil
 function M._l_older(win, count)
-    l_change_history(win, count, require("mjm.error-list-util")._wrapping_sub)
+    l_change_history(win, count, eu._wrapping_sub)
 end
 
 --- @param win integer
 --- @param count integer
 --- @return nil
 function M._l_newer(win, count)
-    l_change_history(win, count, require("mjm.error-list-util")._wrapping_add)
+    l_change_history(win, count, eu._wrapping_add)
 end
 
 --- @param cargs vim.api.keyset.create_user_command.command_args
@@ -125,12 +127,10 @@ end
 --- @param opts QfRancherHistoryOpts
 --- @return nil
 function M._history(src_win, count, opts)
-    local ey = require("mjm.error-list-types")
     ey._validate_win(src_win, true)
     ey._validate_uint(count)
     ey._validate_history_opts(opts)
 
-    local et = require("mjm.error-list-tools") --- @type QfRancherTools
     local stack_len = et._get_max_list_nr(src_win) --- @type integer
     if stack_len < 1 then
         vim.api.nvim_echo({ { "Stack is empty", "" } }, false, {})
@@ -143,18 +143,15 @@ function M._history(src_win, count, opts)
     local adj_count = count > 0 and math.min(count, stack_len) or default --- @type integer|nil
     ---@diagnostic disable-next-line: missing-fields
     vim.api.nvim_cmd({ cmd = cmd, count = adj_count, mods = { silent = opts.silent } }, {})
-    if require("mjm.error-list-util")._get_g_var("qf_rancher_debug_assertions") then
+    if eu._get_g_var("qf_rancher_debug_assertions") then
         if adj_count then
             local list_nr_after = et._get_cur_list_nr(src_win)
             assert(adj_count == list_nr_after)
         end
     end
 
-    if cur_list_nr ~= adj_count then resize_after_stack_change(src_win) end
-
-    if opts.always_open then
-        require("mjm.error-list-open")._open_list(src_win, { keep_win = opts.keep_win })
-    end
+    resize_after_stack_change(src_win)
+    if opts.always_open then eo._open_list(src_win, { keep_win = opts.keep_win }) end
 end
 
 --- @param count integer
@@ -168,8 +165,8 @@ end
 --- @param opts QfRancherHistoryOpts
 --- @return nil
 function M._l_history(win, count, opts)
-    require("mjm.error-list-types")._validate_win(win, false)
-    require("mjm.error-list-util")._locwin_check(win, function()
+    ey._validate_win(win, false)
+    eu._locwin_check(win, function()
         M._history(win, count, opts)
     end)
 end
@@ -194,16 +191,14 @@ end
 --- @param count integer
 --- @return nil
 function M._del(src_win, count)
-    local ey = require("mjm.error-list-types")
     ey._validate_win(src_win, true)
     ey._validate_uint(count)
 
-    local et = require("mjm.error-list-tools") --- @type QfRancherTools
     local result = et._del_list(src_win, count)
     if result == -1 or result == 0 then return end
 
     local cur_list_nr = et._get_cur_list_nr(src_win)
-    if require("mjm.error-list-util")._get_g_var("qf_rancher_debug_assertions") then
+    if eu._get_g_var("qf_rancher_debug_assertions") then
         local target = count == 0 and cur_list_nr or count --- @type integer
         assert(result == target)
     end
@@ -220,7 +215,7 @@ end
 --- @param count integer
 --- @return nil
 function M._l_del(win, count)
-    require("mjm.error-list-util")._locwin_check(win, function()
+    eu._locwin_check(win, function()
         M._del(win, count)
     end)
 end
@@ -233,19 +228,19 @@ end
 
 --- @return nil
 function M._q_del_all()
-    require("mjm.error-list-tools")._del_all(nil, true)
+    et._del_all(nil, true)
 end
 
 --- @param win integer
 --- @return nil
 function M._l_del_all(win)
-    require("mjm.error-list-tools")._del_all(win, true)
+    et._del_all(win, true)
 end
 
 -- --- @param win integer
 -- --- @return nil
 -- function M._del_all(win)
---     require("mjm.error-list-tools")._del_all(win)
+--     et._del_all(win)
 -- end
 
 --- DOCUMENT: All overrides count

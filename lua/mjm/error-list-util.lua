@@ -1,4 +1,4 @@
---- @class QfRancherUtils
+--- @class QfRancherUtil
 local M = {}
 
 local et = Qfr_Defer_Require("mjm.error-list-tools") --- @type QfRancherTools
@@ -277,7 +277,7 @@ end
 
 --- @param win integer
 --- @return boolean
-function M._win_can_have_loclist(win)
+function M._valid_win_for_loclist(win)
     ey._validate_win(win, true)
     if not win then return false end
 
