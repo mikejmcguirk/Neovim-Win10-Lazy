@@ -1,0 +1,6 @@
+{
+    "diagnostics.disable": [
+        "trailing-space",
+        "invisible"
+    ]
+}
