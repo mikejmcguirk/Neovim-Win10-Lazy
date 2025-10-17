@@ -519,13 +519,13 @@ function M._open_item_to_win(item, opts)
         end)
     end
 
-    if already_open and not opts.skip_set_cur_pos then
-        vim.api.nvim_buf_call(buf, function()
-            api.nvim_cmd({ cmd = "normal", args = { "m'" }, bang = true }, {})
-        end)
-    end
-
     if not opts.skip_set_cur_pos then
+        if already_open then
+            vim.api.nvim_buf_call(buf, function()
+                api.nvim_cmd({ cmd = "normal", args = { "m'" }, bang = true }, {})
+            end)
+        end
+
         --- @type {[1]:integer, [2]:integer}
         local cur_pos = M._qf_pos_to_cur_pos(item.lnum, item.col)
         M._protected_set_cursor(win, cur_pos)

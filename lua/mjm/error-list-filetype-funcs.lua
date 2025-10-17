@@ -417,7 +417,7 @@ function M._open_item_from_list(split, finish, idx_func)
     end
 
     local buf_win = get_buf_win(dest_win, split, item.bufnr, list_win) --- @type integer
-    local clearjumps = split == "none" and dest_win == buf_win --- @type boolean
+    local clearjumps = not (split == "none" and dest_win == buf_win) --- @type boolean
     local goto_win = finish == "focusWin" --- @type boolean
     eu._open_item_to_win(
         item,
