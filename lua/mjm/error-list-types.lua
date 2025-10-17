@@ -207,9 +207,10 @@ end
 --- @param optional? boolean
 --- @return nil
 function M._validate_list_win(list_win, optional)
-    M._validate_win(list_win, optional)
     if optional and type(list_win) == "nil" then return end
 
+    M._validate_win(list_win)
+    ---@diagnostic disable-next-line: param-type-mismatch
     local list_win_buf = vim.api.nvim_win_get_buf(list_win) --- @type integer
     --- @type string
     local buftype = vim.api.nvim_get_option_value("buftype", { buf = list_win_buf })
@@ -523,19 +524,21 @@ function M._validate_open_opts(open_opts)
     vim.validate("open_opts.print_errs", open_opts.print_errs, "boolean", true)
 end
 
---- @alias QfRancherOpenMethod "split"|"tabnew"|"vsplit"
-local valid_opens = { "split", "tabnew", "vsplit" }
+--- @alias QfRancherIdxFunc fun(integer?):vim.quickfix.entry|nil, integer|nil
 
---- @alias QfRancherFinishMethod "closeList"|"focusList"|"focusWin"
-local valid_finishes = { "closeList", "focusList", "focusWin" }
+--- @alias QfRancherSplitType "none"|"split"|"tabnew"|"vsplit"
+local valid_splits = { "none", "split", "tabnew", "vsplit" }
 
---- @param open QfRancherOpenMethod
+--- @alias QfRancherFinishMethod "focusList"|"focusWin"
+local valid_finishes = { "focusList", "focusWin" }
+
+--- @param split QfRancherSplitType
 --- @return nil
-function M._validate_open_method(open)
-    vim.validate("open", open, "string")
-    vim.validate("open", open, function()
-        return vim.tbl_contains(valid_opens, open)
-    end, "Open method of " .. open .. " is invalid")
+function M._validate_split(split)
+    vim.validate("split", split, "string")
+    vim.validate("split", split, function()
+        return vim.tbl_contains(valid_splits, split)
+    end, "Split type of " .. split .. " is invalid")
 end
 
 --- @param finish QfRancherFinishMethod

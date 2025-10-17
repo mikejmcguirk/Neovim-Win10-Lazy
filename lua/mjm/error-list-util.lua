@@ -1,9 +1,11 @@
 --- @class QfRancherUtils
 local M = {}
 
+local et = Qfr_Defer_Require("mjm.error-list-tools") --- @type QfRancherTools
 local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
 
 local api = vim.api
+local fn = vim.fn
 
 -----------------
 --- CMD UTILS ---
@@ -84,9 +86,9 @@ local function get_visual_pattern(mode)
         return mode == "v" or mode == "V" or mode == "\22"
     end)
 
-    local start_pos = vim.fn.getpos(".") --- @type Range4
-    local end_pos = vim.fn.getpos("v") --- @type Range4
-    local region = vim.fn.getregion(start_pos, end_pos, { type = mode }) --- @type string[]
+    local start_pos = fn.getpos(".") --- @type Range4
+    local end_pos = fn.getpos("v") --- @type Range4
+    local region = fn.getregion(start_pos, end_pos, { type = mode }) --- @type string[]
     if #region < 1 then return nil end
 
     if #region == 1 then
@@ -116,7 +118,7 @@ local function get_input(prompt)
     vim.validate("prompt", prompt, "string")
 
     --- @type boolean, string
-    local ok, pattern = pcall(vim.fn.input, { prompt = prompt, cancelreturn = "" })
+    local ok, pattern = pcall(fn.input, { prompt = prompt, cancelreturn = "" })
     if ok then return pattern end
 
     if pattern == "Keyboard interrupt" then return nil end
@@ -137,7 +139,7 @@ function M._resolve_pattern(prompt, input_pattern, input_type)
 
     if input_pattern then return input_pattern end
 
-    local mode = vim.fn.mode() --- @type string
+    local mode = fn.mode() --- @type string
     local is_visual = mode == "v" or mode == "V" or mode == "\22" --- @type boolean
     if is_visual then return get_visual_pattern(mode) end
 
@@ -145,9 +147,91 @@ function M._resolve_pattern(prompt, input_pattern, input_type)
     return (pattern and input_type == "insensitive") and string.lower(pattern) or pattern
 end
 
-------------
---- MISC ---
-------------
+------------------------
+-- WRAPPING IDX FUNCS --
+------------------------
+
+--- @param src_win integer|nil
+--- @param count integer
+--- @param wrapping_math function
+--- @return integer|nil
+local function get_wrapping_idx(src_win, count, wrapping_math)
+    ey._validate_win(src_win, true)
+    ey._validate_uint(count)
+    vim.validate("arithmetic", wrapping_math, "callable")
+
+    local count1 = M._count_to_count1(count) --- @type integer|nil
+    local size = et._get_list(src_win, { nr = 0, size = 0 }).size --- @type integer
+    if size < 1 then return nil end
+
+    local cur_idx = et._get_list(src_win, { nr = 0, idx = 0 }).idx --- @type integer
+    if cur_idx < 1 then return nil end
+
+    return wrapping_math(cur_idx, count1, 1, size)
+end
+
+--- @param src_win integer|nil
+--- @param count integer
+--- @return integer|nil
+function M._get_idx_wrapping_sub(src_win, count)
+    return get_wrapping_idx(src_win, count, M._wrapping_sub)
+end
+
+--- @param src_win integer|nil
+--- @param count integer
+--- @return integer|nil
+function M._get_idx_wrapping_add(src_win, count)
+    return get_wrapping_idx(src_win, count, M._wrapping_add)
+end
+
+---------------------------
+-- LIST IDX GETTER FUNCS --
+---------------------------
+
+-- LOW: An obvious expansion of this concept would be to also pass in a specific list
+
+--- @param src_win integer|nil
+--- @param idx integer
+--- @return vim.quickfix.entry|nil, integer|nil
+local function get_item(src_win, idx)
+    ey._validate_win(src_win, true)
+    ey._validate_uint(idx)
+
+    --- @type vim.quickfix.entry[]
+    local items = et._get_list(src_win, { nr = 0, idx = idx, items = true }).items
+    if #items < 1 then return nil, nil end
+
+    local item = items[1] --- @type vim.quickfix.entry
+    if item.bufnr and api.nvim_buf_is_valid(item.bufnr) then return item, idx end
+
+    api.nvim_echo({ { "List item bufnr is invalid", "ErrorMsg" } }, true, { err = true })
+    return nil, nil
+end
+
+--- @type QfRancherIdxFunc
+function M._get_item_under_cursor(src_win)
+    return get_item(src_win, fn.line("."))
+end
+
+--- @type QfRancherIdxFunc
+function M._get_item_wrapping_sub(src_win)
+    local idx = M._get_idx_wrapping_sub(src_win, vim.v.count)
+    if not idx then return nil, nil end
+    return get_item(src_win, idx)
+end
+
+--- @type QfRancherIdxFunc
+function M._get_item_wrapping_add(src_win)
+    local idx = M._get_idx_wrapping_add(src_win, vim.v.count)
+    if not idx then return nil, nil end
+    return get_item(src_win, idx)
+end
+
+----------
+-- MISC --
+----------
+
+-- TODO: This needs another breakup
 
 --- @param win integer
 --- @param todo function
@@ -155,7 +239,7 @@ end
 function M._locwin_check(win, todo)
     ey._validate_win(win, false)
 
-    local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
+    local qf_id = fn.getloclist(win, { id = 0 }).id --- @type integer
     if qf_id == 0 then
         api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
         return
@@ -197,7 +281,7 @@ function M._win_can_have_loclist(win)
     ey._validate_win(win, true)
     if not win then return false end
 
-    local wintype = vim.fn.win_gettype(win)
+    local wintype = fn.win_gettype(win)
     if wintype == "" or wintype == "loclist" then return true end
 
     --- @type string
@@ -305,19 +389,19 @@ function M._vcol_to_byte_bounds(vcol, line)
 
     if vcol == 0 or #line <= 1 then return true, 0, 0 end
 
-    local max_vcol = vim.fn.strdisplaywidth(line) --- @type integer
+    local max_vcol = fn.strdisplaywidth(line) --- @type integer
     if vcol > max_vcol then return false, 0, 0 end
 
-    local charlen = vim.fn.strcharlen(line) --- @type integer
+    local charlen = fn.strcharlen(line) --- @type integer
     for char_idx = 0, charlen - 1 do
-        local start_byte = vim.fn.byteidx(line, char_idx) --- @type integer
+        local start_byte = fn.byteidx(line, char_idx) --- @type integer
         if start_byte == -1 then return false, 0, 0 end
 
-        local char = vim.fn.strcharpart(line, char_idx, 1, true) --- @type string
+        local char = fn.strcharpart(line, char_idx, 1, true) --- @type string
         local fin_byte = start_byte + #char - 1 --- @type integer
 
         local test_str = line:sub(1, fin_byte + 1) --- @type string
-        local test_vcol = vim.fn.strdisplaywidth(test_str) --- @type integer
+        local test_vcol = fn.strdisplaywidth(test_str) --- @type integer
         if test_vcol >= vcol then return true, start_byte, fin_byte end
     end
 
@@ -488,9 +572,9 @@ end
 --- @param win integer
 --- @return boolean
 local function is_loclist_win(qf_id, win)
-    local tw_qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
+    local tw_qf_id = fn.getloclist(win, { id = 0 }).id --- @type integer
     if tw_qf_id ~= qf_id then return false end
-    local wintype = vim.fn.win_gettype(win)
+    local wintype = fn.win_gettype(win)
     if wintype == "loclist" then
         return true
     else
@@ -500,29 +584,24 @@ end
 
 --- If searching for wins by qf_id, passing a zero id is allowed so that orphans can be checked
 
---- @param qf_id integer
+--- @param win integer
 --- @param opts QfRancherTabpageOpts
---- @return integer[]
-local function get_loclist_wins(qf_id, opts)
-    ey._validate_uint(qf_id)
-    ey._validate_tabpage_opts(opts)
+--- @return integer|nil
+function M._get_loclist_win_by_win(win, opts)
+    ey._validate_win(win, false)
 
-    local wins = {} --- @type integer[]
-    local tabpages = M._resolve_tabpages(opts) --- @type integer[]
-    for _, tabpage in ipairs(tabpages) do
-        local tabpage_wins = api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
-        for _, t_win in ipairs(tabpage_wins) do
-            if is_loclist_win(qf_id, t_win) then table.insert(wins, t_win) end
-        end
+    local qf_id = fn.getloclist(win, { id = 0 }).id --- @type integer
+    if qf_id == 0 then
+        return nil
+    else
+        return M._get_loclist_win_by_qf_id(qf_id, opts)
     end
-
-    return wins
 end
 
 --- @param qf_id integer
 --- @param opts QfRancherTabpageOpts
 --- @return integer|nil
-local function get_loclist_win(qf_id, opts)
+function M._get_loclist_win_by_qf_id(qf_id, opts)
     ey._validate_uint(qf_id)
     ey._validate_tabpage_opts(opts)
 
@@ -539,42 +618,33 @@ end
 
 --- @param win integer
 --- @param opts QfRancherTabpageOpts
---- @return integer|nil
-function M._get_loclist_win_by_win(win, opts)
-    ey._validate_win(win, false)
-
-    local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
-    if qf_id == 0 then
-        return nil
-    else
-        return get_loclist_win(qf_id, opts)
-    end
-end
-
---- @param qf_id integer
---- @param opts QfRancherTabpageOpts
---- @return integer|nil
-function M._get_ll_win_by_qf_id(qf_id, opts)
-    return get_loclist_win(qf_id, opts)
-end
-
---- @param win integer
---- @param opts QfRancherTabpageOpts
 --- @return integer[]
 function M._get_loclist_wins_by_win(win, opts)
     ey._validate_win(win, false)
 
-    local qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
+    local qf_id = fn.getloclist(win, { id = 0 }).id --- @type integer
     if qf_id == 0 then return {} end
 
-    return get_loclist_wins(qf_id, opts)
+    return M._get_ll_wins_by_qf_id(qf_id, opts)
 end
 
 --- @param qf_id integer
 --- @param opts QfRancherTabpageOpts
 --- @return integer[]
 function M._get_ll_wins_by_qf_id(qf_id, opts)
-    return get_loclist_wins(qf_id, opts)
+    ey._validate_uint(qf_id)
+    ey._validate_tabpage_opts(opts)
+
+    local wins = {} --- @type integer[]
+    local tabpages = M._resolve_tabpages(opts) --- @type integer[]
+    for _, tabpage in ipairs(tabpages) do
+        local tabpage_wins = api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
+        for _, t_win in ipairs(tabpage_wins) do
+            if is_loclist_win(qf_id, t_win) then table.insert(wins, t_win) end
+        end
+    end
+
+    return wins
 end
 
 --- @param opts QfRancherTabpageOpts
@@ -586,7 +656,7 @@ function M._get_all_loclist_wins(opts)
     for _, tabpage in ipairs(tabpages) do
         local tabpage_wins = api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
         for _, win in ipairs(tabpage_wins) do
-            local wintype = vim.fn.win_gettype(win)
+            local wintype = fn.win_gettype(win)
             if wintype == "loclist" then table.insert(ll_wins, win) end
         end
     end
@@ -603,7 +673,7 @@ function M._get_qf_wins(opts)
     for _, tabpage in ipairs(tabpages) do
         local tabpage_wins = api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
         for _, t_win in ipairs(tabpage_wins) do
-            local wintype = vim.fn.win_gettype(t_win)
+            local wintype = fn.win_gettype(t_win)
             if wintype == "quickfix" then table.insert(wins, t_win) end
         end
     end
@@ -619,7 +689,7 @@ function M._get_qf_win(opts)
     for _, tabpage in ipairs(tabpages) do
         local tabpage_wins = api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
         for _, t_win in ipairs(tabpage_wins) do
-            local wintype = vim.fn.win_gettype(t_win)
+            local wintype = fn.win_gettype(t_win)
             if wintype == "quickfix" then return t_win end
         end
     end
@@ -644,15 +714,15 @@ end
 function M._find_loclist_origin(list_win, opts)
     ey._validate_list_win(list_win)
 
-    local qf_id = vim.fn.getloclist(list_win, { id = 0 }).id --- @type integer
+    local qf_id = fn.getloclist(list_win, { id = 0 }).id --- @type integer
     if qf_id == 0 then return nil end
 
     local tabpages = M._resolve_tabpages(opts) --- @type integer[]
     for _, tabpage in ipairs(tabpages) do
         local tabpage_wins = api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
         for _, win in ipairs(tabpage_wins) do
-            local win_qf_id = vim.fn.getloclist(win, { id = 0 }).id --- @type integer
-            local win_wintype = vim.fn.win_gettype(win)
+            local win_qf_id = fn.getloclist(win, { id = 0 }).id --- @type integer
+            local win_wintype = fn.win_gettype(win)
             if win_qf_id == qf_id and win_wintype == "" then return win end
         end
     end

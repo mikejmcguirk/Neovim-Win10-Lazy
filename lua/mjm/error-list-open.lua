@@ -63,34 +63,6 @@ local function resolve_height_for_list(src_win, height)
     return size
 end
 
---- @param list_win integer
---- @param height integer|nil
---- @return nil
-local function resize_list_win(list_win, height)
-    require("mjm.error-list-types")._validate_list_win(list_win)
-    vim.validate("height", height, "number", true)
-
-    local list_wintype = fn.win_gettype(list_win)
-    local is_loclist = list_wintype == "loclist" --- @type boolean
-    local is_qflist = list_wintype == "quickfix" --- @type boolean
-    if not (is_loclist or is_qflist) then return end
-
-    local old_height = api.nvim_win_get_height(list_win) --- @type integer
-    local src_win = is_loclist and list_win or nil --- @type integer|nil
-    local new_height = resolve_height_for_list(src_win, height) --- @type integer
-    if old_height == new_height then return end
-
-    local tabpage = api.nvim_win_get_tabpage(list_win)
-    local tabpage_wins = api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
-    tabpage_wins = vim.tbl_filter(function(win)
-        return win ~= list_win
-    end, tabpage_wins)
-
-    local views = get_views(tabpage_wins) --- @type vim.fn.winsaveview.ret[]
-    api.nvim_win_set_height(list_win, new_height)
-    restore_views(views)
-end
-
 --- @param opts QfRancherOpenOpts
 --- @return nil
 local function validate_and_clean_open_opts(opts)
@@ -116,7 +88,7 @@ local function handle_open_list_win(list_win, opts)
     validate_and_clean_open_opts(opts)
 
     if opts.always_resize then
-        resize_list_win(list_win, opts.height)
+        M._resize_list_win(list_win, opts.height)
     else
         local eu = require("mjm.error-list-util")
         eu._checked_echo("List win is already open", opts.print_errs, false)
@@ -185,7 +157,7 @@ function M._open_loclist(src_win, opts)
 
     local tabpage = api.nvim_win_get_tabpage(src_win) --- @type integer
     local eu = require("mjm.error-list-util") --- @type QfRancherUtils
-    local ll_win = eu._get_ll_win_by_qf_id(qf_id, { tabpage = tabpage }) --- @type integer|nil
+    local ll_win = eu._get_loclist_win_by_qf_id(qf_id, { tabpage = tabpage }) --- @type integer|nil
     if ll_win then return handle_open_list_win(ll_win, opts) end
 
     local tabpage_wins = api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
@@ -336,6 +308,38 @@ function M._close_win_save_views(win)
     return true
 end
 
+------------
+-- RESIZE --
+------------
+
+--- @param list_win integer
+--- @param height? integer
+--- @return nil
+function M._resize_list_win(list_win, height)
+    ey._validate_list_win(list_win)
+    vim.validate("height", height, "number", true)
+
+    local list_wintype = fn.win_gettype(list_win)
+    local is_loclist = list_wintype == "loclist" --- @type boolean
+    local is_qflist = list_wintype == "quickfix" --- @type boolean
+    if not (is_loclist or is_qflist) then return end
+
+    local old_height = api.nvim_win_get_height(list_win) --- @type integer
+    local src_win = is_loclist and list_win or nil --- @type integer|nil
+    local new_height = resolve_height_for_list(src_win, height) --- @type integer
+    if old_height == new_height then return end
+
+    local tabpage = api.nvim_win_get_tabpage(list_win)
+    local tabpage_wins = api.nvim_tabpage_list_wins(tabpage) --- @type integer[]
+    tabpage_wins = vim.tbl_filter(function(win)
+        return win ~= list_win
+    end, tabpage_wins)
+
+    local views = get_views(tabpage_wins) --- @type vim.fn.winsaveview.ret[]
+    api.nvim_win_set_height(list_win, new_height)
+    restore_views(views)
+end
+
 -----------------------
 --- BULK OPERATIONS ---
 -----------------------
@@ -363,7 +367,7 @@ function M._resize_qfwins(opts)
 
     local qfwins = require("mjm.error-list-util")._get_qf_wins(opts) --- @type integer[]
     for _, list in ipairs(qfwins) do
-        resize_list_win(list, nil)
+        M._resize_list_win(list, nil)
     end
 end
 
@@ -377,7 +381,7 @@ function M._resize_loclists_by_win(win, opts)
     --- @type integer[]
     local loclists = require("mjm.error-list-util")._get_loclist_wins_by_win(win, opts)
     for _, list_win in ipairs(loclists) do
-        resize_list_win(list_win, nil)
+        M._resize_list_win(list_win, nil)
     end
 end
 

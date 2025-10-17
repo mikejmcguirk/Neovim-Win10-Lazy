@@ -202,6 +202,9 @@ end
 -- TODO: Create a validation for what table and add to types. Unsure exactly what to call it
 -- because "get_what" could also be the result of the get statement
 -- "response_what" is accurate but long. Check the docs
+-- TODO: Not sure what the pattern here is for handling nil loclists. Handling nils in these
+-- functions is cumbersome, especially when qf functions don't have to do it
+-- Might be something the caller just has to figure out
 
 --- @param src_win integer|nil
 --- @param what table

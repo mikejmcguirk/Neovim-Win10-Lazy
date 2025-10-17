@@ -2,7 +2,6 @@
 local M = {}
 
 local eo = Qfr_Defer_Require("mjm.error-list-open") --- @type QfRancherOpen
-local en = Qfr_Defer_Require("mjm.error-list-nav-action") --- @type QfRancherNav
 local et = Qfr_Defer_Require("mjm.error-list-tools") --- @type QfRancherTools
 local eu = Qfr_Defer_Require("mjm.error-list-util") --- @type QfRancherUtils
 local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
@@ -14,94 +13,30 @@ local fn = vim.fn
 --- LIST DELETION ---
 ---------------------
 
--- TODO: The default map for vsplits simply cannot include V. Even outside multi-line deletion,
--- it is broadly useful for yanking. Change that map, then re-create the multi-line visual
--- delete
-
+--- @return nil
 function M._del_one_list_item()
     local list_win = api.nvim_get_current_win() --- @type integer
     if not ey._is_in_list_win(list_win) then return end
 
     local src_win = fn.win_gettype(list_win) == "loclist" and list_win or nil --- @type integer|nil
-    local list_dict = et._get_list(src_win, { nr = 0, all = true }) --- @type table
-    if #list_dict.items < 1 then return end
+    local list = et._get_list(src_win, { nr = 0, all = true }) --- @type table
+    if #list.items < 1 then return end
 
     local row, col = unpack(api.nvim_win_get_cursor(list_win)) --- @type integer, integer
-    table.remove(list_dict.items, row)
+    table.remove(list.items, row)
     et._set_list(src_win, {
         nr = 0,
-        items = list_dict.items,
-        idx = list_dict.idx,
+        items = list.items,
+        idx = list.idx,
         user_data = { action = "replace" },
     })
 
     eu._protected_set_cursor(0, { row, col })
 end
 
------------------------
---- LIST NAVIGATION ---
------------------------
-
--- --- @param src_win integer|nil
--- --- @param count integer
--- --- @param opts {keep_win?:boolean}
--- --- @param func function
--- --- @return nil
--- local function list_nav(src_win, count, opts, func)
---     ey._validate_uint(src_win, true)
---     vim.validate("opts", opts, "table")
---
---     local cur_win = src_win --- @type integer|nil
---     if not cur_win then cur_win = vim.api.nvim_get_current_win() end
---     if not ey._is_in_list_win(cur_win) then return end
---
---     local adj_opts = vim.tbl_extend("force", opts, { keep_win = true }) --- @type table
---     if not func(src_win, count, adj_opts) then return end
---
---     local cur_idx = et._get_list(src_win, { nr = 0, idx = 0 }).idx --- @type integer
---     local col = vim.api.nvim_win_get_cursor(cur_win)[2] --- @type integer
---     eu._protected_set_cursor(cur_win, { cur_idx, col })
---     eu._do_zzze(cur_win)
--- end
---
--- --- @param src_win integer|nil
--- --- @param count integer
--- --- @param opts {keep_win?:boolean}
--- --- @return nil
--- function M._list_prev(src_win, count, opts)
---     list_nav(src_win, count, opts, en._prev)
--- end
---
--- --- @param src_win integer|nil
--- --- @param count integer
--- --- @param opts {keep_win?:boolean}
--- --- @return nil
--- function M._list_next(src_win, count, opts)
---     list_nav(src_win, count, opts, en._next)
--- end
-
 -------------------------
 --- LIST OPEN HELPERS ---
 -------------------------
-
--- TODO: Is there a way to consolidate this with the one in preview?
-
---- @param src_win integer|nil
---- @return vim.quickfix.entry|nil, integer|nil
-local function get_list_item(src_win)
-    ey._validate_win(src_win, true)
-
-    --- @type vim.quickfix.entry[]
-    local items = et._get_list(src_win, { nr = 0, items = true }).items
-    if #items < 1 then return nil, nil end
-
-    local line = fn.line(".") --- @type integer
-    local item = items[line] --- @type vim.quickfix.entry
-    if item.bufnr and api.nvim_buf_is_valid(item.bufnr) then return item, line end
-
-    api.nvim_echo({ { "List item bufnr is invalid", "ErrorMsg" } }, true, { err = true })
-    return nil, nil
-end
 
 --- @return integer|nil, integer|nil, boolean
 local function get_list_info()
@@ -124,46 +59,27 @@ local function get_list_info()
 end
 
 --- @param list_win integer
---- @param dest_win integer
+--- @param buf_win integer
 --- @param finish QfRancherFinishMethod
 --- @return nil
-local function handle_orphan(list_win, dest_win, finish)
+local function handle_orphan(list_win, buf_win, finish)
     ey._validate_list_win(list_win)
-    ey._validate_win(dest_win)
+    ey._validate_win(buf_win)
     ey._validate_finish_method(finish)
-    if eu._get_g_var("qf_rancher_debug_assertions") then
-        local cur_win = api.nvim_get_current_win() --- @type integer
-        if finish == "closeList" or finish == "focusWin" then assert(cur_win == dest_win) end
-        if finish == "focusList" then assert(cur_win == list_win) end
-    end
 
-    local dest_win_qf_id = fn.getloclist(dest_win, { id = 0 }).id
-    if dest_win_qf_id > 0 then
-        if finish == "closeList" then eo._close_win_save_views(list_win) end
-        return
-    end
+    local buf_win_qf_id = fn.getloclist(buf_win, { id = 0 }).id --- @type integer
+    if buf_win_qf_id > 0 then return end
 
     local stack = et._get_stack(list_win) --- @type table[]
     eo._close_win_save_views(list_win)
-    et._set_stack(dest_win, stack)
+    et._set_stack(buf_win, stack)
 
-    if finish == "closeList" then
-        if eu._get_g_var("qf_rancher_debug_assertions") then
-            assert(api.nvim_get_current_win() == dest_win)
-        end
-
-        return
-    end
-
-    local keep_win = finish == "focusWin" --- @type boolean
-    -- Cannot ensure proper context with nvim_win_call because open_loclist is meant
-    -- to use lopen to move to the list win if keep_win is false
-    api.nvim_set_current_win(dest_win)
-    eo._open_loclist(dest_win, { keep_win = keep_win })
+    api.nvim_set_current_win(buf_win)
+    eo._open_loclist(buf_win, { keep_win = finish == "focusWin" })
 
     if eu._get_g_var("qf_rancher_debug_assertions") then
         local cur_win = api.nvim_get_current_win() --- @type integer
-        if finish == "focusWin" then assert(cur_win == dest_win) end
+        if finish == "focusWin" then assert(cur_win == buf_win) end
         if finish == "focusList" then assert(fn.win_gettype(cur_win) == "loclist") end
     end
 end
@@ -374,147 +290,186 @@ local function get_qf_dest_win(list_win, dest_buftype, buf)
     return true, nil
 end
 
---- @param list_win integer
---- @param dest_win integer|nil
---- @param open QfRancherOpenMethod
---- @return vim.api.keyset.win_config
-local function get_split_config(list_win, dest_win, open)
-    local adj_dest_win = dest_win or list_win --- @type integer
-    if adj_dest_win == list_win then return { win = adj_dest_win, split = "above" } end
-
-    if open == "split" then
-        --- @type boolean
-        local splitbelow = api.nvim_get_option_value("splitbelow", { scope = "global" })
-        local split_dir = splitbelow and "below" or "above" --- @type string
-        return { win = adj_dest_win, split = split_dir }
-    end
-
-    --- @type boolean
-    local splitright = api.nvim_get_option_value("splitright", { scope = "global" })
-    local split_dir = splitright and "right" or "left" --- @type string
-    return { win = adj_dest_win, split = split_dir }
-end
-
 -----------------------
 --- LIST OPEN FUNCS ---
 -----------------------
 
--- DOCUMENT: switchbuf behavior for direct open:
+-- DOCUMENT: switchbuf behavior :
 -- useopen is respected and given first priority
 -- usetab is respected and given next priority
 -- uselast is respected and given next priority
 -- split, vsplit, and newtab are not respected
 
--- MID: It would be cool if the qf vs ll find path were determined at ftplugin load time, since
--- the buf should not switch list types
+--- @param list_win integer
+--- @param dest_win integer|nil
+--- @param is_orphan boolean
+--- @return boolean
+local function should_resize_list_win(list_win, dest_win, is_orphan)
+    ey._validate_list_win(list_win)
+    ey._validate_win(dest_win, true)
+    vim.validate("is_orphan", is_orphan, "boolean")
 
---- @param finish QfRancherFinishMethod
---- @return nil
-function M._direct_open(finish)
-    ey._validate_finish_method(finish)
+    if dest_win or is_orphan then return false end
 
-    --- @type integer|nil, integer|nil, boolean
-    local list_win, src_win, is_orphan = get_list_info()
-    if not list_win then return end
+    local win_tabpage = vim.api.nvim_win_get_tabpage(list_win) --- @type integer
+    return #vim.api.nvim_tabpage_list_wins(win_tabpage) == 1
+end
 
-    local item, line = get_list_item(src_win) --- @type vim.quickfix.entry|nil, integer|nil
-    if not (item and line) then return end
+--- @param dest_win integer|nil
+--- @param split QfRancherSplitType
+--- @param buf integer
+--- @param list_win integer
+local function get_buf_win(dest_win, split, buf, list_win)
+    ey._validate_win(dest_win, true)
+    ey._validate_list_win(list_win)
+    ey._validate_buf(buf)
+    ey._validate_split(split)
 
-    local dest_buftype = item.type == "\1" and "help" or "" --- @type string
-    local ok, dest_win = (function()
-        if src_win then return get_ll_dest_win(list_win, dest_buftype, item.bufnr) end
-        return get_qf_dest_win(list_win, dest_buftype, item.bufnr)
-    end)() --- @type boolean, integer|nil
+    if dest_win and split == "none" then return dest_win end
 
-    if not ok then return end
     if not dest_win then
-        -- TODO: This needs to be a split. Branch off into that logic
-        -- Use a g_var to say switchbuf, vsplit, or split to open
-        api.nvim_echo({ { "No available dest win. Needs to be a split", "" } }, false, {})
-        return
+        return api.nvim_open_win(buf, false, { win = list_win, split = "above" })
     end
 
-    local goto_win = finish ~= "focusList" --- @type boolean
-    et._set_list(src_win, { nr = 0, idx = line, user_data = { action = "replace" } })
-    eu._open_item_to_win(item, { buftype = dest_buftype, goto_win = goto_win, win = dest_win })
+    if split == "split" then
+        --- @type boolean
+        local splitbelow = api.nvim_get_option_value("splitbelow", { scope = "global" })
+        local split_dir = splitbelow and "below" or "above" --- @type string
+        return api.nvim_open_win(buf, false, { win = dest_win, split = split_dir })
+    end
 
-    if (not is_orphan) and finish == "closeList" then eo._close_win_save_views(list_win) end
-
-    if is_orphan then handle_orphan(list_win, dest_win, finish) end
+    --- @type boolean
+    local splitright = api.nvim_get_option_value("splitright", { scope = "global" })
+    local split_dir = splitright and "right" or "left" --- @type string
+    return api.nvim_open_win(buf, false, { win = dest_win, split = split_dir })
 end
-
---- @param open QfRancherOpenMethod
---- @param finish QfRancherFinishMethod
---- @return nil
-function M._split_open(open, finish)
-    ey._validate_open_method(open)
-    ey._validate_finish_method(finish)
-
-    --- @type integer|nil, integer|nil, boolean
-    local list_win, src_win, is_orphan = get_list_info()
-    if not list_win then return end
-
-    local item, line = get_list_item(src_win) --- @type vim.quickfix.entry|nil, integer|nil
-    if not (item and line) then return end
-
-    local dest_buftype = item.type == "\1" and "help" or "" --- @type string
-    local ok, dest_win = (function()
-        if src_win then return get_ll_dest_win(list_win, dest_buftype, item.bufnr) end
-        return get_qf_dest_win(list_win, dest_buftype, item.bufnr)
-    end)() --- @type boolean, integer|nil
-
-    if not ok then return end
-
-    --- @type vim.api.keyset.win_config
-    local split_config = get_split_config(list_win, dest_win, open)
-    local goto_win = finish ~= "focusList" --- @type boolean
-    et._set_list(src_win, { nr = 0, idx = line, user_data = { action = "replace" } })
-    local split_win = api.nvim_open_win(item.bufnr, false, split_config) --- @type integer
-    eu._open_item_to_win(
-        item,
-        { buftype = dest_buftype, clearjumps = true, goto_win = goto_win, win = split_win }
-    )
-
-    if (not is_orphan) and finish == "closeList" then eo._close_win_save_views(list_win) end
-
-    if is_orphan then handle_orphan(list_win, split_win, finish) end
-end
-
---- TODO: Do we just take tabnew out of the finish opts and have it be a split opt?
 
 --- @param finish QfRancherFinishMethod
 --- @return nil
-function M._tabnew_open(finish)
+local function tabnew_open(list_win, item, finish, is_orphan, pattern)
+    ey._validate_list_win(list_win)
+    ey._validate_list_item(item)
     ey._validate_finish_method(finish)
-
-    --- @type integer|nil, integer|nil, boolean
-    local list_win, src_win, is_orphan = get_list_info()
-    if not list_win then return end
-
-    local item, line = get_list_item(src_win) --- @type vim.quickfix.entry|nil, integer|nil
-    if not (item and line) then return end
+    vim.validate("is_orphan", is_orphan, "boolean")
+    vim.validate("pattern", pattern, "string")
 
     local tab_count = fn.tabpagenr("$") --- @type integer
     --- @type integer
     local range = vim.v.count > 0 and math.min(vim.v.count, tab_count) or tab_count
-    local dest_buftype = item.type == "\1" and "help" or "" --- @type string
-
-    et._set_list(src_win, { nr = 0, idx = line, user_data = { action = "replace" } })
     api.nvim_cmd({ cmd = "tabnew", range = { range } }, {})
-    local dest_win = api.nvim_get_current_win() --- @type integer
-    eu._open_item_to_win(item, { buftype = dest_buftype, win = dest_win })
 
-    -- TODO: Silly if you have an orphan, but here for the moment because direct/splits end up
-    -- here
-    if finish == "focusList" then vim.api.nvim_set_current_win(list_win) end
-    if (not is_orphan) and finish == "closeList" then eo._close_win_save_views(list_win) end
+    local buf_win = api.nvim_get_current_win() --- @type integer
+    local dest_buftype = item.type == "\1" and "help" or "" --- @type string
+    eu._open_item_to_win(item, { buftype = dest_buftype, win = buf_win })
+    if finish == "focusList" and not is_orphan then vim.api.nvim_set_current_win(list_win) end
 
-    if is_orphan then handle_orphan(list_win, dest_win, finish) end
+    if is_orphan then handle_orphan(list_win, buf_win, finish) end
+
+    vim.api.nvim_exec_autocmds("QuickFixCmdPost", { pattern = pattern })
+end
+
+-- LOW: Can this logic be generalized? Should it be?
+
+--- @param finish QfRancherFinishMethod
+--- @param idx_func QfRancherIdxFunc
+--- @return nil
+function M._open_item_from_list(split, finish, idx_func)
+    ey._validate_split(split)
+    ey._validate_finish_method(finish)
+    vim.validate("idx_func", idx_func, "callable")
+
+    --- @type integer|nil, integer|nil, boolean
+    local list_win, src_win, is_orphan = get_list_info()
+    if not list_win then return end
+
+    local item, idx = idx_func(src_win) --- @type vim.quickfix.entry|nil, integer|nil
+    if not (item and item.bufnr and item.type and idx) then return end
+
+    local dest_buftype = item.type == "\1" and "help" or "" --- @type string
+    local ok, dest_win = (function()
+        if src_win then return get_ll_dest_win(list_win, dest_buftype, item.bufnr) end
+        return get_qf_dest_win(list_win, dest_buftype, item.bufnr)
+    end)() --- @type boolean, integer|nil
+
+    if not ok then return end
+
+    local pattern = src_win and "ll" or "cc"
+    vim.api.nvim_exec_autocmds("QuickFixCmdPre", { pattern = pattern })
+
+    et._set_list(src_win, { nr = 0, idx = idx, user_data = { action = "replace" } })
+
+    if split == "tabnew" then
+        tabnew_open(list_win, item, finish, is_orphan, pattern)
+        return
+    end
+
+    local should_resize = should_resize_list_win(list_win, dest_win, is_orphan) --- @type boolean
+    local row, col = unpack(api.nvim_win_get_cursor(list_win)) --- @type integer, integer
+    if row ~= idx then
+        eu._protected_set_cursor(list_win, { idx, col })
+        eu._do_zzze(list_win)
+    end
+
+    local buf_win = get_buf_win(dest_win, split, item.bufnr, list_win) --- @type integer
+    local clearjumps = split == "none" and dest_win == buf_win --- @type boolean
+    local goto_win = finish == "focusWin" --- @type boolean
+    eu._open_item_to_win(
+        item,
+        { buftype = dest_buftype, clearjumps = clearjumps, goto_win = goto_win, win = buf_win }
+    )
+
+    if should_resize then eo._resize_list_win(list_win) end
+    if is_orphan then handle_orphan(list_win, buf_win, finish) end
+
+    vim.api.nvim_exec_autocmds("QuickFixCmdPost", { pattern = pattern })
+end
+
+-----------------------
+-- MAPPING FUNCTIONS --
+-----------------------
+
+function M._open_direct_focuswin()
+    M._open_item_from_list("none", "focusWin", eu._get_item_under_cursor)
+end
+
+function M._open_direct_focuslist()
+    M._open_item_from_list("none", "focusList", eu._get_item_under_cursor)
+end
+
+function M._open_split_focuswin()
+    M._open_item_from_list("split", "focusWin", eu._get_item_under_cursor)
+end
+
+function M._open_split_focuslist()
+    M._open_item_from_list("split", "focusList", eu._get_item_under_cursor)
+end
+
+function M._open_vsplit_focuswin()
+    M._open_item_from_list("vsplit", "focusWin", eu._get_item_under_cursor)
+end
+
+function M._open_vsplit_focuslist()
+    M._open_item_from_list("vsplit", "focusList", eu._get_item_under_cursor)
+end
+
+function M._open_tabnew_focuswin()
+    M._open_item_from_list("tabnew", "focusWin", eu._get_item_under_cursor)
+end
+
+function M._open_tabnew_focuslist()
+    M._open_item_from_list("tabnew", "focusList", eu._get_item_under_cursor)
+end
+
+function M._open_prev_focuslist()
+    M._open_item_from_list("none", "focusList", eu._get_item_wrapping_sub)
+end
+
+function M._open_next_focuslist()
+    M._open_item_from_list("none", "focusList", eu._get_item_wrapping_add)
 end
 
 return M
 
--- TODO: Remove closeList handling
 -- TODO: Re-add the multi-line visual delete
 -- TODO: Create stevearc's {} maps for scrolling in the list
 

@@ -1,11 +1,4 @@
----------------
---- CREDITS ---
----------------
-
---- https://github.com/r0nsha/qfpreview.nvim
-
 local eu = Qfr_Defer_Require("mjm.error-list-util") --- @type QfRancherUtils
-local et = Qfr_Defer_Require("mjm.error-list-tools") --- @type QfRancherTools
 local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
 
 --- @class QfRancherPreview
@@ -729,12 +722,7 @@ local function get_list_item(list_win)
     local is_loclist = wintype == "loclist" --- @type boolean
     local src_win = is_loclist and list_win or nil --- @type integer|nil
 
-    --- @type vim.quickfix.entry[]
-    local items = et._get_list_items(src_win, 0)
-    if #items < 1 then return nil end
-
-    local line = vim.fn.line(".") --- @type integer
-    return items[line]
+    return eu._get_item_under_cursor(src_win)
 end
 
 --- @return nil
@@ -816,6 +804,12 @@ function M.toggle_preview_win(list_win)
 end
 
 return M
+
+---------------
+--- CREDITS ---
+---------------
+
+--- https://github.com/r0nsha/qfpreview.nvim
 
 ------------
 --- TODO ---

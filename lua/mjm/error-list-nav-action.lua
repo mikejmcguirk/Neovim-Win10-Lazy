@@ -10,26 +10,6 @@ local api = vim.api
 --- PREV/NEXT ---
 -----------------
 
---- @param win integer|nil
---- @param count integer
---- @param arithmetic function
---- @return integer|nil
-local function get_list_new_idx(win, count, arithmetic)
-    ey._validate_win(win, true)
-    ey._validate_uint(count)
-    vim.validate("arithmetic", arithmetic, "callable")
-
-    local count1 = eu._count_to_count1(count) --- @type integer|nil
-    local et = require("mjm.error-list-tools") --- @type QfRancherTools
-    local size = et._get_list_size(win, 0) --- @type integer|nil
-    if not size or size < 1 then return nil end
-
-    local cur_idx = et._get_list_idx(win, 0) --- @type integer|nil
-    if not cur_idx then return nil end
-
-    return arithmetic(cur_idx, count1, 1, size)
-end
-
 --- @param new_idx integer
 --- @param cmd string
 --- @param opts table
@@ -56,7 +36,7 @@ end
 --- @return boolean
 function M._q_prev(count, opts)
     --- @type integer|nil
-    local new_idx = get_list_new_idx(nil, count, eu._wrapping_sub)
+    local new_idx = eu._get_idx_wrapping_sub(nil, count)
     if new_idx then return goto_list_entry(new_idx, "cc", opts) end
     return false
 end
@@ -66,7 +46,7 @@ end
 --- @return boolean
 function M._q_next(count, opts)
     --- @type integer|nil
-    local new_idx = get_list_new_idx(nil, count, eu._wrapping_add)
+    local new_idx = eu._get_idx_wrapping_add(nil, count)
     if new_idx then return goto_list_entry(new_idx, "cc", opts) end
     return false
 end
@@ -78,7 +58,7 @@ end
 function M._l_prev(src_win, count, opts)
     return eu._locwin_check(src_win, function()
         --- @type integer|nil
-        local new_idx = get_list_new_idx(src_win, count, eu._wrapping_sub)
+        local new_idx = eu._get_idx_wrapping_sub(src_win, count)
         if new_idx then goto_list_entry(new_idx, "ll", opts) end
     end)
 end
@@ -90,7 +70,7 @@ end
 function M._l_next(src_win, count, opts)
     return eu._locwin_check(src_win, function()
         --- @type integer|nil
-        local new_idx = get_list_new_idx(src_win, count, eu._wrapping_add)
+        local new_idx = eu._get_idx_wrapping_add(src_win, count)
         if new_idx then goto_list_entry(new_idx, "ll", opts) end
     end)
 end

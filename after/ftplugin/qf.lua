@@ -52,14 +52,13 @@ bufmap_plug("n", "P", "<Plug>(qf-rancher-list-update-preview-pos)", "Open the pr
 if in_loclist then
     bufmap_plug("n", "<", "<Plug>(qf-rancher-ll-older)", "Go to an older location list")
     bufmap_plug("n", ">", "<Plug>(qf-rancher-ll-newer)", "Go to a newer location list")
-    -- bufmap_plug("n", "{", "<Plug>(qf-rancher-list-ll-prev)", "Go to a previous llist entry")
-    -- bufmap_plug("n", "}", "<Plug>(qf-rancher-list-ll-next)", "Go to a later llist entry")
 else
     bufmap_plug("n", "<", "<Plug>(qf-rancher-qf-older)", "Go to an older qflist")
     bufmap_plug("n", ">", "<Plug>(qf-rancher-qf-newer)", "Go to a newer qflist")
-    -- bufmap_plug("n", "{", "<Plug>(qf-rancher-list-qf-prev)", "Go to a previous qflist entry")
-    -- bufmap_plug("n", "}", "<Plug>(qf-rancher-list-qf-next)", "Go to a later qflist entry")
 end
+
+bufmap_plug("n", "{", "<Plug>(qf-rancher-list-prev)", "Go to a previous list entry")
+bufmap_plug("n", "}", "<Plug>(qf-rancher-list-next)", "Go to a later list entry")
 
 local d_focuswin_desc = "Open a list item and focus on it" --- @type string
 local d_focuslist_desc = "Open a list item, keep list focus" --- @type string

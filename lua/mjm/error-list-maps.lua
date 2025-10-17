@@ -704,64 +704,44 @@ vim.keymap.set("n", pqfr .. "-list-update-preview-pos)", function()
 end, { desc = "Update the preview win position" })
 
 vim.keymap.set("n", pqfr .. "-list-open-direct-focuswin)", function()
-    ei._direct_open("focusWin")
+    ei._open_direct_focuswin()
 end, { desc = "Open a list item and focus on it" })
 
-vim.keymap.set("n", pqfr .. "-list-open-direct-closelist)", function()
-    ei._direct_open("closeList")
-end, { desc = "Open a list item then close the list" })
-
 vim.keymap.set("n", pqfr .. "-list-open-direct-focuslist)", function()
-    ei._direct_open("focusList")
+    ei._open_direct_focuslist()
 end, { desc = "Open a list item, keep list focus" })
 
+vim.keymap.set("n", pqfr .. "-list-prev)", function()
+    ei._open_prev_focuslist()
+end, { desc = "Go to a previous qf entry, keep window focus" })
+
+vim.keymap.set("n", pqfr .. "-list-next)", function()
+    ei._open_next_focuslist()
+end, { desc = "Go to a later qf entry, keep window focus" })
+
 vim.keymap.set("n", pqfr .. "-list-open-split-focuswin)", function()
-    ei._split_open("split", "focusWin")
+    ei._open_split_focuswin()
 end, { desc = "Open a list item in a split and focus on it" })
 
-vim.keymap.set("n", pqfr .. "-list-open-split-closelist)", function()
-    ei._split_open("split", "closeList")
-end, { desc = "Open a list item in a split then close the list" })
-
 vim.keymap.set("n", pqfr .. "-list-open-split-focuslist)", function()
-    ei._split_open("split", "focusList")
+    ei._open_split_focuslist()
 end, { desc = "Open a list item in a split, keep list focus" })
 
 vim.keymap.set("n", pqfr .. "-list-open-vsplit-focuswin)", function()
-    ei._split_open("vsplit", "focusWin")
+    ei._open_vsplit_focuswin()
 end, { desc = "Open a list item in a vsplit and focus on it" })
 
-vim.keymap.set("n", pqfr .. "-list-open-vsplit-closelist)", function()
-    ei._split_open("vsplit", "closeList")
-end, { desc = "Open a list item in a vsplit then close the list" })
-
 vim.keymap.set("n", pqfr .. "-list-open-vsplit-focuslist)", function()
-    ei._split_open("vsplit", "focusList")
+    ei._open_vsplit_focuslist()
 end, { desc = "Open a list item in a vsplit, keep list focus" })
 
 vim.keymap.set("n", pqfr .. "-list-open-tabnew-focuswin)", function()
-    ei._tabnew_open("focusWin")
+    ei._open_tabnew_focuswin()
 end, { desc = "Open a list item in a new tab and focus on it" })
 
 vim.keymap.set("n", pqfr .. "-list-open-tabnew-focuslist)", function()
-    ei._tabnew_open("focusList")
+    ei._open_tabnew_focuslist()
 end, { desc = "Open a list item in a new tab, keep list focus" })
-
--- vim.keymap.set("n", pqfr .. "-list-qf-prev)", function()
---     ei._list_prev(nil, vim.v.count, { keep_win = true })
--- end, { desc = "Go to a previous qf entry, keep window focus" })
---
--- vim.keymap.set("n", pqfr .. "-list-qf-next)", function()
---     ei._list_next(nil, vim.v.count, { keep_win = true })
--- end, { desc = "Go to a later qf entry, keep window focus" })
---
--- vim.keymap.set("n", pqfr .. "-list-ll-prev)", function()
---     ei._list_prev(cur_win(), vim.v.count, { keep_win = true })
--- end, { desc = "Go to a previous loclist entry, keep window focus" })
---
--- vim.keymap.set("n", pqfr .. "-list-ll-next)", function()
---     ei._list_next(cur_win(), vim.v.count, { keep_win = true })
--- end, { desc = "Go to a later loclist entry, keep window focus" })
 
 ------------
 --- CMDS ---
