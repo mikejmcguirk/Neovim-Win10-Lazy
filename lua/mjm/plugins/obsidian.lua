@@ -131,9 +131,7 @@ local function load_obsidian()
                 -- local ws_fname = ws.name
                 -- local img_dir = ws_fname .. "/" .. img_folder ---@type string
                 local img_dir = img_folder ---@type string
-                if vim.fn.isdirectory(img_dir) == 0 then
-                    vim.fn.mkdir(img_dir, "p")
-                end
+                if vim.fn.isdirectory(img_dir) == 0 then vim.fn.mkdir(img_dir, "p") end
 
                 local pattern = img_dir .. "/" .. cur_file_name .. "*.png" ---@type string
                 local files = vim.fn.glob(pattern, false, true) ---@type table

@@ -87,26 +87,23 @@ require("mjm.plugins.session_manager")
 require("mjm.plugins.lightbulb")
 require("mjm.plugins.misc")
 
+require("mjm.plugins.spec-ops")
+require("mjm.plugins.specialist")
+
 local eager_loaded = vim.uv.hrtime()
 
 -------------------------
 -- Lazy Initialization --
 -------------------------
 
-require("mjm.plugins.autopairs")
+-- TODO: Rather than have each module setup an autocmd, set the autocmds here and gate the modules
+-- behind them. More centralized behavior + less eager requires + config code still separate
+
 require("mjm.plugins.blink")
 require("mjm.plugins.conform")
-require("mjm.plugins.git_signs")
-require("mjm.plugins.jump2d")
-require("mjm.plugins.lazydev")
-require("mjm.plugins.mini-operators")
-require("mjm.plugins.nvim-surround")
 require("mjm.plugins.obsidian")
-require("mjm.plugins.spec-ops")
-require("mjm.plugins.specialist")
-require("mjm.plugins.treesj")
+require("mjm.plugins.lazydev")
 require("mjm.plugins.ts-autotag")
-require("mjm.plugins.zen")
 
 -- This is fine as long as modules aren't divided into multiple pieces to do this
 local buf_augroup_name = "mjm-buf-settings"
@@ -114,6 +111,14 @@ Autocmd({ "BufNew", "BufReadPre" }, {
     group = Augroup(buf_augroup_name, {}),
     once = true,
     callback = function()
+        require("mjm.plugins.autopairs")
+        require("mjm.plugins.git_signs")
+        require("mjm.plugins.jump2d")
+        require("mjm.plugins.mini-operators")
+        require("mjm.plugins.nvim-surround")
+        require("mjm.plugins.treesj")
+        require("mjm.plugins.zen")
+
         require("mjm.diagnostics")
         require("mjm.lsp")
         require("mjm.ts-tools")

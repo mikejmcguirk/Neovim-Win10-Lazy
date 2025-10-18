@@ -548,6 +548,7 @@ local function map_on_bufreadpre()
         visual_move({ upward = true })
     end)
 
+    -- TODO: Doesn't always properly re-select
     local function add_blank_visual(up)
         api.nvim_set_option_value("lz", true, { scope = "global" })
 
