@@ -1,8 +1,8 @@
 --- @class QfRancherNav
 local M = {}
 
-local eu = Qfr_Defer_Require("mjm.error-list-util") --- @type QfRancherUtil
-local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
+local eu = Qfr_Defer_Require("mjm.error-list-util") --- @type QfrUtil
+local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfrTypes
 
 local api = vim.api
 
@@ -140,7 +140,7 @@ local function goto_specific_idx(src_win, count)
     ey._validate_win(src_win, true)
     ey._validate_uint(count)
 
-    local et = require("mjm.error-list-tools") --- @type QfRancherTools
+    local et = require("mjm.error-list-tools") --- @type QfrTools
     local size = et._get_list_size(src_win, 0) --- @type integer|nil
     if not size or size < 1 then return nil end
 
@@ -289,7 +289,7 @@ local function file_nav_wrap(src_win, count, cmd, backup_cmd)
     vim.validate("cmd", cmd, "string")
     vim.validate("backup_cmd", backup_cmd, "string")
 
-    local et = require("mjm.error-list-tools") --- @type QfRancherTools
+    local et = require("mjm.error-list-tools") --- @type QfrTools
     local size = et._get_list_size(src_win, 0) --- @type integer|nil
     if not size or size < 1 then return nil end
 

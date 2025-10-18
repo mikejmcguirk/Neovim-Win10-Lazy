@@ -11,14 +11,14 @@ local api = vim.api
 --- Map and Cmd Pieces ---
 --------------------------
 
-local sys_opt = { timeout = 4000 } --- @type QfRancherSystemOpts
+local sys_opt = { timeout = 4000 } --- @type QfrSystemOpts
 
-local in_vimsmart = { input_type = "vimsmart" } --- @type QfRancherInputOpts
-local in_sensitive = { input_type = "sensitive" } --- @type QfRancherInputOpts
-local in_regex = { input_type = "regex" } --- @type QfRancherInputOpts
+local in_vimsmart = { input_type = "vimsmart" } --- @type QfrInputOpts
+local in_sensitive = { input_type = "sensitive" } --- @type QfrInputOpts
+local in_regex = { input_type = "regex" } --- @type QfrInputOpts
 
 local function get_what(dest, win)
-    local what = { nr = vim.v.count } --- @type QfRancherWhat
+    local what = { nr = vim.v.count } --- @type QfrWhat
     what.user_data = { action = dest, src_win = win } --- @type QfRancherUserData
     return what
 end
@@ -28,41 +28,41 @@ local function cur_win()
     return api.nvim_get_current_win()
 end
 
---- @return QfRancherWhat
+--- @return QfrWhat
 local function new_qflist()
     return get_what("new", nil)
 end
 
---- @return QfRancherWhat
+--- @return QfrWhat
 local function replace_qflist()
     return get_what("replace", nil)
 end
 
---- @return QfRancherWhat
+--- @return QfrWhat
 local function add_qflist()
     return get_what("add", nil)
 end
 
---- @return QfRancherWhat
+--- @return QfrWhat
 local function new_loclist()
     return get_what("new", cur_win())
 end
 
---- @return QfRancherWhat
+--- @return QfrWhat
 local function replace_loclist()
     return get_what("replace", cur_win())
 end
 
---- @return QfRancherWhat
+--- @return QfrWhat
 local function add_loclist()
     return get_what("add", cur_win())
 end
 
-local ea = Qfr_Defer_Require("mjm.error-list-stack") --- @type QfRancherStack
+local ea = Qfr_Defer_Require("mjm.error-list-stack") --- @type QfrStack
 local ed = Qfr_Defer_Require("mjm.error-list-diag") --- @type QfRancherDiagnostics
-local ef = Qfr_Defer_Require("mjm.error-list-filter") --- @type QfRancherFilter
+local ef = Qfr_Defer_Require("mjm.error-list-filter") --- @type QfrFilter
 local ei = Qfr_Defer_Require("mjm.error-list-filetype-funcs") --- @type QfRancherFiletypeFuncs
-local eg = Qfr_Defer_Require("mjm.error-list-grep") --- @type QfRancherGrep
+local eg = Qfr_Defer_Require("mjm.error-list-grep") --- @type QfrGrep
 local en = Qfr_Defer_Require("mjm.error-list-nav-action") --- @type QfRancherNav
 local eo = Qfr_Defer_Require("mjm.error-list-open") --- @type QfRancherOpen
 local ep = Qfr_Defer_Require("mjm.error-list-preview") --- @type QfRancherPreview
@@ -758,11 +758,11 @@ if vim.g.qf_rancher_set_default_cmds then
     -------------
 
     api.nvim_create_user_command("Qdiag", function(cargs)
-        ed._q_diag(cargs)
+        ed.q_diag_cmd(cargs)
     end, { count = 0, nargs = "*", desc = "Get all diagnostics for the Quickfix list" })
 
     api.nvim_create_user_command("Ldiag", function(cargs)
-        ed._l_diag(cargs)
+        ed.l_diag_cmd(cargs)
     end, { count = 0, nargs = "*", desc = "Get current buf diagnostics for the Location list" })
 
     --------------
@@ -770,11 +770,11 @@ if vim.g.qf_rancher_set_default_cmds then
     --------------
 
     api.nvim_create_user_command("Qfilter", function(cargs)
-        ef._q_filter(cargs)
+        ef.q_filter_cmd(cargs)
     end, { bang = true, count = true, nargs = "*", desc = "Sort quickfix items" })
 
     api.nvim_create_user_command("Lfilter", function(cargs)
-        ef._l_filter(cargs)
+        ef.l_filter_cmd(cargs)
     end, { bang = true, count = true, nargs = "*", desc = "Sort loclist items" })
 
     --------------
@@ -782,11 +782,11 @@ if vim.g.qf_rancher_set_default_cmds then
     --------------
 
     api.nvim_create_user_command("Qgrep", function(cargs)
-        eg._q_grep_cmd(cargs)
+        eg.q_grep_cmd(cargs)
     end, { count = true, nargs = "*", desc = "Grep to the quickfix list" })
 
     api.nvim_create_user_command("Lgrep", function(cargs)
-        eg._l_grep_cmd(cargs)
+        eg.l_grep_cmd(cargs)
     end, { count = true, nargs = "*", desc = "Grep to the location list" })
 
     -------------------------

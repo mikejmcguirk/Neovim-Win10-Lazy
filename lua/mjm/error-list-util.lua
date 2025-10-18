@@ -1,8 +1,8 @@
---- @class QfRancherUtil
+--- @class QfrUtil
 local M = {}
 
-local et = Qfr_Defer_Require("mjm.error-list-tools") --- @type QfRancherTools
-local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
+local et = Qfr_Defer_Require("mjm.error-list-tools") --- @type QfrTools
+local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfrTypes
 
 local api = vim.api
 local fn = vim.fn
@@ -42,7 +42,7 @@ end
 --- INPUT UTILS ---
 -------------------
 
---- @param input QfRancherInputType
+--- @param input QfrInputType
 --- @return string
 --- NOTE: This function assumes that an API input of "vimsmart" has already been resolved
 function M._get_display_input_type(input)
@@ -57,8 +57,8 @@ function M._get_display_input_type(input)
     end
 end
 
---- @param input QfRancherInputType
---- @return QfRancherInputType
+--- @param input QfrInputType
+--- @return QfrInputType
 function M._resolve_input_type(input)
     ey._validate_input_type(input)
 
@@ -130,7 +130,7 @@ end
 
 --- @param prompt string
 --- @param input_pattern string|nil
---- @param input_type QfRancherInputType
+--- @param input_type QfrInputType
 --- @return string|nil
 function M._resolve_pattern(prompt, input_pattern, input_type)
     vim.validate("prompt", prompt, "string")
@@ -412,7 +412,7 @@ end
 --- @param line string
 --- @return integer
 function M._vcol_to_end_col_(vcol, line)
-    ey._validate_uint(vcol) --- @type QfRancherTypes
+    ey._validate_uint(vcol) --- @type QfrTypes
     vim.validate("line", line, "string")
 
     local ok, _, fin_byte = M._vcol_to_byte_bounds(vcol, line) --- @type boolean, integer

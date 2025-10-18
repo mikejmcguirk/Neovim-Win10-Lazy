@@ -7,7 +7,7 @@ local M = {}
 
 --- @param sort_info QfRancherSortInfo
 --- @param sort_opts QfRancherSortOpts
---- @param what QfRancherWhat
+--- @param what QfrWhat
 --- @return nil
 local function validate_sort_wrapper_input(sort_info, sort_opts, what)
     sort_info = sort_info or {}
@@ -22,20 +22,20 @@ end
 
 --- @param sort_info QfRancherSortInfo
 --- @param sort_opts QfRancherSortOpts
---- @param what QfRancherWhat
+--- @param what QfrWhat
 --- @return nil
 local function sort_wrapper(sort_info, sort_opts, what)
     validate_sort_wrapper_input(sort_info, sort_opts, what)
 
     local src_win = what.user_data.src_win --- @type integer|nil
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtil
+    local eu = require("mjm.error-list-util") --- @type QfrUtil
     if src_win and not eu._valid_win_for_loclist(what.user_data.src_win) then
         local msg = "Win " .. src_win .. " cannot have a location list"
         vim.api.nvim_echo({ { msg, "" } }, false, {})
         return
     end
 
-    local et = require("mjm.error-list-tools") --- @type QfRancherTools
+    local et = require("mjm.error-list-tools") --- @type QfrTools
     local cur_list = et._get_list_all(src_win, what.nr) --- @type table
     if cur_list.size < 1 then
         vim.api.nvim_echo({ { "Not enough entries to sort", "" } }, false, {})
@@ -60,7 +60,7 @@ local function sort_wrapper(sort_info, sort_opts, what)
             or what.quickfixtextfunc,
         title = cur_list.title or what.title,
         user_data = { sort_func = predicate },
-    }) --- @type QfRancherWhat
+    }) --- @type QfrWhat
 
     local dest_nr = et._set_list(src_win, what_set) --- @type integer
     if eu._get_g_var("qf_rancher_auto_open_changes") then
@@ -366,7 +366,7 @@ end
 --- - is_loclist? boolean - Whether to filter against a location list
 --- @param name string
 --- @param sort_opts QfRancherSortOpts
---- @param what QfRancherWhat
+--- @param what QfrWhat
 --- @return nil
 function M.sort(name, sort_opts, what)
     local sort_info = sorts[name] --- @type QfRancherSortInfo
@@ -383,15 +383,15 @@ local function sort_cmd(src_win, cargs)
 
     local sort_names = require("mjm.error-list-sort").get_sort_names()
     assert(#sort_names > 1, "No sort functions available")
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtil
+    local eu = require("mjm.error-list-util") --- @type QfrUtil
     local sort_name = eu._check_cmd_arg(fargs, sort_names, "fname") --- @type string
 
-    local ey = require("mjm.error-list-types") --- @type QfRancherTypes
+    local ey = require("mjm.error-list-types") --- @type QfrTypes
     local dir = eu._check_cmd_arg(fargs, { "asc", "desc" }, "asc") --- @type QfRancherSortDir
 
-    --- @type QfRancherAction
+    --- @type QfrAction
     local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action)
-    --- @type QfRancherWhat
+    --- @type QfrWhat
     local what = { nr = 0, user_data = { action = action, src_win = src_win } }
 
     M.sort(sort_name, { dir = dir }, what)

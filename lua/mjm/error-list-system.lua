@@ -1,26 +1,15 @@
----@mod Sys Sends diags to the qf list
+local ea = Qfr_Defer_Require("mjm.error-list-stack") ---@type QfrStack
+local et = Qfr_Defer_Require("mjm.error-list-tools") ---@type QfrTools
+local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfrUtil
+local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfrTypes
 
----@class QfRancherSystem
-local Sys = {}
+---@mod System Sends diags to the qf list
 
-local ea = Qfr_Defer_Require("mjm.error-list-stack") ---@type QfRancherStack
-local et = Qfr_Defer_Require("mjm.error-list-tools") ---@type QfRancherTools
-local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfRancherUtil
-local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfRancherTypes
-
--- SYSTEM DO --
-
----@param system_opts QfRancherSystemOpts
----@param what QfRancherWhat
----@return nil
-local function validate_system_do(system_opts, what)
-    ey._validate_system_opts(system_opts)
-    ey._validate_list(system_opts.cmd_parts, { type = "string" })
-    ey._validate_what(what)
-end
+--- @class QfrSystem
+local System = {}
 
 ---@param obj vim.SystemCompleted
----@param what QfRancherWhat
+---@param what QfrWhat
 local function handle_output(obj, what)
     if obj.code ~= 0 then
         --- @type string
@@ -31,13 +20,11 @@ local function handle_output(obj, what)
     end
 
     local src_win = what.user_data.src_win --- @type integer
-    if src_win and not eu._valid_win_for_loclist(src_win) then
-        local msg = "Win " .. src_win .. " cannot have a location list" ---@type string
-        vim.api.nvim_echo({ { msg, "" } }, false, {})
-        return
-    end
+    if src_win and not eu._valid_win_for_loclist(src_win) then return end
 
     local lines = vim.split(obj.stdout or "", "\n", { trimempty = true }) --- @type string[]
+    if #lines == 0 then return end
+
     local qf_dict = vim.fn.getqflist({ lines = lines }) --- @type {items: table[]}
     if what.user_data.list_item_type then
         for _, item in pairs(qf_dict.items) do
@@ -45,8 +32,7 @@ local function handle_output(obj, what)
         end
     end
 
-    --- @type QfRancherWhat
-    local what_set = vim.tbl_deep_extend("force", what, { items = qf_dict.items })
+    local what_set = vim.tbl_deep_extend("force", what, { items = qf_dict.items }) ---@type QfrWhat
     local dest_nr = et._set_list(src_win, what_set) --- @type integer
     if eu._get_g_var("qf_rancher_auto_open_changes") then
         ea._history(src_win, dest_nr, {
@@ -59,11 +45,13 @@ end
 
 -- DOCUMENT: How to use this
 
----@param system_opts QfRancherSystemOpts
----@param what QfRancherWhat
+---@param system_opts QfrSystemOpts
+---@param what QfrWhat
 ---@return nil
-function Sys.system_do(system_opts, what)
-    validate_system_do(system_opts, what)
+function System.system_do(system_opts, what)
+    ey._validate_system_opts(system_opts)
+    ey._validate_list(system_opts.cmd_parts, { type = "string" })
+    ey._validate_what(what)
 
     ---@type vim.SystemOpts
     local vim_system_opts = { text = true, timeout = system_opts.timeout or ey._default_timeout }
@@ -80,7 +68,7 @@ function Sys.system_do(system_opts, what)
     end
 end
 
-return Sys
+return System
 ---@export sys
 
 -- TODO: Tests

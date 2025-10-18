@@ -1,4 +1,4 @@
---- @class QfRancherTypes
+--- @class QfrTypes
 local M = {}
 
 -------------------------
@@ -12,11 +12,11 @@ local M = {}
 ---     each validation step rather than have to reason about how functions down the chain
 ---     handle nil values
 
---- @class QfRancherWhat : vim.fn.setqflist.what
+--- @class QfrWhat : vim.fn.setqflist.what
 --- @field nr integer
 --- @field user_data? any
 
---- @param what QfRancherWhat
+--- @param what QfrWhat
 --- @return nil
 function M._validate_what(what)
     vim.validate("what", what, "table")
@@ -41,7 +41,7 @@ function M._validate_what(what)
 end
 
 --- @class QfRancherUserData
---- @field action? QfRancherAction
+--- @field action? QfrAction
 --- @field list_item_type? string
 --- @field src_win? integer
 --- @field sort_func? QfRancherSortPredicate
@@ -347,12 +347,12 @@ end
 --- CUSTOM TYPES -- GENERAL ---
 -------------------------------
 
---- @alias QfRancherAction "new"|"replace"|"add"
+--- @alias QfrAction "new"|"replace"|"add"
 
 M._actions = { "new", "replace", "add" }
 M._default_action = "new"
 
---- @param action QfRancherAction
+--- @param action QfrAction
 --- @return nil
 function M._validate_action(action)
     vim.validate("action", action, "string")
@@ -361,7 +361,7 @@ function M._validate_action(action)
     end)
 end
 
---- @alias QfRancherInputType "insensitive"|"regex"|"sensitive"|"smartcase"|"vimsmart"
+--- @alias QfrInputType "insensitive"|"regex"|"sensitive"|"smartcase"|"vimsmart"
 
 --- @type string[]
 local input_types = { "insensitive", "regex", "sensitive", "smartcase", "vimsmart" }
@@ -370,7 +370,7 @@ M._cmd_input_types = vim.tbl_filter(function(t)
     return t ~= "vimsmart"
 end, input_types)
 
---- @param input QfRancherInputType
+--- @param input QfrInputType
 --- @return nil
 function M._validate_input_type(input)
     vim.validate("input", input, "string")
@@ -379,11 +379,11 @@ function M._validate_input_type(input)
     end, "Input type " .. input .. " is not valid")
 end
 
---- @class QfRancherInputOpts
---- @field input_type QfRancherInputType
+--- @class QfrInputOpts
+--- @field input_type QfrInputType
 --- @field pattern? string
 
---- @param input_opts QfRancherInputOpts
+--- @param input_opts QfrInputOpts
 --- @return nil
 function M._validate_input_opts(input_opts)
     vim.validate("input_opts", input_opts, "table")
@@ -439,11 +439,11 @@ function M._validate_sev_type(filter)
     end, "Severity filter " .. filter .. " is invalid")
 end
 
---- @class QfRancherDiagOpts
+--- @class QfrDiagOpts
 --- @field filter QfRancherSeverityFilter
 --- @field level? vim.diagnostic.Severity
 
---- @param diag_opts QfRancherDiagOpts
+--- @param diag_opts QfrDiagOpts
 --- @return nil
 function M._validate_diag_opts(diag_opts)
     vim.validate("diag_opts", diag_opts, "table")
@@ -456,13 +456,13 @@ end
 --- CUSTOM TYPES -- FILTER ---
 ------------------------------
 
---- @class QfRancherFilterInfo
+--- @class QfrFilterInfo
 --- @field name string
---- @field insensitive_func QfRancherPredicateFunc
---- @field regex_func QfRancherPredicateFunc
---- @field sensitive_func QfRancherPredicateFunc
+--- @field insensitive_func QfrPredicate
+--- @field regex_func QfrPredicate
+--- @field sensitive_func QfrPredicate
 
---- @param filter_info QfRancherFilterInfo
+--- @param filter_info QfrFilterInfo
 function M._validate_filter_info(filter_info)
     vim.validate("filter_info", filter_info, "table")
     vim.validate("filter_info.name", filter_info.name, "string")
@@ -471,7 +471,7 @@ function M._validate_filter_info(filter_info)
     vim.validate("filter_info.sensitive_func", filter_info.sensitive_func, "callable")
 end
 
---- @class QfRancherFilterOpts
+--- @class QfrFilterOpts
 --- @field keep? boolean
 
 function M._validate_filter_opts(filter_opts)
@@ -483,13 +483,13 @@ end
 --- @field pattern? string
 --- @field regex? vim.regex
 
---- @alias QfRancherPredicateFunc fun(vim.qflist.entry, boolean, QfRancherPredicateOpts):boolean
+--- @alias QfrPredicate fun(vim.qflist.entry, boolean, QfRancherPredicateOpts):boolean
 
 ----------------------------
 --- CUSTOM TYPES -- GREP ---
 ----------------------------
 
---- @alias QfRancherGrepPartsFunc fun(string, string, QfRancherGrepLocs):string[]
+--- @alias QfrGrepPartsFunc fun(string, string, QfRancherGrepLocs):string[]
 
 --- @class QfRancherGrepInfo
 --- @field name string
@@ -597,12 +597,12 @@ end
 --- SYSTEM TYPES ---
 --------------------
 
---- @class QfRancherSystemOpts
+--- @class QfrSystemOpts
 --- @field sync? boolean
 --- @field cmd_parts? string[]
 --- @field timeout? integer
 
---- @param system_opts QfRancherSystemOpts
+--- @param system_opts QfrSystemOpts
 --- @return nil
 function M._validate_system_opts(system_opts)
     vim.validate("system_opts", system_opts, "table")

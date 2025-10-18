@@ -179,6 +179,11 @@ end
 --- TODO: ---
 -------------
 
+-- DOCUMENT as a dev note somewhere: lemmy-help ignores functions based on private/protected/
+-- package annotations, which also hide modules from LSP auto-complete. Therefore, we cannot have
+-- _underline functions in modules we are using to run out docs. _underline functions need to go
+-- in modules that are not used to generate docs. Also needs to be noted that the line breaks
+-- before @class are intentional to make lemmy-help skip those declarations
 -- Do I make all the type annotations Qfr?
 -- lemmy cmd: lemmy-help -l "compact" names > output
 -- Make sure the luarc for the project has the disabled private diag for docs. Also want to

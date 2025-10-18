@@ -1,6 +1,4 @@
 {
-    "diagnostics.disable": [
-        "trailing-space",
-        "invisible"
-    ]
+  "diagnostics.disable": ["trailing-space"]
 }
+

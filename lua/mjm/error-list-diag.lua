@@ -1,22 +1,27 @@
 ---@mod Diags Sends diags to the qf list
 
----@class QfRancherDiagnostics
+--- @class QfRancherDiagnostics
 local Diags = {}
 
-local ea = Qfr_Defer_Require("mjm.error-list-stack") ---@type QfRancherStack
+local ea = Qfr_Defer_Require("mjm.error-list-stack") ---@type QfrStack
 local es = Qfr_Defer_Require("mjm.error-list-sort") ---@type QfRancherSort
-local et = Qfr_Defer_Require("mjm.error-list-tools") ---@type QfRancherTools
-local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfRancherUtil
-local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfRancherTypes
+local et = Qfr_Defer_Require("mjm.error-list-tools") ---@type QfrTools
+local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfrUtil
+local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfrTypes
 
--- HELPER FUNCTIONS --
+local api = vim.api
+local ds = vim.diagnostic.severity
+
+-- ======================
+-- == HELPER FUNCTIONS ==
+-- ======================
 
 -- LOW: This and tbl_filter do not feel like the most efficient way to do this
 
 ---@param diags vim.Diagnostic[]
 ---@return vim.Diagnostic[]
 local function filter_diags_top_severity(diags)
-    local top_severity = vim.diagnostic.severity.HINT ---@type vim.diagnostic.Severity
+    local top_severity = ds.HINT ---@type vim.diagnostic.Severity
     for _, diag in ipairs(diags) do
         if diag.severity < top_severity then top_severity = diag.severity end
     end
@@ -50,29 +55,16 @@ local function convert_diag(d)
     }
 end
 
----@param diag_opts QfRancherDiagOpts
----@return vim.diagnostic.GetOpts
-local function get_getopts(diag_opts)
-    ey._validate_diag_opts(diag_opts)
-
-    local level = diag_opts.level or vim.diagnostic.severity.HINT ---@type vim.diagnostic.Severity
-    if diag_opts.filter == "only" then return { severity = level } end
-
-    ---@type boolean
-    local min_hint = diag_opts.filter == "min" and level == vim.diagnostic.severity.HINT
-    if min_hint or diag_opts.filter == "top" then
-        return { severity = nil }
-    else
-        return { severity = { min = level } }
-    end
-end
+-- ===================
+-- == DIAGS TO LIST ==
+-- ===================
 
 ---Convert diagnostics into list entries
 ---
----@param diag_opts QfRancherDiagOpts Options dict:
+---@param diag_opts QfrDiagOpts Options dict:
 ---- filter: (string) "min", "only", or "top" severity
 ---- level: vim.diagnostic.Severity
----@param what QfRancherWhat
+---@param what QfrWhat
 ---@return nil
 function Diags.diags_to_list(diag_opts, what)
     ey._validate_diag_opts(diag_opts)
@@ -81,13 +73,21 @@ function Diags.diags_to_list(diag_opts, what)
     local src_win = what.user_data.src_win ---@type integer
     if src_win and not eu._valid_win_for_loclist(src_win) then return end
 
-    local buf = src_win and vim.api.nvim_win_get_buf(src_win) or nil ---@type integer|nil
-    local getopts = get_getopts(diag_opts) ---@type vim.diagnostic.GetOpts
-    local raw_diags = vim.diagnostic.get(buf, getopts) ---@type vim.Diagnostic[]
+    local buf = src_win and api.nvim_win_get_buf(src_win) or nil ---@type integer|nil
+    local getopts = (function()
+        local level = diag_opts.level or ds.HINT ---@type vim.diagnostic.Severity
+        if diag_opts.filter == "only" then return { severity = level } end
 
+        local min_hint = diag_opts.filter == "min" and level == ds.HINT
+        if min_hint or diag_opts.filter == "top" then return { severity = nil } end
+
+        return { severity = { min = level } }
+    end)()
+
+    local raw_diags = vim.diagnostic.get(buf, getopts) ---@type vim.Diagnostic[]
     local plural = ey._plural_severity_map[diag_opts.level] or "diagnostics" ---@type string
     if #raw_diags == 0 then
-        vim.api.nvim_echo({ { "No " .. plural, "" } }, false, {})
+        api.nvim_echo({ { "No " .. plural, "" } }, false, {})
         return
     end
 
@@ -98,7 +98,7 @@ function Diags.diags_to_list(diag_opts, what)
         items = converted_diags,
         title = "vim.diagnostic.get() " .. diag_opts.filter .. " " .. plural,
         user_data = { sort_func = es._sort_fname_diag_asc },
-    }) ---@type QfRancherWhat
+    }) ---@type QfrWhat
 
     local dest_nr = et._set_list(src_win, what_set) ---@type integer
     if eu._get_g_var("qf_rancher_auto_open_changes") and dest_nr > 0 then
@@ -110,11 +110,17 @@ function Diags.diags_to_list(diag_opts, what)
     end
 end
 
+-- ===============
+-- == CMD FUNCS ==
+-- ===============
+
+-- DOCUMENT: How these work for making your own custom cmd maps
+
 local level_map = {
-    hint = vim.diagnostic.severity.HINT,
-    info = vim.diagnostic.severity.INFO,
-    warn = vim.diagnostic.severity.WARN,
-    error = vim.diagnostic.severity.ERROR,
+    hint = ds.HINT,
+    info = ds.INFO,
+    warn = ds.WARN,
+    error = ds.ERROR,
     top = nil,
 } ---@type table <string, vim.diagnostic.Severity>
 
@@ -130,28 +136,25 @@ local function make_diag_cmd(src_win, cargs)
     local level = eu._check_cmd_arg(fargs, levels, "hint") ---@type string
     local sev_filter = eu._check_cmd_arg(fargs, ey._sev_filters, "min") ---@type string
 
-    local diag_opts = { level = level_map[level], filter = sev_filter } ---@type QfRancherDiagOpts
+    local diag_opts = { level = level_map[level], filter = sev_filter } ---@type QfrDiagOpts
 
-    ---@type QfRancherAction
-    local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action)
-    ---@type QfRancherWhat
+    local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action) ---@type QfrAction
+    ---@type QfrWhat
     local what = { nr = cargs.count, user_data = { action = action, src_win = src_win } }
 
     Diags.diags_to_list(diag_opts, what)
 end
 
----@private
 ---@param cargs vim.api.keyset.create_user_command.command_args
 ---@return nil
-function Diags._q_diag(cargs)
+function Diags.q_diag_cmd(cargs)
     make_diag_cmd(nil, cargs)
 end
 
----@private
 ---@param cargs vim.api.keyset.create_user_command.command_args
 ---@return nil
-function Diags._l_diag(cargs)
-    make_diag_cmd(vim.api.nvim_get_current_win(), cargs)
+function Diags.l_diag_cmd(cargs)
+    make_diag_cmd(api.nvim_get_current_win(), cargs)
 end
 
 return Diags

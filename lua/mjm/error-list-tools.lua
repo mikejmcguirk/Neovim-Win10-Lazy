@@ -1,9 +1,9 @@
---- @class QfRancherTools
+--- @class QfrTools
 local M = {}
 
 local eo = Qfr_Defer_Require("mjm.error-list-open") --- @type QfRancherOpen
-local eu = Qfr_Defer_Require("mjm.error-list-util") --- @type QfRancherUtil
-local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfRancherTypes
+local eu = Qfr_Defer_Require("mjm.error-list-util") --- @type QfrUtil
+local ey = Qfr_Defer_Require("mjm.error-list-types") --- @type QfrTypes
 
 local api = vim.api
 
@@ -57,8 +57,8 @@ local function use_old(var, var_type)
     return type(var) == var_type and var or nil
 end
 
---- @param new_what QfRancherWhat
---- @return QfRancherWhat
+--- @param new_what QfrWhat
+--- @return QfrWhat
 local function create_add_list_what(new_what)
     require("mjm.error-list-types")._validate_what(new_what)
 
@@ -78,7 +78,7 @@ local function create_add_list_what(new_what)
             or use_old(old_all.quickfixtextfunc, "function"),
         title = new_what.title or use_old(old_all.title, "string"),
         user_data = new_what.user_data or nil,
-    } --- @type QfRancherWhat
+    } --- @type QfrWhat
 
     if require("mjm.error-list-util")._get_g_var("qf_rancher_debug_assertions") then
         require("mjm.error-list-types")._validate_what(add_what)
@@ -87,7 +87,7 @@ local function create_add_list_what(new_what)
     return add_what
 end
 
---- @param what QfRancherWhat
+--- @param what QfrWhat
 --- @return nil
 local function cycle_lists_down(src_win, what)
     --- Always assert because this is a destructive, looping operation
@@ -106,20 +106,20 @@ local function cycle_lists_down(src_win, what)
             quickfixtextfunc = use_old(next_list.quickfixtextgfunc, "function"),
             title = use_old(next_list.title, "string"),
             user_data = { action = "replace", src_win = src_win },
-        } --- @type QfRancherWhat
+        } --- @type QfrWhat
 
         M._set_list(src_win, next_what)
     end
 end
 
 --- @param setlist_action "r"|" "|"a"|"f"|"u"
---- @param what QfRancherWhat
+--- @param what QfrWhat
 --- @return integer
 local function do_set_list(src_win, setlist_action, what)
     ey._validate_setlist_action(setlist_action)
     ey._validate_what(what)
 
-    local what_set = vim.deepcopy(what, true) --- @type QfRancherWhat
+    local what_set = vim.deepcopy(what, true) --- @type QfrWhat
     local es = require("mjm.error-list-sort") --- @type QfRancherSort
     --- LOW: Are there conditions at which we shouldn't sort? Should it be possible to set
     --- the sort_func to vim.NIL selectively to ignore it?
@@ -147,7 +147,7 @@ local function do_set_list(src_win, setlist_action, what)
     return what_set.nr > 0 and what_set.nr or 1
 end
 
---- @param what QfRancherWhat
+--- @param what QfrWhat
 --- @return nil
 local function validate_and_clean_set_list(what)
     require("mjm.error-list-types")._validate_what(what)
@@ -161,13 +161,13 @@ end
 --- LIST TOOLS ---
 ------------------
 
---- @param what QfRancherWhat
+--- @param what QfrWhat
 --- @return integer
 function M._set_list(src_win, what)
     validate_and_clean_set_list(what)
 
-    local what_set = vim.deepcopy(what, true) --- @type QfRancherWhat
-    local action = what.user_data.action --- @type QfRancherAction
+    local what_set = vim.deepcopy(what, true) --- @type QfrWhat
+    local action = what.user_data.action --- @type QfrAction
 
     local max_nr = M._get_list(src_win, { nr = "$" }).nr --- @type integer
     if max_nr == 0 then
@@ -473,7 +473,7 @@ function M._del_list(src_win, count)
         quickfixtextfunc = nil,
         title = "",
         user_data = nil,
-    } --- @type QfRancherWhat
+    } --- @type QfrWhat
 
     local result = src_win and vim.fn.setloclist(src_win, {}, "r", del_list_data)
         or vim.fn.setqflist({}, "r", del_list_data) --- @type integer
