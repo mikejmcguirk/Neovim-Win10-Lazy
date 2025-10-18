@@ -1,65 +1,41 @@
+local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
+
 local noremap = { noremap = true }
 
 -------------
 -- Disable --
 -------------
 
--- Cumbersome default functionality. Use for swaps as in Helix
-ApiMap("n", "(", "<nop>", { noremap = true })
-ApiMap("n", ")", "<nop>", { noremap = true })
+-- Use for ts-text-object swaps
+ApiMap("n", "(", "<nop>", noremap)
+ApiMap("n", ")", "<nop>", noremap)
 
 -------------------------
 -- Saving and Quitting --
 -------------------------
 
--- Works for Z because all default functionality is overwritten
-ApiMap("n", "Z", "<nop>", { noremap = true })
-ApiMap("n", "ZA", "<cmd>lockmarks silent wa<cr>", { noremap = true })
-ApiMap("n", "ZC", "<cmd>lockmarks wqa<cr>", { noremap = true })
-ApiMap("n", "ZR", "<cmd>lockmarks silent wa | restart<cr>", { noremap = true })
-ApiMap("n", "ZQ", "<cmd>qall!<cr>", { noremap = true })
-ApiMap("n", "ZZ", "<cmd>lockmarks silent up<cr>", { noremap = true })
+ApiMap("n", "Z", "<nop>", noremap)
+
+ApiMap("n", "ZA", "<cmd>lockmarks silent wa<cr>", noremap)
+ApiMap("n", "ZC", "<cmd>lockmarks wqa<cr>", noremap)
+ApiMap("n", "ZR", "<cmd>lockmarks silent wa | restart<cr>", noremap)
+ApiMap("n", "ZQ", "<cmd>qall!<cr>", noremap)
+ApiMap("n", "ZZ", "<cmd>lockmarks silent up<cr>", noremap)
 
 -- FUTURE: Can pare this down once extui is stabilized
 Map("n", "ZS", function()
-    if not require("mjm.utils").check_modifiable() then
-        return
-    end
-
-    local status, result = pcall(function() ---@type boolean, unknown|nil
-        vim.cmd("lockmarks silent up | so")
-    end)
-
-    if not status then
-        local msg = result or "Unknown error on save and source"
-        vim.api.nvim_echo({ { msg } }, true, { err = true })
-    end
+    if not ut.check_modifiable() then return end
+    ---@diagnostic disable-next-line: missing-fields
+    Cmd({ cmd = "update", mods = { lockmarks = true, silent = true } }, {})
+    Cmd({ cmd = "source" }, {})
 end)
 
 for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
-    ApiMap("n", map, "<nop>", {
-        noremap = true,
-        callback = function()
-            local cur_win = vim.api.nvim_get_current_win()
-            local cur_buf = vim.api.nvim_win_get_buf(cur_win)
-            ---@diagnostic disable-next-line: missing-fields
-            Cmd({ cmd = "update", mods = { lockmarks = true, silent = true } }, {})
-            pcall(vim.api.nvim_win_close, cur_win, false)
-
-            vim.schedule(function()
-                local buf_wins = vim.fn.win_findbuf(cur_buf)
-                local buf_list = vim.api.nvim_list_bufs()
-                if #buf_wins < 1 and vim.tbl_contains(buf_list, cur_buf) then
-                    --- https://github.com/neovim/neovim/pull/33402
-                    --- When nvim_buf_delete is run without the unload flag, it goes beyond
-                    --- deleting the buffer into deleting shada state, including the '"' mark
-                    --- TODO: Whenever nvim_buf_del is created, use that for deleting buffers
-                    vim.api.nvim_set_option_value("buflisted", false, { buf = cur_buf })
-                    vim.api.nvim_buf_delete(cur_buf, { unload = true })
-                end
-            end)
-        end,
-    })
+    Map("n", map, function()
+        -- TODO: Use wipeout when that logic is fixed
+        -- https://github.com/neovim/neovim/pull/33402
+        ut.pclose_and_rm(vim.api.nvim_get_current_win(), false, false)
+    end)
 end
 
 ---------------------
@@ -72,15 +48,11 @@ local tmux_cmd_map = { ["h"] = "L", ["j"] = "D", ["k"] = "U", ["l"] = "R" }
 ---@param dir string
 ---@return nil
 local do_tmux_move = function(dir)
-    if vim.fn.getenv("TMUX") == vim.NIL then
-        return
-    end
+    if vim.fn.getenv("TMUX") == vim.NIL then return end
 
     local zoom_cmd = { "tmux", "display-message", "-p", "#{window_zoomed_flag}" }
     local result = vim.system(zoom_cmd, { text = true }):wait()
-    if result.code == 0 and result.stdout == "1\n" then
-        return
-    end
+    if result.code == 0 and result.stdout == "1\n" then return end
 
     local cmd_parts = { "tmux", "select-pane", "-" .. tmux_cmd_map[dir] }
     vim.system(cmd_parts, { text = true, timeout = 1000 })
@@ -97,9 +69,7 @@ local win_move_tmux = function(nvim_cmd)
     local start_win = vim.api.nvim_get_current_win() ---@type integer
     vim.cmd("wincmd " .. nvim_cmd)
 
-    if vim.api.nvim_get_current_win() == start_win then
-        do_tmux_move(nvim_cmd)
-    end
+    if vim.api.nvim_get_current_win() == start_win then do_tmux_move(nvim_cmd) end
 end
 
 -- tmux-navigator style window navigation
@@ -177,9 +147,7 @@ for _ = 1, 10 do
         noremap = true,
         callback = function()
             local tabs = vim.api.nvim_list_tabpages()
-            if #tabs < this_tab then
-                return
-            end
+            if #tabs < this_tab then return end
 
             vim.api.nvim_set_current_tabpage(tabs[this_tab])
         end,
@@ -491,9 +459,7 @@ local function map_on_bufreadpre()
     Map("n", "g?", "<nop>")
 
     Map("n", "J", function()
-        if not require("mjm.utils").check_modifiable() then
-            return
-        end
+        if not require("mjm.utils").check_modifiable() then return end
 
         -- Done using a view instead of a mark to prevent visible screen shake
         local view = vim.fn.winsaveview() ---@type vim.fn.winsaveview.ret
@@ -506,9 +472,7 @@ local function map_on_bufreadpre()
     ---@param opts? {upward:boolean}
     ---@return nil
     local visual_move = function(opts)
-        if not require("mjm.utils").check_modifiable() then
-            return
-        end
+        if not require("mjm.utils").check_modifiable() then return end
 
         local cur_mode = vim.api.nvim_get_mode().mode ---@type string
         if cur_mode ~= "V" and cur_mode ~= "Vs" then
@@ -556,9 +520,7 @@ local function map_on_bufreadpre()
     Map("x", "<C-=>", eval_cmd, { noremap = true, silent = true })
 
     Map("n", "<C-j>", function()
-        if not require("mjm.utils").check_modifiable() then
-            return
-        end
+        if not require("mjm.utils").check_modifiable() then return end
 
         local ok, err = pcall(function()
             vim.cmd("m+" .. vim.v.count1 .. " | norm! ==")
@@ -570,9 +532,7 @@ local function map_on_bufreadpre()
     end)
 
     Map("n", "<C-k>", function()
-        if not require("mjm.utils").check_modifiable() then
-            return
-        end
+        if not require("mjm.utils").check_modifiable() then return end
 
         local ok, err = pcall(function()
             vim.cmd("m-" .. vim.v.count1 + 1 .. " | norm! ==")
@@ -737,9 +697,7 @@ Autocmd("InsertEnter", {
 --- @param path string
 --- @return boolean
 local function is_git_tracked(path)
-    if not vim.g.gitsigns_head then
-        return false
-    end
+    if not vim.g.gitsigns_head then return false end
 
     local cmd = { "git", "ls-files", "--error-unmatch", "--", path }
     local output = vim.system(cmd):wait()
@@ -766,9 +724,7 @@ end
 
 local function del_cur_buf_from_disk(cargs)
     local buf, bufname = get_cur_buf()
-    if (not buf) or not bufname then
-        return
-    end
+    if (not buf) or not bufname then return end
 
     if not cargs.bang then
         if vim.api.nvim_get_option_value("modified", { buf = buf }) then
@@ -808,9 +764,7 @@ end, { bang = true })
 
 local function do_mkdir(path)
     local mkdir = vim.system({ "mkdir", "-p", path }):wait()
-    if mkdir.code == 0 then
-        return true
-    end
+    if mkdir.code == 0 then return true end
 
     local err = mkdir.stderr or ("Cannot open " .. path)
     vim.api.nvim_echo({ { err, "ErrorMsg" } }, true, { err = true })
@@ -829,9 +783,7 @@ local function mv_cur_buf(cargs)
     end
 
     local buf, bufname = get_cur_buf()
-    if (not buf) or not bufname then
-        return
-    end
+    if (not buf) or not bufname then return end
 
     if (not cargs.bang) and vim.api.nvim_get_option_value("modified", { buf = buf }) then
         vim.api.nvim_echo({ { "Buf is modified", "" } }, false, {})
@@ -853,9 +805,7 @@ local function mv_cur_buf(cargs)
     local escape_target = vim.fn.fnameescape(full_target)
     local full_bufname = vim.fn.fnamemodify(bufname, ":p")
     local escape_bufname = vim.fn.fnameescape(full_bufname)
-    if escape_target == escape_bufname then
-        return
-    end
+    if escape_target == escape_bufname then return end
 
     do_mkdir(vim.fn.fnamemodify(escape_target, ":h"))
     local is_tracked = is_git_tracked(escape_bufname)
@@ -897,9 +847,7 @@ local function close_floats()
     for _, win in pairs(vim.fn.getwininfo()) do
         local id = win.winid
         local config = vim.api.nvim_win_get_config(id)
-        if config.relative and config.relative ~= "" then
-            vim.api.nvim_win_close(id, false)
-        end
+        if config.relative and config.relative ~= "" then vim.api.nvim_win_close(id, false) end
     end
 end
 
@@ -916,15 +864,11 @@ local function tab_kill()
         2
     )
 
-    if confirm ~= 1 then
-        return
-    end
+    if confirm ~= 1 then return end
 
     local buffers = vim.fn.tabpagebuflist(vim.fn.tabpagenr())
     for _, buf in pairs(buffers) do
-        if vim.api.nvim_buf_is_valid(buf) then
-            vim.api.nvim_buf_delete(buf, { force = true })
-        end
+        if vim.api.nvim_buf_is_valid(buf) then vim.api.nvim_buf_delete(buf, { force = true }) end
     end
 end
 

@@ -304,6 +304,8 @@ function M._checked_echo(msg, print_msgs, is_err)
     end
 end
 
+-- TODO: This doesn't work if you're dealing with the last window but want to rm the last buf
+
 --- @param win integer
 --- @param force boolean
 --- @return integer

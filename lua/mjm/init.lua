@@ -4,6 +4,23 @@ local start = vim.uv.hrtime()
 --- Before Pack ---
 -------------------
 
+-- LOW: Create a more general defer require. Look at all of tj's funcs + vim._defer_require
+
+--- https://github.com/tjdevries/lazy-require.nvim/blob/master/lua/lazy-require.lua
+--- @param require_path string
+--- @return table
+function _G.Mjm_Defer_Require(require_path)
+    return setmetatable({}, {
+        __index = function(_, key)
+            return require(require_path)[key]
+        end,
+
+        __newindex = function(_, key, value)
+            require(require_path)[key] = value
+        end,
+    })
+end
+
 _G.Border = "single" ---@type string
 _G.GetOpt = vim.api.nvim_get_option_value
 _G.Gset = vim.api.nvim_set_var

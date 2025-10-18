@@ -331,6 +331,8 @@ Gset("colors_name", "SimpleDelta")
 -- alias for the instance object. But also one of my last namespaces
 
 SetHl(0, "@lsp.type.function.lua", {})
+SetHl(0, "@lsp.type.method.lua", {})
+
 Autocmd("FileType", {
     group = vim.api.nvim_create_augroup("lua-disable-captures", { clear = true }),
     pattern = "lua",
