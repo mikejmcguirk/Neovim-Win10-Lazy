@@ -1,15 +1,19 @@
----@class QfRancherSystem
-local M = {}
+---@mod Sys Sends diags to the qf list
 
------------------
---- SYSTEM DO ---
------------------
+---@class QfRancherSystem
+local Sys = {}
+
+local ea = Qfr_Defer_Require("mjm.error-list-stack") ---@type QfRancherStack
+local et = Qfr_Defer_Require("mjm.error-list-tools") ---@type QfRancherTools
+local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfRancherUtil
+local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfRancherTypes
+
+-- SYSTEM DO --
 
 --- @param system_opts QfRancherSystemOpts
 --- @param what QfRancherWhat
 --- @return nil
 local function validate_system_do(system_opts, what)
-    local ey = require("mjm.error-list-types")
     ey._validate_system_opts(system_opts)
     ey._validate_list(system_opts.cmd_parts, { type = "string" })
     ey._validate_what(what)
@@ -26,10 +30,9 @@ local function handle_output(obj, what)
         return
     end
 
-    local eu = require("mjm.error-list-util") --- @type QfRancherUtil
     local src_win = what.user_data.src_win --- @type integer
     if src_win and not eu._valid_win_for_loclist(src_win) then
-        local msg = "Win " .. src_win .. " cannot have a location list"
+        local msg = "Win " .. src_win .. " cannot have a location list" ---@type string
         vim.api.nvim_echo({ { msg, "" } }, false, {})
         return
     end
@@ -44,10 +47,9 @@ local function handle_output(obj, what)
 
     --- @type QfRancherWhat
     local what_set = vim.tbl_deep_extend("force", what, { items = qf_dict.items })
-    local et = require("mjm.error-list-tools") --- @type QfRancherTools
     local dest_nr = et._set_list(src_win, what_set) --- @type integer
     if eu._get_g_var("qf_rancher_auto_open_changes") then
-        require("mjm.error-list-stack")._history(src_win, dest_nr, {
+        ea._history(src_win, dest_nr, {
             always_open = true,
             default = "current",
             silent = true,
@@ -60,16 +62,14 @@ end
 --- @param system_opts QfRancherSystemOpts
 --- @param what QfRancherWhat
 --- @return nil
-function M.system_do(system_opts, what)
-    system_opts = system_opts or {}
-    what = what or {}
+function Sys.system_do(system_opts, what)
     validate_system_do(system_opts, what)
 
-    local ey = require("mjm.error-list-types")
+    ---@type vim.SystemOpts
     local vim_system_opts = { text = true, timeout = system_opts.timeout or ey._default_timeout }
     if system_opts.sync then
         local obj = vim.system(system_opts.cmd_parts, vim_system_opts)
-            :wait(system_opts.timeout or ey._default_timeout)
+            :wait(system_opts.timeout or ey._default_timeout) ---@type vim.SystemCompleted
         handle_output(obj, what)
     else
         vim.system(system_opts.cmd_parts, vim_system_opts, function(obj)
@@ -80,11 +80,8 @@ function M.system_do(system_opts, what)
     end
 end
 
-return M
+return Sys
+---@export sys
 
-------------
---- TODO ---
-------------
-
---- Tests
---- Docs
+--- TODO: Tests
+--- TODO: Docs
