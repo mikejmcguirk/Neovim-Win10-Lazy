@@ -1,1 +1,1 @@
-BufApiMap(0, "n", "q", "<cmd>q<cr>", { noremap = true })
+Map("n", "q", "<cmd>q<cr>", { buffer = true })

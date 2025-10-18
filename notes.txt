@@ -101,7 +101,6 @@ example - j/k jumps over a certain length should go into the jumplist
 - If you open a buf, detach the LSP, then re-attach it, progress messages don't show properly
     - (in general LSP progress has been the biggest challenge here)
 - Maybe make a "bad mode" util since it's in stl and error-list
-- In the maps file, use the ApiMaps and move out of vim.cmd
 - Find a viable keymap for this and make it more robust to edge cases:
     -- Map("n", "H", 'mzk_D"_ddA <esc>p`zze', { silent = true })
 - For the <> visual mode re-indentation, it might be possible to do it without leaving visual mode by using getregionpos and the "."/"v" positions. If re-indentation dot repeats by default, potentially make it an ofunc so that can be done. Could be a specialist thing too

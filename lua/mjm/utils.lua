@@ -449,20 +449,20 @@ function M.harpoon_mv_buf(old_bufname, new_bufname)
     extensions.extensions:emit(extensions.event_names.REMOVE)
 end
 
----@param fn function
+---@param func function
 ---@return nil
-local function do_when_idle(fn)
-    vim.validate("fn", fn, "callable")
+function M.do_when_idle(func)
+    vim.validate("fn", func, "callable")
 
     local idle_handle = vim.uv.new_idle() ---@type uv.uv_idle_t|nil
     if not idle_handle then
-        fn()
+        func()
         return
     end
 
     idle_handle:start(function()
         vim.schedule(function()
-            fn()
+            func()
         end)
 
         idle_handle:stop()
@@ -506,7 +506,7 @@ function M.pbuf_rm(buf, force, wipeout)
 
     if not wipeout then api.nvim_set_option_value("buflisted", false, { buf = buf }) end
     local delete_opts = wipeout and { force = force } or { force = force, unload = true }
-    pcall(api.nvim_buf_delete, delete_opts)
+    pcall(api.nvim_buf_delete, buf, delete_opts)
 end
 
 --- @param win integer
@@ -515,7 +515,7 @@ end
 --- @return nil
 function M.pclose_and_rm(win, force, wipeout)
     local buf = M.pwin_close(win, force)
-    if buf > 0 then do_when_idle(function()
+    if buf > 0 then M.do_when_idle(function()
         M.pbuf_rm(buf, force, wipeout)
     end) end
 end

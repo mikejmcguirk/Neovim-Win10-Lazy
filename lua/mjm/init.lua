@@ -1,5 +1,7 @@
 local start = vim.uv.hrtime()
 
+local api = vim.api
+
 -------------------
 --- Before Pack ---
 -------------------
@@ -22,30 +24,20 @@ function _G.Mjm_Defer_Require(require_path)
 end
 
 _G.Border = "single" ---@type string
-_G.GetOpt = vim.api.nvim_get_option_value
-_G.Gset = vim.api.nvim_set_var
+_G.GetOpt = api.nvim_get_option_value
+_G.Gset = api.nvim_set_var
 _G.Has_Nerd_Font = true --- @type boolean
 _G.Highlight_Time = 175 --- @type integer
 _G.Scrolloff_Val = 6 ---@type integer
-_G.SetOpt = vim.api.nvim_set_option_value
+_G.SetOpt = api.nvim_set_option_value
 _G.SpellFile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add" ---@type string
 
-_G.ApiMap = vim.api.nvim_set_keymap
-_G.BufApiMap = vim.api.nvim_buf_set_keymap
-_G.Augroup = vim.api.nvim_create_augroup
-_G.Autocmd = vim.api.nvim_create_autocmd
-_G.Cmd = vim.api.nvim_cmd
+_G.Augroup = api.nvim_create_augroup
+_G.Autocmd = api.nvim_create_autocmd
+_G.Cmd = api.nvim_cmd
 _G.Map = vim.keymap.set
-_G.SetHl = vim.api.nvim_set_hl
-_G.GetHl = vim.api.nvim_get_hl
-
---- @param lhs string
---- @param rhs string
---- @param opts vim.api.keyset.keymap
-function _G.NXMap(lhs, rhs, opts)
-    vim.api.nvim_set_keymap("n", lhs, rhs, opts)
-    vim.api.nvim_set_keymap("x", lhs, rhs, opts)
-end
+_G.SetHl = api.nvim_set_hl
+_G.GetHl = api.nvim_get_hl
 
 local pre_pack = vim.uv.hrtime()
 
@@ -65,6 +57,7 @@ local pack_finish = vim.uv.hrtime()
 require("mjm.colorscheme")
 require("mjm.set")
 require("mjm.map")
+require("mjm.custom-cmds")
 require("mjm.stl")
 
 require("mjm.error-list")
@@ -115,6 +108,19 @@ require("mjm.plugins.treesj")
 require("mjm.plugins.ts-autotag")
 require("mjm.plugins.zen")
 
+-- This is fine as long as modules aren't divided into multiple pieces to do this
+local buf_augroup_name = "mjm-buf-settings"
+Autocmd({ "BufNew", "BufReadPre" }, {
+    group = Augroup(buf_augroup_name, {}),
+    once = true,
+    callback = function()
+        require("mjm.diagnostics")
+        require("mjm.lsp")
+        require("mjm.ts-tools")
+        api.nvim_del_augroup_by_name(buf_augroup_name)
+    end,
+})
+
 local lazy_loaded = vim.uv.hrtime()
 
 local to_pre_pack = math.floor((pre_pack - start) / 1e6 * 100) / 100
@@ -123,14 +129,14 @@ local to_env_setup = math.floor((env_setup - start) / 1e6 * 100) / 100
 local to_eager_loaded = math.floor((eager_loaded - start) / 1e6 * 100) / 100
 local to_lazy_loaded = math.floor((lazy_loaded - start) / 1e6 * 100) / 100
 
-vim.api.nvim_create_autocmd("UIEnter", {
-    group = vim.api.nvim_create_augroup("display-profile-info", { clear = true }),
+api.nvim_create_autocmd("UIEnter", {
+    group = api.nvim_create_augroup("display-profile-info", { clear = true }),
     callback = function()
         local ui_enter = vim.uv.hrtime()
         local to_ui_enter = math.floor((ui_enter - start) / 1e6 * 100) / 100
 
-        local cur_buf = vim.api.nvim_get_current_buf()
-        local modified = vim.api.nvim_get_option_value("modified", { buf = cur_buf })
+        local cur_buf = api.nvim_get_current_buf()
+        local modified = api.nvim_get_option_value("modified", { buf = cur_buf })
         if vim.fn.argc() > 0 or vim.fn.line2byte("$") ~= -1 or modified then return end
 
         local headers = {
@@ -168,9 +174,9 @@ vim.api.nvim_create_autocmd("UIEnter", {
             lines[i] = string.rep(" ", padding) .. line
         end
 
-        local win = vim.api.nvim_get_current_win()
-        local bufnr = vim.api.nvim_win_get_buf(win)
-        vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+        local win = api.nvim_get_current_win()
+        local bufnr = api.nvim_win_get_buf(win)
+        api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
         local buf_opts = {
             { "buftype", "nofile" },
             { "bufhidden", "wipe" },
@@ -182,17 +188,17 @@ vim.api.nvim_create_autocmd("UIEnter", {
         }
 
         for _, option in pairs(buf_opts) do
-            vim.api.nvim_set_option_value(option[1], option[2], { buf = bufnr })
+            api.nvim_set_option_value(option[1], option[2], { buf = bufnr })
         end
 
-        vim.api.nvim_create_autocmd("BufLeave", {
-            group = vim.api.nvim_create_augroup("leave-greeter", { clear = true }),
+        api.nvim_create_autocmd("BufLeave", {
+            group = api.nvim_create_augroup("leave-greeter", { clear = true }),
             buffer = bufnr,
             once = true,
             callback = function()
                 -- Treesitter fails in the next buffer if not scheduled wrapped
                 vim.schedule_wrap(function()
-                    vim.api.nvim_buf_delete(bufnr, { force = true })
+                    api.nvim_buf_delete(bufnr, { force = true })
                 end)
             end,
         })

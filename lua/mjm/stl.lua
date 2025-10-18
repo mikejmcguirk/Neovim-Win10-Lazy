@@ -17,9 +17,7 @@ local stl_events = vim.api.nvim_create_augroup("stl-events", { clear = true })
 vim.api.nvim_create_autocmd("LspProgress", {
     group = stl_events,
     callback = function(ev)
-        if (not ev.data) or not ev.data.client_id then
-            return
-        end
+        if (not ev.data) or not ev.data.client_id then return end
 
         if not vim.api.nvim_buf_is_valid(ev.buf) then
             progress_cache[ev.buf] = nil
@@ -35,9 +33,7 @@ vim.api.nvim_create_autocmd("LspProgress", {
 
         local values = ev.data.params.value
         -- These happen a lot
-        if string.find(values.title, "Searching in files") then
-            return
-        end
+        if string.find(values.title, "Searching in files") then return end
 
         local pct = (function()
             if values.kind == "end" then
@@ -56,15 +52,15 @@ vim.api.nvim_create_autocmd("LspProgress", {
         progress_cache[ev.buf] = str
 
         -- Don't create more textlock in insert mode
-        if not is_bad_mode() then
-            Cmd({ cmd = "redraws" }, {})
-        end
+        if not is_bad_mode() then Cmd({ cmd = "redraws" }, {}) end
     end,
 })
 
 local levels = { "Error", "Warn", "Info", "Hint" }
 -- local signs = Has_Nerd_Font and { "󰅚", "󰀪", "󰋽", "󰌶" } or { "E:", "W:", "I:", "H:" }
 local signs = { "E:", "W:", "I:", "H:" }
+
+-- NOTE: Diagnostics.lua contains the delete for the default diagnostic status cache augroup
 
 -- FUTURE: Verify if this is still needed
 -- Per mini.Statusline - Needs to be schedule-wrapped due to a possible crash when running
@@ -95,23 +91,15 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
 
         diag_cache[ev.buf] = diag_str or nil
 
-        if not is_bad_mode() then
-            Cmd({ cmd = "redraws" }, {})
-        end
+        if not is_bad_mode() then Cmd({ cmd = "redraws" }, {}) end
     end),
 })
-
--- Delete the default diagnostics status caching.
--- NOTE: This must be run after diagnostics have been configured
-vim.api.nvim_del_augroup_by_name("nvim.diagnostic.status")
 
 vim.api.nvim_create_autocmd("ModeChanged", {
     group = stl_events,
     callback = function()
         --- @diagnostic disable: undefined-field
-        if vim.v.event.new_mode == mode then
-            return
-        end
+        if vim.v.event.new_mode == mode then return end
 
         mode = vim.v.event.new_mode
         Cmd({ cmd = "redraws" }, {})
@@ -169,9 +157,9 @@ function MjmStl.active()
     if buftype == "" then
         buftype = buftype
     elseif buftype == "nofile" then
-        buftype = " [nf]"
+        buftype = "[nf] "
     elseif buftype == "nowrite" then
-        buftype = " [nw]"
+        buftype = "[nw] "
     else
         buftype = "[" .. string.sub(buftype, 1, 1) .. "] "
     end

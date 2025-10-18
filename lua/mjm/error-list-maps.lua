@@ -89,6 +89,13 @@ local nokeep = { keep = false }
 --- and non-trivially affecting startup time
 --- TODO: Need to have settable options for mappings
 
+-- TODO: Might be a way to do this without the big table
+-- qg/qG/q<C-g> all relate to how the what table is set. What is standard across all maps
+-- Means you can loop them
+-- So as a first step, you can have the what settings in a table and use that as a loop
+-- Move the different loop pieces over in steps
+-- Might also lead to better thinking about the API
+
 --- Mode(s), Plug Map, User Map, Desc, Action
 
 --- @alias QfRancherMapData{[1]:string[], [2]:string, [3]:string, [4]: string, [5]: function}
