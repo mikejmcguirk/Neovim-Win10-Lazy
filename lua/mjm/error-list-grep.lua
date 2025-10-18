@@ -24,17 +24,17 @@ local function get_full_parts_rg(pattern, input_type, locations)
     if vim.fn.has("win32") == 1 then table.insert(cmd, "--crlf") end
 
     if input_type == "smartcase" then
-        table.insert(cmd, "--smart-case") --- or "-S"
+        table.insert(cmd, "--smart-case") -- or "-S"
     elseif input_type == "insensitive" then
-        table.insert(cmd, "--ignore-case") --- or "-i"
+        table.insert(cmd, "--ignore-case") -- or "-i"
     end
 
     if input_type ~= "regex" then
-        table.insert(cmd, "--fixed-strings") --- or "-F"
+        table.insert(cmd, "--fixed-strings") -- or "-F"
     end
 
     if string.find(pattern, "\n", 1, true) ~= nil then
-        table.insert(cmd, "--multiline") --- or "-U"
+        table.insert(cmd, "--multiline") -- or "-U"
     end
 
     table.insert(cmd, "--")
@@ -49,15 +49,15 @@ local function get_full_parts_grep(pattern, input_type, locations)
     local cmd = vim.deepcopy(base_parts.grep) ---@type string[]
 
     if input_type == "regex" then
-        table.insert(cmd, "--extended-regexp") --- or "-E"
+        table.insert(cmd, "--extended-regexp") -- or "-E"
     else
-        table.insert(cmd, "--fixed-strings") --- or "-F"
+        table.insert(cmd, "--fixed-strings") -- or "-F"
     end
 
     ---@type boolean
     local smartcase = input_type == "smartcase" and string.lower(pattern) == pattern
     if smartcase or input_type == "insensitive" then
-        table.insert(cmd, "--ignore-case") --- or "-i"
+        table.insert(cmd, "--ignore-case") -- or "-i"
     end
 
     table.insert(cmd, "--")
@@ -226,7 +226,7 @@ end
 
 local greps = {
     cwd = { name = "CWD", list_item_type = nil, location_func = get_cwd },
-    --- DOCUMENT: This will overwrite arbitrary data passed from the caller
+    -- DOCUMENT: This will overwrite arbitrary data passed from the caller
     help = { name = "Help", list_item_type = "\1", location_func = get_help_dirs },
     bufs = { name = "Buf", list_item_type = nil, location_func = get_buflist },
     cbuf = { name = "Cur Buf", list_item_type = nil, location_func = get_cur_buf },
