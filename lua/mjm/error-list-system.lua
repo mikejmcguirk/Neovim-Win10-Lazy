@@ -1,3 +1,4 @@
+---@class QfRancherSystem
 local M = {}
 
 -----------------

@@ -6,6 +6,10 @@
 ---@class QfRancherGrep
 local Grep = {}
 
+local ee = Qfr_Defer_Require("mjm.error-list-system") ---@type QfRancherSystem
+local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfRancherUtil
+local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfRancherTypes
+
 -- GREPPRG/GREP PARTS --
 
 local base_parts = {
@@ -77,10 +81,10 @@ local get_full_parts = {
 local function get_grep_parts(pattern, input_type, locations)
     vim.validate("pattern", pattern, "string")
     vim.validate("input_type", input_type, "string")
-    require("mjm.error-list-types")._validate_list(locations, { type = "string" })
+    ey._validate_list(locations, { type = "string" })
 
     ---@type string
-    local grep_cmd = require("mjm.error-list-util")._get_g_var("qf_rancher_grepprg")
+    local grep_cmd = eu._get_g_var("qf_rancher_grepprg")
     if vim.fn.executable(grep_cmd) ~= 1 then
         local chunk = { grep_cmd .. " is not executable", "ErrorMsg" }
         vim.api.nvim_echo({ chunk }, true, { err = true })
@@ -90,19 +94,15 @@ local function get_grep_parts(pattern, input_type, locations)
     return get_full_parts[grep_cmd](pattern, input_type, locations)
 end
 
---------------------------
---- Main Grep Function ---
---------------------------
+-- MAIN GREP FUNCTION --
 
 ---@param grep_info QfRancherGrepInfo
 ---@param input_type QfRancherInputType
 ---@return string
 local function get_prompt(grep_info, input_type)
-    local ey = require("mjm.error-list-types")
     ey._validate_grep_info(grep_info)
     ey._validate_input_type(input_type)
 
-    local eu = require("mjm.error-list-util") ---@type QfRancherUtil
     local display_type = eu._get_display_input_type(input_type) ---@type string
     local grepprg = eu._get_g_var("qf_rancher_grepprg") ---@type string
 
@@ -121,7 +121,6 @@ local function validate_do_grep_inputs(grep_info, system_opts, input_opts, what)
     input_opts = input_opts or {}
     what = what or {}
 
-    local ey = require("mjm.error-list-types")
     ey._validate_grep_info(grep_info)
     ey._validate_system_opts(system_opts)
     ey._validate_input_opts(input_opts)
@@ -129,14 +128,13 @@ local function validate_do_grep_inputs(grep_info, system_opts, input_opts, what)
 end
 
 ---@param grep_info QfRancherGrepInfo
----@param system_opts QfRancherSystemOpts
 ---@param input_opts QfRancherInputOpts
+---@param system_opts QfRancherSystemOpts
 ---@param what QfRancherWhat
 ---@return nil
-function Grep._do_grep(grep_info, system_opts, input_opts, what)
+local function do_grep(grep_info, input_opts, system_opts, what)
     validate_do_grep_inputs(grep_info, system_opts, input_opts, what)
 
-    local eu = require("mjm.error-list-util") ---@type QfRancherUtil
     if what.user_data.src_win and not eu._valid_win_for_loclist(what.user_data.src_win) then
         local msg = "Win " .. what.user_data.src_win .. " cannot have a location list"
         vim.api.nvim_echo({ { msg, "" } }, false, {})
@@ -163,7 +161,7 @@ function Grep._do_grep(grep_info, system_opts, input_opts, what)
     what_set.user_data.list_item_type = grep_info.list_item_type
         or what_set.user_data.list_item_type
 
-    require("mjm.error-list-system").system_do(full_system_opts, what_set)
+    ee.system_do(full_system_opts, what_set)
 end
 
 ------------------
@@ -174,8 +172,6 @@ end
 local function get_cwd()
     return { vim.fn.getcwd() }
 end
-
--- TODO: Check fzflua's help provider for info on how to get the lazy unloaded RTP paths
 
 ---@return string[]|nil
 local function get_help_dirs()
@@ -248,14 +244,14 @@ end
 --- DOCUMENT: This. necessary to run your grep
 
 ---@param name string
----@param system_opts QfRancherSystemOpts
 ---@param input_opts QfRancherInputOpts
+---@param system_opts QfRancherSystemOpts
 ---@param what QfRancherWhat
 ---@return nil
-function Grep.grep(name, system_opts, input_opts, what)
+function Grep.grep(name, input_opts, system_opts, what)
     local grep_info = greps[name] ---@type QfRancherGrepInfo|nil
     if grep_info then
-        Grep._do_grep(grep_info, system_opts, input_opts, what)
+        do_grep(grep_info, input_opts, system_opts, what)
     else
         local chunk = { "Grep " .. name .. " is not registered", "ErrorMsg" }
         vim.api.nvim_echo({ chunk }, true, { err = true })
@@ -266,8 +262,8 @@ end
 ---@param grep_info QfRancherGrepInfo
 ---@return nil
 function Grep.register_grep(grep_info)
-    require("mjm.error-list-types")._validate_grep_info(grep_info)
-    greps.grep_info.name = grep_info
+    ey._validate_grep_info(grep_info)
+    greps[grep_info.name] = grep_info
 end
 
 --- DOCUMENT: How this works
@@ -297,28 +293,26 @@ local function grep_cmd(src_win, cargs)
 
     local grep_names = Grep.get_grep_names() ---@type string[]
     assert(#grep_names > 1, "No grep commands available")
-    local eu = require("mjm.error-list-util") ---@type QfRancherUtil
     local grep_name = eu._check_cmd_arg(fargs, grep_names, "cwd") ---@type string
-
-    local ey = require("mjm.error-list-types") ---@type QfRancherTypes
-    ---@type "sync"|"async"
-    local sync_str = eu._check_cmd_arg(fargs, ey._sync_opts, ey._default_sync_opt)
-    local sync = sync_str == "sync" and true or false ---@type boolean
-    --- MID: Should be able to set the timeout from the cmd
-    ---@type QfRancherSystemOpts
-    local system_opts = { sync = sync, timeout = ey._default_timeout }
 
     ---@type QfRancherInputType
     local input_type = eu._check_cmd_arg(fargs, ey._cmd_input_types, ey._default_input_type)
     local pattern = eu._find_cmd_pattern(fargs) ---@type string|nil
     local input_opts = { input_type = input_type, pattern = pattern } ---@type QfRancherInputOpts
 
+    ---@type "sync"|"async"
+    local sync_str = eu._check_cmd_arg(fargs, ey._sync_opts, ey._default_sync_opt)
+    local sync = sync_str == "sync" and true or false ---@type boolean
+    --- LOW: Should be able to set the timeout from the cmd
+    ---@type QfRancherSystemOpts
+    local system_opts = { sync = sync, timeout = ey._default_timeout }
+
     ---@type QfRancherAction
     local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action)
     ---@type QfRancherWhat
     local what = { nr = cargs.count, user_data = { action = action, src_win = src_win } }
 
-    Grep.grep(grep_name, system_opts, input_opts, what)
+    Grep.grep(grep_name, input_opts, system_opts, what)
 end
 
 ---@private
@@ -338,39 +332,31 @@ end
 return Grep
 ---@export Grep
 
---  TODO --
+-- TODO: Docs
+-- TODO: Add tests
 
--- This still does not properly resize the list window
--- Add tests
--- Docs
-
---  MID --
-
--- Grep specific file. Can either be a built-in or shown as a recipe
--- Partly a grep, partly a filter, but grep based on treesitter node name. e.g. I should be
+-- MID: Grep specific file. Can either be a built-in or shown as a recipe
+-- MID: Partly a grep, partly a filter, but grep based on treesitter node name. e.g. I should be
 --     able to grep all parameters
--- Mid: Each grepprg should be a module, and there should be a defined set of functions
+-- MID: Each grepprg should be a module, and there should be a defined set of functions
 --     that each grepprg should have. Essentially, defining an interface and then having
 --     modules that fulfill it. I don't know if you use a literal interface module, but that's
 --     the conceptual idea
 
---  LOW --
-
--- Support ack
--- Use globbing for locations instead of passing potentially triple digit amounts of arguments
--- Look at vim-grepper to see how it supports certain grepprgs
--- Cache the executable status of the grepprg. Issues:
+-- LOW: Check fzflua's help provider for info on how to get the lazy unloaded RTP paths
+-- LOW: Support ack
+-- LOW: Use globbing for locations instead of passing potentially triple digit amounts of arguments
+-- LOW: Look at vim-grepper to see how it supports certain grepprgs
+-- LOW: Cache the executable status of the grepprg. Issues:
 -- - relative to how little time this check takes to run, a lot of state to keep track of
 -- - how do you trigger re-checks?
--- - If you have a good status, under what circumstances might it fail? How do you check it for
---     a bad status?
--- Support changes to the grepprg itself, like turning off recursive grepping, or specifying the
---     grepprg in a command or map
+-- - If you have a good status, under what circumstances might it fail? How do you check it for a
+--   bad status?
+-- LOW: Support changes to the grepprg itself, like turning off recursive grepping, or
+-- specifying the grepprg in a command or map
 
--- DOCUMENTATION --
-
--- Only rg and grep are currently supported
+-- DOCUMENT: Only rg and grep are currently supported
 -- - I am not in Windows so I cannot test findstr
 -- - I am open to PRs on this
--- It is intended behavior that cbuf grep can work on help files, but all bufs will not pull from
---     help files
+-- DOCUMENT: It is intended behavior that cbuf grep can work on help files, but all bufs will
+-- not pull from help files
