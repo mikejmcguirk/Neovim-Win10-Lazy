@@ -164,9 +164,7 @@ local function do_grep(grep_info, input_opts, system_opts, what)
     ee.system_do(full_system_opts, what_set)
 end
 
-------------------
---- API Pieces ---
-------------------
+-- API PIECES --
 
 ---@return string[]
 local function get_cwd()
@@ -176,11 +174,9 @@ end
 ---@return string[]|nil
 local function get_help_dirs()
     local doc_files = vim.api.nvim_get_runtime_file("doc/*.txt", true) ---@type string[]
-    if #doc_files == 0 then
-        vim.api.nvim_echo({ { "No doc files found", "ErrorMsg" } }, true, { err = true })
-    end
+    if #doc_files > 0 then return doc_files end
 
-    return doc_files
+    vim.api.nvim_echo({ { "No doc files found", "ErrorMsg" } }, true, { err = true })
 end
 
 ---@return string[]|nil
@@ -241,7 +237,7 @@ function Grep.get_grep_names()
     return vim.tbl_keys(greps)
 end
 
---- DOCUMENT: This. necessary to run your grep
+-- DOCUMENT: This. necessary to run your grep
 
 ---@param name string
 ---@param input_opts QfRancherInputOpts
@@ -258,7 +254,7 @@ function Grep.grep(name, input_opts, system_opts, what)
     end
 end
 
---- DOCUMENT: How this works
+-- DOCUMENT: How this works
 ---@param grep_info QfRancherGrepInfo
 ---@return nil
 function Grep.register_grep(grep_info)
@@ -266,7 +262,7 @@ function Grep.register_grep(grep_info)
     greps[grep_info.name] = grep_info
 end
 
---- DOCUMENT: How this works
+-- DOCUMENT: How this works
 ---@param name string
 ---@return nil
 function Grep.clear_grep(name)
@@ -303,7 +299,7 @@ local function grep_cmd(src_win, cargs)
     ---@type "sync"|"async"
     local sync_str = eu._check_cmd_arg(fargs, ey._sync_opts, ey._default_sync_opt)
     local sync = sync_str == "sync" and true or false ---@type boolean
-    --- LOW: Should be able to set the timeout from the cmd
+    -- LOW: Should be able to set the timeout from the cmd
     ---@type QfRancherSystemOpts
     local system_opts = { sync = sync, timeout = ey._default_timeout }
 

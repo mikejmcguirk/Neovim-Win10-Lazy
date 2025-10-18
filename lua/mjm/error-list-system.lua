@@ -10,17 +10,17 @@ local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfRancherTypes
 
 -- SYSTEM DO --
 
---- @param system_opts QfRancherSystemOpts
---- @param what QfRancherWhat
---- @return nil
+---@param system_opts QfRancherSystemOpts
+---@param what QfRancherWhat
+---@return nil
 local function validate_system_do(system_opts, what)
     ey._validate_system_opts(system_opts)
     ey._validate_list(system_opts.cmd_parts, { type = "string" })
     ey._validate_what(what)
 end
 
---- @param obj vim.SystemCompleted
---- @param what QfRancherWhat
+---@param obj vim.SystemCompleted
+---@param what QfRancherWhat
 local function handle_output(obj, what)
     if obj.code ~= 0 then
         --- @type string
@@ -57,11 +57,11 @@ local function handle_output(obj, what)
     end
 end
 
---- DOCUMENT: How to use this
+-- DOCUMENT: How to use this
 
---- @param system_opts QfRancherSystemOpts
---- @param what QfRancherWhat
---- @return nil
+---@param system_opts QfRancherSystemOpts
+---@param what QfRancherWhat
+---@return nil
 function Sys.system_do(system_opts, what)
     validate_system_do(system_opts, what)
 
@@ -83,5 +83,5 @@ end
 return Sys
 ---@export sys
 
---- TODO: Tests
---- TODO: Docs
+-- TODO: Tests
+-- TODO: Docs
