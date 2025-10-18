@@ -366,7 +366,7 @@ function M._pbuf_rm(buf, force, wipeout)
     if not wipeout then api.nvim_set_option_value("buflisted", false, { buf = buf }) end
 
     local delete_opts = wipeout and { force = force } or { force = force, unload = true }
-    pcall(api.nvim_buf_delete, delete_opts)
+    pcall(api.nvim_buf_delete, buf, delete_opts)
 end
 
 --- @param win integer
