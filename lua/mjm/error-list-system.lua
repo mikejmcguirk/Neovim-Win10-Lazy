@@ -5,27 +5,27 @@ local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfrTypes
 
 ---@mod System Sends diags to the qf list
 
---- @class QfrSystem
+---@class QfrSystem
 local System = {}
 
 ---@param obj vim.SystemCompleted
 ---@param what QfrWhat
 local function handle_output(obj, what)
     if obj.code ~= 0 then
-        --- @type string
+        ---@type string
         local err = (obj.stderr and #obj.stderr > 0) and "Error: " .. obj.stderr or ""
-        local msg = (obj.code and "Exit code: " .. obj.code or "") .. " " .. err --- @type string
+        local msg = (obj.code and "Exit code: " .. obj.code or "") .. " " .. err ---@type string
         vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
         return
     end
 
-    local src_win = what.user_data.src_win --- @type integer
+    local src_win = what.user_data.src_win ---@type integer
     if src_win and not eu._valid_win_for_loclist(src_win) then return end
 
-    local lines = vim.split(obj.stdout or "", "\n", { trimempty = true }) --- @type string[]
+    local lines = vim.split(obj.stdout or "", "\n", { trimempty = true }) ---@type string[]
     if #lines == 0 then return end
 
-    local qf_dict = vim.fn.getqflist({ lines = lines }) --- @type {items: table[]}
+    local qf_dict = vim.fn.getqflist({ lines = lines }) ---@type {items: table[]}
     if what.user_data.list_item_type then
         for _, item in pairs(qf_dict.items) do
             item.type = what.user_data.list_item_type
@@ -33,7 +33,7 @@ local function handle_output(obj, what)
     end
 
     local what_set = vim.tbl_deep_extend("force", what, { items = qf_dict.items }) ---@type QfrWhat
-    local dest_nr = et._set_list(src_win, what_set) --- @type integer
+    local dest_nr = et._set_list(src_win, what_set) ---@type integer
     if eu._get_g_var("qf_rancher_auto_open_changes") then
         ea._history(src_win, dest_nr, {
             always_open = true,

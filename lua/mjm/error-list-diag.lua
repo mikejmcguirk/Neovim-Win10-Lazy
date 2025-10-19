@@ -1,6 +1,6 @@
 ---@mod Diags Sends diags to the qf list
 
---- @class QfRancherDiagnostics
+---@class QfRancherDiagnostics
 local Diags = {}
 
 local ea = Qfr_Defer_Require("mjm.error-list-stack") ---@type QfrStack

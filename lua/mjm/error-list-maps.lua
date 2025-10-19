@@ -11,63 +11,63 @@ local api = vim.api
 --- Map and Cmd Pieces ---
 --------------------------
 
-local sys_opt = { timeout = 4000 } --- @type QfrSystemOpts
+local sys_opt = { timeout = 4000 } ---@type QfrSystemOpts
 
-local in_vimsmart = { input_type = "vimsmart" } --- @type QfrInputOpts
-local in_sensitive = { input_type = "sensitive" } --- @type QfrInputOpts
-local in_regex = { input_type = "regex" } --- @type QfrInputOpts
+local in_vimsmart = { input_type = "vimsmart" } ---@type QfrInputOpts
+local in_sensitive = { input_type = "sensitive" } ---@type QfrInputOpts
+local in_regex = { input_type = "regex" } ---@type QfrInputOpts
 
 local function get_what(dest, win)
-    local what = { nr = vim.v.count } --- @type QfrWhat
-    what.user_data = { action = dest, src_win = win } --- @type QfRancherUserData
+    local what = { nr = vim.v.count } ---@type QfrWhat
+    what.user_data = { action = dest, src_win = win } ---@type QfRancherUserData
     return what
 end
 
---- @return integer
+---@return integer
 local function cur_win()
     return api.nvim_get_current_win()
 end
 
---- @return QfrWhat
+---@return QfrWhat
 local function new_qflist()
     return get_what("new", nil)
 end
 
---- @return QfrWhat
+---@return QfrWhat
 local function replace_qflist()
     return get_what("replace", nil)
 end
 
---- @return QfrWhat
+---@return QfrWhat
 local function add_qflist()
     return get_what("add", nil)
 end
 
---- @return QfrWhat
+---@return QfrWhat
 local function new_loclist()
     return get_what("new", cur_win())
 end
 
---- @return QfrWhat
+---@return QfrWhat
 local function replace_loclist()
     return get_what("replace", cur_win())
 end
 
---- @return QfrWhat
+---@return QfrWhat
 local function add_loclist()
     return get_what("add", cur_win())
 end
 
-local ea = Qfr_Defer_Require("mjm.error-list-stack") --- @type QfrStack
-local ed = Qfr_Defer_Require("mjm.error-list-diag") --- @type QfRancherDiagnostics
-local ef = Qfr_Defer_Require("mjm.error-list-filter") --- @type QfrFilter
-local ei = Qfr_Defer_Require("mjm.error-list-filetype-funcs") --- @type QfRancherFiletypeFuncs
-local eg = Qfr_Defer_Require("mjm.error-list-grep") --- @type QfrGrep
-local en = Qfr_Defer_Require("mjm.error-list-nav-action") --- @type QfRancherNav
-local eo = Qfr_Defer_Require("mjm.error-list-open") --- @type QfRancherOpen
-local ep = Qfr_Defer_Require("mjm.error-list-preview") --- @type QfRancherPreview
-local es = Qfr_Defer_Require("mjm.error-list-sort") --- @type QfRancherSort
--- local et = Qfr_Defer_Require("mjm.error-list-tools") --- @type QfRancherTools
+local ea = Qfr_Defer_Require("mjm.error-list-stack") ---@type QfrStack
+local ed = Qfr_Defer_Require("mjm.error-list-diag") ---@type QfRancherDiagnostics
+local ef = Qfr_Defer_Require("mjm.error-list-filter") ---@type QfrFilter
+local ei = Qfr_Defer_Require("mjm.error-list-filetype-funcs") ---@type QfRancherFiletypeFuncs
+local eg = Qfr_Defer_Require("mjm.error-list-grep") ---@type QfrGrep
+local en = Qfr_Defer_Require("mjm.error-list-nav-action") ---@type QfRancherNav
+local eo = Qfr_Defer_Require("mjm.error-list-open") ---@type QfRancherOpen
+local ep = Qfr_Defer_Require("mjm.error-list-preview") ---@type QfRancherPreview
+local es = Qfr_Defer_Require("mjm.error-list-sort") ---@type QfRancherSort
+-- local et = Qfr_Defer_Require("mjm.error-list-tools") ---@type QfRancherTools
 
 local nn = { "n" }
 local nx = { "n", "x" }
@@ -98,10 +98,10 @@ local nokeep = { keep = false }
 
 --- Mode(s), Plug Map, User Map, Desc, Action
 
---- @alias QfRancherMapData{[1]:string[], [2]:string, [3]:string, [4]: string, [5]: function}
+---@alias QfRancherMapData{[1]:string[], [2]:string, [3]:string, [4]: string, [5]: function}
 
 -- stylua: ignore
---- @type QfRancherMapData[]
+---@type QfRancherMapData[]
 local rancher_keymaps = {
     -------------------
     --- DIAGNOSTICS ---
@@ -606,7 +606,7 @@ local rancher_keymaps = {
 --- causes multiple problems
 
 -- stylua: ignore
---- @type QfRancherMapData[]
+---@type QfRancherMapData[]
 local rancher_keymap_default_rm = {
     { nx, "<nop>", "<leader>q", "Avoid falling back to defaults", nil },
     { nx, "<nop>", "<leader>l", "Avoid falling back to defaults", nil },
@@ -893,11 +893,11 @@ if vim.g.qf_rancher_set_default_cmds then
     ------------
 
     api.nvim_create_user_command("Qsort", function(cargs)
-        es._q_sort(cargs)
+        es.q_sort(cargs)
     end, { nargs = "*" })
 
     api.nvim_create_user_command("Lsort", function(cargs)
-        es._l_sort(cargs)
+        es.l_sort(cargs)
     end, { nargs = "*" })
 
     -------------

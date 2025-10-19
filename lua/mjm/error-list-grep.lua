@@ -10,7 +10,7 @@ local fn = vim.fn
 
 ---@mod Grep Grep items into the list
 
---- @class QfrGrep
+---@class QfrGrep
 local Grep = {}
 
 -- ========================

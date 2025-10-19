@@ -1,4 +1,4 @@
---- @class QfrTypes
+---@class QfrTypes
 local M = {}
 
 -------------------------
@@ -12,12 +12,12 @@ local M = {}
 ---     each validation step rather than have to reason about how functions down the chain
 ---     handle nil values
 
---- @class QfrWhat : vim.fn.setqflist.what
---- @field nr integer
---- @field user_data? any
+---@class QfrWhat : vim.fn.setqflist.what
+---@field nr integer
+---@field user_data? any
 
---- @param what QfrWhat
---- @return nil
+---@param what QfrWhat
+---@return nil
 function M._validate_what(what)
     vim.validate("what", what, "table")
 
@@ -40,14 +40,14 @@ function M._validate_what(what)
     if type(what.user_data) == "table" then M._validate_user_data(what.user_data) end
 end
 
---- @class QfRancherUserData
---- @field action? QfrAction
---- @field list_item_type? string
---- @field src_win? integer
---- @field sort_func? QfRancherSortPredicate
+---@class QfRancherUserData
+---@field action? QfrAction
+---@field list_item_type? string
+---@field src_win? integer
+---@field sort_func? QfRancherSortPredicate
 
---- @param user_data QfRancherUserData
---- @return nil
+---@param user_data QfRancherUserData
+---@return nil
 function M._validate_user_data(user_data)
     vim.validate("user_data", user_data, "table")
     vim.validate("user_data.action", user_data.action, "string", true)
@@ -60,13 +60,13 @@ end
 
 -- LOW: Add validation for win config
 
---- @class QfRancherFindWinInTabOpts
---- @field bufnr? integer
---- @field fin_winnr? integer
---- @field skip_winnr? integer
+---@class QfRancherFindWinInTabOpts
+---@field bufnr? integer
+---@field fin_winnr? integer
+---@field skip_winnr? integer
 
---- @param opts QfRancherFindWinInTabOpts
---- @return nil
+---@param opts QfRancherFindWinInTabOpts
+---@return nil
 function M._validate_find_win_in_tab_opts(opts)
     vim.validate("opts", opts, "table")
     M._validate_uint(opts.bufnr, true)
@@ -78,9 +78,9 @@ end
 --- PRIMITIVES ---
 ------------------
 
---- @param n integer|nil
---- @param optional? boolean
---- @return nil
+---@param n integer|nil
+---@param optional? boolean
+---@return nil
 function M._validate_uint(n, optional)
     vim.validate("num", n, "number", optional)
     vim.validate("num", n, function()
@@ -91,8 +91,8 @@ function M._validate_uint(n, optional)
     end, optional, "Num is less than zero")
 end
 
---- @param n integer
---- @return boolean
+---@param n integer
+---@return boolean
 function M._is_uint(n)
     if type(n) ~= "number" then return false end
 
@@ -101,9 +101,9 @@ function M._is_uint(n)
     return n % 1 == 0
 end
 
---- @param num integer|nil
---- @param optional? boolean
---- @return nil
+---@param num integer|nil
+---@param optional? boolean
+---@return nil
 function M._validate_int(num, optional)
     vim.validate("num", num, "number", optional)
     vim.validate("num", num, function()
@@ -118,9 +118,9 @@ end
 -- MID: Perhaps create a separate validation for stack nrs limiting to between 0-10
 -- How a huge deal since clamping is easy, but would enforce more type consistency
 
---- @param win integer|nil
---- @param optional? boolean
---- @return nil
+---@param win integer|nil
+---@param optional? boolean
+---@return nil
 function M._validate_win(win, optional)
     if optional and type(win) == "nil" then return end
 
@@ -134,9 +134,9 @@ function M._validate_win(win, optional)
     end
 end
 
---- @param buf integer|nil
---- @param optional? boolean
---- @return nil
+---@param buf integer|nil
+---@param optional? boolean
+---@return nil
 function M._validate_buf(buf, optional)
     M._validate_uint(buf, optional)
     if optional and type(buf) == "nil" then return end
@@ -150,13 +150,13 @@ function M._validate_buf(buf, optional)
     end
 end
 
---- @class QfRancherValidateListOpts
---- @field len? integer
---- @field optional? boolean
---- @field type? string
+---@class QfRancherValidateListOpts
+---@field len? integer
+---@field optional? boolean
+---@field type? string
 
---- @param opts QfRancherValidateListOpts
---- @return nil
+---@param opts QfRancherValidateListOpts
+---@return nil
 local function validate_validate_list_opts(opts)
     vim.validate("opts", opts, "table")
     M._validate_uint(opts.len, true)
@@ -164,8 +164,8 @@ local function validate_validate_list_opts(opts)
     vim.validate("opts.type", opts.type, "string", true)
 end
 
---- @param list table
---- @param opts? QfRancherValidateListOpts
+---@param list table
+---@param opts? QfRancherValidateListOpts
 function M._validate_list(list, opts)
     opts = opts or {}
     validate_validate_list_opts(opts)
@@ -190,8 +190,8 @@ function M._validate_list(list, opts)
     end
 end
 
---- @param cur_pos {[1]: integer, [2]: integer}
---- @return nil
+---@param cur_pos {[1]: integer, [2]: integer}
+---@return nil
 function M._validate_cur_pos(cur_pos)
     M._validate_list(cur_pos, { len = 2, type = "number" })
 
@@ -203,16 +203,16 @@ function M._validate_cur_pos(cur_pos)
     M._validate_uint(cur_pos[2])
 end
 
---- @param list_win integer|nil
---- @param optional? boolean
---- @return nil
+---@param list_win integer|nil
+---@param optional? boolean
+---@return nil
 function M._validate_list_win(list_win, optional)
     if optional and type(list_win) == "nil" then return end
 
     M._validate_win(list_win)
     ---@diagnostic disable-next-line: param-type-mismatch
-    local list_win_buf = vim.api.nvim_win_get_buf(list_win) --- @type integer
-    --- @type string
+    local list_win_buf = vim.api.nvim_win_get_buf(list_win) ---@type integer
+    ---@type string
     local buftype = vim.api.nvim_get_option_value("buftype", { buf = list_win_buf })
     vim.validate("buftype", buftype, function()
         return buftype == "quickfix"
@@ -222,13 +222,13 @@ end
 -- TODO: There are a bunch of these kinds of functions that have less to do with data typing and
 -- more to do with state. Utils file getting bloated. Maybe new module
 
---- @param list_win integer
---- @return boolean
+---@param list_win integer
+---@return boolean
 function M._is_in_list_win(list_win)
     M._validate_win(list_win)
 
-    local list_win_buf = vim.api.nvim_win_get_buf(list_win) --- @type integer
-    --- @type string
+    local list_win_buf = vim.api.nvim_win_get_buf(list_win) ---@type integer
+    ---@type string
     local buftype = vim.api.nvim_get_option_value("buftype", { buf = list_win_buf })
 
     if buftype == "quickfix" then return true end
@@ -239,8 +239,8 @@ end
 --- MID: If this value starts being used in more places, consider making an alias for it rather
 --- than add-hoc annotation enums
 
---- @param setlist_action "r"|" "|"a"|"f"|"u"
---- @return nil
+---@param setlist_action "r"|" "|"a"|"f"|"u"
+---@return nil
 function M._validate_setlist_action(setlist_action)
     vim.validate("setlist_action", setlist_action, "string")
     vim.validate("setlist_action", setlist_action, function()
@@ -254,8 +254,8 @@ end
 
 --- NOTE: This is designed for entries used to set qflists. The entries from getqflist() are
 --- not exactly the same
---- @param item vim.quickfix.entry
---- @return nil
+---@param item vim.quickfix.entry
+---@return nil
 function M._validate_list_item(item)
     vim.validate("item", item, "table")
 
@@ -315,12 +315,12 @@ M._severity_unmap = {
 -- :h 'winborder'
 -- PR: This feels like something you could put into vim.validate. Or at least a type annotation
 
---- @alias QfRancherBorder "double"|"none"|"rounded"|"shadow"|"single"|"solid"|string[]
+---@alias QfRancherBorder "double"|"none"|"rounded"|"shadow"|"single"|"solid"|string[]
 
---- @type string[]
+---@type string[]
 local valid_borders = { "double", "none", "rounded", "shadow", "single", "solid" }
 
---- @param border QfRancherBorder
+---@param border QfRancherBorder
 function M._validate_border(border)
     vim.validate("border", border, { "string", "table" })
     if type(border) == "string" then
@@ -332,10 +332,10 @@ function M._validate_border(border)
     end
 end
 
---- @alias QfRancherTitlePos "left"|"center"|"right"
+---@alias QfRancherTitlePos "left"|"center"|"right"
 
---- @param winblend integer
---- @return nil
+---@param winblend integer
+---@return nil
 function M._validate_winblend(winblend)
     M._validate_uint(winblend)
     vim.validate("winblend", winblend, function()
@@ -347,13 +347,13 @@ end
 --- CUSTOM TYPES -- GENERAL ---
 -------------------------------
 
---- @alias QfrAction "new"|"replace"|"add"
+---@alias QfrAction "new"|"replace"|"add"
 
 M._actions = { "new", "replace", "add" }
 M._default_action = "new"
 
---- @param action QfrAction
---- @return nil
+---@param action QfrAction
+---@return nil
 function M._validate_action(action)
     vim.validate("action", action, "string")
     vim.validate("action", action, function()
@@ -361,17 +361,17 @@ function M._validate_action(action)
     end)
 end
 
---- @alias QfrInputType "insensitive"|"regex"|"sensitive"|"smartcase"|"vimsmart"
+---@alias QfrInputType "insensitive"|"regex"|"sensitive"|"smartcase"|"vimsmart"
 
---- @type string[]
+---@type string[]
 local input_types = { "insensitive", "regex", "sensitive", "smartcase", "vimsmart" }
 M._default_input_type = "vimsmart"
 M._cmd_input_types = vim.tbl_filter(function(t)
     return t ~= "vimsmart"
 end, input_types)
 
---- @param input QfrInputType
---- @return nil
+---@param input QfrInputType
+---@return nil
 function M._validate_input_type(input)
     vim.validate("input", input, "string")
     vim.validate("input", input, function()
@@ -379,24 +379,24 @@ function M._validate_input_type(input)
     end, "Input type " .. input .. " is not valid")
 end
 
---- @class QfrInputOpts
---- @field input_type QfrInputType
---- @field pattern? string
+---@class QfrInputOpts
+---@field input_type QfrInputType
+---@field pattern? string
 
---- @param input_opts QfrInputOpts
---- @return nil
+---@param input_opts QfrInputOpts
+---@return nil
 function M._validate_input_opts(input_opts)
     vim.validate("input_opts", input_opts, "table")
     M._validate_input_type(input_opts.input_type)
     vim.validate("input_opts.pattern", input_opts.pattern, "string", true)
 end
 
---- @class QfRancherTabpageOpts
---- @field tabpage? integer
---- @field tabpages? integer[]
---- @field all_tabpages? boolean
+---@class QfRancherTabpageOpts
+---@field tabpage? integer
+---@field tabpages? integer[]
+---@field all_tabpages? boolean
 
---- @param opts QfRancherTabpageOpts
+---@param opts QfRancherTabpageOpts
 function M._validate_tabpage_opts(opts)
     vim.validate("opts", opts, "table")
     vim.validate("opts.tabpage", opts.tabpage, "number", true)
@@ -404,13 +404,13 @@ function M._validate_tabpage_opts(opts)
     vim.validate("opts.all_tabpages", opts.all_tabpages, "boolean", true)
 end
 
---- @class QfRancherBufOpenOpts
---- @field buftype? string
---- @field clearjumps? boolean
---- @field goto_win? boolean
---- @field skip_set_cur_pos? boolean
---- @field skip_zzze? boolean
---- @field win? integer
+---@class QfRancherBufOpenOpts
+---@field buftype? string
+---@field clearjumps? boolean
+---@field goto_win? boolean
+---@field skip_set_cur_pos? boolean
+---@field skip_zzze? boolean
+---@field win? integer
 
 function M._validate_open_buf_opts(opts)
     vim.validate("opts", opts, "table")
@@ -426,12 +426,12 @@ end
 --- CUSTOM TYPES - DIAG ---
 ---------------------------
 
---- @alias QfRancherSeverityFilter "min"|"only"|"top"
+---@alias QfRancherSeverityFilter "min"|"only"|"top"
 
-M._sev_filters = { "min", "only", "top" } --- @type QfRancherSeverityFilter[]
+M._sev_filters = { "min", "only", "top" } ---@type QfRancherSeverityFilter[]
 
---- @param filter QfRancherSeverityFilter
---- @return nil
+---@param filter QfRancherSeverityFilter
+---@return nil
 function M._validate_sev_type(filter)
     vim.validate("filter", filter, "string")
     vim.validate("filter", filter, function()
@@ -439,12 +439,12 @@ function M._validate_sev_type(filter)
     end, "Severity filter " .. filter .. " is invalid")
 end
 
---- @class QfrDiagOpts
---- @field filter QfRancherSeverityFilter
---- @field level? vim.diagnostic.Severity
+---@class QfrDiagOpts
+---@field filter QfRancherSeverityFilter
+---@field level? vim.diagnostic.Severity
 
---- @param diag_opts QfrDiagOpts
---- @return nil
+---@param diag_opts QfrDiagOpts
+---@return nil
 function M._validate_diag_opts(diag_opts)
     vim.validate("diag_opts", diag_opts, "table")
     vim.validate("diag_opts.level", diag_opts.level, "number", true)
@@ -456,13 +456,13 @@ end
 --- CUSTOM TYPES -- FILTER ---
 ------------------------------
 
---- @class QfrFilterInfo
---- @field name string
---- @field insensitive_func QfrPredicate
---- @field regex_func QfrPredicate
---- @field sensitive_func QfrPredicate
+---@class QfrFilterInfo
+---@field name string
+---@field insensitive_func QfrPredicate
+---@field regex_func QfrPredicate
+---@field sensitive_func QfrPredicate
 
---- @param filter_info QfrFilterInfo
+---@param filter_info QfrFilterInfo
 function M._validate_filter_info(filter_info)
     vim.validate("filter_info", filter_info, "table")
     vim.validate("filter_info.name", filter_info.name, "string")
@@ -471,33 +471,33 @@ function M._validate_filter_info(filter_info)
     vim.validate("filter_info.sensitive_func", filter_info.sensitive_func, "callable")
 end
 
---- @class QfrFilterOpts
---- @field keep? boolean
+---@class QfrFilterOpts
+---@field keep? boolean
 
 function M._validate_filter_opts(filter_opts)
     vim.validate("filter_opts", filter_opts, "table")
     vim.validate("filter_opts.keep", filter_opts.keep, "boolean", true)
 end
 
---- @class QfRancherPredicateOpts
---- @field pattern? string
---- @field regex? vim.regex
+---@class QfRancherPredicateOpts
+---@field pattern? string
+---@field regex? vim.regex
 
---- @alias QfrPredicate fun(vim.qflist.entry, boolean, QfRancherPredicateOpts):boolean
+---@alias QfrPredicate fun(vim.qflist.entry, boolean, QfRancherPredicateOpts):boolean
 
 ----------------------------
 --- CUSTOM TYPES -- GREP ---
 ----------------------------
 
---- @alias QfrGrepPartsFunc fun(string, string, QfRancherGrepLocs):string[]
+---@alias QfrGrepPartsFunc fun(string, string, QfRancherGrepLocs):string[]
 
---- @class QfRancherGrepInfo
---- @field name string
---- @field list_item_type string|nil
---- @field location_func fun():string[]
+---@class QfRancherGrepInfo
+---@field name string
+---@field list_item_type string|nil
+---@field location_func fun():string[]
 
---- @param grep_info QfRancherGrepInfo
---- @return nil
+---@param grep_info QfRancherGrepInfo
+---@return nil
 function M._validate_grep_info(grep_info)
     vim.validate("grep_info", grep_info, "table")
     vim.validate("grep_info.name", grep_info.name, "string")
@@ -509,14 +509,14 @@ end
 --- CUSTOM TYPES -- OPEN ---
 ----------------------------
 
---- @class QfRancherOpenOpts
---- @field always_resize? boolean
---- @field height? integer
---- @field keep_win? boolean
---- @field print_errs? boolean
+---@class QfRancherOpenOpts
+---@field always_resize? boolean
+---@field height? integer
+---@field keep_win? boolean
+---@field print_errs? boolean
 
---- @param open_opts QfRancherOpenOpts
---- @return nil
+---@param open_opts QfRancherOpenOpts
+---@return nil
 function M._validate_open_opts(open_opts)
     vim.validate("open_opts", open_opts, "table")
     vim.validate("open_opts.always_resize", open_opts.always_resize, "boolean", true)
@@ -525,16 +525,16 @@ function M._validate_open_opts(open_opts)
     vim.validate("open_opts.print_errs", open_opts.print_errs, "boolean", true)
 end
 
---- @alias QfRancherIdxFunc fun(integer?):vim.quickfix.entry|nil, integer|nil
+---@alias QfRancherIdxFunc fun(integer?):vim.quickfix.entry|nil, integer|nil
 
---- @alias QfRancherSplitType "none"|"split"|"tabnew"|"vsplit"
+---@alias QfRancherSplitType "none"|"split"|"tabnew"|"vsplit"
 local valid_splits = { "none", "split", "tabnew", "vsplit" }
 
---- @alias QfRancherFinishMethod "focusList"|"focusWin"
+---@alias QfRancherFinishMethod "focusList"|"focusWin"
 local valid_finishes = { "focusList", "focusWin" }
 
---- @param split QfRancherSplitType
---- @return nil
+---@param split QfRancherSplitType
+---@return nil
 function M._validate_split(split)
     vim.validate("split", split, "string")
     vim.validate("split", split, function()
@@ -542,8 +542,8 @@ function M._validate_split(split)
     end, "Split type of " .. split .. " is invalid")
 end
 
---- @param finish QfRancherFinishMethod
---- @return nil
+---@param finish QfRancherFinishMethod
+---@return nil
 function M._validate_finish_method(finish)
     vim.validate("finish", finish, "string")
     vim.validate("finish", finish, function()
@@ -555,55 +555,55 @@ end
 --- SORT TYPES ---
 ------------------
 
---- @alias QfRancherSortPredicate fun(table, table): boolean
+---@alias QfRancherSortPredicate fun(table, table): boolean
 
---- @class QfRancherSortInfo
---- @field asc_func QfRancherSortPredicate
---- @field desc_func QfRancherSortPredicate
+---@class QfRancherSortInfo
+---@field asc_func QfRancherSortPredicate
+---@field desc_func QfRancherSortPredicate
 
---- @param sort_info QfRancherSortInfo
---- @return nil
+---@param sort_info QfRancherSortInfo
+---@return nil
 function M._validate_sort_info(sort_info)
     vim.validate("sort_info", sort_info, "table")
     vim.validate("sort_info.asc_func", sort_info.asc_func, "callable")
     vim.validate("sort_info.desc_func", sort_info.desc_func, "callable")
 end
 
---- @alias QfRancherSortDir "asc"|"desc"
+---@alias QfRancherSortDir "asc"|"desc"
 
---- @param dir QfRancherSortDir
---- @return nil
+---@param dir QfRancherSortDir
+---@return nil
 function M._validate_sort_dir(dir)
     vim.validate("dir", dir, function()
         return dir == "asc" or dir == "desc"
     end)
 end
 
---- @class QfRancherSortOpts
---- @field dir QfRancherSortDir
+---@class QfRancherSortOpts
+---@field dir QfRancherSortDir
 
---- @param sort_opts QfRancherSortOpts
---- @return nil
+---@param sort_opts QfRancherSortOpts
+---@return nil
 function M._validate_sort_opts(sort_opts)
     vim.validate("sort_opts", sort_opts, "table")
     vim.validate("sort_opts.dir", sort_opts.dir, "string")
     if type(sort_opts.dir) == "string" then M._validate_sort_dir(sort_opts.dir) end
 end
 
---- @alias QfRancherSortable string|integer
---- @alias QfRancherCheckFunc fun(QfRancherSortable, QfRancherSortable):boolean
+---@alias QfRancherSortable string|integer
+---@alias QfRancherCheckFunc fun(QfRancherSortable, QfRancherSortable):boolean
 
 --------------------
 --- SYSTEM TYPES ---
 --------------------
 
---- @class QfrSystemOpts
---- @field sync? boolean
---- @field cmd_parts? string[]
---- @field timeout? integer
+---@class QfrSystemOpts
+---@field sync? boolean
+---@field cmd_parts? string[]
+---@field timeout? integer
 
---- @param system_opts QfrSystemOpts
---- @return nil
+---@param system_opts QfrSystemOpts
+---@return nil
 function M._validate_system_opts(system_opts)
     vim.validate("system_opts", system_opts, "table")
 
@@ -620,14 +620,14 @@ M._default_timeout = 4000
 --- STACK TYPES ---
 -------------------
 
---- @class QfRancherHistoryOpts
---- @field always_open? boolean
---- @field default? "all"|"current"
---- @field keep_win? boolean
---- @field silent? boolean
+---@class QfRancherHistoryOpts
+---@field always_open? boolean
+---@field default? "all"|"current"
+---@field keep_win? boolean
+---@field silent? boolean
 
---- @param opts QfRancherHistoryOpts
---- @return nil
+---@param opts QfRancherHistoryOpts
+---@return nil
 function M._validate_history_opts(opts)
     vim.validate("opts", opts, "table")
     vim.validate("opts.default", opts.default, "string", true)

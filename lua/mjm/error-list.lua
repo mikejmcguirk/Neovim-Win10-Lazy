@@ -3,8 +3,8 @@
 -------------------------
 
 --- https://github.com/tjdevries/lazy-require.nvim/blob/master/lua/lazy-require.lua
---- @param require_path string
---- @return table
+---@param require_path string
+---@return table
 function _G.Qfr_Defer_Require(require_path)
     return setmetatable({}, {
         __index = function(_, key)
@@ -70,10 +70,10 @@ _G._QFR_G_VAR_MAP = {
     qf_rancher_set_default_maps = { { "boolean" }, true },
     qf_rancher_set_default_cmds = { { "boolean" }, true },
     qf_rancher_use_smartcase = { { "boolean" }, true },
-} --- @type table<string, {[1]:string[], [2]: any}>
+} ---@type table<string, {[1]:string[], [2]: any}>
 
 for k, v in pairs(_QFR_G_VAR_MAP) do
-    local cur_g_val = vim.g[k] --- @type any
+    local cur_g_val = vim.g[k] ---@type any
     if not vim.tbl_contains(v[1], type(cur_g_val)) then vim.api.nvim_set_var(k, v[2]) end
 end
 
@@ -96,7 +96,7 @@ require("mjm.error-list-maps")
 -- screenrow() ?
 
 -- TODO: There should be a setting for whether or not to turn these autocmds on
---- @type integer
+---@type integer
 -- local loclist_group = vim.api.nvim_create_augroup("loclist-group", { clear = true })
 
 -- Start each window with a fresh loclist
@@ -112,14 +112,14 @@ require("mjm.error-list-maps")
 -- vim.api.nvim_create_autocmd("WinClosed", {
 --     group = loclist_group,
 --     callback = function(ev)
---         local win = tonumber(ev.match) --- @type number?
+--         local win = tonumber(ev.match) ---@type number?
 --         if not type(win) == "number" then return end
 --
---         local config = vim.api.nvim_win_get_config(win) --- @type vim.api.keyset.win_config
+--         local config = vim.api.nvim_win_get_config(win) ---@type vim.api.keyset.win_config
 --         if config.relative and config.relative ~= "" then return end
 --
---         local buf = vim.api.nvim_win_get_buf(win) --- @type integer
---         local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf }) --- @type string
+--         local buf = vim.api.nvim_win_get_buf(win) ---@type integer
+--         local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf }) ---@type string
 --         if buftype == "quickfix" then return end
 --
 --         local qf_id = vim.fn.getloclist(ev.match, { id = 0 }).id ---@type integer

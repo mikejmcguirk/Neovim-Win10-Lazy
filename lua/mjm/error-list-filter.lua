@@ -8,7 +8,7 @@ local fn = vim.fn
 
 ---@mod Filter Filter list items
 
---- @class QfrFilter
+---@class QfrFilter
 local Filter = {}
 
 ---@param filter_info QfrFilterInfo
