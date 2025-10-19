@@ -12,6 +12,10 @@ Map("i", "?", "?<C-g>u", { silent = true, buffer = true })
 Map("i", "!", "!<C-g>u", { silent = true, buffer = true })
 
 local ut = require("mjm.utils")
+-- LOW: Broader idea here:
+-- This might not work in markdown files because of those LSPs. Semi-obvious solution, use gK
+-- But then consider - Why does there only have to be only one floating window option per buf?
+-- Why is gT (Inspect) a cmd popup? Why can't it be a float?
 Map("n", "K", ut.check_word_under_cursor)
 
 vim.api.nvim_create_autocmd("BufWritePre", {

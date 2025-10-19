@@ -108,6 +108,7 @@ SetOpt("shiftround", true, global_scope)
 -- global scope settings still whited out.
 -- SetOpt("wrap", false, global_scope)
 -- For fts where opt_local wrap is true
+-- TODO: Test this again
 SetOpt("breakindent", true, global_scope)
 SetOpt("linebreak", true, global_scope)
 SetOpt("smartindent", true, global_scope)
@@ -203,6 +204,8 @@ Autocmd("CmdlineEnter", {
     end,
 })
 
+-- MID: can BufWinEnter be used instead of BufEnter?
+
 autoset_winopt({ "WinLeave", "BufLeave" }, "rnu", false)
 autoset_winopt({ "WinEnter", "CmdlineLeave", "BufEnter" }, "rnu", true)
 
@@ -248,3 +251,6 @@ Autocmd(clear_conditions, {
 -- vim.opt.lazyredraw = false -- Causes unpredictable problems
 -- vim.opt.startofline = false -- Makes gg/G feel weird
 -- vim.opt.winborder = "single" -- Sets arbitrary border around Zen mode display
+
+-- LOW: SSH Clipboard Config
+-- https://github.com/tjdevries/config.nvim/blob/master/plugin/clipboard.lua

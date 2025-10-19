@@ -215,9 +215,6 @@ end
 ---     a public API or right behind one, should be validated. Same with functions that can cause
 ---     real issues if they go wrong (list cycling is the most obvious example)
 
---- Audit all files except ftplugin for bad/old API usage
---- Add in the util func for opening based on outputopts. Put it behind a gvar
-
 --- - I have filter and sort right now set to use new list as their default, in line with how
 --- Cfilter works. And that should actually be the default. But I am thinking there might need
 --- to be a way to not do that. Having to do qGf to sort by filename without pollutting the
@@ -290,6 +287,7 @@ end
 ---     the way, where you put the Qflist into edit mode, and then re-integrate the changes
 ---     in a save step
 ---     https://github.com/stefandtw/quickfix-reflector.vim - A similar take
+-- MID: Add ftplugin files that use rancher, such as make commands piped to the system module
 
 -----------
 --- LOW ---

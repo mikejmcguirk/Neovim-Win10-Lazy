@@ -1,6 +1,7 @@
 local fzf_lua = require("fzf-lua")
 
 fzf_lua.setup({
+    -- MID: Get out of this preset
     "telescope",
     debug = false,
     files = {
@@ -81,9 +82,9 @@ Map("n", "<leader>ft", fzf_lua.highlights)
 Map("n", "<leader>fk", fzf_lua.keymaps)
 
 Map("n", "<leader>fo", fzf_lua.loclist)
-Map("n", "<leader>fu", fzf_lua.quickfix)
+Map("n", "<leader>fq", fzf_lua.quickfix)
 Map("n", "<leader>fO", fzf_lua.loclist_stack)
-Map("n", "<leader>fU", fzf_lua.quickfix_stack)
+Map("n", "<leader>fQ", fzf_lua.quickfix_stack)
 
 Map("n", "<leader>fm", function()
     fzf_lua.marks({
@@ -103,6 +104,7 @@ end)
 
 local function fuzzy_dict()
     --- @diagnostic disable: undefined-field
+    -- LOW: This should merge results from all dictionaries
     local dict_file = vim.opt.dictionary:get()[1]
     local file = io.open(dict_file, "r")
     if not file then
@@ -115,9 +117,7 @@ end
 
 local function fuzzy_spell_correct()
     local word = vim.fn.expand("<cword>"):lower() ---@type string
-    if word == "" then
-        return vim.notify("No word under cursor", vim.log.levels.WARN)
-    end
+    if word == "" then return vim.notify("No word under cursor", vim.log.levels.WARN) end
 
     local buf = vim.api.nvim_get_current_buf()
 
@@ -133,9 +133,7 @@ local function fuzzy_spell_correct()
         prompt = 'Suggestions for "' .. word .. '": ',
         actions = {
             ["default"] = function(selected, _)
-                if not selected or not selected[1] then
-                    return
-                end
+                if not selected or not selected[1] then return end
 
                 local line = vim.api.nvim_get_current_line()
                 local row_1, col_0 = unpack(vim.api.nvim_win_get_cursor(0))
@@ -189,9 +187,7 @@ Map("n", "<leader>fds", fuzzy_spell_correct)
 -- Copy of the original code with vim.fn.getregtype() added
 fzf_lua.registers = function(opts)
     opts = require("fzf-lua.config").normalize_opts(opts, "registers")
-    if not opts then
-        return
-    end
+    if not opts then return end
 
     local registers = { [["]], "_", "#", "=", "_", "/", "*", "+", ":", ".", "%" }
     for i = 0, 9 do
@@ -213,9 +209,7 @@ fzf_lua.registers = function(opts)
     end
 
     local function register_escape_special(reg, nl)
-        if not reg then
-            return
-        end
+        if not reg then return end
 
         local gsub_map = {
             ["\3"] = "^C", -- <C-c>
@@ -236,9 +230,7 @@ fzf_lua.registers = function(opts)
     for _, r in ipairs(registers) do
         -- pcall in case of invalid data err E5108
         local _, contents = pcall(vim.fn.getreg, r)
-        if not contents then
-            return
-        end
+        if not contents then return end
 
         contents = register_escape_special(contents, opts.multiline and 2 or 1)
         local regtype = vim.fn.getregtype(r) or " "
@@ -274,3 +266,11 @@ vim.api.nvim_create_autocmd("VimEnter", {
         Cmd({ cmd = "FzfLua", args = { "register_ui_select" } }, {})
     end,
 })
+
+-- MID: Map to gi
+-- giq/giQ for qflist/qfstack
+-- gil/giL for loclist/loclist stack
+-- MID: How to delete stacks from FzfLua?
+
+-- LOW: Turn let g:/w:/b:/t: into pickers
+-- LOW: Make a thesaurus picker

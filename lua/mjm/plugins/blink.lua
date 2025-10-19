@@ -39,9 +39,7 @@ local function setup_blink()
                                 return ctx.kind or ""
                             end,
                             highlight = function(ctx)
-                                if ctx.kind then
-                                    return "BlinkCmpKind" .. ctx.kind
-                                end
+                                if ctx.kind then return "BlinkCmpKind" .. ctx.kind end
                                 return "BlinkCmpKind"
                             end,
                         },
@@ -301,6 +299,8 @@ local function setup_blink()
     end
 end
 
+-- MAYBE: Shouldn't the build for this kick off after UIEnter?
+
 vim.api.nvim_create_autocmd({ "CmdlineEnter", "BufReadPre", "BufNewFile" }, {
     group = vim.api.nvim_create_augroup("setup-blink", { clear = true }),
     once = true,
@@ -323,6 +323,7 @@ vim.api.nvim_create_autocmd({ "CmdlineEnter", "BufReadPre", "BufNewFile" }, {
         local sys_opts = { cwd = path, text = true } --- @type vim.SystemOpts
         vim.api.nvim_echo({ { "Building fuzzy for blink.cmp...", "" } }, true, {})
 
+        -- LOW: Would be better if the URL for this were smarter
         vim.system(cmd, sys_opts, function(out)
             if out.code == 0 then
                 vim.schedule(function()
@@ -342,6 +343,8 @@ vim.api.nvim_create_autocmd({ "CmdlineEnter", "BufReadPre", "BufNewFile" }, {
         vim.api.nvim_del_augroup_by_name("setup-blink")
     end,
 })
+
+-- TODO: Make the dictionary source work properly. Rewrite with vim.system?
 
 -- NOTES:
 -- There is an available keymap for viewing completion options from a specific source

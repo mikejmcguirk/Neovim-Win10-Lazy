@@ -247,6 +247,8 @@ SetHl(0, "SignColumn", {}) -- Default self-definition
 --- Markup ---
 --------------
 
+-- MID: Make these make sense
+
 SetHl(0, "@markup.environment", { fg = l_purple })
 SetHl(0, "@markup.heading", { link = "Title" })
 SetHl(0, "@markup.italic", { fg = l_green, italic = true })

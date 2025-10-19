@@ -72,3 +72,5 @@ Map("n", "<leader>ar", function()
 end, { desc = "Delete current file from Harpoon List" })
 
 -- https://github.com/neovim/neovim/issues/32546 - Data storage
+
+-- LOW: How to open marks from a list in a vsplit

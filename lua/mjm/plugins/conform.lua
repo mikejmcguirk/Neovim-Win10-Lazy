@@ -55,3 +55,5 @@ vim.api.nvim_create_autocmd("FileType", {
         vim.api.nvim_del_augroup_by_name("load-conform")
     end,
 })
+
+-- MID: Investigate dprint as a prettier alternative

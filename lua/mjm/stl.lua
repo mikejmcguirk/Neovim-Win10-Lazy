@@ -95,6 +95,8 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
     end),
 })
 
+-- LOW: This does not catch leaving cmd mode after confirming a substitution
+
 vim.api.nvim_create_autocmd("ModeChanged", {
     group = stl_events,
     callback = function()
@@ -125,6 +127,8 @@ vim.api.nvim_create_autocmd({ "LspAttach", "LspDetach" }, {
 -- local format_icons = Has_Nerd_Font and { unix = "", dos = "", mac = "" }
 --     or { unix = "unix", dos = "dos", mac = "mac" }
 local format_icons = { unix = "unix", dos = "dos", mac = "mac" }
+
+-- MID: This should pre-allocate the table with NILs
 
 function MjmStl.active()
     local stl = {}
@@ -178,6 +182,7 @@ function MjmStl.active()
 end
 
 -- TODO: How to do qf statusline that shows stack nr
+-- MID: Show diagnostics in inactive windows whited out
 
 function MjmStl.inactive()
     local winnr = vim.fn.winnr()
@@ -190,3 +195,7 @@ vim.api.nvim_set_var("qf_disable_statusline", 1)
 local eval = "(nvim_get_current_win()==#g:actual_curwin || &laststatus==3)"
 local stl_str = "%{%" .. eval .. " ? v:lua.MjmStl.active() : v:lua.MjmStl.inactive()%}"
 vim.api.nvim_set_option_value("stl", stl_str, { scope = "global" })
+
+-- LOW: Build a character index component, even if it's only held in reserve
+-- LOW: If you open a buf, detach the LSP, then re-attach it, progress messages don't show properly
+-- - (in general LSP progress has been the biggest challenge here)

@@ -29,9 +29,7 @@ oil.setup({
             function()
                 oil.save({ confirm = nil }, function(err)
                     if err then
-                        if err ~= "Canceled" then
-                            vim.notify(err, vim.log.levels.ERROR)
-                        end
+                        if err ~= "Canceled" then vim.notify(err, vim.log.levels.ERROR) end
 
                         return
                     end
@@ -57,3 +55,5 @@ end)
 Map("n", "+", function()
     oil.open_float(vim.fn.getcwd())
 end)
+
+-- LOW: Re-create the function to pre-populate a highlighted filename? Might be useful in all contexts

@@ -2,6 +2,7 @@ require("mjm")
 
 -- TODO: Move the notes back into the files. Was bad, friction creating idea
 -- TODO: https://github.com/neovim/neovim/issues/36081 - I might be able to get this
+-- TODO: Fix the missing fields annotations in certain keysets (nvim_cmd being the worst)
 
 -----------
 --- MID ---

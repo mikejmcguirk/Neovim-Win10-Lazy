@@ -198,3 +198,7 @@ for _, event in pairs(note_paths) do
         end,
     })
 end
+
+-- LOW: Make Obsidian paste image work with Windows
+-- Really though, since we want to exit Obsidian anyway, the bigger idea is -
+-- How do we re-implement paste image to begin with

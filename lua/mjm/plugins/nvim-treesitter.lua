@@ -127,9 +127,7 @@ local function setup_objects()
     vim.api.nvim_create_autocmd("FileType", {
         group = vim.api.nvim_create_augroup("object-maps", { clear = true }),
         callback = function(ev)
-            if not vim.tbl_contains(languages, ev.match) then
-                return
-            end
+            if not vim.tbl_contains(languages, ev.match) then return end
 
             -- BUILTIN
             -- [s] - Assignment
@@ -152,6 +150,14 @@ local function setup_objects()
             -- CUSTOM:
             -- [#] - PreProc
             -- ["] - String (moves and swaps)
+
+            -- LOW: Additions:
+            --  Lua unary expressions
+            --  Table keys/values
+            --  Individual parts of a conditional
+            --  MID: Consider stevearc's mapping approach where lowercase goes to the beginning and
+            --  upper to the end, or vice-versa
+            --  LOW: A way to go to the first and last appearance of a text object
 
             ----------------
             -- Selections --
@@ -328,3 +334,5 @@ vim.api.nvim_create_autocmd({ "BufNewFile", "BufReadPre" }, {
         vim.api.nvim_del_augroup_by_name("setup-objects")
     end,
 })
+
+-- PR: The "parsers up to date" message is annoying

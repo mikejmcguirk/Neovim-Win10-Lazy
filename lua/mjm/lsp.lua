@@ -195,11 +195,21 @@ local function set_lsp_maps(ev)
 
     -- textDocument/linkedEditingRange
 
+    -- the docs recommend trying with html:
+    -- if client:supports_method("textDocument/linkedEditingRange") then
+    --     vim.lsp.linked_editing_range.enable(true, { client_id = client.id })
+    -- end
+
     -- textDocument/references --
     Map("n", "grr", references, { buffer = buf })
     Map("n", "grR", peek_references, { buffer = buf })
 
     -- textDocument/rename --
+
+    -- LOW: Would like a way of having an incremental rename preview for LSP renames.
+    -- The plugin, from what I can tell, does a full re-implementation of rename,
+    -- which I don't want
+
     Map("n", "grn", function()
         --- @type boolean, string
         local ok_i, input = require("mjm.utils").get_input("Rename: ")
@@ -238,9 +248,10 @@ local function set_lsp_maps(ev)
 
     -- workspace/symbol --
     -- Kickstart mapping
-    Map("n", "gW", workspace, { buffer = buf })
+    Map("n", "grw", workspace, { buffer = buf })
 
     -- Other --
+    -- LOW: Which lsp method is Semantic token behind, because there are like three of them
     Map("n", "grm", function()
         lsp.semantic_tokens.enable(not lsp.semantic_tokens.is_enabled())
     end, { buffer = buf })
@@ -290,6 +301,7 @@ lsp.enable({
     "cssls",
     "html",
     --- Lua ---
+    -- LOW: Look into emmylua
     "lua_ls",
     --- Python ---
     -- Ruff is not feature-complete enough to replace pylsp
@@ -300,3 +312,5 @@ lsp.enable({
     --- Toml ---
     "taplo",
 })
+
+-- MID: Get a C LSP for reading code

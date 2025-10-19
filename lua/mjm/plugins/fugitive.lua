@@ -1,13 +1,5 @@
 --- TODO: Move to gg mappings
 
-vim.api.nvim_create_autocmd("FileType", {
-    group = vim.api.nvim_create_augroup("git-diff-ts", { clear = true }),
-    pattern = "git",
-    callback = function()
-        vim.api.nvim_cmd({ cmd = "set", args = { "filetype=gitdiff" } }, {})
-    end,
-})
-
 Map("n", "<leader>gcam", function()
     --- @type boolean, string
     local ok, result = require("mjm.utils").get_input("Commit message (All): ")
@@ -44,6 +36,7 @@ Map("n", "<leader>gchn", function()
     vim.api.nvim_cmd({ cmd = "Git", args = { "commit" } }, {})
 end)
 
+-- MID: Use rancher to close all lists, with close/lclose as fallbacks
 local function open_diffs(staged)
     for _, w in ipairs(vim.fn.getwininfo()) do
         if vim.api.nvim_get_option_value("filetype", { buf = w.bufnr }) == "diff" then return end
@@ -75,4 +68,5 @@ Map("n", "<leader>gp", function()
     vim.api.nvim_cmd({ cmd = "Git", args = { "push" } }, {})
 end)
 
+-- TODO: Map this
 -- git reset --soft HEAD~1

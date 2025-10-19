@@ -27,6 +27,8 @@ if fn.maparg("gO", "n", false, false) ~= "" then api.nvim_del_keymap("n", "gO") 
 -- SAVING AND QUITTING --
 -------------------------
 
+-- LOW: More testing on lockmarks/conform behavior
+
 Map("n", "Z", "<nop>")
 
 Map("n", "ZA", "<cmd>lockmarks silent wa<cr>")
@@ -66,6 +68,7 @@ end
 ---@param dir string
 ---@return nil
 local win_move_tmux = function(dir)
+    -- LOW: How to make work in prompt buffers?
     if api.nvim_get_option_value("buftype", { buf = 0 }) == "prompt" then
         do_tmux_move(dir)
         return
@@ -169,16 +172,22 @@ Map("n", "\\D", function()
     di.toggle_virt_lines()
 end)
 
+-- LOW: Could do <M-d> as errors or top only
+
 Map("n", "\\s", function()
     local is_spell = api.nvim_get_option_value("spell", { win = 0 })
     api.nvim_set_option_value("spell", not is_spell, { win = 0 })
 end)
+
+Map("n", "\\<C-s>", "<cmd>set spell?<cr>")
 
 Map("n", "\\w", function()
     -- LOW: How does this interact with local scope?
     local is_wrap = api.nvim_get_option_value("wrap", { win = 0 })
     api.nvim_set_option_value("wrap", not is_wrap, { win = 0 })
 end)
+
+Map("n", "\\<C-w>", "<cmd>set wrap?<cr>")
 
 --------------------
 -- MODE SWITCHING --
@@ -249,15 +258,12 @@ local function map_on_bufreadpre()
     -- "S" enters insert with the proper indent. "I" left on default behavior
     for _, map in pairs({ "i", "a", "A" }) do
         Map("n", map, function()
-            if string.match(api.nvim_get_current_line(), "^%s*$") then
-                return '"_S'
-            else
-                return map
-            end
+            if string.match(api.nvim_get_current_line(), "^%s*$") then return '"_S' end
+            return map
         end, { expr = true })
     end
 
-    -- TODO: I still have no idea what to do with gi
+    -- LOW: Not sure what to map to M-i
     Map("n", "gI", "g^i")
     -- NOTE: At least for now, keep the default gR mapping
     Map("n", "<M-r>", "gr")
@@ -269,9 +275,8 @@ local function map_on_bufreadpre()
     -- NOTE: the pcmark has to be set through the m command rather than the API in order to
     -- actually modify the jumplist
     Map({ "n", "x" }, "j", function()
-        if vim.v.count == 0 then
-            return "gj"
-        elseif vim.v.count >= api.nvim_get_option_value("lines", { scope = "global" }) then
+        if vim.v.count == 0 then return "gj" end
+        if vim.v.count >= api.nvim_get_option_value("lines", { scope = "global" }) then
             return "m'" .. vim.v.count1 .. "j"
         else
             return "j"
@@ -279,9 +284,8 @@ local function map_on_bufreadpre()
     end, { expr = true, silent = true })
 
     Map({ "n", "x" }, "k", function()
-        if vim.v.count == 0 then
-            return "gk"
-        elseif vim.v.count >= api.nvim_get_option_value("lines", { scope = "global" }) then
+        if vim.v.count == 0 then return "gk" end
+        if vim.v.count >= api.nvim_get_option_value("lines", { scope = "global" }) then
             return "m'" .. vim.v.count1 .. "k"
         else
             return "k"
@@ -301,26 +305,24 @@ local function map_on_bufreadpre()
     -- Address cursorline flickering
     -- Purposefully does not implement the default count mechanic in <C-u>/<C-d>, as it is painful
     -- to accidently hit
-    Map({ "n", "x" }, "<C-u>", function()
+    ---@param cmd string
+    local function scroll(cmd)
         api.nvim_set_option_value("lz", true, { scope = "global" })
         local win = api.nvim_get_current_win()
         local cul = api.nvim_get_option_value("cul", { win = win })
         api.nvim_set_option_value("cul", false, { win = win })
 
-        Cmd({ cmd = "normal", args = { "\21zz" }, bang = true }, {})
+        Cmd({ cmd = "normal", args = { cmd }, bang = true }, {})
         api.nvim_set_option_value("cul", cul, { win = win })
         api.nvim_set_option_value("lz", false, { scope = "global" })
+    end
+
+    Map({ "n", "x" }, "<C-u>", function()
+        scroll("\21zz")
     end, { silent = true })
 
     Map({ "n", "x" }, "<C-d>", function()
-        api.nvim_set_option_value("lz", true, { scope = "global" })
-        local win = api.nvim_get_current_win()
-        local cul = api.nvim_get_option_value("cul", { win = win })
-        api.nvim_set_option_value("cul", false, { win = win })
-
-        Cmd({ cmd = "normal", args = { "\4zz" }, bang = true }, {})
-        api.nvim_set_option_value("cul", cul, { win = win })
-        api.nvim_set_option_value("lz", false, { scope = "global" })
+        scroll("\4zz")
     end, { silent = true })
 
     Map("n", "zT", function()
@@ -454,6 +456,9 @@ local function map_on_bufreadpre()
     )
 
     Map("n", "g?", "<nop>")
+
+    -- TODO: Find a viable keymap for this and make it more robust to edge cases:
+    -- Map("n", "H", 'mzk_D"_ddA <esc>p`zze', { silent = true })
 
     Map("n", "J", function()
         if not require("mjm.utils").check_modifiable() then return end
@@ -599,6 +604,7 @@ local function map_on_bufreadpre()
         vim.opt.lazyredraw = false
     end
 
+    -- TODO: Do these as a spec-ops mapping, same in normal mode due to the nag there
     Map("x", "<", function()
         visual_indent({ back = true })
     end, { silent = true })
@@ -610,6 +616,8 @@ local function map_on_bufreadpre()
     -------------
     --- Spell ---
     -------------
+
+    -- MID: Why does [s]s navigation work in some buffers but not others?
 
     Map("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true })
     Map("n", "[w", "[s")
@@ -626,6 +634,8 @@ Autocmd({ "BufReadPre", "BufNewFile" }, {
         end)
     end,
 })
+
+-- LOW: Would like <M-d> to work properly
 
 local function map_on_cmdlineenter()
     Map("c", "<C-a>", "<C-b>")

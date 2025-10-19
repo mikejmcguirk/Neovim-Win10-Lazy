@@ -52,3 +52,6 @@ return {
         },
     },
 }
+
+-- LOW: Curious how to make the run commands work. Also feels like it could just be a vim.system
+-- thing

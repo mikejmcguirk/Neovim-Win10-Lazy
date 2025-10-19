@@ -29,3 +29,5 @@ end)
 Map("n", "g\\sd", function()
     require("session_manager").delete_session()
 end)
+
+-- TODO: This plugin uses the deprecated nvim_buf_set_option function

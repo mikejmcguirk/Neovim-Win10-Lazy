@@ -43,3 +43,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
         })
     end,
 })
+
+-- LOW: Create custom lightbulb
+-- - https://github.com/MariaSolOs/dotfiles/blob/main/.config/nvim/lua/lightbulb.lua
