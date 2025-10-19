@@ -35,10 +35,6 @@ local termfeatures = vim.g.termfeatures or {}
 termfeatures.osc52 = false
 Gset("termfeatures", termfeatures)
 
-Map({ "n", "x" }, "<Space>", "<Nop>")
-Gset("mapleader", " ")
-Gset("maplocalleader", " ")
-
 -----------------------
 -- Internal Behavior --
 -----------------------

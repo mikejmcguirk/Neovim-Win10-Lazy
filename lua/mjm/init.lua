@@ -39,6 +39,10 @@ _G.Map = vim.keymap.set
 _G.SetHl = api.nvim_set_hl
 _G.GetHl = api.nvim_get_hl
 
+Map({ "n", "x" }, "<Space>", "<Nop>")
+Gset("mapleader", " ")
+Gset("maplocalleader", " ")
+
 local pre_pack = vim.uv.hrtime()
 
 -------------------------------
