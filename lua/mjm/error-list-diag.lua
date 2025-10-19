@@ -162,3 +162,6 @@ return Diags
 
 -- TODO: Docs
 -- TODO: Add tests
+
+-- MID: Diags by diagnostic producer. Could make an opt for maps + cmds. Or like if someone wants
+-- to prompt for the source and have that be fed in

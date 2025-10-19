@@ -179,6 +179,11 @@ end
 --- TODO: ---
 -------------
 
+-- I am wondering if, in the name of sanity, it would be best to limit the defaults to a sane
+-- subset of what the plugin can do. So like for sort, just do replace
+-- The builtins have an interesting thing for diags where it scans for a name and if it
+-- finds it it overwrites that list with u. Kind of good. YOu can do something similar for grep
+-- Filter should also just overwrite by default
 -- DOCUMENT as a dev note somewhere: lemmy-help ignores functions based on private/protected/
 -- package annotations, which also hide modules from LSP auto-complete. Therefore, we cannot have
 -- _underline functions in modules we are using to run out docs. _underline functions need to go
