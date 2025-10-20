@@ -134,8 +134,6 @@ Autocmd("TabNew", {
     group = Augroup("mjm-tab-maps", {}),
     once = true,
     callback = function()
-        -- Leaves ctrl-tab/ctrl-shift-tab open
-        -- TODO: Saw issue where these were not advancing/going back correctly
         Map("n", "<tab>", "gt")
         Map("n", "<S-tab>", "gT")
 
@@ -160,6 +158,8 @@ Autocmd("TabNew", {
 ------------------
 -- Setting Maps --
 ------------------
+
+-- MAYBE: Use \t to toggle the tabline, which would also de-activate/activate the harpoon state
 
 -- Do all these here so it's simple to see how the namespace is being used
 
@@ -445,7 +445,7 @@ local function map_on_bufreadpre()
     Map("n", "<M-s>", ":'<,'>s/\\%V")
     Map("x", "<M-s>", ":s/\\%V")
 
-    -- TODO: Make a map of this in visual mode that uses the same syntax but without %
+    -- LOW: Make a map of this in visual mode that uses the same syntax but without %
     -- Credit ThePrimeagen
     Map("n", "g%", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
 

@@ -117,7 +117,7 @@ vim.api.nvim_create_autocmd({ "LspAttach", "LspDetach" }, {
             return
         end
 
-        local clients = vim.lsp.get_clients({ bufnr = ev.buf })
+        local clients = vim.lsp.get_clients({ bufnr = ev.buf }) ---@type vim.lsp.Client[]
         lsp_cache[ev.buf] = (clients and #clients > 0) and string.format("[%d]", #clients) or nil
 
         Cmd({ cmd = "redraws" }, {})
