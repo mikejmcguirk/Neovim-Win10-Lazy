@@ -329,10 +329,7 @@ end
 ---@param cur_pos {[1]: integer, [2]: integer}
 ---@return nil
 function M._protected_set_cursor(win, cur_pos)
-    ey._validate_uint(win)
-
-    if not api.nvim_win_is_valid(win) then return end
-
+    ey._validate_win(win)
     ey._validate_cur_pos(cur_pos)
 
     local adj_cur_pos = vim.deepcopy(cur_pos, true) ---@type {[1]: integer, [2]: integer}
