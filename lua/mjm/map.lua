@@ -130,6 +130,10 @@ Map("n", "<C-w><C-c>", "<nop>")
 -- - tabmove
 -- - tabonly
 
+-- Leave these for the terminal
+Map("n", "<C-tab>", "<nop>")
+Map("n", "<C-S-tab>", "<nop>")
+
 Autocmd("TabNew", {
     group = Augroup("mjm-tab-maps", {}),
     once = true,
@@ -176,8 +180,8 @@ end)
 -- LOW: Could do <M-d> as errors or top only
 
 Map("n", "\\s", function()
-    local is_spell = api.nvim_get_option_value("spell", { win = 0 })
-    api.nvim_set_option_value("spell", not is_spell, { win = 0 })
+    local is_spell = GetOpt("spell", { win = 0 })
+    SetOpt("spell", not is_spell, { win = 0 })
 end)
 
 Map("n", "\\<C-s>", "<cmd>set spell?<cr>")
