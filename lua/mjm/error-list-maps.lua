@@ -17,10 +17,13 @@ local in_vimsmart = { input_type = "vimsmart" } ---@type QfrInputOpts
 local in_sensitive = { input_type = "sensitive" } ---@type QfrInputOpts
 local in_regex = { input_type = "regex" } ---@type QfrInputOpts
 
-local function get_what(dest, win)
-    local what = { nr = vim.v.count } ---@type QfrWhat
-    what.user_data = { action = dest, src_win = win } ---@type QfRancherUserData
-    return what
+-- TODO: Reverse action and src_win
+
+---@param action QfrRealAction
+---@param src_win integer|nil
+---@return QfrOutputOpts
+local function get_output_opts(action, src_win)
+    return { src_win = src_win, action = action, what = { nr = vim.v.count } }
 end
 
 ---@return integer
@@ -28,34 +31,34 @@ local function cur_win()
     return api.nvim_get_current_win()
 end
 
----@return QfrWhat
+---@return QfrOutputOpts
 local function new_qflist()
-    return get_what("new", nil)
+    return get_output_opts(" ", nil)
 end
 
----@return QfrWhat
+---@return QfrOutputOpts
 local function replace_qflist()
-    return get_what("replace", nil)
+    return get_output_opts("u", nil)
 end
 
----@return QfrWhat
+---@return QfrOutputOpts
 local function add_qflist()
-    return get_what("add", nil)
+    return get_output_opts("a", nil)
 end
 
----@return QfrWhat
+---@return QfrOutputOpts
 local function new_loclist()
-    return get_what("new", cur_win())
+    return get_output_opts(" ", cur_win())
 end
 
----@return QfrWhat
+---@return QfrOutputOpts
 local function replace_loclist()
-    return get_what("replace", cur_win())
+    return get_output_opts("u", cur_win())
 end
 
----@return QfrWhat
+---@return QfrOutputOpts
 local function add_loclist()
-    return get_what("add", cur_win())
+    return get_output_opts("a", cur_win())
 end
 
 local ea = Qfr_Defer_Require("mjm.error-list-stack") ---@type QfrStack

@@ -28,12 +28,7 @@ function M._del_one_list_item()
 
     local row, col = unpack(api.nvim_win_get_cursor(list_win)) ---@type integer, integer
     table.remove(list.items, row)
-    et._set_list(src_win, {
-        nr = 0,
-        items = list.items,
-        idx = list.idx,
-        user_data = { action = "replace" },
-    })
+    et._set_list(src_win, "u", { nr = 0, items = list.items, idx = list.idx })
 
     eu._protected_set_cursor(0, { row, col })
 end
@@ -70,11 +65,10 @@ function M._visual_del()
         table.remove(list.items, i)
     end
 
-    et._set_list(src_win, {
+    et._set_list(src_win, "u", {
         nr = 0,
         items = list.items,
         idx = list.idx,
-        user_data = { action = "replace" },
     })
 
     eu._protected_set_cursor(0, { vrange_4[1], col })
@@ -402,7 +396,7 @@ function M._open_item_from_list(split, finish, idx_func)
     local pattern = src_win and "ll" or "cc"
     vim.api.nvim_exec_autocmds("QuickFixCmdPre", { pattern = pattern })
 
-    et._set_list(src_win, { nr = 0, idx = idx, user_data = { action = "replace" } })
+    et._set_list(src_win, "u", { nr = 0, idx = idx })
 
     if split == "tabnew" then
         tabnew_open(list_win, item, finish, is_orphan, pattern)

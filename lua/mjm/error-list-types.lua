@@ -1,3 +1,5 @@
+local eu = Qfr_Defer_Require("mjm.error-list-util")
+
 ---@class QfrTypes
 local M = {}
 
@@ -5,15 +7,24 @@ local M = {}
 --- SEMI-CUSTOM TYPES ---
 -------------------------
 
+---@param nr integer|"$"|nil
+---@param optional boolean
+---@return nil
+function M._validate_list_nr(nr, optional)
+    vim.validate("optional", optional, "boolean", true)
+
+    vim.validate("nr", nr, { "number", "string" }, optional)
+    if type(nr) == "number" then M._validate_uint(nr) end
+    if type(nr) == "string" then
+        vim.validate("nr", nr, function()
+            return nr == "$"
+        end)
+    end
+end
+
 --- PR: The built-in what annotation does not contain the user_data field
---- NOTE: Handling the "$" nr value adds complexity. Disallow here
---- NOTE: Similarly, don't create a custom annotation for "$" idx values
---- NOTE: Because what tables are frequently passed down through function chains, require nr at
----     each validation step rather than have to reason about how functions down the chain
----     handle nil values
 
 ---@class QfrWhat : vim.fn.setqflist.what
----@field nr integer
 ---@field user_data? any
 
 ---@param what QfrWhat
@@ -26,7 +37,6 @@ function M._validate_what(what)
     M._validate_uint(what.id, true)
     M._validate_uint(what.idx, true)
     vim.validate("what.items", what.items, "table", true)
-    local eu = require("mjm.error-list-util")
     if eu._get_g_var("qf_rancher_debug_assertions") and type(what.items) == "table" then
         for _, item in ipairs(what.items) do
             M._validate_list_item(item)
@@ -36,6 +46,7 @@ function M._validate_what(what)
     M._validate_list(what.lines, { optional = true, type = "string" })
 
     vim.validate("what.nr", what.nr, { "number", "string" }, true)
+    ---@diagnostic disable-next-line: param-type-mismatch
     if type(what.nr) == "number" then M._validate_uint(what.nr) end
     if type(what.nr) == "string" then
         vim.validate("what.nr", what.nr, function()
@@ -48,22 +59,14 @@ function M._validate_what(what)
     if type(what.user_data) == "table" then M._validate_user_data(what.user_data) end
 end
 
----@class QfRancherUserData
----@field action? QfrAction
+---@class QfrUserData
 ---@field list_item_type? string
----@field src_win? integer
----@field sort_func? QfRancherSortPredicate
 
----@param user_data QfRancherUserData
+---@param user_data QfrUserData
 ---@return nil
 function M._validate_user_data(user_data)
     vim.validate("user_data", user_data, "table")
-    vim.validate("user_data.action", user_data.action, "string", true)
-    if type(user_data.action) == "string" then M._validate_action(user_data.action) end
-
     vim.validate("user_data.list_item_type", user_data.list_item_type, "string", true)
-    vim.validate("user_data.src_win", user_data.src_win, "number", true)
-    vim.validate("user_data.sort_func", user_data.sort_func, "callable", true)
 end
 
 -- LOW: Add validation for win config
@@ -181,7 +184,7 @@ function M._validate_list(list, opts)
 
     vim.validate("list", list, vim.islist, "Must be a valid list")
 
-    if opts.type and require("mjm.error-list-util")._get_g_var("qf_rancher_debug_assertions") then
+    if opts.type and eu._get_g_var("qf_rancher_debug_assertions") then
         vim.validate("list", list, function()
             for _, value in ipairs(list) do
                 if type(value) ~= opts.type then return false end
@@ -354,6 +357,39 @@ end
 -------------------------------
 --- CUSTOM TYPES -- GENERAL ---
 -------------------------------
+
+-- TODO: Rename this
+---@alias QfrRealAction "a"|"f"|"r"|"u"|" "
+
+-- TODO: Test if a double space produces a new cmd arg
+-- DOCUMENT: new is the default for cmds, can add another action to replace
+
+-- TODO: rename this too
+M._real_actions = { "a", "f", "r", "u", " " } ---@type string[]
+M._default_real_action = " " ---@type string
+
+-- TODO: Rename this
+
+---@param action QfrRealAction
+---@return nil
+function M._validate_real_action(action)
+    vim.validate("action", action, "string")
+    vim.validate("action", action, function()
+        return vim.tbl_contains(M._real_actions, action)
+    end)
+end
+
+---@class QfrOutputOpts
+---@field src_win integer|nil
+---@field action QfrRealAction
+---@field what QfrWhat
+
+function M._validate_output_opts(output_opts)
+    vim.validate("output_opts", output_opts, "table")
+    M._validate_win(output_opts.src_win, true)
+    M._validate_real_action(output_opts.action)
+    M._validate_what(output_opts.what)
+end
 
 ---@alias QfrAction "new"|"replace"|"add"
 
@@ -615,6 +651,7 @@ end
 function M._validate_system_opts(system_opts)
     vim.validate("system_opts", system_opts, "table")
 
+    -- TODO: valdate list
     vim.validate("system_opts.cmd_parts", system_opts.cmd_parts, "table", true)
     vim.validate("system_opts.sync", system_opts.sync, "boolean", true)
     vim.validate("system_opts.timeout", system_opts.timeout, "number", true)

@@ -67,13 +67,13 @@ end
 ---@param diag_opts QfrDiagOpts Options dict:
 ---- filter: (string) "min", "only", or "top" severity
 ---- level: vim.diagnostic.Severity
----@param what QfrWhat
+---@param output_opts QfrOutputOpts
 ---@return nil
-function Diags.diags_to_list(diag_opts, what)
+function Diags.diags_to_list(diag_opts, output_opts)
     ey._validate_diag_opts(diag_opts)
-    ey._validate_what(what)
+    ey._validate_output_opts(output_opts)
 
-    local src_win = what.user_data.src_win ---@type integer
+    local src_win = output_opts.src_win ---@type integer
     if src_win and not eu._valid_win_for_loclist(src_win) then return end
 
     local buf = src_win and api.nvim_win_get_buf(src_win) or nil ---@type integer|nil
@@ -97,13 +97,13 @@ function Diags.diags_to_list(diag_opts, what)
     if diag_opts.filter == "top" then raw_diags = filter_diags_top_severity(raw_diags) end
     local converted_diags = vim.tbl_map(convert_diag, raw_diags) ---@type vim.quickfix.entry[]
 
-    local what_set = vim.tbl_deep_extend("force", what, {
+    local what_set = vim.tbl_deep_extend("force", output_opts.what, {
         items = converted_diags,
         title = "vim.diagnostic.get() " .. diag_opts.filter .. " " .. plural,
         user_data = { sort_func = es._sort_fname_diag_asc },
     }) ---@type QfrWhat
 
-    local dest_nr = et._set_list(src_win, what_set) ---@type integer
+    local dest_nr = et._set_list(src_win, output_opts.action, what_set) ---@type integer
     if eu._get_g_var("qf_rancher_auto_open_changes") and dest_nr > 0 then
         ea._history(src_win, dest_nr, {
             always_open = true,
@@ -141,11 +141,12 @@ local function make_diag_cmd(src_win, cargs)
 
     local diag_opts = { level = level_map[level], filter = sev_filter } ---@type QfrDiagOpts
 
-    local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action) ---@type QfrAction
-    ---@type QfrWhat
-    local what = { nr = cargs.count, user_data = { action = action, src_win = src_win } }
+    ---@type QfrRealAction
+    local action = eu._check_cmd_arg(fargs, ey._real_actions, ey._default_real_action)
+    ---@type QfrOutputOpts
+    local output_opts = { src_win = src_win, action = action, what = { nr = cargs.count } }
 
-    Diags.diags_to_list(diag_opts, what)
+    Diags.diags_to_list(diag_opts, output_opts)
 end
 
 ---@param cargs vim.api.keyset.create_user_command.command_args

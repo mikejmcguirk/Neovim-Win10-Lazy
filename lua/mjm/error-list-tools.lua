@@ -22,46 +22,59 @@ local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfrUtil
 -- nr values, and doing sets by qf_id would make handling new lists contrived
 
 ---@param src_win integer|nil
----@param what QfrWhat
----@return QfrWhat
-local function resolve_list_nr(src_win, what)
+---@param nr integer|"$"|nil
+---@return integer|"$"
+local function resolve_list_nr(src_win, nr)
     ey._validate_win(src_win, true)
-    ey._validate_what(what)
+    ey._validate_list_nr(nr, true)
 
-    if type(what.nr) ~= "number" then return what end
-    if what.nr == 0 then return what end
-
-    local new_what = vim.deepcopy(what, true) ---@type QfrWhat
+    if not nr then return 0 end
+    if type(nr) == "string" then return nr end
+    if nr == 0 then return nr end
 
     local max_nr = M._get_list(src_win, { nr = "$" }).nr ---@type integer
-    new_what.nr = math.min(new_what.nr, max_nr)
-
-    return new_what
+    ---@diagnostic disable-next-line: param-type-mismatch, return-type-mismatch
+    return math.min(nr, max_nr)
 end
 
+-- TODO: The close_wins behavior should be behind a g var
+-- TODO: This should be local, but need to fix the refs to it first
+
+---@param src_win integer|nil
+---@return integer
+local function del_all(src_win)
+    ey._validate_win(src_win, true)
+
+    if not src_win then
+        local result = vim.fn.setqflist({}, "f") ---@type integer
+        if result == 0 then eo._close_qfwins({ all_tabpages = true }) end
+        return result
+    end
+
+    local qf_id = vim.fn.getloclist(src_win, { id = 0 }).id ---@type integer
+    local result = vim.fn.setloclist(src_win, {}, "f") ---@type integer
+    if result == 0 then eo._close_loclists_by_qf_id(qf_id, { all_tabpages = true }) end
+    return result
+end
+
+---@param src_win integer|nil
+---@param action QfrRealAction
 ---@param what QfrWhat
 ---@return integer
-function M._set_list(src_win, what)
+function M._set_list(src_win, action, what)
+    ey._validate_win(src_win, true)
+    ey._validate_real_action(action)
     ey._validate_what(what)
-    ey._validate_action(what.user_data.action)
+
+    if action == "f" then return del_all(src_win) end
 
     local what_set = vim.deepcopy(what, true) ---@type QfrWhat
-    what_set = resolve_list_nr(src_win, what_set)
+    what_set.nr = resolve_list_nr(src_win, what_set.nr)
 
-    -- TODO: Temporary to avoid changing too much at once. Find permanent solution
-    local action_map = {
-        new = " ",
-        replace = "u",
-        add = "a",
-    }
-
-    local action = action_map[what.user_data.action] ---@type string
     local result = src_win and vim.fn.setloclist(src_win, {}, action, what_set)
         or vim.fn.setqflist({}, action, what_set)
 
-    if result == -1 then return result end
-    return src_win and vim.fn.getloclist(src_win, { nr = what_set.nr }).nr
-        or vim.fn.getqflist({ nr = what_set.nr }).nr
+    return result == -1 and result or M._get_list(src_win, { nr = what_set.nr }).nr
 end
 
 ---@param src_win integer|nil
@@ -70,20 +83,14 @@ end
 function M._get_list(src_win, what)
     ey._validate_win(src_win, true)
     vim.validate("what", what, "table")
-    vim.validate("what.nr", what.nr, function()
-        return type(what.nr) == "number" or what.nr == "$"
-    end)
 
-    ---@type integer
-    local max_nr = src_win and vim.fn.getloclist(src_win, { nr = "$" }).nr
-        or vim.fn.getqflist({ nr = "$" }).nr
+    local what_set = vim.deepcopy(what, true) ---@type QfrWhat
+    what_set.nr = resolve_list_nr(src_win, what_set.nr)
 
-    -- TODO: Might need its own validation due to different what typing
-    what.nr = what.nr == "$" and max_nr or math.min(what.nr, max_nr)
-    return src_win and vim.fn.getloclist(src_win, what) or vim.fn.getqflist(what)
+    return src_win and vim.fn.getloclist(src_win, what_set) or vim.fn.getqflist(what_set)
 end
 
----@param src_win integer
+---@param src_win integer|nil
 ---@param stack table[]
 ---@return nil
 function M._set_stack(src_win, stack)
@@ -92,14 +99,14 @@ function M._set_stack(src_win, stack)
 
     if src_win and not eu._valid_win_for_loclist(src_win) then return end
 
-    M._del_all(src_win, false)
+    M._set_list(src_win, "f", {})
 
     for _, what in ipairs(stack) do
-        M._set_list(src_win, what)
+        M._set_list(src_win, " ", what)
     end
 
     if eu._get_g_var("qf_rancher_debug_assertions") then
-        local max_nr = vim.fn.getloclist(src_win, { nr = "$" }).nr
+        local max_nr = M._get_list(src_win, { nr = "$" }).nr
         assert(#stack == max_nr)
     end
 end
@@ -145,28 +152,6 @@ function M._get_stack(src_win)
     if eu._get_g_var("qf_rancher_debug_assertions") then assert(#stack == max_nr) end
 
     return stack
-end
-
--- TODO: This should branch off from setlist, which should just take an action
-
----@param src_win integer|nil
----@param close_wins? boolean
----@return integer
-function M._del_all(src_win, close_wins)
-    ey._validate_win(src_win, true)
-    vim.validate("close_wins", close_wins, "boolean", true)
-
-    if not src_win then
-        local result = vim.fn.setqflist({}, "f") ---@type integer
-        if result == 0 and close_wins then eo._close_qfwins({ all_tabpages = true }) end
-        return result
-    end
-
-    local qf_id = vim.fn.getloclist(src_win, { id = 0 }).id ---@type integer
-    local result = vim.fn.setloclist(src_win, {}, "f") ---@type integer
-    if result == -1 then return result end
-    if close_wins then eo._close_loclists_by_qf_id(qf_id, { all_tabpages = true }) end
-    return result
 end
 
 return M

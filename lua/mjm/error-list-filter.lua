@@ -14,18 +14,18 @@ local Filter = {}
 ---@param filter_info QfrFilterInfo
 ---@param filter_opts QfrFilterOpts
 ---@param input_opts QfrInputOpts
----@param what QfrWhat
+---@param output_opts QfrOutputOpts
 ---@return nil
-local function filter_wrapper(filter_info, filter_opts, input_opts, what)
+local function filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
     ey._validate_filter_info(filter_info)
     ey._validate_filter_opts(filter_opts)
     ey._validate_input_opts(input_opts)
-    ey._validate_what(what)
+    ey._validate_output_opts(output_opts)
 
-    local src_win = what.user_data.src_win ---@type integer|nil
-    if src_win and not eu._valid_win_for_loclist(what.user_data.src_win) then return end
+    local src_win = output_opts.src_win ---@type integer|nil
+    if src_win and not eu._valid_win_for_loclist(src_win) then return end
 
-    local cur_list = et._get_list(src_win, { nr = what.nr, all = true }) ---@type table
+    local cur_list = et._get_list(src_win, { nr = output_opts.what.nr, all = true }) ---@type table
     if cur_list.size == 0 then
         api.nvim_echo({ { "No entries to filter", "" } }, false, {})
         return
@@ -59,13 +59,13 @@ local function filter_wrapper(filter_info, filter_opts, input_opts, what)
         return predicate(t, keep, { pattern = pattern, regex = regex })
     end, cur_list.items) ---@type vim.quickfix.entry[]
 
-    local what_set = vim.tbl_deep_extend("force", what, {
+    local what_set = vim.tbl_deep_extend("force", output_opts.what, {
         idx = math.min(#new_items, cur_list.idx),
         items = new_items,
         title = filter_info.name .. " filter: /" .. pattern,
     }) ---@type QfrWhat
 
-    local dest_nr = et._set_list(src_win, what_set) ---@type integer
+    local dest_nr = et._set_list(src_win, output_opts.action, what_set) ---@type integer
     if eu._get_g_var("qf_rancher_auto_open_changes") then
         ea._history(what_set.user_data.src_win, dest_nr, {
             always_open = true,
@@ -304,11 +304,11 @@ end
 ---@param name string
 ---@param filter_opts QfrFilterOpts
 ---@param input_opts QfrInputOpts
----@param what QfrWhat
+---@param output_opts QfrOutputOpts
 ---@return nil
-function Filter.filter(name, filter_opts, input_opts, what)
+function Filter.filter(name, filter_opts, input_opts, output_opts)
     if filters[name] then
-        filter_wrapper(filters[name], filter_opts, input_opts, what)
+        filter_wrapper(filters[name], filter_opts, input_opts, output_opts)
     else
         api.nvim_echo({ { "Invalid filter", "ErrorMsg" } }, true, { err = true })
     end
@@ -335,11 +335,12 @@ local function filter_cmd(cargs, src_win)
     local pattern = eu._find_cmd_pattern(fargs) ---@type string|nil
     local input_opts = { input_type = input_type, pattern = pattern } ---@type QfrInputOpts
 
-    local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action) ---@type QfrAction
-    ---@type QfrWhat
-    local what = { nr = cargs.count, user_data = { action = action, src_win = src_win } }
+    ---@type QfrRealAction
+    local action = eu._check_cmd_arg(fargs, ey._real_actions, ey._default_real_action)
+    ---@type QfrOutputOpts
+    local output_opts = { src_win = src_win, action = action, what = { nr = cargs.count } }
 
-    filter_wrapper(filters[filter_name], filter_opts, input_opts, what)
+    filter_wrapper(filters[filter_name], filter_opts, input_opts, output_opts)
 end
 
 -- DOCUMENT: The documentation for the cmds and the functions should be mixed together along

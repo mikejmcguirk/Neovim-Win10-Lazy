@@ -16,17 +16,17 @@ local api = vim.api
 
 ---@param sort_info QfRancherSortInfo
 ---@param sort_opts QfRancherSortOpts
----@param what QfrWhat
+---@param output_opts QfrOutputOpts
 ---@return nil
-local function sort_wrapper(sort_info, sort_opts, what)
+local function sort_wrapper(sort_info, sort_opts, output_opts)
     ey._validate_sort_info(sort_info)
     ey._validate_sort_opts(sort_opts)
-    ey._validate_what(what)
+    ey._validate_output_opts(output_opts)
 
-    local src_win = what.user_data.src_win ---@type integer|nil
-    if src_win and not eu._valid_win_for_loclist(what.user_data.src_win) then return end
+    local src_win = output_opts.src_win ---@type integer|nil
+    if src_win and not eu._valid_win_for_loclist(src_win) then return end
 
-    local cur_list = et._get_list(src_win, { nr = what.nr, all = true }) ---@type table
+    local cur_list = et._get_list(src_win, { nr = output_opts.what.nr, all = true }) ---@type table
     if cur_list.size == 0 then
         vim.api.nvim_echo({ { "Not enough entries to sort", "" } }, false, {})
         return
@@ -41,6 +41,8 @@ local function sort_wrapper(sort_info, sort_opts, what)
     ---@type QfRancherSortPredicate
     local predicate = sort_opts.dir == "asc" and sort_info.asc_func or sort_info.desc_func
     local new_items = vim.deepcopy(cur_list.items, false) ---@type vim.quickfix.entry[]
+    local what = output_opts.what ---@type QfrWhat
+    -- TODO: This combining logic should be in tools
     local what_set = vim.tbl_deep_extend("force", what, {
         context = type(cur_list.context) == "table" and cur_list.context or what.context,
         efm = cur_list.efm or what.efm,
@@ -52,7 +54,7 @@ local function sort_wrapper(sort_info, sort_opts, what)
         user_data = { sort_func = predicate },
     }) ---@type QfrWhat
 
-    local dest_nr = et._set_list(src_win, what_set) ---@type integer
+    local dest_nr = et._set_list(src_win, output_opts.action, what_set) ---@type integer
     if eu._get_g_var("qf_rancher_auto_open_changes") then
         ea._history(src_win, dest_nr, {
             always_open = true,
@@ -356,15 +358,15 @@ end
 --- - is_loclist? boolean - Whether to filter against a location list
 ---@param name string
 ---@param sort_opts QfRancherSortOpts
----@param what QfrWhat
+---@param output_opts QfrOutputOpts
 ---@return nil
-function Sort.sort(name, sort_opts, what)
+function Sort.sort(name, sort_opts, output_opts)
     local sort_info = sorts[name] ---@type QfRancherSortInfo
     if not sort_info then
         vim.api.nvim_echo({ { "Invalid sort", "ErrorMsg" } }, true, { err = true })
     end
 
-    sort_wrapper(sort_info, sort_opts, what)
+    sort_wrapper(sort_info, sort_opts, output_opts)
 end
 
 ---@param src_win integer|nil
@@ -383,12 +385,12 @@ local function sort_cmd(src_win, cargs)
 
     local dir = eu._check_cmd_arg(fargs, { "asc", "desc" }, "asc") ---@type QfRancherSortDir
 
-    ---@type QfrAction
-    local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action)
-    ---@type QfrWhat
-    local what = { nr = 0, user_data = { action = action, src_win = src_win } }
+    ---@type QfrRealAction
+    local action = eu._check_cmd_arg(fargs, ey._real_actions, ey._default_real_action)
+    ---@type QfrOutputOpts
+    local output_opts = { src_win = src_win, action = action, what = { nr = cargs.count } }
 
-    Sort.sort(sort_name, { dir = dir }, what)
+    Sort.sort(sort_name, { dir = dir }, output_opts)
 end
 
 ---@param cargs vim.api.keyset.create_user_command.command_args

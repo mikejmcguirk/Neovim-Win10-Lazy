@@ -196,7 +196,7 @@ function M._del(src_win, count)
 
     -- TODO: Need a better way to handle the action
     local result =
-        et._set_list(src_win, { nr = count, lines = {}, user_data = { action = "replace" } })
+        et._set_list(src_win, "r", { nr = count, lines = {}, user_data = { action = "replace" } })
     if result == -1 or result == 0 then return end
 
     local cur_list_nr = et._get_list(src_win, { nr = 0 }).nr ---@type integer
@@ -230,13 +230,13 @@ end
 
 ---@return nil
 function M._q_del_all()
-    et._del_all(nil, true)
+    et._set_list(nil, "f", {})
 end
 
----@param win integer
+---@param src_win integer
 ---@return nil
-function M._l_del_all(win)
-    et._del_all(win, true)
+function M._l_del_all(src_win)
+    et._set_list(src_win, "f", {})
 end
 
 -- ---@param win integer

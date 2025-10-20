@@ -102,16 +102,16 @@ local get_full_parts = {
 ---@param grep_info QfRancherGrepInfo
 ---@param input_opts QfrInputOpts
 ---@param system_opts QfrSystemOpts
----@param what QfrWhat
+---@param output_opts QfrOutputOpts
 ---@return nil
-local function do_grep(grep_info, input_opts, system_opts, what)
+local function do_grep(grep_info, input_opts, system_opts, output_opts)
     ey._validate_grep_info(grep_info)
     ey._validate_system_opts(system_opts)
     ey._validate_input_opts(input_opts)
-    ey._validate_what(what)
+    ey._validate_output_opts(output_opts)
 
-    local src_win = what.user_data.src_win ---@type integer|nil
-    if src_win and not eu._valid_win_for_loclist(what.user_data.src_win) then return end
+    local src_win = output_opts.src_win ---@type integer|nil
+    if src_win and not eu._valid_win_for_loclist(src_win) then return end
 
     local locations = grep_info.location_func() ---@type string[]
     if #locations < 1 then return end
@@ -137,13 +137,14 @@ local function do_grep(grep_info, input_opts, system_opts, what)
     local full_system_opts = vim.deepcopy(system_opts, true) ---@type QfrSystemOpts
     full_system_opts.cmd_parts = grep_parts
 
-    local what_set = vim.deepcopy(what, true) ---@type QfrWhat
-    local title_parts = base_parts[grepprg] ---@type string[]
-    what_set.title = table.concat(title_parts, " ")
-    what_set.user_data.list_item_type = grep_info.list_item_type
-        or what_set.user_data.list_item_type
+    local sys_output_opts = vim.deepcopy(output_opts, true) ---@type QfrOutputOpts
+    local what = sys_output_opts.what ---@type QfrWhat
+    what.title = table.concat(base_parts[grepprg], " ")
+    what.user_data = what.user_data or {}
+    what.user_data.list_item_type = grep_info.list_item_type or what.user_data.list_item_type
 
-    ee.system_do(full_system_opts, what_set)
+    sys_output_opts.what = what
+    ee.system_do(full_system_opts, sys_output_opts)
 end
 
 -- ====================
@@ -266,12 +267,14 @@ end
 ---@param name string
 ---@param input_opts QfrInputOpts
 ---@param system_opts QfrSystemOpts
----@param what QfrWhat
+---@param output_opts QfrOutputOpts
 ---@return nil
-function Grep.grep(name, input_opts, system_opts, what)
+function Grep.grep(name, input_opts, system_opts, output_opts)
+    vim.validate("name", name, "string")
+
     local grep_info = greps[name] ---@type QfRancherGrepInfo|nil
     if grep_info then
-        do_grep(grep_info, input_opts, system_opts, what)
+        do_grep(grep_info, input_opts, system_opts, output_opts)
     else
         local chunk = { "Grep " .. name .. " is not registered", "ErrorMsg" }
         api.nvim_echo({ chunk }, true, { err = true })
@@ -305,12 +308,12 @@ local function grep_cmd(src_win, cargs)
     ---@type QfrSystemOpts
     local system_opts = { sync = sync, timeout = ey._default_timeout }
 
-    ---@type QfrAction
-    local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action)
-    ---@type QfrWhat
-    local what = { nr = cargs.count, user_data = { action = action, src_win = src_win } }
+    ---@type QfrRealAction
+    local action = eu._check_cmd_arg(fargs, ey._real_actions, ey._default_real_action)
+    ---@type QfrOutputOpts
+    local output_opts = { src_win = src_win, action = action, what = { nr = cargs.count } }
 
-    Grep.grep(grep_name, input_opts, system_opts, what)
+    Grep.grep(grep_name, input_opts, system_opts, output_opts)
 end
 
 -- DOCUMENT: The documentation for the cmds and the functions should be mixed together along

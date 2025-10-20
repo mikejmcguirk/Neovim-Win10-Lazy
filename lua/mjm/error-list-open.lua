@@ -55,7 +55,7 @@ local function resolve_height_for_list(src_win, height)
 
     if height then return height end
 
-    local size = et._get_list(src_win, { size = 0 }).size ---@type integer
+    local size = et._get_list(src_win, { nr = 0, size = 0 }).size ---@type integer
     if not size then return QFR_MAX_HEIGHT end
 
     size = math.max(size, 1)
@@ -115,7 +115,6 @@ function M._open_qflist(opts)
 
     local cur_win = api.nvim_get_current_win() ---@type integer
     local tabpage = api.nvim_win_get_tabpage(cur_win) ---@type integer
-    local eu = require("mjm.error-list-util") ---@type QfrUtil
     local list_win = eu._get_qf_win({ tabpage = tabpage }) ---@type integer|nil
 
     if list_win then return handle_open_list_win(list_win, opts) end
