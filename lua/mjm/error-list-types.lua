@@ -34,7 +34,15 @@ function M._validate_what(what)
     end
 
     M._validate_list(what.lines, { optional = true, type = "string" })
-    M._validate_uint(what.nr)
+
+    vim.validate("what.nr", what.nr, { "number", "string" }, true)
+    if type(what.nr) == "number" then M._validate_uint(what.nr) end
+    if type(what.nr) == "string" then
+        vim.validate("what.nr", what.nr, function()
+            return what.nr == "$"
+        end)
+    end
+
     vim.validate("what.quickfixtextfunc", what.quickfixtextfunc, "callable", true)
     vim.validate("what.title", what.title, "string", true)
     if type(what.user_data) == "table" then M._validate_user_data(what.user_data) end

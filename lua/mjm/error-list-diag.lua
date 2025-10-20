@@ -35,6 +35,9 @@ end
 local severity_map = ey._severity_map ---@type table<integer, string>
 
 -- LOW: Come up with a way to specify a custom conversion function
+-- MID: The core's add function in get_diagnostics clamps the values to the buf line count
+-- Awkward here because this is outlined, and maybe not necessary, but helps with safety against
+-- stale diags
 
 ---@param d vim.Diagnostic
 ---@return vim.quickfix.entry
@@ -165,3 +168,21 @@ return Diags
 
 -- MID: Diags by diagnostic producer. Could make an opt for maps + cmds. Or like if someone wants
 -- to prompt for the source and have that be fed in
+-- More broadly, should include namespacing in the options here. Need to look into how this
+-- relates to lsp specific pulls. Would be better to pull from an LSP specific namespace than to
+-- have to manually check the producer's source
+
+-- NOTES ON built-ins
+-- vim.diagnostic.setqflist immediately rolls into the set_list helper function
+-- (it uses a setloclist true/false value, with each top level function going into it)
+-- setqflist - send all diags to qflist
+-- toqflist - convert a list of diags to list items
+-- Because of my error queries and custom formatting, don't integrate the built-ins into my code,
+-- but we do want to check them for reference
+-- setqflist uses cur_buf for loclist as we would expect
+-- So the qf_ids for qflists are unique to each list? Because I would do it based on stack_nr
+-- The built-in title is just "Diagnostics"
+-- So the overall idea here is we want a "smartnew" action that checks for a matching title. Could
+-- do based on context, but feels better to use Nvim's conventions here
+--
+-- Notes on setqflist

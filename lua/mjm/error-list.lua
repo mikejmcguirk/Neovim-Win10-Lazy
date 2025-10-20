@@ -1,6 +1,6 @@
--------------------------
---- GLOBAL UTILS/VARS ---
--------------------------
+-- =======================
+-- == GLOBAL UTILS/VARS ==
+-- =======================
 
 --- https://github.com/tjdevries/lazy-require.nvim/blob/master/lua/lazy-require.lua
 ---@param require_path string
@@ -17,13 +17,11 @@ function _G.Qfr_Defer_Require(require_path)
     })
 end
 
--- NOTE: If you set an impossible height, Nvim will clamp it to the available area - 1
--- This value is for aesthetic/sanity purposes
 _G.QFR_MAX_HEIGHT = 10
 
------------------------
--- Config/Validation --
------------------------
+-- ============
+-- == CONFIG ==
+-- ============
 
 --- LOW: Add a g:var to handle closing behavior when lists are deleted
 
@@ -179,6 +177,9 @@ end
 --- TODO: ---
 -------------
 
+-- It will be necessary to go through everything and allow for the "$" nrs to be used for stack
+-- and list nrs. It is... silly to put out the what based API but then also tell people not to
+-- use it
 -- I am wondering if, in the name of sanity, it would be best to limit the defaults to a sane
 -- subset of what the plugin can do. So like for sort, just do replace
 -- The builtins have an interesting thing for diags where it scans for a name and if it

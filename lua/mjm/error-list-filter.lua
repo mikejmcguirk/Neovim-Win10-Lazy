@@ -368,6 +368,8 @@ return Filter
 -- - With this, make an additional entry validation to check for valid errors only
 -- MID: Make a filter for dotfiles/hidden files
 -- MID: do qkie and so on syntactic sugar mappings for diagnostics
+-- MID: Re-implement the view saving/restoration that calculates the new row based on how many
+-- were removed above the current one
 
 -- MID: Depending on how some of the more niche sorts are used, add different default sorts to the
 --     filter_opts field

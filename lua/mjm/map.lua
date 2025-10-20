@@ -135,6 +135,7 @@ Autocmd("TabNew", {
     once = true,
     callback = function()
         -- Leaves ctrl-tab/ctrl-shift-tab open
+        -- TODO: Saw issue where these were not advancing/going back correctly
         Map("n", "<tab>", "gt")
         Map("n", "<S-tab>", "gT")
 

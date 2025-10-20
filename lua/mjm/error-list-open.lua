@@ -1,6 +1,8 @@
 ---@class QfRancherOpen
 local M = {}
 
+local et = Qfr_Defer_Require("mjm.error-list-tools") ---@type QfrTools
+local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfrUtil
 local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfrTypes
 
 local api = vim.api
@@ -26,9 +28,7 @@ end
 ---@return vim.fn.winsaveview.ret[]
 local function get_views(wins)
     local views = {} ---@type vim.fn.winsaveview.ret[]
-    if require("mjm.error-list-util")._get_g_var("qf_rancher_always_save_views") == false then
-        return views
-    end
+    if eu._get_g_var("qf_rancher_always_save_views") == false then return views end
 
     ---@type string
     local splitkeep = api.nvim_get_option_value("splitkeep", { scope = "global" })
@@ -50,12 +50,12 @@ end
 ---@param height integer|nil
 ---@return integer
 local function resolve_height_for_list(src_win, height)
-    require("mjm.error-list-types")._validate_win(src_win, true)
+    ey._validate_win(src_win, true)
     vim.validate("height", height, "number", true)
 
     if height then return height end
 
-    local size = require("mjm.error-list-tools")._get_list_size(src_win, 0) ---@type integer|nil
+    local size = et._get_list(src_win, { size = 0 }).size ---@type integer
     if not size then return QFR_MAX_HEIGHT end
 
     size = math.max(size, 1)
@@ -90,7 +90,6 @@ local function handle_open_list_win(list_win, opts)
     if opts.always_resize then
         M._resize_list_win(list_win, opts.height)
     else
-        local eu = require("mjm.error-list-util")
         eu._checked_echo("List win is already open", opts.print_errs, false)
     end
 

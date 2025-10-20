@@ -1,6 +1,7 @@
 ---@class QfRancherNav
 local M = {}
 
+local et = Qfr_Defer_Require("mjm.error-list-tools") ---@type QfrTools
 local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfrUtil
 local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfrTypes
 
@@ -140,8 +141,7 @@ local function goto_specific_idx(src_win, count)
     ey._validate_win(src_win, true)
     ey._validate_uint(count)
 
-    local et = require("mjm.error-list-tools") ---@type QfrTools
-    local size = et._get_list_size(src_win, 0) ---@type integer|nil
+    local size = et._get_list(src_win, { size = 0 }).size ---@type integer
     if not size or size < 1 then return nil end
 
     local cmd = src_win and "ll" or "cc" ---@type string
@@ -162,8 +162,8 @@ local function goto_specific_idx(src_win, count)
         return
     end
 
-    local cur_idx = et._get_list_idx(src_win, 0) ---@type integer|nil
-    if not cur_idx then return nil end
+    local cur_idx = et._get_list(src_win, { idx = 0 }).idx ---@type integer
+    if cur_idx < 1 then return end
 
     goto_list_entry(cur_idx, cmd, {})
 end
@@ -204,7 +204,7 @@ end
 ---@param cmd string
 ---@return nil
 local function bookends(count, cmd)
-    require("mjm.error-list-types")._validate_uint(count)
+    ey._validate_uint(count)
     vim.validate("cmd", cmd, "string")
 
     local adj_count = count >= 1 and count or nil ---@type integer|nil
@@ -289,8 +289,7 @@ local function file_nav_wrap(src_win, count, cmd, backup_cmd)
     vim.validate("cmd", cmd, "string")
     vim.validate("backup_cmd", backup_cmd, "string")
 
-    local et = require("mjm.error-list-tools") ---@type QfrTools
-    local size = et._get_list_size(src_win, 0) ---@type integer|nil
+    local size = et._get_list(src_win, { size = 0 }).size ---@type integer
     if not size or size < 1 then return nil end
 
     local adj_count = eu._count_to_count1(count) ---@type integer

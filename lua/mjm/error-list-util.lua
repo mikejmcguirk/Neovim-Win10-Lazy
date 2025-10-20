@@ -374,11 +374,9 @@ end
 ---@param wipeout boolean
 ---@return nil
 function M._pclose_and_rm(win, force, wipeout)
-    -- The individual functions handle validation
     local buf = M._pwin_close(win, force)
     if buf > 0 then
-        -- MAYBE: This could be done when idle, but I want to see that play out in my personal
-        -- config first
+        -- MAYBE: Do when idle
         vim.schedule(function()
             if #fn.win_findbuf(buf) == 0 then M._pbuf_rm(buf, force, wipeout) end
         end)

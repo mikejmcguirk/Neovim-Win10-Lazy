@@ -37,20 +37,20 @@ local function change_history(src_win, count, arithmetic)
     ey._validate_uint(count)
     vim.validate("arithmetic", arithmetic, "callable")
 
-    local stack_len = et._get_max_list_nr(src_win) ---@type integer
+    local stack_len = et._get_list(src_win, { nr = "$" }).nr ---@type integer
     if stack_len < 1 then
         vim.api.nvim_echo({ { "Stack is empty", "" } }, false, {})
         return
     end
 
-    local cur_list_nr = et._get_cur_list_nr(src_win) ---@type integer
+    local cur_list_nr = et._get_list(src_win, { nr = 0 }).nr ---@type integer
     local count1 = eu._count_to_count1(count) ---@type integer
     local new_list_nr = arithmetic(cur_list_nr, count1, 1, stack_len) ---@type integer
 
     local cmd = src_win and "lhistory" or "chistory" ---@type string
     vim.api.nvim_cmd({ cmd = cmd, count = new_list_nr }, {})
     if eu._get_g_var("qf_rancher_debug_assertions") then
-        local list_nr_after = et._get_cur_list_nr(src_win)
+        local list_nr_after = et._get_list(src_win, { nr = 0 }).nr ---@type integer
         assert(new_list_nr == list_nr_after)
     end
 
@@ -131,13 +131,13 @@ function M._history(src_win, count, opts)
     ey._validate_uint(count)
     ey._validate_history_opts(opts)
 
-    local stack_len = et._get_max_list_nr(src_win) ---@type integer
+    local stack_len = et._get_list(src_win, { nr = "$" }).nr ---@type integer
     if stack_len < 1 then
         vim.api.nvim_echo({ { "Stack is empty", "" } }, false, {})
         return
     end
 
-    local cur_list_nr = et._get_cur_list_nr(src_win) ---@type integer
+    local cur_list_nr = et._get_list(src_win, { nr = 0 }).nr ---@type integer
     local cmd = src_win and "lhistory" or "chistory" ---@type string
     local default = opts.default == "current" and cur_list_nr or nil ---@type integer|nil
     local adj_count = count > 0 and math.min(count, stack_len) or default ---@type integer|nil
@@ -145,7 +145,7 @@ function M._history(src_win, count, opts)
     vim.api.nvim_cmd({ cmd = cmd, count = adj_count, mods = { silent = opts.silent } }, {})
     if eu._get_g_var("qf_rancher_debug_assertions") then
         if adj_count then
-            local list_nr_after = et._get_cur_list_nr(src_win)
+            local list_nr_after = et._get_list(src_win, { nr = 0 }).nr
             assert(adj_count == list_nr_after)
         end
     end
@@ -194,10 +194,12 @@ function M._del(src_win, count)
     ey._validate_win(src_win, true)
     ey._validate_uint(count)
 
-    local result = et._del_list(src_win, count)
+    -- TODO: Need a better way to handle the action
+    local result =
+        et._set_list(src_win, { nr = count, lines = {}, user_data = { action = "replace" } })
     if result == -1 or result == 0 then return end
 
-    local cur_list_nr = et._get_cur_list_nr(src_win)
+    local cur_list_nr = et._get_list(src_win, { nr = 0 }).nr ---@type integer
     if eu._get_g_var("qf_rancher_debug_assertions") then
         local target = count == 0 and cur_list_nr or count ---@type integer
         assert(result == target)
