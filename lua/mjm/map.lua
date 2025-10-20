@@ -554,27 +554,25 @@ local function map_on_bufreadpre()
         visual_move({ upward = true })
     end)
 
-    -- TODO: Doesn't always properly re-select
+    ---@param up? boolean
+    ---@return nil
     local function add_blank_visual(up)
-        api.nvim_set_option_value("lz", true, { scope = "global" })
+        local vrange4 = ut.get_vrange4() ---@type Range4|nil
+        if not vrange4 then return end
 
-        local vcount1 = vim.v.count1
-        vim.cmd("norm! \27") -- Update '< and '>
-
-        local mark = up and "<" or ">"
-        local row, col = unpack(api.nvim_buf_get_mark(0, mark))
-        row = up and row or row + 1
-        local new_lines = {}
-        for _ = 1, vcount1 do
-            table.insert(new_lines, "")
+        local row = up and vrange4[1] or vrange4[3] + 1
+        local new_lines = {} ---@type string[]
+        for _ = 1, vim.v.count1 do
+            new_lines[#new_lines + 1] = ""
         end
 
+        -- LOW: Currently exiting and re-selecting visual mode because new lines upward pins the
+        -- visual selection to the new lines. It should be possible to calculate the adjustment of
+        -- the selection without actually leaving visual mode
+        api.nvim_set_option_value("lz", true, { scope = "global" })
+        Cmd({ cmd = "norm", args = { "\27" }, bang = true }, {})
         api.nvim_buf_set_lines(0, row - 1, row - 1, false, new_lines)
-
-        local new_row = up and row + #new_lines or row - 1
-        api.nvim_buf_set_mark(0, mark, new_row, col, {})
-        api.nvim_cmd({ cmd = "norm", args = { "gv" }, bang = true }, {})
-
+        Cmd({ cmd = "norm", args = { "gv" }, bang = true }, {})
         api.nvim_set_option_value("lz", false, { scope = "global" })
     end
 
