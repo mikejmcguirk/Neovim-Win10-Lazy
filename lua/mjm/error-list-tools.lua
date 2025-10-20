@@ -1,25 +1,9 @@
----@class QfrTools
-local M = {}
-
 local eo = Qfr_Defer_Require("mjm.error-list-open") ---@type QfRancherOpen
 local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfrTypes
 local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfrUtil
 
--- TODO: Replace my bespoke actions with "a"/"u"|"r"/" "
--- There will still need to be translation, but it will allow things to better conform with the
--- built-in data types, making the API more easily grokkable
---
--- We need to think through the actual conditions:
--- a qf_id for a quickfix set ties to a specific list
--- a non-zero nr value ties to a specific list for qf and loclists
--- "$" is the highest list_nr
--- 0 is the current list
--- For qflists, the doc says to prefer ID rather than nr
--- But looking at the code, qf_ids are converted to numbers, and this would create an inconsistency
--- with loclists, so, iunno
-
--- NOTE: While the docs say to prefer qf_id for setting qflists, the code resolves qf_id values to
--- nr values, and doing sets by qf_id would make handling new lists contrived
+---@class QfrTools
+local M = {}
 
 ---@param src_win integer|nil
 ---@param nr integer|"$"|nil
@@ -29,16 +13,12 @@ local function resolve_list_nr(src_win, nr)
     ey._validate_list_nr(nr, true)
 
     if not nr then return 0 end
-    if type(nr) == "string" then return nr end
-    if nr == 0 then return nr end
+    if nr == 0 or type(nr) == "string" then return nr end
 
     local max_nr = M._get_list(src_win, { nr = "$" }).nr ---@type integer
     ---@diagnostic disable-next-line: param-type-mismatch, return-type-mismatch
     return math.min(nr, max_nr)
 end
-
--- TODO: The close_wins behavior should be behind a g var
--- TODO: This should be local, but need to fix the refs to it first
 
 ---@param src_win integer|nil
 ---@return integer
@@ -47,13 +27,19 @@ local function del_all(src_win)
 
     if not src_win then
         local result = vim.fn.setqflist({}, "f") ---@type integer
-        if result == 0 then eo._close_qfwins({ all_tabpages = true }) end
+        if result == 0 and eu._get_g_var("qf_rancher_close_on_stack_clear") then
+            eo._close_qfwins({ all_tabpages = true })
+        end
+
         return result
     end
 
     local qf_id = vim.fn.getloclist(src_win, { id = 0 }).id ---@type integer
     local result = vim.fn.setloclist(src_win, {}, "f") ---@type integer
-    if result == 0 then eo._close_loclists_by_qf_id(qf_id, { all_tabpages = true }) end
+    if result == 0 and eu._get_g_var("qf_rancher_close_on_stack_clear") then
+        eo._close_loclists_by_qf_id(qf_id, { all_tabpages = true })
+    end
+
     return result
 end
 
@@ -155,6 +141,10 @@ function M._get_stack(src_win)
 end
 
 return M
+
+-- TODO: Handle "smartnew" option based on title
+-- Diagnostics is "Diagnostics"
+-- If I do grep, I get ":rg --vimgrep -uu  require"
 
 -- TODO: Docs
 -- TODO: Tests

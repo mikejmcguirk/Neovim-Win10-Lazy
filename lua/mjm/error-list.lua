@@ -46,7 +46,8 @@ _G._QFR_G_VAR_MAP = {
     -- - If this is off and splitkeep is set for cursor, you get Nvim default behavior
     qf_rancher_always_save_views = { { "boolean" }, true },
     qf_rancher_debug_assertions = { { "boolean" }, false },
-    qf_rancher_del_all_if_empty = { { "boolean" }, true },
+    qf_rancher_close_on_stack_clear = { { "boolean" }, true },
+    -- qf_rancher_del_all_if_empty = { { "boolean" }, true },
 
     qf_rancher_ftplugin_demap = { { "boolean" }, true },
     qf_rancher_ftplugin_keymap = { { "boolean" }, true },
