@@ -54,8 +54,9 @@ function M._visual_del()
 
     local cur = fn.getpos(".") ---@type table
     local fin = fn.getpos("v") ---@type table
-    ---@type table
-    local region = fn.getregionpos(cur, fin, { type = mode, exclusive = false })
+    local selection = api.nvim_get_option_value("selection", { scope = "global" }) ---@type string
+    local exclusive = selection == "exclusive" ---@type boolean
+    local region = fn.getregionpos(cur, fin, { type = mode, exclusive = exclusive }) ---@type table
 
     ---@type Range4
     local vrange_4 =
