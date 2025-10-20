@@ -515,9 +515,11 @@ end
 --- @return nil
 function M.pclose_and_rm(win, force, wipeout)
     local buf = M.pwin_close(win, force)
-    if buf > 0 then M.do_when_idle(function()
-        M.pbuf_rm(buf, force, wipeout)
-    end) end
+    if buf > 0 then
+        M.do_when_idle(function()
+            if #fn.win_findbuf(buf) == 0 then M.pbuf_rm(buf, force, wipeout) end
+        end)
+    end
 end
 
 return M
