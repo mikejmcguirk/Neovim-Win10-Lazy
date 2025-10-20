@@ -2,6 +2,7 @@
 -- ..ad\\f40+$':-# @=,!;%^&&*()_{}/ /4304\'""?`9$343%$ ^adfadf[ad)[(
 
 local ee = Qfr_Defer_Require("mjm.error-list-system") ---@type QfrSystem
+local et = Qfr_Defer_Require("mjm.error-list-tools") ---@type QfrTools
 local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfrUtil
 local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfrTypes
 
@@ -138,12 +139,24 @@ local function do_grep(grep_info, input_opts, system_opts, output_opts)
     full_system_opts.cmd_parts = grep_parts
 
     local sys_output_opts = vim.deepcopy(output_opts, true) ---@type QfrOutputOpts
-    local what = sys_output_opts.what ---@type QfrWhat
-    what.title = table.concat(base_parts[grepprg], " ")
-    what.user_data = what.user_data or {}
-    what.user_data.list_item_type = grep_info.list_item_type or what.user_data.list_item_type
+    local what_set = sys_output_opts.what ---@type QfrWhat
 
-    sys_output_opts.what = what
+    local base_cmd = table.concat(base_parts[grepprg], " ") ---@type string
+    what_set.title = grep_info.name .. " " .. base_cmd .. "  " .. pattern ---@type string
+    -- DOCUMENT: This convention is similar to but distinct from vimgrep
+    local action = output_opts.action ---@type QfrAction
+    if action == " " then
+        local grep_nr = et._find_list_with_title(src_win, what_set.title) ---@type integer|nil
+        if grep_nr then
+            what_set.nr = grep_nr
+            sys_output_opts.action = "u"
+        end
+    end
+
+    what_set.user_data = what_set.user_data or {}
+    what_set.user_data.list_item_type = grep_info.list_item_type
+        or what_set.user_data.list_item_type
+
     ee.system_do(full_system_opts, sys_output_opts)
 end
 
@@ -308,8 +321,8 @@ local function grep_cmd(src_win, cargs)
     ---@type QfrSystemOpts
     local system_opts = { sync = sync, timeout = ey._default_timeout }
 
-    ---@type QfrRealAction
-    local action = eu._check_cmd_arg(fargs, ey._real_actions, ey._default_real_action)
+    ---@type QfrAction
+    local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action)
     ---@type QfrOutputOpts
     local output_opts = { src_win = src_win, action = action, what = { nr = cargs.count } }
 

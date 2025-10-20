@@ -359,29 +359,27 @@ end
 -------------------------------
 
 -- TODO: Rename this
----@alias QfrRealAction "a"|"f"|"r"|"u"|" "
+---@alias QfrAction "a"|"f"|"r"|"u"|" "
 
 -- TODO: Test if a double space produces a new cmd arg
 -- DOCUMENT: new is the default for cmds, can add another action to replace
 
 -- TODO: rename this too
-M._real_actions = { "a", "f", "r", "u", " " } ---@type string[]
-M._default_real_action = " " ---@type string
+M._actions = { "a", "f", "r", "u", " " } ---@type string[]
+M._default_action = " " ---@type string
 
--- TODO: Rename this
-
----@param action QfrRealAction
+---@param action QfrAction
 ---@return nil
 function M._validate_real_action(action)
     vim.validate("action", action, "string")
     vim.validate("action", action, function()
-        return vim.tbl_contains(M._real_actions, action)
+        return vim.tbl_contains(M._actions, action)
     end)
 end
 
 ---@class QfrOutputOpts
 ---@field src_win integer|nil
----@field action QfrRealAction
+---@field action QfrAction
 ---@field what QfrWhat
 
 function M._validate_output_opts(output_opts)
@@ -389,20 +387,6 @@ function M._validate_output_opts(output_opts)
     M._validate_win(output_opts.src_win, true)
     M._validate_real_action(output_opts.action)
     M._validate_what(output_opts.what)
-end
-
----@alias QfrAction "new"|"replace"|"add"
-
-M._actions = { "new", "replace", "add" }
-M._default_action = "new"
-
----@param action QfrAction
----@return nil
-function M._validate_action(action)
-    vim.validate("action", action, "string")
-    vim.validate("action", action, function()
-        return vim.tbl_contains(M._actions, action)
-    end)
 end
 
 ---@alias QfrInputType "insensitive"|"regex"|"sensitive"|"smartcase"|"vimsmart"

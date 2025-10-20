@@ -385,8 +385,8 @@ local function sort_cmd(src_win, cargs)
 
     local dir = eu._check_cmd_arg(fargs, { "asc", "desc" }, "asc") ---@type QfRancherSortDir
 
-    ---@type QfrRealAction
-    local action = eu._check_cmd_arg(fargs, ey._real_actions, ey._default_real_action)
+    ---@type QfrAction
+    local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action)
     ---@type QfrOutputOpts
     local output_opts = { src_win = src_win, action = action, what = { nr = cargs.count } }
 

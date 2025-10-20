@@ -73,7 +73,7 @@ function Diags.diags_to_list(diag_opts, output_opts)
     ey._validate_diag_opts(diag_opts)
     ey._validate_output_opts(output_opts)
 
-    local src_win = output_opts.src_win ---@type integer
+    local src_win = output_opts.src_win ---@type integer|nil
     if src_win and not eu._valid_win_for_loclist(src_win) then return end
 
     local buf = src_win and api.nvim_win_get_buf(src_win) or nil ---@type integer|nil
@@ -97,13 +97,23 @@ function Diags.diags_to_list(diag_opts, output_opts)
     if diag_opts.filter == "top" then raw_diags = filter_diags_top_severity(raw_diags) end
     local converted_diags = vim.tbl_map(convert_diag, raw_diags) ---@type vim.quickfix.entry[]
 
+    local title = "Diagnostics" ---@type string
     local what_set = vim.tbl_deep_extend("force", output_opts.what, {
         items = converted_diags,
-        title = "vim.diagnostic.get() " .. diag_opts.filter .. " " .. plural,
+        title = title,
         user_data = { sort_func = es._sort_fname_diag_asc },
     }) ---@type QfrWhat
 
-    local dest_nr = et._set_list(src_win, output_opts.action, what_set) ---@type integer
+    local action = output_opts.action
+    if action == " " then
+        local diag_nr = et._find_list_with_title(src_win, title) ---@type integer|nil
+        if diag_nr then
+            what_set.nr = diag_nr
+            action = "u"
+        end
+    end
+
+    local dest_nr = et._set_list(src_win, action, what_set) ---@type integer
     if eu._get_g_var("qf_rancher_auto_open_changes") and dest_nr > 0 then
         ea._history(src_win, dest_nr, {
             always_open = true,
@@ -141,8 +151,8 @@ local function make_diag_cmd(src_win, cargs)
 
     local diag_opts = { level = level_map[level], filter = sev_filter } ---@type QfrDiagOpts
 
-    ---@type QfrRealAction
-    local action = eu._check_cmd_arg(fargs, ey._real_actions, ey._default_real_action)
+    ---@type QfrAction
+    local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action)
     ---@type QfrOutputOpts
     local output_opts = { src_win = src_win, action = action, what = { nr = cargs.count } }
 
@@ -167,8 +177,5 @@ return Diags
 -- TODO: Docs
 -- TODO: Add tests
 
--- MID: Diags by diagnostic producer. Could make an opt for maps + cmds. Or like if someone wants
--- to prompt for the source and have that be fed in
--- More broadly, should include namespacing in the options here. Need to look into how this
--- relates to lsp specific pulls. Would be better to pull from an LSP specific namespace than to
--- have to manually check the producer's source
+-- MID: Ability to select/map based on namespace
+-- MID: Possibly related to the above - query by diagnostic producer(s)

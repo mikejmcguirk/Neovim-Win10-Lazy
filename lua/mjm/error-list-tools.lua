@@ -5,6 +5,23 @@ local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfrUtil
 ---@class QfrTools
 local M = {}
 
+-- MAYBE: Loop backwards so that, for ties, the more recent list is used
+
+---@param src_win integer|nil
+---@param title string
+---@return integer|nil
+function M._find_list_with_title(src_win, title)
+    ey._validate_win(src_win, true)
+    vim.validate("title", title, "string")
+
+    local max_nr = M._get_list(src_win, { nr = "$" }).nr ---@type integer
+    for i = 1, max_nr do
+        if M._get_list(src_win, { nr = i, title = 0 }).title == title then return i end
+    end
+
+    return nil
+end
+
 ---@param src_win integer|nil
 ---@param nr integer|"$"|nil
 ---@return integer|"$"
@@ -44,7 +61,7 @@ local function del_all(src_win)
 end
 
 ---@param src_win integer|nil
----@param action QfrRealAction
+---@param action QfrAction
 ---@param what QfrWhat
 ---@return integer
 function M._set_list(src_win, action, what)
@@ -127,7 +144,7 @@ function M._get_stack(src_win)
 
     for i = 1, max_nr do
         local what_get = M._get_list(src_win, { nr = i, all = true }) ---@type table
-        local what_set = what_get_to_set(what_get)
+        local what_set = what_get_to_set(what_get) ---@type QfrWhat
         what_set.nr = i
         what_set.user_data = {}
         what_set.user_data.action = "new"
@@ -142,10 +159,6 @@ end
 
 return M
 
--- TODO: Handle "smartnew" option based on title
--- Diagnostics is "Diagnostics"
--- If I do grep, I get ":rg --vimgrep -uu  require"
-
 -- TODO: Docs
 -- TODO: Tests
 
@@ -157,7 +170,7 @@ return M
 -- would require pulling the old list and removing the old list entries specifically. This would
 -- then also require manually setting the idx and maybe the view to match the old list. I want to
 -- properly understand the nuances of how the default "a" action works first
--- MID: Gated behind a g:var (free_stack_if_list), re-implement the behavior where deleting the
+-- MID: Gated behind a g:var (free_stack_if_nolist), re-implement the behavior where deleting the
 -- last non-empty list will free the stack. Like the items above, properly integrating this
 -- into a unified _set_list function (in order to keep the behavior as consistent as possible
 -- with the defaults) requires a better understanding of how the built-in setlist behaves

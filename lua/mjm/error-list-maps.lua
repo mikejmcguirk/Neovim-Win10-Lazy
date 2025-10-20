@@ -19,7 +19,7 @@ local in_regex = { input_type = "regex" } ---@type QfrInputOpts
 
 -- TODO: Reverse action and src_win
 
----@param action QfrRealAction
+---@param action QfrAction
 ---@param src_win integer|nil
 ---@return QfrOutputOpts
 local function get_output_opts(action, src_win)
@@ -42,10 +42,10 @@ local function replace_qflist()
 end
 
 ---@return QfrOutputOpts
-local function add_qflist()
-    return get_output_opts("a", nil)
-end
-
+-- local function add_qflist()
+--     return get_output_opts("a", nil)
+-- end
+--
 ---@return QfrOutputOpts
 local function new_loclist()
     return get_output_opts(" ", cur_win())
@@ -56,11 +56,11 @@ local function replace_loclist()
     return get_output_opts("u", cur_win())
 end
 
----@return QfrOutputOpts
-local function add_loclist()
-    return get_output_opts("a", cur_win())
-end
-
+-- ---@return QfrOutputOpts
+-- local function add_loclist()
+--     return get_output_opts("a", cur_win())
+-- end
+--
 local ea = Qfr_Defer_Require("mjm.error-list-stack") ---@type QfrStack
 local ed = Qfr_Defer_Require("mjm.error-list-diag") ---@type QfRancherDiagnostics
 local ef = Qfr_Defer_Require("mjm.error-list-filter") ---@type QfrFilter
@@ -82,7 +82,7 @@ local cs = " (case sensitive)"
 local rx = " (regex)"
 local n = ", new"
 local r = ", replace"
-local a = ", add"
+-- local a = ", add"
 
 local keep = { keep = true }
 local nokeep = { keep = false }
@@ -116,71 +116,21 @@ local rancher_keymaps = {
     { nn, pqfr.. "Qdiags-n-error", qp.."ie", "All buffer diagnostics min error"..n,        function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.ERROR }, new_qflist()) end },
     { nn, pqfr.. "Qdiags-n-top",   qp.."it", "All buffer diagnostics top severity"..n,     function() ed.diags_to_list({ filter = "top", level = nil }, new_qflist()) end },
 
-    { nn, pqfr.. "Qdiags-r-hint",  qp.."In", "All buffer diagnostics min hint"..r,         function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.HINT }, replace_qflist()) end },
-    { nn, pqfr.. "Qdiags-r-info",  qp.."If", "All buffer diagnostics min info"..r,         function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.INFO }, replace_qflist()) end },
-    { nn, pqfr.. "Qdiags-r-warn",  qp.."Iw", "All buffer diagnostics min warn"..r,         function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.WARN }, replace_qflist()) end },
-    { nn, pqfr.. "Qdiags-r-error", qp.."Ie", "All buffer diagnostics min error"..r,        function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.ERROR }, replace_qflist()) end },
-    { nn, pqfr.. "Qdiags-r-top",   qp.."It", "All buffer diagnostics top severity"..r,     function() ed.diags_to_list({ filter = "top", level = nil }, replace_qflist()) end },
-
-    { nn, pqfr.. "Qdiags-a-hint",  qp.."<C-i>n", "All buffer diagnostics min hint"..a,     function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.HINT }, add_qflist()) end },
-    { nn, pqfr.. "Qdiags-a-info",  qp.."<C-i>f", "All buffer diagnostics min info"..a,     function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.INFO }, add_qflist()) end },
-    { nn, pqfr.. "Qdiags-a-warn",  qp.."<C-i>w", "All buffer diagnostics min warn"..a,     function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.WARN }, add_qflist()) end },
-    { nn, pqfr.. "Qdiags-a-error", qp.."<C-i>e", "All buffer diagnostics min error"..a,    function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.ERROR }, add_qflist()) end },
-    { nn, pqfr.. "Qdiags-a-top",   qp.."<C-i>t", "All buffer diagnostics top severity"..a, function() ed.diags_to_list({ filter = "top", level = nil }, add_qflist()) end },
-
     { nn, pqfr.. "Ldiags-n-hint",  lp.."in", "Cur buf diagnostics min hint"..n,            function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.HINT }, new_loclist()) end },
     { nn, pqfr.. "Ldiags-n-info",  lp.."if", "Cur buf diagnostics min info"..n,            function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.INFO }, new_loclist()) end },
     { nn, pqfr.. "Ldiags-n-warn",  lp.."iw", "Cur buf diagnostics min warn"..n,            function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.WARN }, new_loclist()) end },
     { nn, pqfr.. "Ldiags-n-error", lp.."ie", "Cur buf diagnostics min error"..n,           function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.ERROR }, new_loclist()) end },
     { nn, pqfr.. "Ldiags-n-top",   lp.."it", "Cur buf diagnostics top severity"..n,        function() ed.diags_to_list({ filter = "top", level = nil }, new_loclist()) end },
 
-    { nn, pqfr.. "Ldiags-r-hint",  lp.."In", "Cur buf diagnostics min hint"..r,            function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.HINT }, replace_loclist()) end },
-    { nn, pqfr.. "Ldiags-r-info",  lp.."If", "Cur buf diagnostics min info"..r,            function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.INFO }, replace_loclist()) end },
-    { nn, pqfr.. "Ldiags-r-warn",  lp.."Iw", "Cur buf diagnostics min warn"..r,            function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.WARN }, replace_loclist()) end },
-    { nn, pqfr.. "Ldiags-r-error", lp.."Ie", "Cur buf diagnostics min error"..r,           function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.ERROR }, replace_loclist()) end },
-    { nn, pqfr.. "Ldiags-r-top",   lp.."It", "Cur buf diagnostics top severity"..r,        function() ed.diags_to_list({ filter = "top", level = nil }, replace_loclist()) end },
-
-    { nn, pqfr.. "Ldiags-a-hint",  lp.."<C-i>n", "Cur buf diagnostics min hint"..a,        function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.HINT }, add_loclist()) end },
-    { nn, pqfr.. "Ldiags-a-info",  lp.."<C-i>f", "Cur buf diagnostics min info"..a,        function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.INFO }, add_loclist()) end },
-    { nn, pqfr.. "Ldiags-a-warn",  lp.."<C-i>w", "Cur buf diagnostics min warn"..a,        function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.WARN }, add_loclist()) end },
-    { nn, pqfr.. "Ldiags-a-error", lp.."<C-i>e", "Cur buf diagnostics min error"..a,       function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.ERROR }, add_loclist()) end },
-    { nn, pqfr.. "Ldiags-a-top",   lp.."<C-i>t", "Cur buf diagnostics top severity"..a,    function() ed.diags_to_list({ filter = "top", level = nil }, add_loclist()) end },
-
     { nn, pqfr.. "Qdiags-n-HINT",  qp.."iN", "All buffer diagnostics only hint"..n,        function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.HINT }, new_qflist()) end },
     { nn, pqfr.. "Qdiags-n-INFO",  qp.."iF", "All buffer diagnostics only info"..n,        function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.INFO }, new_qflist()) end },
     { nn, pqfr.. "Qdiags-n-WARN",  qp.."iW", "All buffer diagnostics only warn"..n,        function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.WARN }, new_qflist()) end },
     { nn, pqfr.. "Qdiags-n-ERROR", qp.."iE", "All buffer diagnostics only error"..n,       function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.ERROR }, new_qflist()) end },
-    { nn, pqfr.. "Qdiags-n-TOP",   qp.."iT", "All buffer diagnostics top severity"..n,     function() ed.diags_to_list({ filter = "top", level = nil }, new_qflist()) end },
-
-    { nn, pqfr.. "Qdiags-r-HINT",  qp.."IN", "All buffer diagnostics only hint"..r,        function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.HINT }, replace_qflist()) end },
-    { nn, pqfr.. "Qdiags-r-INFO",  qp.."IF", "All buffer diagnostics only info"..r,        function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.INFO }, replace_qflist()) end },
-    { nn, pqfr.. "Qdiags-r-WARN",  qp.."IW", "All buffer diagnostics only warn"..r,        function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.WARN }, replace_qflist()) end },
-    { nn, pqfr.. "Qdiags-r-ERROR", qp.."IE", "All buffer diagnostics only error"..r,       function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.ERROR }, replace_qflist()) end },
-    { nn, pqfr.. "Qdiags-r-TOP",   qp.."IT", "All buffer diagnostics top severity"..r,     function() ed.diags_to_list({ filter = "top", level = nil }, replace_qflist()) end },
-
-    { nn, pqfr.. "Qdiags-a-HINT",  qp.."<C-i>N", "All buffer diagnostics only hint"..a,    function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.HINT }, add_qflist()) end },
-    { nn, pqfr.. "Qdiags-a-INFO",  qp.."<C-i>F", "All buffer diagnostics only info"..a,    function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.INFO }, add_qflist()) end },
-    { nn, pqfr.. "Qdiags-a-WARN",  qp.."<C-i>W", "All buffer diagnostics only warn"..a,    function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.WARN }, add_qflist()) end },
-    { nn, pqfr.. "Qdiags-a-ERROR", qp.."<C-i>E", "All buffer diagnostics only error"..a,   function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.ERROR }, add_qflist()) end },
-    { nn, pqfr.. "Qdiags-a-TOP",   qp.."<C-i>T", "All buffer diagnostics top severity"..a, function() ed.diags_to_list({ filter = "top", level = nil }, add_qflist()) end },
 
     { nn, pqfr.. "Ldiags-n-HINT",  lp.."iN", "Cur buf diagnostics only hint"..n,           function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.HINT }, new_loclist()) end },
     { nn, pqfr.. "Ldiags-n-INFO",  lp.."iF", "Cur buf diagnostics only info"..n,           function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.INFO }, new_loclist()) end },
     { nn, pqfr.. "Ldiags-n-WARN",  lp.."iW", "Cur buf diagnostics only warn"..n,           function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.WARN }, new_loclist()) end },
     { nn, pqfr.. "Ldiags-n-ERROR", lp.."iE", "Cur buf diagnostics only error"..n,          function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.ERROR }, new_loclist()) end },
-    { nn, pqfr.. "Ldiags-n-TOP",   lp.."iT", "Cur buf diagnostics top severity"..n,        function() ed.diags_to_list({ filter = "top", level = nil }, new_loclist()) end },
-
-    { nn, pqfr.. "Ldiags-r-HINT",  lp.."IN", "Cur buf diagnostics only hint"..r,           function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.HINT }, replace_loclist()) end },
-    { nn, pqfr.. "Ldiags-r-INFO",  lp.."IF", "Cur buf diagnostics only info"..r,           function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.INFO }, replace_loclist()) end },
-    { nn, pqfr.. "Ldiags-r-WARN",  lp.."IW", "Cur buf diagnostics only warn"..r,           function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.WARN }, replace_loclist()) end },
-    { nn, pqfr.. "Ldiags-r-ERROR", lp.."IE", "Cur buf diagnostics only error"..r,          function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.ERROR }, replace_loclist()) end },
-    { nn, pqfr.. "Ldiags-r-TOP",   lp.."IT", "Cur buf diagnostics top severity"..r,        function() ed.diags_to_list({ filter = "top", level = nil }, replace_loclist()) end },
-
-    { nn, pqfr.. "Ldiags-a-HINT",  lp.."<C-i>N", "Cur buf diagnostics only hint"..a,       function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.HINT }, add_loclist()) end },
-    { nn, pqfr.. "Ldiags-a-INFO",  lp.."<C-i>F", "Cur buf diagnostics only info"..a,       function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.INFO }, add_loclist()) end },
-    { nn, pqfr.. "Ldiags-a-WARN",  lp.."<C-i>W", "Cur buf diagnostics only warn"..a,       function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.WARN }, add_loclist()) end },
-    { nn, pqfr.. "Ldiags-a-ERROR", lp.."<C-i>E", "Cur buf diagnostics only error"..a,      function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.ERROR }, add_loclist()) end },
-    { nn, pqfr.. "Ldiags-a-TOP",   lp.."<C-i>T", "Cur buf diagnostics top severity"..a,    function() ed.diags_to_list({ filter = "top", level = nil }, add_loclist()) end },
 
     --------------
     --- FILTER ---
@@ -271,64 +221,28 @@ local rancher_keymaps = {
     ------------
 
     { nx, pqfr.."-grep-n-cwd)",    qp.."gd",         "Qgrep cwd, new"..sc,           function() eg.grep("cwd", in_vimsmart, sys_opt, new_qflist()) end },
-    { nx, pqfr.."-grep-r-cwd)",    qp.."Gd",         "Qgrep cwd, replace"..sc,       function() eg.grep("cwd", in_vimsmart, sys_opt, replace_qflist()) end },
-    { nx, pqfr.."-grep-a-cwd)",    qp.."<C-g>d",     "Qgrep cwd, add"..sc,           function() eg.grep("cwd", in_vimsmart, sys_opt, add_qflist()) end },
     { nx, pqfr.."-grep-n-CWD)",    qp.."gD",         "Qgrep cwd, new"..cs,           function() eg.grep("cwd", in_sensitive, sys_opt, new_qflist()) end },
-    { nx, pqfr.."-grep-r-CWD)",    qp.."GD",         "Qgrep cwd, replace"..cs,       function() eg.grep("cwd", in_sensitive, sys_opt, replace_qflist()) end },
-    { nx, pqfr.."-grep-a-CWD)",    qp.."<C-g>D",     "Qgrep cwd, add"..cs,           function() eg.grep("cwd", in_sensitive, sys_opt, add_qflist()) end },
     { nx, pqfr.."-grep-n-cwdX)",   qp.."g<C-d>",     "Qgrep cwd, new"..rx,           function() eg.grep("cwd", in_regex, sys_opt, new_qflist()) end },
-    { nx, pqfr.."-grep-r-cwdX)",   qp.."G<C-d>",     "Qgrep cwd, replace"..rx,       function() eg.grep("cwd", in_regex, sys_opt, replace_qflist()) end },
-    { nx, pqfr.."-grep-a-cwdX)",   qp.."<C-g><C-d>", "Qgrep cwd, add"..rx,           function() eg.grep("cwd", in_regex, sys_opt, add_qflist()) end },
 
     { nx, pqfr.."-lgrep-n-cwd)",   lp.."gd",         "Lgrep cwd, new"..sc,           function() eg.grep("cwd", in_vimsmart, sys_opt, new_loclist()) end },
-    { nx, pqfr.."-lgrep-r-cwd)",   lp.."Gd",         "Lgrep cwd, replace"..sc,       function() eg.grep("cwd", in_vimsmart, sys_opt, replace_loclist()) end },
-    { nx, pqfr.."-lgrep-a-cwd)",   lp.."<C-g>d",     "Lgrep cwd, add"..sc,           function() eg.grep("cwd", in_vimsmart, sys_opt, add_loclist()) end },
     { nx, pqfr.."-lgrep-n-CWD)",   lp.."gD",         "Lgrep cwd, new"..cs,           function() eg.grep("cwd", in_sensitive, sys_opt, new_loclist()) end },
-    { nx, pqfr.."-lgrep-r-CWD)",   lp.."GD",         "Lgrep cwd, replace"..cs,       function() eg.grep("cwd", in_sensitive, sys_opt, replace_loclist()) end },
-    { nx, pqfr.."-lgrep-a-CWD)",   lp.."<C-g>D",     "Lgrep cwd, add"..cs,           function() eg.grep("cwd", in_sensitive, sys_opt, add_loclist()) end },
     { nx, pqfr.."-lgrep-n-cwdX)",  lp.."g<C-d>",     "Lgrep cwd, new"..rx,           function() eg.grep("cwd", in_regex, sys_opt, new_loclist()) end },
-    { nx, pqfr.."-lgrep-r-cwdX)",  lp.."G<C-d>",     "Lgrep cwd, replace"..rx,       function() eg.grep("cwd", in_regex, sys_opt, replace_loclist()) end },
-    { nx, pqfr.."-lgrep-a-cwdX)",  lp.."<C-g><C-d>", "Lgrep cwd, add"..rx,           function() eg.grep("cwd", in_regex, sys_opt, add_loclist()) end },
 
     { nx, pqfr.."-grep-n-help)",   qp.."gh",         "Qgrep docs, new"..sc,          function() eg.grep("help", in_vimsmart, sys_opt, new_qflist()) end },
-    { nx, pqfr.."-grep-r-help)",   qp.."Gh",         "Qgrep docs, replace"..sc,      function() eg.grep("help", in_vimsmart, sys_opt, replace_qflist()) end },
-    { nx, pqfr.."-grep-a-help)",   qp.."<C-g>h",     "Qgrep docs, add"..sc,          function() eg.grep("help", in_vimsmart, sys_opt, add_qflist()) end },
     { nx, pqfr.."-grep-n-HELP)",   qp.."gH",         "Qgrep docs, new"..cs,          function() eg.grep("help", in_sensitive, sys_opt, new_qflist()) end },
-    { nx, pqfr.."-grep-r-HELP)",   qp.."GH",         "Qgrep docs, replace"..cs,      function() eg.grep("help", in_sensitive, sys_opt, replace_qflist()) end },
-    { nx, pqfr.."-grep-a-HELP)",   qp.."<C-g>H",     "Qgrep docs, add"..cs,          function() eg.grep("help", in_sensitive, sys_opt, add_qflist()) end },
     { nx, pqfr.."-grep-n-helpX)",  qp.."g<C-h>",     "Qgrep docs, new"..rx,          function() eg.grep("help", in_regex, sys_opt, new_qflist()) end },
-    { nx, pqfr.."-grep-r-helpX)",  qp.."G<C-h>",     "Qgrep docs, replace"..rx,      function() eg.grep("help", in_regex, sys_opt, replace_qflist()) end },
-    { nx, pqfr.."-grep-a-helpX)",  qp.."<C-g><C-h>", "Qgrep docs, add"..rx,          function() eg.grep("help", in_regex, sys_opt, add_qflist()) end },
 
     { nx, pqfr.."-lgrep-n-help)",  lp.."gh",         "Lgrep docs, new"..sc,          function() eg.grep("help", in_vimsmart, sys_opt, new_loclist()) end },
-    { nx, pqfr.."-lgrep-r-help)",  lp.."Gh",         "Lgrep docs, replace"..sc,      function() eg.grep("help", in_vimsmart, sys_opt, replace_loclist()) end },
-    { nx, pqfr.."-lgrep-a-help)",  lp.."<C-g>h",     "Lgrep docs, add"..sc,          function() eg.grep("help", in_vimsmart, sys_opt, add_loclist()) end },
     { nx, pqfr.."-lgrep-n-HELP)",  lp.."gH",         "Lgrep docs, new"..cs,          function() eg.grep("help", in_sensitive, sys_opt, new_loclist()) end },
-    { nx, pqfr.."-lgrep-r-HELP)",  lp.."GH",         "Lgrep docs, replace"..cs,      function() eg.grep("help", in_sensitive, sys_opt, replace_loclist()) end },
-    { nx, pqfr.."-lgrep-a-HELP)",  lp.."<C-g>H",     "Lgrep docs, add"..cs,          function() eg.grep("help", in_sensitive, sys_opt, add_loclist()) end },
     { nx, pqfr.."-lgrep-n-helpX)", lp.."g<C-h>",     "Lgrep docs, new"..rx,          function() eg.grep("help", in_regex, sys_opt, new_loclist()) end },
-    { nx, pqfr.."-lgrep-r-helpX)", lp.."G<C-h>",     "Lgrep docs, replace"..rx,      function() eg.grep("help", in_regex, sys_opt, replace_loclist()) end },
-    { nx, pqfr.."-lgrep-a-helpX)", lp.."<C-g><C-h>", "Lgrep docs, add"..rx,          function() eg.grep("help", in_vimsmart, sys_opt, add_loclist()) end },
 
     { nx, pqfr.."-grep-n-bufs)",   qp.."gu",         "Qgrep open bufs, new"..sc,     function() eg.grep("bufs", in_vimsmart, sys_opt, new_qflist()) end },
-    { nx, pqfr.."-grep-r-bufs)",   qp.."Gu",         "Qgrep open bufs, replace"..sc, function() eg.grep("bufs", in_vimsmart, sys_opt, replace_qflist()) end },
-    { nx, pqfr.."-grep-a-bufs)",   qp.."<C-g>u",     "Qgrep open bufs, add"..sc,     function() eg.grep("bufs", in_vimsmart, sys_opt, add_qflist()) end },
     { nx, pqfr.."-grep-n-BUFS)",   qp.."gU",         "Qgrep open bufs, new"..cs,     function() eg.grep("bufs", in_sensitive, sys_opt, new_qflist()) end },
-    { nx, pqfr.."-grep-r-BUFS)",   qp.."GU",         "Qgrep open bufs, replace"..cs, function() eg.grep("bufs", in_sensitive, sys_opt, replace_qflist()) end },
-    { nx, pqfr.."-grep-a-BUFS)",   qp.."<C-g>U",     "Qgrep open bufs, add"..cs,     function() eg.grep("bufs", in_sensitive, sys_opt, add_qflist()) end },
     { nx, pqfr.."-grep-n-bufsX)",  qp.."g<C-u>",     "Qgrep open bufs, new"..rx,     function() eg.grep("bufs", in_regex, sys_opt, new_qflist()) end },
-    { nx, pqfr.."-grep-r-bufsX)",  qp.."G<C-u>",     "Qgrep open bufs, replace"..rx, function() eg.grep("bufs", in_regex, sys_opt, replace_qflist()) end },
-    { nx, pqfr.."-grep-a-bufsX)",  qp.."<C-g><C-u>", "Qgrep open bufs, add"..rx,     function() eg.grep("bufs", in_regex, sys_opt, add_qflist()) end },
 
     { nx, pqfr.."-lgrep-n-cbuf)",  lp.."gu",         "Lgrep cur buf, new"..sc,       function() eg.grep("cbuf", in_vimsmart, sys_opt, new_loclist()) end },
-    { nx, pqfr.."-lgrep-r-cbuf)",  lp.."Gu",         "Lgrep cur buf, replace"..sc,   function() eg.grep("cbuf", in_vimsmart, sys_opt, replace_loclist()) end },
-    { nx, pqfr.."-lgrep-a-cbuf)",  lp.."<C-g>u",     "Lgrep cur buf, add"..sc,       function() eg.grep("cbuf", in_vimsmart, sys_opt, add_loclist()) end },
     { nx, pqfr.."-lgrep-n-CBUF)",  lp.."gU",         "Lgrep cur buf, new"..cs,       function() eg.grep("cbuf", in_sensitive, sys_opt, new_loclist()) end },
-    { nx, pqfr.."-lgrep-r-CBUF)",  lp.."GU",         "Lgrep cur buf, replace"..cs,   function() eg.grep("cbuf", in_sensitive, sys_opt, replace_loclist()) end },
-    { nx, pqfr.."-lgrep-a-CBUF)",  lp.."<C-g>U",     "Lgrep cur buf, add"..cs,       function() eg.grep("cbuf", in_sensitive, sys_opt, add_loclist()) end },
     { nx, pqfr.."-lgrep-n-cbufX)", lp.."g<C-u>",     "Lgrep cur buf, new"..rx,       function() eg.grep("cbuf", in_regex, sys_opt, new_loclist()) end },
-    { nx, pqfr.."-lgrep-r-cbufX)", lp.."G<C-u>",     "Lgrep cur buf, replace"..rx,   function() eg.grep("cbuf", in_regex, sys_opt, replace_loclist()) end },
-    { nx, pqfr.."-lgrep-a-cbufX)", lp.."<C-g><C-u>", "Lgrep cur buf, add"..rx,       function() eg.grep("cbuf", in_regex, sys_opt, add_loclist()) end },
 
     -------------------------
     --- OPEN/CLOSE/RESIZE ---

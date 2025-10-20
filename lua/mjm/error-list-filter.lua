@@ -335,8 +335,8 @@ local function filter_cmd(cargs, src_win)
     local pattern = eu._find_cmd_pattern(fargs) ---@type string|nil
     local input_opts = { input_type = input_type, pattern = pattern } ---@type QfrInputOpts
 
-    ---@type QfrRealAction
-    local action = eu._check_cmd_arg(fargs, ey._real_actions, ey._default_real_action)
+    ---@type QfrAction
+    local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action)
     ---@type QfrOutputOpts
     local output_opts = { src_win = src_win, action = action, what = { nr = cargs.count } }
 
