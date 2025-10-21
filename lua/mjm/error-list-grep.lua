@@ -119,7 +119,7 @@ local function do_grep(grep_info, input_opts, system_opts, output_opts)
     local locations = grep_info.location_func() ---@type string[]
     if #locations < 1 then return end
 
-    local grepprg = eu._get_g_var("qf_rancher_grepprg") ---@type string
+    local grepprg = eu._get_g_var("qfr_grepprg") ---@type string
     if fn.executable(grepprg) ~= 1 then
         api.nvim_echo({ { grepprg .. " is not executable", "ErrorMsg" } }, true, { err = true })
         return

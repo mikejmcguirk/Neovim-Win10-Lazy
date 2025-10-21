@@ -94,7 +94,7 @@ local function handle_orphan(list_win, buf_win, finish)
     api.nvim_set_current_win(buf_win)
     eo._open_loclist(buf_win, { keep_win = finish == "focusWin" })
 
-    if eu._get_g_var("qf_rancher_debug_assertions") then
+    if eu._get_g_var("qfr_debug_assertions") then
         local cur_win = api.nvim_get_current_win() ---@type integer
         if finish == "focusWin" then assert(cur_win == buf_win) end
         if finish == "focusList" then assert(fn.win_gettype(cur_win) == "loclist") end
@@ -297,7 +297,7 @@ local function should_resize_list_win(list_win, dest_win, is_orphan)
     ey._validate_win(dest_win, true)
     vim.validate("is_orphan", is_orphan, "boolean")
 
-    if not eu._get_g_var("qf_rancher_auto_list_height") then return false end
+    if not eu._get_g_var("qfr_auto_list_height") then return false end
 
     if dest_win or is_orphan then return false end
 

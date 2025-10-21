@@ -32,7 +32,7 @@ end
 ---@return vim.fn.winsaveview.ret[]
 local function get_views(wins)
     local views = {} ---@type vim.fn.winsaveview.ret[]
-    if not eu._get_g_var("qf_rancher_always_save_views") then return views end
+    if not eu._get_g_var("qfr_always_save_views") then return views end
 
     ---@type string
     local splitkeep = api.nvim_get_option_value("splitkeep", { scope = "global" })
@@ -59,7 +59,7 @@ local function resolve_height_for_list(src_win, height)
 
     if height then return height end
 
-    if not eu._get_g_var("qf_rancher_auto_list_height") then return QFR_MAX_HEIGHT end
+    if not eu._get_g_var("qfr_auto_list_height") then return QFR_MAX_HEIGHT end
 
     local size = et._get_list(src_win, { nr = 0, size = 0 }).size ---@type integer
     if not size then return QFR_MAX_HEIGHT end
@@ -89,7 +89,7 @@ local function handle_open_list_win(list_win, opts)
 
     if opts.nop_if_open then return false end
 
-    if opts.height or eu._get_g_var("qf_rancher_auto_list_height") then
+    if opts.height or eu._get_g_var("qfr_auto_list_height") then
         Open._resize_list_win(list_win, opts.height)
     end
 
@@ -203,7 +203,7 @@ function Open._open_qflist(opts)
     end
 
     local height = resolve_height_for_list(nil, opts.height)
-    local split = eu._get_g_var("qf_rancher_qfsplit") ---@type string
+    local split = eu._get_g_var("qfr_qfsplit") ---@type string
     ---@diagnostic disable: missing-fields
     api.nvim_cmd({ cmd = "copen", count = height, mods = { split = split } }, {})
     return open_cleanup(views, opts.keep_win, cur_win)

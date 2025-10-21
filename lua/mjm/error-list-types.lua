@@ -42,7 +42,7 @@ function M._validate_what(what)
     M._validate_uint(what.id, true)
     M._validate_uint(what.idx, true)
     vim.validate("what.items", what.items, "table", true)
-    if eu._get_g_var("qf_rancher_debug_assertions") and type(what.items) == "table" then
+    if eu._get_g_var("qfr_debug_assertions") and type(what.items) == "table" then
         for _, item in ipairs(what.items) do
             M._validate_list_item(item)
         end
@@ -186,7 +186,7 @@ function M._validate_list(list, opts)
         end, "List length must be " .. opts.len)
     end
 
-    if opts.type and eu._get_g_var("qf_rancher_debug_assertions") then
+    if opts.type and eu._get_g_var("qfr_debug_assertions") then
         vim.validate("list", list, function()
             for _, value in ipairs(list) do
                 if type(value) ~= opts.type then return false end

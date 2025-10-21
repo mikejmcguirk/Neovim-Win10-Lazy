@@ -19,7 +19,7 @@ local Stack = {}
 ---@param src_win integer|nil
 ---@return nil
 local function resize_after_stack_change(src_win)
-    if not eu._get_g_var("qf_rancher_auto_list_height") then return end
+    if not eu._get_g_var("qfr_auto_list_height") then return end
     if src_win then
         local src_win_tabpage = api.nvim_win_get_tabpage(src_win) ---@type integer
         eo._resize_loclists_by_win(src_win, { tabpage = src_win_tabpage })

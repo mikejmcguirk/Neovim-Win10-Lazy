@@ -11,7 +11,7 @@ end
 -- NOTE: To avoid requires, don't use util g_var function
 
 -- DOCUMENT: Which options are set
-if vim.g.qf_rancher_ftplugin_set_opts then
+if vim.g.qfr_ftplugin_set_opts then
     api.nvim_set_option_value("buflisted", false, { buf = 0 })
     api.nvim_set_option_value("cc", "", { scope = "local" })
     api.nvim_set_option_value("list", false, { scope = "local" })
@@ -19,7 +19,7 @@ if vim.g.qf_rancher_ftplugin_set_opts then
 end
 
 -- DOCUMENT: which defaults are removed
-if vim.g.qf_rancher_ftplugin_demap then
+if vim.g.qfr_ftplugin_demap then
     bufmap(0, "n", "<C-w>v", "<nop>", { noremap = true, nowait = true })
     bufmap(0, "n", "<C-w><C-v>", "<nop>", { noremap = true, nowait = true })
     bufmap(0, "n", "<C-w>s", "<nop>", { noremap = true, nowait = true })
@@ -29,11 +29,11 @@ if vim.g.qf_rancher_ftplugin_demap then
     bufmap(0, "n", "<C-o>", "<nop>", { noremap = true, nowait = true })
 end
 
-if not vim.g.qf_rancher_ftplugin_keymap then return end
+if not vim.g.qfr_ftplugin_keymap then return end
 
 local in_loclist = fn.win_gettype(0) == "loclist" --- @type boolean
-local ll_prefix = vim.g.qf_rancher_map_ll_prefix or "l" --- @type string
-local qf_prefix = vim.g.qf_rancher_map_qf_prefix or "q" --- @type string
+local ll_prefix = vim.g.qfr_map_ll_prefix or "l" --- @type string
+local qf_prefix = vim.g.qfr_map_qf_prefix or "q" --- @type string
 ll_prefix = type(ll_prefix) == "string" and ll_prefix or "l"
 qf_prefix = type(qf_prefix) == "string" and qf_prefix or "q"
 local list_prefix = in_loclist and ll_prefix or qf_prefix --- @type string

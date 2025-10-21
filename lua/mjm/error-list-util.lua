@@ -313,7 +313,7 @@ function M._clear_list_and_resize(src_win, list_nr)
     local result = et._clear_list(src_win, list_nr)
 
     if result == -1 then return result end
-    if not M._get_g_var("qf_rancher_auto_list_height") then return result end
+    if not M._get_g_var("qfr_auto_list_height") then return result end
 
     if result == 0 or result == et._get_list(src_win, { nr = 0 }).nr then
         local tabpage = src_win and api.nvim_win_get_tabpage(src_win)
@@ -505,7 +505,7 @@ end
 function M._do_zzze(win)
     ey._validate_win(win)
 
-    if eu._get_g_var("qf_rancher_skip_zzze") then return end
+    if eu._get_g_var("qfr_skip_zzze") then return end
 
     api.nvim_win_call(win, function()
         api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})

@@ -60,7 +60,7 @@ local function filter_wrapper(filter_info, keep, input_opts, output_opts)
     local what_set = et._what_ret_to_set(what_ret) ---@type QfrWhat
     what_set.nr = output_opts.what.nr
     local dest_nr = et._set_list(src_win, output_opts.action, what_set) ---@type integer
-    if dest_nr >= 0 and eu._get_g_var("qf_rancher_auto_open_changes") then
+    if dest_nr >= 0 and eu._get_g_var("qfr_auto_open_changes") then
         ea._get_history(src_win, dest_nr, {
             open_list = true,
             default = "cur_list",

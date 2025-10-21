@@ -37,26 +37,26 @@ end
 -- MID: Not the greatest way to do this. If this gets combined with the main setup file, then
 -- try to put together the validations more
 
-local qp = string.lower(vim.g.qf_rancher_map_qf_prefix) ---@type string
-qp = validate_prefix(qp) and qp or _QFR_G_VAR_MAP["qf_rancher_map_qf_prefix"][2]
+local qp = string.lower(vim.g.qfr_map_qf_prefix) ---@type string
+qp = validate_prefix(qp) and qp or _QFR_G_VAR_MAP["qfr_map_qf_prefix"][2]
 local ql = "<leader>" .. qp ---@type string
 local qP = string.upper(qp) ---@type string
 
-local lp = string.lower(vim.g.qf_rancher_map_ll_prefix) ---@type string
-lp = validate_prefix(lp) and lp or _QFR_G_VAR_MAP["qf_rancher_map_ll_prefix"][2]
+local lp = string.lower(vim.g.qfr_map_ll_prefix) ---@type string
+lp = validate_prefix(lp) and lp or _QFR_G_VAR_MAP["qfr_map_ll_prefix"][2]
 local ll = "<leader>" .. lp ---@type string
 local lP = string.upper(lp) ---@type string
 
-local dp = string.lower(vim.g.qf_rancher_map_diag_prefix) ---@type string
-dp = validate_prefix(dp) and dp or _QFR_G_VAR_MAP["qf_rancher_map_diag_prefix"][2]
-local kp = string.lower(vim.g.qf_rancher_map_keep_prefix) ---@type string
-kp = validate_prefix(kp) and kp or _QFR_G_VAR_MAP["qf_rancher_map_keep_prefix"][2]
-local rp = string.lower(vim.g.qf_rancher_map_remove_prefix) ---@type string
-rp = validate_prefix(rp) and rp or _QFR_G_VAR_MAP["qf_rancher_map_remove_prefix"][2]
-local gp = string.lower(vim.g.qf_rancher_map_grep_prefix) ---@type string
-gp = validate_prefix(gp) and gp or _QFR_G_VAR_MAP["qf_rancher_map_grep_prefix"][2]
-local sp = string.lower(vim.g.qf_rancher_map_sort_prefix) ---@type string
-sp = validate_prefix(sp) and sp or _QFR_G_VAR_MAP["qf_rancher_map_sort_prefix"][2]
+local dp = string.lower(vim.g.qfr_map_diag_prefix) ---@type string
+dp = validate_prefix(dp) and dp or _QFR_G_VAR_MAP["qfr_map_diag_prefix"][2]
+local kp = string.lower(vim.g.qfr_map_keep_prefix) ---@type string
+kp = validate_prefix(kp) and kp or _QFR_G_VAR_MAP["qfr_map_keep_prefix"][2]
+local rp = string.lower(vim.g.qfr_map_remove_prefix) ---@type string
+rp = validate_prefix(rp) and rp or _QFR_G_VAR_MAP["qfr_map_remove_prefix"][2]
+local gp = string.lower(vim.g.qfr_map_grep_prefix) ---@type string
+gp = validate_prefix(gp) and gp or _QFR_G_VAR_MAP["qfr_map_grep_prefix"][2]
+local sp = string.lower(vim.g.qfr_map_sort_prefix) ---@type string
+sp = validate_prefix(sp) and sp or _QFR_G_VAR_MAP["qfr_map_sort_prefix"][2]
 
 local sc = " (smartcase)" ---@type string
 local rx = " (regex)" ---@type string
@@ -331,7 +331,7 @@ for _, map in ipairs(qfr_maps) do
 end
 
 -- Don't use the util g_var wrapper here to avoid a require
-if vim.g.qf_rancher_map_set_defaults then
+if vim.g.qfr_map_set_defaults then
     for _, map in ipairs(qfr_maps) do
         for _, mode in ipairs(map[1]) do
             api.nvim_set_keymap(mode, map[3], map[2], {
@@ -416,7 +416,7 @@ end, { desc = "Open a list item in a new tab, keep list focus" })
 ------------
 
 -- Don't use the util g_var wrapper here to avoid a require
-if vim.g.qf_rancher_set_default_cmds then
+if vim.g.qfr_set_default_cmds then
     -------------
     --- DIAGS ---
     -------------

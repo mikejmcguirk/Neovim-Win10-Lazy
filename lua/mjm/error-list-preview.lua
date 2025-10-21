@@ -233,20 +233,20 @@ local function get_title_cfg(item_buf)
     -- Do not assert that item_buf is valid since a buf can be wiped after the list is created
     ey._validate_uint(item_buf, true)
 
-    if not eu._get_g_var("qf_rancher_preview_show_title") then return { title = nil } end
+    if not eu._get_g_var("qfr_preview_show_title") then return { title = nil } end
 
     if not (item_buf and api.nvim_buf_is_valid(item_buf)) then return { title = "No buffer" } end
 
     local preview_name = api.nvim_buf_get_name(item_buf) ---@type string
     local relative_name = fn.fnamemodify(preview_name, ":.") ---@type string
-    local g_title_pos = eu._get_g_var("qf_rancher_preview_title_pos") ---@type QfrTitlePos
+    local g_title_pos = eu._get_g_var("qfr_preview_title_pos") ---@type QfrTitlePos
     return { title = relative_name, title_pos = g_title_pos }
 end
 
 ---@return QfrBorder
 local function get_winborder()
     ---@type QfrBorder|nil
-    local border = eu._get_g_var("qf_rancher_preview_border", true)
+    local border = eu._get_g_var("qfr_preview_border", true)
     if border then
         ey._validate_border(border)
         return border
@@ -475,7 +475,7 @@ local function create_preview_win(win_cfg, preview_buf)
     set_opt("spell", false, { win = preview_win })
 
     ---@type integer
-    local g_winblend = eu._get_g_var("qf_rancher_preview_winblend")
+    local g_winblend = eu._get_g_var("qfr_preview_winblend")
     set_opt("winblend", g_winblend, { win = preview_win })
 
     set_opt("so", SCROLLOFF, { win = preview_win })
@@ -715,7 +715,7 @@ end
 
 local function start_timer()
     timer = timer or vim.uv.new_timer()
-    if timer then timer:start(eu._get_g_var("qf_rancher_preview_debounce"), 0, at_timer_end) end
+    if timer then timer:start(eu._get_g_var("qfr_preview_debounce"), 0, at_timer_end) end
 end
 
 ---@param list_win integer

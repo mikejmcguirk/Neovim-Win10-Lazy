@@ -141,7 +141,7 @@ function Diags.diags_to_list(diag_opts, output_opts)
     }) ---@type QfrWhat
 
     local dest_nr = et._set_list(src_win, adj_output_opts.action, what_set) ---@type integer
-    if eu._get_g_var("qf_rancher_auto_open_changes") and dest_nr > 0 then
+    if eu._get_g_var("qfr_auto_open_changes") and dest_nr > 0 then
         ea._get_history(src_win, dest_nr, {
             open_list = true,
             default = "cur_list",

@@ -68,7 +68,7 @@ local function del_all(src_win)
 
     if not src_win then
         local result = fn.setqflist({}, "f") ---@type integer
-        if result == 0 and eu._get_g_var("qf_rancher_close_on_stack_clear") then
+        if result == 0 and eu._get_g_var("qfr_close_on_stack_clear") then
             eo._close_qfwins({ all_tabpages = true })
         end
 
@@ -77,7 +77,7 @@ local function del_all(src_win)
 
     local qf_id = fn.getloclist(src_win, { id = 0 }).id ---@type integer
     local result = fn.setloclist(src_win, {}, "f") ---@type integer
-    if result == 0 and eu._get_g_var("qf_rancher_close_on_stack_clear") then
+    if result == 0 and eu._get_g_var("qfr_close_on_stack_clear") then
         eo._close_loclists_by_qf_id(qf_id, { all_tabpages = true })
     end
 
@@ -130,7 +130,7 @@ end
 function M.handle_new_same_title(output_opts)
     ey._validate_output_opts(output_opts)
 
-    if not eu._get_g_var("qf_rancher_reuse_same_title") then return output_opts end
+    if not eu._get_g_var("qfr_reuse_same_title") then return output_opts end
 
     if output_opts.action ~= " " then return output_opts end
     local what = output_opts.what
@@ -183,7 +183,7 @@ function M._set_stack(src_win, stack)
         M._set_list(src_win, " ", what)
     end
 
-    if eu._get_g_var("qf_rancher_debug_assertions") then
+    if eu._get_g_var("qfr_debug_assertions") then
         local max_nr = M._get_list(src_win, { nr = "$" }).nr
         assert(#stack == max_nr)
     end
@@ -229,7 +229,7 @@ function M._get_stack(src_win)
         stack[#stack + 1] = what_set
     end
 
-    if eu._get_g_var("qf_rancher_debug_assertions") then assert(#stack == max_nr) end
+    if eu._get_g_var("qfr_debug_assertions") then assert(#stack == max_nr) end
 
     return stack
 end

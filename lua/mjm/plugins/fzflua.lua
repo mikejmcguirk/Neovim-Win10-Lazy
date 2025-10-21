@@ -267,6 +267,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
     end,
 })
 
+-- MID: Fix ugly colors in scroll area
 -- MID: Map to gi
 -- giq/giQ for qflist/qfstack
 -- gil/giL for loclist/loclist stack

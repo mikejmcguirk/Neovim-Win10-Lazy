@@ -1,6 +1,6 @@
--- =======================
--- == GLOBAL UTILS/VARS ==
--- =======================
+-- ===========================
+-- == NVIM QUICKFIX RANCHER ==
+-- ===========================
 
 --- https://github.com/tjdevries/lazy-require.nvim/blob/master/lua/lazy-require.lua
 ---@param require_path string
@@ -19,65 +19,60 @@ end
 
 _G.QFR_MAX_HEIGHT = 10
 
+-- TODO: These are my personal settings. Get out of here
+vim.api.nvim_set_var("qfr_debug_assertions", true)
+vim.api.nvim_set_var("qfr_preview_debounce", 50)
+vim.api.nvim_set_var("qfr_preview_show_title", false)
+
+---@mod NvimQfRancher Error list husbandry
+
 -- ============
--- == CONFIG ==
+-- == G VARS ==
 -- ============
 
---- LOW: Add a g:var to handle closing behavior when lists are deleted
+-- MID: Create specific validator functions for these where appropriate
 
---- TODO: These are my personal settings. Get out of here
--- Personal setting. Default is false in line with Nvim
-vim.api.nvim_set_var("qf_rancher_auto_open_changes", true)
-vim.api.nvim_set_var("qf_rancher_debug_assertions", true)
-vim.api.nvim_set_var("qf_rancher_preview_debounce", 50)
-vim.api.nvim_set_var("qf_rancher_preview_show_title", false)
--- vim.api.nvim_set_var("qf_rancher_set_default_maps", false)
-
---- TODO: For stuff like winblend, use actual validator functions
---- TODO: Make sure the options actually do what they're supposed to
---- DOCUMENT: What these vars do
---- TODO: FOr stuff like auto_open and auto-resize, need to go through everything and make sure
---- they're properly used
+-- DOCUMENT: What these vars do
 
 _G._QFR_G_VAR_MAP = {
-    qf_rancher_auto_open_changes = { { "boolean" }, false },
-    qf_rancher_auto_list_height = { { "boolean" }, true },
+    qfr_auto_open_changes = { { "boolean" }, true },
+    qfr_auto_list_height = { { "boolean" }, true },
     -- DOCUMENT:
     -- - If splitkeep is set to screen or topline, that will take precedence
     -- - If splitkeep is set for cursor, and this option is true, rancher will save and restore
     --      views where necessary
     -- - If this is off and splitkeep is set for cursor, you get Nvim default behavior
-    qf_rancher_always_save_views = { { "boolean" }, true },
-    qf_rancher_debug_assertions = { { "boolean" }, false },
-    qf_rancher_close_on_stack_clear = { { "boolean" }, true },
-    -- qf_rancher_del_all_if_empty = { { "boolean" }, true },
+    qfr_always_save_views = { { "boolean" }, true },
+    qfr_debug_assertions = { { "boolean" }, false },
+    qfr_close_on_stack_clear = { { "boolean" }, true },
 
-    qf_rancher_ftplugin_demap = { { "boolean" }, true },
-    qf_rancher_ftplugin_keymap = { { "boolean" }, true },
-    qf_rancher_ftplugin_set_opts = { { "boolean" }, true },
+    qfr_ftplugin_demap = { { "boolean" }, true },
+    qfr_ftplugin_keymap = { { "boolean" }, true },
+    qfr_ftplugin_set_opts = { { "boolean" }, true },
 
-    qf_rancher_grepprg = { { "string" }, "rg" },
+    qfr_grepprg = { { "string" }, "rg" },
 
-    qf_rancher_map_set_defaults = { { "boolean" }, true },
-    qf_rancher_map_ll_prefix = { { "string" }, "l" },
-    qf_rancher_map_qf_prefix = { { "string" }, "q" },
-    qf_rancher_map_diag_prefix = { { "string" }, "i" },
-    qf_rancher_map_keep_prefix = { { "string" }, "k" },
-    qf_rancher_map_remove_prefix = { { "string" }, "r" },
-    qf_rancher_map_grep_prefix = { { "string" }, "g" },
-    qf_rancher_map_sort_prefix = { { "string" }, "t" },
+    qfr_map_set_defaults = { { "boolean" }, true },
+    qfr_map_ll_prefix = { { "string" }, "l" },
+    qfr_map_qf_prefix = { { "string" }, "q" },
+    qfr_map_diag_prefix = { { "string" }, "i" },
+    qfr_map_keep_prefix = { { "string" }, "k" },
+    qfr_map_remove_prefix = { { "string" }, "r" },
+    qfr_map_grep_prefix = { { "string" }, "g" },
+    qfr_map_sort_prefix = { { "string" }, "t" },
 
-    qf_rancher_preview_border = { { "string", "table" }, "single" },
+    qfr_preview_border = { { "string", "table" }, "single" },
     -- DOCUMENT: Default is 100 to accomodate slower systems/HDs. 50 should be fine if you have an
     -- SSD/reasonably fast computer. Below that more risk of things getting choppy
-    qf_rancher_preview_debounce = { { "number" }, 100 },
-    qf_rancher_preview_show_title = { { "boolean" }, true },
-    qf_rancher_preview_title_pos = { { "string" }, "left" },
-    qf_rancher_preview_winblend = { { "number" }, 0 },
-    qf_rancher_qfsplit = { { "string" }, "botright" },
-    qf_rancher_reuse_same_title = { { "boolean" }, true },
-    qf_rancher_set_default_cmds = { { "boolean" }, true },
-    qf_rancher_skip_zzze = { { "boolean" }, false },
+    qfr_preview_debounce = { { "number" }, 100 },
+    qfr_preview_show_title = { { "boolean" }, true },
+    qfr_preview_title_pos = { { "string" }, "left" },
+    qfr_preview_winblend = { { "number" }, 0 },
+
+    qfr_qfsplit = { { "string" }, "botright" },
+    qfr_reuse_same_title = { { "boolean" }, true },
+    qfr_set_default_cmds = { { "boolean" }, true },
+    qfr_skip_zzze = { { "boolean" }, false },
 } ---@type table<string, {[1]:string[], [2]: any}>
 
 for k, v in pairs(_QFR_G_VAR_MAP) do
@@ -85,8 +80,7 @@ for k, v in pairs(_QFR_G_VAR_MAP) do
     if not vim.tbl_contains(v[1], type(cur_g_val)) then vim.api.nvim_set_var(k, v[2]) end
 end
 
---- TODO: It seems like this file is effectively the /plugin file, so this will have to be moved
---- in here
+--- TODO: Since this is the /plugin file, integrate the maps here
 require("mjm.error-list-maps")
 
 ----------------
@@ -97,11 +91,6 @@ require("mjm.error-list-maps")
 -- a generalized function for win_check, and pass in function handlers for different wintype
 -- conditions. Would allow for customization. But for the current case, I think the layers of
 -- wrappers would add complexity
-
--- FUTURE: View adjustments should take into account scrolloff and screenlines so that if the
--- user re-enters the window, it doesn't shift to meet scrolloff requirements
--- screenpos() ?
--- screenrow() ?
 
 -- TODO: There should be a setting for whether or not to turn these autocmds on
 ---@type integer
@@ -182,6 +171,8 @@ for _, m in pairs(scroll_maps) do
         qf_scroll_wrapper(m[2], m[3], m[4])
     end)
 end
+
+---@export NvimQfRancher
 
 -------------
 --- TODO: ---
@@ -312,6 +303,9 @@ end
 -----------
 --- LOW ---
 -----------
+
+-- LOW: View adjustments should take into account scrolloff and screenlines so that if the
+-- user re-enters the window, it doesn't shift to meet scrolloff requirements
 
 --- Something awkward is that, because marks are not supported, you cannot run any cmds from
 ---     visual mode without manually removing the marks with <C-u>. This adds friction to running
