@@ -140,11 +140,11 @@ local function do_grep(grep_info, input_opts, system_opts, output_opts)
     sys_opts.cmd_parts = grep_parts
 
     local sys_output_opts = vim.deepcopy(output_opts, true) ---@type QfrOutputOpts
-    sys_output_opts = et.handle_new_same_title(sys_output_opts)
-
     local base_cmd = table.concat(base_parts[grepprg], " ") ---@type string
     -- DOCUMENT: This convention is similar to but distinct from vimgrep
     sys_output_opts.what.title = grep_info.name .. " " .. base_cmd .. "  " .. pattern
+    sys_output_opts = et.handle_new_same_title(sys_output_opts)
+
     sys_output_opts.list_item_type = grep_info.list_item_type or output_opts.list_item_type
     sys_output_opts.sort_func = es._sort_fname_asc
 
