@@ -131,7 +131,7 @@ local function do_grep(grep_info, input_opts, system_opts, output_opts)
     local prompt = which_grep .. "(" .. display_input_type .. "): " ---@type string
 
     local pattern = eu._resolve_pattern(prompt, input_opts.pattern, input_type) ---@type string|nil
-    if not pattern then return end
+    if not pattern or pattern == "" then return end
 
     local grep_parts = get_full_parts[grepprg](pattern, input_type, locations) ---@type string[]
     if (not grep_parts) or #grep_parts == 0 then return end
