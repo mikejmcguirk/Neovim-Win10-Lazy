@@ -301,6 +301,8 @@ local function should_resize_list_win(list_win, dest_win, is_orphan)
     ey._validate_win(dest_win, true)
     vim.validate("is_orphan", is_orphan, "boolean")
 
+    if not eu._get_g_var("qf_rancher_auto_list_height") then return false end
+
     if dest_win or is_orphan then return false end
 
     local win_tabpage = vim.api.nvim_win_get_tabpage(list_win) ---@type integer

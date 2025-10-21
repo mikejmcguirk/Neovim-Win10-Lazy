@@ -41,7 +41,7 @@ vim.api.nvim_set_var("qf_rancher_preview_show_title", false)
 
 _G._QFR_G_VAR_MAP = {
     qf_rancher_auto_open_changes = { { "boolean" }, false },
-    qf_rancher_auto_resize_changes = { { "boolean" }, true },
+    qf_rancher_auto_list_height = { { "boolean" }, true },
     -- DOCUMENT:
     -- - If splitkeep is set to screen or topline, that will take precedence
     -- - If splitkeep is set for cursor, and this option is true, rancher will save and restore
@@ -184,6 +184,7 @@ end
 
 -- TODO: Need to go through everything and make sure it handles the assumption that nr can be
 -- 0, a number, "$", or nil. This is all valid data
+-- TODO: For cmd mappings, document what cmd opts they expect to be available
 
 -- It will be necessary to go through everything and allow for the "$" nrs to be used for stack
 -- and list nrs. It is... silly to put out the what based API but then also tell people not to

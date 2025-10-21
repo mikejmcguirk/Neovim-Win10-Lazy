@@ -15,7 +15,7 @@ local M = {}
 ---@param src_win integer|nil
 ---@return nil
 local function resize_after_stack_change(src_win)
-    if not eu._get_g_var("qf_rancher_auto_resize_changes") then return end
+    if not eu._get_g_var("qf_rancher_auto_list_height") then return end
     if src_win then
         local src_win_tabpage = api.nvim_win_get_tabpage(src_win) ---@type integer
         eo._resize_loclists_by_win(src_win, { tabpage = src_win_tabpage })
@@ -154,7 +154,9 @@ function M._get_history(src_win, count, opts)
     api.nvim_cmd({ cmd = cmd, count = adj_count, mods = { silent = opts.silent } }, {})
 
     resize_after_stack_change(src_win)
-    if opts.always_open then eo._open_list(src_win, { keep_win = opts.keep_win }) end
+    if opts.always_open then
+        eo._open_list(src_win, { keep_win = opts.keep_win, nop_if_open = true })
+    end
 end
 
 ---@param count integer

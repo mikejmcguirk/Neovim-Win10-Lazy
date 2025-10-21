@@ -311,8 +311,6 @@ function M._checked_echo(msg, print_msgs, is_err)
     end
 end
 
--- TODO: This doesn't work if you're dealing with the last window but want to rm the last buf
-
 ---@param win integer
 ---@param force boolean
 ---@return integer
@@ -325,9 +323,9 @@ function M._pwin_close(win, force)
     local tabpages = api.nvim_list_tabpages() ---@type integer[]
     local win_tabpage = api.nvim_win_get_tabpage(win) ---@type integer
     local win_tabpage_wins = api.nvim_tabpage_list_wins(win_tabpage) ---@type integer[]
-    if #tabpages == 1 and #win_tabpage_wins == 1 then return -1 end
-
     local buf = api.nvim_win_get_buf(win) ---@type integer
+    if #tabpages == 1 and #win_tabpage_wins == 1 then return buf end
+
     local ok, _ = pcall(api.nvim_win_close, win, force) ---@type boolean, nil
     return ok and buf or -1
 end
@@ -569,7 +567,7 @@ function M._clear_list_and_resize(src_win, list_nr)
     local result = et._clear_list(src_win, list_nr)
 
     if result == -1 then return result end
-    if not M._get_g_var("qf_rancher_auto_resize_changes") then return result end
+    if not M._get_g_var("qf_rancher_auto_list_height") then return result end
 
     if result == 0 or result == et._get_list(src_win, { nr = 0 }).nr then
         local tabpage = src_win and api.nvim_win_get_tabpage(src_win)

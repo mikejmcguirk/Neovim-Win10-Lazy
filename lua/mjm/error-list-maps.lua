@@ -240,14 +240,14 @@ local rancher_keymaps = {
     --- OPEN/CLOSE/RESIZE ---
     -------------------------
 
-    { nn, pqfr.."-open-qf-list)",     qp.."p", "Open the quickfix list",               function() eo._open_qflist({ always_resize = true, height = vim.v.count, print_errs = true }) end },
-    { nn, pqfr.."-open-qf-list-max)", qp.."P", "Open the quickfix list to max height", function() eo._open_qflist({ always_resize = true, height = QFR_MAX_HEIGHT, print_errs = true }) end },
+    { nn, pqfr.."-open-qf-list)",     qp.."p", "Open the quickfix list",               function() eo._open_qflist({ height = vim.v.count }) end },
+    { nn, pqfr.."-open-qf-list-max)", qp.."P", "Open the quickfix list to max height", function() eo._open_qflist({ height = QFR_MAX_HEIGHT }) end },
     { nn, pqfr.."-close-qf-list)",    qp.."o", "Close the quickfix list",              function() eo._close_qflist() end },
-    { nn, pqfr.."-toggle-qf-list)",   qp.."q", "Toggle the quickfix list",             function() eo._toggle_qflist()  end },
-    { nn, pqfr.."-open-loclist)",     lp.."p", "Open the location list",               function() eo._open_loclist(cur_win(), { always_resize = true, height = vim.v.count, print_errs = true }) end },
-    { nn, pqfr.."-open-loclist-max)", lp.."P", "Open the location list to max height", function() eo._open_loclist(cur_win(), { always_resize = true, height = QFR_MAX_HEIGHT, print_errs = true }) end },
+    { nn, pqfr.."-toggle-qf-list)",   qp.."q", "Toggle the quickfix list",             function() eo._toggle_qflist({})  end },
+    { nn, pqfr.."-open-loclist)",     lp.."p", "Open the location list",               function() eo._open_loclist(cur_win(), { height = vim.v.count }) end },
+    { nn, pqfr.."-open-loclist-max)", lp.."P", "Open the location list to max height", function() eo._open_loclist(cur_win(), { height = QFR_MAX_HEIGHT }) end },
     { nn, pqfr.."-close-loclist)",    lp.."o", "Close the location list",              function() eo._close_loclist(cur_win()) end },
-    { nn, pqfr.."-toggle-loclist)",   lp.."l", "Toggle the location list",             function() eo._toggle_loclist(cur_win()) end },
+    { nn, pqfr.."-toggle-loclist)",   lp.."l", "Toggle the location list",             function() eo._toggle_loclist(cur_win(), {}) end },
 
     ------------------
     --- NAVIGATION ---
@@ -520,33 +520,29 @@ if vim.g.qf_rancher_set_default_cmds then
     --- OPEN/CLOSE/TOGGLE ---
     -------------------------
 
-    --- NOTE: If actual opts or logic are added to the close/toggle cmds, put that in the open
-    --- module and call an exposed funtion here
-
     api.nvim_create_user_command("Qopen", function(cargs)
-        eo._open_qflist_cmd(cargs)
+        eo.open_qflist_cmd(cargs)
     end, { count = 0, desc = "Open the Quickfix list" })
 
     api.nvim_create_user_command("Lopen", function(cargs)
-        eo._open_loclist_cmd(cargs)
+        eo.open_loclist_cmd(cargs)
     end, { count = 0, desc = "Open the Location List" })
 
     api.nvim_create_user_command("Qclose", function()
-        eo._close_qflist()
+        eo.close_qflist_cmd()
     end, { desc = "Close the Quickfix list" })
 
-    -- TODO: Bring all these into the open file
     api.nvim_create_user_command("Lclose", function()
-        eo._close_loclist(api.nvim_get_current_win())
+        eo.close_loclist_cmd()
     end, { desc = "Close the Location List" })
 
-    api.nvim_create_user_command("Qtoggle", function()
-        eo._toggle_qflist()
-    end, { desc = "Toggle the Quickfix list" })
+    api.nvim_create_user_command("Qtoggle", function(cargs)
+        eo.toggle_qflist_cmd(cargs)
+    end, { count = 0, desc = "Toggle the Quickfix list" })
 
-    api.nvim_create_user_command("Ltoggle", function()
-        eo._toggle_loclist(api.nvim_get_current_win())
-    end, { desc = "Toggle the Location List" })
+    api.nvim_create_user_command("Ltoggle", function(cargs)
+        eo.toggle_loclist_cmd(cargs)
+    end, { count = 0, desc = "Toggle the Location List" })
 
     ------------------
     --- NAV/ACTION ---

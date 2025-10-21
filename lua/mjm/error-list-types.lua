@@ -586,19 +586,17 @@ end
 ----------------------------
 
 ---@class QfrListOpenOpts
----@field always_resize? boolean
 ---@field height? integer
 ---@field keep_win? boolean
----@field print_errs? boolean
+---@field nop_if_open? boolean
 
 ---@param open_opts QfrListOpenOpts
 ---@return nil
 function M._validate_open_opts(open_opts)
     vim.validate("open_opts", open_opts, "table")
-    vim.validate("open_opts.always_resize", open_opts.always_resize, "boolean", true)
     vim.validate("open_opts.height", open_opts.height, "number", true)
     vim.validate("open_opts.keep_win", open_opts.keep_win, "boolean", true)
-    vim.validate("open_opts.print_errs", open_opts.print_errs, "boolean", true)
+    vim.validate("open_opts.nop_if_open", open_opts.nop_if_open, "boolean", true)
 end
 
 ---@alias QfRancherIdxFunc fun(integer?):vim.quickfix.entry|nil, integer|nil
