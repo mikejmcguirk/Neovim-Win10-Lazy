@@ -1,5 +1,6 @@
 MjmStl = {}
 
+-- TODO: Use a timer on the LSP cache to clear no matter what
 local lsp_cache = {}
 local diag_cache = {}
 local mode = "n" -- ModeChanged does not grab the initial set to normal mode

@@ -555,14 +555,6 @@ function M._validate_filter_info(filter_info)
     vim.validate("filter_info.sensitive_func", filter_info.sensitive_func, "callable")
 end
 
----@class QfrFilterOpts
----@field keep? boolean
-
-function M._validate_filter_opts(filter_opts)
-    vim.validate("filter_opts", filter_opts, "table")
-    vim.validate("filter_opts.keep", filter_opts.keep, "boolean", true)
-end
-
 ---@class QfRancherPredicateOpts
 ---@field pattern? string
 ---@field regex? vim.regex

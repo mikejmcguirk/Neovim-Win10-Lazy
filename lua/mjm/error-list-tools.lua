@@ -98,6 +98,12 @@ function M._set_list(src_win, action, what)
     local what_set = vim.deepcopy(what, true) ---@type QfrWhat
     what_set.nr = resolve_list_nr(src_win, what_set.nr)
 
+    local items_len = what_set.items and #what_set.items or 0
+    local lines_len = what_set.lines and #what_set.lines or 0
+    local new_len = items_len + lines_len
+    local idx = what_set.idx or 1
+    what_set.idx = new_len > 0 and math.min(idx, new_len) or nil
+
     local result = src_win and fn.setloclist(src_win, {}, action, what_set)
         or fn.setqflist({}, action, what_set)
 

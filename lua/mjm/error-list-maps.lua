@@ -79,9 +79,6 @@ local r = ", replace"
 
 local ds = vim.diagnostic.severity
 
-local keep = { keep = true }
-local nokeep = { keep = false }
-
 --- The keymaps need to all be set here to avoid eagerly requiring other modules
 --- I have not been able to find a way to build the list at runtime without it being hard to read
 --- and non-trivially affecting startup time
@@ -133,83 +130,83 @@ local rancher_keymaps = {
 
     --- Cfilter ---
 
-    { nx, pqfr.."-Qfilter-r-cfilter)",   qp.."kl",         "Qfilter cfilter"..r..sc,  function() ef.filter("cfilter", keep, in_vimsmart, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-cfilter)",  qp.."rl",         "Qfilter! cfilter"..r..sc, function() ef.filter("cfilter", nokeep, in_vimsmart, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter-r-CFILTER)",   qp.."kL",         "Qfilter cfilter"..r..cs,  function() ef.filter("cfilter", keep, in_sensitive, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-CFILTER)",  qp.."rL",         "Qfilter! cfilter"..r..cs, function() ef.filter("cfilter", nokeep, in_sensitive, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter-r-cfilterX)",  qp.."k<C-l>",     "Qfilter cfilter"..r..rx,  function() ef.filter("cfilter", keep, in_regex, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-cfilterX)", qp.."r<C-l>",     "Qfilter! cfilter"..r..rx, function() ef.filter("cfilter", nokeep, in_regex, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter-r-cfilter)",   qp.."kl",         "Qfilter cfilter"..r..sc,  function() ef.filter("cfilter", true, in_vimsmart, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter!-r-cfilter)",  qp.."rl",         "Qfilter! cfilter"..r..sc, function() ef.filter("cfilter", false, in_vimsmart, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter-r-CFILTER)",   qp.."kL",         "Qfilter cfilter"..r..cs,  function() ef.filter("cfilter", true, in_sensitive, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter!-r-CFILTER)",  qp.."rL",         "Qfilter! cfilter"..r..cs, function() ef.filter("cfilter", false, in_sensitive, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter-r-cfilterX)",  qp.."k<C-l>",     "Qfilter cfilter"..r..rx,  function() ef.filter("cfilter", true, in_regex, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter!-r-cfilterX)", qp.."r<C-l>",     "Qfilter! cfilter"..r..rx, function() ef.filter("cfilter", false, in_regex, replace_qflist()) end},
 
-    { nx, pqfr.."-Lfilter-r-cfilter)",   lp.."kl",         "Lfilter cfilter"..r..sc,  function() ef.filter("cfilter", keep, in_vimsmart, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-cfilter)",  lp.."rl",         "Lfilter! cfilter"..r..sc, function() ef.filter("cfilter", nokeep, in_vimsmart, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter-r-CFILTER)",   lp.."kL",         "Lfilter cfilter"..r..cs,  function() ef.filter("cfilter", keep, in_sensitive, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-CFILTER)",  lp.."rL",         "Lfilter! cfilter"..r..cs, function() ef.filter("cfilter", nokeep, in_sensitive, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter-r-cfilterX)",  lp.."k<C-l>",     "Lfilter cfilter"..r..rx,  function() ef.filter("cfilter", keep, in_regex, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-cfilterX)", lp.."r<C-l>",     "Lfilter! cfilter"..r..rx, function() ef.filter("cfilter", nokeep, in_regex, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter-r-cfilter)",   lp.."kl",         "Lfilter cfilter"..r..sc,  function() ef.filter("cfilter", true, in_vimsmart, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter!-r-cfilter)",  lp.."rl",         "Lfilter! cfilter"..r..sc, function() ef.filter("cfilter", false, in_vimsmart, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter-r-CFILTER)",   lp.."kL",         "Lfilter cfilter"..r..cs,  function() ef.filter("cfilter", true, in_sensitive, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter!-r-CFILTER)",  lp.."rL",         "Lfilter! cfilter"..r..cs, function() ef.filter("cfilter", false, in_sensitive, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter-r-cfilterX)",  lp.."k<C-l>",     "Lfilter cfilter"..r..rx,  function() ef.filter("cfilter", true, in_regex, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter!-r-cfilterX)", lp.."r<C-l>",     "Lfilter! cfilter"..r..rx, function() ef.filter("cfilter", false, in_regex, replace_loclist()) end},
 
     --- Fname ---
 
-    { nx, pqfr.."-Qfilter-r-fname)",     qp.."kf",         "Qfilter fname"..r..sc,    function() ef.filter("fname", keep, in_vimsmart, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-fname)",    qp.."rf",         "Qfilter! fname"..r..sc,   function() ef.filter("fname", nokeep, in_vimsmart, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter-r-FNAME)",     qp.."kF",         "Qfilter fname"..r..cs,    function() ef.filter("fname", keep, in_sensitive, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-FNAME)",    qp.."rF",         "Qfilter! fname"..r..cs,   function() ef.filter("fname", nokeep, in_sensitive, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter-r-fnameX)",    qp.."k<C-f>",     "Qfilter fname"..r..rx,    function() ef.filter("fname", keep, in_regex, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-fnameX)",   qp.."r<C-f>",     "Qfilter! fname"..r..rx,   function() ef.filter("fname", nokeep, in_regex, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter-r-fname)",     qp.."kf",         "Qfilter fname"..r..sc,    function() ef.filter("fname", true, in_vimsmart, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter!-r-fname)",    qp.."rf",         "Qfilter! fname"..r..sc,   function() ef.filter("fname", false, in_vimsmart, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter-r-FNAME)",     qp.."kF",         "Qfilter fname"..r..cs,    function() ef.filter("fname", true, in_sensitive, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter!-r-FNAME)",    qp.."rF",         "Qfilter! fname"..r..cs,   function() ef.filter("fname", false, in_sensitive, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter-r-fnameX)",    qp.."k<C-f>",     "Qfilter fname"..r..rx,    function() ef.filter("fname", true, in_regex, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter!-r-fnameX)",   qp.."r<C-f>",     "Qfilter! fname"..r..rx,   function() ef.filter("fname", false, in_regex, replace_qflist()) end},
 
-    { nx, pqfr.."-Lfilter-r-fname)",     lp.."kf",         "Lfilter fname"..r..sc,    function() ef.filter("fname", keep, in_vimsmart, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-fname)",    lp.."rf",         "Lfilter! fname"..r..sc,   function() ef.filter("fname", nokeep, in_vimsmart, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter-r-FNAME)",     lp.."kF",         "Lfilter fname"..r..cs,    function() ef.filter("fname", keep, in_sensitive, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-FNAME)",    lp.."rF",         "Lfilter! fname"..r..cs,   function() ef.filter("fname", nokeep, in_sensitive, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter-r-fnameX)",    lp.."k<C-f>",     "Lfilter fname"..r..rx,    function() ef.filter("fname", keep, in_regex, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-fnameX)",   lp.."r<C-f>",     "Lfilter! fname"..r..rx,   function() ef.filter("fname", nokeep, in_regex, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter-r-fname)",     lp.."kf",         "Lfilter fname"..r..sc,    function() ef.filter("fname", true, in_vimsmart, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter!-r-fname)",    lp.."rf",         "Lfilter! fname"..r..sc,   function() ef.filter("fname", false, in_vimsmart, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter-r-FNAME)",     lp.."kF",         "Lfilter fname"..r..cs,    function() ef.filter("fname", true, in_sensitive, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter!-r-FNAME)",    lp.."rF",         "Lfilter! fname"..r..cs,   function() ef.filter("fname", false, in_sensitive, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter-r-fnameX)",    lp.."k<C-f>",     "Lfilter fname"..r..rx,    function() ef.filter("fname", true, in_regex, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter!-r-fnameX)",   lp.."r<C-f>",     "Lfilter! fname"..r..rx,   function() ef.filter("fname", false, in_regex, replace_loclist()) end},
 
     --- Text ---
 
-    { nx, pqfr.."-Qfilter-r-text)",      qp.."ke",         "Qfilter text"..r..sc,     function() ef.filter("text", keep, in_vimsmart, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-text)",     qp.."re",         "Qfilter! text"..r..sc,    function() ef.filter("text", nokeep, in_vimsmart, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter-r-TEXT)",      qp.."kE",         "Qfilter text"..r..cs,     function() ef.filter("text", keep, in_sensitive, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-TEXT)",     qp.."rE",         "Qfilter! text"..r..cs,    function() ef.filter("text", nokeep, in_sensitive, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter-r-textX)",     qp.."k<C-e>",     "Qfilter text"..r..rx,     function() ef.filter("text", keep, in_regex, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-textX)",    qp.."r<C-e>",     "Qfilter! text"..r..rx,    function() ef.filter("text", nokeep, in_regex, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter-r-text)",      qp.."ke",         "Qfilter text"..r..sc,     function() ef.filter("text", true, in_vimsmart, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter!-r-text)",     qp.."re",         "Qfilter! text"..r..sc,    function() ef.filter("text", false, in_vimsmart, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter-r-TEXT)",      qp.."kE",         "Qfilter text"..r..cs,     function() ef.filter("text", true, in_sensitive, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter!-r-TEXT)",     qp.."rE",         "Qfilter! text"..r..cs,    function() ef.filter("text", false, in_sensitive, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter-r-textX)",     qp.."k<C-e>",     "Qfilter text"..r..rx,     function() ef.filter("text", true, in_regex, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter!-r-textX)",    qp.."r<C-e>",     "Qfilter! text"..r..rx,    function() ef.filter("text", false, in_regex, replace_qflist()) end},
 
-    { nx, pqfr.."-Lfilter-r-text)",      lp.."ke",         "Lfilter text"..r..sc,     function() ef.filter("text", keep, in_vimsmart, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-text)",     lp.."re",         "Lfilter! text"..r..sc,    function() ef.filter("text", nokeep, in_vimsmart, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter-r-TEXT)",      lp.."kE",         "Lfilter text"..r..cs,     function() ef.filter("text", keep, in_sensitive, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-TEXT)",     lp.."rE",         "Lfilter! text"..r..cs,    function() ef.filter("text", nokeep, in_sensitive, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter-r-textX)",     lp.."k<C-e>",     "Lfilter text"..r..rx,     function() ef.filter("text", keep, in_regex, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-textX)",    lp.."r<C-e>",     "Lfilter! text"..r..rx,    function() ef.filter("text", nokeep, in_regex, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter-r-text)",      lp.."ke",         "Lfilter text"..r..sc,     function() ef.filter("text", true, in_vimsmart, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter!-r-text)",     lp.."re",         "Lfilter! text"..r..sc,    function() ef.filter("text", false, in_vimsmart, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter-r-TEXT)",      lp.."kE",         "Lfilter text"..r..cs,     function() ef.filter("text", true, in_sensitive, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter!-r-TEXT)",     lp.."rE",         "Lfilter! text"..r..cs,    function() ef.filter("text", false, in_sensitive, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter-r-textX)",     lp.."k<C-e>",     "Lfilter text"..r..rx,     function() ef.filter("text", true, in_regex, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter!-r-textX)",    lp.."r<C-e>",     "Lfilter! text"..r..rx,    function() ef.filter("text", false, in_regex, replace_loclist()) end},
 
     --- Lnum ---
 
-    { nx, pqfr.."-Qfilter-r-lnum)",      qp.."kn",         "Qfilter lnum"..r..sc,     function() ef.filter("lnum", keep, in_vimsmart, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-lnum)",     qp.."rn",         "Qfilter! lnum"..r..sc,    function() ef.filter("lnum", nokeep, in_vimsmart, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter-r-LNUM)",      qp.."kN",         "Qfilter lnum"..r..cs,     function() ef.filter("lnum", keep, in_sensitive, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-LNUM)",     qp.."rN",         "Qfilter! lnum"..r..cs,    function() ef.filter("lnum", nokeep, in_sensitive, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter-r-lnumX)",     qp.."k<C-n>",     "Qfilter lnum"..r..rx,     function() ef.filter("lnum", keep, in_regex, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-lnumX)",    qp.."r<C-n>",     "Qfilter! lnum"..r..rx,    function() ef.filter("lnum", nokeep, in_regex, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter-r-lnum)",      qp.."kn",         "Qfilter lnum"..r..sc,     function() ef.filter("lnum", true, in_vimsmart, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter!-r-lnum)",     qp.."rn",         "Qfilter! lnum"..r..sc,    function() ef.filter("lnum", false, in_vimsmart, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter-r-LNUM)",      qp.."kN",         "Qfilter lnum"..r..cs,     function() ef.filter("lnum", true, in_sensitive, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter!-r-LNUM)",     qp.."rN",         "Qfilter! lnum"..r..cs,    function() ef.filter("lnum", false, in_sensitive, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter-r-lnumX)",     qp.."k<C-n>",     "Qfilter lnum"..r..rx,     function() ef.filter("lnum", true, in_regex, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter!-r-lnumX)",    qp.."r<C-n>",     "Qfilter! lnum"..r..rx,    function() ef.filter("lnum", false, in_regex, replace_qflist()) end},
 
-    { nx, pqfr.."-Lfilter-r-lnum)",      lp.."kn",         "Lfilter lnum"..r..sc,     function() ef.filter("lnum", keep, in_vimsmart, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-lnum)",     lp.."rn",         "Lfilter! lnum"..r..sc,    function() ef.filter("lnum", nokeep, in_vimsmart, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter-r-LNUM)",      lp.."kN",         "Lfilter lnum"..r..cs,     function() ef.filter("lnum", keep, in_sensitive, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-LNUM)",     lp.."rN",         "Lfilter! lnum"..r..cs,    function() ef.filter("lnum", nokeep, in_sensitive, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter-r-lnumX)",     lp.."k<C-n>",     "Lfilter lnum"..r..rx,     function() ef.filter("lnum", keep, in_regex, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-lnumX)",    lp.."r<C-n>",     "Lfilter! lnum"..r..rx,    function() ef.filter("lnum", nokeep, in_regex, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter-r-lnum)",      lp.."kn",         "Lfilter lnum"..r..sc,     function() ef.filter("lnum", true, in_vimsmart, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter!-r-lnum)",     lp.."rn",         "Lfilter! lnum"..r..sc,    function() ef.filter("lnum", false, in_vimsmart, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter-r-LNUM)",      lp.."kN",         "Lfilter lnum"..r..cs,     function() ef.filter("lnum", true, in_sensitive, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter!-r-LNUM)",     lp.."rN",         "Lfilter! lnum"..r..cs,    function() ef.filter("lnum", false, in_sensitive, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter-r-lnumX)",     lp.."k<C-n>",     "Lfilter lnum"..r..rx,     function() ef.filter("lnum", true, in_regex, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter!-r-lnumX)",    lp.."r<C-n>",     "Lfilter! lnum"..r..rx,    function() ef.filter("lnum", false, in_regex, replace_loclist()) end},
 
     --- Type ---
 
-    { nx, pqfr.."-Qfilter-r-type)",      qp.."kt",         "Qfilter type"..r..sc,     function() ef.filter("type", keep, in_vimsmart, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-type)",     qp.."rt",         "Qfilter! type"..r..sc,    function() ef.filter("type", nokeep, in_vimsmart, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter-r-TYPE)",      qp.."kT",         "Qfilter type"..r..cs,     function() ef.filter("type", keep, in_sensitive, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-TYPE)",     qp.."rT",         "Qfilter! type"..r..cs,    function() ef.filter("type", nokeep, in_sensitive, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter-r-typeX)",     qp.."k<C-t>",     "Qfilter type"..r..rx,     function() ef.filter("type", keep, in_regex, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-typeX)",    qp.."r<C-t>",     "Qfilter! type"..r..rx,    function() ef.filter("type", nokeep, in_regex, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter-r-type)",      qp.."kt",         "Qfilter type"..r..sc,     function() ef.filter("type", true, in_vimsmart, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter!-r-type)",     qp.."rt",         "Qfilter! type"..r..sc,    function() ef.filter("type", false, in_vimsmart, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter-r-TYPE)",      qp.."kT",         "Qfilter type"..r..cs,     function() ef.filter("type", true, in_sensitive, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter!-r-TYPE)",     qp.."rT",         "Qfilter! type"..r..cs,    function() ef.filter("type", false, in_sensitive, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter-r-typeX)",     qp.."k<C-t>",     "Qfilter type"..r..rx,     function() ef.filter("type", true, in_regex, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter!-r-typeX)",    qp.."r<C-t>",     "Qfilter! type"..r..rx,    function() ef.filter("type", false, in_regex, replace_qflist()) end},
 
-    { nx, pqfr.."-Lfilter-r-type)",      lp.."kt",         "Lfilter type"..r..sc,     function() ef.filter("type", keep, in_vimsmart, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-type)",     lp.."rt",         "Lfilter! type"..r..sc,    function() ef.filter("type", nokeep, in_vimsmart, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter-r-TYPE)",      lp.."kT",         "Lfilter type"..r..cs,     function() ef.filter("type", keep, in_sensitive, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-TYPE)",     lp.."rT",         "Lfilter! type"..r..cs,    function() ef.filter("type", nokeep, in_sensitive, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter-r-typeX)",     lp.."k<C-t>",     "Lfilter type"..r..rx,     function() ef.filter("type", keep, in_regex, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-typeX)",    lp.."r<C-t>",     "Lfilter! type"..r..rx,    function() ef.filter("type", nokeep, in_regex, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter-r-type)",      lp.."kt",         "Lfilter type"..r..sc,     function() ef.filter("type", true, in_vimsmart, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter!-r-type)",     lp.."rt",         "Lfilter! type"..r..sc,    function() ef.filter("type", false, in_vimsmart, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter-r-TYPE)",      lp.."kT",         "Lfilter type"..r..cs,     function() ef.filter("type", true, in_sensitive, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter!-r-TYPE)",     lp.."rT",         "Lfilter! type"..r..cs,    function() ef.filter("type", false, in_sensitive, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter-r-typeX)",     lp.."k<C-t>",     "Lfilter type"..r..rx,     function() ef.filter("type", true, in_regex, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter!-r-typeX)",    lp.."r<C-t>",     "Lfilter! type"..r..rx,    function() ef.filter("type", false, in_regex, replace_loclist()) end},
 
     ------------
     --- GREP ---

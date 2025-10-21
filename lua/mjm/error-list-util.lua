@@ -131,6 +131,10 @@ local function get_input(prompt)
     return nil
 end
 
+-- MID: This function forces callers to build their prompts even in visual mode. What this
+-- function should do is take a function reference to build the prompt that is only called if
+-- we're in normal mode
+
 ---@param prompt string
 ---@param input_pattern string|nil
 ---@param input_type QfrInputType

@@ -8,30 +8,29 @@ local fn = vim.fn
 
 ---@mod Filter Filter list items
 
----@class QfrFilter
+--- @class QfrFilter
 local Filter = {}
 
 ---@param filter_info QfrFilterInfo
----@param filter_opts QfrFilterOpts
+---@param keep boolean
 ---@param input_opts QfrInputOpts
 ---@param output_opts QfrOutputOpts
 ---@return nil
-local function filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
+local function filter_wrapper(filter_info, keep, input_opts, output_opts)
     ey._validate_filter_info(filter_info)
-    ey._validate_filter_opts(filter_opts)
+    vim.validate("keep", keep, "boolean")
     ey._validate_input_opts(input_opts)
     ey._validate_output_opts(output_opts)
 
     local src_win = output_opts.src_win ---@type integer|nil
     if src_win and not eu._valid_win_for_loclist(src_win) then return end
 
-    local cur_list = et._get_list(src_win, { nr = output_opts.what.nr, all = true }) ---@type table
-    if cur_list.size == 0 then
+    local what_ret = et._get_list(src_win, { nr = output_opts.what.nr, all = true }) ---@type table
+    if what_ret.size == 0 then
         api.nvim_echo({ { "No entries to filter", "" } }, false, {})
         return
     end
 
-    local keep = filter_opts.keep ---@type boolean
     local prompt = "Enter pattern to " .. (keep and "keep" or "remove") ---@type string
     local input_type = eu._resolve_input_type(input_opts.input_type) ---@type QfrInputType
     local display_input_type = eu._get_display_input_type(input_type) ---@type string
@@ -42,7 +41,6 @@ local function filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
 
     local regex = input_type == "regex" and vim.regex(pattern) or nil ---@type vim.regex|nil
     local lower_pattern = string.lower(pattern) ---@type string
-    -- LOW: The resolution of input types is conceptually hazy
     if input_type == "smartcase" then
         local is_smart_pattern = lower_pattern == pattern ---@type boolean
         input_type = is_smart_pattern and "insensitive" or "sensitive"
@@ -55,21 +53,17 @@ local function filter_wrapper(filter_info, filter_opts, input_opts, output_opts)
         return filter_info.insensitive_func
     end)() ---@type QfrPredicate
 
-    local new_items = vim.tbl_filter(function(t)
+    what_ret.items = vim.tbl_filter(function(t)
         return predicate(t, keep, { pattern = pattern, regex = regex })
-    end, cur_list.items) ---@type vim.quickfix.entry[]
+    end, what_ret.items) ---@type vim.quickfix.entry[]
 
-    local what_set = vim.tbl_deep_extend("force", output_opts.what, {
-        idx = math.min(#new_items, cur_list.idx),
-        items = new_items,
-        title = filter_info.name .. " filter: /" .. pattern,
-    }) ---@type QfrWhat
-
+    local what_set = et._what_ret_to_set(what_ret) ---@type QfrWhat
+    what_set.nr = output_opts.what.nr
     local dest_nr = et._set_list(src_win, output_opts.action, what_set) ---@type integer
-    if eu._get_g_var("qf_rancher_auto_open_changes") then
+    if dest_nr >= 0 and eu._get_g_var("qf_rancher_auto_open_changes") then
         ea._get_history(src_win, dest_nr, {
             always_open = true,
-            default = "current",
+            default = "cur_list",
             silent = true,
         })
     end
@@ -92,7 +86,7 @@ end
 ---@param comparison string
 ---@param keep boolean
 ---@return boolean
-local function regex_boilerplate(regex, comparison, keep)
+local function regex_filter(regex, comparison, keep)
     if regex:match_str(comparison) then return keep end
     return not keep
 end
@@ -101,7 +95,7 @@ end
 ---@param comparison string
 ---@param keep boolean
 ---@return boolean
-local function insensitive_boilerplate(pattern, comparison, keep)
+local function insensitive_filter(pattern, comparison, keep)
     local lower = string.lower(comparison) ---@type string
     if string.find(lower, pattern, 1, true) then return keep end
     return not keep
@@ -111,7 +105,7 @@ end
 ---@param comparison string
 ---@param keep boolean
 ---@return boolean
-local function sensitive_boilerplate(pattern, comparison, keep)
+local function sensitive_filter(pattern, comparison, keep)
     if string.find(comparison, pattern, 1, true) then return keep end
     return not keep
 end
@@ -122,23 +116,23 @@ end
 
 ---@type QfrPredicate
 local function cfilter_regex(item, keep, opts)
-    if regex_boilerplate(opts.regex, item.text, keep) == keep then return keep end
+    if regex_filter(opts.regex, item.text, keep) == keep then return keep end
     if not item.bufnr then return false end
-    return regex_boilerplate(opts.regex, fn.bufname(item.bufnr), keep)
+    return regex_filter(opts.regex, fn.bufname(item.bufnr), keep)
 end
 
 ---@type QfrPredicate
 local function cfilter_insensitive(item, keep, opts)
-    if insensitive_boilerplate(opts.pattern, item.text, keep) == keep then return keep end
+    if insensitive_filter(opts.pattern, item.text, keep) == keep then return keep end
     if not item.bufnr then return false end
-    return insensitive_boilerplate(opts.pattern, fn.bufname(item.bufnr), keep)
+    return insensitive_filter(opts.pattern, fn.bufname(item.bufnr), keep)
 end
 
 ---@type QfrPredicate
 local function cfilter_sensitive(item, keep, opts)
-    if sensitive_boilerplate(opts.pattern, item.text, keep) == keep then return keep end
+    if sensitive_filter(opts.pattern, item.text, keep) == keep then return keep end
     if not opts.bufnr then return false end
-    return sensitive_boilerplate(opts.pattern, fn.bufname(item.bufnr), keep)
+    return sensitive_filter(opts.pattern, fn.bufname(item.bufnr), keep)
 end
 
 -- ==============
@@ -148,19 +142,19 @@ end
 ---@type QfrPredicate
 local function fname_regex(item, keep, opts)
     if not item.bufnr then return false end
-    return regex_boilerplate(opts.regex, fn.bufname(item.bufnr), keep)
+    return regex_filter(opts.regex, fn.bufname(item.bufnr), keep)
 end
 
 ---@type QfrPredicate
 local function fname_insensitive(item, keep, opts)
     if not item.bufnr then return false end
-    return insensitive_boilerplate(opts.pattern, fn.bufname(item.bufnr), keep)
+    return insensitive_filter(opts.pattern, fn.bufname(item.bufnr), keep)
 end
 
 ---@type QfrPredicate
 local function fname_sensitive(item, keep, opts)
     if not item.bufnr then return false end
-    return sensitive_boilerplate(opts.pattern, fn.bufname(item.bufnr), keep)
+    return sensitive_filter(opts.pattern, fn.bufname(item.bufnr), keep)
 end
 
 -- ==========
@@ -169,17 +163,17 @@ end
 
 ---@type QfrPredicate
 local function text_regex(item, keep, opts)
-    return regex_boilerplate(opts.regex, item.text, keep)
+    return regex_filter(opts.regex, item.text, keep)
 end
 
 ---@type QfrPredicate
 local function text_insensitive(item, keep, opts)
-    return insensitive_boilerplate(opts.pattern, item.text, keep)
+    return insensitive_filter(opts.pattern, item.text, keep)
 end
 
 ---@type QfrPredicate
 local function text_sensitive(item, keep, opts)
-    return sensitive_boilerplate(opts.pattern, item.text, keep)
+    return sensitive_filter(opts.pattern, item.text, keep)
 end
 
 -- ==========
@@ -188,17 +182,17 @@ end
 
 ---@type QfrPredicate
 local function type_regex(item, keep, opts)
-    return regex_boilerplate(opts.regex, item.type, keep)
+    return regex_filter(opts.regex, item.type, keep)
 end
 
 ---@type QfrPredicate
 local function type_insensitive(item, keep, opts)
-    return insensitive_boilerplate(opts.pattern, item.type, keep)
+    return insensitive_filter(opts.pattern, item.type, keep)
 end
 
 ---@type QfrPredicate
 local function type_sensitive(item, keep, opts)
-    return sensitive_boilerplate(opts.pattern, item.type, keep)
+    return sensitive_filter(opts.pattern, item.type, keep)
 end
 
 -- =================
@@ -207,7 +201,12 @@ end
 
 ---@type QfrPredicate
 local function lnum_regex(item, keep, opts)
-    return regex_boilerplate(opts.regex, tostring(item.lnum), keep)
+    return regex_filter(opts.regex, tostring(item.lnum), keep)
+end
+
+---@type QfrPredicate
+local function lnum_insensitive(item, keep, opts)
+    return insensitive_filter(opts.pattern, tostring(item.lnum), keep)
 end
 
 -- DOCUMENT: This compares exactly, vs the insensitive, which works like a contains function
@@ -216,11 +215,6 @@ end
 local function lnum_sensitive(item, keep, opts)
     if tostring(item.lnum) == opts.pattern then return keep end
     return not keep
-end
-
----@type QfrPredicate
-local function lnum_insensitive(item, keep, opts)
-    return insensitive_boilerplate(opts.pattern, tostring(item.lnum), keep)
 end
 
 -- =========
@@ -302,13 +296,13 @@ end
 -- DOCUMENT: this. Needed if you want to run your filter
 
 ---@param name string
----@param filter_opts QfrFilterOpts
+---@param keep boolean
 ---@param input_opts QfrInputOpts
 ---@param output_opts QfrOutputOpts
 ---@return nil
-function Filter.filter(name, filter_opts, input_opts, output_opts)
+function Filter.filter(name, keep, input_opts, output_opts)
     if filters[name] then
-        filter_wrapper(filters[name], filter_opts, input_opts, output_opts)
+        filter_wrapper(filters[name], keep, input_opts, output_opts)
     else
         api.nvim_echo({ { "Invalid filter", "ErrorMsg" } }, true, { err = true })
     end
@@ -328,8 +322,6 @@ local function filter_cmd(cargs, src_win)
     assert(#filter_names > 1, "No filter functions available")
     local filter_name = eu._check_cmd_arg(fargs, filter_names, "cfilter") ---@type string
 
-    local filter_opts = { keep = not cargs.bang } ---@type QfrFilterOpts
-
     ---@type QfrInputType
     local input_type = eu._check_cmd_arg(fargs, ey._cmd_input_types, ey._default_input_type)
     local pattern = eu._find_cmd_pattern(fargs) ---@type string|nil
@@ -340,7 +332,7 @@ local function filter_cmd(cargs, src_win)
     ---@type QfrOutputOpts
     local output_opts = { src_win = src_win, action = action, what = { nr = cargs.count } }
 
-    filter_wrapper(filters[filter_name], filter_opts, input_opts, output_opts)
+    filter_wrapper(filters[filter_name], not cargs.bang, input_opts, output_opts)
 end
 
 -- DOCUMENT: The documentation for the cmds and the functions should be mixed together along
@@ -372,8 +364,6 @@ return Filter
 -- MID: Re-implement the view saving/restoration that calculates the new row based on how many
 -- were removed above the current one
 
--- MID: Depending on how some of the more niche sorts are used, add different default sorts to the
---     filter_opts field
 -- MID: Look again at how Cfilter works
 
 -- DOCUMENT: specifically that a cfilter emulation is available

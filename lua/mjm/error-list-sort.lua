@@ -8,7 +8,7 @@ local fn = vim.fn
 
 ---@mod Sort Sends diags to the qf list
 
----@ class QfRancherSort
+--- @class QfRancherSort
 local Sort = {}
 
 ---------------
@@ -27,15 +27,15 @@ local function sort_wrapper(sort_info, sort_opts, output_opts)
     local src_win = output_opts.src_win ---@type integer|nil
     if src_win and not eu._valid_win_for_loclist(src_win) then return end
 
-    local cur_list = et._get_list(src_win, { nr = output_opts.what.nr, all = true }) ---@type table
-    if cur_list.size <= 1 then
+    local what_ret = et._get_list(src_win, { nr = output_opts.what.nr, all = true }) ---@type table
+    if what_ret.size <= 1 then
         api.nvim_echo({ { "Not enough entries to sort", "" } }, false, {})
         return
     end
 
     ---@type QfRancherSortPredicate
     local predicate = sort_opts.dir == "asc" and sort_info.asc_func or sort_info.desc_func
-    local what_set = et._what_ret_to_set(cur_list) ---@type QfrWhat
+    local what_set = et._what_ret_to_set(what_ret) ---@type QfrWhat
     table.sort(what_set.items, predicate)
     what_set.nr = output_opts.what.nr
 
