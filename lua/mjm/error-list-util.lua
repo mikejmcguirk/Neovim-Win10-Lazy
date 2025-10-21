@@ -367,8 +367,15 @@ function M._pbuf_rm(buf, force, wipeout)
 
     if not api.nvim_buf_is_valid(buf) then return end
 
-    if not wipeout then api.nvim_set_option_value("buflisted", false, { buf = buf }) end
+    local modifiable = api.nvim_get_option_value("modifiable", { buf = buf }) ---@type boolean
+    if modifiable then
+        api.nvim_buf_call(buf, function()
+            ---@diagnostic disable-next-line: missing-fields
+            api.nvim_cmd({ cmd = "update", mods = { silent = true } }, {})
+        end)
+    end
 
+    if not wipeout then api.nvim_set_option_value("buflisted", false, { buf = buf }) end
     local delete_opts = wipeout and { force = force } or { force = force, unload = true }
     pcall(api.nvim_buf_delete, buf, delete_opts)
 end

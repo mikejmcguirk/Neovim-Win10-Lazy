@@ -502,6 +502,7 @@ function M.pbuf_rm(buf, force, wipeout)
     vim.validate("buf", buf, "number")
     vim.validate("force", force, "boolean")
     vim.validate("wipeout", wipeout, "boolean")
+
     if not api.nvim_buf_is_valid(buf) then return end
 
     local modifiable = GetOpt("modifiable", { buf = buf }) ---@type boolean
