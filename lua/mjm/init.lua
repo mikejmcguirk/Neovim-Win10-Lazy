@@ -67,7 +67,7 @@ require("mjm.map")
 require("mjm.custom-cmds")
 require("mjm.stl")
 
-require("mjm.error-list")
+-- require("mjm.error-list")
 
 local env_setup = vim.uv.hrtime()
 
