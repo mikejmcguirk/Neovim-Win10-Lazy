@@ -81,7 +81,7 @@ end
 
 ---@param list_win integer
 ---@param buf_win integer
----@param finish QfRancherFinishMethod
+---@param finish QfrFinishMethod
 ---@return nil
 local function handle_orphan(list_win, buf_win, finish)
     ey._validate_list_win(list_win)
@@ -130,7 +130,7 @@ end
 
 ---@param tabnr integer
 ---@param dest_buftype string
----@param opts QfRancherFindWinInTabOpts
+---@param opts QfrFindWinInTabOpts
 ---@return integer|nil
 local function find_win_in_tab(tabnr, dest_buftype, opts)
     ey._validate_uint(tabnr)
@@ -178,7 +178,7 @@ end
 
 ---@param tabnr integer
 ---@param dest_buftype string
----@param opts QfRancherFindWinInTabOpts
+---@param opts QfrFindWinInTabOpts
 ---@return integer|nil
 local function find_win_in_tab_reverse(tabnr, dest_buftype, opts)
     ey._validate_uint(tabnr)
@@ -255,7 +255,7 @@ local function get_dest_win(list_win, dest_buftype, buf, is_loclist, loclist_ori
         or nil ---@type string
 
     if string.find(switchbuf, "useopen", 1, true) or is_loclist then
-        ---@type QfRancherFindWinInTabOpts
+        ---@type QfrFindWinInTabOpts
         local find_opts = { bufnr = buf, skip_winnr = list_winnr }
         ---@type integer|nil
         local tabpage_buf_win = find_win_in_tab(list_tabnr, dest_buftype, find_opts)
@@ -273,7 +273,7 @@ local function get_dest_win(list_win, dest_buftype, buf, is_loclist, loclist_ori
         if is_valid_dest_win(alt_win, dest_buftype, buf) then return true, alt_win end
     end
 
-    ---@type QfRancherFindWinInTabOpts
+    ---@type QfrFindWinInTabOpts
     local find_opts = { fin_winnr = list_winnr, skip_winnr = list_winnr }
     ---@type integer|nil
     local fallback_win = find_win_in_tab_reverse(list_tabnr, dest_buftype, find_opts)
@@ -310,7 +310,7 @@ local function should_resize_list_win(list_win, dest_win, is_orphan)
 end
 
 ---@param dest_win integer|nil
----@param split QfRancherSplitType
+---@param split QfrSplitType
 ---@param buf integer
 ---@param list_win integer
 local function get_buf_win(dest_win, split, buf, list_win)
@@ -338,7 +338,7 @@ local function get_buf_win(dest_win, split, buf, list_win)
     return api.nvim_open_win(buf, false, { win = dest_win, split = split_dir })
 end
 
----@param finish QfRancherFinishMethod
+---@param finish QfrFinishMethod
 ---@return nil
 local function tabnew_open(list_win, item, finish, is_orphan, pattern)
     ey._validate_list_win(list_win)
@@ -364,8 +364,8 @@ end
 
 -- LOW: Can this logic be generalized? Should it be?
 
----@param finish QfRancherFinishMethod
----@param idx_func QfRancherIdxFunc
+---@param finish QfrFinishMethod
+---@param idx_func QfrIdxFunc
 ---@return nil
 function M._open_item_from_list(split, finish, idx_func)
     ey._validate_split(split)
@@ -373,7 +373,7 @@ function M._open_item_from_list(split, finish, idx_func)
     vim.validate("idx_func", idx_func, "callable")
 
     local list_win = api.nvim_get_current_win() ---@type integer
-    if not ey._is_in_list_win(list_win) then
+    if not eu._is_in_list_win(list_win) then
         api.nvim_echo({ { "Not inside a list window", "" } }, false, {})
         return
     end

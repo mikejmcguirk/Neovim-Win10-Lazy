@@ -178,7 +178,7 @@ end
 
 ---@param src_win integer|nil
 ---@param count integer
----@param opts QfRancherHistoryOpts
+---@param opts QfrHistoryOpts
 ---@return nil
 function Stack._get_history(src_win, count, opts)
     ey._validate_win(src_win, true)
@@ -206,14 +206,14 @@ function Stack._get_history(src_win, count, opts)
 end
 
 ---@param count integer
----@param opts QfRancherHistoryOpts
+---@param opts QfrHistoryOpts
 ---@return nil
 function Stack._q_history(count, opts)
     Stack._get_history(nil, count, opts)
 end
 
 ---@param win integer
----@param opts QfRancherHistoryOpts
+---@param opts QfrHistoryOpts
 ---@return nil
 function Stack._l_history(win, count, opts)
     eu._locwin_check(win, function()

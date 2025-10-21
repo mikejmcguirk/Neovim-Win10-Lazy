@@ -405,7 +405,7 @@ end
 -- location lists are opened, the views can be saved and restored once. Low priority because the
 -- most likely case of this issue occuring, opening a QfList, already works this way
 
----@param opts QfRancherTabpageOpts
+---@param opts QfrTabpageOpts
 ---@return nil
 function Open._close_qfwins(opts)
     ey._validate_tabpage_opts(opts)
@@ -416,7 +416,7 @@ function Open._close_qfwins(opts)
     end
 end
 
----@param opts QfRancherTabpageOpts
+---@param opts QfrTabpageOpts
 ---@return nil
 function Open._resize_qfwins(opts)
     ey._validate_tabpage_opts(opts)
@@ -428,7 +428,7 @@ function Open._resize_qfwins(opts)
 end
 
 ---@param src_win integer
----@param opts QfRancherTabpageOpts
+---@param opts QfrTabpageOpts
 ---@return nil
 function Open._resize_loclists_by_win(src_win, opts)
     ey._validate_win(src_win, false)
@@ -442,7 +442,7 @@ function Open._resize_loclists_by_win(src_win, opts)
 end
 
 ---@param src_win integer|nil
----@param opts QfRancherTabpageOpts
+---@param opts QfrTabpageOpts
 ---@return nil
 function Open._resize_lists_by_win(src_win, opts)
     ey._validate_win(src_win, true)
@@ -454,7 +454,7 @@ function Open._resize_lists_by_win(src_win, opts)
 end
 
 ---@param qf_id integer
----@param opts QfRancherTabpageOpts
+---@param opts QfrTabpageOpts
 ---@return nil
 function Open._close_loclists_by_qf_id(qf_id, opts)
     ey._validate_uint(qf_id)

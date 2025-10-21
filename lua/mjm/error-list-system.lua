@@ -10,6 +10,8 @@ local api = vim.api
 ---@class QfrSystem
 local System = {}
 
+System._default_timeout = 2000 ---@type integer
+
 ---@param obj vim.SystemCompleted
 ---@param output_opts QfrOutputOpts
 local function handle_output(obj, output_opts)
@@ -62,10 +64,11 @@ function System.system_do(system_opts, output_opts)
     ey._validate_output_opts(output_opts)
 
     ---@type vim.SystemOpts
-    local vim_system_opts = { text = true, timeout = system_opts.timeout or ey._default_timeout }
+    local vim_system_opts =
+        { text = true, timeout = system_opts.timeout or System._default_timeout }
     if system_opts.sync then
         local obj = vim.system(system_opts.cmd_parts, vim_system_opts)
-            :wait(system_opts.timeout or ey._default_timeout) ---@type vim.SystemCompleted
+            :wait(system_opts.timeout or System._default_timeout) ---@type vim.SystemCompleted
         handle_output(obj, output_opts)
     else
         vim.system(system_opts.cmd_parts, vim_system_opts, function(obj)

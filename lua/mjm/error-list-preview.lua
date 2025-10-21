@@ -239,15 +239,18 @@ local function get_title_cfg(item_buf)
 
     local preview_name = api.nvim_buf_get_name(item_buf) ---@type string
     local relative_name = fn.fnamemodify(preview_name, ":.") ---@type string
-    local g_title_pos = eu._get_g_var("qf_rancher_preview_title_pos") ---@type QfRancherTitlePos
+    local g_title_pos = eu._get_g_var("qf_rancher_preview_title_pos") ---@type QfrTitlePos
     return { title = relative_name, title_pos = g_title_pos }
 end
 
----@return QfRancherBorder
+---@return QfrBorder
 local function get_winborder()
-    ---@type QfRancherBorder|nil
+    ---@type QfrBorder|nil
     local border = eu._get_g_var("qf_rancher_preview_border", true)
-    if border then return border end
+    if border then
+        ey._validate_border(border)
+        return border
+    end
 
     local winborder = fn.has("nvim-0.11")
             and api.nvim_get_option_value("winborder", { global = true })
@@ -302,7 +305,7 @@ local function get_win_cfg(list_win, item_buf)
     local e_lines = api.nvim_get_option_value("lines", { scope = "global" }) ---@type integer
     local e_cols = api.nvim_get_option_value("columns", { scope = "global" }) ---@type integer
 
-    local border = get_winborder() ---@type QfRancherBorder
+    local border = get_winborder() ---@type QfrBorder
     local preview_border_cells = border ~= "none" and 2 or 0 ---@type integer
     local vim_separator = 1 ---@type integer
     local padding = 1 ---@type integer
@@ -793,7 +796,7 @@ end
 ---@param list_win integer
 ---@return nil
 function Preview.toggle_preview_win(list_win)
-    if not ey._is_in_list_win(list_win) then return end
+    if not eu._is_in_list_win(list_win) then return end
 
     local was_open = preview_state:is_open() ---@type boolean
     local start_list_win = preview_state.list_win ---@type integer|nil

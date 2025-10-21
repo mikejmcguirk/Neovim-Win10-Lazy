@@ -276,7 +276,7 @@ end
 
 -- DOCUMENT: Improve this
 
----Clears the function name from the registered sorts
+---Clears the function name from the registered filters
 ---@param name string
 ---@return nil
 function Filter.clear_filter(name)

@@ -102,7 +102,7 @@ local get_full_parts = {
 -- == MAIN GREP FUNCTION ==
 -- ========================
 
----@param grep_info QfRancherGrepInfo
+---@param grep_info QfrGrepInfo
 ---@param input_opts QfrInputOpts
 ---@param system_opts QfrSystemOpts
 ---@param output_opts QfrOutputOpts
@@ -232,7 +232,7 @@ local greps = {
     help = { name = "Help", list_item_type = "\1", location_func = get_help_dirs },
     bufs = { name = "Buf", list_item_type = nil, location_func = get_buflist },
     cbuf = { name = "Cur Buf", list_item_type = nil, location_func = get_cur_buf },
-} ---@type QfRancherGrepInfo[]
+} ---@type QfrGrepInfo[]
 
 ---@return string[]
 function Grep.get_grep_names()
@@ -241,7 +241,7 @@ end
 
 -- DOCUMENT: How this works
 
----@param grep_info QfRancherGrepInfo
+---@param grep_info QfrGrepInfo
 ---@return nil
 function Grep.register_grep(grep_info)
     ey._validate_grep_info(grep_info)
@@ -276,7 +276,7 @@ end
 function Grep.grep(name, input_opts, system_opts, output_opts)
     vim.validate("name", name, "string")
 
-    local grep_info = greps[name] ---@type QfRancherGrepInfo|nil
+    local grep_info = greps[name] ---@type QfrGrepInfo|nil
     if grep_info then
         do_grep(grep_info, input_opts, system_opts, output_opts)
     else
@@ -310,7 +310,7 @@ local function grep_cmd(src_win, cargs)
     local sync = sync_str == "sync" and true or false ---@type boolean
     -- LOW: Should be able to set the timeout from the cmd
     ---@type QfrSystemOpts
-    local system_opts = { sync = sync, timeout = ey._default_timeout }
+    local system_opts = { sync = sync, timeout = ee._default_timeout }
 
     ---@type QfrAction
     local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action)

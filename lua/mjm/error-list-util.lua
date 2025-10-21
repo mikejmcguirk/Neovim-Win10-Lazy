@@ -225,19 +225,19 @@ local function get_item(src_win, idx)
     return nil, nil
 end
 
----@type QfRancherIdxFunc
+---@type QfrIdxFunc
 function M._get_item_under_cursor(src_win)
     return get_item(src_win, fn.line("."))
 end
 
----@type QfRancherIdxFunc
+---@type QfrIdxFunc
 function M._get_item_wrapping_sub(src_win)
     local idx = M._get_idx_wrapping_sub(src_win, vim.v.count)
     if not idx then return nil, nil end
     return get_item(src_win, idx)
 end
 
----@type QfRancherIdxFunc
+---@type QfrIdxFunc
 function M._get_item_wrapping_add(src_win)
     local idx = M._get_idx_wrapping_add(src_win, vim.v.count)
     if not idx then return nil, nil end
@@ -288,6 +288,20 @@ function M._get_g_var(g_var, allow_nil)
     else
         return g_var_data[2]
     end
+end
+
+---@param list_win integer
+---@return boolean
+function M._is_in_list_win(list_win)
+    ey._validate_win(list_win)
+
+    local list_win_buf = vim.api.nvim_win_get_buf(list_win) ---@type integer
+    ---@type string
+    local buftype = vim.api.nvim_get_option_value("buftype", { buf = list_win_buf })
+
+    if buftype == "quickfix" then return true end
+    vim.api.nvim_echo({ { "Window " .. list_win .. " is not a list", "" } }, false, {})
+    return false
 end
 
 ---@param src_win integer|nil
@@ -430,7 +444,7 @@ local function setup_help_win(win)
 end
 
 ---@param item vim.quickfix.entry
----@param opts QfRancherBufOpenOpts
+---@param opts QfrBufOpenOpts
 ---@return boolean
 function M._open_item_to_win(item, opts)
     ey._validate_list_item(item)
@@ -566,7 +580,7 @@ end
 --- WINDOW FINDING ---
 ----------------------
 
----@param opts QfRancherTabpageOpts
+---@param opts QfrTabpageOpts
 ---@return integer[]
 function M._resolve_tabpages(opts)
     ey._validate_tabpage_opts(opts)
@@ -603,7 +617,7 @@ end
 --- If searching for wins by qf_id, passing a zero id is allowed so that orphans can be checked
 
 ---@param qf_id integer
----@param opts QfRancherTabpageOpts
+---@param opts QfrTabpageOpts
 ---@return integer|nil
 function M._get_loclist_win_by_qf_id(qf_id, opts)
     ey._validate_uint(qf_id)
@@ -621,7 +635,7 @@ function M._get_loclist_win_by_qf_id(qf_id, opts)
 end
 
 ---@param win integer
----@param opts QfRancherTabpageOpts
+---@param opts QfrTabpageOpts
 ---@return integer[]
 function M._get_loclist_wins_by_win(win, opts)
     ey._validate_win(win, false)
@@ -633,7 +647,7 @@ function M._get_loclist_wins_by_win(win, opts)
 end
 
 ---@param qf_id integer
----@param opts QfRancherTabpageOpts
+---@param opts QfrTabpageOpts
 ---@return integer[]
 function M._get_ll_wins_by_qf_id(qf_id, opts)
     ey._validate_uint(qf_id)
@@ -651,7 +665,7 @@ function M._get_ll_wins_by_qf_id(qf_id, opts)
     return wins
 end
 
----@param opts QfRancherTabpageOpts
+---@param opts QfrTabpageOpts
 ---@return integer[]
 function M._get_all_loclist_wins(opts)
     local ll_wins = {} ---@type integer[]
@@ -668,7 +682,7 @@ function M._get_all_loclist_wins(opts)
     return ll_wins
 end
 
----@param opts QfRancherTabpageOpts
+---@param opts QfrTabpageOpts
 ---@return integer[]
 function M._get_qf_wins(opts)
     local wins = {} ---@type integer[]
@@ -685,7 +699,7 @@ function M._get_qf_wins(opts)
     return wins
 end
 
----@param opts QfRancherTabpageOpts
+---@param opts QfrTabpageOpts
 ---@return integer|nil
 function M._get_qf_win(opts)
     local tabpages = M._resolve_tabpages(opts) ---@type integer[]
@@ -702,7 +716,7 @@ function M._get_qf_win(opts)
 end
 
 ---@param list_win integer
----@param opts QfRancherTabpageOpts
+---@param opts QfrTabpageOpts
 ---@return integer|nil
 function M._find_loclist_origin(list_win, opts)
     ey._validate_list_win(list_win)

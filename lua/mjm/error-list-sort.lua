@@ -15,8 +15,8 @@ local Sort = {}
 --- Wrapper ---
 ---------------
 
----@param sort_info QfRancherSortInfo
----@param sort_opts QfRancherSortOpts
+---@param sort_info QfrSortInfo
+---@param sort_opts QfrSortOpts
 ---@param output_opts QfrOutputOpts
 ---@return nil
 local function sort_wrapper(sort_info, sort_opts, output_opts)
@@ -33,7 +33,7 @@ local function sort_wrapper(sort_info, sort_opts, output_opts)
         return
     end
 
-    ---@type QfRancherSortPredicate
+    ---@type QfrSortPredicate
     local predicate = sort_opts.dir == "asc" and sort_info.asc_func or sort_info.desc_func
     local what_set = et._what_ret_to_set(what_ret) ---@type QfrWhat
     table.sort(what_set.items, predicate)
@@ -55,19 +55,19 @@ end
 
 --- NOTE: Do not use ternaries here, as it causes logical errors
 
----@type QfRancherCheckFunc
+---@type QfrCheckFunc
 local function check_asc(a, b)
     return a < b
 end
 
----@type QfRancherCheckFunc
+---@type QfrCheckFunc
 local function check_desc(a, b)
     return a > b
 end
 
 ---@param a any
 ---@param b any
----@param check QfRancherCheckFunc
+---@param check QfrCheckFunc
 ---@return boolean|nil
 local function a_b_check(a, b, check)
     if not (a and b) then return nil end
@@ -92,7 +92,7 @@ end
 
 ---@param a table
 ---@param b table
----@param check QfRancherCheckFunc
+---@param check QfrCheckFunc
 ---@return boolean|nil
 local function check_fname(a, b, check)
     local fname_a, fname_b = get_fnames(a, b) ---@type string|nil, string|nil
@@ -101,7 +101,7 @@ end
 
 ---@param a table
 ---@param b table
----@param check QfRancherCheckFunc
+---@param check QfrCheckFunc
 ---@return boolean|nil
 local function check_lcol(a, b, check)
     local checked_lnum = a_b_check(a.lnum, b.lnum, check) ---@type boolean|nil
@@ -128,7 +128,7 @@ end
 
 ---@param a table
 ---@param b table
----@param check QfRancherCheckFunc
+---@param check QfrCheckFunc
 ---@return boolean|nil
 local function check_lcol_type(a, b, check)
     local checked_lcol = check_lcol(a, b, check) ---@type boolean|nil
@@ -175,7 +175,7 @@ end
 
 ---@param a vim.quickfix.entry
 ---@param b vim.quickfix.entry
----@param check QfRancherCheckFunc
+---@param check QfrCheckFunc
 ---@return boolean
 local function sort_fname(a, b, check)
     if not (a and b) then return false end
@@ -191,19 +191,19 @@ local function sort_fname(a, b, check)
     end
 end
 
----@type QfRancherSortPredicate
+---@type QfrSortPredicate
 function Sort._sort_fname_asc(a, b)
     return sort_fname(a, b, check_asc)
 end
 
----@type QfRancherSortPredicate
+---@type QfrSortPredicate
 function Sort._sort_fname_desc(a, b)
     return sort_fname(a, b, check_desc)
 end
 
 ---@param a vim.quickfix.entry
 ---@param b vim.quickfix.entry
----@param check QfRancherCheckFunc
+---@param check QfrCheckFunc
 ---@return boolean
 local function sort_text(a, b, check)
     if not (a and b) then return false end
@@ -234,7 +234,7 @@ end
 
 ---@param a vim.quickfix.entry
 ---@param b vim.quickfix.entry
----@param check QfRancherCheckFunc
+---@param check QfrCheckFunc
 ---@return boolean
 local function sort_type(a, b, check)
     if not (a and b) then return false end
@@ -250,19 +250,19 @@ local function sort_type(a, b, check)
     end
 end
 
----@type QfRancherSortPredicate
+---@type QfrSortPredicate
 function Sort._sort_type_asc(a, b)
     return sort_type(a, b, check_asc)
 end
 
----@type QfRancherSortPredicate
+---@type QfrSortPredicate
 function Sort._sort_type_desc(a, b)
     return sort_type(a, b, check_desc)
 end
 
 ---@param a vim.quickfix.entry
 ---@param b vim.quickfix.entry
----@param check QfRancherCheckFunc
+---@param check QfrCheckFunc
 ---@return boolean
 local function sort_severity(a, b, check)
     if not (a and b) then return false end
@@ -279,19 +279,19 @@ local function sort_severity(a, b, check)
     end
 end
 
----@type QfRancherSortPredicate
+---@type QfrSortPredicate
 function Sort._sort_severity_asc(a, b)
     return sort_severity(a, b, check_asc)
 end
 
----@type QfRancherSortPredicate
+---@type QfrSortPredicate
 function Sort._sort_severity_desc(a, b)
     return sort_severity(a, b, check_desc)
 end
 
 ---@param a vim.quickfix.entry
 ---@param b vim.quickfix.entry
----@param check QfRancherCheckFunc
+---@param check QfrCheckFunc
 ---@return boolean
 local function sort_diag_fname(a, b, check)
     if not (a and b) then return false end
@@ -307,12 +307,12 @@ local function sort_diag_fname(a, b, check)
     end
 end
 
----@type QfRancherSortPredicate
+---@type QfrSortPredicate
 function Sort._sort_fname_diag_asc(a, b)
     return sort_diag_fname(a, b, check_asc)
 end
 
----@type QfRancherSortPredicate
+---@type QfrSortPredicate
 function Sort._sort_fname_diag_desc(a, b)
     return sort_diag_fname(a, b, check_desc)
 end
@@ -327,7 +327,7 @@ local sorts = {
     severity = { asc_func = Sort._sort_severity_asc, desc_func = Sort._sort_severity_desc },
     text = { asc_func = Sort._sort_text_asc, desc_func = Sort._sort_text_desc },
     type = { asc_func = Sort._sort_type_asc, desc_func = Sort._sort_type_desc },
-} ---@type table<string, QfRancherSortInfo>
+} ---@type table<string, QfrSortInfo>
 
 --- DOCUMENT: this
 
@@ -342,8 +342,8 @@ end
 --- asc_func: Predicate to sort ascending. Takes two quickfix items. Returns boolean
 --- asc_func: Predicate to sort descending. Takes two quickfix items. Returns boolean
 ---@param name string
----@param asc_func QfRancherSortPredicate
----@param desc_func QfRancherSortPredicate
+---@param asc_func QfrSortPredicate
+---@param desc_func QfrSortPredicate
 ---@return nil
 function Sort.register_sort(name, asc_func, desc_func)
     sorts[name] = { asc_func = asc_func, desc_func = desc_func }
@@ -374,11 +374,11 @@ end
 ---     one
 --- - is_loclist? boolean - Whether to filter against a location list
 ---@param name string
----@param sort_opts QfRancherSortOpts
+---@param sort_opts QfrSortOpts
 ---@param output_opts QfrOutputOpts
 ---@return nil
 function Sort.sort(name, sort_opts, output_opts)
-    local sort_info = sorts[name] ---@type QfRancherSortInfo
+    local sort_info = sorts[name] ---@type QfrSortInfo
     if not sort_info then
         api.nvim_echo({ { "Invalid sort", "ErrorMsg" } }, true, { err = true })
     end
