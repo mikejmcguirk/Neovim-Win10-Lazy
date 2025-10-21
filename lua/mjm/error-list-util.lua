@@ -3,6 +3,7 @@ local M = {}
 
 local eo = Qfr_Defer_Require("mjm.error-list-open") ---@type QfrOpen
 local et = Qfr_Defer_Require("mjm.error-list-tools") ---@type QfrTools
+local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfrUtil
 local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfrTypes
 
 local api = vim.api
@@ -45,7 +46,7 @@ end
 
 ---@param input QfrInputType
 ---@return string
---- NOTE: This function assumes that an API input of "vimsmart" has already been resolved
+--- NOTE: This function assumes that an API input of "vimcase" has already been resolved
 function M._get_display_input_type(input)
     if input == "regex" then
         return "Regex"
@@ -58,33 +59,19 @@ function M._get_display_input_type(input)
     end
 end
 
--- TODO: get rid of the use_smartcase g:var
--- TODO: vimsmart should be renamed to something like usevim
--- Need to respect both ignorecase and smartcase
--- TODO: Conceptual problem: There are three sets of input types. The raw input type, which can
--- include respecting vim settings, the resolve input, which can include smartcase, and the
--- final input type, which cannot include smartcase (since we've checked the pattern). Should
--- probably distinguish the three types, since it prevents data sloppiness
-
 ---@param input QfrInputType
 ---@return QfrInputType
-function M._resolve_input_type(input)
+function M._resolve_input_vimcase(input)
     ey._validate_input_type(input)
 
-    if input ~= "vimsmart" then return input end
+    if input ~= "vimcase" then return input end
 
-    local smartcase = M._get_g_var("qf_rancher_use_smartcase")
-    if smartcase == true then
-        return "smartcase"
-    elseif smartcase == false then
-        return "insensitive"
-    end
+    local ignorecase = api.nvim_get_option_value("ignorecase", { scope = "global" })
+    local smartcase = api.nvim_get_option_value("smartcase", { scope = "global" })
 
-    if api.nvim_get_option_value("smartcase", { scope = "global" }) then
-        return "smartcase"
-    else
-        return "insensitive"
-    end
+    if ignorecase and smartcase then return "smartcase" end
+    if ignorecase then return "insensitive" end
+    return "sensitive"
 end
 
 ---@param mode string
@@ -180,6 +167,26 @@ local function get_wrapping_idx(src_win, count, wrapping_math)
     return wrapping_math(cur_idx, count1, 1, size)
 end
 
+---@param x integer
+---@param y integer
+---@param min integer
+---@param max integer
+---@return integer
+function M._wrapping_add(x, y, min, max)
+    local period = max - min + 1 ---@type integer
+    return ((x - min + y) % period) + min
+end
+
+---@param x integer
+---@param y integer
+---@param min integer
+---@param max integer
+---@return integer
+function M._wrapping_sub(x, y, min, max)
+    local period = max - min + 1 ---@type integer
+    return ((x - y - min) % period) + min
+end
+
 ---@param src_win integer|nil
 ---@param count integer
 ---@return integer|nil
@@ -237,26 +244,9 @@ function M._get_item_wrapping_add(src_win)
     return get_item(src_win, idx)
 end
 
-----------
--- MISC --
-----------
-
--- TODO: This needs another breakup
-
----@param win integer
----@param todo function
----@return any
-function M._locwin_check(win, todo)
-    ey._validate_win(win, false)
-
-    local qf_id = fn.getloclist(win, { id = 0 }).id ---@type integer
-    if qf_id == 0 then
-        api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
-        return
-    end
-
-    return todo()
-end
+------------------
+-- DATA HYGIENE --
+------------------
 
 ---@param count integer
 ---@return integer
@@ -265,73 +255,64 @@ function M._count_to_count1(count)
     return math.max(count, 1)
 end
 
----@param x integer
----@param y integer
----@param min integer
----@param max integer
----@return integer
-function M._wrapping_add(x, y, min, max)
-    local period = max - min + 1 ---@type integer
-    return ((x - min + y) % period) + min
-end
+---@param g_var string
+---@param allow_nil? boolean
+---@return any
+function M._get_g_var(g_var, allow_nil)
+    vim.validate("g_var", g_var, "string")
+    vim.validate("allow_nil", allow_nil, "boolean", true)
 
----@param x integer
----@param y integer
----@param min integer
----@param max integer
----@return integer
-function M._wrapping_sub(x, y, min, max)
-    local period = max - min + 1 ---@type integer
-    return ((x - y - min) % period) + min
-end
+    local g_var_data = _QFR_G_VAR_MAP[g_var] ---@type {[1]:string[], [2]:any}
 
----@param win integer
----@return boolean
-function M._valid_win_for_loclist(win)
-    ey._validate_win(win, true)
-    if not win then return false end
+    vim.validate("g_var_data", g_var_data, function()
+        return #g_var_data == 2
+    end, "G var table info should containt two elements")
 
-    local wintype = fn.win_gettype(win)
-    if wintype == "" or wintype == "loclist" then return true end
+    vim.validate("g_var_data[1]", g_var_data[1], function()
+        for _, value in pairs(g_var_data[1]) do
+            if type(value) ~= "string" then return false end
+        end
 
-    ---@type string
-    local text = "Window " .. win .. " with type " .. wintype .. " cannot contain a location list"
-    api.nvim_echo({ { text, "ErrorMsg" } }, true, { err = true })
-    return false
-end
+        return true
+    end, "G var table info should containt two elements")
 
----@param msg string
----@param print_msgs boolean
----@param is_err boolean
----@return nil
-function M._checked_echo(msg, print_msgs, is_err)
-    if not print_msgs then return end
+    vim.validate("g_var_data[2]", g_var_data[2], function()
+        return type(g_var_data[2]) ~= "nil"
+    end, "G var defaults canot be nil")
 
-    if is_err then
-        api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
+    local cur_g_val = vim.g[g_var] ---@type any
+    if allow_nil and type(cur_g_val) == "nil" then return nil end
+
+    if vim.tbl_contains(g_var_data[1], type(cur_g_val)) then
+        return cur_g_val
     else
-        api.nvim_echo({ { msg, "" } }, false, {})
+        return g_var_data[2]
     end
 end
 
----@param win integer
----@param force boolean
+---@param src_win integer|nil
+---@param list_nr integer|"$"
 ---@return integer
-function M._pwin_close(win, force)
-    ey._validate_uint(win)
-    vim.validate("force", force, "boolean")
+function M._clear_list_and_resize(src_win, list_nr)
+    ey._validate_win(src_win, true)
 
-    if not api.nvim_win_is_valid(win) then return -1 end
+    local result = et._clear_list(src_win, list_nr)
 
-    local tabpages = api.nvim_list_tabpages() ---@type integer[]
-    local win_tabpage = api.nvim_win_get_tabpage(win) ---@type integer
-    local win_tabpage_wins = api.nvim_tabpage_list_wins(win_tabpage) ---@type integer[]
-    local buf = api.nvim_win_get_buf(win) ---@type integer
-    if #tabpages == 1 and #win_tabpage_wins == 1 then return buf end
+    if result == -1 then return result end
+    if not M._get_g_var("qf_rancher_auto_list_height") then return result end
 
-    local ok, _ = pcall(api.nvim_win_close, win, force) ---@type boolean, nil
-    return ok and buf or -1
+    if result == 0 or result == et._get_list(src_win, { nr = 0 }).nr then
+        local tabpage = src_win and api.nvim_win_get_tabpage(src_win)
+            or api.nvim_get_current_tabpage()
+        eo._resize_lists_by_win(src_win, { tabpage = tabpage })
+    end
+
+    return result
 end
+
+-------------------------
+-- OPENING AND CLOSING --
+-------------------------
 
 ---@param win integer
 ---@param cur_pos {[1]: integer, [2]: integer}
@@ -352,6 +333,25 @@ function M._protected_set_cursor(win, cur_pos)
     adj_cur_pos[2] = math.max(adj_cur_pos[2], 0)
 
     api.nvim_win_set_cursor(win, adj_cur_pos)
+end
+
+---@param win integer
+---@param force boolean
+---@return integer
+function M._pwin_close(win, force)
+    ey._validate_uint(win)
+    vim.validate("force", force, "boolean")
+
+    if not api.nvim_win_is_valid(win) then return -1 end
+
+    local tabpages = api.nvim_list_tabpages() ---@type integer[]
+    local win_tabpage = api.nvim_win_get_tabpage(win) ---@type integer
+    local win_tabpage_wins = api.nvim_tabpage_list_wins(win_tabpage) ---@type integer[]
+    local buf = api.nvim_win_get_buf(win) ---@type integer
+    if #tabpages == 1 and #win_tabpage_wins == 1 then return buf end
+
+    local ok, _ = pcall(api.nvim_win_close, win, force) ---@type boolean, nil
+    return ok and buf or -1
 end
 
 -- TODO: https://github.com/neovim/neovim/pull/33402
@@ -394,6 +394,114 @@ function M._pclose_and_rm(win, force, wipeout)
         end)
     end
 end
+
+-- Adapted from the source's "prepare_help_buffer" function
+
+---@param buf integer
+---@return nil
+local function prepare_help_buffer(buf)
+    ey._validate_buf(buf)
+
+    api.nvim_set_option_value("bt", "help", { buf = buf })
+    api.nvim_set_option_value("bl", false, { buf = buf })
+    api.nvim_set_option_value("filetype", "help", { buf = buf })
+
+    api.nvim_set_option_value("ts", 8, { buf = buf })
+
+    api.nvim_set_option_value("ma", false, { buf = buf })
+    api.nvim_set_option_value("bin", false, { buf = buf })
+end
+
+---@param win integer
+---@return nil
+local function setup_help_win(win)
+    api.nvim_win_call(win, function()
+        -- api.set_option_value("iskeyword", '!-~,^*,^|,^",192-255', { scope = "local" })
+        api.nvim_set_option_value("fdm", "manual", { scope = "local" })
+        api.nvim_set_option_value("list", false, { scope = "local" })
+        api.nvim_set_option_value("arabic", false, { scope = "local" })
+        api.nvim_set_option_value("rl", false, { scope = "local" })
+        api.nvim_set_option_value("fen", false, { scope = "local" })
+        api.nvim_set_option_value("diff", false, { scope = "local" })
+        api.nvim_set_option_value("spell", false, { scope = "local" })
+    end)
+
+    api.nvim_set_option_value("scb", false, { win = win })
+end
+
+---@param item vim.quickfix.entry
+---@param opts QfRancherBufOpenOpts
+---@return boolean
+function M._open_item_to_win(item, opts)
+    ey._validate_list_item(item)
+    ey._validate_open_buf_opts(opts)
+
+    local buf = item.bufnr ---@type integer|nil
+    if not (buf and api.nvim_buf_is_valid(buf)) then return false end
+
+    local win = opts.win or api.nvim_get_current_win() ---@type integer
+    if not api.nvim_win_is_valid(win) then return false end
+
+    local already_open = api.nvim_win_get_buf(win) == buf ---@type boolean
+    if not already_open then
+        if opts.buftype == "help" then
+            prepare_help_buffer(buf)
+        else
+            api.nvim_set_option_value("bl", true, { buf = buf })
+        end
+
+        api.nvim_win_call(win, function()
+            -- This loads the buf if necessary. Do not use bufload
+            api.nvim_set_current_buf(buf)
+        end)
+
+        if opts.buftype == "help" then setup_help_win(win) end
+    end
+
+    if opts.clearjumps then
+        api.nvim_win_call(win, function()
+            api.nvim_cmd({ cmd = "clearjumps" }, {})
+        end)
+    end
+
+    if not opts.skip_set_cur_pos then
+        if already_open then
+            api.nvim_buf_call(buf, function()
+                api.nvim_cmd({ cmd = "normal", args = { "m'" }, bang = true }, {})
+            end)
+        end
+
+        ---@type {[1]:integer, [2]:integer}
+        local cur_pos = M._qf_pos_to_cur_pos(item.lnum, item.col)
+        M._protected_set_cursor(win, cur_pos)
+    end
+
+    if not opts.skip_zzze then M._do_zzze(win) end
+    api.nvim_win_call(win, function()
+        api.nvim_cmd({ cmd = "normal", args = { "zv" }, bang = true }, {})
+    end)
+
+    if opts.goto_win then api.nvim_set_current_win(win) end
+
+    return true
+end
+
+---@param win integer
+---@return nil
+function M._do_zzze(win)
+    ey._validate_win(win)
+
+    if eu._get_g_var("qf_rancher_skip_zzze") then return end
+
+    api.nvim_win_call(win, function()
+        api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
+        api.nvim_cmd({ cmd = "normal", args = { "ze" }, bang = true }, {})
+    end)
+end
+
+----------------------
+-- POSITION HELPERS --
+----------------------
 
 -- PR: Why can't this be a part of Nvim core?
 -- MID: This could be a binary search instead
@@ -442,43 +550,6 @@ function M._vcol_to_end_col_(vcol, line)
 end
 
 -- NOTE: Handle all validation here with built-ins to avoid looping code
--- TODO: The table validation really should be done during initialization, and since it refers
--- to a static, non-advertised constant, should be gated behind a g_var
-
----@param g_var string
----@param allow_nil? boolean
----@return any
-function M._get_g_var(g_var, allow_nil)
-    vim.validate("g_var", g_var, "string")
-    vim.validate("allow_nil", allow_nil, "boolean", true)
-
-    local g_var_data = _QFR_G_VAR_MAP[g_var] ---@type {[1]:string[], [2]:any}
-
-    vim.validate("g_var_data", g_var_data, function()
-        return #g_var_data == 2
-    end, "G var table info should containt two elements")
-
-    vim.validate("g_var_data[1]", g_var_data[1], function()
-        for _, value in pairs(g_var_data[1]) do
-            if type(value) ~= "string" then return false end
-        end
-
-        return true
-    end, "G var table info should containt two elements")
-
-    vim.validate("g_var_data[2]", g_var_data[2], function()
-        return type(g_var_data[2]) ~= "nil"
-    end, "G var defaults canot be nil")
-
-    local cur_g_val = vim.g[g_var] ---@type any
-    if allow_nil and type(cur_g_val) == "nil" then return nil end
-
-    if vim.tbl_contains(g_var_data[1], type(cur_g_val)) then
-        return cur_g_val
-    else
-        return g_var_data[2]
-    end
-end
 
 ---@param item_lnum integer
 ---@param item_col integer
@@ -489,96 +560,6 @@ function M._qf_pos_to_cur_pos(item_lnum, item_col)
     col = math.max(col, 0)
 
     return { row, col }
-end
-
--- TODO: Put this in preview module
--- TODO: By centralizing all zzze here, you can add a skip_zzze g_var for users who don't like
--- that behavior
-
----@param win integer
----@return nil
-function M._do_zzze(win)
-    ey._validate_win(win)
-
-    api.nvim_win_call(win, function()
-        api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
-        api.nvim_cmd({ cmd = "normal", args = { "ze" }, bang = true }, {})
-    end)
-end
-
----@param item vim.quickfix.entry
----@param opts QfRancherBufOpenOpts
----@return boolean
-function M._open_item_to_win(item, opts)
-    ey._validate_list_item(item)
-    ey._validate_open_buf_opts(opts)
-
-    local buf = item.bufnr ---@type integer|nil
-    if not (buf and api.nvim_buf_is_valid(buf)) then return false end
-
-    local win = opts.win or api.nvim_get_current_win() ---@type integer
-    if not api.nvim_win_is_valid(win) then return false end
-
-    local already_open = api.nvim_win_get_buf(win) == buf ---@type boolean
-    api.nvim_set_option_value("buflisted", true, { buf = buf })
-    if opts.buftype == "help" then
-        api.nvim_set_option_value("buftype", opts.buftype, { buf = buf })
-    end
-
-    -- TODO: Implement prepare_help_buffer
-    if not already_open then
-        api.nvim_win_call(win, function()
-            -- NOTE: This loads the buf if necessary. Do not use bufload
-            api.nvim_set_current_buf(buf)
-        end)
-    end
-
-    if opts.clearjumps then
-        api.nvim_win_call(win, function()
-            api.nvim_cmd({ cmd = "clearjumps" }, {})
-        end)
-    end
-
-    if not opts.skip_set_cur_pos then
-        if already_open then
-            vim.api.nvim_buf_call(buf, function()
-                api.nvim_cmd({ cmd = "normal", args = { "m'" }, bang = true }, {})
-            end)
-        end
-
-        ---@type {[1]:integer, [2]:integer}
-        local cur_pos = M._qf_pos_to_cur_pos(item.lnum, item.col)
-        M._protected_set_cursor(win, cur_pos)
-    end
-
-    if not opts.skip_zzze then M._do_zzze(win) end
-    api.nvim_win_call(win, function()
-        api.nvim_cmd({ cmd = "normal", args = { "zv" }, bang = true }, {})
-    end)
-
-    if opts.goto_win then vim.api.nvim_set_current_win(win) end
-
-    return true
-end
-
----@param src_win integer|nil
----@param list_nr integer|"$"
----@return integer
-function M._clear_list_and_resize(src_win, list_nr)
-    ey._validate_win(src_win, true)
-
-    local result = et._clear_list(src_win, list_nr)
-
-    if result == -1 then return result end
-    if not M._get_g_var("qf_rancher_auto_list_height") then return result end
-
-    if result == 0 or result == et._get_list(src_win, { nr = 0 }).nr then
-        local tabpage = src_win and api.nvim_win_get_tabpage(src_win)
-            or api.nvim_get_current_tabpage()
-        eo._resize_lists_by_win(src_win, { tabpage = tabpage })
-    end
-
-    return result
 end
 
 ----------------------
@@ -620,20 +601,6 @@ local function is_loclist_win(qf_id, win)
 end
 
 --- If searching for wins by qf_id, passing a zero id is allowed so that orphans can be checked
-
----@param win integer
----@param opts QfRancherTabpageOpts
----@return integer|nil
-function M._get_loclist_win_by_win(win, opts)
-    ey._validate_win(win, false)
-
-    local qf_id = fn.getloclist(win, { id = 0 }).id ---@type integer
-    if qf_id == 0 then
-        return nil
-    else
-        return M._get_loclist_win_by_qf_id(qf_id, opts)
-    end
-end
 
 ---@param qf_id integer
 ---@param opts QfRancherTabpageOpts
@@ -756,11 +723,37 @@ function M._find_loclist_origin(list_win, opts)
     return nil
 end
 
+---@param win integer
+---@param todo function
+---@return any
+function M._locwin_check(win, todo)
+    ey._validate_win(win, false)
+
+    local qf_id = fn.getloclist(win, { id = 0 }).id ---@type integer
+    if qf_id == 0 then
+        api.nvim_echo({ { "Current window has no location list", "" } }, false, {})
+        return
+    end
+
+    return todo()
+end
+
+---@param win integer
+---@return boolean
+function M._valid_win_for_loclist(win)
+    ey._validate_win(win, true)
+    if not win then return false end
+
+    local wintype = fn.win_gettype(win)
+    if wintype == "" or wintype == "loclist" then return true end
+
+    ---@type string
+    local text = "Window " .. win .. " with type " .. wintype .. " cannot contain a location list"
+    api.nvim_echo({ { text, "ErrorMsg" } }, true, { err = true })
+    return false
+end
+
 return M
 
-------------
---- TODO ---
-------------
-
---- Tests
---- Docs
+-- TODO: Docs
+-- TODO: Tests

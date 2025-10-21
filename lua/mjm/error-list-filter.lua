@@ -32,7 +32,7 @@ local function filter_wrapper(filter_info, keep, input_opts, output_opts)
     end
 
     local prompt = "Enter pattern to " .. (keep and "keep" or "remove") ---@type string
-    local input_type = eu._resolve_input_type(input_opts.input_type) ---@type QfrInputType
+    local input_type = eu._resolve_input_vimcase(input_opts.input_type) ---@type QfrInputType
     local display_input_type = eu._get_display_input_type(input_type) ---@type string
     prompt = filter_info.name .. ": " .. prompt .. " (" .. display_input_type .. "): "
 

@@ -410,13 +410,13 @@ function M._validate_output_opts(output_opts)
     M._validate_what(output_opts.what)
 end
 
----@alias QfrInputType "insensitive"|"regex"|"sensitive"|"smartcase"|"vimsmart"
+---@alias QfrInputType "insensitive"|"regex"|"sensitive"|"smartcase"|"vimcase"
 
 ---@type string[]
-local input_types = { "insensitive", "regex", "sensitive", "smartcase", "vimsmart" }
-M._default_input_type = "vimsmart"
+local input_types = { "insensitive", "regex", "sensitive", "smartcase", "vimcase" }
+M._default_input_type = "vimcase"
 M._cmd_input_types = vim.tbl_filter(function(t)
-    return t ~= "vimsmart"
+    return t ~= "vimcase"
 end, input_types)
 
 ---@param input QfrInputType

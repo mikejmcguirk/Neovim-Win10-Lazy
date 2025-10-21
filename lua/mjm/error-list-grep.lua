@@ -125,7 +125,7 @@ local function do_grep(grep_info, input_opts, system_opts, output_opts)
         return
     end
 
-    local input_type = eu._resolve_input_type(input_opts.input_type) ---@type QfrInputType
+    local input_type = eu._resolve_input_vimcase(input_opts.input_type) ---@type QfrInputType
     local display_input_type = eu._get_display_input_type(input_type) ---@type string
     local which_grep = "[" .. grepprg .. "] " .. grep_info.name .. " Grep " ---@type string
     local prompt = which_grep .. "(" .. display_input_type .. "): " ---@type string

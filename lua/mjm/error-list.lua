@@ -72,7 +72,7 @@ _G._QFR_G_VAR_MAP = {
     qf_rancher_reuse_same_title = { { "boolean" }, true },
     qf_rancher_set_default_maps = { { "boolean" }, true },
     qf_rancher_set_default_cmds = { { "boolean" }, true },
-    qf_rancher_use_smartcase = { { "boolean" }, true },
+    qf_rancher_skip_zzze = { { "boolean" }, false },
 } ---@type table<string, {[1]:string[], [2]: any}>
 
 for k, v in pairs(_QFR_G_VAR_MAP) do
@@ -334,7 +334,7 @@ end
 --- When writing the plugin description, don't focus on overly pastoral ranching imagery, as the
 --- poitn of the Quickfix list is to be quick
 --- The new/add/replace behavior
---- How smartcase works by default (the "vimsmart" thing). Does it make sense?
+--- How smartcase works by default (the "vimcase" thing). Does it make sense?
 ---     Have to document this in the more general sense with "smartcase" and "insensitive" also as
 ---     options
 --- Use of marks is not supported in cmds because they are row only

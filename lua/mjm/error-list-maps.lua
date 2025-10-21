@@ -13,7 +13,7 @@ local api = vim.api
 
 local sys_opt = { timeout = 4000 } ---@type QfrSystemOpts
 
-local in_vimsmart = { input_type = "vimsmart" } ---@type QfrInputOpts
+local in_vimcase = { input_type = "vimcase" } ---@type QfrInputOpts
 local in_sensitive = { input_type = "sensitive" } ---@type QfrInputOpts
 local in_regex = { input_type = "regex" } ---@type QfrInputOpts
 
@@ -130,15 +130,15 @@ local rancher_keymaps = {
 
     --- Cfilter ---
 
-    { nx, pqfr.."-Qfilter-r-cfilter)",   qp.."kl",         "Qfilter cfilter"..r..sc,  function() ef.filter("cfilter", true, in_vimsmart, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-cfilter)",  qp.."rl",         "Qfilter! cfilter"..r..sc, function() ef.filter("cfilter", false, in_vimsmart, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter-r-cfilter)",   qp.."kl",         "Qfilter cfilter"..r..sc,  function() ef.filter("cfilter", true, in_vimcase, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter!-r-cfilter)",  qp.."rl",         "Qfilter! cfilter"..r..sc, function() ef.filter("cfilter", false, in_vimcase, replace_qflist()) end},
     { nx, pqfr.."-Qfilter-r-CFILTER)",   qp.."kL",         "Qfilter cfilter"..r..cs,  function() ef.filter("cfilter", true, in_sensitive, replace_qflist()) end},
     { nx, pqfr.."-Qfilter!-r-CFILTER)",  qp.."rL",         "Qfilter! cfilter"..r..cs, function() ef.filter("cfilter", false, in_sensitive, replace_qflist()) end},
     { nx, pqfr.."-Qfilter-r-cfilterX)",  qp.."k<C-l>",     "Qfilter cfilter"..r..rx,  function() ef.filter("cfilter", true, in_regex, replace_qflist()) end},
     { nx, pqfr.."-Qfilter!-r-cfilterX)", qp.."r<C-l>",     "Qfilter! cfilter"..r..rx, function() ef.filter("cfilter", false, in_regex, replace_qflist()) end},
 
-    { nx, pqfr.."-Lfilter-r-cfilter)",   lp.."kl",         "Lfilter cfilter"..r..sc,  function() ef.filter("cfilter", true, in_vimsmart, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-cfilter)",  lp.."rl",         "Lfilter! cfilter"..r..sc, function() ef.filter("cfilter", false, in_vimsmart, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter-r-cfilter)",   lp.."kl",         "Lfilter cfilter"..r..sc,  function() ef.filter("cfilter", true, in_vimcase, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter!-r-cfilter)",  lp.."rl",         "Lfilter! cfilter"..r..sc, function() ef.filter("cfilter", false, in_vimcase, replace_loclist()) end},
     { nx, pqfr.."-Lfilter-r-CFILTER)",   lp.."kL",         "Lfilter cfilter"..r..cs,  function() ef.filter("cfilter", true, in_sensitive, replace_loclist()) end},
     { nx, pqfr.."-Lfilter!-r-CFILTER)",  lp.."rL",         "Lfilter! cfilter"..r..cs, function() ef.filter("cfilter", false, in_sensitive, replace_loclist()) end},
     { nx, pqfr.."-Lfilter-r-cfilterX)",  lp.."k<C-l>",     "Lfilter cfilter"..r..rx,  function() ef.filter("cfilter", true, in_regex, replace_loclist()) end},
@@ -146,15 +146,15 @@ local rancher_keymaps = {
 
     --- Fname ---
 
-    { nx, pqfr.."-Qfilter-r-fname)",     qp.."kf",         "Qfilter fname"..r..sc,    function() ef.filter("fname", true, in_vimsmart, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-fname)",    qp.."rf",         "Qfilter! fname"..r..sc,   function() ef.filter("fname", false, in_vimsmart, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter-r-fname)",     qp.."kf",         "Qfilter fname"..r..sc,    function() ef.filter("fname", true, in_vimcase, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter!-r-fname)",    qp.."rf",         "Qfilter! fname"..r..sc,   function() ef.filter("fname", false, in_vimcase, replace_qflist()) end},
     { nx, pqfr.."-Qfilter-r-FNAME)",     qp.."kF",         "Qfilter fname"..r..cs,    function() ef.filter("fname", true, in_sensitive, replace_qflist()) end},
     { nx, pqfr.."-Qfilter!-r-FNAME)",    qp.."rF",         "Qfilter! fname"..r..cs,   function() ef.filter("fname", false, in_sensitive, replace_qflist()) end},
     { nx, pqfr.."-Qfilter-r-fnameX)",    qp.."k<C-f>",     "Qfilter fname"..r..rx,    function() ef.filter("fname", true, in_regex, replace_qflist()) end},
     { nx, pqfr.."-Qfilter!-r-fnameX)",   qp.."r<C-f>",     "Qfilter! fname"..r..rx,   function() ef.filter("fname", false, in_regex, replace_qflist()) end},
 
-    { nx, pqfr.."-Lfilter-r-fname)",     lp.."kf",         "Lfilter fname"..r..sc,    function() ef.filter("fname", true, in_vimsmart, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-fname)",    lp.."rf",         "Lfilter! fname"..r..sc,   function() ef.filter("fname", false, in_vimsmart, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter-r-fname)",     lp.."kf",         "Lfilter fname"..r..sc,    function() ef.filter("fname", true, in_vimcase, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter!-r-fname)",    lp.."rf",         "Lfilter! fname"..r..sc,   function() ef.filter("fname", false, in_vimcase, replace_loclist()) end},
     { nx, pqfr.."-Lfilter-r-FNAME)",     lp.."kF",         "Lfilter fname"..r..cs,    function() ef.filter("fname", true, in_sensitive, replace_loclist()) end},
     { nx, pqfr.."-Lfilter!-r-FNAME)",    lp.."rF",         "Lfilter! fname"..r..cs,   function() ef.filter("fname", false, in_sensitive, replace_loclist()) end},
     { nx, pqfr.."-Lfilter-r-fnameX)",    lp.."k<C-f>",     "Lfilter fname"..r..rx,    function() ef.filter("fname", true, in_regex, replace_loclist()) end},
@@ -162,15 +162,15 @@ local rancher_keymaps = {
 
     --- Text ---
 
-    { nx, pqfr.."-Qfilter-r-text)",      qp.."ke",         "Qfilter text"..r..sc,     function() ef.filter("text", true, in_vimsmart, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-text)",     qp.."re",         "Qfilter! text"..r..sc,    function() ef.filter("text", false, in_vimsmart, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter-r-text)",      qp.."ke",         "Qfilter text"..r..sc,     function() ef.filter("text", true, in_vimcase, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter!-r-text)",     qp.."re",         "Qfilter! text"..r..sc,    function() ef.filter("text", false, in_vimcase, replace_qflist()) end},
     { nx, pqfr.."-Qfilter-r-TEXT)",      qp.."kE",         "Qfilter text"..r..cs,     function() ef.filter("text", true, in_sensitive, replace_qflist()) end},
     { nx, pqfr.."-Qfilter!-r-TEXT)",     qp.."rE",         "Qfilter! text"..r..cs,    function() ef.filter("text", false, in_sensitive, replace_qflist()) end},
     { nx, pqfr.."-Qfilter-r-textX)",     qp.."k<C-e>",     "Qfilter text"..r..rx,     function() ef.filter("text", true, in_regex, replace_qflist()) end},
     { nx, pqfr.."-Qfilter!-r-textX)",    qp.."r<C-e>",     "Qfilter! text"..r..rx,    function() ef.filter("text", false, in_regex, replace_qflist()) end},
 
-    { nx, pqfr.."-Lfilter-r-text)",      lp.."ke",         "Lfilter text"..r..sc,     function() ef.filter("text", true, in_vimsmart, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-text)",     lp.."re",         "Lfilter! text"..r..sc,    function() ef.filter("text", false, in_vimsmart, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter-r-text)",      lp.."ke",         "Lfilter text"..r..sc,     function() ef.filter("text", true, in_vimcase, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter!-r-text)",     lp.."re",         "Lfilter! text"..r..sc,    function() ef.filter("text", false, in_vimcase, replace_loclist()) end},
     { nx, pqfr.."-Lfilter-r-TEXT)",      lp.."kE",         "Lfilter text"..r..cs,     function() ef.filter("text", true, in_sensitive, replace_loclist()) end},
     { nx, pqfr.."-Lfilter!-r-TEXT)",     lp.."rE",         "Lfilter! text"..r..cs,    function() ef.filter("text", false, in_sensitive, replace_loclist()) end},
     { nx, pqfr.."-Lfilter-r-textX)",     lp.."k<C-e>",     "Lfilter text"..r..rx,     function() ef.filter("text", true, in_regex, replace_loclist()) end},
@@ -178,15 +178,15 @@ local rancher_keymaps = {
 
     --- Lnum ---
 
-    { nx, pqfr.."-Qfilter-r-lnum)",      qp.."kn",         "Qfilter lnum"..r..sc,     function() ef.filter("lnum", true, in_vimsmart, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-lnum)",     qp.."rn",         "Qfilter! lnum"..r..sc,    function() ef.filter("lnum", false, in_vimsmart, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter-r-lnum)",      qp.."kn",         "Qfilter lnum"..r..sc,     function() ef.filter("lnum", true, in_vimcase, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter!-r-lnum)",     qp.."rn",         "Qfilter! lnum"..r..sc,    function() ef.filter("lnum", false, in_vimcase, replace_qflist()) end},
     { nx, pqfr.."-Qfilter-r-LNUM)",      qp.."kN",         "Qfilter lnum"..r..cs,     function() ef.filter("lnum", true, in_sensitive, replace_qflist()) end},
     { nx, pqfr.."-Qfilter!-r-LNUM)",     qp.."rN",         "Qfilter! lnum"..r..cs,    function() ef.filter("lnum", false, in_sensitive, replace_qflist()) end},
     { nx, pqfr.."-Qfilter-r-lnumX)",     qp.."k<C-n>",     "Qfilter lnum"..r..rx,     function() ef.filter("lnum", true, in_regex, replace_qflist()) end},
     { nx, pqfr.."-Qfilter!-r-lnumX)",    qp.."r<C-n>",     "Qfilter! lnum"..r..rx,    function() ef.filter("lnum", false, in_regex, replace_qflist()) end},
 
-    { nx, pqfr.."-Lfilter-r-lnum)",      lp.."kn",         "Lfilter lnum"..r..sc,     function() ef.filter("lnum", true, in_vimsmart, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-lnum)",     lp.."rn",         "Lfilter! lnum"..r..sc,    function() ef.filter("lnum", false, in_vimsmart, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter-r-lnum)",      lp.."kn",         "Lfilter lnum"..r..sc,     function() ef.filter("lnum", true, in_vimcase, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter!-r-lnum)",     lp.."rn",         "Lfilter! lnum"..r..sc,    function() ef.filter("lnum", false, in_vimcase, replace_loclist()) end},
     { nx, pqfr.."-Lfilter-r-LNUM)",      lp.."kN",         "Lfilter lnum"..r..cs,     function() ef.filter("lnum", true, in_sensitive, replace_loclist()) end},
     { nx, pqfr.."-Lfilter!-r-LNUM)",     lp.."rN",         "Lfilter! lnum"..r..cs,    function() ef.filter("lnum", false, in_sensitive, replace_loclist()) end},
     { nx, pqfr.."-Lfilter-r-lnumX)",     lp.."k<C-n>",     "Lfilter lnum"..r..rx,     function() ef.filter("lnum", true, in_regex, replace_loclist()) end},
@@ -194,15 +194,15 @@ local rancher_keymaps = {
 
     --- Type ---
 
-    { nx, pqfr.."-Qfilter-r-type)",      qp.."kt",         "Qfilter type"..r..sc,     function() ef.filter("type", true, in_vimsmart, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-type)",     qp.."rt",         "Qfilter! type"..r..sc,    function() ef.filter("type", false, in_vimsmart, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter-r-type)",      qp.."kt",         "Qfilter type"..r..sc,     function() ef.filter("type", true, in_vimcase, replace_qflist()) end},
+    { nx, pqfr.."-Qfilter!-r-type)",     qp.."rt",         "Qfilter! type"..r..sc,    function() ef.filter("type", false, in_vimcase, replace_qflist()) end},
     { nx, pqfr.."-Qfilter-r-TYPE)",      qp.."kT",         "Qfilter type"..r..cs,     function() ef.filter("type", true, in_sensitive, replace_qflist()) end},
     { nx, pqfr.."-Qfilter!-r-TYPE)",     qp.."rT",         "Qfilter! type"..r..cs,    function() ef.filter("type", false, in_sensitive, replace_qflist()) end},
     { nx, pqfr.."-Qfilter-r-typeX)",     qp.."k<C-t>",     "Qfilter type"..r..rx,     function() ef.filter("type", true, in_regex, replace_qflist()) end},
     { nx, pqfr.."-Qfilter!-r-typeX)",    qp.."r<C-t>",     "Qfilter! type"..r..rx,    function() ef.filter("type", false, in_regex, replace_qflist()) end},
 
-    { nx, pqfr.."-Lfilter-r-type)",      lp.."kt",         "Lfilter type"..r..sc,     function() ef.filter("type", true, in_vimsmart, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-type)",     lp.."rt",         "Lfilter! type"..r..sc,    function() ef.filter("type", false, in_vimsmart, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter-r-type)",      lp.."kt",         "Lfilter type"..r..sc,     function() ef.filter("type", true, in_vimcase, replace_loclist()) end},
+    { nx, pqfr.."-Lfilter!-r-type)",     lp.."rt",         "Lfilter! type"..r..sc,    function() ef.filter("type", false, in_vimcase, replace_loclist()) end},
     { nx, pqfr.."-Lfilter-r-TYPE)",      lp.."kT",         "Lfilter type"..r..cs,     function() ef.filter("type", true, in_sensitive, replace_loclist()) end},
     { nx, pqfr.."-Lfilter!-r-TYPE)",     lp.."rT",         "Lfilter! type"..r..cs,    function() ef.filter("type", false, in_sensitive, replace_loclist()) end},
     { nx, pqfr.."-Lfilter-r-typeX)",     lp.."k<C-t>",     "Lfilter type"..r..rx,     function() ef.filter("type", true, in_regex, replace_loclist()) end},
@@ -212,27 +212,27 @@ local rancher_keymaps = {
     --- GREP ---
     ------------
 
-    { nx, pqfr.."-grep-n-cwd)",    qp.."gd",         "Qgrep cwd, new"..sc,           function() eg.grep("cwd", in_vimsmart, sys_opt, new_qflist()) end },
+    { nx, pqfr.."-grep-n-cwd)",    qp.."gd",         "Qgrep cwd, new"..sc,           function() eg.grep("cwd", in_vimcase, sys_opt, new_qflist()) end },
     { nx, pqfr.."-grep-n-CWD)",    qp.."gD",         "Qgrep cwd, new"..cs,           function() eg.grep("cwd", in_sensitive, sys_opt, new_qflist()) end },
     { nx, pqfr.."-grep-n-cwdX)",   qp.."g<C-d>",     "Qgrep cwd, new"..rx,           function() eg.grep("cwd", in_regex, sys_opt, new_qflist()) end },
 
-    { nx, pqfr.."-lgrep-n-cwd)",   lp.."gd",         "Lgrep cwd, new"..sc,           function() eg.grep("cwd", in_vimsmart, sys_opt, new_loclist()) end },
+    { nx, pqfr.."-lgrep-n-cwd)",   lp.."gd",         "Lgrep cwd, new"..sc,           function() eg.grep("cwd", in_vimcase, sys_opt, new_loclist()) end },
     { nx, pqfr.."-lgrep-n-CWD)",   lp.."gD",         "Lgrep cwd, new"..cs,           function() eg.grep("cwd", in_sensitive, sys_opt, new_loclist()) end },
     { nx, pqfr.."-lgrep-n-cwdX)",  lp.."g<C-d>",     "Lgrep cwd, new"..rx,           function() eg.grep("cwd", in_regex, sys_opt, new_loclist()) end },
 
-    { nx, pqfr.."-grep-n-help)",   qp.."gh",         "Qgrep docs, new"..sc,          function() eg.grep("help", in_vimsmart, sys_opt, new_qflist()) end },
+    { nx, pqfr.."-grep-n-help)",   qp.."gh",         "Qgrep docs, new"..sc,          function() eg.grep("help", in_vimcase, sys_opt, new_qflist()) end },
     { nx, pqfr.."-grep-n-HELP)",   qp.."gH",         "Qgrep docs, new"..cs,          function() eg.grep("help", in_sensitive, sys_opt, new_qflist()) end },
     { nx, pqfr.."-grep-n-helpX)",  qp.."g<C-h>",     "Qgrep docs, new"..rx,          function() eg.grep("help", in_regex, sys_opt, new_qflist()) end },
 
-    { nx, pqfr.."-lgrep-n-help)",  lp.."gh",         "Lgrep docs, new"..sc,          function() eg.grep("help", in_vimsmart, sys_opt, new_loclist()) end },
+    { nx, pqfr.."-lgrep-n-help)",  lp.."gh",         "Lgrep docs, new"..sc,          function() eg.grep("help", in_vimcase, sys_opt, new_loclist()) end },
     { nx, pqfr.."-lgrep-n-HELP)",  lp.."gH",         "Lgrep docs, new"..cs,          function() eg.grep("help", in_sensitive, sys_opt, new_loclist()) end },
     { nx, pqfr.."-lgrep-n-helpX)", lp.."g<C-h>",     "Lgrep docs, new"..rx,          function() eg.grep("help", in_regex, sys_opt, new_loclist()) end },
 
-    { nx, pqfr.."-grep-n-bufs)",   qp.."gu",         "Qgrep open bufs, new"..sc,     function() eg.grep("bufs", in_vimsmart, sys_opt, new_qflist()) end },
+    { nx, pqfr.."-grep-n-bufs)",   qp.."gu",         "Qgrep open bufs, new"..sc,     function() eg.grep("bufs", in_vimcase, sys_opt, new_qflist()) end },
     { nx, pqfr.."-grep-n-BUFS)",   qp.."gU",         "Qgrep open bufs, new"..cs,     function() eg.grep("bufs", in_sensitive, sys_opt, new_qflist()) end },
     { nx, pqfr.."-grep-n-bufsX)",  qp.."g<C-u>",     "Qgrep open bufs, new"..rx,     function() eg.grep("bufs", in_regex, sys_opt, new_qflist()) end },
 
-    { nx, pqfr.."-lgrep-n-cbuf)",  lp.."gu",         "Lgrep cur buf, new"..sc,       function() eg.grep("cbuf", in_vimsmart, sys_opt, new_loclist()) end },
+    { nx, pqfr.."-lgrep-n-cbuf)",  lp.."gu",         "Lgrep cur buf, new"..sc,       function() eg.grep("cbuf", in_vimcase, sys_opt, new_loclist()) end },
     { nx, pqfr.."-lgrep-n-CBUF)",  lp.."gU",         "Lgrep cur buf, new"..cs,       function() eg.grep("cbuf", in_sensitive, sys_opt, new_loclist()) end },
     { nx, pqfr.."-lgrep-n-cbufX)", lp.."g<C-u>",     "Lgrep cur buf, new"..rx,       function() eg.grep("cbuf", in_regex, sys_opt, new_loclist()) end },
 
