@@ -371,16 +371,18 @@ end
 -- TODO: https://github.com/neovim/neovim/pull/33402
 -- Redo this once this issue is resolved
 
+-- Return an integer to stay consistent with pwin_close
+
 ---@param buf integer
 ---@param force boolean
 ---@param wipeout boolean
----@return nil
+---@return integer
 function M._pbuf_rm(buf, force, wipeout)
     ey._validate_uint(buf)
     vim.validate("force", force, "boolean")
     vim.validate("wipeout", wipeout, "boolean")
 
-    if not api.nvim_buf_is_valid(buf) then return end
+    if not api.nvim_buf_is_valid(buf) then return -1 end
 
     local modifiable = api.nvim_get_option_value("modifiable", { buf = buf }) ---@type boolean
     if modifiable then
@@ -392,13 +394,14 @@ function M._pbuf_rm(buf, force, wipeout)
 
     if not wipeout then api.nvim_set_option_value("buflisted", false, { buf = buf }) end
     local delete_opts = wipeout and { force = force } or { force = force, unload = true }
-    pcall(api.nvim_buf_delete, buf, delete_opts)
+    local ok, _ = pcall(api.nvim_buf_delete, buf, delete_opts)
+    return ok and 0 or -1
 end
 
 ---@param win integer
 ---@param force boolean
 ---@param wipeout boolean
----@return nil
+---@return integer
 function M._pclose_and_rm(win, force, wipeout)
     local buf = M._pwin_close(win, force)
     if buf > 0 then
@@ -407,6 +410,8 @@ function M._pclose_and_rm(win, force, wipeout)
             if #fn.win_findbuf(buf) == 0 then M._pbuf_rm(buf, force, wipeout) end
         end)
     end
+
+    return buf
 end
 
 -- Adapted from the source's "prepare_help_buffer" function
