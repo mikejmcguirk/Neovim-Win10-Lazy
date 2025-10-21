@@ -549,59 +549,59 @@ if vim.g.qf_rancher_set_default_cmds then
     ------------------
 
     api.nvim_create_user_command("Qprev", function(cargs)
-        en._q_prev_cmd(cargs)
+        en.q_prev_cmd(cargs)
     end, { count = 0, desc = "Go to a previous qf entry" })
 
     api.nvim_create_user_command("Qnext", function(cargs)
-        en._q_next_cmd(cargs)
+        en.q_next_cmd(cargs)
     end, { count = 0, desc = "Go to a later qf entry" })
 
     api.nvim_create_user_command("Qrewind", function(cargs)
-        en._q_rewind_cmd(cargs)
+        en.q_rewind_cmd(cargs)
     end, { count = 0, desc = "Go to the first or count qf entry" })
 
     api.nvim_create_user_command("Qlast", function(cargs)
-        en._q_last_cmd(cargs)
+        en.q_last_cmd(cargs)
     end, { count = 0, desc = "Go to the last or count qf entry" })
 
     api.nvim_create_user_command("Qq", function(cargs)
-        en._q_q_cmd(cargs)
+        en.q_q_cmd(cargs)
     end, { count = 0, desc = "Go to the current qf entry" })
 
     api.nvim_create_user_command("Qpfile", function(cargs)
-        en._q_pfile_cmd(cargs)
+        en.q_pfile_cmd(cargs)
     end, { count = 0, desc = "Go to the previous qf file" })
 
     api.nvim_create_user_command("Qnfile", function(cargs)
-        en._q_nfile_cmd(cargs)
+        en.q_nfile_cmd(cargs)
     end, { count = 0, desc = "Go to the next qf file" })
 
     api.nvim_create_user_command("Lprev", function(cargs)
-        en._l_prev_cmd(cargs)
+        en.l_prev_cmd(cargs)
     end, { count = 0, desc = "Go to a previous loclist entry" })
 
     api.nvim_create_user_command("Lnext", function(cargs)
-        en._l_next_cmd(cargs)
+        en.l_next_cmd(cargs)
     end, { count = 0, desc = "Go to a later loclist entry" })
 
     api.nvim_create_user_command("Lrewind", function(cargs)
-        en._l_rewind_cmd(cargs)
+        en.l_rewind_cmd(cargs)
     end, { count = 0, desc = "Go to the first or count loclist entry" })
 
     api.nvim_create_user_command("Llast", function(cargs)
-        en._l_last_cmd(cargs)
+        en.l_last_cmd(cargs)
     end, { count = 0, desc = "Go to the last or count loclist entry" })
 
     api.nvim_create_user_command("Ll", function(cargs)
-        en._l_l_cmd(cargs)
+        en.l_l_cmd(cargs)
     end, { count = 0, desc = "Go to the current loclist entry" })
 
     api.nvim_create_user_command("Lpfile", function(cargs)
-        en._l_pfile_cmd(cargs)
+        en.l_pfile_cmd(cargs)
     end, { count = 0, desc = "Go to the previous loclist file" })
 
     api.nvim_create_user_command("Lnfile", function(cargs)
-        en._l_nfile_cmd(cargs)
+        en.l_nfile_cmd(cargs)
     end, { count = 0, desc = "Go to the next loclist file" })
 
     ------------

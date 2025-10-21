@@ -169,7 +169,10 @@ local function get_wrapping_idx(src_win, count, wrapping_math)
 
     local count1 = M._count_to_count1(count) ---@type integer|nil
     local size = et._get_list(src_win, { nr = 0, size = 0 }).size ---@type integer
-    if size < 1 then return nil end
+    if size < 1 then
+        api.nvim_echo({ { "E42: No Errors", "" } }, false, {})
+        return nil
+    end
 
     local cur_idx = et._get_list(src_win, { nr = 0, idx = 0 }).idx ---@type integer
     if cur_idx < 1 then return nil end
