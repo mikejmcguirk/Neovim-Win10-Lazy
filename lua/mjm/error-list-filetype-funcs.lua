@@ -1,7 +1,7 @@
 ---@class QfRancherFiletypeFuncs
 local M = {}
 
-local eo = Qfr_Defer_Require("mjm.error-list-open") ---@type QfRancherOpen
+local eo = Qfr_Defer_Require("mjm.error-list-open") ---@type QfrOpen
 local et = Qfr_Defer_Require("mjm.error-list-tools") ---@type QfrTools
 local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfrUtil
 local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfrTypes

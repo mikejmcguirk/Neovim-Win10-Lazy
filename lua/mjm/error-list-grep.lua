@@ -139,23 +139,12 @@ local function do_grep(grep_info, input_opts, system_opts, output_opts)
     full_system_opts.cmd_parts = grep_parts
 
     local sys_output_opts = vim.deepcopy(output_opts, true) ---@type QfrOutputOpts
-    local what_set = sys_output_opts.what ---@type QfrWhat
+    sys_output_opts = et.handle_new_same_title(sys_output_opts)
 
     local base_cmd = table.concat(base_parts[grepprg], " ") ---@type string
-    what_set.title = grep_info.name .. " " .. base_cmd .. "  " .. pattern ---@type string
     -- DOCUMENT: This convention is similar to but distinct from vimgrep
-    local action = output_opts.action ---@type QfrAction
-    if action == " " then
-        local grep_nr = et._find_list_with_title(src_win, what_set.title) ---@type integer|nil
-        if grep_nr then
-            what_set.nr = grep_nr
-            sys_output_opts.action = "u"
-        end
-    end
-
-    what_set.user_data = what_set.user_data or {}
-    what_set.user_data.list_item_type = grep_info.list_item_type
-        or what_set.user_data.list_item_type
+    sys_output_opts.what.title = grep_info.name .. " " .. base_cmd .. "  " .. pattern
+    output_opts.list_item_type = grep_info.list_item_type or output_opts.list_item_type
 
     ee.system_do(full_system_opts, sys_output_opts)
 end

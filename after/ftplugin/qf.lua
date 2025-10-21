@@ -1,4 +1,4 @@
-local eo = Qfr_Defer_Require("mjm.error-list-open") --- @type QfRancherOpen
+local eo = Qfr_Defer_Require("mjm.error-list-open") --- @type QfrOpen
 
 local api = vim.api
 local bufmap = api.nvim_buf_set_keymap
@@ -79,15 +79,7 @@ bufmap_plug("n", "<C-v>", "<Plug>(qf-rancher-list-open-vsplit-focuslist)", vs_fo
 bufmap_plug("n", "x", "<Plug>(qf-rancher-list-open-tabnew-focuswin)", t_focuswin_desc)
 bufmap_plug("n", "<C-x>", "<Plug>(qf-rancher-list-open-tabnew-focuslist)", t_focuslist_desc)
 
-------------
---- TODO ---
-------------
+-- TODO: Tests
+-- TODO: Docs
 
---- Tests
---- Docs
-
------------
---- LOW ---
------------
-
---- Add an undo_ftplugin script
+-- LOW: Add an undo_ftplugin script

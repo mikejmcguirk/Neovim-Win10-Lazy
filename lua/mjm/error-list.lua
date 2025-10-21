@@ -36,9 +36,12 @@ vim.api.nvim_set_var("qf_rancher_preview_show_title", false)
 --- TODO: For stuff like winblend, use actual validator functions
 --- TODO: Make sure the options actually do what they're supposed to
 --- DOCUMENT: What these vars do
+--- TODO: FOr stuff like auto_open and auto-resize, need to go through everything and make sure
+--- they're properly used
 
 _G._QFR_G_VAR_MAP = {
     qf_rancher_auto_open_changes = { { "boolean" }, false },
+    qf_rancher_auto_resize_changes = { { "boolean" }, true },
     -- DOCUMENT:
     -- - If splitkeep is set to screen or topline, that will take precedence
     -- - If splitkeep is set for cursor, and this option is true, rancher will save and restore
@@ -66,6 +69,7 @@ _G._QFR_G_VAR_MAP = {
     qf_rancher_preview_title_pos = { { "string" }, "left" },
     qf_rancher_preview_winblend = { { "number" }, 0 },
     qf_rancher_qfsplit = { { "string" }, "botright" },
+    qf_rancher_reuse_same_title = { { "boolean" }, true },
     qf_rancher_set_default_maps = { { "boolean" }, true },
     qf_rancher_set_default_cmds = { { "boolean" }, true },
     qf_rancher_use_smartcase = { { "boolean" }, true },
@@ -177,6 +181,9 @@ end
 -------------
 --- TODO: ---
 -------------
+
+-- TODO: Need to go through everything and make sure it handles the assumption that nr can be
+-- 0, a number, "$", or nil. This is all valid data
 
 -- It will be necessary to go through everything and allow for the "$" nrs to be used for stack
 -- and list nrs. It is... silly to put out the what based API but then also tell people not to

@@ -1,6 +1,7 @@
 ---@class QfrUtil
 local M = {}
 
+local eo = Qfr_Defer_Require("mjm.error-list-open") ---@type QfrOpen
 local et = Qfr_Defer_Require("mjm.error-list-tools") ---@type QfrTools
 local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfrTypes
 
@@ -346,7 +347,7 @@ function M._protected_set_cursor(win, cur_pos)
     api.nvim_win_set_cursor(win, adj_cur_pos)
 end
 
--- MID: https://github.com/neovim/neovim/pull/33402
+-- TODO: https://github.com/neovim/neovim/pull/33402
 -- Redo this once this issue is resolved
 
 ---@param buf integer
@@ -544,6 +545,26 @@ function M._open_item_to_win(item, opts)
     if opts.goto_win then vim.api.nvim_set_current_win(win) end
 
     return true
+end
+
+---@param src_win integer|nil
+---@param list_nr integer|"$"
+---@return integer
+function M._clear_list_and_resize(src_win, list_nr)
+    ey._validate_win(src_win, true)
+
+    local result = et._clear_list(src_win, list_nr)
+
+    if result == -1 then return result end
+    if not M._get_g_var("qf_rancher_auto_resize_changes") then return result end
+
+    if result == 0 or result == et._get_list(src_win, { nr = 0 }).nr then
+        local tabpage = src_win and api.nvim_win_get_tabpage(src_win)
+            or api.nvim_get_current_tabpage()
+        eo._resize_lists_by_win(src_win, { tabpage = tabpage })
+    end
+
+    return result
 end
 
 ----------------------

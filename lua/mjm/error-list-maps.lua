@@ -67,7 +67,7 @@ local ef = Qfr_Defer_Require("mjm.error-list-filter") ---@type QfrFilter
 local ei = Qfr_Defer_Require("mjm.error-list-filetype-funcs") ---@type QfRancherFiletypeFuncs
 local eg = Qfr_Defer_Require("mjm.error-list-grep") ---@type QfrGrep
 local en = Qfr_Defer_Require("mjm.error-list-nav-action") ---@type QfRancherNav
-local eo = Qfr_Defer_Require("mjm.error-list-open") ---@type QfRancherOpen
+local eo = Qfr_Defer_Require("mjm.error-list-open") ---@type QfrOpen
 local ep = Qfr_Defer_Require("mjm.error-list-preview") ---@type QfRancherPreview
 local es = Qfr_Defer_Require("mjm.error-list-sort") ---@type QfRancherSort
 -- local et = Qfr_Defer_Require("mjm.error-list-tools") ---@type QfRancherTools
@@ -83,6 +83,8 @@ local rx = " (regex)"
 local n = ", new"
 local r = ", replace"
 -- local a = ", add"
+
+local ds = vim.diagnostic.severity
 
 local keep = { keep = true }
 local nokeep = { keep = false }
@@ -110,27 +112,27 @@ local rancher_keymaps = {
     --- DIAGNOSTICS ---
     -------------------
 
-    { nn, pqfr.. "Qdiags-n-hint",  qp.."in", "All buffer diagnostics min hint"..n,         function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.HINT }, new_qflist()) end },
-    { nn, pqfr.. "Qdiags-n-info",  qp.."if", "All buffer diagnostics min info"..n,         function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.INFO }, new_qflist()) end },
-    { nn, pqfr.. "Qdiags-n-warn",  qp.."iw", "All buffer diagnostics min warn"..n,         function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.WARN }, new_qflist()) end },
-    { nn, pqfr.. "Qdiags-n-error", qp.."ie", "All buffer diagnostics min error"..n,        function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.ERROR }, new_qflist()) end },
-    { nn, pqfr.. "Qdiags-n-top",   qp.."it", "All buffer diagnostics top severity"..n,     function() ed.diags_to_list({ filter = "top", level = nil }, new_qflist()) end },
+    { nn, pqfr.. "Qdiags-n-hint",  qp.."in", "All buffer diagnostics min hint"..n,         function() ed.diags_to_list({ getopts = { severity = nil } }, new_qflist()) end },
+    { nn, pqfr.. "Qdiags-n-info",  qp.."if", "All buffer diagnostics min info"..n,         function() ed.diags_to_list({ getopts = { severity = { min = ds.INFO } } }, new_qflist()) end },
+    { nn, pqfr.. "Qdiags-n-warn",  qp.."iw", "All buffer diagnostics min warn"..n,         function() ed.diags_to_list({ getopts = { severity = { min = ds.WARN } } }, new_qflist()) end },
+    { nn, pqfr.. "Qdiags-n-error", qp.."ie", "All buffer diagnostics min error"..n,        function() ed.diags_to_list({ getopts = { severity = { min = ds.ERROR } } }, new_qflist()) end },
+    { nn, pqfr.. "Qdiags-n-top",   qp.."it", "All buffer diagnostics top severity"..n,     function() ed.diags_to_list({ top = true }, new_qflist()) end },
 
-    { nn, pqfr.. "Ldiags-n-hint",  lp.."in", "Cur buf diagnostics min hint"..n,            function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.HINT }, new_loclist()) end },
-    { nn, pqfr.. "Ldiags-n-info",  lp.."if", "Cur buf diagnostics min info"..n,            function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.INFO }, new_loclist()) end },
-    { nn, pqfr.. "Ldiags-n-warn",  lp.."iw", "Cur buf diagnostics min warn"..n,            function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.WARN }, new_loclist()) end },
-    { nn, pqfr.. "Ldiags-n-error", lp.."ie", "Cur buf diagnostics min error"..n,           function() ed.diags_to_list({ filter = "min", level = vim.diagnostic.severity.ERROR }, new_loclist()) end },
-    { nn, pqfr.. "Ldiags-n-top",   lp.."it", "Cur buf diagnostics top severity"..n,        function() ed.diags_to_list({ filter = "top", level = nil }, new_loclist()) end },
+    { nn, pqfr.. "Ldiags-n-hint",  lp.."in", "Cur buf diagnostics min hint"..n,            function() ed.diags_to_list({ getopts = { severity = nil } }, new_loclist()) end },
+    { nn, pqfr.. "Ldiags-n-info",  lp.."if", "Cur buf diagnostics min info"..n,            function() ed.diags_to_list({ getopts = { severity = { min = ds.INFO } } }, new_loclist()) end },
+    { nn, pqfr.. "Ldiags-n-warn",  lp.."iw", "Cur buf diagnostics min warn"..n,            function() ed.diags_to_list({ getopts = { severity = { min = ds.WARN } } }, new_loclist()) end },
+    { nn, pqfr.. "Ldiags-n-error", lp.."ie", "Cur buf diagnostics min error"..n,           function() ed.diags_to_list({ getopts = { severity = { min = ds.ERROR } } }, new_loclist()) end },
+    { nn, pqfr.. "Ldiags-n-top",   lp.."it", "Cur buf diagnostics top severity"..n,        function() ed.diags_to_list({ top = true }, new_loclist()) end },
 
-    { nn, pqfr.. "Qdiags-n-HINT",  qp.."iN", "All buffer diagnostics only hint"..n,        function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.HINT }, new_qflist()) end },
-    { nn, pqfr.. "Qdiags-n-INFO",  qp.."iF", "All buffer diagnostics only info"..n,        function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.INFO }, new_qflist()) end },
-    { nn, pqfr.. "Qdiags-n-WARN",  qp.."iW", "All buffer diagnostics only warn"..n,        function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.WARN }, new_qflist()) end },
-    { nn, pqfr.. "Qdiags-n-ERROR", qp.."iE", "All buffer diagnostics only error"..n,       function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.ERROR }, new_qflist()) end },
+    { nn, pqfr.. "Qdiags-n-HINT",  qp.."iN", "All buffer diagnostics only hint"..n,        function() ed.diags_to_list({ getopts = { severity = ds.HINT } }, new_qflist()) end },
+    { nn, pqfr.. "Qdiags-n-INFO",  qp.."iF", "All buffer diagnostics only info"..n,        function() ed.diags_to_list({ getopts = { severity = ds.INFO } }, new_qflist()) end },
+    { nn, pqfr.. "Qdiags-n-WARN",  qp.."iW", "All buffer diagnostics only warn"..n,        function() ed.diags_to_list({ getopts = { severity = ds.WARN } }, new_qflist()) end },
+    { nn, pqfr.. "Qdiags-n-ERROR", qp.."iE", "All buffer diagnostics only error"..n,       function() ed.diags_to_list({ getopts = { severity = ds.ERROR } }, new_qflist()) end },
 
-    { nn, pqfr.. "Ldiags-n-HINT",  lp.."iN", "Cur buf diagnostics only hint"..n,           function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.HINT }, new_loclist()) end },
-    { nn, pqfr.. "Ldiags-n-INFO",  lp.."iF", "Cur buf diagnostics only info"..n,           function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.INFO }, new_loclist()) end },
-    { nn, pqfr.. "Ldiags-n-WARN",  lp.."iW", "Cur buf diagnostics only warn"..n,           function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.WARN }, new_loclist()) end },
-    { nn, pqfr.. "Ldiags-n-ERROR", lp.."iE", "Cur buf diagnostics only error"..n,          function() ed.diags_to_list({ filter = "only", level = vim.diagnostic.severity.ERROR }, new_loclist()) end },
+    { nn, pqfr.. "Ldiags-n-HINT",  lp.."iN", "Cur buf diagnostics only hint"..n,           function() ed.diags_to_list({ getopts = { severity = ds.HINT } }, new_loclist()) end },
+    { nn, pqfr.. "Ldiags-n-INFO",  lp.."iF", "Cur buf diagnostics only info"..n,           function() ed.diags_to_list({ getopts = { severity = ds.INFO } }, new_loclist()) end },
+    { nn, pqfr.. "Ldiags-n-WARN",  lp.."iW", "Cur buf diagnostics only warn"..n,           function() ed.diags_to_list({ getopts = { severity = ds.WARN } }, new_loclist()) end },
+    { nn, pqfr.. "Ldiags-n-ERROR", lp.."iE", "Cur buf diagnostics only error"..n,          function() ed.diags_to_list({ getopts = { severity = ds.ERROR } }, new_loclist()) end },
 
     --------------
     --- FILTER ---
@@ -314,14 +316,14 @@ local rancher_keymaps = {
 
     { nn, pqfr.."-qf-older)",        qp.."[", "Go to an older qflist",                         function() ea._q_older(vim.v.count) end },
     { nn, pqfr.."-qf-newer)",        qp.."]", "Go to a newer qflist",                          function() ea._q_newer(vim.v.count) end },
-    { nn, pqfr.."-qf-history)",      qp.."Q", "View or jump within the quickfix history",      function() ea._q_history(vim.v.count, { default = "current" }) end },
-    { nn, pqfr.."-qf-history-open)", qp.."<C-q>", "Open and jump within the quickfix history", function() ea._q_history(vim.v.count, { always_open = true, default = "current" }) end },
+    { nn, pqfr.."-qf-history)",      qp.."Q", "View or jump within the quickfix history",      function() ea._q_history(vim.v.count, { default = "cur_list" }) end },
+    { nn, pqfr.."-qf-history-open)", qp.."<C-q>", "Open and jump within the quickfix history", function() ea._q_history(vim.v.count, { always_open = true, default = "cur_list" }) end },
     { nn, pqfr.."-qf-del)",          qp.."e", "Delete a list from the quickfix stack",         function() ea._q_del(vim.v.count) end },
     { nn, pqfr.."-qf-del-all)",      qp.."E", "Delete all items from the quickfix stack",      function() ea._q_del_all() end },
     { nn, pqfr.."-ll-older)",        lp.."[", "Go to an older location list",                  function() ea._l_older(cur_win(), vim.v.count) end },
     { nn, pqfr.."-ll-newer)",        lp.."]", "Go to a newer location list",                   function() ea._l_newer(cur_win(), vim.v.count) end },
-    { nn, pqfr.."-ll-history)",      lp.."L", "View or jump within the loclist history",       function() ea._l_history(cur_win(), vim.v.count, { default = "current" }) end },
-    { nn, pqfr.."-ll-history-open)", lp.."<C-l>", "Open and jump within the loclist history",  function() ea._l_history(cur_win(), vim.v.count, { always_open = true, default = "current" }) end },
+    { nn, pqfr.."-ll-history)",      lp.."L", "View or jump within the loclist history",       function() ea._l_history(cur_win(), vim.v.count, { default = "cur_list" }) end },
+    { nn, pqfr.."-ll-history-open)", lp.."<C-l>", "Open and jump within the loclist history",  function() ea._l_history(cur_win(), vim.v.count, { always_open = true, default = "cur_list" }) end },
     { nn, pqfr.."-ll-del)",          lp.."e", "Delete a list from the loclist stack",          function() ea._l_del(cur_win(), vim.v.count) end },
     { nn, pqfr.."-ll-del-all)",      lp.."E", "Delete all items from the loclist stack",       function() ea._l_del_all(cur_win()) end },
 }
@@ -490,11 +492,11 @@ if vim.g.qf_rancher_set_default_cmds then
 
     api.nvim_create_user_command("Qdiag", function(cargs)
         ed.q_diag_cmd(cargs)
-    end, { count = 0, nargs = "*", desc = "Get all diagnostics for the Quickfix list" })
+    end, { bang = true, count = 0, nargs = "*", desc = "Send diags to the Quickfix list" })
 
     api.nvim_create_user_command("Ldiag", function(cargs)
         ed.l_diag_cmd(cargs)
-    end, { count = 0, nargs = "*", desc = "Get current buf diagnostics for the Location list" })
+    end, { bang = true, count = 0, nargs = "*", desc = "Send buf diags to the Location list" })
 
     --------------
     --- FILTER ---

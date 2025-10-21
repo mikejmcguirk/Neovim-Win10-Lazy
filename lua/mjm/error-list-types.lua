@@ -7,8 +7,11 @@ local M = {}
 --- SEMI-CUSTOM TYPES ---
 -------------------------
 
+-- MID: I think this should be limited to between 0 and 10, but need to triple check that the
+-- source only allows stack sizes up to 10
+
 ---@param nr integer|"$"|nil
----@param optional boolean
+---@param optional? boolean
 ---@return nil
 function M._validate_list_nr(nr, optional)
     vim.validate("optional", optional, "boolean", true)
@@ -23,8 +26,10 @@ function M._validate_list_nr(nr, optional)
 end
 
 --- PR: The built-in what annotation does not contain the user_data field
+--- PR: The built-in annotation does not allow string values for quickfixtextfunc
 
 ---@class QfrWhat : vim.fn.setqflist.what
+---@field quickfixtextfunc? function|string
 ---@field user_data? any
 
 ---@param what QfrWhat
@@ -56,18 +61,10 @@ function M._validate_what(what)
 
     vim.validate("what.quickfixtextfunc", what.quickfixtextfunc, "callable", true)
     vim.validate("what.title", what.title, "string", true)
-    if type(what.user_data) == "table" then M._validate_user_data(what.user_data) end
 end
 
 ---@class QfrUserData
 ---@field list_item_type? string
-
----@param user_data QfrUserData
----@return nil
-function M._validate_user_data(user_data)
-    vim.validate("user_data", user_data, "table")
-    vim.validate("user_data.list_item_type", user_data.list_item_type, "string", true)
-end
 
 -- LOW: Add validation for win config
 
@@ -175,6 +172,8 @@ local function validate_validate_list_opts(opts)
     vim.validate("opts.type", opts.type, "string", true)
 end
 
+-- LOW: This should be able to take a function as a validator
+
 ---@param list table
 ---@param opts? QfRancherValidateListOpts
 function M._validate_list(list, opts)
@@ -263,6 +262,20 @@ function M._validate_setlist_action(setlist_action)
     end)
 end
 
+---@param item_type string|nil
+---@param optional? boolean
+function M._validate_list_item_type(item_type, optional)
+    vim.validate("optional", optional, "boolean", true)
+    if optional and type(item_type) == "nil" then return end
+
+    vim.validate("item_type", item_type, "string", true)
+    if type(item_type) == "string" then
+        vim.validate("item_type", item_type, function()
+            return #item_type <= 1
+        end)
+    end
+end
+
 --- NOTE: This is designed for entries used to set qflists. The entries from getqflist() are
 --- not exactly the same
 ---@param item vim.quickfix.entry
@@ -288,12 +301,7 @@ function M._validate_list_item(item)
     --- MID: Figure out what the proper validation for this is
     -- vim.validate("item.valid", item.valid, { "boolean", "nil" })
 
-    vim.validate("item.type", item.type, "string", true)
-    if type(item.type) == "string" then
-        vim.validate("item.type", item.type, function()
-            return #item.type <= 1
-        end)
-    end
+    M._validate_list_item_type(item.type, true)
 
     --- NOTE: While qf rows and cols are one indexed, 0 is used to represent non-values
     M._validate_uint(item.lnum, true)
@@ -309,11 +317,18 @@ M._severity_map = {
     [vim.diagnostic.severity.HINT] = "H",
 } ---@type table<integer, string>
 
-M._plural_severity_map = {
+M._severity_map_plural = {
     [vim.diagnostic.severity.ERROR] = "errors",
     [vim.diagnostic.severity.WARN] = "warnings",
     [vim.diagnostic.severity.INFO] = "info",
     [vim.diagnostic.severity.HINT] = "hints",
+} ---@type table<integer, string>
+
+M._severity_map_str = {
+    [vim.diagnostic.severity.ERROR] = "Error",
+    [vim.diagnostic.severity.WARN] = "Warning",
+    [vim.diagnostic.severity.INFO] = "Info",
+    [vim.diagnostic.severity.HINT] = "Hint",
 } ---@type table<integer, string>
 
 M._severity_unmap = {
@@ -358,19 +373,17 @@ end
 --- CUSTOM TYPES -- GENERAL ---
 -------------------------------
 
--- TODO: Rename this
 ---@alias QfrAction "a"|"f"|"r"|"u"|" "
 
 -- TODO: Test if a double space produces a new cmd arg
 -- DOCUMENT: new is the default for cmds, can add another action to replace
 
--- TODO: rename this too
 M._actions = { "a", "f", "r", "u", " " } ---@type string[]
 M._default_action = " " ---@type string
 
 ---@param action QfrAction
 ---@return nil
-function M._validate_real_action(action)
+function M._validate_action(action)
     vim.validate("action", action, "string")
     vim.validate("action", action, function()
         return vim.tbl_contains(M._actions, action)
@@ -378,14 +391,22 @@ function M._validate_real_action(action)
 end
 
 ---@class QfrOutputOpts
+---@field list_item_type? string
+---@field sort_func? function
 ---@field src_win integer|nil
 ---@field action QfrAction
 ---@field what QfrWhat
 
+-- TODO: the sort funcs need to be put back in
+
+---@param output_opts QfrOutputOpts
+---@return nil
 function M._validate_output_opts(output_opts)
     vim.validate("output_opts", output_opts, "table")
+    M._validate_list_item_type(output_opts.list_item_type, true)
+    vim.validate("sort_func", output_opts.sort_func, "callable", true)
     M._validate_win(output_opts.src_win, true)
-    M._validate_real_action(output_opts.action)
+    M._validate_action(output_opts.action)
     M._validate_what(output_opts.what)
 end
 
@@ -454,30 +475,65 @@ end
 --- CUSTOM TYPES - DIAG ---
 ---------------------------
 
----@alias QfRancherSeverityFilter "min"|"only"|"top"
-
-M._sev_filters = { "min", "only", "top" } ---@type QfRancherSeverityFilter[]
-
----@param filter QfRancherSeverityFilter
----@return nil
-function M._validate_sev_type(filter)
-    vim.validate("filter", filter, "string")
-    vim.validate("filter", filter, function()
-        return vim.tbl_contains(M._sev_filters, filter)
-    end, "Severity filter " .. filter .. " is invalid")
-end
+---@alias QfrDiagDispFunc fun(vim.Diagnostic):vim.quickfix.entry
 
 ---@class QfrDiagOpts
----@field filter QfRancherSeverityFilter
----@field level? vim.diagnostic.Severity
+---@field disp_func? QfrDiagDispFunc
+---@field top? boolean
+---@field getopts? vim.diagnostic.GetOpts
 
 ---@param diag_opts QfrDiagOpts
 ---@return nil
 function M._validate_diag_opts(diag_opts)
     vim.validate("diag_opts", diag_opts, "table")
-    vim.validate("diag_opts.level", diag_opts.level, "number", true)
-    vim.validate("diag_opts.sev_type", diag_opts.filter, "string")
-    M._validate_sev_type(diag_opts.filter)
+    vim.validate("diag_opts.disp_func", diag_opts.disp_func, "callable", true)
+    vim.validate("diag_opts.top", diag_opts.top, "boolean", true)
+    M._validate_diag_getopts(diag_opts.getopts, true)
+end
+
+---@param severity integer|nil
+---@param optional? boolean
+function M._validate_diag_severity(severity, optional)
+    vim.validate("optional", optional, "boolean", true)
+    if optional and type(severity) == "nil" then return end
+
+    M._validate_uint(severity)
+    vim.validate("severity", severity, function()
+        return severity >= 1 and severity <= 4
+    end, "Diagnostic severity must be between 1 and 4")
+end
+
+---@param diag_getopts? vim.diagnostic.GetOpts
+---@param optional? boolean
+function M._validate_diag_getopts(diag_getopts, optional)
+    vim.validate("optional", optional, "boolean", true)
+    if optional and type(diag_getopts) == "nil" then return end
+
+    vim.validate("diag_getopts", diag_getopts, "table")
+    assert(type(diag_getopts) == "table")
+
+    local ns = diag_getopts.namespace
+    vim.validate("ns", ns, { "number", "table" }, true)
+    ---@diagnostic disable-next-line: param-type-mismatch
+    if type(ns) == "number" then M._validate_uint(ns) end
+    ---@diagnostic disable-next-line: param-type-mismatch
+    if type(ns) == "table" then M._validate_list(ns, "number") end
+
+    M._validate_uint(diag_getopts.lnum, true)
+
+    vim.validate("diag_getopts.severity", diag_getopts.severity, { "number", "table" }, true)
+    if type(diag_getopts.severity) == "number" then
+        ---@diagnostic disable-next-line: param-type-mismatch
+        M._validate_diag_severity(diag_getopts.severity)
+    elseif vim.islist(diag_getopts.severity) then
+        ---@diagnostic disable-next-line: param-type-mismatch
+        M._validate_list(diag_getopts.severity, { type = "number" })
+    elseif type(diag_getopts.severity) == "table" then
+        M._validate_diag_severity(diag_getopts.severity.min, true)
+        M._validate_diag_severity(diag_getopts.severity.max, true)
+    end
+
+    vim.validate("diag_getopts.enabled", diag_getopts.enabled, "boolean", true)
 end
 
 ------------------------------
@@ -537,13 +593,13 @@ end
 --- CUSTOM TYPES -- OPEN ---
 ----------------------------
 
----@class QfRancherOpenOpts
+---@class QfrListOpenOpts
 ---@field always_resize? boolean
 ---@field height? integer
 ---@field keep_win? boolean
 ---@field print_errs? boolean
 
----@param open_opts QfRancherOpenOpts
+---@param open_opts QfrListOpenOpts
 ---@return nil
 function M._validate_open_opts(open_opts)
     vim.validate("open_opts", open_opts, "table")
@@ -649,9 +705,13 @@ M._default_timeout = 4000
 --- STACK TYPES ---
 -------------------
 
+-- MID: Pass the full ListOpenOpts in here. This would allow for more flexibility with how
+-- the history function behaves
+-- TODO: always_open is bad naming. Should be open_list
+
 ---@class QfRancherHistoryOpts
 ---@field always_open? boolean
----@field default? "all"|"current"
+---@field default? "cur_list"|"show_stack"
 ---@field keep_win? boolean
 ---@field silent? boolean
 

@@ -1,4 +1,4 @@
----@class QfRancherOpen
+---@class QfrOpen
 local M = {}
 
 local et = Qfr_Defer_Require("mjm.error-list-tools") ---@type QfrTools
@@ -63,7 +63,7 @@ local function resolve_height_for_list(src_win, height)
     return size
 end
 
----@param opts QfRancherOpenOpts
+---@param opts QfrListOpenOpts
 ---@return nil
 local function validate_and_clean_open_opts(opts)
     ey._validate_open_opts(opts)
@@ -82,7 +82,7 @@ end
 -- default
 
 ---@param list_win integer
----@param opts QfRancherOpenOpts
+---@param opts QfrListOpenOpts
 ---@return boolean
 local function handle_open_list_win(list_win, opts)
     validate_and_clean_open_opts(opts)
@@ -107,7 +107,7 @@ local function open_cleanup(views, keep_win, cur_win)
     return true
 end
 
----@param opts? QfRancherOpenOpts
+---@param opts? QfrListOpenOpts
 ---@return boolean
 function M._open_qflist(opts)
     opts = opts or {}
@@ -141,20 +141,18 @@ end
 --- TODO: Make qfopen opts non-optional
 
 ---@param src_win integer
----@param opts QfRancherOpenOpts
+---@param opts QfrListOpenOpts
 ---@return boolean
 function M._open_loclist(src_win, opts)
     validate_and_clean_open_opts(opts)
 
     local qf_id = fn.getloclist(src_win, { id = 0 }).id ---@type integer
     if qf_id == 0 then
-        local eu = require("mjm.error-list-util")
         eu._checked_echo("Window has no location list", opts.print_errs, false)
         return false
     end
 
     local tabpage = api.nvim_win_get_tabpage(src_win) ---@type integer
-    local eu = require("mjm.error-list-util") ---@type QfrUtil
     local ll_win = eu._get_loclist_win_by_qf_id(qf_id, { tabpage = tabpage }) ---@type integer|nil
     if ll_win then return handle_open_list_win(ll_win, opts) end
 
@@ -177,9 +175,10 @@ function M._open_loclist(src_win, opts)
 end
 
 ---@param src_win? integer
----@param opts QfRancherOpenOpts
+---@param opts QfrListOpenOpts
 ---@return boolean
 function M._open_list(src_win, opts)
+    ey._validate_win(src_win, true)
     --- NOTE: Because these functions return booleans, cannot use the Lua ternary
     if src_win then
         return M._open_loclist(src_win, opts)
@@ -209,12 +208,13 @@ end
 --- CLOSE ---
 -------------
 
+-- TODO: Manually goto the alternate window if it's available
+
 ---@return boolean
 function M._close_qflist()
     local cur_win = api.nvim_get_current_win() ---@type integer
     local tabpage = api.nvim_win_get_tabpage(cur_win) ---@type integer
 
-    local eu = require("mjm.error-list-util") ---@type QfrUtil
     local qf_win = eu._get_qf_win({ tabpage = tabpage }) ---@type integer|nil
     if not qf_win then return false end
 
@@ -241,7 +241,6 @@ function M._close_loclist(src_win)
         return false
     end
 
-    local eu = require("mjm.error-list-util") ---@type QfrUtil
     local tabpage = api.nvim_win_get_tabpage(src_win) ---@type integer
     local ll_wins = eu._get_ll_wins_by_qf_id(qf_id, { tabpage = tabpage }) ---@type integer[]
     if #ll_wins < 1 then return false end
@@ -369,17 +368,29 @@ function M._resize_qfwins(opts)
     end
 end
 
----@param win integer
+---@param src_win integer
 ---@param opts QfRancherTabpageOpts
 ---@return nil
-function M._resize_loclists_by_win(win, opts)
-    ey._validate_win(win, false)
+function M._resize_loclists_by_win(src_win, opts)
+    ey._validate_win(src_win, false)
     ey._validate_tabpage_opts(opts)
 
     ---@type integer[]
-    local loclists = require("mjm.error-list-util")._get_loclist_wins_by_win(win, opts)
+    local loclists = require("mjm.error-list-util")._get_loclist_wins_by_win(src_win, opts)
     for _, list_win in ipairs(loclists) do
         M._resize_list_win(list_win, nil)
+    end
+end
+
+---@param src_win integer|nil
+---@param opts QfRancherTabpageOpts
+---@return nil
+function M._resize_lists_by_win(src_win, opts)
+    ey._validate_win(src_win, true)
+    if src_win then
+        M._resize_loclists_by_win(src_win, opts)
+    else
+        M._resize_qfwins(opts)
     end
 end
 

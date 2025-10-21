@@ -26,9 +26,9 @@ local function handle_output(obj, output_opts)
     if #lines == 0 then return end
 
     local lines_dict = vim.fn.getqflist({ lines = lines }) ---@type {items: table[]}
-    if output_opts.what.user_data.list_item_type then
+    if output_opts.list_item_type then
         for _, item in pairs(lines_dict.items) do
-            item.type = output_opts.what.user_data.list_item_type
+            item.type = output_opts.list_item_type
         end
     end
 
@@ -36,7 +36,7 @@ local function handle_output(obj, output_opts)
     local what_set = vim.tbl_deep_extend("force", output_opts.what, { items = lines_dict.items })
     local dest_nr = et._set_list(src_win, output_opts.action, what_set) ---@type integer
     if eu._get_g_var("qf_rancher_auto_open_changes") then
-        ea._history(src_win, dest_nr, {
+        ea._get_history(src_win, dest_nr, {
             always_open = true,
             default = "current",
             silent = true,

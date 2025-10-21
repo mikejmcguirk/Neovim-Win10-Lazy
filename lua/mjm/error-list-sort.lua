@@ -40,6 +40,7 @@ local function sort_wrapper(sort_info, sort_opts, output_opts)
 
     ---@type QfRancherSortPredicate
     local predicate = sort_opts.dir == "asc" and sort_info.asc_func or sort_info.desc_func
+    -- TODO: the sort needs to be re-put here
     local new_items = vim.deepcopy(cur_list.items, false) ---@type vim.quickfix.entry[]
     local what = output_opts.what ---@type QfrWhat
     -- TODO: This combining logic should be in tools
@@ -51,12 +52,11 @@ local function sort_wrapper(sort_info, sort_opts, output_opts)
                 and cur_list.quickfixtextfunc
             or what.quickfixtextfunc,
         title = cur_list.title or what.title,
-        user_data = { sort_func = predicate },
     }) ---@type QfrWhat
 
     local dest_nr = et._set_list(src_win, output_opts.action, what_set) ---@type integer
     if eu._get_g_var("qf_rancher_auto_open_changes") then
-        ea._history(src_win, dest_nr, {
+        ea._get_history(src_win, dest_nr, {
             always_open = true,
             default = "current",
             silent = true,

@@ -7,6 +7,8 @@ local api = vim.api
 -------------------
 
 -- LOW: Create a more general defer require. Look at all of tj's funcs + vim._defer_require
+-- To address here: Right now you need a type annotation for lua_ls to see the contents of the
+-- module. I *think* vim._defer_require addresses this but haven't checked
 
 --- https://github.com/tjdevries/lazy-require.nvim/blob/master/lua/lazy-require.lua
 --- @param require_path string
