@@ -517,6 +517,8 @@ function M.pbuf_rm(buf, force, wipeout)
     pcall(api.nvim_buf_delete, buf, delete_opts)
 end
 
+-- MID: This does not wipe the buf in the last win
+
 --- @param win integer
 --- @param force boolean
 --- @param wipeout boolean

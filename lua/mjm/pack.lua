@@ -66,6 +66,7 @@ local pack_spec = {
 vim.pack.add(pack_spec, {})
 
 vim.api.nvim_cmd({ cmd = "packadd", args = { "nvim.undotree" }, bang = true }, {})
+vim.api.nvim_cmd({ cmd = "packadd", args = { "nvim-qf-rancher" }, bang = true }, {})
 
 Map("n", "zqc", function()
     local inactive = vim.iter(pairs(vim.pack.get()))
