@@ -504,7 +504,14 @@ function M.pbuf_rm(buf, force, wipeout)
     vim.validate("wipeout", wipeout, "boolean")
     if not api.nvim_buf_is_valid(buf) then return end
 
-    if not wipeout then api.nvim_set_option_value("buflisted", false, { buf = buf }) end
+    local modifiable = GetOpt("modifiable", { buf = buf }) ---@type boolean
+    if modifiable then
+        api.nvim_buf_call(buf, function()
+            Cmd({ cmd = "update", mods = { silent = true } }, {})
+        end)
+    end
+
+    if not wipeout then SetOpt("buflisted", false, { buf = buf }) end
     local delete_opts = wipeout and { force = force } or { force = force, unload = true }
     pcall(api.nvim_buf_delete, buf, delete_opts)
 end
