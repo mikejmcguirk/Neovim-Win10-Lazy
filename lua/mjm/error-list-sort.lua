@@ -370,9 +370,6 @@ end
 --- sort_opts:
 --- - dir?: "asc"|"desc" Defaults to "asc"
 --- what
---- - action? "new"|"replace"|"add" - Create a new list, replace a pre-existing one, or add a new
----     one
---- - is_loclist? boolean - Whether to filter against a location list
 ---@param name string
 ---@param sort_opts QfrSortOpts
 ---@param output_opts QfrOutputOpts

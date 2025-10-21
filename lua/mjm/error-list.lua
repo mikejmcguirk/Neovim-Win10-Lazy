@@ -58,8 +58,14 @@ _G._QFR_G_VAR_MAP = {
 
     qf_rancher_grepprg = { { "string" }, "rg" },
 
+    qf_rancher_map_set_defaults = { { "boolean" }, true },
     qf_rancher_map_ll_prefix = { { "string" }, "l" },
     qf_rancher_map_qf_prefix = { { "string" }, "q" },
+    qf_rancher_map_diag_prefix = { { "string" }, "i" },
+    qf_rancher_map_keep_prefix = { { "string" }, "k" },
+    qf_rancher_map_remove_prefix = { { "string" }, "r" },
+    qf_rancher_map_grep_prefix = { { "string" }, "g" },
+    qf_rancher_map_sort_prefix = { { "string" }, "t" },
 
     qf_rancher_preview_border = { { "string", "table" }, "single" },
     -- DOCUMENT: Default is 100 to accomodate slower systems/HDs. 50 should be fine if you have an
@@ -70,7 +76,6 @@ _G._QFR_G_VAR_MAP = {
     qf_rancher_preview_winblend = { { "number" }, 0 },
     qf_rancher_qfsplit = { { "string" }, "botright" },
     qf_rancher_reuse_same_title = { { "boolean" }, true },
-    qf_rancher_set_default_maps = { { "boolean" }, true },
     qf_rancher_set_default_cmds = { { "boolean" }, true },
     qf_rancher_skip_zzze = { { "boolean" }, false },
 } ---@type table<string, {[1]:string[], [2]: any}>

@@ -1,21 +1,72 @@
---- NOTE: The mappings and user commands are all here in order to avoid eagerly requiring every
---- module during startup
+-- NOTE: The mappings and user commands are all here in order to avoid eagerly requiring every
+-- module during startup
 
---- NOTE: In order for the defer require to work, all function calls must be inside of
---- anonymous functions. If you pass, for example, eo.closeqflist as a function reference, eo
---- needs to be evaluated at command creation
+-- NOTE: In order for the defer require to work, all function calls must be inside of
+-- anonymous functions. If you pass, for example, eo.closeqflist as a function reference, eo
+-- needs to be evaluated at command creation
+
+local ea = Qfr_Defer_Require("mjm.error-list-stack") ---@type QfrStack
+local ed = Qfr_Defer_Require("mjm.error-list-diag") ---@type QfRancherDiagnostics
+local ef = Qfr_Defer_Require("mjm.error-list-filter") ---@type QfrFilter
+local ei = Qfr_Defer_Require("mjm.error-list-filetype-funcs") ---@type QfRancherFiletypeFuncs
+local eg = Qfr_Defer_Require("mjm.error-list-grep") ---@type QfrGrep
+local en = Qfr_Defer_Require("mjm.error-list-nav-action") ---@type QfRancherNav
+local eo = Qfr_Defer_Require("mjm.error-list-open") ---@type QfrOpen
+local ep = Qfr_Defer_Require("mjm.error-list-preview") ---@type QfRancherPreview
+local es = Qfr_Defer_Require("mjm.error-list-sort") ---@type QfRancherSort
 
 local api = vim.api
 
---------------------------
---- Map and Cmd Pieces ---
---------------------------
+------------------------
+-- Map and Cmd Pieces --
+------------------------
+
+local nn = { "n" } ---@type string[]
+local nx = { "n", "x" } ---@type string[]
+
+-- DOCUMENT: how prefixes are validated
+
+---@param prefix string
+---@return boolean
+local function validate_prefix(prefix)
+    if #prefix ~= 1 then return false end
+    if prefix:match("^[%a]+$") == nil then return false end
+    return true
+end
+
+-- MID: Not the greatest way to do this. If this gets combined with the main setup file, then
+-- try to put together the validations more
+
+local qp = string.lower(vim.g.qf_rancher_map_qf_prefix) ---@type string
+qp = validate_prefix(qp) and qp or _QFR_G_VAR_MAP["qf_rancher_map_qf_prefix"][2]
+local ql = "<leader>" .. qp ---@type string
+local qP = string.upper(qp) ---@type string
+
+local lp = string.lower(vim.g.qf_rancher_map_ll_prefix) ---@type string
+lp = validate_prefix(lp) and lp or _QFR_G_VAR_MAP["qf_rancher_map_ll_prefix"][2]
+local ll = "<leader>" .. lp ---@type string
+local lP = string.upper(lp) ---@type string
+
+local dp = string.lower(vim.g.qf_rancher_map_diag_prefix) ---@type string
+dp = validate_prefix(dp) and dp or _QFR_G_VAR_MAP["qf_rancher_map_diag_prefix"][2]
+local kp = string.lower(vim.g.qf_rancher_map_keep_prefix) ---@type string
+kp = validate_prefix(kp) and kp or _QFR_G_VAR_MAP["qf_rancher_map_keep_prefix"][2]
+local rp = string.lower(vim.g.qf_rancher_map_remove_prefix) ---@type string
+rp = validate_prefix(rp) and rp or _QFR_G_VAR_MAP["qf_rancher_map_remove_prefix"][2]
+local gp = string.lower(vim.g.qf_rancher_map_grep_prefix) ---@type string
+gp = validate_prefix(gp) and gp or _QFR_G_VAR_MAP["qf_rancher_map_grep_prefix"][2]
+local sp = string.lower(vim.g.qf_rancher_map_sort_prefix) ---@type string
+sp = validate_prefix(sp) and sp or _QFR_G_VAR_MAP["qf_rancher_map_sort_prefix"][2]
+
+local sc = " (smartcase)" ---@type string
+local rx = " (regex)" ---@type string
+
+local vimcase = { input_type = "vimcase" } ---@type QfrInputOpts
+local regex = { input_type = "regex" } ---@type QfrInputOpts
+
+local ds = vim.diagnostic.severity
 
 local sys_opt = { timeout = 4000 } ---@type QfrSystemOpts
-
-local in_vimcase = { input_type = "vimcase" } ---@type QfrInputOpts
-local in_sensitive = { input_type = "sensitive" } ---@type QfrInputOpts
-local in_regex = { input_type = "regex" } ---@type QfrInputOpts
 
 ---@return integer
 local function cur_win()
@@ -49,277 +100,201 @@ local function replace_loclist()
     return get_output_opts(cur_win(), "u")
 end
 
--- ---@return QfrOutputOpts
--- local function add_loclist()
---     return get_output_opts("a", cur_win())
--- end
---
-local ea = Qfr_Defer_Require("mjm.error-list-stack") ---@type QfrStack
-local ed = Qfr_Defer_Require("mjm.error-list-diag") ---@type QfRancherDiagnostics
-local ef = Qfr_Defer_Require("mjm.error-list-filter") ---@type QfrFilter
-local ei = Qfr_Defer_Require("mjm.error-list-filetype-funcs") ---@type QfRancherFiletypeFuncs
-local eg = Qfr_Defer_Require("mjm.error-list-grep") ---@type QfrGrep
-local en = Qfr_Defer_Require("mjm.error-list-nav-action") ---@type QfRancherNav
-local eo = Qfr_Defer_Require("mjm.error-list-open") ---@type QfrOpen
-local ep = Qfr_Defer_Require("mjm.error-list-preview") ---@type QfRancherPreview
-local es = Qfr_Defer_Require("mjm.error-list-sort") ---@type QfRancherSort
--- local et = Qfr_Defer_Require("mjm.error-list-tools") ---@type QfRancherTools
-
-local nn = { "n" }
-local nx = { "n", "x" }
-local pqfr = "<Plug>(qf-rancher"
-local qp = "<leader>q"
-local lp = "<leader>l"
-local sc = " (smartcase)"
-local cs = " (case sensitive)"
-local rx = " (regex)"
-local n = ", new"
-local r = ", replace"
--- local a = ", add"
-
-local ds = vim.diagnostic.severity
-
---- The keymaps need to all be set here to avoid eagerly requiring other modules
---- I have not been able to find a way to build the list at runtime without it being hard to read
---- and non-trivially affecting startup time
---- TODO: Need to have settable options for mappings
-
--- TODO: Might be a way to do this without the big table
--- qg/qG/q<C-g> all relate to how the what table is set. What is standard across all maps
--- Means you can loop them
--- So as a first step, you can have the what settings in a table and use that as a loop
--- Move the different loop pieces over in steps
--- Might also lead to better thinking about the API
 
 --- Mode(s), Plug Map, User Map, Desc, Action
-
 ---@alias QfRancherMapData{[1]:string[], [2]:string, [3]:string, [4]: string, [5]: function}
 
 -- stylua: ignore
 ---@type QfRancherMapData[]
-local rancher_keymaps = {
-    -------------------
-    --- DIAGNOSTICS ---
-    -------------------
+local qfr_maps = {
+    -- =================
+    -- == DIAGNOSTICS ==
+    -- =================
 
-    { nn, pqfr.. "Qdiags-n-hint",  qp.."in", "All buffer diagnostics min hint"..n,         function() ed.diags_to_list({ getopts = { severity = nil } }, new_qflist()) end },
-    { nn, pqfr.. "Qdiags-n-info",  qp.."if", "All buffer diagnostics min info"..n,         function() ed.diags_to_list({ getopts = { severity = { min = ds.INFO } } }, new_qflist()) end },
-    { nn, pqfr.. "Qdiags-n-warn",  qp.."iw", "All buffer diagnostics min warn"..n,         function() ed.diags_to_list({ getopts = { severity = { min = ds.WARN } } }, new_qflist()) end },
-    { nn, pqfr.. "Qdiags-n-error", qp.."ie", "All buffer diagnostics min error"..n,        function() ed.diags_to_list({ getopts = { severity = { min = ds.ERROR } } }, new_qflist()) end },
-    { nn, pqfr.. "Qdiags-n-top",   qp.."it", "All buffer diagnostics top severity"..n,     function() ed.diags_to_list({ top = true }, new_qflist()) end },
+    { nn, "<Plug>(qfr-Qdiags-hint)",  ql..dp.."n", "All buffer diagnostics min hint",     function() ed.diags_to_list({ getopts = { severity = nil } }, new_qflist()) end },
+    { nn, "<Plug>(qfr-Qdiags-info)",  ql..dp.."f", "All buffer diagnostics min info",     function() ed.diags_to_list({ getopts = { severity = { min = ds.INFO } } }, new_qflist()) end },
+    { nn, "<Plug>(qfr-Qdiags-warn)",  ql..dp.."w", "All buffer diagnostics min warn",     function() ed.diags_to_list({ getopts = { severity = { min = ds.WARN } } }, new_qflist()) end },
+    { nn, "<Plug>(qfr-Qdiags-error)", ql..dp.."e", "All buffer diagnostics min error",    function() ed.diags_to_list({ getopts = { severity = { min = ds.ERROR } } }, new_qflist()) end },
+    { nn, "<Plug>(qfr-Qdiags-top)",   ql..dp.."t", "All buffer diagnostics top severity", function() ed.diags_to_list({ top = true }, new_qflist()) end },
 
-    { nn, pqfr.. "Ldiags-n-hint",  lp.."in", "Cur buf diagnostics min hint"..n,            function() ed.diags_to_list({ getopts = { severity = nil } }, new_loclist()) end },
-    { nn, pqfr.. "Ldiags-n-info",  lp.."if", "Cur buf diagnostics min info"..n,            function() ed.diags_to_list({ getopts = { severity = { min = ds.INFO } } }, new_loclist()) end },
-    { nn, pqfr.. "Ldiags-n-warn",  lp.."iw", "Cur buf diagnostics min warn"..n,            function() ed.diags_to_list({ getopts = { severity = { min = ds.WARN } } }, new_loclist()) end },
-    { nn, pqfr.. "Ldiags-n-error", lp.."ie", "Cur buf diagnostics min error"..n,           function() ed.diags_to_list({ getopts = { severity = { min = ds.ERROR } } }, new_loclist()) end },
-    { nn, pqfr.. "Ldiags-n-top",   lp.."it", "Cur buf diagnostics top severity"..n,        function() ed.diags_to_list({ top = true }, new_loclist()) end },
+    { nn, "<Plug>(qfr-Qdiags-HINT)",  ql..dp.."N", "All buffer diagnostics only hint",    function() ed.diags_to_list({ getopts = { severity = ds.HINT } }, new_qflist()) end },
+    { nn, "<Plug>(qfr-Qdiags-INFO)",  ql..dp.."F", "All buffer diagnostics only info",    function() ed.diags_to_list({ getopts = { severity = ds.INFO } }, new_qflist()) end },
+    { nn, "<Plug>(qfr-Qdiags-WARN)",  ql..dp.."W", "All buffer diagnostics only warn",    function() ed.diags_to_list({ getopts = { severity = ds.WARN } }, new_qflist()) end },
+    { nn, "<Plug>(qfr-Qdiags-ERROR)", ql..dp.."E", "All buffer diagnostics only error",   function() ed.diags_to_list({ getopts = { severity = ds.ERROR } }, new_qflist()) end },
 
-    { nn, pqfr.. "Qdiags-n-HINT",  qp.."iN", "All buffer diagnostics only hint"..n,        function() ed.diags_to_list({ getopts = { severity = ds.HINT } }, new_qflist()) end },
-    { nn, pqfr.. "Qdiags-n-INFO",  qp.."iF", "All buffer diagnostics only info"..n,        function() ed.diags_to_list({ getopts = { severity = ds.INFO } }, new_qflist()) end },
-    { nn, pqfr.. "Qdiags-n-WARN",  qp.."iW", "All buffer diagnostics only warn"..n,        function() ed.diags_to_list({ getopts = { severity = ds.WARN } }, new_qflist()) end },
-    { nn, pqfr.. "Qdiags-n-ERROR", qp.."iE", "All buffer diagnostics only error"..n,       function() ed.diags_to_list({ getopts = { severity = ds.ERROR } }, new_qflist()) end },
+    { nn, "<Plug>(qfr-Ldiags-hint)",  ll..dp.."n", "Cur buf diagnostics min hint",        function() ed.diags_to_list({ getopts = { severity = nil } }, new_loclist()) end },
+    { nn, "<Plug>(qfr-Ldiags-info)",  ll..dp.."f", "Cur buf diagnostics min info",        function() ed.diags_to_list({ getopts = { severity = { min = ds.INFO } } }, new_loclist()) end },
+    { nn, "<Plug>(qfr-Ldiags-warn)",  ll..dp.."w", "Cur buf diagnostics min warn",        function() ed.diags_to_list({ getopts = { severity = { min = ds.WARN } } }, new_loclist()) end },
+    { nn, "<Plug>(qfr-Ldiags-error)", ll..dp.."e", "Cur buf diagnostics min error",       function() ed.diags_to_list({ getopts = { severity = { min = ds.ERROR } } }, new_loclist()) end },
+    { nn, "<Plug>(qfr-Ldiags-top)",   ll..dp.."t", "Cur buf diagnostics top severity",    function() ed.diags_to_list({ top = true }, new_loclist()) end },
 
-    { nn, pqfr.. "Ldiags-n-HINT",  lp.."iN", "Cur buf diagnostics only hint"..n,           function() ed.diags_to_list({ getopts = { severity = ds.HINT } }, new_loclist()) end },
-    { nn, pqfr.. "Ldiags-n-INFO",  lp.."iF", "Cur buf diagnostics only info"..n,           function() ed.diags_to_list({ getopts = { severity = ds.INFO } }, new_loclist()) end },
-    { nn, pqfr.. "Ldiags-n-WARN",  lp.."iW", "Cur buf diagnostics only warn"..n,           function() ed.diags_to_list({ getopts = { severity = ds.WARN } }, new_loclist()) end },
-    { nn, pqfr.. "Ldiags-n-ERROR", lp.."iE", "Cur buf diagnostics only error"..n,          function() ed.diags_to_list({ getopts = { severity = ds.ERROR } }, new_loclist()) end },
+    { nn, "<Plug>(qfr-Ldiags-HINT)",  ll..dp.."N", "Cur buf diagnostics only hint",       function() ed.diags_to_list({ getopts = { severity = ds.HINT } }, new_loclist()) end },
+    { nn, "<Plug>(qfr-Ldiags-INFO)",  ll..dp.."F", "Cur buf diagnostics only info",       function() ed.diags_to_list({ getopts = { severity = ds.INFO } }, new_loclist()) end },
+    { nn, "<Plug>(qfr-Ldiags-WARN)",  ll..dp.."W", "Cur buf diagnostics only warn",       function() ed.diags_to_list({ getopts = { severity = ds.WARN } }, new_loclist()) end },
+    { nn, "<Plug>(qfr-Ldiags-ERROR)", ll..dp.."E", "Cur buf diagnostics only error",      function() ed.diags_to_list({ getopts = { severity = ds.ERROR } }, new_loclist()) end },
 
-    --------------
-    --- FILTER ---
-    --------------
+    -- ============
+    -- == FILTER ==
+    -- ============
 
-    --- Cfilter ---
+    -- Cfilter --
 
-    { nx, pqfr.."-Qfilter-r-cfilter)",   qp.."kl",         "Qfilter cfilter"..r..sc,  function() ef.filter("cfilter", true, in_vimcase, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-cfilter)",  qp.."rl",         "Qfilter! cfilter"..r..sc, function() ef.filter("cfilter", false, in_vimcase, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter-r-CFILTER)",   qp.."kL",         "Qfilter cfilter"..r..cs,  function() ef.filter("cfilter", true, in_sensitive, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-CFILTER)",  qp.."rL",         "Qfilter! cfilter"..r..cs, function() ef.filter("cfilter", false, in_sensitive, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter-r-cfilterX)",  qp.."k<C-l>",     "Qfilter cfilter"..r..rx,  function() ef.filter("cfilter", true, in_regex, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-cfilterX)", qp.."r<C-l>",     "Qfilter! cfilter"..r..rx, function() ef.filter("cfilter", false, in_regex, replace_qflist()) end},
+    { nx, "<Plug>(qfr-Qfilter-cfilter)",   ql..kp.."l", "Qfilter cfilter"..sc,  function() ef.filter("cfilter", true, vimcase, replace_qflist()) end },
+    { nx, "<Plug>(qfr-Qfilter!-cfilter)",  ql..rp.."l", "Qfilter! cfilter"..sc, function() ef.filter("cfilter", false, vimcase, replace_qflist()) end },
+    { nx, "<Plug>(qfr-Qfilter-cfilterX)",  ql..kp.."L", "Qfilter cfilter"..rx,  function() ef.filter("cfilter", true, regex, replace_qflist()) end },
+    { nx, "<Plug>(qfr-Qfilter!-cfilterX)", ql..rp.."L", "Qfilter! cfilter"..rx, function() ef.filter("cfilter", false, regex, replace_qflist()) end },
 
-    { nx, pqfr.."-Lfilter-r-cfilter)",   lp.."kl",         "Lfilter cfilter"..r..sc,  function() ef.filter("cfilter", true, in_vimcase, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-cfilter)",  lp.."rl",         "Lfilter! cfilter"..r..sc, function() ef.filter("cfilter", false, in_vimcase, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter-r-CFILTER)",   lp.."kL",         "Lfilter cfilter"..r..cs,  function() ef.filter("cfilter", true, in_sensitive, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-CFILTER)",  lp.."rL",         "Lfilter! cfilter"..r..cs, function() ef.filter("cfilter", false, in_sensitive, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter-r-cfilterX)",  lp.."k<C-l>",     "Lfilter cfilter"..r..rx,  function() ef.filter("cfilter", true, in_regex, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-cfilterX)", lp.."r<C-l>",     "Lfilter! cfilter"..r..rx, function() ef.filter("cfilter", false, in_regex, replace_loclist()) end},
+    { nx, "<Plug>(qfr-Lfilter-cfilter)",   ll..kp.."l", "Lfilter cfilter"..sc,  function() ef.filter("cfilter", true, vimcase, replace_loclist()) end },
+    { nx, "<Plug>(qfr-Lfilter!-cfilter)",  ll..rp.."l", "Lfilter! cfilter"..sc, function() ef.filter("cfilter", false, vimcase, replace_loclist()) end },
+    { nx, "<Plug>(qfr-Lfilter-cfilterX)",  ll..kp.."L", "Lfilter cfilter"..rx,  function() ef.filter("cfilter", true, regex, replace_loclist()) end },
+    { nx, "<Plug>(qfr-Lfilter!-cfilterX)", ll..rp.."L", "Lfilter! cfilter"..rx, function() ef.filter("cfilter", false, regex, replace_loclist()) end },
 
-    --- Fname ---
+    -- Fname --
 
-    { nx, pqfr.."-Qfilter-r-fname)",     qp.."kf",         "Qfilter fname"..r..sc,    function() ef.filter("fname", true, in_vimcase, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-fname)",    qp.."rf",         "Qfilter! fname"..r..sc,   function() ef.filter("fname", false, in_vimcase, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter-r-FNAME)",     qp.."kF",         "Qfilter fname"..r..cs,    function() ef.filter("fname", true, in_sensitive, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-FNAME)",    qp.."rF",         "Qfilter! fname"..r..cs,   function() ef.filter("fname", false, in_sensitive, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter-r-fnameX)",    qp.."k<C-f>",     "Qfilter fname"..r..rx,    function() ef.filter("fname", true, in_regex, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-fnameX)",   qp.."r<C-f>",     "Qfilter! fname"..r..rx,   function() ef.filter("fname", false, in_regex, replace_qflist()) end},
+    { nx, "<Plug>(qfr-Qfilter-fname)",     ql..kp.."f", "Qfilter fname"..sc,    function() ef.filter("fname", true, vimcase, replace_qflist()) end },
+    { nx, "<Plug>(qfr-Qfilter!-fname)",    ql..rp.."f", "Qfilter! fname"..sc,   function() ef.filter("fname", false, vimcase, replace_qflist()) end },
+    { nx, "<Plug>(qfr-Qfilter-fnameX)",    ql..kp.."F", "Qfilter fname"..rx,    function() ef.filter("fname", true, regex, replace_qflist()) end },
+    { nx, "<Plug>(qfr-Qfilter!-fnameX)",   ql..rp.."F", "Qfilter! fname"..rx,   function() ef.filter("fname", false, regex, replace_qflist()) end },
 
-    { nx, pqfr.."-Lfilter-r-fname)",     lp.."kf",         "Lfilter fname"..r..sc,    function() ef.filter("fname", true, in_vimcase, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-fname)",    lp.."rf",         "Lfilter! fname"..r..sc,   function() ef.filter("fname", false, in_vimcase, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter-r-FNAME)",     lp.."kF",         "Lfilter fname"..r..cs,    function() ef.filter("fname", true, in_sensitive, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-FNAME)",    lp.."rF",         "Lfilter! fname"..r..cs,   function() ef.filter("fname", false, in_sensitive, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter-r-fnameX)",    lp.."k<C-f>",     "Lfilter fname"..r..rx,    function() ef.filter("fname", true, in_regex, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-fnameX)",   lp.."r<C-f>",     "Lfilter! fname"..r..rx,   function() ef.filter("fname", false, in_regex, replace_loclist()) end},
+    { nx, "<Plug>(qfr-Lfilter-fname)",     ll..kp.."f", "Lfilter fname"..sc,    function() ef.filter("fname", true, vimcase, replace_loclist()) end },
+    { nx, "<Plug>(qfr-Lfilter!-fname)",    ll..rp.."f", "Lfilter! fname"..sc,   function() ef.filter("fname", false, vimcase, replace_loclist()) end },
+    { nx, "<Plug>(qfr-Lfilter-fnameX)",    ll..kp.."F", "Lfilter fname"..rx,    function() ef.filter("fname", true, regex, replace_loclist()) end },
+    { nx, "<Plug>(qfr-Lfilter!-fnameX)",   ll..rp.."F", "Lfilter! fname"..rx,   function() ef.filter("fname", false, regex, replace_loclist()) end },
 
-    --- Text ---
+    -- Text --
 
-    { nx, pqfr.."-Qfilter-r-text)",      qp.."ke",         "Qfilter text"..r..sc,     function() ef.filter("text", true, in_vimcase, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-text)",     qp.."re",         "Qfilter! text"..r..sc,    function() ef.filter("text", false, in_vimcase, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter-r-TEXT)",      qp.."kE",         "Qfilter text"..r..cs,     function() ef.filter("text", true, in_sensitive, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-TEXT)",     qp.."rE",         "Qfilter! text"..r..cs,    function() ef.filter("text", false, in_sensitive, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter-r-textX)",     qp.."k<C-e>",     "Qfilter text"..r..rx,     function() ef.filter("text", true, in_regex, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-textX)",    qp.."r<C-e>",     "Qfilter! text"..r..rx,    function() ef.filter("text", false, in_regex, replace_qflist()) end},
+    { nx, "<Plug>(qfr-Qfilter-text)",      ql..kp.."e", "Qfilter text"..sc,     function() ef.filter("text", true, vimcase, replace_qflist()) end },
+    { nx, "<Plug>(qfr-Qfilter!-text)",     ql..rp.."e", "Qfilter! text"..sc,    function() ef.filter("text", false, vimcase, replace_qflist()) end },
+    { nx, "<Plug>(qfr-Qfilter-textX)",     ql..kp.."E", "Qfilter text"..rx,     function() ef.filter("text", true, regex, replace_qflist()) end },
+    { nx, "<Plug>(qfr-Qfilter!-textX)",    ql..rp.."E", "Qfilter! text"..rx,    function() ef.filter("text", false, regex, replace_qflist()) end },
 
-    { nx, pqfr.."-Lfilter-r-text)",      lp.."ke",         "Lfilter text"..r..sc,     function() ef.filter("text", true, in_vimcase, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-text)",     lp.."re",         "Lfilter! text"..r..sc,    function() ef.filter("text", false, in_vimcase, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter-r-TEXT)",      lp.."kE",         "Lfilter text"..r..cs,     function() ef.filter("text", true, in_sensitive, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-TEXT)",     lp.."rE",         "Lfilter! text"..r..cs,    function() ef.filter("text", false, in_sensitive, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter-r-textX)",     lp.."k<C-e>",     "Lfilter text"..r..rx,     function() ef.filter("text", true, in_regex, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-textX)",    lp.."r<C-e>",     "Lfilter! text"..r..rx,    function() ef.filter("text", false, in_regex, replace_loclist()) end},
+    { nx, "<Plug>(qfr-Lfilter-text)",      ll..kp.."e", "Lfilter text"..sc,     function() ef.filter("text", true, vimcase, replace_loclist()) end },
+    { nx, "<Plug>(qfr-Lfilter!-text)",     ll..rp.."e", "Lfilter! text"..sc,    function() ef.filter("text", false, vimcase, replace_loclist()) end },
+    { nx, "<Plug>(qfr-Lfilter-textX)",     ll..kp.."E", "Lfilter text"..rx,     function() ef.filter("text", true, regex, replace_loclist()) end },
+    { nx, "<Plug>(qfr-Lfilter!-textX)",    ll..rp.."E", "Lfilter! text"..rx,    function() ef.filter("text", false, regex, replace_loclist()) end },
 
-    --- Lnum ---
+    -- Lnum --
 
-    { nx, pqfr.."-Qfilter-r-lnum)",      qp.."kn",         "Qfilter lnum"..r..sc,     function() ef.filter("lnum", true, in_vimcase, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-lnum)",     qp.."rn",         "Qfilter! lnum"..r..sc,    function() ef.filter("lnum", false, in_vimcase, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter-r-LNUM)",      qp.."kN",         "Qfilter lnum"..r..cs,     function() ef.filter("lnum", true, in_sensitive, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-LNUM)",     qp.."rN",         "Qfilter! lnum"..r..cs,    function() ef.filter("lnum", false, in_sensitive, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter-r-lnumX)",     qp.."k<C-n>",     "Qfilter lnum"..r..rx,     function() ef.filter("lnum", true, in_regex, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-lnumX)",    qp.."r<C-n>",     "Qfilter! lnum"..r..rx,    function() ef.filter("lnum", false, in_regex, replace_qflist()) end},
+    { nx, "<Plug>(qfr-Qfilter-lnum)",      ql..kp.."n", "Qfilter lnum"..sc,     function() ef.filter("lnum", true, vimcase, replace_qflist()) end },
+    { nx, "<Plug>(qfr-Qfilter!-lnum)",     ql..rp.."n", "Qfilter! lnum"..sc,    function() ef.filter("lnum", false, vimcase, replace_qflist()) end },
+    { nx, "<Plug>(qfr-Qfilter-lnumX)",     ql..kp.."N", "Qfilter lnum"..rx,     function() ef.filter("lnum", true, regex, replace_qflist()) end },
+    { nx, "<Plug>(qfr-Qfilter!-lnumX)",    ql..rp.."N", "Qfilter! lnum"..rx,    function() ef.filter("lnum", false, regex, replace_qflist()) end },
 
-    { nx, pqfr.."-Lfilter-r-lnum)",      lp.."kn",         "Lfilter lnum"..r..sc,     function() ef.filter("lnum", true, in_vimcase, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-lnum)",     lp.."rn",         "Lfilter! lnum"..r..sc,    function() ef.filter("lnum", false, in_vimcase, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter-r-LNUM)",      lp.."kN",         "Lfilter lnum"..r..cs,     function() ef.filter("lnum", true, in_sensitive, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-LNUM)",     lp.."rN",         "Lfilter! lnum"..r..cs,    function() ef.filter("lnum", false, in_sensitive, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter-r-lnumX)",     lp.."k<C-n>",     "Lfilter lnum"..r..rx,     function() ef.filter("lnum", true, in_regex, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-lnumX)",    lp.."r<C-n>",     "Lfilter! lnum"..r..rx,    function() ef.filter("lnum", false, in_regex, replace_loclist()) end},
+    { nx, "<Plug>(qfr-Lfilter-lnum)",      ll..kp.."n", "Lfilter lnum"..sc,     function() ef.filter("lnum", true, vimcase, replace_loclist()) end },
+    { nx, "<Plug>(qfr-Lfilter!-lnum)",     ll..rp.."n", "Lfilter! lnum"..sc,    function() ef.filter("lnum", false, vimcase, replace_loclist()) end },
+    { nx, "<Plug>(qfr-Lfilter-lnumX)",     ll..kp.."N", "Lfilter lnum"..rx,     function() ef.filter("lnum", true, regex, replace_loclist()) end },
+    { nx, "<Plug>(qfr-Lfilter!-lnumX)",    ll..rp.."N", "Lfilter! lnum"..rx,    function() ef.filter("lnum", false, regex, replace_loclist()) end },
 
-    --- Type ---
+    -- Type --
 
-    { nx, pqfr.."-Qfilter-r-type)",      qp.."kt",         "Qfilter type"..r..sc,     function() ef.filter("type", true, in_vimcase, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-type)",     qp.."rt",         "Qfilter! type"..r..sc,    function() ef.filter("type", false, in_vimcase, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter-r-TYPE)",      qp.."kT",         "Qfilter type"..r..cs,     function() ef.filter("type", true, in_sensitive, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-TYPE)",     qp.."rT",         "Qfilter! type"..r..cs,    function() ef.filter("type", false, in_sensitive, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter-r-typeX)",     qp.."k<C-t>",     "Qfilter type"..r..rx,     function() ef.filter("type", true, in_regex, replace_qflist()) end},
-    { nx, pqfr.."-Qfilter!-r-typeX)",    qp.."r<C-t>",     "Qfilter! type"..r..rx,    function() ef.filter("type", false, in_regex, replace_qflist()) end},
+    { nx, "<Plug>(qfr-Qfilter-type)",      ql..kp.."t", "Qfilter type"..sc,     function() ef.filter("type", true, vimcase, replace_qflist()) end },
+    { nx, "<Plug>(qfr-Qfilter!-type)",     ql..rp.."t", "Qfilter! type"..sc,    function() ef.filter("type", false, vimcase, replace_qflist()) end },
+    { nx, "<Plug>(qfr-Qfilter-typeX)",     ql..kp.."T", "Qfilter type"..rx,     function() ef.filter("type", true, regex, replace_qflist()) end },
+    { nx, "<Plug>(qfr-Qfilter!-typeX)",    ql..rp.."T", "Qfilter! type"..rx,    function() ef.filter("type", false, regex, replace_qflist()) end },
 
-    { nx, pqfr.."-Lfilter-r-type)",      lp.."kt",         "Lfilter type"..r..sc,     function() ef.filter("type", true, in_vimcase, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-type)",     lp.."rt",         "Lfilter! type"..r..sc,    function() ef.filter("type", false, in_vimcase, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter-r-TYPE)",      lp.."kT",         "Lfilter type"..r..cs,     function() ef.filter("type", true, in_sensitive, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-TYPE)",     lp.."rT",         "Lfilter! type"..r..cs,    function() ef.filter("type", false, in_sensitive, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter-r-typeX)",     lp.."k<C-t>",     "Lfilter type"..r..rx,     function() ef.filter("type", true, in_regex, replace_loclist()) end},
-    { nx, pqfr.."-Lfilter!-r-typeX)",    lp.."r<C-t>",     "Lfilter! type"..r..rx,    function() ef.filter("type", false, in_regex, replace_loclist()) end},
+    { nx, "<Plug>(qfr-Lfilter-type)",      ll..kp.."t", "Lfilter type"..sc,     function() ef.filter("type", true, vimcase, replace_loclist()) end },
+    { nx, "<Plug>(qfr-Lfilter!-type)",     ll..rp.."t", "Lfilter! type"..sc,    function() ef.filter("type", false, vimcase, replace_loclist()) end },
+    { nx, "<Plug>(qfr-Lfilter-typeX)",     ll..kp.."T", "Lfilter type"..rx,     function() ef.filter("type", true, regex, replace_loclist()) end },
+    { nx, "<Plug>(qfr-Lfilter!-typeX)",    ll..rp.."T", "Lfilter! type"..rx,    function() ef.filter("type", false, regex, replace_loclist()) end },
 
-    ------------
-    --- GREP ---
-    ------------
+    -- ==========
+    -- == GREP ==
+    -- ==========
 
-    { nx, pqfr.."-grep-n-cwd)",    qp.."gd",         "Qgrep cwd, new"..sc,           function() eg.grep("cwd", in_vimcase, sys_opt, new_qflist()) end },
-    { nx, pqfr.."-grep-n-CWD)",    qp.."gD",         "Qgrep cwd, new"..cs,           function() eg.grep("cwd", in_sensitive, sys_opt, new_qflist()) end },
-    { nx, pqfr.."-grep-n-cwdX)",   qp.."g<C-d>",     "Qgrep cwd, new"..rx,           function() eg.grep("cwd", in_regex, sys_opt, new_qflist()) end },
+    { nx, "<Plug>(qfr-grep-cwd)",    ql..gp.."d", "Qgrep CWD"..sc,       function() eg.grep("cwd", vimcase, sys_opt, new_qflist()) end },
+    { nx, "<Plug>(qfr-grep-cwdX)",   ql..gp.."D", "Qgrep CWD"..rx,       function() eg.grep("cwd", regex, sys_opt, new_qflist()) end },
+    { nx, "<Plug>(qfr-grep-help)",   ql..gp.."h", "Qgrep help"..sc,      function() eg.grep("help", vimcase, sys_opt, new_qflist()) end },
+    { nx, "<Plug>(qfr-grep-helpX)",  ql..gp.."H", "Qgrep help"..rx,      function() eg.grep("help", regex, sys_opt, new_qflist()) end },
+    { nx, "<Plug>(qfr-grep-bufs)",   ql..gp.."u", "Qgrep open bufs"..sc, function() eg.grep("bufs", vimcase, sys_opt, new_qflist()) end },
+    { nx, "<Plug>(qfr-grep-bufsX)",  ql..gp.."U", "Qgrep open bufs"..rx, function() eg.grep("bufs", regex, sys_opt, new_qflist()) end },
 
-    { nx, pqfr.."-lgrep-n-cwd)",   lp.."gd",         "Lgrep cwd, new"..sc,           function() eg.grep("cwd", in_vimcase, sys_opt, new_loclist()) end },
-    { nx, pqfr.."-lgrep-n-CWD)",   lp.."gD",         "Lgrep cwd, new"..cs,           function() eg.grep("cwd", in_sensitive, sys_opt, new_loclist()) end },
-    { nx, pqfr.."-lgrep-n-cwdX)",  lp.."g<C-d>",     "Lgrep cwd, new"..rx,           function() eg.grep("cwd", in_regex, sys_opt, new_loclist()) end },
+    { nx, "<Plug>(qfr-lgrep-cwd)",   ll..gp.."d", "Lgrep CWD"..sc,       function() eg.grep("cwd", vimcase, sys_opt, new_loclist()) end },
+    { nx, "<Plug>(qfr-lgrep-cwdX)",  ll..gp.."D", "Lgrep CWD"..rx,       function() eg.grep("cwd", regex, sys_opt, new_loclist()) end },
+    { nx, "<Plug>(qfr-lgrep-help)",  ll..gp.."h", "Lgrep help"..sc,      function() eg.grep("help", vimcase, sys_opt, new_loclist()) end },
+    { nx, "<Plug>(qfr-lgrep-helpX)", ll..gp.."H", "Lgrep help"..rx,      function() eg.grep("help", regex, sys_opt, new_loclist()) end },
+    { nx, "<Plug>(qfr-lgrep-cbuf)",  ll..gp.."u", "Lgrep cur buf"..sc,   function() eg.grep("cbuf", vimcase, sys_opt, new_loclist()) end },
+    { nx, "<Plug>(qfr-lgrep-cbufX)", ll..gp.."U", "Lgrep cur buf"..rx,   function() eg.grep("cbuf", regex, sys_opt, new_loclist()) end },
 
-    { nx, pqfr.."-grep-n-help)",   qp.."gh",         "Qgrep docs, new"..sc,          function() eg.grep("help", in_vimcase, sys_opt, new_qflist()) end },
-    { nx, pqfr.."-grep-n-HELP)",   qp.."gH",         "Qgrep docs, new"..cs,          function() eg.grep("help", in_sensitive, sys_opt, new_qflist()) end },
-    { nx, pqfr.."-grep-n-helpX)",  qp.."g<C-h>",     "Qgrep docs, new"..rx,          function() eg.grep("help", in_regex, sys_opt, new_qflist()) end },
+    -- =======================
+    -- == OPEN/CLOSE/RESIZE ==
+    -- =======================
 
-    { nx, pqfr.."-lgrep-n-help)",  lp.."gh",         "Lgrep docs, new"..sc,          function() eg.grep("help", in_vimcase, sys_opt, new_loclist()) end },
-    { nx, pqfr.."-lgrep-n-HELP)",  lp.."gH",         "Lgrep docs, new"..cs,          function() eg.grep("help", in_sensitive, sys_opt, new_loclist()) end },
-    { nx, pqfr.."-lgrep-n-helpX)", lp.."g<C-h>",     "Lgrep docs, new"..rx,          function() eg.grep("help", in_regex, sys_opt, new_loclist()) end },
+    { nn, "<Plug>(qfr-open-qf-list)",     ql.."p", "Open the quickfix list",               function() eo._open_qflist({ height = vim.v.count }) end },
+    { nn, "<Plug>(qfr-open-qf-list-max)", ql.."P", "Open the quickfix list to max height", function() eo._open_qflist({ height = QFR_MAX_HEIGHT }) end },
+    { nn, "<Plug>(qfr-close-qf-list)",    ql.."o", "Close the quickfix list",              function() eo._close_qflist() end },
+    { nn, "<Plug>(qfr-toggle-qf-list)",   ql.."q", "Toggle the quickfix list",             function() eo._toggle_qflist({})  end },
+    { nn, "<Plug>(qfr-open-loclist)",     ll.."p", "Open the location list",               function() eo._open_loclist(cur_win(), { height = vim.v.count }) end },
+    { nn, "<Plug>(qfr-open-loclist-max)", ll.."P", "Open the location list to max height", function() eo._open_loclist(cur_win(), { height = QFR_MAX_HEIGHT }) end },
+    { nn, "<Plug>(qfr-close-loclist)",    ll.."o", "Close the location list",              function() eo._close_loclist(cur_win()) end },
+    { nn, "<Plug>(qfr-toggle-loclist)",   ll.."l", "Toggle the location list",             function() eo._toggle_loclist(cur_win(), {}) end },
 
-    { nx, pqfr.."-grep-n-bufs)",   qp.."gu",         "Qgrep open bufs, new"..sc,     function() eg.grep("bufs", in_vimcase, sys_opt, new_qflist()) end },
-    { nx, pqfr.."-grep-n-BUFS)",   qp.."gU",         "Qgrep open bufs, new"..cs,     function() eg.grep("bufs", in_sensitive, sys_opt, new_qflist()) end },
-    { nx, pqfr.."-grep-n-bufsX)",  qp.."g<C-u>",     "Qgrep open bufs, new"..rx,     function() eg.grep("bufs", in_regex, sys_opt, new_qflist()) end },
+    -- ================
+    -- == NAVIGATION ==
+    -- ================
 
-    { nx, pqfr.."-lgrep-n-cbuf)",  lp.."gu",         "Lgrep cur buf, new"..sc,       function() eg.grep("cbuf", in_vimcase, sys_opt, new_loclist()) end },
-    { nx, pqfr.."-lgrep-n-CBUF)",  lp.."gU",         "Lgrep cur buf, new"..cs,       function() eg.grep("cbuf", in_sensitive, sys_opt, new_loclist()) end },
-    { nx, pqfr.."-lgrep-n-cbufX)", lp.."g<C-u>",     "Lgrep cur buf, new"..rx,       function() eg.grep("cbuf", in_regex, sys_opt, new_loclist()) end },
+    { nn, "<Plug>(qfr-qf-prev)",  "["..qp,         "Go to a previous qf entry",       function() en._q_prev(vim.v.count, {}) end },
+    { nn, "<Plug>(qfr-qf-next)",  "]"..qp,         "Go to a later qf entry",          function() en._q_next(vim.v.count, {}) end },
+    { nn, "<Plug>(qfr-qf-rewind)","["..qP,         "Go to the first qf entry",        function() en._q_rewind(vim.v.count) end },
+    { nn, "<Plug>(qfr-qf-last)",  "]"..qP,         "Go to the last qf entry",         function() en._q_last(vim.v.count) end },
+    { nn, "<Plug>(qfr-qf-pfile)", "[<C-"..qp..">", "Go to the previous qf file",      function() en._q_pfile(vim.v.count) end },
+    { nn, "<Plug>(qfr-qf-nfile)", "]<C-"..qp..">", "Go to the next qf file",          function() en._q_nfile(vim.v.count) end },
+    { nn, "<Plug>(qfr-ll-prev)",  "["..lp,         "Go to a previous loclist entry",  function() en._l_prev(cur_win(), vim.v.count, {}) end },
+    { nn, "<Plug>(qfr-ll-next)",  "]"..lp,         "Go to a later loclist entry",     function() en._l_next(cur_win(), vim.v.count, {}) end },
+    { nn, "<Plug>(qfr-ll-rewind)","["..lP,         "Go to the first loclist entry",   function() en._l_rewind(cur_win(), vim.v.count) end },
+    { nn, "<Plug>(qfr-ll-last)",  "]"..lP,         "Go to the last loclist entry",    function() en._l_last(cur_win(), vim.v.count) end },
+    { nn, "<Plug>(qfr-ll-pfile)", "[<C-"..lp..">", "Go to the previous loclist file", function() en._l_pfile(cur_win(), vim.v.count) end },
+    { nn, "<Plug>(qfr-ll-nfile)", "]<C-"..lp..">", "Go to the next loclist file",     function() en._l_nfile(cur_win(), vim.v.count) end },
 
-    -------------------------
-    --- OPEN/CLOSE/RESIZE ---
-    -------------------------
+    -- ==========
+    -- == SORT ==
+    -- ==========
 
-    { nn, pqfr.."-open-qf-list)",     qp.."p", "Open the quickfix list",               function() eo._open_qflist({ height = vim.v.count }) end },
-    { nn, pqfr.."-open-qf-list-max)", qp.."P", "Open the quickfix list to max height", function() eo._open_qflist({ height = QFR_MAX_HEIGHT }) end },
-    { nn, pqfr.."-close-qf-list)",    qp.."o", "Close the quickfix list",              function() eo._close_qflist() end },
-    { nn, pqfr.."-toggle-qf-list)",   qp.."q", "Toggle the quickfix list",             function() eo._toggle_qflist({})  end },
-    { nn, pqfr.."-open-loclist)",     lp.."p", "Open the location list",               function() eo._open_loclist(cur_win(), { height = vim.v.count }) end },
-    { nn, pqfr.."-open-loclist-max)", lp.."P", "Open the location list to max height", function() eo._open_loclist(cur_win(), { height = QFR_MAX_HEIGHT }) end },
-    { nn, pqfr.."-close-loclist)",    lp.."o", "Close the location list",              function() eo._close_loclist(cur_win()) end },
-    { nn, pqfr.."-toggle-loclist)",   lp.."l", "Toggle the location list",             function() eo._toggle_loclist(cur_win(), {}) end },
+    { nn, "<Plug>(qfr-qsort-fname-asc)",       ql..sp.."f",     "Qsort by fname asc",       function() es.sort("fname", { dir = "asc" }, replace_qflist()) end },
+    { nn, "<Plug>(qfr-qsort-fname-desc)",      ql..sp.."F",     "Qsort by fname desc",      function() es.sort("fname", { dir = "desc" }, replace_qflist()) end },
+    { nn, "<Plug>(qfr-qsort-fname-diag-asc)",  ql..sp..dp.."f", "Qsort by fname_diag asc",  function() es.sort("fname_diag", { dir = "asc" }, replace_qflist()) end },
+    { nn, "<Plug>(qfr-qsort-fname-diag-desc)", ql..sp..dp.."F", "Qsort by fname_diag desc", function() es.sort("fname_diag", { dir = "desc" }, replace_qflist()) end },
+    { nn, "<Plug>(qfr-qsort-severity-asc)",    ql..sp..dp.."s", "Qsort by severity asc",    function() es.sort("severity", { dir = "asc" }, replace_qflist()) end },
+    { nn, "<Plug>(qfr-qsort-severity-desc)",   ql..sp..dp.."S", "Qsort by severity desc",   function() es.sort("severity", { dir = "desc" }, replace_qflist()) end },
+    { nn, "<Plug>(qfr-qsort-text-asc)",        ql..sp.."e",     "Qsort by text asc",        function() es.sort("text", { dir = "asc" }, replace_qflist()) end },
+    { nn, "<Plug>(qfr-qsort-text-desc)",       ql..sp.."E",     "Qsort by text desc",       function() es.sort("text", { dir = "desc" }, replace_qflist()) end },
+    { nn, "<Plug>(qfr-qsort-type-asc)",        ql..sp.."t",     "Qsort by type asc",        function() es.sort("type", { dir = "asc" }, replace_qflist()) end },
+    { nn, "<Plug>(qfr-qsort-type-desc)",       ql..sp.."T",     "Qsort by type desc",       function() es.sort("type", { dir = "desc" }, replace_qflist()) end },
 
-    ------------------
-    --- NAVIGATION ---
-    ------------------
+    { nn, "<Plug>(qfr-lsort-fname-asc)",       ll..sp.."f",     "Lsort by fname asc",       function() es.sort("fname", { dir = "asc" }, replace_loclist()) end },
+    { nn, "<Plug>(qfr-lsort-fname-desc)",      ll..sp.."F",     "Lsort by fname desc",      function() es.sort("fname", { dir = "desc" }, replace_loclist()) end },
+    { nn, "<Plug>(qfr-lsort-fname-diag-asc)",  ll..sp..dp.."f", "Lsort by fname_diag asc",  function() es.sort("fname_diag", { dir = "asc" }, replace_loclist()) end },
+    { nn, "<Plug>(qfr-lsort-fname-diag-desc)", ll..sp..dp.."F", "Lsort by fname_diag desc", function() es.sort("fname_diag", { dir = "desc" }, replace_loclist()) end },
+    { nn, "<Plug>(qfr-lsort-severity-asc)",    ll..sp..dp.."s", "Lsort by severity asc",    function() es.sort("severity", { dir = "asc" }, replace_loclist()) end },
+    { nn, "<Plug>(qfr-lsort-severity-desc)",   ll..sp..dp.."S", "Lsort by severity desc",   function() es.sort("severity", { dir = "desc" }, replace_loclist()) end },
+    { nn, "<Plug>(qfr-lsort-text-asc)",        ll..sp.."e",     "Lsort by text asc",        function() es.sort("text", { dir = "asc" }, replace_loclist()) end },
+    { nn, "<Plug>(qfr-lsort-text-desc)",       ll..sp.."E",     "Lsort by text desc",       function() es.sort("text", { dir = "desc" }, replace_loclist()) end },
+    { nn, "<Plug>(qfr-lsort-type-asc)",        ll..sp.."t",     "Lsort by type asc",        function() es.sort("type", { dir = "asc" }, replace_loclist()) end },
+    { nn, "<Plug>(qfr-lsort-type-desc)",       ll..sp.."T",     "Lsort by type desc",       function() es.sort("type", { dir = "desc" }, replace_loclist()) end },
 
-    { nn, pqfr.."-qf-prev)",  "[q",          "Go to a previous qf entry",       function() en._q_prev(vim.v.count, {}) end },
-    { nn, pqfr.."-qf-next)",  "]q",          "Go to a later qf entry",          function() en._q_next(vim.v.count, {}) end },
-    { nn, pqfr.."-qf-rewind)","[Q",          "Go to the first qf entry",        function() en._q_rewind(vim.v.count) end },
-    { nn, pqfr.."-qf-last)",  "]Q",          "Go to the last qf entry",         function() en._q_last(vim.v.count) end },
-    { nn, pqfr.."-qf-pfile)", "[<C-q>",      "Go to the previous qf file",      function() en._q_pfile(vim.v.count) end },
-    { nn, pqfr.."-qf-nfile)", "]<C-q>",      "Go to the next qf file",          function() en._q_nfile(vim.v.count) end },
-    { nn, pqfr.."-ll-prev)",  "[l",          "Go to a previous loclist entry",  function() en._l_prev(cur_win(), vim.v.count, {}) end },
-    { nn, pqfr.."-ll-next)",  "]l",          "Go to a later loclist entry",     function() en._l_next(cur_win(), vim.v.count, {}) end },
-    { nn, pqfr.."-ll-rewind)","[L",          "Go to the first loclist entry",   function() en._l_rewind(cur_win(), vim.v.count) end },
-    { nn, pqfr.."-ll-last)",  "]L",          "Go to the last loclist entry",    function() en._l_last(cur_win(), vim.v.count) end },
-    { nn, pqfr.."-ll-pfile)", "[<C-l>",      "Go to the previous loclist file", function() en._l_pfile(cur_win(), vim.v.count) end },
-    { nn, pqfr.."-ll-nfile)", "]<C-l>",      "Go to the next loclist file",     function() en._l_nfile(cur_win(), vim.v.count) end },
+    -- ===========
+    -- == STACK ==
+    -- ===========
 
-    ------------
-    --- SORT ---
-    ------------
+    -- DOCUMENT: older/newer are meant for cycling. so 2<leader>q[ will go back two lists
+    -- The history commands are meant for targeting specific lists. So 2<leader>qQ will go to
+    -- list two
+    -- NOTE: For history, the open command is the more cumbersome map of the two. This is to
+    -- align with the default behavior, where history only changes the list_nr, but does not
+    -- open. If, in field testing, there are more cases where we want to open the list than
+    -- just change, this can be swapped
 
-    --- DOCUMENT: This breaks the usual pattern by simply replacing the list
-    --- LOW: Keeping the mappings simple here so we're just sorting in place. If use cases come up
-    --- where adding and replacing lists is necessary, can unlock those maps
-    { nn, pqfr.."-qsort-r-fname-asc)",       qp.."tf",  "Qsort by fname asc"..r,           function() es.sort("fname", { dir = "asc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-fname-desc)",      qp.."tF",  "Qsort by fname desc"..r,          function() es.sort("fname", { dir = "desc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-fname-diag-asc)",  qp.."tif", "Qsort by fname_diag asc"..r,      function() es.sort("fname_diag", { dir = "asc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-fname-diag-desc)", qp.."tiF", "Qsort by fname_diag desc"..r,     function() es.sort("fname_diag", { dir = "desc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-severity-asc)",    qp.."tis", "Qsort by severity asc"..r,        function() es.sort("severity", { dir = "asc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-severity-desc)",   qp.."tiS", "Qsort by severity desc"..r,       function() es.sort("severity", { dir = "desc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-text-asc)",        qp.."te",  "Qsort by text asc"..r,            function() es.sort("text", { dir = "asc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-text-desc)",       qp.."tE",  "Qsort by text desc"..r,           function() es.sort("text", { dir = "desc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-type-asc)",        qp.."tt",  "Qsort by type asc"..r,            function() es.sort("type", { dir = "asc" }, replace_qflist()) end },
-    { nn, pqfr.."-qsort-r-type-desc)",       qp.."tT",  "Qsort by type desc"..r,           function() es.sort("type", { dir = "desc" }, replace_qflist()) end },
-
-    { nn, pqfr.."-lsort-r-fname-asc)",       lp.."tf",  "Lsort by fname asc"..r,           function() es.sort("fname", { dir = "asc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-fname-desc)",      lp.."tF",  "Lsort by fname desc"..r,          function() es.sort("fname", { dir = "desc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-fname-diag-asc)",  lp.."tif", "Lsort by fname_diag asc"..r,      function() es.sort("fname_diag", { dir = "asc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-fname-diag-desc)", lp.."tiF", "Lsort by fname_diag desc"..r,     function() es.sort("fname_diag", { dir = "desc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-severity-asc)",    lp.."tis", "Lsort by severity asc"..r,        function() es.sort("severity", { dir = "asc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-severity-desc)",   lp.."tiS", "Lsort by severity desc"..r,       function() es.sort("severity", { dir = "desc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-text-asc)",        lp.."te",  "Lsort by text asc"..r,            function() es.sort("text", { dir = "asc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-text-desc)",       lp.."tE",  "Lsort by text desc"..r,           function() es.sort("text", { dir = "desc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-type-asc)",        lp.."tt",  "Lsort by type asc"..r,            function() es.sort("type", { dir = "asc" }, replace_loclist()) end },
-    { nn, pqfr.."-lsort-r-type-desc)",       lp.."tT",  "Lsort by type desc"..r,           function() es.sort("type", { dir = "desc" }, replace_loclist()) end },
-
-
-    -------------
-    --- STACK ---
-    -------------
-
-    --- DOCUMENT: older/newer are meant for cycling. so 2<leader>q[ will go back two lists
-    --- The history commands are meant for targeting specific lists. So 2<leader>qQ will go to
-    --- list two
-    --- NOTE: For history, the open command is the more cumbersome map of the two. This is to
-    --- align with the default behavior, where history only changes the list_nr, but does not
-    --- open. If, in field testing, there are more cases where we want to open the list than
-    --- just change, this can be swapped
-
-    { nn, pqfr.."-qf-older)",        qp.."[", "Go to an older qflist",                         function() ea._q_older(vim.v.count) end },
-    { nn, pqfr.."-qf-newer)",        qp.."]", "Go to a newer qflist",                          function() ea._q_newer(vim.v.count) end },
-    { nn, pqfr.."-qf-history)",      qp.."Q", "View or jump within the quickfix history",      function() ea._q_history(vim.v.count, { default = "cur_list" }) end },
-    { nn, pqfr.."-qf-history-open)", qp.."<C-q>", "Open and jump within the quickfix history", function() ea._q_history(vim.v.count, { open_list = true, default = "cur_list" }) end },
-    { nn, pqfr.."-qf-del)",          qp.."e", "Delete a list from the quickfix stack",         function() ea._q_del(vim.v.count) end },
-    { nn, pqfr.."-qf-del-all)",      qp.."E", "Delete all items from the quickfix stack",      function() ea._q_del_all() end },
-    { nn, pqfr.."-ll-older)",        lp.."[", "Go to an older location list",                  function() ea._l_older(cur_win(), vim.v.count) end },
-    { nn, pqfr.."-ll-newer)",        lp.."]", "Go to a newer location list",                   function() ea._l_newer(cur_win(), vim.v.count) end },
-    { nn, pqfr.."-ll-history)",      lp.."L", "View or jump within the loclist history",       function() ea._l_history(cur_win(), vim.v.count, { default = "cur_list" }) end },
-    { nn, pqfr.."-ll-history-open)", lp.."<C-l>", "Open and jump within the loclist history",  function() ea._l_history(cur_win(), vim.v.count, { open_list = true, default = "cur_list" }) end },
-    { nn, pqfr.."-ll-del)",          lp.."e", "Delete a list from the loclist stack",          function() ea._l_del(cur_win(), vim.v.count) end },
-    { nn, pqfr.."-ll-del-all)",      lp.."E", "Delete all items from the loclist stack",       function() ea._l_del_all(cur_win()) end },
+    { nn, "<Plug>(qfr-qf-older)",        ql.."[", "Go to an older qflist",                                function() ea._q_older(vim.v.count) end },
+    { nn, "<Plug>(qfr-qf-newer)",        ql.."]", "Go to a newer qflist",                                 function() ea._q_newer(vim.v.count) end },
+    { nn, "<Plug>(qfr-qf-history)",      ql..qP, "View or jump within the quickfix history",              function() ea._q_history(vim.v.count, { default = "cur_list" }) end },
+    { nn, "<Plug>(qfr-qf-history-open)", ql.."<C-"..qp..">", "Open and jump within the quickfix history", function() ea._q_history(vim.v.count, { open_list = true, default = "cur_list" }) end },
+    { nn, "<Plug>(qfr-qf-del)",          ql.."e", "Delete a list from the quickfix stack",                function() ea._q_del(vim.v.count) end },
+    { nn, "<Plug>(qfr-qf-del-all)",      ql.."E", "Delete all items from the quickfix stack",             function() ea._q_del_all() end },
+    { nn, "<Plug>(qfr-ll-older)",        ll.."[", "Go to an older location list",                         function() ea._l_older(cur_win(), vim.v.count) end },
+    { nn, "<Plug>(qfr-ll-newer)",        ll.."]", "Go to a newer location list",                          function() ea._l_newer(cur_win(), vim.v.count) end },
+    { nn, "<Plug>(qfr-ll-history)",      ll..lP, "View or jump within the loclist history",               function() ea._l_history(cur_win(), vim.v.count, { default = "cur_list" }) end },
+    { nn, "<Plug>(qfr-ll-history-open)", ll.."<C-"..lp..">", "Open and jump within the loclist history",  function() ea._l_history(cur_win(), vim.v.count, { open_list = true, default = "cur_list" }) end },
+    { nn, "<Plug>(qfr-ll-del)",          ll.."e", "Delete a list from the loclist stack",                 function() ea._l_del(cur_win(), vim.v.count) end },
+    { nn, "<Plug>(qfr-ll-del-all)",      ll.."E", "Delete all items from the loclist stack",              function() ea._l_del_all(cur_win()) end },
 }
 
 --- NOTE: This table needs to be separate or else the plug mapping pass will map "<nop>", which
@@ -328,62 +303,24 @@ local rancher_keymaps = {
 -- stylua: ignore
 ---@type QfRancherMapData[]
 local rancher_keymap_default_rm = {
-    { nx, "<nop>", "<leader>q", "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>l", "Avoid falling back to defaults", nil },
+    { nx, "<nop>", ql,     "Avoid falling back to defaults", nil },
+    { nx, "<nop>", ll,     "Avoid falling back to defaults", nil },
 
-    -------------------
-    --- DIAGNOSTICS ---
-    -------------------
+    { nx, "<nop>", ll..dp, "Avoid falling back to defaults", nil },
 
-    { nx, "<nop>", "<leader>qi",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>qI",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>q<C-i>", "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>li",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>lI",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>l<C-i>", "Avoid falling back to defaults", nil },
+    { nx, "<nop>", ql..kp, "Avoid falling back to defaults", nil },
+    { nx, "<nop>", ql..rp, "Avoid falling back to defaults", nil },
+    { nx, "<nop>", ll..kp, "Avoid falling back to defaults", nil },
+    { nx, "<nop>", ll..rp, "Avoid falling back to defaults", nil },
 
-    --------------
-    --- FILTER ---
-    --------------
+    { nx, "<nop>", ql..gp, "Avoid falling back to defaults", nil },
+    { nx, "<nop>", ll..gp, "Avoid falling back to defaults", nil },
 
-    { nx, "<nop>", "<leader>qk",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>qr",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>qK",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>qR",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>q<c-k>", "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>q<c-r>", "Avoid falling back to defaults", nil },
-
-    { nx, "<nop>", "<leader>lk",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>lr",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>lK",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>lR",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>l<c-k>", "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>l<c-r>", "Avoid falling back to defaults", nil },
-
-    ------------
-    --- GREP ---
-    ------------
-
-    { nx, "<nop>", "<leader>qg",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>qG",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>q<c-g>", "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>lg",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>lG",     "Avoid falling back to defaults", nil },
-    { nx, "<nop>", "<leader>l<c-g>", "Avoid falling back to defaults", nil },
-
-    ------------
-    --- SORT ---
-    ------------
-
-    { nn, "<nop>", "<leader>qt",     "Avoid falling back to defaults", nil },
-    { nn, "<nop>", "<leader>qT",     "Avoid falling back to defaults", nil },
-    { nn, "<nop>", "<leader>q<C-t>", "Avoid falling back to defaults", nil },
-    { nn, "<nop>", "<leader>lt",     "Avoid falling back to defaults", nil },
-    { nn, "<nop>", "<leader>lT",     "Avoid falling back to defaults", nil },
-    { nn, "<nop>", "<leader>l<C-t>", "Avoid falling back to defaults", nil },
+    { nn, "<nop>", ql..sp, "Avoid falling back to defaults", nil },
+    { nn, "<nop>", ll..sp, "Avoid falling back to defaults", nil },
 }
 
-for _, map in ipairs(rancher_keymaps) do
+for _, map in ipairs(qfr_maps) do
     for _, mode in ipairs(map[1]) do
         api.nvim_set_keymap(mode, map[2], "", {
             callback = map[5],
@@ -394,8 +331,8 @@ for _, map in ipairs(rancher_keymaps) do
 end
 
 -- Don't use the util g_var wrapper here to avoid a require
-if vim.g.qf_rancher_set_default_maps then
-    for _, map in ipairs(rancher_keymaps) do
+if vim.g.qf_rancher_map_set_defaults then
+    for _, map in ipairs(qfr_maps) do
         for _, mode in ipairs(map[1]) do
             api.nvim_set_keymap(mode, map[3], map[2], {
                 desc = map[4],
@@ -418,59 +355,59 @@ end
 --- FTPLUGIN MAPS ---
 ---------------------
 
-vim.keymap.set("n", pqfr .. "-list-del-one)", function()
+vim.keymap.set("n", "<Plug>(qfr-list-del-one)", function()
     ei._del_one_list_item()
 end, { desc = "Delete the current list line" })
 
-vim.keymap.set("x", pqfr .. "-list-visual-del)", function()
+vim.keymap.set("x", "<Plug>(qfr-list-visual-del)", function()
     ei._visual_del()
 end, { desc = "Delete a visual line selection" })
 
-vim.keymap.set("n", pqfr .. "-list-toggle-preview)", function()
+vim.keymap.set("n", "<Plug>(qfr-list-toggle-preview)", function()
     ep.toggle_preview_win(api.nvim_get_current_win())
 end, { desc = "Toggle the preview win" })
 
-vim.keymap.set("n", pqfr .. "-list-update-preview-pos)", function()
+vim.keymap.set("n", "<Plug>(qfr-list-update-preview-pos)", function()
     ep.update_preview_win_pos()
 end, { desc = "Update the preview win position" })
 
-vim.keymap.set("n", pqfr .. "-list-open-direct-focuswin)", function()
+vim.keymap.set("n", "<Plug>(qfr-list-open-direct-focuswin)", function()
     ei._open_direct_focuswin()
 end, { desc = "Open a list item and focus on it" })
 
-vim.keymap.set("n", pqfr .. "-list-open-direct-focuslist)", function()
+vim.keymap.set("n", "<Plug>(qfr-list-open-direct-focuslist)", function()
     ei._open_direct_focuslist()
 end, { desc = "Open a list item, keep list focus" })
 
-vim.keymap.set("n", pqfr .. "-list-prev)", function()
+vim.keymap.set("n", "<Plug>(qfr-list-prev)", function()
     ei._open_prev_focuslist()
 end, { desc = "Go to a previous qf entry, keep window focus" })
 
-vim.keymap.set("n", pqfr .. "-list-next)", function()
+vim.keymap.set("n", "<Plug>(qfr-list-next)", function()
     ei._open_next_focuslist()
 end, { desc = "Go to a later qf entry, keep window focus" })
 
-vim.keymap.set("n", pqfr .. "-list-open-split-focuswin)", function()
+vim.keymap.set("n", "<Plug>(qfr-list-open-split-focuswin)", function()
     ei._open_split_focuswin()
 end, { desc = "Open a list item in a split and focus on it" })
 
-vim.keymap.set("n", pqfr .. "-list-open-split-focuslist)", function()
+vim.keymap.set("n", "<Plug>(qfr-list-open-split-focuslist)", function()
     ei._open_split_focuslist()
 end, { desc = "Open a list item in a split, keep list focus" })
 
-vim.keymap.set("n", pqfr .. "-list-open-vsplit-focuswin)", function()
+vim.keymap.set("n", "<Plug>(qfr-list-open-vsplit-focuswin)", function()
     ei._open_vsplit_focuswin()
 end, { desc = "Open a list item in a vsplit and focus on it" })
 
-vim.keymap.set("n", pqfr .. "-list-open-vsplit-focuslist)", function()
+vim.keymap.set("n", "<Plug>(qfr-list-open-vsplit-focuslist)", function()
     ei._open_vsplit_focuslist()
 end, { desc = "Open a list item in a vsplit, keep list focus" })
 
-vim.keymap.set("n", pqfr .. "-list-open-tabnew-focuswin)", function()
+vim.keymap.set("n", "<Plug>(qfr-list-open-tabnew-focuswin)", function()
     ei._open_tabnew_focuswin()
 end, { desc = "Open a list item in a new tab and focus on it" })
 
-vim.keymap.set("n", pqfr .. "-list-open-tabnew-focuslist)", function()
+vim.keymap.set("n", "<Plug>(qfr-list-open-tabnew-focuslist)", function()
     ei._open_tabnew_focuslist()
 end, { desc = "Open a list item in a new tab, keep list focus" })
 
@@ -652,3 +589,6 @@ if vim.g.qf_rancher_set_default_cmds then
         ea.l_delete_cmd(cargs)
     end, { count = 0, nargs = "?", desc = "Delete one or all lists from the loclist stack" })
 end
+
+-- TODO: Another case of - I don't want to think about docs here until everything is in the actual
+-- project structure
