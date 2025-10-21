@@ -4,6 +4,7 @@ local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfrUtil
 local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfrTypes
 
 local api = vim.api
+local fn = vim.fn
 
 ---@mod Sort Sends diags to the qf list
 
@@ -28,7 +29,7 @@ local function sort_wrapper(sort_info, sort_opts, output_opts)
 
     local cur_list = et._get_list(src_win, { nr = output_opts.what.nr, all = true }) ---@type table
     if cur_list.size <= 1 then
-        vim.api.nvim_echo({ { "Not enough entries to sort", "" } }, false, {})
+        api.nvim_echo({ { "Not enough entries to sort", "" } }, false, {})
         return
     end
 
@@ -84,8 +85,8 @@ end
 local function get_fnames(a, b)
     if not (a.bufnr and b.bufnr) then return nil, nil end
 
-    local fname_a = vim.fn.bufname(a.bufnr) ---@type string|nil
-    local fname_b = vim.fn.bufname(b.bufnr) ---@type string|nil
+    local fname_a = fn.bufname(a.bufnr) ---@type string|nil
+    local fname_b = fn.bufname(b.bufnr) ---@type string|nil
     return fname_a, fname_b
 end
 
@@ -352,15 +353,15 @@ end
 ---@param name string
 function Sort.clear_sort(name)
     if #vim.tbl_keys(sorts) <= 1 then
-        vim.api.nvim_echo({ { "Cannot remove the last sort method" } }, false, {})
+        api.nvim_echo({ { "Cannot remove the last sort method" } }, false, {})
         return
     end
 
     if sorts[name] then
         sorts[name] = nil
-        vim.api.nvim_echo({ { name .. " removed from sort list", "" } }, true, {})
+        api.nvim_echo({ { name .. " removed from sort list", "" } }, true, {})
     else
-        vim.api.nvim_echo({ { name .. " is not a registered sort", "" } }, true, {})
+        api.nvim_echo({ { name .. " is not a registered sort", "" } }, true, {})
     end
 end
 
@@ -379,7 +380,7 @@ end
 function Sort.sort(name, sort_opts, output_opts)
     local sort_info = sorts[name] ---@type QfRancherSortInfo
     if not sort_info then
-        vim.api.nvim_echo({ { "Invalid sort", "ErrorMsg" } }, true, { err = true })
+        api.nvim_echo({ { "Invalid sort", "ErrorMsg" } }, true, { err = true })
     end
 
     sort_wrapper(sort_info, sort_opts, output_opts)
@@ -421,7 +422,7 @@ end
 ---@param cargs vim.api.keyset.create_user_command.command_args
 ---@return nil
 Sort.l_sort = function(cargs)
-    sort_cmd(vim.api.nvim_get_current_win(), cargs)
+    sort_cmd(api.nvim_get_current_win(), cargs)
 end
 
 return Sort
