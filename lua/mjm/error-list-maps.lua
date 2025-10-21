@@ -289,6 +289,8 @@ local rancher_keymaps = {
     { nn, pqfr.."-qsort-r-fname-diag-desc)", qp.."tiF", "Qsort by fname_diag desc"..r,     function() es.sort("fname_diag", { dir = "desc" }, replace_qflist()) end },
     { nn, pqfr.."-qsort-r-severity-asc)",    qp.."tis", "Qsort by severity asc"..r,        function() es.sort("severity", { dir = "asc" }, replace_qflist()) end },
     { nn, pqfr.."-qsort-r-severity-desc)",   qp.."tiS", "Qsort by severity desc"..r,       function() es.sort("severity", { dir = "desc" }, replace_qflist()) end },
+    { nn, pqfr.."-qsort-r-text-asc)",        qp.."te",  "Qsort by text asc"..r,            function() es.sort("text", { dir = "asc" }, replace_qflist()) end },
+    { nn, pqfr.."-qsort-r-text-desc)",       qp.."tE",  "Qsort by text desc"..r,           function() es.sort("text", { dir = "desc" }, replace_qflist()) end },
     { nn, pqfr.."-qsort-r-type-asc)",        qp.."tt",  "Qsort by type asc"..r,            function() es.sort("type", { dir = "asc" }, replace_qflist()) end },
     { nn, pqfr.."-qsort-r-type-desc)",       qp.."tT",  "Qsort by type desc"..r,           function() es.sort("type", { dir = "desc" }, replace_qflist()) end },
 
@@ -298,6 +300,8 @@ local rancher_keymaps = {
     { nn, pqfr.."-lsort-r-fname-diag-desc)", lp.."tiF", "Lsort by fname_diag desc"..r,     function() es.sort("fname_diag", { dir = "desc" }, replace_loclist()) end },
     { nn, pqfr.."-lsort-r-severity-asc)",    lp.."tis", "Lsort by severity asc"..r,        function() es.sort("severity", { dir = "asc" }, replace_loclist()) end },
     { nn, pqfr.."-lsort-r-severity-desc)",   lp.."tiS", "Lsort by severity desc"..r,       function() es.sort("severity", { dir = "desc" }, replace_loclist()) end },
+    { nn, pqfr.."-lsort-r-text-asc)",        lp.."te",  "Lsort by text asc"..r,            function() es.sort("text", { dir = "asc" }, replace_loclist()) end },
+    { nn, pqfr.."-lsort-r-text-desc)",       lp.."tE",  "Lsort by text desc"..r,           function() es.sort("text", { dir = "desc" }, replace_loclist()) end },
     { nn, pqfr.."-lsort-r-type-asc)",        lp.."tt",  "Lsort by type asc"..r,            function() es.sort("type", { dir = "asc" }, replace_loclist()) end },
     { nn, pqfr.."-lsort-r-type-desc)",       lp.."tT",  "Lsort by type desc"..r,           function() es.sort("type", { dir = "desc" }, replace_loclist()) end },
 

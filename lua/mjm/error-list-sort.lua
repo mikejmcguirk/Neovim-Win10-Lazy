@@ -204,6 +204,37 @@ end
 ---@param b vim.quickfix.entry
 ---@param check QfRancherCheckFunc
 ---@return boolean
+local function sort_text(a, b, check)
+    if not (a and b) then return false end
+
+    local a_trim = a.text:gsub("^%s*(.-)%s*$", "%1") ---@type string
+    local b_trim = b.text:gsub("^%s*(.-)%s*$", "%1") ---@type string
+
+    local checked_text = a_b_check(a_trim, b_trim, check) ---@type boolean|nil
+    if type(checked_text) == "boolean" then return checked_text end
+
+    local checked_fname_lcol = check_fname_lcol(a, b, check_asc) ---@type boolean|nil
+    if type(checked_fname_lcol) == "boolean" then
+        return checked_fname_lcol
+    else
+        return false
+    end
+end
+
+---@text QfRancherSortPredicate
+function Sort._sort_text_asc(a, b)
+    return sort_text(a, b, check_asc)
+end
+
+---@text QfRancherSortPredicate
+function Sort._sort_text_desc(a, b)
+    return sort_text(a, b, check_desc)
+end
+
+---@param a vim.quickfix.entry
+---@param b vim.quickfix.entry
+---@param check QfRancherCheckFunc
+---@return boolean
 local function sort_type(a, b, check)
     if not (a and b) then return false end
 
@@ -293,6 +324,7 @@ local sorts = {
     fname = { asc_func = Sort._sort_fname_asc, desc_func = Sort._sort_fname_desc },
     fname_diag = { asc_func = Sort._sort_fname_diag_asc, desc_func = Sort._sort_fname_diag_desc },
     severity = { asc_func = Sort._sort_severity_asc, desc_func = Sort._sort_severity_desc },
+    text = { asc_func = Sort._sort_text_asc, desc_func = Sort._sort_text_desc },
     type = { asc_func = Sort._sort_type_asc, desc_func = Sort._sort_type_desc },
 } ---@type table<string, QfRancherSortInfo>
 
