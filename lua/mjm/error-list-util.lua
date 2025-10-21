@@ -722,17 +722,6 @@ function M._get_qf_win(opts)
     return nil
 end
 
----@param win integer|nil
----@param opts QfRancherTabpageOpts
----@return integer|nil
-function M._get_list_win(win, opts)
-    if win then
-        return M._get_loclist_win_by_win(win, opts)
-    else
-        return M._get_qf_win(opts)
-    end
-end
-
 ---@param list_win integer
 ---@param opts QfRancherTabpageOpts
 ---@return integer|nil
@@ -754,17 +743,6 @@ function M._find_loclist_origin(list_win, opts)
 
     return nil
 end
-
--- ---@param win integer|nil
--- ---@param opts QfRancherTabpageOpts
--- ---@return integer[]
--- function M._get_list_wins(win, opts)
---     if win then
---         return M._get_loclist_wins_by_win(win, opts)
---     else
---         return M._get_qf_wins(opts)
---     end
--- end
 
 return M
 

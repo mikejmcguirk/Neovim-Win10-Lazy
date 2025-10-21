@@ -1,14 +1,14 @@
----@mod Sort Sends diags to the qf list
-
----@ class QfRancherSort
-local Sort = {}
-
 local ea = Qfr_Defer_Require("mjm.error-list-stack") ---@type QfrStack
 local et = Qfr_Defer_Require("mjm.error-list-tools") ---@type QfrTools
 local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfrUtil
 local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfrTypes
 
 local api = vim.api
+
+---@mod Sort Sends diags to the qf list
+
+---@ class QfRancherSort
+local Sort = {}
 
 ---------------
 --- Wrapper ---
@@ -316,9 +316,9 @@ function Sort._sort_fname_diag_desc(a, b)
     return sort_diag_fname(a, b, check_desc)
 end
 
------------
---- API ---
------------
+-- =========
+-- == API ==
+-- =========
 
 local sorts = {
     fname = { asc_func = Sort._sort_fname_asc, desc_func = Sort._sort_fname_desc },
@@ -384,6 +384,10 @@ function Sort.sort(name, sort_opts, output_opts)
 
     sort_wrapper(sort_info, sort_opts, output_opts)
 end
+
+-- ===============
+-- == CMD FUNCS ==
+-- ===============
 
 ---@param src_win integer|nil
 ---@param cargs vim.api.keyset.create_user_command.command_args

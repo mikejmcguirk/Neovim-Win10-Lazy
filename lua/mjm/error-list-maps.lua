@@ -17,43 +17,36 @@ local in_vimsmart = { input_type = "vimsmart" } ---@type QfrInputOpts
 local in_sensitive = { input_type = "sensitive" } ---@type QfrInputOpts
 local in_regex = { input_type = "regex" } ---@type QfrInputOpts
 
--- TODO: Reverse action and src_win
-
----@param action QfrAction
----@param src_win integer|nil
----@return QfrOutputOpts
-local function get_output_opts(action, src_win)
-    return { src_win = src_win, action = action, what = { nr = vim.v.count } }
-end
-
 ---@return integer
 local function cur_win()
     return api.nvim_get_current_win()
 end
 
+---@param action QfrAction
+---@param src_win integer|nil
+---@return QfrOutputOpts
+local function get_output_opts(src_win, action)
+    return { src_win = src_win, action = action, what = { nr = vim.v.count } }
+end
+
 ---@return QfrOutputOpts
 local function new_qflist()
-    return get_output_opts(" ", nil)
+    return get_output_opts(nil, " ")
 end
 
 ---@return QfrOutputOpts
 local function replace_qflist()
-    return get_output_opts("u", nil)
+    return get_output_opts(nil, "u")
 end
 
 ---@return QfrOutputOpts
--- local function add_qflist()
---     return get_output_opts("a", nil)
--- end
---
----@return QfrOutputOpts
 local function new_loclist()
-    return get_output_opts(" ", cur_win())
+    return get_output_opts(cur_win(), " ")
 end
 
 ---@return QfrOutputOpts
 local function replace_loclist()
-    return get_output_opts("u", cur_win())
+    return get_output_opts(cur_win(), "u")
 end
 
 -- ---@return QfrOutputOpts

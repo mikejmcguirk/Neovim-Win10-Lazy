@@ -185,7 +185,7 @@ end
 
 ---@param what_ret table
 ---@return table
-local function what_ret_to_set(what_ret)
+function M._what_ret_to_set(what_ret)
     local what_set = {} ---@type QfrWhat
 
     what_set.context = type(what_ret.context) == "table" and what_ret.context or nil
@@ -217,7 +217,7 @@ function M._get_stack(src_win)
 
     for i = 1, max_nr do
         local what_ret = M._get_list(src_win, { nr = i, all = true }) ---@type table
-        local what_set = what_ret_to_set(what_ret) ---@type QfrWhat
+        local what_set = M._what_ret_to_set(what_ret) ---@type QfrWhat
         what_set.nr = i
 
         stack[#stack + 1] = what_set
