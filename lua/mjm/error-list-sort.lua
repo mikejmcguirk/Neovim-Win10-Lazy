@@ -27,38 +27,22 @@ local function sort_wrapper(sort_info, sort_opts, output_opts)
     if src_win and not eu._valid_win_for_loclist(src_win) then return end
 
     local cur_list = et._get_list(src_win, { nr = output_opts.what.nr, all = true }) ---@type table
-    if cur_list.size == 0 then
+    if cur_list.size <= 1 then
         vim.api.nvim_echo({ { "Not enough entries to sort", "" } }, false, {})
-        return
-    end
-
-    if not eu._get_list_win(src_win, {}) then
-        local list = src_win and "Loclist" or "Qflist" ---@type string
-        vim.api.nvim_echo({ { list .. " not open", "" } }, false, {})
         return
     end
 
     ---@type QfRancherSortPredicate
     local predicate = sort_opts.dir == "asc" and sort_info.asc_func or sort_info.desc_func
-    -- TODO: the sort needs to be re-put here
-    local new_items = vim.deepcopy(cur_list.items, false) ---@type vim.quickfix.entry[]
-    local what = output_opts.what ---@type QfrWhat
-    -- TODO: This combining logic should be in tools
-    local what_set = vim.tbl_deep_extend("force", what, {
-        context = type(cur_list.context) == "table" and cur_list.context or what.context,
-        efm = cur_list.efm or what.efm,
-        items = new_items,
-        quickfixtextfunc = type(cur_list.quickfixtextfunc) == "function"
-                and cur_list.quickfixtextfunc
-            or what.quickfixtextfunc,
-        title = cur_list.title or what.title,
-    }) ---@type QfrWhat
+    local what_set = et._what_ret_to_set(cur_list) ---@type QfrWhat
+    table.sort(what_set.items, predicate)
+    what_set.nr = output_opts.what.nr
 
     local dest_nr = et._set_list(src_win, output_opts.action, what_set) ---@type integer
     if eu._get_g_var("qf_rancher_auto_open_changes") then
         ea._get_history(src_win, dest_nr, {
             always_open = true,
-            default = "current",
+            default = "cur_list",
             silent = true,
         })
     end
