@@ -9,9 +9,9 @@ local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfrTypes
 local api = vim.api
 local fn = vim.fn
 
------------------
---- CMD UTILS ---
------------------
+-- ===============
+-- == CMD UTILS ==
+-- ===============
 
 ---@param fargs string[]
 ---@return string|nil
@@ -40,13 +40,13 @@ function M._check_cmd_arg(fargs, valid_args, default)
     return default
 end
 
--------------------
---- INPUT UTILS ---
--------------------
+-- =================
+-- == INPUT UTILS ==
+-- =================
 
 ---@param input QfrInputType
 ---@return string
---- NOTE: This function assumes that an API input of "vimcase" has already been resolved
+---NOTE: This function assumes that an API input of "vimcase" has already been resolved
 function M._get_display_input_type(input)
     if input == "regex" then
         return "Regex"
@@ -581,9 +581,9 @@ function M._qf_pos_to_cur_pos(item_lnum, item_col)
     return { row, col }
 end
 
-----------------------
---- WINDOW FINDING ---
-----------------------
+-- ====================
+-- == WINDOW FINDING ==
+-- ====================
 
 ---@param opts QfrTabpageOpts
 ---@return integer[]
@@ -619,7 +619,7 @@ local function is_loclist_win(qf_id, win)
     end
 end
 
---- If searching for wins by qf_id, passing a zero id is allowed so that orphans can be checked
+-- If searching for wins by qf_id, passing a zero id is allowed so that orphans can be checked
 
 ---@param qf_id integer
 ---@param opts QfrTabpageOpts

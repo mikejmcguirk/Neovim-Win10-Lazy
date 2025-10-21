@@ -3,9 +3,9 @@ local eu = Qfr_Defer_Require("mjm.error-list-util")
 ---@class QfrTypes
 local M = {}
 
--------------------------
---- SEMI-CUSTOM TYPES ---
--------------------------
+-- =======================
+-- == SEMI-CUSTOM TYPES ==
+-- =======================
 
 -- MID: Triple check the source that the max is 10 and add that validation here. Would need to be
 -- sure not to put it anywhere with an unchecked user count
@@ -25,8 +25,8 @@ function M._validate_list_nr(nr, optional)
     end
 end
 
---- PR: The built-in what annotation does not contain the user_data field
---- PR: The built-in annotation does not allow string values for quickfixtextfunc
+-- PR: The built-in what annotation does not contain the user_data field
+-- PR: The built-in annotation does not allow string values for quickfixtextfunc
 
 ---@class QfrWhat : vim.fn.setqflist.what
 ---@field quickfixtextfunc? function|string
@@ -79,9 +79,9 @@ function M._validate_find_win_in_tab_opts(opts)
     vim.validate("opts.skip_winnr", opts.skip_winnr, "number", true)
 end
 
-------------------
---- PRIMITIVES ---
-------------------
+-- ================
+-- == PRIMITIVES ==
+-- ================
 
 ---@param n integer|nil
 ---@param optional? boolean
@@ -116,9 +116,9 @@ function M._validate_int(num, optional)
     end, optional, "Num is not an integer")
 end
 
------------------
---- BUILT-INS ---
------------------
+-- ===============
+-- == BUILT-INS ==
+-- ===============
 
 -- MID: Perhaps create a separate validation for stack nrs limiting to between 0-10
 -- How a huge deal since clamping is easy, but would enforce more type consistency
@@ -245,8 +245,8 @@ function M._validate_list_item_type(item_type, optional)
     end
 end
 
---- NOTE: This is designed for entries used to set qflists. The entries from getqflist() are
---- not exactly the same
+---NOTE: This is designed for entries used to set qflists. The entries from getqflist() are
+---not exactly the same
 ---@param item vim.quickfix.entry
 ---@return nil
 function M._validate_list_item(item)
@@ -267,12 +267,12 @@ function M._validate_list_item(item)
 
     vim.validate("item.text", item.text, "string", true)
 
-    --- MID: Figure out what the proper validation for this is
+    -- MID: Figure out what the proper validation for this is
     -- vim.validate("item.valid", item.valid, { "boolean", "nil" })
 
     M._validate_list_item_type(item.type, true)
 
-    --- NOTE: While qf rows and cols are one indexed, 0 is used to represent non-values
+    -- NOTE: While qf rows and cols are one indexed, 0 is used to represent non-values
     M._validate_uint(item.lnum, true)
     M._validate_uint(item.col, true)
     M._validate_uint(item.end_lnum, true)
@@ -339,9 +339,9 @@ function M._validate_winblend(winblend)
     end, false, "Winblend is not between 0 and 100")
 end
 
--------------------------------
---- CUSTOM TYPES -- GENERAL ---
--------------------------------
+-- =============================
+-- == CUSTOM TYPES -- GENERAL ==
+-- =============================
 
 ---@alias QfrAction "a"|"f"|"r"|"u"|" "
 
@@ -441,9 +441,9 @@ function M._validate_open_buf_opts(opts)
     M._validate_win(opts.win, true)
 end
 
----------------------------
---- CUSTOM TYPES - DIAG ---
----------------------------
+-- =========================
+-- == CUSTOM TYPES - DIAG ==
+-- =========================
 
 ---@alias QfrDiagDispFunc fun(vim.Diagnostic):vim.quickfix.entry
 
@@ -508,9 +508,9 @@ function M._validate_diag_getopts(diag_getopts, optional)
     vim.validate("diag_getopts.enabled", diag_getopts.enabled, "boolean", true)
 end
 
-------------------------------
---- CUSTOM TYPES -- FILTER ---
-------------------------------
+-- ============================
+-- == CUSTOM TYPES -- FILTER ==
+-- ============================
 
 ---@class QfrPredicateOpts
 ---@field pattern? string
@@ -534,9 +534,9 @@ function M._validate_filter_info(filter_info)
     vim.validate("filter_info.sensitive_func", filter_info.sensitive_func, "callable")
 end
 
-----------------------------
---- CUSTOM TYPES -- GREP ---
-----------------------------
+-- ==========================
+-- == CUSTOM TYPES -- GREP ==
+-- ==========================
 
 ---@alias QfrGrepLocs string[]
 ---@alias QfrGrepPartsFunc fun(string, string, QfrGrepLocs):string[]
@@ -555,9 +555,9 @@ function M._validate_grep_info(grep_info)
     vim.validate("location_func", grep_info.location_func, "callable")
 end
 
-------------------
---- OPEN TYPES ---
-------------------
+-- ================
+-- == OPEN TYPES ==
+-- ================
 
 ---@class QfrListOpenOpts
 ---@field height? integer

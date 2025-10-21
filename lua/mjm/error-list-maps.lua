@@ -297,8 +297,8 @@ local qfr_maps = {
     { nn, "<Plug>(qfr-ll-del-all)",      ll.."E", "Delete all items from the loclist stack",              function() ea._l_del_all(cur_win()) end },
 }
 
---- NOTE: This table needs to be separate or else the plug mapping pass will map "<nop>", which
---- causes multiple problems
+-- NOTE: This table needs to be separate or else the plug mapping pass will map "<nop>", which
+-- causes multiple problems
 
 -- stylua: ignore
 ---@type QfRancherMapData[]
@@ -351,9 +351,9 @@ if vim.g.qfr_map_set_defaults then
     end
 end
 
----------------------
---- FTPLUGIN MAPS ---
----------------------
+-- ===================
+-- == FTPLUGIN MAPS ==
+-- ===================
 
 vim.keymap.set("n", "<Plug>(qfr-list-del-one)", function()
     ei._del_one_list_item()
@@ -411,15 +411,15 @@ vim.keymap.set("n", "<Plug>(qfr-list-open-tabnew-focuslist)", function()
     ei._open_tabnew_focuslist()
 end, { desc = "Open a list item in a new tab, keep list focus" })
 
-------------
---- CMDS ---
-------------
+-- ==========
+-- == CMDS ==
+-- ==========
 
 -- Don't use the util g_var wrapper here to avoid a require
 if vim.g.qfr_set_default_cmds then
-    -------------
-    --- DIAGS ---
-    -------------
+    -- ===========
+    -- == DIAGS ==
+    -- ===========
 
     api.nvim_create_user_command("Qdiag", function(cargs)
         ed.q_diag_cmd(cargs)
@@ -429,9 +429,9 @@ if vim.g.qfr_set_default_cmds then
         ed.l_diag_cmd(cargs)
     end, { bang = true, count = 0, nargs = "*", desc = "Send buf diags to the Location list" })
 
-    --------------
-    --- FILTER ---
-    --------------
+    -- ============
+    -- == FILTER ==
+    -- ============
 
     api.nvim_create_user_command("Qfilter", function(cargs)
         ef.q_filter_cmd(cargs)
@@ -441,9 +441,9 @@ if vim.g.qfr_set_default_cmds then
         ef.l_filter_cmd(cargs)
     end, { bang = true, count = true, nargs = "*", desc = "Sort loclist items" })
 
-    --------------
-    --- GREP ---
-    --------------
+    -- ==========
+    -- == GREP ==
+    -- ==========
 
     api.nvim_create_user_command("Qgrep", function(cargs)
         eg.q_grep_cmd(cargs)
@@ -453,9 +453,9 @@ if vim.g.qfr_set_default_cmds then
         eg.l_grep_cmd(cargs)
     end, { count = true, nargs = "*", desc = "Grep to the location list" })
 
-    -------------------------
-    --- OPEN/CLOSE/TOGGLE ---
-    -------------------------
+    -- =======================
+    -- == OPEN/CLOSE/TOGGLE ==
+    -- =======================
 
     api.nvim_create_user_command("Qopen", function(cargs)
         eo.open_qflist_cmd(cargs)
@@ -481,9 +481,9 @@ if vim.g.qfr_set_default_cmds then
         eo.toggle_loclist_cmd(cargs)
     end, { count = 0, desc = "Toggle the Location List" })
 
-    ------------------
-    --- NAV/ACTION ---
-    ------------------
+    -- ================
+    -- == NAV/ACTION ==
+    -- ================
 
     api.nvim_create_user_command("Qprev", function(cargs)
         en.q_prev_cmd(cargs)
@@ -541,9 +541,9 @@ if vim.g.qfr_set_default_cmds then
         en.l_nfile_cmd(cargs)
     end, { count = 0, desc = "Go to the next loclist file" })
 
-    ------------
-    --- SORT ---
-    ------------
+    -- ==========
+    -- == SORT ==
+    -- ==========
 
     api.nvim_create_user_command("Qsort", function(cargs)
         es.q_sort(cargs)
@@ -553,9 +553,9 @@ if vim.g.qfr_set_default_cmds then
         es.l_sort(cargs)
     end, { bang = true, count = 0, nargs = 1 })
 
-    -------------
-    --- STACK ---
-    -------------
+    -- ===========
+    -- == STACK ==
+    -- ===========
 
     api.nvim_create_user_command("Qolder", function(cargs)
         ea.q_older_cmd(cargs)

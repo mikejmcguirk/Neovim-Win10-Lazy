@@ -366,8 +366,8 @@ function Open._close_win_save_views(win)
     end, tabpage_wins)
 
     local views = get_views(tabpage_wins) ---@type vim.fn.winsaveview.ret[]
-    eu._pclose_and_rm(win, true, true)
-    restore_views(views)
+    local result = eu._pclose_and_rm(win, true, true)
+    if result >= 0 then restore_views(views) end
 
     return true
 end

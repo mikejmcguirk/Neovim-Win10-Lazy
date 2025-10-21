@@ -10,11 +10,11 @@ local set_opt = api.nvim_set_option_value
 --- @class QfRancherPreview
 local Preview = {}
 
--------------------
---- MODULE DATA ---
--------------------
+-- =================
+-- == MODULE DATA ==
+-- =================
 
-local hl_ns = api.nvim_create_namespace("qf-rancher-preview-hl") ---@type integer
+local hl_ns = api.nvim_create_namespace("qfr-preview-hl") ---@type integer
 
 -- DOCUMENT: This highlight group
 local hl_name = "QfRancherHighlightItem" ---@type string
@@ -92,7 +92,7 @@ end
 local bufs = {} ---@type integer[]
 local extmarks = {} ---@type integer[]
 
-local group_name = "qf-rancher-preview-group" ---@type string
+local group_name = "qfr-preview-group" ---@type string
 local group = api.nvim_create_augroup(group_name, {}) ---@type integer
 
 local SCROLLOFF = 6 ---@type integer
@@ -222,9 +222,9 @@ local function create_autocmds()
     })
 end
 
---------------------
---- WINDOW SETUP ---
---------------------
+-- ==================
+-- == WINDOW SETUP ==
+-- ==================
 
 ---@param item_buf integer
 ---@return vim.api.keyset.win_config
@@ -484,9 +484,9 @@ local function create_preview_win(win_cfg, preview_buf)
     return preview_win
 end
 
------------------
---- BUF SETUP ---
------------------
+-- ===============
+-- == BUF SETUP ==
+-- ===============
 
 ---@param preview_buf integer
 ---@param item table
@@ -692,9 +692,9 @@ local function get_preview_buf(item)
     return bufs[item.bufnr]
 end
 
--------------------------
---- OPEN/CLOSE/UPDATE ---
--------------------------
+-- =======================
+-- == OPEN/CLOSE/UPDATE ==
+-- =======================
 
 local timer = nil ---@type uv.uv_timer_t|nil
 local queued_update = false ---@type boolean

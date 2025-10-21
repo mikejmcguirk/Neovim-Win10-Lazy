@@ -11,9 +11,9 @@ local fn = vim.fn
 --- @class QfRancherSort
 local Sort = {}
 
----------------
---- Wrapper ---
----------------
+-- =============
+-- == Wrapper ==
+-- =============
 
 ---@param sort_info QfrSortInfo
 ---@param sort_opts QfrSortOpts
@@ -49,11 +49,11 @@ local function sort_wrapper(sort_info, sort_opts, output_opts)
     end
 end
 
-------------------
---- Sort Parts ---
-------------------
+-- ================
+-- == Sort Parts ==
+-- ================
 
---- NOTE: Do not use ternaries here, as it causes logical errors
+-- NOTE: Do not use ternaries here, as it causes logical errors
 
 ---@type QfrCheckFunc
 local function check_asc(a, b)
@@ -169,9 +169,9 @@ local function check_lcol_severity(a, b, check)
     return check_severity(a, b, check) -- Allow the nil to pass through
 end
 
------------------
---- Sort Info ---
------------------
+-- ===============
+-- == Sort Info ==
+-- ===============
 
 ---@param a vim.quickfix.entry
 ---@param b vim.quickfix.entry
@@ -329,14 +329,15 @@ local sorts = {
     type = { asc_func = Sort._sort_type_asc, desc_func = Sort._sort_type_desc },
 } ---@type table<string, QfrSortInfo>
 
---- DOCUMENT: this
+-- DOCUMENT: this
 
 ---@return string[]
 function Sort.get_sort_names()
     return vim.tbl_keys(sorts)
 end
 
---- DOCUMENT: Improve this?
+-- DOCUMENT: Improve this?
+
 --- Add your own sort. Can be accessed using Qsort or Lsort
 --- name: The name the sort is accessed with
 --- asc_func: Predicate to sort ascending. Takes two quickfix items. Returns boolean
@@ -365,11 +366,11 @@ function Sort.clear_sort(name)
     end
 end
 
---- Run a registered sort
---- name: The registered name of the sort to run
---- sort_opts:
---- - dir?: "asc"|"desc" Defaults to "asc"
---- what
+---Run a registered sort
+---name: The registered name of the sort to run
+---sort_opts:
+---- dir?: "asc"|"desc" Defaults to "asc"
+---what
 ---@param name string
 ---@param sort_opts QfrSortOpts
 ---@param output_opts QfrOutputOpts
