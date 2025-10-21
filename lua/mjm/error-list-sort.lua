@@ -398,8 +398,7 @@ local function sort_cmd(src_win, cargs)
     end
 
     local sort_name = eu._check_cmd_arg(fargs, sort_names, "fname") ---@type string
-
-    local dir = eu._check_cmd_arg(fargs, { "asc", "desc" }, "asc") ---@type QfRancherSortDir
+    local dir = cargs.bang and "desc" or "asc"
 
     ---@type QfrAction
     local action = eu._check_cmd_arg(fargs, ey._actions, ey._default_action)

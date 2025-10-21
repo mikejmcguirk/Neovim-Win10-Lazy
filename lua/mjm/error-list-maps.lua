@@ -624,11 +624,11 @@ if vim.g.qf_rancher_set_default_cmds then
 
     api.nvim_create_user_command("Qsort", function(cargs)
         es.q_sort(cargs)
-    end, { nargs = "*" })
+    end, { bang = true, count = 0, nargs = 1 })
 
     api.nvim_create_user_command("Lsort", function(cargs)
         es.l_sort(cargs)
-    end, { nargs = "*" })
+    end, { bang = true, count = 0, nargs = 1 })
 
     -------------
     --- STACK ---
