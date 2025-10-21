@@ -1,6 +1,3 @@
----@class QfRancherFiletypeFuncs
-local M = {}
-
 local eo = Qfr_Defer_Require("mjm.error-list-open") ---@type QfrOpen
 local et = Qfr_Defer_Require("mjm.error-list-tools") ---@type QfrTools
 local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfrUtil
@@ -9,9 +6,10 @@ local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfrTypes
 local api = vim.api
 local fn = vim.fn
 
----------------------
---- LIST DELETION ---
----------------------
+--- @class QfRancherFiletypeFuncs
+local M = {}
+
+-- LIST DELETION --
 
 ---@return nil
 function M._del_one_list_item()
@@ -75,9 +73,7 @@ function M._visual_del()
     eu._protected_set_cursor(0, { vrange_4[1], col })
 end
 
--------------------------
---- LIST OPEN HELPERS ---
--------------------------
+-- LIST OPEN HELPERS --
 
 ---@param list_win integer
 ---@param buf_win integer
@@ -282,9 +278,9 @@ local function get_dest_win(list_win, dest_buftype, buf, is_loclist, loclist_ori
     return true, nil
 end
 
------------------------
---- LIST OPEN FUNCS ---
------------------------
+-- =====================
+-- == LIST OPEN FUNCS ==
+-- =====================
 
 -- DOCUMENT: switchbuf behavior :
 -- useopen is respected and given first priority
@@ -367,7 +363,7 @@ end
 ---@param finish QfrFinishMethod
 ---@param idx_func QfrIdxFunc
 ---@return nil
-function M._open_item_from_list(split, finish, idx_func)
+local function open_item_from_list(split, finish, idx_func)
     ey._validate_split(split)
     ey._validate_finish_method(finish)
     vim.validate("idx_func", idx_func, "callable")
@@ -427,61 +423,61 @@ function M._open_item_from_list(split, finish, idx_func)
     vim.api.nvim_exec_autocmds("QuickFixCmdPost", { pattern = pattern })
 end
 
------------------------
 -- MAPPING FUNCTIONS --
------------------------
 
 function M._open_direct_focuswin()
-    M._open_item_from_list("none", "focusWin", eu._get_item_under_cursor)
+    open_item_from_list("none", "focusWin", eu._get_item_under_cursor)
 end
 
 function M._open_direct_focuslist()
-    M._open_item_from_list("none", "focusList", eu._get_item_under_cursor)
+    open_item_from_list("none", "focusList", eu._get_item_under_cursor)
 end
 
 function M._open_split_focuswin()
-    M._open_item_from_list("split", "focusWin", eu._get_item_under_cursor)
+    open_item_from_list("split", "focusWin", eu._get_item_under_cursor)
 end
 
 function M._open_split_focuslist()
-    M._open_item_from_list("split", "focusList", eu._get_item_under_cursor)
+    open_item_from_list("split", "focusList", eu._get_item_under_cursor)
 end
 
 function M._open_vsplit_focuswin()
-    M._open_item_from_list("vsplit", "focusWin", eu._get_item_under_cursor)
+    open_item_from_list("vsplit", "focusWin", eu._get_item_under_cursor)
 end
 
 function M._open_vsplit_focuslist()
-    M._open_item_from_list("vsplit", "focusList", eu._get_item_under_cursor)
+    open_item_from_list("vsplit", "focusList", eu._get_item_under_cursor)
 end
 
 function M._open_tabnew_focuswin()
-    M._open_item_from_list("tabnew", "focusWin", eu._get_item_under_cursor)
+    open_item_from_list("tabnew", "focusWin", eu._get_item_under_cursor)
 end
 
 function M._open_tabnew_focuslist()
-    M._open_item_from_list("tabnew", "focusList", eu._get_item_under_cursor)
+    open_item_from_list("tabnew", "focusList", eu._get_item_under_cursor)
 end
 
 function M._open_prev_focuslist()
-    M._open_item_from_list("none", "focusList", eu._get_item_wrapping_sub)
+    open_item_from_list("none", "focusList", eu._get_item_wrapping_sub)
 end
 
 function M._open_next_focuslist()
-    M._open_item_from_list("none", "focusList", eu._get_item_wrapping_add)
+    open_item_from_list("none", "focusList", eu._get_item_wrapping_add)
 end
 
 return M
 
+-- TODO: Wait on doc formatting until the project has been moved into its own dir and I can see
+-- all the pieces of the ftplugin file put together
 -- TODO: docs
 -- TODO: tests
 
 -- MAYBE: For some of the context switching, eventignore could be useful. But very bad if we error
 -- with that option on
 
-----------------
--- REFERENCES --
-----------------
+-- ================
+-- == REFERENCES ==
+-- ================
 
 -- qf_view_result
 -- ex_cc
