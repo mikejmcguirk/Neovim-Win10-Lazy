@@ -178,8 +178,6 @@ end
 -- == UNSUPPORTED ==
 -- =================
 
--- MID: The open/close/toggle funcs seem useful for keymapping, but want to see how they do in the
--- wild first
 -- MID: "get_filtered_tabpage_wins" might be a useful util function
 
 ---@param opts QfrListOpenOpts
@@ -471,8 +469,8 @@ end
 
 return Open
 
--- TODO: Tests
 -- TODO: Docs
+-- TODO: Tests
 
 -- MID: Implement a feature where, if you open list to a blank one, do a wrapping search forward or
 --     backward for a list with items

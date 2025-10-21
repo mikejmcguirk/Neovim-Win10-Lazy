@@ -698,10 +698,9 @@ M._default_timeout = 4000
 
 -- MID: Pass the full ListOpenOpts in here. This would allow for more flexibility with how
 -- the history function behaves
--- TODO: always_open is bad naming. Should be open_list
 
 ---@class QfRancherHistoryOpts
----@field always_open? boolean
+---@field open_list? boolean
 ---@field default? "cur_list"|"show_stack"
 ---@field keep_win? boolean
 ---@field silent? boolean
@@ -711,8 +710,8 @@ M._default_timeout = 4000
 function M._validate_history_opts(opts)
     vim.validate("opts", opts, "table")
     vim.validate("opts.default", opts.default, "string", true)
-    vim.validate("opts.always_open", opts.always_open, "boolean", true)
     vim.validate("opts.keep_win", opts.keep_win, "boolean", true)
+    vim.validate("opts.open_list", opts.open_list, "boolean", true)
     vim.validate("opts.silent", opts.silent, "boolean", true)
 end
 

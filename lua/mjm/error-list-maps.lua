@@ -311,13 +311,13 @@ local rancher_keymaps = {
     { nn, pqfr.."-qf-older)",        qp.."[", "Go to an older qflist",                         function() ea._q_older(vim.v.count) end },
     { nn, pqfr.."-qf-newer)",        qp.."]", "Go to a newer qflist",                          function() ea._q_newer(vim.v.count) end },
     { nn, pqfr.."-qf-history)",      qp.."Q", "View or jump within the quickfix history",      function() ea._q_history(vim.v.count, { default = "cur_list" }) end },
-    { nn, pqfr.."-qf-history-open)", qp.."<C-q>", "Open and jump within the quickfix history", function() ea._q_history(vim.v.count, { always_open = true, default = "cur_list" }) end },
+    { nn, pqfr.."-qf-history-open)", qp.."<C-q>", "Open and jump within the quickfix history", function() ea._q_history(vim.v.count, { open_list = true, default = "cur_list" }) end },
     { nn, pqfr.."-qf-del)",          qp.."e", "Delete a list from the quickfix stack",         function() ea._q_del(vim.v.count) end },
     { nn, pqfr.."-qf-del-all)",      qp.."E", "Delete all items from the quickfix stack",      function() ea._q_del_all() end },
     { nn, pqfr.."-ll-older)",        lp.."[", "Go to an older location list",                  function() ea._l_older(cur_win(), vim.v.count) end },
     { nn, pqfr.."-ll-newer)",        lp.."]", "Go to a newer location list",                   function() ea._l_newer(cur_win(), vim.v.count) end },
     { nn, pqfr.."-ll-history)",      lp.."L", "View or jump within the loclist history",       function() ea._l_history(cur_win(), vim.v.count, { default = "cur_list" }) end },
-    { nn, pqfr.."-ll-history-open)", lp.."<C-l>", "Open and jump within the loclist history",  function() ea._l_history(cur_win(), vim.v.count, { always_open = true, default = "cur_list" }) end },
+    { nn, pqfr.."-ll-history-open)", lp.."<C-l>", "Open and jump within the loclist history",  function() ea._l_history(cur_win(), vim.v.count, { open_list = true, default = "cur_list" }) end },
     { nn, pqfr.."-ll-del)",          lp.."e", "Delete a list from the loclist stack",          function() ea._l_del(cur_win(), vim.v.count) end },
     { nn, pqfr.."-ll-del-all)",      lp.."E", "Delete all items from the loclist stack",       function() ea._l_del_all(cur_win()) end },
 }
@@ -621,19 +621,19 @@ if vim.g.qf_rancher_set_default_cmds then
     -------------
 
     api.nvim_create_user_command("Qolder", function(cargs)
-        ea._q_older_cmd(cargs)
+        ea.q_older_cmd(cargs)
     end, { count = 0, desc = "Go to an older qflist" })
 
     api.nvim_create_user_command("Qnewer", function(cargs)
-        ea._q_newer_cmd(cargs)
+        ea.q_newer_cmd(cargs)
     end, { count = 0, desc = "Go to a newer qflist" })
 
     api.nvim_create_user_command("Qhistory", function(cargs)
-        ea._q_history_cmd(cargs)
+        ea.q_history_cmd(cargs)
     end, { count = 0, desc = "View or jump within the quickfix history" })
 
     api.nvim_create_user_command("Qdelete", function(cargs)
-        ea._q_delete_cmd(cargs)
+        ea.q_delete_cmd(cargs)
     end, { count = 0, nargs = "?", desc = "Delete one or all lists from the quickfix stack" })
 
     api.nvim_create_user_command("Lolder", function(cargs)
@@ -645,10 +645,10 @@ if vim.g.qf_rancher_set_default_cmds then
     end, { count = 0, desc = "Go to a newer location list" })
 
     api.nvim_create_user_command("Lhistory", function(cargs)
-        ea._l_history_cmd(cargs)
+        ea.l_history_cmd(cargs)
     end, { count = 0, desc = "View or jump within the loclist history" })
 
     api.nvim_create_user_command("Ldelete", function(cargs)
-        ea._l_delete_cmd(cargs)
+        ea.l_delete_cmd(cargs)
     end, { count = 0, nargs = "?", desc = "Delete one or all lists from the loclist stack" })
 end

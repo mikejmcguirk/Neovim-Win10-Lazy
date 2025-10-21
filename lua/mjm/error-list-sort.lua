@@ -42,7 +42,7 @@ local function sort_wrapper(sort_info, sort_opts, output_opts)
     local dest_nr = et._set_list(src_win, output_opts.action, what_set) ---@type integer
     if eu._get_g_var("qf_rancher_auto_open_changes") then
         ea._get_history(src_win, dest_nr, {
-            always_open = true,
+            open_list = true,
             default = "cur_list",
             silent = true,
         })
