@@ -1,23 +1,27 @@
 local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfrUtil
 local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfrTypes
 
----@class QfRancherPreview
-local M = {}
+local api = vim.api
+local fn = vim.fn
+local set_opt = api.nvim_set_option_value
 
-local set_opt = vim.api.nvim_set_option_value
+---@mod Preview Preview List Items
+
+--- @class QfRancherPreview
+local Preview = {}
 
 -------------------
 --- MODULE DATA ---
 -------------------
 
-local hl_ns = vim.api.nvim_create_namespace("qf-rancher-preview-hl") ---@type integer
+local hl_ns = api.nvim_create_namespace("qf-rancher-preview-hl") ---@type integer
 
 -- DOCUMENT: This highlight group
 local hl_name = "QfRancherHighlightItem" ---@type string
-local cur_hl = vim.api.nvim_get_hl(0, { name = hl_name }) ---@type vim.api.keyset.get_hl_info
+local cur_hl = api.nvim_get_hl(0, { name = hl_name }) ---@type vim.api.keyset.get_hl_info
 if (not cur_hl) or #vim.tbl_keys(cur_hl) == 0 then
     -- DOCUMENT: That this links to CurSearch by default
-    vim.api.nvim_set_hl(0, hl_name, { link = "CurSearch" })
+    api.nvim_set_hl(0, hl_name, { link = "CurSearch" })
 end
 
 ---@class QfRancherPreviewState
@@ -89,7 +93,7 @@ local bufs = {} ---@type integer[]
 local extmarks = {} ---@type integer[]
 
 local group_name = "qf-rancher-preview-group" ---@type string
-local group = vim.api.nvim_create_augroup(group_name, {}) ---@type integer
+local group = api.nvim_create_augroup(group_name, {}) ---@type integer
 
 local SCROLLOFF = 6 ---@type integer
 
@@ -113,9 +117,9 @@ local function clear_session_data()
     extmarks = {}
 
     ---@type vim.api.keyset.get_autocmds.ret[]
-    local autocmds = vim.api.nvim_get_autocmds({ group = group })
+    local autocmds = api.nvim_get_autocmds({ group = group })
     for _, autocmd in pairs(autocmds) do
-        vim.api.nvim_del_autocmd(autocmd.id)
+        api.nvim_del_autocmd(autocmd.id)
     end
 end
 
@@ -160,22 +164,22 @@ end
 
 ---@return nil
 local function create_autocmds()
-    if #vim.api.nvim_get_autocmds({ group = group }) > 0 then return end
+    if #api.nvim_get_autocmds({ group = group }) > 0 then return end
 
     assert(preview_state:is_open())
 
-    local list_win_buf = vim.api.nvim_win_get_buf(preview_state.list_win) ---@type integer
+    local list_win_buf = api.nvim_win_get_buf(preview_state.list_win) ---@type integer
 
-    vim.api.nvim_create_autocmd("CursorMoved", {
+    api.nvim_create_autocmd("CursorMoved", {
         group = group,
         buffer = list_win_buf,
         callback = function()
-            M.update_preview_win_pos()
-            M._update_preview_win_buf()
+            Preview.update_preview_win_pos()
+            Preview._update_preview_win_buf()
         end,
     })
 
-    vim.api.nvim_create_autocmd("BufLeave", {
+    api.nvim_create_autocmd("BufLeave", {
         group = group,
         buffer = list_win_buf,
         callback = function()
@@ -184,7 +188,7 @@ local function create_autocmds()
         end,
     })
 
-    vim.api.nvim_create_autocmd("WinClosed", {
+    api.nvim_create_autocmd("WinClosed", {
         group = group,
         callback = function()
             checked_clear_when_idle()
@@ -192,28 +196,28 @@ local function create_autocmds()
     })
 
     -- Here to account for situations where WinLeave does not fire properly
-    vim.api.nvim_create_autocmd("WinEnter", {
+    api.nvim_create_autocmd("WinEnter", {
         group = group,
         callback = function()
-            if not preview_state:is_cur_list_win(vim.api.nvim_get_current_win()) then
-                M.close_preview_win()
+            if not preview_state:is_cur_list_win(api.nvim_get_current_win()) then
+                Preview.close_preview_win()
             end
         end,
     })
 
-    vim.api.nvim_create_autocmd("WinLeave", {
+    api.nvim_create_autocmd("WinLeave", {
         group = group,
         callback = function()
-            if preview_state:is_cur_list_win(vim.api.nvim_get_current_win()) then
-                M.close_preview_win()
+            if preview_state:is_cur_list_win(api.nvim_get_current_win()) then
+                Preview.close_preview_win()
             end
         end,
     })
 
-    vim.api.nvim_create_autocmd("WinResized", {
+    api.nvim_create_autocmd("WinResized", {
         group = group,
         callback = function()
-            M.update_preview_win_pos()
+            Preview.update_preview_win_pos()
         end,
     })
 end
@@ -231,12 +235,10 @@ local function get_title_cfg(item_buf)
 
     if not eu._get_g_var("qf_rancher_preview_show_title") then return { title = nil } end
 
-    if not (item_buf and vim.api.nvim_buf_is_valid(item_buf)) then
-        return { title = "No buffer" }
-    end
+    if not (item_buf and api.nvim_buf_is_valid(item_buf)) then return { title = "No buffer" } end
 
-    local preview_name = vim.api.nvim_buf_get_name(item_buf) ---@type string
-    local relative_name = vim.fn.fnamemodify(preview_name, ":.") ---@type string
+    local preview_name = api.nvim_buf_get_name(item_buf) ---@type string
+    local relative_name = fn.fnamemodify(preview_name, ":.") ---@type string
     local g_title_pos = eu._get_g_var("qf_rancher_preview_title_pos") ---@type QfRancherTitlePos
     return { title = relative_name, title_pos = g_title_pos }
 end
@@ -247,8 +249,8 @@ local function get_winborder()
     local border = eu._get_g_var("qf_rancher_preview_border", true)
     if border then return border end
 
-    local winborder = vim.fn.has("nvim-0.11")
-            and vim.api.nvim_get_option_value("winborder", { global = true })
+    local winborder = fn.has("nvim-0.11")
+            and api.nvim_get_option_value("winborder", { global = true })
         or "single"
 
     if winborder ~= "" then
@@ -278,7 +280,7 @@ local function get_fallback_win_config(base_cfg, e_lines, e_cols, padding, previ
         col = 1,
     }) ---@type vim.api.keyset.win_config
 
-    local screenrow = vim.fn.screenrow() ---@type integer
+    local screenrow = fn.screenrow() ---@type integer
     local half_way = e_lines * 0.5 ---@type number
     if screenrow <= half_way then
         return vim.tbl_extend("force", fallback_base, { row = math.floor(e_lines * 0.6) })
@@ -294,11 +296,11 @@ local function get_win_cfg(list_win, item_buf)
     ey._validate_list_win(list_win)
     ey._validate_uint(item_buf, true)
 
-    local list_win_pos = vim.api.nvim_win_get_position(list_win) ---@type [integer, integer]
-    local list_win_height = vim.api.nvim_win_get_height(list_win) ---@type integer
-    local list_win_width = vim.api.nvim_win_get_width(list_win) ---@type integer
-    local e_lines = vim.api.nvim_get_option_value("lines", { scope = "global" }) ---@type integer
-    local e_cols = vim.api.nvim_get_option_value("columns", { scope = "global" }) ---@type integer
+    local list_win_pos = api.nvim_win_get_position(list_win) ---@type [integer, integer]
+    local list_win_height = api.nvim_win_get_height(list_win) ---@type integer
+    local list_win_width = api.nvim_win_get_width(list_win) ---@type integer
+    local e_lines = api.nvim_get_option_value("lines", { scope = "global" }) ---@type integer
+    local e_cols = api.nvim_get_option_value("columns", { scope = "global" }) ---@type integer
 
     local border = get_winborder() ---@type QfRancherBorder
     local preview_border_cells = border ~= "none" and 2 or 0 ---@type integer
@@ -428,7 +430,7 @@ local function get_win_cfg(list_win, item_buf)
         end
     end
 
-    if vim.api.nvim_get_option_value("splitright", { scope = "global" }) then
+    if api.nvim_get_option_value("splitright", { scope = "global" }) then
         if avail_x_right >= min_x then
             return open_right()
         elseif avail_x_left >= min_x then
@@ -452,7 +454,7 @@ local function create_preview_win(win_cfg, preview_buf)
     vim.validate("win_cfg", win_cfg, "table")
     ey._validate_buf(preview_buf)
 
-    local preview_win = vim.api.nvim_open_win(preview_buf, false, win_cfg) ---@type integer
+    local preview_win = api.nvim_open_win(preview_buf, false, win_cfg) ---@type integer
 
     set_opt("cc", "", { win = preview_win })
     set_opt("cul", true, { win = preview_win })
@@ -491,10 +493,10 @@ local function range_qf_to_zero_(preview_buf, item)
     ey._validate_list_item(item)
 
     local row = item.lnum > 0 and item.lnum - 1 or 0 ---@type integer
-    row = math.min(row, vim.api.nvim_buf_line_count(preview_buf) - 1)
+    row = math.min(row, api.nvim_buf_line_count(preview_buf) - 1)
 
     ---@type string
-    local start_line = vim.api.nvim_buf_get_lines(preview_buf, row, row + 1, false)[1]
+    local start_line = api.nvim_buf_get_lines(preview_buf, row, row + 1, false)[1]
     local col = (function()
         if item.col <= 0 then return 0 end
 
@@ -512,7 +514,7 @@ local function range_qf_to_zero_(preview_buf, item)
 
     ---@type string
     local fin_line = fin_row == row and start_line
-        or vim.api.nvim_buf_get_lines(preview_buf, fin_row, fin_row + 1, false)[1]
+        or api.nvim_buf_get_lines(preview_buf, fin_row, fin_row + 1, false)[1]
     local fin_col_ = (function()
         if item.end_col <= 0 then return #fin_line end
 
@@ -534,14 +536,14 @@ local function set_err_range_extmark(preview_buf, item)
     local hl_range = range_qf_to_zero_(preview_buf, item) ---@type Range4
     if not hl_range then
         if extmarks[preview_buf] then
-            vim.api.nvim_buf_del_extmark(preview_buf, hl_ns, extmarks[preview_buf])
+            api.nvim_buf_del_extmark(preview_buf, hl_ns, extmarks[preview_buf])
         end
 
         return
     end
 
     extmarks[preview_buf] =
-        vim.api.nvim_buf_set_extmark(preview_buf, hl_ns, hl_range[1], hl_range[2], {
+        api.nvim_buf_set_extmark(preview_buf, hl_ns, hl_range[1], hl_range[2], {
             hl_group = "QfRancherHighlightItem",
             id = extmarks[preview_buf],
             end_row = hl_range[3],
@@ -567,13 +569,13 @@ end
 
 ---@return integer
 local function create_fallback_buf()
-    local buf = vim.api.nvim_create_buf(false, true) ---@type integer
+    local buf = api.nvim_create_buf(false, true) ---@type integer
 
     set_opt("bufhidden", "wipe", { buf = buf })
     set_preview_buf_opts(buf)
 
     local lines = { "No bufnr for this list entry" } ---@type string[]
-    vim.api.nvim_buf_set_lines(buf, 0, 0, false, lines)
+    api.nvim_buf_set_lines(buf, 0, 0, false, lines)
 
     return buf
 end
@@ -584,14 +586,14 @@ local function get_lines(item_buf)
     -- Do not assert that item_buf is valid since a buf can be wiped after the list is created
     ey._validate_uint(item_buf)
 
-    if not vim.api.nvim_buf_is_valid(item_buf) then return { item_buf .. " is not valid" } end
+    if not api.nvim_buf_is_valid(item_buf) then return { item_buf .. " is not valid" } end
 
-    if vim.api.nvim_buf_is_loaded(item_buf) then
-        return vim.api.nvim_buf_get_lines(item_buf, 0, -1, false)
+    if api.nvim_buf_is_loaded(item_buf) then
+        return api.nvim_buf_get_lines(item_buf, 0, -1, false)
     end
 
-    local full_path = vim.api.nvim_buf_get_name(item_buf) ---@type string
-    if vim.uv.fs_access(full_path, 4) then return vim.fn.readfile(full_path, "") end
+    local full_path = api.nvim_buf_get_name(item_buf) ---@type string
+    if vim.uv.fs_access(full_path, 4) then return fn.readfile(full_path, "") end
 
     return { "Unable to read lines for bufnr " .. item_buf }
 end
@@ -605,7 +607,7 @@ local function update_preview_buf(item_buf)
 
     local lines = get_lines(item_buf) ---@type string[]
     set_opt("modifiable", true, { buf = bufs[item_buf] })
-    pcall(vim.api.nvim_buf_set_lines, bufs[item_buf], 0, -1, false, lines)
+    pcall(api.nvim_buf_set_lines, bufs[item_buf], 0, -1, false, lines)
     set_opt("modifiable", false, { buf = bufs[item_buf] })
 end
 
@@ -614,7 +616,7 @@ end
 local function get_mtime(item_buf)
     ey._validate_buf(item_buf)
 
-    local item_buf_full_path = vim.api.nvim_buf_get_name(item_buf) ---@type string
+    local item_buf_full_path = api.nvim_buf_get_name(item_buf) ---@type string
     local stat = vim.uv.fs_stat(item_buf_full_path) ---@type uv.fs_stat.result|nil
     return stat and stat.mtime.sec or 0
 end
@@ -627,17 +629,17 @@ local function create_preview_buf_from_lines(item_buf, lines)
     ey._validate_uint(item_buf)
     ey._validate_list(lines, { type = "string" })
 
-    local preview_buf = vim.api.nvim_create_buf(false, true) ---@type integer
-    vim.api.nvim_buf_set_lines(preview_buf, 0, 0, false, lines)
+    local preview_buf = api.nvim_create_buf(false, true) ---@type integer
+    api.nvim_buf_set_lines(preview_buf, 0, 0, false, lines)
     set_preview_buf_opts(preview_buf)
 
-    if not vim.api.nvim_buf_is_valid(item_buf) then return preview_buf end
+    if not api.nvim_buf_is_valid(item_buf) then return preview_buf end
 
-    local src_changedtick = vim.api.nvim_buf_get_changedtick(item_buf) ---@type integer
-    vim.api.nvim_buf_set_var(preview_buf, "src_changedtick", src_changedtick)
-    vim.api.nvim_buf_set_var(preview_buf, "src_mtime", get_mtime(item_buf))
+    local src_changedtick = api.nvim_buf_get_changedtick(item_buf) ---@type integer
+    api.nvim_buf_set_var(preview_buf, "src_changedtick", src_changedtick)
+    api.nvim_buf_set_var(preview_buf, "src_mtime", get_mtime(item_buf))
 
-    local item_ft = vim.api.nvim_get_option_value("filetype", { buf = item_buf }) ---@type string
+    local item_ft = api.nvim_get_option_value("filetype", { buf = item_buf }) ---@type string
     item_ft = item_ft ~= "" and item_ft or (vim.filetype.match({ buf = item_buf }) or "")
     if item_ft == "" then
         set_opt("syntax", item_ft, { buf = preview_buf })
@@ -668,16 +670,16 @@ local function get_preview_buf(item)
     if not bufs[item.bufnr] then
         local lines = get_lines(item.bufnr) ---@type string[]
         bufs[item.bufnr] = create_preview_buf_from_lines(item.bufnr, lines)
-    elseif vim.api.nvim_buf_is_valid(item.bufnr) then
-        local src_changedtick = vim.api.nvim_buf_get_changedtick(item.bufnr) ---@type integer
+    elseif api.nvim_buf_is_valid(item.bufnr) then
+        local src_changedtick = api.nvim_buf_get_changedtick(item.bufnr) ---@type integer
         local src_mtime = get_mtime(item.bufnr) ---@type integer
 
         ---@type boolean
         local changedtick_updated = src_changedtick ~= vim.b[bufs[item.bufnr]].src_changedtick
         local mtime_updated = src_mtime ~= vim.b[bufs[item.bufnr]].src_mtime ---@type boolean
         if changedtick_updated or mtime_updated then
-            vim.api.nvim_buf_set_var(bufs[item.bufnr], "src_changedtick", src_changedtick)
-            vim.api.nvim_buf_set_var(bufs[item.bufnr], "src_mtime", src_mtime)
+            api.nvim_buf_set_var(bufs[item.bufnr], "src_changedtick", src_changedtick)
+            api.nvim_buf_set_var(bufs[item.bufnr], "src_mtime", src_mtime)
             update_preview_buf(item.bufnr)
         end
     end
@@ -698,7 +700,7 @@ local queued_update = false ---@type boolean
 local function at_timer_end()
     if queued_update then
         queued_update = false
-        vim.schedule(M._update_preview_win_buf)
+        vim.schedule(Preview._update_preview_win_buf)
     end
 
     if timer then
@@ -718,15 +720,16 @@ end
 local function get_list_item(list_win)
     ey._validate_list_win(list_win)
 
-    local wintype = vim.fn.win_gettype(list_win)
+    local wintype = fn.win_gettype(list_win)
     local is_loclist = wintype == "loclist" ---@type boolean
     local src_win = is_loclist and list_win or nil ---@type integer|nil
 
     return eu._get_item_under_cursor(src_win)
 end
 
+---@private
 ---@return nil
-function M._update_preview_win_buf()
+function Preview._update_preview_win_buf()
     if timer and timer:get_due_in() > 0 then
         queued_update = true
         return
@@ -734,14 +737,14 @@ function M._update_preview_win_buf()
 
     if not preview_state:is_open() then return end
 
-    if not preview_state:is_cur_list_win(vim.api.nvim_get_current_win()) then return end
+    if not preview_state:is_cur_list_win(api.nvim_get_current_win()) then return end
 
     local item = get_list_item(preview_state.list_win) ---@type vim.quickfix.entry|nil
     if not item then return end
 
     local preview_buf = get_preview_buf(item) ---@type integer
-    vim.api.nvim_win_set_buf(preview_state.preview_win, preview_buf)
-    vim.api.nvim_win_set_config(preview_state.preview_win, get_title_cfg(item.bufnr))
+    api.nvim_win_set_buf(preview_state.preview_win, preview_buf)
+    api.nvim_win_set_config(preview_state.preview_win, get_title_cfg(item.bufnr))
 
     eu._protected_set_cursor(preview_state.preview_win, eu._qf_pos_to_cur_pos(item.lnum, item.col))
     eu._do_zzze(preview_state.preview_win)
@@ -750,18 +753,18 @@ function M._update_preview_win_buf()
 end
 
 ---@return nil
-function M.update_preview_win_pos()
+function Preview.update_preview_win_pos()
     if not preview_state:is_open() then return end
 
     local win_cfg = get_win_cfg(preview_state.list_win) ---@type vim.api.keyset.win_config
-    vim.api.nvim_win_set_config(preview_state.preview_win, win_cfg)
+    api.nvim_win_set_config(preview_state.preview_win, win_cfg)
 
     eu._do_zzze(preview_state.preview_win)
 end
 
 ---@param list_win integer
 ---@return nil
-function M.open_preview_win(list_win)
+function Preview.open_preview_win(list_win)
     if preview_state:is_open() then return end
 
     ey._validate_list_win(list_win)
@@ -783,58 +786,47 @@ function M.open_preview_win(list_win)
 end
 
 ---@return nil
-function M.close_preview_win()
+function Preview.close_preview_win()
     close_and_clear()
 end
 
 ---@param list_win integer
 ---@return nil
-function M.toggle_preview_win(list_win)
+function Preview.toggle_preview_win(list_win)
     if not ey._is_in_list_win(list_win) then return end
 
     local was_open = preview_state:is_open() ---@type boolean
     local start_list_win = preview_state.list_win ---@type integer|nil
-    if was_open then M.close_preview_win() end
+    if was_open then Preview.close_preview_win() end
 
     if was_open and list_win == start_list_win then
         return
     else
-        M.open_preview_win(list_win)
+        Preview.open_preview_win(list_win)
     end
 end
 
-return M
+return Preview
+---@export Preview
 
----------------
---- CREDITS ---
----------------
+-- =============
+-- == CREDITS ==
+-- =============
 
---- https://github.com/r0nsha/qfpreview.nvim
+-- https://github.com/r0nsha/qfpreview.nvim
 
-------------
---- TODO ---
-------------
+-- TODO: Testing
+-- TODO: Docs
 
---- Testing
---- Docs
+-- MID: If the file has to be read fresh, that should be handled async
+-- - Study Lua co-routines, built-in async lib, and lewis's async lib
+-- - Trouble also uses a mini-async library
+-- MID: Allow one open preview win per tabpage
+-- MID: Make the baseline window dimensions configurable
 
------------
---- MID ---
------------
-
---- If the file has to be read fresh, that should be handled async
---- - Study Lua co-routines, built-in async lib, and lewis's async lib
---- - Trouble also uses a mini-async library
---- Allow one open preview win per tabpage
---- Make the baseline window dimensions configurable
-
------------
---- LOW ---
------------
-
---- Customize how error is emphasized. Cursor row/column? Visual line on lnum?
---- Add scrolling to preview win
----     See https://github.com/bfrg/vim-qf-preview for relevant controls
---- Add an option to autoshow the preview
---- Always updating and reading changedtick and mtime is not the most efficient. But the current
----     way also avoids the extra logic of tracking which is being used as well as bufloaded
+-- LOW: Customize how error is emphasized. Cursor row/column? Visual line on lnum?
+-- LOW: Add scrolling to preview win
+--     See https://github.com/bfrg/vim-qf-preview for relevant controls
+-- LOW: Add an option to autoshow the preview
+-- LOW: Always updating and reading changedtick and mtime is not the most efficient. But the current
+--     way also avoids the extra logic of tracking which is being used as well as bufloaded
