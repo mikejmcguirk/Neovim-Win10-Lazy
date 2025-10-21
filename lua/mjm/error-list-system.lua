@@ -38,7 +38,7 @@ local function handle_output(obj, output_opts)
     if eu._get_g_var("qf_rancher_auto_open_changes") then
         ea._get_history(src_win, dest_nr, {
             always_open = true,
-            default = "current",
+            default = "cur_list",
             silent = true,
         })
     end

@@ -58,6 +58,14 @@ function M._get_display_input_type(input)
     end
 end
 
+-- TODO: get rid of the use_smartcase g:var
+-- TODO: vimsmart should be renamed to something like usevim
+-- Need to respect both ignorecase and smartcase
+-- TODO: Conceptual problem: There are three sets of input types. The raw input type, which can
+-- include respecting vim settings, the resolve input, which can include smartcase, and the
+-- final input type, which cannot include smartcase (since we've checked the pattern). Should
+-- probably distinguish the three types, since it prevents data sloppiness
+
 ---@param input QfrInputType
 ---@return QfrInputType
 function M._resolve_input_type(input)
@@ -90,22 +98,16 @@ local function get_visual_pattern(mode)
     local start_pos = fn.getpos(".") ---@type Range4
     local end_pos = fn.getpos("v") ---@type Range4
     local region = fn.getregion(start_pos, end_pos, { type = mode }) ---@type string[]
-    if #region < 1 then return nil end
 
     if #region == 1 then
         local trimmed = region[1]:gsub("^%s*(.-)%s*$", "%1") ---@type string
-        if trimmed == "" then
-            api.nvim_echo({ { "get_visual_pattern: Empty selection", "" } }, false, {})
-            return nil
-        end
-
-        return trimmed
-    end
-
-    for _, line in ipairs(region) do
-        if line ~= "" then
-            api.nvim_cmd({ cmd = "normal", args = { "\27" }, bang = true }, {})
-            return table.concat(region, "\n")
+        if #trimmed > 0 then return trimmed end
+    elseif #region > 1 then
+        for _, line in ipairs(region) do
+            if line ~= "" then
+                api.nvim_cmd({ cmd = "normal", args = { "\27" }, bang = true }, {})
+                return table.concat(region, "\n")
+            end
         end
     end
 
@@ -140,7 +142,7 @@ function M._resolve_pattern(prompt, input_pattern, input_type)
 
     if input_pattern then return input_pattern end
 
-    local mode = fn.mode() ---@type string
+    local mode = string.sub(api.nvim_get_mode().mode, 1, 1) ---@type string
     local is_visual = mode == "v" or mode == "V" or mode == "\22" ---@type boolean
     if is_visual then return get_visual_pattern(mode) end
 

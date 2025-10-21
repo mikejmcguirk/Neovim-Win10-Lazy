@@ -18,17 +18,22 @@ local Grep = {}
 -- == GREPPRG/GREP PARTS ==
 -- ========================
 
--- MID: The grepprgs should live in their own module, with type annotations serving as an
--- interface for how they are interacted with. This would standardize development and allow for
--- registering custom grepprgs. This does create a source of truth conflict with the g_var though
--- This could allow for building out behaviors like setting hidden file behavior. Looking at
--- vim-grepper would be a good idea here
+-- MID: Grep refactor:
+-- - Each grepprg should be in its own module
+-- - The modules should all share a type that serves as a common interface for how they are
+-- interacted with
+-- - This, should, make it easier to register custom grepprgs or develop new ones
+-- - Caveat: Creates a source of truth conflict with the g_var
+-- - Look at vim-grepper for ideas
+-- - grep_info should be renamed to grep_opts
+-- - grep_opts should be used for specifying grep behavior, such as how to handle hidden and
+-- git files. Should all be run through the grep interface
 
 -- LOW: Support ack
 -- LOW: When handling multiple locations, the grepprgs should build their arguments using
 -- globbing rather than appending potentially dozens of locations
 -- LOW: If vim.fn.executable succeeds, it shouldn't be re-run unless it then fails in the future
--- Unsure how to pass that behavior to vim.system though
+-- Unsure how to pass that behavior in and out of vim.system though
 
 local base_parts = {
     rg = { "rg", "--vimgrep", "-uu" },
@@ -96,10 +101,6 @@ local get_full_parts = {
 -- == MAIN GREP FUNCTION ==
 -- ========================
 
--- LOW: Add a grep_opts table with grepprg as an option. You could also use this for controlling
--- the behaviors of the grepprgs, such as whether or not to check hidden or gitignored files
--- This is gated behind a grepprg interface I'm more confident in
-
 ---@param grep_info QfRancherGrepInfo
 ---@param input_opts QfrInputOpts
 ---@param system_opts QfrSystemOpts
@@ -119,8 +120,7 @@ local function do_grep(grep_info, input_opts, system_opts, output_opts)
 
     local grepprg = eu._get_g_var("qf_rancher_grepprg") ---@type string
     if fn.executable(grepprg) ~= 1 then
-        local chunk = { grepprg .. " is not executable", "ErrorMsg" }
-        api.nvim_echo({ chunk }, true, { err = true })
+        api.nvim_echo({ { grepprg .. " is not executable", "ErrorMsg" } }, true, { err = true })
         return
     end
 
@@ -135,8 +135,8 @@ local function do_grep(grep_info, input_opts, system_opts, output_opts)
     local grep_parts = get_full_parts[grepprg](pattern, input_type, locations) ---@type string[]
     if (not grep_parts) or #grep_parts == 0 then return end
 
-    local full_system_opts = vim.deepcopy(system_opts, true) ---@type QfrSystemOpts
-    full_system_opts.cmd_parts = grep_parts
+    local sys_opts = vim.deepcopy(system_opts, true) ---@type QfrSystemOpts
+    sys_opts.cmd_parts = grep_parts
 
     local sys_output_opts = vim.deepcopy(output_opts, true) ---@type QfrOutputOpts
     sys_output_opts = et.handle_new_same_title(sys_output_opts)
@@ -144,9 +144,9 @@ local function do_grep(grep_info, input_opts, system_opts, output_opts)
     local base_cmd = table.concat(base_parts[grepprg], " ") ---@type string
     -- DOCUMENT: This convention is similar to but distinct from vimgrep
     sys_output_opts.what.title = grep_info.name .. " " .. base_cmd .. "  " .. pattern
-    output_opts.list_item_type = grep_info.list_item_type or output_opts.list_item_type
+    sys_output_opts.list_item_type = grep_info.list_item_type or output_opts.list_item_type
 
-    ee.system_do(full_system_opts, sys_output_opts)
+    ee.system_do(sys_opts, sys_output_opts)
 end
 
 -- ====================
