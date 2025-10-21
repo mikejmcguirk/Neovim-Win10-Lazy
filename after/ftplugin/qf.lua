@@ -44,22 +44,22 @@ for _, lhs in ipairs({ "<leader>" .. list_prefix .. list_prefix, "q" }) do
     end, { buffer = true, nowait = true, desc = "Close the list" })
 end
 
-bufmap_plug("n", "dd", "<Plug>(qf-rancher-list-del-one)", "Delete the current list line")
-bufmap_plug("x", "d", "<Plug>(qf-rancher-list-visual-del)", "Delete a visual line selection")
+bufmap_plug("n", "dd", "<Plug>(qfr-list-del-one)", "Delete the current list line")
+bufmap_plug("x", "d", "<Plug>(qfr-list-visual-del)", "Delete a visual line selection")
 
-bufmap_plug("n", "p", "<Plug>(qf-rancher-list-toggle-preview)", "Toggle the preview win")
-bufmap_plug("n", "P", "<Plug>(qf-rancher-list-update-preview-pos)", "Open the preview win")
+bufmap_plug("n", "p", "<Plug>(qfr-list-toggle-preview)", "Toggle the preview win")
+bufmap_plug("n", "P", "<Plug>(qfr-list-update-preview-pos)", "Open the preview win")
 
 if in_loclist then
-    bufmap_plug("n", "<", "<Plug>(qf-rancher-ll-older)", "Go to an older location list")
-    bufmap_plug("n", ">", "<Plug>(qf-rancher-ll-newer)", "Go to a newer location list")
+    bufmap_plug("n", "<", "<Plug>(qfr-ll-older)", "Go to an older location list")
+    bufmap_plug("n", ">", "<Plug>(qfr-ll-newer)", "Go to a newer location list")
 else
-    bufmap_plug("n", "<", "<Plug>(qf-rancher-qf-older)", "Go to an older qflist")
-    bufmap_plug("n", ">", "<Plug>(qf-rancher-qf-newer)", "Go to a newer qflist")
+    bufmap_plug("n", "<", "<Plug>(qfr-qf-older)", "Go to an older qflist")
+    bufmap_plug("n", ">", "<Plug>(qfr-qf-newer)", "Go to a newer qflist")
 end
 
-bufmap_plug("n", "{", "<Plug>(qf-rancher-list-prev)", "Go to a previous list entry")
-bufmap_plug("n", "}", "<Plug>(qf-rancher-list-next)", "Go to a later list entry")
+bufmap_plug("n", "{", "<Plug>(qfr-list-prev)", "Go to a previous list entry")
+bufmap_plug("n", "}", "<Plug>(qfr-list-next)", "Go to a later list entry")
 
 local d_focuswin_desc = "Open a list item and focus on it" --- @type string
 local d_focuslist_desc = "Open a list item, keep list focus" --- @type string
@@ -70,14 +70,14 @@ local vs_focuslist_desc = "Open a list item in a vsplit, keep list focus" --- @t
 local t_focuswin_desc = "Open a list item in a new tab and focus on it" --- @type string
 local t_focuslist_desc = "Open a list item in a new tab, keep list focus" --- @type string
 
-bufmap_plug("n", "o", "<Plug>(qf-rancher-list-open-direct-focuswin)", d_focuswin_desc)
-bufmap_plug("n", "<C-o>", "<Plug>(qf-rancher-list-open-direct-focuslist)", d_focuslist_desc)
-bufmap_plug("n", "s", "<Plug>(qf-rancher-list-open-split-focuswin)", s_focuswin_desc)
-bufmap_plug("n", "<C-s>", "<Plug>(qf-rancher-list-open-split-focuslist)", s_focuslist_desc)
-bufmap_plug("n", "v", "<Plug>(qf-rancher-list-open-vsplit-focuswin)", vs_focuswin_desc)
-bufmap_plug("n", "<C-v>", "<Plug>(qf-rancher-list-open-vsplit-focuslist)", vs_focuslist_desc)
-bufmap_plug("n", "x", "<Plug>(qf-rancher-list-open-tabnew-focuswin)", t_focuswin_desc)
-bufmap_plug("n", "<C-x>", "<Plug>(qf-rancher-list-open-tabnew-focuslist)", t_focuslist_desc)
+bufmap_plug("n", "o", "<Plug>(qfr-list-open-direct-focuswin)", d_focuswin_desc)
+bufmap_plug("n", "<C-o>", "<Plug>(qfr-list-open-direct-focuslist)", d_focuslist_desc)
+bufmap_plug("n", "s", "<Plug>(qfr-list-open-split-focuswin)", s_focuswin_desc)
+bufmap_plug("n", "<C-s>", "<Plug>(qfr-list-open-split-focuslist)", s_focuslist_desc)
+bufmap_plug("n", "v", "<Plug>(qfr-list-open-vsplit-focuswin)", vs_focuswin_desc)
+bufmap_plug("n", "<C-v>", "<Plug>(qfr-list-open-vsplit-focuslist)", vs_focuslist_desc)
+bufmap_plug("n", "x", "<Plug>(qfr-list-open-tabnew-focuswin)", t_focuswin_desc)
+bufmap_plug("n", "<C-x>", "<Plug>(qfr-list-open-tabnew-focuslist)", t_focuslist_desc)
 
 -- TODO: Tests
 -- TODO: Docs
