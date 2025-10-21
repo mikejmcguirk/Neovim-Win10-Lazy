@@ -162,10 +162,10 @@ function M._get_list(src_win, what)
     ey._validate_win(src_win, true)
     vim.validate("what", what, "table")
 
-    local what_set = vim.deepcopy(what, true) ---@type QfrWhat
-    what_set.nr = resolve_list_nr(src_win, what_set.nr)
+    local what_get = vim.deepcopy(what, true) ---@type table
+    what_get.nr = resolve_list_nr(src_win, what_get.nr)
 
-    return src_win and fn.getloclist(src_win, what_set) or fn.getqflist(what_set)
+    return src_win and fn.getloclist(src_win, what_get) or fn.getqflist(what_get)
 end
 
 ---@param src_win integer|nil
@@ -236,8 +236,6 @@ end
 
 return M
 
--- TODO: Because of list_nr resolution, need to return the modified nr values from all these
--- functions so that callers can use them
 -- TODO: Docs
 -- TODO: Tests
 
