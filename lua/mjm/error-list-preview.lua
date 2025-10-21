@@ -691,7 +691,7 @@ end
 --- OPEN/CLOSE/UPDATE ---
 -------------------------
 
-local timer = vim.uv.new_timer() ---@type uv.uv_timer_t|nil
+local timer = nil ---@type uv.uv_timer_t|nil
 local queued_update = false ---@type boolean
 
 ---@return nil
