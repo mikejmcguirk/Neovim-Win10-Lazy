@@ -2,6 +2,7 @@
 -- ..ad\\f40+$':-# @=,!;%^&&*()_{}/ /4304\'""?`9$343%$ ^adfadf[ad)[(
 
 local ee = Qfr_Defer_Require("mjm.error-list-system") ---@type QfrSystem
+local es = Qfr_Defer_Require("mjm.error-list-sort") ---@type QfRancherSort
 local et = Qfr_Defer_Require("mjm.error-list-tools") ---@type QfrTools
 local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfrUtil
 local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfrTypes
@@ -145,6 +146,7 @@ local function do_grep(grep_info, input_opts, system_opts, output_opts)
     -- DOCUMENT: This convention is similar to but distinct from vimgrep
     sys_output_opts.what.title = grep_info.name .. " " .. base_cmd .. "  " .. pattern
     sys_output_opts.list_item_type = grep_info.list_item_type or output_opts.list_item_type
+    sys_output_opts.sort_func = es._sort_fname_asc
 
     ee.system_do(sys_opts, sys_output_opts)
 end

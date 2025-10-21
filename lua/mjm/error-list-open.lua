@@ -208,7 +208,7 @@ end
 --- CLOSE ---
 -------------
 
--- TODO: Manually goto the alternate window if it's available
+-- TODO: If switchbuf contains uselast, goto the alt win
 
 ---@return boolean
 function M._close_qflist()

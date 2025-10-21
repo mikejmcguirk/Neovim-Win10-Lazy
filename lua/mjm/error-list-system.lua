@@ -3,6 +3,8 @@ local et = Qfr_Defer_Require("mjm.error-list-tools") ---@type QfrTools
 local eu = Qfr_Defer_Require("mjm.error-list-util") ---@type QfrUtil
 local ey = Qfr_Defer_Require("mjm.error-list-types") ---@type QfrTypes
 
+local api = vim.api
+
 ---@mod System Sends diags to the qf list
 
 ---@class QfrSystem
@@ -26,6 +28,12 @@ local function handle_output(obj, output_opts)
     if #lines == 0 then return end
 
     local lines_dict = vim.fn.getqflist({ lines = lines }) ---@type {items: table[]}
+    if #lines_dict.items < 1 then
+        api.nvim_echo({ { "No items", "" } }, false, {})
+        return
+    end
+
+    table.sort(lines_dict.items, output_opts.sort_func)
     if output_opts.list_item_type then
         for _, item in pairs(lines_dict.items) do
             item.type = output_opts.list_item_type
