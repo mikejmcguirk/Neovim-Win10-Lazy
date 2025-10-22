@@ -1,3 +1,5 @@
+local api = vim.api
+
 local M = {}
 
 local pack_spec = {
@@ -66,7 +68,47 @@ local pack_spec = {
 vim.pack.add(pack_spec, {})
 
 vim.api.nvim_cmd({ cmd = "packadd", args = { "nvim.undotree" }, bang = true }, {})
-vim.api.nvim_cmd({ cmd = "packadd", args = { "nvim-qf-rancher" }, bang = true }, {})
+
+-- LOW: Since this is all filereads, it would be cool if you could spin it off. We could wait
+-- for it at the end of init.lua
+
+---@param pack string
+---@return nil
+local function custom_add(pack)
+    Cmd({ cmd = "packadd", args = { pack }, bang = true }, {})
+
+    local packpath = vim.iter(api.nvim_list_runtime_paths()):find(function(path)
+        local npath = vim.fs.normalize(path) ---@type string
+        local basename = vim.fs.basename(npath) ---@type string
+        if basename == pack then return npath end
+    end) ---@type string|nil
+
+    if not packpath then return end
+    local fs = vim.uv.fs_scandir(packpath) ---@type uv.uv_fs_t|nil
+    if not fs then return end
+
+    while true do
+        local name, type = vim.uv.fs_scandir_next(fs) ---@type string|nil, string
+        if not name then break end
+        if name == "doc" and type == "directory" then
+            local doc_dir = vim.fs.joinpath(packpath, name) ---@type string
+            local tag_file = vim.fs.joinpath(doc_dir, "tags") ---@type string
+
+            vim.uv.fs_unlink(tag_file)
+            ---@diagnostic disable-next-line: missing-fields
+            Cmd({ cmd = "helptags", args = { doc_dir }, magic = { file = false } }, {})
+
+            break
+        end
+    end
+end
+
+custom_add("nvim-qf-rancher")
+
+-- TODO: Re-create my alt mappings for q/l history
+vim.api.nvim_set_var("qfr_debug_assertions", true)
+vim.api.nvim_set_var("qfr_preview_debounce", 50)
+vim.api.nvim_set_var("qfr_preview_show_title", false)
 
 Map("n", "zqc", function()
     local inactive = vim.iter(pairs(vim.pack.get()))
