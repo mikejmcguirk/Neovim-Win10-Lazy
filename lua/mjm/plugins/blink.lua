@@ -141,9 +141,10 @@ local function setup_blink()
                 lua = { inherit_defaults = true, "lazydev" },
                 markdown = {
                     -- "dictionary",
-                    "obsidian",
-                    "obsidian_new",
-                    "obsidian_tags",
+                    -- TODO: How to get the obsidian pickers only when loaded
+                    -- "obsidian",
+                    -- "obsidian_new",
+                    -- "obsidian_tags",
                     "snippets",
                     "buffer",
                     "path",
