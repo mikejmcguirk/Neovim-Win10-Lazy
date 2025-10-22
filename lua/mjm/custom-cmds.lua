@@ -95,13 +95,14 @@ local function del_cur_buf_from_disk(cargs)
             return
         end
     else
-        if fn.delete(full_bufname) ~= 0 then
-            local msg = "Failed to delete file from disk"
+        local ok, err = vim.uv.fs_unlink(full_bufname) ---@type boolean|nil, string|nil
+        if not ok then
+            local msg = err or "Failed to delete file from disk" ---@type string
             api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
             return
         end
 
-        api.nvim_buf_delete(buf, { force = true })
+        ut.pbuf_rm(buf, false, false)
     end
 
     ut.harpoon_rm_buf({ bufname = full_bufname })
