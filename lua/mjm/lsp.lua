@@ -146,7 +146,8 @@ local function set_lsp_maps(ev)
         end
     end
 
-    if client:supports_method("textDocument/codeLens") then start_codelens(ev.buf) end
+    -- TODO: Turn this back on when needed
+    -- if client:supports_method("textDocument/codeLens") then start_codelens(ev.buf) end
 
     -- Use bespoke module because the lenses are cached there
     Map("n", "grs", toggle_codelens)
@@ -312,5 +313,18 @@ lsp.enable({
     --- Toml ---
     "taplo",
 })
+
+-- TODO: Friction point coming up where sometimes I want to send the results of the get_locations
+-- cmd to a list, and sometimes to FzfLua. Some of this I think is based on, because I have
+-- Rancher made, I'm more interested in using it, regardless of what is objectively better. I
+-- think that making both options available could work, but sucks up the namespace. I also think
+-- the maps should push toward what's the more efficient solution
+-- Partly command dependent. goto definition works well with FzfLua because, if there are
+-- multiple definitions, we want to preview them to see which one is best. references might work
+-- better with the qflist, because we need to go through each of them. But I think that defining
+-- different behavior per cmd is over-complicated
+-- More indirect solution - Issue might be that <C-q> for quickfix in FzfLua is cumbersome. But
+-- <C-u> us remove line and <C-c> is close. Not really a better place for it
+-- Too early to make decision
 
 -- MID: Get a C LSP for reading code

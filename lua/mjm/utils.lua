@@ -518,6 +518,9 @@ function M.pbuf_rm(buf, force, wipeout)
 end
 
 -- MID: This does not wipe the buf in the last win
+-- This would also need to return an ok, result from pwin_close. If the window did not close but
+-- it returned a valid buf, we would want to close the buf immediately. If the window did close,
+-- then we can defer cleaning up the buf
 
 --- @param win integer
 --- @param force boolean

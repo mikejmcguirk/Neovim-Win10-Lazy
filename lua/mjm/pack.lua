@@ -91,6 +91,9 @@ local function custom_add(pack)
         local name, type = vim.uv.fs_scandir_next(fs) ---@type string|nil, string
         if not name then break end
         if name == "doc" and type == "directory" then
+            -- LOW: The docs for helptags say that helptags will silently overwrite an existing
+            -- tags file, but vim.pack manually deletes it. Re-create the vim.pack behavior here,
+            -- but why?
             local doc_dir = vim.fs.joinpath(packpath, name) ---@type string
             local tag_file = vim.fs.joinpath(doc_dir, "tags") ---@type string
 
