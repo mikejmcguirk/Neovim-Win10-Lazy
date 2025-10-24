@@ -69,7 +69,7 @@ end
 ---@return nil
 local win_move_tmux = function(dir)
     -- LOW: How to make work in prompt buffers?
-    if api.nvim_get_option_value("buftype", { buf = 0 }) == "prompt" then
+    if GetOpt("buftype", { buf = 0 }) == "prompt" then
         do_tmux_move(dir)
         return
     end
@@ -94,10 +94,10 @@ end
 local resize_win = function(cmd)
     local wintype = fn.win_gettype(api.nvim_get_current_win())
     if wintype == "" or wintype == "quickfix" or wintype == "loclist" then
-        local old_spk = api.nvim_get_option_value("splitkeep", { scope = "global" })
-        api.nvim_set_option_value("spk", "topline", { scope = "global" })
+        local old_spk = GetOpt("splitkeep", { scope = "global" })
+        SetOpt("spk", "topline", { scope = "global" })
         Cmd(cmd, {})
-        api.nvim_set_option_value("spk", old_spk, { scope = "global" })
+        SetOpt("spk", old_spk, { scope = "global" })
     end
 end
 
@@ -188,8 +188,8 @@ Map("n", "\\<C-s>", "<cmd>set spell?<cr>")
 
 Map("n", "\\w", function()
     -- LOW: How does this interact with local scope?
-    local is_wrap = api.nvim_get_option_value("wrap", { win = 0 })
-    api.nvim_set_option_value("wrap", not is_wrap, { win = 0 })
+    local is_wrap = GetOpt("wrap", { win = 0 })
+    SetOpt("wrap", not is_wrap, { win = 0 })
 end)
 
 Map("n", "\\<C-w>", "<cmd>set wrap?<cr>")
@@ -308,24 +308,21 @@ local function map_on_bufreadpre()
     -- Purposefully does not implement the default count mechanic in <C-u>/<C-d>, as it is painful
     -- to accidently hit
     ---@param cmd string
-    local function scroll(cmd)
-        api.nvim_set_option_value("lz", true, { scope = "global" })
-        local win = api.nvim_get_current_win()
-        local cul = api.nvim_get_option_value("cul", { win = win })
-        api.nvim_set_option_value("cul", false, { win = win })
+    local function map_scroll(map, cmd)
+        Map({ "n", "x" }, map, function()
+            local win = api.nvim_get_current_win()
+            local cul = GetOpt("cul", { win = win })
+            SetOpt("lz", true, { scope = "global" })
+            SetOpt("cul", false, { win = win })
 
-        Cmd({ cmd = "normal", args = { cmd }, bang = true }, {})
-        api.nvim_set_option_value("cul", cul, { win = win })
-        api.nvim_set_option_value("lz", false, { scope = "global" })
+            Cmd({ cmd = "normal", args = { cmd }, bang = true }, {})
+            SetOpt("cul", cul, { win = win })
+            SetOpt("lz", false, { scope = "global" })
+        end, { silent = true })
     end
 
-    Map({ "n", "x" }, "<C-u>", function()
-        scroll("\21zz")
-    end, { silent = true })
-
-    Map({ "n", "x" }, "<C-d>", function()
-        scroll("\4zz")
-    end, { silent = true })
+    map_scroll("<C-u>", "\21zz")
+    map_scroll("<C-d>", "\4zz")
 
     Map("n", "zT", function()
         vim.opt_local.scrolloff = 0
@@ -433,9 +430,9 @@ local function map_on_bufreadpre()
     -- invalid leading whitespace on the new line
     Map("n", "dJ", "Do<esc>p==", { silent = true })
     Map("n", "dK", function()
-        api.nvim_set_option_value("lz", true, { scope = "global" })
+        SetOpt("lz", true, { scope = "global" })
         api.nvim_feedkeys("DO\27p==", "nix", false)
-        api.nvim_set_option_value("lz", false, { scope = "global" })
+        SetOpt("lz", false, { scope = "global" })
     end)
     Map("n", "dm", "<cmd>delmarks!<cr>")
 
@@ -484,7 +481,7 @@ local function map_on_bufreadpre()
             return
         end
 
-        api.nvim_set_option_value("lz", true, { scope = "global" })
+        SetOpt("lz", true, { scope = "global" })
         opts = opts or {}
         -- Get before leaving visual mode
         local vcount1 = vim.v.count1 + (opts.upward and 1 or 0) ---@type integer
@@ -516,7 +513,7 @@ local function map_on_bufreadpre()
         end
 
         api.nvim_cmd({ cmd = "norm", args = { "gv" }, bang = true }, {})
-        api.nvim_set_option_value("lz", false, { scope = "global" })
+        SetOpt("lz", false, { scope = "global" })
     end
 
     -- Has to be literally opening the cmdline or else the visual selection goes haywire
@@ -570,11 +567,11 @@ local function map_on_bufreadpre()
         -- LOW: Currently exiting and re-selecting visual mode because new lines upward pins the
         -- visual selection to the new lines. It should be possible to calculate the adjustment of
         -- the selection without actually leaving visual mode
-        api.nvim_set_option_value("lz", true, { scope = "global" })
+        SetOpt("lz", true, { scope = "global" })
         Cmd({ cmd = "norm", args = { "\27" }, bang = true }, {})
         api.nvim_buf_set_lines(0, row - 1, row - 1, false, new_lines)
         Cmd({ cmd = "norm", args = { "gv" }, bang = true }, {})
-        api.nvim_set_option_value("lz", false, { scope = "global" })
+        SetOpt("lz", false, { scope = "global" })
     end
 
     Map("x", "[<space>", function()
