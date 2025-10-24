@@ -55,7 +55,7 @@ local tmux_cmd_map = { h = "L", j = "D", k = "U", l = "R" } ---@type table<strin
 ---@param dir string
 ---@return nil
 local do_tmux_move = function(dir)
-    if fn.getenv("TMUX") == vim.NIL then return end
+    if os.getenv("TMUX") == nil then return end
 
     local zoom_cmd = { "tmux", "display-message", "-p", "#{window_zoomed_flag}" } ---@type string[]
     local result = vim.system(zoom_cmd, { text = true }):wait() ---@type vim.SystemCompleted
