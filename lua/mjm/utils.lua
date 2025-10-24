@@ -37,11 +37,9 @@ function M.protected_set_cursor(cur_pos, opts)
     local win = opts.win or 0
 
     if opts.set_pcmark then
-        local cur_row, cur_col = unpack(api.nvim_win_get_cursor(win))
-        -- TODO: This does not actually update the jump list. But then, because this function
-        -- is based on the idea that it can be fired remotely, just setting the PC mark from
-        -- a normal command doesn't necessarily do what we want
-        api.nvim_buf_set_mark(buf, "'", cur_row, cur_col, {})
+        api.nvim_win_call(win, function()
+            Cmd({ cmd = "norm", args = { "m'" }, bang = true }, {})
+        end)
     end
 
     api.nvim_win_set_cursor(win, cur_pos)
