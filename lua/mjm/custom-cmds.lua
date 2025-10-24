@@ -43,8 +43,8 @@ end, { nargs = "+" })
 -- Buf Cmds --
 --------------
 
---- @param path string
---- @return boolean
+---@param path string
+---@return boolean
 local function is_git_tracked(path)
     if not vim.g.gitsigns_head then return false end
 
@@ -54,7 +54,7 @@ local function is_git_tracked(path)
     return output.code == 0
 end
 
---- @return integer|nil, string|nil
+---@return integer|nil, string|nil
 local function get_cur_buf()
     local buf = api.nvim_get_current_buf()
     if not api.nvim_buf_is_valid(buf) then
@@ -119,8 +119,8 @@ end
 
 -- MID: Use vim.fs.normalize?
 
---- @param cargs vim.api.keyset.create_user_command.command_args
---- @return nil
+---@param cargs vim.api.keyset.create_user_command.command_args
+---@return nil
 local function mv_cur_buf(cargs)
     local arg = cargs.fargs[1] or ""
     if arg == "" then

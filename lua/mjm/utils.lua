@@ -7,8 +7,8 @@ local fn = vim.fn
 ---@class MjmUtils
 local M = {}
 
---- @param prompt string
---- @return boolean, string
+---@param prompt string
+---@return boolean, string
 function M.get_input(prompt)
     local ok, result = pcall(fn.input, { prompt = prompt, cancelreturn = "" })
 
@@ -19,9 +19,9 @@ function M.get_input(prompt)
     end
 end
 
---- @param cur_pos {[1]: integer, [2]: integer}
---- @param opts? {buf?: integer, set_pcmark?: boolean, win?: integer}
---- @return nil
+---@param cur_pos {[1]: integer, [2]: integer}
+---@param opts? {buf?: integer, set_pcmark?: boolean, win?: integer}
+---@return nil
 function M.protected_set_cursor(cur_pos, opts)
     opts = opts or {}
     local buf = opts.buf or 0
@@ -45,22 +45,22 @@ function M.protected_set_cursor(cur_pos, opts)
     api.nvim_win_set_cursor(win, cur_pos)
 end
 
---- @class mjm.OpenBufSource
---- @field bufnr? integer
---- @field file? string
+---@class mjm.OpenBufSource
+---@field bufnr? integer
+---@field file? string
 
---- @class mjm.OpenBufOpts
---- @field buftype? string
---- @field clearjumps? boolean
---- @field cur_pos? {[1]: integer, [2]: integer}
---- @field force? boolean
---- @field open? "vsplit"|"split"|"tabnew"
---- @field win? integer
---- @field zz? boolean
+---@class mjm.OpenBufOpts
+---@field buftype? string
+---@field clearjumps? boolean
+---@field cur_pos? {[1]: integer, [2]: integer}
+---@field force? boolean
+---@field open? "vsplit"|"split"|"tabnew"
+---@field win? integer
+---@field zz? boolean
 
---- @param source mjm.OpenBufSource
---- @param opts mjm.OpenBufOpts
---- @return boolean
+---@param source mjm.OpenBufSource
+---@param opts mjm.OpenBufOpts
+---@return boolean
 --- Using bufload breaks BufReadPost autocmds and opt_local setup
 --- nvim_set_current_buf will load the buf properly if it needs to
 --- nvim_win_set_buf does the same, and also automatically moves the user into that window
@@ -96,7 +96,7 @@ function M.open_buf(source, opts)
 
     opts = opts or {}
     if opts.open == "vsplit" then
-        --- @diagnostic disable: missing-fields
+        ---@diagnostic disable: missing-fields
         api.nvim_cmd({ cmd = "vsplit" }, {})
     elseif opts.open == "split" then
         api.nvim_cmd({ cmd = "split" }, {})
@@ -164,7 +164,7 @@ M.get_indent = function(line_num)
     -- This is already updated before nvim_exec2 is called
     -- Other indentexpr arguments are not guaranteed to be handled properly
     vim.v.lnum = line_num
-    local indentexpr_out = api.nvim_eval(vim.bo.indentexpr) --- @type any
+    local indentexpr_out = api.nvim_eval(vim.bo.indentexpr) ---@type any
     local indent = tonumber(indentexpr_out) ---@type number?
     return indent >= 0 and indent or nil
 end
@@ -365,8 +365,8 @@ end
 
 -- Adapted from mike-jl/harpoonEx
 -- # harpoon
---- @param opts {buf?: integer, bufname?: string}
---- @return nil
+---@param opts {buf?: integer, bufname?: string}
+---@return nil
 function M.harpoon_rm_buf(opts)
     opts = opts or {}
 
@@ -410,9 +410,9 @@ function M.harpoon_rm_buf(opts)
     extensions.extensions:emit(extensions.event_names.REMOVE)
 end
 
---- @param old_bufname string
---- @param new_bufname string
---- @return nil
+---@param old_bufname string
+---@param new_bufname string
+---@return nil
 --- # harpoon
 function M.harpoon_mv_buf(old_bufname, new_bufname)
     local ok, harpoon = pcall(require, "harpoon")
@@ -468,22 +468,22 @@ function M.do_when_idle(func)
     end)
 end
 
---- @param win integer
---- @param force boolean
---- @return integer
+---@param win integer
+---@param force boolean
+---@return integer
 function M.pwin_close(win, force)
     vim.validate("win", win, "number")
     vim.validate("force", force, "boolean")
     if not api.nvim_win_is_valid(win) then return -1 end
 
-    local tabpages = api.nvim_list_tabpages() --- @type integer[]
-    local win_tabpage = api.nvim_win_get_tabpage(win) --- @type integer
-    local win_tabpage_wins = api.nvim_tabpage_list_wins(win_tabpage) --- @type integer[]
+    local tabpages = api.nvim_list_tabpages() ---@type integer[]
+    local win_tabpage = api.nvim_win_get_tabpage(win) ---@type integer
+    local win_tabpage_wins = api.nvim_tabpage_list_wins(win_tabpage) ---@type integer[]
 
-    local buf = api.nvim_win_get_buf(win) --- @type integer
+    local buf = api.nvim_win_get_buf(win) ---@type integer
     if #tabpages == 1 and #win_tabpage_wins == 1 then return buf end
 
-    local ok, _ = pcall(api.nvim_win_close, win, force) --- @type boolean, nil
+    local ok, _ = pcall(api.nvim_win_close, win, force) ---@type boolean, nil
     return ok and buf or -1
 end
 
@@ -492,10 +492,10 @@ end
 -- deleting the buffer into deleting shada state, including the '"' mark
 -- TODO: Whenever nvim_buf_del is created, use that for deleting buffers
 
---- @param buf integer
---- @param force boolean
---- @param wipeout boolean
---- @return nil
+---@param buf integer
+---@param force boolean
+---@param wipeout boolean
+---@return nil
 function M.pbuf_rm(buf, force, wipeout)
     vim.validate("buf", buf, "number")
     vim.validate("force", force, "boolean")
@@ -520,10 +520,10 @@ end
 -- it returned a valid buf, we would want to close the buf immediately. If the window did close,
 -- then we can defer cleaning up the buf
 
---- @param win integer
---- @param force boolean
---- @param wipeout boolean
---- @return nil
+---@param win integer
+---@param force boolean
+---@param wipeout boolean
+---@return nil
 function M.pclose_and_rm(win, force, wipeout)
     local buf = M.pwin_close(win, force)
     if buf > 0 then

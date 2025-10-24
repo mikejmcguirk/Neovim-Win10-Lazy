@@ -1,10 +1,10 @@
 --- TODO: Move to gg mappings
 
 Map("n", "<leader>gcam", function()
-    --- @type boolean, string
+    ---@type boolean, string
     local ok, result = require("mjm.utils").get_input("Commit message (All): ")
     if not ok then
-        local msg = result or "Unknown error getting input" --- @type string
+        local msg = result or "Unknown error getting input" ---@type string
         vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
         return
     elseif result == "" then
@@ -20,9 +20,9 @@ end
 
 Map("n", "<leader>gcan", commit_all)
 Map("n", "<leader>gchm", function()
-    local ok, result = require("mjm.utils").get_input("Commit message: ") --- @type boolean, string
+    local ok, result = require("mjm.utils").get_input("Commit message: ") ---@type boolean, string
     if not ok then
-        local msg = result or "Unknown error getting input" --- @type string
+        local msg = result or "Unknown error getting input" ---@type string
         vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
         return
     elseif result == "" then
@@ -44,7 +44,7 @@ local function open_diffs(staged)
 
     local mods = { split = "botright" }
     if staged then
-        --- @diagnostic disable: missing-fields
+        ---@diagnostic disable: missing-fields
         vim.api.nvim_cmd({ cmd = "Git", args = { "diff --staged" }, mods = mods }, {})
     else
         vim.api.nvim_cmd({ cmd = "Git", args = { "diff" }, mods = mods }, {})

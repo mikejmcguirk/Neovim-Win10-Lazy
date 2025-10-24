@@ -4,7 +4,7 @@ local api = vim.api
 local fn = vim.fn
 local lsp = vim.lsp
 
-local ok, fzflua = pcall(require, "fzf-lua") --- @type boolean, table
+local ok, fzflua = pcall(require, "fzf-lua") ---@type boolean, table
 -- TODO: Check for rancher and use its copen if available
 local function on_list(on_list_ctx)
     fn.setqflist({}, " ", { title = on_list_ctx.title, items = on_list_ctx.items })
@@ -88,7 +88,7 @@ end ---@type function
 local workspace = ok and fzflua.lsp_live_workspace_symbols or lsp.buf.workspace_symbol
 
 local function set_lsp_maps(ev)
-    local client = lsp.get_client_by_id(ev.data.client_id) --- @type vim.lsp.Client?
+    local client = lsp.get_client_by_id(ev.data.client_id) ---@type vim.lsp.Client?
     if not client then return end
 
     local buf = ev.buf ---@type integer
@@ -123,10 +123,10 @@ local function set_lsp_maps(ev)
     end
 
     local function restart_codelens()
-        local clients = lsp.get_clients() --- @type vim.lsp.Client[]
+        local clients = lsp.get_clients() ---@type vim.lsp.Client[]
         for _, c in ipairs(clients) do
             if c:supports_method("textDocument/codeLens") then
-                local attached_bufs = c.attached_buffers --- @type table<integer, true>
+                local attached_bufs = c.attached_buffers ---@type table<integer, true>
                 for k, v in pairs(attached_bufs) do
                     if v then start_codelens(k) end
                 end
@@ -137,7 +137,7 @@ local function set_lsp_maps(ev)
     -- TODO: This doesn't work because new bufs create new autocmds. Needs to be global state
     -- on this. Just hack it or actually modify the module?
     local function toggle_codelens()
-        --- @type boolean, vim.api.keyset.get_autocmds.ret[]
+        ---@type boolean, vim.api.keyset.get_autocmds.ret[]
         local a_ok, autocmds = pcall(api.nvim_get_autocmds, { group = "mjm-refresh-lens" })
         if a_ok and #autocmds > 0 then
             stop_codelens()
@@ -212,10 +212,10 @@ local function set_lsp_maps(ev)
     -- which I don't want
 
     Map("n", "grn", function()
-        --- @type boolean, string
+        ---@type boolean, string
         local ok_i, input = require("mjm.utils").get_input("Rename: ")
         if not ok_i then
-            local msg = input or "Unknown error getting input" --- @type string
+            local msg = input or "Unknown error getting input" ---@type string
             api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
             return
         elseif #input < 1 then

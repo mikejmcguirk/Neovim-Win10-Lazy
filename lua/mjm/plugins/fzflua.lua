@@ -103,7 +103,7 @@ Map("n", "<leader>fh", function()
 end)
 
 local function fuzzy_dict()
-    --- @diagnostic disable: undefined-field
+    ---@diagnostic disable: undefined-field
     -- LOW: This should merge results from all dictionaries
     local dict_file = vim.opt.dictionary:get()[1]
     local file = io.open(dict_file, "r")
@@ -121,7 +121,7 @@ local function fuzzy_spell_correct()
 
     local buf = vim.api.nvim_get_current_buf()
 
-    --- @diagnostic disable: undefined-field
+    ---@diagnostic disable: undefined-field
     local dict_file = vim.opt.dictionary:get()[1]
     local file = io.open(dict_file, "r")
     if not file then

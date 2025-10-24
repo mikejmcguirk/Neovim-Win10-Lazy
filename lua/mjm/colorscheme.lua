@@ -9,29 +9,29 @@ Cmd({ cmd = "hi", args = { "clear" } }, {})
 if vim.g.syntax_on == 1 then Cmd({ cmd = "syntax", args = { "reset" } }, {}) end
 
 -- https://www.sessions.edu/color-calculator/
-local black = "#000000" --- @type string
-local fg = "#EFEFFD" --- @type string
-local l_cyan = "#98FFFB" --- @type string
-local cyan = "#558396" --- @type string
-local l_green = "#C0FF98" --- @type string
-local green = "#579964" --- @type string
-local l_orange = "#FFD298" --- @type string
-local orange = "#967A55" --- @type string
-local orange_fg = "#FFF0E0" --- @type string
-local l_pink = "#FF67D4" --- @type string
-local pink = "#613852" --- @type string
-local l_purple = "#D598FF" --- @type string
-local purple = "#925393" --- @type string
-local bold_purple = "#492949" --- @type string
-local d_purple = "#251d2b" --- @type string
--- local d_purple_two = "#2b2233" --- @type string
+local black = "#000000" ---@type string
+local fg = "#EFEFFD" ---@type string
+local l_cyan = "#98FFFB" ---@type string
+local cyan = "#558396" ---@type string
+local l_green = "#C0FF98" ---@type string
+local green = "#579964" ---@type string
+local l_orange = "#FFD298" ---@type string
+local orange = "#967A55" ---@type string
+local orange_fg = "#FFF0E0" ---@type string
+local l_pink = "#FF67D4" ---@type string
+local pink = "#613852" ---@type string
+local l_purple = "#D598FF" ---@type string
+local purple = "#925393" ---@type string
+local bold_purple = "#492949" ---@type string
+local d_purple = "#251d2b" ---@type string
+-- local d_purple_two = "#2b2233" ---@type string
 -- Darkened from dark purple
-local d_purple_three = "#18131c" --- @type string
-local l_red = "#FF98B3" --- @type string
-local l_yellow = "#EDFF98" --- @type string
+local d_purple_three = "#18131c" ---@type string
+local l_red = "#FF98B3" ---@type string
+local l_yellow = "#EDFF98" ---@type string
 
---- @param old_hl string
---- @param cfg_ext table
+---@param old_hl string
+---@param cfg_ext table
 local function hl_extend(old_hl, cfg_ext)
     local old_cfg = GetHl(0, { name = old_hl })
     return vim.tbl_extend("force", old_cfg, cfg_ext)
@@ -340,7 +340,7 @@ Autocmd("FileType", {
     pattern = "lua",
     once = true,
     callback = function()
-        --- @type vim.treesitter.Query?
+        ---@type vim.treesitter.Query?
         local hl_query = vim.treesitter.query.get("lua", "highlights")
         if not hl_query then return end
 

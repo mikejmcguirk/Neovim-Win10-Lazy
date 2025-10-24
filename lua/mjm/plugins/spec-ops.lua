@@ -3,8 +3,8 @@
 -- The plugin/ file automatically sets up lazy loading
 vim.cmd.packadd({ vim.fn.escape("spec-ops", " "), bang = true, magic = { file = false } })
 
---- @module "spec-ops"
---- @type SpecOpsConfig
+---@module "spec-ops"
+---@type SpecOpsConfig
 local config = {
     global = {
         reg_handler = "target_only",

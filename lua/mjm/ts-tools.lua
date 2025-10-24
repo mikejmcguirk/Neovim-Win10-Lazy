@@ -21,8 +21,8 @@ Map("n", "gtee", function()
     vim.api.nvim_cmd({ cmd = "EditQuery" }, {})
 end)
 
---- @param ts_file string
---- @return nil
+---@param ts_file string
+---@return nil
 --- Lifted from the old TS Master Branch
 local function edit_query_file(ts_file)
     local lang = vim.api.nvim_get_option_value("filetype", { buf = 0 })

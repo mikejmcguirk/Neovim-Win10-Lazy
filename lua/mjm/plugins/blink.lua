@@ -223,10 +223,10 @@ local function setup_blink()
                 --         end,
                 --     },
                 --     -- transform_items = function(_, items)
-                --     --     local seen = {} --- @type boolean[]
+                --     --     local seen = {} ---@type boolean[]
 
                 --     --     local out = vim.tbl_filter(function(item)
-                --     --         local text = item.insertText or "" --- @type string
+                --     --         local text = item.insertText or "" ---@type string
 
                 --     --         if seen[text] then
                 --     --             return false
@@ -293,7 +293,7 @@ local function setup_blink()
         CmpItemKindOperator = { link = "@operator" },
 
         BlinkCmpKindTypeParameter = { link = "Type" },
-    } --- @type {string: vim.api.keyset.highlight}
+    } ---@type {string: vim.api.keyset.highlight}
 
     for k, v in pairs(groups) do
         vim.api.nvim_set_hl(0, k, v)
@@ -306,7 +306,7 @@ vim.api.nvim_create_autocmd({ "CmdlineEnter", "BufReadPre", "BufNewFile" }, {
     group = vim.api.nvim_create_augroup("setup-blink", { clear = true }),
     once = true,
     callback = function()
-        local path = nil --- @type string
+        local path = nil ---@type string
         for _, s in pairs(vim.pack.get()) do
             if s.spec.name == "blink.cmp" then
                 path = s.path
@@ -315,13 +315,13 @@ vim.api.nvim_create_autocmd({ "CmdlineEnter", "BufReadPre", "BufNewFile" }, {
         end
 
         if not path then
-            local msg = "blink.cmp path not found. Cannot build fuzzy" --- @type string
+            local msg = "blink.cmp path not found. Cannot build fuzzy" ---@type string
             vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, {})
             return
         end
 
-        local cmd = { "cargo", "+nightly", "build", "--release" } --- @type string[]
-        local sys_opts = { cwd = path, text = true } --- @type vim.SystemOpts
+        local cmd = { "cargo", "+nightly", "build", "--release" } ---@type string[]
+        local sys_opts = { cwd = path, text = true } ---@type vim.SystemOpts
         vim.api.nvim_echo({ { "Building fuzzy for blink.cmp...", "" } }, true, {})
 
         -- LOW: Would be better if the URL for this were smarter
@@ -336,7 +336,7 @@ vim.api.nvim_create_autocmd({ "CmdlineEnter", "BufReadPre", "BufNewFile" }, {
             end
 
             vim.schedule(function()
-                local msg = out.stderr or "Unknown error building fuzzy for blink" --- @type string
+                local msg = out.stderr or "Unknown error building fuzzy for blink" ---@type string
                 vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
             end)
         end)

@@ -26,7 +26,7 @@ harpoon:setup({
                 return
             end
 
-            local buf = vim.fn.bufadd(list_item.value) --- @type integer
+            local buf = vim.fn.bufadd(list_item.value) ---@type integer
             local success = require("mjm.utils").open_buf({ bufnr = buf }, {})
 
             if success then

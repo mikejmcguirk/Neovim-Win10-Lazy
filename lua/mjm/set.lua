@@ -141,9 +141,9 @@ SetOpt("ru", false, global_scope)
 
 vim.filetype.add({ filename = { [".bashrc_custom"] = "sh" } })
 
---- @param event string|string[]
---- @param opt string
---- @param val any
+---@param event string|string[]
+---@param opt string
+---@param val any
 local function autoset_winopt(event, opt, val)
     Autocmd(event, {
         group = set_group,

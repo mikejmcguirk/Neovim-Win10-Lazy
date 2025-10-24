@@ -61,7 +61,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
 -- Treesitter Text Objects --
 -----------------------------
 
---- @return Range4
+---@return Range4
 local function get_vrange4()
     local cur = vim.fn.getpos(".")
     local fin = vim.fn.getpos("v")

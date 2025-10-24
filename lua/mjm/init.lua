@@ -11,8 +11,8 @@ local api = vim.api
 -- module. I *think* vim._defer_require addresses this but haven't checked
 
 --- https://github.com/tjdevries/lazy-require.nvim/blob/master/lua/lazy-require.lua
---- @param require_path string
---- @return table
+---@param require_path string
+---@return table
 function _G.Mjm_Defer_Require(require_path)
     return setmetatable({}, {
         __index = function(_, key)
@@ -28,8 +28,8 @@ end
 _G.Border = "single" ---@type string
 _G.GetOpt = api.nvim_get_option_value
 _G.Gset = api.nvim_set_var
-_G.Has_Nerd_Font = true --- @type boolean
-_G.Highlight_Time = 175 --- @type integer
+_G.Has_Nerd_Font = true ---@type boolean
+_G.Highlight_Time = 175 ---@type integer
 _G.Scrolloff_Val = 6 ---@type integer
 _G.SetOpt = api.nvim_set_option_value
 _G.SpellFile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add" ---@type string
@@ -217,8 +217,4 @@ api.nvim_create_autocmd("UIEnter", {
     end,
 })
 
-------------
---- TODO ---
-------------
-
---- Bisecting has become impractical due to how config elements are spread out
+-- TODO: Bisecting has become impractical due to how config elements are spread out

@@ -118,16 +118,16 @@ Map("n", "zqc", function()
         :map(function(_, s)
             return (not s.active) and s.spec.name or nil
         end)
-        :totable() --- @type string[]
+        :totable() ---@type string[]
 
     vim.pack.del(inactive)
 end)
 
 Map("n", "zqd", function()
-    local prompt = "Enter plugins to delete (space separated): " --- @type string
-    local ok, result = require("mjm.utils").get_input(prompt) --- @type boolean, string
+    local prompt = "Enter plugins to delete (space separated): " ---@type string
+    local ok, result = require("mjm.utils").get_input(prompt) ---@type boolean, string
     if not ok then
-        local msg = result or "Unknown error getting input" --- @type string
+        local msg = result or "Unknown error getting input" ---@type string
         vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
         return
     elseif result == "" then
@@ -144,7 +144,7 @@ Map("n", "zqD", function()
         :map(function(_, s)
             return s.spec.name
         end)
-        :totable() --- @type string[]
+        :totable() ---@type string[]
 
     vim.pack.del(plugins)
 end)
@@ -154,6 +154,9 @@ Map("n", "zqu", function()
 end)
 
 return M
+
+-- https://github.com/neovim/neovim/commit/83f7d9851835d4ac5b92ddf689ad720914735712
+-- TODO: Run the blink build script this way
 
 -------------------------
 --- POTENTIAL PLUGINS ---

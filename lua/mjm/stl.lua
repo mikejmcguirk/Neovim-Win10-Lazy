@@ -101,7 +101,7 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
 vim.api.nvim_create_autocmd("ModeChanged", {
     group = stl_events,
     callback = function()
-        --- @diagnostic disable: undefined-field
+        ---@diagnostic disable: undefined-field
         if vim.v.event.new_mode == mode then return end
 
         mode = vim.v.event.new_mode

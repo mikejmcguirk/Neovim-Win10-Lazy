@@ -90,7 +90,7 @@ for k, _ in pairs(tmux_cmd_map) do
     end)
 end
 
---- @param cmd vim.api.keyset.cmd
+---@param cmd vim.api.keyset.cmd
 local resize_win = function(cmd)
     local wintype = fn.win_gettype(api.nvim_get_current_win())
     if wintype == "" or wintype == "quickfix" or wintype == "loclist" then

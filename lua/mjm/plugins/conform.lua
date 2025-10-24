@@ -1,4 +1,4 @@
---- @type table<string, conform.FiletypeFormatter>
+---@type table<string, conform.FiletypeFormatter>
 local ft_config = {
     css = { "prettier" },
     go = { "gofumpt" },
