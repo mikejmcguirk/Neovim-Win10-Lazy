@@ -1,5 +1,7 @@
 MjmStl = {}
 
+local api = vim.api
+
 -- TODO: Use a timer on the LSP cache to clear no matter what
 local lsp_cache = {}
 local diag_cache = {}
@@ -171,7 +173,7 @@ function MjmStl.active()
     -- local ft_str = ft == "" and "" or "| " .. ft
     table.insert(stl, "%#stl_c# " .. encoding .. " | " .. fmt .. " | " .. buftype .. ft .. " %*")
 
-    local winnr = vim.fn.winnr()
+    local winnr = api.nvim_win_get_number(0)
     local alt_win = vim.fn.winnr("#")
     local alt_win_disp = (alt_win and alt_win ~= winnr) and (" | #" .. alt_win) or ""
     table.insert(
@@ -186,7 +188,7 @@ end
 -- MID: Show diagnostics in inactive windows whited out
 
 function MjmStl.inactive()
-    local winnr = vim.fn.winnr()
+    local winnr = api.nvim_win_get_number(0)
     return "%#stl_b# %m %t %*%= %#stl_b# [" .. winnr .. "] %p%% %*"
 end
 

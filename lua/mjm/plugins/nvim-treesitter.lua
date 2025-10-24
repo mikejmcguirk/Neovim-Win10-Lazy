@@ -1,3 +1,5 @@
+local api = vim.api
+
 ------------------------
 -- Treesitter Parsers --
 ------------------------
@@ -37,22 +39,22 @@ require("nvim-treesitter").install(languages)
 local ft_extensions = { "sh" }
 local fts = vim.tbl_extend("force", languages, ft_extensions)
 
-vim.api.nvim_create_autocmd({ "FileType" }, {
-    group = vim.api.nvim_create_augroup("ts-start", { clear = true }),
+Autocmd({ "FileType" }, {
+    group = Augroup("ts-start", {}),
     pattern = fts,
     callback = function(ev)
-        vim.treesitter.start()
+        vim.treesitter.start(ev.buf)
         local indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
         vim.api.nvim_buf_set_var(ev.buf, "indentexpr", indentexpr)
     end,
 })
 
-vim.api.nvim_create_autocmd("VimEnter", {
-    group = vim.api.nvim_create_augroup("run-tsupdate", { clear = true }),
+Autocmd("VimEnter", {
+    group = Augroup("run-tsupdate", {}),
     pattern = "*",
     callback = function()
         vim.schedule(function()
-            vim.cmd("TSUpdate")
+            Cmd({ cmd = "TSUpdate" }, {})
         end)
     end,
 })
@@ -65,7 +67,7 @@ vim.api.nvim_create_autocmd("VimEnter", {
 local function get_vrange4()
     local cur = vim.fn.getpos(".")
     local fin = vim.fn.getpos("v")
-    local mode = vim.fn.mode()
+    local mode = string.sub(api.nvim_get_mode().mode, 1, 1)
 
     local region = vim.fn.getregionpos(cur, fin, { type = mode, exclusive = false })
     return { region[1][1][2], region[1][1][3], region[#region][2][2], region[#region][2][3] }

@@ -52,7 +52,6 @@ SetHl(0, "DiagnosticUnderlineWarn", hl_extend("DiagnosticWarn", { underline = tr
 SetHl(0, "DiagnosticUnderlineInfo", hl_extend("DiagnosticInfo", { underline = true }))
 SetHl(0, "DiagnosticUnderlineHint", hl_extend("DiagnosticHint", { underline = true }))
 
--- Same here
 SetHl(0, "DiffAdd", { fg = black, bg = l_green })
 SetHl(0, "DiffChange", { fg = black, bg = l_orange })
 SetHl(0, "DiffDelete", { fg = black, bg = l_red })

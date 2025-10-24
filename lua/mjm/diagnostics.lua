@@ -5,22 +5,14 @@ local api = vim.api
 ---@class MjmDiags
 local M = {}
 
-local diag_main_cfg = {
-    float = { source = true, border = Border },
-    severity_sort = true,
-} ---@type vim.diagnostic.Opts
+---@type vim.diagnostic.Opts
+local diag_main_cfg = { float = { source = true, border = Border }, severity_sort = true }
 
-local virt_text_cfg = {
-    virtual_lines = false,
-    virtual_text = {
-        current_line = true,
-    },
-} ---@type vim.diagnostic.Opts
+---@type vim.diagnostic.Opts
+local virt_text_cfg = { virtual_lines = false, virtual_text = { current_line = true } }
 
-local virt_lines_cfg = {
-    virtual_lines = { current_line = true },
-    virtual_text = false,
-} ---@type vim.diagnostic.Opts
+---@type vim.diagnostic.Opts
+local virt_lines_cfg = { virtual_lines = { current_line = true }, virtual_text = false }
 
 local diag_text_cfg = vim.tbl_extend("force", diag_main_cfg, virt_text_cfg)
 local diag_lines_cfg = vim.tbl_extend("force", diag_main_cfg, virt_lines_cfg)

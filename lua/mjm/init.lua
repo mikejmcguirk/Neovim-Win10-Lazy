@@ -182,7 +182,7 @@ api.nvim_create_autocmd("UIEnter", {
         end
 
         for i, line in ipairs(lines) do
-            local padding = math.floor((vim.fn.winwidth(0) - #lines[i]) / 2)
+            local padding = math.floor((api.nvim_win_get_width(0) - #lines[i]) / 2)
             lines[i] = string.rep(" ", padding) .. line
         end
 
