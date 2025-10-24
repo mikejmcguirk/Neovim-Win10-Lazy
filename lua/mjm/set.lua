@@ -248,6 +248,21 @@ Autocmd(clear_conditions, {
     end),
 })
 
+-- https://github.com/yutkat/dotfiles/blob/main/.config/nvim/lua/rc/autocmd.lua
+-- MID: Seems interesting. Do with vim.system
+-- vim.api.nvim_create_autocmd({ "BufWritePost" }, {
+--     group = group_name,
+--     pattern = "*",
+--     callback = function()
+--         if string.match(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1], "^#!") then
+--             if string.match(vim.api.nvim_buf_get_lines(0, 0, 1, false)[1], ".+/bin/.+") then
+--                 vim.cmd([[silent !chmod a+x <afile>]])
+--             end
+--         end
+--     end,
+--     once = false,
+-- })
+
 -- vim.opt.lazyredraw = false -- Causes unpredictable problems
 -- vim.opt.startofline = false -- Makes gg/G feel weird
 -- vim.opt.winborder = "single" -- Sets arbitrary border around Zen mode display

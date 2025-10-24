@@ -240,6 +240,9 @@ Map("n", "g'", "g`")
 Map("n", "['", "[`")
 Map("n", "]'", "]`")
 
+Map("n", "[;", "g;")
+Map("n", "];", "g,")
+
 local function map_on_bufreadpre()
     -- NOTE: I have my initial buffer set to nomodifiable, eliminating the possibility of a lot
     -- of maps being used
@@ -277,25 +280,19 @@ local function map_on_bufreadpre()
     -- BUF NAVIGATION --
     --------------------
 
-    -- NOTE: the pcmark has to be set through the m command rather than the API in order to
-    -- actually modify the jumplist
-    Map({ "n", "x" }, "j", function()
-        if vim.v.count == 0 then return "gj" end
-        if vim.v.count >= api.nvim_get_option_value("lines", { scope = "global" }) then
-            return "m'" .. vim.v.count1 .. "j"
-        else
-            return "j"
-        end
-    end, { expr = true, silent = true })
+    local function map_vert(dir)
+        Map({ "n", "x" }, dir, function()
+            if vim.v.count == 0 then return "g" .. dir end
+            if vim.v.count >= GetOpt("lines", { scope = "global" }) then
+                return "m'" .. vim.v.count1 .. dir
+            else
+                return dir
+            end
+        end, { expr = true, silent = true })
+    end
 
-    Map({ "n", "x" }, "k", function()
-        if vim.v.count == 0 then return "gk" end
-        if vim.v.count >= api.nvim_get_option_value("lines", { scope = "global" }) then
-            return "m'" .. vim.v.count1 .. "k"
-        else
-            return "k"
-        end
-    end, { expr = true, silent = true })
+    map_vert("j")
+    map_vert("k")
 
     Map("o", "gg", "<esc>")
     Map("o", "go", function()
