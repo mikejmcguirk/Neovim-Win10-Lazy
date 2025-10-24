@@ -669,7 +669,7 @@ local function map_on_insertenter()
     Map("i", "<C-d>", "<Del>")
     Map("i", "<M-d>", "<C-g>u<C-o>dw")
     Map("i", "<C-k>", "<C-g>u<C-o>D")
-    Map("i", "<C-l>", "<esc>u")
+    Map("i", "<C-l>", "<esc><cmd>silent norm! u<cr>")
 
     -- Since <C-d> is remapped
     Map("i", "<C-m>", "<C-d>")
