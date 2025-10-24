@@ -180,16 +180,14 @@ end)
 -- LOW: Could do <M-d> as errors or top only
 
 Map("n", "\\s", function()
-    local is_spell = GetOpt("spell", { win = 0 })
-    SetOpt("spell", not is_spell, { win = 0 })
+    SetOpt("spell", not GetOpt("spell", { scope = "local" }), { scope = "local" })
 end)
 
 Map("n", "\\<C-s>", "<cmd>set spell?<cr>")
 
 Map("n", "\\w", function()
     -- LOW: How does this interact with local scope?
-    local is_wrap = GetOpt("wrap", { win = 0 })
-    SetOpt("wrap", not is_wrap, { win = 0 })
+    SetOpt("wrap", not GetOpt("wrap", { scope = "local" }), { scope = "local" })
 end)
 
 Map("n", "\\<C-w>", "<cmd>set wrap?<cr>")
