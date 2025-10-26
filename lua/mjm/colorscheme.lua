@@ -323,12 +323,16 @@ api.nvim_create_autocmd("FileType", {
         local hl_query = vim.treesitter.query.get("lua", "highlights")
         if not hl_query then return end
 
+        -- Keep constant.builtin because it includes nil
+        -- Keep variable.parameter because there are edge cases semantic tokens miss
+
         hl_query.query:disable_capture("comment.documentation")
         hl_query.query:disable_capture("function")
-        hl_query.query:disable_capture("module-builtin")
+        hl_query.query:disable_capture("module.builtin")
         hl_query.query:disable_capture("punctuation.bracket")
         hl_query.query:disable_capture("punctuation.delimiter")
         hl_query.query:disable_capture("variable")
+        hl_query.query:disable_capture("variable.builtin")
         hl_query.query:disable_capture("variable.member")
         hl_query.query:disable_capture("variable.property")
     end,
@@ -363,6 +367,3 @@ api.nvim_create_autocmd("FileType", {
         hl_query.query:disable_capture("variable.member")
     end,
 })
-
--- MAYBE: Create a custom hl query for self as italicized constant. Obvious since self is an
--- alias for the instance object. But also one of my last namespaces
