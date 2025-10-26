@@ -1,2 +1,2 @@
 -- Since " are vim comments
-Map("i", '"', '"', { buffer = 0 })
+vim.keymap.set("i", '"', '"', { buffer = 0 })

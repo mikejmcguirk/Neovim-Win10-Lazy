@@ -1,3 +1,4 @@
+local api = vim.api
 local fzf_lua = require("fzf-lua")
 
 fzf_lua.setup({
@@ -62,39 +63,39 @@ vim.api.nvim_set_hl(0, "FzfLuaHeaderText", { link = "Constant" })
 
 -- Obsidian pickers are set to "fa"
 
-Map("n", "<leader>ff", fzf_lua.resume)
+vim.keymap.set("n", "<leader>ff", fzf_lua.resume)
 
-Map("n", "<leader>fb", fzf_lua.buffers)
-Map("n", "<leader>fi", fzf_lua.files)
+vim.keymap.set("n", "<leader>fb", fzf_lua.buffers)
+vim.keymap.set("n", "<leader>fi", fzf_lua.files)
 
-Map("n", "<leader>fgc", fzf_lua.git_commits)
-Map("n", "<leader>fgf", fzf_lua.git_files)
-Map("n", "<leader>fgh", fzf_lua.git_hunks)
+vim.keymap.set("n", "<leader>fgc", fzf_lua.git_commits)
+vim.keymap.set("n", "<leader>fgf", fzf_lua.git_files)
+vim.keymap.set("n", "<leader>fgh", fzf_lua.git_hunks)
 -- MID: Why does this not jump? Turning off " jumps doesn't change this
-Map("n", "<leader>fgs", fzf_lua.git_status)
+vim.keymap.set("n", "<leader>fgs", fzf_lua.git_status)
 
-Map("n", "<leader>fp", fzf_lua.grep)
-Map("n", "<leader>fe", fzf_lua.live_grep)
+vim.keymap.set("n", "<leader>fp", fzf_lua.grep)
+vim.keymap.set("n", "<leader>fe", fzf_lua.live_grep)
 
-Map("n", "<leader>fa", fzf_lua.autocmds)
-Map("n", "<leader>fc", fzf_lua.command_history)
-Map("n", "<leader>ft", fzf_lua.highlights)
-Map("n", "<leader>fk", fzf_lua.keymaps)
+vim.keymap.set("n", "<leader>fa", fzf_lua.autocmds)
+vim.keymap.set("n", "<leader>fc", fzf_lua.command_history)
+vim.keymap.set("n", "<leader>ft", fzf_lua.highlights)
+vim.keymap.set("n", "<leader>fk", fzf_lua.keymaps)
 
-Map("n", "<leader>fo", fzf_lua.loclist)
-Map("n", "<leader>fq", fzf_lua.quickfix)
-Map("n", "<leader>fO", fzf_lua.loclist_stack)
-Map("n", "<leader>fQ", fzf_lua.quickfix_stack)
+vim.keymap.set("n", "<leader>fo", fzf_lua.loclist)
+vim.keymap.set("n", "<leader>fq", fzf_lua.quickfix)
+vim.keymap.set("n", "<leader>fO", fzf_lua.loclist_stack)
+vim.keymap.set("n", "<leader>fQ", fzf_lua.quickfix_stack)
 
-Map("n", "<leader>fm", function()
+vim.keymap.set("n", "<leader>fm", function()
     fzf_lua.marks({
         marks = '[a-z"]',
     })
 end)
-Map("n", "<leader>fM", fzf_lua.marks)
-Map("n", "<leader>fs", fzf_lua.spellcheck)
+vim.keymap.set("n", "<leader>fM", fzf_lua.marks)
+vim.keymap.set("n", "<leader>fs", fzf_lua.spellcheck)
 
-Map("n", "<leader>fh", function()
+vim.keymap.set("n", "<leader>fh", function()
     fzf_lua.helptags({
         fzf_opts = {
             ["--tiebreak"] = "begin,chunk,length",
@@ -162,8 +163,9 @@ local function fuzzy_spell_correct()
                 -- vim.api.nvim_echo({ { msg } }, true, {})
             end,
             ["ctrl-w"] = function(_, _)
-                vim.fn.writefile({ word }, SpellFile, "a")
-                vim.cmd("mkspell! " .. SpellFile)
+                local spellfile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add"
+                vim.fn.writefile({ word }, spellfile, "a")
+                api.nvim_cmd({ cmd = "mkspell", args = { spellfile }, bang = true }, {})
                 -- Doesn't display for whatever reason
                 -- local msg = 'Added new word "' .. word .. '" to spellfile as valid'
                 -- vim.api.nvim_echo({ { msg } }, true, {})
@@ -179,8 +181,8 @@ local function fuzzy_spell_correct()
     })
 end
 
-Map("n", "<leader>fdd", fuzzy_dict)
-Map("n", "<leader>fds", fuzzy_spell_correct)
+vim.keymap.set("n", "<leader>fdd", fuzzy_dict)
+vim.keymap.set("n", "<leader>fds", fuzzy_spell_correct)
 
 -- PR: This is an easy pull request to make so I don't have to hold onto bespoke code
 -- But this doesn't show the "l"/"c" conversions like :registers does so needs more work
@@ -257,18 +259,18 @@ fzf_lua.registers = function(opts)
     require("fzf-lua.core").fzf_exec(entries, opts)
 end
 
-Map("n", "<leader>fr", fzf_lua.registers)
+vim.keymap.set("n", "<leader>fr", fzf_lua.registers)
 
 vim.api.nvim_create_autocmd("VimEnter", {
     group = vim.api.nvim_create_augroup("fzf-lua-register-ui-select", { clear = true }),
     once = true,
     callback = function()
-        Cmd({ cmd = "FzfLua", args = { "register_ui_select" } }, {})
+        vim.api.nvim_cmd({ cmd = "FzfLua", args = { "register_ui_select" } }, {})
     end,
 })
 
 -- MID: Fix ugly colors in scroll area
--- MID: Map to gi
+-- MID: vim.keymap.set to gi
 -- giq/giQ for qflist/qfstack
 -- gil/giL for loclist/loclist stack
 -- MID: How to delete stacks from FzfLua?

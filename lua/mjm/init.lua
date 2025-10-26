@@ -1,4 +1,4 @@
-local start = vim.uv.hrtime()
+local start = vim.uv.hrtime() ---@type number
 
 local api = vim.api
 
@@ -26,27 +26,13 @@ function _G.Mjm_Defer_Require(require_path)
 end
 
 _G.Border = "single" ---@type string
-_G.GetOpt = api.nvim_get_option_value
-_G.Gset = api.nvim_set_var
-_G.Has_Nerd_Font = true ---@type boolean
-_G.Highlight_Time = 175 ---@type integer
-_G.Scrolloff_Val = 6 ---@type integer
-_G.SetOpt = api.nvim_set_option_value
-_G.SpellFile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add" ---@type string
+_G.Scrolloff = 6 ---@type integer
 
-_G.Augroup = api.nvim_create_augroup
-_G.Autocmd = api.nvim_create_autocmd
-_G.Cmd = api.nvim_cmd
-_G.Map = vim.keymap.set
-_G.SetHl = api.nvim_set_hl
-_G.GetHl = api.nvim_get_hl
+vim.keymap.set({ "n", "x" }, "<Space>", "<Nop>")
+api.nvim_set_var("mapleader", " ")
+api.nvim_set_var("maplocalleader", " ")
 
--- TODO: What's a "leader" mapping that can be used in insert mode?
-Map({ "n", "x" }, "<Space>", "<Nop>")
-Gset("mapleader", " ")
-Gset("maplocalleader", " ")
-
-local pre_pack = vim.uv.hrtime()
+local pre_pack = vim.uv.hrtime() ---@type number
 
 -------------------------------
 -- Download/Register Plugins --
@@ -55,7 +41,7 @@ local pre_pack = vim.uv.hrtime()
 --- Only downloads plugins/adds them to RTP
 require("mjm.pack")
 
-local pack_finish = vim.uv.hrtime()
+local pack_finish = vim.uv.hrtime() ---@type number
 
 -----------
 -- Setup --
@@ -69,7 +55,7 @@ require("mjm.stl")
 
 -- require("mjm.error-list")
 
-local env_setup = vim.uv.hrtime()
+local env_setup = vim.uv.hrtime() ---@type number
 
 ---------------------------------
 -- Eager Plugin Initialization --
@@ -97,7 +83,7 @@ require("mjm.plugins.misc")
 require("mjm.plugins.spec-ops")
 require("mjm.plugins.specialist")
 
-local eager_loaded = vim.uv.hrtime()
+local eager_loaded = vim.uv.hrtime() ---@type number
 
 -------------------------
 -- Lazy Initialization --
@@ -114,12 +100,12 @@ require("mjm.plugins.ts-autotag")
 
 -- This is fine as long as modules aren't divided into multiple pieces to do this
 local buf_augroup_name = "mjm-buf-settings"
-Autocmd({ "BufNew", "BufReadPre" }, {
-    group = Augroup(buf_augroup_name, {}),
+vim.api.nvim_create_autocmd({ "BufNew", "BufReadPre" }, {
+    group = vim.api.nvim_create_augroup(buf_augroup_name, {}),
     once = true,
     callback = function()
         require("mjm.plugins.autopairs")
-        require("mjm.plugins.git_signs")
+        require("mjm.plugins.gitsigns")
         require("mjm.plugins.jump2d")
         require("mjm.plugins.mini-operators")
         require("mjm.plugins.nvim-surround")
@@ -133,41 +119,23 @@ Autocmd({ "BufNew", "BufReadPre" }, {
     end,
 })
 
-local lazy_loaded = vim.uv.hrtime()
+local lazy_loaded = vim.uv.hrtime() ---@type number
 
-local to_pre_pack = math.floor((pre_pack - start) / 1e6 * 100) / 100
-local to_pack_finish = math.floor((pack_finish - start) / 1e6 * 100) / 100
-local to_env_setup = math.floor((env_setup - start) / 1e6 * 100) / 100
-local to_eager_loaded = math.floor((eager_loaded - start) / 1e6 * 100) / 100
-local to_lazy_loaded = math.floor((lazy_loaded - start) / 1e6 * 100) / 100
+local to_pre_pack = math.floor((pre_pack - start) / 1e6 * 100) / 100 ---@type number
+local to_pack_finish = math.floor((pack_finish - start) / 1e6 * 100) / 100 ---@type number
+local to_env_setup = math.floor((env_setup - start) / 1e6 * 100) / 100 ---@type number
+local to_eager_loaded = math.floor((eager_loaded - start) / 1e6 * 100) / 100 ---@type number
+local to_lazy_loaded = math.floor((lazy_loaded - start) / 1e6 * 100) / 100 ---@type number
 
 api.nvim_create_autocmd("UIEnter", {
-    group = api.nvim_create_augroup("display-profile-info", { clear = true }),
+    group = vim.api.nvim_create_augroup("display-profile-info", {}),
     callback = function()
-        local ui_enter = vim.uv.hrtime()
-        local to_ui_enter = math.floor((ui_enter - start) / 1e6 * 100) / 100
+        local ui_enter = vim.uv.hrtime() ---@type number
+        local to_ui_enter = math.floor((ui_enter - start) / 1e6 * 100) / 100 ---@type number
 
-        local cur_buf = api.nvim_get_current_buf()
-        local modified = api.nvim_get_option_value("modified", { buf = cur_buf })
+        local buf = api.nvim_get_current_buf() ---@type integer
+        local modified = api.nvim_get_option_value("modified", { buf = buf }) ---@type boolean
         if vim.fn.argc() > 0 or vim.fn.line2byte("$") ~= -1 or modified then return end
-
-        local headers = {
-            { "Pre-Pack Setup: ", to_pre_pack },
-            { "Download/Register Plugins: ", to_pack_finish },
-            { "Setup: ", to_env_setup },
-            { "Eager Plugin Init: ", to_eager_loaded },
-            { "Lazy Plugin Init: ", to_lazy_loaded },
-            { "UI Enter: ", to_ui_enter },
-        }
-
-        local max_header_len = 0
-        for _, header in ipairs(headers) do
-            if #header[1] > max_header_len then max_header_len = #header[1] end
-        end
-
-        for i, header in ipairs(headers) do
-            headers[i][1] = header[1] .. string.rep(" ", max_header_len - #header[1] + 2)
-        end
 
         local lines = {
             "",
@@ -175,20 +143,34 @@ api.nvim_create_autocmd("UIEnter", {
             "==== STARTUP ====",
             "=================",
             "",
-        }
+        } ---@type string[]
 
-        for _, header in ipairs(headers) do
-            table.insert(lines, header[1] .. header[2] .. "ms")
+        local stats = {
+            { "Pre-Pack Setup: ", to_pre_pack },
+            { "Download/Register Plugins: ", to_pack_finish },
+            { "Setup: ", to_env_setup },
+            { "Eager Plugin Init: ", to_eager_loaded },
+            { "Lazy Plugin Init: ", to_lazy_loaded },
+            { "UI Enter: ", to_ui_enter },
+        } ---@type { [1]:string, [2]:number }[]
+
+        local max_stat_len = 0 ---@type integer
+        for _, stat in ipairs(stats) do
+            if #stat[1] > max_stat_len then max_stat_len = #stat[1] end
         end
 
+        for _, stat in ipairs(stats) do
+            stat[1] = stat[1] .. string.rep(" ", max_stat_len - #stat[1] + 2)
+            lines[#lines + 1] = stat[1] .. stat[2] .. "ms"
+        end
+
+        local width = api.nvim_win_get_width(0) ---@type integer
         for i, line in ipairs(lines) do
-            local padding = math.floor((api.nvim_win_get_width(0) - #lines[i]) / 2)
-            lines[i] = string.rep(" ", padding) .. line
+            local padding = string.rep(" ", ((width - #line) * 0.5) - 2) ---@type string
+            lines[i] = padding .. line .. padding
         end
 
-        local win = api.nvim_get_current_win()
-        local bufnr = api.nvim_win_get_buf(win)
-        api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+        api.nvim_buf_set_lines(buf, 0, -1, false, lines)
         local buf_opts = {
             { "buftype", "nofile" },
             { "bufhidden", "wipe" },
@@ -197,20 +179,21 @@ api.nvim_create_autocmd("UIEnter", {
             { "modifiable", false },
             { "modified", false },
             { "buflisted", false },
-        }
+        } ---@type { [1]:string, [2]:any }[]
 
-        for _, option in pairs(buf_opts) do
-            api.nvim_set_option_value(option[1], option[2], { buf = bufnr })
+        for _, opt in ipairs(buf_opts) do
+            vim.api.nvim_set_option_value(opt[1], opt[2], { buf = buf })
         end
 
-        api.nvim_create_autocmd("BufLeave", {
-            group = api.nvim_create_augroup("leave-greeter", { clear = true }),
-            buffer = bufnr,
+        vim.api.nvim_create_autocmd("BufLeave", {
+            group = vim.api.nvim_create_augroup("leave-greeter", {}),
+            buffer = buf,
             once = true,
             callback = function()
                 -- Treesitter fails in the next buffer if not scheduled wrapped
+                -- Needs to be schedule wrapped, not just vim.schedule
                 vim.schedule_wrap(function()
-                    api.nvim_buf_delete(bufnr, { force = true })
+                    api.nvim_buf_delete(buf, { force = true })
                 end)
             end,
         })

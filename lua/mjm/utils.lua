@@ -38,7 +38,7 @@ function M.protected_set_cursor(cur_pos, opts)
 
     if opts.set_pcmark then
         api.nvim_win_call(win, function()
-            Cmd({ cmd = "norm", args = { "m'" }, bang = true }, {})
+            vim.api.nvim_cmd({ cmd = "norm", args = { "m'" }, bang = true }, {})
         end)
     end
 
@@ -127,10 +127,10 @@ function M.open_buf(source, opts)
         M.protected_set_cursor(opts.cur_pos, { buf = buf, set_pcmark = same_buf, win = win })
     end
 
-    if opts.clearjumps then Cmd({ cmd = "clearjumps" }, {}) end
-    if opts.zz then Cmd({ cmd = "normal", args = { "zz" }, bang = true }, {}) end
+    if opts.clearjumps then vim.api.nvim_cmd({ cmd = "clearjumps" }, {}) end
+    if opts.zz then vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {}) end
 
-    Cmd({ cmd = "normal", args = { "zv" }, bang = true }, {})
+    vim.api.nvim_cmd({ cmd = "normal", args = { "zv" }, bang = true }, {})
 
     return true
 end
@@ -503,14 +503,14 @@ function M.pbuf_rm(buf, force, wipeout)
 
     if not api.nvim_buf_is_valid(buf) then return end
 
-    local modifiable = GetOpt("modifiable", { buf = buf }) ---@type boolean
+    local modifiable = vim.api.nvim_get_option_value("modifiable", { buf = buf }) ---@type boolean
     if modifiable then
         api.nvim_buf_call(buf, function()
-            Cmd({ cmd = "update", mods = { silent = true } }, {})
+            vim.api.nvim_cmd({ cmd = "update", mods = { silent = true } }, {})
         end)
     end
 
-    if not wipeout then SetOpt("buflisted", false, { buf = buf }) end
+    if not wipeout then vim.api.nvim_set_option_value("buflisted", false, { buf = buf }) end
     local delete_opts = wipeout and { force = force } or { force = force, unload = true }
     pcall(api.nvim_buf_delete, buf, delete_opts)
 end

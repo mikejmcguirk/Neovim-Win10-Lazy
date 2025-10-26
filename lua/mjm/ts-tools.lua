@@ -4,7 +4,7 @@
 -- AFAIK, because of how query files work, it's not possible to overwrite hl group queries, but
 -- worth investigating
 
-Map("n", "gtt", function()
+vim.keymap.set("n", "gtt", function()
     local buf = vim.api.nvim_get_current_buf()
     if vim.treesitter.highlighter.active[buf] then
         vim.treesitter.stop(buf)
@@ -13,11 +13,11 @@ Map("n", "gtt", function()
     end
 end)
 
-Map("n", "gti", function()
+vim.keymap.set("n", "gti", function()
     vim.api.nvim_cmd({ cmd = "InspectTree" }, {})
 end)
 
-Map("n", "gtee", function()
+vim.keymap.set("n", "gtee", function()
     vim.api.nvim_cmd({ cmd = "EditQuery" }, {})
 end)
 
@@ -39,22 +39,22 @@ local function edit_query_file(ts_file)
     end
 end
 
-Map("n", "gted", function()
+vim.keymap.set("n", "gted", function()
     edit_query_file("folds")
 end)
 
-Map("n", "gtei", function()
+vim.keymap.set("n", "gtei", function()
     edit_query_file("highlights")
 end)
 
-Map("n", "gten", function()
+vim.keymap.set("n", "gten", function()
     edit_query_file("indents")
 end)
 
-Map("n", "gtej", function()
+vim.keymap.set("n", "gtej", function()
     edit_query_file("injections")
 end)
 
-Map("n", "gteo", function()
+vim.keymap.set("n", "gteo", function()
     edit_query_file("textobjects")
 end)

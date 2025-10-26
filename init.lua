@@ -1,12 +1,11 @@
 require("mjm")
 
--- MID: https://github.com/neovim/neovim/pull/35448 -- Could be easier way to handle this
-
+-- LOW: Do not love the diffing solutions out there. Perhaps one can be fashioned out of DiffTool
 -- LOW: How does Fugitive do line wrap in commit buffers?
 -- LOW: Look for table.inserts and see if they can be replaced with t[#t + 1]
 
--- PR: https://github.com/neovim/neovim/issues/36081 - I might be able to get this
 -- PR: Fix the missing fields annotations in certain keysets (nvim_cmd being the worst)
+-- PR: https://github.com/neovim/neovim/issues/36081 - I might be able to get this
 
 ----------------------
 -- DOTFILE STALKING --

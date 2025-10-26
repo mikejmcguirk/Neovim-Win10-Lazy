@@ -34,90 +34,90 @@ vim.g.spec_ops = config
 -- Change --
 ------------
 
-Map("o", "c", "<Plug>(SpecOpsChangeLineObject)")
-Map("o", "w", "<Plug>(SpecOpsChangeWord)")
-Map("o", "W", "<Plug>(SpecOpsChangeWORD)")
+vim.keymap.set("o", "c", "<Plug>(SpecOpsChangeLineObject)")
+vim.keymap.set("o", "w", "<Plug>(SpecOpsChangeWord)")
+vim.keymap.set("o", "W", "<Plug>(SpecOpsChangeWORD)")
 
-Map("n", "c", "<Plug>(SpecOpsChangeOperator)")
-Map("n", "C", "<Plug>(SpecOpsChangeEol)")
+vim.keymap.set("n", "c", "<Plug>(SpecOpsChangeOperator)")
+vim.keymap.set("n", "C", "<Plug>(SpecOpsChangeEol)")
 
-Map("n", "<M-c>", '"_<Plug>(SpecOpsChangeOperator)')
-Map("n", "<M-C>", '"_<Plug>(SpecOpsChangeEol)')
+vim.keymap.set("n", "<M-c>", '"_<Plug>(SpecOpsChangeOperator)')
+vim.keymap.set("n", "<M-C>", '"_<Plug>(SpecOpsChangeEol)')
 
-Map("x", "c", "<Plug>(SpecOpsChangeVisual)")
-Map("x", "C", "<nop>")
+vim.keymap.set("x", "c", "<Plug>(SpecOpsChangeVisual)")
+vim.keymap.set("x", "C", "<nop>")
 
-Map("x", "<M-c>", '"_<Plug>(SpecOpsChangeVisual)')
+vim.keymap.set("x", "<M-c>", '"_<Plug>(SpecOpsChangeVisual)')
 
 ------------
 -- Delete --
 ------------
 
-Map("o", "d", "<Plug>(SpecOpsDeleteLineObject)")
+vim.keymap.set("o", "d", "<Plug>(SpecOpsDeleteLineObject)")
 
-Map("n", "d", "<Plug>(SpecOpsDeleteOperator)")
-Map("n", "D", "<Plug>(SpecOpsDeleteEol)")
+vim.keymap.set("n", "d", "<Plug>(SpecOpsDeleteOperator)")
+vim.keymap.set("n", "D", "<Plug>(SpecOpsDeleteEol)")
 
-Map("n", "<M-d>", '"_<Plug>(SpecOpsDeleteOperator)')
-Map("n", "<M-D>", '"_<Plug>(SpecOpsDeleteEol)')
+vim.keymap.set("n", "<M-d>", '"_<Plug>(SpecOpsDeleteOperator)')
+vim.keymap.set("n", "<M-D>", '"_<Plug>(SpecOpsDeleteEol)')
 
-Map("x", "d", "<Plug>(SpecOpsDeleteVisual)")
-Map("x", "D", "<nop>")
+vim.keymap.set("x", "d", "<Plug>(SpecOpsDeleteVisual)")
+vim.keymap.set("x", "D", "<nop>")
 
-Map("x", "<M-d>", '"_<Plug>(SpecOpsDeleteVisual)')
+vim.keymap.set("x", "<M-d>", '"_<Plug>(SpecOpsDeleteVisual)')
 
 ----------------
 -- Substitute --
 ----------------
 
--- Map("o", "s", "<Plug>(SpecOpsSubstituteLineObject)")
+-- vim.keymap.set("o", "s", "<Plug>(SpecOpsSubstituteLineObject)")
 --
--- Map("n", "s", "<Plug>(SpecOpsSubstituteOperator)")
--- Map("n", "S", "<Plug>(SpecOpsSubstituteEol)")
+-- vim.keymap.set("n", "s", "<Plug>(SpecOpsSubstituteOperator)")
+-- vim.keymap.set("n", "S", "<Plug>(SpecOpsSubstituteEol)")
 --
--- Map("n", "<M-s>", '"+<Plug>(SpecOpsSubstituteOperator)')
--- Map("n", "<M-S>", '"+<Plug>(SpecOpsSubstituteEol)')
+-- vim.keymap.set("n", "<M-s>", '"+<Plug>(SpecOpsSubstituteOperator)')
+-- vim.keymap.set("n", "<M-S>", '"+<Plug>(SpecOpsSubstituteEol)')
 --
--- Map("x", "s", "<Plug>(SpecOpsSubstituteVisual)")
--- Map("x", "<M-s>", '"+<Plug>(SpecOpsSubstituteVisual)')
+-- vim.keymap.set("x", "s", "<Plug>(SpecOpsSubstituteVisual)")
+-- vim.keymap.set("x", "<M-s>", '"+<Plug>(SpecOpsSubstituteVisual)')
 
 -----------
 -- Paste --
 -----------
 
--- Map("n", "p", "<Plug>(SpecOpsPasteNormalAfterCursor)")
--- Map("n", "P", "<Plug>(SpecOpsPasteNormalBeforeCursor)")
+-- vim.keymap.set("n", "p", "<Plug>(SpecOpsPasteNormalAfterCursor)")
+-- vim.keymap.set("n", "P", "<Plug>(SpecOpsPasteNormalBeforeCursor)")
 --
--- Map("n", "<M-p>", '"+<Plug>(SpecOpsPasteNormalAfterCursor)')
--- Map("n", "<M-P>", '"+<Plug>(SpecOpsPasteNormalBeforeCursor)')
+-- vim.keymap.set("n", "<M-p>", '"+<Plug>(SpecOpsPasteNormalAfterCursor)')
+-- vim.keymap.set("n", "<M-P>", '"+<Plug>(SpecOpsPasteNormalBeforeCursor)')
 --
--- Map("n", "[p", "<Plug>(SpecOpsPasteLinewiseBefore)")
--- Map("n", "]p", "<Plug>(SpecOpsPasteLinewiseAfter)")
+-- vim.keymap.set("n", "[p", "<Plug>(SpecOpsPasteLinewiseBefore)")
+-- vim.keymap.set("n", "]p", "<Plug>(SpecOpsPasteLinewiseAfter)")
 --
--- Map("n", "<M-[>p", '"+<Plug>(SpecOpsPasteLinewiseBefore)')
--- Map("n", "<M-]>p", '"+<Plug>(SpecOpsPasteLinewiseAfter)')
--- Map("n", "<M-[><M-p>", '"+<Plug>(SpecOpsPasteLinewiseBefore)')
--- Map("n", "<M-]><M-p>", '"+<Plug>(SpecOpsPasteLinewiseAfter)')
+-- vim.keymap.set("n", "<M-[>p", '"+<Plug>(SpecOpsPasteLinewiseBefore)')
+-- vim.keymap.set("n", "<M-]>p", '"+<Plug>(SpecOpsPasteLinewiseAfter)')
+-- vim.keymap.set("n", "<M-[><M-p>", '"+<Plug>(SpecOpsPasteLinewiseBefore)')
+-- vim.keymap.set("n", "<M-]><M-p>", '"+<Plug>(SpecOpsPasteLinewiseAfter)')
 --
--- Map("x", "p", "<Plug>(SpecOpsPasteVisual)")
--- Map("x", "P", "<Plug>(SpecOpsPasteVisualAndYank)")
+-- vim.keymap.set("x", "p", "<Plug>(SpecOpsPasteVisual)")
+-- vim.keymap.set("x", "P", "<Plug>(SpecOpsPasteVisualAndYank)")
 --
--- Map("x", "<M-p>", '"+<Plug>(SpecOpsPasteVisual)')
--- Map("x", "<M-P>", '"+<Plug>(SpecOpsPasteVisualAndYank)')
+-- vim.keymap.set("x", "<M-p>", '"+<Plug>(SpecOpsPasteVisual)')
+-- vim.keymap.set("x", "<M-P>", '"+<Plug>(SpecOpsPasteVisualAndYank)')
 
 ----------
 -- Yank --
 ----------
 
-Map("o", "y", "<Plug>(SpecOpsYankLineObject)")
+vim.keymap.set("o", "y", "<Plug>(SpecOpsYankLineObject)")
 
-Map("n", "y", "<Plug>(SpecOpsYankOperator)")
-Map("n", "Y", "<Plug>(SpecOpsYankEol)")
+vim.keymap.set("n", "y", "<Plug>(SpecOpsYankOperator)")
+vim.keymap.set("n", "Y", "<Plug>(SpecOpsYankEol)")
 
-Map("n", "<M-y>", '"+<Plug>(SpecOpsYankOperator)')
-Map("n", "<M-Y>", '"+<Plug>(SpecOpsYankEol)')
+vim.keymap.set("n", "<M-y>", '"+<Plug>(SpecOpsYankOperator)')
+vim.keymap.set("n", "<M-Y>", '"+<Plug>(SpecOpsYankEol)')
 
-Map("x", "y", "<Plug>(SpecOpsYankVisual)")
-Map("x", "Y", "<nop>")
+vim.keymap.set("x", "y", "<Plug>(SpecOpsYankVisual)")
+vim.keymap.set("x", "Y", "<nop>")
 
-Map("x", "<M-y>", '"+<Plug>(SpecOpsYankVisual)')
+vim.keymap.set("x", "<M-y>", '"+<Plug>(SpecOpsYankVisual)')

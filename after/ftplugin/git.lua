@@ -1,4 +1,4 @@
-SetOpt("cc", "", { scope = "local" })
-SetOpt("list", false, { scope = "local" })
+vim.api.nvim_set_option_value("cc", "", { scope = "local" })
+vim.api.nvim_set_option_value("list", false, { scope = "local" })
 
-Map("n", "q", "<cmd>bd<cr>", { buffer = true })
+vim.keymap.set("n", "q", "<cmd>bd<cr>", { buffer = true })

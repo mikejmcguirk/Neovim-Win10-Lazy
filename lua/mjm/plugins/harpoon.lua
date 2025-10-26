@@ -38,11 +38,11 @@ harpoon:setup({
     },
 })
 
-Map("n", "<leader>ad", function()
+vim.keymap.set("n", "<leader>ad", function()
     harpoon:list():add()
 end)
 
-Map("n", "<leader>aa", function()
+vim.keymap.set("n", "<leader>aa", function()
     harpoon.ui:toggle_quick_menu(harpoon:list(), { height_in_lines = 10 })
 end)
 
@@ -51,7 +51,7 @@ for _ = 1, 10 do
     local this_mark = mark -- 10, 1, 2, 3, 4, 5, 6, 7, 8, 9
     local mod_mark = this_mark % 10 -- 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 
-    Map("n", string.format("<leader>%s", mod_mark), function()
+    vim.keymap.set("n", string.format("<leader>%s", mod_mark), function()
         local open_mark = function()
             harpoon:list():select(this_mark)
         end
@@ -66,7 +66,7 @@ for _ = 1, 10 do
     mark = mod_mark + 1
 end
 
-Map("n", "<leader>ar", function()
+vim.keymap.set("n", "<leader>ar", function()
     local buf = vim.api.nvim_get_current_buf()
     require("mjm.utils").harpoon_rm_buf({ buf = buf })
 end, { desc = "Delete current file from Harpoon List" })

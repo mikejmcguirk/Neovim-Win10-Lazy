@@ -94,21 +94,21 @@ local function set_lsp_maps(ev)
     local buf = ev.buf ---@type integer
 
     -- callHierarchy/incomingCalls --
-    Map("n", "grc", in_call, { buffer = buf })
+    vim.keymap.set("n", "grc", in_call, { buffer = buf })
 
     -- callHierarchy/outgoingCalls --
-    Map("n", "grC", out_call, { buffer = buf })
+    vim.keymap.set("n", "grC", out_call, { buffer = buf })
 
     -- textDocument/codeAction --
-    Map("n", "gra", code_action, { buffer = buf })
+    vim.keymap.set("n", "gra", code_action, { buffer = buf })
 
     -- textDocument/codeLens --
     local function start_codelens(bufnr)
         -- Lens updates are throttled so only one runs at a time. Updating on text change
         -- increases the likelihood of lenses rendering with stale data
-        Autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
+        vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
             buffer = bufnr,
-            group = Augroup("mjm-refresh-lens", { clear = true }),
+            group = vim.api.nvim_create_augroup("mjm-refresh-lens", { clear = true }),
             -- Bespoke module so I can render the lenses as virtual lines
             callback = function()
                 require("mjm.codelens").refresh({ buf = ev.buf })
@@ -150,47 +150,47 @@ local function set_lsp_maps(ev)
     -- if client:supports_method("textDocument/codeLens") then start_codelens(ev.buf) end
 
     -- Use bespoke module because the lenses are cached there
-    Map("n", "grs", toggle_codelens)
-    Map("n", "grS", require("mjm.codelens").run)
+    vim.keymap.set("n", "grs", toggle_codelens)
+    vim.keymap.set("n", "grS", require("mjm.codelens").run)
 
     -- textDocument/declaration --
-    Map("n", "grd", declaration, { buffer = buf })
-    Map("n", "grD", peek_declaration)
+    vim.keymap.set("n", "grd", declaration, { buffer = buf })
+    vim.keymap.set("n", "grD", peek_declaration)
 
     -- textDocument/definition --
     if client:supports_method("textDocument/definition") then
-        Map("n", "gd", definition, { buffer = buf })
-        Map("n", "gD", peek_definition)
+        vim.keymap.set("n", "gd", definition, { buffer = buf })
+        vim.keymap.set("n", "gD", peek_definition)
     end
 
     -- textDocument/documentColor --
-    Map("n", "gro", function()
+    vim.keymap.set("n", "gro", function()
         lsp.document_color.enable(not lsp.document_color.is_enabled())
     end, { buffer = buf })
 
-    Map("n", "grO", lsp.document_color.color_presentation, { buffer = buf })
+    vim.keymap.set("n", "grO", lsp.document_color.color_presentation, { buffer = buf })
 
     -- textDocument/documentHighlight --
-    Map("n", "grh", lsp.buf.document_highlight, { buffer = buf })
+    vim.keymap.set("n", "grh", lsp.buf.document_highlight, { buffer = buf })
 
     -- textDocument/documentSymbol --
-    Map("n", "gO", symbols, { buffer = buf })
+    vim.keymap.set("n", "gO", symbols, { buffer = buf })
 
     -- textDocument/hover --
     -- LOW: This is set in runtime/lua/lsp.lua _set_defaults
     -- This would need to be undone either by overwriting the function or by putting in a PR for
     -- options to customize
     -- Low value since I can just overwrite default K and conform can set its formatexpr
-    Map("n", "K", function()
+    vim.keymap.set("n", "K", function()
         lsp.buf.hover({ border = Border })
     end, { buffer = buf })
 
     -- textDocument/implementation --
-    Map("n", "gri", implementation)
-    Map("n", "grI", peek_implementation, { buffer = buf })
+    vim.keymap.set("n", "gri", implementation)
+    vim.keymap.set("n", "grI", peek_implementation, { buffer = buf })
 
     -- textDocument/inlayHint --
-    Map("n", "grl", function()
+    vim.keymap.set("n", "grl", function()
         lsp.inlay_hint.enable(not lsp.inlay_hint.is_enabled({ buffer = buf }))
     end)
 
@@ -202,8 +202,8 @@ local function set_lsp_maps(ev)
     -- end
 
     -- textDocument/references --
-    Map("n", "grr", references, { buffer = buf })
-    Map("n", "grR", peek_references, { buffer = buf })
+    vim.keymap.set("n", "grr", references, { buffer = buf })
+    vim.keymap.set("n", "grR", peek_references, { buffer = buf })
 
     -- textDocument/rename --
 
@@ -211,7 +211,7 @@ local function set_lsp_maps(ev)
     -- The plugin, from what I can tell, does a full re-implementation of rename,
     -- which I don't want
 
-    Map("n", "grn", function()
+    vim.keymap.set("n", "grn", function()
         ---@type boolean, string
         local ok_i, input = require("mjm.utils").get_input("Rename: ")
         if not ok_i then
@@ -229,42 +229,42 @@ local function set_lsp_maps(ev)
         lsp.buf.rename(input)
     end, { buffer = buf })
 
-    Map("n", "grN", lsp.buf.rename, { buffer = buf })
+    vim.keymap.set("n", "grN", lsp.buf.rename, { buffer = buf })
 
     -- textDocument/signatureHelp --
-    Map({ "i", "s" }, "<C-S>", function()
+    vim.keymap.set({ "i", "s" }, "<C-S>", function()
         lsp.buf.signature_help({ border = Border })
     end, { buffer = buf })
 
     -- textDocument/typeDefinition --
-    Map("n", "grt", typedef, { buffer = buf })
+    vim.keymap.set("n", "grt", typedef, { buffer = buf })
     if client:supports_method("textDocument/typeDefinition") then
-        Map("n", "grT", peek_typedef, { buffer = buf })
+        vim.keymap.set("n", "grT", peek_typedef, { buffer = buf })
     else
         local msg = "LSP Server does not have capability textDocument/typeDefinition"
-        Map("n", "grT", function()
+        vim.keymap.set("n", "grT", function()
             api.nvim_echo({ { msg, "" } }, true, {})
         end)
     end
 
     -- workspace/symbol --
     -- Kickstart mapping
-    Map("n", "grw", workspace, { buffer = buf })
+    vim.keymap.set("n", "grw", workspace, { buffer = buf })
 
     -- Other --
     -- LOW: Which lsp method is Semantic token behind, because there are like three of them
-    Map("n", "grm", function()
+    vim.keymap.set("n", "grm", function()
         lsp.semantic_tokens.enable(not lsp.semantic_tokens.is_enabled())
     end, { buffer = buf })
 
-    Map("n", "grf", function()
+    vim.keymap.set("n", "grf", function()
         print(vim.inspect(lsp.buf.list_workspace_folders()))
     end, { buffer = buf })
 end
 
-local lsp_group = Augroup("lsp-autocmds", { clear = true })
+local lsp_group = vim.api.nvim_create_augroup("lsp-autocmds", { clear = true })
 
-Autocmd("LspAttach", {
+vim.api.nvim_create_autocmd("LspAttach", {
     group = lsp_group,
     callback = function(ev)
         set_lsp_maps(ev)
@@ -273,7 +273,7 @@ Autocmd("LspAttach", {
 
 -- PR: Should be "attached_bufs"
 -- There's a Neovim issue/discussion on removing "buffer" names from the code, but unsure where
-Autocmd("LspDetach", {
+vim.api.nvim_create_autocmd("LspDetach", {
     group = lsp_group,
     callback = function(ev)
         local buf = ev.buf ---@type integer

@@ -93,35 +93,35 @@ local function load_obsidian()
             -- Don't need the conditional operator in Markdown, so the [o ]o defaults can stay
             vim.keymap.del("n", "<CR>", { buffer = ev.buf })
 
-            Map("n", "gf", function()
+            vim.keymap.set("n", "gf", function()
                 return obsidian.util.smart_action()
             end, { buffer = ev.buf, expr = true })
 
-            Map("n", "<leader>ss", function()
+            vim.keymap.set("n", "<leader>ss", function()
                 vim.api.nvim_cmd({ cmd = "Obsidian", args = { "follow_link", "hsplit" } }, {})
             end, { buffer = ev.buf })
 
-            Map("n", "<leader>sv", function()
+            vim.keymap.set("n", "<leader>sv", function()
                 vim.api.nvim_cmd({ cmd = "Obsidian", args = { "follow_link", "vsplit" } }, {})
             end, { buffer = ev.buf })
 
-            Map("n", "<leader>so", function()
+            vim.keymap.set("n", "<leader>so", function()
                 vim.api.nvim_cmd({ cmd = "Obsidian", args = { "open" } }, {})
             end, { buffer = ev.buf })
 
-            Map("n", "<leader>fab", function()
+            vim.keymap.set("n", "<leader>fab", function()
                 vim.api.nvim_cmd({ cmd = "Obsidian", args = { "backliknks" } }, {})
             end, { buffer = ev.buf })
 
-            Map("n", "<leader>fal", function()
+            vim.keymap.set("n", "<leader>fal", function()
                 vim.api.nvim_cmd({ cmd = "Obsidian", args = { "links" } }, {})
             end, { buffer = ev.buf })
 
-            Map("n", "<leader>sr", function()
+            vim.keymap.set("n", "<leader>sr", function()
                 vim.api.nvim_cmd({ cmd = "Obsidian", args = { "rename" } }, {})
             end, { buffer = ev.buf })
 
-            Map("n", "<leader>si", function()
+            vim.keymap.set("n", "<leader>si", function()
                 ---@type string
                 local cur_buf_name = vim.api.nvim_buf_get_name(0)
                 ---@type string
@@ -176,7 +176,7 @@ local function load_obsidian()
         end,
     })
 
-    Map("n", "<leader>sw", function()
+    vim.keymap.set("n", "<leader>sw", function()
         local year = os.date("%Y")
         local month = os.date("%m")
         local day = os.date("%d")

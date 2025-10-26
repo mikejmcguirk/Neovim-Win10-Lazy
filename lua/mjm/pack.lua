@@ -1,7 +1,5 @@
 local api = vim.api
 
-local M = {}
-
 local pack_spec = {
     -- Multi-deps
     { src = "https://github.com/nvim-tree/nvim-web-devicons" },
@@ -10,9 +8,8 @@ local pack_spec = {
     { src = "https://github.com/saghen/blink.cmp", version = vim.version.range("1.*") },
     { src = "https://github.com/rafamadriz/friendly-snippets" },
     { src = "https://github.com/kristijanhusak/vim-dadbod-completion" },
-    -- Requires plenary
-    -- { src = "https://github.com/mikejmcguirk/blink-cmp-dictionary", version = "add-cancel" },
-    -- { src = "https://github.com/Kaiser-Yang/blink-cmp-dictionary" },
+    -- TODO: Try this
+    -- https://github.com/archie-judd/blink-cmp-words
 
     { src = "https://github.com/stevearc/conform.nvim" },
 
@@ -69,13 +66,12 @@ vim.pack.add(pack_spec, {})
 
 vim.api.nvim_cmd({ cmd = "packadd", args = { "nvim.undotree" }, bang = true }, {})
 
--- LOW: Since this is all filereads, it would be cool if you could spin it off. We could wait
--- for it at the end of init.lua
+-- TODO: Remove this once vim.pack can support local plugins
 
 ---@param pack string
 ---@return nil
 local function custom_add(pack)
-    Cmd({ cmd = "packadd", args = { pack }, bang = true }, {})
+    api.nvim_cmd({ cmd = "packadd", args = { pack }, bang = true }, {})
 
     local packpath = vim.iter(api.nvim_list_runtime_paths()):find(function(path)
         local npath = vim.fs.normalize(path) ---@type string
@@ -91,15 +87,12 @@ local function custom_add(pack)
         local name, type = vim.uv.fs_scandir_next(fs) ---@type string|nil, string
         if not name then break end
         if name == "doc" and type == "directory" then
-            -- LOW: The docs for helptags say that helptags will silently overwrite an existing
-            -- tags file, but vim.pack manually deletes it. Re-create the vim.pack behavior here,
-            -- but why?
             local doc_dir = vim.fs.joinpath(packpath, name) ---@type string
             local tag_file = vim.fs.joinpath(doc_dir, "tags") ---@type string
 
             vim.uv.fs_unlink(tag_file)
             ---@diagnostic disable-next-line: missing-fields
-            Cmd({ cmd = "helptags", args = { doc_dir }, magic = { file = false } }, {})
+            api.nvim_cmd({ cmd = "helptags", args = { doc_dir }, magic = { file = false } }, {})
 
             break
         end
@@ -108,22 +101,29 @@ end
 
 custom_add("nvim-qf-rancher")
 
+-- TODO: The config should not be here
 -- TODO: Re-create my alt mappings for q/l history
-vim.api.nvim_set_var("qfr_debug_assertions", true)
-vim.api.nvim_set_var("qfr_preview_debounce", 50)
-vim.api.nvim_set_var("qfr_preview_show_title", false)
+api.nvim_set_var("qfr_debug_assertions", true)
+api.nvim_set_var("qfr_preview_debounce", 50)
+api.nvim_set_var("qfr_preview_show_title", false)
 
-Map("n", "zqc", function()
-    local inactive = vim.iter(pairs(vim.pack.get()))
-        :map(function(_, s)
-            return (not s.active) and s.spec.name or nil
+vim.keymap.set("n", "zqc", function()
+    local inactive = vim.iter(vim.pack.get())
+        :map(function(p)
+            if not p.active then return p.spec.name end
+            return nil
         end)
         :totable() ---@type string[]
+
+    if #inactive == 0 then
+        api.nvim_echo({ { "No inactive plugins", "" } }, false, {})
+        return
+    end
 
     vim.pack.del(inactive)
 end)
 
-Map("n", "zqd", function()
+vim.keymap.set("n", "zqd", function()
     local prompt = "Enter plugins to delete (space separated): " ---@type string
     local ok, result = require("mjm.utils").get_input(prompt) ---@type boolean, string
     if not ok then
@@ -137,23 +137,26 @@ Map("n", "zqd", function()
     vim.pack.del(vim.split(result, " "))
 end)
 
-Map("n", "zqD", function()
+vim.keymap.set("n", "zqD", function()
     if vim.fn.confirm("Delete all plugins?", "&Yes\n&No", 2) ~= 1 then return end
 
-    local plugins = vim.iter(pairs(vim.pack.get()))
-        :map(function(_, s)
-            return s.spec.name
+    local plugins = vim.iter(vim.pack.get())
+        :map(function(p)
+            return p.spec.name
         end)
         :totable() ---@type string[]
+
+    if #plugins == 0 then
+        api.nvim_echo({ { "No plugins to delete", "" } }, false, {})
+        return
+    end
 
     vim.pack.del(plugins)
 end)
 
-Map("n", "zqu", function()
+vim.keymap.set("n", "zqu", function()
     vim.pack.update()
 end)
-
-return M
 
 -- https://github.com/neovim/neovim/commit/83f7d9851835d4ac5b92ddf689ad720914735712
 -- TODO: Run the blink build script this way

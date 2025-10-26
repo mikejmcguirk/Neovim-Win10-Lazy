@@ -57,30 +57,30 @@ local function get_first_or_last_diag(opts)
     return opts.last and diagnostics[#diagnostics] or diagnostics[1]
 end
 
-Map("n", "[D", function()
+vim.keymap.set("n", "[D", function()
     local diagnostic = get_first_or_last_diag()
     if diagnostic then vim.diagnostic.jump({ diagnostic = diagnostic }) end
 end)
 
-Map("n", "]D", function()
+vim.keymap.set("n", "]D", function()
     local diagnostic = get_first_or_last_diag({ last = true })
     if diagnostic then vim.diagnostic.jump({ diagnostic = diagnostic }) end
 end)
 
-Map("n", "[<C-d>", function()
+vim.keymap.set("n", "[<C-d>", function()
     vim.diagnostic.jump({ count = -vim.v.count1, severity = ut.get_top_severity({ buf = 0 }) })
 end)
 
-Map("n", "]<C-d>", function()
+vim.keymap.set("n", "]<C-d>", function()
     vim.diagnostic.jump({ count = vim.v.count1, severity = ut.get_top_severity({ buf = 0 }) })
 end)
 
-Map("n", "[<M-d>", function()
+vim.keymap.set("n", "[<M-d>", function()
     local diagnostic = get_first_or_last_diag({ severity = ut.get_top_severity({ buf = 0 }) })
     if diagnostic then vim.diagnostic.jump({ diagnostic = diagnostic }) end
 end)
 
-Map("n", "]<M-d>", function()
+vim.keymap.set("n", "]<M-d>", function()
     local severity = ut.get_top_severity({ buf = 0 })
     local diagnostic = get_first_or_last_diag({ severity = severity, last = true })
     if diagnostic then vim.diagnostic.jump({ diagnostic = diagnostic }) end

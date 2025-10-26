@@ -41,7 +41,7 @@ require("zen-mode.config").setup({
     end,
 })
 
-Map("n", "<leader>e", function()
+vim.keymap.set("n", "<leader>e", function()
     local view = require("zen-mode.view")
     if view.is_open() then
         view.close()

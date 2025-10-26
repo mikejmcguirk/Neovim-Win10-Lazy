@@ -5,4 +5,4 @@ vim.bo.shiftwidth = width
 
 vim.cmd("wincmd =")
 vim.opt_local.colorcolumn = ""
-Map("n", "q", "<cmd>bd<cr>", { buffer = true })
+vim.keymap.set("n", "q", "<cmd>bd<cr>", { buffer = true })

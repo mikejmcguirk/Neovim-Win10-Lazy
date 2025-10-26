@@ -1,6 +1,6 @@
 --- TODO: Move to gg mappings
 
-Map("n", "<leader>gcam", function()
+vim.keymap.set("n", "<leader>gcam", function()
     ---@type boolean, string
     local ok, result = require("mjm.utils").get_input("Commit message (All): ")
     if not ok then
@@ -18,8 +18,8 @@ local commit_all = function()
     vim.api.nvim_cmd({ cmd = "Git", args = { "commit -a" } }, {})
 end
 
-Map("n", "<leader>gcan", commit_all)
-Map("n", "<leader>gchm", function()
+vim.keymap.set("n", "<leader>gcan", commit_all)
+vim.keymap.set("n", "<leader>gchm", function()
     local ok, result = require("mjm.utils").get_input("Commit message: ") ---@type boolean, string
     if not ok then
         local msg = result or "Unknown error getting input" ---@type string
@@ -32,7 +32,7 @@ Map("n", "<leader>gchm", function()
     vim.api.nvim_cmd({ cmd = "Git", args = { 'commit -m "' .. result .. '"' } }, {})
 end)
 
-Map("n", "<leader>gchn", function()
+vim.keymap.set("n", "<leader>gchn", function()
     vim.api.nvim_cmd({ cmd = "Git", args = { "commit" } }, {})
 end)
 
@@ -51,22 +51,22 @@ local function open_diffs(staged)
     end
 end
 
-Map("n", "<leader>gdd", function()
+vim.keymap.set("n", "<leader>gdd", function()
     open_diffs()
 end)
 
-Map("n", "<leader>gds", function()
+vim.keymap.set("n", "<leader>gds", function()
     open_diffs(true)
 end)
 
-Map("n", "<leader>ghU", function()
+vim.keymap.set("n", "<leader>ghU", function()
     local cur_buf = vim.fn.fnamemodify(vim.api.nvim_buf_get_name(0), ":p")
     vim.system({ "git", "restore", "--staged", cur_buf }, nil)
 end)
 
-Map("n", "<leader>gp", function()
+vim.keymap.set("n", "<leader>gp", function()
     vim.api.nvim_cmd({ cmd = "Git", args = { "push" } }, {})
 end)
 
--- TODO: Map this
+-- TODO: vim.keymap.set this
 -- git reset --soft HEAD~1

@@ -12,14 +12,14 @@ vim.opt_local.spell = true
 -- "r" in Markdown treats lines like "- some text" as comments and indents them
 vim.opt.formatoptions:append("r")
 
-Map("i", ",", ",<C-g>u", { silent = true, buffer = true })
-Map("i", ".", ".<C-g>u", { silent = true, buffer = true })
-Map("i", ":", ":<C-g>u", { silent = true, buffer = true })
-Map("i", "-", "-<C-g>u", { silent = true, buffer = true })
-Map("i", "?", "?<C-g>u", { silent = true, buffer = true })
-Map("i", "!", "!<C-g>u", { silent = true, buffer = true })
+vim.keymap.set("i", ",", ",<C-g>u", { silent = true, buffer = true })
+vim.keymap.set("i", ".", ".<C-g>u", { silent = true, buffer = true })
+vim.keymap.set("i", ":", ":<C-g>u", { silent = true, buffer = true })
+vim.keymap.set("i", "-", "-<C-g>u", { silent = true, buffer = true })
+vim.keymap.set("i", "?", "?<C-g>u", { silent = true, buffer = true })
+vim.keymap.set("i", "!", "!<C-g>u", { silent = true, buffer = true })
 
-Map("n", "K", require("mjm.utils").check_word_under_cursor)
+vim.keymap.set("n", "K", require("mjm.utils").check_word_under_cursor)
 
 vim.api.nvim_create_autocmd("BufWritePre", {
     group = vim.api.nvim_create_augroup("md_save", { clear = true }),

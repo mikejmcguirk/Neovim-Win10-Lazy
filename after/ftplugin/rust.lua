@@ -1,16 +1,14 @@
 -- FUTURE: Worth exploring mrcjkb/rustaceanvim and rust-lang/rust.vim
 -- The former unlocks more features of rust-analyzer, the latter does some basic formatting
 
-Map("i", ";", ";<C-g>u", { silent = true })
+vim.keymap.set("i", ";", ";<C-g>u", { silent = true })
 local ut = require("mjm.utils")
 
 ---@param pragma string
 ---@return nil
 local add_pragma = function(pragma)
     local line = vim.api.nvim_get_current_line() ---@type string
-    if not line:match("^%s*$") then
-        return vim.notify("Line is not blank")
-    end
+    if not line:match("^%s*$") then return vim.notify("Line is not blank") end
 
     local row_1 = vim.api.nvim_win_get_cursor(0)[1] ---@type integer
     local row_0 = row_1 - 1
@@ -24,15 +22,15 @@ local add_pragma = function(pragma)
     vim.cmd("startinsert")
 end
 
-Map("n", "<leader>-d", function()
+vim.keymap.set("n", "<leader>-d", function()
     add_pragma("#[derive()]")
 end)
-Map("n", "<leader>-c", function()
+vim.keymap.set("n", "<leader>-c", function()
     add_pragma("#[cfg()]")
 end)
-Map("n", "<leader>-a", function()
+vim.keymap.set("n", "<leader>-a", function()
     add_pragma("#[allow()]")
 end)
-Map("n", "<leader>-e", function()
+vim.keymap.set("n", "<leader>-e", function()
     add_pragma("#[expect()]")
 end)

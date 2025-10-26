@@ -11,16 +11,16 @@ local fn = vim.fn
 -- Do these now to avoid contradicting config later
 
 -- Use for ts-text-object swaps
-Map("n", "(", "<nop>")
-Map("n", ")", "<nop>")
+vim.keymap.set("n", "(", "<nop>")
+vim.keymap.set("n", ")", "<nop>")
 
 -- I use this as a prefix for inserting boilerplate code. Don't want this falling back to other
 -- behavior on timeout
-Map("n", "<leader>-", "<nop>")
+vim.keymap.set("n", "<leader>-", "<nop>")
 
 -- Keep the default gr mappings since I have gr renmapped to <M-r>
 -- NOTE: "K" is mapped automatically when the LSP attaches, not unconditionally
-Map("n", "gr", "<nop>")
+vim.keymap.set("n", "gr", "<nop>")
 if fn.maparg("gO", "n", false, false) ~= "" then api.nvim_del_keymap("n", "gO") end
 
 -------------------------
@@ -29,17 +29,17 @@ if fn.maparg("gO", "n", false, false) ~= "" then api.nvim_del_keymap("n", "gO") 
 
 -- LOW: More testing on lockmarks/conform behavior
 
-Map("n", "Z", "<nop>")
+vim.keymap.set("n", "Z", "<nop>")
 
-Map("n", "ZA", "<cmd>lockmarks silent wa<cr>")
-Map("n", "ZC", "<cmd>lockmarks wqa<cr>")
-Map("n", "ZR", "<cmd>lockmarks silent wa | restart<cr>")
-Map("n", "ZQ", "<cmd>qall!<cr>")
-Map("n", "ZS", "<cmd>lockmarks silent up | so<cr>")
-Map("n", "ZZ", "<cmd>lockmarks silent up<cr>")
+vim.keymap.set("n", "ZA", "<cmd>lockmarks silent wa<cr>")
+vim.keymap.set("n", "ZC", "<cmd>lockmarks wqa<cr>")
+vim.keymap.set("n", "ZR", "<cmd>lockmarks silent wa | restart<cr>")
+vim.keymap.set("n", "ZQ", "<cmd>qall!<cr>")
+vim.keymap.set("n", "ZS", "<cmd>lockmarks silent up | so<cr>")
+vim.keymap.set("n", "ZZ", "<cmd>lockmarks silent up<cr>")
 
 for _, map in pairs({ "<C-w>q", "<C-w><C-q>" }) do
-    Map("n", map, function()
+    vim.keymap.set("n", map, function()
         -- TODO: Use wipeout when that logic is fixed
         -- https://github.com/neovim/neovim/pull/33402
         ut.pclose_and_rm(api.nvim_get_current_win(), false, false)
@@ -69,13 +69,13 @@ end
 ---@return nil
 local win_move_tmux = function(dir)
     -- LOW: How to make work in prompt buffers?
-    if GetOpt("buftype", { buf = 0 }) == "prompt" then
+    if vim.api.nvim_get_option_value("buftype", { buf = 0 }) == "prompt" then
         do_tmux_move(dir)
         return
     end
 
     local start_win = api.nvim_get_current_win() ---@type integer
-    Cmd({ cmd = "wincmd", args = { dir } }, {})
+    vim.api.nvim_cmd({ cmd = "wincmd", args = { dir } }, {})
 
     if api.nvim_get_current_win() == start_win then do_tmux_move(dir) end
 end
@@ -85,7 +85,7 @@ end
 -- C-S is also something of a super layer for terminal commands, so this is a better pattern
 -- See tmux config (mikejmcguirk/dotfiles) for reasoning and how on C-S for this mapping
 for k, _ in pairs(tmux_cmd_map) do
-    Map({ "n", "x" }, "<C-S-" .. k .. ">", function()
+    vim.keymap.set({ "n", "x" }, "<C-S-" .. k .. ">", function()
         win_move_tmux(k)
     end)
 end
@@ -94,35 +94,35 @@ end
 local resize_win = function(cmd)
     local wintype = fn.win_gettype(api.nvim_get_current_win())
     if wintype == "" or wintype == "quickfix" or wintype == "loclist" then
-        local old_spk = GetOpt("splitkeep", { scope = "global" })
-        SetOpt("spk", "topline", { scope = "global" })
-        Cmd(cmd, {})
-        SetOpt("spk", old_spk, { scope = "global" })
+        local old_spk = vim.api.nvim_get_option_value("splitkeep", { scope = "global" })
+        vim.api.nvim_set_option_value("spk", "topline", { scope = "global" })
+        vim.api.nvim_cmd(cmd, {})
+        vim.api.nvim_set_option_value("spk", old_spk, { scope = "global" })
     end
 end
 
-Map("n", "<M-h>", function()
+vim.keymap.set("n", "<M-h>", function()
     ---@diagnostic disable-next-line: missing-fields
     resize_win({ cmd = "resize", args = { "-2" }, mods = { silent = true, vertical = true } })
 end)
 
-Map("n", "<M-j>", function()
+vim.keymap.set("n", "<M-j>", function()
     ---@diagnostic disable-next-line: missing-fields
     resize_win({ cmd = "resize", args = { "-2" }, mods = { silent = true } })
 end)
 
-Map("n", "<M-k>", function()
+vim.keymap.set("n", "<M-k>", function()
     ---@diagnostic disable-next-line: missing-fields
     resize_win({ cmd = "resize", args = { "+2" }, mods = { silent = true } })
 end)
 
-Map("n", "<M-l>", function()
+vim.keymap.set("n", "<M-l>", function()
     ---@diagnostic disable-next-line: missing-fields
     resize_win({ cmd = "resize", args = { "+2" }, mods = { silent = true, vertical = true } })
 end)
 
-Map("n", "<C-w>c", "<nop>")
-Map("n", "<C-w><C-c>", "<nop>")
+vim.keymap.set("n", "<C-w>c", "<nop>")
+vim.keymap.set("n", "<C-w><C-c>", "<nop>")
 
 -- MID: Missing tab cmds:
 -- - tabclose
@@ -131,15 +131,15 @@ Map("n", "<C-w><C-c>", "<nop>")
 -- - tabonly
 
 -- Leave these for the terminal
-Map("n", "<C-tab>", "<nop>")
-Map("n", "<C-S-tab>", "<nop>")
+vim.keymap.set("n", "<C-tab>", "<nop>")
+vim.keymap.set("n", "<C-S-tab>", "<nop>")
 
-Autocmd("TabNew", {
-    group = Augroup("mjm-tab-maps", {}),
+vim.api.nvim_create_autocmd("TabNew", {
+    group = vim.api.nvim_create_augroup("mjm-tab-maps", {}),
     once = true,
     callback = function()
-        Map("n", "<tab>", "gt")
-        Map("n", "<S-tab>", "gT")
+        vim.keymap.set("n", "<tab>", "gt")
+        vim.keymap.set("n", "<S-tab>", "gT")
 
         -- MID: Appears I might need to manually send these down now thru tmux
         local tab = 10 ---@type integer
@@ -147,7 +147,7 @@ Autocmd("TabNew", {
             -- Otherwise a closure is formed around tab
             local this_tab = tab -- 10, 1, 2, 3, 4, 5, 6, 7, 8, 9
             local mod_tab = this_tab % 10 -- 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
-            Map("n", string.format("<M-%d>", mod_tab), function()
+            vim.keymap.set("n", string.format("<M-%d>", mod_tab), function()
                 local tabs = api.nvim_list_tabpages()
                 if #tabs < this_tab then return end
 
@@ -160,46 +160,54 @@ Autocmd("TabNew", {
 })
 
 ------------------
--- Setting Maps --
+-- Setting vim.keymap.sets --
 ------------------
 
 -- MAYBE: Use \t to toggle the tabline, which would also de-activate/activate the harpoon state
 
 -- Do all these here so it's simple to see how the namespace is being used
 
-Map("n", "\\", "<nop>")
+vim.keymap.set("n", "\\", "<nop>")
 
-Map("n", "\\d", function()
+vim.keymap.set("n", "\\d", function()
     di.toggle_diags()
 end)
 
-Map("n", "\\D", function()
+vim.keymap.set("n", "\\D", function()
     di.toggle_virt_lines()
 end)
 
 -- LOW: Could do <M-d> as errors or top only
 
-Map("n", "\\s", function()
-    SetOpt("spell", not GetOpt("spell", { scope = "local" }), { scope = "local" })
+vim.keymap.set("n", "\\s", function()
+    vim.api.nvim_set_option_value(
+        "spell",
+        not vim.api.nvim_get_option_value("spell", { scope = "local" }),
+        { scope = "local" }
+    )
 end)
 
-Map("n", "\\<C-s>", "<cmd>set spell?<cr>")
+vim.keymap.set("n", "\\<C-s>", "<cmd>set spell?<cr>")
 
-Map("n", "\\w", function()
+vim.keymap.set("n", "\\w", function()
     -- LOW: How does this interact with local scope?
-    SetOpt("wrap", not GetOpt("wrap", { scope = "local" }), { scope = "local" })
+    vim.api.nvim_set_option_value(
+        "wrap",
+        not vim.api.nvim_get_option_value("wrap", { scope = "local" }),
+        { scope = "local" }
+    )
 end)
 
-Map("n", "\\<C-w>", "<cmd>set wrap?<cr>")
+vim.keymap.set("n", "\\<C-w>", "<cmd>set wrap?<cr>")
 
 --------------------
 -- MODE SWITCHING --
 --------------------
 
 -- NOTE: could not get set lmap "\3\27" to work
-Map("n", "<C-c>", function()
+vim.keymap.set("n", "<C-c>", function()
     print("")
-    Cmd({ cmd = "noh" }, {})
+    vim.api.nvim_cmd({ cmd = "noh" }, {})
     vim.lsp.buf.clear_references()
 
     -- Allows <C-c> to exit commands with a count. Also eliminates command line nag
@@ -207,7 +215,7 @@ Map("n", "<C-c>", function()
 end, { expr = true, silent = true })
 
 --- omapped so that Quickscope highlighting properly exits
-Map({ "o", "x" }, "<C-c>", "<esc>")
+vim.keymap.set({ "o", "x" }, "<C-c>", "<esc>")
 
 --------------------
 -- BUF NAVIGATION --
@@ -215,31 +223,31 @@ Map({ "o", "x" }, "<C-c>", "<esc>")
 
 --- Keep these from adding to the jumplist. :h jump-motions
 
-Map({ "n", "x" }, "H", "<cmd>keepjumps norm! H<cr>")
-Map({ "n", "x" }, "L", "<cmd>keepjumps norm! L<cr>")
-Map({ "n", "x" }, "M", "<cmd>keepjumps norm! M<cr>")
-Map({ "n", "x" }, "%", "<cmd>keepjumps norm! %<cr>")
+vim.keymap.set({ "n", "x" }, "H", "<cmd>keepjumps norm! H<cr>")
+vim.keymap.set({ "n", "x" }, "L", "<cmd>keepjumps norm! L<cr>")
+vim.keymap.set({ "n", "x" }, "M", "<cmd>keepjumps norm! M<cr>")
+vim.keymap.set({ "n", "x" }, "%", "<cmd>keepjumps norm! %<cr>")
 
-Map({ "n", "x" }, "{", function()
+vim.keymap.set({ "n", "x" }, "{", function()
     local args = vim.v.count1 .. "{"
     local cmd = { cmd = "normal", args = { args }, bang = true, mods = { keepjumps = true } }
     api.nvim_cmd(cmd, {})
 end)
 
-Map({ "n", "x" }, "}", function()
+vim.keymap.set({ "n", "x" }, "}", function()
     local args = vim.v.count1 .. "}"
     local cmd = { cmd = "normal", args = { args }, bang = true, mods = { keepjumps = true } }
     api.nvim_cmd(cmd, {})
 end)
 
-Map("n", "'", "`")
-Map("n", "g'", "g`")
+vim.keymap.set("n", "'", "`")
+vim.keymap.set("n", "g'", "g`")
 -- Just keep these all together
-Map("n", "['", "[`")
-Map("n", "]'", "]`")
+vim.keymap.set("n", "['", "[`")
+vim.keymap.set("n", "]'", "]`")
 
-Map("n", "[;", "g;")
-Map("n", "];", "g,")
+vim.keymap.set("n", "[;", "g;")
+vim.keymap.set("n", "];", "g,")
 
 local function map_on_bufreadpre()
     -- NOTE: I have my initial buffer set to nomodifiable, eliminating the possibility of a lot
@@ -249,39 +257,39 @@ local function map_on_bufreadpre()
     -- MODE SWITCHING --
     --------------------
 
-    -- Mapping <C-c> to <esc> in cmd mode causes <C-C> to accept commands rather than cancel them
+    -- vim.keymap.setping <C-c> to <esc> in cmd mode causes <C-C> to accept commands rather than cancel them
 
     -- Deal with default behavior where you type just to the bound of a window, so Nvim scrolls to
     -- the next column so you can see what you're typing, but then you exit insert mode, meaning
     -- the character no longer can exist, but Neovim still has you scrolled to the side
     -- NOTE: This also applies to replace mode, but not single replace char
-    Map("i", "<C-c>", "<esc>ze")
+    vim.keymap.set("i", "<C-c>", "<esc>ze")
 
-    Map("n", "v", "mvv")
-    Map("n", "V", "mvV")
-    Map("n", "<C-v>", "mv<C-v>")
+    vim.keymap.set("n", "v", "mvv")
+    vim.keymap.set("n", "V", "mvV")
+    vim.keymap.set("n", "<C-v>", "mv<C-v>")
 
     -- "S" enters insert with the proper indent. "I" left on default behavior
     for _, map in pairs({ "i", "a", "A" }) do
-        Map("n", map, function()
+        vim.keymap.set("n", map, function()
             if string.match(api.nvim_get_current_line(), "^%s*$") then return '"_S' end
             return map
         end, { expr = true })
     end
 
     -- LOW: Not sure what to map to M-i
-    Map("n", "gI", "g^i")
+    vim.keymap.set("n", "gI", "g^i")
     -- NOTE: At least for now, keep the default gR mapping
-    Map("n", "<M-r>", "gr")
+    vim.keymap.set("n", "<M-r>", "gr")
 
     --------------------
     -- BUF NAVIGATION --
     --------------------
 
     local function map_vert(dir)
-        Map({ "n", "x" }, dir, function()
+        vim.keymap.set({ "n", "x" }, dir, function()
             if vim.v.count == 0 then return "g" .. dir end
-            if vim.v.count >= GetOpt("lines", { scope = "global" }) then
+            if vim.v.count >= vim.api.nvim_get_option_value("lines", { scope = "global" }) then
                 return "m'" .. vim.v.count1 .. dir
             else
                 return dir
@@ -292,12 +300,12 @@ local function map_on_bufreadpre()
     map_vert("j")
     map_vert("k")
 
-    Map("o", "gg", "<esc>")
-    Map("o", "go", function()
+    vim.keymap.set("o", "gg", "<esc>")
+    vim.keymap.set("o", "go", function()
         return vim.v.count < 1 and "gg" or "go"
     end, { expr = true })
 
-    Map({ "n", "x" }, "go", function()
+    vim.keymap.set({ "n", "x" }, "go", function()
         -- gg Retains cursor position since I have startofline off
         return vim.v.count < 1 and "m'gg" or "m'" .. vim.v.count1 .. "go"
     end, { expr = true })
@@ -307,38 +315,38 @@ local function map_on_bufreadpre()
     -- to accidently hit
     ---@param cmd string
     local function map_scroll(map, cmd)
-        Map({ "n", "x" }, map, function()
+        vim.keymap.set({ "n", "x" }, map, function()
             local win = api.nvim_get_current_win()
-            local cul = GetOpt("cul", { win = win })
-            SetOpt("lz", true, { scope = "global" })
-            SetOpt("cul", false, { win = win })
+            local cul = vim.api.nvim_get_option_value("cul", { win = win })
+            vim.api.nvim_set_option_value("lz", true, { scope = "global" })
+            vim.api.nvim_set_option_value("cul", false, { win = win })
 
-            Cmd({ cmd = "normal", args = { cmd }, bang = true }, {})
-            SetOpt("cul", cul, { win = win })
-            SetOpt("lz", false, { scope = "global" })
+            vim.api.nvim_cmd({ cmd = "normal", args = { cmd }, bang = true }, {})
+            vim.api.nvim_set_option_value("cul", cul, { win = win })
+            vim.api.nvim_set_option_value("lz", false, { scope = "global" })
         end, { silent = true })
     end
 
     map_scroll("<C-u>", "\21zz")
     map_scroll("<C-d>", "\4zz")
 
-    Map("n", "zT", function()
+    vim.keymap.set("n", "zT", function()
         vim.opt_local.scrolloff = 0
         vim.cmd("norm! zt")
-        vim.opt_local.scrolloff = Scrolloff_Val
+        vim.opt_local.scrolloff = Scrolloff
     end)
 
-    Map("n", "zB", function()
+    vim.keymap.set("n", "zB", function()
         vim.opt_local.scrolloff = 0
         vim.cmd("norm! zb")
-        vim.opt_local.scrolloff = Scrolloff_Val
+        vim.opt_local.scrolloff = Scrolloff
     end)
 
     -- Not silent so that the search prompting displays properly
-    Map("n", "/", "ms/")
-    Map("n", "?", "ms?")
-    Map("n", "N", "Nzzzv")
-    Map("n", "n", "nzzzv")
+    vim.keymap.set("n", "/", "ms/")
+    vim.keymap.set("n", "?", "ms?")
+    vim.keymap.set("n", "N", "Nzzzv")
+    vim.keymap.set("n", "n", "nzzzv")
 
     ------------------
     -- TEXT OBJECTS --
@@ -347,14 +355,14 @@ local function map_on_bufreadpre()
     --- MID: These can be re-written as functions. For omode, get the current line. For vmode,
     --- can use getregionpos to get the boundaries and extend by count appropriately
 
-    Map("o", "a_", "<cmd>norm! ggVG<cr>", { silent = true })
-    Map("x", "a_", "<cmd>norm! ggoVG<cr>", { silent = true })
+    vim.keymap.set("o", "a_", "<cmd>norm! ggVG<cr>", { silent = true })
+    vim.keymap.set("x", "a_", "<cmd>norm! ggoVG<cr>", { silent = true })
 
-    Map("o", "i_", function()
+    vim.keymap.set("o", "i_", function()
         vim.cmd("norm! _v" .. vim.v.count1 .. "g_")
     end, { silent = true })
 
-    Map("x", "i_", function()
+    vim.keymap.set("x", "i_", function()
         local keys = "g_o^o" .. vim.v.count .. "g_"
         api.nvim_feedkeys(keys, "ni", false)
     end, { silent = true })
@@ -363,11 +371,11 @@ local function map_on_bufreadpre()
     -- UNDO AND REDO --
     -------------------
 
-    Map("n", "u", function()
+    vim.keymap.set("n", "u", function()
         return "<cmd>silent norm! " .. vim.v.count1 .. "u<cr>"
     end, { expr = true })
 
-    Map("n", "<C-r>", function()
+    vim.keymap.set("n", "<C-r>", function()
         return "<cmd>silent norm! " .. vim.v.count1 .. "\18<cr>"
     end, { expr = true })
 
@@ -394,7 +402,7 @@ local function map_on_bufreadpre()
     } ---@type table string[]
 
     for _, map in pairs(cap_motions_norm) do
-        Map("n", map, function()
+        vim.keymap.set("n", map, function()
             local row, col = unpack(api.nvim_win_get_cursor(0))
             api.nvim_buf_set_mark(0, "z", row, col, {})
             return map .. "`z"
@@ -409,7 +417,7 @@ local function map_on_bufreadpre()
     }
 
     for _, map in pairs(cap_motions_vis) do
-        Map("x", map, function()
+        vim.keymap.set("x", map, function()
             local row, col = unpack(api.nvim_win_get_cursor(0))
             api.nvim_buf_set_mark(0, "z", row, col, {})
             return map .. "`z"
@@ -420,44 +428,44 @@ local function map_on_bufreadpre()
     --- Change/Delete ---
     ---------------------
 
-    Map({ "n", "x" }, "x", '"_x', { silent = true })
-    Map("n", "X", '"_X', { silent = true })
-    Map("x", "X", 'ygvV"_d<cmd>put!<cr>=`]', { silent = true })
+    vim.keymap.set({ "n", "x" }, "x", '"_x', { silent = true })
+    vim.keymap.set("n", "X", '"_X', { silent = true })
+    vim.keymap.set("x", "X", 'ygvV"_d<cmd>put!<cr>=`]', { silent = true })
 
     -- FUTURE: These should remove trailing whitespace from the original line. The == should handle
     -- invalid leading whitespace on the new line
-    Map("n", "dJ", "Do<esc>p==", { silent = true })
-    Map("n", "dK", function()
-        SetOpt("lz", true, { scope = "global" })
+    vim.keymap.set("n", "dJ", "Do<esc>p==", { silent = true })
+    vim.keymap.set("n", "dK", function()
+        vim.api.nvim_set_option_value("lz", true, { scope = "global" })
         api.nvim_feedkeys("DO\27p==", "nix", false)
-        SetOpt("lz", false, { scope = "global" })
+        vim.api.nvim_set_option_value("lz", false, { scope = "global" })
     end)
-    Map("n", "dm", "<cmd>delmarks!<cr>")
+    vim.keymap.set("n", "dm", "<cmd>delmarks!<cr>")
 
     -----------------------
     -- Text Manipulation --
     -----------------------
 
-    Map("n", "<M-s>", ":'<,'>s/\\%V")
-    Map("x", "<M-s>", ":s/\\%V")
+    vim.keymap.set("n", "<M-s>", ":'<,'>s/\\%V")
+    vim.keymap.set("x", "<M-s>", ":s/\\%V")
 
     -- LOW: Make a map of this in visual mode that uses the same syntax but without %
     -- Credit ThePrimeagen
-    Map("n", "g%", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
+    vim.keymap.set("n", "g%", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
 
-    Map(
+    vim.keymap.set(
         "n",
         "gV",
         '"`[" . strpart(getregtype(), 0, 1) . "`]"',
         { expr = true, replace_keycodes = false }
     )
 
-    Map("n", "g?", "<nop>")
+    vim.keymap.set("n", "g?", "<nop>")
 
     -- TODO: Find a viable keymap for this and make it more robust to edge cases:
-    -- Map("n", "H", 'mzk_D"_ddA <esc>p`zze', { silent = true })
+    -- vim.keymap.set("n", "H", 'mzk_D"_ddA <esc>p`zze', { silent = true })
 
-    Map("n", "J", function()
+    vim.keymap.set("n", "J", function()
         if not require("mjm.utils").check_modifiable() then return end
 
         -- Done using a view instead of a mark to prevent visible screen shake
@@ -479,7 +487,7 @@ local function map_on_bufreadpre()
             return
         end
 
-        SetOpt("lz", true, { scope = "global" })
+        vim.api.nvim_set_option_value("lz", true, { scope = "global" })
         opts = opts or {}
         -- Get before leaving visual mode
         local vcount1 = vim.v.count1 + (opts.upward and 1 or 0) ---@type integer
@@ -511,14 +519,14 @@ local function map_on_bufreadpre()
         end
 
         api.nvim_cmd({ cmd = "norm", args = { "gv" }, bang = true }, {})
-        SetOpt("lz", false, { scope = "global" })
+        vim.api.nvim_set_option_value("lz", false, { scope = "global" })
     end
 
     -- Has to be literally opening the cmdline or else the visual selection goes haywire
     local eval_cmd = ":s/\\%V.*\\%V./\\=eval(submatch(0))/<CR>"
-    Map("x", "<C-=>", eval_cmd, { noremap = true, silent = true })
+    vim.keymap.set("x", "<C-=>", eval_cmd, { noremap = true, silent = true })
 
-    Map("n", "<C-j>", function()
+    vim.keymap.set("n", "<C-j>", function()
         if not require("mjm.utils").check_modifiable() then return end
 
         local ok, err = pcall(function()
@@ -530,7 +538,7 @@ local function map_on_bufreadpre()
         end
     end)
 
-    Map("n", "<C-k>", function()
+    vim.keymap.set("n", "<C-k>", function()
         if not require("mjm.utils").check_modifiable() then return end
 
         local ok, err = pcall(function()
@@ -542,11 +550,11 @@ local function map_on_bufreadpre()
         end
     end)
 
-    Map("x", "<C-j>", function()
+    vim.keymap.set("x", "<C-j>", function()
         visual_move()
     end)
 
-    Map("x", "<C-k>", function()
+    vim.keymap.set("x", "<C-k>", function()
         visual_move({ upward = true })
     end)
 
@@ -565,18 +573,18 @@ local function map_on_bufreadpre()
         -- LOW: Currently exiting and re-selecting visual mode because new lines upward pins the
         -- visual selection to the new lines. It should be possible to calculate the adjustment of
         -- the selection without actually leaving visual mode
-        SetOpt("lz", true, { scope = "global" })
-        Cmd({ cmd = "norm", args = { "\27" }, bang = true }, {})
+        vim.api.nvim_set_option_value("lz", true, { scope = "global" })
+        vim.api.nvim_cmd({ cmd = "norm", args = { "\27" }, bang = true }, {})
         api.nvim_buf_set_lines(0, row - 1, row - 1, false, new_lines)
-        Cmd({ cmd = "norm", args = { "gv" }, bang = true }, {})
-        SetOpt("lz", false, { scope = "global" })
+        vim.api.nvim_cmd({ cmd = "norm", args = { "gv" }, bang = true }, {})
+        vim.api.nvim_set_option_value("lz", false, { scope = "global" })
     end
 
-    Map("x", "[<space>", function()
+    vim.keymap.set("x", "[<space>", function()
         add_blank_visual(true)
     end)
 
-    Map("x", "]<space>", function()
+    vim.keymap.set("x", "]<space>", function()
         add_blank_visual()
     end)
 
@@ -600,11 +608,11 @@ local function map_on_bufreadpre()
     end
 
     -- TODO: Do these as a spec-ops mapping, same in normal mode due to the nag there
-    Map("x", "<", function()
+    vim.keymap.set("x", "<", function()
         visual_indent({ back = true })
     end, { silent = true })
 
-    Map("x", ">", function()
+    vim.keymap.set("x", ">", function()
         visual_indent()
     end, { silent = true })
 
@@ -614,13 +622,13 @@ local function map_on_bufreadpre()
 
     -- MID: Why does [s]s navigation work in some buffers but not others?
 
-    Map("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true })
-    Map("n", "[w", "[s")
-    Map("n", "]w", "]s")
+    vim.keymap.set("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true })
+    vim.keymap.set("n", "[w", "[s")
+    vim.keymap.set("n", "]w", "]s")
 end
 
-Autocmd({ "BufReadPre", "BufNewFile" }, {
-    group = Augroup("keymap-setup", { clear = true }),
+vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
+    group = vim.api.nvim_create_augroup("keymap-setup", { clear = true }),
     once = true,
     callback = function()
         map_on_bufreadpre()
@@ -633,21 +641,21 @@ Autocmd({ "BufReadPre", "BufNewFile" }, {
 -- LOW: Would like <M-d> to work properly
 
 local function map_on_cmdlineenter()
-    Map("c", "<C-a>", "<C-b>")
-    Map("c", "<C-d>", "<Del>")
+    vim.keymap.set("c", "<C-a>", "<C-b>")
+    vim.keymap.set("c", "<C-d>", "<Del>")
 
-    Map("c", "<C-k>", "<c-\\>estrpart(getcmdline(), 0, getcmdpos()-1)<cr>")
-    Map("c", "<C-b>", "<left>")
-    Map("c", "<C-f>", "<right>")
-    Map("c", "<M-b>", "<S-left>")
-    Map("c", "<M-f>", "<S-right>")
+    vim.keymap.set("c", "<C-k>", "<c-\\>estrpart(getcmdline(), 0, getcmdpos()-1)<cr>")
+    vim.keymap.set("c", "<C-b>", "<left>")
+    vim.keymap.set("c", "<C-f>", "<right>")
+    vim.keymap.set("c", "<M-b>", "<S-left>")
+    vim.keymap.set("c", "<M-f>", "<S-right>")
 
-    Map("c", "<M-p>", "<up>")
-    Map("c", "<M-n>", "<down>")
+    vim.keymap.set("c", "<M-p>", "<up>")
+    vim.keymap.set("c", "<M-n>", "<down>")
 end
 
-Autocmd("CmdlineEnter", {
-    group = Augroup("keymap-cmdlineenter", { clear = true }),
+vim.api.nvim_create_autocmd("CmdlineEnter", {
+    group = vim.api.nvim_create_augroup("keymap-cmdlineenter", { clear = true }),
     once = true,
     callback = function()
         map_on_cmdlineenter()
@@ -657,33 +665,33 @@ Autocmd("CmdlineEnter", {
 
 local function map_on_insertenter()
     -- Bash style typing
-    Map("i", "<C-a>", "<C-o>I")
-    Map("i", "<C-e>", "<End>")
-    Map("i", "<C-b>", "<left>")
-    Map("i", "<C-f>", "<right>")
-    Map("i", "<M-b>", "<S-left>")
-    Map("i", "<M-f>", "<S-right>")
+    vim.keymap.set("i", "<C-a>", "<C-o>I")
+    vim.keymap.set("i", "<C-e>", "<End>")
+    vim.keymap.set("i", "<C-b>", "<left>")
+    vim.keymap.set("i", "<C-f>", "<right>")
+    vim.keymap.set("i", "<M-b>", "<S-left>")
+    vim.keymap.set("i", "<M-f>", "<S-right>")
 
-    Map("i", "<C-d>", "<Del>")
-    Map("i", "<M-d>", "<C-g>u<C-o>dw")
-    Map("i", "<C-k>", "<C-g>u<C-o>D")
-    Map("i", "<C-l>", "<esc><cmd>silent norm! u<cr>")
+    vim.keymap.set("i", "<C-d>", "<Del>")
+    vim.keymap.set("i", "<M-d>", "<C-g>u<C-o>dw")
+    vim.keymap.set("i", "<C-k>", "<C-g>u<C-o>D")
+    vim.keymap.set("i", "<C-l>", "<esc><cmd>silent norm! u<cr>")
 
     -- Since <C-d> is remapped
-    Map("i", "<C-m>", "<C-d>")
+    vim.keymap.set("i", "<C-m>", "<C-d>")
 
-    Map("i", "<M-j>", "<down>")
-    Map("i", "<M-k>", "<up>")
+    vim.keymap.set("i", "<M-j>", "<down>")
+    vim.keymap.set("i", "<M-k>", "<up>")
 
-    Map("i", "<M-e>", "<C-o>ze")
+    vim.keymap.set("i", "<M-e>", "<C-o>ze")
 
     -- i_Ctrl-v always shows the simplified form of a key, Ctrl-Shift-v must be used to show the
     -- unsimplified form. Use this map since I have Ctrl-Shift-v as terminal paste
-    Map("i", "<C-q>", "<C-S-v>")
+    vim.keymap.set("i", "<C-q>", "<C-S-v>")
 end
 
-Autocmd("InsertEnter", {
-    group = Augroup("keymap-insertenter", { clear = true }),
+vim.api.nvim_create_autocmd("InsertEnter", {
+    group = vim.api.nvim_create_augroup("keymap-insertenter", { clear = true }),
     once = true,
     callback = function()
         map_on_insertenter()

@@ -13,7 +13,7 @@ jump2d.setup({
     silent = true,
 })
 
-Map("n", "<cr>", function()
+vim.keymap.set("n", "<cr>", function()
     jump2d.start(jump2d.builtin_opts.word_start)
 end)
 

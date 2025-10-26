@@ -4,7 +4,7 @@ local fn = vim.fn
 local M = {}
 
 -- Alchemical trident symbol
-local symbol = Has_Nerd_Font and "\u{1F751}" or "|" ---@type string
+local symbol = "\u{1F751}" ---@type string
 -- Alternatively, "\u{21CC}" (left over right harpoon)
 
 local hl_active = "stl_b" ---@type string
@@ -32,7 +32,7 @@ local function build_harpoon_component(tal)
             local buf = fn.bufnr(t_path)
             if buf == -1 then return "" end
 
-            return GetOpt("modified", { buf = buf }) and "[+]" or ""
+            return vim.api.nvim_get_option_value("modified", { buf = buf }) and "[+]" or ""
         end)() ---@type string
 
         local t_basename = vim.fs.basename(t.value) ---@type string
@@ -57,7 +57,7 @@ function M.build_tab_component()
         local has_modified = false ---@type boolean
         for _, w in ipairs(t_wins) do
             local bufnr = api.nvim_win_get_buf(w) ---@type integer
-            if GetOpt("modified", { buf = bufnr }) then
+            if vim.api.nvim_get_option_value("modified", { buf = bufnr }) then
                 has_modified = true
                 break
             end
@@ -76,7 +76,7 @@ local function build_tal()
     tal[#tal + 1] = string.format("%%#%s#%%=%%*", hl_separator)
     tal[#tal + 1] = "%{%v:lua.require('mjm.tal').build_tab_component()%}%*"
 
-    SetOpt("tal", table.concat(tal, ""), { scope = "global" })
+    vim.api.nvim_set_option_value("tal", table.concat(tal, ""), { scope = "global" })
 end
 
 if ok then
@@ -88,16 +88,16 @@ if ok then
     })
 end
 
-local tal_events = Augroup("tal-events", { clear = true }) ---@type integer
+local tal_events = vim.api.nvim_create_augroup("tal-events", { clear = true }) ---@type integer
 
-Autocmd({ "BufModifiedSet", "CmdlineLeave" }, {
+vim.api.nvim_create_autocmd({ "BufModifiedSet", "CmdlineLeave" }, {
     group = tal_events,
     callback = function()
         build_tal()
     end,
 })
 
-Autocmd("BufWritePost", {
+vim.api.nvim_create_autocmd("BufWritePost", {
     group = tal_events,
     callback = function()
         -- Leave autocmd context so cur_buf is correct
@@ -107,7 +107,7 @@ Autocmd("BufWritePost", {
     end,
 })
 
-Autocmd({ "BufEnter", "BufWinEnter" }, {
+vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
     group = tal_events,
     callback = function()
         -- For edge case where you change Windows in insert mode. Wait for event to be over to
@@ -121,7 +121,7 @@ Autocmd({ "BufEnter", "BufWinEnter" }, {
     end,
 })
 
-SetOpt("stal", 2, { scope = "global" })
+vim.api.nvim_set_option_value("stal", 2, { scope = "global" })
 build_tal()
 
 return M

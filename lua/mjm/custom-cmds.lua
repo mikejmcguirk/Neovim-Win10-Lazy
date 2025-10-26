@@ -184,8 +184,8 @@ local function mv_cur_buf(cargs)
 end
 
 local cmd_augroup_name = "mjm-buf-cmds"
-Autocmd({ "BufNew", "BufReadPre" }, {
-    group = Augroup(cmd_augroup_name, {}),
+vim.api.nvim_create_autocmd({ "BufNew", "BufReadPre" }, {
+    group = vim.api.nvim_create_augroup(cmd_augroup_name, {}),
     once = true,
     callback = function()
         api.nvim_create_user_command("BKill", function(cargs)

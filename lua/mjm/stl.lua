@@ -30,7 +30,7 @@ vim.api.nvim_create_autocmd("LspProgress", {
         if ev.data.params.value.kind == "end" then
             vim.defer_fn(function()
                 progress_cache[ev.buf] = nil
-                Cmd({ cmd = "redraws" }, {})
+                vim.api.nvim_cmd({ cmd = "redraws" }, {})
             end, 2250)
         end
 
@@ -55,7 +55,7 @@ vim.api.nvim_create_autocmd("LspProgress", {
         progress_cache[ev.buf] = str
 
         -- Don't create more textlock in insert mode
-        if not is_bad_mode() then Cmd({ cmd = "redraws" }, {}) end
+        if not is_bad_mode() then vim.api.nvim_cmd({ cmd = "redraws" }, {}) end
     end,
 })
 
@@ -94,7 +94,7 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
 
         diag_cache[ev.buf] = diag_str or nil
 
-        if not is_bad_mode() then Cmd({ cmd = "redraws" }, {}) end
+        if not is_bad_mode() then vim.api.nvim_cmd({ cmd = "redraws" }, {}) end
     end),
 })
 
@@ -107,7 +107,7 @@ vim.api.nvim_create_autocmd("ModeChanged", {
         if vim.v.event.new_mode == mode then return end
 
         mode = vim.v.event.new_mode
-        Cmd({ cmd = "redraws" }, {})
+        vim.api.nvim_cmd({ cmd = "redraws" }, {})
     end,
 })
 
@@ -123,7 +123,7 @@ vim.api.nvim_create_autocmd({ "LspAttach", "LspDetach" }, {
         local clients = vim.lsp.get_clients({ bufnr = ev.buf }) ---@type vim.lsp.Client[]
         lsp_cache[ev.buf] = (clients and #clients > 0) and string.format("[%d]", #clients) or nil
 
-        Cmd({ cmd = "redraws" }, {})
+        vim.api.nvim_cmd({ cmd = "redraws" }, {})
     end),
 })
 

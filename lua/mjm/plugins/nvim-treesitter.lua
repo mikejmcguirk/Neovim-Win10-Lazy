@@ -39,8 +39,8 @@ require("nvim-treesitter").install(languages)
 local ft_extensions = { "sh" }
 local fts = vim.tbl_extend("force", languages, ft_extensions)
 
-Autocmd({ "FileType" }, {
-    group = Augroup("ts-start", {}),
+vim.api.nvim_create_autocmd({ "FileType" }, {
+    group = vim.api.nvim_create_augroup("ts-start", {}),
     pattern = fts,
     callback = function(ev)
         vim.treesitter.start(ev.buf)
@@ -49,12 +49,12 @@ Autocmd({ "FileType" }, {
     end,
 })
 
-Autocmd("VimEnter", {
-    group = Augroup("run-tsupdate", {}),
+vim.api.nvim_create_autocmd("VimEnter", {
+    group = vim.api.nvim_create_augroup("run-tsupdate", {}),
     pattern = "*",
     callback = function()
         vim.schedule(function()
-            Cmd({ cmd = "TSUpdate" }, {})
+            vim.api.nvim_cmd({ cmd = "TSUpdate" }, {})
         end)
     end,
 })
@@ -196,7 +196,7 @@ local function setup_objects()
             }
 
             for _, m in pairs(select_maps) do
-                Map({ "x", "o" }, m[1], function()
+                vim.keymap.set({ "x", "o" }, m[1], function()
                     select.select_textobject(m[2], "textobjects")
                 end, { buffer = ev.buf })
             end
@@ -231,19 +231,19 @@ local function setup_objects()
             }
 
             for _, m in pairs(move_maps) do
-                Map("n", m[1], function()
+                vim.keymap.set("n", m[1], function()
                     move.goto_previous_start(m[3], "textobjects")
                 end, { buffer = ev.buf })
 
-                Map("n", m[2], function()
+                vim.keymap.set("n", m[2], function()
                     move.goto_next_start(m[3], "textobjects")
                 end, { buffer = ev.buf })
 
-                Map("o", m[1], function()
+                vim.keymap.set("o", m[1], function()
                     move.goto_previous_start(m[3], "textobjects")
                 end, { buffer = ev.buf })
 
-                Map("o", m[2], function()
+                vim.keymap.set("o", m[2], function()
                     move.goto_next_end(m[3], "textobjects")
                 end, { buffer = ev.buf })
 
@@ -253,7 +253,7 @@ local function setup_objects()
                 -- The current implementation can also make unexpectedly big moves, but my
                 -- attempts at walking back and redoing could cause the cursor to get stuck
 
-                Map({ "x" }, m[1], function()
+                vim.keymap.set({ "x" }, m[1], function()
                     local orientation = get_cursor_orientation()
 
                     if orientation == "fin" then
@@ -268,7 +268,7 @@ local function setup_objects()
                     end
                 end, { buffer = ev.buf })
 
-                Map("x", m[2], function()
+                vim.keymap.set("x", m[2], function()
                     local orientation = get_cursor_orientation()
 
                     if orientation == "start" then
@@ -316,11 +316,11 @@ local function setup_objects()
             }
 
             for _, m in pairs(swap_maps) do
-                Map("n", m[1], function()
+                vim.keymap.set("n", m[1], function()
                     swap.swap_previous(m[3], "textobjects")
                 end, { buffer = ev.buf })
 
-                Map("n", m[2], function()
+                vim.keymap.set("n", m[2], function()
                     swap.swap_next(m[3], "textobjects")
                 end, { buffer = ev.buf })
             end

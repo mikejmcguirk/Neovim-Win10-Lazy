@@ -4,7 +4,7 @@ require("treesj").setup({
     notify = false,
 })
 
-Map("n", "gs", require("treesj").toggle)
-Map("n", "gS", function()
+vim.keymap.set("n", "gs", require("treesj").toggle)
+vim.keymap.set("n", "gS", function()
     require("treesj").split({ split = { recursive = true } })
 end)
