@@ -35,9 +35,7 @@ local function hl_extend(old_hl, cfg_ext)
     return vim.tbl_extend("force", old_cfg, cfg_ext)
 end
 
-----------------------------
--- Diagnostics and Status --
-----------------------------
+-- DIAGNOSTICS AND STATUS --
 
 api.nvim_set_hl(0, "DiagnosticError", { fg = l_red })
 api.nvim_set_hl(0, "DiagnosticWarn", { fg = l_orange })
@@ -69,27 +67,7 @@ api.nvim_set_hl(0, "SpellLocal", { link = "DiagnosticWarn" }) -- (Default self-d
 api.nvim_set_hl(0, "SpellCap", { link = "DiagnosticInfo" }) -- (Default self-definition)
 api.nvim_set_hl(0, "SpellRare", { link = "DiagnosticHint" }) -- (Default self-definition)
 
----------------
--- Normal/Fg --
----------------
-
-api.nvim_set_hl(0, "Normal", { fg = fg })
-
-api.nvim_set_hl(0, "Delimiter", {})
-api.nvim_set_hl(0, "Identifier", {})
-api.nvim_set_hl(0, "NormalFloat", {}) -- Default self-definition
-api.nvim_set_hl(0, "NormalNC", {}) -- Causes performance issues (default setting)
-
-api.nvim_set_hl(0, "@variable", {}) --- Default self-definition
--- Meaningless without an LSP to determine scope
-api.nvim_set_hl(0, "@variable.paramter", {}) --- Default self-definition
-api.nvim_set_hl(0, "@variable.property", {}) --- Default self-definition
-
-api.nvim_set_hl(0, "@lsp.type.variable", {})
-
---------------------
---- Special Text ---
---------------------
+--- SPECIAL TEXT ---
 
 api.nvim_set_hl(0, "Comment", { fg = purple, italic = true })
 api.nvim_set_hl(0, "Conceal", { link = "Comment" }) -- (Default self-definition)
@@ -105,9 +83,22 @@ api.nvim_set_hl(0, "LspInlayHint", { fg = green, italic = true })
 
 api.nvim_set_hl(0, "EndOfBuffer", {}) -- (Default link: Non-text)
 
-----------------------------------
---- Builtins/Constants/Globals ---
-----------------------------------
+-- NORMAL/FG --
+
+api.nvim_set_hl(0, "Normal", { fg = fg })
+
+api.nvim_set_hl(0, "Delimiter", {})
+api.nvim_set_hl(0, "Identifier", {})
+api.nvim_set_hl(0, "NormalFloat", {}) -- Default self-definition
+api.nvim_set_hl(0, "NormalNC", {}) -- Causes performance issues (default setting)
+
+api.nvim_set_hl(0, "@variable", {}) --- Default self-definition
+api.nvim_set_hl(0, "@variable.member", {}) --- Default self-definition
+api.nvim_set_hl(0, "@variable.property", {}) --- Default self-definition
+
+api.nvim_set_hl(0, "@lsp.type.variable", {})
+
+--- RED ---
 
 api.nvim_set_hl(0, "Constant", { fg = l_red })
 
@@ -118,17 +109,13 @@ api.nvim_set_hl(0, "@lsp.typemod.function.global", { link = "Constant" }) -- Def
 api.nvim_set_hl(0, "@lsp.typemod.variable.defaultLibrary", { link = "Constant" }) -- Default @lsp
 api.nvim_set_hl(0, "@lsp.typemod.variable.global", { link = "Constant" }) -- Default @lsp
 
------------------
---- Functions ---
------------------
+--- FUNCTIONS ---
 
 api.nvim_set_hl(0, "Function", { fg = l_yellow })
 
 api.nvim_set_hl(0, "@function.builtin", { link = "Function" }) -- Default link to Special
 
---------------------------------------
---- Numbers/Booleans/Chars/Modules ---
---------------------------------------
+--- NUMBERS/BOOLEANS/CHARS/MODULES ---
 
 api.nvim_set_hl(0, "Number", { fg = l_cyan }) -- (Default link: Constant)
 
@@ -140,11 +127,10 @@ api.nvim_set_hl(0, "@module", { link = "Number" }) -- (Default link: Type)
 api.nvim_set_hl(0, "@lsp.type.namespace", { link = "Number" }) -- (Default link: Type)
 api.nvim_set_hl(0, "@lsp.typemod.boolean.injected", { link = "Boolean" }) -- Default @lsp
 
-api.nvim_set_hl(0, "@lsp.type.enumMember", hl_extend("Number", { italic = true })) -- (Default link: Type)
+-- (Default link: Type)
+api.nvim_set_hl(0, "@lsp.type.enumMember", hl_extend("Number", { italic = true }))
 
--------------------------------------------
---- Operators/PreProc/Statement/Special ---
--------------------------------------------
+--- OPERATORS/PREPROC/STATEMENT/SPECIAL ---
 
 api.nvim_set_hl(0, "Operator", { fg = l_pink })
 
@@ -171,9 +157,10 @@ api.nvim_set_hl(0, "Statement", { fg = l_pink })
 --- Parameters ---
 ------------------
 
-api.nvim_set_hl(0, "@variable.parameter", { link = "@lsp.type.parameter" })
+api.nvim_set_hl(0, "@variable.parameter", { fg = l_orange })
 
-api.nvim_set_hl(0, "@lsp.type.parameter", { fg = l_orange }) -- Default link: Identifier
+-- Default link: Identifier
+api.nvim_set_hl(0, "@lsp.type.parameter", { link = "@variable.parameter" })
 
 --------------
 --- String ---
@@ -181,7 +168,7 @@ api.nvim_set_hl(0, "@lsp.type.parameter", { fg = l_orange }) -- Default link: Id
 
 api.nvim_set_hl(0, "String", { fg = l_purple })
 
-api.nvim_set_hl(0, "@string.escape", { fg = l_purple, italic = true })
+api.nvim_set_hl(0, "@string.escape", hl_extend("String", { italic = true }))
 
 api.nvim_set_hl(0, "@lsp.type.formatSpecifier", { link = "@string.escape" })
 
@@ -196,7 +183,6 @@ api.nvim_set_hl(0, "@type.builtin", { link = "Type" }) -- Default link Special
 api.nvim_set_hl(0, "@lsp.type.builtinType", { link = "Type" }) -- Default link @lsp
 
 api.nvim_set_hl(0, "@lsp.type.typeAlias", hl_extend("Type", { italic = true }))
-
 -- Default link @lsp
 api.nvim_set_hl(0, "@lsp.type.selfTypeKeyword", { link = "@lsp.type.typeAlias" })
 
@@ -327,26 +313,29 @@ vim.keymap.set("n", "gT", function()
     api.nvim_cmd({ cmd = "Inspect" }, {})
 end)
 
----------
--- Lua --
----------
-
--- Disable function vars showing the same highlight as function calls
-
-api.nvim_set_hl(0, "@lsp.type.function.lua", {})
-api.nvim_set_hl(0, "@lsp.type.method.lua", {})
-
+local lua_captures = "lua-disable-hl-captures"
 api.nvim_create_autocmd("FileType", {
-    group = api.nvim_create_augroup("lua-disable-captures", { clear = true }),
+    group = api.nvim_create_augroup(lua_captures, { clear = true }),
     pattern = "lua",
     once = true,
     callback = function()
+        api.nvim_set_hl(0, "@lsp.type.function.lua", {})
+        api.nvim_set_hl(0, "@lsp.type.method.lua", {})
+        api.nvim_set_hl(0, "@lsp.type.property.lua", {})
+        api.nvim_set_hl(0, "@lsp.type.variable.lua", {})
+
         ---@type vim.treesitter.Query?
         local hl_query = vim.treesitter.query.get("lua", "highlights")
         if not hl_query then return end
 
+        hl_query.query:disable_capture("comment.documentation")
         hl_query.query:disable_capture("function")
-        api.nvim_del_augroup_by_name("lua-disable-captures")
+        hl_query.query:disable_capture("module-builtin")
+        hl_query.query:disable_capture("punctuation.bracket")
+        hl_query.query:disable_capture("punctuation.delimiter")
+        hl_query.query:disable_capture("variable")
+        hl_query.query:disable_capture("variable.member")
+        hl_query.query:disable_capture("variable.property")
     end,
 })
 
