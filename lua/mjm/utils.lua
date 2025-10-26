@@ -450,7 +450,7 @@ end
 ---@param func function
 ---@return nil
 function M.do_when_idle(func)
-    vim.validate("fn", func, "callable")
+    vim.validate("func", func, "callable")
 
     local idle_handle = vim.uv.new_idle() ---@type uv.uv_idle_t|nil
     if not idle_handle then
@@ -470,21 +470,36 @@ end
 
 ---@param win integer
 ---@param force boolean
----@return integer
+---@return integer|nil, boolean
 function M.pwin_close(win, force)
     vim.validate("win", win, "number")
     vim.validate("force", force, "boolean")
-    if not api.nvim_win_is_valid(win) then return -1 end
+
+    if not api.nvim_win_is_valid(win) then return nil, false end
 
     local tabpages = api.nvim_list_tabpages() ---@type integer[]
     local win_tabpage = api.nvim_win_get_tabpage(win) ---@type integer
     local win_tabpage_wins = api.nvim_tabpage_list_wins(win_tabpage) ---@type integer[]
-
     local buf = api.nvim_win_get_buf(win) ---@type integer
-    if #tabpages == 1 and #win_tabpage_wins == 1 then return buf end
+
+    if #tabpages == 1 and #win_tabpage_wins == 1 then return buf, true end
 
     local ok, _ = pcall(api.nvim_win_close, win, force) ---@type boolean, nil
-    return ok and buf or -1
+    if ok then return buf, false end
+    return nil, false
+end
+
+---@return integer[]
+local function list_listed_bufs()
+    local listed_bufs = {} ---@type integer[]
+    local bufs = api.nvim_list_bufs() ---@type integer[]
+    for _, buf in ipairs(bufs) do
+        if api.nvim_get_option_value("buflisted", { buf = buf }) then
+            listed_bufs[#listed_bufs + 1] = buf
+        end
+    end
+
+    return listed_bufs
 end
 
 -- https://github.com/neovim/neovim/pull/33402
@@ -495,42 +510,56 @@ end
 ---@param buf integer
 ---@param force boolean
 ---@param wipeout boolean
----@return nil
+---@return boolean, [string, string|integer?][]|nil, boolean|nil, vim.api.keyset.echo_opts|nil
 function M.pbuf_rm(buf, force, wipeout)
     vim.validate("buf", buf, "number")
     vim.validate("force", force, "boolean")
     vim.validate("wipeout", wipeout, "boolean")
 
-    if not api.nvim_buf_is_valid(buf) then return end
+    if not api.nvim_buf_is_valid(buf) then
+        local chunks = { { "Buf " .. buf .. " is not valid" } } ---@type [string,string|integer?][]
+        return false, chunks, true, { err = true }
+    end
 
-    local modifiable = vim.api.nvim_get_option_value("modifiable", { buf = buf }) ---@type boolean
-    if modifiable then
+    local delete_opts = { force = force }
+    if not wipeout then
+        if #list_listed_bufs() <= 1 then
+            ---@type [string,string|integer?][]
+            local chunks = { { "Cannot unload the last buffer" } }
+            return false, chunks, false, {}
+        end
+
+        api.nvim_set_option_value("buflisted", false, { buf = buf })
+        delete_opts.unload = true
+    end
+
+    if api.nvim_get_option_value("modifiable", { buf = buf }) then
         api.nvim_buf_call(buf, function()
-            vim.api.nvim_cmd({ cmd = "update", mods = { silent = true } }, {})
+            api.nvim_cmd({ cmd = "update", mods = { silent = true } }, {})
         end)
     end
 
-    if not wipeout then vim.api.nvim_set_option_value("buflisted", false, { buf = buf }) end
-    local delete_opts = wipeout and { force = force } or { force = force, unload = true }
-    pcall(api.nvim_buf_delete, buf, delete_opts)
+    local ok, err = pcall(api.nvim_buf_delete, buf, delete_opts) ---@type boolean, nil
+    if ok then return true, nil, nil, nil end
+    ---@type [string, string|integer?][]
+    local chunks = { { err or ("Unknown error deleting buf " .. buf) } }
+    return false, chunks, true, { err = true }
 end
-
--- MID: This does not wipe the buf in the last win
--- This would also need to return an ok, result from pwin_close. If the window did not close but
--- it returned a valid buf, we would want to close the buf immediately. If the window did close,
--- then we can defer cleaning up the buf
 
 ---@param win integer
 ---@param force boolean
 ---@param wipeout boolean
 ---@return nil
 function M.pclose_and_rm(win, force, wipeout)
-    local buf = M.pwin_close(win, force)
-    if buf > 0 then
-        M.do_when_idle(function()
-            if #fn.win_findbuf(buf) == 0 then M.pbuf_rm(buf, force, wipeout) end
-        end)
-    end
+    local buf, always = M.pwin_close(win, force) ---@type integer|nil, boolean
+    if not buf then return end
+    M.do_when_idle(function()
+        if always or #vim.fn.win_findbuf(buf) == 0 then
+            local ok, chunks, msg, opts = M.pbuf_rm(buf, force, wipeout)
+            if ok then return end
+            api.nvim_echo(chunks or { { "Unknown error" } }, msg or false, opts or { err = true })
+        end
+    end)
 end
 
 ---@return Range4|nil
