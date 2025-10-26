@@ -1,3 +1,5 @@
+local api = vim.api
+
 -- MID: Might be an Arboreal thing too - Create syntactic sugar for mapping ft to parser name
 -- I don't think the edit code below works for sh
 -- LOW: Also maybe an Arboreal thing - Create syntactic sugar for disabling default hl groups
@@ -8,6 +10,7 @@ vim.keymap.set("n", "gtt", function()
     local buf = vim.api.nvim_get_current_buf()
     if vim.treesitter.highlighter.active[buf] then
         vim.treesitter.stop(buf)
+        if vim.g.syntax_on == 1 then api.nvim_cmd({ cmd = "syntax", args = { "off" } }, {}) end
     else
         vim.treesitter.start(buf)
     end
