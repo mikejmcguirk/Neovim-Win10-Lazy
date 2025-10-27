@@ -102,45 +102,11 @@ local function setup_blink()
                 show_documentation = true,
             },
         },
-
-        -- If the sources option is a function, and dictionary is one of the possible sources,
-        -- what can happen is that the dictionary can spawn an fzf process that is not closed.
-        -- The easiest way to observe this is by typing "let's" repeatedly. This issue seems to
-        -- occur when the dictionary runs out of sources. Even without the dynamic source config,
-        -- you can still see an fzf job spawn and take a moment to close sometimes when the
-        -- dictionary runs out of words. If you type the words slowly, one character at a time,
-        -- this does not occur. I cannot help but note that, yes, this is an issue that occurs
-        -- because I type too fast. My vague theory is that, during the period when blink is
-        -- running the function to check providers, it is not sending events to those providers,
-        -- and the dictionary provider relies on an event from cmp to close the fzf job that it is
-        -- not getting. But this would need testing with a minimal config to isolate
-        -- I can also see this occurring if another async source is running alongside the
-        -- Dictionary source, which points further to me at the broken event loop idea
-        -- In the meantime, if I statically set the sources by filetype and make sure no async
-        -- sources are running next to the dictionary, this does not occur
-        -- Something else I notice is, if I type quickly with Obsidian completions on, I eventually
-        -- get an error about how Vimscript functions cannot be used in a fast event context, but
-        -- this doesn't happen if I type slowly. I guess I'm the fast event! But this points to
-        -- blink's event handling also being an element of what's happening. A downside here
-        -- seems to be that async needs to be turned off for all providers, or else if an async
-        -- provider pushes completions first, then the others will not be seen
-        -- UPDATE: While less frequent, this can still happen. Can trigger by just doing
-        -- as;ldfkj spam. The solution here I think is to use vim.system instead of a plenary
-        -- job, because then the calls are managed through Vim's context.
-        -- If you prevent a prefix from being added if there is any special character, it works
-        -- If you make Dictionary run synrhonously, it works
-        -- If you prevent non-alpha characters from going into prefix, doesn't change. Feels like
-        -- data is being polluted somehow. Like, something is being affected in a scope
-        -- it's not meant to be. It also looks like both the plenary jobs and vim.system use
-        -- uv.spawn under the hood, so I'm not sure that would actually do anything. Though with
-        -- vim.system, you pass the callback handler and that handler does its work, whereas
-        -- plenary has wrappers after uv.spawn to handle cleanup
         sources = {
             default = { "lsp", "snippets", "buffer", "path" },
             per_filetype = {
                 lua = { inherit_defaults = true, "lazydev" },
                 markdown = {
-                    -- "dictionary",
                     -- TODO: How to get the obsidian pickers only when loaded
                     -- "obsidian",
                     -- "obsidian_new",
@@ -151,7 +117,6 @@ local function setup_blink()
                 },
                 sql = { "dadbod", "buffer", "path" },
                 text = { "buffer", "path" },
-                -- text = { "dictionary", "buffer", "path" },
             },
             providers = {
                 buffer = {
@@ -203,49 +168,8 @@ local function setup_blink()
                     end,
                 },
                 dadbod = { name = "Dadbod", module = "vim_dadbod_completion.blink" },
-                -- dictionary = {
-                --     -- NOTE: Do not set async for this provider, or else the fzf jobs it spawns
-                --     -- might not be closed on exit. Per the docs, it should be async by default
-                --     -- and non-blocking anyway
-                --     module = "blink-cmp-dictionary",
-                --     name = "Dict",
-                --     max_items = 20,
-                --     min_keyword_length = 3, -- How many two letter words do we need to look up?
-                --     opts = {
-                --         dictionary_files = {
-                --             vim.fn.expand("~/.local/bin/words/words_alpha.txt"),
-                --             vim.fn.expand(SpellFile),
-                --         },
-                --         get_prefix = function(ctx)
-                --             local line = ctx.line:sub(1, ctx.cursor[2])
-                --             local word = line:match("[a-zA-Z]+$")
-                --             return word or ""
-                --         end,
-                --     },
-                --     -- transform_items = function(_, items)
-                --     --     local seen = {} ---@type boolean[]
-
-                --     --     local out = vim.tbl_filter(function(item)
-                --     --         local text = item.insertText or "" ---@type string
-
-                --     --         if seen[text] then
-                --     --             return false
-                --     --         end
-
-                --     --         seen[text] = true
-
-                --     --         return #text > 0 and text:match("^[a-zA-Z]+$")
-                --     --     end, items)
-
-                --     --     return out
-                --     -- end,
-                -- },
                 -- NOTE: To test, trigger LazyDev's specific completion by requiring a module
-                lazydev = {
-                    module = "lazydev.integrations.blink",
-                    name = "LazyDev",
-                    -- score_offset = 100,
-                },
+                lazydev = { module = "lazydev.integrations.blink", name = "LazyDev" },
                 lsp = { fallbacks = {} },
                 path = {
                     opts = {
@@ -254,7 +178,6 @@ local function setup_blink()
                         end,
                     },
                 },
-                -- snippets = { async = true },
             },
         },
     })
@@ -324,7 +247,6 @@ vim.api.nvim_create_autocmd({ "CmdlineEnter", "BufReadPre", "BufNewFile" }, {
         local sys_opts = { cwd = path, text = true } ---@type vim.SystemOpts
         vim.api.nvim_echo({ { "Building fuzzy for blink.cmp...", "" } }, true, {})
 
-        -- LOW: Would be better if the URL for this were smarter
         vim.system(cmd, sys_opts, function(out)
             if out.code == 0 then
                 vim.schedule(function()
@@ -344,17 +266,3 @@ vim.api.nvim_create_autocmd({ "CmdlineEnter", "BufReadPre", "BufNewFile" }, {
         vim.api.nvim_del_augroup_by_name("setup-blink")
     end,
 })
-
--- TODO: Make the dictionary source work properly. Rewrite with vim.system?
-
--- NOTES:
--- There is an available keymap for viewing completion options from a specific source
--- The recipes page has info on how to disable completion for specific buf types
--- If we get too many meaningless sources in comments, the recipes page has a way to filter them
-
--- Source Notes:
--- https://github.com/niuiic/blink-cmp-rg.nvim -- A lot, but looks customizable
--- https://github.com/mikavilpas/blink-ripgrep.nvim -- Similar to the above
--- https://github.com/Kaiser-Yang/blink-cmp-avante -- If we go the Avante route
--- https://github.com/phanen/blink-cmp-register -- Maybe
--- https://github.com/bydlw98/blink-cmp-sshconfig -- Niche but maybe
