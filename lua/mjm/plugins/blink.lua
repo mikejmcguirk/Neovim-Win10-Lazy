@@ -1,5 +1,4 @@
 local function setup_blink()
-    -- Don't want any mis-fires
     vim.keymap.set("i", "<C-y>", "<nop>")
     vim.keymap.set("i", "<C-n>", "<nop>")
     vim.keymap.set("i", "<C-p>", "<nop>")
@@ -168,7 +167,6 @@ local function setup_blink()
                     end,
                 },
                 dadbod = { name = "Dadbod", module = "vim_dadbod_completion.blink" },
-                -- NOTE: To test, trigger LazyDev's specific completion by requiring a module
                 lazydev = { module = "lazydev.integrations.blink", name = "LazyDev" },
                 lsp = { fallbacks = {} },
                 path = {
@@ -216,7 +214,7 @@ local function setup_blink()
         CmpItemKindOperator = { link = "@operator" },
 
         BlinkCmpKindTypeParameter = { link = "Type" },
-    } ---@type {string: vim.api.keyset.highlight}
+    } ---@type { string: vim.api.keyset.highlight }
 
     for k, v in pairs(groups) do
         vim.api.nvim_set_hl(0, k, v)

@@ -70,6 +70,7 @@ require("mjm.plugins.harpoon")
 require("mjm.tal")
 
 require("mjm.plugins.oil")
+require("mjm.plugins.snacks")
 
 require("mjm.plugins.fugitive")
 require("mjm.plugins.session_manager")
@@ -107,7 +108,6 @@ vim.api.nvim_create_autocmd({ "BufNew", "BufReadPre" }, {
         require("mjm.plugins.mini-operators")
         require("mjm.plugins.nvim-surround")
         require("mjm.plugins.treesj")
-        require("mjm.plugins.zen")
 
         require("mjm.diagnostics")
         require("mjm.lsp")

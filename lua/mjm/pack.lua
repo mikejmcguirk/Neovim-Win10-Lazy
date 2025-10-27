@@ -50,6 +50,8 @@ local pack_spec = {
 
     { src = "https://github.com/unblevable/quick-scope" },
 
+    { src = "https://github.com/folke/snacks.nvim" },
+
     { src = "https://github.com/Wansmer/treesj" },
 
     { src = "https://github.com/tpope/vim-abolish" },
@@ -58,8 +60,6 @@ local pack_spec = {
     { src = "https://github.com/kristijanhusak/vim-dadbod-ui" },
 
     { src = "https://github.com/tpope/vim-fugitive" },
-
-    { src = "https://github.com/folke/zen-mode.nvim" },
 }
 
 vim.pack.add(pack_spec, {})
