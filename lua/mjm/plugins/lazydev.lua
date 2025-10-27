@@ -1,6 +1,8 @@
 local function load_lazydev()
     require("lazydev.config").setup({
         library = {
+            "${3rd}/busted/library",
+            "${3rd}/luassert/library",
             -- Load luvit types when the `vim.uv` word is found
             { path = "${3rd}/luv/library", words = { "vim%.uv" } },
         },

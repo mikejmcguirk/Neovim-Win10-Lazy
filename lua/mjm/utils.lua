@@ -567,11 +567,12 @@ function M.get_vrange4()
     local mode = string.sub(api.nvim_get_mode().mode, 1, 1) ---@type string
     if not (mode == "v" or mode == "V" or mode == "\22") then return nil end
 
-    local cur = fn.getpos(".") ---@type table
-    local fin = fn.getpos("v") ---@type table
+    local cur = fn.getpos(".") ---@type [integer, integer, integer, integer]
+    local fin = fn.getpos("v") ---@type [integer, integer, integer, integer]
     local selection = api.nvim_get_option_value("selection", { scope = "global" }) ---@type string
     local exclusive = selection == "exclusive" ---@type boolean
-    local region = fn.getregionpos(cur, fin, { type = mode, exclusive = exclusive }) ---@type table
+    --- @type [ [integer, integer, integer, integer], [integer, integer, integer, integer] ][]
+    local region = fn.getregionpos(cur, fin, { type = mode, exclusive = exclusive })
 
     return { region[1][1][2], region[1][1][3], region[#region][2][2], region[#region][2][3] }
 end

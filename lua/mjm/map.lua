@@ -4,6 +4,16 @@ local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 local api = vim.api
 local fn = vim.fn
 
+-- Unsimplify mappings
+-- See :h <tab> and https://github.com/neovim/neovim/pull/17932
+-- NOTE: For this to work in Tmux, that config has to be handled separately
+vim.keymap.set("n", "<C-i>", "<C-i>")
+vim.keymap.set("n", "<tab>", "<tab>")
+vim.keymap.set("n", "<C-m>", "<C-m>")
+vim.keymap.set("n", "<cr>", "<cr>")
+vim.keymap.set("n", "<C-[>", "<C-[>")
+vim.keymap.set("n", "<esc>", "<esc>")
+
 -------------
 -- DISABLE --
 -------------

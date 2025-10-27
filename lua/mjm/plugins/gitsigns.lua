@@ -15,7 +15,7 @@ gitsigns.setup({
 
         local function diff_map(lhs, nav, opts, backup)
             map("n", lhs, function()
-                local win = api.nvim_get_current_window()
+                local win = api.nvim_get_current_win()
                 if api.nvim_get_option_value("diff", { win = win }) then
                     api.nvim_cmd({ cmd = "normal", args = { backup }, bang = true }, {})
                 else

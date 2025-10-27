@@ -38,7 +38,6 @@ local pre_pack = vim.uv.hrtime() ---@type number
 -- Download/Register Plugins --
 -------------------------------
 
---- Only downloads plugins/adds them to RTP
 require("mjm.pack")
 
 local pack_finish = vim.uv.hrtime() ---@type number
@@ -49,11 +48,10 @@ local pack_finish = vim.uv.hrtime() ---@type number
 
 require("mjm.colorscheme")
 require("mjm.set")
+require("mjm.autocmd")
 require("mjm.map")
 require("mjm.custom-cmds")
 require("mjm.stl")
-
--- require("mjm.error-list")
 
 local env_setup = vim.uv.hrtime() ---@type number
 
@@ -64,7 +62,6 @@ local env_setup = vim.uv.hrtime() ---@type number
 require("mjm.plugins.nvim-treesitter") -- Text Objects Sets Up Lazily
 
 require("mjm.plugins.fzflua")
-
 require("mjm.plugins.harpoon")
 --- LOW: This module requires harpoon to setup the tabline display. For some reason, if this is
 --- done before the harpoon module, the setup funciton in the harpoon module will not run properly
