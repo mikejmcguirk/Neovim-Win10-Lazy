@@ -306,7 +306,6 @@ api.nvim_create_autocmd("FileType", {
         api.nvim_set_hl(0, "@lsp.type.method.lua", {})
         api.nvim_set_hl(0, "@lsp.type.property.lua", {})
         api.nvim_set_hl(0, "@lsp.type.variable.lua", {})
-        api.nvim_set_hl(0, "@lsp.typemod.function.global.lua", {})
 
         ---@type vim.treesitter.Query?
         local hl_query = vim.treesitter.query.get("lua", "highlights")
