@@ -5,11 +5,15 @@ local fn = vim.fn
 local lsp = vim.lsp
 
 local ok, fzflua = pcall(require, "fzf-lua") ---@type boolean, table
--- TODO: Check for rancher and use its copen if available
 local function on_list(on_list_ctx)
     fn.setqflist({}, " ", { title = on_list_ctx.title, items = on_list_ctx.items })
-    vim.cmd("botright copen")
-end
+    local rancher_window = require("qf-rancher.window") ---@type QfrWins?
+    if rancher_window then
+        rancher_window.open_qflist({})
+    else
+        api.nvim_cmd({ cmd = "copen" }, {})
+    end
+end ---@type function
 
 -- callHierarchy/incomingCalls --
 local in_call = ok and function()
@@ -18,7 +22,7 @@ end or lsp.buf.incoming_calls ---@type function
 
 -- callHierarchy/outgoingCalls --
 local out_call = ok and function()
-    fzflua.lsp_incoming_calls({ jump1 = false })
+    fzflua.lsp_outgoing_calls({ jump1 = false })
 end or lsp.buf.outgoing_calls ---@type function
 
 -- textDocument/codeAction --
@@ -33,7 +37,7 @@ end or function()
 end ---@type function
 
 -- textDocument/definition --
-local definition = ok and fzflua.lsp_definitions or lsp.buf.definition
+local definition = ok and fzflua.lsp_definitions or lsp.buf.definition ---@type function
 local peek_definition = ok and function()
     fzflua.lsp_definitions({ jump1 = false })
 end or function()
@@ -44,6 +48,7 @@ end ---@type function
 local symbols = ok and fzflua.lsp_document_symbols or lsp.buf.document_symbol ---@type function
 
 -- textDocument/implementation --
+---@type function
 local implementation = ok and fzflua.lsp_implementations or lsp.buf.implementation
 local peek_implementation = ok and function()
     fzflua.lsp_implementations({ jump1 = false })
@@ -58,8 +63,6 @@ end or function()
     lsp.buf.references({ includeDeclaration = false })
 end ---@type function
 
--- TODO: Check for rancher and use its copen if available
--- PR: on_list should be consistent with the other functions
 local peek_references = ok
         and function()
             fzflua.lsp_references({ includeDeclaration = false, jump1 = false })
@@ -69,13 +72,18 @@ local peek_references = ok
             includeDeclaration = false,
             on_list = function(list)
                 fn.setqflist({}, " ", list)
-                vim.cmd("botright copen")
+                local rancher_window = require("qf-rancher.window") ---@type QfrWins?
+                if rancher_window then
+                    rancher_window.open_qflist({})
+                else
+                    api.nvim_cmd({ cmd = "copen" }, {})
+                end
             end,
         })
     end ---@type function
 
 -- textDocument/typeDefinition --
-local typedef = ok and fzflua.lsp_typedefs or lsp.buf.type_definition
+local typedef = ok and fzflua.lsp_typedefs or lsp.buf.type_definition ---@type function
 local peek_typedef = ok and function()
     fzflua.lsp_typedefs({ jump1 = false })
 end or function()
@@ -85,12 +93,27 @@ end or function()
 end ---@type function
 
 -- workspace/symbol --
+---@type function
 local workspace = ok and fzflua.lsp_live_workspace_symbols or lsp.buf.workspace_symbol
 
+---@param lhs string
+---@param client vim.lsp.Client
+---@param method string
+---@param buf integer
+---@return nil
+local function map_no_support(lhs, client, method, buf)
+    vim.keymap.set("n", lhs, function()
+        ---@type [string, string|integer?]
+        local chunk = { "Client " .. client.name .. " does not support method " .. method }
+        api.nvim_echo({ chunk }, false, {})
+    end, { buffer = buf })
+end
+
+---@param ev vim.api.keyset.create_autocmd.callback_args
+---@return nil
 local function set_lsp_maps(ev)
     local client = lsp.get_client_by_id(ev.data.client_id) ---@type vim.lsp.Client?
     if not client then return end
-
     local buf = ev.buf ---@type integer
 
     -- callHierarchy/incomingCalls --
@@ -103,11 +126,10 @@ local function set_lsp_maps(ev)
     vim.keymap.set("n", "gra", code_action, { buffer = buf })
 
     -- textDocument/codeLens --
-    local function start_codelens(bufnr)
-        -- Lens updates are throttled so only one runs at a time. Updating on text change
-        -- increases the likelihood of lenses rendering with stale data
+    -- TODO: Update my bespoke module with an enable/disable for codelens, then PR to the core
+    if client:supports_method("textDocument/codeLens") then
         vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
-            buffer = bufnr,
+            buffer = ev.buf,
             group = vim.api.nvim_create_augroup("mjm-refresh-lens", { clear = true }),
             -- Bespoke module so I can render the lenses as virtual lines
             callback = function()
@@ -115,43 +137,6 @@ local function set_lsp_maps(ev)
             end,
         })
     end
-
-    local function stop_codelens()
-        api.nvim_del_augroup_by_name("mjm-refresh-lens")
-        -- Use bespoke module because that's where the caches are
-        require("mjm.codelens").clear()
-    end
-
-    local function restart_codelens()
-        local clients = lsp.get_clients() ---@type vim.lsp.Client[]
-        for _, c in ipairs(clients) do
-            if c:supports_method("textDocument/codeLens") then
-                local attached_bufs = c.attached_buffers ---@type table<integer, true>
-                for k, v in pairs(attached_bufs) do
-                    if v then start_codelens(k) end
-                end
-            end
-        end
-    end
-
-    -- TODO: This doesn't work because new bufs create new autocmds. Needs to be global state
-    -- on this. Just hack it or actually modify the module?
-    local function toggle_codelens()
-        ---@type boolean, vim.api.keyset.get_autocmds.ret[]
-        local a_ok, autocmds = pcall(api.nvim_get_autocmds, { group = "mjm-refresh-lens" })
-        if a_ok and #autocmds > 0 then
-            stop_codelens()
-        else
-            restart_codelens()
-        end
-    end
-
-    -- TODO: Turn this back on when needed
-    -- if client:supports_method("textDocument/codeLens") then start_codelens(ev.buf) end
-
-    -- Use bespoke module because the lenses are cached there
-    vim.keymap.set("n", "grs", toggle_codelens)
-    vim.keymap.set("n", "grS", require("mjm.codelens").run)
 
     -- textDocument/declaration --
     vim.keymap.set("n", "grd", declaration, { buffer = buf })
@@ -174,13 +159,11 @@ local function set_lsp_maps(ev)
     vim.keymap.set("n", "grh", lsp.buf.document_highlight, { buffer = buf })
 
     -- textDocument/documentSymbol --
-    vim.keymap.set("n", "gO", symbols, { buffer = buf })
+    if client:supports_method("textDocument/documentSymbol") then
+        vim.keymap.set("n", "gO", symbols, { buffer = buf })
+    end
 
     -- textDocument/hover --
-    -- LOW: This is set in runtime/lua/lsp.lua _set_defaults
-    -- This would need to be undone either by overwriting the function or by putting in a PR for
-    -- options to customize
-    -- Low value since I can just overwrite default K and conform can set its formatexpr
     vim.keymap.set("n", "K", function()
         lsp.buf.hover({ border = Border })
     end, { buffer = buf })
@@ -195,7 +178,6 @@ local function set_lsp_maps(ev)
     end)
 
     -- textDocument/linkedEditingRange
-
     -- the docs recommend trying with html:
     -- if client:supports_method("textDocument/linkedEditingRange") then
     --     vim.lsp.linked_editing_range.enable(true, { client_id = client.id })
@@ -206,11 +188,6 @@ local function set_lsp_maps(ev)
     vim.keymap.set("n", "grR", peek_references, { buffer = buf })
 
     -- textDocument/rename --
-
-    -- LOW: Would like a way of having an incremental rename preview for LSP renames.
-    -- The plugin, from what I can tell, does a full re-implementation of rename,
-    -- which I don't want
-
     vim.keymap.set("n", "grn", function()
         ---@type boolean, string
         local ok_i, input = require("mjm.utils").get_input("Rename: ")
@@ -231,6 +208,15 @@ local function set_lsp_maps(ev)
 
     vim.keymap.set("n", "grN", lsp.buf.rename, { buffer = buf })
 
+    -- textDocument/semanticTokens
+    if client:supports_method("textDocument/semanticTokens/full") then
+        vim.keymap.set("n", "grm", function()
+            lsp.semantic_tokens.enable(not lsp.semantic_tokens.is_enabled())
+        end, { buffer = buf })
+    else
+        map_no_support("grm", client, "textDocument/semanticTokens/full", buf)
+    end
+
     -- textDocument/signatureHelp --
     vim.keymap.set({ "i", "s" }, "<C-S>", function()
         lsp.buf.signature_help({ border = Border })
@@ -238,32 +224,31 @@ local function set_lsp_maps(ev)
 
     -- textDocument/typeDefinition --
     vim.keymap.set("n", "grt", typedef, { buffer = buf })
-    if client:supports_method("textDocument/typeDefinition") then
-        vim.keymap.set("n", "grT", peek_typedef, { buffer = buf })
+    vim.keymap.set("n", "grT", peek_typedef, { buffer = buf })
+
+    -- typeHierarchy/subtypes --
+    if client:supports_method("typeHierarchy/subtypes") then
+        vim.keymap.set("n", "grY", function()
+            vim.lsp.buf.typehierarchy("subtypes")
+        end, { buffer = buf })
     else
-        local msg = "LSP Server does not have capability textDocument/typeDefinition"
-        vim.keymap.set("n", "grT", function()
-            api.nvim_echo({ { msg, "" } }, true, {})
-        end)
+        map_no_support("grY", client, "typeHierarchy/subtypes", buf)
+    end
+
+    -- typeHierarchy/supertypes --
+    if client:supports_method("typeHierarchy/supertypes") then
+        vim.keymap.set("n", "gry", function()
+            vim.lsp.buf.typehierarchy("supertypes")
+        end, { buffer = buf })
+    else
+        map_no_support("gry", client, "typeHierarchy/supertypes", buf)
     end
 
     -- workspace/symbol --
-    -- Kickstart mapping
     vim.keymap.set("n", "grw", workspace, { buffer = buf })
-
-    -- Other --
-    -- LOW: Which lsp method is Semantic token behind, because there are like three of them
-    vim.keymap.set("n", "grm", function()
-        lsp.semantic_tokens.enable(not lsp.semantic_tokens.is_enabled())
-    end, { buffer = buf })
-
-    vim.keymap.set("n", "grf", function()
-        print(vim.inspect(lsp.buf.list_workspace_folders()))
-    end, { buffer = buf })
 end
 
-local lsp_group = vim.api.nvim_create_augroup("lsp-autocmds", { clear = true })
-
+local lsp_group = vim.api.nvim_create_augroup("lsp-autocmds", { clear = true }) ---@type integer
 vim.api.nvim_create_autocmd("LspAttach", {
     group = lsp_group,
     callback = function(ev)
@@ -271,8 +256,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
     end,
 })
 
--- PR: Should be "attached_bufs"
--- There's a Neovim issue/discussion on removing "buffer" names from the code, but unsure where
 vim.api.nvim_create_autocmd("LspDetach", {
     group = lsp_group,
     callback = function(ev)
@@ -291,7 +274,6 @@ vim.api.nvim_create_autocmd("LspDetach", {
 
 lsp.log.set_level(vim.log.levels.ERROR)
 
--- Configs are in after/lsp
 lsp.enable({
     --- Bash --
     "bashls",
@@ -302,10 +284,8 @@ lsp.enable({
     "cssls",
     "html",
     --- Lua ---
-    -- LOW: Look into emmylua
     "lua_ls",
     --- Python ---
-    -- Ruff is not feature-complete enough to replace pylsp
     "pylsp",
     "ruff",
     --- Rust ---
@@ -313,18 +293,5 @@ lsp.enable({
     --- Toml ---
     "taplo",
 })
-
--- TODO: Friction point coming up where sometimes I want to send the results of the get_locations
--- cmd to a list, and sometimes to FzfLua. Some of this I think is based on, because I have
--- Rancher made, I'm more interested in using it, regardless of what is objectively better. I
--- think that making both options available could work, but sucks up the namespace. I also think
--- the maps should push toward what's the more efficient solution
--- Partly command dependent. goto definition works well with FzfLua because, if there are
--- multiple definitions, we want to preview them to see which one is best. references might work
--- better with the qflist, because we need to go through each of them. But I think that defining
--- different behavior per cmd is over-complicated
--- More indirect solution - Issue might be that <C-q> for quickfix in FzfLua is cumbersome. But
--- <C-u> us remove line and <C-c> is close. Not really a better place for it
--- Too early to make decision
 
 -- MID: Get a C LSP for reading code
