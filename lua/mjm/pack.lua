@@ -103,10 +103,6 @@ custom_add("nvim-qf-rancher")
 
 -- TODO: The config should not be here
 -- TODO: Re-create my alt mappings for q/l history
-api.nvim_set_var("qfr_debug_assertions", true)
-api.nvim_set_var("qfr_preview_debounce", 50)
-api.nvim_set_var("qfr_preview_show_title", false)
-
 vim.keymap.set("n", "zqc", function()
     local inactive = vim.iter(vim.pack.get())
         :map(function(p)
