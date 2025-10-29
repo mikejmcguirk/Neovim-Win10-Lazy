@@ -48,7 +48,7 @@ local pack_finish = vim.uv.hrtime() ---@type number
 
 require("mjm.colorscheme")
 require("mjm.set")
-require("mjm.autocmd")
+-- require("mjm.autocmd")
 require("mjm.map")
 require("mjm.custom-cmds")
 require("mjm.stl")
