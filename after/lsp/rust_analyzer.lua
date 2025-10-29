@@ -35,9 +35,7 @@ return {
     settings = {
         ["rust-analyzer"] = {
             checkOnSave = true,
-            check = {
-                command = "clippy",
-            },
+            check = { command = "clippy", extraArgs = { "--no-deps" } },
             lens = {
                 enable = true,
                 run = { enable = true },
@@ -49,6 +47,7 @@ return {
                     enumVariant = { enable = true },
                 },
             },
+            procMacro = { enable = true },
         },
     },
 }

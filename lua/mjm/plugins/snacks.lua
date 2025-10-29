@@ -16,7 +16,6 @@ require("snacks").setup({
     scroll = { enabled = false },
     statuscolumn = { enabled = false },
     words = { enabled = false },
-    ---@class snacks.zen.Config
     zen = {
         toggles = { dim = false, git_signs = false, mini_diff_signs = false },
         win = { width = 106, style = "zen" },

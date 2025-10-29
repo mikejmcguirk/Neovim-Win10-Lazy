@@ -130,7 +130,7 @@ api.nvim_set_option_value("nuw", 5, { scope = "global" })
 api.nvim_set_option_value("scl", "yes:1", { scope = "global" })
 
 autoset_winopt({ "WinLeave" }, "rnu", false)
-autoset_winopt({ "WinEnter", "CmdlineLeave" }, "rnu", true)
+autoset_winopt({ "WinEnter", "BufWinEnter", "CmdlineLeave" }, "rnu", true)
 api.nvim_create_autocmd("CmdlineEnter", {
     group = set_group,
     callback = function()

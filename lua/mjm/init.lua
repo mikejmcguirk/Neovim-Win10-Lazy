@@ -87,16 +87,12 @@ local eager_loaded = vim.uv.hrtime() ---@type number
 -- Lazy Initialization --
 -------------------------
 
--- TODO: Rather than have each module setup an autocmd, set the autocmds here and gate the modules
--- behind them. More centralized behavior + less eager requires + config code still separate
-
 require("mjm.plugins.blink")
 require("mjm.plugins.conform")
 require("mjm.plugins.obsidian")
 require("mjm.plugins.lazydev")
 require("mjm.plugins.ts-autotag")
 
--- This is fine as long as modules aren't divided into multiple pieces to do this
 local buf_augroup_name = "mjm-buf-settings"
 vim.api.nvim_create_autocmd({ "BufNew", "BufReadPre" }, {
     group = vim.api.nvim_create_augroup(buf_augroup_name, {}),
@@ -117,7 +113,6 @@ vim.api.nvim_create_autocmd({ "BufNew", "BufReadPre" }, {
 })
 
 local lazy_loaded = vim.uv.hrtime() ---@type number
-
 local to_pre_pack = math.floor((pre_pack - start) / 1e6 * 100) / 100 ---@type number
 local to_pack_finish = math.floor((pack_finish - start) / 1e6 * 100) / 100 ---@type number
 local to_env_setup = math.floor((env_setup - start) / 1e6 * 100) / 100 ---@type number
@@ -196,5 +191,3 @@ api.nvim_create_autocmd("UIEnter", {
         })
     end,
 })
-
--- TODO: Bisecting has become impractical due to how config elements are spread out
