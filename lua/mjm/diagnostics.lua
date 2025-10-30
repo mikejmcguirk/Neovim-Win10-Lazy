@@ -24,7 +24,7 @@ end
 
 M.toggle_virt_lines = function()
     local cur_cfg = vim.diagnostic.config() or {}
-    vim.diagnostic.config((not cur_cfg.virtual_lines) and diag_lines_cfg or diag_text_cfg)
+    vim.diagnostic.config(cur_cfg.virtual_lines and diag_text_cfg or diag_lines_cfg)
 end
 
 -- MID: Redo diagnostic top severity to be the way I have it in Rancher. Fixes fixes double pull

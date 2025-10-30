@@ -38,8 +38,7 @@ local function setup_blink()
                                 return ctx.kind or ""
                             end,
                             highlight = function(ctx)
-                                if ctx.kind then return "BlinkCmpKind" .. ctx.kind end
-                                return "BlinkCmpKind"
+                                return ctx.kind and "BlinkCmpKind" .. ctx.kind or "BlinkCmpKind"
                             end,
                         },
                         source_name = {
