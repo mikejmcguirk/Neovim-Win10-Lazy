@@ -4,7 +4,6 @@
 -- Be able to handle checkboxes (gf?)
 -- Do new notes go to a specific location? Same dir? (the config doens't let you plug functions
 --  into a code action though which is unfortunate)
--- Carry over the sw function
 
 -- Only load if we enter a .md file in a defined Obsidian workspace
 local note_paths = {}

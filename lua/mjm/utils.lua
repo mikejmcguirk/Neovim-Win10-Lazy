@@ -335,32 +335,26 @@ function M.write_to_scratch_buf(lines)
     api.nvim_set_current_buf(scratch)
 end
 
--- FUTURE: More sophisticated handling if we don't have a parser
+---@param types string[]
+---@return boolean
+function M.is_in_node_type(types)
+    vim.validate("types", types, vim.islist)
+    if #types < 1 then return false end
+    local node = vim.treesitter.get_node() ---@type TSNode?
+    while node do
+        for _, type in ipairs(types) do
+            if node:type() == type then return true end
+        end
 
+        node = node:parent()
+    end
+
+    return false
+end
+
+---@return boolean
 function M.is_comment()
-    local ok, lang_tree = pcall(vim.treesitter.get_parser)
-    if (not ok) or not lang_tree then
-        -- if type(lang_tree) == "string" then
-        --     api.nvim_echo({ { lang_tree } }, true, { kind = "echoerr" })
-        -- else
-        --     vim.notify("Unknown error getting parser in is_comment", vim.log.levels.ERROR)
-        -- end
-        return false
-    end
-    lang_tree:parse()
-
-    -- Include col before or a cursor at the very end of a comment will be a "chunk" node
-    local row, col = unpack(api.nvim_win_get_cursor(0))
-    local start_col = col > 0 and col - 1 or col
-    local node = lang_tree:node_for_range({ row - 1, start_col, row - 1, col })
-    if not node then return false end
-
-    local comment_nodes = { "comment", "line_comment", "block_comment", "comment_content" }
-    if vim.tbl_contains(comment_nodes, node:type()) then
-        return true
-    else
-        return false
-    end
+    return M.is_in_node_type({ "comment", "line_comment", "block_comment", "comment_content" })
 end
 
 -- Adapted from mike-jl/harpoonEx
