@@ -86,7 +86,6 @@ local function del_cur_buf_from_disk(cargs)
     local is_tracked = is_git_tracked(full_bufname)
 
     if is_tracked then
-        -- # Fugitive
         local gdelete = { cmd = "GDelete", bang = true }
         local ok, err = pcall(api.nvim_cmd, gdelete, {})
         if not ok then
@@ -156,7 +155,6 @@ local function mv_cur_buf(cargs)
     do_mkdir(fn.fnamemodify(escape_target, ":h"))
     local is_tracked = is_git_tracked(escape_bufname)
     if is_tracked then
-        -- # Fugitive
         local gmove = { cmd = "GMove", args = { escape_target } }
         local ok, err = pcall(api.nvim_cmd, gmove, {})
         if not ok then

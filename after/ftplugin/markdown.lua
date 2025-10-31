@@ -1,3 +1,5 @@
+local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
+
 local width = 2
 vim.bo.tabstop = width
 vim.bo.softtabstop = width
@@ -19,44 +21,13 @@ vim.keymap.set("i", "-", "-<C-g>u", { silent = true, buffer = true })
 vim.keymap.set("i", "?", "?<C-g>u", { silent = true, buffer = true })
 vim.keymap.set("i", "!", "!<C-g>u", { silent = true, buffer = true })
 
-vim.keymap.set("n", "K", require("mjm.utils").check_word_under_cursor)
+vim.keymap.set("n", "K", function()
+    ut.check_word_under_cursor()
+end)
 
 vim.api.nvim_create_autocmd("BufWritePre", {
-    group = vim.api.nvim_create_augroup("md_save", { clear = true }),
-    pattern = "*.md",
+    buffer = vim.api.nvim_get_current_buf(),
     callback = function(ev)
-        require("mjm.utils").fallback_formatter(ev.buf)
+        ut.fallback_formatter(ev.buf)
     end,
 })
-
--- FUTURE: For the future migration away from Obsidian
--- vim.opt.listchars:remove("multispace")
---
--- local map = vim.keymap.set
---
--- map("n", "<leader>x", function()
--- 	local line = vim.api.nvim_get_current_line()
---
--- 	if line:find("- [ ]", 1, true) then
--- 		line = line:gsub("- %b[]", "- [x]")
--- 		vim.api.nvim_set_current_line(line)
--- 	elseif line:find("- [x]", 1, true) then
--- 		line = line:gsub("- %b[]", "- [ ]")
--- 		vim.api.nvim_set_current_line(line)
--- 	end
--- end)
---
--- vim.o.foldlevel = 99
---
--- map("n", "~", function()
--- 	local line = vim.api.nvim_get_current_line()
--- 	local new_line
---
--- 	if line:find("~") then
--- 		new_line = line:gsub("~", "")
--- 	else
--- 		new_line = line:gsub("- (.+)", "- ~%1~")
--- 	end
---
--- 	vim.api.nvim_set_current_line(new_line)
--- end, { desc = "Toggle strikethrough" })

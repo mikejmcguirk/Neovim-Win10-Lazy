@@ -7,9 +7,9 @@ local lsp = vim.lsp
 local ok, fzflua = pcall(require, "fzf-lua") ---@type boolean, table
 local function on_list(on_list_ctx)
     fn.setqflist({}, " ", { title = on_list_ctx.title, items = on_list_ctx.items })
-    local rancher_window = require("qf-rancher.window") ---@type QfrWins?
-    if rancher_window then
-        rancher_window.open_qflist({})
+    local ok_w, window = pcall(require, "qf-rancher.window") ---@type boolean, QfrWins?
+    if ok_w and window then
+        window.open_qflist({})
     else
         api.nvim_cmd({ cmd = "copen" }, {})
     end
@@ -45,6 +45,7 @@ end or function()
 end ---@type function
 
 -- textDocument/documentSymbol --
+-- MID: This flickers fzflua if there are no symbols
 local symbols = ok and fzflua.lsp_document_symbols or lsp.buf.document_symbol ---@type function
 
 -- textDocument/implementation --
@@ -173,9 +174,13 @@ local function set_lsp_maps(ev)
     vim.keymap.set("n", "grI", peek_implementation, { buffer = buf })
 
     -- textDocument/inlayHint --
-    vim.keymap.set("n", "grl", function()
-        lsp.inlay_hint.enable(not lsp.inlay_hint.is_enabled({ buffer = buf }))
-    end)
+    if client:supports_method("textDocument/inlayHint") then
+        vim.keymap.set("n", "grl", function()
+            lsp.inlay_hint.enable(not lsp.inlay_hint.is_enabled({ buffer = buf }))
+        end)
+    else
+        map_no_support("grl", client, "textDocument/inlay_hint", buf)
+    end
 
     -- textDocument/linkedEditingRange
     -- the docs recommend trying with html:
@@ -275,22 +280,24 @@ vim.api.nvim_create_autocmd("LspDetach", {
 lsp.log.set_level(vim.log.levels.ERROR)
 
 lsp.enable({
-    --- Bash --
+    -- Bash --
     "bashls",
-    --- Go ---
+    -- Go --
     "golangci_lint_ls",
     "gopls",
-    --- HTML/CSS ---
+    -- HTML/CSS --
     "cssls",
     "html",
-    --- Lua ---
+    -- Lua --
     "lua_ls",
-    --- Python ---
+    -- Markdown --
+    "markdown_oxide",
+    -- Python --
     "pylsp",
     "ruff",
-    --- Rust ---
+    -- Rust --
     "rust_analyzer",
-    --- Toml ---
+    -- Toml --
     "taplo",
 })
 

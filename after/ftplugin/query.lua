@@ -1,8 +1,10 @@
-local width = 2
-vim.bo.tabstop = width
-vim.bo.softtabstop = width
-vim.bo.shiftwidth = width
+local api = vim.api
 
-vim.cmd("wincmd =")
-vim.opt_local.colorcolumn = ""
+local width = 2
+api.nvim_set_option_value("ts", width, { buf = 0 })
+api.nvim_set_option_value("sts", width, { buf = 0 })
+api.nvim_set_option_value("sw", width, { buf = 0 })
+
+api.nvim_cmd({ cmd = "wincmd", args = { "=" } }, {})
+api.nvim_set_option_value("cc", "", { scope = "local" })
 vim.keymap.set("n", "q", "<cmd>bd<cr>", { buffer = true })

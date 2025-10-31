@@ -364,7 +364,6 @@ function M.is_comment()
 end
 
 -- Adapted from mike-jl/harpoonEx
--- # harpoon
 ---@param opts {buf?: integer, bufname?: string}
 ---@return nil
 function M.harpoon_rm_buf(opts)
@@ -413,7 +412,6 @@ end
 ---@param old_bufname string
 ---@param new_bufname string
 ---@return nil
---- # harpoon
 function M.harpoon_mv_buf(old_bufname, new_bufname)
     local ok, harpoon = pcall(require, "harpoon")
     if (not ok) or not harpoon then

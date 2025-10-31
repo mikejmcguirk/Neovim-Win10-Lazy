@@ -3,11 +3,9 @@ vim.bo.tabstop = width
 vim.bo.softtabstop = width
 vim.bo.shiftwidth = width
 
-local ut = require("mjm.utils")
 vim.api.nvim_create_autocmd("BufWritePre", {
-    group = vim.api.nvim_create_augroup("xml_save", { clear = true }),
-    pattern = "*.xml",
+    buffer = vim.api.nvim_get_current_buf(),
     callback = function(ev)
-        ut.fallback_formatter(ev.buf)
+        require("mjm.utils").fallback_formatter(ev.buf)
     end,
 })

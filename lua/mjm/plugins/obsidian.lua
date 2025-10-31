@@ -1,8 +1,10 @@
--- FUTURE:
--- https://www.youtube.com/watch?v=SXKsIyYJIrU
--- This video talks about using marksman for a note-taking workflow
--- Various commenters also talk about using Markdown Oxide as an alternative
--- Directionally this is the right thing to do but would be a major migration
+-- TODO: markdown-oxide migration:
+-- Strip anything Obsidian related out of the dir. Ironic yes
+-- Re-create the paste-image function
+-- Be able to handle checkboxes (gf?)
+-- Do new notes go to a specific location? Same dir? (the config doens't let you plug functions
+--  into a code action though which is unfortunate)
+-- Carry over the sw function
 
 -- Only load if we enter a .md file in a defined Obsidian workspace
 local note_paths = {}
@@ -189,7 +191,3 @@ for _, event in pairs(note_paths) do
         end,
     })
 end
-
--- LOW: Make Obsidian paste image work with Windows
--- Really though, since we want to exit Obsidian anyway, the bigger idea is -
--- How do we re-implement paste image to begin with
