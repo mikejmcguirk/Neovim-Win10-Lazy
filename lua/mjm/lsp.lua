@@ -7,9 +7,9 @@ local lsp = vim.lsp
 local ok, fzflua = pcall(require, "fzf-lua") ---@type boolean, table
 local function on_list(on_list_ctx)
     fn.setqflist({}, " ", { title = on_list_ctx.title, items = on_list_ctx.items })
-    local rancher_window = require("qf-rancher.window") ---@type QfrWins?
-    if rancher_window then
-        rancher_window.open_qflist({})
+    local ok_w, window = pcall(require, "qf-rancher.window") ---@type boolean, QfrWins?
+    if ok_w and window then
+        window.open_qflist({})
     else
         api.nvim_cmd({ cmd = "copen" }, {})
     end
