@@ -89,7 +89,7 @@ local eager_loaded = vim.uv.hrtime() ---@type number
 
 require("mjm.plugins.blink")
 require("mjm.plugins.conform")
-require("mjm.plugins.obsidian")
+-- require("mjm.plugins.obsidian")
 require("mjm.plugins.lazydev")
 require("mjm.plugins.ts-autotag")
 

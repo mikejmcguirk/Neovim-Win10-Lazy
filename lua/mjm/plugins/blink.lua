@@ -1,3 +1,5 @@
+local api = vim.api
+
 local function setup_blink()
     vim.keymap.set("i", "<C-y>", "<nop>")
     vim.keymap.set("i", "<C-n>", "<nop>")
@@ -33,21 +35,11 @@ local function setup_blink()
                     columns = { { "label" }, { "kind" }, { "source_name" } },
                     components = {
                         kind = {
-                            width = { max = 20 },
-                            text = function(ctx)
-                                return ctx.kind or ""
-                            end,
                             highlight = function(ctx)
                                 return ctx.kind and "BlinkCmpKind" .. ctx.kind or "BlinkCmpKind"
                             end,
                         },
-                        source_name = {
-                            width = { max = 20 },
-                            text = function(ctx)
-                                return "[" .. ctx.source_name .. "]"
-                            end,
-                            highlight = "Comment",
-                        },
+                        source_name = { highlight = "Comment" },
                     },
                 },
             },
@@ -104,15 +96,6 @@ local function setup_blink()
             default = { "lsp", "snippets", "buffer", "path" },
             per_filetype = {
                 lua = { inherit_defaults = true, "lazydev" },
-                markdown = {
-                    -- TODO: How to get the obsidian pickers only when loaded
-                    -- "obsidian",
-                    -- "obsidian_new",
-                    -- "obsidian_tags",
-                    "snippets",
-                    "buffer",
-                    "path",
-                },
                 sql = { "dadbod", "buffer", "path" },
                 text = { "buffer", "path" },
             },
@@ -122,7 +105,7 @@ local function setup_blink()
                     opts = {
                         get_bufnrs = function()
                             return vim.tbl_filter(function(bufnr)
-                                return vim.bo[bufnr].buftype == ""
+                                return api.nvim_get_option_value("buftype", { buf = bufnr }) == ""
                             end, vim.api.nvim_list_bufs())
                         end,
                     },
@@ -184,33 +167,25 @@ local function setup_blink()
         BlinkCmpMenuBorder = { link = "FloatBorder" },
         BlinkCmpSignatureHelpBorder = { link = "FloatBorder" },
 
-        CmpItemAbbrDeprecated = { link = "Comment" },
-        CmpItemAbbrMatch = { link = "IncSearch" },
-        CmpItemAbbrMatchFuzzy = { link = "IncSearch" },
-        CmpItemKindText = { link = "String" },
-        CmpItemKindMethod = { link = "Function" },
-        CmpItemKindFunction = { link = "Function" },
-        CmpItemKindConstructor = { link = "Special" },
-        CmpItemKindField = { link = "Normal" },
-        CmpItemKindVariable = { link = "Normal" },
-        CmpItemKindClass = { link = "Type" },
-        CmpItemKindInterface = { link = "Type" },
-        CmpItemKindModule = { link = "Type" },
-        CmpItemKindProperty = { link = "Normal" },
-        CmpItemKindUnit = { link = "Number" },
-        CmpItemKindValue = { link = "String" },
-        CmpItemKindEnum = { link = "Type" },
-        CmpItemKindKeyword = { link = "Special" },
-        CmpItemKindSnippet = { link = "Special" },
-        CmpItemKindColor = { link = "DiagnosticWarn" },
-        CmpItemKindFile = { link = "Normal" },
-        CmpItemKindReference = { link = "@text.reference" },
-        CmpItemKindFolder = { link = "Directory" },
-        CmpItemKindEnumMember = { link = "@constant" },
-        CmpItemKindConstant = { link = "@constant" },
-        CmpItemKindStruct = { link = "Structure" },
-        CmpItemKindEvent = { link = "@function" },
-        CmpItemKindOperator = { link = "@operator" },
+        BlinkCmpKindClass = { link = "Type" },
+        BlinkCmpKindColor = { link = "DiagnosticWarn" },
+        BlinkCmpKindConstant = { link = "Constant" },
+        BlinkCmpKindConstructor = { link = "Special" },
+        BlinkCmpKindEnum = { link = "Type" },
+        BlinkCmpKindEnumMember = { link = "@lsp.type.enumMember" },
+        BlinkCmpKindEvent = { link = "Function" },
+        BlinkCmpKindFolder = { link = "Directory" },
+        BlinkCmpKindFunction = { link = "Function" },
+        BlinkCmpKindInterface = { link = "Type" },
+        BlinkCmpKindKeyword = { link = "Special" },
+        BlinkCmpKindMethod = { link = "Function" },
+        BlinkCmpKindModule = { link = "@module" },
+        BlinkCmpKindOperator = { link = "Operator" },
+        BlinkCmpKindSnippet = { link = "Special" },
+        BlinkCmpKindStruct = { link = "Type" },
+        BlinkCmpKindText = { link = "String" },
+        BlinkCmpKindUnit = { link = "Number" },
+        BlinkCmpKindValue = { link = "String" },
 
         BlinkCmpKindTypeParameter = { link = "Type" },
     } ---@type { string: vim.api.keyset.highlight }
@@ -219,8 +194,6 @@ local function setup_blink()
         vim.api.nvim_set_hl(0, k, v)
     end
 end
-
--- MAYBE: Shouldn't the build for this kick off after UIEnter?
 
 vim.api.nvim_create_autocmd({ "CmdlineEnter", "BufReadPre", "BufNewFile" }, {
     group = vim.api.nvim_create_augroup("setup-blink", { clear = true }),
