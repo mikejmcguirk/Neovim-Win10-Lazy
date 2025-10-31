@@ -38,7 +38,6 @@ vim.keymap.set("n", "<leader>gchn", function()
     commit(false, false)
 end)
 
--- MID: Use rancher to close all lists, with close/lclose as fallbacks
 local function open_diffs(staged)
     local tabpage = api.nvim_get_current_tabpage() ---@type integer
     local tabpage_wins = api.nvim_tabpage_list_wins(tabpage) ---@type integer[]
