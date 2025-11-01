@@ -88,17 +88,6 @@ local function del_cur_buf_from_disk(cargs)
     ut.harpoon_rm_buf({ bufname = bufname })
 end
 
-local function do_mkdir(path)
-    local mkdir = vim.system({ "mkdir", "-p", path }):wait()
-    if mkdir.code == 0 then return true end
-
-    local err = mkdir.stderr or ("Cannot open " .. path)
-    api.nvim_echo({ { err, "ErrorMsg" } }, true, { err = true })
-    return false
-end
-
--- MID: Use vim.fs.normalize?
-
 ---@param cargs vim.api.keyset.create_user_command.command_args
 ---@return nil
 local function mv_cur_buf(cargs)
@@ -135,7 +124,7 @@ local function mv_cur_buf(cargs)
     local escape_bufname = fn.fnameescape(bufname)
     if escape_target == escape_bufname then return end
 
-    do_mkdir(fn.fnamemodify(escape_target, ":h"))
+    ut.checked_mkdir_p(fn.fnamemodify(escape_target, ":h"), tonumber("755", 8))
     if is_git_tracked(escape_bufname) then
         local ok, err = pcall(api.nvim_cmd, { cmd = "GMove", args = { escape_target } }, {})
         if not ok then
