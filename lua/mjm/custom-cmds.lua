@@ -55,56 +55,37 @@ local function is_git_tracked(path)
 end
 
 ---@return integer|nil, string|nil
-local function get_cur_buf()
-    local buf = api.nvim_get_current_buf()
-    if not api.nvim_buf_is_valid(buf) then
-        api.nvim_echo({ { "Invalid buf", "WarningMsg" } }, true, { err = true })
-        return nil, nil
-    end
-
-    local bufname = api.nvim_buf_get_name(buf)
-    if bufname == "" then
-        api.nvim_echo({ { "No bufname", "" } }, true, { err = true })
-        return nil, nil
-    end
-
-    return buf, bufname
-end
-
 local function del_cur_buf_from_disk(cargs)
-    local buf, bufname = get_cur_buf()
-    if (not buf) or not bufname then return end
+    local buf = api.nvim_get_current_buf() ---@type integer
+    local bufname = api.nvim_buf_get_name(buf) ---@type string
+    if bufname == "" then return end
+    local buftype = api.nvim_get_option_value("buftype", { buf = buf })
+    if buftype ~= "" then return end
 
-    if not cargs.bang then
-        if api.nvim_get_option_value("modified", { buf = buf }) then
-            api.nvim_echo({ { "Buf is modified", "" } }, false, {})
-            return
-        end
+    if (not cargs.bang) and api.nvim_get_option_value("modified", { buf = buf }) then
+        api.nvim_echo({ { "Buf is modified", "" } }, false, {})
+        return
     end
 
-    local full_bufname = fn.fnamemodify(bufname, ":p")
-    local is_tracked = is_git_tracked(full_bufname)
-
-    if is_tracked then
-        local gdelete = { cmd = "GDelete", bang = true }
-        local ok, err = pcall(api.nvim_cmd, gdelete, {})
+    if is_git_tracked(bufname) then
+        local ok, err = pcall(api.nvim_cmd, { cmd = "GDelete", bang = true }, {})
         if not ok then
             local msg = err or "Unknown error performing GDelete"
             api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
             return
         end
     else
-        local ok, err = vim.uv.fs_unlink(full_bufname) ---@type boolean|nil, string|nil
+        local ok, err = vim.uv.fs_unlink(bufname) ---@type boolean|nil, string|nil
         if not ok then
             local msg = err or "Failed to delete file from disk" ---@type string
             api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
             return
         end
 
-        ut.pbuf_rm(buf, false, false)
+        ut.pbuf_rm(buf, true, true, true)
     end
 
-    ut.harpoon_rm_buf({ bufname = full_bufname })
+    ut.harpoon_rm_buf({ bufname = bufname })
 end
 
 local function do_mkdir(path)
@@ -127,7 +108,10 @@ local function mv_cur_buf(cargs)
         return
     end
 
-    local buf, bufname = get_cur_buf()
+    local buf = api.nvim_get_current_buf() ---@type integer
+    local bufname = api.nvim_buf_get_name(buf) ---@type string
+    if bufname == "" then return end
+    if api.nvim_get_option_value("buftype", { buf = buf }) ~= "" then return end
     if (not buf) or not bufname then return end
 
     if (not cargs.bang) and api.nvim_get_option_value("modified", { buf = buf }) then
@@ -148,15 +132,12 @@ local function mv_cur_buf(cargs)
 
     local full_target = fn.fnamemodify(target, ":p")
     local escape_target = fn.fnameescape(full_target)
-    local full_bufname = fn.fnamemodify(bufname, ":p")
-    local escape_bufname = fn.fnameescape(full_bufname)
+    local escape_bufname = fn.fnameescape(bufname)
     if escape_target == escape_bufname then return end
 
     do_mkdir(fn.fnamemodify(escape_target, ":h"))
-    local is_tracked = is_git_tracked(escape_bufname)
-    if is_tracked then
-        local gmove = { cmd = "GMove", args = { escape_target } }
-        local ok, err = pcall(api.nvim_cmd, gmove, {})
+    if is_git_tracked(escape_bufname) then
+        local ok, err = pcall(api.nvim_cmd, { cmd = "GMove", args = { escape_target } }, {})
         if not ok then
             local err_msg = err or "Unknown error performing GMove"
             api.nvim_echo({ { err_msg, "ErrorMsg" } }, true, { err = true })

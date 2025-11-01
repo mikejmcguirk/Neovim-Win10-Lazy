@@ -502,8 +502,9 @@ end
 ---@param buf integer
 ---@param force boolean
 ---@param wipeout boolean
+---@param no_save boolean
 ---@return boolean, [string, string|integer?][]|nil, boolean|nil, vim.api.keyset.echo_opts|nil
-function M.pbuf_rm(buf, force, wipeout)
+function M.pbuf_rm(buf, force, wipeout, no_save)
     vim.validate("buf", buf, "number")
     vim.validate("force", force, "boolean")
     vim.validate("wipeout", wipeout, "boolean")
@@ -525,7 +526,7 @@ function M.pbuf_rm(buf, force, wipeout)
         delete_opts.unload = true
     end
 
-    if api.nvim_get_option_value("modifiable", { buf = buf }) then
+    if (not no_save) and api.nvim_get_option_value("modifiable", { buf = buf }) then
         api.nvim_buf_call(buf, function()
             api.nvim_cmd({ cmd = "update", mods = { silent = true } }, {})
         end)
@@ -547,7 +548,7 @@ function M.pclose_and_rm(win, force, wipeout)
     if not buf then return end
     M.do_when_idle(function()
         if always or #vim.fn.win_findbuf(buf) == 0 then
-            local ok, chunks, msg, opts = M.pbuf_rm(buf, force, wipeout)
+            local ok, chunks, msg, opts = M.pbuf_rm(buf, force, wipeout, false)
             if ok then return end
             api.nvim_echo(chunks or { { "Unknown error" } }, msg or false, opts or { err = true })
         end
