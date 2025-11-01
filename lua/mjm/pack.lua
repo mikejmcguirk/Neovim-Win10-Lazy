@@ -45,8 +45,6 @@ local pack_spec = {
 
     { src = "https://github.com/windwp/nvim-ts-autotag" },
 
-    { src = "https://github.com/obsidian-nvim/obsidian.nvim" },
-
     -- Requires mini.icons or nvim-tree/nvim-web-devicons
     { src = "https://github.com/stevearc/oil.nvim" },
 
