@@ -1,7 +1,6 @@
 -- TODO: markdown-oxide migration:
 -- Strip anything Obsidian related out of the dir. Ironic yes
 -- Re-create the paste-image function
--- Be able to handle checkboxes (gf?)
 -- Do new notes go to a specific location? Same dir? (the config doens't let you plug functions
 --  into a code action though which is unfortunate)
 

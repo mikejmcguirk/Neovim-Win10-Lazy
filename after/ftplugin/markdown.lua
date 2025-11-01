@@ -52,32 +52,33 @@ local function is_checkbox(line)
     return false
 end
 
+---@return nil
 local function toggle_checkbox()
     if ut.is_in_node_type({ "fenced_code_block", "minus_metadata" }) == true then return end
-    local row, _ = unpack(api.nvim_win_get_cursor(0))
-    local line = api.nvim_buf_get_lines(0, row - 1, row, false)[1]
-    local checkboxes = { " ", "x" }
-
-    if is_checkbox(line) then
-        for i, check_char in ipairs(checkboxes) do
-            if string.match(line, "^.* %[" .. vim.pesc(check_char) .. "%].*") then
-                i = i % #checkboxes
-                local pre = "[" .. check_char .. "]"
-                local post = "[" .. checkboxes[i + 1] .. "]"
-                line = string.gsub(line, pre, post, 1)
-                break
+    local row, _ = unpack(api.nvim_win_get_cursor(0)) ---@type integer, integer
+    local line = api.nvim_buf_get_lines(0, row - 1, row, false)[1] ---@type string
+    local checkboxes = { " ", "x" } ---@type string[]
+    local new_line = (function()
+        if is_checkbox(line) then
+            for i, check_char in ipairs(checkboxes) do
+                if string.match(line, "^.* %[" .. vim.pesc(check_char) .. "%].*") then
+                    i = i % #checkboxes
+                    local pre = "%[" .. check_char .. "%]" ---@type string
+                    local post = "[" .. checkboxes[i + 1] .. "]" ---@type string
+                    return string.gsub(line, pre, post, 1)
+                end
+            end
+        else
+            local unordered_list_pat = "^(%s*)[-*+] (.*)" ---@type string
+            if string.match(line, unordered_list_pat) then
+                return string.gsub(line, unordered_list_pat, "%1- [ ] %2")
+            else
+                return string.gsub(line, "^(%s*)", "%1- [ ] ")
             end
         end
-    else
-        local unordered_list_pat = "^(%s*)[-*+] (.*)"
-        if string.match(line, unordered_list_pat) then
-            line = string.gsub(line, unordered_list_pat, "%1- [ ] %2")
-        else
-            line = string.gsub(line, "^(%s*)", "%1- [ ] ")
-        end
-    end
+    end)() ---@type string
 
-    vim.api.nvim_buf_set_lines(0, row - 1, row, true, { line })
+    vim.api.nvim_buf_set_lines(0, row - 1, row, true, { new_line })
 end
 
 -- Traditional, since the Obsidian plugin uses gf as its multi-function key
