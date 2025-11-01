@@ -100,6 +100,7 @@ vim.api.nvim_create_autocmd({ "BufNew", "BufReadPre" }, {
     callback = function()
         require("mjm.plugins.autopairs")
         require("mjm.plugins.gitsigns")
+        require("mjm.plugins.img-clip")
         require("mjm.plugins.jump2d")
         require("mjm.plugins.mini-operators")
         require("mjm.plugins.nvim-surround")

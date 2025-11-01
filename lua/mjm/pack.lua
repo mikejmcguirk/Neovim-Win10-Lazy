@@ -21,6 +21,8 @@ local pack_spec = {
     --- Requires plenary
     { src = "https://github.com/ThePrimeagen/harpoon", version = "harpoon2" },
 
+    { src = "https://github.com/HakonHarnes/img-clip.nvim" },
+
     { src = "https://github.com/nvim-mini/mini.jump2d" },
 
     { src = "https://github.com/nvim-mini/mini.operators" },

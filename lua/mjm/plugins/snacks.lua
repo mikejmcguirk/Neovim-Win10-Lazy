@@ -13,7 +13,7 @@ require("snacks").setup({
     bigfile = { enabled = false },
     dashboard = { enabled = false },
     explorer = { enabled = false },
-    image = { enabled = false },
+    image = { enabled = true },
     indent = { animate = { enabled = false }, scope = { enabled = false } },
     input = { enabled = false },
     notifier = { enabled = false },

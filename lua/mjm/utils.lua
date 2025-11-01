@@ -599,4 +599,12 @@ function M.checked_mkdir_p(path, mode)
     return false, err_m
 end
 
+-- LOW: Could be updated to remove multiple extensions
+
+function M.remove_last_extension(fname)
+    local last_dot = fname:match(".*()%.")
+    if (not last_dot) or last_dot == 1 then return fname end
+    return fname:sub(1, last_dot - 1)
+end
+
 return M
