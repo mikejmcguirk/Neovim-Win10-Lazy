@@ -27,9 +27,6 @@ local pack_spec = {
 
     { src = "https://github.com/folke/lazydev.nvim" },
 
-    --- Requires plenary
-    { src = "https://github.com/Shatur/neovim-session-manager" },
-
     { src = "https://github.com/windwp/nvim-autopairs" },
 
     { src = "https://github.com/kosayoda/nvim-lightbulb" },

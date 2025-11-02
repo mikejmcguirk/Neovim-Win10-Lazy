@@ -52,6 +52,8 @@ require("mjm.autocmd")
 require("mjm.map")
 require("mjm.custom-cmds")
 require("mjm.stl")
+require("mjm.diagnostics")
+require("mjm.ts-tools")
 
 local env_setup = vim.uv.hrtime() ---@type number
 
@@ -62,24 +64,23 @@ local env_setup = vim.uv.hrtime() ---@type number
 require("mjm.plugins.treesitter-plugins") -- Text Objects Sets Up Lazily
 
 require("mjm.plugins.fzflua")
-require("mjm.plugins.harpoon")
---- LOW: This module requires harpoon to setup the tabline display. For some reason, if this is
---- done before the harpoon module, the setup funciton in the harpoon module will not run properly
---- Curious as to why
---- LOW: Re-add the post-plugin timer section
-require("mjm.tal")
-
 require("mjm.plugins.oil")
-require("mjm.plugins.snacks")
-
-require("mjm.plugins.fugitive")
-require("mjm.plugins.session_manager")
-
-require("mjm.plugins.lightbulb")
-require("mjm.plugins.misc")
+require("mjm.plugins.harpoon")
+-- For whatever reason, harpoon needs to be setup before this module is required
+require("mjm.tal")
 
 require("mjm.plugins.spec-ops")
 require("mjm.plugins.specialist")
+
+require("mjm.lsp")
+require("mjm.plugins.autopairs")
+require("mjm.plugins.fugitive")
+require("mjm.plugins.jump2d")
+require("mjm.plugins.gitsigns")
+require("mjm.plugins.mini-operators")
+require("mjm.plugins.misc")
+require("mjm.plugins.nvim-surround")
+require("mjm.plugins.snacks")
 
 local eager_loaded = vim.uv.hrtime() ---@type number
 
@@ -87,31 +88,14 @@ local eager_loaded = vim.uv.hrtime() ---@type number
 -- Lazy Initialization --
 -------------------------
 
+-- LOW: Should be eager loaded, but build step needs deferred
 require("mjm.plugins.blink")
 require("mjm.plugins.conform")
--- require("mjm.plugins.obsidian")
+require("mjm.plugins.img-clip")
 require("mjm.plugins.lazydev")
+require("mjm.plugins.lightbulb")
+require("mjm.plugins.treesj")
 require("mjm.plugins.ts-autotag")
-
-local buf_augroup_name = "mjm-buf-settings"
-vim.api.nvim_create_autocmd({ "BufNew", "BufReadPre" }, {
-    group = vim.api.nvim_create_augroup(buf_augroup_name, {}),
-    once = true,
-    callback = function()
-        require("mjm.plugins.autopairs")
-        require("mjm.plugins.gitsigns")
-        require("mjm.plugins.img-clip")
-        require("mjm.plugins.jump2d")
-        require("mjm.plugins.mini-operators")
-        require("mjm.plugins.nvim-surround")
-        require("mjm.plugins.treesj")
-
-        require("mjm.diagnostics")
-        require("mjm.lsp")
-        require("mjm.ts-tools")
-        api.nvim_del_augroup_by_name(buf_augroup_name)
-    end,
-})
 
 local lazy_loaded = vim.uv.hrtime() ---@type number
 local to_pre_pack = math.floor((pre_pack - start) / 1e6 * 100) / 100 ---@type number
