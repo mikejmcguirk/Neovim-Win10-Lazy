@@ -217,8 +217,6 @@ api.nvim_set_hl(0, "SignColumn", {})
 
 -- MARKUP --
 
--- MID: Make these make sense
-
 api.nvim_set_hl(0, "@markup.environment", { fg = l_purple })
 api.nvim_set_hl(0, "@markup.heading", { link = "Title" })
 api.nvim_set_hl(0, "@markup.italic", { italic = true })
@@ -230,7 +228,7 @@ api.nvim_set_hl(0, "@markup.list.checked", { fg = l_green })
 api.nvim_set_hl(0, "@markup.math", { link = "Operator" })
 api.nvim_set_hl(0, "@markup.quote", { link = "Comment" })
 api.nvim_set_hl(0, "@markup.raw", { link = "Comment" })
-api.nvim_set_hl(0, "@markup.raw.block", { link = "Comment" })
+api.nvim_set_hl(0, "@markup.raw.block", hl_extend("Normal", { italic = true }))
 api.nvim_set_hl(0, "@markup.strikethrough", { strikethrough = true })
 api.nvim_set_hl(0, "@markup.strong", { bold = true })
 api.nvim_set_hl(0, "@markup.underline", { link = "Underlined" })
