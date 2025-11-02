@@ -90,9 +90,13 @@ local function custom_add(pack)
             local doc_dir = vim.fs.joinpath(packpath, name) ---@type string
             local tag_file = vim.fs.joinpath(doc_dir, "tags") ---@type string
 
-            vim.uv.fs_unlink(tag_file)
-            ---@diagnostic disable-next-line: missing-fields
-            api.nvim_cmd({ cmd = "helptags", args = { doc_dir }, magic = { file = false } }, {})
+            vim.uv.fs_unlink(tag_file, function()
+                vim.schedule(function()
+                    ---@diagnostic disable-next-line: missing-fields
+                    local magic = { file = false }
+                    api.nvim_cmd({ cmd = "helptags", args = { doc_dir }, magic = magic }, {})
+                end)
+            end)
 
             break
         end
