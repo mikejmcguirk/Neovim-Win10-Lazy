@@ -179,25 +179,52 @@ local function map_objects(ev)
     end
 end
 
-local function setup_objects()
-    require(objects).setup({
-        select = { lookahead = true, include_surrounding_whitespace = false },
-        move = { set_jumps = false },
-    })
-
-    api.nvim_create_autocmd("FileType", {
-        group = api.nvim_create_augroup("objects-map", {}),
-        pattern = langs,
-        callback = map_objects,
-    })
-end
-
 local objects_setup = api.nvim_create_augroup("objects-setup", {})
 api.nvim_create_autocmd({ "BufNewFile", "BufReadPre" }, {
     group = objects_setup,
     once = true,
     callback = function()
-        setup_objects()
+        require(objects).setup({
+            select = { lookahead = true, include_surrounding_whitespace = false },
+            move = { set_jumps = false },
+        })
+
+        local objects_map = api.nvim_create_augroup("objects-map", {})
+        api.nvim_create_autocmd("FileType", {
+            group = objects_map,
+            pattern = langs,
+            callback = map_objects,
+        })
+
+        vim.api.nvim_exec_autocmds("FileType", { group = objects_map })
         api.nvim_del_augroup_by_id(objects_setup)
     end,
+})
+
+api.nvim_set_var("treeclimber", { highlight = false })
+local function map_treeclimber(ev)
+    local map = vim.keymap.set
+    local sel_prev = { buffer = ev.buf, desc = "Select previous node" }
+    map({ "n", "x", "o" }, "[e", "<Plug>(treeclimber-select-previous)", sel_prev)
+    local sel_forward = { buffer = ev.buf, desc = "Select forward and move to node end" }
+    map({ "n", "x", "o" }, "]e", "<Plug>(treeclimber-select-forward-end)", sel_forward)
+    local s_back = { buffer = ev.buf, desc = "Select first sibling" }
+    map({ "n", "x", "o" }, "[E", "<Plug>(treeclimber-select-siblings-backward)", s_back)
+    local s_front = { buffer = ev.buf, desc = "Select last sibling" }
+    map({ "n", "x", "o" }, "]E", "<Plug>(treeclimber-select-siblings-forward)", s_front)
+    local grow_back = { buffer = ev.buf, desc = "Grow selection backward" }
+    map({ "n", "x", "o" }, "[<C-e>", "<Plug>(treeclimber-select-grow-backward)", grow_back)
+    local grow_forward = { buffer = ev.buf, desc = "Grow selection forward" }
+    map({ "n", "x", "o" }, "]<C-e>", "<Plug>(treeclimber-select-grow-forward)", grow_forward)
+
+    local sel_cur = { buffer = ev.buf, desc = "Select child node" }
+    map({ "x", "o" }, "ie", "<Plug>(treeclimber-select-shrink)", sel_cur)
+    local sel_exp = { buffer = ev.buf, desc = "Select parent node (around)" }
+    map({ "x", "o" }, "ae", "<Plug>(treeclimber-select-expand)", sel_exp)
+end
+
+api.nvim_create_autocmd("FileType", {
+    group = api.nvim_create_augroup("treeclimber", {}),
+    pattern = langs,
+    callback = map_treeclimber,
 })

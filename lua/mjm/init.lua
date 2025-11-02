@@ -59,7 +59,7 @@ local env_setup = vim.uv.hrtime() ---@type number
 -- Eager Plugin Initialization --
 ---------------------------------
 
-require("mjm.plugins.nvim-treesitter") -- Text Objects Sets Up Lazily
+require("mjm.plugins.treesitter-plugins") -- Text Objects Sets Up Lazily
 
 require("mjm.plugins.fzflua")
 require("mjm.plugins.harpoon")
