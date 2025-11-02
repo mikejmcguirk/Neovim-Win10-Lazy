@@ -206,8 +206,11 @@ local function map_treeclimber(ev)
     local map = vim.keymap.set
     local sel_prev = { buffer = ev.buf, desc = "Select previous node" }
     map({ "n", "x", "o" }, "[e", "<Plug>(treeclimber-select-previous)", sel_prev)
-    local sel_forward = { buffer = ev.buf, desc = "Select forward and move to node end" }
-    map({ "n", "x", "o" }, "]e", "<Plug>(treeclimber-select-forward-end)", sel_forward)
+    local sel_next = { buffer = ev.buf, desc = "Select the next node" }
+    map({ "n", "x" }, "]e", "<Plug>(treeclimber-select-next)", sel_next)
+    local sel_forward_end = { buffer = ev.buf, desc = "Select forward and move to node end" }
+    map({ "o" }, "]e", "<Plug>(treeclimber-select-forward-end)", sel_forward_end)
+
     local s_back = { buffer = ev.buf, desc = "Select first sibling" }
     map({ "n", "x", "o" }, "[E", "<Plug>(treeclimber-select-siblings-backward)", s_back)
     local s_front = { buffer = ev.buf, desc = "Select last sibling" }
