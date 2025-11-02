@@ -1,4 +1,5 @@
 local api = vim.api
+local map = vim.keymap.set
 local ut = Mjm_Defer_Require("mjm.utils")
 
 local langs = {
@@ -97,7 +98,7 @@ local function map_objects(ev)
 
     local select = require(objects .. ".select")
     for _, m in pairs(select_maps) do
-        vim.keymap.set({ "x", "o" }, m[1], function()
+        map({ "x", "o" }, m[1], function()
             select.select_textobject(m[2], "textobjects")
         end, { buffer = ev.buf })
     end
@@ -118,19 +119,19 @@ local function map_objects(ev)
 
     local move = require(objects .. ".move")
     for _, m in pairs(move_maps) do
-        vim.keymap.set({ "n", "o" }, m[1], function()
+        map({ "n", "o" }, m[1], function()
             move.goto_previous_start(m[3], "textobjects")
         end, { buffer = ev.buf })
 
-        vim.keymap.set("n", m[2], function()
+        map("n", m[2], function()
             move.goto_next_start(m[3], "textobjects")
         end, { buffer = ev.buf })
 
-        vim.keymap.set("o", m[2], function()
+        map("o", m[2], function()
             move.goto_next_end(m[3], "textobjects")
         end, { buffer = ev.buf })
 
-        vim.keymap.set({ "x" }, m[1], function()
+        map({ "x" }, m[1], function()
             if get_vpos() ~= "fin" then
                 move.goto_previous_start(m[3], "textobjects")
                 return
@@ -140,7 +141,7 @@ local function map_objects(ev)
             if get_vpos() == "start" then move.goto_previous_start(m[3], "textobjects") end
         end, { buffer = ev.buf })
 
-        vim.keymap.set("x", m[2], function()
+        map("x", m[2], function()
             if get_vpos() ~= "start" then
                 move.goto_next_end(m[3], "textobjects")
                 return
@@ -165,15 +166,15 @@ local function map_objects(ev)
         { '("', ')"', "@string.outer" },
     }
 
-    vim.keymap.set("n", "(", "<nop>", { buffer = ev.buf })
-    vim.keymap.set("n", ")", "<nop>", { buffer = ev.buf })
+    map("n", "(", "<nop>", { buffer = ev.buf })
+    map("n", ")", "<nop>", { buffer = ev.buf })
     local swap = require(objects .. ".swap")
     for _, m in pairs(swap_maps) do
-        vim.keymap.set("n", m[1], function()
+        map("n", m[1], function()
             swap.swap_previous(m[3], "textobjects")
         end, { buffer = ev.buf })
 
-        vim.keymap.set("n", m[2], function()
+        map("n", m[2], function()
             swap.swap_next(m[3], "textobjects")
         end, { buffer = ev.buf })
     end
@@ -203,7 +204,6 @@ api.nvim_create_autocmd({ "BufNewFile", "BufReadPre" }, {
 
 api.nvim_set_var("treeclimber", { highlight = false })
 local function map_treeclimber(ev)
-    local map = vim.keymap.set
     local sel_prev = { buffer = ev.buf, desc = "Select previous node" }
     map({ "n", "x", "o" }, "[e", "<Plug>(treeclimber-select-previous)", sel_prev)
     local sel_next = { buffer = ev.buf, desc = "Select the next node" }

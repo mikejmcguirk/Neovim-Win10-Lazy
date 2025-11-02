@@ -131,7 +131,7 @@ vim.api.nvim_create_autocmd({ "LspAttach", "LspDetach" }, {
 --     or { unix = "unix", dos = "dos", mac = "mac" }
 local format_icons = { unix = "unix", dos = "dos", mac = "mac" }
 
--- MID: This should pre-allocate the table with NILs
+-- LOW: This should pre-allocate the table with NILs
 
 function MjmStl.active()
     local stl = {}
@@ -184,8 +184,8 @@ function MjmStl.active()
     return table.concat(stl, "")
 end
 
--- TODO: How to do qf statusline that shows stack nr
--- MID: Show diagnostics in inactive windows whited out
+-- LOW: How to do qf statusline that shows stack nr
+-- LOW: Show diagnostics in inactive windows whited out
 
 function MjmStl.inactive()
     local winnr = api.nvim_win_get_number(0)

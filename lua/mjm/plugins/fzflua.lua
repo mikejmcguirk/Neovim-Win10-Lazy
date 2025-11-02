@@ -2,7 +2,7 @@ local api = vim.api
 local fzf_lua = require("fzf-lua")
 
 fzf_lua.setup({
-    -- MID: Get out of this preset
+    -- LOW: Get out of this preset
     "telescope",
     debug = false,
     files = {
@@ -71,7 +71,7 @@ vim.keymap.set("n", "<leader>fi", fzf_lua.files)
 vim.keymap.set("n", "<leader>fgc", fzf_lua.git_commits)
 vim.keymap.set("n", "<leader>fgf", fzf_lua.git_files)
 vim.keymap.set("n", "<leader>fgh", fzf_lua.git_hunks)
--- MID: Why does this not jump? Turning off " jumps doesn't change this
+-- LOW: Why does this not jump? Turning off " jumps doesn't change this
 vim.keymap.set("n", "<leader>fgs", fzf_lua.git_status)
 
 vim.keymap.set("n", "<leader>fp", fzf_lua.grep)
@@ -269,11 +269,10 @@ vim.api.nvim_create_autocmd("VimEnter", {
     end,
 })
 
--- MID: Fix ugly colors in scroll area
--- MID: vim.keymap.set to gi
+-- LOW: Fix ugly colors in scroll area
+-- MAYBE: vim.keymap.set to gi
 -- giq/giQ for qflist/qfstack
 -- gil/giL for loclist/loclist stack
--- MID: How to delete stacks from FzfLua?
-
+-- LOW: How to delete stacks from FzfLua?
 -- LOW: Turn let g:/w:/b:/t: into pickers
 -- LOW: Make a thesaurus picker

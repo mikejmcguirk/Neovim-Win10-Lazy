@@ -1,3 +1,5 @@
+local api = vim.api
+
 local expr_group = "conform-formatexpr" ---@type string
 local ft_config = {
     css = { "prettier" },
@@ -44,14 +46,15 @@ local function setup_conform()
     })
 end
 
+local load_conform = api.nvim_create_augroup("load-conform", {})
 vim.api.nvim_create_autocmd("FileType", {
-    group = vim.api.nvim_create_augroup("load-conform", { clear = true }),
-    callback = function(ev)
-        if not vim.tbl_contains(fts, ev.match) then return end
+    group = load_conform,
+    pattern = fts,
+    callback = function()
         setup_conform()
         vim.api.nvim_exec_autocmds("FileType", { group = expr_group })
-        vim.api.nvim_del_augroup_by_name("load-conform")
+        vim.api.nvim_del_augroup_by_id(load_conform)
     end,
 })
 
--- MID: Investigate dprint as a prettier alternative
+-- LOW: Investigate dprint as a prettier alternative

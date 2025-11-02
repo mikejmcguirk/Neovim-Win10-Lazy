@@ -1,11 +1,10 @@
-local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
-
 local api = vim.api
 local fn = vim.fn
 local lsp = vim.lsp
+local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 
 local ok, fzflua = pcall(require, "fzf-lua") ---@type boolean, table
-local function on_list(on_list_ctx)
+local function peek_on_list(on_list_ctx)
     fn.setqflist({}, " ", { title = on_list_ctx.title, items = on_list_ctx.items })
     local ok_w, window = pcall(require, "qf-rancher.window") ---@type boolean, QfrWins?
     if ok_w and window then
@@ -33,7 +32,7 @@ local declaration = ok and fzflua.lsp_declarations or lsp.buf.declaration ---@ty
 local peek_declaration = ok and function()
     fzflua.lsp_declarations({ jump1 = false })
 end or function()
-    lsp.buf.declaration({ on_list = on_list })
+    lsp.buf.declaration({ on_list = peek_on_list })
 end ---@type function
 
 -- textDocument/definition --
@@ -41,11 +40,10 @@ local definition = ok and fzflua.lsp_definitions or lsp.buf.definition ---@type 
 local peek_definition = ok and function()
     fzflua.lsp_definitions({ jump1 = false })
 end or function()
-    lsp.buf.definition({ on_list = on_list })
+    lsp.buf.definition({ on_list = peek_on_list })
 end ---@type function
 
 -- textDocument/documentSymbol --
--- MID: This flickers fzflua if there are no symbols
 local symbols = ok and fzflua.lsp_document_symbols or lsp.buf.document_symbol ---@type function
 
 -- textDocument/implementation --
@@ -54,7 +52,7 @@ local implementation = ok and fzflua.lsp_implementations or lsp.buf.implementati
 local peek_implementation = ok and function()
     fzflua.lsp_implementations({ jump1 = false })
 end or function()
-    lsp.buf.implementation({ on_list = on_list })
+    lsp.buf.implementation({ on_list = peek_on_list })
 end ---@type function
 
 -- textDocument/references --
@@ -89,7 +87,7 @@ local peek_typedef = ok and function()
     fzflua.lsp_typedefs({ jump1 = false })
 end or function()
     lsp.buf.type_definition({
-        on_list = on_list,
+        on_list = peek_on_list,
     })
 end ---@type function
 
@@ -256,9 +254,7 @@ end
 local lsp_group = vim.api.nvim_create_augroup("lsp-autocmds", { clear = true }) ---@type integer
 vim.api.nvim_create_autocmd("LspAttach", {
     group = lsp_group,
-    callback = function(ev)
-        set_lsp_maps(ev)
-    end,
+    callback = set_lsp_maps,
 })
 
 vim.api.nvim_create_autocmd("LspDetach", {
@@ -301,4 +297,4 @@ lsp.enable({
     "taplo",
 })
 
--- MID: Get a C LSP for reading code
+-- TODO: Get a C LSP for reading code

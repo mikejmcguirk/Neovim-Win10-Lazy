@@ -236,3 +236,6 @@ vim.api.nvim_create_autocmd({ "CmdlineEnter", "BufReadPre", "BufNewFile" }, {
         vim.api.nvim_del_augroup_by_name("setup-blink")
     end,
 })
+
+-- LOW: blink-cmp-words creates blocking calls and the other dictionary plugin creats hanging
+-- fzf processes, so, if we want a dictionary, we have to make it

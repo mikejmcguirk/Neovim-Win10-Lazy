@@ -27,7 +27,7 @@ M.toggle_virt_lines = function()
     vim.diagnostic.config(cur_cfg.virtual_lines and diag_text_cfg or diag_lines_cfg)
 end
 
--- MID: Redo diagnostic top severity to be the way I have it in Rancher. Fixes fixes double pull
+-- LOW: Redo diagnostic top severity to be the way I have it in Rancher. Fixes fixes double pull
 
 -- Default [D/]D cause my computer to lockup
 local function get_first_or_last_diag(opts)
