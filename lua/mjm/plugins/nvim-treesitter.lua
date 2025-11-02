@@ -1,10 +1,7 @@
 local api = vim.api
+local ut = Mjm_Defer_Require("mjm.utils")
 
-------------------------
--- Treesitter Parsers --
-------------------------
-
-local languages = {
+local langs = {
     -- Mandatory
     "c",
     "lua",
@@ -34,307 +31,173 @@ local languages = {
     "typescript",
 }
 
-require("nvim-treesitter").install(languages)
-
-local ft_extensions = { "sh" }
-local fts = vim.tbl_extend("force", languages, ft_extensions)
-
-vim.api.nvim_create_autocmd({ "FileType" }, {
-    group = vim.api.nvim_create_augroup("ts-start", {}),
-    pattern = fts,
+require("nvim-treesitter").install(langs)
+langs[#langs + 1] = "sh"
+api.nvim_create_autocmd({ "FileType" }, {
+    group = api.nvim_create_augroup("ts-start", {}),
+    pattern = langs,
     callback = function(ev)
         vim.treesitter.start(ev.buf)
         local indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
-        vim.api.nvim_buf_set_var(ev.buf, "indentexpr", indentexpr)
-    end,
-})
-
-vim.api.nvim_create_autocmd("UIEnter", {
-    group = vim.api.nvim_create_augroup("run-tsupdate", {}),
-    pattern = "*",
-    callback = function()
-        vim.schedule(function()
-            vim.api.nvim_cmd({ cmd = "TSUpdate" }, {})
-        end)
-    end,
-})
-
------------------------------
--- Treesitter Text Objects --
------------------------------
-
----@return Range4
-local function get_vrange4()
-    local cur = vim.fn.getpos(".")
-    local fin = vim.fn.getpos("v")
-    local mode = string.sub(api.nvim_get_mode().mode, 1, 1)
-
-    local region = vim.fn.getregionpos(cur, fin, { type = mode, exclusive = false })
-    return { region[1][1][2], region[1][1][3], region[#region][2][2], region[#region][2][3] }
-end
-
-local function get_cursor_orientation()
-    local vrange4 = get_vrange4()
-    vrange4[2] = math.max(vrange4[2] - 1, 0)
-    vrange4[4] = math.max(vrange4[4] - 1, 0)
-
-    local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-
-    local at_start = row == vrange4[1] and col == vrange4[2]
-    local at_fin = row == vrange4[3] and col == vrange4[4]
-    if at_start and not at_fin then
-        return "start"
-    elseif (not at_start) and at_fin then
-        return "fin"
-    else
-        return "center"
-    end
-end
-
-local objects = "nvim-treesitter-textobjects"
-
-local function setup_objects()
-    require(objects).setup({
-        select = {
-            lookahead = true,
-            selection_modes = {
-                ["@assignment.inner"] = "v",
-                ["@assignment.outer"] = "v",
-                ["@call.inner"] = "v",
-                ["@call.outer"] = "v",
-                ["@comment.inner"] = "v",
-                ["@comment.outer"] = "v",
-                ["@conditional.inner"] = "v",
-                ["@conditional.outer"] = "v",
-                ["@function.inner"] = "v",
-                ["@function.outer"] = "v",
-                ["@loop.inner"] = "v",
-                ["@loop.outer"] = "v",
-                ["@parameter.inner"] = "v",
-                ["@parameter.outer"] = "v",
-                ["@preproc.inner"] = "v",
-                ["@preproc.outer"] = "v",
-                ["@return.inner"] = "v",
-                ["@return.outer"] = "v",
-                ["@string.inner"] = "v",
-                ["@string.outer"] = "v",
-            },
-            include_surrounding_whitespace = false,
-        },
-        move = {
-            set_jumps = false,
-        },
-    })
-
-    vim.api.nvim_create_autocmd("FileType", {
-        group = vim.api.nvim_create_augroup("object-maps", { clear = true }),
-        callback = function(ev)
-            if not vim.tbl_contains(languages, ev.match) then return end
-
-            -- BUILTIN
-            -- [s] - Assignment
-            -- [f] - Call
-            -- [/] - Comment
-            -- [i] - Conditional
-            -- [m] - function definition
-            -- [o] - loop
-            -- [,] - Parameter
-            -- [.] - return
-            -- attribute
-            -- block
-            -- class
-            -- frame { minimal - r }
-            -- number
-            -- regex
-            -- scopename { minimal - e }
-            -- statement
-
-            -- CUSTOM:
-            -- [#] - PreProc
-            -- ["] - String (moves and swaps)
-
-            -- LOW: Additions:
-            --  Lua unary expressions
-            --  Table keys/values
-            --  Individual parts of a conditional
-            --  MID: Consider stevearc's mapping approach where lowercase goes to the beginning and
-            --  upper to the end, or vice-versa
-            --  LOW: A way to go to the first and last appearance of a text object
-
-            ----------------
-            -- Selections --
-            ----------------
-
-            local select = require(objects .. ".select")
-            local select_maps = {
-                -- Spot checking, the only language I've seen that has a @comment.inner is Python
-                { "is", "@assignment.rhs" },
-                { "as", "@assignment.outer" },
-                { "iS", "@assignment.lhs" },
-                { "aS", "@assignment.inner" },
-                { "if", "@call.inner" },
-                { "af", "@call.outer" },
-                -- Vim uses agc and igc for its comment text objects. A kind of bigger issue though
-                -- is what echasnovski mentions about how it blanks out g operators, unless you
-                -- say that ig/ag are going to be a namespace for other things. This is not
-                -- necessarily bad though, as it would mean you could then map the LSP objects
-                -- to igrn/agrn. Though this is also a lot to type
-                { "i/", "@comment.inner" },
-                { "a/", "@comment.outer" },
-                { "ii", "@conditional.inner" },
-                { "ai", "@conditional.outer" },
-                { "im", "@function.inner" },
-                { "am", "@function.outer" },
-                { "io", "@loop.inner" },
-                { "ao", "@loop.outer" },
-                { "i,", "@parameter.inner" },
-                { "a,", "@parameter.outer" },
-                { "i.", "@return.inner" },
-                { "a.", "@return.outer" },
-                { "i#", "@preproc.inner" },
-                { "a#", "@preproc.outer" },
-            }
-
-            for _, m in pairs(select_maps) do
-                vim.keymap.set({ "x", "o" }, m[1], function()
-                    select.select_textobject(m[2], "textobjects")
-                end, { buffer = ev.buf })
-            end
-
-            -----------
-            -- Gotos --
-            -----------
-
-            local move = require(objects .. ".move")
-            local move_maps = {
-                { "[s", "]s", "@assignment.outer" },
-                { "[f", "]f", "@call.outer" },
-                { "[/", "]/", "@comment.outer" },
-                { "[i", "]i", "@conditional.outer" },
-                { "[m", "]m", "@function.outer" },
-                { "[o", "]o", "@loop.outer" },
-                { "[,", "],", "@parameter.inner" }, -- To perform edits inside strings
-                { "[#", "]#", "@preproc.outer" },
-                { "[.", "].", "@return.outer" },
-                { '["', ']"', "@string.inner" }, -- To perform edits inside
-
-                { "[<C-s>", "]<C-s>", "@assignment.inner" },
-                { "[<C-f>", "]<C-f>", "@call.inner" },
-                { "[<C-/>", "]<C-/>", "@comment.inner" },
-                { "[<C-i>", "]<C-i>", "@conditional.inner" },
-                { "[<C-m>", "]<C-m>", "@function.inner" },
-                { "[<C-o>", "]<C-o>", "@loop.inner" },
-                { "[<C-,>", "]<C-,>", "@parameter.inner" },
-                { "[<C-3>", "]<C-3>", "@preproc.inner" },
-                { "[<C-.>", "]<C-.>", "@return.inner" },
-                { "[<C-'>", "]<C-'>", "@string.inner" },
-            }
-
-            for _, m in pairs(move_maps) do
-                vim.keymap.set("n", m[1], function()
-                    move.goto_previous_start(m[3], "textobjects")
-                end, { buffer = ev.buf })
-
-                vim.keymap.set("n", m[2], function()
-                    move.goto_next_start(m[3], "textobjects")
-                end, { buffer = ev.buf })
-
-                vim.keymap.set("o", m[1], function()
-                    move.goto_previous_start(m[3], "textobjects")
-                end, { buffer = ev.buf })
-
-                vim.keymap.set("o", m[2], function()
-                    move.goto_next_end(m[3], "textobjects")
-                end, { buffer = ev.buf })
-
-                -- FUTURE: In theory, the better way to handle this is to have some sort of
-                -- lookahead rather than potentially performing a double-move if you cross over
-                -- the origin of the visual selection
-                -- The current implementation can also make unexpectedly big moves, but my
-                -- attempts at walking back and redoing could cause the cursor to get stuck
-
-                vim.keymap.set({ "x" }, m[1], function()
-                    local orientation = get_cursor_orientation()
-
-                    if orientation == "fin" then
-                        move.goto_previous_end(m[3], "textobjects")
-
-                        local new_orientation = get_cursor_orientation()
-                        if new_orientation == "start" then
-                            move.goto_previous_start(m[3], "textobjects")
-                        end
-                    else
-                        move.goto_previous_start(m[3], "textobjects")
-                    end
-                end, { buffer = ev.buf })
-
-                vim.keymap.set("x", m[2], function()
-                    local orientation = get_cursor_orientation()
-
-                    if orientation == "start" then
-                        move.goto_next_start(m[3], "textobjects")
-
-                        local new_orientation = get_cursor_orientation()
-                        if new_orientation == "fin" then
-                            move.goto_next_end(m[3], "textobjects")
-                        end
-                    else
-                        move.goto_next_end(m[3], "textobjects")
-                    end
-                end, { buffer = ev.buf })
-            end
-
-            -----------
-            -- Swaps --
-            -----------
-
-            -- FUTURE: Would be cool if these accepted count
-
-            local swap = require(objects .. ".swap")
-            local swap_maps = {
-                { "(s", ")s", "@assignment.outer" },
-                { "(f", ")f", "@call.outer" },
-                { "(/", ")/", "@comment.outer" },
-                { "(i", ")i", "@conditional.outer" },
-                { "(m", ")m", "@function.outer" },
-                { "(o", ")o", "@loop.outer" },
-                { "(,", "),", "@parameter.inner" }, -- Outer can break commas if swapped at end
-                { "(#", ")#", "@preproc.outer" },
-                { "(.", ").", "@return.outer" },
-                { '("', ')"', "@string.outer" },
-
-                { "(<C-s>", ")<C-s>", "@assignment.inner" },
-                { "(<C-f>", ")<C-f>", "@call.inner" },
-                { "(<C-/>", ")<C-/>", "@comment.inner" },
-                { "(<C-i>", ")<C-i>", "@conditional.inner" },
-                { "(<C-m>", ")<C-m>", "@function.inner" },
-                { "(<C-o>", ")<C-o>", "@loop.inner" },
-                { "(<C-,>", ")<C-,>", "@parameter.inner" },
-                { "(<C-3>", ")<C-3>", "@preproc.inner" },
-                { "(<C-.>", ")<C-.>", "@return.inner" },
-                { "(<C-'>", ")<C-'>", "@string.inner" },
-            }
-
-            for _, m in pairs(swap_maps) do
-                vim.keymap.set("n", m[1], function()
-                    swap.swap_previous(m[3], "textobjects")
-                end, { buffer = ev.buf })
-
-                vim.keymap.set("n", m[2], function()
-                    swap.swap_next(m[3], "textobjects")
-                end, { buffer = ev.buf })
-            end
-        end,
-    })
-end
-
-vim.api.nvim_create_autocmd({ "BufNewFile", "BufReadPre" }, {
-    group = vim.api.nvim_create_augroup("setup-objects", { clear = true }),
-    once = true,
-    callback = function()
-        setup_objects()
-        vim.api.nvim_del_augroup_by_name("setup-objects")
+        api.nvim_set_option_value("indentexpr", indentexpr, { buf = ev.buf })
     end,
 })
 
 -- PR: The "parsers up to date" message is annoying
+api.nvim_create_autocmd("UIEnter", {
+    group = api.nvim_create_augroup("run-tsupdate", {}),
+    pattern = "*",
+    callback = function()
+        vim.schedule(function()
+            api.nvim_cmd({ cmd = "TSUpdate" }, {})
+        end)
+    end,
+})
+
+---@return "start"|"center"|"fin"
+local function get_vpos()
+    local vrange4 = ut.get_vrange4() ---@type Range4
+    vrange4[2] = math.max(vrange4[2] - 1, 0)
+    vrange4[4] = math.max(vrange4[4] - 1, 0)
+
+    local row, col = unpack(api.nvim_win_get_cursor(0))
+    local at_start = row == vrange4[1] and col == vrange4[2]
+    local at_fin = row == vrange4[3] and col == vrange4[4]
+
+    if at_start and not at_fin then return "start" end
+    if (not at_start) and at_fin then return "fin" end
+    return "center"
+end
+
+local objects = "nvim-treesitter-textobjects"
+local function map_objects(ev)
+    local select_maps = {
+        { "is", "@assignment.rhs" },
+        { "as", "@assignment.outer" },
+        { "iS", "@assignment.lhs" },
+        { "aS", "@assignment.inner" },
+        { "if", "@call.inner" }, -- From minimal init
+        { "af", "@call.outer" },
+        { "i/", "@comment.inner" }, -- :h [/
+        { "a/", "@comment.outer" },
+        { "ii", "@conditional.inner" },
+        { "ai", "@conditional.outer" },
+        { "im", "@function.inner" }, -- :h [m
+        { "am", "@function.outer" },
+        { "io", "@loop.inner" }, -- From minimal init
+        { "ao", "@loop.outer" },
+        { "i,", "@parameter.inner" },
+        { "a,", "@parameter.outer" },
+        { "i.", "@return.inner" },
+        { "a.", "@return.outer" },
+        -- Custom object
+        { "i#", "@preproc.inner" }, -- :h [#
+        { "a#", "@preproc.outer" },
+    }
+
+    local select = require(objects .. ".select")
+    for _, m in pairs(select_maps) do
+        vim.keymap.set({ "x", "o" }, m[1], function()
+            select.select_textobject(m[2], "textobjects")
+        end, { buffer = ev.buf })
+    end
+
+    local move_maps = {
+        { "[s", "]s", "@assignment.outer" },
+        { "[f", "]f", "@call.outer" },
+        { "[/", "]/", "@comment.outer" },
+        { "[i", "]i", "@conditional.outer" },
+        { "[m", "]m", "@function.outer" },
+        { "[o", "]o", "@loop.outer" },
+        { "[,", "],", "@parameter.inner" }, -- To perform edits inside strings
+        { "[.", "].", "@return.outer" },
+        -- Custom objects
+        { "[#", "]#", "@preproc.outer" },
+        { '["', ']"', "@string.inner" }, -- To perform edits inside
+    }
+
+    local move = require(objects .. ".move")
+    for _, m in pairs(move_maps) do
+        vim.keymap.set({ "n", "o" }, m[1], function()
+            move.goto_previous_start(m[3], "textobjects")
+        end, { buffer = ev.buf })
+
+        vim.keymap.set("n", m[2], function()
+            move.goto_next_start(m[3], "textobjects")
+        end, { buffer = ev.buf })
+
+        vim.keymap.set("o", m[2], function()
+            move.goto_next_end(m[3], "textobjects")
+        end, { buffer = ev.buf })
+
+        vim.keymap.set({ "x" }, m[1], function()
+            if get_vpos() ~= "fin" then
+                move.goto_previous_start(m[3], "textobjects")
+                return
+            end
+
+            move.goto_previous_end(m[3], "textobjects")
+            if get_vpos() == "start" then move.goto_previous_start(m[3], "textobjects") end
+        end, { buffer = ev.buf })
+
+        vim.keymap.set("x", m[2], function()
+            if get_vpos() ~= "start" then
+                move.goto_next_end(m[3], "textobjects")
+                return
+            end
+
+            move.goto_next_start(m[3], "textobjects")
+            if get_vpos() == "fin" then move.goto_next_end(m[3], "textobjects") end
+        end, { buffer = ev.buf })
+    end
+
+    local swap_maps = {
+        { "(s", ")s", "@assignment.outer" },
+        { "(f", ")f", "@call.outer" },
+        { "(/", ")/", "@comment.outer" },
+        { "(i", ")i", "@conditional.outer" },
+        { "(m", ")m", "@function.outer" },
+        { "(o", ")o", "@loop.outer" },
+        { "(,", "),", "@parameter.inner" }, -- Outer can break commas if swapped at end
+        { "(.", ").", "@return.outer" },
+        -- Custom objects
+        { "(#", ")#", "@preproc.outer" },
+        { '("', ')"', "@string.outer" },
+    }
+
+    vim.keymap.set("n", "(", "<nop>", { buffer = ev.buf })
+    vim.keymap.set("n", ")", "<nop>", { buffer = ev.buf })
+    local swap = require(objects .. ".swap")
+    for _, m in pairs(swap_maps) do
+        vim.keymap.set("n", m[1], function()
+            swap.swap_previous(m[3], "textobjects")
+        end, { buffer = ev.buf })
+
+        vim.keymap.set("n", m[2], function()
+            swap.swap_next(m[3], "textobjects")
+        end, { buffer = ev.buf })
+    end
+end
+
+local function setup_objects()
+    require(objects).setup({
+        select = { lookahead = true, include_surrounding_whitespace = false },
+        move = { set_jumps = false },
+    })
+
+    api.nvim_create_autocmd("FileType", {
+        group = api.nvim_create_augroup("objects-map", {}),
+        pattern = langs,
+        callback = map_objects,
+    })
+end
+
+local objects_setup = api.nvim_create_augroup("objects-setup", {})
+api.nvim_create_autocmd({ "BufNewFile", "BufReadPre" }, {
+    group = objects_setup,
+    once = true,
+    callback = function()
+        setup_objects()
+        api.nvim_del_augroup_by_id(objects_setup)
+    end,
+})
