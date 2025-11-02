@@ -198,9 +198,10 @@ end, { silent = true })
 
 local function mv_normal(upward)
     if not ut.check_modifiable() then return end
-    local dir = upward and "+" or "-"
+    local dir = upward and "-" or "+" ---@type string
+    local count = vim.v.count1 + (upward and 1 or 0) ---@type integer
     local ok, err = pcall(function()
-        vim.cmd("m" .. dir .. vim.v.count1 .. " | norm! ==")
+        vim.cmd("m" .. dir .. count .. " | norm! ==")
     end)
 
     if not ok then
