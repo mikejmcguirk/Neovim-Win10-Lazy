@@ -517,7 +517,15 @@ function M.pbuf_rm(buf, force, wipeout, no_save)
 
     local delete_opts = { force = force }
     if not wipeout then
-        if #list_listed_bufs() <= 1 then
+        local listed_bufs = list_listed_bufs()
+        for i = 1, #listed_bufs, -1 do
+            if listed_bufs[i] == buf then
+                table.remove(listed_bufs, i)
+                break
+            end
+        end
+
+        if #listed_bufs < 1 then
             ---@type [string,string|integer?][]
             local chunks = { { "Cannot unload the last buffer" } }
             return false, chunks, false, {}
