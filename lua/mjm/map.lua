@@ -48,7 +48,6 @@ map("n", "<leader>-", "<nop>")
 -- - Would need to test tabonly before mapping it. Maybe do it as a custom function
 map("n", "<tab>", "gt")
 map("n", "<S-tab>", "gT")
-map("n", "g<tab>", "<cmd>tabnew<cr>")
 map("n", "<C-tab>", "<nop>")
 map("n", "<C-S-tab>", "<nop>")
 
@@ -327,6 +326,7 @@ apimap("n", "g`", "<nop>", { noremap = true })
 -- Credit ThePrimeagen
 map("n", "g%", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
 
+map("n", "g<tab>", "<cmd>tabnew<cr>")
 map("n", "gr", "<nop>")
 
 local cap_motions_norm = {
