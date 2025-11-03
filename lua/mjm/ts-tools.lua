@@ -1,6 +1,6 @@
 local api = vim.api
 
-vim.keymap.set("n", "gtt", function()
+vim.keymap.set("n", "<leader>tt", function()
     local buf = vim.api.nvim_get_current_buf()
     if vim.treesitter.highlighter.active[buf] then
         vim.treesitter.stop(buf)
@@ -10,11 +10,11 @@ vim.keymap.set("n", "gtt", function()
     end
 end)
 
-vim.keymap.set("n", "gti", function()
+vim.keymap.set("n", "<leader>ti", function()
     vim.api.nvim_cmd({ cmd = "InspectTree" }, {})
 end)
 
-vim.keymap.set("n", "gtee", function()
+vim.keymap.set("n", "<leader>tee", function()
     vim.api.nvim_cmd({ cmd = "EditQuery" }, {})
 end)
 
@@ -36,22 +36,24 @@ local function edit_query_file(ts_file)
     end
 end
 
-vim.keymap.set("n", "gted", function()
+vim.keymap.set("n", "<leader>ted", function()
     edit_query_file("folds")
 end)
 
-vim.keymap.set("n", "gtei", function()
+vim.keymap.set("n", "<leader>tei", function()
     edit_query_file("highlights")
 end)
 
-vim.keymap.set("n", "gten", function()
+vim.keymap.set("n", "<leader>ten", function()
     edit_query_file("indents")
 end)
 
-vim.keymap.set("n", "gtej", function()
+vim.keymap.set("n", "<leader>tej", function()
     edit_query_file("injections")
 end)
 
-vim.keymap.set("n", "gteo", function()
+vim.keymap.set("n", "<leader>teo", function()
     edit_query_file("textobjects")
 end)
+
+-- LOW: These are in the master nvim-treesitter as TSEditQuery {type}
