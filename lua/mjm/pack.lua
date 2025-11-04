@@ -25,7 +25,7 @@ local pack_spec = {
 
     { src = "https://github.com/nvim-mini/mini.operators" },
 
-    { src = "https://github.com/folke/lazydev.nvim" },
+    { src = "https://github.com/jake-stewart/multicursor.nvim" },
 
     { src = "https://github.com/windwp/nvim-autopairs" },
 

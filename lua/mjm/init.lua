@@ -71,7 +71,7 @@ require("mjm.tal")
 
 require("mjm.plugins.spec-ops")
 require("mjm.plugins.specialist")
-
+require("mjm.plugins.multicursor")
 require("mjm.lsp")
 require("mjm.plugins.autopairs")
 require("mjm.plugins.fugitive")
