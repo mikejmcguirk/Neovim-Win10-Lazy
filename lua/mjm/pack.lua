@@ -60,6 +60,8 @@ local pack_spec = {
     { src = "https://github.com/tpope/vim-fugitive" },
 
     { src = "https://github.com/andymass/vim-matchup" },
+
+    { src = "https://github.com/tpope/vim-speeddating" },
 }
 
 vim.pack.add(pack_spec, {})
