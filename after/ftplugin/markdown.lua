@@ -82,3 +82,7 @@ end
 -- Traditional, since the Obsidian plugin uses gf as its multi-function key
 -- Since markdown-oxide uses goto definition for link nav, we don't need gf for that purpose
 vim.keymap.set("n", "gf", toggle_checkbox)
+
+-- TODO: Bulleted lists do not auto-create a new bullet on <cr>
+-- TODO: When using fds to select new words, enter does not cause a replace
+-- TODO: Markdown files take forever to open. Which plugin(s) are causing this?

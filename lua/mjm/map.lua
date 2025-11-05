@@ -5,14 +5,6 @@ local fn = vim.fn
 local map = vim.keymap.set
 local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 
--- See :h <tab> and https://github.com/neovim/neovim/pull/17932
-apimap("n", "<C-i>", "<C-i>", { noremap = true })
-apimap("n", "<tab>", "<tab>", { noremap = true })
-apimap("n", "<C-m>", "<C-m>", { noremap = true })
-apimap("n", "<cr>", "<cr>", { noremap = true })
-apimap("n", "<C-[>", "<C-[>", { noremap = true })
-apimap("n", "<esc>", "<esc>", { noremap = true })
-
 -----------------
 -- NORMAL MODE --
 -----------------
@@ -37,7 +29,7 @@ for _ = 1, 10 do
     tab = mod_tab + 1
 end
 
--- () are used for TS Text Object swap
+-- () used for swaps in multicursor and ts text objects
 -- - and + are used for oil
 -- I use this as a prefix for inserting boilerplate code. Don't want this falling back to other
 -- behavior on timeout
@@ -370,6 +362,7 @@ for _, m in pairs(cap_motions_vis) do
     end, { silent = true, expr = true })
 end
 
+-- gi used for multicursor
 apimap("n", "gI", "g^i", { noremap = true })
 
 apimap("n", "g'", "g`", { noremap = true })
@@ -585,29 +578,29 @@ apimap("o", "<C-c>", "<esc>", { noremap = true })
 -- INSERT MODE --
 -----------------
 
-map("i", "<C-q>", "<C-S-v>")
-map("i", "<C-e>", "<End>")
-map("i", "<M-e>", "<C-o>ze")
-
-map("i", "<C-a>", "<C-o>I")
-map("i", "<C-d>", "<Del>")
-map("i", "<M-d>", "<C-g>u<C-o>dw")
-map("i", "<C-f>", "<right>")
-map("i", "<M-f>", "<S-right>")
-
-map("i", "<M-j>", "<down>")
-map("i", "<C-k>", "<C-g>u<C-o>D")
-map("i", "<M-k>", "<up>")
-map("i", "<C-l>", "<esc><cmd>silent norm! u<cr>")
-
 -- Deal with default behavior where you type just to the bound of a window, so Nvim scrolls to
 -- the next column so you can see what you're typing, but then you exit insert mode, meaning
 -- the character no longer can exist, but Neovim still has you scrolled to the side
 -- NOTE: This also applies to replace mode, but not single replace char
 map("i", "<C-c>", "<esc>ze")
-map("i", "<C-b>", "<left>")
-map("i", "<M-b>", "<S-left>")
 
+map("i", "<C-q>", "<C-S-v>") -- Seen unsimplified char literals. Avoid terminal paste
+
+map("i", "<C-a>", "<C-o>I")
+map("i", "<C-e>", "<End>")
+map("i", "<C-f>", "<right>")
+map("i", "<C-b>", "<left>")
+map("i", "<M-f>", "<S-right>")
+map("i", "<M-b>", "<S-left>")
+map("i", "<M-j>", "<down>")
+map("i", "<M-k>", "<up>")
+
+map("i", "<M-e>", "<C-o>ze")
+
+map("i", "<C-d>", "<Del>")
+map("i", "<M-d>", "<C-g>u<C-o>dw")
+map("i", "<C-k>", "<C-g>u<C-o>D")
+map("i", "<C-l>", "<esc><cmd>silent norm! u<cr>")
 map("i", "<C-m>", "<C-d>")
 
 ------------------
@@ -631,3 +624,11 @@ map("c", "<C-b>", "<left>")
 map("c", "<M-b>", "<S-left>")
 
 map("c", "<M-n>", "<down>")
+
+-- LOW: Visual mode mapping to trim whitespace from selection
+-- LOW: ctrl-b/ctrl-f behavior is odd. Going up or down one "page" sometimes results in the same
+-- line number when you go back
+-- Obvious solution - get 'lines' option value, move by that and set a jump point
+-- But would want to see if the page navigation has an underlying logic I'm not understanding
+-- before going there. Could also add zz to the bespoke navigation
+-- LOW: Re-organize these by topic

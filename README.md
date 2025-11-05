@@ -12,8 +12,6 @@
 
 ### Notes
 
-- This config requires Neovim nightly v12 because it uses the in-development vim.pack feature
-
 - When installing on Windows, avoid running as Administrator or using an elevated terminal if possible (accepting UAC prompts is still fine). If the nvim-data files have mixed ownership, permissions conflicts might cause plugins to fail
 
 ### Git Installation Notes

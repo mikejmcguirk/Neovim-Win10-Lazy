@@ -52,14 +52,20 @@ local function load_lightbulb()
     api.nvim_exec_autocmds("LspAttach", { group = attach_lightbulb })
 end
 
-local load_group = api.nvim_create_augroup("load-lightbulb", {})
-api.nvim_create_autocmd("LspAttach", {
-    group = load_group,
-    once = true,
-    callback = function()
-        load_lightbulb()
+return {
+    "kosayoda/nvim-lightbulb",
+    -- TODO: Does this properly hold back loading? Are we better off just using the default?
+    init = function()
+        local load_group = api.nvim_create_augroup("load-lightbulb", {})
+        api.nvim_create_autocmd("LspAttach", {
+            group = load_group,
+            once = true,
+            callback = function()
+                load_lightbulb()
+            end,
+        })
     end,
-})
+}
 
 -- LOW: Create custom lightbulb
 -- - https://github.com/MariaSolOs/dotfiles/blob/main/.config/nvim/lua/lightbulb.lua

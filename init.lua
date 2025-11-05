@@ -14,6 +14,7 @@ require("mjm")
 -- https://github.com/folke/dot/tree/master/nvim
 -- https://github.com/stevearc/dotfiles/tree/master/.config/nvim
 -- https://github.com/b0o/nvim-conf/tree/main
+-- https://nvim-mini.org/MiniMax/configs/nvim-0.11/
 
 ---------------
 -- RESOURCES --
@@ -26,3 +27,6 @@ require("mjm")
 -----------------
 
 -- export NVIM_APPNAME=some-other-thing will make the config .config/some-other-thing
+
+-- BASELINE setup:
+-- - Use <esc> or <C-c> as your main mode switching key (influences multi-cursor)

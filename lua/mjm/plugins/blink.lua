@@ -1,15 +1,22 @@
 local api = vim.api
+local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 
-local function setup_blink()
-    vim.keymap.set("i", "<C-y>", "<nop>")
-    vim.keymap.set("i", "<C-n>", "<nop>")
-    vim.keymap.set("i", "<C-p>", "<nop>")
-    vim.keymap.set("i", "<M-y>", "<nop>")
-    vim.keymap.set("i", "<M-n>", "<nop>")
-    vim.keymap.set("i", "<M-p>", "<nop>")
-    vim.keymap.set("i", "<M-s>", "<nop>")
+-- LOW: Test tucking the setup function into an autocmd. Issues are (1) making sure /plugin file
+-- runs and (2) making sure it doesn't adversely interact with the build
+return {
+    "saghen/blink.cmp",
+    lazy = false,
+    -- optional: provides snippets for the snippet source
+    dependencies = {
+        "rafamadriz/friendly-snippets",
+        "https://github.com/kristijanhusak/vim-dadbod-completion",
+    },
+    version = "1.*",
+    build = "cargo +nightly build --release",
+    ---@module 'blink.cmp'
+    ---@type blink.cmp.Config
+    opts = {
 
-    require("blink.cmp").setup({
         cmdline = {
             completion = { menu = { auto_show = true }, ghost_text = { enabled = false } },
             enabled = true,
@@ -111,7 +118,6 @@ local function setup_blink()
                     },
                     score_offset = -6,
                     transform_items = function(a, items)
-                        local ut = require("mjm.utils")
                         local prose_ft = { "text", "markdown" }
                         local ft = vim.api.nvim_get_option_value("filetype", { buf = 0 })
                         if not (vim.tbl_contains(prose_ft, ft) or ut.is_comment()) then
@@ -160,82 +166,49 @@ local function setup_blink()
                 },
             },
         },
-    })
+    },
+    init = function()
+        vim.keymap.set("i", "<C-y>", "<nop>")
+        vim.keymap.set("i", "<C-n>", "<nop>")
+        vim.keymap.set("i", "<C-p>", "<nop>")
+        vim.keymap.set("i", "<M-y>", "<nop>")
+        vim.keymap.set("i", "<M-n>", "<nop>")
+        vim.keymap.set("i", "<M-p>", "<nop>")
+        vim.keymap.set("i", "<M-s>", "<nop>")
 
-    local groups = {
-        BlinkCmpDocBorder = { link = "FloatBorder" },
-        BlinkCmpMenuBorder = { link = "FloatBorder" },
-        BlinkCmpSignatureHelpBorder = { link = "FloatBorder" },
+        local groups = {
+            BlinkCmpDocBorder = { link = "FloatBorder" },
+            BlinkCmpMenuBorder = { link = "FloatBorder" },
+            BlinkCmpSignatureHelpBorder = { link = "FloatBorder" },
 
-        BlinkCmpKindClass = { link = "Type" },
-        BlinkCmpKindColor = { link = "DiagnosticWarn" },
-        BlinkCmpKindConstant = { link = "Constant" },
-        BlinkCmpKindConstructor = { link = "Special" },
-        BlinkCmpKindEnum = { link = "Type" },
-        BlinkCmpKindEnumMember = { link = "@lsp.type.enumMember" },
-        BlinkCmpKindEvent = { link = "Function" },
-        BlinkCmpKindFolder = { link = "Directory" },
-        BlinkCmpKindFunction = { link = "Function" },
-        BlinkCmpKindInterface = { link = "Type" },
-        BlinkCmpKindKeyword = { link = "Special" },
-        BlinkCmpKindMethod = { link = "Function" },
-        BlinkCmpKindModule = { link = "@module" },
-        BlinkCmpKindOperator = { link = "Operator" },
-        BlinkCmpKindSnippet = { link = "Special" },
-        BlinkCmpKindStruct = { link = "Type" },
-        BlinkCmpKindText = { link = "String" },
-        BlinkCmpKindUnit = { link = "Number" },
-        BlinkCmpKindValue = { link = "String" },
+            BlinkCmpKindClass = { link = "Type" },
+            BlinkCmpKindColor = { link = "DiagnosticWarn" },
+            BlinkCmpKindConstant = { link = "Constant" },
+            BlinkCmpKindConstructor = { link = "Special" },
+            BlinkCmpKindEnum = { link = "Type" },
+            BlinkCmpKindEnumMember = { link = "@lsp.type.enumMember" },
+            BlinkCmpKindEvent = { link = "Function" },
+            BlinkCmpKindFolder = { link = "Directory" },
+            BlinkCmpKindFunction = { link = "Function" },
+            BlinkCmpKindInterface = { link = "Type" },
+            BlinkCmpKindKeyword = { link = "Special" },
+            BlinkCmpKindMethod = { link = "Function" },
+            BlinkCmpKindModule = { link = "@module" },
+            BlinkCmpKindOperator = { link = "Operator" },
+            BlinkCmpKindSnippet = { link = "Special" },
+            BlinkCmpKindStruct = { link = "Type" },
+            BlinkCmpKindText = { link = "String" },
+            BlinkCmpKindUnit = { link = "Number" },
+            BlinkCmpKindValue = { link = "String" },
 
-        BlinkCmpKindTypeParameter = { link = "Type" },
-    } ---@type { string: vim.api.keyset.highlight }
+            BlinkCmpKindTypeParameter = { link = "Type" },
+        } ---@type { string: vim.api.keyset.highlight }
 
-    for k, v in pairs(groups) do
-        vim.api.nvim_set_hl(0, k, v)
-    end
-end
-
-vim.api.nvim_create_autocmd({ "CmdlineEnter", "BufReadPre", "BufNewFile" }, {
-    group = vim.api.nvim_create_augroup("setup-blink", { clear = true }),
-    once = true,
-    callback = function()
-        local path = nil ---@type string
-        for _, s in pairs(vim.pack.get()) do
-            if s.spec.name == "blink.cmp" then
-                path = s.path
-                break
-            end
+        for k, v in pairs(groups) do
+            vim.api.nvim_set_hl(0, k, v)
         end
-
-        if not path then
-            local msg = "blink.cmp path not found. Cannot build fuzzy" ---@type string
-            vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, {})
-            return
-        end
-
-        local cmd = { "cargo", "+nightly", "build", "--release" } ---@type string[]
-        local sys_opts = { cwd = path, text = true } ---@type vim.SystemOpts
-        vim.api.nvim_echo({ { "Building fuzzy for blink.cmp...", "" } }, true, {})
-
-        vim.system(cmd, sys_opts, function(out)
-            if out.code == 0 then
-                vim.schedule(function()
-                    vim.api.nvim_echo({ { "", "" } }, false, {})
-                    setup_blink()
-                end)
-
-                return
-            end
-
-            vim.schedule(function()
-                local msg = out.stderr or "Unknown error building fuzzy for blink" ---@type string
-                vim.api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
-            end)
-        end)
-
-        vim.api.nvim_del_augroup_by_name("setup-blink")
     end,
-})
+}
 
 -- LOW: blink-cmp-words creates blocking calls and the other dictionary plugin creats hanging
 -- fzf processes, so, if we want a dictionary, we have to make it

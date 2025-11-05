@@ -1,9 +1,10 @@
-local api = vim.api
 local fs = vim.fs
 local img_dir = "assets/img" ---@type string
 
-local function setup_img_clip()
-    require("img-clip").setup({
+return {
+    "HakonHarnes/img-clip.nvim",
+    event = "VeryLazy",
+    opts = {
         default = {
             dir_path = img_dir,
             extension = "png",
@@ -21,17 +22,6 @@ local function setup_img_clip()
             prompt_for_file_name = false,
         },
         filetypes = { markdown = { template = "![$LABEL]($FILE_PATH)" } },
-    })
-
-    vim.keymap.set("n", "<leader>cp", "<cmd>PasteImage<cr>")
-end
-
-local load_img_clip = api.nvim_create_augroup("load-img-clip", {})
-api.nvim_create_autocmd("FileType", {
-    group = load_img_clip,
-    pattern = "markdown",
-    callback = function()
-        setup_img_clip()
-        api.nvim_del_augroup_by_id(load_img_clip)
-    end,
-})
+    },
+    keys = { { "<leader>cp", "<cmd>PasteImage<cr>", mode = "n" } },
+}

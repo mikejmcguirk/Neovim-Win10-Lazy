@@ -1,6 +1,6 @@
 local api = vim.api
-local map = vim.keymap.set
-local ut = Mjm_Defer_Require("mjm.utils")
+local set = vim.keymap.set
+local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 
 local langs = {
     -- Mandatory
@@ -32,32 +32,12 @@ local langs = {
     "typescript",
 }
 
-require("nvim-treesitter").install(langs)
-langs[#langs + 1] = "sh"
-api.nvim_create_autocmd({ "FileType" }, {
-    group = api.nvim_create_augroup("ts-start", {}),
-    pattern = langs,
-    callback = function(ev)
-        vim.treesitter.start(ev.buf)
-        local indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
-        api.nvim_set_option_value("indentexpr", indentexpr, { buf = ev.buf })
-    end,
-})
-
--- PR: The "parsers up to date" message is annoying
-api.nvim_create_autocmd("UIEnter", {
-    group = api.nvim_create_augroup("run-tsupdate", {}),
-    pattern = "*",
-    callback = function()
-        vim.schedule(function()
-            api.nvim_cmd({ cmd = "TSUpdate" }, {})
-        end)
-    end,
-})
+local objects = "nvim-treesitter-textobjects"
 
 ---@return "start"|"center"|"fin"
 local function get_vpos()
-    local vrange4 = ut.get_vrange4() ---@type Range4
+    local vrange4 = ut.get_vrange4() ---@type Range4|nil
+    if not vrange4 then return "center" end
     vrange4[2] = math.max(vrange4[2] - 1, 0)
     vrange4[4] = math.max(vrange4[4] - 1, 0)
 
@@ -70,7 +50,6 @@ local function get_vpos()
     return "center"
 end
 
-local objects = "nvim-treesitter-textobjects"
 local function map_objects(ev)
     local select_maps = {
         { "is", "@assignment.rhs" },
@@ -98,7 +77,7 @@ local function map_objects(ev)
 
     local select = require(objects .. ".select")
     for _, m in pairs(select_maps) do
-        map({ "x", "o" }, m[1], function()
+        set({ "x", "o" }, m[1], function()
             select.select_textobject(m[2], "textobjects")
         end, { buffer = ev.buf })
     end
@@ -119,19 +98,19 @@ local function map_objects(ev)
 
     local move = require(objects .. ".move")
     for _, m in pairs(move_maps) do
-        map({ "n", "o" }, m[1], function()
+        set({ "n", "o" }, m[1], function()
             move.goto_previous_start(m[3], "textobjects")
         end, { buffer = ev.buf })
 
-        map("n", m[2], function()
+        set("n", m[2], function()
             move.goto_next_start(m[3], "textobjects")
         end, { buffer = ev.buf })
 
-        map("o", m[2], function()
+        set("o", m[2], function()
             move.goto_next_end(m[3], "textobjects")
         end, { buffer = ev.buf })
 
-        map({ "x" }, m[1], function()
+        set({ "x" }, m[1], function()
             if get_vpos() ~= "fin" then
                 move.goto_previous_start(m[3], "textobjects")
                 return
@@ -141,7 +120,7 @@ local function map_objects(ev)
             if get_vpos() == "start" then move.goto_previous_start(m[3], "textobjects") end
         end, { buffer = ev.buf })
 
-        map("x", m[2], function()
+        set("x", m[2], function()
             if get_vpos() ~= "start" then
                 move.goto_next_end(m[3], "textobjects")
                 return
@@ -166,68 +145,121 @@ local function map_objects(ev)
         { '("', ')"', "@string.outer" },
     }
 
-    map("n", "(", "<nop>", { buffer = ev.buf })
-    map("n", ")", "<nop>", { buffer = ev.buf })
+    set("n", "(", "<nop>", { buffer = ev.buf })
+    set("n", ")", "<nop>", { buffer = ev.buf })
     local swap = require(objects .. ".swap")
     for _, m in pairs(swap_maps) do
-        map("n", m[1], function()
+        set("n", m[1], function()
             swap.swap_previous(m[3], "textobjects")
         end, { buffer = ev.buf })
 
-        map("n", m[2], function()
+        set("n", m[2], function()
             swap.swap_next(m[3], "textobjects")
         end, { buffer = ev.buf })
     end
 end
 
-local objects_setup = api.nvim_create_augroup("objects-setup", {})
-api.nvim_create_autocmd({ "BufNewFile", "BufReadPre" }, {
-    group = objects_setup,
-    once = true,
-    callback = function()
-        require(objects).setup({
+return {
+    {
+        "nvim-treesitter/nvim-treesitter",
+        lazy = false,
+        branch = "main",
+        build = ":TSUpdate",
+        config = function()
+            require("nvim-treesitter").install(langs)
+
+            -- TODO: Test that this properly handles bash + ts text objects
+            langs[#langs + 1] = "sh"
+            api.nvim_create_autocmd({ "FileType" }, {
+                group = api.nvim_create_augroup("ts-start", {}),
+                pattern = langs,
+                callback = function(ev)
+                    vim.treesitter.start(ev.buf)
+                    local indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
+                    api.nvim_set_option_value("indentexpr", indentexpr, { buf = ev.buf })
+                end,
+            })
+        end,
+    },
+    {
+        "nvim-treesitter/nvim-treesitter-textobjects",
+        branch = "main",
+        ft = langs,
+        opts = {
+
             select = { lookahead = true, include_surrounding_whitespace = false },
             move = { set_jumps = false },
-        })
+        },
+        init = function()
+            local objects_setup = api.nvim_create_augroup("objects-setup", {})
+            local objects_map = api.nvim_create_augroup("objects-map", {})
+            api.nvim_create_autocmd("FileType", {
+                group = objects_map,
+                pattern = langs,
+                callback = map_objects,
+            })
 
-        local objects_map = api.nvim_create_augroup("objects-map", {})
-        api.nvim_create_autocmd("FileType", {
-            group = objects_map,
-            pattern = langs,
-            callback = map_objects,
-        })
+            -- TODO: I have no idea if this works
+            vim.api.nvim_exec_autocmds("FileType", { group = objects_map })
+            api.nvim_del_augroup_by_id(objects_setup)
+        end,
+    },
 
-        vim.api.nvim_exec_autocmds("FileType", { group = objects_map })
-        api.nvim_del_augroup_by_id(objects_setup)
-    end,
-})
+    {
+        "Dkendal/nvim-treeclimber",
+        lazy = false,
+        init = function()
+            api.nvim_set_var("treeclimber", { highlight = false })
+            -- TODO: Outline for length
+            local function map_treeclimber(ev)
+                local sel_prev = { buffer = ev.buf, desc = "Select previous node" }
+                set({ "n", "x", "o" }, "[e", "<Plug>(treeclimber-select-previous)", sel_prev)
+                local sel_next = { buffer = ev.buf, desc = "Select the next node" }
+                set({ "n", "x" }, "]e", "<Plug>(treeclimber-select-next)", sel_next)
+                local sel_forward_end =
+                    { buffer = ev.buf, desc = "Select forward and move to node end" }
+                set({ "o" }, "]e", "<Plug>(treeclimber-select-forward-end)", sel_forward_end)
 
-api.nvim_set_var("treeclimber", { highlight = false })
-local function map_treeclimber(ev)
-    local sel_prev = { buffer = ev.buf, desc = "Select previous node" }
-    map({ "n", "x", "o" }, "[e", "<Plug>(treeclimber-select-previous)", sel_prev)
-    local sel_next = { buffer = ev.buf, desc = "Select the next node" }
-    map({ "n", "x" }, "]e", "<Plug>(treeclimber-select-next)", sel_next)
-    local sel_forward_end = { buffer = ev.buf, desc = "Select forward and move to node end" }
-    map({ "o" }, "]e", "<Plug>(treeclimber-select-forward-end)", sel_forward_end)
+                local s_back = { buffer = ev.buf, desc = "Select first sibling" }
+                set(
+                    { "n", "x", "o" },
+                    "[E",
+                    "<Plug>(treeclimber-select-siblings-backward)",
+                    s_back
+                )
+                local s_front = { buffer = ev.buf, desc = "Select last sibling" }
+                set(
+                    { "n", "x", "o" },
+                    "]E",
+                    "<Plug>(treeclimber-select-siblings-forward)",
+                    s_front
+                )
+                local grow_back = { buffer = ev.buf, desc = "Grow selection backward" }
+                set(
+                    { "n", "x", "o" },
+                    "[<C-e>",
+                    "<Plug>(treeclimber-select-grow-backward)",
+                    grow_back
+                )
+                local grow_forward = { buffer = ev.buf, desc = "Grow selection forward" }
+                set(
+                    { "n", "x", "o" },
+                    "]<C-e>",
+                    "<Plug>(treeclimber-select-grow-forward)",
+                    grow_forward
+                )
 
-    local s_back = { buffer = ev.buf, desc = "Select first sibling" }
-    map({ "n", "x", "o" }, "[E", "<Plug>(treeclimber-select-siblings-backward)", s_back)
-    local s_front = { buffer = ev.buf, desc = "Select last sibling" }
-    map({ "n", "x", "o" }, "]E", "<Plug>(treeclimber-select-siblings-forward)", s_front)
-    local grow_back = { buffer = ev.buf, desc = "Grow selection backward" }
-    map({ "n", "x", "o" }, "[<C-e>", "<Plug>(treeclimber-select-grow-backward)", grow_back)
-    local grow_forward = { buffer = ev.buf, desc = "Grow selection forward" }
-    map({ "n", "x", "o" }, "]<C-e>", "<Plug>(treeclimber-select-grow-forward)", grow_forward)
+                local sel_cur = { buffer = ev.buf, desc = "Select child node" }
+                set({ "x", "o" }, "ie", "<Plug>(treeclimber-select-shrink)", sel_cur)
+                local sel_exp = { buffer = ev.buf, desc = "Select parent node (around)" }
+                set({ "x", "o" }, "ae", "<Plug>(treeclimber-select-expand)", sel_exp)
+            end
 
-    local sel_cur = { buffer = ev.buf, desc = "Select child node" }
-    map({ "x", "o" }, "ie", "<Plug>(treeclimber-select-shrink)", sel_cur)
-    local sel_exp = { buffer = ev.buf, desc = "Select parent node (around)" }
-    map({ "x", "o" }, "ae", "<Plug>(treeclimber-select-expand)", sel_exp)
-end
-
-api.nvim_create_autocmd("FileType", {
-    group = api.nvim_create_augroup("treeclimber", {}),
-    pattern = langs,
-    callback = map_treeclimber,
-})
+            api.nvim_create_autocmd("FileType", {
+                group = api.nvim_create_augroup("treeclimber", {}),
+                pattern = langs,
+                callback = map_treeclimber,
+            })
+        end,
+    },
+}
