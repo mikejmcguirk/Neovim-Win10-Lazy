@@ -105,7 +105,7 @@ end
 
 custom_add("nvim-qf-rancher")
 
-vim.keymap.set("n", "<leader>pqc", function()
+vim.keymap.set("n", "<leader>pc", function()
     local inactive = vim.iter(vim.pack.get())
         :map(function(p)
             if not p.active then return p.spec.name end
@@ -121,7 +121,7 @@ vim.keymap.set("n", "<leader>pqc", function()
     vim.pack.del(inactive)
 end)
 
-vim.keymap.set("n", "<leader>pqd", function()
+vim.keymap.set("n", "<leader>pd", function()
     local prompt = "Enter plugins to delete (space separated): " ---@type string
     local ok, result = require("mjm.utils").get_input(prompt) ---@type boolean, string
     if not ok then
@@ -135,7 +135,7 @@ vim.keymap.set("n", "<leader>pqd", function()
     vim.pack.del(vim.split(result, " "))
 end)
 
-vim.keymap.set("n", "<leader>pqD", function()
+vim.keymap.set("n", "<leader>pD", function()
     if vim.fn.confirm("Delete all plugins?", "&Yes\n&No", 2) ~= 1 then return end
 
     local plugins = vim.iter(vim.pack.get())
@@ -152,7 +152,7 @@ vim.keymap.set("n", "<leader>pqD", function()
     vim.pack.del(plugins)
 end)
 
-vim.keymap.set("n", "<leader>pqu", function()
+vim.keymap.set("n", "<leader>pu", function()
     vim.pack.update()
 end)
 
