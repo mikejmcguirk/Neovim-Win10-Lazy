@@ -25,6 +25,7 @@ end
 vim.opt.rtp:prepend(lazypath)
 require("lazy").setup({
     change_detection = { enabled = false, notify = false },
+    rocks = { enabled = false },
     spec = { { import = "mjm.plugins" } },
     ui = { border = "single" },
 })
