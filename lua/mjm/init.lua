@@ -1,7 +1,8 @@
 local api = vim.api
+local set = vim.keymap.set
 
-_G.Border = "single" ---@type string
-_G.Scrolloff = 6 ---@type integer
+_G.Mjm_Border = "single" ---@type string
+_G.Mjm_Scrolloff = 6 ---@type integer
 -- LOW: Create a more general defer require. Look at all of tj's funcs + vim._defer_require
 -- Needs to work with LSP autocomplete. Maybe vim._defer_require addresses this
 -- https://github.com/tjdevries/lazy-require.nvim/blob/master/lua/lazy-require.lua
@@ -18,17 +19,22 @@ function _G.Mjm_Defer_Require(path)
     })
 end
 
-vim.keymap.set({ "n", "x" }, "<Space>", "<Nop>")
+set({ "n", "x" }, "<Space>", "<Nop>")
 api.nvim_set_var("mapleader", " ")
+-- LOW: Ideas:
+-- - "\" - Used for settings
+-- - "`" - Might be better used for case operations
+-- - <bs> - Has a lot of semantic connotation
+-- Use case: Alleviates leader namespace cramping. Conform, for example, could be local leader
 api.nvim_set_var("maplocalleader", " ")
 
 -- See :h <tab> and https://github.com/neovim/neovim/pull/17932
-vim.keymap.set("n", "<C-i>", "<C-i>", { noremap = true })
-vim.keymap.set("n", "<tab>", "<tab>", { noremap = true })
-vim.keymap.set("n", "<C-m>", "<C-m>", { noremap = true })
-vim.keymap.set("n", "<cr>", "<cr>", { noremap = true })
-vim.keymap.set("n", "<C-[>", "<C-[>", { noremap = true })
-vim.keymap.set("n", "<esc>", "<esc>", { noremap = true })
+set("n", "<C-i>", "<C-i>")
+set("n", "<tab>", "<tab>")
+set("n", "<C-m>", "<C-m>")
+set("n", "<cr>", "<cr>")
+set("n", "<C-[>", "<C-[>")
+set("n", "<esc>", "<esc>")
 
 require("mjm.colorscheme")
 

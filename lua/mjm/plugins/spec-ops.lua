@@ -6,7 +6,6 @@ local set = vim.keymap.set
 
 return {
     dir = "~/.local/share/nvim/site/pack/dev-plugins/opt/spec-ops/",
-    lazy = false,
     init = function()
         ---@module "spec-ops"
         ---@type SpecOpsConfig

@@ -1,6 +1,5 @@
-local oil = Mjm_Defer_Require("oil")
-
 local api = vim.api
+local oil = Mjm_Defer_Require("oil")
 
 local function close_oil()
     if api.nvim_get_option_value("modified", { buf = 0 }) then
@@ -13,13 +12,12 @@ end
 return {
     "stevearc/oil.nvim",
     dependencies = { "nvim-tree/nvim-web-devicons" },
-    lazy = false,
     ---@module 'oil'
     ---@type oil.SetupOpts
     opts = {
 
         columns = { "size", "permissions" },
-        float = { border = Border, padding = 3 },
+        float = { border = Mjm_Border, padding = 3 },
         keymaps = {
             ["`"] = { "actions.parent", mode = "n" }, --- Patternful with vinegar mapping
             ["~"] = { "actions.open_cwd", mode = "n" }, --- Vinegar style mapping
@@ -50,8 +48,8 @@ return {
             ["<C-c>"] = false,
             ["_"] = false,
         },
-        keymaps_help = { border = Border },
-        ssh = { border = Border },
+        keymaps_help = { border = Mjm_Border },
+        ssh = { border = Mjm_Border },
         view_options = { show_hidden = true },
         watch_for_changes = true,
     },

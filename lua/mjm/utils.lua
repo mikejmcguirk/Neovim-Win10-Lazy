@@ -65,6 +65,7 @@ end
 --- Using bufload breaks BufReadPost autocmds and opt_local setup
 --- nvim_set_current_buf will load the buf properly if it needs to
 --- nvim_win_set_buf does the same, and also automatically moves the user into that window
+--- TODO: Update this to work like the one in rancher does
 function M.open_buf(source, opts)
     --- TODO: Scenario:
     --- - Create a new tab. It will contain a noname buffer
@@ -322,7 +323,7 @@ function M.check_word_under_cursor()
         return vim.notify("No results from WordNet for '" .. word .. "'", vim.log.levels.INFO)
     end
 
-    vim.lsp.util.open_floating_preview(lines, "markdown", { border = Border })
+    vim.lsp.util.open_floating_preview(lines, "markdown", { border = Mjm_Border })
 end
 
 function M.write_to_scratch_buf(lines)

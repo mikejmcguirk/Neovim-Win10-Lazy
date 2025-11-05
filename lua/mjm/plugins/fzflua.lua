@@ -1,3 +1,59 @@
+local api = vim.api
+local set = vim.keymap.set
+local fzflua_opts = {
+    -- LOW: Get out of this preset
+    "telescope",
+    debug = false,
+    files = {
+        no_ignore = true,
+    },
+    winopts = {
+        border = Mjm_Border,
+        width = 0.91,
+        preview = {
+            horizontal = "right:60%",
+            winopts = { number = true },
+        },
+    },
+    keymap = {
+        builtin = {
+            -- Undo Telescope profile mappings
+            ["<C-u>"] = false,
+            ["<C-d>"] = false,
+            -- Avoid shift maps
+            -- The ctrl maps are only bound here because ctrl-up/down are not valid
+            -- bindings in fzf
+            ["<C-up>"] = "preview-page-up",
+            ["<C-down>"] = "preview-page-down",
+            ["<M-up>"] = "preview-up",
+            ["<M-down>"] = "preview-down",
+        },
+        fzf = {
+            ["ctrl-j"] = "ignore",
+            ["ctrl-k"] = "kill-line",
+            ["alt-j"] = "down",
+            ["alt-k"] = "up",
+            -- Undo Telescope profile mappings
+            ["ctrl-u"] = "unix-line-discard",
+            ["ctrl-d"] = false,
+            -- Avoid shift maps
+            ["alt-up"] = "preview-up",
+            ["alt-down"] = "preview-down",
+        },
+    },
+    hls = {
+        normal = "NormalFloat",
+        preview_normal = "NormalFloat",
+        border = "FloatBorder",
+        preview_border = "FloatBorder",
+        backdrop = "NormalFloat",
+    },
+    fzf_opts = {
+        ["--tiebreak"] = "length,chunk",
+        ["--algo"] = "v2",
+    },
+}
+
 return {
     "ibhagwan/fzf-lua",
     -- LOW: Would be cool if this were lazy loaded. Could put keymaps into a table. But then how
@@ -5,104 +61,49 @@ return {
     dependencies = { "nvim-tree/nvim-web-devicons" },
     lazy = false,
     config = function()
-        local api = vim.api
         local fzf_lua = require("fzf-lua")
+        fzf_lua.setup(fzflua_opts)
 
-        fzf_lua.setup({
-            -- LOW: Get out of this preset
-            "telescope",
-            debug = false,
-            files = {
-                no_ignore = true,
-            },
-            winopts = {
-                border = Border,
-                width = 0.91,
-                preview = {
-                    horizontal = "right:60%",
-                    winopts = { number = true },
-                },
-            },
-            keymap = {
-                builtin = {
-                    -- Undo Telescope profile mappings
-                    ["<C-u>"] = false,
-                    ["<C-d>"] = false,
-                    -- Avoid shift maps
-                    -- The ctrl maps are only bound here because ctrl-up/down are not valid
-                    -- bindings in fzf
-                    ["<C-up>"] = "preview-page-up",
-                    ["<C-down>"] = "preview-page-down",
-                    ["<M-up>"] = "preview-up",
-                    ["<M-down>"] = "preview-down",
-                },
-                fzf = {
-                    ["ctrl-j"] = "ignore",
-                    ["ctrl-k"] = "kill-line",
-                    ["alt-j"] = "down",
-                    ["alt-k"] = "up",
-                    -- Undo Telescope profile mappings
-                    ["ctrl-u"] = "unix-line-discard",
-                    ["ctrl-d"] = false,
-                    -- Avoid shift maps
-                    ["alt-up"] = "preview-up",
-                    ["alt-down"] = "preview-down",
-                },
-            },
-            hls = {
-                normal = "NormalFloat",
-                preview_normal = "NormalFloat",
-                border = "FloatBorder",
-                preview_border = "FloatBorder",
-                backdrop = "NormalFloat",
-            },
-            fzf_opts = {
-                ["--tiebreak"] = "length,chunk",
-                ["--algo"] = "v2",
-            },
-        })
+        api.nvim_set_hl(0, "FzfLuaScrollBorderFull", { link = "FzfLuaScrollFloatFull" })
+        api.nvim_set_hl(0, "FzfLuaScrollFloatEmpty", { link = "FzfLuaScrollFloatFull" })
+        api.nvim_set_hl(0, "FzfLuaScrollBorderEmpty", { link = "FzfLuaScrollFloatFull" })
+        api.nvim_set_hl(0, "FzfLuaBufFlagCur", { link = "Constant" })
+        api.nvim_set_hl(0, "FzfLuaHeaderText", { link = "Constant" })
 
-        vim.api.nvim_set_hl(0, "FzfLuaScrollBorderFull", { link = "FzfLuaScrollFloatFull" })
-        vim.api.nvim_set_hl(0, "FzfLuaScrollFloatEmpty", { link = "FzfLuaScrollFloatFull" })
-        vim.api.nvim_set_hl(0, "FzfLuaScrollBorderEmpty", { link = "FzfLuaScrollFloatFull" })
-        vim.api.nvim_set_hl(0, "FzfLuaBufFlagCur", { link = "Constant" })
-        vim.api.nvim_set_hl(0, "FzfLuaHeaderText", { link = "Constant" })
+        -- LOW: Define the keymaps in a table and use them as load triggers
+        set("n", "<leader>ff", fzf_lua.resume)
 
-        -- Obsidian pickers are set to "fa"
+        set("n", "<leader>fb", fzf_lua.buffers)
+        set("n", "<leader>fi", fzf_lua.files)
 
-        vim.keymap.set("n", "<leader>ff", fzf_lua.resume)
-
-        vim.keymap.set("n", "<leader>fb", fzf_lua.buffers)
-        vim.keymap.set("n", "<leader>fi", fzf_lua.files)
-
-        vim.keymap.set("n", "<leader>fgc", fzf_lua.git_commits)
-        vim.keymap.set("n", "<leader>fgf", fzf_lua.git_files)
-        vim.keymap.set("n", "<leader>fgh", fzf_lua.git_hunks)
+        set("n", "<leader>fgc", fzf_lua.git_commits)
+        set("n", "<leader>fgf", fzf_lua.git_files)
+        set("n", "<leader>fgh", fzf_lua.git_hunks)
         -- LOW: Why does this not jump? Turning off " jumps doesn't change this
-        vim.keymap.set("n", "<leader>fgs", fzf_lua.git_status)
+        set("n", "<leader>fgs", fzf_lua.git_status)
 
-        vim.keymap.set("n", "<leader>fp", fzf_lua.grep)
-        vim.keymap.set("n", "<leader>fe", fzf_lua.live_grep)
+        set("n", "<leader>fp", fzf_lua.grep)
+        set("n", "<leader>fe", fzf_lua.live_grep)
 
-        vim.keymap.set("n", "<leader>fa", fzf_lua.autocmds)
-        vim.keymap.set("n", "<leader>fc", fzf_lua.command_history)
-        vim.keymap.set("n", "<leader>ft", fzf_lua.highlights)
-        vim.keymap.set("n", "<leader>fk", fzf_lua.keymaps)
+        set("n", "<leader>fa", fzf_lua.autocmds)
+        set("n", "<leader>fc", fzf_lua.command_history)
+        set("n", "<leader>ft", fzf_lua.highlights)
+        set("n", "<leader>fk", fzf_lua.keymaps)
 
-        vim.keymap.set("n", "<leader>fo", fzf_lua.loclist)
-        vim.keymap.set("n", "<leader>fq", fzf_lua.quickfix)
-        vim.keymap.set("n", "<leader>fO", fzf_lua.loclist_stack)
-        vim.keymap.set("n", "<leader>fQ", fzf_lua.quickfix_stack)
+        set("n", "<leader>fo", fzf_lua.loclist)
+        set("n", "<leader>fq", fzf_lua.quickfix)
+        set("n", "<leader>fO", fzf_lua.loclist_stack)
+        set("n", "<leader>fQ", fzf_lua.quickfix_stack)
 
-        vim.keymap.set("n", "<leader>fm", function()
+        set("n", "<leader>fm", function()
             fzf_lua.marks({
                 marks = '[a-z"]',
             })
         end)
-        vim.keymap.set("n", "<leader>fM", fzf_lua.marks)
-        vim.keymap.set("n", "<leader>fs", fzf_lua.spellcheck)
+        set("n", "<leader>fM", fzf_lua.marks)
+        set("n", "<leader>fs", fzf_lua.spellcheck)
 
-        vim.keymap.set("n", "<leader>fh", function()
+        set("n", "<leader>fh", function()
             fzf_lua.helptags({
                 fzf_opts = {
                     ["--tiebreak"] = "begin,chunk,length",
@@ -130,7 +131,7 @@ return {
             local word = vim.fn.expand("<cword>"):lower() ---@type string
             if word == "" then return vim.notify("No word under cursor", vim.log.levels.WARN) end
 
-            local buf = vim.api.nvim_get_current_buf()
+            local buf = api.nvim_get_current_buf()
 
             ---@diagnostic disable: undefined-field
             local dict_file = vim.opt.dictionary:get()[1]
@@ -149,8 +150,8 @@ return {
                     ["default"] = function(selected, _)
                         if not selected or not selected[1] then return end
 
-                        local line = vim.api.nvim_get_current_line()
-                        local row_1, col_0 = unpack(vim.api.nvim_win_get_cursor(0))
+                        local line = api.nvim_get_current_line()
+                        local row_1, col_0 = unpack(api.nvim_win_get_cursor(0))
                         local col_1 = col_0 + 1
                         local search_start = math.max(1, col_1 - #word)
                         local start_col_1 = line:find(word, search_start, false)
@@ -168,7 +169,7 @@ return {
                         local row_0 = row_1 - 1
                         local start_col_0 = start_col_1 - 1
                         local end_col_ex = start_col_0 + #word
-                        vim.api.nvim_buf_set_text(
+                        api.nvim_buf_set_text(
                             buf,
                             row_0,
                             start_col_0,
@@ -177,10 +178,10 @@ return {
                             { new_word }
                         )
 
-                        vim.api.nvim_win_set_cursor(0, { row_1, col_0 })
+                        api.nvim_win_set_cursor(0, { row_1, col_0 })
                         -- Doesn't display for whatever reason
                         -- local msg = 'Replaced "' .. word .. '" with "' .. new_word .. '"'
-                        -- vim.api.nvim_echo({ { msg } }, true, {})
+                        -- api.nvim_echo({ { msg } }, true, {})
                     end,
                     ["ctrl-w"] = function(_, _)
                         local spellfile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add"
@@ -188,7 +189,7 @@ return {
                         api.nvim_cmd({ cmd = "mkspell", args = { spellfile }, bang = true }, {})
                         -- Doesn't display for whatever reason
                         -- local msg = 'Added new word "' .. word .. '" to spellfile as valid'
-                        -- vim.api.nvim_echo({ { msg } }, true, {})
+                        -- api.nvim_echo({ { msg } }, true, {})
                     end,
                 },
                 -- FUTURE: Would be cool if the previewer tied into wordnet
@@ -201,8 +202,8 @@ return {
             })
         end
 
-        vim.keymap.set("n", "<leader>fdd", fuzzy_dict)
-        vim.keymap.set("n", "<leader>fds", fuzzy_spell_correct)
+        set("n", "<leader>fdd", fuzzy_dict)
+        set("n", "<leader>fds", fuzzy_spell_correct)
 
         -- PR: This is an easy pull request to make so I don't have to hold onto bespoke code
         -- But this doesn't show the "l"/"c" conversions like :registers does so needs more work
@@ -279,20 +280,19 @@ return {
             require("fzf-lua.core").fzf_exec(entries, opts)
         end
 
-        vim.keymap.set("n", "<leader>fr", fzf_lua.registers)
+        set("n", "<leader>fr", fzf_lua.registers)
 
-        vim.api.nvim_create_autocmd("VimEnter", {
-            group = vim.api.nvim_create_augroup("fzf-lua-register-ui-select", { clear = true }),
+        api.nvim_create_autocmd("VimEnter", {
+            group = api.nvim_create_augroup("fzf-lua-register-ui-select", { clear = true }),
             once = true,
             callback = function()
-                vim.api.nvim_cmd({ cmd = "FzfLua", args = { "register_ui_select" } }, {})
+                api.nvim_cmd({ cmd = "FzfLua", args = { "register_ui_select" } }, {})
             end,
         })
-
-        -- LOW: Fix ugly colors in scroll area
-        -- MAYBE: vim.keymap.set to gi
-        -- LOW: How to delete qf stacks from FzfLua?
-        -- LOW: Turn let g:/w:/b:/t: into pickers
-        -- LOW: Make a thesaurus picker
     end,
 }
+
+-- LOW: Fix ugly colors in scroll area
+-- LOW: How to delete qf stacks from FzfLua?
+-- LOW: Turn let g:/w:/b:/t: into pickers
+-- LOW: Make a thesaurus picker

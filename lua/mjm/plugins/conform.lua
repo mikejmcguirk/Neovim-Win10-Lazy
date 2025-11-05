@@ -1,3 +1,4 @@
+local api = vim.api
 local expr_group = "conform-formatexpr" ---@type string
 local ft_config = {
     css = { "prettier" },
@@ -13,7 +14,6 @@ local ft_config = {
 } ---@type table<string, conform.FiletypeFormatter>
 
 local fts = vim.tbl_keys(ft_config) ---@type string[]
-
 return {
     "stevearc/conform.nvim",
     ft = fts,
@@ -21,27 +21,31 @@ return {
         formatters_by_ft = ft_config,
     },
     init = function()
-        vim.api.nvim_create_autocmd("BufWritePre", {
-            group = vim.api.nvim_create_augroup("conformer", { clear = true }),
+        api.nvim_create_autocmd("FileType", {
+            group = api.nvim_create_augroup("conformer", { clear = true }),
+            pattern = fts,
             callback = function(ev)
-                ---@type string
-                local ft = vim.api.nvim_get_option_value("filetype", { buf = ev.buf })
-                if not vim.tbl_contains(fts, ft) then return end
-                require("conform").format({
-                    bufnr = ev.buf,
-                    lsp_fallback = false,
-                    async = false,
-                    timeout_ms = 1000,
+                api.nvim_create_autocmd("BufWritePre", {
+                    group = api.nvim_create_augroup("conform-" .. tostring(ev.buf), {}),
+                    buffer = ev.buf,
+                    callback = function()
+                        require("conform").format({
+                            bufnr = ev.buf,
+                            lsp_fallback = false,
+                            async = false,
+                            timeout_ms = 1000,
+                        })
+                    end,
                 })
             end,
         })
 
-        vim.api.nvim_create_autocmd("FileType", {
-            group = vim.api.nvim_create_augroup(expr_group, { clear = true }),
+        api.nvim_create_autocmd("FileType", {
+            group = api.nvim_create_augroup(expr_group, { clear = true }),
             pattern = fts,
             callback = function(ev)
                 local expr = "v:lua.require'conform'.formatexpr()" ---@type string
-                vim.api.nvim_set_option_value("formatexpr", expr, { buf = ev.buf })
+                api.nvim_set_option_value("formatexpr", expr, { buf = ev.buf })
             end,
         })
     end,

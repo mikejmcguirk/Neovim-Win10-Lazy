@@ -54,7 +54,6 @@ end
 
 return {
     "kosayoda/nvim-lightbulb",
-    -- TODO: Does this properly hold back loading? Are we better off just using the default?
     init = function()
         local load_group = api.nvim_create_augroup("load-lightbulb", {})
         api.nvim_create_autocmd("LspAttach", {

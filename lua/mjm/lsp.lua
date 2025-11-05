@@ -164,7 +164,7 @@ local function set_lsp_maps(ev)
 
     -- textDocument/hover --
     vim.keymap.set("n", "K", function()
-        lsp.buf.hover({ border = Border })
+        lsp.buf.hover({ border = Mjm_Border })
     end, { buffer = buf })
 
     -- textDocument/implementation --
@@ -222,7 +222,7 @@ local function set_lsp_maps(ev)
 
     -- textDocument/signatureHelp --
     vim.keymap.set({ "i", "s" }, "<C-S>", function()
-        lsp.buf.signature_help({ border = Border })
+        lsp.buf.signature_help({ border = Mjm_Border })
     end, { buffer = buf })
 
     -- textDocument/typeDefinition --

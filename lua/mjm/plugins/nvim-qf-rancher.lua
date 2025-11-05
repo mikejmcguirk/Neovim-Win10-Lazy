@@ -1,6 +1,5 @@
 return {
     "mikejmcguirk/nvim-qf-rancher",
-    lazy = false,
     init = function()
         vim.api.nvim_set_var("qfr_debug_assertions", true)
         vim.api.nvim_set_var("qfr_preview_debounce", 50)

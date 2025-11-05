@@ -50,7 +50,7 @@ api.nvim_set_option_value("mouse", "", { scope = "global" })
 local new_mps = api.nvim_get_option_value("mps", { scope = "global" }) .. ",<:>" ---@type string
 api.nvim_set_option_value("mps", new_mps, { scope = "global" })
 api.nvim_set_option_value("sel", "old", { scope = "global" })
-api.nvim_set_option_value("so", Scrolloff, { scope = "global" })
+api.nvim_set_option_value("so", Mjm_Scrolloff, { scope = "global" })
 api.nvim_set_option_value("fen", false, { scope = "global" })
 
 api.nvim_set_option_value("ic", true, { scope = "global" })

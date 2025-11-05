@@ -378,7 +378,7 @@ apimap("n", "g?", "<nop>", { noremap = true })
 map("n", "zT", function()
     vim.opt_local.scrolloff = 0
     vim.cmd("norm! zt")
-    vim.opt_local.scrolloff = Scrolloff
+    vim.opt_local.scrolloff = Mjm_Scrolloff
 end)
 
 map("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true })
@@ -386,7 +386,7 @@ map("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true })
 map("n", "zB", function()
     vim.opt_local.scrolloff = 0
     vim.cmd("norm! zb")
-    vim.opt_local.scrolloff = Scrolloff
+    vim.opt_local.scrolloff = Mjm_Scrolloff
 end)
 
 --------------------
