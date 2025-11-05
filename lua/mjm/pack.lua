@@ -91,11 +91,9 @@ local function custom_add(pack)
         if name == "doc" and type == "directory" then
             local doc_dir = vim.fs.joinpath(packpath, name) ---@type string
             local tag_file = vim.fs.joinpath(doc_dir, "tags") ---@type string
-
             vim.uv.fs_unlink(tag_file, function()
                 vim.schedule(function()
-                    ---@diagnostic disable-next-line: missing-fields
-                    local magic = { file = false }
+                    local magic = { bar = true, file = false } ---@type vim.api.keyset.cmd.magic
                     api.nvim_cmd({ cmd = "helptags", args = { doc_dir }, magic = magic }, {})
                 end)
             end)
@@ -107,7 +105,7 @@ end
 
 custom_add("nvim-qf-rancher")
 
-vim.keymap.set("n", "zqc", function()
+vim.keymap.set("n", "<leader>pqc", function()
     local inactive = vim.iter(vim.pack.get())
         :map(function(p)
             if not p.active then return p.spec.name end
@@ -123,7 +121,7 @@ vim.keymap.set("n", "zqc", function()
     vim.pack.del(inactive)
 end)
 
-vim.keymap.set("n", "zqd", function()
+vim.keymap.set("n", "<leader>pqd", function()
     local prompt = "Enter plugins to delete (space separated): " ---@type string
     local ok, result = require("mjm.utils").get_input(prompt) ---@type boolean, string
     if not ok then
@@ -137,7 +135,7 @@ vim.keymap.set("n", "zqd", function()
     vim.pack.del(vim.split(result, " "))
 end)
 
-vim.keymap.set("n", "zqD", function()
+vim.keymap.set("n", "<leader>pqD", function()
     if vim.fn.confirm("Delete all plugins?", "&Yes\n&No", 2) ~= 1 then return end
 
     local plugins = vim.iter(vim.pack.get())
@@ -154,7 +152,7 @@ vim.keymap.set("n", "zqD", function()
     vim.pack.del(plugins)
 end)
 
-vim.keymap.set("n", "zqu", function()
+vim.keymap.set("n", "<leader>pqu", function()
     vim.pack.update()
 end)
 
