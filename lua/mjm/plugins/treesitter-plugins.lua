@@ -30,7 +30,10 @@ local langs = {
     "sql",
     -- "tmux", -- Errors on things that are correct
     "typescript",
-}
+} ---@type string[]
+
+local fts = langs ---@type string[]
+fts[#fts + 1] = "sh"
 
 local objects = "nvim-treesitter-textobjects"
 
@@ -168,11 +171,9 @@ return {
         config = function()
             require("nvim-treesitter").install(langs)
 
-            -- TODO: Test that this properly handles bash + ts text objects
-            langs[#langs + 1] = "sh"
             api.nvim_create_autocmd({ "FileType" }, {
                 group = api.nvim_create_augroup("ts-start", {}),
-                pattern = langs,
+                pattern = fts,
                 callback = function(ev)
                     vim.treesitter.start(ev.buf)
                     local indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
@@ -184,7 +185,7 @@ return {
     {
         "nvim-treesitter/nvim-treesitter-textobjects",
         branch = "main",
-        ft = langs,
+        ft = fts,
         opts = {
 
             select = { lookahead = true, include_surrounding_whitespace = false },
@@ -195,7 +196,7 @@ return {
             local objects_map = api.nvim_create_augroup("objects-map", {})
             api.nvim_create_autocmd("FileType", {
                 group = objects_map,
-                pattern = langs,
+                pattern = fts,
                 callback = map_objects,
             })
 
@@ -207,7 +208,7 @@ return {
 
     {
         "Dkendal/nvim-treeclimber",
-        lazy = false,
+        ft = fts,
         init = function()
             api.nvim_set_var("treeclimber", { highlight = false })
             -- TODO: Outline for length

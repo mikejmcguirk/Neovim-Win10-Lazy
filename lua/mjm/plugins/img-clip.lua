@@ -3,7 +3,8 @@ local img_dir = "assets/img" ---@type string
 
 return {
     "HakonHarnes/img-clip.nvim",
-    event = "VeryLazy",
+    -- event = "VeryLazy",
+    keys = { { "<leader>cp", "<cmd>PasteImage<cr>", mode = "n" } },
     opts = {
         default = {
             dir_path = img_dir,
@@ -23,5 +24,4 @@ return {
         },
         filetypes = { markdown = { template = "![$LABEL]($FILE_PATH)" } },
     },
-    keys = { { "<leader>cp", "<cmd>PasteImage<cr>", mode = "n" } },
 }

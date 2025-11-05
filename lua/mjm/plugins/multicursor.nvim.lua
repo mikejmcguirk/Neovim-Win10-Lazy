@@ -47,7 +47,8 @@ return {
 
         -- MAYBE: <C-/> or <M-/>
         set({ "n", "x" }, "gi/", mc.searchAllAddCursors)
-        -- LOW: Unsure why searchAddCursor always sets v:searchforward to 1. search() does not do this
+        -- LOW: Unsure why searchAddCursor always sets v:searchforward to 1.
+        -- search() does not do this
         -- MAYBE: Could be <C-n> and <M-n>
         set({ "n", "x" }, "gin", function()
             local sf = vim.v.searchforward
@@ -130,7 +131,8 @@ return {
             layerSet({ "n", "x" }, "<S-left>", mc.firstCursor)
             layerSet({ "n", "x" }, "<S-right>", mc.lastCursor)
 
-            set("n", "giu", mc.duplicateCursors) -- Automatically leaves visual mode. Map in normal only
+            -- Automatically leaves visual mode. Map in normal only
+            set("n", "giu", mc.duplicateCursors)
             set({ "n", "x" }, "giC", function()
                 mc.addCursor()
                 if not mc.cursorsEnabled() then mc.enableCursors() end

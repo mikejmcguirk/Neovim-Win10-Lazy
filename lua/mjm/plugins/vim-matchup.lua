@@ -1,5 +1,6 @@
 return {
     "andymass/vim-matchup",
+    event = { "BufNewFile", "BufReadPre" },
     init = function()
         vim.api.nvim_set_var("matchup_delim_nomids", 1)
         vim.api.nvim_set_var("matchup_mappings_enabled", 0)

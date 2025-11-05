@@ -127,6 +127,8 @@ autoset_winopt("InsertLeave", "list", true)
 -- On my monitors, for files under 10k lines, a centered vsplit will be on the color column
 api.nvim_set_option_value("nu", true, { scope = "global" })
 api.nvim_set_option_value("rnu", true, { scope = "global" })
+-- LOW: Could set this as default "" then set it on filetype to prevent it from showing in
+-- empty buffers. Low value for complexity though
 api.nvim_set_option_value("cc", "100", { scope = "global" })
 api.nvim_set_option_value("nuw", 5, { scope = "global" })
 api.nvim_set_option_value("scl", "yes:1", { scope = "global" })
