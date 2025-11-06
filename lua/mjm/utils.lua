@@ -297,33 +297,32 @@ function M.get_top_severity(opts)
     end
 end
 
--- TODO: This should use vim.system and open the win in the callback
-
 ---@return nil
 function M.check_word_under_cursor()
-    local word = fn.expand("<cword>")
+    local word = fn.expand("<cword>") ---@type string
     if word == "" then
-        vim.notify("No word under cursor", vim.log.levels.INFO)
+        api.nvim_echo({ { "No word under cursor" } }, false, {})
         return
     end
 
-    local cmd = "wn " .. fn.shellescape(word) .. " -over"
-    local output = fn.system(cmd)
-    if vim.v.shell_error == -1 then
-        return vim.notify("Error running wn: " .. output, vim.log.levels.ERROR)
-    end
+    vim.system({ "wn", word, "-over" }, { text = true, timeout = 1000 }, function(out)
+        vim.schedule(function()
+            local lines = vim.split(out.stdout, "\n") ---@type string[]
+            if out.code <= 0 or #lines < 0 then
+                ---@type string
+                local msg = out.code < 0 and "Error checking Wordnet: " .. out.stderr
+                    or "No results from Wordnet"
+                api.nvim_echo({ { msg } }, false, { err = out.code < 0 })
+                return
+            end
 
-    local lines = {}
-    for line in output:gmatch("[^\n]+") do
-        line = line:match("^%s*(.-)%s*$")
-        if line ~= "" then table.insert(lines, line) end
-    end
+            for _, line in ipairs(lines) do
+                line = line:match("^%s*(.-)%s*$")
+            end
 
-    if #lines == 0 then
-        return vim.notify("No results from WordNet for '" .. word .. "'", vim.log.levels.INFO)
-    end
-
-    vim.lsp.util.open_floating_preview(lines, "markdown", { border = Mjm_Border })
+            vim.lsp.util.open_floating_preview(lines, "markdown", { border = Mjm_Border })
+        end)
+    end)
 end
 
 function M.write_to_scratch_buf(lines)

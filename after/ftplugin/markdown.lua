@@ -22,7 +22,7 @@ vim.keymap.set("i", "-", "-<C-g>u", { silent = true, buffer = true })
 vim.keymap.set("i", "?", "?<C-g>u", { silent = true, buffer = true })
 vim.keymap.set("i", "!", "!<C-g>u", { silent = true, buffer = true })
 
-vim.keymap.set("n", "K", function()
+vim.keymap.set("n", "gK", function()
     ut.check_word_under_cursor()
 end)
 
