@@ -4,37 +4,34 @@ local ms = require("vim.lsp.protocol").Methods
 local api = vim.api
 local M = {}
 
--- TODO: Need to make a class for the opts
--- "replace"|"combine"|"blend" for hl_mode
--- Apparently blend is not supported for "inline" virtual text. Does that affect here?
--- How do you annotate the hl_mode?
-
--- CHANGE: Add this
-local default_hl_mode = "combine" ---@type string
-
--- CHANGE: Add this
--- TODO: I'm not sure if this type of design pattern is typical in Nvim
-local function resolve_hl_mode(hl_mode)
-    if type(hl_mode) ~= "string" then return default_hl_mode end
-    return vim.tbl_contains({ "replace", "combine", "blend" }, hl_mode) and hl_mode
-        or default_hl_mode
-end
-
-local function resolve_options(options)
-    --
-end
-
--- CHANGE: Add this
+---CHANGE: Add this
+---TODO: Is this the right naming scheme for this class? Is this the right context to declare
+---it in?
+---TODO: The validation for hl_mode is a manual copy from vim.api.keyset.set_extmark
+---@class Codelens.Config
 local lens_config = {
-    hl_mode = "combine",
-    virtual_lines = false,
+    hl_mode = "combine", ---@type "replace"|"combine"|"blend"
+    virt_lines = false, ---@type boolean
+    virt_text = true, ---@type boolean
 }
 
 -- CHANGE: Add this
+---@param opts? Codelens.Config
+---@return Codelens.Config
 function M.config(opts)
-    vim.validate("opts", opts, "table", true)
     if not opts then return vim.deepcopy(lens_config, true) end
-    lens_config = vim.tbl_deep_extend("force", lens_config, opts)
+    vim.validate("opts", opts, "table", true)
+
+    if type(opts.virt_text) == "boolean" then lens_config.virt_text = opts.virt_text end
+    if type(opts.virt_lines) == "boolean" then lens_config.virt_lines = opts.virt_lines end
+    if
+        type(opts.hl_mode) == "string"
+        and vim.tbl_contains({ "replace", "combine", "blend" }, opts.hl_mode)
+    then
+        lens_config.hl_mode = opts.hl_mode
+    end
+
+    return vim.deepcopy(lens_config, true)
 end
 
 --- bufnr → true|nil
@@ -178,10 +175,6 @@ end
 ---@param ns integer
 ---@param line integer
 ---@param lenses lsp.CodeLens[] Lenses that start at `line`
--- The extmark options, conceptually, are simple enough. Just let the user pass in their own
--- table. You I guess could check in the table for virtual lines and then add whitespace, but
--- that's awkward
--- Better solution - Do it like the diagnostic config
 local function display_line_lenses(bufnr, ns, line, lenses)
     local chunks = {}
     local num_lenses = #lenses
@@ -207,21 +200,25 @@ local function display_line_lenses(bufnr, ns, line, lenses)
 
     api.nvim_buf_clear_namespace(bufnr, ns, line, line + 1)
     if #chunks > 0 then
-        -- CHANGE: Decentish way of doing this
-        -- Have to do it here or else blank lines of virtual text will be inserted everywhere
-        local cur_line = vim.api.nvim_buf_get_lines(bufnr, line, line + 1, false)[1] or ""
-        local indent = cur_line:match("^%s+") or ""
-        if #indent > 0 then table.insert(chunks, 1, { indent, "LspCodeLens" }) end
+        -- CHANGE: Add this check
+        if lens_config.virt_text then
+            api.nvim_buf_set_extmark(bufnr, ns, line, 0, {
+                virt_text = chunks,
+                hl_mode = lens_config.hl_mode, -- CHANGE: Use user config
+            })
+        end
 
-        -- TODO: The config is virt_text if virt_text, different things. Then virt_lines_above
-        -- is its own thing
-        -- It would be cool to just pass in the extmarks config, but that doesn't help out with
-        -- formatting the virt text
-        api.nvim_buf_set_extmark(bufnr, ns, line, 0, {
-            virt_lines = { chunks }, -- CHANGE: Add additional table layer here
-            virt_lines_above = lens_config.virtual_lines and true or false, -- CHANGE: Add this
-            hl_mode = resolve_hl_mode(lens_config.hl_mode), -- CHANGE: Use config
-        })
+        -- CHANGE: Add this section
+        if lens_config.virt_lines then
+            local cur_line = vim.api.nvim_buf_get_lines(bufnr, line, line + 1, false)[1] or ""
+            local indent = cur_line:match("^%s+") or ""
+            if #indent > 0 then table.insert(chunks, 1, { indent, "" }) end
+            api.nvim_buf_set_extmark(bufnr, ns, line, 0, {
+                virt_lines = { chunks },
+                virt_lines_above = true,
+                hl_mode = lens_config.hl_mode,
+            })
+        end
     end
 end
 

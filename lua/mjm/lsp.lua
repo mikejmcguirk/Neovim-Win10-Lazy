@@ -108,7 +108,7 @@ local function map_no_support(lhs, client, method, buf)
     end, { buffer = buf })
 end
 
-require("mjm.codelens").config({ hl_mode = "replace", virtual_lines = true })
+require("mjm.codelens").config({ hl_mode = "replace", virt_lines = true, virt_text = false })
 
 ---@param ev vim.api.keyset.create_autocmd.callback_args
 ---@return nil
