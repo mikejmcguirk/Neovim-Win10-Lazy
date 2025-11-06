@@ -32,9 +32,13 @@ return {
 
         map_nocursor()
         set({ "n", "x" }, "gic", mc.addCursor)
-        -- TODO: Don't use these in visual block mode
-        set("x", "I", mc.insertVisual)
-        set("x", "A", mc.appendVisual)
+        set("x", "I", function()
+            if string.sub(vim.api.nvim_get_mode().mode, 1, 1) ~= "\22" then mc.insertVisual() end
+        end)
+
+        set("x", "A", function()
+            if string.sub(vim.api.nvim_get_mode().mode, 1, 1) ~= "\22" then mc.appendVisual() end
+        end)
 
         -- MAYBE: <C-s> in normal mode, then s/S/<M-s> in visual. But where does nvim-surround 'S'
         -- go? Also, anti-pattern for substitute to not be in visual
