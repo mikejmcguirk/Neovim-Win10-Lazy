@@ -84,5 +84,4 @@ end
 vim.keymap.set("n", "gf", toggle_checkbox)
 
 -- TODO: Bulleted lists do not auto-create a new bullet on <cr>
--- TODO: When using fds to select new words, enter does not cause a replace
 -- TODO: Markdown files take forever to open. Which plugin(s) are causing this?
