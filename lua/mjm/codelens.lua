@@ -4,6 +4,39 @@ local ms = require("vim.lsp.protocol").Methods
 local api = vim.api
 local M = {}
 
+-- TODO: Need to make a class for the opts
+-- "replace"|"combine"|"blend" for hl_mode
+-- Apparently blend is not supported for "inline" virtual text. Does that affect here?
+-- How do you annotate the hl_mode?
+
+-- CHANGE: Add this
+local default_hl_mode = "combine" ---@type string
+
+-- CHANGE: Add this
+-- TODO: I'm not sure if this type of design pattern is typical in Nvim
+local function resolve_hl_mode(hl_mode)
+    if type(hl_mode) ~= "string" then return default_hl_mode end
+    return vim.tbl_contains({ "replace", "combine", "blend" }, hl_mode) and hl_mode
+        or default_hl_mode
+end
+
+local function resolve_options(options)
+    --
+end
+
+-- CHANGE: Add this
+local lens_config = {
+    hl_mode = "combine",
+    virtual_lines = false,
+}
+
+-- CHANGE: Add this
+function M.config(opts)
+    vim.validate("opts", opts, "table", true)
+    if not opts then return vim.deepcopy(lens_config, true) end
+    lens_config = vim.tbl_deep_extend("force", lens_config, opts)
+end
+
 --- bufnr → true|nil
 --- to throttle refreshes to at most one at a time
 local active_refreshes = {} ---@type table<integer,true>
@@ -180,10 +213,14 @@ local function display_line_lenses(bufnr, ns, line, lenses)
         local indent = cur_line:match("^%s+") or ""
         if #indent > 0 then table.insert(chunks, 1, { indent, "LspCodeLens" }) end
 
+        -- TODO: The config is virt_text if virt_text, different things. Then virt_lines_above
+        -- is its own thing
+        -- It would be cool to just pass in the extmarks config, but that doesn't help out with
+        -- formatting the virt text
         api.nvim_buf_set_extmark(bufnr, ns, line, 0, {
             virt_lines = { chunks }, -- CHANGE: Add additional table layer here
-            virt_lines_above = true, -- CHANGE: Add this
-            hl_mode = "replace", -- CHANGE: Personal preference
+            virt_lines_above = lens_config.virtual_lines and true or false, -- CHANGE: Add this
+            hl_mode = resolve_hl_mode(lens_config.hl_mode), -- CHANGE: Use config
         })
     end
 end
