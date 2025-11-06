@@ -5,33 +5,34 @@ local api = vim.api
 local M = {}
 
 ---CHANGE: Add this
----TODO: Is this the right naming scheme for this class? Is this the right context to declare
----it in?
+---TODO: Is this the best name for this class?
 ---TODO: The validation for hl_mode is a manual copy from vim.api.keyset.set_extmark
----@class Codelens.Config
-local lens_config = {
+---@class CodelensDisplay
+local lens_display = {
     hl_mode = "combine", ---@type "replace"|"combine"|"blend"
     virt_lines = false, ---@type boolean
     virt_text = true, ---@type boolean
 }
 
+---CHANGE: Add this
+---@return CodelensDisplay
+function M.get_display()
+    return vim.deepcopy(lens_display)
+end
+
 -- CHANGE: Add this
----@param opts? Codelens.Config
----@return Codelens.Config
-function M.config(opts)
-    if not opts then return vim.deepcopy(lens_config, true) end
+---@param opts CodelensDisplay
+function M.set_display(opts)
     vim.validate("opts", opts, "table", true)
 
-    if type(opts.virt_text) == "boolean" then lens_config.virt_text = opts.virt_text end
-    if type(opts.virt_lines) == "boolean" then lens_config.virt_lines = opts.virt_lines end
+    if type(opts.virt_text) == "boolean" then lens_display.virt_text = opts.virt_text end
+    if type(opts.virt_lines) == "boolean" then lens_display.virt_lines = opts.virt_lines end
     if
         type(opts.hl_mode) == "string"
         and vim.tbl_contains({ "replace", "combine", "blend" }, opts.hl_mode)
     then
-        lens_config.hl_mode = opts.hl_mode
+        lens_display.hl_mode = opts.hl_mode
     end
-
-    return vim.deepcopy(lens_config, true)
 end
 
 --- bufnr → true|nil
@@ -201,22 +202,22 @@ local function display_line_lenses(bufnr, ns, line, lenses)
     api.nvim_buf_clear_namespace(bufnr, ns, line, line + 1)
     if #chunks > 0 then
         -- CHANGE: Add this check
-        if lens_config.virt_text then
+        if lens_display.virt_text then
             api.nvim_buf_set_extmark(bufnr, ns, line, 0, {
                 virt_text = chunks,
-                hl_mode = lens_config.hl_mode, -- CHANGE: Use user config
+                hl_mode = lens_display.hl_mode, -- CHANGE: Use user config
             })
         end
 
         -- CHANGE: Add this section
-        if lens_config.virt_lines then
+        if lens_display.virt_lines then
             local cur_line = vim.api.nvim_buf_get_lines(bufnr, line, line + 1, false)[1] or ""
             local indent = cur_line:match("^%s+") or ""
             if #indent > 0 then table.insert(chunks, 1, { indent, "" }) end
             api.nvim_buf_set_extmark(bufnr, ns, line, 0, {
                 virt_lines = { chunks },
                 virt_lines_above = true,
-                hl_mode = lens_config.hl_mode,
+                hl_mode = lens_display.hl_mode,
             })
         end
     end
