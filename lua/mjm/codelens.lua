@@ -4,9 +4,6 @@ local ms = require("vim.lsp.protocol").Methods
 local api = vim.api
 local M = {}
 
----CHANGE: Add this
----TODO: Is this the best name for this class?
----TODO: The validation for hl_mode is a manual copy from vim.api.keyset.set_extmark
 ---@class CodelensDisplay
 local lens_display = {
     hl_mode = "combine", ---@type "replace"|"combine"|"blend"

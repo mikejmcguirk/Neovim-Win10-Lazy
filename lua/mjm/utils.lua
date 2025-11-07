@@ -46,6 +46,37 @@ function M.protected_set_cursor(cur_pos, opts)
     api.nvim_win_set_cursor(win, cur_pos)
 end
 
+-- Adapted from the source's "prepare_help_buffer" function
+
+---@param buf integer
+---@return nil
+local function prep_help_buf(buf)
+    -- NOTE: Do not manually set filetype here. Unsure why, but it makes local opts set improperly
+    api.nvim_set_option_value("bt", "help", { buf = buf })
+    -- Have observed inconsistent behavior with these options on their own. Just set always
+    api.nvim_set_option_value("bl", false, { buf = buf })
+    api.nvim_set_option_value("bin", false, { buf = buf })
+    api.nvim_set_option_value("ma", false, { buf = buf })
+    api.nvim_set_option_value("ts", 8, { buf = buf })
+end
+
+---@param win integer
+---@return nil
+local function setup_help_win(win)
+    api.nvim_win_call(win, function()
+        -- api.set_option_value("iskeyword", '!-~,^*,^|,^",192-255', { scope = "local" })
+        api.nvim_set_option_value("fdm", "manual", { scope = "local" })
+        api.nvim_set_option_value("list", false, { scope = "local" })
+        api.nvim_set_option_value("arabic", false, { scope = "local" })
+        api.nvim_set_option_value("rl", false, { scope = "local" })
+        api.nvim_set_option_value("fen", false, { scope = "local" })
+        api.nvim_set_option_value("diff", false, { scope = "local" })
+        api.nvim_set_option_value("spell", false, { scope = "local" })
+    end)
+
+    api.nvim_set_option_value("scb", false, { win = win })
+end
+
 ---@class mjm.OpenBufSource
 ---@field bufnr? integer
 ---@field file? string
@@ -57,7 +88,7 @@ end
 ---@field force? boolean
 ---@field open? "vsplit"|"split"|"tabnew"
 ---@field win? integer
----@field zz? boolean
+---@field skip_zz? boolean
 
 ---@param source mjm.OpenBufSource
 ---@param opts mjm.OpenBufOpts
@@ -106,33 +137,47 @@ function M.open_buf(source, opts)
         api.nvim_cmd({ cmd = "tabnew" }, {})
     end
 
-    api.nvim_set_option_value("buflisted", true, { buf = buf })
-    if opts.buftype then api.nvim_set_option_value("buftype", opts.buftype, { buf = buf }) end
-
-    if opts.buftype == "help" then
-        local win = opts.win or api.nvim_get_current_win()
-        api.nvim_set_option_value("list", false, { win = win })
-    end
-
-    if cur_buf ~= buf then
-        if opts.win then
-            api.nvim_win_call(opts.win, function()
-                api.nvim_set_current_buf(buf)
-            end)
+    local win = opts.win or api.nvim_get_current_win() ---@type integer
+    if not api.nvim_win_is_valid(win) then return false end
+    local already_open = api.nvim_win_get_buf(win) == buf ---@type boolean
+    if not already_open then
+        if opts.buftype == "help" then
+            prep_help_buf(buf)
         else
-            api.nvim_set_current_buf(buf)
+            api.nvim_set_option_value("bl", true, { buf = buf })
         end
+
+        api.nvim_win_call(win, function()
+            -- This loads the buf if necessary. Do not use bufload
+            api.nvim_set_current_buf(buf)
+            if opts.clearjumps then api.nvim_cmd({ cmd = "clearjumps" }, {}) end
+        end)
+
+        -- TODO: check that this option is passed
+        -- need to check harpoon
+        if opts.buftype == "help" then setup_help_win(win) end
     end
 
     if opts.cur_pos then
-        local win = opts.win or 0
+        if already_open then
+            api.nvim_buf_call(buf, function()
+                api.nvim_cmd({ cmd = "normal", args = { "m'" }, bang = true }, {})
+            end)
+        end
+
         M.protected_set_cursor(opts.cur_pos, { buf = buf, set_pcmark = same_buf, win = win })
     end
 
-    if opts.clearjumps then vim.api.nvim_cmd({ cmd = "clearjumps" }, {}) end
-    if opts.zz then vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {}) end
+    -- TODO: reversed
+    if not opts.skip_zz then
+        api.nvim_win_call(win, function()
+            vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
+        end)
+    end
 
-    vim.api.nvim_cmd({ cmd = "normal", args = { "zv" }, bang = true }, {})
+    api.nvim_win_call(win, function()
+        api.nvim_cmd({ cmd = "normal", args = { "zv" }, bang = true }, {})
+    end)
 
     return true
 end

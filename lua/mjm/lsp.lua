@@ -129,7 +129,6 @@ local function set_lsp_maps(ev)
     vim.keymap.set("n", "gra", code_action, { buffer = buf })
 
     -- textDocument/codeLens --
-    -- TODO: Update my bespoke module with an enable/disable for codelens, then PR to the core
     if client:supports_method("textDocument/codeLens") then
         vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
             buffer = ev.buf,
