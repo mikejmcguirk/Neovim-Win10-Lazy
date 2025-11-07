@@ -109,6 +109,8 @@ local function map_no_support(lhs, client, method, buf)
 end
 
 require("mjm.codelens").set_display({ hl_mode = "replace", virt_lines = true, virt_text = false })
+-- For testing
+-- vim.lsp.codelens.set_display({ hl_mode = "replace", virt_lines = true, virt_text = false })
 
 ---@param ev vim.api.keyset.create_autocmd.callback_args
 ---@return nil
@@ -134,6 +136,8 @@ local function set_lsp_maps(ev)
             group = vim.api.nvim_create_augroup("mjm-refresh-lens", { clear = true }),
             -- Bespoke module so I can render the lenses as virtual lines
             callback = function()
+                -- For testing
+                -- vim.lsp.codelens.refresh({ buf = ev.buf })
                 require("mjm.codelens").refresh({ buf = ev.buf })
             end,
         })
