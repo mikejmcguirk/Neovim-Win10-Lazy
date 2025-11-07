@@ -33,11 +33,19 @@ return {
         map_nocursor()
         set({ "n", "x" }, "gic", mc.addCursor)
         set("x", "I", function()
-            if string.sub(vim.api.nvim_get_mode().mode, 1, 1) ~= "\22" then mc.insertVisual() end
+            if string.sub(vim.api.nvim_get_mode().mode, 1, 1) ~= "\22" then
+                mc.insertVisual()
+            else
+                vim.api.nvim_feedkeys("I", "nix!", false)
+            end
         end)
 
         set("x", "A", function()
-            if string.sub(vim.api.nvim_get_mode().mode, 1, 1) ~= "\22" then mc.appendVisual() end
+            if string.sub(vim.api.nvim_get_mode().mode, 1, 1) ~= "\22" then
+                mc.appendVisual()
+            else
+                vim.api.nvim_feedkeys("A", "nix!", false)
+            end
         end)
 
         -- MAYBE: <C-s> in normal mode, then s/S/<M-s> in visual. But where does nvim-surround 'S'
