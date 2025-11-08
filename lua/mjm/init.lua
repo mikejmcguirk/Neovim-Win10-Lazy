@@ -53,3 +53,25 @@ require("mjm.ts-tools")
 require("mjm.tal")
 
 require("mjm.lsp")
+
+api.nvim_create_autocmd("UIEnter", {
+    once = true,
+    callback = function()
+        local win = api.nvim_get_current_win() ---@type integer
+        if win ~= 1000 then return end
+        local tabpage = api.nvim_get_current_tabpage() ---@type integer
+        local tabpage_wins = api.nvim_tabpage_list_wins(tabpage) ---@type integer[]
+        for _, t_win in ipairs(tabpage_wins) do
+            if vim.fn.win_gettype(t_win) ~= "popup" and t_win ~= win then return end
+        end
+
+        local buf = api.nvim_get_current_buf() ---@type integer
+        if buf ~= 1 then return end
+        if api.nvim_buf_get_name(buf) ~= "" then return end
+        local lines = api.nvim_buf_get_lines(buf, 0, -1, false) ---@type string[]
+        if #lines > 1 then return end
+        if lines[1] ~= "" then return end
+
+        api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
+    end,
+})
