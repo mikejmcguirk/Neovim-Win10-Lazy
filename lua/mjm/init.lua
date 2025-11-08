@@ -70,8 +70,14 @@ api.nvim_create_autocmd("UIEnter", {
         if api.nvim_buf_get_name(buf) ~= "" then return end
         local lines = api.nvim_buf_get_lines(buf, 0, -1, false) ---@type string[]
         if #lines > 1 then return end
-        if lines[1] ~= "" then return end
+        if #lines[1] > 0 then return end
 
+        -- LOW: There's a more nuanced way to handle this where the buffer is re-checked on
+        -- BufLeave to see if it's still empty, and wiped if so
         api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
+        api.nvim_set_option_value("buftype", "nofile", { buf = buf })
+        api.nvim_set_option_value("modifiable", false, { buf = buf })
+        api.nvim_set_option_value("swapfile", false, { buf = buf })
+        api.nvim_set_option_value("undofile", false, { buf = buf })
     end,
 })
