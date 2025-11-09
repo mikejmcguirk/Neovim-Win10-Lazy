@@ -9,8 +9,7 @@ vim.keymap.set("n", "q", "<cmd>lua require('undotree').open()<cr>", { buffer = t
 api.nvim_create_autocmd("CursorMoved", {
     buffer = 0,
     callback = function()
-        for i = 1, fn.winnr("$") do
-            local win = fn.win_getid(i) ---@type integer
+        for _, win in ipairs(api.nvim_tabpage_list_wins(0)) do
             if vim.b[api.nvim_win_get_buf(win)].nvim_undotree then
                 api.nvim_win_call(win, function()
                     local cur_line = fn.line(".") ---@type integer
