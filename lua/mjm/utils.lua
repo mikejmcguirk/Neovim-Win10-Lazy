@@ -90,6 +90,15 @@ end
 ---@field win? integer
 ---@field skip_zz? boolean
 
+---@param buf integer
+---@return boolean
+local function is_buf_empty_noname(buf)
+    if #api.nvim_buf_get_name(buf) > 0 then return false end
+    local lines = api.nvim_buf_get_lines(buf, 0, -1, false) ---@type string[]
+    if #lines > 1 or #lines[1] > 0 then return false end
+    return true
+end
+
 ---@param source mjm.OpenBufSource
 ---@param opts mjm.OpenBufOpts
 ---@return boolean
@@ -98,11 +107,6 @@ end
 --- nvim_win_set_buf does the same, and also automatically moves the user into that window
 --- TODO: Update this to work like the one in rancher does
 function M.open_buf(source, opts)
-    --- TODO: Scenario:
-    --- - Create a new tab. It will contain a noname buffer
-    --- - Use this to open a buf
-    --- - The noname buffer will still be there
-    --- - This does not happen when using :edit
     source = source or {}
     local buf = (function()
         if source.bufnr then
@@ -135,6 +139,11 @@ function M.open_buf(source, opts)
         api.nvim_cmd({ cmd = "split" }, {})
     elseif opts.open == "tabnew" then
         api.nvim_cmd({ cmd = "tabnew" }, {})
+        local tabnew_win = api.nvim_get_current_win() ---@type integer
+        local tabnew_buf = api.nvim_win_get_buf(tabnew_win) ---@type integer
+        if is_buf_empty_noname(tabnew_buf) then
+            api.nvim_set_option_value("bufhidden", "wipe", { buf = tabnew_buf })
+        end
     end
 
     local win = opts.win or api.nvim_get_current_win() ---@type integer
@@ -153,8 +162,6 @@ function M.open_buf(source, opts)
             if opts.clearjumps then api.nvim_cmd({ cmd = "clearjumps" }, {}) end
         end)
 
-        -- TODO: check that this option is passed
-        -- need to check harpoon
         if opts.buftype == "help" then setup_help_win(win) end
     end
 
@@ -168,7 +175,6 @@ function M.open_buf(source, opts)
         M.protected_set_cursor(opts.cur_pos, { buf = buf, set_pcmark = same_buf, win = win })
     end
 
-    -- TODO: reversed
     if not opts.skip_zz then
         api.nvim_win_call(win, function()
             vim.api.nvim_cmd({ cmd = "normal", args = { "zz" }, bang = true }, {})
