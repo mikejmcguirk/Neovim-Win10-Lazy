@@ -100,9 +100,9 @@ map({ "n", "x" }, "}", function()
     api.nvim_cmd(cmd, {})
 end)
 
--- Create normal \ layer
 map_scroll("<C-d>", "\4zz")
-map("n", "\\", "<nop>")
+-- Create normal <bs> layer
+map("n", "<bs>", "<nop>")
 
 -- a/A remapped with i
 -- s used for substitution maps
@@ -271,23 +271,29 @@ map("n", "];", "g,")
 map("n", "['", "[`")
 map("n", "]'", "]`")
 
---------------------
--- NORMAL \ LAYER --
---------------------
+-----------------------
+-- NORMAL <BS> LAYER --
+-----------------------
 
--- MAYBE: Use \t to toggle the tabline, which would also de-activate/activate the harpoon state
+-- MAYBE: Use t to toggle the tabline, which would also de-activate/activate the harpoon state
 
-map("n", "\\d", function()
+map("n", "<bs>d", function()
     di.toggle_diags()
 end)
 
-map("n", "\\D", function()
+map("n", "<bs>D", function()
     di.toggle_virt_lines()
+end)
+
+map("n", "<bs><C-d>", function()
+    local enabled = tostring(vim.diagnostic.is_enabled())
+    local cfg = vim.inspect(vim.diagnostic.config())
+    print("Enabled: " .. enabled .. "\n\n" .. cfg)
 end)
 
 -- LOW: Could do <M-d> as errors or top only
 
-map("n", "\\s", function()
+map("n", "<bs>s", function()
     vim.api.nvim_set_option_value(
         "spell",
         not vim.api.nvim_get_option_value("spell", { scope = "local" }),
@@ -295,9 +301,9 @@ map("n", "\\s", function()
     )
 end)
 
-map("n", "\\<C-s>", "<cmd>set spell?<cr>")
+map("n", "<bs><C-s>", "<cmd>set spell?<cr>")
 
-map("n", "\\w", function()
+map("n", "<bs>w", function()
     -- LOW: How does this interact with local scope?
     vim.api.nvim_set_option_value(
         "wrap",
@@ -306,7 +312,7 @@ map("n", "\\w", function()
     )
 end)
 
-map("n", "\\<C-w>", "<cmd>set wrap?<cr>")
+map("n", "<bs><C-w>", "<cmd>set wrap?<cr>")
 
 --------------------
 -- NORMAL g LAYER --

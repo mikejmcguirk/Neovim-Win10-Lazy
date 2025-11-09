@@ -26,7 +26,7 @@ api.nvim_set_var("mapleader", " ")
 -- - "`" - Might be better used for case operations
 -- - <bs> - Has a lot of semantic connotation
 -- Use case: Alleviates leader namespace cramping. Conform, for example, could be local leader
-api.nvim_set_var("maplocalleader", " ")
+api.nvim_set_var("maplocalleader", "\\")
 
 -- See :h <tab> and https://github.com/neovim/neovim/pull/17932
 set("n", "<C-i>", "<C-i>")
