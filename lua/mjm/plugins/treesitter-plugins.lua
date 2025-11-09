@@ -209,7 +209,7 @@ return {
         end,
     },
     {
-        "nvim-treesitter/nvim-treesitter-textobjects",
+        "nvim-treesitter/" .. objects,
         branch = "main",
         ft = fts,
         opts = {

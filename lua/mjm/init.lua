@@ -63,7 +63,7 @@ api.nvim_create_autocmd("UIEnter", {
 
         local buf = api.nvim_get_current_buf() ---@type integer
         if buf ~= 1 then return end
-        if api.nvim_buf_get_name(buf) ~= "" then return end
+        if #api.nvim_buf_get_name(buf) > 0 then return end
         local lines = api.nvim_buf_get_lines(buf, 0, -1, false) ---@type string[]
         if #lines > 1 then return end
         if #lines[1] > 0 then return end

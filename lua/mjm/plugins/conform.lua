@@ -31,6 +31,8 @@ return {
                     })
                 end
 
+                local expr = "v:lua.require'conform'.formatexpr()" ---@type string
+                api.nvim_set_option_value("formatexpr", expr, { buf = ev.buf })
                 vim.keymap.set("n", "<localleader>c", function()
                     do_conform(ev.buf)
                 end, { buffer = ev.buf })
@@ -42,9 +44,6 @@ return {
                         do_conform(ev.buf)
                     end,
                 })
-
-                local expr = "v:lua.require'conform'.formatexpr()" ---@type string
-                api.nvim_set_option_value("formatexpr", expr, { buf = ev.buf })
             end,
         })
     end,
