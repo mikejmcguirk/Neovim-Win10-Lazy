@@ -105,7 +105,6 @@ end
 --- Using bufload breaks BufReadPost autocmds and opt_local setup
 --- nvim_set_current_buf will load the buf properly if it needs to
 --- nvim_win_set_buf does the same, and also automatically moves the user into that window
---- TODO: Update this to work like the one in rancher does
 function M.open_buf(source, opts)
     source = source or {}
     local buf = (function()
