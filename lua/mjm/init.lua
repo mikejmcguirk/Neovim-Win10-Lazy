@@ -20,12 +20,8 @@ function _G.Mjm_Defer_Require(path)
 end
 
 set({ "n", "x" }, "<Space>", "<Nop>")
+set({ "n", "x" }, "\\", "<Nop>")
 api.nvim_set_var("mapleader", " ")
--- LOW: Ideas:
--- - "\" - Used for settings
--- - "`" - Might be better used for case operations
--- - <bs> - Has a lot of semantic connotation
--- Use case: Alleviates leader namespace cramping. Conform, for example, could be local leader
 api.nvim_set_var("maplocalleader", "\\")
 
 -- See :h <tab> and https://github.com/neovim/neovim/pull/17932
