@@ -265,16 +265,13 @@ vim.api.nvim_create_autocmd("LspAttach", {
 vim.api.nvim_create_autocmd("LspDetach", {
     group = lsp_group,
     callback = function(ev)
-        local buf = ev.buf ---@type integer
-        local clients = lsp.get_clients({ bufnr = buf }) ---@type vim.lsp.Client[]
-        if not clients or vim.tbl_isempty(clients) then return end
-
-        ut.do_when_idle(function()
-            for _, client in pairs(clients) do
-                local attached_bufs = vim.tbl_keys(client.attached_buffers) ---@type integer[]
-                if vim.tbl_isempty(attached_bufs) then client:stop() end
+        for _, client in ipairs(lsp.get_clients({ bufnr = ev.buf }) or {}) do
+            if vim.tbl_isempty(vim.tbl_keys(client.attached_buffers)) then
+                ut.do_when_idle(function()
+                    client:stop()
+                end)
             end
-        end)
+        end
     end,
 })
 
