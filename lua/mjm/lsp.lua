@@ -272,7 +272,7 @@ vim.api.nvim_create_autocmd("LspDetach", {
         ut.do_when_idle(function()
             for _, client in pairs(clients) do
                 local attached_bufs = vim.tbl_keys(client.attached_buffers) ---@type integer[]
-                if vim.tbl_isempty(attached_bufs) then lsp.stop_client(client.id) end
+                if vim.tbl_isempty(attached_bufs) then client:stop() end
             end
         end)
     end,
