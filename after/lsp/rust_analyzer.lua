@@ -1,3 +1,4 @@
+-- PR: nvim-lspconfig does not correctly enable codelens
 -- https://github.com/neovim/neovim/discussions/34353#discussioncomment-13596488
 -- Used the VSCode Rust-Analyzer extension to get info
 -- https://github.com/rust-lang/rust-analyzer/tree/5b852da4c3852d030ebca67746980bc0288a85ec/editors/code

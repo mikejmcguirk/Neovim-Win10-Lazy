@@ -66,12 +66,6 @@
       .
       ","? @preproc.outer)))
 
-; https://github.com/nvim-treesitter/nvim-treesitter-textobjects/issues/798
-; Does not work the best with lookahead though
-(line_comment
-  !outer
-  !doc) @rust_comment_fix.outer
-
 ; String
 (string_literal
   .

@@ -1,3 +1,4 @@
+-- MAYBE: One strike - Had InsertLeave autocmd error
 return {
     "andymass/vim-matchup",
     event = { "BufNewFile", "BufReadPre" },
