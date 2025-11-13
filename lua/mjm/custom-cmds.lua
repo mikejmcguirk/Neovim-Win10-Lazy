@@ -58,9 +58,11 @@ end
 local function del_cur_buf_from_disk(cargs)
     local buf = api.nvim_get_current_buf() ---@type integer
     local bufname = api.nvim_buf_get_name(buf) ---@type string
-    if bufname == "" then return end
-    local buftype = api.nvim_get_option_value("buftype", { buf = buf })
-    if buftype ~= "" then return end
+    if api.nvim_get_option_value("buftype", { buf = buf }) ~= "" then return end
+    if bufname == "" then
+        if cargs.bang then api.nvim_cmd({ cmd = "bwipeout", bang = true }, {}) end
+        return
+    end
 
     if (not cargs.bang) and api.nvim_get_option_value("modified", { buf = buf }) then
         api.nvim_echo({ { "Buf is modified", "" } }, false, {})

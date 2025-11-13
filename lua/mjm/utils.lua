@@ -567,6 +567,11 @@ function M.pbuf_rm(buf, force, wipeout, no_save)
         return false, chunks, true, { err = true }
     end
 
+    if #api.nvim_buf_get_name(buf) == 0 and not force then
+        local chunks = { { "Buf " .. " has no filename" } }
+        return false, chunks, true, { err = true }
+    end
+
     local delete_opts = { force = force }
     if not wipeout then
         local listed_bufs = list_listed_bufs()
