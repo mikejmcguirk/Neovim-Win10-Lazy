@@ -2,30 +2,30 @@ local api = vim.api
 local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 
 local width = 2
-vim.bo.tabstop = width
-vim.bo.softtabstop = width
-vim.bo.shiftwidth = width
-
-vim.opt_local.colorcolumn = ""
-vim.opt_local.cursorlineopt = "number,screenline"
-vim.opt_local.wrap = true
-vim.opt_local.sidescrolloff = 12
-vim.opt_local.spell = true
+api.nvim_set_option_value("ts", width, { buf = 0 })
+api.nvim_set_option_value("sts", width, { buf = 0 })
+api.nvim_set_option_value("sw", width, { buf = 0 })
 
 -- "r" in Markdown treats lines like "- some text" as comments and indents them
-vim.opt.formatoptions:append("r")
+vim.opt_local.fo:remove("r")
+api.nvim_set_option_value("cc", "", { scope = "local" })
+api.nvim_set_option_value("culopt", "number,screenline", { scope = "local" })
+api.nvim_set_option_value("wrap", true, { scope = "local" })
+api.nvim_set_option_value("siso", 12, { scope = "local" })
+api.nvim_set_option_value("spell", true, { scope = "local" })
 
-vim.keymap.set("i", ",", ",<C-g>u", { silent = true, buffer = true })
-vim.keymap.set("i", ".", ".<C-g>u", { silent = true, buffer = true })
-vim.keymap.set("i", ":", ":<C-g>u", { silent = true, buffer = true })
-vim.keymap.set("i", "-", "-<C-g>u", { silent = true, buffer = true })
-vim.keymap.set("i", "?", "?<C-g>u", { silent = true, buffer = true })
-vim.keymap.set("i", "!", "!<C-g>u", { silent = true, buffer = true })
+vim.keymap.set("i", ",", ",<C-g>u", { silent = true, buffer = 0 })
+vim.keymap.set("i", ".", ".<C-g>u", { silent = true, buffer = 0 })
+vim.keymap.set("i", ":", ":<C-g>u", { silent = true, buffer = 0 })
+vim.keymap.set("i", "-", "-<C-g>u", { silent = true, buffer = 0 })
+vim.keymap.set("i", "?", "?<C-g>u", { silent = true, buffer = 0 })
+vim.keymap.set("i", "!", "!<C-g>u", { silent = true, buffer = 0 })
 
 vim.keymap.set("n", "gK", function()
     ut.check_word_under_cursor()
 end)
 
+-- TODO: Do we go back to prettier? Good for the README use case. Bad for notes
 vim.api.nvim_create_autocmd("BufWritePre", {
     buffer = vim.api.nvim_get_current_buf(),
     callback = function(ev)
@@ -52,7 +52,7 @@ end
 ---@return nil
 local function toggle_checkbox()
     if ut.is_in_node_type({ "fenced_code_block", "minus_metadata" }) then return end
-    local row, _ = unpack(api.nvim_win_get_cursor(0)) ---@type integer, integer
+    local row = api.nvim_win_get_cursor(0)[1] ---@type integer
     local line = api.nvim_buf_get_lines(0, row - 1, row, false)[1] ---@type string
     local unchecked = " " ---@type string
     local checked = "x" ---@type string
@@ -83,5 +83,5 @@ end
 -- Since markdown-oxide uses goto definition for link nav, we don't need gf for that purpose
 vim.keymap.set("n", "gf", toggle_checkbox)
 
--- TODO: Bulleted lists do not auto-create a new bullet on <cr>
+-- TODO: Add bullets.vim
 -- TODO: Markdown files take forever to open. Which plugin(s) are causing this?

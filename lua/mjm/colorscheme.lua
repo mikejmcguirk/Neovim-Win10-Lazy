@@ -1,12 +1,12 @@
-local api = vim.api
+-- Bespoke version of Fluoromachine.nvim's delta theme
 
--- NOTE: This is a bespoke version of Fluoromachine.nvim's delta theme
+local api = vim.api
 
 api.nvim_cmd({ cmd = "hi", args = { "clear" } }, {})
 if vim.g.syntax_on == 1 then api.nvim_cmd({ cmd = "syntax", args = { "reset" } }, {}) end
 api.nvim_set_var("c_syntax_for_h", true)
 api.nvim_set_var("colors_name", "SimpleDelta")
-api.nvim_set_option_value("bg", "dark", { scope = "global" })
+api.nvim_set_option_value("bg", "dark", {})
 
 -- https://www.sessions.edu/color-calculator/
 local black = "#000000" ---@type string

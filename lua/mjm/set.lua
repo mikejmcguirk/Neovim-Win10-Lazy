@@ -70,8 +70,6 @@ api.nvim_set_option_value("swb", "useopen,uselast", {})
 -- TODO: Test this again
 -- api.nvim_set_option_value("wrap", false, {  })
 api.nvim_set_option_value("breakindent", true, {})
--- TODO: Try formatlistpat for making bulleted lists in markdown. This would interface I think
--- with breakindentopt
 api.nvim_set_option_value("linebreak", true, {})
 
 api.nvim_set_option_value("ts", 4, {})
