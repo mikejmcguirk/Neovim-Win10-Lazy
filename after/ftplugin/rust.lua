@@ -7,29 +7,32 @@ vim.keymap.set("i", ";", ";<C-g>u", { silent = true })
 ---@return nil
 local add_pragma = function(pragma)
     local line = vim.api.nvim_get_current_line() ---@type string
-    if not line:match("^%s*$") then return vim.notify("Line is not blank") end
+    if not line:match("^%s*$") then
+        vim.api.nvim_echo({ { "Line is not blank" } }, false, {})
+        return
+    end
 
-    local row_1 = vim.api.nvim_win_get_cursor(0)[1] ---@type integer
-    local row_0 = row_1 - 1
-    local indent = require("mjm.utils").get_indent(row_1) or 0 ---@type integer
-    local padding = string.rep(" ", indent) ---@type string
-    vim.api.nvim_buf_set_text(0, row_0, 0, row_0, #line, { padding .. pragma })
+    local row = vim.api.nvim_win_get_cursor(0)[1] ---@type integer
+    local indent = require("mjm.utils").get_indent(row) or 0 ---@type integer
+    vim.api.nvim_buf_set_text(0, row - 1, 0, row - 1, #line, { string.rep(" ", indent) .. pragma })
 
-    line = vim.api.nvim_get_current_line() ---@type string
-    local line_len_0 = #line - 1
-    vim.api.nvim_win_set_cursor(0, { row_1, line_len_0 - 1 })
+    local line_len_0 = #vim.api.nvim_get_current_line() - 1 ---@type integer
+    vim.api.nvim_win_set_cursor(0, { row, line_len_0 - 1 })
     vim.cmd("startinsert")
 end
+
+vim.keymap.set("n", "<leader>-a", function()
+    add_pragma("#[allow()]")
+end)
+
+vim.keymap.set("n", "<leader>-c", function()
+    add_pragma("#[cfg()]")
+end)
 
 vim.keymap.set("n", "<leader>-d", function()
     add_pragma("#[derive()]")
 end)
-vim.keymap.set("n", "<leader>-c", function()
-    add_pragma("#[cfg()]")
-end)
-vim.keymap.set("n", "<leader>-a", function()
-    add_pragma("#[allow()]")
-end)
+
 vim.keymap.set("n", "<leader>-e", function()
     add_pragma("#[expect()]")
 end)

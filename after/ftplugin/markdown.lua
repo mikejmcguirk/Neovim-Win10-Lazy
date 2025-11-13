@@ -14,16 +14,15 @@ api.nvim_set_option_value("wrap", true, { scope = "local" })
 api.nvim_set_option_value("siso", 12, { scope = "local" })
 api.nvim_set_option_value("spell", true, { scope = "local" })
 
-vim.keymap.set("i", ",", ",<C-g>u", { silent = true, buffer = 0 })
-vim.keymap.set("i", ".", ".<C-g>u", { silent = true, buffer = 0 })
-vim.keymap.set("i", ":", ":<C-g>u", { silent = true, buffer = 0 })
-vim.keymap.set("i", "-", "-<C-g>u", { silent = true, buffer = 0 })
-vim.keymap.set("i", "?", "?<C-g>u", { silent = true, buffer = 0 })
-vim.keymap.set("i", "!", "!<C-g>u", { silent = true, buffer = 0 })
-
+vim.keymap.set("i", ",", ",<C-g>u", { buffer = 0 })
+vim.keymap.set("i", ".", ".<C-g>u", { buffer = 0 })
+vim.keymap.set("i", ":", ":<C-g>u", { buffer = 0 })
+vim.keymap.set("i", "-", "-<C-g>u", { buffer = 0 })
+vim.keymap.set("i", "?", "?<C-g>u", { buffer = 0 })
+vim.keymap.set("i", "!", "!<C-g>u", { buffer = 0 })
 vim.keymap.set("n", "gK", function()
     ut.check_word_under_cursor()
-end)
+end, { buffer = 0 })
 
 -- TODO: Do we go back to prettier? Good for the README use case. Bad for notes
 vim.api.nvim_create_autocmd("BufWritePre", {
@@ -85,3 +84,5 @@ vim.keymap.set("n", "gf", toggle_checkbox)
 
 -- TODO: Add bullets.vim
 -- TODO: Markdown files take forever to open. Which plugin(s) are causing this?
+
+-- LOW: Potential friction point: Bullets overrides autopairs <cr> mapping
