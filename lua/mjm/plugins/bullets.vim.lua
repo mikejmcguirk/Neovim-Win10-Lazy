@@ -19,7 +19,7 @@ return {
 
                 set("n", "<<", "<Plug>(bullets-promote)", { buffer = ev.buf })
                 set("n", ">>", "<Plug>(bullets-demote)", { buffer = ev.buf })
-                set("i", "<C-m>", "<Plug>(bullets-promote)", { buffer = ev.buf })
+                set("i", I_Dedent, "<Plug>(bullets-promote)", { buffer = ev.buf })
                 set("i", "<C-t>", "<Plug>(bullets-demote)", { buffer = ev.buf })
                 set("v", "<", "<Plug>(bullets-promote)", { buffer = ev.buf })
                 set("v", ">", "<Plug>(bullets-demote)", { buffer = ev.buf })
@@ -31,9 +31,10 @@ return {
     end,
 }
 
--- LOW: This would be a good Lua re-write. Limitations:
+-- LOW: This would be a good Lua re-write. Current limitations:
 -- - Only creates a new bullet if at the end of the line. So, cannot bring contents down into a
 -- new bullet
 -- - Promote/demote cannot take a non-bulleted line and add it to the list above. You have to
 -- go up, make the new bullet, then join with J
 -- MAYBE: For maps, could let default logic happen then demap, but this is simpler
+-- MAYBE: Trying to use default levels. Can edit/hack if it contradicts my old notes

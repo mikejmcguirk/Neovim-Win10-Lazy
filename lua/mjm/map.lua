@@ -607,7 +607,8 @@ map("i", "<C-d>", "<Del>")
 map("i", "<M-d>", "<C-g>u<C-o>dw")
 map("i", "<C-k>", "<C-g>u<C-o>D")
 map("i", "<C-l>", "<esc><cmd>silent norm! u<cr>")
-map("i", "<C-m>", "<C-d>")
+_G.I_Dedent = "<C-m>"
+map("i", I_Dedent, "<C-d>")
 
 ------------------
 -- COMMAND MODE --
