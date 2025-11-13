@@ -216,3 +216,4 @@ return {
 -- - Only built-in insert mode navigation seems to work. Keymaps or <C-o> navigation are
 --   inconsistent
 -- - Results with ts-text-objects are inconsistent
+-- - Does not handle spec-ops cut commands well

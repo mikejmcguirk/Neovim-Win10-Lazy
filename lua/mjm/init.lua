@@ -55,18 +55,15 @@ api.nvim_create_autocmd("UIEnter", {
     callback = function()
         local win = api.nvim_get_current_win() ---@type integer
         if win ~= 1000 then return end
-        local tabpage = api.nvim_get_current_tabpage() ---@type integer
-        local tabpage_wins = api.nvim_tabpage_list_wins(tabpage) ---@type integer[]
-        for _, t_win in ipairs(tabpage_wins) do
+        for _, t_win in ipairs(api.nvim_tabpage_list_wins(0)) do
             if vim.fn.win_gettype(t_win) ~= "popup" and t_win ~= win then return end
         end
 
         local buf = api.nvim_get_current_buf() ---@type integer
         if buf ~= 1 then return end
-        if #api.nvim_buf_get_name(buf) > 0 then return end
+        if #api.nvim_buf_get_name(1) > 0 then return end
         local lines = api.nvim_buf_get_lines(buf, 0, -1, false) ---@type string[]
-        if #lines > 1 then return end
-        if #lines[1] > 0 then return end
+        if #lines > 1 or #lines[1] > 0 then return end
 
         -- LOW: There's a more nuanced way to handle this where the buffer is re-checked on
         -- BufLeave to see if it's still empty, and wiped if so

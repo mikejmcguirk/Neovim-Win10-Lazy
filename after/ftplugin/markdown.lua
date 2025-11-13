@@ -7,7 +7,7 @@ vim.bo.softtabstop = width
 vim.bo.shiftwidth = width
 
 vim.opt_local.colorcolumn = ""
-vim.opt_local.cursorlineopt = "screenline"
+vim.opt_local.cursorlineopt = "number,screenline"
 vim.opt_local.wrap = true
 vim.opt_local.sidescrolloff = 12
 vim.opt_local.spell = true

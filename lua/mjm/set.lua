@@ -33,34 +33,34 @@ api.nvim_set_var("termfeatures", termfeatures)
 -- OPTIONS --
 -------------
 
-api.nvim_set_option_value("fileformats", "unix,dos", { scope = "global" })
-api.nvim_set_option_value("sd", [[<0,'100,/0,:1000,h]], { scope = "global" })
+api.nvim_set_option_value("fileformats", "unix,dos", {})
+api.nvim_set_option_value("sd", [[<0,'100,/0,:1000,h]], {})
 
-api.nvim_set_option_value("swapfile", false, { scope = "global" })
-api.nvim_set_option_value("undofile", true, { scope = "global" })
-api.nvim_set_option_value("updatetime", 300, { scope = "global" })
+api.nvim_set_option_value("swapfile", false, {})
+api.nvim_set_option_value("undofile", true, {})
+api.nvim_set_option_value("updatetime", 300, {})
 
-local new_cpo = api.nvim_get_option_value("cpo", { scope = "global" }) .. "WZ" ---@type string
-api.nvim_set_option_value("cpo", new_cpo, { scope = "global" })
-api.nvim_set_option_value("jop", "stack,clean,view", { scope = "global" })
-api.nvim_set_option_value("mls", 1, { scope = "global" })
+local new_cpo = api.nvim_get_option_value("cpo", {}) .. "WZ" ---@type string
+api.nvim_set_option_value("cpo", new_cpo, {})
+api.nvim_set_option_value("jop", "stack,clean,view", {})
+api.nvim_set_option_value("mls", 1, {})
 
-api.nvim_set_option_value("bs", "indent,eol,nostop", { scope = "global" })
-api.nvim_set_option_value("mouse", "", { scope = "global" })
-local new_mps = api.nvim_get_option_value("mps", { scope = "global" }) .. ",<:>" ---@type string
-api.nvim_set_option_value("mps", new_mps, { scope = "global" })
-api.nvim_set_option_value("sel", "old", { scope = "global" })
-api.nvim_set_option_value("so", Mjm_Scrolloff, { scope = "global" })
-api.nvim_set_option_value("fen", false, { scope = "global" })
+api.nvim_set_option_value("bs", "indent,eol,nostop", {})
+api.nvim_set_option_value("mouse", "", {})
+local new_mps = api.nvim_get_option_value("mps", {}) .. ",<:>" ---@type string
+api.nvim_set_option_value("mps", new_mps, {})
+api.nvim_set_option_value("sel", "old", {})
+api.nvim_set_option_value("so", Mjm_Scrolloff, {})
+api.nvim_set_option_value("fen", false, {})
 
-api.nvim_set_option_value("ic", true, { scope = "global" })
-api.nvim_set_option_value("scs", true, { scope = "global" })
-api.nvim_set_option_value("is", false, { scope = "global" })
+api.nvim_set_option_value("ic", true, {})
+api.nvim_set_option_value("scs", true, {})
+api.nvim_set_option_value("is", false, {})
 
-api.nvim_set_option_value("sb", true, { scope = "global" })
-api.nvim_set_option_value("spr", true, { scope = "global" })
+api.nvim_set_option_value("sb", true, {})
+api.nvim_set_option_value("spr", true, {})
 -- For some reason, uselast needs to be manually set globally
-api.nvim_set_option_value("swb", "useopen,uselast", { scope = "global" })
+api.nvim_set_option_value("swb", "useopen,uselast", {})
 
 -- https://github.com/neovim/neovim/pull/35536
 -- https://github.com/neovim/neovim/issues/35575
@@ -68,37 +68,37 @@ api.nvim_set_option_value("swb", "useopen,uselast", { scope = "global" })
 -- global scope settings still whited out.
 -- For fts where opt_local wrap is true
 -- TODO: Test this again
--- api.nvim_set_option_value("wrap", false, { scope = "global" })
-api.nvim_set_option_value("breakindent", true, { scope = "global" })
+-- api.nvim_set_option_value("wrap", false, {  })
+api.nvim_set_option_value("breakindent", true, {})
 -- TODO: Try formatlistpat for making bulleted lists in markdown. This would interface I think
 -- with breakindentopt
-api.nvim_set_option_value("linebreak", true, { scope = "global" })
+api.nvim_set_option_value("linebreak", true, {})
 
-api.nvim_set_option_value("ts", 4, { scope = "global" })
-api.nvim_set_option_value("sts", 4, { scope = "global" })
-api.nvim_set_option_value("sw", 4, { scope = "global" })
-api.nvim_set_option_value("et", true, { scope = "global" })
-api.nvim_set_option_value("sr", true, { scope = "global" })
+api.nvim_set_option_value("ts", 4, {})
+api.nvim_set_option_value("sts", 4, {})
+api.nvim_set_option_value("sw", 4, {})
+api.nvim_set_option_value("et", true, {})
+api.nvim_set_option_value("sr", true, {})
 
 vim.filetype.add({ filename = { [".bashrc_custom"] = "sh" } })
 
 local dict = vim.fn.expand("~/.local/bin/words/words_alpha.txt") ---@type string
-api.nvim_set_option_value("dictionary", dict, { scope = "global" })
-api.nvim_set_option_value("spell", false, { scope = "global" })
-api.nvim_set_option_value("spelllang", "en_us", { scope = "global" })
+api.nvim_set_option_value("dictionary", dict, {})
+api.nvim_set_option_value("spell", false, {})
+api.nvim_set_option_value("spelllang", "en_us", {})
 
-local new_shm = api.nvim_get_option_value("shm", { scope = "global" }) .. "asIW"
-api.nvim_set_option_value("shm", new_shm, { scope = "global" })
+local new_shm = api.nvim_get_option_value("shm", {}) .. "asIW"
+api.nvim_set_option_value("shm", new_shm, {})
 
 local blink_setting = "blinkon1-blinkoff1" ---@type string
 local norm_cursor = "n:block" .. blink_setting ---@type string
 local ver_cursor = "i-sm-c-ci-t:ver100-" .. blink_setting ---@type string
 local hor_cursor = "o-v-ve-r-cr:hor100-" .. blink_setting ---@type string
 local gcr = norm_cursor .. "," .. ver_cursor .. "," .. hor_cursor ---@type string
-api.nvim_set_option_value("gcr", gcr, { scope = "global" })
+api.nvim_set_option_value("gcr", gcr, {})
 
-api.nvim_set_option_value("fcs", "eob: ", { scope = "global" })
-api.nvim_set_option_value("ru", false, { scope = "global" })
+api.nvim_set_option_value("fcs", "eob: ", {})
+api.nvim_set_option_value("ru", false, {})
 
 local set_group = api.nvim_create_augroup("set-group", {})
 
@@ -114,24 +114,25 @@ local function autoset_winopt(event, opt, val)
     })
 end
 
-api.nvim_set_option_value("cul", true, { scope = "global" })
+api.nvim_set_option_value("cul", true, {})
 autoset_winopt("WinEnter", "cul", true)
 autoset_winopt("WinLeave", "cul", false)
 
-api.nvim_set_option_value("list", true, { scope = "global" })
+api.nvim_set_option_value("list", true, {})
 local new_lcs = "tab:<->,extends:»,precedes:«,nbsp:␣,trail:⣿" ---@type string
-api.nvim_set_option_value("lcs", new_lcs, { scope = "global" })
+api.nvim_set_option_value("lcs", new_lcs, {})
 autoset_winopt("InsertEnter", "list", false)
 autoset_winopt("InsertLeave", "list", true)
 
 -- On my monitors, for files under 10k lines, a centered vsplit will be on the color column
-api.nvim_set_option_value("nu", true, { scope = "global" })
-api.nvim_set_option_value("rnu", true, { scope = "global" })
+api.nvim_set_option_value("nu", true, {})
+api.nvim_set_option_value("rnu", true, {})
+api.nvim_set_option_value("cursorlineopt", "both", {})
 -- LOW: Could set this as default "" then set it on filetype to prevent it from showing in
 -- empty buffers. Low value for complexity though
-api.nvim_set_option_value("cc", "100", { scope = "global" })
-api.nvim_set_option_value("nuw", 5, { scope = "global" })
-api.nvim_set_option_value("scl", "yes:1", { scope = "global" })
+api.nvim_set_option_value("cc", "100", {})
+api.nvim_set_option_value("nuw", 5, {})
+api.nvim_set_option_value("scl", "yes:1", {})
 
 autoset_winopt({ "WinLeave" }, "rnu", false)
 autoset_winopt({ "WinEnter", "BufWinEnter", "CmdlineLeave" }, "rnu", true)
