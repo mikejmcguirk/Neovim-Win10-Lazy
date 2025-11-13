@@ -7,7 +7,7 @@ api.nvim_set_option_value("sts", width, { buf = 0 })
 api.nvim_set_option_value("sw", width, { buf = 0 })
 
 -- "r" in Markdown treats lines like "- some text" as comments and indents them
-vim.opt_local.fo:remove("r")
+Mjm_Opt_Str_Remove("fo", "r", { scope = "local" })
 api.nvim_set_option_value("cc", "", { scope = "local" })
 api.nvim_set_option_value("culopt", "number,screenline", { scope = "local" })
 api.nvim_set_option_value("wrap", true, { scope = "local" })

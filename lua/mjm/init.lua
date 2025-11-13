@@ -19,6 +19,14 @@ function _G.Mjm_Defer_Require(path)
     })
 end
 
+---@param opt string
+---@param out string
+---@param scope vim.api.keyset.option
+function _G.Mjm_Opt_Str_Remove(opt, out, scope)
+    local old = api.nvim_get_option_value(opt, scope) ---@type string
+    api.nvim_set_option_value(opt, string.gsub(old, out, ""), scope)
+end
+
 set({ "n", "x" }, "<Space>", "<Nop>")
 set({ "n", "x" }, "\\", "<Nop>")
 api.nvim_set_var("mapleader", " ")

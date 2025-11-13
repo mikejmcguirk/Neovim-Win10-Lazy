@@ -22,6 +22,7 @@ if not vim.uv.fs_stat(lazypath) then
     end
 end
 
+-- LOW: vim.opt will be deprecated eventually
 vim.opt.rtp:prepend(lazypath)
 require("lazy").setup({
     change_detection = { enabled = false, notify = false },

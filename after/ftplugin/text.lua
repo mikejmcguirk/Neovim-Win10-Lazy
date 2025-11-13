@@ -1,10 +1,10 @@
 local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 
-vim.opt_local.colorcolumn = ""
-vim.opt_local.cursorlineopt = "screenline"
-vim.opt_local.wrap = true
-vim.opt_local.sidescrolloff = 12
-vim.opt_local.spell = true
+vim.api.nvim_set_option_value("cc", "", { scope = "local" })
+vim.api.nvim_set_option_value("culopt", "screenline", { scope = "local" })
+vim.api.nvim_set_option_value("wrap", true, { scope = "local" })
+vim.api.nvim_set_option_value("siso", 12, { scope = "local" })
+vim.api.nvim_set_option_value("spell", true, { scope = "local" })
 
 vim.keymap.set("i", ",", ",<C-g>u", { silent = true, buffer = true })
 vim.keymap.set("i", ".", ".<C-g>u", { silent = true, buffer = true })

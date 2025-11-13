@@ -382,18 +382,18 @@ apimap("n", "g?", "<nop>", { noremap = true })
 --------------------
 
 map("n", "zT", function()
-    vim.opt_local.scrolloff = 0
-    vim.cmd("norm! zt")
-    vim.opt_local.scrolloff = Mjm_Scrolloff
+    api.nvim_set_option_value("scrolloff", 0, { scope = "local" })
+    api.nvim_cmd({ cmd = "norm", args = { "zt" }, bang = true }, {})
+    api.nvim_set_option_value("scrolloff", Mjm_Scrolloff, { scope = "local" })
+end)
+
+map("n", "zB", function()
+    api.nvim_set_option_value("scrolloff", 0, { scope = "local" })
+    api.nvim_cmd({ cmd = "norm", args = { "zb" }, bang = true }, {})
+    api.nvim_set_option_value("scrolloff", Mjm_Scrolloff, { scope = "local" })
 end)
 
 map("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true })
-
-map("n", "zB", function()
-    vim.opt_local.scrolloff = 0
-    vim.cmd("norm! zb")
-    vim.opt_local.scrolloff = Mjm_Scrolloff
-end)
 
 --------------------
 -- NORMAL Z LAYER --
@@ -542,19 +542,18 @@ apimap("x", "M", "<cmd>keepjumps norm! M<cr>", { noremap = true })
 ---@param opts? table
 ---@return nil
 local visual_indent = function(opts)
-    vim.opt.lazyredraw = true
-    vim.opt_local.cursorline = false
+    local old_lz = api.nvim_get_option_value("lz", {})
+    local old_cc = api.nvim_get_option_value("cc", {})
+    api.nvim_set_option_value("lz", true, {})
+    api.nvim_set_option_value("cc", false, { scope = "local" })
 
-    local count = vim.v.count1 ---@type integer
-    opts = opts or {}
-    local shift = opts.back and "<" or ">" ---@type string
-
+    local shift = (opts or {}).back and "<" or ">" ---@type string
     vim.cmd("norm! \27")
-    vim.cmd("silent '<,'> " .. string.rep(shift, count))
+    vim.cmd("silent '<,'> " .. string.rep(shift, vim.v.count1))
     vim.cmd("silent norm! gv")
 
-    vim.opt_local.cursorline = true
-    vim.opt.lazyredraw = false
+    api.nvim_set_option_value("cc", old_cc, { scope = "local" })
+    api.nvim_set_option_value("lz", old_lz, {})
 end
 
 map("x", "<", function()

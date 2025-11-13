@@ -148,9 +148,7 @@ api.nvim_create_autocmd({ "FileType" }, {
     group = set_group,
     pattern = "*",
     callback = function(ev)
-        local fo = api.nvim_get_option_value("fo", { buf = ev.buf }) ---@type string
-        local new_fo = string.gsub(fo, "o", "") ---@type string
-        api.nvim_set_option_value("fo", new_fo, { buf = ev.buf })
+        Mjm_Opt_Str_Remove("fo", "o", { buf = ev.buf })
     end,
 })
 
