@@ -36,9 +36,9 @@ api.nvim_set_var("termfeatures", termfeatures)
 api.nvim_set_option_value("fileformats", "unix,dos", {})
 api.nvim_set_option_value("sd", [[<0,'100,/0,:1000,h]], {})
 
-api.nvim_set_option_value("swapfile", false, {})
-api.nvim_set_option_value("undofile", true, {})
-api.nvim_set_option_value("updatetime", 300, {})
+api.nvim_set_option_value("swf", false, {})
+api.nvim_set_option_value("udf", true, {})
+api.nvim_set_option_value("ut", 300, {})
 
 local new_cpo = api.nvim_get_option_value("cpo", {}) .. "WZ" ---@type string
 api.nvim_set_option_value("cpo", new_cpo, {})
@@ -81,7 +81,7 @@ api.nvim_set_option_value("sr", true, {})
 vim.filetype.add({ filename = { [".bashrc_custom"] = "sh" } })
 
 local dict = vim.fn.expand("~/.local/bin/words/words_alpha.txt") ---@type string
-api.nvim_set_option_value("dictionary", dict, {})
+api.nvim_set_option_value("dict", dict, {})
 api.nvim_set_option_value("spell", false, {})
 api.nvim_set_option_value("spelllang", "en_us", {})
 
