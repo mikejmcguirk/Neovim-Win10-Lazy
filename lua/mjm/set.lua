@@ -152,6 +152,7 @@ api.nvim_create_autocmd({ "FileType" }, {
     end,
 })
 
--- vim.opt.lazyredraw = false -- Causes unpredictable problems
--- vim.opt.startofline = false -- Makes gg/G feel weird
--- vim.opt.winborder = "single" -- Sets arbitrary border around Zen mode display
+-- vim.o.lazyredraw = false -- Causes unpredictable problems
+-- vim.o.startofline = false -- Makes gg/G feel weird
+-- LOW: Try this again
+-- vim.o.winborder = "single" -- Sets arbitrary border around Zen mode display

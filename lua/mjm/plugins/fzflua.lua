@@ -111,38 +111,35 @@ return {
             })
         end)
 
-        local function fuzzy_dict()
-            ---@diagnostic disable: undefined-field
-            -- LOW: This should merge results from all dictionaries
-            local dict_file = vim.opt.dictionary:get()[1]
-            local file = io.open(dict_file, "r")
-            if not file then
-                return vim.notify(
-                    "Unable to open dictionary file: " .. dict_file,
-                    vim.log.levels.ERROR
-                )
+        ---@return boolean|nil, string
+        local function get_dict_file()
+            local dict = api.nvim_get_option_value("dict", {}) ---@type string
+            local dict_file = vim.split(dict, ",")[1] ---@type string
+            return vim.uv.fs_access(dict_file, 4), dict_file
+        end
+
+        set("n", "<leader>fdd", function()
+            local ok, dict_file = get_dict_file() ---@type boolean|nil, string
+            if not ok then
+                local msg = "Unable to access dictionary file: " .. dict_file ---@type string
+                api.nvim_echo({ { msg } }, true, { err = true })
+                return
             end
-            file:close()
 
             fzf_lua.fzf_exec("tr -d '\\r' < " .. vim.fn.shellescape(dict_file))
-        end
+        end)
 
         local function fuzzy_spell_correct()
             local word = vim.fn.expand("<cword>"):lower() ---@type string
             if word == "" then return vim.notify("No word under cursor", vim.log.levels.WARN) end
-
             local buf = api.nvim_get_current_buf()
 
-            ---@diagnostic disable: undefined-field
-            local dict_file = vim.opt.dictionary:get()[1]
-            local file = io.open(dict_file, "r")
-            if not file then
-                return vim.notify(
-                    "Unable to open dictionary file: " .. dict_file,
-                    vim.log.levels.ERROR
-                )
+            local ok, dict_file = get_dict_file() ---@type boolean|nil, string
+            if not ok then
+                local msg = "Unable to access dictionary file: " .. dict_file ---@type string
+                api.nvim_echo({ { msg } }, true, { err = true })
+                return
             end
-            file:close()
 
             fzf_lua.fzf_exec("tr -d '\\r' < " .. vim.fn.shellescape(dict_file), {
                 prompt = 'Suggestions for "' .. word .. '": ',
@@ -202,7 +199,6 @@ return {
             })
         end
 
-        set("n", "<leader>fdd", fuzzy_dict)
         set("n", "<leader>fds", fuzzy_spell_correct)
 
         -- PR: This is an easy pull request to make so I don't have to hold onto bespoke code
