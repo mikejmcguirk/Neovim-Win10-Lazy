@@ -1,6 +1,6 @@
 return {
-    "mikejmcguirk/nvim-qf-rancher",
-    -- dir = "~/.local/share/nvim/site/pack/dev-plugins/opt/nvim-qf-rancher/",
+    -- "mikejmcguirk/nvim-qf-rancher",
+    dir = "~/.local/share/nvim/site/pack/dev-plugins/opt/nvim-qf-rancher/",
     init = function()
         vim.api.nvim_set_var("qfr_debug_assertions", true)
         vim.api.nvim_set_var("qfr_preview_debounce", 50)

@@ -1,66 +1,65 @@
 local api = vim.api
-local apimap = api.nvim_set_keymap
 local di = Mjm_Defer_Require("mjm.diagnostics") ---@type MjmDiags
 local fn = vim.fn
-local map = vim.keymap.set
+local set = vim.keymap.set
 local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
+
+----------
+-- TABS --
+----------
+
+-- LOW: Missing tab cmds:
+-- - tabclose (Z<tab>?)
+-- - Would need to test tabonly before mapping it. Maybe do it as a custom function
+set("n", "<tab>", "gt")
+set("n", "<S-tab>", "gT")
+set("n", "g<tab>", function()
+    ---@type integer
+    local range = vim.v.count == 0 and api.nvim_call_function("tabpagenr", { "$" }) or vim.v.count
+    api.nvim_cmd({ cmd = "tabnew", range = { range } }, {})
+
+    -- LOW: Better way to handle this: Attach a BufLeave autocmd to the buf that checks if it's
+    -- an empty noname, wiping if so
+    local buf = api.nvim_get_current_buf() ---@type integer
+    api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
+    api.nvim_set_option_value("buftype", "nofile", { buf = buf })
+    api.nvim_set_option_value("modifiable", false, { buf = buf })
+    api.nvim_set_option_value("swapfile", false, { buf = buf })
+    api.nvim_set_option_value("undofile", false, { buf = buf })
+end)
 
 -----------------
 -- NORMAL MODE --
 -----------------
 
-apimap("n", "`", "<nop>", { noremap = true })
+set("n", "`", "<nop>")
 -- ~ remapped in the g layer section
-apimap("x", "%", "<cmd>keepjumps norm! %<cr>", { noremap = true })
-
--- LOW: Appears I might need to manually send these down now thru tmux
-local tab = 10 ---@type integer
-for _ = 1, 10 do
-    -- Otherwise a closure is formed around tab
-    local this_tab = tab -- 10, 1, 2, 3, 4, 5, 6, 7, 8, 9
-    local mod_tab = this_tab % 10 -- 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
-    map("n", string.format("<M-%d>", mod_tab), function()
-        local tabs = api.nvim_list_tabpages()
-        if #tabs < this_tab then return end
-
-        api.nvim_set_current_tabpage(tabs[this_tab])
-    end)
-
-    tab = mod_tab + 1
-end
+set("x", "%", "<cmd>keepjumps norm! %<cr>")
 
 -- () used for swaps in multicursor and ts text objects
 -- - and + are used for oil
 -- I use this as a prefix for inserting boilerplate code. Don't want this falling back to other
 -- behavior on timeout
-map("n", "<leader>-", "<nop>")
+set("n", "<leader>-", "<nop>")
 
--- LOW: Missing tab cmds:
--- - tabclose (Z<tab>?)
--- - Would need to test tabonly before mapping it. Maybe do it as a custom function
-map("n", "<tab>", "gt")
-map("n", "<S-tab>", "gT")
-map("n", "<C-tab>", "<nop>")
-map("n", "<C-S-tab>", "<nop>")
-
-map("n", "<C-r>", function()
+set("n", "<C-r>", function()
     return "<cmd>silent norm! " .. vim.v.count1 .. "\18<cr>"
 end, { expr = true })
 
 -- NOTE: At least for now, keep the default gR mapping
-map("n", "<M-r>", "gr")
+set("n", "<M-r>", "gr")
 
-map("n", "u", function()
+set("n", "u", function()
     return "<cmd>silent norm! " .. vim.v.count1 .. "u<cr>"
 end, { expr = true })
 
-apimap("n", "U", "<nop>", { noremap = true })
+set("n", "U", "<nop>")
 -- Address cursorline flickering
 -- Purposefully does not implement the default count mechanic in <C-u>/<C-d>, as it is painful
 -- to accidently hit
 ---@param cmd string
 local function map_scroll(m, cmd)
-    map({ "n", "x" }, m, function()
+    set({ "n", "x" }, m, function()
         local win = api.nvim_get_current_win()
         local cul = vim.api.nvim_get_option_value("cul", { win = win })
         vim.api.nvim_set_option_value("lz", true, { scope = "global" })
@@ -76,25 +75,25 @@ map_scroll("<C-u>", "\21zz")
 
 -- "S" enters insert with the proper indent. "I" left on default behavior
 for _, m in pairs({ "i", "a", "A" }) do
-    map("n", m, function()
+    set("n", m, function()
         if string.match(api.nvim_get_current_line(), "^%s*$") then return '"_S' end
         return m
     end, { expr = true })
 end
 
 -- LOW: Not sure what to map to M-i
-map({ "n", "x" }, "go", function()
+set({ "n", "x" }, "go", function()
     -- gg Retains cursor position since I have startofline off
     return vim.v.count < 1 and "m'gg" or "m'" .. vim.v.count1 .. "go"
 end, { expr = true })
 
-map({ "n", "x" }, "{", function()
+set({ "n", "x" }, "{", function()
     local args = vim.v.count1 .. "{"
     local cmd = { cmd = "normal", args = { args }, bang = true, mods = { keepjumps = true } }
     api.nvim_cmd(cmd, {})
 end)
 
-map({ "n", "x" }, "}", function()
+set({ "n", "x" }, "}", function()
     local args = vim.v.count1 .. "}"
     local cmd = { cmd = "normal", args = { args }, bang = true, mods = { keepjumps = true } }
     api.nvim_cmd(cmd, {})
@@ -102,26 +101,26 @@ end)
 
 map_scroll("<C-d>", "\4zz")
 -- Create normal <bs> layer
-map("n", "<bs>", "<nop>")
+set("n", "<bs>", "<nop>")
 
 -- a/A remapped with i
 -- s used for substitution maps
-apimap("n", "<M-s>", ":'<,'>s/\\%V", { noremap = true })
+set("n", "<M-s>", ":'<,'>s/\\%V")
 
 -- FUTURE: These should remove trailing whitespace from the original line. The == should handle
 -- invalid leading whitespace on the new line
-map("n", "dJ", "Do<esc>p==", { silent = true })
-map("n", "dK", function()
+set("n", "dJ", "Do<esc>p==", { silent = true })
+set("n", "dK", function()
     vim.api.nvim_set_option_value("lz", true, { scope = "global" })
     api.nvim_feedkeys("DO\27p==", "nix", false)
     vim.api.nvim_set_option_value("lz", false, { scope = "global" })
 end)
 
-map("n", "dm", "<cmd>delmarks!<cr>")
-map("o", "gg", "<esc>")
+set("n", "dm", "<cmd>delmarks!<cr>")
+set("o", "gg", "<esc>")
 
 local function map_vert(dir)
-    map({ "n", "x" }, dir, function()
+    set({ "n", "x" }, dir, function()
         if vim.v.count == 0 then return "g" .. dir end
         if vim.v.count >= vim.api.nvim_get_option_value("lines", { scope = "global" }) then
             return "m'" .. vim.v.count1 .. dir
@@ -169,15 +168,15 @@ end
 -- C-S is also something of a super layer for terminal commands, so this is a better pattern
 -- See tmux config (mikejmcguirk/dotfiles) for reasoning and how on C-S for this mapping
 for k, _ in pairs(tmux_cmd_map) do
-    map({ "n", "x" }, "<C-S-" .. k .. ">", function()
+    set({ "n", "x" }, "<C-S-" .. k .. ">", function()
         win_move_tmux(k)
     end)
 end
 
-apimap("x", "H", "<cmd>keepjumps norm! H<cr>", { noremap = true })
+set("x", "H", "<cmd>keepjumps norm! H<cr>")
 -- LOW: Find a viable keymap for this and make it more robust to edge cases:
 -- map("n", "H", 'mzk_D"_ddA <esc>p`zze', { silent = true })
-map("n", "J", function()
+set("n", "J", function()
     if not require("mjm.utils").check_modifiable() then return end
 
     -- Done using a view instead of a mark to prevent visible screen shake
@@ -200,12 +199,12 @@ local function mv_normal(upward)
     end
 end
 
-map("n", "<C-j>", mv_normal)
-map("n", "<C-k>", function()
+set("n", "<C-j>", mv_normal)
+set("n", "<C-k>", function()
     mv_normal(true)
 end)
 
-apimap("x", "L", "<cmd>keepjumps norm! L<cr>", { noremap = true })
+set("x", "L", "<cmd>keepjumps norm! L<cr>")
 
 ---@param cmd vim.api.keyset.cmd
 local resize_win = function(cmd)
@@ -225,20 +224,20 @@ local resize_maps = {
 }
 
 for _, m in ipairs(resize_maps) do
-    map("n", m[1], function()
+    set("n", m[1], function()
         ---@diagnostic disable-next-line: missing-fields
         resize_win({ cmd = "resize", args = { m[2] }, mods = { silent = true, vertical = m[3] } })
     end)
 end
 
-map("n", "'", "`")
+set("n", "'", "`")
 -- <cr> is used for Jump2D
 
-map("n", "Z", "<nop>") -- Create normal Z layer
-map({ "n", "x" }, "x", '"_x', { silent = true })
-map("n", "X", '"_X', { silent = true })
+set("n", "Z", "<nop>") -- Create normal Z layer
+set({ "n", "x" }, "x", '"_x', { silent = true })
+set("n", "X", '"_X', { silent = true })
 -- NOTE: could not get set lmap "\3\27" to work
-map("n", "<C-c>", function()
+set("n", "<C-c>", function()
     print("")
     vim.api.nvim_cmd({ cmd = "noh" }, {})
     vim.lsp.buf.clear_references()
@@ -247,29 +246,29 @@ map("n", "<C-c>", function()
     return "<esc>"
 end, { expr = true, silent = true })
 
-map("n", "v", "mvv")
-map("n", "V", "mvV")
-map("n", "<C-v>", "mv<C-v>")
+set("n", "v", "mvv")
+set("n", "V", "mvV")
+set("n", "<C-v>", "mv<C-v>")
 
 -- Not silent so that the search prompting displays properly
-apimap("n", "N", "Nzzzv", { noremap = true })
-apimap("n", "n", "nzzzv", { noremap = true })
-apimap("n", "/", "ms/", { noremap = true })
-apimap("n", "?", "ms?", { noremap = true })
-apimap("x", "M", "<cmd>keepjumps norm! M<cr>", { noremap = true })
+set("n", "N", "Nzzzv")
+set("n", "n", "nzzzv")
+set("n", "/", "ms/")
+set("n", "?", "ms?")
+set("x", "M", "<cmd>keepjumps norm! M<cr>")
 
 -----------------------------
 -- NORMAL UNIMPAIRED LAYER --
 -----------------------------
 
 -- LOW: Why does [s]s navigation work in some buffers but not others?
-map("n", "[w", "[s")
-map("n", "]w", "]s")
+set("n", "[w", "[s")
+set("n", "]w", "]s")
 
-map("n", "[;", "g;")
-map("n", "];", "g,")
-map("n", "['", "[`")
-map("n", "]'", "]`")
+set("n", "[;", "g;")
+set("n", "];", "g,")
+set("n", "['", "[`")
+set("n", "]'", "]`")
 
 -----------------------
 -- NORMAL <BS> LAYER --
@@ -277,15 +276,15 @@ map("n", "]'", "]`")
 
 -- MAYBE: Use t to toggle the tabline, which would also de-activate/activate the harpoon state
 
-map("n", "<bs>d", function()
+set("n", "<bs>d", function()
     di.toggle_diags()
 end)
 
-map("n", "<bs>D", function()
+set("n", "<bs>D", function()
     di.toggle_virt_lines()
 end)
 
-map("n", "<bs><C-d>", function()
+set("n", "<bs><C-d>", function()
     local enabled = tostring(vim.diagnostic.is_enabled())
     local cfg = vim.inspect(vim.diagnostic.config())
     print("Enabled: " .. enabled .. "\n\n" .. cfg)
@@ -293,7 +292,7 @@ end)
 
 -- LOW: Could do <M-d> as errors or top only
 
-map("n", "<bs>s", function()
+set("n", "<bs>s", function()
     vim.api.nvim_set_option_value(
         "spell",
         not vim.api.nvim_get_option_value("spell", { scope = "local" }),
@@ -301,9 +300,9 @@ map("n", "<bs>s", function()
     )
 end)
 
-map("n", "<bs><C-s>", "<cmd>set spell?<cr>")
+set("n", "<bs><C-s>", "<cmd>set spell?<cr>")
 
-map("n", "<bs>w", function()
+set("n", "<bs>w", function()
     -- LOW: How does this interact with local scope?
     vim.api.nvim_set_option_value(
         "wrap",
@@ -312,20 +311,19 @@ map("n", "<bs>w", function()
     )
 end)
 
-map("n", "<bs><C-w>", "<cmd>set wrap?<cr>")
+set("n", "<bs><C-w>", "<cmd>set wrap?<cr>")
 
 --------------------
 -- NORMAL g LAYER --
 --------------------
 
-apimap("n", "g`", "<nop>", { noremap = true })
+set("n", "g`", "<nop>")
 -- g~ mapped along with gu
 -- LOW: Make a map of this in visual mode that uses the same syntax but without %
 -- Credit ThePrimeagen
-map("n", "g%", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
+set("n", "g%", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
 
-map("n", "g<tab>", "<cmd>tabnew<cr>")
-map("n", "gr", "<nop>")
+set("n", "gr", "<nop>")
 
 local cap_motions_norm = {
     "~",
@@ -346,7 +344,7 @@ local cap_motions_norm = {
 } ---@type table string[]
 
 for _, m in pairs(cap_motions_norm) do
-    map("n", m, function()
+    set("n", m, function()
         local row, col = unpack(api.nvim_win_get_cursor(0))
         api.nvim_buf_set_mark(0, "z", row, col, {})
         return m .. "`z"
@@ -361,7 +359,7 @@ local cap_motions_vis = {
 }
 
 for _, m in pairs(cap_motions_vis) do
-    map("x", m, function()
+    set("x", m, function()
         local row, col = unpack(api.nvim_win_get_cursor(0))
         api.nvim_buf_set_mark(0, "z", row, col, {})
         return m .. "`z"
@@ -369,31 +367,31 @@ for _, m in pairs(cap_motions_vis) do
 end
 
 -- gi used for multicursor
-apimap("n", "gI", "g^i", { noremap = true })
+set("n", "gI", "g^i")
 
-apimap("n", "g'", "g`", { noremap = true })
+set("n", "g'", "g`")
 
-apimap("n", "gV", "`[v`]", { noremap = true })
+set("n", "gV", "`[v`]")
 
-apimap("n", "g?", "<nop>", { noremap = true })
+set("n", "g?", "<nop>")
 
 --------------------
 -- NORMAL z LAYER --
 --------------------
 
-map("n", "zT", function()
+set("n", "zT", function()
     api.nvim_set_option_value("scrolloff", 0, { scope = "local" })
     api.nvim_cmd({ cmd = "norm", args = { "zt" }, bang = true }, {})
     api.nvim_set_option_value("scrolloff", Mjm_Scrolloff, { scope = "local" })
 end)
 
-map("n", "zB", function()
+set("n", "zB", function()
     api.nvim_set_option_value("scrolloff", 0, { scope = "local" })
     api.nvim_cmd({ cmd = "norm", args = { "zb" }, bang = true }, {})
     api.nvim_set_option_value("scrolloff", Mjm_Scrolloff, { scope = "local" })
 end)
 
-map("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true })
+set("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true })
 
 --------------------
 -- NORMAL Z LAYER --
@@ -401,21 +399,21 @@ map("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true })
 
 -- LOW: More testing on lockmarks/conform behavior
 
-map("n", "ZQ", "<cmd>qall!<cr>")
-map("n", "ZR", "<cmd>lockmarks silent wa | restart<cr>")
+set("n", "ZQ", "<cmd>qall!<cr>")
+set("n", "ZR", "<cmd>lockmarks silent wa | restart<cr>")
 
-map("n", "ZA", "<cmd>lockmarks silent wa<cr>")
-map("n", "ZS", "<cmd>lockmarks silent up | so<cr>")
+set("n", "ZA", "<cmd>lockmarks silent wa<cr>")
+set("n", "ZS", "<cmd>lockmarks silent up | so<cr>")
 
-map("n", "ZZ", "<cmd>lockmarks silent up<cr>")
-map("n", "ZC", "<cmd>lockmarks wqa<cr>")
+set("n", "ZZ", "<cmd>lockmarks silent up<cr>")
+set("n", "ZC", "<cmd>lockmarks wqa<cr>")
 
 ------------
 -- CTRL-W --
 ------------
 
 for _, m in pairs({ "<C-w>q", "<C-w><C-q>" }) do
-    map("n", m, function()
+    set("n", m, function()
         -- TODO: Use wipeout when that logic is fixed
         -- https://github.com/neovim/neovim/pull/33402
         -- TODO: Suppress errors when buf is invalid. Needed for TS Tree buffers
@@ -423,22 +421,22 @@ for _, m in pairs({ "<C-w>q", "<C-w><C-q>" }) do
     end)
 end
 
-map("n", "<C-w>c", "<nop>")
-map("n", "<C-w><C-c>", "<nop>")
+set("n", "<C-w>c", "<nop>")
+set("n", "<C-w><C-c>", "<nop>")
 
 -----------------
 -- VISUAL MODE --
 -----------------
 
-apimap("x", "%", "<cmd>keepjumps norm! %<cr>", { noremap = true })
+set("x", "%", "<cmd>keepjumps norm! %<cr>")
 -- { and } remapped in normal mode section
 -- Has to be literally opening the cmdline or else the visual selection goes haywire
 local eval_cmd = ":s/\\%V.*\\%V./\\=eval(submatch(0))/<CR>"
-map("x", "<C-=>", eval_cmd, { noremap = true, silent = true })
+set("x", "<C-=>", eval_cmd, { noremap = true, silent = true })
 
 --- LOW: These can be re-written as functions. For omode, get the current line. For vmode,
 --- can use getregionpos to get the boundaries and extend by count appropriately
-map("x", "i_", function()
+set("x", "i_", function()
     local keys = "g_o^o" .. vim.v.count .. "g_"
     api.nvim_feedkeys(keys, "ni", false)
 end, { silent = true })
@@ -465,17 +463,17 @@ local function add_blank_visual(up)
     vim.api.nvim_set_option_value("lz", false, { scope = "global" })
 end
 
-map("x", "[<space>", function()
+set("x", "[<space>", function()
     add_blank_visual(true)
 end)
 
-map("x", "]<space>", add_blank_visual)
+set("x", "]<space>", add_blank_visual)
 
-apimap("x", "a_", "<cmd>norm! ggoVG<cr>", { noremap = true, silent = true })
-apimap("x", "<M-s>", ":s/\\%V", { noremap = true })
+set("x", "a_", "<cmd>norm! ggoVG<cr>")
+set("x", "<M-s>", ":s/\\%V")
 -- go mapped in normal mode section
 
-apimap("x", "H", "<cmd>keepjumps norm! H<cr>", { noremap = true })
+set("x", "H", "<cmd>keepjumps norm! H<cr>")
 -- j/k are mapped in normal mode section
 
 ---@param opts? {upward:boolean}
@@ -524,18 +522,18 @@ local visual_move = function(opts)
     vim.api.nvim_set_option_value("lz", false, { scope = "global" })
 end
 
-map("x", "<C-j>", visual_move)
-map("x", "<C-k>", function()
+set("x", "<C-j>", visual_move)
+set("x", "<C-k>", function()
     visual_move({ upward = true })
 end)
 
-apimap("x", "L", "<cmd>keepjumps norm! L<cr>", { noremap = true })
+set("x", "L", "<cmd>keepjumps norm! L<cr>")
 
 -- x mapped in normal mode section
-map("x", "X", 'ygvV"_d<cmd>put!<cr>=`]', { silent = true })
-apimap("x", "<C-c>", "<esc>", { noremap = true })
+set("x", "X", 'ygvV"_d<cmd>put!<cr>=`]', { silent = true })
+set("x", "<C-c>", "<esc>")
 
-apimap("x", "M", "<cmd>keepjumps norm! M<cr>", { noremap = true })
+set("x", "M", "<cmd>keepjumps norm! M<cr>")
 
 -- TODO: Do these as a spec-ops mapping, same in normal mode due to the nag there
 -- Done as a function to suppress nag when shifting multiple lines
@@ -556,11 +554,11 @@ local visual_indent = function(opts)
     api.nvim_set_option_value("lz", old_lz, {})
 end
 
-map("x", "<", function()
+set("x", "<", function()
     visual_indent({ back = true })
 end, { silent = true })
 
-map("x", ">", function()
+set("x", ">", function()
     visual_indent()
 end, { silent = true })
 
@@ -568,16 +566,16 @@ end, { silent = true })
 -- OPERATOR PENDING MODE --
 ---------------------------
 
-map("o", "i_", function()
+set("o", "i_", function()
     vim.cmd("norm! _v" .. vim.v.count1 .. "g_")
 end, { silent = true })
 
-apimap("o", "a_", "<cmd>norm! ggVG<cr>", { noremap = true, silent = true })
-map("o", "go", function()
+set("o", "a_", "<cmd>norm! ggVG<cr>")
+set("o", "go", function()
     return vim.v.count < 1 and "gg" or "go"
 end, { expr = true })
 
-apimap("o", "<C-c>", "<esc>", { noremap = true })
+set("o", "<C-c>", "<esc>")
 
 -----------------
 -- INSERT MODE --
@@ -587,27 +585,27 @@ apimap("o", "<C-c>", "<esc>", { noremap = true })
 -- the next column so you can see what you're typing, but then you exit insert mode, meaning
 -- the character no longer can exist, but Neovim still has you scrolled to the side
 -- NOTE: This also applies to replace mode, but not single replace char
-map("i", "<C-c>", "<esc>ze")
+set("i", "<C-c>", "<esc>ze")
 
-map("i", "<C-q>", "<C-S-v>") -- Seen unsimplified char literals. Avoid terminal paste
+set("i", "<C-q>", "<C-S-v>") -- Seen unsimplified char literals. Avoid terminal paste
 
-map("i", "<C-a>", "<C-o>I")
-map("i", "<C-e>", "<End>")
-map("i", "<C-f>", "<right>")
-map("i", "<C-b>", "<left>")
-map("i", "<M-f>", "<S-right>")
-map("i", "<M-b>", "<S-left>")
-map("i", "<M-j>", "<down>")
-map("i", "<M-k>", "<up>")
+set("i", "<C-a>", "<C-o>I")
+set("i", "<C-e>", "<End>")
+set("i", "<C-f>", "<right>")
+set("i", "<C-b>", "<left>")
+set("i", "<M-f>", "<S-right>")
+set("i", "<M-b>", "<S-left>")
+set("i", "<M-j>", "<down>")
+set("i", "<M-k>", "<up>")
 
-map("i", "<M-e>", "<C-o>ze")
+set("i", "<M-e>", "<C-o>ze")
 
-map("i", "<C-d>", "<Del>")
-map("i", "<M-d>", "<C-g>u<C-o>dw")
-map("i", "<C-k>", "<C-g>u<C-o>D")
-map("i", "<C-l>", "<esc><cmd>silent norm! u<cr>")
+set("i", "<C-d>", "<Del>")
+set("i", "<M-d>", "<C-g>u<C-o>dw")
+set("i", "<C-k>", "<C-g>u<C-o>D")
+set("i", "<C-l>", "<esc><cmd>silent norm! u<cr>")
 _G.I_Dedent = "<C-m>"
-map("i", I_Dedent, "<C-d>")
+set("i", I_Dedent, "<C-d>")
 
 ------------------
 -- COMMAND MODE --
@@ -616,20 +614,20 @@ map("i", I_Dedent, "<C-d>")
 -- NOTE: Setting <C-c> in cmd mode causes <C-c> to accept commands rather than cancel them
 -- LOW: How to do delete word in cmd mode
 
-map("c", "<M-p>", "<up>")
+set("c", "<M-p>", "<up>")
 
-map("c", "<C-a>", "<C-b>")
-map("c", "<C-d>", "<Del>")
-map("c", "<C-f>", "<right>")
-map("c", "<M-f>", "<S-right>")
+set("c", "<C-a>", "<C-b>")
+set("c", "<C-d>", "<Del>")
+set("c", "<C-f>", "<right>")
+set("c", "<M-f>", "<S-right>")
 
-map("c", "<C-k>", "<c-\\>estrpart(getcmdline(), 0, getcmdpos()-1)<cr>")
+set("c", "<C-k>", "<c-\\>estrpart(getcmdline(), 0, getcmdpos()-1)<cr>")
 
-map("c", "<C-b>", "<left>")
+set("c", "<C-b>", "<left>")
 
-map("c", "<M-b>", "<S-left>")
+set("c", "<M-b>", "<S-left>")
 
-map("c", "<M-n>", "<down>")
+set("c", "<M-n>", "<down>")
 
 -- LOW: Visual mode mapping to trim whitespace from selection
 -- LOW: ctrl-b/ctrl-f behavior is odd. Going up or down one "page" sometimes results in the same

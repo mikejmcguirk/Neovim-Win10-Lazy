@@ -550,7 +550,8 @@ end
 -- deleting the buffer into deleting shada state, including the '"' mark
 -- TODO: Whenever nvim_buf_del is created, use that for deleting buffers
 
--- TODO: Does not properly handle no name buffers
+-- TODO: Does not properly handle no name buffers. Prints a buffer has no filename msg
+-- TODO: Suppress msg on invalid bufs
 
 ---@param buf integer
 ---@param force boolean

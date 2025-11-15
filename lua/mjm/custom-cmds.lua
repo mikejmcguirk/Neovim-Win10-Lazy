@@ -175,5 +175,3 @@ vim.api.nvim_create_autocmd({ "BufNew", "BufReadPre" }, {
 
 -- LOW: Redo the Abolish subvert cmd with the preview handler
 -- Does this plugin already exist?
-
--- LOW: How to do document exports. pandoc? 2html? Is there a plugin?

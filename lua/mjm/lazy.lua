@@ -1,7 +1,6 @@
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not vim.uv.fs_stat(lazypath) then
     local lazyrepo = "https://github.com/folke/lazy.nvim.git"
-    -- LOW: Should be vim.system:wait()
     local out = vim.fn.system({
         "git",
         "clone",
@@ -22,7 +21,6 @@ if not vim.uv.fs_stat(lazypath) then
     end
 end
 
--- LOW: vim.opt will be deprecated eventually
 vim.opt.rtp:prepend(lazypath)
 require("lazy").setup({
     change_detection = { enabled = false, notify = false },

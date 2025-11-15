@@ -85,4 +85,4 @@ vim.keymap.set("n", "gf", toggle_checkbox)
 -- TODO: Add bullets.vim
 -- TODO: Markdown files take forever to open. Which plugin(s) are causing this?
 
--- LOW: Potential friction point: Bullets overrides autopairs <cr> mapping
+-- MAYBE: Potential friction point: Bullets overrides autopairs <cr> mapping
