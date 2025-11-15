@@ -210,12 +210,12 @@ return {
 
             local registers = { [["]], "_", "#", "=", "_", "/", "*", "+", ":", ".", "%" }
             for i = 0, 9 do
-                table.insert(registers, tostring(i))
+                registers[#registers + 1] = tostring(i)
             end
 
             -- Alphabetical registers
             for i = 65, 90 do
-                table.insert(registers, string.char(i))
+                registers[#registers + 1] = string.char(i)
             end
 
             if type(opts.filter) == "string" or type(opts.filter) == "function" then
@@ -255,14 +255,11 @@ return {
                 local regtype = vim.fn.getregtype(r) or " "
                 if (contents and #contents > 0) or not opts.ignore_empty then
                     -- Insert regtype here
-                    table.insert(
-                        entries,
-                        string.format(
-                            "[%s] [%s] %s",
-                            require("fzf-lua.utils").ansi_codes.yellow(r),
-                            require("fzf-lua.utils").ansi_codes.blue(regtype),
-                            contents
-                        )
+                    entries[#entries + 1] = string.format(
+                        "[%s] [%s] %s",
+                        require("fzf-lua.utils").ansi_codes.yellow(r),
+                        require("fzf-lua.utils").ansi_codes.blue(regtype),
+                        contents
                     )
                 end
             end

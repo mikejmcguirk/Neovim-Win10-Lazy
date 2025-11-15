@@ -72,9 +72,10 @@ api.nvim_set_option_value("swb", "useopen,uselast", {})
 api.nvim_set_option_value("breakindent", true, {})
 api.nvim_set_option_value("linebreak", true, {})
 
-api.nvim_set_option_value("ts", 4, {})
-api.nvim_set_option_value("sts", 4, {})
-api.nvim_set_option_value("sw", 4, {})
+_G.Mjm_Sw = 4
+api.nvim_set_option_value("ts", Mjm_Sw, {})
+api.nvim_set_option_value("sts", Mjm_Sw, {})
+api.nvim_set_option_value("sw", Mjm_Sw, {})
 api.nvim_set_option_value("et", true, {})
 api.nvim_set_option_value("sr", true, {})
 
@@ -117,8 +118,8 @@ autoset_winopt("WinEnter", "cul", true)
 autoset_winopt("WinLeave", "cul", false)
 
 api.nvim_set_option_value("list", true, {})
-local new_lcs = "tab:<->,extends:»,precedes:«,nbsp:␣,trail:⣿" ---@type string
-api.nvim_set_option_value("lcs", new_lcs, {})
+_G.Mjm_Lcs = "tab:<->,extends:»,precedes:«,nbsp:␣,trail:⣿"
+api.nvim_set_option_value("lcs", Mjm_Lcs, {})
 autoset_winopt("InsertEnter", "list", false)
 autoset_winopt("InsertLeave", "list", true)
 

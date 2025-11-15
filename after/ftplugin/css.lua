@@ -1,6 +1,4 @@
 local width = 2
-vim.bo.tabstop = width
-vim.bo.softtabstop = width
-vim.bo.shiftwidth = width
-
--- LOW: Look into styling (styline.io)
+vim.api.nvim_set_option_value("tabstop", width, { buf = 0 })
+vim.api.nvim_set_option_value("softtabstop", width, { buf = 0 })
+vim.api.nvim_set_option_value("shiftwidth", width, { buf = 0 })

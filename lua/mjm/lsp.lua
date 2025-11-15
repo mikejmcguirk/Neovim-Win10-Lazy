@@ -108,9 +108,20 @@ local function map_no_support(lhs, client, method, buf)
     end, { buffer = buf })
 end
 
-require("mjm.codelens").set_display({ hl_mode = "replace", virt_lines = true, virt_text = false })
+-- require("mjm.codelens").set_display({ hl_mode = "replace", virt_lines = true, virt_text = false })
 -- For testing
--- vim.lsp.codelens.set_display({ hl_mode = "replace", virt_lines = true, virt_text = false })
+vim.lsp.codelens.config({
+    virt_text = false,
+    virt_lines = function(buf, ns, line, chunks)
+        local indent = vim.fn.indent(line + 1) ---@type integer
+        if indent > 0 then table.insert(chunks, 1, { string.rep(" ", indent), "" }) end
+        api.nvim_buf_set_extmark(buf, ns, line, 0, {
+            virt_lines = { chunks },
+            virt_lines_above = true,
+            hl_mode = "combine",
+        })
+    end,
+})
 
 ---@param ev vim.api.keyset.create_autocmd.callback_args
 ---@return nil
@@ -136,8 +147,8 @@ local function set_lsp_maps(ev)
             -- Bespoke module so I can render the lenses as virtual lines
             callback = function()
                 -- For testing
-                -- vim.lsp.codelens.refresh({ buf = ev.buf })
-                require("mjm.codelens").refresh({ buf = ev.buf })
+                vim.lsp.codelens.refresh({ buf = ev.buf })
+                -- require("mjm.codelens").refresh({ buf = ev.buf })
             end,
         })
     end

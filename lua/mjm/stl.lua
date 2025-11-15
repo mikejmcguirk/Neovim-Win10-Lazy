@@ -140,9 +140,9 @@ function MjmStl.active()
 
     local head = vim.g.gitsigns_head or ""
     local diffs = vim.b.gitsigns_status or ""
-    table.insert(stl, "%#stl_a# " .. head .. " " .. diffs .. "%* ")
+    stl[#stl + 1] = "%#stl_a# " .. head .. " " .. diffs .. "%* "
 
-    table.insert(stl, "%#stl_b# %m %<%f [" .. mode .. "] %*")
+    stl[#stl + 1] = "%#stl_b# %m %<%f [" .. mode .. "] %*"
 
     -- I leave update_in_insert for diags set to false. Additionally, DiagnosticChange events
     -- cannot push redraws because they create text lock randomly in the middle of insert
@@ -152,9 +152,9 @@ function MjmStl.active()
     -- Annoying
     local progress = (progress_cache[buf] and not bad_mode) and progress_cache[buf] or ""
 
-    table.insert(stl, " %#stl_c#" .. lsps .. " " .. diags .. " %<" .. progress .. "%*")
+    stl[#stl + 1] = " %#stl_c#" .. lsps .. " " .. diags .. " %<" .. progress .. "%*"
 
-    table.insert(stl, "%=%*")
+    stl[#stl + 1] = "%=%*"
 
     local encoding = vim.api.nvim_get_option_value("encoding", { scope = "global" })
     local format = vim.api.nvim_get_option_value("fileformat", { buf = buf })
@@ -171,15 +171,16 @@ function MjmStl.active()
         buftype = "[" .. string.sub(buftype, 1, 1) .. "] "
     end
     -- local ft_str = ft == "" and "" or "| " .. ft
-    table.insert(stl, "%#stl_c# " .. encoding .. " | " .. fmt .. " | " .. buftype .. ft .. " %*")
+    stl[#stl + 1] = "%#stl_c# " .. encoding .. " | " .. fmt .. " | " .. buftype .. ft .. " %*"
 
     local winnr = api.nvim_win_get_number(0)
     local alt_win = vim.fn.winnr("#")
     local alt_win_disp = (alt_win and alt_win ~= winnr) and (" | #" .. alt_win) or ""
-    table.insert(
-        stl,
-        "%#stl_b# [" .. winnr .. "] %p%%" .. alt_win_disp .. " %*%#stl_a# %l/%L | %c %*"
-    )
+    stl[#stl + 1] = "%#stl_b# ["
+        .. winnr
+        .. "] %p%%"
+        .. alt_win_disp
+        .. " %*%#stl_a# %l/%L | %c %*"
 
     return table.concat(stl, "")
 end

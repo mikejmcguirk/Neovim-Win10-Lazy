@@ -134,7 +134,7 @@ local blink_opts = {
                         end
                         if not seen[item.insertText] then
                             seen[item.insertText] = true
-                            table.insert(out, item)
+                            out[#out + 1] = item
                         end
                     end
 
