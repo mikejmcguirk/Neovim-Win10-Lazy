@@ -1,4 +1,4 @@
-vim.keymap.set("n", "<leader>-s", function()
+vim.keymap.set("n", "<localleader>s", function()
     local year = os.date("%Y")
     local month = os.date("%m")
     local day = os.date("%d")
