@@ -84,7 +84,7 @@ local function del_cur_buf_from_disk(cargs)
             return
         end
 
-        ut.pbuf_rm(buf, true, true, true)
+        ut.pbuf_rm(buf, true, true, true, false)
     end
 
     ut.harpoon_rm_buf({ bufname = bufname })

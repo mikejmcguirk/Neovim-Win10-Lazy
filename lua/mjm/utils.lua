@@ -550,15 +550,19 @@ end
 -- deleting the buffer into deleting shada state, including the '"' mark
 -- TODO: Whenever nvim_buf_del is created, use that for deleting buffers
 
--- TODO: Does not properly handle no name buffers. Prints a buffer has no filename msg
--- TODO: Suppress msg on invalid bufs
+function M.is_empty_buf(buf)
+    local lines = api.nvim_buf_get_lines(buf, 0, -1, false) ---@type string[]
+    if #lines > 1 or #lines[1] > 0 then return false end
+    return true
+end
 
 ---@param buf integer
 ---@param force boolean
 ---@param wipeout boolean
 ---@param no_save boolean
+---@param suppress_invalid boolean
 ---@return boolean, [string, string|integer?][]|nil, boolean|nil, vim.api.keyset.echo_opts|nil
-function M.pbuf_rm(buf, force, wipeout, no_save)
+function M.pbuf_rm(buf, force, wipeout, no_save, suppress_invalid)
     vim.validate("buf", buf, "number")
     vim.validate("force", force, "boolean")
     vim.validate("wipeout", wipeout, "boolean")
@@ -568,8 +572,9 @@ function M.pbuf_rm(buf, force, wipeout, no_save)
         return false, chunks, true, { err = true }
     end
 
-    if #api.nvim_buf_get_name(buf) == 0 and not force then
+    if #api.nvim_buf_get_name(buf) == 0 and not force and not M.is_empty_buf(buf) then
         local chunks = { { "Buf " .. " has no filename" } }
+        if suppress_invalid then return true, nil, nil, nil end
         return false, chunks, true, { err = true }
     end
 
@@ -615,7 +620,7 @@ function M.pclose_and_rm(win, force, wipeout)
     if not buf then return end
     M.do_when_idle(function()
         if always or #vim.fn.win_findbuf(buf) == 0 then
-            local ok, chunks, msg, opts = M.pbuf_rm(buf, force, wipeout, false)
+            local ok, chunks, msg, opts = M.pbuf_rm(buf, force, wipeout, false, true)
             if ok then return end
             api.nvim_echo(chunks or { { "Unknown error" } }, msg or false, opts or { err = true })
         end
