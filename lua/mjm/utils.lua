@@ -203,9 +203,9 @@ end
 ---@param indent integer
 ---@return nil
 function M.set_buf_space_indent(buf, indent)
-    vim.api.nvim_set_option_value("ts", indent, { buf = 0 })
-    vim.api.nvim_set_option_value("sts", indent, { buf = 0 })
-    vim.api.nvim_set_option_value("sw", indent, { buf = 0 })
+    vim.api.nvim_set_option_value("ts", indent, { buf = buf })
+    vim.api.nvim_set_option_value("sts", indent, { buf = buf })
+    vim.api.nvim_set_option_value("sw", indent, { buf = buf })
 end
 
 ---@param line_num number -- One indexed
