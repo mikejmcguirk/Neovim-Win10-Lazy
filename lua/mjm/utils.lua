@@ -199,6 +199,15 @@ function M.check_modifiable(bufnr)
     end
 end
 
+---@param buf integer
+---@param indent integer
+---@return nil
+function M.set_buf_space_indent(buf, indent)
+    vim.api.nvim_set_option_value("ts", indent, { buf = 0 })
+    vim.api.nvim_set_option_value("sts", indent, { buf = 0 })
+    vim.api.nvim_set_option_value("sw", indent, { buf = 0 })
+end
+
 ---@param line_num number -- One indexed
 ---@return integer|nil
 M.get_indent = function(line_num)
@@ -569,12 +578,12 @@ function M.pbuf_rm(buf, force, wipeout, no_save, suppress_invalid)
 
     if not api.nvim_buf_is_valid(buf) then
         local chunks = { { "Buf " .. buf .. " is not valid" } } ---@type [string,string|integer?][]
+        if suppress_invalid then return true, nil, nil, nil end
         return false, chunks, true, { err = true }
     end
 
     if #api.nvim_buf_get_name(buf) == 0 and not force and not M.is_empty_buf(buf) then
         local chunks = { { "Buf " .. " has no filename" } }
-        if suppress_invalid then return true, nil, nil, nil end
         return false, chunks, true, { err = true }
     end
 
