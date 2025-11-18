@@ -1,11 +1,23 @@
 return {
     "tpope/vim-speeddating",
-}
+    init = function()
+        vim.api.nvim_set_var("speeddating_no_mappings", true)
 
--- LOW: If you have this sequence
--- 2022
--- 2023
--- 2024
--- And you visually select it then press C-a/C-x, it increments everything in the sequence and
--- leave it de-selected. Is this triggering speeddating behavior of Nvim's built-in behavior? Is
--- there a way to map this with gv so it can be used repeatedly?
+        vim.keymap.set("n", "<C-a>", "<Plug>SpeedDatingUp", { silent = true })
+        vim.keymap.set("n", "<C-x>", "<Plug>SpeedDatingDown", { silent = true })
+        vim.keymap.set("n", "d<C-a>", "<Plug>SpeedDatingNowUTC", { silent = true })
+        vim.keymap.set("n", "d<C-x>", "<Plug>SpeedDatingNowLocal", { silent = true })
+
+        vim.keymap.set("x", "<C-a>", function()
+            vim.api.nvim_feedkeys("\27", "nix", false)
+            vim.fn["speeddating#incrementvisual"](vim.v.count1)
+            vim.api.nvim_feedkeys("gv", "nix", false)
+        end, { silent = true })
+
+        vim.keymap.set("x", "<C-x>", function()
+            vim.api.nvim_feedkeys("\27", "nix", false)
+            vim.fn["speeddating#incrementvisual"](-vim.v.count1)
+            vim.api.nvim_feedkeys("gv", "nix", false)
+        end, { silent = true })
+    end,
+}
