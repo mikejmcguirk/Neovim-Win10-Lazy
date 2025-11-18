@@ -129,7 +129,7 @@ api.nvim_set_option_value("rnu", true, {})
 api.nvim_set_option_value("cursorlineopt", "both", {})
 -- LOW: Could set this as default "" then set it on filetype to prevent it from showing in
 -- empty buffers. Low value for complexity though
-api.nvim_set_option_value("cc", "100", {})
+api.nvim_set_option_value("cc", "80,100", {})
 api.nvim_set_option_value("nuw", 5, {})
 api.nvim_set_option_value("scl", "yes:1", {})
 
