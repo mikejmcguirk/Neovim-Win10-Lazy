@@ -22,13 +22,11 @@ set("n", "g<tab>", function()
     api.nvim_cmd({ cmd = "tabnew", range = { range } }, {})
 
     local buf = api.nvim_get_current_buf() ---@type integer
-    if #api.nvim_buf_get_name(buf) ~= 0 then return end
-    if not require("mjm.utils").is_empty_buf(buf) then return end
+    if not ut.is_empty_noname_buf(buf) then return end
     api.nvim_create_autocmd("BufHidden", {
         buffer = buf,
         callback = function()
-            if #api.nvim_buf_get_name(buf) ~= 0 then return end
-            if not require("mjm.utils").is_empty_buf(buf) then return end
+            if not ut.is_empty_noname_buf(buf) then return end
             vim.schedule(function()
                 api.nvim_buf_delete(buf, { force = true })
             end)

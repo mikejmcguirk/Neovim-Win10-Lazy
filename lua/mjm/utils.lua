@@ -561,8 +561,14 @@ end
 
 function M.is_empty_buf(buf)
     local lines = api.nvim_buf_get_lines(buf, 0, -1, false) ---@type string[]
+    if not lines[1] then return true end
     if #lines > 1 or #lines[1] > 0 then return false end
     return true
+end
+
+function M.is_empty_noname_buf(buf)
+    if #api.nvim_buf_get_name(buf) > 0 then return false end
+    return M.is_empty_buf(buf)
 end
 
 ---@param buf integer

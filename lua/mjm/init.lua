@@ -60,13 +60,14 @@ require("mjm.tal")
 require("mjm.lsp")
 
 if not api.nvim_buf_is_valid(1) then return end
+local ut = require("mjm.utils")
+if not ut.is_empty_noname_buf(1) then return end
 api.nvim_create_autocmd("BufHidden", {
     buffer = 1,
     callback = function()
-        if #api.nvim_buf_get_name(1) == 0 and require("mjm.utils").is_empty_buf(1) then
-            vim.schedule(function()
-                api.nvim_buf_delete(1, { force = true })
-            end)
-        end
+        if not ut.is_empty_noname_buf(1) then return end
+        vim.schedule(function()
+            api.nvim_buf_delete(1, { force = true })
+        end)
     end,
 })
