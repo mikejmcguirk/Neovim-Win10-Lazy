@@ -2,7 +2,9 @@ local api = vim.api
 return {
     "iamcco/markdown-preview.nvim",
     ft = { "markdown" },
-    build = ":call mkdp#util#install()",
+    build = function()
+        vim.fn["mkdp#util#install"]()
+    end,
     init = function()
         api.nvim_set_var("mkdp_auto_close", 1)
         api.nvim_set_var("mkdp_browser", "brave-browser-stable")
