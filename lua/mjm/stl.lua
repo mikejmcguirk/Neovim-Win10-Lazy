@@ -1,43 +1,37 @@
-MjmStl = {}
-
 local api = vim.api
 
--- TODO: Use a timer on the LSP cache to clear no matter what
-local lsp_cache = {}
-local diag_cache = {}
-local mode = "n" -- ModeChanged does not grab the initial set to normal mode
-local progress_cache = {}
+_G.Mjm_Stl = {}
 
+local diag_cache = {} ---@type table<integer,string>
+local lsp_cache = {} ---@type table<integer,string>
+local mode = "n" ---@type string -- ModeChanged does not grab the initial set to normal mode
+local progress_cache = {} ---@type table<integer,string>
+local timers = {} ---@type table<integer,uv.uv_timer_t>
+
+-- NOTE: Evaluating the statusline initiates textlock. As much of the calculation as possible
+-- should be performed outside the eval func. The eval func should also not be triggered
+-- unnecessarily in insert mode
+
+local stl_events = vim.api.nvim_create_augroup("stl-events", {}) ---@type integer
 local is_bad_mode = function()
     return string.match(mode, "[csSiR]")
 end
 
--- Because evaluating the statusline initiates textlock, perform as much of the calculation
--- outside the eval func as possible
-
-local stl_events = vim.api.nvim_create_augroup("stl-events", { clear = true })
-
 vim.api.nvim_create_autocmd("LspProgress", {
     group = stl_events,
     callback = function(ev)
-        if (not ev.data) or not ev.data.client_id then return end
-
-        if not vim.api.nvim_buf_is_valid(ev.buf) then
-            progress_cache[ev.buf] = nil
-            return
+        if not (ev.data and ev.data.client_id) then return end
+        local function end_timer(idx)
+            if not timers[idx] then return end
+            timers[idx]:stop()
+            timers[idx]:close()
+            timers[idx] = nil
         end
 
-        if ev.data.params.value.kind == "end" then
-            vim.defer_fn(function()
-                progress_cache[ev.buf] = nil
-                vim.api.nvim_cmd({ cmd = "redraws" }, {})
-            end, 2250)
-        end
-
+        end_timer(ev.buf)
+        local name = vim.lsp.get_client_by_id(ev.data.client_id).name or "" ---@type string
         local values = ev.data.params.value
-        -- These happen a lot
-        if string.find(values.title, "Searching in files") then return end
-
+        local message = ev.data.msg and (" - " .. values.msg) or "" ---@type string
         local pct = (function()
             if values.kind == "end" then
                 return "(Complete) " -- End messages might not have a % value
@@ -46,22 +40,32 @@ vim.api.nvim_create_autocmd("LspProgress", {
             else
                 return ""
             end
-        end)()
+        end)() ---@type string
 
-        local name = vim.lsp.get_client_by_id(ev.data.client_id).name
+        timers[ev.buf] = vim.uv.new_timer() ---@type uv.uv_timer_t|nil
+        if not timers[ev.buf] then return end
+        timers[ev.buf]:start(2250, 0, function()
+            progress_cache[ev.buf] = nil
+            vim.schedule(function()
+                if not is_bad_mode() and api.nvim_win_get_buf(0) == ev.buf then
+                    vim.api.nvim_cmd({ cmd = "redraws" }, {})
+                end
+            end)
 
-        local message = ev.data.msg and (" - " .. values.msg) or ""
-        local str = pct .. name .. ": " .. values.title .. message
-        progress_cache[ev.buf] = str
+            end_timer(ev.buf)
+        end)
 
-        -- Don't create more textlock in insert mode
-        if not is_bad_mode() then vim.api.nvim_cmd({ cmd = "redraws" }, {}) end
+        progress_cache[ev.buf] = pct .. name .. ": " .. values.title .. message
+        if not is_bad_mode() and api.nvim_win_get_buf(0) == ev.buf then
+            vim.api.nvim_cmd({ cmd = "redraws" }, {})
+        end
     end,
 })
 
-local levels = { "Error", "Warn", "Info", "Hint" }
+local levels = { "Error", "Warn", "Info", "Hint" } ---@type string[]
 -- local signs = Has_Nerd_Font and { "󰅚", "󰀪", "󰋽", "󰌶" } or { "E:", "W:", "I:", "H:" }
-local signs = { "E:", "W:", "I:", "H:" }
+-- LOW: Detect if a patched font is available and use symbols accordingly
+local signs = { "E:", "W:", "I:", "H:" } ---@type string[]
 
 -- NOTE: Diagnostics.lua contains the delete for the default diagnostic status cache augroup
 
@@ -78,14 +82,14 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
             return
         end
 
-        local counts = {}
+        local counts = {} ---@type table<integer,integer>
         for _, d in pairs(ev.data.diagnostics) do
             counts[d.severity] = (counts[d.severity] or 0) + 1
         end
 
-        local diag_str = ""
+        local diag_str = "" ---@type string
         for i = 1, 4 do
-            local count = counts[i] or 0
+            local count = counts[i] or 0 ---@type integer
             if count > 0 then
                 diag_str = diag_str
                     .. string.format("%%#Diagnostic%s#%s%d%%* ", levels[i], signs[i], count)
@@ -93,13 +97,11 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
         end
 
         diag_cache[ev.buf] = diag_str or nil
-
         if not is_bad_mode() then vim.api.nvim_cmd({ cmd = "redraws" }, {}) end
     end),
 })
 
 -- LOW: This does not catch leaving cmd mode after confirming a substitution
-
 vim.api.nvim_create_autocmd("ModeChanged", {
     group = stl_events,
     callback = function()
@@ -129,38 +131,38 @@ vim.api.nvim_create_autocmd({ "LspAttach", "LspDetach" }, {
 
 -- local format_icons = Has_Nerd_Font and { unix = "", dos = "", mac = "" }
 --     or { unix = "unix", dos = "dos", mac = "mac" }
-local format_icons = { unix = "unix", dos = "dos", mac = "mac" }
+local format_icons = { unix = "unix", dos = "dos", mac = "mac" } ---@type string[]
 
 -- LOW: This should pre-allocate the table with NILs
+function Mjm_Stl.active()
+    local stl = {} ---@type string[]
+    local buf = vim.api.nvim_get_current_buf() ---@type integer
+    local bad_mode = is_bad_mode() ---@type boolean
 
-function MjmStl.active()
-    local stl = {}
-    local buf = vim.api.nvim_get_current_buf()
-    local bad_mode = is_bad_mode()
-
-    local head = vim.g.gitsigns_head or ""
-    local diffs = vim.b.gitsigns_status or ""
+    local head = vim.g.gitsigns_head or "" ---@type string
+    local diffs = vim.b.gitsigns_status or "" ---@type string
     stl[#stl + 1] = "%#stl_a# " .. head .. " " .. diffs .. "%* "
 
     stl[#stl + 1] = "%#stl_b# %m %<%f [" .. mode .. "] %*"
 
-    -- I leave update_in_insert for diags set to false. Additionally, DiagnosticChange events
-    -- cannot push redraws because they create text lock randomly in the middle of insert
-    -- You could just show the cached diag data, but it might be stale
-    local diags = (not bad_mode) and (diag_cache[buf] or "") or ""
-    local lsps = lsp_cache[buf] or ""
-    -- Annoying
+    -- I have update_in_insert for diags set to false, so avoid showing stale data
+    local diags = (not bad_mode) and (diag_cache[buf] or "") or "" ---@type string
+    local lsps = lsp_cache[buf] or "" ---@type string
+    ---@type string
     local progress = (progress_cache[buf] and not bad_mode) and progress_cache[buf] or ""
-
-    stl[#stl + 1] = " %#stl_c#" .. lsps .. " " .. diags .. " %<" .. progress .. "%*"
+    stl[#stl + 1] = " %#stl_c#" .. lsps .. " " .. diags .. "%<" .. progress .. "%*"
 
     stl[#stl + 1] = "%=%*"
 
+    -- LOW: Would prefer if this info were cached, but unsure how to do so without creating more
+    -- work than what's currently here. The issue is making sure we don't cache the contents of
+    -- popup bufs
+    ---@type string
     local encoding = vim.api.nvim_get_option_value("encoding", { scope = "global" })
-    local format = vim.api.nvim_get_option_value("fileformat", { buf = buf })
-    local fmt = format_icons[format]
-    local ft = vim.api.nvim_get_option_value("ft", { buf = buf })
-    local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf })
+    local format = vim.api.nvim_get_option_value("fileformat", { buf = buf }) ---@type string
+    local fmt = format_icons[format] ---@type string
+    local ft = vim.api.nvim_get_option_value("ft", { buf = buf }) ---@type string
+    local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf }) ---@type string
     if buftype == "" then
         buftype = buftype
     elseif buftype == "nofile" then
@@ -170,34 +172,34 @@ function MjmStl.active()
     else
         buftype = "[" .. string.sub(buftype, 1, 1) .. "] "
     end
-    -- local ft_str = ft == "" and "" or "| " .. ft
+
     stl[#stl + 1] = "%#stl_c# " .. encoding .. " | " .. fmt .. " | " .. buftype .. ft .. " %*"
 
-    local winnr = api.nvim_win_get_number(0)
-    local alt_win = vim.fn.winnr("#")
-    local alt_win_disp = (alt_win and alt_win ~= winnr) and (" | #" .. alt_win) or ""
-    stl[#stl + 1] = "%#stl_b# ["
-        .. winnr
-        .. "] %p%%"
-        .. alt_win_disp
-        .. " %*%#stl_a# %l/%L | %c %*"
+    local winnr = api.nvim_win_get_number(0) ---@type integer
+    stl[#stl + 1] = "%#stl_b# [" .. winnr .. "] %p%%" .. " %*%#stl_a# %l/%L | %c %*"
+    -- Keep in reserve for rancher debugging
+    -- local alt_win = vim.fn.winnr("#") ---@type integer
+    -- ---@type string
+    -- local alt_win_disp = (alt_win and alt_win ~= winnr) and (" | #" .. alt_win) or ""
+    -- ---@type string
+    -- local ba = "%#stl_b# [" .. winnr .. "] %p%%" .. alt_win_disp .. " %*%#stl_a# %l/%L | %c %*"
+    -- stl[#stl + 1] = ba
 
     return table.concat(stl, "")
 end
 
--- LOW: How to do qf statusline that shows stack nr
+-- LOW: Show the stack nr in the qf stl
 -- LOW: Show diagnostics in inactive windows whited out
 
-function MjmStl.inactive()
-    local winnr = api.nvim_win_get_number(0)
-    return "%#stl_b# %m %t %*%= %#stl_b# [" .. winnr .. "] %p%% %*"
+function Mjm_Stl.inactive()
+    return "%#stl_b# %m %t %*%= %#stl_b# [" .. api.nvim_win_get_number(0) .. "] %p%% %*"
 end
 
 vim.api.nvim_set_option_value("showmode", false, { scope = "global" })
 vim.api.nvim_set_var("qf_disable_statusline", 1)
 
 local eval = "(nvim_get_current_win()==#g:actual_curwin || &laststatus==3)"
-local stl_str = "%{%" .. eval .. " ? v:lua.MjmStl.active() : v:lua.MjmStl.inactive()%}"
+local stl_str = "%{%" .. eval .. " ? v:lua.Mjm_Stl.active() : v:lua.Mjm_Stl.inactive()%}"
 vim.api.nvim_set_option_value("stl", stl_str, { scope = "global" })
 
 -- LOW: Build a character index component, even if it's only held in reserve
