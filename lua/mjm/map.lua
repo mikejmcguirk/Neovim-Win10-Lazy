@@ -290,34 +290,25 @@ set("n", "<bs>D", function()
     di.toggle_virt_lines()
 end)
 
-set("n", "<bs><C-d>", function()
+set("n", "<bs><M-d>", function()
     local enabled = tostring(vim.diagnostic.is_enabled())
     local cfg = vim.inspect(vim.diagnostic.config())
     print("Enabled: " .. enabled .. "\n\n" .. cfg)
 end)
 
--- LOW: Could do <M-d> as errors or top only
-
 set("n", "<bs>s", function()
-    vim.api.nvim_set_option_value(
-        "spell",
-        not vim.api.nvim_get_option_value("spell", { scope = "local" }),
-        { scope = "local" }
-    )
+    local cur_spell = api.nvim_get_option_value("spell", { scope = "local" }) ---@type boolean
+    vim.api.nvim_set_option_value("spell", not cur_spell, { scope = "local" })
 end)
 
-set("n", "<bs><C-s>", "<cmd>set spell?<cr>")
+set("n", "<bs><M-s>", "<cmd>set spell?<cr>")
 
 set("n", "<bs>w", function()
-    -- LOW: How does this interact with local scope?
-    vim.api.nvim_set_option_value(
-        "wrap",
-        not vim.api.nvim_get_option_value("wrap", { scope = "local" }),
-        { scope = "local" }
-    )
+    local cur_wrap = api.nvim_get_option_value("wrap", { scope = "local" }) ---@type boolean
+    vim.api.nvim_set_option_value("wrap", not cur_wrap, { scope = "local" })
 end)
 
-set("n", "<bs><C-w>", "<cmd>set wrap?<cr>")
+set("n", "<bs><M-w>", "<cmd>set wrap?<cr>")
 
 --------------------
 -- NORMAL g LAYER --
