@@ -551,7 +551,7 @@ local visual_indent = function(opts)
     local old_lz = api.nvim_get_option_value("lz", {})
     local old_cc = api.nvim_get_option_value("cc", {})
     api.nvim_set_option_value("lz", true, {})
-    api.nvim_set_option_value("cc", false, { scope = "local" })
+    api.nvim_set_option_value("cc", "", { scope = "local" })
 
     local shift = (opts or {}).back and "<" or ">" ---@type string
     vim.cmd("norm! \27")
