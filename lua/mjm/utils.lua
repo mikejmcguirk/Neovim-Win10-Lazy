@@ -569,20 +569,21 @@ end
 ---@param force boolean
 ---@param wipeout boolean
 ---@param no_save boolean
----@param suppress_invalid boolean
+---@param suppress_errs boolean
 ---@return boolean, [string, string|integer?][]|nil, boolean|nil, vim.api.keyset.echo_opts|nil
-function M.pbuf_rm(buf, force, wipeout, no_save, suppress_invalid)
+function M.pbuf_rm(buf, force, wipeout, no_save, suppress_errs)
     vim.validate("buf", buf, "number")
     vim.validate("force", force, "boolean")
     vim.validate("wipeout", wipeout, "boolean")
 
     if not api.nvim_buf_is_valid(buf) then
         local chunks = { { "Buf " .. buf .. " is not valid" } } ---@type [string,string|integer?][]
-        if suppress_invalid then return true, nil, nil, nil end
+        if suppress_errs then return true, nil, nil, nil end
         return false, chunks, true, { err = true }
     end
 
     if #api.nvim_buf_get_name(buf) == 0 and not force and not M.is_empty_buf(buf) then
+        if suppress_errs then return true, nil, nil, nil end
         local chunks = { { "Buf " .. " has no filename" } }
         return false, chunks, true, { err = true }
     end
