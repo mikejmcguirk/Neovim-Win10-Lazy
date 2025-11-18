@@ -21,14 +21,19 @@ set("n", "g<tab>", function()
     local range = vim.v.count == 0 and api.nvim_call_function("tabpagenr", { "$" }) or vim.v.count
     api.nvim_cmd({ cmd = "tabnew", range = { range } }, {})
 
-    -- LOW: Better way to handle this: Attach a BufLeave autocmd to the buf that checks if it's
-    -- an empty noname, wiping if so
     local buf = api.nvim_get_current_buf() ---@type integer
-    api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
-    api.nvim_set_option_value("buftype", "nofile", { buf = buf })
-    api.nvim_set_option_value("modifiable", false, { buf = buf })
-    api.nvim_set_option_value("swapfile", false, { buf = buf })
-    api.nvim_set_option_value("undofile", false, { buf = buf })
+    if #api.nvim_buf_get_name(buf) ~= 0 then return end
+    if not require("mjm.utils").is_empty_buf(buf) then return end
+    api.nvim_create_autocmd("BufHidden", {
+        buffer = buf,
+        callback = function()
+            if #api.nvim_buf_get_name(buf) ~= 0 then return end
+            if not require("mjm.utils").is_empty_buf(buf) then return end
+            vim.schedule(function()
+                api.nvim_buf_delete(buf, { force = true })
+            end)
+        end,
+    })
 end)
 
 -----------------
