@@ -289,7 +289,7 @@ api.nvim_set_hl(0, "stl_b", { fg = s_fg, bg = darken_24bit(s_fg, 50) })
 api.nvim_set_hl(0, "stl_c", { link = "Normal" })
 
 -- LOW: Would be cool if this was a hover menu
-vim.keymap.set("n", "gT", function()
+vim.keymap.set("n", "zS", function()
     api.nvim_cmd({ cmd = "Inspect" }, {})
 end)
 
