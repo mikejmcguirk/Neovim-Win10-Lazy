@@ -143,10 +143,7 @@ local function set_lsp_maps(ev)
     if client:supports_method("textDocument/codeLens") then
         vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
             buffer = ev.buf,
-            group = vim.api.nvim_create_augroup("mjm-refresh-lens", { clear = true }),
-            -- Bespoke module so I can render the lenses as virtual lines
             callback = function()
-                -- For testing
                 vim.lsp.codelens.refresh({ buf = ev.buf })
                 -- require("mjm.codelens").refresh({ buf = ev.buf })
             end,
