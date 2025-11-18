@@ -8,11 +8,14 @@ local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 -- TABS --
 ----------
 
--- LOW: Missing tab cmds:
--- - tabclose (Z<tab>?)
--- - Would need to test tabonly before mapping it. Maybe do it as a custom function
+-- LOW: Missing tabonly map
 set("n", "<tab>", "gt")
 set("n", "<S-tab>", "gT")
+set("n", "ZT", function()
+    local args = vim.v.count > 0 and { tostring(vim.v.count) } or nil ---@type string[]|nil
+    api.nvim_cmd({ cmd = "tabclose", args = args }, {})
+end)
+
 set("n", "g<tab>", function()
     ---@type integer
     local range = vim.v.count == 0 and api.nvim_call_function("tabpagenr", { "$" }) or vim.v.count
