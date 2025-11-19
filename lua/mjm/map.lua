@@ -8,12 +8,16 @@ local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 -- TABS --
 ----------
 
--- LOW: Missing tabonly map
 set("n", "<tab>", "gt")
 set("n", "<S-tab>", "gT")
 set("n", "ZT", function()
     local args = vim.v.count > 0 and { tostring(vim.v.count) } or nil ---@type string[]|nil
     api.nvim_cmd({ cmd = "tabclose", args = args }, {})
+end)
+
+set("n", "ZB", function()
+    local args = vim.v.count > 0 and { tostring(vim.v.count) } or nil ---@type string[]|nil
+    api.nvim_cmd({ cmd = "tabonly", args = args }, {})
 end)
 
 set("n", "g<tab>", function()
