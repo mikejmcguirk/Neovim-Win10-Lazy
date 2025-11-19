@@ -15,7 +15,6 @@ return {
     ---@module 'oil'
     ---@type oil.SetupOpts
     opts = {
-
         columns = { "size", "permissions" },
         float = { border = Mjm_Border, padding = 3 },
         keymaps = {

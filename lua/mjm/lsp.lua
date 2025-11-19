@@ -113,12 +113,15 @@ end
 vim.lsp.codelens.config({
     virt_text = false,
     virt_lines = function(buf, ns, line, chunks)
-        local indent = vim.fn.indent(line + 1) ---@type integer
+        local indent = vim.api.nvim_buf_call(buf, function()
+            return vim.fn.indent(line + 1)
+        end)
+
         if indent > 0 then table.insert(chunks, 1, { string.rep(" ", indent), "" }) end
         api.nvim_buf_set_extmark(buf, ns, line, 0, {
             virt_lines = { chunks },
             virt_lines_above = true,
-            hl_mode = "combine",
+            hl_mode = "replace", -- Change from default of 'combine'
         })
     end,
 })
