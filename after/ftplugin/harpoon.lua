@@ -1,4 +1,5 @@
-vim.keymap.set("n", "q", "<cmd>bd<cr>", { buffer = true })
-vim.keymap.set("n", "<C-c>", function()
-    require("harpoon").ui:close_menu()
-end, { buffer = true })
+for _, map in ipairs({ "q", "<C-c>" }) do
+    vim.keymap.set("n", map, function()
+        require("harpoon").ui:close_menu()
+    end, { buffer = true })
+end

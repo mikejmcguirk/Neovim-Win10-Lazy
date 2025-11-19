@@ -55,5 +55,3 @@ end)
 vim.keymap.set("n", "<leader>teo", function()
     edit_query_file("textobjects")
 end)
-
--- LOW: These are in the master nvim-treesitter as TSEditQuery {type}

@@ -4,16 +4,11 @@ local fzflua_opts = {
     -- LOW: Get out of this preset
     "telescope",
     debug = false,
-    files = {
-        no_ignore = true,
-    },
+    files = { no_ignore = true },
     winopts = {
         border = Mjm_Border,
         width = 0.91,
-        preview = {
-            horizontal = "right:60%",
-            winopts = { number = true },
-        },
+        preview = { horizontal = "right:60%", winopts = { number = true } },
     },
     keymap = {
         builtin = {
@@ -48,10 +43,7 @@ local fzflua_opts = {
         preview_border = "FloatBorder",
         backdrop = "NormalFloat",
     },
-    fzf_opts = {
-        ["--tiebreak"] = "length,chunk",
-        ["--algo"] = "v2",
-    },
+    fzf_opts = { ["--tiebreak"] = "length,chunk", ["--algo"] = "v2" },
 }
 
 return {
@@ -91,8 +83,8 @@ return {
         set("n", "<leader>fk", fzf_lua.keymaps)
 
         set("n", "<leader>fo", fzf_lua.loclist)
-        set("n", "<leader>fq", fzf_lua.quickfix)
         set("n", "<leader>fO", fzf_lua.loclist_stack)
+        set("n", "<leader>fq", fzf_lua.quickfix)
         set("n", "<leader>fQ", fzf_lua.quickfix_stack)
 
         set("n", "<leader>fm", function()
@@ -285,7 +277,5 @@ return {
     end,
 }
 
--- LOW: Fix ugly colors in scroll area
--- LOW: How to delete qf stacks from FzfLua?
 -- LOW: Turn let g:/w:/b:/t: into pickers
 -- LOW: Make a thesaurus picker

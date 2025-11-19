@@ -31,6 +31,8 @@ return {
     end,
 }
 
+-- LOW: When I hit enter in a markdown file, I can see the line numbers flicker. It is doing
+-- some kind of goofy nonsense under the hood
 -- LOW: This would be a good Lua re-write. Current limitations:
 -- - Only creates a new bullet if at the end of the line. So, cannot bring contents down into a
 -- new bullet

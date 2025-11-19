@@ -1,18 +1,15 @@
 local api = vim.api
 local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 
-local width = 2
-api.nvim_set_option_value("ts", width, { buf = 0 })
-api.nvim_set_option_value("sts", width, { buf = 0 })
-api.nvim_set_option_value("sw", width, { buf = 0 })
+require("mjm.utils").set_buf_space_indent(0, 2)
 
 -- "r" in Markdown treats lines like "- some text" as comments and indents them
 Mjm_Opt_Str_Remove("fo", "r", { scope = "local" })
 api.nvim_set_option_value("cc", "", { scope = "local" })
 api.nvim_set_option_value("culopt", "number,screenline", { scope = "local" })
-api.nvim_set_option_value("wrap", true, { scope = "local" })
 api.nvim_set_option_value("siso", 12, { scope = "local" })
 api.nvim_set_option_value("spell", true, { scope = "local" })
+api.nvim_set_option_value("wrap", true, { scope = "local" })
 
 vim.keymap.set("i", ",", ",<C-g>u", { buffer = 0 })
 vim.keymap.set("i", ".", ".<C-g>u", { buffer = 0 })
@@ -26,7 +23,7 @@ end, { buffer = 0 })
 
 -- TODO: Do we go back to prettier? Good for the README use case. Bad for notes
 vim.api.nvim_create_autocmd("BufWritePre", {
-    buffer = vim.api.nvim_get_current_buf(),
+    buffer = 0,
     callback = function(ev)
         ut.fallback_formatter(ev.buf)
     end,

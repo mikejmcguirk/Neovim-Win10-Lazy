@@ -666,8 +666,8 @@ end
 function M.checked_mkdir_p(path, mode)
     vim.validate("path", path, "string")
     vim.validate("mode", mode, "number")
-    local resolved_path = vim.fs.normalize(vim.fs.abspath(path))
 
+    local resolved_path = vim.fs.normalize(vim.fs.abspath(path)) ---@type string
     ---@type uv.fs_stat.result|nil, string|nil
     local stat, err, err_name = uv.fs_stat(resolved_path)
     if stat and stat.type == "directory" then return true, nil end
@@ -686,7 +686,7 @@ function M.checked_mkdir_p(path, mode)
     return false, err_m
 end
 
---PR: Add to vim.fs
+--PR: Add to vim.fs. Faster than using fnamemodify
 ---@param fname string
 ---@param rm_all boolean
 ---@return string

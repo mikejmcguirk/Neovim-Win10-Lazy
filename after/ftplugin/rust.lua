@@ -16,8 +16,7 @@ local add_pragma = function(pragma)
     local indent = require("mjm.utils").get_indent(row) or 0 ---@type integer
     vim.api.nvim_buf_set_text(0, row - 1, 0, row - 1, #line, { string.rep(" ", indent) .. pragma })
 
-    local line_len_0 = #vim.api.nvim_get_current_line() - 1 ---@type integer
-    vim.api.nvim_win_set_cursor(0, { row, line_len_0 - 1 })
+    vim.api.nvim_win_set_cursor(0, { row, #vim.api.nvim_get_current_line() - 2 })
     vim.cmd("startinsert")
 end
 

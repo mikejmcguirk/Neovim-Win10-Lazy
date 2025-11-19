@@ -283,6 +283,7 @@ vim.api.nvim_create_autocmd("LspDetach", {
     end,
 })
 
+vim.keymap.set("n", "gr", "<nop>")
 lsp.log.set_level(vim.log.levels.ERROR)
 
 lsp.enable({

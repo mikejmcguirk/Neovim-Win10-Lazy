@@ -1,10 +1,6 @@
-local width = 2
-vim.bo.tabstop = width
-vim.bo.softtabstop = width
-vim.bo.shiftwidth = width
-
+require("mjm.utils").set_buf_space_indent(0, 2)
 vim.api.nvim_create_autocmd("BufWritePre", {
-    buffer = vim.api.nvim_get_current_buf(),
+    buffer = 0,
     callback = function(ev)
         require("mjm.utils").fallback_formatter(ev.buf)
     end,

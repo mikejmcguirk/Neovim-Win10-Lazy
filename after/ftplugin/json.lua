@@ -1,4 +1,1 @@
-local width = 2
-vim.bo.tabstop = width
-vim.bo.softtabstop = width
-vim.bo.shiftwidth = width
+require("mjm.utils").set_buf_space_indent(0, 2)

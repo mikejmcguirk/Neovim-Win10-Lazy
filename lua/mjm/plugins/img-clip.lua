@@ -13,7 +13,7 @@ return {
                 local root = vim.uv.cwd() ---@type string|nil
                 if not root then return end
                 local basename = fs.basename(vim.api.nvim_buf_get_name(0)) ---@type string
-                local name = require("mjm.utils").fname_root(basename) ---@type string
+                local name = require("mjm.utils").fname_root(basename, false) ---@type string
                 local pattern = fs.joinpath(root, img_dir, name) .. "*" ---@type string
 
                 local files = vim.fn.glob(pattern, false, true) ---@type string[]
