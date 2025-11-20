@@ -17,7 +17,7 @@ return {
         bigfile = { enabled = false },
         dashboard = { enabled = false },
         explorer = { enabled = false },
-        image = { enabled = true },
+        image = { enabled = true, math = { enabled = false } },
         indent = { animate = { enabled = false }, scope = { enabled = false } },
         input = { enabled = false },
         notifier = { enabled = false },

@@ -309,6 +309,8 @@ lsp.enable({
     "rust_analyzer",
     -- Toml --
     "taplo",
+    -- Typst --
+    "tinymist",
 })
 
 -- TODO: Get a C LSP for reading code

@@ -10,6 +10,7 @@ local ft_config = {
     query = { "format-queries" },
     sh = { "shfmt" },
     toml = { "taplo" },
+    typst = { "typstyle" },
 } ---@type table<string, conform.FiletypeFormatter>
 
 local fts = vim.tbl_keys(ft_config) ---@type string[]

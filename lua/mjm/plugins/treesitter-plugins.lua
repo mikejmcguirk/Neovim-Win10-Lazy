@@ -30,6 +30,7 @@ local langs = {
     "sql",
     -- "tmux", -- Errors on things that are correct
     "typescript",
+    "typst",
 } ---@type string[]
 
 local fts = vim.deepcopy(langs, true) ---@type string[]
