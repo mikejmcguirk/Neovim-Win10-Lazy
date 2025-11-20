@@ -48,6 +48,8 @@ local fzflua_opts = {
 
 return {
     "ibhagwan/fzf-lua",
+    -- "mikejmcguirk/fzf-lua",
+    -- branch = "feat/regtypes",
     -- LOW: Would be cool if this were lazy loaded. Could put keymaps into a table. But then how
     -- to handle LSP setups
     dependencies = { "nvim-tree/nvim-web-devicons" },
@@ -221,7 +223,6 @@ return {
 
             local function register_escape_special(reg, nl)
                 if not reg then return end
-
                 local gsub_map = {
                     ["\3"] = "^C", -- <C-c>
                     ["\27"] = "^[", -- <Esc>
@@ -243,6 +244,16 @@ return {
                 local _, contents = pcall(vim.fn.getreg, r)
                 if not contents then return end
 
+                local function convert_regtype(regtype)
+                    if regtype == "V" then
+                        return "l"
+                    elseif regtype == "\22" then
+                        return "b"
+                    else
+                        return "c"
+                    end
+                end
+
                 contents = register_escape_special(contents, opts.multiline and 2 or 1)
                 local regtype = vim.fn.getregtype(r) or " "
                 if (contents and #contents > 0) or not opts.ignore_empty then
@@ -250,7 +261,7 @@ return {
                     entries[#entries + 1] = string.format(
                         "[%s] [%s] %s",
                         require("fzf-lua.utils").ansi_codes.yellow(r),
-                        require("fzf-lua.utils").ansi_codes.blue(regtype),
+                        require("fzf-lua.utils").ansi_codes.blue(convert_regtype(regtype)),
                         contents
                     )
                 end
