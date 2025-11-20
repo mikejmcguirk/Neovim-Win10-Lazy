@@ -48,8 +48,6 @@ local fzflua_opts = {
 
 return {
     "ibhagwan/fzf-lua",
-    -- "mikejmcguirk/fzf-lua",
-    -- branch = "feat/regtypes",
     -- LOW: Would be cool if this were lazy loaded. Could put keymaps into a table. But then how
     -- to handle LSP setups
     dependencies = { "nvim-tree/nvim-web-devicons" },
@@ -69,6 +67,7 @@ return {
 
         set("n", "<leader>fb", fzf_lua.buffers)
         set("n", "<leader>fi", fzf_lua.files)
+        set("n", "<leader>fr", fzf_lua.registers)
 
         set("n", "<leader>fgc", fzf_lua.git_commits)
         set("n", "<leader>fgf", fzf_lua.git_files)
@@ -194,89 +193,6 @@ return {
         end
 
         set("n", "<leader>fds", fuzzy_spell_correct)
-
-        -- PR: This is an easy pull request to make so I don't have to hold onto bespoke code
-        -- But this doesn't show the "l"/"c" conversions like :registers does so needs more work
-        -- Copy of the original code with vim.fn.getregtype() added
-        fzf_lua.registers = function(opts)
-            opts = require("fzf-lua.config").normalize_opts(opts, "registers")
-            if not opts then return end
-
-            local registers = { [["]], "_", "#", "=", "_", "/", "*", "+", ":", ".", "%" }
-            for i = 0, 9 do
-                registers[#registers + 1] = tostring(i)
-            end
-
-            -- Alphabetical registers
-            for i = 65, 90 do
-                registers[#registers + 1] = string.char(i)
-            end
-
-            if type(opts.filter) == "string" or type(opts.filter) == "function" then
-                local filter = type(opts.filter) == "function" and opts.filter
-                    or function(r)
-                        return r:match(opts.filter) ~= nil
-                    end
-
-                registers = vim.tbl_filter(filter, registers)
-            end
-
-            local function register_escape_special(reg, nl)
-                if not reg then return end
-                local gsub_map = {
-                    ["\3"] = "^C", -- <C-c>
-                    ["\27"] = "^[", -- <Esc>
-                    ["\18"] = "^R", -- <C-r>
-                }
-
-                for k, v in pairs(gsub_map) do
-                    reg = reg:gsub(k, require("fzf-lua.utils").ansi_codes.magenta(v))
-                end
-
-                return not nl and reg
-                    or nl == 2 and reg:gsub("\n$", "")
-                    or reg:gsub("\n", require("fzf-lua.utils").ansi_codes.magenta("\\n"))
-            end
-
-            local entries = {}
-            for _, r in ipairs(registers) do
-                -- pcall in case of invalid data err E5108
-                local _, contents = pcall(vim.fn.getreg, r)
-                if not contents then return end
-
-                local function convert_regtype(regtype)
-                    if regtype == "V" then
-                        return "l"
-                    elseif regtype == "\22" then
-                        return "b"
-                    else
-                        return "c"
-                    end
-                end
-
-                contents = register_escape_special(contents, opts.multiline and 2 or 1)
-                local regtype = vim.fn.getregtype(r) or " "
-                if (contents and #contents > 0) or not opts.ignore_empty then
-                    -- Insert regtype here
-                    entries[#entries + 1] = string.format(
-                        "[%s] [%s] %s",
-                        require("fzf-lua.utils").ansi_codes.yellow(r),
-                        require("fzf-lua.utils").ansi_codes.blue(convert_regtype(regtype)),
-                        contents
-                    )
-                end
-            end
-
-            opts.preview = function(args)
-                local r = args[1]:match("%[(.*)%] ")
-                local _, contents = pcall(vim.fn.getreg, r)
-                return contents and register_escape_special(contents) or args[1]
-            end
-
-            require("fzf-lua.core").fzf_exec(entries, opts)
-        end
-
-        set("n", "<leader>fr", fzf_lua.registers)
 
         api.nvim_create_autocmd("VimEnter", {
             group = api.nvim_create_augroup("fzf-lua-register-ui-select", { clear = true }),

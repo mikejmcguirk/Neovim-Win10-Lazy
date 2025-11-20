@@ -11,6 +11,7 @@ local function close_floats()
     end
 end
 
+-- TODO: This should be a ctrl-w map
 api.nvim_create_user_command("CloseFloats", close_floats, {})
 
 api.nvim_create_user_command("Parse", function(cargs)
