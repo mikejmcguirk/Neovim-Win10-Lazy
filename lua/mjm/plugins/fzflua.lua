@@ -1,8 +1,8 @@
 local api = vim.api
 local set = vim.keymap.set
+
 local fzflua_opts = {
-    -- LOW: Get out of this preset
-    "telescope",
+    -- { "default-title" },
     debug = false,
     files = { no_ignore = true },
     winopts = {
@@ -12,26 +12,20 @@ local fzflua_opts = {
     },
     keymap = {
         builtin = {
-            -- Undo Telescope profile mappings
-            ["<C-u>"] = false,
             ["<C-d>"] = false,
-            -- Avoid shift maps
-            -- The ctrl maps are only bound here because ctrl-up/down are not valid
-            -- bindings in fzf
             ["<C-up>"] = "preview-page-up",
             ["<C-down>"] = "preview-page-down",
             ["<M-up>"] = "preview-up",
             ["<M-down>"] = "preview-down",
         },
         fzf = {
+            ["ctrl-q"] = "select-all+accept",
             ["ctrl-j"] = "ignore",
             ["ctrl-k"] = "kill-line",
             ["alt-j"] = "down",
             ["alt-k"] = "up",
-            -- Undo Telescope profile mappings
             ["ctrl-u"] = "unix-line-discard",
             ["ctrl-d"] = false,
-            -- Avoid shift maps
             ["alt-up"] = "preview-up",
             ["alt-down"] = "preview-down",
         },
@@ -43,17 +37,23 @@ local fzflua_opts = {
         preview_border = "FloatBorder",
         backdrop = "NormalFloat",
     },
-    fzf_opts = { ["--tiebreak"] = "length,chunk", ["--algo"] = "v2" },
+    fzf_opts = {
+        ["--algo"] = "v2",
+        ["--cycle"] = true,
+        ["--layout"] = "default",
+        ["--gutter"] = " ",
+        ["--tiebreak"] = "length,chunk",
+    },
 }
 
 return {
     "ibhagwan/fzf-lua",
-    -- LOW: Would be cool if this were lazy loaded. Could put keymaps into a table. But then how
-    -- to handle LSP setups
     dependencies = { "nvim-tree/nvim-web-devicons" },
     lazy = false,
     config = function()
         local fzf_lua = require("fzf-lua")
+        local actions = Mjm_Defer_Require("fzf-lua").actions
+
         fzf_lua.setup(fzflua_opts)
 
         api.nvim_set_hl(0, "FzfLuaScrollBorderFull", { link = "FzfLuaScrollFloatFull" })
@@ -62,11 +62,21 @@ return {
         api.nvim_set_hl(0, "FzfLuaBufFlagCur", { link = "Constant" })
         api.nvim_set_hl(0, "FzfLuaHeaderText", { link = "Constant" })
 
-        -- LOW: Define the keymaps in a table and use them as load triggers
         set("n", "<leader>ff", fzf_lua.resume)
+        set("n", "<leader>fb", function()
+            fzf_lua.buffers({ actions = { ["ctrl-d"] = { actions.buf_del, actions.resume } } })
+        end)
 
-        set("n", "<leader>fb", fzf_lua.buffers)
-        set("n", "<leader>fi", fzf_lua.files)
+        set("n", "<leader>fi", function()
+            fzf_lua.files({
+                actions = {
+                    ["enter"] = actions.file_edit_or_qf,
+                    ["ctrl-x"] = actions.file_tabedit,
+                    ["alt-q"] = actions.file_sel_to_qf,
+                },
+            })
+        end)
+
         set("n", "<leader>fr", fzf_lua.registers)
 
         set("n", "<leader>fgc", fzf_lua.git_commits)
@@ -89,19 +99,14 @@ return {
         set("n", "<leader>fQ", fzf_lua.quickfix_stack)
 
         set("n", "<leader>fm", function()
-            fzf_lua.marks({
-                marks = '[a-z"]',
-            })
+            fzf_lua.marks({ marks = '[a-z"]' })
         end)
+
         set("n", "<leader>fM", fzf_lua.marks)
         set("n", "<leader>fs", fzf_lua.spellcheck)
 
         set("n", "<leader>fh", function()
-            fzf_lua.helptags({
-                fzf_opts = {
-                    ["--tiebreak"] = "begin,chunk,length",
-                },
-            })
+            fzf_lua.helptags({ fzf_opts = { ["--tiebreak"] = "begin,chunk,length" } })
         end)
 
         ---@return boolean|nil, string
@@ -125,7 +130,7 @@ return {
         local function fuzzy_spell_correct()
             local word = vim.fn.expand("<cword>"):lower() ---@type string
             if word == "" then return vim.notify("No word under cursor", vim.log.levels.WARN) end
-            local buf = api.nvim_get_current_buf()
+            local buf = api.nvim_get_current_buf() ---@type integer
 
             local ok, dict_file = get_dict_file() ---@type boolean|nil, string
             if not ok then
@@ -140,50 +145,41 @@ return {
                     ["default"] = function(selected, _)
                         if not selected or not selected[1] then return end
 
-                        local line = api.nvim_get_current_line()
-                        local row_1, col_0 = unpack(api.nvim_win_get_cursor(0))
-                        local col_1 = col_0 + 1
-                        local search_start = math.max(1, col_1 - #word)
-                        local start_col_1 = line:find(word, search_start, false)
+                        local line = api.nvim_get_current_line() ---@type string
+                        ---@type integer, integer
+                        local row, col = unpack(api.nvim_win_get_cursor(0))
+                        local col_1 = col + 1 ---@type integer
+                        local search_start = math.max(1, col_1 - #word) ---@type integer
+                        local start_col_1 = line:find(word, search_start, false) ---@type integer?
                         if not start_col_1 then
+                            ---@type string
                             local err_msg = "Unable to find word boundary for " .. word
                             err_msg = err_msg .. " from cursor position " .. col_1
-                            return vim.notify(err_msg, vim.log.levels.ERROR)
+                            api.nvim_echo({ { err_msg } }, true, { err = true })
+                            return
                         end
 
                         if not (start_col_1 <= col_1 and col_1 < start_col_1 + #word) then
-                            return vim.notify("Invalid word position (", vim.log.levels.ERROR)
+                            api.nvim_echo({ { "Invalid word position" } }, true, { err = true })
+                            return
                         end
 
-                        local new_word = selected[1]
-                        local row_0 = row_1 - 1
-                        local start_col_0 = start_col_1 - 1
-                        local end_col_ex = start_col_0 + #word
-                        api.nvim_buf_set_text(
-                            buf,
-                            row_0,
-                            start_col_0,
-                            row_0,
-                            end_col_ex,
-                            { new_word }
-                        )
-
-                        api.nvim_win_set_cursor(0, { row_1, col_0 })
-                        -- Doesn't display for whatever reason
-                        -- local msg = 'Replaced "' .. word .. '" with "' .. new_word .. '"'
-                        -- api.nvim_echo({ { msg } }, true, {})
+                        local new_word = selected[1] ---@type string
+                        local row_0 = row - 1 ---@type integer
+                        local start_col = start_col_1 - 1 ---@type integer
+                        local fin_col = start_col + #word ---@type integer
+                        api.nvim_buf_set_text(buf, row_0, start_col, row_0, fin_col, { new_word })
+                        api.nvim_win_set_cursor(0, { row, col })
                     end,
                     ["ctrl-w"] = function(_, _)
+                        ---@type string
                         local spellfile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add"
                         vim.fn.writefile({ word }, spellfile, "a")
                         api.nvim_cmd({ cmd = "mkspell", args = { spellfile }, bang = true }, {})
-                        -- Doesn't display for whatever reason
-                        -- local msg = 'Added new word "' .. word .. '" to spellfile as valid'
-                        -- api.nvim_echo({ { msg } }, true, {})
                     end,
                 },
                 -- FUTURE: Would be cool if the previewer tied into wordnet
-                previewer = false,
+                previewer = nil,
                 fzf_opts = {
                     ["--query"] = word,
                     ["--tiebreak"] = "length",
