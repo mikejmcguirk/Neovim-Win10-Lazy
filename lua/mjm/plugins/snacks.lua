@@ -4,7 +4,7 @@ local tmux_status = vim.api.nvim_create_augroup(group, {}) ---@type integer
 
 ---@param cmd_parts string[]
 ---@return nil
-local function if_tmux(cmd_parts)
+local function do_if_tmux(cmd_parts)
     if os.getenv("TMUX") == nil then return end
     vim.system(cmd_parts, { text = true, timeout = 1000 })
 end
@@ -30,18 +30,18 @@ return {
             toggles = { dim = false, git_signs = false, mini_diff_signs = false },
             win = { width = 106, style = "zen" },
             on_open = function()
-                if_tmux({ "tmux", "set", "status", "off" })
+                do_if_tmux({ "tmux", "set", "status", "off" })
                 vim.api.nvim_clear_autocmds({ group = group })
                 -- Don't rely on the on_close callback to re-open the tmux statusline
                 vim.api.nvim_create_autocmd({ "VimLeave" }, {
                     group = tmux_status,
                     callback = function()
-                        if_tmux({ "tmux", "set", "status", "on" })
+                        do_if_tmux({ "tmux", "set", "status", "on" })
                     end,
                 })
             end,
             on_close = function()
-                if_tmux({ "tmux", "set", "status", "on" })
+                do_if_tmux({ "tmux", "set", "status", "on" })
                 vim.api.nvim_clear_autocmds({ group = group })
             end,
         },

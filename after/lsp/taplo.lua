@@ -9,10 +9,7 @@ return {
             schema = {
                 enabled = true,
                 catalogs = { "https://www.schemastore.org/api/json/catalog.json" },
-                cache = {
-                    memoryExpiration = 60,
-                    diskExpiration = 600,
-                },
+                cache = { memoryExpiration = 60, diskExpiration = 600 },
             },
         },
     },
