@@ -1,5 +1,6 @@
 local api = vim.api
-local ft_config = {
+
+local ft_cfg = {
     css = { "prettier" },
     go = { "gofumpt" },
     html = { "prettier" },
@@ -13,15 +14,13 @@ local ft_config = {
     typst = { "typstyle" },
 } ---@type table<string, conform.FiletypeFormatter>
 
-local fts = vim.tbl_keys(ft_config) ---@type string[]
 return {
     "stevearc/conform.nvim",
-    ft = fts,
-    opts = { formatters_by_ft = ft_config },
+    opts = { formatters_by_ft = ft_cfg },
     init = function()
         api.nvim_create_autocmd("FileType", {
-            group = api.nvim_create_augroup("conformer", { clear = true }),
-            pattern = fts,
+            group = api.nvim_create_augroup("conformer", {}),
+            pattern = vim.tbl_keys(ft_cfg),
             callback = function(ev)
                 local do_conform = function(buf)
                     require("conform").format({
@@ -49,3 +48,6 @@ return {
         })
     end,
 }
+
+-- MAYBE: https://github.com/neovim/neovim/discussions/35602
+-- Probably not, be interesting to have around
