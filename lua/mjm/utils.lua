@@ -686,18 +686,4 @@ function M.checked_mkdir_p(path, mode)
     return false, err_m
 end
 
---PR: Add to vim.fs. Faster than using fnamemodify
----@param fname string
----@param rm_all boolean
----@return string
-function M.fname_root(fname, rm_all)
-    local root = fname ---@type string
-    while true do
-        local last_dot = string.match(root, ".*()%.") ---@type integer
-        if (not last_dot) or last_dot == 1 then return root end
-        root = fname:sub(1, last_dot - 1) ---@type string
-        if not rm_all then return root end
-    end
-end
-
 return M

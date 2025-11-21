@@ -11,6 +11,7 @@ local ft_cfg = {
     query = { "format-queries" },
     sh = { "shfmt" },
     toml = { "taplo" },
+    -- TODO: Configure to remove trailing blanks
     typst = { "typstyle" },
 } ---@type table<string, conform.FiletypeFormatter>
 

@@ -32,3 +32,6 @@ require("mjm")
 
 -- BASELINE setup:
 -- - Use <esc> or <C-c> as your main mode switching key (influences multi-cursor)
+
+-- For getting filename roots, once you deal with all the necessary bookkeeping, pure Lua is
+-- slower than just using vim.fn.fnamemodify(path, ":r")
