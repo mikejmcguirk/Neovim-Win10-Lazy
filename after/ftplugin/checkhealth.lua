@@ -1,4 +1,8 @@
--- PR: This should be in the official ftplugin file
 vim.api.nvim_set_option_value("cc", "", { scope = "local" })
--- PR: This as well, because doing vim.cmd.close does not delete the buf
 vim.keymap.set("n", "q", "<cmd>bwipe<cr>", { buffer = true })
+
+-- PR: Setting window opts for health is non-trivially difficult because the _check function does
+-- not contain window info for the non-float case
+-- Manually setting a q command is trivially easy to do to overwrite the default, rather than
+-- submitting a PR to change the close command
+-- Better to bundle these changes together into a broader health refactor
