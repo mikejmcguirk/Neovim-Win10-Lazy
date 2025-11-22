@@ -1,6 +1,9 @@
 local set = vim.keymap.set
 -- https://github.com/mikejmcguirk/spec-ops
 
+-- TODO: Interesting discussion about operator pending mode here
+-- https://github.com/neovim/neovim/pull/36575
+
 -- The plugin/ file automatically sets up lazy loading
 -- vim.cmd.packadd({ vim.fn.escape("spec-ops", " "), bang = true, magic = { file = false } })
 

@@ -295,6 +295,8 @@ end)
 
 -- NOTE: Don't create a global disable here, as we can't know how it would apply to new languages
 
+-- LOW: This is filetype specific behavior and should go in ftplugin files
+
 local lua_captures = "lua-disable-hl-captures"
 api.nvim_create_autocmd("FileType", {
     group = api.nvim_create_augroup(lua_captures, { clear = true }),

@@ -314,3 +314,5 @@ lsp.enable({
 })
 
 -- TODO: Get a C LSP for reading code
+-- LOW: Would prefer to use vim.lsp.start in ftplugin files, but this creates multiple lua_ls
+-- processes, which lsp.enable does not. Would like to fix
