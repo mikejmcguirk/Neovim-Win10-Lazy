@@ -196,7 +196,7 @@ for _, m in pairs(cap_motions) do
     set(m[1], m[2], function()
         local row, col = unpack(api.nvim_win_get_cursor(0))
         api.nvim_buf_set_mark(0, "z", row, col, {})
-        return m .. "`z<cmd>delm z<cr>"
+        return m[2] .. "`z<cmd>delm z<cr>"
     end, { silent = true, expr = true })
 end
 
