@@ -8,7 +8,7 @@ local set = vim.keymap.set
 -- vim.cmd.packadd({ vim.fn.escape("spec-ops", " "), bang = true, magic = { file = false } })
 
 return {
-    dir = "~/.local/share/nvim/site/pack/dev-plugins/opt/spec-ops/",
+    dir = "~/Documents/nvim-plugin-dev/spec-ops/",
     init = function()
         ---@module "spec-ops"
         ---@type SpecOpsConfig

@@ -1,7 +1,7 @@
 -- vim.cmd.packadd({ vim.fn.escape("specialist.nvim", " "), bang = true, magic = { file = false } })
 
 return {
-    dir = "~/.local/share/nvim/site/pack/dev-plugins/opt/specialist.nvim",
+    dir = "~/Documents/nvim-plugin-dev/specialist.nvim",
 }
 
 -- TODO: The cw custom comand does not stop at delimiters like quotes
