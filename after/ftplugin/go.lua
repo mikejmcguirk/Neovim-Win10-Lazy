@@ -7,3 +7,6 @@ vim.api.nvim_set_option_value("sw", Mjm_Sw, { scope = "local" })
 vim.api.nvim_set_option_value("sts", 0, { scope = "local" })
 
 vim.keymap.set("n", "<leader>-e", "oif err!= nil {<cr>}<esc>O//<esc>")
+
+require("mjm.utils").lsp_start(0, "golangci_lint_ls")
+require("mjm.utils").lsp_start(0, "gopls")

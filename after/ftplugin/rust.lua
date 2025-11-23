@@ -35,3 +35,5 @@ end)
 vim.keymap.set("n", "<leader>-e", function()
     add_pragma("#[expect()]")
 end)
+
+require("mjm.utils").lsp_start(0, "rust_analyzer")

@@ -686,4 +686,53 @@ function M.checked_mkdir_p(path, mode)
     return false, err_m
 end
 
+-- LOW: Starting off with this hacked verison of the vim.lsp.enable wrapper code
+-- My bigger idea is that it should be possible to run vim.lsp.start({config})
+-- Notes:
+-- https://github.com/neovim/neovim/pull/36219#issuecomment-3419114076 - MariaSolOs elegy for the
+-- old nvim-lspconfig
+-- https://github.com/neovim/neovim/pull/36071#issuecomment-3404560028 - mfussenegger has the
+-- same idea I did. His code snippet:
+-- local conf = vim.lsp.config.myserver
+-- if type(conf.root_dir) == "function" then
+--     conf.root_dir(bufnr, function(root_dir)
+--         conf.root_dir = root_dir
+--         vim.lsp.start(conf)
+--     end)
+-- else
+--     vim.lsp.start(conf)
+-- end
+-- He also brings up the idea of vim.lsp.config just being a function
+-- https://github.com/neovim/neovim/pull/35182: General thoughts on project scope
+-- https://github.com/neovim/neovim/issues/34622: Decoupling root markers from LSP
+-- https://github.com/mfussenegger/nvim-dap/discussions/1530: Project root in the DAP context
+-- exrc discussion: https://github.com/neovim/neovim/issues/33214#issuecomment-3159688873
+-- https://github.com/neovim/neovim/pull/33771: Wildcards in fs.find
+-- https://github.com/neovim/neovim/pull/33320: buf local cwd
+-- https://github.com/neovim/neovim/pull/18506 (comment in here on project idea)
+-- https://github.com/neovim/neovim/pull/31031 - lsp.config/lsp.enable
+
+local function start_config(bufnr, config)
+    return vim.lsp.start(config, {
+        bufnr = bufnr,
+        reuse_client = config.reuse_client,
+        _root_markers = config.root_markers,
+    })
+end
+
+function M.lsp_start(buf, lsp)
+    if api.nvim_get_option_value("buftype", { buf = buf }) ~= "" then return end
+    local config = vim.deepcopy(vim.lsp.config[lsp], true) ---@type vim.lsp.Config
+    if type(config.root_dir) == "function" then
+        config.root_dir(buf, function(root_dir)
+            config.root_dir = root_dir
+            vim.schedule(function()
+                start_config(buf, config)
+            end)
+        end)
+    else
+        start_config(buf, config)
+    end
+end
+
 return M

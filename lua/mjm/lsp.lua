@@ -288,31 +288,3 @@ vim.api.nvim_create_autocmd("LspDetach", {
 
 vim.keymap.set("n", "gr", "<nop>")
 lsp.log.set_level(vim.log.levels.ERROR)
-
-lsp.enable({
-    -- Bash --
-    "bashls",
-    -- Go --
-    "golangci_lint_ls",
-    "gopls",
-    -- HTML/CSS --
-    "cssls",
-    "html",
-    -- Lua --
-    "lua_ls",
-    -- Markdown --
-    "markdown_oxide",
-    -- Python --
-    "pylsp",
-    "ruff",
-    -- Rust --
-    "rust_analyzer",
-    -- Toml --
-    "taplo",
-    -- Typst --
-    "tinymist",
-})
-
--- TODO: Get a C LSP for reading code
--- LOW: Would prefer to use vim.lsp.start in ftplugin files, but this creates multiple lua_ls
--- processes, which lsp.enable does not. Would like to fix
