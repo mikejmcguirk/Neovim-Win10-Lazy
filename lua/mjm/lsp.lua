@@ -134,10 +134,10 @@ local function set_lsp_maps(ev)
     local buf = ev.buf ---@type integer
 
     -- callHierarchy/incomingCalls --
-    vim.keymap.set("n", "grc", in_call, { buffer = buf })
+    vim.keymap.set("n", "grC", in_call, { buffer = buf })
 
     -- callHierarchy/outgoingCalls --
-    vim.keymap.set("n", "grC", out_call, { buffer = buf })
+    vim.keymap.set("n", "grc", out_call, { buffer = buf })
 
     -- textDocument/codeAction --
     vim.keymap.set("n", "gra", code_action, { buffer = buf })
