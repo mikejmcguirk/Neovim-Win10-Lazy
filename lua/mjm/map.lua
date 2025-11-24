@@ -74,6 +74,20 @@ set({ "n", "x" }, "}", function()
     api.nvim_cmd({ cmd = "normal", args = { args }, bang = true, mods = { keepjumps = true } }, {})
 end)
 
+----------------
+-- SET PCMARK --
+----------------
+
+set({ "n", "x" }, "<C-f>", function()
+    api.nvim_cmd({ cmd = "norm", args = { "m'" }, bang = true }, {})
+    api.nvim_cmd({ cmd = "norm", args = { "\6" }, bang = true }, {})
+end)
+
+set({ "n", "x" }, "<C-b>", function()
+    api.nvim_cmd({ cmd = "norm", args = { "m'" }, bang = true }, {})
+    api.nvim_cmd({ cmd = "norm", args = { "\2" }, bang = true }, {})
+end)
+
 ------------------
 -- TEXT OBJECTS --
 ------------------
@@ -256,6 +270,31 @@ set("n", "zB", function()
     api.nvim_set_option_value("scrolloff", 0, { scope = "local" })
     api.nvim_cmd({ cmd = "norm", args = { "zb" }, bang = true }, {})
     api.nvim_set_option_value("scrolloff", Mjm_Scrolloff, { scope = "local" })
+end)
+
+set({ "n", "x" }, "gM", "<nop>")
+-- This is more ergonomic than gM, particularly in the case where you are in an f/t motion and
+-- need to advance further up the line (just double tap <C-m>) This also starts to point toward
+-- the idea of being in the middle of an f/t motion and being able to hit <C-m> to center the
+-- cursor then re-open the motion to see new highlighting
+-- Patternful with <C-d>/<C-u>
+-- Opens gM
+-- MAYBE: It would be... extremely valuable to map H,L, and M to gH, gL, and gM, as this opens
+-- premium real-estate in normal mode. In particular, it would let me map "reverse J" to L where
+-- it belongs
+-- If I were re-doing Neovim from scratch, I would not include select mode. Or, at the very least,
+-- I would limit it somehow, like to mouse selections. Taking up gh in particular is egregious
+-- The potential blocker here is vanilla vim, though I don't think mis-wired muscle memory here
+-- would cause anything particularly destructive (the one thing to watch would be gH)
+-- A smaller issue is that this is probably not a paradigm I could use in any sort of plugin
+-- mapping
+-- There is, also, apparently an accessbility use case for select mode
+set({ "n", "x" }, "<C-m>", function()
+    if api.nvim_get_mode().blocking then
+        api.nvim_cmd({ cmd = "norm", args = { "\27" }, bang = true }, {})
+    end
+
+    api.nvim_cmd({ cmd = "norm", args = { vim.v.count .. "gM" }, bang = true }, {})
 end)
 
 -- Not silent so that the search prompting displays properly

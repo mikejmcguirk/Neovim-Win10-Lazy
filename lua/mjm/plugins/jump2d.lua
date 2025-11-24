@@ -1,3 +1,5 @@
+-- PR: Add a flag to prefer current window if the jump point is in both
+
 local jump_2d_map = "<cr>"
 return {
     "nvim-mini/mini.jump2d",
