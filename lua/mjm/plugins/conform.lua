@@ -36,8 +36,8 @@ return {
             })
         end
 
-        -- PR: Add a filetype to this window buf so I can map co to quit
-        vim.keymap.set("n", "<leader>ci", "<cmd>ConformInfo<cr>")
+        local info_toggle = "<leader>ci" ---@type string
+        vim.keymap.set("n",info_toggle, "<cmd>ConformInfo<cr>")
         vim.keymap.set("n", "<leader>co", function()
             do_conform(0)
         end)
@@ -55,6 +55,14 @@ return {
                         do_conform(ev.buf)
                     end,
                 })
+            end,
+        })
+
+        api.nvim_create_autocmd("FileType", {
+            group = api.nvim_create_augroup("conformer", {}),
+            pattern = "conform-info",
+            callback = function(ev)
+                vim.keymap.set("n", info_toggle, "<cmd>close<cr>", { buffer = ev.buf })
             end,
         })
     end,
