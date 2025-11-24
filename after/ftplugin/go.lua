@@ -8,5 +8,5 @@ vim.api.nvim_set_option_value("sts", 0, { scope = "local" })
 
 vim.keymap.set("n", "<leader>-e", "oif err!= nil {<cr>}<esc>O//<esc>")
 
-require("mjm.utils").lsp_start(0, "golangci_lint_ls")
-require("mjm.utils").lsp_start(0, "gopls")
+mjm.lsp.start(vim.lsp.config["golangci_lint_ls"], { bufnr = 0 })
+mjm.lsp.start(vim.lsp.config["gopls"], { bufnr = 0 })

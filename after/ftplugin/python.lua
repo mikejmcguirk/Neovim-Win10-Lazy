@@ -1,2 +1,2 @@
-require("mjm.utils").lsp_start(0, "pylsp")
-require("mjm.utils").lsp_start(0, "ruff")
+mjm.lsp.start(vim.lsp.config["pylsp"], { bufnr = 0 })
+mjm.lsp.start(vim.lsp.config["ruff"], { bufnr = 0 })

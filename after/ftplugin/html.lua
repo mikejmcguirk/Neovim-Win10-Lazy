@@ -1,2 +1,2 @@
 require("mjm.utils").set_buf_space_indent(0, 2)
-require("mjm.utils").lsp_start(0, "html")
+mjm.lsp.start(vim.lsp.config["html"], { bufnr = 0 })

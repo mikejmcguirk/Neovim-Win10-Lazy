@@ -1,1 +1,1 @@
-require("mjm.utils").lsp_start(0, "bashls")
+mjm.lsp.start(vim.lsp.config["bashls"], { bufnr = 0 })

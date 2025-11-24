@@ -72,4 +72,4 @@ vim.keymap.set("n", "<leader>--", function()
     add_annotation("")
 end, { buffer = true })
 
-require("mjm.utils").lsp_start(0, "lua_ls")
+mjm.lsp.start(vim.lsp.config["lua_ls"], { bufnr = 0 })

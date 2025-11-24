@@ -79,7 +79,7 @@ end
 -- Since markdown-oxide uses goto definition for link nav, we don't need gf for that purpose
 vim.keymap.set("n", "gf", toggle_checkbox)
 
-require("mjm.utils").lsp_start(0, "markdown_oxide")
+mjm.lsp.start(vim.lsp.config["markdown_oxide"], { bufnr = 0 })
 
 -- TODO: Add bullets.vim
 -- TODO: Markdown files take forever to open. Which plugin(s) are causing this?

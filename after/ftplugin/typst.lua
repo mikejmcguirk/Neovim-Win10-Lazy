@@ -1,1 +1,1 @@
-require("mjm.utils").lsp_start(0, "tinymist")
+mjm.lsp.start(vim.lsp.config["tinymist"], { bufnr = 0 })

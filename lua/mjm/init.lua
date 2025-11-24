@@ -1,6 +1,8 @@
 local api = vim.api
 local set = vim.keymap.set
 
+_G.mjm = {}
+
 _G.Mjm_Border = "single" ---@type string
 _G.Mjm_Scrolloff = 6 ---@type integer
 -- LOW: Create a more general defer require. Look at all of tj's funcs + vim._defer_require

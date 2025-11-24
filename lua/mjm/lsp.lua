@@ -118,10 +118,10 @@ vim.lsp.codelens.config({
         end)
 
         if indent > 0 then table.insert(chunks, 1, { string.rep(" ", indent), "" }) end
-        api.nvim_buf_set_extmark(buf, ns, line, 0, {
+        vim.api.nvim_buf_set_extmark(buf, ns, line, 0, {
             virt_lines = { chunks },
             virt_lines_above = true,
-            hl_mode = "replace", -- Change from default of 'combine'
+            hl_mode = "replace", -- Default: 'combine'
         })
     end,
 })
@@ -288,3 +288,65 @@ vim.api.nvim_create_autocmd("LspDetach", {
 
 vim.keymap.set("n", "gr", "<nop>")
 lsp.log.set_level(vim.log.levels.ERROR)
+
+-- TODO: vim.lsp.start should be able to take a vim.lsp.Config table directly
+-- Problem: State of how project scope is defined in Neovim is evolving. The changes you would
+-- make right now might be irrelevant to future project architecture (including deprecations of
+-- current interfaces)
+
+-- NOTES:
+-- https://github.com/neovim/neovim/issues/8610 - General project concept thoughts
+-- https://github.com/neovim/neovim/pull/35182 - Rejected vim.project PR. Contains some thoughts
+-- on project scope
+-- https://github.com/neovim/neovim/issues/34622: Decoupling root markers from LSP
+-- https://github.com/mfussenegger/nvim-dap/discussions/1530: Project root in the DAP context
+-- exrc discussion: https://github.com/neovim/neovim/issues/33214#issuecomment-3159688873
+-- https://github.com/neovim/neovim/pull/33771: Wildcards in fs.find
+-- https://github.com/neovim/neovim/issues/33318: bcd
+-- https://github.com/neovim/neovim/pull/33320: buf local cwd
+-- https://github.com/neovim/neovim/pull/18506 (comment in here on project idea)
+-- https://github.com/neovim/neovim/pull/31031 - lsp.config/lsp.enable
+-- https://github.com/neovim/neovim/issues/33214 - Project local data
+
+local M = {}
+
+---@param config vim.lsp.Config
+---@param opts vim.lsp.start.Opts?
+---@return integer? client_id
+function M.start(config, opts)
+    vim.validate("config", config, "table")
+    vim.validate("opts", opts, "table", true)
+    opts = opts or {}
+
+    -- In an actual lsp.start rewrite, local values would be created. But since this
+    -- proof-of-concept is just a wrapper for lsp.start, we need to pass along the modified opts.
+    -- Create a separate table and extend to avoid modifying the original opts table
+    local start_opts = {} ---@type vim.lsp.start.Opts
+    start_opts.bufnr = vim._resolve_bufnr(opts.bufnr) ---@type integer
+    -- From the lsp.enable logic
+    -- NOTE: Can't print an error here because comment uses ftdetect on scratch buffers
+    if api.nvim_get_option_value("buftype", { buf = start_opts.bufnr }) ~= "" then return end
+
+    -- I think it would be the most clean to deprecate start.Opts.reuse_client and only use the
+    -- value in lsp.Config. Emulate that behavior below
+    start_opts.reuse_client = config.reuse_client
+    -- The future state of what process owns root_markers and how they are accessed is still
+    -- being discussed. For now, simply use the current underscore interface
+    ---@diagnostic disable-next-line: invisible
+    start_opts._root_markers = config.root_markers
+    -- Leaving this as is. A change, IMO, would need to be based on how root_markers are handled
+    if type(config.root_dir) == "function" then
+        config.root_dir(start_opts.bufnr, function(root_dir)
+            -- NOTE: Similarly to the opts table, a re-write of lsp.start would just create locals
+            config = vim.deepcopy(config, true)
+            config.root_dir = root_dir
+            vim.schedule(function()
+                return vim.lsp.start(config, vim.tbl_deep_extend("force", opts, start_opts))
+            end)
+        end)
+    else
+        return vim.lsp.start(config, vim.tbl_deep_extend("force", opts, start_opts))
+    end
+end
+
+mjm.lsp = M
