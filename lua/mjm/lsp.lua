@@ -293,6 +293,8 @@ lsp.log.set_level(vim.log.levels.ERROR)
 -- Problem: State of how project scope is defined in Neovim is evolving. The changes you would
 -- make right now might be irrelevant to future project architecture (including deprecations of
 -- current interfaces)
+--
+-- TODO: Make a list of the issues where the work is actually happening so I can track
 
 -- NOTES:
 -- https://github.com/neovim/neovim/issues/8610 - General project concept thoughts
@@ -308,12 +310,12 @@ lsp.log.set_level(vim.log.levels.ERROR)
 -- https://github.com/neovim/neovim/pull/31031 - lsp.config/lsp.enable
 -- https://github.com/neovim/neovim/issues/33214 - Project local data
 
-local M = {}
+mjm.lsp = {}
 
 ---@param config vim.lsp.Config
 ---@param opts vim.lsp.start.Opts?
 ---@return integer? client_id
-function M.start(config, opts)
+function mjm.lsp.start(config, opts)
     vim.validate("config", config, "table")
     vim.validate("opts", opts, "table", true)
     opts = opts or {}
@@ -324,7 +326,10 @@ function M.start(config, opts)
     local start_opts = {} ---@type vim.lsp.start.Opts
     start_opts.bufnr = vim._resolve_bufnr(opts.bufnr) ---@type integer
     -- From the lsp.enable logic
-    -- NOTE: Can't print an error here because comment uses ftdetect on scratch buffers
+    -- NOTE: The comment below should actually be in lsp.start since it's a weird edge case
+    -- Do not display an error if this fails, even if not opts.silent. The comment operator runs
+    -- the ftplugin in the background on a nofile buffer. To avoid this, the user would need to
+    -- set opts.silent = true in all cases
     if api.nvim_get_option_value("buftype", { buf = start_opts.bufnr }) ~= "" then return end
 
     -- I think it would be the most clean to deprecate start.Opts.reuse_client and only use the
@@ -348,5 +353,3 @@ function M.start(config, opts)
         return vim.lsp.start(config, vim.tbl_deep_extend("force", opts, start_opts))
     end
 end
-
-mjm.lsp = M
