@@ -37,13 +37,14 @@ return {
         end
 
         local info_toggle = "<leader>ci" ---@type string
-        vim.keymap.set("n",info_toggle, "<cmd>ConformInfo<cr>")
+        vim.keymap.set("n", info_toggle, "<cmd>ConformInfo<cr>")
         vim.keymap.set("n", "<leader>co", function()
             do_conform(0)
         end)
 
+        local group = api.nvim_create_augroup("conformer", {})
         api.nvim_create_autocmd("FileType", {
-            group = api.nvim_create_augroup("conformer", {}),
+            group = group,
             pattern = fts,
             callback = function(ev)
                 local expr = "v:lua.require'conform'.formatexpr()" ---@type string
@@ -59,7 +60,7 @@ return {
         })
 
         api.nvim_create_autocmd("FileType", {
-            group = api.nvim_create_augroup("conformer", {}),
+            group = group,
             pattern = "conform-info",
             callback = function(ev)
                 vim.keymap.set("n", info_toggle, "<cmd>close<cr>", { buffer = ev.buf })
