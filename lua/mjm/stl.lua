@@ -55,17 +55,16 @@ vim.api.nvim_create_autocmd("LspProgress", {
             end_timer(ev.buf)
         end)
 
-        progress_cache[ev.buf] = pct .. name .. ": " .. values.title .. message
+        -- Prepend padding since diags are built from the default
+        progress_cache[ev.buf] = " " .. pct .. name .. ": " .. values.title .. message
         if not is_bad_mode() and api.nvim_win_get_buf(0) == ev.buf then
             vim.api.nvim_cmd({ cmd = "redraws" }, {})
         end
     end,
 })
 
-local levels = { "Error", "Warn", "Info", "Hint" } ---@type string[]
 -- local signs = Has_Nerd_Font and { "󰅚", "󰀪", "󰋽", "󰌶" } or { "E:", "W:", "I:", "H:" }
 -- LOW: Detect if a patched font is available and use symbols accordingly
-local signs = { "E:", "W:", "I:", "H:" } ---@type string[]
 
 -- NOTE: Diagnostics.lua contains the delete for the default diagnostic status cache augroup
 
@@ -82,21 +81,7 @@ vim.api.nvim_create_autocmd("DiagnosticChanged", {
             return
         end
 
-        local counts = {} ---@type table<integer,integer>
-        for _, d in pairs(ev.data.diagnostics) do
-            counts[d.severity] = (counts[d.severity] or 0) + 1
-        end
-
-        local diag_str = "" ---@type string
-        for i = 1, 4 do
-            local count = counts[i] or 0 ---@type integer
-            if count > 0 then
-                diag_str = diag_str
-                    .. string.format("%%#Diagnostic%s#%s%d%%* ", levels[i], signs[i], count)
-            end
-        end
-
-        diag_cache[ev.buf] = diag_str or nil
+        diag_cache[ev.buf] = vim.diagnostic.status(ev.buf)
         if not is_bad_mode() then vim.api.nvim_cmd({ cmd = "redraws" }, {}) end
     end),
 })
