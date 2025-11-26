@@ -174,5 +174,30 @@ vim.api.nvim_create_autocmd({ "BufNew", "BufReadPre" }, {
     end,
 })
 
+---@param args string
+local function scratch_cmd(args)
+    local output = vim.fn.execute(args) ---@type string
+
+    -- MID: This feels like enough for a convenience function
+    api.nvim_cmd({ cmd = "tabnew" }, {})
+    local tabnew_buf = api.nvim_get_current_buf() ---@type integer
+    if mjm.util.is_buf_empty_noname(tabnew_buf) then
+        api.nvim_set_option_value("bufhidden", "wipe", { buf = tabnew_buf })
+    end
+
+    local buf = vim.api.nvim_get_current_buf() ---@type integer
+    -- MID: This also feels like something that can be broken out
+    vim.api.nvim_set_option_value("buftype", "nofile", { buf = buf })
+    vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
+    vim.api.nvim_set_option_value("swapfile", false, { buf = buf })
+    vim.api.nvim_set_option_value("buflisted", false, { buf = buf })
+    vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(output, "\n"))
+    vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
+end
+
+vim.api.nvim_create_user_command("ScratchCmd", function(opts)
+    scratch_cmd(opts.args)
+end, { nargs = "+" })
+
 -- LOW: Redo the Abolish subvert cmd with the preview handler
 -- Does this plugin already exist?

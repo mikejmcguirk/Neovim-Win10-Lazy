@@ -1,6 +1,8 @@
 -- From mini.jump2D. Extremely useful
 -- local max_width = vim.o.columns * math.max(vim.o.cmdheight - 1, 0) + vim.v.echospace
 
+mjm.util = {}
+
 local api = vim.api
 local fn = vim.fn
 local uv = vim.uv
@@ -92,7 +94,7 @@ end
 
 ---@param buf integer
 ---@return boolean
-local function is_buf_empty_noname(buf)
+function mjm.util.is_buf_empty_noname(buf)
     if #api.nvim_buf_get_name(buf) > 0 then return false end
     local lines = api.nvim_buf_get_lines(buf, 0, -1, false) ---@type string[]
     if #lines > 1 or #lines[1] > 0 then return false end
@@ -140,7 +142,7 @@ function M.open_buf(source, opts)
         api.nvim_cmd({ cmd = "tabnew" }, {})
         local tabnew_win = api.nvim_get_current_win() ---@type integer
         local tabnew_buf = api.nvim_win_get_buf(tabnew_win) ---@type integer
-        if is_buf_empty_noname(tabnew_buf) then
+        if mjm.util.is_buf_empty_noname(tabnew_buf) then
             api.nvim_set_option_value("bufhidden", "wipe", { buf = tabnew_buf })
         end
     end
