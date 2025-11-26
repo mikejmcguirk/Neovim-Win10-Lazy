@@ -108,6 +108,35 @@ set("x", "a_", "<cmd>norm! ggoVG<cr>")
 -- WINDOW MANAGEMENT --
 -----------------------
 
+-- MID: https://github.com/neovim/neovim/issues/36659
+for _, map in ipairs({ "<C-w>e", "<C-w><C-e>" }) do
+    vim.keymap.set("n", map, function()
+        local win = api.nvim_get_current_win() ---@type integer
+        local config = vim.api.nvim_win_get_config(win) ---@type vim.api.keyset.win_config_ret
+        if not (config.relative and config.relative ~= "") then
+            vim.api.nvim_echo({ { "Current window is not floating" } }, false, {})
+            return
+        end
+
+        local buf = vim.api.nvim_win_get_buf(win) ---@type integer
+        vim.api.nvim_set_option_value("bufhidden", "", { buf = buf })
+        local to_split = (function()
+            if vim.v.count > 0 then
+                local winnr = math.min(vim.v.count, fn.winnr("$")) ---@type integer
+                return vim.fn.win_getid(winnr)
+            end
+
+            -- LOW: How to handle other origin conditions?
+            return config.relative == "win" and config.win or vim.fn.win_getid(1)
+        end)() ---@type integer
+
+        ---@type "above"|"below"|"left"|"right"
+        local split = vim.api.nvim_get_option_value("splitright", {}) and "right" or "left"
+        api.nvim_win_close(win, true)
+        api.nvim_open_win(buf, true, { win = to_split, split = split })
+    end)
+end
+
 local tmux_cmd_map = { h = "L", j = "D", k = "U", l = "R" } ---@type table<string, string>
 
 ---@param dir string
