@@ -295,11 +295,11 @@ end)
 
 -- TODO: This issue seems to be helped by not eagly disably captures
 -- https://github.com/neovim/neovim/issues/35575
-
 -- NOTE: Don't create a global disable here, as we can't know how it would apply to new languages
 -- NOTE: Only disable treesitter captures if they produce bad colors. Squeezing perf out of
 -- disabling captures is not worth the maintenance cost
--- LOW: This is filetype specific behavior and should go in ftplugin files
+-- LOW: Once we no longer need to tie this code to resolving the nowrap issue, move this out into
+-- ftplugin files, since this is filetype specific behavior
 
 api.nvim_create_autocmd("FileType", {
     group = api.nvim_create_augroup("mjm-lua-disable-hl-captures", {}),

@@ -3,17 +3,6 @@ local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 local api = vim.api
 local fn = vim.fn
 
-local function close_floats()
-    for _, win in pairs(fn.getwininfo()) do
-        local id = win.winid
-        local config = api.nvim_win_get_config(id)
-        if config.relative and config.relative ~= "" then api.nvim_win_close(id, false) end
-    end
-end
-
--- TODO: This should be a ctrl-w map
-api.nvim_create_user_command("CloseFloats", close_floats, {})
-
 api.nvim_create_user_command("Parse", function(cargs)
     print(vim.inspect(api.nvim_parse_cmd(cargs.args, {})))
 end, { nargs = "+" })

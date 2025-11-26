@@ -139,6 +139,18 @@ for _, map in ipairs({ "<C-w>e", "<C-w><C-e>" }) do
     end)
 end
 
+local function close_floats()
+    for _, win in ipairs(api.nvim_tabpage_list_wins(0)) do
+        local config = api.nvim_win_get_config(win) ---@type vim.api.keyset.win_config_ret
+        if config.relative and config.relative ~= "" then api.nvim_win_close(win, false) end
+    end
+end
+
+-- MAYBE: The built-ins do not map, say <C-w>gf holding ctrl the whole way through. If this
+-- becomes a problem here, can adjust
+vim.keymap.set("n", "<C-w>ge", close_floats)
+api.nvim_create_user_command("CloseFloats", close_floats, {})
+
 local tmux_cmd_map = { h = "L", j = "D", k = "U", l = "R" } ---@type table<string, string>
 
 ---@param dir string
