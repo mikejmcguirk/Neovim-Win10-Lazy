@@ -297,9 +297,14 @@ end)
 
 -- LOW: This is filetype specific behavior and should go in ftplugin files
 
-local lua_captures = "lua-disable-hl-captures"
+-- TODO: For now, I am allowing all TS highlights through in order to help mitigate the issue
+-- below
+-- https://github.com/neovim/neovim/issues/35575
+-- Even so, when resolved, I'm not sure how much I want to stick with this. The perf change
+-- isn't that big, and it seems to cause me a lot of grief!
+
 api.nvim_create_autocmd("FileType", {
-    group = api.nvim_create_augroup(lua_captures, { clear = true }),
+    group = api.nvim_create_augroup("mjm-lua-disable-hl-captures", {}),
     pattern = "lua",
     once = true,
     callback = function()
@@ -315,21 +320,20 @@ api.nvim_create_autocmd("FileType", {
         -- Keep constant.builtin because it includes nil
         -- Keep variable.parameter because there are edge cases semantic tokens miss
 
-        hl_query.query:disable_capture("comment.documentation")
-        hl_query.query:disable_capture("function")
-        hl_query.query:disable_capture("module.builtin")
-        hl_query.query:disable_capture("punctuation.bracket")
-        hl_query.query:disable_capture("punctuation.delimiter")
-        hl_query.query:disable_capture("variable")
-        hl_query.query:disable_capture("variable.builtin")
-        hl_query.query:disable_capture("variable.member")
-        hl_query.query:disable_capture("variable.property")
+        -- hl_query.query:disable_capture("comment.documentation")
+        -- hl_query.query:disable_capture("function")
+        -- hl_query.query:disable_capture("module.builtin")
+        -- hl_query.query:disable_capture("punctuation.bracket")
+        -- hl_query.query:disable_capture("punctuation.delimiter")
+        -- hl_query.query:disable_capture("variable")
+        -- hl_query.query:disable_capture("variable.builtin")
+        -- hl_query.query:disable_capture("variable.member")
+        -- hl_query.query:disable_capture("variable.property")
     end,
 })
 
-local rust_captures = "rust-disable-hl-captures"
 api.nvim_create_autocmd("FileType", {
-    group = api.nvim_create_augroup(rust_captures, { clear = true }),
+    group = api.nvim_create_augroup("mjm-rust-disable-hl-captures", {}),
     pattern = "rust",
     once = true,
     callback = function()
@@ -340,19 +344,19 @@ api.nvim_create_autocmd("FileType", {
         local hl_query = vim.treesitter.query.get("rust", "highlights")
         if not hl_query then return end
 
-        hl_query.query:disable_capture("attribute.builtin")
-        hl_query.query:disable_capture("constant.builtin")
-        hl_query.query:disable_capture("keyword.conditional")
-        hl_query.query:disable_capture("keyword.repeat")
-        hl_query.query:disable_capture("keyword.return")
-        hl_query.query:disable_capture("function")
-        hl_query.query:disable_capture("function.call")
-        hl_query.query:disable_capture("punctuation.bracket")
-        hl_query.query:disable_capture("punctuation.delimiter")
-        hl_query.query:disable_capture("type")
-        hl_query.query:disable_capture("type.builtin")
-        hl_query.query:disable_capture("variable")
-        hl_query.query:disable_capture("variable.builtin")
-        hl_query.query:disable_capture("variable.member")
+        -- hl_query.query:disable_capture("attribute.builtin")
+        -- hl_query.query:disable_capture("constant.builtin")
+        -- hl_query.query:disable_capture("keyword.conditional")
+        -- hl_query.query:disable_capture("keyword.repeat")
+        -- hl_query.query:disable_capture("keyword.return")
+        -- hl_query.query:disable_capture("function")
+        -- hl_query.query:disable_capture("function.call")
+        -- hl_query.query:disable_capture("punctuation.bracket")
+        -- hl_query.query:disable_capture("punctuation.delimiter")
+        -- hl_query.query:disable_capture("type")
+        -- hl_query.query:disable_capture("type.builtin")
+        -- hl_query.query:disable_capture("variable")
+        -- hl_query.query:disable_capture("variable.builtin")
+        -- hl_query.query:disable_capture("variable.member")
     end,
 })

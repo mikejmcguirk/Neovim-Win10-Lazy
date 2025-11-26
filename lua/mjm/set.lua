@@ -62,13 +62,7 @@ api.nvim_set_option_value("spr", true, {})
 -- For some reason, uselast needs to be manually set globally
 api.nvim_set_option_value("swb", "useopen,uselast", {})
 
--- https://github.com/neovim/neovim/pull/35536
--- https://github.com/neovim/neovim/issues/35575
--- Issue is better after this pull request, but not resolved. In this file I can see some
--- global scope settings still whited out.
--- For fts where opt_local wrap is true
--- TODO: Test this again
--- api.nvim_set_option_value("wrap", false, {  })
+api.nvim_set_option_value("wrap", false, {})
 api.nvim_set_option_value("breakindent", true, {})
 api.nvim_set_option_value("linebreak", true, {})
 
