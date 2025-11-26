@@ -226,6 +226,18 @@ return {
         end,
     },
     {
+        "nvim-treesitter/nvim-treesitter-context",
+        ft = fts,
+        -- TODO: Try with this on by default again. If it gets annoying, disable by default but
+        -- keep installed to avoid the "let's scroll until I figure out where I am" loop
+        -- MAYBE: Is using the win border line number confusing?
+        -- MAYBE: Disable rnu in context windows?
+        opts = { enable = true, separator = "─" },
+        init = function()
+            vim.keymap.set("n", "<leader>tc", "<cmd>TSContext toggle<cr>")
+        end,
+    },
+    {
         "Dkendal/nvim-treeclimber",
         init = function()
             api.nvim_set_var("treeclimber", { highlight = false })

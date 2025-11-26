@@ -34,10 +34,6 @@ vim.keymap.set("n", "<leader>zu", "<cmd>Lazy update<cr>")
 vim.keymap.set("n", "<leader>zx", "<cmd>Lazy clean<cr>")
 vim.keymap.set("n", "<leader>zz", "<cmd>Lazy<cr>")
 
--- TODO: Use-case for ts-context - When looking at unfamiliar code bases, and you are in a big
--- function, it is useful to be able to just see the function name without having to scroll up
--- to find its beginning. But if it's brought back, it needs to be togglable. Not something I
--- want to have always on. Can put it under <leader>t somewhere
 -- TODO: https://github.com/nvim-mini/mini.sessions
 -- Another mksession wrapper to try. Use case here: When working on changes, I get trapped in the
 -- close Nvim then re-open my buffers loop. So we need to make sure that toggling whether or not
