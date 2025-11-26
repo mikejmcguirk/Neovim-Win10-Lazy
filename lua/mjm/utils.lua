@@ -381,7 +381,7 @@ function M.check_word_under_cursor()
                 line = line:match("^%s*(.-)%s*$")
             end
 
-            vim.lsp.util.open_floating_preview(lines, "markdown", { border = Mjm_Border })
+            vim.lsp.util.open_floating_preview(lines, "markdown")
         end)
     end)
 end

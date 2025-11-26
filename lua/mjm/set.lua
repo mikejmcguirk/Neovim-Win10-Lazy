@@ -92,6 +92,7 @@ api.nvim_set_option_value("gcr", gcr, {})
 
 api.nvim_set_option_value("fcs", "eob: ", {})
 api.nvim_set_option_value("ru", false, {})
+api.nvim_set_option_value("winborder", "single", {})
 
 local set_group = api.nvim_create_augroup("set-group", {})
 
@@ -121,8 +122,6 @@ autoset_winopt("InsertLeave", "list", true)
 api.nvim_set_option_value("nu", true, {})
 api.nvim_set_option_value("rnu", true, {})
 api.nvim_set_option_value("cursorlineopt", "both", {})
--- LOW: Could set this as default "" then set it on filetype to prevent it from showing in
--- empty buffers. Low value for complexity though
 api.nvim_set_option_value("cc", "80,100", {})
 api.nvim_set_option_value("nuw", 5, {})
 api.nvim_set_option_value("scl", "yes:1", {})
@@ -149,5 +148,3 @@ api.nvim_create_autocmd({ "FileType" }, {
 
 -- vim.o.lazyredraw = false -- Causes unpredictable problems
 -- vim.o.startofline = false -- Makes gg/G feel weird
--- LOW: Try this again
--- vim.o.winborder = "single" -- Sets arbitrary border around Zen mode display

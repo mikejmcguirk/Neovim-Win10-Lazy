@@ -6,7 +6,7 @@ local api = vim.api
 local M = {}
 
 ---@type vim.diagnostic.Opts
-local diag_main_cfg = { float = { source = true, border = Mjm_Border }, severity_sort = true }
+local diag_main_cfg = { float = { source = true }, severity_sort = true }
 
 ---@type vim.diagnostic.Opts
 local virt_text_cfg = { virtual_lines = false, virtual_text = { current_line = true } }

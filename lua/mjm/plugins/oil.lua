@@ -16,7 +16,7 @@ return {
     ---@type oil.SetupOpts
     opts = {
         columns = { "size", "permissions" },
-        float = { border = Mjm_Border, padding = 3 },
+        float = { padding = 3 },
         keymaps = {
             ["`"] = { "actions.parent", mode = "n" }, --- Patternful with vinegar mapping
             ["~"] = { "actions.open_cwd", mode = "n" }, --- Vinegar style mapping
@@ -47,8 +47,6 @@ return {
             ["<C-c>"] = false,
             ["_"] = false,
         },
-        keymaps_help = { border = Mjm_Border },
-        ssh = { border = Mjm_Border },
         view_options = { show_hidden = true },
         watch_for_changes = true,
     },

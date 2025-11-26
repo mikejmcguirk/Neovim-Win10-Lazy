@@ -6,7 +6,6 @@ local fzflua_opts = {
     debug = false,
     files = { no_ignore = true },
     winopts = {
-        border = Mjm_Border,
         width = 0.91,
         preview = { horizontal = "right:60%", winopts = { number = true } },
     },

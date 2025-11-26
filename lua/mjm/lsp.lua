@@ -179,9 +179,7 @@ local function set_lsp_maps(ev)
     end
 
     -- textDocument/hover --
-    vim.keymap.set("n", "K", function()
-        lsp.buf.hover({ border = Mjm_Border })
-    end, { buffer = buf })
+    -- Default border now set with winborder
 
     -- textDocument/implementation --
     vim.keymap.set("n", "gri", implementation)
@@ -237,9 +235,7 @@ local function set_lsp_maps(ev)
     end
 
     -- textDocument/signatureHelp --
-    vim.keymap.set({ "i", "s" }, "<C-S>", function()
-        lsp.buf.signature_help({ border = Mjm_Border })
-    end, { buffer = buf })
+    -- Border supplied with winborder
 
     -- textDocument/typeDefinition --
     vim.keymap.set("n", "grt", typedef, { buffer = buf })
