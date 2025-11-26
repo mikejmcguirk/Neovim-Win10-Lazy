@@ -1,1 +1,1 @@
--- TODO: Get a c lsp for reading code
+mjm.lsp.start(vim.lsp.config["clangd"], { bufnr = 0 })
