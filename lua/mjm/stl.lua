@@ -1,7 +1,6 @@
 local api = vim.api
 
-_G.Mjm_Stl = {}
-
+local buf_cache = {} ---@type table<integer, string>
 local diag_cache = {} ---@type table<integer,string>
 local lsp_cache = {} ---@type table<integer,string>
 local mode = "n" ---@type string -- ModeChanged does not grab the initial set to normal mode
@@ -10,14 +9,17 @@ local timers = {} ---@type table<integer,uv.uv_timer_t>
 
 -- NOTE: Evaluating the statusline initiates textlock. As much of the calculation as possible
 -- should be performed outside the eval func. The eval func should also not be triggered
--- unnecessarily in insert mode
+-- unnecessarily in insert mode, as this creates noticeable stutter
 
-local stl_events = vim.api.nvim_create_augroup("stl-events", {}) ---@type integer
+local stl_events = api.nvim_create_augroup("mjm-stl-events", {}) ---@type integer
+---@return boolean
 local is_bad_mode = function()
     return string.match(mode, "[csSiR]")
 end
 
-vim.api.nvim_create_autocmd("LspProgress", {
+-- LOW: There's a bunch of little corner cases you could handle in here, but I haven't seen them
+-- matter in practice
+api.nvim_create_autocmd("LspProgress", {
     group = stl_events,
     callback = function(ev)
         if not (ev.data and ev.data.client_id) then return end
@@ -48,145 +50,201 @@ vim.api.nvim_create_autocmd("LspProgress", {
             progress_cache[ev.buf] = nil
             vim.schedule(function()
                 if not is_bad_mode() and api.nvim_win_get_buf(0) == ev.buf then
-                    vim.api.nvim_cmd({ cmd = "redraws" }, {})
+                    api.nvim_cmd({ cmd = "redraws" }, {})
                 end
             end)
 
             end_timer(ev.buf)
         end)
 
-        -- Prepend padding since diags are built from the default
-        progress_cache[ev.buf] = " " .. pct .. name .. ": " .. values.title .. message
+        progress_cache[ev.buf] = pct .. name .. ": " .. values.title .. message
         if not is_bad_mode() and api.nvim_win_get_buf(0) == ev.buf then
-            vim.api.nvim_cmd({ cmd = "redraws" }, {})
+            api.nvim_cmd({ cmd = "redraws" }, {})
         end
     end,
 })
 
--- local signs = Has_Nerd_Font and { "󰅚", "󰀪", "󰋽", "󰌶" } or { "E:", "W:", "I:", "H:" }
--- LOW: Detect if a patched font is available and use symbols accordingly
+local levels = { "Error", "Warn", "Info", "Hint" } ---@type string[]
+local signs = Has_Nerd_Font and { "󰅚 ", "󰀪 ", "󰋽 ", "󰌶 " }
+    or { "E:", "W:", "I:", "H:" } ---@type string[]
 
 -- NOTE: Diagnostics.lua contains the delete for the default diagnostic status cache augroup
-
--- FUTURE: Verify if this is still needed
--- Per mini.Statusline - Needs to be schedule-wrapped due to a possible crash when running
--- redraws on detach after bufwipeout - https://github.com/neovim/neovim/issues/32349
--- The issue comments say this was fixed. Perhaps the wrap is kept in the mini code for
--- compatibility
-vim.api.nvim_create_autocmd("DiagnosticChanged", {
+-- MID: Show whited out diag counts in the inactive stl
+-- MAYBE: mini.statusline schedule wraps its diagnostic update because of something to do with
+-- invalid buffer data. Unsure if the underlying issue is resolved. Trying without here since we
+-- check buffer validity at the top. If it breaks again, set the callback to a schedule wrap and
+-- re-research the issue
+api.nvim_create_autocmd("DiagnosticChanged", {
     group = stl_events,
-    callback = vim.schedule_wrap(function(ev)
-        if not vim.api.nvim_buf_is_valid(ev.buf) then
+    callback = function(ev)
+        if api.nvim_buf_is_valid(ev.buf) then
+            -- Cannot use the builtin because it runs get_diagnostics fresh
+            local counts = {} ---@type table<integer,integer>
+            for _, d in pairs(ev.data.diagnostics) do
+                counts[d.severity] = (counts[d.severity] or 0) + 1
+            end
+
+            local diag_str = "" ---@type string
+            for i = 1, 4 do
+                local count = counts[i] or 0 ---@type integer
+                if count > 0 then
+                    diag_str = diag_str
+                        .. string.format("%%#Diagnostic%s#%s%d%%* ", levels[i], signs[i], count)
+                end
+            end
+
+            diag_cache[ev.buf] = diag_str
+        else
             diag_cache[ev.buf] = nil
-            return
         end
 
-        diag_cache[ev.buf] = vim.diagnostic.status(ev.buf)
-        if not is_bad_mode() then vim.api.nvim_cmd({ cmd = "redraws" }, {}) end
-    end),
+        -- LOW: Checking based on ev.buf being the current buf produces inconsistent results. Why?
+        if not is_bad_mode() then api.nvim_cmd({ cmd = "redraws" }, {}) end
+    end,
 })
 
--- LOW: This does not catch leaving cmd mode after confirming a substitution
-vim.api.nvim_create_autocmd("ModeChanged", {
+api.nvim_create_autocmd("ModeChanged", {
     group = stl_events,
     callback = function()
         ---@diagnostic disable: undefined-field
         if vim.v.event.new_mode == mode then return end
-
         mode = vim.v.event.new_mode
-        vim.api.nvim_cmd({ cmd = "redraws" }, {})
+        api.nvim_cmd({ cmd = "redraws" }, {})
     end,
 })
 
 -- From mini.statusline - Schedule wrap because the server is still listed on LspDetach
-vim.api.nvim_create_autocmd({ "LspAttach", "LspDetach" }, {
+api.nvim_create_autocmd({ "LspAttach", "LspDetach" }, {
     group = stl_events,
     callback = vim.schedule_wrap(function(ev)
-        if not vim.api.nvim_buf_is_valid(ev.buf) then
+        if api.nvim_buf_is_valid(ev.buf) then
+            local clients = vim.lsp.get_clients({ bufnr = ev.buf }) ---@type vim.lsp.Client[]
+            lsp_cache[ev.buf] = (clients and #clients > 0) and string.format("[%d]", #clients)
+                or nil
+        else
             lsp_cache[ev.buf] = nil
-            return
         end
 
-        local clients = vim.lsp.get_clients({ bufnr = ev.buf }) ---@type vim.lsp.Client[]
-        lsp_cache[ev.buf] = (clients and #clients > 0) and string.format("[%d]", #clients) or nil
-
-        vim.api.nvim_cmd({ cmd = "redraws" }, {})
+        api.nvim_cmd({ cmd = "redraws" }, {})
     end),
 })
 
--- local format_icons = Has_Nerd_Font and { unix = "", dos = "", mac = "" }
---     or { unix = "unix", dos = "dos", mac = "mac" }
-local format_icons = { unix = "unix", dos = "dos", mac = "mac" } ---@type string[]
+---@type string[]
+local format_icons = Has_Nerd_Font and { unix = "", dos = "", mac = "" }
+    or { unix = "unix", dos = "dos", mac = "mac" }
 
--- LOW: This should pre-allocate the table with NILs
+local bt_map = {
+    [""] = "",
+    acwrite = "[acw] ",
+    help = "[h] ",
+    nofile = "[nf] ",
+    nowrite = "[nw] ",
+    prompt = "[p] ",
+    quickfix = "[qf] ",
+    terminal = "[term] ",
+} ---@type table<string, string>
+
+local function create_buf_str(buf)
+    local fenc = api.nvim_get_option_value("fenc", { buf = buf }) ---@type string
+    ---@type string
+    local encoding = #fenc > 0 and fenc or api.nvim_get_option_value("enc", { scope = "global" })
+
+    local fmt = format_icons[api.nvim_get_option_value("ff", { buf = buf })] ---@type string
+    local bt = bt_map[api.nvim_get_option_value("bt", { buf = buf })] ---@type string
+    local ft = api.nvim_get_option_value("ft", { buf = buf }) ---@type string
+    local bt_ft = bt .. ft ---@type string
+    local fmt_bt_ft = #bt_ft > 0 and " " .. bt_ft or ""
+
+    return encoding .. " | " .. fmt .. " |" .. fmt_bt_ft .. " "
+end
+
+-- LOW: This does not address the case where a float is converted to a non-float. Can look at this
+-- more if this case becomes more frequent
+api.nvim_create_autocmd("BufWinEnter", {
+    group = stl_events,
+    callback = function(ev)
+        local win = api.nvim_get_current_win() ---@type integer
+        local config = api.nvim_win_get_config(win) ---@type vim.api.keyset.win_config_ret
+        if config.relative and config.relative ~= "" then return end
+
+        buf_cache[ev.buf] = create_buf_str(ev.buf)
+        api.nvim_cmd({ cmd = "redraws" }, {})
+    end,
+})
+
+-- MAYBE: Mixed feelings about this because, early exit or not, it triggers on every completion
+-- popup. Still better, I suppose, than re-generating the buf options every keystroke
+api.nvim_create_autocmd("OptionSet", {
+    group = stl_events,
+    callback = function(ev)
+        local buf = ev.buf ~= 0 and ev.buf or api.nvim_get_current_buf() ---@type integer
+        if not buf_cache[buf] then return end
+        local watched = { "fileencoding", "encoding", "fileformat", "buftype" } ---@type string[]
+        if not vim.tbl_contains(watched, ev.match) then return end
+
+        buf_cache[buf] = create_buf_str(buf)
+        api.nvim_cmd({ cmd = "redraws" }, {})
+    end,
+})
+
+api.nvim_create_autocmd("BufDelete", {
+    group = stl_events,
+    callback = function(ev)
+        require("mjm.utils").do_when_idle(function()
+            buf_cache[ev.buf] = nil
+        end)
+    end,
+})
+
+_G.Mjm_Stl = {}
+
+-- LOW: Now that everything is cached, worth re-exploring doing this based on real-time evals
+-- rather than re-making the string each time
+-- In theory, it should be possible to set certain elements to be static and only redraw when
+-- needed. In practice, certain things seem to always fall through the cracks. In the interest of
+-- sanity, and because the stl performs fairly cleanly as is, am willing to accept a certain level
+-- of compromise on "over-rendering" the stl to avoid having to over-think every edge case
+---@return string
 function Mjm_Stl.active()
-    local stl = {} ---@type string[]
-    local buf = vim.api.nvim_get_current_buf() ---@type integer
+    local stl = { nil, nil, nil, "%=%*", nil, nil } ---@type string[]
+    local buf = api.nvim_get_current_buf() ---@type integer
     local bad_mode = is_bad_mode() ---@type boolean
 
     local head = vim.g.gitsigns_head or "" ---@type string
     local diffs = vim.b.gitsigns_status or "" ---@type string
-    stl[#stl + 1] = "%#stl_a# " .. head .. " " .. diffs .. "%* "
+    stl[1] = "%#stl_a# " .. head .. " " .. diffs .. "%* "
 
-    stl[#stl + 1] = "%#stl_b# %m %<%f [" .. mode .. "] %*"
+    stl[2] = "%#stl_b# %m %f [" .. mode .. "] %*"
 
-    -- I have update_in_insert for diags set to false, so avoid showing stale data
+    -- update_in_insert for diags set to false. Avoid showing stale data
     local diags = (not bad_mode) and (diag_cache[buf] or "") or "" ---@type string
     local lsps = lsp_cache[buf] or "" ---@type string
     ---@type string
     local progress = (progress_cache[buf] and not bad_mode) and progress_cache[buf] or ""
-    stl[#stl + 1] = " %#stl_c#" .. lsps .. " " .. diags .. "%<" .. progress .. "%*"
+    stl[3] = " %#stl_c#" .. lsps .. " " .. diags .. "%<" .. progress .. "%*"
 
-    stl[#stl + 1] = "%=%*"
-
-    -- LOW: Would prefer if this info were cached, but unsure how to do so without creating more
-    -- work than what's currently here. The issue is making sure we don't cache the contents of
-    -- popup bufs
-    ---@type string
-    local encoding = vim.api.nvim_get_option_value("encoding", { scope = "global" })
-    local format = vim.api.nvim_get_option_value("fileformat", { buf = buf }) ---@type string
-    local fmt = format_icons[format] ---@type string
-    local ft = vim.api.nvim_get_option_value("ft", { buf = buf }) ---@type string
-    local buftype = vim.api.nvim_get_option_value("buftype", { buf = buf }) ---@type string
-    if buftype == "" then
-        buftype = buftype
-    elseif buftype == "nofile" then
-        buftype = "[nf] "
-    elseif buftype == "nowrite" then
-        buftype = "[nw] "
-    else
-        buftype = "[" .. string.sub(buftype, 1, 1) .. "] "
-    end
-
-    stl[#stl + 1] = "%#stl_c# " .. encoding .. " | " .. fmt .. " | " .. buftype .. ft .. " %*"
+    stl[5] = "%#stl_c#" .. (buf_cache[buf] or "") .. "%*"
 
     local winnr = api.nvim_win_get_number(0) ---@type integer
-    stl[#stl + 1] = "%#stl_b# [" .. winnr .. "] %p%%" .. " %*%#stl_a# %l/%L | %c %*"
-    -- Keep in reserve for rancher debugging
-    -- local alt_win = vim.fn.winnr("#") ---@type integer
-    -- ---@type string
-    -- local alt_win_disp = (alt_win and alt_win ~= winnr) and (" | #" .. alt_win) or ""
-    -- ---@type string
-    -- local ba = "%#stl_b# [" .. winnr .. "] %p%%" .. alt_win_disp .. " %*%#stl_a# %l/%L | %c %*"
-    -- stl[#stl + 1] = ba
+    stl[6] = "%#stl_b# [" .. winnr .. "] %p%%" .. " %*%#stl_a# %l/%L | %c %*"
 
     return table.concat(stl, "")
 end
 
--- LOW: Show the stack nr in the qf stl
--- LOW: Show diagnostics in inactive windows whited out
-
+---@return string
 function Mjm_Stl.inactive()
     return "%#stl_b# %m %t %*%= %#stl_b# [" .. api.nvim_win_get_number(0) .. "] %p%% %*"
 end
 
-vim.api.nvim_set_option_value("showmode", false, { scope = "global" })
-vim.api.nvim_set_var("qf_disable_statusline", 1)
-
-local eval = "(nvim_get_current_win()==#g:actual_curwin || &laststatus==3)"
+-- LOW: Show the stack nr in the qf stl. This g:var controls an ftplugin that sets based on a
+-- setlocal, so I could just re-apply that idea
+api.nvim_set_var("qf_disable_statusline", 1)
+api.nvim_set_option_value("smd", false, {})
+local eval = "(nvim_get_current_win()==#g:actual_curwin || &laststatus==3)" ---@type string
+---@type string
 local stl_str = "%{%" .. eval .. " ? v:lua.Mjm_Stl.active() : v:lua.Mjm_Stl.inactive()%}"
-vim.api.nvim_set_option_value("stl", stl_str, { scope = "global" })
+api.nvim_set_option_value("stl", stl_str, { scope = "global" })
 
--- LOW: Build a character index component, even if it's only held in reserve
--- LOW: If you open a buf, detach the LSP, then re-attach it, progress messages don't show properly
--- - (in general LSP progress has been the biggest challenge here)
+-- LOW: Build a character index component for spec-ops debugging
+-- LOW: Re-check if the virtual column component is usable for spec-ops debugging or if I need to
+-- build my own. That might be tough though because you have to binary search each cursor movement
