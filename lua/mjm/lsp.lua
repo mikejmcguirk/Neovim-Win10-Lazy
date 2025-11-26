@@ -322,9 +322,9 @@ function mjm.lsp.start(config, opts)
 
     -- In an actual lsp.start rewrite, local values would be created. But since this
     -- proof-of-concept is just a wrapper for lsp.start, we need to pass along the modified opts.
-    -- Create a separate table and extend to avoid modifying the original opts table
-    local start_opts = {} ---@type vim.lsp.start.Opts
-    start_opts.bufnr = vim._resolve_bufnr(opts.bufnr) ---@type integer
+    -- Create a separate table to avoid modifying the original
+    local start_opts = vim.deepcopy(opts, true) ---@type vim.lsp.start.Opts
+    start_opts.bufnr = vim._resolve_bufnr(start_opts.bufnr) ---@type integer
     -- From the lsp.enable logic
     -- NOTE: The comment below should actually be in lsp.start since it's a weird edge case
     -- Do not display an error if this fails, even if not opts.silent. The comment operator runs
@@ -346,10 +346,10 @@ function mjm.lsp.start(config, opts)
             config = vim.deepcopy(config, true)
             config.root_dir = root_dir
             vim.schedule(function()
-                return vim.lsp.start(config, vim.tbl_deep_extend("force", opts, start_opts))
+                return vim.lsp.start(config, start_opts)
             end)
         end)
     else
-        return vim.lsp.start(config, vim.tbl_deep_extend("force", opts, start_opts))
+        return vim.lsp.start(config, start_opts)
     end
 end
