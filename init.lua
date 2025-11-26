@@ -1,5 +1,8 @@
 require("mjm")
 
+-- MID: Would prefer that the jumplist not inherit bufs from other sessions. I'm not necessarily
+-- against just starting it fresh each time
+
 -- LOW: How to do document exports. pandoc? 2html? Is there a plugin?
 -- LOW: Commentary on surcor style resetting. https://github.com/neovim/neovim/pull/36261
 -- And also discussion: https://github.com/neovim/neovim/discussions/32540
@@ -35,3 +38,5 @@ require("mjm")
 
 -- For getting filename roots, once you deal with all the necessary bookkeeping, pure Lua is
 -- slower than just using vim.fn.fnamemodify(path, ":r")
+
+-- TEST_FILE=test/functional/autocmd/win_scrolled_resized_spec.lua make functionaltest

@@ -21,7 +21,8 @@ vim.keymap.set("n", "gK", function()
     ut.check_word_under_cursor()
 end, { buffer = 0 })
 
--- TODO: Do we go back to prettier? Good for the README use case. Bad for notes
+-- MID: Create a localleader mapping in Conform for prettier, keep this for running on save
+
 vim.api.nvim_create_autocmd("BufWritePre", {
     buffer = 0,
     callback = function(ev)
@@ -80,8 +81,5 @@ end
 vim.keymap.set("n", "gf", toggle_checkbox)
 
 mjm.lsp.start(vim.lsp.config["markdown_oxide"], { bufnr = 0 })
-
--- TODO: Add bullets.vim
--- TODO: Markdown files take forever to open. Which plugin(s) are causing this?
 
 -- MAYBE: Potential friction point: Bullets overrides autopairs <cr> mapping

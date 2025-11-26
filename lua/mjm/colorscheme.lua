@@ -293,15 +293,13 @@ vim.keymap.set("n", "zS", function()
     api.nvim_cmd({ cmd = "Inspect" }, {})
 end)
 
--- NOTE: Don't create a global disable here, as we can't know how it would apply to new languages
-
--- LOW: This is filetype specific behavior and should go in ftplugin files
-
--- TODO: For now, I am allowing all TS highlights through in order to help mitigate the issue
--- below
+-- TODO: This issue seems to be helped by not eagly disably captures
 -- https://github.com/neovim/neovim/issues/35575
--- Even so, when resolved, I'm not sure how much I want to stick with this. The perf change
--- isn't that big, and it seems to cause me a lot of grief!
+
+-- NOTE: Don't create a global disable here, as we can't know how it would apply to new languages
+-- NOTE: Only disable treesitter captures if they produce bad colors. Squeezing perf out of
+-- disabling captures is not worth the maintenance cost
+-- LOW: This is filetype specific behavior and should go in ftplugin files
 
 api.nvim_create_autocmd("FileType", {
     group = api.nvim_create_augroup("mjm-lua-disable-hl-captures", {}),
@@ -320,15 +318,7 @@ api.nvim_create_autocmd("FileType", {
         -- Keep constant.builtin because it includes nil
         -- Keep variable.parameter because there are edge cases semantic tokens miss
 
-        -- hl_query.query:disable_capture("comment.documentation")
-        -- hl_query.query:disable_capture("function")
-        -- hl_query.query:disable_capture("module.builtin")
-        -- hl_query.query:disable_capture("punctuation.bracket")
-        -- hl_query.query:disable_capture("punctuation.delimiter")
-        -- hl_query.query:disable_capture("variable")
-        -- hl_query.query:disable_capture("variable.builtin")
-        -- hl_query.query:disable_capture("variable.member")
-        -- hl_query.query:disable_capture("variable.property")
+        hl_query.query:disable_capture("function")
     end,
 })
 
@@ -339,24 +329,5 @@ api.nvim_create_autocmd("FileType", {
     callback = function()
         api.nvim_set_hl(0, "@lsp.type.property.rust", {})
         api.nvim_set_hl(0, "@lsp.type.variable.rust", {})
-
-        ---@type vim.treesitter.Query?
-        local hl_query = vim.treesitter.query.get("rust", "highlights")
-        if not hl_query then return end
-
-        -- hl_query.query:disable_capture("attribute.builtin")
-        -- hl_query.query:disable_capture("constant.builtin")
-        -- hl_query.query:disable_capture("keyword.conditional")
-        -- hl_query.query:disable_capture("keyword.repeat")
-        -- hl_query.query:disable_capture("keyword.return")
-        -- hl_query.query:disable_capture("function")
-        -- hl_query.query:disable_capture("function.call")
-        -- hl_query.query:disable_capture("punctuation.bracket")
-        -- hl_query.query:disable_capture("punctuation.delimiter")
-        -- hl_query.query:disable_capture("type")
-        -- hl_query.query:disable_capture("type.builtin")
-        -- hl_query.query:disable_capture("variable")
-        -- hl_query.query:disable_capture("variable.builtin")
-        -- hl_query.query:disable_capture("variable.member")
     end,
 })

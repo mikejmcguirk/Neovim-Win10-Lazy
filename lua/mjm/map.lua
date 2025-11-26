@@ -109,6 +109,8 @@ set("x", "a_", "<cmd>norm! ggoVG<cr>")
 -----------------------
 
 -- MID: https://github.com/neovim/neovim/issues/36659
+-- LOW: Lots of little improvements and edge case handling that could be done here, but see how
+-- this is used in the wild before sinking in time
 for _, map in ipairs({ "<C-w>e", "<C-w><C-e>" }) do
     vim.keymap.set("n", map, function()
         local win = api.nvim_get_current_win() ---@type integer
