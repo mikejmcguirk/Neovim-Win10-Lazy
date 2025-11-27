@@ -155,12 +155,12 @@ local function set_lsp_maps(ev)
 
     -- textDocument/declaration --
     vim.keymap.set("n", "grd", declaration, { buffer = buf })
-    vim.keymap.set("n", "grD", peek_declaration)
+    vim.keymap.set("n", "grD", peek_declaration, { buffer = buf })
 
     -- textDocument/definition --
     if client:supports_method("textDocument/definition") then
         vim.keymap.set("n", "gd", definition, { buffer = buf })
-        vim.keymap.set("n", "gD", peek_definition)
+        vim.keymap.set("n", "gD", peek_definition, { buffer = buf })
     end
 
     -- textDocument/documentColor --
@@ -182,14 +182,14 @@ local function set_lsp_maps(ev)
     -- Default border now set with winborder
 
     -- textDocument/implementation --
-    vim.keymap.set("n", "gri", implementation)
+    vim.keymap.set("n", "gri", implementation, { buffer = buf })
     vim.keymap.set("n", "grI", peek_implementation, { buffer = buf })
 
     -- textDocument/inlayHint --
     if client:supports_method("textDocument/inlayHint") then
         vim.keymap.set("n", "grl", function()
             lsp.inlay_hint.enable(not lsp.inlay_hint.is_enabled({ buffer = buf }))
-        end)
+        end, { buffer = buf })
     else
         map_no_support("grl", client, "textDocument/inlay_hint", buf)
     end
