@@ -228,7 +228,7 @@ return {
     {
         "nvim-treesitter/nvim-treesitter-context",
         ft = fts,
-        -- TODO: Try with this on by default again. If it gets annoying, disable by default but
+        -- PENDING: Try with this on by default again. If it gets annoying, disable by default but
         -- keep installed to avoid the "let's scroll until I figure out where I am" loop
         -- MAYBE: Is using the win border line number confusing?
         -- MAYBE: Disable rnu in context windows?

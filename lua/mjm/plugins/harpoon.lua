@@ -83,5 +83,5 @@ return {
     end,
 }
 
+-- FUTURE: No work on this unless it is a significant blocker
 -- https://github.com/neovim/neovim/issues/32546 - Data storage
--- LOW: How to open marks from a list in a vsplit

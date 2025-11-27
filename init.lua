@@ -2,6 +2,7 @@ require("mjm")
 
 -- MID: Would prefer that the jumplist not inherit bufs from other sessions. I'm not necessarily
 -- against just starting it fresh each time
+-- MID: The new float statusline would be useful to show win info/buf info
 
 -- LOW: How to do document exports. pandoc? 2html? Is there a plugin?
 -- LOW: Commentary on surcor style resetting. https://github.com/neovim/neovim/pull/36261

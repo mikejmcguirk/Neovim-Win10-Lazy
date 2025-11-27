@@ -34,11 +34,6 @@ vim.keymap.set("n", "<leader>zu", "<cmd>Lazy update<cr>")
 vim.keymap.set("n", "<leader>zx", "<cmd>Lazy clean<cr>")
 vim.keymap.set("n", "<leader>zz", "<cmd>Lazy<cr>")
 
--- TODO: https://github.com/nvim-mini/mini.sessions
--- Another mksession wrapper to try. Use case here: When working on changes, I get trapped in the
--- close Nvim then re-open my buffers loop. So we need to make sure that toggling whether or not
--- to auto-reload sessions is low friction, since we don't need it all the time
-
 -- MAYBE: https://github.com/rockerBOO/awesome-neovim - So many plugins out there
 -- MAYBE: https://github.com/mrcjkb/rustaceanvim
 -- MAYBE: Dap setup?

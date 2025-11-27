@@ -222,5 +222,5 @@ return {
     end,
 }
 
--- LOW: blink-cmp-words creates blocking calls and the other dictionary plugin creats hanging
+-- LOW: blink-cmp-words creates blocking calls and the other dictionary plugin creates hanging
 -- fzf processes, so, if we want a dictionary, we have to make it

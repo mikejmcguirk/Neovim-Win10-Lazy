@@ -285,18 +285,18 @@ vim.api.nvim_create_autocmd("LspDetach", {
 vim.keymap.set("n", "gr", "<nop>")
 lsp.log.set_level(vim.log.levels.ERROR)
 
--- TODO: vim.lsp.start should be able to take a vim.lsp.Config table directly
+-- TODO: PR: vim.lsp.start should be able to take a vim.lsp.Config table directly
 -- Problem: State of how project scope is defined in Neovim is evolving. The changes you would
 -- make right now might be irrelevant to future project architecture (including deprecations of
 -- current interfaces)
 --
--- TODO: Make a list of the issues where the work is actually happening so I can track
+-- TRACKING ISSUES
+-- https://github.com/neovim/neovim/issues/33214 - Project local data
+-- https://github.com/neovim/neovim/issues/34622 - Decoupling root markers from LSP
 
 -- NOTES:
--- https://github.com/neovim/neovim/issues/8610 - General project concept thoughts
 -- https://github.com/neovim/neovim/pull/35182 - Rejected vim.project PR. Contains some thoughts
--- on project scope
--- https://github.com/neovim/neovim/issues/34622: Decoupling root markers from LSP
+-- https://github.com/neovim/neovim/issues/8610 - General project concept thoughts
 -- https://github.com/mfussenegger/nvim-dap/discussions/1530: Project root in the DAP context
 -- exrc discussion: https://github.com/neovim/neovim/issues/33214#issuecomment-3159688873
 -- https://github.com/neovim/neovim/pull/33771: Wildcards in fs.find
@@ -304,7 +304,6 @@ lsp.log.set_level(vim.log.levels.ERROR)
 -- https://github.com/neovim/neovim/pull/33320: buf local cwd
 -- https://github.com/neovim/neovim/pull/18506 (comment in here on project idea)
 -- https://github.com/neovim/neovim/pull/31031 - lsp.config/lsp.enable
--- https://github.com/neovim/neovim/issues/33214 - Project local data
 
 mjm.lsp = {}
 
