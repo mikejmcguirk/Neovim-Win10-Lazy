@@ -235,6 +235,18 @@ return {
         opts = { enable = true, separator = "─" },
         init = function()
             vim.keymap.set("n", "<leader>tc", "<cmd>TSContext toggle<cr>")
+
+            api.nvim_create_autocmd("FileType", {
+                group = api.nvim_create_augroup("mjm-ts-context-disable", {}),
+                pattern = "markdown",
+                callback = function()
+                    -- MAYBE: Not sure what else to do here since ts-context doesn't have per-
+                    -- window or per-ft disabling
+                    -- Other relevant question - How is context for md files determined to
+                    -- begin with? Could it be made to be useful?
+                    require("treesitter-context").disable()
+                end,
+            })
         end,
     },
     {
