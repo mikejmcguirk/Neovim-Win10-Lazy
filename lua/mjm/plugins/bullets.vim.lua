@@ -14,7 +14,6 @@ return {
             callback = function(ev)
                 local set = vim.keymap.set
 
-                set("n", "o", "<Plug>(bullets-newline)", { buffer = ev.buf })
                 set("i", "<cr>", "<Plug>(bullets-newline)", { buffer = ev.buf })
 
                 set("n", "<<", "<Plug>(bullets-promote)", { buffer = ev.buf })
