@@ -20,8 +20,8 @@ return {
                 set("n", ">>", "<Plug>(bullets-demote)", { buffer = ev.buf })
                 set("i", I_Dedent, "<Plug>(bullets-promote)", { buffer = ev.buf })
                 set("i", "<C-t>", "<Plug>(bullets-demote)", { buffer = ev.buf })
-                set("v", "<", "<Plug>(bullets-promote)", { buffer = ev.buf })
-                set("v", ">", "<Plug>(bullets-demote)", { buffer = ev.buf })
+                -- NOTE: Do not map promote/demote in x mode because it does not properly gv into
+                -- the old visual selection
 
                 set("n", "<C-n>", "<Plug>(bullets-renumber)", { buffer = ev.buf })
                 set("v", "<C-n>", "<Plug>(bullets-renumber)", { buffer = ev.buf })
@@ -37,5 +37,7 @@ return {
 -- new bullet
 -- - Promote/demote cannot take a non-bulleted line and add it to the list above. You have to
 -- go up, make the new bullet, then join with J
+-- - As noted above, promote/demote in visual mode does not properly handle the old visual
+-- selection
 -- MAYBE: For maps, could let default logic happen then demap, but this is simpler
 -- MAYBE: Trying to use default levels. Can edit/hack if it contradicts my old notes
