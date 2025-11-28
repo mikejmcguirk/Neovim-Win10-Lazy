@@ -4,7 +4,7 @@ local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 require("mjm.utils").set_buf_space_indent(0, 2)
 
 -- "r" in Markdown treats lines like "- some text" as comments and indents them
-Mjm_Opt_Str_Remove("fo", "r", { scope = "local" })
+mjm.opt.str_rm("fo", "r", { scope = "local" })
 api.nvim_set_option_value("cc", "", { scope = "local" })
 api.nvim_set_option_value("culopt", "number,screenline", { scope = "local" })
 api.nvim_set_option_value("siso", 12, { scope = "local" })

@@ -142,7 +142,7 @@ api.nvim_create_autocmd({ "FileType" }, {
     group = set_group,
     pattern = "*",
     callback = function(ev)
-        Mjm_Opt_Str_Remove("fo", "o", { buf = ev.buf })
+        mjm.opt.str_rm("fo", "o", { buf = ev.buf })
     end,
 })
 

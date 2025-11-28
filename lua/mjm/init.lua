@@ -20,10 +20,20 @@ function _G.Mjm_Defer_Require(path)
     })
 end
 
+mjm.opt = {}
+
+---@param opt string
+---@param new string
+---@param scope vim.api.keyset.option
+function mjm.opt.str_append(opt, new, scope)
+    local old = api.nvim_get_option_value(opt, scope) ---@type string
+    api.nvim_set_option_value(opt, old .. new, scope)
+end
+
 ---@param opt string
 ---@param out string
 ---@param scope vim.api.keyset.option
-function _G.Mjm_Opt_Str_Remove(opt, out, scope)
+function mjm.opt.str_rm(opt, out, scope)
     local old = api.nvim_get_option_value(opt, scope) ---@type string
     api.nvim_set_option_value(opt, string.gsub(old, out, ""), scope)
 end
