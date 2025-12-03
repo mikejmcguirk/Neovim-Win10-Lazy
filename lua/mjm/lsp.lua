@@ -4,15 +4,18 @@ local lsp = vim.lsp
 local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 
 local ok, fzflua = pcall(require, "fzf-lua") ---@type boolean, table
--- LOW: Whether or not to use Rancher's copen should be determined beforehand like fzflua is
-local function peek_on_list(on_list_ctx)
-    fn.setqflist({}, " ", { title = on_list_ctx.title, items = on_list_ctx.items })
+local qf_open = (function()
     local ok_w, window = pcall(require, "qf-rancher.window") ---@type boolean, QfrWins?
-    if ok_w and window then
+    return (ok_w and window) and function()
         window.open_qflist({})
-    else
+    end or function()
         api.nvim_cmd({ cmd = "copen" }, {})
     end
+end)()
+
+local function peek_on_list(on_list_ctx)
+    fn.setqflist({}, " ", { title = on_list_ctx.title, items = on_list_ctx.items })
+    qf_open()
 end ---@type function
 
 -- callHierarchy/incomingCalls --
