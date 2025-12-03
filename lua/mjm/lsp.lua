@@ -3,11 +3,11 @@ local fn = vim.fn
 local lsp = vim.lsp
 local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 
-if #fn.maparg("gO", "n") > 0 then
-    vim.keymap.del("n", "gO")
-end
+vim.keymap.set("n", "gr", "<nop>")
+if #fn.maparg("gO", "n") > 0 then vim.keymap.del("n", "gO") end
 
 local ok, fzflua = pcall(require, "fzf-lua") ---@type boolean, table
+---@type function
 local qf_open = (function()
     local ok_w, window = pcall(require, "qf-rancher.window") ---@type boolean, QfrWins?
     return (ok_w and window) and function()
@@ -17,20 +17,23 @@ local qf_open = (function()
     end
 end)()
 
+---@type function
 local function peek_on_list(on_list_ctx)
     fn.setqflist({}, " ", { title = on_list_ctx.title, items = on_list_ctx.items })
     qf_open()
-end ---@type function
+end
 
 -- callHierarchy/incomingCalls --
+---@type function
 local in_call = ok and function()
     fzflua.lsp_incoming_calls({ jump1 = false })
-end or lsp.buf.incoming_calls ---@type function
+end or lsp.buf.incoming_calls
 
 -- callHierarchy/outgoingCalls --
+---@type function
 local out_call = ok and function()
     fzflua.lsp_outgoing_calls({ jump1 = false })
-end or lsp.buf.outgoing_calls ---@type function
+end or lsp.buf.outgoing_calls
 
 -- textDocument/codeAction --
 local code_action = ok and fzflua.lsp_code_actions or lsp.buf.code_action ---@type function
@@ -40,19 +43,21 @@ local code_action = ok and fzflua.lsp_code_actions or lsp.buf.code_action ---@ty
 
 -- textDocument/declaration --
 local declaration = ok and fzflua.lsp_declarations or lsp.buf.declaration ---@type function
+---@type function
 local peek_declaration = ok and function()
     fzflua.lsp_declarations({ jump1 = false })
 end or function()
     lsp.buf.declaration({ on_list = peek_on_list })
-end ---@type function
+end
 
 -- textDocument/definition --
 local definition = ok and fzflua.lsp_definitions or lsp.buf.definition ---@type function
+---@type function
 local peek_definition = ok and function()
     fzflua.lsp_definitions({ jump1 = false })
 end or function()
     lsp.buf.definition({ on_list = peek_on_list })
-end ---@type function
+end
 
 -- textDocument/documentSymbol --
 local symbols = ok and fzflua.lsp_document_symbols or lsp.buf.document_symbol ---@type function
@@ -60,21 +65,24 @@ local symbols = ok and fzflua.lsp_document_symbols or lsp.buf.document_symbol --
 -- textDocument/implementation --
 ---@type function
 local implementation = ok and fzflua.lsp_implementations or lsp.buf.implementation
+---@type function
 local peek_implementation = ok and function()
     fzflua.lsp_implementations({ jump1 = false })
 end or function()
     lsp.buf.implementation({ on_list = peek_on_list })
-end ---@type function
+end
 
 -- textDocument/references --
+---@type function
 local references = ok and function()
     fzflua.lsp_references({ includeDeclaration = false })
 end or function()
     lsp.buf.references({ includeDeclaration = false })
-end ---@type function
+end
 
--- LOW: PR: Why am I creating a separate on_list function here? Is it something in the code that
--- should be fixed?
+-- PR: Unlike the other functions, this does not pass the full list ctx. Unsure how you change
+-- this over though without breaking configs
+---@type function
 local peek_references = ok
         and function()
             fzflua.lsp_references({ includeDeclaration = false, jump1 = false })
@@ -87,17 +95,18 @@ local peek_references = ok
                 qf_open()
             end,
         })
-    end ---@type function
+    end
 
 -- textDocument/typeDefinition --
 local typedef = ok and fzflua.lsp_typedefs or lsp.buf.type_definition ---@type function
+---@type function
 local peek_typedef = ok and function()
     fzflua.lsp_typedefs({ jump1 = false })
 end or function()
     lsp.buf.type_definition({
         on_list = peek_on_list,
     })
-end ---@type function
+end
 
 -- workspace/symbol --
 ---@type function
@@ -121,6 +130,7 @@ end
 vim.lsp.codelens.config({
     virt_text = false,
     virt_lines = function(buf, ns, line, chunks)
+        ---@type integer
         local indent = vim.api.nvim_buf_call(buf, function()
             return vim.fn.indent(line + 1)
         end)
@@ -223,7 +233,7 @@ local function set_lsp_maps(ev)
         elseif #input < 1 then
             return
         elseif string.find(input, "%s") then
-            local msg = string.format("'%s' contains spaces", input)
+            local msg = string.format("'%s' contains spaces", input) ---@type string
             api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
             return
         end
@@ -290,7 +300,6 @@ vim.api.nvim_create_autocmd("LspDetach", {
     end,
 })
 
-vim.keymap.set("n", "gr", "<nop>")
 lsp.log.set_level(vim.log.levels.ERROR)
 
 -- TODO: PR: vim.lsp.start should be able to take a vim.lsp.Config table directly
