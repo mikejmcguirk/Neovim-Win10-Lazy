@@ -2,6 +2,8 @@ return {
     "mikejmcguirk/nvim-qf-rancher",
     -- dir = "~/Documents/nvim-plugin-dev/nvim-qf-rancher/",
     init = function()
+        vim.api.nvim_set_var("qfr_auto_center", true)
+        -- vim.api.nvim_set_var("qfr_create_loclist_autocmds", false) -- For debugging
         vim.api.nvim_set_var("qfr_debug_assertions", true)
         vim.api.nvim_set_var("qfr_preview_debounce", 50)
         vim.api.nvim_set_var("qfr_preview_show_title", false)
