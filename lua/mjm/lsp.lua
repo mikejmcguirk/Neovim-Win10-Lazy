@@ -3,6 +3,10 @@ local fn = vim.fn
 local lsp = vim.lsp
 local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 
+if #fn.maparg("gO", "n") > 0 then
+    vim.keymap.del("n", "gO")
+end
+
 local ok, fzflua = pcall(require, "fzf-lua") ---@type boolean, table
 local qf_open = (function()
     local ok_w, window = pcall(require, "qf-rancher.window") ---@type boolean, QfrWins?
