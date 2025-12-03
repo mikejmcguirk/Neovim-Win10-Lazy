@@ -80,12 +80,7 @@ local peek_references = ok
             includeDeclaration = false,
             on_list = function(list)
                 fn.setqflist({}, " ", list)
-                local rancher_window = require("qf-rancher.window") ---@type QfrWins?
-                if rancher_window then
-                    rancher_window.open_qflist({})
-                else
-                    api.nvim_cmd({ cmd = "copen" }, {})
-                end
+                qf_open()
             end,
         })
     end ---@type function
