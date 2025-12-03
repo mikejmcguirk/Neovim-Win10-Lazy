@@ -60,3 +60,10 @@ return {
         end)
     end,
 }
+
+-- LOW: Do we still want to use floating buffer? It's not really a good pattern with Neovim, but
+-- one significant benefit is that you get the sense of what context you are in. If you hit open,
+-- or open split, you know where it's being done
+-- Could maybe do the cmd line attached style layout here, so it feels less arbitrary
+-- The philosophical issue is - A floating window should feel like it has an anchor point, and
+-- right now it just arbitrarily floats there, which is bad

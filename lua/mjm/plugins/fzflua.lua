@@ -199,5 +199,17 @@ return {
     end,
 }
 
+-- LOW: Command line attached/full screen layout. Starts pointing more toward the Helix-style
+-- endgame (IMO) for pickers, where they are built into the editor as an extension of the cmdline
+-- LOW: Do need to explore the snacks plugin. Issues with fzflua:
+-- - customization is clunky
+-- - mixed opinions on fuzzy finding
+-- - I'm not actually totally sure I want to be using external sys calls for searching
+--   - Related to this, one of the big original selling points of Fzflua was learning more about
+--   fzf, but that has kinda stalled, in part because customization is hard
+-- - opportunities in an alternate picker
+--   - frecency (not as big a deal to me as others, but does help)
+--   - better customization
+--   - load times
 -- LOW: Turn let g:/w:/b:/t: into pickers
 -- LOW: Make a thesaurus picker

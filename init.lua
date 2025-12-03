@@ -1,5 +1,6 @@
 require("mjm")
 
+-- MID: Why is matchparen working? I have it set to 1 in set. Do you need to do it through lazy?
 -- MID: Would prefer that the jumplist not inherit bufs from other sessions. I'm not necessarily
 -- against just starting it fresh each time
 -- MID: The new float statusline would be useful to show win info/buf info
@@ -27,6 +28,8 @@ require("mjm")
 ---------------
 
 -- https://github.com/tjdevries/lazy-require.nvim
+-- https://neo451.github.io/blog/posts/in-process-lsp-guide/
+-- - vim.pack buffers do this as well
 
 -----------------
 -- OTHER NOTES --
@@ -41,3 +44,5 @@ require("mjm")
 -- slower than just using vim.fn.fnamemodify(path, ":r")
 
 -- TEST_FILE=test/functional/autocmd/win_scrolled_resized_spec.lua make functionaltest
+
+-- https://antonk52.github.io/webdevandstuff/post/2025-11-30-diy-easymotion.html

@@ -4,6 +4,7 @@ local lsp = vim.lsp
 local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 
 local ok, fzflua = pcall(require, "fzf-lua") ---@type boolean, table
+-- LOW: Whether or not to use Rancher's copen should be determined beforehand like fzflua is
 local function peek_on_list(on_list_ctx)
     fn.setqflist({}, " ", { title = on_list_ctx.title, items = on_list_ctx.items })
     local ok_w, window = pcall(require, "qf-rancher.window") ---@type boolean, QfrWins?
@@ -26,6 +27,9 @@ end or lsp.buf.outgoing_calls ---@type function
 
 -- textDocument/codeAction --
 local code_action = ok and fzflua.lsp_code_actions or lsp.buf.code_action ---@type function
+
+-- PR: If I understand right - The location/list opts items section just uses a list of
+-- quickfix items, so you should be able to use that annotation type rather than a table[]
 
 -- textDocument/declaration --
 local declaration = ok and fzflua.lsp_declarations or lsp.buf.declaration ---@type function
@@ -62,6 +66,8 @@ end or function()
     lsp.buf.references({ includeDeclaration = false })
 end ---@type function
 
+-- LOW: PR: Why am I creating a separate on_list function here? Is it something in the code that
+-- should be fixed?
 local peek_references = ok
         and function()
             fzflua.lsp_references({ includeDeclaration = false, jump1 = false })
@@ -348,3 +354,10 @@ function mjm.lsp.start(config, opts)
         return vim.lsp.start(config, start_opts)
     end
 end
+
+-- LOW: Want to look back again into how how we are dealing with window opening certain cmds
+-- Another use case: I already have a split open that I want to goto definition into. I would like
+-- to be able to do 2gd to put the result into window 2, but cannot
+-- With this on top of the split use case, IMO there's enough there to think about it more broadly
+-- The problem of course is, you're trying to figure out how to get LSP, Nvim, and FzfLua to all
+-- talk to each other

@@ -30,6 +30,17 @@ vim.api.nvim_create_autocmd("BufWritePre", {
     end,
 })
 
+-- MID: More reliable method for creating checkboxes in insert mode
+-- Basic solution - Make sure creating a checkbox puts the cursor at the end of the line, which
+-- needs to happen in normal mode anyway, allowing <C-o>gf to work
+-- A hotkey then would work/be helpful. Would be cool if you could double it over vim.bullets
+-- promote
+-- I think that for namespacing reasons, making <C-o>gf work is preferrable, should only make a
+-- special key if it's really needed
+-- MID: Should be possible to visually select multiple lines and alter their checkbox status
+-- This case comes up more than you'd think
+-- Issue is how to handle mixed cases
+
 -- Modified from the obsidian-nvim/obsidian.nvim functions
 ---Supported checkboxes:
 --- - [ ] foo

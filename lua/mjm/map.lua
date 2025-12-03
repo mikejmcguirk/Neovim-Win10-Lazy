@@ -261,6 +261,14 @@ end
 -- SCROLLING AND JUMPING --
 ---------------------------
 
+-- MID: When you zz on a line with a virtual line on the first line, it will scroll out the
+-- virtual line.
+-- PR: This feels like some kind of issue in the core that should actually be fixed. Unsure if
+-- it's done in Lua and I can fix it, or if it needs to be done in C, which I would need to do an
+-- issue for
+-- MID: In the meantime, could try calculating the position for the scroll character
+-- MID: PR: Related to this - k does not scroll up to the virt line
+
 -- Address cursorline flickering. Purposefully do not implement the default count mechanic
 ---@param cmd string
 local function map_scroll(m, cmd)
@@ -688,6 +696,10 @@ set("c", "<C-b>", "<left>")
 set("c", "<M-b>", "<S-left>")
 
 set("c", "<M-n>", "<down>")
+
+-- MID: Worth considering mapping [] like wincmds, so you could do <C-[><C-q> to use the cpfile
+-- default, for example. It would shrink the namespace, but I'm not sure it would be practical to
+-- use anyway
 
 -- LOW: Visual mode mapping to trim whitespace from selection
 -- LOW: Re-organize these by topic

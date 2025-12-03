@@ -222,5 +222,7 @@ return {
     end,
 }
 
+-- MID: Is there not a spell source that can be used? Or does that run into the same issues as the
+-- dict source?
 -- LOW: blink-cmp-words creates blocking calls and the other dictionary plugin creates hanging
 -- fzf processes, so, if we want a dictionary, we have to make it

@@ -18,6 +18,10 @@ return {
         dashboard = { enabled = false },
         explorer = { enabled = false },
         image = { enabled = true, math = { enabled = false } },
+        -- LOW: If I am looking at one of my config Lua files in one window, and a piece of Nvim
+        -- Lua runtime code in another, the config sw of 4 is used in the Nvim config window,
+        -- producing weird results in the soruce Window. This issue does not happen if I open
+        -- a runtime window directly
         indent = { animate = { enabled = false }, scope = { enabled = false } },
         input = { enabled = false },
         notifier = { enabled = false },
