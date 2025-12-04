@@ -38,31 +38,36 @@ fts[#fts + 1] = "sh"
 
 local objects = "nvim-treesitter-textobjects"
 
+-- MID: Should be -1, 0, 1
 ---@return "start"|"center"|"fin"
 local function get_vpos()
     local vrange4 = ut.get_vrange4() ---@type Range4|nil
     if not vrange4 then
         return "center"
     end
+
     vrange4[2] = math.max(vrange4[2] - 1, 0)
     vrange4[4] = math.max(vrange4[4] - 1, 0)
 
-    local row, col = unpack(api.nvim_win_get_cursor(0))
-    local at_start = row == vrange4[1] and col == vrange4[2]
-    local at_fin = row == vrange4[3] and col == vrange4[4]
+    local row, col = unpack(api.nvim_win_get_cursor(0)) ---@type integer, integer
+    local at_start = row == vrange4[1] and col == vrange4[2] ---@type boolean
+    local at_fin = row == vrange4[3] and col == vrange4[4] ---@type boolean
 
     if at_start and not at_fin then
         return "start"
     end
+
     if (not at_start) and at_fin then
         return "fin"
     end
+
     return "center"
 end
 
 ---@param ev vim.api.keyset.create_autocmd.callback_args
 ---@return nil
 local function map_objects(ev)
+    ---@type {[1]: string, [2]:string }[]
     local select_maps = {
         { "is", "@assignment.rhs" },
         { "as", "@assignment.outer" },
@@ -94,6 +99,7 @@ local function map_objects(ev)
         end, { buffer = ev.buf })
     end
 
+    ---@type {[1]:string, [2]:string, [3]:string }[]
     local move_maps = {
         { "[s", "]s", "@assignment.outer" },
         { "[f", "]f", "@call.outer" },
@@ -101,11 +107,11 @@ local function map_objects(ev)
         { "[i", "]i", "@conditional.outer" },
         { "[m", "]m", "@function.outer" },
         { "[o", "]o", "@loop.outer" },
-        { "[,", "],", "@parameter.inner" }, -- To perform edits inside strings
+        { "[,", "],", "@parameter.inner" },
         { "[.", "].", "@return.outer" },
         -- Custom objects
         { "[#", "]#", "@preproc.outer" },
-        { '["', ']"', "@string.inner" }, -- To perform edits inside
+        { '["', ']"', "@string.inner" },
     }
 
     local move = require(objects .. ".move")
@@ -147,6 +153,7 @@ local function map_objects(ev)
         end, { buffer = ev.buf })
     end
 
+    ---@type {[1]:string, [2]:string, [3]:string }[]
     local swap_maps = {
         { "(s", ")s", "@assignment.outer" },
         { "(f", ")f", "@call.outer" },
@@ -213,6 +220,7 @@ return {
                 pattern = fts,
                 callback = function(ev)
                     vim.treesitter.start(ev.buf)
+                    ---@type string
                     local indentexpr = "v:lua.require'nvim-treesitter'.indentexpr()"
                     api.nvim_set_option_value("indentexpr", indentexpr, { buf = ev.buf })
                 end,
