@@ -132,7 +132,9 @@ api.nvim_create_autocmd("CmdlineEnter", {
     group = set_group,
     callback = function()
         api.nvim_set_option_value("rnu", false, { win = api.nvim_get_current_win() })
-        if not vim.tbl_contains({ "@", "-" }, vim.v.event.cmdtype) then vim.cmd("redraw") end
+        if not vim.tbl_contains({ "@", "-" }, vim.v.event.cmdtype) then
+            vim.cmd("redraw")
+        end
     end,
 })
 

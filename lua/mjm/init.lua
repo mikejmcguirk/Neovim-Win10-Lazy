@@ -27,7 +27,8 @@ mjm.opt = {}
 ---@param scope vim.api.keyset.option
 function mjm.opt.str_append(opt, new, scope)
     local old = api.nvim_get_option_value(opt, scope) ---@type string
-    api.nvim_set_option_value(opt, old .. new, scope)
+    local new_val = old .. new ---@type string
+    api.nvim_set_option_value(opt, new_val, scope)
 end
 
 ---@param opt string
@@ -35,7 +36,8 @@ end
 ---@param scope vim.api.keyset.option
 function mjm.opt.str_rm(opt, out, scope)
     local old = api.nvim_get_option_value(opt, scope) ---@type string
-    api.nvim_set_option_value(opt, string.gsub(old, out, ""), scope)
+    local new_val = string.gsub(old, out, "") ---@type string
+    api.nvim_set_option_value(opt, new_val, scope)
 end
 
 set({ "n", "x" }, "<Space>", "<Nop>")
@@ -70,13 +72,19 @@ require("mjm.tal")
 
 require("mjm.lsp")
 
-if not api.nvim_buf_is_valid(1) then return end
+if not api.nvim_buf_is_valid(1) then
+    return
+end
 local ut = require("mjm.utils")
-if not ut.is_empty_noname_buf(1) then return end
+if not ut.is_empty_noname_buf(1) then
+    return
+end
 api.nvim_create_autocmd("BufHidden", {
     buffer = 1,
     callback = function()
-        if not ut.is_empty_noname_buf(1) then return end
+        if not ut.is_empty_noname_buf(1) then
+            return
+        end
         vim.schedule(function()
             api.nvim_buf_delete(1, { force = true })
         end)

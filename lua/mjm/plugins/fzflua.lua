@@ -128,7 +128,9 @@ return {
 
         local function fuzzy_spell_correct()
             local word = vim.fn.expand("<cword>"):lower() ---@type string
-            if word == "" then return vim.notify("No word under cursor", vim.log.levels.WARN) end
+            if word == "" then
+                return vim.notify("No word under cursor", vim.log.levels.WARN)
+            end
             local buf = api.nvim_get_current_buf() ---@type integer
 
             local ok, dict_file = get_dict_file() ---@type boolean|nil, string
@@ -142,7 +144,9 @@ return {
                 prompt = 'Suggestions for "' .. word .. '": ',
                 actions = {
                     ["default"] = function(selected, _)
-                        if not selected or not selected[1] then return end
+                        if not selected or not selected[1] then
+                            return
+                        end
 
                         local line = api.nvim_get_current_line() ---@type string
                         ---@type integer, integer

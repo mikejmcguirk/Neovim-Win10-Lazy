@@ -4,7 +4,9 @@ vim.keymap.set("n", "<leader>tt", function()
     local buf = vim.api.nvim_get_current_buf()
     if vim.treesitter.highlighter.active[buf] then
         vim.treesitter.stop(buf)
-        if vim.g.syntax_on == 1 then api.nvim_cmd({ cmd = "syntax", args = { "off" } }, {}) end
+        if vim.g.syntax_on == 1 then
+            api.nvim_cmd({ cmd = "syntax", args = { "off" } }, {})
+        end
     else
         vim.treesitter.start(buf)
     end
@@ -31,7 +33,9 @@ local function edit_query_file(ts_file)
         require("mjm.utils").open_buf({ file = files[1] }, { open = "vsplit" })
     else
         vim.ui.select(files, { prompt = "Select a file:" }, function(file)
-            if file then require("mjm.utils").open_buf({ file = file }, { open = "vsplit" }) end
+            if file then
+                require("mjm.utils").open_buf({ file = file }, { open = "vsplit" })
+            end
         end)
     end
 end

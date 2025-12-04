@@ -3,7 +3,9 @@
 local api = vim.api
 
 api.nvim_cmd({ cmd = "hi", args = { "clear" } }, {})
-if vim.g.syntax_on == 1 then api.nvim_cmd({ cmd = "syntax", args = { "reset" } }, {}) end
+if vim.g.syntax_on == 1 then
+    api.nvim_cmd({ cmd = "syntax", args = { "reset" } }, {})
+end
 api.nvim_set_var("c_syntax_for_h", true)
 api.nvim_set_var("colors_name", "SimpleDelta")
 api.nvim_set_option_value("bg", "dark", {})
@@ -293,7 +295,7 @@ vim.keymap.set("n", "zS", function()
     api.nvim_cmd({ cmd = "Inspect" }, {})
 end)
 
--- TODO: This issue seems to be helped by not eagly disably captures
+-- FUTURE: This issue seems to be helped by not eagly disably captures
 -- https://github.com/neovim/neovim/issues/35575
 -- NOTE: Don't create a global disable here, as we can't know how it would apply to new languages
 -- NOTE: Only disable treesitter captures if they produce bad colors. Squeezing perf out of
@@ -313,7 +315,9 @@ api.nvim_create_autocmd("FileType", {
 
         ---@type vim.treesitter.Query?
         local hl_query = vim.treesitter.query.get("lua", "highlights")
-        if not hl_query then return end
+        if not hl_query then
+            return
+        end
 
         -- Keep constant.builtin because it includes nil
         -- Keep variable.parameter because there are edge cases semantic tokens miss

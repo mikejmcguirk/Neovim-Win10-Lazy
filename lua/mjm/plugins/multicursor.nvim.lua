@@ -25,7 +25,9 @@ return {
         local function del_nocursor()
             for _, map in ipairs(nocursor_maps) do
                 for _, mode in ipairs(map[1]) do
-                    if vim.fn.maparg(map[2], mode) ~= "" then del(mode, map[2]) end
+                    if vim.fn.maparg(map[2], mode) ~= "" then
+                        del(mode, map[2])
+                    end
                 end
             end
         end
@@ -147,7 +149,9 @@ return {
             set("n", "giu", mc.duplicateCursors)
             set({ "n", "x" }, "giC", function()
                 mc.addCursor()
-                if not mc.cursorsEnabled() then mc.enableCursors() end
+                if not mc.cursorsEnabled() then
+                    mc.enableCursors()
+                end
             end, { desc = "Add a new cursor" })
 
             ---@param toggle_enable boolean
@@ -155,15 +159,21 @@ return {
             local function del_cursor(toggle_enable)
                 if mc.cursorsEnabled() then
                     mc.deleteCursor()
-                    if toggle_enable then mc.disableCursors() end
+                    if toggle_enable then
+                        mc.disableCursors()
+                    end
                 else
                     mc.action(function(ctx)
                         local mainCursor = ctx:mainCursor()
                         local cursor = mainCursor:overlappedCursor()
-                        if cursor then cursor:delete() end
+                        if cursor then
+                            cursor:delete()
+                        end
                     end)
 
-                    if toggle_enable then mc.enableCursors() end
+                    if toggle_enable then
+                        mc.enableCursors()
+                    end
                 end
             end
 

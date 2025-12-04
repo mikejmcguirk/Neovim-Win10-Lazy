@@ -41,7 +41,9 @@ local objects = "nvim-treesitter-textobjects"
 ---@return "start"|"center"|"fin"
 local function get_vpos()
     local vrange4 = ut.get_vrange4() ---@type Range4|nil
-    if not vrange4 then return "center" end
+    if not vrange4 then
+        return "center"
+    end
     vrange4[2] = math.max(vrange4[2] - 1, 0)
     vrange4[4] = math.max(vrange4[4] - 1, 0)
 
@@ -49,8 +51,12 @@ local function get_vpos()
     local at_start = row == vrange4[1] and col == vrange4[2]
     local at_fin = row == vrange4[3] and col == vrange4[4]
 
-    if at_start and not at_fin then return "start" end
-    if (not at_start) and at_fin then return "fin" end
+    if at_start and not at_fin then
+        return "start"
+    end
+    if (not at_start) and at_fin then
+        return "fin"
+    end
     return "center"
 end
 
@@ -123,7 +129,9 @@ local function map_objects(ev)
             end
 
             move.goto_previous_end(m[3], "textobjects")
-            if get_vpos() == "start" then move.goto_previous_start(m[3], "textobjects") end
+            if get_vpos() == "start" then
+                move.goto_previous_start(m[3], "textobjects")
+            end
         end, { buffer = ev.buf })
 
         set("x", m[2], function()
@@ -133,7 +141,9 @@ local function map_objects(ev)
             end
 
             move.goto_next_start(m[3], "textobjects")
-            if get_vpos() == "fin" then move.goto_next_end(m[3], "textobjects") end
+            if get_vpos() == "fin" then
+                move.goto_next_end(m[3], "textobjects")
+            end
         end, { buffer = ev.buf })
     end
 

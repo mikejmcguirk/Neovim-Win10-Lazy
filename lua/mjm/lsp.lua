@@ -4,7 +4,9 @@ local lsp = vim.lsp
 local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 
 vim.keymap.set("n", "gr", "<nop>")
-if #fn.maparg("gO", "n") > 0 then vim.keymap.del("n", "gO") end
+if #fn.maparg("gO", "n") > 0 then
+    vim.keymap.del("n", "gO")
+end
 
 local ok, fzflua = pcall(require, "fzf-lua") ---@type boolean, table
 ---@type function
@@ -135,7 +137,9 @@ vim.lsp.codelens.config({
             return vim.fn.indent(line + 1)
         end)
 
-        if indent > 0 then table.insert(chunks, 1, { string.rep(" ", indent), "" }) end
+        if indent > 0 then
+            table.insert(chunks, 1, { string.rep(" ", indent), "" })
+        end
         vim.api.nvim_buf_set_extmark(buf, ns, line, 0, {
             virt_lines = { chunks },
             virt_lines_above = true,
@@ -148,7 +152,9 @@ vim.lsp.codelens.config({
 ---@return nil
 local function set_lsp_maps(ev)
     local client = lsp.get_client_by_id(ev.data.client_id) ---@type vim.lsp.Client?
-    if not client then return end
+    if not client then
+        return
+    end
     local buf = ev.buf ---@type integer
 
     -- callHierarchy/incomingCalls --
@@ -302,7 +308,7 @@ vim.api.nvim_create_autocmd("LspDetach", {
 
 lsp.log.set_level(vim.log.levels.ERROR)
 
--- TODO: PR: vim.lsp.start should be able to take a vim.lsp.Config table directly
+-- FUTURE: PR: vim.lsp.start should be able to take a vim.lsp.Config table directly
 -- Problem: State of how project scope is defined in Neovim is evolving. The changes you would
 -- make right now might be irrelevant to future project architecture (including deprecations of
 -- current interfaces)
@@ -342,7 +348,9 @@ function mjm.lsp.start(config, opts)
     -- Do not display an error if this fails, even if not opts.silent. The comment operator runs
     -- the ftplugin in the background on a nofile buffer. To avoid this, the user would need to
     -- set opts.silent = true in all cases
-    if api.nvim_get_option_value("buftype", { buf = start_opts.bufnr }) ~= "" then return end
+    if api.nvim_get_option_value("buftype", { buf = start_opts.bufnr }) ~= "" then
+        return
+    end
 
     -- I think it would be the most clean to deprecate start.Opts.reuse_client and only use the
     -- value in lsp.Config. Emulate that behavior below

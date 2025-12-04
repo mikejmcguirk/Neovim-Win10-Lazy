@@ -5,7 +5,9 @@ local tmux_status = vim.api.nvim_create_augroup(group, {}) ---@type integer
 ---@param cmd_parts string[]
 ---@return nil
 local function do_if_tmux(cmd_parts)
-    if os.getenv("TMUX") == nil then return end
+    if os.getenv("TMUX") == nil then
+        return
+    end
     vim.system(cmd_parts, { text = true, timeout = 1000 })
 end
 

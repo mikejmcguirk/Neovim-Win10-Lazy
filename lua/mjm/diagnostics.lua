@@ -57,12 +57,16 @@ end
 
 vim.keymap.set("n", "[D", function()
     local diagnostic = get_first_or_last_diag()
-    if diagnostic then vim.diagnostic.jump({ diagnostic = diagnostic }) end
+    if diagnostic then
+        vim.diagnostic.jump({ diagnostic = diagnostic })
+    end
 end)
 
 vim.keymap.set("n", "]D", function()
     local diagnostic = get_first_or_last_diag({ last = true })
-    if diagnostic then vim.diagnostic.jump({ diagnostic = diagnostic }) end
+    if diagnostic then
+        vim.diagnostic.jump({ diagnostic = diagnostic })
+    end
 end)
 
 vim.keymap.set("n", "[<C-d>", function()
@@ -75,13 +79,17 @@ end)
 
 vim.keymap.set("n", "[<M-d>", function()
     local diagnostic = get_first_or_last_diag({ severity = ut.get_top_severity({ buf = 0 }) })
-    if diagnostic then vim.diagnostic.jump({ diagnostic = diagnostic }) end
+    if diagnostic then
+        vim.diagnostic.jump({ diagnostic = diagnostic })
+    end
 end)
 
 vim.keymap.set("n", "]<M-d>", function()
     local severity = ut.get_top_severity({ buf = 0 })
     local diagnostic = get_first_or_last_diag({ severity = severity, last = true })
-    if diagnostic then vim.diagnostic.jump({ diagnostic = diagnostic }) end
+    if diagnostic then
+        vim.diagnostic.jump({ diagnostic = diagnostic })
+    end
 end)
 
 -- Because I create custom caching in stl.lua

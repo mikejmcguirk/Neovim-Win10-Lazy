@@ -22,9 +22,13 @@ end
 api.nvim_create_autocmd("LspProgress", {
     group = stl_events,
     callback = function(ev)
-        if not (ev.data and ev.data.client_id) then return end
+        if not (ev.data and ev.data.client_id) then
+            return
+        end
         local function end_timer(idx)
-            if not timers[idx] then return end
+            if not timers[idx] then
+                return
+            end
             timers[idx]:stop()
             timers[idx]:close()
             timers[idx] = nil
@@ -45,7 +49,9 @@ api.nvim_create_autocmd("LspProgress", {
         end)() ---@type string
 
         timers[ev.buf] = vim.uv.new_timer() ---@type uv.uv_timer_t|nil
-        if not timers[ev.buf] then return end
+        if not timers[ev.buf] then
+            return
+        end
         timers[ev.buf]:start(2250, 0, function()
             progress_cache[ev.buf] = nil
             vim.schedule(function()
@@ -65,8 +71,9 @@ api.nvim_create_autocmd("LspProgress", {
 })
 
 local levels = { "Error", "Warn", "Info", "Hint" } ---@type string[]
+---@type string[]
 local signs = Has_Nerd_Font and { "󰅚 ", "󰀪 ", "󰋽 ", "󰌶 " }
-    or { "E:", "W:", "I:", "H:" } ---@type string[]
+    or { "E:", "W:", "I:", "H:" }
 
 -- NOTE: Diagnostics.lua contains the delete for the default diagnostic status cache augroup
 -- MID: Show whited out diag counts in the inactive stl
@@ -99,7 +106,9 @@ api.nvim_create_autocmd("DiagnosticChanged", {
         end
 
         -- LOW: Checking based on ev.buf being the current buf produces inconsistent results. Why?
-        if not is_bad_mode() then api.nvim_cmd({ cmd = "redraws" }, {}) end
+        if not is_bad_mode() then
+            api.nvim_cmd({ cmd = "redraws" }, {})
+        end
     end,
 })
 
@@ -107,7 +116,9 @@ api.nvim_create_autocmd("ModeChanged", {
     group = stl_events,
     callback = function()
         ---@diagnostic disable: undefined-field
-        if vim.v.event.new_mode == mode then return end
+        if vim.v.event.new_mode == mode then
+            return
+        end
         mode = vim.v.event.new_mode
         api.nvim_cmd({ cmd = "redraws" }, {})
     end,
@@ -119,8 +130,8 @@ api.nvim_create_autocmd({ "LspAttach", "LspDetach" }, {
     callback = vim.schedule_wrap(function(ev)
         if api.nvim_buf_is_valid(ev.buf) then
             local clients = vim.lsp.get_clients({ bufnr = ev.buf }) ---@type vim.lsp.Client[]
-            lsp_cache[ev.buf] = (clients and #clients > 0) and string.format("[%d]", #clients)
-                or nil
+            local has_clients = clients and #clients > 0 ---@type boolean
+            lsp_cache[ev.buf] = has_clients and string.format("[%d]", #clients) or nil
         else
             lsp_cache[ev.buf] = nil
         end
@@ -153,7 +164,7 @@ local function create_buf_str(buf)
     local bt = bt_map[api.nvim_get_option_value("bt", { buf = buf })] ---@type string
     local ft = api.nvim_get_option_value("ft", { buf = buf }) ---@type string
     local bt_ft = bt .. ft ---@type string
-    local fmt_bt_ft = #bt_ft > 0 and " " .. bt_ft or ""
+    local fmt_bt_ft = #bt_ft > 0 and " " .. bt_ft or "" ---@type string
 
     return encoding .. " | " .. fmt .. " |" .. fmt_bt_ft .. " "
 end
@@ -165,7 +176,9 @@ api.nvim_create_autocmd("BufWinEnter", {
     callback = function(ev)
         local win = api.nvim_get_current_win() ---@type integer
         local config = api.nvim_win_get_config(win) ---@type vim.api.keyset.win_config_ret
-        if config.relative and config.relative ~= "" then return end
+        if config.relative and config.relative ~= "" then
+            return
+        end
 
         buf_cache[ev.buf] = create_buf_str(ev.buf)
         api.nvim_cmd({ cmd = "redraws" }, {})
@@ -178,9 +191,13 @@ api.nvim_create_autocmd("OptionSet", {
     group = stl_events,
     callback = function(ev)
         local buf = ev.buf ~= 0 and ev.buf or api.nvim_get_current_buf() ---@type integer
-        if not buf_cache[buf] then return end
+        if not buf_cache[buf] then
+            return
+        end
         local watched = { "fileencoding", "encoding", "fileformat", "buftype" } ---@type string[]
-        if not vim.tbl_contains(watched, ev.match) then return end
+        if not vim.tbl_contains(watched, ev.match) then
+            return
+        end
 
         buf_cache[buf] = create_buf_str(buf)
         api.nvim_cmd({ cmd = "redraws" }, {})
@@ -197,6 +214,8 @@ api.nvim_create_autocmd("BufDelete", {
 })
 
 _G.Mjm_Stl = {}
+-- Module scoped because it's used on every keystroke
+local stl = { nil, nil, nil, "%=%*", nil, nil } ---@type string[]
 
 -- LOW: Now that everything is cached, worth re-exploring doing this based on real-time evals
 -- rather than re-making the string each time
@@ -206,7 +225,6 @@ _G.Mjm_Stl = {}
 -- of compromise on "over-rendering" the stl to avoid having to over-think every edge case
 ---@return string
 function Mjm_Stl.active()
-    local stl = { nil, nil, nil, "%=%*", nil, nil } ---@type string[]
     local buf = api.nvim_get_current_buf() ---@type integer
     local bad_mode = is_bad_mode() ---@type boolean
 
@@ -219,8 +237,8 @@ function Mjm_Stl.active()
     -- update_in_insert for diags set to false. Avoid showing stale data
     local diags = (not bad_mode) and (diag_cache[buf] or "") or "" ---@type string
     local lsps = lsp_cache[buf] or "" ---@type string
-    ---@type string
-    local progress = (progress_cache[buf] and not bad_mode) and progress_cache[buf] or ""
+    local show_progress = progress_cache[buf] and not bad_mode ---@type boolean
+    local progress = show_progress and progress_cache[buf] or "" ---@type string
     stl[3] = " %#stl_c#" .. lsps .. " " .. diags .. "%<" .. progress .. "%*"
 
     stl[5] = "%#stl_c#" .. (buf_cache[buf] or "") .. "%*"

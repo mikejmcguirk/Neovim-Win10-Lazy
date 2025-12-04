@@ -14,13 +14,19 @@ local hl_separator = "stl_c" ---@type string
 local ok, harpoon = pcall(require, "harpoon")
 
 local function build_harpoon_component(tal)
-    if not ok then return "" end
+    if not ok then
+        return ""
+    end
 
     local list = harpoon:list() ---@type table
-    if not list then return "" end
+    if not list then
+        return ""
+    end
 
     local items = list.items
-    if not items or #items < 1 then return "" end
+    if not items or #items < 1 then
+        return ""
+    end
 
     local cur_buf_path = api.nvim_buf_get_name(0) ---@type string
     for i, t in ipairs(items) do
@@ -30,7 +36,9 @@ local function build_harpoon_component(tal)
 
         local modified = (function()
             local buf = fn.bufnr(t_path)
-            if buf == -1 then return "" end
+            if buf == -1 then
+                return ""
+            end
 
             return vim.api.nvim_get_option_value("modified", { buf = buf }) and "[+]" or ""
         end)() ---@type string
@@ -114,7 +122,9 @@ vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
         -- check mode fresh
         vim.schedule(function()
             -- Avoid rendering in autocompletion windows
-            if fn.mode() == "i" then return end
+            if fn.mode() == "i" then
+                return
+            end
 
             build_tal()
         end)

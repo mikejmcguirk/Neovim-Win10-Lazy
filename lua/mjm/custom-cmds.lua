@@ -14,11 +14,15 @@ local function tab_kill()
         2
     )
 
-    if confirm ~= 1 then return end
+    if confirm ~= 1 then
+        return
+    end
 
     local buffers = fn.tabpagebuflist(fn.tabpagenr())
     for _, buf in pairs(buffers) do
-        if api.nvim_buf_is_valid(buf) then api.nvim_buf_delete(buf, { force = true }) end
+        if api.nvim_buf_is_valid(buf) then
+            api.nvim_buf_delete(buf, { force = true })
+        end
     end
 end
 
@@ -36,7 +40,9 @@ end, { nargs = "+" })
 ---@param path string
 ---@return boolean
 local function is_git_tracked(path)
-    if not vim.g.gitsigns_head then return false end
+    if not vim.g.gitsigns_head then
+        return false
+    end
 
     local cmd = { "git", "ls-files", "--error-unmatch", "--", path }
     local output = vim.system(cmd):wait()
@@ -48,9 +54,13 @@ end
 local function del_cur_buf_from_disk(cargs)
     local buf = api.nvim_get_current_buf() ---@type integer
     local bufname = api.nvim_buf_get_name(buf) ---@type string
-    if api.nvim_get_option_value("buftype", { buf = buf }) ~= "" then return end
+    if api.nvim_get_option_value("buftype", { buf = buf }) ~= "" then
+        return
+    end
     if bufname == "" then
-        if cargs.bang then api.nvim_cmd({ cmd = "bwipeout", bang = true }, {}) end
+        if cargs.bang then
+            api.nvim_cmd({ cmd = "bwipeout", bang = true }, {})
+        end
         return
     end
 
@@ -91,9 +101,15 @@ local function mv_cur_buf(cargs)
 
     local buf = api.nvim_get_current_buf() ---@type integer
     local bufname = api.nvim_buf_get_name(buf) ---@type string
-    if bufname == "" then return end
-    if api.nvim_get_option_value("buftype", { buf = buf }) ~= "" then return end
-    if (not buf) or not bufname then return end
+    if bufname == "" then
+        return
+    end
+    if api.nvim_get_option_value("buftype", { buf = buf }) ~= "" then
+        return
+    end
+    if (not buf) or not bufname then
+        return
+    end
 
     if (not cargs.bang) and api.nvim_get_option_value("modified", { buf = buf }) then
         api.nvim_echo({ { "Buf is modified", "" } }, false, {})
@@ -114,7 +130,9 @@ local function mv_cur_buf(cargs)
     local full_target = fn.fnamemodify(target, ":p")
     local escape_target = fn.fnameescape(full_target)
     local escape_bufname = fn.fnameescape(bufname)
-    if escape_target == escape_bufname then return end
+    if escape_target == escape_bufname then
+        return
+    end
 
     ut.checked_mkdir_p(fn.fnamemodify(escape_target, ":h"), tonumber("755", 8))
     if is_git_tracked(escape_bufname) then
@@ -137,51 +155,45 @@ local function mv_cur_buf(cargs)
     end
 
     for _, b in pairs(api.nvim_list_bufs()) do
-        if api.nvim_buf_get_name(b) == bufname then api.nvim_buf_delete(b, { force = true }) end
+        if api.nvim_buf_get_name(b) == bufname then
+            api.nvim_buf_delete(b, { force = true })
+        end
     end
 
     ut.harpoon_mv_buf(escape_bufname, escape_target)
 end
 
-local cmd_augroup_name = "mjm-buf-cmds"
-vim.api.nvim_create_autocmd({ "BufNew", "BufReadPre" }, {
-    group = vim.api.nvim_create_augroup(cmd_augroup_name, {}),
-    once = true,
-    callback = function()
-        api.nvim_create_user_command("BKill", function(cargs)
-            del_cur_buf_from_disk(cargs)
-        end, { bang = true })
+api.nvim_create_user_command("BKill", function(cargs)
+    del_cur_buf_from_disk(cargs)
+end, { bang = true })
 
-        api.nvim_create_user_command("BMove", function(cargs)
-            mv_cur_buf(cargs)
-        end, { bang = true, nargs = 1, complete = "file_in_path" })
+api.nvim_create_user_command("BMove", function(cargs)
+    mv_cur_buf(cargs)
+end, { bang = true, nargs = 1, complete = "file_in_path" })
 
-        -- Quick refresh if Treesitter bugs out
-        api.nvim_create_user_command("We", "silent up | e", {})
-
-        api.nvim_del_augroup_by_name(cmd_augroup_name)
-    end,
-})
+-- Quick refresh if Treesitter bugs out
+api.nvim_create_user_command("We", "silent up | e", {})
 
 ---@param args string
 local function scratch_cmd(args)
     local output = vim.fn.execute(args) ---@type string
 
-    -- MID: This feels like enough for a convenience function
     api.nvim_cmd({ cmd = "tabnew" }, {})
-    local tabnew_buf = api.nvim_get_current_buf() ---@type integer
-    if mjm.util.is_buf_empty_noname(tabnew_buf) then
-        api.nvim_set_option_value("bufhidden", "wipe", { buf = tabnew_buf })
+    local buf = vim.api.nvim_get_current_buf() ---@type integer
+    if not mjm.util.is_buf_empty_noname(buf) then
+        api.nvim_cmd({ cmd = "enew" }, {})
     end
 
-    local buf = vim.api.nvim_get_current_buf() ---@type integer
     -- MID: This also feels like something that can be broken out
-    vim.api.nvim_set_option_value("buftype", "nofile", { buf = buf })
-    vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = buf })
-    vim.api.nvim_set_option_value("swapfile", false, { buf = buf })
-    vim.api.nvim_set_option_value("buflisted", false, { buf = buf })
-    vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(output, "\n"))
-    vim.api.nvim_set_option_value("modifiable", false, { buf = buf })
+    api.nvim_set_option_value("bh", "wipe", { buf = buf })
+    api.nvim_set_option_value("bl", false, { buf = buf })
+    api.nvim_set_option_value("bt", "nofile", { buf = buf })
+    api.nvim_set_option_value("swf", false, { buf = buf })
+    api.nvim_set_option_value("udf", false, { buf = buf })
+
+    local lines_tbl = vim.split(output, "\n") ---@type string[]
+    api.nvim_buf_set_lines(buf, 0, -1, false, lines_tbl)
+    api.nvim_set_option_value("ma", false, { buf = buf })
 end
 
 vim.api.nvim_create_user_command("ScratchCmd", function(opts)

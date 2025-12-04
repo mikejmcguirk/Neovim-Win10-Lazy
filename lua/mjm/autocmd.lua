@@ -29,7 +29,9 @@ api.nvim_create_autocmd("BufWinEnter", {
     desc = "Go to the last cursor position when opening a buffer",
     callback = function(ev)
         local mark = api.nvim_buf_get_mark(ev.buf, '"')
-        if mark[1] < 1 or mark[1] > api.nvim_buf_line_count(ev.buf) then return end
+        if mark[1] < 1 or mark[1] > api.nvim_buf_line_count(ev.buf) then
+            return
+        end
         api.nvim_cmd({ cmd = "normal", args = { 'g`"zz' }, bang = true }, {})
     end,
 })

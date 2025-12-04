@@ -30,7 +30,9 @@ local function open_diffs(staged)
     local tabpage_wins = api.nvim_tabpage_list_wins(tabpage) ---@type integer[]
     for _, win in ipairs(tabpage_wins) do
         local win_buf = api.nvim_win_get_buf(win) ---@type integer
-        if api.nvim_get_option_value("filetype", { buf = win_buf }) == "diff" then return end
+        if api.nvim_get_option_value("filetype", { buf = win_buf }) == "diff" then
+            return
+        end
     end
 
     local ok, window = pcall(require, "qf-rancher.window") ---@type boolean, QfrWins?
@@ -89,7 +91,9 @@ local function setup_fugitive()
         end
 
         input = string.sub(string.lower(input), 1, 1)
-        if input ~= "y" then return end
+        if input ~= "y" then
+            return
+        end
         api.nvim_cmd({ cmd = "Git", args = { "reset --soft HEAD~1" } }, {})
     end)
 end

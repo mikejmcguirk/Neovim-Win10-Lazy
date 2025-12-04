@@ -52,14 +52,20 @@ vim.api.nvim_create_autocmd("BufWritePre", {
 ---@param line string
 ---@return boolean
 local function is_checkbox(line)
-    if string.match(line, "%s*[-+*]%s+%[.%]") ~= nil then return true end
-    if string.match(line, "%s*%d+[%.%)]%s+%[.%]") ~= nil then return true end
+    if string.match(line, "%s*[-+*]%s+%[.%]") ~= nil then
+        return true
+    end
+    if string.match(line, "%s*%d+[%.%)]%s+%[.%]") ~= nil then
+        return true
+    end
     return false
 end
 
 ---@return nil
 local function toggle_checkbox()
-    if ut.is_in_node_type({ "fenced_code_block", "minus_metadata" }) then return end
+    if ut.is_in_node_type({ "fenced_code_block", "minus_metadata" }) then
+        return
+    end
     local row = api.nvim_win_get_cursor(0)[1] ---@type integer
     local line = api.nvim_buf_get_lines(0, row - 1, row, false)[1] ---@type string
     local unchecked = " " ---@type string
@@ -67,9 +73,12 @@ local function toggle_checkbox()
     local new_line = (function()
         if is_checkbox(line) then
             if string.match(line, "^.*%[[xX]%]") then
-                return string.gsub(line, "%[[xX]%]", "[" .. unchecked .. "]", 1)
+                local unchecked_part = "[" .. unchecked .. "]" ---@type string
+                return string.gsub(line, "%[[xX]%]", unchecked_part, 1)
             else
-                return string.gsub(line, "%[" .. unchecked .. "%]", "[" .. checked .. "]", 1)
+                local unchecked_part = "%[" .. unchecked .. "%]" ---@type string
+                local checked_part = "[" .. checked .. "]" ---@type string
+                return string.gsub(line, unchecked_part, checked_part, 1)
             end
         else
             local unordered_pat = "^(%s*)([-+*]) (.*)" ---@type string

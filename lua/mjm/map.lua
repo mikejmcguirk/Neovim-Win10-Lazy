@@ -41,11 +41,15 @@ set("n", "g<tab>", function()
     api.nvim_cmd({ cmd = "tabnew", range = { range } }, {})
 
     local buf = api.nvim_get_current_buf() ---@type integer
-    if not ut.is_empty_noname_buf(buf) then return end
+    if not ut.is_empty_noname_buf(buf) then
+        return
+    end
     api.nvim_create_autocmd("BufHidden", {
         buffer = buf,
         callback = function()
-            if not ut.is_empty_noname_buf(buf) then return end
+            if not ut.is_empty_noname_buf(buf) then
+                return
+            end
             vim.schedule(function()
                 api.nvim_buf_delete(buf, { force = true })
             end)
@@ -142,7 +146,9 @@ end
 local function close_floats()
     for _, win in ipairs(api.nvim_tabpage_list_wins(0)) do
         local config = api.nvim_win_get_config(win) ---@type vim.api.keyset.win_config_ret
-        if config.relative and config.relative ~= "" then api.nvim_win_close(win, false) end
+        if config.relative and config.relative ~= "" then
+            api.nvim_win_close(win, false)
+        end
     end
 end
 
@@ -156,11 +162,15 @@ local tmux_cmd_map = { h = "L", j = "D", k = "U", l = "R" } ---@type table<strin
 ---@param dir string
 ---@return nil
 local do_tmux_move = function(dir)
-    if os.getenv("TMUX") == nil then return end
+    if os.getenv("TMUX") == nil then
+        return
+    end
 
     local zoom_cmd = { "tmux", "display-message", "-p", "#{window_zoomed_flag}" } ---@type string[]
     local result = vim.system(zoom_cmd, { text = true }):wait() ---@type vim.SystemCompleted
-    if result.code == 0 and result.stdout == "1\n" then return end
+    if result.code == 0 and result.stdout == "1\n" then
+        return
+    end
 
     local cmd_parts = { "tmux", "select-pane", "-" .. tmux_cmd_map[dir] } ---@type string[]
     vim.system(cmd_parts, { text = true, timeout = 1000 })
@@ -176,7 +186,9 @@ local win_move_tmux = function(dir)
 
     local start_win = api.nvim_get_current_win() ---@type integer
     vim.api.nvim_cmd({ cmd = "wincmd", args = { dir } }, {})
-    if api.nvim_get_current_win() == start_win then do_tmux_move(dir) end
+    if api.nvim_get_current_win() == start_win then
+        do_tmux_move(dir)
+    end
 end
 
 -- See tmux config (mikejmcguirk/dotfiles) for reasoning and how on C-S for this mapping
@@ -189,7 +201,9 @@ end
 ---@param cmd vim.api.keyset.cmd
 local resize_win = function(cmd)
     local wintype = fn.win_gettype(api.nvim_get_current_win())
-    if not (wintype == "" or wintype == "quickfix" or wintype == "loclist") then return end
+    if not (wintype == "" or wintype == "quickfix" or wintype == "loclist") then
+        return
+    end
     local old_spk = api.nvim_get_option_value("splitkeep", { scope = "global" })
     api.nvim_set_option_value("spk", "topline", { scope = "global" })
     api.nvim_cmd(cmd, {})
@@ -212,7 +226,7 @@ end
 
 for _, m in pairs({ "<C-w>q", "<C-w><C-q>" }) do
     set("n", m, function()
-        -- TODO: Use wipeout when that logic is fixed
+        -- FUTURE: Use wipeout when that logic is fixed
         -- https://github.com/neovim/neovim/pull/33402
         ut.pclose_and_rm(api.nvim_get_current_win(), false, false)
     end)
@@ -225,7 +239,7 @@ set("n", "<C-w><C-c>", "<nop>")
 -- CAP MOTION MAPS --
 ---------------------
 
--- TODO: Should be fixed in spec-ops
+-- FUTURE: Should be fixed in spec-ops
 
 local cap_motions = {
     { "n", "~" },
@@ -299,7 +313,9 @@ end, { expr = true })
 
 local function map_vert(dir)
     set({ "n", "x" }, dir, function()
-        if vim.v.count == 0 then return "g" .. dir end
+        if vim.v.count == 0 then
+            return "g" .. dir
+        end
         if vim.v.count >= vim.api.nvim_get_option_value("lines", { scope = "global" }) then
             return "m'" .. vim.v.count1 .. dir
         else
@@ -340,6 +356,7 @@ set({ "n", "x" }, "gM", "<nop>")
 -- A smaller issue is that this is probably not a paradigm I could use in any sort of plugin
 -- mapping
 -- There is, also, apparently an accessbility use case for select mode
+-- MAYBE: Use M-m to go to the center of the screenline
 set({ "n", "x" }, "<C-m>", function()
     if api.nvim_get_mode().blocking then
         api.nvim_cmd({ cmd = "norm", args = { "\27" }, bang = true }, {})
@@ -420,7 +437,9 @@ set("n", "gI", "g^i")
 -- LOW: This creates an undo point, even when exiting insert immediately
 for _, m in pairs({ "i", "a", "A" }) do
     set("n", m, function()
-        if string.match(api.nvim_get_current_line(), "^%s*$") then return '"_S' end
+        if string.match(api.nvim_get_current_line(), "^%s*$") then
+            return '"_S'
+        end
         return m
     end, { expr = true })
 end
@@ -478,7 +497,9 @@ set("n", "dm", "<cmd>delmarks!<cr>")
 -- LOW: Find a viable keymap for this and make it more robust to edge cases:
 -- map("n", "H", 'mzk_D"_ddA <esc>p`zze', { silent = true })
 set("n", "J", function()
-    if not require("mjm.utils").check_modifiable() then return end
+    if not require("mjm.utils").check_modifiable() then
+        return
+    end
 
     -- Done using a view instead of a mark to prevent visible screen shake
     local view = fn.winsaveview() ---@type vim.fn.winsaveview.ret
@@ -488,7 +509,9 @@ set("n", "J", function()
 end, { silent = true })
 
 local function mv_normal(upward)
-    if not ut.check_modifiable() then return end
+    if not ut.check_modifiable() then
+        return
+    end
     local dir = upward and "-" or "+" ---@type string
     local count = vim.v.count1 + (upward and 1 or 0) ---@type integer
     local ok, err = pcall(function()
@@ -547,7 +570,9 @@ set("x", "<C-=>", eval_cmd, { noremap = true, silent = true })
 ---@return nil
 local function add_blank_visual(up)
     local vrange4 = ut.get_vrange4() ---@type Range4|nil
-    if not vrange4 then return end
+    if not vrange4 then
+        return
+    end
 
     local row = up and vrange4[1] or vrange4[3] + 1 ---@type integer
     local new_lines = {} ---@type string[]
@@ -574,7 +599,9 @@ set("x", "]<space>", add_blank_visual)
 ---@param opts? {upward:boolean}
 ---@return nil
 local visual_move = function(opts)
-    if not require("mjm.utils").check_modifiable() then return end
+    if not require("mjm.utils").check_modifiable() then
+        return
+    end
 
     local cur_mode = api.nvim_get_mode().mode ---@type string
     if cur_mode ~= "V" and cur_mode ~= "Vs" then
@@ -624,7 +651,7 @@ end)
 
 set("x", "X", 'ygvV"_d<cmd>put!<cr>=`]', { silent = true })
 
--- TODO: Do these as a spec-ops mapping, same in normal mode due to the nag there
+-- FUTURE: Do these as a spec-ops mapping, same in normal mode due to the nag there
 -- Done as a function to suppress nag when shifting multiple lines
 ---@param opts? table
 ---@return nil

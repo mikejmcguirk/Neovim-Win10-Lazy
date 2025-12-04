@@ -95,9 +95,13 @@ end
 ---@param buf integer
 ---@return boolean
 function mjm.util.is_buf_empty_noname(buf)
-    if #api.nvim_buf_get_name(buf) > 0 then return false end
+    if #api.nvim_buf_get_name(buf) > 0 then
+        return false
+    end
     local lines = api.nvim_buf_get_lines(buf, 0, -1, false) ---@type string[]
-    if #lines > 1 or #lines[1] > 0 then return false end
+    if #lines > 1 or #lines[1] > 0 then
+        return false
+    end
     return true
 end
 
@@ -148,7 +152,9 @@ function M.open_buf(source, opts)
     end
 
     local win = opts.win or api.nvim_get_current_win() ---@type integer
-    if not api.nvim_win_is_valid(win) then return false end
+    if not api.nvim_win_is_valid(win) then
+        return false
+    end
     local already_open = api.nvim_win_get_buf(win) == buf ---@type boolean
     if not already_open then
         if opts.buftype == "help" then
@@ -160,10 +166,14 @@ function M.open_buf(source, opts)
         api.nvim_win_call(win, function()
             -- This loads the buf if necessary. Do not use bufload
             api.nvim_set_current_buf(buf)
-            if opts.clearjumps then api.nvim_cmd({ cmd = "clearjumps" }, {}) end
+            if opts.clearjumps then
+                api.nvim_cmd({ cmd = "clearjumps" }, {})
+            end
         end)
 
-        if opts.buftype == "help" then setup_help_win(win) end
+        if opts.buftype == "help" then
+            setup_help_win(win)
+        end
     end
 
     if opts.cur_pos then
@@ -241,7 +251,9 @@ local function fix_bookend_blanks(buf, start_idx, end_idx)
     local blank_line = (line == "") or line:match("^%s*$") ---@type any
     local last_line = api.nvim_buf_line_count(buf) == 1 ---@type boolean
 
-    if last_line or not blank_line then return end
+    if last_line or not blank_line then
+        return
+    end
 
     api.nvim_buf_set_lines(buf, start_idx, end_idx, false, {})
     fix_bookend_blanks(buf, start_idx, end_idx)
@@ -306,7 +318,9 @@ M.fallback_formatter = function(buf)
         local first_non_blank, _ = line:find("%S") or 1, nil ---@type integer, nil
         first_non_blank = first_non_blank - 1
         local extra_spaces = first_non_blank % shiftwidth ---@type unknown
-        if extra_spaces == 0 or not expandtab then return end
+        if extra_spaces == 0 or not expandtab then
+            return
+        end
 
         local half_shiftwidth = shiftwidth * 0.5 ---@type unknown
         local round_up = extra_spaces >= half_shiftwidth ---@type boolean
@@ -386,26 +400,21 @@ function M.check_word_under_cursor()
     end)
 end
 
-function M.write_to_scratch_buf(lines)
-    local scratch = api.nvim_create_buf(false, true)
-    api.nvim_set_option_value("buftype", "nofile", { buf = scratch })
-    api.nvim_set_option_value("bufhidden", "wipe", { buf = scratch })
-    api.nvim_set_option_value("swapfile", false, { buf = scratch })
-
-    api.nvim_buf_set_lines(scratch, 0, -1, false, vim.split(lines, "\n"))
-    vim.cmd.vsplit()
-    api.nvim_set_current_buf(scratch)
-end
-
+-- MID: This should have a cap on iterations
 ---@param types string[]
 ---@return boolean
 function M.is_in_node_type(types)
     vim.validate("types", types, vim.islist)
-    if #types < 1 then return false end
+
+    if #types < 1 then
+        return false
+    end
     local node = vim.treesitter.get_node() ---@type TSNode?
     while node do
         for _, type in ipairs(types) do
-            if node:type() == type then return true end
+            if node:type() == type then
+                return true
+            end
         end
 
         node = node:parent()
@@ -435,7 +444,9 @@ function M.harpoon_rm_buf(opts)
         end
     end)()
 
-    if not full_bufname then return end
+    if not full_bufname then
+        return
+    end
 
     local ok, harpoon = pcall(require, "harpoon")
     if (not ok) or not harpoon then
@@ -443,7 +454,9 @@ function M.harpoon_rm_buf(opts)
     end
 
     local list = harpoon:list()
-    if not list then return end
+    if not list then
+        return
+    end
 
     local items = list.items
     local idx = nil
@@ -456,7 +469,9 @@ function M.harpoon_rm_buf(opts)
         end
     end
 
-    if not idx then return end
+    if not idx then
+        return
+    end
 
     table.remove(list.items, idx)
     list._length = list._length - 1
@@ -475,10 +490,14 @@ function M.harpoon_mv_buf(old_bufname, new_bufname)
     end
 
     local list = harpoon:list()
-    if not list then return end
+    if not list then
+        return
+    end
 
     local items = list.items
-    if #items < 1 then return end
+    if #items < 1 then
+        return
+    end
 
     local full_old_bufname = fn.fnamemodify(old_bufname, ":p")
     local idx = nil
@@ -491,7 +510,9 @@ function M.harpoon_mv_buf(old_bufname, new_bufname)
         end
     end
 
-    if not idx then return end
+    if not idx then
+        return
+    end
 
     local full_new_bufname = fn.fnamemodify(new_bufname, ":p")
     local relative_new_bufname = fn.fnamemodify(full_new_bufname, ":.")
@@ -529,17 +550,23 @@ function M.pwin_close(win, force)
     vim.validate("win", win, "number")
     vim.validate("force", force, "boolean")
 
-    if not api.nvim_win_is_valid(win) then return nil, false end
+    if not api.nvim_win_is_valid(win) then
+        return nil, false
+    end
 
     local tabpages = api.nvim_list_tabpages() ---@type integer[]
     local win_tabpage = api.nvim_win_get_tabpage(win) ---@type integer
     local win_tabpage_wins = api.nvim_tabpage_list_wins(win_tabpage) ---@type integer[]
     local buf = api.nvim_win_get_buf(win) ---@type integer
 
-    if #tabpages == 1 and #win_tabpage_wins == 1 then return buf, true end
+    if #tabpages == 1 and #win_tabpage_wins == 1 then
+        return buf, true
+    end
 
     local ok, _ = pcall(api.nvim_win_close, win, force) ---@type boolean, nil
-    if ok then return buf, false end
+    if ok then
+        return buf, false
+    end
     return nil, false
 end
 
@@ -559,17 +586,23 @@ end
 -- https://github.com/neovim/neovim/pull/33402
 -- When nvim_buf_delete is run without the unload flag, it goes beyond
 -- deleting the buffer into deleting shada state, including the '"' mark
--- TODO: Whenever nvim_buf_del is created, use that for deleting buffers
+-- FUTURE: Whenever nvim_buf_del is created, use that for deleting buffers
 
 function M.is_empty_buf(buf)
     local lines = api.nvim_buf_get_lines(buf, 0, -1, false) ---@type string[]
-    if not lines[1] then return true end
-    if #lines > 1 or #lines[1] > 0 then return false end
+    if not lines[1] then
+        return true
+    end
+    if #lines > 1 or #lines[1] > 0 then
+        return false
+    end
     return true
 end
 
 function M.is_empty_noname_buf(buf)
-    if #api.nvim_buf_get_name(buf) > 0 then return false end
+    if #api.nvim_buf_get_name(buf) > 0 then
+        return false
+    end
     return M.is_empty_buf(buf)
 end
 
@@ -586,12 +619,16 @@ function M.pbuf_rm(buf, force, wipeout, no_save, suppress_errs)
 
     if not api.nvim_buf_is_valid(buf) then
         local chunks = { { "Buf " .. buf .. " is not valid" } } ---@type [string,string|integer?][]
-        if suppress_errs then return true, nil, nil, nil end
+        if suppress_errs then
+            return true, nil, nil, nil
+        end
         return false, chunks, true, { err = true }
     end
 
     if #api.nvim_buf_get_name(buf) == 0 and not force and not M.is_empty_buf(buf) then
-        if suppress_errs then return true, nil, nil, nil end
+        if suppress_errs then
+            return true, nil, nil, nil
+        end
         local chunks = { { "Buf " .. " has no filename" } }
         return false, chunks, true, { err = true }
     end
@@ -623,7 +660,9 @@ function M.pbuf_rm(buf, force, wipeout, no_save, suppress_errs)
     end
 
     local ok, err = pcall(api.nvim_buf_delete, buf, delete_opts) ---@type boolean, nil
-    if ok then return true, nil, nil, nil end
+    if ok then
+        return true, nil, nil, nil
+    end
     ---@type [string, string|integer?][]
     local chunks = { { err or ("Unknown error deleting buf " .. buf) } }
     return false, chunks, true, { err = true }
@@ -635,11 +674,15 @@ end
 ---@return nil
 function M.pclose_and_rm(win, force, wipeout)
     local buf, always = M.pwin_close(win, force) ---@type integer|nil, boolean
-    if not buf then return end
+    if not buf then
+        return
+    end
     M.do_when_idle(function()
         if always or #vim.fn.win_findbuf(buf) == 0 then
             local ok, chunks, msg, opts = M.pbuf_rm(buf, force, wipeout, false, true)
-            if ok then return end
+            if ok then
+                return
+            end
             api.nvim_echo(chunks or { { "Unknown error" } }, msg or false, opts or { err = true })
         end
     end)
@@ -648,7 +691,9 @@ end
 ---@return Range4|nil
 function M.get_vrange4()
     local mode = string.sub(api.nvim_get_mode().mode, 1, 1) ---@type string
-    if not (mode == "v" or mode == "V" or mode == "\22") then return nil end
+    if not (mode == "v" or mode == "V" or mode == "\22") then
+        return nil
+    end
 
     local cur = fn.getpos(".") ---@type [integer, integer, integer, integer]
     local fin = fn.getpos("v") ---@type [integer, integer, integer, integer]
@@ -672,19 +717,29 @@ function M.checked_mkdir_p(path, mode)
     local resolved_path = vim.fs.normalize(vim.fs.abspath(path)) ---@type string
     ---@type uv.fs_stat.result|nil, string|nil
     local stat, err, err_name = uv.fs_stat(resolved_path)
-    if stat and stat.type == "directory" then return true, nil end
-    if (not stat) and err_name ~= "ENOENT" then return false, err end
+    if stat and stat.type == "directory" then
+        return true, nil
+    end
+    if (not stat) and err_name ~= "ENOENT" then
+        return false, err
+    end
     if stat and stat.type ~= "directory" then
         return false, "Path exists, but is not a directory"
     end
 
     local parent = vim.fs.dirname(resolved_path) ---@type string|nil
-    if not parent then return false, "Cannot resolve target parent" end
+    if not parent then
+        return false, "Cannot resolve target parent"
+    end
     local ok_p, err_p = M.checked_mkdir_p(parent, mode) ---@type boolean, string?
-    if not ok_p then return false, err_p end
+    if not ok_p then
+        return false, err_p
+    end
 
     local ok_m, err_m = uv.fs_mkdir(resolved_path, mode) ---@type boolean|nil, string|nil
-    if ok_m then return true, nil end
+    if ok_m then
+        return true, nil
+    end
     return false, err_m
 end
 
