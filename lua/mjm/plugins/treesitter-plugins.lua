@@ -253,7 +253,7 @@ return {
             api.nvim_set_var("treeclimber", { highlight = false })
             api.nvim_create_autocmd("FileType", {
                 group = api.nvim_create_augroup("treeclimber", {}),
-                pattern = langs,
+                pattern = fts,
                 callback = map_climber,
             })
         end,
