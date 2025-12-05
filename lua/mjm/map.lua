@@ -144,7 +144,8 @@ for _, map in ipairs({ "<C-w>e", "<C-w><C-e>" }) do
 end
 
 local function close_floats()
-    for _, win in ipairs(api.nvim_tabpage_list_wins(0)) do
+    local wins = api.nvim_tabpage_list_wins(0) ---@type integer[]
+    for _, win in ipairs(wins) do
         local config = api.nvim_win_get_config(win) ---@type vim.api.keyset.win_config_ret
         if config.relative and config.relative ~= "" then
             api.nvim_win_close(win, false)
@@ -154,7 +155,7 @@ end
 
 -- MAYBE: The built-ins do not map, say <C-w>gf holding ctrl the whole way through. If this
 -- becomes a problem here, can adjust
-vim.keymap.set("n", "<C-w>ge", close_floats)
+set("n", "<C-w>ge", close_floats)
 api.nvim_create_user_command("CloseFloats", close_floats, {})
 
 local tmux_cmd_map = { h = "L", j = "D", k = "U", l = "R" } ---@type table<string, string>
@@ -179,14 +180,16 @@ end
 ---@param dir string
 ---@return nil
 local win_move_tmux = function(dir)
-    if vim.api.nvim_get_option_value("buftype", { buf = 0 }) == "prompt" then
+    local bt = vim.api.nvim_get_option_value("bt", { buf = 0 })
+    if bt == "prompt" then
         do_tmux_move(dir)
         return
     end
 
     local start_win = api.nvim_get_current_win() ---@type integer
     vim.api.nvim_cmd({ cmd = "wincmd", args = { dir } }, {})
-    if api.nvim_get_current_win() == start_win then
+    local fin_win = api.nvim_get_current_win() ---@type integer
+    if start_win == fin_win then
         do_tmux_move(dir)
     end
 end
@@ -200,22 +203,24 @@ end
 
 ---@param cmd vim.api.keyset.cmd
 local resize_win = function(cmd)
-    local wintype = fn.win_gettype(api.nvim_get_current_win())
+    local wintype = fn.win_gettype(0)
     if not (wintype == "" or wintype == "quickfix" or wintype == "loclist") then
         return
     end
-    local old_spk = api.nvim_get_option_value("splitkeep", { scope = "global" })
+
+    local old_spk = api.nvim_get_option_value("spk", { scope = "global" }) ---@type string
     api.nvim_set_option_value("spk", "topline", { scope = "global" })
     api.nvim_cmd(cmd, {})
     api.nvim_set_option_value("spk", old_spk, { scope = "global" })
 end
 
+---@type { [1]:string, [2]:string, [3]:boolean }[]
 local resize_maps = {
     { "<M-h>", "-2", true },
     { "<M-j>", "-2", false },
     { "<M-k>", "+2", false },
     { "<M-l>", "+2", true },
-} ---@type { [1]:string, [2]:string, [3]:boolean }[]
+}
 
 for _, m in ipairs(resize_maps) do
     set("n", m[1], function()
@@ -284,18 +289,18 @@ end
 -- MID: PR: Related to this - k does not scroll up to the virt line
 
 -- Address cursorline flickering. Purposefully do not implement the default count mechanic
----@param cmd string
-local function map_scroll(m, cmd)
-    set({ "n", "x" }, m, function()
-        local win = api.nvim_get_current_win()
-        local cul = vim.api.nvim_get_option_value("cul", { win = win })
-        vim.api.nvim_set_option_value("lz", true, { scope = "global" })
-        vim.api.nvim_set_option_value("cul", false, { win = win })
+---@param args string
+local function map_scroll(lhs, args)
+    set({ "n", "x" }, lhs, function()
+        local old_cul = api.nvim_get_option_value("cul", { win = 0 })
+        local old_lz = api.nvim_get_option_value("lz", { scope = "global" })
+        api.nvim_set_option_value("lz", true, { scope = "global" })
+        api.nvim_set_option_value("cul", false, { win = 0 })
 
-        vim.api.nvim_cmd({ cmd = "normal", args = { cmd }, bang = true }, {})
-        vim.api.nvim_set_option_value("cul", cul, { win = win })
-        vim.api.nvim_set_option_value("lz", false, { scope = "global" })
-    end, { silent = true })
+        api.nvim_cmd({ cmd = "norm", args = { args }, bang = true }, {})
+        api.nvim_set_option_value("cul", old_cul, { win = 0 })
+        api.nvim_set_option_value("lz", old_lz, { scope = "global" })
+    end)
 end
 
 map_scroll("<C-u>", "\21zz")
@@ -315,28 +320,29 @@ local function map_vert(dir)
     set({ "n", "x" }, dir, function()
         if vim.v.count == 0 then
             return "g" .. dir
-        end
-        if vim.v.count >= vim.api.nvim_get_option_value("lines", { scope = "global" }) then
+        elseif vim.v.count >= vim.api.nvim_get_option_value("lines", { scope = "global" }) then
             return "m'" .. vim.v.count1 .. dir
         else
             return dir
         end
-    end, { expr = true, silent = true })
+    end, { expr = true })
 end
 
 map_vert("j")
 map_vert("k")
 
 set("n", "zT", function()
-    api.nvim_set_option_value("scrolloff", 0, { scope = "local" })
+    local old_so = api.nvim_get_option_value("so", { scope = "local" })
+    api.nvim_set_option_value("so", 0, { scope = "local" })
     api.nvim_cmd({ cmd = "norm", args = { "zt" }, bang = true }, {})
-    api.nvim_set_option_value("scrolloff", Mjm_Scrolloff, { scope = "local" })
+    api.nvim_set_option_value("so", old_so, { scope = "local" })
 end)
 
 set("n", "zB", function()
-    api.nvim_set_option_value("scrolloff", 0, { scope = "local" })
+    local old_so = api.nvim_get_option_value("so", { scope = "local" })
+    api.nvim_set_option_value("so", 0, { scope = "local" })
     api.nvim_cmd({ cmd = "norm", args = { "zb" }, bang = true }, {})
-    api.nvim_set_option_value("scrolloff", Mjm_Scrolloff, { scope = "local" })
+    api.nvim_set_option_value("so", old_so, { scope = "local" })
 end)
 
 set({ "n", "x" }, "gM", "<nop>")
@@ -605,6 +611,7 @@ local visual_move = function(opts)
 
     local cur_mode = api.nvim_get_mode().mode ---@type string
     if cur_mode ~= "V" and cur_mode ~= "Vs" then
+        -- MAYBE: Move into visual line mode?
         api.nvim_echo({ { "Not in visual line mode", "" } }, false, {})
         return
     end
@@ -630,10 +637,9 @@ local visual_move = function(opts)
     end) ---@type boolean, unknown|nil
 
     if status then
-        local row_1 = api.nvim_buf_get_mark(0, "]")[1] ---@type integer
-        local row_0 = row_1 - 1
-        local end_col = #api.nvim_buf_get_lines(0, row_0, row_1, false)[1] ---@type integer
-        api.nvim_buf_set_mark(0, "]", row_1, end_col, {})
+        local row = api.nvim_buf_get_mark(0, "]")[1] ---@type integer
+        local end_col = #api.nvim_buf_get_lines(0, row - 1, row, false)[1] ---@type integer
+        api.nvim_buf_set_mark(0, "]", row, end_col, {})
         vim.cmd("silent norm! `[=`]")
     elseif offset_count > 1 then
         local msg = result or "Unknown error in visual_move"

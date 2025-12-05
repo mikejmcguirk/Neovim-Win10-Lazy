@@ -50,7 +50,7 @@ api.nvim_set_option_value("mouse", "", {})
 local new_mps = api.nvim_get_option_value("mps", {}) .. ",<:>" ---@type string
 api.nvim_set_option_value("mps", new_mps, {})
 api.nvim_set_option_value("sel", "old", {})
-api.nvim_set_option_value("so", Mjm_Scrolloff, {})
+api.nvim_set_option_value("so", 6, {})
 api.nvim_set_option_value("fen", false, {})
 
 api.nvim_set_option_value("ic", true, {})
@@ -66,7 +66,6 @@ api.nvim_set_option_value("wrap", false, {})
 api.nvim_set_option_value("breakindent", true, {})
 api.nvim_set_option_value("linebreak", true, {})
 
-_G.Mjm_Sw = 4
 api.nvim_set_option_value("ts", Mjm_Sw, {})
 api.nvim_set_option_value("sts", Mjm_Sw, {})
 api.nvim_set_option_value("sw", Mjm_Sw, {})

@@ -14,7 +14,6 @@ local M = {}
 ---@return boolean, string
 function M.get_input(prompt)
     local ok, result = pcall(fn.input, { prompt = prompt, cancelreturn = "" })
-
     if (not ok) and result == "Keyboard interrupt" then
         return true, ""
     else
@@ -22,30 +21,22 @@ function M.get_input(prompt)
     end
 end
 
----@param cur_pos {[1]: integer, [2]: integer}
----@param opts? {buf?: integer, set_pcmark?: boolean, win?: integer}
+---@param cur_pos { [1]: integer, [2]: integer }
+---@param opts? { win?: integer }
 ---@return nil
-function M.protected_set_cursor(cur_pos, opts)
+function mjm.protected_set_cursor(cur_pos, opts)
     opts = opts or {}
-    local buf = opts.buf or 0
+    local win = opts.win or api.nvim_get_current_win() ---@type integer
+    local buf = api.nvim_win_get_buf(win) ---@type integer
 
-    local line_count = api.nvim_buf_line_count(buf)
-    cur_pos[1] = math.min(cur_pos[1], line_count)
+    local line_count = api.nvim_buf_line_count(buf) ---@type integer
+    local row = math.min(cur_pos[1], line_count) ---@type integer
 
-    local row = cur_pos[1]
-    local set_line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
-    cur_pos[2] = math.min(cur_pos[2], #set_line - 1)
-    cur_pos[2] = math.max(cur_pos[2], 0)
+    local set_line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1] ---@type string
+    local set_line_len_0 = math.max(#set_line - 1, 0) ---@type integer
+    local col = math.min(cur_pos[2], set_line_len_0) ---@type integer
 
-    local win = opts.win or 0
-
-    if opts.set_pcmark then
-        api.nvim_win_call(win, function()
-            vim.api.nvim_cmd({ cmd = "norm", args = { "m'" }, bang = true }, {})
-        end)
-    end
-
-    api.nvim_win_set_cursor(win, cur_pos)
+    api.nvim_win_set_cursor(win, { row, col })
 end
 
 -- Adapted from the source's "prepare_help_buffer" function
@@ -92,6 +83,7 @@ end
 ---@field win? integer
 ---@field skip_zz? boolean
 
+-- MID: Redundant with the one later on. Get rid of one of them
 ---@param buf integer
 ---@return boolean
 function mjm.util.is_buf_empty_noname(buf)
@@ -183,7 +175,7 @@ function M.open_buf(source, opts)
             end)
         end
 
-        M.protected_set_cursor(opts.cur_pos, { buf = buf, set_pcmark = same_buf, win = win })
+        mjm.protected_set_cursor(opts.cur_pos, { win = win })
     end
 
     if not opts.skip_zz then
@@ -409,6 +401,7 @@ function M.is_in_node_type(types)
     if #types < 1 then
         return false
     end
+
     local node = vim.treesitter.get_node() ---@type TSNode?
     while node do
         for _, type in ipairs(types) do
@@ -543,6 +536,11 @@ function M.do_when_idle(func)
     end)
 end
 
+-- MID: The returns from this don't make any sense
+-- Should be ok, buf pattern. ok means the win was closed, and return buf if possible
+-- And then this naturally means you would return ok if it's the last win, since we hit an
+-- expected result, allowing the function to be composed
+
 ---@param win integer
 ---@param force boolean
 ---@return integer|nil, boolean
@@ -571,11 +569,11 @@ function M.pwin_close(win, force)
 end
 
 ---@return integer[]
-local function list_listed_bufs()
-    local listed_bufs = {} ---@type integer[]
+local function get_listed_bufs()
     local bufs = api.nvim_list_bufs() ---@type integer[]
+    local listed_bufs = {} ---@type integer[]
     for _, buf in ipairs(bufs) do
-        if api.nvim_get_option_value("buflisted", { buf = buf }) then
+        if api.nvim_get_option_value("bl", { buf = buf }) then
             listed_bufs[#listed_bufs + 1] = buf
         end
     end
@@ -589,20 +587,27 @@ end
 -- FUTURE: Whenever nvim_buf_del is created, use that for deleting buffers
 
 function M.is_empty_buf(buf)
-    local lines = api.nvim_buf_get_lines(buf, 0, -1, false) ---@type string[]
-    if not lines[1] then
-        return true
-    end
-    if #lines > 1 or #lines[1] > 0 then
+    if api.nvim_buf_line_count(buf) > 1 then
         return false
     end
-    return true
+
+    local first_line = api.nvim_buf_get_lines(buf, 0, 1, false) ---@type string[]
+    if (not first_line[1]) or #first_line[1] == 0 then
+        return true
+    else
+        return false
+    end
 end
 
 function M.is_empty_noname_buf(buf)
+    if not api.nvim_buf_is_valid(buf) then
+        return false
+    end
+
     if #api.nvim_buf_get_name(buf) > 0 then
         return false
     end
+
     return M.is_empty_buf(buf)
 end
 
@@ -635,7 +640,7 @@ function M.pbuf_rm(buf, force, wipeout, no_save, suppress_errs)
 
     local delete_opts = { force = force }
     if not wipeout then
-        local listed_bufs = list_listed_bufs()
+        local listed_bufs = get_listed_bufs()
         for i = 1, #listed_bufs, -1 do
             if listed_bufs[i] == buf then
                 table.remove(listed_bufs, i)
@@ -673,21 +678,25 @@ end
 ---@param wipeout boolean
 ---@return nil
 function M.pclose_and_rm(win, force, wipeout)
+    -- MID: What does always mean here?
     local buf, always = M.pwin_close(win, force) ---@type integer|nil, boolean
     if not buf then
         return
     end
+
     M.do_when_idle(function()
         if always or #vim.fn.win_findbuf(buf) == 0 then
             local ok, chunks, msg, opts = M.pbuf_rm(buf, force, wipeout, false, true)
             if ok then
                 return
             end
+
             api.nvim_echo(chunks or { { "Unknown error" } }, msg or false, opts or { err = true })
         end
     end)
 end
 
+-- MID: Poor function naming because it doesn't imply the indexing
 ---@return Range4|nil
 function M.get_vrange4()
     local mode = string.sub(api.nvim_get_mode().mode, 1, 1) ---@type string

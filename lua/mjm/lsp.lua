@@ -21,7 +21,11 @@ end)()
 
 ---@type function
 local function peek_on_list(on_list_ctx)
+    -- MID: Rancher should have an interface where you can do the list set, and it should be able
+    -- to detect the title and replace if it exists
     fn.setqflist({}, " ", { title = on_list_ctx.title, items = on_list_ctx.items })
+    -- MID: Rancher should allow you to open to a specific list number, basically setting the
+    -- stack nr underneath before opening
     qf_open()
 end
 

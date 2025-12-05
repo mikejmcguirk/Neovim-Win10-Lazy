@@ -2,8 +2,8 @@ local api = vim.api
 local set = vim.keymap.set
 
 _G.mjm = {}
+_G.Mjm_Sw = 4
 _G.Has_Nerd_Font = true
-_G.Mjm_Scrolloff = 6 ---@type integer
 -- LOW: Create a more general defer require. Look at all of tj's funcs + vim._defer_require
 -- Needs to work with LSP autocomplete. Maybe vim._defer_require addresses this
 -- https://github.com/tjdevries/lazy-require.nvim/blob/master/lua/lazy-require.lua
@@ -82,11 +82,10 @@ end
 api.nvim_create_autocmd("BufHidden", {
     buffer = 1,
     callback = function()
-        if not ut.is_empty_noname_buf(1) then
-            return
+        if ut.is_empty_noname_buf(1) then
+            vim.schedule(function()
+                api.nvim_buf_delete(1, { force = true })
+            end)
         end
-        vim.schedule(function()
-            api.nvim_buf_delete(1, { force = true })
-        end)
     end,
 })
