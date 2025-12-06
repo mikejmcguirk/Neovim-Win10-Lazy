@@ -12,11 +12,6 @@ return {
             mappings = { start_jumping = nil },
             view = { n_steps_ahead = 1 },
             silent = true,
-
-            vim.keymap.set("n", jump_2d_map, function()
-                local jump2d = require("mini.jump2d")
-                jump2d.start(jump2d.builtin_opts.word_start)
-            end),
         })
 
         vim.api.nvim_set_hl(0, "MiniJump2dSpot", { reverse = true })

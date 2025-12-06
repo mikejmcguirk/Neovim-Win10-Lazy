@@ -372,6 +372,10 @@ set({ "n", "x" }, "<C-m>", function()
 end)
 
 -- Not silent so that the search prompting displays properly
+-- MAYBE: Very goofy idea: Use [n]n for search result navigation
+-- Patternful with unimpaired. No default, so non-destructive. Opens premium real-estate
+-- Less ergonomic as a motion, but as that typical use?
+-- Interesting possibility - Move ge to n (probably too goofy)
 set("n", "N", "Nzzzv")
 set("n", "n", "nzzzv")
 set("n", "/", "ms/")
