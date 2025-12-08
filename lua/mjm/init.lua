@@ -56,6 +56,7 @@ set("n", "<esc>", "<esc>")
 require("mjm.colorscheme")
 
 require("mjm.lazy")
+require("mjm.internal")
 require("mjm.undotree")
 require("mjm.difftool")
 require("mjm.plugins.spec-ops")

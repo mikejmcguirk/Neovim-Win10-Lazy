@@ -32,6 +32,10 @@ function mjm.protected_set_cursor(cur_pos, opts)
     local line_count = api.nvim_buf_line_count(buf) ---@type integer
     local row = math.min(cur_pos[1], line_count) ---@type integer
 
+    -- LOW: I had an issue where I jumped to a file from another directory, and then when I jumped
+    -- back it was saying it shouldn't get the length of setline. I tried to re-create it but
+    -- could not. I could add an or statement here to cover it up, but would like to figure out
+    -- why the issue's occuring. This was in combination with the BufWinEnter " mark autocmd
     local set_line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1] ---@type string
     local set_line_len_0 = math.max(#set_line - 1, 0) ---@type integer
     local col = math.min(cur_pos[2], set_line_len_0) ---@type integer
