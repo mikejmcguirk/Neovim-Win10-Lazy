@@ -26,6 +26,12 @@ set("n", "ZC", "<cmd>lockmarks wqa<cr>")
 set("n", "<tab>", "gt")
 set("n", "<S-tab>", "gT")
 set("n", "ZT", function()
+    local tabpagenr = fn.tabpagenr("$") ---@type integer
+    if tabpagenr == 1 then
+        api.nvim_echo({ { "Cannot close last tabpage" } }, false, {})
+        return
+    end
+
     local args = vim.v.count > 0 and { tostring(vim.v.count) } or nil ---@type string[]|nil
     api.nvim_cmd({ cmd = "tabclose", args = args }, {})
 end)
@@ -36,20 +42,21 @@ set("n", "ZB", function()
 end)
 
 set("n", "g<tab>", function()
-    ---@type integer
-    local range = vim.v.count == 0 and api.nvim_call_function("tabpagenr", { "$" }) or vim.v.count
+    local range = vim.v.count == 0 and vim.fn.tabpagenr("$") or vim.v.count ---@type integer
     api.nvim_cmd({ cmd = "tabnew", range = { range } }, {})
 
     local buf = api.nvim_get_current_buf() ---@type integer
     if not ut.is_empty_noname_buf(buf) then
         return
     end
+
     api.nvim_create_autocmd("BufHidden", {
         buffer = buf,
         callback = function()
             if not ut.is_empty_noname_buf(buf) then
                 return
             end
+
             vim.schedule(function()
                 api.nvim_buf_delete(buf, { force = true })
             end)
@@ -83,12 +90,12 @@ end)
 ----------------
 
 set({ "n", "x" }, "<C-f>", function()
-    api.nvim_cmd({ cmd = "norm", args = { "m'" }, bang = true }, {})
+    api.nvim_cmd({ cmd = "norm", args = { "m`" }, bang = true }, {})
     api.nvim_cmd({ cmd = "norm", args = { "\6" }, bang = true }, {})
 end)
 
 set({ "n", "x" }, "<C-b>", function()
-    api.nvim_cmd({ cmd = "norm", args = { "m'" }, bang = true }, {})
+    api.nvim_cmd({ cmd = "norm", args = { "m`" }, bang = true }, {})
     api.nvim_cmd({ cmd = "norm", args = { "\2" }, bang = true }, {})
 end)
 
@@ -118,45 +125,36 @@ set("x", "a_", "<cmd>norm! ggoVG<cr>")
 for _, map in ipairs({ "<C-w>e", "<C-w><C-e>" }) do
     vim.keymap.set("n", map, function()
         local win = api.nvim_get_current_win() ---@type integer
-        local config = vim.api.nvim_win_get_config(win) ---@type vim.api.keyset.win_config_ret
+        local config = api.nvim_win_get_config(win) ---@type vim.api.keyset.win_config_ret
         if not (config.relative and config.relative ~= "") then
             vim.api.nvim_echo({ { "Current window is not floating" } }, false, {})
             return
         end
 
-        local buf = vim.api.nvim_win_get_buf(win) ---@type integer
+        local buf = api.nvim_win_get_buf(win) ---@type integer
         vim.api.nvim_set_option_value("bufhidden", "", { buf = buf })
+        ---@type integer
         local to_split = (function()
             if vim.v.count > 0 then
-                local winnr = math.min(vim.v.count, fn.winnr("$")) ---@type integer
+                local max_winnr = fn.winnr("$") ---@type integer
+                local winnr = math.min(vim.v.count, max_winnr) ---@type integer
                 return vim.fn.win_getid(winnr)
             end
 
             -- LOW: How to handle other origin conditions?
-            return config.relative == "win" and config.win or vim.fn.win_getid(1)
-        end)() ---@type integer
+            return config.relative == "win" and config.win or fn.win_getid(1)
+        end)()
 
-        ---@type "above"|"below"|"left"|"right"
-        local split = vim.api.nvim_get_option_value("splitright", {}) and "right" or "left"
+        local spr = api.nvim_get_option_value("spr", {}) ---@type boolean
+        local split = spr and "right" or "left" ---@type "above"|"below"|"left"|"right"
         api.nvim_win_close(win, true)
         api.nvim_open_win(buf, true, { win = to_split, split = split })
     end)
 end
 
-local function close_floats()
-    local wins = api.nvim_tabpage_list_wins(0) ---@type integer[]
-    for _, win in ipairs(wins) do
-        local config = api.nvim_win_get_config(win) ---@type vim.api.keyset.win_config_ret
-        if config.relative and config.relative ~= "" then
-            api.nvim_win_close(win, false)
-        end
-    end
-end
-
 -- MAYBE: The built-ins do not map, say <C-w>gf holding ctrl the whole way through. If this
 -- becomes a problem here, can adjust
-set("n", "<C-w>ge", close_floats)
-api.nvim_create_user_command("CloseFloats", close_floats, {})
+set("n", "<C-w>ge", "<cmd>fclose!<cr>")
 
 local tmux_cmd_map = { h = "L", j = "D", k = "U", l = "R" } ---@type table<string, string>
 
@@ -187,7 +185,7 @@ local win_move_tmux = function(dir)
     end
 
     local start_win = api.nvim_get_current_win() ---@type integer
-    vim.api.nvim_cmd({ cmd = "wincmd", args = { dir } }, {})
+    api.nvim_cmd({ cmd = "wincmd", args = { dir } }, {})
     local fin_win = api.nvim_get_current_win() ---@type integer
     if start_win == fin_win then
         do_tmux_move(dir)
@@ -233,7 +231,8 @@ for _, m in pairs({ "<C-w>q", "<C-w><C-q>" }) do
     set("n", m, function()
         -- FUTURE: Use wipeout when that logic is fixed
         -- https://github.com/neovim/neovim/pull/33402
-        ut.pclose_and_rm(api.nvim_get_current_win(), false, false)
+        local cur_win = api.nvim_get_current_win()
+        ut.pclose_and_rm(cur_win, false, false)
     end)
 end
 
@@ -292,8 +291,8 @@ end
 ---@param args string
 local function map_scroll(lhs, args)
     set({ "n", "x" }, lhs, function()
-        local old_cul = api.nvim_get_option_value("cul", { win = 0 })
-        local old_lz = api.nvim_get_option_value("lz", { scope = "global" })
+        local old_cul = api.nvim_get_option_value("cul", { win = 0 }) ---@type boolean
+        local old_lz = api.nvim_get_option_value("lz", { scope = "global" }) ---@type boolean
         api.nvim_set_option_value("lz", true, { scope = "global" })
         api.nvim_set_option_value("cul", false, { win = 0 })
 
@@ -309,37 +308,52 @@ map_scroll("<C-d>", "\4zz")
 set("o", "gg", "<esc>")
 set({ "n", "x" }, "go", function()
     -- gg Retains cursor position since I have startofline off
-    return vim.v.count < 1 and "m'gg" or "m'" .. vim.v.count1 .. "go"
+    return vim.v.count < 1 and "m`gg" or "m`" .. vim.v.count1 .. "go"
 end, { expr = true })
 
 set("o", "go", function()
     return vim.v.count < 1 and "gg" or "go"
 end, { expr = true })
 
-local function map_vert(dir)
-    set({ "n", "x" }, dir, function()
-        if vim.v.count == 0 then
-            return "g" .. dir
-        elseif vim.v.count >= vim.api.nvim_get_option_value("lines", { scope = "global" }) then
-            return "m'" .. vim.v.count1 .. dir
-        else
-            return dir
-        end
-    end, { expr = true })
-end
+set({ "n", "x" }, "j", function()
+    if vim.v.count == 0 then
+        return "gj"
+    end
 
-map_vert("j")
-map_vert("k")
+    local line = fn.line(".") ---@type integer
+    local new_line = line + vim.v.count1 ---@type integer
+    local bot = fn.line("w$") ---@type integer
+    if new_line > bot then
+        return "m`" .. vim.v.count1 .. "j"
+    end
+
+    return "j"
+end, { expr = true })
+
+set({ "n", "x" }, "k", function()
+    if vim.v.count == 0 then
+        return "gk"
+    end
+
+    local line = fn.line(".") ---@type integer
+    local new_line = line - vim.v.count1 ---@type integer
+    local top = fn.line("w0") ---@type integer
+    if new_line < top then
+        return "m`" .. vim.v.count1 .. "k"
+    end
+
+    return "k"
+end, { expr = true })
 
 set("n", "zT", function()
-    local old_so = api.nvim_get_option_value("so", { scope = "local" })
+    local old_so = api.nvim_get_option_value("so", { scope = "local" }) ---@type integer
     api.nvim_set_option_value("so", 0, { scope = "local" })
     api.nvim_cmd({ cmd = "norm", args = { "zt" }, bang = true }, {})
     api.nvim_set_option_value("so", old_so, { scope = "local" })
 end)
 
 set("n", "zB", function()
-    local old_so = api.nvim_get_option_value("so", { scope = "local" })
+    local old_so = api.nvim_get_option_value("so", { scope = "local" }) ---@type integer
     api.nvim_set_option_value("so", 0, { scope = "local" })
     api.nvim_cmd({ cmd = "norm", args = { "zb" }, bang = true }, {})
     api.nvim_set_option_value("so", old_so, { scope = "local" })
@@ -410,8 +424,9 @@ end)
 
 set("n", "<bs><M-d>", function()
     local enabled = tostring(vim.diagnostic.is_enabled())
-    local cfg = vim.inspect(vim.diagnostic.config())
-    print("Enabled: " .. enabled .. "\n\n" .. cfg)
+    local config = vim.diagnostic.config()
+    local inspected = vim.inspect(config)
+    print("Enabled: " .. enabled .. "\n\n" .. inspected)
 end)
 
 set("n", "<bs>s", function()
@@ -435,7 +450,7 @@ set("n", "<bs><M-w>", "<cmd>set wrap?<cr>")
 -- NOTE: could not get set lmap "\3\27" to work
 set("n", "<C-c>", function()
     print("")
-    vim.api.nvim_cmd({ cmd = "noh" }, {})
+    api.nvim_cmd({ cmd = "noh" }, {})
     vim.lsp.buf.clear_references()
 
     -- Allows <C-c> to exit commands with a count. Also eliminates command line nag
@@ -450,6 +465,7 @@ for _, m in pairs({ "i", "a", "A" }) do
         if string.match(api.nvim_get_current_line(), "^%s*$") then
             return '"_S'
         end
+
         return m
     end, { expr = true })
 end
@@ -569,7 +585,6 @@ set("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true })
 -- VISUAL MODE --
 -----------------
 
--- { and } remapped in normal mode section
 -- Has to be literally opening the cmdline or else the visual selection goes haywire
 local eval_cmd = ":s/\\%V.*\\%V./\\=eval(submatch(0))/<CR>"
 set("x", "<C-=>", eval_cmd, { noremap = true, silent = true })
@@ -593,11 +608,12 @@ local function add_blank_visual(up)
     -- LOW: Currently exiting and re-selecting visual mode because new lines upward pins the
     -- visual selection to the new lines. It should be possible to calculate the adjustment of
     -- the selection without actually leaving visual mode
-    vim.api.nvim_set_option_value("lz", true, { scope = "global" })
-    vim.api.nvim_cmd({ cmd = "norm", args = { "\27" }, bang = true }, {})
+    local old_lz = api.nvim_get_option_value("lz", { scope = "global" }) ---@type boolean
+    api.nvim_set_option_value("lz", true, { scope = "global" })
+    api.nvim_cmd({ cmd = "norm", args = { "\27" }, bang = true }, {})
     api.nvim_buf_set_lines(0, row - 1, row - 1, false, new_lines)
-    vim.api.nvim_cmd({ cmd = "norm", args = { "gv" }, bang = true }, {})
-    vim.api.nvim_set_option_value("lz", false, { scope = "global" })
+    api.nvim_cmd({ cmd = "norm", args = { "gv" }, bang = true }, {})
+    api.nvim_set_option_value("lz", old_lz, { scope = "global" })
 end
 
 set("x", "[<space>", function()
@@ -620,6 +636,7 @@ local visual_move = function(opts)
         return
     end
 
+    local old_lz = api.nvim_get_option_value("lz", { scope = "global" }) ---@type boolean
     vim.api.nvim_set_option_value("lz", true, { scope = "global" })
     opts = opts or {}
     -- Get before leaving visual mode
@@ -633,12 +650,13 @@ local visual_move = function(opts)
     elseif vcount1 > 1 and not opts.upward then
         offset = fn.line("'>") - fn.line(".")
     end
-    local offset_count = vcount1 - offset
 
+    local offset_count = vcount1 - offset
+    ---@type boolean, unknown|nil
     local status, result = pcall(function()
         local cmd = cmd_start .. offset_count
         vim.cmd(cmd)
-    end) ---@type boolean, unknown|nil
+    end)
 
     if status then
         local row = api.nvim_buf_get_mark(0, "]")[1] ---@type integer
@@ -651,7 +669,7 @@ local visual_move = function(opts)
     end
 
     api.nvim_cmd({ cmd = "norm", args = { "gv" }, bang = true }, {})
-    vim.api.nvim_set_option_value("lz", false, { scope = "global" })
+    api.nvim_set_option_value("lz", old_lz, { scope = "global" })
 end
 
 set("x", "<C-j>", visual_move)

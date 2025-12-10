@@ -15,6 +15,7 @@ require("mjm")
 
 -- PR: Fix the missing fields annotations in certain keysets (nvim_cmd being the worst)
 -- PR: https://github.com/neovim/neovim/issues/36081 - I might be able to get this
+-- Could just use Rancher's diag format
 
 ----------------------
 -- DOTFILE STALKING --

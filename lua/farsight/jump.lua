@@ -105,7 +105,7 @@ local function get_jump_wins(all_wins)
     if all_wins then
         return get_focusable_wins_ordered(0)
     else
-        local cur_win = api.nvim_get_current_win()
+        local cur_win = api.nvim_get_current_win() ---@type integer
         win_cache = { cur_win }
         return { cur_win }
     end
@@ -309,6 +309,7 @@ local function display_sights(sights)
 
     local extmarks = get_extmarks_from_sights(sights) ---@type FarsightExtmarkInfo[]
     for _, extmark in ipairs(extmarks) do
+        ---@type vim.api.keyset.set_extmark
         local extmark_opts = {
             hl_mode = "combine",
             priority = 1000,
@@ -316,9 +317,9 @@ local function display_sights(sights)
             virt_text_pos = "overlay",
         }
 
-        local buf = extmark.buf
-        local row = extmark.row
-        local col = extmark.col
+        local buf = extmark.buf ---@type integer
+        local row = extmark.row ---@type integer
+        local col = extmark.col ---@type integer
         pcall(api.nvim_buf_set_extmark, buf, JUMP_HL_NS, row, col, extmark_opts)
     end
 
@@ -336,6 +337,8 @@ local function find_jump_win(buf, row)
     local wins = win_cache or get_focusable_wins_ordered(0) ---@type integer[]
     -- FARSIGHT: This *should* work because winnrs excluse non-focusable and hidden wins
     -- I'm also not convinced this is the most efficient way to do this
+    -- FARSIGHT: This would fail though if the cursor were in a hidden window, which is technically
+    -- possible. I don't know if you just set to winnr 1
     local start_winnr = api.nvim_win_get_number(0) ---@type integer
     local winnr = start_winnr ---@type integer
 

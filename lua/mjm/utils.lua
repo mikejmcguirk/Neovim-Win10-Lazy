@@ -29,8 +29,11 @@ function mjm.protected_set_cursor(cur_pos, opts)
     local win = opts.win or api.nvim_get_current_win() ---@type integer
     local buf = api.nvim_win_get_buf(win) ---@type integer
 
+    -- LOW: I'm not sure why this guard is necessary. If the '"' mark doesn't exist, it should
+    -- return 1,0. Happens intermittently. Will see if this helps
+    local cursor_row = math.max(cur_pos[1], 1) ---@type integer
     local line_count = api.nvim_buf_line_count(buf) ---@type integer
-    local row = math.min(cur_pos[1], line_count) ---@type integer
+    local row = math.min(cursor_row, line_count) ---@type integer
 
     -- LOW: I had an issue where I jumped to a file from another directory, and then when I jumped
     -- back it was saying it shouldn't get the length of setline. I tried to re-create it but
@@ -337,6 +340,7 @@ end
 -- Taken from nvim-overfly
 -- FUTURE: If I understand the Neovim repo code right, at some point a "highest" filter will be
 -- added to diagnostic jumping
+-- PR: Or add it if not
 ---@param opts? {buf:integer|nil}
 ---@return integer|nil
 function M.get_top_severity(opts)
