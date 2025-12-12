@@ -98,7 +98,7 @@ end
 
 -- Traditional, since the Obsidian plugin uses gf as its multi-function key
 -- Since markdown-oxide uses goto definition for link nav, we don't need gf for that purpose
-vim.keymap.set("n", "gf", toggle_checkbox)
+vim.keymap.set("n", "gf", toggle_checkbox, { buffer = 0 })
 
 mjm.lsp.start(vim.lsp.config["markdown_oxide"], { bufnr = 0 })
 
