@@ -4,7 +4,8 @@ local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 require("mjm.utils").set_buf_space_indent(0, 2)
 
 -- "r" in Markdown treats lines like "- some text" as comments and indents them
-mjm.opt.str_rm("fo", "r", { scope = "local" })
+mjm.opt.str_rm("fo", "r", { buf = 0 })
+
 api.nvim_set_option_value("cc", "", { scope = "local" })
 api.nvim_set_option_value("culopt", "number,screenline", { scope = "local" })
 api.nvim_set_option_value("siso", 12, { scope = "local" })
@@ -17,13 +18,14 @@ vim.keymap.set("i", ":", ":<C-g>u", { buffer = 0 })
 vim.keymap.set("i", "-", "-<C-g>u", { buffer = 0 })
 vim.keymap.set("i", "?", "?<C-g>u", { buffer = 0 })
 vim.keymap.set("i", "!", "!<C-g>u", { buffer = 0 })
+
 vim.keymap.set("n", "gK", function()
     ut.check_word_under_cursor()
 end, { buffer = 0 })
 
 -- MID: Create a localleader mapping in Conform for prettier, keep this for running on save
 
-vim.api.nvim_create_autocmd("BufWritePre", {
+api.nvim_create_autocmd("BufWritePre", {
     buffer = 0,
     callback = function(ev)
         ut.fallback_formatter(ev.buf)
@@ -55,9 +57,11 @@ local function is_checkbox(line)
     if string.match(line, "%s*[-+*]%s+%[.%]") ~= nil then
         return true
     end
+
     if string.match(line, "%s*%d+[%.%)]%s+%[.%]") ~= nil then
         return true
     end
+
     return false
 end
 
@@ -66,6 +70,7 @@ local function toggle_checkbox()
     if ut.is_in_node_type({ "fenced_code_block", "minus_metadata" }) then
         return
     end
+
     local row = api.nvim_win_get_cursor(0)[1] ---@type integer
     local line = api.nvim_buf_get_lines(0, row - 1, row, false)[1] ---@type string
     local unchecked = " " ---@type string
@@ -93,7 +98,7 @@ local function toggle_checkbox()
         end
     end)() ---@type string
 
-    vim.api.nvim_buf_set_lines(0, row - 1, row, true, { new_line })
+    api.nvim_buf_set_lines(0, row - 1, row, true, { new_line })
 end
 
 -- Traditional, since the Obsidian plugin uses gf as its multi-function key

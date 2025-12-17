@@ -112,7 +112,6 @@ autoset_winopt("WinEnter", "cul", true)
 autoset_winopt("WinLeave", "cul", false)
 
 api.nvim_set_option_value("list", true, {})
-_G.Mjm_Lcs = "tab:<->,extends:»,precedes:«,nbsp:␣,trail:⣿"
 api.nvim_set_option_value("lcs", Mjm_Lcs, {})
 autoset_winopt("InsertEnter", "list", false)
 autoset_winopt("InsertLeave", "list", true)

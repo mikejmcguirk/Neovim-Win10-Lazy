@@ -34,6 +34,7 @@ local MAX_TOKENS = 2 ---@type integer
 local TOKENS = vim.split("abcdefghijklmnopqrstuvwxyz", "") ---@type string[]
 
 -- FARSIGHT: Advertise these HL groups
+---@type table<string, string>
 local hl = {
     JUMP = "FarsightJump",
     JUMP_AHEAD = "FarsightJumpAhead",
@@ -203,7 +204,7 @@ local function clear_sight_labels(sights)
     end
 end
 
--- LOW: In theory, he best way to do this would be to figure out a way to pre-determine the length
+-- LOW: In theory, the best way to do this would be to figure out a way to pre-determine the length
 -- of each label and allocate each only once as a string
 ---@param sights FarsightSight[]
 ---@param opts farsight.jump.JumpOpts
