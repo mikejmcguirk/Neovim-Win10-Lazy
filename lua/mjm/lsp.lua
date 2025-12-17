@@ -378,6 +378,8 @@ function mjm.lsp.start(config, opts)
     end
 end
 
+-- LOW: LspInfo is an alias for checkhealth vim.lsp, and there is a project to upstream cmds from
+-- nvim-lspconfig to core. Unsure of where that will eventually land
 -- LOW: Want to look back again into how how we are dealing with window opening certain cmds
 -- Another use case: I already have a split open that I want to goto definition into. I would like
 -- to be able to do 2gd to put the result into window 2, but cannot
