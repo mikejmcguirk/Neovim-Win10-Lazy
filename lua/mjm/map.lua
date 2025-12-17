@@ -74,30 +74,19 @@ set({ "n", "x" }, "L", "<cmd>keepjumps norm! L<cr>")
 set({ "n", "x" }, "M", "<cmd>keepjumps norm! M<cr>")
 
 set({ "n", "x" }, "{", function()
-    local args = vim.v.count1 .. "{"
-    ---@diagnostic disable-next-line: missing-fields
-    api.nvim_cmd({ cmd = "normal", args = { args }, bang = true, mods = { keepjumps = true } }, {})
+    vim.cmd("keepjumps norm! " .. vim.v.count1 .. "{")
 end)
 
 set({ "n", "x" }, "}", function()
-    local args = vim.v.count1 .. "}"
-    ---@diagnostic disable-next-line: missing-fields
-    api.nvim_cmd({ cmd = "normal", args = { args }, bang = true, mods = { keepjumps = true } }, {})
+    vim.cmd("keepjumps norm! " .. vim.v.count1 .. "}")
 end)
 
 ----------------
 -- SET PCMARK --
 ----------------
 
-set({ "n", "x" }, "<C-f>", function()
-    api.nvim_cmd({ cmd = "norm", args = { "m`" }, bang = true }, {})
-    api.nvim_cmd({ cmd = "norm", args = { "\6" }, bang = true }, {})
-end)
-
-set({ "n", "x" }, "<C-b>", function()
-    api.nvim_cmd({ cmd = "norm", args = { "m`" }, bang = true }, {})
-    api.nvim_cmd({ cmd = "norm", args = { "\2" }, bang = true }, {})
-end)
+set({ "n", "x" }, "<C-f>", "m`<C-f>")
+set({ "n", "x" }, "<C-b>", "m`<C-b>")
 
 ------------------
 -- TEXT OBJECTS --
@@ -594,7 +583,7 @@ set("x", "<C-=>", eval_cmd, { noremap = true, silent = true })
 ---@param up? boolean
 ---@return nil
 local function add_blank_visual(up)
-    local vrange4 = ut.get_vrange4() ---@type Range4|nil
+    local vrange4 = ut.get_vregionpos4() ---@type Range4|nil
     if not vrange4 then
         return
     end

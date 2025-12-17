@@ -1,5 +1,5 @@
 vim.api.nvim_set_option_value("cc", "", { scope = "local" })
-vim.keymap.set("n", "q", "<cmd>bwipe<cr>", { buffer = true })
+vim.keymap.set("n", "q", "<cmd>bwipe<cr>", { buffer = 0 })
 
 -- PR: Setting window opts for health is non-trivially difficult because the _check function does
 -- not contain window info for the non-float case

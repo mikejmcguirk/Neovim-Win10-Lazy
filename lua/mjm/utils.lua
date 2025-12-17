@@ -424,6 +424,8 @@ function M.is_in_node_type(types)
     return false
 end
 
+-- LOW: Could do this as a table<string, string[]> where the key is filetype and the val is the
+-- list of comment nodes, and then have a fallback list
 ---@return boolean
 function M.is_comment()
     return M.is_in_node_type({ "comment", "line_comment", "block_comment", "comment_content" })
@@ -704,9 +706,8 @@ function M.pclose_and_rm(win, force, wipeout)
     end)
 end
 
--- MID: Poor function naming because it doesn't imply the indexing
 ---@return Range4|nil
-function M.get_vrange4()
+function M.get_vregionpos4()
     local mode = string.sub(api.nvim_get_mode().mode, 1, 1) ---@type string
     if not (mode == "v" or mode == "V" or mode == "\22") then
         return nil

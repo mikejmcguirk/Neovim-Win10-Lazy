@@ -2,7 +2,12 @@ local api = vim.api
 local set = vim.keymap.set
 
 _G.mjm = {}
+
+local gen_lcs = "extends:»,precedes:«,nbsp:␣,trail:⣿"
+_G.Mjm_Lcs = "tab:<->," .. gen_lcs
+_G.Mjm_Lcs_Tab = "tab:   ," .. gen_lcs
 _G.Mjm_Sw = 4
+
 _G.Has_Nerd_Font = true
 -- LOW: Create a more general defer require. Look at all of tj's funcs + vim._defer_require
 -- Needs to work with LSP autocomplete. Maybe vim._defer_require addresses this
@@ -27,6 +32,10 @@ mjm.opt = {}
 ---@param scope vim.api.keyset.option
 function mjm.opt.str_append(opt, new, scope)
     local old = api.nvim_get_option_value(opt, scope) ---@type string
+    if string.find(old, new, 1, true) ~= nil then
+        return
+    end
+
     local new_val = old .. new ---@type string
     api.nvim_set_option_value(opt, new_val, scope)
 end

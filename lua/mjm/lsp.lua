@@ -1,9 +1,10 @@
 local api = vim.api
 local fn = vim.fn
 local lsp = vim.lsp
-local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
+local set = vim.keymap.set
 
-vim.keymap.set("n", "gr", "<nop>")
+set("n", "gr", "<nop>")
+-- LOW: This could, in theory, overwrite a gO mapping I create
 if #fn.maparg("gO", "n") > 0 then
     vim.keymap.del("n", "gO")
 end
@@ -124,98 +125,107 @@ local workspace = ok and fzflua.lsp_live_workspace_symbols or lsp.buf.workspace_
 ---@param buf integer
 ---@return nil
 local function map_no_support(lhs, client, method, buf)
-    vim.keymap.set("n", lhs, function()
+    set("n", lhs, function()
         ---@type [string, string|integer?]
         local chunk = { "Client " .. client.name .. " does not support method " .. method }
         api.nvim_echo({ chunk }, false, {})
     end, { buffer = buf })
 end
 
--- require("mjm.codelens").set_display({ hl_mode = "replace", virt_lines = true, virt_text = false })
--- For testing
-vim.lsp.codelens.config({
-    virt_text = false,
-    virt_lines = function(buf, ns, line, chunks)
-        ---@type integer
-        local indent = vim.api.nvim_buf_call(buf, function()
-            return vim.fn.indent(line + 1)
-        end)
-
-        if indent > 0 then
-            table.insert(chunks, 1, { string.rep(" ", indent), "" })
-        end
-        vim.api.nvim_buf_set_extmark(buf, ns, line, 0, {
-            virt_lines = { chunks },
-            virt_lines_above = true,
-            hl_mode = "replace", -- Default: 'combine'
-        })
-    end,
-})
-
 ---@param ev vim.api.keyset.create_autocmd.callback_args
 ---@return nil
 local function set_lsp_maps(ev)
+    local buf = ev.buf ---@type integer
     local client = lsp.get_client_by_id(ev.data.client_id) ---@type vim.lsp.Client?
     if not client then
         return
     end
-    local buf = ev.buf ---@type integer
 
     -- callHierarchy/incomingCalls --
-    vim.keymap.set("n", "grC", in_call, { buffer = buf })
+    set("n", "grC", in_call, { buffer = buf })
 
     -- callHierarchy/outgoingCalls --
-    vim.keymap.set("n", "grc", out_call, { buffer = buf })
+    set("n", "grc", out_call, { buffer = buf })
 
     -- textDocument/codeAction --
-    vim.keymap.set("n", "gra", code_action, { buffer = buf })
+    set("n", "gra", code_action, { buffer = buf })
 
     -- textDocument/codeLens --
     if client:supports_method("textDocument/codeLens") then
-        vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
+        ---@param lens_buf integer
+        ---@param ns integer
+        ---@param lnum integer
+        ---@param chunks [string, string|integer?][]
+        local function on_display(lens_buf, ns, lnum, chunks)
+            api.nvim_buf_clear_namespace(lens_buf, ns, lnum, lnum + 1)
+            if #chunks == 0 then
+                return
+            end
+
+            ---@type integer
+            local indent = api.nvim_buf_call(lens_buf, function()
+                return fn.indent(lnum + 1)
+            end)
+
+            if indent > 0 then
+                local indent_str = string.rep(" ", indent) ---@type string
+                table.insert(chunks, 1, { indent_str, "" })
+            end
+
+            vim.api.nvim_buf_set_extmark(lens_buf, ns, lnum, 0, {
+                virt_lines = { chunks },
+                virt_lines_above = true,
+                hl_mode = "replace", -- Default: 'combine'
+            })
+        end
+
+        api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
             buffer = ev.buf,
             callback = function()
-                vim.lsp.codelens.refresh({ buf = ev.buf })
-                -- require("mjm.codelens").refresh({ buf = ev.buf })
+                vim.lsp.codelens.refresh({
+                    buf = buf,
+                    display = { on_display = on_display },
+                })
             end,
         })
     end
 
     -- textDocument/declaration --
-    vim.keymap.set("n", "grd", declaration, { buffer = buf })
-    vim.keymap.set("n", "grD", peek_declaration, { buffer = buf })
+    set("n", "grd", declaration, { buffer = buf })
+    set("n", "grD", peek_declaration, { buffer = buf })
 
     -- textDocument/definition --
     if client:supports_method("textDocument/definition") then
-        vim.keymap.set("n", "gd", definition, { buffer = buf })
-        vim.keymap.set("n", "gD", peek_definition, { buffer = buf })
+        set("n", "gd", definition, { buffer = buf })
+        set("n", "gD", peek_definition, { buffer = buf })
     end
 
     -- textDocument/documentColor --
-    vim.keymap.set("n", "gro", function()
-        lsp.document_color.enable(not lsp.document_color.is_enabled())
+    set("n", "gro", function()
+        local enabled = lsp.document_color.is_enabled() ---@type boolean
+        lsp.document_color.enable(not enabled)
     end, { buffer = buf })
 
-    vim.keymap.set("n", "grO", lsp.document_color.color_presentation, { buffer = buf })
+    set("n", "grO", lsp.document_color.color_presentation, { buffer = buf })
 
     -- textDocument/documentHighlight --
-    vim.keymap.set("n", "grh", lsp.buf.document_highlight, { buffer = buf })
+    set("n", "grh", lsp.buf.document_highlight, { buffer = buf })
 
     -- textDocument/documentSymbol --
     if client:supports_method("textDocument/documentSymbol") then
-        vim.keymap.set("n", "gO", symbols, { buffer = buf })
+        set("n", "gO", symbols, { buffer = buf })
     end
 
     -- textDocument/hover --
     -- Default border now set with winborder
 
     -- textDocument/implementation --
-    vim.keymap.set("n", "gri", implementation, { buffer = buf })
-    vim.keymap.set("n", "grI", peek_implementation, { buffer = buf })
+    set("n", "gri", implementation, { buffer = buf })
+    set("n", "grI", peek_implementation, { buffer = buf })
 
     -- textDocument/inlayHint --
     if client:supports_method("textDocument/inlayHint") then
-        vim.keymap.set("n", "grl", function()
+        set("n", "grl", function()
             lsp.inlay_hint.enable(not lsp.inlay_hint.is_enabled({ buffer = buf }))
         end, { buffer = buf })
     else
@@ -229,11 +239,11 @@ local function set_lsp_maps(ev)
     -- end
 
     -- textDocument/references --
-    vim.keymap.set("n", "grr", references, { buffer = buf })
-    vim.keymap.set("n", "grR", peek_references, { buffer = buf })
+    set("n", "grr", references, { buffer = buf })
+    set("n", "grR", peek_references, { buffer = buf })
 
     -- textDocument/rename --
-    vim.keymap.set("n", "grn", function()
+    set("n", "grn", function()
         ---@type boolean, string
         local ok_i, input = require("mjm.utils").get_input("Rename: ")
         if not ok_i then
@@ -251,12 +261,13 @@ local function set_lsp_maps(ev)
         lsp.buf.rename(input)
     end, { buffer = buf })
 
-    vim.keymap.set("n", "grN", lsp.buf.rename, { buffer = buf })
+    set("n", "grN", lsp.buf.rename, { buffer = buf })
 
     -- textDocument/semanticTokens
     if client:supports_method("textDocument/semanticTokens/full") then
-        vim.keymap.set("n", "grm", function()
-            lsp.semantic_tokens.enable(not lsp.semantic_tokens.is_enabled())
+        set("n", "grm", function()
+            local enabled = lsp.semantic_tokens.is_enabled() ---@type boolean
+            lsp.semantic_tokens.enable(not enabled)
         end, { buffer = buf })
     else
         map_no_support("grm", client, "textDocument/semanticTokens/full", buf)
@@ -266,12 +277,12 @@ local function set_lsp_maps(ev)
     -- Border supplied with winborder
 
     -- textDocument/typeDefinition --
-    vim.keymap.set("n", "grt", typedef, { buffer = buf })
-    vim.keymap.set("n", "grT", peek_typedef, { buffer = buf })
+    set("n", "grt", typedef, { buffer = buf })
+    set("n", "grT", peek_typedef, { buffer = buf })
 
     -- typeHierarchy/subtypes --
     if client:supports_method("typeHierarchy/subtypes") then
-        vim.keymap.set("n", "grY", function()
+        set("n", "grY", function()
             vim.lsp.buf.typehierarchy("subtypes")
         end, { buffer = buf })
     else
@@ -280,7 +291,7 @@ local function set_lsp_maps(ev)
 
     -- typeHierarchy/supertypes --
     if client:supports_method("typeHierarchy/supertypes") then
-        vim.keymap.set("n", "gry", function()
+        set("n", "gry", function()
             vim.lsp.buf.typehierarchy("supertypes")
         end, { buffer = buf })
     else
@@ -288,10 +299,10 @@ local function set_lsp_maps(ev)
     end
 
     -- workspace/symbol --
-    vim.keymap.set("n", "grw", workspace, { buffer = buf })
+    set("n", "grw", workspace, { buffer = buf })
 end
 
-local lsp_group = vim.api.nvim_create_augroup("lsp-autocmds", { clear = true }) ---@type integer
+local lsp_group = vim.api.nvim_create_augroup("mjm-lsp", {}) ---@type integer
 vim.api.nvim_create_autocmd("LspAttach", {
     group = lsp_group,
     callback = set_lsp_maps,
@@ -302,7 +313,7 @@ vim.api.nvim_create_autocmd("LspDetach", {
     callback = function(ev)
         for _, client in ipairs(lsp.get_clients({ bufnr = ev.buf }) or {}) do
             if vim.tbl_isempty(vim.tbl_keys(client.attached_buffers)) then
-                ut.do_when_idle(function()
+                require("mjm.utils").do_when_idle(function()
                     client:stop()
                 end)
             end
@@ -342,31 +353,17 @@ function mjm.lsp.start(config, opts)
     vim.validate("opts", opts, "table", true)
     opts = opts or {}
 
-    -- In an actual lsp.start rewrite, local values would be created. But since this
-    -- proof-of-concept is just a wrapper for lsp.start, we need to pass along the modified opts.
-    -- Create a separate table to avoid modifying the original
     local start_opts = vim.deepcopy(opts, true) ---@type vim.lsp.start.Opts
     start_opts.bufnr = vim._resolve_bufnr(start_opts.bufnr) ---@type integer
-    -- From the lsp.enable logic
-    -- NOTE: The comment below should actually be in lsp.start since it's a weird edge case
-    -- Do not display an error if this fails, even if not opts.silent. The comment operator runs
-    -- the ftplugin in the background on a nofile buffer. To avoid this, the user would need to
-    -- set opts.silent = true in all cases
     if api.nvim_get_option_value("buftype", { buf = start_opts.bufnr }) ~= "" then
         return
     end
 
-    -- I think it would be the most clean to deprecate start.Opts.reuse_client and only use the
-    -- value in lsp.Config. Emulate that behavior below
     start_opts.reuse_client = config.reuse_client
-    -- The future state of what process owns root_markers and how they are accessed is still
-    -- being discussed. For now, simply use the current underscore interface
     ---@diagnostic disable-next-line: invisible
     start_opts._root_markers = config.root_markers
-    -- Leaving this as is. A change, IMO, would need to be based on how root_markers are handled
     if type(config.root_dir) == "function" then
         config.root_dir(start_opts.bufnr, function(root_dir)
-            -- NOTE: Similarly to the opts table, a re-write of lsp.start would just create locals
             config = vim.deepcopy(config, true)
             config.root_dir = root_dir
             vim.schedule(function()
@@ -380,9 +377,5 @@ end
 
 -- LOW: LspInfo is an alias for checkhealth vim.lsp, and there is a project to upstream cmds from
 -- nvim-lspconfig to core. Unsure of where that will eventually land
--- LOW: Want to look back again into how how we are dealing with window opening certain cmds
--- Another use case: I already have a split open that I want to goto definition into. I would like
--- to be able to do 2gd to put the result into window 2, but cannot
--- With this on top of the split use case, IMO there's enough there to think about it more broadly
--- The problem of course is, you're trying to figure out how to get LSP, Nvim, and FzfLua to all
--- talk to each other
+-- LOW: For the split use case, FzfLua handles this well enough for it to not be worth worrying
+-- about. Do want to look into how to use winnr as an input to open the result to a specific win

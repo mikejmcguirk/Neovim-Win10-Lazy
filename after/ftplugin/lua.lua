@@ -26,50 +26,50 @@ end
 
 vim.keymap.set("n", "<leader>-a", function()
     add_annotation("[[@as")
-end, { buffer = true })
+end, { buffer = 0 })
 
 vim.keymap.set("n", "<leader>-c", function()
     add_annotation("@class")
-end, { buffer = true })
+end, { buffer = 0 })
 
 vim.keymap.set("n", "<leader>-d", function()
     add_annotation("@diagnostic")
-end, { buffer = true })
+end, { buffer = 0 })
 
 vim.keymap.set("n", "<leader>-e", function()
     add_annotation("@export")
-end, { buffer = true })
+end, { buffer = 0 })
 
 vim.keymap.set("n", "<leader>-f", function()
     add_annotation("@field")
-end, { buffer = true })
+end, { buffer = 0 })
 
 vim.keymap.set("n", "<leader>-i", function()
     add_annotation("@private")
-end, { buffer = true })
+end, { buffer = 0 })
 
 vim.keymap.set("n", "<leader>-l", function()
     add_annotation("@alias")
-end, { buffer = true })
+end, { buffer = 0 })
 
 vim.keymap.set("n", "<leader>-m", function()
     add_annotation("@mod")
-end, { buffer = true })
+end, { buffer = 0 })
 
 vim.keymap.set("n", "<leader>-p", function()
     add_annotation("@param")
-end, { buffer = true })
+end, { buffer = 0 })
 
 vim.keymap.set("n", "<leader>-r", function()
     add_annotation("@return")
-end, { buffer = true })
+end, { buffer = 0 })
 
 vim.keymap.set("n", "<leader>-t", function()
     add_annotation("@type")
-end, { buffer = true })
+end, { buffer = 0 })
 
 vim.keymap.set("n", "<leader>--", function()
     add_annotation("")
-end, { buffer = true })
+end, { buffer = 0 })
 
 mjm.lsp.start(vim.lsp.config["lua_ls"], { bufnr = 0 })
