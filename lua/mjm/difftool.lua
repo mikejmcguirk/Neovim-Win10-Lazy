@@ -8,6 +8,7 @@ vim.keymap.set("n", "<leader>d", function()
         if #bufnames >= 2 then
             break
         end
+
         local buf = api.nvim_win_get_buf(vim.fn.win_getid(i)) ---@type integer
         local bufname = api.nvim_buf_get_name(buf) ---@type string
         if #bufname > 0 then
@@ -24,3 +25,5 @@ vim.keymap.set("n", "<leader>d", function()
     api.nvim_set_option_value("bufhidden", "wipe", { buf = 0 })
     require("difftool").open(bufnames[1], bufnames[2])
 end)
+
+-- MID: Can this be made to work with non-files? Would be useful to be able to diff temp buffers

@@ -62,6 +62,32 @@ set("n", "<cr>", "<cr>")
 set("n", "<C-[>", "<C-[>")
 set("n", "<esc>", "<esc>")
 
+api.nvim_set_var("no_plugin_maps", 1)
+
+-- Get these before lazy.nvim runs
+-- :h standard-plugin-list
+api.nvim_set_var("loaded_2html_plugin", 1)
+api.nvim_set_var("did_install_default_menus", 1)
+api.nvim_set_var("loaded_gzip", 1)
+api.nvim_set_var("loaded_man", 1)
+api.nvim_set_var("loaded_matchit", 1)
+api.nvim_set_var("loaded_matchparen", 1)
+api.nvim_set_var("loaded_netrw", 1)
+api.nvim_set_var("loaded_netrwPlugin", 1)
+api.nvim_set_var("loaded_netrwSettings", 1)
+api.nvim_set_var("loaded_remote_plugins", 1)
+api.nvim_set_var("loaded_shada_plugin", 1)
+api.nvim_set_var("loaded_spellfile_plugin", 1)
+api.nvim_set_var("loaded_tar", 1)
+api.nvim_set_var("loaded_tarPlugin", 1)
+api.nvim_set_var("loaded_tutor_mode_plugin", 1)
+api.nvim_set_var("loaded_zip", 1)
+api.nvim_set_var("loaded_zipPlugin", 1)
+
+local termfeatures = vim.g.termfeatures or {}
+termfeatures.osc52 = false -- I use xsel
+api.nvim_set_var("termfeatures", termfeatures)
+
 require("mjm.colorscheme")
 
 require("mjm.lazy")

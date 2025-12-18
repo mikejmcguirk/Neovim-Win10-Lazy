@@ -500,3 +500,5 @@ Jump.jump = function(opts)
 end
 
 return Jump
+
+-- MID: https://antonk52.github.io/webdevandstuff/post/2025-11-30-diy-easymotion.html

@@ -150,6 +150,11 @@ local function set_lsp_maps(ev)
     -- textDocument/codeAction --
     set("n", "gra", code_action, { buffer = buf })
 
+    -- TODO: The code actions returned are based on the line scope provided. So asking for actions
+    -- for the whole doc could produce different actions than the specific line
+    -- grA could be a useful mapping for returning actions scoped to the whole doc. What else
+    -- could be addressed?
+
     -- textDocument/codeLens --
     if client:supports_method("textDocument/codeLens") then
         ---@param lens_buf integer
@@ -179,7 +184,11 @@ local function set_lsp_maps(ev)
             })
         end
 
+        local buf_str = tostring(ev.buf) ---@type string
+        local lens_group_name = "mjm-codelens-" .. buf_str ---@type string
+        local lens_group = api.nvim_create_augroup(lens_group_name, {}) ---@type integer
         api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
+            group = lens_group,
             buffer = ev.buf,
             callback = function()
                 vim.lsp.codelens.refresh({

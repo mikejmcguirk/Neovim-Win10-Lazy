@@ -25,10 +25,12 @@ api.nvim_create_autocmd("LspProgress", {
         if not (ev.data and ev.data.client_id) then
             return
         end
+
         local function end_timer(idx)
             if not timers[idx] then
                 return
             end
+
             timers[idx]:stop()
             timers[idx]:close()
             timers[idx] = nil
@@ -52,6 +54,7 @@ api.nvim_create_autocmd("LspProgress", {
         if not timers[ev.buf] then
             return
         end
+
         timers[ev.buf]:start(2250, 0, function()
             progress_cache[ev.buf] = nil
             vim.schedule(function()
