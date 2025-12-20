@@ -1,4 +1,5 @@
 -- The jump functionality is a modified version of https://github.com/nvim-mini/mini.jump2d
+-- TODO: Look at this: https://github.com/neovim/neovim/discussions/36785
 
 local api = vim.api
 local fn = vim.fn

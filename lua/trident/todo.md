@@ -1,3 +1,6 @@
+shada is loaded after plugin sourcing. building everything needs to be done on vim enter
+! option needs to be included in shada (have a health check for this)
+
 ## WHY
 
 - I have to write a lot of hacks around harpoon to make it work in my config

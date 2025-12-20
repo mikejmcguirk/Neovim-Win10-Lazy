@@ -35,6 +35,7 @@ vim.keymap.set("n", "<leader>zu", "<cmd>Lazy update<cr>")
 vim.keymap.set("n", "<leader>zx", "<cmd>Lazy clean<cr>")
 vim.keymap.set("n", "<leader>zz", "<cmd>Lazy<cr>")
 
+-- MAYBE: https://github.com/yutkat/my-neovim-pluginlist - Massive plugin list
 -- MAYBE: https://github.com/rockerBOO/awesome-neovim - So many plugins out there
 -- MAYBE: https://github.com/mrcjkb/rustaceanvim
 -- MAYBE: Dap setup?

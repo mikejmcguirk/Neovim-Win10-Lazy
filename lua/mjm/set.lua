@@ -5,7 +5,7 @@ local api = vim.api
 -------------
 
 api.nvim_set_option_value("fileformats", "unix,dos", {})
-api.nvim_set_option_value("sd", [[<0,'100,/0,:1000,h]], {})
+api.nvim_set_option_value("sd", [[!,<0,'100,/0,:1000,h]], {})
 
 api.nvim_set_option_value("swf", false, {})
 api.nvim_set_option_value("udf", true, {})
@@ -50,7 +50,7 @@ api.nvim_set_option_value("dict", dict, {})
 api.nvim_set_option_value("spell", false, {})
 api.nvim_set_option_value("spelllang", "en_us", {})
 
-local new_shm = api.nvim_get_option_value("shm", {}) .. "asIW"
+local new_shm = api.nvim_get_option_value("shm", {}) .. "asIW" ---@type string
 api.nvim_set_option_value("shm", new_shm, {})
 
 local blink_setting = "blinkon1-blinkoff1" ---@type string

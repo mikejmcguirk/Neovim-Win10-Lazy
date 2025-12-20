@@ -14,6 +14,10 @@ require("mjm")
 -- PR: https://github.com/neovim/neovim/issues/36081 - I might be able to get this
 -- Could just use Rancher's diag format
 
+-- ISSUES --
+
+-- https://github.com/neovim/neovim/issues/37030
+
 ----------------------
 -- DOTFILE STALKING --
 ----------------------

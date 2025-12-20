@@ -45,9 +45,6 @@ end or lsp.buf.outgoing_calls
 -- textDocument/codeAction --
 local code_action = ok and fzflua.lsp_code_actions or lsp.buf.code_action ---@type function
 
--- PR: If I understand right - The location/list opts items section just uses a list of
--- quickfix items, so you should be able to use that annotation type rather than a table[]
-
 -- textDocument/declaration --
 local declaration = ok and fzflua.lsp_declarations or lsp.buf.declaration ---@type function
 ---@type function
@@ -270,7 +267,7 @@ local function set_lsp_maps(ev)
         lsp.buf.rename(input)
     end, { buffer = buf })
 
-    set("n", "grN", lsp.buf.rename, { buffer = buf })
+    -- set("n", "grN", lsp.buf.rename, { buffer = buf })
 
     -- textDocument/semanticTokens
     if client:supports_method("textDocument/semanticTokens/full") then
