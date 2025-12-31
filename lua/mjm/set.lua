@@ -5,7 +5,7 @@ local api = vim.api
 -------------
 
 api.nvim_set_option_value("fileformats", "unix,dos", {})
-api.nvim_set_option_value("sd", [[!,<0,'100,/0,:1000,h]], {})
+api.nvim_set_option_value("sd", [[<0,'100,/0,:1000,h]], {})
 
 api.nvim_set_option_value("swf", false, {})
 api.nvim_set_option_value("udf", true, {})

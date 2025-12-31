@@ -128,9 +128,9 @@ local function map_objects(ev)
                 return
             end
 
-            local cur_start = api.nvim_win_get_cursor(0) ---@type { [1]:integer, [2]:integer }
+            local cur_start = api.nvim_win_get_cursor(0)
             move.goto_previous_end(m[3], "textobjects")
-            local next_vpos = get_vpos() ---@type integer
+            local next_vpos = get_vpos()
             if next_vpos == -1 then
                 api.nvim_win_set_cursor(0, cur_start)
                 move.goto_previous_start(m[3], "textobjects")
@@ -144,9 +144,9 @@ local function map_objects(ev)
                 return
             end
 
-            local cur_start = api.nvim_win_get_cursor(0) ---@type { [1]:integer, [2]:integer }
+            local cur_start = api.nvim_win_get_cursor(0)
             move.goto_next_start(m[3], "textobjects")
-            local fin_vpos = get_vpos() ---@type integer
+            local fin_vpos = get_vpos()
             if fin_vpos == 1 then
                 api.nvim_win_set_cursor(0, cur_start)
                 move.goto_next_end(m[3], "textobjects")
@@ -156,14 +156,14 @@ local function map_objects(ev)
 
     ---@type { [1]:string, [2]:string, [3]:string }[]
     local swap_maps = {
-        { "(s", ")s", "@assignment.outer" },
+        { "(s", ")s", "@assignment.rhs" },
         { "(f", ")f", "@call.outer" },
         { "(/", ")/", "@comment.outer" },
         { "(i", ")i", "@conditional.outer" },
         { "(m", ")m", "@function.outer" },
         { "(o", ")o", "@loop.outer" },
         { "(,", "),", "@parameter.inner" }, -- Outer can break commas if swapped at end
-        { "(.", ").", "@return.inner" }, -- Outer includes the return keyword
+        { "(.", ").", "@return.outer" },
         -- Custom objects
         { "(#", ")#", "@preproc.outer" },
         { '("', ')"', "@string.outer" },
@@ -279,3 +279,8 @@ return {
         end,
     },
 }
+
+-- TODO: PR: Inconsistency between text objects, the upcoming built-in incremental selection, and
+-- tree-climber - When you do move in text objects, it grows the selection, but the baseline
+-- selection in the incremental selection plugins actually moves the selection. Crosses wires in
+-- muscle memory.

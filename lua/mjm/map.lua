@@ -12,6 +12,10 @@ local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 
 set("n", "Z", "<nop>") -- Create normal Z layer
 set("n", "ZQ", "<cmd>qall!<cr>")
+-- LOW: The obvious solution here is a separate restart hotkey that saves the hotkey then performs
+-- a restart that reloads the session. The blocker here is that you need a way to reliably save
+-- and load the session, which isn't all that possible with the current way of doing it
+-- Even have obvious map: ZE (restore sEssion)
 set("n", "ZR", "<cmd>lockmarks silent wa | restart<cr>")
 
 set("n", "ZA", "<cmd>lockmarks silent wa<cr>")
@@ -26,26 +30,26 @@ set("n", "ZC", "<cmd>lockmarks wqa<cr>")
 set("n", "<tab>", "gt")
 set("n", "<S-tab>", "gT")
 set("n", "ZT", function()
-    local tabpagenr = fn.tabpagenr("$") ---@type integer
+    local tabpagenr = fn.tabpagenr("$")
     if tabpagenr == 1 then
         api.nvim_echo({ { "Cannot close last tabpage" } }, false, {})
         return
     end
 
-    local args = vim.v.count > 0 and { tostring(vim.v.count) } or nil ---@type string[]|nil
+    local args = vim.v.count > 0 and { tostring(vim.v.count) } or nil
     api.nvim_cmd({ cmd = "tabclose", args = args }, {})
 end)
 
 set("n", "ZB", function()
-    local args = vim.v.count > 0 and { tostring(vim.v.count) } or nil ---@type string[]|nil
+    local args = vim.v.count > 0 and { tostring(vim.v.count) } or nil
     api.nvim_cmd({ cmd = "tabonly", args = args }, {})
 end)
 
 set("n", "g<tab>", function()
-    local range = vim.v.count == 0 and vim.fn.tabpagenr("$") or vim.v.count ---@type integer
+    local range = vim.v.count == 0 and vim.fn.tabpagenr("$") or vim.v.count
     api.nvim_cmd({ cmd = "tabnew", range = { range } }, {})
 
-    local buf = api.nvim_get_current_buf() ---@type integer
+    local buf = api.nvim_get_current_buf()
     if not ut.is_empty_noname_buf(buf) then
         return
     end
@@ -113,25 +117,30 @@ set("x", "a_", "<cmd>norm! ggoVG<cr>")
 -- this is used in the wild before sinking in time
 for _, map in ipairs({ "<C-w>e", "<C-w><C-e>" }) do
     vim.keymap.set("n", map, function()
-        local win = api.nvim_get_current_win() ---@type integer
-        local config = api.nvim_win_get_config(win) ---@type vim.api.keyset.win_config_ret
+        local win = api.nvim_get_current_win()
+        local config = api.nvim_win_get_config(win)
         if not (config.relative and config.relative ~= "") then
             vim.api.nvim_echo({ { "Current window is not floating" } }, false, {})
             return
         end
 
-        local buf = api.nvim_win_get_buf(win) ---@type integer
+        local buf = api.nvim_win_get_buf(win)
         vim.api.nvim_set_option_value("bufhidden", "", { buf = buf })
         ---@type integer
         local to_split = (function()
             if vim.v.count > 0 then
-                local max_winnr = fn.winnr("$") ---@type integer
-                local winnr = math.min(vim.v.count, max_winnr) ---@type integer
+                local max_winnr = fn.winnr("$")
+                local winnr = math.min(vim.v.count, max_winnr)
                 return vim.fn.win_getid(winnr)
             end
 
             -- LOW: How to handle other origin conditions?
-            return config.relative == "win" and config.win or fn.win_getid(1)
+            if config.relative == "win" then
+                return config.win
+            end
+
+            local first_id = fn.win_getid(1)
+            return first_id
         end)()
 
         local spr = api.nvim_get_option_value("spr", {}) ---@type boolean
@@ -145,7 +154,7 @@ end
 -- becomes a problem here, can adjust
 set("n", "<C-w>ge", "<cmd>fclose!<cr>")
 
-local tmux_cmd_map = { h = "L", j = "D", k = "U", l = "R" } ---@type table<string, string>
+local tmux_cmd_map = { h = "L", j = "D", k = "U", l = "R" }
 
 ---@param dir string
 ---@return nil
@@ -154,13 +163,13 @@ local do_tmux_move = function(dir)
         return
     end
 
-    local zoom_cmd = { "tmux", "display-message", "-p", "#{window_zoomed_flag}" } ---@type string[]
-    local result = vim.system(zoom_cmd, { text = true }):wait() ---@type vim.SystemCompleted
+    local zoom_cmd = { "tmux", "display-message", "-p", "#{window_zoomed_flag}" }
+    local result = vim.system(zoom_cmd, { text = true }):wait()
     if result.code == 0 and result.stdout == "1\n" then
         return
     end
 
-    local cmd_parts = { "tmux", "select-pane", "-" .. tmux_cmd_map[dir] } ---@type string[]
+    local cmd_parts = { "tmux", "select-pane", "-" .. tmux_cmd_map[dir] }
     vim.system(cmd_parts, { text = true, timeout = 1000 })
 end
 
@@ -173,9 +182,9 @@ local win_move_tmux = function(dir)
         return
     end
 
-    local start_win = api.nvim_get_current_win() ---@type integer
+    local start_win = api.nvim_get_current_win()
     api.nvim_cmd({ cmd = "wincmd", args = { dir } }, {})
-    local fin_win = api.nvim_get_current_win() ---@type integer
+    local fin_win = api.nvim_get_current_win()
     if start_win == fin_win then
         do_tmux_move(dir)
     end
@@ -189,6 +198,7 @@ for k, _ in pairs(tmux_cmd_map) do
 end
 
 ---@param cmd vim.api.keyset.cmd
+---@return nil
 local resize_win = function(cmd)
     local wintype = fn.win_gettype(0)
     if not (wintype == "" or wintype == "quickfix" or wintype == "loclist") then
@@ -234,6 +244,7 @@ set("n", "<C-w><C-c>", "<nop>")
 
 -- FUTURE: Should be fixed in spec-ops
 
+---@type { [1]:string, [2]: string }[]
 local cap_motions = {
     { "n", "~" },
     { "n", "guu" },
@@ -254,7 +265,7 @@ local cap_motions = {
     { "x", "g~" },
     { "x", "gu" },
     { "x", "gU" },
-} ---@type table string[]
+}
 
 for _, m in pairs(cap_motions) do
     set(m[1], m[2], function()
@@ -309,9 +320,9 @@ set({ "n", "x" }, "j", function()
         return "gj"
     end
 
-    local line = fn.line(".") ---@type integer
-    local new_line = line + vim.v.count1 ---@type integer
-    local bot = fn.line("w$") ---@type integer
+    local line = fn.line(".")
+    local new_line = line + vim.v.count1
+    local bot = fn.line("w$")
     if new_line > bot then
         return "m`" .. vim.v.count1 .. "j"
     end
@@ -324,9 +335,9 @@ set({ "n", "x" }, "k", function()
         return "gk"
     end
 
-    local line = fn.line(".") ---@type integer
-    local new_line = line - vim.v.count1 ---@type integer
-    local top = fn.line("w0") ---@type integer
+    local line = fn.line(".")
+    local new_line = line - vim.v.count1
+    local top = fn.line("w0")
     if new_line < top then
         return "m`" .. vim.v.count1 .. "k"
     end
@@ -502,11 +513,13 @@ set({ "n", "x" }, "<M-s>", ":'<,'>s/\\%V")
 -- invalid leading whitespace on the new line
 set("n", "dJ", "Do<esc>p==", { silent = true })
 set("n", "dK", function()
-    vim.api.nvim_set_option_value("lz", true, { scope = "global" })
+    local old_lz = api.nvim_get_option_value("lz", { scope = "global" }) ---@type boolean
+    api.nvim_set_option_value("lz", true, { scope = "global" })
     api.nvim_feedkeys("DO\27p==", "nix", false)
-    vim.api.nvim_set_option_value("lz", false, { scope = "global" })
+    api.nvim_set_option_value("lz", old_lz, { scope = "global" })
 end)
 
+-- MAYBE: This is never used
 set("n", "dm", "<cmd>delmarks!<cr>")
 
 -- LOW: Find a viable keymap for this and make it more robust to edge cases:
@@ -741,9 +754,15 @@ set("c", "<M-b>", "<S-left>")
 
 set("c", "<M-n>", "<down>")
 
+-- MID: Would like a solution to the problem of opening a comment line above the current one.
+-- Perhaps you just toggle the option. You could swap the fo options o and r, but that gets
+-- unnatural when trying to type out multi-line comments
 -- MID: Worth considering mapping [] like wincmds, so you could do <C-[><C-q> to use the cpfile
 -- default, for example. It would shrink the namespace, but I'm not sure it would be practical to
 -- use anyway
 
 -- LOW: Visual mode mapping to trim whitespace from selection
 -- LOW: Re-organize these by topic
+
+-- MAYBE: Map <M-o> and <M-O> in normal mode so they are easier to use with the same map in
+-- insert mode.

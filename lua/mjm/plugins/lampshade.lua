@@ -33,6 +33,8 @@ return {
                 end
             end,
 
+            ---@param _ integer
+            ---@param action lsp.Command|lsp.CodeAction
             python = function(_, action)
                 if action.disabled then
                     return false
@@ -80,6 +82,7 @@ return {
                     "BufEnter",
                     "CmdlineLeave",
                     "CursorMoved",
+                    "DiagnosticChanged",
                     "InsertLeave",
                     "TextChanged",
                 }
@@ -87,10 +90,6 @@ return {
                 local ft = api.nvim_get_option_value("filetype", { buf = buf }) ---@type string
                 local opts = {} ---@type lampshade.UpdateLamp.Opts
                 opts.on_actions = action_filters[ft]
-                -- TODO: Can't do this unless there's a blocker against this running in bad modes
-                -- if ft == "lua" then
-                --     update_events[#update_events + 1] = "DiagnosticChanged"
-                -- end
 
                 local lamp = require("lampshade")
                 lamp.update_lamp(buf, opts)
@@ -98,8 +97,17 @@ return {
                 api.nvim_create_autocmd(update_events, {
                     group = buf_group,
                     buffer = buf,
-                    desc = "Show action lamp",
+                    desc = "Show lamp",
                     callback = function(iev)
+                        if iev.event == "DiagnosticChanged" then
+                            local mode = api.nvim_get_mode().mode
+                            local short_mode = string.sub(mode, 1)
+                            local bad_mode = string.match(short_mode, "[csS\19irR]")
+                            if bad_mode then
+                                return
+                            end
+                        end
+
                         lamp.update_lamp(iev.buf, opts)
                     end,
                 })
@@ -108,7 +116,7 @@ return {
                 api.nvim_create_autocmd(clear_events, {
                     group = buf_group,
                     buffer = buf,
-                    desc = "Clear action lamp",
+                    desc = "Clear lamp",
                     callback = function(iev)
                         lamp.clear_lamp(iev.buf)
                         if iev.event == "CmdlineEnter" then
@@ -120,7 +128,7 @@ return {
                 api.nvim_create_autocmd("LspDetach", {
                     group = buf_group,
                     buffer = buf,
-                    desc = "Detach action lamp",
+                    desc = "Detach lamp",
                     callback = function(iev)
                         lamp.clear_lamp(iev.buf)
                         api.nvim_del_augroup_by_id(buf_group)

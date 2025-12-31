@@ -4,6 +4,8 @@ require("mjm")
 -- against just starting it fresh each time
 -- MID: The new float statusline would be useful to show win info/buf info
 
+-- LOW: In-process LSP that pushes diagnostics for lines over a certain length. Could expand this
+-- into other general linting tools. Perhaps then move into a compiled language
 -- LOW: How to do document exports. pandoc? 2html? Is there a plugin?
 -- LOW: Commentary on guicursor style resetting. https://github.com/neovim/neovim/pull/36261
 -- And also discussion: https://github.com/neovim/neovim/discussions/32540

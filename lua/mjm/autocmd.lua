@@ -24,6 +24,8 @@ api.nvim_create_autocmd(clear_conditions, {
     end),
 })
 
+-- TODO: Pull this back. The various methods of navigation have their own settings here, and we
+-- are getting overlapping/non-specific behaviors. The one thing I'd probably keep is zz
 api.nvim_create_autocmd("BufWinEnter", {
     group = mjm_group,
     callback = function(ev)

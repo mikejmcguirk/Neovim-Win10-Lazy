@@ -12,7 +12,7 @@ end
 local ok, fzflua = pcall(require, "fzf-lua") ---@type boolean, table
 ---@type function
 local qf_open = (function()
-    local ok_w, window = pcall(require, "qf-rancher.window") ---@type boolean, QfrWins?
+    local ok_w, window = pcall(require, "qf-rancher.window") ---@type boolean, qf-rancher.Window?
     return (ok_w and window) and function()
         window.open_qflist({})
     end or function()
@@ -267,7 +267,7 @@ local function set_lsp_maps(ev)
         lsp.buf.rename(input)
     end, { buffer = buf })
 
-    -- set("n", "grN", lsp.buf.rename, { buffer = buf })
+    set("n", "grN", lsp.buf.rename, { buffer = buf })
 
     -- textDocument/semanticTokens
     if client:supports_method("textDocument/semanticTokens/full") then
