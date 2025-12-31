@@ -404,8 +404,6 @@ end
 ---@param types string[]
 ---@return boolean
 function M.is_in_node_type(types)
-    vim.validate("types", types, vim.islist)
-
     if #types < 1 then
         return false
     end
