@@ -1,4 +1,5 @@
 local api = vim.api
+local uv = vim.uv
 
 local buf_cache = {} ---@type table<integer, string>
 local diag_cache = {} ---@type table<integer,string>
@@ -7,39 +8,58 @@ local mode = "n" ---@type string -- ModeChanged does not grab the initial set to
 local progress_cache = {} ---@type table<integer,string>
 local timers = {} ---@type table<integer,uv.uv_timer_t>
 
+---@param buf integer
+local function end_timer(buf)
+    if not timers[buf] then
+        return
+    end
+
+    timers[buf]:stop()
+    timers[buf]:close()
+    timers[buf] = nil
+end
+
 -- NOTE: Evaluating the statusline initiates textlock. As much of the calculation as possible
 -- should be performed outside the eval func. The eval func should also not be triggered
 -- unnecessarily in insert mode, as this creates noticeable stutter
 
-local stl_events = api.nvim_create_augroup("mjm-stl-events", {}) ---@type integer
+local stl_events = api.nvim_create_augroup("mjm-stl-events", {})
+
 ---@return boolean
 local is_bad_mode = function()
     return string.match(mode, "[csSiR]")
 end
 
--- LOW: There's a bunch of little corner cases you could handle in here, but I haven't seen them
--- matter in practice
 api.nvim_create_autocmd("LspProgress", {
     group = stl_events,
     callback = function(ev)
-        if not (ev.data and ev.data.client_id) then
+        local data = ev.data
+        if not data then
             return
         end
 
-        local function end_timer(idx)
-            if not timers[idx] then
-                return
-            end
-
-            timers[idx]:stop()
-            timers[idx]:close()
-            timers[idx] = nil
+        local client_id = data.client_id
+        if not client_id then
+            return
         end
 
-        end_timer(ev.buf)
-        local name = vim.lsp.get_client_by_id(ev.data.client_id).name or "" ---@type string
-        local values = ev.data.params.value
-        local message = ev.data.msg and (" - " .. values.msg) or "" ---@type string
+        local client = vim.lsp.get_client_by_id(client_id)
+        if not client then
+            return
+        end
+
+        local buf = ev.buf
+        end_timer(buf)
+        timers[buf] = uv.new_timer()
+        if not timers[buf] then
+            return
+        end
+
+        local name = client.name
+        local values = data.params.value
+        local message = data.msg and (" - " .. values.msg) or "" ---@type string
+
+        ---@type string
         local pct = (function()
             if values.kind == "end" then
                 return "(Complete) " -- End messages might not have a % value
@@ -48,67 +68,67 @@ api.nvim_create_autocmd("LspProgress", {
             else
                 return ""
             end
-        end)() ---@type string
+        end)()
 
-        timers[ev.buf] = vim.uv.new_timer() ---@type uv.uv_timer_t|nil
-        if not timers[ev.buf] then
-            return
-        end
-
-        timers[ev.buf]:start(2250, 0, function()
-            progress_cache[ev.buf] = nil
+        timers[buf]:start(2250, 0, function()
+            progress_cache[buf] = nil
             vim.schedule(function()
-                if not is_bad_mode() and api.nvim_win_get_buf(0) == ev.buf then
+                local cur_buf = api.nvim_win_get_buf(0)
+                if not is_bad_mode() and cur_buf == buf then
                     api.nvim_cmd({ cmd = "redraws" }, {})
                 end
             end)
 
-            end_timer(ev.buf)
+            end_timer(buf)
         end)
 
-        progress_cache[ev.buf] = pct .. name .. ": " .. values.title .. message
-        if not is_bad_mode() and api.nvim_win_get_buf(0) == ev.buf then
+        progress_cache[buf] = pct .. name .. ": " .. values.title .. message
+        local cur_buf = api.nvim_win_get_buf(0)
+        if not is_bad_mode() and cur_buf == buf then
             api.nvim_cmd({ cmd = "redraws" }, {})
         end
     end,
 })
 
-local levels = { "Error", "Warn", "Info", "Hint" } ---@type string[]
+local counts = { 0, 0, 0, 0 }
+local levels = { "Error", "Warn", "Info", "Hint" }
 ---@type string[]
 local signs = Has_Nerd_Font and { "󰅚 ", "󰀪 ", "󰋽 ", "󰌶 " }
     or { "E:", "W:", "I:", "H:" }
 
--- NOTE: Diagnostics.lua contains the delete for the default diagnostic status cache augroup
+-- NOTE: My diagnostics.lua contains the delete for the default diagnostic status cache augroup
 -- MID: Show whited out diag counts in the inactive stl
 -- MAYBE: mini.statusline schedule wraps its diagnostic update because of something to do with
 -- invalid buffer data. Unsure if the underlying issue is resolved. Trying without here since we
--- check buffer validity at the top. If it breaks again, set the callback to a schedule wrap and
--- re-research the issue
+-- check buffer validity at the top. If it breaks again, schedule wrap again and research further
 api.nvim_create_autocmd("DiagnosticChanged", {
     group = stl_events,
     callback = function(ev)
-        if api.nvim_buf_is_valid(ev.buf) then
-            -- Cannot use the builtin because it runs get_diagnostics fresh
-            local counts = {} ---@type table<integer,integer>
-            for _, d in pairs(ev.data.diagnostics) do
-                counts[d.severity] = (counts[d.severity] or 0) + 1
-            end
-
-            local diag_str = "" ---@type string
-            for i = 1, 4 do
-                local count = counts[i] or 0 ---@type integer
-                if count > 0 then
-                    diag_str = diag_str
-                        .. string.format("%%#Diagnostic%s#%s%d%%* ", levels[i], signs[i], count)
-                end
-            end
-
-            diag_cache[ev.buf] = diag_str
-        else
+        if not api.nvim_buf_is_valid(ev.buf) then
             diag_cache[ev.buf] = nil
+            return
         end
 
-        -- LOW: Checking based on ev.buf being the current buf produces inconsistent results. Why?
+        for i = 1, 4 do
+            counts[i] = 0
+        end
+
+        for _, diag in pairs(ev.data.diagnostics) do
+            local severity = diag.severity
+            counts[severity] = counts[severity] + 1
+        end
+
+        local diag_tbl = {} ---@type string[]
+        for i = 1, 4 do
+            if counts[i] > 0 then
+                local level =
+                    string.format("%%#Diagnostic%s#%s%d%%* ", levels[i], signs[i], counts[i])
+                diag_tbl[#diag_tbl + 1] = level
+            end
+        end
+
+        local diag_str = table.concat(diag_tbl, "")
+        diag_cache[ev.buf] = diag_str
         if not is_bad_mode() then
             api.nvim_cmd({ cmd = "redraws" }, {})
         end
@@ -122,6 +142,7 @@ api.nvim_create_autocmd("ModeChanged", {
         if vim.v.event.new_mode == mode then
             return
         end
+
         mode = vim.v.event.new_mode
         api.nvim_cmd({ cmd = "redraws" }, {})
     end,
@@ -132,8 +153,8 @@ api.nvim_create_autocmd({ "LspAttach", "LspDetach" }, {
     group = stl_events,
     callback = vim.schedule_wrap(function(ev)
         if api.nvim_buf_is_valid(ev.buf) then
-            local clients = vim.lsp.get_clients({ bufnr = ev.buf }) ---@type vim.lsp.Client[]
-            local has_clients = clients and #clients > 0 ---@type boolean
+            local clients = vim.lsp.get_clients({ bufnr = ev.buf })
+            local has_clients = clients and #clients > 0
             lsp_cache[ev.buf] = has_clients and string.format("[%d]", #clients) or nil
         else
             lsp_cache[ev.buf] = nil
@@ -156,20 +177,25 @@ local bt_map = {
     prompt = "[p] ",
     quickfix = "[qf] ",
     terminal = "[term] ",
-} ---@type table<string, string>
+}
 
+---@param buf integer
+---@return string
 local function create_buf_str(buf)
     local fenc = api.nvim_get_option_value("fenc", { buf = buf }) ---@type string
     ---@type string
     local encoding = #fenc > 0 and fenc or api.nvim_get_option_value("enc", { scope = "global" })
 
-    local fmt = format_icons[api.nvim_get_option_value("ff", { buf = buf })] ---@type string
-    local bt = bt_map[api.nvim_get_option_value("bt", { buf = buf })] ---@type string
+    local ff = api.nvim_get_option_value("ff", { buf = buf }) ---@type string
+    local mff = format_icons[ff]
+    local bt = api.nvim_get_option_value("bt", { buf = buf }) ---@type string
+    local mbt = bt_map[bt]
     local ft = api.nvim_get_option_value("ft", { buf = buf }) ---@type string
-    local bt_ft = bt .. ft ---@type string
-    local fmt_bt_ft = #bt_ft > 0 and " " .. bt_ft or "" ---@type string
 
-    return encoding .. " | " .. fmt .. " |" .. fmt_bt_ft .. " "
+    local printable = #mbt + #ft > 0
+    local fmt_bt_ft = printable and " " .. bt .. ft or ""
+
+    return encoding .. " | " .. mff .. " |" .. fmt_bt_ft .. " "
 end
 
 -- LOW: This does not address the case where a float is converted to a non-float. Can look at this
@@ -190,14 +216,15 @@ api.nvim_create_autocmd("BufWinEnter", {
 
 -- MAYBE: Mixed feelings about this because, early exit or not, it triggers on every completion
 -- popup. Still better, I suppose, than re-generating the buf options every keystroke
+local watched = { "fileencoding", "encoding", "fileformat", "buftype" }
 api.nvim_create_autocmd("OptionSet", {
     group = stl_events,
     callback = function(ev)
-        local buf = ev.buf ~= 0 and ev.buf or api.nvim_get_current_buf() ---@type integer
+        local buf = ev.buf ~= 0 and ev.buf or api.nvim_get_current_buf()
         if not buf_cache[buf] then
             return
         end
-        local watched = { "fileencoding", "encoding", "fileformat", "buftype" } ---@type string[]
+
         if not vim.tbl_contains(watched, ev.match) then
             return
         end
@@ -217,7 +244,6 @@ api.nvim_create_autocmd("BufDelete", {
 })
 
 _G.Mjm_Stl = {}
--- Module scoped because it's used on every keystroke
 local stl = { nil, nil, nil, "%=%*", nil, nil } ---@type string[]
 
 -- LOW: Now that everything is cached, worth re-exploring doing this based on real-time evals
