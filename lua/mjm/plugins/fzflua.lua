@@ -10,6 +10,15 @@ local fzflua_opts = {
         preview = { horizontal = "right:60%", winopts = { number = true } },
     },
     keymap = {
+        -- actions = {
+        --     files = {
+        --         ["enter"] = function(selected)
+        --             require("fzf-lua").actions.file_edit_or_qf(selected, { no_action_zz = true })
+        --             local quote_mark = api.nvim_buf_get_mark(0, '"')
+        --             mjm.protected_set_cursor(quote_mark)
+        --         end,
+        --     },
+        -- },
         builtin = {
             ["<C-d>"] = false,
             ["<C-up>"] = "preview-page-up",
@@ -111,14 +120,14 @@ return {
         ---@return boolean|nil, string
         local function get_dict_file()
             local dict = api.nvim_get_option_value("dict", {}) ---@type string
-            local dict_file = vim.split(dict, ",")[1] ---@type string
+            local dict_file = vim.split(dict, ",")[1]
             return vim.uv.fs_access(dict_file, 4), dict_file
         end
 
         set("n", "<leader>fdd", function()
-            local ok, dict_file = get_dict_file() ---@type boolean|nil, string
+            local ok, dict_file = get_dict_file()
             if not ok then
-                local msg = "Unable to access dictionary file: " .. dict_file ---@type string
+                local msg = "Unable to access dictionary file: " .. dict_file
                 api.nvim_echo({ { msg } }, true, { err = true })
                 return
             end
@@ -127,15 +136,15 @@ return {
         end)
 
         local function fuzzy_spell_correct()
-            local word = vim.fn.expand("<cword>"):lower() ---@type string
+            local word = vim.fn.expand("<cword>"):lower()
             if word == "" then
                 return vim.notify("No word under cursor", vim.log.levels.WARN)
             end
-            local buf = api.nvim_get_current_buf() ---@type integer
+            local buf = api.nvim_get_current_buf()
 
-            local ok, dict_file = get_dict_file() ---@type boolean|nil, string
+            local ok, dict_file = get_dict_file()
             if not ok then
-                local msg = "Unable to access dictionary file: " .. dict_file ---@type string
+                local msg = "Unable to access dictionary file: " .. dict_file
                 api.nvim_echo({ { msg } }, true, { err = true })
                 return
             end
@@ -148,14 +157,12 @@ return {
                             return
                         end
 
-                        local line = api.nvim_get_current_line() ---@type string
-                        ---@type integer, integer
+                        local line = api.nvim_get_current_line()
                         local row, col = unpack(api.nvim_win_get_cursor(0))
-                        local col_1 = col + 1 ---@type integer
+                        local col_1 = col + 1
                         local search_start = math.max(1, col_1 - #word) ---@type integer
-                        local start_col_1 = line:find(word, search_start, false) ---@type integer?
+                        local start_col_1 = line:find(word, search_start, false)
                         if not start_col_1 then
-                            ---@type string
                             local err_msg = "Unable to find word boundary for " .. word
                             err_msg = err_msg .. " from cursor position " .. col_1
                             api.nvim_echo({ { err_msg } }, true, { err = true })
@@ -167,10 +174,10 @@ return {
                             return
                         end
 
-                        local new_word = selected[1] ---@type string
-                        local row_0 = row - 1 ---@type integer
-                        local start_col = start_col_1 - 1 ---@type integer
-                        local fin_col = start_col + #word ---@type integer
+                        local new_word = selected[1]
+                        local row_0 = row - 1
+                        local start_col = start_col_1 - 1
+                        local fin_col = start_col + #word
                         api.nvim_buf_set_text(buf, row_0, start_col, row_0, fin_col, { new_word })
                         api.nvim_win_set_cursor(0, { row, col })
                     end,
