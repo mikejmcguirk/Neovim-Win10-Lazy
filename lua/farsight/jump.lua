@@ -13,37 +13,13 @@
 local api = vim.api
 local fn = vim.fn
 
----@alias farsight.GetColsFunc fun(integer, string, integer):integer[]
-
----@class farsight.jump.JumpOpts
----@field all_wins? boolean Place jump labels in all wins?
----The input row argument is one indexed
----This function will be called in the window context being evaluated. This means, for example,
----that foldclosed() will return the proper result
----The returned columns must be zero indexed
----The returned array will be de-duplicated and sorted from least to greatest
----@field get_cols? farsight.GetColsFunc
----@field keepjumps? boolean
----@field max_tokens? integer
----@field tokens? string[]
----@field prefer_next_win? boolean
-
--- MID: Because this datatype is used in hot loops, might be worth list indexing rather than
--- hash indexing
-
+---List indexed because it is used in hot loops
 ---@class FarsightSight
----@field buf integer Buffer ID
----@field row integer Zero indexed row |api-indexing|
----@field col integer Zero index col, inclusive for extmarks |api-indexing|
----@field label string[]
-
--- FARSIGHT: This can just be rolled into the sights since we're no longer using sights to hold
--- win info
----@class FarsightExtmarkInfo
----@field buf integer
----@field row integer Zero indexed
----@field col integer Zero indexed
----@field virt_text [string,string|integer][]
+---@field [1] integer Buffer ID
+---@field [2] integer Zero indexed row |api-indexing|
+---@field [3] integer Zero index col, inclusive for extmarks |api-indexing|
+---@field [4] string[] Label
+---@field [5] [string,string|integer][] Extmark virtual text
 
 local MAX_TOKENS = 2 ---@type integer
 local TOKENS = vim.split("abcdefghijklmnopqrstuvwxyz", "") ---@type string[]
@@ -107,12 +83,7 @@ end
 ---@param all_wins boolean
 ---@return integer[]
 local function get_jump_wins(all_wins)
-    if all_wins then
-        return get_focusable_wins_ordered(0)
-    else
-        local cur_win = api.nvim_get_current_win() ---@type integer
-        return { cur_win }
-    end
+    return all_wins and get_focusable_wins_ordered(0) or { api.nvim_get_current_win() }
 end
 
 ---@param row integer
@@ -145,18 +116,17 @@ end
 
 ---@param wins integer[]
 ---@param opts farsight.jump.JumpOpts
----@return FarsightSight[]
+---@return FarsightSight[], integer[]
 local function get_sights(wins, opts)
     local sights = {} ---@type FarsightSight[]
-    local get_cols = opts.get_cols or default_get_cols ---@type farsight.GetColsFunc
+    ---@type fun(integer, string, integer):integer[]
+    local get_cols = opts.get_cols or default_get_cols
 
-    -- FARSIGHT: Basically all this info, win buf, top and bottom, is used later to find the
-    -- jump win, so it should be cached.
     local bufs = {} ---@type integer[]
     for _, win in ipairs(wins) do
+        local buf = api.nvim_win_get_buf(win)
+        bufs[#bufs + 1] = buf
         api.nvim_win_call(win, function()
-            local buf = api.nvim_win_get_buf(win)
-            bufs[#bufs + 1] = buf
             local top = fn.line("w0")
             local bot = fn.line("w$")
             for i = top, bot do
@@ -170,7 +140,7 @@ local function get_sights(wins, opts)
 
                 for _, col in ipairs(cols) do
                     local row_0 = i - 1
-                    sights[#sights + 1] = { row = row_0, col = col, buf = buf, label = {} }
+                    sights[#sights + 1] = { buf, row_0, col, {}, {} }
                 end
             end
         end)
@@ -180,11 +150,11 @@ local function get_sights(wins, opts)
     vim.list.unique(bufs)
     if #bufs ~= count_bufs then
         vim.list.unique(sights, function(sight)
-            return tostring(sight.buf) .. tostring(sight.row) .. tostring(sight.col)
+            return tostring(sight[1]) .. tostring(sight[2]) .. tostring(sight[3])
         end)
     end
 
-    return sights
+    return sights, bufs
 end
 
 -- MID: The variable names in this function could be more clear
@@ -218,14 +188,13 @@ local function populate_sight_labels(sights, opts)
         local token_start = range[1]
 
         for i = range[1], range[2] do
-            local label = sights[i].label
-            label[#label + 1] = tokens[token_idx]
+            sights[i][4][#sights[i][4] + 1] = tokens[token_idx]
             on_token = on_token - 1
             if on_token == 0 then
                 on_token = quotient + (remainder >= 1 and 1 or 0)
                 remainder = remainder > 0 and remainder - 1 or remainder
 
-                if i > token_start and #label < max_tokens then
+                if i > token_start and #sights[i][4] < max_tokens then
                     queue[#queue + 1] = { token_start, i }
                 end
 
@@ -236,79 +205,40 @@ local function populate_sight_labels(sights, opts)
     end
 end
 
+-- LOW: Profile this function to see if it could be optimized further
+
 ---@param sights FarsightSight[]
----@return table<string, integer>
-local function get_first_token_counts(sights)
-    local first_token_counts = {} ---@type table<string, integer>
-    for _, sight in ipairs(sights) do
-        local first_token = sight.label[1]
-        local count = first_token_counts[first_token] or 0
-        first_token_counts[first_token] = count + 1
+local function populate_virt_text(sights, tokens)
+    local first_counts = {} ---@type table<string, integer>
+    for _, token in ipairs(tokens) do
+        first_counts[token] = 0
     end
 
-    return first_token_counts
-end
-
----@param sights FarsightSight[]
----@return FarsightExtmarkInfo[]
-local function get_extmarks_from_sights(sights)
-    local extmarks = {} ---@type FarsightExtmarkInfo[]
-    local virt_text = {} ---@type [string,string|integer][]
-    local first_token_counts = get_first_token_counts(sights)
+    for _, sight in ipairs(sights) do
+        first_counts[sight[4][1]] = first_counts[sight[4][1]] + 1
+    end
 
     for i = 1, #sights do
-        local buf = sights[i].buf
-        local row = sights[i].row
-        local col = sights[i].col
-        local label = sights[i].label
+        local only_token = first_counts[sights[i][4][1]] == 1
+        local first_hl_group = only_token and HL_JUMP_TARGET or HL_JUMP
+        sights[i][5][1] = { sights[i][4][1], first_hl_group }
 
-        local next_sight = sights[i + 1] or {}
-        local next_buf = next_sight.buf
-        local next_row = next_sight.row
-        local next_col = next_sight.col
+        local max_display_tokens = (function()
+            if i == #sights then
+                return math.huge
+            end
 
-        local same_line = buf == next_buf and row == next_row
-        local max_display_tokens = same_line and (next_col - col) or math.huge
-        local display_tokens = math.min(#label, max_display_tokens)
+            local same_buf = sights[i][1] == sights[i + 1][1]
+            local same_line = same_buf and sights[i][2] == sights[i + 1][2]
+            return same_line and (sights[i + 1][3] - sights[i][3]) or math.huge
+        end)()
 
-        local first_hl_group = first_token_counts[label[1]] == 1 and HL_JUMP_TARGET or HL_JUMP
-        virt_text[#virt_text + 1] = { label[1], first_hl_group }
-
-        local tokens_ahead = string.sub(table.concat(label), 2, display_tokens)
-        if tokens_ahead ~= "" then
-            table.insert(virt_text, { tokens_ahead, HL_JUMP_AHEAD })
+        local total_tokens = math.min(#sights[i][4], max_display_tokens)
+        if 2 <= total_tokens then
+            local tokens_ahead = table.concat(sights[i][4], "", 2, total_tokens)
+            sights[i][5][2] = { tokens_ahead, HL_JUMP_AHEAD }
         end
-
-        extmarks[#extmarks + 1] = { buf = buf, row = row, col = col, virt_text = virt_text }
-        virt_text = {}
     end
-
-    return extmarks
-end
-
----@param sights FarsightSight[]
-local function display_sights(sights)
-    local extmarks = get_extmarks_from_sights(sights)
-    for _, extmark in ipairs(extmarks) do
-        ---@type vim.api.keyset.set_extmark
-        local extmark_opts = {
-            hl_mode = "combine",
-            priority = 1000,
-            virt_text = extmark.virt_text,
-            virt_text_pos = "overlay",
-        }
-
-        pcall(
-            api.nvim_buf_set_extmark,
-            extmark.buf,
-            JUMP_HL_NS,
-            extmark.row,
-            extmark.col,
-            extmark_opts
-        )
-    end
-
-    api.nvim_cmd({ cmd = "redraw" }, {})
 end
 
 ---@param cur_win integer
@@ -376,64 +306,73 @@ local function do_jump(wins, buf, row, col, opts)
     api.nvim_cmd({ cmd = "norm", args = { "zv" }, bang = true }, {})
 end
 
----@param sights FarsightSight[]
----@return nil
-local function clear_sight_extmarks(sights)
-    -- Use a map to avoid a separate de-duplication step
-    local bufs = {} ---@type table<integer, boolean>
-    for _, sight in ipairs(sights) do
-        bufs[sight.buf] = true
-    end
-
-    for _, buf in ipairs(vim.tbl_keys(bufs)) do
-        pcall(api.nvim_buf_clear_namespace, buf, JUMP_HL_NS, 0, -1)
-    end
-end
-
----Edits sights in place
+---Edits wins, bufs, and sights in place
 ---@param wins integer[]
+---@param bufs integer[]
 ---@param sights FarsightSight[]
 ---@param opts farsight.jump.JumpOpts
 ---@return nil
-local function advance_jump(wins, sights, opts)
+local function advance_jump(wins, bufs, sights, opts)
     while true do
         populate_sight_labels(sights, opts)
-        display_sights(sights)
+        populate_virt_text(sights, opts.tokens)
 
+        ---@type vim.api.keyset.set_extmark
+        local extmark_opts = { hl_mode = "combine", priority = 1000, virt_text_pos = "overlay" }
+        for _, sight in ipairs(sights) do
+            extmark_opts.virt_text = sight[5]
+            pcall(api.nvim_buf_set_extmark, sight[1], JUMP_HL_NS, sight[2], sight[3], extmark_opts)
+        end
+
+        api.nvim_cmd({ cmd = "redraw" }, {})
         local _, input = pcall(fn.getcharstr)
+        for _, buf in ipairs(bufs) do
+            pcall(api.nvim_buf_clear_namespace, buf, JUMP_HL_NS, 0, -1)
+        end
+
         if not vim.list_contains(opts.tokens, input) then
-            clear_sight_extmarks(sights)
-            api.nvim_cmd({ cmd = "redraw" }, {})
             return
         end
 
-        -- Clearing the old extmarks immediately feels subjectively better than doing so after
-        -- filtering
-        clear_sight_extmarks(sights)
         local new_sights = {} ---@type FarsightSight[]
         for _, sight in ipairs(sights) do
-            if sight.label[1] == input then
+            if sight[4][1] == input then
                 new_sights[#new_sights + 1] = sight
             end
         end
 
         sights = new_sights
         if #sights == 1 then
-            do_jump(wins, sights[1].buf, sights[1].row + 1, sights[1].col, opts)
-            -- TODO: Isn't this redundant?
-            clear_sight_extmarks(sights)
-            api.nvim_cmd({ cmd = "redraw" }, {})
+            do_jump(wins, sights[1][1], sights[1][2] + 1, sights[1][3], opts)
             return
         end
 
+        local new_bufs = {} ---@type table<integer, boolean>
         for _, sight in ipairs(sights) do
-            sight.label = {}
+            new_bufs[sight[1]] = true
+            sight[4] = {}
+            sight[5] = {}
         end
+
+        bufs = vim.tbl_keys(new_bufs)
     end
 end
 
 ---@class farsight.Jump
 local Jump = {}
+
+---@class farsight.jump.JumpOpts
+---@field all_wins? boolean Place jump labels in all wins?
+---The input row argument is one indexed
+---This function will be called in the window context being evaluated. This means, for example,
+---that foldclosed() will return the proper result
+---The returned columns must be zero indexed
+---The returned array will be de-duplicated and sorted from least to greatest
+---@field get_cols? fun(integer, string, integer):integer[]
+---@field keepjumps? boolean
+---@field max_tokens? integer
+---@field tokens? string[]
+---@field prefer_next_win? boolean
 
 -- FARSIGHT: The default spotter in xmode and omode should go to the end of the word if it's
 -- after the cursor, and the beginning of the word if it's before. I would guess that this info
@@ -468,11 +407,11 @@ function Jump.jump(opts)
     -- encoding of the buf, row, col, and label. But how clear is this to the user? This is
     -- confused by the get_cols opt. Maybe just call that get_sights or sight_filter?
     local wins = get_jump_wins(opts.all_wins)
-    local sights = get_sights(wins, opts)
+    local sights, bufs = get_sights(wins, opts)
     if #sights > 1 then
-        advance_jump(wins, sights, opts)
+        advance_jump(wins, bufs, sights, opts)
     elseif #sights == 1 then
-        do_jump(wins, sights[1].buf, sights[1].row + 1, sights[1].col, opts)
+        do_jump(wins, sights[1][1], sights[1][2] + 1, sights[1][3], opts)
     else
         api.nvim_echo({ { "No sights to jump to" } }, false, {})
     end
