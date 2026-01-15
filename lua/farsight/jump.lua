@@ -23,8 +23,10 @@ local fn = vim.fn
 ---The returned columns must be zero indexed
 ---The returned array will be de-duplicated and sorted from least to greatest
 ---@field get_cols? farsight.GetColsFunc
+---@field keepjumps? boolean
 ---@field max_tokens? integer
 ---@field tokens? string[]
+---@field prefer_next_win? boolean
 
 -- MID: Because this datatype is used in hot loops, might be worth list indexing rather than
 -- hash indexing
@@ -62,52 +64,45 @@ vim.api.nvim_set_hl(0, HL_JUMP, { default = true, reverse = true })
 vim.api.nvim_set_hl(0, HL_JUMP_AHEAD, { default = true, reverse = true })
 vim.api.nvim_set_hl(0, HL_JUMP_TARGET, { default = true, reverse = true })
 
--- FARSIGHT: Maybe provide an interface to the ns
 local JUMP_HL_NS = api.nvim_create_namespace("FarsightJumps")
 
--- FARSIGHT: This function does a bit too much, even with the rename. The issue is I don't want
--- to pull win configs multiple times. Could cache those as well, but that's a bit goofy
 -- Per mini.jump2d, while nvim_tabpage_list_wins does currently ensure proper window layout, this
 -- is not documented behavior and thus can change. The below function ensures layout
 ---@param tabpage integer
 ---@return integer[]
 local function get_focusable_wins_ordered(tabpage)
     local wins = api.nvim_tabpage_list_wins(tabpage)
-    local configs = {} ---@type table<integer, vim.api.keyset.win_config_ret>
+    local focusable_wins = {} ---@type integer[]
+    local positions = {} ---@type { [1]:integer, [2]:integer, [3]:integer }[]
+
     for _, win in ipairs(wins) do
-        configs[win] = api.nvim_win_get_config(win)
-    end
-
-    -- FARSIGHT: More naming issues. This really is - Can this have a winnr?
-    local focusable_wins = vim.tbl_filter(function(win)
-        return configs[win].focusable and not configs[win].hide
-    end, wins)
-
-    local wins_pos = {} ---@type { [1]:integer, [2]:integer, [3]:integer }[]
-    for _, win in ipairs(focusable_wins) do
-        local pos = api.nvim_win_get_position(win)
-        local zindex = configs[win].zindex or 0
-        wins_pos[win] = { pos[1], pos[2], zindex }
+        local config = api.nvim_win_get_config(win)
+        if config.focusable and not config.hide then
+            focusable_wins[#focusable_wins + 1] = win
+            local pos = api.nvim_win_get_position(win)
+            positions[win] = { pos[1], pos[2], config.zindex or 0 }
+        end
     end
 
     table.sort(focusable_wins, function(a, b)
-        if wins_pos[a][3] < wins_pos[b][3] then
+        local pos_a = positions[a]
+        local pos_b = positions[b]
+
+        if pos_a[3] < pos_b[3] then
             return true
-        elseif wins_pos[a][3] > wins_pos[b][3] then
+        elseif pos_a[3] > pos_b[3] then
             return false
-        elseif wins_pos[a][2] < wins_pos[b][2] then
+        elseif pos_a[2] < pos_b[2] then
             return true
-        elseif wins_pos[a][2] > wins_pos[b][2] then
+        elseif pos_a[2] > pos_b[2] then
             return false
         else
-            return wins_pos[a][1] < wins_pos[b][1]
+            return pos_a[1] < pos_b[1]
         end
     end)
 
     return focusable_wins
 end
-
-local win_cache = nil ---@type integer[]|nil
 
 ---@param all_wins boolean
 ---@return integer[]
@@ -116,7 +111,6 @@ local function get_jump_wins(all_wins)
         return get_focusable_wins_ordered(0)
     else
         local cur_win = api.nvim_get_current_win() ---@type integer
-        win_cache = { cur_win }
         return { cur_win }
     end
 end
@@ -149,10 +143,10 @@ local function default_get_cols(row, line, _)
     return cols
 end
 
+---@param wins integer[]
 ---@param opts farsight.jump.JumpOpts
 ---@return FarsightSight[]
-local function get_sights(opts)
-    local wins = get_jump_wins(opts.all_wins)
+local function get_sights(wins, opts)
     local sights = {} ---@type FarsightSight[]
     local get_cols = opts.get_cols or default_get_cols ---@type farsight.GetColsFunc
 
@@ -190,8 +184,6 @@ local function get_sights(opts)
         end)
     end
 
-    -- Do late so we don't create goofiness if we edit this function later
-    win_cache = wins
     return sights
 end
 
@@ -319,26 +311,28 @@ local function display_sights(sights)
     api.nvim_cmd({ cmd = "redraw" }, {})
 end
 
--- FARSIGHT: The "prefer current win" for jumps behavior should be configurable
--- There also needs attention to be paid to how window caching and fallback works. A goofy scenario
--- lies in wait here where prefer current win is off, the cache is lost, and a non-current win is
--- pulled in and jumped to
+---@param cur_win integer
+---@param wins integer[]
 ---@param buf integer
 ---@param row integer
+---@param opts farsight.jump.JumpOpts
 ---@return integer
-local function find_jump_win(buf, row)
-    local wins = win_cache or get_focusable_wins_ordered(0)
-    -- FARSIGHT: This *should* work because winnrs exclude non-focusable and hidden wins
-    -- I'm also not convinced this is the most efficient way to do this
-    -- FARSIGHT: This would fail though if the cursor were in a hidden window, which is technically
-    -- possible. I don't know if you just set to winnr 1
-    local start_winnr = api.nvim_win_get_number(0)
-    local winnr = start_winnr
+local function find_jump_win(cur_win, wins, buf, row, opts)
+    local start_idx = 1
+    for i, win in ipairs(wins) do
+        if win == cur_win then
+            start_idx = i
+            break
+        end
+    end
 
-    -- FARSIGHT: Why would this go wrong? Informational error return
-    assert(winnr > 0)
-    for _ = 1, 100 do
-        local win = wins[winnr]
+    if opts.prefer_next_win then
+        start_idx = start_idx < #wins and start_idx + 1 or 1
+    end
+
+    local idx = start_idx
+    while true do
+        local win = wins[idx]
         if api.nvim_win_get_buf(win) == buf then
             local top ---@type integer
             local bot ---@type integer
@@ -352,35 +346,32 @@ local function find_jump_win(buf, row)
             end
         end
 
-        winnr = winnr - 1
-        if winnr == 0 then
-            winnr = #wins
-        end
-
-        if winnr == start_winnr then
+        idx = idx < #wins and idx + 1 or 1
+        if idx == start_idx then
             break
         end
     end
-
-    -- FARSIGHT: Need an informational error return
-    error("buf not found")
 end
 
 --- Row and col are cursor indexed
+---@param wins integer[]
 ---@param buf integer
 ---@param row integer
 ---@param col integer
+---@param opts farsight.jump.JumpOpts
 ---@return nil
-local function do_jump(buf, row, col)
-    -- TODO: I'm not sure if this is helpful if you switch windows and buffers, because the
-    -- original window doesn't change, and the current one can't jump back. But I don't know if
-    -- that's because of how I have my jop configured.
-    -- MID: This should be an opt
-    api.nvim_cmd({ cmd = "norm", args = { "m`" }, bang = true }, {})
+local function do_jump(wins, buf, row, col, opts)
+    local cur_win = api.nvim_get_current_win()
+    local win = find_jump_win(cur_win, wins, buf, row, opts)
+    if cur_win ~= win then
+        api.nvim_set_current_win(win)
+    end
 
-    local win = find_jump_win(buf, row)
-    -- TODO: Check the C core to see if checking the current win is worth it
-    api.nvim_set_current_win(win)
+    if not opts.keepjumps then
+        -- TODO: Does this have to be disabled in omode?
+        api.nvim_cmd({ cmd = "norm", args = { "m`" }, bang = true }, {})
+    end
+
     api.nvim_win_set_cursor(win, { row, col })
     api.nvim_cmd({ cmd = "norm", args = { "zv" }, bang = true }, {})
 end
@@ -399,26 +390,20 @@ local function clear_sight_extmarks(sights)
     end
 end
 
----@param sights FarsightSight[]
----@return nil
-local function clear_jump_state(sights)
-    clear_sight_extmarks(sights)
-    win_cache = nil
-    api.nvim_cmd({ cmd = "redraw" }, {})
-end
-
 ---Edits sights in place
+---@param wins integer[]
 ---@param sights FarsightSight[]
 ---@param opts farsight.jump.JumpOpts
 ---@return nil
-local function advance_jump(sights, opts)
+local function advance_jump(wins, sights, opts)
     while true do
         populate_sight_labels(sights, opts)
         display_sights(sights)
 
         local _, input = pcall(fn.getcharstr)
         if not vim.list_contains(opts.tokens, input) then
-            clear_jump_state(sights)
+            clear_sight_extmarks(sights)
+            api.nvim_cmd({ cmd = "redraw" }, {})
             return
         end
 
@@ -434,8 +419,10 @@ local function advance_jump(sights, opts)
 
         sights = new_sights
         if #sights == 1 then
-            do_jump(sights[1].buf, sights[1].row + 1, sights[1].col)
-            clear_jump_state(sights)
+            do_jump(wins, sights[1].buf, sights[1].row + 1, sights[1].col, opts)
+            -- TODO: Isn't this redundant?
+            clear_sight_extmarks(sights)
+            api.nvim_cmd({ cmd = "redraw" }, {})
             return
         end
 
@@ -457,8 +444,6 @@ local Jump = {}
 -- function to create an EasyMotion style F/T map. You can create your own wrapper to enter
 -- F/T and get the character, then pass that arg into a sight_in function which is passed into
 -- here in order to get the relevant locations. Would be cool example in documentation
--- FARSIGHT: A couple basic default spotter functions should be provided. Can look at what
--- Jump2D offers
 -- NOGO: Add in opts to control how folds or blanks are handled. These are concerns within
 -- the handling of the individual line and should be scoped there
 
@@ -482,21 +467,27 @@ function Jump.jump(opts)
     -- TODO: The naming is somewhat confusing. For internal purposes, a sight makes sense as an
     -- encoding of the buf, row, col, and label. But how clear is this to the user? This is
     -- confused by the get_cols opt. Maybe just call that get_sights or sight_filter?
-    local sights = get_sights(opts)
-    if #sights <= 1 then
-        if #sights == 1 then
-            do_jump(sights[1].buf, sights[1].row + 1, sights[1].col)
-        else
-            api.nvim_echo({ { "No sights to jump to" } }, false, {})
-        end
-
-        clear_jump_state(sights)
-        return
+    local wins = get_jump_wins(opts.all_wins)
+    local sights = get_sights(wins, opts)
+    if #sights > 1 then
+        advance_jump(wins, sights, opts)
+    elseif #sights == 1 then
+        do_jump(wins, sights[1].buf, sights[1].row + 1, sights[1].col, opts)
+    else
+        api.nvim_echo({ { "No sights to jump to" } }, false, {})
     end
+end
 
-    advance_jump(sights, opts)
+---@return integer
+function Jump.get_hl_ns()
+    return JUMP_HL_NS
 end
 
 return Jump
 
 -- MID: https://antonk52.github.io/webdevandstuff/post/2025-11-30-diy-easymotion.html
+
+-- DOCUMENT: Should try to recognize and integrate the past history of these types of
+-- motions and plugins, particularly EasyMotion. Also consider the text editor that Helix stole its
+-- motion from
+-- DOCUMENT: A couple example spotter functions
