@@ -1,4 +1,13 @@
+-- NOTE: Doing <cr> -> letter to target has been tested and this still produces two token labels,
+-- resulting in more inputs to get to the target. For the end of word case, you can consistently
+-- use e or E. Problem I suppose is middle of the word case, where you would need to use f/t,
+-- adding two more keys. But this is rare enough that I think this saves keys on average, not to
+-- mention the lack of smoothness of the four char motion. Though some of that can be ascribed to
+-- lack of practice.
 -- TODO: For this and the f/t/;/, case, how is the unicode handling?
+-- TODO: f/t should probably allow for customizing the function that determines the word boundary
+-- somehow. You might also be able to generalize this out to the jump function. You could provide
+-- CWORD (space separated) as an alternative builtin, or at least an example
 -- TODO: For the f/t case, ;/, don't need to worry about caching. From a particular set of saved
 -- char, direction, and t flags, we can just advance through the text and find where to go.
 -- Caching would only be relevant in the particular undo state the original cmd was run, and I'm
@@ -21,8 +30,8 @@ local fn = vim.fn
 ---@field [4] string[] Label
 ---@field [5] [string,string|integer][] Extmark virtual text
 
-local MAX_TOKENS = 2 ---@type integer
-local TOKENS = vim.split("abcdefghijklmnopqrstuvwxyz", "") ---@type string[]
+local MAX_TOKENS = 2
+local TOKENS = vim.split("abcdefghijklmnopqrstuvwxyz", "")
 
 -- DOCUMENT: Advertise these HL groups
 local HL_JUMP = "FarsightJump"
@@ -36,9 +45,9 @@ local HL_JUMP_TARGET = "FarsightJumpTarget"
 -- would get the table of info the function generates, and you could do what you want with them
 -- The biggest use case I'm not sure if that addresses is dimming. Would also need to make sure
 -- the ns is passed out
-vim.api.nvim_set_hl(0, HL_JUMP, { default = true, reverse = true })
-vim.api.nvim_set_hl(0, HL_JUMP_AHEAD, { default = true, reverse = true })
-vim.api.nvim_set_hl(0, HL_JUMP_TARGET, { default = true, reverse = true })
+api.nvim_set_hl(0, HL_JUMP, { default = true, reverse = true })
+api.nvim_set_hl(0, HL_JUMP_AHEAD, { default = true, reverse = true })
+api.nvim_set_hl(0, HL_JUMP_TARGET, { default = true, reverse = true })
 
 local JUMP_HL_NS = api.nvim_create_namespace("FarsightJumps")
 
@@ -86,22 +95,26 @@ local function get_jump_wins(all_wins)
     return all_wins and get_focusable_wins_ordered(0) or { api.nvim_get_current_win() }
 end
 
+-- MID: Profile this against regex:match_line()
+
+local cword_regex = vim.regex("\\k\\+")
+
 ---@param row integer
 ---@param line string
 ---@param _ integer
 ---@return integer[]
 local function default_get_cols(row, line, _)
+    -- TODO: for folded lines, put a label at the beginning that can zv it open
     if fn.prevnonblank(row) ~= row or fn.foldclosed(row) ~= -1 then
         return {}
     end
 
     local cols = {} ---@type integer[]
-    local regex = vim.regex("\\k\\+")
     local start = 1
     local len_ = (line:len() + 1)
 
     for _ = 1, len_ do
-        local from, to = regex:match_str(line)
+        local from, to = cword_regex:match_str(line)
         if from == nil or to == nil then
             break
         end
@@ -324,7 +337,7 @@ local function advance_jump(wins, bufs, sights, opts)
             pcall(api.nvim_buf_set_extmark, sight[1], JUMP_HL_NS, sight[2], sight[3], extmark_opts)
         end
 
-        api.nvim_cmd({ cmd = "redraw" }, {})
+        api.nvim__redraw({ valid = true })
         local _, input = pcall(fn.getcharstr)
         for _, buf in ipairs(bufs) do
             pcall(api.nvim_buf_clear_namespace, buf, JUMP_HL_NS, 0, -1)
@@ -358,7 +371,7 @@ local function advance_jump(wins, bufs, sights, opts)
     end
 end
 
----@class farsight.Jump
+---@class farsight.StepJump
 local Jump = {}
 
 ---@class farsight.jump.JumpOpts
@@ -425,6 +438,10 @@ end
 return Jump
 
 -- MID: https://antonk52.github.io/webdevandstuff/post/2025-11-30-diy-easymotion.html
+
+-- LOW: The labels could be potentially optimized by doing them in a DoD/SoA way. I'm not sure
+-- how much faster this would be since the arrays have to be created a step at a time as well as
+-- deleted a step at a time, resulting in more(?) allocations
 
 -- DOCUMENT: Should try to recognize and integrate the past history of these types of
 -- motions and plugins, particularly EasyMotion. Also consider the text editor that Helix stole its

@@ -138,3 +138,7 @@ return {
         })
     end,
 }
+
+-- TODO: In the plugin, consider having separate g:vars for each autocmd. There's no real reason
+-- to have to manually re-create the LspDetach autocmd. I should just be able to turn off the
+-- update and clear autocmds. Issue: This would be an interface change.
