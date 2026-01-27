@@ -381,6 +381,10 @@ function mjm.lsp.start(config, opts)
     end
 end
 
+-- MID: If you have an LSP, it should be possible to type something like grv and replace a variable
+-- with its corresponding literal. I think rust-analyzer has this as a code action. Is there a more
+-- generalizable way to do it
+
 -- LOW: LspInfo is an alias for checkhealth vim.lsp, and there is a project to upstream cmds from
 -- nvim-lspconfig to core. Unsure of where that will eventually land
 -- LOW: For the split use case, FzfLua handles this well enough for it to not be worth worrying
