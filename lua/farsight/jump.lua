@@ -45,7 +45,7 @@ local cword_regex = vim.regex("\\k\\+")
 ---@param line string
 ---@param _ integer
 ---@return integer[]
-local function target_cwords(row, line, _)
+local function target_cwords(row, line, _, _)
     -- TODO: for folded lines, put a label at the beginning that can zv it open
     if fn.prevnonblank(row) ~= row or fn.foldclosed(row) ~= -1 then
         return {}
@@ -69,12 +69,73 @@ local function target_cwords(row, line, _)
     return cols
 end
 
+-- TODO: Vague function name
+-- TODO: Issue with this function: The jump labels run off the edge of the word. Especially
+-- punshing for me because it makes the reverse highlighting a mess. But if you use under
+-- highlighting to identify jumps, still creates disorienting visuals where the under decorations
+-- run past the word.
+-- The most visually pleasing solution would be to restrict the labels to within the word. But
+-- this creates a disconnect where now the labels to not match exactly to where the jump point is,
+-- creating a new type of confusion.
+-- I just don't think shifting the labels off from the cols they identify can be correct. I think
+-- the better path forward is to consider this as a factor when creating the defaults, and
+-- something to keep in mind for my own config as well.
+
+---@param row integer
+---@param line string
+---@param _ integer
+---@param cur_pos { [1]: integer, [2]:integer }
+---@return integer[]
+local function target_cwords_cur_pos(row, line, _, cur_pos)
+    -- TODO: for folded lines, put a label at the beginning that can zv it open
+    if fn.prevnonblank(row) ~= row or fn.foldclosed(row) ~= -1 then
+        return {}
+    end
+
+    local cols = {} ---@type integer[]
+    local start = 1
+    local len_ = (line:len() + 1)
+
+    -- TODO: YOu could just do while true here and remove the len_ allocation. Though it is a
+    -- useful guard. And might save a regex call
+    for _ = 1, len_ do
+        local from, to = cword_regex:match_str(line)
+        if from == nil or to == nil then
+            break
+        end
+
+        -- TODO: handle same row, col after
+        local after_row = row > cur_pos[1]
+        if after_row then
+            cols[#cols + 1] = to + start - 2
+        else
+            cols[#cols + 1] = from + start - 1
+        end
+
+        -- if after_row then
+        --     print(
+        --         tostring(from + start - 1)
+        --             .. ", "
+        --             .. tostring(to + start - 1)
+        --             .. ", "
+        --             .. tostring(cols[#cols])
+        --     )
+        -- end
+
+        line = line:sub(to + 1)
+        start = start + to
+    end
+
+    return cols
+end
+
 ---@param row integer
 ---@param line string
 ---@param buf integer
----@param locator fun(integer, string, integer):integer[]
-local function get_cols(row, line, buf, locator)
-    local cols = locator(row, line, buf)
+---@param cur_pos { [1]: integer, [2]: integer }
+---@param locator fun(row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
+local function get_cols(row, line, buf, cur_pos, locator)
+    local cols = locator(row, line, buf, cur_pos)
     -- TODO: I think this is a version 12 function
     vim.list.unique(cols)
     table.sort(cols, function(a, b)
@@ -88,7 +149,7 @@ end
 ---@param win integer
 ---@param cur_pos { [1]: integer, [2]: integer }
 ---@param buf integer
----@param locator fun(integer, string, integer):integer[]
+---@param locator fun(row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
 ---@param ns integer
 ---@param targets farsight.jump.Target[]
 local function add_targets_after(win, cur_pos, buf, locator, ns, targets)
@@ -106,7 +167,7 @@ local function add_targets_after(win, cur_pos, buf, locator, ns, targets)
     end)()
 
     local line_after = string.sub(line, start_col_1, #line)
-    local cols = get_cols(cur_pos[1], line_after, buf, locator)
+    local cols = get_cols(cur_pos[1], line_after, buf, cur_pos, locator)
 
     local cut_len = #line - #line_after
     for i = 1, #cols do
@@ -123,7 +184,7 @@ end
 ---@param win integer
 ---@param cur_pos { [1]: integer, [2]: integer }
 ---@param buf integer
----@param locator fun(integer, string, integer):integer[]
+---@param locator fun(row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
 ---@param ns integer
 ---@param targets farsight.jump.Target[]
 local function add_targets_before(win, cur_pos, buf, locator, ns, targets)
@@ -133,7 +194,7 @@ local function add_targets_before(win, cur_pos, buf, locator, ns, targets)
     local end_col_1 = cur_cword and cur_cword[2] or cur_pos[2]
 
     local line_before = string.sub(line, 1, end_col_1)
-    local cols = get_cols(cur_pos[1], line_before, buf, locator)
+    local cols = get_cols(cur_pos[1], line_before, buf, cur_pos, locator)
 
     local row_0 = cur_pos[1] - 1
     for _, col in ipairs(cols) do
@@ -144,12 +205,13 @@ end
 ---@param win integer
 ---@param row integer
 ---@param buf integer
----@param locator fun(integer, string, integer):integer[]
+---@param cur_pos { [1]: integer, [2]: integer }
+---@param locator fun(row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
 ---@param ns integer
 ---@param targets farsight.jump.Target[]
-local function add_targets(win, row, buf, locator, ns, targets)
+local function add_targets(win, row, buf, cur_pos, locator, ns, targets)
     local line = fn.getline(row)
-    local cols = get_cols(row, line, buf, locator)
+    local cols = get_cols(row, line, buf, cur_pos, locator)
 
     local row_0 = row - 1
     for _, col in ipairs(cols) do
@@ -162,7 +224,7 @@ end
 ---@return farsight.jump.Target[], table<integer, integer>
 local function get_targets(wins, opts)
     local targets = {} ---@type farsight.jump.Target[]
-    local locator = opts.locator ---@type fun(integer, string, integer):integer[]
+    local locator = opts.locator ---@type fun(row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
     local dir = opts.dir ---@type integer
     local missing_ns = #wins - #namespaces
     for _ = 1, missing_ns do
@@ -201,7 +263,7 @@ local function get_targets(wins, opts)
             end
 
             for i = top, bot do
-                add_targets(win, i, buf, locator, ns, targets)
+                add_targets(win, i, buf, cur_pos, locator, ns, targets)
             end
 
             if dir == -1 then
@@ -291,11 +353,24 @@ local function populate_target_virt_text(targets, tokens)
         end
     end
 
-    for i = 1, #targets - 1 do
-        local same_buf = targets[i][2] == targets[i + 1][2]
-        local same_line = same_buf and targets[i][3] == targets[i + 1][3]
-        local max_display_tokens = same_line and (targets[i + 1][4] - targets[i][4]) or math.huge
+    local function get_max_display_tokens(target, next_target)
+        if target[1] ~= next_target[1] then
+            return math.huge
+        end
 
+        if target[2] ~= next_target[2] then
+            return math.huge
+        end
+
+        if target[3] ~= next_target[3] then
+            return math.huge
+        end
+
+        return next_target[4] - target[4]
+    end
+
+    for i = 1, #targets - 1 do
+        local max_display_tokens = get_max_display_tokens(targets[i], targets[i + 1])
         add_virt_text(targets[i], max_display_tokens)
     end
 
@@ -392,7 +467,21 @@ local function resolve_jump_opts(opts)
     ut._validate_uint(opts.max_tokens)
     opts.max_tokens = math.max(opts.max_tokens, 1)
 
-    opts.locator = opts.locator or target_cwords
+    local short_mode = string.sub(api.nvim_get_mode().mode, 1, 1)
+    opts.locator = (function()
+        if opts.locator then
+            return opts.locator
+        end
+
+        -- TODO: Check omode as well
+        local is_visual = short_mode == "v" or short_mode == "V" or short_mode == "\22"
+        if is_visual then
+            return target_cwords_cur_pos
+        else
+            return target_cwords
+        end
+    end)()
+
     vim.validate("opts.locator", opts.locator, "callable")
 
     opts.tokens = opts.tokens or TOKENS
@@ -416,7 +505,7 @@ local Jump = {}
 ---The returned array will be de-duplicated and sorted from least to greatest
 ---@field dir? integer
 ---@field keepjumps? boolean
----@field locator? fun(integer, string, integer):integer[]
+---@field locator? fun(row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
 ---@field max_tokens? integer
 ---@field tokens? string[]
 

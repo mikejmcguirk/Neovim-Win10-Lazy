@@ -20,25 +20,25 @@ local actions_backward = {
     end,
 }
 
-vim.keymap.set("n", "f", function()
+vim.keymap.set({ "n", "x" }, "f", function()
     require("farsight.csearch").csearch({ actions = actions_forward })
 end)
 
-vim.keymap.set("n", "t", function()
+vim.keymap.set({ "n", "x" }, "t", function()
     require("farsight.csearch").csearch({
         t_cmd = true,
         actions = actions_forward,
     })
 end)
 
-vim.keymap.set("n", "F", function()
+vim.keymap.set({ "n", "x" }, "F", function()
     require("farsight.csearch").csearch({
         forward = false,
         actions = actions_backward,
     })
 end)
 
-vim.keymap.set("n", "T", function()
+vim.keymap.set({ "n", "x" }, "T", function()
     require("farsight.csearch").csearch({
         actions = actions_backward,
         forward = false,
@@ -46,10 +46,10 @@ vim.keymap.set("n", "T", function()
     })
 end)
 
-vim.keymap.set("n", ";", function()
+vim.keymap.set({ "n", "x" }, ";", function()
     require("farsight.csearch").rep()
 end)
 
-vim.keymap.set("n", ",", function()
+vim.keymap.set({ "n", "x" }, ",", function()
     require("farsight.csearch").rep({ reverse = true })
 end)
