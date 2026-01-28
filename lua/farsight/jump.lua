@@ -1,7 +1,7 @@
 local api = vim.api
 local fn = vim.fn
 
----@class FarsightSight
+---@class farsight.jump.Target
 ---@field [1] integer Window ID
 ---@field [2] integer Buffer ID
 ---@field [3] integer Zero indexed row |api-indexing|
@@ -13,7 +13,7 @@ local fn = vim.fn
 local MAX_TOKENS = 2
 local TOKENS = vim.split("abcdefghijklmnopqrstuvwxyz", "")
 
--- DOCUMENT: Advertise these HL groups
+-- TODO: Document these HL groups
 local HL_JUMP_STR = "FarsightJump"
 local HL_JUMP_AHEAD_STR = "FarsightJumpAhead"
 local HL_JUMP_TARGET_STR = "FarsightJumpTarget"
@@ -45,7 +45,7 @@ local cword_regex = vim.regex("\\k\\+")
 ---@param line string
 ---@param _ integer
 ---@return integer[]
-local function scope_cwords(row, line, _)
+local function target_cwords(row, line, _)
     -- TODO: for folded lines, put a label at the beginning that can zv it open
     if fn.prevnonblank(row) ~= row or fn.foldclosed(row) ~= -1 then
         return {}
@@ -69,27 +69,113 @@ local function scope_cwords(row, line, _)
     return cols
 end
 
+---@param row integer
+---@param line string
+---@param buf integer
+---@param locator fun(integer, string, integer):integer[]
+local function get_cols(row, line, buf, locator)
+    local cols = locator(row, line, buf)
+    -- TODO: I think this is a version 12 function
+    vim.list.unique(cols)
+    table.sort(cols, function(a, b)
+        return a < b
+    end)
+
+    return cols
+end
+
+---Edits targets in place
+---@param win integer
+---@param cur_pos { [1]: integer, [2]: integer }
+---@param buf integer
+---@param locator fun(integer, string, integer):integer[]
+---@param ns integer
+---@param targets farsight.jump.Target[]
+local function add_targets_after(win, cur_pos, buf, locator, ns, targets)
+    local line = fn.getline(cur_pos[1])
+    local start_col_1 = (function()
+        local ut = require("farsight.util")
+        local cur_cword = ut._find_cword_at_col(line, cur_pos[2])
+        if cur_cword then
+            return cur_cword[3] + 1
+        end
+
+        local charidx = fn.charidx(line, cur_pos[2])
+        local char = fn.strcharpart(line, charidx, 1, true) ---@type string
+        return cur_pos[2] + #char + 1
+    end)()
+
+    local line_after = string.sub(line, start_col_1, #line)
+    local cols = get_cols(cur_pos[1], line_after, buf, locator)
+
+    local cut_len = #line - #line_after
+    for i = 1, #cols do
+        cols[i] = cols[i] + cut_len
+    end
+
+    local row_0 = cur_pos[1] - 1
+    for _, col in ipairs(cols) do
+        targets[#targets + 1] = { win, buf, row_0, col, {}, ns, {} }
+    end
+end
+
+---Edits targets in place
+---@param win integer
+---@param cur_pos { [1]: integer, [2]: integer }
+---@param buf integer
+---@param locator fun(integer, string, integer):integer[]
+---@param ns integer
+---@param targets farsight.jump.Target[]
+local function add_targets_before(win, cur_pos, buf, locator, ns, targets)
+    local line = fn.getline(cur_pos[1])
+    local ut = require("farsight.util")
+    local cur_cword = ut._find_cword_at_col(line, cur_pos[2])
+    local end_col_1 = cur_cword and cur_cword[2] or cur_pos[2]
+
+    local line_before = string.sub(line, 1, end_col_1)
+    local cols = get_cols(cur_pos[1], line_before, buf, locator)
+
+    local row_0 = cur_pos[1] - 1
+    for _, col in ipairs(cols) do
+        targets[#targets + 1] = { win, buf, row_0, col, {}, ns, {} }
+    end
+end
+
+---@param win integer
+---@param row integer
+---@param buf integer
+---@param locator fun(integer, string, integer):integer[]
+---@param ns integer
+---@param targets farsight.jump.Target[]
+local function add_targets(win, row, buf, locator, ns, targets)
+    local line = fn.getline(row)
+    local cols = get_cols(row, line, buf, locator)
+
+    local row_0 = row - 1
+    for _, col in ipairs(cols) do
+        targets[#targets + 1] = { win, buf, row_0, col, {}, ns, {} }
+    end
+end
+
 ---@param wins integer[]
 ---@param opts farsight.jump.JumpOpts
----@return FarsightSight[], table<integer, integer>
+---@return farsight.jump.Target[], table<integer, integer>
 local function get_targets(wins, opts)
-    local sights = {} ---@type FarsightSight[]
-    ---@type fun(integer, string, integer):integer[]
-
+    local targets = {} ---@type farsight.jump.Target[]
+    local locator = opts.locator ---@type fun(integer, string, integer):integer[]
+    local dir = opts.dir ---@type integer
     local missing_ns = #wins - #namespaces
     for _ = 1, missing_ns do
         namespaces[#namespaces + 1] = api.nvim_create_namespace("")
     end
 
-    local win_ns_map = {}
+    local win_ns_map = {} ---@type table<integer, integer>
+    local ns_buf_map = {} ---@type table<integer, integer>
     for i = 1, #wins do
         win_ns_map[wins[i]] = namespaces[i]
         api.nvim__ns_set(namespaces[i], { wins = { wins[i] } })
     end
 
-    local locator = opts.locator ---@type  fun(integer, string, integer):integer[]
-    local dir = opts.dir ---@type integer
-    local ns_buf_map = {}
     for _, win in ipairs(wins) do
         local cur_pos = api.nvim_win_get_cursor(win)
         local buf = api.nvim_win_get_buf(win)
@@ -97,45 +183,52 @@ local function get_targets(wins, opts)
         ns_buf_map[ns] = buf
 
         api.nvim_win_call(win, function()
-            local top = dir == 1 and cur_pos[1] or fn.line("w0")
-            local bot = dir == -1 and cur_pos[1] or fn.line("w$")
-            for i = top, bot do
-                local line = fn.getline(i)
-                local cols = locator(i, line, buf)
-                -- FARSIGHT: I think this is a version 12 function
-                vim.list.unique(cols)
-                table.sort(cols, function(a, b)
-                    return a < b
-                end)
+            local top ---@type integer
+            local bot ---@type integer
+            if dir <= 0 then
+                top = fn.line("w0")
+            end
 
-                for _, col in ipairs(cols) do
-                    local row_0 = i - 1
-                    sights[#sights + 1] = { win, buf, row_0, col, {}, ns, {} }
-                end
+            if dir >= 0 then
+                bot = fn.line("w$")
+            end
+
+            if dir == -1 then
+                bot = math.max(cur_pos[1] - 1, top)
+            elseif dir == 1 then
+                top = math.min(cur_pos[1] + 1, bot)
+                add_targets_after(win, cur_pos, buf, locator, ns, targets)
+            end
+
+            for i = top, bot do
+                add_targets(win, i, buf, locator, ns, targets)
+            end
+
+            if dir == -1 then
+                add_targets_before(win, cur_pos, buf, locator, ns, targets)
             end
         end)
     end
 
-    return sights, ns_buf_map
+    return targets, ns_buf_map
 end
 
 -- MID: The variable names in this function could be more clear
 -- LOW: In theory, the best way to do this would be to figure out a way to pre-determine the length
 -- of each label and allocate each only once as a string
 
----@param sights FarsightSight[]
+---@param targets farsight.jump.Target[]
 ---@param opts farsight.jump.JumpOpts
 ---@return nil
-local function populate_sight_labels(sights, opts)
-    if #sights <= 1 then
+local function populate_target_labels(targets, opts)
+    if #targets <= 1 then
         return
     end
 
-    -- TODO: Either use individualized casting here ot a private JumpOptsResolved type
-    local tokens = opts.tokens or TOKENS
+    local tokens = opts.tokens ---@type string[]
     local max_tokens = opts.max_tokens
     local queue = {} ---@type { [1]: integer, [2]:integer }[]
-    queue[#queue + 1] = { 1, #sights }
+    queue[#queue + 1] = { 1, #targets }
 
     while #queue > 0 do
         local range = table.remove(queue, 1) ---@type { [1]: integer, [2]:integer }
@@ -143,20 +236,20 @@ local function populate_sight_labels(sights, opts)
 
         local quotient = math.floor(len / #tokens)
         local remainder = len % #tokens
-        local on_token = quotient + (remainder >= 1 and 1 or 0)
+        local rem_tokens = quotient + (remainder >= 1 and 1 or 0)
         remainder = remainder > 0 and remainder - 1 or remainder
 
         local token_idx = 1
         local token_start = range[1]
 
         for i = range[1], range[2] do
-            sights[i][5][#sights[i][5] + 1] = tokens[token_idx]
-            on_token = on_token - 1
-            if on_token == 0 then
-                on_token = quotient + (remainder >= 1 and 1 or 0)
+            targets[i][5][#targets[i][5] + 1] = tokens[token_idx]
+            rem_tokens = rem_tokens - 1
+            if rem_tokens == 0 then
+                rem_tokens = quotient + (remainder >= 1 and 1 or 0)
                 remainder = remainder > 0 and remainder - 1 or remainder
 
-                if i > token_start and #sights[i][5] < max_tokens then
+                if i > token_start and #targets[i][5] < max_tokens then
                     queue[#queue + 1] = { token_start, i }
                 end
 
@@ -167,41 +260,46 @@ local function populate_sight_labels(sights, opts)
     end
 end
 
+-- LOW: It might be faster to build first_counts when populating the labels. Not sure how to do
+-- it though without essentially writing duplicate code for the queue iteration. One for the first
+-- token to add quotient to first counts, then another that doesn't touch first_counts. Don't
+-- want to be if checking on subsequent iterations
 -- LOW: Profile this function to see if it could be optimized further
 
----@param sights FarsightSight[]
-local function populate_virt_text(sights, tokens)
+---@param targets farsight.jump.Target[]
+local function populate_target_virt_text(targets, tokens)
     local first_counts = {} ---@type table<string, integer>
     for _, token in ipairs(tokens) do
         first_counts[token] = 0
     end
 
-    for _, sight in ipairs(sights) do
-        first_counts[sight[5][1]] = first_counts[sight[5][1]] + 1
+    for _, target in ipairs(targets) do
+        first_counts[target[5][1]] = first_counts[target[5][1]] + 1
     end
 
-    for i = 1, #sights do
-        local only_token = first_counts[sights[i][5][1]] == 1
+    ---@param target farsight.jump.Target
+    ---@param max_display_tokens integer
+    local function add_virt_text(target, max_display_tokens)
+        local only_token = first_counts[target[5][1]] == 1
         local first_hl_group = only_token and hl_jump_target or hl_jump
-        sights[i][7][1] = { sights[i][5][1], first_hl_group }
+        target[7][1] = { target[5][1], first_hl_group }
 
-        local max_display_tokens = (function()
-            if i == #sights then
-                return math.huge
-            end
-
-            -- TODO: Would need to add win check in here too I think
-            local same_buf = sights[i][2] == sights[i + 1][2]
-            local same_line = same_buf and sights[i][3] == sights[i + 1][3]
-            return same_line and (sights[i + 1][4] - sights[i][4]) or math.huge
-        end)()
-
-        local total_tokens = math.min(#sights[i][5], max_display_tokens)
+        local total_tokens = math.min(#target[5], max_display_tokens)
         if 2 <= total_tokens then
-            local tokens_ahead = table.concat(sights[i][5], "", 2, total_tokens)
-            sights[i][7][2] = { tokens_ahead, hl_jump_ahead }
+            local tokens_ahead = table.concat(target[5], "", 2, total_tokens)
+            target[7][2] = { tokens_ahead, hl_jump_ahead }
         end
     end
+
+    for i = 1, #targets - 1 do
+        local same_buf = targets[i][2] == targets[i + 1][2]
+        local same_line = same_buf and targets[i][3] == targets[i + 1][3]
+        local max_display_tokens = same_line and (targets[i + 1][4] - targets[i][4]) or math.huge
+
+        add_virt_text(targets[i], max_display_tokens)
+    end
+
+    add_virt_text(targets[#targets], math.huge)
 end
 
 --- Row and col are cursor indexed
@@ -227,13 +325,13 @@ end
 
 ---Edits ns_buf_map and sights in place
 ---@param ns_buf_map table<integer, integer>
----@param sights FarsightSight[]
+---@param sights farsight.jump.Target[]
 ---@param opts farsight.jump.JumpOpts
 ---@return nil
 local function advance_jump(ns_buf_map, sights, opts)
     while true do
-        populate_sight_labels(sights, opts)
-        populate_virt_text(sights, opts.tokens)
+        populate_target_labels(sights, opts)
+        populate_target_virt_text(sights, opts.tokens)
 
         ---@type vim.api.keyset.set_extmark
         local extmark_opts = { hl_mode = "combine", priority = 1000, virt_text_pos = "overlay" }
@@ -248,11 +346,7 @@ local function advance_jump(ns_buf_map, sights, opts)
             pcall(api.nvim_buf_clear_namespace, buf, ns, 0, -1)
         end
 
-        if not vim.list_contains(opts.tokens, input) then
-            return
-        end
-
-        local new_sights = {} ---@type FarsightSight[]
+        local new_sights = {} ---@type farsight.jump.Target[]
         for _, sight in ipairs(sights) do
             if sight[5][1] == input then
                 new_sights[#new_sights + 1] = sight
@@ -260,8 +354,11 @@ local function advance_jump(ns_buf_map, sights, opts)
         end
 
         sights = new_sights
-        if #sights == 1 then
-            do_jump(sights[1][1], sights[1][3] + 1, sights[1][4], opts)
+        if #sights <= 1 then
+            if #sights == 1 then
+                do_jump(sights[1][1], sights[1][3] + 1, sights[1][4], opts)
+            end
+
             return
         end
 
@@ -295,7 +392,7 @@ local function resolve_jump_opts(opts)
     ut._validate_uint(opts.max_tokens)
     opts.max_tokens = math.max(opts.max_tokens, 1)
 
-    opts.locator = opts.locator or scope_cwords
+    opts.locator = opts.locator or target_cwords
     vim.validate("opts.locator", opts.locator, "callable")
 
     opts.tokens = opts.tokens or TOKENS
@@ -386,6 +483,7 @@ return Jump
 -- TODO: Add quickscope to inspirations or something
 -- TODO: Add alternative projects (many of them)
 -- TODO: Go through the extmark opts doc to see what works here
+-- TODO: Test/document dot repeat behavior
 
 -- LOW: Would be interesting to test storing the labels as a struct of arrays
 

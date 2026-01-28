@@ -745,6 +745,8 @@ return Csearch
 -- done through the APIs.
 -- TODO: Go through the extmark opts doc to see what works here
 -- TODO: Document that rep() checks cpo for default t skip behavior
+-- TODO: Test/document dot repeat behavior for operators. Should at least match what default f/t
+-- does
 
 -- MID: The default tokens should be 'isk' for the current buffer. The isk strings + tokens can
 -- be cached when created for the first time. For subsequent runs, re-query the opt string and
@@ -758,6 +760,8 @@ return Csearch
 -- highlighted. I'm not sure how to turn it off though without setting up a key listener
 -- MID: If wrap is on and a line runs off the end of the screen, you could f/t into it
 -- unexpectedly. For the last line, would be good to be able to stop where it actually displays
+-- MID: For token iteration, is there some kind of Rust-esque optimization where raw bytes can be
+-- iterated over instead of the string/char representations?
 
 -- LOW: Rather than niling tokens that cannot be highlighted, could separately keep track of
 -- how many highlightable tokens remain. Saw slight perf gain when trying this, but not enough to

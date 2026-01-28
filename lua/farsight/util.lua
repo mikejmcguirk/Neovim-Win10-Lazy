@@ -1,4 +1,5 @@
 local api = vim.api
+local fn = vim.fn
 
 ---@class farsight.Util
 local Util = {}
@@ -44,6 +45,7 @@ end
 local cword_str = [[\k\+]]
 
 --- Col is zero indexed inclusive
+--- Returns the result of matchstrpos(). The cols are zero indexed, and the end col is exclusive
 ---@param line string
 ---@param col integer
 ---@return { [1]: string, [2]: integer, [3]: integer }|nil
@@ -51,7 +53,7 @@ function Util._find_cword_at_col(line, col)
     local start = 0
 
     while start <= col do
-        local res = vim.fn.matchstrpos(line, cword_str, start)
+        local res = fn.matchstrpos(line, cword_str, start)
         if res[2] < 0 then
             return nil
         end

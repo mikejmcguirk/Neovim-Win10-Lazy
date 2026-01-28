@@ -14,7 +14,7 @@ local ok, fzflua = pcall(require, "fzf-lua") ---@type boolean, table
 local qf_open = (function()
     local ok_w, window = pcall(require, "qf-rancher.window") ---@type boolean, qf-rancher.Window?
     return (ok_w and window) and function()
-        window.open_qflist({})
+        window.open_qf_win({})
     end or function()
         api.nvim_cmd({ cmd = "copen" }, {})
     end
@@ -380,6 +380,8 @@ function mjm.lsp.start(config, opts)
         return vim.lsp.start(config, start_opts)
     end
 end
+
+-- TODO: PR: Add an opt to rename to avoid filling in the default
 
 -- MID: If you have an LSP, it should be possible to type something like grv and replace a variable
 -- with its corresponding literal. I think rust-analyzer has this as a code action. Is there a more
