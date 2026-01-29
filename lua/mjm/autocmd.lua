@@ -24,8 +24,16 @@ api.nvim_create_autocmd(clear_conditions, {
     end),
 })
 
+api.nvim_create_autocmd("TextYankPost", {
+    group = mjm_group,
+    callback = function()
+        vim.hl.on_yank({ timeout = 175 })
+    end,
+})
+
 -- TODO: This behavior is correct but this is the wrong way to get it. It should be built into
 -- each individual buffer opening. Eliminates overlapping behavior.
+-- Update - Or maybe not. As we've now turned one problem into many problems
 -- api.nvim_create_autocmd("BufWinEnter", {
 --     group = mjm_group,
 --     callback = function(ev)

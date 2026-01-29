@@ -1,3 +1,5 @@
+local set = vim.keymap.set
+
 vim.keymap.set("n", "<cr>", function()
     require("farsight.jump").jump({ all_wins = true })
 end)
@@ -53,3 +55,59 @@ end)
 vim.keymap.set({ "n", "x" }, ",", function()
     require("farsight.csearch").rep({ reverse = true })
 end)
+
+--------------
+
+set({ "n", "x" }, "y", function()
+    return require("specops").yank()
+end, { expr = true })
+
+set({ "n", "x" }, "Y", function()
+    return require("specops").yank() .. "$"
+end, { expr = true })
+
+set({ "n", "x" }, "<M-y>", function()
+    return '"+' .. require("specops").yank()
+end, { expr = true })
+
+set({ "n", "x" }, "<M-Y>", function()
+    return '"+' .. require("specops").yank() .. "$"
+end, { expr = true })
+
+set("x", "p", "P")
+set("x", "P", "p")
+
+set("n", "[p", '<Cmd>exe "iput! " . v:register<CR>')
+set("n", "]p", '<Cmd>exe "iput "  . v:register<CR>')
+
+-- set({ "n", "x" }, "d", function()
+--     return require("specops").delete()
+-- end, { expr = true })
+--
+-- set({ "n", "x" }, "D", function()
+--     return require("specops").delete() .. "$"
+-- end, { expr = true })
+--
+-- set({ "n", "x" }, "<M-d>", function()
+--     return '"_' .. require("specops").delete()
+-- end, { expr = true })
+--
+-- set({ "n", "x" }, "<M-D>", function()
+--     return '"_' .. require("specops").delete() .. "$"
+-- end, { expr = true })
+--
+-- set({ "n", "x" }, "c", function()
+--     return require("specops").change()
+-- end, { expr = true })
+--
+-- set({ "n", "x" }, "C", function()
+--     return require("specops").change() .. "$"
+-- end, { expr = true })
+--
+-- set({ "n", "x" }, "<M-c>", function()
+--     return '"_' .. require("specops").change()
+-- end, { expr = true })
+--
+-- set({ "n", "x" }, "<M-C>", function()
+--     return '"_' .. require("specops").change() .. "$"
+-- end, { expr = true })

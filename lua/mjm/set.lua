@@ -51,7 +51,8 @@ api.nvim_set_option_value("spell", false, {})
 api.nvim_set_option_value("spelllang", "en_us", {})
 
 local new_shm = api.nvim_get_option_value("shm", {}) .. "asIW" ---@type string
-api.nvim_set_option_value("shm", new_shm, {})
+api.nvim_set_option_value("shm", new_shm, { scope = "global" })
+api.nvim_set_option_value("report", 9999, { scope = "global" })
 
 local blink_setting = "blinkon1-blinkoff1" ---@type string
 local norm_cursor = "n:block" .. blink_setting ---@type string

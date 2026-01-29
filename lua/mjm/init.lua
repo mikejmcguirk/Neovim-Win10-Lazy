@@ -93,8 +93,6 @@ require("mjm.lazy")
 require("mjm.internal")
 require("mjm.undotree")
 require("mjm.difftool")
-require("mjm.plugins.spec-ops")
-require("mjm.plugins.specialist")
 
 require("mjm.set")
 require("mjm.autocmd")
