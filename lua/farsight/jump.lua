@@ -18,9 +18,10 @@ local HL_JUMP_STR = "FarsightJump"
 local HL_JUMP_AHEAD_STR = "FarsightJumpAhead"
 local HL_JUMP_TARGET_STR = "FarsightJumpTarget"
 
--- FARSIGHT: These are not great defaults. But some blockers to determining:
+-- TODO: These are not great defaults. But some blockers to determining:
 -- - What defaults would be patternful with the F/T motions?
 -- - How should extmarks be config'd in general? Would need to look at the jump plugin and
+-- - What looks good with vmode/omode running over the edge?
 -- Flash. Ideally, the user could just provide a callback to setting extmarks. Like, they
 -- would get the table of info the function generates, and you could do what you want with them
 -- The biggest use case I'm not sure if that addresses is dimming. Would also need to make sure
@@ -39,14 +40,14 @@ local namespaces = { api.nvim_create_namespace("") } ---@type integer[]
 
 local cword_regex = vim.regex("\\k\\+")
 
--- LOW: Using this function adds an extra if check for the output. Could mitigate by checking
--- a bool instead of truthiness. Could also re-inline, though that creates repetitious code
-
 ---@param line string
 ---@return boolean
 local function is_blank(line)
     return string.find(line, "[^\\0-\\32\\127]") == nil
 end
+
+-- LOW: Using this function adds an extra if check for the output. Could mitigate by checking
+-- a bool instead of truthiness. Could also re-inline, though that creates repetitious code
 
 ---@param row integer
 ---@param line string
@@ -101,18 +102,6 @@ local function locate_cwords(_, row, line, _, _)
 
     return cols
 end
-
--- TODO: Vague function name
--- TODO: Issue with this function: The jump labels run off the edge of the word. Especially
--- punshing for me because it makes the reverse highlighting a mess. But if you use under
--- highlighting to identify jumps, still creates disorienting visuals where the under decorations
--- run past the word.
--- The most visually pleasing solution would be to restrict the labels to within the word. But
--- this creates a disconnect where now the labels to not match exactly to where the jump point is,
--- creating a new type of confusion.
--- I just don't think shifting the labels off from the cols they identify can be correct. I think
--- the better path forward is to consider this as a factor when creating the defaults, and
--- something to keep in mind for my own config as well.
 
 ---@diagnostic disable-next-line: duplicate-doc-param
 ---@param _ integer
@@ -229,6 +218,7 @@ local function add_targets_before(win, cur_pos, buf, locator, ns, targets)
     end
 end
 
+---Edits targets in place
 ---@param win integer
 ---@param row integer
 ---@param buf integer
@@ -404,7 +394,7 @@ local function populate_target_virt_text(targets, tokens)
     add_virt_text(targets[#targets], math.huge)
 end
 
---- Row and col are cursor indexed
+---Expects cursor indexed row and col
 ---@param win integer
 ---@param row integer
 ---@param col integer
@@ -537,13 +527,6 @@ local Jump = {}
 ---@field max_tokens? integer
 ---@field tokens? string[]
 
--- FARSIGHT: Add back in the ability to do before or after cursor only. You can use this
--- function to create an EasyMotion style F/T map. You can create your own wrapper to enter
--- F/T and get the character, then pass that arg into a sight_in function which is passed into
--- here in order to get the relevant locations. Would be cool example in documentation
--- NOGO: Add in opts to control how folds or blanks are handled. These are concerns within
--- the handling of the individual line and should be scoped there
-
 ---@param opts farsight.jump.JumpOpts?
 ---@return nil
 function Jump.jump(opts)
@@ -554,9 +537,6 @@ function Jump.jump(opts)
     local wins = opts.all_wins and ut._get_focusable_wins_ordered(0)
         or { api.nvim_get_current_win() }
 
-    -- TODO: The naming is somewhat confusing. For internal purposes, a sight makes sense as an
-    -- encoding of the buf, row, col, and label. But how clear is this to the user? This is
-    -- confused by the get_cols opt. Maybe just call that get_sights or sight_filter?
     local sights, ns_buf_map = get_targets(wins, opts)
     if #sights > 1 then
         advance_jump(ns_buf_map, sights, opts)
@@ -574,6 +554,7 @@ end
 
 return Jump
 
+-- TODO: Should all_wins = true be the default?
 -- TODO: Yanking in omode does not get the last char. Unsure if this is because of my bespoke
 -- function or because of something intrinsic about selection types or what else
 -- TODO: Document a couple locator examples, like CWORD
