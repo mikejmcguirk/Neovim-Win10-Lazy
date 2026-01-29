@@ -39,23 +39,56 @@ local namespaces = { api.nvim_create_namespace("") } ---@type integer[]
 
 local cword_regex = vim.regex("\\k\\+")
 
--- Unlike for csearch, the string sub method works best here
+-- LOW: Using this function adds an extra if check for the output. Could mitigate by checking
+-- a bool instead of truthiness. Could also re-inline, though that creates repetitious code
+
+---@param line string
+---@return boolean
+local function is_blank(line)
+    return string.find(line, "[^\\0-\\32\\127]") == nil
+end
 
 ---@param row integer
 ---@param line string
----@param _ integer
----@return integer[]
-local function target_cwords(row, line, _, _)
-    -- TODO: for folded lines, put a label at the beginning that can zv it open
-    if fn.prevnonblank(row) ~= row or fn.foldclosed(row) ~= -1 then
+---@return integer[]|nil
+local function handle_non_rows(row, line)
+    if is_blank(line) then
         return {}
+    end
+
+    local fold_row = fn.foldclosed(row)
+    if fold_row ~= -1 then
+        if fold_row == row then
+            return { 0 }
+        end
+
+        return {}
+    end
+
+    return nil
+end
+
+-- Unlike for csearch, the string sub method works best here
+
+---@diagnostic disable-next-line: duplicate-doc-param
+---@param _ integer
+---@param row integer
+---@param line string
+---@diagnostic disable-next-line: duplicate-doc-param
+---@param _ integer
+---@diagnostic disable-next-line: duplicate-doc-param
+---@param _ { [1]: integer, [2]:integer }
+---@return integer[]
+local function locate_cwords(_, row, line, _, _)
+    local non_row_cols = handle_non_rows(row, line)
+    if non_row_cols then
+        return non_row_cols
     end
 
     local cols = {} ---@type integer[]
     local start = 1
-    local len_ = (line:len() + 1)
 
-    for _ = 1, len_ do
+    while true do
         local from, to = cword_regex:match_str(line)
         if from == nil or to == nil then
             break
@@ -81,46 +114,41 @@ end
 -- the better path forward is to consider this as a factor when creating the defaults, and
 -- something to keep in mind for my own config as well.
 
+---@diagnostic disable-next-line: duplicate-doc-param
+---@param _ integer
 ---@param row integer
 ---@param line string
+---@diagnostic disable-next-line: duplicate-doc-param
 ---@param _ integer
 ---@param cur_pos { [1]: integer, [2]:integer }
 ---@return integer[]
-local function target_cwords_cur_pos(row, line, _, cur_pos)
-    -- TODO: for folded lines, put a label at the beginning that can zv it open
-    if fn.prevnonblank(row) ~= row or fn.foldclosed(row) ~= -1 then
-        return {}
+local function locate_cwords_with_cur_pos(_, row, line, _, cur_pos)
+    local non_row_cols = handle_non_rows(row, line)
+    if non_row_cols then
+        return non_row_cols
     end
 
     local cols = {} ---@type integer[]
     local start = 1
-    local len_ = (line:len() + 1)
 
-    -- TODO: YOu could just do while true here and remove the len_ allocation. Though it is a
-    -- useful guard. And might save a regex call
-    for _ = 1, len_ do
+    while true do
         local from, to = cword_regex:match_str(line)
         if from == nil or to == nil then
             break
         end
 
-        -- TODO: handle same row, col after
-        local after_row = row > cur_pos[1]
-        if after_row then
+        if row > cur_pos[1] then
             cols[#cols + 1] = to + start - 2
+        elseif row == cur_pos[1] then
+            local to_fixed = to + start - 2
+            if to_fixed > cur_pos[2] then
+                cols[#cols + 1] = to + start - 2
+            else
+                cols[#cols + 1] = from + start - 1
+            end
         else
             cols[#cols + 1] = from + start - 1
         end
-
-        -- if after_row then
-        --     print(
-        --         tostring(from + start - 1)
-        --             .. ", "
-        --             .. tostring(to + start - 1)
-        --             .. ", "
-        --             .. tostring(cols[#cols])
-        --     )
-        -- end
 
         line = line:sub(to + 1)
         start = start + to
@@ -133,11 +161,10 @@ end
 ---@param line string
 ---@param buf integer
 ---@param cur_pos { [1]: integer, [2]: integer }
----@param locator fun(row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
-local function get_cols(row, line, buf, cur_pos, locator)
-    local cols = locator(row, line, buf, cur_pos)
-    -- TODO: I think this is a version 12 function
-    vim.list.unique(cols)
+---@param locator fun(win: integer, row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
+local function get_cols(win, row, line, buf, cur_pos, locator)
+    local cols = locator(win, row, line, buf, cur_pos)
+    require("farsight.util")._dedup_list(cols)
     table.sort(cols, function(a, b)
         return a < b
     end)
@@ -149,7 +176,7 @@ end
 ---@param win integer
 ---@param cur_pos { [1]: integer, [2]: integer }
 ---@param buf integer
----@param locator fun(row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
+---@param locator fun(win: integer, row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
 ---@param ns integer
 ---@param targets farsight.jump.Target[]
 local function add_targets_after(win, cur_pos, buf, locator, ns, targets)
@@ -167,7 +194,7 @@ local function add_targets_after(win, cur_pos, buf, locator, ns, targets)
     end)()
 
     local line_after = string.sub(line, start_col_1, #line)
-    local cols = get_cols(cur_pos[1], line_after, buf, cur_pos, locator)
+    local cols = get_cols(win, cur_pos[1], line_after, buf, cur_pos, locator)
 
     local cut_len = #line - #line_after
     for i = 1, #cols do
@@ -184,7 +211,7 @@ end
 ---@param win integer
 ---@param cur_pos { [1]: integer, [2]: integer }
 ---@param buf integer
----@param locator fun(row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
+---@param locator fun(win: integer, row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
 ---@param ns integer
 ---@param targets farsight.jump.Target[]
 local function add_targets_before(win, cur_pos, buf, locator, ns, targets)
@@ -194,7 +221,7 @@ local function add_targets_before(win, cur_pos, buf, locator, ns, targets)
     local end_col_1 = cur_cword and cur_cword[2] or cur_pos[2]
 
     local line_before = string.sub(line, 1, end_col_1)
-    local cols = get_cols(cur_pos[1], line_before, buf, cur_pos, locator)
+    local cols = get_cols(win, cur_pos[1], line_before, buf, cur_pos, locator)
 
     local row_0 = cur_pos[1] - 1
     for _, col in ipairs(cols) do
@@ -206,12 +233,12 @@ end
 ---@param row integer
 ---@param buf integer
 ---@param cur_pos { [1]: integer, [2]: integer }
----@param locator fun(row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
+---@param locator fun(win: integer, row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
 ---@param ns integer
 ---@param targets farsight.jump.Target[]
 local function add_targets(win, row, buf, cur_pos, locator, ns, targets)
     local line = fn.getline(row)
-    local cols = get_cols(row, line, buf, cur_pos, locator)
+    local cols = get_cols(win, row, line, buf, cur_pos, locator)
 
     local row_0 = row - 1
     for _, col in ipairs(cols) do
@@ -467,18 +494,19 @@ local function resolve_jump_opts(opts)
     ut._validate_uint(opts.max_tokens)
     opts.max_tokens = math.max(opts.max_tokens, 1)
 
-    local short_mode = string.sub(api.nvim_get_mode().mode, 1, 1)
     opts.locator = (function()
         if opts.locator then
             return opts.locator
         end
 
-        -- TODO: Check omode as well
+        local mode = api.nvim_get_mode().mode
+        local short_mode = string.sub(mode, 1, 1)
         local is_visual = short_mode == "v" or short_mode == "V" or short_mode == "\22"
-        if is_visual then
-            return target_cwords_cur_pos
+        local is_omode = string.sub(mode, 1, 2) == "no"
+        if is_visual or is_omode then
+            return locate_cwords_with_cur_pos
         else
-            return target_cwords
+            return locate_cwords
         end
     end)()
 
@@ -487,7 +515,7 @@ local function resolve_jump_opts(opts)
     opts.tokens = opts.tokens or TOKENS
     -- MID: Clumsy validation method
     ut._validate_list(opts.tokens, { item_type = "string" })
-    vim.list.unique(opts.tokens)
+    require("farsight.util")._dedup_list(opts.tokens)
     ut._validate_list(opts.tokens, { min_len = 2 })
 end
 
@@ -546,9 +574,8 @@ end
 
 return Jump
 
--- TODO: The default locator in xmode and omode should go to the end of the word if it's after the
--- cursor, and the beginning if before. This requires the cursor position to be passed in. The
--- plug mappings should have the proper scopes.
+-- TODO: Yanking in omode does not get the last char. Unsure if this is because of my bespoke
+-- function or because of something intrinsic about selection types or what else
 -- TODO: Document a couple locator examples, like CWORD
 -- TODO: Document the locator behavior:
 -- - It's win called to the current win
@@ -573,6 +600,7 @@ return Jump
 -- TODO: Add alternative projects (many of them)
 -- TODO: Go through the extmark opts doc to see what works here
 -- TODO: Test/document dot repeat behavior
+-- TODO: Create <Plug> maps
 
 -- LOW: Would be interesting to test storing the labels as a struct of arrays
 

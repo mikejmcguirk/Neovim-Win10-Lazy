@@ -4,6 +4,35 @@ local fn = vim.fn
 ---@class farsight.Util
 local Util = {}
 
+---Bespoke function because:
+---- vim.list.unique runs vim.validate at the beginning. Inconvenient here since deduping is done
+---in hot loops (spot checking, the average execution time is not meaningfully higher, but the
+---variance is higher)
+---- vim.list.unique returns the list, which is unnecesary
+---- vim.list.unique is v12 only. Doing this saves the cost of versioning maintenance
+---@param t any[]
+function Util._dedup_list(t)
+    local seen = {} --- @type table<any,boolean>
+
+    local finish = #t
+
+    local j = 1
+    for i = 1, finish do
+        local v = t[i]
+        if not seen[v] then
+            t[j] = v
+            if v ~= nil then
+                seen[v] = true
+            end
+            j = j + 1
+        end
+    end
+
+    for i = j, finish do
+        t[i] = nil
+    end
+end
+
 -- Per mini.jump2d, while nvim_tabpage_list_wins does currently ensure proper window layout, this
 -- is not documented behavior and thus can change. The below function ensures layout
 ---@param tabpage integer

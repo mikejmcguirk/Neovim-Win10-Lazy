@@ -592,6 +592,8 @@ local function resolve_csearch_opts(opts)
 
     opts.tokens = opts.tokens or TOKENS
     ut._validate_list(opts.tokens, { item_type = "string" })
+    require("farsight.util")._dedup_list(opts.tokens)
+    ut._validate_list(opts.tokens, { min_len = 2 })
 
     opts.max_hl_steps = opts.max_hl_steps or DEFAULT_MAX_HL_STEPS
     ut._validate_uint(opts.max_hl_steps)
@@ -747,6 +749,11 @@ return Csearch
 -- TODO: Document that rep() checks cpo for default t skip behavior
 -- TODO: Test/document dot repeat behavior for operators. Should at least match what default f/t
 -- does
+-- - When I dot repeat d<cr> is prompts me for the jump token. I think for that function that's
+-- desirable behavior. For this, I think, using f/t should prompt for input, and dot repeat should
+-- use saved values. But I'm not sure we can distinguish how we're entering omode, or if there's
+-- a var we can leave behind. Could also add a key listener. Acceptable fallback is to always
+-- prompt. Can also see what other plugins do
 
 -- MID: The default tokens should be 'isk' for the current buffer. The isk strings + tokens can
 -- be cached when created for the first time. For subsequent runs, re-query the opt string and
