@@ -79,7 +79,7 @@ local function utf_counter(res, token_counts)
     local hl_id
 
     for i = 0, strcharlen - 1 do
-        local char_start = vim.fn.byteidx(res[1], i)
+        local char_start = fn.byteidx(res[1], i)
         local char = fn.strcharpart(res[1], i, 1, true) ---@type string
         local remaining = token_counts[char] ---@type integer?
         if remaining then
@@ -108,7 +108,7 @@ local function utf_counter_rev(res, token_counts)
     local hl_id
 
     for i = strcharlen - 1, 1, -1 do
-        local char_start = vim.fn.byteidx(res[1], i)
+        local char_start = fn.byteidx(res[1], i)
         local char = fn.strcharpart(res[1], i, 1, true) ---@type string
         local remaining = token_counts[char] ---@type integer?
         if remaining then
@@ -128,7 +128,7 @@ end
 
 ---@param res { [1]: string, [2]: integer, [3]: integer }
 ---@param token_counts table<integer, integer>|table<string, integer>
----@return integer|nil, integer|nil, integer|nil, integer|nil
+---@return integer, integer|nil, integer, integer|nil
 local function ascii_counter(res, token_counts)
     local priority = 0
     local idx
@@ -153,7 +153,7 @@ end
 
 ---@param res { [1]: string, [2]: integer, [3]: integer }
 ---@param token_counts table<integer, integer>|table<string, integer>
----@return integer|nil, integer|nil, integer|nil, integer|nil
+---@return integer, integer|nil, integer, integer|nil
 local function ascii_counter_rev(res, token_counts)
     local priority = 0
     local idx
@@ -177,19 +177,20 @@ local function ascii_counter_rev(res, token_counts)
 end
 
 ---Edits token_counts and labels in place
+---@param counter_func fun(res: { [1]: string, [2]: integer, [3]: integer }, token_counts: table<integer, integer>|table<string, integer>)
 ---@param line string
 ---@param row_0 integer
 ---@param token_counts table<integer, integer>|table<string,integer>
 ---@param labels farsight.csearch.TokenLabel[]
-local function iter_tokens_forward(tokener_func, line, row_0, token_counts, labels)
+local function iter_tokens_forward(counter_func, line, row_0, token_counts, labels)
     local pos = 0
     while pos < #line do
-        local res = vim.fn.matchstrpos(line, cword_str, pos)
+        local res = fn.matchstrpos(line, cword_str, pos)
         if res[2] < 0 then
             break
         end
 
-        local priority, idx, len, hl_id = tokener_func(res, token_counts)
+        local priority, idx, len, hl_id = counter_func(res, token_counts)
         if priority > 0 then
             labels[#labels + 1] = { row_0, res[2] + idx, len, hl_id }
         end
@@ -207,11 +208,11 @@ end
 ---@param row_0 integer
 ---@param token_counts table<integer, integer>|table<string,integer>
 ---@param labels farsight.csearch.TokenLabel[]
-local function iter_tokens_backward(tokener_func, line, row_0, token_counts, labels)
-    local words = {} -- Collect all word res forward, then process backward
+local function iter_tokens_backward(counter_func, line, row_0, token_counts, labels)
+    local words = {}
     local pos = 0
     while pos < #line do
-        local res = vim.fn.matchstrpos(line, cword_str, pos)
+        local res = fn.matchstrpos(line, cword_str, pos)
         if res[2] < 0 then
             break
         end
@@ -221,7 +222,7 @@ local function iter_tokens_backward(tokener_func, line, row_0, token_counts, lab
     end
 
     for i = #words, 1, -1 do
-        local priority, idx, len, hl_id = tokener_func(words[i], token_counts)
+        local priority, idx, len, hl_id = counter_func(words[i], token_counts)
         if priority > 0 then
             labels[#labels + 1] = { row_0, words[i][2] + idx, len, hl_id }
         end
@@ -246,7 +247,7 @@ end
 
 ---@param tokens string[]
 ---@return integer[]
-local function tokens_as_codes(tokens)
+local function get_tokens_as_codes(tokens)
     local codes = {}
     for _, token in ipairs(tokens) do
         codes[#codes + 1] = string.byte(token)
@@ -272,7 +273,7 @@ end
 ---@return table<integer, integer>|table<string, integer>
 local function create_token_counts(is_ascii, tokens, max_hl_steps)
     tokens = vim.deepcopy(tokens)
-    tokens = is_ascii and tokens_as_codes(tokens) or tokens
+    tokens = is_ascii and get_tokens_as_codes(tokens) or tokens
     local token_counts = {} ---@type table<integer, integer>|table<string, integer>
     for _, token in ipairs(tokens) do
         token_counts[token] = max_hl_steps
@@ -401,7 +402,7 @@ end
 ---@param pos { [1]: integer, [2]: integer }
 local function handle_t_cmd(buf, pos)
     local line = api.nvim_buf_get_lines(buf, pos[1] - 1, pos[1], false)[1]
-    local char_idx = vim.fn.charidx(line, pos[2])
+    local char_idx = fn.charidx(line, pos[2])
 
     if char_idx > 1 then
         pos[2] = fn.byteidx(line, char_idx - 1)
@@ -507,9 +508,9 @@ end
 ---@param pos { [1]: integer, [2]: integer }
 local function handle_t_cmd_rev(buf, pos)
     local line = api.nvim_buf_get_lines(buf, pos[1] - 1, pos[1], false)[1]
-    local char_idx = vim.fn.charidx(line, pos[2])
+    local char_idx = fn.charidx(line, pos[2])
 
-    if char_idx < vim.fn.strcharlen(line) - 1 then
+    if char_idx < fn.strcharlen(line) - 1 then
         pos[2] = fn.byteidx(line, char_idx + 1)
     else
         pos[1] = pos[1] + 1
@@ -642,6 +643,7 @@ function Csearch.csearch(opts)
         -- TODO: Document the replace_termcode behavior
         local rep_key = api.nvim_replace_termcodes(key, true, false, true)
         if input == rep_key then
+            -- TODO: We could pass win/pos/buf into here
             action()
             return
         end
@@ -649,7 +651,7 @@ function Csearch.csearch(opts)
 
     local input_byte = string.byte(input)
     local is_ascii_control_char = input_byte <= 31 or input_byte == 127
-    if type(input) == "nil" or is_ascii_control_char or #input == 0 then
+    if input == nil or is_ascii_control_char or #input == 0 then
         return
     end
 
@@ -658,7 +660,7 @@ function Csearch.csearch(opts)
     last_t_cmd = t_cmd
     last_input = input
 
-    if opts.forward then
+    if forward then
         csearch_forward(1, cur_win, cur_pos, cur_buf, input, t_cmd, false)
     else
         csearch_backward(1, cur_win, cur_pos, cur_buf, input, t_cmd, false)
@@ -675,15 +677,7 @@ function Csearch.rep(opts)
     vim.validate("opts.reverse", opts.reverse, "boolean", true)
     vim.validate("opts.skip", opts.skip, "boolean", true)
 
-    if type(last_dir) ~= "boolean" then
-        return
-    end
-
-    if type(last_t_cmd) ~= "boolean" then
-        return
-    end
-
-    if type(last_input) ~= "string" then
+    if last_dir == nil or last_t_cmd == nil or last_input == nil then
         return
     end
 
@@ -705,14 +699,15 @@ function Csearch.rep(opts)
         end
 
         local cpo = api.nvim_get_option_value("cpo", {})
-        local default_skip = string.find(cpo, ";", 1, true)
-        return type(default_skip) == "nil"
+        local cpo_noskip = string.find(cpo, ";", 1, true)
+        return cpo_noskip == nil
     end)()
 
+    local count1 = vim.v.count1
     if this_dir then
-        csearch_forward(vim.v.count1, cur_win, cur_pos, cur_buf, last_input, last_t_cmd, skip)
+        csearch_forward(count1, cur_win, cur_pos, cur_buf, last_input, last_t_cmd, skip)
     else
-        csearch_backward(vim.v.count1, cur_win, cur_pos, cur_buf, last_input, last_t_cmd, skip)
+        csearch_backward(count1, cur_win, cur_pos, cur_buf, last_input, last_t_cmd, skip)
     end
 end
 
@@ -724,6 +719,14 @@ return Csearch
 -- local duration_ms = (end_time - start_time) / 1e6
 -- print(string.format("hl_forward took %.2f ms", duration_ms))
 
+-- TODO: line 1: this is a length
+--       line 2: some other line
+-- Do a t motion to h on line 2, then try to go back. The cursor will stop at the beginning of
+-- line 2, which is correct, but it will not then go backward past the h at the end of line 1
+-- The initial skip scan then need to also check the end of the last line or the beginning of the
+-- next one if you are at the beginning of a line or the end of one
+-- Since ctrl char literals are displayed, maybe allow them to be factored into csearch and
+-- jump
 -- TODO: The module contains a lot of functions that are only barely different. Now that the code
 -- is actually written, can factor more aggressively
 -- TODO: A lot of this can probably be made to be common with jump
