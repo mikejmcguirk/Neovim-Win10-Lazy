@@ -1,7 +1,8 @@
+local api = vim.api
 local set = vim.keymap.set
 
 vim.keymap.set("n", "<cr>", function()
-    require("farsight.jump").jump({ all_wins = true })
+    require("farsight.jump").jump({ wins = api.nvim_tabpage_list_wins(0) })
 end)
 
 vim.keymap.set({ "x", "o" }, "<cr>", function()

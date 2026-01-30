@@ -385,13 +385,30 @@ set({ "n", "x" }, "<C-m>", function()
     api.nvim_cmd({ cmd = "norm", args = { vim.v.count .. "gM" }, bang = true }, {})
 end)
 
+-- MID: Showing the search string would be more useful when hlsearch is turned on than with n/N
+-- But I'd have to make the initial output match
+
+-- For the N/n maps, when I tested this with silent = true, it does show the result/total counter
+-- but not the searched term, which is the goal. Disable silent if something changes here
+set("n", "N", function()
+    if vim.v.hlsearch == 0 then
+        vim.v.hlsearch = 1
+        return "\27"
+    else
+        return "Nzzzv"
+    end
+end, { expr = true })
+
+set("n", "n", function()
+    if vim.v.hlsearch == 0 then
+        vim.v.hlsearch = 1
+        return "\27"
+    else
+        return "nzzzv"
+    end
+end, { expr = true })
+
 -- Not silent so that the search prompting displays properly
--- MAYBE: Very goofy idea: Use [n]n for search result navigation
--- Patternful with unimpaired. No default, so non-destructive. Opens premium real-estate
--- Less ergonomic as a motion, but as that typical use?
--- Interesting possibility - Move ge to n (probably too goofy)
-set("n", "N", "Nzzzv")
-set("n", "n", "nzzzv")
 set("n", "/", "ms/")
 set("n", "?", "ms?")
 

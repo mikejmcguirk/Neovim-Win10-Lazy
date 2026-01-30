@@ -394,21 +394,41 @@ local function populate_target_virt_text(targets, tokens)
     add_virt_text(targets[#targets], math.huge)
 end
 
----Expects cursor indexed row and col
+---Expects zero indexed row and col
 ---@param win integer
----@param row integer
+---@param buf integer
+---@param row_0 integer
 ---@param col integer
+---@param is_omode boolean
 ---@param opts farsight.jump.JumpOpts
 ---@return nil
-local function do_jump(win, row, col, opts)
+local function do_jump(win, buf, row_0, col, is_omode, opts)
+    -- Because jumplists are scoped per window, setting the pcmark in the window being left doesn't
+    -- provide anything useful. By setting the pcmark in the window where the jump is performed,
+    -- the user is provided the ability to undo the jump
     local cur_win = api.nvim_get_current_win()
     if cur_win ~= win then
         api.nvim_set_current_win(win)
     end
 
-    if not opts.keepjumps then
-        -- TODO: Does this have to be disabled in omode?
+    if (not opts.keepjumps) and not is_omode then
+        -- FUTURE: When the updated mark API is released, see if that can be used to set the
+        -- pcmark correctly
         api.nvim_cmd({ cmd = "norm", args = { "m`" }, bang = true }, {})
+    end
+
+    local row = row_0 + 1
+    -- In omode, use visual mode so that all text within the selection is operated on, rather
+    -- than the text between the start and end of the cursor movemet. In this case, staying in
+    -- normal mode causes the actual character jumped to to be truncated
+    if is_omode then
+        api.nvim_cmd({ cmd = "norm", args = { "v" }, bang = true }, {})
+        ---@type string
+        local selection = api.nvim_get_option_value("selection", { scope = "global" })
+        if selection == "exclusive" then
+            local line = api.nvim_buf_get_lines(buf, row_0, row, false)[1]
+            col = math.min(col + 1, math.max(#line - 1, 0))
+        end
     end
 
     api.nvim_win_set_cursor(win, { row, col })
@@ -418,9 +438,10 @@ end
 ---Edits ns_buf_map and sights in place
 ---@param ns_buf_map table<integer, integer>
 ---@param sights farsight.jump.Target[]
+---@param is_omode boolean
 ---@param opts farsight.jump.JumpOpts
 ---@return nil
-local function advance_jump(ns_buf_map, sights, opts)
+local function advance_jump(ns_buf_map, sights, is_omode, opts)
     while true do
         populate_target_labels(sights, opts)
         populate_target_virt_text(sights, opts.tokens)
@@ -448,7 +469,7 @@ local function advance_jump(ns_buf_map, sights, opts)
         sights = new_sights
         if #sights <= 1 then
             if #sights == 1 then
-                do_jump(sights[1][1], sights[1][3] + 1, sights[1][4], opts)
+                do_jump(sights[1][1], sights[1][2], sights[1][3], sights[1][4], is_omode, opts)
             end
 
             return
@@ -466,16 +487,15 @@ local function advance_jump(ns_buf_map, sights, opts)
 end
 
 ---@param opts farsight.jump.JumpOpts
+---@return boolean
 local function resolve_jump_opts(opts)
     vim.validate("opts", opts, "table")
     local ut = require("farsight.util")
 
-    opts.all_wins = ut._resolve_bool_opt(opts.all_wins, true)
-    vim.validate("opts.all_wins", opts.all_wins, "boolean")
-
-    -- TODO: Should be restricted to -1, 0, or 1
     opts.dir = opts.dir or 0
-    vim.validate("opts.dir", opts.dir, "number")
+    vim.validate("opts.dir", opts.dir, function()
+        return -1 <= opts.dir and opts.dir <= 1
+    end, "Dir must be -1, 0, or 1")
 
     opts.keepjumps = ut._resolve_bool_opt(opts.keepjumps, false)
     vim.validate("opts.keepjumps", opts.keepjumps, "boolean")
@@ -484,15 +504,15 @@ local function resolve_jump_opts(opts)
     ut._validate_uint(opts.max_tokens)
     opts.max_tokens = math.max(opts.max_tokens, 1)
 
+    local mode = api.nvim_get_mode().mode
+    local short_mode = string.sub(mode, 1, 1)
+    local is_visual = short_mode == "v" or short_mode == "V" or short_mode == "\22"
+    local is_omode = string.sub(mode, 1, 2) == "no"
     opts.locator = (function()
         if opts.locator then
             return opts.locator
         end
 
-        local mode = api.nvim_get_mode().mode
-        local short_mode = string.sub(mode, 1, 1)
-        local is_visual = short_mode == "v" or short_mode == "V" or short_mode == "\22"
-        local is_omode = string.sub(mode, 1, 2) == "no"
         if is_visual or is_omode then
             return locate_cwords_with_cur_pos
         else
@@ -507,6 +527,11 @@ local function resolve_jump_opts(opts)
     ut._validate_list(opts.tokens, { item_type = "string" })
     require("farsight.util")._dedup_list(opts.tokens)
     ut._validate_list(opts.tokens, { min_len = 2 })
+
+    opts.wins = opts.wins or { api.nvim_get_current_win() }
+    ut._validate_list(opts.wins, { item_type = "number", min_len = 1 })
+
+    return is_omode
 end
 
 ---@class farsight.StepJump
@@ -515,7 +540,6 @@ local Jump = {}
 -- TODO: Flesh out this documentation
 
 ---@class farsight.jump.JumpOpts
----@field all_wins? boolean Place jump labels in all wins?
 ---The input row argument is one indexed
 ---This function will be called in the window context being evaluated. This means, for example,
 ---that foldclosed() will return the proper result
@@ -526,22 +550,26 @@ local Jump = {}
 ---@field locator? fun(row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
 ---@field max_tokens? integer
 ---@field tokens? string[]
+---@field wins? integer[]
 
 ---@param opts farsight.jump.JumpOpts?
 ---@return nil
 function Jump.jump(opts)
     opts = opts and vim.deepcopy(opts, true) or {}
-    resolve_jump_opts(opts)
+    local is_omode = resolve_jump_opts(opts)
 
     local ut = require("farsight.util")
-    local wins = opts.all_wins and ut._get_focusable_wins_ordered(0)
-        or { api.nvim_get_current_win() }
+    local focusable_wins = ut._order_focusable_wins(opts.wins)
+    if #focusable_wins < 1 then
+        api.nvim_echo({ { "No focusable wins provided" } }, false, {})
+        return
+    end
 
-    local sights, ns_buf_map = get_targets(wins, opts)
+    local sights, ns_buf_map = get_targets(focusable_wins, opts)
     if #sights > 1 then
-        advance_jump(ns_buf_map, sights, opts)
+        advance_jump(ns_buf_map, sights, is_omode, opts)
     elseif #sights == 1 then
-        do_jump(sights[1][1], sights[1][3] + 1, sights[1][4], opts)
+        do_jump(sights[1][1], sights[1][2], sights[1][3], sights[1][4], is_omode, opts)
     else
         api.nvim_echo({ { "No sights to jump to" } }, false, {})
     end
@@ -554,9 +582,6 @@ end
 
 return Jump
 
--- TODO: Should all_wins = true be the default?
--- TODO: Yanking in omode does not get the last char. Unsure if this is because of my bespoke
--- function or because of something intrinsic about selection types or what else
 -- TODO: Document a couple locator examples, like CWORD
 -- TODO: Document the locator behavior:
 -- - It's win called to the current win
@@ -564,8 +589,8 @@ return Jump
 -- As a general design philosophy and as a note, because the locator is run so many times, it
 -- neds to be perf optimized, so even obvious boilerplate like checking folds is not done so that
 -- nothing superfluous happens
--- TODO: Add a pre-locator opt for before cursor or after cursor only. Add doc examples showing
--- how to make EasyMotion style f/t motions
+-- TODO: Add doc examples for EasyMotion style f/t mapping
+-- TODO: Show how to do two-character search like vim sneak/vim-seek
 -- TODO: Plugins to research in more detail:
 -- - EasyMotion (Historically important)
 -- - Flash (and the listed related plugins)
@@ -581,7 +606,45 @@ return Jump
 -- TODO: Add alternative projects (many of them)
 -- TODO: Go through the extmark opts doc to see what works here
 -- TODO: Test/document dot repeat behavior
+-- TODO: Create g:vars for the defaults
 -- TODO: Create <Plug> maps
+-- TODO: Document how the focusable wins filtering works
+-- TODO: What is the default max tokens to show?
+-- TODO: Should a highlight group be added to show truncated labels?
+-- TODO: The above two questions get into the broader issue of - Do the current hl groups actually
+-- clearly show what is going on?
+-- TODO: Thinking about the defaults - I like the current <cr> jump because I can look at
+-- somewhere I want to go and get their in three keystrokes. But the "I need to find something"
+-- case is not addressed. A very basic obstacle is - I'm not sure where to map it. I also don't
+-- want to graft is on top of search. You could maybe do something like map <C-n> to jump based on
+-- search results, but that's a lot of steps. YOu could remove t motions, but they are useful for
+-- operating up to but not including a paren, where mentally parsing out the individual
+-- characters would be a pain. Ctrl_<cr> or Shift_<cr> are natural choices, but I'm not sure
+-- all terminals/tmux send them reliably. Nvim does recoognize them though as distinct termcodes
+-- TODO: Un-related to the more general find/sneak question - How do I want to handle searching
+-- in general? Right now, if I have n/N, it automatically goes to the next search term. In
+-- practice, this ends up being disorienting. And I think, given a broader re-think of search,
+-- that we really need to look at what Flash does and be willing to graft on top of search
+-- Upon further research, the most logical way to handle this is to tie displaying jump tokens to
+-- hlsearch being on. But I don't know a way to track the var's status that isn't contrived. The
+-- way flash does it with / and ?, IMO, is a bit much, and relies on a lot of hacks. For my own
+-- purposes, and maybe as doc examples, you can do something where like n/N trigger labels, and
+-- you omit n/N from the possibilities. You could also have something on like <C-n> that sets
+-- hlsearch and displays labels, with n/N omitted. But this all feels very contrived. Maybe
+-- you could do it where you use <C-n> to enter a "Token searching state" and a non-token exits.
+-- But then what feedback do you get if there are no valid tokens on the page? I guess it just
+-- quits?
+
+-- EasyMotion notes:
+-- - EasyMotion replaces a lot of things, like w and f/t
+-- - Provides a version of search where after entering the term, labels are then shown on the
+-- search results
+-- Flash notes:
+-- - The enhanced search is neat, but my experience with it was that it was a bit much, and the
+-- code within uses a lot of hacks to keep Nvim's state correct. Unsure of value relative to
+-- effort
+
+-- MID: Wins should be able to accept a list or a custom callback to get the wins
 
 -- LOW: Would be interesting to test storing the labels as a struct of arrays
 

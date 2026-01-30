@@ -35,10 +35,9 @@ end
 
 -- Per mini.jump2d, while nvim_tabpage_list_wins does currently ensure proper window layout, this
 -- is not documented behavior and thus can change. The below function ensures layout
----@param tabpage integer
+---@param wins integer[]
 ---@return integer[]
-function Util._get_focusable_wins_ordered(tabpage)
-    local wins = api.nvim_tabpage_list_wins(tabpage)
+function Util._order_focusable_wins(wins)
     local focusable_wins = {} ---@type integer[]
     local positions = {} ---@type { [1]:integer, [2]:integer, [3]:integer }[]
 

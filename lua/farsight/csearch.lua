@@ -719,6 +719,7 @@ return Csearch
 -- local duration_ms = (end_time - start_time) / 1e6
 -- print(string.format("hl_forward took %.2f ms", duration_ms))
 
+-- TODO: Add visual selection voodoo so this works in omode
 -- TODO: line 1: this is a length
 --       line 2: some other line
 -- Do a t motion to h on line 2, then try to go back. The cursor will stop at the beginning of
