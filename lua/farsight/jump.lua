@@ -494,6 +494,10 @@ local function resolve_jump_opts(opts)
 
     opts.dir = opts.dir or 0
     vim.validate("opts.dir", opts.dir, function()
+        if type(opts.dir) ~= "number" then
+            return false
+        end
+
         return -1 <= opts.dir and opts.dir <= 1
     end, "Dir must be -1, 0, or 1")
 
@@ -506,13 +510,13 @@ local function resolve_jump_opts(opts)
 
     local mode = api.nvim_get_mode().mode
     local short_mode = string.sub(mode, 1, 1)
-    local is_visual = short_mode == "v" or short_mode == "V" or short_mode == "\22"
     local is_omode = string.sub(mode, 1, 2) == "no"
     opts.locator = (function()
         if opts.locator then
             return opts.locator
         end
 
+        local is_visual = short_mode == "v" or short_mode == "V" or short_mode == "\22"
         if is_visual or is_omode then
             return locate_cwords_with_cur_pos
         else
