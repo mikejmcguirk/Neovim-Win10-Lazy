@@ -10,6 +10,7 @@ local fn = vim.fn
 ---@field [6] integer extmark namespace
 ---@field [7] [string,string|integer][] Extmark virtual text
 
+-- TODO: Call this max display tokens or something
 local MAX_TOKENS = 2
 local TOKENS = vim.split("abcdefghijklmnopqrstuvwxyz", "")
 
@@ -26,8 +27,11 @@ local HL_JUMP_TARGET_STR = "FarsightJumpTarget"
 -- would get the table of info the function generates, and you could do what you want with them
 -- The biggest use case I'm not sure if that addresses is dimming. Would also need to make sure
 -- the ns is passed out
+-- TODO: For my purposes, it feels like the current character to type should always be obvious so
+-- that it's identifiable, but then the next character should indicate if it's the conclusion or
+-- a transition char
 api.nvim_set_hl(0, HL_JUMP_STR, { default = true, reverse = true })
-api.nvim_set_hl(0, HL_JUMP_AHEAD_STR, { default = true, reverse = true })
+api.nvim_set_hl(0, HL_JUMP_AHEAD_STR, { default = true, underdouble = true })
 api.nvim_set_hl(0, HL_JUMP_TARGET_STR, { default = true, reverse = true })
 
 local hl_jump = api.nvim_get_hl_id_by_name(HL_JUMP_STR)
@@ -304,8 +308,8 @@ local function populate_target_labels(targets, opts)
         return
     end
 
+    -- TODO: Don't need the whole opt I don't think
     local tokens = opts.tokens ---@type string[]
-    local max_tokens = opts.max_tokens
     local queue = {} ---@type { [1]: integer, [2]:integer }[]
     queue[#queue + 1] = { 1, #targets }
 
@@ -328,7 +332,8 @@ local function populate_target_labels(targets, opts)
                 rem_tokens = quotient + (remainder >= 1 and 1 or 0)
                 remainder = remainder > 0 and remainder - 1 or remainder
 
-                if i > token_start and #targets[i][5] < max_tokens then
+                if i > token_start then
+                    -- if i > token_start and #targets[i][5] < max_tokens then
                     queue[#queue + 1] = { token_start, i }
                 end
 
@@ -339,48 +344,55 @@ local function populate_target_labels(targets, opts)
     end
 end
 
--- LOW: It might be faster to build first_counts when populating the labels. Not sure how to do
--- it though without essentially writing duplicate code for the queue iteration. One for the first
--- token to add quotient to first counts, then another that doesn't touch first_counts. Don't
--- want to be if checking on subsequent iterations
 -- LOW: Profile this function to see if it could be optimized further
 
 ---@param targets farsight.jump.Target[]
-local function populate_target_virt_text(targets, tokens)
-    local first_counts = {} ---@type table<string, integer>
-    for _, token in ipairs(tokens) do
-        first_counts[token] = 0
-    end
-
-    for _, target in ipairs(targets) do
-        first_counts[target[5][1]] = first_counts[target[5][1]] + 1
-    end
-
+---@param max_tokens integer
+local function populate_target_virt_text(targets, max_tokens)
     ---@param target farsight.jump.Target
     ---@param max_display_tokens integer
     local function add_virt_text(target, max_display_tokens)
-        local only_token = first_counts[target[5][1]] == 1
-        local first_hl_group = only_token and hl_jump_target or hl_jump
-        target[7][1] = { target[5][1], first_hl_group }
-
-        local total_tokens = math.min(#target[5], max_display_tokens)
-        if 2 <= total_tokens then
-            local tokens_ahead = table.concat(target[5], "", 2, total_tokens)
-            target[7][2] = { tokens_ahead, hl_jump_ahead }
+        -- TODO: Since the last untruncated token is always hl_jump_target, maybe arrive at that
+        -- first then work backward?
+        -- Do not waste an if check on less than one token in a hot loop, as that should never
+        -- happen
+        if #target[5] == 1 then
+            target[7][1] = { target[5][1], hl_jump_target }
+            return
         end
+
+        target[7][1] = { target[5][1], hl_jump }
+        if #target[5] > max_display_tokens then
+            if max_display_tokens <= 1 then
+                return
+            end
+
+            local remainder = table.concat(target[5], "", 2, max_display_tokens)
+            target[7][2] = { remainder, hl_jump_ahead }
+            return
+        end
+
+        if #target[5] > 2 then
+            local before = table.concat(target[5], "", 2, #target[5] - 1)
+            target[7][2] = { before, hl_jump_ahead }
+        end
+
+        target[7][#target[7] + 1] = { target[5][#target[5]], hl_jump_target }
     end
 
+    ---@param target farsight.jump.Target
+    ---@param next_target farsight.jump.Target
     local function get_max_display_tokens(target, next_target)
         if target[1] ~= next_target[1] then
-            return math.huge
+            return max_tokens
         end
 
         if target[2] ~= next_target[2] then
-            return math.huge
+            return max_tokens
         end
 
         if target[3] ~= next_target[3] then
-            return math.huge
+            return max_tokens
         end
 
         return next_target[4] - target[4]
@@ -388,10 +400,11 @@ local function populate_target_virt_text(targets, tokens)
 
     for i = 1, #targets - 1 do
         local max_display_tokens = get_max_display_tokens(targets[i], targets[i + 1])
+        max_display_tokens = math.min(max_display_tokens, max_tokens)
         add_virt_text(targets[i], max_display_tokens)
     end
 
-    add_virt_text(targets[#targets], math.huge)
+    add_virt_text(targets[#targets], max_tokens)
 end
 
 ---Expects zero indexed row and col
@@ -418,9 +431,9 @@ local function do_jump(win, buf, row_0, col, is_omode, opts)
     end
 
     local row = row_0 + 1
-    -- In omode, use visual mode so that all text within the selection is operated on, rather
-    -- than the text between the start and end of the cursor movemet. In this case, staying in
-    -- normal mode causes the actual character jumped to to be truncated
+    -- Use visual mode so that all text within the selection is operated on, rather than the text
+    -- between the start and end of the cursor movemet. In this case, staying in normal mode causes
+    -- the actual character jumped to to be truncated
     if is_omode then
         api.nvim_cmd({ cmd = "norm", args = { "v" }, bang = true }, {})
         ---@type string
@@ -443,8 +456,11 @@ end
 ---@return nil
 local function advance_jump(ns_buf_map, sights, is_omode, opts)
     while true do
-        populate_target_labels(sights, opts)
-        populate_target_virt_text(sights, opts.tokens)
+        local start_time = vim.uv.hrtime()
+        populate_target_virt_text(sights, opts.max_tokens)
+        local end_time = vim.uv.hrtime()
+        local duration_ms = (end_time - start_time) / 1e6
+        print(string.format("hl_forward took %.2f ms", duration_ms))
 
         ---@type vim.api.keyset.set_extmark
         local extmark_opts = { hl_mode = "combine", priority = 1000, virt_text_pos = "overlay" }
@@ -478,7 +494,7 @@ local function advance_jump(ns_buf_map, sights, is_omode, opts)
         local new_ns_buf_map = {} ---@type table<integer, integer>
         for _, sight in ipairs(sights) do
             new_ns_buf_map[sight[6]] = sight[2]
-            sight[5] = {}
+            table.remove(sight[5], 1)
             sight[7] = {}
         end
 
@@ -487,8 +503,7 @@ local function advance_jump(ns_buf_map, sights, is_omode, opts)
 end
 
 ---@param opts farsight.jump.JumpOpts
----@return boolean
-local function resolve_jump_opts(opts)
+local function resolve_jump_opts(opts, mode, is_omode)
     vim.validate("opts", opts, "table")
     local ut = require("farsight.util")
 
@@ -508,14 +523,12 @@ local function resolve_jump_opts(opts)
     ut._validate_uint(opts.max_tokens)
     opts.max_tokens = math.max(opts.max_tokens, 1)
 
-    local mode = api.nvim_get_mode().mode
-    local short_mode = string.sub(mode, 1, 1)
-    local is_omode = string.sub(mode, 1, 2) == "no"
     opts.locator = (function()
         if opts.locator then
             return opts.locator
         end
 
+        local short_mode = string.sub(mode, 1, 1)
         local is_visual = short_mode == "v" or short_mode == "V" or short_mode == "\22"
         if is_visual or is_omode then
             return locate_cwords_with_cur_pos
@@ -534,8 +547,6 @@ local function resolve_jump_opts(opts)
 
     opts.wins = opts.wins or { api.nvim_get_current_win() }
     ut._validate_list(opts.wins, { item_type = "number", min_len = 1 })
-
-    return is_omode
 end
 
 ---@class farsight.StepJump
@@ -560,7 +571,9 @@ local Jump = {}
 ---@return nil
 function Jump.jump(opts)
     opts = opts and vim.deepcopy(opts, true) or {}
-    local is_omode = resolve_jump_opts(opts)
+    local mode = api.nvim_get_mode().mode
+    local is_omode = string.sub(mode, 1, 2) == "no"
+    resolve_jump_opts(opts, mode, is_omode)
 
     local ut = require("farsight.util")
     local focusable_wins = ut._order_focusable_wins(opts.wins)
@@ -571,6 +584,7 @@ function Jump.jump(opts)
 
     local sights, ns_buf_map = get_targets(focusable_wins, opts)
     if #sights > 1 then
+        populate_target_labels(sights, opts)
         advance_jump(ns_buf_map, sights, is_omode, opts)
     elseif #sights == 1 then
         do_jump(sights[1][1], sights[1][2], sights[1][3], sights[1][4], is_omode, opts)
@@ -638,6 +652,8 @@ return Jump
 -- you could do it where you use <C-n> to enter a "Token searching state" and a non-token exits.
 -- But then what feedback do you get if there are no valid tokens on the page? I guess it just
 -- quits?
+-- TODO: WHen doing default mappings, can the unique flag be used rather than maparg to check if
+-- it's already been mapped?
 
 -- EasyMotion notes:
 -- - EasyMotion replaces a lot of things, like w and f/t

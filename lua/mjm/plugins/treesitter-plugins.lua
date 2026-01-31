@@ -281,6 +281,10 @@ return {
 }
 
 -- TODO: PR: Inconsistency between text objects, the upcoming built-in incremental selection, and
+
 -- tree-climber - When you do move in text objects, it grows the selection, but the baseline
 -- selection in the incremental selection plugins actually moves the selection. Crosses wires in
 -- muscle memory.
+
+-- PR: The ts-text-object selection functions should place the cursor at the end closest to where
+-- the cursor was when the selection was initiated

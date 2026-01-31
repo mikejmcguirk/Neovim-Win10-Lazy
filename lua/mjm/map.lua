@@ -749,6 +749,19 @@ set("i", "<C-l>", "<esc><cmd>silent norm! u<cr>")
 _G.I_Dedent = "<C-m>"
 set("i", I_Dedent, "<C-d>")
 
+-- TODO: Send the CSI to make this work
+-- set("i", "<M-[>", "<C-o>[")
+--
+-- set("i", "<M-]>", "<C-o>]")
+
+-- set("i", "<M-[>", function()
+--     api.nvim_feedkeys("\15[", "nix", false)
+-- end)
+--
+-- set("i", "<M-]>", function()
+--     api.nvim_feedkeys("\15]", "nix", false)
+-- end)
+
 ------------------
 -- COMMAND MODE --
 ------------------

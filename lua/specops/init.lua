@@ -84,6 +84,12 @@ return Spec_Ops
 -- should not insist on itself
 -- TODO: Paste highlight
 -- TODO: Linewise paste should auto-indent
+-- TODO: Mapping to center based on a motion/text object. We'll say zu for the moment since that's
+-- the closest opening there is. So you should be able to do zuiw and it will move the cursor to
+-- the iw and zz. More importantly, you could do something like zuim and it would move the cursor
+-- to the center of the function and zz. Simple enough logic - Get boundaries, calculate center,
+-- move cursor, norm zz. Better mapping: zZ. No default. No conflict. Logic. This is not a high
+-- enough value function to demand premium real-estate.
 --
 -- TODO: Implement the emacs yank cycling function with [y]y as the keys
 -- TODO: As before, implementing substitute and and repeat are mandatory
