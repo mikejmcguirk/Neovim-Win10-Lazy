@@ -10,7 +10,6 @@ local fn = vim.fn
 ---@field [6] integer extmark namespace
 ---@field [7] [string,string|integer][] Extmark virtual text
 
--- TODO: Call this max display tokens or something
 local MAX_TOKENS = 2
 local TOKENS = vim.split("abcdefghijklmnopqrstuvwxyz", "")
 
@@ -27,9 +26,6 @@ local HL_JUMP_TARGET_STR = "FarsightJumpTarget"
 -- would get the table of info the function generates, and you could do what you want with them
 -- The biggest use case I'm not sure if that addresses is dimming. Would also need to make sure
 -- the ns is passed out
--- TODO: For my purposes, it feels like the current character to type should always be obvious so
--- that it's identifiable, but then the next character should indicate if it's the conclusion or
--- a transition char
 api.nvim_set_hl(0, HL_JUMP_STR, { default = true, reverse = true })
 api.nvim_set_hl(0, HL_JUMP_AHEAD_STR, { default = true, underdouble = true })
 api.nvim_set_hl(0, HL_JUMP_TARGET_STR, { default = true, reverse = true })
@@ -297,19 +293,17 @@ local function get_targets(wins, opts)
 end
 
 -- MID: The variable names in this function could be more clear
--- LOW: In theory, the best way to do this would be to figure out a way to pre-determine the length
--- of each label and allocate each only once as a string
+-- LOW: A perf issue here is that the label needs to be re-allocated multiple times as new tokens
+-- are added.
 
 ---@param targets farsight.jump.Target[]
----@param opts farsight.jump.JumpOpts
+---@param tokens string[]
 ---@return nil
-local function populate_target_labels(targets, opts)
+local function populate_target_labels(targets, tokens)
     if #targets <= 1 then
         return
     end
 
-    -- TODO: Don't need the whole opt I don't think
-    local tokens = opts.tokens ---@type string[]
     local queue = {} ---@type { [1]: integer, [2]:integer }[]
     queue[#queue + 1] = { 1, #targets }
 
@@ -325,82 +319,129 @@ local function populate_target_labels(targets, opts)
         local token_idx = 1
         local token_start = range[1]
 
-        for i = range[1], range[2] do
-            targets[i][5][#targets[i][5] + 1] = tokens[token_idx]
-            rem_tokens = rem_tokens - 1
-            if rem_tokens == 0 then
-                rem_tokens = quotient + (remainder >= 1 and 1 or 0)
-                remainder = remainder > 0 and remainder - 1 or remainder
-
-                if i > token_start then
-                    -- if i > token_start and #targets[i][5] < max_tokens then
-                    queue[#queue + 1] = { token_start, i }
-                end
-
-                token_idx = token_idx + 1
-                token_start = i + 1
+        local idx = range[1] - 1
+        while idx < range[2] do
+            for _ = 1, rem_tokens do
+                idx = idx + 1
+                targets[idx][5][#targets[idx][5] + 1] = tokens[token_idx]
             end
+
+            if idx > token_start then
+                queue[#queue + 1] = { token_start, idx }
+            end
+
+            rem_tokens = quotient + (remainder >= 1 and 1 or 0)
+            remainder = remainder > 0 and remainder - 1 or remainder
+
+            token_idx = token_idx + 1
+            token_start = idx + 1
         end
     end
 end
 
--- LOW: Profile this function to see if it could be optimized further
-
+---Edits targets in place
 ---@param targets farsight.jump.Target[]
----@param max_tokens integer
-local function populate_target_virt_text(targets, max_tokens)
+---@param jump_level integer
+local function populate_target_virt_text_max_1(targets, jump_level)
+    local start = 1 + jump_level
+    for _, target in ipairs(targets) do
+        local hl = #target[5] - jump_level > 1 and hl_jump or hl_jump_target
+        target[7][1] = { target[5][start], hl }
+    end
+end
+
+---Edits targets in place
+---@param targets farsight.jump.Target[]
+---@param jump_level integer
+local function populate_target_virt_text_max_2(targets, jump_level)
     ---@param target farsight.jump.Target
     ---@param max_display_tokens integer
     local function add_virt_text(target, max_display_tokens)
-        -- TODO: Since the last untruncated token is always hl_jump_target, maybe arrive at that
-        -- first then work backward?
-        -- Do not waste an if check on less than one token in a hot loop, as that should never
-        -- happen
-        if #target[5] == 1 then
-            target[7][1] = { target[5][1], hl_jump_target }
-            return
+        local label = target[5]
+        local virt_text = target[7]
+        local len = #label - jump_level
+        local has_more_tokens = len > 1
+        local start_hl = has_more_tokens and hl_jump or hl_jump_target
+        virt_text[1] = { label[1 + jump_level], start_hl }
+
+        -- This seems to be faster than early returning if len == 1
+        if has_more_tokens and max_display_tokens == 2 then
+            local next_hl = len == 2 and hl_jump_target or hl_jump_ahead
+            virt_text[2] = { label[2 + jump_level], next_hl }
         end
-
-        target[7][1] = { target[5][1], hl_jump }
-        if #target[5] > max_display_tokens then
-            if max_display_tokens <= 1 then
-                return
-            end
-
-            local remainder = table.concat(target[5], "", 2, max_display_tokens)
-            target[7][2] = { remainder, hl_jump_ahead }
-            return
-        end
-
-        if #target[5] > 2 then
-            local before = table.concat(target[5], "", 2, #target[5] - 1)
-            target[7][2] = { before, hl_jump_ahead }
-        end
-
-        target[7][#target[7] + 1] = { target[5][#target[5]], hl_jump_target }
     end
 
+    local max_idx = #targets - 1
+    for i = 1, max_idx do
+        local target = targets[i]
+        local next_target = targets[i + 1]
+
+        local max_display_tokens = (
+            target[1] ~= next_target[1]
+            or target[2] ~= next_target[2]
+            or target[3] ~= next_target[3]
+            or next_target[4] - target[4] >= 2
+        )
+                and 2
+            or 1
+
+        add_virt_text(target, max_display_tokens)
+    end
+
+    add_virt_text(targets[#targets], 2)
+end
+
+-- LOW: Profile this function to see if it could be optimized further
+
+---Edits targets in place
+---@param targets farsight.jump.Target[]
+---@param max_tokens integer
+---@param jump_level integer
+local function populate_target_virt_text(targets, max_tokens, jump_level)
+    local start = 1 + jump_level
+    local start_plus_one = start + 1
+
     ---@param target farsight.jump.Target
-    ---@param next_target farsight.jump.Target
-    local function get_max_display_tokens(target, next_target)
-        if target[1] ~= next_target[1] then
-            return max_tokens
+    ---@param max_display_tokens integer
+    local function add_virt_text(target, max_display_tokens)
+        local label = target[5]
+        local virt_text = target[7]
+        local len = #target[5] - jump_level
+
+        -- Unlike the max_2 case, early exiting here doesn't seem to negatively affect performance
+        if len == 1 then
+            virt_text[1] = { label[start], hl_jump_target }
+            return
         end
 
-        if target[2] ~= next_target[2] then
-            return max_tokens
-        end
+        virt_text[1] = { label[start], hl_jump }
+        if len <= max_display_tokens then
+            if #label > 2 then
+                local before = table.concat(label, "", start_plus_one, #label - 1)
+                virt_text[2] = { before, hl_jump_ahead }
+            end
 
-        if target[3] ~= next_target[3] then
-            return max_tokens
+            virt_text[#virt_text + 1] = { label[#label], hl_jump_target }
+        else
+            local remainder = #label > 2
+                    and table.concat(label, "", start_plus_one, max_display_tokens)
+                or label[start_plus_one]
+            virt_text[2] = { remainder, hl_jump_ahead }
         end
-
-        return next_target[4] - target[4]
     end
 
     for i = 1, #targets - 1 do
-        local max_display_tokens = get_max_display_tokens(targets[i], targets[i + 1])
-        max_display_tokens = math.min(max_display_tokens, max_tokens)
+        local target = targets[i]
+        local next_target = targets[i + 1]
+
+        local max_display_tokens = (
+            target[1] ~= next_target[1]
+            or target[2] ~= next_target[2]
+            or target[3] ~= next_target[3]
+        )
+                and max_tokens
+            or math.min(next_target[4] - target[4], max_tokens)
+
         add_virt_text(targets[i], max_display_tokens)
     end
 
@@ -416,14 +457,14 @@ end
 ---@param opts farsight.jump.JumpOpts
 ---@return nil
 local function do_jump(win, buf, row_0, col, is_omode, opts)
-    -- Because jumplists are scoped per window, setting the pcmark in the window being left doesn't
-    -- provide anything useful. By setting the pcmark in the window where the jump is performed,
-    -- the user is provided the ability to undo the jump
     local cur_win = api.nvim_get_current_win()
     if cur_win ~= win then
         api.nvim_set_current_win(win)
     end
 
+    -- Because jumplists are scoped per window, setting the pcmark in the window being left doesn't
+    -- provide anything useful. By setting the pcmark in the window where the jump is performed,
+    -- the user is provided the ability to undo the jump
     if (not opts.keepjumps) and not is_omode then
         -- FUTURE: When the updated mark API is released, see if that can be used to set the
         -- pcmark correctly
@@ -448,23 +489,32 @@ local function do_jump(win, buf, row_0, col, is_omode, opts)
     api.nvim_cmd({ cmd = "norm", args = { "zv" }, bang = true }, {})
 end
 
+-- LOW: A way you could optimize virt text population is to check the actual max label size when
+-- building them. If you have max tokens at 3 and the biggest label is only 2, the cheaper
+-- function can be used. Unsure on this given the guaranteed up front cost of calculating this vs
+-- the inconsistent (at best) benefit.
+
 ---Edits ns_buf_map and sights in place
 ---@param ns_buf_map table<integer, integer>
----@param sights farsight.jump.Target[]
+---@param targets farsight.jump.Target[]
 ---@param is_omode boolean
+---@param jump_level integer
 ---@param opts farsight.jump.JumpOpts
 ---@return nil
-local function advance_jump(ns_buf_map, sights, is_omode, opts)
+local function advance_jump(ns_buf_map, targets, is_omode, jump_level, opts)
+    local max_tokens = opts.max_tokens
     while true do
-        local start_time = vim.uv.hrtime()
-        populate_target_virt_text(sights, opts.max_tokens)
-        local end_time = vim.uv.hrtime()
-        local duration_ms = (end_time - start_time) / 1e6
-        print(string.format("hl_forward took %.2f ms", duration_ms))
+        if max_tokens == 1 then
+            populate_target_virt_text_max_1(targets, jump_level)
+        elseif max_tokens == 2 then
+            populate_target_virt_text_max_2(targets, jump_level)
+        else
+            populate_target_virt_text(targets, opts.max_tokens, jump_level)
+        end
 
         ---@type vim.api.keyset.set_extmark
         local extmark_opts = { hl_mode = "combine", priority = 1000, virt_text_pos = "overlay" }
-        for _, sight in ipairs(sights) do
+        for _, sight in ipairs(targets) do
             extmark_opts.virt_text = sight[7]
             pcall(api.nvim_buf_set_extmark, sight[2], sight[6], sight[3], sight[4], extmark_opts)
         end
@@ -475,27 +525,32 @@ local function advance_jump(ns_buf_map, sights, is_omode, opts)
             pcall(api.nvim_buf_clear_namespace, buf, ns, 0, -1)
         end
 
+        local start = jump_level + 1
         local new_sights = {} ---@type farsight.jump.Target[]
-        for _, sight in ipairs(sights) do
-            if sight[5][1] == input then
+        for _, sight in ipairs(targets) do
+            if sight[5][start] == input then
                 new_sights[#new_sights + 1] = sight
             end
         end
 
-        sights = new_sights
-        if #sights <= 1 then
-            if #sights == 1 then
-                do_jump(sights[1][1], sights[1][2], sights[1][3], sights[1][4], is_omode, opts)
+        targets = new_sights
+        if #targets <= 1 then
+            if #targets == 1 then
+                do_jump(targets[1][1], targets[1][2], targets[1][3], targets[1][4], is_omode, opts)
             end
 
             return
         end
 
+        jump_level = jump_level + 1
         local new_ns_buf_map = {} ---@type table<integer, integer>
-        for _, sight in ipairs(sights) do
+        for _, sight in ipairs(targets) do
             new_ns_buf_map[sight[6]] = sight[2]
-            table.remove(sight[5], 1)
-            sight[7] = {}
+            local virt_text = sight[7]
+            local len = #virt_text
+            for i = len, 1, -1 do
+                virt_text[i] = nil
+            end
         end
 
         ns_buf_map = new_ns_buf_map
@@ -584,8 +639,9 @@ function Jump.jump(opts)
 
     local sights, ns_buf_map = get_targets(focusable_wins, opts)
     if #sights > 1 then
-        populate_target_labels(sights, opts)
-        advance_jump(ns_buf_map, sights, is_omode, opts)
+        local jump_level = 0
+        populate_target_labels(sights, opts.tokens)
+        advance_jump(ns_buf_map, sights, is_omode, jump_level, opts)
     elseif #sights == 1 then
         do_jump(sights[1][1], sights[1][2], sights[1][3], sights[1][4], is_omode, opts)
     else
@@ -664,8 +720,4 @@ return Jump
 -- code within uses a lot of hacks to keep Nvim's state correct. Unsure of value relative to
 -- effort
 
--- MID: Wins should be able to accept a list or a custom callback to get the wins
-
 -- LOW: Would be interesting to test storing the labels as a struct of arrays
-
--- DOCUMENT: A couple example spotter functions

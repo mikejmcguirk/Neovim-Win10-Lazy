@@ -244,7 +244,7 @@ api.nvim_create_autocmd("BufDelete", {
 })
 
 _G.Mjm_Stl = {}
-local stl = { nil, nil, nil, "%=%*", nil, nil } ---@type string[]
+local stl = { "", "", "", "%=%*", "", "" } ---@type string[]
 
 -- LOW: Now that everything is cached, worth re-exploring doing this based on real-time evals
 -- rather than re-making the string each time
