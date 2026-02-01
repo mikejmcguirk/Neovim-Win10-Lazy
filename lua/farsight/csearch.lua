@@ -9,10 +9,9 @@ local HL_1ST_STR = "FarsightCsearch1st"
 local HL_2ND_STR = "FarsightCsearch2nd"
 local HL_3RD_STR = "FarsightCsearch3rd"
 
--- TODO: Can't use these defaults because they assume termguicolors
-api.nvim_set_hl(0, HL_1ST_STR, { default = true, reverse = true })
-api.nvim_set_hl(0, HL_2ND_STR, { default = true, undercurl = true })
-api.nvim_set_hl(0, HL_3RD_STR, { default = true, underdouble = true })
+api.nvim_set_hl(0, HL_1ST_STR, { link = "DiffChange" })
+api.nvim_set_hl(0, HL_2ND_STR, { link = "DiffText" })
+api.nvim_set_hl(0, HL_3RD_STR, { link = "DiffAdd" })
 
 local hl_1st = api.nvim_get_hl_id_by_name(HL_1ST_STR)
 local hl_2nd = api.nvim_get_hl_id_by_name(HL_2ND_STR)
@@ -593,7 +592,7 @@ local function resolve_csearch_opts(opts)
 
     opts.tokens = opts.tokens or TOKENS
     ut._validate_list(opts.tokens, { item_type = "string" })
-    require("farsight.util")._dedup_list(opts.tokens)
+    require("farsight.util")._list_dedup(opts.tokens)
     ut._validate_list(opts.tokens, { min_len = 2 })
 
     opts.max_hl_steps = opts.max_hl_steps or DEFAULT_MAX_HL_STEPS

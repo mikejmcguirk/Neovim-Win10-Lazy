@@ -18,17 +18,9 @@ local HL_JUMP_STR = "FarsightJump"
 local HL_JUMP_AHEAD_STR = "FarsightJumpAhead"
 local HL_JUMP_TARGET_STR = "FarsightJumpTarget"
 
--- TODO: These are not great defaults. But some blockers to determining:
--- - What defaults would be patternful with the F/T motions?
--- - How should extmarks be config'd in general? Would need to look at the jump plugin and
--- - What looks good with vmode/omode running over the edge?
--- Flash. Ideally, the user could just provide a callback to setting extmarks. Like, they
--- would get the table of info the function generates, and you could do what you want with them
--- The biggest use case I'm not sure if that addresses is dimming. Would also need to make sure
--- the ns is passed out
-api.nvim_set_hl(0, HL_JUMP_STR, { default = true, reverse = true })
-api.nvim_set_hl(0, HL_JUMP_AHEAD_STR, { default = true, underdouble = true })
-api.nvim_set_hl(0, HL_JUMP_TARGET_STR, { default = true, reverse = true })
+api.nvim_set_hl(0, HL_JUMP_STR, { link = "DiffChange" })
+api.nvim_set_hl(0, HL_JUMP_AHEAD_STR, { link = "DiffText" })
+api.nvim_set_hl(0, HL_JUMP_TARGET_STR, { link = "DiffAdd" })
 
 local hl_jump = api.nvim_get_hl_id_by_name(HL_JUMP_STR)
 local hl_jump_ahead = api.nvim_get_hl_id_by_name(HL_JUMP_AHEAD_STR)
@@ -69,8 +61,6 @@ local function handle_non_rows(row, line)
     return nil
 end
 
--- Unlike for csearch, the string sub method works best here
-
 ---@diagnostic disable-next-line: duplicate-doc-param
 ---@param _ integer
 ---@param row integer
@@ -89,6 +79,7 @@ local function locate_cwords(_, row, line, _, _)
     local cols = {} ---@type integer[]
     local start = 1
 
+    -- Unlike for csearch, the string sub method works best here
     while true do
         local from, to = cword_regex:match_str(line)
         if from == nil or to == nil then
@@ -129,8 +120,7 @@ local function locate_cwords_with_cur_pos(_, row, line, _, cur_pos)
         if row > cur_pos[1] then
             cols[#cols + 1] = to + start - 2
         elseif row == cur_pos[1] then
-            local to_fixed = to + start - 2
-            if to_fixed > cur_pos[2] then
+            if to + start - 2 > cur_pos[2] then
                 cols[#cols + 1] = to + start - 2
             else
                 cols[#cols + 1] = from + start - 1
@@ -146,6 +136,7 @@ local function locate_cwords_with_cur_pos(_, row, line, _, cur_pos)
     return cols
 end
 
+---@param win integer
 ---@param row integer
 ---@param line string
 ---@param buf integer
@@ -153,7 +144,7 @@ end
 ---@param locator fun(win: integer, row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
 local function get_cols(win, row, line, buf, cur_pos, locator)
     local cols = locator(win, row, line, buf, cur_pos)
-    require("farsight.util")._dedup_list(cols)
+    require("farsight.util")._list_dedup(cols)
     table.sort(cols, function(a, b)
         return a < b
     end)
@@ -184,10 +175,9 @@ local function add_targets_after(win, cur_pos, buf, locator, ns, targets)
 
     local line_after = string.sub(line, start_col_1, #line)
     local cols = get_cols(win, cur_pos[1], line_after, buf, cur_pos, locator)
-
-    local cut_len = #line - #line_after
-    for i = 1, #cols do
-        cols[i] = cols[i] + cut_len
+    local count_cols = #cols
+    for i = 1, count_cols do
+        cols[i] = cols[i] + (#line - #line_after)
     end
 
     local row_0 = cur_pos[1] - 1
@@ -204,15 +194,16 @@ end
 ---@param ns integer
 ---@param targets farsight.jump.Target[]
 local function add_targets_before(win, cur_pos, buf, locator, ns, targets)
-    local line = fn.getline(cur_pos[1])
+    local row = cur_pos[1]
+    local line = fn.getline(row)
     local ut = require("farsight.util")
     local cur_cword = ut._find_cword_at_col(line, cur_pos[2])
     local end_col_1 = cur_cword and cur_cword[2] or cur_pos[2]
 
     local line_before = string.sub(line, 1, end_col_1)
-    local cols = get_cols(win, cur_pos[1], line_before, buf, cur_pos, locator)
+    local cols = get_cols(win, row, line_before, buf, cur_pos, locator)
 
-    local row_0 = cur_pos[1] - 1
+    local row_0 = row - 1
     for _, col in ipairs(cols) do
         targets[#targets + 1] = { win, buf, row_0, col, {}, ns, {} }
     end
@@ -293,8 +284,8 @@ local function get_targets(wins, opts)
 end
 
 -- MID: The variable names in this function could be more clear
--- LOW: A perf issue here is that the label needs to be re-allocated multiple times as new tokens
--- are added.
+-- LOW: In theory, there should be some way to optimize this by pre-computing and pre-allocating
+-- the label lengths rather than doing multiple appends/resizes
 
 ---@param targets farsight.jump.Target[]
 ---@param tokens string[]
@@ -448,6 +439,20 @@ local function populate_target_virt_text(targets, max_tokens, jump_level)
     add_virt_text(targets[#targets], max_tokens)
 end
 
+---Edits targets in place
+---@param targets farsight.jump.Target[]
+---@param max_tokens integer
+---@param jump_level integer
+local function populate_target_virt_text_from_max(targets, jump_level, max_tokens)
+    if max_tokens == 1 then
+        populate_target_virt_text_max_1(targets, jump_level)
+    elseif max_tokens == 2 then
+        populate_target_virt_text_max_2(targets, jump_level)
+    else
+        populate_target_virt_text(targets, max_tokens, jump_level)
+    end
+end
+
 ---Expects zero indexed row and col
 ---@param win integer
 ---@param buf integer
@@ -494,7 +499,7 @@ end
 -- function can be used. Unsure on this given the guaranteed up front cost of calculating this vs
 -- the inconsistent (at best) benefit.
 
----Edits ns_buf_map and sights in place
+---Edits ns_buf_map and targets in place
 ---@param ns_buf_map table<integer, integer>
 ---@param targets farsight.jump.Target[]
 ---@param is_omode boolean
@@ -502,15 +507,9 @@ end
 ---@param opts farsight.jump.JumpOpts
 ---@return nil
 local function advance_jump(ns_buf_map, targets, is_omode, jump_level, opts)
-    local max_tokens = opts.max_tokens
+    local max_tokens = opts.max_tokens ---@type integer
     while true do
-        if max_tokens == 1 then
-            populate_target_virt_text_max_1(targets, jump_level)
-        elseif max_tokens == 2 then
-            populate_target_virt_text_max_2(targets, jump_level)
-        else
-            populate_target_virt_text(targets, opts.max_tokens, jump_level)
-        end
+        populate_target_virt_text_from_max(targets, jump_level, max_tokens)
 
         ---@type vim.api.keyset.set_extmark
         local extmark_opts = { hl_mode = "combine", priority = 1000, virt_text_pos = "overlay" }
@@ -526,34 +525,44 @@ local function advance_jump(ns_buf_map, targets, is_omode, jump_level, opts)
         end
 
         local start = jump_level + 1
-        local new_sights = {} ---@type farsight.jump.Target[]
-        for _, sight in ipairs(targets) do
-            if sight[5][start] == input then
-                new_sights[#new_sights + 1] = sight
-            end
-        end
+        require("farsight.util")._list_filter(targets, function(target)
+            return target[5][start] == input
+        end)
 
-        targets = new_sights
         if #targets <= 1 then
             if #targets == 1 then
-                do_jump(targets[1][1], targets[1][2], targets[1][3], targets[1][4], is_omode, opts)
+                local target = targets[1]
+                do_jump(target[1], target[2], target[3], target[4], is_omode, opts)
             end
 
             return
         end
 
-        jump_level = jump_level + 1
-        local new_ns_buf_map = {} ---@type table<integer, integer>
-        for _, sight in ipairs(targets) do
-            new_ns_buf_map[sight[6]] = sight[2]
-            local virt_text = sight[7]
-            local len = #virt_text
+        local rebuild_ns_buf_map = true
+        local k1 = next(ns_buf_map)
+        local k2 = next(ns_buf_map, k1)
+        if k2 == nil then
+            rebuild_ns_buf_map = false
+        end
+
+        if rebuild_ns_buf_map then
+            local new_ns_buf_map = {} ---@type table<integer, integer>
+            for _, target in ipairs(targets) do
+                new_ns_buf_map[target[6]] = target[2]
+            end
+
+            ns_buf_map = new_ns_buf_map
+        end
+
+        for _, target in ipairs(targets) do
+            -- Faster with the lower quantities in the virtual text tables
+            local len = #target[7]
             for i = len, 1, -1 do
-                virt_text[i] = nil
+                target[7][i] = nil
             end
         end
 
-        ns_buf_map = new_ns_buf_map
+        jump_level = jump_level + 1
     end
 end
 
@@ -597,7 +606,7 @@ local function resolve_jump_opts(opts, mode, is_omode)
     opts.tokens = opts.tokens or TOKENS
     -- MID: Clumsy validation method
     ut._validate_list(opts.tokens, { item_type = "string" })
-    require("farsight.util")._dedup_list(opts.tokens)
+    require("farsight.util")._list_dedup(opts.tokens)
     ut._validate_list(opts.tokens, { min_len = 2 })
 
     opts.wins = opts.wins or { api.nvim_get_current_win() }

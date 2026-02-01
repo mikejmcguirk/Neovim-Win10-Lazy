@@ -11,24 +11,51 @@ local Util = {}
 ---- vim.list.unique returns the list, which is unnecesary
 ---- vim.list.unique is v12 only. Doing this saves the cost of versioning maintenance
 ---@param t any[]
-function Util._dedup_list(t)
+function Util._list_dedup(t)
     local seen = {} --- @type table<any,boolean>
-
     local finish = #t
-
     local j = 1
+
     for i = 1, finish do
         local v = t[i]
         if not seen[v] then
             t[j] = v
+
             if v ~= nil then
                 seen[v] = true
             end
+
             j = j + 1
         end
     end
 
     for i = j, finish do
+        t[i] = nil
+    end
+end
+
+-- PR: This should be in vim.list. You can run vim.validate on t and t then the code should
+-- otherwise be the same. The vim function should also return the table reference
+-- Question - How do you validate that it's a proper list? Like, how do you handle something with
+-- nil gaps in it? Question needs more fully explored
+-- Should the vim list filter allow f to be optional? If it's not present, then I guess just
+-- nil the list in place?
+
+---@param t any[]
+---@param f fun(v: any): boolean
+function Util._list_filter(t, f)
+    local len = #t
+    local j = 1
+
+    for i = 1, len do
+        local v = t[i]
+        if f(v) then
+            t[j] = v
+            j = j + 1
+        end
+    end
+
+    for i = j, len do
         t[i] = nil
     end
 end

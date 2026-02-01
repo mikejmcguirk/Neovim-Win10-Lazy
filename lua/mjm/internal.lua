@@ -1,6 +1,14 @@
 local api = vim.api
 local set = vim.keymap.set
 
+api.nvim_set_hl(0, "FarsightJump", { reverse = true })
+api.nvim_set_hl(0, "FarsightJumpAhead", { underdouble = true })
+api.nvim_set_hl(0, "FarsightJumpTarget", { reverse = true })
+
+api.nvim_set_hl(0, "FarsightCsearch1st", { reverse = true })
+api.nvim_set_hl(0, "FarsightCsearch2nd", { undercurl = true })
+api.nvim_set_hl(0, "FarsightCsearch3rd", { underdouble = true })
+
 vim.keymap.set("n", "<cr>", function()
     require("farsight.jump").jump({ wins = api.nvim_tabpage_list_wins(0) })
 end)
