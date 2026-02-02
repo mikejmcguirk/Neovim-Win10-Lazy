@@ -9,19 +9,17 @@ local HL_1ST_STR = "FarsightCsearch1st"
 local HL_2ND_STR = "FarsightCsearch2nd"
 local HL_3RD_STR = "FarsightCsearch3rd"
 
-api.nvim_set_hl(0, HL_1ST_STR, { link = "DiffChange" })
-api.nvim_set_hl(0, HL_2ND_STR, { link = "DiffText" })
-api.nvim_set_hl(0, HL_3RD_STR, { link = "DiffAdd" })
+local nvim_set_hl = api.nvim_set_hl
+nvim_set_hl(0, HL_1ST_STR, { default = true, link = "DiffChange" })
+nvim_set_hl(0, HL_2ND_STR, { default = true, link = "DiffText" })
+nvim_set_hl(0, HL_3RD_STR, { default = true, link = "DiffAdd" })
 
-local hl_1st = api.nvim_get_hl_id_by_name(HL_1ST_STR)
-local hl_2nd = api.nvim_get_hl_id_by_name(HL_2ND_STR)
-local hl_3rd = api.nvim_get_hl_id_by_name(HL_3RD_STR)
+local nvim_get_hl_id_by_name = api.nvim_get_hl_id_by_name
+local hl_1st = nvim_get_hl_id_by_name(HL_1ST_STR)
+local hl_2nd = nvim_get_hl_id_by_name(HL_2ND_STR)
+local hl_3rd = nvim_get_hl_id_by_name(HL_3RD_STR)
 
 local HL_NS = api.nvim_create_namespace("FarsightCsearch")
-
-local last_dir = nil
-local last_t_cmd = nil
-local last_input = nil
 
 local cword_str = [[\k\+]]
 local priority_map = { hl_3rd, hl_2nd, hl_1st } ---@type integer[]
@@ -46,8 +44,9 @@ end
 ---@param word string
 ---@param token_counts table<integer, integer>|table<string, integer>
 local function decrement_utf_word(word, token_counts)
+    local strcharpart = fn.strcharpart
     for i = 0, fn.strcharlen(word[1]) - 1 do
-        local char = fn.strcharpart(word[1], i, 1, true) ---@type string
+        local char = strcharpart(word[1], i, 1, true) ---@type string
         local remaining = token_counts[char] ---@type integer?
         if remaining then
             decrement_token_count(token_counts, remaining, char)
@@ -58,8 +57,9 @@ end
 ---@param word string
 ---@param token_counts table<integer, integer>|table<string, integer>
 local function decrement_ascii_word(word, token_counts)
+    local byte = string.byte
     for i = 1, #word do
-        local char = string.byte(word, i)
+        local char = byte(word, i)
         local remaining = token_counts[char] ---@type integer?
         if remaining then
             decrement_token_count(token_counts, remaining, char)
@@ -71,15 +71,18 @@ end
 ---@param token_counts table<integer, integer>|table<string, integer>
 ---@return integer|nil, integer|nil, integer|nil, integer|nil
 local function utf_counter(res, token_counts)
-    local strcharlen = fn.strcharlen(res[1])
+    local word = res[1]
+    local charlen = fn.strcharlen(word)
     local priority = 0
     local idx
     local len
     local hl_id
 
-    for i = 0, strcharlen - 1 do
-        local char_start = fn.byteidx(res[1], i)
-        local char = fn.strcharpart(res[1], i, 1, true) ---@type string
+    local byteidx = fn.byteidx
+    local strcharpart = fn.strcharpart
+    for i = 0, charlen - 1 do
+        local char_start = byteidx(word, i)
+        local char = strcharpart(word, i, 1, true) ---@type string
         local remaining = token_counts[char] ---@type integer?
         if remaining then
             if remaining > priority then
@@ -100,15 +103,18 @@ end
 ---@param token_counts table<integer, integer>|table<string, integer>
 ---@return integer|nil, integer|nil, integer|nil, integer|nil
 local function utf_counter_rev(res, token_counts)
-    local strcharlen = fn.strcharlen(res[1])
+    local word = res[1]
+    local charlen = fn.strcharlen(word)
     local priority = 0
     local idx
     local len
     local hl_id
 
-    for i = strcharlen - 1, 1, -1 do
-        local char_start = fn.byteidx(res[1], i)
-        local char = fn.strcharpart(res[1], i, 1, true) ---@type string
+    local byteidx = fn.byteidx
+    local strcharpart = fn.strcharpart
+    for i = charlen - 1, 1, -1 do
+        local char_start = byteidx(word, i)
+        local char = strcharpart(word, i, 1, true) ---@type string
         local remaining = token_counts[char] ---@type integer?
         if remaining then
             if remaining >= priority then
@@ -133,9 +139,11 @@ local function ascii_counter(res, token_counts)
     local idx
     local hl_id
 
-    for i = 1, #res[1] do
-        local byte = string.byte(res[1], i)
-        local remaining = token_counts[byte] ---@type integer?
+    local word = res[1]
+    local byte = string.byte
+    for i = 1, #word do
+        local str_byte = byte(word, i)
+        local remaining = token_counts[str_byte] ---@type integer?
         if remaining then
             if remaining > priority then
                 priority = remaining
@@ -143,7 +151,7 @@ local function ascii_counter(res, token_counts)
                 hl_id = priority_map[priority]
             end
 
-            decrement_token_count(token_counts, remaining, byte)
+            decrement_token_count(token_counts, remaining, str_byte)
         end
     end
 
@@ -158,9 +166,11 @@ local function ascii_counter_rev(res, token_counts)
     local idx
     local hl_id
 
-    for i = #res[1], 1, -1 do
-        local byte = string.byte(res[1], i)
-        local remaining = token_counts[byte] ---@type integer?
+    local word = res[1]
+    local byte = string.byte
+    for i = #word, 1, -1 do
+        local str_byte = byte(word, i)
+        local remaining = token_counts[str_byte] ---@type integer?
         if remaining then
             if remaining >= priority then
                 priority = remaining
@@ -168,7 +178,7 @@ local function ascii_counter_rev(res, token_counts)
                 hl_id = priority_map[priority]
             end
 
-            decrement_token_count(token_counts, remaining, byte)
+            decrement_token_count(token_counts, remaining, str_byte)
         end
     end
 
@@ -183,15 +193,18 @@ end
 ---@param labels farsight.csearch.TokenLabel[]
 local function iter_tokens_forward(counter_func, line, row_0, token_counts, labels)
     local pos = 0
-    while pos < #line do
-        local res = fn.matchstrpos(line, cword_str, pos)
-        if res[2] < 0 then
+    local line_len = #line
+    local matchstrpos = fn.matchstrpos
+    while pos < line_len do
+        local res = matchstrpos(line, cword_str, pos)
+        local start = res[2]
+        if start < 0 then
             break
         end
 
         local priority, idx, len, hl_id = counter_func(res, token_counts)
         if priority > 0 then
-            labels[#labels + 1] = { row_0, res[2] + idx, len, hl_id }
+            labels[#labels + 1] = { row_0, start + idx, len, hl_id }
         end
 
         if not next(token_counts) then
@@ -208,22 +221,26 @@ end
 ---@param token_counts table<integer, integer>|table<string,integer>
 ---@param labels farsight.csearch.TokenLabel[]
 local function iter_tokens_backward(counter_func, line, row_0, token_counts, labels)
-    local words = {}
+    local results = {}
     local pos = 0
-    while pos < #line do
-        local res = fn.matchstrpos(line, cword_str, pos)
+    local line_len = #line
+    local matchstrpos = fn.matchstrpos
+    while pos < line_len do
+        local res = matchstrpos(line, cword_str, pos)
         if res[2] < 0 then
             break
         end
 
-        words[#words + 1] = res
+        results[#results + 1] = res
         pos = res[3]
     end
 
-    for i = #words, 1, -1 do
-        local priority, idx, len, hl_id = counter_func(words[i], token_counts)
+    local len_results = #results
+    for i = len_results, 1, -1 do
+        local res = results[i]
+        local priority, idx, len, hl_id = counter_func(res, token_counts)
         if priority > 0 then
-            labels[#labels + 1] = { row_0, words[i][2] + idx, len, hl_id }
+            labels[#labels + 1] = { row_0, res[2] + idx, len, hl_id }
         end
 
         if not next(token_counts) then
@@ -248,8 +265,9 @@ end
 ---@return integer[]
 local function get_tokens_as_codes(tokens)
     local codes = {}
+    local byte = string.byte
     for _, token in ipairs(tokens) do
-        codes[#codes + 1] = string.byte(token)
+        codes[#codes + 1] = byte(token)
     end
 
     return codes
@@ -297,32 +315,41 @@ local function hl_forward(cur_pos, buf, tokens, max_hl_steps)
     local decrement_func = is_ascii and decrement_ascii_word or decrement_utf_word
     local labels = {} ---@type farsight.csearch.TokenLabel[]
 
-    if fn.foldclosed(cur_pos[1]) == -1 then
-        local cur_line = api.nvim_buf_get_lines(buf, cur_pos[1] - 1, cur_pos[1], false)[1]
-        local col_after_1 = cur_pos[2] + 2
-        local cur_res = require("farsight.util")._find_cword_at_col(cur_line, cur_pos[2])
+    local row = cur_pos[1]
+    local col = cur_pos[2]
+    local nvim_buf_get_lines = api.nvim_buf_get_lines
+    if fn.foldclosed(row) == -1 then
+        local row_0 = row - 1
+        local cur_line = nvim_buf_get_lines(buf, row_0, row, false)[1]
+        local col_after_1 = col + 2
+        local cur_res = require("farsight.util")._find_cword_at_col(cur_line, col)
+        local sub = string.sub
         if cur_res then
-            local suffix = string.sub(cur_line, col_after_1, cur_res[3])
+            local res_to = cur_res[3]
+            local suffix = sub(cur_line, col_after_1, res_to)
             decrement_func(suffix, token_counts)
-            col_after_1 = cur_res[3] + 1
+            col_after_1 = res_to + 1
         end
 
-        local line_after = string.sub(cur_line, col_after_1)
-        iter_tokens_forward(counter_func, line_after, cur_pos[1] - 1, token_counts, labels)
+        local line_after = sub(cur_line, col_after_1)
+        iter_tokens_forward(counter_func, line_after, row_0, token_counts, labels)
         for _, label in ipairs(labels) do
             local before_len = #cur_line - #line_after
             label[2] = label[2] + before_len
         end
     end
 
-    for i = cur_pos[1] + 1, fn.line("w$") do
+    local next_row = row + 1
+    local bot = fn.line("w$")
+    for i = next_row, bot do
         if not next(token_counts) then
             break
         end
 
         if fn.foldclosed(i) == -1 then
-            local line = api.nvim_buf_get_lines(buf, i - 1, i, false)[1]
-            iter_tokens_forward(counter_func, line, i - 1, token_counts, labels)
+            local i_0 = i - 1
+            local line = nvim_buf_get_lines(buf, i_0, i, false)[1]
+            iter_tokens_forward(counter_func, line, i_0, token_counts, labels)
         end
     end
 
@@ -345,28 +372,36 @@ local function hl_backward(cur_pos, buf, tokens, max_hl_steps)
     local decrement_func = is_ascii and decrement_ascii_word or decrement_utf_word
     local labels = {} ---@type farsight.csearch.TokenLabel[]
 
-    if fn.foldclosed(cur_pos[1]) == -1 then
-        local cur_line = api.nvim_buf_get_lines(buf, cur_pos[1] - 1, cur_pos[1], false)[1]
-        local col_before_1 = cur_pos[2]
-        local cur_res = require("farsight.util")._find_cword_at_col(cur_line, cur_pos[2])
+    local row = cur_pos[1]
+    local col = cur_pos[2]
+    local row_0 = row - 1
+    local nvim_buf_get_lines = api.nvim_buf_get_lines
+    if fn.foldclosed(row) == -1 then
+        local cur_line = nvim_buf_get_lines(buf, row_0, row, false)[1]
+        local col_before_1 = col
+        local cur_res = require("farsight.util")._find_cword_at_col(cur_line, col)
+        local sub = string.sub
         if cur_res then
-            local prefix = string.sub(cur_line, cur_res[2] + 1, col_before_1)
+            local cur_res_from = cur_res[2]
+            local prefix = sub(cur_line, cur_res_from + 1, col_before_1)
             decrement_func(prefix, token_counts)
-            col_before_1 = cur_res[2]
+            col_before_1 = cur_res_from
         end
 
-        local line_before = string.sub(cur_line, 1, col_before_1)
-        iter_tokens_backward(checker_func, line_before, cur_pos[1] - 1, token_counts, labels)
+        local line_before = sub(cur_line, 1, col_before_1)
+        iter_tokens_backward(checker_func, line_before, row_0, token_counts, labels)
     end
 
-    for i = cur_pos[1] - 1, fn.line("w0"), -1 do
+    local top = fn.line("w0")
+    for i = row_0, top, -1 do
         if not next(token_counts) then
             break
         end
 
         if fn.foldclosed(i) == -1 then
-            local line = api.nvim_buf_get_lines(buf, i - 1, i, false)[1]
-            iter_tokens_backward(checker_func, line, i - 1, token_counts, labels)
+            local i_0 = i - 1
+            local line = nvim_buf_get_lines(buf, i_0, i, false)[1]
+            iter_tokens_backward(checker_func, line, i_0, token_counts, labels)
         end
     end
 
@@ -382,8 +417,9 @@ end
 local function csearch_line_forward(this_line, row, input, count, found_pos)
     local search_pos = 1
 
+    local find = string.find
     while count > 0 do
-        local start = string.find(this_line, input, search_pos, true)
+        local start = find(this_line, input, search_pos, true)
         if not start then
             break
         end
@@ -400,15 +436,19 @@ end
 ---@param buf integer
 ---@param pos { [1]: integer, [2]: integer }
 local function handle_t_cmd(buf, pos)
-    local line = api.nvim_buf_get_lines(buf, pos[1] - 1, pos[1], false)[1]
-    local char_idx = fn.charidx(line, pos[2])
+    local row = pos[1]
+    local col = pos[2]
+    local nvim_buf_get_lines = api.nvim_buf_get_lines
+
+    local line = nvim_buf_get_lines(buf, row - 1, row, false)[1]
+    local char_idx = fn.charidx(line, col)
 
     if char_idx > 1 then
         pos[2] = fn.byteidx(line, char_idx - 1)
     else
-        pos[1] = pos[1] - 1
+        pos[1] = row - 1
 
-        local prev_line = api.nvim_buf_get_lines(buf, pos[1] - 1, pos[1], false)[1]
+        local prev_line = nvim_buf_get_lines(buf, row - 1, row, false)[1]
         local strcharlen = fn.strcharlen(prev_line)
         pos[2] = fn.byteidx(prev_line, math.max(strcharlen - 1, 0))
     end
@@ -421,18 +461,22 @@ end
 ---@param cur_pos { [1]: integer, [2]: integer }
 ---@param buf integer
 ---@param input string
----@param t_cmd boolean
+---@param t_cmd integer
 ---@param t_cmd_skip boolean
 local function csearch_forward(count, win, cur_pos, buf, input, t_cmd, t_cmd_skip)
     local found_pos = nil ---@type { [1]: integer, [2]: integer }|nil
 
-    if fn.foldclosed(cur_pos[1]) == -1 then
-        local cur_line = api.nvim_buf_get_lines(buf, cur_pos[1] - 1, cur_pos[1], false)[1]
-        local charidx = fn.charidx(cur_line, cur_pos[2])
+    local row = cur_pos[1]
+    local col = cur_pos[2]
+    local foldclosed = fn.foldclosed
+    local nvim_buf_get_lines = api.nvim_buf_get_lines
+    if foldclosed(row) == -1 then
+        local cur_line = nvim_buf_get_lines(buf, row - 1, row, false)[1]
+        local charidx = fn.charidx(cur_line, col)
         local char = fn.strcharpart(cur_line, charidx, 1, true) ---@type string
-        local col_after_cursor_1 = cur_pos[2] + #char + 1
+        local col_after_cursor_1 = col + #char + 1
 
-        if t_cmd and t_cmd_skip then
+        if t_cmd == 1 and t_cmd_skip then
             local col_after_cursor = col_after_cursor_1 - 1
             local next_charidx = fn.charidx(cur_line, col_after_cursor)
             local next_char = fn.strcharpart(cur_line, next_charidx, 1, true)
@@ -442,18 +486,18 @@ local function csearch_forward(count, win, cur_pos, buf, input, t_cmd, t_cmd_ski
         end
 
         -- Allow "" substrings if col_after_cursor_1 > #cur_line
-        local line_after = cur_line:sub(col_after_cursor_1)
-        count, found_pos = csearch_line_forward(line_after, cur_pos[1], input, count, found_pos)
+        local line_after = string.sub(cur_line, col_after_cursor_1)
+        count, found_pos = csearch_line_forward(line_after, row, input, count, found_pos)
         if found_pos then
             found_pos[2] = found_pos[2] + (#cur_line - #line_after)
         end
     end
 
-    local i = cur_pos[1] + 1
+    local i = row + 1
     local bot = fn.line("w$")
     while i <= bot and count > 0 do
-        if fn.foldclosed(i) == -1 then
-            local this_line = api.nvim_buf_get_lines(buf, i - 1, i, false)[1]
+        if foldclosed(i) == -1 then
+            local this_line = nvim_buf_get_lines(buf, i - 1, i, false)[1]
             count, found_pos = csearch_line_forward(this_line, i, input, count, found_pos)
         end
 
@@ -461,7 +505,7 @@ local function csearch_forward(count, win, cur_pos, buf, input, t_cmd, t_cmd_ski
     end
 
     if found_pos then
-        if t_cmd then
+        if t_cmd == 1 then
             handle_t_cmd(buf, found_pos)
         end
 
@@ -472,30 +516,35 @@ end
 
 -- Reversing the string performs about as well as iterating forward through repeated calls to find
 
----@param this_line string
+---Returns cursor indexed row, col
+---@param line string
 ---@param row integer
 ---@param input string
 ---@param count integer
 ---@param found_pos { [1]: integer, [2]: integer }|nil
 ---@return integer, { [1]: integer, [2]: integer }|nil
-local function csearch_line_backward(this_line, row, input, count, found_pos)
+local function csearch_line_backward(line, row, input, count, found_pos)
     -- TODO: Profile this
-    if #this_line == 0 then
+    if #line == 0 then
         return count, found_pos
     end
 
-    local rev_line = this_line:reverse()
-    local rev_input = input:reverse()
+    local reverse = string.reverse
+    local rev_line = reverse(line)
+    local rev_input = reverse(input)
     local search_pos = 1
 
+    local find = string.find
+    local line_len = #line
+    local input_len = #input
     while count > 0 do
-        local rev_start = rev_line:find(rev_input, search_pos, true)
+        local rev_start = find(rev_line, rev_input, search_pos, true)
         if not rev_start then
             break
         end
 
         count = count - 1
-        local start_0 = #this_line - (rev_start + #input - 1)
+        local start_0 = line_len - (rev_start + input_len - 1)
         found_pos = { row, start_0 }
         search_pos = rev_start + #rev_input
     end
@@ -506,7 +555,8 @@ end
 ---@param buf integer
 ---@param pos { [1]: integer, [2]: integer }
 local function handle_t_cmd_rev(buf, pos)
-    local line = api.nvim_buf_get_lines(buf, pos[1] - 1, pos[1], false)[1]
+    local row = pos[1]
+    local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
     local char_idx = fn.charidx(line, pos[2])
 
     if char_idx < fn.strcharlen(line) - 1 then
@@ -524,16 +574,20 @@ end
 ---@param cur_pos { [1]: integer, [2]: integer }
 ---@param buf integer
 ---@param input string
----@param t_cmd boolean
+---@param t_cmd integer
 ---@param t_cmd_skip boolean
 local function csearch_backward(count, win, cur_pos, buf, input, t_cmd, t_cmd_skip)
     local found_pos = nil ---@type { [1]: integer, [2]: integer }|nil
 
-    if fn.foldclosed(cur_pos[1]) == -1 then
-        local cur_line = api.nvim_buf_get_lines(buf, cur_pos[1] - 1, cur_pos[1], false)[1]
-        local col_before_cursor_1 = cur_pos[2]
+    local row = cur_pos[1]
+    local col = cur_pos[2]
+    local foldclosed = fn.foldclosed
+    local nvim_buf_get_lines = api.nvim_buf_get_lines
+    if foldclosed(row) == -1 and col > 0 then
+        local cur_line = nvim_buf_get_lines(buf, row - 1, row, false)[1]
+        local col_before_cursor_1 = col
 
-        if t_cmd and t_cmd_skip then
+        if t_cmd == 1 and t_cmd_skip then
             local col_before_cursor = col_before_cursor_1 - 1
             local prev_charidx = fn.charidx(cur_line, col_before_cursor)
             if fn.strcharpart(cur_line, prev_charidx, 1, true) == input then
@@ -544,14 +598,14 @@ local function csearch_backward(count, win, cur_pos, buf, input, t_cmd, t_cmd_sk
 
         -- Allow "" substring if before_end_1 < 1
         local line_before = string.sub(cur_line, 1, col_before_cursor_1)
-        count, found_pos = csearch_line_backward(line_before, cur_pos[1], input, count, found_pos)
+        count, found_pos = csearch_line_backward(line_before, row, input, count, found_pos)
     end
 
-    local i = cur_pos[1] - 1
+    local i = row - 1
     local top = fn.line("w0")
     while i >= top and count > 0 do
-        if fn.foldclosed(i) == -1 then
-            local this_line = api.nvim_buf_get_lines(buf, i - 1, i, false)[1]
+        if foldclosed(i) == -1 then
+            local this_line = nvim_buf_get_lines(buf, i - 1, i, false)[1]
             count, found_pos = csearch_line_backward(this_line, i, input, count, found_pos)
         end
 
@@ -559,7 +613,7 @@ local function csearch_backward(count, win, cur_pos, buf, input, t_cmd, t_cmd_sk
     end
 
     if found_pos then
-        if t_cmd then
+        if t_cmd == 1 then
             found_pos = handle_t_cmd_rev(buf, found_pos)
         end
 
@@ -581,14 +635,18 @@ local function resolve_csearch_opts(opts)
         vim.validate("v", v, "callable")
     end
 
-    opts.forward = ut._resolve_bool_opt(opts.forward, true)
-    vim.validate("opts.forward", opts.forward, "boolean")
+    opts.forward = opts.forward or 1
+    vim.validate("opts.forward", opts.forward, function()
+        return opts.forward == 0 or opts.forward == 1
+    end, "opts.forward must be 0 or 1")
 
     opts.hl = ut._resolve_bool_opt(opts.hl, true)
     vim.validate("opts.hl", opts.hl, "boolean")
 
-    opts.t_cmd = ut._resolve_bool_opt(opts.t_cmd, false)
-    vim.validate("opts.t_cmd", opts.t_cmd, "boolean")
+    opts.t_cmd = opts.t_cmd or 0
+    vim.validate("opts.t_cmd", opts.t_cmd, function()
+        return opts.t_cmd == 0 or opts.t_cmd == 1
+    end, "opts.t_cmd must be 0 or 1")
 
     opts.tokens = opts.tokens or TOKENS
     ut._validate_list(opts.tokens, { item_type = "string" })
@@ -609,10 +667,10 @@ local Csearch = {}
 
 ---@class farsight.csearch.CsearchOpts
 ---@field actions? table<string, fun()>
----@field forward? boolean
+---@field forward? integer
 ---@field hl? boolean
 ---@field max_hl_steps? integer
----@field t_cmd? boolean
+---@field t_cmd? integer
 ---@field tokens? string[]
 
 ---@param opts? farsight.csearch.CsearchOpts
@@ -624,10 +682,10 @@ function Csearch.csearch(opts)
     local cur_pos = api.nvim_win_get_cursor(cur_win)
     local cur_buf = api.nvim_win_get_buf(cur_win)
 
-    local forward = opts.forward
+    local forward = opts.forward ---@type integer
     if opts.hl then
         api.nvim__ns_set(HL_NS, { wins = { cur_win } })
-        if forward then
+        if forward == 1 then
             hl_forward(cur_pos, cur_buf, opts.tokens, opts.max_hl_steps)
         else
             hl_backward(cur_pos, cur_buf, opts.tokens, opts.max_hl_steps)
@@ -638,9 +696,10 @@ function Csearch.csearch(opts)
 
     local _, input = pcall(fn.getcharstr)
     pcall(api.nvim_buf_clear_namespace, cur_buf, HL_NS, 0, -1)
+    local nvim_replace_termcodes = api.nvim_replace_termcodes
     for key, action in pairs(opts.actions) do
         -- TODO: Document the replace_termcode behavior
-        local rep_key = api.nvim_replace_termcodes(key, true, false, true)
+        local rep_key = nvim_replace_termcodes(key, true, false, true)
         if input == rep_key then
             -- TODO: We could pass win/pos/buf into here
             action()
@@ -650,16 +709,20 @@ function Csearch.csearch(opts)
 
     local input_byte = string.byte(input)
     local is_ascii_control_char = input_byte <= 31 or input_byte == 127
-    if input == nil or is_ascii_control_char or #input == 0 then
+    local no_input = input == nil or #input == 0
+    if is_ascii_control_char or no_input then
         return
     end
 
-    local t_cmd = opts.t_cmd ---@type boolean
-    last_dir = forward
-    last_t_cmd = t_cmd
-    last_input = input
+    local t_cmd = opts.t_cmd ---@type integer
+    ---@diagnostic disable-next-line: param-type-mismatch
+    fn.setcharsearch({
+        char = input,
+        forward = forward,
+        ["until"] = t_cmd,
+    })
 
-    if forward then
+    if forward == 1 then
         csearch_forward(1, cur_win, cur_pos, cur_buf, input, t_cmd, false)
     else
         csearch_backward(1, cur_win, cur_pos, cur_buf, input, t_cmd, false)
@@ -667,16 +730,23 @@ function Csearch.csearch(opts)
 end
 
 ---@class farsight.csearch.RepOpts
----@field reverse? boolean
+---@field forward? integer
 ---@field skip? boolean
 
 ---@param opts? farsight.csearch.RepOpts
 function Csearch.rep(opts)
     opts = opts or {}
-    vim.validate("opts.reverse", opts.reverse, "boolean", true)
+    opts.forward = opts.forward or 1
+    vim.validate("opts.forward", opts.forward, function()
+        return opts.forward == 0 or opts.forward == 1
+    end, "opts.forward must be 0 or 1")
+
     vim.validate("opts.skip", opts.skip, "boolean", true)
 
-    if last_dir == nil or last_t_cmd == nil or last_input == nil then
+    ---@type { char: string, forward: integer, until: integer }
+    local charsearch = fn.getcharsearch()
+    local char = charsearch.char
+    if char == "" then
         return
     end
 
@@ -684,13 +754,9 @@ function Csearch.rep(opts)
     local cur_pos = api.nvim_win_get_cursor(cur_win)
     local cur_buf = api.nvim_win_get_buf(cur_win)
 
-    local this_dir = (function()
-        if opts.reverse then
-            return not last_dir
-        else
-            return last_dir
-        end
-    end)()
+    -- Bitshifts are LuaJIT only
+    local forward = (opts.forward == 1) and charsearch.forward or (1 - charsearch.forward)
+    local t_cmd = charsearch["until"]
 
     local skip = (function()
         if type(opts.skip) ~= "nil" then
@@ -703,10 +769,10 @@ function Csearch.rep(opts)
     end)()
 
     local count1 = vim.v.count1
-    if this_dir then
-        csearch_forward(count1, cur_win, cur_pos, cur_buf, last_input, last_t_cmd, skip)
+    if forward == 1 then
+        csearch_forward(count1, cur_win, cur_pos, cur_buf, char, t_cmd, skip)
     else
-        csearch_backward(count1, cur_win, cur_pos, cur_buf, last_input, last_t_cmd, skip)
+        csearch_backward(count1, cur_win, cur_pos, cur_buf, char, t_cmd, skip)
     end
 end
 
@@ -718,6 +784,12 @@ return Csearch
 -- local duration_ms = (end_time - start_time) / 1e6
 -- print(string.format("hl_forward took %.2f ms", duration_ms))
 
+-- TODO: The issue has come up again where t cmds cannot roll over the starts and ends of lines
+-- This can be observed by doing t near the top of this file, You can't go backwards over the
+-- n at the end of vim.fn, and you can't go forwards over an the n in nvim at the begnning of a
+-- line
+-- TODO: Add an on_jump callback to the csearch and rev opts
+-- TODO: For the getcharsearch and setcharsearch data, use vim's builtin datatypes consistently
 -- TODO: Add visual selection voodoo so this works in omode
 -- TODO: line 1: this is a length
 --       line 2: some other line
@@ -787,6 +859,10 @@ return Csearch
 -- code, but the annotation looks wrong
 -- - The docs talk about setting skipcc to one, but the variable in Lua takes a boolean. Unsure
 -- what the cause of the mis-match here is
+-- PR: setcharsearch has an incorrect type annotation. The input should be:
+-- string|{ char: string, forward: integer, until: integer }
+-- But is currently string. I think the params definition in src/nvim/eval.lua, and then run
+-- a make cmd to re-generate runtime/lua/vim/_meta/vimfn.lua
 -- PR: It would be cool if Neovim provided some kind of clear_plugin_highlights function that
 -- plugins could register with. That way, users couldn't have to create bespoke highlight clearing
 -- for every plugin (that said, how does Flash do it?)

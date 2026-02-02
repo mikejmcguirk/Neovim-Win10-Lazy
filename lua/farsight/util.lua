@@ -60,6 +60,20 @@ function Util._list_filter(t, f)
     end
 end
 
+-- PR: Spot checking, this moves about the same speed as or more quickly than table.remove for
+-- lists
+
+---@param t any[]
+---@param idx integer
+function Util._list_remove_item(t, idx)
+    local len = #t
+    for i = idx + 1, len do
+        t[i - 1] = t[i]
+    end
+
+    t[len] = nil
+end
+
 -- Per mini.jump2d, while nvim_tabpage_list_wins does currently ensure proper window layout, this
 -- is not documented behavior and thus can change. The below function ensures layout
 ---@param wins integer[]
@@ -134,6 +148,21 @@ function Util._resolve_bool_opt(opt, default)
     end
 end
 
+---@param opt any
+---@param gvar string
+---@return any
+function Util._use_g_if_nil(opt, gvar)
+    if vim.g[gvar] == nil then
+        return opt
+    end
+
+    if opt == nil then
+        return vim.g[gvar]
+    else
+        return opt
+    end
+end
+
 ---@class farsight.util.ValidateListOpts
 ---@field len? integer
 ---@field max_len? integer
@@ -151,28 +180,34 @@ function Util._validate_list(list, opts)
 
     vim.validate("list", list, vim.islist, "Must be a valid list")
 
-    if opts.len then
+    local list_len = #list
+    local len = opts.len
+
+    if len then
         vim.validate("list", list, function()
-            return #list == opts.len
-        end, "List length must be " .. opts.len)
+            return list_len == len
+        end, "List length must be " .. len)
     end
 
-    if opts.min_len then
+    local min_len = opts.min_len
+    if min_len then
         vim.validate("list", list, function()
-            return #list >= opts.min_len
-        end, "List length must be at least" .. opts.min_len)
+            return list_len >= min_len
+        end, "List length must be at least" .. min_len)
     end
 
-    if opts.max_len then
+    local max_len = opts.max_len
+    if max_len then
         vim.validate("list", list, function()
-            return #list <= opts.max_len
-        end, "List length cannot be greater than " .. opts.max_len)
+            return list_len <= max_len
+        end, "List length cannot be greater than " .. max_len)
     end
 
-    if opts.item_type then
+    local item_type = opts.item_type
+    if item_type then
         for _, item in ipairs(list) do
-            local err_str = "List items must be type " .. opts.item_type
-            vim.validate("item", item, opts.item_type, err_str)
+            local err_str = "List items must be type " .. item_type
+            vim.validate("item", item, item_type, err_str)
         end
     end
 end
@@ -180,8 +215,22 @@ end
 ---@param n integer|nil
 ---@param optional? boolean
 ---@return nil
+function Util._validate_int(n, optional)
+    if n == nil and optional then
+        return
+    end
+
+    vim.validate("num", n, "number")
+    vim.validate("num", n, function()
+        return n % 1 == 0
+    end, "Num is not an integer")
+end
+
+---@param n integer|nil
+---@param optional? boolean
+---@return nil
 function Util._validate_uint(n, optional)
-    if type(n) == "nil" and optional then
+    if n == nil and optional then
         return
     end
 
