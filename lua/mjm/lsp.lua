@@ -194,6 +194,8 @@ local function set_lsp_maps(ev)
                 })
             end,
         })
+
+        -- vim.lsp.codelens.enable()
     end
 
     -- textDocument/declaration --
@@ -230,6 +232,7 @@ local function set_lsp_maps(ev)
     set("n", "grI", peek_implementation, { buffer = buf })
 
     -- textDocument/inlayHint --
+    -- TODO: If grl becomes codelens, make this grx for inlay teXt
     if client:supports_method("textDocument/inlayHint") then
         set("n", "grl", function()
             lsp.inlay_hint.enable(not lsp.inlay_hint.is_enabled({ buffer = buf }))
@@ -386,6 +389,8 @@ end
 -- MID: If you have an LSP, it should be possible to type something like grv and replace a variable
 -- with its corresponding literal. I think rust-analyzer has this as a code action. Is there a more
 -- generalizable way to do it
+-- MID: It should be possible to send all occurrences of a symbol within a scope to the qflist or
+-- something. documentHighlight detects this properly, so...
 
 -- LOW: LspInfo is an alias for checkhealth vim.lsp, and there is a project to upstream cmds from
 -- nvim-lspconfig to core. Unsure of where that will eventually land

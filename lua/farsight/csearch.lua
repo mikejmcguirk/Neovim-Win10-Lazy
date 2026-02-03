@@ -408,51 +408,56 @@ local function hl_backward(cur_pos, buf, tokens, max_hl_steps)
     highlight_labels(buf, labels)
 end
 
+---Returns cursor indexed row, col
 ---@param this_line string
+---@param init integer
 ---@param row integer
 ---@param input string
 ---@param count integer
----@param found_pos { [1]: integer, [2]: integer }|nil
----@return integer, { [1]: integer, [2]: integer }|nil
-local function csearch_line_forward(this_line, row, input, count, found_pos)
-    local search_pos = 1
-
+---@param pos { [1]: integer, [2]: integer }
+---@return integer, { [1]: integer, [2]: integer }
+local function csearch_line_forward(this_line, init, row, input, count, pos)
     local find = string.find
+    local input_len = #input
     while count > 0 do
-        local start = find(this_line, input, search_pos, true)
-        if not start then
+        local start = find(this_line, input, init, true)
+        if start == nil then
             break
         end
 
         count = count - 1
-        local start_0 = start - 1 ---@type integer
-        found_pos = { row, start_0 }
-        search_pos = start + #input
+        pos[1] = row
+        pos[2] = start - 1
+        init = start + input_len
     end
 
-    return count, found_pos
+    return count, pos
 end
 
 ---@param buf integer
 ---@param pos { [1]: integer, [2]: integer }
+---@return { [1]: integer, [2]: integer }
 local function handle_t_cmd(buf, pos)
     local row = pos[1]
     local col = pos[2]
     local nvim_buf_get_lines = api.nvim_buf_get_lines
 
+    -- LOW: Is it better to keep the line in pos than to re-query it?
     local line = nvim_buf_get_lines(buf, row - 1, row, false)[1]
-    local char_idx = fn.charidx(line, col)
+    local charidx = fn.charidx(line, col)
 
-    if char_idx > 1 then
-        pos[2] = fn.byteidx(line, char_idx - 1)
+    if charidx > 1 then
+        pos[2] = fn.byteidx(line, charidx - 1)
     else
-        pos[1] = row - 1
+        local prev_row = row - 1
+        pos[1] = math.max(prev_row, 1)
 
-        local prev_line = nvim_buf_get_lines(buf, row - 1, row, false)[1]
-        local strcharlen = fn.strcharlen(prev_line)
+        local prev_line = nvim_buf_get_lines(buf, prev_row - 1, prev_row, false)[1]
+        local strcharlen = fn.strcharlen(prev_line) ---@type integer
         pos[2] = fn.byteidx(prev_line, math.max(strcharlen - 1, 0))
     end
 
+    -- MAYBE: Technically pointless, but maintains consistency with the csearch_line functions
     return pos
 end
 
@@ -464,33 +469,51 @@ end
 ---@param t_cmd integer
 ---@param t_cmd_skip boolean
 local function csearch_forward(count, win, cur_pos, buf, input, t_cmd, t_cmd_skip)
-    local found_pos = nil ---@type { [1]: integer, [2]: integer }|nil
-
-    local row = cur_pos[1]
-    local col = cur_pos[2]
+    local byteidx = fn.byteidx
     local foldclosed = fn.foldclosed
     local nvim_buf_get_lines = api.nvim_buf_get_lines
-    if foldclosed(row) == -1 then
-        local cur_line = nvim_buf_get_lines(buf, row - 1, row, false)[1]
-        local charidx = fn.charidx(cur_line, col)
-        local char = fn.strcharpart(cur_line, charidx, 1, true) ---@type string
-        local col_after_cursor_1 = col + #char + 1
 
-        if t_cmd == 1 and t_cmd_skip then
-            local col_after_cursor = col_after_cursor_1 - 1
-            local next_charidx = fn.charidx(cur_line, col_after_cursor)
-            local next_char = fn.strcharpart(cur_line, next_charidx, 1, true)
-            if next_char == input then
-                col_after_cursor_1 = col_after_cursor_1 + #next_char
+    -- TODO: Why is cur_pos being passed in as a table just to be immediately broken up?
+    local row = cur_pos[1]
+    local col = cur_pos[2]
+    local cur_line = nvim_buf_get_lines(buf, row - 1, row, false)[1]
+    local cur_charidx = fn.charidx(cur_line, col)
+
+    local charlen = fn.strcharlen(cur_line) ---@type integer
+    local valid_line = foldclosed(row) == -1 and charlen > 1
+    local last_byteidx = byteidx(cur_line, math.max(charlen - 1, 0))
+    local search_cur_line = valid_line and col ~= last_byteidx
+
+    if t_cmd == 1 and t_cmd_skip then
+        if search_cur_line then
+            local next_charidx = cur_charidx + 1
+            if fn.strcharpart(cur_line, next_charidx, 1, true) == input then
+                cur_charidx = next_charidx
+                col = byteidx(cur_line, next_charidx)
+                search_cur_line = col ~= last_byteidx
+            end
+        else
+            local next_row = math.min(row + 1, api.nvim_buf_line_count(buf))
+            if next_row == row then
+                return
+            end
+
+            -- LOW: Wasteful if starcharpart ~= input, as the loop grabs this again
+            local next_line = nvim_buf_get_lines(buf, row, next_row, false)[1]
+            if fn.strcharpart(next_line, 0, 1, true) == input then
+                row = next_row
+                col = 0
+                cur_line = next_line
+                cur_charidx = 0
+                search_cur_line = true
             end
         end
+    end
 
-        -- Allow "" substrings if col_after_cursor_1 > #cur_line
-        local line_after = string.sub(cur_line, col_after_cursor_1)
-        count, found_pos = csearch_line_forward(line_after, row, input, count, found_pos)
-        if found_pos then
-            found_pos[2] = found_pos[2] + (#cur_line - #line_after)
-        end
+    local pos = {} ---@type { [1]: integer, [2]: integer }
+    if search_cur_line then
+        local next_col_1 = byteidx(cur_line, cur_charidx + 1) + 1
+        count, pos = csearch_line_forward(cur_line, next_col_1, row, input, count, pos)
     end
 
     local i = row + 1
@@ -498,19 +521,18 @@ local function csearch_forward(count, win, cur_pos, buf, input, t_cmd, t_cmd_ski
     while i <= bot and count > 0 do
         if foldclosed(i) == -1 then
             local this_line = nvim_buf_get_lines(buf, i - 1, i, false)[1]
-            count, found_pos = csearch_line_forward(this_line, i, input, count, found_pos)
+            count, pos = csearch_line_forward(this_line, 1, i, input, count, pos)
         end
 
         i = i + 1
     end
 
-    if found_pos then
+    if #pos == 2 then
         if t_cmd == 1 then
-            handle_t_cmd(buf, found_pos)
+            pos = handle_t_cmd(buf, pos)
         end
 
-        api.nvim_win_set_cursor(win, found_pos)
-        -- api.nvim_cmd({ cmd = "norm", args = { "zv" }, bang = true }, {})
+        api.nvim_win_set_cursor(win, pos)
     end
 end
 
@@ -518,35 +540,40 @@ end
 
 ---Returns cursor indexed row, col
 ---@param line string
+---@param init integer
 ---@param row integer
 ---@param input string
 ---@param count integer
----@param found_pos { [1]: integer, [2]: integer }|nil
----@return integer, { [1]: integer, [2]: integer }|nil
-local function csearch_line_backward(line, row, input, count, found_pos)
-    -- TODO: Profile this
-    if #line == 0 then
-        return count, found_pos
-    end
-
+---@param found_pos { [1]: integer, [2]: integer }
+---@return integer, { [1]: integer, [2]: integer }
+local function csearch_line_rev(line, init, row, input, count, found_pos)
     local reverse = string.reverse
     local rev_line = reverse(line)
     local rev_input = reverse(input)
-    local search_pos = 1
 
-    local find = string.find
     local line_len = #line
     local input_len = #input
+
+    local min_start_rev = line_len - input_len + 2 - init
+    if min_start_rev < 1 then
+        min_start_rev = 1
+    end
+
+    local search_pos = min_start_rev
+    local find = string.find
+
     while count > 0 do
-        local rev_start = find(rev_line, rev_input, search_pos, true)
-        if not rev_start then
+        local start = find(rev_line, rev_input, search_pos, true)
+        if not start then
             break
         end
 
         count = count - 1
-        local start_0 = line_len - (rev_start + input_len - 1)
+
+        local start_0 = line_len - start - input_len + 1
         found_pos = { row, start_0 }
-        search_pos = rev_start + #rev_input
+
+        search_pos = start + input_len
     end
 
     return count, found_pos
@@ -577,28 +604,48 @@ end
 ---@param t_cmd integer
 ---@param t_cmd_skip boolean
 local function csearch_backward(count, win, cur_pos, buf, input, t_cmd, t_cmd_skip)
-    local found_pos = nil ---@type { [1]: integer, [2]: integer }|nil
+    local byteidx = fn.byteidx
+    local foldclosed = fn.foldclosed
+    local nvim_buf_get_lines = api.nvim_buf_get_lines
 
     local row = cur_pos[1]
     local col = cur_pos[2]
-    local foldclosed = fn.foldclosed
-    local nvim_buf_get_lines = api.nvim_buf_get_lines
-    if foldclosed(row) == -1 and col > 0 then
-        local cur_line = nvim_buf_get_lines(buf, row - 1, row, false)[1]
-        local col_before_cursor_1 = col
+    local cur_line = nvim_buf_get_lines(buf, row - 1, row, false)[1]
+    local cur_charidx = fn.charidx(cur_line, col)
+    local search_cur_line = foldclosed(row) == -1 and cur_charidx > 0
 
-        if t_cmd == 1 and t_cmd_skip then
-            local col_before_cursor = col_before_cursor_1 - 1
-            local prev_charidx = fn.charidx(cur_line, col_before_cursor)
+    if t_cmd == 1 and t_cmd_skip then
+        if search_cur_line then
+            local prev_charidx = cur_charidx - 1
             if fn.strcharpart(cur_line, prev_charidx, 1, true) == input then
-                col_before_cursor = fn.byteidx(cur_line, prev_charidx) - 1
-                col_before_cursor_1 = col_before_cursor + 1
+                cur_charidx = prev_charidx
+                col = byteidx(cur_line, prev_charidx)
+                search_cur_line = cur_charidx > 0
+            end
+        else
+            local prev_row = math.max(row - 1, 1)
+            if prev_row == row then
+                return
+            end
+
+            -- LOW: Wasteful if starcharpart ~= input, as the loop grabs this again
+            local prev_line = nvim_buf_get_lines(buf, prev_row - 1, prev_row, false)[1]
+            local charlen = fn.strcharlen(cur_line) ---@type integer
+            local last_byteidx = byteidx(prev_line, math.max(charlen - 1, 0))
+            if fn.strcharpart(prev_line, last_byteidx, 1, true) == input then
+                row = prev_row
+                col = last_byteidx
+                cur_line = prev_line
+                cur_charidx = fn.charidx(prev_line, last_byteidx)
+                search_cur_line = true
             end
         end
+    end
+    -- TODO: finish polishing the reverse function
 
-        -- Allow "" substring if before_end_1 < 1
-        local line_before = string.sub(cur_line, 1, col_before_cursor_1)
-        count, found_pos = csearch_line_backward(line_before, row, input, count, found_pos)
+    local pos = {} ---@type { [1]: integer, [2]: integer }
+    if search_cur_line then
+        count, pos = csearch_line_rev(cur_line, col, row, input, count, pos)
     end
 
     local i = row - 1
@@ -606,19 +653,21 @@ local function csearch_backward(count, win, cur_pos, buf, input, t_cmd, t_cmd_sk
     while i >= top and count > 0 do
         if foldclosed(i) == -1 then
             local this_line = nvim_buf_get_lines(buf, i - 1, i, false)[1]
-            count, found_pos = csearch_line_backward(this_line, i, input, count, found_pos)
+            count, pos = csearch_line_rev(this_line, #this_line, i, input, count, pos)
         end
 
         i = i - 1
     end
 
-    if found_pos then
+    if #pos == 2 then
         if t_cmd == 1 then
-            found_pos = handle_t_cmd_rev(buf, found_pos)
+            pos = handle_t_cmd_rev(buf, pos)
         end
 
-        api.nvim_win_set_cursor(win, found_pos)
-        -- api.nvim_cmd({ cmd = "norm", args = { "zv" }, bang = true }, {})
+        -- TODO: There needs to be a goto_jump function here that handles jumping. This needs to
+        -- handle going to visual for omode, the on_jump callback, as well as adjusting the pos
+        -- to the end of the character for visual (I think, needs to be confirmed)
+        api.nvim_win_set_cursor(win, pos)
     end
 end
 
@@ -787,7 +836,8 @@ return Csearch
 -- TODO: The issue has come up again where t cmds cannot roll over the starts and ends of lines
 -- This can be observed by doing t near the top of this file, You can't go backwards over the
 -- n at the end of vim.fn, and you can't go forwards over an the n in nvim at the begnning of a
--- line
+-- line. What's tough is that you have to change the structure because the t skip across lines
+-- can't build on the normal result
 -- TODO: Add an on_jump callback to the csearch and rev opts
 -- TODO: For the getcharsearch and setcharsearch data, use vim's builtin datatypes consistently
 -- TODO: Add visual selection voodoo so this works in omode

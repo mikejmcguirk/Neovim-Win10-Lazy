@@ -221,7 +221,6 @@ local resize_maps = {
 
 for _, m in ipairs(resize_maps) do
     set("n", m[1], function()
-        ---@diagnostic disable-next-line: missing-fields
         resize_win({ cmd = "resize", args = { m[2] }, mods = { silent = true, vertical = m[3] } })
     end)
 end

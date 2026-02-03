@@ -163,6 +163,12 @@ for _, map in ipairs(csearch_maps) do
     end
 end
 
+-- TODO: Need to be able to use b:vars to control options. Reasoning: for certain buffers types
+-- users might want certain defaults without having to setup new mappings. Could highlight groups
+-- be included as well? (Additionally, the default jump behaviors need to be rolled up so that
+-- they can be overridden. So the word finding logic needs to be an internalized if. Same with
+-- windows. And whatever else. The user should not need to make bespoke mappings to set per
+-- buffer defaults with autocmds)
 -- TODO: Think more deeply about how control characters are handled
 
 -- LOW: Is there a good way to allow jump's locator and wins opts to be controlled by g:vars?
