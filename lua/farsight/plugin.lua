@@ -60,28 +60,28 @@ local plugs = {
         end,
     },
     {
-        { "n", "x" },
+        { "n", "x", "o" },
         "<Plug>(Farsight-CsearchF-Forward)",
         function()
             require("farsight.csearch").csearch({ actions = actions_forward })
         end,
     },
     {
-        { "n", "x" },
+        { "n", "x", "o" },
         "<Plug>(Farsight-CsearchF-Backward)",
         function()
             require("farsight.csearch").csearch({ actions = actions_backward, forward = 0 })
         end,
     },
     {
-        { "n", "x" },
+        { "n", "x", "o" },
         "<Plug>(Farsight-CsearchT-Forward)",
         function()
             require("farsight.csearch").csearch({ actions = actions_forward, t_cmd = 1 })
         end,
     },
     {
-        { "n", "x" },
+        { "n", "x", "o" },
         "<Plug>(Farsight-CsearchT-Backward)",
         function()
             require("farsight.csearch").csearch({
@@ -92,7 +92,7 @@ local plugs = {
         end,
     },
     {
-        { "n", "x" },
+        { "n", "x", "o" },
         "<Plug>(Farsight-CsearchRep-Forward)",
         function()
             require("farsight.csearch").rep({})
@@ -100,7 +100,7 @@ local plugs = {
     },
     -- TODO: Should reverse also be used as the naming convention for the plugs?
     {
-        { "n", "x" },
+        { "n", "x", "o" },
         "<Plug>(Farsight-CsearchRep-Backward)",
         function()
             require("farsight.csearch").rep({ forward = 0 })
@@ -143,12 +143,12 @@ end
 
 ---@type { [1]: string[], [2]: string, [3]: string }[]
 local csearch_maps = {
-    { { "n", "x" }, "f", "<Plug>(Farsight-CsearchF-Forward)" },
-    { { "n", "x" }, "F", "<Plug>(Farsight-CsearchF-Backward)" },
-    { { "n", "x" }, "t", "<Plug>(Farsight-CsearchT-Forward)" },
-    { { "n", "x" }, "T", "<Plug>(Farsight-CsearchT-Backward)" },
-    { { "n", "x" }, ";", "<Plug>(Farsight-CsearchRep-Forward)" },
-    { { "n", "x" }, ",", "<Plug>(Farsight-CsearchRep-Backward)" },
+    { { "n", "x", "o" }, "f", "<Plug>(Farsight-CsearchF-Forward)" },
+    { { "n", "x", "o" }, "F", "<Plug>(Farsight-CsearchF-Backward)" },
+    { { "n", "x", "o" }, "t", "<Plug>(Farsight-CsearchT-Forward)" },
+    { { "n", "x", "o" }, "T", "<Plug>(Farsight-CsearchT-Backward)" },
+    { { "n", "x", "o" }, ";", "<Plug>(Farsight-CsearchRep-Forward)" },
+    { { "n", "x", "o" }, ",", "<Plug>(Farsight-CsearchRep-Backward)" },
 }
 
 for _, map in ipairs(csearch_maps) do
@@ -168,8 +168,14 @@ end
 -- be included as well? (Additionally, the default jump behaviors need to be rolled up so that
 -- they can be overridden. So the word finding logic needs to be an internalized if. Same with
 -- windows. And whatever else. The user should not need to make bespoke mappings to set per
--- buffer defaults with autocmds)
+-- buffer defaults with autocmds). Should Jump provide the user a way to use an arg to determine
+-- the locator by mode? Or should the user just have to do it per mapping. Makes getting the mode
+-- info wasteful in custom mappings
 -- TODO: Think more deeply about how control characters are handled
+-- TODO: Test everything with and around multibyte chars. It doesn't look like anything special
+-- needs to be done, but need to be sure
+-- TODO: Since ctrl char literals are displayed, maybe allow them to be factored into csearch and
+-- jump
 
 -- LOW: Is there a good way to allow jump's locator and wins opts to be controlled by g:vars?
 -- - Changing either default would break vmode and omode

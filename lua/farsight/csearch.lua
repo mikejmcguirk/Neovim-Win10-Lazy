@@ -299,11 +299,12 @@ local function create_token_counts(is_ascii, tokens, max_hl_steps)
     return token_counts
 end
 
----@param cur_pos { [1]: integer, [2]: integer }
 ---@param buf integer
+---@param row integer
+---@param col integer
 ---@param tokens string[]
 ---@param max_hl_steps integer
-local function hl_forward(cur_pos, buf, tokens, max_hl_steps)
+local function hl_forward(buf, row, col, tokens, max_hl_steps)
     local is_ascii = is_ascii_only(tokens)
     ---@type table<integer, integer>|table<string, integer>
     local token_counts = create_token_counts(is_ascii, tokens, max_hl_steps)
@@ -315,8 +316,6 @@ local function hl_forward(cur_pos, buf, tokens, max_hl_steps)
     local decrement_func = is_ascii and decrement_ascii_word or decrement_utf_word
     local labels = {} ---@type farsight.csearch.TokenLabel[]
 
-    local row = cur_pos[1]
-    local col = cur_pos[2]
     local nvim_buf_get_lines = api.nvim_buf_get_lines
     if fn.foldclosed(row) == -1 then
         local row_0 = row - 1
@@ -356,11 +355,12 @@ local function hl_forward(cur_pos, buf, tokens, max_hl_steps)
     highlight_labels(buf, labels)
 end
 
----@param cur_pos { [1]: integer, [2]: integer }
 ---@param buf integer
+---@param row integer
+---@param col integer
 ---@param tokens string[]
 ---@param max_hl_steps integer
-local function hl_backward(cur_pos, buf, tokens, max_hl_steps)
+local function hl_backward(buf, row, col, tokens, max_hl_steps)
     local is_ascii = is_ascii_only(tokens)
     ---@type table<integer, integer>|table<string, integer>
     local token_counts = create_token_counts(is_ascii, tokens, max_hl_steps)
@@ -372,8 +372,6 @@ local function hl_backward(cur_pos, buf, tokens, max_hl_steps)
     local decrement_func = is_ascii and decrement_ascii_word or decrement_utf_word
     local labels = {} ---@type farsight.csearch.TokenLabel[]
 
-    local row = cur_pos[1]
-    local col = cur_pos[2]
     local row_0 = row - 1
     local nvim_buf_get_lines = api.nvim_buf_get_lines
     if fn.foldclosed(row) == -1 then
@@ -408,15 +406,62 @@ local function hl_backward(cur_pos, buf, tokens, max_hl_steps)
     highlight_labels(buf, labels)
 end
 
+---@param win integer
+---@param buf integer
+---@param pos { [1]: integer, [2]: integer }
+---@param opts farsight.csearch.CsearchOpts
+local function do_cjump(win, buf, pos, opts)
+    if string.sub(api.nvim_get_mode().mode, 1, 2) == "no" then
+        -- TODO: This re-uses the data from and essentially re-creates the logic from the backward
+        -- t_cmd_skip adjustment. The relevant data needs to be passed in so it isn't being
+        -- pulled in duplicate. It also seems like a common function could be re-created that
+        -- returns a row/col for the caller to use
+        if opts.forward == 0 then
+            local cur_pos = api.nvim_win_get_cursor(win)
+            local cur_row = cur_pos[1]
+            local cur_col = cur_pos[2]
+            local cur_line = api.nvim_buf_get_lines(buf, cur_row - 1, cur_row, false)[1]
+            local cur_charidx = fn.charidx(cur_line, cur_col)
+            if cur_charidx > 1 then
+                local prev_byteidx = fn.byteidx(cur_line, cur_charidx - 1)
+                api.nvim_win_set_cursor(win, { cur_row, prev_byteidx })
+            else
+                local prev_row = math.max(cur_row - 1, 1)
+                -- TODO: With the defaults, if you are on the first character if the first line,
+                -- the backward motion is a noop. That behavior should be re-created here
+                if prev_row < cur_row then
+                    local prev_line = api.nvim_buf_get_lines(buf, prev_row - 1, prev_row, false)[1]
+                    local prev_last_charidx = fn.strcharlen(prev_line) - 1
+                    local prev_last_byteidx = fn.byteidx(prev_line, prev_last_charidx)
+                    api.nvim_win_set_cursor(win, { prev_row, prev_last_byteidx })
+                end
+            end
+        end
+
+        api.nvim_cmd({ cmd = "norm", args = { "v" }, bang = true }, {})
+        if vim.o.selection == "exclusive" then
+            local row = pos[1]
+            local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
+            pos[2] = math.min(pos[2] + 1, math.max(#line - 1, 0))
+        end
+    end
+
+    api.nvim_win_set_cursor(win, pos)
+    local on_cjump = opts.on_cjump
+    if on_cjump then
+        on_cjump(win, buf, pos)
+    end
+end
+
 ---Returns cursor indexed row, col
 ---@param this_line string
----@param init integer
----@param row integer
+---@param init integer See string.sub
+---@param row integer Cursor indexed
 ---@param input string
 ---@param count integer
 ---@param pos { [1]: integer, [2]: integer }
 ---@return integer, { [1]: integer, [2]: integer }
-local function csearch_line_forward(this_line, init, row, input, count, pos)
+local function csearch_line(this_line, init, row, input, count, pos)
     local find = string.find
     local input_len = #input
     while count > 0 do
@@ -463,27 +508,25 @@ end
 
 ---@param count integer
 ---@param win integer
----@param cur_pos { [1]: integer, [2]: integer }
 ---@param buf integer
+---@param row integer
+---@param col integer
 ---@param input string
----@param t_cmd integer
----@param t_cmd_skip boolean
-local function csearch_forward(count, win, cur_pos, buf, input, t_cmd, t_cmd_skip)
+---@param opts farsight.csearch.CsearchOpts
+local function csearch_fwd(count, win, buf, row, col, input, opts)
     local byteidx = fn.byteidx
     local foldclosed = fn.foldclosed
     local nvim_buf_get_lines = api.nvim_buf_get_lines
 
-    -- TODO: Why is cur_pos being passed in as a table just to be immediately broken up?
-    local row = cur_pos[1]
-    local col = cur_pos[2]
     local cur_line = nvim_buf_get_lines(buf, row - 1, row, false)[1]
     local cur_charidx = fn.charidx(cur_line, col)
-
     local charlen = fn.strcharlen(cur_line) ---@type integer
     local valid_line = foldclosed(row) == -1 and charlen > 1
     local last_byteidx = byteidx(cur_line, math.max(charlen - 1, 0))
     local search_cur_line = valid_line and col ~= last_byteidx
 
+    local t_cmd = opts.t_cmd
+    local t_cmd_skip = opts.t_cmd_skip
     if t_cmd == 1 and t_cmd_skip then
         if search_cur_line then
             local next_charidx = cur_charidx + 1
@@ -513,7 +556,7 @@ local function csearch_forward(count, win, cur_pos, buf, input, t_cmd, t_cmd_ski
     local pos = {} ---@type { [1]: integer, [2]: integer }
     if search_cur_line then
         local next_col_1 = byteidx(cur_line, cur_charidx + 1) + 1
-        count, pos = csearch_line_forward(cur_line, next_col_1, row, input, count, pos)
+        count, pos = csearch_line(cur_line, next_col_1, row, input, count, pos)
     end
 
     local i = row + 1
@@ -521,7 +564,7 @@ local function csearch_forward(count, win, cur_pos, buf, input, t_cmd, t_cmd_ski
     while i <= bot and count > 0 do
         if foldclosed(i) == -1 then
             local this_line = nvim_buf_get_lines(buf, i - 1, i, false)[1]
-            count, pos = csearch_line_forward(this_line, 1, i, input, count, pos)
+            count, pos = csearch_line(this_line, 1, i, input, count, pos)
         end
 
         i = i + 1
@@ -532,51 +575,42 @@ local function csearch_forward(count, win, cur_pos, buf, input, t_cmd, t_cmd_ski
             pos = handle_t_cmd(buf, pos)
         end
 
-        api.nvim_win_set_cursor(win, pos)
+        do_cjump(win, buf, pos, opts)
     end
 end
 
--- Reversing the string performs about as well as iterating forward through repeated calls to find
-
----Returns cursor indexed row, col
 ---@param line string
----@param init integer
----@param row integer
+---@param init integer See string.find
+---@param row integer 1 indexed
 ---@param input string
 ---@param count integer
----@param found_pos { [1]: integer, [2]: integer }
----@return integer, { [1]: integer, [2]: integer }
-local function csearch_line_rev(line, init, row, input, count, found_pos)
+---@param pos { [1]: integer, [2]: integer } Cursor indexed
+---@return integer, { [1]: integer, [2]: integer } Cursor indexed
+local function csearch_line_rev(line, init, row, input, count, pos)
     local reverse = string.reverse
     local rev_line = reverse(line)
     local rev_input = reverse(input)
 
     local line_len = #line
     local input_len = #input
+    local rev_init = 1 + (line_len - init)
 
-    local min_start_rev = line_len - input_len + 2 - init
-    if min_start_rev < 1 then
-        min_start_rev = 1
-    end
-
-    local search_pos = min_start_rev
     local find = string.find
-
     while count > 0 do
-        local start = find(rev_line, rev_input, search_pos, true)
+        local start = find(rev_line, rev_input, rev_init, true)
         if not start then
             break
         end
 
         count = count - 1
-
         local start_0 = line_len - start - input_len + 1
-        found_pos = { row, start_0 }
+        pos[1] = row
+        pos[2] = start_0
 
-        search_pos = start + input_len
+        rev_init = start + input_len
     end
 
-    return count, found_pos
+    return count, pos
 end
 
 ---@param buf integer
@@ -589,7 +623,7 @@ local function handle_t_cmd_rev(buf, pos)
     if char_idx < fn.strcharlen(line) - 1 then
         pos[2] = fn.byteidx(line, char_idx + 1)
     else
-        pos[1] = pos[1] + 1
+        pos[1] = math.min(pos[1] + 1, api.nvim_buf_line_count(buf))
         pos[2] = 0
     end
 
@@ -598,22 +632,24 @@ end
 
 ---@param count integer
 ---@param win integer
----@param cur_pos { [1]: integer, [2]: integer }
 ---@param buf integer
+---@param row integer
+---@param col integer
 ---@param input string
----@param t_cmd integer
----@param t_cmd_skip boolean
-local function csearch_backward(count, win, cur_pos, buf, input, t_cmd, t_cmd_skip)
+---@param opts farsight.csearch.CsearchOpts
+local function csearch_rev(count, win, buf, row, col, input, opts)
     local byteidx = fn.byteidx
     local foldclosed = fn.foldclosed
     local nvim_buf_get_lines = api.nvim_buf_get_lines
 
-    local row = cur_pos[1]
-    local col = cur_pos[2]
     local cur_line = nvim_buf_get_lines(buf, row - 1, row, false)[1]
+    -- Can't just check col > 0. While non-standard, it is possible for the cursor to be in the
+    -- middle of a multibyte character
     local cur_charidx = fn.charidx(cur_line, col)
     local search_cur_line = foldclosed(row) == -1 and cur_charidx > 0
 
+    local t_cmd = opts.t_cmd
+    local t_cmd_skip = opts.t_cmd_skip
     if t_cmd == 1 and t_cmd_skip then
         if search_cur_line then
             local prev_charidx = cur_charidx - 1
@@ -630,18 +666,18 @@ local function csearch_backward(count, win, cur_pos, buf, input, t_cmd, t_cmd_sk
 
             -- LOW: Wasteful if starcharpart ~= input, as the loop grabs this again
             local prev_line = nvim_buf_get_lines(buf, prev_row - 1, prev_row, false)[1]
-            local charlen = fn.strcharlen(cur_line) ---@type integer
-            local last_byteidx = byteidx(prev_line, math.max(charlen - 1, 0))
+            local charlen = fn.strcharlen(prev_line) ---@type integer
+            local last_charidx = math.max(charlen - 1, 0)
+            local last_byteidx = byteidx(prev_line, last_charidx)
             if fn.strcharpart(prev_line, last_byteidx, 1, true) == input then
                 row = prev_row
                 col = last_byteidx
                 cur_line = prev_line
-                cur_charidx = fn.charidx(prev_line, last_byteidx)
+                cur_charidx = last_charidx
                 search_cur_line = true
             end
         end
     end
-    -- TODO: finish polishing the reverse function
 
     local pos = {} ---@type { [1]: integer, [2]: integer }
     if search_cur_line then
@@ -664,19 +700,15 @@ local function csearch_backward(count, win, cur_pos, buf, input, t_cmd, t_cmd_sk
             pos = handle_t_cmd_rev(buf, pos)
         end
 
-        -- TODO: There needs to be a goto_jump function here that handles jumping. This needs to
-        -- handle going to visual for omode, the on_jump callback, as well as adjusting the pos
-        -- to the end of the character for visual (I think, needs to be confirmed)
-        api.nvim_win_set_cursor(win, pos)
+        do_cjump(win, buf, pos, opts)
     end
 end
 
 ---@param opts farsight.csearch.CsearchOpts
-local function resolve_csearch_opts(opts)
+local function resolve_csearch_opts(opts, cur_buf)
     vim.validate("opts", opts, "table")
     local ut = require("farsight.util")
 
-    -- TODO: Do we make jump on enter a default? What does <cr> do by default?
     opts.actions = opts.actions or {}
     vim.validate("opts.actions", opts.actions, "table")
     for k, v in pairs(opts.actions) do
@@ -684,24 +716,35 @@ local function resolve_csearch_opts(opts)
         vim.validate("v", v, "callable")
     end
 
+    -- TODO: Maybe document that there's no g:var for this.
     opts.forward = opts.forward or 1
     vim.validate("opts.forward", opts.forward, function()
         return opts.forward == 0 or opts.forward == 1
     end, "opts.forward must be 0 or 1")
 
-    opts.hl = ut._resolve_bool_opt(opts.hl, true)
-    vim.validate("opts.hl", opts.hl, "boolean")
+    opts.show_hl = ut._use_gb_if_nil(opts.show_hl, "farsight_csearch_use_hl", cur_buf)
+    opts.show_hl = ut._resolve_bool_opt(opts.show_hl, true)
+    vim.validate("opts.hl", opts.show_hl, "boolean")
 
+    -- TODO: Maybe document that there's no g:var for this.
     opts.t_cmd = opts.t_cmd or 0
     vim.validate("opts.t_cmd", opts.t_cmd, function()
         return opts.t_cmd == 0 or opts.t_cmd == 1
     end, "opts.t_cmd must be 0 or 1")
 
-    opts.tokens = opts.tokens or TOKENS
-    ut._validate_list(opts.tokens, { item_type = "string" })
-    require("farsight.util")._list_dedup(opts.tokens)
-    ut._validate_list(opts.tokens, { min_len = 2 })
+    -- TODO: Document that, for ;/, the cpo option should be used
+    opts.t_cmd_skip = ut._use_gb_if_nil(opts.t_cmd_skip, "farsight_csearch_t_cmd_skip_ft", cur_buf)
+    opts.t_cmd_skip = ut._resolve_bool_opt(opts.t_cmd_skip, false)
+    vim.validate("opts.t_cmd_skip", opts.t_cmd_skip, "boolean")
 
+    opts.hl_tokens = ut._use_gb_if_nil(opts.hl_tokens, "farsight_csearch_hl_tokens", cur_buf)
+    opts.hl_tokens = opts.hl_tokens or TOKENS
+    ut._validate_list(opts.hl_tokens, { item_type = "string" })
+    require("farsight.util")._list_dedup(opts.hl_tokens)
+    ut._validate_list(opts.hl_tokens, { min_len = 2 })
+
+    local gb_max_hl_steps = "farsight_csearch_max_hl_steps"
+    opts.max_hl_steps = ut._use_gb_if_nil(opts.max_hl_steps, gb_max_hl_steps, cur_buf)
     opts.max_hl_steps = opts.max_hl_steps or DEFAULT_MAX_HL_STEPS
     ut._validate_uint(opts.max_hl_steps)
     opts.max_hl_steps = math.min(opts.max_hl_steps, MAX_MAX_HL_STEPS)
@@ -710,34 +753,39 @@ end
 ---@class farsight.Csearch
 local Csearch = {}
 
--- TODO: Document this
--- TODO: No reason for this not to have the option to skip
+-- TODO: Document these
 -- TODO: For actions, document that all inputs are simplified, even if manually unsimplified
 
----@class farsight.csearch.CsearchOpts
----@field actions? table<string, fun()>
+---@class farsight.csearch.BaseOpts
 ---@field forward? integer
----@field hl? boolean
+---@field on_cjump? fun(win: integer, buf: integer, pos: { [1]: integer, [2]: integer })
+---@field t_cmd_skip? boolean
+
+---@class farsight.csearch.CsearchOpts : farsight.csearch.BaseOpts
+---@field actions? table<string, fun()>
+---@field hl_tokens? string[]
 ---@field max_hl_steps? integer
+---@field show_hl? boolean
 ---@field t_cmd? integer
----@field tokens? string[]
 
 ---@param opts? farsight.csearch.CsearchOpts
 function Csearch.csearch(opts)
     opts = opts and vim.deepcopy(opts, true) or {}
-    resolve_csearch_opts(opts)
-
     local cur_win = api.nvim_get_current_win()
-    local cur_pos = api.nvim_win_get_cursor(cur_win)
     local cur_buf = api.nvim_win_get_buf(cur_win)
+    resolve_csearch_opts(opts, cur_buf)
+
+    local cur_pos = api.nvim_win_get_cursor(cur_win)
+    local row = cur_pos[1]
+    local col = cur_pos[2]
 
     local forward = opts.forward ---@type integer
-    if opts.hl then
+    if opts.show_hl then
         api.nvim__ns_set(HL_NS, { wins = { cur_win } })
         if forward == 1 then
-            hl_forward(cur_pos, cur_buf, opts.tokens, opts.max_hl_steps)
+            hl_forward(cur_buf, row, col, opts.hl_tokens, opts.max_hl_steps)
         else
-            hl_backward(cur_pos, cur_buf, opts.tokens, opts.max_hl_steps)
+            hl_backward(cur_buf, row, col, opts.hl_tokens, opts.max_hl_steps)
         end
 
         api.nvim__redraw({ valid = true })
@@ -772,25 +820,22 @@ function Csearch.csearch(opts)
     })
 
     if forward == 1 then
-        csearch_forward(1, cur_win, cur_pos, cur_buf, input, t_cmd, false)
+        csearch_fwd(vim.v.count1, cur_win, cur_buf, row, col, input, opts)
     else
-        csearch_backward(1, cur_win, cur_pos, cur_buf, input, t_cmd, false)
+        csearch_rev(vim.v.count1, cur_win, cur_buf, row, col, input, opts)
     end
 end
 
----@class farsight.csearch.RepOpts
----@field forward? integer
----@field skip? boolean
-
----@param opts? farsight.csearch.RepOpts
+---@param opts? farsight.csearch.BaseOpts
 function Csearch.rep(opts)
-    opts = opts or {}
+    opts = opts or {} --[[ @as farsight.csearch.CsearchOpts ]]
     opts.forward = opts.forward or 1
     vim.validate("opts.forward", opts.forward, function()
         return opts.forward == 0 or opts.forward == 1
     end, "opts.forward must be 0 or 1")
 
-    vim.validate("opts.skip", opts.skip, "boolean", true)
+    vim.validate("opts.on_cjump", opts.on_cjump, "callable", true)
+    vim.validate("opts.t_cmd_skip", opts.t_cmd_skip, "boolean", true)
 
     ---@type { char: string, forward: integer, until: integer }
     local charsearch = fn.getcharsearch()
@@ -801,15 +846,14 @@ function Csearch.rep(opts)
 
     local cur_win = api.nvim_get_current_win()
     local cur_pos = api.nvim_win_get_cursor(cur_win)
+    local row = cur_pos[1]
+    local col = cur_pos[2]
     local cur_buf = api.nvim_win_get_buf(cur_win)
 
-    -- Bitshifts are LuaJIT only
-    local forward = (opts.forward == 1) and charsearch.forward or (1 - charsearch.forward)
-    local t_cmd = charsearch["until"]
-
-    local skip = (function()
-        if type(opts.skip) ~= "nil" then
-            return opts.skip
+    opts.t_cmd = charsearch["until"]
+    opts.t_cmd_skip = (function()
+        if type(opts.t_cmd_skip) ~= "nil" then
+            return opts.t_cmd_skip
         end
 
         local cpo = api.nvim_get_option_value("cpo", {})
@@ -818,10 +862,12 @@ function Csearch.rep(opts)
     end)()
 
     local count1 = vim.v.count1
+    -- Bitshifts are LuaJIT only
+    local forward = (opts.forward == 1) and charsearch.forward or (1 - charsearch.forward)
     if forward == 1 then
-        csearch_forward(count1, cur_win, cur_pos, cur_buf, char, t_cmd, skip)
+        csearch_fwd(count1, cur_win, cur_buf, row, col, char, opts)
     else
-        csearch_backward(count1, cur_win, cur_pos, cur_buf, char, t_cmd, skip)
+        csearch_rev(count1, cur_win, cur_buf, row, col, char, opts)
     end
 end
 
@@ -833,43 +879,13 @@ return Csearch
 -- local duration_ms = (end_time - start_time) / 1e6
 -- print(string.format("hl_forward took %.2f ms", duration_ms))
 
--- TODO: The issue has come up again where t cmds cannot roll over the starts and ends of lines
--- This can be observed by doing t near the top of this file, You can't go backwards over the
--- n at the end of vim.fn, and you can't go forwards over an the n in nvim at the begnning of a
--- line. What's tough is that you have to change the structure because the t skip across lines
--- can't build on the normal result
--- TODO: Add an on_jump callback to the csearch and rev opts
--- TODO: For the getcharsearch and setcharsearch data, use vim's builtin datatypes consistently
--- TODO: Add visual selection voodoo so this works in omode
--- TODO: line 1: this is a length
---       line 2: some other line
--- Do a t motion to h on line 2, then try to go back. The cursor will stop at the beginning of
--- line 2, which is correct, but it will not then go backward past the h at the end of line 1
--- The initial skip scan then need to also check the end of the last line or the beginning of the
--- next one if you are at the beginning of a line or the end of one
--- Since ctrl char literals are displayed, maybe allow them to be factored into csearch and
--- jump
+-- TODO: If count > 1, the first highlight for any particular letter needs to reflect where it
+-- will actually go. The rest should be based on count1
 -- TODO: The module contains a lot of functions that are only barely different. Now that the code
 -- is actually written, can factor more aggressively
+-- TODO: Try to refactor more aggressively. Still many similar functions
 -- TODO: A lot of this can probably be made to be common with jump
--- TODO: g:vars:
--- - default tokens
--- - max_tokens
--- - inner actions
--- - Map defaults
--- TODO: <Plug> maps: f, t, F, T, ;, ,
--- - EasyMotion fallbacks
--- - 3 hl tokens
--- - Same window
--- Problem: How do you make the inner action map responsive for all? Editing an inner actions
--- var doesn't quite do it because f/t need different actions with different opts. I really do not
--- love having a var for how to map jump by default, as that's an extra thing that doesn't really
--- fit with the default/g/plug/API scheme I have
--- TODO: The enter fallback should be an EasyMotion style f/t. So, uni-directional and restricted
--- to the same window. This would then also require Jump to have a t compensation opt
--- TODO: Rough opinion, and this applies to the jump module too - The default mappings should be
--- what make sense. The Plug maps should be the default settings. And then customization should be
--- done through the APIs.
+-- TODO: Use the gb:var construct for the various opts
 -- TODO: Go through the extmark opts doc to see what works here
 -- TODO: Document that rep() checks cpo for default t skip behavior
 -- TODO: Test/document dot repeat behavior for operators. Should at least match what default f/t
@@ -879,6 +895,9 @@ return Csearch
 -- use saved values. But I'm not sure we can distinguish how we're entering omode, or if there's
 -- a var we can leave behind. Could also add a key listener. Acceptable fallback is to always
 -- prompt. Can also see what other plugins do
+-- TODO: I'm still not completely satisfied with the backup <cr> map, because it still makes
+-- you enter three more keypresses to get somewhere. EasyMotion style f/t makes more sense, but
+-- that feels like something that should be more immediately available.
 
 -- MID: The default tokens should be 'isk' for the current buffer. The isk strings + tokens can
 -- be cached when created for the first time. For subsequent runs, re-query the opt string and
@@ -894,6 +913,18 @@ return Csearch
 -- unexpectedly. For the last line, would be good to be able to stop where it actually displays
 -- MID: For token iteration, is there some kind of Rust-esque optimization where raw bytes can be
 -- iterated over instead of the string/char representations?
+-- MID: Multiple cases where we need to re-pull lines for corrections. Check if adding the line to
+-- pos causes slowdown
+-- MID: The highlighting capability can be extended so that max_hl can go above three. Two
+-- possibilities:
+-- - Accept a table so the highlight groups can be cycled like a rainbow
+-- - Simply highlight anything after three with the last color
+-- The former fits with the more general types of aesthetics users tend to look for, but also not
+-- helpful since it's more keystrokes than just jumping. Whereas the latter is useful for getting
+-- a general idea of where the chars are. A Blocker here is, I'm not sure what other types of
+-- jump functionality I'm building out, that might better address other cases that extended
+-- highlighting could here
+-- MID: Like jump, accept an opt for wins. Default should still just be one win though
 
 -- LOW: Rather than niling tokens that cannot be highlighted, could separately keep track of
 -- how many highlightable tokens remain. Saw slight perf gain when trying this, but not enough to
@@ -913,6 +944,7 @@ return Csearch
 -- string|{ char: string, forward: integer, until: integer }
 -- But is currently string. I think the params definition in src/nvim/eval.lua, and then run
 -- a make cmd to re-generate runtime/lua/vim/_meta/vimfn.lua
+-- PR: Is the return type of getcharsearch correct?
 -- PR: It would be cool if Neovim provided some kind of clear_plugin_highlights function that
 -- plugins could register with. That way, users couldn't have to create bespoke highlight clearing
 -- for every plugin (that said, how does Flash do it?)

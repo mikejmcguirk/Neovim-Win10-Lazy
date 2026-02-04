@@ -195,6 +195,9 @@ local function set_lsp_maps(ev)
             end,
         })
 
+        -- TODO: Under the new module, what happens when codelens.run() is executed with
+        -- codelens disabled? My theory is mapping grl unconditionally could report the disabled
+        -- status to the user and refer to the proper documentation
         -- vim.lsp.codelens.enable()
     end
 

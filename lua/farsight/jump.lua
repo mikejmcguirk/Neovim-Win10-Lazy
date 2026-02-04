@@ -633,8 +633,9 @@ end
 local function resolve_jump_opts(opts, mode, is_omode)
     vim.validate("opts", opts, "table")
     local ut = require("farsight.util")
+    local cur_buf = api.nvim_get_current_buf()
 
-    opts.dim = ut._use_g_if_nil(opts.dim, "farsight_dim")
+    opts.dim = ut._use_gb_if_nil(opts.dim, "farsight_dim", cur_buf)
     opts.dim = ut._resolve_bool_opt(opts.dim, false)
     vim.validate("opts.dim", opts.dim, "boolean")
 
@@ -644,7 +645,7 @@ local function resolve_jump_opts(opts, mode, is_omode)
         return -1 <= opts.dir and opts.dir <= 1
     end, "Dir must be -1, 0, or 1")
 
-    opts.keepjumps = ut._use_g_if_nil(opts.keepjumps, "farsight_keepjumps")
+    opts.keepjumps = ut._use_gb_if_nil(opts.keepjumps, "farsight_keepjumps", cur_buf)
     opts.keepjumps = ut._resolve_bool_opt(opts.keepjumps, false)
     vim.validate("opts.keepjumps", opts.keepjumps, "boolean")
 
@@ -664,14 +665,14 @@ local function resolve_jump_opts(opts, mode, is_omode)
 
     vim.validate("opts.locator", opts.locator, "callable")
 
-    opts.max_tokens = ut._use_g_if_nil(opts.max_tokens, "farsight_max_tokens")
+    opts.max_tokens = ut._use_gb_if_nil(opts.max_tokens, "farsight_max_tokens", cur_buf)
     opts.max_tokens = opts.max_tokens or MAX_TOKENS
     ut._validate_uint(opts.max_tokens)
     vim.validate("opts.max_tokens", opts.max_tokens, function()
         return opts.max_tokens > 0
     end, "max_tokens must be at least one")
 
-    opts.on_jump = ut._use_g_if_nil(opts.on_jump, "farsight_on_jump")
+    opts.on_jump = ut._use_gb_if_nil(opts.on_jump, "farsight_on_jump", cur_buf)
     opts.on_jump = opts.on_jump
         or function(_, _, _)
             api.nvim_cmd({ cmd = "norm", args = { "zv" }, bang = true }, {})
@@ -679,7 +680,7 @@ local function resolve_jump_opts(opts, mode, is_omode)
 
     vim.validate("opts.on_jump", opts.on_jump, "callable")
 
-    opts.tokens = ut._use_g_if_nil(opts.tokens, "farsight_tokens")
+    opts.tokens = ut._use_gb_if_nil(opts.tokens, "farsight_tokens", cur_buf)
     opts.tokens = opts.tokens or TOKENS
     -- LOW: Clumsy validation method
     ut._validate_list(opts.tokens, { item_type = "string" })
@@ -779,6 +780,8 @@ return Jump
 -- TODO: WHen doing default mappings, can the unique flag be used rather than maparg to check if
 -- it's already been mapped?
 -- TODO: Document that backup csearch jumps do not set charsearch
+-- TODO: all_wins needs to be determined within the function body rather than being explicitly
+-- passed in the plug map, this way gbvars can alter it
 
 -- EasyMotion notes:
 -- - EasyMotion replaces a lot of things, like w and f/t
@@ -807,6 +810,13 @@ return Jump
 -- - An issue with Flash's search is that the labels get in the way of the word. Would want to try
 -- to avoid this
 -- - If you hit <cr>, it should behave like search normally does
+-- - If we jump to a specific search term, either with a label or automatically, hlsearch should
+-- stay at zero. hlsearch should only set to 1 if we hit enter (unsure if there are built-in
+-- controls on this to keep in mind. I think of the nohlsearch opt is set even a v value of 1
+-- does nothing)
+-- Concrete use case: I'm working in a function. Jump to somewhere else. Jump back. Cursor position
+-- isn't the same. Unsure exactly where to jump. I want to hit /foo to identify where exactly to
+-- jump
 -- MID: For the backup csearch jump, should jumps from t motions offset?
 
 -- LOW: Would be interesting to test storing the labels as a struct of arrays

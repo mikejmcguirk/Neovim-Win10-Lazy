@@ -137,6 +137,9 @@ function Util._find_cword_at_col(line, col)
     return nil
 end
 
+-- TODO: Should the validation also be in here? It only saves one line per use, but it's used a
+-- lot
+
 ---@param opt boolean|nil
 ---@param default boolean
 ---@return boolean
@@ -149,18 +152,23 @@ function Util._resolve_bool_opt(opt, default)
 end
 
 ---@param opt any
----@param gvar string
+---@param var string
+---@param buf integer
 ---@return any
-function Util._use_g_if_nil(opt, gvar)
-    if vim.g[gvar] == nil then
+function Util._use_gb_if_nil(opt, var, buf)
+    if opt ~= nil then
         return opt
     end
 
-    if opt == nil then
-        return vim.g[gvar]
-    else
-        return opt
+    if vim.b[buf][var] ~= nil then
+        return vim.b[buf][var]
     end
+
+    if vim.g[var] ~= nil then
+        return vim.g[var]
+    end
+
+    return opt
 end
 
 ---@class farsight.util.ValidateListOpts
