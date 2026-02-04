@@ -37,6 +37,7 @@ require("mjm")
 -- https://github.com/tjdevries/lazy-require.nvim
 -- https://neo451.github.io/blog/posts/in-process-lsp-guide/
 -- - vim.pack buffers do this as well
+-- https://github.com/neovim/neovim/issues/16166 - Virt lines above scroll issue
 
 -----------------
 -- OTHER NOTES --

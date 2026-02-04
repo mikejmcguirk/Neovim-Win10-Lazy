@@ -144,61 +144,16 @@ local function set_lsp_maps(ev)
     -- callHierarchy/outgoingCalls --
     set("n", "grc", out_call, { buffer = buf })
 
-    -- textDocument/codeAction --
-    set("n", "gra", code_action, { buffer = buf })
-
     -- TODO: The code actions returned are based on the line scope provided. So asking for actions
     -- for the whole doc could produce different actions than the specific line
     -- grA could be a useful mapping for returning actions scoped to the whole doc. What else
     -- could be addressed?
+    -- textDocument/codeAction --
+    set("n", "gra", code_action, { buffer = buf })
 
     -- textDocument/codeLens --
     if client:supports_method("textDocument/codeLens") then
-        ---@param lens_buf integer
-        ---@param ns integer
-        ---@param lnum integer
-        ---@param chunks [string, string|integer?][]
-        local function on_display(lens_buf, ns, lnum, chunks)
-            api.nvim_buf_clear_namespace(lens_buf, ns, lnum, lnum + 1)
-            if #chunks == 0 then
-                return
-            end
-
-            ---@type integer
-            local indent = api.nvim_buf_call(lens_buf, function()
-                return fn.indent(lnum + 1)
-            end)
-
-            if indent > 0 then
-                local indent_str = string.rep(" ", indent) ---@type string
-                table.insert(chunks, 1, { indent_str, "" })
-            end
-
-            vim.api.nvim_buf_set_extmark(lens_buf, ns, lnum, 0, {
-                virt_lines = { chunks },
-                virt_lines_above = true,
-                hl_mode = "replace", -- Default: 'combine'
-            })
-        end
-
-        local buf_str = tostring(ev.buf) ---@type string
-        local lens_group_name = "mjm-codelens-" .. buf_str ---@type string
-        local lens_group = api.nvim_create_augroup(lens_group_name, {}) ---@type integer
-        api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
-            group = lens_group,
-            buffer = ev.buf,
-            callback = function()
-                vim.lsp.codelens.refresh({
-                    buf = buf,
-                    display = { on_display = on_display },
-                })
-            end,
-        })
-
-        -- TODO: Under the new module, what happens when codelens.run() is executed with
-        -- codelens disabled? My theory is mapping grl unconditionally could report the disabled
-        -- status to the user and refer to the proper documentation
-        -- vim.lsp.codelens.enable()
+        vim.lsp.codelens.enable()
     end
 
     -- textDocument/declaration --
@@ -399,3 +354,7 @@ end
 -- nvim-lspconfig to core. Unsure of where that will eventually land
 -- LOW: For the split use case, FzfLua handles this well enough for it to not be worth worrying
 -- about. Do want to look into how to use winnr as an input to open the result to a specific win
+
+-- PR: In the lens drawing, could be mis-understanding, but does it like tear down and re-create
+-- the namespace for each client? This kind of makes sense because you wouldn't want "X references"
+-- being shown multiple times, but still odd
