@@ -30,10 +30,13 @@ local priority_map = { hl_3rd, hl_2nd, hl_1st } ---@type integer[]
 ---@field [3] integer hl byte length
 ---@field [4] integer hl_group id
 
+-- LOW: This can't be the most efficient way to do this.
+
+---Edits token_counts in place
 ---@param token_counts table<integer, integer>|table<string, integer>
 ---@param remaining integer
 ---@param char integer|string
-local function decrement_token_count(token_counts, remaining, char)
+local function decrement_tokens(token_counts, remaining, char)
     if token_counts[char] > 1 then
         token_counts[char] = remaining - 1
     else
@@ -41,208 +44,220 @@ local function decrement_token_count(token_counts, remaining, char)
     end
 end
 
+---Edits token_counts in place
 ---@param word string
 ---@param token_counts table<integer, integer>|table<string, integer>
-local function decrement_utf_word(word, token_counts)
+local function decrement_utf_tokens(word, token_counts)
     local strcharpart = fn.strcharpart
-    for i = 0, fn.strcharlen(word[1]) - 1 do
+    local last_charidx = fn.strcharlen(word[1]) - 1
+    for i = 0, last_charidx do
         local char = strcharpart(word[1], i, 1, true) ---@type string
         local remaining = token_counts[char] ---@type integer?
         if remaining then
-            decrement_token_count(token_counts, remaining, char)
+            decrement_tokens(token_counts, remaining, char)
         end
     end
 end
 
+---Edits token_counts in place
 ---@param word string
 ---@param token_counts table<integer, integer>|table<string, integer>
-local function decrement_ascii_word(word, token_counts)
+local function decrement_ascii_tokens(word, token_counts)
     local byte = string.byte
-    for i = 1, #word do
+    local len_word = #word
+    for i = 1, len_word do
         local char = byte(word, i)
         local remaining = token_counts[char] ---@type integer?
         if remaining then
-            decrement_token_count(token_counts, remaining, char)
+            decrement_tokens(token_counts, remaining, char)
         end
     end
 end
 
----@param res { [1]: string, [2]: integer, [3]: integer }
----@param token_counts table<integer, integer>|table<string, integer>
----@return integer|nil, integer|nil, integer|nil, integer|nil
-local function utf_counter(res, token_counts)
-    local word = res[1]
-    local charlen = fn.strcharlen(word)
-    local priority = 0
-    local idx
-    local len
-    local hl_id
-
-    local byteidx = fn.byteidx
-    local strcharpart = fn.strcharpart
-    for i = 0, charlen - 1 do
-        local char_start = byteidx(word, i)
-        local char = strcharpart(word, i, 1, true) ---@type string
-        local remaining = token_counts[char] ---@type integer?
-        if remaining then
-            if remaining > priority then
-                priority = remaining
-                idx = char_start
-                len = #char
-                hl_id = priority_map[priority]
-            end
-
-            decrement_token_count(token_counts, remaining, char)
-        end
+---Edits labels in place
+---@param priority integer
+---@param labels farsight.csearch.TokenLabel[]
+---@param row_0 integer
+---@param start integer
+---@param len integer
+---@param hl_id integer
+local function checked_add_label(priority, labels, row_0, start, len, hl_id)
+    if priority > 0 then
+        labels[#labels + 1] = { row_0, start, len, hl_id }
     end
-
-    return priority, idx, len, hl_id
-end
-
----@param res { [1]: string, [2]: integer, [3]: integer }
----@param token_counts table<integer, integer>|table<string, integer>
----@return integer|nil, integer|nil, integer|nil, integer|nil
-local function utf_counter_rev(res, token_counts)
-    local word = res[1]
-    local charlen = fn.strcharlen(word)
-    local priority = 0
-    local idx
-    local len
-    local hl_id
-
-    local byteidx = fn.byteidx
-    local strcharpart = fn.strcharpart
-    for i = charlen - 1, 1, -1 do
-        local char_start = byteidx(word, i)
-        local char = strcharpart(word, i, 1, true) ---@type string
-        local remaining = token_counts[char] ---@type integer?
-        if remaining then
-            if remaining >= priority then
-                priority = remaining
-                idx = char_start
-                len = #char
-                hl_id = priority_map[priority]
-            end
-
-            decrement_token_count(token_counts, remaining, char)
-        end
-    end
-
-    return priority, idx, len, hl_id
-end
-
----@param res { [1]: string, [2]: integer, [3]: integer }
----@param token_counts table<integer, integer>|table<string, integer>
----@return integer, integer|nil, integer, integer|nil
-local function ascii_counter(res, token_counts)
-    local priority = 0
-    local idx
-    local hl_id
-
-    local word = res[1]
-    local byte = string.byte
-    for i = 1, #word do
-        local str_byte = byte(word, i)
-        local remaining = token_counts[str_byte] ---@type integer?
-        if remaining then
-            if remaining > priority then
-                priority = remaining
-                idx = i - 1
-                hl_id = priority_map[priority]
-            end
-
-            decrement_token_count(token_counts, remaining, str_byte)
-        end
-    end
-
-    return priority, idx, 1, hl_id
-end
-
----@param res { [1]: string, [2]: integer, [3]: integer }
----@param token_counts table<integer, integer>|table<string, integer>
----@return integer, integer|nil, integer, integer|nil
-local function ascii_counter_rev(res, token_counts)
-    local priority = 0
-    local idx
-    local hl_id
-
-    local word = res[1]
-    local byte = string.byte
-    for i = #word, 1, -1 do
-        local str_byte = byte(word, i)
-        local remaining = token_counts[str_byte] ---@type integer?
-        if remaining then
-            if remaining >= priority then
-                priority = remaining
-                idx = i - 1
-                hl_id = priority_map[priority]
-            end
-
-            decrement_token_count(token_counts, remaining, str_byte)
-        end
-    end
-
-    return priority, idx, 1, hl_id
 end
 
 ---Edits token_counts and labels in place
----@param counter_func fun(res: { [1]: string, [2]: integer, [3]: integer }, token_counts: table<integer, integer>|table<string, integer>)
+---@param res { [1]: string, [2]: integer, [3]: integer }
+---@param token_counts table<integer, integer>|table<string, integer>
+---@param labels farsight.csearch.TokenLabel[]
+---@param row_0 integer
+---@param step integer
+---@param rem_check fun(a: integer, b: integer):boolean
+local function utf_labeler(res, token_counts, labels, row_0, step, rem_check)
+    local priority = 0
+    local idx
+    local len_char
+    local hl_id
+
+    local word = res[1]
+    local start_word = res[2]
+    local strcharpart = fn.strcharpart
+
+    local iter_start = step == 1 and 0 or fn.strcharlen(word) - 1
+    local iter_fin = step == 1 and fn.strcharlen(word) - 1 or 0
+    for i = iter_start, iter_fin, step do
+        local char = strcharpart(word, i, 1, true) ---@type string
+        local remaining = token_counts[char] ---@type integer?
+        if remaining then
+            if rem_check(remaining, priority) then
+                priority = remaining
+                -- This might be skipped more often than not, so don't pre-get the reference
+                idx = start_word + fn.byteidx(word, i)
+                len_char = #char
+                hl_id = priority_map[priority]
+            end
+
+            decrement_tokens(token_counts, remaining, char)
+        end
+    end
+
+    checked_add_label(priority, labels, row_0, idx, len_char, hl_id)
+end
+
+---Edits token_counts and labels in place
+---@param res { [1]: string, [2]: integer, [3]: integer }
+---@param token_counts table<integer, integer>|table<string, integer>
+---@param labels farsight.csearch.TokenLabel[]
+---@param row_0 integer
+local function utf_labeler_fwd(res, token_counts, labels, row_0)
+    utf_labeler(res, token_counts, labels, row_0, 1, function(a, b)
+        return a > b
+    end)
+end
+
+---Edits token_counts and labels in place
+---@param res { [1]: string, [2]: integer, [3]: integer }
+---@param token_counts table<integer, integer>|table<string, integer>
+---@param labels farsight.csearch.TokenLabel[]
+---@param row_0 integer
+local function utf_labeler_rev(res, token_counts, labels, row_0)
+    utf_labeler(res, token_counts, labels, row_0, -1, function(a, b)
+        return a >= b
+    end)
+end
+
+---Edits token_counts and labels in place
+---@param res { [1]: string, [2]: integer, [3]: integer }
+---@param token_counts table<integer, integer>|table<string, integer>
+---@param labels farsight.csearch.TokenLabel[]
+---@param row_0 integer
+---@param step integer
+---@param rem_check fun(a: integer, b: integer):boolean
+local function ascii_labeler(res, token_counts, labels, row_0, step, rem_check)
+    local priority = 0
+    local idx
+    local hl_id
+
+    local word = res[1]
+    local start = res[2]
+    local byte = string.byte
+
+    local iter_start = step == 1 and 1 or #word
+    local iter_fin = step == 1 and #word or 1
+    for i = iter_start, iter_fin, step do
+        local str_byte = byte(word, i)
+        local remaining = token_counts[str_byte] ---@type integer?
+        if remaining then
+            if rem_check(remaining, priority) then
+                priority = remaining
+                idx = start + (i - 1)
+                hl_id = priority_map[priority]
+            end
+
+            decrement_tokens(token_counts, remaining, str_byte)
+        end
+    end
+
+    checked_add_label(priority, labels, row_0, idx, 1, hl_id)
+end
+
+---Edits token_counts and labels in place
+---@param res { [1]: string, [2]: integer, [3]: integer }
+---@param token_counts table<integer, integer>|table<string, integer>
+---@param labels farsight.csearch.TokenLabel[]
+---@param row_0 integer
+local function ascii_labeler_fwd(res, token_counts, labels, row_0)
+    ascii_labeler(res, token_counts, labels, row_0, 1, function(a, b)
+        return a > b
+    end)
+end
+
+---Edits token_counts and labels in place
+---@param res { [1]: string, [2]: integer, [3]: integer }
+---@param token_counts table<integer, integer>|table<string, integer>
+---@param labels farsight.csearch.TokenLabel[]
+---@param row_0 integer
+local function ascii_labeler_rev(res, token_counts, labels, row_0)
+    ascii_labeler(res, token_counts, labels, row_0, -1, function(a, b)
+        return a >= b
+    end)
+end
+
+---Edits token_counts and labels in place
+---@param labeler_func fun(res: { [1]: string, [2]: integer, [3]: integer },
+---token_counts: table<integer, integer>|table<string, integer>,
+---labels: farsight.csearch.TokenLabel[], row_0: integer)
 ---@param line string
+---@param init integer
 ---@param row_0 integer
 ---@param token_counts table<integer, integer>|table<string,integer>
 ---@param labels farsight.csearch.TokenLabel[]
-local function iter_tokens_forward(counter_func, line, row_0, token_counts, labels)
-    local pos = 0
-    local line_len = #line
+local function iter_tokens_fwd(labeler_func, line, init, row_0, token_counts, labels)
+    local len_line = #line
     local matchstrpos = fn.matchstrpos
-    while pos < line_len do
-        local res = matchstrpos(line, cword_str, pos)
+    while init < len_line do
+        local res = matchstrpos(line, cword_str, init)
         local start = res[2]
         if start < 0 then
             break
         end
 
-        local priority, idx, len, hl_id = counter_func(res, token_counts)
-        if priority > 0 then
-            labels[#labels + 1] = { row_0, start + idx, len, hl_id }
-        end
-
+        labeler_func(res, token_counts, labels, row_0)
         if not next(token_counts) then
             return
         end
 
-        pos = res[3] -- Already exclusive indexed
+        init = res[3] -- Already exclusive indexed
     end
 end
 
 ---Edits token_counts and labels in place
+---@param labeler_func fun(res: { [1]: string, [2]: integer, [3]: integer },
+---token_counts: table<integer, integer>|table<string, integer>,
+---labels: farsight.csearch.TokenLabel[], row_0: integer)
 ---@param line string
 ---@param row_0 integer
 ---@param token_counts table<integer, integer>|table<string,integer>
 ---@param labels farsight.csearch.TokenLabel[]
-local function iter_tokens_backward(counter_func, line, row_0, token_counts, labels)
+local function iter_tokens_rev(labeler_func, line, row_0, token_counts, labels)
     local results = {}
-    local pos = 0
-    local line_len = #line
+    local init = 0
+    local len_line = #line
     local matchstrpos = fn.matchstrpos
-    while pos < line_len do
-        local res = matchstrpos(line, cword_str, pos)
+    while init < len_line do
+        local res = matchstrpos(line, cword_str, init)
         if res[2] < 0 then
             break
         end
 
         results[#results + 1] = res
-        pos = res[3]
+        init = res[3] -- Already exclusive indexed
     end
 
     local len_results = #results
     for i = len_results, 1, -1 do
-        local res = results[i]
-        local priority, idx, len, hl_id = counter_func(res, token_counts)
-        if priority > 0 then
-            labels[#labels + 1] = { row_0, res[2] + idx, len, hl_id }
-        end
-
+        labeler_func(results[i], token_counts, labels, row_0)
         if not next(token_counts) then
             return
         end
@@ -264,7 +279,7 @@ end
 ---@param tokens string[]
 ---@return integer[]
 local function get_tokens_as_codes(tokens)
-    local codes = {}
+    local codes = {} ---@type integer[]
     local byte = string.byte
     for _, token in ipairs(tokens) do
         codes[#codes + 1] = byte(token)
@@ -304,7 +319,7 @@ end
 ---@param col integer
 ---@param tokens string[]
 ---@param max_hl_steps integer
-local function hl_forward(buf, row, col, tokens, max_hl_steps)
+local function hl_fwd(buf, row, col, tokens, max_hl_steps)
     local is_ascii = is_ascii_only(tokens)
     ---@type table<integer, integer>|table<string, integer>
     local token_counts = create_token_counts(is_ascii, tokens, max_hl_steps)
@@ -312,30 +327,27 @@ local function hl_forward(buf, row, col, tokens, max_hl_steps)
         return
     end
 
-    local counter_func = is_ascii and ascii_counter or utf_counter
-    local decrement_func = is_ascii and decrement_ascii_word or decrement_utf_word
+    local counter_func = is_ascii and ascii_labeler_fwd or utf_labeler_fwd
+    local decrement_func = is_ascii and decrement_ascii_tokens or decrement_utf_tokens
     local labels = {} ---@type farsight.csearch.TokenLabel[]
 
     local nvim_buf_get_lines = api.nvim_buf_get_lines
-    if fn.foldclosed(row) == -1 then
-        local row_0 = row - 1
-        local cur_line = nvim_buf_get_lines(buf, row_0, row, false)[1]
-        local col_after_1 = col + 2
+    local row_0 = row - 1
+    local cur_line = nvim_buf_get_lines(buf, row_0, row, false)[1]
+    local col_1 = col + 1
+    local foldclosed = fn.foldclosed
+    if foldclosed(row) == -1 and col_1 < #cur_line then
+        local init = col_1
         local cur_res = require("farsight.util")._find_cword_at_col(cur_line, col)
         local sub = string.sub
         if cur_res then
             local res_to = cur_res[3]
-            local suffix = sub(cur_line, col_after_1, res_to)
+            local suffix = sub(cur_line, init + 1, res_to)
             decrement_func(suffix, token_counts)
-            col_after_1 = res_to + 1
+            init = res_to
         end
 
-        local line_after = sub(cur_line, col_after_1)
-        iter_tokens_forward(counter_func, line_after, row_0, token_counts, labels)
-        for _, label in ipairs(labels) do
-            local before_len = #cur_line - #line_after
-            label[2] = label[2] + before_len
-        end
+        iter_tokens_fwd(counter_func, cur_line, init, row_0, token_counts, labels)
     end
 
     local next_row = row + 1
@@ -345,10 +357,10 @@ local function hl_forward(buf, row, col, tokens, max_hl_steps)
             break
         end
 
-        if fn.foldclosed(i) == -1 then
+        if foldclosed(i) == -1 then
             local i_0 = i - 1
             local line = nvim_buf_get_lines(buf, i_0, i, false)[1]
-            iter_tokens_forward(counter_func, line, i_0, token_counts, labels)
+            iter_tokens_fwd(counter_func, line, 0, i_0, token_counts, labels)
         end
     end
 
@@ -360,7 +372,7 @@ end
 ---@param col integer
 ---@param tokens string[]
 ---@param max_hl_steps integer
-local function hl_backward(buf, row, col, tokens, max_hl_steps)
+local function hl_rev(buf, row, col, tokens, max_hl_steps)
     local is_ascii = is_ascii_only(tokens)
     ---@type table<integer, integer>|table<string, integer>
     local token_counts = create_token_counts(is_ascii, tokens, max_hl_steps)
@@ -368,13 +380,14 @@ local function hl_backward(buf, row, col, tokens, max_hl_steps)
         return
     end
 
-    local checker_func = is_ascii and ascii_counter_rev or utf_counter_rev
-    local decrement_func = is_ascii and decrement_ascii_word or decrement_utf_word
+    local checker_func = is_ascii and ascii_labeler_rev or utf_labeler_rev
+    local decrement_func = is_ascii and decrement_ascii_tokens or decrement_utf_tokens
     local labels = {} ---@type farsight.csearch.TokenLabel[]
 
     local row_0 = row - 1
     local nvim_buf_get_lines = api.nvim_buf_get_lines
-    if fn.foldclosed(row) == -1 then
+    local foldclosed = fn.foldclosed
+    if foldclosed(row) == -1 and col > 0 then
         local cur_line = nvim_buf_get_lines(buf, row_0, row, false)[1]
         local col_before_1 = col
         local cur_res = require("farsight.util")._find_cword_at_col(cur_line, col)
@@ -387,7 +400,7 @@ local function hl_backward(buf, row, col, tokens, max_hl_steps)
         end
 
         local line_before = sub(cur_line, 1, col_before_1)
-        iter_tokens_backward(checker_func, line_before, row_0, token_counts, labels)
+        iter_tokens_rev(checker_func, line_before, row_0, token_counts, labels)
     end
 
     local top = fn.line("w0")
@@ -396,10 +409,11 @@ local function hl_backward(buf, row, col, tokens, max_hl_steps)
             break
         end
 
-        if fn.foldclosed(i) == -1 then
+        -- MID: Is it faster to always get the line and then check if it's at least one byte?
+        if foldclosed(i) == -1 then
             local i_0 = i - 1
             local line = nvim_buf_get_lines(buf, i_0, i, false)[1]
-            iter_tokens_backward(checker_func, line, i_0, token_counts, labels)
+            iter_tokens_rev(checker_func, line, i_0, token_counts, labels)
         end
     end
 
@@ -603,9 +617,8 @@ local function csearch_line_rev(line, init, row, input, count, pos)
         end
 
         count = count - 1
-        local start_0 = line_len - start - input_len + 1
         pos[1] = row
-        pos[2] = start_0
+        pos[2] = line_len - start - input_len + 1
 
         rev_init = start + input_len
     end
@@ -623,7 +636,7 @@ local function handle_t_cmd_rev(buf, pos)
     if char_idx < fn.strcharlen(line) - 1 then
         pos[2] = fn.byteidx(line, char_idx + 1)
     else
-        pos[1] = math.min(pos[1] + 1, api.nvim_buf_line_count(buf))
+        pos[1] = math.min(row + 1, api.nvim_buf_line_count(buf))
         pos[2] = 0
     end
 
@@ -783,9 +796,9 @@ function Csearch.csearch(opts)
     if opts.show_hl then
         api.nvim__ns_set(HL_NS, { wins = { cur_win } })
         if forward == 1 then
-            hl_forward(cur_buf, row, col, opts.hl_tokens, opts.max_hl_steps)
+            hl_fwd(cur_buf, row, col, opts.hl_tokens, opts.max_hl_steps)
         else
-            hl_backward(cur_buf, row, col, opts.hl_tokens, opts.max_hl_steps)
+            hl_rev(cur_buf, row, col, opts.hl_tokens, opts.max_hl_steps)
         end
 
         api.nvim__redraw({ valid = true })
@@ -898,6 +911,8 @@ return Csearch
 -- TODO: I'm still not completely satisfied with the backup <cr> map, because it still makes
 -- you enter three more keypresses to get somewhere. EasyMotion style f/t makes more sense, but
 -- that feels like something that should be more immediately available.
+-- TODO: What do we do about wrapped lines that run off the edge of the screen? The highlights
+-- aren't necessarily a huge deal, but what about the actual token finding?
 
 -- MID: The default tokens should be 'isk' for the current buffer. The isk strings + tokens can
 -- be cached when created for the first time. For subsequent runs, re-query the opt string and
