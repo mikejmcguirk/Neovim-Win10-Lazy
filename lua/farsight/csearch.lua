@@ -49,8 +49,10 @@ end
 ---@param token_counts table<integer, integer>|table<string, integer>
 local function decrement_utf_tokens(word, token_counts)
     local strcharpart = fn.strcharpart
-    local last_charidx = fn.strcharlen(word[1]) - 1
+    -- TODO: https://github.com/neovim/neovim/pull/37737
+    local last_charidx = fn.strcharlen(word[1]) - 1 ---@type integer
     for i = 0, last_charidx do
+        -- TODO: https://github.com/neovim/neovim/pull/37737
         local char = strcharpart(word[1], i, 1, true) ---@type string
         local remaining = token_counts[char] ---@type integer?
         if remaining then
@@ -104,9 +106,10 @@ local function utf_labeler(res, token_counts, labels, row_0, step, rem_check)
     local start_word = res[2]
     local strcharpart = fn.strcharpart
 
-    local iter_start = step == 1 and 0 or fn.strcharlen(word) - 1
-    local iter_fin = step == 1 and fn.strcharlen(word) - 1 or 0
+    local iter_start = step == 1 and 0 or fn.strcharlen(word) - 1 ---@type integer
+    local iter_fin = step == 1 and fn.strcharlen(word) - 1 or 0 ---@type integer
     for i = iter_start, iter_fin, step do
+        -- TODO: https://github.com/neovim/neovim/pull/37737
         local char = strcharpart(word, i, 1, true) ---@type string
         local remaining = token_counts[char] ---@type integer?
         if remaining then
@@ -445,6 +448,7 @@ local function do_cjump(win, buf, pos, opts)
                 -- the backward motion is a noop. That behavior should be re-created here
                 if prev_row < cur_row then
                     local prev_line = api.nvim_buf_get_lines(buf, prev_row - 1, prev_row, false)[1]
+                    -- TODO: https://github.com/neovim/neovim/pull/37737
                     local prev_last_charidx = fn.strcharlen(prev_line) - 1
                     local prev_last_byteidx = fn.byteidx(prev_line, prev_last_charidx)
                     api.nvim_win_set_cursor(win, { prev_row, prev_last_byteidx })
@@ -512,6 +516,7 @@ local function handle_t_cmd(buf, pos)
         pos[1] = math.max(prev_row, 1)
 
         local prev_line = nvim_buf_get_lines(buf, prev_row - 1, prev_row, false)[1]
+        -- TODO: https://github.com/neovim/neovim/pull/37737
         local strcharlen = fn.strcharlen(prev_line) ---@type integer
         pos[2] = fn.byteidx(prev_line, math.max(strcharlen - 1, 0))
     end
@@ -534,6 +539,7 @@ local function csearch_fwd(count, win, buf, row, col, input, opts)
 
     local cur_line = nvim_buf_get_lines(buf, row - 1, row, false)[1]
     local cur_charidx = fn.charidx(cur_line, col)
+    -- TODO: https://github.com/neovim/neovim/pull/37737
     local charlen = fn.strcharlen(cur_line) ---@type integer
     local valid_line = foldclosed(row) == -1 and charlen > 1
     local last_byteidx = byteidx(cur_line, math.max(charlen - 1, 0))
@@ -679,6 +685,7 @@ local function csearch_rev(count, win, buf, row, col, input, opts)
 
             -- LOW: Wasteful if starcharpart ~= input, as the loop grabs this again
             local prev_line = nvim_buf_get_lines(buf, prev_row - 1, prev_row, false)[1]
+            -- TODO: https://github.com/neovim/neovim/pull/37737
             local charlen = fn.strcharlen(prev_line) ---@type integer
             local last_charidx = math.max(charlen - 1, 0)
             local last_byteidx = byteidx(prev_line, last_charidx)
@@ -729,32 +736,35 @@ local function resolve_csearch_opts(opts, cur_buf)
         vim.validate("v", v, "callable")
     end
 
-    -- TODO: Maybe document that there's no g:var for this.
+    -- TODO: Document in the type that this is only locally controlled
     opts.forward = opts.forward or 1
     vim.validate("opts.forward", opts.forward, function()
         return opts.forward == 0 or opts.forward == 1
     end, "opts.forward must be 0 or 1")
-
-    opts.show_hl = ut._use_gb_if_nil(opts.show_hl, "farsight_csearch_use_hl", cur_buf)
-    opts.show_hl = ut._resolve_bool_opt(opts.show_hl, true)
-    vim.validate("opts.hl", opts.show_hl, "boolean")
-
-    -- TODO: Maybe document that there's no g:var for this.
-    opts.t_cmd = opts.t_cmd or 0
-    vim.validate("opts.t_cmd", opts.t_cmd, function()
-        return opts.t_cmd == 0 or opts.t_cmd == 1
-    end, "opts.t_cmd must be 0 or 1")
-
-    -- TODO: Document that, for ;/, the cpo option should be used
-    opts.t_cmd_skip = ut._use_gb_if_nil(opts.t_cmd_skip, "farsight_csearch_t_cmd_skip_ft", cur_buf)
-    opts.t_cmd_skip = ut._resolve_bool_opt(opts.t_cmd_skip, false)
-    vim.validate("opts.t_cmd_skip", opts.t_cmd_skip, "boolean")
 
     opts.hl_tokens = ut._use_gb_if_nil(opts.hl_tokens, "farsight_csearch_hl_tokens", cur_buf)
     opts.hl_tokens = opts.hl_tokens or TOKENS
     ut._validate_list(opts.hl_tokens, { item_type = "string" })
     require("farsight.util")._list_dedup(opts.hl_tokens)
     ut._validate_list(opts.hl_tokens, { min_len = 2 })
+
+    opts.on_cjump = ut._use_gb_if_nil(opts.on_cjump, "farsight_csearch_on_cjump", cur_buf)
+    vim.validate("opts.on_cjump", opts.on_cjump, "callable", true)
+
+    opts.show_hl = ut._use_gb_if_nil(opts.show_hl, "farsight_csearch_use_hl", cur_buf)
+    opts.show_hl = ut._resolve_bool_opt(opts.show_hl, true)
+    vim.validate("opts.hl", opts.show_hl, "boolean")
+
+    -- TODO: Document in the type that this is only locally controlled
+    opts.t_cmd = opts.t_cmd or 0
+    vim.validate("opts.t_cmd", opts.t_cmd, function()
+        return opts.t_cmd == 0 or opts.t_cmd == 1
+    end, "opts.t_cmd must be 0 or 1")
+
+    -- TODO: Document that the cpo option does not control here
+    opts.t_cmd_skip = ut._use_gb_if_nil(opts.t_cmd_skip, "farsight_csearch_t_cmd_skip_ft", cur_buf)
+    opts.t_cmd_skip = ut._resolve_bool_opt(opts.t_cmd_skip, false)
+    vim.validate("opts.t_cmd_skip", opts.t_cmd_skip, "boolean")
 
     local gb_max_hl_steps = "farsight_csearch_max_hl_steps"
     opts.max_hl_steps = ut._use_gb_if_nil(opts.max_hl_steps, gb_max_hl_steps, cur_buf)
@@ -825,6 +835,7 @@ function Csearch.csearch(opts)
     end
 
     local t_cmd = opts.t_cmd ---@type integer
+    -- TODO: https://github.com/neovim/neovim/pull/37734
     ---@diagnostic disable-next-line: param-type-mismatch
     fn.setcharsearch({
         char = input,
@@ -850,7 +861,8 @@ function Csearch.rep(opts)
     vim.validate("opts.on_cjump", opts.on_cjump, "callable", true)
     vim.validate("opts.t_cmd_skip", opts.t_cmd_skip, "boolean", true)
 
-    ---@type { char: string, forward: integer, until: integer }
+    -- TODO: https://github.com/neovim/neovim/pull/37734
+    ---@type { char: string, forward: 1|0, until: 1|0 }
     local charsearch = fn.getcharsearch()
     local char = charsearch.char
     if char == "" then
@@ -869,7 +881,8 @@ function Csearch.rep(opts)
             return opts.t_cmd_skip
         end
 
-        local cpo = api.nvim_get_option_value("cpo", {})
+        -- TODO: Document that cpo controls here
+        local cpo = api.nvim_get_option_value("cpo", {}) ---@type string
         local cpo_noskip = string.find(cpo, ";", 1, true)
         return cpo_noskip == nil
     end)()
@@ -950,16 +963,8 @@ return Csearch
 -- LOW: Try the labels as a struct of arrays.
 -- LOW: Ignoring fold lines is in line with the built-in behavior, but is there a better solution?
 
--- PR: Two issues with starcharpart:
--- - The lua return type is any, but the doc says an empty string is returned on error. Check the
--- code, but the annotation looks wrong
--- - The docs talk about setting skipcc to one, but the variable in Lua takes a boolean. Unsure
--- what the cause of the mis-match here is
--- PR: setcharsearch has an incorrect type annotation. The input should be:
--- string|{ char: string, forward: integer, until: integer }
--- But is currently string. I think the params definition in src/nvim/eval.lua, and then run
--- a make cmd to re-generate runtime/lua/vim/_meta/vimfn.lua
--- PR: Is the return type of getcharsearch correct?
 -- PR: It would be cool if Neovim provided some kind of clear_plugin_highlights function that
 -- plugins could register with. That way, users couldn't have to create bespoke highlight clearing
 -- for every plugin (that said, how does Flash do it?)
+-- PR: matchstrpos has a non-specific return type. This would require some digging though, as the
+-- return type can differ based on the args
