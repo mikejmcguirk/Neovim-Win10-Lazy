@@ -539,6 +539,7 @@ local function do_jump(win, buf, row_0, col, is_omode, opts)
     -- the actual character jumped to to be truncated
     if is_omode then
         nvim_cmd({ cmd = "norm", args = { "v" }, bang = true }, {})
+        -- TODO: This might only work for forward
         if vim.o.selection == "exclusive" then
             local line = api.nvim_buf_get_lines(buf, row_0, row, false)[1]
             col = math.min(col + 1, math.max(#line - 1, 0))

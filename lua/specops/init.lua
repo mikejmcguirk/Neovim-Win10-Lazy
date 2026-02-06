@@ -1,32 +1,16 @@
 local api = vim.api
 
--- local old_report ---@type integer|nil
 local old_cur_pos ---@type { [1]: integer, [2]: integer }|nil
 
 local Spec_Ops = {}
 
--- TODO: Opt for disabling the report set
--- TODO: Opt for disabling the cursor hold
 function Spec_Ops.yank()
-    -- old_report = api.nvim_get_option_value("report", { scope = "global" })
     if vim.v.register ~= "_" then
         old_cur_pos = api.nvim_win_get_cursor(0)
     end
 
     return "y"
 end
-
--- function Spec_Ops.delete()
---     old_report = api.nvim_get_option_value("report", { scope = "global" })
---     api.nvim_set_option_value("report", 9999, { scope = "global" })
---     return "d"
--- end
-
--- function Spec_Ops.change()
---     old_report = api.nvim_get_option_value("report", { scope = "global" })
---     api.nvim_set_option_value("report", 9999, { scope = "global" })
---     return "c"
--- end
 
 local group = api.nvim_create_augroup("specops", {})
 api.nvim_create_autocmd("TextYankPost", {
@@ -36,11 +20,6 @@ api.nvim_create_autocmd("TextYankPost", {
             return
         end
 
-        -- if old_report then
-        --     api.nvim_set_option_value("report", old_report, { scope = "global" })
-        --     old_report = nil
-        -- end
-
         if old_cur_pos then
             api.nvim_win_set_cursor(0, old_cur_pos)
             old_cur_pos = nil
@@ -48,25 +27,8 @@ api.nvim_create_autocmd("TextYankPost", {
     end,
 })
 
--- TODO: does not handle, for example, "dl" on a blank line
--- TODO: Do I just set report=9999 as a default option and move on from this? Issue - report is
--- useful with substitute
-
--- api.nvim_create_autocmd("TextChanged", {
---     group = group,
---     callback = function()
---         local op = vim.v.operator
---         if (op == "d" or op == "c") and old_report then
---             api.nvim_set_option_value("report", old_report, { scope = "global" })
---             old_report = nil
---         end
---     end,
--- })
-
 return Spec_Ops
 
--- TODO: See if ui_attach is better for intercepting the lines yanked messages than altering the
--- report option
 -- TODO: For convenience, provide separate Eol <Plug> maps. Should not need to be necessary to
 -- create separate APIs for them though
 -- TODO: Review the old spec ops code for features to transfer over

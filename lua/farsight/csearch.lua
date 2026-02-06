@@ -93,10 +93,11 @@ end
 ---@param res { [1]: string, [2]: integer, [3]: integer }
 ---@param token_counts table<integer, integer>|table<string, integer>
 ---@param labels farsight.csearch.TokenLabel[]
+---@param max_tokens integer
 ---@param row_0 integer
 ---@param step integer
----@param rem_check fun(a: integer, b: integer):boolean
-local function utf_labeler(res, token_counts, labels, row_0, step, rem_check)
+---@param rem_check fun(a: integer, b: integer, c: integer):boolean
+local function utf_labeler(res, token_counts, labels, max_tokens, row_0, step, rem_check)
     local priority = 0
     local idx
     local len_char
@@ -113,7 +114,7 @@ local function utf_labeler(res, token_counts, labels, row_0, step, rem_check)
         local char = strcharpart(word, i, 1, true) ---@type string
         local remaining = token_counts[char] ---@type integer?
         if remaining then
-            if rem_check(remaining, priority) then
+            if rem_check(remaining, priority, max_tokens) then
                 priority = remaining
                 -- This might be skipped more often than not, so don't pre-get the reference
                 idx = start_word + fn.byteidx(word, i)
@@ -132,10 +133,11 @@ end
 ---@param res { [1]: string, [2]: integer, [3]: integer }
 ---@param token_counts table<integer, integer>|table<string, integer>
 ---@param labels farsight.csearch.TokenLabel[]
+---@param max_tokens integer
 ---@param row_0 integer
-local function utf_labeler_fwd(res, token_counts, labels, row_0)
-    utf_labeler(res, token_counts, labels, row_0, 1, function(a, b)
-        return a > b
+local function utf_labeler_fwd(res, token_counts, labels, max_tokens, row_0)
+    utf_labeler(res, token_counts, labels, max_tokens, row_0, 1, function(a, b, c)
+        return a > b and a <= c
     end)
 end
 
@@ -143,10 +145,11 @@ end
 ---@param res { [1]: string, [2]: integer, [3]: integer }
 ---@param token_counts table<integer, integer>|table<string, integer>
 ---@param labels farsight.csearch.TokenLabel[]
+---@param max_tokens integer
 ---@param row_0 integer
-local function utf_labeler_rev(res, token_counts, labels, row_0)
-    utf_labeler(res, token_counts, labels, row_0, -1, function(a, b)
-        return a >= b
+local function utf_labeler_rev(res, token_counts, labels, max_tokens, row_0)
+    utf_labeler(res, token_counts, labels, max_tokens, row_0, -1, function(a, b, c)
+        return a >= b and a <= c
     end)
 end
 
@@ -154,10 +157,11 @@ end
 ---@param res { [1]: string, [2]: integer, [3]: integer }
 ---@param token_counts table<integer, integer>|table<string, integer>
 ---@param labels farsight.csearch.TokenLabel[]
+---@param max_tokens integer
 ---@param row_0 integer
 ---@param step integer
----@param rem_check fun(a: integer, b: integer):boolean
-local function ascii_labeler(res, token_counts, labels, row_0, step, rem_check)
+---@param rem_check fun(a: integer, b: integer, c: integer):boolean
+local function ascii_labeler(res, token_counts, labels, max_tokens, row_0, step, rem_check)
     local priority = 0
     local idx
     local hl_id
@@ -172,7 +176,7 @@ local function ascii_labeler(res, token_counts, labels, row_0, step, rem_check)
         local str_byte = byte(word, i)
         local remaining = token_counts[str_byte] ---@type integer?
         if remaining then
-            if rem_check(remaining, priority) then
+            if rem_check(remaining, priority, max_tokens) then
                 priority = remaining
                 idx = start + (i - 1)
                 hl_id = priority_map[priority]
@@ -189,10 +193,11 @@ end
 ---@param res { [1]: string, [2]: integer, [3]: integer }
 ---@param token_counts table<integer, integer>|table<string, integer>
 ---@param labels farsight.csearch.TokenLabel[]
+---@param max_tokens integer
 ---@param row_0 integer
-local function ascii_labeler_fwd(res, token_counts, labels, row_0)
-    ascii_labeler(res, token_counts, labels, row_0, 1, function(a, b)
-        return a > b
+local function ascii_labeler_fwd(res, token_counts, labels, max_tokens, row_0)
+    ascii_labeler(res, token_counts, labels, max_tokens, row_0, 1, function(a, b, c)
+        return a > b and a <= c
     end)
 end
 
@@ -200,23 +205,25 @@ end
 ---@param res { [1]: string, [2]: integer, [3]: integer }
 ---@param token_counts table<integer, integer>|table<string, integer>
 ---@param labels farsight.csearch.TokenLabel[]
+---@param max_tokens integer
 ---@param row_0 integer
-local function ascii_labeler_rev(res, token_counts, labels, row_0)
-    ascii_labeler(res, token_counts, labels, row_0, -1, function(a, b)
-        return a >= b
+local function ascii_labeler_rev(res, token_counts, labels, max_tokens, row_0)
+    ascii_labeler(res, token_counts, labels, max_tokens, row_0, -1, function(a, b, c)
+        return a >= b and a <= c
     end)
 end
 
 ---Edits token_counts and labels in place
 ---@param labeler_func fun(res: { [1]: string, [2]: integer, [3]: integer },
 ---token_counts: table<integer, integer>|table<string, integer>,
----labels: farsight.csearch.TokenLabel[], row_0: integer)
+---labels: farsight.csearch.TokenLabel[], max_tokens:integer, row_0: integer)
 ---@param line string
 ---@param init integer
 ---@param row_0 integer
 ---@param token_counts table<integer, integer>|table<string,integer>
 ---@param labels farsight.csearch.TokenLabel[]
-local function iter_tokens_fwd(labeler_func, line, init, row_0, token_counts, labels)
+---@param max_tokens integer
+local function iter_tokens_fwd(labeler_func, line, init, row_0, token_counts, labels, max_tokens)
     local len_line = #line
     local matchstrpos = fn.matchstrpos
     while init < len_line do
@@ -226,7 +233,7 @@ local function iter_tokens_fwd(labeler_func, line, init, row_0, token_counts, la
             break
         end
 
-        labeler_func(res, token_counts, labels, row_0)
+        labeler_func(res, token_counts, labels, max_tokens, row_0)
         if not next(token_counts) then
             return
         end
@@ -238,12 +245,13 @@ end
 ---Edits token_counts and labels in place
 ---@param labeler_func fun(res: { [1]: string, [2]: integer, [3]: integer },
 ---token_counts: table<integer, integer>|table<string, integer>,
----labels: farsight.csearch.TokenLabel[], row_0: integer)
+---labels: farsight.csearch.TokenLabel[], max_tokens:integer, row_0: integer)
 ---@param line string
 ---@param row_0 integer
 ---@param token_counts table<integer, integer>|table<string,integer>
 ---@param labels farsight.csearch.TokenLabel[]
-local function iter_tokens_rev(labeler_func, line, row_0, token_counts, labels)
+---@param max_tokens integer
+local function iter_tokens_rev(labeler_func, line, row_0, token_counts, labels, max_tokens)
     local results = {}
     local init = 0
     local len_line = #line
@@ -260,7 +268,7 @@ local function iter_tokens_rev(labeler_func, line, row_0, token_counts, labels)
 
     local len_results = #results
     for i = len_results, 1, -1 do
-        labeler_func(results[i], token_counts, labels, row_0)
+        labeler_func(results[i], token_counts, labels, max_tokens, row_0)
         if not next(token_counts) then
             return
         end
@@ -294,7 +302,8 @@ end
 ---@param buf integer
 ---@param labels farsight.csearch.TokenLabel[]
 local function highlight_labels(buf, labels)
-    local extmark_opts = { priority = 1000, strict = false } ---@type vim.api.keyset.set_extmark
+    ---@type vim.api.keyset.set_extmark
+    local extmark_opts = { priority = 1000, strict = false }
     for _, label in ipairs(labels) do
         extmark_opts.hl_group = label[4]
         extmark_opts.end_col = label[2] + label[3]
@@ -302,30 +311,33 @@ local function highlight_labels(buf, labels)
     end
 end
 
+---@param vcount1 integer
 ---@param is_ascii boolean
 ---@param tokens string[]
 ---@param max_hl_steps integer
 ---@return table<integer, integer>|table<string, integer>
-local function create_token_counts(is_ascii, tokens, max_hl_steps)
+local function create_token_counts(vcount1, is_ascii, tokens, max_hl_steps)
     tokens = vim.deepcopy(tokens)
     tokens = is_ascii and get_tokens_as_codes(tokens) or tokens
+    local token_count = max_hl_steps + (vcount1 - 1)
     local token_counts = {} ---@type table<integer, integer>|table<string, integer>
     for _, token in ipairs(tokens) do
-        token_counts[token] = max_hl_steps
+        token_counts[token] = token_count
     end
 
     return token_counts
 end
 
+---@param vcount1 integer
 ---@param buf integer
 ---@param row integer
 ---@param col integer
 ---@param tokens string[]
 ---@param max_hl_steps integer
-local function hl_fwd(buf, row, col, tokens, max_hl_steps)
+local function hl_fwd(vcount1, buf, row, col, tokens, max_hl_steps)
     local is_ascii = is_ascii_only(tokens)
     ---@type table<integer, integer>|table<string, integer>
-    local token_counts = create_token_counts(is_ascii, tokens, max_hl_steps)
+    local token_counts = create_token_counts(vcount1, is_ascii, tokens, max_hl_steps)
     if not next(token_counts) then
         return
     end
@@ -350,7 +362,7 @@ local function hl_fwd(buf, row, col, tokens, max_hl_steps)
             init = res_to
         end
 
-        iter_tokens_fwd(counter_func, cur_line, init, row_0, token_counts, labels)
+        iter_tokens_fwd(counter_func, cur_line, init, row_0, token_counts, labels, max_hl_steps)
     end
 
     local next_row = row + 1
@@ -363,27 +375,28 @@ local function hl_fwd(buf, row, col, tokens, max_hl_steps)
         if foldclosed(i) == -1 then
             local i_0 = i - 1
             local line = nvim_buf_get_lines(buf, i_0, i, false)[1]
-            iter_tokens_fwd(counter_func, line, 0, i_0, token_counts, labels)
+            iter_tokens_fwd(counter_func, line, 0, i_0, token_counts, labels, max_hl_steps)
         end
     end
 
     highlight_labels(buf, labels)
 end
 
+---@param vcount1 integer
 ---@param buf integer
 ---@param row integer
 ---@param col integer
 ---@param tokens string[]
 ---@param max_hl_steps integer
-local function hl_rev(buf, row, col, tokens, max_hl_steps)
+local function hl_rev(vcount1, buf, row, col, tokens, max_hl_steps)
     local is_ascii = is_ascii_only(tokens)
     ---@type table<integer, integer>|table<string, integer>
-    local token_counts = create_token_counts(is_ascii, tokens, max_hl_steps)
+    local token_counts = create_token_counts(vcount1, is_ascii, tokens, max_hl_steps)
     if not next(token_counts) then
         return
     end
 
-    local checker_func = is_ascii and ascii_labeler_rev or utf_labeler_rev
+    local labeler_func = is_ascii and ascii_labeler_rev or utf_labeler_rev
     local decrement_func = is_ascii and decrement_ascii_tokens or decrement_utf_tokens
     local labels = {} ---@type farsight.csearch.TokenLabel[]
 
@@ -403,7 +416,7 @@ local function hl_rev(buf, row, col, tokens, max_hl_steps)
         end
 
         local line_before = sub(cur_line, 1, col_before_1)
-        iter_tokens_rev(checker_func, line_before, row_0, token_counts, labels)
+        iter_tokens_rev(labeler_func, line_before, row_0, token_counts, labels, max_hl_steps)
     end
 
     local top = fn.line("w0")
@@ -416,14 +429,18 @@ local function hl_rev(buf, row, col, tokens, max_hl_steps)
         if foldclosed(i) == -1 then
             local i_0 = i - 1
             local line = nvim_buf_get_lines(buf, i_0, i, false)[1]
-            iter_tokens_rev(checker_func, line, i_0, token_counts, labels)
+            iter_tokens_rev(labeler_func, line, i_0, token_counts, labels, max_hl_steps)
         end
     end
 
     highlight_labels(buf, labels)
 end
 
+-- MID: This function should be used by csearch_rev, but I'm not sure how to impress that in
+-- because the csearch_rev code is so interwoven
+
 ---@param cur_pos { [1]: integer, [2]: integer }
+---@param buf integer
 local function get_backward_skip_pos(cur_pos, buf)
     local cur_row = cur_pos[1]
     local cur_col = cur_pos[2]
@@ -435,7 +452,6 @@ local function get_backward_skip_pos(cur_pos, buf)
     end
 
     local prev_row = math.max(cur_row - 1, 1)
-    -- TODO: Unsure what to do with this yet
     if prev_row == cur_row then
         return cur_row, 0
     end
@@ -452,23 +468,32 @@ end
 ---@param pos { [1]: integer, [2]: integer }
 ---@param opts farsight.csearch.CsearchOpts
 local function do_cjump(win, buf, pos, opts)
-    if string.sub(api.nvim_get_mode().mode, 1, 2) == "no" then
-        -- TODO: This re-uses the data from and essentially re-creates the logic from the backward
-        -- t_cmd_skip adjustment. The relevant data needs to be passed in so it isn't being
-        -- pulled in duplicate. It also seems like a common function could be re-created that
-        -- returns a row/col for the caller to use
-        if opts.forward == 0 then
+    local selection = vim.o.selection
+    local forward = opts.forward
+    local mode = api.nvim_get_mode().mode
+    local short_mode = string.sub(mode, 1, 1)
+
+    local is_visual = short_mode == "v" or short_mode == "V" or short_mode == "\22"
+    local is_omode = string.sub(mode, 1, 2) == "no"
+    local is_vo_mode = is_visual or is_omode
+    local is_exclusive = selection == "exclusive"
+    local is_forward = forward == 1
+
+    if is_vo_mode and is_exclusive and is_forward then
+        local row = pos[1]
+        local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
+        -- Exclusive selection can go one past the line boundary
+        pos[2] = math.min(pos[2] + 1, math.max(#line, 0))
+    end
+
+    if is_omode then
+        if not (is_exclusive or is_forward) then
             local cur_pos = api.nvim_win_get_cursor(win)
             local prev_row, prev_col = get_backward_skip_pos(cur_pos, buf)
             api.nvim_win_set_cursor(win, { prev_row, prev_col })
         end
 
         api.nvim_cmd({ cmd = "norm", args = { "v" }, bang = true }, {})
-        if vim.o.selection == "exclusive" then
-            local row = pos[1]
-            local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
-            pos[2] = math.min(pos[2] + 1, math.max(#line - 1, 0))
-        end
     end
 
     api.nvim_win_set_cursor(win, pos)
@@ -668,10 +693,6 @@ local function csearch_rev(count, win, buf, row, col, input, opts)
     local foldclosed = fn.foldclosed
     local nvim_buf_get_lines = api.nvim_buf_get_lines
 
-    -- TODO: Awkward, because we need to know if we can search the current line regardless of if
-    -- we are skipping or not, so completely outlining that creates redundant logic. Nonetheless
-    -- this does need to be turned into common logic to avoid broader redundancy
-
     local cur_line = nvim_buf_get_lines(buf, row - 1, row, false)[1]
     -- Can't just check col > 0. While non-standard, it is possible for the cursor to be in the
     -- middle of a multibyte character
@@ -694,7 +715,6 @@ local function csearch_rev(count, win, buf, row, col, input, opts)
                 return
             end
 
-            -- LOW: Wasteful if starcharpart ~= input, as the loop grabs this again
             local prev_line = nvim_buf_get_lines(buf, prev_row - 1, prev_row, false)[1]
             -- FUTURE: https://github.com/neovim/neovim/pull/37737
             local charlen = fn.strcharlen(prev_line) ---@type integer
@@ -736,6 +756,7 @@ local function csearch_rev(count, win, buf, row, col, input, opts)
 end
 
 ---@param opts farsight.csearch.CsearchOpts
+---@param cur_buf integer
 local function resolve_csearch_opts(opts, cur_buf)
     vim.validate("opts", opts, "table")
     local ut = require("farsight.util")
@@ -757,7 +778,6 @@ local function resolve_csearch_opts(opts, cur_buf)
     opts.hl_tokens = opts.hl_tokens or TOKENS
     ut._validate_list(opts.hl_tokens, { item_type = "string" })
     require("farsight.util")._list_dedup(opts.hl_tokens)
-    ut._validate_list(opts.hl_tokens, { min_len = 2 })
 
     opts.on_cjump = ut._use_gb_if_nil(opts.on_cjump, "farsight_csearch_on_cjump", cur_buf)
     vim.validate("opts.on_cjump", opts.on_cjump, "callable", true)
@@ -778,6 +798,7 @@ local function resolve_csearch_opts(opts, cur_buf)
     vim.validate("opts.t_cmd_skip", opts.t_cmd_skip, "boolean")
 
     local gb_max_hl_steps = "farsight_csearch_max_hl_steps"
+    -- TODO: rename to max_tokens
     opts.max_hl_steps = ut._use_gb_if_nil(opts.max_hl_steps, gb_max_hl_steps, cur_buf)
     opts.max_hl_steps = opts.max_hl_steps or DEFAULT_MAX_HL_STEPS
     ut._validate_uint(opts.max_hl_steps)
@@ -814,12 +835,13 @@ function Csearch.csearch(opts)
     local col = cur_pos[2]
 
     local forward = opts.forward ---@type integer
+    local vcount1 = vim.v.count1
     if opts.show_hl then
         api.nvim__ns_set(HL_NS, { wins = { cur_win } })
         if forward == 1 then
-            hl_fwd(cur_buf, row, col, opts.hl_tokens, opts.max_hl_steps)
+            hl_fwd(vcount1, cur_buf, row, col, opts.hl_tokens, opts.max_hl_steps)
         else
-            hl_rev(cur_buf, row, col, opts.hl_tokens, opts.max_hl_steps)
+            hl_rev(vcount1, cur_buf, row, col, opts.hl_tokens, opts.max_hl_steps)
         end
 
         api.nvim__redraw({ valid = true })
@@ -855,9 +877,9 @@ function Csearch.csearch(opts)
     })
 
     if forward == 1 then
-        csearch_fwd(vim.v.count1, cur_win, cur_buf, row, col, input, opts)
+        csearch_fwd(vcount1, cur_win, cur_buf, row, col, input, opts)
     else
-        csearch_rev(vim.v.count1, cur_win, cur_buf, row, col, input, opts)
+        csearch_rev(vcount1, cur_win, cur_buf, row, col, input, opts)
     end
 end
 
@@ -916,15 +938,7 @@ return Csearch
 -- local duration_ms = (end_time - start_time) / 1e6
 -- print(string.format("hl_forward took %.2f ms", duration_ms))
 
--- TODO: If count > 1, the first highlight for any particular letter needs to reflect where it
--- will actually go. The rest should be based on count1
--- TODO: The module contains a lot of functions that are only barely different. Now that the code
--- is actually written, can factor more aggressively
--- TODO: Try to refactor more aggressively. Still many similar functions
 -- TODO: A lot of this can probably be made to be common with jump
--- TODO: Use the gb:var construct for the various opts
--- TODO: Go through the extmark opts doc to see what works here
--- TODO: Document that rep() checks cpo for default t skip behavior
 -- TODO: Test/document dot repeat behavior for operators. Should at least match what default f/t
 -- does
 -- - When I dot repeat d<cr> is prompts me for the jump token. I think for that function that's
@@ -937,6 +951,7 @@ return Csearch
 -- that feels like something that should be more immediately available.
 -- TODO: What do we do about wrapped lines that run off the edge of the screen? The highlights
 -- aren't necessarily a huge deal, but what about the actual token finding?
+-- TODO: Need to test that the gb options work
 
 -- MID: The default tokens should be 'isk' for the current buffer. The isk strings + tokens can
 -- be cached when created for the first time. For subsequent runs, re-query the opt string and
@@ -964,6 +979,8 @@ return Csearch
 -- jump functionality I'm building out, that might better address other cases that extended
 -- highlighting could here
 -- MID: Like jump, accept an opt for wins. Default should still just be one win though
+-- MID: Is search() faster than using string.find? It also comes with helpful features like
+-- searching backward. It might also plug into the some logic that csearch uses
 
 -- LOW: Rather than niling tokens that cannot be highlighted, could separately keep track of
 -- how many highlightable tokens remain. Saw slight perf gain when trying this, but not enough to
@@ -973,6 +990,8 @@ return Csearch
 -- pulled as a group (only one API call) since that's the most likely, then chunks of the rest
 -- LOW: Try the labels as a struct of arrays.
 -- LOW: Ignoring fold lines is in line with the built-in behavior, but is there a better solution?
+-- LOW: A few different points here where we get lines over the API multiple times. Low priority
+-- since those calls don't occur in hot paths, but still unfortunate
 
 -- PR: It would be cool if Neovim provided some kind of clear_plugin_highlights function that
 -- plugins could register with. That way, users couldn't have to create bespoke highlight clearing
