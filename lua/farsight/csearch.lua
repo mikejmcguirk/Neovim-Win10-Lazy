@@ -49,10 +49,10 @@ end
 ---@param token_counts table<integer, integer>|table<string, integer>
 local function decrement_utf_tokens(word, token_counts)
     local strcharpart = fn.strcharpart
-    -- TODO: https://github.com/neovim/neovim/pull/37737
+    -- FUTURE: https://github.com/neovim/neovim/pull/37737
     local last_charidx = fn.strcharlen(word[1]) - 1 ---@type integer
     for i = 0, last_charidx do
-        -- TODO: https://github.com/neovim/neovim/pull/37737
+        -- FUTURE: https://github.com/neovim/neovim/pull/37737
         local char = strcharpart(word[1], i, 1, true) ---@type string
         local remaining = token_counts[char] ---@type integer?
         if remaining then
@@ -109,7 +109,7 @@ local function utf_labeler(res, token_counts, labels, row_0, step, rem_check)
     local iter_start = step == 1 and 0 or fn.strcharlen(word) - 1 ---@type integer
     local iter_fin = step == 1 and fn.strcharlen(word) - 1 or 0 ---@type integer
     for i = iter_start, iter_fin, step do
-        -- TODO: https://github.com/neovim/neovim/pull/37737
+        -- FUTURE: https://github.com/neovim/neovim/pull/37737
         local char = strcharpart(word, i, 1, true) ---@type string
         local remaining = token_counts[char] ---@type integer?
         if remaining then
@@ -423,6 +423,30 @@ local function hl_rev(buf, row, col, tokens, max_hl_steps)
     highlight_labels(buf, labels)
 end
 
+---@param cur_pos { [1]: integer, [2]: integer }
+local function get_backward_skip_pos(cur_pos, buf)
+    local cur_row = cur_pos[1]
+    local cur_col = cur_pos[2]
+    local cur_line = api.nvim_buf_get_lines(buf, cur_row - 1, cur_row, false)[1]
+    local cur_charidx = fn.charidx(cur_line, cur_col)
+    if cur_charidx > 0 then
+        local prev_byteidx = fn.byteidx(cur_line, cur_charidx - 1)
+        return cur_row, prev_byteidx
+    end
+
+    local prev_row = math.max(cur_row - 1, 1)
+    -- TODO: Unsure what to do with this yet
+    if prev_row == cur_row then
+        return cur_row, 0
+    end
+
+    local prev_line = api.nvim_buf_get_lines(buf, prev_row - 1, prev_row, false)[1]
+    -- FUTURE: https://github.com/neovim/neovim/pull/37737
+    local prev_last_charidx = fn.strcharlen(prev_line) - 1
+    local prev_last_byteidx = fn.byteidx(prev_line, prev_last_charidx)
+    return prev_row, prev_last_byteidx
+end
+
 ---@param win integer
 ---@param buf integer
 ---@param pos { [1]: integer, [2]: integer }
@@ -435,25 +459,8 @@ local function do_cjump(win, buf, pos, opts)
         -- returns a row/col for the caller to use
         if opts.forward == 0 then
             local cur_pos = api.nvim_win_get_cursor(win)
-            local cur_row = cur_pos[1]
-            local cur_col = cur_pos[2]
-            local cur_line = api.nvim_buf_get_lines(buf, cur_row - 1, cur_row, false)[1]
-            local cur_charidx = fn.charidx(cur_line, cur_col)
-            if cur_charidx > 1 then
-                local prev_byteidx = fn.byteidx(cur_line, cur_charidx - 1)
-                api.nvim_win_set_cursor(win, { cur_row, prev_byteidx })
-            else
-                local prev_row = math.max(cur_row - 1, 1)
-                -- TODO: With the defaults, if you are on the first character if the first line,
-                -- the backward motion is a noop. That behavior should be re-created here
-                if prev_row < cur_row then
-                    local prev_line = api.nvim_buf_get_lines(buf, prev_row - 1, prev_row, false)[1]
-                    -- TODO: https://github.com/neovim/neovim/pull/37737
-                    local prev_last_charidx = fn.strcharlen(prev_line) - 1
-                    local prev_last_byteidx = fn.byteidx(prev_line, prev_last_charidx)
-                    api.nvim_win_set_cursor(win, { prev_row, prev_last_byteidx })
-                end
-            end
+            local prev_row, prev_col = get_backward_skip_pos(cur_pos, buf)
+            api.nvim_win_set_cursor(win, { prev_row, prev_col })
         end
 
         api.nvim_cmd({ cmd = "norm", args = { "v" }, bang = true }, {})
@@ -516,7 +523,7 @@ local function handle_t_cmd(buf, pos)
         pos[1] = math.max(prev_row, 1)
 
         local prev_line = nvim_buf_get_lines(buf, prev_row - 1, prev_row, false)[1]
-        -- TODO: https://github.com/neovim/neovim/pull/37737
+        -- FUTURE: https://github.com/neovim/neovim/pull/37737
         local strcharlen = fn.strcharlen(prev_line) ---@type integer
         pos[2] = fn.byteidx(prev_line, math.max(strcharlen - 1, 0))
     end
@@ -539,7 +546,7 @@ local function csearch_fwd(count, win, buf, row, col, input, opts)
 
     local cur_line = nvim_buf_get_lines(buf, row - 1, row, false)[1]
     local cur_charidx = fn.charidx(cur_line, col)
-    -- TODO: https://github.com/neovim/neovim/pull/37737
+    -- FUTURE: https://github.com/neovim/neovim/pull/37737
     local charlen = fn.strcharlen(cur_line) ---@type integer
     local valid_line = foldclosed(row) == -1 and charlen > 1
     local last_byteidx = byteidx(cur_line, math.max(charlen - 1, 0))
@@ -661,6 +668,10 @@ local function csearch_rev(count, win, buf, row, col, input, opts)
     local foldclosed = fn.foldclosed
     local nvim_buf_get_lines = api.nvim_buf_get_lines
 
+    -- TODO: Awkward, because we need to know if we can search the current line regardless of if
+    -- we are skipping or not, so completely outlining that creates redundant logic. Nonetheless
+    -- this does need to be turned into common logic to avoid broader redundancy
+
     local cur_line = nvim_buf_get_lines(buf, row - 1, row, false)[1]
     -- Can't just check col > 0. While non-standard, it is possible for the cursor to be in the
     -- middle of a multibyte character
@@ -685,7 +696,7 @@ local function csearch_rev(count, win, buf, row, col, input, opts)
 
             -- LOW: Wasteful if starcharpart ~= input, as the loop grabs this again
             local prev_line = nvim_buf_get_lines(buf, prev_row - 1, prev_row, false)[1]
-            -- TODO: https://github.com/neovim/neovim/pull/37737
+            -- FUTURE: https://github.com/neovim/neovim/pull/37737
             local charlen = fn.strcharlen(prev_line) ---@type integer
             local last_charidx = math.max(charlen - 1, 0)
             local last_byteidx = byteidx(prev_line, last_charidx)
@@ -835,7 +846,7 @@ function Csearch.csearch(opts)
     end
 
     local t_cmd = opts.t_cmd ---@type integer
-    -- TODO: https://github.com/neovim/neovim/pull/37734
+    -- FUTURE: https://github.com/neovim/neovim/pull/37734
     ---@diagnostic disable-next-line: param-type-mismatch
     fn.setcharsearch({
         char = input,
@@ -861,7 +872,7 @@ function Csearch.rep(opts)
     vim.validate("opts.on_cjump", opts.on_cjump, "callable", true)
     vim.validate("opts.t_cmd_skip", opts.t_cmd_skip, "boolean", true)
 
-    -- TODO: https://github.com/neovim/neovim/pull/37734
+    -- FUTURE: https://github.com/neovim/neovim/pull/37734
     ---@type { char: string, forward: 1|0, until: 1|0 }
     local charsearch = fn.getcharsearch()
     local char = charsearch.char
