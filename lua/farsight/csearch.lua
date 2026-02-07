@@ -953,6 +953,8 @@ return Csearch
 -- aren't necessarily a huge deal, but what about the actual token finding?
 -- TODO: Need to test that the gb options work
 
+-- MID: Determine if user customization is practically possible in this module. The amount of
+-- inter-connection is a real issue.
 -- MID: The default tokens should be 'isk' for the current buffer. The isk strings + tokens can
 -- be cached when created for the first time. For subsequent runs, re-query the opt string and
 -- only rebuild the list if the string has changed

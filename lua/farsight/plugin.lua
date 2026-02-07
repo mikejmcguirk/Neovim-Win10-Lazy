@@ -163,15 +163,14 @@ for _, map in ipairs(csearch_maps) do
     end
 end
 
--- TODO: Need to be able to use b:vars to control options. Reasoning: for certain buffers types
--- users might want certain defaults without having to setup new mappings. Could highlight groups
--- be included as well? (Additionally, the default jump behaviors need to be rolled up so that
--- they can be overridden. So the word finding logic needs to be an internalized if. Same with
--- windows. And whatever else. The user should not need to make bespoke mappings to set per
--- buffer defaults with autocmds). Should Jump provide the user a way to use an arg to determine
--- the locator by mode? Or should the user just have to do it per mapping. Makes getting the mode
--- info wasteful in custom mappings
--- TODO: Think more deeply about how control characters are handled
+-- TODO: Document deprecation plan:
+-- - Time period: 2-3 months
+-- - Opt/function removal: Mark private/package, then delete
+-- - Function signature change: Use a shim that routes the old interface, then delete the shim and
+-- old interface
+-- - Default function behaviors: Notify which opt lets you use old behavior
+-- - Plug map changes: Unsure
+-- Document that b:vars are the same as g:vars and prioritized. Can be used for ft configurations
 -- TODO: Test everything with and around multibyte chars. It doesn't look like anything special
 -- needs to be done, but need to be sure
 -- TODO: Since ctrl char literals are displayed, maybe allow them to be factored into csearch and
