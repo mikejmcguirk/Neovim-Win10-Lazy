@@ -509,49 +509,22 @@ local function dim_target_lines(targets, ns_buf_map)
 end
 
 ---Expects zero indexed row and col
----@param win integer
+---@param jump_win integer
 ---@param buf integer
 ---@param row_0 integer
 ---@param col integer
----@param is_omode boolean
+---@param map_mode "n"|"v"|"o"|"l"|"t"|"x"|"s"|"i"|"c"
 ---@param opts farsight.jump.JumpOpts
 ---@return nil
-local function do_jump(win, buf, row_0, col, is_omode, opts)
+local function do_jump(jump_win, buf, row_0, col, map_mode, opts)
     local cur_win = api.nvim_get_current_win()
-    if cur_win ~= win then
-        api.nvim_set_current_win(win)
-    end
+    local cur_pos = api.nvim_win_get_cursor(cur_win)
+    local jump_pos = { row_0 + 1, col }
 
-    local nvim_cmd = api.nvim_cmd
-
-    -- Because jumplists are scoped per window, setting the pcmark in the window being left doesn't
-    -- provide anything useful. By setting the pcmark in the window where the jump is performed,
-    -- the user is provided the ability to undo the jump
-    if (not opts.keepjumps) and not is_omode then
-        -- FUTURE: When the updated mark API is released, see if that can be used to set the
-        -- pcmark correctly
-        nvim_cmd({ cmd = "norm", args = { "m`" }, bang = true }, {})
-    end
-
-    local row = row_0 + 1
-    -- Use visual mode so that all text within the selection is operated on, rather than the text
-    -- between the start and end of the cursor movemet. In this case, staying in normal mode causes
-    -- the actual character jumped to to be truncated
-    if is_omode then
-        nvim_cmd({ cmd = "norm", args = { "v" }, bang = true }, {})
-        -- TODO: This might only work for forward
-        if vim.o.selection == "exclusive" then
-            local line = api.nvim_buf_get_lines(buf, row_0, row, false)[1]
-            col = math.min(col + 1, math.max(#line - 1, 0))
-        end
-    end
-
-    local cur_pos = { row, col }
-    api.nvim_win_set_cursor(win, cur_pos)
-    local on_jump = opts.on_jump
-    if on_jump then
-        on_jump(win, buf, cur_pos)
-    end
+    ---@type farsight._common.DoJumpOpts
+    local jump_opts = { on_jump = opts.on_jump, keepjumps = opts.keepjumps }
+    local common = require("farsight._common")
+    common._do_jump(cur_win, jump_win, buf, map_mode, cur_pos, jump_pos, jump_opts)
 end
 
 -- LOW: A way you could optimize virt text population is to check the actual max label size when
@@ -562,11 +535,11 @@ end
 ---Edits ns_buf_map and targets in place
 ---@param ns_buf_map table<integer, integer>
 ---@param targets farsight.jump.Target[]
----@param is_omode boolean
+---@param map_mode "n"|"v"|"o"|"l"|"t"|"x"|"s"|"i"|"c"
 ---@param jump_level integer
 ---@param opts farsight.jump.JumpOpts
 ---@return nil
-local function advance_jump(ns_buf_map, targets, is_omode, jump_level, opts)
+local function advance_jump(ns_buf_map, targets, map_mode, jump_level, opts)
     local dim = opts.dim
     local max_tokens = opts.max_tokens ---@type integer
     while true do
@@ -600,7 +573,7 @@ local function advance_jump(ns_buf_map, targets, is_omode, jump_level, opts)
         if targets_len <= 1 then
             if targets_len == 1 then
                 local target = targets[1]
-                do_jump(target[1], target[2], target[3], target[4], is_omode, opts)
+                do_jump(target[1], target[2], target[3], target[4], map_mode, opts)
             end
 
             return
@@ -631,7 +604,8 @@ local function advance_jump(ns_buf_map, targets, is_omode, jump_level, opts)
 end
 
 ---@param opts farsight.jump.JumpOpts
-local function resolve_jump_opts(opts, mode, is_omode)
+---@param map_mode "n"|"v"|"o"|"l"|"t"|"x"|"s"|"i"|"c"
+local function resolve_jump_opts(opts, map_mode)
     vim.validate("opts", opts, "table")
     local ut = require("farsight.util")
     local cur_buf = api.nvim_get_current_buf()
@@ -641,7 +615,7 @@ local function resolve_jump_opts(opts, mode, is_omode)
     vim.validate("opts.dim", opts.dim, "boolean")
 
     opts.dir = opts.dir or 0
-    ut._validate_int(opts.dir)
+    vim.validate("opts.dir", opts.dir, ut._is_int)
     vim.validate("opts.dir", opts.dir, function()
         return -1 <= opts.dir and opts.dir <= 1
     end, "Dir must be -1, 0, or 1")
@@ -655,9 +629,7 @@ local function resolve_jump_opts(opts, mode, is_omode)
             return opts.locator
         end
 
-        local short_mode = string.sub(mode, 1, 1)
-        local is_visual = short_mode == "v" or short_mode == "V" or short_mode == "\22"
-        if is_visual or is_omode then
+        if map_mode == "v" or map_mode == "o" then
             return locate_cwords_with_cur_pos
         else
             return locate_cwords
@@ -668,7 +640,7 @@ local function resolve_jump_opts(opts, mode, is_omode)
 
     opts.max_tokens = ut._use_gb_if_nil(opts.max_tokens, "farsight_max_tokens", cur_buf)
     opts.max_tokens = opts.max_tokens or MAX_TOKENS
-    ut._validate_uint(opts.max_tokens)
+    vim.validate("opts.max_tokens", opts.max_tokens, ut._is_uint)
     vim.validate("opts.max_tokens", opts.max_tokens, function()
         return opts.max_tokens > 0
     end, "max_tokens must be at least one")
@@ -681,12 +653,11 @@ local function resolve_jump_opts(opts, mode, is_omode)
 
     vim.validate("opts.on_jump", opts.on_jump, "callable")
 
-    opts.tokens = ut._use_gb_if_nil(opts.tokens, "farsight_tokens", cur_buf)
+    opts.tokens = ut._use_gb_if_nil(opts.tokens, "farsight_jump_tokens", cur_buf)
     opts.tokens = opts.tokens or TOKENS
-    -- LOW: Clumsy validation method
-    ut._validate_list(opts.tokens, { item_type = "string" })
+    vim.validate("opts.tokens", opts.tokens, "table")
     ut._list_dedup(opts.tokens)
-    ut._validate_list(opts.tokens, { min_len = 2 })
+    ut._validate_list(opts.tokens, { item_type = "string", min_len = 2 })
 
     opts.wins = opts.wins or { api.nvim_get_current_win() }
     ut._validate_list(opts.wins, { item_type = "number", min_len = 1 })
@@ -706,33 +677,33 @@ local Jump = {}
 ---@field dim? boolean
 ---@field dir? integer
 ---@field keepjumps? boolean
----@field locator? fun(win: integer, row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
+---@field locator? fun(win: integer, row: integer, line: string, buf: integer,
+---cur_pos: { [1]: integer, [2]: integer }):integer[]
 ---@field max_tokens? integer
----@field on_jump? fun(win: integer, buf: integer, cur_pos: { [1]:integer, [2]: integer })
+---@field on_jump? fun(win: integer, buf: integer, jump_pos: { [1]:integer, [2]: integer })
 ---@field tokens? string[]
 ---@field wins? integer[]
 
 ---@param opts farsight.jump.JumpOpts?
 function Jump.jump(opts)
     opts = opts and vim.deepcopy(opts, true) or {}
-    local mode = api.nvim_get_mode().mode
-    local is_omode = string.sub(mode, 1, 2) == "no"
-    resolve_jump_opts(opts, mode, is_omode)
-
     local ut = require("farsight.util")
+    local map_mode = ut._resolve_map_mode(api.nvim_get_mode().mode)
+    resolve_jump_opts(opts, map_mode)
+
     local focusable_wins = ut._order_focusable_wins(opts.wins)
     if #focusable_wins < 1 then
         api.nvim_echo({ { "No focusable wins provided" } }, false, {})
         return
     end
 
-    local sights, ns_buf_map = get_targets(focusable_wins, opts)
-    if #sights > 1 then
+    local targets, ns_buf_map = get_targets(focusable_wins, opts)
+    if #targets > 1 then
         local jump_level = 0
-        populate_target_labels(sights, opts.tokens)
-        advance_jump(ns_buf_map, sights, is_omode, jump_level, opts)
-    elseif #sights == 1 then
-        do_jump(sights[1][1], sights[1][2], sights[1][3], sights[1][4], is_omode, opts)
+        populate_target_labels(targets, opts.tokens)
+        advance_jump(ns_buf_map, targets, map_mode, jump_level, opts)
+    elseif #targets == 1 then
+        do_jump(targets[1][1], targets[1][2], targets[1][3], targets[1][4], map_mode, opts)
     else
         api.nvim_echo({ { "No sights to jump to" } }, false, {})
     end

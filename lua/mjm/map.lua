@@ -46,7 +46,7 @@ set("n", "ZB", function()
 end)
 
 set("n", "g<tab>", function()
-    local range = vim.v.count == 0 and vim.fn.tabpagenr("$") or vim.v.count
+    local range = vim.v.count == 0 and fn.tabpagenr("$") or vim.v.count
     api.nvim_cmd({ cmd = "tabnew", range = { range } }, {})
 
     local buf = api.nvim_get_current_buf()
@@ -387,25 +387,29 @@ end)
 -- MID: Showing the search string would be more useful when hlsearch is turned on than with n/N
 -- But I'd have to make the initial output match
 
+-- MID: If you hit n without hlsearch and the term is not on the screen, no feedback on what is
+-- happening. Unsure how to proceed
 -- For the N/n maps, when I tested this with silent = true, it does show the result/total counter
 -- but not the searched term, which is the goal. Disable silent if something changes here
-set("n", "N", function()
-    if vim.v.hlsearch == 0 then
-        vim.v.hlsearch = 1
-        return "\27"
-    else
-        return "Nzzzv"
-    end
-end, { expr = true })
-
-set("n", "n", function()
-    if vim.v.hlsearch == 0 then
-        vim.v.hlsearch = 1
-        return "\27"
-    else
-        return "nzzzv"
-    end
-end, { expr = true })
+-- set("n", "N", function()
+--     if vim.v.hlsearch == 0 then
+--         vim.v.hlsearch = 1
+--         return "\27"
+--     else
+--         return "Nzzzv"
+--     end
+-- end, { expr = true })
+--
+-- set("n", "n", function()
+--     if vim.v.hlsearch == 0 then
+--         vim.v.hlsearch = 1
+--         return "\27"
+--     else
+--         return "nzzzv"
+--     end
+-- end, { expr = true })
+set("n", "n", "nzzzv")
+set("n", "N", "Nzzzv")
 
 -- Not silent so that the search prompting displays properly
 set("n", "/", "ms/")
@@ -523,7 +527,8 @@ end, { expr = true })
 -- behavior on timeout
 set("n", "<leader>-", "<nop>")
 
-set({ "n", "x" }, "<M-s>", ":'<,'>s/\\%V")
+set({ "n" }, "<M-s>", ":'<,'>s/\\%V")
+set({ "x" }, "<M-s>", ":s/\\%V")
 
 -- FUTURE: These should remove trailing whitespace from the original line. The == should handle
 -- invalid leading whitespace on the new line

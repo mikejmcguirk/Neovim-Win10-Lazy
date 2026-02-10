@@ -163,6 +163,24 @@ for _, map in ipairs(csearch_maps) do
     end
 end
 
+-- Profiling code:
+-- local start_time = vim.uv.hrtime()
+-- local end_time = vim.uv.hrtime()
+-- local duration_ms = (end_time - start_time) / 1e6
+-- print(string.format("hl_forward took %.2f ms", duration_ms))
+
+-- TODO: The various functions should have hard protections against multi-win if not in normal mode
+-- TODO: Augmented /? search. Design specs:
+-- - As you are typing, items are labeled like in flash
+-- - If you jump to a label, the "/" register is not updated
+-- - If you hit <cr>, the "/" register is updated and hlsearch is turned on based on settings
+-- - No auto-jump, as (a) this can happen by accident and (b) it can prevent entering full search
+-- terms for actual searches
+-- Design plan:
+-- - Look at the code for search and note what it actually does. There is nuance I'm sure we'll
+-- need to capture
+-- - Look at what happens when "incsearch" is active. How much do we want to implement that
+-- behavior?
 -- TODO: Document deprecation plan:
 -- - Time period: 2-3 months
 -- - Opt/function removal: Mark private/package, then delete
@@ -175,6 +193,7 @@ end
 -- needs to be done, but need to be sure
 -- TODO: Since ctrl char literals are displayed, maybe allow them to be factored into csearch and
 -- jump
+-- TODO: Need to test that the gb options work
 
 -- LOW: Is there a good way to allow jump's locator and wins opts to be controlled by g:vars?
 -- - Changing either default would break vmode and omode

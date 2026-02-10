@@ -2,7 +2,7 @@ local api = vim.api
 local fn = vim.fn
 
 ---@class farsight.Util
-local Util = {}
+local M = {}
 
 ---Bespoke function because:
 ---- vim.list.unique runs vim.validate at the beginning. Inconvenient here since deduping is done
@@ -11,7 +11,7 @@ local Util = {}
 ---- vim.list.unique returns the list, which is unnecesary
 ---- vim.list.unique is v12 only. Doing this saves the cost of versioning maintenance
 ---@param t any[]
-function Util._list_dedup(t)
+function M._list_dedup(t)
     local seen = {} --- @type table<any,boolean>
     local finish = #t
     local j = 1
@@ -40,10 +40,11 @@ end
 -- nil gaps in it? Question needs more fully explored
 -- Should the vim list filter allow f to be optional? If it's not present, then I guess just
 -- nil the list in place?
+-- Note - A vim implementation would need to work with vim.iter
 
 ---@param t any[]
 ---@param f fun(v: any): boolean
-function Util._list_filter(t, f)
+function M._list_filter(t, f)
     local len = #t
     local j = 1
 
@@ -65,7 +66,7 @@ end
 
 ---@param t any[]
 ---@param idx integer
-function Util._list_remove_item(t, idx)
+function M._list_remove_item(t, idx)
     local len = #t
     for i = idx + 1, len do
         t[i - 1] = t[i]
@@ -78,7 +79,7 @@ end
 -- is not documented behavior and thus can change. The below function ensures layout
 ---@param wins integer[]
 ---@return integer[]
-function Util._order_focusable_wins(wins)
+function M._order_focusable_wins(wins)
     local focusable_wins = {} ---@type integer[]
     local positions = {} ---@type { [1]:integer, [2]:integer, [3]:integer }[]
 
@@ -118,7 +119,7 @@ local cword_str = [[\k\+]]
 ---@param line string
 ---@param col integer
 ---@return { [1]: string, [2]: integer, [3]: integer }|nil
-function Util._find_cword_at_col(line, col)
+function M._find_cword_at_col(line, col)
     local start = 0
 
     while start <= col do
@@ -137,13 +138,10 @@ function Util._find_cword_at_col(line, col)
     return nil
 end
 
--- TODO: Should the validation also be in here? It only saves one line per use, but it's used a
--- lot
-
 ---@param opt boolean|nil
 ---@param default boolean
 ---@return boolean
-function Util._resolve_bool_opt(opt, default)
+function M._resolve_bool_opt(opt, default)
     if type(opt) == "nil" then
         return default
     else
@@ -151,11 +149,47 @@ function Util._resolve_bool_opt(opt, default)
     end
 end
 
+---While the return type contains all |map-modes| for completeness, this function only returns
+---n, v, o, l, or t
+---Visual/select mode aren't distinguished because selection=exclusive has the same effect on both
+---I'm unsure how any of the l modes would be used for a jump in practice, so they are all
+---grouped together
+---@param mode string
+---@return "n"|"v"|"o"|"l"|"t"|"x"|"s"|"i"|"c"
+function M._resolve_map_mode(mode)
+    local sub = string.sub
+    if sub(mode, 1, 2) == "no" then
+        return "o"
+    end
+
+    local short_mode = sub(mode, 1, 1)
+    if short_mode == "n" then
+        return "n"
+    end
+
+    if
+        short_mode == "v"
+        or short_mode == "V"
+        or short_mode == "\22"
+        or short_mode == "s"
+        or short_mode == "S"
+        or short_mode == "\19"
+    then
+        return "v"
+    end
+
+    if short_mode == "t" then
+        return "t"
+    end
+
+    return "l"
+end
+
 ---@param opt any
 ---@param var string
 ---@param buf integer
 ---@return any
-function Util._use_gb_if_nil(opt, var, buf)
+function M._use_gb_if_nil(opt, var, buf)
     if opt ~= nil then
         return opt
     end
@@ -181,75 +215,65 @@ end
 ---@param list table
 ---@param opts farsight.util.ValidateListOpts
 ---@return nil
-function Util._validate_list(list, opts)
-    if (not list) and opts.optional then
-        return
-    end
-
-    vim.validate("list", list, vim.islist, "Must be a valid list")
-
-    local list_len = #list
-    local len = opts.len
-
-    if len then
-        vim.validate("list", list, function()
-            return list_len == len
-        end, "List length must be " .. len)
-    end
-
-    local min_len = opts.min_len
-    if min_len then
-        vim.validate("list", list, function()
-            return list_len >= min_len
-        end, "List length must be at least" .. min_len)
-    end
-
-    local max_len = opts.max_len
-    if max_len then
-        vim.validate("list", list, function()
-            return list_len <= max_len
-        end, "List length cannot be greater than " .. max_len)
-    end
-
-    local item_type = opts.item_type
-    if item_type then
-        for _, item in ipairs(list) do
-            local err_str = "List items must be type " .. item_type
-            vim.validate("item", item, item_type, err_str)
+function M._validate_list(list, opts)
+    vim.validate("list", list, function()
+        if not vim.islist(list) then
+            return false, "Not a valid list"
         end
-    end
+
+        local list_len = #list
+        local len = opts.len
+        if len and list_len ~= len then
+            return false, "List length must be " .. len
+        end
+
+        local min_len = opts.min_len
+        if min_len and list_len < min_len then
+            return false, "List length must be at least" .. min_len
+        end
+
+        local max_len = opts.max_len
+        if max_len and list_len > max_len then
+            return false, "List length must be at most" .. max_len
+        end
+
+        local item_type = opts.item_type
+        if item_type then
+            for _, item in ipairs(list) do
+                if type(item) ~= item_type then
+                    return false, "List items must be type " .. item_type
+                end
+            end
+        end
+
+        return true
+    end, opts.optional)
 end
 
----@param n integer|nil
----@param optional? boolean
----@return nil
-function Util._validate_int(n, optional)
-    if n == nil and optional then
-        return
+-- MID: Also return messages from these validations for vim.validate to use
+
+---@param n integer
+---@return boolean
+function M._is_int(n)
+    if type(n) ~= "number" then
+        return false
     end
 
-    vim.validate("num", n, "number")
-    vim.validate("num", n, function()
-        return n % 1 == 0
-    end, "Num is not an integer")
+    return n % 1 == 0
 end
 
----@param n integer|nil
----@param optional? boolean
----@return nil
-function Util._validate_uint(n, optional)
-    if n == nil and optional then
-        return
+---@param n integer
+---@return boolean
+function M._is_uint(n)
+    if M._is_int(n) == false then
+        return false
     end
 
-    vim.validate("num", n, "number")
-    vim.validate("num", n, function()
-        return n % 1 == 0
-    end, "Num is not an integer")
-
-    vim.validate("num", n, function()
-        return n >= 0
-    end, "Num is less than zero")
+    return n >= 0
 end
 
-return Util
+return M
+
+-- TODO: Rename this to _util
+-- TODO: Why is _common a separate file? I guess we're separating jump logic from helper logic, but
+-- feels thin
