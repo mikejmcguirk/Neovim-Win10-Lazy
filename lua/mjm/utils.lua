@@ -258,18 +258,36 @@ local function fix_bookend_blanks(buf, start_idx, end_idx)
     fix_bookend_blanks(buf, start_idx, end_idx)
 end
 
-M.fallback_formatter = function(buf)
-    local shiftwidth = api.nvim_get_option_value("shiftwidth", { buf = buf }) ---@type any
-    if shiftwidth == 0 then
-        shiftwidth = api.nvim_get_option_value("tabstop", { buf = buf })
-    else
-        api.nvim_set_option_value("tabstop", shiftwidth, { buf = buf })
+---@class mjm.util.FallbackFormatterOpts
+---@field retab boolean
+
+---@param buf integer
+---@param opts? mjm.util.FallbackFormatterOpts
+---@return nil
+function M.fallback_formatter(buf, opts)
+    buf = buf == 0 and api.nvim_get_current_buf() or buf
+    opts = opts or {}
+    if opts.retab == nil then
+        opts.retab = true
     end
 
-    local expandtab = api.nvim_get_option_value("expandtab", { buf = buf }) ---@type any
-    if expandtab then
-        api.nvim_set_option_value("softtabstop", shiftwidth, { buf = buf })
-        vim.cmd(buf .. "bufdo retab")
+    local retab = opts.retab
+    local get_option_value = api.nvim_get_option_value
+    -- Assuming retab = true is the typical case
+    local set_option_value = api.nvim_set_option_value
+    local shiftwidth = get_option_value("sw", { buf = buf }) ---@type integer
+    if shiftwidth == 0 then
+        shiftwidth = get_option_value("ts", { buf = buf })
+    elseif retab then
+        set_option_value("ts", shiftwidth, { buf = buf })
+    end
+
+    local expandtab = get_option_value("et", { buf = buf }) ---@type boolean
+    if expandtab and retab then
+        set_option_value("sts", shiftwidth, { buf = buf })
+        api.nvim_buf_call(buf, function()
+            api.nvim_cmd({ cmd = "retab" }, {})
+        end)
     end
 
     fix_bookend_blanks(buf, 0, 1)

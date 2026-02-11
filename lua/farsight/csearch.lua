@@ -831,7 +831,8 @@ local function do_csearch(win, buf, cur_pos, char, opts)
         jump_pos = csearch_rev(vim.v.count1, buf, cur_pos, char, opts)
     end
 
-    if jump_pos then
+    -- Can't just check nil. The csearch functions create empty tables to update in place
+    if jump_pos and #jump_pos == 2 then
         if opts.t_cmd == 1 then
             if forward == 1 then
                 jump_pos = handle_t_cmd(buf, jump_pos)

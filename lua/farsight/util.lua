@@ -38,9 +38,6 @@ end
 -- otherwise be the same. The vim function should also return the table reference
 -- Question - How do you validate that it's a proper list? Like, how do you handle something with
 -- nil gaps in it? Question needs more fully explored
--- Should the vim list filter allow f to be optional? If it's not present, then I guess just
--- nil the list in place?
--- Note - A vim implementation would need to work with vim.iter
 
 ---@param t any[]
 ---@param f fun(v: any): boolean

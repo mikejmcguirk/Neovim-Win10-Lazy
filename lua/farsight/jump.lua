@@ -227,6 +227,11 @@ end
 ---@field [5] integer bot
 ---@field [6] integer right
 
+-- TODO: The zwins logic is also needed for the search module. In the Csearch module, I think
+-- it would be purely aesthetic, so the overhead would probably not be worth it
+-- TODO: In the search case, if incsearch makes the cursor move, and that closes an LSP float,
+-- how would we deal with the updated window state?
+
 ---@return farsight.jump.Zwin[]
 local function get_zwins()
     local tabpage_wins = api.nvim_tabpage_list_wins(0)
@@ -326,13 +331,10 @@ local function get_targets(wins, opts)
                 end
             else
                 add_targets(win, top, buf, cur_pos, locator, ns, targets)
-                local old_len = #targets
                 list_filter(targets, function(t)
                     local screeninfo = screenpos(win, top, t[4] + 1)
-                    vim.fn.confirm(top .. ", " .. screeninfo.row)
                     return screeninfo.row ~= 0
                 end)
-                print(old_len .. ", " .. #targets)
                 top = top + 1
             end
 

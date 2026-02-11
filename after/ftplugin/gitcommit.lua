@@ -17,6 +17,11 @@ end)
 api.nvim_create_autocmd("BufWritePre", {
     buffer = 0,
     callback = function(ev)
-        require("mjm.utils").fallback_formatter(ev.buf)
+        require("mjm.utils").fallback_formatter(ev.buf, { retab = false })
     end,
 })
+
+set("n", "ZZ", function()
+    require("mjm.utils").fallback_formatter(0, { retab = false })
+    api.nvim_cmd({ cmd = "norm", args = { "w" }, mods = { lockmarks = true, silent = true } }, {})
+end, { buffer = 0 })
