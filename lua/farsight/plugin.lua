@@ -181,6 +181,8 @@ end
 -- need to capture
 -- - Look at what happens when "incsearch" is active. How much do we want to implement that
 -- behavior?
+-- - For the actual search, try to use the search() function or something related, as it uses the
+-- same underlying searchit function that /? search uses
 -- TODO: Document deprecation plan:
 -- - Time period: 2-3 months
 -- - Opt/function removal: Mark private/package, then delete

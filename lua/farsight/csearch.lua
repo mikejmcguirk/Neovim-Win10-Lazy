@@ -299,8 +299,7 @@ end
 ---@param buf integer
 ---@param labels farsight.csearch.TokenLabel[]
 local function highlight_labels(buf, labels)
-    ---@type vim.api.keyset.set_extmark
-    local extmark_opts = { priority = 1000, strict = false }
+    local extmark_opts = { priority = 1000, strict = false } ---@type vim.api.keyset.set_extmark
     for _, label in ipairs(labels) do
         extmark_opts.hl_group = label[4]
         extmark_opts.end_col = label[2] + label[3]
@@ -325,19 +324,12 @@ local function create_token_counts(vcount1, is_ascii, tokens, max_tokens)
     return token_counts
 end
 
----@param vcount1 integer
 ---@param buf integer
 ---@param cur_pos { [1]: integer, [2]: integer }
----@param tokens string[]
 ---@param max_tokens integer
-local function hl_fwd(vcount1, buf, cur_pos, tokens, max_tokens)
-    local is_ascii = is_ascii_only(tokens)
-    ---@type table<integer, integer>|table<string, integer>
-    local token_counts = create_token_counts(vcount1, is_ascii, tokens, max_tokens)
-    if not next(token_counts) then
-        return
-    end
-
+---@param is_ascii boolean
+---@param token_counts table<integer, integer>|table<string, integer>
+local function hl_fwd(buf, cur_pos, max_tokens, is_ascii, token_counts)
     local counter_func = is_ascii and ascii_labeler_fwd or utf_labeler_fwd
     local decrement_func = is_ascii and decrement_ascii_tokens or decrement_utf_tokens
     local labels = {} ---@type farsight.csearch.TokenLabel[]
@@ -377,22 +369,14 @@ local function hl_fwd(vcount1, buf, cur_pos, tokens, max_tokens)
         end
     end
 
-    highlight_labels(buf, labels)
+    return labels
 end
 
----@param vcount1 integer
 ---@param buf integer
 ---@param cur_pos { [1]: integer, [2]: integer }
----@param tokens string[]
 ---@param max_tokens integer
-local function hl_rev(vcount1, buf, cur_pos, tokens, max_tokens)
-    local is_ascii = is_ascii_only(tokens)
-    ---@type table<integer, integer>|table<string, integer>
-    local token_counts = create_token_counts(vcount1, is_ascii, tokens, max_tokens)
-    if not next(token_counts) then
-        return
-    end
-
+---@param is_ascii boolean
+local function hl_rev(buf, cur_pos, max_tokens, is_ascii, token_counts)
     local labeler_func = is_ascii and ascii_labeler_rev or utf_labeler_rev
     local decrement_func = is_ascii and decrement_ascii_tokens or decrement_utf_tokens
     local labels = {} ---@type farsight.csearch.TokenLabel[]
@@ -432,7 +416,7 @@ local function hl_rev(vcount1, buf, cur_pos, tokens, max_tokens)
         end
     end
 
-    highlight_labels(buf, labels)
+    return labels
 end
 
 ---@param jump_win integer
@@ -780,17 +764,39 @@ end
 ---@param buf integer
 ---@param cur_pos { [1]: integer, [2]: integer }
 ---@param opts farsight.csearch.CsearchOpts
+local function add_csearch_labels(win, buf, cur_pos, opts)
+    local tokens = opts.tokens --[[@as string[] ]]
+    local max_tokens = opts.max_tokens --[[@as integer]]
+    local is_ascii = is_ascii_only(tokens)
+    ---@type table<integer, integer>|table<string, integer>
+    local token_counts = create_token_counts(vim.v.count1, is_ascii, tokens, max_tokens)
+    if not next(token_counts) then
+        return
+    end
+
+    local labels = (function()
+        if opts.forward == 1 then
+            return hl_fwd(buf, cur_pos, max_tokens, is_ascii, token_counts)
+        else
+            return hl_rev(buf, cur_pos, max_tokens, is_ascii, token_counts)
+        end
+    end)()
+
+    if #labels > 0 then
+        api.nvim__ns_set(HL_NS, { wins = { win } })
+        highlight_labels(buf, labels)
+        api.nvim__redraw({ valid = true })
+    end
+end
+
+---@param win integer
+---@param buf integer
+---@param cur_pos { [1]: integer, [2]: integer }
+---@param opts farsight.csearch.CsearchOpts
 ---@return string
 local function get_csearch_input(win, buf, cur_pos, opts)
     if opts.show_hl then
-        api.nvim__ns_set(HL_NS, { wins = { win } })
-        if opts.forward == 1 then
-            hl_fwd(vim.v.count1, buf, cur_pos, opts.tokens, opts.max_tokens)
-        else
-            hl_rev(vim.v.count1, buf, cur_pos, opts.tokens, opts.max_tokens)
-        end
-
-        api.nvim__redraw({ valid = true })
+        add_csearch_labels(win, buf, cur_pos, opts)
     end
 
     local _, input = pcall(fn.getcharstr, -1)
@@ -943,9 +949,7 @@ end
 return Csearch
 
 -- TODO: Add dimming to csearch lines with tokens
--- TODO: I'm still not completely satisfied with the backup <cr> map, because it still makes
--- you enter three more keypresses to get somewhere. EasyMotion style f/t makes more sense, but
--- that feels like something that should be more immediately available.
+-- TODO: Make the backup a single char labeler. Not the best, but does add something.
 -- TODO: One last deep scan through the code
 -- TODO: nv_csearch contains a fold adjustment at the end. What does this do? Do I need to
 -- implement it?
