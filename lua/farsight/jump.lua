@@ -219,6 +219,35 @@ local function add_targets(win, row, buf, cur_pos, locator, ns, targets)
     end
 end
 
+---@class farsight.jump.Zwin
+---@field [1] integer winid
+---@field [2] integer zindex
+---@field [3] integer top
+---@field [4] integer left
+---@field [5] integer bot
+---@field [6] integer right
+
+---@return farsight.jump.Zwin[]
+local function get_zwins()
+    local tabpage_wins = api.nvim_tabpage_list_wins(0)
+    local zwins = {} ---@type farsight.jump.Zwin[]
+    local nvim_win_get_config = api.nvim_win_get_config
+    local nvim_win_get_position = api.nvim_win_get_position
+    for _, win in ipairs(tabpage_wins) do
+        local config = nvim_win_get_config(win)
+        local pos = nvim_win_get_position(win)
+        -- TODO: Unsure if this indexing is correct
+        local top = pos[1] + 1
+        local left = pos[2] + 1
+        local bottom = top + config.height - 1
+        local right = left + config.width - 1
+        local zindex = config.zindex
+        zwins[#zwins + 1] = { win, zindex, top, left, bottom, right }
+    end
+
+    return zwins
+end
+
 ---@param wins integer[]
 ---@param opts farsight.jump.JumpOpts
 ---@return farsight.jump.Target[], table<integer, integer>
@@ -246,6 +275,8 @@ local function get_targets(wins, opts)
     local locator = opts.locator ---@type fun(row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
     local max = math.max
     local min = math.min
+    local list_filter = require("farsight.util")._list_filter
+    local screenpos = fn.screenpos
     for _, win in ipairs(wins) do
         local cur_pos = nvim_win_get_cursor(win)
         local buf = nvim_win_get_buf(win)
@@ -253,21 +284,56 @@ local function get_targets(wins, opts)
         ns_buf_map[ns] = buf
 
         nvim_win_call(win, function()
+            local w0 = fn_line("w0")
+            local wS = fn_line("w$")
             local top ---@type integer
             local bot ---@type integer
             if dir <= 0 then
-                top = fn_line("w0")
+                top = w0
             end
 
             if dir >= 0 then
-                bot = fn_line("w$")
+                bot = wS
             end
+
+            -- TODO: Tokens are currently created under floating windows.
+            -- For each target, we need to see if it's under a float and discard if so
+            -- Need to get all configs in the current tabe and sort by zindex
+            -- For each win, we need to get other windows with a higher zindex
+            -- We then need to get the boundaries of each float
+            -- For each label/float, check if there's an intersection
+            -- Possible optimization - Get each row's labels first. If the row does not intersect
+            -- with any floats, can skip individualized checking
+            -- Another possible optimization - Check for any floats that wholly intersect others,
+            -- meaning only the bigger window needs compared
+            -- Question when/where is this done?
+            -- In the midst of adding the labels seems most reasonable. You can get the old label
+            -- length, compare with the new one, then use that to build indexing for a reverse loop
+            -- to check the intersections for only the new labels. If the row doesn't intersect,
+            -- the whole comparison process can be skipped
+            -- This behavior should be documented as happening outside the finder function
 
             if dir == -1 then
                 bot = max(cur_pos[1] - 1, top)
             elseif dir == 1 then
                 top = min(cur_pos[1] + 1, bot)
                 add_targets_after(win, cur_pos, buf, locator, ns, targets)
+                if top == w0 then
+                    list_filter(targets, function(t)
+                        local screeninfo = screenpos(win, top, t[4] + 1)
+                        return screeninfo.row ~= 0
+                    end)
+                end
+            else
+                add_targets(win, top, buf, cur_pos, locator, ns, targets)
+                local old_len = #targets
+                list_filter(targets, function(t)
+                    local screeninfo = screenpos(win, top, t[4] + 1)
+                    vim.fn.confirm(top .. ", " .. screeninfo.row)
+                    return screeninfo.row ~= 0
+                end)
+                print(old_len .. ", " .. #targets)
+                top = top + 1
             end
 
             for i = top, bot do
@@ -716,6 +782,7 @@ end
 
 return Jump
 
+-- TODO: Validate that all provided wins are in the current tabpage
 -- TODO: Document a couple locator examples:
 -- - CWORD
 -- - Sneak style
@@ -792,3 +859,5 @@ return Jump
 -- MID: For the backup csearch jump, should jumps from t motions offset?
 
 -- LOW: Would be interesting to test storing the labels as a struct of arrays
+-- LOW: Could explore allowing a list of wins not in the current tabpage to be passed to the jump
+-- function, assuming they are all part of the same tabpage

@@ -954,9 +954,8 @@ return Csearch
 -- TODO: nv_csearch contains a fold adjustment at the end. What does this do? Do I need to
 -- implement it?
 -- TODO: Check if the user is prompted for chars when running macros on default f/t
+-- TODO: During highlighting, use screenpos() to check for invalid positions
 
--- MID: What do we do about wrapped lines that run off the edge of the screen? The highlights
--- aren't necessarily a huge deal, but what about the actual token finding?
 -- MID: Determine if user customization is practically possible in this module. The amount of
 -- inter-connection is a real issue.
 -- MID: The default tokens should be 'isk' for the current buffer. The isk strings + tokens can
