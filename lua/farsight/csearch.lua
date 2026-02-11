@@ -885,7 +885,7 @@ function Csearch.csearch(opts)
         char = get_csearch_input(cur_win, cur_buf, cur_pos, opts)
     end
 
-    local input_byte = string.byte(char)
+    local input_byte = string.byte(char) or 0
     local is_ascii_control_char = input_byte <= 31 or input_byte == 127
     local no_char = char == nil or #char == 0
     if is_ascii_control_char or no_char then

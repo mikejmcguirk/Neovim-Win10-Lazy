@@ -39,8 +39,9 @@ end
 -- Question - How do you validate that it's a proper list? Like, how do you handle something with
 -- nil gaps in it? Question needs more fully explored
 
----@param t any[]
----@param f fun(v: any): boolean
+---@generic T
+---@param t T[]
+---@param f fun(x: T): boolean
 function M._list_filter(t, f)
     local len = #t
     local j = 1
