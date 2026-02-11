@@ -271,19 +271,16 @@ function M.fallback_formatter(buf, opts)
         opts.retab = true
     end
 
-    local retab = opts.retab
     local get_option_value = api.nvim_get_option_value
-    -- Assuming retab = true is the typical case
-    local set_option_value = api.nvim_set_option_value
     local shiftwidth = get_option_value("sw", { buf = buf }) ---@type integer
+    local expandtab = get_option_value("et", { buf = buf }) ---@type boolean
     if shiftwidth == 0 then
         shiftwidth = get_option_value("ts", { buf = buf })
-    elseif retab then
-        set_option_value("ts", shiftwidth, { buf = buf })
     end
 
-    local expandtab = get_option_value("et", { buf = buf }) ---@type boolean
-    if expandtab and retab then
+    if expandtab and opts.retab then
+        local set_option_value = api.nvim_set_option_value
+        set_option_value("ts", shiftwidth, { buf = buf })
         set_option_value("sts", shiftwidth, { buf = buf })
         api.nvim_buf_call(buf, function()
             api.nvim_cmd({ cmd = "retab" }, {})
