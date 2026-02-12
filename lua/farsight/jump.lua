@@ -250,6 +250,10 @@ local function get_zwins()
         zwins[#zwins + 1] = { win, zindex, top, left, bottom, right }
     end
 
+    table.sort(zwins, function(a, b)
+        return a[2] < b[2]
+    end)
+
     return zwins
 end
 
@@ -271,10 +275,13 @@ local function get_targets(wins, opts)
         nvim__ns_set(namespaces[i], { wins = { wins[i] } })
     end
 
+    local zwins = get_zwins()
+
     local targets = {} ---@type farsight.jump.Target[]
     local nvim_win_get_cursor = api.nvim_win_get_cursor
     local nvim_win_get_buf = api.nvim_win_get_buf
     local nvim_win_call = api.nvim_win_call
+    local nvim_win_get_config = api.nvim_win_get_config
     local fn_line = fn.line
     local dir = opts.dir ---@type integer
     local locator = opts.locator ---@type fun(row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
@@ -283,6 +290,20 @@ local function get_targets(wins, opts)
     local list_filter = require("farsight.util")._list_filter
     local screenpos = fn.screenpos
     for _, win in ipairs(wins) do
+        local config = nvim_win_get_config(win)
+        local zindex = config.zindex
+        local zwins_for_cmp = list_filter(vim.deepcopy(zwins, true), function(x)
+            return x[2] > zindex
+        end)
+
+        -- TODO: For each zwin, check the row first, and flag with 1 if the row matters, then
+        -- compare the cols.
+        -- Reset to all zeroes at the end of each row
+        local zwin_cmp_flags = {}
+        for i = 1, #zwins_for_cmp do
+            zwin_cmp_flags[i] = 0
+        end
+
         local cur_pos = nvim_win_get_cursor(win)
         local buf = nvim_win_get_buf(win)
         local ns = win_ns_map[win]
