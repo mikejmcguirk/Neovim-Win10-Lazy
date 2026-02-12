@@ -46,3 +46,7 @@ require("mjm")
 -- export NVIM_APPNAME=some-other-thing will make the config .config/some-other-thing
 
 -- TEST_FILE=test/functional/autocmd/win_scrolled_resized_spec.lua make functionaltest
+
+-- Build with PUC Lua
+-- make CMAKE_EXTRA_FLAGS="-DPREFER_LUA=ON" DEPS_CMAKE_FLAGS="-DUSE_BUNDLED_LUAJIT=OFF -DUSE_BUNDLED_LUA=ON"
+-- Delete .deps and build, build with this, then tests will run with PUC Lua

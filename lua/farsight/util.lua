@@ -272,6 +272,8 @@ end
 
 return M
 
+-- TODO: Given what I found when doing list.filter in PUC Lua, I have to imagine that would
+-- influence the behavior in this plugin
 -- TODO: Rename this to _util
 -- TODO: Why is _common a separate file? I guess we're separating jump logic from helper logic, but
 -- feels thin
