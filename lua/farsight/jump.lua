@@ -144,14 +144,62 @@ local function get_cols(win, row, line, buf, cur_pos, locator)
     return cols
 end
 
+local function is_col_covered(screenpos, fwins)
+    local srow = screenpos.row
+    local scol = screenpos.col
+
+    for _, fwin in ipairs(fwins) do
+        local within_height = fwin[3] <= srow and srow <= fwin[5]
+        local within_width = fwin[4] <= scol and scol <= fwin[6]
+        if within_height and within_width then
+            return false
+        end
+    end
+
+    return true
+end
+
+-- TODO: Do we have the col finder output one indexed cols? Awkward for user customization
+
+local function filter_invisible_cols(win, row, cols, fwins)
+    local screenpos = fn.screenpos
+    local function is_offscreen(i, col)
+        local spos = screenpos(win, row, col + 1)
+        if spos.row == 0 then
+            cols[i] = nil
+            return true
+        else
+            return false
+        end
+    end
+
+    local cols_start_len = #cols
+    -- Handling this step separately does actually non-trivially impact perf in walls of text
+    for i = cols_start_len, 1, -1 do
+        if not is_offscreen(i, cols[i]) then
+            break
+        end
+    end
+
+    if #fwins < 1 then
+        return
+    end
+
+    require("farsight.util")._list_filter(cols, function(c)
+        local spos = screenpos(win, row, c + 1)
+        return is_col_covered(spos, fwins)
+    end)
+end
+
 ---Edits targets in place
 ---@param win integer
 ---@param cur_pos { [1]: integer, [2]: integer }
 ---@param buf integer
 ---@param locator fun(win: integer, row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
 ---@param ns integer
+---@param fwins farsight.jump.FloatWin[]
 ---@param targets farsight.jump.Target[]
-local function add_targets_after(win, cur_pos, buf, locator, ns, targets)
+local function add_targets_after(win, cur_pos, buf, locator, ns, fwins, targets)
     local line = fn.getline(cur_pos[1])
     local start_col_1 = (function()
         local ut = require("farsight.util")
@@ -172,7 +220,10 @@ local function add_targets_after(win, cur_pos, buf, locator, ns, targets)
         cols[i] = cols[i] + (#line - #line_after)
     end
 
-    local row_0 = cur_pos[1] - 1
+    local row = cur_pos[1]
+    filter_invisible_cols(win, row, cols, fwins)
+
+    local row_0 = row - 1
     for _, col in ipairs(cols) do
         targets[#targets + 1] = { win, buf, row_0, col, {}, ns, {} }
     end
@@ -184,8 +235,9 @@ end
 ---@param buf integer
 ---@param locator fun(win: integer, row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
 ---@param ns integer
+---@param fwins farsight.jump.FloatWin[]
 ---@param targets farsight.jump.Target[]
-local function add_targets_before(win, cur_pos, buf, locator, ns, targets)
+local function add_targets_before(win, cur_pos, buf, locator, ns, fwins, targets)
     local row = cur_pos[1]
     local line = fn.getline(row)
     local ut = require("farsight.util")
@@ -194,6 +246,7 @@ local function add_targets_before(win, cur_pos, buf, locator, ns, targets)
 
     local line_before = string.sub(line, 1, end_col_1)
     local cols = get_cols(win, row, line_before, buf, cur_pos, locator)
+    filter_invisible_cols(win, row, cols, fwins)
 
     local row_0 = row - 1
     for _, col in ipairs(cols) do
@@ -208,18 +261,20 @@ end
 ---@param cur_pos { [1]: integer, [2]: integer }
 ---@param locator fun(win: integer, row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
 ---@param ns integer
+---@param fwins farsight.jump.FloatWin[]
 ---@param targets farsight.jump.Target[]
-local function add_targets(win, row, buf, cur_pos, locator, ns, targets)
+local function add_targets(win, row, buf, cur_pos, locator, ns, fwins, targets)
     local line = fn.getline(row)
     local cols = get_cols(win, row, line, buf, cur_pos, locator)
 
+    filter_invisible_cols(win, row, cols, fwins)
     local row_0 = row - 1
     for _, col in ipairs(cols) do
         targets[#targets + 1] = { win, buf, row_0, col, {}, ns, {} }
     end
 end
 
----@class farsight.jump.Zwin
+---@class farsight.jump.FloatWin
 ---@field [1] integer winid
 ---@field [2] integer zindex
 ---@field [3] integer top
@@ -227,35 +282,43 @@ end
 ---@field [5] integer bot
 ---@field [6] integer right
 
--- TODO: The zwins logic is also needed for the search module. In the Csearch module, I think
+-- TODO: The fwins logic is also needed for the search module. In the Csearch module, I think
 -- it would be purely aesthetic, so the overhead would probably not be worth it
 -- TODO: In the search case, if incsearch makes the cursor move, and that closes an LSP float,
 -- how would we deal with the updated window state?
 
----@return farsight.jump.Zwin[]
-local function get_zwins()
-    local tabpage_wins = api.nvim_tabpage_list_wins(0)
-    local zwins = {} ---@type farsight.jump.Zwin[]
+---@return farsight.jump.FloatWin[]
+local function get_fwins()
+    local fwins = {} ---@type farsight.jump.FloatWin[]
+
     local nvim_win_get_config = api.nvim_win_get_config
     local nvim_win_get_position = api.nvim_win_get_position
+    local tabpage_wins = api.nvim_tabpage_list_wins(0)
+
     for _, win in ipairs(tabpage_wins) do
         local config = nvim_win_get_config(win)
-        local pos = nvim_win_get_position(win)
-        -- TODO: Unsure if this indexing is correct
-        local top = pos[1] + 1
-        local left = pos[2] + 1
-        local bottom = top + config.height - 1
-        local right = left + config.width - 1
         local zindex = config.zindex
-        zwins[#zwins + 1] = { win, zindex, top, left, bottom, right }
+        if zindex and zindex > 0 then
+            local pos = nvim_win_get_position(win)
+            -- These two already properly handle border
+            local top = pos[1] + 1
+            local left = pos[2] + 1
+
+            -- LOW: Potential edge case where a table border is set that does not include the
+            -- right and/or bottom border. Can handle this if it shows up in the wild
+            local border_val = config.border ~= "none" and 1 or 0
+            local bottom = top + config.height - 1 + border_val
+            local right = left + config.width - 1 + border_val
+
+            fwins[#fwins + 1] = { win, zindex, top, left, bottom, right }
+        end
     end
 
-    table.sort(zwins, function(a, b)
-        return a[2] < b[2]
-    end)
-
-    return zwins
+    return fwins
 end
+
+-- TODO: The float win and off screen checks must be optimized, as they produce slowdown in large
+-- prose files
 
 ---@param wins integer[]
 ---@param opts farsight.jump.JumpOpts
@@ -267,51 +330,45 @@ local function get_targets(wins, opts)
         namespaces[#namespaces + 1] = api.nvim_create_namespace("")
     end
 
-    local win_ns_map = {} ---@type table<integer, integer>
+    local fwins = get_fwins()
     local ns_buf_map = {} ---@type table<integer, integer>
     local nvim__ns_set = api.nvim__ns_set
-    for i = 1, wins_len do
-        win_ns_map[wins[i]] = namespaces[i]
-        nvim__ns_set(namespaces[i], { wins = { wins[i] } })
-    end
-
-    local zwins = get_zwins()
-
     local targets = {} ---@type farsight.jump.Target[]
-    local nvim_win_get_cursor = api.nvim_win_get_cursor
-    local nvim_win_get_buf = api.nvim_win_get_buf
-    local nvim_win_call = api.nvim_win_call
-    local nvim_win_get_config = api.nvim_win_get_config
-    local fn_line = fn.line
+
+    local deepcopy = vim.deepcopy
     local dir = opts.dir ---@type integer
-    local locator = opts.locator ---@type fun(row: integer, line: string, buf: integer, cur_pos: { [1]: integer, [2]: integer }):integer[]
+    local line = fn.line
+    local list_filter = require("farsight.util")._list_filter
+    ---@type fun(row: integer, line: string, buf: integer,
+    ---cur_pos: { [1]: integer, [2]: integer }):integer[]
+    local locator = opts.locator
     local max = math.max
     local min = math.min
-    local list_filter = require("farsight.util")._list_filter
-    local screenpos = fn.screenpos
-    for _, win in ipairs(wins) do
-        local config = nvim_win_get_config(win)
-        local zindex = config.zindex
-        local zwins_for_cmp = list_filter(vim.deepcopy(zwins, true), function(x)
-            return x[2] > zindex
-        end)
+    local nvim_win_call = api.nvim_win_call
+    local nvim_win_get_buf = api.nvim_win_get_buf
+    local nvim_win_get_config = api.nvim_win_get_config
+    local nvim_win_get_cursor = api.nvim_win_get_cursor
 
-        -- TODO: For each zwin, check the row first, and flag with 1 if the row matters, then
-        -- compare the cols.
-        -- Reset to all zeroes at the end of each row
-        local zwin_cmp_flags = {}
-        for i = 1, #zwins_for_cmp do
-            zwin_cmp_flags[i] = 0
-        end
+    for i = 1, wins_len do
+        local win = wins[i]
+
+        local cmp_fwins = deepcopy(fwins, true)
+        local zindex = nvim_win_get_config(win).zindex or 0
+        list_filter(cmp_fwins, function(x)
+            -- AFAIK, two floating windows with the same zindex produce undefined behavior in terms
+            -- of which one displays. Therefore, don't show jump tokens for either
+            return x[2] >= zindex
+        end)
 
         local cur_pos = nvim_win_get_cursor(win)
         local buf = nvim_win_get_buf(win)
-        local ns = win_ns_map[win]
+        local ns = namespaces[i]
+        nvim__ns_set(ns, { wins = { win } })
         ns_buf_map[ns] = buf
 
         nvim_win_call(win, function()
-            local w0 = fn_line("w0")
-            local wS = fn_line("w$")
+            local w0 = line("w0")
+            local wS = line("w$")
             local top ---@type integer
             local bot ---@type integer
             if dir <= 0 then
@@ -322,49 +379,23 @@ local function get_targets(wins, opts)
                 bot = wS
             end
 
-            -- TODO: Tokens are currently created under floating windows.
-            -- For each target, we need to see if it's under a float and discard if so
-            -- Need to get all configs in the current tabe and sort by zindex
-            -- For each win, we need to get other windows with a higher zindex
-            -- We then need to get the boundaries of each float
-            -- For each label/float, check if there's an intersection
-            -- Possible optimization - Get each row's labels first. If the row does not intersect
-            -- with any floats, can skip individualized checking
-            -- Another possible optimization - Check for any floats that wholly intersect others,
-            -- meaning only the bigger window needs compared
-            -- Question when/where is this done?
-            -- In the midst of adding the labels seems most reasonable. You can get the old label
-            -- length, compare with the new one, then use that to build indexing for a reverse loop
-            -- to check the intersections for only the new labels. If the row doesn't intersect,
-            -- the whole comparison process can be skipped
-            -- This behavior should be documented as happening outside the finder function
-
             if dir == -1 then
                 bot = max(cur_pos[1] - 1, top)
             elseif dir == 1 then
                 top = min(cur_pos[1] + 1, bot)
-                add_targets_after(win, cur_pos, buf, locator, ns, targets)
-                if top == w0 then
-                    list_filter(targets, function(t)
-                        local screeninfo = screenpos(win, top, t[4] + 1)
-                        return screeninfo.row ~= 0
-                    end)
-                end
-            else
-                add_targets(win, top, buf, cur_pos, locator, ns, targets)
-                list_filter(targets, function(t)
-                    local screeninfo = screenpos(win, top, t[4] + 1)
-                    return screeninfo.row ~= 0
-                end)
-                top = top + 1
+                add_targets_after(win, cur_pos, buf, locator, ns, cmp_fwins, targets)
             end
 
-            for i = top, bot do
-                add_targets(win, i, buf, cur_pos, locator, ns, targets)
+            if dir <= 0 then
+                -- TODO: Remove invisible from beginning. Add to top row
+            end
+
+            for k = top, bot do
+                add_targets(win, k, buf, cur_pos, locator, ns, cmp_fwins, targets)
             end
 
             if dir == -1 then
-                add_targets_before(win, cur_pos, buf, locator, ns, targets)
+                add_targets_before(win, cur_pos, buf, locator, ns, cmp_fwins, targets)
             end
         end)
     end
@@ -884,3 +915,4 @@ return Jump
 -- LOW: Would be interesting to test storing the labels as a struct of arrays
 -- LOW: Could explore allowing a list of wins not in the current tabpage to be passed to the jump
 -- function, assuming they are all part of the same tabpage
+-- PR: screenpos() return type
