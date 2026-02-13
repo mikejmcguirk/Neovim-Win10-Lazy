@@ -34,19 +34,18 @@ function M._list_dedup(t)
     end
 end
 
--- PR: This should be in vim.list. You can run vim.validate on t and t then the code should
--- otherwise be the same. The vim function should also return the table reference
--- Question - How do you validate that it's a proper list? Like, how do you handle something with
--- nil gaps in it? Question needs more fully explored
+-- Even if the vim.list PR is accepted, stick with this bespoke function. The reduced validation
+-- and start param are useful.
 
 ---@generic T
 ---@param t T[]
+---@param s integer
 ---@param f fun(x: T): boolean
-function M._list_filter(t, f)
+function M._list_filter(t, s, f)
     local len = #t
-    local j = 1
+    local j = s
 
-    for i = 1, len do
+    for i = s, len do
         local v = t[i]
         if f(v) then
             t[j] = v
@@ -56,6 +55,53 @@ function M._list_filter(t, f)
 
     for i = j, len do
         t[i] = nil
+    end
+end
+
+---@generic T
+---@param t T[]
+---@param f fun(x: T): boolean
+function M._list_filter_beg_only(t, f)
+    local len = #t
+    local j = 1
+    local k = 1
+
+    for i = 1, len do
+        local v = t[i]
+        if f(v) then
+            if i == 1 then
+                return
+            end
+
+            t[j] = v
+            k = i + 1
+            j = j + 1
+            break
+        end
+    end
+
+    for i = k, len do
+        t[j] = t[i]
+        j = j + 1
+    end
+
+    for i = j, len do
+        t[i] = nil
+    end
+end
+
+---@generic T
+---@param t T[]
+---@param f fun(x: T): boolean
+function M._list_filter_end_only(t, f)
+    local len_t = #t
+    for i = len_t, 1, -1 do
+        local v = t[i]
+        if not f(v) then
+            t[i] = nil
+        else
+            break
+        end
     end
 end
 
