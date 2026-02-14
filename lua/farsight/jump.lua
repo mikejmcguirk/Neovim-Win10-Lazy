@@ -262,19 +262,19 @@ end
 
 ---Assumes it is called in the window context of the relevant win
 ---@param dir -1|0|1
----@return integer, integer
+---@return integer, integer, integer
 local function get_top_bot(dir, cur_pos)
+    local wS = fn.line("w$")
     if dir == 1 then
-        local wS = fn.line("w$")
         -- Add one because the cursor line will be handled separately
-        return math.min(cur_pos[1] + 1, wS), wS
+        return math.min(cur_pos[1] + 1, wS), wS, wS
     elseif dir == -1 then
         local w0 = fn.line("w0")
         -- Subtract one because the cursor line will be handled separately
-        return w0, math.max(cur_pos[1] - 1, w0)
+        return w0, math.max(cur_pos[1] - 1, w0), wS
     else
         local line = fn.line
-        return line("w0"), line("w$")
+        return line("w0"), wS, wS
     end
 end
 
@@ -305,22 +305,23 @@ local function add_missing_ns(wins)
     end
 end
 
----@class farsight.jump.FloatWin
----@field [1] integer winid
----@field [2] integer zindex
----@field [3] integer top
----@field [4] integer left
----@field [5] integer bot
----@field [6] integer right
+----@class farsight.jump.FloatWin
+----@field [1] integer winid
+----@field [2] integer zindex
+----@field [3] integer top
+----@field [4] integer left
+----@field [5] integer bot
+----@field [6] integer right
 
 ---@param wins integer[]
 ---@param opts farsight.jump.JumpOpts
----@return farsight.jump.Target[], table<integer, integer>
+---@return farsight.jump.Target[], table<integer, integer>, vim.api.keyset.redraw[]
 local function get_targets(wins, opts)
     add_missing_ns(wins)
 
     local targets = {} ---@type farsight.jump.Target[]
     local ns_buf_map = {} ---@type table<integer, integer>
+    local redraw_opts = {} ---@type vim.api.keyset.redraw[]
 
     local dir = opts.dir ---@type integer
     ---@type fun(row: integer, line: string, buf: integer,
@@ -341,10 +342,11 @@ local function get_targets(wins, opts)
         local ns = namespaces[i]
         nvim__ns_set(ns, { wins = { win } })
         ns_buf_map[ns] = buf
+        redraw_opts[#redraw_opts + 1] = { win = win, valid = true }
         local wrap, leftcol, maxcol = get_wrap_info(win)
 
         nvim_win_call(win, function()
-            local top, bot = get_top_bot(dir, cur_pos)
+            local top, bot, wS = get_top_bot(dir, cur_pos)
 
             if dir == 1 then
                 local cols = add_targets_after(win, cur_pos, buf, locator)
@@ -365,15 +367,18 @@ local function get_targets(wins, opts)
                 add_cols_to_targets(cur_pos[1], cols, win, buf, ns, targets)
             end
 
-            if wrap and bot == fn.line("w$") and dir >= 0 then
+            if wrap and bot == wS and dir >= 0 then
                 local row = bot + 1
                 local cols = get_extra_wrap_cols(row, win, buf, cur_pos, locator)
-                add_cols_to_targets(row, cols, win, buf, ns, targets)
+                if #cols > 0 then
+                    add_cols_to_targets(row, cols, win, buf, ns, targets)
+                    redraw_opts[#redraw_opts]["valid"] = false
+                end
             end
         end)
     end
 
-    return targets, ns_buf_map
+    return targets, ns_buf_map, redraw_opts
 end
 
 -- MID: The variable names in this function could be more clear
@@ -429,6 +434,81 @@ local function populate_target_labels(targets, tokens)
             token_idx = token_idx + 1
             token_start = idx + 1
         end
+    end
+end
+
+---Edits targets in place
+---@param targets farsight.jump.Target[]
+local function clear_target_virt_text(targets)
+    for _, target in ipairs(targets) do
+        local virt_text = target[7]
+        -- Because the virt text tables tend to have a small number of items, this is faster than
+        -- overwriting them with new table allocations
+        local len = #virt_text
+        for i = len, 1, -1 do
+            virt_text[i] = nil
+        end
+    end
+end
+
+---@param ns_buf_map table<integer, integer>
+---@param targets farsight.jump.Target[]
+---@return table<integer, integer>
+local function filter_ns_buf_map(ns_buf_map, targets)
+    local bk1 = next(ns_buf_map)
+    local bk2 = next(ns_buf_map, bk1)
+    if bk2 == nil then
+        return ns_buf_map
+    end
+
+    local new_ns_buf_map = {} ---@type table<integer, integer>
+    for _, target in ipairs(targets) do
+        new_ns_buf_map[target[6]] = target[2]
+    end
+
+    return new_ns_buf_map
+end
+
+-- Trivial in comparison to the redraws it saves
+
+---Edits redraw_map in place
+---@param redraw_opts vim.api.keyset.redraw[]
+---@param targets farsight.jump.Target[]
+local function filter_redraw_map(redraw_opts, targets)
+    if #redraw_opts <= 1 then
+        return
+    end
+
+    local targeted_win_tbl = {} ---@type table<integer, boolean>
+    for _, target in ipairs(targets) do
+        targeted_win_tbl[target[1]] = true
+    end
+
+    require("farsight.util")._list_filter(redraw_opts, 1, function(opt)
+        return targeted_win_tbl[opt.win]
+    end)
+end
+
+-- Helpful on average because:
+-- - Non-trivial time is saved as opts are removed
+-- - If a win has to be redrawn with valid = false, avoids that being applied to all wins
+
+---@param redraw_opts vim.api.keyset.redraw[]
+local function redraw_list(redraw_opts)
+    local nvim__redraw = api.nvim__redraw
+    for _, opt in pairs(redraw_opts) do
+        nvim__redraw(opt)
+    end
+end
+
+---@param targets farsight.jump.Target[]
+local function set_label_extmarks(targets)
+    ---@type vim.api.keyset.set_extmark
+    local extmark_opts = { hl_mode = "combine", priority = 1000, virt_text_pos = "overlay" }
+    local nvim_buf_set_extmark = api.nvim_buf_set_extmark
+    for _, target in ipairs(targets) do
+        extmark_opts.virt_text = target[7]
+        pcall(nvim_buf_set_extmark, target[2], target[6], target[3], target[4], extmark_opts)
     end
 end
 
@@ -500,7 +580,7 @@ end
 ---@param targets farsight.jump.Target[]
 ---@param max_tokens integer
 ---@param jump_level integer
-local function populate_target_virt_text(targets, max_tokens, jump_level)
+local function populate_target_virt_text_max_tokens(targets, max_tokens, jump_level)
     local len_targets = #targets
     if len_targets < 1 then
         return
@@ -564,13 +644,13 @@ end
 ---@param targets farsight.jump.Target[]
 ---@param max_tokens integer
 ---@param jump_level integer
-local function populate_target_virt_text_from_max(targets, jump_level, max_tokens)
+local function populate_target_virt_text(targets, jump_level, max_tokens)
     if max_tokens == 1 then
         populate_target_virt_text_max_1(targets, jump_level)
     elseif max_tokens == 2 then
         populate_target_virt_text_max_2(targets, jump_level)
     else
-        populate_target_virt_text(targets, max_tokens, jump_level)
+        populate_target_virt_text_max_tokens(targets, max_tokens, jump_level)
     end
 end
 
@@ -620,41 +700,37 @@ local function do_jump(jump_win, buf, row_0, col, map_mode, opts)
     common._do_jump(cur_win, jump_win, buf, map_mode, cur_pos, jump_pos, jump_opts)
 end
 
--- LOW: A way you could optimize virt text population is to check the actual max label size when
--- building them. If you have max tokens at 3 and the biggest label is only 2, the cheaper
--- function can be used. Unsure on this given the guaranteed up front cost of calculating this vs
--- the inconsistent (at best) benefit.
-
----Edits ns_buf_map and targets in place
+---Edits ns_buf_map, targets, and redraw_map in place
 ---@param ns_buf_map table<integer, integer>
 ---@param targets farsight.jump.Target[]
 ---@param map_mode "n"|"v"|"o"|"l"|"t"|"x"|"s"|"i"|"c"
----@param jump_level integer
+---@param redraw_opts vim.api.keyset.redraw[]
 ---@param opts farsight.jump.JumpOpts
 ---@return nil
-local function advance_jump(ns_buf_map, targets, map_mode, jump_level, opts)
+local function advance_jump(ns_buf_map, targets, map_mode, redraw_opts, opts)
     local dim = opts.dim
+    local jump_level = 0
     local max_tokens = opts.max_tokens ---@type integer
+
     while true do
-        populate_target_virt_text_from_max(targets, jump_level, max_tokens)
-
-        ---@type vim.api.keyset.set_extmark
-        local extmark_opts = { hl_mode = "combine", priority = 1000, virt_text_pos = "overlay" }
-        local nvim_buf_set_extmark = api.nvim_buf_set_extmark
-        for _, target in ipairs(targets) do
-            extmark_opts.virt_text = target[7]
-            pcall(nvim_buf_set_extmark, target[2], target[6], target[3], target[4], extmark_opts)
-        end
-
+        populate_target_virt_text(targets, jump_level, max_tokens)
+        set_label_extmarks(targets)
         if dim then
             dim_target_lines(targets, ns_buf_map)
         end
 
-        vim.cmd("redraw!")
+        redraw_list(redraw_opts)
         local _, input = pcall(fn.getcharstr)
+
         local nvim_buf_clear_namespace = api.nvim_buf_clear_namespace
         for ns, buf in pairs(ns_buf_map) do
             pcall(nvim_buf_clear_namespace, buf, ns, 0, -1)
+        end
+
+        -- The redraw map should be based on the wins from the previous jump level so that all
+        -- labels are guaranteed to be cleared. Adjust before filtering targets
+        if jump_level > 0 then
+            filter_redraw_map(redraw_opts, targets)
         end
 
         local start = jump_level + 1
@@ -664,7 +740,7 @@ local function advance_jump(ns_buf_map, targets, map_mode, jump_level, opts)
 
         local targets_len = #targets
         if targets_len <= 1 then
-            vim.cmd("redraw!")
+            redraw_list(redraw_opts)
             if targets_len == 1 then
                 local target = targets[1]
                 do_jump(target[1], target[2], target[3], target[4], map_mode, opts)
@@ -673,26 +749,8 @@ local function advance_jump(ns_buf_map, targets, map_mode, jump_level, opts)
             return
         end
 
-        local k1 = next(ns_buf_map)
-        local k2 = next(ns_buf_map, k1)
-        if k2 ~= nil then
-            local new_ns_buf_map = {} ---@type table<integer, integer>
-            for _, target in ipairs(targets) do
-                new_ns_buf_map[target[6]] = target[2]
-            end
-
-            ns_buf_map = new_ns_buf_map
-        end
-
-        for _, target in ipairs(targets) do
-            local virt_text = target[7]
-            -- Faster with the lower quantities in the virtual text tables
-            local len = #virt_text
-            for i = len, 1, -1 do
-                virt_text[i] = nil
-            end
-        end
-
+        ns_buf_map = filter_ns_buf_map(ns_buf_map, targets)
+        clear_target_virt_text(targets)
         jump_level = jump_level + 1
     end
 end
@@ -785,21 +843,20 @@ function Jump.jump(opts)
     local map_mode = ut._resolve_map_mode(api.nvim_get_mode().mode)
     resolve_jump_opts(opts, map_mode)
 
-    local focusable_wins = ut._order_focusable_wins(opts.wins)
-    if #focusable_wins < 1 then
+    local wins = ut._order_focusable_wins(opts.wins)
+    if #wins < 1 then
         api.nvim_echo({ { "No focusable wins provided" } }, false, {})
         return
     end
 
-    local targets, ns_buf_map = get_targets(focusable_wins, opts)
+    local targets, ns_buf_map, redraw_opts = get_targets(wins, opts)
     if #targets > 1 then
-        local jump_level = 0
         populate_target_labels(targets, opts.tokens)
-        advance_jump(ns_buf_map, targets, map_mode, jump_level, opts)
+        advance_jump(ns_buf_map, targets, map_mode, redraw_opts, opts)
     elseif #targets == 1 then
         do_jump(targets[1][1], targets[1][2], targets[1][3], targets[1][4], map_mode, opts)
     else
-        api.nvim_echo({ { "No sights to jump to" } }, false, {})
+        api.nvim_echo({ { "No targets available" } }, false, {})
     end
 end
 
@@ -810,6 +867,7 @@ end
 
 return Jump
 
+-- TODO: Re-order functions on their own diff
 -- TODO: Validate that all provided wins are in the current tabpage
 -- TODO: Document a couple locator examples:
 -- - CWORD
@@ -873,5 +931,15 @@ return Jump
 -- LOW: Would be interesting to test storing the labels as a struct of arrays
 -- LOW: Could explore allowing a list of wins not in the current tabpage to be passed to the jump
 -- function, assuming they are all part of the same tabpage
+-- LOW: Could optimize filtering ns_buf_map and redraw_map by storing a record of which wins and
+-- bufs are still active in the targets. On the first filtering pass, even with only two wins,
+-- could save a lot of iterating through targets, though it would also make each iteration through
+-- the targets more expensive
+-- LOW: A way you could optimize virt text population is to check the actual max label size when
+-- building them. If you have max tokens at 3 and the biggest label is only 2, the cheaper
+-- function can be used. Unsure on this given the guaranteed up front cost of calculating this vs
+-- the inconsistent (at best) benefit.
 
--- ISSUE: Have to use redraw! to redraw incomplete bottom wrapped line
+-- ISSUE: Base redraw uses w_botline as the lower bound of where to redraw the window. This
+-- excludes the last wrapped line if it is only partially visible. Kinda hate to open an issue for
+-- this because it would potentially require re-architecting redraw to fix, which is a lot.
