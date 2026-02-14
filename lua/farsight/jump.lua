@@ -129,251 +129,6 @@ local function locate_cwords_with_cur_pos(_, row, line, _, cur_pos)
 end
 
 ---Edits targets in place
----@param row integer
----@param cols integer[]
----@param win integer
----@param buf integer
----@param ns integer
----@param targets farsight.jump.Target[]
-local function add_cols_to_targets(row, cols, win, buf, ns, targets)
-    local row_0 = row - 1
-    for _, col in ipairs(cols) do
-        targets[#targets + 1] = { win, buf, row_0, col, {}, ns, {} }
-    end
-end
-
----Assumes it is called in the window context of win
----@param win integer
----@param row integer
----@param line string
----@param buf integer
----@param cur_pos { [1]: integer, [2]: integer }
----@param locator fun(win: integer, row: integer, line: string, buf: integer,
----cur_pos: { [1]: integer, [2]: integer }):integer[]
-local function get_cols(win, row, line, buf, cur_pos, locator)
-    local cols = locator(win, row, line, buf, cur_pos)
-    require("farsight.util")._list_dedup(cols)
-    table.sort(cols, function(a, b)
-        return a < b
-    end)
-
-    return cols
-end
-
--- TODO: Re-organize params and maybe optimize some
-
----Assumes it is called in the window context of win
----@param row integer
----@param win integer
----@param buf integer
----@param cur_pos { [1]: integer, [2]: integer }
----@param locator fun(win: integer, row: integer, line: string, buf: integer,
----cur_pos: { [1]: integer, [2]: integer }):integer[]
-local function get_extra_wrap_cols(row, win, buf, cur_pos, locator)
-    if row >= api.nvim_buf_line_count(buf) then
-        return {}
-    end
-
-    local cur_line = fn.getline(row)
-    local cols = get_cols(win, row, cur_line, buf, cur_pos, locator)
-    if #cols < 1 then
-        return {}
-    end
-
-    local first_screenpos = fn.screenpos(win, row, cols[1] + 1)
-    if first_screenpos.row < 1 then
-        return {}
-    end
-
-    require("farsight.util")._list_filter_end_only(cols, function(col)
-        local screenpos = fn.screenpos(win, row, col + 1)
-        return screenpos.row > 0
-    end)
-
-    return cols
-end
-
----Edits cols in place
----@param wrap boolean
----@param cols integer[]
----@param leftcol integer
----@param maxcol integer
-local function filter_nowrap_oob(wrap, cols, leftcol, maxcol)
-    if wrap then
-        return
-    end
-
-    local ut = require("farsight.util")
-    ut._list_filter_end_only(cols, function(col)
-        return col <= maxcol
-    end)
-
-    ut._list_filter_beg_only(cols, function(col)
-        return col >= leftcol
-    end)
-end
-
----Edits targets in place
----Assumes it is called in the window context of win
----@param win integer
----@param cur_pos { [1]: integer, [2]: integer }
----@param buf integer
----@param locator fun(win: integer, row: integer, line: string, buf: integer,
----cur_pos: { [1]: integer, [2]: integer }):integer[]
-local function add_targets_before(win, cur_pos, buf, locator)
-    local row = cur_pos[1]
-    local line = fn.getline(row)
-    local ut = require("farsight.util")
-    local cur_cword = ut._find_cword_at_col(line, cur_pos[2])
-    local end_col_1 = cur_cword and cur_cword[2] or cur_pos[2]
-
-    local line_before = string.sub(line, 1, end_col_1)
-    return get_cols(win, row, line_before, buf, cur_pos, locator)
-end
-
----Assumes it is called in the window context of win
----@param win integer
----@param cur_pos { [1]: integer, [2]: integer }
----@param buf integer
----@param locator fun(win: integer, row: integer, line: string, buf: integer,
----cur_pos: { [1]: integer, [2]: integer }):integer[]
-local function add_targets_after(win, cur_pos, buf, locator)
-    local line = fn.getline(cur_pos[1])
-
-    local start_col_1 ---@type integer
-    local ut = require("farsight.util")
-    local cur_cword = ut._find_cword_at_col(line, cur_pos[2])
-    if cur_cword then
-        start_col_1 = cur_cword[3] + 1
-    else
-        local charidx = fn.charidx(line, cur_pos[2])
-        start_col_1 = fn.byteidx(line, charidx + 1) + 1
-    end
-
-    local line_after = string.sub(line, start_col_1, #line)
-    local cols = get_cols(win, cur_pos[1], line_after, buf, cur_pos, locator)
-    local count_cols = #cols
-    for i = 1, count_cols do
-        cols[i] = cols[i] + (#line - #line_after)
-    end
-
-    return cols
-end
-
----Assumes it is called in the window context of the relevant win
----@param dir -1|0|1
----@return integer, integer, integer
-local function get_top_bot(dir, cur_pos)
-    local wS = fn.line("w$")
-    if dir == 1 then
-        -- Add one because the cursor line will be handled separately
-        return math.min(cur_pos[1] + 1, wS), wS, wS
-    elseif dir == -1 then
-        local w0 = fn.line("w0")
-        -- Subtract one because the cursor line will be handled separately
-        return w0, math.max(cur_pos[1] - 1, w0), wS
-    else
-        local line = fn.line
-        return line("w0"), wS, wS
-    end
-end
-
----@param win integer
----@return boolean, integer, integer
-local function get_wrap_info(win)
-    local wrap = api.nvim_get_option_value("wrap", { win = win }) ---@type boolean
-    if wrap then
-        return true, -1, -1
-    end
-
-    local wininfo = fn.getwininfo(win)[1]
-    -- FUTURE: https://github.com/neovim/neovim/pull/37840
-    ---@diagnostic disable-next-line: undefined-field
-    local leftcol = wininfo.leftcol ---@type integer
-    local width = api.nvim_win_get_config(win).width
-    local maxcol = math.max(width - wininfo.textoff - 1 + leftcol, 0)
-
-    return wrap, leftcol, maxcol
-end
-
----@param wins integer[]
-local function add_missing_ns(wins)
-    local wins_len = #wins
-    local missing_ns = wins_len - #namespaces
-    for _ = 1, missing_ns do
-        namespaces[#namespaces + 1] = api.nvim_create_namespace("")
-    end
-end
-
----@param wins integer[]
----@param opts farsight.jump.JumpOpts
----@return farsight.jump.Target[], table<integer, integer>, vim.api.keyset.redraw[]
-local function get_targets(wins, opts)
-    add_missing_ns(wins)
-
-    local targets = {} ---@type farsight.jump.Target[]
-    local ns_buf_map = {} ---@type table<integer, integer>
-    local redraw_opts = {} ---@type vim.api.keyset.redraw[]
-
-    local dir = opts.dir ---@type integer
-    ---@type fun(row: integer, line: string, buf: integer,
-    ---cur_pos: { [1]: integer, [2]: integer }):integer[]
-    local locator = opts.locator
-    local nvim_win_call = api.nvim_win_call
-    local nvim_win_get_buf = api.nvim_win_get_buf
-    local nvim_win_get_cursor = api.nvim_win_get_cursor
-    local nvim__ns_set = api.nvim__ns_set
-
-    local wins_len = #wins
-    for i = 1, wins_len do
-        local win = wins[i]
-
-        local buf = nvim_win_get_buf(win)
-        -- Always get/send so it's available for user functions
-        local cur_pos = nvim_win_get_cursor(win)
-        local ns = namespaces[i]
-        nvim__ns_set(ns, { wins = { win } })
-        ns_buf_map[ns] = buf
-        redraw_opts[#redraw_opts + 1] = { win = win, valid = true }
-        local wrap, leftcol, maxcol = get_wrap_info(win)
-
-        nvim_win_call(win, function()
-            local top, bot, wS = get_top_bot(dir, cur_pos)
-
-            if dir == 1 then
-                local cols = add_targets_after(win, cur_pos, buf, locator)
-                filter_nowrap_oob(wrap, cols, leftcol, maxcol)
-                add_cols_to_targets(cur_pos[1], cols, win, buf, ns, targets)
-            end
-
-            for j = top, bot do
-                local cur_line = fn.getline(j)
-                local cols = get_cols(win, j, cur_line, buf, cur_pos, locator)
-                filter_nowrap_oob(wrap, cols, leftcol, maxcol)
-                add_cols_to_targets(j, cols, win, buf, ns, targets)
-            end
-
-            if dir == -1 then
-                local cols = add_targets_before(win, cur_pos, buf, locator)
-                filter_nowrap_oob(wrap, cols, leftcol, maxcol)
-                add_cols_to_targets(cur_pos[1], cols, win, buf, ns, targets)
-            end
-
-            if wrap and bot == wS and dir >= 0 then
-                local row = bot + 1
-                local cols = get_extra_wrap_cols(row, win, buf, cur_pos, locator)
-                if #cols > 0 then
-                    add_cols_to_targets(row, cols, win, buf, ns, targets)
-                    redraw_opts[#redraw_opts]["valid"] = false
-                end
-            end
-        end)
-    end
-
-    return targets, ns_buf_map, redraw_opts
-end
-
----Edits targets in place
 ---@param targets farsight.jump.Target[]
 local function clear_target_virt_text(targets)
     for _, target in ipairs(targets) do
@@ -752,6 +507,251 @@ local function populate_target_labels(targets, tokens)
             token_start = idx + 1
         end
     end
+end
+
+---Edits targets in place
+---@param row integer
+---@param cols integer[]
+---@param win integer
+---@param buf integer
+---@param ns integer
+---@param targets farsight.jump.Target[]
+local function add_cols_to_targets(row, cols, win, buf, ns, targets)
+    local row_0 = row - 1
+    for _, col in ipairs(cols) do
+        targets[#targets + 1] = { win, buf, row_0, col, {}, ns, {} }
+    end
+end
+
+---Assumes it is called in the window context of win
+---@param win integer
+---@param row integer
+---@param line string
+---@param buf integer
+---@param cur_pos { [1]: integer, [2]: integer }
+---@param locator fun(win: integer, row: integer, line: string, buf: integer,
+---cur_pos: { [1]: integer, [2]: integer }):integer[]
+local function get_cols(win, row, line, buf, cur_pos, locator)
+    local cols = locator(win, row, line, buf, cur_pos)
+    require("farsight.util")._list_dedup(cols)
+    table.sort(cols, function(a, b)
+        return a < b
+    end)
+
+    return cols
+end
+
+-- TODO: Re-organize params and maybe optimize some
+
+---Assumes it is called in the window context of win
+---@param row integer
+---@param win integer
+---@param buf integer
+---@param cur_pos { [1]: integer, [2]: integer }
+---@param locator fun(win: integer, row: integer, line: string, buf: integer,
+---cur_pos: { [1]: integer, [2]: integer }):integer[]
+local function get_extra_wrap_cols(row, win, buf, cur_pos, locator)
+    if row >= api.nvim_buf_line_count(buf) then
+        return {}
+    end
+
+    local cur_line = fn.getline(row)
+    local cols = get_cols(win, row, cur_line, buf, cur_pos, locator)
+    if #cols < 1 then
+        return {}
+    end
+
+    local first_screenpos = fn.screenpos(win, row, cols[1] + 1)
+    if first_screenpos.row < 1 then
+        return {}
+    end
+
+    require("farsight.util")._list_filter_end_only(cols, function(col)
+        local screenpos = fn.screenpos(win, row, col + 1)
+        return screenpos.row > 0
+    end)
+
+    return cols
+end
+
+---Edits cols in place
+---@param wrap boolean
+---@param cols integer[]
+---@param leftcol integer
+---@param maxcol integer
+local function filter_nowrap_oob(wrap, cols, leftcol, maxcol)
+    if wrap then
+        return
+    end
+
+    local ut = require("farsight.util")
+    ut._list_filter_end_only(cols, function(col)
+        return col <= maxcol
+    end)
+
+    ut._list_filter_beg_only(cols, function(col)
+        return col >= leftcol
+    end)
+end
+
+---Edits targets in place
+---Assumes it is called in the window context of win
+---@param win integer
+---@param cur_pos { [1]: integer, [2]: integer }
+---@param buf integer
+---@param locator fun(win: integer, row: integer, line: string, buf: integer,
+---cur_pos: { [1]: integer, [2]: integer }):integer[]
+local function add_targets_before(win, cur_pos, buf, locator)
+    local row = cur_pos[1]
+    local line = fn.getline(row)
+    local ut = require("farsight.util")
+    local cur_cword = ut._find_cword_at_col(line, cur_pos[2])
+    local end_col_1 = cur_cword and cur_cword[2] or cur_pos[2]
+
+    local line_before = string.sub(line, 1, end_col_1)
+    return get_cols(win, row, line_before, buf, cur_pos, locator)
+end
+
+---Assumes it is called in the window context of win
+---@param win integer
+---@param cur_pos { [1]: integer, [2]: integer }
+---@param buf integer
+---@param locator fun(win: integer, row: integer, line: string, buf: integer,
+---cur_pos: { [1]: integer, [2]: integer }):integer[]
+local function add_targets_after(win, cur_pos, buf, locator)
+    local line = fn.getline(cur_pos[1])
+
+    local start_col_1 ---@type integer
+    local ut = require("farsight.util")
+    local cur_cword = ut._find_cword_at_col(line, cur_pos[2])
+    if cur_cword then
+        start_col_1 = cur_cword[3] + 1
+    else
+        local charidx = fn.charidx(line, cur_pos[2])
+        start_col_1 = fn.byteidx(line, charidx + 1) + 1
+    end
+
+    local line_after = string.sub(line, start_col_1, #line)
+    local cols = get_cols(win, cur_pos[1], line_after, buf, cur_pos, locator)
+    local count_cols = #cols
+    for i = 1, count_cols do
+        cols[i] = cols[i] + (#line - #line_after)
+    end
+
+    return cols
+end
+
+---Assumes it is called in the window context of the relevant win
+---@param dir -1|0|1
+---@return integer, integer, integer
+local function get_top_bot(dir, cur_pos)
+    local wS = fn.line("w$")
+    if dir == 1 then
+        -- Add one because the cursor line will be handled separately
+        return math.min(cur_pos[1] + 1, wS), wS, wS
+    elseif dir == -1 then
+        local w0 = fn.line("w0")
+        -- Subtract one because the cursor line will be handled separately
+        return w0, math.max(cur_pos[1] - 1, w0), wS
+    else
+        local line = fn.line
+        return line("w0"), wS, wS
+    end
+end
+
+---@param win integer
+---@return boolean, integer, integer
+local function get_wrap_info(win)
+    local wrap = api.nvim_get_option_value("wrap", { win = win }) ---@type boolean
+    if wrap then
+        return true, -1, -1
+    end
+
+    local wininfo = fn.getwininfo(win)[1]
+    -- FUTURE: https://github.com/neovim/neovim/pull/37840
+    ---@diagnostic disable-next-line: undefined-field
+    local leftcol = wininfo.leftcol ---@type integer
+    local width = api.nvim_win_get_config(win).width
+    local maxcol = math.max(width - wininfo.textoff - 1 + leftcol, 0)
+
+    return wrap, leftcol, maxcol
+end
+
+---@param wins integer[]
+local function add_missing_ns(wins)
+    local wins_len = #wins
+    local missing_ns = wins_len - #namespaces
+    for _ = 1, missing_ns do
+        namespaces[#namespaces + 1] = api.nvim_create_namespace("")
+    end
+end
+
+---@param wins integer[]
+---@param opts farsight.jump.JumpOpts
+---@return farsight.jump.Target[], table<integer, integer>, vim.api.keyset.redraw[]
+local function get_targets(wins, opts)
+    add_missing_ns(wins)
+
+    local targets = {} ---@type farsight.jump.Target[]
+    local ns_buf_map = {} ---@type table<integer, integer>
+    local redraw_opts = {} ---@type vim.api.keyset.redraw[]
+
+    local dir = opts.dir ---@type integer
+    ---@type fun(row: integer, line: string, buf: integer,
+    ---cur_pos: { [1]: integer, [2]: integer }):integer[]
+    local locator = opts.locator
+    local nvim_win_call = api.nvim_win_call
+    local nvim_win_get_buf = api.nvim_win_get_buf
+    local nvim_win_get_cursor = api.nvim_win_get_cursor
+    local nvim__ns_set = api.nvim__ns_set
+
+    local wins_len = #wins
+    for i = 1, wins_len do
+        local win = wins[i]
+
+        local buf = nvim_win_get_buf(win)
+        -- Always get/send so it's available for user functions
+        local cur_pos = nvim_win_get_cursor(win)
+        local ns = namespaces[i]
+        nvim__ns_set(ns, { wins = { win } })
+        ns_buf_map[ns] = buf
+        redraw_opts[#redraw_opts + 1] = { win = win, valid = true }
+        local wrap, leftcol, maxcol = get_wrap_info(win)
+
+        nvim_win_call(win, function()
+            local top, bot, wS = get_top_bot(dir, cur_pos)
+
+            if dir == 1 then
+                local cols = add_targets_after(win, cur_pos, buf, locator)
+                filter_nowrap_oob(wrap, cols, leftcol, maxcol)
+                add_cols_to_targets(cur_pos[1], cols, win, buf, ns, targets)
+            end
+
+            for j = top, bot do
+                local cur_line = fn.getline(j)
+                local cols = get_cols(win, j, cur_line, buf, cur_pos, locator)
+                filter_nowrap_oob(wrap, cols, leftcol, maxcol)
+                add_cols_to_targets(j, cols, win, buf, ns, targets)
+            end
+
+            if dir == -1 then
+                local cols = add_targets_before(win, cur_pos, buf, locator)
+                filter_nowrap_oob(wrap, cols, leftcol, maxcol)
+                add_cols_to_targets(cur_pos[1], cols, win, buf, ns, targets)
+            end
+
+            if wrap and bot == wS and dir >= 0 then
+                local row = bot + 1
+                local cols = get_extra_wrap_cols(row, win, buf, cur_pos, locator)
+                if #cols > 0 then
+                    add_cols_to_targets(row, cols, win, buf, ns, targets)
+                    redraw_opts[#redraw_opts]["valid"] = false
+                end
+            end
+        end)
+    end
+
+    return targets, ns_buf_map, redraw_opts
 end
 
 ---Edits opts in place
