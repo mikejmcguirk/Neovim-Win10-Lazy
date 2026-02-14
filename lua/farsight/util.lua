@@ -189,6 +189,7 @@ function M._resolve_bool_opt(opt, default)
     if type(opt) == "nil" then
         return default
     else
+        vim.validate("opt", opt, "boolean")
         return opt
     end
 end
@@ -250,11 +251,12 @@ function M._use_gb_if_nil(opt, var, buf)
 end
 
 ---@class farsight.util.ValidateListOpts
+---@field func? fun(any):boolean, string?
+---@field item_type? string
 ---@field len? integer
 ---@field max_len? integer
 ---@field min_len? integer
 ---@field optional? boolean
----@field item_type? string
 
 ---@param list table
 ---@param opts farsight.util.ValidateListOpts
@@ -286,6 +288,16 @@ function M._validate_list(list, opts)
             for _, item in ipairs(list) do
                 if type(item) ~= item_type then
                     return false, "List items must be type " .. item_type
+                end
+            end
+        end
+
+        local func = opts.func
+        if func then
+            for _, item in ipairs(list) do
+                local ok, msg = func(item)
+                if not ok then
+                    return false, msg
                 end
             end
         end

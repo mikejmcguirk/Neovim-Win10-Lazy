@@ -142,26 +142,6 @@ local function add_cols_to_targets(row, cols, win, buf, ns, targets)
     end
 end
 
----Edits cols in place
----@param wrap boolean
----@param cols integer[]
----@param leftcol integer
----@param maxcol integer
-local function filter_nowrap_oob(wrap, cols, leftcol, maxcol)
-    if wrap then
-        return
-    end
-
-    local ut = require("farsight.util")
-    ut._list_filter_end_only(cols, function(col)
-        return col <= maxcol
-    end)
-
-    ut._list_filter_beg_only(cols, function(col)
-        return col >= leftcol
-    end)
-end
-
 ---Assumes it is called in the window context of win
 ---@param win integer
 ---@param row integer
@@ -213,6 +193,44 @@ local function get_extra_wrap_cols(row, win, buf, cur_pos, locator)
     return cols
 end
 
+---Edits cols in place
+---@param wrap boolean
+---@param cols integer[]
+---@param leftcol integer
+---@param maxcol integer
+local function filter_nowrap_oob(wrap, cols, leftcol, maxcol)
+    if wrap then
+        return
+    end
+
+    local ut = require("farsight.util")
+    ut._list_filter_end_only(cols, function(col)
+        return col <= maxcol
+    end)
+
+    ut._list_filter_beg_only(cols, function(col)
+        return col >= leftcol
+    end)
+end
+
+---Edits targets in place
+---Assumes it is called in the window context of win
+---@param win integer
+---@param cur_pos { [1]: integer, [2]: integer }
+---@param buf integer
+---@param locator fun(win: integer, row: integer, line: string, buf: integer,
+---cur_pos: { [1]: integer, [2]: integer }):integer[]
+local function add_targets_before(win, cur_pos, buf, locator)
+    local row = cur_pos[1]
+    local line = fn.getline(row)
+    local ut = require("farsight.util")
+    local cur_cword = ut._find_cword_at_col(line, cur_pos[2])
+    local end_col_1 = cur_cword and cur_cword[2] or cur_pos[2]
+
+    local line_before = string.sub(line, 1, end_col_1)
+    return get_cols(win, row, line_before, buf, cur_pos, locator)
+end
+
 ---Assumes it is called in the window context of win
 ---@param win integer
 ---@param cur_pos { [1]: integer, [2]: integer }
@@ -240,24 +258,6 @@ local function add_targets_after(win, cur_pos, buf, locator)
     end
 
     return cols
-end
-
----Edits targets in place
----Assumes it is called in the window context of win
----@param win integer
----@param cur_pos { [1]: integer, [2]: integer }
----@param buf integer
----@param locator fun(win: integer, row: integer, line: string, buf: integer,
----cur_pos: { [1]: integer, [2]: integer }):integer[]
-local function add_targets_before(win, cur_pos, buf, locator)
-    local row = cur_pos[1]
-    local line = fn.getline(row)
-    local ut = require("farsight.util")
-    local cur_cword = ut._find_cword_at_col(line, cur_pos[2])
-    local end_col_1 = cur_cword and cur_cword[2] or cur_pos[2]
-
-    local line_before = string.sub(line, 1, end_col_1)
-    return get_cols(win, row, line_before, buf, cur_pos, locator)
 end
 
 ---Assumes it is called in the window context of the relevant win
@@ -754,6 +754,70 @@ local function populate_target_labels(targets, tokens)
     end
 end
 
+---Edits opts in place
+---@param opts farsight.jump.JumpOpts
+local function resolve_wins(opts)
+    if opts.wins == nil then
+        opts.wins = { api.nvim_get_current_win() }
+        return
+    end
+
+    -- LOW: Alternatively, other tabpages could work so long as all windows belonged to the same
+    -- one. Could delay the switch until we know we have at least one target
+    local tabpage = api.nvim_get_current_tabpage()
+    require("farsight.util")._validate_list(opts.wins, {
+        item_type = "number",
+        min_len = 1,
+        func = function(win)
+            local win_tabpage = api.nvim_win_get_tabpage(win)
+            if win_tabpage ~= tabpage then
+                return true
+            else
+                return false, "Window " .. win .. " is not in the current tabpage"
+            end
+        end,
+    })
+end
+
+---Edits opts in place
+---@param opts farsight.jump.JumpOpts
+local function resolve_on_jump(opts, cur_buf)
+    local ut = require("farsight.util")
+    opts.on_jump = ut._use_gb_if_nil(opts.on_jump, "farsight_on_jump", cur_buf)
+    if opts.on_jump == nil then
+        opts.on_jump = function(_, _, _)
+            api.nvim_cmd({ cmd = "norm", args = { "zv" }, bang = true }, {})
+        end
+
+        return
+    end
+
+    vim.validate("opts.on_jump", opts.on_jump, "callable")
+end
+
+---Edits opts in place
+---@param opts farsight.jump.JumpOpts
+---@param map_mode "n"|"v"|"o"|"l"|"t"|"x"|"s"|"i"|"c"
+local function resolve_locator(opts, cur_buf, map_mode)
+    local ut = require("farsight.util")
+    opts.locator = ut._use_gb_if_nil(opts.locator, "farsight_jump_locator", cur_buf)
+    if opts.locator == nil then
+        if map_mode == "v" or map_mode == "o" then
+            opts.locator = locate_cwords_with_cur_pos
+        else
+            opts.locator = locate_cwords
+        end
+
+        return
+    end
+
+    vim.validate("opts.locator", opts.locator, "callable")
+end
+
+-- TODO: In the docs, mention g/b:vars when relevant. Don't waste time mentioning when they are
+-- missing
+
+---Edits opts in place
 ---@param opts farsight.jump.JumpOpts
 ---@param map_mode "n"|"v"|"o"|"l"|"t"|"x"|"s"|"i"|"c"
 local function resolve_jump_opts(opts, map_mode)
@@ -763,46 +827,33 @@ local function resolve_jump_opts(opts, map_mode)
 
     opts.dim = ut._use_gb_if_nil(opts.dim, "farsight_dim", cur_buf)
     opts.dim = ut._resolve_bool_opt(opts.dim, false)
-    vim.validate("opts.dim", opts.dim, "boolean")
 
-    opts.dir = opts.dir or 0
-    vim.validate("opts.dir", opts.dir, ut._is_int)
-    vim.validate("opts.dir", opts.dir, function()
-        return -1 <= opts.dir and opts.dir <= 1
-    end, "Dir must be -1, 0, or 1")
+    if opts.dir == nil then
+        opts.dir = 0
+    else
+        local dir = opts.dir
+        vim.validate("opts.dir", dir, function()
+            return dir == -1 or dir == 0 or dir == 1
+        end, "Dir must be -1, 0, or 1")
+    end
 
-    opts.keepjumps = ut._use_gb_if_nil(opts.keepjumps, "farsight_keepjumps", cur_buf)
+    opts.keepjumps = ut._use_gb_if_nil(opts.keepjumps, "farsight_jump_keepjumps", cur_buf)
     opts.keepjumps = ut._resolve_bool_opt(opts.keepjumps, false)
-    vim.validate("opts.keepjumps", opts.keepjumps, "boolean")
 
-    opts.locator = (function()
-        if opts.locator then
-            return opts.locator
-        end
+    resolve_locator(opts, cur_buf, map_mode)
 
-        if map_mode == "v" or map_mode == "o" then
-            return locate_cwords_with_cur_pos
-        else
-            return locate_cwords
-        end
-    end)()
-
-    vim.validate("opts.locator", opts.locator, "callable")
-
-    opts.max_tokens = ut._use_gb_if_nil(opts.max_tokens, "farsight_max_tokens", cur_buf)
+    opts.max_tokens = ut._use_gb_if_nil(opts.max_tokens, "farsight_jump_max_tokens", cur_buf)
     opts.max_tokens = opts.max_tokens or MAX_TOKENS
-    vim.validate("opts.max_tokens", opts.max_tokens, ut._is_uint)
-    vim.validate("opts.max_tokens", opts.max_tokens, function()
-        return opts.max_tokens > 0
-    end, "max_tokens must be at least one")
-
-    opts.on_jump = ut._use_gb_if_nil(opts.on_jump, "farsight_on_jump", cur_buf)
-    opts.on_jump = opts.on_jump
-        or function(_, _, _)
-            api.nvim_cmd({ cmd = "norm", args = { "zv" }, bang = true }, {})
+    local max_tokens = opts.max_tokens
+    vim.validate("opts.max_tokens", max_tokens, function()
+        if max_tokens % 1 ~= 0 then
+            return false
         end
 
-    vim.validate("opts.on_jump", opts.on_jump, "callable")
+        return max_tokens > 0
+    end, "max_tokens must be a uint greater than zero")
+
+    resolve_on_jump(opts, cur_buf)
 
     opts.tokens = ut._use_gb_if_nil(opts.tokens, "farsight_jump_tokens", cur_buf)
     opts.tokens = opts.tokens or TOKENS
@@ -810,8 +861,7 @@ local function resolve_jump_opts(opts, map_mode)
     ut._list_dedup(opts.tokens)
     ut._validate_list(opts.tokens, { item_type = "string", min_len = 2 })
 
-    opts.wins = opts.wins or { api.nvim_get_current_win() }
-    ut._validate_list(opts.wins, { item_type = "number", min_len = 1 })
+    resolve_wins(opts)
 end
 
 ---@class farsight.StepJump

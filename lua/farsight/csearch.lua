@@ -727,7 +727,6 @@ local function resolve_csearch_opts(opts, cur_buf)
 
     opts.keepjumps = ut._use_gb_if_nil(opts.keepjumps, "farsight_csearch_keepjumps", cur_buf)
     opts.keepjumps = ut._resolve_bool_opt(opts.keepjumps, true)
-    vim.validate("opts.keepjumps", opts.keepjumps, "boolean")
 
     opts.tokens = ut._use_gb_if_nil(opts.tokens, "farsight_csearch_tokens", cur_buf)
     opts.tokens = opts.tokens or TOKENS
@@ -740,7 +739,6 @@ local function resolve_csearch_opts(opts, cur_buf)
 
     opts.show_hl = ut._use_gb_if_nil(opts.show_hl, "farsight_csearch_show_hl", cur_buf)
     opts.show_hl = ut._resolve_bool_opt(opts.show_hl, true)
-    vim.validate("opts.show_hl", opts.show_hl, "boolean")
 
     -- TODO: Document in the type that this is only locally controlled
     opts.t_cmd = opts.t_cmd or 0
@@ -751,7 +749,6 @@ local function resolve_csearch_opts(opts, cur_buf)
     -- TODO: Document that the cpo option does not control here
     opts.t_cmd_skip = ut._use_gb_if_nil(opts.t_cmd_skip, "farsight_csearch_t_cmd_skip_ft", cur_buf)
     opts.t_cmd_skip = ut._resolve_bool_opt(opts.t_cmd_skip, false)
-    vim.validate("opts.t_cmd_skip", opts.t_cmd_skip, "boolean")
 
     local gb_max_tokens = "farsight_csearch_max_hl_steps"
     opts.max_tokens = ut._use_gb_if_nil(opts.max_tokens, gb_max_tokens, cur_buf)
@@ -919,7 +916,6 @@ function Csearch.rep(opts)
 
     opts.keepjumps = ut._use_gb_if_nil(opts.keepjumps, "farsight_csearch_keepjumps", cur_buf)
     opts.keepjumps = ut._resolve_bool_opt(opts.keepjumps, true)
-    vim.validate("opts.hl", opts.keepjumps, "boolean")
 
     vim.validate("opts.on_jump", opts.on_jump, "callable", true)
     vim.validate("opts.t_cmd_skip", opts.t_cmd_skip, "boolean", true)

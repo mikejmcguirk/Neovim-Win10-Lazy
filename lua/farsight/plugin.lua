@@ -200,3 +200,5 @@ end
 -- LOW: Is there a good way to allow jump's locator and wins opts to be controlled by g:vars?
 -- - Changing either default would break vmode and omode
 -- - Passing the built-in default expliclty breaks the assumption that g:vars overwrite defaults
+
+-- FUTURE: If vim vars are able to properly hold metatables, use them for var validation
