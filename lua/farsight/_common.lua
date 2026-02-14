@@ -5,14 +5,13 @@ local M = {}
 
 ---@param cur_pos { [1]: integer, [2]: integer }
 ---@param buf integer
+---@return integer, integer
 local function get_backward_skip_pos(cur_pos, buf)
     local cur_row = cur_pos[1]
-    local cur_col = cur_pos[2]
     local cur_line = api.nvim_buf_get_lines(buf, cur_row - 1, cur_row, false)[1]
-    local cur_charidx = fn.charidx(cur_line, cur_col)
+    local cur_charidx = fn.charidx(cur_line, cur_pos[2])
     if cur_charidx > 0 then
-        local prev_byteidx = fn.byteidx(cur_line, cur_charidx - 1)
-        return cur_row, prev_byteidx
+        return cur_row, fn.byteidx(cur_line, cur_charidx - 1)
     end
 
     local prev_row = math.max(cur_row - 1, 1)
@@ -21,10 +20,7 @@ local function get_backward_skip_pos(cur_pos, buf)
     end
 
     local prev_line = api.nvim_buf_get_lines(buf, prev_row - 1, prev_row, false)[1]
-    -- FUTURE: https://github.com/neovim/neovim/pull/37737
-    local prev_last_charidx = fn.strcharlen(prev_line) - 1 ---@type integer
-    local prev_last_byteidx = fn.byteidx(prev_line, prev_last_charidx)
-    return prev_row, prev_last_byteidx
+    return prev_row, fn.byteidx(prev_line, fn.strcharlen(prev_line) - 1)
 end
 
 ---@class farsight._common.DoJumpOpts
@@ -41,8 +37,8 @@ end
 function M._do_jump(cur_win, jump_win, buf, map_mode, cur_pos, jump_pos, opts)
     if cur_win ~= jump_win then
         api.nvim_set_current_win(jump_win)
-        -- AFAIK, changing windows in non-normal modes changes the mode to normal. I'm also not
-        -- sure why a window switching jump would be mapped in a non-normal mode to begin with.
+        -- AFAIK, changing windows in non-normal modes always changes the mode to normal. I'm also
+        -- not sure why a window switching jump would be mapped in a non-normal mode to begin with.
         -- This seems like the simplest way to avoid selection/mode adjustments in goofy edge
         -- cases. Can update if a use case comes up
         map_mode = "n"

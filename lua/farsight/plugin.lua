@@ -21,11 +21,13 @@ local lower = string.lower
 local maparg = fn.maparg
 local set = api.nvim_set_keymap
 
+-- TODO: Is the opts typing here right?
+
 ---@type table<string, fun(opts: farsight.jump.JumpOpts)>
 local actions_forward = {
 
     ["\r"] = function()
-        require("farsight.jump").jump({ all_wins = false, dir = 1 })
+        require("farsight.jump").jump({ dir = 1 })
     end,
 }
 
@@ -33,7 +35,7 @@ local actions_forward = {
 local actions_backward = {
 
     ["\r"] = function()
-        require("farsight.jump").jump({ all_wins = false, dir = -1 })
+        require("farsight.jump").jump({ dir = -1 })
     end,
 }
 
@@ -42,7 +44,7 @@ local plugs = {
         { "n" },
         "<Plug>(Farsight-Jump-Normal)",
         function()
-            require("farsight.jump").jump({ wins = api.nvim_tabpage_list_wins(0) })
+            require("farsight.jump").jump({})
         end,
     },
     {
@@ -169,6 +171,7 @@ end
 -- local duration_ms = (end_time - start_time) / 1e6
 -- print(string.format("hl_forward took %.2f ms", duration_ms))
 
+-- TODO: Add types to any usages of matchstrpos
 -- TODO: The various functions should have hard protections against multi-win if not in normal mode
 -- TODO: Augmented /? search. Design specs:
 -- - As you are typing, items are labeled like in flash
@@ -202,3 +205,5 @@ end
 -- - Passing the built-in default expliclty breaks the assumption that g:vars overwrite defaults
 
 -- FUTURE: If vim vars are able to properly hold metatables, use them for var validation
+
+-- PR: Understand how matchstrpos's returns actually work and update them in eval.lua

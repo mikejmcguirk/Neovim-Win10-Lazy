@@ -128,6 +128,24 @@ local function locate_cwords_with_cur_pos(_, row, line, _, cur_pos)
     return cols
 end
 
+---@param jump_win integer
+---@param buf integer
+---@param row_0 integer
+---@param col integer
+---@param map_mode "n"|"v"|"o"|"l"|"t"|"x"|"s"|"i"|"c"
+---@param opts farsight.jump.JumpOpts
+---@return nil
+local function do_jump(jump_win, buf, row_0, col, map_mode, opts)
+    local cur_win = api.nvim_get_current_win()
+    local cur_pos = api.nvim_win_get_cursor(cur_win)
+    local jump_pos = { row_0 + 1, col }
+
+    ---@type farsight._common.DoJumpOpts
+    local jump_opts = { on_jump = opts.on_jump, keepjumps = opts.keepjumps }
+    local common = require("farsight._common")
+    common._do_jump(cur_win, jump_win, buf, map_mode, cur_pos, jump_pos, jump_opts)
+end
+
 ---Edits targets in place
 ---@param targets farsight.jump.Target[]
 local function clear_target_virt_text(targets)
@@ -162,21 +180,21 @@ end
 
 -- Trivial perf cost in comparison to the redraws it saves
 
----Edits redraw_map in place
----@param redraw_opts vim.api.keyset.redraw[]
+---Edits redraws in place
+---@param redraws vim.api.keyset.redraw[]
 ---@param targets farsight.jump.Target[]
-local function filter_redraw_map(redraw_opts, targets)
-    if #redraw_opts <= 1 then
+local function filter_redraws(redraws, targets)
+    if #redraws <= 1 then
         return
     end
 
-    local targeted_win_tbl = {} ---@type table<integer, boolean>
+    local targeted_wins = {} ---@type table<integer, boolean>
     for _, target in ipairs(targets) do
-        targeted_win_tbl[target[1]] = true
+        targeted_wins[target[1]] = true
     end
 
-    require("farsight.util")._list_filter(redraw_opts, 1, function(opt)
-        return targeted_win_tbl[opt.win]
+    require("farsight.util")._list_filter(redraws, function(opt)
+        return targeted_wins[opt.win]
     end)
 end
 
@@ -187,7 +205,7 @@ end
 -- windows
 
 ---@param redraw_opts vim.api.keyset.redraw[]
-local function redraw_opts_list(redraw_opts)
+local function do_redraws(redraw_opts)
     local nvim__redraw = api.nvim__redraw
     for _, opt in pairs(redraw_opts) do
         nvim__redraw(opt)
@@ -378,33 +396,14 @@ local function populate_target_virt_text(targets, jump_level, max_tokens)
     end
 end
 
----Expects zero indexed row and col
----@param jump_win integer
----@param buf integer
----@param row_0 integer
----@param col integer
----@param map_mode "n"|"v"|"o"|"l"|"t"|"x"|"s"|"i"|"c"
----@param opts farsight.jump.JumpOpts
----@return nil
-local function do_jump(jump_win, buf, row_0, col, map_mode, opts)
-    local cur_win = api.nvim_get_current_win()
-    local cur_pos = api.nvim_win_get_cursor(cur_win)
-    local jump_pos = { row_0 + 1, col }
-
-    ---@type farsight._common.DoJumpOpts
-    local jump_opts = { on_jump = opts.on_jump, keepjumps = opts.keepjumps }
-    local common = require("farsight._common")
-    common._do_jump(cur_win, jump_win, buf, map_mode, cur_pos, jump_pos, jump_opts)
-end
-
----Edits ns_buf_map, targets, and redraw_map in place
+---Edits ns_buf_map, targets, and redraws in place
 ---@param ns_buf_map table<integer, integer>
 ---@param targets farsight.jump.Target[]
 ---@param map_mode "n"|"v"|"o"|"l"|"t"|"x"|"s"|"i"|"c"
----@param redraw_opts vim.api.keyset.redraw[]
+---@param redraws vim.api.keyset.redraw[]
 ---@param opts farsight.jump.JumpOpts
 ---@return nil
-local function advance_jump(ns_buf_map, targets, map_mode, redraw_opts, opts)
+local function advance_jump(ns_buf_map, targets, map_mode, redraws, opts)
     local dim = opts.dim
     local jump_level = 0
     local list_filter = require("farsight.util")._list_filter
@@ -417,7 +416,7 @@ local function advance_jump(ns_buf_map, targets, map_mode, redraw_opts, opts)
             dim_target_lines(targets, ns_buf_map)
         end
 
-        redraw_opts_list(redraw_opts)
+        do_redraws(redraws)
         local _, input = pcall(fn.getcharstr)
 
         local nvim_buf_clear_namespace = api.nvim_buf_clear_namespace
@@ -428,17 +427,17 @@ local function advance_jump(ns_buf_map, targets, map_mode, redraw_opts, opts)
         -- Adjust before filtering targets so that labels in all previous windows are cleared
         -- Accordingly, no windows need to be filtered at the first jump level
         if jump_level > 0 then
-            filter_redraw_map(redraw_opts, targets)
+            filter_redraws(redraws, targets)
         end
 
         local start = jump_level + 1
-        list_filter(targets, 1, function(target)
+        list_filter(targets, function(target)
             return target[5][start] == input
         end)
 
         local targets_len = #targets
         if targets_len <= 1 then
-            redraw_opts_list(redraw_opts)
+            do_redraws(redraws)
             if targets_len == 1 then
                 local target = targets[1]
                 do_jump(target[1], target[2], target[3], target[4], map_mode, opts)
@@ -457,6 +456,7 @@ end
 -- LOW: In theory, there should be some way to optimize this by pre-computing and pre-allocating
 -- the label lengths rather than doing multiple appends/resizes
 
+---Edits targets in place
 ---@param targets farsight.jump.Target[]
 ---@param tokens string[]
 ---@return nil
@@ -541,8 +541,6 @@ local function get_cols(win, row, line, buf, cur_pos, locator)
     return cols
 end
 
--- TODO: Re-organize params and maybe optimize some
-
 ---Assumes it is called in the window context of win
 ---@param row integer
 ---@param win integer
@@ -555,14 +553,14 @@ local function get_extra_wrap_cols(row, win, buf, cur_pos, locator)
         return {}
     end
 
-    local cur_line = fn.getline(row)
-    local cols = get_cols(win, row, cur_line, buf, cur_pos, locator)
-    if #cols < 1 then
+    local first_screenpos = fn.screenpos(win, row, 1)
+    if first_screenpos.row < 1 then
         return {}
     end
 
-    local first_screenpos = fn.screenpos(win, row, cols[1] + 1)
-    if first_screenpos.row < 1 then
+    local cur_line = fn.getline(row)
+    local cols = get_cols(win, row, cur_line, buf, cur_pos, locator)
+    if #cols < 1 then
         return {}
     end
 
@@ -573,6 +571,9 @@ local function get_extra_wrap_cols(row, win, buf, cur_pos, locator)
 
     return cols
 end
+
+-- LOW: Cols covered by extends/precedes listchars are considered on screen and visible per
+-- screenpos. Manually calculating/removing these characters feels quite tricky
 
 ---Edits cols in place
 ---@param wrap boolean
@@ -601,7 +602,7 @@ end
 ---@param buf integer
 ---@param locator fun(win: integer, row: integer, line: string, buf: integer,
 ---cur_pos: { [1]: integer, [2]: integer }):integer[]
-local function add_targets_before(win, cur_pos, buf, locator)
+local function get_cols_before(win, cur_pos, buf, locator)
     local row = cur_pos[1]
     local line = fn.getline(row)
     local ut = require("farsight.util")
@@ -618,8 +619,9 @@ end
 ---@param buf integer
 ---@param locator fun(win: integer, row: integer, line: string, buf: integer,
 ---cur_pos: { [1]: integer, [2]: integer }):integer[]
-local function add_targets_after(win, cur_pos, buf, locator)
-    local line = fn.getline(cur_pos[1])
+local function get_cols_after(win, cur_pos, buf, locator)
+    local row = cur_pos[1]
+    local line = fn.getline(row)
 
     local start_col_1 ---@type integer
     local ut = require("farsight.util")
@@ -632,7 +634,7 @@ local function add_targets_after(win, cur_pos, buf, locator)
     end
 
     local line_after = string.sub(line, start_col_1, #line)
-    local cols = get_cols(win, cur_pos[1], line_after, buf, cur_pos, locator)
+    local cols = get_cols(win, row, line_after, buf, cur_pos, locator)
     local count_cols = #cols
     for i = 1, count_cols do
         cols[i] = cols[i] + (#line - #line_after)
@@ -660,8 +662,9 @@ local function get_top_bot(dir, cur_pos)
 end
 
 ---@param win integer
+---@param configs table<integer, vim.api.keyset.win_config_ret>
 ---@return boolean, integer, integer
-local function get_wrap_info(win)
+local function get_wrap_info(win, configs)
     local wrap = api.nvim_get_option_value("wrap", { win = win }) ---@type boolean
     if wrap then
         return true, -1, -1
@@ -671,7 +674,7 @@ local function get_wrap_info(win)
     -- FUTURE: https://github.com/neovim/neovim/pull/37840
     ---@diagnostic disable-next-line: undefined-field
     local leftcol = wininfo.leftcol ---@type integer
-    local width = api.nvim_win_get_config(win).width
+    local width = configs[win].width
     local maxcol = math.max(width - wininfo.textoff - 1 + leftcol, 0)
 
     return wrap, leftcol, maxcol
@@ -687,14 +690,15 @@ local function add_missing_ns(wins)
 end
 
 ---@param wins integer[]
+---@param configs table<integer, vim.api.keyset.win_config_ret>
 ---@param opts farsight.jump.JumpOpts
 ---@return farsight.jump.Target[], table<integer, integer>, vim.api.keyset.redraw[]
-local function get_targets(wins, opts)
+local function get_targets(wins, configs, opts)
     add_missing_ns(wins)
 
     local targets = {} ---@type farsight.jump.Target[]
     local ns_buf_map = {} ---@type table<integer, integer>
-    local redraw_opts = {} ---@type vim.api.keyset.redraw[]
+    local redraws = {} ---@type vim.api.keyset.redraw[]
 
     local dir = opts.dir ---@type integer
     ---@type fun(row: integer, line: string, buf: integer,
@@ -715,14 +719,14 @@ local function get_targets(wins, opts)
         local ns = namespaces[i]
         nvim__ns_set(ns, { wins = { win } })
         ns_buf_map[ns] = buf
-        redraw_opts[#redraw_opts + 1] = { win = win, valid = true }
-        local wrap, leftcol, maxcol = get_wrap_info(win)
+        redraws[#redraws + 1] = { win = win, valid = true }
+        local wrap, leftcol, maxcol = get_wrap_info(win, configs)
 
         nvim_win_call(win, function()
             local top, bot, wS = get_top_bot(dir, cur_pos)
 
             if dir == 1 then
-                local cols = add_targets_after(win, cur_pos, buf, locator)
+                local cols = get_cols_after(win, cur_pos, buf, locator)
                 filter_nowrap_oob(wrap, cols, leftcol, maxcol)
                 add_cols_to_targets(cur_pos[1], cols, win, buf, ns, targets)
             end
@@ -734,8 +738,11 @@ local function get_targets(wins, opts)
                 add_cols_to_targets(j, cols, win, buf, ns, targets)
             end
 
+            -- LOW: From what I can tell, Nvim will not allow the cursor to be in a bottom, not
+            -- fully visible row in a wrap window, so that edge case does not need to be handled.
+            -- Could investigate further though
             if dir == -1 then
-                local cols = add_targets_before(win, cur_pos, buf, locator)
+                local cols = get_cols_before(win, cur_pos, buf, locator)
                 filter_nowrap_oob(wrap, cols, leftcol, maxcol)
                 add_cols_to_targets(cur_pos[1], cols, win, buf, ns, targets)
             end
@@ -745,20 +752,26 @@ local function get_targets(wins, opts)
                 local cols = get_extra_wrap_cols(row, win, buf, cur_pos, locator)
                 if #cols > 0 then
                     add_cols_to_targets(row, cols, win, buf, ns, targets)
-                    redraw_opts[#redraw_opts]["valid"] = false
+                    redraws[#redraws]["valid"] = false
                 end
             end
         end)
     end
 
-    return targets, ns_buf_map, redraw_opts
+    return targets, ns_buf_map, redraws
 end
 
 ---Edits opts in place
 ---@param opts farsight.jump.JumpOpts
-local function resolve_wins(opts)
+---@param map_mode "n"|"v"|"o"|"l"|"t"|"x"|"s"|"i"|"c"
+local function resolve_wins(opts, map_mode)
     if opts.wins == nil then
-        opts.wins = { api.nvim_get_current_win() }
+        if map_mode == "v" or map_mode == "o" then
+            opts.wins = { api.nvim_get_current_win() }
+        else
+            opts.wins = api.nvim_tabpage_list_wins(0)
+        end
+
         return
     end
 
@@ -769,11 +782,11 @@ local function resolve_wins(opts)
         item_type = "number",
         min_len = 1,
         func = function(win)
-            local win_tabpage = api.nvim_win_get_tabpage(win)
-            if win_tabpage ~= tabpage then
+            if api.nvim_win_get_tabpage(win) == tabpage then
                 return true
             else
-                return false, "Window " .. win .. " is not in the current tabpage"
+                local msg = "Window " .. win .. " is not in the current tabpage"
+                return false, msg
             end
         end,
     })
@@ -781,6 +794,7 @@ end
 
 ---Edits opts in place
 ---@param opts farsight.jump.JumpOpts
+---@param cur_buf integer
 local function resolve_on_jump(opts, cur_buf)
     local ut = require("farsight.util")
     opts.on_jump = ut._use_gb_if_nil(opts.on_jump, "farsight_on_jump", cur_buf)
@@ -861,7 +875,7 @@ local function resolve_jump_opts(opts, map_mode)
     ut._list_dedup(opts.tokens)
     ut._validate_list(opts.tokens, { item_type = "string", min_len = 2 })
 
-    resolve_wins(opts)
+    resolve_wins(opts, map_mode)
 end
 
 ---@class farsight.StepJump
@@ -892,18 +906,19 @@ function Jump.jump(opts)
     local map_mode = ut._resolve_map_mode(api.nvim_get_mode().mode)
     resolve_jump_opts(opts, map_mode)
 
-    local wins = ut._order_focusable_wins(opts.wins)
+    local wins, configs = ut._order_focusable_wins(opts.wins)
     if #wins < 1 then
         api.nvim_echo({ { "No focusable wins provided" } }, false, {})
         return
     end
 
-    local targets, ns_buf_map, redraw_opts = get_targets(wins, opts)
+    local targets, ns_buf_map, redraws = get_targets(wins, configs, opts)
     if #targets > 1 then
         populate_target_labels(targets, opts.tokens)
-        advance_jump(ns_buf_map, targets, map_mode, redraw_opts, opts)
+        advance_jump(ns_buf_map, targets, map_mode, redraws, opts)
     elseif #targets == 1 then
-        do_jump(targets[1][1], targets[1][2], targets[1][3], targets[1][4], map_mode, opts)
+        local target = targets[1]
+        do_jump(target[1], target[2], target[3], target[4], map_mode, opts)
     else
         api.nvim_echo({ { "No targets available" } }, false, {})
     end
@@ -916,8 +931,6 @@ end
 
 return Jump
 
--- TODO: Re-order functions on their own diff
--- TODO: Validate that all provided wins are in the current tabpage
 -- TODO: Document a couple locator examples:
 -- - CWORD
 -- - Sneak style

@@ -5,18 +5,16 @@ local fn = vim.fn
 local M = {}
 
 ---Bespoke function because:
----- vim.list.unique runs vim.validate at the beginning. Inconvenient here since deduping is done
----in hot loops (spot checking, the average execution time is not meaningfully higher, but the
----variance is higher)
----- vim.list.unique returns the list, which is unnecesary
----- vim.list.unique is v12 only. Doing this saves the cost of versioning maintenance
----@param t any[]
+---- Skip running vim.validate in hot loops
+---- Don't need the list return
+---@generic T
+---@param t T[]
 function M._list_dedup(t)
-    local seen = {} --- @type table<any,boolean>
-    local finish = #t
+    local seen = {} --- @type table<any, boolean>
+    local len = #t
     local j = 1
 
-    for i = 1, finish do
+    for i = 1, len do
         local v = t[i]
         if not seen[v] then
             t[j] = v
@@ -29,23 +27,20 @@ function M._list_dedup(t)
         end
     end
 
-    for i = j, finish do
+    for i = j, len do
         t[i] = nil
     end
 end
 
--- Even if the vim.list PR is accepted, stick with this bespoke function. The reduced validation
--- and start param are useful.
-
+---Bespoke function to avoid vim.validate and list returns in hot loops
 ---@generic T
 ---@param t T[]
----@param s integer
 ---@param f fun(x: T): boolean
-function M._list_filter(t, s, f)
+function M._list_filter(t, f)
     local len = #t
-    local j = s
+    local j = 1
 
-    for i = s, len do
+    for i = 1, len do
         local v = t[i]
         if f(v) then
             t[j] = v
@@ -67,6 +62,8 @@ function M._list_filter_beg_only(t, f)
     local k = 1
 
     for i = 1, len do
+        k = i + 1
+
         local v = t[i]
         if f(v) then
             if i == 1 then
@@ -74,7 +71,6 @@ function M._list_filter_beg_only(t, f)
             end
 
             t[j] = v
-            k = i + 1
             j = j + 1
             break
         end
@@ -100,7 +96,7 @@ function M._list_filter_end_only(t, f)
         if not f(v) then
             t[i] = nil
         else
-            break
+            return
         end
     end
 end
@@ -122,8 +118,9 @@ end
 -- Per mini.jump2d, while nvim_tabpage_list_wins does currently ensure proper window layout, this
 -- is not documented behavior and thus can change. The below function ensures layout
 ---@param wins integer[]
----@return integer[]
+---@return integer[], table<integer, vim.api.keyset.win_config_ret>
 function M._order_focusable_wins(wins)
+    local configs = {} ---@type table<integer, vim.api.keyset.win_config_ret>
     local focusable_wins = {} ---@type integer[]
     local positions = {} ---@type { [1]:integer, [2]:integer, [3]:integer }[]
 
@@ -131,6 +128,7 @@ function M._order_focusable_wins(wins)
         local config = api.nvim_win_get_config(win)
         if config.focusable and not config.hide then
             focusable_wins[#focusable_wins + 1] = win
+            configs[win] = config
             local pos = api.nvim_win_get_position(win)
             positions[win] = { pos[1], pos[2], config.zindex or 0 }
         end
@@ -153,30 +151,34 @@ function M._order_focusable_wins(wins)
         end
     end)
 
-    return focusable_wins
+    return focusable_wins, configs
 end
 
 local cword_str = [[\k\+]]
 
---- Col is zero indexed inclusive
---- Returns the result of matchstrpos(). The cols are zero indexed, and the end col is exclusive
+---Col is zero indexed inclusive
+---Returns the result of matchstrpos(). The cols are zero indexed, and the end col is exclusive
 ---@param line string
 ---@param col integer
 ---@return { [1]: string, [2]: integer, [3]: integer }|nil
 function M._find_cword_at_col(line, col)
-    local start = 0
+    local init = 0
 
-    while start <= col do
-        local res = fn.matchstrpos(line, cword_str, start)
-        if res[2] < 0 then
+    while init <= col do
+        ---@type { [1]: string, [2]: integer, [3]: integer }
+        local res = fn.matchstrpos(line, cword_str, init)
+        local start = res[2]
+        local fin_ = res[3]
+
+        if start < 0 then
             return nil
         end
 
-        if res[2] <= col and col < res[3] then
+        if start <= col and col < fin_ then
             return res
         end
 
-        start = res[3]
+        init = fin_
     end
 
     return nil
@@ -247,7 +249,7 @@ function M._use_gb_if_nil(opt, var, buf)
         return vim.g[var]
     end
 
-    return opt
+    return nil
 end
 
 ---@class farsight.util.ValidateListOpts
