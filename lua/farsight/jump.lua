@@ -305,14 +305,6 @@ local function add_missing_ns(wins)
     end
 end
 
-----@class farsight.jump.FloatWin
-----@field [1] integer winid
-----@field [2] integer zindex
-----@field [3] integer top
-----@field [4] integer left
-----@field [5] integer bot
-----@field [6] integer right
-
 ---@param wins integer[]
 ---@param opts farsight.jump.JumpOpts
 ---@return farsight.jump.Target[], table<integer, integer>, vim.api.keyset.redraw[]
@@ -381,62 +373,6 @@ local function get_targets(wins, opts)
     return targets, ns_buf_map, redraw_opts
 end
 
--- MID: The variable names in this function could be more clear
--- LOW: In theory, there should be some way to optimize this by pre-computing and pre-allocating
--- the label lengths rather than doing multiple appends/resizes
-
----@param targets farsight.jump.Target[]
----@param tokens string[]
----@return nil
-local function populate_target_labels(targets, tokens)
-    local len_targets = #targets
-    if len_targets <= 1 then
-        return
-    end
-
-    local queue = {} ---@type { [1]: integer, [2]:integer }[]
-    queue[#queue + 1] = { 1, len_targets }
-
-    local floor = math.floor
-    local list_remove = require("farsight.util")._list_remove_item
-    local len_tokens = #tokens
-    while #queue > 0 do
-        local range = queue[1]
-        local range_start = range[1]
-        local range_end = range[2]
-        list_remove(queue, 1)
-        local len_range = range_end - range_start + 1
-
-        local quotient = floor(len_range / len_tokens)
-        local remainder = len_range % len_tokens
-        local rem_tokens = quotient + (remainder >= 1 and 1 or 0)
-        remainder = remainder > 0 and remainder - 1 or remainder
-
-        local token_idx = 1
-        local token_start = range_start
-
-        local idx = range_start - 1
-        while idx < range_end do
-            local token = tokens[token_idx]
-            for _ = 1, rem_tokens do
-                idx = idx + 1
-                local label = targets[idx][5]
-                label[#label + 1] = token
-            end
-
-            if idx > token_start then
-                queue[#queue + 1] = { token_start, idx }
-            end
-
-            rem_tokens = quotient + (remainder >= 1 and 1 or 0)
-            remainder = remainder > 0 and remainder - 1 or remainder
-
-            token_idx = token_idx + 1
-            token_start = idx + 1
-        end
-    end
-end
-
 ---Edits targets in place
 ---@param targets farsight.jump.Target[]
 local function clear_target_virt_text(targets)
@@ -469,7 +405,7 @@ local function filter_ns_buf_map(ns_buf_map, targets)
     return new_ns_buf_map
 end
 
--- Trivial in comparison to the redraws it saves
+-- Trivial perf cost in comparison to the redraws it saves
 
 ---Edits redraw_map in place
 ---@param redraw_opts vim.api.keyset.redraw[]
@@ -489,12 +425,14 @@ local function filter_redraw_map(redraw_opts, targets)
     end)
 end
 
--- Helpful on average because:
--- - Non-trivial time is saved as opts are removed
--- - If a win has to be redrawn with valid = false, avoids that being applied to all wins
+-- Redrawing per window improves perf on average because:
+-- - If not all wins have to be redrawn, then redrawing all, even with valid = true, is
+-- non-trivially slower.
+-- - If a win has to be redrawn with valid = false, we avoid having to apply that setting to all
+-- windows
 
 ---@param redraw_opts vim.api.keyset.redraw[]
-local function redraw_list(redraw_opts)
+local function redraw_opts_list(redraw_opts)
     local nvim__redraw = api.nvim__redraw
     for _, opt in pairs(redraw_opts) do
         nvim__redraw(opt)
@@ -502,76 +440,46 @@ local function redraw_list(redraw_opts)
 end
 
 ---@param targets farsight.jump.Target[]
+---@param ns_buf_map table<integer, integer>
+local function dim_target_lines(targets, ns_buf_map)
+    local ns_rows = {}
+    for _, target in ipairs(targets) do
+        local ns = target[6]
+        local lines = ns_rows[ns] or {}
+        lines[target[3]] = true
+        ns_rows[ns] = lines
+    end
+
+    local dim_extmark_opts = {
+        end_col = 0,
+        hl_eol = true,
+        hl_group = hl_jump_dim,
+        priority = 999,
+    }
+
+    local nvim_buf_set_extmark = api.nvim_buf_set_extmark
+    for ns, buf in pairs(ns_buf_map) do
+        for row, _ in pairs(ns_rows[ns]) do
+            dim_extmark_opts.end_line = row + 1
+            pcall(nvim_buf_set_extmark, buf, ns, row, 0, dim_extmark_opts)
+        end
+    end
+end
+
+---@param targets farsight.jump.Target[]
 local function set_label_extmarks(targets)
     ---@type vim.api.keyset.set_extmark
-    local extmark_opts = { hl_mode = "combine", priority = 1000, virt_text_pos = "overlay" }
+    local extmark_opts = {
+        hl_mode = "combine",
+        priority = 1000,
+        virt_text_pos = "overlay",
+    }
+
     local nvim_buf_set_extmark = api.nvim_buf_set_extmark
     for _, target in ipairs(targets) do
         extmark_opts.virt_text = target[7]
         pcall(nvim_buf_set_extmark, target[2], target[6], target[3], target[4], extmark_opts)
     end
-end
-
----Edits targets in place
----@param targets farsight.jump.Target[]
----@param jump_level integer
-local function populate_target_virt_text_max_1(targets, jump_level)
-    local start = 1 + jump_level
-    for _, target in ipairs(targets) do
-        local label = target[5]
-        local hl = #label - jump_level > 1 and hl_jump or hl_jump_target
-        target[7][1] = { label[start], hl }
-    end
-end
-
----Edits targets in place
----@param targets farsight.jump.Target[]
----@param jump_level integer
-local function populate_target_virt_text_max_2(targets, jump_level)
-    local len_targets = #targets
-    if len_targets < 1 then
-        return
-    end
-
-    local start = 1 + jump_level
-    local start_plus_one = start + 1
-
-    ---@param target farsight.jump.Target
-    ---@param max_display_tokens integer
-    local function add_virt_text(target, max_display_tokens)
-        local label = target[5]
-        local virt_text = target[7]
-        local len_label = #label - jump_level
-        local has_more_tokens = len_label > 1
-        local start_hl = has_more_tokens and hl_jump or hl_jump_target
-        virt_text[1] = { label[start], start_hl }
-
-        -- This seems to be faster than early returning if len == 1
-        if has_more_tokens and max_display_tokens == 2 then
-            local next_hl = len_label == 2 and hl_jump_target or hl_jump_ahead
-            virt_text[2] = { label[start_plus_one], next_hl }
-        end
-    end
-
-    local max_idx = len_targets - 1
-    local next_target = targets[1]
-    for i = 1, max_idx do
-        local target = next_target
-        next_target = targets[i + 1]
-
-        local max_display_tokens = (
-            target[1] ~= next_target[1]
-            or target[2] ~= next_target[2]
-            or target[3] ~= next_target[3]
-            or next_target[4] - target[4] >= 2
-        )
-                and 2
-            or 1
-
-        add_virt_text(target, max_display_tokens)
-    end
-
-    add_virt_text(next_target, 2)
 end
 
 -- LOW: Profile this function to see if it could be optimized further
@@ -637,9 +545,70 @@ local function populate_target_virt_text_max_tokens(targets, max_tokens, jump_le
         add_virt_text(targets[i], max_display_tokens)
     end
 
-    add_virt_text(targets[#targets], max_tokens)
+    add_virt_text(next_target, max_tokens)
 end
 
+---Edits targets in place
+---@param targets farsight.jump.Target[]
+---@param jump_level integer
+local function populate_target_virt_text_max_2(targets, jump_level)
+    local len_targets = #targets
+    if len_targets < 1 then
+        return
+    end
+
+    local start = 1 + jump_level
+    local start_plus_one = start + 1
+
+    ---@param target farsight.jump.Target
+    ---@param max_display_tokens integer
+    local function add_virt_text(target, max_display_tokens)
+        local label = target[5]
+        local virt_text = target[7]
+        local len_label = #label - jump_level
+        local has_more_tokens = len_label > 1
+        local start_hl = has_more_tokens and hl_jump or hl_jump_target
+        virt_text[1] = { label[start], start_hl }
+
+        -- This seems to be faster than early returning if len == 1
+        if has_more_tokens and max_display_tokens == 2 then
+            local next_hl = len_label == 2 and hl_jump_target or hl_jump_ahead
+            virt_text[2] = { label[start_plus_one], next_hl }
+        end
+    end
+
+    local max_idx = len_targets - 1
+    local next_target = targets[1]
+    for i = 1, max_idx do
+        local target = next_target
+        next_target = targets[i + 1]
+
+        local max_display_tokens = (
+            target[1] ~= next_target[1]
+            or target[2] ~= next_target[2]
+            or target[3] ~= next_target[3]
+            or next_target[4] - target[4] >= 2
+        )
+                and 2
+            or 1
+
+        add_virt_text(target, max_display_tokens)
+    end
+
+    add_virt_text(next_target, 2)
+end
+
+---Edits targets in place
+---@param targets farsight.jump.Target[]
+---@param jump_level integer
+local function populate_target_virt_text_max_1(targets, jump_level)
+    local start = 1 + jump_level
+    for _, target in ipairs(targets) do
+        local label = target[5]
+        local hl = #label - jump_level > 1 and hl_jump or hl_jump_target
+        target[7][1] = { label[start], hl }
+    end
+end
 ---Edits targets in place
 ---@param targets farsight.jump.Target[]
 ---@param max_tokens integer
@@ -651,33 +620,6 @@ local function populate_target_virt_text(targets, jump_level, max_tokens)
         populate_target_virt_text_max_2(targets, jump_level)
     else
         populate_target_virt_text_max_tokens(targets, max_tokens, jump_level)
-    end
-end
-
----@param targets farsight.jump.Target[]
----@param ns_buf_map table<integer, integer>
-local function dim_target_lines(targets, ns_buf_map)
-    local ns_rows = {}
-    for _, target in ipairs(targets) do
-        local ns = target[6]
-        local lines = ns_rows[ns] or {}
-        lines[target[3]] = true
-        ns_rows[ns] = lines
-    end
-
-    local dim_extmark_opts = {
-        end_col = 0,
-        hl_eol = true,
-        hl_group = hl_jump_dim,
-        priority = 999,
-    }
-
-    local nvim_buf_set_extmark = api.nvim_buf_set_extmark
-    for ns, buf in pairs(ns_buf_map) do
-        for row, _ in pairs(ns_rows[ns]) do
-            dim_extmark_opts.end_line = row + 1
-            pcall(nvim_buf_set_extmark, buf, ns, row, 0, dim_extmark_opts)
-        end
     end
 end
 
@@ -710,6 +652,7 @@ end
 local function advance_jump(ns_buf_map, targets, map_mode, redraw_opts, opts)
     local dim = opts.dim
     local jump_level = 0
+    local list_filter = require("farsight.util")._list_filter
     local max_tokens = opts.max_tokens ---@type integer
 
     while true do
@@ -719,7 +662,7 @@ local function advance_jump(ns_buf_map, targets, map_mode, redraw_opts, opts)
             dim_target_lines(targets, ns_buf_map)
         end
 
-        redraw_list(redraw_opts)
+        redraw_opts_list(redraw_opts)
         local _, input = pcall(fn.getcharstr)
 
         local nvim_buf_clear_namespace = api.nvim_buf_clear_namespace
@@ -727,20 +670,20 @@ local function advance_jump(ns_buf_map, targets, map_mode, redraw_opts, opts)
             pcall(nvim_buf_clear_namespace, buf, ns, 0, -1)
         end
 
-        -- The redraw map should be based on the wins from the previous jump level so that all
-        -- labels are guaranteed to be cleared. Adjust before filtering targets
+        -- Adjust before filtering targets so that labels in all previous windows are cleared
+        -- Accordingly, no windows need to be filtered at the first jump level
         if jump_level > 0 then
             filter_redraw_map(redraw_opts, targets)
         end
 
         local start = jump_level + 1
-        require("farsight.util")._list_filter(targets, 1, function(target)
+        list_filter(targets, 1, function(target)
             return target[5][start] == input
         end)
 
         local targets_len = #targets
         if targets_len <= 1 then
-            redraw_list(redraw_opts)
+            redraw_opts_list(redraw_opts)
             if targets_len == 1 then
                 local target = targets[1]
                 do_jump(target[1], target[2], target[3], target[4], map_mode, opts)
@@ -752,6 +695,62 @@ local function advance_jump(ns_buf_map, targets, map_mode, redraw_opts, opts)
         ns_buf_map = filter_ns_buf_map(ns_buf_map, targets)
         clear_target_virt_text(targets)
         jump_level = jump_level + 1
+    end
+end
+
+-- MID: The variable names in this function could be more clear
+-- LOW: In theory, there should be some way to optimize this by pre-computing and pre-allocating
+-- the label lengths rather than doing multiple appends/resizes
+
+---@param targets farsight.jump.Target[]
+---@param tokens string[]
+---@return nil
+local function populate_target_labels(targets, tokens)
+    local len_targets = #targets
+    if len_targets <= 1 then
+        return
+    end
+
+    local queue = {} ---@type { [1]: integer, [2]:integer }[]
+    queue[#queue + 1] = { 1, len_targets }
+
+    local floor = math.floor
+    local list_remove = require("farsight.util")._list_remove_item
+    local len_tokens = #tokens
+    while #queue > 0 do
+        local range = queue[1]
+        local range_start = range[1]
+        local range_end = range[2]
+        list_remove(queue, 1)
+        local len_range = range_end - range_start + 1
+
+        local quotient = floor(len_range / len_tokens)
+        local remainder = len_range % len_tokens
+        local rem_tokens = quotient + (remainder >= 1 and 1 or 0)
+        remainder = remainder > 0 and remainder - 1 or remainder
+
+        local token_idx = 1
+        local token_start = range_start
+
+        local idx = range_start - 1
+        while idx < range_end do
+            local token = tokens[token_idx]
+            for _ = 1, rem_tokens do
+                idx = idx + 1
+                local label = targets[idx][5]
+                label[#label + 1] = token
+            end
+
+            if idx > token_start then
+                queue[#queue + 1] = { token_start, idx }
+            end
+
+            rem_tokens = quotient + (remainder >= 1 and 1 or 0)
+            remainder = remainder > 0 and remainder - 1 or remainder
+
+            token_idx = token_idx + 1
+            token_start = idx + 1
+        end
     end
 end
 
