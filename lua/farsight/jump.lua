@@ -931,6 +931,7 @@ end
 
 return Jump
 
+-- TODO: Defaults should respect fdo 'jump' and 'all' flags
 -- TODO: Document a couple locator examples:
 -- - CWORD
 -- - Sneak style

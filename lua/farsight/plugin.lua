@@ -199,6 +199,11 @@ end
 -- TODO: Since ctrl char literals are displayed, maybe allow them to be factored into csearch and
 -- jump
 -- TODO: Need to test that the gb options work
+-- TODO: Jokes:
+-- - "Extraterrestrial vantage point over your code"
+-- - "You'll move through your code so quickly, people won't be sure your movement was real"
+-- - "See through walls with jump" (Direct Farsight reference)
+-- - "Even the best researchers at Area 51 won't be able to understand your speed"
 
 -- LOW: Is there a good way to allow jump's locator and wins opts to be controlled by g:vars?
 -- - Changing either default would break vmode and omode

@@ -18,6 +18,7 @@ local nvim_get_hl_id_by_name = api.nvim_get_hl_id_by_name
 local hl_1st = nvim_get_hl_id_by_name(HL_1ST_STR)
 local hl_2nd = nvim_get_hl_id_by_name(HL_2ND_STR)
 local hl_3rd = nvim_get_hl_id_by_name(HL_3RD_STR)
+local hl_map = { hl_1st, hl_2nd, hl_3rd } ---@type integer[]
 
 local HL_NS = api.nvim_create_namespace("FarsightCsearch")
 
@@ -77,9 +78,6 @@ local function setup_repeat_tracking()
 end
 
 setup_repeat_tracking()
-
-local cword_str = [[\k\+]]
-local priority_map = { hl_3rd, hl_2nd, hl_1st } ---@type integer[]
 
 ---@class farsight.csearch.TokenLabel
 ---@field [1] integer row
@@ -368,274 +366,6 @@ local function do_csearch(win, buf, cur_pos, char, opts)
     end
 end
 
--- LOW: This can't be the most efficient way to do this.
-
----Edits token_counts in place
----@param token_counts table<integer, integer>|table<string, integer>
----@param remaining integer
----@param char integer|string
-local function decrement_tokens(token_counts, remaining, char)
-    if token_counts[char] > 1 then
-        token_counts[char] = remaining - 1
-    else
-        token_counts[char] = nil
-    end
-end
-
----Edits token_counts in place
----@param word string
----@param token_counts table<integer, integer>|table<string, integer>
-local function decrement_utf_tokens(word, token_counts)
-    local strcharpart = fn.strcharpart
-    local last_charidx = fn.strcharlen(word[1]) - 1
-    for i = 0, last_charidx do
-        local char = strcharpart(word[1], i, 1, true)
-        local remaining = token_counts[char] ---@type integer?
-        if remaining then
-            decrement_tokens(token_counts, remaining, char)
-        end
-    end
-end
-
----Edits token_counts in place
----@param word string
----@param token_counts table<integer, integer>|table<string, integer>
-local function decrement_ascii_tokens(word, token_counts)
-    local byte = string.byte
-    local len_word = #word
-    for i = 1, len_word do
-        local char = byte(word, i)
-        local remaining = token_counts[char] ---@type integer?
-        if remaining then
-            decrement_tokens(token_counts, remaining, char)
-        end
-    end
-end
-
----Edits token_counts and labels in place
----@param res { [1]: string, [2]: integer, [3]: integer }
----@param token_counts table<integer, integer>|table<string, integer>
----@param labels farsight.csearch.TokenLabel[]
----@param max_tokens integer
----@param row_0 integer
----@param step -1|1
----@param rem_check fun(a: integer, b: integer, c: integer):boolean
-local function utf_labeler(res, token_counts, labels, max_tokens, row_0, step, rem_check)
-    local priority = 0
-    local idx
-    local len_char
-    local hl_id
-
-    local word = res[1]
-    local start_word = res[2]
-    local strcharpart = fn.strcharpart
-    local byteidx = fn.byteidx
-
-    local iter_start = step == 1 and 0 or fn.strcharlen(word) - 1 ---@type integer
-    local iter_fin = step == 1 and fn.strcharlen(word) - 1 or 0 ---@type integer
-    for i = iter_start, iter_fin, step do
-        local char = strcharpart(word, i, 1, true)
-        local remaining = token_counts[char] ---@type integer?
-        if remaining then
-            if rem_check(remaining, priority, max_tokens) then
-                priority = remaining
-                -- This might be skipped more often than not, so don't pre-get the reference
-                idx = start_word + byteidx(word, i)
-                len_char = #char
-                hl_id = priority_map[priority]
-            end
-
-            decrement_tokens(token_counts, remaining, char)
-        end
-    end
-
-    if priority > 0 then
-        labels[#labels + 1] = { row_0, idx, len_char, hl_id }
-    end
-end
-
----Edits token_counts and labels in place
----@param res { [1]: string, [2]: integer, [3]: integer }
----@param token_counts table<integer, integer>|table<string, integer>
----@param labels farsight.csearch.TokenLabel[]
----@param max_tokens integer
----@param row_0 integer
-local function utf_labeler_fwd(res, token_counts, labels, max_tokens, row_0)
-    utf_labeler(res, token_counts, labels, max_tokens, row_0, 1, function(a, b, c)
-        return a > b and a <= c
-    end)
-end
-
----Edits token_counts and labels in place
----@param res { [1]: string, [2]: integer, [3]: integer }
----@param token_counts table<integer, integer>|table<string, integer>
----@param labels farsight.csearch.TokenLabel[]
----@param max_tokens integer
----@param row_0 integer
-local function utf_labeler_rev(res, token_counts, labels, max_tokens, row_0)
-    utf_labeler(res, token_counts, labels, max_tokens, row_0, -1, function(a, b, c)
-        return a >= b and a <= c
-    end)
-end
-
----Edits token_counts and labels in place
----@param res { [1]: string, [2]: integer, [3]: integer }
----@param token_counts table<integer, integer>|table<string, integer>
----@param labels farsight.csearch.TokenLabel[]
----@param max_tokens integer
----@param row_0 integer
----@param step -1|1
----@param rem_check fun(a: integer, b: integer, c: integer):boolean
-local function ascii_labeler(res, token_counts, labels, max_tokens, row_0, step, rem_check)
-    local priority = 0
-    local idx
-    local hl_id
-
-    local word = res[1]
-    local start = res[2]
-    local byte = string.byte
-
-    local iter_start = step == 1 and 1 or #word
-    local iter_fin = step == 1 and #word or 1
-    for i = iter_start, iter_fin, step do
-        local str_byte = byte(word, i)
-        local remaining = token_counts[str_byte] ---@type integer?
-        if remaining then
-            -- if rem_check(remaining, priority, max_tokens) then
-            --     priority = remaining
-            --     idx = start + (i - 1)
-            --     hl_id = priority_map[priority]
-            -- end
-
-            if remaining > 0 then
-                idx = start + (i - 1)
-                hl_id = priority_map[remaining]
-                labels[#labels + 1] = { row_0, idx, 1, hl_id }
-            end
-
-            decrement_tokens(token_counts, remaining, str_byte)
-        end
-    end
-
-    -- if priority > 0 then
-    --     labels[#labels + 1] = { row_0, idx, 1, hl_id }
-    -- end
-end
-
----Edits token_counts and labels in place
----@param res { [1]: string, [2]: integer, [3]: integer }
----@param token_counts table<integer, integer>|table<string, integer>
----@param labels farsight.csearch.TokenLabel[]
----@param max_tokens integer
----@param row_0 integer
-local function ascii_labeler_fwd(res, token_counts, labels, max_tokens, row_0)
-    ascii_labeler(res, token_counts, labels, max_tokens, row_0, 1, function(a, b, c)
-        return a > b and a <= c
-    end)
-end
-
----Edits token_counts and labels in place
----@param res { [1]: string, [2]: integer, [3]: integer }
----@param token_counts table<integer, integer>|table<string, integer>
----@param labels farsight.csearch.TokenLabel[]
----@param max_tokens integer
----@param row_0 integer
-local function ascii_labeler_rev(res, token_counts, labels, max_tokens, row_0)
-    ascii_labeler(res, token_counts, labels, max_tokens, row_0, -1, function(a, b, c)
-        return a >= b and a <= c
-    end)
-end
-
----Edits token_counts and labels in place
----@param labeler fun(res: { [1]: string, [2]: integer, [3]: integer },
----token_counts: table<integer, integer>|table<string, integer>,
----labels: farsight.csearch.TokenLabel[], max_tokens:integer, row_0: integer)
----@param line string
----@param init integer
----@param row_0 integer
----@param token_counts table<integer, integer>|table<string,integer>
----@param labels farsight.csearch.TokenLabel[]
----@param max_tokens integer
-local function iter_tokens_fwd(labeler, line, init, row_0, token_counts, labels, max_tokens)
-    local len_line = #line
-    local matchstrpos = fn.matchstrpos
-
-    while init < len_line do
-        ---@type { [1]: string, [2]: integer, [3]: integer }
-        local res = matchstrpos(line, cword_str, init)
-        if res[2] < 0 then
-            break
-        end
-
-        labeler(res, token_counts, labels, max_tokens, row_0)
-        if not next(token_counts) then
-            return
-        end
-
-        init = res[3] -- Already exclusive indexed
-    end
-end
-
----Edits token_counts and labels in place
----@param labeler fun(res: { [1]: string, [2]: integer, [3]: integer },
----token_counts: table<integer, integer>|table<string, integer>,
----labels: farsight.csearch.TokenLabel[], max_tokens:integer, row_0: integer)
----@param line string
----@param row_0 integer
----@param token_counts table<integer, integer>|table<string,integer>
----@param labels farsight.csearch.TokenLabel[]
----@param max_tokens integer
-local function iter_tokens_rev(labeler, line, row_0, token_counts, labels, max_tokens)
-    local init = 0
-    local results = {}
-
-    local len_line = #line
-    local matchstrpos = fn.matchstrpos
-
-    while init < len_line do
-        ---@type { [1]: string, [2]: integer, [3]: integer }
-        local res = matchstrpos(line, cword_str, init)
-        if res[2] < 0 then
-            break
-        end
-
-        results[#results + 1] = res
-        init = res[3] -- Already exclusive indexed
-    end
-
-    local len_results = #results
-    for i = len_results, 1, -1 do
-        labeler(results[i], token_counts, labels, max_tokens, row_0)
-        if not next(token_counts) then
-            return
-        end
-    end
-end
-
----@param tokens string[]
----@return boolean
-local function is_ascii_only(tokens)
-    for _, token in ipairs(tokens) do
-        if #token > 1 then
-            return false
-        end
-    end
-
-    return true
-end
-
----@param tokens string[]
----@return integer[]
-local function get_tokens_as_codes(tokens)
-    local codes = {} ---@type integer[]
-    local byte = string.byte
-    for _, token in ipairs(tokens) do
-        codes[#codes + 1] = byte(token)
-    end
-
-    return codes
-end
-
 ---@param buf integer
 ---@param labels farsight.csearch.TokenLabel[]
 local function highlight_labels(buf, labels)
@@ -647,160 +377,10 @@ local function highlight_labels(buf, labels)
     end
 end
 
----@param vcount1 integer
----@param is_ascii boolean
----@param tokens string[]
----@param max_tokens integer
----@return table<integer, integer>|table<string, integer>
-local function create_token_counts(vcount1, is_ascii, tokens, max_tokens)
-    tokens = vim.deepcopy(tokens)
-    tokens = is_ascii and get_tokens_as_codes(tokens) or tokens
-    local token_count = max_tokens + (vcount1 - 1)
-    local token_counts = {} ---@type table<integer, integer>|table<string, integer>
-    for _, token in ipairs(tokens) do
-        token_counts[token] = token_count
-    end
-
-    return token_counts
-end
-
 ---@param buf integer
----@param cur_pos { [1]: integer, [2]: integer }
----@param max_tokens integer
----@param is_ascii boolean
----@param token_counts table<integer, integer>|table<string, integer>
-local function hl_fwd(buf, cur_pos, max_tokens, is_ascii, token_counts)
-    local counter_func = is_ascii and ascii_labeler_fwd or utf_labeler_fwd
-    local decrement_func = is_ascii and decrement_ascii_tokens or decrement_utf_tokens
-    local labels = {} ---@type farsight.csearch.TokenLabel[]
-
-    local row = cur_pos[1]
-    local col = cur_pos[2]
-    local nvim_buf_get_lines = api.nvim_buf_get_lines
-    local row_0 = row - 1
-    local cur_line = nvim_buf_get_lines(buf, row_0, row, false)[1]
-    local col_1 = col + 1
-    local foldclosed = fn.foldclosed
-    if foldclosed(row) == -1 and col_1 < #cur_line then
-        local init = col_1
-        local cur_res = require("farsight.util")._find_cword_at_col(cur_line, col)
-        local sub = string.sub
-        if cur_res then
-            local res_to = cur_res[3]
-            local suffix = sub(cur_line, init + 1, res_to)
-            decrement_func(suffix, token_counts)
-            init = res_to
-        end
-
-        iter_tokens_fwd(counter_func, cur_line, init, row_0, token_counts, labels, max_tokens)
-    end
-
-    local next_row = row + 1
-    local bot = fn.line("w$")
-    for i = next_row, bot do
-        if not next(token_counts) then
-            break
-        end
-
-        if foldclosed(i) == -1 then
-            local i_0 = i - 1
-            local line = nvim_buf_get_lines(buf, i_0, i, false)[1]
-            iter_tokens_fwd(counter_func, line, 0, i_0, token_counts, labels, max_tokens)
-        end
-    end
-
-    return labels
-end
-
----@param buf integer
----@param cur_pos { [1]: integer, [2]: integer }
----@param max_tokens integer
----@param is_ascii boolean
-local function hl_rev(buf, cur_pos, max_tokens, is_ascii, token_counts)
-    local labeler_func = is_ascii and ascii_labeler_rev or utf_labeler_rev
-    local decrement_func = is_ascii and decrement_ascii_tokens or decrement_utf_tokens
-    local labels = {} ---@type farsight.csearch.TokenLabel[]
-
-    local row = cur_pos[1]
-    local col = cur_pos[2]
-    local row_0 = row - 1
-    local nvim_buf_get_lines = api.nvim_buf_get_lines
-    local foldclosed = fn.foldclosed
-    if foldclosed(row) == -1 and col > 0 then
-        local cur_line = nvim_buf_get_lines(buf, row_0, row, false)[1]
-        local col_before_1 = col
-        local cur_res = require("farsight.util")._find_cword_at_col(cur_line, col)
-        local sub = string.sub
-        if cur_res then
-            local cur_res_from = cur_res[2]
-            local prefix = sub(cur_line, cur_res_from + 1, col_before_1)
-            decrement_func(prefix, token_counts)
-            col_before_1 = cur_res_from
-        end
-
-        local line_before = sub(cur_line, 1, col_before_1)
-        iter_tokens_rev(labeler_func, line_before, row_0, token_counts, labels, max_tokens)
-    end
-
-    local top = fn.line("w0")
-    for i = row_0, top, -1 do
-        if not next(token_counts) then
-            break
-        end
-
-        -- MID: Is it faster to always get the line and then check if it's at least one byte?
-        if foldclosed(i) == -1 then
-            local i_0 = i - 1
-            local line = nvim_buf_get_lines(buf, i_0, i, false)[1]
-            iter_tokens_rev(labeler_func, line, i_0, token_counts, labels, max_tokens)
-        end
-    end
-
-    return labels
-end
-
--- TODO: Apply what we learned from working with Jump to here when it comes to highlighting
-
----@param win integer
----@param buf integer
----@param cur_pos { [1]: integer, [2]: integer }
----@param opts farsight.csearch.CsearchOpts
-local function add_csearch_labels(win, buf, cur_pos, opts)
-    local tokens = opts.tokens --[[@as string[] ]]
-    local max_tokens = opts.max_tokens --[[@as integer]]
-    local is_ascii = is_ascii_only(tokens)
-    -- local is_ascii = false
-    ---@type table<integer, integer>|table<string, integer>
-    local token_counts = create_token_counts(vim.v.count1, is_ascii, tokens, max_tokens)
-    if not next(token_counts) then
-        return
-    end
-
-    local labels = (function()
-        if opts.forward == 1 then
-            return hl_fwd(buf, cur_pos, max_tokens, is_ascii, token_counts)
-        else
-            return hl_rev(buf, cur_pos, max_tokens, is_ascii, token_counts)
-        end
-    end)()
-
-    if #labels > 0 then
-        api.nvim__ns_set(HL_NS, { wins = { win } })
-        highlight_labels(buf, labels)
-        api.nvim__redraw({ valid = true })
-    end
-end
-
----@param win integer
----@param buf integer
----@param cur_pos { [1]: integer, [2]: integer }
 ---@param opts farsight.csearch.CsearchOpts
 ---@return string
-local function get_csearch_input(win, buf, cur_pos, opts)
-    if opts.show_hl then
-        add_csearch_labels(win, buf, cur_pos, opts)
-    end
-
+local function get_csearch_input(buf, opts)
     local _, input = pcall(fn.getcharstr, -1)
     pcall(api.nvim_buf_clear_namespace, buf, HL_NS, 0, -1)
     local actions = opts.actions --[[@as table<string, fun()>]]
@@ -816,6 +396,205 @@ local function get_csearch_input(win, buf, cur_pos, opts)
     end
 
     return input
+end
+
+-- TODO: Rename to create_token_counts once old one is gone
+-- TODO: Decouple comments from params
+---@param tokens (integer|string)[]
+---@return table<integer, integer>
+local function init_token_counts(tokens)
+    local token_counts = {} ---@type table<integer, integer>
+    local start_count = 0 - (vim.v.count1 - 1)
+
+    local char2nr = fn.char2nr
+
+    for _, token in ipairs(tokens) do
+        if type(token) == "string" then
+            token_counts[char2nr(token)] = start_count
+        else
+            token_counts[token] = start_count
+        end
+    end
+
+    return token_counts
+end
+
+---NON: Worth the function call overhead to avoid logic duplication
+
+---@param line string
+---@param b1 integer
+---@param idx integer
+---@return integer, integer
+local function get_utf_codepoint(line, b1, idx)
+    local len_utf = utf8_len_tbl[b1]
+    if len_utf == 1 or len_utf > 4 or idx + len_utf - 1 > #line then
+        return b1, 1
+    end
+
+    local lshift = require("bit").lshift
+    local sbyte = string.byte
+
+    local b2 = sbyte(line, idx + 1)
+    if len_utf == 2 then
+        return lshift(b1 - 0xC0, 6) + (b2 - 0x80), 2
+    end
+
+    local b3 = sbyte(line, idx + 2)
+    if len_utf == 3 then
+        return lshift(b1 - 0xE0, 12) + lshift(b2 - 0x80, 6) + (b3 - 0x80), 3
+    end
+
+    local b4 = sbyte(line, idx + 3)
+    local b1_shift = lshift(b1 - 0xF0, 18)
+    local b2_shift = lshift(b2 - 0x80, 12)
+    local b3_shift = lshift(b3 - 0x80, 6)
+    return b1_shift + b2_shift + b3_shift + (b4 - 0x80), 4
+end
+
+---Edits token_counts and labels in place
+---@param row integer
+---@param line string
+---@param max_tokens integer
+---@param token_counts table<integer, integer>
+---@param labels farsight.csearch.TokenLabel[]
+local function add_labels_rev(row, line, max_tokens, token_counts, labels)
+    local n = #line
+    local sbyte = string.byte
+
+    local i = n
+    local row_0 = row - 1
+
+    while i >= 1 do
+        local b1 = sbyte(line, i)
+        if b1 <= 0x80 or b1 >= 0xC0 then
+            local char_nr, len_char = get_utf_codepoint(line, b1, i)
+            local char_token_count = token_counts[char_nr]
+            if char_token_count then
+                token_counts[char_nr] = char_token_count + 1
+                local new_char_token_count = token_counts[char_nr]
+                local hl_id = hl_map[new_char_token_count]
+                if hl_id then
+                    labels[#labels + 1] = { row_0, i - 1, len_char, hl_id }
+                end
+
+                if new_char_token_count >= max_tokens then
+                    token_counts[char_nr] = nil
+                end
+
+                if not next(token_counts) then
+                    return
+                end
+            end
+        end
+
+        i = i - 1
+    end
+end
+
+-- TODO: Check this against Nvim's built-in char2nr
+-- TODO: Don't have comments attached to params
+---Edits token_counts and labels in place
+---@param row integer
+---@param line string
+---@param max_tokens integer
+---@param token_counts table<integer, integer>
+---@param labels farsight.csearch.TokenLabel[]
+local function add_labels_fwd(row, line, max_tokens, token_counts, labels)
+    local len_line = #line
+    local sbyte = string.byte
+
+    local row_0 = row - 1
+    local i = 1
+    while i <= len_line do
+        local b1 = sbyte(line, i)
+        local char_nr, len_char = get_utf_codepoint(line, b1, i)
+        local char_token_count = token_counts[char_nr]
+        if char_token_count then
+            token_counts[char_nr] = char_token_count + 1
+            local new_char_token_count = token_counts[char_nr]
+            local hl_id = hl_map[new_char_token_count]
+            if hl_id then
+                labels[#labels + 1] = { row_0, i - 1, len_char, hl_id }
+            end
+
+            if new_char_token_count >= max_tokens then
+                token_counts[char_nr] = nil
+            end
+
+            if not next(token_counts) then
+                return
+            end
+        end
+
+        i = i + len_char
+    end
+end
+
+-- TODO: Make sure these comments are separate from the params
+-- TODO: Make sure this function is moved to the appropriate place
+---@param opts farsight.csearch.CsearchOpts
+local function get_csearch_labels(cur_pos, opts)
+    local cur_row = cur_pos[1]
+    local cur_col = cur_pos[2]
+    local forward = opts.forward
+    local max_tokens = opts.max_tokens --[[@as integer]]
+    local tokens = opts.tokens --[[@as string[] ]]
+
+    -- TODO: filter control chars from token counts
+    -- TODO: early exit of token_counts is 0. print a warning
+    local token_counts = init_token_counts(tokens)
+    local labels = {} ---@type farsight.csearch.TokenLabel[]
+
+    if forward == 1 then
+        -- TODO: Resolve fold state/opts. Have opts.use_folds or something, and use the Nvim
+        -- option to fill it if nil. fdo_hor?
+        local cur_line = api.nvim_buf_get_lines(0, cur_row - 1, cur_row, false)[1]
+        local line_after = string.sub(cur_line, cur_col + 1, #cur_line)
+        add_labels_fwd(cur_row, line_after, max_tokens, token_counts, labels)
+        local len_cut_line = #cur_line - #line_after
+        for _, label in ipairs(labels) do
+            label[2] = label[2] + len_cut_line
+        end
+
+        if not next(token_counts) then
+            return labels
+        end
+
+        local bot = fn.line("w$")
+        for i = cur_row + 1, bot do
+            -- TODO: Same thing with folds here
+            local line = api.nvim_buf_get_lines(0, i - 1, i, false)[1]
+            add_labels_fwd(i, line, max_tokens, token_counts, labels)
+            if not next(token_counts) then
+                return labels
+            end
+        end
+        -- TODO: Add extra for wrapped rows. Try to incorporate jump logic
+    else
+        local cur_line = api.nvim_buf_get_lines(0, cur_row - 1, cur_row, false)[1]
+        local line_before = string.sub(cur_line, 1, cur_col)
+        add_labels_rev(cur_row, line_before, max_tokens, token_counts, labels)
+        if not next(token_counts) then
+            return labels
+        end
+
+        local top = fn.line("w0")
+        local prev_row = math.max(cur_row - 1, 1)
+        for i = prev_row, top, -1 do
+            -- TODO: Same thing with folds here
+            local line = api.nvim_buf_get_lines(0, i - 1, i, false)[1]
+            add_labels_rev(i, line, max_tokens, token_counts, labels)
+            if not next(token_counts) then
+                return labels
+            end
+        end
+    end
+
+    -- TODO: Current char does not count for f
+    -- TODO: Very next char for t counts based on skip
+    -- TODO: Respect fdo 'hor' and 'all' flags. To start, just print tokens where they would be
+    -- and see what happens
+    return labels
 end
 
 ---@param opts farsight.csearch.CsearchOpts
@@ -906,7 +685,17 @@ function Csearch.csearch(opts)
 
     local cur_pos = api.nvim_win_get_cursor(cur_win)
     if char == "" then
-        char = get_csearch_input(cur_win, cur_buf, cur_pos, opts)
+        -- NON: Leave the function call to get highlights here. Less confusing
+        if opts.show_hl then
+            local labels = get_csearch_labels(cur_pos, opts)
+            if #labels > 0 then
+                api.nvim__ns_set(HL_NS, { wins = { cur_win } })
+                highlight_labels(cur_buf, labels)
+                api.nvim__redraw({ valid = true })
+            end
+        end
+
+        char = get_csearch_input(cur_buf, opts)
     end
 
     local input_byte = string.byte(char) or 0
@@ -965,6 +754,7 @@ function Csearch.rep(opts)
     end)()
 
     -- Bitshifts are LuaJIT only
+    -- TODO: Neovim has a builtin module. Fix
     opts.forward = (opts.forward == 1) and charsearch.forward or (1 - charsearch.forward)
     local cur_pos = api.nvim_win_get_cursor(cur_win)
     do_csearch(cur_win, cur_buf, cur_pos, char, opts)
@@ -972,6 +762,12 @@ end
 
 return Csearch
 
+-- TODO: Add option to override fdo setting
+-- TODO: Tokens should be able to be provided as either a number or a string
+-- - number tokens need to be ints
+-- - The list validator should be able to handle both types
+-- - Use a bespoke function in the validator to test that numbers are ints
+-- - We then convert all strings to numbers using nr2char()
 -- TODO: Need to think through the architecture. I'm not sure utf chars even work properly
 -- because right now searching is tied to keywords. User customization of searching is
 -- impossible. Deeply nested strategy pattern functions. This is not good. I would even be fine
