@@ -101,6 +101,31 @@ function M._list_filter_end_only(t, f)
     end
 end
 
+-- PR: Add to Nvim shared. Unsure if it needs al these steps, but that also means it can be a part
+-- of a filter map
+
+---@generic T
+---@param t T[]
+---@param f fun(x: T): any
+function M._list_map(t, f)
+    local len_t = #t
+    for i = 1, len_t do
+        t[i] = f(t[i])
+    end
+
+    local j = 1
+    for i = 1, len_t do
+        if type(t[i]) ~= nil then
+            t[j] = t[i]
+            j = j + 1
+        end
+    end
+
+    for i = j, len_t do
+        t[i] = nil
+    end
+end
+
 -- PR: Spot checking, this moves about the same speed as or more quickly than table.remove for
 -- lists
 
@@ -254,7 +279,7 @@ end
 
 ---@class farsight.util.ValidateListOpts
 ---@field func? fun(any):boolean, string?
----@field item_type? string
+---@field item_type? string[]
 ---@field len? integer
 ---@field max_len? integer
 ---@field min_len? integer
@@ -288,8 +313,9 @@ function M._validate_list(list, opts)
         local item_type = opts.item_type
         if item_type then
             for _, item in ipairs(list) do
-                if type(item) ~= item_type then
-                    return false, "List items must be type " .. item_type
+                local this_item_type = type(item)
+                if not vim.list_contains(item_type, this_item_type) then
+                    return false, "List items must be type " .. vim.inspect(item_type)
                 end
             end
         end

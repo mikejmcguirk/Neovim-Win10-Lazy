@@ -2,7 +2,7 @@ return {
     "folke/flash.nvim",
     enabled = false,
     event = "VeryLazy",
-    config = function()
+    init = function()
         vim.keymap.set({ "n", "o" }, "/", function()
             require("flash").jump({
                 search = { forward = true, wrap = false, multi_window = false },
@@ -15,4 +15,11 @@ return {
             })
         end)
     end,
+    opts = {
+        modes = {
+            char = {
+                enabled = false,
+            },
+        },
+    },
 }

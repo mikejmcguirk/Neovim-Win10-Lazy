@@ -781,7 +781,7 @@ local function resolve_wins(opts, map_mode)
     -- one. Could delay the switch until we know we have at least one target
     local tabpage = api.nvim_get_current_tabpage()
     require("farsight.util")._validate_list(opts.wins, {
-        item_type = "number",
+        item_type = { "number" },
         min_len = 1,
         func = function(win)
             if api.nvim_win_get_tabpage(win) == tabpage then
@@ -875,7 +875,8 @@ local function resolve_jump_opts(opts, map_mode)
     opts.tokens = opts.tokens or TOKENS
     vim.validate("opts.tokens", opts.tokens, "table")
     ut._list_dedup(opts.tokens)
-    ut._validate_list(opts.tokens, { item_type = "string", min_len = 2 })
+    -- TODO: Support integer tokens here
+    ut._validate_list(opts.tokens, { item_type = { "string" }, min_len = 2 })
 
     resolve_wins(opts, map_mode)
 end
