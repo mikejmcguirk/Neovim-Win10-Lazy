@@ -437,6 +437,8 @@ local function advance_jump(ns_buf_map, targets, map_mode, redraws, opts)
 
         local targets_len = #targets
         if targets_len <= 1 then
+            -- TODO: I believe in this case I only need to redraw wins where valid is false, so
+            -- this function should be able to take an opt to do that
             do_redraws(redraws)
             if targets_len == 1 then
                 local target = targets[1]

@@ -171,6 +171,7 @@ end
 -- local duration_ms = (end_time - start_time) / 1e6
 -- print(string.format("hl_forward took %.2f ms", duration_ms))
 
+-- TODO: Document that for csearch and /? search that |cpo-c| is respected
 -- TODO: Add types to any usages of matchstrpos
 -- TODO: The various functions should have hard protections against multi-win if not in normal mode
 -- TODO: Augmented /? search. Design specs:
