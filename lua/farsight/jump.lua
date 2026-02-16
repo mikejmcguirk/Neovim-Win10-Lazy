@@ -1,5 +1,6 @@
 local api = vim.api
 local fn = vim.fn
+-- TODO: These are too much
 local foldclosed = fn.foldclosed
 local str_find = string.find
 
@@ -12,7 +13,33 @@ local str_find = string.find
 ---@field [6] integer Extmark namespace
 ---@field [7] [string,string|integer][] Extmark virtual text
 
-local MAX_TOKENS = 2
+-- namespaces is the biggest issue here from a DoD perspective.
+-- Since the targets have to be stored by win, I think what you do is store namespaces by win and
+-- then hash lookup once to avoid the memory reads/sizing?
+
+---@class farsight.jump.Targets
+---@field rows integer[] Zero indexed |api-indexing|
+---@field cols integer[] Zero indexed, inclusive |api-indexing|
+---@field labels string[][] Labels
+---@field virt_text [string,string|integer][][] Extmark virtual text
+
+---@class farsight.jump.WinInfo
+---@field buf integer
+---@field ns integer
+
+local wins = {} ---@type integer[]
+local win_winfo = {} ---@type table<integer, farsight.jump.WinInfo>
+local win_targets = {} ---@type table <integer, farsight.jump.Targets>
+
+for i = 1, #wins do
+    local labels = win_targets[i]["labels"]
+    for j = 1, #labels do
+        local label = labels[j]
+        foo(label)
+    end
+end
+
+local DEFAULT_MAX_TOKENS = 2
 local TOKENS = vim.split("abcdefghijklmnopqrstuvwxyz", "")
 
 -- TODO: Document these HL groups
@@ -36,6 +63,7 @@ local hl_jump_dim = nvim_get_hl_id_by_name(HL_JUMP_DIM_STR)
 local namespaces = { api.nvim_create_namespace("") } ---@type integer[]
 
 -- MID: Profile regex:match_str() against regex:match_line()
+-- TODO: The vim.regex alias is also too much
 local vim_regex = vim.regex
 local cword_regex = vim_regex("\\k\\+")
 
@@ -215,12 +243,12 @@ end
 ---@param targets farsight.jump.Target[]
 ---@param ns_buf_map table<integer, integer>
 local function dim_target_lines(targets, ns_buf_map)
-    local ns_rows = {}
+    local ns_rows = {} ---@type table<integer, table<integer,boolean>>
     for _, target in ipairs(targets) do
         local ns = target[6]
-        local lines = ns_rows[ns] or {}
-        lines[target[3]] = true
-        ns_rows[ns] = lines
+        local rows = ns_rows[ns] or {}
+        rows[target[3]] = true
+        ns_rows[ns] = rows
     end
 
     local dim_extmark_opts = {
@@ -279,7 +307,9 @@ local function populate_target_virt_text_max_tokens(targets, max_tokens, jump_le
         local len_full_label = #label
         local len_label = len_full_label - jump_level
 
-        -- Unlike the max_2 case, early exiting here doesn't seem to negatively affect performance
+        -- LOW: Try to optimize the doe path. The issue here is the amount of branching
+        -- possibilities
+
         if len_label == 1 then
             virt_text[1] = { label[start], hl_jump_target }
             return
@@ -339,15 +369,26 @@ local function populate_target_virt_text_max_2(targets, jump_level)
         local label = target[5]
         local virt_text = target[7]
         local len_label = #label - jump_level
-        local has_more_tokens = len_label > 1
-        local start_hl = has_more_tokens and hl_jump or hl_jump_target
-        virt_text[1] = { label[start], start_hl }
 
-        -- This seems to be faster than early returning if len == 1
-        if has_more_tokens and max_display_tokens == 2 then
-            local next_hl = len_label == 2 and hl_jump_target or hl_jump_ahead
-            virt_text[2] = { label[start_plus_one], next_hl }
+        if len_label == 2 then
+            virt_text[1] = { label[start], hl_jump }
+            if max_display_tokens == 2 then
+                virt_text[2] = { label[start_plus_one], hl_jump_target }
+            end
+
+            return
         end
+
+        if len_label > 2 then
+            virt_text[1] = { label[start], hl_jump }
+            if max_display_tokens == 2 then
+                virt_text[2] = { label[start_plus_one], hl_jump_ahead }
+            end
+
+            return
+        end
+
+        virt_text[1] = { label[start], hl_jump_target }
     end
 
     local max_idx = len_targets - 1
@@ -566,7 +607,7 @@ local function get_extra_wrap_cols(row, win, buf, cur_pos, locator)
         return {}
     end
 
-    require("farsight.util")._list_filter_end_only(cols, function(col)
+    require("farsight.util")._list_filter_end_only(cols, 1, function(col)
         local screenpos = fn.screenpos(win, row, col + 1)
         return screenpos.row > 0
     end)
@@ -588,7 +629,7 @@ local function filter_nowrap_oob(wrap, cols, leftcol, maxcol)
     end
 
     local ut = require("farsight.util")
-    ut._list_filter_end_only(cols, function(col)
+    ut._list_filter_end_only(cols, 1, function(col)
         return col <= maxcol
     end)
 
@@ -859,7 +900,7 @@ local function resolve_jump_opts(opts, map_mode)
     resolve_locator(opts, cur_buf, map_mode)
 
     opts.max_tokens = ut._use_gb_if_nil(opts.max_tokens, "farsight_jump_max_tokens", cur_buf)
-    opts.max_tokens = opts.max_tokens or MAX_TOKENS
+    opts.max_tokens = opts.max_tokens or DEFAULT_MAX_TOKENS
     local max_tokens = opts.max_tokens
     vim.validate("opts.max_tokens", max_tokens, function()
         if max_tokens % 1 ~= 0 then
@@ -904,7 +945,7 @@ local Jump = {}
 
 ---@param opts farsight.jump.JumpOpts?
 function Jump.jump(opts)
-    opts = opts and vim.deepcopy(opts, true) or {}
+    opts = opts and vim.deepcopy(opts) or {}
     local ut = require("farsight.util")
     local map_mode = ut._resolve_map_mode(api.nvim_get_mode().mode)
     resolve_jump_opts(opts, map_mode)
@@ -929,7 +970,7 @@ end
 
 ---@return integer[]
 function Jump.get_hl_ns()
-    return vim.deepcopy(namespaces, true)
+    return vim.deepcopy(namespaces)
 end
 
 return Jump

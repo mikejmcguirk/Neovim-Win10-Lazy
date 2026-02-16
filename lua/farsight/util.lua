@@ -88,40 +88,40 @@ end
 
 ---@generic T
 ---@param t T[]
+---@param s integer
 ---@param f fun(x: T): boolean
-function M._list_filter_end_only(t, f)
+function M._list_filter_end_only(t, s, f)
     local len_t = #t
     for i = len_t, 1, -1 do
         local v = t[i]
         if not f(v) then
             t[i] = nil
+            if i == s then
+                return
+            end
         else
             return
         end
     end
 end
 
--- PR: Add to Nvim shared. Unsure if it needs al these steps, but that also means it can be a part
--- of a filter map
+-- PR: Add to Nvim shared.
 
 ---@generic T
 ---@param t T[]
 ---@param f fun(x: T): any
 function M._list_map(t, f)
-    local len_t = #t
-    for i = 1, len_t do
-        t[i] = f(t[i])
-    end
-
+    local len = #t
     local j = 1
-    for i = 1, len_t do
-        if type(t[i]) ~= nil then
-            t[j] = t[i]
+
+    for i = 1, len do
+        t[j] = f(t[i])
+        if t[j] ~= nil then
             j = j + 1
         end
     end
 
-    for i = j, len_t do
+    for i = j, len do
         t[i] = nil
     end
 end
@@ -257,6 +257,7 @@ function M._resolve_map_mode(mode)
     return "l"
 end
 
+---If a found var is a table, return with vim.deepcopy
 ---@param opt any
 ---@param var string
 ---@param buf integer
@@ -267,11 +268,19 @@ function M._use_gb_if_nil(opt, var, buf)
     end
 
     if vim.b[buf][var] ~= nil then
-        return vim.b[buf][var]
+        if type(vim.b[buf][var]) == "table" then
+            return vim.deepcopy(vim.b[buf][var])
+        else
+            return vim.b[buf][var]
+        end
     end
 
     if vim.g[var] ~= nil then
-        return vim.g[var]
+        if type(vim.g[var]) == "table" then
+            return vim.deepcopy(vim.g[var])
+        else
+            return vim.g[var]
+        end
     end
 
     return nil

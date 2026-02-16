@@ -79,7 +79,7 @@ local plugs = {
         { "n", "x", "o" },
         "<Plug>(Farsight-CsearchT-Forward)",
         function()
-            require("farsight.csearch").csearch({ actions = actions_forward, t_cmd = 1 })
+            require("farsight.csearch").csearch({ actions = actions_forward, ["until"] = 1 })
         end,
     },
     {
@@ -89,7 +89,7 @@ local plugs = {
             require("farsight.csearch").csearch({
                 actions = actions_backward,
                 forward = 0,
-                t_cmd = 1,
+                ["until"] = 1,
             })
         end,
     },
@@ -171,6 +171,19 @@ end
 -- local duration_ms = (end_time - start_time) / 1e6
 -- print(string.format("hl_forward took %.2f ms", duration_ms))
 
+-- TODO: Refactor with DoD concepts. Non-trivial gains:
+-- - Can load parts of SoA into sub functions
+-- - Easier to make smaller loops
+-- TODO: For storing function references. Think in terms of like:
+-- - For foldclosed iterations. You can usually grab the variable once before the hot loop begins.
+-- Saving the cost of one hash lookup before the hot path isn't all that relevant
+-- - So like, in csearch, it's fine at the function level because you can get it before the hot
+-- path. Whereas in jump it is actually needed because it runs inside the hot function
+-- - Lots of small sub-functions good. JIT apparently can inline them
+-- - Avoid deeply nested long functions
+-- TODO: Confirm that g/b:vars can take function literals. I've seen it work, but does it break
+-- TODO: Where can we use require("table.new") ?
+-- easily?
 -- TODO: Document that for csearch and /? search that |cpo-c| is respected
 -- TODO: Add types to any usages of matchstrpos
 -- TODO: The various functions should have hard protections against multi-win if not in normal mode
@@ -211,5 +224,6 @@ end
 -- - Passing the built-in default expliclty breaks the assumption that g:vars overwrite defaults
 
 -- FUTURE: If vim vars are able to properly hold metatables, use them for var validation
+-- FUTURE: Use the new mark API when it comes out for setting pcmarks
 
 -- PR: Understand how matchstrpos's returns actually work and update them in eval.lua

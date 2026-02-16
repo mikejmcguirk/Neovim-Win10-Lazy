@@ -33,7 +33,7 @@ local langs = {
     "typst",
 }
 
-local fts = vim.deepcopy(langs, true) ---@type string[]
+local fts = vim.deepcopy(langs) ---@type string[]
 fts[#fts + 1] = "sh"
 
 ---@return integer
