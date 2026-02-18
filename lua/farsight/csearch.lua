@@ -1,22 +1,15 @@
 local api = vim.api
 local fn = vim.fn
 
----@class farsight.csearch.TokenLabel
----@field [1] integer row_0
----@field [2] integer col
----@field [3] integer hl byte length
----@field [4] integer hl_group id
+---@class farsight.csearch.TokenLabels
+---@field [1] integer Length
+---@field [2] integer[] Rows (zero indexed)
+---@field [3] integer[] Cols
+---@field [4] integer[] Byte lengths
+---@field [5] integer[] Hl group IDs
 
 local MAX_MAX_TOKENS = 3
 local DEFAULT_MAX_TOKENS = MAX_MAX_TOKENS
-
----@type (integer|string)[]
-local TOKENS = vim.split("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", "")
-local char2nr = fn.char2nr
-require("farsight.util")._list_map(TOKENS, function(token)
-    ---@diagnostic disable-next-line: param-type-mismatch
-    return char2nr(token)
-end)
 
 local HL_1ST_STR = "FarsightCsearch1st"
 local HL_2ND_STR = "FarsightCsearch2nd"
@@ -40,6 +33,8 @@ local hl_ns = api.nvim_create_namespace("FarsightCsearch")
 
 -- Save the ref so we don't have to re-acquire it in hot loops
 local util_char = require("farsight._util_char")
+
+local char2nr = fn.char2nr
 
 local on_key_repeating = 0 ---@type 0|1
 local function get_repeat_state()
@@ -82,7 +77,6 @@ setup_repeat_tracking()
 local function get_pattern(char, is_omode, opts)
     ---@type string
     local selection = api.nvim_get_option_value("selection", { scope = "global" })
-
     local pattern = string.gsub(char, "\\", "\\\\")
 
     if opts.forward == 1 then
@@ -179,11 +173,14 @@ local function checked_clear_hl(win, buf, valid, opts)
 end
 
 ---@param buf integer
----@param labels farsight.csearch.TokenLabel[]
+---@param labels farsight.csearch.TokenLabels
 local function dim_target_lines(buf, labels)
     local rows = {} ---@type table<integer, boolean>
-    for _, label in ipairs(labels) do
-        rows[label[1]] = true
+
+    local len_labels = labels[1]
+    local label_rows = labels[2]
+    for i = 1, len_labels do
+        rows[label_rows[i]] = true
     end
 
     local dim_extmark_opts = {
@@ -201,13 +198,21 @@ local function dim_target_lines(buf, labels)
 end
 
 ---@param buf integer
----@param labels farsight.csearch.TokenLabel[]
+---@param labels farsight.csearch.TokenLabels
 local function do_highlights(buf, labels)
     local extmark_opts = { priority = 1000, strict = false } ---@type vim.api.keyset.set_extmark
-    for _, label in ipairs(labels) do
-        extmark_opts.hl_group = label[4]
-        extmark_opts.end_col = label[2] + label[3]
-        pcall(api.nvim_buf_set_extmark, buf, hl_ns, label[1], label[2], extmark_opts)
+    local len_labels = labels[1]
+    local label_rows = labels[2]
+    local label_cols = labels[3]
+    local label_char_lens = labels[4]
+    local label_hl_ids = labels[5]
+
+    for i = 1, len_labels do
+        local col = label_cols[i]
+        extmark_opts.hl_group = label_hl_ids[i]
+        -- TODO: Should this be done here?
+        extmark_opts.end_col = col + label_char_lens[i]
+        pcall(api.nvim_buf_set_extmark, buf, hl_ns, label_rows[i], col, extmark_opts)
     end
 end
 
@@ -216,9 +221,14 @@ end
 ---@param line string
 ---@param max_tokens integer
 ---@param token_counts table<integer, integer>
----@param labels farsight.csearch.TokenLabel[]
+---@param labels farsight.csearch.TokenLabels
 local function add_labels_rev(row, line, max_tokens, token_counts, labels)
     local sbyte = string.byte
+
+    local label_rows = labels[2]
+    local label_cols = labels[3]
+    local label_char_lens = labels[4]
+    local label_hl_ids = labels[5]
 
     local i = #line
     local row_0 = row - 1
@@ -233,7 +243,11 @@ local function add_labels_rev(row, line, max_tokens, token_counts, labels)
                 local new_char_token_count = token_counts[char_nr]
                 local hl_id = hl_map[new_char_token_count]
                 if hl_id then
-                    labels[#labels + 1] = { row_0, i - 1, len_char, hl_id }
+                    labels[1] = labels[1] + 1
+                    label_rows[#label_rows + 1] = row_0
+                    label_cols[#label_cols + 1] = i - 1
+                    label_char_lens[#label_char_lens + 1] = len_char
+                    label_hl_ids[#label_hl_ids + 1] = hl_id
                 end
 
                 if new_char_token_count >= max_tokens then
@@ -255,10 +269,15 @@ end
 ---@param line string
 ---@param max_tokens integer
 ---@param token_counts table<integer, integer>
----@param labels farsight.csearch.TokenLabel[]
+---@param labels farsight.csearch.TokenLabels
 local function add_labels_fwd(row, line, max_tokens, token_counts, labels)
     local len_line = #line
     local sbyte = string.byte
+
+    local label_rows = labels[2]
+    local label_cols = labels[3]
+    local label_char_lens = labels[4]
+    local label_hl_ids = labels[5]
 
     local row_0 = row - 1
     local i = 1
@@ -271,7 +290,11 @@ local function add_labels_fwd(row, line, max_tokens, token_counts, labels)
             local new_char_token_count = token_counts[char_nr]
             local hl_id = hl_map[new_char_token_count]
             if hl_id then
-                labels[#labels + 1] = { row_0, i - 1, len_char, hl_id }
+                labels[1] = labels[1] + 1
+                label_rows[#label_rows + 1] = row_0
+                label_cols[#label_cols + 1] = i - 1
+                label_char_lens[#label_char_lens + 1] = len_char
+                label_hl_ids[#label_hl_ids + 1] = hl_id
             end
 
             if new_char_token_count >= max_tokens then
@@ -293,7 +316,7 @@ end
 ---@param cur_col integer
 ---@param max_tokens integer
 ---@param token_counts table<integer, integer>
----@param labels farsight.csearch.TokenLabel[]
+---@param labels farsight.csearch.TokenLabels
 ---@return boolean
 local function get_labels_rev(buf, cur_row, cur_col, max_tokens, token_counts, labels)
     local foldclosed = fn.foldclosed
@@ -330,7 +353,7 @@ end
 ---@param bot integer
 ---@param max_tokens integer
 ---@param token_counts table<integer, integer>
----@param labels farsight.csearch.TokenLabel[]
+---@param labels farsight.csearch.TokenLabels
 local function handle_wrapped_bot_screenline(buf, bot, max_tokens, token_counts, labels)
     if not api.nvim_get_option_value("wrap", { win = 0 }) then
         return
@@ -356,19 +379,24 @@ end
 ---@param cur_col integer
 ---@param max_tokens integer
 ---@param token_counts table<integer, integer>
----@param labels farsight.csearch.TokenLabel[]
+---@param labels farsight.csearch.TokenLabels
 ---@return boolean
 local function get_labels_fwd(buf, cur_row, cur_col, max_tokens, token_counts, labels)
     local foldclosed = fn.foldclosed
     local nvim_buf_get_lines = api.nvim_buf_get_lines
 
+    -- TODO: Get all lines at once
+
     if foldclosed(cur_row) == -1 then
         local cur_line = nvim_buf_get_lines(buf, cur_row - 1, cur_row, false)[1]
         local line_after = string.sub(cur_line, cur_col + 2, #cur_line)
         add_labels_fwd(cur_row, line_after, max_tokens, token_counts, labels)
+
         local len_cut_line = #cur_line - #line_after
-        for _, label in ipairs(labels) do
-            label[2] = label[2] + len_cut_line
+        local len_labels = labels[1]
+        local label_cols = labels[3]
+        for i = 1, len_labels do
+            label_cols[i] = label_cols[i] + len_cut_line
         end
 
         if not next(token_counts) then
@@ -387,9 +415,9 @@ local function get_labels_fwd(buf, cur_row, cur_col, max_tokens, token_counts, l
         end
     end
 
-    local old_len_labels = #labels
+    local old_len_labels = labels[1]
     handle_wrapped_bot_screenline(buf, bot, max_tokens, token_counts, labels)
-    if #labels > old_len_labels then
+    if labels[1] > old_len_labels then
         return false
     else
         return true
@@ -443,7 +471,7 @@ local function checked_show_hl(win, buf, cur_pos, opts)
         return true
     end
 
-    local labels = {} ---@type farsight.csearch.TokenLabel[]
+    local labels = { 0, {}, {}, {}, {} }
     local token_counts = create_token_counts(opts.tokens)
     local valid
     if opts.forward == 1 then
@@ -452,7 +480,7 @@ local function checked_show_hl(win, buf, cur_pos, opts)
         valid = get_labels_rev(buf, cur_pos[1], cur_pos[2], opts.max_tokens, token_counts, labels)
     end
 
-    if #labels > 0 then
+    if labels[1] > 0 then
         api.nvim__ns_set(hl_ns, { wins = { win } })
         do_highlights(buf, labels)
         if opts.dim then
@@ -609,7 +637,7 @@ function Csearch.csearch(opts)
     do_csearch(cur_win, cur_buf, cur_pos, char, opts)
 end
 
----If opts.until_skip is not provided, the |cpoptions| ";" flag will be checked
+---The |cpoptions| ";" flag controls until skip behavior
 ---@param opts? farsight.csearch.BaseOpts
 function Csearch.rep(opts)
     opts = opts and vim.deepcopy(opts) or {} --[[ @as farsight.csearch.CsearchOpts ]]
@@ -643,26 +671,24 @@ function Csearch.rep(opts)
         opts.until_skip = false
     end
 
-    -- Bitshifts are LuaJIT only
-    -- TODO: Neovim has a builtin module. Fix
-    opts.forward = (opts.forward == 1) and charsearch.forward or (1 - charsearch.forward)
+    opts.forward = require("bit").bxor(opts.forward, charsearch.forward, 1)
     local cur_pos = api.nvim_win_get_cursor(cur_win)
     do_csearch(cur_win, cur_buf, cur_pos, char, opts)
 end
 
 return Csearch
 
--- TODO: DoD refactor
--- TODO: Check if the user is prompted for chars when running macros on default f/t
--- TODO: Make the backup a single char labeler. Not the best, but does add something.
+-- TODO: For folds:
+-- - When on a foldclosed line, display the acutal line with fold highlighting, then display the
+-- tokens on top of it. This goes away when highlighting ends.
+-- - What to do with dim though?
+-- TODO: Outline string.byte to module. Perhaps others
+-- TODO: Make the jump backup a single char labeler. Not the best, but does add something.
 -- TODO: Document lack of support for folds
 -- TODO: One last deep scan through the code
 -- TODO: Document that f/t properly do not prompt for input during operator dot repeats or macro
 -- execution
 
--- MID: The default tokens should be 'isk' for the current buffer. The isk strings + tokens can
--- be cached when created for the first time. For subsequent runs, re-query the opt string and
--- only rebuild the list if the string has changed
 -- MID: See if foldtextresult can be used to get to a way to decorate and jump to foldedlines.
 -- fdo hor/all can then be used to control auto-opening. This unblocks the single-line f/t
 -- option (fold support needed for this, otherwise the Farsight implementation is strictly
