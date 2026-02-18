@@ -20,6 +20,7 @@ require("mjm")
 -- PR: Doc updates:
 -- - getchar andd getcharstr opts are not documented
 -- - getqflist and getloclist returns are any
+-- - nvim_win_get_config in the doc isn't tied to the _ret type. Maybe intentional
 
 -- ISSUES --
 

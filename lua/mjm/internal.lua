@@ -1,4 +1,5 @@
 require("farsight.plugin")
+-- require("farsight._lookup")
 
 local api = vim.api
 local set = vim.keymap.set

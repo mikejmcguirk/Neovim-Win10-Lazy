@@ -1,14 +1,5 @@
--- TODO: I'm not sure validating opts here is actually valuable. checkhealth should fulfill this
--- purpose, and bad g:vars will fail validation if used. Avoids requiring util here
-
 -- TODO: Document highlight groups here
-
--- TODO: Document g:vars here:
--- - farsight_dim
--- - farsight_keepjumps
--- - farsight_max_tokens
--- - farsight_on_jump
--- - farsight_tokens
+-- TODO: Document g:vars here. Check validations
 
 -- TODO: Create checkhealth
 -- - Nvim version
@@ -21,9 +12,7 @@ local lower = string.lower
 local maparg = fn.maparg
 local set = api.nvim_set_keymap
 
--- TODO: Is the opts typing here right?
-
----@type table<string, fun(opts: farsight.jump.JumpOpts)>
+---@type table<string, fun(win: integer, buf: integer, cur_pos: { [1]: integer, [2]: integer })>
 local actions_forward = {
 
     ["\r"] = function()
@@ -31,7 +20,7 @@ local actions_forward = {
     end,
 }
 
----@type table<string, fun(opts: farsight.jump.JumpOpts)>
+---@type table<string, fun(win: integer, buf: integer, cur_pos: { [1]: integer, [2]: integer })>
 local actions_backward = {
 
     ["\r"] = function()
@@ -41,22 +30,8 @@ local actions_backward = {
 
 local plugs = {
     {
-        { "n" },
-        "<Plug>(Farsight-Jump-Normal)",
-        function()
-            require("farsight.jump").jump({})
-        end,
-    },
-    {
-        { "x" },
-        "<Plug>(Farsight-Jump-Visual)",
-        function()
-            require("farsight.jump").jump({})
-        end,
-    },
-    {
-        { "o" },
-        "<Plug>(Farsight-Jump-Operator-Pending)",
+        { "n", "x", "o" },
+        "<Plug>(Farsight-Jump)",
         function()
             require("farsight.jump").jump({})
         end,
@@ -70,7 +45,7 @@ local plugs = {
     },
     {
         { "n", "x", "o" },
-        "<Plug>(Farsight-CsearchF-Backward)",
+        "<Plug>(Farsight-CsearchF-Reverse)",
         function()
             require("farsight.csearch").csearch({ actions = actions_backward, forward = 0 })
         end,
@@ -84,7 +59,7 @@ local plugs = {
     },
     {
         { "n", "x", "o" },
-        "<Plug>(Farsight-CsearchT-Backward)",
+        "<Plug>(Farsight-CsearchT-Reverse)",
         function()
             require("farsight.csearch").csearch({
                 actions = actions_backward,
@@ -103,7 +78,7 @@ local plugs = {
     -- TODO: Should reverse also be used as the naming convention for the plugs?
     {
         { "n", "x", "o" },
-        "<Plug>(Farsight-CsearchRep-Backward)",
+        "<Plug>(Farsight-CsearchRep-Reverse)",
         function()
             require("farsight.csearch").rep({ forward = 0 })
         end,
@@ -127,9 +102,7 @@ end
 
 ---@type { [1]: string[], [2]: string, [3]: string }[]
 local jump_maps = {
-    { { "n" }, "<cr>", "<Plug>(Farsight-Jump-Normal)" },
-    { { "x" }, "<cr>", "<Plug>(Farsight-Jump-Visual)" },
-    { { "o" }, "<cr>", "<Plug>(Farsight-Jump-Operator-Pending)" },
+    { { "n" }, "<cr>", "<Plug>(Farsight-Jump)" },
 }
 
 for _, map in ipairs(jump_maps) do
@@ -146,11 +119,11 @@ end
 ---@type { [1]: string[], [2]: string, [3]: string }[]
 local csearch_maps = {
     { { "n", "x", "o" }, "f", "<Plug>(Farsight-CsearchF-Forward)" },
-    { { "n", "x", "o" }, "F", "<Plug>(Farsight-CsearchF-Backward)" },
+    { { "n", "x", "o" }, "F", "<Plug>(Farsight-CsearchF-Reverse)" },
     { { "n", "x", "o" }, "t", "<Plug>(Farsight-CsearchT-Forward)" },
-    { { "n", "x", "o" }, "T", "<Plug>(Farsight-CsearchT-Backward)" },
+    { { "n", "x", "o" }, "T", "<Plug>(Farsight-CsearchT-Reverse)" },
     { { "n", "x", "o" }, ";", "<Plug>(Farsight-CsearchRep-Forward)" },
-    { { "n", "x", "o" }, ",", "<Plug>(Farsight-CsearchRep-Backward)" },
+    { { "n", "x", "o" }, ",", "<Plug>(Farsight-CsearchRep-Reverse)" },
 }
 
 for _, map in ipairs(csearch_maps) do
@@ -218,10 +191,28 @@ end
 -- - "You'll move through your code so quickly, people won't be sure your movement was real"
 -- - "See through walls with jump" (Direct Farsight reference)
 -- - "Even the best researchers at Area 51 won't be able to understand your speed"
+-- TODO: Re-check that farsight name is available
+-- TODO: README:
+-- - Credits:
+--   - jump2d (initial basis for jump)
+--   - flash (f/t ideas)
+-- - Inspirations:
+--   - Quickscope
+-- - Alternatives:
+--   - vim-sneak
+--   - hop
+--   - EasyMotion
+--   - { Flash lists a lot of them }
 
--- LOW: Is there a good way to allow jump's locator and wins opts to be controlled by g:vars?
--- - Changing either default would break vmode and omode
--- - Passing the built-in default expliclty breaks the assumption that g:vars overwrite defaults
+-- LOW: Remove invisible targets. All methods I know to do this have problems:
+-- - screenpos() - Non-trivially slow
+-- - strcharlen() + strdisplaywidth() - Likely also slow
+-- - Hand-rolling Lua functions - Non-trivially difficult to write and maintain
+-- Other issues
+-- - Efficiently removing characters under floats
+-- - Determining string length for the wrapped fill line
+-- - Removing characters under listchars, plus under "@@@" in wrapped lines
+-- Hard to prioritize because it does not cause false negatives
 
 -- FUTURE: If vim vars are able to properly hold metatables, use them for var validation
 -- FUTURE: Use the new mark API when it comes out for setting pcmarks

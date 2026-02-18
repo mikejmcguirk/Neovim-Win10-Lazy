@@ -1,43 +1,17 @@
 local api = vim.api
 local fn = vim.fn
--- TODO: These are too much
-local foldclosed = fn.foldclosed
-local str_find = string.find
-
----@class farsight.jump.Target
----@field [1] integer Window ID
----@field [2] integer Buffer ID
----@field [3] integer Zero indexed row |api-indexing|
----@field [4] integer Zero index col, inclusive for extmarks |api-indexing|
----@field [5] string[] Label
----@field [6] integer Extmark namespace
----@field [7] [string,string|integer][] Extmark virtual text
-
--- namespaces is the biggest issue here from a DoD perspective.
--- Since the targets have to be stored by win, I think what you do is store namespaces by win and
--- then hash lookup once to avoid the memory reads/sizing?
 
 ---@class farsight.jump.Targets
----@field rows integer[] Zero indexed |api-indexing|
----@field cols integer[] Zero indexed, inclusive |api-indexing|
----@field labels string[][] Labels
----@field virt_text [string,string|integer][][] Extmark virtual text
+---@field [1] integer Length
+---@field [2] integer[] Zero indexed rows |api-indexing|
+---@field [3] integer[] Zero indexed cols, inclusive |api-indexing|
+---@field [4] string[][] Labels
+---@field [5] [string, string|integer][][] Virtual text chunks
 
 ---@class farsight.jump.WinInfo
----@field buf integer
----@field ns integer
-
-local wins = {} ---@type integer[]
-local win_winfo = {} ---@type table<integer, farsight.jump.WinInfo>
-local win_targets = {} ---@type table <integer, farsight.jump.Targets>
-
-for i = 1, #wins do
-    local labels = win_targets[i]["labels"]
-    for j = 1, #labels do
-        local label = labels[j]
-        foo(label)
-    end
-end
+---@field [1] integer Buf
+---@field [2] integer Hl Ns
+---@field [3] boolean Redraw valid flag
 
 local DEFAULT_MAX_TOKENS = 2
 local TOKENS = vim.split("abcdefghijklmnopqrstuvwxyz", "")
@@ -62,98 +36,170 @@ local hl_jump_dim = nvim_get_hl_id_by_name(HL_JUMP_DIM_STR)
 
 local namespaces = { api.nvim_create_namespace("") } ---@type integer[]
 
--- MID: Profile regex:match_str() against regex:match_line()
--- TODO: The vim.regex alias is also too much
-local vim_regex = vim.regex
-local cword_regex = vim_regex("\\k\\+")
+local fn_foldclosed = fn.foldclosed
+local str_byte = string.byte
+local str_find = string.find
+local str_sub = string.sub
 
+local get_char_class = require("farsight._util_char")._get_char_class
+local get_utf_codepoint = require("farsight._util_char")._get_utf_codepoint
+
+---Assumes nvim_win_call in relevant window context
 ---@param line string
----@return boolean
-local function is_blank(line)
-    return str_find(line, "[^\\0-\\32\\127]") == nil
-end
+---@param isk_tbl boolean[]
+---@return integer[] Zero indexed
+local function locate_cwords_cur_line(line, col, isk_tbl)
+    local cols = {}
+    local in_keyword = false
+    local last_i = 0
 
----@diagnostic disable-next-line: duplicate-doc-param
----@param _ integer
----@param row integer
----@param line string
----@diagnostic disable-next-line: duplicate-doc-param
----@param _ integer
----@diagnostic disable-next-line: duplicate-doc-param
----@param _ { [1]: integer, [2]:integer }
----@return integer[]
-local function locate_cwords(_, row, line, _, _)
-    if is_blank(line) then
-        return {}
-    end
+    local col_1 = col + 1
+    local i = 1
+    local len_line = #line
+    while i <= len_line do
+        local char_nr, len_char = get_utf_codepoint(line, str_byte(line, i), i)
+        local char_class = get_char_class(char_nr, isk_tbl)
+        if char_class >= 2 then
+            if i < col_1 and in_keyword == false then
+                cols[#cols + 1] = i - 1
+            end
 
-    local fold_row = foldclosed(row)
-    if fold_row ~= -1 then
-        return fold_row == row and { 0 } or {}
-    end
-
-    local cols = {} ---@type integer[]
-    local start = 1
-    local sub = string.sub
-
-    -- Unlike for csearch, the string sub method works best here
-    while true do
-        local from, to = cword_regex:match_str(line)
-        if from == nil or to == nil then
-            break
-        end
-
-        cols[#cols + 1] = from + start - 1
-        line = sub(line, to + 1)
-        start = start + to
-    end
-
-    return cols
-end
-
----@diagnostic disable-next-line: duplicate-doc-param
----@param _ integer
----@param row integer
----@param line string
----@diagnostic disable-next-line: duplicate-doc-param
----@param _ integer
----@param cur_pos { [1]: integer, [2]:integer }
----@return integer[]
-local function locate_cwords_with_cur_pos(_, row, line, _, cur_pos)
-    if is_blank(line) then
-        return {}
-    end
-
-    local fold_row = foldclosed(row)
-    if fold_row ~= -1 then
-        return fold_row == row and { 0 } or {}
-    end
-
-    local cols = {} ---@type integer[]
-    local start = 1
-    local cur_row = cur_pos[1]
-    local cur_col = cur_pos[2]
-    local sub = string.sub
-
-    while true do
-        local from, to = cword_regex:match_str(line)
-        if from == nil or to == nil then
-            break
-        end
-
-        if row > cur_row then
-            cols[#cols + 1] = to + start - 2
-        elseif row == cur_row then
-            cols[#cols + 1] = start - 2 > cur_col and to + start - 2 or from + start - 1
+            in_keyword = true
         else
-            cols[#cols + 1] = from + start - 1
+            if i > col_1 and in_keyword == true then
+                cols[#cols + 1] = last_i - 1
+            end
+
+            in_keyword = false
         end
 
-        line = sub(line, to + 1)
-        start = start + to
+        last_i = i
+        i = i + len_char
     end
 
     return cols
+end
+
+---Assumes nvim_win_call in relevant window context
+---@param line string
+---@param isk_tbl boolean[]
+---@return integer[] Zero indexed
+local function locate_cword_fin(line, isk_tbl)
+    local cols = {}
+    local in_keyword = false
+    local last_i = 0
+
+    local i = 1
+    local len_line = #line
+    while i <= len_line do
+        local char_nr, len_char = get_utf_codepoint(line, str_byte(line, i), i)
+        local char_class = get_char_class(char_nr, isk_tbl)
+        if char_class >= 2 then
+            in_keyword = true
+        else
+            if in_keyword == true then
+                cols[#cols + 1] = last_i - 1
+            end
+
+            in_keyword = false
+        end
+
+        last_i = i
+        i = i + len_char
+    end
+
+    return cols
+end
+
+---Assumes nvim_win_call in relevant window context
+---@param line string
+---@param isk_tbl boolean[]
+---@return integer[] Zero indexed
+local function locate_cword_start(line, isk_tbl)
+    local cols = {}
+    local in_keyword = false
+
+    local i = 1
+    local len_line = #line
+    while i <= len_line do
+        local char_nr, len_char = get_utf_codepoint(line, str_byte(line, i), i)
+        local char_class = get_char_class(char_nr, isk_tbl)
+        if char_class >= 2 then
+            if in_keyword == false then
+                cols[#cols + 1] = i - 1
+            end
+
+            in_keyword = true
+        else
+            in_keyword = false
+        end
+
+        i = i + len_char
+    end
+
+    return cols
+end
+
+---Assumes nvim_win_call in relevant window context
+---@param line string
+---@param row integer
+---@return integer[]|nil Returns a list if the line should NOT be iterated over
+local function check_locator_line(line, row)
+    if str_find(line, "[^\\0-\\32\\127]") == nil then
+        return {}
+    end
+
+    local fold_row = fn_foldclosed(row)
+    if fold_row ~= -1 then
+        if fold_row ~= row then
+            return {}
+        end
+
+        return { 0 }
+    end
+
+    return nil
+end
+
+---Assumes nvim_win_call in relevant window context
+---@param _ integer
+---@param line string
+---@param row integer
+---@param cur_pos { [1]: integer, [2]: integer }
+---@param isk_tbl boolean[]
+---@return integer[] Zero indexed
+local function locate_cwords_with_cur_pos(_, line, row, cur_pos, isk_tbl)
+    local early_cols = check_locator_line(line, row)
+    if early_cols then
+        return early_cols
+    end
+
+    local cur_row = cur_pos[1]
+    if row < cur_row then
+        return locate_cword_start(line, isk_tbl)
+    elseif row > cur_row then
+        return locate_cword_fin(line, isk_tbl)
+    else
+        return locate_cwords_cur_line(line, cur_pos[2], isk_tbl)
+    end
+end
+
+---Assumes nvim_win_call in relevant window context
+---@diagnostic disable-next-line: duplicate-doc-param
+---@param _ integer
+---@param line string
+---@param row integer
+---@diagnostic disable-next-line: duplicate-doc-param
+---@param _ { [1]: integer, [2]: integer }
+---@param isk_tbl boolean[]
+---@return integer[] Zero indexed
+local function locate_cwords(_, line, row, _, isk_tbl)
+    local early_cols = check_locator_line(line, row)
+    if early_cols then
+        return early_cols
+    end
+
+    return locate_cword_start(line, isk_tbl)
 end
 
 ---@param jump_win integer
@@ -174,101 +220,151 @@ local function do_jump(jump_win, buf, row_0, col, map_mode, opts)
     common._do_jump(cur_win, jump_win, buf, map_mode, cur_pos, jump_pos, jump_opts)
 end
 
----Edits targets in place
----@param targets farsight.jump.Target[]
-local function clear_target_virt_text(targets)
-    for _, target in ipairs(targets) do
-        local virt_text = target[7]
-        -- Because the virt text tables tend to have a small number of items, this is faster than
-        -- overwriting them with new table allocations
-        local len = #virt_text
-        for i = len, 1, -1 do
-            virt_text[i] = nil
+---j_win == -1 if no targets remain, 0 if multiple targets remain, and >= 1000 if only one target
+---@param win_targets table<integer, farsight.jump.Targets>
+---@return integer, integer, integer
+local function get_jump_info(win_targets)
+    local j_win = -1
+    local j_row = -1
+    local j_col = -1
+
+    for win, targets in pairs(win_targets) do
+        local len_targets = targets[1]
+        if len_targets > 1 then
+            return 0, 0, 0
+        end
+
+        if len_targets == 1 then
+            if j_win >= 1000 then
+                return 0, 0, 0
+            end
+
+            j_win = win
+            j_row = targets[2][1]
+            j_col = targets[3][1]
+        end
+    end
+
+    return j_win, j_row, j_col
+end
+
+---Edits win_targets in place
+---@param win_targets table<integer, farsight.jump.Targets>
+local function clear_target_virt_text(win_targets)
+    for _, targets in pairs(win_targets) do
+        local t_chunks = targets[5]
+        local len_targets = targets[1]
+        for i = 1, len_targets do
+            local chunks = t_chunks[i]
+            local len_chunks = #chunks
+            for j = 1, len_chunks do
+                chunks[j] = nil
+            end
         end
     end
 end
 
----@param ns_buf_map table<integer, integer>
----@param targets farsight.jump.Target[]
----@return table<integer, integer>
-local function filter_ns_buf_map(ns_buf_map, targets)
-    local bk1 = next(ns_buf_map)
-    local bk2 = next(ns_buf_map, bk1)
-    if bk2 == nil then
-        return ns_buf_map
-    end
+---Edits win_dim_info in place
+---@param win_targets table<integer, farsight.jump.Targets>
+---@param win_dim_rows table<integer, integer[]>
+local function filter_dim_rows(win_targets, win_dim_rows)
+    local list_filter = require("farsight.util")._list_filter
+    for win, dim_rows in pairs(win_dim_rows) do
+        local targets = win_targets[win]
+        if not targets then
+            local cur_rows = {} ---@type table<integer, boolean>
+            local target_rows = targets[2]
+            local len_target_rows = #target_rows
+            for i = 1, len_target_rows do
+                cur_rows[target_rows[i]] = true
+            end
 
-    local new_ns_buf_map = {} ---@type table<integer, integer>
-    for _, target in ipairs(targets) do
-        new_ns_buf_map[target[6]] = target[2]
+            list_filter(dim_rows, function(row)
+                return cur_rows[row] == true
+            end)
+        else
+            win_dim_rows[win] = nil
+        end
     end
-
-    return new_ns_buf_map
 end
 
--- Trivial perf cost in comparison to the redraws it saves
+---Edits win_targets in place
+---@param win_targets table<integer, farsight.jump.Targets>
+---@param start integer
+---@param input string
+local function filter_win_targets(win_targets, start, input)
+    for win, targets in pairs(win_targets) do
+        local len_targets = targets[1]
+        local t_rows = targets[2]
+        local t_cols = targets[3]
+        local t_labels = targets[4]
+        local t_chunks = targets[5]
 
----Edits redraws in place
----@param redraws vim.api.keyset.redraw[]
----@param targets farsight.jump.Target[]
-local function filter_redraws(redraws, targets)
-    if #redraws <= 1 then
-        return
+        local j = 1
+        for i = 1, len_targets do
+            local label = t_labels[i]
+            if label[start] == input then
+                t_rows[j] = t_rows[i]
+                t_cols[j] = t_cols[i]
+                t_labels[j] = label
+                t_chunks[j] = t_chunks[i]
+                j = j + 1
+            end
+        end
+
+        local new_len = j - 1
+        if new_len == 0 then
+            win_targets[win] = nil
+        else
+            targets[1] = new_len
+            for i = j, len_targets do
+                t_rows[i] = nil
+                t_cols[i] = nil
+                t_labels[i] = nil
+                t_chunks[i] = nil
+            end
+        end
     end
-
-    local targeted_wins = {} ---@type table<integer, boolean>
-    for _, target in ipairs(targets) do
-        targeted_wins[target[1]] = true
-    end
-
-    require("farsight.util")._list_filter(redraws, function(opt)
-        return targeted_wins[opt.win]
-    end)
 end
 
--- Redrawing per window improves perf on average because:
--- - If not all wins have to be redrawn, then redrawing all, even with valid = true, is
--- non-trivially slower.
--- - If a win has to be redrawn with valid = false, we avoid having to apply that setting to all
--- windows
+-- LOW: Redrawing is the most performance intensive part of this module. Other than per-window
+-- scoping, I'm not sure how to reduce the time it takes. Doing ranges almost seems to make it
+-- worse
 
----@param redraw_opts vim.api.keyset.redraw[]
-local function do_redraws(redraw_opts)
+---@param win_info table<integer, farsight.jump.WinInfo>
+local function do_redraws(win_info)
     local nvim__redraw = api.nvim__redraw
-    for _, opt in pairs(redraw_opts) do
-        nvim__redraw(opt)
+    for win, info in pairs(win_info) do
+        nvim__redraw({ win = win, valid = info[3] })
     end
 end
 
----@param targets farsight.jump.Target[]
----@param ns_buf_map table<integer, integer>
-local function dim_target_lines(targets, ns_buf_map)
-    local ns_rows = {} ---@type table<integer, table<integer,boolean>>
-    for _, target in ipairs(targets) do
-        local ns = target[6]
-        local rows = ns_rows[ns] or {}
-        rows[target[3]] = true
-        ns_rows[ns] = rows
-    end
-
-    local dim_extmark_opts = {
+---@param win_info table<integer, farsight.jump.WinInfo>
+---@param win_dim_rows table<integer, integer[]>
+local function dim_target_lines(win_info, win_dim_rows)
+    local nvim_buf_set_extmark = api.nvim_buf_set_extmark
+    ---@type vim.api.keyset.set_extmark
+    local dim_opts = {
         end_col = 0,
         hl_eol = true,
         hl_group = hl_jump_dim,
         priority = 999,
     }
 
-    local nvim_buf_set_extmark = api.nvim_buf_set_extmark
-    for ns, buf in pairs(ns_buf_map) do
-        for row, _ in pairs(ns_rows[ns]) do
-            dim_extmark_opts.end_line = row + 1
-            pcall(nvim_buf_set_extmark, buf, ns, row, 0, dim_extmark_opts)
+    for win, dim_rows in pairs(win_dim_rows) do
+        local len_dim_rows = #dim_rows
+        for i = 1, len_dim_rows do
+            local info = win_info[win]
+            local row = dim_rows[i]
+            dim_opts.end_line = row + 1
+            pcall(nvim_buf_set_extmark, info[1], info[2], row, 0, dim_opts)
         end
     end
 end
 
----@param targets farsight.jump.Target[]
-local function set_label_extmarks(targets)
+---@param win_targets table<integer, farsight.jump.Targets>
+---@param win_info table<integer, farsight.jump.WinInfo>
+local function set_label_extmarks(win_targets, win_info)
     ---@type vim.api.keyset.set_extmark
     local extmark_opts = {
         hl_mode = "combine",
@@ -277,220 +373,251 @@ local function set_label_extmarks(targets)
     }
 
     local nvim_buf_set_extmark = api.nvim_buf_set_extmark
-    for _, target in ipairs(targets) do
-        extmark_opts.virt_text = target[7]
-        pcall(nvim_buf_set_extmark, target[2], target[6], target[3], target[4], extmark_opts)
+    for win, targets in pairs(win_targets) do
+        local info = win_info[win]
+        local t_rows = targets[2]
+        local t_cols = targets[3]
+        local t_chunks = targets[5]
+
+        local len_targets = targets[1]
+        for i = 1, len_targets do
+            extmark_opts.virt_text = t_chunks[i]
+            pcall(nvim_buf_set_extmark, info[1], info[2], t_rows[i], t_cols[i], extmark_opts)
+        end
     end
 end
 
--- LOW: Profile this function to see if it could be optimized further
-
----Edits targets in place
----@param targets farsight.jump.Target[]
----@param max_tokens integer
+---Edits win_targets in place
+---@param win_targets table<integer, farsight.jump.Targets>
 ---@param jump_level integer
-local function populate_target_virt_text_max_tokens(targets, max_tokens, jump_level)
-    local len_targets = #targets
-    if len_targets < 1 then
-        return
-    end
-
+---@param max_tokens integer
+local function populate_virt_text_max_tokens(win_targets, jump_level, max_tokens)
+    local concat = table.concat
+    local maxcol = vim.v.maxcol
+    local min = math.min
     local start = 1 + jump_level
     local start_plus_one = start + 1
-    local concat = table.concat
 
-    ---@param target farsight.jump.Target
-    ---@param max_display_tokens integer
-    local function add_virt_text(target, max_display_tokens)
-        local label = target[5]
-        local virt_text = target[7]
+    ---@param row integer
+    ---@param next_row integer
+    ---@param col integer
+    ---@param next_col integer
+    ---@param label string[]
+    ---@param chunks [string,integer|string][]
+    local function add_chunk_info(row, next_row, col, next_col, label, chunks)
         local len_full_label = #label
         local len_label = len_full_label - jump_level
 
-        -- LOW: Try to optimize the doe path. The issue here is the amount of branching
-        -- possibilities
-
-        if len_label == 1 then
-            virt_text[1] = { label[start], hl_jump_target }
-            return
-        end
-
-        virt_text[1] = { label[start], hl_jump }
-        if len_label <= max_display_tokens then
-            if len_full_label > 2 then
-                local before = concat(label, "", start_plus_one, len_full_label - 1)
-                virt_text[2] = { before, hl_jump_ahead }
+        chunks[1] = { label[start], hl_jump }
+        if len_label > 1 then
+            local same_row = row == next_row
+            local max_display_tokens = same_row and min(next_col - col, max_tokens) or maxcol
+            if len_label <= max_display_tokens then
+                local rem_label = len_full_label - start
+                if rem_label == 1 then
+                    chunks[2] = { label[start_plus_one], hl_jump_target }
+                elseif rem_label == 2 then
+                    chunks[2] = { label[start_plus_one], hl_jump_ahead }
+                    chunks[3] = { label[start_plus_one + 1], hl_jump_target }
+                else
+                    local text = concat(label, "", start_plus_one, len_full_label - 1)
+                    chunks[2] = { text, hl_jump_ahead }
+                    chunks[3] = { label[len_full_label], hl_jump_target }
+                end
+            elseif max_display_tokens == 2 then
+                chunks[2] = { label[start_plus_one], hl_jump_ahead }
+            elseif max_display_tokens > 2 then
+                local concat_j = start + max_display_tokens - 1
+                local text = concat(label, "", start_plus_one, concat_j)
+                chunks[2] = { text, hl_jump_ahead }
             end
-
-            virt_text[#virt_text + 1] = { label[len_full_label], hl_jump_target }
         else
-            local remainder = #label > 2 and concat(label, "", start_plus_one, max_display_tokens)
-                or label[start_plus_one]
-            virt_text[2] = { remainder, hl_jump_ahead }
+            chunks[1][2] = hl_jump_target
         end
     end
 
-    local max_idx = len_targets - 1
-    local next_target = targets[1]
-    local min = math.min
-    for i = 1, max_idx do
-        local target = next_target
-        next_target = targets[i + 1]
+    for _, targets in pairs(win_targets) do
+        local len_targets = targets[1]
+        local t_rows = targets[2]
+        local t_cols = targets[3]
+        local t_labels = targets[4]
+        local t_chunks = targets[5]
 
-        local max_display_tokens = (
-            target[1] ~= next_target[1]
-            or target[2] ~= next_target[2]
-            or target[3] ~= next_target[3]
-        )
-                and max_tokens
-            or min(next_target[4] - target[4], max_tokens)
+        local max_i = len_targets - 1
+        for i = 1, max_i do
+            local row = t_rows[i]
+            local next_row = t_rows[i + 1]
+            local col = t_cols[i]
+            local next_col = t_cols[i + 1]
+            local label = t_labels[i]
+            local chunks = t_chunks[i]
 
-        add_virt_text(targets[i], max_display_tokens)
+            add_chunk_info(row, next_row, col, next_col, label, chunks)
+        end
+
+        local row = t_rows[len_targets]
+        local col = t_cols[len_targets]
+        local label = t_labels[len_targets]
+        local chunks = t_chunks[len_targets]
+
+        add_chunk_info(row, maxcol, col, maxcol, label, chunks)
     end
-
-    add_virt_text(next_target, max_tokens)
 end
 
----Edits targets in place
----@param targets farsight.jump.Target[]
+---Edits win_targets in place
+---@param win_targets table<integer, farsight.jump.Targets>
 ---@param jump_level integer
-local function populate_target_virt_text_max_2(targets, jump_level)
-    local len_targets = #targets
-    if len_targets < 1 then
-        return
-    end
-
+local function populate_virt_text_max_2(win_targets, jump_level)
     local start = 1 + jump_level
     local start_plus_one = start + 1
 
-    ---@param target farsight.jump.Target
-    ---@param max_display_tokens integer
-    local function add_virt_text(target, max_display_tokens)
-        local label = target[5]
-        local virt_text = target[7]
-        local len_label = #label - jump_level
-
+    ---@param label string[]
+    ---@param len_label integer
+    ---@param chunks [string, string|integer][]
+    local function add_token_2(label, len_label, chunks)
         if len_label == 2 then
-            virt_text[1] = { label[start], hl_jump }
-            if max_display_tokens == 2 then
-                virt_text[2] = { label[start_plus_one], hl_jump_target }
-            end
-
-            return
+            chunks[2] = { label[start_plus_one], hl_jump_target }
+        else
+            chunks[2] = { label[start_plus_one], hl_jump_ahead }
         end
-
-        if len_label > 2 then
-            virt_text[1] = { label[start], hl_jump }
-            if max_display_tokens == 2 then
-                virt_text[2] = { label[start_plus_one], hl_jump_ahead }
-            end
-
-            return
-        end
-
-        virt_text[1] = { label[start], hl_jump_target }
     end
 
-    local max_idx = len_targets - 1
-    local next_target = targets[1]
-    for i = 1, max_idx do
-        local target = next_target
-        next_target = targets[i + 1]
-
-        local max_display_tokens = (
-            target[1] ~= next_target[1]
-            or target[2] ~= next_target[2]
-            or target[3] ~= next_target[3]
-            or next_target[4] - target[4] >= 2
-        )
-                and 2
-            or 1
-
-        add_virt_text(target, max_display_tokens)
+    ---@param row integer
+    ---@param next_row integer
+    ---@param col integer
+    ---@param next_col integer
+    ---@param label string[]
+    ---@param chunks [string, string|integer][]
+    local function add_chunk_info(row, next_row, col, next_col, label, chunks)
+        chunks[1] = { label[start], hl_jump }
+        local len_label = #label - jump_level
+        if len_label > 1 then
+            if row == next_row then
+                if next_col - col >= 2 then
+                    add_token_2(label, len_label, chunks)
+                end
+            else
+                add_token_2(label, len_label, chunks)
+            end
+        else
+            chunks[1][2] = hl_jump_target
+        end
     end
 
-    add_virt_text(next_target, 2)
+    for _, targets in pairs(win_targets) do
+        local len_targets = targets[1]
+        local t_rows = targets[2]
+        local t_cols = targets[3]
+        local t_labels = targets[4]
+        local t_chunks = targets[5]
+
+        local max_i = len_targets - 1
+        for i = 1, max_i do
+            local row = t_rows[i]
+            local next_row = t_rows[i + 1]
+            local col = t_cols[i]
+            local next_col = t_cols[i + 1]
+            local label = t_labels[i]
+            local chunks = t_chunks[i]
+
+            add_chunk_info(row, next_row, col, next_col, label, chunks)
+        end
+
+        local row = t_rows[len_targets]
+        local col = t_cols[len_targets]
+        local label = t_labels[len_targets]
+        local chunks = t_chunks[len_targets]
+
+        local maxcol = vim.v.maxcol
+        add_chunk_info(row, maxcol, col, maxcol, label, chunks)
+    end
 end
 
 ---Edits targets in place
----@param targets farsight.jump.Target[]
+---@param win_targets table<integer, farsight.jump.Targets>
 ---@param jump_level integer
-local function populate_target_virt_text_max_1(targets, jump_level)
+local function populate_virt_text_max_1(win_targets, jump_level)
     local start = 1 + jump_level
-    for _, target in ipairs(targets) do
-        local label = target[5]
-        local hl = #label - jump_level > 1 and hl_jump or hl_jump_target
-        target[7][1] = { label[start], hl }
+
+    for _, targets in pairs(win_targets) do
+        local len_targets = targets[1]
+        local t_labels = targets[4]
+        local t_chunks = targets[5]
+
+        for i = 1, len_targets do
+            local label = t_labels[i]
+            local rem_label = #label - jump_level
+            if rem_label > 1 then
+                t_chunks[i][1] = { label[start], hl_jump }
+            else
+                t_chunks[i][1] = { label[start], hl_jump_target }
+            end
+        end
     end
 end
+
 ---Edits targets in place
----@param targets farsight.jump.Target[]
+---@param win_targets table<integer, farsight.jump.Targets>
 ---@param max_tokens integer
 ---@param jump_level integer
-local function populate_target_virt_text(targets, jump_level, max_tokens)
+local function populate_target_virt_text(win_targets, jump_level, max_tokens)
     if max_tokens == 1 then
-        populate_target_virt_text_max_1(targets, jump_level)
+        populate_virt_text_max_1(win_targets, jump_level)
     elseif max_tokens == 2 then
-        populate_target_virt_text_max_2(targets, jump_level)
+        populate_virt_text_max_2(win_targets, jump_level)
     else
-        populate_target_virt_text_max_tokens(targets, max_tokens, jump_level)
+        populate_virt_text_max_tokens(win_targets, jump_level, max_tokens)
     end
 end
 
----Edits ns_buf_map, targets, and redraws in place
----@param ns_buf_map table<integer, integer>
----@param targets farsight.jump.Target[]
+---Edits win_targets and win_info in place
+---@param win_targets table<integer, farsight.jump.Targets>
+---@param win_info table<integer, farsight.jump.WinInfo>
+---@param win_dim_rows table<integer, integer[]>
 ---@param map_mode "n"|"v"|"o"|"l"|"t"|"x"|"s"|"i"|"c"
----@param redraws vim.api.keyset.redraw[]
 ---@param opts farsight.jump.JumpOpts
 ---@return nil
-local function advance_jump(ns_buf_map, targets, map_mode, redraws, opts)
-    local dim = opts.dim
+local function advance_jump(win_targets, win_info, win_dim_rows, map_mode, opts)
     local jump_level = 0
-    local list_filter = require("farsight.util")._list_filter
-    local max_tokens = opts.max_tokens ---@type integer
+    local nvim_buf_clear_namespace = api.nvim_buf_clear_namespace
 
     while true do
-        populate_target_virt_text(targets, jump_level, max_tokens)
-        set_label_extmarks(targets)
-        if dim then
-            dim_target_lines(targets, ns_buf_map)
+        populate_target_virt_text(win_targets, jump_level, opts.max_tokens)
+        set_label_extmarks(win_targets, win_info)
+        if opts.dim then
+            dim_target_lines(win_info, win_dim_rows)
         end
 
-        do_redraws(redraws)
+        do_redraws(win_info)
         local _, input = pcall(fn.getcharstr)
-
-        local nvim_buf_clear_namespace = api.nvim_buf_clear_namespace
-        for ns, buf in pairs(ns_buf_map) do
-            pcall(nvim_buf_clear_namespace, buf, ns, 0, -1)
+        for _, info in pairs(win_info) do
+            pcall(nvim_buf_clear_namespace, info[1], info[2], 0, -1)
         end
 
-        -- Adjust before filtering targets so that labels in all previous windows are cleared
-        -- Accordingly, no windows need to be filtered at the first jump level
+        -- Do before filtering targets because we need the previous level's windows for redrawing
         if jump_level > 0 then
-            filter_redraws(redraws, targets)
+            require("farsight.util")._dict_filter(win_info, function(k, _)
+                return win_targets[k] ~= nil
+            end)
         end
 
         local start = jump_level + 1
-        list_filter(targets, function(target)
-            return target[5][start] == input
-        end)
+        filter_win_targets(win_targets, start, input)
+        if opts.dim then
+            filter_dim_rows(win_targets, win_dim_rows)
+        end
 
-        local targets_len = #targets
-        if targets_len <= 1 then
-            -- TODO: I believe in this case I only need to redraw wins where valid is false, so
-            -- this function should be able to take an opt to do that
-            do_redraws(redraws)
-            if targets_len == 1 then
-                local target = targets[1]
-                do_jump(target[1], target[2], target[3], target[4], map_mode, opts)
+        local j_win, j_row, j_col = get_jump_info(win_targets)
+        if j_win ~= 0 then
+            do_redraws(win_info)
+            if j_win >= 1000 then
+                do_jump(j_win, win_info[j_win][1], j_row, j_col, map_mode, opts)
             end
 
             return
         end
 
-        ns_buf_map = filter_ns_buf_map(ns_buf_map, targets)
-        clear_target_virt_text(targets)
+        clear_target_virt_text(win_targets)
         jump_level = jump_level + 1
     end
 end
@@ -500,25 +627,38 @@ end
 -- the label lengths rather than doing multiple appends/resizes
 
 ---Edits targets in place
----@param targets farsight.jump.Target[]
+---@param wins integer[]
+---@param win_targets table<integer, farsight.jump.Targets>
 ---@param tokens string[]
 ---@return nil
-local function populate_target_labels(targets, tokens)
-    local len_targets = #targets
-    if len_targets <= 1 then
-        return
+local function populate_target_labels(wins, win_targets, tokens)
+    local total_targets = 0
+    local len_wins = #wins
+    for i = 1, len_wins do
+        total_targets = total_targets + win_targets[wins[i]][1]
     end
 
-    local queue = {} ---@type { [1]: integer, [2]:integer }[]
-    queue[#queue + 1] = { 1, len_targets }
+    local ut = require("farsight.util")
+    -- More consistent performance. narray is zero indexed
+    local labels = ut._table_new(total_targets + 1, 0) ---@type string[][]
+    -- Use wins for lookup to preserve ordering
+    for i = 1, len_wins do
+        local t_labels = win_targets[wins[i]][4]
+        local len_t_labels = #t_labels
+        for j = 1, len_t_labels do
+            labels[#labels + 1] = t_labels[j]
+        end
+    end
 
     local floor = math.floor
-    local list_remove = require("farsight.util")._list_remove_item
     local len_tokens = #tokens
+    local list_remove = ut._list_remove_item
+
+    local queue = {} ---@type { [1]: integer, [2]:integer }[]
+    queue[#queue + 1] = { 1, total_targets }
     while #queue > 0 do
-        local range = queue[1]
-        local range_start = range[1]
-        local range_end = range[2]
+        local range_start = queue[1][1]
+        local range_end = queue[1][2]
         list_remove(queue, 1)
         local len_range = range_end - range_start + 1
 
@@ -535,7 +675,7 @@ local function populate_target_labels(targets, tokens)
             local token = tokens[token_idx]
             for _ = 1, rem_tokens do
                 idx = idx + 1
-                local label = targets[idx][5]
+                local label = labels[idx]
                 label[#label + 1] = token
             end
 
@@ -553,131 +693,123 @@ local function populate_target_labels(targets, tokens)
 end
 
 ---Edits targets in place
----@param row integer
+---@param row_0 integer
 ---@param cols integer[]
----@param win integer
----@param buf integer
----@param ns integer
----@param targets farsight.jump.Target[]
-local function add_cols_to_targets(row, cols, win, buf, ns, targets)
-    local row_0 = row - 1
-    for _, col in ipairs(cols) do
-        targets[#targets + 1] = { win, buf, row_0, col, {}, ns, {} }
+---@param targets farsight.jump.Targets
+local function add_cols_to_targets(row_0, cols, targets)
+    local t_rows = targets[2]
+    local t_cols = targets[3]
+    local t_labels = targets[4]
+    local t_chunks = targets[5]
+
+    local len_cols = #cols
+    targets[1] = targets[1] + len_cols
+    for i = 1, len_cols do
+        t_rows[#t_rows + 1] = row_0
+        t_cols[#t_cols + 1] = cols[i]
+        t_labels[#t_labels + 1] = {}
+        t_chunks[#t_chunks + 1] = {}
     end
 end
 
 ---Assumes it is called in the window context of win
 ---@param win integer
----@param row integer
----@param line string
 ---@param buf integer
 ---@param cur_pos { [1]: integer, [2]: integer }
----@param locator fun(win: integer, row: integer, line: string, buf: integer,
----cur_pos: { [1]: integer, [2]: integer }):integer[]
-local function get_cols(win, row, line, buf, cur_pos, locator)
-    local cols = locator(win, row, line, buf, cur_pos)
-    require("farsight.util")._list_dedup(cols)
-    table.sort(cols, function(a, b)
-        return a < b
-    end)
-
-    return cols
-end
-
----Assumes it is called in the window context of win
 ---@param row integer
----@param win integer
----@param buf integer
----@param cur_pos { [1]: integer, [2]: integer }
----@param locator fun(win: integer, row: integer, line: string, buf: integer,
----cur_pos: { [1]: integer, [2]: integer }):integer[]
-local function get_extra_wrap_cols(row, win, buf, cur_pos, locator)
+---@param isk_tbl boolean[]
+---@param locator fun( buf: integer, line: string, row: integer,
+---cur_pos: { [1]: integer, [2]: integer }, isk_tbl: boolean[]):integer[]
+local function get_extra_wrap_cols(win, buf, row, cur_pos, isk_tbl, locator)
     if row >= api.nvim_buf_line_count(buf) then
         return {}
     end
 
-    local first_screenpos = fn.screenpos(win, row, 1)
-    if first_screenpos.row < 1 then
+    if fn.screenpos(win, row, 1).row < 1 then
         return {}
     end
 
-    local cur_line = fn.getline(row)
-    local cols = get_cols(win, row, cur_line, buf, cur_pos, locator)
-    if #cols < 1 then
-        return {}
-    end
-
-    require("farsight.util")._list_filter_end_only(cols, 1, function(col)
-        local screenpos = fn.screenpos(win, row, col + 1)
-        return screenpos.row > 0
-    end)
-
-    return cols
+    return locator(buf, fn.getline(row), row, cur_pos, isk_tbl)
 end
 
--- LOW: Cols covered by extends/precedes listchars are considered on screen and visible per
--- screenpos. Manually calculating/removing these characters feels quite tricky
-
----Edits cols in place
----@param wrap boolean
----@param cols integer[]
----@param leftcol integer
----@param maxcol integer
-local function filter_nowrap_oob(wrap, cols, leftcol, maxcol)
-    if wrap then
-        return
+---Takes zero indexed col
+---Returns are zero indexed, end exclusive
+---Returns -1, -1 if the cursor is not in a cword
+---@param line string
+---@param col integer
+---@return integer, integer
+local function find_cword_around_col(line, col, isk_tbl)
+    local col_1 = col + 1
+    local cur_b1 = str_byte(line, col_1)
+    local cur_char_nr, len_cur_char = get_utf_codepoint(line, cur_b1, col_1)
+    local cur_char_class = get_char_class(cur_char_nr, isk_tbl)
+    if cur_char_class < 2 then
+        return -1, -1
     end
 
-    local ut = require("farsight.util")
-    ut._list_filter_end_only(cols, 1, function(col)
-        return col <= maxcol
-    end)
+    local start = col_1 - 1
+    local fin_ = col_1 + len_cur_char - 1
 
-    ut._list_filter_beg_only(cols, function(col)
-        return col >= leftcol
-    end)
+    local i = col_1 + len_cur_char
+    local len_line = #line
+    while i <= len_line do
+        local b1 = str_byte(line, i)
+        local char_nr, len_char = get_utf_codepoint(line, b1, i)
+        local char_class = get_char_class(char_nr, isk_tbl)
+        if char_class >= 2 then
+            i = i + len_char
+            fin_ = i - 1
+        else
+            break
+        end
+    end
+
+    i = start - 1
+    while i >= 1 do
+        local b1 = str_byte(line, i)
+        if b1 <= 0x80 or b1 >= 0xC0 then
+            local char_nr, _ = get_utf_codepoint(line, b1, i)
+            local char_class = get_char_class(char_nr, isk_tbl)
+            if char_class >= 2 then
+                start = i - 1
+            else
+                break
+            end
+        end
+
+        i = i - 1
+    end
+
+    return start, fin_
 end
 
----Edits targets in place
----Assumes it is called in the window context of win
----@param win integer
----@param cur_pos { [1]: integer, [2]: integer }
+---Assumes nvim_win_call in relevant window context
 ---@param buf integer
----@param locator fun(win: integer, row: integer, line: string, buf: integer,
----cur_pos: { [1]: integer, [2]: integer }):integer[]
-local function get_cols_before(win, cur_pos, buf, locator)
-    local row = cur_pos[1]
-    local line = fn.getline(row)
-    local ut = require("farsight.util")
-    local cur_cword = ut._find_cword_at_col(line, cur_pos[2])
-    local end_col_1 = cur_cword and cur_cword[2] or cur_pos[2]
-
+---@param line string
+---@param cur_pos { [1]: integer, [2]: integer }
+---@param isk_tbl boolean[]
+---@param locator fun( buf: integer, line: string, row: integer,
+---cur_pos: { [1]: integer, [2]: integer }, isk_tbl: boolean[]):integer[]
+local function get_cols_before(buf, line, cur_pos, isk_tbl, locator)
+    local start, _ = find_cword_around_col(line, cur_pos[2], isk_tbl)
+    local end_col_1 = start > -1 and start - 1 or cur_pos[2]
     local line_before = string.sub(line, 1, end_col_1)
-    return get_cols(win, row, line_before, buf, cur_pos, locator)
+    return locator(buf, line_before, cur_pos[1], cur_pos, isk_tbl)
 end
 
----Assumes it is called in the window context of win
----@param win integer
----@param cur_pos { [1]: integer, [2]: integer }
+---Assumes nvim_win_call in relevant window context
 ---@param buf integer
----@param locator fun(win: integer, row: integer, line: string, buf: integer,
----cur_pos: { [1]: integer, [2]: integer }):integer[]
-local function get_cols_after(win, cur_pos, buf, locator)
-    local row = cur_pos[1]
-    local line = fn.getline(row)
+---@param line string
+---@param cur_pos { [1]: integer, [2]: integer }
+---@param locator fun( buf: integer, line: string, row: integer,
+---cur_pos: { [1]: integer, [2]: integer }, isk_tbl: boolean[]):integer[]
+---@param isk_tbl boolean[]
+local function get_cols_after(buf, line, cur_pos, locator, isk_tbl)
+    local _, fin_ = find_cword_around_col(line, cur_pos[2], isk_tbl)
+    local start_col_1 = fin_ > -1 and fin_ + 1 or cur_pos[2]
 
-    local start_col_1 ---@type integer
-    local ut = require("farsight.util")
-    local cur_cword = ut._find_cword_at_col(line, cur_pos[2])
-    if cur_cword then
-        start_col_1 = cur_cword[3] + 1
-    else
-        local charidx = fn.charidx(line, cur_pos[2])
-        start_col_1 = fn.byteidx(line, charidx + 1) + 1
-    end
-
-    local line_after = string.sub(line, start_col_1, #line)
-    local cols = get_cols(win, row, line_after, buf, cur_pos, locator)
+    local line_after = str_sub(line, start_col_1, #line)
+    local cols = locator(buf, line_after, cur_pos[1], cur_pos, isk_tbl)
     local count_cols = #cols
     for i = 1, count_cols do
         cols[i] = cols[i] + (#line - #line_after)
@@ -689,119 +821,135 @@ end
 ---Assumes it is called in the window context of the relevant win
 ---@param dir -1|0|1
 ---@return integer, integer, integer
-local function get_top_bot(dir, cur_pos)
-    local wS = fn.line("w$")
+local function get_adjusted_top_bot(dir, cur_pos)
+    local fn_line = fn.line
+    local wS = fn_line("w$")
     if dir == 1 then
-        -- Add one because the cursor line will be handled separately
-        return math.min(cur_pos[1] + 1, wS), wS, wS
+        return math.min(cur_pos[1], wS), wS, wS
     elseif dir == -1 then
-        local w0 = fn.line("w0")
-        -- Subtract one because the cursor line will be handled separately
-        return w0, math.max(cur_pos[1] - 1, w0), wS
+        local w0 = fn_line("w0")
+        return w0, math.max(cur_pos[1], w0), wS
     else
-        local line = fn.line
-        return line("w0"), wS, wS
+        return fn_line("w0"), wS, wS
     end
 end
 
----@param win integer
----@param configs table<integer, vim.api.keyset.win_config_ret>
----@return boolean, integer, integer
-local function get_wrap_info(win, configs)
-    local wrap = api.nvim_get_option_value("wrap", { win = win }) ---@type boolean
-    if wrap then
-        return true, -1, -1
+---Edits win_info in place
+---@param wins integer[]
+---@param win_info table<integer, farsight.jump.WinInfo>
+---@param opts farsight.jump.JumpOpts
+---@return table<integer, farsight.jump.Targets>, table<integer, integer[]>
+local function get_targets(wins, win_info, opts)
+    local win_targets = {} ---@type table<integer, farsight.jump.Targets>
+    local win_dim_rows = {} ---@type table<integer, integer[]>
+    for _, win in ipairs(wins) do
+        win_targets[win] = { 0, {}, {}, {}, {} }
+        win_dim_rows[win] = {}
     end
 
-    local wininfo = fn.getwininfo(win)[1]
-    -- FUTURE: https://github.com/neovim/neovim/pull/37840
-    ---@diagnostic disable-next-line: undefined-field
-    local leftcol = wininfo.leftcol ---@type integer
-    local width = configs[win].width
-    local maxcol = math.max(width - wininfo.textoff - 1 + leftcol, 0)
+    local dim = opts.dim ---@type boolean
+    local dir = opts.dir ---@type -1|0|1
+    local list_dedup = require("farsight.util")._list_dedup
+    ---@type fun( buf: integer, line: string, row: integer,
+    ---cur_pos: { [1]: integer, [2]: integer }, isk_tbl: boolean[]):integer[]
+    local locator = opts.locator
+    local nvim_buf_get_lines = api.nvim_buf_get_lines
+    local nvim_win_call = api.nvim_win_call
+    local nvim_win_get_cursor = api.nvim_win_get_cursor
+    local nvim_get_option_value = api.nvim_get_option_value
+    local parse_isk = require("farsight._util_char")._parse_isk
+    local table_new = require("farsight.util")._table_new
+    local tbl_sort = table.sort
 
-    return wrap, leftcol, maxcol
+    local wins_len = #wins
+    for i = 1, wins_len do
+        local win = wins[i]
+        local buf = win_info[win][1]
+        -- Always get/send so it's available for user functions
+        local cur_pos = nvim_win_get_cursor(win)
+        local isk = nvim_get_option_value("isk", { buf = buf }) ---@type string
+        local isk_tbl = parse_isk(buf, isk)
+        local wrap = nvim_get_option_value("wrap", { win = win }) ---@type boolean
+
+        local targets = win_targets[win]
+        local all_cols
+        local offset
+
+        nvim_win_call(win, function()
+            local top, bot, wS = get_adjusted_top_bot(dir, cur_pos)
+            -- +1 because math, +1 for potential wrap line, +1 because "table.new" is zero indexed
+            all_cols = table_new(bot - top + 3, 0)
+            local lines = nvim_buf_get_lines(buf, top - 1, bot, false)
+            offset = top - 1 -- Set before dir adjustments for proper line numbering
+
+            if dir == 1 then
+                all_cols[1] = get_cols_after(buf, lines[1], cur_pos, locator, isk_tbl)
+                top = top + 1
+            elseif dir == -1 then
+                bot = bot - 1
+            end
+
+            for j = top, bot do
+                local idx = j - offset
+                all_cols[idx] = locator(buf, lines[idx], j, cur_pos, isk_tbl)
+            end
+
+            if dir == -1 then
+                local idx = #lines
+                all_cols[idx] = get_cols_before(buf, lines[idx], cur_pos, isk_tbl, locator)
+            end
+
+            if wrap and bot == wS and dir >= 0 then
+                local row = bot + 1
+                local cols = get_extra_wrap_cols(win, buf, row, cur_pos, isk_tbl, locator)
+                all_cols[#lines + 1] = cols
+                if #cols > 0 then
+                    win_info[win][3] = false
+                end
+            end
+        end)
+
+        local dim_rows = win_dim_rows[win]
+        local len_all_cols = #all_cols
+        for j = 1, len_all_cols do
+            local cols = all_cols[j]
+            list_dedup(cols)
+            tbl_sort(cols, function(a, b)
+                return a < b
+            end)
+
+            local row_0 = j + offset - 1
+            add_cols_to_targets(row_0, cols, targets)
+            if #cols > 0 and dim then
+                dim_rows[#dim_rows + 1] = row_0
+            end
+        end
+    end
+
+    return win_targets, win_dim_rows
 end
 
 ---@param wins integer[]
-local function add_missing_ns(wins)
+---@return table<integer, farsight.jump.WinInfo>
+local function get_win_info(wins)
     local wins_len = #wins
     local missing_ns = wins_len - #namespaces
     for _ = 1, missing_ns do
         namespaces[#namespaces + 1] = api.nvim_create_namespace("")
     end
-end
 
----@param wins integer[]
----@param configs table<integer, vim.api.keyset.win_config_ret>
----@param opts farsight.jump.JumpOpts
----@return farsight.jump.Target[], table<integer, integer>, vim.api.keyset.redraw[]
-local function get_targets(wins, configs, opts)
-    add_missing_ns(wins)
-
-    local targets = {} ---@type farsight.jump.Target[]
-    local ns_buf_map = {} ---@type table<integer, integer>
-    local redraws = {} ---@type vim.api.keyset.redraw[]
-
-    local dir = opts.dir ---@type integer
-    ---@type fun(row: integer, line: string, buf: integer,
-    ---cur_pos: { [1]: integer, [2]: integer }):integer[]
-    local locator = opts.locator
-    local nvim_win_call = api.nvim_win_call
     local nvim_win_get_buf = api.nvim_win_get_buf
-    local nvim_win_get_cursor = api.nvim_win_get_cursor
     local nvim__ns_set = api.nvim__ns_set
 
-    local wins_len = #wins
+    local win_info = {} ---@type table<integer, farsight.jump.WinInfo>
     for i = 1, wins_len do
         local win = wins[i]
-
-        local buf = nvim_win_get_buf(win)
-        -- Always get/send so it's available for user functions
-        local cur_pos = nvim_win_get_cursor(win)
         local ns = namespaces[i]
         nvim__ns_set(ns, { wins = { win } })
-        ns_buf_map[ns] = buf
-        redraws[#redraws + 1] = { win = win, valid = true }
-        local wrap, leftcol, maxcol = get_wrap_info(win, configs)
-
-        nvim_win_call(win, function()
-            local top, bot, wS = get_top_bot(dir, cur_pos)
-
-            if dir == 1 then
-                local cols = get_cols_after(win, cur_pos, buf, locator)
-                filter_nowrap_oob(wrap, cols, leftcol, maxcol)
-                add_cols_to_targets(cur_pos[1], cols, win, buf, ns, targets)
-            end
-
-            for j = top, bot do
-                local cur_line = fn.getline(j)
-                local cols = get_cols(win, j, cur_line, buf, cur_pos, locator)
-                filter_nowrap_oob(wrap, cols, leftcol, maxcol)
-                add_cols_to_targets(j, cols, win, buf, ns, targets)
-            end
-
-            -- LOW: From what I can tell, Nvim will not allow the cursor to be in a bottom, not
-            -- fully visible row in a wrap window, so that edge case does not need to be handled.
-            -- Could investigate further though
-            if dir == -1 then
-                local cols = get_cols_before(win, cur_pos, buf, locator)
-                filter_nowrap_oob(wrap, cols, leftcol, maxcol)
-                add_cols_to_targets(cur_pos[1], cols, win, buf, ns, targets)
-            end
-
-            if wrap and bot == wS and dir >= 0 then
-                local row = bot + 1
-                local cols = get_extra_wrap_cols(row, win, buf, cur_pos, locator)
-                if #cols > 0 then
-                    add_cols_to_targets(row, cols, win, buf, ns, targets)
-                    redraws[#redraws]["valid"] = false
-                end
-            end
-        end)
+        win_info[win] = { nvim_win_get_buf(win), ns, true }
     end
 
-    return targets, ns_buf_map, redraws
+    return win_info
 end
 
 ---Edits opts in place
@@ -835,6 +983,21 @@ local function resolve_wins(opts, map_mode)
     })
 end
 
+local function resolve_tokens(opts, cur_buf)
+    local ut = require("farsight.util")
+    opts.tokens = ut._use_gb_if_nil(opts.tokens, "farsight_jump_tokens", cur_buf)
+    if opts.tokens == nil then
+        opts.tokens = TOKENS
+    else
+        local tokens = opts.tokens
+        vim.validate("opts.tokens", tokens, "table")
+        ---@diagnostic disable-next-line: param-type-mismatch
+        ut._list_dedup(tokens)
+        ---@diagnostic disable-next-line: param-type-mismatch
+        ut._validate_list(tokens, { item_type = { "string" }, min_len = 2 })
+    end
+end
+
 ---Edits opts in place
 ---@param opts farsight.jump.JumpOpts
 ---@param cur_buf integer
@@ -850,6 +1013,26 @@ local function resolve_on_jump(opts, cur_buf)
     end
 
     vim.validate("opts.on_jump", opts.on_jump, "callable")
+end
+
+---Edits opts in place
+---@param opts farsight.jump.JumpOpts
+---@param cur_buf integer
+local function resolve_max_tokens(opts, cur_buf)
+    local ut = require("farsight.util")
+    opts.max_tokens = ut._use_gb_if_nil(opts.max_tokens, "farsight_jump_max_tokens", cur_buf)
+    if opts.max_tokens == nil then
+        opts.max_tokens = DEFAULT_MAX_TOKENS
+    else
+        local max_tokens = opts.max_tokens
+        vim.validate("opts.max_tokens", max_tokens, function()
+            if max_tokens % 1 ~= 0 then
+                return false
+            end
+
+            return max_tokens > 0
+        end, "max_tokens must be a uint greater than zero")
+    end
 end
 
 ---Edits opts in place
@@ -882,7 +1065,7 @@ local function resolve_jump_opts(opts, map_mode)
     local ut = require("farsight.util")
     local cur_buf = api.nvim_get_current_buf()
 
-    opts.dim = ut._use_gb_if_nil(opts.dim, "farsight_dim", cur_buf)
+    opts.dim = ut._use_gb_if_nil(opts.dim, "farsight_jump_dim", cur_buf)
     opts.dim = ut._resolve_bool_opt(opts.dim, false)
 
     if opts.dir == nil then
@@ -898,34 +1081,14 @@ local function resolve_jump_opts(opts, map_mode)
     opts.keepjumps = ut._resolve_bool_opt(opts.keepjumps, false)
 
     resolve_locator(opts, cur_buf, map_mode)
-
-    opts.max_tokens = ut._use_gb_if_nil(opts.max_tokens, "farsight_jump_max_tokens", cur_buf)
-    opts.max_tokens = opts.max_tokens or DEFAULT_MAX_TOKENS
-    local max_tokens = opts.max_tokens
-    vim.validate("opts.max_tokens", max_tokens, function()
-        if max_tokens % 1 ~= 0 then
-            return false
-        end
-
-        return max_tokens > 0
-    end, "max_tokens must be a uint greater than zero")
-
+    resolve_max_tokens(opts, cur_buf)
     resolve_on_jump(opts, cur_buf)
-
-    opts.tokens = ut._use_gb_if_nil(opts.tokens, "farsight_jump_tokens", cur_buf)
-    opts.tokens = opts.tokens or TOKENS
-    vim.validate("opts.tokens", opts.tokens, "table")
-    ut._list_dedup(opts.tokens)
-    -- TODO: Support integer tokens here
-    ut._validate_list(opts.tokens, { item_type = { "string" }, min_len = 2 })
-
+    resolve_tokens(opts, cur_buf)
     resolve_wins(opts, map_mode)
 end
 
 ---@class farsight.StepJump
 local Jump = {}
-
--- TODO: Flesh out this documentation
 
 ---@class farsight.jump.JumpOpts
 ---The input row argument is one indexed
@@ -934,10 +1097,10 @@ local Jump = {}
 ---The returned columns must be zero indexed
 ---The returned array will be de-duplicated and sorted from least to greatest
 ---@field dim? boolean
----@field dir? integer
+---@field dir? -1|0|1
 ---@field keepjumps? boolean
----@field locator? fun(win: integer, row: integer, line: string, buf: integer,
----cur_pos: { [1]: integer, [2]: integer }):integer[]
+---@field locator? fun( buf: integer, line: string, row: integer,
+---cur_pos: { [1]: integer, [2]: integer }, isk_tbl: boolean[]):integer[]
 ---@field max_tokens? integer
 ---@field on_jump? fun(win: integer, buf: integer, jump_pos: { [1]:integer, [2]: integer })
 ---@field tokens? string[]
@@ -950,103 +1113,54 @@ function Jump.jump(opts)
     local map_mode = ut._resolve_map_mode(api.nvim_get_mode().mode)
     resolve_jump_opts(opts, map_mode)
 
-    local wins, configs = ut._order_focusable_wins(opts.wins)
+    local wins = ut._order_focusable_wins(opts.wins)
     if #wins < 1 then
         api.nvim_echo({ { "No focusable wins provided" } }, false, {})
         return
     end
 
-    local targets, ns_buf_map, redraws = get_targets(wins, configs, opts)
-    if #targets > 1 then
-        populate_target_labels(targets, opts.tokens)
-        advance_jump(ns_buf_map, targets, map_mode, redraws, opts)
-    elseif #targets == 1 then
-        local target = targets[1]
-        do_jump(target[1], target[2], target[3], target[4], map_mode, opts)
-    else
-        api.nvim_echo({ { "No targets available" } }, false, {})
+    local win_info = get_win_info(wins)
+    local win_targets, win_dim_rows = get_targets(wins, win_info, opts)
+    local j_win, j_row, j_col = get_jump_info(win_targets)
+    if j_win == 0 then
+        populate_target_labels(wins, win_targets, opts.tokens)
+        advance_jump(win_targets, win_info, win_dim_rows, map_mode, opts)
+        return
     end
+
+    if j_win >= 1000 then
+        do_jump(j_win, win_info[j_win][1], j_row, j_col, map_mode, opts)
+        return
+    end
+
+    api.nvim_echo({ { "No targets available" } }, false, {})
 end
 
 ---@return integer[]
 function Jump.get_hl_ns()
-    return vim.deepcopy(namespaces)
+    return require("farsight.util")._list_copy(namespaces)
 end
 
 return Jump
 
--- TODO: Defaults should respect fdo 'jump' and 'all' flags
 -- TODO: Document a couple locator examples:
 -- - CWORD
 -- - Sneak style
--- TODO: Document the locator behavior:
--- - It's win called to the current win
--- - cur_pos is passed by reference. Do not modify
--- As a general design philosophy and as a note, because the locator is run so many times, it
--- neds to be perf optimized, so even obvious boilerplate like checking folds is not done so that
--- nothing superfluous happens
--- TODO: Add doc examples for EasyMotion style f/t mapping
 -- TODO: Show how to do two-character search like vim sneak/vim-seek
--- TODO: Plugins to research in more detail:
--- - EasyMotion (Historically important)
--- - Flash (and the listed related plugins)
--- - Hop
--- - Sneak
--- - https://github.com/neovim/neovim/discussions/36785
--- - https://antonk52.github.io/webdevandstuff/post/2025-11-30-diy-easymotion.html
--- - The text editor that Helix took its gw motion from
--- TODO: Verify farsight.nvim or nvim-farsight are available
--- TODO: Update the label gathering based on what we've learned doing csearch
--- TODO: Add jump2d to credits
--- TODO: Add quickscope to inspirations or something
--- TODO: Add alternative projects (many of them)
 -- TODO: Go through the extmark opts doc to see what works here
 -- TODO: Test/document dot repeat behavior
--- TODO: Create g:vars for the defaults
--- TODO: Create <Plug> maps
 -- TODO: Document how the focusable wins filtering works
 -- TODO: What is the default max tokens to show?
--- TODO: Should a highlight group be added to show truncated labels?
--- TODO: The above two questions get into the broader issue of - Do the current hl groups actually
--- clearly show what is going on?
 -- TODO: WHen doing default mappings, can the unique flag be used rather than maparg to check if
 -- it's already been mapped?
 -- TODO: Document that backup csearch jumps do not set charsearch
--- TODO: all_wins needs to be determined within the function body rather than being explicitly
--- passed in the plug map, this way gbvars can alter it
-
--- EasyMotion notes:
--- - EasyMotion replaces a lot of things, like w and f/t
--- - Provides a version of search where after entering the term, labels are then shown on the
--- search results
--- Flash notes:
--- - The enhanced search is neat, but my experience with it was that it was a bit much, and the
--- code within uses a lot of hacks to keep Nvim's state correct. Unsure of value relative to
--- effort
 
 -- MID: For the backup csearch jump, should jumps from t motions offset?
 
--- LOW: Additional ideas for removing irrelevant locations from cols:
--- - Removing cols under float wins (most common case - TS Context)
--- - For nowrap, removing cols under extends listchars
--- Problem in both cases - Screenpos seems to be quite slow. Produces non-trivial perf loss in
--- big prose buffers. Would need to do a lot of searching to not unnecessarily run screenpos more
--- than necessary on rows not covered by floats. On rows with floats, would need to binary search
--- for positions under floats. Even in Lua space, lots of heap allocation. And the screenpos tables
--- are based on string keys (requires hashing)
--- The best possibility to work with first would be the last wrap line
--- LOW: Would be interesting to test storing the labels as a struct of arrays
--- LOW: Could explore allowing a list of wins not in the current tabpage to be passed to the jump
--- function, assuming they are all part of the same tabpage
--- LOW: Could optimize filtering ns_buf_map and redraw_map by storing a record of which wins and
--- bufs are still active in the targets. On the first filtering pass, even with only two wins,
--- could save a lot of iterating through targets, though it would also make each iteration through
--- the targets more expensive
--- LOW: A way you could optimize virt text population is to check the actual max label size when
--- building them. If you have max tokens at 3 and the biggest label is only 2, the cheaper
--- function can be used. Unsure on this given the guaranteed up front cost of calculating this vs
--- the inconsistent (at best) benefit.
+-- LOW: Allow a list of wins not in the current tabpage to be passed to the jump function, assuming
+-- they are all part of the same tabpage. Make advance_jump change tabpages before displaying
+-- extmarks
 
--- ISSUE: Base redraw uses w_botline as the lower bound of where to redraw the window. This
--- excludes the last wrapped line if it is only partially visible. Kinda hate to open an issue for
--- this because it would potentially require re-architecting redraw to fix, which is a lot.
+-- MAYBE: Pass a ctx tbl to the locator function, allowing more data to be visible without the user
+-- having to get it manually. For performance, could be allocated in create_targets then passed
+-- around and edited in place.

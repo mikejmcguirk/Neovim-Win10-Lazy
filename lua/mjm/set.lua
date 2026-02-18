@@ -37,8 +37,8 @@ setopt("spr", true, {})
 setopt("swb", "useopen,uselast", {})
 
 setopt("wrap", false, {})
-setopt("breakindent", true, {})
-setopt("linebreak", true, {})
+setopt("bri", true, {})
+setopt("lbr", true, {})
 
 setopt("ts", Mjm_Sw, {})
 setopt("sts", Mjm_Sw, {})

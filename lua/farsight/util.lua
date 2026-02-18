@@ -4,6 +4,42 @@ local fn = vim.fn
 ---@class farsight.Util
 local M = {}
 
+---@type fun(narray: integer, nhash: integer): table
+M._table_new = (function()
+    local t_new = require("table.new")
+    if t_new then
+        ---@diagnostic disable-next-line: undefined-field
+        return table.new
+    else
+        return function()
+            return {}
+        end
+    end
+end)()
+
+---@generic T
+---@param t table<T, T>
+---@param f fun(k: T, v: T): boolean|nil
+function M._dict_filter(t, f)
+    for k, v in pairs(t) do
+        if not f(k, v) then
+            t[k] = nil
+        end
+    end
+end
+
+---@generic T
+---@param t T[]
+function M._list_copy(t)
+    local len_t = #t
+    local ret = M._table_new(len_t, 0)
+    for i = 1, len_t do
+        ret[i] = t[i]
+    end
+
+    return ret
+end
+
 ---Bespoke function because:
 ---- Skip running vim.validate in hot loops
 ---- Don't need the list return
@@ -18,7 +54,6 @@ function M._list_dedup(t)
         local v = t[i]
         if not seen[v] then
             t[j] = v
-
             if v ~= nil then
                 seen[v] = true
             end
@@ -53,69 +88,17 @@ function M._list_filter(t, f)
     end
 end
 
----@generic T
----@param t T[]
----@param f fun(x: T): boolean
-function M._list_filter_beg_only(t, f)
-    local len = #t
-    local j = 1
-    local k = 1
-
-    for i = 1, len do
-        k = i + 1
-
-        local v = t[i]
-        if f(v) then
-            if i == 1 then
-                return
-            end
-
-            t[j] = v
-            j = j + 1
-            break
-        end
-    end
-
-    for i = k, len do
-        t[j] = t[i]
-        j = j + 1
-    end
-
-    for i = j, len do
-        t[i] = nil
-    end
-end
-
----@generic T
----@param t T[]
----@param s integer
----@param f fun(x: T): boolean
-function M._list_filter_end_only(t, s, f)
-    local len_t = #t
-    for i = len_t, 1, -1 do
-        local v = t[i]
-        if not f(v) then
-            t[i] = nil
-            if i == s then
-                return
-            end
-        else
-            return
-        end
-    end
-end
-
 -- PR: Add to Nvim shared.
 
 ---@generic T
 ---@param t T[]
----@param f fun(x: T): any
+---@param f fun(x: T, idx: integer): any
 function M._list_map(t, f)
     local len = #t
     local j = 1
 
     for i = 1, len do
-        t[j] = f(t[i])
+        t[j] = f(t[i], i)
         if t[j] ~= nil then
             j = j + 1
         end
@@ -143,9 +126,8 @@ end
 -- Per mini.jump2d, while nvim_tabpage_list_wins does currently ensure proper window layout, this
 -- is not documented behavior and thus can change. The below function ensures layout
 ---@param wins integer[]
----@return integer[], table<integer, vim.api.keyset.win_config_ret>
+---@return integer[]
 function M._order_focusable_wins(wins)
-    local configs = {} ---@type table<integer, vim.api.keyset.win_config_ret>
     local focusable_wins = {} ---@type integer[]
     local positions = {} ---@type { [1]:integer, [2]:integer, [3]:integer }[]
 
@@ -153,7 +135,6 @@ function M._order_focusable_wins(wins)
         local config = api.nvim_win_get_config(win)
         if config.focusable and not config.hide then
             focusable_wins[#focusable_wins + 1] = win
-            configs[win] = config
             local pos = api.nvim_win_get_position(win)
             positions[win] = { pos[1], pos[2], config.zindex or 0 }
         end
@@ -176,7 +157,7 @@ function M._order_focusable_wins(wins)
         end
     end)
 
-    return focusable_wins, configs
+    return focusable_wins
 end
 
 local cword_str = [[\k\+]]
@@ -372,3 +353,55 @@ return M
 -- TODO: Rename this to _util
 -- TODO: Why is _common a separate file? I guess we're separating jump logic from helper logic, but
 -- feels thin
+
+-- ---@generic T
+-- ---@param t T[]
+-- ---@param f fun(x: T): boolean
+-- function M._list_filter_beg_only(t, f)
+--     local len = #t
+--     local j = 1
+--     local k = 1
+--
+--     for i = 1, len do
+--         k = i + 1
+--
+--         local v = t[i]
+--         if f(v) then
+--             if i == 1 then
+--                 return
+--             end
+--
+--             t[j] = v
+--             j = j + 1
+--             break
+--         end
+--     end
+--
+--     for i = k, len do
+--         t[j] = t[i]
+--         j = j + 1
+--     end
+--
+--     for i = j, len do
+--         t[i] = nil
+--     end
+-- end
+
+-- ---@generic T
+-- ---@param t T[]
+-- ---@param s integer
+-- ---@param f fun(x: T): boolean
+-- function M._list_filter_end_only(t, s, f)
+--     local len_t = #t
+--     for i = len_t, 1, -1 do
+--         local v = t[i]
+--         if not f(v) then
+--             t[i] = nil
+--             if i == s then
+--                 return
+--             end
+--         else
+--             return
+--         end
+--     end
+-- end

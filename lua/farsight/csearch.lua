@@ -39,7 +39,7 @@ local hl_map = { hl_1st, hl_2nd, hl_3rd } ---@type integer[]
 local hl_ns = api.nvim_create_namespace("FarsightCsearch")
 
 -- Save the ref so we don't have to re-acquire it in hot loops
-local utf8_len_tbl = require("farsight._lookups")._utf8_len_tbl
+local util_char = require("farsight._util_char")
 
 local on_key_repeating = 0 ---@type 0|1
 local function get_repeat_state()
@@ -211,36 +211,6 @@ local function do_highlights(buf, labels)
     end
 end
 
----@param line string
----@param b1 integer
----@param idx integer
----@return integer, integer
-local function get_utf_codepoint(line, b1, idx)
-    local len_utf = utf8_len_tbl[b1]
-    if len_utf == 1 or len_utf > 4 or idx + len_utf - 1 > #line then
-        return b1, 1
-    end
-
-    local lshift = require("bit").lshift
-    local sbyte = string.byte
-
-    local b2 = sbyte(line, idx + 1)
-    if len_utf == 2 then
-        return lshift(b1 - 0xC0, 6) + (b2 - 0x80), 2
-    end
-
-    local b3 = sbyte(line, idx + 2)
-    if len_utf == 3 then
-        return lshift(b1 - 0xE0, 12) + lshift(b2 - 0x80, 6) + (b3 - 0x80), 3
-    end
-
-    local b4 = sbyte(line, idx + 3)
-    local b1_shift = lshift(b1 - 0xF0, 18)
-    local b2_shift = lshift(b2 - 0x80, 12)
-    local b3_shift = lshift(b3 - 0x80, 6)
-    return b1_shift + b2_shift + b3_shift + (b4 - 0x80), 4
-end
-
 ---Edits token_counts and labels in place
 ---@param row integer
 ---@param line string
@@ -256,7 +226,7 @@ local function add_labels_rev(row, line, max_tokens, token_counts, labels)
     while i >= 1 do
         local b1 = sbyte(line, i)
         if b1 <= 0x80 or b1 >= 0xC0 then
-            local char_nr, len_char = get_utf_codepoint(line, b1, i)
+            local char_nr, len_char = util_char._get_utf_codepoint(line, b1, i)
             local char_token_count = token_counts[char_nr]
             if char_token_count then
                 token_counts[char_nr] = char_token_count + 1
@@ -294,7 +264,7 @@ local function add_labels_fwd(row, line, max_tokens, token_counts, labels)
     local i = 1
     while i <= len_line do
         local b1 = sbyte(line, i)
-        local char_nr, len_char = get_utf_codepoint(line, b1, i)
+        local char_nr, len_char = util_char._get_utf_codepoint(line, b1, i)
         local char_token_count = token_counts[char_nr]
         if char_token_count then
             token_counts[char_nr] = char_token_count + 1
@@ -352,6 +322,10 @@ local function get_labels_rev(buf, cur_row, cur_col, max_tokens, token_counts, l
     return true
 end
 
+-- TODO: This isn't quite the same as how Jump does it. Make both more consistent
+-- Small thing, but the checks for row validity can be outlined
+-- Definitely is_row_valid_and_visible. Not sure if it's contrived to outline the bot check
+
 ---@param buf integer
 ---@param bot integer
 ---@param max_tokens integer
@@ -367,19 +341,13 @@ local function handle_wrapped_bot_screenline(buf, bot, max_tokens, token_counts,
         return
     end
 
-    local screenpos = fn.screenpos
     local first_spos = fn.screenpos(0, row, 1)
     if first_spos.row < 1 then
         return
     end
 
-    local old_len_labels = #labels
     local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
     add_labels_fwd(row, line, max_tokens, token_counts, labels)
-    require("farsight.util")._list_filter_end_only(labels, old_len_labels + 1, function(label)
-        local spos = screenpos(0, row, label[2] + 1)
-        return spos.row > 0
-    end)
 end
 
 ---Edits token_counts and labels in place
@@ -451,7 +419,7 @@ end
 ---@param opts farsight.csearch.CsearchOpts
 ---@return boolean
 local function checked_show_hl(win, buf, cur_pos, opts)
-    if not opts.show_hl then
+    if (not opts.show_hl) or vim.fn.reg_executing() ~= "" then
         return true
     end
 
@@ -501,13 +469,16 @@ end
 ---@param opts farsight.csearch.CsearchOpts
 local function resolve_tokens(cur_buf, opts)
     local ut = require("farsight.util")
-
     opts.tokens = ut._use_gb_if_nil(opts.tokens, "farsight_csearch_tokens", cur_buf)
-    opts.tokens = opts.tokens or TOKENS
-    vim.validate("opts.tokens", opts.tokens, "table")
-    require("farsight.util")._list_dedup(opts.tokens)
-    -- MID: It should be possible to pass ut.is_int as a validator function here
-    ut._validate_list(opts.tokens, { item_type = { "number", "string" } })
+    if opts.tokens == nil then
+        local isk = api.nvim_get_option_value("isk", { buf = cur_buf }) ---@type string
+        opts.tokens = require("farsight._util_char")._get_isk_tokens(cur_buf, isk)
+    else
+        vim.validate("opts.tokens", opts.tokens, "table")
+        ut._list_dedup(opts.tokens)
+        -- MID: It should be possible to pass ut.is_int as a validator function here
+        ut._validate_list(opts.tokens, { item_type = { "number", "string" } })
+    end
 end
 
 -- TODO: Document the types that have g/b:vars. Don't spend space calling out the ones that don't
@@ -681,6 +652,7 @@ end
 
 return Csearch
 
+-- TODO: DoD refactor
 -- TODO: Check if the user is prompted for chars when running macros on default f/t
 -- TODO: Make the backup a single char labeler. Not the best, but does add something.
 -- TODO: Document lack of support for folds
