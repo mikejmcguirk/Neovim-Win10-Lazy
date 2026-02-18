@@ -1,5 +1,7 @@
 require("mjm")
 
+-- TODO: https://github.com/ribru17/ts_query_ls (and download build that disables built-in linter)
+
 -- MID: Would prefer that the jumplist not inherit bufs from other sessions. I'm not necessarily
 -- against just starting it fresh each time
 -- MID: The new float statusline would be useful to show win info/buf info

@@ -28,13 +28,16 @@ local hl_2nd = nvim_get_hl_id_by_name(HL_2ND_STR)
 local hl_3rd = nvim_get_hl_id_by_name(HL_3RD_STR)
 local hl_dim = nvim_get_hl_id_by_name(HL_DIM_STR)
 
+-- TODO: Probably worth asserting check #hl_map == MAX_MAX_TOKENS
+-- TODO: And double check that opts.max_tokens is properly clamped
 local hl_map = { hl_1st, hl_2nd, hl_3rd } ---@type integer[]
 local hl_ns = api.nvim_create_namespace("FarsightCsearch")
 
 -- Save the ref so we don't have to re-acquire it in hot loops
 local util_char = require("farsight._util_char")
 
-local char2nr = fn.char2nr
+local str_byte = string.byte
+local get_utf_codepoint = util_char._get_utf_codepoint
 
 local on_key_repeating = 0 ---@type 0|1
 local function get_repeat_state()
@@ -223,40 +226,27 @@ end
 ---@param token_counts table<integer, integer>
 ---@param labels farsight.csearch.TokenLabels
 local function add_labels_rev(row, line, max_tokens, token_counts, labels)
-    local sbyte = string.byte
-
-    local label_rows = labels[2]
-    local label_cols = labels[3]
-    local label_char_lens = labels[4]
-    local label_hl_ids = labels[5]
-
-    local i = #line
+    local l_rows = labels[2]
+    local l_cols = labels[3]
+    local l_char_lens = labels[4]
+    local l_hl_ids = labels[5]
     local row_0 = row - 1
 
+    local i = #line
     while i >= 1 do
-        local b1 = sbyte(line, i)
+        local b1 = str_byte(line, i)
         if b1 <= 0x80 or b1 >= 0xC0 then
-            local char_nr, len_char = util_char._get_utf_codepoint(line, b1, i)
+            local char_nr, len_char = get_utf_codepoint(line, b1, i)
             local char_token_count = token_counts[char_nr]
-            if char_token_count then
-                token_counts[char_nr] = char_token_count + 1
-                local new_char_token_count = token_counts[char_nr]
-                local hl_id = hl_map[new_char_token_count]
-                if hl_id then
-                    labels[1] = labels[1] + 1
-                    label_rows[#label_rows + 1] = row_0
-                    label_cols[#label_cols + 1] = i - 1
-                    label_char_lens[#label_char_lens + 1] = len_char
-                    label_hl_ids[#label_hl_ids + 1] = hl_id
-                end
+            if char_token_count and char_token_count < max_tokens then
+                local new_char_token_count = char_token_count + 1
+                token_counts[char_nr] = new_char_token_count
 
-                if new_char_token_count >= max_tokens then
-                    token_counts[char_nr] = nil
-                end
-
-                if not next(token_counts) then
-                    return
-                end
+                labels[1] = labels[1] + 1
+                l_rows[#l_rows + 1] = row_0
+                l_cols[#l_cols + 1] = i - 1
+                l_char_lens[#l_char_lens + 1] = len_char
+                l_hl_ids[#l_hl_ids + 1] = hl_map[new_char_token_count]
             end
         end
 
@@ -267,43 +257,30 @@ end
 ---Edits token_counts and labels in place
 ---@param row integer
 ---@param line string
+---@param start integer
 ---@param max_tokens integer
 ---@param token_counts table<integer, integer>
 ---@param labels farsight.csearch.TokenLabels
-local function add_labels_fwd(row, line, max_tokens, token_counts, labels)
+local function add_labels_fwd(row, line, start, max_tokens, token_counts, labels)
     local len_line = #line
-    local sbyte = string.byte
-
-    local label_rows = labels[2]
-    local label_cols = labels[3]
-    local label_char_lens = labels[4]
-    local label_hl_ids = labels[5]
+    local l_rows = labels[2]
+    local l_cols = labels[3]
+    local l_char_lens = labels[4]
+    local l_hl_ids = labels[5]
 
     local row_0 = row - 1
-    local i = 1
+    local i = start
     while i <= len_line do
-        local b1 = sbyte(line, i)
-        local char_nr, len_char = util_char._get_utf_codepoint(line, b1, i)
+        local char_nr, len_char = get_utf_codepoint(line, str_byte(line, i), i)
         local char_token_count = token_counts[char_nr]
-        if char_token_count then
-            token_counts[char_nr] = char_token_count + 1
-            local new_char_token_count = token_counts[char_nr]
-            local hl_id = hl_map[new_char_token_count]
-            if hl_id then
-                labels[1] = labels[1] + 1
-                label_rows[#label_rows + 1] = row_0
-                label_cols[#label_cols + 1] = i - 1
-                label_char_lens[#label_char_lens + 1] = len_char
-                label_hl_ids[#label_hl_ids + 1] = hl_id
-            end
-
-            if new_char_token_count >= max_tokens then
-                token_counts[char_nr] = nil
-            end
-
-            if not next(token_counts) then
-                return
-            end
+        if char_token_count and char_token_count < max_tokens then
+            local new_char_token_count = char_token_count + 1
+            token_counts[char_nr] = new_char_token_count
+            labels[1] = labels[1] + 1
+            l_rows[#l_rows + 1] = row_0
+            l_cols[#l_cols + 1] = i - 1
+            l_char_lens[#l_char_lens + 1] = len_char
+            l_hl_ids[#l_hl_ids + 1] = hl_map[new_char_token_count]
         end
 
         i = i + len_char
@@ -321,6 +298,8 @@ end
 local function get_labels_rev(buf, cur_row, cur_col, max_tokens, token_counts, labels)
     local foldclosed = fn.foldclosed
     local nvim_buf_get_lines = api.nvim_buf_get_lines
+
+    -- TODO: Get all lines at once
 
     if foldclosed(cur_row) == -1 then
         local cur_line = nvim_buf_get_lines(buf, cur_row - 1, cur_row, false)[1]
@@ -370,7 +349,7 @@ local function handle_wrapped_bot_screenline(buf, bot, max_tokens, token_counts,
     end
 
     local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
-    add_labels_fwd(row, line, max_tokens, token_counts, labels)
+    add_labels_fwd(row, line, 1, max_tokens, token_counts, labels)
 end
 
 ---Edits token_counts and labels in place
@@ -383,32 +362,20 @@ end
 ---@return boolean
 local function get_labels_fwd(buf, cur_row, cur_col, max_tokens, token_counts, labels)
     local foldclosed = fn.foldclosed
-    local nvim_buf_get_lines = api.nvim_buf_get_lines
-
-    -- TODO: Get all lines at once
+    local bot = fn.line("w$")
+    local lines = api.nvim_buf_get_lines(buf, cur_row - 1, bot, false)
 
     if foldclosed(cur_row) == -1 then
-        local cur_line = nvim_buf_get_lines(buf, cur_row - 1, cur_row, false)[1]
-        local line_after = string.sub(cur_line, cur_col + 2, #cur_line)
-        add_labels_fwd(cur_row, line_after, max_tokens, token_counts, labels)
-
-        local len_cut_line = #cur_line - #line_after
-        local len_labels = labels[1]
-        local label_cols = labels[3]
-        for i = 1, len_labels do
-            label_cols[i] = label_cols[i] + len_cut_line
-        end
-
+        add_labels_fwd(cur_row, lines[1], cur_col + 2, max_tokens, token_counts, labels)
         if not next(token_counts) then
             return true
         end
     end
 
-    local bot = fn.line("w$")
+    local offset = cur_row - 1
     for i = cur_row + 1, bot do
         if foldclosed(cur_row) == -1 then
-            local line = nvim_buf_get_lines(buf, i - 1, i, false)[1]
-            add_labels_fwd(i, line, max_tokens, token_counts, labels)
+            add_labels_fwd(i, lines[i - offset], max_tokens, 1, token_counts, labels)
             if not next(token_counts) then
                 return true
             end
@@ -424,18 +391,14 @@ local function get_labels_fwd(buf, cur_row, cur_col, max_tokens, token_counts, l
     end
 end
 
----@param tokens (integer|string)[]
+---@param tokens integer[]
 ---@return table<integer, integer>
 local function create_token_counts(tokens)
     local token_counts = {} ---@type table<integer, integer>
     local start_count = 0 - (vim.v.count1 - 1)
-
-    for _, token in ipairs(tokens) do
-        if type(token) == "string" then
-            token_counts[char2nr(token)] = start_count
-        else
-            token_counts[token] = start_count
-        end
+    local len_tokens = #tokens
+    for i = 1, len_tokens do
+        token_counts[tokens[i]] = start_count
     end
 
     return token_counts
@@ -447,16 +410,23 @@ end
 ---@param opts farsight.csearch.CsearchOpts
 ---@return boolean
 local function checked_show_hl(win, buf, cur_pos, opts)
-    if (not opts.show_hl) or vim.fn.reg_executing() ~= "" then
+    if opts.show_hl == false then
         return true
     end
 
-    require("farsight.util")._list_map(opts.tokens, function(token)
+    if fn.reg_executing() ~= "" then
+        opts.show_hl = false
+        return true
+    end
+
+    local ut = require("farsight.util")
+    ut._list_map(opts.tokens, function(token)
         local mapped_token
-        if type(token) == "string" then
-            mapped_token = char2nr(token)
-        else
+        if type(token) == "number" then
             mapped_token = token
+        else
+            ---@diagnostic disable-next-line: param-type-mismatch
+            mapped_token = get_utf_codepoint(token, str_byte(token), 1)
         end
 
         -- LOW: Could handle these more specifically with a map like the UTF lengths
@@ -467,18 +437,33 @@ local function checked_show_hl(win, buf, cur_pos, opts)
         return mapped_token
     end)
 
-    if #opts.tokens < 1 then
+    local tokens = opts.tokens ---@type integer[]
+    if #tokens < 1 then
         return true
     end
 
-    local labels = { 0, {}, {}, {}, {} }
-    local token_counts = create_token_counts(opts.tokens)
+    local table_new = ut._table_new
+    local max_avail_labels = math.min(#tokens * opts.max_tokens, 1000)
+    ---@type farsight.csearch.TokenLabels
+    local labels = {
+        0,
+        table_new(max_avail_labels + 1, 0),
+        table_new(max_avail_labels + 1, 0),
+        table_new(max_avail_labels + 1, 0),
+        table_new(max_avail_labels + 1, 0),
+    }
+
+    local token_counts = create_token_counts(tokens)
     local valid
+    local start_time = vim.uv.hrtime()
     if opts.forward == 1 then
         valid = get_labels_fwd(buf, cur_pos[1], cur_pos[2], opts.max_tokens, token_counts, labels)
     else
         valid = get_labels_rev(buf, cur_pos[1], cur_pos[2], opts.max_tokens, token_counts, labels)
     end
+    local end_time = vim.uv.hrtime()
+    local duration_ms = (end_time - start_time) / 1e6
+    print(string.format("hl_forward took %.2f ms", duration_ms))
 
     if labels[1] > 0 then
         api.nvim__ns_set(hl_ns, { wins = { win } })
@@ -684,10 +669,12 @@ return Csearch
 -- - What to do with dim though?
 -- TODO: Outline string.byte to module. Perhaps others
 -- TODO: Make the jump backup a single char labeler. Not the best, but does add something.
--- TODO: Document lack of support for folds
--- TODO: One last deep scan through the code
 -- TODO: Document that f/t properly do not prompt for input during operator dot repeats or macro
 -- execution
+-- TODO: For my personal purposes, do I want to use isprint instead of isk? Too noisy as a default.
+-- Raise broader question though - What if a user does want to do this? Are the functions exposed
+-- that allow them to do this?
+-- TODO: Strategy pattern in the token criteria. Remove token lists in favor of this
 
 -- MID: See if foldtextresult can be used to get to a way to decorate and jump to foldedlines.
 -- fdo hor/all can then be used to control auto-opening. This unblocks the single-line f/t

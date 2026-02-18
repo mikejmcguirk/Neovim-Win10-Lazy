@@ -238,6 +238,11 @@ function M._get_isk_tokens(buf, isk)
     return isk_tbl
 end
 
+-- TODO: The nested function call in hot paths is not great. I'm unsure right now if this module
+-- will be exported for user purposes, hence the M table declaration layout. If this ends up
+-- being fully private, declare M at the top and re-order functions accordingly, eliminating
+-- this issue.
+
 ---idx is one indexed
 ---@param line string
 ---@param b1 integer
