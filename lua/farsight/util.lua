@@ -90,24 +90,24 @@ end
 
 -- PR: Add to Nvim shared.
 
----@generic T
----@param t T[]
----@param f fun(x: T, idx: integer): any
-function M._list_map(t, f)
-    local len = #t
-    local j = 1
-
-    for i = 1, len do
-        t[j] = f(t[i], i)
-        if t[j] ~= nil then
-            j = j + 1
-        end
-    end
-
-    for i = j, len do
-        t[i] = nil
-    end
-end
+-- ---@generic T
+-- ---@param t T[]
+-- ---@param f fun(x: T, idx: integer): any
+-- function M._list_map(t, f)
+--     local len = #t
+--     local j = 1
+--
+--     for i = 1, len do
+--         t[j] = f(t[i], i)
+--         if t[j] ~= nil then
+--             j = j + 1
+--         end
+--     end
+--
+--     for i = j, len do
+--         t[i] = nil
+--     end
+-- end
 
 -- PR: Spot checking, this moves about the same speed as or more quickly than table.remove for
 -- lists
