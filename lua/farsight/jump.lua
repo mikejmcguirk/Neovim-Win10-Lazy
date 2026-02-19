@@ -1154,6 +1154,11 @@ return Jump
 -- TODO: WHen doing default mappings, can the unique flag be used rather than maparg to check if
 -- it's already been mapped?
 -- TODO: Document that backup csearch jumps do not set charsearch
+-- TODO: Fold options
+-- - Ignore
+-- - Zero
+-- - First row (csearch behavior)
+-- Still unsure how to handle fdo
 
 -- MID: For the backup csearch jump, should jumps from t motions offset?
 

@@ -215,29 +215,6 @@ function M._parse_isk(buf, isk)
     return isk_tbl
 end
 
----@param buf integer
----@param isk string
----@return integer[]
-function M._get_isk_tokens(buf, isk)
-    local cached_isk_tokens = lookup._get_cached_isk_tokens(isk)
-    if cached_isk_tokens then
-        return cached_isk_tokens
-    end
-
-    local isk_tbl = M._parse_isk(buf, isk)
-    local ut = require("farsight.util")
-    ut._list_map(isk_tbl, function(c, idx)
-        if c == false then
-            return nil
-        end
-
-        return idx - 1
-    end)
-
-    lookup._add_cached_isk_tokens(isk, isk_tbl)
-    return isk_tbl
-end
-
 -- TODO: The nested function call in hot paths is not great. I'm unsure right now if this module
 -- will be exported for user purposes, hence the M table declaration layout. If this ends up
 -- being fully private, declare M at the top and re-order functions accordingly, eliminating
