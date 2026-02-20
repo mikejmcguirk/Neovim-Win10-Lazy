@@ -48,7 +48,7 @@ end
 
 ---@param line string
 ---@param b1 integer
----@param idx integer
+---@param idx integer One indexed
 ---@return integer, integer
 local function get_utf_codepoint(line, b1, idx)
     local b1_1 = b1 + 1

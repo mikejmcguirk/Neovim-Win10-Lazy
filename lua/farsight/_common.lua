@@ -3,6 +3,8 @@ local fn = vim.fn
 
 local M = {}
 
+-- TODO: Rewrite this based on what we learned doing csearch.
+
 ---@param cur_pos { [1]: integer, [2]: integer }
 ---@param buf integer
 ---@return integer, integer

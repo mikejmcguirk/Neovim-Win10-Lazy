@@ -12,22 +12,6 @@ local lower = string.lower
 local maparg = fn.maparg
 local set = api.nvim_set_keymap
 
----@type table<string, fun(win: integer, buf: integer, cur_pos: { [1]: integer, [2]: integer })>
-local actions_forward = {
-
-    ["\r"] = function()
-        require("farsight.jump").jump({ dir = 1 })
-    end,
-}
-
----@type table<string, fun(win: integer, buf: integer, cur_pos: { [1]: integer, [2]: integer })>
-local actions_backward = {
-
-    ["\r"] = function()
-        require("farsight.jump").jump({ dir = -1 })
-    end,
-}
-
 local plugs = {
     {
         { "n", "x", "o" },
@@ -40,32 +24,28 @@ local plugs = {
         { "n", "x", "o" },
         "<Plug>(Farsight-CsearchF-Forward)",
         function()
-            require("farsight.csearch").csearch({ actions = actions_forward })
+            require("farsight.csearch").csearch({})
         end,
     },
     {
         { "n", "x", "o" },
         "<Plug>(Farsight-CsearchF-Reverse)",
         function()
-            require("farsight.csearch").csearch({ actions = actions_backward, forward = 0 })
+            require("farsight.csearch").csearch({ forward = 0 })
         end,
     },
     {
         { "n", "x", "o" },
         "<Plug>(Farsight-CsearchT-Forward)",
         function()
-            require("farsight.csearch").csearch({ actions = actions_forward, ["until"] = 1 })
+            require("farsight.csearch").csearch({ ["until"] = 1 })
         end,
     },
     {
         { "n", "x", "o" },
         "<Plug>(Farsight-CsearchT-Reverse)",
         function()
-            require("farsight.csearch").csearch({
-                actions = actions_backward,
-                forward = 0,
-                ["until"] = 1,
-            })
+            require("farsight.csearch").csearch({ forward = 0, ["until"] = 1 })
         end,
     },
     {
@@ -85,9 +65,15 @@ local plugs = {
     },
 }
 
-for _, map in ipairs(plugs) do
-    for _, mode in ipairs(map[1]) do
-        set(mode, map[2], "", { noremap = true, callback = map[3] })
+local len_plugs = #plugs
+for i = 1, len_plugs do
+    local plug = plugs[i]
+    local modes = plug[1]
+    local key = plug[2]
+    local callback = plug[3]
+    local len_modes = #modes
+    for j = 1, len_modes do
+        set(modes[j], key, "", { noremap = true, callback = callback })
     end
 end
 
@@ -102,16 +88,20 @@ end
 
 ---@type { [1]: string[], [2]: string, [3]: string }[]
 local jump_maps = {
-    { { "n" }, "<cr>", "<Plug>(Farsight-Jump)" },
+    { { "n", "x", "o" }, "<cr>", "<Plug>(Farsight-Jump)" },
 }
 
-for _, map in ipairs(jump_maps) do
-    for _, mode in ipairs(map[1]) do
-        local key = map[2]
+for i = 1, #jump_maps do
+    local map = jump_maps[i]
+    local modes = map[1]
+    local key = map[2]
+    local rhs = map[3]
+    for j = 1, #modes do
+        local mode = modes[j]
         local maparg_res = maparg(key, mode)
         -- Need to check for just <cr> because of unsimplification (:h <tab>)
         if maparg_res == "" or lower(maparg_res) == key then
-            set(mode, key, map[3], { noremap = true })
+            set(mode, key, rhs, { noremap = true })
         end
     end
 end
@@ -126,14 +116,15 @@ local csearch_maps = {
     { { "n", "x", "o" }, ",", "<Plug>(Farsight-CsearchRep-Reverse)" },
 }
 
-for _, map in ipairs(csearch_maps) do
-    for _, mode in ipairs(map[1]) do
-        local key = map[2]
-        local maparg_res = maparg(key, mode)
-        -- MID: Unsure if we should check for the literal mapped key here. What is the use case we
-        -- are intentionally overwriting?
-        if maparg_res == "" or maparg_res == key then
-            set(mode, key, map[3], { noremap = true })
+for i = 1, #csearch_maps do
+    local map = csearch_maps[i]
+    local modes = map[1]
+    local key = map[2]
+    local rhs = map[3]
+    for j = 1, #modes do
+        local mode = modes[j]
+        if maparg(key, mode) == "" then
+            set(mode, key, rhs, { noremap = true })
         end
     end
 end
@@ -203,6 +194,8 @@ end
 --   - hop
 --   - EasyMotion
 --   - { Flash lists a lot of them }
+-- - TODO: Create docgen
+-- - TODO: Go through the opts of the various functions and document the g:variable overrides
 
 -- LOW: Remove invisible targets. All methods I know to do this have problems:
 -- - screenpos() - Non-trivially slow

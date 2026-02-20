@@ -5,40 +5,34 @@ local fn = vim.fn
 ---@field [1] integer Length
 ---@field [2] integer[] Rows (zero indexed)
 ---@field [3] integer[] Cols
----@field [4] integer[] Byte lengths
+---@field [4] integer[] End cols
 ---@field [5] integer[] Hl group IDs
 
 local MAX_MAX_TOKENS = 3
 local DEFAULT_MAX_TOKENS = MAX_MAX_TOKENS
+assert(DEFAULT_MAX_TOKENS <= MAX_MAX_TOKENS)
 
 local HL_1ST_STR = "FarsightCsearch1st"
 local HL_2ND_STR = "FarsightCsearch2nd"
 local HL_3RD_STR = "FarsightCsearch3rd"
 local HL_DIM_STR = "FarsightCsearchDim"
 
-local nvim_set_hl = api.nvim_set_hl
-nvim_set_hl(0, HL_1ST_STR, { default = true, link = "DiffChange" })
-nvim_set_hl(0, HL_2ND_STR, { default = true, link = "DiffText" })
-nvim_set_hl(0, HL_3RD_STR, { default = true, link = "DiffAdd" })
-nvim_set_hl(0, HL_DIM_STR, { default = true, link = "Comment" })
-
-local nvim_get_hl_id_by_name = api.nvim_get_hl_id_by_name
-local hl_1st = nvim_get_hl_id_by_name(HL_1ST_STR)
-local hl_2nd = nvim_get_hl_id_by_name(HL_2ND_STR)
-local hl_3rd = nvim_get_hl_id_by_name(HL_3RD_STR)
-local hl_dim = nvim_get_hl_id_by_name(HL_DIM_STR)
-
--- TODO: Probably worth asserting check #hl_map == MAX_MAX_TOKENS
--- TODO: And double check that opts.max_tokens is properly clamped
-local hl_map = { hl_1st, hl_2nd, hl_3rd } ---@type integer[]
 local hl_ns = api.nvim_create_namespace("FarsightCsearch")
+api.nvim_set_hl(0, HL_1ST_STR, { default = true, link = "DiffChange" })
+api.nvim_set_hl(0, HL_2ND_STR, { default = true, link = "DiffText" })
+api.nvim_set_hl(0, HL_3RD_STR, { default = true, link = "DiffAdd" })
+api.nvim_set_hl(0, HL_DIM_STR, { default = true, link = "Comment" })
 
--- Save the ref so we don't have to re-acquire it in hot loops
-local util_char = require("farsight._util_char")
+local hl_1st = api.nvim_get_hl_id_by_name(HL_1ST_STR)
+local hl_2nd = api.nvim_get_hl_id_by_name(HL_2ND_STR)
+local hl_3rd = api.nvim_get_hl_id_by_name(HL_3RD_STR)
+local hl_dim = api.nvim_get_hl_id_by_name(HL_DIM_STR)
+local hl_map = { hl_1st, hl_2nd, hl_3rd } ---@type integer[]
+assert(#hl_map == MAX_MAX_TOKENS)
 
+local get_utf_codepoint = require("farsight._util_char")._get_utf_codepoint
 local maxcol = vim.v.maxcol
 local str_byte = string.byte
-local get_utf_codepoint = util_char._get_utf_codepoint
 
 local on_key_repeating = 0 ---@type 0|1
 local function get_repeat_state()
@@ -48,12 +42,10 @@ end
 local function setup_repeat_tracking()
     local has_ffi, ffi = pcall(require, "ffi")
     if has_ffi then
-        -- When a dot repeat is performed, the stored characters are moved into the stuff buffer
-        -- for processing. The KeyStuffed global flags if the last char was processed from the
-        -- stuff buffer. int searchc in search.c only checks the value of KeyStuffed for redoing
-        -- state, so no additional checks added here
-        local has_keystuffed = pcall(ffi.cdef, "int KeyStuffed;")
-        if has_keystuffed then
+        -- Dot repeats move their text from the repeat buffer to the stuff buffer for execution.
+        -- When chars are processed from that buffer, the KeyStuffed global is set to 1.
+        -- searchc in search.c checks this value for redoing state.
+        if pcall(ffi.cdef, "int KeyStuffed;") then
             get_repeat_state = function()
                 return ffi.C.KeyStuffed --[[@as 0|1]]
             end
@@ -76,15 +68,17 @@ end
 setup_repeat_tracking()
 
 ---@param char string
----@param opts farsight.csearch.CsearchOpts
+---@param is_omode boolean
+---@param forward 0|1
+---@param opts_until 0|1
 ---@return string
-local function get_pattern(char, is_omode, opts)
+local function get_pattern(char, is_omode, forward, opts_until)
     ---@type string
     local selection = api.nvim_get_option_value("selection", { scope = "global" })
     local pattern = string.gsub(char, "\\", "\\\\")
 
-    if opts.forward == 1 then
-        if opts["until"] == 1 then
+    if forward == 1 then
+        if opts_until == 1 then
             if is_omode and selection == "exclusive" then
                 return "\\C\\V" .. pattern
             else
@@ -99,7 +93,7 @@ local function get_pattern(char, is_omode, opts)
         end
     end
 
-    if opts["until"] == 1 then
+    if opts_until == 1 then
         return "\\C\\V" .. pattern .. "\\zs\\m."
     else
         return "\\C\\V" .. pattern
@@ -114,7 +108,7 @@ end
 local function do_csearch(win, buf, cur_pos, char, opts)
     local ut = require("farsight.util")
     local is_omode = ut._resolve_map_mode(api.nvim_get_mode().mode) == "o"
-    local pattern = get_pattern(char, is_omode, opts)
+    local pattern = get_pattern(char, is_omode, opts.forward, opts["until"])
 
     local flags_tbl = { "Wn" }
     flags_tbl[#flags_tbl + 1] = opts.forward == 1 and "z" or "b"
@@ -149,12 +143,7 @@ local function do_csearch(win, buf, cur_pos, char, opts)
         return
     end
 
-    -- TODO: Is it better to always set ' if we go below bot, and always not if we don't?
-    -- Not really how any other motion works though
-    -- Could do sneak style where only the initial command sets the pc mark
-    -- The problem is that, for big movements, we want to be able to revert, but we dont' want to
-    -- clog up the jump list for small ones
-    if not opts.keepjumps then
+    if jump_pos[1] ~= cur_pos[1] and not opts.keepjumps and not is_omode then
         api.nvim_cmd({ cmd = "norm", args = { "m'" }, bang = true }, {})
     end
 
@@ -162,7 +151,6 @@ local function do_csearch(win, buf, cur_pos, char, opts)
     local selection = api.nvim_get_option_value("selection", { scope = "global" })
     -- If operating backward, the cursor character should not be affected
     if opts.forward == 0 and is_omode and selection ~= "exclusive" then
-        -- TODO: Use this for jump
         fn.searchpos("\\m.", "Wb", cur_pos[1])
     end
 
@@ -170,19 +158,18 @@ local function do_csearch(win, buf, cur_pos, char, opts)
         api.nvim_cmd({ cmd = "norm", args = { "v" }, bang = true }, {})
     end
 
+    -- searchpos() returns are 1, 1 indexed
     jump_pos[2] = math.max(jump_pos[2] - 1, 0)
     api.nvim_win_set_cursor(win, jump_pos)
-    -- TODO: Consider passing a flag that says if the jump happened, and calling if a 0, 0
-    -- searchpos result returns
     opts.on_jump(win, buf, jump_pos)
 end
 
 ---@param win integer
 ---@param buf integer
+---@param show_hl boolean
 ---@param valid boolean
----@param opts farsight.csearch.CsearchOpts
-local function checked_clear_hl(win, buf, valid, opts)
-    if not opts.show_hl then
+local function checked_clear_hl(win, buf, show_hl, valid)
+    if not show_hl then
         return
     end
 
@@ -193,16 +180,15 @@ local function checked_clear_hl(win, buf, valid, opts)
 end
 
 ---@param buf integer
----@param labels farsight.csearch.TokenLabels
-local function dim_target_lines(buf, labels)
+---@param label_len integer
+---@param label_rows integer[]
+local function dim_target_lines(buf, label_len, label_rows)
     local rows = {} ---@type table<integer, boolean>
-
-    local len_labels = labels[1]
-    local label_rows = labels[2]
-    for i = 1, len_labels do
+    for i = 1, label_len do
         rows[label_rows[i]] = true
     end
 
+    local nvim_buf_set_extmark = api.nvim_buf_set_extmark
     local dim_extmark_opts = {
         end_col = 0,
         hl_eol = true,
@@ -210,7 +196,6 @@ local function dim_target_lines(buf, labels)
         priority = 999,
     }
 
-    local nvim_buf_set_extmark = api.nvim_buf_set_extmark
     for row, _ in pairs(rows) do
         dim_extmark_opts.end_line = row + 1
         pcall(nvim_buf_set_extmark, buf, hl_ns, row, 0, dim_extmark_opts)
@@ -224,86 +209,33 @@ local function do_highlights(buf, labels)
     local len_labels = labels[1]
     local l_rows = labels[2]
     local l_cols = labels[3]
-    local l_char_lens = labels[4]
+    local l_end_cols = labels[4]
     local l_hl_ids = labels[5]
 
     for i = 1, len_labels do
-        local col = l_cols[i]
         extmark_opts.hl_group = l_hl_ids[i]
-        -- TODO: Should this be done here?
-        extmark_opts.end_col = col + l_char_lens[i]
-        pcall(api.nvim_buf_set_extmark, buf, hl_ns, l_rows[i], col, extmark_opts)
+        extmark_opts.end_col = l_end_cols[i]
+        pcall(api.nvim_buf_set_extmark, buf, hl_ns, l_rows[i], l_cols[i], extmark_opts)
     end
 end
 
 ---@param row_0 integer
----@param col integer
+---@param col_1 integer
 ---@param len_char integer
 ---@param count integer
 ---@param labels farsight.csearch.TokenLabels
-local function add_label(row_0, col, len_char, count, labels)
+local function add_label(row_0, col_1, len_char, count, labels)
     local new_label_len = labels[1] + 1
 
     labels[1] = new_label_len
     labels[2][new_label_len] = row_0
-    labels[3][new_label_len] = col
-    labels[4][new_label_len] = len_char
+    local col_0 = col_1 - 1
+    labels[3][new_label_len] = col_0
+    labels[4][new_label_len] = col_0 + len_char
     labels[5][new_label_len] = hl_map[count]
 end
 
----Edits token_counts and labels in place
----Init is one indexed, inclusive
----@param row_0 integer
----@param line string
----@param init integer
----@param locator fun(codepoint: integer):boolean
----@param counts table<integer, integer>
----@param min_count integer
----@param max_count integer
----@param labels farsight.csearch.TokenLabels
-local function add_labels_rev(row_0, line, init, locator, counts, min_count, max_count, labels)
-    local h_col = -1
-    local h_len = -1
-    local h_count = maxcol
-
-    local i = init
-    while i >= 1 do
-        local b1 = str_byte(line, i)
-        if b1 <= 0x80 or b1 >= 0xC0 then
-            local char_nr, len_char = get_utf_codepoint(line, b1, i)
-            if locator(char_nr) then
-                local char_count = counts[char_nr] or min_count
-                if char_count < max_count then
-                    local new_count = char_count + 1
-                    counts[char_nr] = new_count
-
-                    if new_count >= 1 and new_count <= h_count then
-                        h_col = i - 1
-                        h_len = len_char
-                        h_count = new_count
-                    end
-                end
-            else
-                if h_count <= max_count then
-                    add_label(row_0, h_col, h_len, h_count, labels)
-                    h_col = -1
-                    h_len = -1
-                    h_count = maxcol
-                end
-            end
-        end
-
-        i = i - 1
-    end
-
-    if h_count > max_count then
-        return
-    end
-
-    add_label(row_0, h_col, h_len, h_count, labels)
-end
-
----Edits token_counts and labels in place
+---Edits counts and labels in place
 ---Start is one indexed, inclusive
 ---@param row_0 integer
 ---@param line string
@@ -326,7 +258,8 @@ local function add_all_labels_rev(row_0, line, init, locator, counts, min_count,
                     counts[char_nr] = new_count
 
                     if new_count > 0 then
-                        add_label(row_0, i - 1, len_char, new_count, labels)
+                        local col_0 = i - 1
+                        add_label(row_0, col_0, len_char, new_count, labels)
                     end
                 end
             end
@@ -334,6 +267,58 @@ local function add_all_labels_rev(row_0, line, init, locator, counts, min_count,
 
         i = i - 1
     end
+end
+
+---Edits counts and labels in place
+---Init is one indexed, inclusive
+---@param row_0 integer
+---@param line string
+---@param init integer
+---@param locator fun(codepoint: integer):boolean
+---@param counts table<integer, integer>
+---@param min_count integer
+---@param max_count integer
+---@param labels farsight.csearch.TokenLabels
+local function add_labels_rev(row_0, line, init, locator, counts, min_count, max_count, labels)
+    local hl_col_1 = -1
+    local hl_char_len = -1
+    local hl_count = maxcol
+
+    local i = init
+    while i >= 1 do
+        local b1 = str_byte(line, i)
+        if b1 <= 0x80 or b1 >= 0xC0 then
+            local char_nr, len_char = get_utf_codepoint(line, b1, i)
+            if locator(char_nr) then
+                local char_count = counts[char_nr] or min_count
+                if char_count < max_count then
+                    local new_count = char_count + 1
+                    counts[char_nr] = new_count
+
+                    if new_count >= 1 and new_count <= hl_count then
+                        hl_col_1 = i
+                        hl_char_len = len_char
+                        hl_count = new_count
+                    end
+                end
+            else
+                if hl_count <= max_count then
+                    add_label(row_0, hl_col_1, hl_char_len, hl_count, labels)
+                    hl_col_1 = -1
+                    hl_char_len = -1
+                    hl_count = maxcol
+                end
+            end
+        end
+
+        i = i - 1
+    end
+
+    if hl_count > max_count then
+        return
+    end
+
+    add_label(row_0, hl_col_1, hl_char_len, hl_count, labels)
 end
 
 ---Edits counts and labels in place
@@ -358,7 +343,8 @@ local function add_all_labels_fwd(row_0, line, init, locator, counts, min_count,
                 counts[char_nr] = new_count
 
                 if new_count > 0 then
-                    add_label(row_0, i - 1, len_char, new_count, labels)
+                    local col_0 = i - 1
+                    add_label(row_0, col_0, len_char, new_count, labels)
                 end
             end
         end
@@ -378,9 +364,9 @@ end
 ---@param max_count integer
 ---@param labels farsight.csearch.TokenLabels
 local function add_labels_fwd(row_0, line, init, locator, counts, min_count, max_count, labels)
-    local h_col = -1
-    local h_len = -1
-    local h_count = maxcol
+    local hl_col_1 = -1
+    local hl_char_len = -1
+    local hl_count = maxcol
 
     local i = init
     local len_line = #line
@@ -392,32 +378,32 @@ local function add_labels_fwd(row_0, line, init, locator, counts, min_count, max
                 local new_count = char_count + 1
                 counts[char_nr] = new_count
 
-                if new_count > 0 and new_count < h_count then
-                    h_col = i - 1
-                    h_len = len_char
-                    h_count = new_count
+                if new_count > 0 and new_count < hl_count then
+                    hl_col_1 = i
+                    hl_char_len = len_char
+                    hl_count = new_count
                 end
             end
         else
-            if h_count <= max_count then
-                add_label(row_0, h_col, h_len, h_count, labels)
-                h_col = -1
-                h_len = -1
-                h_count = maxcol
+            if hl_count <= max_count then
+                add_label(row_0, hl_col_1, hl_char_len, hl_count, labels)
+                hl_col_1 = -1
+                hl_char_len = -1
+                hl_count = maxcol
             end
         end
 
         i = i + len_char
     end
 
-    if h_count > max_count then
+    if hl_count > max_count then
         return
     end
 
-    add_label(row_0, h_col, h_len, h_count, labels)
+    add_label(row_0, hl_col_1, hl_char_len, hl_count, labels)
 end
 
----Edits token_counts and labels in place
+---Edits labels in place
 ---@param buf integer
 ---@param cur_pos { [1]: integer, [2]: integer }
 ---@param iterator function
@@ -462,13 +448,7 @@ local function get_labels_rev(buf, cur_pos, iterator, labels, opts)
     return true
 end
 
--- TODO: This isn't quite the same as how Jump does it. Make both more consistent
--- Small thing, but the checks for row validity can be outlined
--- Definitely is_row_valid_and_visible. Not sure if it's contrived to outline the bot check
-
--- TODO: More specific iterator type. Update opts table too
-
----Edits token_counts and labels in place
+---Edits labels in place
 ---@param buf integer
 ---@param cur_pos { [1]: integer, [2]: integer }
 ---@param iterator function
@@ -525,8 +505,12 @@ local function get_labels_fwd(buf, cur_pos, iterator, labels, opts)
     end
 
     local old_len_labels = labels[1]
-    local fill_line = api.nvim_buf_get_lines(buf, fill_row - 1, fill_row, false)[1]
-    iterator(row, fill_line, 1, locator, counts, min_count, max_tokens, labels)
+    local fill_fold_row = foldclosed(fill_row)
+    if fill_fold_row == -1 or (skip_folds == false and fill_fold_row == fill_row) then
+        local fill_line = api.nvim_buf_get_lines(buf, fill_row - 1, fill_row, false)[1]
+        iterator(row, fill_line, 1, locator, counts, min_count, max_tokens, labels)
+    end
+
     if labels[1] > old_len_labels then
         return false
     else
@@ -549,18 +533,16 @@ local function checked_show_hl(win, buf, cur_pos, opts)
         return true
     end
 
-    local table_new = require("farsight.util")._table_new
     ---@type farsight.csearch.TokenLabels
     local labels = {
         0,
-        table_new(256, 0),
-        table_new(256, 0),
-        table_new(256, 0),
-        table_new(256, 0),
+        require("farsight.util")._table_new(256, 0),
+        require("farsight.util")._table_new(256, 0),
+        require("farsight.util")._table_new(256, 0),
+        require("farsight.util")._table_new(256, 0),
     }
 
     local valid
-    local start_time = vim.uv.hrtime()
     if opts.forward == 1 then
         local iterator = opts.all_tokens and add_all_labels_fwd or add_labels_fwd
         valid = get_labels_fwd(buf, cur_pos, iterator, labels, opts)
@@ -568,15 +550,12 @@ local function checked_show_hl(win, buf, cur_pos, opts)
         local iterator = opts.all_tokens and add_all_labels_rev or add_labels_rev
         valid = get_labels_rev(buf, cur_pos, iterator, labels, opts)
     end
-    local end_time = vim.uv.hrtime()
-    local duration_ms = (end_time - start_time) / 1e6
-    print(string.format("hl_forward took %.2f ms", duration_ms))
 
     if labels[1] > 0 then
         api.nvim__ns_set(hl_ns, { wins = { win } })
         do_highlights(buf, labels)
         if opts.dim then
-            dim_target_lines(buf, labels)
+            dim_target_lines(buf, labels[1], labels[2])
         end
 
         api.nvim__redraw({ win = win, valid = valid })
@@ -585,11 +564,64 @@ local function checked_show_hl(win, buf, cur_pos, opts)
     return valid
 end
 
----@param cur_buf integer
+---Must put opts in a state such that:
+---- All values are present
+---- All internal tables are deep copied
 ---@param opts farsight.csearch.CsearchOpts
-local function resolve_locator(cur_buf, opts)
+---@param cur_buf integer
+local function resolve_base_opts(opts, cur_buf)
+    vim.validate("opts", opts, "table")
     local ut = require("farsight.util")
-    opts.locator = ut._use_gb_if_nil(opts.locator, "farsight_csearch_tokens", cur_buf)
+
+    if opts.forward == nil then
+        opts.forward = 1
+    else
+        vim.validate("opts.forward", opts.forward, function()
+            return opts.forward == 0 or opts.forward == 1
+        end, "opts.forward must be 0 or 1")
+    end
+
+    opts.keepjumps = ut._use_gb_if_nil(opts.keepjumps, "farsight_csearch_keepjumps", cur_buf)
+    opts.keepjumps = ut._resolve_bool_opt(opts.keepjumps, false)
+
+    opts.on_jump = ut._use_gb_if_nil(opts.on_jump, "farsight_csearch_on_jump", cur_buf)
+    if opts.on_jump == nil then
+        opts.on_jump = function()
+            ---@type string
+            local fdo = api.nvim_get_option_value("fdo", { scope = "global" })
+            local all, _, _ = string.find(fdo, "all", 1, true)
+            local hor, _, _ = string.find(fdo, "hor", 1, true)
+            if all or hor then
+                api.nvim_cmd({ cmd = "norm", args = { "zv" }, bang = true }, {})
+            end
+        end
+    else
+        vim.validate("opts.on_jump", opts.on_jump, "callable")
+    end
+
+    opts.single_line = ut._use_gb_if_nil(opts.single_line, "farsight_csearch_single_line", cur_buf)
+    opts.single_line = ut._resolve_bool_opt(opts.single_line, false)
+
+    opts.skip_folds = ut._use_gb_if_nil(opts.skip_folds, "farsight_csearch_skip_folds", cur_buf)
+    opts.skip_folds = ut._resolve_bool_opt(opts.skip_folds, false)
+end
+
+---Must put opts in a state such that:
+---- All values are present
+---- All internal tables are deep copied
+---@param opts farsight.csearch.CsearchOpts
+---@param cur_buf integer
+local function resolve_csearch_opts(opts, cur_buf)
+    resolve_base_opts(opts, cur_buf)
+    local ut = require("farsight.util")
+
+    opts.all_tokens = ut._use_gb_if_nil(opts.all_tokens, "farsight_csearch_all_tokens", cur_buf)
+    opts.all_tokens = ut._resolve_bool_opt(opts.all_tokens, false)
+
+    opts.dim = ut._use_gb_if_nil(opts.dim, "farsight_csearch_dim", cur_buf)
+    opts.dim = ut._resolve_bool_opt(opts.dim, false)
+
+    opts.locator = ut._use_gb_if_nil(opts.locator, "farsight_csearch_locator", cur_buf)
     if opts.locator == nil then
         local isk = api.nvim_get_option_value("isk", { buf = cur_buf }) ---@type string
         local isk_tbl = require("farsight._util_char")._parse_isk(cur_buf, isk)
@@ -599,69 +631,26 @@ local function resolve_locator(cur_buf, opts)
     else
         vim.validate("opts.locator", opts.locator, "callable")
     end
-end
-
--- TODO: Document the types that have g/b:vars. Don't spend space calling out the ones that don't
-
----Must put opts in a state such that:
----- All values are present
----- All internal tables are deep copied
----@param opts farsight.csearch.CsearchOpts
----@param cur_buf integer
-local function resolve_csearch_opts(opts, cur_buf)
-    local validate = vim.validate
-    validate("opts", opts, "table")
-    local ut = require("farsight.util")
-
-    opts.all_tokens = ut._use_gb_if_nil(opts.all_tokens, "farsight_csearch_all_tokens", cur_buf)
-    opts.all_tokens = ut._resolve_bool_opt(opts.all_tokens, false)
-
-    opts.actions = opts.actions or {}
-    validate("opts.actions", opts.actions, "table")
-    for k, v in pairs(opts.actions) do
-        validate("k", k, "string")
-        validate("v", v, "callable")
-    end
-
-    opts.dim = ut._use_gb_if_nil(opts.dim, "farsight_csearch_dim", cur_buf)
-    opts.dim = ut._resolve_bool_opt(opts.dim, false)
-
-    opts.dim = ut._use_gb_if_nil(opts.dim, "farsight_csearch_dim", cur_buf)
-    opts.dim = ut._resolve_bool_opt(opts.dim, false)
-
-    opts.forward = opts.forward or 1
-    validate("opts.forward", opts.forward, function()
-        return opts.forward == 0 or opts.forward == 1
-    end, "opts.forward must be 0 or 1")
-
-    opts.keepjumps = ut._use_gb_if_nil(opts.keepjumps, "farsight_csearch_keepjumps", cur_buf)
-    opts.keepjumps = ut._resolve_bool_opt(opts.keepjumps, true)
 
     local gb_max_tokens = "farsight_csearch_max_tokens"
     opts.max_tokens = ut._use_gb_if_nil(opts.max_tokens, gb_max_tokens, cur_buf)
-    opts.max_tokens = opts.max_tokens or DEFAULT_MAX_TOKENS
-    validate("opts.max_tokens", opts.max_tokens, ut._is_uint)
-    opts.max_tokens = math.min(opts.max_tokens, MAX_MAX_TOKENS)
-
-    opts.on_jump = ut._use_gb_if_nil(opts.on_jump, "farsight_csearch_on_jump", cur_buf)
-    opts.on_jump = opts.on_jump or function() end
-    validate("opts.on_jump", opts.on_jump, "callable")
+    if opts.max_tokens == nil then
+        opts.max_tokens = DEFAULT_MAX_TOKENS
+    else
+        vim.validate("opts.max_tokens", opts.max_tokens, ut._is_uint)
+        opts.max_tokens = math.min(opts.max_tokens, MAX_MAX_TOKENS)
+    end
 
     opts.show_hl = ut._use_gb_if_nil(opts.show_hl, "farsight_csearch_show_hl", cur_buf)
     opts.show_hl = ut._resolve_bool_opt(opts.show_hl, true)
 
-    opts.single_line = ut._use_gb_if_nil(opts.single_line, "farsight_csearch_single_line", cur_buf)
-    opts.single_line = ut._resolve_bool_opt(opts.single_line, false)
-
-    opts.skip_folds = ut._use_gb_if_nil(opts.skip_folds, "farsight_csearch_skip_folds", cur_buf)
-    opts.skip_folds = ut._resolve_bool_opt(opts.skip_folds, false)
-
-    resolve_locator(cur_buf, opts)
-
-    opts["until"] = opts["until"] or 0
-    validate("opts.until", opts["until"], function()
-        return opts["until"] == 0 or opts["until"] == 1
-    end, "opts.until must be 0 or 1")
+    if opts["until"] == nil then
+        opts["until"] = 0
+    else
+        vim.validate("opts.until", opts["until"], function()
+            return opts["until"] == 0 or opts["until"] == 1
+        end, "opts.until must be 0 or 1")
+    end
 
     opts.until_skip = false
 end
@@ -669,34 +658,69 @@ end
 ---@class farsight.Csearch
 local Csearch = {}
 
--- TODO: Document these
--- TODO: Skip folds and single line need to be integrated into BaseOpts validation
-
+---Opts set for both new character searches and repeat commands
 ---@class farsight.csearch.BaseOpts
+---`1` search forward, `0` to search backward. (Default: `1`)
 ---@field forward? 0|1
----@field keepjumps? boolean
----@field on_jump? fun(win: integer, buf: integer, pos: { [1]: integer, [2]: integer })
----@field skip_folds? boolean
+---If true, limit searches to a single line (Default: `false`. Searches will
+---traverse the entire buffer)
 ---@field single_line? boolean
+---If true, disregard fold lines (Default: `false`. The first line of closed
+---folds will be searched)
+---@field skip_folds? boolean
+---Disable setting jump marks. (Default: `false`. If a search traverses
+---multiple lines, a jump mark will be set)
+---@field keepjumps? boolean
+---Callback to execute on successful jump. (Default: Check the |foldopen|
+---option for `all` or `hor`. If found, perform a |zv| command)
+---@field on_jump? fun(win: integer, buf: integer, pos: { [1]: integer, [2]: integer })
 ---@field package until_skip? boolean
 
--- TODO: Document these
--- TODO: Document specifically that the csearch input is taken with simplify = false, which
--- affects the comparisons for actions
--- TODO: Order these in a way where the explanations build on each other
-
+---Opts for new searches
 ---@class farsight.csearch.CsearchOpts : farsight.csearch.BaseOpts
----@field actions? table<string, fun(win: integer, buf: integer,
----cur_pos: { [1]: integer, [2]: integer })>
----@field all_tokens? boolean
----@field dim? boolean
----@field locator? fun(codepoint: integer):boolean
----@field max_tokens? integer
----@field show_hl? boolean
+---When `1`, search until just before the selected character (|t| and |T|
+---behavior). (Default: `0`, or |f| and |F| behavior)
 ---@field until? 0|1
+---Highlight characters to indicate if they are the first, second, or third
+---occurence from the cursor. (Default: `true`)
+---@field show_hl? boolean
+---Function to determine which characters should be highlighted. The
+---function parameter is a UTF-8 code point.
+---
+---Example:
+---
+---Target alpha characters:
+--->
+---  function(codepoint)
+---      return (codepoint >= 0x41 and codepoint <= 0x5A) or
+---          (codepoint >= 0x61 and codepoint <= 0x7A)
+---  end
+---<
+---
+---Combine with all_tokens = `false` to target whitespace delimited |WORD|s:
+--->
+---  function(codepoint)
+---      return codepoint ~= 0x20 and codepoint ~= 0x09 and codepoint ~= 0x0
+---          and codepoint ~= 0xA0
+---  end
+---<
+---
+---(Default: characters are compared against the value of |iskeyword|)
+---@field locator? fun(codepoint: integer):boolean
+---If `true`, show all characters targeted by the locator function. If `false`,
+---one highlight is shown per contiguous group of targeted characters. The
+---shorted possible jump path per group is shown.
+---(Default: false. In combination with the default locator, this means one
+---token is displayed per keyword)
+---@field all_tokens? boolean
+---Dim lines with targeted characters (Default: `false`)
+---@field dim? boolean
+---Maximum amount of highlights to show per targetable character. Max `3`.
+---(Default: `3`)
+---@field max_tokens? integer
 
--- TODO: Document this
-
+---Perform a single character search from user input. Similar to |f|, |F|, |t|,
+---and |T|. Will not prompt during a |single-repeat| or |macro|.
 ---@param opts? farsight.csearch.CsearchOpts
 function Csearch.csearch(opts)
     opts = opts and vim.deepcopy(opts) or {}
@@ -717,17 +741,8 @@ function Csearch.csearch(opts)
     local cur_pos = api.nvim_win_get_cursor(cur_win)
     if not char then
         local valid = checked_show_hl(cur_win, cur_buf, cur_pos, opts)
-        _, char = pcall(fn.getcharstr, -1, { simplify = true })
-        checked_clear_hl(cur_win, cur_buf, valid, opts)
-
-        local actions = opts.actions --[[ @as table<string, fun(win: integer, buf: integer, cur_pos: { [1]: integer, [2]: integer })> ]]
-        local nvim_replace_termcodes = api.nvim_replace_termcodes
-        for key, action in pairs(actions) do
-            if char == nvim_replace_termcodes(key, true, false, true) then
-                action(cur_win, cur_buf, cur_pos)
-                return
-            end
-        end
+        _, char = pcall(fn.getcharstr, -1)
+        checked_clear_hl(cur_win, cur_buf, opts.show_hl, valid)
     end
 
     if is_repeating == 0 then
@@ -746,31 +761,14 @@ function Csearch.csearch(opts)
     do_csearch(cur_win, cur_buf, cur_pos, char, opts)
 end
 
----The |cpoptions| ";" flag controls until skip behavior
+---Repeat the last character search. Similar to |;| and |,|.
+---This function respects the |cpoptions| ";" flag
 ---@param opts? farsight.csearch.BaseOpts
 function Csearch.rep(opts)
     opts = opts and vim.deepcopy(opts) or {} --[[ @as farsight.csearch.CsearchOpts ]]
-    opts.forward = opts.forward or 1
-    vim.validate("opts.forward", opts.forward, function()
-        return opts.forward == 0 or opts.forward == 1
-    end, "opts.forward must be 0 or 1")
-
     local cur_win = api.nvim_get_current_win()
     local cur_buf = api.nvim_win_get_buf(cur_win)
-
-    -- TODO: There's enough here that I think you do base_opts as its own validation inside the
-    -- bigger csearch opts function. Just make sure csearch doesn't have any differences from
-    -- repeat
-    local ut = require("farsight.util")
-    opts.keepjumps = ut._use_gb_if_nil(opts.keepjumps, "farsight_csearch_keepjumps", cur_buf)
-    opts.keepjumps = ut._resolve_bool_opt(opts.keepjumps, true)
-    opts.on_jump = ut._use_gb_if_nil(opts.on_jump, "farsight_csearch_on_jump", cur_buf)
-    opts.on_jump = opts.on_jump or function() end
-    vim.validate("opts.on_jump", opts.on_jump, "callable")
-    opts.skip_folds = ut._use_gb_if_nil(opts.skip_folds, "farsight_csearch_skip_folds", cur_buf)
-    opts.skip_folds = ut._resolve_bool_opt(opts.skip_folds, false)
-    opts.single_line = ut._use_gb_if_nil(opts.single_line, "farsight_csearch_single_line", cur_buf)
-    opts.single_line = ut._resolve_bool_opt(opts.single_line, false)
+    resolve_base_opts(opts, cur_buf)
 
     local charsearch = fn.getcharsearch()
     local char = charsearch.char
@@ -794,18 +792,9 @@ end
 
 return Csearch
 
--- TODO: DOCUMENT: When skip_folds = false, only the first line of the fold is used. Highlighting
--- on folds is not supported, though future highlights will be accurate
--- TODO: DOCUMENT: Nested folds are not used
--- TODO: For per unit token placement, do you favor the beginning or the end of a unit? Null
--- hypothesis is that beginning of a unit is best. But if your doing a visual f motion, might you
--- want the end? I'm fine with tabling this, but want to think through the use cases
--- TODO: Make new data model work with v:count1
--- TODO: Don't map any default actions. Write bespoke code for myself
 -- TODO: For my personal purposes, do I want to use isprint instead of isk? Too noisy as a default.
 -- Raise broader question though - What if a user does want to do this? Are the functions exposed
 -- that allow them to do this?
--- TODO: Add one-per-unit token highlighting
 -- TODO: Rename parse_isk to parse_isopt so it's useful with isprint. Make a public interface
 -- for it
 
@@ -824,8 +813,8 @@ return Csearch
 -- - ambiwidth == double
 
 -- PR: It would be cool if Neovim provided some kind of clear_plugin_highlights function that
--- plugins could register with. That way, users couldn't have to create bespoke highlight clearing
--- for every plugin
+-- plugins could register with. That way, devs/users wouldn't have to create bespoke highlight
+-- clearing for every plugin
 -- PR: It should be natively possible to detect if you are in the middle of a dot repeat.
 
 -- NON: Allowing max_tokens > 3. This would result in more than four keypresses to get to a
