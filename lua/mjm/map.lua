@@ -387,6 +387,8 @@ end)
 -- MID: Showing the search string would be more useful when hlsearch is turned on than with n/N
 -- But I'd have to make the initial output match
 
+-- MID: N should only set a jump if you are not already in a search term. Could hack into it
+-- with hlsearch status maybe
 -- MID: If you hit n without hlsearch and the term is not on the screen, no feedback on what is
 -- happening. Unsure how to proceed
 -- For the N/n maps, when I tested this with silent = true, it does show the result/total counter

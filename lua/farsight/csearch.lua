@@ -122,30 +122,45 @@ local function do_csearch(win, buf, cur_pos, char, opts)
         flags_tbl[#flags_tbl + 1] = "c"
     end
 
-    local count = vim.v.count1
     local flags = table.concat(flags_tbl, "")
+    local stop_row = opts.single_line == true and cur_pos[1] or 0
+
+    local count = vim.v.count1
+    local fn_line = fn.line
     local foldclosed = fn.foldclosed
+    local skip_folds = opts.skip_folds
+
     -- FUTURE: https://github.com/neovim/neovim/pull/37872
     ---@type { [1]: integer, [2]: integer, [3]: integer? }
-    local jump_pos = fn.searchpos(pattern, flags, 0, 2000, function()
-        if foldclosed(fn.line(".")) ~= -1 then
-            return 1
+    local jump_pos = fn.searchpos(pattern, flags, stop_row, 2000, function()
+        local search_row = fn_line(".")
+        local fold_row = foldclosed(search_row)
+        if fold_row == -1 or (skip_folds == false and fold_row == search_row) then
+            count = count - 1
+            if count == 0 then
+                return 0
+            end
         end
 
-        count = count - 1
-        return count > 0 and 1 or 0
+        return 1
     end)
 
     if jump_pos[1] == 0 and jump_pos[2] == 0 then
         return
     end
 
+    -- TODO: Is it better to always set ' if we go below bot, and always not if we don't?
+    -- Not really how any other motion works though
+    -- Could do sneak style where only the initial command sets the pc mark
+    -- The problem is that, for big movements, we want to be able to revert, but we dont' want to
+    -- clog up the jump list for small ones
     if not opts.keepjumps then
         api.nvim_cmd({ cmd = "norm", args = { "m'" }, bang = true }, {})
     end
 
     ---@type string
     local selection = api.nvim_get_option_value("selection", { scope = "global" })
+    -- If operating backward, the cursor character should not be affected
     if opts.forward == 0 and is_omode and selection ~= "exclusive" then
         -- TODO: Use this for jump
         fn.searchpos("\\m.", "Wb", cur_pos[1])
@@ -207,39 +222,49 @@ end
 local function do_highlights(buf, labels)
     local extmark_opts = { priority = 1000 } ---@type vim.api.keyset.set_extmark
     local len_labels = labels[1]
-    local label_rows = labels[2]
-    local label_cols = labels[3]
-    local label_char_lens = labels[4]
-    local label_hl_ids = labels[5]
-
-    for i = 1, len_labels do
-        local col = label_cols[i]
-        extmark_opts.hl_group = label_hl_ids[i]
-        -- TODO: Should this be done here?
-        extmark_opts.end_col = col + label_char_lens[i]
-        pcall(api.nvim_buf_set_extmark, buf, hl_ns, label_rows[i], col, extmark_opts)
-    end
-end
-
----Edits token_counts and labels in place
----Start is one indexed, inclusive
----@param row_0 integer
----@param line string
----@param init integer
----@param max_count integer
----@param locator fun(codepoint: integer):boolean
----@param counts table<integer, integer>
----@param min_count integer
----@param labels farsight.csearch.TokenLabels
-local function add_labels_rev(row_0, line, init, max_count, locator, counts, min_count, labels)
     local l_rows = labels[2]
     local l_cols = labels[3]
     local l_char_lens = labels[4]
     local l_hl_ids = labels[5]
 
-    local candidate_col = -1
-    local candidate_len = -1
-    local candidate_count = maxcol
+    for i = 1, len_labels do
+        local col = l_cols[i]
+        extmark_opts.hl_group = l_hl_ids[i]
+        -- TODO: Should this be done here?
+        extmark_opts.end_col = col + l_char_lens[i]
+        pcall(api.nvim_buf_set_extmark, buf, hl_ns, l_rows[i], col, extmark_opts)
+    end
+end
+
+---@param row_0 integer
+---@param col integer
+---@param len_char integer
+---@param count integer
+---@param labels farsight.csearch.TokenLabels
+local function add_label(row_0, col, len_char, count, labels)
+    local new_label_len = labels[1] + 1
+
+    labels[1] = new_label_len
+    labels[2][new_label_len] = row_0
+    labels[3][new_label_len] = col
+    labels[4][new_label_len] = len_char
+    labels[5][new_label_len] = hl_map[count]
+end
+
+---Edits token_counts and labels in place
+---Init is one indexed, inclusive
+---@param row_0 integer
+---@param line string
+---@param init integer
+---@param locator fun(codepoint: integer):boolean
+---@param counts table<integer, integer>
+---@param min_count integer
+---@param max_count integer
+---@param labels farsight.csearch.TokenLabels
+local function add_labels_rev(row_0, line, init, locator, counts, min_count, max_count, labels)
+    local h_col = -1
+    local h_len = -1
+    local h_count = maxcol
 
     local i = init
     while i >= 1 do
@@ -247,29 +272,23 @@ local function add_labels_rev(row_0, line, init, max_count, locator, counts, min
         if b1 <= 0x80 or b1 >= 0xC0 then
             local char_nr, len_char = get_utf_codepoint(line, b1, i)
             if locator(char_nr) then
-                local char_token_count = counts[char_nr] or min_count
-                if char_token_count < max_count then
-                    local new_count = char_token_count + 1
+                local char_count = counts[char_nr] or min_count
+                if char_count < max_count then
+                    local new_count = char_count + 1
                     counts[char_nr] = new_count
 
-                    if new_count >= 1 and new_count <= candidate_count then
-                        candidate_col = i - 1
-                        candidate_len = len_char
-                        candidate_count = new_count
+                    if new_count >= 1 and new_count <= h_count then
+                        h_col = i - 1
+                        h_len = len_char
+                        h_count = new_count
                     end
                 end
             else
-                if candidate_count <= max_count then
-                    local new_label_len = labels[1] + 1
-                    labels[1] = new_label_len
-                    l_rows[new_label_len] = row_0
-                    l_cols[new_label_len] = candidate_col
-                    l_char_lens[new_label_len] = candidate_len
-                    l_hl_ids[new_label_len] = hl_map[candidate_count]
-
-                    candidate_col = -1
-                    candidate_len = -1
-                    candidate_count = maxcol
+                if h_count <= max_count then
+                    add_label(row_0, h_col, h_len, h_count, labels)
+                    h_col = -1
+                    h_len = -1
+                    h_count = maxcol
                 end
             end
         end
@@ -277,16 +296,11 @@ local function add_labels_rev(row_0, line, init, max_count, locator, counts, min
         i = i - 1
     end
 
-    if candidate_count > max_count then
+    if h_count > max_count then
         return
     end
 
-    local new_label_len = labels[1] + 1
-    labels[1] = new_label_len
-    l_rows[new_label_len] = row_0
-    l_cols[new_label_len] = candidate_col
-    l_char_lens[new_label_len] = candidate_len
-    l_hl_ids[new_label_len] = hl_map[candidate_count]
+    add_label(row_0, h_col, h_len, h_count, labels)
 end
 
 ---Edits token_counts and labels in place
@@ -294,36 +308,25 @@ end
 ---@param row_0 integer
 ---@param line string
 ---@param init integer
----@param max_count integer
 ---@param locator fun(codepoint: integer):boolean
 ---@param counts table<integer, integer>
 ---@param min_count integer
+---@param max_count integer
 ---@param labels farsight.csearch.TokenLabels
-local function add_all_labels_rev(row_0, line, init, max_count, locator, counts, min_count, labels)
-    local l_rows = labels[2]
-    local l_cols = labels[3]
-    local l_char_lens = labels[4]
-    local l_hl_ids = labels[5]
-
+local function add_all_labels_rev(row_0, line, init, locator, counts, min_count, max_count, labels)
     local i = init
     while i >= 1 do
         local b1 = str_byte(line, i)
         if b1 <= 0x80 or b1 >= 0xC0 then
             local char_nr, len_char = get_utf_codepoint(line, b1, i)
             if locator(char_nr) then
-                local char_token_count = counts[char_nr] or min_count
-                if char_token_count < max_count then
-                    local new_char_token_count = char_token_count + 1
-                    counts[char_nr] = new_char_token_count
+                local char_count = counts[char_nr] or min_count
+                if char_count < max_count then
+                    local new_count = char_count + 1
+                    counts[char_nr] = new_count
 
-                    local hl_id = hl_map[new_char_token_count]
-                    if hl_id then
-                        local new_label_len = labels[1] + 1
-                        labels[1] = new_label_len
-                        l_rows[new_label_len] = row_0
-                        l_cols[new_label_len] = i - 1
-                        l_char_lens[new_label_len] = len_char
-                        l_hl_ids[new_label_len] = hl_id
+                    if new_count > 0 then
+                        add_label(row_0, i - 1, len_char, new_count, labels)
                     end
                 end
             end
@@ -334,38 +337,28 @@ local function add_all_labels_rev(row_0, line, init, max_count, locator, counts,
 end
 
 ---Edits counts and labels in place
+---Init is one indexed, inclusive
 ---@param row_0 integer
 ---@param line string
 ---@param init integer
----@param max_count integer
 ---@param locator fun(codepoint: integer):boolean
 ---@param counts table<integer, integer>
 ---@param min_count integer
+---@param max_count integer
 ---@param labels farsight.csearch.TokenLabels
-local function add_all_labels_fwd(row_0, line, init, max_count, locator, counts, min_count, labels)
-    local len_line = #line
-    local l_rows = labels[2]
-    local l_cols = labels[3]
-    local l_char_lens = labels[4]
-    local l_hl_ids = labels[5]
-
+local function add_all_labels_fwd(row_0, line, init, locator, counts, min_count, max_count, labels)
     local i = init
+    local len_line = #line
     while i <= len_line do
         local char_nr, len_char = get_utf_codepoint(line, str_byte(line, i), i)
         if locator(char_nr) then
-            local char_token_count = counts[char_nr] or min_count
-            if char_token_count < max_count then
-                local new_char_token_count = char_token_count + 1
-                counts[char_nr] = new_char_token_count
+            local char_count = counts[char_nr] or min_count
+            if char_count < max_count then
+                local new_count = char_count + 1
+                counts[char_nr] = new_count
 
-                local hl_id = hl_map[new_char_token_count]
-                if hl_id then
-                    local new_label_len = labels[1] + 1
-                    labels[1] = new_label_len
-                    l_rows[new_label_len] = row_0
-                    l_cols[new_label_len] = i - 1
-                    l_char_lens[new_label_len] = len_char
-                    l_hl_ids[new_label_len] = hl_id
+                if new_count > 0 then
+                    add_label(row_0, i - 1, len_char, new_count, labels)
                 end
             end
         end
@@ -375,79 +368,63 @@ local function add_all_labels_fwd(row_0, line, init, max_count, locator, counts,
 end
 
 ---Edits counts and labels in place
+---Init is one indexed, inclusive
 ---@param row_0 integer
 ---@param line string
 ---@param init integer
----@param max_count integer
 ---@param locator fun(codepoint: integer):boolean
 ---@param counts table<integer, integer>
 ---@param min_count integer
+---@param max_count integer
 ---@param labels farsight.csearch.TokenLabels
-local function add_labels_fwd(row_0, line, init, max_count, locator, counts, min_count, labels)
-    local l_rows = labels[2]
-    local l_cols = labels[3]
-    local l_char_lens = labels[4]
-    local l_hl_ids = labels[5]
-
-    local candidate_col = -1
-    local candidate_len = -1
-    local candidate_count = maxcol
+local function add_labels_fwd(row_0, line, init, locator, counts, min_count, max_count, labels)
+    local h_col = -1
+    local h_len = -1
+    local h_count = maxcol
 
     local i = init
     local len_line = #line
     while i <= len_line do
         local char_nr, len_char = get_utf_codepoint(line, str_byte(line, i), i)
         if locator(char_nr) then
-            local char_token_count = counts[char_nr] or min_count
-            if char_token_count < max_count then
-                local new_count = char_token_count + 1
+            local char_count = counts[char_nr] or min_count
+            if char_count < max_count then
+                local new_count = char_count + 1
                 counts[char_nr] = new_count
 
-                if new_count >= 1 and new_count < candidate_count then
-                    candidate_col = i - 1
-                    candidate_len = len_char
-                    candidate_count = new_count
+                if new_count > 0 and new_count < h_count then
+                    h_col = i - 1
+                    h_len = len_char
+                    h_count = new_count
                 end
             end
         else
-            if candidate_col > -1 then
-                local new_label_len = labels[1] + 1
-                labels[1] = new_label_len
-                l_rows[new_label_len] = row_0
-                l_cols[new_label_len] = candidate_col
-                l_char_lens[new_label_len] = candidate_len
-                l_hl_ids[new_label_len] = hl_map[candidate_count]
-
-                candidate_col = -1
-                candidate_len = -1
-                candidate_count = maxcol
+            if h_count <= max_count then
+                add_label(row_0, h_col, h_len, h_count, labels)
+                h_col = -1
+                h_len = -1
+                h_count = maxcol
             end
         end
 
         i = i + len_char
     end
 
-    if candidate_count > max_count then
+    if h_count > max_count then
         return
     end
 
-    local new_label_len = labels[1] + 1
-    labels[1] = new_label_len
-    l_rows[new_label_len] = row_0
-    l_cols[new_label_len] = candidate_col
-    l_char_lens[new_label_len] = candidate_len
-    l_hl_ids[new_label_len] = hl_map[candidate_count]
+    add_label(row_0, h_col, h_len, h_count, labels)
 end
 
 ---Edits token_counts and labels in place
 ---@param buf integer
 ---@param cur_pos { [1]: integer, [2]: integer }
----@param max_count integer
 ---@param iterator function
----@param locator fun(codepoint: integer):boolean
 ---@param labels farsight.csearch.TokenLabels
+---@param opts farsight.csearch.CsearchOpts
 ---@return boolean
-local function get_labels_rev(buf, cur_pos, max_count, iterator, locator, labels)
+local function get_labels_rev(buf, cur_pos, iterator, labels, opts)
     local row = cur_pos[1]
     local col = cur_pos[2]
 
@@ -457,18 +434,28 @@ local function get_labels_rev(buf, cur_pos, max_count, iterator, locator, labels
     local lines = api.nvim_buf_get_lines(buf, top - 1, row, false)
 
     local foldclosed = fn.foldclosed
+    local locator = opts.locator
+    local max_tokens = opts.max_tokens
+    local skip_folds = opts.skip_folds
+
     local offset = top - 1
-    if foldclosed(row) == -1 then
+    local last_fold_row = foldclosed(row)
+    if last_fold_row == -1 or (skip_folds == false and last_fold_row == row) then
         local row_0 = row - 1
         local cur_idx = row - offset
-        iterator(row_0, lines[cur_idx], col, max_count, locator, counts, min_count, labels)
+        iterator(row_0, lines[cur_idx], col, locator, counts, min_count, max_tokens, labels)
+    end
+
+    if opts.single_line == true then
+        return true
     end
 
     for i = math.max(row - 1, 1), top, -1 do
-        if foldclosed(i) == -1 then
+        local fold_row = foldclosed(i)
+        if fold_row == -1 or (skip_folds == false and fold_row == i) then
             local row_0 = i - 1
             local line = lines[i - offset]
-            iterator(row_0, line, #line, max_count, locator, counts, min_count, labels)
+            iterator(row_0, line, #line, locator, counts, min_count, max_tokens, labels)
         end
     end
 
@@ -485,11 +472,10 @@ end
 ---@param buf integer
 ---@param cur_pos { [1]: integer, [2]: integer }
 ---@param iterator function
----@param max_tokens integer
----@param locator fun(codepoint: integer):boolean
 ---@param labels farsight.csearch.TokenLabels
+---@param opts farsight.csearch.CsearchOpts
 ---@return boolean
-local function get_labels_fwd(buf, cur_pos, max_tokens, iterator, locator, labels)
+local function get_labels_fwd(buf, cur_pos, iterator, labels, opts)
     local row = cur_pos[1]
     local col = cur_pos[2]
 
@@ -499,18 +485,28 @@ local function get_labels_fwd(buf, cur_pos, max_tokens, iterator, locator, label
     local lines = api.nvim_buf_get_lines(buf, row - 1, bot, false)
 
     local foldclosed = fn.foldclosed
-    if foldclosed(row) == -1 then
+    local locator = opts.locator
+    local max_tokens = opts.max_tokens
+    local skip_folds = opts.skip_folds
+
+    local first_fold_row = foldclosed(row)
+    if first_fold_row == -1 or (skip_folds == false and first_fold_row == row) then
         local row_0 = row - 1
         local line = lines[1]
-        iterator(row_0, line, col + 2, max_tokens, locator, counts, min_count, labels)
+        iterator(row_0, line, col + 2, locator, counts, min_count, max_tokens, labels)
+    end
+
+    if opts.single_line == true then
+        return true
     end
 
     local offset = row - 1
     for i = row + 1, bot do
-        if foldclosed(i) == -1 then
+        local fold_row = foldclosed(i)
+        if fold_row == -1 or (skip_folds == false and fold_row == i) then
             local row_0 = i - 1
             local line = lines[i - offset]
-            iterator(row_0, line, 1, max_tokens, locator, counts, min_count, labels)
+            iterator(row_0, line, 1, locator, counts, min_count, max_tokens, labels)
         end
     end
 
@@ -530,7 +526,7 @@ local function get_labels_fwd(buf, cur_pos, max_tokens, iterator, locator, label
 
     local old_len_labels = labels[1]
     local fill_line = api.nvim_buf_get_lines(buf, fill_row - 1, fill_row, false)[1]
-    iterator(row, fill_line, 1, max_tokens, locator, counts, min_count, labels)
+    iterator(row, fill_line, 1, locator, counts, min_count, max_tokens, labels)
     if labels[1] > old_len_labels then
         return false
     else
@@ -564,15 +560,17 @@ local function checked_show_hl(win, buf, cur_pos, opts)
     }
 
     local valid
-    local locator = opts.locator ---@type fun(codepoint: integer):boolean
-    local max_tokens = opts.max_tokens ---@type integer
+    local start_time = vim.uv.hrtime()
     if opts.forward == 1 then
         local iterator = opts.all_tokens and add_all_labels_fwd or add_labels_fwd
-        valid = get_labels_fwd(buf, cur_pos, max_tokens, iterator, locator, labels)
+        valid = get_labels_fwd(buf, cur_pos, iterator, labels, opts)
     else
         local iterator = opts.all_tokens and add_all_labels_rev or add_labels_rev
-        valid = get_labels_rev(buf, cur_pos, max_tokens, iterator, locator, labels)
+        valid = get_labels_rev(buf, cur_pos, iterator, labels, opts)
     end
+    local end_time = vim.uv.hrtime()
+    local duration_ms = (end_time - start_time) / 1e6
+    print(string.format("hl_forward took %.2f ms", duration_ms))
 
     if labels[1] > 0 then
         api.nvim__ns_set(hl_ns, { wins = { win } })
@@ -652,6 +650,12 @@ local function resolve_csearch_opts(opts, cur_buf)
     opts.show_hl = ut._use_gb_if_nil(opts.show_hl, "farsight_csearch_show_hl", cur_buf)
     opts.show_hl = ut._resolve_bool_opt(opts.show_hl, true)
 
+    opts.single_line = ut._use_gb_if_nil(opts.single_line, "farsight_csearch_single_line", cur_buf)
+    opts.single_line = ut._resolve_bool_opt(opts.single_line, false)
+
+    opts.skip_folds = ut._use_gb_if_nil(opts.skip_folds, "farsight_csearch_skip_folds", cur_buf)
+    opts.skip_folds = ut._resolve_bool_opt(opts.skip_folds, false)
+
     resolve_locator(cur_buf, opts)
 
     opts["until"] = opts["until"] or 0
@@ -666,16 +670,20 @@ end
 local Csearch = {}
 
 -- TODO: Document these
+-- TODO: Skip folds and single line need to be integrated into BaseOpts validation
 
 ---@class farsight.csearch.BaseOpts
 ---@field forward? 0|1
 ---@field keepjumps? boolean
 ---@field on_jump? fun(win: integer, buf: integer, pos: { [1]: integer, [2]: integer })
+---@field skip_folds? boolean
+---@field single_line? boolean
 ---@field package until_skip? boolean
 
 -- TODO: Document these
 -- TODO: Document specifically that the csearch input is taken with simplify = false, which
 -- affects the comparisons for actions
+-- TODO: Order these in a way where the explanations build on each other
 
 ---@class farsight.csearch.CsearchOpts : farsight.csearch.BaseOpts
 ---@field actions? table<string, fun(win: integer, buf: integer,
@@ -750,12 +758,19 @@ function Csearch.rep(opts)
     local cur_win = api.nvim_get_current_win()
     local cur_buf = api.nvim_win_get_buf(cur_win)
 
+    -- TODO: There's enough here that I think you do base_opts as its own validation inside the
+    -- bigger csearch opts function. Just make sure csearch doesn't have any differences from
+    -- repeat
     local ut = require("farsight.util")
     opts.keepjumps = ut._use_gb_if_nil(opts.keepjumps, "farsight_csearch_keepjumps", cur_buf)
     opts.keepjumps = ut._resolve_bool_opt(opts.keepjumps, true)
     opts.on_jump = ut._use_gb_if_nil(opts.on_jump, "farsight_csearch_on_jump", cur_buf)
     opts.on_jump = opts.on_jump or function() end
     vim.validate("opts.on_jump", opts.on_jump, "callable")
+    opts.skip_folds = ut._use_gb_if_nil(opts.skip_folds, "farsight_csearch_skip_folds", cur_buf)
+    opts.skip_folds = ut._resolve_bool_opt(opts.skip_folds, false)
+    opts.single_line = ut._use_gb_if_nil(opts.single_line, "farsight_csearch_single_line", cur_buf)
+    opts.single_line = ut._resolve_bool_opt(opts.single_line, false)
 
     local charsearch = fn.getcharsearch()
     local char = charsearch.char
@@ -779,6 +794,9 @@ end
 
 return Csearch
 
+-- TODO: DOCUMENT: When skip_folds = false, only the first line of the fold is used. Highlighting
+-- on folds is not supported, though future highlights will be accurate
+-- TODO: DOCUMENT: Nested folds are not used
 -- TODO: For per unit token placement, do you favor the beginning or the end of a unit? Null
 -- hypothesis is that beginning of a unit is best. But if your doing a visual f motion, might you
 -- want the end? I'm fine with tabling this, but want to think through the use cases
@@ -787,7 +805,6 @@ return Csearch
 -- TODO: For my personal purposes, do I want to use isprint instead of isk? Too noisy as a default.
 -- Raise broader question though - What if a user does want to do this? Are the functions exposed
 -- that allow them to do this?
--- TODO: Document that fold lines are ignored
 -- TODO: Add one-per-unit token highlighting
 -- TODO: Rename parse_isk to parse_isopt so it's useful with isprint. Make a public interface
 -- for it
@@ -798,7 +815,6 @@ return Csearch
 --   - By default, the line should still be highlighted like a fold
 -- - Display relevant tokens at the beginning like jump does
 -- Same ideas could be applied to jump
--- MID: Support single-line. Depends on a fold support solution
 
 -- LOW: Could default size the label arrays as 512 if one of the following conditions are met:
 -- - keymap ~= ""
