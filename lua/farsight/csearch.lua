@@ -729,7 +729,6 @@ function Csearch.csearch(opts)
     resolve_csearch_opts(opts, cur_buf)
 
     local char = nil
-    -- Only get once, since Nvim's internal state has no guarantees
     local is_repeating = get_repeat_state()
     if is_repeating == 1 then
         char = fn.getcharsearch().char
@@ -743,6 +742,10 @@ function Csearch.csearch(opts)
         local valid = checked_show_hl(cur_win, cur_buf, cur_pos, opts)
         _, char = pcall(fn.getcharstr, -1)
         checked_clear_hl(cur_win, cur_buf, opts.show_hl, valid)
+    end
+
+    if char == "\3" then
+        return
     end
 
     if is_repeating == 0 then

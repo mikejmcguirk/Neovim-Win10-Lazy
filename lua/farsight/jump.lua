@@ -16,7 +16,6 @@ local fn = vim.fn
 local DEFAULT_MAX_TOKENS = 2
 local TOKENS = vim.split("abcdefghijklmnopqrstuvwxyz", "")
 
--- TODO: Document these HL groups
 local HL_JUMP_STR = "FarsightJump"
 local HL_JUMP_AHEAD_STR = "FarsightJumpAhead"
 local HL_JUMP_TARGET_STR = "FarsightJumpTarget"
@@ -248,6 +247,10 @@ local function get_jump_info(win_targets)
     return j_win, j_row, j_col
 end
 
+-- LOW: Rather than doing this, it could be possible to incrementally build/edit the virtual text.
+-- But this would require doing surgery on the virtual text chunks, to optimize the part of the
+-- jump where, likely, the amount of remaining targets is probably not all that much
+
 ---Edits win_targets in place
 ---@param win_targets table<integer, farsight.jump.Targets>
 local function clear_target_virt_text(win_targets)
@@ -272,6 +275,8 @@ local function filter_dim_rows(win_targets, win_dim_rows)
     for win, dim_rows in pairs(win_dim_rows) do
         local targets = win_targets[win]
         if not targets then
+            win_dim_rows[win] = nil
+        else
             local cur_rows = {} ---@type table<integer, boolean>
             local target_rows = targets[2]
             local len_target_rows = #target_rows
@@ -282,8 +287,6 @@ local function filter_dim_rows(win_targets, win_dim_rows)
             list_filter(dim_rows, function(row)
                 return cur_rows[row] == true
             end)
-        else
-            win_dim_rows[win] = nil
         end
     end
 end
@@ -808,6 +811,9 @@ local function get_cols_after(buf, line, cur_pos, locator, isk_tbl)
     local _, fin_ = find_cword_around_col(line, cur_pos[2], isk_tbl)
     local start_col_1 = fin_ > -1 and fin_ + 1 or cur_pos[2]
 
+    -- TODO:
+    -- From the user customization standpoint, what is the better method? Do we say that it's
+    -- better to send partial strings or an init value?
     local line_after = str_sub(line, start_col_1, #line)
     local cols = locator(buf, line_after, cur_pos[1], cur_pos, isk_tbl)
     local count_cols = #cols
@@ -821,7 +827,7 @@ end
 ---Assumes it is called in the window context of the relevant win
 ---@param dir -1|0|1
 ---@return integer, integer, integer
-local function get_adjusted_top_bot(dir, cur_pos)
+local function get_top_bot(dir, cur_pos)
     local fn_line = fn.line
     local wS = fn_line("w$")
     if dir == 1 then
@@ -876,7 +882,7 @@ local function get_targets(wins, win_info, opts)
         local offset
 
         nvim_win_call(win, function()
-            local top, bot, wS = get_adjusted_top_bot(dir, cur_pos)
+            local top, bot, wS = get_top_bot(dir, cur_pos)
             -- +1 because math, +1 for potential wrap line, +1 because "table.new" is zero indexed
             all_cols = table_new(bot - top + 3, 0)
             local lines = nvim_buf_get_lines(buf, top - 1, bot, false)
@@ -1054,9 +1060,6 @@ local function resolve_locator(opts, cur_buf, map_mode)
     vim.validate("opts.locator", opts.locator, "callable")
 end
 
--- TODO: In the docs, mention g/b:vars when relevant. Don't waste time mentioning when they are
--- missing
-
 ---Edits opts in place
 ---@param opts farsight.jump.JumpOpts
 ---@param map_mode "n"|"v"|"o"|"l"|"t"|"x"|"s"|"i"|"c"
@@ -1143,16 +1146,9 @@ end
 
 return Jump
 
--- TODO: Document a couple locator examples:
--- - CWORD
--- - Sneak style
--- TODO: Show how to do two-character search like vim sneak/vim-seek
--- TODO: Go through the extmark opts doc to see what works here
+-- TODO: Show a CWORD locator example
 -- TODO: Test/document dot repeat behavior
--- TODO: Document how the focusable wins filtering works
--- TODO: What is the default max tokens to show?
--- TODO: WHen doing default mappings, can the unique flag be used rather than maparg to check if
--- it's already been mapped?
+-- TODO: For wins, document that they must all be in the current tab and focusable
 -- TODO: Document that backup csearch jumps do not set charsearch
 -- TODO: Fold options
 -- - Ignore
