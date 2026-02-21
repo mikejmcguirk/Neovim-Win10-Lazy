@@ -100,3 +100,10 @@ function M._do_jump(cur_win, jump_win, buf, map_mode, cur_pos, jump_pos, opts)
 end
 
 return M
+
+-- TODO: This module can be useful for outlining pieces of logic common to csearch, search, and
+-- jump. Wait though until all three modules are completed before doing such a conceptual refactor.
+-- Ideas:
+-- - The backward cursor correction + visual entrance for omode jumps. If/when it's outlined, put
+-- a comment talking about how the use of that code assumes that we have already early-exited from
+-- invalid backward jumps.

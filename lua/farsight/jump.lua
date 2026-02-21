@@ -203,20 +203,63 @@ end
 
 ---@param jump_win integer
 ---@param buf integer
----@param row_0 integer
----@param col integer
+---@param jump_row_0 integer
+---@param jump_col integer
 ---@param map_mode "n"|"v"|"o"|"l"|"t"|"x"|"s"|"i"|"c"
 ---@param opts farsight.jump.JumpOpts
 ---@return nil
-local function do_jump(jump_win, buf, row_0, col, map_mode, opts)
+local function do_jump(jump_win, buf, jump_row_0, jump_col, map_mode, opts)
     local cur_win = api.nvim_get_current_win()
     local cur_pos = api.nvim_win_get_cursor(cur_win)
-    local jump_pos = { row_0 + 1, col }
+    local cur_row = cur_pos[1]
+    local cur_col = cur_pos[2]
+    local jump_row = jump_row_0 + 1
 
-    ---@type farsight._common.DoJumpOpts
-    local jump_opts = { on_jump = opts.on_jump, keepjumps = opts.keepjumps }
-    local common = require("farsight._common")
-    common._do_jump(cur_win, jump_win, buf, map_mode, cur_pos, jump_pos, jump_opts)
+    if cur_win ~= jump_win then
+        api.nvim_set_current_win(jump_win)
+        -- As far as I know, changing windows always changes the state to normal mode.
+        map_mode = "n"
+    end
+
+    local jump_pos = { jump_row, jump_col }
+    if cur_row == jump_row and cur_col == jump_col then
+        -- By not going into visual mode, the current character is properly captured when
+        -- performing an operator motion only on the cursor column.
+        opts.on_jump(jump_win, buf, jump_pos)
+        return
+    end
+
+    -- Because jumplists are scoped per window, setting the pcmark in the window being left doesn't
+    -- provide anything useful. By setting the pcmark in the window where the jump is performed,
+    -- the user is provided the ability to undo the jump
+    if not opts.keepjumps then
+        -- FUTURE: When the updated mark API is released, see if that can be used to set the
+        -- pcmark correctly
+        api.nvim_cmd({ cmd = "norm", args = { "m`" }, bang = true }, {})
+    end
+
+    if map_mode == "o" then
+        ---@type string
+        local selection = api.nvim_get_option_value("selection", { scope = "global" })
+        local is_backward = jump_row < cur_row or (jump_row == cur_row and jump_col < cur_col)
+
+        -- If operating backward, the cursor character should not be affected.
+        if selection ~= "exclusive" and is_backward then
+            fn.searchpos("\\m.", "Wb", cur_row)
+        -- Make sure the end of the operated range is included.
+        elseif selection == "exclusive" and not is_backward then
+            local line = api.nvim_buf_get_lines(buf, jump_pos[1] - 1, jump_pos[1], false)[1]
+            -- Do this way rather than with searchpos() for control and to avoid a double move.
+            -- Exclusive selections can go one past the line boundary.
+            jump_pos[2] = math.min(jump_pos[2] + 1, #line)
+        end
+
+        -- Always use visual mode for consistency/control over the selected text.
+        api.nvim_cmd({ cmd = "norm", args = { "v" }, bang = true }, {})
+    end
+
+    api.nvim_win_set_cursor(jump_win, jump_pos)
+    opts.on_jump(jump_win, buf, jump_pos)
 end
 
 ---j_win == -1 if no targets remain, 0 if multiple targets remain, and >= 1000 if only one target
@@ -811,9 +854,15 @@ local function get_cols_after(buf, line, cur_pos, locator, isk_tbl)
     local _, fin_ = find_cword_around_col(line, cur_pos[2], isk_tbl)
     local start_col_1 = fin_ > -1 and fin_ + 1 or cur_pos[2]
 
-    -- TODO:
-    -- From the user customization standpoint, what is the better method? Do we say that it's
-    -- better to send partial strings or an init value?
+    -- TODO: Provide init and end indexes to the locator. Unsure on indexing/exclusivity. Should
+    -- be based on what's most useful to the user, so look at matchstrpos, vim.regex, and whatever
+    -- else they might use. This saves an annoying and weird assumption that you might not always
+    -- get the full line, while still allowing deterministic searching for lines where the whole
+    -- thing is not meant to be searched. These variables then need to be put into the function
+    -- signature and documented.
+    -- TODO: Do not pass isk_tbl to the locator. My functions need to get at it a different way.
+    -- If we make a public interface for isk, demonstrate how to use it. It's wasteful if the
+    -- user doesn't need it and aesthetically arbitrary.
     local line_after = str_sub(line, start_col_1, #line)
     local cols = locator(buf, line_after, cur_pos[1], cur_pos, isk_tbl)
     local count_cols = #cols
@@ -1012,7 +1061,12 @@ local function resolve_on_jump(opts, cur_buf)
     opts.on_jump = ut._use_gb_if_nil(opts.on_jump, "farsight_on_jump", cur_buf)
     if opts.on_jump == nil then
         opts.on_jump = function(_, _, _)
-            api.nvim_cmd({ cmd = "norm", args = { "zv" }, bang = true }, {})
+            local fdo = api.nvim_get_option_value("fdo", { scope = "global" })
+            local all, _, _ = string.find(fdo, "all", 1, true)
+            local jump, _, _ = string.find(fdo, "jump", 1, true)
+            if all or jump then
+                api.nvim_cmd({ cmd = "norm", args = { "zv" }, bang = true }, {})
+            end
         end
 
         return
@@ -1093,6 +1147,9 @@ end
 ---@class farsight.StepJump
 local Jump = {}
 
+-- TODO: DOCUMENT: Wait to document the opts until the docgen method is figured out vis-a-vis the
+-- g:vars. I want to avoid writing redundant text.
+
 ---@class farsight.jump.JumpOpts
 ---The input row argument is one indexed
 ---This function will be called in the window context being evaluated. This means, for example,
@@ -1146,17 +1203,11 @@ end
 
 return Jump
 
--- TODO: Show a CWORD locator example
--- TODO: Test/document dot repeat behavior
--- TODO: For wins, document that they must all be in the current tab and focusable
--- TODO: Document that backup csearch jumps do not set charsearch
--- TODO: Fold options
--- - Ignore
--- - Zero
--- - First row (csearch behavior)
--- Still unsure how to handle fdo
-
--- MID: For the backup csearch jump, should jumps from t motions offset?
+-- TODO: DOCUMENT: Show a CWORD locator example
+-- TODO: DOCUMENT: Dot repeats always prompt for a label.
+-- TODO: DOCUMENT: If any provided wins are not in the current tabpage, an error will be raised. If
+-- none of the wins are focusable, the function will early exit.
+-- TODO: DOCUMENT: Like csearch, default on_jump checks fdo.
 
 -- LOW: Allow a list of wins not in the current tabpage to be passed to the jump function, assuming
 -- they are all part of the same tabpage. Make advance_jump change tabpages before displaying

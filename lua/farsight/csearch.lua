@@ -143,18 +143,18 @@ local function do_csearch(win, buf, cur_pos, char, opts)
         return
     end
 
-    if jump_pos[1] ~= cur_pos[1] and not opts.keepjumps and not is_omode then
+    if jump_pos[1] ~= cur_pos[1] and not opts.keepjumps then
         api.nvim_cmd({ cmd = "norm", args = { "m'" }, bang = true }, {})
     end
 
-    ---@type string
-    local selection = api.nvim_get_option_value("selection", { scope = "global" })
-    -- If operating backward, the cursor character should not be affected
-    if opts.forward == 0 and is_omode and selection ~= "exclusive" then
-        fn.searchpos("\\m.", "Wb", cur_pos[1])
-    end
-
     if is_omode then
+        -- If operating backward, the cursor character should not be affected
+        ---@type string
+        local selection = api.nvim_get_option_value("selection", { scope = "global" })
+        if opts.forward == 0 and selection ~= "exclusive" then
+            fn.searchpos("\\m.", "Wb", cur_pos[1])
+        end
+
         api.nvim_cmd({ cmd = "norm", args = { "v" }, bang = true }, {})
     end
 
@@ -586,7 +586,7 @@ local function resolve_base_opts(opts, cur_buf)
 
     opts.on_jump = ut._use_gb_if_nil(opts.on_jump, "farsight_csearch_on_jump", cur_buf)
     if opts.on_jump == nil then
-        opts.on_jump = function()
+        opts.on_jump = function(_, _, _)
             ---@type string
             local fdo = api.nvim_get_option_value("fdo", { scope = "global" })
             local all, _, _ = string.find(fdo, "all", 1, true)
