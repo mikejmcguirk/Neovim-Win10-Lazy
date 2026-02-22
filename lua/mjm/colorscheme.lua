@@ -17,6 +17,7 @@ local l_cyan = "#98FFFB" ---@type string
 local cyan = "#558396" ---@type string
 local l_green = "#C0FF98" ---@type string
 local green = "#579964" ---@type string
+local bold_green = "#3F7046"
 local l_orange = "#FFD298" ---@type string
 local orange = "#967A55" ---@type string
 local orange_fg = "#FFF0E0" ---@type string

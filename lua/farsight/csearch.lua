@@ -34,38 +34,7 @@ local get_utf_codepoint = require("farsight._util_char")._get_utf_codepoint
 local maxcol = vim.v.maxcol
 local str_byte = string.byte
 
-local on_key_repeating = 0 ---@type 0|1
-local function get_repeat_state()
-    return on_key_repeating
-end
-
-local function setup_repeat_tracking()
-    local has_ffi, ffi = pcall(require, "ffi")
-    if has_ffi then
-        -- Dot repeats move their text from the repeat buffer to the stuff buffer for execution.
-        -- When chars are processed from that buffer, the KeyStuffed global is set to 1.
-        -- searchc in search.c checks this value for redoing state.
-        if pcall(ffi.cdef, "int KeyStuffed;") then
-            get_repeat_state = function()
-                return ffi.C.KeyStuffed --[[@as 0|1]]
-            end
-
-            return
-        end
-    end
-
-    -- Credit folke/flash
-    vim.on_key(function(key)
-        if key == "." and fn.reg_executing() == "" and fn.reg_recording() == "" then
-            on_key_repeating = 1
-            vim.schedule(function()
-                on_key_repeating = 0
-            end)
-        end
-    end)
-end
-
-setup_repeat_tracking()
+require("farsight._common").setup_repeat_tracking()
 
 ---@param char string
 ---@param is_omode boolean
@@ -533,14 +502,9 @@ local function checked_show_hl(win, buf, cur_pos, opts)
         return true
     end
 
+    local tn = require("farsight.util")._table_new
     ---@type farsight.csearch.TokenLabels
-    local labels = {
-        0,
-        require("farsight.util")._table_new(256, 0),
-        require("farsight.util")._table_new(256, 0),
-        require("farsight.util")._table_new(256, 0),
-        require("farsight.util")._table_new(256, 0),
-    }
+    local labels = { 0, tn(256, 0), tn(256, 0), tn(256, 0), tn(256, 0) }
 
     local valid
     if opts.forward == 1 then
@@ -729,7 +693,7 @@ function Csearch.csearch(opts)
     resolve_csearch_opts(opts, cur_buf)
 
     local char = nil
-    local is_repeating = get_repeat_state()
+    local is_repeating = require("farsight._common").get_is_repeating()
     if is_repeating == 1 then
         char = fn.getcharsearch().char
         if char == "" then

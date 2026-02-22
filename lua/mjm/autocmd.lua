@@ -4,7 +4,6 @@ local mjm_group = api.nvim_create_augroup("mjm-group", {})
 
 local clear_conditions = {
     "BufEnter",
-    "CmdlineEnter",
     "InsertEnter",
     "RecordingEnter",
     "TabLeave",

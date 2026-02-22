@@ -270,7 +270,15 @@ return {
         -- a treeclimber or Neovim issue
         "Dkendal/nvim-treeclimber",
         init = function()
-            api.nvim_set_var("treeclimber", { highlight = false })
+            -- Set to an empty function to prevent the default hl mixing from running. This fails,
+            -- I suspect, because I have a lot of transparent highlighting set
+            api.nvim_set_var("treeclimber", { highlight = function() end })
+
+            api.nvim_set_hl(0, "TreeClimberParent", { link = "Search" })
+            api.nvim_set_hl(0, "TreeClimberParentStart", { link = "Search" })
+            api.nvim_set_hl(0, "TreeClimberSibling", { fg = "#FFF0E0", bg = "#3F7046" })
+            api.nvim_set_hl(0, "TreeClimberSiblingBoundary", { fg = "#FFF0E0", bg = "#3F7046" })
+
             api.nvim_create_autocmd("FileType", {
                 group = api.nvim_create_augroup("mjm-map-climber", {}),
                 pattern = fts,

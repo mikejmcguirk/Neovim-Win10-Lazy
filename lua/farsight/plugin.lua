@@ -135,6 +135,9 @@ end
 -- local duration_ms = (end_time - start_time) / 1e6
 -- print(string.format("hl_forward took %.2f ms", duration_ms))
 
+-- TODO: For vim.fn calls in tight loops, maybe use the function call API, since I believe that
+-- requires less overhead. You could also skip the vim.fn. metatable and use the underlying one
+-- it wraps, saving a layer of indirection.
 -- TODO: Refactor with DoD concepts. Non-trivial gains:
 -- - Can load parts of SoA into sub functions
 -- - Easier to make smaller loops

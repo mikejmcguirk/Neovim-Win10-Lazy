@@ -12,6 +12,14 @@ api.nvim_set_hl(0, "FarsightCsearch1st", { reverse = true })
 api.nvim_set_hl(0, "FarsightCsearch2nd", { undercurl = true })
 api.nvim_set_hl(0, "FarsightCsearch3rd", { underdouble = true })
 
+set({ "n", "x" }, "/", function()
+    require("farsight.search").search(true)
+end)
+
+set({ "n", "x" }, "?", function()
+    require("farsight.search").search(false)
+end)
+
 -- local function sneak_locator(sneak_text, row, line)
 --     -- Valid since the locator function is called in the proper window context
 --     if vim.fn.prevnonblank(row) ~= row or vim.fn.foldclosed(row) ~= -1 then

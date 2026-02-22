@@ -414,8 +414,8 @@ set("n", "n", "nzzzv")
 set("n", "N", "Nzzzv")
 
 -- Not silent so that the search prompting displays properly
-set("n", "/", "ms/")
-set("n", "?", "ms?")
+-- set("n", "/", "ms/")
+-- set("n", "?", "ms?")
 
 -- LOW: Why does [s]s navigation work in some buffers but not others?
 set("n", "[w", "[s")

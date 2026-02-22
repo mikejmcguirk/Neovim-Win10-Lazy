@@ -46,6 +46,7 @@ local function bisearch_ranges(target, ranges)
     return nil
 end
 
+---Does not return a char length that goes over the line length
 ---@param line string
 ---@param b1 integer
 ---@param idx integer One indexed
