@@ -23,13 +23,6 @@ api.nvim_create_autocmd(clear_conditions, {
     end),
 })
 
-api.nvim_create_autocmd("TextYankPost", {
-    group = mjm_group,
-    callback = function()
-        vim.hl.on_yank({ timeout = 175 })
-    end,
-})
-
 api.nvim_create_autocmd("BufWinEnter", {
     group = mjm_group,
     callback = function(ev)
