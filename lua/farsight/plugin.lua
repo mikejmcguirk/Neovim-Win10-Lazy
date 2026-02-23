@@ -135,6 +135,9 @@ end
 -- local duration_ms = (end_time - start_time) / 1e6
 -- print(string.format("hl_forward took %.2f ms", duration_ms))
 
+-- TODO: Functionalities to try putting into common
+-- - Dimming. Could have a function that takes a row list, ns, and hl_group and runs through
+-- setting the extmarks. Also have it take a dim opt
 -- TODO: For vim.fn calls in tight loops, maybe use the function call API, since I believe that
 -- requires less overhead. You could also skip the vim.fn. metatable and use the underlying one
 -- it wraps, saving a layer of indirection.

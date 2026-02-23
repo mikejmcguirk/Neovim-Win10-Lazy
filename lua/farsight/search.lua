@@ -11,8 +11,16 @@ local fn = vim.fn
 -- TODO: Should be an opt as well
 local TIMEOUT = 500
 
+local HL_SEARCH_DIM_STR = "FarsightJumpDim"
+
+api.nvim_set_hl(0, HL_SEARCH_DIM_STR, { default = true, link = "Comment" })
+
+local nvim_get_hl_id_by_name = api.nvim_get_hl_id_by_name
+local hl_dim = nvim_get_hl_id_by_name(HL_SEARCH_DIM_STR)
+
 local group = api.nvim_create_augroup("farsight-search-hl", {})
 local search_ns = api.nvim_create_namespace("farsight-search-hl")
+local dim_ns = api.nvim_create_namespace("farsight-search-dim")
 
 ---@param cmdprompt string
 ---@param cmdline string
@@ -150,6 +158,28 @@ local get_hl_info = (function()
 end)()
 
 ---@param buf integer
+---@param dim boolean
+---@param dim_rows integer[]
+local function checked_set_dim_row_extmarks(buf, dim, dim_rows)
+    if not dim then
+        return
+    end
+
+    local nvim_buf_set_extmark = api.nvim_buf_set_extmark
+    local extmark_opts = {
+        end_col = 0,
+        hl_eol = true,
+        hl_group = hl_dim,
+        priority = 999,
+    }
+
+    for row, _ in pairs(dim_rows) do
+        extmark_opts.end_line = row + 1
+        pcall(nvim_buf_set_extmark, buf, dim_ns, row, 0, extmark_opts)
+    end
+end
+
+---@param buf integer
 ---@param hl_info farsight.search.HlInfo
 local function set_search_extmarks(buf, hl_info)
     local len_hl_info = hl_info[1]
@@ -181,6 +211,31 @@ local function set_search_extmarks(buf, hl_info)
         extmark_opts.end_col = hl_fin_cols[i]
         pcall(api.nvim_buf_set_extmark, buf, search_ns, hl_rows[i], hl_cols[i], extmark_opts)
     end
+end
+
+---@param hl_info farsight.search.HlInfo
+---@param dim boolean
+---@return table<integer, boolean>
+local function checked_get_dim_rows(hl_info, dim)
+    -- LOW: Is this the most efficient way to do this?
+    local rows = {} ---@type table<integer, boolean>
+    if not dim then
+        return rows
+    end
+
+    local len_hl_info = hl_info[1]
+    local hl_rows = hl_info[2]
+    local hl_fin_rows = hl_info[4]
+
+    for i = 1, len_hl_info do
+        local row = hl_rows[i]
+        local fin_row = hl_fin_rows[i]
+        for j = row, fin_row do
+            rows[j] = true
+        end
+    end
+
+    return rows
 end
 
 ---Edits hl_info in place
@@ -265,6 +320,15 @@ local function echo_no_ok(cmdprompt, cmdline, hl_info)
     api.nvim_echo({ { err_str, "ErrorMsg" } }, true, {})
 end
 
+---@param buf integer
+---@param dim boolean
+local function checked_clear_namespaces(buf, dim)
+    api.nvim_buf_clear_namespace(buf, search_ns, 0, -1)
+    if dim then
+        api.nvim_buf_clear_namespace(buf, dim_ns, 0, -1)
+    end
+end
+
 ---@param cmdprompt string
 ---@param cmdline_raw string
 ---@return string, string
@@ -300,7 +364,8 @@ end
 ---@param win integer
 ---@param buf integer
 ---@param prompt string
-local function display_search_highlights(win, buf, prompt)
+---@param opts farsight.search.SearchOpts
+local function display_search_highlights(win, buf, prompt, opts)
     local cmdprompt = fn.getcmdprompt()
     if cmdprompt ~= prompt then
         -- If this actually happens, I would want as much info about Nvim's state as possible, so
@@ -312,6 +377,7 @@ local function display_search_highlights(win, buf, prompt)
     api.nvim_buf_clear_namespace(buf, search_ns, 0, -1)
     local cmdline_raw = fn.getcmdline()
     if cmdline_raw == "" then
+        checked_clear_namespaces(buf, opts.dim)
         api.nvim__redraw({ valid = true, win = win })
         return
     end
@@ -320,6 +386,7 @@ local function display_search_highlights(win, buf, prompt)
     local ok, hl_info = get_hl_info(cmdprompt, cmdline)
     local len_hl_info = hl_info[1]
     if not ok then
+        checked_clear_namespaces(buf, opts.dim)
         if len_hl_info > 0 then
             echo_no_ok(cmdprompt, cmdline, hl_info)
         end
@@ -330,7 +397,11 @@ local function display_search_highlights(win, buf, prompt)
 
     hl_info_cleanup(hl_info)
     adjust_fin_cols(buf, hl_info)
+    local dim_rows = checked_get_dim_rows(hl_info, opts.dim)
+
+    checked_clear_namespaces(buf, opts.dim)
     set_search_extmarks(buf, hl_info)
+    checked_set_dim_row_extmarks(buf, opts.dim, dim_rows)
 
     api.nvim__redraw({ valid = true, win = win })
 end
@@ -345,52 +416,85 @@ end
 ---@param win integer
 ---@param buf integer
 ---@param prompt string
-local function create_search_listener(win, buf, prompt)
+---@param opts farsight.search.SearchOpts
+local function create_search_listener(win, buf, prompt, opts)
     api.nvim_create_autocmd("CmdlineChanged", {
         group = group,
         desc = "Highlight search terms",
         callback = function()
-            display_search_highlights(win, buf, prompt)
+            display_search_highlights(win, buf, prompt, opts)
             -- TODO: Pass opts into the top level function, display labels and set them up
             -- if true
         end,
     })
 end
 
+---@param win integer
+---@param dim boolean
+local function checked_ns_set(win, dim)
+    api.nvim__ns_set(search_ns, { wins = { win } })
+    if dim then
+        api.nvim__ns_set(dim_ns, { wins = { win } })
+    end
+end
+
+---@param cur_buf integer
+---@param opts farsight.search.SearchOpts
+local function resolve_search_opts(cur_buf, opts)
+    vim.validate("opts", opts, "table")
+    local ut = require("farsight.util")
+
+    opts.dim = ut._use_gb_if_nil(opts.dim, "farsight_search_dim", cur_buf)
+    opts.dim = ut._resolve_bool_opt(opts.dim, false)
+
+    -- TODO: Add keepjumps option. How to make work with feedkeys?
+end
+
 local M = {}
 
-function M.search(fwd)
-    api.nvim_buf_clear_namespace(0, search_ns, 0, -1)
+---@class farsight.search.SearchOpts
+---Dim lines with targeted characters (Default: `false`)
+---@field dim? boolean
+
+---@param fwd boolean
+---@param opts? farsight.search.SearchOpts
+function M.search(fwd, opts)
+    opts = opts and vim.deepcopy(opts) or {}
+    local cur_win = api.nvim_get_current_win()
+    local cur_buf = api.nvim_win_get_buf(cur_win)
+    resolve_search_opts(cur_buf, opts)
+
     -- TODO: Check if we are dot repeating or in a macro. If so, check if the "/" register has
     -- contents. If so, search for that and return.
     -- NOTE: Forward searches operate until just before the term. Backard searches operate until
     -- and including the beginning of the term.
     -- Since this is a direct search, wrapscan needs to be handled
 
-    local cur_win = api.nvim_get_current_win()
-    api.nvim__ns_set(search_ns, { wins = { cur_win } })
-    local cur_buf = api.nvim_win_get_buf(cur_win)
+    checked_clear_namespaces(0, opts.dim)
+    checked_ns_set(cur_win, opts.dim)
+
     local prompt = fwd and "/" or "?"
-    create_search_listener(cur_win, cur_buf, prompt)
+    create_search_listener(cur_win, cur_buf, prompt, opts)
 
     -- pcall so that pressing Ctrl+c does not enter error
     local ok, pattern_raw = pcall(fn.input, prompt)
 
     del_search_listener()
-
     local pattern, _ = parse_search_offset(prompt, pattern_raw)
     if not ok or pattern == "" then
-        api.nvim_buf_clear_namespace(0, search_ns, 0, -1)
+        checked_clear_namespaces(cur_buf, opts.dim)
         api.nvim_echo({ { "" } }, false, {}) -- LOW: I wish there was a less blunt way
         return
     end
 
-    -- TODO: Add the option to keepjumps
+    if opts.dim then
+        api.nvim_buf_clear_namespace(cur_buf, dim_ns, 0, -1)
+    end
 
     -- TODO: What is the difference between typed and mapped?
     api.nvim_feedkeys(vim.v.count1 .. prompt .. pattern_raw .. "\r", "nx", false)
     -- Running this right before running search can cause flicker
-    api.nvim_buf_clear_namespace(0, search_ns, 0, -1)
+    api.nvim_buf_clear_namespace(cur_buf, search_ns, 0, -1)
 end
 
 function M.get_ns()
@@ -401,17 +505,7 @@ return M
 
 -- SEARCH
 --
--- TODO: I need to make my own Incsearch something more useful/aesthetic. For cases where I
--- use it for other things, I need to just define custom text there. For hl.on_yank, move that
--- autocmd into colorscheme so I can set the fg to what I have Incsearch at now
--- TODO: DOCUMENT: Limitation: Ctrl-T/Ctrl-G navigation with Incsearch are not supported
--- TODO: The default highlights here have to work with CurSearch and IncSearch. Being that this is
--- the lowest degrees of freedom module, it is the anchor point for the others.
--- TODO: DOCUMENT: Make some sort of useful documentation out of my error with running nohlsearch
--- on cmdline enter
--- TODO: Option to dim lines with results. Potentially have this as its own namespace so it can
--- be cleared before advancing the search, leaving the Search/Incsearch labels applied until the
--- search is complete
+-- TODO: Handle the additional wrap filled bottom row
 -- TODO: Incsearch specific highlighting should definitely only show if that option is on, but
 -- shoudl Search highlighting always show? Or just the labels? IMO, I like the search highlighting.
 -- I don't like the Incsearch highlighting. But I use the base Incsearch highlighting for a lot of
@@ -421,7 +515,6 @@ return M
 -- within a fold. Want to make sure search() and the /? cmds behave the same. Also need to make
 -- sure that Incsearch highlights properly.
 -- TODO: Does the search feedkeys handle fdo?
--- TODO: DOCUMENT: Highlighting only one way is intentional.
 -- TODO: Perhaps one-way "Search" highlights are always true, and the alt-color Incsearch hl plus
 -- backward "Search" highlights are based on the Incsearch option. This would play better with a
 -- future Ctrl-T/G implementation
@@ -429,14 +522,20 @@ return M
 -- to make it repeat. Macros might not be able to get around having to input, but highlights can
 -- still be disabled.
 -- TODO: Verify Vim's internal timeout for search
--- TODO: DOCUMENT: cpo c is respected
 -- TODO: Test visual mode behavior
 -- TODO: Test omode behavior
+-- TODO: DOCUMENT: Highlighting only one way is intentional.
+-- TODO: DOCUMENT: Limitation: Ctrl-T/Ctrl-G navigation with Incsearch are not supported
+-- TODO: DOCUMENT: Make some sort of useful documentation out of my error with running nohlsearch
+-- on cmdline enter
+-- TODO: DOCUMENT: cpo c is respected
 --
 -- LABELS
 --
 -- TODO: Labels should not accept if the cursor is not in the last position. Maybe don't even
 -- show labels, or show them with a different highlight. Prevents issue with going back and
+-- TODO: The default highlights here have to work with CurSearch and IncSearch. Being that this is
+-- the lowest degrees of freedom module, it is the anchor point for the others.
 -- modifying the search
 -- TODO: Should have fold behavior similar to Csearch. Either skip folds entirely, or affix labels
 -- in a reasonable manner. If there's no good way to apply labels, I'm fine with always skipping.
