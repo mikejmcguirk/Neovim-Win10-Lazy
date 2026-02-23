@@ -752,6 +752,8 @@ function Csearch.rep(opts)
         opts.until_skip = false
     end
 
+    -- TODO: I think for 5.1 you need to require("bit") and in JIT it's just bit.
+    -- So do a check to see which and save the result
     opts.forward = require("bit").bxor(opts.forward, charsearch.forward, 1)
     local cur_pos = api.nvim_win_get_cursor(cur_win)
     do_csearch(cur_win, cur_buf, cur_pos, char, opts)

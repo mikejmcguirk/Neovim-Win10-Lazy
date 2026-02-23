@@ -1,4 +1,5 @@
 local api = vim.api
+local call = vim.call
 local fn = vim.fn
 
 ---@class farsight.search.HlInfo
@@ -22,40 +23,56 @@ local group = api.nvim_create_augroup("farsight-search-hl", {})
 local search_ns = api.nvim_create_namespace("farsight-search-hl")
 local dim_ns = api.nvim_create_namespace("farsight-search-dim")
 
+---@param win integer
+---@param buf integer
+---@param cmdprompt string
+---@return string, string, integer, boolean
+local function get_search_args(win, buf, cmdprompt)
+    if cmdprompt == "/" then
+        local common = require("farsight._common")
+        local wS = vim.call("line", "w$")
+        return "nWz", "nWze", common.get_wrap_checked_bot_row(win, buf, wS)
+    end
+
+    return "nWb", "nWbe", vim.call("line", "w0"), true
+end
+
+---@return farsight.search.HlInfo
+local function create_new_hl_info()
+    local tn = require("farsight.util")._table_new
+    return { 0, tn(64, 0), tn(64, 0), tn(64, 0), tn(64, 0) }
+end
+
+---@param win integer
+---@param buf integer
 ---@param cmdprompt string
 ---@param cmdline string
----@return boolean, farsight.search.HlInfo
-local function get_hl_info_jit(cmdprompt, cmdline)
-    local tn = require("farsight.util")._table_new
-    ---@type farsight.search.HlInfo
-    local hl_info = { 0, tn(64, 0), tn(64, 0), tn(64, 0), tn(64, 0) }
-
+---@return boolean, farsight.search.HlInfo, boolean
+local function get_hl_info_jit(win, buf, cmdprompt, cmdline)
+    local hl_info = create_new_hl_info()
     local hl_rows = hl_info[2]
     local hl_cols = hl_info[3]
     local hl_fin_rows = hl_info[4]
     local hl_fin_cols = hl_info[5]
 
-    local call = vim.call
-    local count1 = vim.v.count1
     local ffi_c = require("ffi").C
     local min = math.min
 
-    local fwd = cmdprompt == "/"
-    local flags = fwd and "nWz" or "nWb"
-    -- TODO: Checked for wrapped bottom fill row. Add this check to puc Lua as well.
-    local stop_row = fwd and call("line", "w$") or call("line", "w0")
+    local count1 = vim.v.count1
+    local flags, _, stop_row, valid = get_search_args(win, buf, cmdprompt)
     local ok, _ = pcall(fn.search, cmdline, flags, stop_row, TIMEOUT, function()
         if count1 <= 1 then
             hl_rows[#hl_rows + 1] = call("line", ".")
 
             local col = call("col", ".")
-            -- Empty lines and \n chars can be matched on
-            -- search() can match on \n characters and empty lines. Subtract one from col("$"), which
-            -- is end-exclusive, to prevent OOB col starts
+            -- Because search() can match on empty lines and \n characters, col can be out of
+            -- bounds. We aren't getting lines for the start cols, so correct now. Subtract one
+            -- from col("$") because it is end-exclusive.
             col = min(col, call("col", "$") - 1)
             hl_cols[#hl_cols + 1] = col
 
             hl_fin_rows[#hl_fin_rows + 1] = ffi_c.search_match_lines --[[ @as integer ]]
+            -- These will be corrected later
             hl_fin_cols[#hl_fin_cols + 1] = ffi_c.search_match_endcol --[[ @as integer ]]
 
             hl_info[1] = hl_info[1] + 1
@@ -69,45 +86,40 @@ local function get_hl_info_jit(cmdprompt, cmdline)
     local len_hl_info = hl_info[1]
     if ok and hl_info[1] > 0 then
         for i = 1, len_hl_info do
-            -- search_match_lines is the difference from the match's start
+            -- Convert search_match_lines to end cols
             hl_fin_rows[i] = hl_rows[i] + hl_fin_rows[i]
         end
 
-        return true, hl_info
+        return true, hl_info, valid
     end
 
-    return false, hl_info
+    return false, hl_info, valid
 end
 
+---@param win integer
+---@param buf integer
 ---@param cmdprompt string
 ---@param cmdline string
----@return boolean, farsight.search.HlInfo
-local function get_hl_info_puc(cmdprompt, cmdline)
-    local tn = require("farsight.util")._table_new
-    ---@type farsight.search.HlInfo
-    local hl_info = { 0, tn(64, 0), tn(64, 0), tn(64, 0), tn(64, 0) }
-
+---@return boolean, farsight.search.HlInfo, boolean
+local function get_hl_info_puc(win, buf, cmdprompt, cmdline)
+    local hl_info = create_new_hl_info()
     local hl_rows = hl_info[2]
     local hl_cols = hl_info[3]
     local hl_fin_rows = hl_info[4]
     local hl_fin_cols = hl_info[5]
 
-    local call = vim.call
     local min = math.min
 
     local count1 = vim.v.count1
-    local fwd = cmdprompt == "/"
-    local s_flags = fwd and "nWz" or "nWb"
-    local f_flags = fwd and "nWze" or "nWbe"
-    local stop_row = fwd and call("line", "w$") or call("line", "w0")
+    local s_flags, f_flags, stop_row, valid = get_search_args(win, buf, cmdprompt)
     local ok_s, _ = pcall(fn.search, cmdline, s_flags, stop_row, TIMEOUT, function()
         if count1 <= 1 then
             hl_rows[#hl_rows + 1] = call("line", ".")
 
             local col = call("col", ".")
-            -- Get now since we don't need to pull these lines later
-            -- search() can match on \n characters and empty lines. Subtract one from col("$"), which
-            -- is end-exclusive, to prevent OOB col starts
+            -- Because search() can match on empty lines and \n characters, col can be out of
+            -- bounds. We aren't getting lines for the start cols, so correct now. Subtract one
+            -- from col("$") because it is end-exclusive.
             col = min(col, call("col", "$") - 1)
             hl_cols[#hl_cols + 1] = col
 
@@ -120,12 +132,14 @@ local function get_hl_info_puc(cmdprompt, cmdline)
 
     local len_hl_info = hl_info[1]
     if not ok_s or len_hl_info < 1 then
-        return false, hl_info
+        return false, hl_info, valid
     end
 
+    count1 = vim.v.count1
     local ok_f, _ = pcall(fn.search, cmdline, f_flags, stop_row, TIMEOUT, function()
         if count1 <= 1 then
             hl_fin_rows[#hl_fin_rows + 1] = call("line", ".")
+            -- These will be corrected later
             hl_fin_cols[#hl_fin_cols + 1] = call("col", ".")
             return 1
         else
@@ -135,18 +149,18 @@ local function get_hl_info_puc(cmdprompt, cmdline)
     end)
 
     if not ok_f then
-        return false, hl_info
+        return false, hl_info, valid
     end
 
     -- The backwards end iteration can create issues with zero-length results.
     local count_hl_info = #hl_info
     for i = 2, count_hl_info do
         if #hl_info[i] ~= len_hl_info then
-            return false, hl_info
+            return false, hl_info, valid
         end
     end
 
-    return true, hl_info
+    return true, hl_info, valid
 end
 
 local get_hl_info = (function()
@@ -218,7 +232,8 @@ end
 ---@return table<integer, boolean>
 local function checked_get_dim_rows(hl_info, dim)
     -- LOW: Is this the most efficient way to do this?
-    local rows = {} ---@type table<integer, boolean>
+    local tn = require("farsight.util")._table_new
+    local rows = tn(0, 32) ---@type table<integer, boolean>
     if not dim then
         return rows
     end
@@ -366,32 +381,32 @@ end
 ---@param prompt string
 ---@param opts farsight.search.SearchOpts
 local function display_search_highlights(win, buf, prompt, opts)
-    local cmdprompt = fn.getcmdprompt()
+    local cmdprompt = call("getcmdprompt")
     if cmdprompt ~= prompt then
         -- If this actually happens, I would want as much info about Nvim's state as possible, so
         -- don't do anything to disturb it.
         return
     end
 
-    -- TODO: This should not rely on ev.buf
-    api.nvim_buf_clear_namespace(buf, search_ns, 0, -1)
-    local cmdline_raw = fn.getcmdline()
+    local cmdline_raw = call("getcmdline")
     if cmdline_raw == "" then
         checked_clear_namespaces(buf, opts.dim)
-        api.nvim__redraw({ valid = true, win = win })
+        local _, _, _, valid = get_search_args(win, buf, cmdprompt)
+        api.nvim__redraw({ valid = valid, win = win })
         return
     end
 
     local cmdline, _ = parse_search_offset(cmdprompt, cmdline_raw)
-    local ok, hl_info = get_hl_info(cmdprompt, cmdline)
+    local ok, hl_info, valid = get_hl_info(win, buf, cmdprompt, cmdline)
     local len_hl_info = hl_info[1]
     if not ok then
         checked_clear_namespaces(buf, opts.dim)
+        -- TODO: Put behind a debug opt
         if len_hl_info > 0 then
             echo_no_ok(cmdprompt, cmdline, hl_info)
         end
 
-        api.nvim__redraw({ valid = true, win = win })
+        api.nvim__redraw({ valid = valid, win = win })
         return
     end
 
@@ -403,7 +418,7 @@ local function display_search_highlights(win, buf, prompt, opts)
     set_search_extmarks(buf, hl_info)
     checked_set_dim_row_extmarks(buf, opts.dim, dim_rows)
 
-    api.nvim__redraw({ valid = true, win = win })
+    api.nvim__redraw({ valid = valid, win = win })
 end
 
 local function del_search_listener()
@@ -487,6 +502,7 @@ function M.search(fwd, opts)
         return
     end
 
+    -- TODO: This looks nicer but might create an extra redraw step. Profile
     if opts.dim then
         api.nvim_buf_clear_namespace(cur_buf, dim_ns, 0, -1)
     end
@@ -505,7 +521,6 @@ return M
 
 -- SEARCH
 --
--- TODO: Handle the additional wrap filled bottom row
 -- TODO: Incsearch specific highlighting should definitely only show if that option is on, but
 -- shoudl Search highlighting always show? Or just the labels? IMO, I like the search highlighting.
 -- I don't like the Incsearch highlighting. But I use the base Incsearch highlighting for a lot of

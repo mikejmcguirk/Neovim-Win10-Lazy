@@ -138,6 +138,8 @@ end
 -- TODO: Functionalities to try putting into common
 -- - Dimming. Could have a function that takes a row list, ns, and hl_group and runs through
 -- setting the extmarks. Also have it take a dim opt
+-- - At least some of the logic for getting the wrapped bottom row. It's all checking the opt
+-- and searchpos on the first col.
 -- TODO: For vim.fn calls in tight loops, maybe use the function call API, since I believe that
 -- requires less overhead. You could also skip the vim.fn. metatable and use the underlying one
 -- it wraps, saving a layer of indirection.
