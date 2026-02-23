@@ -45,7 +45,7 @@ end
 
 -- MAYBE: If another module uses this info, setup a var so it isn't run twice
 
-function M.has_ffi_search_tracking()
+function M.has_ffi_search_globals()
     if not has_ffi then
         return false
     end

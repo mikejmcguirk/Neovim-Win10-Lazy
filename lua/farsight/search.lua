@@ -9,11 +9,9 @@ local fn = vim.fn
 ---@field [4] integer[] Fin rows
 ---@field [5] integer[] Fin cols
 
--- TODO: Should be an opt as well
 local TIMEOUT = 500
 
 local HL_SEARCH_DIM_STR = "FarsightJumpDim"
-
 api.nvim_set_hl(0, HL_SEARCH_DIM_STR, { default = true, link = "Comment" })
 
 local nvim_get_hl_id_by_name = api.nvim_get_hl_id_by_name
@@ -30,11 +28,11 @@ local dim_ns = api.nvim_create_namespace("farsight-search-dim")
 local function get_search_args(win, buf, cmdprompt)
     if cmdprompt == "/" then
         local common = require("farsight._common")
-        local wS = vim.call("line", "w$")
+        local wS = fn.line("w$")
         return "nWz", "nWze", common.get_wrap_checked_bot_row(win, buf, wS)
     end
 
-    return "nWb", "nWbe", vim.call("line", "w0"), true
+    return "nWb", "nWbe", fn.line("w0"), true
 end
 
 ---@return farsight.search.HlInfo
@@ -47,8 +45,9 @@ end
 ---@param buf integer
 ---@param cmdprompt string
 ---@param cmdline string
+---@param opts farsight.search.SearchOpts
 ---@return boolean, farsight.search.HlInfo, boolean
-local function get_hl_info_jit(win, buf, cmdprompt, cmdline)
+local function get_hl_info_jit(win, buf, cmdprompt, cmdline, opts)
     local hl_info = create_new_hl_info()
     local hl_rows = hl_info[2]
     local hl_cols = hl_info[3]
@@ -60,7 +59,7 @@ local function get_hl_info_jit(win, buf, cmdprompt, cmdline)
 
     local count1 = vim.v.count1
     local flags, _, stop_row, valid = get_search_args(win, buf, cmdprompt)
-    local ok, _ = pcall(fn.search, cmdline, flags, stop_row, TIMEOUT, function()
+    local ok, _ = pcall(fn.search, cmdline, flags, stop_row, opts.timeout, function()
         if count1 <= 1 then
             hl_rows[#hl_rows + 1] = call("line", ".")
 
@@ -83,8 +82,8 @@ local function get_hl_info_jit(win, buf, cmdprompt, cmdline)
         end
     end)
 
-    local len_hl_info = hl_info[1]
-    if ok and hl_info[1] > 0 then
+    if ok then
+        local len_hl_info = hl_info[1]
         for i = 1, len_hl_info do
             -- Convert search_match_lines to end cols
             hl_fin_rows[i] = hl_rows[i] + hl_fin_rows[i]
@@ -100,8 +99,9 @@ end
 ---@param buf integer
 ---@param cmdprompt string
 ---@param cmdline string
+---@param opts farsight.search.SearchOpts
 ---@return boolean, farsight.search.HlInfo, boolean
-local function get_hl_info_puc(win, buf, cmdprompt, cmdline)
+local function get_hl_info_puc(win, buf, cmdprompt, cmdline, opts)
     local hl_info = create_new_hl_info()
     local hl_rows = hl_info[2]
     local hl_cols = hl_info[3]
@@ -112,7 +112,7 @@ local function get_hl_info_puc(win, buf, cmdprompt, cmdline)
 
     local count1 = vim.v.count1
     local s_flags, f_flags, stop_row, valid = get_search_args(win, buf, cmdprompt)
-    local ok_s, _ = pcall(fn.search, cmdline, s_flags, stop_row, TIMEOUT, function()
+    local ok_s, _ = pcall(fn.search, cmdline, s_flags, stop_row, opts.timeout, function()
         if count1 <= 1 then
             hl_rows[#hl_rows + 1] = call("line", ".")
 
@@ -130,13 +130,12 @@ local function get_hl_info_puc(win, buf, cmdprompt, cmdline)
         end
     end)
 
-    local len_hl_info = hl_info[1]
-    if not ok_s or len_hl_info < 1 then
+    if not ok_s then
         return false, hl_info, valid
     end
 
     count1 = vim.v.count1
-    local ok_f, _ = pcall(fn.search, cmdline, f_flags, stop_row, TIMEOUT, function()
+    local ok_f, _ = pcall(fn.search, cmdline, f_flags, stop_row, opts.timeout, function()
         if count1 <= 1 then
             hl_fin_rows[#hl_fin_rows + 1] = call("line", ".")
             -- These will be corrected later
@@ -152,6 +151,7 @@ local function get_hl_info_puc(win, buf, cmdprompt, cmdline)
         return false, hl_info, valid
     end
 
+    local len_hl_info = hl_info[1]
     -- The backwards end iteration can create issues with zero-length results.
     local count_hl_info = #hl_info
     for i = 2, count_hl_info do
@@ -163,8 +163,8 @@ local function get_hl_info_puc(win, buf, cmdprompt, cmdline)
     return true, hl_info, valid
 end
 
-local get_hl_info = (function()
-    if require("farsight._common").has_ffi_search_tracking() then
+local get_raw_hl_info = (function()
+    if require("farsight._common").has_ffi_search_globals() then
         return get_hl_info_jit
     else
         return get_hl_info_puc
@@ -195,7 +195,8 @@ end
 
 ---@param buf integer
 ---@param hl_info farsight.search.HlInfo
-local function set_search_extmarks(buf, hl_info)
+---@param incsearch boolean
+local function set_search_extmarks(buf, hl_info, incsearch)
     local len_hl_info = hl_info[1]
     local hl_rows = hl_info[2]
     local hl_cols = hl_info[3]
@@ -203,7 +204,7 @@ local function set_search_extmarks(buf, hl_info)
     local hl_fin_cols = hl_info[5]
 
     local start = 1
-    if api.nvim_get_option_value("incsearch", { scope = "global" }) then
+    if incsearch then
         start = 2
         pcall(api.nvim_buf_set_extmark, buf, search_ns, hl_rows[1], hl_cols[1], {
             priority = 1000,
@@ -319,8 +320,8 @@ end
 ---@param cmdprompt string
 ---@param cmdline string
 ---@param hl_info farsight.search.HlInfo
-local function echo_no_ok(cmdprompt, cmdline, hl_info)
-    -- TODO: This should be hidden behind a debug flag or something
+---@return string
+local function get_hl_info_err_str(cmdprompt, cmdline, hl_info)
     local err_tbl = {}
 
     err_tbl[#err_tbl + 1] = "Prompt: " .. cmdprompt
@@ -331,8 +332,7 @@ local function echo_no_ok(cmdprompt, cmdline, hl_info)
     err_tbl[#err_tbl + 1] = ", #Fin Rows: " .. #hl_info[4]
     err_tbl[#err_tbl + 1] = ", #Fin Cols: " .. #hl_info[5]
 
-    local err_str = table.concat(err_tbl, "")
-    api.nvim_echo({ { err_str, "ErrorMsg" } }, true, {})
+    return table.concat(err_tbl, "")
 end
 
 ---@param buf integer
@@ -342,6 +342,40 @@ local function checked_clear_namespaces(buf, dim)
     if dim then
         api.nvim_buf_clear_namespace(buf, dim_ns, 0, -1)
     end
+end
+
+---@param win integer
+---@param buf integer
+---@param dim boolean
+---@param valid boolean
+local function clear_and_redraw(win, buf, dim, valid)
+    checked_clear_namespaces(buf, dim)
+    api.nvim__redraw({ valid = valid, win = win })
+end
+
+---@param hl_info farsight.search.HlInfo|string
+---@param valid boolean
+---@param opts farsight.search.SearchOpts
+local function handle_hl_info_err(win, buf, hl_info, valid, opts)
+    if opts.debug_msgs and type(hl_info) == "string" then
+        api.nvim_echo({ { hl_info, "ErrorMsg" } }, true, {})
+    end
+
+    clear_and_redraw(win, buf, opts.dim, valid)
+end
+
+---@return boolean, farsight.search.HlInfo|string, boolean
+local function get_hl_info(win, buf, cmdprompt, cmdline, opts)
+    local ok, hl_info, valid = get_raw_hl_info(win, buf, cmdprompt, cmdline, opts)
+    if not ok then
+        local err_str = get_hl_info_err_str(cmdprompt, cmdline, hl_info)
+        return false, err_str, valid
+    end
+
+    hl_info_cleanup(hl_info)
+    adjust_fin_cols(buf, hl_info)
+
+    return true, hl_info, valid
 end
 
 ---@param cmdprompt string
@@ -378,45 +412,79 @@ end
 
 ---@param win integer
 ---@param buf integer
+---@param cmdprompt string
+---@param incsearch boolean
+---@param dim boolean
+local function handle_empty_cmdline(win, buf, cmdprompt, incsearch, dim)
+    checked_clear_namespaces(buf, dim)
+    local _, _, _, valid = get_search_args(win, buf, cmdprompt)
+    if incsearch then
+        local rev_cmdprompt = cmdprompt == "/" and "?" or "/"
+        local _, _, _, rev_valid = get_search_args(win, buf, rev_cmdprompt)
+        if rev_valid == false then
+            valid = false
+        end
+    end
+
+    api.nvim__redraw({ valid = valid, win = win })
+end
+
+---@param win integer
+---@param buf integer
 ---@param prompt string
 ---@param opts farsight.search.SearchOpts
 local function display_search_highlights(win, buf, prompt, opts)
-    local cmdprompt = call("getcmdprompt")
+    local cmdprompt = fn.getcmdprompt()
     if cmdprompt ~= prompt then
-        -- If this actually happens, I would want as much info about Nvim's state as possible, so
-        -- don't do anything to disturb it.
         return
     end
 
-    local cmdline_raw = call("getcmdline")
+    ---@type boolean
+    local incsearch = api.nvim_get_option_value("incsearch", { scope = "global" })
+    local cmdline_raw = fn.getcmdline()
     if cmdline_raw == "" then
-        checked_clear_namespaces(buf, opts.dim)
-        local _, _, _, valid = get_search_args(win, buf, cmdprompt)
-        api.nvim__redraw({ valid = valid, win = win })
+        handle_empty_cmdline(win, buf, cmdprompt, incsearch, opts.dim)
         return
     end
 
     local cmdline, _ = parse_search_offset(cmdprompt, cmdline_raw)
-    local ok, hl_info, valid = get_hl_info(win, buf, cmdprompt, cmdline)
-    local len_hl_info = hl_info[1]
-    if not ok then
-        checked_clear_namespaces(buf, opts.dim)
-        -- TODO: Put behind a debug opt
-        if len_hl_info > 0 then
-            echo_no_ok(cmdprompt, cmdline, hl_info)
+    local ok, hl_info, valid = get_hl_info(win, buf, cmdprompt, cmdline, opts)
+    local rev_ok, rev_hl_info, rev_valid
+    if incsearch then
+        -- Get rev_hl_info before handling hl_info because we need the valid value in case it is
+        -- false. Otherwise, wrapped filler rows might not be redrawn
+        local rev_cmdprompt = cmdprompt == "/" and "?" or "/"
+        rev_ok, rev_hl_info, rev_valid = get_hl_info(win, buf, rev_cmdprompt, cmdline, opts)
+        if rev_valid == false then
+            valid = rev_valid
         end
 
-        api.nvim__redraw({ valid = valid, win = win })
+        if (not rev_ok) or type(rev_hl_info) ~= "table" then
+            handle_hl_info_err(win, buf, rev_hl_info, valid, opts)
+            return
+        elseif hl_info[1] == 0 and rev_hl_info[1] == 0 then
+            clear_and_redraw(win, buf, opts.dim, valid)
+            return
+        end
+    end
+
+    if (not ok) or type(hl_info) ~= "table" then
+        handle_hl_info_err(win, buf, hl_info, valid, opts)
+        return
+    elseif (not incsearch) and hl_info[1] == 0 then
+        clear_and_redraw(win, buf, opts.dim, valid)
         return
     end
 
-    hl_info_cleanup(hl_info)
-    adjust_fin_cols(buf, hl_info)
     local dim_rows = checked_get_dim_rows(hl_info, opts.dim)
-
     checked_clear_namespaces(buf, opts.dim)
-    set_search_extmarks(buf, hl_info)
+    set_search_extmarks(buf, hl_info, incsearch)
     checked_set_dim_row_extmarks(buf, opts.dim, dim_rows)
+    if incsearch then
+        -- Always pass false. Search will not jump here
+        set_search_extmarks(buf, rev_hl_info, false)
+        -- Reverse IncSearch highlights are not valid targets. Don't dim.
+    end
 
     api.nvim__redraw({ valid = valid, win = win })
 end
@@ -459,8 +527,18 @@ local function resolve_search_opts(cur_buf, opts)
     vim.validate("opts", opts, "table")
     local ut = require("farsight.util")
 
+    opts.debug_msgs = ut._use_gb_if_nil(opts.debug_msgs, "farsight_search_debug_msgs", cur_buf)
+    opts.debug_msgs = ut._resolve_bool_opt(opts.debug_msgs, false)
+
     opts.dim = ut._use_gb_if_nil(opts.dim, "farsight_search_dim", cur_buf)
     opts.dim = ut._resolve_bool_opt(opts.dim, false)
+
+    opts.timeout = ut._use_gb_if_nil(opts.timeout, "farsight_search_timeout", cur_buf)
+    if opts.timeout == nil then
+        opts.timeout = TIMEOUT
+    else
+        vim.validate("opts.timeout", opts.timeout, ut._is_int)
+    end
 
     -- TODO: Add keepjumps option. How to make work with feedkeys?
 end
@@ -469,7 +547,9 @@ local M = {}
 
 ---@class farsight.search.SearchOpts
 ---Dim lines with targeted characters (Default: `false`)
+---@field debug_msgs? boolean
 ---@field dim? boolean
+---@field timeout? integer
 
 ---@param fwd boolean
 ---@param opts? farsight.search.SearchOpts
@@ -521,18 +601,28 @@ return M
 
 -- SEARCH
 --
--- TODO: Incsearch specific highlighting should definitely only show if that option is on, but
--- shoudl Search highlighting always show? Or just the labels? IMO, I like the search highlighting.
--- I don't like the Incsearch highlighting. But I use the base Incsearch highlighting for a lot of
--- things that aren't Incsearch. And I think tying the search highlighting here to non-default hl
--- groups is a fundamental mistake.
+-- TODO: Incsearch plan:
+-- - The original cur_pos should be passed as part of the autocmd closure
+-- - Check <C-g>/<C-t> default behavior:
+--   - Do they accept count?
+--   - Do they respect wrap scan?
+--   - What happens if you go into a fold? Are you able to go into folds?
+-- - Check general incsearch default behavior:
+--   - If you unwind from a G/T movement, do you automatically go back to the original cursor
+--   position?
+--   - If you are in a search, does that highlight with IncSearch?
+--   - Does the cursor show during incsearch? Do I need a highlight for it?
+-- - Figure out how to get/intercept the input. Naive solution - check the last character and
+-- manually setcmdline.
+-- - The reversed hl_info should provide a jumpable list of positions
+
+-- TODO: DOCUMENT: Search highlights will always show in the direction you are searching. Incsearch
+-- will show in both directions as the defaults do. Labels will always only show in the search
+-- direction.
 -- TODO: Need to confirm, but I think the various searches all only consider the first result
 -- within a fold. Want to make sure search() and the /? cmds behave the same. Also need to make
 -- sure that Incsearch highlights properly.
 -- TODO: Does the search feedkeys handle fdo?
--- TODO: Perhaps one-way "Search" highlights are always true, and the alt-color Incsearch hl plus
--- backward "Search" highlights are based on the Incsearch option. This would play better with a
--- future Ctrl-T/G implementation
 -- TODO: Handle repeats and macros. I think you just get vcount1 and feed an empty search string
 -- to make it repeat. Macros might not be able to get around having to input, but highlights can
 -- still be disabled.
@@ -598,6 +688,14 @@ return M
 --   - If not, restore the old one
 --   - If so, the search cmd needs to not advance past the saved position (I'm not clear on
 --   exactly how you do this)
+-- MID: In buffers with large amounts of text, searching backwards can be slow. The issue gets
+-- worse when using regex expressions. I'd speculate this is because it makes backwards traversal
+-- more complicated.
+-- Questions:
+-- - How do the built-ins avoid this problem?
+-- Potential solutions:
+-- - Start the cursor at the beginning of the visible buffer. Problem: I'd imagine this triggers
+-- scrolloff when you move the cursor.
 --
 --
 -- MAYBE: Rather than using the inner search to walk the cursor for highlighting, you could use
