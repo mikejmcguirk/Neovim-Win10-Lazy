@@ -599,36 +599,34 @@ end
 
 return M
 
--- SEARCH
---
--- TODO: Incsearch plan:
--- - The original cur_pos should be passed as part of the autocmd closure
--- - Check <C-g>/<C-t> default behavior:
---   - Do they accept count?
---   - Do they respect wrap scan?
---   - What happens if you go into a fold? Are you able to go into folds?
--- - Check general incsearch default behavior:
---   - If you unwind from a G/T movement, do you automatically go back to the original cursor
---   position?
---   - If you are in a search, does that highlight with IncSearch?
---   - Does the cursor show during incsearch? Do I need a highlight for it?
--- - Figure out how to get/intercept the input. Naive solution - check the last character and
--- manually setcmdline.
--- - The reversed hl_info should provide a jumpable list of positions
-
--- TODO: DOCUMENT: Search highlights will always show in the direction you are searching. Incsearch
--- will show in both directions as the defaults do. Labels will always only show in the search
--- direction.
--- TODO: Need to confirm, but I think the various searches all only consider the first result
--- within a fold. Want to make sure search() and the /? cmds behave the same. Also need to make
--- sure that Incsearch highlights properly.
--- TODO: Does the search feedkeys handle fdo?
+-- TODO: The cursor location should be visible during searches.
+-- TODO: Properly support folds. My understanding so far:
+-- - Only the first result in a fold is considered
+-- - If a highlight would be in a fold, it is discarded
+--   - Removing extmarks from within folds is an obvious win, but double-check the actual
+--   behavior as well as what is considered standard for something like this
+-- TODO: Does performing search with feedkeys properly handle fdo?
 -- TODO: Handle repeats and macros. I think you just get vcount1 and feed an empty search string
 -- to make it repeat. Macros might not be able to get around having to input, but highlights can
 -- still be disabled.
 -- TODO: Verify Vim's internal timeout for search
 -- TODO: Test visual mode behavior
 -- TODO: Test omode behavior
+-- TODO: Go through the tests to make sure there aren't any functionalities or corner cases I
+-- need to cover.
+-- - test/unit/search_spec.lua
+-- - test/old/testdir/test_search.vim
+-- TODO: IncSearch hl priority should be > Search.
+
+-- TODO: DOCUMENT: IncSearch emulation is incomplete. Setting IncSearch to true will produce
+-- IncSearch style highlighting. However, the cursor will not automatically advance and
+-- <C-t>/<C-g> commands will not work.
+-- TODO: DOCUMENT: Farsight will always display "Search" highlights in the direction the user
+-- entered. With IncSearch on, backward facing labels will also be displayed. IncSearch will also
+-- cause the next result to display with an IncSearch highlight. Labels will only be calculated
+-- and added to results after the cursor.
+-- TODO: DOCUMENT: |search-offset| is supported
+-- TODO: DOCUMENT: Search highlights will always show in the direction you are searching
 -- TODO: DOCUMENT: Highlighting only one way is intentional.
 -- TODO: DOCUMENT: Limitation: Ctrl-T/Ctrl-G navigation with Incsearch are not supported
 -- TODO: DOCUMENT: Make some sort of useful documentation out of my error with running nohlsearch
@@ -650,44 +648,53 @@ return M
 -- on_jump?
 -- Labels should only go in the direction of the search. Want to keep possibilities down so
 -- useful labeling can be done more quickly. Omni-directional should be handled in jump
---
 -- TODO: There might be interesting stuff we can do with \%V (search inside the visual area only)
 -- On the baseline level, if the user wants to make that custom mapping, where you exit visual
 -- mode (update the marks) and then run search with that magic pre-filled, it should do so
 -- smoothly
 
 -- MID: Is winhighlight properly respected?
--- MID: The built-in search highlights zero length lines. This comes up when dealing with
--- zero-length assertions/incomplete patterns that cover them. AFAICT, doing this would require
--- stepping through the range to see if there are zero lines within it and marking those lines for
--- virtual text overlays. Would be good for feature equivalence, but poor effort/value ratio. Not
--- a showstopper.
+-- MID: The built-in search highlights zero length lines. Extmark highlights do not display on
+-- them. The only way I can think of to deal with this is to manually traverse the results and pick
+-- out the zero-length lines within. Those lines can then have virtual text laid on top of them.
 -- MID: Results off-screen should be reported. Intuitively, it should be a virtual text overlay
--- on the top/bottom of the window. Major blocker: What fallbacks do I use if the overlay would
+-- on the top/bottom of the window. Blocker: What fallbacks should be used if the overlay would
 -- cover a label? Easier version: Only show this if no on-screen results.
 -- - Is searchcount() useful here?
--- MID: Go through the tests and see if any of the use cases give my highlighting trouble
--- - test/unit/search_spec.lua
--- - test/old/testdir/test_search.vim
--- MID: For <C-t>/<C-g> navigation:
--- - Path dependent on indicator for searches above/below the screen. Automatic screen movement
--- will not be implemented
--- - Inccsearch must be on
--- - The keys have to be remapped
---   - Needs to be a solution for entering them if the user wishes
---   - Should be able to do as part of the autocmd build-up/teardown
--- - Pressing forward moves you to the next pos
--- - Moving backwards requires getting the previous one
--- - Cursor state should actually be updated
---   - The old one should be saved
--- - When input is completed, we need to know if we have moved to a new cursor state we want to
--- keep
---   - Probably needs to be module-level state since input only returns text. Though we can use
---   pattern == "" as an indicator we need to go back
---   - If our incsearch returns no results, the original view should be restored
---   - If not, restore the old one
---   - If so, the search cmd needs to not advance past the saved position (I'm not clear on
---   exactly how you do this)
+-- MID: Implement <C-t>/<C-g> navigation.
+-- Blocker questions:
+-- - Should IncSearch's auto-forward cursor movement be supported? I do not use it, but it's a
+-- core component of how IncSearch functions. Because this version of search has non-IncSearch
+-- highlights I'm comfortable with, I'm directionally okay with making IncSearch match its
+-- default behavior
+-- - Is any sort of displaying being done for searches above/below the screen? Might influence how
+-- IncSearch should behave
+-- Questions about built-in behavior:
+-- - Do <C-t>/<C-g> accept count?
+-- - Do they respect wrapscan?
+-- - What happens if you go into a fold?
+-- - Based on user input, when is the temporary home abandoned? When does the temporary home
+-- advance? Go back? My approximate answers from light testing:
+--   - If the user adds text, the cursor tries to advance forward, either at the current position
+--   or to a future one if it's found. This seems to respect wrapscan
+--   - If the user removes search characters, the cursor tries to find a location backwards but
+--   closest to its temporary home
+--   - The cursor does not go backward past the origin
+--   - If a match produces no results, but there is text in the cmdline, the temporary home will
+--   not be abandoned. If the cmdline is cleared, it will be
+--   - How is the current position considered? It seems to straightforwardly be a matter of if the
+--   cursor overlaps with the search. But there could be nuance I'm missing.
+-- - Other Questions:
+--   - How would <Ctrl-t>/<Ctrl-g> be intercepted and processed? Naive but possibly correct answer:
+--     Look at the last character of the cmdline, manually edit the cmdline, then process the char
+--   - How can the cursor be moved without triggering scrolloff? This is also relevant for
+--   potentially removing backward searches from the codebase
+--   - How would the original cur_pos be stored? I think you can pass it as part of the autocmd
+--   closure
+--   - Does the temporary home need to be stored in module level state? Or, if the cursor is
+--   being moved, is getting the current cur_pos sufficient?
+--   - When cmdline is updated, how do we check if the cursor is on a valid match? I would guess
+--   using search() with the "c" flag
 -- MID: In buffers with large amounts of text, searching backwards can be slow. The issue gets
 -- worse when using regex expressions. I'd speculate this is because it makes backwards traversal
 -- more complicated.
@@ -696,6 +703,12 @@ return M
 -- Potential solutions:
 -- - Start the cursor at the beginning of the visible buffer. Problem: I'd imagine this triggers
 -- scrolloff when you move the cursor.
+--
+-- LOW: A potential optimization would be to look for contiguous search results and merging them
+-- together. Since the end_cols are end-exclusive indexed, this is not infeasible. You would make
+-- a loop that iterates through and merges in the next index if possible, then niling the
+-- remainder. This *could* help with redraws. Low priority because it's complexity surface area
+-- and extmark rendering is not the biggest bottleneck at the moment.
 --
 --
 -- MAYBE: Rather than using the inner search to walk the cursor for highlighting, you could use
