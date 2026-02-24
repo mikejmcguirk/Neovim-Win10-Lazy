@@ -135,6 +135,14 @@ end
 -- local duration_ms = (end_time - start_time) / 1e6
 -- print(string.format("hl_forward took %.2f ms", duration_ms))
 
+-- NOTE: Internal function locations:
+-- - cursor() : f_cursor in funcs.c
+-- - line() : f_line in funcs.c
+-- - col() : f_col in funcs.c
+-- - search() : f_search in funcs.c
+
+-- TODO: For any jumps, if doing a backwards correction for omode, use cursor() instead of the API
+-- because it doesn't trigger a screen update.
 -- TODO: Functionalities to try putting into common
 -- - Dimming. Could have a function that takes a row list, ns, and hl_group and runs through
 -- setting the extmarks. Also have it take a dim opt
@@ -214,6 +222,56 @@ end
 -- - Determining string length for the wrapped fill line
 -- - Removing characters under listchars, plus under "@@@" in wrapped lines
 -- Hard to prioritize because it does not cause false negatives
+--
+-- ISSUE: Search does not properly consider multiline boundaries for searching after.
+-- Reproduction:
+-- - Open nvim clean
+-- - confirm cpo c is set (is default in Neovim)
+-- - Have "foo" on 15 lines
+-- - Search "foo\nfoo" then enter
+-- - hlsearch will correctly show the current search as two lines since cpo-c is true. However,
+-- when hitting n to advance searches, it will go to the next line
+-- - If incsearch is true, more weird stuff happens with how the current search increments.
+-- Sometimes it's properly two lines, sometimes it shows three. Need to play with this behavior
+-- more.
+-- Additional questions:
+-- - This needs to be tested in vanilla Vim since it's a vimfn. The issue needs to be opened there
+-- if it happens there
+-- - Why does hlsearch display properly? (At least in Neovim). Given the issue where hlsearch
+-- always displays with cpo-c behavior, it appears there is some non-trivial code difference
+-- - Is an issue already open? (Check both repos)
+-- Possible cause:
+-- search.c line 722:
+--   if (search_from_match_end) {
+--     if (nmatched > 1) {
+--       // end is in next line, thus no match in
+--       // this line
+--       match_ok = false;
+--       break;
+--     }
+--     matchcol = endpos.col;
+--     // for empty match: advance one char
+--     if (matchcol == matchpos.col && ptr[matchcol] != NUL) {
+--       matchcol += utfc_ptr2len(ptr + matchcol);
+--     }
+--     // ...
+--   }
+-- matchcol is advanced, but lnum is not. But simply advancing lnum could be tricky, since it's
+-- the control variable for the main search loop.
+-- ISSUE: Weird hlsearch behavior.
+-- Reproduction (need to confirm in minimal Neovim):
+-- - Open nvim clean
+-- - Confirm cpo c is off (needs to be set in Neovim)
+-- - "foofoofoofoofoofoofoofoofoofoofoofoofoofoofoo"
+-- - /foofoo
+-- - At first match, press n
+-- - First three foos highlighted
+-- - Have "foo" on 15 consecutive lines
+-- - /foo\nfoo<cr>
+-- - The last "foo" will not be highlighted as if cpo c were present
+-- Additional questions:
+-- - Does this happen in vanilla vim?
+-- - Is an issue already open? (Check Vim and Nvim repos)
 
 -- FUTURE: If vim vars are able to properly hold metatables, use them for var validation
 -- FUTURE: Use the new mark API when it comes out for setting pcmarks

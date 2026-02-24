@@ -75,11 +75,13 @@ function M.has_ffi_search_globals()
 end
 
 -- TODO: Use this in all modules
+-- TODO: In search, we need nvim_buf_line_count for other purposes, so it needs to be an input
+-- param here
 
 ---@param win integer
 ---@param buf integer
----@param wS integer
----@return integer, boolean Adjusted row, redraw valid
+---@param wS integer One indexed
+---@return integer, boolean Adjusted row (one indexed), redraw valid
 function M.get_wrap_checked_bot_row(win, buf, wS)
     if api.nvim_get_option_value("wrap", { win = win }) then
         if wS < api.nvim_buf_line_count(buf) then

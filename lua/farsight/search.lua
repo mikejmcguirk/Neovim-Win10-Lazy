@@ -1,5 +1,4 @@
 local api = vim.api
-local call = vim.call
 local fn = vim.fn
 
 ---@class farsight.search.HlInfo
@@ -11,22 +10,21 @@ local fn = vim.fn
 
 local TIMEOUT = 500
 
-local HL_SEARCH_DIM_STR = "FarsightJumpDim"
-api.nvim_set_hl(0, HL_SEARCH_DIM_STR, { default = true, link = "Comment" })
+local HL_DIM_STR = "FarsightSearchDim"
+api.nvim_set_hl(0, HL_DIM_STR, { default = true, link = "Comment" })
+local hl_dim = api.nvim_get_hl_id_by_name(HL_DIM_STR)
 
-local nvim_get_hl_id_by_name = api.nvim_get_hl_id_by_name
-local hl_dim = nvim_get_hl_id_by_name(HL_SEARCH_DIM_STR)
-
-local group = api.nvim_create_augroup("farsight-search-hl", {})
-local search_ns = api.nvim_create_namespace("farsight-search-hl")
 local dim_ns = api.nvim_create_namespace("farsight-search-dim")
+local search_ns = api.nvim_create_namespace("farsight-search-hl")
+
+local search_group = api.nvim_create_augroup("farsight-search-hl", {})
 
 ---@param win integer
 ---@param buf integer
----@param cmdprompt string
+---@param fwd boolean
 ---@return string, string, integer, boolean
-local function get_search_args(win, buf, cmdprompt)
-    if cmdprompt == "/" then
+local function get_win_search_params(win, buf, fwd)
+    if fwd then
         local common = require("farsight._common")
         local wS = fn.line("w$")
         return "nWz", "nWze", common.get_wrap_checked_bot_row(win, buf, wS)
@@ -36,42 +34,41 @@ local function get_search_args(win, buf, cmdprompt)
 end
 
 ---@return farsight.search.HlInfo
-local function create_new_hl_info()
+local function create_empty_hl_info()
     local tn = require("farsight.util")._table_new
     return { 0, tn(64, 0), tn(64, 0), tn(64, 0), tn(64, 0) }
 end
 
 ---@param win integer
 ---@param buf integer
----@param cmdprompt string
 ---@param cmdline string
+---@param fwd boolean
 ---@param opts farsight.search.SearchOpts
 ---@return boolean, farsight.search.HlInfo, boolean
-local function get_hl_info_jit(win, buf, cmdprompt, cmdline, opts)
-    local hl_info = create_new_hl_info()
+local function create_raw_hl_info_jit(win, buf, cmdline, fwd, opts)
+    local hl_info = create_empty_hl_info()
     local hl_rows = hl_info[2]
     local hl_cols = hl_info[3]
     local hl_fin_rows = hl_info[4]
     local hl_fin_cols = hl_info[5]
 
+    local call = vim.call
     local ffi_c = require("ffi").C
     local min = math.min
 
     local count1 = vim.v.count1
-    local flags, _, stop_row, valid = get_search_args(win, buf, cmdprompt)
-    local ok, _ = pcall(fn.search, cmdline, flags, stop_row, opts.timeout, function()
+    local flags, _, stop_row, valid = get_win_search_params(win, buf, fwd)
+    local ok, _ = pcall(call, "search", cmdline, flags, stop_row, opts.timeout, function()
         if count1 <= 1 then
             hl_rows[#hl_rows + 1] = call("line", ".")
-
-            local col = call("col", ".")
-            -- Because search() can match on empty lines and \n characters, col can be out of
-            -- bounds. We aren't getting lines for the start cols, so correct now. Subtract one
-            -- from col("$") because it is end-exclusive.
+            local col = call("col", ".") ---@type integer
+            -- search() can match on empty lines and \n characters, putting col out of bounds.
+            -- Because there is no later step that leaves Lua space for the start positions,
+            -- correct now. Subtract one from col("$") because it is end-exclusive.
             col = min(col, call("col", "$") - 1)
             hl_cols[#hl_cols + 1] = col
 
             hl_fin_rows[#hl_fin_rows + 1] = ffi_c.search_match_lines --[[ @as integer ]]
-            -- These will be corrected later
             hl_fin_cols[#hl_fin_cols + 1] = ffi_c.search_match_endcol --[[ @as integer ]]
 
             hl_info[1] = hl_info[1] + 1
@@ -85,41 +82,58 @@ local function get_hl_info_jit(win, buf, cmdprompt, cmdline, opts)
     if ok then
         local len_hl_info = hl_info[1]
         for i = 1, len_hl_info do
-            -- Convert search_match_lines to end cols
+            -- Convert search_match_lines to end rows
             hl_fin_rows[i] = hl_rows[i] + hl_fin_rows[i]
         end
 
-        return true, hl_info, valid
+        -- TODO: Create a per-keypress line cache that's passed in here and then to the fin_row
+        -- fixer. We might also be able to use that to operate on lines outside the search
+        -- function
+        -- If the last line is "foo" and you search "foo\n", search_match_lines will be 1, causing
+        -- the fin_row to be OOB.
+        local line_count = api.nvim_buf_line_count(buf)
+        for i = len_hl_info, 1, -1 do
+            local fin_line = nil
+            if hl_fin_rows[i] > line_count then
+                hl_fin_rows[i] = line_count
+                if not fin_line then
+                    fin_line = api.nvim_buf_get_lines(buf, line_count - 1, line_count, false)[1]
+                    hl_fin_cols[i] = #fin_line
+                end
+            else
+                break
+            end
+        end
     end
 
-    return false, hl_info, valid
+    return ok, hl_info, valid
 end
 
 ---@param win integer
 ---@param buf integer
----@param cmdprompt string
 ---@param cmdline string
+---@param fwd boolean
 ---@param opts farsight.search.SearchOpts
 ---@return boolean, farsight.search.HlInfo, boolean
-local function get_hl_info_puc(win, buf, cmdprompt, cmdline, opts)
-    local hl_info = create_new_hl_info()
+local function create_raw_hl_info_puc(win, buf, cmdline, fwd, opts)
+    local hl_info = create_empty_hl_info()
     local hl_rows = hl_info[2]
     local hl_cols = hl_info[3]
     local hl_fin_rows = hl_info[4]
     local hl_fin_cols = hl_info[5]
 
+    local call = vim.call
     local min = math.min
 
     local count1 = vim.v.count1
-    local s_flags, f_flags, stop_row, valid = get_search_args(win, buf, cmdprompt)
-    local ok_s, _ = pcall(fn.search, cmdline, s_flags, stop_row, opts.timeout, function()
+    local s_flags, f_flags, stop_row, valid = get_win_search_params(win, buf, fwd)
+    local ok_s, _ = pcall(call, "search", cmdline, s_flags, stop_row, opts.timeout, function()
         if count1 <= 1 then
             hl_rows[#hl_rows + 1] = call("line", ".")
-
             local col = call("col", ".")
-            -- Because search() can match on empty lines and \n characters, col can be out of
-            -- bounds. We aren't getting lines for the start cols, so correct now. Subtract one
-            -- from col("$") because it is end-exclusive.
+            -- search() can match on empty lines and \n characters, putting col out of bounds.
+            -- Because there is no later step that leaves Lua space for the start positions,
+            -- correct now. Subtract one from col("$") because it is end-exclusive.
             col = min(col, call("col", "$") - 1)
             hl_cols[#hl_cols + 1] = col
 
@@ -131,14 +145,13 @@ local function get_hl_info_puc(win, buf, cmdprompt, cmdline, opts)
     end)
 
     if not ok_s then
-        return false, hl_info, valid
+        return ok_s, hl_info, valid
     end
 
     count1 = vim.v.count1
-    local ok_f, _ = pcall(fn.search, cmdline, f_flags, stop_row, opts.timeout, function()
+    local ok_f, _ = pcall(call, "search", cmdline, f_flags, stop_row, opts.timeout, function()
         if count1 <= 1 then
             hl_fin_rows[#hl_fin_rows + 1] = call("line", ".")
-            -- These will be corrected later
             hl_fin_cols[#hl_fin_cols + 1] = call("col", ".")
             return 1
         else
@@ -147,34 +160,33 @@ local function get_hl_info_puc(win, buf, cmdprompt, cmdline, opts)
         end
     end)
 
-    if not ok_f then
-        return false, hl_info, valid
-    end
-
-    local len_hl_info = hl_info[1]
-    -- The backwards end iteration can create issues with zero-length results.
-    local count_hl_info = #hl_info
-    for i = 2, count_hl_info do
-        if #hl_info[i] ~= len_hl_info then
-            return false, hl_info, valid
+    if ok_f then
+        local len_hl_info = hl_info[1]
+        -- Verify both loops captured the same number of results. |zero-width| assertions can cause
+        -- issues if searching backward
+        local count_hl_info = #hl_info
+        for i = 2, count_hl_info do
+            if #hl_info[i] ~= len_hl_info then
+                return false, hl_info, valid
+            end
         end
     end
 
-    return true, hl_info, valid
+    return ok_f, hl_info, valid
 end
 
-local get_raw_hl_info = (function()
+local create_raw_hl_info = (function()
     if require("farsight._common").has_ffi_search_globals() then
-        return get_hl_info_jit
+        return create_raw_hl_info_jit
     else
-        return get_hl_info_puc
+        return create_raw_hl_info_puc
     end
 end)()
 
 ---@param buf integer
----@param dim boolean
 ---@param dim_rows integer[]
-local function checked_set_dim_row_extmarks(buf, dim, dim_rows)
+---@param dim boolean
+local function checked_set_dim_extmarks(buf, dim_rows, dim)
     if not dim then
         return
     end
@@ -232,16 +244,30 @@ end
 ---@param dim boolean
 ---@return table<integer, boolean>
 local function checked_get_dim_rows(hl_info, dim)
+    if not dim then
+        return {} -- LOW: There's no reason to allocate this other than preventing nil checks
+    end
+
     -- LOW: Is this the most efficient way to do this?
     local tn = require("farsight.util")._table_new
     local rows = tn(0, 32) ---@type table<integer, boolean>
-    if not dim then
-        return rows
-    end
-
     local len_hl_info = hl_info[1]
     local hl_rows = hl_info[2]
     local hl_fin_rows = hl_info[4]
+
+    -- TODO: Check assumption that hl_rows always has at least one item
+    -- local merge_rows = { hl_rows[1] } ---@type integer[]
+    -- local merge_fin_rows = { hl_fin_rows[1] } ---@type integer[]
+    -- for i = 2, len_hl_info do
+    --     if merge_fin_rows[i - 1] >= hl_rows[i] then
+    --         -- It should not be possible to have, say, a match that starts on row 1 and ends on
+    --         -- row 3, then another match that starts on row 2 then ends on row 4.
+    --         merge_fin_rows[i - 1] = hl_fin_rows[i - 1]
+    --     else
+    --         merge_rows[#merge_rows + 1] = hl_rows[i]
+    --         merge_fin_rows[#merge_fin_rows + 1] = hl_fin_rows[i]
+    --     end
+    -- end
 
     for i = 1, len_hl_info do
         local row = hl_rows[i]
@@ -252,6 +278,63 @@ local function checked_get_dim_rows(hl_info, dim)
     end
 
     return rows
+end
+
+---Edits hl_info in place
+---Always perform this check because, even with cpo-c not present, the C core's searchit()
+---function does not properly handle searching from after the end of multiline matches.
+---We still do assume that an extmark can never start before the previous one.
+---@param hl_info farsight.search.HlInfo
+local function merge_hl_info_extmarks(hl_info, fwd, incsearch)
+    local init_len_hl_info = hl_info[1]
+    local hl_rows = hl_info[2]
+    local hl_cols = hl_info[3]
+    local hl_fin_rows = hl_info[4]
+    local hl_fin_cols_ = hl_info[5]
+
+    local start = fwd and 2 or init_len_hl_info - 1
+    local fin = fwd and init_len_hl_info or 1
+    local iter = fwd and 1 or -1
+    if incsearch then
+        start = fwd and 3 or start - 1
+    end
+
+    local j = fwd and start - 1 or start + 1
+    local k = init_len_hl_info
+    for i = start, fin, iter do
+        local cur_fin_row = hl_fin_rows[j]
+        local cur_fin_col = hl_fin_cols_[j]
+        local test_row = hl_rows[i]
+        local test_col = hl_cols[i]
+        local test_fin_row = hl_fin_rows[i]
+        local test_fin_col = hl_fin_cols_[i]
+
+        local col_before = cur_fin_row == test_row and cur_fin_col < test_col
+        if col_before or cur_fin_row < test_row then
+            j = j + iter
+            hl_rows[j] = test_row
+            hl_cols[j] = test_col
+            hl_fin_rows[j] = test_fin_row
+            hl_fin_cols_[j] = test_fin_col
+        else
+            local fin_row_before = cur_fin_row < test_fin_row
+            if fin_row_before or cur_fin_row == test_fin_row and cur_fin_col < test_fin_col then
+                hl_fin_rows[j] = test_fin_row
+                hl_fin_cols_[j] = test_fin_col
+            end
+
+            -- Implicitly do nothing if cur_fin_pos >= test_fin_pos
+            k = k - 1
+        end
+    end
+
+    hl_info[1] = k
+    for i = k + 1, init_len_hl_info do
+        hl_rows[i] = nil
+        hl_cols[i] = nil
+        hl_fin_rows[i] = nil
+        hl_fin_cols_[i] = nil
+    end
 end
 
 ---Edits hl_info in place
@@ -273,9 +356,8 @@ local function adjust_fin_cols(buf, hl_info)
     for i = 1, len_hl_info do
         local row = hl_fin_rows[i]
         if last_row ~= row then
-            -- Don't want to persist cache because that starts making too many assumptions about
-            -- state. Also don't want to eagerly pull all lines because the underlying C code
-            -- marshals per line
+            -- Avoid persisting cache because the underlying state could change between keypresses.
+            -- Only pull one line at a time because the C core marshals per line.
             line = nvim_buf_get_lines(buf, row, row + 1, false)[1]
             last_row = row
         end
@@ -283,7 +365,7 @@ local function adjust_fin_cols(buf, hl_info)
         local len_line = #line
         if len_line > 0 then
             -- hl_fin_cols should still be one-indexed
-            -- Handle results on \n chars and zero length lines
+            -- Handle OOB results from \n chars and zero-length lines
             local fin_col_1 = min(hl_fin_cols[i], len_line)
             local b1 = str_byte(line, fin_col_1) or 0
             local _, len_char = get_utf_codepoint(line, b1, fin_col_1)
@@ -303,6 +385,7 @@ local function hl_info_cleanup(hl_info)
     local hl_fin_rows = hl_info[4]
     local hl_fin_cols = hl_info[5]
 
+    -- Handle results of |zero-width| assertions
     for i = 1, len_hl_info do
         if hl_fin_cols[i] < hl_cols[i] then
             hl_fin_cols[i] = hl_cols[i]
@@ -317,14 +400,14 @@ local function hl_info_cleanup(hl_info)
     end
 end
 
----@param cmdprompt string
+---@param fwd boolean
 ---@param cmdline string
 ---@param hl_info farsight.search.HlInfo
 ---@return string
-local function get_hl_info_err_str(cmdprompt, cmdline, hl_info)
+local function get_hl_info_err_str(fwd, cmdline, hl_info)
     local err_tbl = {}
 
-    err_tbl[#err_tbl + 1] = "Prompt: " .. cmdprompt
+    err_tbl[#err_tbl + 1] = "Prompt: " .. fwd
     err_tbl[#err_tbl + 1] = ", Pattern: " .. cmdline
     err_tbl[#err_tbl + 1] = ", Total length: " .. hl_info[1]
     err_tbl[#err_tbl + 1] = ", #Start rows: " .. #hl_info[2]
@@ -364,16 +447,23 @@ local function handle_hl_info_err(win, buf, hl_info, valid, opts)
     clear_and_redraw(win, buf, opts.dim, valid)
 end
 
+---@param win integer
+---@param buf integer
+---@param fwd boolean
+---@param cmdline string
+---@param incsearch boolean
+---@param opts farsight.search.SearchOpts
 ---@return boolean, farsight.search.HlInfo|string, boolean
-local function get_hl_info(win, buf, cmdprompt, cmdline, opts)
-    local ok, hl_info, valid = get_raw_hl_info(win, buf, cmdprompt, cmdline, opts)
+local function get_hl_info(win, buf, fwd, cmdline, incsearch, opts)
+    local ok, hl_info, valid = create_raw_hl_info(win, buf, cmdline, fwd, opts)
     if not ok then
-        local err_str = get_hl_info_err_str(cmdprompt, cmdline, hl_info)
+        local err_str = get_hl_info_err_str(fwd, cmdline, hl_info)
         return false, err_str, valid
     end
 
     hl_info_cleanup(hl_info)
     adjust_fin_cols(buf, hl_info)
+    merge_hl_info_extmarks(hl_info, fwd, incsearch)
 
     return true, hl_info, valid
 end
@@ -412,15 +502,14 @@ end
 
 ---@param win integer
 ---@param buf integer
----@param cmdprompt string
+---@param fwd boolean
 ---@param incsearch boolean
 ---@param dim boolean
-local function handle_empty_cmdline(win, buf, cmdprompt, incsearch, dim)
+local function handle_empty_cmdline(win, buf, fwd, incsearch, dim)
     checked_clear_namespaces(buf, dim)
-    local _, _, _, valid = get_search_args(win, buf, cmdprompt)
+    local _, _, _, valid = get_win_search_params(win, buf, fwd)
     if incsearch then
-        local rev_cmdprompt = cmdprompt == "/" and "?" or "/"
-        local _, _, _, rev_valid = get_search_args(win, buf, rev_cmdprompt)
+        local _, _, _, rev_valid = get_win_search_params(win, buf, not fwd)
         if rev_valid == false then
             valid = false
         end
@@ -442,19 +531,19 @@ local function display_search_highlights(win, buf, prompt, opts)
     ---@type boolean
     local incsearch = api.nvim_get_option_value("incsearch", { scope = "global" })
     local cmdline_raw = fn.getcmdline()
+    local fwd = cmdprompt == "/"
     if cmdline_raw == "" then
-        handle_empty_cmdline(win, buf, cmdprompt, incsearch, opts.dim)
+        handle_empty_cmdline(win, buf, fwd, incsearch, opts.dim)
         return
     end
 
     local cmdline, _ = parse_search_offset(cmdprompt, cmdline_raw)
-    local ok, hl_info, valid = get_hl_info(win, buf, cmdprompt, cmdline, opts)
+    local ok, hl_info, valid = get_hl_info(win, buf, fwd, cmdline, incsearch, opts)
     local rev_ok, rev_hl_info, rev_valid
     if incsearch then
-        -- Get rev_hl_info before handling hl_info because we need the valid value in case it is
-        -- false. Otherwise, wrapped filler rows might not be redrawn
-        local rev_cmdprompt = cmdprompt == "/" and "?" or "/"
-        rev_ok, rev_hl_info, rev_valid = get_hl_info(win, buf, rev_cmdprompt, cmdline, opts)
+        -- Get rev_hl_info before handling hl_info because we need the returned valid value in
+        -- case it is false. Otherwise, wrapped filler rows might not be redrawn
+        rev_ok, rev_hl_info, rev_valid = get_hl_info(win, buf, not fwd, cmdline, incsearch, opts)
         if rev_valid == false then
             valid = rev_valid
         end
@@ -479,7 +568,7 @@ local function display_search_highlights(win, buf, prompt, opts)
     local dim_rows = checked_get_dim_rows(hl_info, opts.dim)
     checked_clear_namespaces(buf, opts.dim)
     set_search_extmarks(buf, hl_info, incsearch)
-    checked_set_dim_row_extmarks(buf, opts.dim, dim_rows)
+    checked_set_dim_extmarks(buf, dim_rows, opts.dim)
     if incsearch then
         -- Always pass false. Search will not jump here
         set_search_extmarks(buf, rev_hl_info, false)
@@ -490,7 +579,7 @@ local function display_search_highlights(win, buf, prompt, opts)
 end
 
 local function del_search_listener()
-    local autocmds = api.nvim_get_autocmds({ group = group })
+    local autocmds = api.nvim_get_autocmds({ group = search_group })
     for _, autocmd in ipairs(autocmds) do
         api.nvim_del_autocmd(autocmd.id)
     end
@@ -502,7 +591,7 @@ end
 ---@param opts farsight.search.SearchOpts
 local function create_search_listener(win, buf, prompt, opts)
     api.nvim_create_autocmd("CmdlineChanged", {
-        group = group,
+        group = search_group,
         desc = "Highlight search terms",
         callback = function()
             display_search_highlights(win, buf, prompt, opts)
@@ -695,27 +784,28 @@ return M
 --   being moved, is getting the current cur_pos sufficient?
 --   - When cmdline is updated, how do we check if the cursor is on a valid match? I would guess
 --   using search() with the "c" flag
--- MID: In buffers with large amounts of text, searching backwards can be slow. The issue gets
--- worse when using regex expressions. I'd speculate this is because it makes backwards traversal
--- more complicated.
+-- MID: In buffers with large amounts of text, searching backward can be slow. This issue is
+-- especially noticeable when using regex.
 -- Questions:
 -- - How do the built-ins avoid this problem?
--- Potential solutions:
--- - Start the cursor at the beginning of the visible buffer. Problem: I'd imagine this triggers
--- scrolloff when you move the cursor.
+-- Potential Solutions:
+-- - For backward searches, use cursor() (nvim_win_set_cursor updates the window view and stages
+-- a redraw) to temporarily set the cursor to the beginning of the window then iterate forward.
+-- To trim extra results on the stop row after the real cursor, edit the array in Lua space (only
+-- requires trimming from the end of the results, rather than checking all of them in the skip
+-- function). This would also require storing or calculating an indicator of which direction to
+-- iterate through the hl_info values (because IncSearch and labeling depend on distance from the
+-- cursor).
 --
 -- LOW: A potential optimization would be to look for contiguous search results and merging them
 -- together. Since the end_cols are end-exclusive indexed, this is not infeasible. You would make
 -- a loop that iterates through and merges in the next index if possible, then niling the
 -- remainder. This *could* help with redraws. Low priority because it's complexity surface area
 -- and extmark rendering is not the biggest bottleneck at the moment.
---
---
--- MAYBE: Rather than using the inner search to walk the cursor for highlighting, you could use
--- Folke's ffi hack to pull out the ending position. But since this is not  an api or fn
--- guarantee, the variable name is liable to change, or its internal behavior altered. I'm worried
--- about introducing that surface area for something that would probably be more performant, but
--- is not necessary. Would not go forward with this without some really non-trivial perf difference
+-- LOW: It would be better if hl_info and rev_hl_info were one big array. Splitting them in two
+-- defeats the purpose of using a struct of arrays to begin with.
+-- LOW: When getting search positions, it might be faster to run getpos() rather than line() and
+-- col(). My concern is that getpos() allocates a table. This would need to be profiled.
 --
 -- NON: Do not re-implement cursor movement for IncSearch. This is performance intensive, creates
 -- complexity surface area, and is visually too busy.
