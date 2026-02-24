@@ -222,10 +222,12 @@ end
 -- this issue.
 
 ---idx is one indexed
+---If checking the last character on a line, the max returned char length will be one, allowing
+---this function to be cleanly used for end-exclusive indexing
 ---@param line string
 ---@param b1 integer
 ---@param idx integer
----@return integer, integer
+---@return integer, integer Codepoint and char length
 function M._get_utf_codepoint(line, b1, idx)
     return get_utf_codepoint(line, b1, idx)
 end

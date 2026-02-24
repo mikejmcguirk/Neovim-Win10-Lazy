@@ -227,8 +227,7 @@ local function add_all_labels_rev(row_0, line, init, locator, counts, min_count,
                     counts[char_nr] = new_count
 
                     if new_count > 0 then
-                        local col_0 = i - 1
-                        add_label(row_0, col_0, len_char, new_count, labels)
+                        add_label(row_0, i, len_char, new_count, labels)
                     end
                 end
             end
@@ -312,8 +311,7 @@ local function add_all_labels_fwd(row_0, line, init, locator, counts, min_count,
                 counts[char_nr] = new_count
 
                 if new_count > 0 then
-                    local col_0 = i - 1
-                    add_label(row_0, col_0, len_char, new_count, labels)
+                    add_label(row_0, i, len_char, new_count, labels)
                 end
             end
         end

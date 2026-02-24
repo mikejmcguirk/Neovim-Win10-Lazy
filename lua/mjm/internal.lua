@@ -20,6 +20,8 @@ set({ "n", "x" }, "?", function()
     require("farsight.search").search(false)
 end)
 
+api.nvim_set_var("farsight_csearch_all_tokens", true)
+
 -- local function sneak_locator(sneak_text, row, line)
 --     -- Valid since the locator function is called in the proper window context
 --     if vim.fn.prevnonblank(row) ~= row or vim.fn.foldclosed(row) ~= -1 then
