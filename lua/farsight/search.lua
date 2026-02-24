@@ -8,6 +8,11 @@ local fn = vim.fn
 ---@field [4] integer[] Fin rows
 ---@field [5] integer[] Fin cols
 
+---@class farsight.search.DimHlInfo
+---@field [1] integer Length
+---@field [2] integer[] Start rows
+---@field [3] integer[] Fin rows
+
 local TIMEOUT = 500
 
 local HL_DIM_STR = "FarsightSearchDim"
@@ -184,9 +189,9 @@ local create_raw_hl_info = (function()
 end)()
 
 ---@param buf integer
----@param dim_rows integer[]
+---@param dim_hl_info farsight.search.DimHlInfo
 ---@param dim boolean
-local function checked_set_dim_extmarks(buf, dim_rows, dim)
+local function checked_set_dim_extmarks(buf, dim_hl_info, dim)
     if not dim then
         return
     end
@@ -199,9 +204,13 @@ local function checked_set_dim_extmarks(buf, dim_rows, dim)
         priority = 999,
     }
 
-    for row, _ in pairs(dim_rows) do
-        extmark_opts.end_line = row + 1
-        pcall(nvim_buf_set_extmark, buf, dim_ns, row, 0, extmark_opts)
+    local len_dim_hl_info = dim_hl_info[1]
+    local dim_rows = dim_hl_info[2]
+    local dim_fin_rows = dim_hl_info[3]
+
+    for i = 1, len_dim_hl_info do
+        extmark_opts.end_row = dim_fin_rows[i] + 1
+        pcall(nvim_buf_set_extmark, buf, dim_ns, dim_rows[i], 0, extmark_opts)
     end
 end
 
@@ -240,44 +249,44 @@ local function set_search_extmarks(buf, hl_info, incsearch)
     end
 end
 
+---Assumes that hl_info has at least one entry and that overlapping entries have been merged
 ---@param hl_info farsight.search.HlInfo
 ---@param dim boolean
----@return table<integer, boolean>
-local function checked_get_dim_rows(hl_info, dim)
+---@return farsight.search.DimHlInfo
+local function checked_get_dim_rows(hl_info, fwd, dim)
     if not dim then
         return {} -- LOW: There's no reason to allocate this other than preventing nil checks
     end
 
-    -- LOW: Is this the most efficient way to do this?
-    local tn = require("farsight.util")._table_new
-    local rows = tn(0, 32) ---@type table<integer, boolean>
     local len_hl_info = hl_info[1]
     local hl_rows = hl_info[2]
     local hl_fin_rows = hl_info[4]
 
-    -- TODO: Check assumption that hl_rows always has at least one item
-    -- local merge_rows = { hl_rows[1] } ---@type integer[]
-    -- local merge_fin_rows = { hl_fin_rows[1] } ---@type integer[]
-    -- for i = 2, len_hl_info do
-    --     if merge_fin_rows[i - 1] >= hl_rows[i] then
-    --         -- It should not be possible to have, say, a match that starts on row 1 and ends on
-    --         -- row 3, then another match that starts on row 2 then ends on row 4.
-    --         merge_fin_rows[i - 1] = hl_fin_rows[i - 1]
-    --     else
-    --         merge_rows[#merge_rows + 1] = hl_rows[i]
-    --         merge_fin_rows[#merge_fin_rows + 1] = hl_fin_rows[i]
-    --     end
-    -- end
+    local tn = require("farsight.util")._table_new
+    local dim_hl_info = { 0, tn(32, 0), tn(32, 0) } ---@type farsight.search.DimHlInfo
+    local dim_rows = dim_hl_info[2]
+    local dim_fin_rows = dim_hl_info[3]
 
-    for i = 1, len_hl_info do
-        local row = hl_rows[i]
-        local fin_row = hl_fin_rows[i]
-        for j = row, fin_row do
-            rows[j] = true
+    local start = fwd and 1 or len_hl_info
+    local fin = fwd and len_hl_info or 1
+    local iter = fwd and 1 or -1
+
+    dim_rows[1] = hl_rows[start]
+    dim_fin_rows[1] = hl_fin_rows[start]
+
+    local j = 1
+    for i = start + iter, fin, iter do
+        if dim_fin_rows[j] < hl_rows[i] + 1 then
+            j = j + 1
+            dim_rows[j] = hl_rows[i]
+            dim_fin_rows[j] = hl_fin_rows[i]
+        else
+            dim_fin_rows[j] = hl_fin_rows[i]
         end
     end
 
-    return rows
+    dim_hl_info[1] = j
+    return dim_hl_info
 end
 
 ---Edits hl_info in place
@@ -476,6 +485,7 @@ local function parse_search_offset(cmdprompt, cmdline_raw)
         return "", ""
     end
 
+    local BACKSLASH = 0x5C
     local str_byte = string.byte
     local prompt_byte = str_byte(cmdprompt)
 
@@ -486,7 +496,7 @@ local function parse_search_offset(cmdprompt, cmdline_raw)
         local c = str_byte(cmdline_raw, i)
         if escaping then
             escaping = false
-        elseif c == 0x5C then
+        elseif c == BACKSLASH then
             escaping = true
         elseif c == prompt_byte then
             local cmdline = string.sub(cmdline_raw, 1, i - 1)
@@ -565,10 +575,10 @@ local function display_search_highlights(win, buf, prompt, opts)
         return
     end
 
-    local dim_rows = checked_get_dim_rows(hl_info, opts.dim)
+    local dim_hl_info = checked_get_dim_rows(hl_info, fwd, opts.dim)
     checked_clear_namespaces(buf, opts.dim)
     set_search_extmarks(buf, hl_info, incsearch)
-    checked_set_dim_extmarks(buf, dim_rows, opts.dim)
+    checked_set_dim_extmarks(buf, dim_hl_info, opts.dim)
     if incsearch then
         -- Always pass false. Search will not jump here
         set_search_extmarks(buf, rev_hl_info, false)

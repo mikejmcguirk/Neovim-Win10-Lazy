@@ -141,6 +141,7 @@ end
 -- - col() : f_col in funcs.c
 -- - search() : f_search in funcs.c
 
+-- TODO: See if dim rows in csearch and jump can be handled like in search
 -- TODO: For any jumps, if doing a backwards correction for omode, use cursor() instead of the API
 -- because it doesn't trigger a screen update.
 -- TODO: Functionalities to try putting into common
@@ -223,6 +224,10 @@ end
 -- - Removing characters under listchars, plus under "@@@" in wrapped lines
 -- Hard to prioritize because it does not cause false negatives
 --
+-- PR: The end_row key in nvim_buf_set_extmark appears to be exclusive when using the hl_eol
+-- option, but this is not mentioned in the docs. Verify if this intuition is correct and submit
+
+-- a PR if so
 -- ISSUE: Search does not properly consider multiline boundaries for searching after.
 -- Reproduction:
 -- - Open nvim clean
