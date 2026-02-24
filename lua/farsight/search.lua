@@ -739,6 +739,9 @@ local function resolve_search_opts(cur_buf, opts)
     opts.dim = ut._use_gb_if_nil(opts.dim, "farsight_search_dim", cur_buf)
     opts.dim = ut._resolve_bool_opt(opts.dim, false)
 
+    opts.keepjumps = ut._use_gb_if_nil(opts.keepjumps, "farsight_search_keepjumps", cur_buf)
+    opts.keepjumps = ut._resolve_bool_opt(opts.keepjumps, false)
+
     opts.timeout = ut._use_gb_if_nil(opts.timeout, "farsight_search_timeout", cur_buf)
     if opts.timeout == nil then
         opts.timeout = TIMEOUT
@@ -755,6 +758,7 @@ local M = {}
 ---Dim lines with targeted characters (Default: `false`)
 ---@field debug_msgs? boolean
 ---@field dim? boolean
+---@field keepjumps? boolean
 ---@field timeout? integer
 
 ---@param fwd boolean
@@ -794,8 +798,17 @@ function M.search(fwd, opts)
         api.nvim_buf_clear_namespace(cur_buf, dim_ns, 0, -1)
     end
 
-    -- TODO: What is the difference between typed and mapped?
-    api.nvim_feedkeys(vim.v.count1 .. prompt .. pattern_raw .. "\r", "nx", false)
+    local arg_parts = {
+        'vim.api.nvim_feedkeys("',
+        tostring(vim.v.count1),
+        prompt,
+        string.gsub(pattern_raw, "\\", "\\\\"),
+        '\\r","nx",false)',
+    }
+
+    local args = { table.concat(arg_parts, "") }
+    local mods = { keepjumps = opts.keepjumps }
+    api.nvim_cmd({ cmd = "lua", args = args, mods = mods }, {})
     -- Running this right before running search can cause flicker
     api.nvim_buf_clear_namespace(cur_buf, search_ns, 0, -1)
 end
