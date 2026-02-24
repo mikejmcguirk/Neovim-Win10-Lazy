@@ -12,13 +12,13 @@ api.nvim_set_hl(0, "FarsightCsearch1st", { reverse = true })
 api.nvim_set_hl(0, "FarsightCsearch2nd", { undercurl = true })
 api.nvim_set_hl(0, "FarsightCsearch3rd", { underdouble = true })
 
-set({ "n", "x" }, "/", function()
-    require("farsight.search").search(true)
-end)
+set({ "n", "x", "o" }, "/", function()
+    return require("farsight.search").search(true)
+end, { expr = true })
 
-set({ "n", "x" }, "?", function()
-    require("farsight.search").search(false)
-end)
+set({ "n", "x", "o" }, "?", function()
+    return require("farsight.search").search(false)
+end, { expr = true })
 
 api.nvim_set_var("farsight_csearch_all_tokens", true)
 

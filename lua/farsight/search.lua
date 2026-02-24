@@ -761,56 +761,61 @@ local M = {}
 ---@field keepjumps? boolean
 ---@field timeout? integer
 
+---This function returns a typed search command string meant to be used in an
+---expr mapping. On error, an empty string is returned.
 ---@param fwd boolean
 ---@param opts? farsight.search.SearchOpts
+---@return string
 function M.search(fwd, opts)
     opts = opts and vim.deepcopy(opts) or {}
     local cur_win = api.nvim_get_current_win()
     local cur_buf = api.nvim_win_get_buf(cur_win)
     resolve_search_opts(cur_buf, opts)
 
-    -- TODO: Check if we are dot repeating or in a macro. If so, check if the "/" register has
-    -- contents. If so, search for that and return.
-    -- NOTE: Forward searches operate until just before the term. Backard searches operate until
-    -- and including the beginning of the term.
-    -- Since this is a direct search, wrapscan needs to be handled
-
-    checked_clear_namespaces(0, opts.dim)
-    checked_ns_set(cur_win, opts.dim)
-
-    local prompt = fwd and "/" or "?"
-    create_search_listener(cur_win, cur_buf, prompt, opts)
-
-    -- pcall so that pressing Ctrl+c does not enter error
-    local ok, pattern_raw = pcall(fn.input, prompt)
-
-    del_search_listener()
-    local pattern, _ = parse_search_offset(prompt, pattern_raw)
-    if not ok or pattern == "" then
-        checked_clear_namespaces(cur_buf, opts.dim)
-        -- TODO: This needs to check for the keyboard interrupt error specifically
-        api.nvim_echo({ { "" } }, false, {}) -- LOW: I wish there was a less blunt way
-        return
+    if require("farsight._common").get_is_repeating() == 1 then
+        if fn.getreg("/") ~= "" then
+            return (vim.v.searchforward == 1 and "/" or "?") .. "\r"
+        else
+            return ""
+        end
     end
 
-    -- TODO: This looks nicer but might create an extra redraw step. Profile
+    local prompt = fwd and "/" or "?"
+    checked_clear_namespaces(0, opts.dim)
+    if fn.reg_executing() == "" then
+        checked_ns_set(cur_win, opts.dim)
+        create_search_listener(cur_win, cur_buf, prompt, opts)
+    end
+
+    local ok, pattern_raw = pcall(fn.input, prompt)
+    del_search_listener()
+    if not ok then
+        checked_clear_namespaces(cur_buf, opts.dim)
+        if pattern_raw == "Keyboard interrupt" then
+            api.nvim_echo({ { "" } }, false, {}) -- LOW: Is there a less blunt way to handle this?
+        else
+            api.nvim_echo({ { pattern_raw, "ErrorMsg" } }, true, {})
+        end
+
+        return ""
+    end
+
+    local pattern, _ = parse_search_offset(prompt, pattern_raw)
+    if pattern == "" and fn.getreg("/") == "" then
+        checked_clear_namespaces(cur_buf, opts.dim)
+        return ""
+    end
+
     if opts.dim then
         api.nvim_buf_clear_namespace(cur_buf, dim_ns, 0, -1)
     end
 
-    local arg_parts = {
-        'vim.api.nvim_feedkeys("',
-        tostring(vim.v.count1),
-        prompt,
-        string.gsub(pattern_raw, "\\", "\\\\"),
-        '\\r","nx",false)',
-    }
+    vim.schedule(function()
+        -- Delay execution to avoid flicker.
+        api.nvim_buf_clear_namespace(cur_buf, search_ns, 0, -1)
+    end)
 
-    local args = { table.concat(arg_parts, "") }
-    local mods = { keepjumps = opts.keepjumps }
-    api.nvim_cmd({ cmd = "lua", args = args, mods = mods }, {})
-    -- Running this right before running search can cause flicker
-    api.nvim_buf_clear_namespace(cur_buf, search_ns, 0, -1)
+    return prompt .. pattern_raw .. "\r"
 end
 
 function M.get_ns()
@@ -916,6 +921,8 @@ return M
 --   - When cmdline is updated, how do we check if the cursor is on a valid match? I would guess
 --   using search() with the "c" flag
 --
+-- LOW: Briefly looking at the code for clearing namespaces, it doesn't look like that triggers a
+-- redraw, so I guess having multiple of them here is okay.
 -- LOW: A potential optimization would be to look for contiguous search results and merging them
 -- together. Since the end_cols are end-exclusive indexed, this is not infeasible. You would make
 -- a loop that iterates through and merges in the next index if possible, then niling the
