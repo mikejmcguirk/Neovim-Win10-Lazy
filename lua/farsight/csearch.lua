@@ -778,6 +778,13 @@ return Csearch
 -- - rightleft == true
 -- - termbidi == true
 -- - ambiwidth == double
+--
+-- MAYBE: An "after" option would be useful. It would be convenient to be able to do something
+-- like "f." and end up after the period. Issues:
+-- - You could no longer store data with setcharsearch, since "last_t_cmd" is represented
+-- interally as a boolean.
+-- - Where would you map this? I would personally be fine with <M-t>/<M-T>, but that's not a
+-- reasonable plugin default.
 
 -- PR: It would be cool if Neovim provided some kind of clear_plugin_highlights function that
 -- plugins could register with. That way, devs/users wouldn't have to create bespoke highlight

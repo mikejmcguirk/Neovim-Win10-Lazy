@@ -1203,11 +1203,53 @@ end
 
 return Jump
 
--- TODO: DOCUMENT: Show a CWORD locator example
--- TODO: DOCUMENT: Dot repeats always prompt for a label.
--- TODO: DOCUMENT: If any provided wins are not in the current tabpage, an error will be raised. If
+-- TODO: I want to re-conceptualize this module some. There are three use cases it should be able
+-- to handle:
+-- - Incremental typed jump
+-- - Type a search term, get a result back
+-- - Get all labels based on a canned search
+-- Something that I think would help unify all this is using search() as effectively the
+-- backend. Becaus then everything could be based on pattern strings. You could do something
+-- similar to Jump2D and allow layering of patterns. So if you specify more than one in a string
+-- table, it would iterate through those strings, get all the results, then merge them. I have
+-- to imagine this would be faster than my bespoke code, and would also save the trouble of
+-- having a totally open-ended locator function (you could still have callbacks for filtering rows
+-- and/or cols, so that way you could specify custom behavior. But even then, for something like
+-- folds, I'm still not totally comfortable executing a user callback in an nvim_win_call context).
+-- This does pose the question of how to do cursor dependent searching like jump currently does,
+-- tough that feature might also just be too much voodoo. Though, if you are getting the start
+-- and end of each search result, you might be able to chose which part to affix the label to
+-- in a cursor aware way. You could have cursor aware labelling be an option (which would fix
+-- one of my biggest issues with how it's currently executed), and then calculate everything
+-- out after selecting the jump points from the search results.
+-- Conceptually, this creates the search term and search results as an additional abstraction
+-- layer, and then you have a subsequent logical piece that translates them into jump points, which
+-- are an independent concept. In retrospect, this was probably the missing conceptual piece that
+-- made this module feel off to me. And then, as discussed below, you would broadly have either
+-- search string or live search mode. And then you do character mode for something like
+-- EasyMotion f/t and Sneak labeling. And then (also as mentioned below) I think a lot of the
+-- search labeling code should be common with this module, since the enhanced search is basically
+-- the Live Jump mode but it also lets you run search if you press enter.
+-- You would also want some kind of setting for how user input is processed. You essentially want
+-- "build all labels then narrow them down" mode and "enter a pattern live and get labels" mode.
+-- Requiring the user to create a closure for something like EasyMotion F/T is a bad idea.
+-- The abstractions should also be common with the Search module. You should be able to specify
+-- windows and scopes (before cursor, after cursor, whole window) and use common logic to get
+-- those things in an abstracted manner. So the "hl_info" in search should be re-conceptualized as
+-- a list of jump positions. This clarifies what to do about extmark merging, since that needs to
+-- exist as a separate concept from getting a validated and cleaned list of jump positions.
+-- The jump position getter would also need to have options for fold handling and count.
+-- Am also wondering how much these ideas can be tied into Csearch, although that module deals with
+-- more tightly coupled logic
+-- TODO: For incremental typed jump, in addition to what is effectively max display labels, there
+-- should be a max_actual_tokens variable or something. You want to be able to say, if a jump
+-- requires more than three keypresses, don't bother.
+--
+-- TODO_DOC: Show a CWORD locator example
+-- TODO_DOC: Dot repeats always prompt for a label.
+-- TODO_DOC: If any provided wins are not in the current tabpage, an error will be raised. If
 -- none of the wins are focusable, the function will early exit.
--- TODO: DOCUMENT: Like csearch, default on_jump checks fdo.
+-- TODO_DOC: Like csearch, default on_jump checks fdo.
 
 -- LOW: Allow a list of wins not in the current tabpage to be passed to the jump function, assuming
 -- they are all part of the same tabpage. Make advance_jump change tabpages before displaying

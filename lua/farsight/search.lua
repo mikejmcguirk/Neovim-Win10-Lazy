@@ -406,6 +406,136 @@ local function merge_hl_info_entries(hl_info, incsearch)
 end
 
 ---Edits hl_info in place
+---Assumes 1-based row indexing
+---@param hl_info farsight.search.HlInfo
+local function clear_fold_rows_rev(hl_info)
+    local len_hl_info = hl_info[1]
+    local hl_rows = hl_info[2]
+    local hl_cols = hl_info[3]
+    local hl_fin_rows = hl_info[4]
+    local hl_fin_cols = hl_info[5]
+    local call = vim.call
+
+    local last_row = 0
+    local last_fold_line = -1
+    local candidate_i = 0
+    local j = 1
+    for i = 1, len_hl_info do
+        local row = hl_rows[i]
+        local fold_line = last_row == row and last_fold_line or call("foldclosed", row)
+        last_row = row
+        if fold_line == -1 then
+            if candidate_i > 0 then
+                hl_rows[j] = hl_rows[candidate_i]
+                hl_cols[j] = hl_cols[candidate_i]
+                hl_fin_rows[j] = hl_fin_rows[candidate_i]
+                hl_fin_cols[j] = hl_fin_cols[candidate_i]
+                j = j + 1
+                candidate_i = 0
+            end
+
+            hl_rows[j] = hl_rows[i]
+            hl_cols[j] = hl_cols[i]
+            hl_fin_rows[j] = hl_fin_rows[i]
+            hl_fin_cols[j] = hl_fin_cols[i]
+            j = j + 1
+            last_fold_line = -1
+        else
+            if fold_line ~= last_fold_line then
+                if candidate_i > 0 then
+                    hl_rows[j] = hl_rows[candidate_i]
+                    hl_cols[j] = hl_cols[candidate_i]
+                    hl_fin_rows[j] = hl_fin_rows[candidate_i]
+                    hl_fin_cols[j] = hl_fin_cols[candidate_i]
+                    j = j + 1
+                end
+
+                candidate_i = i
+                last_fold_line = fold_line
+            else
+                candidate_i = i
+            end
+        end
+    end
+
+    if candidate_i > 0 then
+        hl_rows[j] = hl_rows[candidate_i]
+        hl_cols[j] = hl_cols[candidate_i]
+        hl_fin_rows[j] = hl_fin_rows[candidate_i]
+        hl_fin_cols[j] = hl_fin_cols[candidate_i]
+        j = j + 1
+    end
+
+    hl_info[1] = j - 1
+    for i = j, len_hl_info do
+        hl_rows[i] = nil
+        hl_cols[i] = nil
+        hl_fin_rows[i] = nil
+        hl_fin_cols[i] = nil
+    end
+end
+
+---Edits hl_info in place
+---Assumes 1-based row indexing
+---@param hl_info farsight.search.HlInfo
+local function clear_fold_rows_fwd(hl_info)
+    local len_hl_info = hl_info[1]
+    local hl_rows = hl_info[2]
+    local hl_cols = hl_info[3]
+    local hl_fin_rows = hl_info[4]
+    local hl_fin_cols = hl_info[5]
+    local call = vim.call
+
+    local last_row = 0
+    local last_fold_line = -1
+    local j = 1
+    for i = 1, len_hl_info do
+        local row = hl_rows[i]
+        local fold_line = last_row == row and last_fold_line or call("foldclosed", row)
+        last_row = row
+        if fold_line == -1 then
+            last_fold_line = fold_line
+
+            hl_rows[j] = hl_rows[i]
+            hl_cols[j] = hl_cols[i]
+            hl_fin_rows[j] = hl_fin_rows[i]
+            hl_fin_cols[j] = hl_fin_cols[i]
+            j = j + 1
+        else
+            if last_fold_line ~= fold_line then
+                last_fold_line = fold_line
+
+                hl_rows[j] = hl_rows[i]
+                hl_cols[j] = hl_cols[i]
+                hl_fin_rows[j] = hl_fin_rows[i]
+                hl_fin_cols[j] = hl_fin_cols[i]
+                j = j + 1
+            end
+        end
+    end
+
+    hl_info[1] = j - 1
+    for i = j, len_hl_info do
+        hl_rows[i] = nil
+        hl_cols[i] = nil
+        hl_fin_rows[i] = nil
+        hl_fin_cols[i] = nil
+    end
+end
+
+---Edits hl_info in place
+---Assumes 1-based row indexing
+---@param hl_info farsight.search.HlInfo
+---@param fwd boolean
+local function clear_fold_rows(hl_info, fwd)
+    if fwd then
+        clear_fold_rows_fwd(hl_info)
+    else
+        clear_fold_rows_rev(hl_info)
+    end
+end
+
+---Edits hl_info in place
 ---Change 1, 1 search() results to extmark indexing
 ---@param hl_info farsight.search.HlInfo
 local function adjust_hl_info_indexing(hl_info)
@@ -455,8 +585,8 @@ local function trim_rev_entries(cursor, hl_info)
         end
     end
 
-    -- Because the entries closest to the cursor are searched last, they cannot be skipped when
-    -- searching.
+    -- Adjust for vcount1 now. Because the entries closest to the cursor are searched last, they
+    -- cannot be skipped when running search().
     len_hl_info = hl_info[1]
     local to_trim = vim.v.count1 - 1
     while to_trim > 0 do
@@ -485,6 +615,8 @@ local function adjust_hl_info_vals(buf, hl_info, line_cache, fwd, cursor)
     local hl_fin_rows = hl_info[4]
     local hl_fin_cols = hl_info[5]
 
+    -- TODO: I'm not sure why this is before the col changes. Would reduce inaccuracy. Might also
+    -- want to just put this in the other end_cols loop, so we aren't scanning twice
     -- Handle results of |zero-width| assertions
     for i = 1, len_hl_info do
         hl_fin_cols[i] = math.max(hl_fin_cols[i], 1)
@@ -580,6 +712,7 @@ local function get_hl_info(win, buf, fwd, cmdline, line_cache, incsearch, opts)
 
     if hl_info[1] >= 1 then
         adjust_hl_info_vals(buf, hl_info, line_cache, fwd, cursor)
+        clear_fold_rows(hl_info, fwd)
         adjust_hl_info_indexing(hl_info)
         merge_hl_info_entries(hl_info, incsearch)
     end
@@ -690,7 +823,7 @@ local function display_search_highlights(win, buf, prompt, opts)
     if is then
         -- Always pass false. Search will not jump here
         set_search_extmarks(buf, r_hl_info, false)
-        -- Reverse IncSearch highlights are not valid targets. Don't dim.
+        -- No dimming. Reverse IncSearch highlights are not valid targets.
     end
 
     api.nvim__redraw({ valid = valid, win = win })
@@ -748,8 +881,6 @@ local function resolve_search_opts(cur_buf, opts)
     else
         vim.validate("opts.timeout", opts.timeout, ut._is_int)
     end
-
-    -- TODO: Add keepjumps option. How to make work with feedkeys?
 end
 
 local M = {}
@@ -815,6 +946,7 @@ function M.search(fwd, opts)
         api.nvim_buf_clear_namespace(cur_buf, search_ns, 0, -1)
     end)
 
+    -- Return an expr to support dot repeat and operator pending mode
     return prompt .. pattern_raw .. "\r"
 end
 
@@ -824,16 +956,10 @@ end
 
 return M
 
--- TODO: The cursor location should be visible during searches.
--- TODO: Properly support folds. My understanding so far:
--- - Only the first result in a fold is considered
--- - If a highlight would be in a fold, it is discarded
---   - Removing extmarks from within folds is an obvious win, but double-check the actual
---   behavior as well as what is considered standard for something like this
--- TODO: Does performing search with feedkeys properly handle fdo?
--- TODO: Handle repeats and macros. I think you just get vcount1 and feed an empty search string
--- to make it repeat. Macros might not be able to get around having to input, but highlights can
--- still be disabled.
+-- TODO: Since the fdo doc says it doesn't work in mappings, does that mean it doesn't work here
+-- since this function is designed for expression maps? Test my function against the default.
+-- TODO: Related to the above - Is it possible to add an on_search function here or no? If not,
+-- then fold opening would need to be defined as part of the expr.
 -- TODO: Verify Vim's internal timeout for search
 -- TODO: Test visual mode behavior
 -- TODO: Test omode behavior
@@ -841,22 +967,38 @@ return M
 -- need to cover.
 -- - test/unit/search_spec.lua
 -- - test/old/testdir/test_search.vim
--- TODO: IncSearch hl priority should be > Search.
+-- - There are searchhl tests as well
+-- TODO: Is it possible to create an SoA map and/or SoA filter wrapper to cut down some of the
+-- redundant code? Can this be generalized out with Csearch and jump?
+-- TODO: Add an opt for dislay of "Search" labels.
+-- TODO: Add a "prepend" opt that adds some text before your search. Example use case: If you want
+-- to make a map that only searches inside the current visual area, you could add \%V
+-- TODO: Related to the above, if you wanted to do that kind of map using the defaults, you could
+-- just map "/\%V". I'm not totally sure you could do that here unless you used the "remap"
+-- option (test if that even works, maybe document if so). And I would not map the plugs with
+-- remap.
+-- TODO: Because labeling relies on the unmerged marks, they should be passed out of the search
+-- highlighting sub-function. In order for things to make sense, I think then that the merge
+-- function needs to be taken out of get_hl_info, so that way the get_hl_info return makes sense.
+-- The valid flag also needs to be passed out for redrawing.
 
--- TODO: DOCUMENT: IncSearch emulation is incomplete. Setting IncSearch to true will produce
+-- TODO_DOC: By default, Farsight Search will live highlight matches in the direction the user is
+-- searching using |hl-Search|. If |incsearch| is true, all visible matches will be highighted,
+-- with |hl-IncSearch| used for the first match. If jump labels are enabled (true by default), they
+-- will only be added in the current window in the direction the user is searching. For
+-- multi-directional/multi-window navigation, use jump.
+-- TODO_DOC: IncSearch emulation is incomplete. Setting IncSearch to true will produce
 -- IncSearch style highlighting. However, the cursor will not automatically advance and
 -- <C-t>/<C-g> commands will not work.
--- TODO: DOCUMENT: Farsight will always display "Search" highlights in the direction the user
--- entered. With IncSearch on, backward facing labels will also be displayed. IncSearch will also
--- cause the next result to display with an IncSearch highlight. Labels will only be calculated
--- and added to results after the cursor.
--- TODO: DOCUMENT: |search-offset| is supported
--- TODO: DOCUMENT: Search highlights will always show in the direction you are searching
--- TODO: DOCUMENT: Highlighting only one way is intentional.
--- TODO: DOCUMENT: Limitation: Ctrl-T/Ctrl-G navigation with Incsearch are not supported
--- TODO: DOCUMENT: Make some sort of useful documentation out of my error with running nohlsearch
+-- TODO_DOC: Make some sort of useful documentation out of my error with running nohlsearch
 -- on cmdline enter
--- TODO: DOCUMENT: cpo c is respected
+-- TODO_DOC: The search module, really, is just a wrapper around the built-in /? cmds. If you
+-- press enter to search, that is still handled with the built-in. This means cpo-c is respected
+-- and hlsearch is still used for results.
+-- TODO_DOC: If a macro or dot repeat are performed, the |quote/| last search register is used,
+-- emulating default behavior.
+-- TODO_DOC: Because this module uses input(), if you have an autocmd that schedules nohlsearch
+-- after CmdlineEnter or CmdlineLeave, it will disable hlsearch after you have pressed enter.
 --
 -- LABELS
 --
@@ -865,19 +1007,30 @@ return M
 -- TODO: The default highlights here have to work with CurSearch and IncSearch. Being that this is
 -- the lowest degrees of freedom module, it is the anchor point for the others.
 -- modifying the search
--- TODO: Should have fold behavior similar to Csearch. Either skip folds entirely, or affix labels
--- in a reasonable manner. If there's no good way to apply labels, I'm fine with always skipping.
 -- TODO: Label jumps should have an on_jump option. The default should be a reasonable application
 -- of fdo
 -- Should saving searchforward/histadd/searchreg for labels be an option or something handled in
 -- on_jump?
--- Labels should only go in the direction of the search. Want to keep possibilities down so
--- useful labeling can be done more quickly. Omni-directional should be handled in jump
--- TODO: There might be interesting stuff we can do with \%V (search inside the visual area only)
--- On the baseline level, if the user wants to make that custom mapping, where you exit visual
--- mode (update the marks) and then run search with that magic pre-filled, it should do so
--- smoothly
 
+-- MID: When does input() return vim.NIL?
+-- MID: Fold handling could be further optimized:
+-- - The first extmark in each fold block is currently allowed to be set. This is to avoid
+-- introducing additional logic around fixing hl_info for count and incsearch. But this still
+-- forces Neovim to do bookkeeping around the extmark. I think this is fixed, roughly, by deleting
+-- additional entries based on where the cursor will end up.
+-- - (low priority) It might be more efficient to pre-compute the fold statuses of each row and
+-- look them up in a table, rather than doing an if check on each entry. But this would be
+-- predicated on having a list of rows to build the fold lookup from, rather than having to
+-- iterate through every entry (otherwise, this is pointless). You could use dim_rows for this,
+-- but that list is built after the hl_info entries are merged (and fold visibility needs to be
+-- checked per pre-merge entry).
+-- - An alternative to all this might be to just check folds during search, which is how do_search
+-- handles it. This would solve the first problem, and make the second one irrelevant. The problem
+-- is how to make this work with Puc Lua's double search, since fold handling is based only on the
+-- start index (from what I can tell, this is as per default behavior). You would need to save a
+-- list of omitted searches and hope the Puc Lua ending syncs up with that. Storing a list would
+-- also be a new heap allocation.
+-- MID: Display a highlight on the cursor position. Not required for parity with the built-in.
 -- MID: Is winhighlight properly respected?
 -- MID: The built-in search highlights zero length lines. Extmark highlights do not display on
 -- them. The only way I can think of to deal with this is to manually traverse the results and pick
@@ -891,7 +1044,9 @@ return M
 -- - Should IncSearch's auto-forward cursor movement be supported? I do not use it, but it's a
 -- core component of how IncSearch functions. Because this version of search has non-IncSearch
 -- highlights I'm comfortable with, I'm directionally okay with making IncSearch match its
--- default behavior
+-- default behavior. If this is done, do this before getting into <C-t>/<C-g>, as the only
+-- positions you need to be aware of are the current cursor position and the first match. Note
+-- that this would require off-screen searching and supporting wrapscan.
 -- - Is any sort of displaying being done for searches above/below the screen? Might influence how
 -- IncSearch should behave
 -- Questions about built-in behavior:
@@ -932,9 +1087,8 @@ return M
 -- defeats the purpose of using a struct of arrays to begin with.
 -- LOW: When getting search positions, it might be faster to run getpos() rather than line() and
 -- col(). My concern is that getpos() allocates a table. This would need to be profiled.
+-- LOW: Is vim.call or nvim_call_function faster?
 --
--- NON: Do not re-implement cursor movement for IncSearch. This is performance intensive, creates
--- complexity surface area, and is visually too busy.
 -- NON: Multi-window searching. Creates weird questions with wrap scan. Creates a problem where
 -- even if you replicate the proper window ordering, it's not necessarily intuitive to which
 -- window you will jump to.
