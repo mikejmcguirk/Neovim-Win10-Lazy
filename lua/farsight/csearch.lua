@@ -759,6 +759,12 @@ end
 
 return Csearch
 
+-- TODO: Base this on search patterns as well. You could get the results and then use them to
+-- iterate token_counts. One question is, if you put multiple things in the pattern, how do those
+-- results layer per continguous block?
+-- Perf win - Do search once with the C core, then do the token_counts iteration through a subset
+-- of characters.
+-- UX win - Unified interface for all modules.
 -- TODO: For my personal purposes, do I want to use isprint instead of isk? Too noisy as a default.
 -- Raise broader question though - What if a user does want to do this? Are the functions exposed
 -- that allow them to do this?

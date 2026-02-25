@@ -36,7 +36,7 @@ local function get_win_search_data(win, buf, fwd)
     if fwd then
         local common = require("farsight._common")
         local wS = fn.line("w$")
-        local stop_row, valid = common.get_wrap_checked_bot_row(win, buf, wS)
+        local stop_row, valid = common.get_checked_stop_row(win, buf, wS)
         return hl_info, stop_row, valid, nil
     else
         -- Get the data to restore with the vimfn later
@@ -761,7 +761,7 @@ local function handle_empty_cmdline(win, buf, fwd, incsearch, dim)
     if fwd or ((not fwd) and incsearch) then
         local common = require("farsight._common")
         local wS = fn.line("w$")
-        local _, checked_valid = common.get_wrap_checked_bot_row(win, buf, wS)
+        local _, checked_valid = common.get_checked_stop_row(win, buf, wS)
         valid = checked_valid
     end
 
@@ -956,6 +956,17 @@ end
 
 return M
 
+-- TODO: Abstract out the search results. Concept
+-- - Pass in win (if not current win, it's win called)
+-- - Whole window/upward/downward
+-- - The returned data structure should contain the valid flag (since re-calculation is expensive)
+-- - It should also contain the dir flag. So when you want to filter the results for folds, you
+-- can pass in the data structure and then the function can read the upward flag to determine how
+-- fold handling works. I suspect in either the label or the jump case this will be relevant
+-- - I think you still have it use extmark indexing since it will ultimately be used for labeling
+-- - In the context of this module, after getting the jump positions, you would then create a
+-- separate, merged list of extmarks to save perf there, but pass out the original jump list for
+-- labeling.
 -- TODO: Since the fdo doc says it doesn't work in mappings, does that mean it doesn't work here
 -- since this function is designed for expression maps? Test my function against the default.
 -- TODO: Related to the above - Is it possible to add an on_search function here or no? If not,
@@ -970,20 +981,16 @@ return M
 -- - There are searchhl tests as well
 -- TODO: Is it possible to create an SoA map and/or SoA filter wrapper to cut down some of the
 -- redundant code? Can this be generalized out with Csearch and jump?
--- TODO: Add an opt for dislay of "Search" labels.
+-- TODO: Add an opt for display of "Search" labels.
 -- TODO: Add a "prepend" opt that adds some text before your search. Example use case: If you want
 -- to make a map that only searches inside the current visual area, you could add \%V
 -- TODO: Related to the above, if you wanted to do that kind of map using the defaults, you could
 -- just map "/\%V". I'm not totally sure you could do that here unless you used the "remap"
 -- option (test if that even works, maybe document if so). And I would not map the plugs with
 -- remap.
--- TODO: Because labeling relies on the unmerged marks, they should be passed out of the search
--- highlighting sub-function. In order for things to make sense, I think then that the merge
--- function needs to be taken out of get_hl_info, so that way the get_hl_info return makes sense.
--- The valid flag also needs to be passed out for redrawing.
 
 -- TODO_DOC: By default, Farsight Search will live highlight matches in the direction the user is
--- searching using |hl-Search|. If |incsearch| is true, all visible matches will be highighted,
+-- searching using |hl-Search|. If |incsearch| is true, all visible matches will be highlighted,
 -- with |hl-IncSearch| used for the first match. If jump labels are enabled (true by default), they
 -- will only be added in the current window in the direction the user is searching. For
 -- multi-directional/multi-window navigation, use jump.

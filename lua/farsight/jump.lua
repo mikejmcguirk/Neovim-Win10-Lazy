@@ -1241,6 +1241,7 @@ return Jump
 -- The jump position getter would also need to have options for fold handling and count.
 -- Am also wondering how much these ideas can be tied into Csearch, although that module deals with
 -- more tightly coupled logic
+-- Actually don't do the layered patterns thing. You can do something like\(\d\|\a\)
 -- TODO: For incremental typed jump, in addition to what is effectively max display labels, there
 -- should be a max_actual_tokens variable or something. You want to be able to say, if a jump
 -- requires more than three keypresses, don't bother.
