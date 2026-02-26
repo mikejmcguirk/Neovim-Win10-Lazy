@@ -50,21 +50,20 @@ end
 ---@param is boolean
 ---@param dir -1|1
 local function set_search_extmarks(buf, res, is, dir)
-    local len_res = res[3]
+    local len_res = res[2]
     local start = dir == 1 and 1 or len_res
     local stop = dir == 1 and len_res or 1
 
-    local res_idxs = res[4]
-    local res_rows = res[5]
-    local res_cols = res[6]
-    local res_fin_rows = res[7]
-    local res_fin_cols_ = res[8]
-    local nvim_buf_set_extmark = api.nvim_buf_set_extmark
+    local res_idxs = res[3]
+    local res_rows = res[4]
+    local res_cols = res[5]
+    local res_fin_rows = res[6]
+    local res_fin_cols_ = res[7]
 
     if is then
         local idx = res_idxs[start]
         start = start + dir
-        nvim_buf_set_extmark(buf, search_ns, res_rows[idx], res_cols[idx], {
+        api.nvim_buf_set_extmark(buf, search_ns, res_rows[idx], res_cols[idx], {
             priority = 1000,
             hl_group = hl_is,
             strict = false,
@@ -83,7 +82,7 @@ local function set_search_extmarks(buf, res, is, dir)
         local idx = res_idxs[i]
         extmark_opts.end_row = res_fin_rows[idx]
         extmark_opts.end_col = res_fin_cols_[idx]
-        nvim_buf_set_extmark(buf, search_ns, res_rows[idx], res_cols[idx], extmark_opts)
+        api.nvim_buf_set_extmark(buf, search_ns, res_rows[idx], res_cols[idx], extmark_opts)
     end
 end
 
@@ -96,10 +95,14 @@ local function checked_get_dim_rows_from_res(res, dim)
         return
     end
 
-    local len_res = res[3]
-    local res_idxs = res[4]
-    local res_rows = res[5]
-    local res_fin_rows = res[7]
+    local len_res = res[2]
+    if len_res < 1 then
+        return
+    end
+
+    local res_idxs = res[3]
+    local res_rows = res[4]
+    local res_fin_rows = res[6]
 
     local tn = require("farsight.util")._table_new
     local dim_hl_info = { 0, tn(32, 0), tn(32, 0) } ---@type farsight.search.DimHlInfo
@@ -153,17 +156,17 @@ end
 ---@param res farsight.common.SearchResults 0 indexed, exclusive
 ---@param incsearch boolean
 local function merge_res(res, incsearch)
-    local init_len_res = res[3]
+    local init_len_res = res[2]
     local start = incsearch and 3 or 2
     if init_len_res < start then
         return
     end
 
-    local res_idxs = res[4]
-    local res_rows = res[5]
-    local res_cols = res[6]
-    local res_fin_rows = res[7]
-    local res_fin_cols_ = res[8]
+    local res_idxs = res[3]
+    local res_rows = res[4]
+    local res_cols = res[5]
+    local res_fin_rows = res[6]
+    local res_fin_cols_ = res[7]
 
     local j = start - 1
     for i = start, init_len_res do
@@ -179,6 +182,7 @@ local function merge_res(res, incsearch)
         local col_before = cur_fin_row == test_row and cur_fin_col < test_col
         -- cur_pos before test_pos. Compact.
         if col_before or cur_fin_row < test_row then
+            -- TODO: This could be a standard compact rather than a direct edit
             j = j + 1
             dst = res_idxs[j]
             res_rows[dst] = test_row
@@ -197,7 +201,7 @@ local function merge_res(res, incsearch)
         end
     end
 
-    res[3] = j
+    res[2] = j
 end
 
 ---@param cmdprompt string
@@ -252,41 +256,45 @@ local function display_search_highlights(win, buf, prompt, search_opts, is, is_o
 
     local cmdline, _ = parse_search_offset(prompt, cmdline_raw)
     local common_search = require("farsight._common").search
-    local ok, win_res, cache = common_search(cmdline, search_opts)
+    local ok, win_valid, win_res, cache = common_search(cmdline, search_opts)
+    local valid = win_valid[win] or false
+
+    local r_ok, r_win_valid, r_win_res, r_cache
+    if is then
+        r_ok, r_win_valid, r_win_res, r_cache = common_search(cmdline, is_opts)
+        local r_valid = r_win_valid[win]
+        if r_valid == false then
+            valid = false
+        end
+
+        -- TODO: get valid into here
+        if (not r_ok) or type(r_win_res) == "string" then
+            handle_res_err(win, r_win_res, r_cache, opts)
+            return
+        end
+    end
+
     if (not ok) or type(win_res) == "string" then
         handle_res_err(win, win_res, cache, opts)
         return
     end
 
     local res = win_res[win]
-    local valid = res[2]
-
-    if is then
-        local r_ok, r_win_res, r_cache = common_search(cmdline, is_opts)
-        if (not r_ok) or type(r_win_res) == "string" then
-            handle_res_err(win, r_win_res, r_cache, opts)
-            return
-        end
-
-        local r_res = r_win_res[win]
-        if r_res[2] == false then
-            valid = false
-        end
-
-        if r_res[3] > 0 then
-            -- Saves time setting extmarks
-            merge_res(r_res, is)
-            -- Always pass false. Search will not jump here
-            set_search_extmarks(buf, r_res, false, is_opts[3])
-            -- No dimming. Reverse IncSearch highlights are not valid targets.
-        end
-    end
-
-    if res[3] > 0 then
+    if res[2] > 0 then
         merge_res(res, is)
         local dim_hl_info = checked_get_dim_rows_from_res(res, dim)
         set_search_extmarks(buf, res, is, search_opts[3])
         checked_set_dim_extmarks(buf, dim_hl_info, dim)
+    end
+
+    if is then
+        local r_res = r_win_res[win]
+        if r_res[2] > 0 then
+            -- Saves time setting extmarks
+            merge_res(r_res, is)
+            -- Because these are not valid destinations, always assign false and do not dim
+            set_search_extmarks(buf, r_res, false, is_opts[3])
+        end
     end
 
     api.nvim__redraw({ valid = valid, win = win })

@@ -16,11 +16,7 @@ local group = api.nvim_create_augroup("specops", {})
 api.nvim_create_autocmd("TextYankPost", {
     group = group,
     callback = function()
-        if vim.v.event.operator ~= "y" then
-            return
-        end
-
-        if old_cur_pos then
+        if vim.v.event.operator == "y" and old_cur_pos then
             api.nvim_win_set_cursor(0, old_cur_pos)
             old_cur_pos = nil
         end

@@ -34,8 +34,6 @@ local get_utf_codepoint = require("farsight._util_char")._get_utf_codepoint
 local maxcol = vim.v.maxcol
 local str_byte = string.byte
 
-require("farsight._common").setup_repeat_tracking()
-
 ---@param char string
 ---@param is_omode boolean
 ---@param forward 0|1

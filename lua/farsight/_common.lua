@@ -3,13 +3,12 @@ local fn = vim.fn
 
 ---@class farsight.common.SearchResults
 ---@field [1] boolean Upward? True if going up from cursor
----@field [2] boolean Valid? Flag for nvim__redraw
----@field [3] integer Length valid indexes
----@field [4] integer[] Valid indexes
----@field [5] integer[] Start rows (0 based, inclusive)
----@field [6] integer[] Start cols (0 based, inclusive)
----@field [7] integer[] Fin rows (0 based, inclusive)
----@field [8] integer[] Fin cols (0 based, exclusive)
+---@field [2] integer Length valid indexes
+---@field [3] integer[] Valid indexes
+---@field [4] integer[] Start rows (0 based, inclusive)
+---@field [5] integer[] Start cols (0 based, inclusive)
+---@field [6] integer[] Fin rows (0 based, inclusive)
+---@field [7] integer[] Fin cols (0 based, exclusive)
 
 -- MAYBE: Use dir -2/2 for cursor to top of the buffer and 2 for cursor to the bottom of the
 -- buffer. A wrapscan search could then be -3/3. Note that redraw valid needs to be checked for
@@ -86,7 +85,7 @@ function M.get_is_repeating()
     return is_repeating
 end
 
-function M.setup_repeat_tracking()
+local function setup_repeat_tracking()
     if did_setup_repeat_tracking then
         return
     end
@@ -116,24 +115,22 @@ function M.setup_repeat_tracking()
 
     did_setup_repeat_tracking = true
 end
---
--- TODO: is calling this function rather than letting it run automatically correct? For any
--- function that needs the vim.on_key setup, a repeat is never going to be the first thing you do,
--- so simply running this function on require should suffice.
+
+setup_repeat_tracking()
 
 ---Edits res in place
 ---@param res farsight.common.SearchResults 1 indexed, exclusive
 local function set_api_indexes(res)
-    local len_res = res[3]
+    local len_res = res[2]
     if len_res < 1 then
         return
     end
 
-    local res_idxs = res[4]
-    local res_rows = res[5]
-    local res_cols = res[6]
-    local res_fin_rows = res[7]
-    local res_fin_cols = res[8]
+    local res_idxs = res[3]
+    local res_rows = res[4]
+    local res_cols = res[5]
+    local res_fin_rows = res[6]
+    local res_fin_cols = res[7]
 
     for i = 1, len_res do
         local idx = res_idxs[i]
@@ -147,13 +144,13 @@ end
 ---Edits res in place
 ---@param res farsight.common.SearchResults 1 indexed, inclusive
 local function clear_fold_rows_rev(res)
-    local len_res = res[3]
+    local len_res = res[2]
     if len_res < 1 then
         return
     end
 
-    local res_idxs = res[4]
-    local res_rows = res[5]
+    local res_idxs = res[3]
+    local res_rows = res[4]
 
     local last_row = 0
     local last_fold_row = -1
@@ -194,19 +191,19 @@ local function clear_fold_rows_rev(res)
         j = j + 1
     end
 
-    res[3] = j - 1
+    res[2] = j - 1
 end
 
 ---Edits res in place
 ---@param res farsight.common.SearchResults 1 indexed, inclusive
 local function clear_fold_rows_fwd(res)
-    local len_res = res[3]
+    local len_res = res[2]
     if len_res < 1 then
         return
     end
 
-    local res_idxs = res[4]
-    local res_rows = res[5]
+    local res_idxs = res[3]
+    local res_rows = res[4]
 
     local last_row = 0
     local last_fold_row = -1
@@ -228,20 +225,20 @@ local function clear_fold_rows_fwd(res)
         end
     end
 
-    res[3] = j
+    res[2] = j
 end
 
 ---Edits res in place
 ---@param res farsight.common.SearchResults 1 indexed, inclusive
 ---@param f fun(fold_row: integer, row: integer):boolean
 local function remove_folded_by_condition(res, f)
-    local len_res = res[3]
+    local len_res = res[2]
     if len_res < 1 then
         return
     end
 
-    local res_idxs = res[4]
-    local res_rows = res[5]
+    local res_idxs = res[3]
+    local res_rows = res[4]
 
     local last_row = 0
     local last_fold_row = -1
@@ -259,7 +256,7 @@ local function remove_folded_by_condition(res, f)
         end
     end
 
-    res[3] = j
+    res[2] = j
 end
 
 ---Edits res in place
@@ -291,14 +288,14 @@ end
 ---@param cursor [integer, integer, integer, integer, integer] 1 indexed, inclusive
 ---@param res farsight.common.SearchResults 1 indexed, inclusive
 local function trim_upward_res(cursor, res)
-    local len_res = res[3]
+    local len_res = res[2]
     if len_res < 1 then
         return
     end
 
-    local res_idxs = res[4]
-    local res_rows = res[5]
-    local res_cols = res[6]
+    local res_idxs = res[3]
+    local res_rows = res[4]
+    local res_cols = res[5]
     local cur_row = cursor[2]
     local cur_col = cursor[3]
 
@@ -311,13 +308,13 @@ local function trim_upward_res(cursor, res)
         if start_above or (start_row == cur_row and res_cols[idx] < cur_col) then
             break
         else
-            res[3] = res[3] - 1
+            res[2] = res[2] - 1
         end
     end
 
     -- Adjust for vcount1 now. Because the entries closest to the cursor are searched last, they
     -- cannot be skipped when running search().
-    res[3] = res[3] - (vim.v.count1 - 1)
+    res[2] = res[2] - (vim.v.count1 - 1)
 end
 
 ---@param buf integer
@@ -326,10 +323,10 @@ end
 ---@param cursor [integer, integer, integer, integer, integer]
 ---@param opts farsight.common.SearchOpts
 local function adjust_res_values(buf, res, cache, cursor, opts)
-    local len_res = res[3]
-    local res_idxs = res[4]
-    local res_rows = res[5]
-    local res_cols = res[6]
+    local len_res = res[2]
+    local res_idxs = res[3]
+    local res_rows = res[4]
+    local res_cols = res[5]
 
     cache[buf] = cache[buf] or {}
     local buf_cache = cache[buf]
@@ -360,9 +357,9 @@ local function adjust_res_values(buf, res, cache, cursor, opts)
     -- Fold handling only relies on start rows and proper count adjustment
     clear_fold_rows(res, opts)
 
-    len_res = res[3] -- Update after potentially compacting changes above.
-    local res_fin_rows = res[7]
-    local res_fin_cols = res[8]
+    len_res = res[2] -- Update after potentially compacting changes above.
+    local res_fin_rows = res[6]
+    local res_fin_cols = res[7]
 
     for i = 1, len_res do
         local idx = res_idxs[i]
@@ -415,39 +412,46 @@ local function fmt_res_err(err, win, pattern, res)
     err_tbl[#err_tbl + 1] = "Win: " .. win
     err_tbl[#err_tbl + 1] = ", Upward?: " .. tostring(res[1])
     err_tbl[#err_tbl + 1] = ", Pattern: " .. pattern
-    err_tbl[#err_tbl + 1] = ", Total length: " .. res[3]
-    err_tbl[#err_tbl + 1] = ", Indexes: " .. #res[4]
-    err_tbl[#err_tbl + 1] = ", #Start rows: " .. #res[5]
-    err_tbl[#err_tbl + 1] = ", #Start cols: " .. #res[6]
-    err_tbl[#err_tbl + 1] = ", #Fin Rows: " .. #res[7]
-    err_tbl[#err_tbl + 1] = ", #Fin Cols: " .. #res[8]
+    err_tbl[#err_tbl + 1] = ", Total length: " .. res[2]
+    err_tbl[#err_tbl + 1] = ", Indexes: " .. #res[3]
+    err_tbl[#err_tbl + 1] = ", #Start rows: " .. #res[4]
+    err_tbl[#err_tbl + 1] = ", #Start cols: " .. #res[5]
+    err_tbl[#err_tbl + 1] = ", #Fin Rows: " .. #res[6]
+    err_tbl[#err_tbl + 1] = ", #Fin Cols: " .. #res[7]
 
     return table.concat(err_tbl, "")
 end
 
----Edits res in place
----@param res farsight.common.SearchResults
----@param cursor [integer, integer, integer, integer, integer]
----@param opts farsight.common.SearchOpts
----@return integer
-local function get_stop_row_and_valid(win, buf, res, cursor, opts)
-    if opts[3] < 0 then
-        -- The fill line does not need to be checked here because the cursor can never be in it.
-        return cursor[2]
-    end
-
+---@param win integer
+---@param buf integer
+---@return integer, boolean
+local function get_checked_wrap_fill_and_valid(win, buf)
     local wS = vim.call("line", "w$") ---@type integer
     if api.nvim_get_option_value("wrap", { win = win }) then
         if wS < api.nvim_buf_line_count(buf) then
             local fill_row = wS + 1
             if vim.call("screenpos", win, fill_row, 1).row >= 1 then
-                res[2] = false
-                return fill_row
+                return fill_row, false
             end
         end
     end
 
-    return wS
+    return wS, true
+end
+
+---Edits res in place
+---@param win integer
+---@param buf integer
+---@param cursor [integer, integer, integer, integer, integer]
+---@param opts farsight.common.SearchOpts
+---@return integer, boolean
+local function get_stop_row_and_valid(win, buf, cursor, opts)
+    if opts[3] < 0 then
+        -- The fill line does not need to be checked here because the cursor can never be in it.
+        return cursor[2], true
+    end
+
+    return get_checked_wrap_fill_and_valid(win, buf)
 end
 --
 -- MID: It would be better if nvim_buf_line_count were not ephemeral.
@@ -457,10 +461,10 @@ end
 ---@param res farsight.common.SearchResults 1 indexed, inclusive
 ---@param cache table<integer, table<integer, string>>
 local function fix_jit_search_res(buf, res, cache)
-    local res_idxs = res[4]
-    local len_res = res[3]
-    local res_rows = res[5]
-    local res_fin_rows = res[7]
+    local len_res = res[2]
+    local res_idxs = res[3]
+    local res_rows = res[4]
+    local res_fin_rows = res[6]
 
     -- Convert search_match_lines to end rows
     for i = 1, len_res do
@@ -503,20 +507,20 @@ end
 ---@param res farsight.common.SearchResults
 ---@param cache table<integer, table<integer, string>>
 ---@param opts farsight.common.SearchOpts See class definition.
----@return boolean, string|nil, string|nil
+---@return boolean, boolean, string|nil, string|nil
 local function perform_search_jit(win, buf, pattern, cursor, res, cache, opts)
-    local stop_row = get_stop_row_and_valid(win, buf, res, cursor, opts)
+    local stop_row, valid = get_stop_row_and_valid(win, buf, cursor, opts)
     local count1 = (opts[4] and not res[1]) and vim.v.count1 or 1
     if opts[3] <= 0 then
         -- Use the vimfn because nvim_win_set_cursor updates the view and stages a redraw
         vim.call("cursor", vim.call("line", "w0"), 1, 0)
     end
 
-    local res_idxs = res[4]
-    local res_rows = res[5]
-    local res_cols = res[6]
-    local res_fin_rows = res[7]
-    local res_fin_cols = res[8]
+    local res_idxs = res[3]
+    local res_rows = res[4]
+    local res_cols = res[5]
+    local res_fin_rows = res[6]
+    local res_fin_cols = res[7]
     local ffi_c = require("ffi").C
 
     local ok, err = pcall(vim.call, "search", pattern, "nWz", stop_row, opts[5], function()
@@ -526,8 +530,8 @@ local function perform_search_jit(win, buf, pattern, cursor, res, cache, opts)
             res_fin_rows[#res_fin_rows + 1] = ffi_c.search_match_lines --[[ @as integer ]]
             res_fin_cols[#res_fin_cols + 1] = ffi_c.search_match_endcol --[[ @as integer ]]
 
-            local new_res_len = res[3] + 1
-            res[3] = new_res_len
+            local new_res_len = res[2] + 1
+            res[2] = new_res_len
             res_idxs[#res_idxs + 1] = new_res_len
             return 1
         else
@@ -542,10 +546,10 @@ local function perform_search_jit(win, buf, pattern, cursor, res, cache, opts)
 
     if ok then
         fix_jit_search_res(buf, res, cache)
-        return ok, nil, nil
+        return ok, valid, nil, nil
     else
         local err_str = fmt_res_err(err, win, pattern, res)
-        return ok, err_str, "ErrorMsg"
+        return ok, valid, err_str, "ErrorMsg"
     end
 end
 --
@@ -562,9 +566,9 @@ end
 ---@param res farsight.common.SearchResults
 ---@param _ table<integer, table<integer, string>>
 ---@param opts farsight.common.SearchOpts See class definition.
----@return boolean, string|nil, string|nil
+---@return boolean, boolean, string|nil, string|nil
 local function perform_search_puc(win, buf, pattern, cursor, res, _, opts)
-    local stop_row = get_stop_row_and_valid(win, buf, res, cursor, opts)
+    local stop_row, valid = get_stop_row_and_valid(win, buf, cursor, opts)
     local base_count = (opts[4] and not res[1]) and vim.v.count1 or 1
     local count1 = base_count
     if opts[3] <= 0 then
@@ -572,19 +576,17 @@ local function perform_search_puc(win, buf, pattern, cursor, res, _, opts)
         vim.call("cursor", vim.call("line", "w0"), 1, 0)
     end
 
-    local res_idxs = res[4]
-    local res_rows = res[5]
-    local res_cols = res[6]
-    local res_fin_rows = res[7]
-    local res_fin_cols = res[8]
+    local res_idxs = res[3]
+    local res_rows = res[4]
+    local res_cols = res[5]
 
     local ok_s, err = pcall(vim.call, "search", pattern, "nWz", stop_row, opts[5], function()
         if count1 <= 1 then
             res_rows[#res_rows + 1] = vim.call("line", ".")
             res_cols[#res_cols + 1] = vim.call("col", ".")
 
-            local new_res_len = res[3] + 1
-            res[3] = new_res_len
+            local new_res_len = res[2] + 1
+            res[2] = new_res_len
             res_idxs[#res_idxs + 1] = new_res_len
             return 1
         else
@@ -598,8 +600,11 @@ local function perform_search_puc(win, buf, pattern, cursor, res, _, opts)
             vim.call("cursor", { cursor[2], cursor[3], cursor[4], cursor[5] })
         end
 
-        return ok_s, err, "ErrorMsg"
+        return ok_s, valid, err, "ErrorMsg"
     end
+
+    local res_fin_rows = res[6]
+    local res_fin_cols = res[7]
 
     count1 = base_count
     local ok_f, _ = pcall(vim.call, "search", pattern, "nWze", stop_row, opts[5], function()
@@ -618,19 +623,19 @@ local function perform_search_puc(win, buf, pattern, cursor, res, _, opts)
     end
 
     if ok_f then
-        local len_res = res[3]
+        local len_res = res[2]
         -- Verify both loops captured the same number of results.
         local count_res = #res
-        for i = 4, count_res do
+        for i = 3, count_res do
             if #res[i] ~= len_res then
                 local err_str = "Result lengths do not match after search"
                 local err_msg = fmt_res_err(err_str, win, pattern, res)
-                return false, err_msg, "ErrorMsg"
+                return false, valid, err_msg, "ErrorMsg"
             end
         end
     end
 
-    return ok_f, err, nil
+    return ok_f, valid, nil, nil
 end
 --
 -- MID: This function is too long.
@@ -663,7 +668,6 @@ local function create_empty_results(opts)
     ---@type farsight.common.SearchResults
     local hl_info = {
         opts[6],
-        true,
         0,
         tn(size, 0),
         tn(size, 0),
@@ -680,28 +684,30 @@ end
 ---@param pattern string
 ---@param cache table<integer, table<integer, string>>
 ---@param opts farsight.common.SearchOpts See class definition.
----@return boolean, farsight.common.SearchResults|string, string|nil
+---@return boolean, boolean, farsight.common.SearchResults|string, string|nil
 local function search_win(win, cur_win, pattern, cache, opts)
     local buf = api.nvim_win_get_buf(win)
 
     local cursor = vim.call("getcurpos", win)
     local res = create_empty_results(opts)
-    local ok_s, err, err_hl = win_call_others(win, cur_win, function()
+    ---@type boolean, boolean, string|nil, string|nil
+    local ok_s, valid, err, err_hl = win_call_others(win, cur_win, function()
         return perform_search(win, buf, pattern, cursor, res, cache, opts)
     end)
 
     if not ok_s then
-        return ok_s, err, err_hl
+        local err_msg = err or ("Error searching win " .. 1000)
+        return ok_s, valid, err_msg, err_hl
     end
 
-    if res[3] == 0 then
-        return ok_s, res, nil
+    if res[2] == 0 then
+        return ok_s, valid, res, nil
     end
 
     adjust_res_values(buf, res, cache, cursor, opts)
     set_api_indexes(res)
 
-    return true, res, nil
+    return true, valid, res, nil
 end
 
 ---ok == false should only be returned for invalid results. Potentially undesirable, but valid,
@@ -716,30 +722,35 @@ end
 ---@param pattern string
 ---@param opts farsight.common.SearchOpts See class definition.
 ---@return boolean
+---@return table<integer, boolean>
 ---@return table<integer, farsight.common.SearchResults>|string
----@return table<integer, table<integer, string>>|string|nil
+---@return table<integer, table<integer, string>>|string
 function M.search(pattern, opts)
     local win_res = {} ---@type table<integer, farsight.common.SearchResults>
     local cache = {} ---@type table<integer, table<integer, string>>
     if pattern == "" then
-        return true, win_res, cache
+        -- TODO: Should compute redraw valid somehow
+        return true, {}, win_res, cache
     end
 
     local cur_win = api.nvim_get_current_win()
+    local win_valid = {} ---@type table<integer, boolean>
 
     local wins = opts[7]
     local len_wins = #wins
     for i = 1, len_wins do
         local win = wins[i]
-        local ok_w, res, err_hl = search_win(win, cur_win, pattern, cache, opts)
+        local ok_w, valid, res, err_hl = search_win(win, cur_win, pattern, cache, opts)
+        win_valid[win] = valid
         if ok_w and type(res) == "table" then
             win_res[win] = res
         else
-            return false, res, err_hl
+            -- TODO: Another issue where incomplete valid status can be returned
+            return false, win_valid, res, err_hl or "ErrorMsg"
         end
     end
 
-    return true, win_res, cache
+    return true, win_valid, win_res, cache
 end
 --
 -- LOW: Ticky tack optimization - Pass current win as a param
@@ -748,8 +759,22 @@ end
 -- would we need to check it explicitly for the purposes of other bookkeeping?
 -- MAYBE: Because we always search forward, how would backward wrap scan searches be performed?
 
+---@param wins integer[]
+---@return table<integer, boolean>
+function M.get_win_valid(wins)
+    local win_valid = {} ---@type table<integer, boolean>
+    return win_valid
+end
+
 return M
 
+-- TODO: Because the calling module needs a complete picture of redraw state on its terms, that
+-- logic needs to be parted out so it can be used as the callers wish. Because redraw valid is
+-- coupled with with stop row, callers also need to own that. This also means that callers need
+-- to own the cursor state. Because this module owns the search system, and that system must be
+-- able to accomodate multiple windows, this means the data must be hashed. Unless we do a
+-- search single win function, which I am not necessarily against, as it would save perf. Getting
+-- vimfn returns multiple times is the wrong/slowest choice regardless.
 -- TODO: Dimming should be shared logic across all three modules
 -- TODO: Folding and counts are not working the way I'd think they would. Hidden fold results are
 -- being considered as part of the count. Fine if I was just mis-understanding, but need to be
