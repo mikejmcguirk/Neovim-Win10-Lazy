@@ -123,6 +123,27 @@ function M._list_remove_item(t, idx)
     t[len] = nil
 end
 
+---@param silent boolean
+---@param msg any
+---@param hl any
+---@return nil
+function M._echo(silent, msg, hl)
+    if silent then
+        return
+    end
+
+    if type(msg) ~= "string" then
+        msg = ""
+    end
+
+    if type(hl) ~= "string" then
+        hl = ""
+    end
+
+    local history = hl == "ErrorMsg" or hl == "WarningMsg" ---@type boolean
+    api.nvim_echo({ { msg, hl } }, history, {})
+end
+
 -- Per mini.jump2d, while nvim_tabpage_list_wins does currently ensure proper window layout, this
 -- is not documented behavior and thus can change. The below function ensures layout
 ---@param wins integer[]

@@ -1,5 +1,4 @@
 require("farsight.plugin")
--- require("farsight._lookup")
 
 local api = vim.api
 local set = vim.keymap.set
@@ -13,11 +12,11 @@ api.nvim_set_hl(0, "FarsightCsearch2nd", { undercurl = true })
 api.nvim_set_hl(0, "FarsightCsearch3rd", { underdouble = true })
 
 set({ "n", "x", "o" }, "/", function()
-    return require("farsight.search").search(true)
+    return require("farsight.search").search(1)
 end, { expr = true })
 
 set({ "n", "x", "o" }, "?", function()
-    return require("farsight.search").search(false)
+    return require("farsight.search").search(-1)
 end, { expr = true })
 
 api.nvim_set_var("farsight_csearch_all_tokens", true)

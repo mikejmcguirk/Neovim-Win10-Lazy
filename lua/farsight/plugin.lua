@@ -214,6 +214,11 @@ end
 -- - TODO: Create docgen
 -- - TODO: Go through the opts of the various functions and document the g:variable overrides
 
+-- TODO_DOC: I don't know how much of this is internal vs. user-facing documentation, but - The
+-- general attitude toward any Puc Lua compatibility function should be: It should handle typical
+-- cases, and effort might be made to support edge cases, but the design of the overal module
+-- cannot be compromised to handle it. LuaJIT support/performance takes priority.
+
 -- LOW: Remove invisible targets. All methods I know to do this have problems:
 -- - screenpos() - Non-trivially slow
 -- - strcharlen() + strdisplaywidth() - Likely also slow
