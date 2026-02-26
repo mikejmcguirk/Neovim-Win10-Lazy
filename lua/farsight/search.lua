@@ -1009,6 +1009,11 @@ return M
 --
 -- LABELS
 --
+-- TODO: Labeling and dimming need to be abstracted out, as every module uses it.
+-- - Challenge: Csearch
+-- - Pass the labels as a list
+-- - Fair labeling or preferential labeling (based on upward/res position)
+-- - For live jumps, do you handle trimming the labels generally or specifically?
 -- TODO: Labels should not accept if the cursor is not in the last position. Maybe don't even
 -- show labels, or show them with a different highlight. Prevents issue with going back and
 -- TODO: The default highlights here have to work with CurSearch and IncSearch. Being that this is
