@@ -239,9 +239,10 @@ end
 ---@param prompt string
 ---@param search_opts farsight.common.SearchOpts
 ---@param is boolean
----@param is_opts farsight.common.SearchOpts
+---@param is_opts farsight.common.SearchOpts|nil
+---@param valid boolean
 ---@param opts farsight.search.SearchOpts
-local function display_search_highlights(win, buf, prompt, search_opts, is, is_opts, opts)
+local function display_search_highlights(win, buf, prompt, search_opts, is, is_opts, valid, opts)
     if vim.call("getcmdprompt") ~= prompt then
         return
     end
@@ -256,18 +257,16 @@ local function display_search_highlights(win, buf, prompt, search_opts, is, is_o
 
     local cmdline, _ = parse_search_offset(prompt, cmdline_raw)
     local common_search = require("farsight._common").search
-    local ok, win_valid, win_res, cache = common_search(cmdline, search_opts)
-    local valid = win_valid[win] or false
+    local ok, win_res, cache = common_search(cmdline, search_opts)
 
     local r_ok, r_win_valid, r_win_res, r_cache
-    if is then
-        r_ok, r_win_valid, r_win_res, r_cache = common_search(cmdline, is_opts)
+    if is and is_opts then
+        r_ok, r_win_res, r_cache = common_search(cmdline, is_opts)
         local r_valid = r_win_valid[win]
         if r_valid == false then
             valid = false
         end
 
-        -- TODO: get valid into here
         if (not r_ok) or type(r_win_res) == "string" then
             handle_res_err(win, r_win_res, r_cache, opts)
             return
@@ -283,17 +282,17 @@ local function display_search_highlights(win, buf, prompt, search_opts, is, is_o
     if res[2] > 0 then
         merge_res(res, is)
         local dim_hl_info = checked_get_dim_rows_from_res(res, dim)
-        set_search_extmarks(buf, res, is, search_opts[3])
+        set_search_extmarks(buf, res, is, search_opts.dir)
         checked_set_dim_extmarks(buf, dim_hl_info, dim)
     end
 
-    if is then
+    if is and is_opts then
         local r_res = r_win_res[win]
         if r_res[2] > 0 then
             -- Saves time setting extmarks
             merge_res(r_res, is)
             -- Because these are not valid destinations, always assign false and do not dim
-            set_search_extmarks(buf, r_res, false, is_opts[3])
+            set_search_extmarks(buf, r_res, false, is_opts.dir)
         end
     end
 
@@ -308,16 +307,23 @@ local function del_search_listener()
 end
 
 ---@param dir -1|1
+---@param start_row integer
+---@param start_col integer
+---@param stop_row integer
 ---@return farsight.common.SearchOpts
-local function get_search_opts(dir)
+local function get_search_opts(win, dir, cursor, start_row, start_col, stop_row)
     return {
-        64,
-        2,
-        dir,
-        true,
-        500,
-        dir == -1 and true or false,
-        { api.nvim_get_current_win() },
+        alloc_size = 64,
+        allow_folds = 2,
+        cursor = cursor,
+        dir = dir,
+        handle_count = true,
+        start_row = start_row,
+        start_col = start_col,
+        stop_row = stop_row,
+        timeout = 500,
+        upward = dir == -1 and true or false,
+        wins = { win },
     }
 end
 
@@ -326,15 +332,29 @@ end
 ---@param prompt string
 ---@param opts farsight.search.SearchOpts
 local function create_search_listener(win, buf, prompt, dir, opts)
-    local search_opts = get_search_opts(dir)
-    local is_opts = get_search_opts(dir * -1)
-    local is = api.nvim_get_option_value("is", { scope = "global" })
+    local cursor = vim.call("getcurpos") ---@type [integer, integer, integer, integer, integer]
+    local get_pos_and_valid = require("farsight._common").get_pos_and_valid_from_dir
+
+    local start_row, start_col, stop_row, valid = get_pos_and_valid(win, buf, dir, cursor)
+    local search_opts = get_search_opts(win, dir, cursor, start_row, start_col, stop_row)
+
+    local is_opts
+    local is = api.nvim_get_option_value("is", { scope = "global" }) ---@type boolean
+    if is then
+        local is_dir = dir * -1
+        local is_start_row, is_start_col, is_stop_row, is_valid =
+            get_pos_and_valid(win, buf, is_dir, cursor)
+        is_opts = get_search_opts(win, is_dir, cursor, is_start_row, is_start_col, is_stop_row)
+        if is_valid == false then
+            valid = false
+        end
+    end
 
     api.nvim_create_autocmd("CmdlineChanged", {
         group = search_group,
         desc = "Highlight search terms",
         callback = function()
-            display_search_highlights(win, buf, prompt, search_opts, is, is_opts, opts)
+            display_search_highlights(win, buf, prompt, search_opts, is, is_opts, valid, opts)
             -- TODO: Display labels if that opt is true
         end,
     })
