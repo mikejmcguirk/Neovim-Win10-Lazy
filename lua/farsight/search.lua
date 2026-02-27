@@ -218,12 +218,12 @@ local function display_search_highlights(win, buf, prompt, search_opts, is, is_o
     local dim = opts.dim ---@type boolean
     checked_clear_namespaces(buf, dim)
     local cmdline_raw = vim.call("getcmdline") ---@type string
-    if cmdline_raw == "" then
+    local cmdline, _ = parse_search_offset(prompt, cmdline_raw)
+    if cmdline == "" then
         api.nvim__redraw({ valid = false, win = win })
         return
     end
 
-    local cmdline, _ = parse_search_offset(prompt, cmdline_raw)
     local common_search = require("farsight._common").search
     local ok, win_res, cache = common_search(cmdline, search_opts)
 

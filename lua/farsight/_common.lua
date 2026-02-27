@@ -9,8 +9,12 @@ local fn = vim.fn
 ---@field [5] integer[] Start cols (0 based, inclusive)
 ---@field [6] integer[] Fin rows (0 based, inclusive)
 ---@field [7] integer[] Fin cols (0 based, exclusive)
+---@field [8] string[][] Labels
 
 ---@class farsight.common.SearchOpts
+---If true, pre-allocate space to fill with labels. Otherwise, set the list of labels to vim.NIL
+---so that list structure is preserved.
+---@field alloc_labels boolean
 ---How many fields to initially allocate in the results lists.
 ---@field alloc_size integer
 ---`0`: Allow all results in folded lines.
@@ -645,6 +649,7 @@ end)()
 local function create_empty_results(opts)
     local size = opts.alloc_size
     local tn = require("farsight.util")._table_new
+
     ---@type farsight.common.SearchResults
     local hl_info = {
         opts.upward,
@@ -654,6 +659,7 @@ local function create_empty_results(opts)
         tn(size, 0),
         tn(size, 0),
         tn(size, 0),
+        opts.alloc_labels and tn(size, 0) or vim.NIL,
     }
 
     return hl_info
@@ -670,17 +676,17 @@ local function search_win(win, cur_win, pattern, cache, opts)
 
     local res = create_empty_results(opts)
     ---@type boolean, string|nil, string|nil
-    local ok_s, err, err_hl = win_call_others(win, cur_win, function()
+    local ok, err, err_hl = win_call_others(win, cur_win, function()
         return perform_search(win, buf, pattern, res, cache, opts)
     end)
 
-    if not ok_s then
+    if not ok then
         local err_msg = err or ("Error searching win " .. 1000)
-        return ok_s, err_msg, err_hl
+        return ok, err_msg, err_hl
     end
 
     if res[2] == 0 then
-        return ok_s, res, nil
+        return ok, res, nil
     end
 
     adjust_res_values(win, cur_win, buf, res, cache, opts)
@@ -757,6 +763,10 @@ end
 
 return M
 
+-- TODO: The base search function should have a win_res opt it can use to accept pre-existing
+-- tables. It should then go through each inner table and either run table.clear (JIT) or iterate
+-- through the list (PUC). This saves multiple heap allocations on live searches.
+--
 -- MID: It would be better to remove the dir value from this module because its meaning is
 -- non-specific. This is hard though because the user-facing modules all use it.
 -- MID: If search results return with an error, the valid value is lost. Redrawing with
