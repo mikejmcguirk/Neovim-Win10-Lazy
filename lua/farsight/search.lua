@@ -20,32 +20,6 @@ local search_ns = api.nvim_create_namespace("farsight-search-hl")
 local search_group = api.nvim_create_augroup("farsight-search-hl", {})
 
 ---@param buf integer
----@param dim_hl_info farsight.search.DimHlInfo|nil
----@param dim boolean
-local function checked_set_dim_extmarks(buf, dim_hl_info, dim)
-    if not (dim_hl_info and dim) then
-        return
-    end
-
-    local nvim_buf_set_extmark = api.nvim_buf_set_extmark
-    local dim_rows = dim_hl_info[2]
-    local dim_fin_rows = dim_hl_info[3]
-
-    local extmark_opts = {
-        end_col = 0,
-        hl_eol = true,
-        hl_group = hl_dim,
-        priority = 998,
-    }
-
-    local len_dim_hl_info = dim_hl_info[1]
-    for i = 1, len_dim_hl_info do
-        extmark_opts.end_row = dim_fin_rows[i] + 1
-        nvim_buf_set_extmark(buf, dim_ns, dim_rows[i], 0, extmark_opts)
-    end
-end
-
----@param buf integer
 ---@param res farsight.common.SearchResults
 ---@param is boolean
 ---@param dir -1|1
@@ -86,7 +60,7 @@ local function set_search_extmarks(buf, res, is, dir)
     end
 end
 
----Assumes that res has at least one entry and that overlapping entries have been merged
+---Assumes that overlapping entries have been merged
 ---@param res farsight.common.SearchResults 0 indexed, exclusive
 ---@param dim boolean
 ---@return farsight.search.DimHlInfo|nil
@@ -116,14 +90,12 @@ local function checked_get_dim_rows_from_res(res, dim)
     local j = 1
     for i = 2, len_res do
         local idx = res_idxs[i]
-        local dst = res_idxs[j]
-        if dim_fin_rows[dst] < res_rows[idx] + 1 then
+        if dim_fin_rows[j] < res_rows[idx] + 1 then
             j = j + 1
-            dst = res_idxs[j]
-            dim_rows[dst] = res_rows[idx]
-            dim_fin_rows[dst] = res_fin_rows[idx]
+            dim_rows[j] = res_rows[idx]
+            dim_fin_rows[j] = res_fin_rows[idx]
         else
-            dim_fin_rows[dst] = res_fin_rows[idx]
+            dim_fin_rows[j] = res_fin_rows[idx]
         end
     end
 
@@ -152,7 +124,7 @@ end
 ---Edits res in place
 ---Always perform this check because, even with cpo-c not present, the C core's searchit()
 ---function does not properly handle searching from after the end of multiline matches.
----We still do assume that an extmark can never start before the previous one.
+---We still do assume that a result can never start before the previous one.
 ---@param res farsight.common.SearchResults 0 indexed, exclusive
 ---@param incsearch boolean
 local function merge_res(res, incsearch)
@@ -176,20 +148,16 @@ local function merge_res(res, incsearch)
         local cur_fin_col = res_fin_cols_[dst]
         local test_row = res_rows[idx]
         local test_col = res_cols[idx]
-        local test_fin_row = res_fin_rows[idx]
-        local test_fin_col = res_fin_cols_[idx]
 
         local col_before = cur_fin_row == test_row and cur_fin_col < test_col
         -- cur_pos before test_pos. Compact.
         if col_before or cur_fin_row < test_row then
-            -- TODO: This could be a standard compact rather than a direct edit
             j = j + 1
-            dst = res_idxs[j]
-            res_rows[dst] = test_row
-            res_cols[dst] = test_col
-            res_fin_rows[dst] = test_fin_row
-            res_fin_cols_[dst] = test_fin_col
+            res_idxs[j] = idx
         else
+            local test_fin_col = res_fin_cols_[idx]
+            local test_fin_row = res_fin_rows[idx]
+
             local fin_row_before = cur_fin_row < test_fin_row
             -- Overlapping ranges. Merge.
             if fin_row_before or cur_fin_row == test_fin_row and cur_fin_col < test_fin_col then
@@ -259,13 +227,9 @@ local function display_search_highlights(win, buf, prompt, search_opts, is, is_o
     local common_search = require("farsight._common").search
     local ok, win_res, cache = common_search(cmdline, search_opts)
 
-    local r_ok, r_win_valid, r_win_res, r_cache
+    local r_ok, r_win_res, r_cache
     if is and is_opts then
         r_ok, r_win_res, r_cache = common_search(cmdline, is_opts)
-        local r_valid = r_win_valid[win]
-        if r_valid == false then
-            valid = false
-        end
 
         if (not r_ok) or type(r_win_res) == "string" then
             handle_res_err(win, r_win_res, r_cache, opts)
@@ -283,7 +247,8 @@ local function display_search_highlights(win, buf, prompt, search_opts, is, is_o
         merge_res(res, is)
         local dim_hl_info = checked_get_dim_rows_from_res(res, dim)
         set_search_extmarks(buf, res, is, search_opts.dir)
-        checked_set_dim_extmarks(buf, dim_hl_info, dim)
+        local highlighting = require("farsight._highlighting")
+        highlighting.checked_set_dim_extmarks(buf, dim_ns, hl_dim, dim_hl_info, opts.dim)
     end
 
     if is and is_opts then
@@ -306,7 +271,9 @@ local function del_search_listener()
     end
 end
 
+---@param win integer
 ---@param dir -1|1
+---@param cursor [integer, integer, integer, integer, integer]
 ---@param start_row integer
 ---@param start_col integer
 ---@param stop_row integer
@@ -330,6 +297,7 @@ end
 ---@param win integer
 ---@param buf integer
 ---@param prompt string
+---@param dir -1|1
 ---@param opts farsight.search.SearchOpts
 local function create_search_listener(win, buf, prompt, dir, opts)
     local cursor = vim.call("getcurpos") ---@type [integer, integer, integer, integer, integer]
@@ -387,6 +355,18 @@ local function resolve_search_params(cur_buf, dir, opts)
     opts.keepjumps = ut._use_gb_if_nil(opts.keepjumps, "farsight_search_keepjumps", cur_buf)
     opts.keepjumps = ut._resolve_bool_opt(opts.keepjumps, false)
 
+    opts.open_folds = ut._use_gb_if_nil(opts.open_folds, "farsight_search_open_folds", cur_buf)
+    if opts.open_folds == nil then
+        local fdo = api.nvim_get_option_value("fdo", { scope = "global" })
+        local search, _, _ = string.find(fdo, "search", 1, true)
+        local all, _, _ = string.find(fdo, "all", 1, true)
+        if search or all then
+            opts.open_folds = true
+        else
+            opts.open_folds = false
+        end
+    end
+
     opts.timeout = ut._use_gb_if_nil(opts.timeout, "farsight_search_timeout", cur_buf)
     if opts.timeout == nil then
         opts.timeout = TIMEOUT
@@ -398,14 +378,17 @@ end
 local M = {}
 
 ---@class farsight.search.SearchOpts
----Dim lines with targeted characters (Default: `false`)
 ---@field debug_msgs? boolean
+---Dim lines with targeted characters (Default: `false`)
 ---@field dim? boolean
+---(Default: respect `foldopen`)
 ---@field keepjumps? boolean
+---@field open_folds? boolean
 ---@field timeout? integer
 
 ---This function returns a typed search command string meant to be used in an
 ---expr mapping. On error, an empty string is returned.
+---Note that keepjumps and on_jump only apply to label jumps, not the wrapped search call.
 ---@param dir -1|1
 ---@param opts? farsight.search.SearchOpts
 ---@return string
@@ -416,7 +399,7 @@ function M.search(dir, opts)
     resolve_search_params(cur_buf, dir, opts)
 
     if require("farsight._common").get_is_repeating() == 1 then
-        if fn.getreg("/") ~= "" then
+        if vim.call("getreg", "/") ~= "" then
             return (vim.v.searchforward == 1 and "/" or "?") .. "\r"
         else
             return ""
@@ -424,7 +407,7 @@ function M.search(dir, opts)
     end
 
     local prompt = dir == 1 and "/" or "?"
-    if fn.reg_executing() == "" then
+    if vim.call("reg_executing") == "" then
         checked_ns_set(cur_win, opts.dim)
         create_search_listener(cur_win, cur_buf, prompt, dir, opts)
     end
@@ -443,7 +426,7 @@ function M.search(dir, opts)
     end
 
     local pattern, _ = parse_search_offset(prompt, pattern_raw)
-    if pattern == "" and fn.getreg("/") == "" then
+    if pattern == "" and vim.call("getreg", "/") == "" then
         checked_clear_namespaces(cur_buf, opts.dim)
         return ""
     end
@@ -457,8 +440,13 @@ function M.search(dir, opts)
         api.nvim_buf_clear_namespace(cur_buf, search_ns, 0, -1)
     end)
 
+    local expr = { prompt, pattern_raw, "\r" }
+    if opts.open_folds then
+        expr[#expr + 1] = "zv"
+    end
+
     -- Return an expr to support dot repeat and operator pending mode
-    return prompt .. pattern_raw .. "\r"
+    return table.concat(expr, "")
 end
 
 function M.get_ns()
@@ -467,25 +455,14 @@ end
 
 return M
 
--- TODO: Since the fdo doc says it doesn't work in mappings, does that mean it doesn't work here
--- since this function is designed for expression maps? Test my function against the default.
--- TODO: Related to the above - Is it possible to add an on_search function here or no? If not,
--- then fold opening would need to be defined as part of the expr.
--- TODO: Verify Vim's internal timeout for search
--- TODO: Test visual mode behavior
--- TODO: Test omode behavior
--- TODO: Go through the tests to make sure there aren't any functionalities or corner cases I
--- need to cover.
--- - test/unit/search_spec.lua
--- - test/old/testdir/test_search.vim
--- - There are searchhl tests as well
 -- TODO: Add an opt for display of "Search" labels.
 -- TODO: Add a "prepend" opt that adds some text before your search. Example use case: If you want
 -- to make a map that only searches inside the current visual area, you could add \%V
 -- TODO: Related to the above, if you wanted to do that kind of map using the defaults, you could
 -- just map "/\%V". I'm not totally sure you could do that here unless you used the "remap"
 -- option (test if that even works, maybe document if so). And I would not map the plugs with
--- remap.
+-- remap. You could conctenate your prepend with the function call. Awkward though.
+-- TODO: Outline highlighting. Needs to work with the csearch case
 
 -- TODO_DOC: By default, Farsight Search will live highlight matches in the direction the user is
 -- searching using |hl-Search|. If |incsearch| is true, all visible matches will be highlighted,
@@ -512,6 +489,8 @@ return M
 -- - Pass the labels as a list
 -- - Fair labeling or preferential labeling (based on upward/res position)
 -- - For live jumps, do you handle trimming the labels generally or specifically?
+-- TODO: Results with overlapping ends can happen and need to be filtered. Prefer the first
+-- one probably.
 -- TODO: Labels should not accept if the cursor is not in the last position. Maybe don't even
 -- show labels, or show them with a different highlight. Prevents issue with going back and
 -- TODO: The default highlights here have to work with CurSearch and IncSearch. Being that this is
@@ -522,6 +501,7 @@ return M
 -- Should saving searchforward/histadd/searchreg for labels be an option or something handled in
 -- on_jump?
 
+-- MID: Verify that builtin search timeout is half a second.
 -- MID: When does input() return vim.NIL?
 -- MID: Fold handling could be further optimized:
 -- - The first extmark in each fold block is currently allowed to be set. This is to avoid
@@ -597,7 +577,7 @@ return M
 -- defeats the purpose of using a struct of arrays to begin with.
 -- LOW: When getting search positions, it might be faster to run getpos() rather than line() and
 -- col(). My concern is that getpos() allocates a table. This would need to be profiled.
--- LOW: Is vim.call or nvim_call_function faster?
+-- LOW: Support keepjumps for search.
 --
 -- NON: Multi-window searching. Creates weird questions with wrap scan. Creates a problem where
 -- even if you replicate the proper window ordering, it's not necessarily intuitive to which

@@ -10,11 +10,6 @@ local fn = vim.fn
 ---@field [6] integer[] Fin rows (0 based, inclusive)
 ---@field [7] integer[] Fin cols (0 based, exclusive)
 
--- MAYBE: Use dir -2/2 for cursor to top of the buffer and 2 for cursor to the bottom of the
--- buffer. A wrapscan search could then be -3/3. Note that redraw valid needs to be checked for
--- any search >= 0.
--- MAYBE: Have an opt for searching line ranges.
-
 ---@class farsight.common.SearchOpts
 ---How many fields to initially allocate in the results lists.
 ---@field alloc_size integer
@@ -144,6 +139,8 @@ local function set_api_indexes(res)
 end
 
 ---Edits res in place
+---For results where upward is true. The loop iterates from the top of the window down to the
+---cursor, saving only the fold result, per block, closest to the cursor
 ---@param res farsight.common.SearchResults 1 indexed, inclusive
 local function clear_fold_rows_rev(res)
     local len_res = res[2]
@@ -157,7 +154,7 @@ local function clear_fold_rows_rev(res)
     local last_row = 0
     local last_fold_row = -1
     local candidate_i = 0
-    local j = 1
+    local j = 0
     for i = 1, len_res do
         local row = res_rows[res_idxs[i]]
         local same_row = last_row == row
@@ -165,19 +162,19 @@ local function clear_fold_rows_rev(res)
         last_row = row
         if fold_line == -1 then
             if candidate_i > 0 then
-                res_idxs[j] = res_idxs[candidate_i]
                 j = j + 1
+                res_idxs[j] = res_idxs[candidate_i]
                 candidate_i = 0
             end
 
-            res_idxs[j] = res_idxs[i]
             j = j + 1
+            res_idxs[j] = res_idxs[i]
             last_fold_row = -1
         else
             if fold_line ~= last_fold_row then
                 if candidate_i > 0 then
-                    res_idxs[j] = res_idxs[candidate_i]
                     j = j + 1
+                    res_idxs[j] = res_idxs[candidate_i]
                 end
 
                 candidate_i = i
@@ -189,11 +186,11 @@ local function clear_fold_rows_rev(res)
     end
 
     if candidate_i > 0 then
-        res_idxs[j] = res_idxs[candidate_i]
         j = j + 1
+        res_idxs[j] = res_idxs[candidate_i]
     end
 
-    res[2] = j - 1
+    res[2] = j
 end
 
 ---Edits res in place
@@ -213,18 +210,13 @@ local function clear_fold_rows_fwd(res)
     for i = 1, len_res do
         local row = res_rows[res_idxs[i]]
         local fold_row = last_row == row and last_fold_row or vim.call("foldclosed", row)
-        last_row = row
-        if fold_row == -1 then
+        if fold_row == -1 or last_fold_row ~= fold_row then
             j = j + 1
             res_idxs[j] = res_idxs[i]
-            last_fold_row = -1
-        else
-            if last_fold_row ~= fold_row then
-                j = j + 1
-                res_idxs[j] = res_idxs[i]
-                last_fold_row = fold_row
-            end
         end
+
+        last_row = row
+        last_fold_row = fold_row
     end
 
     res[2] = j
@@ -324,11 +316,23 @@ local function checked_trim_after_cursor(res, opts)
     res[2] = res[2] - (len_res - i)
 end
 
+---@param win integer
+---@param cur_win integer
+---@param f function
+---@return any, any, any
+local function win_call_others(win, cur_win, f)
+    if win == cur_win then
+        return f()
+    else
+        return api.nvim_win_call(win, f)
+    end
+end
+
 ---@param buf integer
 ---@param res farsight.common.SearchResults 1 indexed, inclusive
 ---@param cache table<integer, table<integer, string>>
 ---@param opts farsight.common.SearchOpts
-local function adjust_res_values(buf, res, cache, opts)
+local function adjust_res_values(win, cur_win, buf, res, cache, opts)
     local len_res = res[2]
     local res_idxs = res[3]
     local res_rows = res[4]
@@ -364,8 +368,9 @@ local function adjust_res_values(buf, res, cache, opts)
     end
 
     -- Fold handling only relies on start rows and proper count adjustment
-    -- TODO: needs to be behind win_call_others
-    clear_fold_rows(res, opts)
+    win_call_others(win, cur_win, function()
+        clear_fold_rows(res, opts)
+    end)
 
     len_res = res[2] -- Update after potentially compacting changes above.
     local res_fin_rows = res[6]
@@ -410,6 +415,7 @@ end
 --
 -- MID: The double cache iteration feels like a lot, but I'm not sure how to get around the
 -- path dependency of what needs to be fixed.
+-- MID: This function is too long
 
 ---@param err string
 ---@param win integer
@@ -634,18 +640,6 @@ local perform_search = (function()
     end
 end)()
 
----@param win integer
----@param cur_win integer
----@param f function
----@return any, any, any
-local function win_call_others(win, cur_win, f)
-    if win == cur_win then
-        return f()
-    else
-        return api.nvim_win_call(win, f)
-    end
-end
-
 ---@param opts farsight.common.SearchOpts See class definition.
 ---@return farsight.common.SearchResults
 local function create_empty_results(opts)
@@ -689,17 +683,12 @@ local function search_win(win, cur_win, pattern, cache, opts)
         return ok_s, res, nil
     end
 
-    adjust_res_values(buf, res, cache, opts)
+    adjust_res_values(win, cur_win, buf, res, cache, opts)
     set_api_indexes(res)
 
     return true, res, nil
 end
 
----ok == false should only be returned for invalid results. Potentially undesirable, but valid,
----results need to be handled gracefully here and dealt with by callers. This mostly applies for
----an empty pattern or empty results. The user entering an empty pattern or the buffer not
----containing the result are both valid behavior.
----
 ---The hash key for the second result is the WinID.
 ---
 ---The third result is cached string lines gathered by this function. The outer table key is the
@@ -734,10 +723,6 @@ function M.search(pattern, opts)
 end
 --
 -- LOW: Ticky tack optimization - Pass current win as a param
---
--- MAYBE: How would wrapscan searches be checked? Should it be implicit based on the option, or
--- would we need to check it explicitly for the purposes of other bookkeeping?
--- MAYBE: Because we always search forward, how would backward wrap scan searches be performed?
 
 ---@param win integer
 ---@param dir -1|0|1
@@ -768,28 +753,12 @@ function M.get_pos_and_valid_from_dir(win, buf, dir, cursor)
     return start_row, start_col, stop_row, true
 end
 --
--- MID: This function feels like it only exists because of the dir opt. The dir opt is fine for
--- user input. I'm less sure of that for internal use. Its only current purpose is indicating if
--- results after the cursor should be trimmed. You could just have a trim_after_cursor opt. dir
--- might also be used for wrapscan later, but I also think a wrapscan option might be better. On
--- the other hand, this function eases the conversion from the current user facing opts, and
--- the state of the internal representation is not a showstopper. The other code tends to use dir
--- for its internal calculations as well.
 -- MID: It would be better if buf_line_count were not ephemeral.
 
 return M
 
--- TODO: Dimming should be shared logic across all three modules
--- TODO: Folding and counts are not working the way I'd think they would. Hidden fold results are
--- being considered as part of the count. Fine if I was just mis-understanding, but need to be
--- sure.
--- TODO: Use the index row on the list
--- TODO: Need to look at how to handle overlapping results, for multi-line searches and single-line
--- searches if cpo-c is off. For search highlighting you can merge the extmarks, but for labeling
--- I'm less sure what to do. I don't think you can have results with overlapping starts, as they
--- are incremented. But you can have results with overlapping ends if you don't start from the end
--- of the last search.
---
+-- MID: It would be better to remove the dir value from this module because its meaning is
+-- non-specific. This is hard though because the user-facing modules all use it.
 -- MID: If search results return with an error, the valid value is lost. Redrawing with
 -- valid = false on error is not a showstopper, but is sub-optimal.
 --
@@ -798,3 +767,6 @@ return M
 -- I guess you'd have to look for results on a blank line, and either move the start/end points to
 -- non-blanks or just remove them. But that risks creating overlapping results. This feels
 -- secretly complicated and should be avoided without a concrete use case.
+-- MAYBE: How would wrapscan searches be checked? Should it be implicit based on the option, or
+-- would we need to check it explicitly for the purposes of other bookkeeping?
+-- MAYBE: Because we always search forward, how would backward wrap scan searches be performed?

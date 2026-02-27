@@ -1062,8 +1062,8 @@ local function resolve_on_jump(opts, cur_buf)
     if opts.on_jump == nil then
         opts.on_jump = function(_, _, _)
             local fdo = api.nvim_get_option_value("fdo", { scope = "global" })
-            local all, _, _ = string.find(fdo, "all", 1, true)
             local jump, _, _ = string.find(fdo, "jump", 1, true)
+            local all, _, _ = string.find(fdo, "all", 1, true)
             if all or jump then
                 api.nvim_cmd({ cmd = "norm", args = { "zv" }, bang = true }, {})
             end
