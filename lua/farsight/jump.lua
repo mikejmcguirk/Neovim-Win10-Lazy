@@ -685,8 +685,8 @@ local function populate_target_labels(wins, win_targets, tokens)
     end
 
     local ut = require("farsight.util")
-    -- More consistent performance. narray is zero indexed
-    local labels = ut._table_new(total_targets + 1, 0) ---@type string[][]
+    -- More consistent performance.
+    local labels = ut._table_new(total_targets, 0) ---@type string[][]
     -- Use wins for lookup to preserve ordering
     for i = 1, len_wins do
         local t_labels = win_targets[wins[i]][4]

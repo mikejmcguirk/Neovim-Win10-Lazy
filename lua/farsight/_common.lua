@@ -1,6 +1,8 @@
 local api = vim.api
 local fn = vim.fn
 
+-- TODO: Rename this based on the targets branding.
+
 ---@class farsight.common.SearchResults
 ---@field [1] boolean Upward? True if going up from cursor
 ---@field [2] integer Length valid indexes
@@ -9,12 +11,10 @@ local fn = vim.fn
 ---@field [5] integer[] Start cols (0 based, inclusive)
 ---@field [6] integer[] Fin rows (0 based, inclusive)
 ---@field [7] integer[] Fin cols (0 based, exclusive)
----@field [8] string[][] Labels
+---@field [8] string[][] Start Labels
+---@field [9] string[][] Finish Labels
 
 ---@class farsight.common.SearchOpts
----If true, pre-allocate space to fill with labels. Otherwise, set the list of labels to vim.NIL
----so that list structure is preserved.
----@field alloc_labels boolean
 ---How many fields to initially allocate in the results lists.
 ---@field alloc_size integer
 ---`0`: Allow all results in folded lines.
@@ -32,6 +32,7 @@ local fn = vim.fn
 ---Example: If vcount1 == 2, the first result would be rejected, since it would not be used.
 ---@field handle_count boolean
 ---What row the search starts on. 1 indexed
+---@field label_locations "none"|"start"|"finish"|"both"|"cursor_aware"
 ---@field start_row integer
 ---What col the search starts on. 1 indexed, inclusive
 ---@field start_col integer
@@ -650,6 +651,13 @@ local function create_empty_results(opts)
     local size = opts.alloc_size
     local tn = require("farsight.util")._table_new
 
+    local start_labels = opts.label_locations == "start"
+        or opts.label_locations == "both"
+        or opts.label_locations == "cursor_aware"
+    local fin_labels = opts.label_locations == "finish"
+        or opts.label_locations == "both"
+        or opts.label_locations == "cursor_aware"
+
     ---@type farsight.common.SearchResults
     local hl_info = {
         opts.upward,
@@ -659,7 +667,8 @@ local function create_empty_results(opts)
         tn(size, 0),
         tn(size, 0),
         tn(size, 0),
-        opts.alloc_labels and tn(size, 0) or vim.NIL,
+        start_labels and tn(size, 0) or vim.NIL,
+        fin_labels and tn(size, 0) or vim.NIL,
     }
 
     return hl_info
