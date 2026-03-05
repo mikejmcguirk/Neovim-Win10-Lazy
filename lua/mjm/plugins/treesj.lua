@@ -1,5 +1,7 @@
+-- TODO: Bring this back.
 return {
     "Wansmer/treesj",
+    enabled = false,
     keys = { { "gs", nil, mode = "n" }, { "gS", nil, mode = "n" } },
     config = function()
         require("treesj").setup({

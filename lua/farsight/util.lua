@@ -1,5 +1,6 @@
 local api = vim.api
 local fn = vim.fn
+local vimv = vim.v
 
 ---@class farsight.Util
 local M = {}
@@ -27,6 +28,23 @@ function M._dict_filter(t, f)
         end
     end
 end
+
+---@generic T
+---@param t table<T, T>
+---@param k T
+---@param v T
+function M.dict_get_key_or_default(t, k, v)
+    local ret = t[k]
+    if ret then
+        return ret
+    end
+
+    t[k] = v
+    return v
+end
+--
+-- MID: There might be a better way to handle this with a metatable or something.
+-- PR: Might be a cool vim.dict addition.
 
 ---@generic T
 ---@param t T[]
@@ -90,24 +108,24 @@ end
 
 -- PR: Add to Nvim shared.
 
--- ---@generic T
--- ---@param t T[]
--- ---@param f fun(x: T, idx: integer): any
--- function M._list_map(t, f)
---     local len = #t
---     local j = 1
---
---     for i = 1, len do
---         t[j] = f(t[i], i)
---         if t[j] ~= nil then
---             j = j + 1
---         end
---     end
---
---     for i = j, len do
---         t[i] = nil
---     end
--- end
+---@generic T
+---@param t T[]
+---@param f fun(x: T, idx: integer): any
+function M._list_map(t, f)
+    local len = #t
+    local j = 1
+
+    for i = 1, len do
+        t[j] = f(t[i], i)
+        if t[j] ~= nil then
+            j = j + 1
+        end
+    end
+
+    for i = j, len do
+        t[i] = nil
+    end
+end
 
 -- PR: Spot checking, this moves about the same speed as or more quickly than table.remove for
 -- lists
@@ -142,6 +160,49 @@ function M._echo(silent, msg, hl)
 
     local history = hl == "ErrorMsg" or hl == "WarningMsg" ---@type boolean
     api.nvim_echo({ { msg, hl } }, history, {})
+end
+
+---Return how many columns separate position a and position b.
+---If position a is on a previous row, vim.v.maxcol will be returned.
+---If position a is after position b, a negative value will be returned.
+---@param row_a integer
+---@param col_a integer
+---@param row_b integer
+---@param col_b integer
+---@return integer
+function M.col_distance(row_a, col_a, row_b, col_b)
+    if row_a == row_b then
+        return col_b - col_a
+    end
+
+    return row_a < row_b and vimv.maxcol or -vimv.maxcol
+end
+
+---Inclusive indexed
+---@param row_a integer
+---@param col_a integer
+---@param fin_row_a integer
+---@param fin_col_a integer
+---@param row_b integer
+---@param col_b integer
+---@return boolean
+function M.pos_contained(row_a, col_a, fin_row_a, fin_col_a, row_b, col_b)
+    if row_b < row_a or fin_row_a < row_b then
+        return false
+    end
+
+    local gt_start = (row_a < row_b or col_a <= col_b)
+    return gt_start and (row_b < fin_row_a or col_b <= fin_col_a)
+end
+
+---Inclusive indexed
+---@param row_a integer
+---@param col_a integer
+---@param row_b integer
+---@param col_b integer
+---@return boolean
+function M.pos_lt(row_a, col_a, row_b, col_b)
+    return row_a < row_b or (row_a == row_b and col_a < col_b)
 end
 
 -- Per mini.jump2d, while nvim_tabpage_list_wins does currently ensure proper window layout, this

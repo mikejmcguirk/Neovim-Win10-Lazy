@@ -8,9 +8,21 @@ local fn = vim.fn
 
 local TIMEOUT = 500
 
+local HL_SEARCH_STR = "FarsightSearch"
+local HL_SEARCH_AHEAD_STR = "FarsightSearchAhead"
+local HL_SEARCH_TARGET_STR = "FarsightSearchTarget"
 local HL_DIM_STR = "FarsightSearchDim"
+
+api.nvim_set_hl(0, HL_SEARCH_STR, { default = true, link = "DiffChange" })
+api.nvim_set_hl(0, HL_SEARCH_AHEAD_STR, { default = true, link = "DiffText" })
+api.nvim_set_hl(0, HL_SEARCH_TARGET_STR, { default = true, link = "DiffAdd" })
 api.nvim_set_hl(0, HL_DIM_STR, { default = true, link = "Comment" })
+
+local hl_search_next = api.nvim_get_hl_id_by_name(HL_SEARCH_STR)
+local hl_search_ahead = api.nvim_get_hl_id_by_name(HL_SEARCH_AHEAD_STR)
+local hl_search_target = api.nvim_get_hl_id_by_name(HL_SEARCH_TARGET_STR)
 local hl_dim = api.nvim_get_hl_id_by_name(HL_DIM_STR)
+
 local hl_is = api.nvim_get_hl_id_by_name("IncSearch")
 local hl_search = api.nvim_get_hl_id_by_name("Search")
 
@@ -116,7 +128,7 @@ end
 ---@param msg farsight.common.SearchResults|string
 ---@param hl table<integer, table<integer, string>>|string|nil
 ---@param opts farsight.search.SearchOpts
-local function handle_res_err(win, msg, hl, opts)
+local function handle_targets_err(win, msg, hl, opts)
     require("farsight.util")._echo(not opts.debug_msgs, msg, hl)
     api.nvim__redraw({ valid = false, win = win })
 end
@@ -202,15 +214,24 @@ local function parse_search_offset(cmdprompt, cmdline_raw)
     return cmdline_raw, ""
 end
 
+-- Prefer home row, then top, then bottom.
+-- Prefer index/middle fingers.
+-- Index prefers to go down. Middle and ring prefer to go up.
+-- Prefer right hand due to keyboard slope.
+-- Because tokens will be filtered based on chars after, prefer ergonomics over memorizable
+-- ordering.
+-- To avoid over-subjectivity, group finger/row combinations. Put all shift keys after.
+local tokens = vim.split("kdjflsaieowghmvtnurybpqcxzKDJFLSAIEOWGHMVTNURYBPQCXZ", "")
+
 ---@param win integer
 ---@param buf integer
 ---@param prompt string
----@param search_opts farsight.common.SearchOpts
+---@param search_ctx farsight.common.SearchCtx
 ---@param is boolean
----@param is_opts farsight.common.SearchOpts|nil
+---@param is_ctx farsight.common.SearchCtx|nil
 ---@param valid boolean
 ---@param opts farsight.search.SearchOpts
-local function display_search_highlights(win, buf, prompt, search_opts, is, is_opts, valid, opts)
+local function display_search_highlights(win, buf, prompt, search_ctx, is, is_ctx, valid, opts)
     if vim.call("getcmdprompt") ~= prompt then
         return
     end
@@ -219,45 +240,71 @@ local function display_search_highlights(win, buf, prompt, search_opts, is, is_o
     checked_clear_namespaces(buf, dim)
     local cmdline_raw = vim.call("getcmdline") ---@type string
     local cmdline, _ = parse_search_offset(prompt, cmdline_raw)
-    if cmdline == "" then
+    local common = require("farsight._common")
+    if not common.is_valid_pattern(cmdline) then
         api.nvim__redraw({ valid = false, win = win })
         return
     end
 
-    local common_search = require("farsight._common").search
-    local ok, win_res, cache = common_search(cmdline, search_opts)
+    local cache = {} ---@type table<integer, table<integer, string>>
+    local ok, targets, err_hl = common.search(win, cmdline, cache, search_ctx)
 
-    local r_ok, r_win_res, r_cache
-    if is and is_opts then
-        r_ok, r_win_res, r_cache = common_search(cmdline, is_opts)
+    local r_ok, r_targets, r_err_hl
+    if is and is_ctx then
+        r_ok, r_targets, r_err_hl = common.search(win, cmdline, cache, is_ctx)
 
-        if (not r_ok) or type(r_win_res) == "string" then
-            handle_res_err(win, r_win_res, r_cache, opts)
+        if (not r_ok) or type(r_targets) == "string" then
+            handle_targets_err(win, r_targets, r_err_hl, opts)
             return
         end
     end
 
-    if (not ok) or type(win_res) == "string" then
-        handle_res_err(win, win_res, cache, opts)
+    if (not ok) or type(targets) == "string" then
+        handle_targets_err(win, targets, err_hl, opts)
         return
     end
 
-    local res = win_res[win]
-    if res[2] > 0 then
-        merge_res(res, is)
-        local dim_hl_info = checked_get_dim_rows_from_res(res, dim)
-        set_search_extmarks(buf, res, is, search_opts.dir)
+    if targets[2] > 0 then
+        local labeler = require("farsight._labeler")
+        labeler.fill_labels({ win }, { [win] = targets }, tokens, cache, {
+            allow_partial = true,
+            cursor = search_ctx.cursor,
+            filter_next = true,
+            locations = "finish",
+            max_tokens = 1,
+            is_upward = true,
+        })
+
+        labeler.fill_virt_text(targets, 1, 1, {
+            hl_next = hl_search_next,
+            hl_ahead = hl_search_ahead,
+            hl_last = hl_search_target,
+            locations = "finish",
+            start_row = search_ctx.start_row,
+            stop_row = search_ctx.stop_row,
+            use_upward = true,
+        })
+
+        labeler.set_label_extmarks(
+            buf,
+            search_ns,
+            targets,
+            { cursor = search_ctx.cursor, locations = "finish", use_upward = true }
+        )
+
+        merge_res(targets, is)
+        local dim_hl_info = checked_get_dim_rows_from_res(targets, dim)
+        set_search_extmarks(buf, targets, is, search_ctx.dir)
         local highlighting = require("farsight._highlighting")
         highlighting.checked_set_dim_extmarks(buf, dim_ns, hl_dim, dim_hl_info, opts.dim)
     end
 
-    if is and is_opts then
-        local r_res = r_win_res[win]
-        if r_res[2] > 0 then
+    if is and is_ctx then
+        if r_targets[2] > 0 then
             -- Saves time setting extmarks
-            merge_res(r_res, is)
+            merge_res(r_targets, is)
             -- Because these are not valid destinations, always assign false and do not dim
-            set_search_extmarks(buf, r_res, false, is_opts.dir)
+            set_search_extmarks(buf, r_targets, false, is_ctx.dir)
         end
     end
 
@@ -277,7 +324,7 @@ end
 ---@param start_row integer
 ---@param start_col integer
 ---@param stop_row integer
----@return farsight.common.SearchOpts
+---@return farsight.common.SearchCtx
 local function get_search_opts(win, dir, cursor, start_row, start_col, stop_row)
     return {
         alloc_size = 64,
@@ -455,136 +502,5 @@ end
 
 return M
 
--- TODO: Add an opt for display of "Search" labels.
--- TODO: Add a "prepend" opt that adds some text before your search. Example use case: If you want
--- to make a map that only searches inside the current visual area, you could add \%V
--- TODO: Related to the above, if you wanted to do that kind of map using the defaults, you could
--- just map "/\%V". I'm not totally sure you could do that here unless you used the "remap"
--- option (test if that even works, maybe document if so). And I would not map the plugs with
--- remap. You could conctenate your prepend with the function call. Awkward though.
--- TODO: Outline highlighting. Needs to work with the csearch case
-
--- TODO_DOC: By default, Farsight Search will live highlight matches in the direction the user is
--- searching using |hl-Search|. If |incsearch| is true, all visible matches will be highlighted,
--- with |hl-IncSearch| used for the first match. If jump labels are enabled (true by default), they
--- will only be added in the current window in the direction the user is searching. For
--- multi-directional/multi-window navigation, use jump.
--- TODO_DOC: IncSearch emulation is incomplete. Setting IncSearch to true will produce
--- IncSearch style highlighting. However, the cursor will not automatically advance and
--- <C-t>/<C-g> commands will not work.
--- TODO_DOC: Make some sort of useful documentation out of my error with running nohlsearch
--- on cmdline enter
--- TODO_DOC: The search module, really, is just a wrapper around the built-in /? cmds. If you
--- press enter to search, that is still handled with the built-in. This means cpo-c is respected
--- and hlsearch is still used for results.
--- TODO_DOC: If a macro or dot repeat are performed, the |quote/| last search register is used,
--- emulating default behavior.
--- TODO_DOC: Because this module uses input(), if you have an autocmd that schedules nohlsearch
--- after CmdlineEnter or CmdlineLeave, it will disable hlsearch after you have pressed enter.
---
--- LABELS
---
--- TODO: Labeling and dimming need to be abstracted out, as every module uses it.
--- - Challenge: Csearch
--- - Pass the labels as a list
--- - Fair labeling or preferential labeling (based on upward/res position)
--- - For live jumps, do you handle trimming the labels generally or specifically?
--- TODO: Results with overlapping ends can happen and need to be filtered. Prefer the first
--- one probably.
--- TODO: Labels should not accept if the cursor is not in the last position. Maybe don't even
--- show labels, or show them with a different highlight. Prevents issue with going back and
--- TODO: The default highlights here have to work with CurSearch and IncSearch. Being that this is
--- the lowest degrees of freedom module, it is the anchor point for the others.
--- modifying the search
--- TODO: Label jumps should have an on_jump option. The default should be a reasonable application
--- of fdo
--- Should saving searchforward/histadd/searchreg for labels be an option or something handled in
--- on_jump?
-
--- MID: Verify that builtin search timeout is half a second.
--- MID: When does input() return vim.NIL?
--- MID: Fold handling could be further optimized:
--- - The first extmark in each fold block is currently allowed to be set. This is to avoid
--- introducing additional logic around fixing hl_info for count and incsearch. But this still
--- forces Neovim to do bookkeeping around the extmark. I think this is fixed, roughly, by deleting
--- additional entries based on where the cursor will end up.
--- - (low priority) It might be more efficient to pre-compute the fold statuses of each row and
--- look them up in a table, rather than doing an if check on each entry. But this would be
--- predicated on having a list of rows to build the fold lookup from, rather than having to
--- iterate through every entry (otherwise, this is pointless). You could use dim_rows for this,
--- but that list is built after the hl_info entries are merged (and fold visibility needs to be
--- checked per pre-merge entry).
--- - An alternative to all this might be to just check folds during search, which is how do_search
--- handles it. This would solve the first problem, and make the second one irrelevant. The problem
--- is how to make this work with Puc Lua's double search, since fold handling is based only on the
--- start index (from what I can tell, this is as per default behavior). You would need to save a
--- list of omitted searches and hope the Puc Lua ending syncs up with that. Storing a list would
--- also be a new heap allocation.
--- MID: Display a highlight on the cursor position. Not required for parity with the built-in.
--- MID: Is winhighlight properly respected?
--- MID: The built-in search highlights zero length lines. Extmark highlights do not display on
--- them. The only way I can think of to deal with this is to manually traverse the results and pick
--- out the zero-length lines within. Those lines can then have virtual text laid on top of them.
--- MID: Results off-screen should be reported. Intuitively, it should be a virtual text overlay
--- on the top/bottom of the window. Blocker: What fallbacks should be used if the overlay would
--- cover a label? Easier version: Only show this if no on-screen results.
--- - Is searchcount() useful here?
--- MID: Implement <C-t>/<C-g> navigation.
--- Blocker questions:
--- - Should IncSearch's auto-forward cursor movement be supported? I do not use it, but it's a
--- core component of how IncSearch functions. Because this version of search has non-IncSearch
--- highlights I'm comfortable with, I'm directionally okay with making IncSearch match its
--- default behavior. If this is done, do this before getting into <C-t>/<C-g>, as the only
--- positions you need to be aware of are the current cursor position and the first match. Note
--- that this would require off-screen searching and supporting wrapscan.
--- - Is any sort of displaying being done for searches above/below the screen? Might influence how
--- IncSearch should behave
--- Questions about built-in behavior:
--- - Do <C-t>/<C-g> accept count?
--- - Do they respect wrapscan?
--- - What happens if you go into a fold?
--- - Based on user input, when is the temporary home abandoned? When does the temporary home
--- advance? Go back? My approximate answers from light testing:
---   - If the user adds text, the cursor tries to advance forward, either at the current position
---   or to a future one if it's found. This seems to respect wrapscan
---   - If the user removes search characters, the cursor tries to find a location backwards but
---   closest to its temporary home
---   - The cursor does not go backward past the origin
---   - If a match produces no results, but there is text in the cmdline, the temporary home will
---   not be abandoned. If the cmdline is cleared, it will be
---   - How is the current position considered? It seems to straightforwardly be a matter of if the
---   cursor overlaps with the search. But there could be nuance I'm missing.
--- - Other Questions:
---   - How would <Ctrl-t>/<Ctrl-g> be intercepted and processed? Naive but possibly correct answer:
---     Look at the last character of the cmdline, manually edit the cmdline, then process the char
---   - How can the cursor be moved without triggering scrolloff? This is also relevant for
---   potentially removing backward searches from the codebase
---   - How would the original cur_pos be stored? I think you can pass it as part of the autocmd
---   closure
---   - Does the temporary home need to be stored in module level state? Or, if the cursor is
---   being moved, is getting the current cur_pos sufficient?
---   - When cmdline is updated, how do we check if the cursor is on a valid match? I would guess
---   using search() with the "c" flag
---
--- LOW: Briefly looking at the code for clearing namespaces, it doesn't look like that triggers a
--- redraw, so I guess having multiple of them here is okay.
--- LOW: A potential optimization would be to look for contiguous search results and merging them
--- together. Since the end_cols are end-exclusive indexed, this is not infeasible. You would make
--- a loop that iterates through and merges in the next index if possible, then niling the
--- remainder. This *could* help with redraws. Low priority because it's complexity surface area
--- and extmark rendering is not the biggest bottleneck at the moment.
--- LOW: It would be better if hl_info and rev_hl_info were one big array. Splitting them in two
--- defeats the purpose of using a struct of arrays to begin with.
--- LOW: When getting search positions, it might be faster to run getpos() rather than line() and
--- col(). My concern is that getpos() allocates a table. This would need to be profiled.
--- LOW: Support keepjumps for search.
---
--- NON: Multi-window searching. Creates weird questions with wrap scan. Creates a problem where
--- even if you replicate the proper window ordering, it's not necessarily intuitive to which
--- window you will jump to.
--- NON: Multi-directional searching. Creates weird questions with how the v:vars are updated.
--- Jump handles this.
--- NON: Grafting this on top of the default search. This would require listeners/autocmds to
--- always be running, which means persistent state + the plugin insisting on itself. Harder to
--- turn off if unwanted. It also means that I don't have full-stepwise control over the relevant
--- events.
+-- TODO: Delete this module once the live jump is actually working. Perhaps save the search merge
+-- logic for future reference.

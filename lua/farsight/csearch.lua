@@ -757,6 +757,44 @@ end
 
 return Csearch
 
+-- TODO: While the allow_intersect option is available in locator, I think the better choice here
+-- is to purely search for \k without cursor overlap. That said, since the user can plug in their
+-- own search pattern, we need to be able to handle other cases, so that needs to be thought
+-- through. There's a key difference here where \k\+ looks for sequences and \<\k\+\> looks for
+-- whole words. So if you allow intersect (meaning the cursor result is included), then the former
+-- will start on the cursor, whereas the latter will start before it. (Assuming search forward).
+-- This is all logically valid so far, as this module would need to clean that up. Though perhaps
+-- trim_intersect is a logical superset to include in locator/targets. But then is that logically
+-- correct here? I... think so? Because if the user enters trim_intersect, it should not be
+-- possible to enter a pattern that starts after the cursor wordwise but not charwise. Our search,
+-- like /?, looks for the beginnings of patterns. If you are in the middle of a pattern, even
+-- with the "c" flag, it will not select unless the "e" flag is included. Note that "c" snapping
+-- does properly work if you're in the start of a term. So I guess if you have allow or trim
+-- intersect on, the first thing you need to do is a search with the flags "zce" to guarantee you
+-- find a result overlapping the cursor, save the target, then manually advance the cursor to
+-- after the result, then get the rest of them. Very ugly. It might be better to just document
+-- this limitation. If we go with documenting the limitation, then I'm not sure intersecting
+-- results need to be supported at all.
+-- TODO: Seriously consider the more typical enhanced f/t behavior of highlighting after jumping
+-- and using f/t to advance while highlighted. Realistically, do we want to be using ;/, after a
+-- search? You don't remember what it was after using it and there's no convenient way to look it
+-- up. This would also free up ;/, to be mapped to jump, which I would like. If we did this, we
+-- would want the f/t continuations to move in the direction of the key. So f would always go
+-- fwd, F backward. I... do think this behavior is the way so long as it's a configurable option,
+-- so long as "classic mode" is available that uses charsearch. Classic mode can be offered as
+-- a collection of Plug maps. You can even offer "f_t_classic" as a top level g:var so that you
+-- can conveniently map it, and then live jump would fall back to s/S. One murky conceptual aspect
+-- though is that "classic mode" implies single line, and you should still be able to do classic
+-- multiline. And then this would also work with sneak mode as well. An additional value add is
+-- that you could then switch between f/t in the same continuation.
+-- The one serious blocker question here is - How do you detect when the continuation is over?
+-- Fortunately there are numerous plugins we can reference. Could add an option for timed
+-- highlight removal as well, though it's awkward to remove highlights but not stop continuation
+-- mode. Something flash does that's.. a lot is doing continuation mode in omode or on dot repeat.
+-- Certainly don't do this by default. Not sure if it's even a useful option.
+-- TODO: The overall logic should be generalizable enough that we can test default "\k" (get each
+-- individual character with search and iterate one character per target) vs "\k\+" (get each word
+-- sequence with search and iterate each sequence in Lua). Do the faster one as the default.
 -- TODO: Base this on search patterns as well. You could get the results and then use them to
 -- iterate token_counts. One question is, if you put multiple things in the pattern, how do those
 -- results layer per continguous block?
@@ -768,6 +806,14 @@ return Csearch
 -- that allow them to do this?
 -- TODO: Rename parse_isk to parse_isopt so it's useful with isprint. Make a public interface
 -- for it
+-- TODO: It seems reasonable to put a sneak mode in here. Though this does break using charsearch
+-- for storage. If this is done, highlight after the first char. A question would be - What to do
+-- with overlaps?
+-- TODO: Jump options:
+-- - Never write a jump
+-- - Write a jump if we go past "w0" or "w$"
+-- - Write a jump if we change lines
+-- - Always write a jump
 
 -- MID: Fold ideas:
 -- - Display the foldclosed line as virtual text with token highlights
@@ -798,7 +844,5 @@ return Csearch
 -- NON: Allowing max_tokens > 3. This would result in more than four keypresses to get to a
 -- location. The other Farsight modules can get you anywhere in four or less
 -- NON: Multi-window. Significant complexity add/perf loss for little practical value
--- NON: Persistent highlighting. Creates code complexity/error surface area. Pushes  repeatedly
--- pressing ;/, instead of using jumps
 -- NON: Ignorecase/smartcase support. Breaks the data model. Does not map 1:1 with what's shown
 -- in the buffer

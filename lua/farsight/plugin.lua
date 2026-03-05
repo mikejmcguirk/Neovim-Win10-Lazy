@@ -1,3 +1,4 @@
+vim.g.farsight_debug = true
 -- TODO: Document highlight groups here
 -- TODO: Document g:vars here. Check validations
 
@@ -8,9 +9,6 @@
 
 local api = vim.api
 local fn = vim.fn
-local lower = string.lower
-local maparg = fn.maparg
-local set = api.nvim_set_keymap
 
 local plugs = {
     {
@@ -73,7 +71,7 @@ for i = 1, len_plugs do
     local callback = plug[3]
     local len_modes = #modes
     for j = 1, len_modes do
-        set(modes[j], key, "", { noremap = true, callback = callback })
+        api.nvim_set_keymap(modes[j], key, "", { noremap = true, callback = callback })
     end
 end
 
@@ -98,10 +96,10 @@ for i = 1, #jump_maps do
     local rhs = map[3]
     for j = 1, #modes do
         local mode = modes[j]
-        local maparg_res = maparg(key, mode)
+        local maparg_res = fn.maparg(key, mode)
         -- Need to check for just <cr> because of unsimplification (:h <tab>)
-        if maparg_res == "" or lower(maparg_res) == key then
-            set(mode, key, rhs, { noremap = true })
+        if maparg_res == "" or string.lower(maparg_res) == key then
+            api.nvim_set_keymap(mode, key, rhs, { noremap = true })
         end
     end
 end
@@ -123,8 +121,8 @@ for i = 1, #csearch_maps do
     local rhs = map[3]
     for j = 1, #modes do
         local mode = modes[j]
-        if maparg(key, mode) == "" then
-            set(mode, key, rhs, { noremap = true })
+        if fn.maparg(key, mode) == "" then
+            api.nvim_set_keymap(mode, key, rhs, { noremap = true })
         end
     end
 end
@@ -141,46 +139,41 @@ end
 -- - col() : f_col in funcs.c
 -- - search() : f_search in funcs.c
 
+-- TODO: I think "nomap_ft", "nomap_live", and "nomap_static" options are fine. We presume that
+-- "nomap_all" overrides any of them.
+-- TODO: I believe the manual isk checking will be completely obsoleted from this plugin. I think
+-- that code, along with the various other components in here and in rancher, justify creating an
+-- nvim-tools repo. Each module should have an error message at the top of it so it cannot be
+-- required. We do not want to create a new plenary.
+-- TODO: Note mainly for jumping and csearch:
+-- - \k matches individual characters
+-- - \<\k\+\> ensures word boundaries are respected
+-- - \k\+ looks for runs but does not respect word boundaries
+-- Feels better to use the word boundary one so that way static jump uses proper boundaries when
+-- creating labels
+-- TODO: Look at how stevearc/folke do their docgen. Manually keeping up the README has been a
+-- major pain point with Rancher and even lampshade.
+-- TODO: Config points: Overall, csearch, live search, static search
+-- TODO: I *think* I want to ship a static jump as default on enter. Show all three features.
+-- - That said, for posterity, do explore a live jump on multiple windows as a default. Test in
+-- dense code windows. My question is if there are too many results for labels to reliably spawn
+-- after a small number of keypresses.
+-- - For static jump, IMO labels at beginning only is the sanest default, but test "both" as well.
 -- TODO: See if dim rows in csearch and jump can be handled like in search
 -- TODO: For any jumps, if doing a backwards correction for omode, use cursor() instead of the API
 -- because it doesn't trigger a screen update.
+-- - Or is this based on search() now? Haven't looked at that code in a while.
 -- TODO: Functionalities to try putting into common
 -- - Dimming. Could have a function that takes a row list, ns, and hl_group and runs through
 -- setting the extmarks. Also have it take a dim opt
 -- - At least some of the logic for getting the wrapped bottom row. It's all checking the opt
 -- and searchpos on the first col.
--- TODO: For vim.fn calls in tight loops, maybe use the function call API, since I believe that
--- requires less overhead. You could also skip the vim.fn. metatable and use the underlying one
--- it wraps, saving a layer of indirection.
--- TODO: Refactor with DoD concepts. Non-trivial gains:
--- - Can load parts of SoA into sub functions
--- - Easier to make smaller loops
--- TODO: For storing function references. Think in terms of like:
--- - For foldclosed iterations. You can usually grab the variable once before the hot loop begins.
--- Saving the cost of one hash lookup before the hot path isn't all that relevant
--- - So like, in csearch, it's fine at the function level because you can get it before the hot
--- path. Whereas in jump it is actually needed because it runs inside the hot function
--- - Lots of small sub-functions good. JIT apparently can inline them
--- - Avoid deeply nested long functions
--- TODO: Confirm that g/b:vars can take function literals. I've seen it work, but does it break
--- TODO: Where can we use require("table.new") ?
--- easily?
--- TODO: Document that for csearch and /? search that |cpo-c| is respected
--- TODO: Add types to any usages of matchstrpos
+-- TODO: Replace vim.fn with vim.call where possible
+-- TODO: Confirm that g/b:vars can take function literals. I've seen it work, but does it break?
+-- TODO: Where can we use require("table.new")?
+-- TODO: Document that, in all cases, |cpo-c| is respected. Sub-note though that the default
+-- jump pattern explicitly uses word boundaries to avoid overlaps
 -- TODO: The various functions should have hard protections against multi-win if not in normal mode
--- TODO: Augmented /? search. Design specs:
--- - As you are typing, items are labeled like in flash
--- - If you jump to a label, the "/" register is not updated
--- - If you hit <cr>, the "/" register is updated and hlsearch is turned on based on settings
--- - No auto-jump, as (a) this can happen by accident and (b) it can prevent entering full search
--- terms for actual searches
--- Design plan:
--- - Look at the code for search and note what it actually does. There is nuance I'm sure we'll
--- need to capture
--- - Look at what happens when "incsearch" is active. How much do we want to implement that
--- behavior?
--- - For the actual search, try to use the search() function or something related, as it uses the
--- same underlying searchit function that /? search uses
 -- TODO: Document deprecation plan:
 -- - Time period: 2-3 months
 -- - Opt/function removal: Mark private/package, then delete
@@ -188,11 +181,9 @@ end
 -- old interface
 -- - Default function behaviors: Notify which opt lets you use old behavior
 -- - Plug map changes: Unsure
--- Document that b:vars are the same as g:vars and prioritized. Can be used for ft configurations
+-- TODO_DOC: b:vars are the same as g:vars and prioritized. Can be used for ft configurations
 -- TODO: Test everything with and around multibyte chars. It doesn't look like anything special
 -- needs to be done, but need to be sure
--- TODO: Since ctrl char literals are displayed, maybe allow them to be factored into csearch and
--- jump
 -- TODO: Need to test that the gb options work
 -- TODO: Jokes:
 -- - "Extraterrestrial vantage point over your code"
@@ -203,7 +194,7 @@ end
 -- TODO: README:
 -- - Credits:
 --   - jump2d (initial basis for jump)
---   - flash (f/t ideas)
+--   - flash/lightspeed/leap (for the incremental jump idea)
 -- - Inspirations:
 --   - Quickscope
 -- - Alternatives:
@@ -228,11 +219,14 @@ end
 -- - Determining string length for the wrapped fill line
 -- - Removing characters under listchars, plus under "@@@" in wrapped lines
 -- Hard to prioritize because it does not cause false negatives
+-- LOW: Evaluate target closeness by euclidian distance rather than row/col order.
+-- LOW: For folds: first_row - Display virtual text on top of the fold and label the virtual text
+-- with all the options.
 --
 -- PR: The end_row key in nvim_buf_set_extmark appears to be exclusive when using the hl_eol
 -- option, but this is not mentioned in the docs. Verify if this intuition is correct and submit
-
 -- a PR if so
+
 -- ISSUE: Search does not properly consider multiline boundaries for searching after.
 -- Reproduction:
 -- - Open nvim clean
@@ -285,5 +279,3 @@ end
 
 -- FUTURE: If vim vars are able to properly hold metatables, use them for var validation
 -- FUTURE: Use the new mark API when it comes out for setting pcmarks
-
--- PR: Understand how matchstrpos's returns actually work and update them in eval.lua

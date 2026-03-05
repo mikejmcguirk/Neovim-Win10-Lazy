@@ -306,7 +306,7 @@ map_scroll("<C-d>", "\4zz")
 
 set("o", "gg", "<esc>")
 set({ "n", "x" }, "go", function()
-    -- gg Retains cursor position since I have startofline off
+    -- gg Retains cursor position since I keep startofline off
     return vim.v.count < 1 and "m`gg" or "m`" .. vim.v.count1 .. "go"
 end, { expr = true })
 
@@ -314,34 +314,13 @@ set("o", "go", function()
     return vim.v.count < 1 and "gg" or "go"
 end, { expr = true })
 
+--TODO: Restore adding a jump if top or bottom is exited.
 set({ "n", "x" }, "j", function()
-    if vim.v.count == 0 then
-        return "gj"
-    end
-
-    local line = fn.line(".")
-    local new_line = line + vim.v.count1
-    local bot = fn.line("w$")
-    if new_line > bot then
-        return "m`" .. vim.v.count1 .. "j"
-    end
-
-    return "j"
+    return vim.v.count == 0 and "gj" or "j"
 end, { expr = true })
 
 set({ "n", "x" }, "k", function()
-    if vim.v.count == 0 then
-        return "gk"
-    end
-
-    local line = fn.line(".")
-    local new_line = line - vim.v.count1
-    local top = fn.line("w0")
-    if new_line < top then
-        return "m`" .. vim.v.count1 .. "k"
-    end
-
-    return "k"
+    return vim.v.count == 0 and "gk" or "k"
 end, { expr = true })
 
 set("n", "zT", function()
@@ -359,23 +338,9 @@ set("n", "zB", function()
 end)
 
 set({ "n", "x" }, "gM", "<nop>")
--- This is more ergonomic than gM, particularly in the case where you are in an f/t motion and
--- need to advance further up the line (just double tap <C-m>) This also starts to point toward
--- the idea of being in the middle of an f/t motion and being able to hit <C-m> to center the
--- cursor then re-open the motion to see new highlighting
--- Patternful with <C-d>/<C-u>
--- Opens gM
--- MAYBE: It would be... extremely valuable to map H,L, and M to gH, gL, and gM, as this opens
--- premium real-estate in normal mode. In particular, it would let me map "reverse J" to L where
--- it belongs
--- If I were re-doing Neovim from scratch, I would not include select mode. Or, at the very least,
--- I would limit it somehow, like to mouse selections. Taking up gh in particular is egregious
--- The potential blocker here is vanilla vim, though I don't think mis-wired muscle memory here
--- would cause anything particularly destructive (the one thing to watch would be gH)
--- A smaller issue is that this is probably not a paradigm I could use in any sort of plugin
--- mapping
--- There is, also, apparently an accessbility use case for select mode
--- MAYBE: Use M-m to go to the center of the screenline
+
+-- MAYBE: With Farsight, the ideas for this mapping are less relevant. While gM is not super
+-- ergonomic, it does make sense relative to M.
 set({ "n", "x" }, "<C-m>", function()
     if api.nvim_get_mode().blocking then
         api.nvim_cmd({ cmd = "norm", args = { "\27" }, bang = true }, {})
@@ -598,7 +563,7 @@ set("n", "];", "g,")
 -- Credit ThePrimeagen
 set("n", "g%", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
 
-set("n", "g?", "<nop>")
+-- set("n", "g?", "<nop>")
 
 --------------------
 -- NORMAL z LAYER --
@@ -735,7 +700,7 @@ end, { silent = true })
 -- INSERT MODE --
 -----------------
 
-set("i", "<C-q>", "<C-S-v>") -- Seen unsimplified char literals. Avoid terminal paste
+set("i", "<C-q>", "<C-S-v>") -- See unsimplified char literals. Avoid terminal paste
 
 set("i", "<C-a>", "<C-o>I")
 set("i", "<C-e>", "<End>")

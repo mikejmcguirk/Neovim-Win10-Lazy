@@ -104,12 +104,18 @@ autoset_winopt({ "WinEnter", "BufWinEnter", "CmdlineLeave" }, "rnu", true)
 api.nvim_create_autocmd("CmdlineEnter", {
     group = set_group,
     callback = function()
-        setopt("rnu", false, { win = api.nvim_get_current_win() })
-        if not vim.tbl_contains({ "@", "-" }, vim.v.event.cmdtype) then
-            vim.cmd("redraw")
+        local cur_win = api.nvim_get_current_win()
+        api.nvim_set_option_value("rnu", false, { win = cur_win })
+        local cmdtype = vim.v.event.cmdtype
+        if cmdtype == "@" or cmdtype == "=" then
+            return
         end
+
+        api.nvim__redraw({ statuscolumn = true, win = cur_win })
     end,
 })
+-- MAYBE: I have a suspicion that I've been seeing extmarks drawn when they should not be because
+-- this autocmd originally just called :redraw. Trying specifying statuscolumn to alleviate.
 
 -- :h fo-table
 -- Since multiple runtime ftplugin files set formatoptions, correct here
