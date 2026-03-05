@@ -139,6 +139,11 @@ end
 -- - col() : f_col in funcs.c
 -- - search() : f_search in funcs.c
 
+-- NOTE: Outside of hot paths, it is okay to be redundant with validation. Promotes robustness.
+-- For internal code (underline modules), do not validate what type annotations can catch.
+-- NOTE: Unexpected but valid behaviors should be handled gracefully. Invalid behaviors should
+-- hard error.
+
 -- TODO: I think "nomap_ft", "nomap_live", and "nomap_static" options are fine. We presume that
 -- "nomap_all" overrides any of them.
 -- TODO: I believe the manual isk checking will be completely obsoleted from this plugin. I think

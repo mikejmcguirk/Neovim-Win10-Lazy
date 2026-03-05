@@ -1,7 +1,6 @@
 ---@class farsight.targets.Targets
----@field idxs_len integer
+---@field len_idxs integer
 ---@field idxs integer[]
----@field idxs_rev integer[]
 ---@field start_rows integer[]
 ---@field start_cols integer[]
 ---@field fin_rows integer[]
@@ -29,9 +28,9 @@ end
 function M:init(size)
     local tn = require("farsight.util")._table_new
 
-    self.idxs_len = 0
+    self.len_idxs = 0
     self.idxs = tn(size, 0)
-    self.idxs_rev = tn(size, 0)
+    self.next_idx = 1
 
     self.start_rows = tn(size, 0)
     self.start_cols = tn(size, 0)
@@ -54,29 +53,25 @@ end
 ---@param fin_row integer
 ---@param fin_col integer
 function M:add_new_target(row, col, fin_row, fin_col)
-    local cur_idx_len = self.idxs_len
-    local idxs_fwd = self.idxs
+    self.len_idxs = self.len_idxs + 1
+    local next_idx = self.next_idx
+    self.idxs[self.len_idxs] = next_idx
 
-    local cur_last_idx = idxs_fwd[cur_idx_len] or 0
-    local new_idx = cur_last_idx + 1
+    self.start_rows[next_idx] = row
+    self.start_cols[next_idx] = col
+    self.fin_rows[next_idx] = fin_row
+    self.fin_cols[next_idx] = fin_col
+    self.start_labels[next_idx] = vim.NIL
+    self.start_vtexts[next_idx] = vim.NIL
+    self.fin_labels[next_idx] = vim.NIL
+    self.fin_vtexts[next_idx] = vim.NIL
 
-    self.idxs_len = cur_idx_len + 1
-    idxs_fwd[self.idxs_len] = new_idx
-    -- TODO: This is quite unfortunate if there are a lot of targets
-    table.insert(self.idxs_rev, 1, new_idx)
-
-    self.start_rows[new_idx] = row
-    self.start_cols[new_idx] = col
-    self.fin_rows[new_idx] = fin_row
-    self.fin_cols[new_idx] = fin_col
-    self.start_labels[new_idx] = vim.NIL
-    self.start_vtexts[new_idx] = vim.NIL
-    self.fin_labels[new_idx] = vim.NIL
-    self.fin_vtexts[new_idx] = vim.NIL
+    -- Avoid scanning for a viable idx if next_idx < len_idxs due to a deletion
+    self.next_idx = self.len_idxs + 1
 end
 
 function M:get_len()
-    return self.idxs_len
+    return self.len_idxs
 end
 
 -- TODO: Could these label checks be improved?
@@ -94,25 +89,60 @@ function M:has_fin_labels()
 end
 
 ---@param i integer
+---@param labels_start integer
+---@param labels_fin integer
+---@return integer, integer
+local function correct_label_markers(i, labels_start, labels_fin)
+    if labels_start == 0 and labels_fin == 0 then
+        return 0, 0
+    end
+
+    local new_labels_start = labels_start
+    if labels_start > i then
+        new_labels_start = labels_start - 1
+    end
+
+    local new_labels_fin = labels_fin
+    if labels_fin >= i then
+        new_labels_fin = labels_fin - 1
+    end
+
+    if new_labels_start <= new_labels_fin then
+        return new_labels_start, new_labels_fin
+    else
+        -- Only label deleted. labels_start kept and labels_fin decremented
+        return 0, 0
+    end
+end
+
+---@param i integer
 function M:rm_target(i)
-    local init_idxs_len = self.idxs_len
-    local rev_i = init_idxs_len - i + 1
+    local init_idxs_len = self.len_idxs
+    vim.validate("i", i, function()
+        return i >= i and i <= init_idxs_len, "Cannot delete an out of bounds target"
+    end)
+
+    local idxs = self.idxs
+    local rm_idx = idxs[i]
 
     local j = i
     for k = i + 1, init_idxs_len do
-        self.idxs[j] = self.idxs[k]
+        idxs[j] = idxs[k]
         j = j + 1
     end
 
-    j = rev_i
-    for k = rev_i + 1, init_idxs_len do
-        self.idxs_rev[j] = self.idxs_rev[k]
-        j = j + 1
-    end
+    -- TODO: Write a label validation assertion that can be reused
+    local sls = self.start_labels_start
+    local slf = self.start_labels_fin
+    self.start_labels_start, self.start_labels_fin = correct_label_markers(i, sls, slf)
+    local fls = self.fin_labels_start
+    local flf = self.fin_labels_fin
+    self.fin_labels_start, self.fin_labels_fin = correct_label_markers(i, fls, flf)
 
-    self.idxs_len = init_idxs_len - 1
+    self.len_idxs = init_idxs_len - 1
+    idxs[init_idxs_len] = nil
+    self.next_idx = rm_idx
 end
---
 -- TODO: This also needs to properly handle label start and stop indexing
 -- MAYBE: Values greater than idxs_len are currently not niled since this data structure is
 -- assumed to be used ephemerally. If we find that we're keeping targets around, then check
@@ -189,7 +219,7 @@ end
 ---@param stop? integer
 ---@param rev? boolean
 function M:iter_start_pos(start, stop, rev)
-    local i, iter, limit = get_iter_positions(self.idxs_len, start, stop, rev)
+    local i, iter, limit = get_iter_positions(self.len_idxs, start, stop, rev)
     if iter == 0 then
         return function()
             return nil
@@ -214,7 +244,7 @@ end
 ---@param stop? integer
 ---@param rev? boolean
 function M:iter_fin_rows(start, stop, rev)
-    local i, iter, limit = get_iter_positions(self.idxs_len, start, stop, rev)
+    local i, iter, limit = get_iter_positions(self.len_idxs, start, stop, rev)
     if iter == 0 then
         return function()
             return nil
@@ -239,7 +269,7 @@ end
 ---@param stop? integer
 ---@param rev? boolean
 function M:iter_fin_pos(start, stop, rev)
-    local i, iter, limit = get_iter_positions(self.idxs_len, start, stop, rev)
+    local i, iter, limit = get_iter_positions(self.len_idxs, start, stop, rev)
     if iter == 0 then
         return function()
             return nil
@@ -308,7 +338,7 @@ end
 ---@param stop_on_keep? boolean
 ---@param predicate fun(start_row: integer): boolean
 function M:filter_start_row(start, stop, rev, stop_on_keep, predicate)
-    local len = self.idxs_len
+    local len = self.len_idxs
     if len == 0 then
         return
     end
@@ -352,7 +382,7 @@ end
 ---@param stop_on_keep? boolean
 ---@param predicate fun(start_row: integer, start_col: integer, fin_row: integer, fin_col: integer): boolean
 function M:filter_pos(start, stop, rev, stop_on_keep, predicate)
-    local len = self.idxs_len
+    local len = self.len_idxs
     if len == 0 then
         return
     end
@@ -400,7 +430,7 @@ end
 ---@param rev? boolean
 ---@param mapper fun(start_row: integer, start_col: integer): integer, integer
 function M:map_start_pos(start, stop, rev, mapper)
-    local len = self.idxs_len
+    local len = self.len_idxs
     if len == 0 then
         return
     end
@@ -437,7 +467,7 @@ end
 ---@param rev? boolean
 ---@param mapper fun(start_row: integer, start_col: integer): integer, integer
 function M:map_fin_pos(start, stop, rev, mapper)
-    local len = self.idxs_len
+    local len = self.len_idxs
     if len == 0 then
         return
     end
@@ -474,7 +504,7 @@ end
 ---@param rev? boolean
 ---@param mapper fun(start_row: integer, start_col: integer, fin_row: integer, fin_col: integer): integer, integer, integer, integer
 function M:map_pos(start, stop, rev, mapper)
-    local len = self.idxs_len
+    local len = self.len_idxs
     if len == 0 then
         return
     end
@@ -516,7 +546,7 @@ end
 ---@param stop? integer
 ---@param rev? boolean
 function M:iter_alloc_start_labels(start, stop, rev)
-    local len = self.idxs_len
+    local len = self.len_idxs
     if len == 0 then
         return
     end
@@ -549,7 +579,7 @@ end
 ---@param stop? integer
 ---@param rev? boolean
 function M:iter_alloc_fin_labels(start, stop, rev)
-    local len = self.idxs_len
+    local len = self.len_idxs
     if len == 0 then
         return
     end
@@ -582,7 +612,7 @@ end
 ---@param stop? integer
 ---@param rev? boolean
 function M:iter_alloc_both_labels(start, stop, rev)
-    local len = self.idxs_len
+    local len = self.len_idxs
     if len == 0 then
         return
     end
