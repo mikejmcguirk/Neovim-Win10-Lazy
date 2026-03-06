@@ -204,12 +204,12 @@ local function fix_results_jit(targets, buf, cache)
         buf_cache[line_count] = line
     end
 
-    for _, idx, fin_row in targets:iter_fin_rows() do
+    for i, fin_row in targets:iter_fin_rows() do
         if fin_row <= line_count then
             break
         end
 
-        targets:set_fin_pos_from_idx(idx, line_count, #line)
+        targets:set_fin_pos(i, line_count, #line)
     end
 end
 -- TODO: Add iter_fin_rows

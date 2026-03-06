@@ -59,7 +59,7 @@ local function handle_input(win, buf, cache, cursor)
         timeout = 500,
     })
 
-    vim.fn.confirm(vim.inspect(targets))
+    -- vim.fn.confirm(vim.inspect(targets))
     if not ok or type(targets) == "string" then
         return
     end

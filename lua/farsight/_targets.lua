@@ -1,6 +1,7 @@
 ---@class farsight.targets.Targets
 ---@field len_idxs integer
 ---@field idxs integer[]
+---@field next_idx integer
 ---@field start_rows integer[]
 ---@field start_cols integer[]
 ---@field fin_rows integer[]
@@ -53,39 +54,50 @@ end
 ---@param fin_row integer
 ---@param fin_col integer
 function M:add_new_target(row, col, fin_row, fin_col)
-    self.len_idxs = self.len_idxs + 1
+    local len_idxs = self.len_idxs
+    len_idxs = len_idxs + 1
+    self.len_idxs = len_idxs
+
     local next_idx = self.next_idx
-    self.idxs[self.len_idxs] = next_idx
+    self.idxs[len_idxs] = next_idx
 
     self.start_rows[next_idx] = row
     self.start_cols[next_idx] = col
     self.fin_rows[next_idx] = fin_row
     self.fin_cols[next_idx] = fin_col
+
     self.start_labels[next_idx] = vim.NIL
     self.start_vtexts[next_idx] = vim.NIL
     self.fin_labels[next_idx] = vim.NIL
     self.fin_vtexts[next_idx] = vim.NIL
 
     -- Avoid scanning for a viable idx if next_idx < len_idxs due to a deletion
-    self.next_idx = self.len_idxs + 1
+    self.next_idx = len_idxs + 1
 end
 
+---@return integer
 function M:get_len()
     return self.len_idxs
 end
 
--- TODO: Could these label checks be improved?
-
+---@return boolean
 function M:has_start_labels()
-    return self.start_labels_start > 0
-        and self.start_labels_fin > 0
-        and self.start_labels_start <= self.start_labels_fin
+    local sls = self.start_labels_start
+    local slf = self.start_labels_fin
+    assert(sls <= slf)
+    assert((sls == 0) == (slf == 0))
+
+    return sls > 0
 end
 
+---@return boolean
 function M:has_fin_labels()
-    return self.fin_labels_start > 0
-        and self.fin_labels_fin > 0
-        and self.fin_labels_start <= self.fin_labels_fin
+    local fls = self.fin_labels_start
+    local flf = self.fin_labels_fin
+    assert(fls <= flf)
+    assert((fls == 0) == (flf == 0))
+
+    return fls > 0
 end
 
 ---@param i integer
@@ -118,12 +130,15 @@ end
 ---@param i integer
 function M:rm_target(i)
     local init_idxs_len = self.len_idxs
-    vim.validate("i", i, function()
-        return i >= i and i <= init_idxs_len, "Cannot delete an out of bounds target"
-    end)
+    assert(i >= i and i <= init_idxs_len, "Cannot delete an out of bounds target")
 
     local idxs = self.idxs
     local rm_idx = idxs[i]
+
+    self.start_labels[rm_idx] = vim.NIL
+    self.start_vtexts[rm_idx] = vim.NIL
+    self.fin_labels[rm_idx] = vim.NIL
+    self.fin_vtexts[rm_idx] = vim.NIL
 
     local j = i
     for k = i + 1, init_idxs_len do
@@ -131,7 +146,6 @@ function M:rm_target(i)
         j = j + 1
     end
 
-    -- TODO: Write a label validation assertion that can be reused
     local sls = self.start_labels_start
     local slf = self.start_labels_fin
     self.start_labels_start, self.start_labels_fin = correct_label_markers(i, sls, slf)
@@ -143,41 +157,47 @@ function M:rm_target(i)
     idxs[init_idxs_len] = nil
     self.next_idx = rm_idx
 end
--- TODO: This also needs to properly handle label start and stop indexing
--- MAYBE: Values greater than idxs_len are currently not niled since this data structure is
--- assumed to be used ephemerally. If we find that we're keeping targets around, then check
--- the max value in idxs and nil everything after.
+-- MAYBE: You could go further with this and do something like compacting the sub-tables every X
+-- deletes, but I'm not sure if that will matter in practice.
 
+---@param input integer|nil
+---@param default integer
+---@return integer
+local function adj_iter_input(input, default, idxs_len)
+    input = input or default
+    if input <= 0 then
+        return idxs_len + input
+    else
+        return math.min(input, idxs_len)
+    end
+end
+
+---Returns standard 1 indexed, inclusive iterator bounds.
+---If input is invalid (start > stop), then 0, 0, 0 are returned.
+---If rev is true, the iteration will be from stop to start.
 ---@param idxs_len integer
 ---@param start? integer
 ---@param stop? integer
 ---@param rev? boolean
-local function get_iter_positions(idxs_len, start, stop, rev)
-    start = start or 1
-    if start == 0 then
-        start = idxs_len
-    elseif start < 0 then
-        start = idxs_len + start
+---@return integer, integer, integer
+local function get_pos_iter_bounds(idxs_len, start, stop, rev)
+    if idxs_len <= 0 then
+        return 0, 0, 0
     end
 
-    stop = stop or idxs_len
-    if stop == 0 then
-        stop = idxs_len
-    elseif stop < 0 then
-        stop = idxs_len + stop
-    end
-
-    stop = math.min(stop, idxs_len)
+    start = adj_iter_input(start, 1, idxs_len)
+    stop = adj_iter_input(stop, idxs_len, idxs_len)
     if start > stop then
         return 0, 0, 0
     end
 
-    local iter = rev and -1 or 1
-    local i = (rev and stop or start) - iter
+    local i = rev and stop or start
     local limit = rev and start or stop
+    local iter = rev and -1 or 1
 
-    return i, iter, limit
+    return i, limit, iter
 end
+-- NON: Handle bad input gracefully so that algorithms can use it smoothly.
 
 ---@param self farsight.targets.Targets
 ---@return integer[], integer[]
@@ -186,15 +206,20 @@ local function get_start_positions(self)
 end
 
 ---@param self farsight.targets.Targets
----@return string[][], [string, integer|string?][][]
-local function get_start_extmark_info(self)
-    return self.start_labels, self.start_vtexts
+---@param fin boolean
+---@return integer, integer
+local function get_label_iters(self, fin)
+    local ls = fin and self.fin_labels_start or self.start_labels_start
+    local lf = fin and self.fin_labels_fin or self.start_labels_fin
+    assert(ls <= lf)
+    assert((ls == 0) == (lf == 0))
+    return ls, lf
 end
 
 ---@param self farsight.targets.Targets
----@return integer, integer
-local function get_start_label_iters(self)
-    return self.start_labels_start, self.start_labels_fin
+---@return string[][], [string, integer|string?][][]
+local function get_start_extmark_info(self)
+    return self.start_labels, self.start_vtexts
 end
 
 ---@param self farsight.targets.Targets
@@ -210,115 +235,97 @@ local function get_fin_extmark_info(self)
 end
 
 ---@param self farsight.targets.Targets
----@return integer, integer
-local function get_fin_label_iters(self)
-    return self.fin_labels_start, self.fin_labels_fin
-end
-
 ---@param start? integer
 ---@param stop? integer
 ---@param rev? boolean
-function M:iter_start_pos(start, stop, rev)
-    local i, iter, limit = get_iter_positions(self.len_idxs, start, stop, rev)
+---@param get_pos fun(farsight.targets.Targets): rows:integer[], cols:integer[]
+---@return fun(): i:integer|nil, start_row:integer|nil, start_col:integer|nil
+local function iter_pos(self, start, stop, rev, get_pos)
+    local i, limit, iter = get_pos_iter_bounds(self.len_idxs, start, stop, rev)
     if iter == 0 then
+        ---@return nil, nil, nil
         return function()
-            return nil
+            return nil, nil, nil
         end
     end
 
+    i = i - iter
     local idxs_fwd = self.idxs
-    local start_rows, start_cols = get_start_positions(self)
+    local rows, cols = get_pos(self)
 
+    ---@return integer|nil, integer|nil, integer|nil
     return function()
         i = i + iter
         if (iter > 0 and i > limit) or (iter < 0 and i < limit) then
-            return nil
+            return nil, nil, nil
         end
 
         local idx = idxs_fwd[i]
-        return i, idx, start_rows[idx], start_cols[idx]
+        return i, rows[idx], cols[idx]
     end
 end
 
 ---@param start? integer
 ---@param stop? integer
 ---@param rev? boolean
+---@return fun(): i:integer|nil, start_row:integer|nil, start_col:integer|nil
+function M:iter_start_pos(start, stop, rev)
+    return iter_pos(self, start, stop, rev, get_start_positions)
+end
+
+---@param start? integer
+---@param stop? integer
+---@param rev? boolean
+---@return fun(): i:integer|nil, fin_row:integer|nil, fin_col:integer|nil
+function M:iter_fin_pos(start, stop, rev)
+    return iter_pos(self, start, stop, rev, get_fin_positions)
+end
+
+---@param start? integer
+---@param stop? integer
+---@param rev? boolean
+---@return fun(): i:integer|nil, fin_row:integer|nil
 function M:iter_fin_rows(start, stop, rev)
-    local i, iter, limit = get_iter_positions(self.len_idxs, start, stop, rev)
+    local i, limit, iter = get_pos_iter_bounds(self.len_idxs, start, stop, rev)
     if iter == 0 then
+        ---@return nil, nil
         return function()
             return nil
         end
     end
 
-    local idxs_fwd = self.idxs
+    i = i - iter
+    local idxs = self.idxs
     local fin_rows = self.fin_rows
 
+    ---@return integer|nil, integer|nil
     return function()
         i = i + iter
         if (iter > 0 and i > limit) or (iter < 0 and i < limit) then
             return nil
         end
 
-        local idx = idxs_fwd[i]
-        return i, idx, fin_rows[idx]
+        return i, fin_rows[idxs[i]]
     end
 end
 
----@param start? integer
----@param stop? integer
----@param rev? boolean
-function M:iter_fin_pos(start, stop, rev)
-    local i, iter, limit = get_iter_positions(self.len_idxs, start, stop, rev)
-    if iter == 0 then
+---@param self farsight.targets.Targets
+---@param vtexts [string, integer|string?][]
+---@param get_pos fun(farsight.targets.Targets): rows:integer[], cols:integer[]
+---@param fin boolean
+---@return fun(): row:integer|nil, col:integer|nil, vtext:[string, integer|string?][]|nil
+local function iter_vtexts(self, vtexts, get_pos, fin)
+    local iter_start, iter_fin = get_label_iters(self, fin)
+    if iter_start == 0 then
+        ---@return nil, nil, nil
         return function()
-            return nil
+            return nil, nil, nil
         end
     end
 
-    local idxs_fwd = self.idxs
-    local fin_rows, fin_cols = get_fin_positions(self)
-
-    return function()
-        i = i + iter
-        if (iter > 0 and i > limit) or (iter < 0 and i < limit) then
-            return nil
-        end
-
-        local idx = idxs_fwd[i]
-        return i, idx, fin_rows[idx], fin_cols[idx]
-    end
-end
-
----@return fun():start_row: integer|nil, start_col: integer|nil, start_vtext: [string,integer|string?][]|nil
-function M:iter_start_vtexts()
-    local idxs = self.idxs
-    local start_rows, start_cols = get_start_positions(self)
-    local start_vtexts = self.start_vtexts
-
-    local iter_start, iter_fin = get_start_label_iters(self)
     local i = iter_start - 1
-
-    ---@return integer|nil, integer|nil, [string, integer|string?][]|nil
-    return function()
-        i = i + 1
-        if i > iter_fin then
-            return nil
-        end
-
-        local idx = idxs[i]
-        return start_rows[idx], start_cols[idx], start_vtexts[idx]
-    end
-end
-
----@return fun():fin_row: integer|nil, fin_col: integer|nil, fin_vtext: [string,integer|string?][]|nil
-function M:iter_fin_vtexts()
     local idxs = self.idxs
-    local fin_rows, fin_cols = get_fin_positions(self)
-    local fin_vtexts = self.fin_vtexts
-
-    local iter_start, iter_fin = get_fin_label_iters(self)
-    local i = iter_start - 1
+    local rows, cols = get_pos(self)
 
     ---@return integer|nil, integer|nil, [string, integer|string?][]|nil
     return function()
@@ -328,8 +335,18 @@ function M:iter_fin_vtexts()
         end
 
         local idx = idxs[i]
-        return fin_rows[idx], fin_cols[idx], fin_vtexts[idx]
+        return rows[idx], cols[idx], vtexts[idx]
     end
+end
+
+---@return fun():start_row: integer|nil, start_col: integer|nil, start_vtext: [string,integer|string?][]|nil
+function M:iter_start_vtexts()
+    return iter_vtexts(self, self.start_vtexts, get_start_positions, false)
+end
+
+---@return fun():fin_row: integer|nil, fin_col: integer|nil, fin_vtext: [string,integer|string?][]|nil
+function M:iter_fin_vtexts()
+    return iter_vtexts(self, self.fin_vtexts, get_fin_positions, true)
 end
 
 ---@param start? integer
@@ -343,12 +360,10 @@ function M:filter_start_row(start, stop, rev, stop_on_keep, predicate)
         return
     end
 
-    local i, iter, limit = get_iter_positions(len, start, stop, rev)
+    local i, limit, iter = get_pos_iter_bounds(len, start, stop, rev)
     if iter == 0 then
         return
     end
-
-    i = i + iter
 
     local idxs_fwd = self.idxs
     local start_rows = self.start_rows
@@ -387,12 +402,10 @@ function M:filter_pos(start, stop, rev, stop_on_keep, predicate)
         return
     end
 
-    local i, iter, limit = get_iter_positions(len, start, stop, rev)
+    local i, limit, iter = get_pos_iter_bounds(len, start, stop, rev)
     if iter == 0 then
         return
     end
-
-    i = i + iter
 
     local idxs_fwd = self.idxs
     local start_rows, start_cols = get_start_positions(self)
@@ -435,12 +448,10 @@ function M:map_start_pos(start, stop, rev, mapper)
         return
     end
 
-    local i, iter, limit = get_iter_positions(len, start, stop, rev)
+    local i, limit, iter = get_pos_iter_bounds(len, start, stop, rev)
     if iter == 0 then
         return
     end
-
-    i = i + iter
 
     local idxs_fwd = self.idxs
     local start_rows, start_cols = get_start_positions(self)
@@ -472,12 +483,10 @@ function M:map_fin_pos(start, stop, rev, mapper)
         return
     end
 
-    local i, iter, limit = get_iter_positions(len, start, stop, rev)
+    local i, limit, iter = get_pos_iter_bounds(len, start, stop, rev)
     if iter == 0 then
         return
     end
-
-    i = i + iter
 
     local idxs_fwd = self.idxs
     local fin_rows, fin_cols = get_fin_positions(self)
@@ -509,12 +518,10 @@ function M:map_pos(start, stop, rev, mapper)
         return
     end
 
-    local i, iter, limit = get_iter_positions(len, start, stop, rev)
+    local i, limit, iter = get_pos_iter_bounds(len, start, stop, rev)
     if iter == 0 then
         return
     end
-
-    i = i + iter
 
     local idxs_fwd = self.idxs
     local start_rows, start_cols = get_start_positions(self)
@@ -551,7 +558,7 @@ function M:iter_alloc_start_labels(start, stop, rev)
         return
     end
 
-    local i, iter, limit = get_iter_positions(len, start, stop, rev)
+    local i, limit, iter = get_pos_iter_bounds(len, start, stop, rev)
     if iter == 0 then
         return
     end
@@ -560,6 +567,8 @@ function M:iter_alloc_start_labels(start, stop, rev)
     local start_labels = self.start_labels
     self.start_labels_start = math.max(math.min(i, limit), 1)
     self.start_labels_fin = math.max(math.max(i, limit), 1)
+
+    i = i - iter
 
     return function()
         i = i + iter
@@ -584,7 +593,7 @@ function M:iter_alloc_fin_labels(start, stop, rev)
         return
     end
 
-    local i, iter, limit = get_iter_positions(len, start, stop, rev)
+    local i, limit, iter = get_pos_iter_bounds(len, start, stop, rev)
     if iter == 0 then
         return
     end
@@ -593,6 +602,8 @@ function M:iter_alloc_fin_labels(start, stop, rev)
     local fin_labels = self.fin_labels
     self.fin_labels_start = math.max(math.min(i, limit), 1)
     self.fin_labels_fin = math.max(math.max(i, limit), 1)
+
+    i = i - iter
 
     return function()
         i = i + iter
@@ -617,7 +628,7 @@ function M:iter_alloc_both_labels(start, stop, rev)
         return
     end
 
-    local i, iter, limit = get_iter_positions(len, start, stop, rev)
+    local i, limit, iter = get_pos_iter_bounds(len, start, stop, rev)
     if iter == 0 then
         return
     end
@@ -629,6 +640,8 @@ function M:iter_alloc_both_labels(start, stop, rev)
     self.start_labels_fin = math.max(math.max(i, limit), 1)
     self.fin_labels_start = math.max(math.min(i, limit), 1)
     self.fin_labels_fin = math.max(math.max(i, limit), 1)
+
+    i = i - iter
 
     return function()
         i = i + iter
@@ -660,7 +673,7 @@ function M:map_start_vtext_from_labels(mapper)
     local idxs = self.idxs
     local start_labels, start_vtexts = get_start_extmark_info(self)
 
-    local iter_start, iter_fin = get_start_label_iters(self)
+    local iter_start, iter_fin = get_label_iters(self, false)
     if iter_start == 0 or iter_fin == 0 then
         return
     end
@@ -683,7 +696,7 @@ function M:map_start_vtexts_from_labels_cmp_next_start(mapper)
 
     local col_distance = require("farsight.util").col_distance
 
-    local iter_start, iter_fin = get_start_label_iters(self)
+    local iter_start, iter_fin = get_label_iters(self, false)
     local most_labels = iter_fin - 1
     for i = iter_start, most_labels do
         local idx = idxs[i]
@@ -715,7 +728,7 @@ function M:map_start_vtexts_from_labels_cmp_fin(mapper)
 
     local col_distance = require("farsight.util").col_distance
 
-    local iter_start, iter_fin = get_start_label_iters(self)
+    local iter_start, iter_fin = get_label_iters(self, false)
     for i = iter_start, iter_fin do
         local idx = idxs[i]
         local start_row = start_rows[idx]
@@ -737,7 +750,7 @@ function M:map_fin_vtext_from_labels(mapper)
     local idxs = self.idxs
     local fin_labels, fin_vtexts = get_fin_extmark_info(self)
 
-    local iter_start, iter_fin = get_fin_label_iters(self)
+    local iter_start, iter_fin = get_label_iters(self, true)
     for i = iter_start, iter_fin do
         local idx = idxs[i]
         fin_vtexts[idx] = mapper(fin_labels[idx])
@@ -757,7 +770,7 @@ function M:map_fin_vtexts_from_labels_cmp_next_start(mapper)
 
     local col_distance = require("farsight.util").col_distance
 
-    local iter_start, iter_fin = get_fin_label_iters(self)
+    local iter_start, iter_fin = get_label_iters(self, true)
     local most_labels = iter_fin - 1
     for i = iter_start, most_labels do
         local idx = idxs[i]
@@ -788,7 +801,7 @@ function M:map_fin_vtexts_from_labels_cmp_next_fin(mapper)
 
     local col_distance = require("farsight.util").col_distance
 
-    local iter_start, iter_fin = get_fin_label_iters(self)
+    local iter_start, iter_fin = get_label_iters(self, true)
     local most_labels = iter_fin - 1
     for i = iter_start, most_labels do
         local idx = idxs[i]
@@ -807,13 +820,18 @@ function M:map_fin_vtexts_from_labels_cmp_next_fin(mapper)
     fin_vtexts[idx] = mapper(fin_labels[idx], vim.v.maxcol)
 end
 
----@param idx integer
+---@param i integer
 ---@param fin_row integer
 ---@param fin_col integer
-function M:set_fin_pos_from_idx(idx, fin_row, fin_col)
+function M:set_fin_pos(i, fin_row, fin_col)
+    local idx = self.idxs[i]
     self.fin_rows[idx] = fin_row
     self.fin_cols[idx] = fin_col
 end
+-- MID: Not a fan of this because the iterator has to get idx then this function has to hash
+-- self.idxs again to get idx again. But I also do not want to be exposing idx. The only place this
+-- is used is fix_results_jit, and at most it should only be called once or twice. The better
+-- solution is some kind of reverse map that terminates if mapper returns nil or the same value.
 
 return M
 
@@ -823,6 +841,7 @@ return M
 -- TODO: Try to do every iteration without the rev list. If we can use iterators + logic in here,
 -- that would reduce complexity surface area.
 -- TODO: The double-wrapped label iter limits are very hacky.
+-- TODO: idx should never be exposed.
 --
 -- LOW: For the virt text fills, it is technically inefficient to always calculate the space
 -- available between the target label and the next one. It is also not that slow (just arithmetic)

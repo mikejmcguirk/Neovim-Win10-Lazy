@@ -195,7 +195,7 @@ local function alloc_labels_cursor(wins, win_targets, count_labels, labels, ctx)
 
         local after_start = 1
 
-        for j, _, start_row, start_col in targets:iter_start_pos(start, stop) do
+        for j, start_row, start_col in targets:iter_start_pos(start, stop) do
             local start_row_1 = start_row + 1
             local start_col_1 = start_col + 1
             if not pos_lt(cursor_row, cursor_col, start_row_1, start_col_1) then
@@ -343,7 +343,7 @@ local function get_filtered_tokens(win_targets, cache, tokens, ctx)
 
         local line
         local last_fin_row_1 = 0
-        for _, _, fin_row, fin_col in targets:iter_fin_pos(1, 0, false) do
+        for _, fin_row, fin_col in targets:iter_fin_pos(1, 0, false) do
             local fin_row_1 = fin_row + 1
             if fin_row_1 ~= last_fin_row_1 then
                 line = buf_cache[fin_row_1]
