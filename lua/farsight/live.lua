@@ -177,22 +177,11 @@ return M
 -- last direction. Multi-window searches go to the last result. If dir is zero, the last actual
 -- direction is used.
 --
--- CONCEPTUAL QUESTIONS
---
--- TODO: Do you do something similar here to f/t where, after a jump, you can use ;/, to iterate
--- between other instances of the each result? I think not.
---
--- TODO: In targets, remove the rev idxs table (handle by improved iterators) and nil out extra
--- results. Reasons:
--- - These create more opportunities for subtle errors to occur
--- - These make debugging harder
--- - It makes the underlying assumptions about the data structure more clear
--- - It makes updating the data structure simpler (though not necessarily easier) because you don't
--- have to navigate around the junk state
--- - Downside: By nilling fields this potentially triggers more garbage collection. I don't know if
--- this can be turned off.
--- - Document all of this, since I sometimes later forget my reasoning for why certain things were
--- done.
+-- TODO: Consider doing input based on a getcharstr() loop or how flash does it. Because:
+-- - I'm not sure allowing regex in this context is helpful
+-- - Allowing regex makes one vs two char search start effectively impossible to implement, which
+-- feels like a valuable option.
+-- - I have nagging concerns about how input() will behave.
 -- TODO: For folds, flash's method of adding one label at the start of a fold basically makes
 -- sense. So in our fold filtering, we want to assume that, for any fold block, we are only taking
 -- one candidate per fold. The question then is what are the criteria. The fold option, "all" or
@@ -251,3 +240,8 @@ return M
 --
 -- NON: It would be vaguely interesting to print multi-char labels that let you jump off into a
 -- static jump, but I think that would just create feature confusion.
+-- NON: Autojumping should only occur because there is only one result.
+-- NON: Labels should only appear if they are currently jumpable.
+-- NON: Lightspeed's idea of not moving labels is interesting but I'm not sure it's helpful. If you
+-- allow labels to be generated after one character, the initial batch of labels might not spawn
+-- where you want to go in a large file, and the second character is required to narrow it down.

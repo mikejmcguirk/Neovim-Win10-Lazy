@@ -94,6 +94,8 @@ local function get_alloc_iters(use_upward, len_targets, count_new_labels)
     local stop = use_upward and len_targets or count_new_labels
     return start, stop
 end
+-- TODO: This is a bit silly because it's like doing part of the work then targets does the rest
+-- of it. Would like the code to express more clearly what the intent of this operation is.
 -- MID: It would be better if the location of the labels (beginning or end of targets) as well as
 -- the iteration direction were separate controls.
 

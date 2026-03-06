@@ -757,6 +757,8 @@ end
 
 return Csearch
 
+-- TODO: My current "classic" implementation functions correctly with the Jake-Stewart mutlicursor
+-- plugin. It should continue to do so. So should the enhanced version.
 -- TODO: While the allow_intersect option is available in locator, I think the better choice here
 -- is to purely search for \k without cursor overlap. That said, since the user can plug in their
 -- own search pattern, we need to be able to handle other cases, so that needs to be thought

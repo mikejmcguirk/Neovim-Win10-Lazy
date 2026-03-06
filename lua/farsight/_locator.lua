@@ -54,7 +54,7 @@ local M = {}
 ---Edits targets in place
 ---@param targets farsight.targets.Targets 1 indexed, exclusive
 local function set_api_indexing(targets)
-    targets:map_pos(1, 0, false, function(start_row, start_col, fin_row, fin_col)
+    targets:map_both_pos(1, 0, false, function(start_row, start_col, fin_row, fin_col)
         return start_row - 1, start_col - 1, fin_row - 1, fin_col - 1
     end)
 end
@@ -96,7 +96,7 @@ local function trim_ends(targets, ctx)
     local stop_row = ctx.stop_row
     local stop_col = ctx.stop_col
     -- Because search() only stops by row, handle results on the stop row past the stop col
-    targets:filter_pos(1, 0, true, true, function(start_row, start_col, fin_row, fin_col)
+    targets:filter_both_pos(1, 0, true, true, function(start_row, start_col, fin_row, fin_col)
         local keep = ut.pos_lt(fin_row, fin_col, stop_row, stop_col)
         if allow_intersect then
             keep = keep
@@ -108,7 +108,7 @@ local function trim_ends(targets, ctx)
 
     local cs_row = ctx.start_row
     local cs_col = ctx.start_col
-    targets:filter_pos(1, 0, false, true, function(start_row, start_col, fin_row, fin_col)
+    targets:filter_both_pos(1, 0, false, true, function(start_row, start_col, fin_row, fin_col)
         local keep = ut.pos_lt(cs_row, cs_col, start_row, start_col)
         if allow_intersect then
             keep = keep or ut.pos_contained(start_row, start_col, fin_row, fin_col, cs_row, cs_col)
@@ -151,7 +151,7 @@ local function fix_target_values(targets, buf, cache, ctx)
     filter_folds(targets, ctx)
 
     -- Handle |zero-width| results
-    targets:map_pos(1, 0, false, function(start_row, start_col, fin_row, fin_col)
+    targets:map_both_pos(1, 0, false, function(start_row, start_col, fin_row, fin_col)
         local new_fin_col = fin_col
         if start_row == fin_row and fin_col < start_col then
             new_fin_col = start_col
