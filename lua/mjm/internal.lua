@@ -19,9 +19,9 @@ api.nvim_set_hl(0, "FarsightCsearch3rd", { underdouble = true })
 --     return require("farsight.search").search(-1)
 -- end, { expr = true })
 
-set("n", "s", function()
-    require("farsight.live").live_jump()
-end)
+-- set("n", "s", function()
+--     require("farsight.live").live_jump()
+-- end)
 
 -- foobar
 

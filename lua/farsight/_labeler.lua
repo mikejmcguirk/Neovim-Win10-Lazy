@@ -20,6 +20,7 @@ local vimv = vim.v
 ---If true, then for every results set, check the upward boolean value. If upward is true,
 ---iterate the results from the end.
 ---@field is_upward boolean
+---@field set_char_labels boolean
 
 ---@class farsight.labeler.VirtTextCtx
 ---Highlight group for the next jump input
@@ -328,15 +329,17 @@ end
 ---@param tokens string[]
 ---@param ctx farsight.labeler.LabelCtx
 ---@return string[]
-local function get_filtered_tokens(win_targets, cache, tokens, ctx)
-    if not ctx.filter_next then
+local function check_chars_after(win_targets, cache, tokens, ctx)
+    local filter_next = ctx.filter_next
+    local set_char_labels = ctx.set_char_labels
+    if not (filter_next or set_char_labels) then
         return tokens
     end
 
     local ut = require("farsight.util")
     local get_utf_codepoint = require("farsight._util_char")._get_utf_codepoint
 
-    local codepoints_after = {} ---@type table<integer, boolean>
+    local codepoints_after = {} ---@type table<integer, [integer,integer]>
     for win, targets in pairs(win_targets) do
         local win_buf = api.nvim_win_get_buf(win)
         local buf_cache = ut.dict_get_key_or_default(cache, win_buf, function()
@@ -345,7 +348,7 @@ local function get_filtered_tokens(win_targets, cache, tokens, ctx)
 
         local line
         local last_fin_row_1 = 0
-        for _, fin_row, fin_col in targets:iter_fin_pos(1, 0, false) do
+        for i, fin_row, fin_col in targets:iter_fin_pos(1, 0, false) do
             local fin_row_1 = fin_row + 1
             if fin_row_1 ~= last_fin_row_1 then
                 line = buf_cache[fin_row_1]
@@ -357,25 +360,45 @@ local function get_filtered_tokens(win_targets, cache, tokens, ctx)
 
             local fin_col_1 = fin_col + 1
             local b1 = string.byte(line, fin_col_1) or 0
-            codepoints_after[get_utf_codepoint(line, b1, fin_col_1)] = true
+            local codepoint = get_utf_codepoint(line, b1, fin_col_1)
+            local codepoint_after = codepoints_after[codepoint]
+            if not codepoint_after then
+                codepoints_after[codepoint] = { win, i }
+            else
+                codepoint_after[1] = -1
+            end
         end
     end
 
-    local codepoint_tokens = get_token_codepoints(tokens)
-    ut._list_map(codepoint_tokens, function(t)
-        if codepoints_after[t] == true then
-            return nil
-        else
-            return vim.call("nr2char", t)
+    if set_char_labels then
+        for codepoint, data in pairs(codepoints_after) do
+            local win = data[1]
+            if win >= 1000 then
+                local codepoint_str = vim.call("char2nr", codepoint) ---@type string
+                win_targets[win]:add_char_label(data[2], codepoint_str)
+            end
         end
-    end)
+    end
 
-    return codepoint_tokens
+    if filter_next then
+        local codepoint_tokens = get_token_codepoints(tokens)
+        ut._list_map(codepoint_tokens, function(t)
+            if codepoints_after[t] then
+                return nil
+            else
+                return vim.call("nr2char", t)
+            end
+        end)
+
+        return codepoint_tokens
+    else
+        return tokens
+    end
 end
 -- TODO: The string.byte or 0 check reveals a more fundamental problem: Zero length lines should
 -- either be handled in a principled way or excluded from the targets entirely. I can check, but
 -- I don't think you can highlight zero length lines. And I don't need to label them that badly.
--- A problem is that removing zero length lines is surgey enough that I think it would need to be
+-- A problem is that removing zero length lines is surgery enough that I think it would need to be
 -- a self function on targets. Maybe you can do it with a filter map. This would also increase the
 -- value of de-duping targets as well, since multi-line targets might be shrunken down to
 -- overlapping spaces. Though I'm not sure how you handle partial intersections.
@@ -410,7 +433,7 @@ function M.fill_labels(wins, win_targets, tokens, cache, ctx)
         return false
     end
 
-    local filtered_tokens = get_filtered_tokens(win_targets, cache, tokens, ctx)
+    local filtered_tokens = check_chars_after(win_targets, cache, tokens, ctx)
     local ok, labels = alloc_labels(wins, win_targets, filtered_tokens, ctx)
     if (not ok) or not labels then
         return false

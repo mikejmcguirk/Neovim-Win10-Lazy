@@ -1,20 +1,22 @@
 local vimv = vim.v
 
 ---@class farsight.targets.Targets
----@field len_idxs integer
 ---@field idxs integer[]
 ---@field next_idx integer
+---@field start_label_idx_ref integer[]
+---@field start_label_idxs integer[]
+---@field fin_label_idx_ref integer[]
+---@field fin_label_idxs integer[]
+---@field char_label_idx_ref integer[]
+---@field char_label_idxs integer[]
 ---@field start_rows integer[]
 ---@field start_cols integer[]
 ---@field fin_rows integer[]
 ---@field fin_cols integer[]
----@field start_labels_start integer
----@field start_labels_fin integer
 ---@field start_labels string[][]
----@field start_vtexts [string, integer|string?][][]
----@field fin_labels_start integer
----@field fin_labels_fin integer
 ---@field fin_labels string[][]
+---@field char_labels string[]
+---@field start_vtexts [string, integer|string?][][]
 ---@field fin_vtexts [string, integer|string?][][]
 local M = {}
 M.__index = M
@@ -31,37 +33,49 @@ end
 function M:init(size)
     local tn = require("farsight.util")._table_new
 
-    self.len_idxs = 0
     self.idxs = tn(size, 0)
     self.next_idx = 1
+
+    self.start_label_idx_ref = tn(size, 0)
+    self.start_label_idxs = tn(size, 0)
+
+    self.fin_label_idx_ref = tn(size, 0)
+    self.fin_label_idxs = tn(size, 0)
+
+    self.char_label_idx_ref = tn(size, 0)
+    self.char_label_idxs = tn(size, 0)
 
     self.start_rows = tn(size, 0)
     self.start_cols = tn(size, 0)
     self.fin_rows = tn(size, 0)
     self.fin_cols = tn(size, 0)
 
-    self.start_labels_start = 0
-    self.start_labels_fin = 0
     self.start_labels = tn(size, 0)
-    self.start_vtexts = tn(size, 0)
-
-    self.fin_labels_start = 0
-    self.fin_labels_fin = 0
     self.fin_labels = tn(size, 0)
+    self.char_labels = tn(size, 0)
+
+    self.start_vtexts = tn(size, 0)
     self.fin_vtexts = tn(size, 0)
 end
+-- TODO: Consider how the sizing can be smarter. If we're cursor aware, might we allocate half of
+-- the full size to start and fin labels? Based on bytes being searched, might we allocate more or
+-- fewer char idxs? If default size is 32, we're getting to half a kilobyte in allocated data (not
+-- including whatever superstructure LuaJIT puts around it).
 
 ---@param row integer
 ---@param col integer
 ---@param fin_row integer
 ---@param fin_col integer
 function M:add_new_target(row, col, fin_row, fin_col)
-    local len_idxs = self.len_idxs
-    len_idxs = len_idxs + 1
-    self.len_idxs = len_idxs
+    local idxs = self.idxs
+    local new_len_idxs = #idxs + 1
+
+    self.start_label_idx_ref[new_len_idxs] = 0
+    self.fin_label_idx_ref[new_len_idxs] = 0
+    self.char_label_idx_ref[new_len_idxs] = 0
 
     local next_idx = self.next_idx
-    self.idxs[len_idxs] = next_idx
+    idxs[new_len_idxs] = next_idx
 
     self.start_rows[next_idx] = row
     self.start_cols[next_idx] = col
@@ -69,80 +83,104 @@ function M:add_new_target(row, col, fin_row, fin_col)
     self.fin_cols[next_idx] = fin_col
 
     self.start_labels[next_idx] = vim.NIL
-    self.start_vtexts[next_idx] = vim.NIL
     self.fin_labels[next_idx] = vim.NIL
+    self.char_labels[next_idx] = "" -- Should be fine because of interning
+
+    self.start_vtexts[next_idx] = vim.NIL
     self.fin_vtexts[next_idx] = vim.NIL
 
     -- Avoid scanning for a viable idx if next_idx < len_idxs due to a deletion
-    self.next_idx = len_idxs + 1
+    self.next_idx = new_len_idxs
+end
+
+---Errors if an invalid index is provided.
+---@param i integer
+---@param char string
+function M:add_char_label(i, char)
+    local idxs = self.idxs
+    assert(i >= 1 and i <= #idxs, "Cannot access an out of bounds target")
+
+    local char_label_idxs = self.char_label_idxs
+    local len_char_label_idxs = #char_label_idxs
+    local new_len_char_label_idxs = len_char_label_idxs + 1
+    local idx = idxs[i]
+    char_label_idxs[new_len_char_label_idxs] = idx
+
+    self.char_label_idx_ref[i] = new_len_char_label_idxs
+    self.char_labels[i] = char
 end
 
 ---@return integer
 function M:get_len()
-    return self.len_idxs
+    return #self.idxs
+end
+
+---@return integer
+function M:get_count_char_labels()
+    return #self.char_label_idxs
 end
 
 ---@param i integer
----@param labels_start integer
----@param labels_fin integer
----@return integer, integer
-local function correct_label_markers(i, labels_start, labels_fin)
-    if labels_start == 0 and labels_fin == 0 then
-        return 0, 0
-    end
+---@param label_idx_ref integer[]
+---@param label_idxs integer[]
+local function clear_label(i, label_idx_ref, label_idxs)
+    local label_idx = label_idx_ref[i]
+    if label_idx > 0 then
+        local len_label_idxs = #label_idxs
+        local j = label_idx
+        for k = i + 1, len_label_idxs do
+            label_idxs[j] = label_idxs[k]
+            j = j + 1
+        end
 
-    local new_labels_start = labels_start
-    if labels_start > i then
-        new_labels_start = labels_start - 1
-    end
-
-    local new_labels_fin = labels_fin
-    if labels_fin >= i then
-        new_labels_fin = labels_fin - 1
-    end
-
-    if new_labels_start <= new_labels_fin then
-        return new_labels_start, new_labels_fin
-    else
-        -- Only label deleted. labels_start kept and labels_fin decremented
-        return 0, 0
+        label_idxs[len_label_idxs] = nil
     end
 end
 
 ---Errors if an invalid index is provided.
 ---@param i integer
 function M:rm_target(i)
-    local init_idxs_len = self.len_idxs
-    assert(i >= 1 and i <= init_idxs_len, "Cannot delete an out of bounds target")
-
     local idxs = self.idxs
+    local old_len_idxs = #idxs
+    assert(i >= 1 and i <= old_len_idxs, "Cannot delete an out of bounds target")
+
     local rm_idx = idxs[i]
 
     self.start_rows[rm_idx] = -1
     self.start_cols[rm_idx] = -1
     self.fin_rows[rm_idx] = -1
     self.fin_cols[rm_idx] = -1
+
     self.start_labels[rm_idx] = vim.NIL
-    self.start_vtexts[rm_idx] = vim.NIL
     self.fin_labels[rm_idx] = vim.NIL
+    self.char_labels[rm_idx] = ""
+
+    self.start_vtexts[rm_idx] = vim.NIL
     self.fin_vtexts[rm_idx] = vim.NIL
 
+    local start_label_idx_ref = self.start_label_idx_ref
+    local fin_label_idx_ref = self.fin_label_idx_ref
+    local char_label_idx_ref = self.char_label_idx_ref
+
+    clear_label(i, start_label_idx_ref, self.start_label_idxs)
+    clear_label(i, fin_label_idx_ref, self.fin_label_idxs)
+    clear_label(i, char_label_idx_ref, self.char_label_idxs)
+
     local j = i
-    for k = i + 1, init_idxs_len do
+    for k = i + 1, old_len_idxs do
         idxs[j] = idxs[k]
+        start_label_idx_ref[j] = self.start_label_idx_ref[k]
+        fin_label_idx_ref[j] = self.fin_label_idx_ref[k]
+        char_label_idx_ref[j] = self.char_label_idx_ref[k]
         j = j + 1
     end
 
-    self.len_idxs = init_idxs_len - 1
-    idxs[init_idxs_len] = nil
-    self.next_idx = rm_idx
+    idxs[old_len_idxs] = nil
+    start_label_idx_ref[old_len_idxs] = nil
+    fin_label_idx_ref[old_len_idxs] = nil
+    char_label_idx_ref[old_len_idxs] = nil
 
-    local sls = self.start_labels_start
-    local slf = self.start_labels_fin
-    self.start_labels_start, self.start_labels_fin = correct_label_markers(i, sls, slf)
-    local fls = self.fin_labels_start
-    local flf = self.fin_labels_fin
-    self.fin_labels_start, self.fin_labels_fin = correct_label_markers(i, fls, flf)
+    self.next_idx = rm_idx
 end
 -- MAYBE: I'm not sure it's worthwhile in practice, but some ideas for re-using space:
 -- - Compacting the table every X deletes
@@ -229,7 +267,8 @@ end
 ---@param fin boolean
 ---@return fun(): i:integer|nil, start_row:integer|nil, start_col:integer|nil
 local function iter_pos(self, start, stop, rev, fin)
-    local i, limit, iter = get_pos_iter_bounds(self.len_idxs, start, stop, rev)
+    local idxs = self.idxs
+    local i, limit, iter = get_pos_iter_bounds(#idxs, start, stop, rev)
     if iter == 0 then
         ---@return nil, nil, nil
         return function()
@@ -238,7 +277,6 @@ local function iter_pos(self, start, stop, rev, fin)
     end
 
     i = i - iter
-    local idxs_fwd = self.idxs
     local rows, cols = get_positions(self, fin)
 
     ---@return integer|nil, integer|nil, integer|nil
@@ -248,7 +286,7 @@ local function iter_pos(self, start, stop, rev, fin)
             return nil, nil, nil
         end
 
-        local idx = idxs_fwd[i]
+        local idx = idxs[i]
         return i, rows[idx], cols[idx]
     end
 end
@@ -274,7 +312,8 @@ end
 ---@param rev? boolean
 ---@return fun(): i:integer|nil, fin_row:integer|nil
 function M:iter_fin_rows(start, stop, rev)
-    local i, limit, iter = get_pos_iter_bounds(self.len_idxs, start, stop, rev)
+    local idxs = self.idxs
+    local i, limit, iter = get_pos_iter_bounds(#idxs, start, stop, rev)
     if iter == 0 then
         ---@return nil, nil
         return function()
@@ -283,7 +322,6 @@ function M:iter_fin_rows(start, stop, rev)
     end
 
     i = i - iter
-    local idxs = self.idxs
     local fin_rows = self.fin_rows
 
     ---@return integer|nil, integer|nil
@@ -342,14 +380,14 @@ end
 ---@param stop_on_keep? boolean
 ---@param predicate fun(start_row: integer): boolean
 function M:filter_start_row(start, stop, rev, stop_on_keep, predicate)
-    local len = self.len_idxs
-    if len == 0 then
+    local idxs = self.idxs
+    local len_idxs = #idxs
+    if len_idxs == 0 then
         return
     end
 
-    local idxs_fwd = self.idxs
     local start_rows = self.start_rows
-    local i, limit, iter = get_pos_iter_bounds(len, start, stop, rev)
+    local i, limit, iter = get_pos_iter_bounds(len_idxs, start, stop, rev)
     if iter == 0 then
         return
     end
@@ -359,7 +397,7 @@ function M:filter_start_row(start, stop, rev, stop_on_keep, predicate)
             break
         end
 
-        local idx = idxs_fwd[i]
+        local idx = idxs[i]
         local start_row = start_rows[idx]
 
         if not predicate(start_row) then
@@ -384,14 +422,14 @@ end
 ---@param stop_on_keep? boolean
 ---@param predicate fun(start_row: integer, start_col: integer, fin_row: integer, fin_col: integer): boolean
 function M:filter_both_pos(start, stop, rev, stop_on_keep, predicate)
-    local len = self.len_idxs
-    if len == 0 then
+    local idxs = self.idxs
+    local len_idxs = #idxs
+    if len_idxs == 0 then
         return
     end
 
-    local idxs_fwd = self.idxs
     local start_rows, start_cols, fin_rows, fin_cols = get_all_positions(self)
-    local i, limit, iter = get_pos_iter_bounds(len, start, stop, rev)
+    local i, limit, iter = get_pos_iter_bounds(len_idxs, start, stop, rev)
     if iter == 0 then
         return
     end
@@ -401,7 +439,7 @@ function M:filter_both_pos(start, stop, rev, stop_on_keep, predicate)
             break
         end
 
-        local idx = idxs_fwd[i]
+        local idx = idxs[i]
         local start_row = start_rows[idx]
         local start_col = start_cols[idx]
         local fin_row = fin_rows[idx]
@@ -430,12 +468,12 @@ end
 ---@param mapper fun(start_row: integer, start_col: integer): integer, integer
 ---@param fin boolean
 local function map_pos(self, start, stop, rev, mapper, fin)
-    local len_idxs = self.len_idxs
+    local idxs = self.idxs
+    local len_idxs = #idxs
     if len_idxs == 0 then
         return
     end
 
-    local idxs = self.idxs
     local rows, cols = get_positions(self, fin)
     local i, limit, iter = get_pos_iter_bounds(len_idxs, start, stop, rev)
     if iter == 0 then
@@ -477,24 +515,24 @@ end
 ---@param rev? boolean
 ---@param mapper fun(start_row: integer, start_col: integer, fin_row: integer, fin_col: integer): integer, integer, integer, integer
 function M:map_both_pos(start, stop, rev, mapper)
-    local len = self.len_idxs
-    if len == 0 then
+    local idxs = self.idxs
+    local len_idxs = #idxs
+    if len_idxs == 0 then
         return
     end
 
-    local i, limit, iter = get_pos_iter_bounds(len, start, stop, rev)
+    local i, limit, iter = get_pos_iter_bounds(len_idxs, start, stop, rev)
     if iter == 0 then
         return
     end
 
-    local idxs_fwd = self.idxs
     local start_rows, start_cols, fin_rows, fin_cols = get_all_positions(self)
     while true do
         if (iter > 0 and i > limit) or (iter < 0 and i < limit) then
             break
         end
 
-        local idx = idxs_fwd[i]
+        local idx = idxs[i]
         local start_row = start_rows[idx]
         local start_col = start_cols[idx]
         local fin_row = fin_rows[idx]
@@ -514,7 +552,8 @@ end
 ---@param fin boolean
 ---@return fun(): label:string[]|nil
 local function iter_alloc_labels(self, start, stop, rev, fin)
-    local len_idxs = self.len_idxs
+    local idxs = self.idxs
+    local len_idxs = #idxs
     if len_idxs == 0 then
         ---@return nil
         return function()
@@ -530,7 +569,6 @@ local function iter_alloc_labels(self, start, stop, rev, fin)
         end
     end
 
-    local idxs = self.idxs
     local labels = fin and self.fin_labels or self.start_labels
 
     local labels_start = math.min(i, limit)
@@ -579,7 +617,8 @@ end
 ---@param rev? boolean
 ---@return fun(): label_1:string[]|nil, label_2:string[]|nil
 function M:iter_alloc_both_labels(start, stop, rev)
-    local len_idxs = self.len_idxs
+    local idxs = self.idxs
+    local len_idxs = #idxs
     if len_idxs == 0 then
         ---@return nil
         return function()
@@ -596,7 +635,6 @@ function M:iter_alloc_both_labels(start, stop, rev)
     end
 
     i = i - iter
-    local idxs = self.idxs
     local start_labels = self.start_labels
     local fin_labels = self.fin_labels
     self.start_labels_start = math.min(i, limit)
@@ -765,3 +803,25 @@ return M
 
 -- NOTE: For any fin label placements, we are purposefully utilizing end-exclusive indexing to
 -- put the label directly after the search term.
+
+-- TODO: We are going to do the unique char jump thing.
+--
+-- For possible labels, I'll pull len and char labels manually because I don't want to tie that
+-- logic to this data structure. But then on the other hand, the label adding iteration here has
+-- to skip char labels, so... maybe do that?
+-- *technically*, from a data perspective, char_labels and fin_labels are mututally exclusive since
+-- char labels write where fin_vtext would. You absolutely would block writing a fin label if a
+-- char label was present.
+-- So I think for allocating fin labels you make the block mandatory and add a comment explaining
+-- why. And then for start labels it can be optional.
+-- and then for count possible label reporting, like, I can't think of a superset use case for
+-- a fancy function so just do it manually
+-- And then for allocating labels, it should take how many labels to allocate and a rev flag.
+-- There's no need ever to manually specify indexing.
+--
+--
+--
+-- Final step is writing the char idx extmarks
+
+--
+-- TODO: char labels or unique labels?
