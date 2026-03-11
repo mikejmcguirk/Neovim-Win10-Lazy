@@ -42,9 +42,56 @@ function M.dict_get_key_or_default(t, k, v)
     t[k] = v
     return v
 end
---
 -- MID: There might be a better way to handle this with a metatable or something.
 -- PR: Might be a cool vim.dict addition.
+
+---@generic T
+---@param t table<T, T>
+function M.table_clear(t)
+    for k, _ in pairs(t) do
+        t[k] = nil
+    end
+end
+
+---Assumes list is ordered and v is orderable
+---@generic T
+---@param t T[]
+---@param v T
+---@return integer
+function M.list_bisearch_left(t, v)
+    local lo = 1
+    local hi = #t
+    while lo <= hi do
+        local mid = math.floor((lo + hi) * 0.5)
+        if t[mid] < v then
+            lo = mid + 1
+        else
+            hi = mid - 1
+        end
+    end
+
+    return lo
+end
+
+---@generic T
+---@param t T[]
+function M.list_clear(t)
+    local len_t = #t
+    for i = 1, len_t do
+        t[i] = nil
+    end
+end
+
+---@generic T
+---@param t1 T[]
+---@param t2 T[]
+---@param len integer
+function M.list_clear_two(t1, t2, len)
+    for i = 1, len do
+        t1[i] = nil
+        t2[i] = nil
+    end
+end
 
 ---@generic T
 ---@param t T[]
@@ -56,6 +103,37 @@ function M._list_copy(t)
     end
 
     return ret
+end
+
+---@generic T
+---@param t T[]
+---@param idx integer
+function M.list_del_at(t, idx)
+    local len = #t
+    local j = idx
+    for i = idx + 1, len do
+        t[j] = t[i]
+        j = j + 1
+    end
+
+    t[len] = nil
+end
+
+---@generic T
+---@param t1 T[]
+---@param t2 T[]
+---@param idx integer
+---@param len integer
+function M.list_del_at_two(t1, t2, idx, len)
+    local j = idx
+    for i = idx + 1, len do
+        t1[j] = t1[i]
+        t2[j] = t2[i]
+        j = j + 1
+    end
+
+    t1[len] = nil
+    t2[len] = nil
 end
 
 ---Bespoke function because:
@@ -106,6 +184,40 @@ function M._list_filter(t, f)
     end
 end
 
+---@generic T
+---@param t1 T[]
+---@param v1 T
+---@param idx integer
+function M.list_insert_at(t1, v1, idx)
+    local len = #t1
+    local j = len + 1
+    for i = len, idx, -1 do
+        t1[j] = t1[i]
+        j = j - 1
+    end
+
+    t1[idx] = v1
+end
+
+---@generic T
+---@param t1 T[]
+---@param v1 T
+---@param t2 T[]
+---@param v2 T
+---@param idx integer
+---@param len integer
+function M.list_insert_at_two(t1, v1, t2, v2, idx, len)
+    local j = len + 1
+    for i = len, idx, -1 do
+        t1[j] = t1[i]
+        t2[j] = t2[i]
+        j = j - 1
+    end
+
+    t1[idx] = v1
+    t2[idx] = v2
+end
+
 -- PR: Add to Nvim shared.
 
 ---@generic T
@@ -139,6 +251,19 @@ function M._list_remove_item(t, idx)
     end
 
     t[len] = nil
+end
+
+---@param tokens string[]
+---@return integer[]
+function M.get_token_codepoints(tokens)
+    local get_utf_codepoint = require("farsight._util_char")._get_utf_codepoint
+    local codepoint_tokens = M._list_copy(tokens)
+    M._list_map(codepoint_tokens, function(t)
+        local char_nr, _ = get_utf_codepoint(t, string.byte(t, 1), 1)
+        return char_nr
+    end)
+
+    return codepoint_tokens
 end
 
 ---@param silent boolean
@@ -240,36 +365,6 @@ function M._order_focusable_wins(wins)
     end)
 
     return focusable_wins
-end
-
-local cword_str = [[\k\+]]
-
----Col is zero indexed inclusive
----Returns the result of matchstrpos(). The cols are zero indexed, and the end col is exclusive
----@param line string
----@param col integer
----@return { [1]: string, [2]: integer, [3]: integer }|nil
-function M._find_cword_at_col(line, col)
-    local init = 0
-
-    while init <= col do
-        ---@type { [1]: string, [2]: integer, [3]: integer }
-        local res = fn.matchstrpos(line, cword_str, init)
-        local start = res[2]
-        local fin_ = res[3]
-
-        if start < 0 then
-            return nil
-        end
-
-        if start <= col and col < fin_ then
-            return res
-        end
-
-        init = fin_
-    end
-
-    return nil
 end
 
 ---@param opt boolean|nil
@@ -430,6 +525,7 @@ end
 
 return M
 
+-- TODO: Make util_list its own module
 -- TODO: Given what I found when doing list.filter in PUC Lua, I have to imagine that would
 -- influence the behavior in this plugin
 -- TODO: Rename this to _util

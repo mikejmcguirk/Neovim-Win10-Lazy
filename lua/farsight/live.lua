@@ -1,21 +1,32 @@
 local api = vim.api
 local fn = vim.fn
 
+---@class farsight.live.LiveJumpOpts
+---@field set_char_hl? boolean
+---@field tokens? string[]
+
 local HL_LIVE_STR = "FarsightLiveJump"
 local HL_LIVE_AHEAD_STR = "FarsightLiveJumpAhead"
 local HL_LIVE_TARGET_STR = "FarsightLiveJumpTarget"
 local HL_LIVE_DIM_STR = "FarsightLiveJumpDim"
+local HL_LIVE_UNIQUE_CHAR = "FarsightLiveUniqueChar"
 
 api.nvim_set_hl(0, HL_LIVE_STR, { default = true, link = "DiffChange" })
 api.nvim_set_hl(0, HL_LIVE_AHEAD_STR, { default = true, link = "DiffText" })
 api.nvim_set_hl(0, HL_LIVE_TARGET_STR, { default = true, link = "DiffAdd" })
 api.nvim_set_hl(0, HL_LIVE_DIM_STR, { default = true, link = "Comment" })
 
+local normal_hl = api.nvim_get_hl(0, { name = "Normal" })
+local rev_fg = normal_hl.bg or "#000000"
+local rev_bg = normal_hl.fg or "#ffffff"
+api.nvim_set_hl(0, HL_LIVE_UNIQUE_CHAR, { default = true, fg = rev_fg, bg = rev_bg })
+
 local nvim_get_hl_id_by_name = api.nvim_get_hl_id_by_name
 local hl_next = nvim_get_hl_id_by_name(HL_LIVE_STR)
 local hl_ahead = nvim_get_hl_id_by_name(HL_LIVE_AHEAD_STR)
 local hl_last = nvim_get_hl_id_by_name(HL_LIVE_TARGET_STR)
 local hl_dim = nvim_get_hl_id_by_name(HL_LIVE_DIM_STR)
+local hl_unique_char = nvim_get_hl_id_by_name(HL_LIVE_UNIQUE_CHAR)
 
 -- Prefer home row, then top, then bottom.
 -- Prefer index/middle fingers.
@@ -24,7 +35,7 @@ local hl_dim = nvim_get_hl_id_by_name(HL_LIVE_DIM_STR)
 -- Because tokens will be filtered based on chars after, prefer ergonomics over memorizable
 -- ordering.
 -- To avoid over-subjectivity, group finger/row combinations. Put all shift keys after.
-local tokens = vim.split("kdjflsaieowghmvtnurybpqcxzKDJFLSAIEOWGHMVTNURYBPQCXZ", "")
+local default_tokens = vim.split("kdjflsaieowghmvtnurybpqcxzKDJFLSAIEOWGHMVTNURYBPQCXZ", "")
 
 -- local namespaces = { api.nvim_create_namespace("") } ---@type integer[]
 
@@ -34,7 +45,79 @@ local test_ns = api.nvim_create_namespace("test-ns")
 
 local last_targets = nil ---@type farsight.targets.Targets|nil
 
-local function handle_input(win, buf, cache, cursor)
+---@param win_targets table<integer, farsight.targets.Targets> 0-indexed, exclusive
+---@param cache table<integer, table<integer, string>> 1 indexed
+---@param opts farsight.live.LiveJumpOpts
+---@return string[]
+local function check_chars_after(win_targets, cache, opts)
+    local ut = require("farsight.util")
+    local get_utf_codepoint = require("farsight._util_char")._get_utf_codepoint
+
+    local codepoints_after = {} ---@type table<integer, [integer,integer]>
+    for win, targets in pairs(win_targets) do
+        local win_buf = api.nvim_win_get_buf(win)
+        local buf_cache = ut.dict_get_key_or_default(cache, win_buf, function()
+            return {}
+        end)
+
+        local line
+        local last_fin_row_1 = 0
+        for i, fin_row, fin_col in targets:iter_raw_fin_pos(1, 0, false) do
+            local fin_row_1 = fin_row + 1
+            if fin_row_1 ~= last_fin_row_1 then
+                line = buf_cache[fin_row_1]
+                if not line then
+                    line = api.nvim_buf_get_lines(win_buf, fin_row, fin_row_1, false)[1]
+                    buf_cache[fin_row_1] = line
+                end
+            end
+
+            local fin_col_1 = fin_col + 1
+            local b1 = string.byte(line, fin_col_1) or 0
+            local codepoint = get_utf_codepoint(line, b1, fin_col_1)
+            local codepoint_after = codepoints_after[codepoint]
+            if not codepoint_after then
+                codepoints_after[codepoint] = { win, i }
+            else
+                codepoint_after[1] = -1
+            end
+        end
+    end
+
+    -- TODO: This needs to be some kind of reverse iteration so i is not destroyed
+    if opts.set_char_hl then
+        for codepoint, data in pairs(codepoints_after) do
+            local win = data[1]
+            if win >= 1000 then
+                local codepoint_str = vim.call("nr2char", codepoint) ---@type string
+                win_targets[win]:set_char_hl(data[2], codepoint_str)
+            end
+        end
+    end
+
+    local codepoint_tokens = ut.get_token_codepoints(opts.tokens)
+    ut._list_map(codepoint_tokens, function(t)
+        if codepoints_after[t] then
+            return nil
+        else
+            return vim.call("nr2char", t)
+        end
+    end)
+
+    return codepoint_tokens
+end
+-- TODO: The string.byte or 0 check reveals a more fundamental problem: Zero length lines should
+-- either be handled in a principled way or excluded from the targets entirely. I can check, but
+-- I don't think you can highlight zero length lines. And I don't need to label them that badly.
+-- A problem is that removing zero length lines is surgery enough that I think it would need to be
+-- a self function on targets. Maybe you can do it with a filter map. This would also increase the
+-- value of de-duping targets as well, since multi-line targets might be shrunken down to
+-- overlapping spaces. Though I'm not sure how you handle partial intersections.
+-- MID: I don't love converting the tokens from strings to codepoints then back. But I don't want
+-- to have to make users provide tokens as codepoints, and I don't want to make allocations for
+-- string.sub calls in a hot path.
+
+local function handle_input(win, buf, cache, cursor, opts)
     -- TODO: Check prompt as well
     local cmd_type = vim.fn.getcmdtype()
     if cmd_type ~= "@" then
@@ -59,24 +142,26 @@ local function handle_input(win, buf, cache, cursor)
         timeout = 500,
     })
 
-    -- vim.fn.confirm(vim.inspect(targets))
     if not ok or type(targets) == "string" then
         return
     end
 
-    if targets:get_len() < 1 then
+    if targets:get_no_stat_len() < 1 then
         api.nvim_buf_clear_namespace(0, test_ns, 0, -1)
         return
     end
 
+    local win_targets = { [win] = targets }
+    local filtered_tokens = check_chars_after(win_targets, cache, opts)
     local labeler = require("farsight._labeler")
-    local filled_labels = labeler.fill_labels({ win }, { [win] = targets }, tokens, cache, {
+    local filled_labels = labeler.fill_labels({ win }, win_targets, filtered_tokens, {
         allow_partial = true,
         cursor = cursor,
         filter_next = true,
         locations = "finish",
         max_tokens = 1,
         is_upward = false,
+        set_char_hls = true,
     })
 
     if not filled_labels then
@@ -90,11 +175,19 @@ local function handle_input(win, buf, cache, cursor)
         locations = "finish",
     })
 
+    vim.fn.confirm(vim.inspect(targets))
     if not filled_vtext then
         return
     end
 
     labeler.set_target_extmarks(buf, test_ns, targets, {
+        locations = "finish",
+    })
+
+    -- vim.fn.confirm(vim.inspect(targets))
+
+    local extmarker = require("farsight._extmarker")
+    extmarker.set_uniq_char_jump_hl(buf, test_ns, hl_unique_char, targets, {
         locations = "finish",
     })
 
@@ -108,7 +201,7 @@ end
 -- they don't have to be re-calculated and re-allocated each keystroke.
 
 -- TODO: Needs to handle multi-win
-local function create_input_handler(win, buf)
+local function create_input_handler(win, buf, opts)
     local cache = {}
     cache[buf] = {}
     local cursor = fn.getcurpos(win)
@@ -117,7 +210,7 @@ local function create_input_handler(win, buf)
     api.nvim_create_autocmd({ "CmdlineChanged" }, {
         group = augroup,
         callback = function()
-            handle_input(win, buf, cache, cursor)
+            handle_input(win, buf, cache, cursor, opts)
         end,
     })
 
@@ -138,7 +231,7 @@ function M.live_jump()
     local cur_win = api.nvim_get_current_win()
     api.nvim__ns_set(test_ns, { wins = { cur_win } })
     local win_buf = api.nvim_win_get_buf(cur_win)
-    create_input_handler(cur_win, win_buf)
+    create_input_handler(cur_win, win_buf, { set_char_hl = true, tokens = default_tokens })
 
     local ok, err = pcall(vim.call, "input", "YUMP: ")
     if ok then
@@ -177,6 +270,10 @@ return M
 -- last direction. Multi-window searches go to the last result. If dir is zero, the last actual
 -- direction is used.
 --
+-- TODO: Add an option to omit the first label, since it can always be reached with <cr>.
+-- TODO: line cache needs to persist between keystrokes
+-- TODO: Show unique chars on non-patterns. Csearch pure lua iteration through bufs is fine.
+-- This also lets us fill in buf_cache which is nice.
 -- TODO: Consider doing input based on a getcharstr() loop or how flash does it. Because:
 -- - I'm not sure allowing regex in this context is helpful
 -- - Allowing regex makes one vs two char search start effectively impossible to implement, which
@@ -214,6 +311,7 @@ return M
 -- TODO: Labels should not work if the last character is an un-escaped \
 -- TODO: Display an extmark at the cursor position. What is a sensible default if it's not set?
 -- How do you make it emulate reverse video cursor/detect if that's set?
+-- TODO: Profile seriously once we can do multi-window
 --
 -- MID: Verify that builtin search timeout is half a second.
 -- MID: When does input() return vim.NIL?
@@ -245,3 +343,10 @@ return M
 -- NON: Lightspeed's idea of not moving labels is interesting but I'm not sure it's helpful. If you
 -- allow labels to be generated after one character, the initial batch of labels might not spawn
 -- where you want to go in a large file, and the second character is required to narrow it down.
+
+-- foo
+-- fazz
+-- fuzz
+-- fizz
+-- fill
+--

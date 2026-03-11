@@ -114,6 +114,8 @@ local csearch_maps = {
     { { "n", "x", "o" }, ",", "<Plug>(Farsight-CsearchRep-Reverse)" },
 }
 
+vim.b.farsight_default_maps = false
+
 for i = 1, #csearch_maps do
     local map = csearch_maps[i]
     local modes = map[1]
@@ -144,6 +146,230 @@ end
 -- NOTE: Unexpected but valid behaviors should be handled gracefully. Invalid behaviors should
 -- hard error.
 
+-- TODO: When the plugin is done, verify that only init.lua is required on startup.
+-- TODO_DOC: Specifically note that the plugin does not eagerly require unnecessary modules and
+-- is not meant to be lazy loaded.
+-- TODO: Take the config ramble below and turn it into action items.
+-- - Note: My opinions changed a lot as I was writing it
+-- TODO: Want to think more seriously about config, because:
+-- - It's becoming too many g/b vars
+-- - The validation when running commands is non-trivially long
+-- - For any option that takes a table, the metatable is lost. So for tokens, you would have to
+-- totally re-assign tokens each time.
+-- - If metatable vimvars worked, you couldn't use that validation method for non-table vars
+-- - If you moved things to a config module (NOT setup), you could basically re-create the same
+-- g:var interface that you would use if it existed.
+-- - You could have a hash table for buf-scoped config
+-- - This would, unfortunately, require the config module to be required when running
+-- /plugin.
+-- - The data validation would need to be moved into the config module so that it doesn't require
+-- other modules
+-- - I don't know how this would play with the "opts" key in lazy.nvim
+-- - The config module would need a "did_initial_config" var so that it doesn't run twice
+-- - Would probably make this the init.lua file so you can do require("farsight").config()
+-- - During startup, I would make any validation failure simply revert to default. Then any
+-- failed config change after should be a hard error
+-- - For did_setup, if you pass a nil config table, it should rely on did_setup being false, and
+-- maybe v:did_enter (NOT did_init) being false. As this will setup the initial config. Otherwise,
+-- a new config should be required
+-- - There are also questions to be asked about how to handle extra keys or non-existent keys
+-- - You would still want to compare the buf config and global config  at execution time, since
+-- that's how g: and b: would work
+-- - As much as it would be intellectually interesting + future compatible to do something like
+-- require("farsight").config = {} and use a metatable to parse it, this would be an anti-pattern.
+-- So do:
+--   - require("farsight").config({})
+--   - require("farsight").buf_config(0, {})
+--   - You could maybe use operator overloading to make buf an optional first argument
+-- - There would need to be a way for the user to pass nil values to unset options back to defaults
+--   - This raises the issue of, even if g/b metatables worked, would you get rid of the config
+--   module at all, since it allows for centralization of common settings, like search timeout
+--   - But then, a layer deeper, why does config need to run during plugin sourcing at all? The
+--   one reason I can think of is that the user might not want to set default mappings, and it
+--   makes more sense to check that with the config module. But I'm not sure config needs to be
+--   run by default to check that. If the user wants to use config to disable plug mappings, they
+--   can call it and and set that option, which would then set a g:var. But I'm not sure how this
+--   works for lazy.nvim. You *can* tell the user to do it during init, but that's an anti-pattern.
+--   I don't know if opts runs before /plugin or not.
+-- - The merging procedure would roughly go
+--   - Iterate through keys in the input table
+--   - See if a default config key exists
+--   - If it exists, validate the input
+--   - If valid, in the active config, replace the key with the user key
+--   - Problem: How do you attach specific validators like is_int to this? You could maintain a
+--   parallel validators table with the same key structure as the default config, and fallback
+--   to type validation. Feels unprincipled though. On the other hand, this basic idea is
+--   compatible with g/b config. Since with that, you would want to set the metatable, on index,
+--   to pull a validator with the same key. Like, how else would it find it? This also, again,
+--   points toward just always requiring init on startup, since we need the validators to be
+--   available.
+-- - In the g/b config method, you would want the user to be able to assign the table + vars during
+-- init, before plugin sourcing, which would create the more elaborate structures. In that case,
+-- the /plugin script would need to read the pre-existing table data and properly merge it into
+-- the default (replacing with default rather than erroring if it's bad). A similar thing should
+-- happen here. The initial setup should be done on require. So if the user passes opts or runs
+-- config() manually, it should have the same effect as described above (though the technical
+-- ordering would be reversed). Again, this points to init.lua being required even with the g/b
+-- method. So if we do all the stuff I'm talking about above, we aren't increasing startup time.
+--   - This would eliminate the need for a contrived did_run_setup check when running config(),
+--   since that function wouldn't handle initial setup. In the plugin file, you would just run
+--   require("farsight") and that would do the initialization
+--     - This also achieves the important conceptual goal of separating initialization and config.
+--     Running config() might trigger initialization, but is not necessary to do so
+--   - For validation behavior, you would just check v:did_enter (not did_init). You can defer
+--   this check to validation failure so you don't have to run it frivolously
+--   - This removes the weird question above about if config() has to be run during startup (it
+--   doesn't, but the module does have to be required by /plugin). It also (should) remove the
+--   timing question about running config. If the user runs it before /plugin does, /plugin
+--   requiring it is essentially a no-op. No matter when the user runs it, initialization happens
+--   first during the require step.
+--   - Somewhat in reference to the external interface discussion above - The underlying buf config
+--   table would still need to be some kind of accesor metatable that routed the inputs and
+--   validation.
+--     - Related to the above point and the current one, the validation logic would sit in the
+--     init module so it could not be directly modified
+-- - In the g/b method, something like vim.g.farsight = nil would be caught by the metatable and
+-- considered a no-op. So with the config method, a nil config should be considered a request
+-- to get a copy of the config table
+--   - The question then is what does sending {} do? Is this a no-op or a full reset? If you pass
+--   a table with only one opt in it, we would intuitively think that only that opt should be
+--   changed. So then, intuitively, {} should do nothing.
+--   - Setting an individual opt to nil should definitely reset that opt. But then this points to
+--   a nil table pass being a request to reset, which then raises the question of how you get
+--   the config. But get_config() is a much more common pattern in the Neovim space. And aligns
+--   better with how g/b would be done (where you would read the variable, rather than assigning
+--   to it). So this is actually the better pattern.
+--     - {} does nothing
+--     - nil resets
+--       - In the g/b case, this does create the weird problem of never being able to remove the
+--       config table. Though if you wanted to do that, for whatever reason, then I think you
+--       would run setmetatable on it with a nil metatable value.
+--     - use get_config() to get (would produce a deepcopy)
+--   - Resetting the buf config would delete it from memory
+-- - As a side note, all of this would apply to and greatly help rancher. Would need to think
+-- about it if helps lampshade.
+-- - A question then is how do you reason about and do the class definitions for the opts tables
+-- that are partially drawn from config (like timeout) and determined purely at runtime (like
+-- csearch forward).
+--   - More fundamentally, what about user_input vs. the default table? The input class needs the
+--   fields to all be optional. The actual default fields need to be mandatory.
+-- - You could also have functions like get_default_config and get_config_diff to see the
+-- differences between the default and current. You could also pass a bufid to get_config_diff
+-- to see the per-buffer difference.
+--   - Per-buf config vs. default and per-buf config vs. global config are different things and
+--   that needs to be accounted for.
+--     - Have the first opt? be bufid, and the second opt? be "default"|"global". nil bufid and
+--     "global" would return {}. And we put the silliest case on the most unintuitive set of
+--     params.
+--       - bufid 0 needs to resolve manually (true of writes as well)
+--       - something mildly clever you can do is, if you try to get buf config for an invalid buf,
+--       the bufs config table for that buf should be nil'd just in case
+--       - Not entirely sure what to do though on an invalid buf. A hard error feels like too much
+--       since it's not invalid user input. But putting it behind an ok pattern feels weird.
+--       Actually though it's simple. If the buf is valid but there's no buf config, return an
+--       empty table, adding one to the internal bufs table if it doesn't exist. If the buf is
+--       invalid, return nil. Make sure that's reflected in the return type.
+-- - Use an autocmd to remove buf configs when the buf closes
+-- - An nvim-tools version of the config file should be created. Write this one first though
+-- so we have a concrete use case.
+-- - All of this also makes API changes/deprecation easier.
+--   - The deprecation handling methods for opts keys and plug maps should be generalizable such
+--   that they can be included in the generalized nvim-tools version of the config
+--   - Write up an internal version of this that's actually professional, but don't actually
+--   publish unless the plugin gets a real user base. The plugin can be experimental while it
+--   has a small number of users.
+--   - Opts keys
+--     - Soft-launch
+--       - NOT a breaking change
+--       - New opts keys work immediately
+--       - The old key is still documented, but with the note that it will be deprecated
+--       - The plugin internals assume the old key is not there
+--       - When adding a key, the current keys are checked. If the key is not found, then old_keys
+--       is checked. If the key is found in old_keys, the behavior is routed to the new key. This
+--       happens transparently
+--         - It would be useful if this phase allowed the old key to work as normal with the new
+--         key potentially sitting on top of it. This would allow changes to be made to the new
+--         key if needed/wanted. The problem is, the way I have it now, this allows the old_keys
+--         checking to be modularized so, say, config and JumpOpts could both use it. I'm not sure
+--         if that's possible if you base it on new_keys. Would need to think about the
+--         super/subsets this needs to address though
+--     - Deprecation phase
+--       - Breaking change
+--       - The docs now state that the old key is deprecated. It states no info on how to use it
+--       and instead refers to the new key.
+--       - When the old key is found in old_keys, vim.deprecate is called. It cannot be silenced
+--         - If, somehow, a use case comes up where like, another plugin is built on top of this
+--         that uses the deprecated key and it can't be changed, this can be revisited. But,
+--         unlike vim.deprecate notices for plugins, where you're at the mercy of the plugin
+--         author, in this case, you can just change the key.
+--     - Deletion
+--       - Breaking change
+--       - The class definitions and old_keys routing are completely removed
+--       - The old key is a no-op
+--   - API replacement (Deletion is the same, just without the new function)
+--     - Soft launch
+--       - Not breaking
+--       - The replacement is available, the old one is documented as future deprecation
+--     - Deprecation
+--       - Breaking
+--       - The old function calls vim.deprecate. The documentation only states that it is
+--       deprecated and refers to the new function.
+--     - Deletion
+--       - breaking
+--       - The old function is deleted from the code and docs
+--   - API change
+--     - Soft launch
+--       - Not breaking
+--       - The public interface is a shim that routes between the old and new functions based on
+--       the signature
+--       - The new interface is documented. The old interface is still documented but marked as
+--       future deprecation
+--     - Deprecation
+--       - Breaking
+--       - When the old signature is seen, vim.deprecate is called
+--       - The datatypes of the old signature are documented, but only with a deprecation notice
+--     - Deletion
+--       - Breaking
+--       - The public interface becomes the new function. The old one is removed from the docs.
+--       vim.validate assumes the new interface.
+--   - Plug mappings
+--     - (Note: There is nothing wrong with keeping alternative Plug mappings around so long as
+--     they are separate from the defaults)
+--     - Soft launch
+--       - Not breaking
+--       - Replacement plug mapping is available and documented
+--       - The documentation for the old plug notes that it will be deprecated
+--       - If config.use_uptodate_plugs is true (note: default should be false), the new one is
+--       mapped instead. The user can disable the opt or manually revert.
+--     - Deprecation phase
+--       - Breaking
+--       - The replacement plug is is available and mapped
+--       - The old plug is available but not mapped. The doc for the old Plug only states that it
+--       is deprecated without additional info
+--       - The user can manually re-map the old plug if they wish
+--     - Deletion
+--       - Breaking
+--       - The old plug mapping is removed from the code and documentation
+-- TODO: For the APIs, do you do something like put a wrapper for static in init.lua that calls
+-- the underlying file? Would have following benefits:
+-- - More intuitive user interface. require("farsight").live()
+-- - Since all API calls are in one module, all documentation can go in there.
+--   - This also removes the "organizaing modules for documentation" problem, which had become
+--   a non-trivial strain.
+-- - Since all opt data needs to be validated, it could use the validation functions already in
+-- init.lua. Then the underlying modules could solely handle data resolution
+--   - It is somewhat of a weird question why you would not do resolution in the shim. But I think,
+--   for robustness, the underlying modules should handle it. This still maintains conceptual
+--   clarity between validation and resolution.
+-- - If the config module, which we're requiring anyway, also contains the API shims, this means
+-- the keymaps can be set without wrapping the functions in anonymous functions. This is a major
+-- help for Lua_Ls as well as the code being less obnoxious to read.
+--   - Counterpoint: Is this non-trivially slower to actually execute?
+--   - Counterpoint: Since a lot of opts are things like forward in csearch, you don't *really* get
+--   this advantage.
+-- Downsides
+-- - The class definitions for the user-facing options would need to go into init so they could
+-- be documented. Not great from an ownership perspective
 -- TODO: I think "nomap_ft", "nomap_live", and "nomap_static" options are fine. We presume that
 -- "nomap_all" overrides any of them.
 -- TODO: I believe the manual isk checking will be completely obsoleted from this plugin. I think

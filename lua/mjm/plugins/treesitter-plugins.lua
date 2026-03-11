@@ -187,21 +187,21 @@ end
 ---@return nil
 local function map_climber(ev)
     local sel_prev = { buffer = ev.buf, desc = "Select previous node" }
-    set({ "n", "x", "o" }, "[e", "<Plug>(treeclimber-select-previous)", sel_prev)
+    set({ "n", "x", "o" }, "[n", "<Plug>(treeclimber-select-previous)", sel_prev)
     local sel_next = { buffer = ev.buf, desc = "Select the next node" }
-    set({ "n", "x" }, "]e", "<Plug>(treeclimber-select-next)", sel_next)
+    set({ "n", "x" }, "]n", "<Plug>(treeclimber-select-next)", sel_next)
     local sel_forward_end = { buffer = ev.buf, desc = "Select forward and move to node end" }
-    set({ "o" }, "]e", "<Plug>(treeclimber-select-forward-end)", sel_forward_end)
+    set({ "o" }, "]n", "<Plug>(treeclimber-select-forward-end)", sel_forward_end)
 
     local s_back = { buffer = ev.buf, desc = "Select first sibling" }
-    set({ "n", "x", "o" }, "[E", "<Plug>(treeclimber-select-siblings-backward)", s_back)
+    set({ "n", "x", "o" }, "[N", "<Plug>(treeclimber-select-siblings-backward)", s_back)
     local s_front = { buffer = ev.buf, desc = "Select last sibling" }
-    set({ "n", "x", "o" }, "]E", "<Plug>(treeclimber-select-siblings-forward)", s_front)
+    set({ "n", "x", "o" }, "]N", "<Plug>(treeclimber-select-siblings-forward)", s_front)
 
     local grow_back = { buffer = ev.buf, desc = "Grow selection backward" }
-    set({ "n", "x", "o" }, "[<C-e>", "<Plug>(treeclimber-select-grow-backward)", grow_back)
+    set({ "n", "x", "o" }, "[<C-n>", "<Plug>(treeclimber-select-grow-backward)", grow_back)
     local grow_forward = { buffer = ev.buf, desc = "Grow selection forward" }
-    set({ "n", "x", "o" }, "]<C-e>", "<Plug>(treeclimber-select-grow-forward)", grow_forward)
+    set({ "n", "x", "o" }, "]<C-n>", "<Plug>(treeclimber-select-grow-forward)", grow_forward)
 
     -- PR: I would be good to have shrink backward and shrink forward maps. Would put them on
     -- alt
@@ -209,9 +209,9 @@ local function map_climber(ev)
     -- neightboring function parameters. Would put on iE
 
     local sel_cur = { buffer = ev.buf, desc = "Select child node" }
-    set({ "x", "o" }, "ie", "<Plug>(treeclimber-select-shrink)", sel_cur)
+    set({ "x", "o" }, "in", "<Plug>(treeclimber-select-shrink)", sel_cur)
     local sel_exp = { buffer = ev.buf, desc = "Select parent node (around)" }
-    set({ "x", "o" }, "ae", "<Plug>(treeclimber-select-expand)", sel_exp)
+    set({ "x", "o" }, "an", "<Plug>(treeclimber-select-expand)", sel_exp)
 end
 
 return {
@@ -276,6 +276,8 @@ return {
 
             api.nvim_set_hl(0, "TreeClimberParent", { link = "Search" })
             api.nvim_set_hl(0, "TreeClimberParentStart", { link = "Search" })
+            -- While the fg in here shows in the Visual highlight region if it overlaps, the
+            -- colorscheme does not blend well with the green bg.
             api.nvim_set_hl(0, "TreeClimberSibling", { fg = "#FFF0E0", bg = "#3F7046" })
             api.nvim_set_hl(0, "TreeClimberSiblingBoundary", { fg = "#FFF0E0", bg = "#3F7046" })
 
@@ -289,7 +291,6 @@ return {
 }
 
 -- TODO: PR: Inconsistency between text objects, the upcoming built-in incremental selection, and
-
 -- tree-climber - When you do move in text objects, it grows the selection, but the baseline
 -- selection in the incremental selection plugins actually moves the selection. Crosses wires in
 -- muscle memory.

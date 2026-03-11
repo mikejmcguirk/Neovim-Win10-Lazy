@@ -6,6 +6,8 @@ return {
     -- dir = "~/Documents/nvim-plugin-dev/nvim-qf-rancher/",
     init = function()
         -- vim.api.nvim_set_var("qfr_create_loclist_autocmds", false) -- For debugging
+        -- vim.g.qfr_set_default_keymaps = false
+        -- vim.g.qfr_set_default_cmds = false
 
         set("n", "[<M-q>", "<Plug>(qfr-qf-older)")
         set("n", "]<M-q>", "<Plug>(qfr-qf-newer)")
