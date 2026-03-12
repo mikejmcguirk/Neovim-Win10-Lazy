@@ -62,7 +62,7 @@ local function check_chars_after(win_targets, cache, opts)
 
         local line
         local last_fin_row_1 = 0
-        for i, fin_row, fin_col in targets:iter_raw_fin_pos(1, 0, false) do
+        for i, fin_row, fin_col in targets:iter_no_stat_fin_pos(1, 0, false) do
             local fin_row_1 = fin_row + 1
             if fin_row_1 ~= last_fin_row_1 then
                 line = buf_cache[fin_row_1]

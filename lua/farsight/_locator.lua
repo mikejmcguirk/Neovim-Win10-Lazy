@@ -54,7 +54,7 @@ local M = {}
 ---Edits targets in place
 ---@param targets farsight.targets.Targets 1 indexed, exclusive
 local function set_api_indexing(targets)
-    targets:map_raw_both_pos(1, 0, false, function(start_row, start_col, fin_row, fin_col)
+    targets:map_no_stat_both_pos(1, 0, false, function(start_row, start_col, fin_row, fin_col)
         return start_row - 1, start_col - 1, fin_row - 1, fin_col - 1
     end)
 end
@@ -71,7 +71,7 @@ local function filter_folds(targets, ctx)
     local last_row = 0
     local last_fold_row = -1
 
-    targets:filter_start_row(1, 0, false, false, function(start_row)
+    targets:filter_no_stat_start_rows(1, 0, false, false, function(start_row)
         local fold_row = last_row == start_row and last_fold_row
             or vim.call("foldclosed", start_row)
 
@@ -96,26 +96,39 @@ local function trim_ends(targets, ctx)
     local stop_row = ctx.stop_row
     local stop_col = ctx.stop_col
     -- Because search() only stops by row, handle results on the stop row past the stop col
-    targets:filter_raw_both_pos(1, 0, true, true, function(start_row, start_col, fin_row, fin_col)
-        local keep = ut.pos_lt(fin_row, fin_col, stop_row, stop_col)
-        if allow_intersect then
-            keep = keep
-                or ut.pos_contained(start_row, start_col, fin_row, fin_col, stop_row, stop_col)
-        end
+    targets:filter_no_stat_both_pos(
+        1,
+        0,
+        true,
+        true,
+        function(start_row, start_col, fin_row, fin_col)
+            local keep = ut.pos_lt(fin_row, fin_col, stop_row, stop_col)
+            if allow_intersect then
+                keep = keep
+                    or ut.pos_contained(start_row, start_col, fin_row, fin_col, stop_row, stop_col)
+            end
 
-        return keep
-    end)
+            return keep
+        end
+    )
 
     local cs_row = ctx.start_row
     local cs_col = ctx.start_col
-    targets:filter_raw_both_pos(1, 0, false, true, function(start_row, start_col, fin_row, fin_col)
-        local keep = ut.pos_lt(cs_row, cs_col, start_row, start_col)
-        if allow_intersect then
-            keep = keep or ut.pos_contained(start_row, start_col, fin_row, fin_col, cs_row, cs_col)
-        end
+    targets:filter_no_stat_both_pos(
+        1,
+        0,
+        false,
+        true,
+        function(start_row, start_col, fin_row, fin_col)
+            local keep = ut.pos_lt(cs_row, cs_col, start_row, start_col)
+            if allow_intersect then
+                keep = keep
+                    or ut.pos_contained(start_row, start_col, fin_row, fin_col, cs_row, cs_col)
+            end
 
-        return keep
-    end)
+            return keep
+        end
+    )
 end
 --
 -- MID: Filtering the beginning is reasonable for safety, but I'm not sure why it would ever be
@@ -133,7 +146,7 @@ local function fix_target_values(targets, buf, cache, ctx)
     local line
 
     -- Handle OOB results from \n chars and zero length lines
-    targets:map_raw_start_pos(1, 0, false, function(start_row, start_col)
+    targets:map_no_stat_start_pos(1, 0, false, function(start_row, start_col)
         if start_row ~= last_row then
             last_row = start_row
             line = buf_cache[start_row]
@@ -151,7 +164,7 @@ local function fix_target_values(targets, buf, cache, ctx)
     filter_folds(targets, ctx)
 
     -- Handle |zero-width| results
-    targets:map_raw_both_pos(1, 0, false, function(start_row, start_col, fin_row, fin_col)
+    targets:map_no_stat_both_pos(1, 0, false, function(start_row, start_col, fin_row, fin_col)
         local new_fin_col = fin_col
         if start_row == fin_row and fin_col < start_col then
             new_fin_col = start_col
@@ -161,7 +174,7 @@ local function fix_target_values(targets, buf, cache, ctx)
     end)
 
     local get_utf_codepoint = require("farsight._util_char")._get_utf_codepoint
-    targets:map_raw_fin_pos(1, 0, false, function(fin_row, fin_col)
+    targets:map_no_stat_fin_pos(1, 0, false, function(fin_row, fin_col)
         if fin_row ~= last_row then
             last_row = fin_row
             line = buf_cache[fin_row]
@@ -235,7 +248,7 @@ local function add_search_result_jit(targets)
     local fin_row = row + match_lines
     local fin_col = ffi_c.search_match_endcol --[[ @as integer ]]
 
-    targets:add_new_target(row, col, fin_row, fin_col)
+    targets:insert_at(row, col, fin_row, fin_col)
 
     return 1
 end
