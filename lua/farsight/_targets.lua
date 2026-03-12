@@ -262,36 +262,39 @@ function Positions:del_at(idx)
     return idx
 end
 
----@class farsight.targets.targets.NoStats
----@field pos_idxs integer[]
-local No_Stats = {}
-No_Stats.__index = No_Stats
-
----@param size integer
-function No_Stats:init(size)
-    local tn = require("farsight.util")._table_new
-    self.pos_idxs = tn(size, 0)
+---@param idx integer
+---@return integer
+local function get_pos_idx(self, idx)
+    return self.pos_idxs(idx)
 end
+
+---@class (exact) farsight.targets.targets.NoStats : farsight.meta.StatData
 
 ---@param size integer
 ---@return farsight.targets.targets.NoStats
-function No_Stats.new(size)
-    local self = setmetatable({}, No_Stats)
-    self:init(size)
+local function create_new_no_stats(size)
+    local tn = require("farsight.util")._table_new
+    ---@type farsight.targets.targets.NoStats
+    local self = {
+        pos_idxs = tn(size, 0),
+    }
+
+    self.get_pos_idx = get_pos_idx
+
+    function self:get_len()
+        return #self.pos_idxs
+    end
+
+    function self:insert_at(idx, pos_idx)
+        local pos_idxs = self.pos_idxs
+        local len = #pos_idxs
+        idx = adj_new_idx(idx, len)
+        require("farsight.util").list_insert_at(pos_idxs, pos_idx, idx)
+
+        return idx
+    end
+
     return self
-end
-
----Edits self in place
----@param idx integer
----@param pos_idx integer
----@return integer Resolved idx
-function No_Stats:insert_at(idx, pos_idx)
-    local pos_idxs = self.pos_idxs
-    local len = #pos_idxs
-    idx = adj_new_idx(idx, len)
-    require("farsight.util").list_insert_at(pos_idxs, pos_idx, idx)
-
-    return idx
 end
 
 ---Edits self in place
@@ -308,12 +311,6 @@ end
 ---@return integer
 function No_Stats:get_len()
     return #self.pos_idxs
-end
-
----@param idx integer
----@return integer
-function No_Stats:get_pos_idx(idx)
-    return self.pos_idxs(idx)
 end
 
 ---Edits self in place
@@ -631,7 +628,7 @@ end
 function Targets:init(size)
     self.size = size
     self.positions = Positions.new(size)
-    self.no_stats = No_Stats.new(size)
+    self.no_stats = create_new_no_stats(size)
     self.char_hls = Char_Hls.new(size)
     self.start_labels = Labels.new(size)
     self.fin_labels = Labels.new(size)
@@ -667,6 +664,33 @@ local function del_from_stat(self, stat, start_idx, fin_idx)
         self.fin_vtexts:del_at(fin_idx)
     end
 end
+-- PERF: Test this against a hash table of functions
+
+---@param self farsight.targets.Targets
+---@param stat ""|"c"|"sl"|"fl"|"bl"|"sv"|"fv"|"bv"
+---@return integer[], integer[]|nil
+local function get_stat_pos_idxs(self, stat)
+    if stat == "" then
+        return self.no_stats.pos_idxs, nil
+    elseif stat == "c" then
+        return self.char_hls.pos_idxs, nil
+    elseif stat == "sl" then
+        return self.start_labels.pos_idxs
+    elseif stat == "fl" then
+        return self.fin_labels.pos_idxs, nil
+    elseif stat == "bl" then
+        return self.start_labels.pos_idxs, self.fin_labels.pos_idxs
+    elseif stat == "sv" then
+        return self.start_vtexts.pos_idxs, nil
+    elseif stat == "fv" then
+        return self.fin_vtexts.pos_idxs, nil
+    elseif stat == "bv" then
+        return self.start_vtexts.pos_idxs, self.fin_vtexts.pos_idxs
+    end
+
+    error("Invalid stat")
+end
+-- TODO: This cannot be the best way to handle this
 -- PERF: Test this against a hash table of functions
 
 ---Edits targets in place
@@ -714,19 +738,6 @@ end
 function Targets:get_no_stat_len()
     return self.no_stats:get_len()
 end
-
----Errors if an invalid index is provided.
----@param idx integer
-function Targets:rm_target(idx)
-    local positions = self.positions
-    local len_pos = positions:get_len()
-    assert(idx >= 1 and idx <= len_pos, "Cannot delete an out of bounds target")
-
-    del_from_stat(self, positions:get_stat(idx))
-    positions:del_at(idx)
-end
--- MAYBE: Could add a conditional stat filter, but that adds branching logic.
--- PERF: Is this run enough for the assertion to be a problem?
 
 ---@param input integer|nil
 ---@param default integer
@@ -988,17 +999,16 @@ end
 ---@param stop? integer
 ---@param rev? boolean
 ---@param stop_on_keep? boolean
+---@param stat? ""|"c"|"sl"|"fl"|"bl"|"sv"|"fv"|"bv"
 ---@param predicate fun(start_row: integer): boolean
-function Targets:filter_raw_start_row(start, stop, rev, stop_on_keep, predicate)
-    local idxs = self.idx
-    local len_idxs = #idxs
-    if len_idxs == 0 then
-        return
-    end
+function Targets:filter_start_row(start, stop, rev, stop_on_keep, stat, predicate)
+    stat = stat or ""
+    local pos_idxs, _ = get_stat_pos_idxs(self, stat)
 
-    local start_rows = self.start_row
-    local i, limit, iter = get_pos_iter_bounds(len_idxs, start, stop, rev)
-    if iter == 0 then
+    local positions = self.positions
+    local len = positions:get_len()
+    local i, limit, iter = get_stat_iters(start, stop, rev, len, positions, stat)
+    if not (i > 0 and limit > 0 and iter ~= 0) then
         return
     end
 
@@ -1007,11 +1017,11 @@ function Targets:filter_raw_start_row(start, stop, rev, stop_on_keep, predicate)
             break
         end
 
-        local idx = idxs[i]
-        local start_row = start_rows[idx]
+        local pos_idx = pos_idxs[i]
+        local start_row, _ = positions:get_pos(pos_idx, false)
 
         if not predicate(start_row) then
-            self:rm_target(i)
+            self:rm_target(pos_idx)
             if rev then
                 i = i + iter
             end
@@ -1025,6 +1035,9 @@ end
 --
 -- LOW: If the if logic in here is really a problem, can make this a fwd only function, since
 -- reverse filtering can be handled with iteration.
+-- PERF: Alternatives to the branching logic for iter advancement:
+-- - Make iter fwd and iter rev separate functions
+-- - Save the idxs to delete into a table, then run the deletes in reverse
 
 ---@param start? integer
 ---@param stop? integer
@@ -1489,6 +1502,21 @@ end
 -- MID: This function creates redundancy because it has to get the idx after the iterator has
 -- already done so. But it seems wasteful to create a complicated mapping function for one case,
 -- and I don't want the iterators exposing idx.
+
+---Errors if an invalid index is provided.
+---@param idx integer
+---@return integer Targets remaining
+function Targets:rm_target(idx)
+    local positions = self.positions
+    local len_pos = positions:get_len()
+    assert(idx >= 1 and idx <= len_pos, "Cannot delete an out of bounds target")
+
+    del_from_stat(self, positions:get_stat(idx))
+    positions:del_at(idx)
+    return positions:get_len()
+end
+-- MAYBE: Could add a conditional stat filter, but that adds more branching logic.
+-- PERF: Is this run enough for the assertion to be a problem?
 
 return Targets
 

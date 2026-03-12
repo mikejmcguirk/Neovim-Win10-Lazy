@@ -71,7 +71,7 @@ local function filter_folds(targets, ctx)
     local last_row = 0
     local last_fold_row = -1
 
-    targets:filter_raw_start_row(1, 0, false, false, function(start_row)
+    targets:filter_start_row(1, 0, false, false, function(start_row)
         local fold_row = last_row == start_row and last_fold_row
             or vim.call("foldclosed", start_row)
 
