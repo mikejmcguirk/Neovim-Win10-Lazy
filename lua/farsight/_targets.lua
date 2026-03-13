@@ -47,15 +47,14 @@ end
 
 ---@class farsight.targets.Positions
 ---@field len integer
----@field hashed_starts table<string, integer>
 ---@field start_rows integer[]
 ---@field start_cols integer[]
----@field hashed_fins table<string, integer>
 ---@field fin_rows integer[]
 ---@field fin_cols integer[]
+---@field hashed_starts table<string, integer>
+---@field hashed_fins table<string, integer>
 ---@field stats (""|"c"|"sl"|"fl"|"bl"|"sv"|"fv"|"bv")[]
----@field start_idxs integer[]
----@field fin_idxs integer[]
+---@field stat_idxs integer[]
 local Positions = {}
 Positions.__index = Positions
 
@@ -75,8 +74,7 @@ function Positions:insert_at(idx, start_row, start_col, fin_row, fin_col)
     local fin_cols = self.fin_cols
 
     local stats = self.stats
-    local start_idxs = self.start_idxs
-    local fin_idxs = self.fin_idxs
+    local stat_idxs = self.stat_idxs
 
     local j = len + 1
     for i = len, idx, -1 do
@@ -86,8 +84,7 @@ function Positions:insert_at(idx, start_row, start_col, fin_row, fin_col)
         fin_cols[j] = fin_cols[i]
 
         stats[j] = stats[i]
-        start_idxs[j] = start_idxs[i]
-        fin_idxs[j] = fin_idxs[i]
+        stat_idxs[j] = stat_idxs[i]
 
         j = j - 1
     end
@@ -98,8 +95,7 @@ function Positions:insert_at(idx, start_row, start_col, fin_row, fin_col)
     fin_cols[idx] = fin_col
 
     stats[idx] = ""
-    start_idxs[idx] = 0
-    fin_idxs[idx] = 0
+    stat_idxs[idx] = 0
 
     self.len = len + 1
     local start_key = create_pos_key(start_row, start_col)
@@ -109,6 +105,7 @@ function Positions:insert_at(idx, start_row, start_col, fin_row, fin_col)
 
     return idx
 end
+-- MAYBE: Allow variable stat. Right now though no_stat is my only use case.
 
 ---@return integer
 function Positions:get_len()
@@ -149,10 +146,11 @@ function Positions:get_fin_row(idx)
 end
 
 ---@param idx integer
----@return ""|"c"|"sl"|"fl"|"bl"|"sv"|"fv"|"bv", integer, integer
+---@return ""|"c"|"sl"|"fl"|"bl"|"sv"|"fv"|"bv", integer
 function Positions:get_stat(idx)
-    return self.stats[idx], self.start_idxs[idx], self.fin_idxs[idx]
+    return self.stats[idx], self.stat_idxs[idx]
 end
+-- TODO: Break this up
 
 ---@param stat ""|"c"|"sl"|"fl"|"bl"|"sv"|"fv"|"bv"
 ---@param start integer
@@ -184,21 +182,16 @@ end
 
 ---@param idx integer
 ---@param stat ""|"c"|"sl"|"fl"|"bl"|"sv"|"fv"|"bv"
----@param start_idx integer
----@param fin_idx integer
-function Positions:set_stat(idx, stat, start_idx, fin_idx)
+---@param stat_idx integer
+function Positions:set_stat(idx, stat, stat_idx)
     assert(idx >= 1 and idx <= self.len)
     self.stats[idx] = stat
-    self.start_idxs[idx] = start_idx
-    self.fin_idxs[idx] = fin_idx
+    self.stat_idxs[idx] = stat_idx
 end
 -- PERF: This function is used a lot. I'm not sure we can do an assert here.
 
----Edits self in place
----idxs < 0 are treated as indexes from the end, with -1 appending.
----idx 0 is treated as idx 1
 ---@param idx integer
----@return integer Resolved idx. 0 if no deletion
+---@return integer
 function Positions:del_at(idx)
     local len = self.len
     idx = adj_bounded_idx(idx, len)
@@ -218,8 +211,7 @@ function Positions:del_at(idx)
     self.hashed_fins[fin_key] = nil
 
     local stats = self.stats
-    local start_idxs = self.start_idxs
-    local fin_idxs = self.fin_idxs
+    local stat_idxs = self.stat_idxs
 
     local j = idx
     for i = idx + 1, len do
@@ -229,8 +221,7 @@ function Positions:del_at(idx)
         fin_cols[j] = fin_cols[i]
 
         stats[j] = stats[i]
-        start_idxs[j] = start_idxs[i]
-        fin_idxs[j] = fin_idxs[i]
+        stat_idxs[j] = stat_idxs[i]
 
         j = j + 1
     end
@@ -241,8 +232,7 @@ function Positions:del_at(idx)
     fin_cols[len] = nil
 
     stats[len] = nil
-    start_idxs[len] = nil
-    fin_idxs[len] = nil
+    stat_idxs[len] = nil
 
     self.len = len - 1
     return idx
@@ -265,8 +255,7 @@ function Positions.new(size)
     self.fin_cols = tn(size, 0)
 
     self.stats = tn(size, 0)
-    self.start_idxs = tn(size, 0)
-    self.fin_idxs = tn(size, 0)
+    self.stat_idxs = tn(size, 0)
 
     return self
 end
@@ -318,9 +307,13 @@ end
 ---@param pos_idx integer
 ---@return integer
 function No_Stats:insert_pos_idx(pos_idx)
-    local bisearch_left = require("farsight.util").list_bisearch_left
+    local bisect_left = require("farsight.util").list_bisect_left
     local pos_idxs = self.pos_idxs
-    local idx = bisearch_left(pos_idxs, pos_idx)
+    local idx, found = bisect_left(pos_idxs, pos_idx)
+    if found then
+        return idx
+    end
+
     return self:insert_at(idx, pos_idx)
 end
 
@@ -388,10 +381,14 @@ end
 ---@return integer
 function Char_Hls:insert_pos_idx(pos_idx, char)
     local pos_idxs = self.pos_idxs
-    local idx = require("farsight.util").list_bisearch_left(pos_idxs, pos_idx)
-    self:insert_at(idx, pos_idx, char)
-
-    return idx
+    local bisect_left = require("farsight.util").list_bisect_left
+    local idx, found = bisect_left(pos_idxs, pos_idx)
+    if found then
+        self:update_char(idx, char)
+        return idx
+    else
+        return self:insert_at(idx, pos_idx, char)
+    end
 end
 
 function Char_Hls:get_len()
@@ -400,6 +397,12 @@ end
 
 Char_Hls.get_pos_idx = get_pos_idx
 Char_Hls.get_pos_idxs = get_pos_idxs
+
+---@param idx integer
+---@param char string
+function Char_Hls:update_char(idx, char)
+    self.chars[idx] = char
+end
 
 function Char_Hls:clear()
     local len = self.len
@@ -422,12 +425,6 @@ function Char_Hls:del_at(idx)
     self.len = len - 1
 
     return idx
-end
-
----@param idx integer
----@param char string
-function Char_Hls:update_char(idx, char)
-    self.chars[idx] = char
 end
 
 function Char_Hls.new(size)
@@ -470,8 +467,14 @@ end
 ---@return integer Resolved idx
 function Labels:insert_pos_idx(pos_idx, label)
     local pos_idxs = self.pos_idxs
-    local idx = require("farsight.util").list_bisearch_left(pos_idxs, pos_idx)
-    return self:insert_at(idx, pos_idx, label)
+    local bisect_left = require("farsight.util").list_bisect_left
+    local idx, found = bisect_left(pos_idxs, pos_idx)
+    if found then
+        self:update_label(idx, label)
+        return idx
+    else
+        return self:insert_at(idx, pos_idx, label)
+    end
 end
 
 function Labels:get_len()
@@ -480,6 +483,12 @@ end
 
 Labels.get_pos_idx = get_pos_idx
 Labels.get_pos_idxs = get_pos_idxs
+
+---@param idx integer
+---@param label string[]
+function Labels:update_label(idx, label)
+    self.labels[idx] = label
+end
 
 ---Edits self in place
 function Labels:clear()
@@ -545,8 +554,14 @@ end
 ---@return integer Resolved idx
 function Vtexts:insert_pos_idx(pos_idx, vtext)
     local pos_idxs = self.pos_idxs
-    local idx = require("farsight.util").list_bisearch_left(pos_idxs, pos_idx)
-    return self:insert_at(idx, pos_idx, vtext)
+    local bisect_left = require("farsight.util").list_bisect_left
+    local idx, found = bisect_left(pos_idxs, pos_idx)
+    if found then
+        self:update_vtext(idx, vtext)
+        return idx
+    else
+        return self:insert_at(idx, pos_idx, vtext)
+    end
 end
 
 function Vtexts:get_len()
@@ -555,6 +570,12 @@ end
 
 Vtexts.get_pos_idx = get_pos_idx
 Vtexts.get_pos_idxs = get_pos_idxs
+
+---@param idx integer
+---@param vtext string[]
+function Vtexts:update_vtext(idx, vtext)
+    self.vtexts[idx] = vtext
+end
 
 function Vtexts:clear()
     local len = self.len
@@ -615,27 +636,26 @@ Targets.__index = Targets
 
 ---@param self farsight.targets.Targets
 ---@param stat ""|"c"|"sl"|"fl"|"bl"|"sv"|"fv"|"bv"
----@param start_idx integer
----@param fin_idx integer
-local function del_at_from_stat(self, stat, start_idx, fin_idx)
+---@param stat_idx integer
+local function del_at_from_stat(self, stat, stat_idx)
     if stat == "" then
-        self.no_stats:del_at(start_idx)
+        self.no_stats:del_at(stat_idx)
     elseif stat == "c" then
-        self.char_hls:del_at(fin_idx)
+        self.char_hls:del_at(stat_idx)
     elseif stat == "sl" then
-        self.start_labels:del_at(start_idx)
+        self.start_labels:del_at(stat_idx)
     elseif stat == "fl" then
-        self.fin_labels:del_at(fin_idx)
+        self.fin_labels:del_at(stat_idx)
     elseif stat == "bl" then
-        self.start_labels:del_at(start_idx)
-        self.fin_labels:del_at(fin_idx)
+        self.start_labels:del_at(stat_idx)
+        self.fin_labels:del_at(stat_idx)
     elseif stat == "sv" then
-        self.start_vtexts:del_at(start_idx)
+        self.start_vtexts:del_at(stat_idx)
     elseif stat == "fv" then
-        self.fin_vtexts:del_at(fin_idx)
+        self.fin_vtexts:del_at(stat_idx)
     elseif stat == "bv" then
-        self.start_vtexts:del_at(start_idx)
-        self.fin_vtexts:del_at(fin_idx)
+        self.start_vtexts:del_at(stat_idx)
+        self.fin_vtexts:del_at(stat_idx)
     end
 end
 -- PERF: Test this against a hash table of functions
@@ -678,7 +698,7 @@ function Targets:insert_at(idx, start_row, start_col, fin_row, fin_col)
     local new_idx = positions:insert_at(idx, start_row, start_col, fin_row, fin_col)
 
     local no_stat_idx = self.no_stats:insert_pos_idx(new_idx)
-    positions:set_stat(new_idx, "", no_stat_idx, 0)
+    positions:set_stat(new_idx, "", no_stat_idx)
 
     return new_idx
 end
@@ -736,75 +756,65 @@ local function get_adj_stat_iters(start, stop, rev, len, positions, stat)
     return get_stat_iters(start, stop, rev, positions, stat)
 end
 
--- you have stats table
--- you have the stat start and fin index maps, which are used for handling double data. so if
--- you have both labels, the start idx is where the pos_idx is in the start labels, and fin
--- maps to wher eit is in fin_labels
--- so get stat iters is wrong because it just pulls the idx of the stat flag, but it doesn't
--- tie it back to the start idx in the stat table
--- so combinatorically you have:
--- - what stat?
--- - which idx set? (start, fin, both)
--- - which position? (start, fin, both)
--- a problem is, if we think about the design, why would we be supporting a mix of different
--- label and vtext types? You would have to do weird, hacky stuff to iterate through them
--- if I were doing it in a database, thinking through a couple of them
--- - for no_stat, I would be in the main pos table, would filter by the flag. since no_stat has
--- no additional table, there's no join. This is why no_stat here is just a list of pos_idxs
--- - If I wanted char_hls, I would also just filter on the flag. I only have the chars stored
--- here for persistence. Note too that, if this were actually a table, we wouldn't tie char_hl to
--- either start or fin. That would be program logic. Should we be doing that here?
--- - So now for labels, would I have start_labels and fin_labels in separate tables with stats
--- saying which one to join? Or would I have both labels in one table?
--- - A very important thing to remember is - if you're doing both labels, when do you change the
--- flag from label to vtext?
--- - So what it seems needs to be done is to have start_stat and fin_stat as separate constructs
--- - This then instrinsically ties stat to position, which eliminates some combinatorial
--- complexity. While this adds some additional setup nonsense, this also eliminates some weird
--- questions about data consistency. Basically, you would always setup start and stop as
--- no_stat, and then only advance the one you want
--- - note that del_at logic needs to account for this, as does insert_at
--- - you do also need to have separate StatData tables for start and stop, and the program logic
--- needs to account for that. An important argument for lazy initializing sub-tables. we have to
--- eat building no_stat for start and stop, but we don't have to allocate labels the whole way
--- - And then the final issue is how to handle "both" iterations. If I'm querying a db, it would
--- be like:
--- SELECT * FROM positions WHERE start_stat = "l" and fin_stat = "l";
--- Or it would be like some kind of list.zip thing
--- This also gets back to the inconsistent label issue. For a "both" iteration, you could step
--- through and only read positions where start and fin are "l". But if you're doing something like
--- cursor aware, then you have to do that iter step but only pull out the start label
--- hard to pre-allocate labels due to combinatorial complexity. could pre-allocate the ones that
--- matter like l/l and v/v, but hacky.
--- - also a problem because you have to build the combo label iteration twice. once to pull the
--- refs and another one or two to allocate the vtexts (this might not be quite true though due
--- to the iters not being dependent. you can do an iter over start for start to fin then an
--- iter over fin for fin to next start). But in the "both" case I think you're still locked
--- into this. Actually no you're not because if you're doing fin, you need the next active start
--- label. It doesn't matter if next start has an associated label. But raises additional weird
--- question - How do the iters know what the next label is? You can say progrma logic tells you
--- what the comparison is. But let's say different label types are layered.
--- - however the data is represented, conceptually, we need to eliminate possibilities and say
--- that only one label placement type is possible. start only, fin only, cursor aware, or
--- both. You will not do cursor aware and randomly arrive at a fin label in the middle of the
--- pre-cursor results.
--- - for labels, in a database, I would do foreign key and start/fin as separate columns. this
--- eliminates having to do two tables and elimintes having to check NULLs. and then you would
--- do stat/stat = l/l and inner join so no NULLs return. this kinda sorta points to the ideas I've
--- had above, but still points to the double iterator assembly problem.
--- - for dual iteration, we will do on-the-fly comparisons rather than allocating. we can profile
--- against allocating later.
--- - so then, roughly, in terms of the interfaces you want, although I don't want to speculatively
--- build everything:
---   - one stat, one pos
---   - one stat, both pos
---   - both stat, one pos
---   - both stat, both pos
--- So what I would want to do is not exactly build all of them, but keep this list of combos as
--- a note for like, if we need to access an iter to do something, build off of one of those
--- interfaces if we have them, make the underlying broader interface if it doesn't exist
--- The underlying primitives then need to be composable for this purpose, rather than baking
--- in assumptions at any particular step
+-- STATUS MANAGEMENT AND ITERATION RATIONALIZATION
+--
+-- Add relevant primitives:
+-- - del_at (to targets, and double check individuals)
+-- - insert_at
+-- - set_pos_idx_to_char_hl(pos_idx, char_hl)
+-- - insert_both_labels
+-- - del_at_both_labels
+-- - set_nostat_to_label(pos_idx, start/fin/both)
+-- - set_vtext_from_label(pos_idx, start/fin/both)
+--   - This must fully complete the process within itself to assign "bl" to "bv"
+-- - get_pos(fin)
+-- - get_positions(fin)
+-- - get_row(fin)
+-- - get_col(fin)
+-- - get_rows(fin)
+-- - get_cols(fin)
+-- - get_full_pos
+-- - get_full_positions
+-- - get_label (on the stat table itself)
+-- - get labels(fin)
+-- - get_both_labels
+-- - get_label(fin)
+-- - get_both_labels (one at a time)
+--
+-- fix get_stat_iters because it does not pull the actual stat_idx from the table
+--
+-- - adj_iter_limits (I think I have this)
+-- - get_stat_iters (I think I have this but double check)
+--
+-- - stat_to_pos_idxs (should work now that we're assuming both sync for labels and vtexts)
+-- - stat to position(s)
+--   - tougher because this can be start and/or fin. Or even nothing for nostat
+--   - use cases
+--     - iter char_hl positions
+--     - iter start/fin label positions
+--     - iter start/fin vtexts
+--     - iter both labels/vtexts
+--   - So you just return integer[]|nil, integer[]|nil and return if no data. guards against
+--   irrelevant stats.
+--   - maybe subtype stat. single_stat/multi_stat
+--
+-- - Meta concerns
+--   - Generalize stat removal and addition logic as much as possible
+--
+-- - iter one stat one pos
+-- - iter one stat one row
+-- - iter one stat one col
+-- - iter one stat both pos
+-- - iter both stat one pos
+-- - iter both stat one row
+-- - iter both stat one col
+--   - I'm not sure all of these need to be made, but the template needs to exist such that they
+--   can be made if needed
+--     - stat setting
+--     - start or fin pos setting
+--     - full pos iter
+--     - row with fin setting
+--     - col with fin setting
 
 ---@param self farsight.targets.Targets
 ---@param start? integer
@@ -1387,6 +1397,10 @@ function Targets:alloc_both_labels(start, stop, rev, count)
     end
 end
 
+-- TODO: Because mapping both labels has to be done in one round of iteration, the function to
+-- do that needs to take two mappers and assign both. This way the status can be changed from
+-- "bl" to "bv" without leaving hanging data
+
 ---@param mapper fun(label: string[]): [string, integer|string?][]
 ---@param label_idxs integer[]
 ---@param labels string[][]
@@ -1516,36 +1530,165 @@ function Targets:map_fin_vtexts_from_labels_cmp_next_fin(mapper)
     map_vtexts_cmp_next(fl_idxs, fin_r, fin_c, fin_r, fin_c, fin_l, fin_vt_idxs, fin_vt, mapper)
 end
 
----@param i integer
----@param fin_row integer
----@param fin_col integer
+-- local function del_and_insert_single_stat()
+
+---@param pos_idx integer
+---@param char string
+function Targets:set_stat_char_hl(pos_idx, char)
+    local positions = self.positions
+    local pos_len = positions:get_len()
+    assert(1 <= pos_idx and pos_idx <= pos_len, "Cannot access an out of bounds target")
+
+    local stat = "c"
+    local cur_stat, stat_idx = positions:get_stat(pos_idx)
+    local char_hls = self.char_hls
+    if cur_stat == stat then
+        char_hls:update_char(stat_idx, char)
+        return
+    end
+
+    del_at_from_stat(self, cur_stat, stat_idx)
+    local char_idx = char_hls:insert_pos_idx(pos_idx, char)
+    positions:set_stat(pos_idx, stat, char_idx)
+end
+
+---@param pos_idx integer
+---@param label string[]
+function Targets:set_stat_start_label(pos_idx, label)
+    local positions = self.positions
+    local pos_len = positions:get_len()
+    assert(1 <= pos_idx and pos_idx <= pos_len, "Cannot access an out of bounds target")
+
+    local stat = "sl"
+    local cur_stat, stat_idx = positions:get_stat(pos_idx)
+    local start_labels = self.start_labels
+    if cur_stat == stat then
+        start_labels:update_label(stat_idx, label)
+        return
+    end
+
+    del_at_from_stat(self, cur_stat, stat_idx)
+    local label_idx = start_labels:insert_pos_idx(pos_idx, label)
+    positions:set_stat(pos_idx, stat, label_idx)
+end
+
+---@param pos_idx integer
+---@param label string[]
+function Targets:set_stat_fin_label(pos_idx, label)
+    local positions = self.positions
+    local pos_len = positions:get_len()
+    assert(1 <= pos_idx and pos_idx <= pos_len, "Cannot access an out of bounds target")
+
+    local stat = "fl"
+    local cur_stat, stat_idx = positions:get_stat(pos_idx)
+    local fin_labels = self.fin_labels
+    if cur_stat == stat then
+        fin_labels:update_label(stat_idx, label)
+        return
+    end
+
+    del_at_from_stat(self, cur_stat, stat_idx)
+    local label_idx = fin_labels:insert_pos_idx(pos_idx, label)
+    positions:set_stat(pos_idx, stat, label_idx)
+end
+
+---@param pos_idx integer
+---@param start_label string[]
+---@param fin_label string[]
+function Targets:set_stat_both_labels(pos_idx, start_label, fin_label)
+    local positions = self.positions
+    local pos_len = positions:get_len()
+    assert(1 <= pos_idx and pos_idx <= pos_len, "Cannot access an out of bounds target")
+
+    local stat = "bl"
+    local cur_stat, stat_idx = positions:get_stat(pos_idx)
+    local start_labels = self.start_labels
+    local fin_labels = self.fin_labels
+    if cur_stat == stat then
+        start_labels:update_label(stat_idx, start_label)
+        fin_labels:update_label(stat_idx, fin_label)
+        return
+    end
+
+    del_at_from_stat(self, cur_stat, stat_idx)
+    local start_label_idx = start_labels:insert_pos_idx(pos_idx, start_label)
+    local fin_label_idx = fin_labels:insert_pos_idx(pos_idx, fin_label)
+    assert(start_label_idx == fin_label_idx)
+    positions:set_stat(pos_idx, stat, start_label_idx)
+end
+
+---@param pos_idx integer
+---@param vtext string[]
+function Targets:set_stat_start_vtext(pos_idx, vtext)
+    local positions = self.positions
+    local pos_len = positions:get_len()
+    assert(1 <= pos_idx and pos_idx <= pos_len, "Cannot access an out of bounds target")
+
+    local stat = "sv"
+    local cur_stat, stat_idx = positions:get_stat(pos_idx)
+    local start_vtexts = self.start_vtexts
+    if cur_stat == "sv" then
+        start_vtexts:update_vtext(stat_idx, vtext)
+        return
+    end
+
+    del_at_from_stat(self, cur_stat, stat_idx)
+    local vtext_idx = start_vtexts:insert_pos_idx(pos_idx, vtext)
+    positions:set_stat(pos_idx, "sv", vtext_idx)
+end
+
+---@param pos_idx integer
+---@param vtext string[]
+function Targets:set_stat_fin_vtext(pos_idx, vtext)
+    local positions = self.positions
+    local pos_len = positions:get_len()
+    assert(1 <= pos_idx and pos_idx <= pos_len, "Cannot access an out of bounds target")
+
+    local stat = "fv"
+    local cur_stat, stat_idx = positions:get_stat(pos_idx)
+    local fin_vtexts = self.fin_vtexts
+    if cur_stat == stat then
+        fin_vtexts:update_vtext(stat_idx, vtext)
+        return
+    end
+
+    del_at_from_stat(self, cur_stat, stat_idx)
+    local vtext_idx = fin_vtexts:insert_pos_idx(pos_idx, vtext)
+    positions:set_stat(pos_idx, stat, vtext_idx)
+end
+
+---@param pos_idx integer
+---@param start_vtext string[]
+---@param fin_vtext string[]
+function Targets:set_stat_both_vtexts(pos_idx, start_vtext, fin_vtext)
+    local positions = self.positions
+    local pos_len = positions:get_len()
+    assert(1 <= pos_idx and pos_idx <= pos_len, "Cannot access an out of bounds target")
+
+    local stat = "bv"
+    local cur_stat, stat_idx = positions:get_stat(pos_idx)
+    local start_vtexts = self.start_vtexts
+    local fin_vtexts = self.fin_vtexts
+    if cur_stat == stat then
+        start_vtexts:update_vtext(stat_idx, start_vtext)
+        fin_vtexts:update_vtext(stat_idx, fin_vtext)
+        return
+    end
+
+    del_at_from_stat(self, cur_stat, stat_idx)
+    local start_vtext_idx = start_vtexts:insert_pos_idx(pos_idx, start_vtext)
+    local fin_vtext_idx = fin_vtexts:insert_pos_idx(pos_idx, fin_vtext)
+    assert(start_vtext_idx == fin_vtext_idx)
+    positions:set_stat(pos_idx, stat, start_vtext_idx)
+end
+
+---Errors if an invalid index is provided.
+---@param pos_idx integer
+---@param char string
 function Targets:set_fin_pos(i, fin_row, fin_col)
     local idx = self.idx[i]
     self.fin_row[idx] = fin_row
     self.fin_col[idx] = fin_col
-end
--- MID: This function creates redundancy because it has to get the idx after the iterator has
--- already done so. But it seems wasteful to create a complicated mapping function for one case,
--- and I don't want the iterators exposing idx.
-
----Errors if an invalid index is provided.
----@param idx integer
----@param char string
-function Targets:set_char_hl(idx, char)
-    local positions = self.positions
-    local pos_len = positions:get_len()
-    assert(1 <= idx and idx <= pos_len, "Cannot access an out of bounds target")
-
-    local stat, start_idx, fin_idx = positions:get_stat(idx)
-    local char_hls = self.char_hls
-    if stat == "c" then
-        char_hls:update_char(fin_idx, char)
-        return
-    end
-
-    del_at_from_stat(self, stat, start_idx, fin_idx)
-    local char_idx = char_hls:insert_pos_idx(idx, char)
-    positions:set_stat(idx, "c", 0, char_idx)
 end
 -- PERF: Should be okay to have an assert here.
 -- PERF: It would be better if there were a way to specify append vs binary searching
@@ -1587,6 +1730,9 @@ end
 
 return Targets
 
+-- TODO: For simplicity, right now everything is insert_at. Create append methods to skip binary
+-- search logic and use where possible
+-- - Can add a check to make sure pos_idx > the last one
 -- TODO: I'm not sure why any of the exposed functions in here take optional vars since they
 -- aren't user facing.
 -- TODO: The various insert_at functions do not handle duplicates. This might be okay, since it
@@ -1598,6 +1744,13 @@ return Targets
 -- paths.
 -- TODO: I have the char_hl chars stored here on the assumption that I might need to re-use the
 -- char later. If I don't, the data structure could be simplified by removing it.
+-- TODO: I'm not sure the various insert_at functions should be public since they can break
+-- pos_idx ordering
+--
+-- MID: The stat setting involves a lot of redundant code. But I'm not sure how to do it in a way
+-- that isn't contrived due to the different function args. Could use a v:any pattern, but that
+-- locks in the assumption that each stat table only has one value. Since the code runs in
+-- hot paths, ok with redundancy for now. Don't want to pre-maturely factor.
 
 -- TODO FOR LABELING AND HIGHLIGHTING
 --

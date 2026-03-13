@@ -57,8 +57,8 @@ end
 ---@generic T
 ---@param t T[]
 ---@param v T
----@return integer
-function M.list_bisearch_left(t, v)
+---@return integer, boolean
+function M.list_bisect_left(t, v)
     local lo = 1
     local hi = #t
     while lo <= hi do
@@ -70,7 +70,8 @@ function M.list_bisearch_left(t, v)
         end
     end
 
-    return lo
+    local found = (lo <= #t and t[lo] == v)
+    return lo, found
 end
 
 ---@generic T
