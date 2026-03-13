@@ -292,6 +292,10 @@ local eval = "(nvim_get_current_win()==#g:actual_curwin || &laststatus==3)" ---@
 local stl_str = "%{%" .. eval .. " ? v:lua.Mjm_Stl.active() : v:lua.Mjm_Stl.inactive()%}"
 api.nvim_set_option_value("stl", stl_str, { scope = "global" })
 
+-- TODO: https://github.com/neovim/neovim/commit/caf780859197ae6e2a3af3f9dd1e79bdca5ef02d
+-- Is this a viable replacement for my bespoke code? It doesn't look like it cachces results.
+-- Perhaps that could be PR'd in.
+
 -- LOW: Build a character index component for spec-ops debugging
 -- LOW: Re-check if the virtual column component is usable for spec-ops debugging or if I need to
 -- build my own. That might be tough though because you have to binary search each cursor movement

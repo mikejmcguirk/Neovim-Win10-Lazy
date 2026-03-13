@@ -1,4 +1,8 @@
+local api = vim.api
+
 local M = {}
+
+local STATIC_TOKENS = vim.split("abcdefghijklmnopqrstuvwxyz", "")
 
 local default_config = {
     all = {
@@ -6,7 +10,20 @@ local default_config = {
     },
     csearch = {},
     live = {},
-    static = {},
+    static = {
+        dim = true,
+        max_tokens = 2,
+        on_jump = function(_, _, _)
+            local fdo = api.nvim_get_option_value("fdo", { scope = "global" })
+            local jump, _, _ = string.find(fdo, "jump", 1, true)
+            local all, _, _ = string.find(fdo, "all", 1, true)
+            if all or jump then
+                api.nvim_cmd({ cmd = "norm", args = { "zv" }, bang = true }, {})
+            end
+        end,
+        pattern = "\\k\\+",
+        tokens = STATIC_TOKENS,
+    },
 }
 
 local cur_config = vim.deepcopy(default_config, true)

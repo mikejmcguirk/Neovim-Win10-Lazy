@@ -1203,6 +1203,9 @@ end
 
 return Jump
 
+-- TODO: When this module is initialized, it should make a call to init.lua to get the default
+-- config and load in said defaults. This allows the default behavior to live in init.lua
+-- (clean), but without relying on exterior calls for fallbacks.
 -- TODO: Types of jump to handle:
 -- - Love typed
 -- - X char based
