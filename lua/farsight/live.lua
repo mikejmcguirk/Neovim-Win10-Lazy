@@ -90,7 +90,7 @@ local function check_chars_after(win_targets, cache, opts)
             local win = data[1]
             if win >= 1000 then
                 local codepoint_str = vim.call("nr2char", codepoint) ---@type string
-                win_targets[win]:set_char_hl(data[2], codepoint_str)
+                win_targets[win]:set_stat_char_hl(data[2], codepoint_str)
             end
         end
     end

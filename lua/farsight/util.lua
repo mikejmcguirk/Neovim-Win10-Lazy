@@ -93,6 +93,7 @@ function M.list_clear_two(t1, t2, len)
         t2[i] = nil
     end
 end
+-- TODO: Remove this
 
 ---@generic T
 ---@param t T[]
@@ -186,18 +187,17 @@ function M._list_filter(t, f)
 end
 
 ---@generic T
----@param t1 T[]
----@param v1 T
+---@param t T[]
+---@param v T
 ---@param idx integer
-function M.list_insert_at(t1, v1, idx)
-    local len = #t1
-    local j = len + 1
-    for i = len, idx, -1 do
-        t1[j] = t1[i]
-        j = j - 1
+function M.list_insert_at(t, v, idx)
+    local len = #t
+    t[len + 1] = t[len]
+    for i = len, idx + 1, -1 do
+        t[i] = t[i - 1]
     end
 
-    t1[idx] = v1
+    t[idx] = v
 end
 
 ---@generic T
@@ -208,16 +208,21 @@ end
 ---@param idx integer
 ---@param len integer
 function M.list_insert_at_two(t1, v1, t2, v2, idx, len)
-    local j = len + 1
-    for i = len, idx, -1 do
-        t1[j] = t1[i]
-        t2[j] = t2[i]
+    local len_plus_one = len + 1
+    t1[len_plus_one] = t2[len]
+    t2[len_plus_one] = t2[len]
+
+    local j = len - 1
+    for i = len, idx + 1, -1 do
+        t1[i] = t1[j]
+        t2[i] = t2[j]
         j = j - 1
     end
 
     t1[idx] = v1
     t2[idx] = v2
 end
+-- TODO: I'm not sure if this is actually good, dump it.
 
 -- PR: Add to Nvim shared.
 

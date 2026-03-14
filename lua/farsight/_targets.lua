@@ -1,5 +1,9 @@
 local vimv = vim.v
 
+local bisect_left = require("farsight.util").list_bisect_left
+local list_del_at = require("farsight.util").list_del_at
+local list_insert_at = require("farsight.util").list_insert_at
+
 ---@param idx integer
 ---@param len integer
 ---@return integer
@@ -262,8 +266,6 @@ end
 ---@field get_pos_idx fun(self:farsight.targets.StatData, idx:integer): pos_idx:integer
 ---@field get_pos_idxs fun(self:farsight.targets.StatData): pos_idxs:integer[]
 ---@field clear fun(self:farsight.targets.StatData)
----Returns the deleted idx, 0 if no delete occurred.
----@field del_at fun(self:farsight.targets.StatData, idx:integer): del_idx:integer
 
 -- TODO: I think the StatData insert_at functions should be private, since they can break
 -- pos_idx ordering
@@ -292,27 +294,17 @@ end
 local No_Stats = {}
 No_Stats.__index = No_Stats
 
----@param idx integer
 ---@param pos_idx integer
+---@param pos_idxs integer[]
 ---@return integer
-function No_Stats:insert_at(idx, pos_idx)
-    local pos_idxs = self.pos_idxs
-    idx = adj_new_idx(idx, #pos_idxs)
-    require("farsight.util").list_insert_at(pos_idxs, pos_idx, idx)
+local function no_stats_insert_pos_idx(pos_idx, pos_idxs)
+    local idx, found = bisect_left(pos_idxs, pos_idx)
+    if not found then
+        list_insert_at(pos_idxs, pos_idx, idx)
+        return idx
+    end
 
     return idx
-end
-
----@param pos_idx integer
----@return integer
-function No_Stats:insert_pos_idx(pos_idx)
-    local bisect_left = require("farsight.util").list_bisect_left
-    local idx, found = bisect_left(self.pos_idxs, pos_idx)
-    if found then
-        return idx
-    else
-        return self:insert_at(idx, pos_idx)
-    end
 end
 
 ---@return integer
@@ -320,35 +312,20 @@ function No_Stats:get_len()
     return #self.pos_idxs
 end
 
-No_Stats.get_pos_idx = get_pos_idx
 No_Stats.get_pos_idxs = get_pos_idxs
-
-function No_Stats:clear()
-    require("farsight.util").list_clear(self.pos_idxs)
-end
-
----@param idx integer
----@return integer
-function No_Stats:del_at(idx)
-    local pos_idxs = self.pos_idxs
-    idx = adj_bounded_idx(idx, #pos_idxs)
-    if idx == 0 then
-        return 0
-    end
-
-    require("farsight.util").list_del_at(pos_idxs, idx)
-    return idx
-end
 
 ---@generic T
 ---@param idx integer
 ---@param pos_idxs integer[]
----@param list_del_at fun(t:T[], idx:integer)
-local function no_stats_del_at(idx, pos_idxs, list_del_at)
+---@return integer
+local function no_stats_del_at(idx, pos_idxs)
     idx = adj_bounded_idx(idx, #pos_idxs)
     if idx == 0 then
         return 0
     end
+
+    list_del_at(pos_idxs, idx)
+    return idx
 end
 
 function No_Stats.new(size)
@@ -369,69 +346,30 @@ local Char_Hls = {}
 Char_Hls.__index = Char_Hls
 -- MAYBE: If we don't find a use case for reading the char, can just be removed
 
----@param idx integer
 ---@param pos_idx integer
----@param char string
+---@param pos_idxs integer[]
 ---@return integer
-function Char_Hls:insert_at(idx, pos_idx, char)
-    local len = self.len
-    idx = adj_new_idx(idx, len)
+local function char_hls_insert_pos_idx(pos_idx, pos_idxs, char, chars)
+    local idx, found = bisect_left(pos_idxs, pos_idx)
+    if not found then
+        list_insert_at(pos_idxs, pos_idx, idx)
+        list_insert_at(chars, char, idx)
+        return idx
+    end
 
-    local list_insert_at_two = require("farsight.util").list_insert_at_two
-    list_insert_at_two(self.pos_idxs, pos_idx, self.chars, char, idx, len)
-    self.len = len + 1
-
+    chars[idx] = char
     return idx
 end
 
----@param pos_idx integer
----@param char string
----@return integer
-function Char_Hls:insert_pos_idx(pos_idx, char)
-    local bisect_left = require("farsight.util").list_bisect_left
-    local idx, found = bisect_left(self.pos_idxs, pos_idx)
-    if found then
-        self:update_char(idx, char)
-        return idx
-    else
-        return self:insert_at(idx, pos_idx, char)
-    end
+function Char_Hls:get_chars()
+    return self.chars
 end
 
 function Char_Hls:get_len()
     return self.len
 end
 
-Char_Hls.get_pos_idx = get_pos_idx
 Char_Hls.get_pos_idxs = get_pos_idxs
-
----@param idx integer
----@param char string
-function Char_Hls:update_char(idx, char)
-    self.chars[idx] = char
-end
-
-function Char_Hls:clear()
-    local list_clear_two = require("farsight.util").list_clear_two
-    list_clear_two(self.pos_idxs, self.chars, self.len)
-    self.len = 0
-end
-
----@param idx integer
----@return integer
-function Char_Hls:del_at(idx)
-    local len = self.len
-    idx = adj_bounded_idx(idx, len)
-    if idx == 0 then
-        return 0
-    end
-
-    local list_del_at_two = require("farsight.util").list_del_at_two
-    list_del_at_two(self.pos_idxs, self.chars, idx, len)
-    self.len = len - 1
-
-    return idx
-end
 
 function Char_Hls.new(size)
     local self = setmetatable({}, Char_Hls)
@@ -472,7 +410,6 @@ end
 ---@param label string[]
 ---@return integer Resolved idx
 function Labels:insert_pos_idx(pos_idx, label)
-    local bisect_left = require("farsight.util").list_bisect_left
     local idx, found = bisect_left(self.pos_idxs, pos_idx)
     if found then
         self:update_label(idx, label)
@@ -505,22 +442,6 @@ function Labels:clear()
     local list_clear_two = require("farsight.util").list_clear_two
     list_clear_two(self.pos_idxs, self.labels, self.len)
     self.len = 0
-end
-
----@param idx integer
----@return integer
-function Labels:del_at(idx)
-    local len = self.len
-    idx = adj_bounded_idx(idx, len)
-    if idx < 1 then
-        return 0
-    end
-
-    local list_del_at_two = require("farsight.util").list_del_at_two
-    list_del_at_two(self.pos_idxs, self.labels, idx, len)
-    self.len = len - 1
-
-    return idx
 end
 
 function Labels.new(size)
@@ -597,22 +518,6 @@ function Vtexts:clear()
     self.len = 0
 end
 
----@param idx integer
----@return integer
-function Vtexts:del_at(idx)
-    local len = self.len
-    idx = adj_bounded_idx(idx, len)
-    if idx < 1 then
-        return 0
-    end
-
-    local list_del_at_two = require("farsight.util").list_del_at_two
-    list_del_at_two(self.pos_idxs, self.vtexts, idx, len)
-    self.len = len - 1
-
-    return idx
-end
-
 function Vtexts.new(size)
     local self = setmetatable({}, Vtexts)
     local tn = require("farsight.util")._table_new
@@ -641,23 +546,23 @@ Targets.__index = Targets
 ---@param stat_idx integer
 local function del_at_from_stat(self, stat, stat_idx)
     if stat == "" then
-        self.no_stats:del_at(stat_idx)
+        --
     elseif stat == "c" then
-        self.char_hls:del_at(stat_idx)
+        --
     elseif stat == "sl" then
-        self.start_labels:del_at(stat_idx)
+        --
     elseif stat == "fl" then
-        self.fin_labels:del_at(stat_idx)
+        --
     elseif stat == "bl" then
-        self.start_labels:del_at(stat_idx)
-        self.fin_labels:del_at(stat_idx)
+        --
+        --
     elseif stat == "sv" then
-        self.start_vtexts:del_at(stat_idx)
+        --
     elseif stat == "fv" then
-        self.fin_vtexts:del_at(stat_idx)
+        --
     elseif stat == "bv" then
-        self.start_vtexts:del_at(stat_idx)
-        self.fin_vtexts:del_at(stat_idx)
+        --
+        --
     end
 end
 -- PERF: Test this against a hash table of functions
@@ -699,7 +604,8 @@ function Targets:insert_at(idx, start_row, start_col, fin_row, fin_col)
     local positions = self.positions
     local new_idx = positions:insert_at(idx, start_row, start_col, fin_row, fin_col)
 
-    local no_stat_idx = self.no_stats:insert_pos_idx(new_idx)
+    local pos_idxs = self.no_stats.pos_idxs
+    local no_stat_idx = no_stats_insert_pos_idx(new_idx, pos_idxs)
     positions:set_stat(new_idx, "", no_stat_idx)
 
     return new_idx
@@ -1201,7 +1107,7 @@ local function map_no_stat_to_labels(self, start, stop, count, fin)
 
     while i >= limit do
         local pos_idx = pos_idxs[i]
-        no_stats:del_at(i)
+        no_stats_del_at(i, pos_idxs)
         local label_idx = labels_tbl:insert_pos_idx(pos_idx, {})
         positions:set_stat(pos_idx, stat, label_idx)
 
@@ -1430,8 +1336,13 @@ function Targets:set_stat_char_hl(pos_idx, char)
         return
     end
 
-    self.no_stats:del_at(stat_idx)
-    local char_idx = self.char_hls:insert_pos_idx(pos_idx, char)
+    no_stats_del_at(stat_idx, self.no_stats:get_pos_idxs())
+
+    local char_hls = self.char_hls
+    local pos_idxs = char_hls:get_pos_idxs()
+    local chars = char_hls:get_chars()
+    local char_idx = char_hls_insert_pos_idx(pos_idx, pos_idxs, char, chars)
+
     positions:set_stat(pos_idx, "c", char_idx)
 end
 
