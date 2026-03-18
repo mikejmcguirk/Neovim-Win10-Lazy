@@ -186,6 +186,23 @@ function M._list_filter(t, f)
     end
 end
 
+---Assumes j <= i
+---@generic T
+---@param t T[]
+---@param j integer Starting copy destination
+---@param i integer Starting copy source
+function M.list_compact(t, j, i)
+    local len = #t
+    for k = i, len do
+        t[j] = t[k]
+        j = j + 1
+    end
+
+    for k = j, len do
+        t[k] = nil
+    end
+end
+
 ---@generic T
 ---@param t T[]
 ---@param v T

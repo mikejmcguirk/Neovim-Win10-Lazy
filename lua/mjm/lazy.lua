@@ -46,3 +46,4 @@ vim.keymap.set("n", "<leader>zz", "<cmd>Lazy<cr>")
 -- - https://github.com/toppair/peek.nvim -- Markdown preview
 -- - Previewer for a lot of things: https://github.com/OXY2DEV/markview.nvim
 -- MAYBE: https://github.com/chentoast/marks.nvim
+-- MAYBE: https://github.com/Punity122333/hexinspector.nvim

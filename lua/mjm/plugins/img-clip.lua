@@ -1,6 +1,7 @@
 local api = vim.api
+local fn = vim.fn
 local fs = vim.fs
-local img_dir = "assets/img" ---@type string
+local img_dir = "assets/img"
 
 return {
     "HakonHarnes/img-clip.nvim",
@@ -13,12 +14,14 @@ return {
                 if not root then
                     return
                 end
-                local basename = fs.basename(vim.api.nvim_buf_get_name(0)) ---@type string
-                local name = vim.fn.fnamemodify(basename, ":r") ---@type string
-                local pattern = fs.joinpath(root, img_dir, name) .. "*" ---@type string
 
-                local files = vim.fn.glob(pattern, false, true) ---@type string[]
-                return name .. "_" .. string.format("%03d", #files)
+                local basename = fs.basename(api.nvim_buf_get_name(0))
+                local name = fn.fnamemodify(basename, ":r")
+
+                local pattern = fs.joinpath(root, img_dir, name) .. "*"
+                local files = fn.glob(pattern, false, true) ---@type string[]
+
+                return name .. "_" .. string.format("%03d", #files + 1)
             end,
             insert_mode_after_paste = false,
             prompt_for_file_name = false,

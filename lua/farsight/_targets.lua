@@ -110,7 +110,6 @@ function Positions:insert_at(idx, start_row, start_col, fin_row, fin_col)
 
     return idx
 end
--- MAYBE: Add a param for stat.
 
 ---@param stat ""|"c"|"sl"|"fl"|"bl"|"sv"|"fv"|"bv"
 ---@param pos_idx integer
@@ -156,8 +155,18 @@ end
 
 ---@param pos_idx integer
 ---@return ""|"c"|"sl"|"fl"|"bl"|"sv"|"fv"|"bv", integer
-function Positions:get_stat_info(pos_idx)
+function Positions:get_stat_at(pos_idx)
     return self.stats[pos_idx], self.stat_idxs[pos_idx]
+end
+
+---@return (""|"c"|"sl"|"fl"|"bl"|"sv"|"fv"|"bv")[], integer[]
+function Positions:get_stat_info()
+    return self.stats, self.stat_idxs
+end
+
+---@return table<string, integer>, table<string, integer>
+function Positions:get_both_hashed()
+    return self.hashed_starts, self.hashed_fins
 end
 
 ---@param pos_idx integer
@@ -182,38 +191,32 @@ function Positions:set_stat(pos_idx, stat, stat_idx)
     self.stat_idxs[pos_idx] = stat_idx
 end
 
+---@param self farsight.targets.Positions
 ---@param idx integer
----@return integer
-function Positions:del_at(idx)
+---@param srs integer[]
+---@param scs integer[]
+---@param frs integer[]
+---@param fcs integer[]
+---@param hs table<string, integer>
+---@param hf table<string, integer>
+---@param stats (""|"c"|"sl"|"fl"|"bl"|"sv"|"fv"|"bv")[]
+---@param stat_idxs integer[]
+local function positions_del_at(self, idx, srs, scs, frs, fcs, hs, hf, stats, stat_idxs)
     local len = self.len
     idx = adj_bounded_idx(idx, len)
     if idx < 1 then
         return 0
     end
 
-    local start_rows = self.start_rows
-    local start_cols = self.start_cols
-    local fin_rows = self.fin_rows
-    local fin_cols = self.fin_cols
-
-    local start_row = start_rows[idx]
-    local start_col = start_cols[idx]
-    local fin_row = fin_rows[idx]
-    local fin_col = fin_cols[idx]
-    local start_key = create_pos_key(start_row, start_col)
-    local fin_key = create_pos_key(fin_row, fin_col)
-    self.hashed_starts[start_key] = nil
-    self.hashed_fins[fin_key] = nil
-
-    local stats = self.stats
-    local stat_idxs = self.stat_idxs
+    hs[create_pos_key(srs[idx], scs[idx])] = nil
+    hf[create_pos_key(frs[idx], fcs[idx])] = nil
 
     local j = idx
     for i = idx + 1, len do
-        start_rows[j] = start_rows[i]
-        start_cols[j] = start_cols[i]
-        fin_rows[j] = fin_rows[i]
-        fin_cols[j] = fin_cols[i]
+        srs[j] = srs[i]
+        scs[j] = scs[i]
+        frs[j] = frs[i]
+        fcs[j] = fcs[i]
 
         stats[j] = stats[i]
         stat_idxs[j] = stat_idxs[i]
@@ -221,10 +224,10 @@ function Positions:del_at(idx)
         j = j + 1
     end
 
-    start_rows[len] = nil
-    start_cols[len] = nil
-    fin_rows[len] = nil
-    fin_cols[len] = nil
+    srs[len] = nil
+    scs[len] = nil
+    frs[len] = nil
+    fcs[len] = nil
 
     stats[len] = nil
     stat_idxs[len] = nil
@@ -232,7 +235,11 @@ function Positions:del_at(idx)
     self.len = len - 1
     return idx
 end
--- PERF: Could save the pos_keys rather than having to re-generate them.
+-- TODO: This function points to needing to re-introduce the idxs list. This function is run in
+-- hot paths and it is bad to shove all this data into those iters to be run intermittently.
+-- Issues:
+-- - Not totally sure how to make insert_at work. I would guess it inserts into the middle of the
+-- idxs list but puts a new items at the end.
 
 ---@param size integer
 ---@return farsight.targets.Positions
@@ -257,30 +264,11 @@ end
 
 ---@class (exact) farsight.targets.StatData
 ---@field pos_idxs integer[]
----Returns the new idx
----@field insert_at fun(self:farsight.targets.StatData, idx:integer, pos_idx:integer, ...:any): resolved_idx:integer
----For a given pos_idx, perform a binary search so that it can be inserted in order along with its
----related content
----@field insert_pos_idx fun(self:farsight.targets.StatData, pos_idx:integer, ...:any): resolved_idx:integer
 ---@field get_len fun(self:farsight.targets.StatData): len:integer
----@field get_pos_idx fun(self:farsight.targets.StatData, idx:integer): pos_idx:integer
 ---@field get_pos_idxs fun(self:farsight.targets.StatData): pos_idxs:integer[]
----@field clear fun(self:farsight.targets.StatData)
 
--- TODO: I think the StatData insert_at functions should be private, since they can break
--- pos_idx ordering
 -- TODO: Add append functions to the StatData tables. They can check the new pos_idx against the
 -- last one, and fall back to bisecting if they are less.
--- TODO: A lot of the implementations, like del_at, are all basically the same thing, and can be
--- outlined into generic forms. Wait on this though until the plugin is mostly done.
--- TODO: del_at functions that take the underlying data as exterior references
-
----@param self farsight.targets.StatData
----@param idx integer
----@return integer
-local function get_pos_idx(self, idx)
-    return self.pos_idxs(idx)
-end
 
 ---@param self farsight.targets.StatData
 ---@return integer[]
@@ -293,6 +281,20 @@ end
 ---@field new fun(size:integer): No_Stats:farsight.targets.NoStats
 local No_Stats = {}
 No_Stats.__index = No_Stats
+
+-- TODO: I think what actually needs to be done is - The targets are only actually deleted
+-- right after they're pulled from search. So you do one struct that's just rows and cols, then
+-- you create the one with the associated stuff. And you assume that from there, each target
+-- makes a one-way trip to its final status.
+-- And I think for something like static jumps, we only want to care about deleting from vtexts
+-- yeah?
+-- Another very simple reality - Each sub-table requires two connective tissue tables. You're
+-- almost better off just duplicating the pos data.
+-- TODO: Unsure of how this works, because del_at creates a gap, not an accurate representation.
+-- This actually makes more sense with the idxs list.
+-- I think a delete needs to also have a decrement step on/after idx to sync the values.
+-- A status change is a straight up delete.
+-- Likewise, an insertion needs to cause an increment. A stat change back just inserts.
 
 ---@param pos_idx integer
 ---@param pos_idxs integer[]
@@ -314,7 +316,6 @@ end
 
 No_Stats.get_pos_idxs = get_pos_idxs
 
----@generic T
 ---@param idx integer
 ---@param pos_idxs integer[]
 ---@return integer
@@ -391,32 +392,19 @@ end
 local Labels = {}
 Labels.__index = Labels
 
----@param idx integer
 ---@param pos_idx integer
----@param label string[]
----@return integer Resolved idx
-function Labels:insert_at(idx, pos_idx, label)
-    local len = self.len
-    idx = adj_new_idx(idx, len)
-
-    local list_insert_at_two = require("farsight.util").list_insert_at_two
-    list_insert_at_two(self.pos_idxs, pos_idx, self.labels, label, idx, len)
-    self.len = len + 1
-
-    return idx
-end
-
----@param pos_idx integer
----@param label string[]
----@return integer Resolved idx
-function Labels:insert_pos_idx(pos_idx, label)
-    local idx, found = bisect_left(self.pos_idxs, pos_idx)
-    if found then
-        self:update_label(idx, label)
+---@param pos_idxs integer[]
+---@return integer
+local function labels_insert_pos_idx(pos_idx, pos_idxs, label, labels)
+    local idx, found = bisect_left(pos_idxs, pos_idx)
+    if not found then
+        list_insert_at(pos_idxs, pos_idx, idx)
+        list_insert_at(labels, label, idx)
         return idx
-    else
-        return self:insert_at(idx, pos_idx, label)
     end
+
+    labels[idx] = label
+    return idx
 end
 
 ---@return string[][]
@@ -428,21 +416,7 @@ function Labels:get_len()
     return self.len
 end
 
-Labels.get_pos_idx = get_pos_idx
 Labels.get_pos_idxs = get_pos_idxs
-
----@param idx integer
----@param label string[]
-function Labels:update_label(idx, label)
-    self.labels[idx] = label
-end
-
----Edits self in place
-function Labels:clear()
-    local list_clear_two = require("farsight.util").list_clear_two
-    list_clear_two(self.pos_idxs, self.labels, self.len)
-    self.len = 0
-end
 
 function Labels.new(size)
     local self = setmetatable({}, Labels)
@@ -464,58 +438,30 @@ end
 local Vtexts = {}
 Vtexts.__index = Vtexts
 
----@param idx integer
 ---@param pos_idx integer
----@param vtext string[]
----@return integer Resolved idx
-function Vtexts:insert_at(idx, pos_idx, vtext)
-    local len = self.len
-    idx = adj_new_idx(idx, len)
-
-    local list_insert_at_two = require("farsight.util").list_insert_at_two
-    list_insert_at_two(self.pos_idxs, pos_idx, self.vtexts, vtext, idx, len)
-    self.len = len + 1
-
-    return idx
-end
-
----@param pos_idx integer
----@param vtext [string, integer|string?][]
----@return integer Resolved idx
-function Vtexts:insert_pos_idx(pos_idx, vtext)
-    local bisect_left = require("farsight.util").list_bisect_left
-    local idx, found = bisect_left(self.pos_idxs, pos_idx)
-    if found then
-        self:update_vtext(idx, vtext)
+---@param pos_idxs integer[]
+---@return integer
+local function vtexts_insert_pos_idx(pos_idx, pos_idxs, vtext, vtexts)
+    local idx, found = bisect_left(pos_idxs, pos_idx)
+    if not found then
+        list_insert_at(pos_idxs, pos_idx, idx)
+        list_insert_at(vtexts, vtext, idx)
         return idx
-    else
-        return self:insert_at(idx, pos_idx, vtext)
     end
+
+    vtexts[idx] = vtext
+    return idx
 end
 
 function Vtexts:get_len()
     return self.len
 end
 
-Vtexts.get_pos_idx = get_pos_idx
 Vtexts.get_pos_idxs = get_pos_idxs
 
 ---@return [string, integer|string?][][]
 function Vtexts:get_vtexts()
     return self.vtexts
-end
-
----@param idx integer
----@param vtext string[]
-function Vtexts:update_vtext(idx, vtext)
-    self.vtexts[idx] = vtext
-end
-
-function Vtexts:clear()
-    local len = self.len
-    local list_clear_two = require("farsight.util").list_clear_two
-    list_clear_two(self.pos_idxs, self.vtexts, len)
-    self.len = 0
 end
 
 function Vtexts.new(size)
@@ -541,59 +487,6 @@ end
 local Targets = {}
 Targets.__index = Targets
 
----@param self farsight.targets.Targets
----@param stat ""|"c"|"sl"|"fl"|"bl"|"sv"|"fv"|"bv"
----@param stat_idx integer
-local function del_at_from_stat(self, stat, stat_idx)
-    if stat == "" then
-        --
-    elseif stat == "c" then
-        --
-    elseif stat == "sl" then
-        --
-    elseif stat == "fl" then
-        --
-    elseif stat == "bl" then
-        --
-        --
-    elseif stat == "sv" then
-        --
-    elseif stat == "fv" then
-        --
-    elseif stat == "bv" then
-        --
-        --
-    end
-end
--- PERF: Test this against a hash table of functions
-
----@param self farsight.targets.Targets
----@param stat ""|"c"|"sl"|"fl"|"bl"|"sv"|"fv"|"bv"
----@return integer[]
-local function get_stat_pos_idxs(self, stat)
-    if stat == "" then
-        return self.no_stats:get_pos_idxs()
-    elseif stat == "c" then
-        return self.char_hls:get_pos_idxs()
-    elseif stat == "sl" then
-        return self.start_labels:get_pos_idxs()
-    elseif stat == "fl" then
-        return self.fin_labels:get_pos_idxs()
-    elseif stat == "bl" then
-        return self.start_labels:get_pos_idxs() -- Should match fin_labels
-    elseif stat == "sv" then
-        return self.start_vtexts:get_pos_idxs()
-    elseif stat == "fv" then
-        return self.fin_vtexts:get_pos_idxs()
-    elseif stat == "bv" then
-        return self.start_vtexts:get_pos_idxs() -- Should match fin_vtexts
-    end
-
-    error("Invalid stat")
-end
--- TODO: This cannot be the best way to handle this
--- PERF: Test this against a hash table of functions
-
 ---@param idx integer
 ---@param start_row integer
 ---@param start_col integer
@@ -610,6 +503,9 @@ function Targets:insert_at(idx, start_row, start_col, fin_row, fin_col)
 
     return new_idx
 end
+-- TODO: This one's a bit awkward because you have to put it in the search callback. I guess you
+-- could move the insert_at logic into here to strip a layer of indirection, but I think it would
+-- be unwise design to actually start hoisting out the module internals
 -- PERF: Make a specific append function to skip the binary search on no_stats. Could maybe be
 -- dynamically dispatched somehow.
 
@@ -672,18 +568,17 @@ end
 ---@param stop? integer
 ---@param rev? boolean
 ---@param fin boolean
----@param stat ""|"c"|"sl"|"fl"|"bl"|"sv"|"fv"|"bv"
 ---@return fun(): i:integer|nil, row:integer|nil, col:integer|nil
-local function iter_stat_pos(self, start, stop, rev, fin, stat)
+local function iter_no_stat_pos(self, start, stop, rev, fin)
     local positions = self.positions
     local len = positions:get_len()
-    local i, limit, iter = pos_to_stat_iters(start, stop, rev, len, positions, stat)
+    local i, limit, iter = pos_to_stat_iters(start, stop, rev, len, positions, "")
     if not (i > 0 and limit > 0 and iter ~= 0) then
         return function() end
     end
 
     i = i - iter
-    local pos_idxs = get_stat_pos_idxs(self, stat)
+    local pos_idxs = self.no_stats:get_pos_idxs()
     local rows, cols = positions:get_positions(fin)
 
     ---@return integer|nil, integer|nil, integer|nil
@@ -706,12 +601,42 @@ end
 -- Also (almost certainly) necessary to hoist here because we only want to do the start vs fin
 -- check once, rather than per idx.
 
+---@param self farsight.targets.Targets
+---@param start? integer
+---@param stop? integer
+---@param rev? boolean
+---@param fin boolean
+---@return fun(): i:integer|nil, row:integer|nil, col:integer|nil
+local function iter_char_pos(self, start, stop, rev, fin)
+    local positions = self.positions
+    local len = positions:get_len()
+    local i, limit, iter = pos_to_stat_iters(start, stop, rev, len, positions, "c")
+    if not (i > 0 and limit > 0 and iter ~= 0) then
+        return function() end
+    end
+
+    i = i - iter
+    local pos_idxs = self.char_hls:get_pos_idxs()
+    local rows, cols = positions:get_positions(fin)
+
+    ---@return integer|nil, integer|nil, integer|nil
+    return function()
+        i = i + iter
+        if (iter > 0 and i > limit) or (iter < 0 and i < limit) then
+            return nil, nil, nil
+        end
+
+        local pos_idx = pos_idxs[i]
+        return i, rows[pos_idx], cols[pos_idx]
+    end
+end
+
 ---@param start? integer
 ---@param stop? integer
 ---@param rev? boolean
 ---@return fun(): idx:integer|nil, start_row:integer|nil, start_col:integer|nil
 function Targets:iter_no_stat_start_pos(start, stop, rev)
-    return iter_stat_pos(self, start, stop, rev, false, "")
+    return iter_no_stat_pos(self, start, stop, rev, false)
 end
 
 ---@param start? integer
@@ -719,7 +644,7 @@ end
 ---@param rev? boolean
 ---@return fun(): idx:integer|nil, fin_row:integer|nil, fin_col:integer|nil
 function Targets:iter_no_stat_fin_pos(start, stop, rev)
-    return iter_stat_pos(self, start, stop, rev, true, "")
+    return iter_no_stat_pos(self, start, stop, rev, true)
 end
 
 ---@param self farsight.targets.Targets
@@ -727,18 +652,17 @@ end
 ---@param stop? integer
 ---@param rev? boolean
 ---@param fin boolean
----@param stat ""|"c"|"sl"|"fl"|"bl"|"sv"|"fv"|"bv"
 ---@return fun(): i:integer|nil, row:integer|nil, col:integer|nil
-local function iter_stat_rows(self, start, stop, rev, fin, stat)
+local function iter_no_stat_rows(self, start, stop, rev, fin)
     local positions = self.positions
     local len = positions:get_len()
-    local i, limit, iter = pos_to_stat_iters(start, stop, rev, len, positions, stat)
+    local i, limit, iter = pos_to_stat_iters(start, stop, rev, len, positions, "")
     if not (i > 0 and limit > 0 and iter ~= 0) then
         return function() end
     end
 
     i = i - iter
-    local pos_idxs, _ = get_stat_pos_idxs(self, stat)
+    local pos_idxs = self.no_stats:get_pos_idxs()
     local rows = positions:get_rows(fin)
 
     ---@return integer|nil, integer|nil, integer|nil
@@ -757,7 +681,7 @@ end
 ---@param rev? boolean
 ---@return fun(): i:integer|nil, fin_row:integer|nil
 function Targets:iter_no_stat_fin_rows(start, stop, rev)
-    return iter_stat_rows(self, start, stop, rev, false, "")
+    return iter_no_stat_rows(self, start, stop, rev, false)
 end
 
 ---@param self farsight.targets.Targets
@@ -892,7 +816,7 @@ end
 ---@param rev? boolean
 ---@return fun(): idx:integer|nil, fin_rows:integer|nil, fin_cols:integer|nil
 function Targets:iter_char_pos(start, stop, rev)
-    return iter_stat_pos(self, start, stop, rev, true, "c")
+    return iter_char_pos(self, start, stop, rev, true)
 end
 
 ---@param self farsight.targets.Targets
@@ -901,15 +825,19 @@ end
 ---@param rev? boolean
 ---@param stop_on_keep? boolean
 ---@param fin boolean
----@param stat ""|"c"|"sl"|"fl"|"bl"|"sv"|"fv"|"bv"
 ---@param predicate fun(start_row: integer): boolean
-local function filter_stat_rows(self, start, stop, rev, stop_on_keep, fin, stat, predicate)
+local function filter_no_stat_rows(self, start, stop, rev, stop_on_keep, fin, predicate)
     local positions = self.positions
-    local rows = positions:get_rows(fin)
-    local pos_idxs = get_stat_pos_idxs(self, stat)
-
+    local srs, scs, frs, fcs = positions:get_both_positions()
+    local rows = fin and frs or srs
+    local hs, hf = positions:get_both_hashed()
+    local stats, stat_idxs = positions:get_stat_info()
     local len = positions:get_len()
-    local i, limit, iter = pos_to_stat_iters(start, stop, rev, len, positions, stat)
+
+    local no_stats = self.no_stats
+    local pos_idxs = no_stats:get_pos_idxs()
+
+    local i, limit, iter = pos_to_stat_iters(start, stop, rev, len, positions, "")
     if not (i > 0 and limit > 0 and iter ~= 0) then
         return
     end
@@ -923,7 +851,8 @@ local function filter_stat_rows(self, start, stop, rev, stop_on_keep, fin, stat,
         local row = rows[pos_idx]
 
         if not predicate(row) then
-            self:rm_target(pos_idx)
+            no_stats_del_at(i, pos_idxs)
+            positions_del_at(positions, pos_idx, srs, scs, frs, fcs, hs, hf, stats, stat_idxs)
             if rev then
                 i = i + iter
             end
@@ -944,7 +873,7 @@ end
 ---@param stop_on_keep? boolean
 ---@param predicate fun(start_row: integer): boolean
 function Targets:filter_no_stat_start_rows(start, stop, rev, stop_on_keep, predicate)
-    filter_stat_rows(self, start, stop, rev, stop_on_keep, false, "", predicate)
+    filter_no_stat_rows(self, start, stop, rev, stop_on_keep, false, predicate)
 end
 
 ---@param self farsight.targets.Targets
@@ -956,8 +885,12 @@ end
 ---@param predicate fun(start_row: integer, start_col: integer, fin_row: integer, fin_col: integer): boolean
 local function filter_stat_both_pos(self, start, stop, rev, stop_on_keep, stat, predicate)
     local positions = self.positions
-    local start_rows, start_cols, fin_rows, fin_cols = positions:get_both_positions()
-    local pos_idxs = get_stat_pos_idxs(self, stat)
+    local srs, scs, frs, fcs = positions:get_both_positions()
+    local hs, hf = positions:get_both_hashed()
+    local stats, stat_idxs = positions:get_stat_info()
+
+    local no_stats = self.no_stats
+    local pos_idxs = no_stats:get_pos_idxs()
 
     local len = positions:get_len()
     local i, limit, iter = pos_to_stat_iters(start, stop, rev, len, positions, stat)
@@ -971,13 +904,14 @@ local function filter_stat_both_pos(self, start, stop, rev, stop_on_keep, stat, 
         end
 
         local pos_idx = pos_idxs[i]
-        local start_row = start_rows[pos_idx]
-        local start_col = start_cols[pos_idx]
-        local fin_row = fin_rows[pos_idx]
-        local fin_col = fin_cols[pos_idx]
+        local start_row = srs[pos_idx]
+        local start_col = scs[pos_idx]
+        local fin_row = frs[pos_idx]
+        local fin_col = fcs[pos_idx]
 
         if not predicate(start_row, start_col, fin_row, fin_col) then
-            self:rm_target(pos_idx)
+            no_stats_del_at(i, pos_idxs)
+            positions_del_at(positions, pos_idx, srs, scs, frs, fcs, hs, hf, stats, stat_idxs)
             if rev then
                 i = i + iter
             end
@@ -1003,9 +937,8 @@ end
 ---@param stop? integer
 ---@param rev? boolean
 ---@param mapper fun(start_row: integer, start_col: integer): integer, integer
----@param stat ""|"c"|"sl"|"fl"|"bl"|"sv"|"fv"|"bv"
 ---@param fin boolean
-local function map_stat_pos(self, start, stop, rev, mapper, stat, fin)
+local function map_no_stat_pos(self, start, stop, rev, mapper, fin)
     local positions = self.positions
     local len = positions:get_len()
     local i, limit, iter = pos_to_stat_iters(start, stop, rev, len, positions, "")
@@ -1014,7 +947,7 @@ local function map_stat_pos(self, start, stop, rev, mapper, stat, fin)
     end
 
     local rows, cols = positions:get_positions(fin)
-    local pos_idxs, _ = get_stat_pos_idxs(self, stat)
+    local pos_idxs = self.no_stats:get_pos_idxs()
 
     while true do
         if (iter > 0 and i > limit) or (iter < 0 and i < limit) then
@@ -1032,7 +965,7 @@ end
 ---@param rev? boolean
 ---@param mapper fun(start_row: integer, start_col: integer): integer, integer
 function Targets:map_no_stat_start_pos(start, stop, rev, mapper)
-    map_stat_pos(self, start, stop, rev, mapper, "", false)
+    map_no_stat_pos(self, start, stop, rev, mapper, false)
 end
 
 ---@param start? integer
@@ -1040,7 +973,7 @@ end
 ---@param rev? boolean
 ---@param mapper fun(start_row: integer, start_col: integer): integer, integer
 function Targets:map_no_stat_fin_pos(start, stop, rev, mapper)
-    map_stat_pos(self, start, stop, rev, mapper, "", true)
+    map_no_stat_pos(self, start, stop, rev, mapper, true)
 end
 
 ---@param self farsight.targets.Targets
@@ -1049,7 +982,7 @@ end
 ---@param rev? boolean
 ---@param stat ""|"c"|"sl"|"fl"|"bl"|"sv"|"fv"|"bv"
 ---@param mapper fun(start_row: integer, start_col: integer, fin_row: integer, fin_col: integer): integer, integer, integer, integer
-local function map_stat_both_pos(self, start, stop, rev, stat, mapper)
+local function map_no_stat_both_pos(self, start, stop, rev, stat, mapper)
     local positions = self.positions
     local len = positions:get_len()
     local i, limit, iter = pos_to_stat_iters(start, stop, rev, len, positions, stat)
@@ -1059,7 +992,7 @@ local function map_stat_both_pos(self, start, stop, rev, stat, mapper)
 
     local start_rows, start_cols = positions:get_positions(false)
     local fin_rows, fin_cols = positions:get_positions(true)
-    local pos_idxs, _ = get_stat_pos_idxs(self, stat)
+    local pos_idxs = self.no_stats:get_pos_idxs()
 
     while true do
         if (iter > 0 and i > limit) or (iter < 0 and i < limit) then
@@ -1082,7 +1015,7 @@ end
 ---@param rev? boolean
 ---@param mapper fun(start_row: integer, start_col: integer, fin_row: integer, fin_col: integer): integer, integer, integer, integer
 function Targets:map_no_stat_both_pos(start, stop, rev, mapper)
-    map_stat_both_pos(self, start, stop, rev, "", mapper)
+    map_no_stat_both_pos(self, start, stop, rev, "", mapper)
 end
 
 ---@param self farsight.targets.Targets
@@ -1103,12 +1036,13 @@ local function map_no_stat_to_labels(self, start, stop, count, fin)
     local no_stats = self.no_stats
     local pos_idxs = no_stats:get_pos_idxs()
     local labels_tbl = fin and self.fin_labels or self.start_labels
+    local labels = labels_tbl:get_labels()
     local stat = fin and "fl" or "sl"
 
     while i >= limit do
         local pos_idx = pos_idxs[i]
         no_stats_del_at(i, pos_idxs)
-        local label_idx = labels_tbl:insert_pos_idx(pos_idx, {})
+        local label_idx = labels_insert_pos_idx(pos_idx, pos_idxs, {}, labels)
         positions:set_stat(pos_idx, stat, label_idx)
 
         i = i + iter
@@ -1149,15 +1083,22 @@ local function map_stat_to_both_labels(self, start, stop, count, stat)
 
     count = count or len
     count = math.min(count, len)
-    local pos_idxs = get_stat_pos_idxs(self, stat)
+    local start_labels_tbl = self.start_labels
+    local fin_labels_tbl = self.fin_labels
+    local start_labels = start_labels_tbl:get_labels()
+    local fin_labels = fin_labels_tbl:get_labels()
+    local start_pos_idxs = start_labels_tbl:get_pos_idxs()
+    local fin_pos_idxs = fin_labels_tbl:get_pos_idxs()
 
     while true do
         if (iter > 0 and i > limit) or (iter < 0 and i < limit) then
             break
         end
 
-        local pos_idx = pos_idxs[i]
-        self:set_stat_both_labels(pos_idx, {}, {})
+        local start_pos_idx = start_pos_idxs[i]
+        local fin_pos_idx = fin_pos_idxs[i]
+        labels_insert_pos_idx(start_pos_idx, start_pos_idxs, {}, start_labels)
+        labels_insert_pos_idx(fin_pos_idx, fin_pos_idxs, {}, fin_labels)
 
         i = i + iter
         count = count - 1
@@ -1194,13 +1135,19 @@ local function map_vtext_from_labels(self, start, stop, fin, mapper)
         return
     end
 
-    local set_stat = fin and self.set_stat_fin_vtext or self.set_stat_start_vtext
+    local vtexts_tbl = fin and self.fin_vtexts or self.start_vtexts
+    local vtexts = vtexts_tbl:get_vtexts()
+    local vtext_pos_idxs = vtexts_tbl:get_pos_idxs()
+
     local labels_tbl = fin and self.fin_labels or self.start_labels
-    local pos_idxs = labels_tbl:get_pos_idxs()
     local labels = labels_tbl:get_labels()
+    local label_pos_idxs = labels_tbl:get_pos_idxs()
 
     while i >= limit do
-        set_stat(self, pos_idxs[i], mapper(labels[i]))
+        local label_pos_idx = label_pos_idxs[i]
+        local vtext = mapper(labels[i])
+        local vtext_idx = vtexts_insert_pos_idx(label_pos_idx, vtext_pos_idxs, vtext, vtexts)
+        positions:set_stat(label_pos_idx, stat, vtext_idx)
         i = i + iter
     end
 end
@@ -1235,31 +1182,40 @@ local function map_vtexts_from_labels_cmp_next(self, start, stop, fin, next_fin,
         return
     end
 
-    local set_stat = fin and self.set_stat_fin_vtext or self.set_stat_start_vtext
+    local vtexts_tbl = fin and self.fin_vtexts or self.start_vtexts
+    local vtexts = vtexts_tbl:get_vtexts()
+    local vtext_pos_idxs = vtexts_tbl:get_pos_idxs()
+
     local labels_tbl = fin and self.fin_labels or self.start_labels
     local labels = labels_tbl:get_labels()
-    local pos_idxs = labels_tbl:get_pos_idxs()
+    local label_pos_idxs = labels_tbl:get_pos_idxs()
 
     local rows, cols = positions:get_positions(fin)
     local next_rows, next_cols = positions:get_positions(next_fin)
 
     local most_labels = limit - 1
     while i <= most_labels do
-        local pos_idx = pos_idxs[i]
-        local row = rows[pos_idx]
-        local col = cols[pos_idx]
+        local label_pos_idx = label_pos_idxs[i]
+        local row = rows[label_pos_idx]
+        local col = cols[label_pos_idx]
 
-        local next_pos_idx = pos_idxs[i + 1]
+        local next_pos_idx = label_pos_idxs[i + 1]
         local next_row = next_rows[next_pos_idx]
         local next_col = next_cols[next_pos_idx]
 
         local available = col_distance(row, col, next_row, next_col)
-        set_stat(self, pos_idx, mapper(labels[i], available))
+
+        local vtext = mapper(labels[i], available)
+        local vtext_idx = vtexts_insert_pos_idx(label_pos_idx, vtext_pos_idxs, vtext, vtexts)
+        positions:set_stat(label_pos_idx, stat, vtext_idx)
 
         i = i + iter
     end
 
-    set_stat(self, pos_idxs[i], mapper(labels[i], vimv.maxcol))
+    local label_pos_idx = label_pos_idxs[i]
+    local vtext = mapper(labels[i], vimv.maxcol)
+    local vtext_idx = vtexts_insert_pos_idx(label_pos_idx, vtext_pos_idxs, vtext, vtexts)
+    positions:set_stat(label_pos_idx, stat, vtext_idx)
 end
 -- TODO: This needs to set the vtexts first, then go through again and remove the label stat data.
 -- Or... does it actually? Because static jumps re-use the label data.
@@ -1303,35 +1259,39 @@ function Targets:map_start_vtexts_from_labels_cmp_fin(start, stop, mapper)
         return
     end
 
-    local set_stat = self.set_stat_start_vtext
+    local vtexts_tbl = self.start_vtexts
+    local vtexts = vtexts_tbl:get_vtexts()
+    local vtext_pos_idxs = vtexts_tbl:get_pos_idxs()
+
     local labels_tbl = self.start_labels
     local labels = labels_tbl:get_labels()
-    local pos_idxs = labels_tbl:get_pos_idxs()
+    local label_pos_idxs = labels_tbl:get_pos_idxs()
 
     local rows, cols = positions:get_positions(false)
     local next_rows, next_cols = positions:get_positions(true)
 
     while i <= limit do
-        local pos_idx = pos_idxs[i]
-        local row = rows[pos_idx]
-        local col = cols[pos_idx]
-        local next_row = next_rows[pos_idx]
-        local next_col = next_cols[pos_idx]
+        local label_pos_idx = label_pos_idxs[i]
+        local row = rows[label_pos_idx]
+        local col = cols[label_pos_idx]
+        local next_row = next_rows[label_pos_idx]
+        local next_col = next_cols[label_pos_idx]
 
         local available = col_distance(row, col, next_row, next_col)
-        set_stat(self, pos_idx, mapper(labels[i], available))
+
+        local vtext = mapper(labels[i], available)
+        local vtext_idx = vtexts_insert_pos_idx(label_pos_idx, vtext_pos_idxs, vtext, vtexts)
+        positions:set_stat(label_pos_idx, "sv", vtext_idx)
 
         i = i + iter
     end
 end
 
--- TODO: The "bv" stat is never set properly
-
 ---@param pos_idx integer
 ---@param char string
 function Targets:set_stat_char_hl(pos_idx, char)
     local positions = self.positions
-    local cur_stat, stat_idx = positions:get_stat_info(pos_idx)
+    local cur_stat, stat_idx = positions:get_stat_at(pos_idx)
     if cur_stat ~= "" then
         return
     end
@@ -1431,116 +1391,11 @@ end
 -- window into where the actual patterns reside.
 
 ---@param pos_idx integer
----@param start_label string[]
----@param fin_label string[]
-function Targets:set_stat_both_labels(pos_idx, start_label, fin_label)
-    local positions = self.positions
-    local pos_len = positions:get_len()
-    assert(1 <= pos_idx and pos_idx <= pos_len, "Cannot access an out of bounds target")
-
-    local stat = "bl"
-    local cur_stat, stat_idx = positions:get_stat_info(pos_idx)
-    local start_labels = self.start_labels
-    local fin_labels = self.fin_labels
-    if cur_stat == stat then
-        start_labels:update_label(stat_idx, start_label)
-        fin_labels:update_label(stat_idx, fin_label)
-        return
-    end
-
-    del_at_from_stat(self, cur_stat, stat_idx)
-    local start_label_idx = start_labels:insert_pos_idx(pos_idx, start_label)
-    local fin_label_idx = fin_labels:insert_pos_idx(pos_idx, fin_label)
-    assert(start_label_idx == fin_label_idx)
-    positions:set_stat(pos_idx, stat, start_label_idx)
-end
-
----@param pos_idx integer
----@param vtext string[]
-function Targets:set_stat_start_vtext(pos_idx, vtext)
-    local positions = self.positions
-    local pos_len = positions:get_len()
-    assert(1 <= pos_idx and pos_idx <= pos_len, "Cannot access an out of bounds target")
-
-    local stat = "sv"
-    local cur_stat, stat_idx = positions:get_stat_info(pos_idx)
-    local start_vtexts = self.start_vtexts
-    if cur_stat == stat then
-        start_vtexts:update_vtext(stat_idx, vtext)
-        return
-    end
-
-    del_at_from_stat(self, cur_stat, stat_idx)
-    local vtext_idx = start_vtexts:insert_pos_idx(pos_idx, vtext)
-    positions:set_stat(pos_idx, stat, vtext_idx)
-end
-
----@param pos_idx integer
----@param vtext string[]
-function Targets:set_stat_fin_vtext(pos_idx, vtext)
-    local positions = self.positions
-    local pos_len = positions:get_len()
-    assert(1 <= pos_idx and pos_idx <= pos_len, "Cannot access an out of bounds target")
-
-    local stat = "fv"
-    local cur_stat, stat_idx = positions:get_stat_info(pos_idx)
-    local fin_vtexts = self.fin_vtexts
-    if cur_stat == stat then
-        fin_vtexts:update_vtext(stat_idx, vtext)
-        return
-    end
-
-    del_at_from_stat(self, cur_stat, stat_idx)
-    local vtext_idx = fin_vtexts:insert_pos_idx(pos_idx, vtext)
-    positions:set_stat(pos_idx, stat, vtext_idx)
-end
-
----@param pos_idx integer
----@param start_vtext string[]
----@param fin_vtext string[]
-function Targets:set_stat_both_vtexts(pos_idx, start_vtext, fin_vtext)
-    local positions = self.positions
-    local pos_len = positions:get_len()
-    assert(1 <= pos_idx and pos_idx <= pos_len, "Cannot access an out of bounds target")
-
-    local stat = "bv"
-    local cur_stat, stat_idx = positions:get_stat_info(pos_idx)
-    local start_vtexts = self.start_vtexts
-    local fin_vtexts = self.fin_vtexts
-    if cur_stat == stat then
-        start_vtexts:update_vtext(stat_idx, start_vtext)
-        fin_vtexts:update_vtext(stat_idx, fin_vtext)
-        return
-    end
-
-    del_at_from_stat(self, cur_stat, stat_idx)
-    local start_vtext_idx = start_vtexts:insert_pos_idx(pos_idx, start_vtext)
-    local fin_vtext_idx = fin_vtexts:insert_pos_idx(pos_idx, fin_vtext)
-    assert(start_vtext_idx == fin_vtext_idx)
-    positions:set_stat(pos_idx, stat, start_vtext_idx)
-end
-
----@param pos_idx integer
 ---@param row integer
 ---@param col integer
 function Targets:set_fin_pos(pos_idx, row, col)
     self.positions:set_fin_pos(pos_idx, row, col)
 end
-
----Errors if an invalid index is provided.
----@param idx integer
----@return integer Targets remaining
-function Targets:rm_target(idx)
-    local positions = self.positions
-    local len_pos = positions:get_len()
-    assert(idx >= 1 and idx <= len_pos, "Cannot delete an out of bounds target")
-
-    del_at_from_stat(self, positions:get_stat_info(idx))
-    positions:del_at(idx)
-    return positions:get_len()
-end
--- MAYBE: Could add a conditional stat filter, but that adds more branching logic.
--- PERF: Is this run enough for the assertion to be a problem?
 
 ---@param size integer
 ---@return farsight.targets.Targets

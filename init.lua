@@ -3,6 +3,7 @@ require("mjm")
 -- TODO: https://github.com/ribru17/ts_query_ls (and download build that disables built-in linter)
 -- TODO: https://github.com/neovim/neovim/pull/37276 - Might influence my comment code as well as
 -- rancher.
+-- TODO: https://github.com/neovim/neovim/pull/27223 - Lots of places I could use this.
 
 -- MID: Would prefer that the jumplist not inherit bufs from other sessions. I'm not necessarily
 -- against just starting it fresh each time

@@ -17,13 +17,13 @@ return {
         -- },
     },
     init = function()
-        vim.keymap.set({ "n", "o" }, "s", function()
+        vim.keymap.set({ "n", "x", "o" }, "s", function()
             require("flash").jump({
                 search = { forward = true, wrap = false, multi_window = false },
             })
         end)
 
-        vim.keymap.set({ "n", "o" }, "S", function()
+        vim.keymap.set({ "n", "x", "o" }, "S", function()
             require("flash").jump({
                 search = { forward = false, wrap = false, multi_window = false },
             })

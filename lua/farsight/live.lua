@@ -106,6 +106,8 @@ local function check_chars_after(win_targets, cache, opts)
 
     return codepoint_tokens
 end
+-- TODO: Even if you handle the zero-length issue below, does this properly handle if the pos
+-- is on the very last character of the line?
 -- TODO: The string.byte or 0 check reveals a more fundamental problem: Zero length lines should
 -- either be handled in a principled way or excluded from the targets entirely. I can check, but
 -- I don't think you can highlight zero length lines. And I don't need to label them that badly.
@@ -152,6 +154,9 @@ local function handle_input(win, buf, cache, cursor, opts)
     end
 
     local win_targets = { [win] = targets }
+    -- NOTE: Keep prioritizing unique chars because it frees labels. You can have a situation where
+    -- a target doesn't have a unique char, and so if a label is used on a unique char, now the
+    -- target can't be labeled.
     local filtered_tokens = check_chars_after(win_targets, cache, opts)
     local labeler = require("farsight._labeler")
     local filled_labels = labeler.fill_labels({ win }, win_targets, filtered_tokens, {

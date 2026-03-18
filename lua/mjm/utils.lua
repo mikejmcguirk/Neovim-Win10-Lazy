@@ -6,6 +6,7 @@ mjm.util = {}
 local api = vim.api
 local fn = vim.fn
 local uv = vim.uv
+local vimv = vim.v
 
 ---@class MjmUtils
 local M = {}
@@ -214,32 +215,35 @@ end
 ---@param indent integer
 ---@return nil
 function M.set_buf_space_indent(buf, indent)
-    vim.api.nvim_set_option_value("ts", indent, { buf = buf })
-    vim.api.nvim_set_option_value("sts", indent, { buf = buf })
-    vim.api.nvim_set_option_value("sw", indent, { buf = buf })
+    api.nvim_set_option_value("ts", indent, { buf = buf })
+    api.nvim_set_option_value("sts", indent, { buf = buf })
+    api.nvim_set_option_value("sw", indent, { buf = buf })
 end
 
----@param line_num number -- One indexed
----@return integer|nil
-M.get_indent = function(line_num)
+---@param row number -- One indexed
+---@return integer
+M.get_indent = function(row)
     -- Captures nvim_treesitter#indent() if enabled
-    if vim.bo.indentexpr == "" then
-        local prevnonblank = fn.prevnonblank(line_num - 1) ---@type integer
-        local prevnonblank_indent = fn.indent(prevnonblank) ---@type integer
-        return prevnonblank_indent <= 0 and 0 or prevnonblank_indent
+    local indentexpr = api.nvim_get_option_value("indentexpr", { buf = 0 })
+    if indentexpr == "" then
+        return math.max(fn.indent(fn.prevnonblank(row)), 0)
     end
 
-    -- Most Nvim runtime indent expressions do not take an argument
-    -- A few, however, take v:lnum
-    -- v:lnum is not updated when nvim_exec2 is called, so it must be updated here
-    -- A couple of the runtime expressions take '.' as an argument
-    -- This is already updated before nvim_exec2 is called
-    -- Other indentexpr arguments are not guaranteed to be handled properly
-    vim.v.lnum = line_num
-    local indentexpr_out = api.nvim_eval(vim.bo.indentexpr) ---@type any
-    local indent = tonumber(indentexpr_out) ---@type number?
-    return indent >= 0 and indent or nil
+    -- Update v:lnum for indentexprs that use it
+    -- The "." arg works automatically for those indentexprs
+    -- Other indentexpr args are not guaranteed to be supported
+    local old_lnum = vimv.lnum
+    vimv.lnum = row
+    -- Cast for safety, since I'm not sure what the various vimscript indentexprs return.
+    local indent = tonumber(api.nvim_eval(indentexpr)) ---@type number?
+    vimv.lnum = old_lnum
+    return type(indent) == "number" and math.max(indent, 0) or 0
 end
+-- MID: This function is not clear about what scope it operates in. You could add a buf param and
+-- get the indentexpr for that buf, but I think you would then need to buf_call the indentexpr
+-- for it to work correctly (same with prevnonblank()/indent()).
+-- MAYBE: If this is used in a high-perf context, replace vim.fn with vim.call and consider
+-- caching indentexpr. Also look into if casting the eval result is really necessary.
 
 ---@param buf number
 ---@param start_idx number

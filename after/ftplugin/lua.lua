@@ -1,3 +1,5 @@
+local set = vim.keymap.set
+
 ---@param annotation string
 ---@return nil
 local function add_annotation(annotation)
@@ -24,51 +26,51 @@ local function add_annotation(annotation)
     vim.api.nvim_cmd({ cmd = "startinsert", bang = true }, {})
 end
 
-vim.keymap.set("n", "<leader>-a", function()
+set("n", "<leader>-a", function()
     add_annotation("[[@as")
 end, { buffer = 0 })
 
-vim.keymap.set("n", "<leader>-c", function()
+set("n", "<leader>-c", function()
     add_annotation("@class")
 end, { buffer = 0 })
 
-vim.keymap.set("n", "<leader>-d", function()
+set("n", "<leader>-d", function()
     add_annotation("@diagnostic")
 end, { buffer = 0 })
 
-vim.keymap.set("n", "<leader>-e", function()
+set("n", "<leader>-e", function()
     add_annotation("@export")
 end, { buffer = 0 })
 
-vim.keymap.set("n", "<leader>-f", function()
+set("n", "<leader>-f", function()
     add_annotation("@field")
 end, { buffer = 0 })
 
-vim.keymap.set("n", "<leader>-i", function()
+set("n", "<leader>-i", function()
     add_annotation("@private")
 end, { buffer = 0 })
 
-vim.keymap.set("n", "<leader>-l", function()
+set("n", "<leader>-l", function()
     add_annotation("@alias")
 end, { buffer = 0 })
 
-vim.keymap.set("n", "<leader>-m", function()
+set("n", "<leader>-m", function()
     add_annotation("@mod")
 end, { buffer = 0 })
 
-vim.keymap.set("n", "<leader>-p", function()
+set("n", "<leader>-p", function()
     add_annotation("@param")
 end, { buffer = 0 })
 
-vim.keymap.set("n", "<leader>-r", function()
+set("n", "<leader>-r", function()
     add_annotation("@return")
 end, { buffer = 0 })
 
-vim.keymap.set("n", "<leader>-t", function()
+set("n", "<leader>-t", function()
     add_annotation("@type")
 end, { buffer = 0 })
 
-vim.keymap.set("n", "<leader>--", function()
+set("n", "<leader>--", function()
     add_annotation("")
 end, { buffer = 0 })
 

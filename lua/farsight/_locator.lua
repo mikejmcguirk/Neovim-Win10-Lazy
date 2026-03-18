@@ -85,6 +85,7 @@ local function filter_folds(targets, ctx)
         end
     end)
 end
+-- TODO: Are we sure it's not faster to collect the folds then run the filter?
 
 ---Edits targets in place
 ---@param targets farsight.targets.Targets 1 indexed, inclusive
@@ -323,6 +324,12 @@ end
 ---@param ctx farsight.locator.SearchCtx
 function M.search(win, pattern, cursor, cache, ctx)
     -- TODO: Validate pattern. Note that escaped \\ is fine
+    -- TODO: Hard erroring at \\c does not work
+    -- - Could create awkward errors during a live search
+    -- - The user might be trying to search for the literal charcters "\c"
+    --   - If "\c" is found, need to see if "\" is escaped. Requires additional backtracking to
+    --   make sure you don't have "\\\c"
+    -- - If "\c" is found, it should be removed
     if string.find(pattern, "\\c", 1, true) then
         return false, "Pattern cannot contain \\c", "ErrorMsg"
     end
@@ -356,6 +363,8 @@ end
 
 return M
 
+-- TODO: This along with a reduced version of targets should be outlined into nvim-tools. Having
+-- a consistent interface for searching would actually be useful.
 -- TODO: Want to handle boilerplate as much in _targets as possible. Trimming with overlap is
 -- a good example
 

@@ -296,6 +296,8 @@ api.nvim_set_option_value("stl", stl_str, { scope = "global" })
 -- Is this a viable replacement for my bespoke code? It doesn't look like it cachces results.
 -- Perhaps that could be PR'd in.
 
+-- MID: Show which treesitter parser(s) are running.
+
 -- LOW: Build a character index component for spec-ops debugging
 -- LOW: Re-check if the virtual column component is usable for spec-ops debugging or if I need to
 -- build my own. That might be tough though because you have to binary search each cursor movement

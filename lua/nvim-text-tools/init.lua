@@ -103,6 +103,54 @@ function M.toggle_checkbox()
 
     api.nvim_buf_set_lines(0, row - 1, row, true, { new_line })
 end
+-- MID: Would be neat if toggling checkboxes controlled textboxes at higher nesting levels.
+-- Example:
+-- - [ ] foo
+--   - [x] bar
+--   - [ ] baz
+--   - [x] buzz
+-- - Checking "baz" would also check "foo"
+-- Example:
+-- - [x] foo
+--   - [x] bar
+--   - [x] baz
+--   - [x] buzz
+-- Unchecking bar, baz, or buzz would also uncheck foo
+
+--- Remove the checkbox from a list item (checked or unchecked)
+--- while preserving the original list marker (or the added `-` if the
+--- line was turned into a checkbox from plain text).
+---@return nil
+function M.remove_checkbox()
+    if is_in_node_type({ "fenced_code_block", "minus_metadata" }) then
+        return
+    end
+
+    local row = fn.line(".")
+    local line = api.nvim_buf_get_lines(0, row - 1, row, false)[1]
+
+    if not is_checkbox(line) then
+        return
+    end
+
+    local new_line = (function()
+        -- Unordered list: - [ ] foo, * [x] foo, + [ ] foo
+        local unordered_pat = "^(%s*)([-+*])%s+%[.%]%s*(.*)"
+        if string.match(line, unordered_pat) then
+            return string.gsub(line, unordered_pat, "%1%2 %3")
+        end
+
+        -- Ordered list: 1. [x] foo, 2) [ ] foo
+        local ordered_pat = "^(%s*)(%d+[%.%)])%s+%[.%]%s*(.*)"
+        if string.match(line, ordered_pat) then
+            return string.gsub(line, ordered_pat, "%1%2 %3")
+        end
+
+        return line
+    end)()
+
+    api.nvim_buf_set_lines(0, row - 1, row, true, { new_line })
+end
 
 return M
 
