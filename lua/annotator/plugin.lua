@@ -67,24 +67,9 @@ if config.set_default_maps == true then
     api.nvim_set_keymap("n", "]k", "<Plug>(annotator-jump-fwd)", { noremap = true })
 end
 
--- Concepts:
--- - Strict vs. relaxed search. Strict search cares about exact semantics and tolerates false
--- negatives. Relaxed search only cares if the annotation is in a comment, and tolerates false
--- positives
--- - The user should be able to input annotations without the colon, and the plugin should add the
--- colon programmatically.
---
 -----------
 -- TODO: --
 -----------
---
--- Beforehand:
---
--- - Finish farsight, then fix rancher and lampshade.
--- - Research folke's todo-comments.
---   - Handle early because I want to design around the complete scope of the problem.
---   - What other similar plugins are out there?
--- Study https://github.com/spywhere/vscode-mark-jump
 --
 -- Strict detection (loaded buffer):
 -- - Match against cms
