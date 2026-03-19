@@ -53,7 +53,7 @@ setopt("dict", dict, {})
 setopt("spell", false, {})
 setopt("spelllang", "en_us", {})
 
-local new_shm = getopt("shm", {}) .. "asIW" ---@type string
+local new_shm = getopt("shm", {}) .. "asW" ---@type string
 setopt("shm", new_shm, { scope = "global" })
 setopt("report", 9999, { scope = "global" })
 

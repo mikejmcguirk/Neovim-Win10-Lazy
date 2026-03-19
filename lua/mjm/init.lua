@@ -38,6 +38,9 @@ function mjm.opt.str_append(opt, new, scope)
 
     api.nvim_set_option_value(opt, old .. new, scope)
 end
+-- MID: "new" should be a table. Each new opt should be checked against the old one, and added
+-- to a "new_opts" table. The new_opts table + the old opts should be table.concated, then
+-- nvim_set_option_value can be run
 
 ---@param opt string
 ---@param out string
@@ -46,6 +49,8 @@ function mjm.opt.str_rm(opt, out, scope)
     local old = api.nvim_get_option_value(opt, scope) ---@type string
     api.nvim_set_option_value(opt, string.gsub(old, out, ""), scope)
 end
+-- MID: Handle multiple "out" args as a table. Unsure if running multiple gsubs is a good idea.
+-- Maybe break out options into a table first.
 
 set({ "n", "x" }, "<Space>", "<Nop>")
 set({ "n", "x" }, "\\", "<Nop>")
