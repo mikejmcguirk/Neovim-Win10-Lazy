@@ -297,6 +297,7 @@ api.nvim_set_option_value("stl", stl_str, { scope = "global" })
 -- Perhaps that could be PR'd in.
 
 -- MID: Show which treesitter parser(s) are running.
+-- MID: https://github.com/neovim/neovim/pull/35428
 
 -- LOW: Build a character index component for spec-ops debugging
 -- LOW: Re-check if the virtual column component is usable for spec-ops debugging or if I need to

@@ -15,34 +15,51 @@
     - Are there other similar plugins?
   - [ ] Research https://github.com/spywhere/vscode-mark-jump
 
-- [ ] Init Module
-  - [ ] Options
-    * [ ] If `cms` cannot be found for a buffer, optionally treat MARK as a relaxed annotation
+- [ ] Primitives
+  - [ ] Get the correct nested TS node at a location
+    - [ ] Look at vim._comment
+    - [ ] Look at the new treesitter incremental selection
+    - [ ] Look at todo-comments
+    - [ ] Create a generalized interface
+      - [ ] Add this to nvim-tools
+
+  - [ ] Check if a nested TS node at a particular location is a comment
+  - [ ] Check if a line is a mark annotation
+
+  - [ ] fzf-lua
+    - [ ] What grepprg is being used?
+    - [ ] What is the output format?
+    - [ ] How to use list formatter on items
+
+- [ ] Features
+  - [ ] MARK Navigation
+    - [ ] Require a commentstring
+  - [ ] Same buf MARK search
+    - [ ] Only pull results from filetypes with a commentstring
+  - [ ] CWD MARK search
+  - [ ] Same buf TODO search
+  - [ ] CWD TODO search
 
 - [ ] Integrations
   - [ ] Fzf-lua grep strict cur buf
   - [ ] Fzf-lua grep strict cwd
-  - [ ] Telescope grep strict cur buf
-  - [ ] Telescope grep strict cwd
-  - [ ] snacks grep strict cur buf
-  - [ ] snacks grep strict cwd
-  - [ ] rancher grep strict cur buf
-  - [ ] rancher grep strict cwd
   - [ ] Fzf-lua grep relaxed cur buf
   - [ ] Fzf-lua grep relaxed cwd
-  - [ ] Telescope grep relaxed cur buf
-  - [ ] Telescope grep relaxed cwd
-  - [ ] snacks grep relaxed cur buf
-  - [ ] snacks grep relaxed cwd
+  - [ ] rancher grep strict cur buf
+  - [ ] rancher grep strict cwd
   - [ ] rancher grep relaxed cur buf
   - [ ] rancher grep relaxed cwd
 
 - [ ] Future actions
-  - I don't want this to linger as an "I'll get to this when I feel inspired" type thing
-  - [ ] Make another push at seeing if there's a featureful plugin that can be built from this
-    - One path forward might be to go all-in on the Quickfix integration. todo-comments, AFAICT, just sends the TODO items there and that's it
-      * This would, IMO, also be a better way to do highlighting, even though it does add an extra step
-      * Caveat: Any Quickfix highlighting thing should probably just be a part of rancher. Perhaps this plugin could have an integration where it sends canned highlight settings of some kind, but that in and of itself, IMO, is not a compelling enough reason to use this over TODO comments
+  - This should not linger as an internal plugin
+  - Plugin ideas:
+    * More quickfix integration? AFAICT, todo-comments only sends results there
+      + This would, IMO be a better way to do highlighting
+        + Though doing it like search highlighting is also fine
+        + Caveat: Quickfix highlighting is something that should be implemented in Rancher. So, effectively, you're turning this plugin into a basket of canned Rancher highlight settings
+  - Alternatives if a good plugin idea can't be figured out:
+    - Separate out TODO navigation entirely and focus on the MARK aspect
+    - Add some interfaces and Plug maps to my code
 
 ## DOCUMENT:
 
@@ -71,6 +88,10 @@
   - This would fit the recommendation from the Vim documentation
   - [ ] Check if this formatting is to address a complexity I'm not aware of
     - For example, not misinterpreting double-quoted strings in command contexts
+
+## MAYBE:
+
+- [ ] If `cms` cannot be found for a buffer, treat MARK as a relaxed annotation
 
 ## NON:
 
