@@ -8,6 +8,9 @@ set("n", "gr", "<nop>")
 if #fn.maparg("gO", "n") > 0 then
     vim.keymap.del("n", "gO")
 end
+-- MID: Don't love this because:
+-- - Say you type grx without manually remapping it, the "gr" will <nop> and nv_abbrev runs
+-- - This doesnn't deal with the problem of all LSP maps being unconditional
 
 local ok, fzflua = pcall(require, "fzf-lua") ---@type boolean, table
 ---@type function
@@ -154,6 +157,7 @@ local function set_lsp_maps(ev)
     -- textDocument/codeLens --
     if client:supports_method("textDocument/codeLens") then
         vim.lsp.codelens.enable()
+        set("n", "grx", vim.lsp.codelens.run, { buffer = buf })
     end
 
     -- textDocument/declaration --
@@ -279,7 +283,7 @@ vim.api.nvim_create_autocmd("LspDetach", {
     group = lsp_group,
     callback = function(ev)
         for _, client in ipairs(lsp.get_clients({ bufnr = ev.buf }) or {}) do
-            if vim.tbl_isempty(vim.tbl_keys(client.attached_buffers)) then
+            if not next(client.attached_buffers) then
                 require("mjm.utils").do_when_idle(function()
                     client:stop()
                 end)

@@ -1,84 +1,48 @@
+## OBJECTIVES
+
+- For now, this will be an "internal plugin" focused on structured MARK handling and canned searches for TODO items.
+  * The "strict" vs. "relaxed" search handling feels too goofy for a release
+  * I don't know what to do with TODO comments that isn't just a less featureful version of folke's plugin
+
 ## TODO:
 
 - [ ] Beforehand
   - [ ] Finish farsight, then fix rancher and lampshade
+  - [ ] Rancher improvements
+    - [ ] Address the grep API issues found when creating that integration
   - [ ] Research todo-comments
     - To help better understand the full scope of the problem
     - Are there other similar plugins?
   - [ ] Research https://github.com/spywhere/vscode-mark-jump
 
 - [ ] Init Module
-  - [ ] Module structure
-    - [ ] Research how other plugins handle config table merging and verification
-
-    - [ ] `require("annotator").config` should provide a publicly available table
-      - When metatable support is added to vim.g and vim.b variables, this will reduce the friction of transitioning
-      - For table options, the user should be able to directly extend them, rather than getting a copy of the option, extending it, then writing the new table back
-
-      - [ ] The config table should have a metatable that validates changes
-        - [ ] If an edit is made to a specific config field, it should be validated
-          - [ ] This needs to handle overwriting values/refs as well as extending tables
-        - [ ] If the arg to config is a new table, it should be merged into the current config with validation
-
-      - [ ] `checkhealth` should be able to verify that the config table is in a valid state
-
-    - [ ] `default_config` should be stored separately and privately
-      - [ ] `get_default_config` should be available to get a deep copy of it
-      - [ ] `reset_config` should be available to go back to defaults
-
-    - [ ] Then also have buf_config[buf], guarded by a metatable
-      - Each buf_config key overwrites the default, including with tables
-      - If a buf_config table or key is not present, the global config is used
-      - When running functions, buf_config should be checked first
-
   - [ ] Options
     * [ ] If `cms` cannot be found for a buffer, optionally treat MARK as a relaxed annotation
-    * [ ] Set default maps?
-    * [ ] Relaxed annotations
-      * This is fine because, if the user wants to do something like swapping "PEFF" for "PERFORMANCE" it should be easily accessible.
-    * [ ] Strict annotations
-      * I'm less sure about this because this option should not be edited frivolously, but if you have an annotation you want to assign by filetype, you should be able to set the opt with an autocmd rather than having to remake the keymap
-    * [ ] Setup integrations
-      * I'm assuming you would need to check the integrations for stuff like grep settings. But if this ends up just being whether or not to make the Plug mappings, the option can be `setup_integration_plugs` or something
 
-  - [ ] All public APIs should be run through this module, so you can always do `require("annotator").foo()`
-    - [ ] All defaults should then use the public APIs, to avoid complexity when dealing with how direct calling private modules differs from using the public interfaces
+- [ ] Integrations
+  - [ ] Fzf-lua grep strict cur buf
+  - [ ] Fzf-lua grep strict cwd
+  - [ ] Telescope grep strict cur buf
+  - [ ] Telescope grep strict cwd
+  - [ ] snacks grep strict cur buf
+  - [ ] snacks grep strict cwd
+  - [ ] rancher grep strict cur buf
+  - [ ] rancher grep strict cwd
+  - [ ] Fzf-lua grep relaxed cur buf
+  - [ ] Fzf-lua grep relaxed cwd
+  - [ ] Telescope grep relaxed cur buf
+  - [ ] Telescope grep relaxed cwd
+  - [ ] snacks grep relaxed cur buf
+  - [ ] snacks grep relaxed cwd
+  - [ ] rancher grep relaxed cur buf
+  - [ ] rancher grep relaxed cwd
 
-- [ ] Plug mappings
-
-  - [ ] Assigned by default
-    - [ ] Navigate strict annotations `[k,]k`
-    - [ ] Navigate to first/last strict annotation `[K, ]K`
-
-  - [ ] Not assigned by default
-    - [ ] Navigate relaxed annotations
-    - [ ] Add borders
-    - [ ] Add MARK
-    - [ ] Add TODO
-    - [ ] Add PERF
-    - [ ] Look at todo-comments and others for any sensible plugs to add here
-
-  - [ ] Integrations (not assigned by default)
-    - [ ] Fzf-lua grep strict cur buf
-    - [ ] Fzf-lua grep strict cwd
-    - [ ] Telescope grep strict cur buf
-    - [ ] Telescope grep strict cwd
-    - [ ] snacks grep strict cur buf
-    - [ ] snacks grep strict cwd
-    - [ ] rancher grep strict cur buf
-    - [ ] rancher grep strict cwd
-    - [ ] Fzf-lua grep relaxed cur buf
-    - [ ] Fzf-lua grep relaxed cwd
-    - [ ] Telescope grep relaxed cur buf
-    - [ ] Telescope grep relaxed cwd
-    - [ ] snacks grep relaxed cur buf
-    - [ ] snacks grep relaxed cwd
-    - [ ] rancher grep relaxed cur buf
-    - [ ] rancher grep relaxed cwd
-
-- [ ] Polish
-  - [ ] Add `desc` values to Plug and default mappings
-  - [ ] Verify that the `require("annotator")` call in /plugin.lua does not require other files
+- [ ] Future actions
+  - I don't want this to linger as an "I'll get to this when I feel inspired" type thing
+  - [ ] Make another push at seeing if there's a featureful plugin that can be built from this
+    - One path forward might be to go all-in on the Quickfix integration. todo-comments, AFAICT, just sends the TODO items there and that's it
+      * This would, IMO, also be a better way to do highlighting, even though it does add an extra step
+      * Caveat: Any Quickfix highlighting thing should probably just be a part of rancher. Perhaps this plugin could have an integration where it sends canned highlight settings of some kind, but that in and of itself, IMO, is not a compelling enough reason to use this over TODO comments
 
 ## DOCUMENT:
 
@@ -92,6 +56,11 @@
 + [ ] For any annotations the user adds or deletes, they should be able to do so without the colon
 
 ## MID:
+
+- [ ] Rancher list highlighting:
+  - Rancher should provide a method so that, if the Quickfix list is open and a buf of an item in the list is visible, the Quickfix entries are highlighted
+  - [ ] This should be controllable at the individual list level, not just from the stack as a whole
+  - [ ] It should be possible to customize how the highlighting is done. So, for diagnostics, you might want to highlight the individual items based on diagnostic severity. Whereas, if you are looking at the results of a generic grep, you would use hl-search to highlight
 
 ## LOW:
 
