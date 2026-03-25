@@ -22,31 +22,6 @@ function M.get_input(prompt)
     end
 end
 
----@param cur_pos { [1]: integer, [2]: integer }
----@param opts? { win?: integer }
----@return nil
-function mjm.protected_set_cursor(cur_pos, opts)
-    opts = opts or {}
-    local win = opts.win or api.nvim_get_current_win() ---@type integer
-    local buf = api.nvim_win_get_buf(win) ---@type integer
-
-    -- LOW: I'm not sure why this guard is necessary. If the '"' mark doesn't exist, it should
-    -- return 1,0. Happens intermittently. Will see if this helps
-    local cursor_row = math.max(cur_pos[1], 1) ---@type integer
-    local line_count = api.nvim_buf_line_count(buf) ---@type integer
-    local row = math.min(cursor_row, line_count) ---@type integer
-
-    -- LOW: I had an issue where I jumped to a file from another directory, and then when I jumped
-    -- back it was saying it shouldn't get the length of setline. I tried to re-create it but
-    -- could not. I could add an or statement here to cover it up, but would like to figure out
-    -- why the issue's occuring. This was in combination with the BufWinEnter " mark autocmd
-    local set_line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1] ---@type string
-    local set_line_len_0 = math.max(#set_line - 1, 0) ---@type integer
-    local col = math.min(cur_pos[2], set_line_len_0) ---@type integer
-
-    api.nvim_win_set_cursor(win, { row, col })
-end
-
 -- Adapted from the source's "prepare_help_buffer" function
 
 ---@param buf integer
@@ -178,12 +153,12 @@ function M.open_buf(source, opts)
 
     if opts.cur_pos then
         if already_open then
-            api.nvim_buf_call(buf, function()
+            api.nvim_win_call(win, function()
                 api.nvim_cmd({ cmd = "normal", args = { "m'" }, bang = true }, {})
             end)
         end
 
-        mjm.protected_set_cursor(opts.cur_pos, { win = win })
+        mjm.win.protected_set_cursor(opts.cur_pos, { win = win })
     end
 
     if not opts.skip_zz then
@@ -199,18 +174,6 @@ function M.open_buf(source, opts)
     return true
 end
 
----@param bufnr? integer
----@return boolean
-function M.check_modifiable(bufnr)
-    if api.nvim_get_option_value("modifiable", { buf = bufnr or 0 }) then
-        return true
-    else
-        local err_msg = "E21: Cannot make changes, 'modifiable' is off" ---@type string
-        api.nvim_echo({ { err_msg } }, true, { err = true })
-        return false
-    end
-end
-
 ---@param buf integer
 ---@param indent integer
 ---@return nil
@@ -219,31 +182,6 @@ function M.set_buf_space_indent(buf, indent)
     api.nvim_set_option_value("sts", indent, { buf = buf })
     api.nvim_set_option_value("sw", indent, { buf = buf })
 end
-
----@param row number -- One indexed
----@return integer
-M.get_indent = function(row)
-    -- Captures nvim_treesitter#indent() if enabled
-    local indentexpr = api.nvim_get_option_value("indentexpr", { buf = 0 })
-    if indentexpr == "" then
-        return math.max(fn.indent(fn.prevnonblank(row)), 0)
-    end
-
-    -- Update v:lnum for indentexprs that use it
-    -- The "." arg works automatically for those indentexprs
-    -- Other indentexpr args are not guaranteed to be supported
-    local old_lnum = vimv.lnum
-    vimv.lnum = row
-    -- Cast for safety, since I'm not sure what the various vimscript indentexprs return.
-    local indent = tonumber(api.nvim_eval(indentexpr)) ---@type number?
-    vimv.lnum = old_lnum
-    return type(indent) == "number" and math.max(indent, 0) or 0
-end
--- MID: This function is not clear about what scope it operates in. You could add a buf param and
--- get the indentexpr for that buf, but I think you would then need to buf_call the indentexpr
--- for it to work correctly (same with prevnonblank()/indent()).
--- MAYBE: If this is used in a high-perf context, replace vim.fn with vim.call and consider
--- caching indentexpr. Also look into if casting the eval result is really necessary.
 
 ---@param buf number
 ---@param start_idx number
@@ -502,11 +440,10 @@ end
 
 ---@param old_bufname string
 ---@param new_bufname string
----@return nil
 function M.harpoon_mv_buf(old_bufname, new_bufname)
     local ok, harpoon = pcall(require, "harpoon")
     if (not ok) or not harpoon then
-        api.nvim_echo({ { "Unable to require harpoon", "ErrorMsg" } }, true, { err = true })
+        api.nvim_echo({ { "Unable to require harpoon", "ErrorMsg" } }, true, {})
     end
 
     local list = harpoon:list()
@@ -540,59 +477,6 @@ function M.harpoon_mv_buf(old_bufname, new_bufname)
 
     local extensions = require("harpoon.extensions")
     extensions.extensions:emit(extensions.event_names.REMOVE)
-end
-
----@param func function
----@return nil
-function M.do_when_idle(func)
-    vim.validate("func", func, "callable")
-
-    local idle_handle = vim.uv.new_idle() ---@type uv.uv_idle_t|nil
-    if not idle_handle then
-        func()
-        return
-    end
-
-    idle_handle:start(function()
-        vim.schedule(function()
-            func()
-        end)
-
-        idle_handle:stop()
-        idle_handle:close()
-    end)
-end
-
--- MID: The returns from this don't make any sense
--- Should be ok, buf pattern. ok means the win was closed, and return buf if possible
--- And then this naturally means you would return ok if it's the last win, since we hit an
--- expected result, allowing the function to be composed
-
----@param win integer
----@param force boolean
----@return integer|nil, boolean
-function M.pwin_close(win, force)
-    vim.validate("win", win, "number")
-    vim.validate("force", force, "boolean")
-
-    if not api.nvim_win_is_valid(win) then
-        return nil, false
-    end
-
-    local tabpages = api.nvim_list_tabpages() ---@type integer[]
-    local win_tabpage = api.nvim_win_get_tabpage(win) ---@type integer
-    local win_tabpage_wins = api.nvim_tabpage_list_wins(win_tabpage) ---@type integer[]
-    local buf = api.nvim_win_get_buf(win) ---@type integer
-
-    if #tabpages == 1 and #win_tabpage_wins == 1 then
-        return buf, true
-    end
-
-    local ok, _ = pcall(api.nvim_win_close, win, force) ---@type boolean, nil
-    if ok then
-        return buf, false
-    end
-    return nil, false
 end
 
 ---@return integer[]
@@ -654,6 +538,7 @@ function M.pbuf_rm(buf, force, wipeout, no_save, suppress_errs)
         if suppress_errs then
             return true, nil, nil, nil
         end
+
         return false, chunks, true, { err = true }
     end
 
@@ -661,6 +546,7 @@ function M.pbuf_rm(buf, force, wipeout, no_save, suppress_errs)
         if suppress_errs then
             return true, nil, nil, nil
         end
+
         local chunks = { { "Buf " .. " has no filename" } }
         return false, chunks, true, { err = true }
     end
@@ -700,41 +586,17 @@ function M.pbuf_rm(buf, force, wipeout, no_save, suppress_errs)
     return false, chunks, true, { err = true }
 end
 
----@param win integer
----@param force boolean
----@param wipeout boolean
----@return nil
-function M.pclose_and_rm(win, force, wipeout)
-    -- MID: What does always mean here?
-    local buf, always = M.pwin_close(win, force) ---@type integer|nil, boolean
-    if not buf then
-        return
-    end
-
-    M.do_when_idle(function()
-        if always or #vim.fn.win_findbuf(buf) == 0 then
-            local ok, chunks, msg, opts = M.pbuf_rm(buf, force, wipeout, false, true)
-            if ok then
-                return
-            end
-
-            api.nvim_echo(chunks or { { "Unknown error" } }, msg or false, opts or { err = true })
-        end
-    end)
-end
-
 ---@return Range4|nil
 function M.get_vregionpos4()
-    local mode = string.sub(api.nvim_get_mode().mode, 1, 1) ---@type string
+    local mode = string.sub(api.nvim_get_mode().mode, 1, 1)
     if not (mode == "v" or mode == "V" or mode == "\22") then
         return nil
     end
 
-    local cur = fn.getpos(".") ---@type [integer, integer, integer, integer]
-    local fin = fn.getpos("v") ---@type [integer, integer, integer, integer]
+    local cur = fn.getpos(".")
+    local fin = fn.getpos("v")
     local selection = api.nvim_get_option_value("selection", { scope = "global" }) ---@type string
-    local exclusive = selection == "exclusive" ---@type boolean
-    --- @type [ [integer, integer, integer, integer], [integer, integer, integer, integer] ][]
+    local exclusive = selection == "exclusive"
     local region = fn.getregionpos(cur, fin, { type = mode, exclusive = exclusive })
 
     return { region[1][1][2], region[1][1][3], region[#region][2][2], region[#region][2][3] }
@@ -749,15 +611,16 @@ function M.checked_mkdir_p(path, mode)
     vim.validate("path", path, "string")
     vim.validate("mode", mode, "number")
 
-    local resolved_path = vim.fs.normalize(vim.fs.abspath(path)) ---@type string
-    ---@type uv.fs_stat.result|nil, string|nil
+    local resolved_path = vim.fs.normalize(vim.fs.abspath(path))
     local stat, err, err_name = uv.fs_stat(resolved_path)
     if stat and stat.type == "directory" then
         return true, nil
     end
+
     if (not stat) and err_name ~= "ENOENT" then
         return false, err
     end
+
     if stat and stat.type ~= "directory" then
         return false, "Path exists, but is not a directory"
     end
@@ -766,6 +629,7 @@ function M.checked_mkdir_p(path, mode)
     if not parent then
         return false, "Cannot resolve target parent"
     end
+
     local ok_p, err_p = M.checked_mkdir_p(parent, mode) ---@type boolean, string?
     if not ok_p then
         return false, err_p
@@ -775,6 +639,7 @@ function M.checked_mkdir_p(path, mode)
     if ok_m then
         return true, nil
     end
+
     return false, err_m
 end
 

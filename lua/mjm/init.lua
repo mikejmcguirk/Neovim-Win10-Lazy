@@ -1,7 +1,7 @@
 local api = vim.api
 local set = vim.keymap.set
 
-_G.mjm = {}
+require("mjm.mjm")
 
 local gen_lcs = "extends:»,precedes:«,nbsp:␣,trail:⣿"
 _G.Mjm_Lcs = "tab:<->," .. gen_lcs
@@ -24,33 +24,6 @@ function _G.Mjm_Defer_Require(path)
         end,
     })
 end
-
-mjm.opt = {}
-
----@param opt string
----@param new string
----@param scope vim.api.keyset.option
-function mjm.opt.str_append(opt, new, scope)
-    local old = api.nvim_get_option_value(opt, scope) ---@type string
-    if string.find(old, new, 1, true) ~= nil then
-        return
-    end
-
-    api.nvim_set_option_value(opt, old .. new, scope)
-end
--- MID: "new" should be a table. Each new opt should be checked against the old one, and added
--- to a "new_opts" table. The new_opts table + the old opts should be table.concated, then
--- nvim_set_option_value can be run
-
----@param opt string
----@param out string
----@param scope vim.api.keyset.option
-function mjm.opt.str_rm(opt, out, scope)
-    local old = api.nvim_get_option_value(opt, scope) ---@type string
-    api.nvim_set_option_value(opt, string.gsub(old, out, ""), scope)
-end
--- MID: Handle multiple "out" args as a table. Unsure if running multiple gsubs is a good idea.
--- Maybe break out options into a table first.
 
 set({ "n", "x" }, "<Space>", "<Nop>")
 set({ "n", "x" }, "\\", "<Nop>")

@@ -47,7 +47,7 @@ api.nvim_create_autocmd("BufWinEnter", {
             return
         end
 
-        mjm.protected_set_cursor(mark, { win = win })
+        mjm.win.protected_set_cursor(mark, { win = win })
         api.nvim_win_call(win, function()
             api.nvim_cmd({ cmd = "norm", args = { "zz" }, bang = true }, {})
         end)

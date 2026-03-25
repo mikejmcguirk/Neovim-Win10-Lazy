@@ -21,7 +21,7 @@ return {
                 local previewer = require("qf-rancher.preview")
                 set("n", "p", function()
                     previewer.toggle_preview_win({ border = "bold", debounce = 50 })
-                end, { buffer = 0 })
+                end, { buf = 0 })
             end,
         })
     end,

@@ -69,7 +69,6 @@ function M.config(new_config)
 
     return vim.deepcopy(config, true)
 end
--- TODO: Needs to be able to handle buffer-local configs.
 
 --------------------
 -- MARK: Map APIs --
@@ -106,6 +105,3 @@ function M.rancher_grep(cur_buf)
 end
 
 return M
-
--- TODO: None of this is able to handle nested config tables. Many plugins do this that can be
--- looked at.

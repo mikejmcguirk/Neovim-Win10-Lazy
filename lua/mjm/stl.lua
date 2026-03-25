@@ -237,9 +237,7 @@ api.nvim_create_autocmd("OptionSet", {
 api.nvim_create_autocmd("BufDelete", {
     group = stl_events,
     callback = function(ev)
-        require("mjm.utils").do_when_idle(function()
-            buf_cache[ev.buf] = nil
-        end)
+        buf_cache[ev.buf] = nil
     end,
 })
 

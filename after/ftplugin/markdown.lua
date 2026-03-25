@@ -4,26 +4,31 @@ local set = vim.keymap.set
 require("mjm.utils").set_buf_space_indent(0, 2)
 
 -- "r" in Markdown treats lines like "- some text" as comments and indents them
-mjm.opt.str_rm("fo", "r", { buf = 0 })
+mjm.opt.flag_rm("fo", { "r" }, { buf = 0 })
 
-api.nvim_set_option_value("cc", "", { scope = "local" })
-api.nvim_set_option_value("culopt", "number,screenline", { scope = "local" })
-api.nvim_set_option_value("siso", 12, { scope = "local" })
-api.nvim_set_option_value("spell", true, { scope = "local" })
-api.nvim_set_option_value("wrap", true, { scope = "local" })
+local local_scope = { scope = "local" }
+api.nvim_set_option_value("colorcolumn", "", local_scope)
+api.nvim_set_option_value("cursorlineopt", "screenline", local_scope)
+api.nvim_set_option_value("sidescrolloff", 12, local_scope)
+api.nvim_set_option_value("spell", true, local_scope)
+api.nvim_set_option_value("wrap", true, local_scope)
 
-set("i", ",", ",<C-g>u", { buffer = 0 })
-set("i", ".", ".<C-g>u", { buffer = 0 })
-set("i", ":", ":<C-g>u", { buffer = 0 })
-set("i", "-", "-<C-g>u", { buffer = 0 })
-set("i", "?", "?<C-g>u", { buffer = 0 })
-set("i", "!", "!<C-g>u", { buffer = 0 })
+local buf_0 = { buf = 0 }
+set("i", ",", ",<C-g>u", buf_0)
+set("i", ".", ".<C-g>u", buf_0)
+set("i", ":", ":<C-g>u", buf_0)
+set("i", "-", "-<C-g>u", buf_0)
+set("i", "?", "?<C-g>u", buf_0)
+set("i", "!", "!<C-g>u", buf_0)
 
 set("n", "gK", function()
     require("mjm.utils").check_word_under_cursor()
-end, { buffer = 0 })
+end, buf_0)
 
--- MID: Create a localleader mapping in Conform for prettier, keep this for running on save
+-- MAYBE: Use prettier instead
+set("n", mjm.v.fmt_lhs, function()
+    require("mjm.utils").fallback_formatter(0)
+end, buf_0)
 
 api.nvim_create_autocmd("BufWritePre", {
     buffer = 0,
@@ -36,11 +41,11 @@ api.nvim_create_autocmd("BufWritePre", {
 -- Since markdown-oxide uses goto definition for link nav, we don't need gf for that purpose
 set("n", "gf", function()
     require("nvim-text-tools").toggle_checkbox()
-end, { buffer = 0 })
+end, { buf = 0 })
 
 set("n", "gF", function()
     require("nvim-text-tools").remove_checkbox()
-end, { buffer = 0 })
+end, { buf = 0 })
 
 mjm.lsp.start(vim.lsp.config["markdown_oxide"], { bufnr = 0 })
 

@@ -1,7 +1,7 @@
 local vimv = vim.v
 
 local bisect_left = require("farsight.util").list_bisect_left
-local list_del_at = require("farsight.util").list_del_at
+local list_remove_item = require("farsight.util")._list_remove_item
 local list_insert_at = require("farsight.util").list_insert_at
 
 ---@param idx integer
@@ -325,7 +325,7 @@ local function no_stats_del_at(idx, pos_idxs)
         return 0
     end
 
-    list_del_at(pos_idxs, idx)
+    list_remove_item(pos_idxs, idx)
     return idx
 end
 

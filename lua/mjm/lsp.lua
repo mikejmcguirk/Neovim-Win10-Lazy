@@ -129,7 +129,7 @@ local function map_no_support(lhs, client, method, buf)
         ---@type [string, string|integer?]
         local chunk = { "Client " .. client.name .. " does not support method " .. method }
         api.nvim_echo({ chunk }, false, {})
-    end, { buffer = buf })
+    end, { buf = buf })
 end
 
 ---@param ev vim.api.keyset.create_autocmd.callback_args
@@ -142,63 +142,63 @@ local function set_lsp_maps(ev)
     end
 
     -- callHierarchy/incomingCalls --
-    set("n", "grC", in_call, { buffer = buf })
+    set("n", "grC", in_call, { buf = buf })
 
     -- callHierarchy/outgoingCalls --
-    set("n", "grc", out_call, { buffer = buf })
+    set("n", "grc", out_call, { buf = buf })
 
     -- TODO: The code actions returned are based on the line scope provided. So asking for actions
     -- for the whole doc could produce different actions than the specific line
     -- grA could be a useful mapping for returning actions scoped to the whole doc. What else
     -- could be addressed?
     -- textDocument/codeAction --
-    set("n", "gra", code_action, { buffer = buf })
+    set("n", "gra", code_action, { buf = buf })
 
     -- textDocument/codeLens --
     if client:supports_method("textDocument/codeLens") then
         vim.lsp.codelens.enable()
-        set("n", "grx", vim.lsp.codelens.run, { buffer = buf })
+        set("n", "grx", vim.lsp.codelens.run, { buf = buf })
     end
 
     -- textDocument/declaration --
-    set("n", "grd", declaration, { buffer = buf })
-    set("n", "grD", peek_declaration, { buffer = buf })
+    set("n", "grd", declaration, { buf = buf })
+    set("n", "grD", peek_declaration, { buf = buf })
 
     -- textDocument/definition --
     if client:supports_method("textDocument/definition") then
-        set("n", "gd", definition, { buffer = buf })
-        set("n", "gD", peek_definition, { buffer = buf })
+        set("n", "gd", definition, { buf = buf })
+        set("n", "gD", peek_definition, { buf = buf })
     end
 
     -- textDocument/documentColor --
     set("n", "gro", function()
         local enabled = lsp.document_color.is_enabled() ---@type boolean
         lsp.document_color.enable(not enabled)
-    end, { buffer = buf })
+    end, { buf = buf })
 
-    set("n", "grO", lsp.document_color.color_presentation, { buffer = buf })
+    set("n", "grO", lsp.document_color.color_presentation, { buf = buf })
 
     -- textDocument/documentHighlight --
-    set("n", "grh", lsp.buf.document_highlight, { buffer = buf })
+    set("n", "grh", lsp.buf.document_highlight, { buf = buf })
 
     -- textDocument/documentSymbol --
     if client:supports_method("textDocument/documentSymbol") then
-        set("n", "gO", symbols, { buffer = buf })
+        set("n", "gO", symbols, { buf = buf })
     end
 
     -- textDocument/hover --
     -- Default border now set with winborder
 
     -- textDocument/implementation --
-    set("n", "gri", implementation, { buffer = buf })
-    set("n", "grI", peek_implementation, { buffer = buf })
+    set("n", "gri", implementation, { buf = buf })
+    set("n", "grI", peek_implementation, { buf = buf })
 
     -- textDocument/inlayHint --
     -- TODO: If grl becomes codelens, make this grx for inlay teXt
     if client:supports_method("textDocument/inlayHint") then
         set("n", "grl", function()
-            lsp.inlay_hint.enable(not lsp.inlay_hint.is_enabled({ buffer = buf }))
-        end, { buffer = buf })
+            lsp.inlay_hint.enable(not lsp.inlay_hint.is_enabled({ buf = buf }))
+        end, { buf = buf })
     else
         map_no_support("grl", client, "textDocument/inlay_hint", buf)
     end
@@ -210,8 +210,8 @@ local function set_lsp_maps(ev)
     -- end
 
     -- textDocument/references --
-    set("n", "grr", references, { buffer = buf })
-    set("n", "grR", peek_references, { buffer = buf })
+    set("n", "grr", references, { buf = buf })
+    set("n", "grR", peek_references, { buf = buf })
 
     -- textDocument/rename --
     set("n", "grn", function()
@@ -230,16 +230,16 @@ local function set_lsp_maps(ev)
         end
 
         lsp.buf.rename(input)
-    end, { buffer = buf })
+    end, { buf = buf })
 
-    set("n", "grN", lsp.buf.rename, { buffer = buf })
+    set("n", "grN", lsp.buf.rename, { buf = buf })
 
     -- textDocument/semanticTokens
     if client:supports_method("textDocument/semanticTokens/full") then
         set("n", "grm", function()
             local enabled = lsp.semantic_tokens.is_enabled() ---@type boolean
             lsp.semantic_tokens.enable(not enabled)
-        end, { buffer = buf })
+        end, { buf = buf })
     else
         map_no_support("grm", client, "textDocument/semanticTokens/full", buf)
     end
@@ -248,14 +248,14 @@ local function set_lsp_maps(ev)
     -- Border supplied with winborder
 
     -- textDocument/typeDefinition --
-    set("n", "grt", typedef, { buffer = buf })
-    set("n", "grT", peek_typedef, { buffer = buf })
+    set("n", "grt", typedef, { buf = buf })
+    set("n", "grT", peek_typedef, { buf = buf })
 
     -- typeHierarchy/subtypes --
     if client:supports_method("typeHierarchy/subtypes") then
         set("n", "grY", function()
             vim.lsp.buf.typehierarchy("subtypes")
-        end, { buffer = buf })
+        end, { buf = buf })
     else
         map_no_support("grY", client, "typeHierarchy/subtypes", buf)
     end
@@ -264,16 +264,16 @@ local function set_lsp_maps(ev)
     if client:supports_method("typeHierarchy/supertypes") then
         set("n", "gry", function()
             vim.lsp.buf.typehierarchy("supertypes")
-        end, { buffer = buf })
+        end, { buf = buf })
     else
         map_no_support("gry", client, "typeHierarchy/supertypes", buf)
     end
 
     -- workspace/symbol --
-    set("n", "grw", workspace, { buffer = buf })
+    set("n", "grw", workspace, { buf = buf })
 end
 
-local lsp_group = vim.api.nvim_create_augroup("mjm-lsp", {}) ---@type integer
+local lsp_group = api.nvim_create_augroup("mjm-lsp", {}) ---@type integer
 vim.api.nvim_create_autocmd("LspAttach", {
     group = lsp_group,
     callback = set_lsp_maps,
@@ -281,15 +281,21 @@ vim.api.nvim_create_autocmd("LspAttach", {
 
 vim.api.nvim_create_autocmd("LspDetach", {
     group = lsp_group,
-    callback = function(ev)
-        for _, client in ipairs(lsp.get_clients({ bufnr = ev.buf }) or {}) do
-            if not next(client.attached_buffers) then
-                require("mjm.utils").do_when_idle(function()
-                    client:stop()
-                end)
-            end
+    callback = vim.schedule_wrap(function(ev)
+        local client_id = ev.data.client_id
+        if not client_id then
+            return
         end
-    end,
+
+        local client = lsp.get_client_by_id(client_id)
+        if not client then
+            return
+        end
+
+        if not next(lsp.get_client_by_id(client_id).attached_buffers) then
+            client:stop()
+        end
+    end),
 })
 
 lsp.log.set_level(vim.log.levels.ERROR)

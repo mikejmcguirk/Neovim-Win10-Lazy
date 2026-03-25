@@ -1,6 +1,11 @@
 require("mjm.utils").set_buf_space_indent(0, 2)
+
+vim.keymap.set("n", mjm.v.fmt_lhs, function()
+    require("mjm.utils").fallback_formatter(0)
+end, { buf = 0 })
+
 vim.api.nvim_create_autocmd("BufWritePre", {
-    buffer = 0,
+    buf = 0,
     callback = function(ev)
         require("mjm.utils").fallback_formatter(ev.buf)
     end,

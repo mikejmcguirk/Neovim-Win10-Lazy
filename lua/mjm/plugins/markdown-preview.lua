@@ -17,9 +17,9 @@ return {
                 local toggle = "<cmd>MarkdownPreviewToggle<cr>"
                 local preview = "<cmd>MarkdownPreview<cr>"
                 local stop = "<cmd>MarkdownPreviewStop<cr>"
-                vim.keymap.set("n", "<localleader>mm", toggle, { buffer = ev.buf })
-                vim.keymap.set("n", "<localleader>mp", preview, { buffer = ev.buf })
-                vim.keymap.set("n", "<localleader>ms", stop, { buffer = ev.buf })
+                vim.keymap.set("n", "<localleader>mm", toggle, { buf = ev.buf })
+                vim.keymap.set("n", "<localleader>mp", preview, { buf = ev.buf })
+                vim.keymap.set("n", "<localleader>ms", stop, { buf = ev.buf })
             end,
         })
     end,

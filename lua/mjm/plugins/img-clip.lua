@@ -35,7 +35,7 @@ return {
             callback = function(ev)
                 vim.keymap.set("n", "<localleader>p", function()
                     api.nvim_cmd({ cmd = "PasteImage" }, {})
-                end, { buffer = ev.buf })
+                end, { buf = ev.buf })
             end,
         })
     end,

@@ -89,7 +89,7 @@ local function map_objects(ev)
     for _, m in pairs(select_maps) do
         set({ "x", "o" }, m[1], function()
             select.select_textobject(m[2], "textobjects")
-        end, { buffer = ev.buf })
+        end, { buf = ev.buf })
     end
 
     ---@type {[1]:string, [2]:string, [3]:string }[]
@@ -111,15 +111,15 @@ local function map_objects(ev)
     for _, m in pairs(move_maps) do
         set({ "n", "o" }, m[1], function()
             move.goto_previous_start(m[3], "textobjects")
-        end, { buffer = ev.buf })
+        end, { buf = ev.buf })
 
         set("n", m[2], function()
             move.goto_next_start(m[3], "textobjects")
-        end, { buffer = ev.buf })
+        end, { buf = ev.buf })
 
         set("o", m[2], function()
             move.goto_next_end(m[3], "textobjects")
-        end, { buffer = ev.buf })
+        end, { buf = ev.buf })
 
         set({ "x" }, m[1], function()
             local first_vpos = get_vpos() ---@type integer
@@ -135,7 +135,7 @@ local function map_objects(ev)
                 api.nvim_win_set_cursor(0, cur_start)
                 move.goto_previous_start(m[3], "textobjects")
             end
-        end, { buffer = ev.buf })
+        end, { buf = ev.buf })
 
         set("x", m[2], function()
             local start_vpos = get_vpos() ---@type integer
@@ -151,7 +151,7 @@ local function map_objects(ev)
                 api.nvim_win_set_cursor(0, cur_start)
                 move.goto_next_end(m[3], "textobjects")
             end
-        end, { buffer = ev.buf })
+        end, { buf = ev.buf })
     end
 
     ---@type { [1]:string, [2]:string, [3]:string }[]
@@ -169,38 +169,38 @@ local function map_objects(ev)
         { '("', ')"', "@string.outer" },
     }
 
-    set("n", "(", "<nop>", { buffer = ev.buf })
-    set("n", ")", "<nop>", { buffer = ev.buf })
+    set("n", "(", "<nop>", { buf = ev.buf })
+    set("n", ")", "<nop>", { buf = ev.buf })
     local swap = require("nvim-treesitter-textobjects.swap")
     for _, m in pairs(swap_maps) do
         set("n", m[1], function()
             swap.swap_previous(m[3], "textobjects")
-        end, { buffer = ev.buf })
+        end, { buf = ev.buf })
 
         set("n", m[2], function()
             swap.swap_next(m[3], "textobjects")
-        end, { buffer = ev.buf })
+        end, { buf = ev.buf })
     end
 end
 
 ---@param ev vim.api.keyset.create_autocmd.callback_args
 ---@return nil
 local function map_climber(ev)
-    local sel_prev = { buffer = ev.buf, desc = "Select previous node" }
+    local sel_prev = { buf = ev.buf, desc = "Select previous node" }
     set({ "n", "x", "o" }, "[n", "<Plug>(treeclimber-select-previous)", sel_prev)
-    local sel_next = { buffer = ev.buf, desc = "Select the next node" }
+    local sel_next = { buf = ev.buf, desc = "Select the next node" }
     set({ "n", "x" }, "]n", "<Plug>(treeclimber-select-next)", sel_next)
-    local sel_forward_end = { buffer = ev.buf, desc = "Select forward and move to node end" }
+    local sel_forward_end = { buf = ev.buf, desc = "Select forward and move to node end" }
     set({ "o" }, "]n", "<Plug>(treeclimber-select-forward-end)", sel_forward_end)
 
-    local s_back = { buffer = ev.buf, desc = "Select first sibling" }
+    local s_back = { buf = ev.buf, desc = "Select first sibling" }
     set({ "n", "x", "o" }, "[N", "<Plug>(treeclimber-select-siblings-backward)", s_back)
-    local s_front = { buffer = ev.buf, desc = "Select last sibling" }
+    local s_front = { buf = ev.buf, desc = "Select last sibling" }
     set({ "n", "x", "o" }, "]N", "<Plug>(treeclimber-select-siblings-forward)", s_front)
 
-    local grow_back = { buffer = ev.buf, desc = "Grow selection backward" }
+    local grow_back = { buf = ev.buf, desc = "Grow selection backward" }
     set({ "n", "x", "o" }, "[<C-n>", "<Plug>(treeclimber-select-grow-backward)", grow_back)
-    local grow_forward = { buffer = ev.buf, desc = "Grow selection forward" }
+    local grow_forward = { buf = ev.buf, desc = "Grow selection forward" }
     set({ "n", "x", "o" }, "]<C-n>", "<Plug>(treeclimber-select-grow-forward)", grow_forward)
 
     -- PR: I would be good to have shrink backward and shrink forward maps. Would put them on
@@ -208,9 +208,9 @@ local function map_climber(ev)
     -- PR: Would be useful to have a "sibling fill" map. Would, for example, select all
     -- neightboring function parameters. Would put on iE
 
-    local sel_cur = { buffer = ev.buf, desc = "Select child node" }
+    local sel_cur = { buf = ev.buf, desc = "Select child node" }
     set({ "x", "o" }, "in", "<Plug>(treeclimber-select-shrink)", sel_cur)
-    local sel_exp = { buffer = ev.buf, desc = "Select parent node (around)" }
+    local sel_exp = { buf = ev.buf, desc = "Select parent node (around)" }
     set({ "x", "o" }, "an", "<Plug>(treeclimber-select-expand)", sel_exp)
 end
 

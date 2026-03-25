@@ -13,18 +13,19 @@ return {
             pattern = fts,
             callback = function(ev)
                 local set = vim.keymap.set
+                local buf = ev.buf
 
-                set("i", "<cr>", "<Plug>(bullets-newline)", { buffer = ev.buf })
+                set("i", "<cr>", "<Plug>(bullets-newline)", { buf = buf })
 
-                set("n", "<<", "<Plug>(bullets-promote)", { buffer = ev.buf })
-                set("n", ">>", "<Plug>(bullets-demote)", { buffer = ev.buf })
-                set("i", I_Dedent, "<Plug>(bullets-promote)", { buffer = ev.buf })
-                set("i", "<C-t>", "<Plug>(bullets-demote)", { buffer = ev.buf })
+                set("n", "<<", "<Plug>(bullets-promote)", { buf = buf })
+                set("n", ">>", "<Plug>(bullets-demote)", { buf = buf })
+                set("i", I_Dedent, "<Plug>(bullets-promote)", { buf = buf })
+                set("i", "<C-t>", "<Plug>(bullets-demote)", { buf = buf })
                 -- NOTE: Do not map promote/demote in x mode because it does not properly gv into
                 -- the old visual selection
 
-                set("n", "<C-n>", "<Plug>(bullets-renumber)", { buffer = ev.buf })
-                set("v", "<C-n>", "<Plug>(bullets-renumber)", { buffer = ev.buf })
+                set("n", "<C-n>", "<Plug>(bullets-renumber)", { buf = buf })
+                set("v", "<C-n>", "<Plug>(bullets-renumber)", { buf = buf })
             end,
         })
     end,

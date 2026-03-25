@@ -1,21 +1,28 @@
 local api = vim.api
+local set = vim.keymap.set
 
-api.nvim_set_option_value("cc", "", { scope = "local" })
-api.nvim_set_option_value("culopt", "screenline", { scope = "local" })
-api.nvim_set_option_value("siso", 12, { scope = "local" })
-api.nvim_set_option_value("spell", true, { scope = "local" })
-api.nvim_set_option_value("wrap", true, { scope = "local" })
+local local_scope = { scope = "local" }
+api.nvim_set_option_value("colorcolumn", "", local_scope)
+api.nvim_set_option_value("cursorlineopt", "screenline", local_scope)
+api.nvim_set_option_value("sidescrolloff", 12, local_scope)
+api.nvim_set_option_value("spell", true, local_scope)
+api.nvim_set_option_value("wrap", true, local_scope)
 
-vim.keymap.set("i", ",", ",<C-g>u", { buffer = 0 })
-vim.keymap.set("i", ".", ".<C-g>u", { buffer = 0 })
-vim.keymap.set("i", ":", ":<C-g>u", { buffer = 0 })
-vim.keymap.set("i", "-", "-<C-g>u", { buffer = 0 })
-vim.keymap.set("i", "?", "?<C-g>u", { buffer = 0 })
-vim.keymap.set("i", "!", "!<C-g>u", { buffer = 0 })
+local buf_0 = { buf = 0 }
+set("i", ",", ",<C-g>u", buf_0)
+set("i", ".", ".<C-g>u", buf_0)
+set("i", ":", ":<C-g>u", buf_0)
+set("i", "-", "-<C-g>u", buf_0)
+set("i", "?", "?<C-g>u", buf_0)
+set("i", "!", "!<C-g>u", buf_0)
 
-vim.keymap.set("n", "gK", function()
+set("n", "gK", function()
     require("mjm.utils").check_word_under_cursor()
-end)
+end, buf_0)
+
+set("n", mjm.v.fmt_lhs, function()
+    require("mjm.utils").fallback_formatter(0)
+end, buf_0)
 
 api.nvim_create_autocmd("BufWritePre", {
     buffer = 0,

@@ -15,7 +15,7 @@ local fzflua_opts = {
         --         ["enter"] = function(selected)
         --             require("fzf-lua").actions.file_edit_or_qf(selected, { no_action_zz = true })
         --             local quote_mark = api.nvim_buf_get_mark(0, '"')
-        --             mjm.protected_set_cursor(quote_mark)
+        --             mjm.win.protected_set_cursor(quote_mark)
         --         end,
         --     },
         -- },

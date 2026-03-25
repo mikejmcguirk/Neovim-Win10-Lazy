@@ -4,6 +4,18 @@ local fn = vim.fn
 local set = vim.keymap.set
 local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 
+-----------------
+-- LEADER MAPS --
+-----------------
+
+-- I use this as a prefix for inserting boilerplate code. Don't want this falling back to other
+-- behavior on timeout
+set("n", "<leader>-", "<nop>")
+
+set("n", mjm.v.fmt_lhs, function()
+    api.nvim_echo({ { "Formatter not configured" } }, true, {})
+end)
+
 --------------------
 -- NORMAL Z LAYER --
 --------------------
@@ -23,6 +35,27 @@ set("n", "ZS", "<cmd>lockmarks silent up | so<cr>")
 set("n", "ZZ", "<cmd>lockmarks silent up<cr>")
 set("n", "ZC", "<cmd>lockmarks wqa<cr>")
 
+set("n", "ZU", function()
+    local cur_buf = api.nvim_get_current_buf()
+    local ntb = require("nvim-tools.buf")
+    local listed_bufs = ntb.get_listed_bufs()
+    require("nvim-tools.list").filter(listed_bufs, function(buf)
+        return buf ~= cur_buf
+    end)
+
+    if #listed_bufs == 1 then
+        return
+    end
+
+    for _, buf in ipairs(listed_bufs) do
+        local ok, _, _ = ntb.save(buf)
+        if ok and #fn.win_findbuf(buf) == 0 then
+            api.nvim_set_option_value("buflisted", false, { buf = buf })
+            api.nvim_buf_delete(buf, { unload = true })
+        end
+    end
+end)
+
 ----------
 -- TABS --
 ----------
@@ -30,42 +63,27 @@ set("n", "ZC", "<cmd>lockmarks wqa<cr>")
 set("n", "<tab>", "gt")
 set("n", "<S-tab>", "gT")
 set("n", "ZT", function()
-    local tabpagenr = fn.tabpagenr("$")
-    if tabpagenr == 1 then
+    if fn.tabpagenr("$") == 1 then
         api.nvim_echo({ { "Cannot close last tabpage" } }, false, {})
         return
     end
 
-    local args = vim.v.count > 0 and { tostring(vim.v.count) } or nil
+    local vcount = vim.v.count
+    local args = vcount > 0 and { tostring(vcount) } or nil
     api.nvim_cmd({ cmd = "tabclose", args = args }, {})
 end)
 
 set("n", "ZB", function()
-    local args = vim.v.count > 0 and { tostring(vim.v.count) } or nil
+    local vcount = vim.v.count
+    local args = vcount > 0 and { tostring(vcount) } or nil
     api.nvim_cmd({ cmd = "tabonly", args = args }, {})
 end)
 
 set("n", "g<tab>", function()
-    local range = vim.v.count == 0 and fn.tabpagenr("$") or vim.v.count
-    api.nvim_cmd({ cmd = "tabnew", range = { range } }, {})
-
-    local buf = api.nvim_get_current_buf()
-    if not ut.is_empty_noname_buf(buf) then
-        return
-    end
-
-    api.nvim_create_autocmd("BufHidden", {
-        buffer = buf,
-        callback = function()
-            if not ut.is_empty_noname_buf(buf) then
-                return
-            end
-
-            vim.schedule(function()
-                api.nvim_buf_delete(buf, { force = true })
-            end)
-        end,
-    })
+    local vcount = vim.v.count
+    local count_tabpages = fn.tabpagenr("$")
+    local pos = vcount == 0 and count_tabpages or math.min(vcount, count_tabpages)
+    api.nvim_open_tabpage(0, true, { after = pos })
 end)
 
 ---------------
@@ -176,16 +194,9 @@ end
 ---@param dir string
 ---@return nil
 local win_move_tmux = function(dir)
-    local bt = vim.api.nvim_get_option_value("bt", { buf = 0 })
-    if bt == "prompt" then
-        do_tmux_move(dir)
-        return
-    end
-
     local start_win = api.nvim_get_current_win()
     api.nvim_cmd({ cmd = "wincmd", args = { dir } }, {})
-    local fin_win = api.nvim_get_current_win()
-    if start_win == fin_win then
+    if start_win == api.nvim_get_current_win() then
         do_tmux_move(dir)
     end
 end
@@ -198,7 +209,6 @@ for k, _ in pairs(tmux_cmd_map) do
 end
 
 ---@param cmd vim.api.keyset.cmd
----@return nil
 local resize_win = function(cmd)
     local wintype = fn.win_gettype(0)
     if not (wintype == "" or wintype == "quickfix" or wintype == "loclist") then
@@ -225,12 +235,31 @@ for _, m in ipairs(resize_maps) do
     end)
 end
 
-for _, m in pairs({ "<C-w>q", "<C-w><C-q>" }) do
-    set("n", m, function()
-        -- FUTURE: Use wipeout when that logic is fixed
-        -- https://github.com/neovim/neovim/pull/33402
+for _, map in ipairs({ "<C-w>q", "<C-w><C-q>" }) do
+    set("n", map, function()
+        local ntw = require("nvim-tools.win")
         local cur_win = api.nvim_get_current_win()
-        ut.pclose_and_rm(cur_win, false, false)
+        local _, buf, err_w, hl_w = ntw.protected_close(cur_win, false)
+        if not buf then
+            require("nvim-tools.ui").echo_err(false, err_w, hl_w)
+            return
+        end
+
+        vim.schedule(function()
+            if #fn.win_findbuf(buf) > 0 then
+                return
+            end
+
+            -- FUTURE: Use wipeout when that logic is fixed
+            -- https://github.com/neovim/neovim/pull/33402
+            local ntb = require("nvim-tools.buf")
+            ---@type vim.api.keyset.buf_delete
+            local buf_del_opts = { force = false, unload = true }
+            local ok_b, err_b, hl_b = ntb.save_and_del(buf, true, buf_del_opts)
+            if not ok_b and hl_b == "ErrorMsg" then
+                require("nvim-tools.ui").echo_err(false, err_b, hl_b)
+            end
+        end)
     end)
 end
 
@@ -337,18 +366,6 @@ set("n", "zB", function()
     api.nvim_set_option_value("so", old_so, { scope = "local" })
 end)
 
-set({ "n", "x" }, "gM", "<nop>")
-
--- MAYBE: With Farsight, the ideas for this mapping are less relevant. While gM is not super
--- ergonomic, it does make sense relative to M.
-set({ "n", "x" }, "<C-m>", function()
-    if api.nvim_get_mode().blocking then
-        api.nvim_cmd({ cmd = "norm", args = { "\27" }, bang = true }, {})
-    end
-
-    api.nvim_cmd({ cmd = "norm", args = { vim.v.count .. "gM" }, bang = true }, {})
-end)
-
 -- MID: Showing the search string would be more useful when hlsearch is turned on than with n/N
 -- But I'd have to make the initial output match
 
@@ -436,8 +453,8 @@ set("n", "<bs><M-w>", "<cmd>set wrap?<cr>")
 
 -- NOTE: could not get set lmap "\3\27" to work
 set("n", "<C-c>", function()
-    print("")
-    api.nvim_cmd({ cmd = "noh" }, {})
+    api.nvim_cmd({ cmd = "echo", args = { '""' } }, {})
+    api.nvim_cmd({ cmd = "nohlsearch" }, {})
     vim.lsp.buf.clear_references()
 
     -- Allows <C-c> to exit commands with a count. Also eliminates command line nag
@@ -447,13 +464,13 @@ end, { expr = true, silent = true })
 set("n", "gI", "g^i")
 -- "S" enters insert with the proper indent. "I" left on default behavior
 -- LOW: This creates an undo point, even when exiting insert immediately
-for _, m in pairs({ "i", "a", "A" }) do
-    set("n", m, function()
+for _, map in pairs({ "i", "a", "A" }) do
+    set("n", map, function()
         if string.match(api.nvim_get_current_line(), "^%s*$") then
             return '"_S'
         end
 
-        return m
+        return map
     end, { expr = true })
 end
 
@@ -488,24 +505,13 @@ set("n", "<C-r>", function()
     return "<cmd>silent norm! " .. vim.v.count1 .. "\18<cr>"
 end, { expr = true })
 
--- () used for swaps in multicursor and ts text objects
--- - and + are used for oil
--- I use this as a prefix for inserting boilerplate code. Don't want this falling back to other
--- behavior on timeout
-set("n", "<leader>-", "<nop>")
-
 set({ "n" }, "<M-s>", ":'<,'>s/\\%V")
 set({ "x" }, "<M-s>", ":s/\\%V")
 
 -- FUTURE: These should remove trailing whitespace from the original line. The == should handle
 -- invalid leading whitespace on the new line
 set("n", "dJ", "Do<esc>p==", { silent = true })
-set("n", "dK", function()
-    local old_lz = api.nvim_get_option_value("lz", { scope = "global" }) ---@type boolean
-    api.nvim_set_option_value("lz", true, { scope = "global" })
-    api.nvim_feedkeys("DO\27p==", "nix", false)
-    api.nvim_set_option_value("lz", old_lz, { scope = "global" })
-end)
+set("n", "dK", "DO\27p==", { silent = true })
 
 -- MAYBE: This is never used
 set("n", "dm", "<cmd>delmarks!<cr>")
@@ -513,29 +519,36 @@ set("n", "dm", "<cmd>delmarks!<cr>")
 -- LOW: Find a viable keymap for this and make it more robust to edge cases:
 -- map("n", "H", 'mzk_D"_ddA <esc>p`zze', { silent = true })
 set("n", "J", function()
-    if not require("mjm.utils").check_modifiable() then
+    local ok, err, hl = require("nvim-tools.buf").check_modifiable(0)
+    if not ok then
+        require("nvim-tools.ui").echo_err(false, err, hl)
         return
     end
 
-    -- Done using a view instead of a mark to prevent visible screen shake
-    local view = fn.winsaveview() ---@type vim.fn.winsaveview.ret
+    local view = fn.winsaveview()
     -- By default, [count]J joins one fewer lines than indicated by the relative line numbers
-    api.nvim_cmd({ cmd = "norm", args = { vim.v.count1 + 1 .. "J" }, bang = true }, {})
+    local args = { vim.v.count1 + 1 .. "J" }
+    api.nvim_cmd({ cmd = "norm", args = args, bang = true }, {})
     fn.winrestview(view)
 end, { silent = true })
 
+---@param upward boolean
 local function mv_normal(upward)
-    if not ut.check_modifiable() then
+    local ok, err, hl = require("nvim-tools.buf").check_modifiable(0)
+    if not ok then
+        require("nvim-tools.ui").echo_err(false, err, hl)
         return
     end
-    local dir = upward and "-" or "+" ---@type string
-    local count = vim.v.count1 + (upward and 1 or 0) ---@type integer
-    local ok, err = pcall(function()
+
+    local dir = upward and "-" or "+"
+    local count = vim.v.count1 + (upward and 1 or 0)
+    local ok_m, err_m = pcall(function()
         vim.cmd("m" .. dir .. count .. " | norm! ==")
     end)
 
-    if not ok then
-        api.nvim_echo({ { err or "Unknown error in normal move" } }, true, { err = true })
+    if not ok_m then
+        local err_msg = err_m or "Unknown error in normal move"
+        api.nvim_echo({ { err_msg, "ErrorMsg" } }, true, {})
     end
 end
 
@@ -558,7 +571,6 @@ set("n", "];", "g,")
 -- NORMAL g LAYER --
 --------------------
 
--- g~ mapped along with gu
 -- LOW: Make a map of this in visual mode that uses the same syntax but without %
 -- Credit ThePrimeagen
 set("n", "g%", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
@@ -569,7 +581,7 @@ set("n", "g%", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
 -- NORMAL z LAYER --
 --------------------
 
-set("n", "zg", "<cmd>silent norm! zg<cr>", { silent = true })
+set("n", "zg", "<cmd>silent norm! zg<cr>")
 
 -----------------
 -- VISUAL MODE --
@@ -615,7 +627,9 @@ set("x", "]<space>", add_blank_visual)
 ---@param opts? {upward:boolean}
 ---@return nil
 local visual_move = function(opts)
-    if not require("mjm.utils").check_modifiable() then
+    local ok, err, hl = require("nvim-tools.buf").check_modifiable(0)
+    if not ok then
+        require("nvim-tools.ui").echo_err(false, err, hl)
         return
     end
 
@@ -626,8 +640,6 @@ local visual_move = function(opts)
         return
     end
 
-    local old_lz = api.nvim_get_option_value("lz", { scope = "global" }) ---@type boolean
-    vim.api.nvim_set_option_value("lz", true, { scope = "global" })
     opts = opts or {}
     -- Get before leaving visual mode
     local vcount1 = vim.v.count1 + (opts.upward and 1 or 0) ---@type integer
@@ -659,7 +671,6 @@ local visual_move = function(opts)
     end
 
     api.nvim_cmd({ cmd = "norm", args = { "gv" }, bang = true }, {})
-    api.nvim_set_option_value("lz", old_lz, { scope = "global" })
 end
 
 set("x", "<C-j>", visual_move)
@@ -669,27 +680,21 @@ end)
 
 set("x", "X", 'ygvV"_d<cmd>put!<cr>=`]', { silent = true })
 
--- FUTURE: Do these as a spec-ops mapping, same in normal mode due to the nag there
--- Done as a function to suppress nag when shifting multiple lines
----@param opts? table
----@return nil
-local visual_indent = function(opts)
-    local old_lz = api.nvim_get_option_value("lz", {}) ---@type boolean
-    local old_cc = api.nvim_get_option_value("cc", {}) ---@type string
-    api.nvim_set_option_value("lz", true, {})
-    api.nvim_set_option_value("cc", "", { scope = "local" })
+---@param lt? boolean
+local visual_indent = function(lt)
+    local old_cursorline = api.nvim_get_option_value("cursorline", {}) ---@type boolean
+    api.nvim_set_option_value("cursorline", false, { scope = "local" })
 
-    local shift = (opts or {}).back and "<" or ">" ---@type string
-    vim.cmd("norm! \27")
+    api.nvim_cmd({ cmd = "norm", args = { "\27" }, bang = true }, {})
+    local shift = lt and "<" or ">"
     vim.cmd("silent '<,'> " .. string.rep(shift, vim.v.count1))
-    vim.cmd("silent norm! gv")
+    api.nvim_cmd({ cmd = "norm", args = { "gv" }, bang = true, mods = { silent = true } }, {})
 
-    api.nvim_set_option_value("cc", old_cc, { scope = "local" })
-    api.nvim_set_option_value("lz", old_lz, {})
+    api.nvim_set_option_value("cursorline", old_cursorline, { scope = "local" })
 end
 
 set("x", "<", function()
-    visual_indent({ back = true })
+    visual_indent(true)
 end, { silent = true })
 
 set("x", ">", function()

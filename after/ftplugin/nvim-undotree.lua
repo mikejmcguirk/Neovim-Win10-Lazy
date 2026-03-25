@@ -1,7 +1,7 @@
 local api = vim.api
 local fn = vim.fn
 
-vim.keymap.set("n", "q", "<cmd>lua require('undotree').open()<cr>", { buffer = 0 })
+vim.keymap.set("n", "q", "<cmd>lua require('undotree').open()<cr>", { buf = 0 })
 
 -- MAYBE: Could cache this, but don't see a perf issue in practice
 api.nvim_create_autocmd("CursorMoved", {

@@ -1,2 +1,2 @@
 -- Overwrite autopairs plugins since " is a comment
-vim.keymap.set("i", '"', '"', { buffer = 0 })
+vim.keymap.set("i", '"', '"', { buf = 0 })

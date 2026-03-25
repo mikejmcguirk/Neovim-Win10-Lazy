@@ -5,4 +5,4 @@ vim.keymap.set("n", "<localleader>s", function()
     local date = year .. "-" .. month .. "-" .. day
 
     return "Go" .. date .. ",,<left><space>"
-end, { buffer = 0, expr = true })
+end, { buf = 0, expr = true })

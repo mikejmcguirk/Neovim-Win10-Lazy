@@ -12,7 +12,8 @@ local function add_annotation(annotation)
     if col_1 >= 3 and line:sub(col_1 - 2, col_1) == "---" then
         vim.api.nvim_buf_set_text(0, row_0, col_1, row_0, col_1, { annotation .. " " })
     elseif line:match("^%s*$") then -- All whitespace
-        local padding = string.rep(" ", require("mjm.utils").get_indent(row) or 0) ---@type string
+        local indent = require("nvim-tools.buf").get_indent(0, row)
+        local padding = string.rep(" ", indent)
         local padded_annotation = padding .. "---" .. annotation .. " "
         vim.api.nvim_buf_set_text(0, row_0, 0, row_0, #line, { padded_annotation })
     elseif line:match("%s$") then -- Non-whitespace with trailing whitespace
@@ -28,50 +29,50 @@ end
 
 set("n", "<leader>-a", function()
     add_annotation("[[@as")
-end, { buffer = 0 })
+end, { buf = 0 })
 
 set("n", "<leader>-c", function()
     add_annotation("@class")
-end, { buffer = 0 })
+end, { buf = 0 })
 
 set("n", "<leader>-d", function()
     add_annotation("@diagnostic")
-end, { buffer = 0 })
+end, { buf = 0 })
 
 set("n", "<leader>-e", function()
     add_annotation("@export")
-end, { buffer = 0 })
+end, { buf = 0 })
 
 set("n", "<leader>-f", function()
     add_annotation("@field")
-end, { buffer = 0 })
+end, { buf = 0 })
 
 set("n", "<leader>-i", function()
     add_annotation("@private")
-end, { buffer = 0 })
+end, { buf = 0 })
 
 set("n", "<leader>-l", function()
     add_annotation("@alias")
-end, { buffer = 0 })
+end, { buf = 0 })
 
 set("n", "<leader>-m", function()
     add_annotation("@mod")
-end, { buffer = 0 })
+end, { buf = 0 })
 
 set("n", "<leader>-p", function()
     add_annotation("@param")
-end, { buffer = 0 })
+end, { buf = 0 })
 
 set("n", "<leader>-r", function()
     add_annotation("@return")
-end, { buffer = 0 })
+end, { buf = 0 })
 
 set("n", "<leader>-t", function()
     add_annotation("@type")
-end, { buffer = 0 })
+end, { buf = 0 })
 
 set("n", "<leader>--", function()
     add_annotation("")
-end, { buffer = 0 })
+end, { buf = 0 })
 
 mjm.lsp.start(vim.lsp.config["lua_ls"], { bufnr = 0 })

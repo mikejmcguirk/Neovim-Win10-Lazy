@@ -84,18 +84,6 @@ function M.list_clear(t)
 end
 
 ---@generic T
----@param t1 T[]
----@param t2 T[]
----@param len integer
-function M.list_clear_two(t1, t2, len)
-    for i = 1, len do
-        t1[i] = nil
-        t2[i] = nil
-    end
-end
--- TODO: Remove this
-
----@generic T
 ---@param t T[]
 function M._list_copy(t)
     local len_t = #t
@@ -105,37 +93,6 @@ function M._list_copy(t)
     end
 
     return ret
-end
-
----@generic T
----@param t T[]
----@param idx integer
-function M.list_del_at(t, idx)
-    local len = #t
-    local j = idx
-    for i = idx + 1, len do
-        t[j] = t[i]
-        j = j + 1
-    end
-
-    t[len] = nil
-end
-
----@generic T
----@param t1 T[]
----@param t2 T[]
----@param idx integer
----@param len integer
-function M.list_del_at_two(t1, t2, idx, len)
-    local j = idx
-    for i = idx + 1, len do
-        t1[j] = t1[i]
-        t2[j] = t2[i]
-        j = j + 1
-    end
-
-    t1[len] = nil
-    t2[len] = nil
 end
 
 ---Bespoke function because:
@@ -217,30 +174,6 @@ function M.list_insert_at(t, v, idx)
     t[idx] = v
 end
 
----@generic T
----@param t1 T[]
----@param v1 T
----@param t2 T[]
----@param v2 T
----@param idx integer
----@param len integer
-function M.list_insert_at_two(t1, v1, t2, v2, idx, len)
-    local len_plus_one = len + 1
-    t1[len_plus_one] = t2[len]
-    t2[len_plus_one] = t2[len]
-
-    local j = len - 1
-    for i = len, idx + 1, -1 do
-        t1[i] = t1[j]
-        t2[i] = t2[j]
-        j = j - 1
-    end
-
-    t1[idx] = v1
-    t2[idx] = v2
-end
--- TODO: I'm not sure if this is actually good, dump it.
-
 -- PR: Add to Nvim shared.
 
 ---@generic T
@@ -265,7 +198,8 @@ end
 -- PR: Spot checking, this moves about the same speed as or more quickly than table.remove for
 -- lists
 
----@param t any[]
+---@generic T
+---@param t T[]
 ---@param idx integer
 function M._list_remove_item(t, idx)
     local len = #t

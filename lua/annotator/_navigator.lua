@@ -27,14 +27,5 @@ function M.jump(dir)
         api.nvim_cmd({ cmd = "norm", args = { "zv" }, bang = true }, {})
     end
 end
--- TODO: Using backwards search is inadvisable due to its quirks and perf issues.
--- - How does gitsigns do its [c]c navigation?
--- - Whatever method used needs to properly handle results on the cursor
--- TODO: This needs to handle the combination of any parsed comment string as well as user-custom
--- annotations.
--- TODO: zz and fold handling behavior should be in an on_jump callback.
--- - Document this
---   - Call out that that this means, if the user makes their own on_jump callback, they would
---   need to re-define zz and fold handling
 
 return M

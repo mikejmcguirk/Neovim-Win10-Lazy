@@ -29,6 +29,7 @@ require("mjm")
 -- - matchstrpos return type
 -- - setcmdpos
 -- - setcursorcharpos
+-- - wordcount
 
 -- ISSUES --
 

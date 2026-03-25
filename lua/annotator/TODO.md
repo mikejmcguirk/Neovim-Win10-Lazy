@@ -1,179 +1,219 @@
-## OBJECTIVES
-
-- For now, this will be an "internal plugin" focused on structured MARK handling and canned searches for TODO items.
-  * The "strict" vs. "relaxed" search handling feels too goofy for a release
-  * I don't know what to do with TODO comments that isn't just a less featureful version of folke's plugin
-
 ## TODO:
 
-- [ ] Beforehand
-  - [ ] Finish farsight, then fix rancher and lampshade
-  - [ ] Rancher improvements
-    - [ ] Address the grep API issues found when creating that integration
-  - [ ] Research todo-comments
-    - To help better understand the full scope of the problem
-    - Are there other similar plugins?
-  - [ ] Research https://github.com/spywhere/vscode-mark-jump
+#### Beforehand
 
-#### Checks at end
-- [ ] Any function that takes an annotation var should not require the colon. The function should handle that part
-
-#### Comment Node Detection
-- [ ] Research vim._comment
-- [ ] Research new TS incremental selection
-- [ ] Research how todo-comments does it
-- [ ] Properly handle injected languages
-- [ ] The form of the module should be to enter in a node name/type of your choosing
-- [ ] I have seen different comment node names in different languages I think you do a string.find for "comment" and that should do what needs to be done
-  - [ ] This does then imply that the interface needs to have a param for contains vs exact matching
-- [ ] Then it can be added to nvim-tools
-
-#### Create Annotation
-- [ ] Primitives:
-
-  - [ ] Does a line contain a comment?
+- [ ] nvim-tools
+  - [ ] Template config/init module
+  - [ ] Can I actually name it nvim-tools?
+    - I think I can
+  - [x] echasnovski has a function somewhere for using Nvim's internal width variable to calculate the max length of error messages
+  - [ ] A generalized version of farsight's buffer search
+    - [ ] Get results
+    - [ ] Fix data
+    - [ ] Do basic filtering
+      - [ ] folds
+    - [ ] Include result iterators that would be useful for common tasks
+      - [ ] Iter all positions for re-indexing
+  - [x] Protected set cursor
+  - [x] List tools
+  - [ ] Table tools
+  - [x] echo wrapper
+  - [x] Protected Win Close
+  - [x] Get listed bufs
+  - [x] is_empty_buf
+  - [x] Buffer close interface
+  - [x] Open buf
+  - [ ] Get indent
+    - [ ] If no indentexpr, needs to handle the various indenting options
+    - [ ] needs to handle all runtime indent args
+  - [ ] Is pos in TS node
+    - [ ] Research vim._comment
+    - [ ] Research new TS incremental selection
+    - [ ] Research how todo-comments does it
+    - [ ] Properly handle injected languages
+    - [ ] The form of the module should be to enter in a node name/type of your choosing
+    - [ ] I have seen different comment node names in different languages I think you do a string.find for "comment" and that should do what needs to be done
+      - [ ] This does then imply that the interface needs to have a param for contains vs exact matching
+  - [ ] Does line contain TS node
+    - [ ] Exact node name, node name to find, list of names
     - [ ] My best guess would be to use recursion, but would need more info/research
-    - [ ] This function needs to take the vars it does, such as line, and only return a boolean, so that way it can be easily changed if need be
+    - [ ] What does Folke's todo-comments function do?
+    - [ ] How does autopairs handle this?
+  - [ ] isopt parser
+  - [ ] Char class parser
 
-  - [ ] Insert annotation into commentstring:
-    - [ ] Replace %s with the annotation plus an extra space
-    - [ ] For cursor position calculation, return the format string as well as the offset from the beginning where the space is
-      - [ ] Of importance for markdown style comments where you can't just insert after the end of the substitution
+- [ ] Finish farsight
+- [ ] Fix lampshade (plugin is fine, but needs config module for global/buf level)
+- [ ] Fix rancher
+  - [ ] Tons of different bug issues and API fixes/updates
+  - [ ] Address the grep API issues found when creating that integration
+    - [ ] It is neither intuitive nor explained why there is a what table param
+      - Presumably, this is to be able to do things like enter a qftext func
+      - It is not explained if any what values are mandatory
+      - [ ] The user should be able to pass nil or an empty table to get default behavior
+    - [ ] It should be possible to pass a string argument for locations
+      - Or, if it would be better to keep it as a pure function arg, the defaults need to be documented
+    - [ ] Fzf-lua's approach of having "pattern" and "regex" be separate inputs is superior to having a regex flag. More intuitive
+      - Because you don't have to cross-reference two things in your head
+    - [ ] The "QfrSystemOpts" link in the Grep documentation is incorrect.
+    - [ ] The system sort arg should be able to take a string arg
+      - Alternatively, the defaults should be listed
+    - [ ] In sync, "syncrhonously" is a typo.
+    - [ ] List default behaviors/options for SystemOpts and GrepOpts
+    - [ ] SystemOpts and GrepOpts should be able to take nil values
+    - [ ] Print additional information on error to msgs
+      - [ ] Grep cmd (truncated if it's too long)
+  - [ ] In system, add an on_list callback. This might be useful for editing the result type in helpgrep to `\1` in a less arbitrary way
 
-  - [ ] Does a buf have a valid commentstring?
-    - [ ] vim.bo.commentstring is not nil and contains `%s`
+- [ ] Research todo-comments
+  - To help better understand the full scope of the problem
+  - [ ] Are there other similar plugins?
+- [ ] Research https://github.com/spywhere/vscode-mark-jump
 
-- [ ] Steps
+- [ ] Since, for now, this is meant for internal use, delete any of the config from the init file
+- [ ] Move anything important out of the `/plugin` file and delete that as well
 
-  - [ ] Blank line
-    - [ ] Return if no commentstring
-    - [ ] Get indent
-    - [ ] Replace the blank line with the indented, calculated new annotation.
-    - [ ] Move cursor and start insert based on substitution offset
+- [ ] Need a name for this plugin/convention. In VSCode these are called marks, which does not fit with Neovim. Folke uses todo-comments. But I'm not sure that fits with [k]k navigation. On the other hand, "comment-navigator" is not a terrible plugin name.
+  - Handle early because it's less to rename.
 
-  - [ ] Non-blank line
-    - [ ] Return if no commentstring
-    - [ ] If no append, do shift down
-    - [ ] If append is allowed, check if row has a comment.
-    - [ ] If row has a comment, do shift down, otherwise append
+- [ ] Look into how gitsigns does its [c]c navigation
 
-    - [ ] Append
-      - [ ] Handle Pre-existing trailing whitespace
-        - [ ] If the line has no trailing whitespace, add one space
-        - [ ] All trailing whitespace after the cursor should be removed
-      - [ ] Get set point
-      - [ ] Get new text and offset
-      - [ ] Set text
-      - [ ] Move cursor based on set point and offset
-      - [ ] Enter insert mode
+#### Meta Targets
 
-    - [ ] Shift down
-      - [ ] Basically the same logic as blank line, except nvim_buf_set_lines should be an insertion rather than a replacement
+- [ ] Include the colon as part of the annotation in all functions that use it
+  - Saves concatenation
+- [ ] All APIs should be accessible through init
 
-- [ ] Uses
-  - [ ] MARKS should not allow appends (always overwrite current blank or insert new)
-  - [ ] TODOs should try to append on non-blank lines
+#### General
 
-#### Check if a line has annotation X
-- [ ] Steps
+- [ ] Make autocmd to clean buf commentstring cache on close
 
-  - [ ] Fail if no commentstring
+#### Helpers
+
+- [ ] Get comment string
+  - [ ] If cached, return cached
+  - [ ] Get from buffer, cache and return
+
+- [ ] Validate `cms`
+  - [ ] Not nil
+  - [ ] len > 0
+  - [ ] Contains "%s"
+
+- [ ] Get new annotation X from commentstring:
+  - [ ] Replace `%s` with annotation plus an extra space
+  - [ ] Return the formatted string plus the offset for where the extra space is
+    - For insert mode cursor placement
+    - Relevant for markdown comments, where you can't just append to the end
+
+- [ ] Get border char
+  - [ ] Iterate through `cms`
+  - [ ] Each starting non-whitespace character should be the same, otherwise early return
+  - [ ] Stop iterating at ` ` or `%s`
+  - [ ] Return the iter char or nil
+
+- [ ] Get indent
+  - [ ] Should just be a copy paste of of nvim-tools
+
+- [ ] Get Search Annotation (cms, annotation, startonly, grep strategy)
+  - [ ] Get new annotation
+  - [ ] Use offset and the grep strategy to put its version of `.*` after the space
+  - [ ] Space characters are "one or more". This means something like `--    TODO: ` is valid
+  - [ ] Also have to allow for variable spacing between `cms` elements.
+    - The vimscript `cms` is `"%s`, but we would obviously want `" %s` to be valid
+  - [ ] Non-whitespace parts of `cms` must match exactly
   - [ ] Assume we are on one line. For languages like Lua this doesn't really matter. But for markdown this means we need the start and end of the `cms` on one line.
     - Markdown example:
-    {start of `cms` with space}{user annotation}{colon}{greedy .*}{end of `cms` with space}
-  - [ ] If startonly, then `cms` must be the first non-whitespace character on the line
+    {start of `cms`}{one or more spaces}{user annotation}{greedy .*}{one or more spaces}{end of `cms`}
+  - [ ] If startonly, use the grep strategy to pin the search to the beginning of the line
 
-- [ ] Uses:
+- [ ] Search
+  - [ ] Should basically be the nvim-tools extracted farsight search
+  - [ ] Needs to handle counts for navigation
+  - [ ] Depending on other data needs, perhaps don't use a SoA for results
+  - [ ] Because, at least for now, we are using backwards and fwds for navigation (because we need to support wrapscan), have a dir flag that is -1, 1 or 0 (whole buffer)
+  - [ ] For folds, either allow all results in folds or no folded results. We are assuming that we want to either skip over folds or see all results. First in fold doesn't make sense
 
-  - [ ] MARK needs to be startonly
-  - [ ] TODO does not care about startonly
+#### Create Annotation
 
-#### Same Buf Search for Annotation
-- This logic should handle both navigation and same buf "grep"
-- [ ] Whole Buf
-- [ ] Backward
-- [ ] Forward
+- [ ] Behaviors
+  - [ ] Blank line
+    - [ ] Get indent
+    - [ ] Replace the blank line with the indented, new annotation
+    - [ ] Based on the indent and offset, move the cursor and start insert
+  - [ ] Shift down
+    - [ ] Same as blank line, except nvim_buf_set_lines inserts instead of replaces
+  - [ ] Append
+    - [ ] If line has no trailing whitespace, add one space
+    - [ ] All trailing whitespace on or after the cursor is overwritten
+    - [ ] Get set point one space after last non-whitespace
+    - [ ] Set text
+    - [ ] Based on the set point and offset, move the cursor and start insert
 
-#### Navigate Annotations
+- [ ] Dispatcher
+  - [ ] Get and validate `cms`
+  - [ ] Get new annotation from X and `cms`
+  - [ ] if blank line then do blank line
+  - [ ] else
+    - [ ] if startonly, do shift down
+    - [ ] else
+      - [ ] if line has comment, do shift down
+      - [ ] else do append
 
-#### Search Stuff
+- [ ] Uses
+  - [ ] MARKS are startonly
+  - [ ] TODOs are not startonly
 
-  - [ ] Grep parsing
-    - [ ] General filtering:
-      - [ ] Do not accept results without a commentstring
-      - [ ] For commentstring, need to do filetype.match() then filetype.get_option()
-      - [ ] MARK
-        - [ ] Get commentstring
-        - [ ] Match beginning of line against comment string + mark
-      - [ ] TODO
-        - [ ] Get commentstring
-        - [ ] If buf is loaded, check of results are in comment nodes
-        - [ ] For unloaded bufs, accept all results with commentstring
-    - [ ] fzf-lua
-      - [ ] I'm not sure if the return here is a table or a text list
-    - [ ] rancher
-      - [ ] To start, add an on_list callback to system to filter results
-        - [ ] Get unique bufnrs in results
-        - [ ] Filter only results with `cms`
-        - [ ] Do individual filtering
-      - [ ] It would be better to be able to edit the text results directly, as this saves the effort of converting unused items to qf buffers
-    - [ ] Single-buf
-      - [ ] quit if no `cms`. Maybe vim.notify_once per buffer
-      - [ ] Can do node-based lookup
+#### Buf Search
 
-  - [ ] Adding new MARKS:
-    - [ ] blank line
-    - [ ] Non-blank line
-    - [ ] Cursor positioning must be based on %s, rather than an arbitrary end point. Have to take into account markdown style comments
-    - [ ] Same with How insertion/spacing of the annotation is done
+- [ ] Wrapper function
+  - [ ] For now, always assume current buf and win context. Document this with the function
+    - [ ] Altering window context is challenging because it affects cursor focus on :lopen
+  - [ ] Get and validate `cms`
+  - [ ] Get search annotation (account for startonly, strategy is vim regex)
+  - [ ] Because we search by exact annotation, no filtering needed
+  - [ ] Display results:
 
-  - [ ] Adding new TODOs:
-    - [ ] blank line
-    - [ ] Non-blank line, append
+    - [ ] if fzf-lua:
+      - [ ] Convert the indexing/data to what fzf-lua wants
+      - [ ] Send it
 
-  - [ ] Rather than bespokely parsing grep results, is it possible to use setqflist on the results to convert them
-    - [ ] Benefit - Saves a lot of code writing. Allows navigation of results in more easily parsed format. If we are sending to qflist anyway, gets that step done early
-    - [ ] Problem - This means we are doing qf parsing on results we will discard
-    - [ ] A goofy but not 100% absurd idea would be to re-implement the Quickfix parsing, since this would help with converting it to Lua
-  - [ ] fzf-lua
-    - [ ] What grepprg is being used?
-    - [ ] What is the output format?
-    - [ ] How to use list formatter on items
-  - [ ] rancher
-    - [ ] What grepprg is being used?
-    - [ ] What is the output format?
+    - [ ] else:
+      - [ ] Get lines for qflist display
+      - [ ] Turn the results into qf items
+        - [ ] I think both qf and search indexing is 1, 1 but double check
+      - [ ] Set the title to something like "annotator results"
 
-- [ ] Features
-  - [ ] Add mark
-    - [ ] Use the blank line or same line shift logic
-  - [ ] Add TODO
-    - [ ] Use the blank line or the same line append logic
+      - [ ] if rancher:
+        - [ ] Should have a public API to set a list with a title and take advantage of the "title_reuse" feature
+        - [ ] Use the window APIs to open
+      - [ ] else: Set loclist and open
 
-  - [ ] MARK Navigation
-    - [ ] How does Gitsigns do this?
-    - [ ] Require a commentstring
-    - [ ] Since we are in the same buf, we use the node detection first, then compare to commentstring
-      - [ ] Node might not be necessary since the syntax is so specific
-  - [ ] Same buf MARK search
-    - [ ] Should not do anything if the current buf doesn't have a commentstring
-    - [ ] Fzf-Lua
-    - [ ] Rancher
-  - [ ] CWD MARK search
-    - [ ] Only pull results from filetypes with a commentstring
-    - [ ] Use filetype.match and filetype.get_option
-    - [ ] Fzf-Lua
-    - [ ] Rancher
-  - [ ] Same buf TODO search
-    - [ ] Check comment nodes
-    - [ ] Fzf-Lua
-    - [ ] Rancher
-  - [ ] CWD TODO search
-    - [ ] Check TS in open files, otherwise accept
-    - [ ] Fzf-Lua
-    - [ ] Rancher
+- [ ] Uses
+  - [ ] MARKS are startonly
+  - [ ] TODOs are not startonly
 
-- [ ] Future actions
-  - This should not linger as an internal plugin
+#### Navigation
+
+Wrapper function:
+- [ ] Take dir
+- [ ] Perform search with count
+- [ ] Jump to the result
+- [ ] Have an on jump callback
+  - [ ] By default, handle `fdo` and `zzze` in here
+
+Uses:
+- [ ] MARK navigation
+
+#### Integration Search
+
+- [ ] fzf-lua
+  - [ ] grep the annotation
+- [ ] rancher
+  - [ ] grep the annotation using fixed strings
+
+#### Future Actions
+
+- [ ] This should not linger as an internal plugin
   - Plugin ideas:
     * More quickfix integration? AFAICT, todo-comments only sends results there
       + This would, IMO be a better way to do highlighting
@@ -189,8 +229,17 @@
   - Rancher should provide a method so that, if the Quickfix list is open and a buf of an item in the list is visible, the Quickfix entries are highlighted
   - [ ] This should be controllable at the individual list level, not just from the stack as a whole
   - [ ] It should be possible to customize how the highlighting is done. So, for diagnostics, you might want to highlight the individual items based on diagnostic severity. Whereas, if you are looking at the results of a generic grep, you would use hl-search to highlight
+- [ ] Integration search scoping:
+  - [ ] Should be able to specify ignore hidden files as an option
+  - [ ] Git files specific search
+- [ ] Border addition improvements:
+  - [ ] If a border is only found above or below, we can check to see if that border can be used for the current line. Check the line after the border to see if it is also a comment. If not, then we know it is not attached to some other comment item and can be re-used. Note that we are checking if the whole line is a comment, not if it merely contains one.
+  - [ ] This function could also, optionally, detect if there is whitespace after the border and add it if not.
+- [ ] Make internal searching support injected languages
 
 ## LOW:
+
+- [ ] It should be possible for annotation adding to automatically add borders afterwards. The problem is that the user shouldn't be trapped in this behavior. For <esc> users, this is not an issue, as exiting insert mode with <Esc> would trigger the border addition, whereas <C-c> would cancel it. I'm not sure what the best key is for <C-c> users by default (though obviously it should be mappable to whatever the user wants). I'm also not sure how you detect what key is used to exit insert mode. Could be on_key. Could be a temp keymap.
 
 ## PR:
 
@@ -202,8 +251,26 @@
 
 ## MAYBE:
 
-- [ ] If `cms` cannot be found for a buffer, treat MARK as a relaxed annotation
-- [ ] If `cms` cannot be found for a buffer, allow annotations through
+- If `cms` cannot be found for a buffer, treat MARK as a relaxed annotation
+- If `cms` cannot be found for a buffer, allow annotations through
+- Idea for filtering CWD search results by valid `cms`
+  - Get the grep result searching only for the annotation
+  - Turn it into table list
+  - For each item, iterate i and j (filter)
+    * Track the last filename
+    * Track if the last filename has a valid `cms`
+    * If new filename, use filetype.match and filetype.get_option to get `cms`
+      + If `cms`, then include and move i to j
+      + If not, then don't increment j
+    * For repeat filenames, handle j as needed
+    * Save a filename/`cms` hash table
+    * At the end of the first iteration, nil out extras
+  - For each again
+    * Get `cms` from hash table
+    * Check if line is valid
+    * Keep j if not, i to j then increment if so
+  - Stress test with LLVM
+  - Problem: This does not handle nested TS nodes
 
 ## NON:
 
