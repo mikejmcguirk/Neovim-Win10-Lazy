@@ -1,10 +1,33 @@
--- local api = vim.api
+-- NOTE: The validators for t in this module only check if the param is a table. Like vim.list,
+-- these functions should be able to operate on the list part of a table with a list and dict
+-- component.
+-- NOTE: These functions should all be pure Lua, not relying on vim.api or vim.fn calls
 
 local M = {}
 
 ---@generic T
 ---@param t T[]
+---@return boolean
+---@param f fun(x: T): boolean
+function M.all(t, f)
+    vim.validate("t", t, "table")
+    vim.validate("f", f, "callable")
+
+    local len = #t
+    for i = 1, len do
+        if not f(t[i]) then
+            return false
+        end
+    end
+
+    return true
+end
+
+---@generic T
+---@param t T[]
 function M.clear(t)
+    vim.validate("t", t, "table")
+
     local len = #t
     for i = 1, len do
         t[i] = nil
@@ -14,6 +37,8 @@ end
 ---@generic T
 ---@param t T[]
 function M.copy(t)
+    vim.validate("t", t, "table")
+
     local len = #t
     local ret = require("nvim-tools.table").table_new(len, 0)
     for i = 1, len do
@@ -27,6 +52,9 @@ end
 ---@param t T[]
 ---@param f fun(x: T): boolean
 function M.filter(t, f)
+    vim.validate("t", t, "table")
+    vim.validate("f", f, "callable")
+
     local len = #t
     local j = 1
 
@@ -45,9 +73,34 @@ end
 
 ---@generic T
 ---@param t T[]
+---@param v T | fun(x: T): boolean
+---@return integer|nil
+function M.find(t, v)
+    vim.validate("t", t, "table")
+    vim.validate("v", v, require("nvim-tools.types").not_nil)
+
+    local predicate = type(v) == "function" and v or function(x)
+        return x == v
+    end
+
+    for i = 1, #t do
+        if predicate(t[i]) then
+            return i
+        end
+    end
+
+    return nil
+end
+
+---@generic T
+---@param t T[]
 ---@param v T
 ---@param idx integer
 function M.insert(t, v, idx)
+    vim.validate("t", t, "table")
+    vim.validate("v", v, require("nvim-tools.types").not_nil)
+    vim.validate("idx", idx, "number")
+
     local len = #t
     t[len + 1] = t[len]
     for i = len, idx + 1, -1 do
@@ -61,6 +114,9 @@ end
 ---@param t T[]
 ---@param f fun(x: T, idx: integer): any
 function M.map(t, f)
+    vim.validate("t", t, "table")
+    vim.validate("f", f, "callable")
+
     local len = #t
     local j = 1
 
@@ -80,6 +136,9 @@ end
 ---@param t T[]
 ---@param idx integer
 function M.remove(t, idx)
+    vim.validate("t", t, "table")
+    vim.validate("idx", idx, "number")
+
     local len = #t
     local j = idx
     for i = idx + 1, len do

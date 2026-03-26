@@ -2,6 +2,8 @@ local api = vim.api
 return {
     "lewis6991/gitsigns.nvim",
     config = function()
+        api.nvim_set_hl(0, "GitSignsCurrentLineBlame", { link = "LspInlayHint" })
+
         local gitsigns = require("gitsigns")
         gitsigns.setup({
             signs = {
@@ -50,6 +52,8 @@ return {
                 set("n", "<leader>hS", gitsigns.stage_buffer)
                 set("n", "<leader>hi", gitsigns.preview_hunk_inline)
                 set("n", "<leader>hd", gitsigns.diffthis)
+
+                set("n", "<leader>hb", gitsigns.toggle_current_line_blame)
 
                 -- Changed from default tw
                 set("n", "<leader>hw", gitsigns.toggle_word_diff)

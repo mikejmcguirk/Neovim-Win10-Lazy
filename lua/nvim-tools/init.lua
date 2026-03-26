@@ -3,9 +3,9 @@ local M = {}
 local default_config = {
     foo = 1,
     bar = "buzz",
-    bazz = { 1, 2, 3, 4 }, -- leaf list (function validator)
-    buzz = { "aldrin", "lightyear" }, -- leaf list (function validator)
-    nested = { -- "owned" hash table layer (explicit marker)
+    bazz = { 1, 2, 3, 4 },
+    buzz = { "aldrin", "lightyear" },
+    nested = {
         foo = 2,
         bar = "bazzite",
     },

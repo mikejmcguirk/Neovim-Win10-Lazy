@@ -1,5 +1,5 @@
 local api = vim.api
-local fn = vim.fn
+-- local fn = vim.fn
 local vimv = vim.v
 
 ---@class farsight.Util
@@ -457,7 +457,7 @@ function M._validate_list(list, opts)
         return true
     end, opts.optional)
 end
-
+-- TODO: The func should take the whole list. The function can iterate over items if it wants
 -- MID: Also return messages from these validations for vim.validate to use
 
 ---@param n integer
