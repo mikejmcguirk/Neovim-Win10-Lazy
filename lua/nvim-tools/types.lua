@@ -1,6 +1,6 @@
 local M = {}
 
----@param n integer
+---@param n any
 ---@return boolean
 function M.is_int(n)
     if type(n) ~= "number" then
@@ -14,10 +14,10 @@ end
 -- - It handles both conversion and validation
 -- If that interface graduates, perhaps this will be removed.
 
----@param n integer
+---@param n any
 ---@return boolean
 function M.is_uint(n)
-    if M._is_int(n) == false then
+    if M.is_int(n) == false then
         return false
     end
 
@@ -65,18 +65,16 @@ function M.valid_list(t, opts)
 
     local item_type = opts.item_type
     if item_type then
-        local bad_idx = nil
         local find = require("nvim-tools.list").find
-        if type(item_type) == "string" then
-            bad_idx = find(t, function(v)
+        local predicate = type(item_type) == "table"
+                and function(v)
+                    return find(item_type, type(v)) == nil
+                end
+            or function(v)
                 return type(v) ~= item_type
-            end)
-        elseif type(item_type) == "table" then
-            bad_idx = find(t, function(v)
-                return find(item_type, type(v)) == nil
-            end)
-        end
+            end
 
+        local bad_idx = find(t, predicate)
         if bad_idx then
             return false, "Item at index " .. bad_idx .. " is not type " .. vim.inspect(item_type)
         else

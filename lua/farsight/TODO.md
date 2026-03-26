@@ -87,4 +87,5 @@
 
 ## FUTURE:
 
+- Once Nvim is on v0.13, consider moving position interfaces to vim.pos
 - If/when Neovim adds project scope/project config, see if that prompts a change in how config is handled.

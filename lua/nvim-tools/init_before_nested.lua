@@ -63,11 +63,6 @@ end
 -- TODO: Look at vim.validate
 -- TODO: Optimize ordering for common case
 
----@class nvim-tools.init.Config
----@field foo? integer
-
----@class nvim-tools.init.ConfigMeta
----@field _config nvim-tools.init.Config
 local Config_Meta = {}
 
 function Config_Meta.__index(self, k)

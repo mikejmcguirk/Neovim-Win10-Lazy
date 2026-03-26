@@ -15,4 +15,47 @@ M.table_new = (function()
     end
 end)()
 
+---@generic T
+---@param t table<T, T>
+function M.clear(t)
+    vim.validate("t", t, "table")
+
+    for k, _ in pairs(t) do
+        t[k] = nil
+    end
+end
+
+---@generic T
+---@param t table<T, T>
+---@param f fun(k: T, v: T): boolean|nil
+function M.filter(t, f)
+    vim.validate("t", t, "table")
+    vim.validate("f", f, "callable")
+
+    for k, v in pairs(t) do
+        if not f(k, v) then
+            t[k] = nil
+        end
+    end
+end
+
+---@generic T
+---@param t table<T, T>
+---@param k T
+---@param v T
+function M.get_or_set(t, k, v)
+    vim.validate("t", t, "table")
+    local not_nil = require("nvim-tools.types").not_nil
+    vim.validate("k", k, not_nil)
+    vim.validate("v", v, not_nil)
+
+    local ret = t[k]
+    if ret then
+        return ret
+    end
+
+    t[k] = v
+    return v
+end
+
 return M

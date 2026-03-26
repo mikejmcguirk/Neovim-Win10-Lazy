@@ -7,6 +7,7 @@ local M = {}
 ---@param buf integer
 ---@return boolean, string|nil, string|nil
 function M.check_modifiable(buf)
+    vim.validate("buf", buf, require("nvim-tools.types").is_uint)
     if api.nvim_get_option_value("modifiable", { buf = buf }) then
         return true, nil, nil
     else
@@ -18,6 +19,10 @@ end
 ---@param row integer
 ---@return integer
 function M.get_indent(buf, row)
+    local is_uint = require("nvim-tools.types").is_uint
+    vim.validate("buf", buf, is_uint)
+    vim.validate("row", row, is_uint)
+
     local indentexpr = api.nvim_get_option_value("indentexpr", { buf = buf })
     if #indentexpr > 0 then
         local old_row = vimv.lnum
@@ -77,6 +82,7 @@ end
 ---@param buf integer
 ---@return boolean
 function M.is_empty_buf(buf)
+    vim.validate("buf", buf, require("nvim-tools.types").is_uint)
     return api.nvim_buf_call(buf, function()
         return fn.wordcount().bytes == 0
     end)
@@ -85,6 +91,7 @@ end
 ---@param buf integer
 ---@return boolean
 function M.is_noname_buf(buf)
+    vim.validate("buf", buf, require("nvim-tools.types").is_uint)
     return #api.nvim_buf_get_name(buf) == 0
 end
 
@@ -123,6 +130,30 @@ local function prep_help_buf(buf)
     -- NOTE: Let the filetype be set on load as normal
 end
 
+---@param buf integer|string
+---@return integer
+local function get_open_bufnr(buf)
+    if type(buf) == "string" then
+        local bufnr = fn.bufadd(buf)
+        if bufnr == 0 then
+            error("Unable to add bufname " .. buf)
+        else
+            return bufnr
+        end
+    end
+
+    if type(buf) == "number" then
+        if not api.nvim_buf_is_valid(buf) then
+            error("Buf " .. buf .. " is invalid")
+        else
+            return buf
+        end
+    end
+
+    error("buf " .. tostring(buf) .. " is not a string or a valid bufnr")
+end
+-- MID: Is hard error best here?
+
 ---@class nvim-tools.buf.OpenBufOpts
 ---@field buftype? string
 ---@field clearjumps? boolean
@@ -135,27 +166,30 @@ end
 ---@param buf integer|string
 ---@param opts nvim-tools.buf.OpenBufOpts
 function M.open_buf(win, buf, opts)
+    vim.validate("opts", opts, "table")
+    local is_uint = require("nvim-tools.types").is_uint
+    vim.validate("win", win, is_uint)
     if not api.nvim_win_is_valid(win) then
         return
     end
 
-    buf = type(buf) == "string" and fn.bufadd(buf) or buf ---@type integer
-    if not api.nvim_buf_is_valid(buf) then
+    local bufnr = get_open_bufnr(buf)
+    if not api.nvim_buf_is_valid(bufnr) then
         return
     end
 
     local cur_pos = opts.cur_pos
     api.nvim_win_call(win, function()
-        local already_open = api.nvim_win_get_buf(win) == buf
+        local already_open = api.nvim_win_get_buf(win) == bufnr
         if not already_open then
             if opts.buftype == "help" then
-                prep_help_buf(buf)
+                prep_help_buf(bufnr)
             else
-                api.nvim_set_option_value("buflisted", true, { buf = buf })
+                api.nvim_set_option_value("buflisted", true, { buf = bufnr })
             end
 
             -- This loads the buf if necessary. Do not use bufload
-            api.nvim_set_current_buf(buf)
+            api.nvim_set_current_buf(bufnr)
             if opts.clearjumps then
                 api.nvim_cmd({ cmd = "clearjumps" }, {})
             end
