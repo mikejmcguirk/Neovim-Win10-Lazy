@@ -2,10 +2,10 @@ local api = vim.api
 
 local M = {}
 
+---@generic T
 ---@param silent boolean
----@param msg any
----@param hl any
----@return nil
+---@param msg T
+---@param hl T
 function M.echo_err(silent, msg, hl)
     if silent then
         return

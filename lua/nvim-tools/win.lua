@@ -72,6 +72,7 @@ end
 
 ---@param win integer
 ---@param cur_pos { [1]:integer, [2]: integer }
+---@ return { [1]:integer, [2]: integer }
 function M.protected_set_cursor(win, cur_pos)
     local buf = api.nvim_win_get_buf(win)
 
@@ -82,7 +83,9 @@ function M.protected_set_cursor(win, cur_pos)
     local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
     col = math.min(col, math.max(#line - 1, 0))
 
-    api.nvim_win_set_cursor(win, { row, col })
+    local new_cur_pos = { row, col }
+    api.nvim_win_set_cursor(win, new_cur_pos)
+    return new_cur_pos
 end
 
 return M

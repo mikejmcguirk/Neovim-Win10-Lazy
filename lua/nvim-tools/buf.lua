@@ -101,18 +101,22 @@ function M.is_empty_noname_buf(buf)
     return M.is_empty_buf(buf) and M.is_noname_buf(buf)
 end
 
----Assumes proper window context
 ---@param buf integer
 ---@return nil
 --- See :h help-buffer-options
-local function prep_help_buf(buf)
+local function prepare_help_buf(buf)
     local cur_buf = { buf = buf }
     api.nvim_set_option_value("binary", false, cur_buf)
     api.nvim_set_option_value("buflisted", false, cur_buf)
+    api.nvim_set_option_value("buftype", "help", cur_buf)
     api.nvim_set_option_value("iskeyword", '!-~,^*,^|,^",192-255', cur_buf)
     api.nvim_set_option_value("modifiable", false, cur_buf)
     api.nvim_set_option_value("tabstop", 8, cur_buf)
+    -- NOTE: Don't set filetype yet
+end
 
+---Assumes proper window context
+local function set_help_win()
     local local_scope = { scope = "local" }
     api.nvim_set_option_value("arabic", false, local_scope)
     api.nvim_set_option_value("cursorbind", false, local_scope)
@@ -125,9 +129,6 @@ local function prep_help_buf(buf)
     api.nvim_set_option_value("relativenumber", false, local_scope)
     api.nvim_set_option_value("scrollbind", false, local_scope)
     api.nvim_set_option_value("spell", false, local_scope)
-
-    api.nvim_set_option_value("buftype", "help", cur_buf)
-    -- NOTE: Let the filetype be set on load as normal
 end
 
 ---@param buf integer|string
@@ -161,14 +162,15 @@ end
 ---@field do_zzze? boolean
 ---@field focus? boolean
 ---@field fold_cmd? "zv"|"zO"|nil
+---@field on_open fun(win: integer, buf: integer, cur_pos: { [1]:integer, [2]:integer })
 
 ---@param win integer window-ID
 ---@param buf integer|string
----@param opts nvim-tools.buf.OpenBufOpts
+---@param opts? nvim-tools.buf.OpenBufOpts
 function M.open_buf(win, buf, opts)
+    opts = opts or {}
     vim.validate("opts", opts, "table")
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("win", win, is_uint)
+    vim.validate("win", win, require("nvim-tools.types").is_uint)
     if not api.nvim_win_is_valid(win) then
         return
     end
@@ -179,20 +181,47 @@ function M.open_buf(win, buf, opts)
     end
 
     local cur_pos = opts.cur_pos
-    api.nvim_win_call(win, function()
-        local already_open = api.nvim_win_get_buf(win) == bufnr
-        if not already_open then
-            if opts.buftype == "help" then
-                prep_help_buf(bufnr)
-            else
-                api.nvim_set_option_value("buflisted", true, { buf = bufnr })
-            end
+    -- TODO: alias buftype
+    opts.buftype = opts.buftype or api.nvim_get_option_value("buftype", { buf = bufnr })
+    if opts.buftype == "help" then
+        prepare_help_buf(bufnr)
+    else
+        api.nvim_set_option_value("buflisted", true, { buf = bufnr })
+    end
 
-            -- This loads the buf if necessary. Do not use bufload
-            api.nvim_set_current_buf(bufnr)
-            if opts.clearjumps then
-                api.nvim_cmd({ cmd = "clearjumps" }, {})
+    local already_open = api.nvim_win_get_buf(win) == bufnr
+    local function do_open()
+        if already_open then
+            return true, nil, nil
+        end
+
+        local old_eventignorewin = api.nvim_get_option_value("eventignorewin", { win = win })
+        if opts.buftype == "help" then
+            -- TODO: Should be a conditional append. Or do we just use vim.opt until it's
+            -- actually deprecated
+            api.nvim_set_option_value("eventignorewin", "FileType", { win = win })
+        end
+
+        -- TODO: Calculate if we are focusing on the new win. If we are not, we don't want to
+        -- fire BufEnter, WinEnter, and so on
+        -- It seems like firing BufWinEnter is logical, but that would disrupt my stuff, so I'm
+        -- not sure. Check the code
+        local ok, err = pcall(api.nvim_set_current_buf, bufnr)
+        if opts.buftype == "help" then
+            api.nvim_set_option_value("eventignorewin", old_eventignorewin, { win = win })
+            if ok then
+                set_help_win()
+                api.nvim_set_option_value("filetype", "help", { buf = bufnr })
             end
+        end
+
+        return ok, err
+    end
+
+    local ok, err = api.nvim_win_call(win, function()
+        local ok_b, err_b = do_open()
+        if not ok_b then
+            return ok_b, err_b
         end
 
         if cur_pos then
@@ -200,7 +229,7 @@ function M.open_buf(win, buf, opts)
                 api.nvim_cmd({ cmd = "normal", args = { "m'" }, bang = true }, {})
             end
 
-            require("nvim-tools").win.protected_set_cursor(cur_pos, { win = win })
+            cur_pos = require("nvim-tools.win").protected_set_cursor(win, cur_pos)
         end
 
         if opts.do_zzze then
@@ -211,12 +240,33 @@ function M.open_buf(win, buf, opts)
         if fold_cmd then
             api.nvim_cmd({ cmd = "normal", args = { fold_cmd }, bang = true }, {})
         end
+
+        return ok_b, err_b
     end)
+
+    -- TODO: Is this best?
+    if not ok then
+        error(err)
+    end
 
     if opts.focus and not cur_pos then
         api.nvim_set_current_win(win)
     end
+
+    local on_open = opts.on_open
+    if on_open then
+        on_open(win, bufnr, cur_pos or api.nvim_win_get_cursor(win))
+    end
 end
+-- TODO: For my config, I think I use my protected win close then close buf function for the
+-- various bwipe functions I have, because those functions are not buf coutn aware. Creates
+-- problems if you have a qf buf open in multiple windows. Probably other things I'm not expecting
+-- either
+-- - For stuff like Fugitive, compare my maps to the defaults, to make sure I'm not creating
+-- bad behavior
+-- TODO: Do I actually outline my pbuf rm logic? I Kinda feel forced into it now because of the qf
+-- case, because that leads into
+-- TODO: For rancher, use pbuf_rm for the qflist instead of a simple wipe or delete
 -- TODO: Look at edit C code. Anything I'm missing?
 -- TODO: Is the cur_win check necessary? Wouldn't/shouldn't the API do this check internally?
 -- TODO: Add error handling

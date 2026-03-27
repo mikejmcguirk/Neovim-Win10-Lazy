@@ -30,6 +30,8 @@ local is_bad_mode = function()
     return string.match(mode, "[csSiR]")
 end
 
+-- MID: How does the Nvim default do this? While I like my current method of doing the processing
+-- in the autocmd, I think nvim how has a new interface to use to get this data
 api.nvim_create_autocmd("LspProgress", {
     group = stl_events,
     callback = function(ev)
@@ -193,10 +195,12 @@ local function create_buf_str(buf)
     local ft = api.nvim_get_option_value("ft", { buf = buf }) ---@type string
 
     local printable = #mbt + #ft > 0
-    local fmt_bt_ft = printable and " " .. bt .. ft or ""
+    local fmt_bt_ft = printable and " " .. bt_map[bt] .. ft or ""
 
     return encoding .. " | " .. mff .. " |" .. fmt_bt_ft .. " "
 end
+-- MID: It feels like the better way to do this is with caching them all and using OptionSet to
+-- just update the cache, then using LuaEval to pull them.
 
 -- LOW: This does not address the case where a float is converted to a non-float. Can look at this
 -- more if this case becomes more frequent
