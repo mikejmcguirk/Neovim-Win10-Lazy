@@ -246,6 +246,10 @@ for _, map in ipairs({ "<C-w>q", "<C-w><C-q>" }) do
         end
 
         vim.schedule(function()
+            if not api.nvim_buf_is_valid(buf) then
+                return
+            end
+
             if #fn.win_findbuf(buf) > 0 then
                 return
             end
@@ -262,6 +266,9 @@ for _, map in ipairs({ "<C-w>q", "<C-w><C-q>" }) do
         end)
     end)
 end
+-- MID: This logic should be used for win/buf closing in a lot of different places, because
+-- bwipe closes in all windows and close does not handle the underlying buffer data
+-- - Check defaults, such as in Fugitive, to make sure this doesn't have side-effects
 
 set("n", "<C-w>c", "<nop>")
 set("n", "<C-w><C-c>", "<nop>")

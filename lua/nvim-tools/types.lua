@@ -91,5 +91,3 @@ function M.valid_list(t, opts)
 end
 
 return M
-
--- TODO: Add the other stuff fram rancher if it's general

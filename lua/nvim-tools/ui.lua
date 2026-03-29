@@ -30,7 +30,6 @@ function M.get_echospace()
     local cmdheight = api.nvim_get_option_value("cmdheight", {})
     return columns * math.max(cmdheight - 1, 0) + vim.v.echospace
 end
--- TODO: For cmdheight, do I specify scope = local?
 -- PR: cmdheight is local to tabpage, but get_option_value does not have a tab key
 
 return M

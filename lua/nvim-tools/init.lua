@@ -8,30 +8,31 @@ local default_config = {
     nested = {
         foo = 2,
         bar = "bazzite",
+        deeper = {
+            baz = "bill",
+            fuzz = 4,
+        },
     },
 }
 
-local validators = {
+local config_schema = {
     foo = "number",
     bar = "string",
     bazz = function(v)
-        return vim.islist(v)
-            and vim.tbl_all(v, function(n)
-                return type(n) == "number"
-            end)
+        return require("nvim-tools.types").valid_list(v, { item_type = "number" })
     end,
     buzz = function(v)
-        return vim.islist(v)
-            and vim.tbl_all(v, function(s)
-                return type(s) == "string"
-            end)
+        return require("nvim-tools.types").valid_list(v, { item_type = "string" })
     end,
-
-    -- "owned" hash table layer — explicitly marked so we know it gets its own validation layer
     nested = {
-        __config = true, -- ← this is the explicit "owned" marker
+        __config = true,
         foo = "number",
         bar = "string",
+        deeper = {
+            __config = true,
+            baz = "string",
+            fuzz = "number",
+        },
     },
 }
 
@@ -39,98 +40,114 @@ local validators = {
 ---@param val any
 ---@return boolean
 local function validate(validator, val)
-    if type(validator) == "function" then
-        return validator(val)
-    end
     if type(validator) == "string" then
         return type(val) == validator
+    elseif type(validator) == "function" then
+        return validator(val)
+    else
+        return false
     end
-    return false
 end
 
----@class nvim-tools.init.Config
----@field foo? integer
+---@class nvim-tools.init.ConfigProxy
+local Config_Proxy = {}
 
----@class nvim-tools.init.ConfigMeta
----@field _config nvim-tools.init.Config
-local Config_Meta = {}
-
--- Per-level decision: does this key point to an "owned" hash table layer?
-Config_Meta.__index = function(proxy, key)
-    local data = rawget(proxy, "_config")
-    local value = rawget(data, key)
-
-    local field_validator = (rawget(proxy, "_validator") or validators)[key]
-
-    -- Explicit "owned" hash table layer: create a sub-proxy so writes inside it are validated
-    if
-        type(value) == "table"
-        and type(field_validator) == "table"
-        and field_validator.__config
-    then
-        local sub_proxy = {}
-        rawset(sub_proxy, "_config", value) -- share the real data slice
-        rawset(sub_proxy, "_validator", field_validator) -- sub-validator (minus the marker)
-        setmetatable(sub_proxy, Config_Meta)
-        return sub_proxy
-    end
-
-    -- Leaf case (scalar, list, or any plain table)
-    -- → return the raw value/table so the caller never sees a proxy
-    if value ~= nil then
+local function clean_config(value)
+    if type(value) ~= "table" then
         return value
     end
 
-    return rawget(Config_Meta, key) -- class methods
-end
-
-Config_Meta.__newindex = function(proxy, key, value)
-    local data = rawget(proxy, "_config")
-    local validator = rawget(proxy, "_validator") or validators
-    local field_validator = validator[key]
-
-    if not field_validator then
-        return -- unknown key → silent
+    if getmetatable(value) == Config_Proxy then
+        value = rawget(value, "_config")
     end
 
-    if validate(field_validator, value) then
+    local clean = {}
+    for k, v in pairs(value) do
+        clean[k] = clean_config(v)
+    end
+
+    return clean
+end
+-- TODO: The clean table is a bit extra for non _config tables I think
+
+Config_Proxy.__index = function(self, key)
+    local data = rawget(self, "_config")
+    local value = rawget(data, key)
+
+    if value ~= nil then
+        return clean_config(value)
+    else
+        return rawget(Config_Proxy, key)
+    end
+end
+
+Config_Proxy.__newindex = function(self, key, value)
+    local data = rawget(self, "_config")
+    local validators = rawget(self, "_validators")
+    local validator = validators[key]
+
+    if validator and validate(validator, value) then
         rawset(data, key, value)
     end
-    -- invalid → silently ignored
 end
+-- TODO: Unsure what you do when you newindex a subtable. I think it just fails validation. Should
+-- call __call() to merge in
 
----@param new_tbl nvim-tools.init.Config
-function Config_Meta:__call(new_tbl)
+function Config_Proxy.__call(self, new_tbl)
     if type(new_tbl) ~= "table" then
         return
     end
 
     local data = rawget(self, "_config")
-    local validator = rawget(self, "_validator") or validators
+    local validators = rawget(self, "_validators")
 
     for k, v in pairs(new_tbl) do
-        local field_validator = validator[k]
-        if field_validator and validate(field_validator, v) then
+        local validator = validators[k]
+        if validator and validate(validator, v) then
             rawset(data, k, v)
         end
     end
-    -- empty table or unknown keys → silent no-op
-end
--- TODO: If no argument is passed, return the table
-
-function Config_Meta:get()
-    return vim.deepcopy(rawget(self, "_config"))
 end
 
-function Config_Meta:reset()
-    rawset(self, "_config", vim.deepcopy(default_config))
+function Config_Proxy:get()
+    return clean_config(self)
+end
+
+local function clean_schema(schema)
+    local clean = {}
+    for k, v in pairs(schema) do
+        if k ~= "__config" then
+            clean[k] = v
+        end
+    end
+
+    return clean
+end
+
+local function build_proxy(data, schema)
+    local proxy = {}
+    rawset(proxy, "_config", data)
+    rawset(proxy, "_validators", clean_schema(schema))
+    setmetatable(proxy, Config_Proxy)
+    return proxy
 end
 
 local function create_config()
-    local proxy = {}
-    rawset(proxy, "_config", vim.deepcopy(default_config))
-    setmetatable(proxy, Config_Meta)
-    return proxy
+    local root_data = vim.deepcopy(default_config)
+    local root_proxy = build_proxy(root_data, config_schema)
+
+    local function build_sub_proxies(sub_data, sub_schema)
+        for k, v in pairs(sub_schema) do
+            if type(v) == "table" and v.__config then
+                local child_data = sub_data[k]
+                sub_data[k] = build_proxy(child_data, v)
+                build_sub_proxies(child_data, v)
+            end
+        end
+    end
+
+    build_sub_proxies(root_data, config_schema)
+    return root_proxy
 end
 
 M.config = create_config()
@@ -138,5 +155,9 @@ M.config = create_config()
 function M.reset_config()
     M.config = create_config()
 end
+
+-- setmetatable(M, {
+--
+-- })
 
 return M

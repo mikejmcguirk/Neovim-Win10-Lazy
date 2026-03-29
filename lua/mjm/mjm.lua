@@ -65,3 +65,4 @@ function mjm.win.protected_set_cursor(cur_pos, opts)
 
     api.nvim_win_set_cursor(win, { row, col })
 end
+-- TODO: Replace with nvim-tools code

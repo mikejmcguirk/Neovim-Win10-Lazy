@@ -102,7 +102,7 @@ setopt("nuw", 5, global_scope)
 setopt("scl", "yes:1", global_scope)
 
 autoset_winopt({ "WinLeave" }, "rnu", false)
-api.nvim_create_autocmd({ "WinEnter", "BufWinEnter", "CmdlineLeave" }, {
+api.nvim_create_autocmd({ "WinEnter", "CmdlineLeave" }, {
     group = set_group,
     callback = function()
         if getopt("filetype", { buf = 0 }) == "pager" then

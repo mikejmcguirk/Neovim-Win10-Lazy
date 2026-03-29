@@ -16,7 +16,7 @@
       - [ ] Iter all positions for re-indexing
   - [x] Protected set cursor
   - [x] List tools
-  - [ ] Table tools
+  - [x] Table tools
   - [x] echo wrapper
   - [x] Protected Win Close
   - [x] Get listed bufs

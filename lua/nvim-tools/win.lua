@@ -2,6 +2,14 @@ local api = vim.api
 
 local M = {}
 
+---@param win integer window-ID
+---@param cur_pos { [1]:integer, [2]:integer } Cursor indexed
+---@return boolean
+function M.cursor_at(win, cur_pos)
+    local win_cur_pos = api.nvim_win_get_cursor(win)
+    return win_cur_pos[1] == cur_pos[1] and win_cur_pos[2] == cur_pos[2]
+end
+
 ---Credit echasnovski
 ---@param wins integer[]
 function M.order_wins(wins)
