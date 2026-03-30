@@ -21,3 +21,5 @@ return {
         end, {})
     end,
 }
+-- MID: You cannot use "q" to exit the results window, instead needing "gq". Why is this? Re-enable
+-- q if possible.

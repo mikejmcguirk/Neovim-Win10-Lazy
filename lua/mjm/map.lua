@@ -87,6 +87,10 @@ set("n", "g<tab>", function()
     api.nvim_open_tabpage(0, true, { after = pos })
 end)
 
+-- TODO: Figure out a mapping for :tabmove
+-- A possibility might be to do a harpoon-like buffer where they can be moved/edited. Would need to
+-- be able to handle closing there though to be principled.
+
 ---------------
 -- KEEPJUMPS --
 ---------------

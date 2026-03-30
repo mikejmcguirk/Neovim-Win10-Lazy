@@ -3,6 +3,17 @@
 #### TODO:
 
 - [ ] Double Hash issue in md file with top codelens
+- [ ] Add an external cmd keymap namespace
+  - [ ] BMove/BKill
+    - [ ] BKill should prompt for confirmation
+    - [ ] BMove should enter the literal cmd so it can be reviewed
+  - [ ] chmod
+    - [ ] Should be something like <leader>{key}cx and <leader>{key}cX for add and remove x
+    - [ ] Should operate on current file
+    - [ ] No need to confirm permission, but should print feedback
+  - [ ] The leader sub-key should not be convenient to hit. So use something like \ or <bs>. / or ; could be okay too
+    - [ ] I originally went away from "\" because the ergonomics were so poor. Maybe that one's too much, especially since something like <leader>\bk is only two keys less than :BKill. But it should not be something that can be hit accidentally.
+  - [ ] If we're on windows, for now, just reject and print a msg
 
 #### MID:
 
