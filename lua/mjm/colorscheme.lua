@@ -11,6 +11,10 @@ if vim.g.syntax_on == 1 then
     api.nvim_cmd({ cmd = "syntax", args = { "reset" } }, {})
 end
 
+-- FUTURE: Set to deal with regressions in restart functionality.
+-- https://github.com/neovim/neovim/issues/38545 seems to be the closest tracking issue.
+api.nvim_set_option_value("termguicolors", true, { scope = "global" })
+
 set_var("c_syntax_for_h", true)
 set_var("colors_name", "SimpleDelta")
 api.nvim_set_option_value("bg", "dark", {})

@@ -25,6 +25,19 @@ function M.clear(t)
     end
 end
 
+---Performs a shallow copy
+---@generic T
+---@param t table<T, T>
+---@return table<any, any>
+function M.copy(t)
+    local ret = {}
+    for k, v in pairs(t) do
+        ret[k] = v
+    end
+
+    return ret
+end
+
 ---@generic T
 ---@param t table<T, T>
 ---@param f fun(k: T, v: T): boolean|nil

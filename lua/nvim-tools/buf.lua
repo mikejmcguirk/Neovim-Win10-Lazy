@@ -434,6 +434,10 @@ end
 ---@param buf integer
 ---@return boolean, string|nil, string|nil
 function M.save(buf)
+    if not api.nvim_buf_is_valid(buf) then
+        return false, "Buffer " .. buf .. " is invalid", ""
+    end
+
     if #api.nvim_buf_get_name(buf) == 0 then
         return false, "E32: No file name", "ErrorMsg"
     end
@@ -451,19 +455,20 @@ end
 ---@param opts vim.api.keyset.buf_delete
 ---@return boolean, string|nil, string|nil
 function M.save_and_del(buf, delist, opts)
+    opts = require("nvim-tools.table").copy(opts)
     if not opts.force then
         if M.is_empty_noname_buf(buf) then
             opts.force = true
         else
-            local ok, err = M.save(buf)
+            local ok, err, hl = M.save(buf)
             if not ok then
-                return ok, err, "ErrorMsg"
+                return ok, err, hl
             end
         end
     end
 
     return M.protected_del(buf, delist, opts)
 end
--- TODO: check if buf is valid
+-- LOW: Should force still try to save, but ignore failures?
 
 return M

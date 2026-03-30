@@ -1,5 +1,4 @@
 local api = vim.api
-local di = Mjm_Defer_Require("mjm.diagnostics") ---@type MjmDiags
 local fn = vim.fn
 local set = vim.keymap.set
 local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
@@ -55,6 +54,8 @@ set("n", "ZU", function()
         end
     end
 end)
+-- LOW: Getting listed bufs (requires a filter) then filtering again for current buf is
+-- inefficient.
 
 ----------
 -- TABS --
@@ -246,10 +247,6 @@ for _, map in ipairs({ "<C-w>q", "<C-w><C-q>" }) do
         end
 
         vim.schedule(function()
-            if not api.nvim_buf_is_valid(buf) then
-                return
-            end
-
             if #fn.win_findbuf(buf) > 0 then
                 return
             end
@@ -423,36 +420,48 @@ set("n", "]'", "]`")
 -- NORMAL <BS> LAYER --
 -----------------------
 
+-- MAYBE: Thinking of moving these keys to the leader layer behind <bs>. These can all be set
+-- from the cmdline, and stuff like diagnostic config does not fit naturally as "builtin" keymaps.
+-- Counterpoint: <bs> is not an especially important namespace to free. And, this would have to
+-- be considered relative to the nature of other builtins. [q]q do not "need" to be keymaps but
+-- obviously make sense. Being able to toggle spell in particular is useful.
+
 set("n", "<bs>", "<nop>")
 
 set("n", "<bs>d", function()
-    di.toggle_diags()
+    require("mjm.diagnostics").toggle_diags()
 end)
 
 set("n", "<bs>D", function()
-    di.toggle_virt_lines()
+    require("mjm.diagnostics").toggle_virt_lines()
 end)
 
 set("n", "<bs><M-d>", function()
     local enabled = tostring(vim.diagnostic.is_enabled())
-    local config = vim.diagnostic.config()
-    local inspected = vim.inspect(config)
-    print("Enabled: " .. enabled .. "\n\n" .. inspected)
+    local inspected = vim.inspect(vim.diagnostic.config())
+    print(table.concat({ "Enabled: ", enabled, "\n\n", inspected }, ""))
 end)
 
 set("n", "<bs>s", function()
-    local cur_spell = api.nvim_get_option_value("spell", { scope = "local" }) ---@type boolean
+    ---@type boolean
+    local cur_spell = api.nvim_get_option_value("spell", { scope = "local" })
     vim.api.nvim_set_option_value("spell", not cur_spell, { scope = "local" })
 end)
 
 set("n", "<bs><M-s>", "<cmd>set spell?<cr>")
 
 set("n", "<bs>w", function()
-    local cur_wrap = api.nvim_get_option_value("wrap", { scope = "local" }) ---@type boolean
+    ---@type boolean
+    local cur_wrap = api.nvim_get_option_value("wrap", { scope = "local" })
     vim.api.nvim_set_option_value("wrap", not cur_wrap, { scope = "local" })
 end)
 
 set("n", "<bs><M-w>", "<cmd>set wrap?<cr>")
+
+-- LOW: It is incongruous that I have spellnav on [w]w (to make room for ts-text-objects) but
+-- then have spell still as s here, with wrap on w. The problem is that [w]w is a valuable key
+-- because it's fairly ergonamic, and there's no practical need to use it for navigating w/W
+-- text objects. s is also a great key to use for a text object.
 
 --------------------
 -- MODE SWITCHING --

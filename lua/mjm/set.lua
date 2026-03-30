@@ -3,7 +3,14 @@ local getopt = api.nvim_get_option_value
 local setopt = api.nvim_set_option_value
 
 -- :h ui2
-require("vim._core.ui2").enable({ enable = true })
+-- FUTURE: Wrapped in an autocmd due to https://github.com/neovim/neovim/issues/38553
+api.nvim_create_autocmd("UIEnter", {
+    group = api.nvim_create_augroup("mjm-start-ui2", {}),
+    once = true,
+    callback = function()
+        require("vim._core.ui2").enable({ enable = true })
+    end,
+})
 
 -------------
 -- OPTIONS --
