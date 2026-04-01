@@ -2,15 +2,16 @@ local api = vim.api
 local getopt = api.nvim_get_option_value
 local setopt = api.nvim_set_option_value
 
+-- api.nvim_set_var("no_plugin_maps", 1)
+-- api.nvim_set_var("omni_sql_no_default_maps", 1)
+
+-- TODO: This makes the intro screen not show
+-- Or rather, it shows then flickers off
+-- Would need to first test with a config that only enables ui2. If that works, then I need to
+-- figure out what other thing in combination with this is causing the issue. Is that an issue
+-- then of my config being over-elaborate or a problem in ui2?
 -- :h ui2
--- FUTURE: Wrapped in an autocmd due to https://github.com/neovim/neovim/issues/38553
-api.nvim_create_autocmd("UIEnter", {
-    group = api.nvim_create_augroup("mjm-start-ui2", {}),
-    once = true,
-    callback = function()
-        require("vim._core.ui2").enable({ enable = true })
-    end,
-})
+require("vim._core.ui2").enable()
 
 -------------
 -- OPTIONS --
@@ -50,9 +51,9 @@ setopt("wrap", false, global_scope)
 setopt("bri", true, global_scope)
 setopt("lbr", true, global_scope)
 
-setopt("ts", Mjm_Sw, global_scope)
-setopt("sts", Mjm_Sw, global_scope)
-setopt("sw", Mjm_Sw, global_scope)
+setopt("ts", mjm.v.shiftwidth, global_scope)
+setopt("sts", mjm.v.shiftwidth, global_scope)
+setopt("sw", mjm.v.shiftwidth, global_scope)
 setopt("et", true, global_scope)
 setopt("sr", true, global_scope)
 
@@ -96,7 +97,7 @@ autoset_winopt("WinEnter", "cul", true)
 autoset_winopt("WinLeave", "cul", false)
 
 setopt("list", true, global_scope)
-setopt("lcs", Mjm_Lcs, global_scope)
+setopt("lcs", mjm.v.lcs, global_scope)
 autoset_winopt("InsertEnter", "list", false)
 autoset_winopt("InsertLeave", "list", true)
 

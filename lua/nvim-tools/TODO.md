@@ -9,6 +9,33 @@
 - [ ] When https://github.com/neovim/neovim/issues/38420 releases, update everything to use it. Targets:
   * [ ] Option changes using misc.append_if_missing
 
+## Init
+
+#### TODO:
+
+- [ ] Need to decide how I want the config to render to the user and why.
+  - The technical delineations are:
+    - For any particular level of the config, do you need to use :get() to get a clean view
+      * This needs to be consistent at all levels, including the top level
+      * Cannot be different per level like LSP Config, because config is, conceptually, a continuous object, rather than lsp.config, which itself is understood as a container for sub-configs
+      * You could, in theory, solve this problem with a "global" config, but that is not appropriate for all plugins (such as lampshade)
+      * Also remember that this conceptual answer needs to answer the buf config question
+    - The solution here must properly handle the g/b question. You need to be able to plug a metatable into the g/b config tables and have it function the way the config tables do now
+      * The solution also needs to work such that, in the g/b configuration, you can load the defaults and the meta into g/b tables and never have to hold them in a config file, meaning those tables don't have to be in a separate file needing a require
+        + Why not do that now?
+  - And then the conceptual issues are:
+    * One view of the config object is that we are representing it to the user as a straight table with validation, even though that is certainly not what the internals are
+      + This strikes me as fundamentally deceptive
+        + There are two views a user could have of this. One is that they know it's a metatable hack but want the interface to resemble a normal table. The other just wants the metatable part of it out of mind, and is willing to be decieved about it because it gives their brain permission to avoid the question
+    * Even if you are more open about the meta-table architecture, it also can't be obtrusive. The user/plugin need to be able to get info cleanly without having to mentally parse through the metatable nonsense
+    * Another question relates to hackability. It should be relatively tractable for a user to hack into the plugin if they want. It should not be supported behavior, but it allows for experimentation
+    * Clarity. What makes vim.lsp.config work is that accessing the meta structure gives you the meta structure. The individual configs the individual configs
+      + Which is why I actually don't like a lot of the wrapper functions being put around it, because it sorta muddies the waters of what is being resolved and when
+    * Avoiding redundancy. config() also returning the table is obviously good but confusing
+      + lsp.config just errors
+    * Setting is one of the biggest conceptualy confusions where it looks like a bare table but doesn't actually act like one
+      + Points toward only using call functions to set tbh
+
 ## Buf
 
 #### TODO:

@@ -4,20 +4,15 @@ local api = vim.api
 local get_hl = api.nvim_get_hl
 local set_hl = api.nvim_set_hl
 local set_var = api.nvim_set_var
-local tbl_extend = vim.tbl_extend
 
 api.nvim_cmd({ cmd = "hi", args = { "clear" } }, {})
 if vim.g.syntax_on == 1 then
     api.nvim_cmd({ cmd = "syntax", args = { "reset" } }, {})
 end
 
--- FUTURE: Set to deal with regressions in restart functionality.
--- https://github.com/neovim/neovim/issues/38545 seems to be the closest tracking issue.
-api.nvim_set_option_value("termguicolors", true, { scope = "global" })
-
 set_var("c_syntax_for_h", true)
 set_var("colors_name", "SimpleDelta")
-api.nvim_set_option_value("bg", "dark", {})
+api.nvim_set_option_value("background", "dark", { scope = "global" })
 
 -- https://www.sessions.edu/color-calculator/
 local black = "#000000"
@@ -48,9 +43,8 @@ local l_yellow = "#EDFF98"
 ---@param old_hl string
 ---@param cfg_ext table
 local function hl_extend(old_hl, cfg_ext)
-    -- TODO: Isn't there an hl option now that circumvents the need for this?
     local old_cfg = get_hl(0, { name = old_hl })
-    return tbl_extend("force", old_cfg, cfg_ext)
+    return vim.tbl_extend("force", old_cfg, cfg_ext)
 end
 
 -- DIAGNOSTICS AND STATUS --

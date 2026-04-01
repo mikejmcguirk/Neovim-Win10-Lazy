@@ -26,8 +26,7 @@ api.nvim_create_autocmd("BufWritePre", {
     end,
 })
 
--- TODO: Why do I have this in addition to the BufWritePre autocmd?
 set("n", "ZZ", function()
-    require("mjm.utils").fallback_formatter(0, { retab = false })
     api.nvim_cmd({ cmd = "norm", args = { "w" }, mods = { lockmarks = true, silent = true } }, {})
 end, { buf = 0 })
+-- LOW: Why is this mapped to "w" instead of up?

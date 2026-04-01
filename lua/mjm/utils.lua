@@ -6,7 +6,6 @@ mjm.util = {}
 local api = vim.api
 local fn = vim.fn
 local uv = vim.uv
-local vimv = vim.v
 
 ---@class MjmUtils
 local M = {}
@@ -66,20 +65,6 @@ end
 ---@field win? integer
 ---@field skip_zz? boolean
 
--- MID: Redundant with the one later on. Get rid of one of them
----@param buf integer
----@return boolean
-function mjm.util.is_buf_empty_noname(buf)
-    if #api.nvim_buf_get_name(buf) > 0 then
-        return false
-    end
-    local lines = api.nvim_buf_get_lines(buf, 0, -1, false) ---@type string[]
-    if #lines > 1 or #lines[1] > 0 then
-        return false
-    end
-    return true
-end
-
 ---@param source mjm.OpenBufSource
 ---@param opts mjm.OpenBufOpts
 ---@return boolean
@@ -119,9 +104,9 @@ function M.open_buf(source, opts)
         api.nvim_cmd({ cmd = "split" }, {})
     elseif opts.open == "tabnew" then
         api.nvim_cmd({ cmd = "tabnew" }, {})
-        local tabnew_win = api.nvim_get_current_win() ---@type integer
-        local tabnew_buf = api.nvim_win_get_buf(tabnew_win) ---@type integer
-        if mjm.util.is_buf_empty_noname(tabnew_buf) then
+        local tabnew_win = api.nvim_get_current_win()
+        local tabnew_buf = api.nvim_win_get_buf(tabnew_win)
+        if require("nvim-tools.buf").is_empty_noname(tabnew_buf) then
             api.nvim_set_option_value("bufhidden", "wipe", { buf = tabnew_buf })
         end
     end
@@ -158,7 +143,7 @@ function M.open_buf(source, opts)
             end)
         end
 
-        mjm.win.protected_set_cursor(opts.cur_pos, { win = win })
+        require("nvim-tools.win").protected_set_cursor(win, opts.cur_pos)
     end
 
     if not opts.skip_zz then
@@ -173,6 +158,8 @@ function M.open_buf(source, opts)
 
     return true
 end
+-- TODO: Create nvim-tools window split
+-- TODO: Replace with nvim-tools function
 
 ---@param buf integer
 ---@param indent integer
@@ -357,35 +344,6 @@ function M.check_word_under_cursor()
     end)
 end
 
--- MID: This should have a cap on iterations
----@param types string[]
----@return boolean
-function M.is_in_node_type(types)
-    if #types < 1 then
-        return false
-    end
-
-    local node = vim.treesitter.get_node() ---@type TSNode?
-    while node do
-        for _, type in ipairs(types) do
-            if node:type() == type then
-                return true
-            end
-        end
-
-        node = node:parent()
-    end
-
-    return false
-end
-
--- LOW: Could do this as a table<string, string[]> where the key is filetype and the val is the
--- list of comment nodes, and then have a fallback list
----@return boolean
-function M.is_comment()
-    return M.is_in_node_type({ "comment", "line_comment", "block_comment", "comment_content" })
-end
-
 -- Adapted from mike-jl/harpoonEx
 ---@param opts {buf?: integer, bufname?: string}
 ---@return nil
@@ -510,18 +468,6 @@ function M.is_empty_buf(buf)
     end
 end
 
-function M.is_empty_noname_buf(buf)
-    if not api.nvim_buf_is_valid(buf) then
-        return false
-    end
-
-    if #api.nvim_buf_get_name(buf) > 0 then
-        return false
-    end
-
-    return M.is_empty_buf(buf)
-end
-
 ---@param buf integer
 ---@param force boolean
 ---@param wipeout boolean
@@ -601,6 +547,7 @@ function M.get_vregionpos4()
 
     return { region[1][1][2], region[1][1][3], region[#region][2][2], region[#region][2][3] }
 end
+-- TODO: Replace with the nvim-tools implementation
 
 -- LOW: Do this not with recursion to handle deep directories
 
@@ -644,5 +591,3 @@ function M.checked_mkdir_p(path, mode)
 end
 
 return M
-
--- LOW: This module has a lot of stuff that would benefit from going into the mjm global

@@ -1,13 +1,12 @@
 local api = vim.api
 local set = vim.keymap.set
-local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 
 ---@param all boolean
 local function commit(all, msg)
     local args = "commit" .. (all and " -a" or "") ---@type string
     if msg then
-        local prompt = "Commit message" .. (all and " (ALL)" or "") .. ": " ---@type string
-        local ok, result = ut.get_input(prompt) ---@type boolean, string
+        local prompt = "Commit message" .. (all and " (ALL)" or "") .. ": "
+        local ok, result = require("mjm.utils").get_input(prompt)
         if not ok then
             ---@type [string, string|integer?][]
             local chunks = { { (result or "Unknown error getting input"), "ErrorMsg" } }
@@ -35,10 +34,10 @@ local function open_diffs(staged)
         end
     end
 
-    local ok, window = pcall(require, "qf-rancher.window") ---@type boolean, QfrWins?
+    local ok, window = pcall(require, "qf-rancher.window")
     if ok and window then
-        window.close_loclist(api.nvim_get_current_win())
-        window.close_qflist()
+        window.close_ll_win(api.nvim_get_current_win())
+        window.close_qf_win()
     else
         vim.cmd("lclose | cclose")
     end
@@ -80,7 +79,7 @@ local function setup_fugitive()
 
     set("n", "<leader>gR", function()
         ---@type boolean, string
-        local ok, input = ut.get_input("reset --soft HEAD~1 ? [y/n]: ")
+        local ok, input = require("mjm.utils").get_input("reset --soft HEAD~1 ? [y/n]: ")
         if not ok then
             ---@type [string, string|integer?][]
             local chunks = { { (input or "Unknown error getting input"), "ErrorMsg" } }

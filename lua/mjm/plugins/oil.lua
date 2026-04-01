@@ -1,11 +1,10 @@
 local api = vim.api
-local oil = Mjm_Defer_Require("oil")
 
 local function close_oil()
     if api.nvim_get_option_value("modified", { buf = 0 }) then
         api.nvim_echo({ { "Oil buffer has unsaved changes" } }, false, {})
     else
-        oil.close()
+        require("oil").close()
     end
 end
 
@@ -25,6 +24,7 @@ return {
             ["<C-^>"] = { close_oil, mode = "n" }, -- Vinegar style mapping
             ["q"] = {
                 function()
+                    local oil = require("oil")
                     oil.discard_all_changes()
                     oil.close()
                 end,
@@ -32,13 +32,13 @@ return {
             },
             ["Q"] = {
                 function()
-                    oil.save({ confirm = nil }, function(err)
+                    require("oil").save({ confirm = nil }, function(err)
                         if err and err == "Canceled" then
                             return
                         elseif err then
                             api.nvim_echo({ { err } }, true, { err = true })
                         else
-                            oil.close()
+                            require("oil").close()
                         end
                     end)
                 end,

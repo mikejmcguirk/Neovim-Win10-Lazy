@@ -1,4 +1,5 @@
 local api = vim.api
+local fn = vim.fn
 
 local mjm_group = api.nvim_create_augroup("mjm-group", {})
 
@@ -47,11 +48,9 @@ api.nvim_create_autocmd("BufWinEnter", {
             return
         end
 
-        mjm.win.protected_set_cursor(mark, { win = win })
+        require("nvim-tools.win").protected_set_cursor(win, mark)
         api.nvim_win_call(win, function()
             api.nvim_cmd({ cmd = "norm", args = { "zz" }, bang = true }, {})
         end)
     end,
 })
-
--- MAYBE: Add a an autocmd to automatically chmod+x bash scripts

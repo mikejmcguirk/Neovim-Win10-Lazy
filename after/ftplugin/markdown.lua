@@ -8,7 +8,8 @@ mjm.opt.flag_rm("fo", { "r" }, { buf = 0 })
 
 local local_scope = { scope = "local" }
 api.nvim_set_option_value("colorcolumn", "", local_scope)
-api.nvim_set_option_value("cursorlineopt", "screenline", local_scope)
+-- See :h culopt for highlighting
+api.nvim_set_option_value("cursorlineopt", "screenline,number", local_scope)
 api.nvim_set_option_value("sidescrolloff", 12, local_scope)
 api.nvim_set_option_value("spell", true, local_scope)
 api.nvim_set_option_value("wrap", true, local_scope)

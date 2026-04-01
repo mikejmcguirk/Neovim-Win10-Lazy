@@ -1,5 +1,4 @@
 local api = vim.api
-local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
 
 ---@module 'blink.cmp'
 ---@type blink.cmp.Config
@@ -106,8 +105,11 @@ local blink_opts = {
                 score_offset = -6,
                 transform_items = function(a, items)
                     local prose_ft = { "text", "markdown" }
+                    ---@type string
                     local ft = api.nvim_get_option_value("filetype", { buf = 0 })
-                    if not (vim.tbl_contains(prose_ft, ft) or ut.is_comment()) then
+                    local prose = require("nvim-tools.list").find(prose_ft, ft)
+                        or require("nvim-tools.treesitter").is_in_node({ "comment" }, true)
+                    if not prose then
                         return items
                     end
 

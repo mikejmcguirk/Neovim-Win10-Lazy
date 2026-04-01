@@ -1,29 +1,8 @@
 local api = vim.api
+local fn = vim.fn
 local set = vim.keymap.set
 
 require("mjm.mjm")
-
-local gen_lcs = "extends:»,precedes:«,nbsp:␣,trail:⣿"
-_G.Mjm_Lcs = "tab:<->," .. gen_lcs
-_G.Mjm_Lcs_Tab = "tab:   ," .. gen_lcs
-_G.Mjm_Sw = 4
-
-_G.Has_Nerd_Font = true
--- LOW: Create a more general defer require. Look at all of tj's funcs + vim._defer_require
--- Needs to work with LSP autocomplete. Maybe vim._defer_require addresses this
--- https://github.com/tjdevries/lazy-require.nvim/blob/master/lua/lazy-require.lua
----@param path string
----@return table
-function _G.Mjm_Defer_Require(path)
-    return setmetatable({}, {
-        __index = function(_, key)
-            return require(path)[key]
-        end,
-        __newindex = function(_, key, value)
-            require(path)[key] = value
-        end,
-    })
-end
 
 set({ "n", "x" }, "<Space>", "<Nop>")
 set({ "n", "x" }, "\\", "<Nop>")
@@ -38,9 +17,7 @@ set("n", "<cr>", "<cr>")
 set("n", "<C-[>", "<C-[>")
 set("n", "<esc>", "<esc>")
 
-api.nvim_set_var("no_plugin_maps", 1)
-
--- Get these before lazy.nvim runs
+-- Safer than letting lazy handle skipping
 -- :h standard-plugin-list
 api.nvim_set_var("loaded_2html_plugin", 1)
 api.nvim_set_var("did_install_default_menus", 1)
@@ -63,7 +40,7 @@ local termfeatures = vim.g.termfeatures or {}
 termfeatures.osc52 = false -- I use xsel
 api.nvim_set_var("termfeatures", termfeatures)
 
-require("mjm.colorscheme")
+api.nvim_cmd({ cmd = "colorscheme", args = { "simple_delta" } }, {})
 
 require("mjm.lazy")
 require("mjm.internal")
@@ -85,18 +62,24 @@ if not api.nvim_buf_is_valid(1) then
     return
 end
 
-local ut = require("mjm.utils")
-if not ut.is_empty_noname_buf(1) then
+if not require("nvim-tools.buf").is_empty_noname(1) then
     return
 end
 
 api.nvim_create_autocmd("BufHidden", {
     buffer = 1,
     callback = function()
-        if ut.is_empty_noname_buf(1) then
-            vim.schedule(function()
-                api.nvim_buf_delete(1, { force = true })
-            end)
-        end
+        -- AFAICT, the only function that triggers this event is close_buffer in buffer.c
+        -- The BufHidden event is only meant to be fired when there are no plans to unload.
+        -- Deleting the buffer within the BufHidden event creates unwinding behavior. This is
+        -- not *un*-intended, but I have seen treesitter fail to properly attach to the next
+        -- buffer if this is not scheduled.
+        vim.schedule(function()
+            local ntb = require("nvim-tools.buf")
+            if ntb.is_empty_noname(1) and #fn.win_findbuf(1) == 0 then
+                ntb.protected_del(1, true, { force = true })
+            end
+        end)
     end,
 })
+-- NON: Running this as an autocmd against all buffers. It will fire constantly.

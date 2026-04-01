@@ -1,7 +1,7 @@
 local api = vim.api
 local fn = vim.fn
 local set = vim.keymap.set
-local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
+local vimv = vim.v
 
 -----------------
 -- LEADER MAPS --
@@ -61,8 +61,15 @@ end)
 -- TABS --
 ----------
 
-set("n", "<tab>", "gt")
-set("n", "<S-tab>", "gT")
+set("n", "[t", "gt")
+set("n", "]t", "gT")
+set("n", "<tab>", function()
+    local vcount = vim.v.count
+    local count_tabpages = fn.tabpagenr("$")
+    local pos = vcount == 0 and count_tabpages or math.min(vcount, count_tabpages)
+    api.nvim_open_tabpage(0, true, { after = pos })
+end)
+
 set("n", "ZT", function()
     if fn.tabpagenr("$") == 1 then
         api.nvim_echo({ { "Cannot close last tabpage" } }, false, {})
@@ -79,17 +86,6 @@ set("n", "ZB", function()
     local args = vcount > 0 and { tostring(vcount) } or nil
     api.nvim_cmd({ cmd = "tabonly", args = args }, {})
 end)
-
-set("n", "g<tab>", function()
-    local vcount = vim.v.count
-    local count_tabpages = fn.tabpagenr("$")
-    local pos = vcount == 0 and count_tabpages or math.min(vcount, count_tabpages)
-    api.nvim_open_tabpage(0, true, { after = pos })
-end)
-
--- TODO: Figure out a mapping for :tabmove
--- A possibility might be to do a harpoon-like buffer where they can be moved/edited. Would need to
--- be able to handle closing there though to be principled.
 
 ---------------
 -- KEEPJUMPS --
@@ -188,7 +184,7 @@ local do_tmux_move = function(dir)
 
     local zoom_cmd = { "tmux", "display-message", "-p", "#{window_zoomed_flag}" }
     local result = vim.system(zoom_cmd, { text = true }):wait()
-    if result.code == 0 and result.stdout == "1\n" then
+    if (result.code == 0 and result.stdout == "1\n") or result.code == 124 then
         return
     end
 
@@ -213,15 +209,17 @@ for k, _ in pairs(tmux_cmd_map) do
     end)
 end
 
----@param cmd vim.api.keyset.cmd
-local resize_win = function(cmd)
+---@param amt string
+---@param vert boolean
+local resize_win = function(amt, vert)
     local wintype = fn.win_gettype(0)
     if not (wintype == "" or wintype == "quickfix" or wintype == "loclist") then
         return
     end
-
     local old_spk = api.nvim_get_option_value("spk", { scope = "global" }) ---@type string
     api.nvim_set_option_value("spk", "topline", { scope = "global" })
+    ---@type vim.api.keyset.cmd
+    local cmd = { cmd = "resize", args = { amt }, mods = { silent = true, vertical = vert } }
     api.nvim_cmd(cmd, {})
     api.nvim_set_option_value("spk", old_spk, { scope = "global" })
 end
@@ -236,7 +234,7 @@ local resize_maps = {
 
 for _, m in ipairs(resize_maps) do
     set("n", m[1], function()
-        resize_win({ cmd = "resize", args = { m[2] }, mods = { silent = true, vertical = m[3] } })
+        resize_win(m[2], m[3])
     end)
 end
 
@@ -351,13 +349,34 @@ set("o", "go", function()
     return vim.v.count < 1 and "gg" or "go"
 end, { expr = true })
 
---TODO: Restore adding a jump if top or bottom is exited.
+---@param char "j"|"k"
+---@param do_pc_mark fun(cur:integer, count1:integer): boolean
+---@return string
+local function up_down(char, do_pc_mark)
+    if vimv.count == 0 then
+        return "g" .. char
+    end
+
+    local cur = fn.line(".")
+    local count1 = vimv.count1
+    if do_pc_mark(cur, count1) then
+        return "m'" .. count1 .. char -- Manually add count because m' eats the implicit one
+    else
+        return char
+    end
+end
+
 set({ "n", "x" }, "j", function()
-    return vim.v.count == 0 and "gj" or "j"
+    return up_down("j", function(cur, count1)
+        local new = math.min(cur + count1, api.nvim_buf_line_count(0))
+        return new > fn.line("w$")
+    end)
 end, { expr = true })
 
 set({ "n", "x" }, "k", function()
-    return vim.v.count == 0 and "gk" or "k"
+    return up_down("k", function(cur, count1)
+        return math.min(cur - count1, 1) < fn.line("w0")
+    end)
 end, { expr = true })
 
 set("n", "zT", function()
@@ -616,7 +635,7 @@ set("x", "<C-=>", eval_cmd, { noremap = true, silent = true })
 ---@param up? boolean
 ---@return nil
 local function add_blank_visual(up)
-    local vrange4 = ut.get_vregionpos4() ---@type Range4|nil
+    local vrange4 = require("mjm.utils").get_vregionpos4() ---@type Range4|nil
     if not vrange4 then
         return
     end
@@ -721,6 +740,40 @@ set("x", ">", function()
     visual_indent()
 end, { silent = true })
 
+------------
+-- SYSTEM --
+------------
+
+local sys_leader = "/"
+
+set("n", "<leader>" .. sys_leader .. "cc", function()
+    mjm.fs.get_file_perms(0)
+end)
+
+set("n", "<leader>" .. sys_leader .. "cx", function()
+    mjm.fs.chmod(0, true, 0b001001001)
+end)
+
+set("n", "<leader>" .. sys_leader .. "cX", function()
+    mjm.fs.chmod(0, false, 0b001001001)
+end)
+
+set("n", "<leader>" .. sys_leader .. "cw", function()
+    mjm.fs.chmod(0, true, 0b010010010)
+end)
+
+set("n", "<leader>" .. sys_leader .. "cW", function()
+    mjm.fs.chmod(0, false, 0b010010010)
+end)
+
+set("n", "<leader>" .. sys_leader .. "ce", function()
+    mjm.fs.chmod(0, true, 0b100100100)
+end)
+
+set("n", "<leader>" .. sys_leader .. "cE", function()
+    mjm.fs.chmod(0, false, 0b100100100)
+end)
+
 -----------------
 -- INSERT MODE --
 -----------------
@@ -745,7 +798,7 @@ set("i", "<C-l>", "<esc><cmd>silent norm! u<cr>")
 _G.I_Dedent = "<C-m>"
 set("i", I_Dedent, "<C-d>")
 
--- TODO: Send the CSI to make this work
+-- MID: Send the CSI to make this work
 -- set("i", "<M-[>", "<C-o>[")
 --
 -- set("i", "<M-]>", "<C-o>]")

@@ -1,8 +1,9 @@
--- TODO: Bring this back.
 return {
     "Wansmer/treesj",
-    enabled = false,
-    keys = { { "gs", nil, mode = "n" }, { "gS", nil, mode = "n" } },
+    keys = {
+        { "gJ", nil, mode = "n" },
+        -- { "gS", nil, mode = "n" },
+    },
     config = function()
         require("treesj").setup({
             max_join_length = 99,
@@ -10,12 +11,13 @@ return {
             use_default_keymaps = false,
         })
 
-        vim.keymap.set("n", "gs", function()
-            require("treesj").toggle()
+        vim.keymap.set("n", "gJ", function()
+            require("treesj").toggle({ split = { recursive = true } })
         end)
 
-        vim.keymap.set("n", "gS", function()
-            require("treesj").split({ split = { recursive = true } })
-        end)
+        -- vim.keymap.set("n", "gS", function()
+        --     require("treesj").split({ split = { recursive = true } })
+        -- end)
     end,
 }
+-- MAYBE: If gJ with recursive is too much, can add another map in. gS is not terrible.

@@ -60,7 +60,6 @@ return {
     lazy = false,
     config = function()
         local fzf_lua = require("fzf-lua")
-        local actions = Mjm_Defer_Require("fzf-lua").actions
 
         fzf_lua.setup(fzflua_opts)
 
@@ -72,10 +71,19 @@ return {
 
         set("n", "<leader>ff", fzf_lua.resume)
         set("n", "<leader>fb", function()
-            fzf_lua.buffers({ actions = { ["ctrl-d"] = { actions.buf_del, actions.resume } } })
+            local actions = require("fzf-lua").actions
+            fzf_lua.buffers({
+                actions = {
+                    ["ctrl-d"] = {
+                        actions.buf_del,
+                        actions.resume,
+                    },
+                },
+            })
         end)
 
         set("n", "<leader>fi", function()
+            local actions = require("fzf-lua").actions
             fzf_lua.files({
                 actions = {
                     ["enter"] = actions.file_edit_or_qf,

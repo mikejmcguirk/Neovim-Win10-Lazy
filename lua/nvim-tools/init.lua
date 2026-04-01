@@ -68,14 +68,13 @@ local function clean_config(value)
 
     return clean
 end
--- TODO: The clean table is a bit extra for non _config tables I think
 
 Config_Proxy.__index = function(self, key)
     local data = rawget(self, "_config")
     local value = rawget(data, key)
 
     if value ~= nil then
-        return clean_config(value)
+        return value
     else
         return rawget(Config_Proxy, key)
     end

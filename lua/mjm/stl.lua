@@ -95,7 +95,7 @@ api.nvim_create_autocmd("LspProgress", {
 local counts = { 0, 0, 0, 0 }
 local levels = { "Error", "Warn", "Info", "Hint" }
 ---@type string[]
-local signs = Has_Nerd_Font and { "󰅚 ", "󰀪 ", "󰋽 ", "󰌶 " }
+local signs = mjm.v.has_nerd_font and { "󰅚 ", "󰀪 ", "󰋽 ", "󰌶 " }
     or { "E:", "W:", "I:", "H:" }
 
 -- NOTE: My diagnostics.lua contains the delete for the default diagnostic status cache augroup
@@ -167,7 +167,7 @@ api.nvim_create_autocmd({ "LspAttach", "LspDetach" }, {
 })
 
 ---@type string[]
-local format_icons = Has_Nerd_Font and { unix = "", dos = "", mac = "" }
+local format_icons = mjm.v.has_nerd_font and { unix = "", dos = "", mac = "" }
     or { unix = "unix", dos = "dos", mac = "mac" }
 
 local bt_map = {
@@ -293,10 +293,6 @@ local eval = "(nvim_get_current_win()==#g:actual_curwin || &laststatus==3)" ---@
 ---@type string
 local stl_str = "%{%" .. eval .. " ? v:lua.Mjm_Stl.active() : v:lua.Mjm_Stl.inactive()%}"
 api.nvim_set_option_value("stl", stl_str, { scope = "global" })
-
--- TODO: https://github.com/neovim/neovim/commit/caf780859197ae6e2a3af3f9dd1e79bdca5ef02d
--- Is this a viable replacement for my bespoke code? It doesn't look like it cachces results.
--- Perhaps that could be PR'd in.
 
 -- MID: Show which treesitter parser(s) are running.
 -- MID: https://github.com/neovim/neovim/pull/35428

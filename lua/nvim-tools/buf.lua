@@ -15,6 +15,20 @@ function M.check_modifiable(buf)
     end
 end
 
+---@return integer
+function M.create_temp_buf()
+    local buf = api.nvim_create_buf(false, true)
+    local buf_opt = { buf = buf }
+    api.nvim_set_option_value("bufhidden", "wipe", buf_opt)
+    api.nvim_set_option_value("buftype", "nofile", buf_opt)
+    api.nvim_set_option_value("modifiable", false, buf_opt)
+    api.nvim_set_option_value("readonly", true, buf_opt)
+    api.nvim_set_option_value("swapfile", false, buf_opt)
+    api.nvim_set_option_value("undofile", false, buf_opt)
+
+    return buf
+end
+
 ---@param buf integer
 ---@param row integer
 ---@return integer
@@ -81,7 +95,7 @@ end
 
 ---@param buf integer
 ---@return boolean
-function M.is_empty_buf(buf)
+function M.is_empty(buf)
     vim.validate("buf", buf, require("nvim-tools.types").is_uint)
     return api.nvim_buf_call(buf, function()
         return fn.wordcount().bytes == 0
@@ -90,15 +104,15 @@ end
 
 ---@param buf integer
 ---@return boolean
-function M.is_noname_buf(buf)
+function M.is_noname(buf)
     vim.validate("buf", buf, require("nvim-tools.types").is_uint)
     return #api.nvim_buf_get_name(buf) == 0
 end
 
 ---@param buf integer
 ---@return boolean
-function M.is_empty_noname_buf(buf)
-    return M.is_empty_buf(buf) and M.is_noname_buf(buf)
+function M.is_empty_noname(buf)
+    return M.is_empty(buf) and M.is_noname(buf)
 end
 
 ---@param fold_cmd "zv"|"zO"|nil
@@ -165,7 +179,7 @@ end
 ---@return string, string
 local function get_eiw(win, buftype)
     local old_eiw = api.nvim_get_option_value("eventignorewin", { win = win })
-    local new_eiw_tbl = { "WinEnter" } -- Caller will handle this
+    local new_eiw_tbl = { "WinEnter,WinLeave" } -- Caller will handle these
 
     -- Both of these FileTypes are meant to set two categories of options:
     -- - Buffer local options that run after loading (Should overwrite autocmds)
@@ -411,7 +425,7 @@ end
 ---Assumes buf has been validated
 ---@param buf integer|string
 ---@return boolean, integer, string|nil, string|nil
-function M.resolve_buf(buf)
+function M.resolve_bufnr(buf)
     if buf == 0 then
         return true, api.nvim_get_current_buf(), nil, nil
     end
@@ -429,6 +443,25 @@ function M.resolve_buf(buf)
     else
         return false, -1, "Bufnr " .. bufnr .. " is invalid", "ErrorMsg"
     end
+end
+
+---@param buf integer|string
+---@return boolean, string, string|nil, string|nil
+function M.resolve_full_bufname(buf)
+    vim.validate("buf", buf, function()
+        return require("nvim-tools.types").is_uint(buf) or type(buf) == "string"
+    end)
+
+    local full_bufname = buf
+    if type(full_bufname) == "string" then
+        return true, fn.fnamemodify(full_bufname, ":p"), nil, nil
+    end
+
+    if not api.nvim_buf_is_valid(full_bufname) then
+        return false, "", "Buf " .. buf .. " is invalid", ""
+    end
+
+    return true, api.nvim_buf_get_name(full_bufname), nil, nil
 end
 
 ---@param buf integer
@@ -449,6 +482,7 @@ function M.save(buf)
         return ok, err, "ErrorMsg"
     end
 end
+-- TODO: This error comes up on qflists, where it really shouldn't.
 
 ---@param buf integer
 ---@param delist boolean
@@ -456,8 +490,12 @@ end
 ---@return boolean, string|nil, string|nil
 function M.save_and_del(buf, delist, opts)
     opts = require("nvim-tools.table").copy(opts)
+    if not api.nvim_buf_is_valid(buf) then
+        return false, "Buffer " .. buf .. " is invalid", ""
+    end
+
     if not opts.force then
-        if M.is_empty_noname_buf(buf) then
+        if M.is_empty_noname(buf) then
             opts.force = true
         else
             local ok, err, hl = M.save(buf)

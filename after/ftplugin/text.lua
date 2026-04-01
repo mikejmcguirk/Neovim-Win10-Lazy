@@ -3,7 +3,7 @@ local set = vim.keymap.set
 
 local local_scope = { scope = "local" }
 api.nvim_set_option_value("colorcolumn", "", local_scope)
-api.nvim_set_option_value("cursorlineopt", "screenline", local_scope)
+api.nvim_set_option_value("cursorlineopt", "screenline,number", local_scope)
 api.nvim_set_option_value("sidescrolloff", 12, local_scope)
 api.nvim_set_option_value("spell", true, local_scope)
 api.nvim_set_option_value("wrap", true, local_scope)

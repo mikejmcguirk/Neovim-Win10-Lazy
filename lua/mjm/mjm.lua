@@ -1,20 +1,19 @@
 local api = vim.api
+local uv = vim.uv
 
 _G.mjm = {}
 
 mjm.v = {}
 mjm.v.fmt_lhs = "<leader>o"
+mjm.v.has_nerd_font = true
 
--- Problem:
--- - I have ftplugin files that modify options. I want them to be able to do so safely
--- - vim.opt and set are non-specific about scope (global/local only)
--- - Options are in a liminal state: (https://github.com/neovim/neovim/issues/20107)
--- Solution:
--- - Hack together interfaces for cleanly working with options
---
--- LOW: Handle list and dict options. Dict would be helpful because it would get rid of hackiness
--- around how I have listchars built for Go. List is less relevant because I only append to them
--- in initial setup. Everything in ftplugins is an overwrite.
+local gen_lcs = "extends:»,precedes:«,nbsp:␣,trail:⣿"
+mjm.v.lcs = "tab:<->," .. gen_lcs
+mjm.v.lcs_tab = "tab:   ," .. gen_lcs
+
+mjm.v.shiftwidth = 4
+
+-- Temp interfaces until https://github.com/neovim/neovim/issues/38420
 mjm.opt = {}
 
 ---@param opt string
@@ -45,24 +44,183 @@ function mjm.opt.flag_rm(opt, flags_out, scope)
 end
 -- MID: Is it better to split val into a table and filter on flags_out?
 
-mjm.win = {}
+mjm.fs = {}
+-- FUTURE: The code in the fs_stat calls is mostly redundant, but I don't want to make a
+-- pre-mature generalization
 
----@param cur_pos { [1]: integer, [2]: integer }
----@param opts? { win?: integer }
----@return nil
-function mjm.win.protected_set_cursor(cur_pos, opts)
-    opts = opts or {}
-    local win = opts.win or api.nvim_get_current_win()
-    local buf = api.nvim_win_get_buf(win)
+local PERM_MASK = 511
 
-    local row = math.max(cur_pos[1], 1)
-    local line_count = api.nvim_buf_line_count(buf)
-    row = math.min(row, line_count)
+---@param perm_bits integer
+---@return string
+local function mode_to_readable_perms(perm_bits)
+    local perms = {}
 
-    local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
-    local len_line_0 = math.max(#line - 1, 0)
-    local col = math.min(cur_pos[2], len_line_0)
+    perms[1] = bit.band(perm_bits, 256) ~= 0 and "r" or "-"
+    perms[2] = bit.band(perm_bits, 128) ~= 0 and "w" or "-"
+    perms[3] = bit.band(perm_bits, 64) ~= 0 and "x" or "-"
 
-    api.nvim_win_set_cursor(win, { row, col })
+    perms[4] = bit.band(perm_bits, 32) ~= 0 and "r" or "-"
+    perms[5] = bit.band(perm_bits, 16) ~= 0 and "w" or "-"
+    perms[6] = bit.band(perm_bits, 8) ~= 0 and "x" or "-"
+
+    perms[7] = bit.band(perm_bits, 4) ~= 0 and "r" or "-"
+    perms[8] = bit.band(perm_bits, 2) ~= 0 and "w" or "-"
+    perms[9] = bit.band(perm_bits, 1) ~= 0 and "x" or "-"
+
+    return table.concat(perms, "")
 end
--- TODO: Replace with nvim-tools code
+
+---@param buf integer|string
+function mjm.fs.get_file_perms(buf)
+    local ntb = require("nvim-tools.buf")
+    local ok, full_bufname, r_err, r_hl = ntb.resolve_full_bufname(buf)
+    if not ok then
+        require("nvim-tools.ui").echo_err(false, r_err, r_hl)
+        return
+    end
+
+    uv.fs_stat(full_bufname, function(err, stat)
+        vim.schedule(function()
+            local basename = vim.fs.basename(full_bufname)
+            if err then
+                local msg = "Cannot stat " .. basename .. ": " .. err
+                api.nvim_echo({ { msg, "ErrorMsg" } }, true, {})
+                return
+            end
+
+            local perm_bits = bit.band(stat.mode, PERM_MASK)
+            local perms = mode_to_readable_perms(perm_bits)
+            local octal = string.format("%03o", perm_bits)
+            api.nvim_echo({
+                { basename .. ": ", "Normal" },
+                { perms, "Special" },
+                { " (" .. octal .. ")", "Comment" },
+            }, true, {})
+        end)
+    end)
+end
+
+---@param plus boolean|nil
+---@param layer_bits integer|string
+---@return string
+local function get_chmod_arg(plus, layer_bits)
+    local bits = layer_bits
+    if type(layer_bits) == "string" then
+        bits = tonumber(layer_bits, 8) -- base-8 = octal
+        if not bits then
+            error("Invalid octal permission: '" .. layer_bits)
+        end
+    end
+
+    if bits < 0 or bits > PERM_MASK then
+        error("Permission value out of range (0-777 octal)", 2)
+    end
+
+    local fmt = string.format("%03o", bits)
+    return plus == nil and fmt or (plus and "+" or "-") .. fmt
+end
+
+---@param buf integer|string
+---@param plus boolean|nil   -- true = +, false = -, nil = absolute
+---@param layer_bits integer|string -- e.g. 111 (for +x/-x) or 755 (for absolute)
+function mjm.fs.chmod(buf, plus, layer_bits)
+    vim.validate("layer_bits", layer_bits, { "number", "string" })
+    vim.validate("plus", plus, "boolean", true)
+    local ntb = require("nvim-tools.buf")
+    local ok, full_bufname, r_err, r_hl = ntb.resolve_full_bufname(buf)
+    if not ok then
+        require("nvim-tools.ui").echo_err(false, r_err, r_hl)
+        return
+    end
+
+    if vim.fn.has("win32") == 1 then
+        api.nvim_echo({ { "chmod is not supported on Windows" } }, true, {})
+        return
+    end
+
+    local cmd = { "chmod", get_chmod_arg(plus, layer_bits), full_bufname }
+    vim.system(cmd, { text = true }, function(result)
+        if result.code ~= 0 then
+            vim.schedule(function()
+                local stderr = result.stderr and result.stderr:gsub("%s+$", "") or "(no output)"
+                local msg = string.format("Error(%d): %s", result.code, stderr)
+                api.nvim_echo({ { msg, "ErrorMsg" } }, true, {})
+            end)
+
+            return
+        end
+
+        uv.fs_stat(full_bufname, function(err, stat)
+            vim.schedule(function()
+                local basename = vim.fs.basename(full_bufname)
+                if err then
+                    local msg = "Cannot re-stat " .. basename .. ": " .. err
+                    api.nvim_echo({ { msg, "ErrorMsg" } }, true, {})
+                    return
+                end
+
+                local perm_bits = bit.band(stat.mode, PERM_MASK)
+                local perms = mode_to_readable_perms(perm_bits)
+                local octal = string.format("%03o", perm_bits)
+                api.nvim_echo({
+                    { "Success: " .. basename, "Normal" },
+                    { " → ", "Normal" },
+                    { perms, "Special" },
+                    { " (" .. octal .. ")", "Comment" },
+                }, true, {})
+            end)
+        end)
+    end)
+end
+
+-- FUTURE: PR: vim.lsp.start should be able to take a vim.lsp.Config table directly
+-- Problem: State of how project scope is defined in Neovim is evolving. The changes you would
+-- make right now might be irrelevant to future project architecture (including deprecations of
+-- current interfaces)
+--
+-- TRACKING ISSUES
+-- https://github.com/neovim/neovim/issues/33214 - Project local data
+-- https://github.com/neovim/neovim/issues/34622 - Decoupling root markers from LSP
+
+-- NOTES:
+-- https://github.com/neovim/neovim/pull/35182 - Rejected vim.project PR. Contains some thoughts
+-- https://github.com/neovim/neovim/issues/8610 - General project concept thoughts
+-- https://github.com/mfussenegger/nvim-dap/discussions/1530: Project root in the DAP context
+-- exrc discussion: https://github.com/neovim/neovim/issues/33214#issuecomment-3159688873
+-- https://github.com/neovim/neovim/pull/33771: Wildcards in fs.find
+-- https://github.com/neovim/neovim/issues/33318: bcd
+-- https://github.com/neovim/neovim/pull/33320: buf local cwd
+-- https://github.com/neovim/neovim/pull/18506 (comment in here on project idea)
+-- https://github.com/neovim/neovim/pull/31031 - lsp.config/lsp.enable
+
+mjm.lsp = {}
+
+---@param config vim.lsp.Config
+---@param opts vim.lsp.start.Opts?
+---@return integer? client_id
+function mjm.lsp.start(config, opts)
+    vim.validate("config", config, "table")
+    vim.validate("opts", opts, "table", true)
+    opts = opts or {}
+
+    local start_opts = vim.deepcopy(opts, true) ---@type vim.lsp.start.Opts
+    start_opts.bufnr = vim._resolve_bufnr(start_opts.bufnr) ---@type integer
+    if api.nvim_get_option_value("buftype", { buf = start_opts.bufnr }) ~= "" then
+        return
+    end
+
+    start_opts.reuse_client = config.reuse_client
+    ---@diagnostic disable-next-line: invisible
+    start_opts._root_markers = config.root_markers
+    if type(config.root_dir) == "function" then
+        config.root_dir(start_opts.bufnr, function(root_dir)
+            config = vim.deepcopy(config, true)
+            config.root_dir = root_dir
+            vim.schedule(function()
+                return vim.lsp.start(config, start_opts)
+            end)
+        end)
+    else
+        return vim.lsp.start(config, start_opts)
+    end
+end

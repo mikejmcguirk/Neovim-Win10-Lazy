@@ -1,6 +1,5 @@
-local ut = Mjm_Defer_Require("mjm.utils")
-
 local api = vim.api
+local set = vim.keymap.set
 
 ---@class MjmDiags
 local M = {}
@@ -14,8 +13,8 @@ local virt_text_cfg = { virtual_lines = false, virtual_text = { current_line = t
 ---@type vim.diagnostic.Opts
 local virt_lines_cfg = { virtual_lines = { current_line = true }, virtual_text = false }
 
-local diag_text_cfg = vim.tbl_extend("force", diag_main_cfg, virt_text_cfg)
-local diag_lines_cfg = vim.tbl_extend("force", diag_main_cfg, virt_lines_cfg)
+local diag_text_cfg = vim.tbl_deep_extend("force", diag_main_cfg, virt_text_cfg)
+local diag_lines_cfg = vim.tbl_deep_extend("force", diag_main_cfg, virt_lines_cfg)
 vim.diagnostic.config(diag_text_cfg)
 
 M.toggle_diags = function()
@@ -27,7 +26,7 @@ M.toggle_virt_lines = function()
     vim.diagnostic.config(cur_cfg.virtual_lines and diag_text_cfg or diag_lines_cfg)
 end
 
--- Default [D/]D cause my computer to lockup
+-- The default [D/]D maps cause my computer to lock up
 local function get_first_or_last_diag(opts)
     opts = opts or {}
     local diagnostics = opts.severity and vim.diagnostic.get(0, { severity = opts.severity })
@@ -55,37 +54,40 @@ local function get_first_or_last_diag(opts)
     return opts.last and diagnostics[#diagnostics] or diagnostics[1]
 end
 
-vim.keymap.set("n", "[D", function()
+set("n", "[D", function()
     local diagnostic = get_first_or_last_diag()
     if diagnostic then
         vim.diagnostic.jump({ diagnostic = diagnostic })
     end
 end)
 
-vim.keymap.set("n", "]D", function()
+set("n", "]D", function()
     local diagnostic = get_first_or_last_diag({ last = true })
     if diagnostic then
         vim.diagnostic.jump({ diagnostic = diagnostic })
     end
 end)
 
-vim.keymap.set("n", "[<C-d>", function()
-    vim.diagnostic.jump({ count = -vim.v.count1, severity = ut.get_top_severity({ buf = 0 }) })
+set("n", "[<C-d>", function()
+    local severity = require("mjm.utils").get_top_severity({ buf = 0 })
+    vim.diagnostic.jump({ count = -vim.v.count1, severity = severity })
 end)
 
-vim.keymap.set("n", "]<C-d>", function()
-    vim.diagnostic.jump({ count = vim.v.count1, severity = ut.get_top_severity({ buf = 0 }) })
+set("n", "]<C-d>", function()
+    local severity = require("mjm.utils").get_top_severity({ buf = 0 })
+    vim.diagnostic.jump({ count = vim.v.count1, severity = severity })
 end)
 
-vim.keymap.set("n", "[<M-d>", function()
-    local diagnostic = get_first_or_last_diag({ severity = ut.get_top_severity({ buf = 0 }) })
+set("n", "[<M-d>", function()
+    local severity = require("mjm.utils").get_top_severity({ buf = 0 })
+    local diagnostic = get_first_or_last_diag({ severity = severity })
     if diagnostic then
         vim.diagnostic.jump({ diagnostic = diagnostic })
     end
 end)
 
-vim.keymap.set("n", "]<M-d>", function()
-    local severity = ut.get_top_severity({ buf = 0 })
+set("n", "]<M-d>", function()
+    local severity = require("mjm.utils").get_top_severity({ buf = 0 })
     local diagnostic = get_first_or_last_diag({ severity = severity, last = true })
     if diagnostic then
         vim.diagnostic.jump({ diagnostic = diagnostic })
@@ -94,6 +96,6 @@ end)
 
 -- Because I create custom caching in stl.lua
 -- Do here, after diagnostic setup, to ensure no issues when bisecting config
-vim.api.nvim_del_augroup_by_name("nvim.diagnostic.status")
+api.nvim_del_augroup_by_name("nvim.diagnostic.status")
 
 return M

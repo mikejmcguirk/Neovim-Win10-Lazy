@@ -1,5 +1,3 @@
-local ut = Mjm_Defer_Require("mjm.utils") ---@type MjmUtils
-
 local api = vim.api
 local fn = vim.fn
 
@@ -69,6 +67,7 @@ local function del_cur_buf_from_disk(cargs)
         return
     end
 
+    local ut = require("mjm.utils")
     if is_git_tracked(bufname) then
         local ok, err = pcall(api.nvim_cmd, { cmd = "GDelete", bang = true }, {})
         if not ok then
@@ -134,6 +133,7 @@ local function mv_cur_buf(cargs)
         return
     end
 
+    local ut = require("mjm.utils")
     ut.checked_mkdir_p(fn.fnamemodify(escape_target, ":h"), tonumber("755", 8))
     if is_git_tracked(escape_bufname) then
         local ok, err = pcall(api.nvim_cmd, { cmd = "GMove", args = { escape_target } }, {})
@@ -180,7 +180,7 @@ local function scratch_cmd(args)
 
     api.nvim_cmd({ cmd = "tabnew" }, {})
     local buf = vim.api.nvim_get_current_buf() ---@type integer
-    if not mjm.util.is_buf_empty_noname(buf) then
+    if not require("nvim-tools.buf").is_empty_noname(buf) then
         api.nvim_cmd({ cmd = "enew" }, {})
     end
 

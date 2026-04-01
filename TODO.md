@@ -2,21 +2,25 @@
 
 #### TODO:
 
-- [ ] Double Hash issue in md file with top codelens
-- [ ] Add an external cmd keymap namespace
-  - [ ] BMove/BKill
-    - [ ] BKill should prompt for confirmation
-    - [ ] BMove should enter the literal cmd so it can be reviewed
-  - [ ] chmod
-    - [ ] Should be something like <leader>{key}cx and <leader>{key}cX for add and remove x
-    - [ ] Should operate on current file
-    - [ ] No need to confirm permission, but should print feedback
-  - [ ] The leader sub-key should not be convenient to hit. So use something like \ or <bs>. / or ; could be okay too
-    - [ ] I originally went away from "\" because the ergonomics were so poor. Maybe that one's too much, especially since something like <leader>\bk is only two keys less than :BKill. But it should not be something that can be hit accidentally.
-  - [ ] If we're on windows, for now, just reject and print a msg
+- [ ] Why does entering a prose buffer blow up rnu?
 
 #### MID:
 
+- [ ] fs/git primitives for nvim_tools + system maps:
+  * [ ] Blocker: Because of the amount of fs ops that go into some of these, callback hell becomes a non-trivial concern. Would need to learn co-routines or wait for vim.async
+  * [ ] Git
+    + [ ] Is file git tracked
+    + [ ] Git delete
+    + [ ] Git mv
+  * [ ] fs
+    + [ ] unlink
+    + [ ] mv
+    + [ ] mkdir
+      + [ ] mkdir -p
+- [ ] https://github.com/ribru17/ts_query_ls (and download build that disables built-in linter)
+- [ ] https://github.com/neovim/neovim/pull/27223 - Replace any instances of tabnew with nvim_open_tabpage
+- [ ] Fzf-Lua send to qflist should use rancher
+  - [ ] If an empty list is available, it should be used
 - [ ] https://github.com/neovim/neovim/commit/4d04d0123d2571391a00b87f7ee70f987fb7cedd
   - Can this be used to make colorscheme more performant?
 - [ ] Implement the farsight table_new code here
@@ -31,6 +35,46 @@
   * [ ] Implement the chosen idea
 * [ ] "gx"able URLs in markdown are not underlined. How can this be fixed?
 * [ ] For prose buffers (md and text), should the option sets and insert `<C-g>u` mappings be outlined into utils? The options I think are fine, since I don't see why they would be different, but I've never loved the insert maps to begin with, and since Markdown is more "syntaxy" I'm not sure they should be the same
+- [ ] The jumplist should not inherit bufs from other sessions
+  * Starting it fresh each time is acceptable
+- [ ] The new float statusline would be useful to show win info/buf info
+- [ ] In fs, get_file_perms could probably be a general file info view
+  - [ ] File size
+  - [ ] mtime
+  - [ ] Created
+
+#### LOW:
+
+- [ ] Farm this: https://github.com/chrisgrieser/nvim-various-textobjs
+- [ ] In-process LSP that pushes diagnostics for lines over a certain length. Could expand this into other general linting tools. Perhaps then move into a compiled language
+  * Could also include fallback formatter
+- [ ] How to do document exports. pandoc? 2html? Is there a plugin?
+- [ ] Are there action items or notes to take on this? https://github.com/neovim/neovim/pull/36261
+  * Possibly related: https://github.com/neovim/neovim/discussions/32540
+  * It looks like tmux is the remaining case where it doesn't work. Lots of different things colliding here.
+* [ ] What is secure mode and what does it do?
+
+#### PR:
+
+- [ ] https://github.com/neovim/neovim/issues/36081
+  - Use rancher code here? What about a callback?
+  - Possibly related: https://github.com/neovim/neovim/issues/37030
+    * These both feel conceptually related
+- [ ] Doc updates:
+  - getchar andd getcharstr opts are not documented
+  - getqflist and getloclist returns are any
+  - nvim_win_get_config in the doc isn't tied to the _ret type. Maybe intentional
+  - matchstrpos return type
+  - setcmdpos
+  - setcursorcharpos
+  - wordcount
+- [ ] ts-text-object move should be able to distinguish between move selection and grow selection in visual mode
+- [ ] ts-text-object select should place the cursor at the end closest to the cursor's location when the selection was initiated
+- [ ] Can the built-in diagnostic stl element be used for my statusline?
+  - [ ] Needs caching
+  - [ ] Would need to be able to handle alt-window diagnostics
+    - Might be related to caching
+  - [ ] What else?
 
 ## ui2
 
@@ -49,6 +93,46 @@
 
 * [ ] Submit an issue for pager buffers being modifiable
   * I can't imagine that (a) this is intended behavior and (b) no one has noticed this. My guess is that, since nomodifiable buffers can't even be written to programmatically, this is currently allowed so it doesn't become a development chokepoint
+
+## LSP
+
+#### MID:
+
+* [ ] grA
+  * Whole buffer scoped code actions?
+
+#### PR:
+
+- [ ] Add an opt to the built-in rename function for filling in the current name
+  - [ ] Reasoning: It should be possible to rename from a blank prompt without forgoing the use of prepareRename
+
+## Maps:
+
+#### TODO:
+
+- [ ] Use [<C-t> and ]<C-t> for tabmove
+  - [ ] Should this take a wrapping count?
+    - Unlike qf-navigation, where you can go back, a mis-handled tab move creates a confusing arrangement of tabs. Might be better to just clamp at ends
+    - [ ] If not wrapping count, use +/- args
+
+#### FUTURE:
+
+- [ ] Should ]t be gT or tabnext?
+  - [ ] It's arbitrary for gT to be count back, whereas gt is absolute count
+    - [ ] The defaults, though, are this way
+  - [ ] Would sync with [Q]Q, where count on either is absolute count
+    - [ ] On the other hand, This is also not capital
+  - [ ] Alternative: Make both [t and ]t wrap, then use [T]T for absolutes. Would sync with qf
+
+#### MAYBE:
+
+- Use a harpoon-style buffer to edit tabpages
+
+## Plugins
+
+#### LOW:
+
+* [ ] mini.splitjoin instead of treesj?
 
 ## LSP Feature Config Refactoring
 
