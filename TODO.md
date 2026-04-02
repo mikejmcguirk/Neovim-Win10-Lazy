@@ -3,9 +3,14 @@
 #### TODO:
 
 - [ ] Why does entering a prose buffer blow up rnu?
+  - The scenario that seems to create this is:
+    - Have a non-prose buffer
+    - Use fzf-lua to open a prose buffer in it
+- [ ] When editing a markdown file for a prolonged period, what seems to be a memory leak occurs (I saw Nvim taking up over 200MB of RAM). Why is this?
 
 #### MID:
 
+- [ ] % on quotation marks does not go to the matching quote
 - [ ] fs/git primitives for nvim_tools + system maps:
   * [ ] Blocker: Because of the amount of fs ops that go into some of these, callback hell becomes a non-trivial concern. Would need to learn co-routines or wait for vim.async
   * [ ] Git
@@ -88,6 +93,7 @@
 - [ ] If I `g<` into a pager window then leave or quit, it should go back to the previously used window
   * [ ] Check first if this is a settings issue. Maybe it's a problem if I have useopen before uselast
   * [ ] If it's not a settings issue, then, why wouldn't it work? Hate to open an issue without at least a suggestion on what to do. It feels like this would be the kind of thing that's a somewhat obscure bug.
+* [ ] Why does hitting enter with a pager window open cause me to go into the pager. I think this is intended behavior, but I'd rather overwrite it. Should only be g< to enter
 
 #### MAYBE:
 

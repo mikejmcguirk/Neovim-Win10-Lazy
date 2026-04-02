@@ -47,6 +47,10 @@ set("n", "<leader>-f", function()
     add_annotation("@field")
 end, { buf = 0 })
 
+set("n", "<leader>-g", function()
+    add_annotation("@generic")
+end, { buf = 0 })
+
 set("n", "<leader>-i", function()
     add_annotation("@private")
 end, { buf = 0 })

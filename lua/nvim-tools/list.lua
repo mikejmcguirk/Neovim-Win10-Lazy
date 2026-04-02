@@ -35,6 +35,29 @@ function M.clear(t)
 end
 
 ---@generic T
+---@param t1 T[]
+---@param t2 T[]
+---@return boolean
+function M.equal(t1, t2)
+    vim.validate("t", t1, "table")
+    vim.validate("t", t2, "table")
+
+    local len = #t1
+    local len_t2 = #t2
+    if len ~= len_t2 then
+        return false
+    end
+
+    for i = 1, len do
+        if t1[i] ~= t2[i] then
+            return false
+        end
+    end
+
+    return true
+end
+
+---@generic T
 ---@param t T[]
 function M.copy(t)
     vim.validate("t", t, "table")

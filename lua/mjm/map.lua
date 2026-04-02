@@ -550,6 +550,7 @@ set({ "x" }, "<M-s>", ":s/\\%V")
 -- FUTURE: These should remove trailing whitespace from the original line. The == should handle
 -- invalid leading whitespace on the new line
 set("n", "dJ", "Do<esc>p==", { silent = true })
+-- MID: This creates two undo points
 set("n", "dK", "DO\27p==", { silent = true })
 
 -- MAYBE: This is never used

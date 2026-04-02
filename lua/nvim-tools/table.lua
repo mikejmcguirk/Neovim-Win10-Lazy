@@ -71,4 +71,17 @@ function M.get_or_set(t, k, v)
     return v
 end
 
+---Since vim.tbl_keys will be deprecated and maybe not replaced.
+---@generic T
+---@param t table<T, T>
+---@return T[]
+function M.keys(t)
+    local ret = {}
+    for k, _ in pairs(t) do
+        ret[#ret + 1] = k
+    end
+
+    return ret
+end
+
 return M
