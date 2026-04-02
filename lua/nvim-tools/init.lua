@@ -238,6 +238,7 @@ Buf_Config_Accessor.__index = function(self, k)
     end
 
     if not api.nvim_buf_is_valid(k) then
+        -- Skip autocmd deletion since they are tied to the buffers
         rawset(configs, k, nil)
         error(INVALID_BUF_ERR .. k)
     end
@@ -277,6 +278,7 @@ Buf_Config_Accessor.__newindex = function(self, k, v)
 
     local configs = rawget(self, "_configs")
     if not api.nvim_buf_is_valid(k) then
+        -- Skip autocmd deletion since they are tied to the buffers
         rawset(configs, k, nil)
         error(INVALID_BUF_ERR .. k)
     elseif type(v) == "nil" then
