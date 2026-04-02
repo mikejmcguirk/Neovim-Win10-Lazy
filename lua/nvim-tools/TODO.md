@@ -35,6 +35,18 @@
       + lsp.config just errors
     * Setting is one of the biggest conceptualy confusions where it looks like a bare table but doesn't actually act like one
       + Points toward only using call functions to set tbh
+  - Possible solution:
+    * config() is a validated table merge
+    * direct gets are direct gets
+    * direct *sets* are also direct sets
+    * Reasoning:
+      + This makes the architecture much simpler, as all you need is one proxy with an underlying _config table. This makes the proxy mostly a pass-through
+      + The result is simpler to read
+      + This gets you to "hackability" since you can directly set bad values
+        + Would also make testing easier
+      + A broad mental model for all of this is basically that, the reason a lot of plugins do config the way they do right now is because they want config to be encapsulated. Preventing direct user editing. By moving to g/b space, encapsulation becomes harder to model since those tables are user space and therefore directly editable. The problem with the current model is that it's getting into both validation and encapsulation, which realistically it can't really do. You can, but it creates confusion. Whereas a simple meta-table is much clearer in terms of what it's trying to do
+    * Alternative aspects:
+      + Just don't allow direct set by default. If the user/test-runner wants to direct set through _config they can, but just don't allow it through config
 
 ## Buf
 
