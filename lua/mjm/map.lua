@@ -793,7 +793,7 @@ set("i", "<M-k>", "<up>")
 set("i", "<M-e>", "<C-o>ze")
 
 set("i", "<C-d>", "<Del>")
-set("i", "<M-d>", "<C-g>u<C-o>dw")
+set("i", "<M-d>", "<C-g>u<C-o>de")
 set("i", "<C-k>", "<C-g>u<C-o>D")
 set("i", "<C-l>", "<esc><cmd>silent norm! u<cr>")
 _G.I_Dedent = "<C-m>"
