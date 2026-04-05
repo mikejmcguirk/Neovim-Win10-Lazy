@@ -572,17 +572,17 @@ function M.checked_mkdir_p(path, mode)
         return false, "Path exists, but is not a directory"
     end
 
-    local parent = vim.fs.dirname(resolved_path) ---@type string|nil
+    local parent = vim.fs.dirname(resolved_path) ---@type string?
     if not parent then
         return false, "Cannot resolve target parent"
     end
 
-    local ok_p, err_p = M.checked_mkdir_p(parent, mode) ---@type boolean, string?
+    local ok_p, err_p = M.checked_mkdir_p(parent, mode)
     if not ok_p then
         return false, err_p
     end
 
-    local ok_m, err_m = uv.fs_mkdir(resolved_path, mode) ---@type boolean|nil, string|nil
+    local ok_m, err_m = uv.fs_mkdir(resolved_path, mode)
     if ok_m then
         return true, nil
     end

@@ -109,31 +109,39 @@ setopt("cc", "80,100", global_scope)
 setopt("nuw", 5, global_scope)
 setopt("scl", "yes:1", global_scope)
 
-autoset_winopt({ "WinLeave" }, "rnu", false)
-api.nvim_create_autocmd({ "WinEnter", "CmdlineLeave" }, {
-    group = set_group,
-    callback = function()
-        if getopt("filetype", { buf = 0 }) == "pager" then
-            return
-        end
-
-        setopt("relativenumber", true, { win = 0 })
-    end,
-})
-
-api.nvim_create_autocmd("CmdlineEnter", {
-    group = set_group,
-    callback = function()
-        local cur_win = api.nvim_get_current_win()
-        api.nvim_set_option_value("relativenumber", false, { win = cur_win })
-        local cmdtype = vim.v.event.cmdtype
-        if cmdtype == "@" or cmdtype == "=" then
-            return
-        end
-
-        api.nvim__redraw({ statuscolumn = true, win = cur_win })
-    end,
-})
+-- autoset_winopt({ "WinLeave" }, "rnu", false)
+-- api.nvim_create_autocmd({ "WinEnter", "BufWinEnter", "CmdlineLeave" }, {
+--     group = set_group,
+--     callback = function()
+--         if getopt("filetype", { buf = 0 }) == "pager" then
+--             return
+--         end
+--
+--         setopt("relativenumber", true, { win = 0 })
+--     end,
+-- })
+-- -- MAYBE: Problem:
+-- -- - If BufWinEnter is not present as a condition, when entering prose buffers (markdown and text),
+-- -- rnu can fail to properly set. (This issue is seen very occasionally in other fts)
+-- -- - Those fts have unique culopt settings in their ftplugin files
+-- -- - I have seen this issue both with Fzf-Lua and Harpoon (Fzf-Lua failures are more relevant
+-- -- since that plugin I believe uses :edit or split)
+-- -- - It feels relevant that do_ecmd loads the buffer without running WinEnter, implying that the
+-- -- event is triggered somewhere else. The win opts are also layered in before the buf is loaded.
+--
+-- api.nvim_create_autocmd("CmdlineEnter", {
+--     group = set_group,
+--     callback = function()
+--         local cur_win = api.nvim_get_current_win()
+--         api.nvim_set_option_value("relativenumber", false, { win = cur_win })
+--         local cmdtype = vim.v.event.cmdtype
+--         if cmdtype == "@" or cmdtype == "=" then
+--             return
+--         end
+--
+--         api.nvim__redraw({ statuscolumn = true, win = cur_win })
+--     end,
+-- })
 -- MAYBE: I have a suspicion that I've been seeing extmarks drawn when they should not be because
 -- this autocmd originally just called :redraw. Trying specifying statuscolumn to alleviate.
 

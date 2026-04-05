@@ -794,6 +794,8 @@ return Csearch
 -- highlight removal as well, though it's awkward to remove highlights but not stop continuation
 -- mode. Something flash does that's.. a lot is doing continuation mode in omode or on dot repeat.
 -- Certainly don't do this by default. Not sure if it's even a useful option.
+-- Much simpler reason to do this, you can't map S to jump backwards in visual mode because
+-- surround lives there, so jump really kinda has to go to ;,
 -- TODO: The overall logic should be generalizable enough that we can test default "\k" (get each
 -- individual character with search and iterate one character per target) vs "\k\+" (get each word
 -- sequence with search and iterate each sequence in Lua). Do the faster one as the default.

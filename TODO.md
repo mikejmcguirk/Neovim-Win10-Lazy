@@ -7,9 +7,26 @@
     - Have a non-prose buffer
     - Use fzf-lua to open a prose buffer in it
 - [ ] When editing a markdown file for a prolonged period, what seems to be a memory leak occurs (I saw Nvim taking up over 200MB of RAM). Why is this?
+  - I'm not sure it's Marksman, because that's its own process which sticks at like 10MB
+  - I don't *think* it's related to my text-tools code, because I saw this ussue doing prose writing without a lot of check boxes in it
+  - Could it be blink related? But I feel like I'd see it in other filetypes
+  - If I disable treesitter, the issue keeps happening. Perhaps if I disable treesitter to begin with?
+    * Hard to track down because it's enabled by default in Neovim.
+    * This might need some kind of automated a/b testing to nail down.
+  - Since my text and markdown ftplugins share a lot of stuff, seeing if editing the MD files as text creates the same issues.
+    * As I work more with text files RAM usage is actually going down.
+  - I guess maybe the "r" option being removed causes problems? But that's unlikely and makes typing in markdown much more difficult.
+  - Next best idea is globally disabling treesitter.
+    * Unsure how to do this though...
+  - Disabling Markdown Oxide instead...
+    * Still seeing issue with m-ox disabled
+  - Would need to test with nvim --clean
+- [ ] Manually going to the end of the line after doing gf is annoying. The function needs to smart place the cursor when a new TODO item is added
 
 #### MID:
 
+- [ ] The gF text-tool function needs to be able to handle multiple lines in visual mode
+- [ ] The blink.cmp dictionary removed the plenary dep. Try installing again and see if the hung fzf issue still appears
 - [ ] % on quotation marks does not go to the matching quote
 - [ ] fs/git primitives for nvim_tools + system maps:
   * [ ] Blocker: Because of the amount of fs ops that go into some of these, callback hell becomes a non-trivial concern. Would need to learn co-routines or wait for vim.async
@@ -47,6 +64,7 @@
   - [ ] File size
   - [ ] mtime
   - [ ] Created
+- [ ] @nomarkdown is considered two separate words for markdown line wrapping
 
 #### LOW:
 
@@ -73,6 +91,7 @@
   - setcmdpos
   - setcursorcharpos
   - wordcount
+  - The opts type for vim.keymap.set does not show in the docs
 - [ ] ts-text-object move should be able to distinguish between move selection and grow selection in visual mode
 - [ ] ts-text-object select should place the cursor at the end closest to the cursor's location when the selection was initiated
 - [ ] Can the built-in diagnostic stl element be used for my statusline?

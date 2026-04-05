@@ -62,6 +62,8 @@ set("x", "<M-P>", '"+p')
 
 set("n", "[p", '<Cmd>exe "iput! " . v:register<CR>')
 set("n", "]p", '<Cmd>exe "iput "  . v:register<CR>')
+set("n", "[<M-p>", '<Cmd>exe "iput! " . "+"<CR>')
+set("n", "]<M-p>", '<Cmd>exe "iput "  . "+"<CR>')
 
 set({ "n", "x" }, "<M-d>", '"_d')
 set({ "n", "x" }, "<M-D>", '"_D')
