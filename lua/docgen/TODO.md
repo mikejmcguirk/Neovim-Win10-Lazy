@@ -24,6 +24,8 @@
     - This also makes it more difficult to add support for line numbering
   - [ ] I'm not sure if the full metatable scaffolding is necessary or wise, but we need to get the parser objects to act more like state machines.
 
+- [ ] For parser obj data typing - Maybe make individualized types for fun, class, and so on, but have them inherit the main parser obj and overwrite with their own settings.
+
 - [ ] I think that the way the default docgen handles module level results basically makes sense, because the M table is the standin for the whole module, so it should not be explicitly identified in the module. This includes sticking the desc into the briefs
   - But just tacking it to the end of the briefs puts the user back in the position of, well it goes where it goes. This gets back to why ordered insertion of elements matters
   - [ ] A smallish thing, but would rather not nil out an unordered hash list. But the actual solution exists in the broader context
@@ -156,6 +158,7 @@
 - Supporting direct extraction of Lua data
   * Hard to do, conceptually, without custom hooks, which contradicts extensibility non-goal
   * The push should be to understand what the goals of custom extractions are, and how they can be addressed with new annotations
+- This docgen inherits Neovim's removal of underline named functions. This is a useful convention, and no option will be provided to disable it.
 
 ## REFERENCES
 

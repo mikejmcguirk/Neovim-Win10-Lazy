@@ -5,34 +5,17 @@ local fmt = string.format
 --- @field type string
 --- @field text? string
 
+-- TODO: This is also defined in gen_vimdoc. Cannot have multiple sources of truth.
 local INDENTATION = 4
 
 local NBSP = string.char(160)
 
 local M = {}
 
+-- TODO: Remove or replace with list.find
 local function contains(t, xs)
     return vim.tbl_contains(xs, t)
 end
-
--- Map of api_level:version, by inspection of:
---    :lua= vim.mpack.decode(vim.fn.readfile('test/functional/fixtures/api_level_9.mpack','B')).version
-M.version_level = {
-    [14] = "0.12.0",
-    [13] = "0.11.0",
-    [12] = "0.10.0",
-    [11] = "0.9.0",
-    [10] = "0.8.0",
-    [9] = "0.7.0",
-    [8] = "0.6.0",
-    [7] = "0.5.0",
-    [6] = "0.4.0",
-    [5] = "0.3.2",
-    [4] = "0.3.0",
-    [3] = "0.2.1",
-    [2] = "0.2.0",
-    [1] = "0.1.0",
-}
 
 --- @param txt string
 --- @param srow integer

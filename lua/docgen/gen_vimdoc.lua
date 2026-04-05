@@ -560,18 +560,17 @@ local function render_fun(fun, classes)
         return
     end
 
-    local internal = vim.startswith(fun.name, "nvim__")
     local ret = {} --- @type string[]
 
     table.insert(ret, render_fun_header(fun))
     table.insert(ret, "\n")
 
-    -- TODO: This can probably be genericized away from how Nvim's versioning works
+    -- TODO: Feels arbitrary to have here now that it's not tied to Nvim version validation.
+    -- Would need to check Nvim's docs + luacats syntax, but I think this is a case where the
+    -- user just puts a number in their annotation and the literal is used. I'm not sure how
+    -- you would get to an annotation map here.
     if fun.since then
-        local since =
-            assert(tonumber(fun.since or (internal and 0)), "invalid @since on " .. fun.name)
-        local v = assert(util.version_level[since], "invalid @since on " .. fun.name)
-        table.insert(fun.attrs, str_fmt("Since: %s", v))
+        table.insert(fun.attrs, str_fmt("Since: %s", fun.since))
     end
 
     if fun.desc then
