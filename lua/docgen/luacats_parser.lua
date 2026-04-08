@@ -466,6 +466,10 @@ end
 -- TODO: For the top module name, if the file is init.lua, it should be the name of the file's
 -- directory. (Assuming we keep this convention)
 
+local function foo()
+    return "bar"
+end
+
 --- @param input string
 function M.parse(input)
     local f = assert(io.open(input, "r"))

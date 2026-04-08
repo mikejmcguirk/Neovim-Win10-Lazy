@@ -163,3 +163,5 @@ return M
 -- ftplugin files, since that guarantees they would act before user files. But that also means
 -- the mappings need to be written a lot. But this of course begs the question - Isn't the user
 -- then being asked to do the same?
+-- TODO: If you have a line like " - foo bar" and you hit enter with the cursor before bar, it
+-- should create a new bullet before bar on the next line

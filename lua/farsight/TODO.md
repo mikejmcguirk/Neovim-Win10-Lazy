@@ -1,49 +1,67 @@
-## TODO:
+## General
 
-#### Config
+#### DEPS:
 
-- [ ] Research
-  - [ ] How other plugins handle config merging and verification
-  - [ ] The vim.lsp.config metatable
+- [ ] The nvim-tools config module needs to completed
+- [ ] I need to decide if I'm using search here as the template for Nvim-tools, or building the search in Nvim-tools first
+- [ ] Docgen
+- [ ] Generic modules in nvim-tools need to be complete
+  - These would be modules like buf, win, list, table, types
+  - The goal is to avoid having to bounc between here and nvim-tools to make additions/changes
+  - This would not include modules like treesitter, which I don't think are relevant here
+- [ ] Meta-decisions created by nvim-tools need to be resolved
+    * Examples: fdo handling, config resolution
 
-- [ ] Main config table
-  - [ ] Access with require("farsight").config
-  - [ ] Access controlled with a metatable
-    - [ ] Probably outline definition from table declaration so that it can be restored if needed
-    - Outlining the definition should also make it easier to attach the metatable to buf_configs
-  - [ ] config.timeout = 500 -- Validates input and overwrites current
-    - [ ] Should hard error on failure
-  - [ ] config = { timeout = 500 } -- Merges new table into current if fields are valid
-    - [ ] Invalid values should hard error. Extra values should be skipped silently
-  - [ ] config.tokens = extend_in_place(tokens, { "a", "b", "c" })
-    - [ ] extends config.tokens
-  - [ ] config.tokens = { "a", "b", "c" }
-    - [ ] Overwrites config.tokens
-    - [ ] The metatable needs to understand the difference between sending a table arg to the config table as a whole or to a key
-  - [ ] config.tokens = nil -- Either a no-op or hard error
-  - [ ] config = nil -- Either a no-op or hard error
-  - [ ] local foo = config -- Provides a deepcopy of the current config
-  - [ ] `checkhealth` should be able to verify that the config table has all expected values, that all values are valid, and that the metatable is present and correct
-  - This method simplifies transitioning to g/b variables in the future when metatable support is added
+#### TODO:
 
-- [ ] `get_default_config` returns a deepcopy of the current config
-- [ ] `reset_config` Resets the config back to the defaults
-- [ ] `restore_metatable` in case the old one is removed or corrupted
+###### Bugs
 
-- [ ] buf_config tables
-  - [ ] Research
-    - [ ] How the vim.b accessor works
-  - [ ] Accessed using require("farsight").buf_config[{buf}]
-  - [ ] The top level buf_config map should be protected by a metatable
-  - [ ] Each buf config does not need to have all the same options as config, or even exist
-  - [ ] Each individual buf config should have the same metatable as config
-    - [ ] Make exceptions as needed given that buf config fields are optional
-      - [ ] In particular, unlike config, it should be possible to nil a buf config field
-  - [ ] An autocmd should run when bufs are closed to clear buf_configs
-    - [ ] This should be setup on require
-  - [ ] For all functions that use config, buf_config should take precedence if it exists
-  - [ ] DOCUMENT: An example of using a filetype autocmd to set a buf option
-    - [ ] Either as the main buf_config example, or as an additional one, show an example of how to use an autocmd on the buf to get project information
+###### Other
+
+- [ ] In all modules, add a "fold_cmd" option and remove fdo from the default callback
+  - The default callback behavior was only done to maintain consistency with Neovim's default behavior
+    * This is a bad behavior to be consistent with. What Neovim *should* provide is a keymap option to disable default fdo behavior
+  - Handling fdo in the default callback is bad because, in certain cases, it might need to be performed in temporary window context. This should not be burden-shifted to the user
+  - If running buf_open on a non-focused window, fdo needs to be run in temporary window context. This should not be burden-shfited to the user
+    * This use case does not come up in farsight specifically, but I want to maintain consistency between my plugins
+  - [ ] Document this reasoning in CONTRIBUTING.md
+    - It feels like this is part of some bigger meta section on module design
+
+- [ ] All APIs should be run through the init module
+  - NOTE: A lot of this description might not matter based on how the config module turns out
+  - This way, you can always do something like `require("farsight").csearch()`
+  - Allows documentation to be centralized
+  - [ ] Each API that runs through this module should have a sub-table in config
+    - [ ] Then, as the APIs are added, edit the underlying functions to only grab the sub-table out of config once
+    - [ ] Add this behavior to META or contributing
+  - [ ] If a setting is not found in config, hard error
+    - This should never happen
+    - Getting default config is slow and adds complication
+    - Default config can always be restored
+    - This should prompt an issue to be filed
+      * Counterpoint: The config would probably go bad due to a technical issue or user intervention unrelated to the particular API being used. So while the error would prompt looking into the issue, I'm not sure to what extent it would be of direct diagnostic value
+      * [ ] This means that errors getting config need to present good information, including if the value is missing or if the value has a bad type
+    - [ ] If a buf config value is missing, fall back to config. If a buf config value has a bad data type, hard error.
+
+- [ ] Figure out final names for live and static jumping
+  - I'm not sure they are clearly branded for the end user
+  - Bad ideas:
+    * Incremental does not work because both are incremental
+    * Basing on token count does not work because static jumps can be customized to be single-token
+  - Ideas:
+    * live: Like lightspeed/flash/sneak. Should imply disappearing and re-appearing quickly
+      + teleport
+    * static: Like EasyMotion/Jump2D. Should imply the path being laid out before you.
+      + vista
+
+- [ ] Add `desc` values to Plug and default mappings
+- [ ] Verify that the `require("farsight")` call in /plugin.lua does not require other files
+
+#### NON:
+
+## Config
+
+#### TODO:
 
 - [ ] Options:
   - [ ] set_default_maps
@@ -52,40 +70,18 @@
     - [ ] static
     - [ ] live
 
-#### API Requirements
+## Csearch
 
-- [ ] APIs
-- [ ] All APIs should be run through this module
-  - This way, you can always do something like `require("farsight").csearch()`
-  - Allows documentation to be centralized
-  - [ ] Each API that runs through this module should have a sub-table in config
-    - [ ] This way, a calling function only needs to get a reference to the sub-table once
-  - [ ] If neither buf_config nor config exist for the option, get default config
-    - default config is only a fallback. It should never be possible to actually remove a setting from config
-    - In particular, getting default config is slower since it requires a deepcopy of the whole table
+#### DOCUMENT:
 
-- [ ] All Plug mappings should use the public APIs
-  - This avoids complication around Plugs having different behavior due to separation of validation and resolution
+- [ ] For search string customization, a possible use case would be to set search strings based on filetype. If that use case exists, show an example of using an autocmd to set buf_config based on filetype
 
-#### Polish Step
+## Live Search
 
-  - [ ] Add `desc` values to Plug and default mappings
-  - [ ] Verify that the `require("farsight")` call in /plugin.lua does not require other files
-
-#### csearch
-
-#### Live Search
-
-#### Static Jump
+## Static Jump
 
 ## MID:
-
-- [ ] Is fzf-lua's deep_clone function useful?
-- [ ] In the documentation for buf_options, show an example of using an autocmd to get project information and set an appropriate buf option
-  - [ ] Look at https://github.com/tpope/vim-projectionist
-  - [ ] What is a concrete use case? Perhaps, in a web development project, if you are in the frontend part of a project, you might want csearch to highlight the various markup characters, whereas in the backend part of a project that might be too noisy
 
 ## FUTURE:
 
 - Once Nvim is on v0.13, consider moving position interfaces to vim.pos
-- If/when Neovim adds project scope/project config, see if that prompts a change in how config is handled.

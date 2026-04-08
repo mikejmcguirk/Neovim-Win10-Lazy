@@ -2,6 +2,100 @@
 
 #### TODO:
 
+For plugins, I am seeing lazy updates on both my update branches and on the master branch. Need to figure out how to set plugin installs so that only the relevant branch is shown. Matters because I need to be able to pass TODO between computers without spamming users with updates.
+- As a matter of practice, for git, look at how to block direct pushes to master in the repo.
+
+I need to make some kind of plugin meta design assumptions doc to handle things like fdo, or default rg only.
+
+https://github.com/neovim/neovim/milestone/48
+
+Back to config
+Farsight: Don't do fdo in callbacks due to win_call context
+- [ ] While this doesn't apply to all plugin actions, if we apply it to some then not others, it creates an inconsistency. So it's better to say, Nvim's internal fdo behavior is a product of a limitation on how Nvim keymaps are customized. In the plugin case, because the maps are fully customizable, we consistently don't respet that limitation.
+Nvim-tools: create a generic is-fillline-visible function. Rancher might need it.
+text-tools: Create a text object that selects the line excluding the bullet and/or text box
+- Very obviously: vi-
+- va- would then select the entire list level you are in, you could use a- to expand to outer nested lists and i- to inner nested lists.
+- You could also expand on this with [-]- to navigate between lists/checkboxes in the current buffer
+text-tools: Add the i_/a_ text objects to this plugin?
+- If I make a text objects plugin, they can be migrated
+I'm not sure if this is a text tools thing or some kind of nvim-surround wrapper (maybe both?), but a way to visual line select multiple lines (or block select) then apply nvim-surround to each line.
+  * Alternatively, Make the multi-cursor map to make a cursor for each visual line more convenient
+
+- annotator need to support TODO comments the way I have them written in MD files
+
+- nvim tools buf open needs to contain the reasoning for the fdo setting
+- See if any other foldcmds need to be in the datatype
+- This would apply to farsight as well
+
+- the nvim tools config meta merge should unwind if a bad value is provided (MID)
+- the nvim tools config should come with a checkhealth template (TODO)
+- document nvim tools config examples (DOCUMENT)
+
+- fix ability of multiline moves in markdowns to break nested indentation
+
+- nvim-tools needs a generalized wrapping add/wrapping sub function
+
+- Finish rancher additions
+
+- nvim-tools config should provide a "validate against" function where you can take a config and validate it against the built-in validators
+  * the use case for this is, if you have an API function that lives in config, and you take in a user table, you can use the validators in config rather than having to build a bespoke validation script
+  * I'm not precisely sure how you handle nil. If the validator allows nil that's obviously fine, but then, if you're doing an API config table, you don't want to re-validate the defaults, so you would only pass the new values to validate, and nils should be treated as acceptable. But it feels simple enough to account for the use case where you'd want to re-validate the whole config.
+  * this also points to the idea that you want some way of re-caching configs so you don't have to constantly run this heavy logic
+- related: nvim-tools should also provide a generalized config layering template. So when you run an API, you can say "this is the config I'm using", and the config will handle validation, then merging in config/buf config values
+  * first merge in buf config with keep behavior, then config with keep behavior
+- nvim-tools config needs a generalized way to report its health. You should be able to run `require("plugin").config:get_health()` and `require("plugin").buf_config:get_health()`
+
+Should show in the template version of config that global should be its own table, so that way you don't need to pull the whole config structure to see its values
+- Counterpoint - Is it not faster to just pull the reference once? Though, by pulling the sub-tables, you can skip layers of validation when getting them
+
+Two ways to improve perf:
+- Allow a "skip validation" opt to be passed for ephemeral configs. This would come with the warning that any behavior that happens if this option is used is unsupported
+- When a buf config is added or modified, do a buf_config < global config table merge with "keep" behavior and cache the result, so it does not have to be re-built each time it is used.
+  * Creates complexity surface area, particularly as pertains to nested non-config tables
+
+Because validation is becoming more expensive, the "always run validation" question needs to be re-opened.
+
+add a future note in nvim tools like, as nvim ads buf and project/workspace config, update config if that prompts anything
+
+stuff that I think is supposed to be for annotator
+- [ ] Is fzf-lua's deep_clone function useful?
+- [ ] In the documentation for buf_options, show an example of using an autocmd to get project information and set an appropriate buf option
+  - [ ] Look at https://github.com/tpope/vim-projectionist
+
+- Mapping ts-to conditional to d
+  * The basic point is, you will never map id/ad as diagnostic text objects
+  * id/ad is the one thing that's actually possible, as you could get the diagnostic list and then create a selection
+  * But is this actually useful? Is it worth the development time? It's not about the mockup, I can get Grok to spit that out fairly quickly. But different LSPs are going to have different returns, which will create different behaviors. Does every LSP spit out an end position properly? This would mean that you would be visually selecting a point. Do different LSPs have different quirks in how the end positions are rendered? Inconsistent behavior, leading to having to then make fixes around the edge cases.
+  * Let us presume that this can be made to work perfectly. What is the use case? This is something I've literally never wanted to do in my life.
+
+Got this error when going to the bottom of an md and pasting an image. Not sure where around the pasting this happened.
+Got it again when like, you paste the image on not the last line, save, and then the last line is removed before saving
+Decoration provider "range" (ns=nvim.treesitter.highlighter):
+Lua: /usr/local/share/nvim/runtime/lua/vim/treesitter.lua:212: Index out of bounds
+stack traceback:
+  [C]: in function 'nvim_buf_get_text'
+  /usr/local/share/nvim/runtime/lua/vim/treesitter.lua:212: in function 'get_url'
+  ...al/share/nvim/runtime/lua/vim/treesitter/highlighter.lua:439: in function 'fn'
+  ...al/share/nvim/runtime/lua/vim/treesitter/highlighter.lua:245: in function 'for_each_highlight_state'
+  ...al/share/nvim/runtime/lua/vim/treesitter/highlighter.lua:361: in function <...al/share/nvim/runtime/lua/vim/treesitter/highlighter.lua:335>
+  [C]: in function 'nvim_cmd'
+  /home/mjm/.config/nvim/lua/mjm/stl.lua:149: in function </home/mjm/.config/nvim/lua/mjm/stl.lua:142>
+Decoration provider "range" (ns=nvim.treesitter.highlighter):
+Lua: /usr/local/share/nvim/runtime/lua/vim/treesitter.lua:212: Index out of bounds
+stack traceback:
+  [C]: in function 'nvim_buf_get_text'
+  /usr/local/share/nvim/runtime/lua/vim/treesitter.lua:212: in function 'get_url'
+  ...al/share/nvim/runtime/lua/vim/treesitter/highlighter.lua:439: in function 'fn'
+  ...al/share/nvim/runtime/lua/vim/treesitter/highlighter.lua:245: in function 'for_each_highlight_state'
+  ...al/share/nvim/runtime/lua/vim/treesitter/highlighter.lua:361: in function <...al/share/nvim/runtime/lua/vim/treesitter/highlighter.lua:335>
+  [C]: in function 'nvim_cmd'
+  /home/mjm/.config/nvim/lua/mjm/stl.lua:135: in function </home/mjm/.config/nvim/lua/mjm/stl.lua:108>
+  [C]: in function 'nvim_exec_autocmds'
+  /usr/local/share/nvim/runtime/lua/vim/diagnostic.lua:1456: in function 'set'
+  /usr/local/share/nvim/runtime/lua/vim/lsp/diagnostic.lua:253: in function 'handle_diagnostics'
+  /usr/local/share/nvim/runtime/lua/vim/lsp/diagnostic.lua:266: in f
+
 - [ ] Why does entering a prose buffer blow up rnu?
   - The scenario that seems to create this is:
     - Have a non-prose buffer
@@ -21,10 +115,14 @@
   - Disabling Markdown Oxide instead...
     * Still seeing issue with m-ox disabled
   - Would need to test with nvim --clean
+  - I don't think it's related to the spell memory leak that was just fixed, because that would have also showed up in text files. Not to mention that I think I'm still seeing it.
 - [ ] Manually going to the end of the line after doing gf is annoying. The function needs to smart place the cursor when a new TODO item is added
 
 #### MID:
 
+- [ ] https://github.com/neovim/neovim/pull/38344
+  * [ ] Does this affect my document color setup?
+  * [ ] A lot of commentary in general that's worth parsing thorugh
 - [ ] The gF text-tool function needs to be able to handle multiple lines in visual mode
 - [ ] The blink.cmp dictionary removed the plenary dep. Try installing again and see if the hung fzf issue still appears
 - [ ] % on quotation marks does not go to the matching quote
@@ -162,6 +260,3 @@
 ## LSP Feature Config Refactoring
 
 Issues and PRs related to how to update and standardize LSP configuration.
-
-- https://github.com/neovim/neovim/pull/38344
-- https://github.com/neovim/neovim/commit/e406c4efd6209e093d2d2caff7e3c9a0847ee030

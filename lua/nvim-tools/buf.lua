@@ -430,6 +430,7 @@ function M.resolve_bufnr(buf)
         return true, api.nvim_get_current_buf(), nil, nil
     end
 
+    -- This makes Lua_Ls happy
     local bufnr = buf
     if type(bufnr) == "string" then
         bufnr = fn.bufadd(bufnr)
@@ -444,6 +445,10 @@ function M.resolve_bufnr(buf)
         return false, -1, "Bufnr " .. bufnr .. " is invalid", "ErrorMsg"
     end
 end
+-- TODO: For situations where you know buf is a number, this might be too much logic.
+-- Resolve_bufnr should be a simple, number only function. Then this should be
+-- buf_to_bufnr. For consistency, resolve_full_bufname should then be buf_to_full_bufname. And
+-- then you could add get_bufname functions specifically designed for ints and strings.
 
 ---@param buf integer|string
 ---@return boolean, string, string|nil, string|nil
@@ -452,8 +457,14 @@ function M.resolve_full_bufname(buf)
         return require("nvim-tools.types").is_uint(buf) or type(buf) == "string"
     end)
 
+    -- This makes Lua_Ls happy
     local full_bufname = buf
     if type(full_bufname) == "string" then
+        local bufnr = fn.bufadd(full_bufname)
+        if bufnr == 0 then
+            return false, "", buf .. " is not a valid file", "ErrorMsg"
+        end
+
         return true, fn.fnamemodify(full_bufname, ":p"), nil, nil
     end
 
@@ -463,6 +474,10 @@ function M.resolve_full_bufname(buf)
 
     return true, api.nvim_buf_get_name(full_bufname), nil, nil
 end
+-- TODO: I'm not sure if returning "" on a bad bufadd is correct, because that could be a valid
+-- bufname for a nofile buffer (but, do nofile buffers have valid bufname values?).
+-- TODO: A lot of common code here with resolve_bufnr. Can anything be outlined?
+-- TODO: This function validates buf. resolve_bufnr does not. Resolve inconsistency.
 
 ---@param buf integer
 ---@return boolean, string|nil, string|nil

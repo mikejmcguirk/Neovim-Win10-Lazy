@@ -78,7 +78,10 @@
   - [x] Should appropriately handle errors while saving
   - [ ] If there's no file on disk, should that file be created? Or is that an abort?
     - I think the way I have it right now is probably best, in that it should not insist upon itself if the file's not on disk. If/when bcd is added, I think an opt to use that to save to disk would make sense. Add a FUTURE note somewhere
-- Canned script for creating a temp-buffer for window and tab opening purposes. See the code I have in vim-dadbod
+- [ ] Canned script for creating a temp-buffer for window and tab opening purposes. See the code I have in vim-dadbod
+- [ ] Add a get bcd function
+  - Note that it might be supersceded when the feature is officially supported
+- [ ] Possible new buf_open idea based on using temp buffers to direct the :help cmd
 
 #### MID:
 

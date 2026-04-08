@@ -64,6 +64,8 @@
     - [ ] Print additional information on error to msgs
       - [ ] Grep cmd (truncated if it's too long)
   - [ ] In system, add an on_list callback. This might be useful for editing the result type in helpgrep to `\1` in a less arbitrary way
+  - [ ] Add a "bcd" grep. For now, this can pull based on bufname and notify the user if that's not available
+    - Necessary for being able to grep sub-folders without noise from the larger project
 
 - [ ] Research todo-comments
   - To help better understand the full scope of the problem
@@ -210,6 +212,9 @@ Uses:
   - [ ] grep the annotation
 - [ ] rancher
   - [ ] grep the annotation using fixed strings
+- [ ] scopes
+  - [ ] cwd
+  - [ ] bcd
 
 #### Future Actions
 

@@ -70,8 +70,14 @@ local function map_objects(ev)
         { "af", "@call.outer" },
         { "i/", "@comment.inner" }, -- :h [/
         { "a/", "@comment.outer" },
-        { "ii", "@conditional.inner" },
-        { "ai", "@conditional.outer" },
+        -- Because [d]d is diagnostic jump, this mapping sacrifices:
+        -- - Conditional move
+        -- - id/ad text objects for diagnostics
+        -- - (d)d for diagnostic swap
+        -- However, the above use cases are niche, whereas the keymap real estate savings is
+        -- non-trivial.
+        { "id", "@conditional.inner" }, -- From minimal init
+        { "ad", "@conditional.outer" },
         { "im", "@function.inner" }, -- :h [m
         { "am", "@function.outer" },
         { "io", "@loop.inner" }, -- From minimal init
@@ -97,7 +103,7 @@ local function map_objects(ev)
         { "[s", "]s", "@assignment.outer" },
         { "[f", "]f", "@call.outer" },
         { "[/", "]/", "@comment.outer" },
-        { "[i", "]i", "@conditional.outer" },
+        -- { "[d", "]d", "@conditional.outer" },
         { "[m", "]m", "@function.outer" },
         { "[o", "]o", "@loop.outer" },
         { "[,", "],", "@parameter.inner" },
@@ -159,7 +165,7 @@ local function map_objects(ev)
         { "(s", ")s", "@assignment.rhs" },
         { "(f", ")f", "@call.outer" },
         { "(/", ")/", "@comment.outer" },
-        { "(i", ")i", "@conditional.outer" },
+        { "(d", ")d", "@conditional.outer" },
         { "(m", ")m", "@function.outer" },
         { "(o", ")o", "@loop.outer" },
         { "(,", "),", "@parameter.inner" }, -- Outer can break commas if swapped at end
@@ -169,8 +175,8 @@ local function map_objects(ev)
         { '("', ')"', "@string.outer" },
     }
 
-    set("n", "(", "<nop>", { buf = ev.buf })
-    set("n", ")", "<nop>", { buf = ev.buf })
+    set({ "n", "x" }, "(", "<nop>", { buf = ev.buf })
+    set({ "n", "x" }, ")", "<nop>", { buf = ev.buf })
     local swap = require("nvim-treesitter-textobjects.swap")
     for _, m in pairs(swap_maps) do
         set("n", m[1], function()
@@ -289,3 +295,6 @@ return {
         end,
     },
 }
+
+-- MAYBE: https://github.com/romus204/tree-sitter-manager.nvim
+-- - If nvim-treesitter is really done.
