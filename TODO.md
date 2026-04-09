@@ -2,6 +2,11 @@
 
 #### TODO:
 
+- [ ] Change these keys over - https://github.com/neovim/neovim/commit/3a4a66017b74192caaf9af9af172bdc08e0c1608
+- [ ] Do these, collectively, prompt anything?:
+  - https://github.com/neovim/neovim/commit/446e794a9c8823040b8d41fc86a1bc3bb99508e7
+  - https://github.com/neovim/neovim/commit/1ff1973269594254900fbce40fd35c3024d9ed3d
+  - https://github.com/neovim/neovim/commit/eaea0c0f9da38613a6b8e7f13e0cf4263f7e22f3
 - [ ] I am seeing what looks like a memory leak when editing markdown files for a prolonged period
   - Preliminary conclusions:
     - Does not appear to be related to markdown-oxide. Disabling it does not stop ram buildup
@@ -246,6 +251,10 @@ stack traceback:
 - Use a harpoon-style buffer to edit tabpages
 
 ## Plugins
+
+#### MID:
+
+- [ ] Archived, but an nvim matchparen implementation - https://github.com/utilyre/sentiment.nvim
 
 #### LOW:
 

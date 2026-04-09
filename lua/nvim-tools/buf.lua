@@ -1,5 +1,6 @@
 local api = vim.api
 local fn = vim.fn
+local fs = vim.fs
 local vimv = vim.v
 
 local M = {}
@@ -28,6 +29,14 @@ function M.create_temp_buf()
 
     return buf
 end
+
+---@param bufnr integer
+---@return string
+function M.get_bcd(bufnr)
+    vim.validate("bufnr", bufnr, require("nvim-tools.types").is_uint)
+    return fs.dirname(fs.normalize(api.nvim_buf_get_name(bufnr)))
+end
+-- FUTURE: Deprecate whenever an official implementation of this is rolled out.
 
 ---@param buf integer
 ---@param row integer
