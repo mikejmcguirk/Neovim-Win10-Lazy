@@ -163,3 +163,4 @@ return M
 -- ftplugin files, since that guarantees they would act before user files. But that also means
 -- the mappings need to be written a lot. But this of course begs the question - Isn't the user
 -- then being asked to do the same?
+-- TODO: In markdown, if inside a non-prose injected language, do not add bullets

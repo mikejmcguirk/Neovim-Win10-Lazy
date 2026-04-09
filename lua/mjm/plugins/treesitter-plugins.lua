@@ -10,7 +10,7 @@ local langs = {
     "vimdoc",
     "query",
     "markdown_inline",
-    "markdown",
+    -- "markdown",
     -- Others
     "bash",
     "c_sharp",

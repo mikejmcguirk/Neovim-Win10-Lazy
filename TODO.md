@@ -2,43 +2,35 @@
 
 #### TODO:
 
-- [ ] Why does entering a prose buffer blow up rnu?
-  - The scenario that seems to create this is:
-    - Have a non-prose buffer
-    - Use fzf-lua to open a prose buffer in it
-- [ ] When editing a markdown file for a prolonged period, what seems to be a memory leak occurs (I saw Nvim taking up over 200MB of RAM). Why is this?
-  - I'm not sure it's Marksman, because that's its own process which sticks at like 10MB
-  - I don't *think* it's related to my text-tools code, because I saw this ussue doing prose writing without a lot of check boxes in it
-  - Could it be blink related? But I feel like I'd see it in other filetypes
-  - If I disable treesitter, the issue keeps happening. Perhaps if I disable treesitter to begin with?
-    * Hard to track down because it's enabled by default in Neovim.
-    * This might need some kind of automated a/b testing to nail down.
-  - Since my text and markdown ftplugins share a lot of stuff, seeing if editing the MD files as text creates the same issues.
-    * As I work more with text files RAM usage is actually going down.
-  - I guess maybe the "r" option being removed causes problems? But that's unlikely and makes typing in markdown much more difficult.
-  - Next best idea is globally disabling treesitter.
-    * Unsure how to do this though...
-  - Disabling Markdown Oxide instead...
-    * Still seeing issue with m-ox disabled
-  - Would need to test with nvim --clean
+- [ ] I am seeing what looks like a memory leak when editing markdown files for a prolonged period
+  - Preliminary conclusions:
+    - Does not appear to be related to markdown-oxide. Disabling it does not stop ram buildup
+    - This issue does not happen when editing text files, which rules out a number of things
+      - blink
+      - my text tools code
+    - This does not happen when editing with nvim --clean. Includes using treesitter
+    - If I run vim.treesitter.stop() then keep editing, the issue still occurs
+    - If I disable markdown in nvim-treesitter, the issue still occurs
+    - Running with bullets and text-tools disabled seems to help by slowing down the amount of edits made
+  - Do I create some kind of automated testing for this?
 - [ ] Manually going to the end of the line after doing gf is annoying. The function needs to smart place the cursor when a new TODO item is added
+- [ ] Re-implement dynamic documentHighlight
+  - Reasoning: I use this enough that it would side-step some amount of manual input
+  - [ ] Question: How does this marry with my grh map?
+    - Perhaps use grh to toggle dynamic highlighting, then grH to manually show the highlight if one exists
 
 #### MID:
 
+- [ ] Try to make dynamic rnu again
+  - Blockers:
+    - [ ] My file opening is in flux, so I don't want to chase a moving target
+    - [ ] For the open file methods I use, I need to understand when the different parts of the process happen, so I know what I'm missing that's causing the flaky rnu appearance
+  - Requirements:
+    * [ ] Cannot require layering a bunch of hacks on top of each other that create complexity surface area.
+    * [ ] Must be centralized. Cannot require setting nu/rnu in every problem filetype
 - [ ] The gF text-tool function needs to be able to handle multiple lines in visual mode
 - [ ] The blink.cmp dictionary removed the plenary dep. Try installing again and see if the hung fzf issue still appears
 - [ ] % on quotation marks does not go to the matching quote
-- [ ] fs/git primitives for nvim_tools + system maps:
-  * [ ] Blocker: Because of the amount of fs ops that go into some of these, callback hell becomes a non-trivial concern. Would need to learn co-routines or wait for vim.async
-  * [ ] Git
-    + [ ] Is file git tracked
-    + [ ] Git delete
-    + [ ] Git mv
-  * [ ] fs
-    + [ ] unlink
-    + [ ] mv
-    + [ ] mkdir
-      + [ ] mkdir -p
 - [ ] https://github.com/ribru17/ts_query_ls (and download build that disables built-in linter)
 - [ ] https://github.com/neovim/neovim/pull/27223 - Replace any instances of tabnew with nvim_open_tabpage
 - [ ] Fzf-Lua send to qflist should use rancher

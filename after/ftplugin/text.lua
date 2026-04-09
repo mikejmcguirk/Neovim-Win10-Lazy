@@ -1,12 +1,13 @@
 local api = vim.api
 local set = vim.keymap.set
+local set_opt = api.nvim_set_option_value
 
 local local_scope = { scope = "local" }
-api.nvim_set_option_value("colorcolumn", "", local_scope)
-api.nvim_set_option_value("cursorlineopt", "screenline,number", local_scope)
-api.nvim_set_option_value("sidescrolloff", 12, local_scope)
-api.nvim_set_option_value("spell", true, local_scope)
-api.nvim_set_option_value("wrap", true, local_scope)
+set_opt("colorcolumn", "", local_scope)
+set_opt("cursorlineopt", "screenline,number", local_scope)
+set_opt("sidescrolloff", 12, local_scope)
+set_opt("spell", true, local_scope)
+set_opt("wrap", true, local_scope)
 
 local buf_0 = { buf = 0 }
 set("i", ",", ",<C-g>u", buf_0)
