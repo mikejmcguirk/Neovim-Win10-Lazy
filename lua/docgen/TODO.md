@@ -15,6 +15,8 @@
 
 #### TODO:
 
+handle inner todo here (ts to) and then rancher to do stuff
+
 - [ ] The first/most tractable thing to do is probably massaging the config object architecture:
   - [ ] The shroedinger's type problem still persists because of the helptag object
     - This also makes the rendering more complex

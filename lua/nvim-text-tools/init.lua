@@ -164,3 +164,5 @@ return M
 -- the mappings need to be written a lot. But this of course begs the question - Isn't the user
 -- then being asked to do the same?
 -- TODO: In markdown, if inside a non-prose injected language, do not add bullets
+-- TODO: If you have a line like " - foo bar" and you hit enter with the cursor before bar, it
+-- should create a new bullet before bar on the next line
