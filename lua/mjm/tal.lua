@@ -1,24 +1,35 @@
 local api = vim.api
 local fn = vim.fn
+local fs = vim.fs
+
+-- Alchemical trident symbol
+local symbol = "\u{1F751}"
+-- Alternatively, "\u{21CC}" (left over right harpoon)
+local hl_active = "stl_b"
+local hl_inactive = "stl_a"
+local hl_separator = "stl_c"
+local ok, harpoon = pcall(require, "harpoon")
 
 local M = {}
 
--- Alchemical trident symbol
-local symbol = "\u{1F751}" ---@type string
--- Alternatively, "\u{21CC}" (left over right harpoon)
+---@param bufname string
+---@return string
+local function get_mod_elem(bufname)
+    local bufnr = fn.bufnr(bufname)
+    if bufnr == -1 then
+        return ""
+    end
 
-local hl_active = "stl_b" ---@type string
-local hl_inactive = "stl_a" ---@type string
-local hl_separator = "stl_c" ---@type string
+    return api.nvim_get_option_value("mod", { buf = bufnr }) and "[+]" or ""
+end
 
-local ok, harpoon = pcall(require, "harpoon")
-
+---@param tal string[]
 local function build_harpoon_component(tal)
     if not ok then
         return ""
     end
 
-    local list = harpoon:list() ---@type table
+    local list = harpoon:list()
     if not list then
         return ""
     end
@@ -28,63 +39,65 @@ local function build_harpoon_component(tal)
         return ""
     end
 
-    local cur_buf_path = api.nvim_buf_get_name(0) ---@type string
-    for i, t in ipairs(items) do
-        local t_path = fn.fnamemodify(t.value, ":p") ---@type string
-        ---@type string
-        local hl = string.format("%%#%s#", (t_path == cur_buf_path) and hl_active or hl_inactive)
+    local basename_count = {}
+    for _, t in ipairs(items) do
+        local basename = fs.basename(t.value)
+        basename_count[basename] = (basename_count[basename] or 0) + 1
+    end
 
-        local modified = (function()
-            local buf = fn.bufnr(t_path)
-            if buf == -1 then
-                return ""
-            end
+    local cur_buf_path = api.nvim_buf_get_name(0)
+    for i, item in ipairs(items) do
+        local path = fs.normalize(fn.fnamemodify(item.value, ":p"))
 
-            return vim.api.nvim_get_option_value("modified", { buf = buf }) and "[+]" or ""
-        end)() ---@type string
+        local is_cur_buf = path == cur_buf_path
+        local hl_group = is_cur_buf and hl_active or hl_inactive
+        local elem_hl = string.format("%%#%s#", hl_group)
+        local mod_elem = get_mod_elem(path)
 
-        local t_basename = vim.fs.basename(t.value) ---@type string
-        ---@type string
-        local str = string.format("%s %d %s %s %s ", hl, i, symbol, t_basename, modified)
-        tal[#tal + 1] = str
+        local basename = fs.basename(path)
+        local name_elem = basename_count[basename] > 1 and fn.fnamemodify(item.value, ":~:.")
+            or basename
+
+        tal[#tal + 1] = string.format("%s %d %s %s %s ", elem_hl, i, symbol, name_elem, mod_elem)
     end
 
     tal[#tal + 1] = "%*"
 end
 
--- Referenced as a string in the tal setting
-function M.build_tab_component()
-    local cur_tab = api.nvim_get_current_tabpage() ---@type integer
-    local tabs = {} ---@type string[]
+---Referenced in the tal expression
+---@return string
+function M.build_tabpage_component()
+    local cur_tabpage = api.nvim_get_current_tabpage()
 
-    for i, t in ipairs(api.nvim_list_tabpages()) do
-        local hl_group = (cur_tab == t) and hl_active or hl_inactive ---@type string
-        local hl = string.format("%%#%s#", hl_group) ---@type string
+    local tabpages = {} ---@type string[]
+    for i, tabpage in ipairs(api.nvim_list_tabpages()) do
+        local hl_group = (cur_tabpage == tabpage) and hl_active or hl_inactive
+        local hl = string.format("%%#%s#", hl_group)
 
-        local t_wins = api.nvim_tabpage_list_wins(t) ---@type integer[]
-        local has_modified = false ---@type boolean
-        for _, w in ipairs(t_wins) do
-            local bufnr = api.nvim_win_get_buf(w) ---@type integer
-            if vim.api.nvim_get_option_value("modified", { buf = bufnr }) then
+        local tabpage_wins = api.nvim_tabpage_list_wins(tabpage)
+        local has_modified = false
+        for _, w in ipairs(tabpage_wins) do
+            local bufnr = api.nvim_win_get_buf(w)
+            if vim.api.nvim_get_option_value("mod", { buf = bufnr }) then
                 has_modified = true
                 break
             end
         end
 
-        tabs[#tabs + 1] = string.format("%s %d%s ", hl, i, (has_modified and "[+]" or ""))
+        local mod_elem = has_modified and "[+]" or ""
+        tabpages[#tabpages + 1] = string.format("%s %d%s ", hl, i, mod_elem)
     end
 
-    return table.concat(tabs, "")
+    return table.concat(tabpages, "")
 end
-
 local function build_tal()
-    local tal = {}
+    local tal = {} ---@type string[]
 
     build_harpoon_component(tal)
     tal[#tal + 1] = string.format("%%#%s#%%=%%*", hl_separator)
-    tal[#tal + 1] = "%{%v:lua.require('mjm.tal').build_tab_component()%}%*"
+    tal[#tal + 1] = "%{%v:lua.require('mjm.tal').build_tabpage_component()%}%*"
 
-    vim.api.nvim_set_option_value("tal", table.concat(tal, ""), { scope = "global" })
+    api.nvim_set_option_value("tal", table.concat(tal, ""), { scope = "global" })
 end
 
 if ok then
@@ -96,8 +109,7 @@ if ok then
     })
 end
 
-local tal_events = vim.api.nvim_create_augroup("tal-events", { clear = true }) ---@type integer
-
+local tal_events = vim.api.nvim_create_augroup("mjm-tal-events", {})
 vim.api.nvim_create_autocmd({ "BufModifiedSet", "CmdlineLeave" }, {
     group = tal_events,
     callback = function()
@@ -121,8 +133,10 @@ vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
         -- For edge case where you change Windows in insert mode. Wait for event to be over to
         -- check mode fresh
         vim.schedule(function()
-            -- Avoid rendering in autocompletion windows
-            if fn.mode() == "i" then
+            -- Overly cute way to check if we are in insert or replace mode
+            -- Avoid rendering due to autocompletion windows
+            local short_mode = string.byte(api.nvim_get_mode().mode, 1)
+            if short_mode == 105 or short_mode == 82 then
                 return
             end
 
@@ -131,18 +145,7 @@ vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
     end,
 })
 
-vim.api.nvim_set_option_value("stal", 2, { scope = "global" })
+api.nvim_set_option_value("stal", 2, { scope = "global" })
 build_tal()
 
 return M
-
--- FUTURE: Build out the harpoon tabline as a lua function that holds the current state in the
--- background so that redraws of the tal don't have to perform all that logic on demand
--- You should be able to feed it the highlight groups for customization, and then it should
--- be possible to just drop the lua fn into any tabline plugin. If you make it based on what
--- Neovim's doing, it requires too many assumptions about how Neovim's state changes occur
--- Example: For buf modified post, should just get event buf, tick state, and redraw if it's
--- on the tabline
--- https://github.com/mike-jl/harpoonEx/blob/main/lua/lualine/components/harpoons/init.lua
--- Future thing: Harpoon gets the current dir from vim.loop.cwd() (would upgrade to vim.uv),
--- if the directory is nil, it causes an enter error
