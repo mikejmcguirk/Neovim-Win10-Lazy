@@ -216,11 +216,6 @@ function M._parse_isk(buf, isk)
     return isk_tbl
 end
 
--- TODO: The nested function call in hot paths is not great. I'm unsure right now if this module
--- will be exported for user purposes, hence the M table declaration layout. If this ends up
--- being fully private, declare M at the top and re-order functions accordingly, eliminating
--- this issue.
-
 ---idx is one indexed
 ---If checking the last character on a line, the max returned char length will be one, allowing
 ---this function to be cleanly used for end-exclusive indexing
@@ -231,6 +226,7 @@ end
 function M._get_utf_codepoint(line, b1, idx)
     return get_utf_codepoint(line, b1, idx)
 end
+-- TODO: Remove this nested function call as nvim-tools did
 
 ---@param char_nr integer
 ---@param isk_tbl boolean[]

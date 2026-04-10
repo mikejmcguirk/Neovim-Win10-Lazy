@@ -14,11 +14,17 @@
 
 #### TODO:
 
-- [ ] In all functions, move fdo out of callbacks, since in other plugins they need to be handled in win_call context. Want consistency here.
+- [ ] The modules and code we want to continue with need a deeper audit.
+  - [ ] Based on that audit, then extract the TODO info
 
-###### Bugs
+- [ ] I believe that the goal with the _common module is to remove it.
+- [ ] Because the whole plugin is moving to search based results, I think the lookup module just gets moved to nvim tools then removed.
 
-###### Other
+- [ ] There are a lot of TODO items that I did not port over to here on account of not being sure how they all integrate together. I had tried a lot of different things in different files without really creating an integrated context for them.
+
+- [ ] For unlimited tokens, use math.huge in the labeler and probably config. The way Lua does math works out for that.
+
+- [ ] For live search at least, \ probably has to be blocked from being a token since it can be used for a regex atom. Probably makes sense to do that globally. In my original labeler comment, I noted that the labeler doesn't care about this, so this is something functions higher up the stack need to own.
 
 - [ ] In all modules, add a "fold_cmd" option and remove fdo from the default callback
   - The default callback behavior was only done to maintain consistency with Neovim's default behavior
@@ -59,6 +65,8 @@
 - [ ] Add `desc` values to Plug and default mappings
 - [ ] Verify that the `require("farsight")` call in /plugin.lua does not require other files
 
+- [ ] Rename everything to target locator branding
+
 #### NON:
 
 ## Config
@@ -74,6 +82,20 @@
 
 ## Csearch
 
+#### TODO:
+
+- [ ] Move this over to search based, where you iterate through the results then to find tokens
+- [ ] Move this module over to the highlight on f/t model that a lot of other plugins use. I need the ;, keys to map live search.
+  - [ ] Still keep the "classic" behavior as an option
+  - [ ] Unlike flash, do not do continuation mode in omode or after a dot repeat
+- [ ] For defaults, need to test if "\k" or "\k\+" is faster
+- [ ] A problem to deal with is that if you set a custom search function based on whole words, you might get results that are excluded from targets because they start before the cursor. I'm not sure if search should compensate for this or if it needs to be a documented limitation
+  - Since search is being generalized, probably needs to be handled
+
+#### NON:
+
+- [ ] Sneak mode. Don't need/want it with live jumps, don't want to make an inferior version of the original.
+
 #### DOCUMENT:
 
 - [ ] For search string customization, a possible use case would be to set search strings based on filetype. If that use case exists, show an example of using an autocmd to set buf_config based on filetype
@@ -81,9 +103,3 @@
 ## Live Search
 
 ## Static Jump
-
-## MID:
-
-## FUTURE:
-
-- Once Nvim is on v0.13, consider moving position interfaces to vim.pos

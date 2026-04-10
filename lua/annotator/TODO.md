@@ -1,71 +1,19 @@
-## TODO:
-
-#### Beforehand
+## DEPS:
 
 - [ ] nvim-tools
-  - [ ] Template config/init module
-  - [ ] Can I actually name it nvim-tools?
-    - I think I can
-  - [x] echasnovski has a function somewhere for using Nvim's internal width variable to calculate the max length of error messages
-  - [ ] A generalized version of farsight's buffer search
-    - [ ] Get results
-    - [ ] Fix data
-    - [ ] Do basic filtering
-      - [ ] folds
-    - [ ] Include result iterators that would be useful for common tasks
-      - [ ] Iter all positions for re-indexing
-  - [x] Protected set cursor
-  - [x] List tools
-  - [x] Table tools
-  - [x] echo wrapper
-  - [x] Protected Win Close
-  - [x] Get listed bufs
-  - [x] is_empty_buf
-  - [x] Buffer close interface
-  - [x] Open buf
-  - [ ] Get indent
-    - [ ] If no indentexpr, needs to handle the various indenting options
-    - [ ] needs to handle all runtime indent args
-  - [ ] Is pos in TS node
-    - [ ] Research vim._comment
-    - [ ] Research new TS incremental selection
-    - [ ] Research how todo-comments does it
-    - [ ] Properly handle injected languages
-    - [ ] The form of the module should be to enter in a node name/type of your choosing
-    - [ ] I have seen different comment node names in different languages I think you do a string.find for "comment" and that should do what needs to be done
-      - [ ] This does then imply that the interface needs to have a param for contains vs exact matching
-  - [ ] Does line contain TS node
-    - [ ] Exact node name, node name to find, list of names
-    - [ ] My best guess would be to use recursion, but would need more info/research
-    - [ ] What does Folke's todo-comments function do?
-    - [ ] How does autopairs handle this?
-  - [ ] isopt parser
-  - [ ] Char class parser
-
-- [ ] Finish farsight
-- [ ] Fix lampshade (plugin is fine, but needs config module for global/buf level)
+- [ ] docgen
+- [ ] Complete farsight
+- [ ] fix lampshade
 - [ ] Fix rancher
-  - [ ] Tons of different bug issues and API fixes/updates
-  - [ ] Address the grep API issues found when creating that integration
-    - [ ] It is neither intuitive nor explained why there is a what table param
-      - Presumably, this is to be able to do things like enter a qftext func
-      - It is not explained if any what values are mandatory
-      - [ ] The user should be able to pass nil or an empty table to get default behavior
-    - [ ] It should be possible to pass a string argument for locations
-      - Or, if it would be better to keep it as a pure function arg, the defaults need to be documented
-    - [ ] Fzf-lua's approach of having "pattern" and "regex" be separate inputs is superior to having a regex flag. More intuitive
-      - Because you don't have to cross-reference two things in your head
-    - [ ] The "QfrSystemOpts" link in the Grep documentation is incorrect.
-    - [ ] The system sort arg should be able to take a string arg
-      - Alternatively, the defaults should be listed
-    - [ ] In sync, "syncrhonously" is a typo.
-    - [ ] List default behaviors/options for SystemOpts and GrepOpts
-    - [ ] SystemOpts and GrepOpts should be able to take nil values
-    - [ ] Print additional information on error to msgs
-      - [ ] Grep cmd (truncated if it's too long)
-  - [ ] In system, add an on_list callback. This might be useful for editing the result type in helpgrep to `\1` in a less arbitrary way
-  - [ ] Add a "bcd" grep. For now, this can pull based on bufname and notify the user if that's not available
-    - Necessary for being able to grep sub-folders without noise from the larger project
+- [ ] Do grep plugin
+
+## TODO:
+
+- [ ] However it's accomplished, I need to be able to grep "## TODO:" in markdown files in addition to TODO within comments.
+- [ ] Is fzf-lua's deep_clone function useful?
+- [ ] Look at https://github.com/tpope/vim-projectionist
+
+#### Beforehand
 
 - [ ] Research todo-comments
   - To help better understand the full scope of the problem

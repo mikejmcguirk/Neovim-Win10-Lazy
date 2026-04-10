@@ -544,16 +544,3 @@ function M.set_target_extmarks(buf, ns, targets, ctx)
 end
 
 return M
-
--- TODO: At least internally, use math.huge for unlimited tokens. Unsure if I want to do that in
--- user config, but it's not a bad thing either.
--- TODO: All caller functions should do a data validation to make sure that "\" is not a token
--- Annoying though because then you have to do the same validation multiple places. The better
--- solution I think is to put the token validation/conversion here so it's centralized, but the
--- callers have to actually run it. It's irrelevant to the labeler if a \ is a token, so that's
--- something callers have to own.
---
--- LOW: For directional searching, it would be optimal to compare the current prompt to the last
--- one and, if it were a strict narrowing of the previous search term, filter the current targets
--- rather than create a new set. You could even cache all target sets in the current search. In
--- practice, this would be hideously complicated.

@@ -5,6 +5,9 @@
   * https://github.com/simifalaye/minibuffer.nvim
   * ui2-based finder: https://github.com/comfysage/artio.nvim
 
+- Issues and PRs related to how to update and standardize LSP configuration.
+  * https://github.com/neovim/neovim/issues/38858
+
 ## Neovim Issues:
 
 - https://github.com/neovim/neovim/issues/16166 - Virt lines above scroll issue
@@ -30,6 +33,7 @@ luajit -bl input.lua output.txt # Dump bytecode
 ## Other Info
 
 - https://gitspartv.github.io/LuaJIT-Benchmarks/
+- At least in the case of the vim.pack in-process LSP, while it does use callbacks, it is not true async. This can cause timing issues with co-routines since the in-process callbacks fire earlier than ususual. Example: https://github.com/ibhagwan/fzf-lua/issues/2654
 
 ## Dot Files
 

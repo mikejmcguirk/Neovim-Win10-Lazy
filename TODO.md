@@ -1,19 +1,11 @@
 ## General
 
-#### TODO:
+#### LOW:
 
-- [ ] https://github.com/neovim/neovim/issues/38858
-  - switchbuf usecurrent?
-  - The idea would be:
-    * You are opening a file
-    * You are in a situation where switchbuf becomes relevant
-    * If switchbuf usecurrent, check if the current window is able to accept the new file
-      + help should not go into non-help windows, for example
-    * If so, open the buf in the current window
-    * Otherwise, Move to the next swb option
-  - Is this an idea I could use?
-    * Hard to graft over swb since it's not part of the option
-    * For rancher, does respecting usecurrent outside the list but not caring about it inside the list make sense?
+- [ ] Farm this: https://github.com/chrisgrieser/nvim-various-textobjs
+- [ ] Are there action items or notes to take on this? https://github.com/neovim/neovim/pull/36261
+  * Possibly related: https://github.com/neovim/neovim/discussions/32540
+  * It looks like tmux is the remaining case where it doesn't work. Lots of different things colliding here.
 
 ## Plugins
 
@@ -23,13 +15,41 @@
   * Only support rg out of the box
   * Provide interfaces for other grepprgs to plugin
 
-- In any case where it's logical for an option to control plugin behavior, it should, at least by default
+- In any case where it's logical for an option to control plugin behavior, it should do so, at least by default
   * The function's opts table should also provide a method for overriding the default option
     * The method should be appropriate based on the option
       + For fdo, a simple boolean can be provided
       + If overriding swb, an alternative option value would need to be provided
 
+- Plug maps should fall into two categories:
+  * "Main" Plug maps
+    + These represent the default and most prominently advertised behavior of the plugin
+    + Main Plug maps should never contain opts that override config. Because any API should check against config, default behavior should therefore be set in config
+    + Because config and the APIs should already be documented, Plug documentation should only need to be minimal
+      + Counterpoint: It should be possible for the user to understand the fundamentals of what the Plug does without having to look in other places
+  * "Alt" Plug maps
+    + These provide some kind of desirable, but non-default behavior out of the box
+    + These mappings can override config
+    + The differences from the defaults should be documented
+
+- When designing interfaces, Neovim's patterns should be respected, its limitations not so much
+  * Example: When Neovim's internal functions are used in mappings, fdo is ignored. This is so users can implement their own behavior
+    + The more principled solution would be for respect_fdo or something like that to be a maparg
+    + I had previously tried to implement this behavior by putting fdo handling into the default on_jump callback function. This was a bad idea
+    + While jump behavior should use the fdo option (or a user-override), it adds friction to pocket it within the callback
+
++ Set pcmark behaviors:
+  + Never set pcmark
+  + Set pcmark if we go past w0 or w$
+  + Set pcmark if we change lines
+  + Always set pcmark
+
 #### TODO:
+
+- [ ] Once I have a working example (probably farsight), need to see how config metatable performance functions in real use cases. Based on that, we can evaluate how the question of internal interfaces as lightweight versions of the public APIs should be handled
+  - [ ] Realistically though, because of config resolution, it's probably going to just be using skip_validation
+
+- [ ] All functionalities should use the set pc mark behavior described in meta
 
 - [ ] For plugins, when I update in lazy, I see both the push to the feature branch and then the merge into the master branch. How do you setup plugin installs so this doesn't happen?
   * Alternatively, is there a better way to handle feature/master branch?
@@ -37,170 +57,71 @@
 
 - [ ] How do you block direct pushes to master?
 
+- [ ] Problem: I want to have a unified, idiomatic interface for controlling where items open.
+  - This would primarily be for the rancher list opening use case.
+  - I still think it's correct to go to {count} winnr if provided
+  - If no count is provided, and no opts or config are provided, switchbuf should be respected
+    * [ ] I think I have this in the TODO for nvim-tools, but it needs a comma opt parser so that swb can be handled
+    * [ ] What happens if swb is empty? Would need to look at the code, because this appears to be situational
+      * My hope is that, if swb is empty, then it acts like a hypothetical "usecurrent" option. I would prefer not to have to graft an additional opt in order to do that
+        + The usecase here would be [q]q navigation, which should use the current window if it's a valid destination
+    * [ ] How is swb used throughout the code? I would like to create a generalized swb finder, but I'm not sure if that's possible. I know quickfix is a bespoke use case (only certain swb options are respected)
+      * The correct answer is probably the typical one - Build composable pieces
+
 - [ ] nvim-tools
 - [ ] docgen
 - [ ] farsight
 - [ ] lampshade
   - [ ] Maybe use the full config module, maybe use g/b variables. Big thing is - the user should not have to re-write the entire autocmd scripting to customize it
 - [ ] rancher
+  - [ ] When making new lists, there should be an attempt to re-use blank lists
+  - [ ] Add an fzf-lua integration for sendtoqflist
+    - Can be either a doc snippet or actual Lua code
+    - [ ] Should be based on a re-usable title if possible
   - With rg only
-    - Would keep the system module very general/flexible
+    - Would keep the system module very general/flexible so it can accept a variety of external plugins
+  - [ ] Instead of the current config for spk in the window functions, provide it as an option override and set the default config to topline as per the meta doc for plugs above
+  - [ ] Tons of different bug issues and API fixes/updates
+  - [ ] Address the grep API issues found when creating that integration
+    - [ ] It is neither intuitive nor explained why there is a what table param
+      - Presumably, this is to be able to do things like enter a qftext func
+      - It is not explained if any what values are mandatory
+      - [ ] The user should be able to pass nil or an empty table to get default behavior
+    - [ ] It should be possible to pass a string argument for locations
+      - Or, if it would be better to keep it as a pure function arg, the defaults need to be documented
+    - [ ] Fzf-lua's approach of having "pattern" and "regex" be separate inputs is superior to having a regex flag. More intuitive
+      - Because you don't have to cross-reference two things in your head
+    - [ ] The "QfrSystemOpts" link in the Grep documentation is incorrect.
+    - [ ] The system sort arg should be able to take a string arg
+      - Alternatively, the defaults should be listed
+    - [ ] In sync, "syncrhonously" is a typo.
+    - [ ] List default behaviors/options for SystemOpts and GrepOpts
+    - [ ] SystemOpts and GrepOpts should be able to take nil values
+    - [ ] Print additional information on error to msgs
+      - [ ] Grep cmd (truncated if it's too long)
+  - [ ] In system, add an on_list callback. This might be useful for editing the result type in helpgrep to `\1` in a less arbitrary way
+  - [ ] Add a "bcd" grep. For now, this can pull based on bufname and notify the user if that's not available
+    - Necessary for being able to grep sub-folders without noise from the larger project
 - [ ] grep plugin
+  - [ ] Notes here are currently in the rancher docs. Outline back to my files
 - [ ] Make a more useful rancher + grep plugin integration
 - [ ] annotator
 - [ ] text tools
+
+#### LOW:
+
+- [ ] In-process LSP that pushes diagnostics for lines over a certain length. Could expand this into other general linting tools. Perhaps then move into a compiled language
+  * Could also include fallback formatter
+
+#### FUTURE:
+
+- [ ] Based on experience, update the meta documentation for plug mappings
 
 ## Core
 
 #### TODO:
 
 - [ ] Anything I can contribute here? - https://github.com/neovim/neovim/milestone/48
-
------
-
-- [ ] While this doesn't apply to all plugin actions, if we apply it to some then not others, it creates an inconsistency. So it's better to say, Nvim's internal fdo behavior is a product of a limitation on how Nvim keymaps are customized. In the plugin case, because the maps are fully customizable, we consistently don't respet that limitation.
-Nvim-tools: create a generic is-fillline-visible function. Rancher might need it.
-text-tools: Create a text object that selects the line excluding the bullet and/or text box
-- Very obviously: vi-
-- va- would then select the entire list level you are in, you could use a- to expand to outer nested lists and i- to inner nested lists.
-- You could also expand on this with [-]- to navigate between lists/checkboxes in the current buffer
-text-tools: Add the i_/a_ text objects to this plugin?
-- If I make a text objects plugin, they can be migrated
-I'm not sure if this is a text tools thing or some kind of nvim-surround wrapper (maybe both?), but a way to visual line select multiple lines (or block select) then apply nvim-surround to each line.
-  * Alternatively, Make the multi-cursor map to make a cursor for each visual line more convenient
-
-- annotator need to support TODO comments the way I have them written in MD files
-
-- nvim tools buf open needs to contain the reasoning for the fdo setting
-- See if any other foldcmds need to be in the datatype
-- This would apply to farsight as well
-
-- the nvim tools config meta merge should unwind if a bad value is provided (MID)
-- the nvim tools config should come with a checkhealth template (TODO)
-- document nvim tools config examples (DOCUMENT)
-
-- fix ability of multiline moves in markdowns to break nested indentation
-
-- nvim-tools needs a generalized wrapping add/wrapping sub function
-
-- Finish rancher additions
-
-- nvim-tools config should provide a "validate against" function where you can take a config and validate it against the built-in validators
-  * the use case for this is, if you have an API function that lives in config, and you take in a user table, you can use the validators in config rather than having to build a bespoke validation script
-  * I'm not precisely sure how you handle nil. If the validator allows nil that's obviously fine, but then, if you're doing an API config table, you don't want to re-validate the defaults, so you would only pass the new values to validate, and nils should be treated as acceptable. But it feels simple enough to account for the use case where you'd want to re-validate the whole config.
-  * this also points to the idea that you want some way of re-caching configs so you don't have to constantly run this heavy logic
-- related: nvim-tools should also provide a generalized config layering template. So when you run an API, you can say "this is the config I'm using", and the config will handle validation, then merging in config/buf config values
-  * first merge in buf config with keep behavior, then config with keep behavior
-- nvim-tools config needs a generalized way to report its health. You should be able to run `require("plugin").config:get_health()` and `require("plugin").buf_config:get_health()`
-
-Should show in the template version of config that global should be its own table, so that way you don't need to pull the whole config structure to see its values
-- Counterpoint - Is it not faster to just pull the reference once? Though, by pulling the sub-tables, you can skip layers of validation when getting them
-
-Two ways to improve perf:
-- Allow a "skip validation" opt to be passed for ephemeral configs. This would come with the warning that any behavior that happens if this option is used is unsupported
-- When a buf config is added or modified, do a buf_config < global config table merge with "keep" behavior and cache the result, so it does not have to be re-built each time it is used.
-  * Creates complexity surface area, particularly as pertains to nested non-config tables
-
-Because validation is becoming more expensive, the "always run validation" question needs to be re-opened.
-
-add a future note in nvim tools like, as nvim ads buf and project/workspace config, update config if that prompts anything
-
-stuff that I think is supposed to be for annotator
-- [ ] Is fzf-lua's deep_clone function useful?
-- [ ] In the documentation for buf_options, show an example of using an autocmd to get project information and set an appropriate buf option
-  - [ ] Look at https://github.com/tpope/vim-projectionist
-
-- Mapping ts-to conditional to d
-  * The basic point is, you will never map id/ad as diagnostic text objects
-  * id/ad is the one thing that's actually possible, as you could get the diagnostic list and then create a selection
-  * But is this actually useful? Is it worth the development time? It's not about the mockup, I can get Grok to spit that out fairly quickly. But different LSPs are going to have different returns, which will create different behaviors. Does every LSP spit out an end position properly? This would mean that you would be visually selecting a point. Do different LSPs have different quirks in how the end positions are rendered? Inconsistent behavior, leading to having to then make fixes around the edge cases.
-  * Let us presume that this can be made to work perfectly. What is the use case? This is something I've literally never wanted to do in my life.
-
-Got this error when going to the bottom of an md and pasting an image. Not sure where around the pasting this happened.
-Got it again when like, you paste the image on not the last line, save, and then the last line is removed before saving
-Decoration provider "range" (ns=nvim.treesitter.highlighter):
-Lua: /usr/local/share/nvim/runtime/lua/vim/treesitter.lua:212: Index out of bounds
-stack traceback:
-  [C]: in function 'nvim_buf_get_text'
-  /usr/local/share/nvim/runtime/lua/vim/treesitter.lua:212: in function 'get_url'
-  ...al/share/nvim/runtime/lua/vim/treesitter/highlighter.lua:439: in function 'fn'
-  ...al/share/nvim/runtime/lua/vim/treesitter/highlighter.lua:245: in function 'for_each_highlight_state'
-  ...al/share/nvim/runtime/lua/vim/treesitter/highlighter.lua:361: in function <...al/share/nvim/runtime/lua/vim/treesitter/highlighter.lua:335>
-  [C]: in function 'nvim_cmd'
-  /home/mjm/.config/nvim/lua/mjm/stl.lua:149: in function </home/mjm/.config/nvim/lua/mjm/stl.lua:142>
-Decoration provider "range" (ns=nvim.treesitter.highlighter):
-Lua: /usr/local/share/nvim/runtime/lua/vim/treesitter.lua:212: Index out of bounds
-stack traceback:
-  [C]: in function 'nvim_buf_get_text'
-  /usr/local/share/nvim/runtime/lua/vim/treesitter.lua:212: in function 'get_url'
-  ...al/share/nvim/runtime/lua/vim/treesitter/highlighter.lua:439: in function 'fn'
-  ...al/share/nvim/runtime/lua/vim/treesitter/highlighter.lua:245: in function 'for_each_highlight_state'
-  ...al/share/nvim/runtime/lua/vim/treesitter/highlighter.lua:361: in function <...al/share/nvim/runtime/lua/vim/treesitter/highlighter.lua:335>
-  [C]: in function 'nvim_cmd'
-  /home/mjm/.config/nvim/lua/mjm/stl.lua:135: in function </home/mjm/.config/nvim/lua/mjm/stl.lua:108>
-  [C]: in function 'nvim_exec_autocmds'
-  /usr/local/share/nvim/runtime/lua/vim/diagnostic.lua:1456: in function 'set'
-  /usr/local/share/nvim/runtime/lua/vim/lsp/diagnostic.lua:253: in function 'handle_diagnostics'
-  /usr/local/share/nvim/runtime/lua/vim/lsp/diagnostic.lua:266: in f
-
-- [ ] Manually going to the end of the line after doing gf is annoying. The function needs to smart place the cursor when a new TODO item is added
-- [ ] Re-implement dynamic documentHighlight
-  - Reasoning: I use this enough that it would side-step some amount of manual input
-  - [ ] Question: How does this marry with my grh map?
-    - Perhaps use grh to toggle dynamic highlighting, then grH to manually show the highlight if one exists
-
-#### MID:
-
-- [ ] Try to make dynamic rnu again
-  - Blockers:
-    - [ ] My file opening is in flux, so I don't want to chase a moving target
-    - [ ] For the open file methods I use, I need to understand when the different parts of the process happen, so I know what I'm missing that's causing the flaky rnu appearance
-  - Requirements:
-    * [ ] Cannot require layering a bunch of hacks on top of each other that create complexity surface area.
-    * [ ] Must be centralized. Cannot require setting nu/rnu in every problem filetype
-- [ ] https://github.com/neovim/neovim/pull/38344
-  * [ ] Does this affect my document color setup?
-  * [ ] A lot of commentary in general that's worth parsing thorugh
-- [ ] The gF text-tool function needs to be able to handle multiple lines in visual mode
-- [ ] The blink.cmp dictionary removed the plenary dep. Try installing again and see if the hung fzf issue still appears
-- [ ] % on quotation marks does not go to the matching quote
-- [ ] https://github.com/ribru17/ts_query_ls (and download build that disables built-in linter)
-- [ ] https://github.com/neovim/neovim/pull/27223 - Replace any instances of tabnew with nvim_open_tabpage
-- [ ] Fzf-Lua send to qflist should use rancher
-  - [ ] If an empty list is available, it should be used
-- [ ] https://github.com/neovim/neovim/commit/4d04d0123d2571391a00b87f7ee70f987fb7cedd
-  - Can this be used to make colorscheme more performant?
-- [ ] Implement the farsight table_new code here
-  - [ ] Make it variable based on if `jit` is present so that this can be opened in non-JIT builds
-- [ ] https://github.com/neovim/neovim/pull/37141
-  - Does this create an issue with comma fillchars? If so, make a PR?
-- [ ] Change any abbreviated option values to their full names
-  * Abbreviated option names produce more false positives when grepping
-  * [ ] Make some kind of code style doc to collect notes like these. I've gone to, away from, then back to abbreviated options but I can't remember why
-- [ ] Replace write cmd to scratch buffer custom code
-  * [ ] This thread contains ideas on how to re-direct cmd output to a buffer: https://github.com/neovim/neovim/issues/30376. Research and pick the best one
-  * [ ] Implement the chosen idea
-* [ ] "gx"able URLs in markdown are not underlined. How can this be fixed?
-* [ ] For prose buffers (md and text), should the option sets and insert `<C-g>u` mappings be outlined into utils? The options I think are fine, since I don't see why they would be different, but I've never loved the insert maps to begin with, and since Markdown is more "syntaxy" I'm not sure they should be the same
-- [ ] The jumplist should not inherit bufs from other sessions
-  * Starting it fresh each time is acceptable
-- [ ] The new float statusline would be useful to show win info/buf info
-- [ ] In fs, get_file_perms could probably be a general file info view
-  - [ ] File size
-  - [ ] mtime
-  - [ ] Created
-- [ ] @nomarkdown is considered two separate words for markdown line wrapping
-
-#### LOW:
-
-- [ ] Farm this: https://github.com/chrisgrieser/nvim-various-textobjs
-- [ ] In-process LSP that pushes diagnostics for lines over a certain length. Could expand this into other general linting tools. Perhaps then move into a compiled language
-  * Could also include fallback formatter
-- [ ] How to do document exports. pandoc? 2html? Is there a plugin?
-- [ ] Are there action items or notes to take on this? https://github.com/neovim/neovim/pull/36261
-  * Possibly related: https://github.com/neovim/neovim/discussions/32540
-  * It looks like tmux is the remaining case where it doesn't work. Lots of different things colliding here.
-* [ ] What is secure mode and what does it do?
 
 #### PR:
 
@@ -209,14 +130,14 @@ stack traceback:
   - Possibly related: https://github.com/neovim/neovim/issues/37030
     * These both feel conceptually related
 - [ ] Doc updates:
-  - getchar andd getcharstr opts are not documented
-  - getqflist and getloclist returns are any
-  - nvim_win_get_config in the doc isn't tied to the _ret type. Maybe intentional
-  - matchstrpos return type
-  - setcmdpos
-  - setcursorcharpos
-  - wordcount
-  - The opts type for vim.keymap.set does not show in the docs
+  - [ ] getchar andd getcharstr opts are not documented
+  - [ ] getqflist and getloclist returns are any
+  - [ ] nvim_win_get_config in the doc isn't tied to the _ret type. Maybe intentional
+  - [ ] matchstrpos return type
+  - [ ] setcmdpos
+  - [ ] setcursorcharpos
+  - [ ] wordcount
+  - [ ] The opts type for vim.keymap.set does not show in the docs
 - [ ] ts-text-object move should be able to distinguish between move selection and grow selection in visual mode
 - [ ] ts-text-object select should place the cursor at the end closest to the cursor's location when the selection was initiated
 - [ ] Can the built-in diagnostic stl element be used for my statusline?
@@ -225,77 +146,15 @@ stack traceback:
     - Might be related to caching
   - [ ] What else?
 
-## ui2
-
-#### TODO:
-
-- If I do `imap <C-u>` it opens the pager (I think) with the result on multiple lines. I hit `<C-c>` once and it minimizes the pager, but then I need to hit `<C-c>` again to clear the line
-  - [ ] There should be a way to make closing the pager and clearing the cmdline the same cmd
-
-#### MID:
-
-- [ ] If I `g<` into a pager window then leave or quit, it should go back to the previously used window
-  * [ ] Check first if this is a settings issue. Maybe it's a problem if I have useopen before uselast
-  * [ ] If it's not a settings issue, then, why wouldn't it work? Hate to open an issue without at least a suggestion on what to do. It feels like this would be the kind of thing that's a somewhat obscure bug.
-* [ ] Why does hitting enter with a pager window open cause me to go into the pager. I think this is intended behavior, but I'd rather overwrite it. Should only be g< to enter
-
-#### MAYBE:
-
-* [ ] Submit an issue for pager buffers being modifiable
-  * I can't imagine that (a) this is intended behavior and (b) no one has noticed this. My guess is that, since nomodifiable buffers can't even be written to programmatically, this is currently allowed so it doesn't become a development chokepoint
-
-## LSP
-
-#### TODO:
-
-- https://github.com/neovim/neovim/commit/f9e068117be9c6ca05d3e42530895449cbdc2a17
-  * This prompts a change in my own code since I no longer have to deal with this use case
-  * I know there are other things in my plugins that have to factor this in. Do a scan through the other todo lists to see if they are out there
-  * This change has something else built into it that I need to look at again
-
-#### MID:
-
-* [ ] grA
-  * Whole buffer scoped code actions?
-
-#### PR:
-
 - [ ] Add an opt to the built-in rename function for filling in the current name
   - [ ] Reasoning: It should be possible to rename from a blank prompt without forgoing the use of prepareRename
 
-## Maps:
+## Exterior Plugins
 
-#### TODO:
+#### Harpoon
 
-- [ ] Use [<C-t> and ]<C-t> for tabmove
-  - [ ] Should this take a wrapping count?
-    - Unlike qf-navigation, where you can go back, a mis-handled tab move creates a confusing arrangement of tabs. Might be better to just clamp at ends
-    - [ ] If not wrapping count, use +/- args
+###### PR:
 
-#### FUTURE:
-
-- [ ] Should ]t be gT or tabnext?
-  - [ ] It's arbitrary for gT to be count back, whereas gt is absolute count
-    - [ ] The defaults, though, are this way
-  - [ ] Would sync with [Q]Q, where count on either is absolute count
-    - [ ] On the other hand, This is also not capital
-  - [ ] Alternative: Make both [t and ]t wrap, then use [T]T for absolutes. Would sync with qf
-
-#### MAYBE:
-
-- Use a harpoon-style buffer to edit tabpages
-
-## Plugins
-
-#### MID:
-
-- [ ] Archived, but an nvim matchparen implementation - https://github.com/utilyre/sentiment.nvim
-
-#### LOW:
-
-* [ ] mini.splitjoin instead of treesj?
-
-## LSP Feature Config Refactoring
-
-Issues and PRs related to how to update and standardize LSP configuration.
-- https://github.com/neovim/neovim/issues/38858
+- [ ] Replace vim.loop with vim.uv
+- [ ] Obscure bug where, if harpoon initializes without a cwd, it enter errors
+  - I'm not sure how to re-produce this

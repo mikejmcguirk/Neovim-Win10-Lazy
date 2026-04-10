@@ -1,21 +1,13 @@
-## Design Philosophy
+## General
 
-#### Goals:
+#### META:
 
 - User intervention should never be required for proper formatting
-- Edge cases should be discarded, rather than rendered incorrectly
+- Always discard rather than rendering incorrectly
+- Render correctly, but maybe not most appealingly, rather than erroring or discarding
 - Configuration should not be required to produce professional results
-- Support extended annotations such as @nodoc and @inlinedoc
-
-#### Non-Goals:
-
-- Supporting direct extraction of Lua data
-
-## Overall
 
 #### TODO:
-
-handle inner todo here (ts to) and then rancher to do stuff
 
 - [ ] The first/most tractable thing to do is probably massaging the config object architecture:
   - [ ] The shroedinger's type problem still persists because of the helptag object

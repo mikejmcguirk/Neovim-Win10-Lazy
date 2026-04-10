@@ -45,17 +45,9 @@ setmetatable(proxy, {
 function M.config(buf, new_config)
     return proxy
 end
--- TODO: It is ergonomic for M.config to always return the proxy table. But then, if an empty
--- table config arg is a no-op (intuitive), what do you pass to reset the config?
--- Possible solution: Pass boolean true. This is a distinct type and something the user has to do
--- on purpose.
 
 function M.get_default_config()
     return vim.deepcopy(default_config, true)
 end
 
 return M
-
--- TODO: The types in here should be built such that, for the nvim-tools version, you can have
--- placeholder types like DefaultConfig, CurrentConfig, NewConfig and they'll interface with
--- eachother correctly.

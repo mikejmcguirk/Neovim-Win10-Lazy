@@ -362,13 +362,3 @@ end
 -- MAYBE: Pass cur_win and buf as params
 
 return M
-
--- TODO: This along with a reduced version of targets should be outlined into nvim-tools. Having
--- a consistent interface for searching would actually be useful.
--- TODO: Want to handle boilerplate as much in _targets as possible. Trimming with overlap is
--- a good example
-
--- TODO: In the labeler, store the labels where they actually go. Saves redoing the cursor logic
--- multiple times.
--- TODO: Only semi-related, but consider setting dim to inlay hint, since dim on comments doesn't
--- do anything.
