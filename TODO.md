@@ -2,6 +2,7 @@
 
 #### TODO:
 
+- [ ] https://github.com/neovim/neovim/commit/9c5fba5df0b60cd25ac2c180a7d82fca47a105e6 - Does this prompt anything?
 - [ ] Change these keys over - https://github.com/neovim/neovim/commit/3a4a66017b74192caaf9af9af172bdc08e0c1608
 - [ ] Do these, collectively, prompt anything?:
   - https://github.com/neovim/neovim/commit/446e794a9c8823040b8d41fc86a1bc3bb99508e7
@@ -218,6 +219,13 @@ stack traceback:
 
 ## LSP
 
+#### TODO:
+
+- https://github.com/neovim/neovim/commit/f9e068117be9c6ca05d3e42530895449cbdc2a17
+  * This prompts a change in my own code since I no longer have to deal with this use case
+  * I know there are other things in my plugins that have to factor this in. Do a scan through the other todo lists to see if they are out there
+  * This change has something else built into it that I need to look at again
+
 #### MID:
 
 * [ ] grA
@@ -263,3 +271,4 @@ stack traceback:
 ## LSP Feature Config Refactoring
 
 Issues and PRs related to how to update and standardize LSP configuration.
+- https://github.com/neovim/neovim/issues/38858
