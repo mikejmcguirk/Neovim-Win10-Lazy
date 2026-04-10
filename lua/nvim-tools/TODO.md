@@ -1,4 +1,4 @@
-## Overall
+## General
 
 #### TODO:
 
@@ -13,6 +13,54 @@
   - Specific Targets:
     * [ ] Option changes using misc.append_if_missing
 
+## Buf
+
+#### buf_open
+
+###### TODO:
+- [ ] Add an algorithmic save function
+  - [ ] TODO scoped under the presumption that not all corner cases will be covered. Those can be prioritized down
+  - [x] Should appropriately handle errors while saving
+  - [ ] If there's no file on disk, should that file be created? Or is that an abort?
+    - I think the way I have it right now is probably best, in that it should not insist upon itself if the file's not on disk. If/when bcd is added, I think an opt to use that to save to disk would make sense. Add a FUTURE note somewhere
+- [ ] Canned script for creating a temp-buffer for window and tab opening purposes. See the code I have in vim-dadbod
+- [ ] Add a get bcd function
+  - Note that it might be supersceded when the feature is officially supported
+- [ ] Possible new buf_open idea based on using temp buffers to direct the :help cmd
+
+- [ ] See if it's possible to make :help do what we want by using temp buffers + window context
+  - [ ] If so, this should be a wrapper around :edit/:help rather than bespoke code
+
+###### MID:
+
+- [ ] do_set_buf options
+- [ ] It should be possible to provide your own post-load, pre filetype options
+    - Idea: A callback is provided with buf as a param that's run in the proper window context. You can write your own custom options to set in there. Maybe provide a boolean for if this overwrites or appends to the default behavior
+    - More Complex Idea: Do these option sets from a table. Allow the user to specify their own table along with merge behavior or total removal of the default
+    * Problem: How do you handle setting opts based on programmatic conditions? You could use some kind of table function arg, but this is starting to sound goofy.
+    - [ ] Make sure that ftdetect is handled for buftypes that are non-specific
+- Like the ones that already exist, new options for this function should be layerable and composable, rather than creating new path dependencies
+- [ ] An opt could be provided for setting the pcmark, but I don't know what the use case is
+
+###### LOW:
+
+- [ ] Smarter `open_buf` filetype detection:
+  - With help and qf buftypes, the current trade-off is to sacrifice potential nuance in behavior and performance for reliability, both in avoiding filetypedetect and making sure ftlugins are always able to overwrite post-load settings
+  - It may be possible, based on the previous buf/win settings, to let one of both of the FileType and filetypedetect events fire
+  - This is tough because
+    * Vim tracks if ftdetect occurred based on, seemingly, a few different backend settings. I would prefer not to get them and their meanings mixed up
+    * `do_ecmd` and `open_buffer` do not have the same behavior. I would need to cross-reference both of them to get the result I'm looking for
+    * At least for now, I have yet to see a use case that strengthens the cost/benefit analysis
+
+#### Other
+
+- [ ] Add an algorithmic save function
+  - [ ] TODO scoped under the presumption that not all corner cases will be covered. Those can be prioritized down
+  - [x] Should appropriately handle errors while saving
+  - [ ] If there's no file on disk, should that file be created? Or is that an abort?
+    - I think the way I have it right now is probably best, in that it should not insist upon itself if the file's not on disk. If/when bcd is added, I think an opt to use that to save to disk would make sense. Add a FUTURE note somewhere
+- Canned script for creating a temp-buffer for window and tab opening purposes. See the code I have in vim-dadbod
+
 ## Config
 
 #### META:
@@ -24,6 +72,8 @@
 - [ ] Type annotate everything properly since Lua_Ls doesn't auto-detect everything.
   - [ ] Including fields in both metatables
   - [ ] Make them class exact? Unsure if I want to double-define the self methods though
+  - [ ] Example from vim.pos of how to make metatable __call documented:
+  ---@cast M +fun(buf: integer, row: integer, col: integer): vim.Pos
 
 - [ ] Use this module as the template example for the docgen
   - [ ] Make sure metatable class documentation is correct
@@ -112,120 +162,6 @@
   * This behavior would then require a bespoke accessor function to check if a config exists and is not empty before actually reading the value(s) from it
   * Correctly handling "gc" for empty buf configs is tricky. Don't want to introduce conditions under which tables can be needlessly created
 
-## Buf
-
-#### buf_open
-
-###### TODO:
-- [ ] Add an algorithmic save function
-  - [ ] TODO scoped under the presumption that not all corner cases will be covered. Those can be prioritized down
-  - [x] Should appropriately handle errors while saving
-  - [ ] If there's no file on disk, should that file be created? Or is that an abort?
-    - I think the way I have it right now is probably best, in that it should not insist upon itself if the file's not on disk. If/when bcd is added, I think an opt to use that to save to disk would make sense. Add a FUTURE note somewhere
-- [ ] Canned script for creating a temp-buffer for window and tab opening purposes. See the code I have in vim-dadbod
-- [ ] Add a get bcd function
-  - Note that it might be supersceded when the feature is officially supported
-- [ ] Possible new buf_open idea based on using temp buffers to direct the :help cmd
-
-- [ ] See if it's possible to make :help do what we want by using temp buffers + window context
-  - [ ] If so, this should be a wrapper around :edit/:help rather than bespoke code
-
-###### MID:
-
-- [ ] do_set_buf options
-- [ ] It should be possible to provide your own post-load, pre filetype options
-    - Idea: A callback is provided with buf as a param that's run in the proper window context. You can write your own custom options to set in there. Maybe provide a boolean for if this overwrites or appends to the default behavior
-    - More Complex Idea: Do these option sets from a table. Allow the user to specify their own table along with merge behavior or total removal of the default
-    * Problem: How do you handle setting opts based on programmatic conditions? You could use some kind of table function arg, but this is starting to sound goofy.
-    - [ ] Make sure that ftdetect is handled for buftypes that are non-specific
-- Like the ones that already exist, new options for this function should be layerable and composable, rather than creating new path dependencies
-- [ ] An opt could be provided for setting the pcmark, but I don't know what the use case is
-
-###### LOW:
-
-- [ ] Smarter `open_buf` filetype detection:
-  - With help and qf buftypes, the current trade-off is to sacrifice potential nuance in behavior and performance for reliability, both in avoiding filetypedetect and making sure ftlugins are always able to overwrite post-load settings
-  - It may be possible, based on the previous buf/win settings, to let one of both of the FileType and filetypedetect events fire
-  - This is tough because
-    * Vim tracks if ftdetect occurred based on, seemingly, a few different backend settings. I would prefer not to get them and their meanings mixed up
-    * `do_ecmd` and `open_buffer` do not have the same behavior. I would need to cross-reference both of them to get the result I'm looking for
-    * At least for now, I have yet to see a use case that strengthens the cost/benefit analysis
-
-#### Other
-
-- [ ] Add an algorithmic save function
-  - [ ] TODO scoped under the presumption that not all corner cases will be covered. Those can be prioritized down
-  - [x] Should appropriately handle errors while saving
-  - [ ] If there's no file on disk, should that file be created? Or is that an abort?
-    - I think the way I have it right now is probably best, in that it should not insist upon itself if the file's not on disk. If/when bcd is added, I think an opt to use that to save to disk would make sense. Add a FUTURE note somewhere
-- Canned script for creating a temp-buffer for window and tab opening purposes. See the code I have in vim-dadbod
-
-## pos
-
-#### DEPS:
-
-- [ ] Needs the utf8 functionality in order to get char len for inclusive/exclusive pos conversion
-
-#### META:
-
-- Pos Names:
-  * qf_pos (1 indexed, inclusive or exclusive, includes vcol flag)
-    + I'm not sure this is a particular data type (there is no built-in Range3), but more a particular kind of state
-      + I have never been clear on if this is end exclusive or not. It almost feels dependent on the beginning and end of the qf position. It also seems to depend on the source.
-  * cur_pos (1 indexed rows, 0 indexed cols, inclusive)
-    + In |api-indexing| this is referred to "mark-like" indexing, but cur_pos (for me) is such a common convention, I'm kinda stuck with it
-      + Problem: cur_idx is not particularly clear as to the meaning in this context
-      + cur_pos/mark_idx would be bad
-      + Problem: cur_pos does not necessarily mean cursor
-      + Maybe you do call it mark_pos
-  * api_pos (0 indexed, end exclusive)
-  * ext_pos (0 indexed, end inclusive)
-
-- Range Names:
-  * ts_range_4 (zero indexed, start is end inclusive, end is end exclusive)
-  * regionpos_4 (one indexed, end inclusive or exclusive)
-  * mark_regionpos_4
-
-#### TODO:
-
-- [ ] Position conversion:
-  - [x] api > ext
-  - [x] api > mark
-  - [x] ext > api
-  - [x] ext > mark
-  - [x] mark > api
-  - [x] mark > ext
-
-- [ ] Position adjustment
-  - [ ] api
-  - [ ] ext
-  - [ ] mark
-
-- [ ] Range4 conversion
-  - [ ] 1,1 to ext (for farsight and rancher. Is that exclusive indexed or no?)
-  - [ ] 1,1 region to mark (exclusive optional)
-
-- [ ] Pos functions
-  - [ ] eq
-  - [ ] lt
-  - [ ] gt
-
-- [ ] Range functions
-  - [ ] contains
-  - [ ] intersect
-    - [ ] Lots of ways you could do this, but look at treesitter to see what matters in practice
-
-- [ ] Pos and Range functions
-  - [ ] pos lt
-  - [ ] range contains
-  - [ ] pos gt
-
-- There is a combinatorial problem of:
-
-- Add resolve_qf_pos function
-  * If vcol is true, get the proper end col
-  * Might need an inclusive vs. exclusive flag
-
 ## fs/git
 
 #### DEPS:
@@ -276,3 +212,90 @@
 ###### Git
 
 - Could be extracted in to a library, since what the proposed functions above provide is sufficiently novel
+
+## opt
+
+#### TODO:
+
+- [ ] Opt parsers
+  - [ ] Comma opt (for rancher swb overrides)
+  - [ ] isk (Because I have it)
+- [ ] with_opts() (rancher window opening)
+
+## pos
+
+#### DEPS:
+
+#### META:
+
+- Pos Names:
+  * qf_pos (1 indexed, inclusive or exclusive, includes vcol flag)
+    + I'm not sure this is a particular data type (there is no built-in Range3), but more a particular kind of state
+      + I have never been clear on if this is end exclusive or not. It almost feels dependent on the beginning and end of the qf position. It also seems to depend on the source.
+  * cur_pos (1 indexed rows, 0 indexed cols, inclusive)
+    + In |api-indexing| this is referred to "mark-like" indexing, but cur_pos (for me) is such a common convention, I'm kinda stuck with it
+      + Problem: cur_idx is not particularly clear as to the meaning in this context
+      + cur_pos/mark_idx would be bad
+      + Problem: cur_pos does not necessarily mean cursor
+      + Maybe you do call it mark_pos
+  * api_pos (0 indexed, end exclusive)
+  * ext_pos (0 indexed, end inclusive)
+
+- Range Names:
+  * ts_range_4 (zero indexed, start is end inclusive, end is end exclusive)
+  * regionpos_4 (one indexed, end inclusive or exclusive)
+  * mark_regionpos_4
+
+#### TODO:
+
+- [ ] Need names for 1,1 inclusive and 1,1 exclusive
+
+- [ ] Position conversion:
+  - [x] api > ext
+  - [x] api > mark
+  - [x] ext > api
+  - [x] ext > mark
+  - [x] mark > api
+  - [x] mark > ext
+
+- [ ] Position adjustment
+  - [ ] api
+  - [ ] ext
+  - [ ] mark
+
+- [ ] Range4 conversion
+  - [ ] 1,1 to ext (for farsight and rancher. Is that exclusive indexed or no?)
+  - [ ] 1,1 region to mark (exclusive optional)
+
+- [ ] Pos functions
+  - [ ] cmp_pos (returns -1, 0, 1 like vim.pos does)
+  - Do these if they have more efficient code paths than just checking the result of cmp_pos
+    - [ ] eq
+    - [ ] lt (not lt == >=)
+    - [ ] gt (not gt == <=)
+
+- [ ] Range functions
+  - [ ] contains
+  - [ ] intersect
+    - [ ] Lots of ways you could do this, but look at treesitter to see what matters in practice
+
+- [ ] Pos and Range functions
+  - [ ] pos lt
+  - [ ] range contains
+  - [ ] pos gt
+
+- There is a combinatorial problem of:
+
+- Add resolve_qf_pos function
+  * If vcol is true, get the proper end col
+  * Might need an inclusive vs. exclusive flag
+
+## range
+
+#### TODO:
+
+- [ ] Naming:
+  - [ ] ts_4 (0 based, end pos is end exclusive)
+    - could maybe be api_4 or lsp_4
+  - [ ] mark_4 (both positions are marks based)
+  - [ ] regionpos_4 (1,1, end inclusive or exclusive depending on source)

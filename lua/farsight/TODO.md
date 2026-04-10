@@ -14,6 +14,8 @@
 
 #### TODO:
 
+- [ ] In all functions, move fdo out of callbacks, since in other plugins they need to be handled in win_call context. Want consistency here.
+
 ###### Bugs
 
 ###### Other

@@ -1,36 +1,63 @@
-## General:
+## General
 
 #### TODO:
 
-- [ ] https://github.com/neovim/neovim/commit/9c5fba5df0b60cd25ac2c180a7d82fca47a105e6 - Does this prompt anything?
-- [ ] Change these keys over - https://github.com/neovim/neovim/commit/3a4a66017b74192caaf9af9af172bdc08e0c1608
-- [ ] Do these, collectively, prompt anything?:
-  - https://github.com/neovim/neovim/commit/446e794a9c8823040b8d41fc86a1bc3bb99508e7
-  - https://github.com/neovim/neovim/commit/1ff1973269594254900fbce40fd35c3024d9ed3d
-  - https://github.com/neovim/neovim/commit/eaea0c0f9da38613a6b8e7f13e0cf4263f7e22f3
-- [ ] I am seeing what looks like a memory leak when editing markdown files for a prolonged period
-  - Preliminary conclusions:
-    - Does not appear to be related to markdown-oxide. Disabling it does not stop ram buildup
-    - This issue does not happen when editing text files, which rules out a number of things
-      - blink
-      - my text tools code
-    - This does not happen when editing with nvim --clean. Includes using treesitter
-    - If I run vim.treesitter.stop() then keep editing, the issue still occurs
-    - If I disable markdown in nvim-treesitter, the issue still occurs
-    - Running with bullets and text-tools disabled seems to help by slowing down the amount of edits made
-  - Do I create some kind of automated testing for this?
-  - Better idea - Create a minimal init and start building it in pieces
-    - Basic options first
+- [ ] https://github.com/neovim/neovim/issues/38858
+  - switchbuf usecurrent?
+  - The idea would be:
+    * You are opening a file
+    * You are in a situation where switchbuf becomes relevant
+    * If switchbuf usecurrent, check if the current window is able to accept the new file
+      + help should not go into non-help windows, for example
+    * If so, open the buf in the current window
+    * Otherwise, Move to the next swb option
+  - Is this an idea I could use?
+    * Hard to graft over swb since it's not part of the option
+    * For rancher, does respecting usecurrent outside the list but not caring about it inside the list make sense?
 
-For plugins, I am seeing lazy updates on both my update branches and on the master branch. Need to figure out how to set plugin installs so that only the relevant branch is shown. Matters because I need to be able to pass TODO between computers without spamming users with updates.
-- As a matter of practice, for git, look at how to block direct pushes to master in the repo.
+## Plugins
 
-I need to make some kind of plugin meta design assumptions doc to handle things like fdo, or default rg only.
+#### META:
 
-https://github.com/neovim/neovim/milestone/48
+- For plugins with grep functionality
+  * Only support rg out of the box
+  * Provide interfaces for other grepprgs to plugin
 
-Back to config
-Farsight: Don't do fdo in callbacks due to win_call context
+- In any case where it's logical for an option to control plugin behavior, it should, at least by default
+  * The function's opts table should also provide a method for overriding the default option
+    * The method should be appropriate based on the option
+      + For fdo, a simple boolean can be provided
+      + If overriding swb, an alternative option value would need to be provided
+
+#### TODO:
+
+- [ ] For plugins, when I update in lazy, I see both the push to the feature branch and then the merge into the master branch. How do you setup plugin installs so this doesn't happen?
+  * Alternatively, is there a better way to handle feature/master branch?
+  * Needs to be fixed so I can update feature branches between machines without spamming users
+
+- [ ] How do you block direct pushes to master?
+
+- [ ] nvim-tools
+- [ ] docgen
+- [ ] farsight
+- [ ] lampshade
+  - [ ] Maybe use the full config module, maybe use g/b variables. Big thing is - the user should not have to re-write the entire autocmd scripting to customize it
+- [ ] rancher
+  - With rg only
+    - Would keep the system module very general/flexible
+- [ ] grep plugin
+- [ ] Make a more useful rancher + grep plugin integration
+- [ ] annotator
+- [ ] text tools
+
+## Core
+
+#### TODO:
+
+- [ ] Anything I can contribute here? - https://github.com/neovim/neovim/milestone/48
+
+-----
+
 - [ ] While this doesn't apply to all plugin actions, if we apply it to some then not others, it creates an inconsistency. So it's better to say, Nvim's internal fdo behavior is a product of a limitation on how Nvim keymaps are customized. In the plugin case, because the maps are fully customizable, we consistently don't respet that limitation.
 Nvim-tools: create a generic is-fillline-visible function. Rancher might need it.
 text-tools: Create a text object that selects the line excluding the bullet and/or text box
