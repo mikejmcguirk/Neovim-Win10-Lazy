@@ -17,7 +17,7 @@ function M.check_modifiable(buf)
 end
 
 ---@return integer
-function M.create_temp_buf()
+function M.create_noname_buf()
     local buf = api.nvim_create_buf(false, true)
     local buf_opt = { buf = buf }
     api.nvim_set_option_value("bufhidden", "wipe", buf_opt)
@@ -28,6 +28,21 @@ function M.create_temp_buf()
     api.nvim_set_option_value("undofile", false, buf_opt)
 
     return buf
+end
+
+---@return integer
+function M.create_scratch_buf()
+    local buf = M.create_noname_buf()
+    api.nvim_set_option_value("bt", "nofile", { buf = buf })
+    return buf
+end
+
+---See :h |scratch-buffer|
+---So then you'd have a scratch t/f thing here and a modifiable t/f thing here and that should
+---get you to like the three "states" these buffers can exist in.
+---@return integer
+function M.create_temp_buffer()
+    return 0
 end
 
 ---@param bufnr integer
@@ -141,15 +156,15 @@ end
 ---See qf_set_cwindow_options in quickfix.c
 ---@param buf integer
 local function qf_set_cwindow_options(buf)
-    local cur_buf = { buf = buf }
-    api.nvim_set_option_value("bufhidden", "hide", cur_buf)
-    api.nvim_set_option_value("swapfile", false, cur_buf)
+    local buf_scope = { buf = buf }
+    api.nvim_set_option_value("bh", "hide", buf_scope)
+    api.nvim_set_option_value("swf", false, buf_scope)
 
     local local_scope = { scope = "local" }
+    api.nvim_set_option_value("crb", false, local_scope)
     api.nvim_set_option_value("diff", false, local_scope)
-    api.nvim_set_option_value("cursorbind", false, local_scope)
-    api.nvim_set_option_value("foldmethod", "manual", local_scope)
-    api.nvim_set_option_value("scrollbind", false, local_scope)
+    api.nvim_set_option_value("fdm", "manual", local_scope)
+    api.nvim_set_option_value("scb", false, local_scope)
 end
 
 ---Assumes proper window context
@@ -157,28 +172,28 @@ end
 ---See :h help-buffer-options
 ---@param buf integer
 local function prepare_help_buffer(buf)
-    local cur_buf = { buf = buf }
-    api.nvim_set_option_value("binary", false, cur_buf)
-    api.nvim_set_option_value("buflisted", false, cur_buf)
-    api.nvim_set_option_value("modifiable", false, cur_buf)
-    api.nvim_set_option_value("tabstop", 8, cur_buf)
+    local buf_scope = { buf = buf }
+    api.nvim_set_option_value("binary", false, buf_scope)
+    api.nvim_set_option_value("buflisted", false, buf_scope)
+    api.nvim_set_option_value("modifiable", false, buf_scope)
+    api.nvim_set_option_value("tabstop", 8, buf_scope)
+
     -- Try to avoid re-running buf_init_chartab
-    local old_isk = api.nvim_get_option_value("iskeyword", cur_buf)
+    local old_isk = api.nvim_get_option_value("iskeyword", buf_scope) ---@type string
     local help_isk = '!-~,^*,^|,^",192-255'
-    if old_isk ~= help_isk then
-        api.nvim_set_option_value("iskeyword", help_isk, cur_buf)
-    end
+    local set_if_new = require("nvim-tools.opts").set_if_new
+    set_if_new("isk", old_isk, help_isk, buf_scope)
 
     local local_scope = { scope = "local" }
     api.nvim_set_option_value("arabic", false, local_scope)
     api.nvim_set_option_value("cursorbind", false, local_scope)
     api.nvim_set_option_value("diff", false, local_scope)
-    api.nvim_set_option_value("foldenable", false, local_scope)
-    api.nvim_set_option_value("foldmethod", "manual", local_scope)
+    api.nvim_set_option_value("fdm", "manual", local_scope)
+    api.nvim_set_option_value("fen", false, local_scope)
     api.nvim_set_option_value("list", false, local_scope)
-    api.nvim_set_option_value("number", false, local_scope)
-    api.nvim_set_option_value("relativenumber", false, local_scope)
+    api.nvim_set_option_value("nu", false, local_scope)
     api.nvim_set_option_value("rightleft", false, local_scope)
+    api.nvim_set_option_value("rnu", false, local_scope)
     api.nvim_set_option_value("scrollbind", false, local_scope)
     api.nvim_set_option_value("spell", false, local_scope)
 end
@@ -193,7 +208,7 @@ local function get_eiw(win, buftype)
     -- Both of these FileTypes are meant to set two categories of options:
     -- - Buffer local options that run after loading (Should overwrite autocmds)
     -- - Buffer-scoped window options, which cannot be run until after the buf is set
-    -- However, these options should still be overridable by FileType autocmds
+    --   (Should be overwritten by FileType autocmds)
     if buftype == "help" or buftype == "quickfix" then
         new_eiw_tbl[#new_eiw_tbl + 1] = "FileType"
     end
@@ -210,78 +225,81 @@ end
 ---Assumes proper window context
 ---@param win integer
 ---@param buf integer
----@param buflisted boolean|nil
----@param buftype ""|"acwrite"|"help"|"nofile"|"nowrite"|"prompt"|"quickfix"|"terminal"
----@param will_focus boolean
+---@param bl boolean|nil
+---@param bt ""|"acwrite"|"help"|"nofile"|"nowrite"|"prompt"|"quickfix"|"terminal"
 ---@param clearjumps boolean
-local function do_set_buf(win, buf, buflisted, buftype, will_focus, clearjumps)
+---@return boolean
+local function do_set_buf(win, buf, bl, bt, clearjumps)
     local buf_opt = { buf = buf }
     local win_opt = { win = win }
 
-    local old_eiw, new_eiw = get_eiw(win, buftype)
-    api.nvim_set_option_value("eventignorewin", new_eiw, win_opt)
+    local old_eiw, new_eiw = get_eiw(win, bt)
+    local set_if_new = require("nvim-tools.opts").set_if_new
+    set_if_new("eiw", old_eiw, new_eiw, win_opt)
     -- Set now since buf init can be tied into buftype, such as |local-additions| in help
-    api.nvim_set_option_value("buftype", buftype, buf_opt)
-
-    local cur_win = api.nvim_get_current_win()
-    local dest_win = will_focus and win or cur_win
-    if dest_win == cur_win then
+    api.nvim_set_option_value("bt", bt, buf_opt)
+    if not clearjumps then
         api.nvim_cmd({ cmd = "normal", args = { "m'" }, bang = true }, {})
     end
 
     local global_opt = { scope = "global" }
-    local old_lz = api.nvim_get_option_value("lazyredraw", global_opt)
-    api.nvim_set_option_value("lazyredraw", true, global_opt)
+    local old_lz = api.nvim_get_option_value("lz", global_opt)
+    set_if_new("lz", old_lz, true, global_opt)
+
     local ok, err = pcall(api.nvim_set_current_buf, buf)
-    api.nvim_set_option_value("eventignorewin", old_eiw, win_opt)
-    if not ok then
-        api.nvim_set_option_value("lazyredraw", old_lz, global_opt)
+    set_if_new("eiw", new_eiw, old_eiw, win_opt)
+    if (not ok) or api.nvim_win_get_bur(win) ~= buf then
+        set_if_new("lz", true, old_lz, global_opt)
         error(err or ("Unable to set buf " .. buf .. " into win " .. win))
     end
 
-    if buftype == "help" then
+    if bt == "help" then
         prepare_help_buffer(buf)
         api.nvim_set_option_value("filetype", "help", buf_opt)
-    elseif buftype == "quickfix" then
+    elseif bt == "quickfix" then
         qf_set_cwindow_options(buf)
         api.nvim_set_option_value("filetype", "qf", buf_opt)
     end
 
-    api.nvim_set_option_value("lazyredraw", old_lz, global_opt)
+    set_if_new("lz", true, old_lz, global_opt)
     if clearjumps then
         api.nvim_cmd({ cmd = "clearjumps" }, {})
     end
 
-    local bl = require("nvim-tools.misc").if_not_nil(buflisted, buftype ~= "help")
-    api.nvim_set_option_value("buflisted", bl, buf_opt)
+    local buflisted = require("nvim-tools.misc").if_not_nil(bl, bt ~= "help")
+    api.nvim_set_option_value("bl", buflisted, buf_opt)
+    return true
 end
 -- NOTE: nvim_set_current_buf uses open_buffer in buffer.c as its backend
+-- MID: Will new_buf ~= buf print out an error msg properly? Unsure why it would happen other than
+-- an autocmd.
 
 ---@param buf integer
----@param force "abandon"|"hide"|""|"save"
-local function handle_abandonment(buf, force)
-    if force == "abandon" then
+---@param force "force"|"hide"|""|"save"
+local function handle_force(buf, force)
+    if force == "force" then
         return
     end
 
     local global_opt = { scope = "global" }
-    if api.nvim_get_option_value("hidden", global_opt) == true then
+    if api.nvim_get_option_value("hid", global_opt) == true then
         return
     end
 
     local buf_opt = { buf = buf }
-    if api.nvim_get_option_value("bufhidden", buf_opt) == "hide" or #fn.win_findbuf(buf) > 1 then
+    local bufhidden = api.nvim_get_option_value("bh", buf_opt) ---@type string
+    if bufhidden == "hide" or #fn.win_findbuf(buf) > 1 then
         return
     end
 
     local bt = api.nvim_get_option_value("buftype", buf_opt)
     local no_save = bt == "nowrite" or bt == "nofile" or bt == "terminal" or bt == "prompt"
-    if no_save or not api.nvim_get_option_value("modified", buf_opt) then
+    if no_save or not api.nvim_get_option_value("mod", buf_opt) then
         return
     end
 
     if force == "hide" then
-        api.nvim_set_option_value("bufhidden", "hide", buf_opt)
+        api.nvim_set_option_value("bh", "hide", buf_opt)
         return
     end
 
@@ -298,6 +316,7 @@ local function handle_abandonment(buf, force)
         error(err or ("Unable to save " .. fn.bufname(buf)))
     end
 end
+-- TODO: This is directionally correct but sloppy
 
 ---@param win integer window-ID
 ---@param buf integer
@@ -305,18 +324,16 @@ end
 local function validate_open_buf_params(win, buf, opts)
     local is_uint = require("nvim-tools.types").is_uint
     vim.validate("win", win, is_uint)
-    vim.validate("opts", opts, "table")
-    vim.validate("buf", buf, function()
-        return is_uint(buf) or type(buf) == "string"
-    end)
-
     if not api.nvim_win_is_valid(win) then
         error("Window " .. win .. " is not valid")
     end
 
+    vim.validate("buf", buf, is_uint)
     if not api.nvim_buf_is_valid(buf) then
         error("Buf " .. buf .. " is not valid")
     end
+
+    vim.validate("opts", opts, "table")
 end
 
 ---@class nvim-tools.buf.OpenBufOpts
@@ -334,7 +351,7 @@ end
 ---Default false. Does not apply if the buffer is already open and cur_pos is nil. Ignored if
 ---buftype is terminal.
 ---@field do_zzze? boolean
----Focus the buffer after opening?
+---Default true. Focus the buffer after opening?
 ---@field focus? boolean
 ---What to do if hidden and bufhidden are false, and the buf being exited is only present in
 ---the targeted window. Defaults to "hide" if nil. nofile, nowrite, prompt, and terminal buffers
@@ -343,32 +360,39 @@ end
 ---- "hide" sets bufhidden to hide. Saved buffers are allowed to be abandoned.
 ---- "" will try to save if autowriteall is true. Errors otherwise.
 ---- "abandon" makes no attempt to be non-destructive.
----@field force? "abandon"|"hide"|""|"save"
+---@field force? "force"|"hide"|""|"save"
 ---Default nil. Requires cur_pos to be not nil. Ignored if buttype is terminal.
----@field fold_cmd? "zv"|"zO"
+---@field fold_cmd? "zv"|"zO"|"zx"|"zR"
 ---cur_pos is the final cursor position in the destination window.
 ---@field on_open fun(cur_pos: { [1]:integer, [2]:integer })
 
----Hards errors if win or buf are invalid. Callers should gracefully handle if needed
+---Versatile buffer opening logic meant for user-facing contexts in which any buftype could be
+---opened in any window. Sets temporary window context and uses eventignorewin + lazyredraw to
+---emulate proper help buffer opening.
+---Hards errors on failure, including win or buf invalid.
 ---@param win integer window-ID
 ---@param buf integer
 ---@param opts nvim-tools.buf.OpenBufOpts
 function M.open_buf(win, buf, opts)
     validate_open_buf_params(win, buf, opts)
+    if api.nvim_get_option_value("wfb", { win = win }) then
+        error("Vim:E1513: Cannot switch buffer. 'winfixbuf' is enabled")
+    end
 
     local cur_buf = api.nvim_win_get_buf(win)
     local already_open = cur_buf == buf
-    local buftype = opts.buftype or api.nvim_get_option_value("buftype", { buf = buf })
+    local buftype = opts.buftype or api.nvim_get_option_value("bt", { buf = buf })
     local cur_pos = opts.cur_pos
 
     if not already_open then
-        handle_abandonment(cur_buf, opts.force or "hide")
+        handle_force(cur_buf, opts.force or "hide")
         api.nvim_win_call(win, function()
-            do_set_buf(win, buf, opts.buflisted, buftype, opts.focus, opts.clearjumps)
+            return do_set_buf(win, buf, opts.buflisted, buftype, opts.clearjumps)
         end)
     end
 
-    if cur_pos and buftype ~= "terminal" then
+    local not_term = buftype ~= "terminal"
+    if cur_pos and not_term then
         if already_open then
             api.nvim_win_call(win, function()
                 api.nvim_cmd({ cmd = "normal", args = { "m'" }, bang = true }, {})
@@ -379,10 +403,10 @@ function M.open_buf(win, buf, opts)
         cur_pos = require("nvim-tools.win").protected_set_cursor(win, cur_pos)
     end
 
-    local not_term = buftype ~= "terminal"
-    local do_zzze = opts.do_zzze and ((not already_open) or cur_pos ~= nil) and not_term
-    local fold_cmd = (opts.fold_cmd and cur_pos ~= nil and not_term) and opts.fold_cmd or nil
-    if opts.focus then
+    local do_zzze = opts.do_zzze and (cur_pos or not already_open) and not_term
+    local fold_cmd = (opts.fold_cmd and cur_pos and not_term) and opts.fold_cmd or nil
+    local focus = opts.focus
+    if focus or focus == nil then
         api.nvim_set_current_win(win)
         do_open_buf_adjustments(fold_cmd, do_zzze)
     else
@@ -507,6 +531,7 @@ function M.save(buf)
     end
 end
 -- TODO: This error comes up on qflists, where it really shouldn't.
+-- FUTURE: Could bcd or workspace config be used for saving here?
 
 ---@param buf integer
 ---@param delist boolean

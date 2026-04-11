@@ -50,11 +50,6 @@
   - [ ] Realistically though, because of config resolution, it's probably going to just be using skip_validation
 
 - [ ] All functionalities should use the set pc mark behavior described in meta
-
-- [ ] For plugins, when I update in lazy, I see both the push to the feature branch and then the merge into the master branch. How do you setup plugin installs so this doesn't happen?
-  * Alternatively, is there a better way to handle feature/master branch?
-  * Needs to be fixed so I can update feature branches between machines without spamming users
-
 - [ ] How do you block direct pushes to master?
 
 - [ ] Problem: I want to have a unified, idiomatic interface for controlling where items open.
@@ -74,6 +69,8 @@
 - [ ] lampshade
   - [ ] Maybe use the full config module, maybe use g/b variables. Big thing is - the user should not have to re-write the entire autocmd scripting to customize it
 - [ ] rancher
+  - [ ] Why is rging helptags slower than lhelpgrep? Aren't they both external grep?
+    - [ ] My grep probably needs to take up unloaded lazy help files
   - [ ] When making new lists, there should be an attempt to re-use blank lists
   - [ ] Add an fzf-lua integration for sendtoqflist
     - Can be either a doc snippet or actual Lua code
