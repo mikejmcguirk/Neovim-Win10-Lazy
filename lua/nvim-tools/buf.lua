@@ -1,6 +1,7 @@
 local api = vim.api
 local fn = vim.fn
 local fs = vim.fs
+local uv = vim.uv
 local vimv = vim.v
 
 local M = {}
@@ -16,34 +17,56 @@ function M.check_modifiable(buf)
     end
 end
 
+---Create a temporary buffer. Always:
+---- noml
+---- nomod
+---- noswf
+---- noudf
+---
+---Set bufhidden.
+---"hide" is useful for cached buffers such as previews.
+---"wipe" is useful for placeholders, like temporary help buffers used to open helptags in a
+---targeted window.
+---@param bh ""|"hide"|"unload"|"delete"|"wipe"
+---@param bl boolean Buflisted
+---"nofile" will make the buffer display as "scratch" in the statusline
+---"help" can be used for targeted helptag opening
+---@param bt ""|"acwrite"|"help"|"nofile"|"nowrite"|"prompt"|"quickfix"|"terminal"
+---@param ft string Set a filetype (useful for preview buffers). "" is a no-op
+---@param noma boolean Sets nomodifiable and readonly
 ---@return integer
-function M.create_noname_buf()
-    local buf = api.nvim_create_buf(false, true)
-    local buf_opt = { buf = buf }
-    api.nvim_set_option_value("bufhidden", "wipe", buf_opt)
-    api.nvim_set_option_value("buftype", "nofile", buf_opt)
-    api.nvim_set_option_value("modifiable", false, buf_opt)
-    api.nvim_set_option_value("readonly", true, buf_opt)
-    api.nvim_set_option_value("swapfile", false, buf_opt)
-    api.nvim_set_option_value("undofile", false, buf_opt)
+function M.create_temp_buf(bh, bl, bt, ft, noma)
+    local buf = api.nvim_create_buf(false, false)
+    local buf_scope = { buf = buf }
+
+    if bt ~= "" then
+        api.nvim_set_option_value("buftype", bt, buf_scope)
+    end
+
+    -- Set unconditionally because of autocmds/global settings
+    api.nvim_set_option_value("bh", bh, buf_scope)
+    api.nvim_set_option_value("ml", false, buf_scope)
+    api.nvim_set_option_value("mod", false, buf_scope)
+    api.nvim_set_option_value("swapfile", false, buf_scope)
+    api.nvim_set_option_value("undofile", false, buf_scope)
+
+    if noma then
+        api.nvim_set_option_value("ma", false, buf_scope)
+        api.nvim_set_option_value("ro", true, buf_scope)
+    end
+
+    if bl then
+        api.nvim_set_option_value("bl", bl, buf_scope)
+    end
+
+    if ft ~= "" then
+        api.nvim_set_option_value("ft", ft, buf_scope)
+    end
 
     return buf
 end
-
----@return integer
-function M.create_scratch_buf()
-    local buf = M.create_noname_buf()
-    api.nvim_set_option_value("bt", "nofile", { buf = buf })
-    return buf
-end
-
----See :h |scratch-buffer|
----So then you'd have a scratch t/f thing here and a modifiable t/f thing here and that should
----get you to like the three "states" these buffers can exist in.
----@return integer
-function M.create_temp_buffer()
-    return 0
-end
+-- MID: On principle, I have ft delayed until the end. Can change if a use case comes up for why
+-- it should be fired earlier.
 
 ---@param bufnr integer
 ---@return string
@@ -61,6 +84,7 @@ function M.get_indent(buf, row)
     vim.validate("buf", buf, is_uint)
     vim.validate("row", row, is_uint)
 
+    ---@type string
     local indentexpr = api.nvim_get_option_value("indentexpr", { buf = buf })
     if #indentexpr > 0 then
         local old_row = vimv.lnum
@@ -139,7 +163,7 @@ function M.is_empty_noname(buf)
     return M.is_empty(buf) and M.is_noname(buf)
 end
 
----@param fold_cmd "zv"|"zO"|nil
+---@param fold_cmd "zv"|"zO"|"zx"|"zR"|nil
 ---@param do_zzze? boolean
 local function do_open_buf_adjustments(fold_cmd, do_zzze)
     if fold_cmd then
@@ -248,7 +272,7 @@ local function do_set_buf(win, buf, bl, bt, clearjumps)
 
     local ok, err = pcall(api.nvim_set_current_buf, buf)
     set_if_new("eiw", new_eiw, old_eiw, win_opt)
-    if (not ok) or api.nvim_win_get_bur(win) ~= buf then
+    if (not ok) or api.nvim_win_get_buf(win) ~= buf then
         set_if_new("lz", true, old_lz, global_opt)
         error(err or ("Unable to set buf " .. buf .. " into win " .. win))
     end
@@ -271,8 +295,7 @@ local function do_set_buf(win, buf, bl, bt, clearjumps)
     return true
 end
 -- NOTE: nvim_set_current_buf uses open_buffer in buffer.c as its backend
--- MID: Will new_buf ~= buf print out an error msg properly? Unsure why it would happen other than
--- an autocmd.
+-- TODO: Test buf open failure handling by using a once autocmd on BufReadPre or something
 
 ---@param buf integer
 ---@param force "force"|"hide"|""|"save"
@@ -321,19 +344,20 @@ end
 ---@param win integer window-ID
 ---@param buf integer
 ---@param opts nvim-tools.buf.OpenBufOpts
-local function validate_open_buf_params(win, buf, opts)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("win", win, is_uint)
-    if not api.nvim_win_is_valid(win) then
-        error("Window " .. win .. " is not valid")
+local function resolve_open_buf_params(win, buf, opts)
+    -- The resolve functions run vim.validate
+    local ok_w, win_id, err_w, _ = require("nvim-tools.win").resolve_win_id(win)
+    if not ok_w then
+        error(err_w or ("Invalid window ID " .. win))
     end
 
-    vim.validate("buf", buf, is_uint)
-    if not api.nvim_buf_is_valid(buf) then
-        error("Buf " .. buf .. " is not valid")
+    local ok_b, bufnr, err_b, _ = M.resolve_bufnr(buf)
+    if not ok_b then
+        error(err_b or ("Invalid buffer " .. buf))
     end
 
     vim.validate("opts", opts, "table")
+    return win_id, bufnr
 end
 
 ---@class nvim-tools.buf.OpenBufOpts
@@ -364,7 +388,7 @@ end
 ---Default nil. Requires cur_pos to be not nil. Ignored if buttype is terminal.
 ---@field fold_cmd? "zv"|"zO"|"zx"|"zR"
 ---cur_pos is the final cursor position in the destination window.
----@field on_open fun(cur_pos: { [1]:integer, [2]:integer })
+---@field on_open? fun(cur_pos: { [1]:integer, [2]:integer })
 
 ---Versatile buffer opening logic meant for user-facing contexts in which any buftype could be
 ---opened in any window. Sets temporary window context and uses eventignorewin + lazyredraw to
@@ -374,18 +398,19 @@ end
 ---@param buf integer
 ---@param opts nvim-tools.buf.OpenBufOpts
 function M.open_buf(win, buf, opts)
-    validate_open_buf_params(win, buf, opts)
+    win, buf = resolve_open_buf_params(win, buf, opts)
     if api.nvim_get_option_value("wfb", { win = win }) then
         error("Vim:E1513: Cannot switch buffer. 'winfixbuf' is enabled")
     end
 
-    local cur_buf = api.nvim_win_get_buf(win)
-    local already_open = cur_buf == buf
+    local start_win = api.nvim_get_current_win()
+    local dest_win_cur_buf = api.nvim_win_get_buf(win)
+    local already_open = dest_win_cur_buf == buf
     local buftype = opts.buftype or api.nvim_get_option_value("bt", { buf = buf })
     local cur_pos = opts.cur_pos
 
     if not already_open then
-        handle_force(cur_buf, opts.force or "hide")
+        handle_force(dest_win_cur_buf, opts.force or "hide")
         api.nvim_win_call(win, function()
             return do_set_buf(win, buf, opts.buflisted, buftype, opts.clearjumps)
         end)
@@ -403,11 +428,16 @@ function M.open_buf(win, buf, opts)
         cur_pos = require("nvim-tools.win").protected_set_cursor(win, cur_pos)
     end
 
+    local focus = opts.focus
+    local do_focus = focus == true or focus == nil
+    local in_dest_win = start_win == win
+    if do_focus and not in_dest_win then
+        api.nvim_set_current_win(win)
+    end
+
     local do_zzze = opts.do_zzze and (cur_pos or not already_open) and not_term
     local fold_cmd = (opts.fold_cmd and cur_pos and not_term) and opts.fold_cmd or nil
-    local focus = opts.focus
-    if focus or focus == nil then
-        api.nvim_set_current_win(win)
+    if do_focus or in_dest_win then
         do_open_buf_adjustments(fold_cmd, do_zzze)
     else
         if fold_cmd or do_zzze then
@@ -455,21 +485,13 @@ function M.protected_del(buf, delist, opts)
     end
 end
 
----Assumes buf has been validated
----@param buf integer|string
+---@param bufnr integer
 ---@return boolean, integer, string|nil, string|nil
-function M.resolve_bufnr(buf)
-    if buf == 0 then
-        return true, api.nvim_get_current_buf(), nil, nil
-    end
+function M.resolve_bufnr(bufnr)
+    vim.validate("bufnr", bufnr, require("nvim-tools.types").is_uint)
 
-    -- This makes Lua_Ls happy
-    local bufnr = buf
-    if type(bufnr) == "string" then
-        bufnr = fn.bufadd(bufnr)
-        if bufnr == 0 then
-            return false, -1, buf .. " is not a valid file", "ErrorMsg"
-        end
+    if bufnr == 0 then
+        return true, api.nvim_get_current_buf(), nil, nil
     end
 
     if api.nvim_buf_is_valid(bufnr) then
@@ -478,39 +500,73 @@ function M.resolve_bufnr(buf)
         return false, -1, "Bufnr " .. bufnr .. " is invalid", "ErrorMsg"
     end
 end
--- TODO: For situations where you know buf is a number, this might be too much logic.
--- Resolve_bufnr should be a simple, number only function. Then this should be
--- buf_to_bufnr. For consistency, resolve_full_bufname should then be buf_to_full_bufname. And
--- then you could add get_bufname functions specifically designed for ints and strings.
+
+---Note that "" can be a valid bufname.
+---@param bufnr integer
+---@return boolean, string, string|nil, string|nil
+function M.bufnr_to_full_bufname(bufnr)
+    local ok, resolved_bufnr, err, hl = M.resolve_bufnr(bufnr)
+    if not ok then
+        return ok, "", err, hl
+    end
+
+    return true, api.nvim_buf_get_name(resolved_bufnr), nil, nil
+end
+-- TODO: Is "" the correct return on err?
+
+---@param bufname string
+---@return boolean, string, string|nil, string|nil
+function M.resolve_full_bufname(bufname)
+    vim.validate("bufname", bufname, "string")
+    return true, fs.normalize(fn.fnamemodify(bufname, ":p")), nil, nil
+end
+
+---@param bufname string
+---@return boolean, integer, string|nil, string|nil
+function M.bufname_to_bufnr(bufname)
+    vim.validate("bufname", bufname, "string")
+
+    local full_bufname = fs.normalize(fn.fnamemodify(bufname, ":p"))
+    local ok, err, err_name = uv.fs_access(full_bufname, 4)
+    if not ok then
+        local err_str = err or "fs_access error"
+        local err_msg = err_name .. ": " .. err_str
+        return false, -1, err_msg, "ErrorMsg"
+    end
+
+    local bufnr = fn.bufadd(full_bufname)
+    if bufnr == 0 then
+        return false, -1, "Unable to add " .. full_bufname, "ErrorMsg"
+    else
+        return true, bufnr, nil, nil
+    end
+end
+-- MAYBE: I'm assuming for now that this function wouldn't be used in a situation where nofile
+-- buffers are co-mingled with actual files. Can add guard code if something comes up.
+
+---@param buf integer|string
+---@return boolean, integer, string|nil, string|nil
+function M.buf_to_bufnr(buf)
+    -- Doing the if this way makes Lua_Ls happy
+    if type(buf) == "string" then
+        return M.bufname_to_bufnr(buf)
+    else
+        -- Assumes is_uint will be checked in here
+        return M.resolve_bufnr(buf)
+    end
+end
 
 ---@param buf integer|string
 ---@return boolean, string, string|nil, string|nil
-function M.resolve_full_bufname(buf)
-    vim.validate("buf", buf, function()
-        return require("nvim-tools.types").is_uint(buf) or type(buf) == "string"
-    end)
-
-    -- This makes Lua_Ls happy
-    local full_bufname = buf
-    if type(full_bufname) == "string" then
-        local bufnr = fn.bufadd(full_bufname)
-        if bufnr == 0 then
-            return false, "", buf .. " is not a valid file", "ErrorMsg"
-        end
-
-        return true, fn.fnamemodify(full_bufname, ":p"), nil, nil
+function M.buf_to_full_bufname(buf)
+    -- Doing the if this way makes Lua_Ls happy
+    if type(buf) == "string" then
+        return true, fs.normalize(fn.fnamemodify(buf, ":p")), nil, nil
+    else
+        -- Assumes is_uint will be checked in here
+        return M.bufnr_to_full_bufname(buf)
     end
-
-    if not api.nvim_buf_is_valid(full_bufname) then
-        return false, "", "Buf " .. buf .. " is invalid", ""
-    end
-
-    return true, api.nvim_buf_get_name(full_bufname), nil, nil
 end
--- TODO: I'm not sure if returning "" on a bad bufadd is correct, because that could be a valid
--- bufname for a nofile buffer (but, do nofile buffers have valid bufname values?).
--- TODO: A lot of common code here with resolve_bufnr. Can anything be outlined?
--- TODO: This function validates buf. resolve_bufnr does not. Resolve inconsistency.
 
 ---@param buf integer
 ---@return boolean, string|nil, string|nil

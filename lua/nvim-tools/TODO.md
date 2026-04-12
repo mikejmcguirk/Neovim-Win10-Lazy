@@ -11,9 +11,14 @@
   - Exceptions:
     - Validation functions (since they are, themselves, validators)
 
+- [ ] Create a template minimal init that can be used for plugin debugging. The Neovim repo has an example they use for minimal plugin init, though that might be superceded with vim.pack released
+
 - [ ] The module should be documented using my docgen
   - [ ] Make sure meta-table class documentation is correct
   - [ ] Docgen should be able to handle this. It does so for vim.filetype
+
+- [ ] Test to see if win_call_maybe and buf_call_maybe are faster than running them unconditionally. If so, add them here and use them in all the internals.A
+  - [ ] Test with different % of times where you need to context call vs not
 
 #### FUTURE:
 
@@ -39,13 +44,11 @@
 ###### MAYBE:
 
 - Provide an opt for setting the pc mark
+- Have the function gracefully error. Part of issue is the amount of control flow. Part of it is, since every other edit/buf opening function hard errors, this feels patternful. Part of it too is, it's meant to be a gut check on making sure the surrounding assumptions are correct.
 
 #### Other
 
 ###### TODO:
-
-- [ ] Canned script for creating a temp-buffer for window and tab opening purposes. See the code I have in vim-dadbod
-  - [ ] The code I have so far is fine but also needs to factor in modifiable and readonly
 
 - [ ] Get indent
 - [ ] If no indentexpr, needs to handle the various indenting options
@@ -59,6 +62,32 @@
 - [ ] For save(), pass a directory or a directory outputting function to save to if the file is not on disk
 
 ###### FUTURE:
+
+- [ ] Build switchbuf handling
+  - Waiting for concrete use cases
+  - Want to let the other buf/win functions develop more before adding switchbuf handling as another element to handle
+  - The two main pieces of logic seem to be buflist_getfile() (buffer.c) and swbuf_goto_win_with_buf() (window.c).
+  - qf_jump_edit_buffer calls buflist_getfile() directly
+  * Current thinking:
+    + nil switchbuf = use the global option
+    + empty switchbuf = use current window
+    + non-empty switchbuf = use the opt override
+
+- [ ] Add functions to open a buf in a split/vsplit/newtab. Waiting for more use cases
+  - Particularly with rancher, since I need to see how to work around the special quickfix rules
+
+- [ ] resolve_full_bufname is currently a placeholder. Want to see a few different use cases for a function like this before I decide what it is
+  - Complicated by nofile buffers, which don't/can't have a bufname but are valid
+  - Run bufadd and make sure it provides a valid return?
+  - Run fs_access to verify the file is present?
+    * Conceptually this is the most obvious. But, if you run buf_to_full_bufname, running a file system opt is nasty if the user just wants to resolve the data representation.
+      + You could argue that buf_to_bufnr does the same thing on a string input, but since we have to run bufadd in bufname_to_bufnr, I'm fine with also throwing in the fs_access for more specific error reporting.
+    * Doesn't help that I'm not sure what the use case for buf_to_ functions is in general
+
+#### MAYBE:
+
+- Add a higher-level "open_buf_in" function that takes an integer|split|vsplit|tabnew opt. Trickier than it seems though because of how the opts/vars get moved around, and I don't have a concrete use case.
+  - Additional issue, with rancher, the qf state management is intermingled with the buf opening/win handling. That is probably bad, but I don't want to do this kind of buffer opening in the abstract without knowing what the concrete issues to work around are. Are there certain returns we might need?
 
 ## Config
 
@@ -399,6 +428,13 @@
 
 A specific flag to reject blank lines or all-whitespace lines. This would be most relevant when dealing with multi-line results, as the end of a result might be on a blank line. I guess you'd have to look for results on a blank line, and either move the start/end points to non-blanks or just remove them. But that risks creating overlapping results. This feels secretly complicated and should be avoided without a concrete use case.
 
+## Tab
+
+#### TODO:
+
+- [ ] Tab open function (need to handle count and such)
+  - [ ] If you want to specify a buf, do you need to do open_buf in order to properly handle help wins? Probably.
+
 ## Treesitter
 
 - [ ] Is pos in TS node
@@ -416,6 +452,12 @@ A specific flag to reject blank lines or all-whitespace lines. This would be mos
   - [ ] What does Folke's todo-comments function do?
   - [ ] How does autopairs handle this?
 
+## UI
+
+#### TODO:
+
+- [ ] Generic get_input function that handles the "keyboard interrupt" case properly
+
 ## Win
 
 #### TODO:
@@ -423,3 +465,8 @@ A specific flag to reject blank lines or all-whitespace lines. This would be mos
 - [ ] Create an is_filline_visible function
   - Currently used in farsight
   - Rancher might need this for zzze handling after jumps
+
+#### MAYBE
+
+- Some kind of winnr to win-id function. All it is is tabpagewinnr, so for the most part there's no point in a wrapper unless you want something to convert tab-id to tabnr. I don't have a use case for this, so will pass for now.
+  * In rancher, I get the tabnr once and then use it for everything else, so a wrapper would create more crossing of the Lua bridge

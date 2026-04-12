@@ -20,6 +20,23 @@ vim.keymap.set("n", "<leader>tee", function()
     vim.api.nvim_cmd({ cmd = "EditQuery" }, {})
 end)
 
+---@param file string
+local function open_file_in_vsplit(file)
+    local ntb = require("nvim-tools.buf")
+    local ok, bufnr, err, hl = ntb.bufname_to_bufnr(file)
+    if not ok then
+        require("nvim-tools.ui").echo_err(false, err, hl)
+    end
+
+    local create_split = require("nvim-tools.win").create_split
+    local win = create_split(0, nil, true, "vsplit")
+    ntb.open_buf(win, bufnr, {
+        clearjumps = true,
+        force = "force",
+        fold_cmd = "zv",
+    })
+end
+
 ---@param ts_file string
 ---@return nil
 --- Lifted from the old TS Master Branch
@@ -30,11 +47,11 @@ local function edit_query_file(ts_file)
         vim.api.nvim_echo({ { "No query file found", "" } }, false, {})
         return
     elseif #files == 1 then
-        require("mjm.utils").open_buf({ file = files[1] }, { open = "vsplit" })
+        open_file_in_vsplit(files[1])
     else
         vim.ui.select(files, { prompt = "Select a file:" }, function(file)
             if file then
-                require("mjm.utils").open_buf({ file = file }, { open = "vsplit" })
+                open_file_in_vsplit(file)
             end
         end)
     end

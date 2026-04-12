@@ -11,7 +11,8 @@ return {
             -- - Do not set scratchbuf == true in nvim_create_buf
             -- - Setting buftype to nofile also seems to create the [Scratch] labeling
             -- DBUI query buffers must be saveable (buftype cannot be nofile).
-            local db_buf = api.nvim_create_buf(true, false)
+            local ntb = require("nvim-tools.buf")
+            local db_buf = ntb.create_temp_buf("hide", true, "", "", false)
             local db_opt = { buf = db_buf }
             api.nvim_set_option_value("bufhidden", "wipe", db_opt)
             api.nvim_set_option_value("swapfile", false, db_opt)

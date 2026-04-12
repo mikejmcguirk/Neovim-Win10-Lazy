@@ -70,10 +70,10 @@ local function mode_to_readable_perms(perm_bits)
     return table.concat(perms, "")
 end
 
----@param buf integer|string
+---@param buf integer
 function mjm.fs.get_file_perms(buf)
     local ntb = require("nvim-tools.buf")
-    local ok, full_bufname, r_err, r_hl = ntb.resolve_full_bufname(buf)
+    local ok, full_bufname, r_err, r_hl = ntb.bufnr_to_full_bufname(buf)
     if not ok then
         require("nvim-tools.ui").echo_err(false, r_err, r_hl)
         return
@@ -120,14 +120,14 @@ local function get_chmod_arg(plus, layer_bits)
     return plus == nil and fmt or (plus and "+" or "-") .. fmt
 end
 
----@param buf integer|string
+---@param buf integer
 ---@param plus boolean|nil   -- true = +, false = -, nil = absolute
 ---@param layer_bits integer|string -- e.g. 111 (for +x/-x) or 755 (for absolute)
 function mjm.fs.chmod(buf, plus, layer_bits)
     vim.validate("layer_bits", layer_bits, { "number", "string" })
     vim.validate("plus", plus, "boolean", true)
     local ntb = require("nvim-tools.buf")
-    local ok, full_bufname, r_err, r_hl = ntb.resolve_full_bufname(buf)
+    local ok, full_bufname, r_err, r_hl = ntb.bufnr_to_full_bufname(buf)
     if not ok then
         require("nvim-tools.ui").echo_err(false, r_err, r_hl)
         return

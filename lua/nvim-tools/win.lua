@@ -2,12 +2,71 @@ local api = vim.api
 
 local M = {}
 
+---@param split "left"|"right"|"above"|"below"|"split"|"vsplit"
+---@return "left"|"right"|"above"|"below"
+local function resolve_split(split)
+    if split == "split" then
+        ---@type boolean
+        local splitbelow = api.nvim_get_option_value("sb", { scope = "global" })
+        return splitbelow and "below" or "above"
+    elseif split == "vsplit" then
+        ---@type boolean
+        local splitright = api.nvim_get_option_value("spr", { scope = "global" })
+        return splitright and "right" or "left"
+    else
+        return split --[[@as "left"|"right"|"above"|"below"]]
+    end
+end
+
+---Anchor window for the split. If -1, produces botright/topleft behavior
+---If nil, current window is used
+---@param win integer?
+---If nil, a temporary buffer is used
+---@param buf integer?
+---@param enter boolean
+---If split, splitbelow is used
+---If vsplit, splitright is used
+---@param split "left"|"right"|"above"|"below"|"split"|"vsplit"
+---@return integer
+function M.create_split(win, buf, enter, split)
+    local ntt = require("nvim-tools.types")
+    -- is_int because -1 is valid here
+    vim.validate("win", win, ntt.is_int, true)
+    vim.validate("buf", buf, ntt.is_uint, true)
+    vim.validate("enter", enter, "boolean")
+    vim.validate("split", split, "string")
+
+    win = win == nil and 0 or win
+    buf = buf and buf
+        or require("nvim-tools.buf").create_temp_buf("wipe", false, "nofile", "", true)
+    split = resolve_split(split)
+
+    return api.nvim_open_win(buf, enter, { win = win, split = split })
+end
+-- TOOD: The type checking/id validation could be more robust in here. Use resolve winid and
+-- resolve bufnr.
+-- TODO: Splitting *technically* works off of floats, but should that be disallowed here?
+
 ---@param win integer window-ID
 ---@param cur_pos { [1]:integer, [2]:integer } Cursor indexed
 ---@return boolean
 function M.cursor_at(win, cur_pos)
     local win_cur_pos = api.nvim_win_get_cursor(win)
     return win_cur_pos[1] == cur_pos[1] and win_cur_pos[2] == cur_pos[2]
+end
+
+---@param win_config vim.api.keyset.win_config_ret
+---@return boolean
+function M.is_floating(win_config)
+    local relative = win_config.relative
+    return relative ~= nil and relative ~= ""
+end
+-- Can also check with win_gettype == "popup"
+
+---@param win_config vim.api.keyset.win_config_ret
+---@return boolean
+function M.is_focusable(win_config)
+    return win_config.focusable == true and win_config.hide == false
 end
 
 ---Credit echasnovski
@@ -94,6 +153,22 @@ function M.protected_set_cursor(win, cur_pos)
     local new_cur_pos = { row, col }
     api.nvim_win_set_cursor(win, new_cur_pos)
     return new_cur_pos
+end
+
+---@param win integer
+---@return boolean, integer, string|nil, string|nil
+function M.resolve_win_id(win)
+    vim.validate("win", win, require("nvim-tools.types").is_uint)
+
+    if win == 0 then
+        return true, api.nvim_get_current_win(), nil, nil
+    end
+
+    if api.nvim_win_is_valid(win) then
+        return true, win, nil, nil
+    else
+        return false, -1, "Win ID " .. win .. " is invalid", "ErrorMsg"
+    end
 end
 
 return M

@@ -23,11 +23,12 @@ end)
 
 set("n", "Z", "<nop>") -- Create normal Z layer
 set("n", "ZQ", "<cmd>qall!<cr>")
--- LOW: The obvious solution here is a separate restart hotkey that saves the hotkey then performs
+-- LOW: The obvious solution here is a separate restart hotkey that saves the session then performs
 -- a restart that reloads the session. The blocker here is that you need a way to reliably save
 -- and load the session, which isn't all that possible with the current way of doing it
 -- Even have obvious map: ZE (restore sEssion)
-set("n", "ZR", "<cmd>lockmarks silent wa | restart<cr>")
+
+set("n", "ZR", "<cmd>restart +wqa<cr>")
 
 set("n", "ZA", "<cmd>lockmarks silent wa<cr>")
 set("n", "ZS", "<cmd>lockmarks silent up | so<cr>")
@@ -64,10 +65,14 @@ end)
 set("n", "[t", "gt")
 set("n", "]t", "gT")
 set("n", "<tab>", function()
+    local create_temp_buf = require("nvim-tools.buf").create_temp_buf
+    local temp_buf = create_temp_buf("wipe", true, "nofile", "", true)
+
     local vcount = vim.v.count
     local count_tabpages = fn.tabpagenr("$")
     local pos = vcount == 0 and count_tabpages or math.min(vcount, count_tabpages)
-    api.nvim_open_tabpage(0, true, { after = pos })
+
+    api.nvim_open_tabpage(temp_buf, true, { after = pos })
 end)
 
 set("n", "ZT", function()

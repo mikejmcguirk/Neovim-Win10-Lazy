@@ -43,6 +43,9 @@
 
 #### MID:
 
+- [ ] For the intro scratch buffer, IMO it should either be set to be a noma scratch buffer or I should come up with a way that you can edit it and save it conveniently.
+  - [ ] Caveat, I tried the scratch buffer thing before and there was some reason I ditched it, so I wouldn't just get rid of the current code until the new method has sat for a while.
+
 - [ ] Re-implement dynamic documentHighlight
   - Reasoning: I use this enough that it would side-step some amount of manual input
   - [ ] Question: How does this marry with my grh map?

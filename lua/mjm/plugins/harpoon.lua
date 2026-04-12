@@ -1,3 +1,8 @@
+local api = vim.api
+local fn = vim.fn
+local set = vim.keymap.set
+local uv = vim.uv
+
 local function setup_harpoon()
     local harpoon = require("harpoon")
 
@@ -14,36 +19,51 @@ local function setup_harpoon()
         -- Using custom selection since the built-in uses bufload
         default = {
             select = function(list_item, list, opts)
-                local extensions = require("harpoon.extensions")
-                require("harpoon.logger"):log("custom#select", list_item, list.name, opts)
+                local logger = require("harpoon.logger")
+                logger:log("custom#select", list_item, list.name, opts)
 
+                local echo_err = require("nvim-tools.ui").echo_err
                 if not list_item then
-                    vim.notify("nil list_item")
+                    echo_err(false, "nil list_item", "ErrorMsg")
                     return
                 end
 
-                if not vim.uv.fs_access(list_item.value, 4) then
-                    vim.notify(list_item.value .. " not found", vim.log.levels.WARN)
+                local ntb = require("nvim-tools.buf")
+                local bufname = list_item.value
+                local ok, bufnr, err, hl = ntb.bufname_to_bufnr(bufname)
+                if not ok then
+                    echo_err(false, err, hl)
                     return
                 end
 
-                local buf = vim.fn.bufadd(list_item.value) ---@type integer
-                local success = require("mjm.utils").open_buf({ bufnr = buf }, {})
-
-                if success then
-                    extensions.extensions:emit(extensions.event_names.NAVIGATE, {
-                        buffer = buf,
-                    })
+                -- Get here since open_buf resolves 0 win numbers
+                local cur_win = api.nvim_get_current_win()
+                local cur_buf = api.nvim_win_get_buf(cur_win)
+                if cur_buf == bufnr then
+                    echo_err(false, "Already in " .. bufname, "")
+                    return
                 end
+
+                -- Don't navigate to a cursor position because I use the " mark
+                ntb.open_buf(cur_win, bufnr, {
+                    buftype = "",
+                    fold_cmd = "zv",
+                    force = "hide",
+                })
+
+                local extensions = require("harpoon.extensions")
+                extensions.extensions:emit(extensions.event_names.NAVIGATE, {
+                    buffer = bufnr,
+                })
             end,
         },
     })
 
-    vim.keymap.set("n", "<leader>ad", function()
+    set("n", "<leader>ad", function()
         harpoon:list():add()
     end)
 
-    vim.keymap.set("n", "<leader>aa", function()
+    set("n", "<leader>aa", function()
         harpoon.ui:toggle_quick_menu(harpoon:list(), { height_in_lines = 10 })
     end)
 
@@ -52,7 +72,7 @@ local function setup_harpoon()
         local this_mark = mark -- 10, 1, 2, 3, 4, 5, 6, 7, 8, 9
         local mod_mark = this_mark % 10 -- 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
 
-        vim.keymap.set("n", string.format("<leader>%s", mod_mark), function()
+        set("n", string.format("<leader>%s", mod_mark), function()
             local open_mark = function()
                 harpoon:list():select(this_mark)
             end
@@ -60,7 +80,7 @@ local function setup_harpoon()
             local ok, result = pcall(open_mark)
             if not ok then
                 local chunk = { result or "Unknown error opening harpoon mark", "ErrorMsg" }
-                vim.api.nvim_echo({ chunk }, true, { err = true })
+                api.nvim_echo({ chunk }, true, { err = true })
             end
         end)
 
@@ -68,7 +88,7 @@ local function setup_harpoon()
     end
 
     vim.keymap.set("n", "<leader>ar", function()
-        local buf = vim.api.nvim_get_current_buf()
+        local buf = api.nvim_get_current_buf()
         require("mjm.utils").harpoon_rm_buf({ buf = buf })
     end)
 end
