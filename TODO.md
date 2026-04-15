@@ -46,8 +46,6 @@
 
 #### TODO:
 
-- [ ] Stash/commit the WIP changes in rancher and make a new branch to actually fix the bugs in previewing (and something else as well. Check the TODO notes.) Commit these
-- [ ] Bring the WIP changes in rancher from the laptop over to my main computer so they're all consolidated
 - [ ] Figure out how to install plugins in lazy without seeing every push to feature branches
   - [ ] Alternatively, since it kinda looks like I'm going to be doing a full rewrite, perhaps just make a config-local version of rancher
     - On one hand, the lazy problem needs to be solved anyway. On the other hand, the process of re-writing rancher is going to be long and require a lot of writing docs, so I'm not sure I want to fill up the commit history with that kind of stuff
@@ -86,7 +84,10 @@
   - [ ] Maybe use the full config module, maybe use g/b variables. Big thing is - the user should not have to re-write the entire autocmd scripting to customize it
 
 - [ ] rancher
+  - [ ] https://github.com/ten3roberts/qf.nvim
+    - [ ] Farm + Add to credits/references
   - [ ] The fallback preview buf has bufhidden set to wipe even though it's meant to persist. Should be hidden
+  - [ ] I might have this noted already, but for cmd customization, store customized cmds in a separate table from the built-ins
   - [ ] Why is rging helptags slower than lhelpgrep? Aren't they both external grep?
     - [ ] My grep probably needs to take up unloaded lazy help files
 
@@ -151,6 +152,7 @@
 #### MID:
 
 - [ ] https://github.com/neovim/neovim/issues/39006
+- [ ] https://github.com/neovim/neovim/pull/39054 - What does this mean?
 
 #### PR:
 

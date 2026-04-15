@@ -52,6 +52,25 @@ end
 -- TODO: Make sure that zero return for prev_char_len works properly
 
 ---@param row integer 0 indexed, inclusive
+---@param col_ integer 0 indexed, exclusive
+---@param buf integer
+---@return integer, integer 1 indexed, inclusive end
+function M.api_to_eval(row, col_, buf)
+    local is_uint = require("nvim-tools.types").is_uint
+    vim.validate("row", row, is_uint)
+    vim.validate("col", col_, is_uint)
+    vim.validate("buf", buf, is_uint)
+
+    local row_1 = math.min(row + 1, api.nvim_buf_get_line_count(buf))
+
+    local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
+    local col__1 = math.min(col_ + 1, #line)
+    local col_1 = col__1 - M.get_prev_char_len(line, col__1)
+
+    return row_1, col_1
+end
+
+---@param row integer 0 indexed, inclusive
 ---@param col integer 0 indexed, exclusive
 ---@param buf integer
 ---@return integer, integer 0 indexed, inclusive end
@@ -87,6 +106,46 @@ function M.api_to_mark(row, col, buf)
     return row_1, col - prev_char_len
 end
 
+---@param row integer 1 indexed, inclusive
+---@param col integer 1 indexed, inclusive
+---@param buf integer
+---@return integer, integer 0 indexed, exclusive end
+function M.eval_to_api(row, col, buf)
+    local is_uint = require("nvim-tools.types").is_uint
+    vim.validate("row", row, is_uint)
+    vim.validate("col", col, is_uint)
+    vim.validate("buf", buf, is_uint)
+
+    local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
+    local b1 = string.byte(line, col)
+    local get_char_len = require("nvim-tools.char").get_char_len
+    local char_len = get_char_len(line, b1, col)
+
+    return math.max(row - 1, 0), math.max(col - 1, 0) + char_len
+end
+
+---@param row integer 1 indexed, inclusive
+---@param col integer 1 indexed, inclusive
+---@return integer, integer 0 indexed, exclusive end
+function M.eval_to_ext(row, col)
+    local is_uint = require("nvim-tools.types").is_uint
+    vim.validate("row", row, is_uint)
+    vim.validate("col", col, is_uint)
+
+    return math.max(row - 1, 0), math.max(col - 1, 0)
+end
+
+---@param row integer 1 indexed, inclusive
+---@param col integer 1 indexed, inclusive
+---@return integer, integer 0 indexed, exclusive end
+function M.eval_to_mark(row, col)
+    local is_uint = require("nvim-tools.types").is_uint
+    vim.validate("row", row, is_uint)
+    vim.validate("col", col, is_uint)
+
+    return row, math.max(col - 1, 0)
+end
+
 ---@param row integer 0 indexed, inclusive
 ---@param col integer 0 indexed, inclusive
 ---@param buf integer
@@ -110,22 +169,28 @@ end
 ---@param col integer 0 indexed, inclusive
 ---@param buf integer
 ---@return integer, integer 1, 0 indexed, inclusive
+function M.ext_to_eval(row, col, buf)
+    local is_uint = require("nvim-tools.types").is_uint
+    vim.validate("row", row, is_uint)
+    vim.validate("col", col, is_uint)
+    vim.validate("buf", buf, is_uint)
+
+    local row_1 = math.min(row + 1, api.nvim_buf_line_count(buf))
+    local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
+
+    return row_1, math.min(col + 1, #line)
+end
+
+---@param row integer 0 indexed, inclusive
+---@param col integer 0 indexed, inclusive
+---@param buf integer
+---@return integer, integer 1, 0 indexed, inclusive
 function M.ext_to_mark(row, col, buf)
     local is_uint = require("nvim-tools.types").is_uint
     vim.validate("row", row, is_uint)
     vim.validate("col", col, is_uint)
     vim.validate("buf", buf, is_uint)
     return math.min(row + 1, api.nvim_buf_line_count(buf)), col
-end
-
----@param row integer 1 indexed, inclusive
----@param col integer 0 indexed, inclusive
----@return integer, integer 0, 0 indexed, inclusive
-function M.mark_to_ext(row, col)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col, is_uint)
-    return math.max(row - 1, 0), col
 end
 
 ---@param row integer 1 indexed, inclusive
@@ -147,6 +212,30 @@ function M.mark_to_api(row, col, buf)
     local char_len = get_char_len(line, b1, col_1)
 
     return row_0, col + char_len
+end
+
+---@param row integer 0 indexed, inclusive
+---@param col integer 0 indexed, inclusive
+---@param buf integer
+---@return integer, integer 1, 0 indexed, inclusive
+function M.mark_to_eval(row, col, buf)
+    local is_uint = require("nvim-tools.types").is_uint
+    vim.validate("row", row, is_uint)
+    vim.validate("col", col, is_uint)
+    vim.validate("buf", buf, is_uint)
+
+    local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
+    return row, math.min(col + 1, #line)
+end
+
+---@param row integer 1 indexed, inclusive
+---@param col integer 0 indexed, inclusive
+---@return integer, integer 0, 0 indexed, inclusive
+function M.mark_to_ext(row, col)
+    local is_uint = require("nvim-tools.types").is_uint
+    vim.validate("row", row, is_uint)
+    vim.validate("col", col, is_uint)
+    return math.max(row - 1, 0), col
 end
 
 return M

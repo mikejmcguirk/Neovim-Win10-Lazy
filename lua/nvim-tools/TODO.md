@@ -304,17 +304,17 @@
 #### TODO:
 
 - [ ] Position conversion:
-  - [ ] api > eval
+  - [x] api > eval
   - [x] api > ext
   - [x] api > mark
-  - [ ] eval > api
-  - [ ] eval > ext
-  - [ ] eval > mark
+  - [x] eval > api
+  - [x] eval > ext
+  - [x] eval > mark
   - [x] ext > api
-  - [ ] ext > eval
+  - [x] ext > eval
   - [x] ext > mark
   - [x] mark > api
-  - [ ] mark > eval
+  - [x] mark > eval
   - [x] mark > ext
 
 - [ ] Position adjustment
