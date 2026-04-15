@@ -3,6 +3,7 @@
 #### TODO:
 
 - [ ] https://github.com/neovim/neovim/commit/9c5fba5df0b60cd25ac2c180a7d82fca47a105e6 - Does this prompt anything?
+- [ ] More API buf changes - https://github.com/neovim/neovim/pull/38900
 - [ ] Change these keys over - https://github.com/neovim/neovim/commit/3a4a66017b74192caaf9af9af172bdc08e0c1608
 - [ ] Do these, collectively, prompt anything?:
   - https://github.com/neovim/neovim/commit/446e794a9c8823040b8d41fc86a1bc3bb99508e7
@@ -43,6 +44,8 @@
 
 #### MID:
 
++ [ ] Grep the current visual selection in fzflua
+- [ ] With stal = 0, ls = 0, disabling ts context, tmux commands, and window padding, you can make your own zen at home. Question - do you still just do it as a float or do you save the old window layout?
 - [ ] For the intro scratch buffer, IMO it should either be set to be a noma scratch buffer or I should come up with a way that you can edit it and save it conveniently.
   - [ ] Caveat, I tried the scratch buffer thing before and there was some reason I ditched it, so I wouldn't just get rid of the current code until the new method has sat for a while.
 

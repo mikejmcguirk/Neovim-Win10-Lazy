@@ -2,7 +2,6 @@
 
 #### TODO:
 
-- [ ] Figure out how to install plugins in lazy without seeing every push to feature branches
 - [ ] The broader patterns described in the top level TODO doc all need to apply here
 - [ ] I currently can actually name this nvim-tools, but check the big plugin collection repo before uploading
 
@@ -26,42 +25,39 @@
   - Specific Targets:
     * [ ] Option changes using misc.append_if_missing
 
-## Buf
+## buf_open
 
-#### buf_open
-
-###### TODO:
+#### TODO:
 
 - [ ] This function requires a bit more polish. See comments there.
+- [ ] Unsure if it's a design or documentation issue, but the times I've used this, I've been confused about what it's doing
 
-###### MID:
-
-###### LOW:
+#### LOW:
 
 - [ ] It would be interesting if open_buf let you provide your own post load, pre-filetype options. But I'm loathe to add more features given that the function is already a bunch of hacks stitched together.
 - [ ] It would be interesting if open_buf were smarter about when to fire filetypedetect and FileType events, but I don't want to add more failure points, especially given the complexity of FileType detection under the hood (in terms of where and why it fires)
 
-###### MAYBE:
+#### MAYBE:
 
 - Provide an opt for setting the pc mark
 - Have the function gracefully error. Part of issue is the amount of control flow. Part of it is, since every other edit/buf opening function hard errors, this feels patternful. Part of it too is, it's meant to be a gut check on making sure the surrounding assumptions are correct.
 
-#### Other
+## Buf
 
-###### TODO:
+#### TODO:
 
-- [ ] Get indent
-- [ ] If no indentexpr, needs to handle the various indenting options
-- [ ] needs to handle all runtime indent args
+- [ ] get_indent
+  - [ ] needs to handle all runtime indent args
 
 - [ ] isopt parser
 - [ ] Char class parser
 
-###### MID:
+#### MID:
 
+- [ ] get_indent should properly handle smartindent
 - [ ] For save(), pass a directory or a directory outputting function to save to if the file is not on disk
 
-###### FUTURE:
+#### FUTURE:
 
 - [ ] Build switchbuf handling
   - Waiting for concrete use cases
@@ -293,48 +289,44 @@
 
 ## pos
 
-#### DEPS:
-
 #### META:
 
 - Pos Names:
   * qf_pos (1 indexed, inclusive or exclusive, includes vcol flag)
     + I'm not sure this is a particular data type (there is no built-in Range3), but more a particular kind of state
-      + I have never been clear on if this is end exclusive or not. It almost feels dependent on the beginning and end of the qf position. It also seems to depend on the source.
-  * cur_pos (1 indexed rows, 0 indexed cols, inclusive)
-    + In |api-indexing| this is referred to "mark-like" indexing, but cur_pos (for me) is such a common convention, I'm kinda stuck with it
-      + Problem: cur_idx is not particularly clear as to the meaning in this context
-      + cur_pos/mark_idx would be bad
-      + Problem: cur_pos does not necessarily mean cursor
-      + Maybe you do call it mark_pos
-  * api_pos (0 indexed, end exclusive)
+    + I have never been clear on if this is end exclusive or not. It almost feels dependent on the beginning and end of the qf position. It also seems to depend on the source.
+  * eval_pos (1, 1 inclusive)
+  * {need a name for 1, 1 exclusive}
+  * mark_pos (1 indexed rows, 0 indexed cols, inclusive)
   * ext_pos (0 indexed, end inclusive)
-
-- Range Names:
-  * ts_range_4 (zero indexed, start is end inclusive, end is end exclusive)
-  * regionpos_4 (one indexed, end inclusive or exclusive)
-  * mark_regionpos_4
+  * api_pos (0 indexed, end exclusive)
 
 #### TODO:
 
-- [ ] Need names for 1,1 inclusive and 1,1 exclusive
-
 - [ ] Position conversion:
+  - [ ] api > eval
   - [x] api > ext
   - [x] api > mark
+  - [ ] eval > api
+  - [ ] eval > ext
+  - [ ] eval > mark
   - [x] ext > api
+  - [ ] ext > eval
   - [x] ext > mark
   - [x] mark > api
+  - [ ] mark > eval
   - [x] mark > ext
 
 - [ ] Position adjustment
   - [ ] api
+  - [ ] eval
   - [ ] ext
   - [ ] mark
 
 - [ ] Range4 conversion
-  - [ ] 1,1 to ext (for farsight and rancher. Is that exclusive indexed or no?)
-  - [ ] 1,1 region to mark (exclusive optional)
+  - [ ] eval > ts_range
+  - [ ] eval > ext_range
+  - [ ] regionpos to mark (exclusive optional)
 
 - [ ] Pos functions
   - [ ] cmp_pos (returns -1, 0, 1 like vim.pos does)
@@ -353,37 +345,36 @@
   - [ ] range contains
   - [ ] pos gt
 
-- There is a combinatorial problem of:
-
-- Add resolve_qf_pos function
+- [ ] Add resolve_qf_pos function
   * If vcol is true, get the proper end col
   * Might need an inclusive vs. exclusive flag
 
 ## range
 
-#### TODO:
+#### META:
 
-- [ ] Naming:
-  - [ ] ts_4 (0 based, end pos is end exclusive)
-    - could maybe be api_4 or lsp_4
-  - [ ] mark_4 (both positions are marks based)
-  - [ ] regionpos_4 (1,1, end inclusive or exclusive depending on source)
+- Range Names:
+  * Any reuse of the above names means that both positions in the range use the pos indexing. So mark_range_4 would be two mark positions. ext_range_4 would be all zeroes.
+    + So mixed position indexing, like treesitter ranges, need their own names
+  * ts_range_4 (zero indexed, start is end inclusive, end is end exclusive)
+    + Or lsp_range_4?
+  * regionpos_4 (one indexed, end inclusive or exclusive)
 
 ## Search
 
 #### META:
 
-- [ ] Thinking ahead to the farsight case, the search results struct needs to be a subset of the targets struct
-- [ ] I am basically fine with the idea that we perform the actual filtering and editing of the search results in the search module, and that in farsight the labeling presumes we are using all results.
-  - [ ] Caveat: Handling label re-use, since we need hashed search results. I'm not sure if that's something we build here since it's more generalizable
-  - [ ] I'm not sure how this idea interfaces with the notion of not labeling all results. I guess we would just only take in so many labels.
+- Thinking ahead to the farsight case, the search results struct needs to be a subset of the targets struct
+- I am basically fine with the idea that we perform the actual filtering and editing of the search results in the search module, and that in farsight the labeling presumes we are using all results.
+  - Caveat: Handling label re-use, since we need hashed search results. I'm not sure if that's something we build here since it's more generalizable
+  - I'm not sure how this idea interfaces with the notion of not labeling all results. I guess we would just only take in so many labels.
 
-- [ ] I'm not sure if this is fixed in farsight, but the "dir" opt is vague. Should not be used.
+- I'm not sure if this is fixed in farsight, but the "dir" opt is vague. Should not be used.
 
-- [ ] Must handle wrapscan as an opt
-  - [ ] In farsight, this would just be removed. The annotator/grep cases are more interesting, because for nav, you set it to default true in config, but for buffer searches, where do you set it for false so it's not fiddled with?
+- Must handle wrapscan as an opt
+  - In farsight, this would just be removed. The annotator/grep cases are more interesting, because for nav, you set it to default true in config, but for buffer searches, where do you set it for false so it's not fiddled with?
 
-- [ ] The search needs to return in some way where the ordering of the results makes sense. Like, based on the direction entered into the search, the results should return such that the first result is always the "best" one. Should not need to read flags for iteration.
+- The search needs to return in some way where the ordering of the results makes sense. Like, based on the direction entered into the search, the results should return such that the first result is always the "best" one. Should not need to read flags for iteration.
 
 #### TODO:
 

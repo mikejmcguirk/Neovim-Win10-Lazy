@@ -27,9 +27,7 @@ set("n", "ZQ", "<cmd>qall!<cr>")
 -- a restart that reloads the session. The blocker here is that you need a way to reliably save
 -- and load the session, which isn't all that possible with the current way of doing it
 -- Even have obvious map: ZE (restore sEssion)
-
 set("n", "ZR", "<cmd>restart +wqa<cr>")
-
 set("n", "ZA", "<cmd>lockmarks silent wa<cr>")
 set("n", "ZS", "<cmd>lockmarks silent up | so<cr>")
 set("n", "ZZ", "<cmd>lockmarks silent up<cr>")

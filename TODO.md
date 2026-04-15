@@ -3,7 +3,7 @@
 #### LOW:
 
 - [ ] Farm this: https://github.com/chrisgrieser/nvim-various-textobjs
-- [ ] Are there action items or notes to take on this? https://github.com/neovim/neovim/pull/36261
+- [ ] Are there action items or notes to take on this? https://github.com/neovim/neovim/pull/36261 (PR on cursor style adjustment fixes)
   * Possibly related: https://github.com/neovim/neovim/discussions/32540
   * It looks like tmux is the remaining case where it doesn't work. Lots of different things colliding here.
 
@@ -13,7 +13,7 @@
 
 - For plugins with grep functionality
   * Only support rg out of the box
-  * Provide interfaces for other grepprgs to plugin
+  * Provide interfaces for other grepprgs
 
 - In any case where it's logical for an option to control plugin behavior, it should do so, at least by default
   * The function's opts table should also provide a method for overriding the default option
@@ -46,38 +46,58 @@
 
 #### TODO:
 
-- [ ] Once I have a working example (probably farsight), need to see how config metatable performance functions in real use cases. Based on that, we can evaluate how the question of internal interfaces as lightweight versions of the public APIs should be handled
-  - [ ] Realistically though, because of config resolution, it's probably going to just be using skip_validation
+- [ ] Stash/commit the WIP changes in rancher and make a new branch to actually fix the bugs in previewing (and something else as well. Check the TODO notes.) Commit these
+- [ ] Bring the WIP changes in rancher from the laptop over to my main computer so they're all consolidated
+- [ ] Figure out how to install plugins in lazy without seeing every push to feature branches
+  - [ ] Alternatively, since it kinda looks like I'm going to be doing a full rewrite, perhaps just make a config-local version of rancher
+    - On one hand, the lazy problem needs to be solved anyway. On the other hand, the process of re-writing rancher is going to be long and require a lot of writing docs, so I'm not sure I want to fill up the commit history with that kind of stuff
 
-- [ ] All functionalities should use the set pc mark behavior described in meta
-- [ ] How do you block direct pushes to master?
-
-- [ ] Problem: I want to have a unified, idiomatic interface for controlling where items open.
-  - This would primarily be for the rancher list opening use case.
-  - I still think it's correct to go to {count} winnr if provided
-  - If no count is provided, and no opts or config are provided, switchbuf should be respected
-    * [ ] I think I have this in the TODO for nvim-tools, but it needs a comma opt parser so that swb can be handled
-    * [ ] What happens if swb is empty? Would need to look at the code, because this appears to be situational
-      * My hope is that, if swb is empty, then it acts like a hypothetical "usecurrent" option. I would prefer not to have to graft an additional opt in order to do that
-        + The usecase here would be [q]q navigation, which should use the current window if it's a valid destination
-    * [ ] How is swb used throughout the code? I would like to create a generalized swb finder, but I'm not sure if that's possible. I know quickfix is a bespoke use case (only certain swb options are respected)
-      * The correct answer is probably the typical one - Build composable pieces
+- [ ] Does this change how lampshade works? - https://github.com/neovim/neovim/pull/38988
 
 - [ ] nvim-tools
+  - [ ] All functionalities should use the set pc mark behavior described in meta
 - [ ] docgen
-- [ ] farsight
+- [ ] testing framework
+  - Doesn't matter if it's busted based or based on the thing lewis is cooking up or something else
+  - needs to be plug and play. Can't be doing a bunch of config to make it work
+  - needs to work in CI
+  - Should, if at all possible, auto-create new nvim instances between tests so that doesn't need to be managed
+
+- [ ] How do you block direct pushes to master?
+
 - [ ] lampshade
+  - The least exciting but also the simplest
+
+- [ ] Once I have a working example (probably farsight), need to see how config metatable performance functions in real use cases. Based on that, we can evaluate how the question of internal interfaces as lightweight versions of the public APIs should be handled
+  - [ ] Realistically though, because of config resolution, it's probably going to just be using skip_validation
+    - You have to check config every time because it can change between calls
+    - Because config is a table, you have to do a deep equal to see if they're the same (just using refs don't work because the underlying data could change. Getting around this issue would require extreme contrivance)
+    - The deep equal is slow enough that you're not actually gaining any speed relative to just doing config merging
+    - The one thing that could be viable is pre-merging buf config on write, which is complicated but might provide non-trivial perf gains, plus it is conceptually tractable
+    - All of this needs to be documented because keeping the moving parts straight is non-trivially challenging
+
+- [ ] Rancher vs. farsight first is a somewhat legitimate question:
+  - My half-baked local version of farsight basically works
+  - Rancher addresses a broader suite of things, so I'll be able to learn more from it, in terms of improving nvim-tools, seeing test cases for docgen, and so on
+  - Because the individual pieces of rancher are smaller, it's a bit of an easier project to tackle
+  - It is the project that is actually released and exists, so letting it languish in a liminal state feels wrong
+
+- [ ] farsight
   - [ ] Maybe use the full config module, maybe use g/b variables. Big thing is - the user should not have to re-write the entire autocmd scripting to customize it
+
 - [ ] rancher
   - [ ] The fallback preview buf has bufhidden set to wipe even though it's meant to persist. Should be hidden
   - [ ] Why is rging helptags slower than lhelpgrep? Aren't they both external grep?
     - [ ] My grep probably needs to take up unloaded lazy help files
+
   - [ ] When making new lists, there should be an attempt to re-use blank lists
   - [ ] Add an fzf-lua integration for sendtoqflist
     - Can be either a doc snippet or actual Lua code
     - [ ] Should be based on a re-usable title if possible
+
   - With rg only
     - Would keep the system module very general/flexible so it can accept a variety of external plugins
+
   - [ ] Instead of the current config for spk in the window functions, provide it as an option override and set the default config to topline as per the meta doc for plugs above
   - [ ] Tons of different bug issues and API fixes/updates
   - [ ] Address the grep API issues found when creating that integration
@@ -97,11 +117,14 @@
     - [ ] SystemOpts and GrepOpts should be able to take nil values
     - [ ] Print additional information on error to msgs
       - [ ] Grep cmd (truncated if it's too long)
+
   - [ ] In system, add an on_list callback. This might be useful for editing the result type in helpgrep to `\1` in a less arbitrary way
   - [ ] Add a "bcd" grep. For now, this can pull based on bufname and notify the user if that's not available
     - Necessary for being able to grep sub-folders without noise from the larger project
+
 - [ ] grep plugin
   - [ ] Notes here are currently in the rancher docs. Outline back to my files
+
 - [ ] Make a more useful rancher + grep plugin integration
 - [ ] annotator
 - [ ] text tools
@@ -115,11 +138,19 @@
 
 - [ ] Based on experience, update the meta documentation for plug mappings
 
+#### MAYBE:
+
+- The plugin writing guidelines might benefit from being outlined into their own doc. Getting a bit too long for a meta section.
+
 ## Core
 
 #### TODO:
 
 - [ ] Anything I can contribute here? - https://github.com/neovim/neovim/milestone/48
+
+#### MID:
+
+- [ ] https://github.com/neovim/neovim/issues/39006
 
 #### PR:
 
@@ -146,6 +177,8 @@
 
 - [ ] Add an opt to the built-in rename function for filling in the current name
   - [ ] Reasoning: It should be possible to rename from a blank prompt without forgoing the use of prepareRename
+
+* [ ] Get SQLite into Neovim
 
 ## Exterior Plugins
 
