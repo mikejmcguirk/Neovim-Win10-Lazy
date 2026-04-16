@@ -48,6 +48,29 @@ end
 
 ---@param line string
 ---@param idx integer 1 indexed byte on the line
+---@return integer 1 indexed byte on the line
+function M.get_char_start(line, idx)
+    vim.validate("line", line, "string")
+    vim.validate("idx", idx, require("nvim-tools.types").is_uint)
+
+    local len_line = #line
+    if len_line == 0 then
+        return 0
+    end
+
+    idx = math.min(idx, len_line)
+    for i = idx, 1, -1 do
+        local b = string.byte(line, i)
+        if b <= 0x80 or b >= 0xC0 then
+            return i
+        end
+    end
+
+    return 1
+end
+
+---@param line string
+---@param idx integer 1 indexed byte on the line
 ---@return integer Prev char length. 0 if unable to find a previous char length.
 function M.get_prev_char_len(line, idx)
     vim.validate("line", line, "string")
