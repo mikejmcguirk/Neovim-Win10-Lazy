@@ -4,6 +4,8 @@
 
 - [ ] https://github.com/neovim/neovim/commit/9c5fba5df0b60cd25ac2c180a7d82fca47a105e6 - Does this prompt anything?
 - [ ] More API buf changes - https://github.com/neovim/neovim/pull/38900
+  - https://github.com/neovim/neovim/commit/d0af4cd9094f3439382622906da5b1c5cd82c294
+  - https://github.com/neovim/neovim/commit/71ac4db335e00b03b27d2c4aa5ab90c083a3a3e7
 - [ ] Change these keys over - https://github.com/neovim/neovim/commit/3a4a66017b74192caaf9af9af172bdc08e0c1608
 - [ ] Do these, collectively, prompt anything?:
   - https://github.com/neovim/neovim/commit/446e794a9c8823040b8d41fc86a1bc3bb99508e7

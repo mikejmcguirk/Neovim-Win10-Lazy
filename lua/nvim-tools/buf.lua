@@ -76,6 +76,13 @@ function M.get_bcd(bufnr)
 end
 -- FUTURE: Remove whenever an official implementation of this is rolled out.
 
+---If calling bo.indentexpr, v:lnum will be temporarily set to the value of the row param
+---Some indent functions use line("."). While this is properly updated, it might be the case that
+---a particular indentexpr is meant to get the indent of the current line rather than an
+---adjustable row. If a change in row context is required, a separate wrapper will have to be
+---used.
+---NOTE: If you need to change cursor context, prefer setpos(). Unlike nvim_win_set_cursor, it
+---does not update the view or set temporary window context.
 ---@param buf integer
 ---@param row integer
 ---@return integer

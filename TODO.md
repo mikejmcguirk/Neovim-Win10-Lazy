@@ -11,9 +11,13 @@
 
 #### META:
 
-- For plugins with grep functionality
+- For plugins that grep:
   * Only support rg out of the box
-  * Provide interfaces for other grepprgs
+  * Provide interfaces for other grepprgs/plugins
+    + fzf-lua
+    + telescope
+    + snacks
+    + Future grep plugin
 
 - In any case where it's logical for an option to control plugin behavior, it should do so, at least by default
   * The function's opts table should also provide a method for overriding the default option
@@ -54,9 +58,21 @@
 
 - [ ] nvim-tools
   - [ ] All functionalities should use the set pc mark behavior described in meta
+
 - [ ] docgen
+
 - [ ] testing framework
-  - Doesn't matter if it's busted based or based on the thing lewis is cooking up or something else
+  - New core testing framework: https://github.com/neovim/neovim/commit/55f9c2136e52d8719495b6021ce7e8d64c5141fe
+    * https://github.com/neovim/neovim/pull/38486
+  - The best outcome would be to publicly expose the core testing framework. If I were to do it:
+    * As a PoC, I would need to create a plugin-based extraction of it
+      + This could be helpful simply because, in doing this, I might come up with something simpler than working with the core testutils
+      + Regardless of that, the goal would be to understand, in more detail, what the test framework does and how it needs to be accessed to be useful
+    * Based on my findings with the extraction, I would need to create an exposed dev build locally to make sure I actually knew how to do it
+    * Make an issue
+    * Make a draft PR
+  - This is after docgen, because making a public version of the test utils is an awareness item for the core devs. Not the case with docgen
+  - lewis's test plugin still feels like a source of relevant info
   - needs to be plug and play. Can't be doing a bunch of config to make it work
   - needs to work in CI
   - Should, if at all possible, auto-create new nvim instances between tests so that doesn't need to be managed
@@ -90,6 +106,8 @@
   - [ ] I might have this noted already, but for cmd customization, store customized cmds in a separate table from the built-ins
   - [ ] Why is rging helptags slower than lhelpgrep? Aren't they both external grep?
     - [ ] My grep probably needs to take up unloaded lazy help files
+
+  - [ ] Some kind of "grep dir" function that doesn't require setting cwd
 
   - [ ] When making new lists, there should be an attempt to re-use blank lists
   - [ ] Add an fzf-lua integration for sendtoqflist
@@ -181,6 +199,18 @@
   - [ ] Reasoning: It should be possible to rename from a blank prompt without forgoing the use of prepareRename
 
 * [ ] Get SQLite into Neovim
+
+## nvim-treesitter upstream
+
+#### Tracking Issues
+
+- https://github.com/neovim/neovim/issues/22313 : Master problem statement
+- https://github.com/neovim/neovim/issues/39006 : Upstream nvim-treesitter work plan
+- https://github.com/neovim/neovim/issues/39007 : Possible shipping of pre-built parsers
+- https://github.com/neovim/neovim/issues/39037 : How to address installing non-shipped ts parsers
+- https://github.com/neovim/neovim/issues/39008 : WASM parser support
+- https://github.com/neovim/neovim/issues/39009 : Syntax detection/configuration
+  * I have a comment in here
 
 ## Exterior Plugins
 

@@ -297,4 +297,5 @@ return {
 }
 
 -- MAYBE: https://github.com/romus204/tree-sitter-manager.nvim
--- - If nvim-treesitter is really done.
+-- MAYBE: https://github.com/arborist-ts/arborist.nvim
+-- WASM based ts parsers

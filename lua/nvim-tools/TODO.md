@@ -46,9 +46,6 @@
 
 #### TODO:
 
-- [ ] get_indent
-  - [ ] needs to handle all runtime indent args
-
 - [ ] isopt parser
 - [ ] Char class parser
 

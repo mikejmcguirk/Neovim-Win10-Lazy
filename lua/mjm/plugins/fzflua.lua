@@ -3,7 +3,6 @@ local set = vim.keymap.set
 
 local fzflua_opts = {
     -- { "default-title" },
-    debug = false,
     files = { no_ignore = true },
     winopts = {
         width = 0.91,
@@ -56,6 +55,8 @@ local fzflua_opts = {
 
 return {
     "ibhagwan/fzf-lua",
+    -- FUTURE: https://github.com/ibhagwan/fzf-lua/issues/2669
+    commit = "9449f39",
     dependencies = { "nvim-tree/nvim-web-devicons" },
     lazy = false,
     config = function()
@@ -232,3 +233,4 @@ return {
 --   - load times
 -- LOW: Turn let g:/w:/b:/t: into pickers
 -- LOW: Make a thesaurus picker
+-- LOW: rename this file to fzf-lua
