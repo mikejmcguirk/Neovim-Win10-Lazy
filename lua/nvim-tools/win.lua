@@ -154,6 +154,7 @@ function M.protected_set_cursor(win, cur_pos)
     api.nvim_win_set_cursor(win, new_cur_pos)
     return new_cur_pos
 end
+-- TODO: Use the adj function in pos
 
 ---@param win integer
 ---@return boolean, integer, string|nil, string|nil

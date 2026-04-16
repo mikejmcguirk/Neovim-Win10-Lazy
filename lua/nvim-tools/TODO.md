@@ -46,13 +46,13 @@
 
 #### TODO:
 
-- [ ] isopt parser
-- [ ] Char class parser
+- [ ] Move over the make_emoji_ranges script and document how to use it
 
 #### MID:
 
 - [ ] get_indent should properly handle smartindent
 - [ ] For save(), pass a directory or a directory outputting function to save to if the file is not on disk
+- [ ] The isk module should also be able to handle isf, isi, and isp
 
 #### FUTURE:
 
@@ -229,7 +229,7 @@
     - Would include an opt for whether or not to remove from disk
   - Example: GBufDelete, which performs the underlying GDelete, then handles the buf + file on disk based on what was done in git.
 
-#### TODO:
+#### FUTURE:
 
 ###### Git
 
@@ -281,7 +281,6 @@
 
 - [ ] Opt parsers
   - [ ] Comma opt (for rancher swb overrides)
-  - [ ] isk (Because I have it)
 - [ ] with_opts() (rancher window opening)
 
 ## pos
@@ -300,6 +299,8 @@
 
 #### TODO:
 
+- [ ] Integrate the "find_char_start" abstraction
+
 - [ ] Position conversion:
   - [x] api > eval
   - [x] api > ext
@@ -315,36 +316,29 @@
   - [x] mark > ext
 
 - [ ] Position adjustment
-  - [ ] api
-  - [ ] eval
-  - [ ] ext
-  - [ ] mark
-
-- [ ] Range4 conversion
-  - [ ] eval > ts_range
-  - [ ] eval > ext_range
-  - [ ] regionpos to mark (exclusive optional)
+  - [x] api
+  - [x] eval
+  - [x] ext
+  - [x] mark
 
 - [ ] Pos functions
-  - [ ] cmp_pos (returns -1, 0, 1 like vim.pos does)
+  - [x] cmp_pos (returns -1, 0, 1 like vim.pos does)
   - Do these if they have more efficient code paths than just checking the result of cmp_pos
-    - [ ] eq
-    - [ ] lt (not lt == >=)
-    - [ ] gt (not gt == <=)
-
-- [ ] Range functions
-  - [ ] contains
-  - [ ] intersect
-    - [ ] Lots of ways you could do this, but look at treesitter to see what matters in practice
-
-- [ ] Pos and Range functions
-  - [ ] pos lt
-  - [ ] range contains
-  - [ ] pos gt
 
 - [ ] Add resolve_qf_pos function
   * If vcol is true, get the proper end col
   * Might need an inclusive vs. exclusive flag
+
+#### TEST:
+
+- [ ] You could be able to do conversion loops between different pos types and get the same result you started with
+
+#### MAYBE:
+
+- Add lteq and gteq functions, since getting to them through negation could be confusing
+  * I just hate to add more code.
+- More sophisticated error handling if nvim_buf_get_lines fails. My current theory is, if a bad row + buf is passed to the function, this should hard error (a) for visibility and (b) to prevent bad results from being used upstream
+  * Same comment applies to string.byte
 
 ## range
 
@@ -356,6 +350,23 @@
   * ts_range_4 (zero indexed, start is end inclusive, end is end exclusive)
     + Or lsp_range_4?
   * regionpos_4 (one indexed, end inclusive or exclusive)
+
+#### TODO:
+
+- [ ] range_cmp_pos
+  - -1: pos < range
+  - 0: pos inside range
+  - 1: range < pos
+
+- [ ] Range4 conversion
+  - [ ] eval > ts_range
+  - [ ] eval > ext_range
+  - [ ] regionpos to mark (exclusive optional)
+
+#### FUTURE:
+
+- Lots you could do with ranges, but will wait for use cases
+  * Treesitter cmps might matter
 
 ## Search
 
@@ -382,8 +393,14 @@
 - [ ] Is ther a better way to handle backward searching with wrapscan than an actual backward search?
   - Even without wrapscan, if you only want x results, or you have to manage count, tricky if you're searching forward
 
-- [ ] Case sensitivity needs to be handled properly. I believe that, in the absence of regex atoms, ignorecase/smartcase are respected. I see no reason to disturb that behavior. But if you use an opt to manually specify a casing, then the search module needs to edit/cleanse the search string so that the proper casing is used.
-  - Another case where I'd have to do... something in farsight to make it work right, since all searches should be exact case.
+- [ ] For the farsight case, it is necessary that all searches be case sensitive
+  - [ ] The search function should have an opt or param for case sensitivity
+    - [ ] ignore/sensitive/nooverride(necessary for smartcase, since it needs to come from options)
+  - Search atoms:
+    - \C : case sensitive
+    - \c : Ignorecase
+  - If explicit ignore/respect case are chosen, problem atoms should be removed and correct ones added
+    * I believe the beginning would be the best place. Check the csearch builder logic though
 
 - Go through the old stuff to see what actual trimming is done to the results (there's a lot for handling things like how LuaJIT adds results or incomplete atoms and so on)
 
@@ -414,31 +431,24 @@
 
 #### MAYBE:
 
+- Have the option to set ignorecase+smartcase temporarily for a search
+  * Problem - Unlike atom manipulation, this requires editing Nvim's settings. If you combine this abstraction with atom manipulation, is it too much voodoo?
+
 A specific flag to reject blank lines or all-whitespace lines. This would be most relevant when dealing with multi-line results, as the end of a result might be on a blank line. I guess you'd have to look for results on a blank line, and either move the start/end points to non-blanks or just remove them. But that risks creating overlapping results. This feels secretly complicated and should be avoided without a concrete use case.
 
 ## Tab
 
-#### TODO:
+#### MAYBE:
 
-- [ ] Tab open function (need to handle count and such)
-  - [ ] If you want to specify a buf, do you need to do open_buf in order to properly handle help wins? Probably.
+- Make the open_new_tab function more customizable. For now though I'd just like it to be a wraper for getting a new tab open to a scratch buf with some sensible count handling
 
 ## Treesitter
 
-- [ ] Is pos in TS node
-  - [ ] Isn't this basically done?
-  - [ ] Research vim._comment
-  - [ ] Research new TS incremental selection
-  - [ ] Research how todo-comments does it
-  - [ ] Properly handle injected languages
-  - [ ] The form of the module should be to enter in a node name/type of your choosing
-  - [ ] I have seen different comment node names in different languages I think you do a string.find for "comment" and that should do what needs to be done
-    - [ ] This does then imply that the interface needs to have a param for contains vs exact matching
-- [ ] Does line contain TS node
-  - [ ] Exact node name, node name to find, list of names
-  - [ ] My best guess would be to use recursion, but would need more info/research
-  - [ ] What does Folke's todo-comments function do?
-  - [ ] How does autopairs handle this?
+#### MAYBE:
+
+- Function to see if a line contains a TS node
+  * Might be necessary for the annotator plugin, but would rather try to write around that, since finding a node type on a line would involve multiple layers of recursion.
+    + Can probably just do annotator with string searching
 
 ## UI
 
@@ -453,6 +463,7 @@ A specific flag to reject blank lines or all-whitespace lines. This would be mos
 - [ ] Create an is_filline_visible function
   - Currently used in farsight
   - Rancher might need this for zzze handling after jumps
+  - This needs to tie into handling the valid value for redrawing
 
 #### MAYBE
 

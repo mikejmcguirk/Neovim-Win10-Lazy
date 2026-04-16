@@ -62,6 +62,7 @@
 - [ ] docgen
 
 - [ ] testing framework
+  - Conversation in here about Nvim as Lua runner: https://github.com/neovim/neovim/pull/39116
   - New core testing framework: https://github.com/neovim/neovim/commit/55f9c2136e52d8719495b6021ce7e8d64c5141fe
     * https://github.com/neovim/neovim/pull/38486
   - The best outcome would be to publicly expose the core testing framework. If I were to do it:
@@ -78,6 +79,7 @@
   - Should, if at all possible, auto-create new nvim instances between tests so that doesn't need to be managed
 
 - [ ] How do you block direct pushes to master?
+- [ ] Is my fzf-lua-test file a good way to do a minimal init for plugin testing? Would want to look at what Neovim has (even after vim.pack) as well as fzf-lua's mini.sh script
 
 - [ ] lampshade
   - The least exciting but also the simplest

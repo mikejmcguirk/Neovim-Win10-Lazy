@@ -9,6 +9,8 @@
 
 #### TODO:
 
+- [ ] Affects class rendering: https://github.com/neovim/neovim/pull/39078
+
 - [ ] The first/most tractable thing to do is probably massaging the config object architecture:
   - [ ] The shroedinger's type problem still persists because of the helptag object
     - This also makes the rendering more complex
