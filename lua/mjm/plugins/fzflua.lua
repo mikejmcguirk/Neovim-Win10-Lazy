@@ -55,8 +55,6 @@ local fzflua_opts = {
 
 return {
     "ibhagwan/fzf-lua",
-    -- FUTURE: https://github.com/ibhagwan/fzf-lua/issues/2669
-    commit = "9449f39",
     dependencies = { "nvim-tree/nvim-web-devicons" },
     lazy = false,
     config = function()

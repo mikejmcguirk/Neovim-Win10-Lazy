@@ -23,12 +23,25 @@ end
 ---@param scope vim.api.keyset.option
 ---@return boolean
 function M.set_if_new(opt, old, new, scope)
+    vim.validate("opt", opt, "string")
+    local not_nil = require("nvim-tools.types").not_nil
+    vim.validate("old", old, not_nil)
+    vim.validate("new", new, not_nil)
+    vim.validate("scope", scope, "table")
+
     if old ~= new then
         api.nvim_set_option_value(opt, new, scope)
         return true
     end
 
     return false
+end
+-- MAYBE: I don't think any vim opt allows you to set nil as a value. The
+-- closest thing is "" for blank.
+
+-- TODO: Directionally, this is vim.with with less onerous validation
+function M.with_opts(fn)
+    --
 end
 
 return M

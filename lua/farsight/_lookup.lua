@@ -217,8 +217,6 @@ M._utf_punctuation_ranges = {
 
 --Used in hot paths, so no data protection
 M._basic_emoji_ranges = {
-    { 0xA9, 0xA9 },
-    { 0xAE, 0xAE },
     { 0x203C, 0x203C, 3 },
     { 0x2049, 0x2049, 3 },
     { 0x2122, 0x2122, 3 },

@@ -1,10 +1,10 @@
 local api = vim.api
 
-local M = {}
+local M = {} -- test
 
 ---@param buf integer
 ---@param row integer 0-indexed
----@param col integer 0-indexed
+---@param col integer 0-indexed, inclusive
 ---@param types string[]
 ---@param contains boolean
 ---@return boolean?
