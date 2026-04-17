@@ -249,7 +249,8 @@ local utf8_len_tbl = {
     4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 1, 1,  -- F?
 }
 
--- NOTE: For anything line related, you could take the row, col, and buf as inputs and conver
+-- TODO: Put this as a NON note somewhere
+-- NOTE: For anything line related, you could take the row, col, and buf as inputs and convert
 -- them to the line and idx. But, the choice of position format would be arbitrary, so just take
 -- line and idx as inputs.
 
@@ -272,6 +273,9 @@ function M.get_char_len(line, b1, idx)
     end
 end
 
+---Returns 0 if line len is zero
+---Returns 1 if no valid start byte is found
+---idx values past the length of the line are clamped
 ---@param line string
 ---@param idx integer 1 indexed byte on the line
 ---@return integer 1 indexed byte on the line
@@ -294,26 +298,9 @@ function M.get_char_start(line, idx)
 
     return 1
 end
-
----@param line string
----@param idx integer 1 indexed byte on the line
----@return integer Prev char length. 0 if unable to find a previous char length.
-function M.get_prev_char_len(line, idx)
-    vim.validate("line", line, "string")
-    local len_line = #line
-    vim.validate("idx", idx, function()
-        return require("nvim-tools.types").is_uint(idx) and idx <= len_line
-    end)
-
-    for i = idx - 1, 1, -1 do
-        local b1 = string.byte(line, i)
-        if b1 <= 0x80 or b1 >= 0xC0 then
-            return M.get_char_len(line, b1, i)
-        end
-    end
-
-    return 0
-end
+-- MAYBE: This could return nil if no valid start byte is found, but I think 1 is the most logical
+-- fallback if that's the case, and I don't want to impose result destructuring on callers.
+-- This can be revisited if there's a use case.
 
 ---@param line string
 ---@param b1 integer Raw character byte

@@ -1,0 +1,2 @@
+-- TODO: Do something to handle the fact that, unlike normal eval positions, vcol positions are
+-- col == 0 on zero length lines

@@ -1,5 +1,7 @@
 ## Design/Usage Notes
 
+- The functions contained within should be thought of as "reference implementations" of what they are trying to accomplish, moreso than something to be directly used. For hot paths especially, certain parts of particular functions might be better off omitted or outlined. The goal is to show a complete implementation of how something might be implemented, so the irrelevant parts can be cut.
+
 - vim.validate is typically present at the beginning of each function, under the presumption that it is easier to remove if unwanted than to re-add
   * Exception: Functions explicitly designated as validators
   * Note: If possible, functions that call sub-functions that use vim.validate will try to skip adding an extra, unnecessary layer. But this is not guaranteed
