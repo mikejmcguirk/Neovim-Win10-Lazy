@@ -1,6 +1,5 @@
 local api = vim.api
 
----Design goal: Provide position functions that work with low overhead in a procedural context.
 local M = {}
 
 -------------------------------
@@ -85,13 +84,14 @@ end
 -- MARK: Position Conversion --
 -------------------------------
 
---Because these functions might be used by callers, row and col are passed directly rather than
---as a table. This is more flexible and avoids allocating more heap.
---
---These conversions assume that the provided position is valid.
+-- NOTE: These conversions assume that the provided position is valid. Position validation checks
+-- are provided below, and can be combined with conversion per use case.
+-- NOTE: row and call are provided as integer params rather than a tuple for flexibility and to
+-- avoid allocating heap.
+-- NOTE: These functions are "over-written" in the interest of making the logic as explicit as
+-- possible.
 
--- TODO: Double check that vim.validate is not load bearing
--- TODO: Make sure that zero return for prev_char_len works properly
+-- vex > eval + vex > mark works because eval > mark is just subtraction
 
 ---@param row integer 0 indexed
 ---@param col_ integer 0 indexed, exclusive
@@ -103,8 +103,15 @@ function M.api_to_eval(row, col_, buf)
     vim.validate("col", col_, is_uint)
     vim.validate("buf", buf, is_uint)
 
-    local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
-    return row + 1, require("nvim-tools.char").get_char_start(line, col_)
+    local row_1 = row + 1
+    local line = api.nvim_buf_get_lines(buf, row, row_1, false)[1]
+    local prev_fin_idx_1 = col_
+
+    local get_start_byte = require("nvim-tools.char").get_start_byte
+    local _, prev_start_idx_1 = get_start_byte(line, prev_fin_idx_1)
+    local col_1 = math.max(prev_start_idx_1, 1)
+
+    return row_1, col_1
 end
 
 ---@param row integer 0 indexed
@@ -112,14 +119,9 @@ end
 ---@param buf integer
 ---@return integer, integer 0,0 indexed, inclusive end
 function M.api_to_ext(row, col_, buf)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col_, is_uint)
-    vim.validate("buf", buf, is_uint)
-
-    local get_char_start = require("nvim-tools.char").get_char_start
-    local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
-    return row, get_char_start(line, col_) - 1
+    local _, col_1 = M.api_to_eval(row, col_, buf)
+    local col_0 = col_1 - 1
+    return row, col_0
 end
 
 ---@param row integer 0 indexed
@@ -127,14 +129,9 @@ end
 ---@param buf integer
 ---@return integer, integer 1,0 indexed, inclusive end
 function M.api_to_mark(row, col_, buf)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col_, is_uint)
-    vim.validate("buf", buf, is_uint)
-
-    local get_char_start = require("nvim-tools.char").get_char_start
-    local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
-    return row + 1, get_char_start(line, col_) - 1
+    local row_1, col_1 = M.api_to_eval(row, col_, buf)
+    local col_0 = col_1 - 1
+    return row_1, col_0
 end
 
 ---@param row integer 0 indexed
@@ -153,17 +150,11 @@ end
 ---@param buf integer
 ---@return integer, integer 0,0 indexed, exclusive end
 function M.eval_to_api(row, col, buf)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col, is_uint)
-    vim.validate("buf", buf, is_uint)
+    local row_1, col__1 = M.eval_to_vex(row, col, buf)
+    local row_0 = row_1 - 1
+    local col__0 = col__1 - 1
 
-    local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
-    local b1 = string.byte(line, col)
-    local get_char_len = require("nvim-tools.char").get_char_len
-    local char_len = get_char_len(line, b1, col)
-
-    return row - 1, col + char_len - 1
+    return row_0, col__0
 end
 
 ---@param row integer 1 indexed
@@ -203,7 +194,9 @@ function M.eval_to_vex(row, col, buf)
 
     local get_char_len = require("nvim-tools.char").get_char_len
     local char_len = get_char_len(line, b1, col)
-    return row, col + char_len
+    local col_ = col + char_len
+
+    return row, col_
 end
 
 ---@param row integer 0 indexed
@@ -222,7 +215,9 @@ function M.ext_to_api(row, col, buf)
 
     local get_char_len = require("nvim-tools.char").get_char_len
     local char_len = get_char_len(line, b1, col_1)
-    return row, col + char_len
+    local col_ = col + char_len
+
+    return row, col_
 end
 
 ---@param row integer 0 indexed
@@ -238,7 +233,7 @@ end
 
 ---@param row integer 0 indexed
 ---@param col integer 0 indexed, inclusive
----@return integer, integer 1, 0 indexed, inclusive end
+---@return integer, integer 1,0 indexed, inclusive end
 function M.ext_to_mark(row, col)
     local is_uint = require("nvim-tools.types").is_uint
     vim.validate("row", row, is_uint)
@@ -257,12 +252,16 @@ function M.ext_to_vex(row, col, buf)
     vim.validate("col", col, is_uint)
     vim.validate("buf", buf, is_uint)
 
-    local get_char_len = require("nvim-tools.char").get_char_len
-    local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
+    local row_1 = row + 1
+    local line = api.nvim_buf_get_lines(buf, row, row_1, false)[1]
     local col_1 = col + 1
     local b1 = string.byte(line, col_1)
 
-    return row + 1, col_1 + get_char_len(line, b1, col_1)
+    local get_char_len = require("nvim-tools.char").get_char_len
+    local char_len = get_char_len(line, b1, col_1)
+    local col__1 = col_1 + char_len
+
+    return row_1, col__1
 end
 
 ---@param row integer 1 indexed
@@ -274,17 +273,21 @@ function M.mark_to_api(row, col, buf)
     vim.validate("col", col, is_uint)
     vim.validate("buf", buf, is_uint)
 
-    local get_char_len = require("nvim-tools.char").get_char_len
-    local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
+    local row_0 = row - 1
+    local line = api.nvim_buf_get_lines(buf, row_0, row, false)[1]
     local col_1 = col + 1
     local b1 = string.byte(line, col_1)
 
-    return row - 1, col + get_char_len(line, b1, col_1)
+    local get_char_len = require("nvim-tools.char").get_char_len
+    local char_len = get_char_len(line, b1, col_1)
+    local col_ = col + char_len
+
+    return row_0, col_
 end
 
 ---@param row integer 1 indexed
 ---@param col integer 0 indexed, inclusive
----@return integer, integer 1,0 indexed, inclusive
+---@return integer, integer 1,0 indexed, inclusive end
 function M.mark_to_eval(row, col)
     local is_uint = require("nvim-tools.types").is_uint
     vim.validate("row", row, is_uint)
@@ -295,51 +298,51 @@ end
 
 ---@param row integer 1 indexed
 ---@param col integer 0 indexed, inclusive
----@return integer, integer 0,0 indexed, inclusive
+---@return integer, integer 0,0 indexed, inclusive end
 function M.mark_to_ext(row, col)
     local is_uint = require("nvim-tools.types").is_uint
     vim.validate("row", row, is_uint)
     vim.validate("col", col, is_uint)
+
     return row - 1, col
 end
 
 ---@param row integer 1 indexed, inclusive
 ---@param col integer 0 indexed, inclusive
 ---@param buf integer
----@return integer, integer 1, 1 indexed, exclusive
+---@return integer, integer 1,1 indexed, exclusive end
 function M.mark_to_vex(row, col, buf)
     local is_uint = require("nvim-tools.types").is_uint
     vim.validate("row", row, is_uint)
     vim.validate("col", col, is_uint)
     vim.validate("buf", buf, is_uint)
 
-    local get_char_len = require("nvim-tools.char").get_char_len
     local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
     local col_1 = col + 1
     local b1 = string.byte(line, col_1)
 
-    return row, col_1 + get_char_len(line, b1, col_1)
-end
+    local get_char_len = require("nvim-tools.char").get_char_len
+    local char_len = get_char_len(line, b1, col_1)
+    local col__1 = col_1 + char_len
 
--- TODO: resume cleanup here
+    return row, col__1
+end
 
 ---@param row integer 1 indexed
 ---@param col_ integer 1 indexed, exclusive
----@param buf integer
----@return integer, integer 0 indexed, exclusive
-function M.vex_to_api(row, col_, buf)
+---@return integer, integer 0,0 indexed, exclusive end
+function M.vex_to_api(row, col_)
     local is_uint = require("nvim-tools.types").is_uint
     vim.validate("row", row, is_uint)
     vim.validate("col", col_, is_uint)
-    vim.validate("buf", buf, is_uint)
 
-    return math.max(row - 1, 0), math.max(col_ - 1, 0)
+    return row - 1, col_ - 1
 end
 
 ---@param row integer 1 indexed
 ---@param col_ integer 1 indexed, exclusive
 ---@param buf integer
----@return integer, integer 1 indexed, inclusive
+---@return integer, integer 1,1 indexed, inclusive end
 function M.vex_to_eval(row, col_, buf)
     local is_uint = require("nvim-tools.types").is_uint
     vim.validate("row", row, is_uint)
@@ -347,130 +350,148 @@ function M.vex_to_eval(row, col_, buf)
     vim.validate("buf", buf, is_uint)
 
     local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
-    local get_char_start = require("nvim-tools.char").get_char_start
-    -- getcurpos() returns col == 1 on zero length lines
-    return row, math.max(get_char_start(line, math.max(col_ - 1, 0)), 1)
+    local prev_fin_idx = col_ - 1
+
+    local get_start_byte = require("nvim-tools.char").get_start_byte
+    local _, prev_start_idx = get_start_byte(line, prev_fin_idx)
+    local col = math.max(prev_start_idx, 1)
+
+    return row, col
 end
 
 ---@param row integer 1 indexed
----@param col integer 1 indexed, exclusive
+---@param col_ integer 1 indexed, exclusive
 ---@param buf integer
----@return integer, integer 0 indexed, inclusive
-function M.vex_to_ext(row, col, buf)
+---@return integer, integer 0,0 indexed, inclusive end
+function M.vex_to_ext(row, col_, buf)
     local is_uint = require("nvim-tools.types").is_uint
     vim.validate("row", row, is_uint)
-    vim.validate("col", col, is_uint)
+    vim.validate("col", col_, is_uint)
     vim.validate("buf", buf, is_uint)
 
-    local row_0 = math.max(row - 1, 0)
-    local line = api.nvim_buf_get_lines(buf, row_0, row_0 + 1, false)[1] or ""
-    local col_api = math.max(col - 1, 0)
-    local col_1 = math.min(col_api + 1, #line)
-    local prev_len = M.get_prev_char_len(line, col_1)
-    local col_ext = col_api - prev_len
-    return row_0, math.max(col_ext, 0)
+    local row_0 = row - 1
+    local line = api.nvim_buf_get_lines(buf, row_0, row, false)[1]
+    local prev_fin_idx = col_ - 1
+
+    local get_start_byte = require("nvim-tools.char").get_start_byte
+    local _, prev_start_idx = get_start_byte(line, prev_fin_idx)
+    local col = math.max(prev_start_idx, 1)
+    local col_0 = col - 1
+
+    return row_0, col_0
 end
 
 ---@param row integer 1 indexed
----@param col integer 1 indexed, exclusive
+---@param col_ integer 1 indexed, exclusive
 ---@param buf integer
----@return integer, integer 1, 0 indexed, inclusive
-function M.vex_to_mark(row, col, buf)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col, is_uint)
-    vim.validate("buf", buf, is_uint)
-
-    local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1] or ""
-    local col_api = math.max(col - 1, 0)
-    local col_1 = math.min(col_api + 1, #line)
-    local prev_len = M.get_prev_char_len(line, col_1)
-    local col_mark = col_api - prev_len
-    return row, math.max(col_mark, 0)
+---@return integer, integer 1,0 indexed, inclusive end
+function M.vex_to_mark(row, col_, buf)
+    local row_1, col_1 = M.vex_to_eval(row, col_, buf)
+    local col_0 = col_1 - 1
+    return row_1, col_0
 end
 
 -------------------------------
 -- MARK: Position Adjustment --
 -------------------------------
 
--- TODO: These need to also handle a col being in an invalid position. In the inclusive case, the
--- col should always be at the start of a char. In the exclusive case, it's either the start of
--- a char or one past the end of the line.
--- TODO: These should handle corner cases comprehensively
-
 ---@param row integer 0 indexed
----@param col integer 0 indexed, exclusive
+---@param col_ integer 0 indexed, exclusive
 ---@param buf integer
----@return integer, integer 0, 0 indexed, exclusive
-function M.adj_api_pos(row, col, buf)
+---@return integer, integer 0,0 indexed, exclusive
+function M.adj_api_pos(row, col_, buf)
     local is_uint = require("nvim-tools.types").is_uint
     vim.validate("row", row, is_uint)
-    vim.validate("col", col, is_uint)
+    vim.validate("col", col_, is_uint)
     vim.validate("buf", buf, is_uint)
 
-    row = math.min(row, api.nvim_buf_get_line_count(buf) - 1)
-    local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
-    return row, math.min(col, #line)
+    local row_0 = math.min(row, api.nvim_buf_line_count(buf) - 1)
+
+    local get_start_byte = require("nvim-tools.char").get_start_byte
+    local line = api.nvim_buf_get_lines(buf, row_0, row_0 + 1, false)[1]
+    local _, start_idx = get_start_byte(line, math.min(col_, #line) + 1)
+
+    return row_0, math.max(start_idx, 1) - 1
 end
+-- NOTE: Properly handles zero length strings. col_ will be coerced by get_start_byte to 1, which
+-- will then be re-indexed to zero. Correct since exclusive ends on zero length strings are
+-- invalid.
 
 ---@param row integer 1 indexed
 ---@param col integer 1 indexed, inclusive
 ---@param buf integer
----@return integer, integer 1, 1 indexed, inclusive
+---@return integer, integer 1,1 indexed, inclusive
 function M.adj_eval_pos(row, col, buf)
     local is_uint = require("nvim-tools.types").is_uint
     vim.validate("row", row, is_uint)
     vim.validate("col", col, is_uint)
     vim.validate("buf", buf, is_uint)
 
-    row = math.min(row, api.nvim_buf_get_line_count(buf))
-    local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
-    return row, math.min(col, #line)
+    local row_1 = math.min(row, api.nvim_buf_line_count(buf))
+
+    local get_start_byte = require("nvim-tools.char").get_start_byte
+    local line = api.nvim_buf_get_lines(buf, row_1 - 1, row_1, false)[1]
+    local _, start_idx = get_start_byte(line, math.min(col, #line))
+
+    return row_1, math.max(start_idx, 1)
+end
+
+---@param line string
+---@param col_0 integer
+---@return integer
+local function adj_col_0(line, col_0)
+    local get_start_byte = require("nvim-tools.char").get_start_byte
+    local _, start_idx = get_start_byte(line, math.min(col_0, #line - 1) + 1)
+    return math.max(start_idx, 1) - 1
 end
 
 ---@param row integer 0 indexed
 ---@param col integer 0 indexed, inclusive
 ---@param buf integer
----@return integer, integer 0, 0 indexed, inclusive
+---@return integer, integer 0,0 indexed, inclusive
 function M.adj_ext_pos(row, col, buf)
     local is_uint = require("nvim-tools.types").is_uint
     vim.validate("row", row, is_uint)
     vim.validate("col", col, is_uint)
     vim.validate("buf", buf, is_uint)
 
-    row = math.min(row, api.nvim_buf_get_line_count(buf) - 1)
-    local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
-    return row, math.min(col, #line - 1)
+    local row_0 = math.min(row, api.nvim_buf_line_count(buf) - 1)
+    local line = api.nvim_buf_get_lines(buf, row_0, row_0 + 1, false)[1]
+    return row_0, adj_col_0(line, col)
 end
 
 ---@param row integer 1 indexed
 ---@param col integer 0 indexed, inclusive
 ---@param buf integer
----@return integer, integer 1, 0 indexed, inclusive
+---@return integer, integer 1,0 indexed, inclusive
 function M.adj_mark_pos(row, col, buf)
     local is_uint = require("nvim-tools.types").is_uint
     vim.validate("row", row, is_uint)
     vim.validate("col", col, is_uint)
     vim.validate("buf", buf, is_uint)
 
-    row = math.min(row, api.nvim_buf_get_line_count(buf))
-    local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
-    return row, math.min(col, #line - 1)
+    local row_1 = math.min(row, api.nvim_buf_line_count(buf))
+    local line = api.nvim_buf_get_lines(buf, row_1 - 1, row_1, false)[1]
+    return row_1, adj_col_0(line, col)
 end
 
 ---@param row integer 1 indexed
----@param col integer 1 indexed, exclusive
+---@param col_ integer 1 indexed, exclusive
 ---@param buf integer
----@return integer, integer 1, 1 indexed, exclusive
-function M.adj_vex_pos(row, col, buf)
+---@return integer, integer 1,1 indexed, exclusive
+function M.adj_vex_pos(row, col_, buf)
     local is_uint = require("nvim-tools.types").is_uint
     vim.validate("row", row, is_uint)
-    vim.validate("col", col, is_uint)
+    vim.validate("col", col_, is_uint)
     vim.validate("buf", buf, is_uint)
 
-    row = math.min(row, api.nvim_buf_get_line_count(buf))
-    local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
-    return row, math.min(col, #line + 1)
+    local row_1 = math.min(row, api.nvim_buf_line_count(buf))
+
+    local get_start_byte = require("nvim-tools.char").get_start_byte
+    local line = api.nvim_buf_get_lines(buf, row_1 - 1, row_1, false)[1]
+    local _, start_idx = get_start_byte(line, math.min(col_, #line + 1))
+
+    return row_1, math.max(start_idx, 1)
 end
 
 return M

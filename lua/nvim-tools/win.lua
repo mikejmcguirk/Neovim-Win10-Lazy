@@ -143,18 +143,13 @@ end
 function M.protected_set_cursor(win, cur_pos)
     local buf = api.nvim_win_get_buf(win)
 
-    local row = cur_pos[1]
-    row = math.min(math.max(row, 1), api.nvim_buf_line_count(buf))
-
-    local col = cur_pos[2]
-    local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
-    col = math.min(col, math.max(#line - 1, 0))
+    local row, col = cur_pos[1], cur_pos[2]
+    row, col = require("nvim-tools.pos").adj_mark_pos(row, col, buf)
 
     local new_cur_pos = { row, col }
     api.nvim_win_set_cursor(win, new_cur_pos)
     return new_cur_pos
 end
--- TODO: Use the adj function in pos
 
 ---@param win integer
 ---@return boolean, integer, string|nil, string|nil

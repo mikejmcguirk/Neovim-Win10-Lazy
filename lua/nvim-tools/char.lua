@@ -260,47 +260,96 @@ local utf8_len_tbl = {
 ---@return integer
 function M.get_char_len(line, b1, idx)
     vim.validate("line", line, "string")
-    local len_line = #line
-    vim.validate("idx", idx, function()
-        return require("nvim-tools.types").is_uint(idx) and idx <= len_line
-    end)
+    vim.validate("idx", idx, require("nvim-tools.types").is_uint)
 
     local len_utf = utf8_len_tbl[b1 + 1]
-    if len_utf == 1 or len_utf > 4 or idx + len_utf - 1 > len_line then
+    if len_utf == 1 or len_utf > 4 or idx + len_utf - 1 > #line then
         return 1
     else
         return len_utf
     end
 end
 
----Returns 0 if line len is zero
----Returns 1 if no valid start byte is found
----idx values past the length of the line are clamped
+---If idx is greater than the line length, returns 0, length + 1 (For smooth handling of exclusive
+---indexed col positions past the line length)
+---Returns 0, 0 if line len is zero
+---Returns the byte at position 1 if no valid starting byte is found
 ---@param line string
----@param idx integer 1 indexed byte on the line
----@return integer 1 indexed byte on the line
-function M.get_char_start(line, idx)
+---@param idx integer 1 indexed Lua string position
+---@return integer, integer Byte at idx, 1 indexed char start position
+function M.get_start_byte(line, idx)
+    vim.validate("line", line, "string")
+    vim.validate("idx", idx, require("nvim-tools.types").is_uint)
+
+    local len_line = #line
+    if idx > len_line then
+        return 0, len_line + 1
+    elseif len_line == 0 then
+        return 0, 0
+    end
+
+    for i = idx, 2, -1 do
+        local b = string.byte(line, i)
+        if b <= 0x80 or b >= 0xC0 then
+            return b, i
+        end
+    end
+
+    return string.byte(line, 1), 1
+end
+-- MID: This function is somewhat unfortunate in the context of position evaluation. Because it
+-- can return a zero result, the caller always has to run math.max(idx, 1). The caller could
+-- simplify things by checking for zero length lines and returning the inevitable col value, but
+-- if #line > 0, the check has to be re-run here to prevent invalid string.byte calls. An
+-- alternative could be to always return a zero-indexed result here. But that creates extra work
+-- for one-indexed callers.
+
+---Returns 0, 0 if line len is zero
+---If idx is greater than the line length, returns 0, length + 1 (For consistency with
+---get_start_byte)
+---@param line string
+---@param idx integer 1 indexed Lua string position
+---@return integer, integer Byte at idx, 1 indexed char fin position (inclusive)
+function M.get_fin_byte(line, idx)
+    vim.validate("line", line, "string")
+    vim.validate("idx", idx, require("nvim-tools.types").is_uint)
+
+    local len_line = #line
+    if idx > len_line then
+        return 0, len_line + 1
+    elseif len_line == 0 then
+        return 0, 0
+    end
+
+    -- We assume we have already early-returned on any case that could produce a zero b1 from
+    -- get_start_byte
+    local b1, start_idx = M.get_start_byte(line, idx)
+    local char_len = M.get_char_len(line, b1, start_idx)
+    local fin_idx = start_idx + char_len - 1
+
+    return string.byte(line, fin_idx), fin_idx
+end
+-- MID: Does the idx > len_line edge case handling here make sense? It should properly prevent
+-- zero index values from returning from get_start_byte, but does it work from a UX perspective?
+
+---@param line string
+---@param idx integer 1 indexed byte
+---@return integer, integer 1 indexed start and fin bytes, end inclusive
+function M.get_byte_bounds(line, idx)
     vim.validate("line", line, "string")
     vim.validate("idx", idx, require("nvim-tools.types").is_uint)
 
     local len_line = #line
     if len_line == 0 then
-        return 0
+        return 0, 0
     end
 
-    idx = math.min(idx, len_line)
-    for i = idx, 1, -1 do
-        local b = string.byte(line, i)
-        if b <= 0x80 or b >= 0xC0 then
-            return i
-        end
-    end
+    local b1, start_idx = M.get_start_byte(line, idx)
+    local char_len = M.get_char_len(line, b1, idx)
 
-    return 1
+    return start_idx, start_idx + char_len - 1
 end
--- MAYBE: This could return nil if no valid start byte is found, but I think 1 is the most logical
--- fallback if that's the case, and I don't want to impose result destructuring on callers.
--- This can be revisited if there's a use case.
+-- TODO: Unsure how to handle OOB indexing here
 
 ---@param line string
 ---@param b1 integer Raw character byte
