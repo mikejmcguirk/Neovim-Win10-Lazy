@@ -1,6 +1,3 @@
--- From mini.jump2D. Extremely useful
--- local max_width = vim.o.columns * math.max(vim.o.cmdheight - 1, 0) + vim.v.echospace
-
 mjm.util = {}
 
 local api = vim.api
@@ -9,17 +6,6 @@ local uv = vim.uv
 
 ---@class MjmUtils
 local M = {}
-
----@param prompt string
----@return boolean, string
-function M.get_input(prompt)
-    local ok, result = pcall(fn.input, { prompt = prompt, cancelreturn = "" })
-    if (not ok) and result == "Keyboard interrupt" then
-        return true, ""
-    else
-        return ok, result
-    end
-end
 
 ---@param buf integer
 ---@param indent integer
@@ -392,25 +378,6 @@ function M.pbuf_rm(buf, force, wipeout, no_save, suppress_errs)
     return false, chunks, true, { err = true }
 end
 
----@return Range4|nil
-function M.get_vregionpos4()
-    local mode = string.sub(api.nvim_get_mode().mode, 1, 1)
-    if not (mode == "v" or mode == "V" or mode == "\22") then
-        return nil
-    end
-
-    local cur = fn.getpos(".")
-    local fin = fn.getpos("v")
-    local selection = api.nvim_get_option_value("selection", { scope = "global" }) ---@type string
-    local exclusive = selection == "exclusive"
-    local region = fn.getregionpos(cur, fin, { type = mode, exclusive = exclusive })
-
-    return { region[1][1][2], region[1][1][3], region[#region][2][2], region[#region][2][3] }
-end
--- TODO: Replace with the nvim-tools implementation
-
--- LOW: Do this not with recursion to handle deep directories
-
 ---@param path string
 ---@param mode integer
 ---@return boolean, string?
@@ -449,5 +416,6 @@ function M.checked_mkdir_p(path, mode)
 
     return false, err_m
 end
+-- LOW: Do this not with recursion to handle deep directories
 
 return M

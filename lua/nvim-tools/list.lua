@@ -35,6 +35,21 @@ function M.clear(t)
 end
 
 ---@generic T
+---@param t T[]
+function M.copy(t)
+    vim.validate("t", t, "table")
+
+    local len = #t
+    local ret = require("nvim-tools.table").table_new(len, 0)
+    for i = 1, len do
+        ret[i] = t[i]
+    end
+
+    return ret
+end
+
+---Shallow comparison only.
+---@generic T
 ---@param t1 T[]
 ---@param t2 T[]
 ---@return boolean
@@ -57,19 +72,26 @@ function M.equal(t1, t2)
     return true
 end
 
----@generic T
----@param t T[]
-function M.copy(t)
-    vim.validate("t", t, "table")
+---@generic T: table
+---@param dst T List which will be modified and appended to
+---@param src table List from which values will be inserted
+---@param start integer? Start index on src. Defaults to 1
+---@param finish integer? Final index on src. Defaults to `#src`
+function M.extend(dst, src, start, finish)
+    vim.validate("dst", dst, "table")
+    vim.validate("src", src, "table")
+    vim.validate("start", start, "number", true)
+    vim.validate("finish", finish, "number", true)
 
-    local len = #t
-    local ret = require("nvim-tools.table").table_new(len, 0)
-    for i = 1, len do
-        ret[i] = t[i]
+    start = start or 1
+    finish = finish or #src
+    for i = start, finish do
+        dst[#dst + 1] = src[i]
     end
 
-    return ret
+    -- return dst
 end
+-- FUTURE: If this can be used in vim.list, then remove
 
 ---@generic T
 ---@param t T[]

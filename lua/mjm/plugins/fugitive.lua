@@ -6,7 +6,7 @@ local function commit(all, msg)
     local args = "commit" .. (all and " -a" or "") ---@type string
     if msg then
         local prompt = "Commit message" .. (all and " (ALL)" or "") .. ": "
-        local ok, result = require("mjm.utils").get_input(prompt)
+        local ok, result = require("nvim-tools.ui").get_input(prompt)
         if not ok then
             ---@type [string, string|integer?][]
             local chunks = { { (result or "Unknown error getting input"), "ErrorMsg" } }
@@ -79,7 +79,7 @@ local function setup_fugitive()
 
     set("n", "<leader>gR", function()
         ---@type boolean, string
-        local ok, input = require("mjm.utils").get_input("reset --soft HEAD~1 ? [y/n]: ")
+        local ok, input = require("nvim-tools.ui").get_input("reset --soft HEAD~1 ? [y/n]: ")
         if not ok then
             ---@type [string, string|integer?][]
             local chunks = { { (input or "Unknown error getting input"), "ErrorMsg" } }

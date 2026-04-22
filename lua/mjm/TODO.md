@@ -17,6 +17,8 @@
   - More cumbersome, but can make happen in Lua
   - Does not happen in text
 
+- [ ] Need to figure out a way to have system default config files for stuff like stylua.toml
+
 - [ ] Got this error when going to the bottom of an md and pasting an image. Not sure where around the pasting this happened.
   - Got it again when like, you paste the image on not the last line, save, and then the last line is removed before saving
   Decoration provider "range" (ns=nvim.treesitter.highlighter):
@@ -93,6 +95,8 @@
   * Starting it fresh each time is acceptable
 - [ ] The new float statusline would be useful to show win info/buf info
 - [ ] @nomarkdown is considered two separate words for markdown line wrapping. Why?
+- [ ] https://github.com/neovim/nvim-lspconfig/commit/d50c6d53a40d5592b66a7ce989e0644fee51eeaa - Docs for how to add LSPConfig type annotations
+- [ ] Is the new `scrolloffpad` option useful for my use case?
 
 #### LOW:
 

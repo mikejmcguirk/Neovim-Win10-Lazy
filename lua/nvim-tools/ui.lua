@@ -1,4 +1,5 @@
 local api = vim.api
+local fn = vim.fn
 
 local M = {}
 
@@ -31,5 +32,16 @@ function M.get_echospace()
     return columns * math.max(cmdheight - 1, 0) + vim.v.echospace
 end
 -- PR: cmdheight is local to tabpage, but get_option_value does not have a tab key
+
+---@param prompt string
+---@return boolean, string
+function M.get_input(prompt)
+    local ok, result = pcall(fn.input, { prompt = prompt, cancelreturn = "" })
+    if (not ok) and result == "Keyboard interrupt" then
+        return true, ""
+    else
+        return ok, result
+    end
+end
 
 return M

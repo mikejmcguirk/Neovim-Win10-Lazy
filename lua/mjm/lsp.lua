@@ -210,8 +210,7 @@ local function set_lsp_maps(ev)
 
     -- textDocument/rename --
     set("n", "grn", function()
-        ---@type boolean, string
-        local ok_i, input = require("mjm.utils").get_input("Rename: ")
+        local ok_i, input = require("nvim-tools.ui").get_input("Rename: ")
         if not ok_i then
             local msg = input or "Unknown error getting input" ---@type string
             api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })

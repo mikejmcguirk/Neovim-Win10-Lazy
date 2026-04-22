@@ -84,4 +84,54 @@ function M.keys(t)
     return ret
 end
 
+---Bespoke version because of future tbl_ deprecation
+---The tbl_ version also does not contain the o == nil guard.
+---Like the built-in, will only return non-nil if it is able to traverse the specific path
+---specified in the args to a non-nil value.
+---@param t? table Table to index
+---@param ... any Optional keys (0 or more, variadic) via which to index the table
+---@return any # Nested value indexed by key (if it exists), else nil
+function M.get(t, ...)
+    vim.validate("t", t, "table", true)
+
+    if t == nil then
+        return nil
+    end
+
+    local nargs = select("#", ...)
+    if nargs == 0 then
+        return nil
+    end
+
+    for i = 1, nargs do
+        t = t[select(i, ...)] --- @type any
+        if t == nil then
+            return nil
+        elseif type(t) ~= "table" and i ~= nargs then
+            return nil
+        end
+    end
+
+    return t
+end
+-- FUTURE: If this function is kept in vim.table/vim.dict, consider doing a PR there to address the
+-- nil table case so the bespoke version can be deleted.
+
+---@param  ... any Table keys
+---@return string
+function M.keys_to_str(...)
+    local nargs = select("#", ...)
+    if nargs == 0 then
+        return ""
+    end
+
+    local keys = {}
+    for i = 1, nargs do
+        local k = select(i, ...)
+        keys[i] = type(k) == "string" and k or vim.inspect(k)
+    end
+
+    return table.concat(keys, ".")
+end
+
 return M

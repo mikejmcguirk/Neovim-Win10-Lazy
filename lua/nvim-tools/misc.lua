@@ -32,9 +32,8 @@ end
 
 ---Copy-paste of vim.F.if_nil since the future of that module is uncertain
 ---https://github.com/neovim/neovim/pull/34633
----@generic T
----@param ... T
----@return T
+---@param ... any
+---@return any
 function M.if_not_nil(...)
     local nargs = select("#", ...)
     for i = 1, nargs do
@@ -45,6 +44,26 @@ function M.if_not_nil(...)
     end
 
     return nil
+end
+
+---@param x integer
+---@param y integer
+---@param min integer
+---@param max integer
+---@return integer
+function M.wrapping_add(x, y, min, max)
+    local period = max - min + 1
+    return ((x - min + y) % period) + min
+end
+
+---@param x integer
+---@param y integer
+---@param min integer
+---@param max integer
+---@return integer
+function M.wrapping_sub(x, y, min, max)
+    local period = max - min + 1
+    return ((x - y - min) % period) + min
 end
 
 return M

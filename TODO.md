@@ -102,6 +102,12 @@
   - [ ] Maybe use the full config module, maybe use g/b variables. Big thing is - the user should not have to re-write the entire autocmd scripting to customize it
 
 - [ ] rancher
+  - [ ] qf positions are one indexed, end exclusive (see lhelpgrep results). The preview and diagnostic conversion code needs to account for this (same with grep perhaps)
+  - [ ] I am concerned about the level of bespoke logic used for list opening. Can we not just build wrapper code around cc? Can it not just be nvim_win_call?
+    - Obvious problem comes about when thinking about zzze.
+    - I'm not sure if cc/ll auto-focus the opened window
+    - Can look at how other plugins do it
+  - [ ] Use updated qf_to_vex function for positions
   - [ ] https://github.com/ten3roberts/qf.nvim
     - [ ] Farm + Add to credits/references
   - [ ] The fallback preview buf has bufhidden set to wipe even though it's meant to persist. Should be hidden

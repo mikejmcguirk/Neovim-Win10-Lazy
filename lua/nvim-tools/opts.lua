@@ -5,7 +5,7 @@ local M = {}
 ---@param opt boolean|nil
 ---@param default boolean
 ---@return boolean
-function M._resolve_bool_opt(opt, default)
+function M.resolve_bool_opt(opt, default)
     if type(opt) == "nil" then
         return default
     else
@@ -38,10 +38,5 @@ function M.set_if_new(opt, old, new, scope)
 end
 -- MAYBE: I don't think any vim opt allows you to set nil as a value. The
 -- closest thing is "" for blank.
-
--- TODO: Directionally, this is vim.with with less onerous validation
-function M.with_opts(fn)
-    --
-end
 
 return M

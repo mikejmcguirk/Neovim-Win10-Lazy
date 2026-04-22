@@ -38,19 +38,15 @@ fts[#fts + 1] = "sh"
 
 ---@return integer
 local function get_vpos()
-    local vregionpos4 = require("mjm.utils").get_vregionpos4() ---@type Range4|nil
-    if not vregionpos4 then
-        return 0
-    end
-
+    local vregionpos4 = require("nvim-tools.range").get_regionpos4(".", "v", "v", false)
     vregionpos4[2] = math.max(vregionpos4[2] - 1, 0)
     vregionpos4[4] = math.max(vregionpos4[4] - 1, 0)
 
-    local row, col = unpack(api.nvim_win_get_cursor(0)) ---@type integer, integer
-    local start = row == vregionpos4[1] and col == vregionpos4[2] and -1 or 0 ---@type integer
-    local fin = row == vregionpos4[3] and col == vregionpos4[4] and 1 or 0 ---@type integer
+    local row, col = unpack(api.nvim_win_get_cursor(0))
+    local start = row == vregionpos4[1] and col == vregionpos4[2] and -1 or 0
+    local fin = row == vregionpos4[3] and col == vregionpos4[4] and 1 or 0
 
-    local sum = start + fin ---@type integer
+    local sum = start + fin
     return sum
 end
 

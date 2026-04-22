@@ -2,10 +2,20 @@
 
 #### TODO:
 
+- [ ] Commenting guidelines:
+  - [ ] Annotation comments:
+    - Give an overview of how the function works for devs who want to know, broadly, what it does, without deep-diving into the details.
+      * Example: The pos functions do not require deep explanation
+      * Functions with longer annotation comments, therefore, imply that there is more you need to know
+    - For functions that would be public facing, like config or search, provide a template for how they would be documented to end-users
+  - [ ] Standard comments
+    - Personal notes
+    - Deep dive details
+    - Why certain choices are made (search() needs a lot of these)
+
 - [ ] The broader patterns described in the top level TODO doc all need to apply here
 - [ ] I currently can actually name this nvim-tools, but check the big plugin collection repo before uploading
 
-- [ ] Do I have the README stored locally on both machines? Shows unpushed on laptop.
 - [ ] Make sure everything has vim.validate in the params. It is easier for the user to remove than add them
   - Exceptions:
     - Validation functions (since they are, themselves, validators)
@@ -18,6 +28,8 @@
 
 - [ ] Test to see if win_call_maybe and buf_call_maybe are faster than running them unconditionally. If so, add them here and use them in all the internals.A
   - [ ] Test with different % of times where you need to context call vs not
+
+- [ ] For compatibility, make sure any autocmd API usage or vim.keymap.sets or whatever use "buffer" semantics, and make a note to change those all to "buf" when v0.13 comes out
 
 #### FUTURE:
 
@@ -43,10 +55,6 @@
 - Have the function gracefully error. Part of issue is the amount of control flow. Part of it is, since every other edit/buf opening function hard errors, this feels patternful. Part of it too is, it's meant to be a gut check on making sure the surrounding assumptions are correct.
 
 ## Buf
-
-#### TODO:
-
-- [ ] Move over the make_emoji_ranges script and document how to use it
 
 #### MID:
 
@@ -88,39 +96,9 @@
 
 - Be cautious about adding new automatic config delete conditions. If the user, say, wants to add BufDelete, they can make their own autocmd.
 
-#### TODO:
+#### DEPS:
 
-- [ ] Type annotate everything properly since Lua_Ls doesn't auto-detect everything.
-  - [ ] Including fields in both metatables
-  - [ ] Make them class exact? Unsure if I want to double-define the self methods though
-  - [ ] Example from vim.pos of how to make metatable __call documented:
-  ---@cast M +fun(buf: integer, row: integer, col: integer): vim.Pos
-
-- [ ] When performing a __call merge, all values should be tried. All errors should be collected and printed to console upon completion.
-  - [ ] Before performing the merge, save a copy of the previous table. If an error is found, rewind the table state.
-    - Reasoning: The previous state of the config is assumed "good". A new config state with some good values and some values unchanged due to errors is presumed "bad"
-
-- [ ] Config should be able to export checkhealth info
-- [ ] For checkhealth, iterate over pairs to get active BufConfigs.
-  - [ ] Not totally sure how to handle the case where you have a bunch of buf configs. Do you maybe pass an option to checkhealth? (Would document how to do this). It would be interesting/useful if you could designate fold regions in the checkhealth output.
-  - `require("plugin").config:get_health()` and `require("plugin").buf_config:get_health()`
-
-- [ ] When running an API function that relies on some piece of sub-config, the config metatable should provide a means to do the following:
-  - [ ] Pass the user table as an argument
-  - [ ] Validate the user table against the validators
-    - [ ] Failure is a hard error
-    - [ ] Extra values should be ignored
-    - [ ] Nil values in the passed config would always be acceptable
-      - [ ] Might be a plugin meta-design note that "opts" should always map to something in config and that all opts should be actually optional. Mandatory values should be args or a separate table
-  - [ ] Merge in buf config with "keep" behavior
-  - [ ] Merge in config with "keep" behavior
-  - [ ] A "skip validation" opt should be provided for performance (would be used for built-in plugs). This option should either be internal or marked as unsupported/unsafe/undefined if bad values are passed
-  - [ ] A question is - How do you handle when internal code needs to use public interfaces?
-    - You could have a merge opt of "use_defaults", where user config is skipped. This would be predictable, but risks skipping user-defined behavior when it's desired
-    - You could also just require any opts that need to be static to be passed explicitly, but this risks either falling into traps of unexpected behavior due to user opts or just ending up passing all opts to every internal function to make sure nothing goofy happens
-    - In spite of causing more work, I think the latter option might be better because it avoids the problem of default config changes causing problems downstream.
-  - [ ] When buf_configs are added or changed, should they be merged into the default with "force" behavior and the results cached?
-    - I can feel the complexity surface area here. Feels like this should be responsive to a genuine perf issue. Though, in that case, the concept itself needs to be reconsidered.
+- [ ] Docgen. Because of the nature of how the config is designed, I need to know where the docgen lands in order to actually write the documentation.
 
 #### DOCUMENT:
 
@@ -163,7 +141,17 @@
 
 #### MID:
 
+- [ ] Performing a full config merge each time a function is run is slow. It would be better if the merged configs were saved somehow
+  - Solution 1: Keep a saved merge of buf_config and main config
+    - Presumably, this would be in buf_config
+    - Fine because it puts the perf cost in write
+    - Keeping the state synced would be hard, especially if a change is made to config (does that have to propagate to all buf configs?)
+  - Solution 2: Save specific merges
+    * Similar issue to the above though - How do you know if a merge is stale?
+
 - [ ] For maintaining deprecation plans, it would be better if there were a way to control the defaults. So if you change a default, you could have opt-in/opt-out behavior
+
+- [ ] How to make the buf_config config sub-returns automatically type annotate
 
 - [ ] Outside of any specific use case, __index and __newindex should provide return values that allow the caller to understand what happened below so that proper follow-up action can be taken
   - [ ] nil > nil?
@@ -173,24 +161,7 @@
   - [ ] validation failure?
   - [ ] This implies some sort of binary based flag so the return statuses can be layered performantly and in all combinations.
 
-- [ ] When a config is written to, it should:
-  - Check if it's a buf config
-  - If so, check itself to see if any non-nil config values remain
-  - If not, signal that it should be deleted
-  - On delete, the bufwipe autocmd should also be removed
-
-  - Challenges
-    - This cannot trigger on read, because we are assuming that reads should be as performant as possible
-    - This would need to be detected within a proxy table on __newindex. Feels like you would first need to send a "did_write" value up the call stack, then use that to trigger the recursive value check
-
-- [ ] Provide a principled solution for skipping buf config on merge
-    - [ ] Perhaps providing a nil buf arg, since 0 resolves to the current buffer
-    - While I would prefer this behavior not even be possible, there's nothing to stop hacking it in with a scratch buffer, so I'd rather not be inconvenient on purpose
-
 #### LOW:
-
-- [ ] Is it possible to have a Root_Proxy that solely contains the __call method?
-  - Problems: Both the __call method itself as well as __newindex rely on being able to use __call recursively
 
 - [ ] Is it possible to put proxies on the non-config sub-tables in a way that (a) isn't contrived and (b) doesn't hurt PERF.
 - [ ] It might be faster, for deleting autocmds, to check a cache for the group id rather than re-constructing the name string. I'm not sure this matters enough to justify maintaining the state.
@@ -199,13 +170,19 @@
 
 #### FUTURE:
 
-- When g/b variables are able to store metatables, Show how to setup the code in the /plugin file without requiring an exterior module
+- [ ] When g/b variables are able to store metatables, Show how to setup the code in the /plugin file without requiring an exterior module
   - Should the lua-module based config not be demonstrated at all? Unsure how to do so without creating duplicate code, since the point of the above is to avoid external requires.
   - Could maybe, instead, do the config in a module like it is now, then show a doc example on how to use in /plugin
 
-  - [ ] As bcd/workspace config are added, does this prompt updates/changes?
+- [ ] As bcd/workspace config are added, does this prompt updates/changes?
 
 #### MAYBE:
+
+- Iterate through config with a visitor pattern.
+  * Problems:
+    + Writing the iter code to accommodate all possible things the visitor function wants to do requires managing a lot of theoretical state simultaneously
+    + For new table merges, I'm not sure what the principled solution is, since you need to track the sub-key when you hit nested Configs.
+      + Could be keep a list of keys and use table.get(), but now you are keeping track of and resizing a table + unpacking it on call. Quite heavy.
 
 #### NON:
 
@@ -269,65 +246,22 @@
 
 - Could be extracted in to a library, since what the proposed functions above provide is sufficiently novel
 
-## Misc
+## List
 
-#### TODO:
+#### MID:
 
-- [ ] wrapping add/wrapping sub
+- "list and list" functions. Common enough patterns that you should be able to do `foo(list, list)` and get a result:
+  * Filter by list. Items in the right are removed from the left. You can apply a transform to list a and/or b
+  * A recursive find function like the list validator uses. So you have lists a and b. Every item in a must also be in b. You can apply a transform function to list a and/or b
+  * For transforms, look at how find() does it
 
 ## opt
 
-#### TODO:
+#### MAYBE:
 
-- [ ] Opt parsers
-  - [ ] Comma opt (for rancher swb overrides)
-- [ ] with_opts() (rancher window opening)
+- There is theoretical value in making a lightweight version of vim._with for private use. In practice, the only real use case is rancher's spk open. Would rather just handle that for now and borrow _with's pcall unpacking logic. Can revisit if needed.
 
 ## pos
-
-#### META:
-
-- Pos Names:
-  * qf_pos (1 indexed, inclusive or exclusive, includes vcol flag)
-    + I'm not sure this is a particular data type (there is no built-in Range3), but more a particular kind of state
-    + I have never been clear on if this is end exclusive or not. It almost feels dependent on the beginning and end of the qf position. It also seems to depend on the source.
-  * eval_pos (1, 1 inclusive)
-  * {need a name for 1, 1 exclusive}
-  * mark_pos (1 indexed rows, 0 indexed cols, inclusive)
-  * ext_pos (0 indexed, end inclusive)
-  * api_pos (0 indexed, end exclusive)
-
-#### TODO:
-
-- [ ] Integrate the "find_char_start" abstraction
-
-- [ ] Position conversion:
-  - [x] api > eval
-  - [x] api > ext
-  - [x] api > mark
-  - [x] eval > api
-  - [x] eval > ext
-  - [x] eval > mark
-  - [x] ext > api
-  - [x] ext > eval
-  - [x] ext > mark
-  - [x] mark > api
-  - [x] mark > eval
-  - [x] mark > ext
-
-- [ ] Position adjustment
-  - [x] api
-  - [x] eval
-  - [x] ext
-  - [x] mark
-
-- [ ] Pos functions
-  - [x] cmp_pos (returns -1, 0, 1 like vim.pos does)
-  - Do these if they have more efficient code paths than just checking the result of cmp_pos
-
-- [ ] Add resolve_qf_pos function
-  * If vcol is true, get the proper end col
-  * Might need an inclusive vs. exclusive flag
 
 #### TEST:
 
@@ -335,33 +269,13 @@
 
 #### MAYBE:
 
-- Add lteq and gteq functions, since getting to them through negation could be confusing
-  * I just hate to add more code.
+- Add leq and geq functions, since getting to them through negation could be confusing
 - More sophisticated error handling if nvim_buf_get_lines fails. My current theory is, if a bad row + buf is passed to the function, this should hard error (a) for visibility and (b) to prevent bad results from being used upstream
   * Same comment applies to string.byte
+- Use graphene aware utf positions if a use case comes up. I just really hate to do this because it's slower
+- The uint validation in these functions is load bearing because it prevents sub-zero values. In a real implementation in hot paths, vim.validate would not be present. But I also hate to speculatively make changes based on theoretical data breakage. The position adjustments are based on the premise of correcting stale positions after buffer changes. I have not seen negative values pollute positions before.
 
 ## range
-
-#### META:
-
-- Range Names:
-  * Any reuse of the above names means that both positions in the range use the pos indexing. So mark_range_4 would be two mark positions. ext_range_4 would be all zeroes.
-    + So mixed position indexing, like treesitter ranges, need their own names
-  * ts_range_4 (zero indexed, start is end inclusive, end is end exclusive)
-    + Or lsp_range_4?
-  * regionpos_4 (one indexed, end inclusive or exclusive)
-
-#### TODO:
-
-- [ ] range_cmp_pos
-  - -1: pos < range
-  - 0: pos inside range
-  - 1: range < pos
-
-- [ ] Range4 conversion
-  - [ ] eval > ts_range
-  - [ ] eval > ext_range
-  - [ ] regionpos to mark (exclusive optional)
 
 #### FUTURE:
 
@@ -372,37 +286,90 @@
 
 #### META:
 
-- Thinking ahead to the farsight case, the search results struct needs to be a subset of the targets struct
-- I am basically fine with the idea that we perform the actual filtering and editing of the search results in the search module, and that in farsight the labeling presumes we are using all results.
-  - Caveat: Handling label re-use, since we need hashed search results. I'm not sure if that's something we build here since it's more generalizable
-  - I'm not sure how this idea interfaces with the notion of not labeling all results. I guess we would just only take in so many labels.
-
-- I'm not sure if this is fixed in farsight, but the "dir" opt is vague. Should not be used.
-
-- Must handle wrapscan as an opt
-  - In farsight, this would just be removed. The annotator/grep cases are more interesting, because for nav, you set it to default true in config, but for buffer searches, where do you set it for false so it's not fiddled with?
-
-- The search needs to return in some way where the ordering of the results makes sense. Like, based on the direction entered into the search, the results should return such that the first result is always the "best" one. Should not need to read flags for iteration.
+- Given the farsight case, the search results struct needs to be a subset of the targets struct.
+- Do not handle farsight functions past cleaning of the results themselves
+- I believe the _locator farsight module is the most up-to-date implementation, but it does not contain PUC compatibility
 
 #### TODO:
 
-  - [ ] The "results" module in farsight seems like the best model to start with. I forget which of the farsight modules has the most up-to-date search implementation. I think the one that's LuaJIT only.
+- [ ] Separate this concept into two functions:
+  - search_area
+  - search_single
+- [ ] Search area would be in line with what farsight search is now
+- [ ] Search single would return a single eval indexed position
+- The main value of these functions is encoding the quirks of how search() works
+- Wrapscan breaks multiple assumptions behind area search, creating perf cost to manage them
+- I cannot think of a situation where wrapscan would be used to return multiple results
+- Unless you get into additional levels of contrivance simulating wrapscan with multiple forward searches, it is slower
+  * And that isn't even a solution because if you're wrapscan searching up, the "first" result would be the last when coming from the top. Bad in big buffers
+- A significant issue (that needs to be documented somewhere), is that backwards searches to the end index can get "stuck" for reasons I'm unsure of. This is not an issue in JIT, where you can pull the ends from FFI, but it is relevant in PUC Lua, where you need an end search to fill in those values. This means, for wrapscan, you would need to break it into multiple forward searches for it to even work in PUC Lua. Do you always do this behavior? Do you make it decide at runtime?
+- [ ] The goal of search_single, then, would be to take the wrapper code from search_area and apply it to searching for a single result as possible, such as temporary cursor context, win_call, and pattern filtering.
+- [ ] For single count, you want to have an opt to return the best available result or return no result if count fails
+  - [ ] You would check cursor on each iteration, storing the position. Then just return the stored position. search() would just end on its own
+  - [ ] Check btw to see if any of Vim's build-in bracket navigation handles count with best fit. csearch does nothing if count leads to nothing
 
-- [ ] An open but important question is where valid is stored. The way I think it is right now is that the search module has no concept of this, so that would not be something to handle here.
+- [ ] Figure out how to sort area results
+  - Use case: "Closeness" result sorting
+  - Needs to take a predicate so it can handle cases like before/after or pythagorean distance
+    * [ ] These are obvious functions to put into pos
+      * I think before/after is already handled lt/gt
+  - [ ] We would very much prefer if sorts only changed the idx values. This kind of perf benefit is the whole point of using an SoA
+    - [ ] Problem: If you want to compact results, the idxs are out of order
+      - Simple solution: Add an active boolean flag to each result
+        * Problem: Introduces an if check (if order is guaranteed, you can increment one index and transfer the value from the other unconditionally)
+        * Lesser problem: This is more complicated
+      - Is supporting compacting necessary? Aren't search results supposed to be ephemeral?
+        * NOT supporting compacting would imply this
 
-- [ ] Is ther a better way to handle backward searching with wrapscan than an actual backward search?
+- [ ] Results ordering:
+  - Ref combinatorics below
+  - Thinking through use cases first:
+    * For my static jump, I would just fair label top to bottom in winnr order
+    * A user might want to, for a whole buffer jump, label results based on closeness to the cursor
+    * A user might also want to plug in their own closeness calculation (this applies to "static" and "live" cases), such as pythagorean distance
+      + The suggests some kind of plugin function
+  - Non-goal: This function cannot concern itself with multi-window. It can support the cases that multi-window needs to work, but the actual support of multi-window is out of scope
+  - search() just gives you results in the order they are found
+    * This is "closeness" order if searching in a direction without wrapscan
+    * If searching forward, this also doubles as buffer order
+  - Solutions:
+    * Ideally, some kind of layered indexing scheme would store closeness and buffer order
+      + This is hideously complicated
+    * Simpler solution: Just sort the table as needed
+      + There is value anyway in providing a metatable function for sorting based on a predicate. This solves the combinatorial problem of "how do you sort".
+        + I'm also not sure how much you can/should dumb down the result production
+      + Creates perf issue if you just assume this as part of the pipeline
+      + Wrapscan might still be an issue
+      + Since you would just sort the idxs table, this makes compacting the data complicated
+
+- [ ] Search direction combinatorics:
+  - [ ] Visible buffer:
+    - [ ] Wrapscan is irrelevant here
+    - [ ] Always search forward
+    - [ ] Directions:
+      - [ ] Upward
+      - [ ] Downward
+      - [ ] Whole buffer
+  - [ ] Extended buffer:
+    - [ ] Wrapscan:
+      - [ ] Directions:
+        - [ ] Upward
+        - [ ] Downward
+    - [ ] No Wrapscan:
+      - [ ] Directions:
+        - [ ] Upward
+        - [ ] Downward
+        - [ ] Whole buffer
+
+- [ ] In area search, dir and range have overlapping concerns
+
+- [ ] Range should be taken as a Range4
+  - Basically trying to say, either specify one or don't
+
+- [ ] This should plugin to the nvim-tools config module to demo how it works
+
+- [ ] Is there a better way to handle backward searching with wrapscan than an actual backward search?
   - Even without wrapscan, if you only want x results, or you have to manage count, tricky if you're searching forward
-
-- [ ] For the farsight case, it is necessary that all searches be case sensitive
-  - [ ] The search function should have an opt or param for case sensitivity
-    - [ ] ignore/sensitive/nooverride(necessary for smartcase, since it needs to come from options)
-  - Search atoms:
-    - \C : case sensitive
-    - \c : Ignorecase
-  - If explicit ignore/respect case are chosen, problem atoms should be removed and correct ones added
-    * I believe the beginning would be the best place. Check the csearch builder logic though
-
-- Go through the old stuff to see what actual trimming is done to the results (there's a lot for handling things like how LuaJIT adds results or incomplete atoms and so on)
 
 - [ ] Search Ranges
   - [ ] Entire Buf (wrapscan or no wrapscan)
@@ -440,7 +407,7 @@ A specific flag to reject blank lines or all-whitespace lines. This would be mos
 
 #### MAYBE:
 
-- Make the open_new_tab function more customizable. For now though I'd just like it to be a wraper for getting a new tab open to a scratch buf with some sensible count handling
+- Make the open_new_tab function more customizable. For now though I'd just like it to be a wrapper for getting a new tab open to a scratch buf with some sensible count handling
 
 ## Treesitter
 
@@ -450,22 +417,8 @@ A specific flag to reject blank lines or all-whitespace lines. This would be mos
   * Might be necessary for the annotator plugin, but would rather try to write around that, since finding a node type on a line would involve multiple layers of recursion.
     + Can probably just do annotator with string searching
 
-## UI
+## vcol
 
-#### TODO:
+#### MAYBE:
 
-- [ ] Generic get_input function that handles the "keyboard interrupt" case properly
-
-## Win
-
-#### TODO:
-
-- [ ] Create an is_filline_visible function
-  - Currently used in farsight
-  - Rancher might need this for zzze handling after jumps
-  - This needs to tie into handling the valid value for redrawing
-
-#### MAYBE
-
-- Some kind of winnr to win-id function. All it is is tabpagewinnr, so for the most part there's no point in a wrapper unless you want something to convert tab-id to tabnr. I don't have a use case for this, so will pass for now.
-  * In rancher, I get the tabnr once and then use it for everything else, so a wrapper would create more crossing of the Lua bridge
+- Many old functions sitting around from spec-ops.

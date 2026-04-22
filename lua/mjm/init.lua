@@ -60,9 +60,7 @@ require("mjm.lsp")
 
 if not api.nvim_buf_is_valid(1) then
     return
-end
-
-if not require("nvim-tools.buf").is_empty_noname(1) then
+elseif not require("nvim-tools.buf").is_empty_noname(1) then
     return
 end
 
@@ -76,7 +74,7 @@ api.nvim_create_autocmd("BufHidden", {
         -- buffer if this is not scheduled.
         vim.schedule(function()
             local ntb = require("nvim-tools.buf")
-            if ntb.is_empty_noname(1) and #fn.win_findbuf(1) == 0 then
+            if ntb.is_empty_noname(1) and #vim.call("win_findbuf", 1) == 0 then
                 ntb.protected_del(1, true, { force = true })
             end
         end)

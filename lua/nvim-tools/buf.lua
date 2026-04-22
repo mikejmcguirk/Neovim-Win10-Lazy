@@ -460,8 +460,8 @@ function M.open_buf(win, buf, opts)
     end
 end
 
----@param buf integer
----@param delist boolean
+---@param buf integer Buffer to delete
+---@param delist boolean De-list buffer?
 ---@param opts vim.api.keyset.buf_delete
 ---@return boolean, string|nil, string|nil
 function M.protected_del(buf, delist, opts)

@@ -84,7 +84,7 @@
   - [ ] A compromise could be to perform some kind of bespoke data extraction first, but that extraction has to be into something that the docgen can handle through a generalized process
 
 - [ ] Where the docgen looks for "related" comments to a param/field needs to be consistent.
-  - I would prefer to the side and up
+  - Lua_Ls needs documentation for function params/returns to be to the side and below, so we have to follow that I guess
 
 - [ ] Support early-exiting modules like vimcats does
 

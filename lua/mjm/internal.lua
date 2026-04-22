@@ -94,8 +94,4 @@ vim.api.nvim_create_user_command("HelpCurwin", function(opts)
     local subject = opts.args
     local cmd = HelpCurwin(subject)
     vim.cmd(cmd)
-end, {
-    nargs = "?",
-    complete = "help",
-    bar = true,
-})
+end, { nargs = "?", complete = "help", bar = true })

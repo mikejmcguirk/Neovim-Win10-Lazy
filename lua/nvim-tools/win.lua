@@ -1,4 +1,5 @@
 local api = vim.api
+local fn = vim.fn
 
 local M = {}
 
@@ -54,6 +55,26 @@ function M.cursor_at(win, cur_pos)
     local win_cur_pos = api.nvim_win_get_cursor(win)
     return win_cur_pos[1] == cur_pos[1] and win_cur_pos[2] == cur_pos[2]
 end
+
+---@param win integer
+---@return boolean
+function M.has_fillline(win)
+    local buf = api.nvim_win_get_buf(win)
+    local botline = fn.line("w$", win)
+    local fill_row = math.min(botline + 1, api.nvim_buf_line_count(buf))
+    if fill_row == botline then
+        return false
+    end
+
+    local first_spos = fn.screenpos(0, fill_row, 1)
+    if first_spos.row < 1 then
+        return false
+    end
+
+    return true
+end
+-- MID: This is not great because it will return false if the first col if the fill row is
+-- covered. Hate to check more cols though because screenpos is so slow.
 
 ---@param win_config vim.api.keyset.win_config_ret
 ---@return boolean
@@ -164,6 +185,20 @@ function M.resolve_win_id(win)
         return true, win, nil, nil
     else
         return false, -1, "Win ID " .. win .. " is invalid", "ErrorMsg"
+    end
+end
+
+---Use nvim_win_call if cur_win ~= win. Otherwise, call the function as normal.
+---Worth using due to non-trivial overhead of nvim_win_call
+---@param cur_win integer
+---@param win integer
+---@param f function
+---@return any
+function M.call_in(cur_win, win, f)
+    if cur_win == win then
+        return f()
+    else
+        return api.nvim_win_call(win, f)
     end
 end
 

@@ -552,7 +552,20 @@ set({ "x" }, "<M-s>", ":s/\\%V")
 
 -- FUTURE: These should remove trailing whitespace from the original line. The == should handle
 -- invalid leading whitespace on the new line
-set("n", "dJ", "Do<esc>p==", { silent = true })
+-- set("n", "dJ", "Do<esc>p==", { silent = true })
+-- MID: The dJ map below is more useful than the commented one above, but creates an anti-pattern.
+-- You have the following "move" ideas:
+-- - Take the line below and append: J
+-- - Take the line above and append: unmapped
+--   - This so obviously should be K, but alas
+-- - Push the suffix to a new line above: dK
+-- - Push the suffix to a new line below: unmapped
+--   - This is basically i<cr> but in normal mode. Aside from the convenience, it feels like it
+--   needs a little more, like auto-indenting, to justify itself.
+-- - Push the suffix to the line below: dJ
+-- - Push the suffix to the line above: unmapped
+-- dH/dL might be fine here.
+set("n", "dJ", "Djg_p")
 -- MID: This creates two undo points
 set("n", "dK", "DO\27p==", { silent = true })
 
@@ -639,7 +652,7 @@ set("x", "<C-=>", eval_cmd, { noremap = true, silent = true })
 ---@param up? boolean
 ---@return nil
 local function add_blank_visual(up)
-    local vrange4 = require("mjm.utils").get_vregionpos4() ---@type Range4|nil
+    local vrange4 = require("nvim-tools.range").get_regionpos4(".", "v", "v", false)
     if not vrange4 then
         return
     end
