@@ -177,6 +177,12 @@ function Config:validate(t, return_errors)
 
     return errors
 end
+-- MID: Interesting point from Mitch Hashimoto - The success case should be fast path. The error
+-- case can be allowed to be slow (assuming the success case is distinctly more common, which
+-- in this case it would be since the metatable screens writes). So here, we would not collect
+-- errors on first pass. If a boolean true returns, we know the config is good and return nil
+-- (no allocation). If we get a boolean false, we know we have errors, and can do a re-traversal
+-- to collect them.
 -- DOCUMENT: This function. Use a dummy if needed.
 
 ---@class nvim-tools.init.DefaultConfig

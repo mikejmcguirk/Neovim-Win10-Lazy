@@ -156,6 +156,17 @@
 - [ ] annotator
 - [ ] text tools
 
+#### MID:
+
+- [ ] Come up with a principled way to check for the truncated line in search plugins:
+  - Use case: Jump plugins in wrapped buffers
+  - Problems:
+    * If you put jump tokens on a truncated line, you have to redraw with valid = false. This is slow
+    * There is not a great way to find out if it is showing. You could look for the @ screenchar (or whatever the fillchar is), but this is a lot of logic
+    * You could also see if the next line has a valid screenpos value, but this is slow and not totally reliable
+    * Whether or not the line even shows depends on the user's display option
+    * Also causes an issue where jumping into the line can force it to be scrolled to the middle of the window, so then do you also have to add a "norm! zb" call?
+
 #### LOW:
 
 - [ ] In-process LSP that pushes diagnostics for lines over a certain length. Could expand this into other general linting tools. Perhaps then move into a compiled language

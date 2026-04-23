@@ -99,7 +99,7 @@ local function map_objects(ev)
         { "[s", "]s", "@assignment.outer" },
         { "[f", "]f", "@call.outer" },
         { "[/", "]/", "@comment.outer" },
-        -- { "[d", "]d", "@conditional.outer" },
+        -- { "[d", "]d", "@conditional.outer" }, -- Overwrites diagnostic jumping
         { "[m", "]m", "@function.outer" },
         { "[o", "]o", "@loop.outer" },
         { "[,", "],", "@parameter.inner" },

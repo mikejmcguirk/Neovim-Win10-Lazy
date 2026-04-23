@@ -1,25 +1,88 @@
+local api = vim.api
+local fn = vim.fn
+
+local has_ffi_search_globals = (function()
+    local has_ffi, ffi = pcall(require, "ffi")
+    if not has_ffi then
+        return false
+    end
+
+    local cdef_ok = pcall(
+        ffi.cdef,
+        [[
+            extern int search_match_endcol;
+            extern int search_match_lines;
+        ]]
+    )
+
+    return cdef_ok
+end)()
+
 local M = {}
 
-local function search_jit(pattern, dir, opts)
+-- TODO: nvim_win_call should be run within the search functions, rather than being a wrapper
+-- TODO: The area functions need to explicitly dis-allow wrapscan
+
+---@param pattern string
+---@param range_4 Range4
+---@param opts nvim-tools.search.AreaOpts
+local function search_area_jit(pattern, range_4, opts)
+    local _ = pattern
+    local _ = range_4
+    local _ = opts
+
     ---@type nvim-tools.search.Results
     local res = { idxs = {}, rows = {}, cols = {}, fin_rows = {}, fin_cols = {} }
     return res
 end
 
-local function search_puc(pattern, dir, opts)
+---@param pattern string
+---@param range_4 Range4
+---@param opts nvim-tools.search.AreaOpts
+local function search_area_puc(pattern, range_4, opts)
+    local _ = pattern
+    local _ = range_4
+    local _ = opts
+
     ---@type nvim-tools.search.Results
     local res = { idxs = {}, rows = {}, cols = {}, fin_rows = {}, fin_cols = {} }
     return res
 end
 
-local do_search = (function()
-    if jit then
-        return search_jit
+local search_area = (function()
+    if has_ffi_search_globals then
+        return search_area_jit
     else
-        return search_puc
+        return search_area_puc
     end
 end)()
 -- TODO: This also needs to the FFI checks
+-- Those should probably be done once so then the same result can be used for resolving the area
+-- and single functions.
+
+---@param pattern string
+---@param opts nvim-tools.search.SingleOpts
+local function search_single_jit(pattern, opts)
+    local _ = pattern
+    local _ = opts
+end
+
+---@param pattern string
+---@param opts nvim-tools.search.SingleOpts
+local function search_single_puc(pattern, opts)
+    local _ = pattern
+    local _ = opts
+end
+-- TODO: For count, if looking for at least one, store the cursor result on every hit, but only
+-- exit the search function when count is hit. Use temp ints or the same table.
+
+local search_single = (function()
+    if has_ffi_search_globals then
+        return search_single_jit
+    else
+        return search_single_puc
+    end
+end)()
 
 ---@class nvim-tools.search.Results
 ---@field idxs integer[]
@@ -28,104 +91,150 @@ end)()
 ---@field fin_rows integer[]
 ---@field fin_cols integer[]
 
--- TODO: Need search functions to trim X results, with the option to leave at least one. For
--- supporting count with minimum amount.
--- TODO: You can't really get the perf benefit of the SoA if every op on the result forces a
--- table scan and modification. So for the various result ops, we want to alter the idxs only.
--- The canned version of search results here should perform a final compact step before sending
--- results. Both for demo and RAM management purposes
--- TODO: Needs to be some amount of intelligence about what transformations need to be done
--- where. I mean, I would think.
--- TODO: Use table.new here
--- TODO: Need the following iterators to work with results:
--- - Sort
--- - filter (both ways)
--- - map
--- - compact
--- MAYBE: Cut search result functions into their own file. Want to actually hit that pain point
--- first though.
--- - Part of it too is, what conceptually goes where
--- - There are fixes for JIT and Puc results that have to be done for baseline accuracy. They
--- should be done here unless it's absolutely prohibitive to do so.
--- - On the other hand, something like fold management, while a baseline modification for
--- results, isn't necessary for the basic production of them.
--- - The problem, as I remember from doing this before, is that you want to be cutting results
--- aggressively to avoid the amount of iterating. So like, there are baseline things you need to
--- be able to do in order to make other modifications, but then you want to get those removals
--- in there when you can.
--- - Directionally, it is useful for these modules to provide as meaningful a baseline as possible.
--- Handling fold results is only one layer above fundamental.
--- - This is also a case where, because of how inter-twined everything is, the "reference impl"
--- philosophy doesn't work as well. As if we deliberately introduce slowness here, it's hard to
--- unwind.
--- - We need to make some trade offs here for accuracy, flexibility, and conceptual sanity:
---   - This module can only be concerned with getting the search results, making sure they are
---   correct, and returning the results metatable
---   - The _results farsight module kinda already does this, but the iterators over results need
---   to only be focused on iteration structure, not what the iteration does
---   - The thing that, of course, sticks out here is folds, because they can be path dependent
--- NON: Because the results are meant to be portable across applications, should not add more
--- fields
--- NON: Unless it's absolutely necessary, don't do the position hashing here. Goes against this
--- being a minimal implementation.
+---@param buf integer
+---@param curpos [integer, integer, integer, integer, integer]
+---@param cache table<integer, string> Edited in place
+---@param range -2|-1|0|nil|1|2|Range4
+---@return Range4
+local function resolve_search_range(buf, curpos, cache, range)
+    if type(range) == "table" then
+        return range
+    end
 
----@class nvim-tools.search.Opts
----For LuaJIT builds, set the default size of table.new in the results lists.
----(default: `16`)
----@field alloc_size? integer
+    local range_4 = { 0, 0, 0, 0 }
+
+    if range <= 0 or range == nil then
+        range_4[1] = (range == -2 or range == nil) and 1 or fn.line("w0")
+        range_4[2] = 1
+    else
+        range_4[1] = curpos[2]
+        range_4[2] = curpos[3]
+    end
+
+    if range >= 0 or range == nil then
+        local row
+        if range == 2 or range == nil then
+            row = api.nvim_buf_line_count(buf)
+        else
+            row = fn.line("w$")
+        end
+
+        range_4[3] = row
+
+        local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
+        cache[row] = line
+        range_4[4] = #line
+    else
+        range_4[3] = curpos[2]
+        range_4[4] = curpos[3]
+    end
+
+    return range_4
+end
+
+---@class nvim-tools.search.CommonOpts
 ---At which occurrence should results begin to be collected? count 0 or count 1 will start
 ---from the first result. count 2 will start from the second result, and so on. Useful if you
 ---want to use search to find a jump location, but jump to [count] occurrence.
 ---Note that this can mean, if for example, count 2 is specified but there is only one result, that
 ---no results return.
 ---@field count? integer
----@field max_results? integer
 ---Filter applied to the pattern.
 ---TODO: Document examples of forcing case or forcing fixed strings
 ---@field pattern_filter? fun(pattern:string): filtered_pattern:string
 ---@field win? integer Window to search within
----(default: `false`)
----@field wrapscan? boolean
 
-local function resolve_search_opts(opts)
+---@class nvim-tools.search.AreaOpts : nvim-tools.search.CommonOpts
+---For LuaJIT builds, set the default size of table.new in the results lists.
+---(default: `16`)
+---@field alloc_size? integer
+---Pass in the cursor by reference if it's already been pulled from Neovim.
+---@field cursor? [integer, integer, integer, integer, integer]
+---@field max_results? integer
+---How to handle results that run past the search range
+---- 0: No handling
+---- 1: Crop results to be within the range
+---- 2: Remove overflow results
+---@field spill_handling? 0|1|2
+
+---@param opts nvim-tools.search.CommonOpts
+local function resolve_common_search_opts(opts)
     local _ = opts
 end
 
+---@param opts nvim-tools.search.SingleOpts
+local function resolve_single_search_opts(opts)
+    local _ = opts
+    resolve_common_search_opts(opts)
+end
+
+---@param opts nvim-tools.search.AreaOpts
+local function resolve_area_search_opts(opts)
+    local _ = opts
+    resolve_common_search_opts(opts)
+end
+
+---@param win integer Window to search within
 ---@param pattern string
----@param dir -1|0|1
----@param opts nvim-tools.search.Opts
-function M.search(pattern, dir, opts)
+---Area to search:
+---- -2: Upward from the cursor to the beginning of the buffer
+---- -1: Upward from the cursor to the top of the visible buffer
+---- 0: Visible buffer area
+---- nil: Entire buffer
+---- 1: Downward from the cursor to the bottom of the visible buffer
+---- 2: Downward from the cursor to the end of the buffer
+---- Range4: 1 indexed, end inclusive range to search
+---@param range -2|-1|0|nil|1|2|Range4
+---@param opts nvim-tools.search.AreaOpts
+---@return nvim-tools.search.Results results 1,1,1,1 indexed, inclusive ends
+---@return table<integer, string> cache Lines gathered during search. One indexed rows as keys.
+function M.search_area(win, pattern, range, opts)
     vim.validate("pattern", pattern, "string")
     vim.validate("opts", opts, "table", true)
-    vim.validate("dir", dir, function()
-        return dir == -1 or dir == 0 or dir == 1
+    vim.validate("dir", range, function()
+        return range == -1 or range == 0 or range == 1 or type(range) == "table"
     end)
 
     opts = opts or {}
-    resolve_search_opts(opts)
+    resolve_area_search_opts(opts)
 
     pattern = opts.pattern_filter(pattern)
+    local curpos = opts.cursor or fn.getcurpos(win)
+    local buf = api.nvim_win_get_buf(win)
+    local cache = {} ---@type table<integer, string>
 
-    -- TODO: My hope here is that do_search can do its pattern bookkeeping outside of
-    -- nvim_win_call then only run that for the actual search op
-    do_search(pattern, dir, opts)
+    local range_4 = resolve_search_range(buf, curpos, cache, range)
+
+    search_area(pattern, range_4, opts)
+
+    return {}, cache
 end
--- DOCUMENT: The flags table cannot be passed in literally due to behavioral wrapping.
--- - Results gathering/management
--- - FFI usage/PUC-Lua compatibility
--- - Search region handling
+-- TODO: Use table.new here
 
--- TODO: How is pcmark handled?
--- TODO: Must address use cases:
--- - csearch movement
--- - bracket buffer navigation
--- - live search (up or down)
--- - static search (whole buffer, visible)
--- - whole buffer (not just visible parts, no wrapscan)
+---@class nvim-tools.search.SingleOpts : nvim-tools.search.CommonOpts
+---If the search expires before reaching `count`, return the last result.
+---(default: `false`)
+---@field min_one? boolean
+---(default: `false`)
+---@field upward? boolean
+---(default: `false`)
+---@field wrapscan? boolean
 
--- DOCUMENT: PUC-Lua compatibility is best-effort but not prioritized. LuaJIT recommended.
+---@param pattern string
+---@param opts nvim-tools.search.SingleOpts
+---@return integer row, integer col 1,1 indexed, inclusive
+function M.search_single(pattern, opts)
+    vim.validate("pattern", pattern, "string")
+    vim.validate("opts", opts, "table", true)
 
--- NON: The `dir` param should only handle search direction. Do not make it implicitly handle
--- other things. This was a pain point in prior implementations.
+    opts = opts or {}
+
+    resolve_single_search_opts(opts)
+    search_single(pattern, opts)
+
+    return 1, 1
+end
+-- NON: This function should not jump itself or set a pcmark, since that makes it less useful to
+-- any calling code. Should only be getting position.
 
 return M

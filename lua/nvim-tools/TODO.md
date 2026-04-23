@@ -290,118 +290,112 @@
 - Do not handle farsight functions past cleaning of the results themselves
 - I believe the _locator farsight module is the most up-to-date implementation, but it does not contain PUC compatibility
 
+- Must address the following use cases
+  * csearch movement (search single)
+    + If a csearch result cannot be found at the specified count, noop
+  * csearch highlighting
+    + Includes edge trimming
+  * bracket buffer navigation (search single)
+    + Also includes going to the best fit count (See default `[m]m` behavior)
+  + Live search (both ways)
+  + Static search (entire visible buffer)
+  + Whole buffer searches (extended)
+
+- In the interest of accuracy, flexibility, and conceptual sanity:
+  * The search module should only be concerned about getting the results and making sure they are accurate
+    + Fixing LuaJIT results
+    + Whatever PUC fixes are necessary
+    + Fixing over-the-edge errors
+    + Whatever else is in the previous code
+  * Have another module that's used for result editing.
+    + Fold filtering
+    + Post-count resolution
+      + If you want a minimum amount of results
+  * This might cause some operations to be performed sub-optimally. Acceptable tradeoff IMO
+
+* This function does not, in-and-of itself, support multi-window, but needs to support the underlying results manipulation that makes multi-window possible
+
 #### TODO:
 
-- [ ] Separate this concept into two functions:
-  - search_area
-  - search_single
-- [ ] Search area would be in line with what farsight search is now
-- [ ] Search single would return a single eval indexed position
-- The main value of these functions is encoding the quirks of how search() works
-- Wrapscan breaks multiple assumptions behind area search, creating perf cost to manage them
-- I cannot think of a situation where wrapscan would be used to return multiple results
-- Unless you get into additional levels of contrivance simulating wrapscan with multiple forward searches, it is slower
-  * And that isn't even a solution because if you're wrapscan searching up, the "first" result would be the last when coming from the top. Bad in big buffers
-- A significant issue (that needs to be documented somewhere), is that backwards searches to the end index can get "stuck" for reasons I'm unsure of. This is not an issue in JIT, where you can pull the ends from FFI, but it is relevant in PUC Lua, where you need an end search to fill in those values. This means, for wrapscan, you would need to break it into multiple forward searches for it to even work in PUC Lua. Do you always do this behavior? Do you make it decide at runtime?
-- [ ] The goal of search_single, then, would be to take the wrapper code from search_area and apply it to searching for a single result as possible, such as temporary cursor context, win_call, and pattern filtering.
-- [ ] For single count, you want to have an opt to return the best available result or return no result if count fails
-  - [ ] You would check cursor on each iteration, storing the position. Then just return the stored position. search() would just end on its own
-  - [ ] Check btw to see if any of Vim's build-in bracket navigation handles count with best fit. csearch does nothing if count leads to nothing
+* [ ] Results iters
+  * [ ] Sort
+    - Use case: "Closeness" result sorting
+    - Needs to take a predicate so it can handle cases like before/after or pythagorean distance
+      * [ ] These are obvious functions to put into pos
+        * I think before/after is already handled lt/gt
+    - I think the predicate would then need to take all four values from both positions (eight total). Maybe make sorts that don't move all that data
+  * [ ] Filter
+    * [ ] From start/end
+    * [ ] Stop on keep?
+    * [ ] Max to filter
+  * [ ] Map
+  * [ ] Compact
 
-- [ ] Figure out how to sort area results
-  - Use case: "Closeness" result sorting
-  - Needs to take a predicate so it can handle cases like before/after or pythagorean distance
-    * [ ] These are obvious functions to put into pos
-      * I think before/after is already handled lt/gt
-  - [ ] We would very much prefer if sorts only changed the idx values. This kind of perf benefit is the whole point of using an SoA
-    - [ ] Problem: If you want to compact results, the idxs are out of order
-      - Simple solution: Add an active boolean flag to each result
-        * Problem: Introduces an if check (if order is guaranteed, you can increment one index and transfer the value from the other unconditionally)
-        * Lesser problem: This is more complicated
-      - Is supporting compacting necessary? Aren't search results supposed to be ephemeral?
-        * NOT supporting compacting would imply this
-
-- [ ] Results ordering:
-  - Ref combinatorics below
-  - Thinking through use cases first:
-    * For my static jump, I would just fair label top to bottom in winnr order
-    * A user might want to, for a whole buffer jump, label results based on closeness to the cursor
-    * A user might also want to plug in their own closeness calculation (this applies to "static" and "live" cases), such as pythagorean distance
-      + The suggests some kind of plugin function
-  - Non-goal: This function cannot concern itself with multi-window. It can support the cases that multi-window needs to work, but the actual support of multi-window is out of scope
-  - search() just gives you results in the order they are found
-    * This is "closeness" order if searching in a direction without wrapscan
-    * If searching forward, this also doubles as buffer order
-  - Solutions:
-    * Ideally, some kind of layered indexing scheme would store closeness and buffer order
-      + This is hideously complicated
-    * Simpler solution: Just sort the table as needed
-      + There is value anyway in providing a metatable function for sorting based on a predicate. This solves the combinatorial problem of "how do you sort".
-        + I'm also not sure how much you can/should dumb down the result production
-      + Creates perf issue if you just assume this as part of the pipeline
-      + Wrapscan might still be an issue
-      + Since you would just sort the idxs table, this makes compacting the data complicated
-
-- [ ] Search direction combinatorics:
-  - [ ] Visible buffer:
-    - [ ] Wrapscan is irrelevant here
-    - [ ] Always search forward
-    - [ ] Directions:
-      - [ ] Upward
-      - [ ] Downward
-      - [ ] Whole buffer
-  - [ ] Extended buffer:
-    - [ ] Wrapscan:
-      - [ ] Directions:
-        - [ ] Upward
-        - [ ] Downward
-    - [ ] No Wrapscan:
-      - [ ] Directions:
-        - [ ] Upward
-        - [ ] Downward
-        - [ ] Whole buffer
-
-- [ ] In area search, dir and range have overlapping concerns
-
-- [ ] Range should be taken as a Range4
-  - Basically trying to say, either specify one or don't
+- [ ] fold elimination
+  * [ ] keep all
+  * [ ] remove all
+  * [ ] keep first (row == foldclosed())
 
 - [ ] This should plugin to the nvim-tools config module to demo how it works
 
-- [ ] Is there a better way to handle backward searching with wrapscan than an actual backward search?
-  - Even without wrapscan, if you only want x results, or you have to manage count, tricky if you're searching forward
+#### DOCUMENT:
 
-- [ ] Search Ranges
-  - [ ] Entire Buf (wrapscan or no wrapscan)
-    * [ ] Really the entire buf
-    * [ ] Before cursor
-    * [ ] After cursor
-  - On Screen (wrapscan or not wrapscan)
-    * [ ] Whole screen
-    * [ ] Before Cursor
-    * [ ] After cursor
+- [ ] PUC-Lua compatibility is best-effort but not prioritized. LuaJIT recommended.
+- [ ] Backwards searches to the end index can get "stuck" for reasons I'm unsure of. This is not an issue in JIT, where you can pull the ends from FFI, but it is relevant in PUC Lua, where you need an end search to fill in those values.
+  - [ ] This breaks backwards wrapscan in PUC Lua if sending results to the struct, because PUC Lua needs to run a separate search for the end indices
 
-- [ ] Result order
-  - [ ] Top to bottom
-  - [ ] Closeness to origin
-    * [ ] This only makes sense if you're doing on direction from cursor, otherwise it would just be top to bottom
+- [ ] Why there is not an option to get multiple results with wrapscan
+  - [ ] The backwards search issue described above with PUC Lua
+  - [ ] Area search assumes that the results are in buffer order. I am not aware of a way to do wrapscan without breaking this assumption or introducing extra sorting
+  - [ ] If wrapscan is done with backward search, it is slower. If it is done with forward search only, that introduces additional challenges with stitching/sorting the results
+  - [ ] If you're trying to search upward for one result, and you have to wrapscan search from the start of the range, this is slow because you're looking for the last result
+  - [ ] The exceptions this introduces to standard area searching would need to be addressed at runtime. Complicated!
+    - [ ] Part of the value of this module is managing the quirks of the search() function. Handling wrapscan confuses this objective because of how much there would be to manage.
 
-- [ ] The nvim-tools version of this needs to be feature complete, so we're looking at
-  - [ ] fold elimination
-    * [ ] keep all
-    * [ ] remove all
-    * [ ] keep first
-      + [ ] based on result direction
-      + [ ] or based on top to bottom
-  - [ ] LuaJIT and Puc Lua support
-    * [ ] Note the PUC Lua limitations
+- [ ] The flags table cannot be passed in literally due to behavioral wrapping.
+  - Results gathering/management
+  - FFI usage/PUC-Lua compatibility
+  - Search region handling
+
+- [ ] Why the results iterators are the way they are
+  - [ ] Individual list removes are slow, so we want to use filters so we can do bulk removals
+  - [ ] Save boilerplate on aliasing the underlying refs
+
+- [ ] Default csearch will no-op if the count is too high. Default bracket navigations will go to the best result. So you need to know what behavior you're targeting
+
+#### MID:
+
+- [ ] Merge overlapping results
+  - Handles edge case with multi-line results
+
+- [ ] For the main search function, there might be a way to do count with minimum where you add the first result to the struct, then replace instead of appending until you hit count. This is not a use case I need though
 
 #### MAYBE:
 
-- Have the option to set ignorecase+smartcase temporarily for a search
-  * Problem - Unlike atom manipulation, this requires editing Nvim's settings. If you combine this abstraction with atom manipulation, is it too much voodoo?
+- Compacting function:
+  * Use case: Saving RAM
+    + Counterpoint: Search results should be ephemeral
+  * Problem: If you perform a sort on the results, that only changes the values in the idx list. This makes it impossible to unconditionally move down the underlying search data based on the order of the idxs
+  * Bad solutions:
+    + Re-sort the idxs in order
+      + Combinatorially complex
+    + Add a used boolean to results columns
+      + More data to maintain
+      + Another allocation
+      + Add if checking to compacting
 
-A specific flag to reject blank lines or all-whitespace lines. This would be most relevant when dealing with multi-line results, as the end of a result might be on a blank line. I guess you'd have to look for results on a blank line, and either move the start/end points to non-blanks or just remove them. But that risks creating overlapping results. This feels secretly complicated and should be avoided without a concrete use case.
+* Temporarily set ignorecase and/or smartcase
+  + Problem: Adds complexity when also considered with atom manipulation
+    + Though this is improved by doing it all in a callback function
+  + Problem: Bad if there's a hard error
+    + Though search() is pcalled
+
+- A canned iterator over the results to remove ones that are only on blank or all-whitespace lines
+  * Unsure what the use case is though. Problem since this would be slow
+
+#### NON:
+
+- Unless it's absolutely necessary, don't do the position hashing here. Goes against this being a minimal implementation.
 
 ## Tab
 
