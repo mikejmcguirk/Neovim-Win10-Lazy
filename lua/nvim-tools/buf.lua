@@ -152,9 +152,8 @@ end
 ---@return boolean
 function M.is_empty(buf)
     vim.validate("buf", buf, require("nvim-tools.types").is_uint)
-    return api.nvim_buf_call(buf, function()
-        return fn.wordcount().bytes == 0
-    end)
+    local line_count = api.nvim_buf_line_count(buf)
+    return line_count == 1 and api.nvim_buf_get_lines(buf, 0, 1, false)[1] == ""
 end
 
 ---@param buf integer

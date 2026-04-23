@@ -95,3 +95,62 @@ vim.api.nvim_create_user_command("HelpCurwin", function(opts)
     local cmd = HelpCurwin(subject)
     vim.cmd(cmd)
 end, { nargs = "?", complete = "help", bar = true })
+
+--- Collects all `\k\+` (keyword) matches starting from the current cursor position
+--- to the end of the buffer using `vim.regex:match_line`. Returns two tables:
+--- `rows` (1-based line numbers) and `cols` (0-based byte columns).
+--- Times the operation with `vim.uv.hrtime()`.
+-- local function collect_keywords_from_cursor()
+--     local start_time = vim.uv.hrtime()
+--
+--     local re = vim.regex([[\k\+]])
+--
+--     local buf = vim.api.nvim_get_current_buf()
+--     local cursor = vim.api.nvim_win_get_cursor(0) -- {1-based lnum, 0-based byte col}
+--     local start_lnum = cursor[1] - 1 -- convert to 0-based for API
+--     local start_col = cursor[2]
+--
+--     local rows = {}
+--     local cols = {}
+--
+--     local last_lnum = vim.api.nvim_buf_line_count(buf) - 1
+--
+--     for lnum = start_lnum, last_lnum do
+--         local search_start = (lnum == start_lnum) and start_col or 0
+--
+--         while true do
+--             -- match_line(bufnr, lnum_0based, start_byte?, end_byte?)
+--             -- Returns match_start / match_end RELATIVE to `search_start`
+--             local rel_start, rel_end = re:match_line(buf, lnum, search_start)
+--             if not rel_start then
+--                 break
+--             end
+--
+--             local abs_col = search_start + rel_start
+--
+--             table.insert(rows, lnum + 1) -- store as 1-based row
+--             table.insert(cols, abs_col)
+--
+--             -- Advance past this match (rel_end is also relative to search_start)
+--             search_start = search_start + rel_end
+--
+--             -- Safety: \k\+ never produces zero-width matches, but guard anyway
+--             if rel_end <= 0 then
+--                 break
+--             end
+--         end
+--     end
+--
+--     local duration_ms = (vim.uv.hrtime() - start_time) / 1e6
+--
+--     vim.notify(
+--         string.format("Collected %d keywords from cursor in %.2f ms", #rows, duration_ms),
+--         vim.log.levels.INFO
+--     )
+--
+--     return rows, cols
+-- end
+--
+-- vim.keymap.set("n", "<leader><leader>", function()
+--     collect_keywords_from_cursor()
+-- end)

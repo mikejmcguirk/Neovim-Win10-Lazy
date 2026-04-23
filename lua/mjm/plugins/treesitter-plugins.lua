@@ -195,15 +195,10 @@ local function map_climber(ev)
     local sel_forward_end = { buf = ev.buf, desc = "Select forward and move to node end" }
     set({ "o" }, "]n", "<Plug>(treeclimber-select-forward-end)", sel_forward_end)
 
-    local s_back = { buf = ev.buf, desc = "Select first sibling" }
-    set({ "n", "x", "o" }, "[N", "<Plug>(treeclimber-select-siblings-backward)", s_back)
-    local s_front = { buf = ev.buf, desc = "Select last sibling" }
-    set({ "n", "x", "o" }, "]N", "<Plug>(treeclimber-select-siblings-forward)", s_front)
-
     local grow_back = { buf = ev.buf, desc = "Grow selection backward" }
-    set({ "n", "x", "o" }, "[<C-n>", "<Plug>(treeclimber-select-grow-backward)", grow_back)
+    set({ "n", "x", "o" }, "[N", "<Plug>(treeclimber-select-grow-backward)", grow_back)
     local grow_forward = { buf = ev.buf, desc = "Grow selection forward" }
-    set({ "n", "x", "o" }, "]<C-n>", "<Plug>(treeclimber-select-grow-forward)", grow_forward)
+    set({ "n", "x", "o" }, "]N", "<Plug>(treeclimber-select-grow-forward)", grow_forward)
 
     -- PR: I would be good to have shrink backward and shrink forward maps. Would put them on
     -- alt
@@ -270,10 +265,11 @@ return {
     {
         -- MID: Plugin enter errors when trying to grow selection in markdown. Unsure if this is
         -- a treeclimber or Neovim issue
+        -- Can test by comparing Nvim's built-in selection.
         "Dkendal/nvim-treeclimber",
         init = function()
-            -- Set to an empty function to prevent the default hl mixing from running. This fails,
-            -- I suspect, because I have a lot of transparent highlighting set
+            -- Treeclimber's default hl mixing errors on my colorscheme. I think this is because I
+            -- use transparent bgs. Prevent it from running with an empty function.
             api.nvim_set_var("treeclimber", { highlight = function() end })
 
             api.nvim_set_hl(0, "TreeClimberParent", { link = "Search" })

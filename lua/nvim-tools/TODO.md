@@ -31,6 +31,8 @@
 
 - [ ] For compatibility, make sure any autocmd API usage or vim.keymap.sets or whatever use "buffer" semantics, and make a note to change those all to "buf" when v0.13 comes out
 
+- [ ] https://github.com/neovim/neovim/pull/39222 - Would just copy this Nvim module. Note as such.
+
 #### FUTURE:
 
 - [ ] When https://github.com/neovim/neovim/issues/38420 releases, update everything to use it.
@@ -317,6 +319,17 @@
 
 #### TODO:
 
+- [ ] search_area needs to be replaced with match_area
+  - Empirical testing has revealed that search is non-trivially slower than the pure Lua code I'm running. Like 5-10x+ in some cases
+  - We simply are not doing bespoke Lua-based searching. The amount of dumb philosophical issues that got into was insane
+  - match_line seems to be the only viable solution. As it doesn't allocate heap on return
+  - It is still slower than the pure Lua code, but more like ~3x. At that point I'm willing to make the tradeoff for flexibility and less bespoke code
+  - This also eliminates the whole JIT vs PUC question, since that doesn't apply to single search AFAIK (I don't know why I even have code sitting around for that).
+
+- [ ] Results
+  - [ ] Needs to support being able to binary search through the results based on arbitrary criteria.
+    - This is to support the multi-window case where multiple windows have overlapping results in the same buffer
+
 * [ ] Results iters
   * [ ] Sort
     - Use case: "Closeness" result sorting
@@ -392,6 +405,8 @@
 
 - A canned iterator over the results to remove ones that are only on blank or all-whitespace lines
   * Unsure what the use case is though. Problem since this would be slow
+
+- Allow adding the "c" flag and trimming ends. My concern here is that trimming from the start is expensive because you have to shift down the entire idx list. The only edge case I'm aware of this addressing is the whole keyword case in csearch. No need for this.
 
 #### NON:
 

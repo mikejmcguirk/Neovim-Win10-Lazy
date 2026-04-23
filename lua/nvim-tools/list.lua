@@ -40,7 +40,7 @@ function M.copy(t)
     vim.validate("t", t, "table")
 
     local len = #t
-    local ret = require("nvim-tools.table").table_new(len, 0)
+    local ret = require("nvim-tools.table").new(len, 0)
     for i = 1, len do
         ret[i] = t[i]
     end

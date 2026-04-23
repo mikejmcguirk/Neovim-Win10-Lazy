@@ -1,29 +1,30 @@
--- local api = vim.api
-
 local M = {}
 
----@type fun(narray: integer, nhash: integer): table
-M.table_new = (function()
-    local t_new = require("table.new")
-    if t_new then
-        ---@diagnostic disable-next-line: undefined-field
-        return table.new
-    else
-        return function()
-            return {}
-        end
-    end
-end)()
-
----@generic T
----@param t table<T, T>
-function M.clear(t)
-    vim.validate("t", t, "table")
-
-    for k, _ in pairs(t) do
-        t[k] = nil
+-- Port of Neovim core logic since their table module is private
+local has_new, new = pcall(require, "table.new")
+if not has_new then
+    ---@diagnostic disable-next-line: unused-local
+    new = function(narray, nhash)
+        return {}
     end
 end
+
+---@type fun(narray: integer, nhash: integer): table
+M.new = new
+
+-- Port of Neovim core logic since their table module is private
+local has_clear, clear = pcall(require, "table.clear")
+if not has_clear then
+    clear = function(t)
+        for k in pairs(t) do
+            t[k] = nil
+        end
+    end
+end
+
+---@generic T
+---@type fun(t:T)
+M.clear = clear
 
 ---Performs a shallow copy
 ---@generic T

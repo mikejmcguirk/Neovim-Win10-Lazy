@@ -83,6 +83,7 @@
 
 - [ ] lampshade
   - The least exciting but also the simplest
+  - [ ] Maybe use the full config module, maybe use g/b variables. Big thing is - the user should not have to re-write the entire autocmd scripting to customize it
 
 - [ ] Once I have a working example (probably farsight), need to see how config metatable performance functions in real use cases. Based on that, we can evaluate how the question of internal interfaces as lightweight versions of the public APIs should be handled
   - [ ] Realistically though, because of config resolution, it's probably going to just be using skip_validation
@@ -99,7 +100,7 @@
   - It is the project that is actually released and exists, so letting it languish in a liminal state feels wrong
 
 - [ ] farsight
-  - [ ] Maybe use the full config module, maybe use g/b variables. Big thing is - the user should not have to re-write the entire autocmd scripting to customize it
+  - [ ] If doing multi-win, and buf is in multiple wins, should check to see if there is overlapping area. If so, should not redo search() in same area. Should be able to copy over targets
 
 - [ ] rancher
   - [ ] qf positions are one indexed, end exclusive (see lhelpgrep results). The preview and diagnostic conversion code needs to account for this (same with grep perhaps)
