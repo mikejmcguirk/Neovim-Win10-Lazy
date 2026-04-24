@@ -1180,11 +1180,7 @@ function Jump.jump(opts)
     end
 
     local win_info = get_win_info(wins)
-    local start_time = vim.uv.hrtime()
     local win_targets, win_dim_rows = get_targets(wins, win_info, opts)
-    local end_time = vim.uv.hrtime()
-    local duration_ms = (end_time - start_time) / 1e6
-    print(string.format("hl_forward took %.2f ms", duration_ms))
     local j_win, j_row, j_col = get_jump_info(win_targets)
     if j_win == 0 then
         populate_target_labels(wins, win_targets, opts.tokens)

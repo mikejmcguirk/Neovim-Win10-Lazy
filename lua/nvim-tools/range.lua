@@ -62,29 +62,29 @@ function M.get_regionpos4(pos_1, pos_2, mode, exclusive)
     }
 end
 
----@param row integer 1 indexed
----@param col integer 1 indexed, inclusive
----@param fin_row integer 1 indexed
----@param fin_col integer 1 indexed, inclusive
+---1,1,1,1 indexed, end inclusive.
+---Modified in place. Output is 0,0,0,0 indexed, end exclusive
+---@param eval_range Range4
 ---@param buf integer
----@return integer, integer, integer, integer 0,0,0,0 - exclusive second pos end
-function M.eval_to_ts(row, col, fin_row, fin_col, buf)
+function M.eval_to_ts(eval_range, buf)
+    vim.validate("eval_range", eval_range, "table")
     local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col, is_uint)
-    vim.validate("fin_row", fin_row, is_uint)
-    vim.validate("fin_col", fin_col, is_uint)
     vim.validate("buf", buf, is_uint)
 
-    local row_0 = row - 1
-    local col_0 = col - 1
-    local fin_row_0 = fin_row - 1
+    eval_range[1] = eval_range[1] - 1
+    eval_range[2] = eval_range[2] - 1
 
-    local line = api.nvim_buf_get_lines(buf, fin_row - 1, fin_row, false)[1]
-    local distance = vim.str_utf_end(line, fin_col)
-    local fin_col__0 = fin_col + distance
+    local fin_row_0 = eval_range[3] - 1
+    local line = api.nvim_buf_get_lines(buf, fin_row_0, fin_row_0 + 1, false)[1]
+    if #line > 0 then
+        local fin_col_1 = eval_range[4]
+        local distance = vim.str_utf_end(line, fin_col_1)
+        eval_range[4] = fin_col_1 + distance
+    else
+        eval_range[4] = 0
+    end
 
-    return row_0, col_0, fin_row_0, fin_col__0
+    eval_range[3] = fin_row_0
 end
 
 ---@param lnum integer 1 indexed
@@ -121,6 +121,7 @@ function M.raw_qf_to_mark_pos(lnum, col, vcol, bufnr)
 
     return row_1, col_0
 end
+-- TODO: This should be in pos and it should be called "from_raw_qf"
 -- MAYBE: This isn't really a "range" function, but keeping with other qf range op for now.
 
 ---@param lnum integer 1 indexed
@@ -183,6 +184,14 @@ function M.resolve_raw_qf(lnum, col, end_lnum, end_col, vcol, bufnr)
     end
 
     return { row_1, col_1, fin_row_1, fin_col__1 }
+end
+
+---@param qf_range Range4
+function M.qf_to_ts(qf_range)
+    qf_range[1] = qf_range[1] - 1
+    qf_range[2] = qf_range[2] - 1
+    qf_range[3] = qf_range[3] - 1
+    qf_range[4] = qf_range[4] - 1
 end
 
 return M

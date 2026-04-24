@@ -39,7 +39,7 @@ end
 ---@field min_len? integer
 
 ---@generic T
----@param t T[]
+---@param t any
 ---@param opts nvim-tools.types.ValidateListOpts
 ---@return boolean, string|nil
 function M.valid_list(t, opts)
@@ -89,8 +89,6 @@ function M.valid_list(t, opts)
 
     return true
 end
--- MID: This does not totally work because if you use this function to validate an optional
--- variable, Lua_Ls complains because it could be nil.
 -- MID: opts.func is... fine here, but since you can already take the list and write bespoke logic,
 -- it doesn't do that much. Remove?
 -- MID: Add the ability to send a custom function for item type validation

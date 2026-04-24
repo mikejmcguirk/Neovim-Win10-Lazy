@@ -279,6 +279,10 @@
 
 ## range
 
+#### META:
+
+- At least for now, doing range conversions as in-place conversions. Unlike positions, there's less motivation to take them out of a table structure. Doing them in place prevents additional allocations.
+
 #### FUTURE:
 
 - Lots you could do with ranges, but will wait for use cases
