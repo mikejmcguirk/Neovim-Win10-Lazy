@@ -290,97 +290,87 @@
 
 ## Search
 
-#### META:
-
-- Given the farsight case, the search results struct needs to be a subset of the targets struct.
-- Do not handle farsight functions past cleaning of the results themselves
-- I believe the _locator farsight module is the most up-to-date implementation, but it does not contain PUC compatibility
-
-- Must address the following use cases
-  * csearch movement (search single)
-    + If a csearch result cannot be found at the specified count, noop
-  * csearch highlighting
-    + Includes edge trimming
-  * bracket buffer navigation (search single)
-    + Also includes going to the best fit count (See default `[m]m` behavior)
-  + Live search (both ways)
-  + Static search (entire visible buffer)
-  + Whole buffer searches (extended)
-
-- In the interest of accuracy, flexibility, and conceptual sanity:
-  * The search module should only be concerned about getting the results and making sure they are accurate
-    + Fixing LuaJIT results
-    + Whatever PUC fixes are necessary
-    + Fixing over-the-edge errors
-    + Whatever else is in the previous code
-  * Have another module that's used for result editing.
-    + Fold filtering
-    + Post-count resolution
-      + If you want a minimum amount of results
-  * This might cause some operations to be performed sub-optimally. Acceptable tradeoff IMO
-
-* This function does not, in-and-of itself, support multi-window, but needs to support the underlying results manipulation that makes multi-window possible
-
 #### TODO:
 
-- [ ] search_area needs to be replaced with match_area
-  - Empirical testing has revealed that search is non-trivially slower than the pure Lua code I'm running. Like 5-10x+ in some cases
-  - We simply are not doing bespoke Lua-based searching. The amount of dumb philosophical issues that got into was insane
-  - match_line seems to be the only viable solution. As it doesn't allocate heap on return
-  - It is still slower than the pure Lua code, but more like ~3x. At that point I'm willing to make the tradeoff for flexibility and less bespoke code
-  - This also eliminates the whole JIT vs PUC question, since that doesn't apply to single search AFAIK (I don't know why I even have code sitting around for that).
+- [ ] Results:
+  - [ ] Produces the class for the results struct of arrays
+  - [ ] Needs to support the multi-window case of - Multiple windows have the same buffer, we know the same part of the buffer is visible in multiple windows, so:
+    - [ ] We need to get the data from one set of targets so we know what not to re-search
+    - [ ] We need to copy the old data from the old targets to the new one
+    - [ ] Complicated by custom ordering
+  - [ ] Results iters
+    * [ ] Sort
+      - Use case: "Closeness" result sorting
+      - Needs to take a predicate so it can handle cases like before/after or pythagorean distance
+        * [ ] These are obvious functions to put into pos
+          * I think before/after is already handled lt/gt
+      - I think the predicate would then need to take all four values from both positions (eight total). Maybe make sorts that don't move all that data
+    * [ ] Filter
+      * [ ] From start/end
+      * [ ] Stop on keep?
+      * [ ] Max to filter
+    * [ ] Map
+    * [ ] Compact
 
-- [ ] Results
-  - [ ] Needs to support being able to binary search through the results based on arbitrary criteria.
-    - This is to support the multi-window case where multiple windows have overlapping results in the same buffer
+- [ ] Search:
+  - [ ] Performs the actual search/match and checks/adjust results for accuracy
+    - [ ] Out of bounds results (particularly on zero-width)
+    - [ ] How does match_line handle multi-line searches?
+    - [ ] Does match handle zero-width expressions correctly?
+    - [ ] Check _locator and _common for other fixes
+  - [ ] This should plugin to the nvim-tools config module to demo how it works
 
-* [ ] Results iters
-  * [ ] Sort
-    - Use case: "Closeness" result sorting
-    - Needs to take a predicate so it can handle cases like before/after or pythagorean distance
-      * [ ] These are obvious functions to put into pos
-        * I think before/after is already handled lt/gt
-    - I think the predicate would then need to take all four values from both positions (eight total). Maybe make sorts that don't move all that data
-  * [ ] Filter
-    * [ ] From start/end
-    * [ ] Stop on keep?
-    * [ ] Max to filter
-  * [ ] Map
-  * [ ] Compact
+- [ ] Search Filters (unsure about the naming):
+  - [ ] Canned functions for filtering search results
+    - [ ] Fold filtering
+      * [ ] keep all
+      * [ ] remove all
+      * [ ] keep first (row == foldclosed())
 
-- [ ] fold elimination
-  * [ ] keep all
-  * [ ] remove all
-  * [ ] keep first (row == foldclosed())
+  - [ ] Maybe document: This approach accepts some degree of tradeoff in efficiency. I am not aware of any accuracy check that requires row adjustment. It is completely possible to filter fold rows first, saving work on subsequent adjustments. But fold filtering is not mandatory, so it should not be a part of the search module. The conceptual separation here is important to prevent muddying the waters about what each function is meant to do (seen in Farsight, where the search code is a blur because it jumps between so many different things).
 
-- [ ] This should plugin to the nvim-tools config module to demo how it works
+- [ ] Once the results class is baked in, go back to what I have for Farsight and make sure they fit together.
+
+- [ ] The end-state search implementation needs to support the following use cases:
+  - [ ] csearch movement
+    - Note: If too large a count is provided to find a result, it's a no-op
+  - [ ] csearch highlighting
+    - Note: At least for now, the edge trimming use case will not be supported. I'm not sure if match_line can return results that spill over the start index, and trimming entries from the start causes all results to have to be re-indexed during filtering, which is O(n). For this case, document that something like `\k\+` needs to be used as the pattern (sequences of keyword chars with an arbitrary beginning and end) rather than whole word matching.
+  - [ ] Bracket navigation
+    - [ ] Support wrapscan
+    - [ ] Unlike csearch, if too large a count is provided, Vim's default behavior is to find the best result.
+  - [ ] Farsight live search
+    - [ ] Needs to be able to handle forwards and backwards, visible buffer constrained.
+  - [ ] Farsight static search
+    - [ ] Needs to handle the whole buffer, visible area constrained.
+  - [ ] Whole buffer searches
+    - [ ] Annotator/rancher both want this.
+  - [ ] While multi-window searching is not a direct concern of this code, it does need to provide the underlying components to support it
 
 #### DOCUMENT:
 
-- [ ] PUC-Lua compatibility is best-effort but not prioritized. LuaJIT recommended.
-- [ ] Backwards searches to the end index can get "stuck" for reasons I'm unsure of. This is not an issue in JIT, where you can pull the ends from FFI, but it is relevant in PUC Lua, where you need an end search to fill in those values.
-  - [ ] This breaks backwards wrapscan in PUC Lua if sending results to the struct, because PUC Lua needs to run a separate search for the end indices
+- [ ] Search area
+  - [ ] Because search_area uses match_line under the hood, it cannot handle multi-line results.
+  - [ ] No wrapscan because it introduces contrived questions about how results are ordered
 
-- [ ] Why there is not an option to get multiple results with wrapscan
-  - [ ] The backwards search issue described above with PUC Lua
-  - [ ] Area search assumes that the results are in buffer order. I am not aware of a way to do wrapscan without breaking this assumption or introducing extra sorting
-  - [ ] If wrapscan is done with backward search, it is slower. If it is done with forward search only, that introduces additional challenges with stitching/sorting the results
-  - [ ] If you're trying to search upward for one result, and you have to wrapscan search from the start of the range, this is slow because you're looking for the last result
-  - [ ] The exceptions this introduces to standard area searching would need to be addressed at runtime. Complicated!
-    - [ ] Part of the value of this module is managing the quirks of the search() function. Handling wrapscan confuses this objective because of how much there would be to manage.
+- [ ] Results
+  - [ ] Why the results iterators are the way they are
+    - [ ] Probably best done in the function descriptions, rather than as a philosophical thing
+    - [ ] Individual list removes are slow, so we want to use filters so we can do bulk removals
+    - [ ] Save boilerplate on aliasing the underlying refs
 
-- [ ] The flags table cannot be passed in literally due to behavioral wrapping.
-  - Results gathering/management
-  - FFI usage/PUC-Lua compatibility
-  - Search region handling
-
-- [ ] Why the results iterators are the way they are
-  - [ ] Individual list removes are slow, so we want to use filters so we can do bulk removals
-  - [ ] Save boilerplate on aliasing the underlying refs
-
-- [ ] Default csearch will no-op if the count is too high. Default bracket navigations will go to the best result. So you need to know what behavior you're targeting
+- [ ] Search single
+  - [ ] Why flag behavior is controlled the way it is
+  - [ ] Default csearch will no-op if the count is too high. Default bracket navigations will go to the best result. So you need to know what behavior you're targeting
+    - [ ] Do this as an example note in the opts
 
 #### MID:
+
+- [ ] For search_area, include support for using the results of getwininfo to filter off-screen matches on non-wrapped buffers.
+  - Roughly, the left boundary would be used as the init_col, and the right boundary would be an additional condition for cutting of search on a particular line
+    * For left bounds, I'm pretty sure you can just do a sub-function for calculating the default init_col
+    * For right bound, this introduces another condition for checking stop. I think you could handle this calculation at the end of each line like stop_col currently is, and feed the right bounds to match_line. At least not adding significant additional checks per line.
+  - This would support the Farsight labeling case for live/static jumping.
 
 - [ ] Merge overlapping results
   - Handles edge case with multi-line results

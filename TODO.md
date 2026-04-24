@@ -60,6 +60,7 @@
   - [ ] All functionalities should use the set pc mark behavior described in meta
 
 - [ ] docgen
+  - [ ] Go through all docs and look for instances of "See". I'm pretty sure there's a special annotation for those.
 
 - [ ] testing framework
   - Conversation in here about Nvim as Lua runner: https://github.com/neovim/neovim/pull/39116

@@ -193,7 +193,7 @@ end
 ---@param cur_win integer
 ---@param win integer
 ---@param f function
----@return any
+---@return any, any
 function M.call_in(cur_win, win, f)
     if cur_win == win then
         return f()

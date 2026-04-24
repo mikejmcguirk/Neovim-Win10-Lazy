@@ -12,6 +12,35 @@
 local Results = {}
 Results.__index = Results
 
+---One indexed, as with other Lua indexing
+---If stop is zero, iterate to the length
+---Stop values less than zero will iterate to the length offset by the absolute value
+---@param start? integer
+---@param stop? integer
+---@param rev? boolean
+---@param len integer
+---@return integer, integer, integer
+local function get_iters(start, stop, rev, len)
+    start = start or 1
+    stop = stop or len
+    rev = rev or false
+
+    if start <= 0 then
+        error("Start iter index " .. start .. " cannot be less than one")
+    end
+
+    local init = math.min(start, len)
+    local limit = stop <= 0 and len + stop or stop
+    local iter = rev and -1 or 1
+
+    return init, limit, iter
+end
+-- TODO: Weird conceptual issue where you can create a null iter with negative values but not
+-- intentionally.
+-- TODO: This needs a flag to set start to 0 for actual iterator functions
+-- DOCUMENT: How all these iters work in one place.
+-- LOW: I have a feeling there is a fancier way to calculate limit.
+
 -----------------
 -- MARK: Utils --
 -----------------
@@ -33,6 +62,8 @@ end
 -- MARK: Initialization --
 --------------------------
 
+---@param size integer
+---@return nvim-tools.Results
 function Results.new(size)
     local self = setmetatable({}, Results)
     local tn = require("nvim-tools.table").new
@@ -163,11 +194,10 @@ end
 ---@param predicate fun(row:integer, col:integer): boolean
 function Results:filter_pos_stop_on_keep(start, stop, fin, rev, predicate)
     local idxs = self.active_idxs
-    local rows, cols = self:get_positions(fin)
+    local len_active_idxs = #idxs
+    local init, limit, iter = get_iters(start, stop, rev, len_active_idxs)
 
-    local init = rev and stop or start
-    local limit = rev and start or stop
-    local iter = rev and -1 or 1
+    local rows, cols = self:get_positions(fin)
 
     local j = init
     for i = init, limit do
@@ -187,6 +217,5 @@ function Results:filter_pos_stop_on_keep(start, stop, fin, rev, predicate)
     require("farsight.util").list_compact(idxs, start, j)
 end
 -- TODO: Test that this combines rev and fwd properly
--- TODO: Start and stop need to be adjusted and converted to idx iters
 
 return Results
