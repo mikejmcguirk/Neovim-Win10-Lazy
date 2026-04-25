@@ -802,3 +802,7 @@ end
 -- MID: It would be better if buf_line_count were not ephemeral.
 
 return M
+
+-- MAYBE: How would wrapscan searches be checked? Should it be implicit based on the option, or
+-- would we need to check it explicitly for the purposes of other bookkeeping?
+-- MAYBE: Because we always search forward, how would backward wrap scan searches be performed?
