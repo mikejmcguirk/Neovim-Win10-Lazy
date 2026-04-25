@@ -159,6 +159,8 @@ function M.list_compact(t, j, i)
         t[k] = nil
     end
 end
+-- TODO: This function is bad. It's used for two different things, both of which are confusing.
+-- Outline its logic as appropriate and remove.
 
 ---@generic T
 ---@param t T[]

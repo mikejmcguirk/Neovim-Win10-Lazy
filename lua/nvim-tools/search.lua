@@ -32,7 +32,7 @@ local M = {}
 
 ---@param buf integer
 ---@param pattern string
----@param range_4 Range4
+---@param range_4 Range4 0,0,0,0 indexed, end exclusive
 ---@param opts nvim-tools.search.AreaOpts
 ---@return nvim-tools.Results
 local function run_match_area(buf, pattern, range_4, opts)
@@ -47,29 +47,31 @@ local function run_match_area(buf, pattern, range_4, opts)
 
     local active_idxs = results.active_idxs
     local next_idx = results.next_idx
-    local start_rows = results.start_rows
-    local start_cols = results.start_cols
-    local fin_rows = results.fin_rows
-    local fin_cols = results.fin_cols
+    local start_rows, start_cols, fin_rows, fin_cols = results:get_both_pos()
 
     local i = range_4[1]
     local init_col = range_4[2]
     local last_row = range_4[3]
     local last_col = range_4[4]
-    local stop_col = i == last_row and last_col or nil
+    local line = api.nvim_buf_get_lines(buf, i, i + 1, false)[1]
+    local stop_col = #line
+    if i == last_row then
+        -- Stop col needs to be end exclusive so you can get a match if it's a one char
+        -- search at the very end of the line
+        stop_col = math.min(last_col + 1, #line - 1)
+    end
 
     local count1 = opts.count or 1
     local total_results = 0
     local at_max_results = false
     while i <= last_row and not at_max_results do
         while true and not at_max_results do
-            local start, fin
-            if not stop_col then
-                start, fin = regex.match_line(regex, buf, i, init_col)
-            else
-                start, fin = regex.match_line(regex, buf, i, init_col, stop_col)
+            -- TODO: sloppy
+            if init_col >= stop_col then
+                break
             end
 
+            local start, fin = regex.match_line(regex, buf, i, init_col, stop_col)
             if not (start and fin) then
                 break
             end
@@ -90,12 +92,23 @@ local function run_match_area(buf, pattern, range_4, opts)
                 count1 = count1 - 1
             end
 
-            init_col = fin_col
+            -- Needed to handle zero-width expressions
+            init_col = math.max(fin_col, init_col + 1)
         end
 
         i = i + 1
+        -- TODO: Sloppy
+        if i > last_row then
+            break
+        end
+
         init_col = 0
-        stop_col = i == last_row and last_col or nil
+        -- TODO: Get these in bulk once
+        line = api.nvim_buf_get_lines(buf, i, i + 1, false)[1]
+        stop_col = #line - 1
+        if i == last_row then
+            stop_col = math.min(last_col, #line - 1)
+        end
     end
 
     results.next_idx = next_idx
@@ -124,7 +137,7 @@ local function resolve_search_range(win, buf, cache, range, opts)
     local range_4 = { 0, 0, 0, 0 }
 
     if range <= 0 or range == nil then
-        range_4[1] = (range == -2 or range == nil) and 1 or fn.line("w0")
+        range_4[1] = (range == -2 or range == nil) and 1 or vim.call("line", "w0", win)
         range_4[2] = 1
     else
         range_4[1] = curpos[2]
@@ -136,7 +149,7 @@ local function resolve_search_range(win, buf, cache, range, opts)
         if range == 2 or range == nil then
             row = api.nvim_buf_line_count(buf)
         else
-            row = fn.line("w$")
+            row = vim.call("line", "w$", win) ---@type integer
         end
 
         range_4[3] = row
@@ -151,6 +164,8 @@ local function resolve_search_range(win, buf, cache, range, opts)
 
     return range_4
 end
+-- NOTE: vim.call used here because this function could be called multiple times in a multi-window
+-- search.
 
 ---@class nvim-tools.search.CommonOpts
 ---Cache of buffer lines. One indexed
@@ -197,6 +212,7 @@ function M.search_area(win, pattern, range, opts)
             or nty.valid_list(range, { item_type = "number", len = 4 })
     end, true)
 
+    win = win == 0 and api.nvim_get_current_win() or win
     opts = opts or {}
     if opts.pattern_filter then
         pattern = opts.pattern_filter(pattern)

@@ -292,27 +292,9 @@
 
 #### TODO:
 
-- [ ] Results:
-  - [ ] Produces the class for the results struct of arrays
-  - [ ] Needs to support the multi-window case of - Multiple windows have the same buffer, we know the same part of the buffer is visible in multiple windows, so:
-    - [ ] We need to get the data from one set of targets so we know what not to re-search
-    - [ ] We need to copy the old data from the old targets to the new one
-    - [ ] Complicated by custom ordering
-  - [ ] Results iters
-    * [ ] Sort
-      - Use case: "Closeness" result sorting
-      - Needs to take a predicate so it can handle cases like before/after or pythagorean distance
-        * [ ] These are obvious functions to put into pos
-          * I think before/after is already handled lt/gt
-      - I think the predicate would then need to take all four values from both positions (eight total). Maybe make sorts that don't move all that data
-    * [ ] Filter
-      * [ ] From start/end
-      * [ ] Stop on keep?
-      * [ ] Max to filter
-    * [ ] Map
-    * [ ] Compact
-
 - [ ] Search:
+  - [ ] Does search_area even need to support count?
+  - [ ] Outline the function to get the range so it can be used to pre-build the Range4 values.
   - [ ] Performs the actual search/match and checks/adjust results for accuracy
     - [ ] Out of bounds results (particularly on zero-width)
     - [ ] How does match_line handle multi-line searches?
@@ -326,6 +308,10 @@
       * [ ] keep all
       * [ ] remove all
       * [ ] keep first (row == foldclosed())
+  - [ ] Pre-built sorts:
+    - [ ] Row/col closeness to a pos
+    - [ ] Pythagorean distance to a pos
+    - [ ] Result order (fwd and reverse)
 
   - [ ] Maybe document: This approach accepts some degree of tradeoff in efficiency. I am not aware of any accuracy check that requires row adjustment. It is completely possible to filter fold rows first, saving work on subsequent adjustments. But fold filtering is not mandatory, so it should not be a part of the search module. The conceptual separation here is important to prevent muddying the waters about what each function is meant to do (seen in Farsight, where the search code is a blur because it jumps between so many different things).
 
@@ -377,7 +363,11 @@
 
 - [ ] For the main search function, there might be a way to do count with minimum where you add the first result to the struct, then replace instead of appending until you hit count. This is not a use case I need though
 
+- [ ] The fold functions are mostly redundant code. But I don't think passing last_row and last_foldclosed to the predicate would be ergonomic.
+
 #### MAYBE:
+
+- If use cases come up for sorts that don't need as much initial information, add Results functions to handle them.
 
 - Compacting function:
   * Use case: Saving RAM

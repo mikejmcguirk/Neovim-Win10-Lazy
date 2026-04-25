@@ -12,9 +12,14 @@
 local Results = {}
 Results.__index = Results
 
----One indexed, as with other Lua indexing
----If stop is zero, iterate to the length
----Stop values less than zero will iterate to the length offset by the absolute value
+---@brief All iterators are one indexed, as with other Lua constructs.
+---The start iterator must be at least one, and is clamped to the length of the iterated list.
+---The end iterator is also clamped to the length of the list.
+---If the end iterator is zero or less, the limit will be the length minus that value.
+---
+---Example: 1, 0 - Iterate from the first index to the end
+---Example: 1, -1 - Iterate from the first index to the second-to-last index
+
 ---@param start? integer
 ---@param stop? integer
 ---@param rev? boolean
@@ -35,28 +40,29 @@ local function get_iters(start, stop, rev, len)
 
     return init, limit, iter
 end
--- TODO: Weird conceptual issue where you can create a null iter with negative values but not
--- intentionally.
--- TODO: This needs a flag to set start to 0 for actual iterator functions
--- DOCUMENT: How all these iters work in one place.
--- LOW: I have a feeling there is a fancier way to calculate limit.
+-- MAYBE: If we create an iterator that returns a function, this function needs a flag to
+-- zero-index start (since the iterator always does one).
 
 -----------------
 -- MARK: Utils --
 -----------------
 
+---Returns the active references
 ---@param fin boolean
 ---@return integer[], integer[]
-function Results:get_positions(fin)
-    local rows = fin and self.fin_rows or self.start_rows
-    local cols = fin and self.fin_cols or self.start_cols
-    return rows, cols
+function Results:get_pos(fin)
+    if fin then
+        return self.fin_rows, self.fin_cols
+    else
+        return self.start_rows, self.start_cols
+    end
 end
--- TODO: I guess this naming is fine. Should be
--- - get_pos (one position)
--- - get_positions (get tbls for start or fin)
--- - get_both_pos (get a start + fin position)
--- - get_both_positions (get start and fin pos tbls)
+
+-- Returns the active references
+---@return integer[], integer[], integer[], integer[]
+function Results:get_both_pos()
+    return self.start_rows, self.start_cols, self.fin_rows, self.fin_cols
+end
 
 --------------------------
 -- MARK: Initialization --
@@ -95,6 +101,11 @@ function Results:append(start_row, start_col, fin_row, fin_col)
     self.next_idx = next_idx + 1
 end
 
+---@return integer
+function Results:get_count_active_idxs()
+    return #self.active_idxs
+end
+
 ---@param start integer
 ---@param stop integer
 ---@param fin boolean
@@ -102,15 +113,16 @@ end
 ---@param predicate fun(row:integer, col:integer): boolean
 ---@return integer|nil, integer|nil, integer|nil
 function Results:find_pos(start, stop, fin, rev, predicate)
-    local idxs = self.active_idxs
-    local rows, cols = self:get_positions(fin)
+    local active_idxs = self.active_idxs
+    local len_active_idxs = #active_idxs
+    if len_active_idxs == 0 then
+        return
+    end
 
-    local init = rev and stop or start
-    local limit = rev and start or stop
-    local iter = rev and -1 or 1
-
+    local rows, cols = self:get_pos(fin)
+    local init, limit, iter = get_iters(start, stop, rev, len_active_idxs)
     for i = init, limit, iter do
-        local idx = idxs[i]
+        local idx = active_idxs[i]
         local row = rows[idx]
         local col = cols[idx]
         if predicate(row, col) then
@@ -120,20 +132,21 @@ function Results:find_pos(start, stop, fin, rev, predicate)
 
     return nil, nil, nil
 end
--- TODO: Start and stop need to be adjusted and converted to idx iters
 
 ---@param start integer
 ---@param stop integer
 ---@param mapper fun(start_row: integer, start_col: integer, fin_row: integer, fin_col: integer): integer, integer, integer, integer
 function Results:map_both_pos(start, stop, mapper)
-    local idxs = self.active_idxs
-    local start_rows = self.start_rows
-    local start_cols = self.start_cols
-    local fin_rows = self.fin_rows
-    local fin_cols = self.fin_cols
+    local active_idxs = self.active_idxs
+    local len_active_idxs = #active_idxs
+    if len_active_idxs == 0 then
+        return
+    end
 
-    for i = start, stop do
-        local idx = idxs[i]
+    local start_rows, start_cols, fin_rows, fin_cols = self:get_both_pos()
+    local init, limit, iter = get_iters(start, stop, false, len_active_idxs)
+    for i = init, limit, iter do
+        local idx = active_idxs[i]
         local start_row = start_rows[idx]
         local start_col = start_cols[idx]
         local fin_row = fin_rows[idx]
@@ -143,21 +156,24 @@ function Results:map_both_pos(start, stop, mapper)
             mapper(start_row, start_col, fin_row, fin_col)
     end
 end
--- TODO: Start and stop need to be adjusted and converted to idx iters
 
 ---@param start integer
 ---@param stop integer
 ---@param mapper fun(row: integer, col: integer): integer, integer
 function Results:map_pos(start, stop, fin, mapper)
-    local idxs = self.active_idxs
-    local rows, cols = self:get_positions(fin)
+    local active_idxs = self.active_idxs
+    local len_active_idxs = #active_idxs
+    if len_active_idxs == 0 then
+        return
+    end
 
-    for i = start, stop do
-        local idx = idxs[i]
+    local rows, cols = self:get_pos(fin)
+    local init, limit, iter = get_iters(start, stop, false, len_active_idxs)
+    for i = init, limit, iter do
+        local idx = active_idxs[i]
         rows[idx], cols[idx] = mapper(rows[idx], cols[idx])
     end
 end
--- TODO: Start and stop need to be adjusted and converted to idx iters
 
 ---@param start integer
 ---@param stop integer
@@ -165,15 +181,16 @@ end
 ---@param rev boolean
 ---@param mapper fun(row: integer, col: integer): integer, integer
 function Results:map_pos_stop_on_noop(start, stop, fin, rev, mapper)
-    local idxs = self.active_idxs
-    local rows, cols = self:get_positions(fin)
+    local active_idxs = self.active_idxs
+    local len_active_idxs = #active_idxs
+    if len_active_idxs == 0 then
+        return
+    end
 
-    local init = rev and stop or start
-    local limit = rev and start or stop
-    local iter = rev and -1 or 1
-
+    local rows, cols = self:get_pos(fin)
+    local init, limit, iter = get_iters(start, stop, rev, len_active_idxs)
     for i = init, limit, iter do
-        local idx = idxs[i]
+        local idx = active_idxs[i]
         local row = rows[idx]
         local col = cols[idx]
 
@@ -186,36 +203,73 @@ function Results:map_pos_stop_on_noop(start, stop, fin, rev, mapper)
         end
     end
 end
--- TODO: Start and stop need to be adjusted and converted to idx iters
 
----@param start integer
----@param stop integer
 ---@param fin boolean
 ---@param predicate fun(row:integer, col:integer): boolean
-function Results:filter_pos_stop_on_keep(start, stop, fin, rev, predicate)
-    local idxs = self.active_idxs
-    local len_active_idxs = #idxs
-    local init, limit, iter = get_iters(start, stop, rev, len_active_idxs)
+function Results:filter_pos(fin, predicate)
+    local active_idxs = self.active_idxs
+    local len_active_idxs = #active_idxs
+    if len_active_idxs == 0 then
+        return
+    end
 
-    local rows, cols = self:get_positions(fin)
+    local rows, cols = self:get_pos(fin)
+    require("nvim-tools.list").filter(active_idxs, function(x)
+        return predicate(rows[x], cols[x])
+    end)
+end
 
-    local j = init
-    for i = init, limit do
-        local idx = idxs[i]
-        if not predicate(rows[idx], cols[idx]) then
-            j = j + iter
-        else
+---@param fin boolean
+---@param rev boolean
+---@param predicate fun(row:integer, col:integer): boolean
+function Results:filter_pos_stop_on_keep(fin, rev, predicate)
+    local active_idxs = self.active_idxs
+    local len_active_idxs = #active_idxs
+    if len_active_idxs == 0 then
+        return
+    end
+
+    local rows, cols = self:get_pos(fin)
+    local slice_idx = nil
+    local iter = rev and -1 or 1
+    for i = 1, len_active_idxs, iter do
+        local idx = active_idxs[i]
+        if predicate(rows[idx], cols[idx]) then
+            slice_idx = i
             break
         end
     end
 
-    if j == init then
+    if slice_idx == nil then
+        require("nvim-tools.table").clear(active_idxs)
         return
     end
 
-    -- TODO: wat?
-    require("farsight.util").list_compact(idxs, start, j)
+    local ntl = require("nvim-tools.list")
+    if rev then
+        ntl.slice(active_idxs, 1, slice_idx)
+    else
+        ntl.slice(active_idxs, slice_idx, len_active_idxs)
+    end
 end
--- TODO: Test that this combines rev and fwd properly
+
+---@param predicate fun(sr_a:integer, sc_a:integer, fr_a:integer, fc_a:integer, sr_b:integer, sc_b:integer, fr_b:integer, fc_b:integer): boolean
+function Results:sort(predicate)
+    local active_idxs = self.active_idxs
+    local len_active_idxs = #active_idxs
+    if len_active_idxs == 0 then
+        return
+    end
+
+    local sr = self.start_rows
+    local sc = self.start_cols
+    local fr = self.fin_rows
+    local fc = self.fin_cols
+
+    table.sort(active_idxs, function(a, b)
+        return predicate(sr[a], sc[a], fr[a], fc[a], sr[b], sc[b], fr[b], fc[b])
+    end)
+end
+-- DOCUMENT: The predicate function type is quite long.
 
 return Results

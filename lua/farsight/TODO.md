@@ -103,3 +103,15 @@
 ## Live Search
 
 ## Static Jump
+
+#### MID:
+
+- [ ] An optimization could be - For each window being searched, get the buf info and buf ranges beforehand. See if there are any intersections. If so, only search the intersected area once.
+  - [ ] Challenges:
+    - [ ] How do you check for intersections?
+      - I'm not sure what the solution is other than, after getting each window's range, to do an O(n*n) search through all of them
+    - [ ] How do you store the intersections?
+      - Maybe as an `[integer[], results]` where integer is the list of windows it applies to
+    - [ ] How do you stitch the intersections back into the targets?
+      - You have to see which set of targets goes after the other, so that the targets after can be appended to the ones before. Inserting at the beginning is too slow
+      - Has to be done in a way so that a reference isn't accidentally modified that is meant to be re-used

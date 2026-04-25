@@ -194,4 +194,35 @@ function M.remove(t, idx)
     t[len] = nil
 end
 
+---`start` and `fin` are handled as passed in without clamping.
+---@generic T
+---@param t T[]
+---@param start integer
+---@param fin integer
+function M.slice(t, start, fin)
+    vim.validate("t", t, "table")
+    vim.validate("start", start, "number")
+    vim.validate("fin", fin, "number")
+
+    local len_t = #t
+    for i = fin + 1, len_t do
+        t[i] = nil
+    end
+
+    if start == 1 then
+        return
+    end
+
+    len_t = #t
+    local j = 1
+    for i = start, len_t do
+        t[j] = t[i]
+        j = j + 1
+    end
+
+    for i = j + 1, len_t do
+        t[i] = nil
+    end
+end
+
 return M
