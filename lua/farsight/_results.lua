@@ -301,6 +301,9 @@ function Results:alloc_char_hls(chars_after, char_counts)
         idxs[i] = nil
     end
 end
+-- TODO: I don't know why you would care if this is run more than once, since a second run would
+-- just do nothing. Also, this should be able to be like, a filter on idxs that internally moves
+-- the filtered values to the char list
 -- MID: The function naming and assertion, I think, communicate that this function should only
 -- be used once. I'm fine with hard-erroring since this is internal code. I'm also fine with not
 -- building-in theoretical flexibilty since this does not arbitrarily limit the underlying data

@@ -36,6 +36,8 @@ end
 ---@param prompt string
 ---@return boolean, string
 function M.get_input(prompt)
+    vim.validate("prompt", prompt, "string")
+
     local ok, result = pcall(fn.input, { prompt = prompt, cancelreturn = "" })
     if (not ok) and result == "Keyboard interrupt" then
         return true, ""

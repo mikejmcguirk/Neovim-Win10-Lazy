@@ -1,5 +1,4 @@
 local api = vim.api
-local fn = vim.fn
 
 local M = {}
 
@@ -19,15 +18,13 @@ local function resolve_split(split)
     end
 end
 
----Anchor window for the split. If -1, produces botright/topleft behavior
+---@param win integer? Anchor window for the split. If -1, produces botright/topleft behavior
 ---If nil, current window is used
----@param win integer?
----If nil, a temporary buffer is used
----@param buf integer?
----@param enter boolean
+---@param buf integer? If nil, a temporary buffer is used
+---@param enter boolean Enter split? See |nvim_open_win|
+---@param split "left"|"right"|"above"|"below"|"split"|"vsplit"
 ---If split, splitbelow is used
 ---If vsplit, splitright is used
----@param split "left"|"right"|"above"|"below"|"split"|"vsplit"
 ---@return integer
 function M.create_split(win, buf, enter, split)
     local ntt = require("nvim-tools.types")
@@ -40,45 +37,28 @@ function M.create_split(win, buf, enter, split)
     win = win == nil and 0 or win
     buf = buf and buf
         or require("nvim-tools.buf").create_temp_buf("wipe", false, "nofile", "", true)
-    split = resolve_split(split)
 
+    split = resolve_split(split)
     return api.nvim_open_win(buf, enter, { win = win, split = split })
 end
--- TOOD: The type checking/id validation could be more robust in here. Use resolve winid and
--- resolve bufnr.
--- TODO: Splitting *technically* works off of floats, but should that be disallowed here?
 
 ---@param win integer window-ID
 ---@param cur_pos { [1]:integer, [2]:integer } Cursor indexed
 ---@return boolean
 function M.cursor_at(win, cur_pos)
+    local is_uint = require("nvim-tools.types").is_uint
+    vim.validate("win", win, is_uint)
+    vim.validate("cur_pos", cur_pos, "table")
+
     local win_cur_pos = api.nvim_win_get_cursor(win)
     return win_cur_pos[1] == cur_pos[1] and win_cur_pos[2] == cur_pos[2]
 end
 
----@param win integer
----@return boolean
-function M.has_fillline(win)
-    local buf = api.nvim_win_get_buf(win)
-    local botline = fn.line("w$", win)
-    local fill_row = math.min(botline + 1, api.nvim_buf_line_count(buf))
-    if fill_row == botline then
-        return false
-    end
-
-    local first_spos = fn.screenpos(0, fill_row, 1)
-    if first_spos.row < 1 then
-        return false
-    end
-
-    return true
-end
--- MID: This is not great because it will return false if the first col if the fill row is
--- covered. Hate to check more cols though because screenpos is so slow.
-
 ---@param win_config vim.api.keyset.win_config_ret
 ---@return boolean
 function M.is_floating(win_config)
+    vim.validate("win_config", win_config, "table")
+
     local relative = win_config.relative
     return relative ~= nil and relative ~= ""
 end
@@ -87,12 +67,16 @@ end
 ---@param win_config vim.api.keyset.win_config_ret
 ---@return boolean
 function M.is_focusable(win_config)
+    vim.validate("win_config", win_config, "table")
+
     return win_config.focusable == true and win_config.hide == false
 end
 
 ---Credit echasnovski
 ---@param wins integer[]
 function M.order_wins(wins)
+    vim.validate("wins", wins, "table")
+
     local positions = {} ---@type { [1]:integer, [2]:integer, [3]:integer }[]
     for _, win in ipairs(wins) do
         local config = api.nvim_win_get_config(win)
@@ -132,6 +116,10 @@ end
 ---@param force boolean
 ---@return boolean, integer|nil, string|nil, string|nil
 function M.protected_close(win, force)
+    local is_uint = require("nvim-tools.types").is_uint
+    vim.validate("win", win, is_uint)
+    vim.validate("force", force, "boolean", true)
+
     if not api.nvim_win_is_valid(win) then
         return false, nil, "Invalid window", ""
     end
@@ -162,6 +150,10 @@ end
 ---@param cur_pos { [1]:integer, [2]: integer }
 ---@ return { [1]:integer, [2]: integer }
 function M.protected_set_cursor(win, cur_pos)
+    local is_uint = require("nvim-tools.types").is_uint
+    vim.validate("win", win, is_uint)
+    vim.validate("cur_pos", cur_pos, "table")
+
     local buf = api.nvim_win_get_buf(win)
 
     local row, col = cur_pos[1], cur_pos[2]
@@ -175,7 +167,8 @@ end
 ---@param win integer
 ---@return boolean, integer, string|nil, string|nil
 function M.resolve_win_id(win)
-    vim.validate("win", win, require("nvim-tools.types").is_uint)
+    local is_uint = require("nvim-tools.types").is_uint
+    vim.validate("win", win, is_uint)
 
     if win == 0 then
         return true, api.nvim_get_current_win(), nil, nil
@@ -195,6 +188,12 @@ end
 ---@param f function
 ---@return any, any
 function M.call_in(cur_win, win, f)
+    local is_uint = require("nvim-tools.types").is_uint
+    vim.validate("cur_win", cur_win, is_uint)
+    vim.validate("win", win, is_uint)
+    vim.validate("f", f, "function")
+
+    win = win == 0 and cur_win or win
     if cur_win == win then
         return f()
     else

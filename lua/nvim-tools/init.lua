@@ -9,8 +9,6 @@ local M = {}
 ---@overload fun(t?: table|nil, ): table?
 ---@type nvim-tools.init.Config
 local Config = {}
--- FUTURE: I'm not sure if this class definition + its functions will or should be pulled by the
--- docgen.
 
 ---@generic T
 ---@param self nvim-tools.init.Config
@@ -56,9 +54,6 @@ Config.__newindex = function(self, k, v)
         rawset(data, k, v) -- Do this after the metatable check to avoid overwriting.
     end
 end
--- DOCUMENT: This method is needed to set nils in buf configs.
--- DOCUMENT: For non-config subtables, full replacements are required for validation. Direct
--- editing of those tables is free-form.
 
 ---Assumes that t has been validated.
 ---@param config nvim-tools.init.Config
@@ -129,7 +124,6 @@ function Config:has_config()
 
     return false
 end
--- DOCUMENT: This function. Use a dummy if needed.
 
 ---Outlined to avoid exposing the error table and path implementation details.
 ---@param config nvim-tools.init.Config
@@ -170,6 +164,9 @@ end
 ---     `false`, hard error on failure.
 ---@return string[] errors List of validation errors.
 function Config:validate(t, return_errors)
+    vim.validate("t", t, "table", true)
+    vim.validate("return_errors", return_errors, "boolean", true)
+
     local errors = validate_config(self, t, {}, "")
     if #errors > 0 and return_errors == false then
         error("Config validation failed:\n" .. table.concat(errors, "\n"), 2)
@@ -177,13 +174,6 @@ function Config:validate(t, return_errors)
 
     return errors
 end
--- MID: Interesting point from Mitch Hashimoto - The success case should be fast path. The error
--- case can be allowed to be slow (assuming the success case is distinctly more common, which
--- in this case it would be since the metatable screens writes). So here, we would not collect
--- errors on first pass. If a boolean true returns, we know the config is good and return nil
--- (no allocation). If we get a boolean false, we know we have errors, and can do a re-traversal
--- to collect them.
--- DOCUMENT: This function. Use a dummy if needed.
 
 ---@class nvim-tools.init.DefaultConfig
 local default_config = {
@@ -202,8 +192,6 @@ local default_config = {
         },
     },
 }
--- FUTURE: Use this to test the docgen's ability to pull literals. That will also signify that this
--- table needs to remain un-disturbed.
 
 local reference_validators = {
     foo = "number",
@@ -247,7 +235,6 @@ local function create_config(defaults, validators, allow_nil)
 
     return setmetatable({ _config = _config, _validators = _validators }, Config)
 end
--- LOW: I would like if this were not recursion.
 
 ---@param use_defaults boolean
 ---@param allow_nil boolean
@@ -261,9 +248,6 @@ end
 ---@tag nvim-tools-config
 ---@brief Set global configuration options for your plugin.
 
--- FUTURE: Figure out the max length of the doc lines before hover K wraps them. This issue
--- probably explains a lot of why the Nvim function docs are wrapped so tight. But this is not
--- always the case, which is confusing.
 -- NOTE: The function docs here are used by Lua_Ls in addition to docgen.
 
 ---@param t? table|nil Table of new values to merge in.
@@ -336,7 +320,6 @@ Buf_Config_Accessor.__index = function(self, k)
 
     return rawget(configs, k)
 end
--- DOCUMENT: Failure on read is the same as vim.b
 
 ---@generic T
 ---@param self nvim-tools.init.config.BufAccessor
@@ -367,6 +350,7 @@ Buf_Config_Accessor.__newindex = function(self, k, v)
     -- Do not use BufDelete because deleted buffers can be reloaded under the same buf id
     api.nvim_create_autocmd("BufWipeout", {
         group = api.nvim_create_augroup(get_buf_augroup_name(k), {}),
+        -- FUTURE: Change this to "buf" when v0.14 comes out.
         buffer = k,
         callback = function()
             M.buf_config[k] = nil
@@ -394,6 +378,7 @@ end
 ---@param force? boolean (default: `false`) If false or nil, only clear configs without values.
 ---     If true, clear all listed configs.
 function Buf_Config_Accessor:clear(bufs, force)
+    vim.validate("force", force, "boolean", true)
     vim.validate("buf", bufs, function()
         local nty = require("nvim-tools.types")
         return bufs == nil or nty.valid_list(bufs, { item_type = "number" })
@@ -414,9 +399,6 @@ function Buf_Config_Accessor:clear(bufs, force)
         end
     end
 end
--- DOCUMENT: As noted in this function, in order to nil buf configs, you cannot save the
--- reference to a variable then nil the reference, you must nil through buf_config to utilize
--- its __newindex function
 
 ---@type nvim-tools.init.config.BufAccessor
 M.buf_config = setmetatable({ _configs = {} }, Buf_Config_Accessor)
@@ -470,12 +452,5 @@ function M.get_merged_config(buf, usr_cfg, ...)
 
     return clean_cfg
 end
--- META: Keep keys as the last arg so it's easier to turn into an arg list.
--- MID: Keys could be an argslist like table.get().
--- LOW: Is it possible for the return type to be more specific?
--- MAYBE: Allow skipping validation. Depends on perf cost
--- NON: Don't allow skipping buf_config. I feel like that turns using this function into a
--- free-for-all. Any scenario where that option might be used feels like a case where a more
--- fundamental design issue needs resolved.
 
 return M

@@ -9,6 +9,13 @@ local M = {} -- test
 ---@param contains boolean
 ---@return boolean?
 function M.is_pos_node(buf, row, col, types, contains)
+    local is_uint = require("nvim-tools.types").is_uint
+    vim.validate("buf", buf, is_uint)
+    vim.validate("row", row, is_uint)
+    vim.validate("col", col, is_uint)
+    vim.validate("types", types, "table")
+    vim.validate("contains", contains, "boolean")
+
     if #types < 1 then
         return nil
     end

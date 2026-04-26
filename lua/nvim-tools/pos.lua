@@ -2,6 +2,45 @@ local api = vim.api
 
 local M = {}
 
+--------------------
+-- MARK: Creation --
+--------------------
+
+---@param lnum integer 1 indexed
+---@param col integer 0 for omitted, or 1 indexed, inclusive
+---@param vcol 0|1
+---@param bufnr integer
+---@return integer, integer 1,0 indexed, end inclusive
+function M.mark_from_raw_qf(lnum, col, vcol, bufnr)
+    local is_uint = require("nvim-tools.types").is_uint
+    vim.validate("lnum", lnum, is_uint)
+    vim.validate("col", col, is_uint)
+    vim.validate("bufnr", bufnr, is_uint)
+    vim.validate("vcol", vcol, function()
+        return vcol == 0 or vcol == 1
+    end)
+
+    local line_count = api.nvim_buf_line_count(bufnr)
+    local row_1 = math.min(lnum, line_count)
+
+    local line = api.nvim_buf_get_lines(bufnr, row_1 - 1, row_1, false)[1]
+    local col_0
+
+    if col > 0 then
+        if vcol == 0 then
+            col_0 = math.min(col, #line) - 1
+        else
+            local charlen = vim.call("strcharlen", line)
+            local ntv = require("nvim-tools.vcol")
+            col_0, _, _ = ntv.vcol_to_byte_bounds(line, col, charlen)
+        end
+    else
+        col_0 = 0
+    end
+
+    return row_1, col_0
+end
+
 -------------------------------
 -- MARK: Position Comparison --
 -------------------------------
@@ -78,6 +117,23 @@ function M.gt(row_a, col_a, row_b, col_b)
     vim.validate("col_b", col_b, is_uint)
 
     return row_a > row_b or row_a == row_b and col_a > col_b
+end
+
+---@param row_a integer
+---@param col_a integer
+---@param row_b integer
+---@param col_b integer
+---@return number
+function M.pythagorean_dist(row_a, col_a, row_b, col_b)
+    local is_uint = require("nvim-tools.types").is_uint
+    vim.validate("row_a", row_a, is_uint)
+    vim.validate("col_a", col_a, is_uint)
+    vim.validate("row_b", row_b, is_uint)
+    vim.validate("col_b", col_b, is_uint)
+
+    local delta_row = row_b - row_a
+    local delta_col = col_b - col_a
+    return math.sqrt(delta_row * delta_row + delta_col * delta_col)
 end
 
 -------------------------------

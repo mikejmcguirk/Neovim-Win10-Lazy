@@ -84,11 +84,13 @@
 
 #### TODO:
 
+- [ ] As this will now be using match_area in the future, we need to note that no results before the cursor return, so you need to use some kind of sequence search like `\k\+` for the most accuracy + speed. This matters for internal dev as well as customization.
+  - Matching individual characters works, but is slower because it produces more results. The csearch module itself needs to handle counting the individual chars.
+
 - [ ] Move this over to search based, where you iterate through the results then to find tokens
 - [ ] Move this module over to the highlight on f/t model that a lot of other plugins use. I need the ;, keys to map live search.
   - [ ] Still keep the "classic" behavior as an option
   - [ ] Unlike flash, do not do continuation mode in omode or after a dot repeat
-- [ ] For defaults, need to test if "\k" or "\k\+" is faster
 - [ ] A problem to deal with is that if you set a custom search function based on whole words, you might get results that are excluded from targets because they start before the cursor. I'm not sure if search should compensate for this or if it needs to be a documented limitation
   - Since search is being generalized, probably needs to be handled
 

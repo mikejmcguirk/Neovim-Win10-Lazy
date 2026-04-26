@@ -91,7 +91,6 @@ function M.extend(dst, src, start, finish)
 
     -- return dst
 end
--- FUTURE: If this can be used in vim.list, then remove
 
 ---@generic T
 ---@param t T[]
@@ -112,6 +111,32 @@ function M.filter(t, f)
     end
 
     for i = j, len do
+        t[i] = nil
+    end
+end
+
+---@generic T
+---@param t T[]
+---@param f fun(x: T): boolean
+function M.filter_from_end(t, f)
+    vim.validate("t", t, "table")
+    vim.validate("f", f, "callable")
+
+    local len = #t
+    local j = len
+    for i = len, 1, -1 do
+        if f(t[i]) then
+            t[j] = t[i]
+            j = j - 1
+        end
+    end
+
+    local len_after = len - j
+    for i = 1, len_after do
+        t[i] = t[j + i]
+    end
+
+    for i = len_after + 1, len do
         t[i] = nil
     end
 end

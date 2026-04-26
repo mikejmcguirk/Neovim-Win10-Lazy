@@ -2,49 +2,33 @@
 
 #### TODO:
 
-- [ ] Commenting guidelines:
-  - [ ] Annotation comments:
-    - Give an overview of how the function works for devs who want to know, broadly, what it does, without deep-diving into the details.
-      * Example: The pos functions do not require deep explanation
-      * Functions with longer annotation comments, therefore, imply that there is more you need to know
-    - For functions that would be public facing, like config or search, provide a template for how they would be documented to end-users
-  - [ ] Standard comments
-    - Personal notes
-    - Deep dive details
-    - Why certain choices are made (search() needs a lot of these)
-
-- [ ] The broader patterns described in the top level TODO doc all need to apply here
 - [ ] I currently can actually name this nvim-tools, but check the big plugin collection repo before uploading
 
-- [ ] Make sure everything has vim.validate in the params. It is easier for the user to remove than add them
-  - Exceptions:
-    - Validation functions (since they are, themselves, validators)
+#### DOCUMENT:
 
-- [ ] Create a template minimal init that can be used for plugin debugging. The Neovim repo has an example they use for minimal plugin init, though that might be superceded with vim.pack released
+- [ ] Commenting guidelines:
+- [ ] Annotation comments:
+- Give an overview of how the function works for devs who want to know, broadly, what it does, without deep-diving into the details.
+* Example: The pos functions do not require deep explanation
+* Functions with longer annotation comments, therefore, imply that there is more you need to know
+- For functions that would be public facing, like config or search, provide a template for how they would be documented to end-users
+- [ ] Standard comments
+  - Deep dive details
+- Why certain choices are made (search() needs a lot of these)
 
-- [ ] The module should be documented using my docgen
-  - [ ] Make sure meta-table class documentation is correct
-  - [ ] Docgen should be able to handle this. It does so for vim.filetype
-
-- [ ] Test to see if win_call_maybe and buf_call_maybe are faster than running them unconditionally. If so, add them here and use them in all the internals.A
-  - [ ] Test with different % of times where you need to context call vs not
-
-- [ ] For compatibility, make sure any autocmd API usage or vim.keymap.sets or whatever use "buffer" semantics, and make a note to change those all to "buf" when v0.13 comes out
-
-- [ ] https://github.com/neovim/neovim/pull/39222 - Would just copy this Nvim module. Note as such.
+- [ ] Needs a README
 
 #### FUTURE:
+
+  - [ ] The module should be documented using my docgen
+  - [ ] Make sure meta-table class documentation is correct
+  - [ ] Docgen should be able to handle this. It does so for vim.filetype
 
 - [ ] When https://github.com/neovim/neovim/issues/38420 releases, update everything to use it.
   - Specific Targets:
     * [ ] Option changes using misc.append_if_missing
 
 ## buf_open
-
-#### TODO:
-
-- [ ] This function requires a bit more polish. See comments there.
-- [ ] Unsure if it's a design or documentation issue, but the times I've used this, I've been confused about what it's doing
 
 #### LOW:
 
@@ -60,7 +44,10 @@
 
 #### MID:
 
-- [ ] get_indent should properly handle smartindent
+- [ ] get_indent
+  - [ ] Should probably handle smartindent
+  - [ ] Should take an optional curpos argument for setting temporary cursor context when running the indentexpr (for calls to `line(".")`). Unsure what the right interface is though
+    - Use case: Indenting multiple lines
 - [ ] For save(), pass a directory or a directory outputting function to save to if the file is not on disk
 - [ ] The isk module should also be able to handle isf, isi, and isp
 
@@ -87,10 +74,19 @@
       + You could argue that buf_to_bufnr does the same thing on a string input, but since we have to run bufadd in bufname_to_bufnr, I'm fine with also throwing in the fs_access for more specific error reporting.
     * Doesn't help that I'm not sure what the use case for buf_to_ functions is in general
 
+* Remove get_bcd when an official implementation is created.
+
 #### MAYBE:
 
 - Add a higher-level "open_buf_in" function that takes an integer|split|vsplit|tabnew opt. Trickier than it seems though because of how the opts/vars get moved around, and I don't have a concrete use case.
   - Additional issue, with rancher, the qf state management is intermingled with the buf opening/win handling. That is probably bad, but I don't want to do this kind of buffer opening in the abstract without knowing what the concrete issues to work around are. Are there certain returns we might need?
+
+- create_temp_buf sets ft at the end on principle. Change if this becomes a problem anywhere.
+
+- I feel like protected_del should swap a temp buf into the current window if it's the last one. But that feels too complicated for a function that should be able to handle a bunch of different things.
+
+- Provide to save the option to write to disk to some directory if `#bufname` == 0.
+  * Could bcd or workspace config be used here?
 
 ## Config
 
@@ -103,6 +99,16 @@
 - [ ] Docgen. Because of the nature of how the config is designed, I need to know where the docgen lands in order to actually write the documentation.
 
 #### DOCUMENT:
+
+- [ ] Config.__newindex is required to set nils in buf configs
+
+- [ ] For non-config subtables, full replacements are required for validation. Direct editing of those tables is free-form.
+
+- [ ] Buf accessor failure to read behavior is the same as vim.b
+
+- [ ] All class components meant to be used by the public. Use dummies of needed.
+
+- [ ] Use the default config to test the docgen's ability to pull literals
 
 - [ ] Provide examples of how the config would be used/setup
   - [ ] For both main and buf_config
@@ -163,6 +169,8 @@
   - [ ] validation failure?
   - [ ] This implies some sort of binary based flag so the return statuses can be layered performantly and in all combinations.
 
+- [ ] The validation should move first without collecting errors. If a problem is found, stop the first traversal and make another one to gather the errors. Let the standard case be fast.
+
 #### LOW:
 
 - [ ] Is it possible to put proxies on the non-config sub-tables in a way that (a) isn't contrived and (b) doesn't hurt PERF.
@@ -186,12 +194,16 @@
     + For new table merges, I'm not sure what the principled solution is, since you need to track the sub-key when you hit nested Configs.
       + Could be keep a list of keys and use table.get(), but now you are keeping track of and resizing a table + unpacking it on call. Quite heavy.
 
++ Allow get_merged_config to skip validation.
+
 #### NON:
 
 - Don't auto-create new buf_configs if you __index into a nil buf_config
   * Actual Lua tables don't behave this way, so it's an anti-pattern
   * This behavior would then require a bespoke accessor function to check if a config exists and is not empty before actually reading the value(s) from it
   * Correctly handling "gc" for empty buf configs is tricky. Don't want to introduce conditions under which tables can be needlessly created
+
+* In config merging, don't allow skipping buf config. If you don't want it, don't set it.
 
 ## fs/git
 
@@ -288,86 +300,58 @@
 - Lots you could do with ranges, but will wait for use cases
   * Treesitter cmps might matter
 
+## Types
+
+#### MID:
+
+- validate_list
+  * Probably remove opts.func
+  * item_type needs to be able to take a function
+
 ## Search
-
-#### TODO:
-
-- [ ] Search:
-  - [ ] Does search_area even need to support count?
-  - [ ] Outline the function to get the range so it can be used to pre-build the Range4 values.
-  - [ ] Performs the actual search/match and checks/adjust results for accuracy
-    - [ ] Out of bounds results (particularly on zero-width)
-    - [ ] How does match_line handle multi-line searches?
-    - [ ] Does match handle zero-width expressions correctly?
-    - [ ] Check _locator and _common for other fixes
-  - [ ] This should plugin to the nvim-tools config module to demo how it works
-
-- [ ] Search Filters (unsure about the naming):
-  - [ ] Canned functions for filtering search results
-    - [ ] Fold filtering
-      * [ ] keep all
-      * [ ] remove all
-      * [ ] keep first (row == foldclosed())
-  - [ ] Pre-built sorts:
-    - [ ] Row/col closeness to a pos
-    - [ ] Pythagorean distance to a pos
-    - [ ] Result order (fwd and reverse)
-
-  - [ ] Maybe document: This approach accepts some degree of tradeoff in efficiency. I am not aware of any accuracy check that requires row adjustment. It is completely possible to filter fold rows first, saving work on subsequent adjustments. But fold filtering is not mandatory, so it should not be a part of the search module. The conceptual separation here is important to prevent muddying the waters about what each function is meant to do (seen in Farsight, where the search code is a blur because it jumps between so many different things).
-
-- [ ] Once the results class is baked in, go back to what I have for Farsight and make sure they fit together.
-
-- [ ] The end-state search implementation needs to support the following use cases:
-  - [ ] csearch movement
-    - Note: If too large a count is provided to find a result, it's a no-op
-  - [ ] csearch highlighting
-    - Note: At least for now, the edge trimming use case will not be supported. I'm not sure if match_line can return results that spill over the start index, and trimming entries from the start causes all results to have to be re-indexed during filtering, which is O(n). For this case, document that something like `\k\+` needs to be used as the pattern (sequences of keyword chars with an arbitrary beginning and end) rather than whole word matching.
-  - [ ] Bracket navigation
-    - [ ] Support wrapscan
-    - [ ] Unlike csearch, if too large a count is provided, Vim's default behavior is to find the best result.
-  - [ ] Farsight live search
-    - [ ] Needs to be able to handle forwards and backwards, visible buffer constrained.
-  - [ ] Farsight static search
-    - [ ] Needs to handle the whole buffer, visible area constrained.
-  - [ ] Whole buffer searches
-    - [ ] Annotator/rancher both want this.
-  - [ ] While multi-window searching is not a direct concern of this code, it does need to provide the underlying components to support it
 
 #### DOCUMENT:
 
-- [ ] Search area
-  - [ ] Because search_area uses match_line under the hood, it cannot handle multi-line results.
-  - [ ] No wrapscan because it introduces contrived questions about how results are ordered
+- [ ] The search opts are a useful test for the docgen since they contain inherited class definitions.
+  - [ ] Check inlinedoc vs without.
 
-- [ ] Results
-  - [ ] Why the results iterators are the way they are
-    - [ ] Probably best done in the function descriptions, rather than as a philosophical thing
-    - [ ] Individual list removes are slow, so we want to use filters so we can do bulk removals
-    - [ ] Save boilerplate on aliasing the underlying refs
+- [ ] In CommonOpts.patternfilter, document examples of:
+  - [ ] Forcing case
+  - [ ] Forcing fixed strings
+  - Blocker - Understanding how the docgen renders markdown > Vimdoc
 
-- [ ] Search single
-  - [ ] Why flag behavior is controlled the way it is
-  - [ ] Default csearch will no-op if the count is too high. Default bracket navigations will go to the best result. So you need to know what behavior you're targeting
-    - [ ] Do this as an example note in the opts
+- [ ] Is there a way to deal with how long the function param type is in Results:sort_by_both_pos?
 
 #### MID:
 
 - [ ] For search_area, include support for using the results of getwininfo to filter off-screen matches on non-wrapped buffers.
-  - Roughly, the left boundary would be used as the init_col, and the right boundary would be an additional condition for cutting of search on a particular line
+  - Roughly, the left boundary would be used as the init_col, and the right boundary would be an additional condition for cutting off search on a particular line
     * For left bounds, I'm pretty sure you can just do a sub-function for calculating the default init_col
     * For right bound, this introduces another condition for checking stop. I think you could handle this calculation at the end of each line like stop_col currently is, and feed the right bounds to match_line. At least not adding significant additional checks per line.
   - This would support the Farsight labeling case for live/static jumping.
 
-- [ ] Merge overlapping results
-  - Handles edge case with multi-line results
-
 - [ ] For the main search function, there might be a way to do count with minimum where you add the first result to the struct, then replace instead of appending until you hit count. This is not a use case I need though
 
-- [ ] The fold functions are mostly redundant code. But I don't think passing last_row and last_foldclosed to the predicate would be ergonomic.
+- [ ] The fold functions are mostly redundant code. But I don't think passing last_row and last_foldclosed to a predicate would be ergonomic.
+
+- [ ] Scenario: Performing multi-win match on two windows with the same buffer, each displaying some overlapping portion of the buffer with the other
+  - Currently: The full search would be run twice
+  - What should happen: The code should identify that the same portion of the buffer is being shown in multiple windows and only match it once
+  - Implementation issues:
+    * Where to store the overlapping ranges
+    * How to merge the overlapping ranges back into results
+    * The code to resolve match ranges would need to be outlined. But, other than for this arbitrary thing, it makes no sense.
+
+- [ ] search_single gets and stores row/col info for every result, even if min_one is false. This is unnecessary.
+  - Unsure though how to section off this behavior without it getting bloated.
+
+#### LOW:
+
+- [ ] Is it possible to make the wrapper code to support the `c` flag?
+- [ ] Is it possible to make the necessary wrapper code to support the `e` flag?
+  - [ ] Encountered multiple edge cases here when trying to use this as a PUC Lua fallback
 
 #### MAYBE:
-
-- If use cases come up for sorts that don't need as much initial information, add Results functions to handle them.
 
 - Compacting function:
   * Use case: Saving RAM
@@ -380,6 +364,7 @@
       + More data to maintain
       + Another allocation
       + Add if checking to compacting
+      + Counterpoint - Saves maintaining links between active_idxs and an idxs_ordered list.
 
 * Temporarily set ignorecase and/or smartcase
   + Problem: Adds complexity when also considered with atom manipulation
@@ -390,11 +375,13 @@
 - A canned iterator over the results to remove ones that are only on blank or all-whitespace lines
   * Unsure what the use case is though. Problem since this would be slow
 
-- Allow adding the "c" flag and trimming ends. My concern here is that trimming from the start is expensive because you have to shift down the entire idx list. The only edge case I'm aware of this addressing is the whole keyword case in csearch. No need for this.
+- The fold filtering methods assume that results might not be ordered by position. If the results are filtered by position, it's faster to save last_row and last_foldclosed as individual integers. If the hash method creates a genuine performance issue, can revisit, but the current design is less fragile.
+
+- If we create new results functions that actually return an iterator, add a setting to get_iters to return init - 1, to centralize the initial adjustment (since iter functions always increment before returning)
 
 #### NON:
 
-- Unless it's absolutely necessary, don't do the position hashing here. Goes against this being a minimal implementation.
+- Implementing any sort of wrapscan for match/search area. No use case + introduces numerous complexities around result sorting.
 
 ## Tab
 
@@ -415,3 +402,5 @@
 #### MAYBE:
 
 - Many old functions sitting around from spec-ops.
+- Use binary search. Because characters can contain multiple vcols, binary searching can fail or create additional logic in weird ways.
+- For characters with variable widths, such as tabs or characters controlled by ambiwidth, strdisplaywidth uses the current window settings. In both of the use cases I can think of for this function (visual selection and quickfix), this is correct. If a use case comes up, some kind of context switching can be added.

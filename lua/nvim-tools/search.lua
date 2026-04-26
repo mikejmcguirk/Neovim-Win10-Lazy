@@ -3,16 +3,15 @@ local fn = vim.fn
 
 local M = {}
 
--- Based on my experience developing Farsight, the fastest method for searching text is actually
--- pure Lua, even though its string parsing is slower. My guess is that this is because of
--- not having to pay the tax of crossing the Lua/C bridge. It also helps if string.byte is used
--- where possible, because that avoids new allocations.
---
--- That method has two problems though:
--- - It is less flexible. For any particular search you want to do, you have to work out the Lua
--- code to do so most optimally.
--- - You are stuck with the time and complication cost of writing bespoke versions of Neovim's
--- regex parsing.
+-- Based on profiling while developing Farsight, the fastest method for searching text is actually
+-- pure Lua. But this comes with caveats:
+-- - Some non-trivial amount of the time savings likely comes from simply not having to cross the
+-- C/Lua bridge.
+-- - string.byte needs to be used where possible to save allocations.
+-- - For any particular search case, you need to write code that is specifically optimized for it.
+-- - This requires making bespoke recreations of subsets of Neovim's text parsing, including
+-- UTF-8 codepoint conversion.
+-- - This is costly to maintain, adds points of failure, and is inflexible.
 --
 -- Therefore, except as a learning experience, the Lua method is best avoided.
 --
@@ -35,101 +34,91 @@ local M = {}
 ---@param range_4 Range4 0,0,0,0 indexed, end exclusive
 ---@param opts nvim-tools.search.AreaOpts
 ---@return nvim-tools.Results
-local function run_match_area(buf, pattern, range_4, opts)
-    local size = opts.alloc_size or 16
-    local results = require("nvim-tools.results").new(size)
-    local max_results = opts.max_results or math.huge
-    if max_results < 1 then
-        return results
-    end
-
-    local regex = vim.regex(pattern)
-
-    local active_idxs = results.active_idxs
-    local next_idx = results.next_idx
+local function match_area_run(buf, pattern, range_4, opts)
+    local results = require("nvim-tools.results").new(opts.alloc_size or 16)
+    local active_idxs, _, next_idx = results:get_active_idx_info()
     local start_rows, start_cols, fin_rows, fin_cols = results:get_both_pos()
 
-    local i = range_4[1]
-    local init_col = range_4[2]
+    local i_row = range_4[1]
     local last_row = range_4[3]
-    local last_col = range_4[4]
-    local line = api.nvim_buf_get_lines(buf, i, i + 1, false)[1]
-    local stop_col = #line
-    if i == last_row then
-        -- Stop col needs to be end exclusive so you can get a match if it's a one char
-        -- search at the very end of the line
-        stop_col = math.min(last_col + 1, #line - 1)
-    end
 
-    local count1 = opts.count or 1
-    local total_results = 0
-    local at_max_results = false
-    while i <= last_row and not at_max_results do
-        while true and not at_max_results do
-            -- TODO: sloppy
-            if init_col >= stop_col then
-                break
-            end
+    local lines = api.nvim_buf_get_lines(buf, i_row, last_row + 1, false)
+    local i_line = 1
+    local line = lines[i_line]
+    local last_col_ = range_4[4]
+    -- To avoid guard code in the loop, last_col_ should already be clamped at 0 if #line is 0
+    local stop_col_ = i_row == last_row and last_col_ or #line
 
-            local start, fin = regex.match_line(regex, buf, i, init_col, stop_col)
+    local regex = vim.regex(pattern)
+    local init = range_4[2]
+    while true do
+        -- Typically, regex:match_line({buf}, {lnum}, #line, #line) returns nil, nil
+        -- However, |/zero-width| expressions return 0,0
+        -- Therefore, the manual init advance on those results needs to be checked.
+        -- This also prevents any OOB start_cols and skips any zero length lines.
+        while init < stop_col_ do
+            local start, fin = regex.match_line(regex, buf, i_row, init, stop_col_)
             if not (start and fin) then
                 break
             end
 
-            local start_col = init_col + start
-            local fin_col = init_col + fin
-            if count1 <= 1 then
-                start_rows[next_idx] = i
+            local start_col = init + start
+            local fin_col_ = init + fin
+
+            -- Don't force the user to allocate heap to check line lengths again.
+            if start_col < stop_col_ then
+                start_rows[next_idx] = i_row
                 start_cols[next_idx] = start_col
-                fin_rows[next_idx] = i
-                fin_cols[next_idx] = fin_col
+                fin_rows[next_idx] = i_row
+                fin_cols[next_idx] = fin_col_
                 active_idxs[next_idx] = next_idx
                 next_idx = next_idx + 1
-
-                total_results = total_results + 1
-                at_max_results = total_results >= max_results
-            else
-                count1 = count1 - 1
             end
 
-            -- Needed to handle zero-width expressions
-            init_col = math.max(fin_col, init_col + 1)
+            -- Handle |/zero-width| expressions
+            init = math.max(fin_col_, start_col + 1)
         end
 
-        i = i + 1
-        -- TODO: Sloppy
-        if i > last_row then
+        i_row = i_row + 1
+        if i_row > last_row then
             break
         end
 
-        init_col = 0
-        -- TODO: Get these in bulk once
-        line = api.nvim_buf_get_lines(buf, i, i + 1, false)[1]
-        stop_col = #line - 1
-        if i == last_row then
-            stop_col = math.min(last_col, #line - 1)
-        end
+        i_line = i_line + 1
+        line = lines[i_line]
+        stop_col_ = i_row == last_row and last_col_ or #line
+        init = 0
     end
 
     results.next_idx = next_idx
     return results
 end
--- LOW: The stop_col and count1 checks on every iteration are not great since they only happen on
--- specific subsets of the search. max_results also does not necessarily matter, but is always
--- checked. I'm not sure if LuaJIT has smart enough branch prediction to handle this. The amount of
--- data being handled does not break up into sub-functions well.
--- PR: It would be beneficial if:
--- (a) regex:match_line could clamp arbitrarily large stop_col values
--- (b) It were possible to get the length of a line without pulling heap into Lua space
 
 ---@param win integer
 ---@param buf integer
----@param cache table<integer, string> Edited in place
+---Range4 is 1,1,1,1 indexed, end inclusive
 ---@param range -2|-1|0|nil|1|2|Range4
 ---@param opts nvim-tools.search.AreaOpts
 ---@return Range4 1,1,1,1 indexed, end inclusive
-local function resolve_search_range(win, buf, cache, range, opts)
+local function match_area_resolve_range(win, buf, range, opts)
     if type(range) == "table" then
+        -- Do all this now so the matching can proceed without error checking.
+        local nty = require("nvim-tools.types")
+        nty.valid_list(range, { item_type = "number", len = 4 })
+
+        local line_count = api.nvim_buf_line_count(buf)
+        range[1] = math.min(math.max(range[1], 1), line_count)
+        range[3] = math.min(math.max(range[3], 1), line_count)
+
+        local sr = range[1]
+        local fr = range[3]
+        assert(sr <= fr, "Start row " .. sr .. " > fin row " .. fr)
+
+        local start_line = api.nvim_buf_get_lines(buf, sr - 1, sr, false)[1]
+        range[2] = math.min(math.max(range[2], #start_line), 1)
+        local fin_line = api.nvim_buf_get_lines(buf, fr - 1, fr, false)[1]
+        range[4] = math.min(math.max(range[4], #fin_line), 1)
+
         return range
     end
 
@@ -155,7 +144,6 @@ local function resolve_search_range(win, buf, cache, range, opts)
         range_4[3] = row
 
         local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
-        cache[row] = line
         range_4[4] = #line
     else
         range_4[3] = curpos[2]
@@ -164,20 +152,11 @@ local function resolve_search_range(win, buf, cache, range, opts)
 
     return range_4
 end
--- NOTE: vim.call used here because this function could be called multiple times in a multi-window
--- search.
 
 ---@class nvim-tools.search.CommonOpts
----Cache of buffer lines. One indexed
----@field cache? table<integer, string>
----Begin collecting results at [count] matches..
----(default: `1`)
----@field count? integer
 ---Use a pre-existing cursor position. See |getcurpos()|
 ---@field curpos? [integer, integer, integer, integer, integer]
 ---Filter applied to the pattern.
----TODO: Document examples of forcing case or forcing fixed strings
----Part of the blocker here is, can we use docgen to do it as Markdown? I think so.
 ---@field pattern_filter? fun(pattern:string): filtered_pattern:string
 
 ---@class nvim-tools.search.AreaOpts : nvim-tools.search.CommonOpts
@@ -187,7 +166,7 @@ end
 ---(default: `math.huge`)
 ---@field max_results? integer
 
----Runs |regex:match_line()| over a range.
+---Runs |regex:match_line()| over a range of lines.
 ---@param win integer The |window-ID| to search within
 ---@param pattern string Vim |regexp|
 ---Area to search:
@@ -201,8 +180,7 @@ end
 ---@param range -2|-1|0|nil|1|2|Range4
 ---@param opts nvim-tools.search.AreaOpts
 ---@return nvim-tools.Results results 0,0,0,0 indexed, exclusive end
----@return table<integer, string> cache Lines gathered during search. One indexed rows as keys.
-function M.search_area(win, pattern, range, opts)
+function M.match_area(win, pattern, range, opts)
     local nty = require("nvim-tools.types")
     vim.validate("win", win, nty.is_uint)
     vim.validate("pattern", pattern, "string")
@@ -219,13 +197,12 @@ function M.search_area(win, pattern, range, opts)
     end
 
     local buf = api.nvim_win_get_buf(win)
-    local cache = opts.cache or {} ---@type table<integer, string>
 
-    local range_4 = resolve_search_range(win, buf, cache, range, opts)
+    local range_4 = match_area_resolve_range(win, buf, range, opts)
     require("nvim-tools.range").eval_to_ts(range_4, buf)
-    local results = run_match_area(buf, pattern, range_4, opts)
+    local results = match_area_run(buf, pattern, range_4, opts)
 
-    return results, cache
+    return results
 end
 
 ---@param win integer
@@ -233,7 +210,7 @@ end
 ---@param flags string
 ---@param opts nvim-tools.search.SingleOpts
 ---@return integer, integer
-local function run_search_single(win, pattern, flags, opts)
+local function search_single_run(win, pattern, flags, opts)
     local old_cursor
     local curpos = opts.curpos
     if curpos then
@@ -269,15 +246,13 @@ local function run_search_single(win, pattern, flags, opts)
 
     return row, col
 end
--- MID: It's not necessary to get row/col info if not opts.mine_one. I'm not sure how to section
--- off this behavior though without it getting bloated.
 
 ---@param win integer
 ---@param pattern string
 ---@param upward boolean
 ---@param opts nvim-tools.search.SingleOpts
 ---@return integer, integer
-local function search_single(win, pattern, upward, opts)
+local function search_single_setup(win, pattern, upward, opts)
     local flags_tbl = { "n" }
     flags_tbl[#flags_tbl] = opts.wrapscan and "w" or "W"
     flags_tbl[#flags_tbl] = upward and "b" or "z"
@@ -285,36 +260,40 @@ local function search_single(win, pattern, upward, opts)
 
     local cur_win = api.nvim_get_current_win()
     local row, col = require("nvim-tools.win").call_in(cur_win, win, function()
-        return run_search_single(win, pattern, flags, opts)
+        return search_single_run(win, pattern, flags, opts)
     end)
 
     return row, col
 end
--- LOW: The 'c' flag is not supported because, when searching backward, the search can get stuck.
--- It might be helpful to make wrapper code that identifies and works around this.
--- LOW: The 'e' flag is not supported because I have seen it produce unexpected behavior. It would
--- be helpful to test the flag, document the problems, and either write workarounds or allow the
--- flag with documented limitations.
+-- The 'c' flag is not supported because, when searching backward, the search can get stuck.
+-- The 'e' flag is not supported because I have seen it produce unexpected behavior.
+-- Wrapscan is always set to avoid conflicting sources of truth with the opt.
 
 ---@class nvim-tools.search.SingleOpts : nvim-tools.search.CommonOpts
+---Begin collecting results at [count] matches..
+---(default: `1`)
+---@field count? integer
 ---If the search expires before reaching `count`, return the last result.
+---Example: Neovim's default bracket navigation will return the best available result if count
+---is larger than the available results. (Leaving this behavior disabled mimics csearch, which
+---will simply no-op)
 ---(default: `false`)
 ---@field min_one? boolean
 ---In ms.
 ---(default: `500`)
 ---@field timeout? integer
+---Sets the `w` flag in the search. Otherwise `W` is used.
 ---(default: `false`)
 ---@field wrapscan? boolean
 
--- TODO: These opts are a good docgen thing. On one hand, it makes sense to do these as inlinedoc.
--- But then do you repeat the CommonOpts each time?
-
----@param win integer
----@param pattern string
----@param upward boolean
+---Perform a |search()| for a |pattern| with a count.
+---Flags are controlled within the function opts. The `wrapscan` opt is overridden.
+---
+---@param win integer Context |window_ID|
+---@param pattern string See |pattern|
+---@param upward boolean If true, the `b` search flag will be used instead of `z`.
 ---@param opts nvim-tools.search.SingleOpts
----1,1 indexed, inclusive. 0,0 if no result.
----@return integer row, integer col
+---@return integer row, integer col 1,1 indexed, inclusive. 0,0 if no result.
 function M.search_single(win, pattern, upward, opts)
     local nty = require("nvim-tools.types")
     vim.validate("win", win, nty.is_uint)
@@ -328,7 +307,7 @@ function M.search_single(win, pattern, upward, opts)
         pattern = pattern_filter(pattern)
     end
 
-    return search_single(win, pattern, upward, opts)
+    return search_single_setup(win, pattern, upward, opts)
 end
 
 return M

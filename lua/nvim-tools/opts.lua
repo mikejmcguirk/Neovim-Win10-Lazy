@@ -6,6 +6,7 @@ local M = {}
 ---@param default boolean
 ---@return boolean
 function M.resolve_bool_opt(opt, default)
+    vim.validate("default", default, "boolean")
     if type(opt) == "nil" then
         return default
     else
@@ -29,14 +30,12 @@ function M.set_if_new(opt, old, new, scope)
     vim.validate("new", new, not_nil)
     vim.validate("scope", scope, "table")
 
-    if old ~= new then
+    if old ~= new and new ~= nil then
         api.nvim_set_option_value(opt, new, scope)
         return true
     end
 
     return false
 end
--- MAYBE: I don't think any vim opt allows you to set nil as a value. The
--- closest thing is "" for blank.
 
 return M

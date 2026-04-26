@@ -1,11 +1,10 @@
-local api = vim.api
-
 local M = {}
 
 -- vim.call is used here to avoid the indirection cost of vim.fn in hot paths
 
 ---Cannot use virtcol2col because that function is based on the screen virtual column, not the
 ---virtual column relative to the physical line. This makes visual selections incorrect.
+---
 ---@param line string
 ---@param vcol integer
 ---The result of strcharlen() on the line. Passed as a param in case callers need to re-use it.
@@ -47,11 +46,5 @@ function M.vcol_to_byte_bounds(line, vcol, charlen)
 
     error("Unable to get byte bounds for vcol " .. vcol .. ' on line "' .. line('"'))
 end
--- MAYBE: Use binary search. Because characters can contain multiple vcols, binary searching can
--- fail or create additional logic in weird ways.
--- MAYBE: For characters with variable widths, such as tabs or characters controlled by ambiwidth,
--- strdisplaywidth uses the current window settings. In both of the use cases I can think of for
--- this function (visual selection and quickfix), this is correct. If a use case comes up, some
--- kind of context switching can be added.
 
 return M

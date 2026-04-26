@@ -31,6 +31,8 @@ M.clear = clear
 ---@param t table<T, T>
 ---@return table<any, any>
 function M.copy(t)
+    vim.validate("t", t, "table")
+
     local ret = {}
     for k, v in pairs(t) do
         ret[k] = v
@@ -77,6 +79,8 @@ end
 ---@param t table<T, T>
 ---@return T[]
 function M.keys(t)
+    vim.validate("t", t, "table")
+
     local ret = {}
     for k, _ in pairs(t) do
         ret[#ret + 1] = k
@@ -115,8 +119,6 @@ function M.get(t, ...)
 
     return t
 end
--- FUTURE: If this function is kept in vim.table/vim.dict, consider doing a PR there to address the
--- nil table case so the bespoke version can be deleted.
 
 ---@param  ... any Table keys
 ---@return string

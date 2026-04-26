@@ -20,6 +20,14 @@ local M = {}
 ---@param col_b integer
 ---@return -1|0|1
 function M.cmp_pos(row_a, col_a, fin_row_a, fin_col_a, row_b, col_b)
+    local is_uint = require("nvim-tools.types").is_uint
+    vim.validate("row_a", row_a, is_uint)
+    vim.validate("col_a", col_a, is_uint)
+    vim.validate("fin_row_a", fin_row_a, is_uint)
+    vim.validate("fin_col_a", fin_col_a, is_uint)
+    vim.validate("row_b", row_b, is_uint)
+    vim.validate("col_b", col_b, is_uint)
+
     if row_a <= row_b and row_b <= fin_row_a then
         if row_b == row_a and col_b < col_a then
             return -1
@@ -34,14 +42,18 @@ function M.cmp_pos(row_a, col_a, fin_row_a, fin_col_a, row_b, col_b)
         return 1
     end
 end
--- MID: Could maybe be more efficient.
 
 ---@param pos_1 string
 ---@param pos_2 string
 ---@param mode? string
----@param exclusive? boolean
+---@param exclusive? boolean If nil, use the option value.
 ---@return Range4 1,1,1,1 indexed. Exclusive based on opts
 function M.get_regionpos4(pos_1, pos_2, mode, exclusive)
+    vim.validate("pos_1", pos_1, "string")
+    vim.validate("pos_2", pos_2, "string")
+    vim.validate("mode", mode, "string", true)
+    vim.validate("exclusive", exclusive, "boolean", true)
+
     local cur = fn.getpos(pos_1)
     local fin = fn.getpos(pos_2)
 
@@ -86,43 +98,6 @@ function M.eval_to_ts(eval_range, buf)
 
     eval_range[3] = fin_row_0
 end
-
----@param lnum integer 1 indexed
----@param col integer 0 for omitted, or 1 indexed, inclusive
----@param vcol 0|1
----@param bufnr integer
----@return integer, integer 1,0 indexed, end inclusive
-function M.raw_qf_to_mark_pos(lnum, col, vcol, bufnr)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("lnum", lnum, is_uint)
-    vim.validate("col", col, is_uint)
-    vim.validate("bufnr", bufnr, is_uint)
-    vim.validate("vcol", vcol, function()
-        return vcol == 0 or vcol == 1
-    end)
-
-    local line_count = api.nvim_buf_line_count(bufnr)
-    local row_1 = math.min(lnum, line_count)
-
-    local line = api.nvim_buf_get_lines(bufnr, row_1 - 1, row_1, false)[1]
-    local col_0
-
-    if col > 0 then
-        if vcol == 0 then
-            col_0 = math.min(col, #line) - 1
-        else
-            local charlen = vim.call("strcharlen", line)
-            local ntv = require("nvim-tools.vcol")
-            col_0, _, _ = ntv.vcol_to_byte_bounds(line, col, charlen)
-        end
-    else
-        col_0 = 0
-    end
-
-    return row_1, col_0
-end
--- TODO: This should be in pos and it should be called "from_raw_qf"
--- MAYBE: This isn't really a "range" function, but keeping with other qf range op for now.
 
 ---@param lnum integer 1 indexed
 ---@param col integer 0 for omitted, or 1 indexed, inclusive
@@ -188,6 +163,8 @@ end
 
 ---@param qf_range Range4
 function M.qf_to_ts(qf_range)
+    vim.validate("qf_range", qf_range, "table")
+
     qf_range[1] = qf_range[1] - 1
     qf_range[2] = qf_range[2] - 1
     qf_range[3] = qf_range[3] - 1

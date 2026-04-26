@@ -1,5 +1,7 @@
 local M = {}
 
+---Added even though vim._assert_integer exists because it's a private function and it performs
+---conversion in addition to validation.
 ---@param n any
 ---@return boolean
 function M.is_int(n)
@@ -9,10 +11,6 @@ function M.is_int(n)
 
     return n % 1 == 0
 end
--- MAYBE: Added this even though vim._assert_integer exists because:
--- - That function is "private"
--- - It handles both conversion and validation
--- If that interface graduates, perhaps this will be removed.
 
 ---@param n any
 ---@return boolean
@@ -89,9 +87,5 @@ function M.valid_list(t, opts)
 
     return true
 end
--- MID: opts.func is... fine here, but since you can already take the list and write bespoke logic,
--- it doesn't do that much. Remove?
--- MID: Add the ability to send a custom function for item type validation
--- - Use case: uint/int validations
 
 return M

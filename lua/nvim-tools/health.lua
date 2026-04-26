@@ -1,10 +1,5 @@
 local M = {}
 
--- TODO: My initial judgment here was wrong. A lot of the buf config logic needs to be moved here,
--- since it's basically adding bespoke logic to the buf accessor
--- The only thing I think buf config *needs* is a way to see the buf list, since that's
--- hidden behind _configs
-
 function M.check()
     vim.health.start("nvim-tools Config")
 

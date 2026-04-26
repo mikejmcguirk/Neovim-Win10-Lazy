@@ -64,8 +64,6 @@ function M.open_new_tab_old(buf, enter, after)
 
     return tabpage
 end
--- MAYBE: This could be more robust, but hate to put a bunch of time into something that will be
--- gone next version.
 
 ---@param buf integer?
 ---@param enter boolean

@@ -48,6 +48,9 @@
 
 #### MID:
 
+- [ ] https://github.com/wellle/targets.vim
+  - Looks like it can solve the i| a| problem
+  - Also an interesting thing where you can do di, and da, in text
 + [ ] Grep the current visual selection in fzflua
 - [ ] With stal = 0, ls = 0, disabling ts context, tmux commands, and window padding, you can make your own zen at home. Question - do you still just do it as a float or do you save the old window layout?
 - [ ] For the intro scratch buffer, IMO it should either be set to be a noma scratch buffer or I should come up with a way that you can edit it and save it conveniently.

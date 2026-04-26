@@ -6,14 +6,29 @@ local vimv = vim.v
 
 local M = {}
 
+function M.call_in(cur_buf, buf, f)
+    local is_uint = require("nvim-tools.types").is_uint
+    vim.validate("cur_buf", cur_buf, is_uint)
+    vim.validate("buf", buf, is_uint)
+    vim.validate("f", f, "function")
+
+    buf = buf == 0 and cur_buf or buf
+    if cur_buf == buf then
+        return f()
+    else
+        return api.nvim_buf_call(buf, f)
+    end
+end
+
 ---@param buf integer
 ---@return boolean, string|nil, string|nil
 function M.check_modifiable(buf)
     vim.validate("buf", buf, require("nvim-tools.types").is_uint)
+
     if api.nvim_get_option_value("modifiable", { buf = buf }) then
         return true, nil, nil
     else
-        return false, "E21: Cannot make changes, 'modifiable' is off", ""
+        return false, "Cannot make changes, 'modifiable' is off", ""
     end
 end
 
@@ -23,50 +38,58 @@ end
 ---- noswf
 ---- noudf
 ---
----Set bufhidden.
+---@param bh? ""|"hide"|"unload"|"delete"|"wipe" Set bufhidden
 ---"hide" is useful for cached buffers such as previews.
 ---"wipe" is useful for placeholders, like temporary help buffers used to open helptags in a
 ---targeted window.
----@param bh ""|"hide"|"unload"|"delete"|"wipe"
----@param bl boolean Buflisted
+---(default: `hide`)
+---@param bl? boolean Set buflisted
+---(default: `true`)
+---@param bt? ""|"acwrite"|"help"|"nofile"|"nowrite"|"prompt"|"quickfix"|"terminal"
 ---"nofile" will make the buffer display as "scratch" in the statusline
 ---"help" can be used for targeted helptag opening
----@param bt ""|"acwrite"|"help"|"nofile"|"nowrite"|"prompt"|"quickfix"|"terminal"
----@param ft string Set a filetype (useful for preview buffers). "" is a no-op
----@param noma boolean Sets nomodifiable and readonly
+---(default: `""`)
+---@param ft? string Set a filetype (useful for preview buffers). nil is a no-op
+---(default: `""`)
+---@param ma? boolean Set modifiable
+---(default: `true`)
 ---@return integer
-function M.create_temp_buf(bh, bl, bt, ft, noma)
+function M.create_temp_buf(bh, bl, bt, ft, ma)
+    vim.validate("bh", bh, "string")
+    vim.validate("bl", bl, "boolean")
+    vim.validate("bt", bt, "string", true)
+    vim.validate("ft", ft, "string", true)
+    vim.validate("noma", ma, "boolean", true)
+
     local buf = api.nvim_create_buf(false, false)
     local buf_scope = { buf = buf }
 
-    if bt ~= "" then
+    if bt then
         api.nvim_set_option_value("buftype", bt, buf_scope)
     end
 
     -- Set unconditionally because of autocmds/global settings
+    bh = bh or "hide"
     api.nvim_set_option_value("bh", bh, buf_scope)
     api.nvim_set_option_value("ml", false, buf_scope)
     api.nvim_set_option_value("mod", false, buf_scope)
-    api.nvim_set_option_value("swapfile", false, buf_scope)
-    api.nvim_set_option_value("undofile", false, buf_scope)
+    api.nvim_set_option_value("swf", false, buf_scope)
+    api.nvim_set_option_value("udf", false, buf_scope)
 
-    if noma then
+    if ma == false then
         api.nvim_set_option_value("ma", false, buf_scope)
-        api.nvim_set_option_value("ro", true, buf_scope)
     end
 
-    if bl then
-        api.nvim_set_option_value("bl", bl, buf_scope)
+    if bl ~= false then
+        api.nvim_set_option_value("bl", true, buf_scope)
     end
 
-    if ft ~= "" then
+    if ft then
         api.nvim_set_option_value("ft", ft, buf_scope)
     end
 
     return buf
 end
--- MID: On principle, I have ft delayed until the end. Can change if a use case comes up for why
--- it should be fired earlier.
 
 ---@param bufnr integer
 ---@return string
@@ -74,15 +97,7 @@ function M.get_bcd(bufnr)
     vim.validate("bufnr", bufnr, require("nvim-tools.types").is_uint)
     return fs.dirname(fs.normalize(api.nvim_buf_get_name(bufnr)))
 end
--- FUTURE: Remove whenever an official implementation of this is rolled out.
 
----If calling bo.indentexpr, v:lnum will be temporarily set to the value of the row param
----Some indent functions use line("."). While this is properly updated, it might be the case that
----a particular indentexpr is meant to get the indent of the current line rather than an
----adjustable row. If a change in row context is required, a separate wrapper will have to be
----used.
----NOTE: If you need to change cursor context, prefer setpos(). Unlike nvim_win_set_cursor, it
----does not update the view or set temporary window context.
 ---@param buf integer
 ---@param row integer
 ---@return integer
@@ -91,14 +106,16 @@ function M.get_indent(buf, row)
     vim.validate("buf", buf, is_uint)
     vim.validate("row", row, is_uint)
 
+    local cur_buf = api.nvim_get_current_buf()
+
     ---@type string
     local indentexpr = api.nvim_get_option_value("indentexpr", { buf = buf })
     if #indentexpr > 0 then
         local old_row = vimv.lnum
         vimv.lnum = row
         ---@type boolean, string|number?
-        local ok, indent = pcall(vim.api.nvim_buf_call, buf, function()
-            return vim.fn.eval(indentexpr)
+        local ok, indent = pcall(M.call_in, cur_buf, buf, function()
+            return api.nvim_eval(indentexpr)
         end)
 
         vimv.lnum = old_row
@@ -110,24 +127,24 @@ function M.get_indent(buf, row)
         end
     elseif api.nvim_get_option_value("cindent", { buf = buf }) then
         ---@type integer
-        local cindent = api.nvim_buf_call(buf, function()
-            return fn.cindent(row)
+        local cindent = M.call_in(cur_buf, buf, function()
+            return vim.call("cindent", row)
         end)
 
         if cindent >= 0 then
             return cindent
         end
     elseif
-        api.nvim_get_option_value("autoindent", { buf = buf })
+        api.nvim_get_option_value("ai", { buf = buf })
         and api.nvim_get_option_value("lisp", { buf = buf })
     then
         ---@type integer
-        local lisp = api.nvim_buf_call(buf, function()
-            return fn.lispindent(row)
+        local lispindent = M.call_in(cur_buf, buf, function()
+            return vim.call("lispindent", row)
         end)
 
-        if lisp >= 0 then
-            return lisp
+        if lispindent >= 0 then
+            return lispindent
         end
     end
 
@@ -135,8 +152,6 @@ function M.get_indent(buf, row)
         return math.max(fn.indent(fn.prevnonblank(row)), 0)
     end)
 end
--- TODO: Guarantee support for all runtime indent functions
--- TODO: Support smartindent
 
 ---@return integer[]
 function M.get_listed_bufs()
@@ -160,18 +175,23 @@ end
 ---@return boolean
 function M.is_noname(buf)
     vim.validate("buf", buf, require("nvim-tools.types").is_uint)
+
     return #api.nvim_buf_get_name(buf) == 0
 end
 
 ---@param buf integer
 ---@return boolean
 function M.is_empty_noname(buf)
+    -- Both underlying functions run vim.validate
     return M.is_empty(buf) and M.is_noname(buf)
 end
 
 ---@param fold_cmd "zv"|"zO"|"zx"|"zR"|nil
 ---@param do_zzze? boolean
 local function do_open_buf_adjustments(fold_cmd, do_zzze)
+    vim.validate("fold_cmd", fold_cmd, { "string" }, true)
+    vim.validate("do_zzze", do_zzze, "boolean", true)
+
     if fold_cmd then
         api.nvim_cmd({ cmd = "normal", args = { fold_cmd }, bang = true }, {})
     end
@@ -301,7 +321,6 @@ local function do_set_buf(win, buf, bl, bt, clearjumps)
     return true
 end
 -- NOTE: nvim_set_current_buf uses open_buffer in buffer.c as its backend
--- TODO: Test buf open failure handling by using a once autocmd on BufReadPre or something
 
 ---@param buf integer
 ---@param force "force"|"hide"|""|"save"
@@ -316,8 +335,8 @@ local function handle_force(buf, force)
     end
 
     local buf_opt = { buf = buf }
-    local bufhidden = api.nvim_get_option_value("bh", buf_opt) ---@type string
-    if bufhidden == "hide" or #fn.win_findbuf(buf) > 1 then
+    local bh = api.nvim_get_option_value("bh", buf_opt) ---@type string
+    if bh == "hide" or #fn.win_findbuf(buf) > 1 then
         return
     end
 
@@ -332,20 +351,17 @@ local function handle_force(buf, force)
         return
     end
 
-    if force == "" and not api.nvim_get_option_value("autowriteall", global_opt) then
+    if force == "" and not api.nvim_get_option_value("awa", global_opt) then
         error("No write since last change")
     end
 
     local ok, err, _ = M.save(buf)
     if ok then
         return
-    elseif force == "save" then
-        api.nvim_set_option_value("bufhidden", "hide", buf_opt)
     else
         error(err or ("Unable to save " .. fn.bufname(buf)))
     end
 end
--- TODO: This is directionally correct but sloppy
 
 ---@param win integer window-ID
 ---@param buf integer
@@ -399,8 +415,8 @@ end
 ---Versatile buffer opening logic meant for user-facing contexts in which any buftype could be
 ---opened in any window. Sets temporary window context and uses eventignorewin + lazyredraw to
 ---emulate proper help buffer opening.
----Hards errors on failure, including win or buf invalid.
----@param win integer window-ID
+---Hard errors on failure, including win or buf invalid.
+---@param win integer See |window-ID|
 ---@param buf integer
 ---@param opts nvim-tools.buf.OpenBufOpts
 function M.open_buf(win, buf, opts)
@@ -415,9 +431,10 @@ function M.open_buf(win, buf, opts)
     local buftype = opts.buftype or api.nvim_get_option_value("bt", { buf = buf })
     local cur_pos = opts.cur_pos
 
+    local ntw = require("nvim-tools.win")
     if not already_open then
         handle_force(dest_win_cur_buf, opts.force or "hide")
-        api.nvim_win_call(win, function()
+        ntw.call_in(start_win, win, function()
             return do_set_buf(win, buf, opts.buflisted, buftype, opts.clearjumps)
         end)
     end
@@ -425,7 +442,7 @@ function M.open_buf(win, buf, opts)
     local not_term = buftype ~= "terminal"
     if cur_pos and not_term then
         if already_open then
-            api.nvim_win_call(win, function()
+            ntw.call_in(start_win, win, function()
                 api.nvim_cmd({ cmd = "normal", args = { "m'" }, bang = true }, {})
             end)
         end
@@ -447,7 +464,7 @@ function M.open_buf(win, buf, opts)
         do_open_buf_adjustments(fold_cmd, do_zzze)
     else
         if fold_cmd or do_zzze then
-            api.nvim_win_call(win, function()
+            ntw.call_in(start_win, win, function()
                 do_open_buf_adjustments(fold_cmd, do_zzze)
             end)
         end
@@ -460,10 +477,14 @@ function M.open_buf(win, buf, opts)
 end
 
 ---@param buf integer Buffer to delete
----@param delist boolean De-list buffer?
+---@param delist? boolean De-list buffer?
 ---@param opts vim.api.keyset.buf_delete
 ---@return boolean, string|nil, string|nil
 function M.protected_del(buf, delist, opts)
+    vim.validate("buf", buf, require("nvim-tools.types").is_uint)
+    vim.validate("delist", delist, "boolean", true)
+    vim.validate("opts", opts, "table")
+
     if not api.nvim_buf_is_valid(buf) then
         return false, "Buf " .. buf .. " is not valid", ""
     end
@@ -518,12 +539,12 @@ function M.bufnr_to_full_bufname(bufnr)
 
     return true, api.nvim_buf_get_name(resolved_bufnr), nil, nil
 end
--- TODO: Is "" the correct return on err?
 
 ---@param bufname string
 ---@return boolean, string, string|nil, string|nil
 function M.resolve_full_bufname(bufname)
     vim.validate("bufname", bufname, "string")
+
     return true, fs.normalize(fn.fnamemodify(bufname, ":p")), nil, nil
 end
 
@@ -547,8 +568,6 @@ function M.bufname_to_bufnr(bufname)
         return true, bufnr, nil, nil
     end
 end
--- MAYBE: I'm assuming for now that this function wouldn't be used in a situation where nofile
--- buffers are co-mingled with actual files. Can add guard code if something comes up.
 
 ---@param buf integer|string
 ---@return boolean, integer, string|nil, string|nil
@@ -581,6 +600,11 @@ function M.save(buf)
         return false, "Buffer " .. buf .. " is invalid", ""
     end
 
+    local bt = api.nvim_get_option_value("bt", { buf = buf })
+    if bt == "nofile" or bt == "quickfix" then
+        return false, "Cannot save buftype " .. bt, ""
+    end
+
     if #api.nvim_buf_get_name(buf) == 0 then
         return false, "E32: No file name", "ErrorMsg"
     end
@@ -592,8 +616,6 @@ function M.save(buf)
         return ok, err, "ErrorMsg"
     end
 end
--- TODO: This error comes up on qflists, where it really shouldn't.
--- FUTURE: Could bcd or workspace config be used for saving here?
 
 ---@param buf integer
 ---@param delist boolean
@@ -605,19 +627,17 @@ function M.save_and_del(buf, delist, opts)
         return false, "Buffer " .. buf .. " is invalid", ""
     end
 
-    if not opts.force then
-        if M.is_empty_noname(buf) then
-            opts.force = true
-        else
-            local ok, err, hl = M.save(buf)
-            if not ok then
-                return ok, err, hl
-            end
-        end
+    if M.is_empty_noname(buf) then
+        opts.force = true
+        return M.protected_del(buf, delist, opts)
     end
 
-    return M.protected_del(buf, delist, opts)
+    local ok, err, hl = M.save(buf)
+    if ok or opts.force then
+        return M.protected_del(buf, delist, opts)
+    end
+
+    return ok, err, hl
 end
--- LOW: Should force still try to save, but ignore failures?
 
 return M
