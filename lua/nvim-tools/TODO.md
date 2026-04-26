@@ -404,3 +404,9 @@
 - Many old functions sitting around from spec-ops.
 - Use binary search. Because characters can contain multiple vcols, binary searching can fail or create additional logic in weird ways.
 - For characters with variable widths, such as tabs or characters controlled by ambiwidth, strdisplaywidth uses the current window settings. In both of the use cases I can think of for this function (visual selection and quickfix), this is correct. If a use case comes up, some kind of context switching can be added.
+
+## win
+
+#### MID:
+
+- [ ] There should be a convenience function that handles pcmark + call_in + protected set cursor. I don't want to just fold the pcmark into protected set because that muddies that the function is for. protected_set_cursor_pcmark feels like a bad function name.

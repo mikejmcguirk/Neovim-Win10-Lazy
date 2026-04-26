@@ -148,13 +148,23 @@ end
 
 ---@param win integer
 ---@param cur_pos { [1]:integer, [2]: integer }
+---@param is_term boolean
 ---@ return { [1]:integer, [2]: integer }
-function M.protected_set_cursor(win, cur_pos)
+function M.protected_set_cursor(win, cur_pos, is_term)
     local is_uint = require("nvim-tools.types").is_uint
     vim.validate("win", win, is_uint)
     vim.validate("cur_pos", cur_pos, "table")
 
     local buf = api.nvim_win_get_buf(win)
+    if is_term == nil then
+        ---@type string
+        local bt = api.nvim_get_option_value("bt", { buf = buf })
+        is_term = bt == "terminal"
+    end
+
+    if is_term then
+        return api.nvim_win_get_cursor(win)
+    end
 
     local row, col = cur_pos[1], cur_pos[2]
     row, col = require("nvim-tools.pos").adj_mark_pos(row, col, buf)

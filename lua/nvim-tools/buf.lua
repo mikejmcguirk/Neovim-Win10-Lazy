@@ -186,19 +186,37 @@ function M.is_empty_noname(buf)
     return M.is_empty(buf) and M.is_noname(buf)
 end
 
----@param fold_cmd "zv"|"zO"|"zx"|"zR"|nil
+---@param cur_win integer
+---@param dest_win integer
+---@param is_term? boolean
+---@param fold_cmd? "zv"|"zO"|"zx"|"zR"
 ---@param do_zzze? boolean
-local function do_open_buf_adjustments(fold_cmd, do_zzze)
-    vim.validate("fold_cmd", fold_cmd, { "string" }, true)
-    vim.validate("do_zzze", do_zzze, "boolean", true)
-
-    if fold_cmd then
-        api.nvim_cmd({ cmd = "normal", args = { fold_cmd }, bang = true }, {})
+function M.buf_post_open(cur_win, dest_win, is_term, fold_cmd, do_zzze)
+    if not (fold_cmd or do_zzze) then
+        return
     end
 
-    if do_zzze then
-        api.nvim_cmd({ cmd = "normal", args = { "zzze" }, bang = true }, {})
+    if is_term == nil then
+        local dest_buf = api.nvim_win_get_buf(dest_win)
+        ---@type string
+        local bt = api.nvim_get_option_value("bt", { buf = dest_buf })
+        is_term = bt == "terminal"
     end
+
+    if is_term then
+        return
+    end
+
+    local win_call_in = require("nvim-tools.win").call_in
+    win_call_in(cur_win, dest_win, function()
+        if fold_cmd then
+            api.nvim_cmd({ cmd = "normal", args = { fold_cmd }, bang = true }, {})
+        end
+
+        if do_zzze then
+            api.nvim_cmd({ cmd = "normal", args = { "zzze" }, bang = true }, {})
+        end
+    end)
 end
 
 ---Assumes proper window context
@@ -448,27 +466,21 @@ function M.open_buf(win, buf, opts)
         end
 
         -- Outside win_call to avoid recursively setting temporary window context
-        cur_pos = require("nvim-tools.win").protected_set_cursor(win, cur_pos)
+        cur_pos = require("nvim-tools.win").protected_set_cursor(win, cur_pos, not not_term)
     end
 
     local focus = opts.focus
     local do_focus = focus == true or focus == nil
     local in_dest_win = start_win == win
+    local cur_win = start_win
     if do_focus and not in_dest_win then
         api.nvim_set_current_win(win)
+        cur_win = win
     end
 
-    local do_zzze = opts.do_zzze and (cur_pos or not already_open) and not_term
-    local fold_cmd = (opts.fold_cmd and cur_pos and not_term) and opts.fold_cmd or nil
-    if do_focus or in_dest_win then
-        do_open_buf_adjustments(fold_cmd, do_zzze)
-    else
-        if fold_cmd or do_zzze then
-            ntw.call_in(start_win, win, function()
-                do_open_buf_adjustments(fold_cmd, do_zzze)
-            end)
-        end
-    end
+    local do_zzze = opts.do_zzze and (cur_pos ~= nil or not already_open)
+    local fold_cmd = (opts.fold_cmd and cur_pos) and opts.fold_cmd or nil
+    M.buf_post_open(cur_win, win, not not_term, fold_cmd, do_zzze)
 
     local on_open = opts.on_open
     if on_open then
