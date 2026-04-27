@@ -78,12 +78,12 @@ local function setup_fugitive()
     end)
 
     set("n", "<leader>gR", function()
+        local ntu = require("nvim-tools.ui")
         ---@type boolean, string
-        local ok, input = require("nvim-tools.ui").get_input("reset --soft HEAD~1 ? [y/n]: ")
+        local ok, input = ntu.get_input("reset --soft HEAD~1 ? [y/n]: ")
         if not ok then
-            ---@type [string, string|integer?][]
-            local chunks = { { (input or "Unknown error getting input"), "ErrorMsg" } }
-            api.nvim_echo(chunks, true, { err = true })
+            local err = input or "Unknown error getting input"
+            ntu.echo_err(false, err, "ErrorMsg")
             return
         elseif input == "" then
             return

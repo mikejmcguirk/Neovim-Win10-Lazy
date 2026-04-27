@@ -10,7 +10,7 @@ local md_to_vimdoc = util.md_to_vimdoc
 local str_fmt = string.format
 
 local TEXT_WIDTH = 78
-local INDENTATION = 4
+local INDENT = 4
 
 local DEFAULT_LOG_FILE = "docgen.log"
 local DEFAULT_OUTPUT_FILE = "doc_output.txt"
@@ -93,21 +93,18 @@ end
 local debug_source = debug_info.source:gsub("^@", "")
 local script_path = fn.fnamemodify(debug_source, ":p:h")
 
----@alias nvim.gen_vimdoc.HelptagTarget
----| nvim.luacats.parser.obj
----| nvim.luacats.parser.field
----| nvim.luacats.parser.param
-
---- @param fun nvim.gen_vimdoc.HelptagTarget
+--- @param fun docgen.DocItem|docgen.ParserObj
 --- @return string
 local function fn_helptag_fmt_common(fun)
-    local fn_sfx = fun.table and "" or "()"
+    local fn_sfx = fun.is_table and "" or "()"
     if fun.classvar then
         return str_fmt("%s:%s%s", fun.classvar, fun.name, fn_sfx)
     end
+
     if fun.module then
         return str_fmt("%s.%s%s", fun.module, fun.name, fn_sfx)
     end
+
     return fun.name .. fn_sfx
 end
 
@@ -289,8 +286,8 @@ local function get_default(desc)
 end
 
 --- @param ty string
---- @param classes? table<string,nvim.luacats.parser.obj>
---- @return nvim.luacats.parser.obj?
+--- @param classes? table<string,docgen.ParserObj>
+--- @return docgen.ParserObj?
 local function get_class(ty, classes)
     if not classes then
         return
@@ -301,8 +298,8 @@ local function get_class(ty, classes)
     return classes[cty]
 end
 
---- @param obj nvim.luacats.parser.param|nvim.luacats.parser.return|nvim.luacats.parser.field
---- @param classes? table<string,nvim.luacats.parser.obj>
+--- @param obj docgen.DocItem
+--- @param classes? table<string,docgen.ParserObj>
 local function inline_type(obj, classes)
     local ty = obj.type
     if not ty then
@@ -367,9 +364,9 @@ local function inline_type(obj, classes)
     obj.desc = desc
 end
 
---- @param xs (nvim.luacats.parser.param|nvim.luacats.parser.field)[]
+--- @param xs docgen.DocItem[]
 --- @param generics? table<string,string>
---- @param classes? table<string,nvim.luacats.parser.obj>
+--- @param classes? table<string,docgen.ParserObj>
 local function render_fields_or_params(xs, generics, classes)
     local ret = {} --- @type string[]
 
@@ -425,8 +422,8 @@ end
 -- MARK: Class Rendering --
 ---------------------------
 
---- @param class nvim.luacats.parser.obj
---- @param classes table<string,nvim.luacats.parser.obj>
+--- @param class docgen.ParserObj
+--- @param classes table<string,docgen.ParserObj>
 local function render_class(class, classes)
     if class.access or class.nodoc or class.inlinedoc then
         return
@@ -438,12 +435,12 @@ local function render_class(class, classes)
 
     if class.parent then
         local txt = str_fmt("Extends: |%s|", class.parent)
-        table.insert(ret, md_to_vimdoc(txt, INDENTATION, INDENTATION, TEXT_WIDTH))
+        table.insert(ret, md_to_vimdoc(txt, INDENT, INDENT, TEXT_WIDTH))
         table.insert(ret, "\n")
     end
 
     if class.desc then
-        table.insert(ret, md_to_vimdoc(class.desc, INDENTATION, INDENTATION, TEXT_WIDTH))
+        table.insert(ret, md_to_vimdoc(class.desc, INDENT, INDENT, TEXT_WIDTH))
     end
 
     local fields_txt = render_fields_or_params(class.fields, nil, classes)
@@ -456,7 +453,7 @@ local function render_class(class, classes)
     return table.concat(ret)
 end
 
---- @param classes table<string,nvim.luacats.parser.obj>
+--- @param classes table<string,docgen.ParserObj>
 local function render_classes(classes)
     local ret = {} --- @type string[]
 
@@ -471,9 +468,9 @@ end
 -- MARK: Function Rendering --
 ------------------------------
 
---- @param returns nvim.luacats.parser.return[]
+--- @param returns docgen.DocItem[]
 --- @param generics? table<string,string>
---- @param classes? table<string,nvim.luacats.parser.obj>
+--- @param classes? table<string,docgen.ParserObj>
 --- @return string?
 local function render_returns(returns, generics, classes)
     local ret = {} --- @type string[]
@@ -505,10 +502,43 @@ local function render_returns(returns, generics, classes)
     return table.concat(ret)
 end
 
---- @param fun nvim.luacats.parser.obj
-local function render_fun_header(fun)
-    local ret = {} --- @type string[]
+---@param ret string[]
+---@param fun docgen.ParserObj
+local function add_notes(fun, ret)
+    if not fun.notes then
+        return
+    end
 
+    ret[#ret + 1] = "\n    Note: ~\n"
+    local notes = assert(fun.notes)
+    local len_notes = #notes
+    for i = 1, len_notes do
+        local vimdoc = md_to_vimdoc(notes[i].desc, 0, 8, TEXT_WIDTH, true)
+        ret[#ret + 1] = "      • " .. vimdoc
+    end
+end
+
+--- @param fun docgen.ParserObj
+--- @return boolean
+local function should_render_fun(fun)
+    if fun.access or fun.deprecated or fun.nodoc then
+        return false
+    end
+
+    if not fun.name then
+        error(("fun.name is nil, check fn_xform(). fun: %s"):format(vim.inspect(fun)))
+    end
+
+    if vim.startswith(fun.name, "_") or fun.name:find("[:.]_") then
+        return false
+    end
+
+    return true
+end
+
+--- @param fun docgen.ParserObj
+--- @param ret string[]
+local function render_fun_header(fun, ret)
     local args = {} --- @type string[]
     for _, p in ipairs(fun.params or {}) do
         if p.name ~= "self" then
@@ -520,14 +550,8 @@ local function render_fun_header(fun)
     if fun.classvar then
         nm = str_fmt("%s:%s", fun.classvar, nm)
     end
-    if nm == "vim.bo" then
-        nm = "vim.bo[{bufnr}]"
-    end
-    if nm == "vim.wo" then
-        nm = "vim.wo[{winid}][{bufnr}]"
-    end
 
-    local proto = fun.table and nm or nm .. "(" .. table.concat(args, ", ") .. ")"
+    local proto = fun.is_table and nm or nm .. "(" .. table.concat(args, ", ") .. ")"
 
     local tag = "*" .. fn_helptag_fmt_common(fun) .. "*"
 
@@ -540,63 +564,31 @@ local function render_fun_header(fun)
         local pad = TEXT_WIDTH - #proto - #tag
         table.insert(ret, proto .. string.rep(" ", pad) .. tag)
     end
-
-    return table.concat(ret)
 end
 
---- @param fun nvim.luacats.parser.obj
---- @param classes table<string,nvim.luacats.parser.obj>
+--- @param fun docgen.ParserObj
+--- @param classes table<string,docgen.ParserObj>
 --- @return string|nil
 local function render_fun(fun, classes)
-    if fun.access or fun.deprecated or fun.nodoc then
-        return
-    end
-
-    if not fun.name then
-        error(("fun.name is nil, check fn_xform(). fun: %s"):format(vim.inspect(fun)))
-    end
-
-    if vim.startswith(fun.name, "_") or fun.name:find("[:.]_") then
-        return
+    if not should_render_fun(fun) then
+        return nil
     end
 
     local ret = {} --- @type string[]
+    ret[#ret + 1] = render_fun_header(fun, ret)
+    ret[#ret + 1] = "\n"
 
-    table.insert(ret, render_fun_header(fun))
-    table.insert(ret, "\n")
-
-    -- TODO: Feels arbitrary to have here now that it's not tied to Nvim version validation.
-    -- Would need to check Nvim's docs + luacats syntax, but I think this is a case where the
-    -- user just puts a number in their annotation and the literal is used. I'm not sure how
-    -- you would get to an annotation map here.
     if fun.since then
-        table.insert(fun.attrs, str_fmt("Since: %s", fun.since))
+        fun.attrs = fun.attrs or {}
+        fun.attrs[#fun.attrs + 1] = str_fmt("Since: %s", fun.since)
     end
 
     if fun.desc then
-        table.insert(ret, md_to_vimdoc(fun.desc, INDENTATION, INDENTATION, TEXT_WIDTH))
+        local desc = md_to_vimdoc(fun.desc, INDENT, INDENT, TEXT_WIDTH)
+        table.insert(ret, desc)
     end
 
-    if fun.notes then
-        table.insert(ret, "\n    Note: ~\n")
-        for _, p in ipairs(fun.notes) do
-            table.insert(ret, "      • " .. md_to_vimdoc(p.desc, 0, 8, TEXT_WIDTH, true))
-        end
-    end
-
-    if fun.attrs then
-        table.insert(ret, "\n    Attributes: ~\n")
-        for _, attr in ipairs(fun.attrs) do
-            local attr_str = ({
-                textlock = "not allowed when |textlock| is active or in the |cmdwin|",
-                textlock_allow_cmdwin = "not allowed when |textlock| is active",
-                fast = "|api-fast|",
-                remote_only = "|RPC| only",
-                lua_only = "Lua |vim.api| only",
-            })[attr] or attr
-            table.insert(ret, str_fmt("        %s\n", attr_str))
-        end
-    end
+    add_notes(fun, ret)
 
     if fun.params and #fun.params > 0 then
         local param_txt = render_fields_or_params(fun.params, fun.generics, classes)
@@ -632,8 +624,8 @@ local function render_fun(fun, classes)
     return table.concat(ret)
 end
 
---- @param funs nvim.luacats.parser.obj[]
---- @param classes table<string,nvim.luacats.parser.obj>
+--- @param funs docgen.ParserObj[]
+--- @param classes table<string,docgen.ParserObj>
 local function render_funs(funs, classes)
     local ret = {} --- @type string[]
     for _, f in ipairs(funs) do
@@ -660,7 +652,11 @@ end
 -- TODO: There's some tweaking the cfg does with the functions using the fn_xform key. I'm not
 -- sure what the generalized usecase here is
 
---- @param classes table<string,nvim.luacats.parser.obj>
+-----------------------------------
+-- MARK: Main rendering function --
+-----------------------------------
+
+--- @param classes table<string,docgen.ParserObj>
 --- @return string?
 local function find_module_class(classes, modvar)
     for nm, cls in pairs(classes) do
@@ -671,30 +667,26 @@ local function find_module_class(classes, modvar)
     end
 end
 
------------------------------------
--- MARK: Main rendering function --
------------------------------------
-
 ---@param inputs string[]
 ---@param output_path string
 local function render_docs(inputs, output_path)
     local sections = {} --- @type table<string,nvim.gen_vimdoc.Section>
 
-    --- @type table<string,[table<string,nvim.luacats.parser.obj>, nvim.luacats.parser.obj[], string[]]>
+    --- @type table<string,[table<string,docgen.ParserObj>, docgen.ParserObj[], string[]]>
     local file_results = {}
 
-    --- @type table<string,nvim.luacats.parser.obj>
+    --- @type table<string,docgen.ParserObj>
     local all_classes = {}
 
-    local parser = require("docgen.luacats_parser").parse
-    for _, f in vim.spairs(inputs) do
-        local classes, funs, briefs = parser(f)
-        file_results[f] = { classes, funs, briefs }
+    local parse = require("docgen.luacats_parser").parse
+    for _, input in vim.spairs(inputs) do
+        local classes, funs, briefs = parse(input)
+        file_results[input] = { classes, funs, briefs }
         all_classes = vim.tbl_extend("error", all_classes, classes)
     end
 
-    for f, r in vim.spairs(file_results) do
-        local classes, funs, briefs = r[1], r[2], r[3]
+    for file, result in vim.spairs(file_results) do
+        local classes, funs, briefs = result[1], result[2], result[3]
 
         -- TODO: Does the luacats parser convert everything to M? This is fine but need to confirm.
         local mod_cls_nm = find_module_class(classes, "M")
@@ -706,7 +698,7 @@ local function render_docs(inputs, output_path)
             briefs[#briefs + 1] = mod_cls.desc
         end
 
-        log("    Processing file:" .. f, 0)
+        log("    Processing file:" .. file, 0)
 
         -- TODO: A note here is, even if we do an ordered list, we want to see if it's still
         -- possible to do all of the function rendering then all of the class rendering, since this
@@ -718,9 +710,9 @@ local function render_docs(inputs, output_path)
         -- order or get them by name. And then the like, all-inclusive, ordered iteration with
         -- mixed types should be saved to the end. Would be even better if they could all be
         -- saved as sections, meaning they're all the same datatype
-        local f_base = vim.fs.basename(f)
-        sections[f_base] =
-            make_section(f_base, briefs, render_funs(funs, all_classes), render_classes(classes))
+        local basename = vim.fs.basename(file)
+        sections[basename] =
+            make_section(basename, briefs, render_funs(funs, all_classes), render_classes(classes))
     end
 
     local docs = {} --- @type string[]
@@ -729,10 +721,8 @@ local function render_docs(inputs, output_path)
         docs[#docs + 1] = render_section(section, true)
     end
 
-    table.insert(
-        docs,
-        str_fmt(" vim:tw=78:ts=8:sw=%d:sts=%d:et:ft=help:norl:\n", INDENTATION, INDENTATION)
-    )
+    local ml = str_fmt(" vim:tw=78:ts=8:sw=%d:sts=%d:et:ft=help:norl:\n", INDENT, INDENT)
+    table.insert(docs, ml)
 
     log("Writing output", 1)
     local fp = assert(io.open(output_path, "w"))
@@ -842,10 +832,14 @@ end
 
 local M = {}
 
----@param inputs string[]
----@param output string?
----@param level integer?
----@param log_path string?
+---Main generator function
+---@param inputs string[] Input filepaths
+---@param output string? Output file
+---@param level integer? Log level
+---- 0 Standard output only
+---- 1 Standard messages
+---- 2 Debug messages
+---@param log_path string? Log path
 function M.generate(inputs, output, level, log_path)
     validate_target_inputs(inputs, output, level, log_path)
 

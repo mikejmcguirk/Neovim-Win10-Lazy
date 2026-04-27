@@ -10,30 +10,12 @@
 #### TODO:
 
 - [ ] Affects class rendering: https://github.com/neovim/neovim/pull/39078
+- [ ] Sorted class fields: https://github.com/neovim/neovim/commit/033efbbd32fad882da67c0a1f658d1c12a8d515e
+- [ ] Nested inlinedoc fix: https://github.com/neovim/neovim/commit/825bfba789d924ab2f33b3e87814750863ff4f02
 
-- [ ] The first/most tractable thing to do is probably massaging the config object architecture:
-  - [ ] The shroedinger's type problem still persists because of the helptag object
-    - This also makes the rendering more complex
-  - [ ] The config objects are changed at differing points in the process in ways that are not particularly structured or consistent.
-    - This makes what's there harder to reason about
-    - This also makes adding new annotation support more difficult
-    - This also makes it more difficult to add support for line numbering
-  - [ ] I'm not sure if the full metatable scaffolding is necessary or wise, but we need to get the parser objects to act more like state machines.
-
-- [ ] For parser obj data typing - Maybe make individualized types for fun, class, and so on, but have them inherit the main parser obj and overwrite with their own settings.
-
-- [ ] I think that the way the default docgen handles module level results basically makes sense, because the M table is the standin for the whole module, so it should not be explicitly identified in the module. This includes sticking the desc into the briefs
-  - But just tacking it to the end of the briefs puts the user back in the position of, well it goes where it goes. This gets back to why ordered insertion of elements matters
-  - [ ] A smallish thing, but would rather not nil out an unordered hash list. But the actual solution exists in the broader context
-
-- [ ] I'm not sure what the underlying mechanics of the md parsing are or what they are designed to accomplish in this context.
-  - I don't know what the action items are, other than that md parsing issues cause different demo files I try to render to not work
-  - But I don't want to do spot fixes because I don't understand the overall context
-  - [ ] Is the md rendering in util useful for future markdown export plans?
-  - [ ] Should hanging md tags in vimdoc always be allowed through? Or should it be contextual based on being in a brief or raw?
-
-- [ ] Need to understand how the Lpeg grammar actually works
-  - This unlocks being able to add/customize tag behavior
+- [ ] Before trying to change how module ordering is done, need to go through gen_vimdoc and get the data-typing right.
+  - The vimdoc.Section datatype might be interesting
+- [ ] Also not in love with the big function that takes other function results. Too abstract.
 
 - [ ] Support manual ordering of elements
   - [ ] Line numbers need to attach to the parsed objects
@@ -45,6 +27,24 @@
   - [ ] It would be better if automated briefs/classes/function ordering were still supported as an option. It is not mandatory
     - [ ] Relevant design issue: What do you do with custom modules?
       - A possibility would be to auto-sort the values within each module. But this then creates recursive ordering. Complicated!
+
+- [ ] Using fun.attrs for one thing is a bit lame
+
+- [ ] Additional config object/builder work:
+  - [ ] Data typing can still be improved
+    - Blocker: Need to see how it goes through to the end
+  - [ ] The function to handle function lines does a lot of spaghettified direct editing of the cur_obj table
+  - [ ] The line indent handling is confusing
+    - Blocker: Unsure how this hits the rendering stage
+
+- [ ] I'm not sure what the underlying mechanics of the md parsing are or what they are designed to accomplish in this context.
+  - I don't know what the action items are, other than that md parsing issues cause different demo files I try to render to not work
+  - But I don't want to do spot fixes because I don't understand the overall context
+  - [ ] Is the md rendering in util useful for future markdown export plans?
+  - [ ] Should hanging md tags in vimdoc always be allowed through? Or should it be contextual based on being in a brief or raw?
+
+- [ ] Need to understand how the Lpeg grammar actually works
+  - This unlocks being able to add/customize tag behavior
 
 - [ ] Go through the vimcats tags and prioritize their support
 
@@ -98,6 +98,8 @@
 
 - [ ] Look at the referenced docgens. Do they have ideas that are useful/valuable?
 
+- [ ] https://github.com/neovim/neovim/commit/825bfba789d924ab2f33b3e87814750863ff4f02 - Fix for recursive inlinedoc
+
 - [ ] Support the Markdown/README pipeline
   - panvimdoc does not help us because it does not turn Markdown into fully/properly formatted vimdoc.
   - Using panvimdoc to turn one README markdown file into vimdoc seems frivolous
@@ -118,6 +120,8 @@
 - [ ] Neovim is under an Apache license, which has attribution requirements attached to it. Must be in the README for this separate release
 
 #### MID:
+
+- [ ] Is it possible to re-write how the state machine works so it doesn't rely on niling values both to say "this isn't here" but also to break references that are passed to other tables. All of this causes a lot of re-allocation.
 
 - [ ] The indent adjusting in parse_doc_line on non-parse is confusing
   - I had a theory that this was padding for window display purposes, but this is not the case

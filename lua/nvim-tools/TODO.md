@@ -30,6 +30,13 @@
 
 ## buf_open
 
+#### TODO:
+
+- [ ] This function contains within it what is essentially nvim_set_current_buf() with a bunch of bookkeeping. That should be outlined into its own thing so it can be used without the forcing and whatnot
+  * Check if nvim_win_set_buf is viable (probably not, especially since its state is in flux)
+  * This also allows for a more clean cut in state between the main function and the buf set part, which is a source of confusion
+  * General philosophical point - Isn't everything a wrapper for something else?
+
 #### LOW:
 
 - [ ] It would be interesting if open_buf let you provide your own post load, pre-filetype options. But I'm loathe to add more features given that the function is already a bunch of hacks stitched together.

@@ -110,12 +110,17 @@ if ok then
 end
 
 local tal_events = vim.api.nvim_create_augroup("mjm-tal-events", {})
-vim.api.nvim_create_autocmd({ "BufModifiedSet", "CmdlineLeave" }, {
+vim.api.nvim_create_autocmd({ "CmdlineLeave", "OptionSet" }, {
     group = tal_events,
-    callback = function()
+    callback = function(ev)
+        if ev.event == "OptionSet" and ev.match ~= "modified" then
+            return
+        end
+
         build_tal()
     end,
 })
+-- MID: It would be better if this were scoped so it didn't run build_tal() on all buffers.
 
 vim.api.nvim_create_autocmd("BufWritePost", {
     group = tal_events,

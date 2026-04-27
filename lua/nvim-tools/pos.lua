@@ -512,6 +512,10 @@ function M.adj_mark_pos(row, col, buf)
 
     local row_1 = math.min(row, api.nvim_buf_line_count(buf))
     local line = api.nvim_buf_get_lines(buf, row_1 - 1, row_1, false)[1]
+    if line == nil then
+        local err = table.concat({ row, col, buf, row_1, tostring(line) }, ", ")
+        error(err)
+    end
     local len_line = #line
 
     local col_0 = math.max(math.min(col, len_line - 1), 0)

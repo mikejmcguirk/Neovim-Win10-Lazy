@@ -142,6 +142,8 @@ Some way of grepping todo/mid/low/future/maybe/perf/document from files all at o
     * Whether or not the line even shows depends on the user's display option
     * Also causes an issue where jumping into the line can force it to be scrolled to the middle of the window, so then do you also have to add a "norm! zb" call?
 
+* https://github.com/neovim/neovim/commit/bbd0fdd36dcd684e09836ff41517e0e7ea6d802e - More efficient string parsing method
+
 #### LOW:
 
 - [ ] In-process LSP that pushes diagnostics for lines over a certain length. Could expand this into other general linting tools. Perhaps then move into a compiled language

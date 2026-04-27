@@ -70,16 +70,13 @@ local v = setmetatable({}, {
 })
 
 --- @class nvim.luacats.grammar.Result
---- @field kind string
+--- @field kind? 'class'|'field'|'generic'|'param'|'return'
 --- @field name? string
 --- @field type? string
 --- @field desc? string
 --- @field parent? string
 --- @field access? 'private'|'protected'|'package'
 --- @field [integer]? { type: string, name?: string }
-
---- @class nvim.luacats.grammar
---- @field match fun(self, input: string): nvim.luacats.grammar.Result?
 
 local function annot(nm, pat)
     if type(nm) == "string" then
@@ -180,5 +177,8 @@ local grammar = P({
   ty_index = C(Pf('[') * typedef * fill * P(']')),
   ctype = Cg(typedef, 'type'),
 })
+
+--- @class nvim.luacats.grammar
+--- @field match fun(self, input: string): nvim.luacats.grammar.Result?
 
 return grammar --[[@as nvim.luacats.grammar]]

@@ -51,6 +51,7 @@ local fzflua_opts = {
         ["--gutter"] = " ",
         ["--tiebreak"] = "length,chunk",
     },
+    ui_select = true,
 }
 
 return {
@@ -206,14 +207,6 @@ return {
         end
 
         set("n", "<leader>fds", fuzzy_spell_correct)
-
-        api.nvim_create_autocmd("VimEnter", {
-            group = api.nvim_create_augroup("fzf-lua-register-ui-select", { clear = true }),
-            once = true,
-            callback = function()
-                api.nvim_cmd({ cmd = "FzfLua", args = { "register_ui_select" } }, {})
-            end,
-        })
     end,
 }
 

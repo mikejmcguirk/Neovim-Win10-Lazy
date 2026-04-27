@@ -40,6 +40,22 @@ return {
                 -- NOTE: stage_hunk is also undo stage
                 set("n", "<leader>hs", gitsigns.stage_hunk)
                 set("n", "<leader>hr", gitsigns.reset_hunk)
+                set("n", "<leader>hR", function()
+                    local ntu = require("nvim-tools.ui")
+                    local ok, input = ntu.get_input("Reset buffer? [y/n]: ")
+                    if not ok then
+                        local err = input or "Unknown error getting input"
+                        ntu.echo_err(false, err, "ErrorMsg")
+                        return
+                    elseif input == "" then
+                        return
+                    end
+
+                    local first_byte = string.byte(input, 1)
+                    if first_byte == 89 or first_byte == 121 then
+                        gitsigns.reset_buffer()
+                    end
+                end)
 
                 set("v", "<leader>hs", function()
                     gitsigns.stage_hunk({ vim.fn.line("."), vim.fn.line("v") })
