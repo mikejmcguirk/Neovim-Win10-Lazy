@@ -378,27 +378,6 @@ function M:get_finalized_obj(line, classes, classvars)
         end
     end
 
-    do
-        -- Handle: `M.foo = {...}` where `M` is the modvar
-        local parent_tbl, tbl_nm = line:match("([a-zA-Z_]+)%.([a-zA-Z0-9_]+)%s*=")
-        if self.cur_obj and parent_tbl and parent_tbl == self.cur_obj.modvar then
-            self.cur_obj.name = tbl_nm
-            self.cur_obj.is_table = true
-            return self.cur_obj
-        end
-    end
-
-    do
-        -- Handle: `foo = {...}`
-        local tbl_nm = line:match("^([a-zA-Z0-9_]+)%s*=")
-        if tbl_nm then
-            self.cur_obj = self.cur_obj or new_parser_obj()
-            self.cur_obj.name = tbl_nm
-            self.cur_obj.is_table = true
-            return self.cur_obj
-        end
-    end
-
     if self.cur_obj then
         if line:find("^%s*%-%- luacheck:") then
             self.cur_obj = nil

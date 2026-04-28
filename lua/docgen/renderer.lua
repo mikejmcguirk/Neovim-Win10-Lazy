@@ -13,7 +13,7 @@ local INDENT = 4
 --- @param fun docgen.DocItem|docgen.ParserObj
 --- @return string
 local function fn_helptag_fmt_common(fun)
-    local fn_sfx = fun.is_table and "" or "()"
+    local fn_sfx = "()"
     if fun.classvar then
         return str_fmt("%s:%s%s", fun.classvar, fun.name, fn_sfx)
     end
@@ -45,6 +45,7 @@ local function replace_generics(ty, generics)
 end
 
 --- @param name string
+--- @return string
 local function fmt_field_name(name)
     local name0, opt = name:match("^([^?]*)(%??)$")
     return str_fmt("{%s}%s", name0, opt)
@@ -57,6 +58,11 @@ local function should_render_field_or_param(p)
         and not util.list_find({ "_", "self" }, p.name)
         and not vim.startswith(p.name, "_")
 end
+-- TODO: I'm not sure if you keep this:
+-- - Self might be useful for class fields with self functions, so maybe that's fine
+-- underscore fields/params do... exist I'm not sure why you'd get rid of them
+-- - Underscore fields should be marked private/protected/package, which should also cause them
+-- to fail to show up. Otherwise, Lua_Ls will display them so they should also be in the docgen.
 
 -----------------------------
 -- MARK: Section Rendering --
@@ -455,22 +461,39 @@ end
 
 --- @param fun docgen.ParserObj
 --- @return string
-local function render_fun_header(fun)
-    local ret = {} ---@type string[]
-    local args = {} --- @type string[]
-    for _, p in ipairs(fun.params or {}) do
-        if p.name ~= "self" then
-            args[#args + 1] = fmt_field_name(p.name)
+local function get_params(fun)
+    local params = fun.params
+    if not params then
+        return ""
+    end
+
+    local args = {} ---@type string[]
+    local len_params = #params
+    for i = 1, len_params do
+        local param = params[i]
+        if param.name ~= "self" then
+            args[#args + 1] = fmt_field_name(param.name)
         end
     end
 
+    return table.concat(args, ", ")
+end
+-- TODO: This is not great because, as we see below, if the params need to be wrapped, they are
+-- then re-extracted from the header in order to be formatted. So what this should be doing is
+-- returning a list of params that can then be put together into the header later.
+
+--- @param fun docgen.ParserObj
+--- @return string
+local function render_fun_header(fun)
+    local ret = {} ---@type string[]
+
+    local params = get_params(fun)
     local nm = fun.name
     if fun.classvar then
         nm = str_fmt("%s:%s", fun.classvar, nm)
     end
 
-    local proto = fun.is_table and nm or nm .. "(" .. table.concat(args, ", ") .. ")"
-
+    local proto = nm .. "(" .. params .. ")"
     local tag = "*" .. fn_helptag_fmt_common(fun) .. "*"
 
     if #proto + #tag > TEXT_WIDTH - 8 then
@@ -490,12 +513,11 @@ end
 --- @param classes table<string,docgen.ParserObj>
 --- @return string|nil
 local function render_fun(fun, classes)
-    local ret = {} ---@type string[]
-
     if not should_render_fun(fun) then
         return nil
     end
 
+    local ret = {} ---@type string[]
     ret[#ret + 1] = render_fun_header(fun)
     ret[#ret + 1] = "\n"
 

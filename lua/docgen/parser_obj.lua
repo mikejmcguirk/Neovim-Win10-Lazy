@@ -28,7 +28,6 @@
 ---@field returns? docgen.DocItem[]
 ---@field see? docgen.DocItem[]
 ---@field since? string
----@field is_table? boolean
 ---@field type? nvim.luacats.grammar.Result
 ---
 ---@field __index fun(self: docgen.ParserObj, key: any): val:any
@@ -72,7 +71,6 @@ function M:clear()
     self.returns = nil
     self.see = nil
     self.since = nil
-    self["is_table"] = nil
     self.type = nil
 end
 
