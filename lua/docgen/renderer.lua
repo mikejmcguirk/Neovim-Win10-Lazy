@@ -190,16 +190,21 @@ local function _render_type(typ, generics, default)
     if generics then
         typ = replace_generics(typ, generics)
     end
+    local before = typ
 
+    -- TOOD: this needs to paren outside
     typ = typ:gsub("%s*|%s*nil", "?")
     typ = typ:gsub("nil%s*|%s*(.*)", "%1?")
     typ = typ:gsub("%s*|%s*", "|")
+    local after = typ
+    print(before, " | ", after)
     if default then
         return str_fmt("(`%s`, default: %s)", typ, default)
     end
 
     return str_fmt("(`%s`)", typ)
 end
+-- TODO: runtime dispatch this
 
 --- Gets a field's description and its "(default: …)" value, if any (see `lsp/client.lua` for
 --- examples).
