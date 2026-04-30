@@ -51,8 +51,7 @@ local fzflua_opts = {
         ["--gutter"] = " ",
         ["--tiebreak"] = "length,chunk",
     },
-    -- FUTURE: https://github.com/neovim/neovim/issues/39506
-    -- ui_select = true,
+    ui_select = true,
 }
 
 return {
@@ -197,7 +196,7 @@ return {
                         api.nvim_cmd({ cmd = "mkspell", args = { spellfile }, bang = true }, {})
                     end,
                 },
-                -- FUTURE: Would be cool if the previewer tied into wordnet
+                -- LOW: Would be cool if the previewer tied into wordnet
                 previewer = nil,
                 fzf_opts = {
                     ["--query"] = word,
