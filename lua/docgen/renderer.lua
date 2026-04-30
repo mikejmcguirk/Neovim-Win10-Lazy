@@ -186,19 +186,23 @@ end
 --- @param typ string
 --- @param generics? table<string,string>
 --- @param default? string
-local function _render_type(typ, generics, default)
+--- @param fmt_nil? boolean (default: `true`)
+local function _render_type(typ, generics, default, fmt_nil)
     if generics then
         typ = replace_generics(typ, generics)
     end
 
-    typ = typ:gsub("%s*|%s*nil", "?")
-    typ = typ:gsub("nil%s*|%s*(.*)", "%1?")
     typ = typ:gsub("%s*|%s*", "|")
-    if default then
-        return str_fmt("(`%s`, default: %s)", typ, default)
+    if fmt_nil ~= false then
+        typ = typ:gsub("|nil", "?")
+        typ = typ:gsub("nil|(.*)", "%1?")
     end
 
-    return str_fmt("(`%s`)", typ)
+    if not default then
+        return str_fmt("(`%s`)", typ)
+    end
+
+    return str_fmt("(`%s`, default: %s)", typ, default)
 end
 
 --- Gets a field's description and its "(default: …)" value, if any (see `lsp/client.lua` for
@@ -218,6 +222,7 @@ local function _get_default(desc)
 
     return desc, default
 end
+-- TODO: Does this just not work if default is on the same line as the declaration?
 
 --- @param ty string
 --- @param classes? table<string,docgen.ParserObj>
