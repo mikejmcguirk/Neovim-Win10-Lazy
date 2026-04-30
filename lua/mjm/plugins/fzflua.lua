@@ -51,7 +51,8 @@ local fzflua_opts = {
         ["--gutter"] = " ",
         ["--tiebreak"] = "length,chunk",
     },
-    ui_select = true,
+    -- FUTURE: https://github.com/neovim/neovim/issues/39506
+    -- ui_select = true,
 }
 
 return {

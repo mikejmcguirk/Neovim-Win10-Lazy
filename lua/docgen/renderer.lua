@@ -6,53 +6,65 @@ local str_fmt = string.format
 local TEXT_WIDTH = 78
 local INDENT = 4
 
+-- This module handles two concerns. The first is unpacking the parsed objects into what will be
+-- rendered. The second is the actual rendering into vimdoc.
+--
+-- To help distinguish these concerns, functions that return unpacked data should return string[],
+-- and functions that return rendered text should return strings.
+--
+-- Additionally, rendering should be delayed as much down the pipeline as possible.
+-- Conceptually, if text is rendered upstream, it might be harder to reason about what the
+-- rendered text is and how it fits into the current procedure.
+-- Technically, it hurts flexibility if a function creates or relies on rendering in different
+-- parts of the callstack.
+
 -------------------------------------------
 -- MARK: Other helper data and functions --
 -------------------------------------------
 
 --- @param fun docgen.DocItem|docgen.ParserObj
 --- @return string
-local function fn_helptag_fmt_common(fun)
-    local fn_sfx = "()"
+local function fmt_fun_as_helptag(fun)
     if fun.classvar then
-        return str_fmt("%s:%s%s", fun.classvar, fun.name, fn_sfx)
+        return str_fmt("%s:%s%s", fun.classvar, fun.name, "()")
     end
 
     if fun.module then
-        return str_fmt("%s.%s%s", fun.module, fun.name, fn_sfx)
+        return str_fmt("%s.%s", fun.module, fun.name)
     end
 
-    return fun.name .. fn_sfx
+    return fun.name .. "()"
 end
+-- TODO: Does the module name need to pipe through here?
 
---- @param ty string
+--- @param typ string
 --- @param generics table<string,string>
 --- @return string
-local function replace_generics(ty, generics)
-    if ty:sub(-2) == "[]" then
-        local ty0 = ty:sub(1, -3)
-        if generics[ty0] then
-            return generics[ty0] .. "[]"
+local function replace_generics(typ, generics)
+    if typ:sub(-2) == "[]" then
+        local list_type = typ:sub(1, -3)
+        if generics[list_type] then
+            return generics[list_type] .. "[]"
         end
-    elseif ty:sub(-1) == "?" then
-        local ty0 = ty:sub(1, -2)
-        if generics[ty0] then
-            return generics[ty0] .. "?"
+    elseif typ:sub(-1) == "?" then
+        local typ_prefix = typ:sub(1, -2)
+        if generics[typ_prefix] then
+            return generics[typ_prefix] .. "?"
         end
     end
 
-    return generics[ty] or ty
+    return generics[typ] or typ
 end
 
 --- @param name string
 --- @return string
-local function fmt_field_name(name)
+local function _fmt_field_name(name)
     local name0, opt = name:match("^([^?]*)(%??)$")
     return str_fmt("{%s}%s", name0, opt)
 end
 
 --- @param p nvim.luacats.parser.param|nvim.luacats.parser.field
-local function should_render_field_or_param(p)
+local function _should_render_field_or_param(p)
     return not p.nodoc
         and not p.access
         and not util.list_find({ "_", "self" }, p.name)
@@ -70,7 +82,7 @@ end
 
 --- @param section nvim.gen_vimdoc.Section
 --- @param add_header? boolean
-local function render_section(section, add_header)
+local function _render_section(section, add_header)
     local ret = {} --- @type string[]
 
     if not section.title then
@@ -112,7 +124,7 @@ local function render_section(section, add_header)
 end
 
 --- @param x string
-local function mktitle(x)
+local function _mktitle(x)
     if x == "ui" then
         return "UI"
     end
@@ -136,7 +148,7 @@ end
 --- @param funs_txt string
 --- @param classes_txt string
 --- @return nvim.gen_vimdoc.Section?
-local function make_section(filename, briefs, funs_txt, classes_txt)
+local function _make_section(filename, briefs, funs_txt, classes_txt)
     if funs_txt == "" and classes_txt == "" and #briefs == 0 then
         return
     end
@@ -147,7 +159,7 @@ local function make_section(filename, briefs, funs_txt, classes_txt)
 
     -- Formatted (this is what's going to be written in the vimdoc)
     -- e.g., "Autocmd Functions"
-    local sectname = mktitle(name)
+    local sectname = _mktitle(name)
 
     -- TODO: Unsure how to address without config
     -- Probably use @mod tags
@@ -171,22 +183,22 @@ local function make_section(filename, briefs, funs_txt, classes_txt)
     }
 end
 
---- @param ty string
+--- @param typ string
 --- @param generics? table<string,string>
 --- @param default? string
-local function render_type(ty, generics, default)
-    ty = ty:gsub("vim%.lsp%.protocol%.Method.[%w.]+", "string")
-
+local function _render_type(typ, generics, default)
     if generics then
-        ty = replace_generics(ty, generics)
+        typ = replace_generics(typ, generics)
     end
-    ty = ty:gsub("%s*|%s*nil", "?")
-    ty = ty:gsub("nil%s*|%s*(.*)", "%1?")
-    ty = ty:gsub("%s*|%s*", "|")
+
+    typ = typ:gsub("%s*|%s*nil", "?")
+    typ = typ:gsub("nil%s*|%s*(.*)", "%1?")
+    typ = typ:gsub("%s*|%s*", "|")
     if default then
-        return str_fmt("(`%s`, default: %s)", ty, default)
+        return str_fmt("(`%s`, default: %s)", typ, default)
     end
-    return str_fmt("(`%s`)", ty)
+
+    return str_fmt("(`%s`)", typ)
 end
 
 --- Gets a field's description and its "(default: …)" value, if any (see `lsp/client.lua` for
@@ -194,7 +206,7 @@ end
 ---
 --- @param desc? string
 --- @return string?, string?
-local function get_default(desc)
+local function _get_default(desc)
     if not desc then
         return
     end
@@ -210,7 +222,7 @@ end
 --- @param ty string
 --- @param classes? table<string,docgen.ParserObj>
 --- @return docgen.ParserObj?
-local function get_class(ty, classes)
+local function _get_class(ty, classes)
     if not classes then
         return
     end
@@ -222,13 +234,13 @@ end
 
 --- @param obj docgen.DocItem
 --- @param classes? table<string,docgen.ParserObj>
-local function inline_type(obj, classes)
-    local ty = obj.type
-    if not ty then
+local function _inline_type(obj, classes)
+    local typ = obj.type
+    if not typ then
         return
     end
 
-    local cls = get_class(ty, classes)
+    local cls = _get_class(typ, classes)
 
     if not cls or cls.nodoc then
         return
@@ -242,27 +254,21 @@ local function inline_type(obj, classes)
             return
         end
 
-        -- TODO(lewis6991): Aim to remove this. Need this to prevent dead
-        -- references to types defined in runtime/lua/vim/lsp/_meta/protocol.lua
-        if not vim.startswith(cls.name, "vim.") then
-            return
-        end
-
         obj.desc = obj.desc or ""
         local period = (obj.desc == "" or vim.endswith(obj.desc, ".")) and "" or "."
         obj.desc = obj.desc .. str_fmt("%s See %s.", period, tag)
         return
     end
 
-    local ty_isopt = (ty:match("%?$") or ty:match("%s*|%s*nil")) ~= nil
-    local ty_islist = (ty:match("%[%]$")) ~= nil
-    ty = ty_isopt and "table?" or ty_islist and "table[]" or "table"
+    local typ_isopt = (typ:match("%?$") or typ:match("%s*|%s*nil")) ~= nil
+    local typ_islist = (typ:match("%[%]$")) ~= nil
+    typ = typ_isopt and "table?" or typ_islist and "table[]" or "table"
 
     local desc = obj.desc or ""
     if cls.desc then
         desc = desc .. cls.desc
     elseif desc == "" then
-        if ty_islist then
+        if typ_islist then
             desc = desc .. "A list of objects with the following fields:"
         elseif cls.parent then
             desc = desc .. str_fmt("Extends |%s| with the additional fields:", cls.parent)
@@ -272,27 +278,27 @@ local function inline_type(obj, classes)
     end
 
     local desc_append = {}
-    for _, f in ipairs(cls.fields) do
-        if not f.access then
-            local fdesc, default = get_default(f.desc)
-            local fty = render_type(f.type, nil, default)
-            local fnm = fmt_field_name(f.name)
+    for _, field in ipairs(cls.fields) do
+        if not field.access then
+            local fdesc, default = _get_default(field.desc)
+            local fty = _render_type(field.type, nil, default)
+            local fnm = _fmt_field_name(field.name)
             table.insert(desc_append, table.concat({ "-", fnm, fty, fdesc }, " "))
         end
     end
 
     desc = desc .. "\n" .. table.concat(desc_append, "\n")
-    obj.type = ty
+    obj.type = typ
     obj.desc = desc
 end
 
 --- @param xs docgen.DocItem[]
 --- @param generics? table<string,string>
 --- @param classes? table<string,docgen.ParserObj>
-local function render_fields_or_params(xs, generics, classes)
+local function _render_fields_or_params(xs, generics, classes)
     local ret = {} --- @type string[]
 
-    xs = vim.tbl_filter(should_render_field_or_param, xs)
+    xs = vim.tbl_filter(_should_render_field_or_param, xs)
 
     local indent = 0
     for _, p in ipairs(xs) do
@@ -302,23 +308,23 @@ local function render_fields_or_params(xs, generics, classes)
     end
 
     for _, p in ipairs(xs) do
-        local pdesc, default = get_default(p.desc)
+        local pdesc, default = _get_default(p.desc)
         p.desc = pdesc
 
-        inline_type(p, classes)
+        _inline_type(p, classes)
         -- TODO: Hacky assert
-        local nm, ty = assert(p.name), p.type
+        local nm, typ = assert(p.name), p.type
 
-        local desc = p.classvar and str_fmt("See |%s|.", fn_helptag_fmt_common(p)) or p.desc
+        local desc = p.classvar and str_fmt("See |%s|.", fmt_fun_as_helptag(p)) or p.desc
 
-        local fnm = p.kind == "operator" and str_fmt("op(%s)", nm) or fmt_field_name(nm)
-        local pnm = str_fmt("      • %-" .. indent .. "s", fnm)
+        local field_name = p.kind == "operator" and str_fmt("op(%s)", nm) or _fmt_field_name(nm)
+        local fname_bullet = str_fmt("      • %-" .. indent .. "s", field_name)
 
-        if ty then
-            local pty = render_type(ty, generics, default)
+        if typ then
+            local pty = _render_type(typ, generics, default)
 
             if desc then
-                table.insert(ret, pnm)
+                table.insert(ret, fname_bullet)
                 if #pty > TEXT_WIDTH - indent then
                     vim.list_extend(ret, { " ", pty, "\n" })
                     table.insert(ret, md_to_vimdoc(desc, 9 + indent, 9 + indent, TEXT_WIDTH, true))
@@ -327,11 +333,11 @@ local function render_fields_or_params(xs, generics, classes)
                     table.insert(ret, md_to_vimdoc(desc, 1, 9 + indent, TEXT_WIDTH, true))
                 end
             else
-                table.insert(ret, str_fmt("%s %s\n", pnm, pty))
+                table.insert(ret, str_fmt("%s %s\n", fname_bullet, pty))
             end
         else
             if desc then
-                table.insert(ret, pnm)
+                table.insert(ret, fname_bullet)
                 table.insert(ret, md_to_vimdoc(desc, 1, 9 + indent, TEXT_WIDTH, true))
             end
         end
@@ -347,7 +353,7 @@ end
 --- @param class docgen.ParserObj
 --- @param classes table<string,docgen.ParserObj>
 --- @return string|nil
-local function render_class(class, classes)
+local function _render_class(class, classes)
     if class.access or class.nodoc or class.inlinedoc then
         return
     end
@@ -366,7 +372,7 @@ local function render_class(class, classes)
         table.insert(ret, md_to_vimdoc(class.desc, INDENT, INDENT, TEXT_WIDTH))
     end
 
-    local fields_txt = render_fields_or_params(class.fields, nil, classes)
+    local fields_txt = _render_fields_or_params(class.fields, nil, classes)
     if not fields_txt:match("^%s*$") then
         table.insert(ret, "\n    Fields: ~\n")
         table.insert(ret, fields_txt)
@@ -377,11 +383,11 @@ local function render_class(class, classes)
 end
 
 --- @param classes table<string,docgen.ParserObj>
-local function render_classes(classes)
+local function _render_classes(classes)
     local ret = {} --- @type string[]
 
     for _, class in vim.spairs(classes) do
-        ret[#ret + 1] = render_class(class, classes)
+        ret[#ret + 1] = _render_class(class, classes)
     end
 
     return table.concat(ret)
@@ -390,56 +396,6 @@ end
 ------------------------------
 -- MARK: Function Rendering --
 ------------------------------
-
---- @param returns docgen.DocItem[]
---- @param generics? table<string,string>
---- @param classes? table<string,docgen.ParserObj>
---- @return string?
-local function render_returns(returns, generics, classes)
-    local ret = {} --- @type string[]
-
-    if #returns == 1 and returns[1].type == "nil" then
-        return
-    end
-
-    if #returns > 1 then
-        table.insert(ret, "    Return (multiple): ~\n")
-    elseif #returns == 1 and next(returns[1]) then
-        table.insert(ret, "    Return: ~\n")
-    end
-
-    for _, p in ipairs(returns) do
-        inline_type(p, classes)
-        local rnm, ty, desc = p.name, p.type, p.desc
-
-        local blk = {} --- @type string[]
-        if ty then
-            blk[#blk + 1] = render_type(ty, generics)
-        end
-        blk[#blk + 1] = rnm
-        blk[#blk + 1] = desc
-
-        ret[#ret + 1] = md_to_vimdoc(table.concat(blk, " "), 8, 8, TEXT_WIDTH, true)
-    end
-
-    return table.concat(ret)
-end
-
----@param ret string[]
----@param fun docgen.ParserObj
-local function add_notes(fun, ret)
-    if not fun.notes then
-        return
-    end
-
-    ret[#ret + 1] = "\n    Note: ~\n"
-    local notes = assert(fun.notes)
-    local len_notes = #notes
-    for i = 1, len_notes do
-        local vimdoc = md_to_vimdoc(notes[i].desc, 0, 8, TEXT_WIDTH, true)
-        ret[#ret + 1] = "      • " .. vimdoc
-    end
-end
 
 --- @param fun docgen.ParserObj
 --- @return boolean
@@ -452,146 +408,198 @@ local function should_render_fun(fun)
         error(("fun.name is nil, check fn_xform(). fun: %s"):format(vim.inspect(fun)))
     end
 
-    if vim.startswith(fun.name, "_") or fun.name:find("[:.]_") then
+    local name = fun.name --[[@as string]]
+    if string.byte(name, 1) == 95 or name:find("[:.]_") then
         return false
     end
 
     return true
 end
+-- TODO: Access should just always be present no? If you're not familiar with the code, the nil
+-- check here is awkward. The parser obj should have an is_public() function or is_restricted()
+-- function
 
 --- @param fun docgen.ParserObj
---- @return string
+--- @return string[]|nil
 local function get_params(fun)
     local params = fun.params
     if not params then
-        return ""
+        return nil
     end
 
     local args = {} ---@type string[]
-    local len_params = #params
-    for i = 1, len_params do
-        local param = params[i]
+    for _, param in ipairs(params) do
         if param.name ~= "self" then
-            args[#args + 1] = fmt_field_name(param.name)
+            args[#args + 1] = _fmt_field_name(param.name)
         end
     end
 
-    return table.concat(args, ", ")
+    return args
 end
--- TODO: This is not great because, as we see below, if the params need to be wrapped, they are
--- then re-extracted from the header in order to be formatted. So what this should be doing is
--- returning a list of params that can then be put together into the header later.
 
+--- Builds the function header as lines.
+--- Constructs from semantic parts (name + param list) instead of building a full string then
+--- re-parsing it with match/sub. This eliminates the ugly wrapping case you noted
+--- (`function(\n{param}, {param})`).
 --- @param fun docgen.ParserObj
---- @return string
-local function render_fun_header(fun)
-    local ret = {} ---@type string[]
+--- @return string[]
+local function get_fun_header(fun)
+    local name = fun.classvar and string.format("%s:%s", fun.classvar, fun.name) or fun.name
+    local param_list = get_params(fun)
+    local param_str = param_list and table.concat(param_list, ", ") or ""
+    local full_proto_len = #name + #param_str + 2 -- Add two for parens
 
-    local params = get_params(fun)
-    local nm = fun.name
-    if fun.classvar then
-        nm = str_fmt("%s:%s", fun.classvar, nm)
+    local tag = "*" .. fmt_fun_as_helptag(fun) .. "*"
+    if full_proto_len + #tag <= TEXT_WIDTH - 8 then
+        local full_proto = string.format("%s(%s)", name, param_str)
+        local pad = TEXT_WIDTH - #full_proto - #tag
+        return { full_proto .. string.rep(" ", pad) .. tag }
     end
 
-    local proto = nm .. "(" .. params .. ")"
-    local tag = "*" .. fn_helptag_fmt_common(fun) .. "*"
+    local lines = { string.format("%78s", tag) }
+    lines[#lines + 1] = name .. "("
 
-    if #proto + #tag > TEXT_WIDTH - 8 then
-        table.insert(ret, str_fmt("%78s\n", tag))
-        local name, pargs = proto:match("([^(]+%()(.*)")
-        table.insert(ret, name)
-        table.insert(ret, util.wrap(pargs, 0, #name, TEXT_WIDTH))
+    if param_list and #param_list > 0 then
+        local indent_after_open = #name + 1
+        local wrapped = util.wrap(param_str, 0, indent_after_open, TEXT_WIDTH)
+        lines[#lines] = lines[#lines] .. wrapped .. ")"
+        lines[#lines] = lines[#lines] .. ")"
     else
-        local pad = TEXT_WIDTH - #proto - #tag
-        table.insert(ret, proto .. string.rep(" ", pad) .. tag)
+        lines[#lines + 1] = ")"
     end
 
-    return table.concat(ret)
+    return lines
+end
+
+--- @param returns docgen.DocItem[]
+--- @param generics? table<string,string>
+--- @param classes? table<string,docgen.ParserObj>
+--- @return string[]?
+local function _render_returns(returns, generics, classes)
+    if (not returns) or (#returns == 1 and returns[1].type == "nil") then
+        return nil
+    end
+
+    local ret = {} --- @type string[]
+    ret[#ret + 1] = #returns > 1 and " Returns (multiple): ~" or " Returns: ~"
+
+    for _, p in ipairs(returns) do
+        _inline_type(p, classes)
+        local val = {}
+        if p.type then
+            val[#val + 1] = _render_type(p.type, generics)
+        end
+
+        if p.name then
+            val[#val + 1] = p.name
+        end
+
+        if p.desc then
+            val[#val + 1] = p.desc
+        end
+
+        local line = md_to_vimdoc(table.concat(val, " "), 8, 8, TEXT_WIDTH, true)
+        ret[#ret + 1] = line
+    end
+
+    return ret
+end
+
+---@param fun docgen.ParserObj
+---@param ret string[]
+local function _add_notes(fun, ret)
+    if not fun.notes then
+        return
+    end
+    ret[#ret + 1] = "\n Note: ~"
+    for _, note in ipairs(fun.notes) do
+        local vimdoc = md_to_vimdoc(note.desc, 0, 8, TEXT_WIDTH, true)
+        ret[#ret + 1] = " • " .. vimdoc
+    end
 end
 
 --- @param fun docgen.ParserObj
 --- @param classes table<string,docgen.ParserObj>
---- @return string|nil
-local function render_fun(fun, classes)
+--- @return string[]?
+local function _render_fun(fun, classes)
     if not should_render_fun(fun) then
         return nil
     end
 
     local ret = {} ---@type string[]
-    ret[#ret + 1] = render_fun_header(fun)
-    ret[#ret + 1] = "\n"
+
+    vim.list_extend(ret, get_fun_header(fun))
+    ret[#ret + 1] = ""
 
     if fun.since then
         fun.attrs = fun.attrs or {}
-        fun.attrs[#fun.attrs + 1] = str_fmt("Since: %s", fun.since)
+        fun.attrs[#fun.attrs + 1] = string.format("Since: %s", fun.since)
     end
 
     if fun.desc then
         local desc = md_to_vimdoc(fun.desc, INDENT, INDENT, TEXT_WIDTH)
-        table.insert(ret, desc)
+        ret[#ret + 1] = desc
     end
 
-    add_notes(fun, ret)
+    _add_notes(fun, ret)
 
     if fun.params and #fun.params > 0 then
-        local param_txt = render_fields_or_params(fun.params, fun.generics, classes)
+        local param_txt = _render_fields_or_params(fun.params, fun.generics, classes)
         if not param_txt:match("^%s*$") then
-            table.insert(ret, "\n    Parameters: ~\n")
+            ret[#ret + 1] = "\n Parameters: ~"
             ret[#ret + 1] = param_txt
         end
     end
 
     if fun.overloads then
-        table.insert(ret, "\n    Overloads: ~\n")
+        ret[#ret + 1] = "\n Overloads: ~"
         for _, p in ipairs(fun.overloads) do
-            table.insert(ret, str_fmt("      • `%s`\n", p))
+            ret[#ret + 1] = string.format(" • `%s`", p)
         end
     end
 
     if fun.returns then
-        local txt = render_returns(fun.returns, fun.generics, classes)
-        if txt and not txt:match("^%s*$") then
-            table.insert(ret, "\n")
-            ret[#ret + 1] = txt
+        local returns_lines = _render_returns(fun.returns, fun.generics, classes)
+        if returns_lines and #returns_lines > 0 then
+            ret[#ret + 1] = ""
+            vim.list_extend(ret, returns_lines)
         end
     end
 
     if fun.see then
-        table.insert(ret, "\n    See also: ~\n")
+        ret[#ret + 1] = "\n See also: ~"
         for _, p in ipairs(fun.see) do
-            table.insert(ret, "      • " .. md_to_vimdoc(p.desc, 0, 8, TEXT_WIDTH, true))
+            local see_line = md_to_vimdoc(p.desc, 0, 8, TEXT_WIDTH, true)
+            ret[#ret + 1] = " • " .. see_line
         end
     end
 
-    table.insert(ret, "\n")
-    return table.concat(ret, "\n")
+    ret[#ret + 1] = ""
+    return ret
 end
 
 --- @param funs docgen.ParserObj[]
 --- @param classes table<string,docgen.ParserObj>
 --- @return string
-local function render_funs(funs, classes)
-    local ret = {} --- @type string[]
-    for _, f in ipairs(funs) do
-        ret[#ret + 1] = render_fun(f, classes)
+local function _render_funs(funs, classes)
+    table.sort(funs, function(a, b)
+        local key_a = a.classvar and (a.classvar .. ":" .. a.name) or a.name
+        local key_b = b.classvar and (b.classvar .. ":" .. b.name) or b.name
+        return key_a:lower() < key_b:lower()
+    end)
+
+    local all_lines = {} --- @type string[]
+    local len_funs = #funs
+    for i = 1, len_funs do
+        local fun = funs[i]
+        local fun_lines = _render_fun(fun, classes)
+        if fun_lines then
+            vim.list_extend(all_lines, fun_lines)
+        end
     end
 
-    table.sort(ret, function(a, b)
-        local a1 = ("\n" .. a):match("\n[a-zA-Z_][^\n]+\n")
-        local b1 = ("\n" .. b):match("\n[a-zA-Z_][^\n]+\n")
-        return a1:lower() < b1:lower()
-    end)
-    -- TODO: yeet this when we have lnum based rendering
-
-    return table.concat(ret)
+    return table.concat(all_lines, "\n")
 end
--- TODO: Vaguely, I feel like what I want to be doing is putting together the lines throughout the
--- generation, and only do one concat at the end. It avoids a lot of the sub-level confusion
--- I've experienced trying to parse through what's doing what at what point.
--- At the moment though I guess we do want to do it by string just for consistency with the old
--- code.
--- TODO: There's some tweaking the cfg does with the functions using the fn_xform key. I'm not
--- sure what the generalized usecase here is
 
 -----------------------------------
 -- MARK: Main rendering function --
@@ -599,7 +607,7 @@ end
 
 --- @param classes table<string,docgen.ParserObj>
 --- @return string?
-local function find_module_class(classes, modvar)
+local function _find_module_class(classes, modvar)
     for nm, cls in pairs(classes) do
         local _, field = next(cls.fields or {})
         if cls.desc and field and field.classvar == modvar then
@@ -612,7 +620,7 @@ local M = {}
 
 ---@param inputs string[]
 ---@param output_path string
-function M.render_docs(inputs, output_path)
+function M._render_docs(inputs, output_path)
     local sections = {} --- @type table<string,nvim.gen_vimdoc.Section>
 
     --- @type table<string,[table<string,docgen.ParserObj>, docgen.ParserObj[], string[]]>
@@ -632,7 +640,7 @@ function M.render_docs(inputs, output_path)
         local classes, funs, briefs = result[1], result[2], result[3]
 
         -- TODO: Does the luacats parser convert everything to M? This is fine but need to confirm.
-        local mod_cls_nm = find_module_class(classes, "M")
+        local mod_cls_nm = _find_module_class(classes, "M")
         if mod_cls_nm then
             local mod_cls = classes[mod_cls_nm]
             classes[mod_cls_nm] = nil
@@ -659,14 +667,16 @@ function M.render_docs(inputs, output_path)
         -- TODO: Briefs should be turned into strings maybe here for consistency. But since we
         -- do kinda want them to be lines[] maybe that's fine.
         -- Or are they already concated in obj?
-        sections[basename] =
-            make_section(basename, briefs, render_funs(funs, all_classes), render_classes(classes))
+
+        local funs_txt = _render_funs(funs, all_classes)
+        local classes_txt = _render_classes(classes)
+        sections[basename] = _make_section(basename, briefs, funs_txt, classes_txt)
     end
 
     local docs = {} --- @type string[]
     for _, section in pairs(sections) do
         print(str_fmt("    Rendering section: '%s'", section.title))
-        docs[#docs + 1] = render_section(section, true)
+        docs[#docs + 1] = _render_section(section, true)
     end
 
     local ml = str_fmt(" vim:tw=78:ts=8:sw=%d:sts=%d:et:ft=help:norl:\n", INDENT, INDENT)

@@ -1,14 +1,7 @@
-vim.pack.add({
-    {
-        src = "https://github.com/ibhagwan/fzf-lua",
-        version = "0e0962a", -- Does not work
-        -- version = "9449f39", -- Commit before. Works
-    },
-})
-
+-- nvim -u fzf-lua-test.lua
+vim.pack.add({ { src = "https://github.com/ibhagwan/fzf-lua" } })
 vim.pack.update({ "fzf-lua" }, { force = true })
 
-require("fzf-lua").setup({})
-vim.keymap.set("n", "<leader>fh", function()
-    require("fzf-lua").helptags()
-end)
+require("fzf-lua").setup({ ui_select = true })
+vim.api.nvim_buf_set_lines(0, 0, 1, false, { "Hoyt" })
+-- Run `z=`

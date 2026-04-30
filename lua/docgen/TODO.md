@@ -11,6 +11,7 @@
 
 - [ ] Affects class rendering: https://github.com/neovim/neovim/pull/39078
 - [ ] Sorted class fields: https://github.com/neovim/neovim/commit/033efbbd32fad882da67c0a1f658d1c12a8d515e
+  - https://github.com/neovim/neovim/pull/39427
 - [ ] Nested inlinedoc fix: https://github.com/neovim/neovim/commit/825bfba789d924ab2f33b3e87814750863ff4f02
 
 - [ ] Before trying to change how module ordering is done, need to go through gen_vimdoc and get the data-typing right.
