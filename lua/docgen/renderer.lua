@@ -409,12 +409,13 @@ local function should_render_fun(fun)
         return false
     end
 
-    if not fun.name then
-        error(("fun.name is nil, check fn_xform(). fun: %s"):format(vim.inspect(fun)))
+    local name = fun.name
+    if not name then
+        local fmt_str = "fun.name is nil, check fn_xform(). fun: %s"
+        error(string.format(fmt_str, vim.inspect(fun)))
     end
 
-    local name = fun.name --[[@as string]]
-    if string.byte(name, 1) == 95 or name:find("[:.]_") then
+    if string.byte(name, 1) == 95 or string.find(name, "[:.]_") then
         return false
     end
 
@@ -433,7 +434,9 @@ local function get_params(fun)
     end
 
     local args = {} ---@type string[]
-    for _, param in ipairs(params) do
+    local len_params = #params
+    for i = 1, len_params do
+        local param = params[i]
         if param.name ~= "self" then
             args[#args + 1] = _fmt_field_name(param.name)
         end
@@ -448,16 +451,17 @@ end
 --- (`function(\n{param}, {param})`).
 --- @param fun docgen.ParserObj
 --- @return string[]
-local function get_fun_header(fun)
+local function create_fun_header(fun)
     local name = fun.classvar and string.format("%s:%s", fun.classvar, fun.name) or fun.name
     local param_list = get_params(fun)
     local param_str = param_list and table.concat(param_list, ", ") or ""
-    local full_proto_len = #name + #param_str + 2 -- Add two for parens
+    local proto_len = #name + #param_str + 2 -- Add two for parens
 
     local tag = "*" .. fmt_fun_as_helptag(fun) .. "*"
-    if full_proto_len + #tag <= TEXT_WIDTH - 8 then
+    local len_tag = #tag
+    if proto_len + len_tag <= TEXT_WIDTH - 8 then
         local full_proto = string.format("%s(%s)", name, param_str)
-        local pad = TEXT_WIDTH - #full_proto - #tag
+        local pad = TEXT_WIDTH - #full_proto - len_tag
         return { full_proto .. string.rep(" ", pad) .. tag }
     end
 
@@ -533,7 +537,7 @@ local function _render_fun(fun, classes)
 
     local ret = {} ---@type string[]
 
-    vim.list_extend(ret, get_fun_header(fun))
+    vim.list_extend(ret, create_fun_header(fun))
     ret[#ret + 1] = ""
 
     if fun.since then
