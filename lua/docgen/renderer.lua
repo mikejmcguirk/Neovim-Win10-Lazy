@@ -469,15 +469,11 @@ local function create_fun_header(fun)
     end
 
     local lines = { string.format("%78s", tag) }
-    lines[#lines + 1] = name .. "("
-
     if param_list and #param_list > 0 then
-        local indent_after_open = #name + 1
-        local wrapped = util.wrap(param_str, 0, indent_after_open, TEXT_WIDTH)
-        lines[#lines] = lines[#lines] .. wrapped .. ")"
-        lines[#lines] = lines[#lines] .. ")"
+        local wrapped = util.wrap(param_str, 0, #name + 1, TEXT_WIDTH)
+        lines[#lines + 1] = name .. "(" .. wrapped .. ")"
     else
-        lines[#lines + 1] = ")"
+        lines[#lines + 1] = name .. "()"
     end
 
     return lines
@@ -558,7 +554,7 @@ local function _render_fun(fun, classes)
     if fun.params and #fun.params > 0 then
         local param_txt = _render_fields_or_params(fun.params, fun.generics, classes)
         if not param_txt:match("^%s*$") then
-            ret[#ret + 1] = "\n Parameters: ~"
+            ret[#ret + 1] = string.rep(" ", INDENT) .. "Parameters: ~"
             ret[#ret + 1] = param_txt
         end
     end

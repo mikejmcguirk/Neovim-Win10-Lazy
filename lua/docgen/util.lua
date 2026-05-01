@@ -192,6 +192,8 @@ function M.wrap(x, start_indent, indent, text_width)
         parts[#parts + 1] = w
     end
 
+    -- TODO: Need to look at it more, but this seems silly because you're basically doing the
+    -- start indent string rep then getting rid of it always.
     return (table.concat(parts):gsub("%s+\n", "\n"):gsub("\n+$", ""))
 end
 

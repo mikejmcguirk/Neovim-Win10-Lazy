@@ -212,6 +212,14 @@
 
 * In config merging, don't allow skipping buf config. If you don't want it, don't set it.
 
+## fs
+
+#### TODO:
+
+- [ ] Probably make a "get normalized absolute" function to combine the two
+- [ ] Add a "path contains path" function where you take the a and b paths. Both are expanded, normalized, and made absolute, then whatever Lua's version of string.contains is is run.
+  - [ ] Use this for the gitsigns diff toggling so that we can put the cursor into the matching window for the diffwin if it exists.
+
 ## fs/git
 
 #### DEPS:
