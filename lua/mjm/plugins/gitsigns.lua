@@ -66,10 +66,6 @@ return {
                         gitsigns.reset_buffer()
                     end
                 end, buf_opt)
-                -- MAYBE: Get the origin buf of the diff_win and move the cursor there if it's in
-                -- the diff_win. This would require using gitsigns's logic to transform the
-                -- bufname, which starts getting contrived. And I'm not sure it's part of the API.
-                -- FUTURE: If I run into any edge cases, address here.
 
                 set("v", "<leader>hs", function()
                     gitsigns.stage_hunk({ vim.fn.line("."), vim.fn.line("v") })
@@ -101,6 +97,10 @@ return {
 
                     gitsigns.diffthis()
                 end, buf_opt)
+                -- MAYBE: Get the origin buf of the diff_win and move the cursor there if it's in
+                -- the diff_win. This would require using gitsigns's logic to transform the
+                -- bufname, which starts getting contrived. And I'm not sure it's part of the API.
+                -- FUTURE: If I run into any edge cases, address here.
 
                 set({ "o", "x" }, "ic", gitsigns.select_hunk, buf_opt)
             end,
