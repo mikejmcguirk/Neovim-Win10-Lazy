@@ -186,25 +186,24 @@ end
 --- @param typ string
 --- @param generics? table<string,string>
 --- @param default? string
-local function _render_type(typ, generics, default)
+--- @param fmt_nil? boolean (default: `true`)
+local function render_type(typ, generics, default, fmt_nil)
     if generics then
         typ = replace_generics(typ, generics)
     end
-    local before = typ
 
-    -- TOOD: this needs to paren outside
-    typ = typ:gsub("%s*|%s*nil", "?")
-    typ = typ:gsub("nil%s*|%s*(.*)", "%1?")
     typ = typ:gsub("%s*|%s*", "|")
-    local after = typ
-    print(before, " | ", after)
-    if default then
-        return str_fmt("(`%s`, default: %s)", typ, default)
+    if fmt_nil ~= false then
+        typ = typ:gsub("|nil", "?")
+        typ = typ:gsub("nil|(.*)", "%1?")
     end
 
-    return str_fmt("(`%s`)", typ)
+    if not default then
+        return str_fmt("(`%s`)", typ)
+    end
+
+    return str_fmt("(`%s`, default: %s)", typ, default)
 end
--- TODO: runtime dispatch this
 
 --- Gets a field's description and its "(default: …)" value, if any (see `lsp/client.lua` for
 --- examples).
@@ -223,6 +222,7 @@ local function _get_default(desc)
 
     return desc, default
 end
+-- TODO: Does this just not work if default is on the same line as the declaration?
 
 --- @param ty string
 --- @param classes? table<string,docgen.ParserObj>
@@ -286,7 +286,7 @@ local function _inline_type(obj, classes)
     for _, field in ipairs(cls.fields) do
         if not field.access then
             local fdesc, default = _get_default(field.desc)
-            local fty = _render_type(field.type, nil, default)
+            local fty = render_type(field.type, nil, default)
             local fnm = _fmt_field_name(field.name)
             table.insert(desc_append, table.concat({ "-", fnm, fty, fdesc }, " "))
         end
@@ -326,7 +326,7 @@ local function _render_fields_or_params(xs, generics, classes)
         local fname_bullet = str_fmt("      • %-" .. indent .. "s", field_name)
 
         if typ then
-            local pty = _render_type(typ, generics, default)
+            local pty = render_type(typ, generics, default)
 
             if desc then
                 table.insert(ret, fname_bullet)
@@ -350,6 +350,9 @@ local function _render_fields_or_params(xs, generics, classes)
 
     return table.concat(ret)
 end
+-- TODO: This is used for functions and classes, which means we want render_type to perform
+-- the question mark replacement only on functions. This function needs to be able to handle that,
+-- either as a param or some kind of logical check.
 
 ---------------------------
 -- MARK: Class Rendering --
@@ -496,7 +499,7 @@ local function _render_returns(returns, generics, classes)
         _inline_type(p, classes)
         local val = {}
         if p.type then
-            val[#val + 1] = _render_type(p.type, generics)
+            val[#val + 1] = render_type(p.type, generics)
         end
 
         if p.name then
