@@ -187,7 +187,7 @@ end
 --- @param generics? table<string,string>
 --- @param default? string
 --- @param fmt_nil? boolean (default: `true`)
-local function _render_type(typ, generics, default, fmt_nil)
+local function render_type(typ, generics, default, fmt_nil)
     if generics then
         typ = replace_generics(typ, generics)
     end
@@ -286,7 +286,7 @@ local function _inline_type(obj, classes)
     for _, field in ipairs(cls.fields) do
         if not field.access then
             local fdesc, default = _get_default(field.desc)
-            local fty = _render_type(field.type, nil, default)
+            local fty = render_type(field.type, nil, default)
             local fnm = _fmt_field_name(field.name)
             table.insert(desc_append, table.concat({ "-", fnm, fty, fdesc }, " "))
         end
@@ -326,7 +326,7 @@ local function _render_fields_or_params(xs, generics, classes)
         local fname_bullet = str_fmt("      • %-" .. indent .. "s", field_name)
 
         if typ then
-            local pty = _render_type(typ, generics, default)
+            local pty = render_type(typ, generics, default)
 
             if desc then
                 table.insert(ret, fname_bullet)
@@ -350,6 +350,9 @@ local function _render_fields_or_params(xs, generics, classes)
 
     return table.concat(ret)
 end
+-- TODO: This is used for functions and classes, which means we want render_type to perform
+-- the question mark replacement only on functions. This function needs to be able to handle that,
+-- either as a param or some kind of logical check.
 
 ---------------------------
 -- MARK: Class Rendering --
@@ -492,7 +495,7 @@ local function _render_returns(returns, generics, classes)
         _inline_type(p, classes)
         local val = {}
         if p.type then
-            val[#val + 1] = _render_type(p.type, generics)
+            val[#val + 1] = render_type(p.type, generics)
         end
 
         if p.name then

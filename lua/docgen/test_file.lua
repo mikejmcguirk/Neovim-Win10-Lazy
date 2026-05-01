@@ -2,7 +2,8 @@ local M = {}
 
 ---@param bar integer|string|nil
 ---@param baz table?
-function M.foo(bar, baz)
+---@param bill integer   | string |  nil
+function M.foo(bar, baz, bill)
     return ""
 end
 
