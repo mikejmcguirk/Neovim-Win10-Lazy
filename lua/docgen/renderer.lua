@@ -35,7 +35,8 @@ local function fmt_fun_as_helptag(fun)
 
     return fun.name .. "()"
 end
--- TODO: Does the module name need to pipe through here?
+-- TODO: Does the module name need to pipe through here? Maybe because it looks like this is used
+-- for class rendering.
 
 --- @param typ string
 --- @param generics table<string,string>
@@ -192,6 +193,7 @@ local function render_type(typ, generics, default, fmt_nil)
         typ = replace_generics(typ, generics)
     end
 
+    typ = vim.trim(typ)
     typ = typ:gsub("%s*|%s*", "|")
     if fmt_nil ~= false then
         typ = typ:gsub("|nil", "?")
@@ -224,77 +226,89 @@ local function _get_default(desc)
 end
 -- TODO: Does this just not work if default is on the same line as the declaration?
 
---- @param ty string
---- @param classes? table<string,docgen.ParserObj>
---- @return docgen.ParserObj?
-local function _get_class(ty, classes)
-    if not classes then
-        return
-    end
+--- @param typ string
+--- @return string
+local function get_clean_class_type(typ)
+    typ = vim.trim(typ)
+    typ = typ:gsub("%s*|%s*", "|")
+    typ = typ:gsub("|nil", "")
+    typ = typ:gsub("nil|", "")
 
-    local cty = ty:gsub("%s*|%s*nil", "?"):gsub("?$", ""):gsub("%[%]$", "")
+    typ = typ:gsub("%?", "")
+    typ = typ:gsub("%[%]$", "")
 
-    return classes[cty]
+    return typ
 end
+-- TODO: This is fine for now since the class name editing is different from the editing for
+-- type rendering. But what if you have a field or return that's a T|string or something. How does
+-- that work? I don't know if you do this as a list of strings or you do a string|match inside
+-- classes or what but this doesn't actually work.
 
---- @param obj docgen.DocItem
+--- @param obj docgen.DocItem Modified in place
 --- @param classes? table<string,docgen.ParserObj>
-local function _inline_type(obj, classes)
+local function _inline_class_to_type(obj, classes)
     local typ = obj.type
     if not typ then
         return
     end
 
-    local cls = _get_class(typ, classes)
-
-    if not cls or cls.nodoc then
+    if not classes then
         return
     end
 
-    if not cls.inlinedoc then
-        -- Not inlining so just add a: "See |tag|."
-        local tag = str_fmt("|%s|", cls.name)
-        if obj.desc and obj.desc:find(tag) then
-            -- Tag already there
-            return
-        end
-
-        obj.desc = obj.desc or ""
-        local period = (obj.desc == "" or vim.endswith(obj.desc, ".")) and "" or "."
-        obj.desc = obj.desc .. str_fmt("%s See %s.", period, tag)
-        return
-    end
-
+    -- TODO: A lot of this overlaps with get_clean_class_type feels like something to just do
+    -- once
+    -- TODO: This does not hit the "nil|type" case
     local typ_isopt = (typ:match("%?$") or typ:match("%s*|%s*nil")) ~= nil
     local typ_islist = (typ:match("%[%]$")) ~= nil
     typ = typ_isopt and "table?" or typ_islist and "table[]" or "table"
 
+    local class = classes[get_clean_class_type(typ)]
+    if (not class) or class.nodoc then
+        return
+    end
+
     local desc = obj.desc or ""
-    if cls.desc then
-        desc = desc .. cls.desc
+    if not class.inlinedoc then
+        -- Not inlining so just add a: "See |tag|."
+        local tag = str_fmt("|%s|", class.name)
+        if string.find(desc, tag) then
+            -- Tag already there
+            return
+        end
+
+        desc = desc or ""
+        local has_period = desc == "" or vim.endswith(desc, ".")
+        local period = has_period and "" or "."
+        desc = desc .. str_fmt("%s See %s.", period, tag)
+        return
+    end
+
+    if class.desc then
+        desc = desc .. class.desc
     elseif desc == "" then
         if typ_islist then
-            desc = desc .. "A list of objects with the following fields:"
-        elseif cls.parent then
-            desc = desc .. str_fmt("Extends |%s| with the additional fields:", cls.parent)
+            desc = "A list of objects with the following fields:"
+        elseif class.parent then
+            desc = str_fmt("Extends |%s| with the additional fields:", class.parent)
         else
-            desc = desc .. "A table with the following fields:"
+            desc = "A table with the following fields:"
         end
     end
 
     local desc_append = {}
-    for _, field in ipairs(cls.fields) do
+    for _, field in ipairs(class.fields) do
         if not field.access then
             local fdesc, default = _get_default(field.desc)
-            local fty = render_type(field.type, nil, default)
-            local fnm = _fmt_field_name(field.name)
-            table.insert(desc_append, table.concat({ "-", fnm, fty, fdesc }, " "))
+            local ftyp = render_type(field.type, nil, default)
+            local fname = _fmt_field_name(field.name)
+            local field_str = table.concat({ "-", fname, ftyp, fdesc }, " ")
+            desc_append[#desc_append + 1] = field_str
         end
     end
 
-    desc = desc .. "\n" .. table.concat(desc_append, "\n")
+    obj.desc = desc .. "\n" .. table.concat(desc_append, "\n")
     obj.type = typ
-    obj.desc = desc
 end
 
 --- @param xs docgen.DocItem[]
@@ -316,7 +330,7 @@ local function _render_fields_or_params(xs, generics, classes)
         local pdesc, default = _get_default(p.desc)
         p.desc = pdesc
 
-        _inline_type(p, classes)
+        _inline_class_to_type(p, classes)
         -- TODO: Hacky assert
         local nm, typ = assert(p.name), p.type
 
@@ -448,10 +462,6 @@ local function get_params(fun)
     return args
 end
 
---- Builds the function header as lines.
---- Constructs from semantic parts (name + param list) instead of building a full string then
---- re-parsing it with match/sub. This eliminates the ugly wrapping case you noted
---- (`function(\n{param}, {param})`).
 --- @param fun docgen.ParserObj
 --- @return string[]
 local function create_fun_header(fun)
@@ -464,8 +474,8 @@ local function create_fun_header(fun)
     local len_tag = #tag
     if proto_len + len_tag <= TEXT_WIDTH - 8 then
         local full_proto = string.format("%s(%s)", name, param_str)
-        local pad = TEXT_WIDTH - #full_proto - len_tag
-        return { full_proto .. string.rep(" ", pad) .. tag }
+        local padding = TEXT_WIDTH - #full_proto - len_tag
+        return { full_proto .. string.rep(" ", padding) .. tag }
     end
 
     local lines = { string.format("%78s", tag) }
@@ -483,35 +493,44 @@ end
 --- @param generics? table<string,string>
 --- @param classes? table<string,docgen.ParserObj>
 --- @return string[]?
-local function _render_returns(returns, generics, classes)
+local function render_returns(returns, generics, classes)
     if (not returns) or (#returns == 1 and returns[1].type == "nil") then
         return nil
     end
 
-    local ret = {} --- @type string[]
-    ret[#ret + 1] = #returns > 1 and " Returns (multiple): ~" or " Returns: ~"
+    local lines = {} --- @type string[]
+    local indent = string.rep(" ", INDENT)
+    local text = #returns > 1 and "Returns (multiple): ~" or "Returns: ~"
+    lines[#lines + 1] = indent .. text
 
-    for _, p in ipairs(returns) do
-        _inline_type(p, classes)
-        local val = {}
-        if p.type then
-            val[#val + 1] = render_type(p.type, generics)
+    for _, ret in ipairs(returns) do
+        _inline_class_to_type(ret, classes)
+        local line_tbl = {}
+        if ret.type then
+            line_tbl[#line_tbl + 1] = render_type(ret.type, generics)
         end
 
-        if p.name then
-            val[#val + 1] = p.name
+        if ret.name then
+            line_tbl[#line_tbl + 1] = ret.name
         end
 
-        if p.desc then
-            val[#val + 1] = p.desc
+        if ret.desc then
+            line_tbl[#line_tbl + 1] = ret.desc
         end
 
-        local line = md_to_vimdoc(table.concat(val, " "), 8, 8, TEXT_WIDTH, true)
-        ret[#ret + 1] = line
+        if #line_tbl > 0 then
+            local line = table.concat(line_tbl, " ")
+            lines[#lines + 1] = md_to_vimdoc(line, 8, 8, TEXT_WIDTH, true)
+        end
     end
 
-    return ret
+    return lines
 end
+-- TODO: This is fine for the moment because the return building logic itself is clear, but
+-- md_to_vimdoc does stuff under the hood I'm not sure it necessary. Like for some reason it takes
+-- a string, splits it, then re-joins it. This seems to be to handle indentation, but that's
+-- still quite wasteful. The issue though seems to be that it needs to take in a str in order
+-- to use Treesitter markdown. FeelsBadMan.
 
 ---@param fun docgen.ParserObj
 ---@param ret string[]
@@ -567,7 +586,7 @@ local function _render_fun(fun, classes)
     end
 
     if fun.returns then
-        local returns_lines = _render_returns(fun.returns, fun.generics, classes)
+        local returns_lines = render_returns(fun.returns, fun.generics, classes)
         if returns_lines and #returns_lines > 0 then
             ret[#ret + 1] = ""
             vim.list_extend(ret, returns_lines)

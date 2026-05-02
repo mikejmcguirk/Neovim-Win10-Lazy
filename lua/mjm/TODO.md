@@ -57,6 +57,7 @@
   - Note in both of these, there are other ideas and some suggested mappings for them that are interesting
 + [ ] Grep the current visual selection in fzflua
 - [ ] With stal = 0, ls = 0, disabling ts context, tmux commands, and window padding, you can make your own zen at home. Question - do you still just do it as a float or do you save the old window layout?
+  - Unmerged winpadding PR: https://github.com/neovim/neovim/pull/37939
 - [ ] For the intro scratch buffer, IMO it should either be set to be a noma scratch buffer or I should come up with a way that you can edit it and save it conveniently.
   - [ ] Caveat, I tried the scratch buffer thing before and there was some reason I ditched it, so I wouldn't just get rid of the current code until the new method has sat for a while.
 
@@ -86,7 +87,6 @@
 - [ ] The blink.cmp dictionary removed the plenary dep. Try installing again and see if the hung fzf issue still appears
 - [ ] % on quotation marks does not go to the matching quote
 - [ ] https://github.com/ribru17/ts_query_ls (and download build that disables built-in linter)
-- [ ] https://github.com/neovim/neovim/pull/27223 - Replace any instances of tabnew with nvim_open_tabpage
 - [ ] https://github.com/neovim/neovim/commit/4d04d0123d2571391a00b87f7ee70f987fb7cedd
   - Can this be used to make colorscheme more performant?
 - [ ] Implement table_new in this config
