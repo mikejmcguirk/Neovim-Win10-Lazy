@@ -48,6 +48,8 @@
 
 #### MID:
 
+- [ ] Needs to be some kind of Fugitive shortcut for "amend the last commit to advance it to the current state." Saves time/commits/pushes on cases where you need to fix a goof in the previous commit.
+
 - [ ] https://github.com/wellle/targets.vim
   - Looks like it can solve the i| a| problem
   - Also an interesting thing where you can do di, and da, in text
