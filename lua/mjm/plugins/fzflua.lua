@@ -95,6 +95,7 @@ return {
 
         set("n", "<leader>fr", fzf_lua.registers)
 
+        set("n", "<leader>fgb", fzf_lua.git_bcommits)
         set("n", "<leader>fgc", fzf_lua.git_commits)
         set("n", "<leader>fgf", fzf_lua.git_files)
         set("n", "<leader>fgh", fzf_lua.git_hunks)

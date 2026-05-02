@@ -5,11 +5,6 @@ local set_opt = api.nvim_set_option_value
 -- api.nvim_set_var("no_plugin_maps", 1)
 -- api.nvim_set_var("omni_sql_no_default_maps", 1)
 
--- TODO: This makes the intro screen not show
--- Or rather, it shows then flickers off
--- Would need to first test with a config that only enables ui2. If that works, then I need to
--- figure out what other thing in combination with this is causing the issue. Is that an issue
--- then of my config being over-elaborate or a problem in ui2?
 -- :h ui2
 require("vim._core.ui2").enable()
 
