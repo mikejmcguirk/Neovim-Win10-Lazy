@@ -38,20 +38,27 @@ function M.prepend_if_missing(str, new_items, sep)
     return table.concat(new, sep)
 end
 
----Copy-paste of vim.F.if_nil since the future of that module is uncertain
----https://github.com/neovim/neovim/pull/34633
----@param ... any
----@return any
-function M.if_not_nil(...)
-    local nargs = select("#", ...)
-    for i = 1, nargs do
-        local v = select(i, ...)
-        if v ~= nil then
-            return v
-        end
-    end
+---@diagnostic disable-next-line: deprecated
+M.nonnil = vim.nonnil or vim.F.if_nil
+-- DEPRECATE: Nvim 0.15 released
 
-    return nil
+---@param str string
+---@param byte integer
+---@return boolean
+function M.startswith_byte(str, byte)
+    vim.validate("str", str, "string")
+    vim.validate("buf", byte, require("nvim-tools.types").is_uint)
+    return #str > 0 and string.byte(str, 1) == byte
+end
+
+---@param str string
+---@param byte integer
+---@return boolean
+function M.endswith_byte(str, byte)
+    vim.validate("str", str, "string")
+    vim.validate("buf", byte, require("nvim-tools.types").is_uint)
+    local len_str = #str
+    return len_str > 0 and string.byte(len_str, 1) == byte
 end
 
 ---@param x integer

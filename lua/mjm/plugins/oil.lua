@@ -1,4 +1,5 @@
 local api = vim.api
+local set = vim.keymap.set
 
 local function close_oil()
     if api.nvim_get_option_value("modified", { buf = 0 }) then
@@ -51,11 +52,13 @@ return {
         watch_for_changes = true,
     },
     init = function()
-        vim.keymap.set("n", "-", function()
+        set({ "x", "o" }, "-", "<nop>")
+        set("n", "-", function()
             require("oil").open_float()
         end)
 
-        vim.keymap.set("n", "+", function()
+        set({ "x", "o" }, "+", "<nop>")
+        set("n", "+", function()
             require("oil").open_float(vim.uv.cwd())
         end)
     end,

@@ -1,8 +1,5 @@
---- @class docgen.DocItem
+--- @class docgen.DocItem : nvim.luacats.grammar.Result
 --- @field classvar? string
---- @field desc? string
---- @field name? string
---- @field type? string
 
 ---@class (exact) docgen.ParserObj
 ---@field attrs? string[]
@@ -12,7 +9,7 @@
 ---@field classvar? string
 ---@field deprecated? boolean
 ---@field desc? string
----@field fields? nvim.luacats.grammar.Result[]
+---@field fields? docgen.DocItem[]
 ---@field generics? string[]
 ---@field inlinedoc? boolean
 ---@field kind? "alias"|"brief"|"class"
@@ -28,7 +25,7 @@
 ---@field returns? docgen.DocItem[]
 ---@field see? docgen.DocItem[]
 ---@field since? string
----@field type? nvim.luacats.grammar.Result
+---@field type? docgen.DocItem
 ---
 ---@field __index fun(self: docgen.ParserObj, key: any): val:any
 ---@field new fun(): parser_obj:docgen.ParserObj
@@ -43,27 +40,22 @@ function M.__index(self, key)
     return val or rawget(M, key)
 end
 
-local table_new = require("table.new")
+local table_new = require("docgen.util").table_new
 
 ---@return docgen.ParserObj
 function M.new()
     return setmetatable(table_new(0, 22), M)
 end
 
-function M:clear()
+function M:clear_for_alias_class()
     self.async = nil
-    self.access = nil
     self.class = nil
     self.classvar = nil
-    self.deprecated = nil
     self.desc = nil
     self.fields = nil
-    self.generics = nil
-    self.inlinedoc = nil
     self.kind = nil
     self.member_sep = nil
     self.name = nil
-    self.nodoc = nil
     self.notes = nil
     self.overloads = nil
     self.params = nil
@@ -74,12 +66,27 @@ function M:clear()
     self.type = nil
 end
 
+function M:clear_for_class()
+    self:clear_for_alias_class()
+    self.access = nil
+end
+
+function M:clear_all()
+    self:clear_for_alias_class()
+    self:clear_for_class()
+
+    self.deprecated = nil
+    self.generics = nil
+    self.nodoc = nil
+    self.inlinedoc = nil
+end
+
 ----------------------
 -- MARK: Alias Info --
 ----------------------
 
 function M:alias_set(parsed)
-    self:clear()
+    self:clear_for_alias_class()
     self.kind = "alias"
     self.desc = parsed.desc
 end
@@ -90,7 +97,7 @@ end
 
 ---@param parsed nvim.luacats.grammar.Result
 function M:brief_set(parsed)
-    self:clear()
+    self:clear_all()
     self.kind = "brief"
     self.desc = parsed.desc
 end
@@ -102,7 +109,7 @@ end
 ---@param parsed nvim.luacats.grammar.Result
 ---@param doc_lines? string[]
 function M:class_set(parsed, doc_lines)
-    self:clear()
+    self:clear_for_class()
 
     self.kind = "class"
     self.name = parsed.name
@@ -113,7 +120,7 @@ function M:class_set(parsed, doc_lines)
     self.fields = {}
 end
 
----@param parsed nvim.luacats.grammar.Result
+---@param parsed docgen.DocItem
 ---@param doc_lines? string[]
 function M:class_add_field(parsed, doc_lines)
     if self.kind ~= "class" then
@@ -129,7 +136,7 @@ function M:class_add_field(parsed, doc_lines)
     fields[#fields + 1] = parsed
 end
 
----@param parsed nvim.luacats.grammar.Result
+---@param parsed docgen.DocItem
 ---@param doc_lines? string[]
 function M:class_add_operator(parsed, doc_lines)
     if self.kind ~= "class" then
@@ -242,7 +249,7 @@ function M:see_add(parsed)
     see[#see + 1] = { desc = parsed.desc }
 end
 
----@param parsed nvim.luacats.grammar.Result
+---@param parsed docgen.DocItem
 function M:type_set(parsed)
     self.desc = parsed.desc
     self.type = parsed

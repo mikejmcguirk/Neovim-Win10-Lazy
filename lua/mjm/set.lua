@@ -59,7 +59,7 @@ set_opt("dict", dict, global_scope)
 set_opt("spell", false, global_scope)
 set_opt("spelllang", "en_us", global_scope)
 
-mjm.opt.flag_add("shortmess", { "a", "s", "W" }, global_scope)
+mjm.opt.flag_add("shm", { "a", "s", "u", "W" }, global_scope)
 set_opt("report", 9999, { scope = "global" })
 
 local blink = "-blinkon1-blinkoff1"

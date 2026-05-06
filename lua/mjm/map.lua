@@ -527,6 +527,9 @@ set("n", "V", "mvV")
 set("n", "<C-v>", "mv<C-v>")
 set("n", "gV", "`[v`]")
 
+-- LOW: When doing gv, first check the locations of the '< and '> marks. If gv would take you
+-- past top or botline, set a pcmark
+
 -- Deal with default behavior where you type just to the bound of a window, so Nvim scrolls to
 -- the next column so you can see what you're typing, but then you exit insert mode, meaning
 -- the character no longer can exist, but Neovim still has you scrolled to the side
@@ -539,13 +542,6 @@ set({ "x", "o" }, "<C-c>", "<esc>")
 -----------------
 
 set("n", "U", "<nop>")
-set("n", "u", function()
-    return "<cmd>silent norm! " .. vim.v.count1 .. "u<cr>"
-end, { expr = true })
-
-set("n", "<C-r>", function()
-    return "<cmd>silent norm! " .. vim.v.count1 .. "\18<cr>"
-end, { expr = true })
 
 set({ "n" }, "<M-s>", ":'<,'>s/\\%V")
 set({ "x" }, "<M-s>", ":s/\\%V")
@@ -613,8 +609,8 @@ set("n", "<C-k>", function()
     mv_normal(true)
 end)
 
-set({ "n", "x" }, "x", '"_x', { silent = true })
-set("n", "X", '"_X', { silent = true })
+set({ "n", "x" }, "x", '"_x')
+set("n", "X", '"_X')
 
 -----------------------------
 -- NORMAL UNIMPAIRED LAYER --

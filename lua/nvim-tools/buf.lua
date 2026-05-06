@@ -334,7 +334,7 @@ local function do_set_buf(win, buf, bl, bt, clearjumps)
         api.nvim_cmd({ cmd = "clearjumps" }, {})
     end
 
-    local buflisted = require("nvim-tools.misc").if_not_nil(bl, bt ~= "help")
+    local buflisted = require("nvim-tools.misc").nonnil(bl, bt ~= "help")
     api.nvim_set_option_value("bl", buflisted, buf_opt)
     return true
 end

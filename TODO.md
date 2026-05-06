@@ -55,6 +55,10 @@ Some way of grepping todo/mid/low/future/maybe/perf/document from files all at o
 - [ ] How do you block direct pushes to master?
 - [ ] Is my fzf-lua-test file a good way to do a minimal init for plugin testing? Would want to look at what Neovim has (even after vim.pack) as well as fzf-lua's mini.sh script
 
+- [ ] https://github.com/lewis6991/gitsigns.nvim
+  - Insanely well put together repo
+  - Worth looking at in terms of like, what does a MakeFile give you that's valuable. How do you structure testing, and so on.
+
 - [ ] lampshade
   - The least exciting but also the simplest
   - [ ] Maybe use the full config module, maybe use g/b variables. Big thing is - the user should not have to re-write the entire autocmd scripting to customize it

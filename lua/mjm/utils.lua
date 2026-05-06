@@ -172,7 +172,7 @@ function M.check_word_under_cursor()
 
     vim.system({ "wn", word, "-over" }, { text = true, timeout = 1000 }, function(out)
         vim.schedule(function()
-            local lines = vim.split(out.stdout, "\n") ---@type string[]
+            local lines = vim.split(out.stdout, "\n")
             if out.code <= 0 or #lines < 0 then
                 ---@type string
                 local msg = out.code < 0 and "Error checking Wordnet: " .. out.stderr

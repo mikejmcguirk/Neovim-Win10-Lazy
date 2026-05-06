@@ -1,3 +1,4 @@
+local table_new = require("docgen.util").table_new
 local new_parser_obj = require("docgen.parser_obj").new
 
 --- @class (exact) docgen.Builder
@@ -18,8 +19,6 @@ function M.__index(self, key)
     local val = rawget(self, key)
     return val or rawget(M, key)
 end
-
-local table_new = require("table.new")
 
 ---@return docgen.Builder
 function M.new()

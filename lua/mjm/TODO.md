@@ -85,6 +85,8 @@
 
 - [ ] The gF text-tool function needs to be able to handle multiple lines in visual mode
 - [ ] The blink.cmp dictionary removed the plenary dep. Try installing again and see if the hung fzf issue still appears
+  - https://github.com/neovim/neovim/issues/39552 - This pertains to an issue with job killing in vim.system, which seems relevant to the problem case that cause me to leave the dictionary completion source to begin with. Need to understand if this issue affects me there.
+    * Most likely, I'll just need to try it with system monitor on. But still a good awareness item
 - [ ] % on quotation marks does not go to the matching quote
 - [ ] https://github.com/ribru17/ts_query_ls (and download build that disables built-in linter)
 - [ ] https://github.com/neovim/neovim/commit/4d04d0123d2571391a00b87f7ee70f987fb7cedd
@@ -104,6 +106,8 @@
 - [ ] @nomarkdown is considered two separate words for markdown line wrapping. Why?
 - [ ] https://github.com/neovim/nvim-lspconfig/commit/d50c6d53a40d5592b66a7ce989e0644fee51eeaa - Docs for how to add LSPConfig type annotations
 - [ ] Is the new `scrolloffpad` option useful for my use case?
+
+- [ ] https://github.com/neovim/neovim/commit/7fff439395215001ab74a96cc3df3d1b6d795177 - Does this make Nvim's built-in completion featureful enough to replace nvim-cmp?
 
 #### LOW:
 

@@ -70,7 +70,7 @@ local v = setmetatable({}, {
 })
 
 --- @class nvim.luacats.grammar.Result
---- @field kind? 'class'|'field'|'generic'|'param'|'return'
+--- @field kind? 'class'|'field'|'generic'|'operator'|'param'|'return'
 --- @field name? string
 --- @field type? string
 --- @field desc? string

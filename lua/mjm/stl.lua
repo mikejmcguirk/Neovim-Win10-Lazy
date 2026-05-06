@@ -77,7 +77,7 @@ api.nvim_create_autocmd("LspProgress", {
             vim.schedule(function()
                 local cur_buf = api.nvim_win_get_buf(0)
                 if not is_bad_mode() and cur_buf == buf then
-                    api.nvim_cmd({ cmd = "redraws" }, {})
+                    api.nvim__redraw({ statusline = true, win = 0 })
                 end
             end)
 
@@ -87,7 +87,7 @@ api.nvim_create_autocmd("LspProgress", {
         progress_cache[buf] = pct .. name .. ": " .. values.title .. message
         local cur_buf = api.nvim_win_get_buf(0)
         if not is_bad_mode() and cur_buf == buf then
-            api.nvim_cmd({ cmd = "redraws" }, {})
+            api.nvim__redraw({ statusline = true, win = 0 })
         end
     end,
 })
@@ -132,7 +132,7 @@ api.nvim_create_autocmd("DiagnosticChanged", {
         local diag_str = table.concat(diag_tbl, "")
         diag_cache[ev.buf] = diag_str
         if not is_bad_mode() then
-            api.nvim_cmd({ cmd = "redraws" }, {})
+            api.nvim__redraw({ statusline = true, win = 0 })
         end
     end,
 })
@@ -146,7 +146,7 @@ api.nvim_create_autocmd("ModeChanged", {
         end
 
         mode = vim.v.event.new_mode
-        api.nvim_cmd({ cmd = "redraws" }, {})
+        api.nvim__redraw({ statusline = true, win = 0 })
     end,
 })
 
@@ -162,7 +162,7 @@ api.nvim_create_autocmd({ "LspAttach", "LspDetach" }, {
             lsp_cache[ev.buf] = nil
         end
 
-        api.nvim_cmd({ cmd = "redraws" }, {})
+        api.nvim__redraw({ statusline = true, win = 0 })
     end),
 })
 
@@ -214,7 +214,7 @@ api.nvim_create_autocmd("BufWinEnter", {
         end
 
         buf_cache[ev.buf] = create_buf_str(ev.buf)
-        api.nvim_cmd({ cmd = "redraws" }, {})
+        api.nvim__redraw({ statusline = true, win = 0 })
     end,
 })
 
@@ -229,12 +229,25 @@ api.nvim_create_autocmd("OptionSet", {
             return
         end
 
-        if not vim.tbl_contains(watched, ev.match) then
+        if not require("nvim-tools.list").find(watched, ev.match) then
             return
         end
 
         buf_cache[buf] = create_buf_str(buf)
-        api.nvim_cmd({ cmd = "redraws" }, {})
+        api.nvim__redraw({ statusline = true, win = 0 })
+    end,
+})
+
+api.nvim_create_autocmd("FileType", {
+    group = stl_events,
+    callback = function(ev)
+        local buf = ev.buf ~= 0 and ev.buf or api.nvim_get_current_buf()
+        if not buf_cache[buf] then
+            return
+        end
+
+        buf_cache[buf] = create_buf_str(buf)
+        api.nvim__redraw({ statusline = true, win = 0 })
     end,
 })
 
