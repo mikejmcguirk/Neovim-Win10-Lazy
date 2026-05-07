@@ -232,14 +232,16 @@ function M:handle_unparsed_line(line)
         if not self.last_doc_item_indent then
             self.last_doc_item_indent = #line:match("^%s*") + 1
         end
+
         self.last_doc_item.desc = (self.last_doc_item.desc or "")
             .. "\n"
             .. line:sub(self.last_doc_item_indent or 1)
-    else
-        self.doc_lines = self.doc_lines or {}
-        local doc_lines = self.doc_lines
-        doc_lines[#doc_lines + 1] = line
+        return
     end
+
+    self.doc_lines = self.doc_lines or {}
+    local doc_lines = self.doc_lines
+    doc_lines[#doc_lines + 1] = line
 end
 -- TODO: Overly complicated indent handling.
 

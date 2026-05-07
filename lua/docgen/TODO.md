@@ -46,7 +46,6 @@
   - [ ] Can the various nil checks be changed into something else? Unsure how to do that though since Nil is a clear way to say this is not here
 
 - [ ] Handle core updates:
-  - [ ] Affects class rendering: https://github.com/neovim/neovim/pull/39078
   - [ ] Sorted class fields: https://github.com/neovim/neovim/commit/033efbbd32fad882da67c0a1f658d1c12a8d515e
     - https://github.com/neovim/neovim/pull/39427
   - [ ] Nested inlinedoc fix: https://github.com/neovim/neovim/commit/825bfba789d924ab2f33b3e87814750863ff4f02
@@ -214,6 +213,8 @@
 - [ ] Make sure bullet rendering includes * and -. Maybe +
   - I think this is handled by the list dot and list minus tags, so just add list plus I think
   - You should be able to use Nvim's inspector to see the node names/ranges
+
+- [ ] See if/how the class module as dot functions thing works. The details for it are a bit confusing.
 
 - [ ] Look at the referenced docgens. Do they have ideas that are useful/valuable?
 

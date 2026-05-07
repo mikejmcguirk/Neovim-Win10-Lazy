@@ -31,15 +31,30 @@ local DBL_INDENT_STR = string.rep(" ", DBL_INDENT)
 -- MARK: Other helper data and functions --
 -------------------------------------------
 
+--- True if the `.` class member should render like a module function.
+--- @param fun docgen.DocItem|docgen.ParserObj
+--- @return boolean
+local function is_module_fun(fun)
+    return fun.classvar ~= nil
+        and fun.member_sep == "."
+        and fun.modvar ~= nil
+        and fun.module ~= nil
+        and fun.classvar == fun.modvar
+end
+
 --- @param fun docgen.DocItem|docgen.ParserObj
 --- @return string
 local function fmt_fun_as_helptag(fun)
+    if is_module_fun(fun) then
+        return string.format("%s.%s%s", fun.module, fun.name)
+    end
+
     if fun.classvar then
-        return str_fmt("%s:%s%s", fun.classvar, fun.name, "()")
+        return string.format("%s:%s%s", fun.classvar, fun.name, "()")
     end
 
     if fun.module then
-        return str_fmt("%s.%s", fun.module, fun.name)
+        return string.format("%s.%s", fun.module, fun.name)
     end
 
     return fun.name .. "()"
@@ -393,12 +408,16 @@ end
 -- off into the separate logic. So this function ould take in and modify ret, and export is_list
 -- and is_opt as needed
 
---- @param xs docgen.DocItem[]
+--- @param xs? docgen.DocItem[]
 --- @param generics? table<string,string>
 --- @param classes? table<string,docgen.ParserObj>
 --- @param is_params boolean
 --- @return string
 local function render_fields_or_params(xs, generics, classes, is_params)
+    if not xs then
+        return ""
+    end
+
     list_filter(xs, is_params and should_render_param or should_render_field)
     local len_xs = #xs
     if len_xs < 1 then
@@ -459,8 +478,9 @@ end
 
 --- @param class docgen.ParserObj
 --- @param classes table<string,docgen.ParserObj>
+--- @param hidden_fields? table<string,table<string,true>>
 --- @return string|nil
-local function render_class(class, classes)
+local function render_class(class, classes, hidden_fields)
     if class.access or class.nodoc or class.inlinedoc then
         return
     end
@@ -479,7 +499,15 @@ local function render_class(class, classes)
         ret[#ret + 1] = md_to_vimdoc(class.desc, INDENT, INDENT)
     end
 
-    local fields_txt = render_fields_or_params(class.fields, nil, classes, false)
+    local class_hidden = hidden_fields and hidden_fields[class.name]
+    local fields = class.fields
+    if class_hidden and fields then
+        list_filter(fields, function(field)
+            return not class_hidden[field.name]
+        end)
+    end
+
+    local fields_txt = render_fields_or_params(fields, nil, classes, false)
     if not fields_txt:match("^%s*$") then
         ret[#ret + 1] = "\n    Fields: ~\n"
         ret[#ret + 1] = fields_txt
@@ -493,11 +521,19 @@ end
 -- definition.
 
 --- @param classes table<string,docgen.ParserObj>
-local function render_classes(classes)
+--- @param funs docgen.ParserObj[]
+local function render_classes(classes, funs)
     local ret = {} --- @type string[]
+    local hidden_fields = {} --- @type table<string,table<string,true>>
+    for _, fun in ipairs(funs) do
+        if is_module_fun(fun) and fun.class then
+            hidden_fields[fun.class] = hidden_fields[fun.class] or {}
+            hidden_fields[fun.class][fun.name] = true
+        end
+    end
 
     for _, class in vim.spairs(classes) do
-        ret[#ret + 1] = render_class(class, classes)
+        ret[#ret + 1] = render_class(class, classes, hidden_fields)
     end
 
     return table.concat(ret)
@@ -533,7 +569,10 @@ end
 --- @param fun docgen.ParserObj
 --- @param ret string[]
 local function add_fun_header(fun, ret)
-    local name = fun.classvar and string.format("%s:%s", fun.classvar, fun.name) or fun.name
+    local name = (fun.classvar and not is_module_fun(fun))
+            and string.format("%s:%s", fun.classvar, fun.name)
+        or fun.name
+
     local param_list = get_params(fun)
     local param_str = param_list and table.concat(param_list, ", ") or ""
     local proto_len = #name + #param_str + 2 -- Add two for parens
@@ -557,6 +596,11 @@ local function add_fun_header(fun, ret)
 
     return ret
 end
+-- MAYBE: The core's docgen has logic to re-check the name and add the proto to ret if name does
+-- not pass a string.match for the proper format. I'm not sure if I need that here due to how I
+-- have name/param generation divided.
+-- Note that this pertains to https://github.com/neovim/neovim/pull/39078, which handles rendering
+-- module classes with dot syntax.
 
 ---@param fun docgen.ParserObj
 ---@param ret string[]
@@ -813,7 +857,7 @@ function M._render_docs(inputs, output_path)
         -- Or are they already concated in obj?
 
         local funs_txt = render_funs(funs, all_classes)
-        local classes_txt = render_classes(classes)
+        local classes_txt = render_classes(classes, funs)
         sections[basename] = make_section(basename, briefs, funs_txt, classes_txt)
     end
 

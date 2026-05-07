@@ -245,23 +245,34 @@ for _, map in ipairs({ "<C-w>q", "<C-w><C-q>" }) do
     set("n", map, function()
         local ntw = require("nvim-tools.win")
         local cur_win = api.nvim_get_current_win()
-        local _, buf, err_w, hl_w = ntw.protected_close(cur_win, false)
-        if not buf then
+        local cur_buf = api.nvim_win_get_buf(cur_win)
+
+        local ntb = require("nvim-tools.buf")
+        local ok_s, err_s, hl_s = ntb.save(cur_buf)
+        if not ok_s then
+            err_s = err_s or ("Unknown error saving buffer " .. cur_buf)
+            if not string.match(err_s, "Cannot save buftype") then
+                require("nvim-tools.ui").echo_err(false, err_s, hl_s)
+                return
+            end
+        end
+
+        local _, buf_w, err_w, hl_w = ntw.protected_close(cur_win, false)
+        if not buf_w then
             require("nvim-tools.ui").echo_err(false, err_w, hl_w)
             return
         end
 
         vim.schedule(function()
-            if #fn.win_findbuf(buf) > 0 then
+            if #fn.win_findbuf(buf_w) > 0 then
                 return
             end
 
             -- FUTURE: Use wipeout when that logic is fixed
             -- https://github.com/neovim/neovim/pull/33402
-            local ntb = require("nvim-tools.buf")
             ---@type vim.api.keyset.buf_delete
             local buf_del_opts = { force = false, unload = true }
-            local ok_b, err_b, hl_b = ntb.save_and_del(buf, true, buf_del_opts)
+            local ok_b, err_b, hl_b = ntb.protected_del(buf_w, true, buf_del_opts)
             if not ok_b and hl_b == "ErrorMsg" then
                 require("nvim-tools.ui").echo_err(false, err_b, hl_b)
             end
