@@ -1,15 +1,13 @@
 local luacats_grammar = require("docgen.luacats_grammar")
+local parser_obj = require("docgen.parser_obj")
 
-local obj_builder = require("docgen.obj_builder")
-
+-- TODO: remove
 --- @class nvim.luacats.parser.param : nvim.luacats.grammar.Result
 
+-- TODO: Remove this class
 --- @class nvim.luacats.parser.field : nvim.luacats.grammar.Result
 --- @field classvar? string
 --- @field nodoc? true
-
--- TODO: Another thing here is we need to take stuff and try to combine as much as possible.
--- nodoc/inlinedoc should all be in one variable called "docstyle"
 
 --- @param obj docgen.ParserObj?
 --- @param funs docgen.ParserObj[]
@@ -26,11 +24,10 @@ local function commit_obj(obj, classes, funs, briefs)
         end
     elseif obj.kind == "brief" then
         briefs[#briefs + 1] = obj.desc
-    elseif obj.name then
+    elseif obj.kind == "fun" then
         funs[#funs + 1] = obj
     end
 end
--- MID: "Document aliases" feels like a semi-useful option.
 
 --- Determine the table name used to export functions of a module
 --- @param lines string[]
@@ -65,51 +62,34 @@ local M = {}
 ---@param lines string[]
 ---@param input string
 function M.parse_lines(lines, input)
-    -- TODO: This is not what we want. most of the committed objects should just be in one
-    -- ordered list. We do need a list of all classes for inlinedoc, but I would think that you
-    -- could just make a separate table that references the main one.
     local funs = {} --- @type docgen.ParserObj[]
     local classes = {} --- @type table<string,docgen.ParserObj>
     local briefs = {} --- @type string[]
 
     local classvars = {} --- @type table<string,string>
-    local modvar = find_modvar(lines)
+    local modvar = find_modvar(lines) or ""
 
-    local builder = obj_builder.new()
+    local obj = parser_obj.new(modvar, input)
 
     for _, line in ipairs(lines) do
         local is_doc_line = string.find(line, "^%-%-%-")
-        local has_indent = line:match("^%s+") ~= nil
-        -- TODO: Doesn't this nuke code blocks?
-        line = vim.trim(line)
-
-        -- TODO: This doesn't feel like the right place for any of this.
-        -- If we're keeping the builder object, why can't you just do builder:add_line(line) ?
-        -- There's also merit to pushing more of this into the parser object. Separating out the
-        -- Luacats management has been somewhat of a friction point. parser_obj:add_line(line) is
-        -- nice. You could also use this to treat the builder like more of a state machine.
-        -- So when you add a line, you get two booleans back. "still open" for if the object
-        -- can accept more lines, and "is valid" for if we have a usable object (would be false
-        -- for locals, for example). This feels fundamentally correct. This also plays into the
-        -- ideas on internalizing doc lines handling.
-        -- Note that this all needs to handle the export tag. Maybe return an integer or enum
-        -- for what to do, so like if you get an export you break out of line handling.
+        local line_rtrim = string.match(line, "^.*%S") ---@type string
         if is_doc_line then
-            local nodash_line = line:sub(4):gsub("^%s+@", "@")
+            local line_nodash = string.gsub(string.sub(line_rtrim, 4), "^%s+@", "@")
             ---@type nvim.luacats.grammar.Result?
-            local parsed = luacats_grammar:match(nodash_line)
+            local parsed = luacats_grammar:match(line_nodash)
             if parsed then
-                builder:add_parsed_result(parsed)
+                obj:add_parsed(parsed)
             else
-                builder:handle_unparsed_line(nodash_line)
+                obj:doc_lines_add(line_nodash)
             end
         else
-            builder:set_module_info(modvar, input) -- Also in get finalized
+            local valid_obj = obj:finalize(line, classes, classvars)
+            if valid_obj then
+                commit_obj(obj, classes, funs, briefs)
+            end
 
-            local final_line = (not has_indent) and line or nil
-            local cur_obj = builder:get_finalized_obj(final_line, classes, classvars)
-            commit_obj(cur_obj, classes, funs, briefs)
-            builder:reset()
+            obj = parser_obj.new(modvar, input)
         end
     end
 

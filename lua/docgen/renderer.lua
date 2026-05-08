@@ -155,8 +155,11 @@ local function render_section(section, add_header)
     if len_briefs > 0 then
         local briefs_txt = {} --- @type string[]
         for i = 1, len_briefs do
-            briefs_txt[#briefs_txt + 1] = md_to_vimdoc(briefs[i], 0, 0)
+            local parsed_md = md_to_vimdoc(briefs[i], 0, 0)
+            briefs_txt[#briefs_txt + 1] = wrap(parsed_md, 0, 0, TEXT_WIDTH)
         end
+
+        -- print(vim.inspect(briefs_txt))
 
         local sdoc = "\n\n" .. table.concat(briefs_txt, "\n")
         if sdoc:find("[^%s]") then
@@ -672,6 +675,7 @@ local function add_returns(fun, classes, ret)
         vim.list_extend(ret, lines)
     end
 end
+-- TODO: Single nil return does not properly indent
 
 ---@param fun docgen.ParserObj
 ---@param ret string[]

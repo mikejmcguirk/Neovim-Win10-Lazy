@@ -127,11 +127,9 @@ local md_inline_handlers = {
             end
         end
 
-        if row > 0 or col > 0 then
-            local trailing = slice_lines(lines, row, col)
-            if trailing and trailing ~= "" then
-                ret[#ret + 1] = adj_newlines(trailing)
-            end
+        local trailing = slice_lines(lines, row, col)
+        if trailing and trailing ~= "" then
+            ret[#ret + 1] = adj_newlines(trailing)
         end
     end,
     ["inline_link"] = function(node, str, _, _, ret, _)

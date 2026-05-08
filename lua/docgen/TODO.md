@@ -55,6 +55,8 @@
 
 - [ ] The remaining TODO comments in the rest of the docgen are placed reasonably. Just work through them without moving here.
 
+- [ ] The parser_obj's functions should mostly be private
+
 - [ ] Create actual docgen strategic plan
   - Motivation:
     * The LuaCATs > Vimdoc script needs to handle module building/tag construction/file stitching in line with a broader strategy
@@ -220,6 +222,8 @@
 - [ ] This needs to have tests
   - [ ] The original _spec files will hopefully be helpful
   - [ ] Add a no_output option for validation/debugging
+
+- [ ] An amusing and not totally absurd idea is to have the readme just be in vimdoc. I feel like one of the grep or qf vim plugins I've looked at has actually done this. I think we'd be okay with github's display issues because the docgen outputs spaces and not tabs. It's kind of hard hitting presentation and it does stand itself on the product.
 
 - [ ] Neovim is under an Apache license, which has attribution requirements attached to it. Must be in the README for this separate release
 
