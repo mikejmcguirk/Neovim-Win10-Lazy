@@ -89,7 +89,8 @@ M.table_new = table_new
 ---@param text string
 ---@return string
 function M.adj_newlines(text)
-    text = string.gsub(text, "%s+\n", "\n")
+    -- text = string.gsub(text, "%s+\n", "\n")
+    text = string.gsub(text, "\n%s+", "\n")
     text = string.gsub(text, "\n+", function(match)
         if #match == 1 then
             return " "
@@ -101,6 +102,37 @@ function M.adj_newlines(text)
     return text
 end
 
+--- @param lines string[]
+--- @param srow integer 0-indexed
+--- @param scol integer 0-indexed, inclusive
+--- @param erow? integer 0-indexed
+--- @param ecol? integer 0-indexed, exclusive
+--- @return string sliced
+function M.slice_lines(lines, srow, scol, erow, ecol)
+    local srow_1 = srow + 1
+    local scol_1 = scol + 1
+    local erow_1 = erow and erow + 1 or #lines
+    local len_last_line = #lines[erow_1]
+    local ecol_1 = ecol or len_last_line
+    if len_last_line > 0 then
+        ecol_1 = ecol_1 + vim.str_utf_start(lines[erow_1], ecol_1)
+    end
+
+    if srow_1 == erow_1 then
+        return string.sub(lines[srow_1], scol_1, ecol_1)
+    end
+
+    -- Don't edit lines in place
+    local ret = table_new(erow_1 - srow_1 + 1, 0)
+    ret[1] = string.sub(lines[srow_1], scol_1)
+    for i = srow_1 + 1, erow_1 - 1 do
+        ret[#ret + 1] = lines[i]
+    end
+
+    ret[#ret + 1] = string.sub(lines[erow_1], 1, ecol_1)
+    return table.concat(ret, "\n")
+end
+
 --- @param txt string
 --- @param srow integer
 --- @param scol integer
@@ -109,25 +141,7 @@ end
 --- @return string
 function M.slice_text(txt, srow, scol, erow, ecol)
     local lines = vim.split(txt, "\n")
-
-    if srow == erow then
-        return lines[srow + 1]:sub(scol + 1, ecol)
-    end
-
-    if erow then
-        for _ = erow + 2, #lines do
-            table.remove(lines, #lines)
-        end
-    end
-
-    for _ = 1, srow do
-        table.remove(lines, 1)
-    end
-
-    lines[1] = lines[1]:sub(scol + 1)
-    lines[#lines] = lines[#lines]:sub(1, ecol)
-
-    return table.concat(lines, "\n")
+    return M.slice_lines(lines, srow, scol, erow, ecol)
 end
 
 ---NOTE: Does not add a final newline

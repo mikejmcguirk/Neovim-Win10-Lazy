@@ -8,11 +8,12 @@
 ---@field class? string
 ---@field classvar? string
 ---@field deprecated? boolean
+---@field doc_lines? string[] Uncommitted doc lines
 ---@field desc? string
 ---@field fields? docgen.DocItem[]
 ---@field generics? string[]
 ---@field inlinedoc? boolean
----@field kind? "alias"|"brief"|"class"
+---@field kind? "alias"|"brief"|"class"|"fun"
 ---@field member_sep? '.'|':'
 ---@field module? string
 ---@field modvar? string
@@ -107,8 +108,8 @@ end
 ----------------------
 
 ---@param parsed nvim.luacats.grammar.Result
----@param doc_lines? string[]
-function M:class_set(parsed, doc_lines)
+function M:class_set(parsed)
+    assert(not self.kind, "Cannot set as class. Kind is already " .. tostring(self.kind))
     self:clear_for_class()
 
     self.kind = "class"
@@ -116,40 +117,86 @@ function M:class_set(parsed, doc_lines)
     self.parent = parsed.parent
     self.access = parsed.access
 
+    local doc_lines = self.doc_lines
     self.desc = doc_lines and table.concat(doc_lines, "\n") or nil
     self.fields = {}
 end
 
----@param parsed docgen.DocItem
----@param doc_lines? string[]
-function M:class_add_field(parsed, doc_lines)
+---@param parsed nvim.luacats.grammar.Result
+function M:class_add_field(parsed)
     if self.kind ~= "class" then
         -- TODO: Improve
         error("Cannot add a field to a non-class object")
     end
 
     parsed.desc = (parsed.desc and parsed.desc ~= "") and parsed.desc or nil
+    local doc_lines = self.doc_lines
     parsed.desc = parsed.desc or doc_lines and table.concat(doc_lines, "\n") or nil
     parsed.desc = parsed.desc and vim.trim(parsed.desc) or nil
 
     local fields = self.fields
-    fields[#fields + 1] = parsed
+    fields[#fields + 1] = parsed --[[@as docgen.DocItem]]
+    self.doc_lines = nil
 end
 
----@param parsed docgen.DocItem
----@param doc_lines? string[]
-function M:class_add_operator(parsed, doc_lines)
+--- @param fun docgen.ParserObj
+function M:class_add_field_from_fun(fun)
+    assert(fun.kind == "fun", "fun.kind is not 'fun' " .. fun.kind)
+
+    local type_tbl = { "fun(" }
+
+    local fun_params = fun.params
+    if fun_params then
+        local params = {} ---@type string[]
+        local len_fun_params = #fun_params
+        for i = 1, len_fun_params do
+            local p = fun_params[i]
+            params[#params + 1] = string.format("%s: %s", p.name, p.type)
+        end
+
+        type_tbl[#type_tbl + 1] = table.concat(params, ", ")
+    end
+
+    type_tbl[#type_tbl + 1] = ")"
+
+    local fun_returns = fun.returns
+    if fun_returns then
+        type_tbl[#type_tbl + 1] = ": "
+        local fun_ret_types = {} --- @type string[]
+        local len_fun_returns = #fun_returns
+        for i = 1, len_fun_returns do
+            fun_ret_types[#fun_ret_types + 1] = fun_returns[i].type
+            type_tbl[#type_tbl + 1] = table.concat(fun_ret_types, ", ")
+        end
+    end
+
+    local fields = self.fields
+    fields[#fields + 1] = {
+        kind = "field",
+        name = fun.name,
+        type = table.concat(type_tbl, ""),
+        access = fun.access,
+        desc = fun.desc,
+        nodoc = fun.nodoc,
+        classvar = fun.classvar,
+    }
+end
+
+---@param parsed nvim.luacats.grammar.Result
+function M:class_add_operator(parsed)
     if self.kind ~= "class" then
         -- TODO: Improve
         error("Cannot add an operator to a non-class object")
     end
 
     -- MID: Why isn't desc == "" checked here like in field?
+    local doc_lines = self.doc_lines
     parsed.desc = parsed.desc or doc_lines and table.concat(doc_lines, "\n") or nil
     parsed.desc = parsed.desc and vim.trim(parsed.desc) or nil
 
     local fields = self.fields
-    fields[#fields + 1] = parsed
+    fields[#fields + 1] = parsed --[[@as docgen.DocItem]]
+    self.doc_lines = nil
 end
 
 -------------------------
@@ -158,6 +205,35 @@ end
 
 function M:async_set()
     self.async = true
+end
+
+---@param fun_name string
+---@param class string
+---@param parent string
+---@param sep string
+function M:class_fun_set(fun_name, class, parent, sep)
+    assert(not self.kind, "Cannot set as class function. Kind is already " .. tostring(self.kind))
+
+    self.name = fun_name
+    self.class = class
+    self.classvar = parent
+    self.member_sep = sep
+
+    self.params = self.params or {}
+    table.insert(self.params, 1, {
+        name = "self",
+        type = class,
+    })
+
+    self.kind = "fun"
+end
+-- TODO: Use list.insert_at instead of table.insert
+
+---@param name string
+function M:fun_set_from_name(name)
+    assert(self.kind == nil, "Cannot set as function. Kind is already " .. tostring(self.kind))
+    self.name = name
+    self.kind = "fun"
 end
 
 function M:generic_add(parsed)
@@ -229,6 +305,38 @@ end
 -- MARK: Misc --
 ----------------
 
+---@param line string
+function M:doc_lines_add(line)
+    if line:match("^ ") then
+        line = line:sub(2)
+    end
+
+    self.doc_lines = self.doc_lines or {}
+    local doc_lines = self.doc_lines
+    doc_lines[#doc_lines + 1] = line
+end
+-- MAYBE: Indent handling removed from here. Re-add if needed.
+
+function M:doc_lines_clear()
+    self.doc_lines = nil
+end
+
+function M:doc_lines_commit()
+    local doc_lines = self.doc_lines
+    if not doc_lines then
+        return
+    end
+
+    local doc_lines_str = table.concat(doc_lines, "\n")
+    if self.desc then
+        self.desc = self.desc .. "\n" .. doc_lines_str
+    else
+        self.desc = doc_lines_str
+    end
+
+    self.doc_lines = nil
+end
+
 ---@param doc_item docgen.DocItem
 function M:note_add(doc_item)
     self.notes = self.notes or {}
@@ -236,23 +344,13 @@ function M:note_add(doc_item)
     notes[#notes + 1] = doc_item
 end
 -- TODO: State also does bookkeeping here
-
----@param parsed nvim.luacats.grammar.Result
-function M:since_set(parsed)
-    self.since = parsed.desc
-end
+-- TODO: Why are notes tables that then hold a key to a string. Shouldn't this just be a string[]?
 
 ---@param parsed nvim.luacats.grammar.Result
 function M:see_add(parsed)
     self.see = self.see or {}
     local see = self.see
     see[#see + 1] = { desc = parsed.desc }
-end
-
----@param parsed docgen.DocItem
-function M:type_set(parsed)
-    self.desc = parsed.desc
-    self.type = parsed
 end
 
 ---@param modvar string?
@@ -264,6 +362,17 @@ function M:set_module_info(modvar, input)
     local module = input:match(".*/lua/([a-z_][a-z0-9_/]+)%.lua") or input
     module = module:gsub("/", ".")
     self.module = module
+end
+
+---@param parsed nvim.luacats.grammar.Result
+function M:since_set(parsed)
+    self.since = parsed.desc
+end
+
+---@param parsed nvim.luacats.grammar.Result
+function M:type_set(parsed)
+    self.desc = parsed.desc
+    self.type = parsed --[[@as docgen.DocItem]]
 end
 
 return M

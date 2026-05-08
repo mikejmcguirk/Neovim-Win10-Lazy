@@ -3,8 +3,6 @@ local new_parser_obj = require("docgen.parser_obj").new
 
 --- @class (exact) docgen.Builder
 --- @field cur_obj? docgen.ParserObj
---- @field doc_lines? string[]
---- @field last_doc_item? docgen.DocItem
 ---
 ---@field __index fun(self: docgen.ParserObj, key: any): val:any
 ---@field new fun(): parser_obj:docgen.Builder
@@ -48,8 +46,7 @@ end
 ---@param self docgen.Builder
 ---@param parsed nvim.luacats.grammar.Result
 local function add_parsed_class(self, parsed)
-    self.cur_obj:class_set(parsed, self.doc_lines)
-    self.doc_lines = nil
+    self.cur_obj:class_set(parsed)
 end
 
 ---@param self docgen.Builder
@@ -59,14 +56,13 @@ end
 
 ---@param self docgen.Builder
 local function add_parsed_enum(self)
-    self.doc_lines = nil
+    self.cur_obj:doc_lines_clear()
 end
 
 ---@param self docgen.Builder
 ---@param parsed nvim.luacats.grammar.Result
 local function add_parsed_field(self, parsed)
-    self.cur_obj:class_add_field(parsed, self.doc_lines)
-    self.doc_lines = nil
+    self.cur_obj:class_add_field(parsed)
 end
 
 ---@param self docgen.Builder
@@ -88,16 +84,13 @@ end
 ---@param self docgen.Builder
 ---@param parsed nvim.luacats.grammar.Result
 local function add_parsed_note(self, parsed)
-    self.last_doc_item = { desc = parsed.desc }
-
-    self.cur_obj:note_add(self.last_doc_item)
+    self.cur_obj:note_add({ desc = parsed.desc })
 end
 
 ---@param self docgen.Builder
 ---@param parsed nvim.luacats.grammar.Result
 local function add_parsed_operator(self, parsed)
-    self.cur_obj:class_add_operator(parsed, self.doc_lines)
-    self.doc_lines = nil
+    self.cur_obj:class_add_operator(parsed)
 end
 
 ---@param self docgen.Builder
@@ -114,20 +107,20 @@ end
 ---@param self docgen.Builder
 ---@param parsed nvim.luacats.grammar.Result
 local function add_parsed_param(self, parsed)
-    if vim.endswith(parsed.name, "?") then
-        parsed.name = parsed.name:sub(1, -2)
+    if string.byte(parsed.name, #parsed.name) == 63 then
+        parsed.name = string.sub(parsed.name, 1, -2)
         parsed.type = parsed.type .. "?"
     end
 
-    self.last_doc_item = {
+    self.cur_obj = self.cur_obj or new_parser_obj()
+    self.cur_obj:param_add({
         name = parsed.name,
         type = parsed.type,
         desc = parsed.desc,
-    }
-
-    self.cur_obj = self.cur_obj or new_parser_obj()
-    self.cur_obj:param_add(self.last_doc_item)
+    })
 end
+-- TODO: Why can't parser_obj just handle the Luacats result
+
 ---@param self docgen.Builder
 local function add_parsed_private(self)
     self.cur_obj = self.cur_obj or new_parser_obj()
@@ -146,7 +139,6 @@ local function add_parsed_return(self, parsed)
     self.cur_obj = self.cur_obj or new_parser_obj()
     local cur_obj = self.cur_obj --[[@as docgen.ParserObj]]
     cur_obj:return_add(parsed)
-    self.last_doc_item = cur_obj.returns[#cur_obj.returns]
 end
 
 ---@param self docgen.Builder
@@ -197,7 +189,6 @@ local transform = {
 ---@param parsed nvim.luacats.grammar.Result
 function M:add_parsed_result(parsed)
     self.cur_obj = self.cur_obj or new_parser_obj()
-    self.last_doc_item = nil
 
     local transform_fn = transform[parsed.kind]
     if transform_fn then
@@ -211,176 +202,89 @@ end
 
 function M:reset()
     self.cur_obj = nil
-    self.doc_lines = nil
-    self.last_doc_item = nil
 end
 
 ---@param line string
 function M:handle_unparsed_line(line)
-    if line:match("^ ") then
-        line = line:sub(2)
-    end
-
-    if self.last_doc_item then
-        self.last_doc_item.desc = (self.last_doc_item.desc or "") .. "\n" .. line
-        return
-    end
-
-    self.doc_lines = self.doc_lines or {}
-    local doc_lines = self.doc_lines
-    doc_lines[#doc_lines + 1] = line
+    self.cur_obj = self.cur_obj or new_parser_obj()
+    self.cur_obj:doc_lines_add(line)
 end
--- MAYBE: Indent handling removed from here. Re-add if needed.
 
 ------------------------
 -- MARK: Finalization --
 ------------------------
-
-function M:add_doc_lines_to_obj()
-    if not self.doc_lines then
-        return
-    end
-
-    self.cur_obj = self.cur_obj or new_parser_obj()
-    local cur_obj = assert(self.cur_obj)
-    local txt = table.concat(self.doc_lines, "\n")
-    if cur_obj.desc then
-        cur_obj.desc = cur_obj.desc .. "\n" .. txt
-    else
-        cur_obj.desc = txt
-    end
-
-    self.doc_lines = nil
-end
--- TODO: dumb assert
-
---- @param fun docgen.ParserObj
---- @return nvim.luacats.parser.field
-local function fun2field(fun)
-    local parts = { "fun(" }
-
-    local params = {} ---@type string[]
-    for _, p in ipairs(fun.params or {}) do
-        params[#params + 1] = string.format("%s: %s", p.name, p.type)
-    end
-
-    parts[#parts + 1] = table.concat(params, ", ")
-    parts[#parts + 1] = ")"
-    if fun.returns then
-        parts[#parts + 1] = ": "
-        local tys = {} --- @type string[]
-        for _, p in ipairs(fun.returns) do
-            tys[#tys + 1] = p.type
-        end
-
-        parts[#parts + 1] = table.concat(tys, ", ")
-    end
-
-    return {
-        kind = "field",
-        name = fun.name,
-        type = table.concat(parts, ""),
-        access = fun.access,
-        desc = fun.desc,
-        nodoc = fun.nodoc,
-        classvar = fun.classvar,
-    }
-end
-
---- Function to normalize known form for declaring functions and normalize into a more standard
---- form.
---- @param line string
---- @return string
-local function filter_decl(line)
-    -- M.fun = vim._memoize(function(...)
-    --   ->
-    -- function M.fun(...)
-    line = line:gsub("^local (.+) = memoize%([^,]+, function%((.*)%)$", "local function %1(%2)")
-    line = line:gsub("^(.+) = memoize%([^,]+, function%((.*)%)$", "function %1(%2)")
-    return line
-end
 
 --- @param line? string
 --- @param classes table<string,docgen.ParserObj>
 --- @param classvars table<string,string>
 --- @return docgen.ParserObj?
 function M:get_finalized_obj(line, classes, classvars)
+    if
+        line
+        and (
+            string.find(line, "^%s*local%s+")
+            or string.find(line, "^%s*return%s+")
+            or string.find(line, "^%s*%-%- luacheck:")
+            or string.find(line, "^%s*[a-zA-Z_.]+%(%s+")
+        )
+    then
+        self.cur_obj = nil
+        return
+    end
+
+    local cur_obj = self.cur_obj
+    if cur_obj then
+        cur_obj:doc_lines_commit()
+    end
+
     if not line then
-        return self.cur_obj
+        return cur_obj
     end
 
-    line = filter_decl(line)
-
-    if self.cur_obj and self.cur_obj.kind == "class" then
-        local nm = line:match("^local%s+([a-zA-Z0-9_]+)%s*=")
-        if nm then
-            classvars[nm] = self.cur_obj.name
-        end
-
-        return self.cur_obj
-    end
-
-    do
-        local parent_tbl, sep, fun_or_meth_nm =
-            line:match("^function%s+([a-zA-Z0-9_]+)([.:])([a-zA-Z0-9_]+)%s*%(")
-        if parent_tbl then
-            -- Have a decl. Ensure cur_obj
-            self.cur_obj = self.cur_obj or new_parser_obj()
-            local cur_obj = assert(self.cur_obj)
-
-            -- Match `Class:foo` methods for defined classes
-            local class = classvars[parent_tbl]
-            if class then
-                cur_obj.name = fun_or_meth_nm
-                cur_obj.class = class
-                cur_obj.classvar = parent_tbl
-                cur_obj.member_sep = sep
-                -- Add self param to methods
-                if sep == ":" then
-                    cur_obj.params = cur_obj.params or {}
-                    table.insert(cur_obj.params, 1, {
-                        name = "self",
-                        type = class,
-                    })
-                end
-
-                table.insert(classes[class].fields, fun2field(cur_obj))
-                return self.cur_obj
+    if self.cur_obj then
+        if self.cur_obj.kind == "class" then
+            local name = line:match("^local%s+([a-zA-Z0-9_]+)%s*=")
+            if name then
+                classvars[name] = self.cur_obj.name
             end
 
-            -- Match `M.foo`
-            if cur_obj and parent_tbl == cur_obj.modvar then
-                cur_obj.name = fun_or_meth_nm
-                return self.cur_obj
-            end
-        end
-    end
-
-    do
-        -- Handle: `function A.B.C.foo(...)`
-        local fn_nm = line:match("^function%s+([.a-zA-Z0-9_]+)%s*%(")
-        if fn_nm then
-            self.cur_obj = self.cur_obj or new_parser_obj()
-            self.cur_obj.name = fn_nm
             return self.cur_obj
         end
     end
 
-    if self.cur_obj then
-        if line:find("^%s*%-%- luacheck:") then
-            self.cur_obj = nil
-        elseif line:find("^%s*local%s+") then
-            self.cur_obj = nil
-        elseif line:find("^%s*return%s+") then
-            self.cur_obj = nil
-        elseif line:find("^%s*[a-zA-Z_.]+%(%s+") then
-            self.cur_obj = nil
+    local parent_tbl, sep, fun_name =
+        line:match("^function%s+([a-zA-Z0-9_]+)([.:])([a-zA-Z0-9_]+)%s*%(")
+    if parent_tbl then
+        self.cur_obj = self.cur_obj or new_parser_obj()
+        cur_obj = assert(self.cur_obj)
+
+        local class = classvars[parent_tbl]
+        if class then
+            cur_obj:class_fun_set(fun_name, class, parent_tbl, sep)
+            classes[class]:class_add_field_from_fun(cur_obj)
+            return self.cur_obj
         end
+
+        if cur_obj and parent_tbl == cur_obj.modvar then
+            cur_obj:fun_set_from_name(fun_name)
+            return self.cur_obj
+        end
+    end
+
+    local dot_fun_name = line:match("^function%s+([.a-zA-Z0-9_]+)%s*%(")
+    if dot_fun_name then
+        self.cur_obj = self.cur_obj or new_parser_obj()
+        cur_obj = assert(self.cur_obj)
+        cur_obj:fun_set_from_name(dot_fun_name)
+        return cur_obj
     end
 
     return self.cur_obj
 end
--- Should parse Lua Line be its own thing again, then just get the obj somehow else.
+-- TODO: Doc lines should work such that, when you add one, the parser_obj checks its kind
+-- and handles the doc line accordingly. So briefs and such would immediately commit the doc line,
+-- whereas non-kinds would hold them. And then functions would consume the doc lines when the
+-- type is set. This avoids the manual commit step and makes their purpose/usage more clear.
 
 ---@param modvar string?
 ---@param input string

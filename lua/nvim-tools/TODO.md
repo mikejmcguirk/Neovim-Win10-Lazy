@@ -2,6 +2,8 @@
 
 #### TODO:
 
+- [ ] The "nvim-tools" repo should contain these functions, as well as the build/ci scripts. So this way I can clone the repo and use it to start a new plugin. The nvim-tools functions should be sectioned off so they can be easily deleted rather than making the user download them entirely.
+  - [ ] This also prompts a bit of a different attitude toward how it's presented. While I still don't want to do a whole "making Neovim plugins is easy!" type of marketing, it does act more as a base to create from than just an arbitrary collection of code.
 - [ ] I currently can actually name this nvim-tools, but check the big plugin collection repo before uploading
 
 #### DOCUMENT:

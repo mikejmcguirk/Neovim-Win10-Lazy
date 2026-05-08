@@ -7,11 +7,10 @@ local util = require("docgen.util")
 local adj_newlines = util.adj_newlines
 local do_over_lines = util.do_over_lines
 local list_map = util.list_map
-local slice_text = util.slice_text
+local slice_lines = util.slice_lines
 
 -- TODO: All constants like this need to be in one file. It's fine to do an export step when
 -- requiring so it's not constantly being re-required.
-local INDENTATION = 4
 local NBSP = string.char(160)
 local TEXT_WIDTH = 78
 
@@ -108,15 +107,17 @@ local md_inline_handlers = {
     ["emphasis"] = function(node, str, _, _, ret, _)
         ret[#ret + 1] = string.sub(treesitter.get_node_text(node, str), 2, -2)
     end,
+    -- Use adj_lines on gap areas here because we might not wrap later.
     ["inline"] = function(node, str, start_indent, indent, ret, handlers)
+        local lines = vim.split(str, "\n")
         local row, col = 0, 0
         for child, _ in node:iter_children() do
             local child_type = child:type()
             if not child_type:match("^%p$") then
                 local srow, scol = child:start()
                 if (srow == row and scol > col) or srow > row then
-                    local gap = slice_text(str, row, col, srow, scol)
-                    if gap ~= "" then
+                    local gap = slice_lines(lines, row, col, srow, scol)
+                    if gap and gap ~= "" then
                         ret[#ret + 1] = adj_newlines(gap)
                     end
                 end
@@ -127,17 +128,12 @@ local md_inline_handlers = {
         end
 
         if row > 0 or col > 0 then
-            local trailing = slice_text(str, row, col)
+            local trailing = slice_lines(lines, row, col)
             if trailing and trailing ~= "" then
                 ret[#ret + 1] = adj_newlines(trailing)
             end
         end
     end,
-    -- TODO: Repeatedly running slice_text here is brutal. Have slice_text be a feeder function
-    -- into another called slice_lines which is also publicly available. For repeated cases like
-    -- this, we can convert to lines once. For ad hoc uses, we can use slice text.
-    -- TODO: Test to see if it's actually faster to run slice_lines on skipped punctuation nodes
-    -- rather than just letting the default handler grab the text
     ["inline_link"] = function(node, str, _, _, ret, _)
         local zeroeth_child = get_zeroeth_child(node)
         if not zeroeth_child then

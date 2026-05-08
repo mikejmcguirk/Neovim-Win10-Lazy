@@ -2,26 +2,24 @@
 
 #### TODO:
 
-- [ ] I have an old note about object building that mentions indent handling. If there's indent code in the build objs, outline
-- [ ] Fix data-typing nags
-- [ ] Are we okay with how DocItem is done? It feels like it's hiding some kind of subtle potential bug
 - [ ] The big clump function in parser_obj needs to be moved to the metatable model
   - Feels like the time/place to tag things as functions
+  - Use this as an opportunity to see how DocItem as a type actually works
+
+- [ ] Go through all the uses of the Parser Obj and make them metatable calls
+
+- [ ] Can the way the parser obj is typed be made more clear?
 
 - [ ] See if the "builder" obj can be removed. I don't understand why the parser object can't properly manage state
 - [ ] Add code to ignore stylua tags
   - I think the core's docgen does this. If not, I have to imagine that every one does
 
+- [ ] For the parser obj, do we want to limit, and to what degree, arbitrary addition of "meta" annotations like @nodoc, @inlinedoc, @tag, and so on.
+  - [ ] It's probably wise to follow Lua_Ls's example here, whatever that may be
+  - [ ] The pattern I feel myself settling on overall is that there should be a "warning" or verbose mode that tells the user about things that are incorrect but can be worked around. I think a "debug" mode is too much and I think hard erroring on recoverable problems is unduly demoralizing.
+
 - [ ] The rendering code still lacks structure. There's no coherent theme for "when" things happen (turning obj data into strings vs. turning them into lists vs. formatting them)
   - Do we think of it as a kind of recursion?
-
-- [ ] Fix the wrap function
-  - Do now because the stuff below needs to be able to make more consistent assumptions about formatting
-  - NOTE: Tabs need to be treated as eight spaces since vimdoc ts=8
-  - The idea is basically like, you pre-figure out based on indents where the line is supposed to be, then pull the string subs
-    * When you hit a marker, go backwards for first non-white
-    * Keep in mind the thing in vim.trim. Match is slow or something
-  - We want to be not clobbering inlined whitespace
 
 - [ ] There's a note out there somewhere about how class descriptions above are discarded if one below is found
 - [ ] This feeds into a larger issue - Right now descriptions seem to be pulled correctly automagically, but IMO this is bad and will break at some point
@@ -152,9 +150,10 @@
           * It should be possible to handle config using the class table definitions + desc text + briefs from the init module (for the config metatable).
             + If using pure g:vars for documentation then you can just use @mod and @brief tags. If that's too cumbersome, well, then, probably should be a config class module.
 
-- [ ] After here is when the business of creating modules and toc and such really kicks in. We need some kind of actual strategy for handling how README and markdown and handled, and the docgen needs to be able to handle it.
-
 - [ ] The future items below require building out logic for when module headings are created. The vimdoc treesitter page has a link to the vimdoc spec. Read and familiarize.
+
+- [ ] If the parser object is set to a module type, it should be able to accept contiguous @tag annotations. My guess is that it's probably right to push tags to be on the top of doc blocks. So when a module is found, it should pull in any tags as well. If a tag is found with no kind, it should be stored for the committed object. It should probably be allowed to put in arbitrary tags that are not used, so that way if you need to temporarily add @nodoc to something the docgen doesn't spaz out. Maybe emit a warning.
+  - [ ] Probably also keep in mind data sanity here as well. If you have something that's @inlinedoc, tags can be thrown away. One caveat though - Does this trigger more gc?
 
 - [ ] I want to be able to, after parsing, be able to traverse the created objects and create/render the TOC before rendering. The data should be available to do this
   - This also implies that a lot of info like helptags should be ready to go before rendering, which might impact a lot of the stuff below
@@ -245,6 +244,7 @@
 
 #### LOW:
 
+- [ ] The core's docgen has a function that turns memoized declarations such as `local foo = memoize(function foo())` into standard function declarations. For a plugin docgen, this specifically is a niche use case, but it would be cool to be able to create a custom filter
 - [ ] Reading the files should be done async.
 - [ ] Supporting Lua code literal class definitions in tables and self: functions
 - [ ] Remove all nvim runner dependencies

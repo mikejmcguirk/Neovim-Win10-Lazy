@@ -80,8 +80,20 @@ function M.parse_lines(lines, input)
     for _, line in ipairs(lines) do
         local is_doc_line = string.find(line, "^%-%-%-")
         local has_indent = line:match("^%s+") ~= nil
+        -- TODO: Doesn't this nuke code blocks?
         line = vim.trim(line)
 
+        -- TODO: This doesn't feel like the right place for any of this.
+        -- If we're keeping the builder object, why can't you just do builder:add_line(line) ?
+        -- There's also merit to pushing more of this into the parser object. Separating out the
+        -- Luacats management has been somewhat of a friction point. parser_obj:add_line(line) is
+        -- nice. You could also use this to treat the builder like more of a state machine.
+        -- So when you add a line, you get two booleans back. "still open" for if the object
+        -- can accept more lines, and "is valid" for if we have a usable object (would be false
+        -- for locals, for example). This feels fundamentally correct. This also plays into the
+        -- ideas on internalizing doc lines handling.
+        -- Note that this all needs to handle the export tag. Maybe return an integer or enum
+        -- for what to do, so like if you get an export you break out of line handling.
         if is_doc_line then
             local nodash_line = line:sub(4):gsub("^%s+@", "@")
             ---@type nvim.luacats.grammar.Result?
@@ -92,8 +104,7 @@ function M.parse_lines(lines, input)
                 builder:handle_unparsed_line(nodash_line)
             end
         else
-            builder:add_doc_lines_to_obj()
-            builder:set_module_info(modvar, input)
+            builder:set_module_info(modvar, input) -- Also in get finalized
 
             local final_line = (not has_indent) and line or nil
             local cur_obj = builder:get_finalized_obj(final_line, classes, classvars)
