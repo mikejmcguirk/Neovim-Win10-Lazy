@@ -1,6 +1,7 @@
 local md_to_vimdoc = require("docgen.ts_parsing").luacats_md_to_vimdoc
 local util = require("docgen.util")
 local list_filter = util.list_filter
+local wrap = util.wrap
 local table_new = require("docgen.util").table_new
 
 -- TODO: Get rid of this
@@ -91,7 +92,7 @@ end
 local function fmt_field_or_param_name(name, width)
     local name_iso, opt = name:match("^([^?]*)(%??)$")
     local raw_width = #name_iso + #opt
-    local remain = math.max(width - raw_width, 1)
+    local remain = math.max(width - raw_width - 2, 0)
 
     return "{" .. name_iso .. "}" .. opt .. string.rep(" ", remain)
 end
@@ -105,8 +106,8 @@ local function get_max_field_or_name_width(xs)
     for i = 1, len_xs do
         local x = xs[i]
         if x.type or x.desc then
-            -- Add one for each curly brace plus an extra space
-            width = math.max(width, #x.name + 3)
+            -- Add one for each curly brace
+            width = math.max(width, #x.name + 2)
         end
     end
 
@@ -315,11 +316,7 @@ local function get_class_inlinedoc(old_desc, class, is_list)
         return ret
     end
 
-    local width = 0
-    for i = 1, len_fields do
-        width = math.max(width, #fields[i].name + 3)
-    end
-
+    local width = get_max_field_or_name_width(fields)
     for i = 1, len_fields do
         local field = fields[i]
         if not field.access then
@@ -426,7 +423,6 @@ local function render_fields_or_params(xs, generics, classes, is_params)
 
     local ret = {} --- @type string[]
     local width = get_max_field_or_name_width(xs)
-    local double_indent_str = DBL_INDENT_STR
 
     for i = 1, len_xs do
         local x = xs[i]
@@ -441,27 +437,35 @@ local function render_fields_or_params(xs, generics, classes, is_params)
         local is_op = x.kind == "operator"
         local name = is_op and string.format("op(%s)", xname)
             or fmt_field_or_param_name(xname, width)
-        local name_bullet = double_indent_str .. "• " .. name
+        local name_bullet = "• " .. name
 
         local desc = x.classvar and string.format("See |%s|.", fmt_fun_as_helptag(x)) or x.desc
+        local start_indent = DBL_INDENT
         if xtyp then
             local typ = render_type(xtyp, generics, default)
             if desc then
-                ret[#ret + 1] = name_bullet
-                local start_indent = 0
-                if #typ > TEXT_WIDTH - (DBL_INDENT + width) then
-                    ret[#ret + 1] = typ .. "\n"
-                    start_indent = INDENT * 3
+                if #typ > TEXT_WIDTH - (DBL_INDENT + #name_bullet + 1) then
+                    ret[#ret + 1] = name_bullet .. " " .. typ
+                    ret[#ret + 1] = "\n"
+                    start_indent = TPL_INDENT
                 else
-                    desc = typ .. " " .. desc
+                    desc = name_bullet .. " " .. typ .. " " .. desc
                 end
 
-                ret[#ret + 1] = md_to_vimdoc(desc, start_indent, TPL_INDENT)
+                local parsed_md = md_to_vimdoc(desc, start_indent, TPL_INDENT)
+                ret[#ret + 1] = wrap(parsed_md, start_indent, TPL_INDENT, TEXT_WIDTH)
             else
-                ret[#ret + 1] = name_bullet .. typ .. "\n"
+                -- TODO: Repetitious
+                local to_wrap = name_bullet .. " " .. typ
+                ret[#ret + 1] = wrap(to_wrap, DBL_INDENT, TPL_INDENT, TEXT_WIDTH)
+                -- TODO: Why does this need a newline but not the others?
+                ret[#ret + 1] = "\n"
             end
         elseif desc then
-            ret[#ret + 1] = name_bullet .. md_to_vimdoc(desc, 0, TPL_INDENT)
+            -- TODO: Still somewhat repetitious
+            local to_wrap = name_bullet .. " " .. desc
+            local parsed_md = md_to_vimdoc(to_wrap, DBL_INDENT, TPL_INDENT)
+            ret[#ret + 1] = wrap(parsed_md, DBL_INDENT, TPL_INDENT, TEXT_WIDTH)
         end
     end
 
@@ -588,7 +592,7 @@ local function add_fun_header(fun, ret)
 
     ret[#ret + 1] = string.format("%78s", tag)
     if param_list and #param_list > 0 then
-        local wrapped = util.wrap(param_str, 0, #name + 1, TEXT_WIDTH)
+        local wrapped = util.wrap(param_str, 0, #name, TEXT_WIDTH)
         ret[#ret + 1] = name .. "(" .. wrapped .. ")"
     else
         ret[#ret + 1] = name .. "()"

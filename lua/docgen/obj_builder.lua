@@ -5,7 +5,6 @@ local new_parser_obj = require("docgen.parser_obj").new
 --- @field cur_obj? docgen.ParserObj
 --- @field doc_lines? string[]
 --- @field last_doc_item? docgen.DocItem
---- @field last_doc_item_indent? integer
 ---
 ---@field __index fun(self: docgen.ParserObj, key: any): val:any
 ---@field new fun(): parser_obj:docgen.Builder
@@ -89,7 +88,6 @@ end
 ---@param self docgen.Builder
 ---@param parsed nvim.luacats.grammar.Result
 local function add_parsed_note(self, parsed)
-    self.last_doc_item_indent = nil
     self.last_doc_item = { desc = parsed.desc }
 
     self.cur_obj:note_add(self.last_doc_item)
@@ -116,7 +114,6 @@ end
 ---@param self docgen.Builder
 ---@param parsed nvim.luacats.grammar.Result
 local function add_parsed_param(self, parsed)
-    self.last_doc_item_indent = nil
     if vim.endswith(parsed.name, "?") then
         parsed.name = parsed.name:sub(1, -2)
         parsed.type = parsed.type .. "?"
@@ -146,8 +143,6 @@ end
 ---@param self docgen.Builder
 ---@param parsed nvim.luacats.grammar.Result
 local function add_parsed_return(self, parsed)
-    self.last_doc_item_indent = nil
-
     self.cur_obj = self.cur_obj or new_parser_obj()
     local cur_obj = self.cur_obj --[[@as docgen.ParserObj]]
     cur_obj:return_add(parsed)
@@ -202,7 +197,6 @@ local transform = {
 ---@param parsed nvim.luacats.grammar.Result
 function M:add_parsed_result(parsed)
     self.cur_obj = self.cur_obj or new_parser_obj()
-    self.last_doc_item_indent = nil
     self.last_doc_item = nil
 
     local transform_fn = transform[parsed.kind]
@@ -219,7 +213,6 @@ function M:reset()
     self.cur_obj = nil
     self.doc_lines = nil
     self.last_doc_item = nil
-    self.last_doc_item_indent = nil
 end
 
 ---@param line string
@@ -229,13 +222,7 @@ function M:handle_unparsed_line(line)
     end
 
     if self.last_doc_item then
-        if not self.last_doc_item_indent then
-            self.last_doc_item_indent = #line:match("^%s*") + 1
-        end
-
-        self.last_doc_item.desc = (self.last_doc_item.desc or "")
-            .. "\n"
-            .. line:sub(self.last_doc_item_indent or 1)
+        self.last_doc_item.desc = (self.last_doc_item.desc or "") .. "\n" .. line
         return
     end
 
@@ -243,7 +230,7 @@ function M:handle_unparsed_line(line)
     local doc_lines = self.doc_lines
     doc_lines[#doc_lines + 1] = line
 end
--- TODO: Overly complicated indent handling.
+-- MAYBE: Indent handling removed from here. Re-add if needed.
 
 ------------------------
 -- MARK: Finalization --

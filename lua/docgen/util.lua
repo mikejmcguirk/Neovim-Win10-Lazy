@@ -86,6 +86,21 @@ M.table_new = table_new
 -- MARK: Text Functions --
 --------------------------
 
+---@param text string
+---@return string
+function M.adj_newlines(text)
+    text = string.gsub(text, "%s+\n", "\n")
+    text = string.gsub(text, "\n+", function(match)
+        if #match == 1 then
+            return " "
+        else
+            return "\n\n"
+        end
+    end)
+
+    return text
+end
+
 --- @param txt string
 --- @param srow integer
 --- @param scol integer
@@ -115,121 +130,89 @@ function M.slice_text(txt, srow, scol, erow, ecol)
     return table.concat(lines, "\n")
 end
 
--- --- @param x string
--- --- @param start_indent integer
--- --- @param indent integer
--- --- @param text_width integer
--- --- @return string
--- function M.wrap(x, start_indent, indent, text_width)
---     local words = vim.split(vim.trim(x), "%s+")
---     local parts = { string.rep(" ", start_indent) } --- @type string[]
---     local len_cur_line = indent
---
---     for i, w in ipairs(words) do
---         if len_cur_line > indent and len_cur_line + #w > text_width - 1 then
---             parts[#parts + 1] = "\n"
---             parts[#parts + 1] = string.rep(" ", indent)
---             len_cur_line = indent
---         elseif i ~= 1 then
---             parts[#parts + 1] = " "
---             len_cur_line = len_cur_line + 1
---         end
---         len_cur_line = len_cur_line + #w
---         parts[#parts + 1] = w
---     end
---
---     return (table.concat(parts):gsub("%s+\n", "\n"):gsub("\n+$", ""))
--- end
-
--- Pre-compiled regexes (zero cost after first use)
-local non_ws_re = vim.regex([[\S+]])
-local ws_re = vim.regex([[\s+]])
-
-local function wrap_single_line(line, first_indent, cont_indent, width)
-    if line == "" then
-        return string.rep(" ", first_indent)
+---NOTE: Does not add a final newline
+---@param line string
+---@param first_indent integer
+---@param indent integer
+---@param text_width integer
+local function wrap_line(line, first_indent, indent, text_width)
+    local init = 1
+    local start, fin = string.find(line, "[^%s]+", init)
+    if not (start and fin) then
+        return ""
     end
 
+    local indent_str = string.rep(" ", indent)
+    local len_line = #line
     local parts = { string.rep(" ", first_indent) }
-    local cur_len = first_indent
-    local pos = 0
-    local is_first_chunk = true
-
-    -- TODO: How does the current code handle the thing where you are able to successfully
-    -- wrap to text width on the half complete line
+    local cur_sub_len = first_indent
+    local sub_start = 1
+    local sub_fin = fin
 
     while true do
-        local s, e = non_ws_re:match_str(line:sub(pos + 1))
-        if not s then
+        if start and fin then
+            local growth = fin - init + 1
+            cur_sub_len = cur_sub_len + growth
+
+            if cur_sub_len > text_width then
+                parts[#parts + 1] = string.sub(line, sub_start, sub_fin)
+                parts[#parts + 1] = "\n"
+                parts[#parts + 1] = indent_str
+
+                sub_start = start
+                cur_sub_len = indent + growth
+            end
+
+            sub_fin = fin
+            init = sub_fin + 1
+
+            if init > len_line then
+                parts[#parts + 1] = string.sub(line, sub_start, sub_fin)
+                break
+            end
+        else
+            parts[#parts + 1] = string.sub(line, sub_start, sub_fin)
             break
         end
 
-        -- TODO: We should not be doing this
-        local token = line:sub(pos + s + 1, pos + e)
-        local token_len = e - s
-
-        -- Soft-wrap *before* this token if it doesn't fit (never on the very first chunk)
-        if not is_first_chunk and cur_len + token_len > width then
-            -- Remove now-trailing whitespace from the line we're leaving
-            parts[#parts] = parts[#parts]:gsub("%s+$", "")
-
-            -- New split starts with continuation indent
-            table.insert(parts, "\n")
-            table.insert(parts, string.rep(" ", cont_indent))
-            cur_len = cont_indent
-            is_first_chunk = true
-        end
-
-        table.insert(parts, token)
-        cur_len = cur_len + token_len
-        is_first_chunk = false
-        pos = pos + e
-
-        -- === Preserve the following \s+ run exactly (if it fits) ===
-        s, e = ws_re:match_str(line:sub(pos + 1))
-        if s then
-            local ws = line:sub(pos + s + 1, pos + e)
-            local ws_len = e - s
-
-            if cur_len + ws_len <= width then
-                table.insert(parts, ws)
-                cur_len = cur_len + ws_len
-            end
-            -- (If the whitespace run didn't fit we just drop it – it becomes the
-            -- leading whitespace on the *new* line that we already replaced.)
-            pos = pos + e
-        end
+        start, fin = string.find(line, "[^%s]+", init)
     end
 
     return table.concat(parts)
 end
 
---- @param x string
---- @param first_indent integer
+--- Assumes that lines are already cleanly separated by single "\n" characters
+--- @param text string
+--- @param first_indent integer Only applied to the first unwrapped line
 --- @param indent integer
 --- @param text_width integer
---- @return string
-function M.wrap(x, first_indent, indent, text_width)
-    x = x:gsub("\t", string.rep(" ", 8))
-    local orig_lines = vim.split(x, "\n", { plain = true })
-
-    local result = {}
-    for _, line in ipairs(orig_lines) do
-        -- TODO: This is only relevant once
-        if #result > 0 then
-            table.insert(result, "\n")
-        end
-
-        if not line:match("^%s*$") then
-            local wrapped = wrap_single_line(line, first_indent, indent, text_width)
-            table.insert(result, wrapped)
-        end
+--- @return string wrapped Does not contain a trailing \n
+function M.wrap(text, first_indent, indent, text_width)
+    if not text or text == "" or text_width < 1 then
+        return text or ""
     end
 
-    local out = table.concat(result)
+    text = text:gsub("\t", string.rep(" ", 8))
 
-    local sub_line, _ = string.gsub(string.gsub(out, "%s+\n", "\n"), "\n+$", "")
-    return sub_line
+    local lines = vim.split(text, "\n", { plain = true })
+    local res = {}
+
+    local first_line = lines[1]
+    local this_fin_indent = string.find(first_line, "^•", 1) and first_indent + 2 or indent
+    res[1] = wrap_line(lines[1], first_indent, this_fin_indent, text_width)
+
+    for i = 2, #lines do
+        res[#res + 1] = "\n"
+        local line = lines[i]
+        local this_indent = string.find(line, "^•", 1) and indent + 2 or indent
+        res[#res + 1] = wrap_line(line, indent, this_indent, text_width)
+    end
+
+    return table.concat(res)
 end
+-- MID: Tab replacement should be done in some broader location to make sure they're handled
+-- throughout the whole doc. It would be nice it were in some location that was guaranteed to hit
+-- them all before they got here, but it might be better to just do the check in duplicate.
+-- NON: Keep the text width var. Keeps the function flexible.
 
 return M

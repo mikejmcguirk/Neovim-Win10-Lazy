@@ -4,10 +4,10 @@
 
 local treesitter = vim.treesitter
 local util = require("docgen.util")
+local adj_newlines = util.adj_newlines
 local do_over_lines = util.do_over_lines
 local list_map = util.list_map
 local slice_text = util.slice_text
-local wrap = util.wrap
 
 -- TODO: All constants like this need to be in one file. It's fine to do an export step when
 -- requiring so it's not constantly being re-required.
@@ -117,7 +117,7 @@ local md_inline_handlers = {
                 if (srow == row and scol > col) or srow > row then
                     local gap = slice_text(str, row, col, srow, scol)
                     if gap ~= "" then
-                        ret[#ret + 1] = gap
+                        ret[#ret + 1] = adj_newlines(gap)
                     end
                 end
 
@@ -129,7 +129,7 @@ local md_inline_handlers = {
         if row > 0 or col > 0 then
             local trailing = slice_text(str, row, col)
             if trailing and trailing ~= "" then
-                ret[#ret + 1] = trailing
+                ret[#ret + 1] = adj_newlines(trailing)
             end
         end
     end,
@@ -181,10 +181,11 @@ local md_handlers = {
         local text = treesitter.get_node_text(node, str)
         local lines = vim.split(string.gsub(text, "\n%s*$", ""), "\n")
 
-        for _, l in ipairs(lines) do
-            if #l > 0 then
-                ret[#ret + 1] = string.rep(" ", indent + INDENTATION)
-                ret[#ret + 1] = l
+        for _, line in ipairs(lines) do
+            if #line > 0 then
+                -- TODO: Try to remove this
+                -- ret[#ret + 1] = string.rep(" ", indent + INDENTATION)
+                ret[#ret + 1] = line
             end
 
             ret[#ret + 1] = "\n"
@@ -230,7 +231,15 @@ local md_handlers = {
         if i_root then
             node_to_lines(i_root, i_text, start_indent, indent, ret, md_inline_handlers)
         else
-            ret[#ret + 1] = wrap(i_text, start_indent, indent, TEXT_WIDTH)
+            i_text = string.gsub(i_text, "\n+", function(match)
+                if #match == 1 then
+                    return "" -- single newline → removed
+                else
+                    return "\n\n" -- 2 or more newlines → exactly two newlines
+                end
+            end)
+
+            ret[#ret + 1] = i_text
         end
     end,
     ["list"] = iter_all_children,
@@ -247,12 +256,15 @@ local md_handlers = {
             ret[#ret + 1] = "\n"
         end
 
-        ret[#ret + 1] = string.rep(" ", indent)
-        local offset = zeroeth_child:type() == "list_marker_dot" and 3 or 2
+        -- TODO: I'm not sure if I need this but we'll see.
+        -- ret[#ret + 1] = string.rep(" ", indent)
+        -- local offset = zeroeth_child:type() == "list_marker_dot" and 3 or 2
+        local offset = 0
 
         local i = 0
         for child, _ in node:iter_children() do
             i = i + 1
+            -- TODO: Try to remove
             local sindent = i <= 2 and 0 or (indent + offset)
             node_to_lines(child, str, sindent, indent + offset, ret, handlers)
         end
@@ -276,8 +288,7 @@ local md_handlers = {
             node_to_lines(child, str, start_indent, indent, para_parts, handlers)
         end
 
-        local para_str = table.concat(para_parts)
-        ret[#ret + 1] = wrap(para_str, start_indent, indent, TEXT_WIDTH)
+        ret[#ret + 1] = table.concat(para_parts)
         ret[#ret + 1] = "\n"
     end,
     ["section"] = iter_all_children,
@@ -294,6 +305,7 @@ local md_handlers = {
             local node_type = node:type()
             for child, _ in node:iter_children() do
                 i = i + 1
+                -- TODO: Try to remove
                 local this_indent = i == 1 and start_indent or indent
                 node_to_lines(child, str, this_indent, indent, ret, handlers)
 
@@ -324,6 +336,7 @@ local M = {}
 function M.md_tree_to_vimdoc(root, str, start_indent, indent)
     local ret = {}
     node_to_lines(root, str, start_indent, indent, ret, md_handlers)
+    -- print(vim.inspect(ret))
     local lines = do_over_lines(ret, function(s)
         return string.gsub(s, NBSP, " ")
     end)
