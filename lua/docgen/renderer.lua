@@ -32,21 +32,10 @@ local DBL_INDENT_STR = string.rep(" ", DBL_INDENT)
 -- MARK: Other helper data and functions --
 -------------------------------------------
 
---- True if the `.` class member should render like a module function.
---- @param fun docgen.DocItem|docgen.ParserObj
---- @return boolean
-local function is_module_fun(fun)
-    return fun.classvar ~= nil
-        and fun.member_sep == "."
-        and fun.modvar ~= nil
-        and fun.module ~= nil
-        and fun.classvar == fun.modvar
-end
-
 --- @param fun docgen.DocItem|docgen.ParserObj
 --- @return string
 local function fmt_fun_as_helptag(fun)
-    if is_module_fun(fun) then
+    if fun:is_module_fun() then
         return string.format("%s.%s%s", fun.module, fun.name)
     end
 
@@ -533,7 +522,7 @@ local function render_classes(classes, funs)
     local ret = {} --- @type string[]
     local hidden_fields = {} --- @type table<string,table<string,true>>
     for _, fun in ipairs(funs) do
-        if is_module_fun(fun) and fun.class then
+        if fun:is_module_fun() and fun.class then
             hidden_fields[fun.class] = hidden_fields[fun.class] or {}
             hidden_fields[fun.class][fun.name] = true
         end
@@ -554,29 +543,27 @@ end
 --- @param fun docgen.ParserObj
 --- @return string[]|nil
 local function get_params(fun)
-    local params = fun.params
-    if not params then
+    if not fun:has_params() then
         return nil
     end
 
     local args = {} ---@type string[]
-    local len_params = #params
-    for i = 1, len_params do
-        local param = params[i]
+    fun:param_iter(function(param)
         local name = param.name
         if name ~= "self" then
             args[#args + 1] = fmt_field_or_param_name(name, 0)
         end
-    end
+    end)
 
     return args
 end
 -- TODO: Why don't the params come in with question marks?
+-- TODO: Unfortunate to run has_params() here because param_iter does it internally
 
 --- @param fun docgen.ParserObj
 --- @param ret string[]
 local function add_fun_header(fun, ret)
-    local name = (fun.classvar and not is_module_fun(fun))
+    local name = (fun.classvar and not fun:is_module_fun())
             and string.format("%s:%s", fun.classvar, fun.name)
         or fun.name
 
@@ -612,20 +599,14 @@ end
 ---@param fun docgen.ParserObj
 ---@param ret string[]
 local function add_see(fun, ret)
-    local see = fun.see
-    if not see then
-        return
-    end
-
-    local len_see = #see
-    if len_see < 1 then
+    if not fun:has_see() then
         return
     end
 
     ret[#ret + 1] = "\n See also: ~"
-    for i = 1, len_see do
-        ret[#ret + 1] = "• " .. md_to_vimdoc(see[i].desc, 0, 8)
-    end
+    fun:see_iter(function(see)
+        ret[#ret + 1] = "• " .. md_to_vimdoc(see, 0, 8)
+    end)
 end
 
 ---@param fun docgen.ParserObj
@@ -695,54 +676,20 @@ end
 ---@param fun docgen.ParserObj
 ---@param ret string[]
 local function add_notes(fun, ret)
-    local notes = fun.notes
-    if not notes then
-        return
-    end
-
-    local len_notes = #notes
-    if len_notes < 1 then
+    if not fun:has_notes() then
         return
     end
 
     ret[#ret + 1] = "\n Note: ~"
-    for i = 1, len_notes do
-        local vimdoc = md_to_vimdoc(notes[i].desc, 0, 8)
-        ret[#ret + 1] = "• " .. vimdoc
-    end
+    fun:notes_iter(function(note)
+        ret[#ret + 1] = "• " .. md_to_vimdoc(note, 0, 8)
+    end)
 end
-
---- @param fun docgen.ParserObj
---- @return boolean
-local function should_render_fun(fun)
-    if fun.access or fun.deprecated or fun.nodoc then
-        return false
-    end
-
-    local name = fun.name
-    if not name then
-        local fmt_str = "fun.name is nil, check fn_xform(). fun: %s"
-        error(string.format(fmt_str, vim.inspect(fun)))
-    end
-
-    if string.byte(name, 1) == 95 or string.find(name, "[:.]_") then
-        return false
-    end
-
-    return true
-end
--- TODO: Access should just always be present no? If you're not familiar with the code, the nil
--- check here is awkward. The parser obj should have an is_public() function or is_restricted()
--- function
 
 --- @param fun docgen.ParserObj
 --- @param classes table<string,docgen.ParserObj>
 --- @return string[]?
 local function render_fun(fun, classes)
-    if not should_render_fun(fun) then
-        return nil
-    end
-
     local ret = {} ---@type string[]
     add_fun_header(fun, ret)
     ret[#ret + 1] = ""
@@ -777,6 +724,7 @@ end
 --- @param classes table<string,docgen.ParserObj>
 --- @return string
 local function render_funs(funs, classes)
+    -- NON: Don't fix this, it will be gone
     table.sort(funs, function(a, b)
         local key_a = a.classvar and (a.classvar .. ":" .. a.name) or a.name or ""
         local key_b = b.classvar and (b.classvar .. ":" .. b.name) or b.name or ""

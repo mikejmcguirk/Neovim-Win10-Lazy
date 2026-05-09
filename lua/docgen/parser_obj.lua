@@ -21,12 +21,12 @@ local table_new = require("docgen.util").table_new
 ---@field modvar? string
 ---@field name? string
 ---@field nodoc? boolean
----@field notes? docgen.DocItem[]
+---@field notes? string[]
 ---@field overloads? string[]
 ---@field params? docgen.DocItem[]
 ---@field parent? string
 ---@field returns? docgen.DocItem[]
----@field see? docgen.DocItem[]
+---@field see? string[]
 ---@field since? string
 ---@field type? docgen.DocItem
 ---
@@ -284,6 +284,7 @@ end
 ---@param sep string
 function M:class_fun_set(fun_name, class, parent, sep)
     assert_no_kind(self, "class function")
+
     commit_doc_lines(self)
 
     self.name = fun_name
@@ -298,15 +299,35 @@ function M:class_fun_set(fun_name, class, parent, sep)
     })
 
     self.kind = "fun"
+    if not self.name then
+        local fmt_str = "fun.name is nil, check fn_xform(). fun: %s"
+        error(string.format(fmt_str, vim.inspect(self)))
+    end
 end
 -- TODO: Use list.insert_at instead of table.insert
 
 ---@param name string
 function M:fun_set_from_name(name)
     assert_no_kind(self, "function")
+
     commit_doc_lines(self)
-    self.name = name
     self.kind = "fun"
+    self.name = name
+    if not self.name then
+        local fmt_str = "fun.name is nil, check fn_xform(). fun: %s"
+        error(string.format(fmt_str, vim.inspect(self)))
+    end
+end
+
+--- True if the `.` class member should render like a module function.
+--- @return boolean
+function M:is_module_fun()
+    return self.kind == "fun"
+        and self.classvar ~= nil
+        and self.member_sep == "."
+        and self.modvar ~= nil
+        and self.module ~= nil
+        and self.classvar == self.modvar
 end
 
 ---@param parsed nvim.luacats.grammar.Result
@@ -339,6 +360,23 @@ function M:param_add(parsed)
         type = parsed.type,
         desc = parsed.desc,
     }
+end
+
+function M:has_params()
+    return self.params and #self.params > 0
+end
+
+---@param f fun(param:docgen.DocItem)
+function M:param_iter(f)
+    if not self:has_params() then
+        return
+    end
+
+    local params = self.params ---@type docgen.DocItem[]
+    local len_params = #params
+    for i = 1, len_params do
+        f(params[i])
+    end
 end
 
 ---@param parsed nvim.luacats.grammar.Result
@@ -459,16 +497,49 @@ end
 function M:note_add(parsed)
     self.notes = self.notes or {}
     local notes = self.notes
-    notes[#notes + 1] = { desc = parsed.desc }
+    notes[#notes + 1] = parsed.desc
 end
--- TODO: State also does bookkeeping here
 -- TODO: Why are notes tables that then hold a key to a string. Shouldn't this just be a string[]?
+
+function M:has_notes()
+    return self.notes ~= nil and #self.notes > 0
+end
+
+---@param f fun(note:string)
+function M:notes_iter(f)
+    if not self:has_notes() then
+        return
+    end
+
+    local notes = self.notes ---@type string[]
+    local len_notes = #notes
+    for i = 1, len_notes do
+        f(notes[i])
+    end
+end
 
 ---@param parsed nvim.luacats.grammar.Result
 function M:see_add(parsed)
     self.see = self.see or {}
     local see = self.see
-    see[#see + 1] = { desc = parsed.desc }
+    see[#see + 1] = parsed.desc
+end
+
+function M:has_see()
+    return self.see ~= nil and #self.see > 0
+end
+
+---@param f fun(see:string)
+function M:see_iter(f)
+    if not self:has_see() then
+        return
+    end
+
+    local see = self.see ---@type string[]
+    local len_see = #see
+    for i = 1, len_see do
+        f(see[i])
+    end
 end
 
 ---@param parsed nvim.luacats.grammar.Result
@@ -569,20 +640,36 @@ function M:finalize(line, classes, classvars)
             classes[class]:class_add_field_from_fun(self)
             return true
         end
+    end
 
-        if parent_tbl == self.modvar then
-            self:fun_set_from_name(fun_name)
-            return true
+    if self.access or self.deprecated or self.nodoc then
+        return false
+    end
+
+    if parent_tbl == self.modvar then
+        self:fun_set_from_name(fun_name)
+        local name = assert(self.name)
+        if string.byte(name, 1) == 95 or string.find(name, "[:.]_") then
+            return false
         end
+
+        return true
     end
 
     local dot_fun_name = line:match("^function%s+([.a-zA-Z0-9_]+)%s*%(")
     if dot_fun_name then
         self:fun_set_from_name(dot_fun_name)
+        local name = assert(self.name)
+        if string.byte(name, 1) == 95 or string.find(name, "[:.]_") then
+            return false
+        end
+
         return true
     end
 
     return true
 end
+-- TODO: The function name failures I think should be in the actual setter functions. Maybe do
+-- some kind of outline thing.
 
 return M

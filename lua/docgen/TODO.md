@@ -1,16 +1,22 @@
 ## General
 
-#### TODO:
+#### Parser_Obj Direct Pulls
 
-- [ ] The big clump function in parser_obj needs to be moved to the metatable model
-  - Feels like the time/place to tag things as functions
-  - Use this as an opportunity to see how DocItem as a type actually works
+Seeing what values are pulled out of parser_obj raw. I would prefer to get the data out of it in a structured way, but I also don't want to create contrived or bulky ways to get at the underlying data. And I certainly don't want to make the parser_obj responsible for rendering.
+
+Perhaps, looking at everything, common patterns will emerge.
+
+- add_fun_header : fun.classvar, fun.name
+- md_to_vimdoc : fun.desc
+- render_fun : fun.since
+{ Currently stopped here }
+
+#### TODO:
 
 - [ ] Go through all the uses of the Parser Obj and make them metatable calls
 
 - [ ] Can the way the parser obj is typed be made more clear?
 
-- [ ] See if the "builder" obj can be removed. I don't understand why the parser object can't properly manage state
 - [ ] Add code to ignore stylua tags
   - I think the core's docgen does this. If not, I have to imagine that every one does
 
