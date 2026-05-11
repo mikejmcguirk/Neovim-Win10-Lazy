@@ -9,10 +9,9 @@ local do_over_lines = util.do_over_lines
 local list_map = util.list_map
 local slice_lines = util.slice_lines
 
--- TODO: All constants like this need to be in one file. It's fine to do an export step when
--- requiring so it's not constantly being re-required.
-local NBSP = string.char(160)
-local TEXT_WIDTH = 78
+local const = require("docgen.const")
+local NBSP = const.NBSP
+local TEXT_WIDTH = const.TEXT_WIDTH
 
 -------------------------------------
 -- MARK: Tree Extraction/Traversal --
@@ -29,16 +28,14 @@ end
 
 ---@param node TSNode
 ---@param str string
----@param start_indent integer
----@param indent integer
 ---@param ret string[] -- Edited in place
----@param handlers table<string, fun(node:TSNode, str:string, start_indent:integer, indent:integer, ret:string[], handlers:table)>
-local function node_to_lines(node, str, start_indent, indent, ret, handlers)
+---@param handlers table<string, fun(node:TSNode, str:string, ret:string[], handlers:table)>
+local function node_to_lines(node, str, ret, handlers)
     local node_type = node:type()
     -- ret[#ret + 1] = "<" .. node_type .. ">"
 
     local handler = assert(handlers[node_type] or handlers["_default"])
-    handler(node, str, start_indent, indent, ret, handlers)
+    handler(node, str, ret, handlers)
     -- ret[#ret + 1] = "</" .. node_type .. ">"
 end
 -- LOW: The handler assertion could have a more detailed error message.
@@ -52,7 +49,7 @@ end
 ---@param node TSNode
 ---@param str string
 ---@param ret string[]
-local function add_node_text_and_stop(node, str, _, _, ret, _)
+local function add_node_text_and_stop(node, str, ret, _)
     ret[#ret + 1] = treesitter.get_node_text(node, str)
 end
 
@@ -84,9 +81,13 @@ local function get_zeroeth_child(node)
     return node:child_count() > 0 and node:child(0) or nil
 end
 
-local function iter_all_children(node, str, start_indent, indent, ret, handlers)
+---@param node TSNode
+---@param str string
+---@param ret string[] Edited in place
+---@param handlers table<string, fun(node:TSNode, str:string, ret:string[], handlers:table)>
+local function iter_all_children(node, str, ret, handlers)
     for child, _ in node:iter_children() do
-        node_to_lines(child, str, start_indent, indent, ret, handlers)
+        node_to_lines(child, str, ret, handlers)
     end
 end
 
@@ -94,21 +95,21 @@ end
 -- MARK: Handlers --
 --------------------
 
----@type table<string, fun(node:TSNode, str:string, start_indent:integer, indent:integer, ret:string[], handlers:table)>
+---@type table<string, fun(node:TSNode, str:string, ret:string[], handlers:table)>
 local md_inline_handlers = {
     ["backslash_escape"] = add_node_text_and_stop,
-    ["code_span"] = function(node, str, _, _, ret, _)
+    ["code_span"] = function(node, str, ret, _)
         local node_text = treesitter.get_node_text(node, str)
 
         ret[#ret + 1] = "`"
         ret[#ret + 1] = string.gsub(string.sub(node_text, 2, -2), " ", NBSP)
         ret[#ret + 1] = "`"
     end,
-    ["emphasis"] = function(node, str, _, _, ret, _)
+    ["emphasis"] = function(node, str, ret, _)
         ret[#ret + 1] = string.sub(treesitter.get_node_text(node, str), 2, -2)
     end,
     -- Use adj_lines on gap areas here because we might not wrap later.
-    ["inline"] = function(node, str, start_indent, indent, ret, handlers)
+    ["inline"] = function(node, str, ret, handlers)
         local lines = vim.split(str, "\n")
         local row, col = 0, 0
         for child, _ in node:iter_children() do
@@ -122,7 +123,7 @@ local md_inline_handlers = {
                     end
                 end
 
-                node_to_lines(child, str, start_indent, indent, ret, handlers)
+                node_to_lines(child, str, ret, handlers)
                 row, col = child:end_()
             end
         end
@@ -132,7 +133,7 @@ local md_inline_handlers = {
             ret[#ret + 1] = adj_newlines(trailing)
         end
     end,
-    ["inline_link"] = function(node, str, _, _, ret, _)
+    ["inline_link"] = function(node, str, ret, _)
         local zeroeth_child = get_zeroeth_child(node)
         if not zeroeth_child then
             return
@@ -142,7 +143,7 @@ local md_inline_handlers = {
         ret[#ret + 1] = treesitter.get_node_text(zeroeth_child, str)
         ret[#ret + 1] = "*"
     end,
-    ["shortcut_link"] = function(node, str, _, _, ret, _)
+    ["shortcut_link"] = function(node, str, ret, _)
         local zeroeth_child = get_zeroeth_child(node)
         if not zeroeth_child then
             return
@@ -159,26 +160,24 @@ local md_inline_handlers = {
         ret[#ret + 1] = node_text
         ret[#ret + 1] = all_nums and "]" or "|"
     end,
-    ["strong"] = function(node, str, _, _, ret, _)
+    ["strong"] = function(node, str, ret, _)
         ret[#ret + 1] = string.sub(treesitter.get_node_text(node, str), 3, -3)
     end,
     ["text"] = add_node_text_and_stop,
-    ["_default"] = function(node, str, _, _, ret, _)
+    ["_default"] = function(node, str, ret, _)
         ret[#ret + 1] = treesitter.get_node_text(node, str)
     end,
 }
 
----@type table<string, fun(node:TSNode, str:string, start_indent:integer, indent:integer, ret:string[], handlers:table)>
+---@type table<string, fun(node:TSNode, str:string, ret:string[], handlers:table)>
 local md_handlers = {
     ["block_continuation"] = function() end,
-    ["code_fence_content"] = function(node, str, _, indent, ret, _)
+    ["code_fence_content"] = function(node, str, ret, _)
         local text = treesitter.get_node_text(node, str)
         local lines = vim.split(string.gsub(text, "\n%s*$", ""), "\n")
 
         for _, line in ipairs(lines) do
             if #line > 0 then
-                -- TODO: Try to remove this
-                -- ret[#ret + 1] = string.rep(" ", indent + INDENTATION)
                 ret[#ret + 1] = line
             end
 
@@ -187,7 +186,7 @@ local md_handlers = {
     end,
     -- MAYBE: Re-introduce the manual indent parsing if needed.
     ["document"] = iter_all_children,
-    ["fenced_code_block"] = function(node, str, start_indent, indent, ret, handlers)
+    ["fenced_code_block"] = function(node, str, ret, handlers)
         ret[#ret + 1] = ">"
         for child, _ in node:iter_children() do
             if child:type() == "info_string" then
@@ -199,23 +198,23 @@ local md_handlers = {
         ret[#ret + 1] = "\n"
         for child, _ in node:iter_children() do
             if child:type() ~= "info_string" then
-                node_to_lines(child, str, start_indent, indent, ret, handlers)
+                node_to_lines(child, str, ret, handlers)
             end
         end
 
         ret[#ret + 1] = "<\n"
     end,
     ["fenced_code_block_delimiter"] = iter_all_children,
-    ["html_block"] = function(node, str, _, _, ret, _)
+    ["html_block"] = function(node, str, ret, _)
         local text = treesitter.get_node_text(node, str)
         text = string.gsub(text, "^<pre>help", "")
         text = string.gsub(text, "</pre>%s*$", "")
         ret[#ret + 1] = text
     end,
-    ["html_tag"] = function(node, str, _, _, _, _)
+    ["html_tag"] = function(node, str, _, _)
         error("html_tag: " .. treesitter.get_node_text(node, str))
     end,
-    ["inline"] = function(node, str, start_indent, indent, ret, _)
+    ["inline"] = function(node, str, ret, _)
         local i_text = treesitter.get_node_text(node, str)
         if i_text == "" then
             return
@@ -223,7 +222,7 @@ local md_handlers = {
 
         local i_root = root_from_str(i_text, "markdown_inline")
         if i_root then
-            node_to_lines(i_root, i_text, start_indent, indent, ret, md_inline_handlers)
+            node_to_lines(i_root, i_text, ret, md_inline_handlers)
         else
             i_text = string.gsub(i_text, "\n+", function(match)
                 if #match == 1 then
@@ -237,7 +236,7 @@ local md_handlers = {
         end
     end,
     ["list"] = iter_all_children,
-    ["list_item"] = function(node, str, _, indent, ret, handlers)
+    ["list_item"] = function(node, str, ret, handlers)
         local zeroeth_child = get_zeroeth_child(node)
         if not zeroeth_child then
             return
@@ -250,36 +249,32 @@ local md_handlers = {
             ret[#ret + 1] = "\n"
         end
 
-        -- TODO: I'm not sure if I need this but we'll see.
-        -- ret[#ret + 1] = string.rep(" ", indent)
-        -- local offset = zeroeth_child:type() == "list_marker_dot" and 3 or 2
-        local offset = 0
-
         local i = 0
         for child, _ in node:iter_children() do
             i = i + 1
-            -- TODO: Try to remove
-            local sindent = i <= 2 and 0 or (indent + offset)
-            node_to_lines(child, str, sindent, indent + offset, ret, handlers)
+            -- TODO: How should this work without the indent value coming in? The idea is that,
+            -- for later lines in a bulleted list, you want them indented over. You can't just
+            -- wrap because of code blocks.
+            node_to_lines(child, str, ret, handlers)
         end
     end,
     ["list_marker_dot"] = add_node_text_and_stop,
 
-    ["list_marker_minus"] = function(_, _, _, _, ret, _)
+    ["list_marker_minus"] = function(_, _, ret, _)
         ret[#ret + 1] = "• "
     end,
 
-    ["list_marker_star"] = function(_, _, _, _, ret, _)
+    ["list_marker_star"] = function(_, _, ret, _)
         ret[#ret + 1] = "• "
     end,
-    ["paragraph"] = function(node, str, start_indent, indent, ret, handlers)
+    ["paragraph"] = function(node, str, ret, handlers)
         if node:child_count() == 0 then
             return
         end
 
         local para_parts = {}
         for child, _ in node:iter_children() do
-            node_to_lines(child, str, start_indent, indent, para_parts, handlers)
+            node_to_lines(child, str, para_parts, handlers)
         end
 
         ret[#ret + 1] = table.concat(para_parts)
@@ -287,7 +282,7 @@ local md_handlers = {
     end,
     ["section"] = iter_all_children,
     ["text"] = add_node_text_and_stop,
-    ["_default"] = function(node, str, start_indent, indent, ret, handlers)
+    ["_default"] = function(node, str, ret, handlers)
         local child_count = node:child_count()
         if child_count == 0 then
             ---@diagnostic disable-next-line: empty-block
@@ -299,9 +294,7 @@ local md_handlers = {
             local node_type = node:type()
             for child, _ in node:iter_children() do
                 i = i + 1
-                -- TODO: Try to remove
-                local this_indent = i == 1 and start_indent or indent
-                node_to_lines(child, str, this_indent, indent, ret, handlers)
+                node_to_lines(child, str, ret, handlers)
 
                 if node_type ~= "list" and i ~= child_count then
                     local next_child = node:child(i) -- node:child() is zero indexed
@@ -324,15 +317,12 @@ local M = {}
 
 ---@param root TSNode
 ---@param str string
----@param start_indent integer
----@param indent integer
 ---@return string
-function M.md_tree_to_vimdoc(root, str, start_indent, indent)
+function M.md_tree_to_vimdoc(root, str)
     local ret = {}
-    node_to_lines(root, str, start_indent, indent, ret, md_handlers)
-    -- print(vim.inspect(ret))
+    node_to_lines(root, str, ret, md_handlers)
     local lines = do_over_lines(ret, function(s)
-        return string.gsub(s, NBSP, " ")
+        return string.gsub(string.gsub(s, "\n+$", ""), NBSP, " ")
     end)
 
     list_map(lines, align_tags)
@@ -344,18 +334,17 @@ function M.md_tree_to_vimdoc(root, str, start_indent, indent)
 end
 
 ---@param str string
----@param start_indent integer
----@param indent integer
 ---@return string
-function M.luacats_md_to_vimdoc(str, start_indent, indent)
+function M.luacats_md_to_vimdoc(str)
     -- Add an extra newline so the parser can properly capture ending ```
     local root = root_from_str(str .. "\n", "markdown", { injections = { markdown = "" } })
     if not root then
         return ""
     end
 
-    return M.md_tree_to_vimdoc(root, str, start_indent, indent)
+    return M.md_tree_to_vimdoc(root, str)
 end
+-- TODO: Any usage of indenting needs to be removed from this module.
 -- TODO: Returning "" on a bad root is fine for the moment, but since this makes it impossible to
 -- parse a lot of different types of text, might be better as an error.
 -- LOW: Pre-allocate lines. Problem: I'm not sure how to get a reasonable pre-allocation without

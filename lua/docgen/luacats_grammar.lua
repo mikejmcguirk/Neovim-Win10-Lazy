@@ -69,8 +69,10 @@ local v = setmetatable({}, {
     end,
 })
 
+---@alias docgen.luacats.Kind 'class'|'field'|'generic'|'operator'|'param'|'return'
+
 --- @class nvim.luacats.grammar.Result
---- @field kind? 'class'|'field'|'generic'|'operator'|'param'|'return'
+--- @field kind? docgen.luacats.Kind
 --- @field name? string
 --- @field type? string
 --- @field desc? string

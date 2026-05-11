@@ -1,30 +1,29 @@
 local luacats_grammar = require("docgen.luacats_grammar")
 local parser_obj = require("docgen.parser_obj")
 
--- TODO: remove
---- @class nvim.luacats.parser.param : nvim.luacats.grammar.Result
-
--- TODO: Remove this class
---- @class nvim.luacats.parser.field : nvim.luacats.grammar.Result
---- @field classvar? string
---- @field nodoc? true
-
+--- funs, classes, and briefs are edited in place.
 --- @param obj docgen.ParserObj?
 --- @param funs docgen.ParserObj[]
 --- @param classes table<string,docgen.ParserObj>
---- @param briefs string[]
-local function commit_obj(obj, classes, funs, briefs)
+--- @param briefs docgen.ParserObj[]
+local function commit_obj_if_valid(obj, classes, funs, briefs)
     if not obj then
         return
     end
 
-    if obj.kind == "class" then
-        if not classes[obj.name] then
-            classes[obj.name] = obj
+    if not obj:can_commit() then
+        return
+    end
+
+    local kind = obj:get_kind()
+    if kind == "class" then
+        local obj_name = obj:get_name()
+        if obj_name and not classes[obj_name] then
+            classes[obj_name] = obj
         end
-    elseif obj.kind == "brief" then
-        briefs[#briefs + 1] = obj.desc
-    elseif obj.kind == "fun" then
+    elseif kind == "brief" then
+        briefs[#briefs + 1] = obj
+    elseif kind == "fun" then
         funs[#funs + 1] = obj
     end
 end
@@ -57,19 +56,29 @@ end
 -- the setmetatable line if found. Since we can only have one return, wouldn't we search for
 -- return M (common case) first, then use setmetatable as a fallback?
 
+---@param fname string
+---@return string
+local function module_from_fname(fname)
+    local module = fname:match(".*/lua/([a-z_][a-z0-9_/]+)%.lua") or fname
+    return module:gsub("/", ".")
+end
+
 local M = {}
 
 ---@param lines string[]
----@param input string
-function M.parse_lines(lines, input)
+---@param fname string
+---@return table<string,docgen.ParserObj>, docgen.ParserObj[], docgen.ParserObj[]
+function M.parse_lines(lines, fname)
     local funs = {} --- @type docgen.ParserObj[]
     local classes = {} --- @type table<string,docgen.ParserObj>
-    local briefs = {} --- @type string[]
+    local briefs = {} --- @type docgen.ParserObj[]
 
-    local classvars = {} --- @type table<string,string>
+    local classvar_map = {} --- @type table<string,string>
     local modvar = find_modvar(lines) or ""
-
-    local obj = parser_obj.new(modvar, input)
+    -- TODO: This needs to produce a more aesthetic result, but will defer until I know the
+    -- pipeline it comes down from.
+    local module = module_from_fname(fname)
+    local obj = parser_obj.new(modvar, module)
 
     for _, line in ipairs(lines) do
         local is_doc_line = string.find(line, "^%-%-%-")
@@ -81,17 +90,17 @@ function M.parse_lines(lines, input)
             if parsed then
                 obj:add_parsed(parsed)
             else
-                obj:doc_lines_add(line_nodash)
+                obj:add_doc_line(line_nodash)
             end
         else
-            local valid_obj = obj:finalize(line, classes, classvars)
-            if valid_obj then
-                commit_obj(obj, classes, funs, briefs)
-            end
-
-            obj = parser_obj.new(modvar, input)
+            obj:finalize(line, classes, classvar_map)
+            commit_obj_if_valid(obj, classes, funs, briefs)
+            obj = parser_obj.new(modvar, module)
         end
     end
+
+    obj:finalize("", classes, classvar_map)
+    commit_obj_if_valid(obj, classes, funs, briefs)
 
     return classes, funs, briefs
 end
@@ -100,12 +109,14 @@ end
 
 ---@param str string
 ---@param input string
+---@return table<string,docgen.ParserObj>, docgen.ParserObj[], docgen.ParserObj[]
 function M.parse_str(str, input)
     local lines = vim.split(str, "\n")
     return M.parse_lines(lines, input)
 end
 
 --- @param input string
+---@return table<string,docgen.ParserObj>, docgen.ParserObj[], docgen.ParserObj[]
 function M.parse(input)
     local f = assert(io.open(input, "r"))
     local txt = f:read("*all")

@@ -82,6 +82,31 @@ end
 
 M.table_new = table_new
 
+-- Port of Neovim core logic since their table module is private
+local has_clear, table_clear = pcall(require, "table.clear")
+if not has_clear then
+    table_clear = function(t)
+        for k in pairs(t) do
+            t[k] = nil
+        end
+    end
+end
+
+---@generic T
+---@type fun(t:T)
+M.table_clear = table_clear
+
+---@generic T
+---@param t table<T, T>
+---@param f fun(k: T, v: T): boolean|nil
+function M.table_filter(t, f)
+    for k, v in pairs(t) do
+        if not f(k, v) then
+            t[k] = nil
+        end
+    end
+end
+
 --------------------------
 -- MARK: Text Functions --
 --------------------------
@@ -100,6 +125,32 @@ function M.adj_newlines(text)
     end)
 
     return text
+end
+-- TODO: Needs to be documented that, except for when the markdown parsing detects a bulleted
+-- list, single newlines are always wrapped. Double+ newlines are always treated as a double
+-- newline.
+
+---@param str string?
+---@return boolean
+function M.str_has_content(str)
+    return str ~= nil and string.match(str, "^%s*$") == nil
+end
+
+---@param target string?
+---@param str string
+---@param trim_leading_nl? boolean If unable to append, trim all leading newlines.
+---@return string
+function M.checked_str_append(target, str, trim_leading_nl)
+    if target ~= nil and (M.str_has_content(target)) then
+        return target .. str
+    end
+
+    if not trim_leading_nl then
+        return str
+    end
+
+    local nl_trim, _ = string.gsub(str, "^\n+", "")
+    return nl_trim
 end
 
 --- @param lines string[]
@@ -144,12 +195,33 @@ function M.slice_text(txt, srow, scol, erow, ecol)
     return M.slice_lines(lines, srow, scol, erow, ecol)
 end
 
+---@param str string
+---@param byte integer
+---@return boolean
+function M.startswith_byte(str, byte)
+    return #str > 0 and string.byte(str, 1) == byte
+end
+
+---@param str string
+---@param byte integer
+---@return boolean
+function M.endswith_byte(str, byte)
+    local len_str = #str
+    return len_str > 0 and string.byte(len_str, 1) == byte
+end
+
 ---NOTE: Does not add a final newline
 ---@param line string
 ---@param first_indent integer
 ---@param indent integer
 ---@param text_width integer
+---@return string
 local function wrap_line(line, first_indent, indent, text_width)
+    local len_line = #line
+    if len_line + first_indent <= text_width then
+        return string.rep(" ", first_indent) .. line
+    end
+
     local init = 1
     local start, fin = string.find(line, "[^%s]+", init)
     if not (start and fin) then
@@ -157,7 +229,6 @@ local function wrap_line(line, first_indent, indent, text_width)
     end
 
     local indent_str = string.rep(" ", indent)
-    local len_line = #line
     local parts = { string.rep(" ", first_indent) }
     local cur_sub_len = first_indent
     local sub_start = 1
@@ -216,17 +287,19 @@ function M.wrap(text, first_indent, indent, text_width)
     res[1] = wrap_line(lines[1], first_indent, this_fin_indent, text_width)
 
     for i = 2, #lines do
-        res[#res + 1] = "\n"
         local line = lines[i]
         local this_indent = string.find(line, "^•", 1) and indent + 2 or indent
         res[#res + 1] = wrap_line(line, indent, this_indent, text_width)
     end
 
-    return table.concat(res)
+    return table.concat(res, "\n")
 end
--- MID: Tab replacement should be done in some broader location to make sure they're handled
--- throughout the whole doc. It would be nice it were in some location that was guaranteed to hit
--- them all before they got here, but it might be better to just do the check in duplicate.
--- NON: Keep the text width var. Keeps the function flexible.
+-- NON: Don't remove the text width variable even though it exists as a constant. Keeps the
+-- function flexible.
+
+-- TODO: I would like to have a "pure function" rule for this module, with an exception for
+-- editing a single function param. If a function param is edited, the actual return from the
+-- function should only be a status marker.
+-- - Bigger challenge I think would be anything related to logging.
 
 return M

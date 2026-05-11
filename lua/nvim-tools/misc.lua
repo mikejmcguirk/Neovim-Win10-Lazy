@@ -42,25 +42,6 @@ end
 M.nonnil = vim.nonnil or vim.F.if_nil
 -- DEPRECATE: Nvim 0.15 released
 
----@param str string
----@param byte integer
----@return boolean
-function M.startswith_byte(str, byte)
-    vim.validate("str", str, "string")
-    vim.validate("buf", byte, require("nvim-tools.types").is_uint)
-    return #str > 0 and string.byte(str, 1) == byte
-end
-
----@param str string
----@param byte integer
----@return boolean
-function M.endswith_byte(str, byte)
-    vim.validate("str", str, "string")
-    vim.validate("buf", byte, require("nvim-tools.types").is_uint)
-    local len_str = #str
-    return len_str > 0 and string.byte(len_str, 1) == byte
-end
-
 ---@param x integer
 ---@param y integer
 ---@param min integer

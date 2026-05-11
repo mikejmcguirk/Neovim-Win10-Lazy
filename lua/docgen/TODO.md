@@ -1,53 +1,49 @@
 ## General
 
-#### Parser_Obj Direct Pulls
-
-Seeing what values are pulled out of parser_obj raw. I would prefer to get the data out of it in a structured way, but I also don't want to create contrived or bulky ways to get at the underlying data. And I certainly don't want to make the parser_obj responsible for rendering.
-
-Perhaps, looking at everything, common patterns will emerge.
-
-- add_fun_header : fun.classvar, fun.name
-- md_to_vimdoc : fun.desc
-- render_fun : fun.since
-{ Currently stopped here }
-
 #### TODO:
 
-- [ ] Go through all the uses of the Parser Obj and make them metatable calls
+- [ ] Typing
+  - [ ] Using aliases as enums wherever possible
+  - [ ] Tie those aliases to the LuaCATs grammar
+    - [ ] Can aliases extend aliases? I guess by adding them as an or condition
+  - [ ] Use enums to replace functions like "is_class/is_fun" with "get_kind"
 
-- [ ] Can the way the parser obj is typed be made more clear?
+- [ ] Possible typing solution - Lazy initialization at get.
 
 - [ ] Add code to ignore stylua tags
-  - I think the core's docgen does this. If not, I have to imagine that every one does
+  - I think the core's docgen does this. If not, I have to imagine that some other one out there does. Or I can just look it up
 
-- [ ] For the parser obj, do we want to limit, and to what degree, arbitrary addition of "meta" annotations like @nodoc, @inlinedoc, @tag, and so on.
-  - [ ] It's probably wise to follow Lua_Ls's example here, whatever that may be
-  - [ ] The pattern I feel myself settling on overall is that there should be a "warning" or verbose mode that tells the user about things that are incorrect but can be worked around. I think a "debug" mode is too much and I think hard erroring on recoverable problems is unduly demoralizing.
+- [ ] Executive decision: Parsing rules need to match what Lua_Ls does
+  - [ ] No after desc for class desc or operators
+  - [ ] Fields are probably the same
+  - [ ] Same for aliases
+  - [ ] Document this behavior
+  - [ ] Make a maybe/future note that if emmylua_ls supports this a change can be made
 
-- [ ] The rendering code still lacks structure. There's no coherent theme for "when" things happen (turning obj data into strings vs. turning them into lists vs. formatting them)
-  - Do we think of it as a kind of recursion?
+- [ ] buzz issues:
+  - [ ] Important - newline fixing is not correct. Cannot get double newline break
+  - [ ] Less important - nested bullets not working
+    - [ ] possible solution - handle indenting in md parsing but keep it purely internal. then you can do structured incrementation on bullets
 
-- [ ] There's a note out there somewhere about how class descriptions above are discarded if one below is found
-- [ ] This feeds into a larger issue - Right now descriptions seem to be pulled correctly automagically, but IMO this is bad and will break at some point
-  - [ ] Class descriptions need to be above and to the side
-  - [ ] Function param descriptions need to be to the side and below
-
-- [ ] I don't know if it's necessary or a good idea to build this out fully now, but we want to make sure some of the skeleton is out there to handle warnings. Because we want to be able to write them to a log of the user wants
+- [ ] I don't know if it's necessary or a good idea to build this out fully now, but we want to make sure some of the skeleton is out there to handle warnings. Because we want to be able to write them to a log if the user wants
   - Related to this, I think I threw out all the logging stuff a bit prematurely. The overriding problem is that basically everything in the docgen is a hot path, but like, are there transition points where it makes sense and doesn't create too many IO hits?
 
-- [ ] In part for performance reasons, in part for data hygiene reasons, if something is marked @nodoc building needs to be skipped so we can just get to the end of the current "thing" and discard it
-  - Something I'm weirdly unclear about is like, I guess @nodoc works no matter where in the annotation block it is, which feels weird.
-  - [ ] @nodoc should only trigger if it's the first thing in the annotation block, or at the very least the first tag. If not, it should be a warning
+- [ ] @nodoc auditing:
+  - [ ] Should override everything else
+  - [ ] Should only work at the kind level
+  - [ ] Unlike access, which Lua_Ls makes effectively invisible, I don't think you can just toss nodoc items
+
+- [ ] Access
+  - [ ] DOCUMENT: only works on class stuff
+  - [ ] verify it only works for classes
+    - [ ] Should not be able to put access on functions and have it do anything
+    - [ ] So like, I don't think you can pre-emptively reject access tags because they can come before class declarations, but it can be rejected if kind is affirmatively something other than class, and the checks on access check also check class status
 
 - [ ] @deprecated needs to be treated here like @nodoc (avoid needing redundant annotations)
 
 - [ ] Need a better/more coherent way of managing how classes are referenced.
   - We need to hold a table of class references by name for inlinedoc purposes
   - I would think/hope that you can just put the classes in a master object list and hold the name ref for inlinedoc only and be done with it
-
-- [ ] Can inlinedoc/nodoc be turned into a "docstyle" var?
-
-  - [ ] Can the various nil checks be changed into something else? Unsure how to do that though since Nil is a clear way to say this is not here
 
 - [ ] Handle core updates:
   - [ ] Sorted class fields: https://github.com/neovim/neovim/commit/033efbbd32fad882da67c0a1f658d1c12a8d515e
@@ -159,6 +155,8 @@ Perhaps, looking at everything, common patterns will emerge.
             + If using pure g:vars for documentation then you can just use @mod and @brief tags. If that's too cumbersome, well, then, probably should be a config class module.
 
 - [ ] The future items below require building out logic for when module headings are created. The vimdoc treesitter page has a link to the vimdoc spec. Read and familiarize.
+  - Initial findings:
+    * The github article on the treesitter page goes over the regex syntax for each element. We can use this to validate certain elements, like helptags
 
 - [ ] If the parser object is set to a module type, it should be able to accept contiguous @tag annotations. My guess is that it's probably right to push tags to be on the top of doc blocks. So when a module is found, it should pull in any tags as well. If a tag is found with no kind, it should be stored for the committed object. It should probably be allowed to put in arbitrary tags that are not used, so that way if you need to temporarily add @nodoc to something the docgen doesn't spaz out. Maybe emit a warning.
   - [ ] Probably also keep in mind data sanity here as well. If you have something that's @inlinedoc, tags can be thrown away. One caveat though - Does this trigger more gc?
@@ -229,28 +227,27 @@ Perhaps, looking at everything, common patterns will emerge.
   - [ ] The original _spec files will hopefully be helpful
   - [ ] Add a no_output option for validation/debugging
 
+- [ ] Do a final audit that everything consolidates its output to a string when possible.
+  - [ ] Does this include the treesitter parsing?
+
 - [ ] An amusing and not totally absurd idea is to have the readme just be in vimdoc. I feel like one of the grep or qf vim plugins I've looked at has actually done this. I think we'd be okay with github's display issues because the docgen outputs spaces and not tabs. It's kind of hard hitting presentation and it does stand itself on the product.
 
 - [ ] Neovim is under an Apache license, which has attribution requirements attached to it. Must be in the README for this separate release
 
+#### DOC:
+
+- [ ] Underline functions/params/fields are not rendered.
+- [ ] (default: `foo`) will auto-format with params and fields
+  - [ ] Does not work with returns
+- [ ] Because class/field/overload side annotations are not read by Lua_Ls, they are only used here if no doc lines above are present
+
 #### MID:
 
-- [ ] Is it possible to re-write how the state machine works so it doesn't rely on niling values both to say "this isn't here" but also to break references that are passed to other tables. All of this causes a lot of re-allocation.
-
-- [ ] The indent adjusting in parse_doc_line on non-parse is confusing
-  - I had a theory that this was padding for window display purposes, but this is not the case
-
-- [ ] Global flags to control
-  - [ ] Function rendering
-  - [ ] Class rendering
-    - Non-goal (move to that section when this overall block of TODO is done): Globally control inlinedoc (same with nodoc). So if you have class rendering disabled but a class is on inlinedoc, then the class will still render as inlinedoc inside the functions it's used
-      - Likewise, if class rendering is enabled but function rendering is disabled, and a class is labeled as inlinedoc, then you don't see it
-      - Flags for ignoreinlinedoc and/or ignorenodoc feel complicated to implement and create combinatorial complexity in behavior
-  - [ ] Alias rendering
-
-- [ ] Once this whole thing is much more robust, build cli around it.
 - [ ] More robust arg parsing
 - [ ] Add optional debug timers
+
+- [ ] For `class (exact)`, exact comes in as an access specifier. Store the specifier and display it as an attribute.
+- [ ] Support @nodiscard
 
 #### LOW:
 
@@ -263,10 +260,24 @@ Perhaps, looking at everything, common patterns will emerge.
 - [ ] I believe, for Markdown parsing, you get Nvim's built-in parser since Nvim is just opened as a Lua runner without awareness of other installed parsers. It should be possible to point the docgen to a parser of choice
   - Low priority because, IMO, this is not actually useful. And actually even creates problems in the context of a public repository
 
+- [ ] Tab replacement should be done somewhere other than the wrap function
+  - Motivation: Not all text is wrapped
+  - Problem: Adding additional steps to remove tabs decreases perf
+
 #### FUTURE:
 
-- This is a task that wants to be written in a compiled language, since it involves so much text crunching
-  * You could start getting really fancy with how the bytes are being read, rather than relying on higher level abstractions.
+* This is a program that wants to be written in a compiled language.
+  + Motivation: More efficient heap usage and object oriented constructs
+  + Problems: Harder to write/use
+
+#### MAYBE:
+
+- Have code for a "committed" state in the parser obj that restricts certain types of writes
+  * This would add complexity surface area
+  * I'm unsure of the practical benefit since the program is fairly on rails
+- Support the `@note` annotation
+  * Motivation: It would not be that hard and it can be convenient
+  * Problems: The annotation is not supported by Lua_Ls, and any reduction in complexity surface area is worthwhile. It also feels like a "catch-all" way of organizing things.
 
 #### NON:
 

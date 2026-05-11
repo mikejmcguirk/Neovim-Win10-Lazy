@@ -169,7 +169,7 @@ function M.generate(inputs, output, level, log_path)
     validate_input_files(inputs)
     local output_path = resolve_output_path(output, DEFAULT_OUTPUT_FILE)
 
-    require("docgen.renderer")._render_docs(inputs, output_path)
+    require("docgen.renderer").render_docs(inputs, output_path)
 end
 
 local function print_help()

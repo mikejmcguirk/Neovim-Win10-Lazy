@@ -28,6 +28,7 @@ Some way of grepping todo/mid/low/future/maybe/perf/document from files all at o
     - On one hand, the lazy problem needs to be solved anyway. On the other hand, the process of re-writing rancher is going to be long and require a lot of writing docs, so I'm not sure I want to fill up the commit history with that kind of stuff
 
 - [ ] Does this change how lampshade works? - https://github.com/neovim/neovim/pull/38988
+  - It does. The lampshade is showing a bulb on the line but it doesn't work because Code Actions is now cursor based
 
 - [ ] nvim-tools
   - [ ] All functionalities should use the set pc mark behavior described in meta
@@ -51,6 +52,26 @@ Some way of grepping todo/mid/low/future/maybe/perf/document from files all at o
   - needs to be plug and play. Can't be doing a bunch of config to make it work
   - needs to work in CI
   - Should, if at all possible, auto-create new nvim instances between tests so that doesn't need to be managed
+
+- [ ] make
+  * [ ] test
+    + [ ] Prompt if mini.test is missing
+  * [ ] fmt
+    + [ ] Run stylua
+  * [ ] doc
+    + [ ] Run docgen
+    + [ ] Prompt if missing
+  - [ ] lint:
+    * This should basically be minimum viable product level If issues come up they can be addressed
+    * An interesting question though is per-project linting rules.
+    * I think core just dumped their linter from CI. Unsure if there's another useful one out there
+    * [ ] WARN:
+      + [ ] Diagnostic disable messages
+    * [ ] FAIL:
+      + [ ] Lua_Ls diagnostics
+      + [ ] Formatting
+        + [ ] Multiple newline only lines
+        + [ ] Trailing whitespace
 
 - [ ] How do you block direct pushes to master?
 - [ ] Is my fzf-lua-test file a good way to do a minimal init for plugin testing? Would want to look at what Neovim has (even after vim.pack) as well as fzf-lua's mini.sh script
@@ -155,6 +176,7 @@ Some way of grepping todo/mid/low/future/maybe/perf/document from files all at o
 
 #### FUTURE:
 
+- [ ] https://github.com/neovim/neovim/pull/38906 - Would be good to use this for plugin/docgen logging
 - [ ] Based on experience, update the meta documentation for plug mappings
 
 #### MAYBE:
