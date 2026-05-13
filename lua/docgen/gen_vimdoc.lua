@@ -1,5 +1,18 @@
 #!/usr/bin/env -S nvim -l
 
+if not jit then
+    error("Requires Neovim built with LuaJIT to run.")
+end
+
+local luacats_parser = require("docgen.luacats_parser")
+local parsed_from_file = luacats_parser.parsed_from_file
+
+local holistic = require("docgen.holistic")
+local resolve_holistic = holistic.parsed_sources_resolve_holistic
+
+local renderer = require("docgen.renderer")
+local render_docs = renderer.render_docs
+
 local fn = vim.fn
 local fs = vim.fs
 local uv = vim.uv
@@ -154,22 +167,53 @@ end
 
 local M = {}
 
+---@class docgen.Source
+---@field [1] string Name
+---@field [2] "file"|"lines"|"str" Type
+---@field [3] string[] Lines to parse
+---@field [4] string String to parse
+
+---@class docgen.ParsedSource
+---@field [1] string Formatted Source Name
+---@field [2] docgen.ParserObj[] Objs
+
 ---Main generator function
----@param inputs string[] Input filepaths
+---@param sources string[] Input filepaths
 ---@param output string? Output file
 ---@param level integer? Log level
 ---- 0 Standard output only
 ---- 1 Standard messages
 ---- 2 Debug messages
 ---@param log_path string? Log path
-function M.generate(inputs, output, level, log_path)
-    validate_target_inputs(inputs, output, level, log_path)
+function M.generate(sources, output, level, log_path)
+    validate_target_inputs(sources, output, level, log_path)
 
+    -- TODO: Outline this business
     setup_log(level, log_path)
-    validate_input_files(inputs)
+    -- TODO: It should be possible to parse strings or line collections as well
+    validate_input_files(sources)
     local output_path = resolve_output_path(output, DEFAULT_OUTPUT_FILE)
 
-    require("docgen.renderer").render_docs(inputs, output_path)
+    -- TODO: This is about where this should be determined.
+    -- Also might not be necessary. If you add all the helptags here, you can just pass the
+    -- variable in and be done with it.
+    _G.Nvim_Tools_Docgen_Help_Prefix = "demo-help"
+
+    local parsed_sources = {} --- @type docgen.ParsedSource[]
+    for _, source in vim.spairs(sources) do
+        local parsed = parsed_from_file(source)
+        parsed_sources[#parsed_sources + 1] = parsed
+    end
+
+    resolve_holistic(parsed_sources)
+    if #parsed_sources == 0 then
+        -- TODO: Improve
+        print("No parsed data to render")
+        return
+    end
+
+    -- TODO: Printing output should not also be handled here
+    render_docs(parsed_sources, output_path)
 end
 
 local function print_help()

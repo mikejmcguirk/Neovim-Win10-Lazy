@@ -136,6 +136,18 @@ function M.str_has_content(str)
     return str ~= nil and string.match(str, "^%s*$") == nil
 end
 
+---If no width formatting is needed, call with width = 0.
+---@param str string
+---@param width integer
+---@return string name
+function M.cbraces_add(str, width)
+    local name, opt = str:match("^([^?]*)(%??)$")
+    local raw_width = #name + #opt
+    local remain = math.max(width - raw_width - 2, 0)
+
+    return "{" .. name .. "}" .. opt .. string.rep(" ", remain)
+end
+
 ---@param target string?
 ---@param str string
 ---@param trim_leading_nl? boolean If unable to append, trim all leading newlines.
@@ -208,6 +220,25 @@ end
 function M.endswith_byte(str, byte)
     local len_str = #str
     return len_str > 0 and string.byte(len_str, 1) == byte
+end
+
+---@param name string
+---@param surround? "*"|"|"|""
+---@return string
+function M.help_tag_from_name(name, surround)
+    surround = surround or ""
+    local ret = {}
+
+    ret[#ret + 1] = surround
+    if not vim.startswith(Nvim_Tools_Docgen_Help_Prefix, name) then
+        ret[#ret + 1] = Nvim_Tools_Docgen_Help_Prefix
+        ret[#ret + 1] = "."
+    end
+
+    ret[#ret + 1] = name
+    ret[#ret + 1] = surround
+
+    return table.concat(ret)
 end
 
 ---NOTE: Does not add a final newline

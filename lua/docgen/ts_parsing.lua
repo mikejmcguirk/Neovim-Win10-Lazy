@@ -224,14 +224,7 @@ local md_handlers = {
         if i_root then
             node_to_lines(i_root, i_text, ret, md_inline_handlers)
         else
-            i_text = string.gsub(i_text, "\n+", function(match)
-                if #match == 1 then
-                    return "" -- single newline → removed
-                else
-                    return "\n\n" -- 2 or more newlines → exactly two newlines
-                end
-            end)
-
+            i_text = adj_newlines(i_text)
             ret[#ret + 1] = i_text
         end
     end,

@@ -9,6 +9,7 @@
 
 local M = {}
 
+---@deprecated
 ---@param bar integer|string|nil I'm a bar
 ---@param baz table? I'm a bazz
 ---@param bill integer   | string |  nil I'm a billy
@@ -27,6 +28,7 @@ end
 ---(default: `foo`)
 ---This is a bazz
 ---@field bazz string
+---Welp
 ---(default: `{ 1, 2, 3, 4, 5 }`) Some nonsense.
 ---This is a buzz
 ---@field buzz integer[]

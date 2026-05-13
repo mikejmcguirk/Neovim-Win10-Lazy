@@ -2,6 +2,11 @@
 
 #### TODO:
 
+- [ ] Add a list of tags to the parser objects based on collected @tag annotations and generated tags. Store in generated order.
+  - [ ] Do you have an option for only generate tag if no @tag is present? Do you control this with annotations? Something like `@notag` or `@noautotag?`
+
+- [ ] Refactor loops to use `goto continue`
+
 - [ ] Typing
   - [ ] Using aliases as enums wherever possible
   - [ ] Tie those aliases to the LuaCATs grammar
@@ -201,6 +206,9 @@
     - Though, I'm not sure how totally feasible this actually is
   - [ ] @mod
   - [ ] @tag
+    - [ ] The docgen should be able to check @tags and see if they begin with the help_prefix. If not, it can be prepended
+    - [ ] It should also be able to handle whether or not the user surrounds it with * characters
+      - [ ] Though see what vimcats does. Maybe worth developing a bit of a standard around that.
   - [ ] @export
 
 - [ ] Support table of contents
@@ -219,7 +227,7 @@
   - I think this is handled by the list dot and list minus tags, so just add list plus I think
   - You should be able to use Nvim's inspector to see the node names/ranges
 
-- [ ] See if/how the class module as dot functions thing works. The details for it are a bit confusing.
+- [ ] My assumption right now is that, by default, the help_prefix can be calculated based on the file inputs. It seems reasonable that the user could provide a custom one. Just unsure how that's handled because I'm not totally sure how the docgen should take input yet. CLI only? CLI and script? Script only?
 
 - [ ] Look at the referenced docgens. Do they have ideas that are useful/valuable?
 
@@ -263,6 +271,11 @@
 - [ ] Tab replacement should be done somewhere other than the wrap function
   - Motivation: Not all text is wrapped
   - Problem: Adding additional steps to remove tabs decreases perf
+
+- [ ] It could be interesting if you could use tags in briefs to insert generated documentation.
+  - Dummy example: You put a class annotation in a brief, and it expands the inlinedoc.
+
+- [ ] It might be faster to, at the start of a doc block, do a minimal iteration to the first non-annotation line to see if it invalidates the block.
 
 #### FUTURE:
 

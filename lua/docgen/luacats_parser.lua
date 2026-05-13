@@ -2,29 +2,11 @@ local luacats_grammar = require("docgen.luacats_grammar")
 local parser_obj = require("docgen.parser_obj")
 
 --- funs, classes, and briefs are edited in place.
---- @param obj docgen.ParserObj?
---- @param funs docgen.ParserObj[]
---- @param classes table<string,docgen.ParserObj>
---- @param briefs docgen.ParserObj[]
-local function commit_obj_if_valid(obj, classes, funs, briefs)
-    if not obj then
-        return
-    end
-
-    if not obj:can_commit() then
-        return
-    end
-
-    local kind = obj:get_kind()
-    if kind == "class" then
-        local obj_name = obj:get_name()
-        if obj_name and not classes[obj_name] then
-            classes[obj_name] = obj
-        end
-    elseif kind == "brief" then
-        briefs[#briefs + 1] = obj
-    elseif kind == "fun" then
-        funs[#funs + 1] = obj
+--- @param obj docgen.ParserObj
+--- @param obj_list docgen.ParserObj[]
+local function commit_obj_if_valid(obj, obj_list)
+    if obj:is_finalized() then
+        obj_list[#obj_list + 1] = obj
     end
 end
 
@@ -59,6 +41,8 @@ end
 ---@param fname string
 ---@return string
 local function module_from_fname(fname)
+    -- TODO: Needs to be the basename. But unsure what type of fname we're getting from
+    -- upstream
     local module = fname:match(".*/lua/([a-z_][a-z0-9_/]+)%.lua") or fname
     return module:gsub("/", ".")
 end
@@ -66,18 +50,15 @@ end
 local M = {}
 
 ---@param lines string[]
----@param fname string
----@return table<string,docgen.ParserObj>, docgen.ParserObj[], docgen.ParserObj[]
-function M.parse_lines(lines, fname)
-    local funs = {} --- @type docgen.ParserObj[]
-    local classes = {} --- @type table<string,docgen.ParserObj>
-    local briefs = {} --- @type docgen.ParserObj[]
+---@param source string
+---@return docgen.ParsedSource
+function M.parsed_from_lines(lines, source)
+    local obj_list = {} ---@type docgen.ParserObj[]
 
-    local classvar_map = {} --- @type table<string,string>
     local modvar = find_modvar(lines) or ""
     -- TODO: This needs to produce a more aesthetic result, but will defer until I know the
     -- pipeline it comes down from.
-    local module = module_from_fname(fname)
+    local module = module_from_fname(source)
     local obj = parser_obj.new(modvar, module)
 
     for _, line in ipairs(lines) do
@@ -90,39 +71,39 @@ function M.parse_lines(lines, fname)
             if parsed then
                 obj:add_parsed(parsed)
             else
-                obj:add_doc_line(line_nodash)
+                obj:doc_line_add(line_nodash)
             end
         else
-            obj:finalize(line, classes, classvar_map)
-            commit_obj_if_valid(obj, classes, funs, briefs)
+            obj:finalize(line)
+            commit_obj_if_valid(obj, obj_list)
             obj = parser_obj.new(modvar, module)
         end
     end
 
-    obj:finalize("", classes, classvar_map)
-    commit_obj_if_valid(obj, classes, funs, briefs)
+    obj:finalize("")
+    commit_obj_if_valid(obj, obj_list)
 
-    return classes, funs, briefs
+    return { source, obj_list }
 end
 -- TODO: For the top module name, if the file is init.lua, it should be the name of the file's
 -- directory. (Assuming we keep this convention)
 
 ---@param str string
----@param input string
----@return table<string,docgen.ParserObj>, docgen.ParserObj[], docgen.ParserObj[]
-function M.parse_str(str, input)
+---@param source string
+---@return docgen.ParsedSource
+function M.parsed_from_str(str, source)
     local lines = vim.split(str, "\n")
-    return M.parse_lines(lines, input)
+    return M.parsed_from_lines(lines, source)
 end
 
---- @param input string
----@return table<string,docgen.ParserObj>, docgen.ParserObj[], docgen.ParserObj[]
-function M.parse(input)
-    local f = assert(io.open(input, "r"))
+--- @param source string
+---@return docgen.ParsedSource
+function M.parsed_from_file(source)
+    local f = assert(io.open(source, "r"))
     local txt = f:read("*all")
     f:close()
 
-    return M.parse_str(txt, input)
+    return M.parsed_from_str(txt, source)
 end
 
 return M
