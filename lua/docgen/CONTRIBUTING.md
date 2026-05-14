@@ -38,3 +38,10 @@
   * Exception: Reading the data from its provided iterators such as fields, params, or returns
 - Within the Parser Object module, use direct access for simple reads and writes. Build interfaces for tasks that involve logic
 - Prefer using table.concat by newline for function returns. This imposes a performance cost in intermediate concatenation, but creates simpler assumptions for callers
+
+## References
+
+- https://github.com/neovim/tree-sitter-vimdoc
+- https://neovim.io/doc/user/helphelp/#help-writing
+- https://github.com/nanotee/vimdoc-notes
+- Runtime files for the "help" filetype

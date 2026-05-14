@@ -109,6 +109,8 @@
 
 - [ ] https://github.com/neovim/neovim/commit/7fff439395215001ab74a96cc3df3d1b6d795177 - Does this make Nvim's built-in completion featureful enough to replace nvim-cmp?
 
+- [ ] Potentially use `:h indent-guides`
+
 #### LOW:
 
 - [ ] The guard against running due to autocomplete windows could be more specific
