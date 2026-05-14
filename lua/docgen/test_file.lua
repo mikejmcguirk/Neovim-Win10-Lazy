@@ -9,7 +9,8 @@
 
 local M = {}
 
----@deprecated
+---@deprecated Use |bar()| instead
+---Just a simple function.
 ---@param bar integer|string|nil I'm a bar
 ---@param baz table? I'm a bazz
 ---@param bill integer   | string |  nil I'm a billy

@@ -164,6 +164,18 @@ function M.checked_str_append(target, str, trim_leading_nl)
     local nl_trim, _ = string.gsub(str, "^\n+", "")
     return nl_trim
 end
+-- TODO: This should take as args:
+-- - left (string?)
+-- - sep (string)
+-- - right (string)
+-- On failure, return right
+-- Update usages here, update return_append to use this, update the nvim-tools version.
+
+---@param str string
+---@return string, integer
+function M.lua_pattern_escape(str)
+    return string.gsub(str, "([%^%$%(%)%.%[%]%*%+%-%?])", "%%%1")
+end
 
 --- @param lines string[]
 --- @param srow integer 0-indexed

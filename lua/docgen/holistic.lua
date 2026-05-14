@@ -15,10 +15,19 @@ local function create_maps(parsed_sources)
 
     for _, source in ipairs(parsed_sources) do
         for _, obj in ipairs(source[2]) do
-            local kind = obj:get_kind()
+            local kind = obj:kind_get()
             if kind == "fun" then
-                funs[obj:namevar_get()] = obj
+                -- Need to use fmt_name because function namevars do not have to be globally
+                -- unique.
+                local fmt_name = obj:fmt_name_get() --[[@as string]]
+                if not funs[fmt_name] then
+                    funs[fmt_name] = obj
+                else
+                    error("Duplicate fun " .. fmt_name .. " from source " .. source[1])
+                end
+                funs[obj:fmt_name_get()] = obj
             elseif kind == "class" then
+                -- Globally unique LuaCATs class name
                 local name = obj:name_get() --[[@as string]]
                 if not classes[name] then
                     classes[name] = obj
@@ -36,7 +45,7 @@ end
 -- iterate past briefs and aliases. Keeping it here at the moment though more logically scopes
 -- the data.
 
----@param classes table<string, docgen.ParserObj> Edited in place
+---@param classes table<string, docgen.ParserObj>
 ---@param classes_count integer
 ---@return table<string, string> classvar_map
 local function create_classvar_map(classes, classes_count)
@@ -53,13 +62,13 @@ end
 -- MID: I'm not sure this is faster than just getting it along with classes and funs. Though it
 -- does save memory in files without functions (niche case?).
 
----@param all_classes table<string, docgen.ParserObj> Edited in place
+---@param classes table<string, docgen.ParserObj> Edited in place
 ---@param classvar_map table<string, string>
----@param all_funs table<string, docgen.ParserObj> Edited in place
-local function class_funs_resolve(all_classes, classvar_map, all_funs)
+---@param funs table<string, docgen.ParserObj> Edited in place
+local function class_funs_resolve_links(classes, classvar_map, funs)
     local module_hidden_fields = {} ---@type table<string, table<string, true>>
 
-    for _, fun in pairs(all_funs) do
+    for _, fun in pairs(funs) do
         local classvar = fun:classvar_get()
         if classvar == nil then
             goto continue
@@ -70,7 +79,6 @@ local function class_funs_resolve(all_classes, classvar_map, all_funs)
             goto continue
         end
 
-        -- Assuming that M tables are not typically given class annotations.
         if fun:is_module_fun() then
             if not module_hidden_fields[class_name] then
                 module_hidden_fields[class_name] = {}
@@ -81,29 +89,42 @@ local function class_funs_resolve(all_classes, classvar_map, all_funs)
             goto continue
         end
 
-        local class = all_classes[class_name]
+        local class = classes[class_name]
         fun:class_fun_set_from_class(class)
-        -- TODO: Does this hold up after funs are moved to namevar? You could
-        -- presumably have a generalized get_name() function that resolves this.
         class:field_append_from_fun(fun)
 
         ::continue::
     end
 
     for class_name, class_hidden_fields in pairs(module_hidden_fields) do
-        all_classes[class_name]:filter_fields(function(field)
+        classes[class_name]:filter_fields(function(field)
             return not class_hidden_fields[field.name]
         end)
     end
 end
 -- MID: I doubt that the module_hidden_fields are being handled in the most efficient manner.
 
----@param parsed_sources docgen.ParsedSource[]
-local function parsed_sources_filter_invalid(parsed_sources)
+---@param parsed_sources docgen.ParsedSource[] Edited in place
+---@param classes table<string, docgen.ParserObj> Edited in place
+---@param funs table<string, docgen.ParserObj> Edited in place
+local function parsed_sources_filter_invalid(parsed_sources, classes, funs)
     for _, source in ipairs(parsed_sources) do
         local obj_list = source[2]
         list_filter(obj_list, function(obj)
-            return obj:holistically_valid()
+            local holistically_valid = obj:holistically_valid()
+            -- Avoid callees having to individually verify their state.
+            if not holistically_valid then
+                local kind = obj:kind_get()
+                if kind == "fun" then
+                    local fmt_name = obj:fmt_name_get() --[[@as string]]
+                    funs[fmt_name] = nil
+                elseif kind == "class" then
+                    local name = obj:name_get() --[[@as string]]
+                    classes[name] = nil
+                end
+            end
+
+            return holistically_valid
         end)
     end
 
@@ -120,21 +141,24 @@ function M.parsed_sources_resolve_holistic(parsed_sources)
     end)
 
     local classes, classes_count, funs = create_maps(parsed_sources)
-    if classes_count > 0 then
-        if next(funs) then
-            local classvar_map = create_classvar_map(classes, classes_count)
-            class_funs_resolve(classes, classvar_map, funs)
-            for _, fun in pairs(funs) do
-                fun:inlinedoc_inject(classes)
-            end
-        end
-
-        for _, class in pairs(classes) do
-            class:inlinedoc_inject(classes)
-        end
+    if classes_count > 0 and next(funs) then
+        local classvar_map = create_classvar_map(classes, classes_count)
+        class_funs_resolve_links(classes, classvar_map, funs)
     end
 
-    parsed_sources_filter_invalid(parsed_sources)
+    -- Only do this once because it's expensive.
+    parsed_sources_filter_invalid(parsed_sources, classes, funs)
+    if not next(classes) then
+        return
+    end
+
+    for _, fun in pairs(funs) do
+        fun:inlinedoc_inject(classes)
+    end
+
+    for _, class in pairs(classes) do
+        class:inlinedoc_inject(classes)
+    end
 end
 -- MAYBE: If specific issues with the incoming file results repeatedly come up, add runtime
 -- checking if inexpensive.

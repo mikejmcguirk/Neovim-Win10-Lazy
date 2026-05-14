@@ -23,6 +23,11 @@ Some way of grepping todo/mid/low/future/maybe/perf/document from files all at o
 
 #### TODO:
 
+- [ ] "Dimmed" highlight group in `.13`: https://github.com/neovim/neovim/pull/39505
+  - [ ] Plugins should check if it is already set (doesn't require `has()`) and link by default if so. Otherwise, link to comment
+  - [ ] Don't define if it already exists. Not something we have ownership over
+  - [ ] Add a deprecate tag - When `>=0.14` is out, just always use Dimmed
+
 - [ ] Figure out how to install plugins in lazy without seeing every push to feature branches
   - [ ] Alternatively, since it kinda looks like I'm going to be doing a full rewrite, perhaps just make a config-local version of rancher
     - On one hand, the lazy problem needs to be solved anyway. On the other hand, the process of re-writing rancher is going to be long and require a lot of writing docs, so I'm not sure I want to fill up the commit history with that kind of stuff

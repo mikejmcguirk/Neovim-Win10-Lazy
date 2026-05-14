@@ -195,8 +195,10 @@ function M.generate(sources, output, level, log_path)
     local output_path = resolve_output_path(output, DEFAULT_OUTPUT_FILE)
 
     -- TODO: This is about where this should be determined.
-    -- Also might not be necessary. If you add all the helptags here, you can just pass the
-    -- variable in and be done with it.
+    -- TODO: This needs to be validated to be a string with at least one character and
+    -- valid helptag text.
+    -- TODO: Bring in the spec's helptag syntax for evaluation. Needed here because we are basing
+    -- on external info.
     _G.Nvim_Tools_Docgen_Help_Prefix = "demo-help"
 
     local parsed_sources = {} --- @type docgen.ParsedSource[]
@@ -215,6 +217,10 @@ function M.generate(sources, output, level, log_path)
     -- TODO: Printing output should not also be handled here
     render_docs(parsed_sources, output_path)
 end
+-- NON: Leave the help prefix as a global.
+-- - It does not change throughout program execution
+-- - Passing it through the callstack is cumbersome, especially because text parsing is a
+--   lower-level task that can sit in different, deeply nested places.
 
 local function print_help()
     print([[

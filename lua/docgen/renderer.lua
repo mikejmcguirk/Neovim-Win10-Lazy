@@ -17,35 +17,10 @@ local TEXT_WIDTH = const.TEXT_WIDTH
 -- MARK: Section Rendering --
 -----------------------------
 
----@class docgen.Section
----@field name string
----@field title string
----@field help_tag string
----@field rendered string[]
-
---- @param section docgen.Section
---- @param add_header? boolean
-local function render_section(section, add_header)
-    local ret = {} --- @type string[]
-
-    if add_header ~= false then
-        local border = string.rep("=", TEXT_WIDTH) .. "\n"
-        ret[#ret + 1] = border
-        local rem_whitespace = TEXT_WIDTH - #section.title
-        local help_tag = string.format("%" .. rem_whitespace .. "s", section.help_tag)
-        vim.list_extend(ret, { section.title, help_tag })
-    end
-
-    ret[#ret + 1] = "\n\n"
-    ret[#ret + 1] = table.concat(section.rendered, "\n\n")
-
-    return table.concat(ret)
-end
-
 ---@param source_name string
 ---@param rendered string[]
 ---@return docgen.Section?
-local function make_section(source_name, rendered)
+local function section_create(source_name, rendered)
     -- TODO: I think this is the right baseline behavior. Since the names should be filename
     -- based, they should be lowercase. And then we have a camel/snake case title that looks
     -- more appealing.
@@ -67,35 +42,34 @@ local function make_section(source_name, rendered)
     }
 end
 
+---@class docgen.Section
+---@field name string
+---@field title string
+---@field help_tag string
+---@field rendered string[]
+
+--- @param section docgen.Section
+--- @param add_header? boolean
+local function section_render(section, add_header)
+    local ret = {} --- @type string[]
+
+    if add_header ~= false then
+        local border = string.rep("=", TEXT_WIDTH) .. "\n"
+        ret[#ret + 1] = border
+        local rem_whitespace = TEXT_WIDTH - #section.title
+        local help_tag = string.format("%" .. rem_whitespace .. "s", section.help_tag)
+        vim.list_extend(ret, { section.title, help_tag })
+    end
+
+    ret[#ret + 1] = "\n\n"
+    ret[#ret + 1] = table.concat(section.rendered, "\n\n")
+
+    return table.concat(ret)
+end
+
 ------------------
 -- MARK: Obj Utils
 ------------------
-
----@param tag string
----@return string
-local function get_fmt_lone_tag(tag)
-    return string.format("%" .. TEXT_WIDTH .. "s", tag)
-end
--- FUTURE: This works for multi-tagging. Each object would have a list of tags associated with it.
--- The tags would display, right-justified, in alphabetical order. Most would just use
--- `get_fmt_lone_tag()` to display, and the last would use `get_fmt_header()`.
-
----@param header string
----@param tag string
----@param wrap_indent integer
----@return string
-local function get_fmt_header(header, tag, wrap_indent)
-    local len_header = #header
-    local len_tag = #tag
-
-    if len_header + len_tag <= TEXT_WIDTH - DBL_INDENT then
-        local padding = TEXT_WIDTH - len_header - len_tag
-        return header .. string.rep(" ", padding) .. tag
-    end
-
-    header = wrap(header, 0, wrap_indent, TEXT_WIDTH)
-    return get_fmt_lone_tag(tag) .. "\n" .. header
-end
 
 ---@param name string
 ---@param typ string
@@ -130,8 +104,58 @@ local function fmt_arg_mapper(name, typ, desc)
     lines[#lines + 1] = wrap(md_text, start_indent, TPL_INDENT, TEXT_WIDTH)
     return table.concat(lines, "\n")
 end
--- LOW: It would be better if this function did not emphasize readability so heavily to the
--- detriment of performance.
+
+---@param tag string
+---@return string
+local function tag_header_get(tag)
+    return string.format("%" .. TEXT_WIDTH .. "s", tag)
+end
+-- FUTURE: This works for multi-tagging. Each object would have a list of tags associated with it.
+-- The tags would display, right-justified, in alphabetical order. Most would just use
+-- `get_fmt_lone_tag()` to display, and the last would use `get_fmt_header()`.
+
+---@param header string
+---@param tag string
+---@param wrap_indent integer
+---@return string
+local function header_get(header, tag, wrap_indent)
+    local len_header = #header
+    local len_tag = #tag
+
+    if len_header + len_tag <= TEXT_WIDTH - DBL_INDENT then
+        local padding = TEXT_WIDTH - len_header - len_tag
+        return header .. string.rep(" ", padding) .. tag
+    end
+
+    header = wrap(header, 0, wrap_indent, TEXT_WIDTH)
+    return tag_header_get(tag) .. "\n" .. header
+end
+
+--- @param obj docgen.ParserObj
+--- @return string?
+local function post_header_get(obj)
+    local deprecated = obj:deprecated()
+    local fmt_desc = obj:get_fmt_desc()
+    local parent = obj:parent_get()
+    if not (deprecated or fmt_desc or parent) then
+        return
+    end
+
+    local ret = {}
+    if deprecated then
+        ret[#ret + 1] = INDENT_STR .. obj:fmt_doc_desc_get()
+    end
+
+    if parent then
+        ret[#ret + 1] = INDENT_STR .. parent
+    end
+
+    if fmt_desc then
+        ret[#ret + 1] = wrap(fmt_desc, INDENT, INDENT, TEXT_WIDTH)
+    end
+
+    return table.concat(ret, "\n\n")
+end
 
 ---------------------------
 -- MARK: Brief Rendering --
@@ -152,7 +176,7 @@ local function get_class_header(class)
     local display_name = cbraces_add(class_fmt_name, 0)
     local tag = help_tag_from_name(class_fmt_name, "*")
 
-    return get_fmt_header(display_name, tag, INDENT)
+    return header_get(display_name, tag, INDENT)
 end
 -- MAYBE: The literal class name might be fine since that's how it shows up when you dot-complete
 -- the annotation.
@@ -174,21 +198,14 @@ end
 local function render_class(class)
     local ret = {} --- @type string[]
 
-    local heading = {}
-    heading[#heading + 1] = get_class_header(class)
-    local parent = class:parent_get()
-    if parent then
-        local txt = "Extends: " .. help_tag_from_name(parent, "|")
-        heading[#heading + 1] = wrap(md_to_vimdoc(txt), INDENT, INDENT, TEXT_WIDTH)
-        heading[#heading + 1] = "\n"
+    local header = get_class_header(class)
+    local post_header = post_header_get(class)
+    if post_header then
+        ret[#ret + 1] = header .. "\n" .. post_header
+    else
+        ret[#ret + 1] = header
     end
 
-    local fmt_desc = class:get_fmt_desc()
-    if fmt_desc then
-        heading[#heading + 1] = wrap(fmt_desc, INDENT, INDENT, TEXT_WIDTH)
-    end
-
-    ret[#ret + 1] = table.concat(heading, "\n")
     ret[#ret + 1] = get_fields(class)
     return table.concat(ret, "\n\n")
 end
@@ -199,7 +216,7 @@ end
 
 --- @param fun docgen.ParserObj
 --- @return string
-local function get_fun_header(fun)
+local function fun_header_get(fun)
     local name = fun:fmt_name_get() --[[@as string]]
     local param_list = fun:params_fmt_get(0)
     local param_str = param_list and table.concat(param_list, ", ") or ""
@@ -207,7 +224,7 @@ local function get_fun_header(fun)
 
     local name_parens = fun:fmt_name_get(true) --[[@as string]]
     local tag = help_tag_from_name(name_parens, "*")
-    return get_fmt_header(full_proto, tag, #name)
+    return header_get(full_proto, tag, #name)
 end
 
 ---@param fun docgen.ParserObj
@@ -234,7 +251,7 @@ local function get_returns(fun)
     local header = len_returns > 1 and "Returns (multiple): ~" or "Returns: ~"
     lines[#lines + 1] = INDENT_STR .. header
 
-    local fmt_returns = fun:get_fmt_returns()
+    local fmt_returns = fun:returns_fmt_get()
     local len_fmt_returns = #fmt_returns
     for i = 1, len_fmt_returns do
         fmt_returns[i] = wrap(fmt_returns[i], DBL_INDENT, TPL_INDENT, TEXT_WIDTH)
@@ -285,17 +302,11 @@ end
 local function render_fun(fun)
     local ret = {} ---@type string[]
 
-    local header = get_fun_header(fun)
-    local fmt_desc = fun:get_fmt_desc()
-    if fun:deprecated() then
-        ret[#ret + 1] = header .. "\n" .. INDENT_STR .. "DEPRECATED:"
-        if fmt_desc then
-            ret[#ret + 1] = wrap(fmt_desc, INDENT, INDENT, TEXT_WIDTH)
-        end
+    local header = fun_header_get(fun)
+    local post_header = post_header_get(fun)
+    if post_header then
+        ret[#ret + 1] = header .. "\n" .. post_header
     else
-        if fmt_desc then
-            ret[#ret + 1] = header .. "\n" .. wrap(fmt_desc, INDENT, INDENT, TEXT_WIDTH)
-        end
         ret[#ret + 1] = header
     end
 
@@ -328,22 +339,22 @@ function M.render_docs(parsed_sources, output_path)
         local source_objs = source[2]
         local rendered = {} ---@type string[]
         for _, obj in ipairs(source_objs) do
-            if obj:get_kind() == "fun" then
+            if obj:kind_get() == "fun" then
                 rendered[#rendered + 1] = render_fun(obj)
-            elseif obj:get_kind() == "class" then
+            elseif obj:kind_get() == "class" then
                 rendered[#rendered + 1] = render_class(obj)
-            elseif obj:get_kind() == "brief" then
+            elseif obj:kind_get() == "brief" then
                 rendered[#rendered + 1] = render_brief(obj)
             end
         end
 
-        sections[#sections + 1] = make_section(basename, rendered)
+        sections[#sections + 1] = section_create(basename, rendered)
     end
 
     local docs = {} --- @type string[]
     for _, section in ipairs(sections) do
         print(string.format("    Rendering section: '%s'", section.title))
-        docs[#docs + 1] = render_section(section, true)
+        docs[#docs + 1] = section_render(section, true)
     end
 
     -- The trailing newline is required by the vimdoc spec.

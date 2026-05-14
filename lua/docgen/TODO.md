@@ -292,6 +292,10 @@
   * Motivation: It would not be that hard and it can be convenient
   * Problems: The annotation is not supported by Lua_Ls, and any reduction in complexity surface area is worthwhile. It also feels like a "catch-all" way of organizing things.
 
+- The "doc_text" field and the specific @deprecate handling are a minimally disruptive, ad hoc solution to a specific problem. Storing table data for doc flags in a principled manner opens up an architectural can of worms that is best avoided. If use cases come up for adding text to the other doc flags, or another case is found where an enum Parser Object field needs to store accompanying text, this can be revisited.
+
+- There are a lot of places, such as briefs, where help tag injection could be used, but spamming the behavior adds footguns and perf costs. This function should be added somewhere in response to specific use cases, after more tailored behavior has been ruled out. (For example, rather than applying this globally to brief text, it would be better if `@see` tags were supported in an ergonomic way.)
+
 #### NON:
 
 - Supporting extensibility
