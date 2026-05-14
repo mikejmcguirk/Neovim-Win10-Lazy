@@ -339,7 +339,6 @@ function M.render_docs(parsed_sources, output_path)
         local source_objs = source[2]
         local rendered = {} ---@type string[]
         for _, obj in ipairs(source_objs) do
-            print(vim.inspect(obj))
             if obj:kind_get() == "fun" then
                 rendered[#rendered + 1] = render_fun(obj)
             elseif obj:kind_get() == "class" then
