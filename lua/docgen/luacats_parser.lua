@@ -1,3 +1,6 @@
+local fn = vim.fn
+local fs = vim.fs
+
 local luacats_grammar = require("docgen.luacats_grammar")
 local parser_obj = require("docgen.parser_obj")
 
@@ -39,13 +42,21 @@ end
 -- return M (common case) first, then use setmetatable as a fallback?
 
 ---@param fname string
----@return string
+---@return string, any
 local function module_from_fname(fname)
-    -- TODO: Needs to be the basename. But unsure what type of fname we're getting from
-    -- upstream
     local module = fname:match(".*/lua/([a-z_][a-z0-9_/]+)%.lua") or fname
-    return module:gsub("/", ".")
+    local basename = fs.basename(module)
+    local root = fn.fnamemodify(basename, ":r")
+    return string.gsub(root, "/", ".")
 end
+-- TODO: The filenames need to be relative to some root dir. so like root/init.lua would give
+-- you the modulename root. Of probably even just nothing and let the help prefix be the
+-- root dir. Which seems like basically the most elegant way to do it.  Then you would have
+-- root/foo.lua would be foo.fun() and so on. And if you had root/bar/init.lua you would have
+-- bar.fun() and root/bar/buzz/lua would be bar.buzz(). Does this allow duplicates though?
+-- root/bar.lua
+-- root/bar/init.lua
+-- I guess you would pre-parse all the roots so you know what's coming.
 
 local M = {}
 
@@ -108,7 +119,7 @@ end
 
 return M
 
--- TODO: Something I think is pretty standard but should be documented, is we're assuming that
+-- DOC: Something I think is pretty standard but should be documented, is we're assuming that
 -- every doc object is separated by a blank line or function or something. So if you do @alias
 -- on one line, and then you have @class on the next doc line, then unintended results will
 -- happen.

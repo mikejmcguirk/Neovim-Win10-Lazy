@@ -133,6 +133,21 @@ local function parsed_sources_filter_invalid(parsed_sources, classes, funs)
     end)
 end
 
+---@param parsed_sources docgen.ParsedSource[] Edited in place
+local function parsed_sources_filter_inlinedoc(parsed_sources)
+    for _, source in ipairs(parsed_sources) do
+        local obj_list = source[2]
+        list_filter(obj_list, function(obj)
+            return not (obj:kind_get() == "class" and obj:doc_flag_get() == "inlinedoc")
+        end)
+    end
+
+    list_filter(parsed_sources, function(input)
+        return #input > 0
+    end)
+end
+-- TODO: This cannot be the way.
+
 ---Assumes that all underlying parser objects are finalized and valid.
 ---@param parsed_sources docgen.ParsedSource[] Modified in place
 function M.parsed_sources_resolve_holistic(parsed_sources)
@@ -159,6 +174,8 @@ function M.parsed_sources_resolve_holistic(parsed_sources)
     for _, class in pairs(classes) do
         class:inlinedoc_inject(classes)
     end
+
+    parsed_sources_filter_inlinedoc(parsed_sources)
 end
 -- MAYBE: If specific issues with the incoming file results repeatedly come up, add runtime
 -- checking if inexpensive.

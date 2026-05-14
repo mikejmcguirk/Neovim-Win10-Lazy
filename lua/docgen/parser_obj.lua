@@ -457,7 +457,7 @@ function M:holistically_valid()
     end
 
     if kind == "class" then
-        if self:fields_count() == 0 or self.doc_flag == "inlinedoc" then
+        if self:fields_count() == 0 then
             return false
         end
     end
@@ -710,7 +710,7 @@ end
 ---@param self docgen.ParserObj
 ---@return boolean
 local function doc_lines_present(self)
-    return self.doc_lines ~= nil and #self.doc_lines == 0
+    return self.doc_lines ~= nil and #self.doc_lines > 0
 end
 -- MAYBE: This could iterate through the doc lines to see if they contain non-whitespace content.
 
@@ -775,6 +775,11 @@ end
 --------------------
 -- MARK: Doc Flag --
 --------------------
+
+---@return "deprecated"|"inlinedoc"|"nodoc"
+function M:doc_flag_get()
+    return self.doc_flag
+end
 
 ---@return string?
 function M:fmt_doc_desc_get()
@@ -991,8 +996,9 @@ end
 ---@param classvar string
 ---@param namevar string
 ---@param modvar string
+---@param module string
 ---@param sep "."|":"
-local function fun_fmt_name_get(classvar, namevar, modvar, sep)
+local function fun_fmt_name_get(classvar, namevar, modvar, module, sep)
     local modclass = classvar == modvar
     local sep_res = modclass and "." or sep
     local mod = modclass and module or classvar
@@ -1008,17 +1014,16 @@ function M:fun_set_from_name(name, classvar, sep)
     self.kind = "fun"
     self.namevar = name
     self.classvar = classvar
-    -- TODO: This protects against it being dumped out, but I'm not sure how this plays
-    -- downstream
     if classvar == self.modvar then
-        self.class = self.module
+        self.class = ""
+    else
+        self.class = nil
     end
 
-    self.fmt_name = fun_fmt_name_get(self.classvar, self.namevar, self.modvar, sep)
+    self.fmt_name = fun_fmt_name_get(self.classvar, self.namevar, self.modvar, self.module, sep)
 
     -- TODO: filter self here if sep == ":"
 
-    self.class = nil
     self.fields = nil
     self.parent = nil
 end
@@ -1445,9 +1450,6 @@ local function finalize_class_find_classvar(self, line)
         self.namevar = classvar
     end
 end
--- TODO: The relevant use case we need to think through here is actually my config module, because
--- the underlying table classes are not exported, but do have function add-ons and need to be
--- documented.
 
 ---@param self docgen.ParserObj
 ---@param line string
@@ -1468,8 +1470,6 @@ local function finalize_fun_find(self, line)
 
     return false
 end
--- TODO: I need to double check if the holistic module has code to verify that any class
--- functions have an associated class or match the modvar
 
 --- @param line string
 function M:finalize(line)
@@ -1509,7 +1509,5 @@ function M:finalize(line)
         return
     end
 end
--- TODO: There's a bunch of stuff in gen_vimdoc around handling different declaration forms that
--- might be relevant to inline class declarations
 
 return M

@@ -337,7 +337,6 @@ function M.luacats_md_to_vimdoc(str)
 
     return M.md_tree_to_vimdoc(root, str)
 end
--- TODO: Any usage of indenting needs to be removed from this module.
 -- TODO: Returning "" on a bad root is fine for the moment, but since this makes it impossible to
 -- parse a lot of different types of text, might be better as an error.
 -- LOW: Pre-allocate lines. Problem: I'm not sure how to get a reasonable pre-allocation without

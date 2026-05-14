@@ -71,6 +71,26 @@ function M.list_map(t, f)
     end
 end
 
+---`start` and `fin` are handled as passed in without clamping.
+---@generic T
+---@param t T[] Modified in place
+---@param start integer
+---@param fin integer
+function M.list_slice(t, start, fin)
+    local len_t = #t
+    if start > 1 then
+        local j = 1
+        for i = start, fin do
+            t[j] = t[i]
+            j = j + 1
+        end
+    end
+
+    for i = fin + 1, len_t do
+        t[i] = nil
+    end
+end
+
 -- Port of Neovim core logic since their table module is private
 local has_new, table_new = pcall(require, "table.new")
 if not has_new then

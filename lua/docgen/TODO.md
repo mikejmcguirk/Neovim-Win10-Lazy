@@ -2,27 +2,28 @@
 
 #### TODO:
 
+- [ ] file/module behavior
+  - [ ] Ideal
+    - [ ] Taking all the files together, work out the root dirs among them, so:
+      - foo/init.lua
+      - foo/bar/buzz.lua
+      - bazz/init.lua
+      - In the above case, the roots could be foo and bazz
+      - And you would do the order of the documents based on the input order of the deepest root
+    - [ ] Problem: How do you handle a duplicate such as foo/bar.lua and foo/bar/init.lua? Given that the goal is for init to resolve to the root?
+    - One idea that would make sense would be to take the inputs, sort, and see how many levels down you can go before you lose commonality. This would create awkward results, but would be consistent and logical.
+    - Weird though because then you have to have all docs in the /lua folder, which might be fine though. It would be good to push against documenting from `/plugin`
+
 - [ ] Add a list of tags to the parser objects based on collected @tag annotations and generated tags. Store in generated order.
   - [ ] Do you have an option for only generate tag if no @tag is present? Do you control this with annotations? Something like `@notag` or `@noautotag?`
-
-- [ ] Refactor loops to use `goto continue`
-
-- [ ] Typing
-  - [ ] Using aliases as enums wherever possible
-  - [ ] Tie those aliases to the LuaCATs grammar
-    - [ ] Can aliases extend aliases? I guess by adding them as an or condition
-  - [ ] Use enums to replace functions like "is_class/is_fun" with "get_kind"
-
-- [ ] Possible typing solution - Lazy initialization at get.
 
 - [ ] Add code to ignore stylua tags
   - I think the core's docgen does this. If not, I have to imagine that some other one out there does. Or I can just look it up
 
 - [ ] Executive decision: Parsing rules need to match what Lua_Ls does
-  - [ ] No after desc for class desc or operators
-  - [ ] Fields are probably the same
+  - [ ] DOC: No after desc for class desc or operators
+  - [ ] DOC: Fields are probably the same
   - [ ] Same for aliases
-  - [ ] Document this behavior
   - [ ] Make a maybe/future note that if emmylua_ls supports this a change can be made
 
 - [ ] buzz issues:
@@ -285,9 +286,8 @@
 
 #### MAYBE:
 
-- Have code for a "committed" state in the parser obj that restricts certain types of writes
-  * This would add complexity surface area
-  * I'm unsure of the practical benefit since the program is fairly on rails
+- Support more patterns for matching text to functions or classes. Depends on use case.
+
 - Support the `@note` annotation
   * Motivation: It would not be that hard and it can be convenient
   * Problems: The annotation is not supported by Lua_Ls, and any reduction in complexity surface area is worthwhile. It also feels like a "catch-all" way of organizing things.

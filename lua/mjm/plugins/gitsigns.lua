@@ -75,9 +75,8 @@ return {
                     gitsigns.reset_hunk({ vim.fn.line("."), vim.fn.line("v") })
                 end, buf_opt)
 
-                -- NON: The ns_clear for this is hidden behind an autocmd. I think you could
-                -- hack your way into clearing the ns and autocmd on pressing <leader>hi again,
-                -- but would be contrived.
+                -- NON: Unsure of how to build a toggle for this in a non-contrived way because
+                -- the ns_clear for this is hidden behind an autocmd.
                 set("n", "<leader>hi", gitsigns.preview_hunk_inline, buf_opt)
                 set("n", "<leader>hb", gitsigns.toggle_current_line_blame, buf_opt)
                 -- Changed from default tw
