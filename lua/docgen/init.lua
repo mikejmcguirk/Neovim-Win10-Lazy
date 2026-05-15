@@ -153,6 +153,7 @@ end
 ---@param level integer?
 ---@param log_path string?
 local function validate_target_inputs(inputs, output, level, log_path)
+    -- TODO: Also validate elements
     if type(inputs) ~= "table" or #inputs == 0 then
         print("No source files provided")
         os.exit(1)

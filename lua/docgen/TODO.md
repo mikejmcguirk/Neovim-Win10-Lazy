@@ -65,6 +65,9 @@
 
 - [ ] The parser_obj's functions should mostly be private
 
+- [ ] Seriously considering not using the mod tag. The rough ideas I have in my head mean that you would just make different files for everything.
+
+- [ ] Plan rough idea: Mostly do this based on file generation. So you'd have big files for "keymaps", "cmds", and so on, and you'd use them to export files with LuaCats and stitch them into the `/plugin` file. This kind of makes sense anyway since `/plugin` should not contain serious business logic. Based on the filename > tag resolution, you would so something like create `lua/keymaps/init.lua` to make the tag show up as `*plugin-keymaps`
 - [ ] Create actual docgen strategic plan
   - Motivation:
     * The LuaCATs > Vimdoc script needs to handle module building/tag construction/file stitching in line with a broader strategy
@@ -169,6 +172,13 @@
 
 - [ ] I want to be able to, after parsing, be able to traverse the created objects and create/render the TOC before rendering. The data should be available to do this
   - This also implies that a lot of info like helptags should be ready to go before rendering, which might impact a lot of the stuff below
+
+- [ ] For toc:
+  - As you make sections, collect the header tags in order, then do a list of:
+    * Section_Name.......|section-name|
+  - Numbering or fancy bullet formatting IMO are optional.
+  - Doesn't have to have dots separating the TODO text. Might be a bit noisy
+  - It would be helpful if you could just re-use the header formatting code
 
 - [ ] Conceptually, when are modules auto-created?
   - A file's docs need to start with a module
@@ -285,6 +295,12 @@
   + Problems: Harder to write/use
 
 #### MAYBE:
+
+* Support custom helptag prefix generation
+  + Motivation: The current method introduces a stringent constraint on how projects can be structured. It also does not support str/lines inputs. This is not helpful if I want to generate stuff like keymap docs without creating an intermediary file.
+
+- Support string or lines inputs
+  * Blocker: Introduces a lot of different assumptions you have to resolve on input intake.
 
 - Support more patterns for matching text to functions or classes. Depends on use case.
 

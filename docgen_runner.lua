@@ -2,6 +2,6 @@
 
 local sources = { "lua/docgen/test_file.lua" }
 local output = "lua/docgen/test_file.txt"
-local level = 1
+local level = 0
 
 require("docgen").generate(sources, output, level)
