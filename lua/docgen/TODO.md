@@ -2,17 +2,27 @@
 
 #### TODO:
 
-- [ ] file/module behavior
-  - [ ] Ideal
-    - [ ] Taking all the files together, work out the root dirs among them, so:
-      - foo/init.lua
-      - foo/bar/buzz.lua
-      - bazz/init.lua
-      - In the above case, the roots could be foo and bazz
-      - And you would do the order of the documents based on the input order of the deepest root
-    - [ ] Problem: How do you handle a duplicate such as foo/bar.lua and foo/bar/init.lua? Given that the goal is for init to resolve to the root?
-    - One idea that would make sense would be to take the inputs, sort, and see how many levels down you can go before you lose commonality. This would create awkward results, but would be consistent and logical.
-    - Weird though because then you have to have all docs in the /lua folder, which might be fine though. It would be good to push against documenting from `/plugin`
+- [ ] Tag combination and injection
+  - Possible tags:
+    - `{help-prefix}-{modvar}.{namevar}()` module function
+      * The init module case should already have the tags rendered out properly
+    - `{help-prefix}-{classname}` class definition
+    - `{help-prefix}-{classname}[:.]{namevar}()` class function
+  - [ ] Data issues:
+    - [ ] Since we need to wait for the class name to define a class function, we need to hold onto the member sep
+  - Circumstances to build tags + info
+    - Initial function creation
+      - This is good to go if it's a module function
+      - If not, you have to construct an initial name from `classvar[:.]namevar` to uniquely identify during the holistic step. Then it needs to be replaced during the holistic step
+    - {include tag injections here}
+  - Ideas
+    - Don't greedily make fmt name?
+      * Doesn't work because of function holistic identification
+
+- [ ] Tag space replacement with underscores?
+
+- [ ] I guess we just switch metatables for render_obj. The parser obj is too big and its concerns too co-mingled. If I step away from it for a couple days I can't remember what anything in it does.
+  - [ ] inline doc will go in the rendering stage. You can output "render_obj" from the holistic step for clarity.
 
 - [ ] Add a list of tags to the parser objects based on collected @tag annotations and generated tags. Store in generated order.
   - [ ] Do you have an option for only generate tag if no @tag is present? Do you control this with annotations? Something like `@notag` or `@noautotag?`

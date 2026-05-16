@@ -29,14 +29,14 @@ local table_new = util.table_new
 ---@field package classvar? string
 ---@field package cur_doc_item? docgen.LastDocItem
 ---@field package desc? string
----@field package doc_desc? string
+---@field package doc_flag_desc? string
 ---@field package doc_flag? docgen.Visibility
 ---@field package doc_lines? string[] Uncommitted doc lines
 ---@field package fields? docgen.DocItem[]
 ---@field package finalized? boolean
 ---@field package fmt_name? string
 ---@field package kind? docgen.Kind
----@field package module? string
+---@field package header_tag? string
 ---@field package modvar? string
 ---@field package name? string
 ---@field package namevar? string
@@ -60,12 +60,12 @@ function M.__index(self, key)
 end
 
 ---@param modvar string
----@param module string
+---@param header_tag string
 ---@return docgen.ParserObj
-function M.new(modvar, module)
+function M.new(modvar, header_tag)
     local obj = setmetatable(table_new(0, 8), M)
     rawset(obj, "modvar", modvar)
-    rawset(obj, "module", module)
+    rawset(obj, "header_tag", header_tag)
 
     return obj
 end
@@ -145,22 +145,24 @@ local function item_move_opt(item)
     end
 end
 
----@param desc string
+---@param str string
+---@param to_inject string
 ---@return string
-local function desc_inject_help_prefix(desc)
-    local init, _ = string.find(desc, "|%S+|")
+local function inject_into_tag(str, to_inject)
+    local init, _ = string.find(str, "|%S+|")
     if not init then
-        return desc
+        return str
     end
 
-    local prefix = lua_pattern_get_escaped(Nvim_Tools_Docgen_Help_Prefix)
-    if string.find(desc, "|" .. prefix .. ".%S+|", init) ~= nil then
-        return desc
+    local to_inject_esc = lua_pattern_get_escaped(to_inject)
+    if string.find(str, "|" .. to_inject_esc .. ".%S+|", init) ~= nil then
+        return str
     end
 
-    desc = string.gsub(desc, "|(%S+)|", "|" .. prefix .. ".%1|")
-    return desc
+    str = string.gsub(str, "|(%S+)|", "|" .. to_inject_esc .. ".%1|")
+    return str
 end
+-- TODO: This should use the module/header tag
 
 ---@param typ string
 ---@return string
@@ -663,7 +665,7 @@ function M:class_set(parsed)
 
     self.kind = kind
     self.name = parsed.name
-    self.fmt_name = parsed.name
+    self.fmt_name = Nvim_Tools_Docgen_Help_Prefix .. "-" .. parsed.name
     self.class = parsed.name
     self.parent = parsed.parent
 
@@ -782,18 +784,22 @@ function M:doc_flag_get()
 end
 
 ---@return string?
-function M:fmt_doc_desc_get()
+function M:dog_flag_desc_get()
     local ret = {}
     if self.doc_flag == "deprecated" then
         ret[#ret + 1] = "DEPRECATED:"
     end
 
-    local doc_desc = self.doc_desc
+    local doc_desc = self.doc_flag_desc
     if not doc_desc then
-        return table.concat(ret, " ")
+        return table.concat(ret)
     end
 
-    ret[#ret + 1] = md_to_vimdoc(desc_inject_help_prefix(doc_desc))
+    -- TODO: this is not correct because, if it's a class or class function, we need to use the
+    -- prefix. If it's a module function, we need the full header tag. The call stack up from
+    -- here does not properly handle this
+    -- You could pass this as a param but header_tag lives in the module so feels wrong.
+    ret[#ret + 1] = md_to_vimdoc(inject_into_tag(doc_desc, Nvim_Tools_Docgen_Help_Prefix))
     return table.concat(ret, " ")
 end
 -- DOC: Document the auto-replacement behavior exactly.
@@ -807,7 +813,7 @@ function M:deprecated_set(parsed)
     end
 
     self.doc_flag = "deprecated"
-    self.doc_desc = parsed.desc
+    self.doc_flag_desc = parsed.desc
 end
 -- MID: Support this in briefs. Could be used for module or section level deprecation.
 -- MAYBE: Use doc lines above for desc.
@@ -989,20 +995,14 @@ function M:class_fun_set_from_class(class)
     self.class = class:class_get()
     self.parent = class:parent_get()
 
+    if self.classvar ~= self.modvar then
+        -- TODO: Might need to save the separator info so this can be re-build properly
+        -- TODO: try to re-outline this.
+        self.fmt_name = Nvim_Tools_Docgen_Help_Prefix .. "-" .. self.class .. ":" .. self.namevar
+    end
+
     local class_fmt_name = class:fmt_name_get() --[[@as string]]
     self:see_add({ desc = help_tag_from_name(class_fmt_name, "|") })
-end
-
----@param classvar string
----@param namevar string
----@param modvar string
----@param module string
----@param sep "."|":"
-local function fun_fmt_name_get(classvar, namevar, modvar, module, sep)
-    local modclass = classvar == modvar
-    local sep_res = modclass and "." or sep
-    local mod = modclass and module or classvar
-    return mod .. sep_res .. namevar
 end
 
 ---@param name string
@@ -1014,13 +1014,23 @@ function M:fun_set_from_name(name, classvar, sep)
     self.kind = "fun"
     self.namevar = name
     self.classvar = classvar
+    -- TODO: This is required to make functions generate but I'm unsure why.
     if classvar == self.modvar then
         self.class = ""
     else
         self.class = nil
     end
 
-    self.fmt_name = fun_fmt_name_get(self.classvar, self.namevar, self.modvar, self.module, sep)
+    local modclass = self.classvar == self.modvar
+    if modclass then
+        self.fmt_name = self.header_tag .. "." .. self.namevar
+    else
+        self.fmt_name = Nvim_Tools_Docgen_Help_Prefix
+            .. "-"
+            .. self.classvar
+            .. sep
+            .. self.namevar
+    end
 
     -- TODO: filter self here if sep == ":"
 
@@ -1128,7 +1138,7 @@ function M:params_count()
 end
 
 ---@return integer
-function M:param_fmt_name_max_width()
+function M:param_fmt_names_max_width()
     if self:params_count() == 0 then
         return 0
     end
@@ -1176,7 +1186,7 @@ function M:params_fmt_map(f)
         return
     end
 
-    return args_fmt_map(self, self:param_fmt_name_max_width(), M.params_iter, f)
+    return args_fmt_map(self, self:param_fmt_names_max_width(), M.params_iter, f)
 end
 
 -------------------
@@ -1350,7 +1360,9 @@ function M:see_fmt_get()
 
     local ret = {}
     self:see_iter(function(see)
-        ret[#ret + 1] = "• " .. md_to_vimdoc(desc_inject_help_prefix(see))
+        -- TODO: Depending on what we're trying to see, we would want to inject either the prefix
+        -- or the whole header tag. Unsure how we determine this.
+        ret[#ret + 1] = "• " .. md_to_vimdoc(inject_into_tag(see, Nvim_Tools_Docgen_Help_Prefix))
     end)
 
     return table.concat(ret, "\n")

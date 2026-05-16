@@ -5,7 +5,7 @@ if not jit then
 end
 
 local luacats_parser = require("docgen.luacats_parser")
-local parsed_from_file = luacats_parser.parsed_from_file
+local parsed_from_str = luacats_parser.parsed_from_str
 
 local holistic = require("docgen.holistic")
 local resolve_holistic = holistic.parsed_sources_resolve_holistic
@@ -168,43 +168,52 @@ end
 
 local M = {}
 
----@class docgen.Source
----@field [1] string Name
----@field [2] "file"|"lines"|"str" Type
----@field [3] string[] Lines to parse
----@field [4] string String to parse
-
 ---@class docgen.ParsedSource
 ---@field [1] string Formatted Source Name
 ---@field [2] docgen.ParserObj[] Objs
 
 ---Main generator function
----@param sources string[] Input filepaths
+---@param paths string[] Input filepaths
 ---@param output string? Output file
 ---@param level integer? Log level
 ---- 0 Standard output only
 ---- 1 Standard messages
 ---- 2 Debug messages
 ---@param log_path string? Log path
-function M.generate(sources, output, level, log_path)
-    validate_target_inputs(sources, output, level, log_path)
+function M.generate(paths, output, level, log_path)
+    validate_target_inputs(paths, output, level, log_path)
+    for i, path in ipairs(paths) do
+        paths[i] = fs.normalize(vim.call("fnamemodify", path, ":p"))
+    end
 
     -- TODO: Outline this business
     setup_log(level, log_path)
-    -- TODO: It should be possible to parse strings or line collections as well
-    validate_input_files(sources)
     local output_path = resolve_output_path(output, DEFAULT_OUTPUT_FILE)
 
-    -- TODO: This is about where this should be determined.
-    -- TODO: This needs to be validated to be a string with at least one character and
-    -- valid helptag text.
-    -- TODO: Bring in the spec's helptag syntax for evaluation. Needed here because we are basing
-    -- on external info.
-    _G.Nvim_Tools_Docgen_Help_Prefix = "demo-help"
+    -- TODO: Can't do file.lua because local file would just shadow a built-in
+    local file_mod = require("docgen.file")
+    -- TODO: Because fs_read_list can't guarantee order, need to return as
+    -- table<string, result> where string is the path, and then result would exclude that
+    local ok, timed_out, results = file_mod.fs_read_list(paths)
+    if not (ok and results) then
+        if timed_out then
+            error("Time out while reading file data")
+        else
+            error(file_mod.fs_read_list_get_errs(results))
+        end
+    end
+
+    local prefix, header_tags = file_mod.header_tags_from_paths(paths)
+
+    -- TODO: The helptags need to be filtered for spaces and tabs
+    -- TODO: Rather than be a global, this needs to be passed to the individual parser objs.
+    -- For the holistic segment, the individual classes and functions need to be able to
+    -- remember their own header tags for inline injection.
+    _G.Nvim_Tools_Docgen_Help_Prefix = prefix
 
     local parsed_sources = {} --- @type docgen.ParsedSource[]
-    for _, source in vim.spairs(sources) do
-        local parsed = parsed_from_file(source)
+    for i, path in vim.spairs(paths) do
+        local parsed = parsed_from_str(results[path][2], header_tags[i])
         parsed_sources[#parsed_sources + 1] = parsed
     end
 

@@ -565,14 +565,11 @@ end
 function M.bufname_to_bufnr(bufname)
     vim.validate("bufname", bufname, "string")
 
-    local full_bufname = fs.normalize(fn.fnamemodify(bufname, ":p"))
-    -- TODO: The fs_stat validation written for docgen/nvim-tools needs to be used here.
-    -- Right now, a missing file gets reported as an Unknown fs_stat error
-    local ok, err, err_name = uv.fs_access(full_bufname, 4)
+    local full_bufname = fs.normalize(vim.call("fnamemodify", bufname, ":p"))
+    local ntf = require("nvim-tools.fs")
+    local ok, err = ntf.fs_access_validation(full_bufname, uv.fs_access(full_bufname, 4))
     if not ok then
-        local err_str = err or "fs_access error"
-        local err_msg = (err_name or "Unknown") .. ": " .. err_str
-        return false, -1, err_msg, "ErrorMsg"
+        return false, -1, err, "ErrorMsg"
     end
 
     local bufnr = fn.bufadd(full_bufname)

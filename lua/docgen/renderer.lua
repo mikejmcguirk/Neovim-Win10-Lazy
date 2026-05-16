@@ -143,7 +143,7 @@ local function post_header_get(obj)
 
     local ret = {}
     if deprecated then
-        ret[#ret + 1] = INDENT_STR .. obj:fmt_doc_desc_get()
+        ret[#ret + 1] = INDENT_STR .. obj:dog_flag_desc_get()
     end
 
     if parent then

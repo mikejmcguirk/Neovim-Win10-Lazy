@@ -60,8 +60,8 @@ end)
 -- TABS --
 ----------
 
-set("n", "[t", "gt")
-set("n", "]t", "gT")
+set("n", "[t", "gT")
+set("n", "]t", "gt")
 set("n", "<tab>", function()
     local create_temp_buf = require("nvim-tools.buf").create_temp_buf
     local temp_buf = create_temp_buf("wipe", true, "nofile", "", true)

@@ -42,6 +42,17 @@ end
 M.nonnil = vim.nonnil or vim.F.if_nil
 -- DEPRECATE: Nvim 0.15 released
 
+---@param timer uv.uv_timer_t|nil
+function M.stop_timer(timer)
+    if timer and not timer:is_closing() then
+        timer:stop()
+        timer:close()
+        timer = nil
+    end
+
+    return nil
+end
+
 ---@param x integer
 ---@param y integer
 ---@param min integer

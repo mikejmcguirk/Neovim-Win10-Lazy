@@ -41,36 +41,17 @@ end
 -- the setmetatable line if found. Since we can only have one return, wouldn't we search for
 -- return M (common case) first, then use setmetatable as a fallback?
 
----@param fname string
----@return string, any
-local function module_from_fname(fname)
-    local module = fname:match(".*/lua/([a-z_][a-z0-9_/]+)%.lua") or fname
-    local basename = fs.basename(module)
-    local root = fn.fnamemodify(basename, ":r")
-    return string.gsub(root, "/", ".")
-end
--- TODO: The filenames need to be relative to some root dir. so like root/init.lua would give
--- you the modulename root. Of probably even just nothing and let the help prefix be the
--- root dir. Which seems like basically the most elegant way to do it.  Then you would have
--- root/foo.lua would be foo.fun() and so on. And if you had root/bar/init.lua you would have
--- bar.fun() and root/bar/buzz/lua would be bar.buzz(). Does this allow duplicates though?
--- root/bar.lua
--- root/bar/init.lua
--- I guess you would pre-parse all the roots so you know what's coming.
-
 local M = {}
 
 ---@param lines string[]
----@param source string
+---@param header_tag string
 ---@return docgen.ParsedSource
-function M.parsed_from_lines(lines, source)
+function M.parsed_from_lines(lines, header_tag)
     local obj_list = {} ---@type docgen.ParserObj[]
 
     local modvar = find_modvar(lines) or ""
-    -- TODO: This needs to produce a more aesthetic result, but will defer until I know the
-    -- pipeline it comes down from.
-    local module = module_from_fname(source)
-    local obj = parser_obj.new(modvar, module)
+    -- TODO: Does using the header-tag as the module just work?
+    local obj = parser_obj.new(modvar, header_tag)
 
     for _, line in ipairs(lines) do
         local is_doc_line = string.find(line, "^%-%-%-")
@@ -87,34 +68,24 @@ function M.parsed_from_lines(lines, source)
         else
             obj:finalize(line)
             commit_obj_if_valid(obj, obj_list)
-            obj = parser_obj.new(modvar, module)
+            obj = parser_obj.new(modvar, header_tag)
         end
     end
 
     obj:finalize("")
     commit_obj_if_valid(obj, obj_list)
 
-    return { source, obj_list }
+    return { header_tag, obj_list }
 end
 -- TODO: For the top module name, if the file is init.lua, it should be the name of the file's
 -- directory. (Assuming we keep this convention)
 
 ---@param str string
----@param source string
+---@param header_tag string
 ---@return docgen.ParsedSource
-function M.parsed_from_str(str, source)
+function M.parsed_from_str(str, header_tag)
     local lines = vim.split(str, "\n")
-    return M.parsed_from_lines(lines, source)
-end
-
---- @param source string
----@return docgen.ParsedSource
-function M.parsed_from_file(source)
-    local f = assert(io.open(source, "r"))
-    local txt = f:read("*all")
-    f:close()
-
-    return M.parsed_from_str(txt, source)
+    return M.parsed_from_lines(lines, header_tag)
 end
 
 return M

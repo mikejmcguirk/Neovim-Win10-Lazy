@@ -262,10 +262,11 @@ function M.help_tag_from_name(name, surround)
     local ret = {}
 
     ret[#ret + 1] = surround
-    if not vim.startswith(Nvim_Tools_Docgen_Help_Prefix, name) then
-        ret[#ret + 1] = Nvim_Tools_Docgen_Help_Prefix
-        ret[#ret + 1] = "."
-    end
+    -- TODO: Probably get rid of this piece
+    -- if not vim.startswith(Nvim_Tools_Docgen_Help_Prefix, name) then
+    --     ret[#ret + 1] = Nvim_Tools_Docgen_Help_Prefix
+    --     ret[#ret + 1] = "."
+    -- end
 
     ret[#ret + 1] = name
     ret[#ret + 1] = surround
