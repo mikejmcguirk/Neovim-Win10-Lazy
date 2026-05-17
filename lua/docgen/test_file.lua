@@ -23,13 +23,13 @@ end
 ---@inlinedoc
 ---This is a class description.
 ---@class test.Foo Lua_Ls does not show this.
----(default: `0`)
----This is a bar
----@field bar integer
 ---(default: `foo`)
 ---This is a bazz
 ---@field bazz string
----Welp
+---(default: `0`)
+---This is a bar
+---@field bar integer
+---Welp.
 ---(default: `{ 1, 2, 3, 4, 5 }`) Some nonsense.
 ---This is a buzz
 ---@field buzz integer[]

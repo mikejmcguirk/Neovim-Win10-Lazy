@@ -62,9 +62,6 @@
   - I would think/hope that you can just put the classes in a master object list and hold the name ref for inlinedoc only and be done with it
 
 - [ ] Handle core updates:
-  - [ ] Sorted class fields: https://github.com/neovim/neovim/commit/033efbbd32fad882da67c0a1f658d1c12a8d515e
-    - https://github.com/neovim/neovim/pull/39427
-  - [ ] Nested inlinedoc fix: https://github.com/neovim/neovim/commit/825bfba789d924ab2f33b3e87814750863ff4f02
   - [ ] https://github.com/neovim/neovim/commit/7ed5609439ba83d75e972beb859245d998df09ea - Does this affect if a trailing newline needs to be added at the end of the str when parsing LuaCATs to MD?
   - [ ] https://github.com/neovim/neovim/commit/d7ef55e8817627af0f25dc2bb9ed9927d0049d6a - Additional generics handling
     - Might not be relevant for now though since this is for emmylua. If not, throw into FUTURE because I get the impression the long term push is to migrate there
@@ -272,7 +269,14 @@
 
 #### MID:
 
-- [ ] More robust arg parsing
+- [ ] Refactor inlinedoc:
+  - [ ] Detect inlinedoc during the holistic as is currently done.
+  - [ ] On detection, make necessary fixups/replacements like editing the type and creating the new desc
+  - [ ] `item.desc` should be replaced with a table containing the inline doc info
+  - [ ] The table should then be parsed/formatted during rendering, rather than relying on duplicated logic
+
+- [ ] It should be possible to pass a custom function to convert the filenames into header tags.
+
 - [ ] Add optional debug timers
 
 - [ ] For `class (exact)`, exact comes in as an access specifier. Store the specifier and display it as an attribute.
@@ -297,6 +301,10 @@
   - Dummy example: You put a class annotation in a brief, and it expands the inlinedoc.
 
 - [ ] It might be faster to, at the start of a doc block, do a minimal iteration to the first non-annotation line to see if it invalidates the block.
+
+- [ ] Support recursive inlinedoc like the core's docgen
+  - [ ] DEP: I would not want to attempt this without first converting inline doc processing into a more data-based model, rather than ad-hoc text-injection.
+  - [ ] Blocker: How do you prevent infinite recursion?
 
 #### FUTURE:
 

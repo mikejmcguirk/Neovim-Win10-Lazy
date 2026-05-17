@@ -41,6 +41,10 @@ end
 -- the setmetatable line if found. Since we can only have one return, wouldn't we search for
 -- return M (common case) first, then use setmetatable as a fallback?
 
+---@class docgen.ParsedSource
+---@field [1] string Formatted Source Name
+---@field [2] docgen.ParserObj[] Objs
+
 local M = {}
 
 ---@param lines string[]

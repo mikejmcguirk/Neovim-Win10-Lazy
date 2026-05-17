@@ -131,6 +131,19 @@ end
 -- MARK: Text Functions --
 --------------------------
 
+---If no width formatting is needed, call with width = 0.
+---@param str string
+---@param width integer
+---@return string name
+function M.add_cbraces(str, width)
+    -- TODO: This should not be here. The parser_obj needs to handle this data correction.
+    local name, opt = str:match("^([^?]*)(%??)$")
+    local raw_width = #name + #opt
+    local remain = math.max(width - raw_width - 2, 0)
+
+    return "{" .. name .. "}" .. opt .. string.rep(" ", remain)
+end
+
 ---@param text string
 ---@return string
 function M.adj_newlines(text)
@@ -150,24 +163,6 @@ end
 -- list, single newlines are always wrapped. Double+ newlines are always treated as a double
 -- newline.
 
----@param str string?
----@return boolean
-function M.str_has_content(str)
-    return str ~= nil and string.match(str, "^%s*$") == nil
-end
-
----If no width formatting is needed, call with width = 0.
----@param str string
----@param width integer
----@return string name
-function M.cbraces_add(str, width)
-    local name, opt = str:match("^([^?]*)(%??)$")
-    local raw_width = #name + #opt
-    local remain = math.max(width - raw_width - 2, 0)
-
-    return "{" .. name .. "}" .. opt .. string.rep(" ", remain)
-end
-
 ---@param target string?
 ---@param str string
 ---@param trim_leading_nl? boolean If unable to append, trim all leading newlines.
@@ -184,18 +179,34 @@ function M.checked_str_append(target, str, trim_leading_nl)
     local nl_trim, _ = string.gsub(str, "^\n+", "")
     return nl_trim
 end
--- TODO: This should take as args:
--- - left (string?)
--- - sep (string)
--- - right (string)
--- On failure, return right
--- Update usages here, update return_append to use this, update the nvim-tools version.
+-- TODO: Remove this from here and nvim-tools. It's too much voodoo/perf loss for what it does.
+
+---@param name string
+---@param surround? "*"|"|"|""
+---@return string
+function M.help_tag_from_name(name, surround)
+    surround = surround or ""
+    local ret = {}
+
+    ret[#ret + 1] = surround
+    -- TODO: Probably get rid of this piece
+    -- if not vim.startswith(Nvim_Tools_Docgen_Help_Prefix, name) then
+    --     ret[#ret + 1] = Nvim_Tools_Docgen_Help_Prefix
+    --     ret[#ret + 1] = "."
+    -- end
+
+    ret[#ret + 1] = name
+    ret[#ret + 1] = surround
+
+    return table.concat(ret)
+end
 
 ---@param str string
 ---@return string, integer
 function M.lua_pattern_escape(str)
     return string.gsub(str, "([%^%$%(%)%.%[%]%*%+%-%?])", "%%%1")
 end
+-- TODO: Add to nvim tools
 
 --- @param lines string[]
 --- @param srow integer 0-indexed
@@ -228,17 +239,6 @@ function M.slice_lines(lines, srow, scol, erow, ecol)
     return table.concat(ret, "\n")
 end
 
---- @param txt string
---- @param srow integer
---- @param scol integer
---- @param erow? integer
---- @param ecol? integer
---- @return string
-function M.slice_text(txt, srow, scol, erow, ecol)
-    local lines = vim.split(txt, "\n")
-    return M.slice_lines(lines, srow, scol, erow, ecol)
-end
-
 ---@param str string
 ---@param byte integer
 ---@return boolean
@@ -254,24 +254,22 @@ function M.endswith_byte(str, byte)
     return len_str > 0 and string.byte(len_str, 1) == byte
 end
 
----@param name string
----@param surround? "*"|"|"|""
----@return string
-function M.help_tag_from_name(name, surround)
-    surround = surround or ""
-    local ret = {}
+---@param str string?
+---@return boolean
+function M.str_has_content(str)
+    return str ~= nil and string.match(str, "^%s*$") == nil
+end
+-- TODO: Find the pattern for [not a whitespace] because that early terminates faster
+-- TODO: Add this updated version to nvim-tools
 
-    ret[#ret + 1] = surround
-    -- TODO: Probably get rid of this piece
-    -- if not vim.startswith(Nvim_Tools_Docgen_Help_Prefix, name) then
-    --     ret[#ret + 1] = Nvim_Tools_Docgen_Help_Prefix
-    --     ret[#ret + 1] = "."
-    -- end
+---@param typ string
+---@param default? string
+function M.type_fmt_get_with_default(typ, default)
+    if not default then
+        return "(`" .. typ .. "`)"
+    end
 
-    ret[#ret + 1] = name
-    ret[#ret + 1] = surround
-
-    return table.concat(ret)
+    return string.format("(`%s`, default: %s)", typ, default)
 end
 
 ---NOTE: Does not add a final newline

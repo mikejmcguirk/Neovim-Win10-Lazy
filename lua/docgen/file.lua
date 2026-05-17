@@ -1,4 +1,3 @@
-local fn = vim.fn
 local uv = vim.uv
 
 local util = require("docgen.util")
@@ -65,6 +64,7 @@ local function read_file_async(path, callback)
                 return
             end
 
+            ---@diagnostic disable-next-line: need-check-nil Checked in validation.
             uv.fs_read(fd, stat.size, 0, function(read_err, content)
                 uv.fs_close(fd, function() end)
                 callback(read_err, content)
@@ -257,7 +257,7 @@ local function prefix_and_tags_from_paths(split_paths, prefix_idx)
         local fname = path[path_len]
         if fname ~= "init.lua" then
             tag_parts[#tag_parts + 1] = "."
-            tag_parts[#tag_parts + 1] = fn.fnamemodify(fname, ":r")
+            tag_parts[#tag_parts + 1] = vim.call("fnamemodify", fname, ":r")
         end
 
         header_tags[#header_tags + 1] = table.concat(tag_parts)

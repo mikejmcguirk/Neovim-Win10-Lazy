@@ -109,24 +109,6 @@ end
 -- MID: Could the check for a valid output file be more robust?
 -- MID: More detailed error reporting.
 
----@param paths string[]
-local function validate_input_files(paths)
-    for _, path in ipairs(paths) do
-        local stat, err = uv.fs_stat(path)
-        if not stat then
-            local fmt_str = "input file %s: %s"
-            local msg = string.format(fmt_str, path, err or "does not exist")
-            log_error(msg)
-            error(msg)
-        elseif stat.type ~= "file" then
-            local fmt_str = "input %s exists but is not a regular file (type: %s)"
-            local msg = string.format(fmt_str, path, stat.type)
-            log_error(msg)
-            error(msg)
-        end
-    end
-end
-
 ---@param level? integer
 ---@param path? string
 local function setup_log(level, path)
@@ -167,10 +149,6 @@ local function validate_target_inputs(inputs, output, level, log_path)
 end
 
 local M = {}
-
----@class docgen.ParsedSource
----@field [1] string Formatted Source Name
----@field [2] docgen.ParserObj[] Objs
 
 ---Main generator function
 ---@param paths string[] Input filepaths

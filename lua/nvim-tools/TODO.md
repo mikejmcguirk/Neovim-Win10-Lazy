@@ -298,6 +298,10 @@
 
 - [ ] You could be able to do conversion loops between different pos types and get the same result you started with
 
+### TODO:
+
+- https://github.com/neovim/neovim/commit/6f5ba9ebf688c8d03bcce85f8b58a24719c3d2d4 - Is this relevant for our position calculation?
+
 #### MAYBE:
 
 - Add leq and geq functions, since getting to them through negation could be confusing

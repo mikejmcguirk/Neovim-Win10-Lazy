@@ -19,13 +19,13 @@ local function create_maps(parsed_sources)
             if kind == "fun" then
                 -- Need to use fmt_name because function namevars do not have to be globally
                 -- unique.
-                local fmt_name = obj:fmt_name_get() --[[@as string]]
+                local fmt_name = obj:tag_get() --[[@as string]]
                 if not funs[fmt_name] then
                     funs[fmt_name] = obj
                 else
                     error("Duplicate fun " .. fmt_name .. " from source " .. source[1])
                 end
-                funs[obj:fmt_name_get()] = obj
+                funs[obj:tag_get()] = obj
             elseif kind == "class" then
                 -- Globally unique LuaCATs class name
                 local name = obj:name_get() --[[@as string]]
@@ -116,7 +116,7 @@ local function parsed_sources_filter_invalid(parsed_sources, classes, funs)
             if not holistically_valid then
                 local kind = obj:kind_get()
                 if kind == "fun" then
-                    local fmt_name = obj:fmt_name_get() --[[@as string]]
+                    local fmt_name = obj:tag_get() --[[@as string]]
                     funs[fmt_name] = nil
                 elseif kind == "class" then
                     local name = obj:name_get() --[[@as string]]

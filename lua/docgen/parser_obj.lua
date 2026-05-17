@@ -2,15 +2,15 @@ local ts_parsing = require("docgen.ts_parsing")
 local md_to_vimdoc = ts_parsing.luacats_md_to_vimdoc
 
 local util = require("docgen.util")
-local cbraces_add = util.cbraces_add
+local cbraces_add = util.add_cbraces
 local checked_append = util.checked_str_append
 local endswith_byte = util.endswith_byte
-local lua_pattern_get_escaped = util.lua_pattern_escape
 local help_tag_from_name = util.help_tag_from_name
 local list_filter = util.list_filter
 local startswith_byte = util.startswith_byte
 local table_clear = util.table_clear
 local table_new = util.table_new
+local type_fmt_get_with_default = util.type_fmt_get_with_default
 
 --- @class docgen.DocItem : nvim.luacats.grammar.Result
 --- @field classvar? string
@@ -24,7 +24,7 @@ local table_new = util.table_new
 
 ---@class (exact) docgen.ParserObj
 ---@field package access? docgen.Access
----@field package async? boolean
+---@field package async_flg? boolean
 ---@field package class? string
 ---@field package classvar? string
 ---@field package cur_doc_item? docgen.LastDocItem
@@ -34,7 +34,7 @@ local table_new = util.table_new
 ---@field package doc_lines? string[] Uncommitted doc lines
 ---@field package fields? docgen.DocItem[]
 ---@field package finalized? boolean
----@field package fmt_name? string
+---@field package tag? string
 ---@field package kind? docgen.Kind
 ---@field package header_tag? string
 ---@field package modvar? string
@@ -45,6 +45,7 @@ local table_new = util.table_new
 ---@field package parent? string
 ---@field package returns? docgen.DocItem[]
 ---@field package see? string[]
+---@field package sep? string
 ---@field package type? docgen.DocItem
 ---
 ---@field __index fun(self:docgen.ParserObj, key:any): val:any
@@ -56,7 +57,7 @@ local M = {}
 ---@param key T
 ---@return any
 function M.__index(self, key)
-    return rawget(self, key) or rawget(M, key)
+    return rawget(M, key) or rawget(self, key)
 end
 
 ---@param modvar string
@@ -70,9 +71,168 @@ function M.new(modvar, header_tag)
     return obj
 end
 
------------------
--- MARK: Utils --
------------------
+---------------------
+-- MARK: Inlinedoc --
+---------------------
+
+---@param is_list boolean
+---@param parent string?
+---@return string
+local function inlinedoc_get_defaut_desc(is_list, parent)
+    if is_list then
+        return "A list of objects with the following fields:"
+    elseif parent then
+        return string.format("Extends |%s| with the additional fields:", parent)
+    else
+        return "A table with the following fields:"
+    end
+end
+
+---@param doc_item docgen.DocItem Modified in place
+---@param class docgen.ParserObj
+---@param is_list boolean
+local function inlinedoc_inject_into_desc(doc_item, class, is_list)
+    local new_doc_tbl = table_new(4, 0) ---@type string[]
+
+    local old_desc = doc_item.desc or ""
+    local class_desc = class.desc
+    if class_desc then
+        new_doc_tbl[1] = old_desc .. " " .. class_desc
+    elseif #old_desc == 0 then
+        local inline_desc = inlinedoc_get_defaut_desc(is_list, class.parent)
+        new_doc_tbl[1] = old_desc .. " " .. inline_desc
+    end
+
+    class:fields_sort(function(a, b)
+        return a.name < b.name
+    end)
+
+    local width = class:field_names_max_width() + 2
+    class:fields_iter(function(field)
+        local name = cbraces_add(field.name, width)
+        local typ = type_fmt_get_with_default(field.type, field.default)
+        -- Do now so later rendering has cleaner data to work with.
+        local desc = md_to_vimdoc(field.desc or "")
+        new_doc_tbl[#new_doc_tbl + 1] = table.concat({ "-", name, typ, desc }, " ")
+    end)
+
+    doc_item.desc = table.concat(new_doc_tbl, "\n")
+end
+
+---@param doc_item docgen.DocItem
+---@param class docgen.ParserObj
+local function desc_append_see_class_tag(doc_item, class)
+    local old_desc = doc_item.desc or ""
+    local len_desc = #old_desc
+
+    local tag = "|" .. class:tag_get() .. "|"
+    if len_desc == 0 then
+        doc_item.desc = "See " .. tag .. "."
+        return
+    end
+
+    if string.find(old_desc, tag) then
+        doc_item.desc = old_desc
+        return
+    end
+
+    local punctuation = endswith_byte(old_desc, 46) and " " or ". "
+    doc_item.desc = old_desc .. punctuation .. "See " .. tag .. "."
+end
+
+---Assumes that typ has already had nils and extra spaces cleaned up.
+---@param typ string
+---@return string base, boolean is_optional, boolean is_list
+local function parse_clean_class_type(typ)
+    if (not typ) or typ == "" then
+        return "", false, false
+    end
+
+    local list_count
+    typ, list_count = string.gsub(typ, "%[%]$", "")
+    local q_count
+    typ, q_count = string.gsub(typ, "%?", "")
+
+    return typ, q_count > 0, list_count > 0
+end
+-- LOW: It might be helpful to be able to do inlinedoc on union types. Doesn't inherently
+-- blend in well though.
+-- LOW: Cache these results.
+
+--- @param doc_item docgen.DocItem Modified in place
+--- @param classes table<string,docgen.ParserObj>
+--- @return docgen.ParserObj?, boolean, boolean
+local function type_find_class(doc_item, classes)
+    local typ = doc_item.type
+    if not typ then
+        return nil, false, false
+    end
+
+    local typ_clean, typ_isopt, typ_islist = parse_clean_class_type(typ)
+    local class = classes[typ_clean]
+    if (not class) or class.doc_flag == "nodoc" then
+        return nil, false, false
+    end
+
+    return class, typ_isopt, typ_islist
+end
+
+--- @param doc_item docgen.DocItem Modified in place
+--- @param class docgen.ParserObj
+--- @param typ_isopt boolean
+--- @param typ_islist boolean
+local function add_class_desc_to_doc_item(doc_item, class, typ_isopt, typ_islist)
+    if class.doc_flag ~= "inlinedoc" then
+        desc_append_see_class_tag(doc_item, class)
+        return
+    end
+
+    inlinedoc_inject_into_desc(doc_item, class, typ_islist)
+
+    local typ_tbl = { "table" }
+    if typ_islist then
+        typ_tbl[#typ_tbl + 1] = "[]"
+    end
+
+    if typ_isopt then
+        typ_tbl[#typ_tbl + 1] = "?"
+    end
+
+    doc_item.type = table.concat(typ_tbl)
+end
+
+--- @param classes table<string,docgen.ParserObj> All classes from all files.
+function M:inlinedoc_inject(classes)
+    if self.kind == "fun" then
+        self:params_iter(function(r)
+            local class, typ_isopt, typ_islist = type_find_class(r, classes)
+            if class then
+                add_class_desc_to_doc_item(r, class, typ_isopt, typ_islist)
+            end
+        end)
+
+        self:returns_iter(function(r)
+            local len_r = #r
+            for j = 1, len_r do
+                local class, typ_isopt, typ_islist = type_find_class(r[j], classes)
+                if class then
+                    add_class_desc_to_doc_item(r, class, typ_isopt, typ_islist)
+                end
+            end
+        end)
+    elseif self.kind == "class" then
+        self:fields_iter(function(f)
+            local class, typ_isopt, typ_islist = type_find_class(f, classes)
+            if class then
+                add_class_desc_to_doc_item(f, class, typ_isopt, typ_islist)
+            end
+        end)
+    end
+end
+
+-------------------------
+-- MARK: Utils (Local) --
+-------------------------
 
 ---@param item docgen.DocItem|nvim.luacats.grammar.Result
 local function assert_has_name(item)
@@ -85,21 +245,21 @@ end
 
 ---@param self docgen.ParserObj
 ---@param kind string
-local function assert_no_kind(self, kind)
-    if self.kind then
-        error("Cannot set " .. kind .. ". Kind is already " .. tostring(self.kind))
-    end
-end
--- MID: The output could be nicer/more specific depending on if you are trying to set a doc item
--- or the actual kind (like a param vs. setting class state).
-
----@param self docgen.ParserObj
----@param kind string
 local function assert_is_kind(self, kind)
     if self.kind ~= kind then
         error("Current obj is not " .. kind .. " ( " .. tostring(self.kind) .. ")")
     end
 end
+
+---@param self docgen.ParserObj
+---@param kind string
+local function assert_no_kind(self, kind)
+    if rawget(self, "kind") then
+        error("Cannot set " .. kind .. ". Kind is already " .. tostring(self.kind))
+    end
+end
+-- MID: The output could be nicer/more specific depending on if you are trying to set a doc item
+-- or the actual kind (like a param vs. setting class state).
 
 ---@param item docgen.ParserObj|docgen.DocItem
 ---@return boolean
@@ -144,25 +304,27 @@ local function item_move_opt(item)
         end
     end
 end
+-- TODO: This, type_fixup, and the default move should all be one function. Because they all
+-- modify type, they aren't really separate.
 
----@param str string
----@param to_inject string
----@return string
-local function inject_into_tag(str, to_inject)
-    local init, _ = string.find(str, "|%S+|")
-    if not init then
-        return str
-    end
-
-    local to_inject_esc = lua_pattern_get_escaped(to_inject)
-    if string.find(str, "|" .. to_inject_esc .. ".%S+|", init) ~= nil then
-        return str
-    end
-
-    str = string.gsub(str, "|(%S+)|", "|" .. to_inject_esc .. ".%1|")
-    return str
-end
--- TODO: This should use the module/header tag
+-- ---@param str string
+-- ---@param to_inject string
+-- ---@return string
+-- local function inject_into_tag(str, to_inject)
+--     local init, _ = string.find(str, "|%S+|")
+--     if not init then
+--         return str
+--     end
+--
+--     local to_inject_esc = lua_pattern_get_escaped(to_inject)
+--     if string.find(str, "|" .. to_inject_esc .. ".%S+|", init) ~= nil then
+--         return str
+--     end
+--
+--     str = string.gsub(str, "|(%S+)|", "|" .. to_inject_esc .. ".%1|")
+--     return str
+-- end
+-- TODO: This should occur during the holistic step.
 
 ---@param typ string
 ---@return string
@@ -174,227 +336,6 @@ local function type_fixup(typ)
 
     return typ
 end
-
----@param typ string
----@param default? string
-local function type_fmt_get_with_default(typ, default)
-    if not default then
-        return string.format("(`%s`)", typ)
-    end
-
-    return string.format("(`%s`, default: %s)", typ, default)
-end
-
-------------------------
--- MARK: Format Utils --
-------------------------
-
----@param self docgen.ParserObj
----@param iter fun(self:docgen.ParserObj, f:fun(x:docgen.DocItem))
----@return integer
-local function arg_fmt_names_max_width(self, iter)
-    local width = 0
-    iter(self, function(arg)
-        -- Add two because display names are surrounded by curly braces.
-        width = math.max(width, #arg.name + 2)
-    end)
-
-    return width
-end
--- MAYBE: The original code included a check to see if the item has a type or description. I think
--- this was so items without those values would not contribute to the max display width. I'm not
--- sure if that's helpful. Re-add if a situation comes up where it's necessary.
-
----Creates a new table.
----@param self docgen.ParserObj
----@param width integer
----@param iter fun(self:docgen.ParserObj, f:fun(x:docgen.DocItem))
----@param f fun(name:string, typ:string, desc:string): string
----@return string[]
-local function args_fmt_map(self, width, iter, f)
-    local ret = {}
-    iter(self, function(arg)
-        local name = arg.kind == "operator" and ("op(" .. arg.name .. ")")
-            or cbraces_add(arg.name, width)
-        local typ = arg.type and type_fmt_get_with_default(arg.type, arg.default) or ""
-        local desc = arg.desc and arg.desc or ""
-
-        ret[#ret + 1] = f(name, typ, desc)
-    end)
-
-    return ret
-end
-
-----------------------------
--- MARK: Inline Doc Tools --
-----------------------------
-
--- FUTURE: Hold any revisions to this code for now. What needs to be introduced is a
--- "Make holistic data revisions" step that edits the data based on the accumulated Parser Objects.
--- So stuff like inlinedoc or class function descriptions would all be updated then, rather than
--- during individual parsing. We'd want to handle inline doc then through that lens.
-
----@param is_list boolean
----@param parent string?
----@return string
-local function get_class_inline_type_desc(is_list, parent)
-    if is_list then
-        return "A list of objects with the following fields:"
-    elseif parent then
-        return string.format("Extends |%s| with the additional fields:", parent)
-    else
-        return "A table with the following fields:"
-    end
-end
-
----@param doc_item docgen.DocItem Modified in place
----@param class docgen.ParserObj
----@param is_list boolean
-local function add_class_inlinedoc(doc_item, class, is_list)
-    local new_doc_tbl = table_new(4, 0) ---@type string[]
-
-    local old_desc = doc_item.desc or ""
-    local class_desc = class.desc
-    if class_desc then
-        new_doc_tbl[1] = old_desc .. " " .. class_desc
-    elseif #old_desc == 0 then
-        local inline_desc = get_class_inline_type_desc(is_list, class.parent)
-        new_doc_tbl[1] = old_desc .. " " .. inline_desc
-    end
-
-    local width = class:field_fmt_names_max_width()
-    class:fields_iter(function(field)
-        local name = cbraces_add(field.name, width)
-        local typ = type_fmt_get_with_default(field.type, field.default)
-        new_doc_tbl[#new_doc_tbl + 1] = table.concat({ "-", name, typ, field.desc }, " ")
-    end)
-
-    doc_item.desc = table.concat(new_doc_tbl, "\n")
-end
-
----@param doc_item docgen.DocItem
----@param class docgen.ParserObj
-local function append_doc_item_desc_see_class_tag(doc_item, class)
-    local old_desc = doc_item.desc and string.match(doc_item.desc, "^.*%S") or "" -- rtrim
-    local len_desc = #old_desc
-
-    local tag = help_tag_from_name(class.name, "|")
-    if len_desc == 0 then
-        doc_item.desc = "See " .. tag .. "."
-        return
-    end
-
-    if string.find(old_desc, tag) then
-        doc_item.desc = old_desc
-        return
-    end
-
-    local punctuation = endswith_byte(old_desc, 46) and " " or ". "
-    doc_item.desc = old_desc .. punctuation .. "See " .. tag .. "."
-end
--- LOW: The rtrim here might not be necessary.
-
----Assumes that typ has already had nils and extra spaces cleaned up.
----@param typ string
----@return string base, boolean is_optional, boolean is_list
-local function parse_clean_class_type(typ)
-    if (not typ) or typ == "" then
-        return "", false, false
-    end
-
-    local list_count
-    typ, list_count = string.gsub(typ, "%[%]$", "")
-    local q_count
-    typ, q_count = string.gsub(typ, "%?", "")
-
-    return typ, q_count > 0, list_count > 0
-end
--- LOW: It might be helpful to be able to do inlinedoc on union types. Doesn't inherently
--- blend in well though.
--- LOW: Cache these results.
-
---- @param doc_item docgen.DocItem Modified in place
---- @param classes table<string,docgen.ParserObj>
---- @return docgen.ParserObj?, boolean, boolean
-local function find_class_in_doc_item_type(doc_item, classes)
-    local typ = doc_item.type
-    if not typ then
-        return nil, false, false
-    end
-
-    local typ_clean, typ_isopt, typ_islist = parse_clean_class_type(typ)
-    local class = classes[typ_clean]
-    if (not class) or class.doc_flag == "nodoc" then
-        return nil, false, false
-    end
-
-    return class, typ_isopt, typ_islist
-end
-
----@param is_list boolean
----@param is_optional boolean
----@return string
-local function get_class_table_type(is_list, is_optional)
-    local typ_tbl = { "table" }
-    if is_list then
-        typ_tbl[#typ_tbl + 1] = "[]"
-    end
-
-    if is_optional then
-        typ_tbl[#typ_tbl + 1] = "?"
-    end
-
-    return table.concat(typ_tbl, "")
-end
-
---- @param doc_item docgen.DocItem Modified in place
---- @param class docgen.ParserObj
---- @param typ_isopt boolean
---- @param typ_islist boolean
-local function add_class_desc_to_doc_item(doc_item, class, typ_isopt, typ_islist)
-    if class.doc_flag ~= "inlinedoc" then
-        append_doc_item_desc_see_class_tag(doc_item, class)
-        return
-    end
-
-    add_class_inlinedoc(doc_item, class, typ_islist)
-    doc_item.type = get_class_table_type(typ_islist, typ_isopt)
-end
-
---- @param classes table<string,docgen.ParserObj> All classes from all files.
-function M:inlinedoc_inject(classes)
-    if self.kind == "fun" then
-        self:params_iter(function(r)
-            local class, typ_isopt, typ_islist = find_class_in_doc_item_type(r, classes)
-            if class then
-                add_class_desc_to_doc_item(r, class, typ_isopt, typ_islist)
-            end
-        end)
-
-        self:returns_iter(function(r)
-            local len_r = #r
-            for j = 1, len_r do
-                local class, typ_isopt, typ_islist = find_class_in_doc_item_type(r[j], classes)
-                if class then
-                    add_class_desc_to_doc_item(r, class, typ_isopt, typ_islist)
-                end
-            end
-        end)
-    elseif self.kind == "class" then
-        self:fields_iter(function(f)
-            local class, typ_isopt, typ_islist = find_class_in_doc_item_type(f, classes)
-            if class then
-                add_class_desc_to_doc_item(f, class, typ_isopt, typ_islist)
-            end
-        end)
-    end
-end
--- TODO: Still unsure where this function sits. This both sets data and does style.
--- Something that could help here is to dis-entangle everything. Having one big entrypoint instead
--- of a few different ones that resolve to composable pieces makes everything bloated.
--- I also think it might be helpful to separate out detecting if inlinedoc should be injected from
--- the actual process. The current function is reasonable but I'm looking for any advantage here
--- I can get.
 
 ----------------------------------
 -- MARK: Data Maintenance Utils --
@@ -425,27 +366,21 @@ end
 -- MARK: All --
 ---------------
 
----@param parens? boolean
 ---@return string?
-function M:fmt_name_get(parens)
-    if parens then
-        return self.fmt_name .. "()"
-    end
-
-    return self.fmt_name
+function M:desc_get()
+    return self.desc
 end
+
+---@return string?
+function M:tag_get()
+    return self.tag
+end
+-- TODO: Fun parens should have already been added. If we're doing it here, the underlying
+-- data is wrong.
 
 ---@return docgen.Kind
 function M:kind_get()
     return self.kind
-end
-
----@return string?
-function M:get_fmt_desc()
-    local desc = self.desc
-    if desc then
-        return md_to_vimdoc(desc)
-    end
 end
 
 --- Assumes `self` is finalized and cross-checked against all other parser objects.
@@ -551,48 +486,23 @@ end
 -- they show up
 -- - This includes nested aliases
 
-----------------------
--- MARK: Attributes --
-----------------------
+-----------------
+-- MARK: Async --
+-----------------
+
+---@return boolean
+function M:async_get()
+    return self.async_flg == true
+end
 
 function M:async_set()
-    local kind = self:kind_get()
+    local kind = self.kind
     if kind == "class" or kind == "brief" then
         -- TODO: emit warning
         return
     end
 
-    self.async = true
-end
-
----@return string?
-function M:get_fmt_async()
-    if self.async == true then
-        return "{async}"
-    end
-end
-
----@return boolean
-function M:has_attributes()
-    if self.kind ~= "fun" then
-        return false
-    end
-
-    return self.async == true
-end
-
----@return string?
-function M:get_fmt_attributes()
-    if not self:has_attributes() then
-        return
-    end
-
-    local ret = {}
-    if self.async == true then
-        ret[#ret + 1] = self:get_fmt_async()
-    end
-
-    return table.concat(ret, "\n")
+    self.async_flg = true
 end
 
 ------------------
@@ -608,12 +518,12 @@ function M:brief_set(parsed)
     self.kind = kind --[[@as docgen.Kind]]
 
     self.access = nil
-    self.async = nil
+    self.async_flg = nil
     self.class = nil
     self.classvar = nil
     self.cur_doc_item = nil
     self.fields = nil
-    self.fmt_name = nil
+    self.tag = nil
     self.name = nil
     self.namevar = nil
     self.overloads = nil
@@ -627,12 +537,6 @@ function M:brief_set(parsed)
         table_clear(self.doc_lines)
         -- TODO: Emit warning
     end
-end
-
----@return string
-function M:get_fmt_brief()
-    assert_is_kind(self, "brief")
-    return md_to_vimdoc(self.desc)
 end
 
 ----------------------
@@ -665,12 +569,12 @@ function M:class_set(parsed)
 
     self.kind = kind
     self.name = parsed.name
-    self.fmt_name = Nvim_Tools_Docgen_Help_Prefix .. "-" .. parsed.name
+    self.tag = self.header_tag .. "." .. parsed.name
     self.class = parsed.name
     self.parent = parsed.parent
 
     self.access = nil
-    self.async = nil
+    self.async_flg = nil
     self.classvar = nil
     self.desc = nil
     self.fields = nil
@@ -784,26 +688,9 @@ function M:doc_flag_get()
 end
 
 ---@return string?
-function M:dog_flag_desc_get()
-    local ret = {}
-    if self.doc_flag == "deprecated" then
-        ret[#ret + 1] = "DEPRECATED:"
-    end
-
-    local doc_desc = self.doc_flag_desc
-    if not doc_desc then
-        return table.concat(ret)
-    end
-
-    -- TODO: this is not correct because, if it's a class or class function, we need to use the
-    -- prefix. If it's a module function, we need the full header tag. The call stack up from
-    -- here does not properly handle this
-    -- You could pass this as a param but header_tag lives in the module so feels wrong.
-    ret[#ret + 1] = md_to_vimdoc(inject_into_tag(doc_desc, Nvim_Tools_Docgen_Help_Prefix))
-    return table.concat(ret, " ")
+function M:doc_flag_desc_get()
+    return self.doc_flag_desc
 end
--- DOC: Document the auto-replacement behavior exactly.
--- DOC: The behavior is consistent no matter where it is used.
 
 ---@param parsed docgen.DocItem
 function M:deprecated_set(parsed)
@@ -818,7 +705,7 @@ end
 -- MID: Support this in briefs. Could be used for module or section level deprecation.
 -- MAYBE: Use doc lines above for desc.
 
-function M:deprecated()
+function M:is_deprecated()
     return self.doc_flag == "deprecated"
 end
 
@@ -867,7 +754,7 @@ local function field_add_common(self, item)
         item.desc = doc_lines
     else
         item.desc = (item.desc and item.desc ~= "") and item.desc or nil
-        item.desc = item.desc and vim.trim(item.desc) or nil
+        item.desc = item.desc and string.match(item.desc, "^.*%S") or nil
     end
 
     item.type = type_fixup(item.type)
@@ -921,7 +808,7 @@ function M:field_append_from_fun(fun)
 
     self.fields = self.fields or {}
     local fields = self.fields
-    local fun_fmt_name = fun:fmt_name_get(true) --[[@as string]]
+    local fun_fmt_name = fun:tag_get() --[[@as string]]
     fields[#fields + 1] = {
         kind = "field",
         name = fun:namevar_get(),
@@ -945,15 +832,6 @@ function M:filter_fields(f)
     list_filter(self.fields, f)
 end
 
----@return integer
-function M:field_fmt_names_max_width()
-    if self:fields_count() == 0 then
-        return 0
-    end
-
-    return arg_fmt_names_max_width(self, M.fields_iter)
-end
-
 ---@param f fun(field:docgen.DocItem)
 function M:fields_iter(f)
     if self:fields_count() == 0 then
@@ -967,15 +845,23 @@ function M:fields_iter(f)
     end
 end
 
----Returns a new table.
----@param f fun(name:string, typ:string, desc:string): string
----@return string[]|nil
-function M:map_fmt_fields(f)
+---@return integer
+function M:field_names_max_width()
+    local max_name_width = 0
+    for _, field in ipairs(self.fields) do
+        max_name_width = math.max(#field.name, max_name_width)
+    end
+
+    return max_name_width
+end
+
+---@param predicate fun(a:docgen.DocItem, b:docgen.DocItem): boolean
+function M:fields_sort(predicate)
     if self:fields_count() == 0 then
         return
     end
 
-    return args_fmt_map(self, self:field_fmt_names_max_width(), M.fields_iter, f)
+    table.sort(rawget(self, "fields"), predicate)
 end
 
 -------------------------
@@ -998,41 +884,37 @@ function M:class_fun_set_from_class(class)
     if self.classvar ~= self.modvar then
         -- TODO: Might need to save the separator info so this can be re-build properly
         -- TODO: try to re-outline this.
-        self.fmt_name = Nvim_Tools_Docgen_Help_Prefix .. "-" .. self.class .. ":" .. self.namevar
+        self.tag = Nvim_Tools_Docgen_Help_Prefix .. "-" .. self.class .. ":" .. self.namevar
     end
 
-    local class_fmt_name = class:fmt_name_get() --[[@as string]]
+    local class_fmt_name = class:tag_get() --[[@as string]]
     self:see_add({ desc = help_tag_from_name(class_fmt_name, "|") })
 end
 
----@param name string
+---@param namevar string
 ---@param classvar string
 ---@param sep "."|":"
-function M:fun_set_from_name(name, classvar, sep)
+function M:fun_set_from_namevar(namevar, classvar, sep)
     assert_no_kind(self, "function")
 
-    self.kind = "fun"
-    self.namevar = name
-    self.classvar = classvar
-    -- TODO: This is required to make functions generate but I'm unsure why.
+    rawset(self, "kind", "fun")
+    rawset(self, "namevar", namevar)
+    rawset(self, "classvar", classvar)
+    rawset(self, "sep", sep)
     if classvar == self.modvar then
+        -- TODO: This is required to make functions generate but I'm unsure why.
         self.class = ""
+        self.tag = self.header_tag .. sep .. self.namevar
     else
         self.class = nil
+        self.tag = self.header_tag .. "." .. rawget(self, "classvar") .. sep .. self.namevar
     end
 
-    local modclass = self.classvar == self.modvar
-    if modclass then
-        self.fmt_name = self.header_tag .. "." .. self.namevar
-    else
-        self.fmt_name = Nvim_Tools_Docgen_Help_Prefix
-            .. "-"
-            .. self.classvar
-            .. sep
-            .. self.namevar
+    if sep == ":" then
+        self:params_filter(function(param)
+            return param.name ~= "self"
+        end)
     end
-
-    -- TODO: filter self here if sep == ":"
 
     self.fields = nil
     self.parent = nil
@@ -1067,29 +949,13 @@ end
 
 ---@param f fun(overload:string)
 function M:overloads_iter(f)
-    if self:overloads_count() == 0 then
+    if not self.overloads then
         return
     end
 
-    local overloads = self.overloads ---@type string[]
-    local len_overloads = #overloads
-    for i = 1, len_overloads do
-        f(overloads[i])
+    for _, overload in ipairs(self.overloads) do
+        f(overload)
     end
-end
-
----@return string?
-function M:overloads_fmt_get()
-    if self:overloads_count() == 0 then
-        return
-    end
-
-    local ret = {}
-    self:overloads_iter(function(overload)
-        ret[#ret + 1] = "• " .. md_to_vimdoc(overload)
-    end)
-
-    return table.concat(ret, "\n")
 end
 
 ------------------
@@ -1116,6 +982,7 @@ local function param_add_common(self, item)
     self:cur_doc_item_set("param", true)
     item.type = type_fixup(item.type)
     item_move_opt(item)
+    item.desc = item.desc and string.match(item.desc, "^.*%S") or nil
 
     return true
 end
@@ -1131,6 +998,11 @@ function M:param_append(item)
     local params = self.params
     params[#params + 1] = item --[[@as docgen.DocItem]]
 end
+-- TODO: The LuaCATs grammar needs to have a test that, in order to return a valid param, the
+-- name and type must be present.
+-- TODO: Look at doing specific subtypes again for params/fields/returns. If you make them all
+-- inherit doc item that should allow them to be passed around correct. Though there have been
+-- issues with that with DocItem vs. Grammar.Result.
 
 ---@return integer
 function M:params_count()
@@ -1138,55 +1010,48 @@ function M:params_count()
 end
 
 ---@return integer
-function M:param_fmt_names_max_width()
-    if self:params_count() == 0 then
-        return 0
+function M:param_names_max_width()
+    local max_name_width = 0
+    for _, param in ipairs(self.params) do
+        max_name_width = math.max(#param.name, max_name_width)
     end
 
-    return arg_fmt_names_max_width(self, M.params_iter)
+    return max_name_width
+end
+-- NON: Don't outline the inner logic. Gets too convoluted.
+
+---@generic T
+---@param list T[]
+---@return integer
+local function list_count_get_checked(list)
+    return list ~= nil and #list or 0
+end
+-- TODO: Use this internally rather than having to go through the metatable again.
+
+---@param predicate fun(param: docgen.DocItem): boolean
+function M:params_filter(predicate)
+    if self:params_count() == 0 then
+        return
+    end
+
+    local params = rawget(self, "params")
+    local params_count = list_count_get_checked(params)
+    if params_count == 0 then
+        return
+    end
+
+    list_filter(params, predicate)
 end
 
 ---@param f fun(param:docgen.DocItem)
 function M:params_iter(f)
-    if self:params_count() == 0 then
+    if not self.params then
         return
     end
 
-    local params = self.params ---@type docgen.DocItem[]
-    local len_params = #params
-    for i = 1, len_params do
-        f(params[i])
+    for _, param in ipairs(self.params) do
+        f(param)
     end
-end
-
----@param width integer If a `{name}`'s width is less than `width`, then right padding will be
----     added to assist with alignment.
----@return string[]|nil
-function M:params_fmt_get(width)
-    if self:params_count() == 0 then
-        return nil
-    end
-
-    local args = {}
-    self:params_iter(function(param)
-        local name = param.name
-        if name ~= "self" then
-            args[#args + 1] = cbraces_add(name, width)
-        end
-    end)
-
-    return args
-end
-
----Returns a new table.
----@param f fun(name:string, typ:string, desc:string): string
----@return string[]|nil
-function M:params_fmt_map(f)
-    if self:params_count() == 0 then
-        return
-    end
-
-    return args_fmt_map(self, self:param_fmt_names_max_width(), M.params_iter, f)
 end
 
 -------------------
@@ -1234,6 +1099,7 @@ function M:return_append(parsed)
         p.type = type_fixup(p.type)
     end
 
+    parsed.desc = parsed.desc and string.match(parsed.desc, "^.*%S") or nil
     self:cur_doc_item_set("return", true)
     if not self.returns then
         self.returns = {}
@@ -1265,57 +1131,6 @@ function M:returns_iter(f)
         f(returns[i])
     end
 end
-
----@return string[]
-function M:returns_fmt_get()
-    if self:returns_count() == 0 then
-        return {}
-    end
-
-    local ret = {} ---@type string[]
-    local inner_ret = {} ---@type string[]
-
-    self:returns_iter(function(r)
-        local len_r = #r
-        local names_count = 0
-        for _, inner_r in ipairs(r) do
-            local typ = type_fmt_get_with_default(inner_r.type)
-            local name = inner_r.name
-            if name then
-                names_count = names_count + 1
-                inner_ret[#inner_ret + 1] = typ .. " " .. cbraces_add(name, 0)
-            else
-                inner_ret[#inner_ret + 1] = typ
-            end
-        end
-
-        local desc = r.desc
-        local sep
-        if len_r > 1 then
-            sep = "\n"
-            if desc then
-                inner_ret[#inner_ret + 1] = desc
-            end
-        else
-            sep = ""
-            if desc then
-                inner_ret[#inner_ret + 1] = ": "
-                inner_ret[#inner_ret + 1] = desc
-            end
-        end
-
-        ret[#ret + 1] = md_to_vimdoc(table.concat(inner_ret, sep))
-        table_clear(inner_ret)
-    end)
-
-    return ret
-end
--- MID: The output for multiple returns could be smarter:
--- - Currently sensitive to if the user uses multiple annotations or puts them on one line
--- - If multiple returns, desc is always on its own line
--- - For multiple returns on different lines, no formatting based on type/name width
--- I think you would have to do something similar to params and fields, where the iter passes up
--- the pieces of data and then the caller uses a mapper to determine the formatting.
 
 ---------------
 -- MARK: See --
@@ -1351,23 +1166,6 @@ function M:see_iter(f)
         f(see[i])
     end
 end
-
----@return string?
-function M:see_fmt_get()
-    if self:see_count() == 0 then
-        return
-    end
-
-    local ret = {}
-    self:see_iter(function(see)
-        -- TODO: Depending on what we're trying to see, we would want to inject either the prefix
-        -- or the whole header tag. Unsure how we determine this.
-        ret[#ret + 1] = "• " .. md_to_vimdoc(inject_into_tag(see, Nvim_Tools_Docgen_Help_Prefix))
-    end)
-
-    return table.concat(ret, "\n")
-end
--- DOC: Help prefix injection occurs here
 
 ----------------
 -- MARK: Type --
@@ -1428,11 +1226,11 @@ end
 local function finalize_fun(self, namevar, classvar, sep)
     -- I'm not sure how this could happen, but it is in the original docgen.
     if not namevar then
-        local fmt_str = "fun.name is nil, check fn_xform(). fun: %s"
+        local fmt_str = "fun.name is nil. fun: %s"
         error(string.format(fmt_str, vim.inspect(self)))
     end
 
-    self:fun_set_from_name(namevar, classvar, sep)
+    self:fun_set_from_namevar(namevar, classvar, sep)
     -- Check here in case it's an underline function
     if not item_is_visible(self) then
         return
@@ -1452,14 +1250,12 @@ local function finalize_class_find_classvar(self, line)
     local classvar = line:match("^local%s+([a-zA-Z0-9_]+)%s*=")
     if classvar then
         self.classvar = classvar
-        self.namevar = classvar
     end
 
     local parentvar
     parentvar, classvar = line:match("([a-zA-Z_]+)%.([a-zA-Z0-9_]+)%s*=%s*%{")
     if parentvar == self.modvar then
         self.classvar = classvar
-        self.namevar = classvar
     end
 end
 
