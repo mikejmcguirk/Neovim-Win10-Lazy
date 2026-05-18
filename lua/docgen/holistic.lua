@@ -17,13 +17,12 @@ local function create_maps(parsed_sources)
         for _, obj in ipairs(source[2]) do
             local kind = obj:kind_get()
             if kind == "fun" then
-                -- Need to use fmt_name because function namevars do not have to be globally
-                -- unique.
-                local fmt_name = obj:tag_get() --[[@as string]]
-                if not funs[fmt_name] then
-                    funs[fmt_name] = obj
+                -- Use the unique tag because function namevars do not have to be globally unique.
+                local tag = obj:tag_get() --[[@as string]]
+                if not funs[tag] then
+                    funs[tag] = obj
                 else
-                    error("Duplicate fun " .. fmt_name .. " from source " .. source[1])
+                    error("Duplicate fun " .. tag .. " from source " .. source[1])
                 end
                 funs[obj:tag_get()] = obj
             elseif kind == "class" then
@@ -66,43 +65,20 @@ end
 ---@param classvar_map table<string, string>
 ---@param funs table<string, docgen.ParserObj> Edited in place
 local function class_funs_resolve_links(classes, classvar_map, funs)
-    local module_hidden_fields = {} ---@type table<string, table<string, true>>
-
     for _, fun in pairs(funs) do
-        local classvar = fun:classvar_get()
-        if classvar == nil then
-            goto continue
-        end
-
-        local class_name = classvar_map[classvar]
+        local class_name = classvar_map[fun:classvar_get()]
         if class_name == nil then
             goto continue
         end
 
-        if fun:is_module_fun() then
-            if not module_hidden_fields[class_name] then
-                module_hidden_fields[class_name] = {}
-            end
-
-            module_hidden_fields[class_name][fun:namevar_get()] = true
-
-            goto continue
-        end
-
         local class = classes[class_name]
-        fun:class_fun_set_from_class(class)
-        class:field_append_from_fun(fun)
+        if class then
+            class:class_attach_fun_field(fun)
+        end
 
         ::continue::
     end
-
-    for class_name, class_hidden_fields in pairs(module_hidden_fields) do
-        classes[class_name]:filter_fields(function(field)
-            return not class_hidden_fields[field.name]
-        end)
-    end
 end
--- MID: I doubt that the module_hidden_fields are being handled in the most efficient manner.
 
 ---@param parsed_sources docgen.ParsedSource[] Edited in place
 ---@param classes table<string, docgen.ParserObj> Edited in place
@@ -111,20 +87,20 @@ local function parsed_sources_filter_invalid(parsed_sources, classes, funs)
     for _, source in ipairs(parsed_sources) do
         local obj_list = source[2]
         list_filter(obj_list, function(obj)
-            local holistically_valid = obj:holistically_valid()
-            -- Avoid callees having to individually verify their state.
-            if not holistically_valid then
-                local kind = obj:kind_get()
-                if kind == "fun" then
-                    local fmt_name = obj:tag_get() --[[@as string]]
-                    funs[fmt_name] = nil
-                elseif kind == "class" then
-                    local name = obj:name_get() --[[@as string]]
-                    classes[name] = nil
+            local kind = obj:kind_get()
+            if kind == "fun" then
+                if obj:class_get() == nil then
+                    funs[obj:tag_get()] = nil
+                    return false
+                end
+            elseif kind == "class" then
+                if obj:fields_count() == 0 then
+                    classes[obj:name_get()] = nil
+                    return false
                 end
             end
 
-            return holistically_valid
+            return true
         end)
     end
 
@@ -132,6 +108,8 @@ local function parsed_sources_filter_invalid(parsed_sources, classes, funs)
         return #input > 0
     end)
 end
+-- MAYBE: Unlike with parsing finalization, there aren't enough criteria here to justify putting
+-- into the metatable. If the criteria become more complex, that can be revisited.
 
 ---@param parsed_sources docgen.ParsedSource[] Edited in place
 local function parsed_sources_filter_inlinedoc(parsed_sources)

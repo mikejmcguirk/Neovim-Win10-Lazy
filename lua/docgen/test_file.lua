@@ -34,6 +34,7 @@ end
 ---This is a buzz
 ---@field buzz integer[]
 
+---A description so it doesn't look like it's not rendering.
 ---@param bar integer
 ---@param foo test.Foo
 ---@param foobar boolean It do be like that
@@ -47,10 +48,14 @@ end
 ---This function buzzes very pleasantly.
 ---
 ---Note: This should highlight nicely
----- And this should format correctly
+---
+---A list formatting correctly:
+---- Like this
 ---- Along with this
 ---  - And this
 ---  - And this one too
+---
+---Then this should be on its own line.
 ---@param foo integer
 ---@return nil
 function M.buzz(foo) end

@@ -5,13 +5,11 @@
 local treesitter = vim.treesitter
 local util = require("docgen.util")
 local adj_newlines = util.adj_newlines
-local do_over_lines = util.do_over_lines
-local list_map = util.list_map
 local slice_lines = util.slice_lines
 
 local const = require("docgen.const")
+local INDENT = const.INDENT
 local NBSP = const.NBSP
-local TEXT_WIDTH = const.TEXT_WIDTH
 
 -------------------------------------
 -- MARK: Tree Extraction/Traversal --
@@ -26,17 +24,18 @@ local function root_from_str(str, lang, new_opts)
     return parser:parse(true)[1]:root()
 end
 
+---@alias docgen.NodeHandler fun(node:TSNode, str:string, indent:integer, handlers:table): string?
+
 ---@param node TSNode
 ---@param str string
----@param ret string[] -- Edited in place
----@param handlers table<string, fun(node:TSNode, str:string, ret:string[], handlers:table)>
-local function node_to_lines(node, str, ret, handlers)
+---@param indent integer
+---@param handlers table<string, docgen.NodeHandler>
+---@return string?
+local function node_to_str(node, str, indent, handlers)
     local node_type = node:type()
-    -- ret[#ret + 1] = "<" .. node_type .. ">"
 
-    local handler = assert(handlers[node_type] or handlers["_default"])
-    handler(node, str, ret, handlers)
-    -- ret[#ret + 1] = "</" .. node_type .. ">"
+    local handler = handlers[node_type] or handlers["_default"]
+    return handler(node, str, indent, handlers)
 end
 -- LOW: The handler assertion could have a more detailed error message.
 -- MAYBE: If we don't want to always exclude punctuation nodes, we could add an "_exclusions" key
@@ -46,34 +45,17 @@ end
 -- MARK: Handler Helpers --
 ---------------------------
 
+---@return string
+local function handler_node_bullet_get(_, _, _, _)
+    return "• "
+end
+
 ---@param node TSNode
 ---@param str string
----@param ret string[]
-local function add_node_text_and_stop(node, str, ret, _)
-    ret[#ret + 1] = treesitter.get_node_text(node, str)
+---@return string
+local function handler_node_text_get(node, str, _, _)
+    return treesitter.get_node_text(node, str)
 end
-
----@param line string
----@return string line
-local function align_tags(line)
-    local tag_pat = "%s*(%*.+%*)%s*$"
-    local tags = {}
-    for m in line:gmatch(tag_pat) do
-        table.insert(tags, m)
-    end
-
-    if #tags > 0 then
-        line = line:gsub(tag_pat, "")
-        local tags_str = " " .. table.concat(tags, " ")
-        --- @type integer
-        local conceal_offset = select(2, tags_str:gsub("%*", "")) - 2
-        local pad = string.rep(" ", TEXT_WIDTH - #line - #tags_str + conceal_offset)
-        return line .. pad .. tags_str
-    end
-
-    return line
-end
--- TODO: Touch this up.
 
 ---@param node TSNode
 ---@return TSNode? zeroeth_child
@@ -83,33 +65,33 @@ end
 
 ---@param node TSNode
 ---@param str string
----@param ret string[] Edited in place
----@param handlers table<string, fun(node:TSNode, str:string, ret:string[], handlers:table)>
-local function iter_all_children(node, str, ret, handlers)
+---@param indent integer
+---@param handlers table<string, docgen.NodeHandler>
+---@return string
+local function iter_all_children(node, str, indent, handlers)
+    local ret = {}
     for child, _ in node:iter_children() do
-        node_to_lines(child, str, ret, handlers)
+        ret[#ret + 1] = node_to_str(child, str, indent, handlers)
     end
+
+    return table.concat(ret)
 end
 
 --------------------
 -- MARK: Handlers --
 --------------------
 
----@type table<string, fun(node:TSNode, str:string, ret:string[], handlers:table)>
+---@type table<string, docgen.NodeHandler>
 local md_inline_handlers = {
-    ["backslash_escape"] = add_node_text_and_stop,
-    ["code_span"] = function(node, str, ret, _)
-        local node_text = treesitter.get_node_text(node, str)
-
-        ret[#ret + 1] = "`"
-        ret[#ret + 1] = string.gsub(string.sub(node_text, 2, -2), " ", NBSP)
-        ret[#ret + 1] = "`"
-    end,
-    ["emphasis"] = function(node, str, ret, _)
-        ret[#ret + 1] = string.sub(treesitter.get_node_text(node, str), 2, -2)
+    ["backslash_escape"] = handler_node_text_get,
+    ["code_span"] = handler_node_text_get,
+    ["emphasis"] = function(node, str, _, _)
+        return string.sub(treesitter.get_node_text(node, str), 2, -2)
     end,
     -- Use adj_lines on gap areas here because we might not wrap later.
-    ["inline"] = function(node, str, ret, handlers)
+    ["inline"] = function(node, str, indent, handlers)
+        local ret = {}
+
         local lines = vim.split(str, "\n")
         local row, col = 0, 0
         for child, _ in node:iter_children() do
@@ -123,7 +105,7 @@ local md_inline_handlers = {
                     end
                 end
 
-                node_to_lines(child, str, ret, handlers)
+                ret[#ret + 1] = node_to_str(child, str, indent, handlers)
                 row, col = child:end_()
             end
         end
@@ -132,47 +114,47 @@ local md_inline_handlers = {
         if trailing and trailing ~= "" then
             ret[#ret + 1] = adj_newlines(trailing)
         end
+
+        return table.concat(ret)
     end,
-    ["inline_link"] = function(node, str, ret, _)
+    ["inline_link"] = function(node, str, _, _)
         local zeroeth_child = get_zeroeth_child(node)
         if not zeroeth_child then
-            return
+            return ""
         end
 
-        ret[#ret + 1] = "*"
-        ret[#ret + 1] = treesitter.get_node_text(zeroeth_child, str)
-        ret[#ret + 1] = "*"
+        return "*" .. treesitter.get_node_text(zeroeth_child, str) .. "*"
     end,
-    ["shortcut_link"] = function(node, str, ret, _)
+    ["shortcut_link"] = function(node, str, _, _)
         local zeroeth_child = get_zeroeth_child(node)
         if not zeroeth_child then
-            return
+            return ""
         end
 
         local node_text = treesitter.get_node_text(zeroeth_child, str)
         if string.find(node_text, "^<.*>$") then
-            ret[#ret + 1] = node_text
-            return
+            return node_text
+        elseif string.find(node_text, "^%d+$") then
+            return "[" .. node_text .. "]"
+        else
+            return "|" .. node_text .. "|"
         end
-
-        local all_nums = string.find(node_text, "^%d+$")
-        ret[#ret + 1] = all_nums and "[" or "|"
-        ret[#ret + 1] = node_text
-        ret[#ret + 1] = all_nums and "]" or "|"
     end,
-    ["strong"] = function(node, str, ret, _)
-        ret[#ret + 1] = string.sub(treesitter.get_node_text(node, str), 3, -3)
+    ["strong"] = function(node, str, _, _)
+        return string.sub(treesitter.get_node_text(node, str), 3, -3)
     end,
-    ["text"] = add_node_text_and_stop,
-    ["_default"] = function(node, str, ret, _)
-        ret[#ret + 1] = treesitter.get_node_text(node, str)
+    ["text"] = handler_node_text_get,
+    ["_default"] = function(node, str, _, _)
+        return treesitter.get_node_text(node, str)
     end,
 }
 
----@type table<string, fun(node:TSNode, str:string, ret:string[], handlers:table)>
+---@type table<string, docgen.NodeHandler>
 local md_handlers = {
-    ["block_continuation"] = function() end,
-    ["code_fence_content"] = function(node, str, ret, _)
+    -- Return nothing because these are nodes of whitespace-only characters
+    ["block_continuation"] = function(_, _, _, _) end,
+    ["code_fence_content"] = function(node, str, _, _)
+        local ret = {}
         local text = treesitter.get_node_text(node, str)
         local lines = vim.split(string.gsub(text, "\n%s*$", ""), "\n")
 
@@ -183,10 +165,22 @@ local md_handlers = {
 
             ret[#ret + 1] = "\n"
         end
+
+        -- TODO: I think fix_newlines would work better here, but I need to verify what
+        -- this node is.
+        return table.concat(ret)
     end,
     -- MAYBE: Re-introduce the manual indent parsing if needed.
-    ["document"] = iter_all_children,
-    ["fenced_code_block"] = function(node, str, ret, handlers)
+    ["document"] = function(node, str, indent, handlers)
+        local ret = {}
+        for child, _ in node:iter_children() do
+            ret[#ret + 1] = node_to_str(child, str, indent, handlers)
+        end
+
+        return table.concat(ret, "\n")
+    end,
+    ["fenced_code_block"] = function(node, str, indent, handlers)
+        local ret = {}
         ret[#ret + 1] = ">"
         for child, _ in node:iter_children() do
             if child:type() == "info_string" then
@@ -198,105 +192,133 @@ local md_handlers = {
         ret[#ret + 1] = "\n"
         for child, _ in node:iter_children() do
             if child:type() ~= "info_string" then
-                node_to_lines(child, str, ret, handlers)
+                node_to_str(child, str, indent, handlers)
             end
         end
 
         ret[#ret + 1] = "<\n"
+        return table.concat(ret)
     end,
     ["fenced_code_block_delimiter"] = iter_all_children,
-    ["html_block"] = function(node, str, ret, _)
+    ["html_block"] = function(node, str, _, _)
         local text = treesitter.get_node_text(node, str)
         text = string.gsub(text, "^<pre>help", "")
         text = string.gsub(text, "</pre>%s*$", "")
-        ret[#ret + 1] = text
+        return text
     end,
     ["html_tag"] = function(node, str, _, _)
         error("html_tag: " .. treesitter.get_node_text(node, str))
     end,
-    ["inline"] = function(node, str, ret, _)
+    ["inline"] = function(node, str, indent, _)
         local i_text = treesitter.get_node_text(node, str)
         if i_text == "" then
-            return
+            return ""
         end
 
         local i_root = root_from_str(i_text, "markdown_inline")
         if i_root then
-            node_to_lines(i_root, i_text, ret, md_inline_handlers)
+            return node_to_str(i_root, i_text, indent, md_inline_handlers)
         else
-            i_text = adj_newlines(i_text)
-            ret[#ret + 1] = i_text
+            return adj_newlines(i_text)
         end
     end,
-    ["list"] = iter_all_children,
-    ["list_item"] = function(node, str, ret, handlers)
-        local zeroeth_child = get_zeroeth_child(node)
-        if not zeroeth_child then
-            return
+    ["list"] = function(node, str, indent, handlers)
+        local ret = {}
+        local parent = node:parent()
+        -- For lists that start within paragraphs.
+        if parent and parent:type() ~= "section" then
+            ret[#ret + 1] = ""
         end
 
-        -- Per MariaSolOs: Required since TS vimdoc parser does not support numbered list-items
+        local indent_str = string.rep(" ", indent)
+        local new_indent = indent + INDENT
+        for child, _ in node:iter_children() do
+            ret[#ret + 1] = indent_str .. node_to_str(child, str, new_indent, handlers)
+        end
+
+        return table.concat(ret, "\n")
+    end,
+    -- DOC: Lists always try to snap to directly below the previous line.
+    -- DOC: You need an empty line after the list to make the next thing appear as not the list.
+    -- The markdown parser sees the next line as a continuation of the list item.
+    ["list_item"] = function(node, str, indent, handlers)
+        local zeroeth_child = get_zeroeth_child(node)
+        if not zeroeth_child then
+            return ""
+        end
+
+        local ret = {}
+
+        -- Required since TS vimdoc parser does not support numbered list-items
         -- https://github.com/neovim/tree-sitter-vimdoc/issues/144
         local child_text = treesitter.get_node_text(zeroeth_child, str)
         if string.match(child_text, "[2-9]%.") ~= nil then
             ret[#ret + 1] = "\n"
         end
 
-        local i = 0
         for child, _ in node:iter_children() do
-            i = i + 1
-            -- TODO: How should this work without the indent value coming in? The idea is that,
-            -- for later lines in a bulleted list, you want them indented over. You can't just
-            -- wrap because of code blocks.
-            node_to_lines(child, str, ret, handlers)
-        end
-    end,
-    ["list_marker_dot"] = add_node_text_and_stop,
-
-    ["list_marker_minus"] = function(_, _, ret, _)
-        ret[#ret + 1] = "• "
-    end,
-
-    ["list_marker_star"] = function(_, _, ret, _)
-        ret[#ret + 1] = "• "
-    end,
-    ["paragraph"] = function(node, str, ret, handlers)
-        if node:child_count() == 0 then
-            return
+            ret[#ret + 1] = node_to_str(child, str, indent, handlers)
         end
 
-        local para_parts = {}
+        return table.concat(ret)
+    end,
+    ["list_marker_dot"] = handler_node_text_get,
+    ["list_marker_minus"] = handler_node_bullet_get,
+    ["list_marker_star"] = handler_node_bullet_get,
+    ["paragraph"] = function(node, str, indent, handlers)
+        local ret = {}
         for child, _ in node:iter_children() do
-            node_to_lines(child, str, para_parts, handlers)
+            ret[#ret + 1] = node_to_str(child, str, indent, handlers)
         end
 
-        ret[#ret + 1] = table.concat(para_parts)
-        ret[#ret + 1] = "\n"
+        return table.concat(ret)
     end,
-    ["section"] = iter_all_children,
-    ["text"] = add_node_text_and_stop,
-    ["_default"] = function(node, str, ret, handlers)
+    ["section"] = function(node, str, indent, handlers)
+        local ret = {}
+        local prev_type
+        for child, _ in node:iter_children() do
+            local cur_type = child:type()
+            if (prev_type ~= nil) and cur_type == "paragraph" then
+                ret[#ret + 1] = "" -- Force an additional newline
+            end
+
+            prev_type = cur_type
+            ret[#ret + 1] = node_to_str(child, str, indent, handlers)
+        end
+
+        return table.concat(ret, "\n")
+    end,
+    -- DOC: Lines with one "\n" between them are mixed together into the same paragraph.
+    -- If you use newlines to break into multiple paragraphs, the paragraphs will be given a
+    -- newline separation. Paragraphs after lists will always be given a newline.
+    ["text"] = handler_node_text_get,
+    ["_default"] = function(node, str, indent, handlers)
         local child_count = node:child_count()
         if child_count == 0 then
             ---@diagnostic disable-next-line: empty-block
             if treesitter.get_node_text(node, str) then
                 -- TODO: Add --emit-warnings for these
+                return ""
             end
-        else
-            local i = 0
-            local node_type = node:type()
-            for child, _ in node:iter_children() do
-                i = i + 1
-                node_to_lines(child, str, ret, handlers)
+        end
 
-                if node_type ~= "list" and i ~= child_count then
-                    local next_child = node:child(i) -- node:child() is zero indexed
-                    if next_child and next_child:type() ~= "list" then
-                        ret[#ret + 1] = "\n"
-                    end
+        local ret = {}
+
+        local i = 0
+        local node_type = node:type()
+        for child, _ in node:iter_children() do
+            i = i + 1
+            node_to_str(child, str, indent, handlers)
+
+            if node_type ~= "list" and i ~= child_count then
+                local next_child = node:child(i) -- node:child() is zero indexed
+                if next_child and next_child:type() ~= "list" then
+                    ret[#ret + 1] = "\n"
                 end
             end
         end
+
+        return table.concat(ret)
     end,
     -- LOW: Unfortunate to get node_type again here. Bad though to send it to every handler for
     -- one case.
@@ -312,18 +334,17 @@ local M = {}
 ---@param str string
 ---@return string
 function M.md_tree_to_vimdoc(root, str)
-    local ret = {}
-    node_to_lines(root, str, ret, md_handlers)
-    local lines = do_over_lines(ret, function(s)
-        return string.gsub(string.gsub(s, "\n+$", ""), NBSP, " ")
-    end)
+    local str_fmt = node_to_str(root, str, 0, md_handlers)
+    if not str_fmt then
+        return ""
+    end
 
-    list_map(lines, align_tags)
-    local vimdoc = table.concat(lines, "\n")
-    vimdoc = string.gsub(vimdoc, "\n+%s*>([a-z]+)\n", " >%1\n")
-    vimdoc = string.gsub(vimdoc, "\n+%s*>\n?\n", " >\n")
+    str_fmt = string.gsub(string.gsub(str_fmt, "\n+$", ""), "^\n", "")
+    str_fmt = string.gsub(str_fmt, NBSP, " ")
+    str_fmt = string.gsub(str_fmt, "\n+%s*>([a-z]+)\n", " >%1\n")
+    str_fmt = string.gsub(str_fmt, "\n+%s*>\n?\n", " >\n")
 
-    return vimdoc
+    return str_fmt
 end
 
 ---@param str string

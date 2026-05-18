@@ -1,0 +1,118 @@
+==============================================================================
+Docgen                                                                *docgen*
+
+Full-featured Vimdoc generator for LuaCATs annotations. Simply run it with a
+list of files to get properly tagged and formatted docs.
+
+Supports the following features:
+• Help tags are automatically generated based on the directory structure of
+  the target files
+• `@tag` annotations for defining additional helptags
+• `@inlinedoc` and `@nodoc` to control display
+• Automatic table of contents generation
+• Descriptive text is parsed as markdown and automatically formatted,
+  including line wrapping
+• `@deprecated` tags allow for a one-line description
+• Optional output logging
+• Async file read and write
+
+Requirements: ~
+
+Neovim built with LuaJIT. Supported versions:
+• Nightly
+• Current (`0.12`) and previous release (`0.11`)
+
+Installation: ~
+
+Clone the repo.
+
+CI Usage: ~
+
+Attribution: ~
+
+This is a fork of the Neovim core's doc generator. Accordingly, this project
+is also released under an Apache 2.0 license, with notices in the files
+containing modified core code.
+
+generate({paths}, {output}, {level}, {log_path})           *docgen.generate()*
+    Main generator function
+
+    Parameters: ~
+        • {paths}    (`string[]`) Input filepaths
+        • {output}   (`string?`) Output file
+        • {level}    (`integer?`) Log level
+            • 0 Standard output only
+            • 1 Standard messages
+            • 2 Debug messages
+        • {log_path} (`string?`) Log path
+
+==============================================================================
+Docgen.test_file                                            *docgen.test_file*
+
+This is a brief. It allows the user to explain additional things in the
+documentation that are not necessarily relevant to any particular function or
+class. It's a good way to provide an overview and introduction to the module.
+
+foo({bar}, {baz}, {bill})                             *docgen.test_file.foo()*
+    DEPRECATED: Use |bar()| instead
+
+    Just a simple function.
+
+    Parameters: ~
+        • {bar}  (`integer|string?`) I'm a bar
+        • {baz}  (`table?`) I'm a bazz
+        • {bill} (`integer|string?`) I'm a billy bob kind of boy
+
+    Returns: ~
+        (`string`)
+
+bar({bar}, {foo}, {foobar}, {woah})                   *docgen.test_file.bar()*
+    A description so it doesn't look like it's not rendering.
+
+    Parameters: ~
+        • {bar}    (`integer`)
+        • {foo}    (`table`)  This is a class description.
+            • {bar}  (`integer`, default: `0`) This is a bar
+            • {bazz} (`string`, default: `foo`) This is a bazz
+            • {buzz} (`integer[]`, default: `{ 1, 2, 3, 4, 5 }`) Welp. Some
+              nonsense. This is a buzz
+        • {foobar} (`boolean`) It do be like that
+        • {woah}   (`number`) This is valid.
+
+    Returns (multiple): ~
+        (`integer`) {redacted}
+        (`string`): A potentially grim picture of concatenation.
+
+buzz({foo})                                          *docgen.test_file.buzz()*
+    This function buzzes very pleasantly.
+
+    Note: This should highlight nicely
+
+    A list formatting correctly:
+    • Like this
+    • Along with this
+        • And this
+        • And this one too
+
+    Then this should be on its own line.
+
+    Parameters: ~
+        • {foo} (`integer`)
+
+{test.Wow}                                                   *docgen-test.Wow*
+    What an amazing class
+
+    Fields: ~
+        • {be_amazed} (`fun(jazz_hands:any)`) See:
+          |docgen-test.Wow:be_amazed()|
+
+be_amazed({jazz_hands})                          *docgen-test.Wow:be_amazed()*
+
+    Parameters: ~
+        • {jazz_hands} (`any`)
+
+    See also: ~
+        • |docgen-test.Wow|
+
+
+ vim:tw=78:ts=8:sw=4:sts=4:et:ft=help:norl:

@@ -11,13 +11,6 @@ local M = {}
 -- MARK: Table Functions --
 --------------------------
 
----@param lines string[]
----@param f fun(all_lines: string): string, any
----@return string[]
-function M.do_over_lines(lines, f)
-    return vim.split(f(table.concat(lines)), "\n")
-end
-
 ---@generic T
 ---@param t T[]
 ---@param f fun(x: T): boolean
@@ -38,94 +31,8 @@ function M.list_filter(t, f)
     end
 end
 
----@generic T
----@param t T[]
----@param v T
----@return integer|nil
-function M.list_find(t, v)
-    for i = 1, #t do
-        if t[i] == v then
-            return i
-        end
-    end
-
-    return nil
-end
-
----@generic T
----@param t T[]
----@param f fun(x: T, idx: integer): any
-function M.list_map(t, f)
-    local len = #t
-    local j = 1
-
-    for i = 1, len do
-        t[j] = f(t[i], i)
-        if t[j] ~= nil then
-            j = j + 1
-        end
-    end
-
-    for i = j, len do
-        t[i] = nil
-    end
-end
-
----`start` and `fin` are handled as passed in without clamping.
----@generic T
----@param t T[] Modified in place
----@param start integer
----@param fin integer
-function M.list_slice(t, start, fin)
-    local len_t = #t
-    if start > 1 then
-        local j = 1
-        for i = start, fin do
-            t[j] = t[i]
-            j = j + 1
-        end
-    end
-
-    for i = fin + 1, len_t do
-        t[i] = nil
-    end
-end
-
--- Port of Neovim core logic since their table module is private
-local has_new, table_new = pcall(require, "table.new")
-if not has_new then
-    ---@diagnostic disable-next-line: unused-local
-    table_new = function(narray, nhash)
-        return {}
-    end
-end
-
-M.table_new = table_new
-
--- Port of Neovim core logic since their table module is private
-local has_clear, table_clear = pcall(require, "table.clear")
-if not has_clear then
-    table_clear = function(t)
-        for k in pairs(t) do
-            t[k] = nil
-        end
-    end
-end
-
----@generic T
----@type fun(t:T)
-M.table_clear = table_clear
-
----@generic T
----@param t table<T, T>
----@param f fun(k: T, v: T): boolean|nil
-function M.table_filter(t, f)
-    for k, v in pairs(t) do
-        if not f(k, v) then
-            t[k] = nil
-        end
-    end
-end
+M.table_new = require("table.new")
+M.table_clear = require("table.clear")
 
 --------------------------
 -- MARK: Text Functions --
@@ -163,43 +70,18 @@ end
 -- list, single newlines are always wrapped. Double+ newlines are always treated as a double
 -- newline.
 
----@param target string?
----@param str string
----@param trim_leading_nl? boolean If unable to append, trim all leading newlines.
+---@param left string?
+---@param sep string
+---@param right string
 ---@return string
-function M.checked_str_append(target, str, trim_leading_nl)
-    if target ~= nil and (M.str_has_content(target)) then
-        return target .. str
+function M.checked_append(left, sep, right)
+    if left then
+        return left .. sep .. right
+    else
+        return right
     end
-
-    if not trim_leading_nl then
-        return str
-    end
-
-    local nl_trim, _ = string.gsub(str, "^\n+", "")
-    return nl_trim
 end
--- TODO: Remove this from here and nvim-tools. It's too much voodoo/perf loss for what it does.
-
----@param name string
----@param surround? "*"|"|"|""
----@return string
-function M.help_tag_from_name(name, surround)
-    surround = surround or ""
-    local ret = {}
-
-    ret[#ret + 1] = surround
-    -- TODO: Probably get rid of this piece
-    -- if not vim.startswith(Nvim_Tools_Docgen_Help_Prefix, name) then
-    --     ret[#ret + 1] = Nvim_Tools_Docgen_Help_Prefix
-    --     ret[#ret + 1] = "."
-    -- end
-
-    ret[#ret + 1] = name
-    ret[#ret + 1] = surround
-
-    return table.concat(ret)
-end
+-- TODO:DEP: Add this to nvim-tools with checked_prepend. Wait until the docgen is done.
 
 ---@param str string
 ---@return string, integer
@@ -207,6 +89,17 @@ function M.lua_pattern_escape(str)
     return string.gsub(str, "([%^%$%(%)%.%[%]%*%+%-%?])", "%%%1")
 end
 -- TODO: Add to nvim tools
+
+---@param str string
+---@return string
+function M.rtrim(str)
+    local matched = string.match(str, "^.*%S")
+    if matched then
+        return matched
+    end
+
+    return ""
+end
 
 --- @param lines string[]
 --- @param srow integer 0-indexed
@@ -229,7 +122,7 @@ function M.slice_lines(lines, srow, scol, erow, ecol)
     end
 
     -- Don't edit lines in place
-    local ret = table_new(erow_1 - srow_1 + 1, 0)
+    local ret = M.table_new(erow_1 - srow_1 + 1, 0)
     ret[1] = string.sub(lines[srow_1], scol_1)
     for i = srow_1 + 1, erow_1 - 1 do
         ret[#ret + 1] = lines[i]
@@ -257,9 +150,8 @@ end
 ---@param str string?
 ---@return boolean
 function M.str_has_content(str)
-    return str ~= nil and string.match(str, "^%s*$") == nil
+    return str ~= nil and string.find(str, "[^%s]") ~= nil
 end
--- TODO: Find the pattern for [not a whitespace] because that early terminates faster
 -- TODO: Add this updated version to nvim-tools
 
 ---@param typ string
@@ -279,6 +171,10 @@ end
 ---@param text_width integer
 ---@return string
 local function wrap_line(line, first_indent, indent, text_width)
+    if not M.str_has_content(line) then
+        return ""
+    end
+
     local len_line = #line
     if len_line + first_indent <= text_width then
         return string.rep(" ", first_indent) .. line
@@ -327,6 +223,7 @@ local function wrap_line(line, first_indent, indent, text_width)
 
     return table.concat(parts)
 end
+-- MID: This should not break up code spans.
 
 --- Assumes that lines are already cleanly separated by single "\n" characters
 --- @param text string
@@ -338,8 +235,6 @@ function M.wrap(text, first_indent, indent, text_width)
     if not text or text == "" or text_width < 1 then
         return text or ""
     end
-
-    text = text:gsub("\t", string.rep(" ", 8))
 
     local lines = vim.split(text, "\n", { plain = true })
     local res = {}

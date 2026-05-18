@@ -74,6 +74,8 @@
 
 - [ ] Seriously considering not using the mod tag. The rough ideas I have in my head mean that you would just make different files for everything.
 
+- [ ] Perhaps, instead of `@mod`, do `@section` and change the verbiage in rendering to mod. This would make both things make more sense.
+
 - [ ] Plan rough idea: Mostly do this based on file generation. So you'd have big files for "keymaps", "cmds", and so on, and you'd use them to export files with LuaCats and stitch them into the `/plugin` file. This kind of makes sense anyway since `/plugin` should not contain serious business logic. Based on the filename > tag resolution, you would so something like create `lua/keymaps/init.lua` to make the tag show up as `*plugin-keymaps`
 - [ ] Create actual docgen strategic plan
   - Motivation:
@@ -245,9 +247,24 @@
   - I think this is handled by the list dot and list minus tags, so just add list plus I think
   - You should be able to use Nvim's inspector to see the node names/ranges
 
+- [ ] For writing briefs, how can we make sections with custom sub-headers and indented text?
+  - Motivation: Making the README more aesthetically pleasing.
+  - Syntax might be: `---@note sub_header name\nThe indented text`
+    - Problem with the above, how do you put in line breaks?
+    - Possible solution: When a note tag appears, it collects doc lines like params and returns do. When the next tag hits, resolve the note. In a function or class, this would be collecting the doc lines then proceeding to the next thing. In a brief, you would be able to do @brief again in the same brief to go back to normal formatting.
+
 - [ ] My assumption right now is that, by default, the help_prefix can be calculated based on the file inputs. It seems reasonable that the user could provide a custom one. Just unsure how that's handled because I'm not totally sure how the docgen should take input yet. CLI only? CLI and script? Script only?
 
 - [ ] Look at the referenced docgens. Do they have ideas that are useful/valuable?
+
+- [ ] For convenience/demonstrative/documentation purposes, include a docgen_runner file for generating the README
+
+- [ ] Folder structure
+  - `/` (README, LICENSE, MakeFile)
+    * `/lua`
+      + `/docgen` (The actual docgen files)
+    * `/scripts` (runner, test scripts)
+    * `/tests`
 
 - [ ] This needs to have tests
   - [ ] The original _spec files will hopefully be helpful
@@ -256,11 +273,17 @@
 - [ ] Do a final audit that everything consolidates its output to a string when possible.
   - [ ] Does this include the treesitter parsing?
 
-- [ ] An amusing and not totally absurd idea is to have the readme just be in vimdoc. I feel like one of the grep or qf vim plugins I've looked at has actually done this. I think we'd be okay with github's display issues because the docgen outputs spaces and not tabs. It's kind of hard hitting presentation and it does stand itself on the product.
+- [ ] In the parser object, do a last check that each set does the proper checking
+  - [ ] If it can be taking invalid LuaCATs, assert
+  - [ ] Values should be nil'd where possible
 
-- [ ] Neovim is under an Apache license, which has attribution requirements attached to it. Must be in the README for this separate release
+- [ ] Neovim is under an Apache license, which has attribution and derivative license requirements attached to it
 
 #### DOC:
+
+- [ ] The documentation should be written as LuaCATs annotations and self-generated. This both demonstrates that yes, it works, and also allows for the doc itself to show how it works.
+
+- [ ] Starting a new annotation kind without an intervening blank line is an error.
 
 - [ ] Underline functions/params/fields are not rendered.
 - [ ] (default: `foo`) will auto-format with params and fields
@@ -269,42 +292,51 @@
 
 #### MID:
 
-- [ ] Refactor inlinedoc:
-  - [ ] Detect inlinedoc during the holistic as is currently done.
-  - [ ] On detection, make necessary fixups/replacements like editing the type and creating the new desc
-  - [ ] `item.desc` should be replaced with a table containing the inline doc info
-  - [ ] The table should then be parsed/formatted during rendering, rather than relying on duplicated logic
-
 - [ ] It should be possible to pass a custom function to convert the filenames into header tags.
+
+- [ ] For `class (exact)`, exact comes in as an access specifier. Store the specifier and display it as an attribute.
 
 - [ ] Add optional debug timers
 
-- [ ] For `class (exact)`, exact comes in as an access specifier. Store the specifier and display it as an attribute.
-- [ ] Support @nodiscard
+- [ ] Add more patterns to recognize function and class declarations
+  - [ ] DEP: This would depend on having concrete use cases for doing so. The core's docgen is written for their use cases, which don't match 1:1 with the plugin world.
+
+- [ ] Update the type/name fixing to handle more nuance. A name having a question mark means something different then the data type having a question mark. `type|nil` means something different than `type?`
+  - [ ] DEP: The name/type code needs to be properly distinguished and super/subsetted from what inline doc uses, as well as making sure individual cases like params vs fields are handled correctly.
+
+- [ ] When doing line iteration, when you hit an annotation line, iterate ahead to the first non-annotation line to see if it's invalid (returns for example). If so, skip the doc block. If the line is valid, then only send the doc block range of lines to the parser object
+  - [ ] This would mean that the `string.find` check on each line would be done externally, and add_line would assume that incoming line is a doc line. Because parsing failures get added as doc lines, this does not break the internal validity of the data.
+  - [ ] This would mean that the caller would have to always manually call `finalize()`, but since the question of "what is a doc block" is being moved outside the parser object entirely, this doesn't muddy the abstraction boundary.
+  - [ ] Would likely not go beyond just checking the non-doc line after. Otherwise, you start moving the question of "what is a valid doc block" outside of the parser object, which would mean either a blurry abstraction boundary or re-writing parsing to be fully procedural. If the latter were on the table, you'd be in the territory of just doing a compiled language rewrite.
+
+- [ ] Using all-encompassing types for parser objects and doc items was the wrong decision, because you're forgoing the benefits of Lua_Ls's diagnostics and losing the information that the type annotations convey.
+  - [ ] Use aliases where possible to avoid big type union chains.
+
+- [ ] The field/param/return iterators create leaky abstractions because they expose the underlying table data directly. Based on the use cases, the iterators should return the de-composed fields.
+  - [ ] This is a problem for returns because they contain an inner component. I guess that you'd return an iterator for the inner returns, but that starts to get more convoluted than just returning the raw values.
 
 #### LOW:
-
-- [ ] The core's docgen has a function that turns memoized declarations such as `local foo = memoize(function foo())` into standard function declarations. For a plugin docgen, this specifically is a niche use case, but it would be cool to be able to create a custom filter
-- [ ] Reading the files should be done async.
-- [ ] Supporting Lua code literal class definitions in tables and self: functions
-- [ ] Remove all nvim runner dependencies
-- [ ] Supporting the divider tag. I guess it doesn't hurt anything, but IMO it's also low value
-
-- [ ] I believe, for Markdown parsing, you get Nvim's built-in parser since Nvim is just opened as a Lua runner without awareness of other installed parsers. It should be possible to point the docgen to a parser of choice
-  - Low priority because, IMO, this is not actually useful. And actually even creates problems in the context of a public repository
-
-- [ ] Tab replacement should be done somewhere other than the wrap function
-  - Motivation: Not all text is wrapped
-  - Problem: Adding additional steps to remove tabs decreases perf
-
-- [ ] It could be interesting if you could use tags in briefs to insert generated documentation.
-  - Dummy example: You put a class annotation in a brief, and it expands the inlinedoc.
 
 - [ ] It might be faster to, at the start of a doc block, do a minimal iteration to the first non-annotation line to see if it invalidates the block.
 
 - [ ] Support recursive inlinedoc like the core's docgen
   - [ ] DEP: I would not want to attempt this without first converting inline doc processing into a more data-based model, rather than ad-hoc text-injection.
   - [ ] Blocker: How do you prevent infinite recursion?
+
+#### SPEC:
+
+- [ ] The markdown parser should use byte positions to reason about how to perform output formatting, instead of just relying on node types
+  - [ ] DEP: Difficult/complex, and therefore requires numerous use cases. So far:
+    - [ ] Wanting to create bulleted lists with a line break before them
+    - [ ] Wanting to indent bulleted lists without having to use some kind of sub-section
+    - [ ] Allowing the user to think less about how formatting will be handled when writing docs
+
+- [ ] Add performance profiling. This would allow optimizations to be targeted where they would actually produce an impact.
+  - [ ] DEP: The logging needs to be setup such that anything can just plug into it. You can't be having to create new infrastructure for this.
+  - [ ] The profiling would need to group specific tasks. So for something like function rendering, you would want to add hrtime for each function rendered, then get the total time + time per function.
+  - [ ] The profiling cannot create new branching logic.
+  - [ ] The best way to do it is probably to hold the profling info in a global so it doesn't get into the overall control flow. Or, if globals are inherently slow, then hold it at the module level and have a way to export it
+    - [ ] DEP: How does lazy.nvim do it?
 
 #### FUTURE:
 
@@ -332,12 +364,8 @@
 
 #### NON:
 
-- Supporting extensibility
-  * Creates complexity surface area
-  * Would rather focus on expanding built-ins + robustness
-- Supporting direct extraction of Lua data
-  * Hard to do, conceptually, without custom hooks, which contradicts extensibility non-goal
-  * The push should be to understand what the goals of custom extractions are, and how they can be addressed with new annotations
+- Removing the dependency on Neovim as the Lua runner. This would require fundamentally re-engineering how things like async file read work and re-creating fnamemodify. If we're doing that, better to just re-write it in a compiled language.
+
 - This docgen inherits Neovim's removal of underline named functions. This is a useful convention, and no option will be provided to disable it.
 
 ## REFERENCES

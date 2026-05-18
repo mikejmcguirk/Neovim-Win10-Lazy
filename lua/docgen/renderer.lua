@@ -1,3 +1,5 @@
+-- Forked version of the Neovim core docgen.
+
 local ts_parsing = require("docgen.ts_parsing")
 local md_to_vimdoc = ts_parsing.luacats_md_to_vimdoc
 
@@ -27,14 +29,13 @@ local function section_create(source_name, rendered)
     -- based, they should be lowercase. And then we have a camel/snake case title that looks
     -- more appealing.
     -- TODO: Have to be able to handle non-filename sources though
-    local name = source_name:match("(.*)%.[a-z]+")
-    local help_labels = Nvim_Tools_Docgen_Help_Prefix .. "-" .. name
+    local help_labels = source_name
     if type(help_labels) == "table" then
         help_labels = table.concat(help_labels, "* *")
     end
 
     local help_tags = "*" .. help_labels .. "*"
-    local sectname = string.upper(string.sub(name, 1, 1)) .. string.sub(name, 2)
+    local sectname = string.upper(string.sub(source_name, 1, 1)) .. string.sub(source_name, 2)
 
     return {
         name = sectname,
@@ -128,7 +129,7 @@ end
 --- @param obj docgen.ParserObj
 --- @return string?
 local function post_header_get(obj)
-    local is_deprecated = obj:is_deprecated()
+    local is_deprecated = obj:doc_flag_get() == "deprecated"
     local desc = obj:desc_get()
     local parent = obj:parent_get()
     if not (is_deprecated or desc or parent) then
@@ -202,7 +203,7 @@ local function fields_get(class)
         return a.name < b.name
     end)
 
-    local max_cbrace_name_width = max_name_width + 3
+    local max_cbrace_name_width = max_name_width + 2
     class:fields_iter(function(field)
         -- TODO: Does this get pushed down into fmt_arg?
         local cbrace_name = cbraces_add(field.name, max_cbrace_name_width)
@@ -291,7 +292,7 @@ end
 ---@return string?
 local function returns_get(fun)
     local returns_count = fun:returns_count()
-    if fun:returns_count() == 0 then
+    if returns_count == 0 then
         return
     end
 
@@ -386,7 +387,7 @@ local function params_get(fun)
     local ret = {}
     ret[#ret + 1] = INDENT_STR .. "Parameters: ~"
 
-    local max_cbrace_name_width = max_name_width + 3
+    local max_cbrace_name_width = max_name_width + 2
     fun:params_iter(function(param)
         -- TODO: Does this get pushed down into fmt_arg?
         local cbrace_name = cbraces_add(param.name, max_cbrace_name_width)
@@ -488,7 +489,7 @@ function M.render_docs(parsed_sources, output_path)
     -- TODO: This should be handled by the caller.
     -- Do fancy uv things to validate the file before generating and to do the writing.
     local fp = assert(io.open(output_path, "w"))
-    fp:write(table.concat(docs, "\n"))
+    fp:write(table.concat(docs, "\n\n"))
     fp:close()
 end
 
