@@ -20,29 +20,8 @@ end
 ---@return boolean
 function M.str_has_content(str)
     vim.validate("str", str, "string", true)
-    return str ~= nil and string.match(str, "^%s*$") == nil
+    return str ~= nil and string.find(str, "[^%s]") ~= nil
 end
-
----@param target string?
----@param str string
----@param trim_leading_nl? boolean If unable to append, trim all leading newlines.
----@return string
-function M.checked_str_append(target, str, trim_leading_nl)
-    vim.validate("target", target, "string", true)
-    vim.validate("str", str, "string")
-
-    if target ~= nil and (M.str_has_content(target)) then
-        return target .. str
-    end
-
-    if not trim_leading_nl then
-        return str
-    end
-
-    local nl_trim, _ = string.gsub(str, "^\n+", "")
-    return nl_trim
-end
--- MID: Also do checked_str_prepend
 
 ---@param str string
 ---@param byte integer

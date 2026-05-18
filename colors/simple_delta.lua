@@ -304,10 +304,18 @@ vim.keymap.set("n", "zS", function()
     api.nvim_cmd({ cmd = "Inspect" }, {})
 end)
 
+local op_group = api.nvim_create_augroup("mjm-hl-op", {})
 api.nvim_create_autocmd("TextYankPost", {
-    group = api.nvim_create_augroup("mjm-hl-yank", {}),
+    group = op_group,
     callback = function()
-        vim.hl.on_yank({ higroup = "IncText", timeout = 175 })
+        vim.hl.hl_op({ higroup = "IncText", timeout = 175 })
+    end,
+})
+
+api.nvim_create_autocmd("TextPutPost", {
+    group = op_group,
+    callback = function()
+        vim.hl.hl_op({ higroup = "Number", timeout = 175 })
     end,
 })
 

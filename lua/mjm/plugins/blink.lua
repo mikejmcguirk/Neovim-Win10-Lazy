@@ -97,9 +97,15 @@ local blink_opts = {
                 enabled = true,
                 opts = {
                     get_bufnrs = function()
-                        return vim.tbl_filter(function(bufnr)
-                            return api.nvim_get_option_value("buftype", { buf = bufnr }) == ""
-                        end, api.nvim_list_bufs())
+                        local list_filter = require("nvim-tools.list").filter
+                        local bufs = api.nvim_list_bufs()
+                        list_filter(bufs, function(buf)
+                            local loaded = api.nvim_buf_is_loaded(buf)
+                            local bt = api.nvim_get_option_value("bt", { buf = buf })
+                            return loaded and bt ~= "nofile"
+                        end)
+
+                        return bufs
                     end,
                 },
                 score_offset = -6,

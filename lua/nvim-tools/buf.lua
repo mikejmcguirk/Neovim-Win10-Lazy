@@ -6,6 +6,10 @@ local vimv = vim.v
 
 local M = {}
 
+---@param cur_buf integer
+---@param buf integer
+---@param f function
+---@return any, any
 function M.call_in(cur_buf, buf, f)
     local is_uint = require("nvim-tools.types").is_uint
     vim.validate("cur_buf", cur_buf, is_uint)
@@ -167,15 +171,22 @@ end
 ---@return boolean
 function M.is_empty(buf)
     vim.validate("buf", buf, require("nvim-tools.types").is_uint)
+
     local line_count = api.nvim_buf_line_count(buf)
-    return line_count == 1 and api.nvim_buf_get_lines(buf, 0, 1, false)[1] == ""
+    if line_count == 0 then
+        return true
+    elseif line_count > 1 then
+        return false
+    end
+
+    local lines = api.nvim_buf_get_lines(buf, 0, 1, false)
+    return #lines == 0 or lines[1] == ""
 end
 
 ---@param buf integer
 ---@return boolean
 function M.is_noname(buf)
     vim.validate("buf", buf, require("nvim-tools.types").is_uint)
-
     return #api.nvim_buf_get_name(buf) == 0
 end
 

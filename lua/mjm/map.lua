@@ -808,7 +808,11 @@ set("i", "<C-a>", "<C-o>I")
 set("i", "<C-e>", "<End>")
 set("i", "<C-f>", "<right>")
 set("i", "<C-b>", "<left>")
-set("i", "<M-f>", "<S-right>")
+-- <S-right> goes to the beginning of the next word. This is awkward for when you want to go to
+-- the end of the current word and type a new one after it. I almost never want to go to the
+-- beginning of the next word and start prepending text to it. Doing an extra <C-f> is also
+-- easier than <C-b>
+set("i", "<M-f>", "<C-o>e<right>")
 set("i", "<M-b>", "<S-left>")
 set("i", "<M-j>", "<down>")
 set("i", "<M-k>", "<up>")

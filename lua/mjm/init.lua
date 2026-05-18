@@ -1,5 +1,4 @@
 local api = vim.api
-local fn = vim.fn
 local set = vim.keymap.set
 
 require("mjm.mjm")
@@ -60,7 +59,9 @@ require("mjm.lsp")
 
 if not api.nvim_buf_is_valid(1) then
     return
-elseif not require("nvim-tools.buf").is_empty_noname(1) then
+end
+
+if not require("nvim-tools.buf").is_empty_noname(1) then
     return
 end
 
