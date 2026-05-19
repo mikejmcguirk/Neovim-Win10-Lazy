@@ -115,6 +115,8 @@
 
 - [ ] https://github.com/modem-dev/hunk - Diff viewing is becoming more of a chokepoint. I don't know what tools you put together to do it, but it needs to be like, you make a new tab in Nvim, and you have the list of changed files in the quickfix list, and when you open a file it opens a diff view, and if you use quickfix bracket navigation it keeps both windows updated.
 
+- [ ] How do you jump to unsaved changes?
+
 #### LOW:
 
 - [ ] The guard against running due to autocomplete windows could be more specific

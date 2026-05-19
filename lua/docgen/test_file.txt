@@ -14,7 +14,7 @@ Supports the following features:
   including line wrapping
 • `@deprecated` tags allow for a one-line description
 • Optional output logging
-• Async file read and write
+• Async file read
 
 Requirements: ~
 
@@ -41,9 +41,8 @@ generate({paths}, {output}, {level}, {log_path})           *docgen.generate()*
         • {paths}    (`string[]`) Input filepaths
         • {output}   (`string?`) Output file
         • {level}    (`integer?`) Log level
-            • 0 Standard output only
-            • 1 Standard messages
-            • 2 Debug messages
+            • 0 No log messages
+            • 1 Warning messages
         • {log_path} (`string?`) Log path
 
 ==============================================================================

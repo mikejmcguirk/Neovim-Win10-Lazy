@@ -7,6 +7,17 @@
 
 local M = {}
 
+---@param timer uv.uv_timer_t|nil
+function M.stop_timer(timer)
+    if timer and not timer:is_closing() then
+        timer:stop()
+        timer:close()
+        timer = nil
+    end
+
+    return nil
+end
+
 --------------------------
 -- MARK: Table Functions --
 --------------------------
@@ -29,6 +40,24 @@ function M.list_filter(t, f)
     for i = j, len do
         t[i] = nil
     end
+end
+
+---@generic T
+---@param t T[]
+---@param v T | fun(x: T): boolean
+---@return integer|nil
+function M.list_find(t, v)
+    local predicate = type(v) == "function" and v or function(x)
+        return x == v
+    end
+
+    for i = 1, #t do
+        if predicate(t[i]) then
+            return i
+        end
+    end
+
+    return nil
 end
 
 M.table_new = require("table.new")

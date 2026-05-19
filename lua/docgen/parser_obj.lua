@@ -1,5 +1,8 @@
 -- Forked version of the Neovim core docgen.
 
+local logger = require("docgen.logger")
+local log_warning = logger.log_warning
+
 local luacats_grammar = require("docgen.luacats_grammar")
 
 local ts_parsing = require("docgen.ts_parsing")
@@ -97,6 +100,7 @@ end
 -- - A table containing the inlinedoc data should be added to the item, either overwriting
 --   desc or as a new field
 -- - The rendering step should then format the table data, rather than duplicating code here.
+-- - desc_append_see_class_tag should apply to union types where a class is found within it
 -- For now, keep this code sectioned off from the rest of the module. Should only be updated for
 -- bug fixes.
 
@@ -180,9 +184,6 @@ local function parse_clean_class_type(typ)
 
     return typ, q_count > 0, list_count > 0
 end
--- LOW: It might be helpful to be able to do inlinedoc on union types. Doesn't inherently
--- blend in well though.
--- LOW: Cache these results.
 
 --- @param doc_item docgen.DocItem Modified in place
 --- @param classes table<string,docgen.ParserObj>
@@ -382,26 +383,6 @@ local function self_set_and_get(self, key, val)
     return val
 end
 
--- LOW: This function is inelegant.
--- ---@param str string
--- ---@param to_inject string
--- ---@return string
--- local function inject_into_tag(str, to_inject)
---     local init, _ = string.find(str, "|%S+|")
---     if not init then
---         return str
---     end
---
---     local to_inject_esc = lua_pattern_get_escaped(to_inject)
---     if string.find(str, "|" .. to_inject_esc .. ".%S+|", init) ~= nil then
---         return str
---     end
---
---     str = string.gsub(str, "|(%S+)|", "|" .. to_inject_esc .. ".%1|")
---     return str
--- end
--- TODO: This should occur during the holistic step.
-
 ---------------------
 -- MARK: Doc Lines --
 ---------------------
@@ -508,7 +489,7 @@ end
 local function access_set_package(self)
     local kind = rawget(self, "kind")
     if kind == "brief" or kind == "class" then
-        -- TODO: emit warning
+        log_warning("Attempting to set brief or class to package access")
         return
     end
 
@@ -519,7 +500,7 @@ end
 local function access_set_private(self)
     local kind = rawget(self, "kind")
     if kind == "brief" or kind == "class" then
-        -- TODO: emit warning
+        log_warning("Attempting to set brief or class to private access")
         return
     end
 
@@ -530,7 +511,7 @@ end
 local function access_set_protected(self)
     local kind = rawget(self, "kind")
     if kind == "brief" or kind == "class" then
-        -- TODO: emit warning
+        log_warning("Attempting to set brief or class to protected access")
         return
     end
 
@@ -583,7 +564,7 @@ end
 local function async_set(self)
     local kind = rawget(self, "kind")
     if kind == "class" or kind == "brief" then
-        -- TODO: emit warning
+        log_warning("Attempting to set async on non-function object")
         return
     end
 
@@ -622,7 +603,7 @@ local function brief_set(self, parsed)
     local doc_lines = rawget(self, "doc_lines")
     if doc_lines and #doc_lines > 0 then
         table_clear(doc_lines)
-        -- TODO: Emit warning
+        log_warning("Doc lines before @brief annotation")
     end
 end
 
@@ -783,7 +764,7 @@ end
 ---@param parsed nvim.luacats.grammar.Result
 local function doc_flag_set_deprecated(self, parsed)
     if rawget(self, "kind") == "brief" then
-        -- TODO: emit warning
+        log_warning("Attemping to set brief to deprecated")
         return
     end
 
@@ -799,19 +780,18 @@ end
 ---@param self docgen.ParserObj
 local function doc_flag_set_inlinedoc(self)
     if rawget(self, "doc_flag") == "nodoc" then
-        -- TODO: emit warning
+        log_warning("Attemping to set inlinedoc on nodoc object")
         return
     end
 
     local kind = rawget(self, "kind")
     if not (kind == nil or kind == "class") then
-        -- TODO: emit warning
+        log_warning("Attemping to set inlinedoc on non-class object")
         return
     end
 
     rawset(self, "doc_flag", "inlinedoc")
 end
--- TODO: Add "warn_on" function
 
 ---@param self docgen.ParserObj
 local function doc_flag_set_nodoc(self)
@@ -914,7 +894,7 @@ end
 local function overload_append(self, parsed)
     local kind = rawget(self, "kind")
     if not (kind == "class" or kind == "fun") then
-        -- TODO: emit warning
+        log_warning("Attemping to add overload to non-class/function object")
         return
     end
 
@@ -1096,14 +1076,13 @@ end
 ---@param parsed nvim.luacats.grammar.Result
 local function see_add(self, parsed)
     if rawget(self, "kind") == "brief" then
-        -- TODO: emit warning
+        log_warning("Attempting to add see tag to non-class/fun object")
         return
     end
 
     local see = self_get_or_create_table_field(self, "see")
     see[#see + 1] = parsed.desc
 end
--- MID: Support in briefs.
 
 ---@return integer
 function M:see_count()
@@ -1130,7 +1109,7 @@ end
 ---@param parsed nvim.luacats.grammar.Result
 local function type_set(self, parsed)
     if rawget(self, "kind") == "brief" then
-        -- TODO: emit warning
+        log_warning("Attempting to add type to non-class/fun object")
         return
     end
 
@@ -1149,6 +1128,7 @@ local transform = {
     ["async"] = async_set,
     ["brief"] = brief_set,
     ["class"] = class_set,
+    ["diagnostic"] = function() end,
     ["deprecated"] = doc_flag_set_deprecated,
     ["field"] = field_append,
     ["inlinedoc"] = doc_flag_set_inlinedoc,
@@ -1174,7 +1154,7 @@ function M:add_parsed(parsed)
     if transform_fn then
         transform_fn(self, parsed)
     else
-        -- Emit warning
+        log_warning("No transform fn for parsed tag " .. parsed.kind)
     end
 end
 

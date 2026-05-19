@@ -1,15 +1,179 @@
+local fs = vim.fs
 local uv = vim.uv
 
 local util = require("docgen.util")
+local list_find = util.list_find
+local str_has_content = util.str_has_content
+local stop_timer = util.stop_timer
 local table_new = util.table_new
 
 DEFAULT_TIMEOUT = 1000
 
 local M = {}
 
+function M.get_debug_path()
+    local debug_info = debug.getinfo(2, "S")
+    if not debug_info then
+        debug_info = debug.getinfo(1, "S")
+    end
+
+    local debug_source = debug_info.source:gsub("^@", "")
+    return vim.call("fnamemodify", debug_source, ":p:h")
+end
+
+-- TODO: This mark is now inaccurate
 ----------------------
 -- MARK: Read Files --
 ----------------------
+
+---@param path string
+---@param mode integer|string
+---@return boolean ok, string? msg
+function M.fs_access_get_info(path, mode)
+    local ok, err, err_name = uv.fs_access(path, mode)
+    if not ok then
+        local fmt_str = "Access denied: '%s'\n  level: %s\n  code: %s\n  error: %s"
+        local msg = string.format(fmt_str, path, mode, err, err_name)
+        return false, msg
+    end
+
+    return true, nil
+end
+-- TODO: Better naming
+-- TODO: use in here
+-- TODO: Add to nvim-tools
+
+---@param path string
+---@param types string[]
+---@return boolean ok, uv.fs_stat.result? stat, string? msg
+function M.fs_stat_get_info(path, types)
+    local stat, err, err_name = uv.fs_stat(path)
+    if not stat then
+        err = err or ""
+        err_name = err_name or "UNKNOWN"
+        local fmt_str = "fs_stat: Path does not exist: '%s'\n  code: %s\n  error: %s"
+        local msg = string.format(fmt_str, path, err_name, err)
+        return false, nil, msg
+    end
+
+    local stat_type = stat.type
+    local found_type = list_find(types, function(type)
+        return type == stat_type
+    end)
+
+    if found_type then
+        return true, stat, nil
+    end
+
+    local types_concat = table.concat(types, ", ")
+    local msg = string.format("Stat type %s does not match %s", stat_type, types_concat)
+    return false, stat, msg
+end
+-- TODO: Improve fn name
+-- TODO: Use this function in here
+-- TODO: Add to nvim-tools.
+
+---@param path string
+---@param flags string
+---@param mode integer
+---@param close_handle? boolean Closes handle immediately. uv equivalent of `touch` Note that if
+---     mimicking touch behavior, use flags "a".
+---@return boolean ok, integer? handle, string? msg
+function M.fs_open_get_info(path, flags, mode, close_handle)
+    local fd, err, err_name = uv.fs_open(path, flags, mode)
+    if not fd then
+        local fmt_str = "Unable to open '%s'\n  mode: %s\n  code: %s\n  error: %s"
+        local msg = string.format(fmt_str, path, mode, err, err_name)
+        return false, nil, msg
+    end
+
+    if close_handle then
+        uv.fs_close(fd)
+        return true, nil, nil
+    end
+
+    return true, fd, nil
+end
+-- TODO: better name
+-- TODO: nvim-tools
+
+---@param path string
+---@param flags string
+---@param mode integer
+---@return integer? fd,uv.fs_stat.result? stat, string? msg
+local function try_open_file(path, flags, mode)
+    local default_ok, default_stat, default_msg = M.fs_stat_get_info(path, { "file" })
+    if (not default_ok) and default_stat then
+        return nil, default_stat, default_msg
+    end
+
+    if default_stat then
+        local access_ok, access_msg = M.fs_access_get_info(path, "W")
+        if not access_ok then
+            return nil, default_stat, access_msg
+        end
+    end
+
+    local open_ok, fd, open_msg = M.fs_open_get_info(path, flags, mode, false)
+    return open_ok and fd or nil, default_stat, open_msg
+end
+
+---@param path string
+---@param flags string
+---@param mode integer
+---@param default_fname string
+---@return integer? fd, string? msg
+function M.open_path_validated(path, flags, mode, default_fname)
+    path = fs.normalize(vim.call("fnamemodify", path, ":p"))
+
+    local fd, stat, _ = try_open_file(path, flags, mode)
+    if fd then
+        return fd, nil
+    end
+
+    if stat and stat.type == "directory" then
+        if not str_has_content(default_fname) then
+            return nil, "Path " .. path .. " is a directory, but no default filename provided"
+        end
+
+        local default = fs.joinpath(path, default_fname)
+        local default_fd, _, default_msg = try_open_file(default, flags, mode)
+        return default_fd, default_msg
+    end
+
+    local dirpath = fs.dirname(path)
+    local dir_access_ok, dir_access_msg = M.fs_access_get_info(dirpath, "W")
+    if not dir_access_ok then
+        return nil, dir_access_msg
+    end
+
+    if not str_has_content(default_fname) then
+        return nil, "Path " .. dirpath .. " is a directory, but no default filename provided"
+    end
+
+    local default = fs.joinpath(dirpath, default_fname)
+    local default_fd, _, default_msg = try_open_file(default, flags, mode)
+    return default_fd, default_msg
+end
+-- TODO: nvim-tools
+-- TODO: I don't love the hard coded "W" param. It works for docgen but not as an nvim-tools thing
+-- MID: Replace default_fname with an opts table
+-- To the opts table, add "mkdir", which makes the directory if it doesn't exist.
+
+---@param fd integer
+---@param data uv.buffer
+---@param offset? integer Offset in bytes (-1 = current position; nil = current position)
+---@return integer? bytes_written, string? msg
+function M.fs_write_checked(fd, data, offset)
+    local bytes, err, err_name = uv.fs_write(fd, data, offset)
+    if not bytes then
+        local fmt_str = "fs_write failed\n  code: %s\n  error: %s"
+        local msg = string.format(fmt_str, err_name or "UNKNOWN", err or "unknown error")
+        return nil, msg
+    end
+
+    return bytes, nil
+end
 
 ---@param path string
 ---@param err uv.callback.err
@@ -28,6 +192,7 @@ local function fs_fstat_file_validate(path, err, stat)
 
     return true, nil
 end
+-- TODO: This should be merged in with the code the sync version uses
 
 ---@param path string
 ---@param err uv.callback.err
@@ -44,6 +209,7 @@ local function fs_open_validate(path, err, fd)
 
     return true, nil
 end
+-- TODO: This should be merged in with the code the sync version uses
 
 ---@async
 ---@param path string
@@ -93,7 +259,6 @@ local function _fs_read_list_async(paths, on_complete, opts)
     local timer = nil ---@type uv.uv_timer_t|nil
     local timeout = opts.timeout or DEFAULT_TIMEOUT
     local timed_out = false
-    local stop_timer = require("nvim-tools.misc").stop_timer
 
     ---@type table<string,docgen.file.FsReadListResult>
     local results = table_new(paths_count, 0)
@@ -260,7 +425,9 @@ local function prefix_and_tags_from_paths(split_paths, prefix_idx)
             tag_parts[#tag_parts + 1] = vim.call("fnamemodify", fname, ":r")
         end
 
-        header_tags[#header_tags + 1] = table.concat(tag_parts)
+        local parts_concat = table.concat(tag_parts)
+        parts_concat = parts_concat:gsub("[ \t]", "__")
+        header_tags[#header_tags + 1] = parts_concat
     end
 
     local prefix = split_paths[1][prefix_idx]
@@ -284,8 +451,8 @@ function M.header_tags_from_paths(paths)
 
     -- Only check the |::h| component of the filename.
     local prefix_idx_max = path_len_min - 1
-    -- A file is present in the file system root.
     if prefix_idx_max == 1 then
+        -- A file is present in the file system root.
         return prefix_and_tags_from_paths(split_paths, prefix_idx_max)
     end
 

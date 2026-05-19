@@ -1,5 +1,8 @@
 -- Forked version of the Neovim core docgen.
 
+local logger = require("docgen.logger")
+local log = logger.log
+
 local ts_parsing = require("docgen.ts_parsing")
 local md_to_vimdoc = ts_parsing.luacats_md_to_vimdoc
 
@@ -450,13 +453,12 @@ end
 local M = {}
 
 ---@param parsed_sources docgen.ParsedSource[]
----@param output_path string
-function M.render_docs(parsed_sources, output_path)
+function M.render_docs(parsed_sources)
     local sections = {} --- @type table<string,docgen.Section>
 
     for _, source in ipairs(parsed_sources) do
         local source_name = source[1]
-        print("    Rendering source:" .. source_name, 0)
+        log("    Rendering source:" .. source_name)
         -- TODO: Not relevant if the source is not a filename
         local basename = vim.fs.basename(source_name)
 
@@ -477,7 +479,7 @@ function M.render_docs(parsed_sources, output_path)
 
     local docs = {} --- @type string[]
     for _, section in ipairs(sections) do
-        print(string.format("    Rendering section: '%s'", section.title))
+        log(string.format("    Rendering section: '%s'", section.title))
         docs[#docs + 1] = section_render(section, true)
     end
 
@@ -485,12 +487,7 @@ function M.render_docs(parsed_sources, output_path)
     local ml = string.format("\n vim:tw=78:ts=8:sw=%d:sts=%d:et:ft=help:norl:\n", INDENT, INDENT)
     table.insert(docs, ml)
 
-    print("Writing output")
-    -- TODO: This should be handled by the caller.
-    -- Do fancy uv things to validate the file before generating and to do the writing.
-    local fp = assert(io.open(output_path, "w"))
-    fp:write(table.concat(docs, "\n\n"))
-    fp:close()
+    return table.concat(docs, "\n\n")
 end
 
 return M

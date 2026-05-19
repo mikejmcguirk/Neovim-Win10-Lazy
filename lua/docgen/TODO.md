@@ -19,7 +19,7 @@
     - Don't greedily make fmt name?
       * Doesn't work because of function holistic identification
 
-- [ ] Tag space replacement with underscores?
+- [ ] Parser_obj warnings need line/file info to be useful
 
 - [ ] I guess we just switch metatables for render_obj. The parser obj is too big and its concerns too co-mingled. If I step away from it for a couple days I can't remember what anything in it does.
   - [ ] inline doc will go in the rendering stage. You can output "render_obj" from the holistic step for clarity.
@@ -314,6 +314,11 @@
 
 - [ ] The field/param/return iterators create leaky abstractions because they expose the underlying table data directly. Based on the use cases, the iterators should return the de-composed fields.
   - [ ] This is a problem for returns because they contain an inner component. I guess that you'd return an iterator for the inner returns, but that starts to get more convoluted than just returning the raw values.
+
+- [ ] Tie deprecated functions with their replacements
+  - My best idea at the moment: Add a `@replaces` tag. During the holistic step, each replacing function looks for a `@deprecated` tag with a matching description. If it's found, the "Use X instead" tag is injected. This is a bit of a dialect, but it doesn't contradict Lua_Ls and it works
+    * Would have to think about how the iteration is done + how the tags are added since deprecated/replaces can be a many-to-many relationship
+    * This logic could also be applied to target the `see` tags of other items.
 
 #### LOW:
 
