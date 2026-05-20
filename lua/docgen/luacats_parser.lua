@@ -2,7 +2,6 @@
 
 local parser_obj = require("docgen.parser_obj")
 
----Find the physical variable containing the module's exports.
 ---@param lines string[]
 ---@return string?
 local function find_modvar(lines)
@@ -41,7 +40,7 @@ function M.parsed_from_lines(lines, header_tag)
     local obj_list = {} ---@type docgen.ParserObj[]
     local obj = parser_obj.new(modvar, header_tag)
     for _, line in ipairs(lines) do
-        local status = obj:add_line(line)
+        local status = parser_obj.add_line(obj, line)
         if status > 0 then
             if status == 1 then
                 obj_list[#obj_list + 1] = obj
@@ -51,7 +50,7 @@ function M.parsed_from_lines(lines, header_tag)
         end
     end
 
-    local status = obj:finalize()
+    local status = parser_obj.finalize(obj, "")
     if status == 1 then
         obj_list[#obj_list + 1] = obj
     end

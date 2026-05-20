@@ -139,10 +139,13 @@ function M.generate(paths, output, level, log_path)
         output = fs.joinpath(debug_path, default_output_fname)
     end
 
+    -- TODO: There should be two calls here, the first is "get_uv_validated_path" and the other
+    -- is "uv_write_checked" or something.
+
     ---@diagnostic disable-next-line: param-type-mismatch Handled by str_has_content
     local fd, err = open_path_validated(output, "w", 438, default_output_fname)
     if not fd then
-        error(err)
+        error("On output path open: " .. tostring(err))
     end
 
     local _, write_err = fs_write_checked(fd, docs)

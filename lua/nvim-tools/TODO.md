@@ -107,6 +107,10 @@
 
 - [ ] Docgen. Because of the nature of how the config is designed, I need to know where the docgen lands in order to actually write the documentation.
 
+#### TODO:
+
+- [ ] Is the config picked up by lazy.nvim's "opts" key? Should it be?
+
 #### DOCUMENT:
 
 - [ ] Config.__newindex is required to set nils in buf configs

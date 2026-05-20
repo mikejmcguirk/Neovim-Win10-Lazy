@@ -1,8 +1,209 @@
+local ts_parsing = require("docgen.ts_parsing")
+local md_to_vimdoc = ts_parsing.luacats_md_to_vimdoc
+
 local util = require("docgen.util")
+local cbraces_add = util.add_cbraces
+local endswith_byte = util.endswith_byte
 local list_filter = util.list_filter
 local table_new = util.table_new
+local type_fmt_get_with_default = util.type_fmt_get_with_default
+
+local parser_obj = require("docgen.parser_obj")
 
 local M = {}
+
+-- MID: This code needs to be refactored:
+-- - Fixups to type and desc should still be handled here, since they concern the integrity of
+--   the underlying data.
+-- - A table containing the inlinedoc data should be added to the item, either overwriting
+--   desc or as a new field
+-- - The rendering step should then format the table data, rather than duplicating code here.
+-- - desc_append_see_class_tag should apply to union types where a class is found within it
+-- Until that's done, only update this code for bug fixes.
+
+---@param is_list boolean
+---@param parent string?
+---@return string
+local function inlinedoc_get_defaut_desc(is_list, parent)
+    if is_list then
+        return "A list of objects with the following fields:"
+    elseif parent then
+        return string.format("Extends |%s| with the additional fields:", parent)
+    else
+        return "A table with the following fields:"
+    end
+end
+
+---@param obj docgen.ParserObj
+---@return integer
+local function fields_max_name_width(obj)
+    local max_name_width = 0
+    local fields = obj.fields
+    if not fields then
+        return max_name_width
+    end
+
+    for _, field in ipairs(fields) do
+        max_name_width = math.max(#field.name, max_name_width)
+    end
+
+    return max_name_width
+end
+-- TODO: This should be a util str function that takes any list
+-- TODO: also in renderer
+-- TODO: nvim-tools
+
+---@param doc_item docgen.DocItem Modified in place
+---@param class docgen.ParserObj
+---@param is_list boolean
+local function inlinedoc_inject_into_desc(doc_item, class, is_list)
+    local new_doc_tbl = table_new(4, 0) ---@type string[]
+
+    local old_desc = doc_item.desc or ""
+    local class_desc = class.desc
+    if class_desc then
+        new_doc_tbl[1] = old_desc .. " " .. class_desc
+    elseif #old_desc == 0 then
+        local inline_desc = inlinedoc_get_defaut_desc(is_list, class.parent)
+        new_doc_tbl[1] = old_desc .. " " .. inline_desc
+    end
+
+    table.sort(class.fields, function(a, b)
+        return a.name < b.name
+    end)
+
+    local width = fields_max_name_width(class) + 2
+    for _, field in ipairs(class.fields) do
+        local name = cbraces_add(field.name, width)
+        local typ = type_fmt_get_with_default(field.type, field.default)
+        -- Do now so later rendering has cleaner data to work with.
+        local desc = md_to_vimdoc(field.desc or "")
+        new_doc_tbl[#new_doc_tbl + 1] = table.concat({ "-", name, typ, desc }, " ")
+    end
+
+    doc_item.desc = table.concat(new_doc_tbl, "\n")
+end
+
+---@param doc_item docgen.DocItem
+---@param class docgen.ParserObj
+local function desc_append_see_class_tag(doc_item, class)
+    local old_desc = doc_item.desc or ""
+    local len_desc = #old_desc
+
+    local tag = "|" .. class.tag .. "|"
+    if len_desc == 0 then
+        doc_item.desc = "See " .. tag .. "."
+        return
+    end
+
+    if string.find(old_desc, tag) then
+        doc_item.desc = old_desc
+        return
+    end
+
+    local punctuation = endswith_byte(old_desc, 46) and " " or ". "
+    doc_item.desc = old_desc .. punctuation .. "See " .. tag .. "."
+end
+
+---Assumes that typ has already had nils and extra spaces cleaned up.
+---@param typ string
+---@return string base, boolean is_optional, boolean is_list
+local function parse_clean_class_type(typ)
+    if (not typ) or typ == "" then
+        return "", false, false
+    end
+
+    local list_count
+    typ, list_count = string.gsub(typ, "%[%]$", "")
+    local q_count
+    typ, q_count = string.gsub(typ, "%?", "")
+
+    return typ, q_count > 0, list_count > 0
+end
+
+--- @param doc_item docgen.DocItem Modified in place
+--- @param classes table<string,docgen.ParserObj>
+--- @return docgen.ParserObj?, boolean, boolean
+local function type_find_class(doc_item, classes)
+    local typ = doc_item.type
+    if not typ then
+        return nil, false, false
+    end
+
+    local typ_clean, typ_isopt, typ_islist = parse_clean_class_type(typ)
+    local class = classes[typ_clean]
+    if (not class) or class.doc_flag == "nodoc" then
+        return nil, false, false
+    end
+
+    return class, typ_isopt, typ_islist
+end
+
+--- @param doc_item docgen.DocItem Modified in place
+--- @param class docgen.ParserObj
+--- @param typ_isopt boolean
+--- @param typ_islist boolean
+local function add_class_desc_to_doc_item(doc_item, class, typ_isopt, typ_islist)
+    if class.doc_flag ~= "inlinedoc" then
+        desc_append_see_class_tag(doc_item, class)
+        return
+    end
+
+    inlinedoc_inject_into_desc(doc_item, class, typ_islist)
+
+    local typ_tbl = { "table" }
+    if typ_islist then
+        typ_tbl[#typ_tbl + 1] = "[]"
+    end
+
+    if typ_isopt then
+        typ_tbl[#typ_tbl + 1] = "?"
+    end
+
+    doc_item.type = table.concat(typ_tbl)
+end
+
+---@param obj docgen.ParserObj
+---@param classes table<string,docgen.ParserObj> All classes from all files.
+local function inlinedoc_inject(obj, classes)
+    if obj.kind == "fun" then
+        local params = obj.params
+        if not params then
+            -- TODO: Don't love this because it doesn't just go to the end.
+            goto do_returns
+        end
+
+        for _, param in ipairs(obj.params) do
+            local class, typ_isopt, typ_islist = type_find_class(param, classes)
+            if class then
+                add_class_desc_to_doc_item(param, class, typ_isopt, typ_islist)
+            end
+        end
+
+        ::do_returns::
+        local returns = obj.returns
+        if not returns then
+            return
+        end
+
+        for _, r in ipairs(returns) do
+            local len_r = #r
+            for j = 1, len_r do
+                local class, typ_isopt, typ_islist = type_find_class(r[j], classes)
+                if class then
+                    add_class_desc_to_doc_item(r, class, typ_isopt, typ_islist)
+                end
+            end
+        end
+    elseif obj.kind == "class" then
+        for _, field in ipairs(obj.fields) do
+            local class, typ_isopt, typ_islist = type_find_class(field, classes)
+            if class then
+                add_class_desc_to_doc_item(field, class, typ_isopt, typ_islist)
+            end
+        end
+    end
+end
 
 ---@param parsed_sources docgen.ParsedSource[]
 ---@return table<string, docgen.ParserObj> classes
@@ -15,19 +216,19 @@ local function create_maps(parsed_sources)
 
     for _, source in ipairs(parsed_sources) do
         for _, obj in ipairs(source[2]) do
-            local kind = obj:kind_get()
+            local kind = obj.kind
             if kind == "fun" then
                 -- Use the unique tag because function namevars do not have to be globally unique.
-                local tag = obj:tag_get() --[[@as string]]
+                local tag = obj.tag --[[@as string]]
                 if not funs[tag] then
                     funs[tag] = obj
                 else
                     error("Duplicate fun " .. tag .. " from source " .. source[1])
                 end
-                funs[obj:tag_get()] = obj
+                funs[obj.tag] = obj
             elseif kind == "class" then
                 -- Globally unique LuaCATs class name
-                local name = obj:name_get() --[[@as string]]
+                local name = obj.name --[[@as string]]
                 if not classes[name] then
                     classes[name] = obj
                     classes_count = classes_count + 1
@@ -50,9 +251,9 @@ end
 local function create_classvar_map(classes, classes_count)
     local classvar_map = table_new(0, math.floor(classes_count * 0.25))
     for _, class in pairs(classes) do
-        local classvar = class:classvar_get()
+        local classvar = class.classvar
         if classvar then
-            classvar_map[classvar] = class:name_get()
+            classvar_map[classvar] = class.name
         end
     end
 
@@ -66,14 +267,14 @@ end
 ---@param funs table<string, docgen.ParserObj> Edited in place
 local function class_funs_resolve_links(classes, classvar_map, funs)
     for _, fun in pairs(funs) do
-        local class_name = classvar_map[fun:classvar_get()]
+        local class_name = classvar_map[fun.classvar]
         if class_name == nil then
             goto continue
         end
 
         local class = classes[class_name]
         if class then
-            class:class_attach_fun_field(fun)
+            parser_obj.class_attach_fun_field(class, fun)
         end
 
         ::continue::
@@ -87,15 +288,15 @@ local function parsed_sources_filter_invalid(parsed_sources, classes, funs)
     for _, source in ipairs(parsed_sources) do
         local obj_list = source[2]
         list_filter(obj_list, function(obj)
-            local kind = obj:kind_get()
+            local kind = obj.kind
             if kind == "fun" then
-                if obj:class_get() == nil then
-                    funs[obj:tag_get()] = nil
+                if obj.class == nil then
+                    funs[obj.tag] = nil
                     return false
                 end
             elseif kind == "class" then
-                if obj:fields_count() == 0 then
-                    classes[obj:name_get()] = nil
+                if parser_obj.fields_count(obj) == 0 then
+                    classes[obj.name] = nil
                     return false
                 end
             end
@@ -116,7 +317,7 @@ local function parsed_sources_filter_inlinedoc(parsed_sources)
     for _, source in ipairs(parsed_sources) do
         local obj_list = source[2]
         list_filter(obj_list, function(obj)
-            return not (obj:kind_get() == "class" and obj:doc_flag_get() == "inlinedoc")
+            return not (obj.kind == "class" and obj.doc_flag == "inlinedoc")
         end)
     end
 
@@ -146,11 +347,11 @@ function M.parsed_sources_resolve_holistic(parsed_sources)
     end
 
     for _, fun in pairs(funs) do
-        fun:inlinedoc_inject(classes)
+        inlinedoc_inject(fun, classes)
     end
 
     for _, class in pairs(classes) do
-        class:inlinedoc_inject(classes)
+        inlinedoc_inject(class, classes)
     end
 
     parsed_sources_filter_inlinedoc(parsed_sources)

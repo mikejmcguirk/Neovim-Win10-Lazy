@@ -60,6 +60,19 @@ function M.list_find(t, v)
     return nil
 end
 
+---Performs a shallow copy
+---@generic T
+---@param t table<T, T>
+---@return table<any, any>
+function M.table_copy(t)
+    local ret = {}
+    for k, v in pairs(t) do
+        ret[k] = v
+    end
+
+    return ret
+end
+
 M.table_new = require("table.new")
 M.table_clear = require("table.clear")
 
@@ -140,9 +153,14 @@ function M.slice_lines(lines, srow, scol, erow, ecol)
     local srow_1 = srow + 1
     local scol_1 = scol + 1
     local erow_1 = erow and erow + 1 or #lines
+    erow_1 = math.min(erow_1, #lines)
     local len_last_line = #lines[erow_1]
     local ecol_1 = ecol or len_last_line
-    if len_last_line > 0 then
+    -- In case you have a row, col 0 end node
+    if ecol_1 == 0 then
+        erow_1 = erow_1 - 1
+        ecol_1 = #lines[erow_1]
+    elseif len_last_line > 0 then
         ecol_1 = ecol_1 + vim.str_utf_start(lines[erow_1], ecol_1)
     end
 
@@ -282,6 +300,24 @@ function M.wrap(text, first_indent, indent, text_width)
 end
 -- NON: Don't remove the text width variable even though it exists as a constant. Keeps the
 -- function flexible.
+
+---@param text string
+---@param text_width integer
+---@return string
+function M.pure_wrap(text, text_width)
+    if not text or text == "" or text_width < 1 then
+        return text or ""
+    end
+
+    local lines = vim.split(text, "\n", { plain = true })
+    local res = {}
+    for _, line in ipairs(lines) do
+        res[#res + 1] = wrap_line(line, 0, 0, text_width)
+    end
+
+    return table.concat(res, "\n")
+end
+-- TODO: This cannot be the way.
 
 -- TODO: I would like to have a "pure function" rule for this module, with an exception for
 -- editing a single function param. If a function param is edited, the actual return from the

@@ -132,9 +132,9 @@ end
 --- @param obj docgen.ParserObj
 --- @return string?
 local function post_header_get(obj)
-    local is_deprecated = obj:doc_flag_get() == "deprecated"
-    local desc = obj:desc_get()
-    local parent = obj:parent_get()
+    local is_deprecated = obj.doc_flag == "deprecated"
+    local desc = obj.desc
+    local parent = obj.parent
     if not (is_deprecated or desc or parent) then
         return
     end
@@ -144,7 +144,7 @@ local function post_header_get(obj)
         local deprecated_tbl = {}
         deprecated_tbl[#deprecated_tbl + 1] = INDENT_STR
         deprecated_tbl[#deprecated_tbl + 1] = "DEPRECATED: "
-        local doc_flag_desc = obj:doc_flag_desc_get()
+        local doc_flag_desc = obj.doc_flag_desc
         if doc_flag_desc then
             -- TODO: Tag injection was originally handled here. The tag needs to be resolved
             -- during the holistic step when we have a view into everything.
@@ -175,7 +175,7 @@ end
 ---@param brief docgen.ParserObj
 ---@return string
 local function render_brief(brief)
-    return wrap(md_to_vimdoc(brief:desc_get() or ""), 0, 0, TEXT_WIDTH)
+    return wrap(md_to_vimdoc(brief.desc or ""), 0, 0, TEXT_WIDTH)
 end
 
 ---------------------------
@@ -185,36 +185,55 @@ end
 ---@param class docgen.ParserObj
 --- @return string
 local function header_class_get(class)
-    local class_name = class:name_get() --[[@as string]]
+    local class_name = class.name --[[@as string]]
     local display_name = cbraces_add(class_name, 0)
-    local tag = "*" .. class:tag_get() .. "*" --[[@as string]]
+    local tag = "*" .. class.tag .. "*" --[[@as string]]
 
     return header_assemble(display_name, tag, INDENT)
 end
 
+---@param obj docgen.ParserObj
+---@return integer
+local function fields_max_name_width(obj)
+    local max_name_width = 0
+    local fields = obj.fields
+    if not fields then
+        return max_name_width
+    end
+
+    for _, field in ipairs(fields) do
+        max_name_width = math.max(#field.name, max_name_width)
+    end
+
+    return max_name_width
+end
+-- TODO: This should be a util str function that takes any list
+-- TODO: also in holistic
+-- TODO: nvim-tools
+
 --- @param class docgen.ParserObj
 --- @return string?
 local function fields_get(class)
-    local max_name_width = class:field_names_max_width()
+    local max_name_width = fields_max_name_width(class)
     if max_name_width == 0 then
         return
     end
 
     local ret = {}
     ret[#ret + 1] = INDENT_STR .. "Fields: ~"
-    class:fields_sort(function(a, b)
+    table.sort(class.fields, function(a, b)
         return a.name < b.name
     end)
 
     local max_cbrace_name_width = max_name_width + 2
-    class:fields_iter(function(field)
+    for _, field in ipairs(class.fields) do
         -- TODO: Does this get pushed down into fmt_arg?
         local cbrace_name = cbraces_add(field.name, max_cbrace_name_width)
         -- TODO: Does this get pushed down into fmt_arg?
         local typ = type_fmt_get_with_default(field.type, field.default)
         local desc = field.desc or ""
         ret[#ret + 1] = fmt_arg(cbrace_name, typ, desc)
-    end)
+    end
 
     return table.concat(ret, "\n")
 end
@@ -243,58 +262,57 @@ end
 --- @param fun docgen.ParserObj
 --- @return string
 local function header_fun_get(fun)
-    local header_title = fun:namevar_get()
+    local header_title = fun.namevar
 
-    local params
-    if fun:params_count() > 0 then
+    local params = fun.params
+    local params_str
+    if params and #params > 0 then
         local params_tbl = {}
-        fun:params_iter(function(param)
+        for _, param in ipairs(params) do
             -- TODO: This previously included a check for if the param did not equal self. The
             -- self param should be handled when building the function data. dot functions should
             -- keep the self var, colon functions should discard.
             params_tbl[#params_tbl + 1] = cbraces_add(param.name, 0)
-        end)
+        end
 
-        params = table.concat(params_tbl, ", ")
+        params_str = table.concat(params_tbl, ", ")
     else
-        params = ""
+        params_str = ""
     end
 
-    local full_proto = string.format("%s(%s)", header_title, params)
-    local tag = "*" .. fun:tag_get() .. "*" --[[@as string]]
+    local full_proto = string.format("%s(%s)", header_title, params_str)
+    local tag = "*" .. fun.tag .. "*" --[[@as string]]
     return header_assemble(full_proto, tag, #header_title)
 end
--- TODO: If there are problems with the data in this function, the parser_obj needs to be fixed.
--- The interfaces here should produce the expected output.
 
 ---@param fun docgen.ParserObj
 ---@return string?
 local function see_get(fun)
-    if fun:see_count() == 0 then
+    local see = fun.see
+    if not (see and #see > 0) then
         return
     end
 
     local ret = {}
     ret[#ret + 1] = INDENT_STR
     ret[#ret + 1] = "See also: ~"
-    fun:see_iter(function(see)
+    for _, s in ipairs(see) do
         ret[#ret + 1] = "\n"
         ret[#ret + 1] = DBL_INDENT_STR
         ret[#ret + 1] = "• "
         -- TODO: The old see_fmt_get() injected the tags into here. This needs to be pre-handled
         -- by the parser_obj
-        ret[#ret + 1] = md_to_vimdoc(see)
-    end)
+        ret[#ret + 1] = md_to_vimdoc(s)
+    end
 
     return table.concat(ret)
 end
--- TODO: If there are problems with the data in this function, the parser_obj needs to be fixed.
--- The interfaces here should produce the expected output.
 
 ---@param fun docgen.ParserObj
 ---@return string?
 local function returns_get(fun)
-    local returns_count = fun:returns_count()
+    local returns = fun.returns
+    local returns_count = returns and #returns or 0
     if returns_count == 0 then
         return
     end
@@ -304,7 +322,7 @@ local function returns_get(fun)
     ret[#ret + 1] = INDENT_STR .. sub_header
 
     local ret_inner = {} ---@type string[]
-    fun:returns_iter(function(r)
+    for _, r in ipairs(fun.returns) do
         for _, inner_r in ipairs(r) do
             local typ = type_fmt_get_with_default(inner_r.type)
             local name = inner_r.name
@@ -333,7 +351,7 @@ local function returns_get(fun)
         local r_fmt = md_to_vimdoc(table.concat(ret_inner, sep))
         ret[#ret + 1] = wrap(r_fmt, DBL_INDENT, TPL_INDENT, TEXT_WIDTH)
         table_clear(ret_inner)
-    end)
+    end
 
     return table.concat(ret, "\n")
 end
@@ -346,19 +364,20 @@ end
 ---@param fun docgen.ParserObj
 ---@return string?
 local function overloads_get(fun)
-    if fun:overloads_count() == 0 then
+    local overloads = fun.overloads
+    if not (overloads and #overloads > 0) then
         return
     end
 
     local ret = {}
     ret[#ret + 1] = INDENT_STR
     ret[#ret + 1] = "Overloads: ~"
-    fun:overloads_iter(function(overload)
+    for _, overload in ipairs(overloads) do
         ret[#ret + 1] = "\n"
         ret[#ret + 1] = DBL_INDENT_STR
         ret[#ret + 1] = "• "
         ret[#ret + 1] = md_to_vimdoc(overload)
-    end)
+    end
 
     return table.concat(ret)
 end
@@ -366,7 +385,7 @@ end
 --- @param fun docgen.ParserObj
 --- @return string?
 local function attributes_get(fun)
-    if not fun:async_get() then
+    if not fun.async_flag == true then
         return
     end
 
@@ -382,28 +401,31 @@ end
 --- @param fun docgen.ParserObj
 --- @return string?
 local function params_get(fun)
-    local max_name_width = fun:param_names_max_width()
-    if max_name_width == 0 then
+    local params = fun.params
+    if not (params and #params > 0) then
         return
+    end
+
+    local max_name_width = 0
+    for _, param in ipairs(params) do
+        max_name_width = math.max(#param.name, max_name_width)
     end
 
     local ret = {}
     ret[#ret + 1] = INDENT_STR .. "Parameters: ~"
 
     local max_cbrace_name_width = max_name_width + 2
-    fun:params_iter(function(param)
+    for _, param in ipairs(fun.params) do
         -- TODO: Does this get pushed down into fmt_arg?
         local cbrace_name = cbraces_add(param.name, max_cbrace_name_width)
         -- TODO: Does this get pushed down into fmt_arg?
         local typ = type_fmt_get_with_default(param.type, param.default)
         local desc = param.desc or ""
         ret[#ret + 1] = fmt_arg(cbrace_name, typ, desc)
-    end)
+    end
 
     return table.concat(ret, "\n")
 end
--- TODO: Re-iterating again - The interfaces here should not change. Bad data means the
--- parser_obj is wrong.
 
 --- @param fun docgen.ParserObj
 --- @return string
@@ -465,11 +487,11 @@ function M.render_docs(parsed_sources)
         local source_objs = source[2]
         local rendered = {} ---@type string[]
         for _, obj in ipairs(source_objs) do
-            if obj:kind_get() == "fun" then
+            if obj.kind == "fun" then
                 rendered[#rendered + 1] = render_fun(obj)
-            elseif obj:kind_get() == "class" then
+            elseif obj.kind == "class" then
                 rendered[#rendered + 1] = class_render(obj)
-            elseif obj:kind_get() == "brief" then
+            elseif obj.kind == "brief" then
                 rendered[#rendered + 1] = render_brief(obj)
             end
         end

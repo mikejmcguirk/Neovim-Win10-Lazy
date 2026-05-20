@@ -24,6 +24,8 @@ local function root_from_str(str, lang, new_opts)
     return parser:parse(true)[1]:root()
 end
 
+-- TODO: Define handlers properly
+
 ---@alias docgen.NodeHandler fun(node:TSNode, str:string, indent:integer, handlers:table): string?
 
 ---@param node TSNode

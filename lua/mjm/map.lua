@@ -114,22 +114,6 @@ end)
 set({ "n", "x" }, "<C-f>", "m`<C-f>")
 set({ "n", "x" }, "<C-b>", "m`<C-b>")
 
-------------------
--- TEXT OBJECTS --
-------------------
-
-set("o", "i_", function()
-    vim.cmd("norm! _v" .. vim.v.count1 .. "g_")
-end, { silent = true })
-
-set("x", "i_", function()
-    local keys = "g_o^o" .. vim.v.count .. "g_"
-    api.nvim_feedkeys(keys, "ni", false)
-end, { silent = true })
-
-set("o", "a_", "<cmd>norm! ggVG<cr>")
-set("x", "a_", "<cmd>norm! ggoVG<cr>")
-
 -----------------------
 -- WINDOW MANAGEMENT --
 -----------------------

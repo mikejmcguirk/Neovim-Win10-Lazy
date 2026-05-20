@@ -2,7 +2,6 @@ local fs = vim.fs
 local uv = vim.uv
 
 local util = require("docgen.util")
-local list_find = util.list_find
 local str_has_content = util.str_has_content
 local stop_timer = util.stop_timer
 local table_new = util.table_new
@@ -27,96 +26,24 @@ end
 ----------------------
 
 ---@param path string
----@param mode integer|string
----@return boolean ok, string? msg
-function M.fs_access_get_info(path, mode)
-    local ok, err, err_name = uv.fs_access(path, mode)
-    if not ok then
-        local fmt_str = "Access denied: '%s'\n  level: %s\n  code: %s\n  error: %s"
-        local msg = string.format(fmt_str, path, mode, err, err_name)
-        return false, msg
-    end
-
-    return true, nil
-end
--- TODO: Better naming
--- TODO: use in here
--- TODO: Add to nvim-tools
-
----@param path string
----@param types string[]
----@return boolean ok, uv.fs_stat.result? stat, string? msg
-function M.fs_stat_get_info(path, types)
-    local stat, err, err_name = uv.fs_stat(path)
-    if not stat then
-        err = err or ""
-        err_name = err_name or "UNKNOWN"
-        local fmt_str = "fs_stat: Path does not exist: '%s'\n  code: %s\n  error: %s"
-        local msg = string.format(fmt_str, path, err_name, err)
-        return false, nil, msg
-    end
-
-    local stat_type = stat.type
-    local found_type = list_find(types, function(type)
-        return type == stat_type
-    end)
-
-    if found_type then
-        return true, stat, nil
-    end
-
-    local types_concat = table.concat(types, ", ")
-    local msg = string.format("Stat type %s does not match %s", stat_type, types_concat)
-    return false, stat, msg
-end
--- TODO: Improve fn name
--- TODO: Use this function in here
--- TODO: Add to nvim-tools.
-
----@param path string
----@param flags string
----@param mode integer
----@param close_handle? boolean Closes handle immediately. uv equivalent of `touch` Note that if
----     mimicking touch behavior, use flags "a".
----@return boolean ok, integer? handle, string? msg
-function M.fs_open_get_info(path, flags, mode, close_handle)
-    local fd, err, err_name = uv.fs_open(path, flags, mode)
-    if not fd then
-        local fmt_str = "Unable to open '%s'\n  mode: %s\n  code: %s\n  error: %s"
-        local msg = string.format(fmt_str, path, mode, err, err_name)
-        return false, nil, msg
-    end
-
-    if close_handle then
-        uv.fs_close(fd)
-        return true, nil, nil
-    end
-
-    return true, fd, nil
-end
--- TODO: better name
--- TODO: nvim-tools
-
----@param path string
 ---@param flags string
 ---@param mode integer
 ---@return integer? fd,uv.fs_stat.result? stat, string? msg
 local function try_open_file(path, flags, mode)
-    local default_ok, default_stat, default_msg = M.fs_stat_get_info(path, { "file" })
-    if (not default_ok) and default_stat then
-        return nil, default_stat, default_msg
+    local d_stat, d_err, d_err_name = uv.fs_stat(path)
+    if (d_stat and d_stat.type ~= "file") or ((not d_stat) and d_err_name ~= "ENOENT") then
+        return nil, d_stat, d_err
     end
 
-    if default_stat then
-        local access_ok, access_msg = M.fs_access_get_info(path, "W")
-        if not access_ok then
-            return nil, default_stat, access_msg
-        end
-    end
+    -- local a_ok, a_err, _ = uv.fs_access(path, "W")
+    -- if not a_ok then
+    --     return nil, d_stat, a_err
+    -- end
 
-    local open_ok, fd, open_msg = M.fs_open_get_info(path, flags, mode, false)
-    return open_ok and fd or nil, default_stat, open_msg
+    local fd, err, _ = uv.fs_open(path, flags, mode)
+    return fd, d_stat, err
 end
+-- TODO: Return both uv msg parts for the caller
 
 ---@param path string
 ---@param flags string
@@ -142,10 +69,11 @@ function M.open_path_validated(path, flags, mode, default_fname)
     end
 
     local dirpath = fs.dirname(path)
-    local dir_access_ok, dir_access_msg = M.fs_access_get_info(dirpath, "W")
-    if not dir_access_ok then
-        return nil, dir_access_msg
-    end
+    -- local a_ok, a_err, a_err_name = uv.fs_access(path, "W")
+    -- if not a_ok then
+    --     return nil, ("fs_access: " .. tostring(a_err_name) .. ": " .. tostring(a_err))
+    -- end
+    -- TODO: WHy are these failing? They work when run manually
 
     if not str_has_content(default_fname) then
         return nil, "Path " .. dirpath .. " is a directory, but no default filename provided"
@@ -155,6 +83,10 @@ function M.open_path_validated(path, flags, mode, default_fname)
     local default_fd, _, default_msg = try_open_file(default, flags, mode)
     return default_fd, default_msg
 end
+-- TODO: This abstraction mixes the file path and opening handling.
+-- There should be an abstration where you give it a path and a backup filename, and it gives you
+-- a resolved path. Then a simpler abstraction that just opens. It is okay if each abstraction is
+-- slightly clunkier under the hood if each one is more tractable.
 -- TODO: nvim-tools
 -- TODO: I don't love the hard coded "W" param. It works for docgen but not as an nvim-tools thing
 -- MID: Replace default_fname with an opts table
