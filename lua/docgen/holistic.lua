@@ -8,9 +8,106 @@ local list_filter = util.list_filter
 local table_new = util.table_new
 local type_fmt_get_with_default = util.type_fmt_get_with_default
 
-local parser_obj = require("docgen.parser_obj")
-
 local M = {}
+
+---@param obj docgen.ParserObj
+---@param key string
+---@return table
+local function obj_get_or_create_table_field(obj, key)
+    local val = rawget(obj, key)
+    if val then
+        return val
+    end
+
+    local new_val = {}
+    rawset(obj, key, new_val)
+    return new_val
+end
+-- TODO: Delete this or put it somewhere it can be commonly used.
+-- grep for duplicates
+
+---Assumes that obj and class are already finalized.
+---Assumes that obj.classvar and class.classvar have already been externally checked to match.
+---@param fun docgen.ParserObj
+---@param class_in docgen.ParserObj
+local function fun_set_class_info_from_class(fun, class_in)
+    rawset(fun, "parent", class_in.parent)
+    -- Module class functions should still be tagged as part of the module. Module LuaCATs tags
+    -- should not be confusing. See |vim.pos|/|vim.Pos| for an example of this done right.
+    -- DOC: This behavior.
+    if rawget(fun, "classvar") == rawget(fun, "modvar") then
+        return
+    end
+
+    rawset(fun, "class", class_in.class)
+
+    local class_tag = class_in.tag
+    local sep = rawget(fun, "sep")
+    local namevar = rawget(fun, "namevar")
+    rawset(fun, "tag", class_tag .. sep .. namevar .. "()")
+
+    local see = obj_get_or_create_table_field(fun, "see") ---@type string[]
+    see[#see + 1] = "|" .. class_tag .. "|"
+end
+
+---@param class docgen.ParserObj
+---@param fun docgen.ParserObj Modified in place
+local function class_attach_fun_field(class, fun)
+    local fields = obj_get_or_create_table_field(class, "fields") ---@type docgen.DocItem[]
+    local fun_namevar = fun.name
+    list_filter(fields, function(field)
+        return field.name ~= fun_namevar
+    end)
+
+    fun_set_class_info_from_class(fun, class)
+
+    -- Module classes should not duplicate the module physical function definitions.
+    if rawget(class, "classvar") == rawget(class, "modvar") then
+        return
+    end
+
+    local type_tbl = { "fun(" } ---@type string[]
+    local params = {} ---@type string[]
+    for _, param in ipairs(fun.params) do
+        params[#params + 1] = string.format("%s:%s", param.name, param.type)
+    end
+
+    type_tbl[#type_tbl + 1] = table.concat(params, ", ")
+    type_tbl[#type_tbl + 1] = ")"
+
+    local returns = fun.returns
+    if returns and #returns > 0 then
+        type_tbl[#type_tbl + 1] = ": "
+        local fun_ret_types = {} ---@type string[]
+        for _, r in ipairs(returns) do
+            for _, inner_r in ipairs(r) do
+                local inner_r_name = inner_r.name
+                local inner_r_type = inner_r.type
+                if inner_r_name then
+                    fun_ret_types[#fun_ret_types + 1] = inner_r_name .. ":" .. inner_r_type
+                else
+                    fun_ret_types[#fun_ret_types + 1] = inner_r_type
+                end
+            end
+
+            type_tbl[#type_tbl + 1] = table.concat(fun_ret_types, ", ")
+        end
+    end
+
+    local fun_tag = fun.tag --[[@as string]]
+    fields[#fields + 1] = {
+        kind = "field",
+        name = fun.namevar,
+        type = table.concat(type_tbl, ""),
+        desc = "See: |" .. fun_tag .. "|",
+    }
+end
+-- TODO: Is it necessary to outline the fun part? Maybe too OOP.
+-- MID: Functions currently, properly, filter out self if they are methods when they are finalized.
+-- However, function types, like the one above, need to include the self variable then they are
+-- defined in LuaCATs. Colon functions should hold onto the self var when they are created, only
+-- removing the self var if they attach to a class (since they would be dropped from rendering
+-- otherwise). Re-adding self here de-values the function's params as a source of truth.
 
 -- MID: This code needs to be refactored:
 -- - Fixups to type and desc should still be handled here, since they concern the integrity of
@@ -274,7 +371,7 @@ local function class_funs_resolve_links(classes, classvar_map, funs)
 
         local class = classes[class_name]
         if class then
-            parser_obj.class_attach_fun_field(class, fun)
+            class_attach_fun_field(class, fun)
         end
 
         ::continue::
@@ -295,7 +392,7 @@ local function parsed_sources_filter_invalid(parsed_sources, classes, funs)
                     return false
                 end
             elseif kind == "class" then
-                if parser_obj.fields_count(obj) == 0 then
+                if not (obj.fields and #obj.fields > 0) == 0 then
                     classes[obj.name] = nil
                     return false
                 end
