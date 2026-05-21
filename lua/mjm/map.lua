@@ -725,6 +725,18 @@ set("x", "<C-k>", function()
     visual_move({ upward = true })
 end)
 
+-- MID: Idea: Say you have this line:
+-- local foo = bar(bazz(0, 1), "buzz")
+-- You should be able to do `vaf` to select bazz, then Xis to select the whole statement and trim
+-- around bazz
+-- This idea of omode from xmode would also support swaps. You could do viw)/foo and swap with
+-- the next instance of foo. Or V)5j to swap with the line 5rnu down. Or Vj)5j to swap two lines
+-- with the two lines five down.
+-- The problem is with how omode's area works. The swap examples above would extend the marks
+-- from the cursor to the destination, so you have no way of isolating the destination. You
+-- would almost have to use on_key to capture the text objects or something.
+-- (The snip example actually works with this, since in theory it would be within the text
+-- object)
 set("x", "X", 'ygvV"_d<cmd>put!<cr>=`]', { silent = true })
 
 ---@param lt? boolean

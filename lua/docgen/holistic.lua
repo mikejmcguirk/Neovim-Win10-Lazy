@@ -5,6 +5,7 @@ local util = require("docgen.util")
 local cbraces_add = util.add_cbraces
 local endswith_byte = util.endswith_byte
 local list_filter = util.list_filter
+local list_fold = util.list_fold
 local table_new = util.table_new
 local table_get_or_create_subtable = util.table_get_or_create_subtable
 local type_fmt_get_with_default = util.type_fmt_get_with_default
@@ -116,25 +117,6 @@ local function inlinedoc_get_defaut_desc(is_list, parent)
     end
 end
 
----@param obj docgen.ParserObj
----@return integer
-local function fields_max_name_width(obj)
-    local max_name_width = 0
-    local fields = obj.fields
-    if not fields then
-        return max_name_width
-    end
-
-    for _, field in ipairs(fields) do
-        max_name_width = math.max(#field.name, max_name_width)
-    end
-
-    return max_name_width
-end
--- TODO: This should be a util str function that takes any list
--- TODO: also in renderer
--- TODO: nvim-tools
-
 ---@param doc_item docgen.DocItem Modified in place
 ---@param class docgen.ParserObj
 ---@param is_list boolean
@@ -150,13 +132,17 @@ local function inlinedoc_inject_into_desc(doc_item, class, is_list)
         new_doc_tbl[1] = old_desc .. " " .. inline_desc
     end
 
+    local fields = class.fields ---@type docgen.DocItem[]
     table.sort(class.fields, function(a, b)
         return a.name < b.name
     end)
 
-    local width = fields_max_name_width(class) + 2
+    local field_name_width_max = list_fold(fields, 0, function(field, acc)
+        return math.max(#field.name, acc)
+    end)
+
     for _, field in ipairs(class.fields) do
-        local name = cbraces_add(field.name, width)
+        local name = cbraces_add(field.name, field_name_width_max)
         local typ = type_fmt_get_with_default(field.type, field.default)
         -- Do now so later rendering has cleaner data to work with.
         local desc = md_to_vimdoc(field.desc or "")

@@ -5,19 +5,26 @@ local log = logger.log
 
 local ts_parsing = require("docgen.ts_parsing")
 local md_to_vimdoc = ts_parsing.luacats_md_to_vimdoc
+-- TODO: Replace with the updated parser
 
 local util = require("docgen.util")
-local cbraces_add = util.add_cbraces
+local list_copy = util.list_copy
+local list_fold = util.list_fold
+local list_map = util.list_map
+local str_lpad = util.str_rpad
+local rpad = util.str_rpad
+local str_surround = util.str_surround
+local str_op_by_sep = util.str_op_by_sep
 local table_clear = util.table_clear
 local type_fmt_get_with_default = util.type_fmt_get_with_default
 local wrap = util.wrap
 
 local const = require("docgen.const")
 local INDENT = const.INDENT
+local INDENT_STR = const.INDENT_STR
 local DBL_INDENT = const.DBL_INDENT
 local DBL_INDENT_STR = const.DBL_INDENT_STR
 local TPL_INDENT = const.TPL_INDENT
-local INDENT_STR = const.INDENT_STR
 local TEXT_WIDTH = const.TEXT_WIDTH
 
 -----------------------------
@@ -77,11 +84,14 @@ end
 -- MARK: Obj Utils
 ------------------
 
----@param name string
----@param typ string
----@param desc string
+---@param arg docgen.DocItem
+---@param max_name_width integer
 ---@return string
-local function fmt_arg(name, typ, desc)
+local function arg_fmt(arg, max_name_width)
+    local name_cbraced = rpad(str_surround(arg.name, "{", "}"), " ", max_name_width)
+    local typ = type_fmt_get_with_default(arg.type, arg.default)
+    local desc = arg.desc or ""
+
     local lines = {}
     local start_indent = DBL_INDENT
     local to_wrap
@@ -89,19 +99,19 @@ local function fmt_arg(name, typ, desc)
 
     if typ and #typ > 0 then
         if desc and #desc > 0 then
-            if #typ > TEXT_WIDTH - (DBL_INDENT + #name + 1) then
-                lines[#lines + 1] = bullet .. name .. " " .. typ .. "\n"
+            if #typ > TEXT_WIDTH - (DBL_INDENT + #name_cbraced + 1) then
+                lines[#lines + 1] = bullet .. name_cbraced .. " " .. typ .. "\n"
                 start_indent = TPL_INDENT
 
                 to_wrap = desc
             else
-                to_wrap = bullet .. name .. " " .. typ .. " " .. desc
+                to_wrap = bullet .. name_cbraced .. " " .. typ .. " " .. desc
             end
         else
-            to_wrap = bullet .. name .. " " .. typ
+            to_wrap = bullet .. name_cbraced .. " " .. typ
         end
     elseif desc and #desc > 0 then
-        to_wrap = bullet .. name .. " " .. desc
+        to_wrap = bullet .. name_cbraced .. " " .. desc
     else
         return ""
     end
@@ -110,23 +120,56 @@ local function fmt_arg(name, typ, desc)
     lines[#lines + 1] = wrap(md_text, start_indent, TPL_INDENT, TEXT_WIDTH)
     return table.concat(lines, "\n")
 end
+-- TODO: This is too complicated still.
 -- TODO: Where does the colon go in here?
 
 ---@param title string
----@param tag string
+---@param tag string?
 ---@param title_wrap_indent integer
 ---@return string
-local function header_assemble(title, tag, title_wrap_indent)
-    local len_title = #title
-    local len_tag = #tag
-
-    if len_title + len_tag <= TEXT_WIDTH - DBL_INDENT then
-        local padding = TEXT_WIDTH - len_title - len_tag
-        return title .. string.rep(" ", padding) .. tag
+local function header_title_assemble(title, tag, title_wrap_indent)
+    local title_len = #title
+    tag = tag or ""
+    local tag_len = #tag
+    local content_width = title_len + tag_len
+    if content_width <= TEXT_WIDTH - DBL_INDENT then
+        return title .. string.rep(" ", TEXT_WIDTH - content_width) .. tag
     end
 
     title = wrap(title, 0, title_wrap_indent, TEXT_WIDTH)
-    return string.format("%" .. TEXT_WIDTH .. "s", tag) .. "\n" .. title
+    return string.rep(" ", TEXT_WIDTH - tag_len) .. tag .. "\n" .. title
+end
+-- TODO: Swap tag and title_wrap_indent
+
+---@param title string Title Cased based on `-` separators
+---@param title_wrap integer If the title spans multiple lines, what indentation should the
+---     additional lines have?
+---     Example:
+---         foo({bar}, {bazz},
+---            {buzz})
+---@param tags string[]|nil `*` surrounds are added.
+---@param sep "="|"-"|nil
+local function header_create(title, title_wrap, tags, sep)
+    local ret = {}
+    if sep then
+        ret[#ret + 1] = string.rep(sep, TEXT_WIDTH)
+    end
+
+    if tags then
+        local tags_len_minus_one = #tags
+        for i = 1, tags_len_minus_one do
+            ret[#ret + 1] = str_lpad(str_surround(tags[i], "*"), " ", TEXT_WIDTH)
+        end
+    end
+
+    local tag_fmt = (tags and #tags > 0) and str_surround(tags[#tags], "*") or nil
+    local title_fmt = str_op_by_sep(title, "-", function(part)
+        return string.upper(string.sub(part, 1, 1)) .. string.sub(part, 2)
+    end)
+
+    ret[#ret + 1] = header_title_assemble(title_fmt, tag_fmt, title_wrap)
+
+    return table.concat(ret, "\n")
 end
 
 --- @param obj docgen.ParserObj
@@ -141,17 +184,14 @@ local function post_header_get(obj)
 
     local ret = {}
     if is_deprecated then
-        local deprecated_tbl = {}
-        deprecated_tbl[#deprecated_tbl + 1] = INDENT_STR
-        deprecated_tbl[#deprecated_tbl + 1] = "DEPRECATED: "
         local doc_flag_desc = obj.doc_flag_desc
         if doc_flag_desc then
-            -- TODO: Tag injection was originally handled here. The tag needs to be resolved
-            -- during the holistic step when we have a view into everything.
-            deprecated_tbl[#deprecated_tbl + 1] = md_to_vimdoc(doc_flag_desc)
+            local df_desc_fmt = md_to_vimdoc(doc_flag_desc)
+            local df_desc_wrapped = wrap(df_desc_fmt, DBL_INDENT, DBL_INDENT, TEXT_WIDTH)
+            ret[#ret + 1] = INDENT_STR .. "DEPRECATED:\n" .. df_desc_wrapped
+        else
+            ret[#ret + 1] = INDENT_STR .. "DEPRECATED:"
         end
-
-        ret[#ret + 1] = table.concat(deprecated_tbl)
     end
 
     if parent then
@@ -164,9 +204,6 @@ local function post_header_get(obj)
 
     return table.concat(ret, "\n\n")
 end
--- TODO: Will keep repeating this because it's important - If the underlying data here is wrong,
--- it needs to be fixed in parser_obj, because the interfaces here are what's expected to
--- work.
 
 ---------------------------
 -- MARK: Brief Rendering --
@@ -184,55 +221,27 @@ end
 
 ---@param class docgen.ParserObj
 --- @return string
-local function header_class_get(class)
-    local class_name = class.name --[[@as string]]
-    local display_name = cbraces_add(class_name, 0)
-    local tag = "*" .. class.tag .. "*" --[[@as string]]
-
-    return header_assemble(display_name, tag, INDENT)
+local function class_header_get(class)
+    return header_create(str_surround(class.name, "{", "}"), INDENT, { class.tag })
 end
-
----@param obj docgen.ParserObj
----@return integer
-local function fields_max_name_width(obj)
-    local max_name_width = 0
-    local fields = obj.fields
-    if not fields then
-        return max_name_width
-    end
-
-    for _, field in ipairs(fields) do
-        max_name_width = math.max(#field.name, max_name_width)
-    end
-
-    return max_name_width
-end
--- TODO: This should be a util str function that takes any list
--- TODO: also in holistic
--- TODO: nvim-tools
 
 --- @param class docgen.ParserObj
 --- @return string?
 local function fields_get(class)
-    local max_name_width = fields_max_name_width(class)
-    if max_name_width == 0 then
-        return
-    end
-
     local ret = {}
     ret[#ret + 1] = INDENT_STR .. "Fields: ~"
-    table.sort(class.fields, function(a, b)
+
+    local fields = class.fields --[[@as (docgen.DocItem[])]]
+    table.sort(fields, function(a, b)
         return a.name < b.name
     end)
 
-    local max_cbrace_name_width = max_name_width + 2
+    local max_name_width = list_fold(fields, 0, function(field, acc)
+        return math.max(#field.name, acc)
+    end) + 2 -- Since cbraces will be added.
+
     for _, field in ipairs(class.fields) do
-        -- TODO: Does this get pushed down into fmt_arg?
-        local cbrace_name = cbraces_add(field.name, max_cbrace_name_width)
-        -- TODO: Does this get pushed down into fmt_arg?
-        local typ = type_fmt_get_with_default(field.type, field.default)
-        local desc = field.desc or ""
-        ret[#ret + 1] = fmt_arg(cbrace_name, typ, desc)
+        ret[#ret + 1] = arg_fmt(field, max_name_width)
     end
 
     return table.concat(ret, "\n")
@@ -243,7 +252,7 @@ end
 local function class_render(class)
     local ret = {} --- @type string[]
 
-    local header = header_class_get(class)
+    local header = class_header_get(class)
     local post_header = post_header_get(class)
     if post_header then
         ret[#ret + 1] = header .. "\n" .. post_header
@@ -259,30 +268,28 @@ end
 -- MARK: Function Rendering --
 ------------------------------
 
---- @param fun docgen.ParserObj
---- @return string
-local function header_fun_get(fun)
-    local header_title = fun.namevar
-
+---@param fun docgen.ParserObj
+---@return string
+local function proto_params_get(fun)
     local params = fun.params
-    local params_str
-    if params and #params > 0 then
-        local params_tbl = {}
-        for _, param in ipairs(params) do
-            -- TODO: This previously included a check for if the param did not equal self. The
-            -- self param should be handled when building the function data. dot functions should
-            -- keep the self var, colon functions should discard.
-            params_tbl[#params_tbl + 1] = cbraces_add(param.name, 0)
-        end
-
-        params_str = table.concat(params_tbl, ", ")
-    else
-        params_str = ""
+    if not params then
+        return ""
     end
 
-    local full_proto = string.format("%s(%s)", header_title, params_str)
-    local tag = "*" .. fun.tag .. "*" --[[@as string]]
-    return header_assemble(full_proto, tag, #header_title)
+    local cbraced_params = list_map(list_copy(params), function(param)
+        return str_surround(param.name, "{", "}")
+    end)
+
+    return table.concat(cbraced_params, ", ")
+end
+
+--- @param fun docgen.ParserObj
+--- @return string
+local function fun_header_get(fun)
+    local namevar = fun.namevar
+    local title_params = proto_params_get(fun)
+    local title = string.format("%s(%s)", namevar, title_params)
+    return header_create(title, #namevar, { fun.tag })
 end
 
 ---@param fun docgen.ParserObj
@@ -293,19 +300,11 @@ local function see_get(fun)
         return
     end
 
-    local ret = {}
-    ret[#ret + 1] = INDENT_STR
-    ret[#ret + 1] = "See also: ~"
-    for _, s in ipairs(see) do
-        ret[#ret + 1] = "\n"
-        ret[#ret + 1] = DBL_INDENT_STR
-        ret[#ret + 1] = "• "
-        -- TODO: The old see_fmt_get() injected the tags into here. This needs to be pre-handled
-        -- by the parser_obj
-        ret[#ret + 1] = md_to_vimdoc(s)
-    end
+    local see_bullets = list_map(list_copy(see), function(s)
+        return DBL_INDENT_STR .. "• " .. md_to_vimdoc(s)
+    end)
 
-    return table.concat(ret)
+    return INDENT_STR .. "See also: ~\n" .. table.concat(see_bullets, "\n")
 end
 
 ---@param fun docgen.ParserObj
@@ -327,7 +326,7 @@ local function returns_get(fun)
             local typ = type_fmt_get_with_default(inner_r.type)
             local name = inner_r.name
             if name then
-                ret_inner[#ret_inner + 1] = typ .. " " .. cbraces_add(name, 0)
+                ret_inner[#ret_inner + 1] = typ .. " " .. str_surround(name, "{", "}")
             else
                 ret_inner[#ret_inner + 1] = typ
             end
@@ -369,33 +368,22 @@ local function overloads_get(fun)
         return
     end
 
-    local ret = {}
-    ret[#ret + 1] = INDENT_STR
-    ret[#ret + 1] = "Overloads: ~"
-    for _, overload in ipairs(overloads) do
-        ret[#ret + 1] = "\n"
-        ret[#ret + 1] = DBL_INDENT_STR
-        ret[#ret + 1] = "• "
-        ret[#ret + 1] = md_to_vimdoc(overload)
-    end
+    local overload_bullets = list_copy(overloads)
+    list_map(overload_bullets, function(overload)
+        return DBL_INDENT_STR .. "• " .. md_to_vimdoc(overload)
+    end)
 
-    return table.concat(ret)
+    return INDENT_STR .. "Overloads: ~\n" .. table.concat(overload_bullets, "\n")
 end
 
 --- @param fun docgen.ParserObj
 --- @return string?
 local function attributes_get(fun)
-    if not fun.async_flag == true then
+    if fun.async_flag ~= true then
         return
     end
 
-    local ret = {}
-    ret[#ret + 1] = INDENT_STR
-    ret[#ret + 1] = "Attributes: ~\n"
-    ret[#ret + 1] = DBL_INDENT_STR
-    ret[#ret + 1] = "• {async}"
-
-    return table.concat(ret)
+    return INDENT_STR .. "Attributes: ~\n" .. DBL_INDENT_STR .. "• {async}"
 end
 
 --- @param fun docgen.ParserObj
@@ -406,22 +394,15 @@ local function params_get(fun)
         return
     end
 
-    local max_name_width = 0
-    for _, param in ipairs(params) do
-        max_name_width = math.max(#param.name, max_name_width)
-    end
+    local max_name_width = list_fold(params, 0, function(param, acc)
+        return math.max(#param.name, acc)
+    end) + 2 -- To account for cbraces
 
     local ret = {}
     ret[#ret + 1] = INDENT_STR .. "Parameters: ~"
 
-    local max_cbrace_name_width = max_name_width + 2
     for _, param in ipairs(fun.params) do
-        -- TODO: Does this get pushed down into fmt_arg?
-        local cbrace_name = cbraces_add(param.name, max_cbrace_name_width)
-        -- TODO: Does this get pushed down into fmt_arg?
-        local typ = type_fmt_get_with_default(param.type, param.default)
-        local desc = param.desc or ""
-        ret[#ret + 1] = fmt_arg(cbrace_name, typ, desc)
+        ret[#ret + 1] = arg_fmt(param, max_name_width)
     end
 
     return table.concat(ret, "\n")
@@ -432,7 +413,7 @@ end
 local function render_fun(fun)
     local ret = {} ---@type string[]
 
-    local header = header_fun_get(fun)
+    local header = fun_header_get(fun)
     local post_header = post_header_get(fun)
     if post_header then
         ret[#ret + 1] = header .. "\n" .. post_header

@@ -1,3 +1,6 @@
+local api = vim.api
+local bit = require("bit")
+
 ---@type fun(narray: integer, nhash: integer): table
 
 --- @class nvim.util.MDNode
@@ -24,12 +27,24 @@ end
 
 ---@generic T
 ---@param t T[]
+function M.list_copy(t)
+    local t_len = #t
+    local ret = M.table_new(t_len, 0)
+    for i = 1, t_len do
+        ret[i] = t[i]
+    end
+
+    return ret
+end
+
+---@generic T
+---@param t T[]
 ---@param f fun(x: T): boolean
 function M.list_filter(t, f)
-    local len = #t
+    local t_len = #t
     local j = 1
 
-    for i = 1, len do
+    for i = 1, t_len do
         local v = t[i]
         if f(v) then
             t[j] = v
@@ -37,40 +52,52 @@ function M.list_filter(t, f)
         end
     end
 
-    for i = j, len do
+    for i = j, t_len do
         t[i] = nil
     end
 end
 
 ---@generic T
+---@generic U
 ---@param t T[]
----@param v T | fun(x: T): boolean
----@return integer|nil
-function M.list_find(t, v)
-    local predicate = type(v) == "function" and v or function(x)
-        return x == v
+---@param init U
+---@param f fun(x:T, acc:U): U
+function M.list_fold(t, init, f)
+    local t_len = #t
+    local acc = init
+    for i = 1, t_len do
+        acc = f(t[i], acc)
     end
 
-    for i = 1, #t do
-        if predicate(t[i]) then
-            return i
-        end
-    end
-
-    return nil
+    return acc
 end
+-- TODO: nvim-tools
+
+---@generic T
+---@param t T[]
+---@param f fun(x: T, idx: integer): any
+function M.list_map(t, f)
+    local t_len = #t
+    for i = 1, t_len do
+        t[i] = f(t[i], i)
+    end
+
+    return t
+end
+-- TODO: nvim-tools - Implement the core's reference return pattern in the list module (like
+-- above). Doing something like list_map(list_copy(foo), mapper) is too useful.
 
 ---@param t table
----@param s string
+---@param key string
 ---@return table
-function M.table_get_or_create_subtable(t, s)
-    local ret = rawget(t, s)
-    if ret then
-        return ret
+function M.table_get_or_create_subtable(t, key)
+    local t_ret = rawget(t, key)
+    if t_ret then
+        return t_ret
     end
 
-    ret = {}
-    rawset(t, s, ret)
+    local ret = {}
+    rawset(t, key, ret)
     return ret
 end
 -- TODO: nvim-tools
@@ -94,6 +121,77 @@ function M.add_cbraces(str, width)
 
     return "{" .. name .. "}" .. opt .. string.rep(" ", remain)
 end
+-- TODO: This should be two functions.
+-- - str_surround(string, string, string?) -- Trivial but compact
+-- - rpad(string, string, integer) -- Fills in padding. You can make this more worthwhile by
+-- handling display with + multi-cell characters.
+-- The call would then be: local foo = rpad(str_surround(bar, "{", "}"), " ", width)
+-- This does add perf cost, but it creates more generalizable pieces and makes what's happening
+-- easier to reason about.
+
+---@param str string
+---@param left string
+---@param right? string Same as left if nil
+---@return string
+function M.str_surround(str, left, right)
+    right = right or left
+    return left .. str .. right
+end
+
+---@param str string
+---@param char string
+---@param width integer
+local function str_pad_get_chars_count(str, char, width)
+    -- Use nvim_strwidth instead of strdisplaywidth because the latter's tab expansions are
+    -- dependent on window context.
+    local width_rem = width - api.nvim_strwidth(str)
+    if width_rem > 0 then
+        -- NOTE: Pre-compute char-width in hot paths.
+        local char_width = api.nvim_strwidth(char)
+        if char_width == 1 then
+            return width_rem
+        end
+
+        if char_width == 2 then
+            return bit.rshift(width_rem, 1)
+        end
+
+        -- I have never seen a width three character before.
+        if char_width == 0 then
+            return 0
+        end
+
+        return math.floor(width_rem / char_width)
+    end
+
+    return 0
+end
+
+---@param str string
+---@param char string
+---@param width integer
+function M.str_lpad(str, char, width)
+    local chars_count = str_pad_get_chars_count(str, char, width)
+    if chars_count > 0 then
+        return string.rep(char, chars_count) .. str
+    end
+
+    return str
+end
+-- TODO: nvim-tools
+
+---@param str string
+---@param char string
+---@param width integer
+function M.str_rpad(str, char, width)
+    local chars_count = str_pad_get_chars_count(str, char, width)
+    if chars_count > 0 then
+        return str .. string.rep(char, chars_count)
+    end
+
+    return str
+end
+-- TODO: nvim-tools
 
 ---@param text string
 ---@return string
@@ -196,6 +294,19 @@ function M.endswith_byte(str, byte)
     return len_str > 0 and string.byte(len_str, 1) == byte
 end
 
+---@param str string
+---@param sep string
+---@param f fun(part:string): string
+function M.str_op_by_sep(str, sep, f)
+    local str_parts = vim.split(str, sep)
+    M.list_map(str_parts, function(part)
+        return f(part)
+    end)
+
+    return table.concat(str_parts, sep)
+end
+-- TODO: nvim-tools
+
 ---@param typ string
 ---@param default? string
 function M.type_fmt_get_with_default(typ, default)
@@ -205,6 +316,8 @@ function M.type_fmt_get_with_default(typ, default)
 
     return string.format("(`%s`, default: %s)", typ, default)
 end
+-- MID: When the inlinedoc refactor is done to only handle data, this should be moved to the
+-- renderer module.
 
 ---NOTE: Does not add a final newline
 ---@param line string

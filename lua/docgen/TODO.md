@@ -224,6 +224,9 @@ Represent inputs as fname, str tuples, with str being the material. We need the 
   - [ ] DEP: I would not want to attempt this without first converting inline doc processing into a more data-based model, rather than ad-hoc text-injection.
   - [ ] Blocker: How do you prevent infinite recursion?
 
+- [ ] Allow classes without fields to render
+  - [ ] DEP: I don't know what the concrete use case for this is, so I don't know what I'd expect to see.
+
 #### SPEC:
 
 - [ ] The markdown parser should use byte positions to reason about how to perform output formatting, instead of just relying on node types
@@ -253,6 +256,9 @@ Represent inputs as fname, str tuples, with str being the material. We need the 
 
 ## REFERENCES
 
+* https://github.com/neovim/tree-sitter-vimdoc
+  + https://neovim.io/doc/user/helphelp/#help-writing
+  + https://github.com/nanotee/vimdoc-notes
 * https://github.com/folke/snacks.nvim/blob/main/lua/snacks/meta/docs.lua
 * panvimdoc
   + Though this doesn't solve the problem of how the function documentation gets into the md file

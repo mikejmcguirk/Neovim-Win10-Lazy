@@ -153,7 +153,8 @@ function M.find(t, v)
         return x == v
     end
 
-    for i = 1, #t do
+    local t_len = #t
+    for i = 1, t_len do
         if predicate(t[i]) then
             return i
         end
