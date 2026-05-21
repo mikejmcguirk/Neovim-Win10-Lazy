@@ -9,7 +9,6 @@ local ts = vim.treesitter
 local uv = vim.uv
 
 local util = require("docgen.util")
-local str_has_content = util.str_has_content
 -- local table_copy = util.table_copy
 local wrap = util.wrap
 
@@ -79,7 +78,7 @@ end
 local function add_gap_checked(last_byte, this_byte, str, ret)
     if last_byte < this_byte then
         local gap = string.sub(str, last_byte, this_byte - 1)
-        if str_has_content(gap) then
+        if gap ~= nil and string.find(gap, "[^%s]") ~= nil then
             ret[#ret + 1] = gap
         end
     end
@@ -124,7 +123,7 @@ local function children_iter(node, str, ctx, handlers)
         end
 
         local node_text = node_to_str(child, str, ctx, handlers)
-        if str_has_content(node_text) then
+        if node_text ~= nil and string.find(node_text, "[^%s]") ~= nil then
             ret[#ret + 1] = node_to_str(child, str, ctx, handlers)
         end
 

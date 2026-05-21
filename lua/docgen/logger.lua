@@ -55,7 +55,7 @@ end
 
 -- Add a "default_fname" param
 
----@param level_in 0|1
+---@param level_in (0|1)?
 ---@param path string
 function M.create_logger(level_in, path)
     level = level_in or 0

@@ -2,7 +2,6 @@ local fs = vim.fs
 local uv = vim.uv
 
 local util = require("docgen.util")
-local str_has_content = util.str_has_content
 local stop_timer = util.stop_timer
 local table_new = util.table_new
 
@@ -59,7 +58,7 @@ function M.open_path_validated(path, flags, mode, default_fname)
     end
 
     if stat and stat.type == "directory" then
-        if not str_has_content(default_fname) then
+        if not (default_fname and string.find(default_fname, "[^%s]") ~= nil) then
             return nil, "Path " .. path .. " is a directory, but no default filename provided"
         end
 
@@ -75,7 +74,7 @@ function M.open_path_validated(path, flags, mode, default_fname)
     -- end
     -- TODO: WHy are these failing? They work when run manually
 
-    if not str_has_content(default_fname) then
+    if not (default_fname and string.find(default_fname, "[^%s]") ~= nil) then
         return nil, "Path " .. dirpath .. " is a directory, but no default filename provided"
     end
 

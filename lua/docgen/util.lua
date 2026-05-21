@@ -60,18 +60,20 @@ function M.list_find(t, v)
     return nil
 end
 
----Performs a shallow copy
----@generic T
----@param t table<T, T>
----@return table<any, any>
-function M.table_copy(t)
-    local ret = {}
-    for k, v in pairs(t) do
-        ret[k] = v
+---@param t table
+---@param s string
+---@return table
+function M.table_get_or_create_subtable(t, s)
+    local ret = rawget(t, s)
+    if ret then
+        return ret
     end
 
+    ret = {}
+    rawset(t, s, ret)
     return ret
 end
+-- TODO: nvim-tools
 
 M.table_new = require("table.new")
 M.table_clear = require("table.clear")
@@ -194,13 +196,6 @@ function M.endswith_byte(str, byte)
     return len_str > 0 and string.byte(len_str, 1) == byte
 end
 
----@param str string?
----@return boolean
-function M.str_has_content(str)
-    return str ~= nil and string.find(str, "[^%s]") ~= nil
-end
--- TODO: Add this updated version to nvim-tools
-
 ---@param typ string
 ---@param default? string
 function M.type_fmt_get_with_default(typ, default)
@@ -218,7 +213,7 @@ end
 ---@param text_width integer
 ---@return string
 local function wrap_line(line, first_indent, indent, text_width)
-    if not M.str_has_content(line) then
+    if line == nil or string.find(line, "[^%s]") == nil then
         return ""
     end
 

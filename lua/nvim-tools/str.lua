@@ -16,13 +16,6 @@ function M.do_over_lines(lines, f)
     return vim.split(f(table.concat(lines)), "\n")
 end
 
----@param str string?
----@return boolean
-function M.str_has_content(str)
-    vim.validate("str", str, "string", true)
-    return str ~= nil and string.find(str, "[^%s]") ~= nil
-end
-
 ---@param str string
 ---@param byte integer
 ---@return boolean

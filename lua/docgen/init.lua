@@ -26,9 +26,6 @@ local open_path_validated = file_ops.open_path_validated
 local renderer = require("docgen.renderer")
 local render_docs = renderer.render_docs
 
-local util = require("docgen.util")
-local str_has_content = util.str_has_content
-
 local DEFAULT_LOG_FILE = "nvim-tools_docgen.log"
 
 ---@brief Full-featured Vimdoc generator for LuaCATs annotations. Simply run it with a list of
@@ -100,11 +97,10 @@ function M.generate(paths, output, level, log_path)
     end
 
     local debug_path = get_debug_path()
-    if not str_has_content(log_path) then
+    if not (log_path and string.find(log_path, "[^%s]") ~= nil) then
         log_path = fs.joinpath(debug_path, DEFAULT_LOG_FILE)
     end
 
-    ---@diagnostic disable-next-line: param-type-mismatch Fixed by str_has_content
     create_logger(level, log_path)
 
     local ok, timed_out, results = file_ops.fs_read_list(paths)
@@ -135,14 +131,13 @@ function M.generate(paths, output, level, log_path)
     local docs = render_docs(parsed_sources)
     log("Writing output")
     local default_output_fname = Nvim_Tools_Docgen_Help_Prefix .. ".txt"
-    if not str_has_content(output) then
+    if not (output and string.find(output, "[^%s]") ~= nil) then
         output = fs.joinpath(debug_path, default_output_fname)
     end
 
     -- TODO: There should be two calls here, the first is "get_uv_validated_path" and the other
     -- is "uv_write_checked" or something.
 
-    ---@diagnostic disable-next-line: param-type-mismatch Handled by str_has_content
     local fd, err = open_path_validated(output, "w", 438, default_output_fname)
     if not fd then
         error("On output path open: " .. tostring(err))

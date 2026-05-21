@@ -6,25 +6,10 @@ local cbraces_add = util.add_cbraces
 local endswith_byte = util.endswith_byte
 local list_filter = util.list_filter
 local table_new = util.table_new
+local table_get_or_create_subtable = util.table_get_or_create_subtable
 local type_fmt_get_with_default = util.type_fmt_get_with_default
 
 local M = {}
-
----@param obj docgen.ParserObj
----@param key string
----@return table
-local function obj_get_or_create_table_field(obj, key)
-    local val = rawget(obj, key)
-    if val then
-        return val
-    end
-
-    local new_val = {}
-    rawset(obj, key, new_val)
-    return new_val
-end
--- TODO: Delete this or put it somewhere it can be commonly used.
--- grep for duplicates
 
 ---Assumes that obj and class are already finalized.
 ---Assumes that obj.classvar and class.classvar have already been externally checked to match.
@@ -46,14 +31,14 @@ local function fun_set_class_info_from_class(fun, class_in)
     local namevar = rawget(fun, "namevar")
     rawset(fun, "tag", class_tag .. sep .. namevar .. "()")
 
-    local see = obj_get_or_create_table_field(fun, "see") ---@type string[]
+    local see = table_get_or_create_subtable(fun, "see") ---@type string[]
     see[#see + 1] = "|" .. class_tag .. "|"
 end
 
 ---@param class docgen.ParserObj
 ---@param fun docgen.ParserObj Modified in place
 local function class_attach_fun_field(class, fun)
-    local fields = obj_get_or_create_table_field(class, "fields") ---@type docgen.DocItem[]
+    local fields = table_get_or_create_subtable(class, "fields") ---@type docgen.DocItem[]
     local fun_namevar = fun.name
     list_filter(fields, function(field)
         return field.name ~= fun_namevar

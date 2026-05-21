@@ -71,7 +71,7 @@ local v = setmetatable({}, {
     end,
 })
 
----@alias docgen.luacats.Kind 'brief'|'class'|'field'|'generic'|'operator'|'param'|'return'
+---@alias docgen.luacats.Kind 'alias'|'brief'|'class'|'field'|'generic'|'operator'|'param'|'return'
 
 --- @class nvim.luacats.grammar.Result
 --- @field kind? docgen.luacats.Kind
@@ -131,10 +131,9 @@ local typedef = P({
         Pf(":") * comma1(v.fun_ret)
     ),
     generics = P(ty_ident) * Pf("<") * comma1(v.type) * Plf(">"),
-})
-    / function(match)
-        return vim.trim(match):gsub("^%((.*)%)$", "%1"):gsub("%?+", "?")
-    end
+}) / function(match)
+    return vim.trim(match):gsub("^%((.*)%)$", "%1"):gsub("%?+", "?")
+end
 
 local access = P("private") + P("protected") + P("package")
 local caccess = Cg(access, "access")
