@@ -1,5 +1,7 @@
 -- Forked version of the Neovim core docgen.
 
+local fs = vim.fs
+
 local logger = require("docgen.logger")
 local log = logger.log
 
@@ -15,7 +17,6 @@ local str_lpad = util.str_rpad
 local rpad = util.str_rpad
 local str_surround = util.str_surround
 local str_op_by_sep = util.str_op_by_sep
-local table_clear = util.table_clear
 local type_fmt_get_with_default = util.type_fmt_get_with_default
 local wrap = util.wrap
 
@@ -27,121 +28,11 @@ local DBL_INDENT_STR = const.DBL_INDENT_STR
 local TPL_INDENT = const.TPL_INDENT
 local TEXT_WIDTH = const.TEXT_WIDTH
 
------------------------------
--- MARK: Section Rendering --
------------------------------
+---------------
+-- MARK: Common
+---------------
 
----@param source_name string
----@param rendered string[]
----@return docgen.Section?
-local function section_create(source_name, rendered)
-    -- TODO: I think this is the right baseline behavior. Since the names should be filename
-    -- based, they should be lowercase. And then we have a camel/snake case title that looks
-    -- more appealing.
-    -- TODO: Have to be able to handle non-filename sources though
-    local help_labels = source_name
-    if type(help_labels) == "table" then
-        help_labels = table.concat(help_labels, "* *")
-    end
-
-    local help_tags = "*" .. help_labels .. "*"
-    local sectname = string.upper(string.sub(source_name, 1, 1)) .. string.sub(source_name, 2)
-
-    return {
-        name = sectname,
-        title = sectname,
-        help_tag = help_tags,
-        rendered = rendered,
-    }
-end
-
----@class docgen.Section
----@field name string
----@field title string
----@field help_tag string
----@field rendered string[]
-
---- @param section docgen.Section
---- @param add_header? boolean
-local function section_render(section, add_header)
-    local ret = {} --- @type string[]
-
-    if add_header ~= false then
-        local border = string.rep("=", TEXT_WIDTH) .. "\n"
-        ret[#ret + 1] = border
-        local rem_whitespace = TEXT_WIDTH - #section.title
-        local help_tag = string.format("%" .. rem_whitespace .. "s", section.help_tag)
-        vim.list_extend(ret, { section.title, help_tag })
-    end
-
-    ret[#ret + 1] = "\n\n"
-    ret[#ret + 1] = table.concat(section.rendered, "\n\n")
-
-    return table.concat(ret)
-end
-
-------------------
--- MARK: Obj Utils
-------------------
-
----@param arg docgen.DocItem
----@param max_name_width integer
----@return string
-local function arg_fmt(arg, max_name_width)
-    local name_cbraced = rpad(str_surround(arg.name, "{", "}"), " ", max_name_width)
-    local typ = type_fmt_get_with_default(arg.type, arg.default)
-    local desc = arg.desc or ""
-
-    local lines = {}
-    local start_indent = DBL_INDENT
-    local to_wrap
-    local bullet = "• "
-
-    if typ and #typ > 0 then
-        if desc and #desc > 0 then
-            if #typ > TEXT_WIDTH - (DBL_INDENT + #name_cbraced + 1) then
-                lines[#lines + 1] = bullet .. name_cbraced .. " " .. typ .. "\n"
-                start_indent = TPL_INDENT
-
-                to_wrap = desc
-            else
-                to_wrap = bullet .. name_cbraced .. " " .. typ .. " " .. desc
-            end
-        else
-            to_wrap = bullet .. name_cbraced .. " " .. typ
-        end
-    elseif desc and #desc > 0 then
-        to_wrap = bullet .. name_cbraced .. " " .. desc
-    else
-        return ""
-    end
-
-    local md_text = md_to_vimdoc(to_wrap)
-    lines[#lines + 1] = wrap(md_text, start_indent, TPL_INDENT, TEXT_WIDTH)
-    return table.concat(lines, "\n")
-end
--- TODO: This is too complicated still.
--- TODO: Where does the colon go in here?
-
----@param title string
----@param tag string?
----@param title_wrap_indent integer
----@return string
-local function header_title_assemble(title, tag, title_wrap_indent)
-    local title_len = #title
-    tag = tag or ""
-    local tag_len = #tag
-    local content_width = title_len + tag_len
-    if content_width <= TEXT_WIDTH - DBL_INDENT then
-        return title .. string.rep(" ", TEXT_WIDTH - content_width) .. tag
-    end
-
-    title = wrap(title, 0, title_wrap_indent, TEXT_WIDTH)
-    return string.rep(" ", TEXT_WIDTH - tag_len) .. tag .. "\n" .. title
-end
--- TODO: Swap tag and title_wrap_indent
-
----@param title string Title Cased based on `-` separators
+---@param title string If `sep` is present, Title Cased based on `-` separators
 ---@param title_wrap integer If the title spans multiple lines, what indentation should the
 ---     additional lines have?
 ---     Example:
@@ -156,18 +47,29 @@ local function header_create(title, title_wrap, tags, sep)
     end
 
     if tags then
-        local tags_len_minus_one = #tags
+        local tags_len_minus_one = #tags - 1
         for i = 1, tags_len_minus_one do
             ret[#ret + 1] = str_lpad(str_surround(tags[i], "*"), " ", TEXT_WIDTH)
         end
     end
 
-    local tag_fmt = (tags and #tags > 0) and str_surround(tags[#tags], "*") or nil
-    local title_fmt = str_op_by_sep(title, "-", function(part)
-        return string.upper(string.sub(part, 1, 1)) .. string.sub(part, 2)
-    end)
+    local tag_fmt = (tags and #tags > 0) and str_surround(tags[#tags], "*") or ""
+    local title_fmt = title
+    if sep then
+        title_fmt = str_op_by_sep(title, "-", function(part)
+            return string.upper(string.sub(part, 1, 1)) .. string.sub(part, 2)
+        end)
+    end
 
-    ret[#ret + 1] = header_title_assemble(title_fmt, tag_fmt, title_wrap)
+    local title_len = #title_fmt
+    local tag_len = #tag_fmt
+    local content_width = title_len + tag_len
+    if content_width <= TEXT_WIDTH - DBL_INDENT then
+        ret[#ret + 1] = title_fmt .. string.rep(" ", TEXT_WIDTH - content_width) .. tag_fmt
+    else
+        ret[#ret + 1] = str_lpad(tag_fmt, " ", TEXT_WIDTH)
+        ret[#ret + 1] = wrap(title, 0, title_wrap, TEXT_WIDTH)
+    end
 
     return table.concat(ret, "\n")
 end
@@ -205,9 +107,37 @@ local function post_header_get(obj)
     return table.concat(ret, "\n\n")
 end
 
----------------------------
--- MARK: Brief Rendering --
----------------------------
+---@param arg docgen.DocItem
+---@param max_name_width integer
+---@return string
+local function arg_mapper(arg, max_name_width)
+    local ret = {}
+    ret[#ret + 1] = "• "
+
+    local name_cbraced = rpad(str_surround(arg.name, "{", "}"), " ", max_name_width)
+    ret[#ret + 1] = name_cbraced
+    ret[#ret + 1] = " "
+
+    local typ = type_fmt_get_with_default(arg.type, arg.default)
+    ret[#ret + 1] = typ
+
+    if arg.desc then
+        if TEXT_WIDTH - #name_cbraced - #typ - DBL_INDENT > 0 then
+            ret[#ret + 1] = "\n"
+        else
+            ret[#ret + 1] = ": "
+        end
+
+        ret[#ret + 1] = arg.desc
+    end
+
+    local arg_fmt = md_to_vimdoc(table.concat(ret))
+    return wrap(arg_fmt, DBL_INDENT, TPL_INDENT, TEXT_WIDTH)
+end
+
+---------------
+-- MARK: Briefs
+---------------
 
 ---@param brief docgen.ParserObj
 ---@return string
@@ -215,15 +145,9 @@ local function render_brief(brief)
     return wrap(md_to_vimdoc(brief.desc or ""), 0, 0, TEXT_WIDTH)
 end
 
----------------------------
--- MARK: Class Rendering --
----------------------------
-
----@param class docgen.ParserObj
---- @return string
-local function class_header_get(class)
-    return header_create(str_surround(class.name, "{", "}"), INDENT, { class.tag })
-end
+----------------
+-- MARK: Classes
+----------------
 
 --- @param class docgen.ParserObj
 --- @return string?
@@ -241,7 +165,7 @@ local function fields_get(class)
     end) + 2 -- Since cbraces will be added.
 
     for _, field in ipairs(class.fields) do
-        ret[#ret + 1] = arg_fmt(field, max_name_width)
+        ret[#ret + 1] = arg_mapper(field, max_name_width)
     end
 
     return table.concat(ret, "\n")
@@ -252,7 +176,8 @@ end
 local function class_render(class)
     local ret = {} --- @type string[]
 
-    local header = class_header_get(class)
+    local name_cbraced = str_surround(class.name, "{", "}")
+    local header = header_create(name_cbraced, INDENT, { class.tag })
     local post_header = post_header_get(class)
     if post_header then
         ret[#ret + 1] = header .. "\n" .. post_header
@@ -287,93 +212,8 @@ end
 --- @return string
 local function fun_header_get(fun)
     local namevar = fun.namevar
-    local title_params = proto_params_get(fun)
-    local title = string.format("%s(%s)", namevar, title_params)
+    local title = string.format("%s(%s)", namevar, proto_params_get(fun))
     return header_create(title, #namevar, { fun.tag })
-end
-
----@param fun docgen.ParserObj
----@return string?
-local function see_get(fun)
-    local see = fun.see
-    if not (see and #see > 0) then
-        return
-    end
-
-    local see_bullets = list_map(list_copy(see), function(s)
-        return DBL_INDENT_STR .. "• " .. md_to_vimdoc(s)
-    end)
-
-    return INDENT_STR .. "See also: ~\n" .. table.concat(see_bullets, "\n")
-end
-
----@param fun docgen.ParserObj
----@return string?
-local function returns_get(fun)
-    local returns = fun.returns
-    local returns_count = returns and #returns or 0
-    if returns_count == 0 then
-        return
-    end
-
-    local ret = {} --- @type string[]
-    local sub_header = returns_count > 1 and "Returns (multiple): ~" or "Returns: ~"
-    ret[#ret + 1] = INDENT_STR .. sub_header
-
-    local ret_inner = {} ---@type string[]
-    for _, r in ipairs(fun.returns) do
-        for _, inner_r in ipairs(r) do
-            local typ = type_fmt_get_with_default(inner_r.type)
-            local name = inner_r.name
-            if name then
-                ret_inner[#ret_inner + 1] = typ .. " " .. str_surround(name, "{", "}")
-            else
-                ret_inner[#ret_inner + 1] = typ
-            end
-        end
-
-        local desc = r.desc
-        local sep
-        if #r > 1 then
-            sep = "\n"
-            if desc then
-                ret_inner[#ret_inner + 1] = desc
-            end
-        else
-            sep = ""
-            if desc then
-                ret_inner[#ret_inner + 1] = ": "
-                ret_inner[#ret_inner + 1] = desc
-            end
-        end
-
-        local r_fmt = md_to_vimdoc(table.concat(ret_inner, sep))
-        ret[#ret + 1] = wrap(r_fmt, DBL_INDENT, TPL_INDENT, TEXT_WIDTH)
-        table_clear(ret_inner)
-    end
-
-    return table.concat(ret, "\n")
-end
--- MID: Smarter rendering for multiple returns:
--- - Should not matter if the user uses multiple annotations or puts them all on one line.
--- - Desc should only be on its own line if the types/names are too long.
--- - Like params/fields, multiple returns should align based on type + name width.
--- LOW: It would be better to not have to assemble the ret_inner table.
-
----@param fun docgen.ParserObj
----@return string?
-local function overloads_get(fun)
-    local overloads = fun.overloads
-    if not (overloads and #overloads > 0) then
-        return
-    end
-
-    local overload_bullets = list_copy(overloads)
-    list_map(overload_bullets, function(overload)
-        return DBL_INDENT_STR .. "• " .. md_to_vimdoc(overload)
-    end)
-
-    return INDENT_STR .. "Overloads: ~\n" .. table.concat(overload_bullets, "\n")
 end
 
 --- @param fun docgen.ParserObj
@@ -402,10 +242,104 @@ local function params_get(fun)
     ret[#ret + 1] = INDENT_STR .. "Parameters: ~"
 
     for _, param in ipairs(fun.params) do
-        ret[#ret + 1] = arg_fmt(param, max_name_width)
+        ret[#ret + 1] = arg_mapper(param, max_name_width)
     end
 
     return table.concat(ret, "\n")
+end
+
+---@param fun docgen.ParserObj
+---@return string?
+local function overloads_get(fun)
+    local overloads = fun.overloads
+    if not (overloads and #overloads > 0) then
+        return
+    end
+
+    local overload_bullets = list_copy(overloads)
+    list_map(overload_bullets, function(overload)
+        return DBL_INDENT_STR .. "• " .. md_to_vimdoc(overload)
+    end)
+
+    return INDENT_STR .. "Overloads: ~\n" .. table.concat(overload_bullets, "\n")
+end
+
+---@param fun docgen.ParserObj
+---@return string?
+local function returns_get(fun)
+    local returns = fun.returns
+    if not returns then
+        return
+    end
+
+    local ret = {} --- @type string[]
+    local sub_header = #returns > 1 and "Returns (multiple): ~" or "Returns: ~"
+    ret[#ret + 1] = INDENT_STR .. sub_header
+
+    for _, r in ipairs(fun.returns) do
+        local typs_tbl = {}
+        local typs_len = 0
+        local typ_sep = ", "
+
+        for _, inner_r in ipairs(r) do
+            local typ = type_fmt_get_with_default(inner_r.type)
+            local name = inner_r.name
+            if name then
+                local typ_name = typ .. " " .. str_surround(name, "{", "}")
+                typs_len = typs_len + #typ_name
+                typs_tbl[#typs_tbl + 1] = typ_name
+            else
+                typs_len = typs_len + #typ
+                typs_tbl[#typs_tbl + 1] = typ
+            end
+        end
+
+        if #typs_tbl > 1 then
+            typs_len = typs_len + ((#typs_tbl - 1) * #typ_sep)
+        end
+
+        -- TODO: multiple issues
+
+        local typ_str
+        local desc_sep
+        if TEXT_WIDTH - typs_len - TPL_INDENT - TPL_INDENT >= 0 then
+            desc_sep = ": "
+        else
+            typ_sep = "\n"
+            desc_sep = "\n"
+            list_map(typs_tbl, function(typ)
+                return DBL_INDENT_STR .. typ
+            end)
+        end
+
+        typ_str = table.concat(typs_tbl, typ_sep)
+        local desc = r.desc
+        if desc then
+            local desc_indent = desc_sep == ": " and 0 or DBL_INDENT
+            local desc_prepended = (desc_sep == "\n" and "• " or "") .. desc
+            local desc_wrapped =
+                wrap(md_to_vimdoc(desc_prepended), desc_indent, TPL_INDENT, TEXT_WIDTH)
+            ret[#ret + 1] = typ_str .. desc_sep .. desc_wrapped
+        end
+    end
+
+    return table.concat(ret, "\n")
+end
+
+---@param fun docgen.ParserObj
+---@return string?
+local function see_get(fun)
+    local see = fun.see
+    if not (see and #see > 0) then
+        return
+    end
+
+    local see_bullets = list_map(list_copy(see), function(s)
+        local s_wrapped = wrap(md_to_vimdoc(s), 0, INDENT, TEXT_WIDTH)
+        return DBL_INDENT_STR .. "• " .. s_wrapped
+    end)
+
+    return INDENT_STR .. "See also: ~\n" .. table.concat(see_bullets, "\n")
 end
 
 --- @param fun docgen.ParserObj
@@ -457,17 +391,17 @@ local M = {}
 
 ---@param parsed_sources docgen.ParsedSource[]
 function M.render_docs(parsed_sources)
-    local sections = {} --- @type table<string,docgen.Section>
-
+    local sections = {} --- @type string[]
     for _, source in ipairs(parsed_sources) do
         local source_name = source[1]
         log("    Rendering source:" .. source_name)
-        -- TODO: Not relevant if the source is not a filename
-        local basename = vim.fs.basename(source_name)
 
-        local source_objs = source[2]
+        -- TODO: Not relevant if the source is not a filename
+        local basename = fs.basename(source_name)
         local rendered = {} ---@type string[]
-        for _, obj in ipairs(source_objs) do
+        rendered[#rendered + 1] = header_create(basename, 0, { basename }, "=")
+
+        for _, obj in ipairs(source[2]) do
             if obj.kind == "fun" then
                 rendered[#rendered + 1] = render_fun(obj)
             elseif obj.kind == "class" then
@@ -477,20 +411,13 @@ function M.render_docs(parsed_sources)
             end
         end
 
-        sections[#sections + 1] = section_create(basename, rendered)
-    end
-
-    local docs = {} --- @type string[]
-    for _, section in ipairs(sections) do
-        log(string.format("    Rendering section: '%s'", section.title))
-        docs[#docs + 1] = section_render(section, true)
+        sections[#sections + 1] = table.concat(rendered, "\n\n")
     end
 
     -- The trailing newline is required by the vimdoc spec.
     local ml = string.format("\n vim:tw=78:ts=8:sw=%d:sts=%d:et:ft=help:norl:\n", INDENT, INDENT)
-    table.insert(docs, ml)
-
-    return table.concat(docs, "\n\n")
+    sections[#sections + 1] = ml
+    return table.concat(sections, "\n\n")
 end
 
 return M

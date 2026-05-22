@@ -60,6 +60,11 @@ end
 ---@return nil
 function M.buzz(foo) end
 
+---@return integer id, string name, integer[] perms Card details
+function M.multipass(card)
+    return 0, "foo", { 3, 7, 9 }
+end
+
 ---What an amazing class
 ---@class test.Wow
 local Wow = {}
