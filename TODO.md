@@ -6,6 +6,8 @@
   - There's also fzf-lua's minimal init
   - Is this like a plugin thing? A personal config thing?
 
+- [ ] I'm not sure if it's an Nvim thing or a thing with my code or what, but seeing weird window context change flickers more.
+
 - [ ] Figure out how to write function param/return lines so Lua_Ls doesn't do weird things to wrap them in the hover K display
 
 #### MID:

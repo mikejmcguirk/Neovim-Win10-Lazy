@@ -307,18 +307,6 @@ function M.str_op_by_sep(str, sep, f)
 end
 -- TODO: nvim-tools
 
----@param typ string
----@param default? string
-function M.type_fmt_get_with_default(typ, default)
-    if not default then
-        return "(`" .. typ .. "`)"
-    end
-
-    return string.format("(`%s`, default: %s)", typ, default)
-end
--- MID: When the inlinedoc refactor is done to only handle data, this should be moved to the
--- renderer module.
-
 ---NOTE: Does not add a final newline
 ---@param line string
 ---@param first_indent integer

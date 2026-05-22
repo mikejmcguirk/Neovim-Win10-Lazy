@@ -6,6 +6,23 @@
 
 Represent inputs as fname, str tuples, with str being the material. We need the fnames for tagging/error reporting anyway.
 
+- [ ] In general for the below, would strongly consider using LuaJIT's string buffer, since we're accepting that as a concession to run the script.
+
+- [ ] Every concat should only be based on one thing. If there is no concat separator, there should not be newlines within the strings
+  - Motivation - Building the returns rendering function was painful because of the amount of assumptions about concats separators that had to be held at once. Want to eliminate that road block
+  - I concede that this will lead to perf loss due to intermediate concatenation. The improvements in reasonability + maintainability are worth.
+
+- [ ] The concept needs to exist that each line is intentional about its indentation during operations.
+  - The bluntest way to handle this is to pass strings around as a tuple that contains their indent. IMO this would introduce a ton of ceremony and non-trivial perf reduction
+  - An obvious thing to do is to make wrap better able to handle indentation. Right now, it is only additive. It cannot detect or subtract.
+  - wrap also takes any outgrowths of the first line and and indents them to the remainder. I'm not sure this is good behavior.
+    * But it's also necessary for bullet indenting, so maybe it's a naming/input availability issue. Like maybe wrap line should take it but wrap should calculate the lines after indent.
+  - To avoid a ton of bookkeeping, I think what needs to be done is that each return should be assumed to be indented to its proper block level. Inline doc is instructive I think. When arg_fmt recursively calls itself, it should be able to assume that the inline doc it gets back is zero indented, with sub-bullets one indent over or whatever. Then arg fmt can just indent it by one. And then, in a future support for recursive inline doc, each level of recursion can assume zero indenting from the one directly below it.
+  - Note that the emphasis on now having trailing newlines from concats has been very helpful for reasoning through a lot of muck in this code. More consistent data assumptions are helpful.
+  - Biggest motivation here is markdown parsing, since that involves deep and un-predictable recursion.
+
+- [ ] Function contracts need updated
+
 - [ ] Parser_obj warnings need line/file info to be useful
   - [ ] Add the filename to the parser obj once so the reference doesn't have to be moved every line
   - [ ] Pull the i out of ipairs for the line number

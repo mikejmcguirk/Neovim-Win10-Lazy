@@ -1,64 +1,28 @@
-local ts_parsing = require("docgen.ts_parsing")
-local md_to_vimdoc = ts_parsing.luacats_md_to_vimdoc
-
 local util = require("docgen.util")
-local cbraces_add = util.add_cbraces
+
 local endswith_byte = util.endswith_byte
+local list_copy = util.list_copy
 local list_filter = util.list_filter
-local list_fold = util.list_fold
+local list_map = util.list_map
+
 local table_new = util.table_new
 local table_get_or_create_subtable = util.table_get_or_create_subtable
-local type_fmt_get_with_default = util.type_fmt_get_with_default
 
 local M = {}
 
----Assumes that obj and class are already finalized.
----Assumes that obj.classvar and class.classvar have already been externally checked to match.
 ---@param fun docgen.ParserObj
----@param class_in docgen.ParserObj
-local function fun_set_class_info_from_class(fun, class_in)
-    rawset(fun, "parent", class_in.parent)
-    -- Module class functions should still be tagged as part of the module. Module LuaCATs tags
-    -- should not be confusing. See |vim.pos|/|vim.Pos| for an example of this done right.
-    -- DOC: This behavior.
-    if rawget(fun, "classvar") == rawget(fun, "modvar") then
-        return
-    end
-
-    rawset(fun, "class", class_in.class)
-
-    local class_tag = class_in.tag
-    local sep = rawget(fun, "sep")
-    local namevar = rawget(fun, "namevar")
-    rawset(fun, "tag", class_tag .. sep .. namevar .. "()")
-
-    local see = table_get_or_create_subtable(fun, "see") ---@type string[]
-    see[#see + 1] = "|" .. class_tag .. "|"
-end
-
----@param class docgen.ParserObj
----@param fun docgen.ParserObj Modified in place
-local function class_attach_fun_field(class, fun)
-    local fields = table_get_or_create_subtable(class, "fields") ---@type docgen.DocItem[]
-    local fun_namevar = fun.name
-    list_filter(fields, function(field)
-        return field.name ~= fun_namevar
-    end)
-
-    fun_set_class_info_from_class(fun, class)
-
-    -- Module classes should not duplicate the module physical function definitions.
-    if rawget(class, "classvar") == rawget(class, "modvar") then
-        return
-    end
-
+---@return string
+local function fun_to_fun_type_annotation(fun)
     local type_tbl = { "fun(" } ---@type string[]
-    local params = {} ---@type string[]
-    for _, param in ipairs(fun.params) do
-        params[#params + 1] = string.format("%s:%s", param.name, param.type)
+    local params = fun.params
+    if params and #params > 0 then
+        local type_params = list_map(list_copy(params), function(param)
+            return string.format("%s:%s", param.name, param.type)
+        end)
+
+        type_tbl[#type_tbl + 1] = table.concat(type_params, ", ")
     end
 
-    type_tbl[#type_tbl + 1] = table.concat(params, ", ")
     type_tbl[#type_tbl + 1] = ")"
 
     local returns = fun.returns
@@ -75,149 +39,75 @@ local function class_attach_fun_field(class, fun)
                     fun_ret_types[#fun_ret_types + 1] = inner_r_type
                 end
             end
-
-            type_tbl[#type_tbl + 1] = table.concat(fun_ret_types, ", ")
         end
+
+        type_tbl[#type_tbl + 1] = table.concat(fun_ret_types, ", ")
     end
 
-    local fun_tag = fun.tag --[[@as string]]
-    fields[#fields + 1] = {
-        kind = "field",
-        name = fun.namevar,
-        type = table.concat(type_tbl, ""),
-        desc = "See: |" .. fun_tag .. "|",
-    }
+    return table.concat(type_tbl)
 end
--- TODO: Is it necessary to outline the fun part? Maybe too OOP.
 -- MID: Functions currently, properly, filter out self if they are methods when they are finalized.
 -- However, function types, like the one above, need to include the self variable then they are
 -- defined in LuaCATs. Colon functions should hold onto the self var when they are created, only
 -- removing the self var if they attach to a class (since they would be dropped from rendering
 -- otherwise). Re-adding self here de-values the function's params as a source of truth.
 
--- MID: This code needs to be refactored:
--- - Fixups to type and desc should still be handled here, since they concern the integrity of
---   the underlying data.
--- - A table containing the inlinedoc data should be added to the item, either overwriting
---   desc or as a new field
--- - The rendering step should then format the table data, rather than duplicating code here.
--- - desc_append_see_class_tag should apply to union types where a class is found within it
--- Until that's done, only update this code for bug fixes.
+---@param class docgen.ParserObj Modified in place
+---@param fun docgen.ParserObj Modified in place
+local function class_fun_attach(class, fun)
+    local fields = table_get_or_create_subtable(class, "fields") ---@type docgen.DocItem[]
+    local fun_namevar = fun.namevar
+    list_filter(fields, function(field)
+        return field.name ~= fun_namevar
+    end)
 
----@param is_list boolean
----@param parent string?
----@return string
-local function inlinedoc_get_defaut_desc(is_list, parent)
-    if is_list then
-        return "A list of objects with the following fields:"
-    elseif parent then
-        return string.format("Extends |%s| with the additional fields:", parent)
-    else
-        return "A table with the following fields:"
+    -- DOC: Module functions stay attached to the module. This means module classes can't have
+    -- confusing names. See |vim.pos|/|vim.Pos| for an example of this done right.
+    if class.classvar == class.modvar then
+        return
     end
+
+    fun.class = class.class
+    local class_tag = class.tag
+    local sep = fun.sep
+    fun.tag = class_tag .. sep .. fun_namevar .. "()"
+
+    local fun_see = table_get_or_create_subtable(fun, "see") ---@type string[]
+    fun_see[#fun_see + 1] = "|" .. class_tag .. "|"
+
+    local fun_tag = fun.tag --[[@as string]]
+    fields[#fields + 1] = {
+        kind = "field",
+        name = fun_namevar,
+        type = fun_to_fun_type_annotation(fun),
+        desc = "See: |" .. fun_tag .. "|",
+    }
 end
 
 ---@param doc_item docgen.DocItem Modified in place
 ---@param class docgen.ParserObj
----@param is_list boolean
-local function inlinedoc_inject_into_desc(doc_item, class, is_list)
-    local new_doc_tbl = table_new(4, 0) ---@type string[]
+---@param typ_islist boolean
+local function obj_inlinedoc_inject(doc_item, class, typ_islist, typ_isopt)
+    local inlinedesc = {} ---@type docgen.ParserObj
+    inlinedesc.kind = "class"
 
-    local old_desc = doc_item.desc or ""
+    local doc_desc = doc_item.desc or ""
     local class_desc = class.desc
     if class_desc then
-        new_doc_tbl[1] = old_desc .. " " .. class_desc
-    elseif #old_desc == 0 then
-        local inline_desc = inlinedoc_get_defaut_desc(is_list, class.parent)
-        new_doc_tbl[1] = old_desc .. " " .. inline_desc
+        inlinedesc.desc = doc_desc .. " " .. class_desc
+    elseif #doc_desc == 0 then
+        if typ_islist then
+            inlinedesc.desc = doc_desc .. " " .. "A list of objects with the following fields:"
+        elseif class.parent then
+            local fmt_str = "Extends |%s| with the additional fields:"
+            inlinedesc.desc = doc_desc .. " " .. string.format(fmt_str, class.parent)
+        else
+            inlinedesc.desc = doc_desc .. " " .. "A table with the following fields:"
+        end
     end
 
-    local fields = class.fields ---@type docgen.DocItem[]
-    table.sort(class.fields, function(a, b)
-        return a.name < b.name
-    end)
-
-    local field_name_width_max = list_fold(fields, 0, function(field, acc)
-        return math.max(#field.name, acc)
-    end)
-
-    for _, field in ipairs(class.fields) do
-        local name = cbraces_add(field.name, field_name_width_max)
-        local typ = type_fmt_get_with_default(field.type, field.default)
-        -- Do now so later rendering has cleaner data to work with.
-        local desc = md_to_vimdoc(field.desc or "")
-        new_doc_tbl[#new_doc_tbl + 1] = table.concat({ "-", name, typ, desc }, " ")
-    end
-
-    doc_item.desc = table.concat(new_doc_tbl, "\n")
-end
-
----@param doc_item docgen.DocItem
----@param class docgen.ParserObj
-local function desc_append_see_class_tag(doc_item, class)
-    local old_desc = doc_item.desc or ""
-    local len_desc = #old_desc
-
-    local tag = "|" .. class.tag .. "|"
-    if len_desc == 0 then
-        doc_item.desc = "See " .. tag .. "."
-        return
-    end
-
-    if string.find(old_desc, tag) then
-        doc_item.desc = old_desc
-        return
-    end
-
-    local punctuation = endswith_byte(old_desc, 46) and " " or ". "
-    doc_item.desc = old_desc .. punctuation .. "See " .. tag .. "."
-end
-
----Assumes that typ has already had nils and extra spaces cleaned up.
----@param typ string
----@return string base, boolean is_optional, boolean is_list
-local function parse_clean_class_type(typ)
-    if (not typ) or typ == "" then
-        return "", false, false
-    end
-
-    local list_count
-    typ, list_count = string.gsub(typ, "%[%]$", "")
-    local q_count
-    typ, q_count = string.gsub(typ, "%?", "")
-
-    return typ, q_count > 0, list_count > 0
-end
-
---- @param doc_item docgen.DocItem Modified in place
---- @param classes table<string,docgen.ParserObj>
---- @return docgen.ParserObj?, boolean, boolean
-local function type_find_class(doc_item, classes)
-    local typ = doc_item.type
-    if not typ then
-        return nil, false, false
-    end
-
-    local typ_clean, typ_isopt, typ_islist = parse_clean_class_type(typ)
-    local class = classes[typ_clean]
-    if (not class) or class.doc_flag == "nodoc" then
-        return nil, false, false
-    end
-
-    return class, typ_isopt, typ_islist
-end
-
---- @param doc_item docgen.DocItem Modified in place
---- @param class docgen.ParserObj
---- @param typ_isopt boolean
---- @param typ_islist boolean
-local function add_class_desc_to_doc_item(doc_item, class, typ_isopt, typ_islist)
-    if class.doc_flag ~= "inlinedoc" then
-        desc_append_see_class_tag(doc_item, class)
-        return
-    end
-
-    inlinedoc_inject_into_desc(doc_item, class, typ_islist)
+    inlinedesc.fields = class.fields
+    doc_item.inlinedesc = inlinedesc
 
     local typ_tbl = { "table" }
     if typ_islist then
@@ -230,6 +120,52 @@ local function add_class_desc_to_doc_item(doc_item, class, typ_isopt, typ_islist
 
     doc_item.type = table.concat(typ_tbl)
 end
+
+---@param doc_item docgen.DocItem
+---@param class docgen.ParserObj
+local function desc_append_see_class_tag(doc_item, class)
+    local desc_old = doc_item.desc or ""
+    local desc_len = #desc_old
+
+    local tag = "|" .. class.tag .. "|"
+    if desc_len == 0 then
+        doc_item.desc = "See " .. tag .. "."
+        return
+    end
+
+    if string.find(desc_old, tag, 1, true) then
+        doc_item.desc = desc_old
+        return
+    end
+
+    local see_text = endswith_byte(desc_old, 46) and " See " or ". See "
+    doc_item.desc = desc_old .. see_text .. tag .. "."
+end
+
+--- @param doc_item docgen.DocItem Modified in place
+--- @param classes table<string,docgen.ParserObj>
+--- @return docgen.ParserObj?, boolean, boolean
+local function type_find_class(doc_item, classes)
+    local typ = doc_item.type
+    if (not typ) or typ == "" then
+        return nil, false, false
+    end
+
+    local list_count
+    typ, list_count = string.gsub(typ, "%[%]$", "")
+    local typ_islist = list_count > 0
+    local q_count
+    typ, q_count = string.gsub(typ, "%?", "")
+    local typ_isopt = q_count > 0
+
+    local class = classes[typ]
+    if (not class) or class.doc_flag == "nodoc" then
+        return nil, false, false
+    end
+
+    return class, typ_isopt, typ_islist
+end
+-- MID: Does not parse union types correctly.
 
 ---@param obj docgen.ParserObj
 ---@param classes table<string,docgen.ParserObj> All classes from all files.
@@ -244,7 +180,11 @@ local function inlinedoc_inject(obj, classes)
         for _, param in ipairs(obj.params) do
             local class, typ_isopt, typ_islist = type_find_class(param, classes)
             if class then
-                add_class_desc_to_doc_item(param, class, typ_isopt, typ_islist)
+                if class.doc_flag == "inlinedoc" then
+                    obj_inlinedoc_inject(param, class, typ_islist, typ_isopt)
+                else
+                    desc_append_see_class_tag(param, class)
+                end
             end
         end
 
@@ -255,11 +195,14 @@ local function inlinedoc_inject(obj, classes)
         end
 
         for _, r in ipairs(returns) do
-            local len_r = #r
-            for j = 1, len_r do
-                local class, typ_isopt, typ_islist = type_find_class(r[j], classes)
+            for _, inner_r in ipairs(r) do
+                local class, typ_isopt, typ_islist = type_find_class(inner_r, classes)
                 if class then
-                    add_class_desc_to_doc_item(r, class, typ_isopt, typ_islist)
+                    if class.doc_flag == "inlinedoc" then
+                        obj_inlinedoc_inject(inner_r, class, typ_islist, typ_isopt)
+                    else
+                        desc_append_see_class_tag(inner_r, class)
+                    end
                 end
             end
         end
@@ -267,7 +210,11 @@ local function inlinedoc_inject(obj, classes)
         for _, field in ipairs(obj.fields) do
             local class, typ_isopt, typ_islist = type_find_class(field, classes)
             if class then
-                add_class_desc_to_doc_item(field, class, typ_isopt, typ_islist)
+                if class.doc_flag == "inlinedoc" then
+                    obj_inlinedoc_inject(field, class, typ_islist, typ_isopt)
+                else
+                    desc_append_see_class_tag(field, class)
+                end
             end
         end
     end
@@ -309,6 +256,7 @@ local function create_maps(parsed_sources)
 
     return classes, classes_count, funs
 end
+-- TODO: Rather than checking tags here, do the global tag checking step first.
 -- FUTURE: Build this while creating parsed inputs. Obvious perf gain since you don't have to
 -- iterate past briefs and aliases. Keeping it here at the moment though more logically scopes
 -- the data.
@@ -342,7 +290,7 @@ local function class_funs_resolve_links(classes, classvar_map, funs)
 
         local class = classes[class_name]
         if class then
-            class_attach_fun_field(class, fun)
+            class_fun_attach(class, fun)
         end
 
         ::continue::
@@ -377,8 +325,6 @@ local function parsed_sources_filter_invalid(parsed_sources, classes, funs)
         return #input > 0
     end)
 end
--- MAYBE: Unlike with parsing finalization, there aren't enough criteria here to justify putting
--- into the metatable. If the criteria become more complex, that can be revisited.
 
 ---@param parsed_sources docgen.ParsedSource[] Edited in place
 local function parsed_sources_filter_inlinedoc(parsed_sources)

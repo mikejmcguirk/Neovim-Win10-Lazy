@@ -19,6 +19,7 @@ local NBSP = const.NBSP
 --- @class docgen.DocItem : nvim.luacats.grammar.Result
 --- @field classvar? string
 --- @field default? string
+--- @field inlinedesc? docgen.ParserObj
 --- @field nodoc? boolean
 
 ---@alias docgen.Kind docgen.luacats.Kind|"fun"
@@ -45,20 +46,16 @@ local NBSP = const.NBSP
 ---@field overloads? string[]
 ---@field params? docgen.DocItem[]
 ---@field parent? string
----@field prev_indent integer
+---@field prev_indent? integer
 ---@field returns? docgen.DocItem[]
 ---@field see? string[]
 ---@field sep? string
 ---0: Can accept new lines
 ---1: Finalized and valid
 ---2: Finalized and invalid
----@field status 0|1|2
+---@field status? 0|1|2
 ---@field tag? string
 ---@field type? docgen.DocItem
-
--- TODO: Will this comment still be relevant?
--- For these, and for the obj utils, keep the item_ and obj_ prefixes so their usages is
--- obvious on dot completion.
 
 --- @param item nvim.luacats.grammar.Result|docgen.DocItem Modified in place
 local function item_extract_default_from_desc(item)

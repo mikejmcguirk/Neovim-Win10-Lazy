@@ -13,11 +13,10 @@ local util = require("docgen.util")
 local list_copy = util.list_copy
 local list_fold = util.list_fold
 local list_map = util.list_map
-local str_lpad = util.str_rpad
+local lpad = util.str_lpad
 local rpad = util.str_rpad
 local str_surround = util.str_surround
 local str_op_by_sep = util.str_op_by_sep
-local type_fmt_get_with_default = util.type_fmt_get_with_default
 local wrap = util.wrap
 
 local const = require("docgen.const")
@@ -28,9 +27,9 @@ local DBL_INDENT_STR = const.DBL_INDENT_STR
 local TPL_INDENT = const.TPL_INDENT
 local TEXT_WIDTH = const.TEXT_WIDTH
 
----------------
--- MARK: Common
----------------
+------------------
+-- MARK: Common --
+------------------
 
 ---@param title string If `sep` is present, Title Cased based on `-` separators
 ---@param title_wrap integer If the title spans multiple lines, what indentation should the
@@ -49,7 +48,7 @@ local function header_create(title, title_wrap, tags, sep)
     if tags then
         local tags_len_minus_one = #tags - 1
         for i = 1, tags_len_minus_one do
-            ret[#ret + 1] = str_lpad(str_surround(tags[i], "*"), " ", TEXT_WIDTH)
+            ret[#ret + 1] = lpad(str_surround(tags[i], "*"), " ", TEXT_WIDTH)
         end
     end
 
@@ -67,7 +66,7 @@ local function header_create(title, title_wrap, tags, sep)
     if content_width <= TEXT_WIDTH - DBL_INDENT then
         ret[#ret + 1] = title_fmt .. string.rep(" ", TEXT_WIDTH - content_width) .. tag_fmt
     else
-        ret[#ret + 1] = str_lpad(tag_fmt, " ", TEXT_WIDTH)
+        ret[#ret + 1] = lpad(tag_fmt, " ", TEXT_WIDTH)
         ret[#ret + 1] = wrap(title, 0, title_wrap, TEXT_WIDTH)
     end
 
@@ -107,37 +106,74 @@ local function post_header_get(obj)
     return table.concat(ret, "\n\n")
 end
 
+---@param typ string
+---@param default? string
+local function type_fmt_get_with_default(typ, default)
+    if not default then
+        return "(`" .. typ .. "`)"
+    end
+
+    return string.format("(`%s`, default: %s)", typ, default)
+end
+
+-- MID: When the inlinedoc refactor is done to only handle data, this should be moved to the
+-- renderer module.
 ---@param arg docgen.DocItem
 ---@param max_name_width integer
+---@param base_indent integer
 ---@return string
-local function arg_mapper(arg, max_name_width)
-    local ret = {}
+local function arg_mapper(arg, max_name_width, base_indent)
+    local ret = {} ---@type string[]
     ret[#ret + 1] = "• "
 
     local name_cbraced = rpad(str_surround(arg.name, "{", "}"), " ", max_name_width)
     ret[#ret + 1] = name_cbraced
-    ret[#ret + 1] = " "
+    ret[#ret + 1] = "  "
 
     local typ = type_fmt_get_with_default(arg.type, arg.default)
     ret[#ret + 1] = typ
 
-    if arg.desc then
-        if TEXT_WIDTH - #name_cbraced - #typ - DBL_INDENT > 0 then
-            ret[#ret + 1] = "\n"
+    if arg.inlinedesc or arg.desc then
+        if TEXT_WIDTH - #name_cbraced - #typ - DBL_INDENT - base_indent >= 0 then
+            ret[#ret + 1] = " "
         else
-            ret[#ret + 1] = ": "
+            ret[#ret + 1] = "\n"
         end
 
-        ret[#ret + 1] = arg.desc
+        local inlinedesc = arg.inlinedesc
+        if inlinedesc then
+            ret[#ret + 1] = md_to_vimdoc(inlinedesc.desc)
+            ret[#ret + 1] = "\n"
+
+            local fields = inlinedesc.fields --[[@as (docgen.DocItem[])]]
+            table.sort(fields, function(a, b)
+                return a.name < b.name
+            end)
+
+            local inline_max_name_width = list_fold(fields, 0, function(field, acc)
+                return math.max(#field.name, acc)
+            end) + 2 -- Since cbraces will be added.
+
+            local ret_inline = {} ---@type string[]
+            local inline_base_indent = base_indent + INDENT
+            for _, field in ipairs(fields) do
+                local field_str = arg_mapper(field, inline_max_name_width, inline_base_indent)
+                ret_inline[#ret_inline + 1] = field_str
+            end
+
+            local field_strs = table.concat(ret_inline, "\n")
+            ret[#ret + 1] = wrap(field_strs, inline_base_indent, inline_base_indent, TEXT_WIDTH)
+        elseif arg.desc then
+            ret[#ret + 1] = md_to_vimdoc(arg.desc)
+        end
     end
 
-    local arg_fmt = md_to_vimdoc(table.concat(ret))
-    return wrap(arg_fmt, DBL_INDENT, TPL_INDENT, TEXT_WIDTH)
+    return table.concat(ret)
 end
 
----------------
--- MARK: Briefs
----------------
+------------------
+-- MARK: Briefs --
+------------------
 
 ---@param brief docgen.ParserObj
 ---@return string
@@ -145,9 +181,9 @@ local function render_brief(brief)
     return wrap(md_to_vimdoc(brief.desc or ""), 0, 0, TEXT_WIDTH)
 end
 
-----------------
--- MARK: Classes
-----------------
+-------------------
+-- MARK: Classes --
+-------------------
 
 --- @param class docgen.ParserObj
 --- @return string?
@@ -164,8 +200,9 @@ local function fields_get(class)
         return math.max(#field.name, acc)
     end) + 2 -- Since cbraces will be added.
 
-    for _, field in ipairs(class.fields) do
-        ret[#ret + 1] = arg_mapper(field, max_name_width)
+    for _, field in ipairs(fields) do
+        local field_str = arg_mapper(field, max_name_width, 0)
+        ret[#ret + 1] = wrap(field_str, DBL_INDENT, DBL_INDENT, TEXT_WIDTH)
     end
 
     return table.concat(ret, "\n")
@@ -240,9 +277,9 @@ local function params_get(fun)
 
     local ret = {}
     ret[#ret + 1] = INDENT_STR .. "Parameters: ~"
-
-    for _, param in ipairs(fun.params) do
-        ret[#ret + 1] = arg_mapper(param, max_name_width)
+    for _, param in ipairs(params) do
+        local param_str = arg_mapper(param, max_name_width, 0)
+        ret[#ret + 1] = wrap(param_str, DBL_INDENT, DBL_INDENT, TEXT_WIDTH)
     end
 
     return table.concat(ret, "\n")
@@ -256,8 +293,7 @@ local function overloads_get(fun)
         return
     end
 
-    local overload_bullets = list_copy(overloads)
-    list_map(overload_bullets, function(overload)
+    local overload_bullets = list_map(list_copy(overloads), function(overload)
         return DBL_INDENT_STR .. "• " .. md_to_vimdoc(overload)
     end)
 
@@ -275,51 +311,47 @@ local function returns_get(fun)
     local ret = {} --- @type string[]
     local sub_header = #returns > 1 and "Returns (multiple): ~" or "Returns: ~"
     ret[#ret + 1] = INDENT_STR .. sub_header
-
-    for _, r in ipairs(fun.returns) do
-        local typs_tbl = {}
-        local typs_len = 0
-        local typ_sep = ", "
-
+    for _, r in ipairs(returns) do
+        local name_width_tot = 0
+        local typ_width_max = 0
+        local typ_width_tot = 0
+        local typs_tbl = {} ---@type string[]
         for _, inner_r in ipairs(r) do
-            local typ = type_fmt_get_with_default(inner_r.type)
-            local name = inner_r.name
-            if name then
-                local typ_name = typ .. " " .. str_surround(name, "{", "}")
-                typs_len = typs_len + #typ_name
-                typs_tbl[#typs_tbl + 1] = typ_name
-            else
-                typs_len = typs_len + #typ
-                typs_tbl[#typs_tbl + 1] = typ
-            end
+            name_width_tot = inner_r.name and name_width_tot + #inner_r.name or name_width_tot
+            local typ_fmt = type_fmt_get_with_default(inner_r.type)
+            local typ_fmt_width = #typ_fmt
+            typ_width_max = math.max(typ_width_max, typ_fmt_width)
+            typ_width_tot = typ_width_tot + typ_fmt_width
+            typs_tbl[#typs_tbl + 1] = typ_fmt
         end
 
-        if #typs_tbl > 1 then
-            typs_len = typs_len + ((#typs_tbl - 1) * #typ_sep)
-        end
-
-        -- TODO: multiple issues
-
-        local typ_str
-        local desc_sep
-        if TEXT_WIDTH - typs_len - TPL_INDENT - TPL_INDENT >= 0 then
-            desc_sep = ": "
-        else
-            typ_sep = "\n"
-            desc_sep = "\n"
-            list_map(typs_tbl, function(typ)
-                return DBL_INDENT_STR .. typ
+        local typ_sep = ", "
+        local typs_len = typ_width_tot + name_width_tot + ((#typs_tbl - 1) * #typ_sep)
+        local desc_md = r.desc and md_to_vimdoc(r.desc) or nil
+        if TEXT_WIDTH - typs_len - (DBL_INDENT * 2) >= 0 then
+            list_map(typs_tbl, function(typ, idx)
+                local name = r[idx].name
+                return name and typ .. " " .. str_surround(name, "{", "}") or typ
             end)
-        end
 
-        typ_str = table.concat(typs_tbl, typ_sep)
-        local desc = r.desc
-        if desc then
-            local desc_indent = desc_sep == ": " and 0 or DBL_INDENT
-            local desc_prepended = (desc_sep == "\n" and "• " or "") .. desc
-            local desc_wrapped =
-                wrap(md_to_vimdoc(desc_prepended), desc_indent, TPL_INDENT, TEXT_WIDTH)
-            ret[#ret + 1] = typ_str .. desc_sep .. desc_wrapped
+            local typ_str = DBL_INDENT_STR .. table.concat(typs_tbl, typ_sep)
+            local joined = desc_md and typ_str .. " " .. desc_md or typ_str
+            ret[#ret + 1] = wrap(joined, 0, TPL_INDENT, TEXT_WIDTH)
+        else
+            for i, typ in ipairs(typs_tbl) do
+                local name = r[i].name
+                if name then
+                    local typ_rpadded = rpad(typ, " ", typ_width_max)
+                    local name_cbraced = str_surround(name, "{", "}")
+                    ret[#ret + 1] = DBL_INDENT_STR .. typ_rpadded .. "  " .. name_cbraced
+                else
+                    ret[#ret + 1] = DBL_INDENT_STR .. typ
+                end
+            end
+
+            if desc_md then
+                ret[#ret + 1] = wrap("• " .. desc_md, DBL_INDENT, DBL_INDENT, TEXT_WIDTH)
+            end
         end
     end
 
@@ -342,8 +374,8 @@ local function see_get(fun)
     return INDENT_STR .. "See also: ~\n" .. table.concat(see_bullets, "\n")
 end
 
---- @param fun docgen.ParserObj
---- @return string
+---@param fun docgen.ParserObj
+---@return string
 local function render_fun(fun)
     local ret = {} ---@type string[]
 

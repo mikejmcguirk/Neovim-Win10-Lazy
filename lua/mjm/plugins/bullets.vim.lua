@@ -1,5 +1,6 @@
 return {
     "bullets-vim/bullets.vim",
+    -- enabled = false,
     init = function()
         local api = vim.api
 

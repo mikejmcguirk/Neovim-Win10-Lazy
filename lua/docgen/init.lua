@@ -83,6 +83,9 @@ end
 
 local M = {}
 
+-- TODO: The bullets under level don't indent
+-- TODO: If the bullets under level are manually indented, they don't bullet format.
+
 ---Main generator function
 ---@param paths string[] Input filepaths
 ---@param output string? Output file
