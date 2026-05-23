@@ -8,6 +8,9 @@ local fs = vim.fs
 local ts = vim.treesitter
 local uv = vim.uv
 
+local logger = require("docgen.logger")
+local log_warning = logger.log_warning
+
 local util = require("docgen.util")
 -- local table_copy = util.table_copy
 local wrap = util.wrap
@@ -50,7 +53,7 @@ local function node_to_str(node, str, ctx, handlers)
     return handler(node, str, ctx, handlers)
 
     -- local handled = handler(node, str, ctx, handlers)
-    -- if not str_has_content(handled) then
+    -- if not handled then
     --     return nil
     -- end
     -- -- print(vim.inspect(handled))
@@ -132,17 +135,16 @@ local function children_iter(node, str, ctx, handlers)
         sbyte_1 = byte_ + 1
     end
 
-    if node_type == "document" then
-        print("Ret before: ", vim.inspect(ret))
-    end
+    -- if node_type == "document" then
+    --     -- print("Ret before: ", vim.inspect(ret))
+    -- end
+
     local _, _, ebyte_ = node:end_()
     local ebyte_1_ = ebyte_ + 1
     add_gap_checked(sbyte_1, ebyte_1_, str, ret)
 
     local concat = table.concat(ret, concat_sep)
     if wrap_this then
-        -- TODO: Unsure how to handle indenting here. Maybe you always do reset_indent = false
-        -- and use ltrim on origin lines.
         concat = wrap(concat, indent, indent, TEXT_WIDTH, false)
     end
 
@@ -197,6 +199,10 @@ local inline_handlers = {
         end
     end,
     -- TODO: I'm not sure if any of this is right.
+    ["strong"] = function(node, str, _, _)
+        return string.sub(ts.get_node_text(node, str), 3, -3)
+    end,
+    -- TODO: Has to be a better way to do this.
     ["strong_emphasis"] = children_iter,
     ["text"] = node_get_text,
     ["_default"] = function(node, str, _, _)
@@ -217,6 +223,7 @@ local md_handlers = {
     ["block_continuation"] = function() end,
     -- TODO: Treat "block_quote" like a sub-section header. So the first part of it would have
     -- one indent, the others two indents, and the first part would format with the tilde
+    ["code_fence_content"] = node_get_text,
     ["document"] = children_iter,
     ["end_tag"] = function() end,
     ["fenced_code_block"] = function(node, str, _, _)
@@ -238,15 +245,24 @@ local md_handlers = {
 
         ret[#ret + 1] = "<"
         local concat = table.concat(ret)
-        -- return wrap(concat, 0, 0, TEXT_WIDTH)
         return concat
     end,
     ["html_block"] = function() end,
+    ["html_tag"] = function() end,
     ["inline"] = function(node, str, ctx, _)
         local i_text = ts.get_node_text(node, str)
         if i_text == "" then
             return ""
         end
+
+        i_text = string.gsub(i_text, "\n%s+", "\n")
+        i_text = string.gsub(i_text, "\n+", function(match)
+            if #match == 1 then
+                return " "
+            else
+                return "\n\n"
+            end
+        end)
 
         local i_root = root_from_str(i_text, "markdown_inline")
         if i_root then
@@ -271,17 +287,41 @@ local md_handlers = {
     end,
     ["section"] = children_iter,
     ["start_tag"] = function() end,
-    ["_default"] = function(node, str, _, _)
-        return ts.get_node_text(node, str)
+    ["text"] = node_get_text,
+    ["_default"] = function(node, str, ctx, handlers)
+        local node_type = node:type()
+        log_warning("No md handler for node type " .. node_type)
+        local child_count = node:child_count()
+        if child_count == 0 then
+            return ts.get_node_text(node, str)
+        end
+
+        local ret = {}
+
+        local i = 0
+        for child, _ in node:iter_children() do
+            i = i + 1
+            node_to_str(child, str, ctx, handlers)
+
+            if node_type ~= "list" and i ~= child_count then
+                local next_child = node:child(i) -- node:child() is zero indexed
+                if next_child and next_child:type() ~= "list" then
+                    ret[#ret + 1] = "\n"
+                end
+            end
+        end
+
+        return table.concat(ret)
     end,
 }
 
 ---@param content string
 ---@return string
-local function get_md(content)
+function M.md_to_vimdoc(content)
     local root = root_from_str(content .. "\n", "markdown", { injections = { markdown = "" } })
     if not root then
-        error("Unable to get ts tree")
+        log_warning("Cannot get root node. Returning content.")
+        return content
     end
 
     local parsed = node_to_str(root, content, {}, md_handlers)
@@ -289,8 +329,19 @@ local function get_md(content)
         return ""
     end
 
-    parsed = string.gsub(parsed, "\n+$", "")
+    -- str_fmt = string.gsub(string.gsub(str_fmt, "\n+$", ""), "^\n", "")
+    -- str_fmt = string.gsub(str_fmt, NBSP, " ")
+    -- str_fmt = string.gsub(str_fmt, "\n+%s*>([a-z]+)\n", " >%1\n")
+    -- str_fmt = string.gsub(str_fmt, "\n+%s*>\n?\n", " >\n")
+
+    parsed = string.gsub(string.gsub(parsed, "\n+$", ""), "^\n+", "")
     return parsed
+end
+
+---@param content string
+---@return string
+function M.luacats_md_to_vimdoc(content)
+    return M.md_to_vimdoc(content)
 end
 
 -----------------------
@@ -326,7 +377,7 @@ function M.start(path, output)
     end
 
     print("Parsing data")
-    local parsed = get_md(content)
+    local parsed = M.md_to_vimdoc(content)
 
     print("Writing output")
     path = fs.normalize(vim.call("fnamemodify", output, ":p"))

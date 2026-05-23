@@ -360,6 +360,13 @@ function M.parsed_sources_resolve_holistic(parsed_sources)
         return
     end
 
+    -- Do here for inlinedoc.
+    for _, class in pairs(classes) do
+        table.sort(class.fields, function(a, b)
+            return a.name < b.name
+        end)
+    end
+
     for _, fun in pairs(funs) do
         inlinedoc_inject(fun, classes)
     end

@@ -173,25 +173,6 @@ function M.str_rpad(str, char, width)
 end
 -- TODO: nvim-tools
 
----@param text string
----@return string
-function M.adj_newlines(text)
-    -- text = string.gsub(text, "%s+\n", "\n")
-    text = string.gsub(text, "\n%s+", "\n")
-    text = string.gsub(text, "\n+", function(match)
-        if #match == 1 then
-            return " "
-        else
-            return "\n\n"
-        end
-    end)
-
-    return text
-end
--- TODO: Needs to be documented that, except for when the markdown parsing detects a bulleted
--- list, single newlines are always wrapped. Double+ newlines are always treated as a double
--- newline.
-
 ---@param left string?
 ---@param sep string
 ---@param right string
@@ -228,42 +209,6 @@ function M.str_rtrim(str)
     end
 
     return ""
-end
-
---- @param lines string[]
---- @param srow integer 0-indexed
---- @param scol integer 0-indexed, inclusive
---- @param erow? integer 0-indexed
---- @param ecol? integer 0-indexed, exclusive
---- @return string sliced
-function M.slice_lines(lines, srow, scol, erow, ecol)
-    local srow_1 = srow + 1
-    local scol_1 = scol + 1
-    local erow_1 = erow and erow + 1 or #lines
-    erow_1 = math.min(erow_1, #lines)
-    local len_last_line = #lines[erow_1]
-    local ecol_1 = ecol or len_last_line
-    -- In case you have a row, col 0 end node
-    if ecol_1 == 0 then
-        erow_1 = erow_1 - 1
-        ecol_1 = #lines[erow_1]
-    elseif len_last_line > 0 then
-        ecol_1 = ecol_1 + vim.str_utf_start(lines[erow_1], ecol_1)
-    end
-
-    if srow_1 == erow_1 then
-        return string.sub(lines[srow_1], scol_1, ecol_1)
-    end
-
-    -- Don't edit lines in place
-    local ret = M.table_new(erow_1 - srow_1 + 1, 0)
-    ret[1] = string.sub(lines[srow_1], scol_1)
-    for i = srow_1 + 1, erow_1 - 1 do
-        ret[#ret + 1] = lines[i]
-    end
-
-    ret[#ret + 1] = string.sub(lines[erow_1], 1, ecol_1)
-    return table.concat(ret, "\n")
 end
 
 ---@param str string
