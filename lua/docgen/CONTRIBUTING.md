@@ -32,12 +32,15 @@
   + Input data must not be changed, only re-formatted or discarded
     + Exception, converting bullet point characters
 
++ Util Module
+  + Should be pure or close to pure functions
+    + No side effects
+    + If a parameter is edited in place, the only return should be a status indicator or a copy of the reference to the edited param.
+
 ## Guidelines
 
-- Never interact with the Parser Object's internals outside its module
-  * Exception: Reading the data from its provided iterators such as fields, params, or returns
-- Within the Parser Object module, use direct access for simple reads and writes. Build interfaces for tasks that involve logic
-- Prefer using table.concat by newline for function returns. This imposes a performance cost in intermediate concatenation, but creates simpler assumptions for callers
+- When building strings, manually inserting newlines should be avoided. This makes it harder to reason about the string's intended layout by looking at the final table.concat() call.
+- Calls to wrap() should not be performed recursively.
 
 ## References
 

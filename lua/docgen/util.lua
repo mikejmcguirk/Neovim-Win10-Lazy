@@ -109,26 +109,6 @@ M.table_clear = require("table.clear")
 -- MARK: Text Functions --
 --------------------------
 
----If no width formatting is needed, call with width = 0.
----@param str string
----@param width integer
----@return string name
-function M.add_cbraces(str, width)
-    -- TODO: This should not be here. The parser_obj needs to handle this data correction.
-    local name, opt = str:match("^([^?]*)(%??)$")
-    local raw_width = #name + #opt
-    local remain = math.max(width - raw_width - 2, 0)
-
-    return "{" .. name .. "}" .. opt .. string.rep(" ", remain)
-end
--- TODO: This should be two functions.
--- - str_surround(string, string, string?) -- Trivial but compact
--- - rpad(string, string, integer) -- Fills in padding. You can make this more worthwhile by
--- handling display with + multi-cell characters.
--- The call would then be: local foo = rpad(str_surround(bar, "{", "}"), " ", width)
--- This does add perf cost, but it creates more generalizable pieces and makes what's happening
--- easier to reason about.
-
 ---@param str string
 ---@param left string
 ---@param right? string Same as left if nil
@@ -234,7 +214,14 @@ end
 
 ---@param str string
 ---@return string
-function M.rtrim(str)
+function M.str_ltrim(str)
+    local gsubbed, _ = string.gsub(str, "^%s+", "")
+    return gsubbed
+end
+
+---@param str string
+---@return string
+function M.str_rtrim(str)
     local matched = string.match(str, "^.*%S")
     if matched then
         return matched
@@ -312,10 +299,15 @@ end
 ---@param first_indent integer
 ---@param indent integer
 ---@param text_width integer
+---@param reset_arg integer
 ---@return string
-local function wrap_line(line, first_indent, indent, text_width)
+local function wrap_line(line, first_indent, indent, text_width, reset_arg)
     if line == nil or string.find(line, "[^%s]") == nil then
         return ""
+    end
+
+    if reset_arg > 0 then
+        line = line:gsub("^%s{0," .. reset_arg .. "}", "")
     end
 
     local len_line = #line
@@ -367,57 +359,52 @@ local function wrap_line(line, first_indent, indent, text_width)
     return table.concat(parts)
 end
 -- MID: This should not break up code spans.
+-- No need to rtrim here because the loop only grabs non-whitespace portions.
 
 --- Assumes that lines are already cleanly separated by single "\n" characters
 --- @param text string
 --- @param first_indent integer Only applied to the first unwrapped line
 --- @param indent integer
 --- @param text_width integer
+--- @param reset_indent boolean Remove all leading whitespace before adding new indentation.
 --- @return string wrapped Does not contain a trailing \n
-function M.wrap(text, first_indent, indent, text_width)
+function M.wrap(text, first_indent, indent, text_width, reset_indent)
     if not text or text == "" or text_width < 1 then
         return text or ""
     end
 
     local lines = vim.split(text, "\n", { plain = true })
+
+    local reset_arg = 0
+    if reset_indent then
+        local min_ws = math.huge
+        for _, line in ipairs(lines) do
+            if line and line:find("%S") then -- only non-blank lines affect the common indent
+                local _, ws_end = string.find(line, "^%s*")
+                local ws_len = ws_end or 0
+                if ws_len < min_ws then
+                    min_ws = ws_len
+                end
+            end
+        end
+        reset_arg = (min_ws == math.huge) and 0 or min_ws
+    end
+
     local res = {}
 
     local first_line = lines[1]
     local this_fin_indent = string.find(first_line, "^•", 1) and first_indent + 2 or indent
-    res[1] = wrap_line(lines[1], first_indent, this_fin_indent, text_width)
+    res[1] = wrap_line(lines[1], first_indent, this_fin_indent, text_width, reset_arg)
 
     for i = 2, #lines do
         local line = lines[i]
         local this_indent = string.find(line, "^•", 1) and indent + 2 or indent
-        res[#res + 1] = wrap_line(line, indent, this_indent, text_width)
+        res[#res + 1] = wrap_line(line, indent, this_indent, text_width, reset_arg)
     end
 
     return table.concat(res, "\n")
 end
 -- NON: Don't remove the text width variable even though it exists as a constant. Keeps the
 -- function flexible.
-
----@param text string
----@param text_width integer
----@return string
-function M.pure_wrap(text, text_width)
-    if not text or text == "" or text_width < 1 then
-        return text or ""
-    end
-
-    local lines = vim.split(text, "\n", { plain = true })
-    local res = {}
-    for _, line in ipairs(lines) do
-        res[#res + 1] = wrap_line(line, 0, 0, text_width)
-    end
-
-    return table.concat(res, "\n")
-end
--- TODO: This cannot be the way.
-
--- TODO: I would like to have a "pure function" rule for this module, with an exception for
--- editing a single function param. If a function param is edited, the actual return from the
--- function should only be a status marker.
--- - Bigger challenge I think would be anything related to logging.
 
 return M

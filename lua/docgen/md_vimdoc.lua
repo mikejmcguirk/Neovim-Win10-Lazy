@@ -140,8 +140,10 @@ local function children_iter(node, str, ctx, handlers)
     add_gap_checked(sbyte_1, ebyte_1_, str, ret)
 
     local concat = table.concat(ret, concat_sep)
-    if concat and wrap_this then
-        concat = wrap(concat, indent, indent, TEXT_WIDTH)
+    if wrap_this then
+        -- TODO: Unsure how to handle indenting here. Maybe you always do reset_indent = false
+        -- and use ltrim on origin lines.
+        concat = wrap(concat, indent, indent, TEXT_WIDTH, false)
     end
 
     return concat

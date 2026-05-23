@@ -2,6 +2,8 @@
 
 #### TODO:
 
+- [ ] The constant use of ltrim in the renderer is a data quality issue. Needs to be handled on parsing.
+
 - [ ] Figure out the high level details of the tag generation and file stitching, since they are a constraint on how the docgen works.
 
 Represent inputs as fname, str tuples, with str being the material. We need the fnames for tagging/error reporting anyway.
@@ -191,6 +193,8 @@ Represent inputs as fname, str tuples, with str being the material. We need the 
   - [ ] Does not work with returns
 - [ ] Because class/field/overload side annotations are not read by Lua_Ls, they are only used here if no doc lines above are present
 
+- [ ] Nested inlinedoc is unsupported behavior.
+
 - [ ] Access flags:
   - [ ] Work on whole functions, class fields, or aliases
   - [ ] VERIFY: Doing private instead of exact for class doesn't seem to do anything
@@ -238,8 +242,12 @@ Represent inputs as fname, str tuples, with str being the material. We need the 
   - DEP: These are emmylua_ls only. I have not migrated there yet.
 
 - [ ] Support recursive inlinedoc like the core's docgen
-  - [ ] DEP: I would not want to attempt this without first converting inline doc processing into a more data-based model, rather than ad-hoc text-injection.
-  - [ ] Blocker: How do you prevent infinite recursion?
+  - Currently mostly works, but details are not sorted out:
+    * Because inlinedoc injections are not processed in any particular order, this should mean that it's possible for the top level class/function to pull in a class for inlinedoc before that class pulls in its inlinedoc field
+    * This means that the inlinedoc injection itself needs to be recursive, which checks in each injector to check if the desc is already a table so the process isn't repeated.
+    * There also needs to be a check against infinite recursion
+      + I think, for each strand of the recursion, you'd keep a map of the names, so if you had a hit inside the map, you would error. I think this works if you assume that, for each level of injection, no other args will have an injection, but I don't know if the check works laterally.
+      + If you wanted to keep it to only one map, I think you would need to add/remove the key outside the scope of the injection. So before you moved into the function to inject class foo, you would need to add class foo, then remove the key before checking the next arg.
 
 - [ ] Allow classes without fields to render
   - [ ] DEP: I don't know what the concrete use case for this is, so I don't know what I'd expect to see.

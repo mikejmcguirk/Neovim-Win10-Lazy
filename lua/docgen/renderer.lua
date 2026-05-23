@@ -15,6 +15,7 @@ local list_fold = util.list_fold
 local list_map = util.list_map
 local lpad = util.str_lpad
 local rpad = util.str_rpad
+local ltrim = util.str_ltrim
 local str_surround = util.str_surround
 local str_op_by_sep = util.str_op_by_sep
 local wrap = util.wrap
@@ -67,7 +68,7 @@ local function header_create(title, title_wrap, tags, sep)
         ret[#ret + 1] = title_fmt .. string.rep(" ", TEXT_WIDTH - content_width) .. tag_fmt
     else
         ret[#ret + 1] = lpad(tag_fmt, " ", TEXT_WIDTH)
-        ret[#ret + 1] = wrap(title, 0, title_wrap, TEXT_WIDTH)
+        ret[#ret + 1] = wrap(title, 0, title_wrap, TEXT_WIDTH, false)
     end
 
     return table.concat(ret, "\n")
@@ -85,14 +86,15 @@ local function post_header_get(obj)
 
     local ret = {}
     if is_deprecated then
+        local ret_dep = {}
+        ret_dep[#ret_dep + 1] = INDENT_STR .. "DEPRECATED:"
         local doc_flag_desc = obj.doc_flag_desc
         if doc_flag_desc then
-            local df_desc_fmt = md_to_vimdoc(doc_flag_desc)
-            local df_desc_wrapped = wrap(df_desc_fmt, DBL_INDENT, DBL_INDENT, TEXT_WIDTH)
-            ret[#ret + 1] = INDENT_STR .. "DEPRECATED:\n" .. df_desc_wrapped
-        else
-            ret[#ret + 1] = INDENT_STR .. "DEPRECATED:"
+            local df_desc_fmt = md_to_vimdoc(ltrim(doc_flag_desc))
+            ret_dep[#ret_dep + 1] = wrap(df_desc_fmt, DBL_INDENT, DBL_INDENT, TEXT_WIDTH, false)
         end
+
+        ret[#ret + 1] = table.concat(ret_dep, "\n")
     end
 
     if parent then
@@ -100,7 +102,7 @@ local function post_header_get(obj)
     end
 
     if desc then
-        ret[#ret + 1] = wrap(md_to_vimdoc(desc), INDENT, INDENT, TEXT_WIDTH)
+        ret[#ret + 1] = wrap(md_to_vimdoc(desc), INDENT, INDENT, TEXT_WIDTH, true)
     end
 
     return table.concat(ret, "\n\n")
@@ -124,51 +126,52 @@ end
 ---@return string
 local function arg_mapper(arg, max_name_width, base_indent)
     local ret = {} ---@type string[]
-    ret[#ret + 1] = "• "
+
+    local ret_info = {} ---@type string[]
+    ret_info[#ret_info + 1] = "• "
 
     local name_cbraced = rpad(str_surround(arg.name, "{", "}"), " ", max_name_width)
-    ret[#ret + 1] = name_cbraced
-    ret[#ret + 1] = "  "
+    ret_info[#ret_info + 1] = name_cbraced
+    ret_info[#ret_info + 1] = "  "
 
     local typ = type_fmt_get_with_default(arg.type, arg.default)
-    ret[#ret + 1] = typ
+    ret_info[#ret_info + 1] = typ
 
-    if arg.inlinedesc or arg.desc then
-        if TEXT_WIDTH - #name_cbraced - #typ - DBL_INDENT - base_indent >= 0 then
-            ret[#ret + 1] = " "
-        else
-            ret[#ret + 1] = "\n"
-        end
-
-        local inlinedesc = arg.inlinedesc
-        if inlinedesc then
-            ret[#ret + 1] = md_to_vimdoc(inlinedesc.desc)
-            ret[#ret + 1] = "\n"
-
-            local fields = inlinedesc.fields --[[@as (docgen.DocItem[])]]
-            table.sort(fields, function(a, b)
-                return a.name < b.name
-            end)
-
-            local inline_max_name_width = list_fold(fields, 0, function(field, acc)
-                return math.max(#field.name, acc)
-            end) + 2 -- Since cbraces will be added.
-
-            local ret_inline = {} ---@type string[]
-            local inline_base_indent = base_indent + INDENT
-            for _, field in ipairs(fields) do
-                local field_str = arg_mapper(field, inline_max_name_width, inline_base_indent)
-                ret_inline[#ret_inline + 1] = field_str
-            end
-
-            local field_strs = table.concat(ret_inline, "\n")
-            ret[#ret + 1] = wrap(field_strs, inline_base_indent, inline_base_indent, TEXT_WIDTH)
-        elseif arg.desc then
-            ret[#ret + 1] = md_to_vimdoc(arg.desc)
-        end
+    local inlinedesc = arg.inlinedesc
+    local desc = inlinedesc and inlinedesc.desc or arg.desc
+    local indent = DBL_INDENT + base_indent
+    local overflow = TEXT_WIDTH - #name_cbraced - #typ - indent < 0
+    if (not overflow) and desc then
+        ret_info[#ret_info + 1] = " "
+        ret_info[#ret_info + 1] = md_to_vimdoc(ltrim(desc))
     end
 
-    return table.concat(ret)
+    local ret_info_str = table.concat(ret_info)
+    ret[#ret + 1] = wrap(ret_info_str, indent, indent, TEXT_WIDTH, false)
+    if overflow and desc then
+        local desc_md = md_to_vimdoc(ltrim(desc))
+        ret[#ret + 1] = wrap(desc_md, indent, indent, TEXT_WIDTH, false)
+    end
+
+    if inlinedesc then
+        local fields = inlinedesc.fields --[[@as (docgen.DocItem[])]]
+        table.sort(fields, function(a, b)
+            return a.name < b.name
+        end)
+
+        local inline_max_name_width = list_fold(fields, 0, function(field, acc)
+            return math.max(#field.name, acc)
+        end) + 2 -- Since cbraces will be added.
+
+        local inline_base_indent = base_indent + INDENT
+        local ret_inline = list_map(list_copy(fields), function(field)
+            return arg_mapper(field, inline_max_name_width, inline_base_indent)
+        end)
+
+        ret[#ret + 1] = table.concat(ret_inline, "\n")
+    end
+
+    return table.concat(ret, "\n")
 end
 
 ------------------
@@ -178,7 +181,7 @@ end
 ---@param brief docgen.ParserObj
 ---@return string
 local function render_brief(brief)
-    return wrap(md_to_vimdoc(brief.desc or ""), 0, 0, TEXT_WIDTH)
+    return wrap(md_to_vimdoc(brief.desc or ""), 0, 0, TEXT_WIDTH, true)
 end
 
 -------------------
@@ -202,7 +205,9 @@ local function fields_get(class)
 
     for _, field in ipairs(fields) do
         local field_str = arg_mapper(field, max_name_width, 0)
-        ret[#ret + 1] = wrap(field_str, DBL_INDENT, DBL_INDENT, TEXT_WIDTH)
+        -- TODO: I really think wrapping here is a bad idea
+        -- ret[#ret + 1] = wrap(field_str, DBL_INDENT, DBL_INDENT, TEXT_WIDTH)
+        ret[#ret + 1] = field_str
     end
 
     return table.concat(ret, "\n")
@@ -279,7 +284,9 @@ local function params_get(fun)
     ret[#ret + 1] = INDENT_STR .. "Parameters: ~"
     for _, param in ipairs(params) do
         local param_str = arg_mapper(param, max_name_width, 0)
-        ret[#ret + 1] = wrap(param_str, DBL_INDENT, DBL_INDENT, TEXT_WIDTH)
+        ret[#ret + 1] = param_str
+        -- TODO: I think wrapping here is a bad idea
+        -- ret[#ret + 1] = wrap(param_str, DBL_INDENT, DBL_INDENT, TEXT_WIDTH)
     end
 
     return table.concat(ret, "\n")
@@ -308,54 +315,67 @@ local function returns_get(fun)
         return
     end
 
-    local ret = {} --- @type string[]
+    local lines = {} --- @type string[]
+    -- TODO: This needs to be based on inner ret as well. "multipass" does not trigger this
     local sub_header = #returns > 1 and "Returns (multiple): ~" or "Returns: ~"
-    ret[#ret + 1] = INDENT_STR .. sub_header
-    for _, r in ipairs(returns) do
+    lines[#lines + 1] = INDENT_STR .. sub_header
+    for _, ret in ipairs(returns) do
         local name_width_tot = 0
         local typ_width_max = 0
         local typ_width_tot = 0
-        local typs_tbl = {} ---@type string[]
-        for _, inner_r in ipairs(r) do
-            name_width_tot = inner_r.name and name_width_tot + #inner_r.name or name_width_tot
-            local typ_fmt = type_fmt_get_with_default(inner_r.type)
-            local typ_fmt_width = #typ_fmt
+        local ret_types = {} ---@type string[]
+        local ret_names = {} ---@type table<integer, string>
+        for i, r in ipairs(ret) do
+            local type_fmt = type_fmt_get_with_default(r.type)
+            local typ_fmt_width = #type_fmt
             typ_width_max = math.max(typ_width_max, typ_fmt_width)
             typ_width_tot = typ_width_tot + typ_fmt_width
-            typs_tbl[#typs_tbl + 1] = typ_fmt
+            ret_types[i] = type_fmt
+
+            local r_name = r.name
+            if r_name then
+                local r_name_fmt = str_surround(r.name, "{", "}")
+                name_width_tot = name_width_tot + #r_name_fmt
+                ret_names[i] = r_name_fmt
+            end
         end
 
-        local typ_sep = ", "
-        local typs_len = typ_width_tot + name_width_tot + ((#typs_tbl - 1) * #typ_sep)
-        local desc_md = r.desc and md_to_vimdoc(r.desc) or nil
-        if TEXT_WIDTH - typs_len - (DBL_INDENT * 2) >= 0 then
-            list_map(typs_tbl, function(typ, idx)
-                local name = r[idx].name
+        local ret_sig_sep = ", "
+        local inner_len = typ_width_tot + name_width_tot + ((#ret_types - 1) * #ret_sig_sep)
+        local desc_md = ret.desc and md_to_vimdoc(ret.desc) or nil
+        if TEXT_WIDTH - inner_len - (DBL_INDENT * 2) >= 0 then
+            local lines_sig = {} ---@type string[]
+            for i, type_fmt in ipairs(ret_types) do
+                -- concat the two here
+            end
+            list_map(ret_types, function(typ, idx)
+                local name = ret[idx].name
                 return name and typ .. " " .. str_surround(name, "{", "}") or typ
             end)
 
-            local typ_str = DBL_INDENT_STR .. table.concat(typs_tbl, typ_sep)
-            local joined = desc_md and typ_str .. " " .. desc_md or typ_str
-            ret[#ret + 1] = wrap(joined, 0, TPL_INDENT, TEXT_WIDTH)
+            local type_str = table.concat(ret_types, ret_sig_sep)
+            type_str = desc_md and type_str .. " " .. desc_md or type_str
+            lines[#lines + 1] = wrap(type_str, DBL_INDENT, DBL_INDENT, TEXT_WIDTH, true)
         else
-            for i, typ in ipairs(typs_tbl) do
-                local name = r[i].name
+            for i, typ in ipairs(ret_types) do
+                local name = ret[i].name
                 if name then
                     local typ_rpadded = rpad(typ, " ", typ_width_max)
                     local name_cbraced = str_surround(name, "{", "}")
-                    ret[#ret + 1] = DBL_INDENT_STR .. typ_rpadded .. "  " .. name_cbraced
+                    lines[#lines + 1] = DBL_INDENT_STR .. typ_rpadded .. "  " .. name_cbraced
                 else
-                    ret[#ret + 1] = DBL_INDENT_STR .. typ
+                    lines[#lines + 1] = DBL_INDENT_STR .. typ
                 end
             end
 
             if desc_md then
-                ret[#ret + 1] = wrap("• " .. desc_md, DBL_INDENT, DBL_INDENT, TEXT_WIDTH)
+                lines[#lines + 1] =
+                    wrap("• " .. desc_md, DBL_INDENT, DBL_INDENT, TEXT_WIDTH, true)
             end
         end
     end
 
-    return table.concat(ret, "\n")
+    return table.concat(lines, "\n")
 end
 
 ---@param fun docgen.ParserObj
@@ -366,12 +386,14 @@ local function see_get(fun)
         return
     end
 
-    local see_bullets = list_map(list_copy(see), function(s)
-        local s_wrapped = wrap(md_to_vimdoc(s), 0, INDENT, TEXT_WIDTH)
-        return DBL_INDENT_STR .. "• " .. s_wrapped
-    end)
+    local ret = {}
+    ret[#ret + 1] = INDENT_STR .. "See also: ~"
+    for _, s in ipairs(see) do
+        local s_str = "• " .. ltrim(s)
+        ret[#ret + 1] = wrap(s_str, DBL_INDENT, DBL_INDENT, TEXT_WIDTH, false)
+    end
 
-    return INDENT_STR .. "See also: ~\n" .. table.concat(see_bullets, "\n")
+    return table.concat(ret, "\n")
 end
 
 ---@param fun docgen.ParserObj
