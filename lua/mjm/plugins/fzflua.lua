@@ -145,10 +145,12 @@ return {
         end)
 
         local function fuzzy_spell_correct()
-            local word = vim.fn.expand("<cword>"):lower()
-            if word == "" then
+            local word = vim.fn.expand("<cword>")
+            local word_lower = string.lower(word)
+            if word_lower == "" then
                 return vim.notify("No word under cursor", vim.log.levels.WARN)
             end
+
             local buf = api.nvim_get_current_buf()
 
             local ok, dict_file = get_dict_file()
@@ -159,7 +161,7 @@ return {
             end
 
             fzf_lua.fzf_exec("tr -d '\\r' < " .. vim.fn.shellescape(dict_file), {
-                prompt = 'Suggestions for "' .. word .. '": ',
+                prompt = 'Suggestions for "' .. word_lower .. '": ',
                 actions = {
                     ["default"] = function(selected, _)
                         if not selected or not selected[1] then
@@ -172,35 +174,41 @@ return {
                         local search_start = math.max(1, col_1 - #word) ---@type integer
                         local start_col_1 = line:find(word, search_start, false)
                         if not start_col_1 then
-                            local err_msg = "Unable to find word boundary for " .. word
+                            local err_msg = "Unable to find word boundary for " .. word_lower
                             err_msg = err_msg .. " from cursor position " .. col_1
                             api.nvim_echo({ { err_msg } }, true, { err = true })
                             return
                         end
 
-                        if not (start_col_1 <= col_1 and col_1 < start_col_1 + #word) then
+                        if not (start_col_1 <= col_1 and col_1 < start_col_1 + #word_lower) then
                             api.nvim_echo({ { "Invalid word position" } }, true, { err = true })
                             return
                         end
 
                         local new_word = selected[1]
+                        if string.find(word, "^%s*%u") then
+                            new_word = string.gsub(new_word, "^%s(%n)", function(s)
+                                return string.lower(s)
+                            end)
+                        end
+
                         local row_0 = row - 1
                         local start_col = start_col_1 - 1
-                        local fin_col = start_col + #word
+                        local fin_col = start_col + #word_lower
                         api.nvim_buf_set_text(buf, row_0, start_col, row_0, fin_col, { new_word })
                         api.nvim_win_set_cursor(0, { row, col })
                     end,
                     ["ctrl-w"] = function(_, _)
                         ---@type string
                         local spellfile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add"
-                        vim.fn.writefile({ word }, spellfile, "a")
+                        vim.fn.writefile({ word_lower }, spellfile, "a")
                         api.nvim_cmd({ cmd = "mkspell", args = { spellfile }, bang = true }, {})
                     end,
                 },
                 -- LOW: Would be cool if the previewer tied into wordnet
                 previewer = nil,
                 fzf_opts = {
-                    ["--query"] = word,
+                    ["--query"] = word_lower,
                     ["--tiebreak"] = "length",
                     ["--algo"] = "v2",
                 },
