@@ -32,15 +32,15 @@ local DEFAULT_LOG_FILE = "nvim-tools_docgen.log"
 ---files to get properly tagged and formatted docs.
 ---
 ---Supports the following features:
----- Help tags are automatically generated based on the directory structure of the target files
----- `@tag` annotations for defining additional helptags
----- `@inlinedoc` and `@nodoc` to control display
----- Automatic table of contents generation
----- Descriptive text is parsed as markdown and automatically formatted, including line
----  wrapping
----- `@deprecated` tags allow for a one-line description
----- Optional output logging
----- Async file read
+---  - Help tags are automatically generated based on the directory structure of the target files
+---  - `@tag` annotations for defining additional helptags
+---  - `@inlinedoc` and `@nodoc` to control display
+---  - Automatic table of contents generation
+---  - Descriptive text is parsed as markdown and automatically formatted, including line
+---    wrapping
+---  - `@deprecated` tags allow for a one-line description
+---  - Optional output logging
+---  - Async file read
 ---
 ---Requirements: ~
 ---
@@ -123,7 +123,7 @@ function M.generate(paths, output, level, log_path)
         parsed_sources[#parsed_sources + 1] = parsed
     end
 
-    resolve_holistic(parsed_sources)
+    resolve_holistic(parsed_sources, header_tags)
     if #parsed_sources == 0 then
         -- TODO: Improve
         log("No parsed data to render")

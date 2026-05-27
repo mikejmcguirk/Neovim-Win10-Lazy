@@ -28,6 +28,7 @@ end
 function M.not_nil(v)
     return v ~= nil
 end
+-- TODO: vim.nonnil works. Get rid of this.
 
 ---@class nvim-tools.types.ValidateListOpts
 ---@field func? fun(t:any[]):boolean, string?
@@ -63,21 +64,27 @@ function M.valid_list(t, opts)
 
     local item_type = opts.item_type
     if item_type then
-        local find = require("nvim-tools.list").find
+        local any = require("nvim-tools.list").any
+        local all = require("nvim-tools.list").all
         local predicate = type(item_type) == "table"
                 and function(v)
-                    return find(item_type, type(v)) == nil
+                    return any(item_type, type(v))
                 end
             or function(v)
-                return type(v) ~= item_type
+                return type(v) == item_type
             end
 
-        local bad_idx = find(t, predicate)
-        if bad_idx then
-            return false, "Item at index " .. bad_idx .. " is not type " .. vim.inspect(item_type)
-        else
+        local all_idxs, bad_idx, bad_val = all(t, predicate)
+        if all_idxs then
             return true, nil
         end
+
+        local fmt_str = "Invalid: Idx: %d, Val: %s, Type: %s, Expected: %s"
+        local bad_val_str = tostring(bad_val)
+        local bad_type = type(bad_val)
+        local expected = vim.inspect(item_type)
+        local msg = string.format(fmt_str, bad_idx, bad_val_str, bad_type, expected)
+        return false, msg
     end
 
     local func = opts.func

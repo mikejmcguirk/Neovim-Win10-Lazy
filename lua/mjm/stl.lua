@@ -92,7 +92,6 @@ api.nvim_create_autocmd("LspProgress", {
     end,
 })
 
-local counts = { 0, 0, 0, 0 }
 local levels = { "Error", "Warn", "Info", "Hint" }
 ---@type string[]
 local signs = mjm.v.has_nerd_font and { "󰅚 ", "󰀪 ", "󰋽 ", "󰌶 " }
@@ -111,26 +110,22 @@ api.nvim_create_autocmd("DiagnosticChanged", {
             return
         end
 
-        for i = 1, 4 do
-            counts[i] = 0
-        end
+        local ntl = require("nvim-tools.list")
+        local counts = ntl.fold(ev.data.diagnostics, { 0, 0, 0, 0 }, function(acc, d)
+            local severity = d.severity
+            acc[severity] = acc[severity] + 1
+            return acc
+        end)
 
-        for _, diag in pairs(ev.data.diagnostics) do
-            local severity = diag.severity
-            counts[severity] = counts[severity] + 1
-        end
-
-        local diag_tbl = {} ---@type string[]
-        for i = 1, 4 do
-            if counts[i] > 0 then
-                local level =
-                    string.format("%%#Diagnostic%s#%s%d%%* ", levels[i], signs[i], counts[i])
-                diag_tbl[#diag_tbl + 1] = level
+        ntl.filter_map(counts, function(c, i)
+            if c == 0 then
+                return nil
             end
-        end
 
-        local diag_str = table.concat(diag_tbl, "")
-        diag_cache[ev.buf] = diag_str
+            return "%#Diagnostic" .. levels[i] .. "#" .. signs[i] .. c .. "%* "
+        end)
+
+        diag_cache[ev.buf] = table.concat(counts, "")
         if not is_bad_mode() then
             api.nvim__redraw({ statusline = true, win = 0 })
         end
@@ -141,11 +136,12 @@ api.nvim_create_autocmd("ModeChanged", {
     group = stl_events,
     callback = function()
         ---@diagnostic disable: undefined-field
-        if vim.v.event.new_mode == mode then
+        local new_mode = vim.v.event.new_mode
+        if new_mode == mode then
             return
         end
 
-        mode = vim.v.event.new_mode
+        mode = new_mode
         api.nvim__redraw({ statusline = true, win = 0 })
     end,
 })
@@ -229,7 +225,7 @@ api.nvim_create_autocmd("OptionSet", {
             return
         end
 
-        if not require("nvim-tools.list").find(watched, ev.match) then
+        if not require("nvim-tools.list").any(watched, ev.match) then
             return
         end
 

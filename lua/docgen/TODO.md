@@ -2,26 +2,41 @@
 
 #### TODO:
 
-- [ ] The constant use of ltrim in the renderer is a data quality issue. Needs to be handled on parsing.
+- mod details
++ Formally add support for `@mod`
+  + Parsing
+    + New interfaces/data
+      + transform function for mod
+        + set kind to mod
+        + discard/warn if kind is not nil
+        + set name to mod.name
+        + set desc to @mod.desc if it exists
+        + Commit and discard previous doc lines (like how `@brief` does it)
+      + parser_obj field for `@divider`
+      + transform function for `@divider`
+        + set to `-` if no name
+    + Changed interfaces
+      + class/fun/brief/alias set
+        + handle mod-specific issues
+      + Most transform functions
+        + Warn if they happen after `@mod`
+        + This especially applies to param and ret, which alter cur_doc_item. Like briefs, we don't want a specific flag for mod since everything should go into `desc`
+      + nodoc transform
+        + Verify it works with mod
+      + doc_line_add
+        + verify it handles mod
+      + doc_lines_commit
+        + verify it handles mod (don't add new special case. `@brief` doesn't use one)
+  + Rendering
+    + mod result renderer
+      + verify divider exists (should always be something at this point)
+      + Shoud be able to move right to header_create
 
 - [ ] Figure out the high level details of the tag generation and file stitching, since they are a constraint on how the docgen works.
 
 Represent inputs as fname, str tuples, with str being the material. We need the fnames for tagging/error reporting anyway.
 
 - [ ] In general for the below, would strongly consider using LuaJIT's string buffer, since we're accepting that as a concession to run the script.
-
-- [ ] Every concat should only be based on one thing. If there is no concat separator, there should not be newlines within the strings
-  - Motivation - Building the returns rendering function was painful because of the amount of assumptions about concats separators that had to be held at once. Want to eliminate that road block
-  - I concede that this will lead to perf loss due to intermediate concatenation. The improvements in reasonability + maintainability are worth.
-
-- [ ] The concept needs to exist that each line is intentional about its indentation during operations.
-  - The bluntest way to handle this is to pass strings around as a tuple that contains their indent. IMO this would introduce a ton of ceremony and non-trivial perf reduction
-  - An obvious thing to do is to make wrap better able to handle indentation. Right now, it is only additive. It cannot detect or subtract.
-  - wrap also takes any outgrowths of the first line and and indents them to the remainder. I'm not sure this is good behavior.
-    * But it's also necessary for bullet indenting, so maybe it's a naming/input availability issue. Like maybe wrap line should take it but wrap should calculate the lines after indent.
-  - To avoid a ton of bookkeeping, I think what needs to be done is that each return should be assumed to be indented to its proper block level. Inline doc is instructive I think. When arg_fmt recursively calls itself, it should be able to assume that the inline doc it gets back is zero indented, with sub-bullets one indent over or whatever. Then arg fmt can just indent it by one. And then, in a future support for recursive inline doc, each level of recursion can assume zero indenting from the one directly below it.
-  - Note that the emphasis on now having trailing newlines from concats has been very helpful for reasoning through a lot of muck in this code. More consistent data assumptions are helpful.
-  - Biggest motivation here is markdown parsing, since that involves deep and un-predictable recursion.
 
 - [ ] Function contracts need updated
 
@@ -184,6 +199,8 @@ Represent inputs as fname, str tuples, with str being the material. We need the 
 
 #### DOC:
 
+- [ ] Markdown parsing assumes two space indenting (Treesitter constraint, not my code). So if you start a list indented by two, the parser will recognize this and give you an indented list. But if you start it indented by four, it will see it as an indented code block.
+
 - [ ] The documentation should be written as LuaCATs annotations and self-generated. This both demonstrates that yes, it works, and also allows for the doc itself to show how it works.
 
 - [ ] Starting a new annotation kind without an intervening blank line is an error.
@@ -198,6 +215,13 @@ Represent inputs as fname, str tuples, with str being the material. We need the 
 - [ ] Access flags:
   - [ ] Work on whole functions, class fields, or aliases
   - [ ] VERIFY: Doing private instead of exact for class doesn't seem to do anything
+
+- [ ] `@mod` annotations do not automatically generate tags.
+- [ ] `@divider` does nothing outside of a mod block
+
+#### TEST:
+
+- [ ] The Luacats grammar should never be able to return leading whitespace for desc (or really anything)
 
 #### MID:
 
@@ -238,6 +262,11 @@ Represent inputs as fname, str tuples, with str being the material. We need the 
 - [ ] The handling for access tags should be smarter.
   - [ ] Example: Private is seen on a non-kind block. The kind turns out to be brief or class. Access should be set to nil and a warning emitted.
 
+- [ ] `@mod` annotations should support
+  - [ ] `@deprecated`
+    - [ ] To denote the whole block as deprecated
+  - [ ] `@see` To do global corollaries
+
 - [ ] https://github.com/neovim/neovim/commit/d7ef55e8817627af0f25dc2bb9ed9927d0049d6a - Additional generics handling
   - DEP: These are emmylua_ls only. I have not migrated there yet.
 
@@ -251,6 +280,12 @@ Represent inputs as fname, str tuples, with str being the material. We need the 
 
 - [ ] Allow classes without fields to render
   - [ ] DEP: I don't know what the concrete use case for this is, so I don't know what I'd expect to see.
+
+- [ ] Figure out a way to make the docgen take in raw strings
+  - Motivation: Writing temp files for docgen is a waste of disk IO
+  - Problems:
+    * I don't know what a good interface in would be
+    * I don't know how to figure out the helptags in a way that isn't contrived
 
 #### SPEC:
 

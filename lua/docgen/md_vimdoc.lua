@@ -11,12 +11,6 @@ local uv = vim.uv
 local logger = require("docgen.logger")
 local log_warning = logger.log_warning
 
-local util = require("docgen.util")
--- local table_copy = util.table_copy
-local wrap = util.wrap
-
-local TEXT_WIDTH = 78
-
 local M = {}
 
 ---@alias docgen.md.NodeHandler fun(node:TSNode, str:string, ctx:table, handlers:table<string, docgen.md.NodeHandler>): string?
@@ -74,6 +68,19 @@ end
 --     return ts.get_node_text(node, str)
 -- end
 
+---@param text string
+---@return boolean
+local function is_good_text(text)
+    if
+        text ~= nil
+        and string.find(text, "[^\n+]") ~= nil
+        and string.find(text, "[^%s]") ~= nil
+    then
+        return true
+    end
+    return false
+end
+
 ---@param last_byte integer
 ---@param this_byte integer
 ---@param str string
@@ -81,7 +88,7 @@ end
 local function add_gap_checked(last_byte, this_byte, str, ret)
     if last_byte < this_byte then
         local gap = string.sub(str, last_byte, this_byte - 1)
-        if gap ~= nil and string.find(gap, "[^%s]") ~= nil then
+        if is_good_text(gap) then
             ret[#ret + 1] = gap
         end
     end
@@ -94,24 +101,40 @@ local function children_iter(node, str, ctx, handlers)
     local sbyte_1 = start_byte + 1
 
     local indent = 0
-    local wrap_this = false
+    -- This logic assumes that whitespace before list_marker nodes is never present because:
+    -- - Whitespace contained within block continuations is discarded
+    -- - Pure whitespace gap segments are discarded
     if node_type == "list_item" then
-        indent = start_col * 2 -- Because md is two-space indenting
-        wrap_this = true
+        if start_col > 0 then
+            indent = start_col * 2 -- Because md is two-space indenting
+        else
+            local node_text = ts.get_node_text(node, str)
+            local non_white = string.find(node_text, "%S+", 1)
+            if non_white and non_white > 1 then
+                indent = (non_white - 1) * 2
+            end
+        end
     end
 
     local ret = {}
-    if indent > 0 and not wrap_this then
+    if indent > 0 then
         ret[#ret + 1] = string.rep(" ", indent)
     end
 
     local concat_sep = ""
-    if node_type == "document" or node_type == "section" or node_type == "list" then
+    if node_type == "document" or node_type == "list" then
+        concat_sep = "\n"
+    elseif node_type == "section" then
         concat_sep = "\n"
     end
 
-    local prev_row = nil
+    local prev_row
     for child, _ in node:iter_children() do
+        -- Processing unnamed nodes as nodes creates numerous subtle issues.
+        if not child:named() then
+            goto continue
+        end
+
         local row, _, byte = child:start()
         local byte_1 = byte + 1
         add_gap_checked(sbyte_1, byte_1, str, ret)
@@ -121,34 +144,26 @@ local function children_iter(node, str, ctx, handlers)
             ret[#ret + 1] = "\n"
         end
 
+        -- Allow for lists to be directly after preceding paragraphs.
         if node_type == "section" and ret[#ret] ~= "" and prev_row and row - prev_row > 1 then
             ret[#ret + 1] = ""
         end
 
-        local node_text = node_to_str(child, str, ctx, handlers)
-        if node_text ~= nil and string.find(node_text, "[^%s]") ~= nil then
-            ret[#ret + 1] = node_to_str(child, str, ctx, handlers)
-        end
-
-        prev_row = row
+        ret[#ret + 1] = node_to_str(child, str, ctx, handlers)
         local _, _, byte_ = child:end_()
         sbyte_1 = byte_ + 1
-    end
+        prev_row = row
 
-    -- if node_type == "document" then
-    --     -- print("Ret before: ", vim.inspect(ret))
-    -- end
+        ::continue::
+    end
 
     local _, _, ebyte_ = node:end_()
     local ebyte_1_ = ebyte_ + 1
     add_gap_checked(sbyte_1, ebyte_1_, str, ret)
 
-    local concat = table.concat(ret, concat_sep)
-    if wrap_this then
-        concat = wrap(concat, indent, indent, TEXT_WIDTH, false)
+    if #ret > 0 then
+        return table.concat(ret, concat_sep)
     end
-
-    return concat
 end
 
 ---@type docgen.md.NodeHandler
@@ -164,7 +179,11 @@ end
 
 ---@type docgen.md.NodeHandler
 local function node_get_text(node, str, _, _)
-    return ts.get_node_text(node, str)
+    local node_text = ts.get_node_text(node, str)
+    if is_good_text(node_text) then
+        local gsubbed, _ = string.gsub(node_text, "\n+$", "")
+        return gsubbed
+    end
 end
 
 ---@type table<string, docgen.md.NodeHandler>
@@ -206,8 +225,11 @@ local inline_handlers = {
     ["strong_emphasis"] = children_iter,
     ["text"] = node_get_text,
     ["_default"] = function(node, str, _, _)
-        -- TODO: Print warning
-        return ts.get_node_text(node, str)
+        log_warning("No handler for inline node " .. node:type())
+        local node_text = ts.get_node_text(node, str)
+        if is_good_text(node_text) then
+            return node_text
+        end
     end,
 }
 
@@ -221,6 +243,7 @@ local md_handlers = {
         return node_text
     end,
     ["block_continuation"] = function() end,
+    ["block_quote"] = node_get_text,
     -- TODO: Treat "block_quote" like a sub-section header. So the first part of it would have
     -- one indent, the others two indents, and the first part would format with the tilde
     ["code_fence_content"] = node_get_text,
@@ -244,8 +267,9 @@ local md_handlers = {
         end
 
         ret[#ret + 1] = "<"
-        local concat = table.concat(ret)
-        return concat
+        if #ret > 0 then
+            return table.concat(ret)
+        end
     end,
     ["html_block"] = function() end,
     ["html_tag"] = function() end,
@@ -283,35 +307,21 @@ local md_handlers = {
             ret[#ret + 1] = node_to_str(child, str, ctx, handlers)
         end
 
-        return table.concat(ret, "\n")
+        if #ret > 0 then
+            return table.concat(ret)
+        end
     end,
+    ["pipe_table"] = node_get_text,
+    -- TODO: Actually do something with this
     ["section"] = children_iter,
     ["start_tag"] = function() end,
     ["text"] = node_get_text,
-    ["_default"] = function(node, str, ctx, handlers)
-        local node_type = node:type()
-        log_warning("No md handler for node type " .. node_type)
-        local child_count = node:child_count()
-        if child_count == 0 then
-            return ts.get_node_text(node, str)
+    ["_default"] = function(node, str, _, _)
+        log_warning("No handler for md node " .. node:type())
+        local node_text = ts.get_node_text(node, str)
+        if is_good_text(node_text) then
+            return node_text
         end
-
-        local ret = {}
-
-        local i = 0
-        for child, _ in node:iter_children() do
-            i = i + 1
-            node_to_str(child, str, ctx, handlers)
-
-            if node_type ~= "list" and i ~= child_count then
-                local next_child = node:child(i) -- node:child() is zero indexed
-                if next_child and next_child:type() ~= "list" then
-                    ret[#ret + 1] = "\n"
-                end
-            end
-        end
-
-        return table.concat(ret)
     end,
 }
 
@@ -337,6 +347,8 @@ function M.md_to_vimdoc(content)
     parsed = string.gsub(string.gsub(parsed, "\n+$", ""), "^\n+", "")
     return parsed
 end
+-- TODO: It is not useful for LuaCATs > vimdoc to perform wrapping within the md parsing.
+-- For MD > Vimdoc, do a separate pass that only handles wrapping.
 
 ---@param content string
 ---@return string

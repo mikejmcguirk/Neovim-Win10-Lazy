@@ -30,7 +30,7 @@ local function validate(validator, v)
     elseif type(validator) == "function" then
         return validator(v)
     elseif type(validator) == "table" then
-        return require("nvim-tools.list").find(validator, type(v)) ~= nil
+        return require("nvim-tools.list").any(validator, type(v))
     else
         return false
     end

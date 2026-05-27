@@ -36,9 +36,7 @@ function M.check()
 
     if #empty_buf_configs > 0 then
         local ntl = require("nvim-tools.list")
-        ntl.filter(bufs, function(b)
-            return not ntl.find(empty_buf_configs, b)
-        end)
+        ntl.subtract(bufs, empty_buf_configs, true)
 
         local fmt_str = "Empty per-buffer config(s) detected on %d buffer(s): %s\n"
             .. "Run `require('nvim-tools').buf_config:clear()` to remove them."

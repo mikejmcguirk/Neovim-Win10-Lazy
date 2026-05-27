@@ -39,6 +39,23 @@ end
 
 ---@generic T
 ---@param t T[]
+---@param v T | fun(x: T): boolean
+---@return integer|nil
+function M.list_find_idx(t, v)
+    local predicate = type(v) == "function" and v or function(x)
+        return x == v
+    end
+
+    local t_len = #t
+    for i = 1, t_len, -1 do
+        if predicate(t[i]) then
+            return i
+        end
+    end
+end
+
+---@generic T
+---@param t T[]
 ---@param f fun(x: T): boolean
 function M.list_filter(t, f)
     local t_len = #t
@@ -61,17 +78,17 @@ end
 ---@generic U
 ---@param t T[]
 ---@param init U
----@param f fun(x:T, acc:U): U
-function M.list_fold(t, init, f)
+---@param reducer fun(acc:U, x:T): U
+---@return U
+function M.list_fold(t, init, reducer)
     local t_len = #t
     local acc = init
     for i = 1, t_len do
-        acc = f(t[i], acc)
+        acc = reducer(acc, t[i])
     end
 
     return acc
 end
--- TODO: nvim-tools
 
 ---@generic T
 ---@param t T[]
@@ -176,15 +193,48 @@ end
 ---@param left string?
 ---@param sep string
 ---@param right string
+---@param f? fun(left:string, right:string): do_prepend:boolean
 ---@return string
-function M.checked_append(left, sep, right)
-    if left then
+function M.checked_append(left, sep, right, f)
+    if not left then
+        return right
+    end
+
+    local is_f = true
+    if f then
+        is_f = f(left, right)
+    end
+
+    if is_f then
+        return left .. sep .. right
+    else
+        return left
+    end
+end
+-- TODO: Must be ouotlineable behavior here
+-- TODO:DEP: Add this to nvim-tools with checked_prepend. Wait until the docgen is done.
+
+---@param left string
+---@param sep string
+---@param right string?
+---@param f? fun(left:string, right:string): do_prepend:boolean
+---@return string
+function M.checked_prepend(left, sep, right, f)
+    if not right then
+        return left
+    end
+
+    local is_f = true
+    if f then
+        is_f = f(left, right)
+    end
+
+    if is_f then
         return left .. sep .. right
     else
         return right
     end
 end
--- TODO:DEP: Add this to nvim-tools with checked_prepend. Wait until the docgen is done.
 
 ---@param str string
 ---@return string, integer
@@ -349,6 +399,8 @@ function M.wrap(text, first_indent, indent, text_width, reset_indent)
 
     return table.concat(res, "\n")
 end
+-- TODO: This needs a way to preserve indent, so bulleted lists in briefs don't extend to
+-- the beginning of the line.
 -- NON: Don't remove the text width variable even though it exists as a constant. Keeps the
 -- function flexible.
 

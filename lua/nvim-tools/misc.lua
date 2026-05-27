@@ -19,6 +19,22 @@ function M.append_if_missing(str, new_items, sep)
     return table.concat(new, sep)
 end
 
+---@param a any
+---@param b any
+---@param x any
+---@return boolean
+function M.between(a, b, x)
+    return a <= x and x <= b
+end
+
+---@param a any
+---@param b any
+---@param x any
+---@return boolean
+function M.between_(a, b, x)
+    return a < x and x < b
+end
+
 ---@param str string
 ---@param new_items string[]
 ---@param sep string
@@ -41,6 +57,8 @@ end
 ---@diagnostic disable-next-line: deprecated
 M.nonnil = vim.nonnil or vim.F.if_nil
 -- DEPRECATE: Nvim 0.15 released
+-- TODO: Move this to types so it's one less require.
+-- TODO: I have nonnil explicitly in a lot of places get rid of it
 
 ---@param timer uv.uv_timer_t|nil
 function M.stop_timer(timer)

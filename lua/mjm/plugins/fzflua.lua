@@ -2,22 +2,12 @@ local api = vim.api
 local set = vim.keymap.set
 
 local fzflua_opts = {
-    -- { "default-title" },
     files = { no_ignore = true },
     winopts = {
         width = 0.91,
         preview = { horizontal = "right:60%", winopts = { number = true } },
     },
     keymap = {
-        -- actions = {
-        --     files = {
-        --         ["enter"] = function(selected)
-        --             require("fzf-lua").actions.file_edit_or_qf(selected, { no_action_zz = true })
-        --             local quote_mark = api.nvim_buf_get_mark(0, '"')
-        --             mjm.win.protected_set_cursor(quote_mark)
-        --         end,
-        --     },
-        -- },
         builtin = {
             ["<C-d>"] = false,
             ["<C-up>"] = "preview-page-up",
@@ -198,6 +188,7 @@ return {
                         api.nvim_buf_set_text(buf, row_0, start_col, row_0, fin_col, { new_word })
                         api.nvim_win_set_cursor(0, { row, col })
                     end,
+                    -- MID: Bad hotkey for this.
                     ["ctrl-w"] = function(_, _)
                         ---@type string
                         local spellfile = vim.fn.stdpath("config") .. "/spell/en.utf-8.add"
@@ -205,7 +196,6 @@ return {
                         api.nvim_cmd({ cmd = "mkspell", args = { spellfile }, bang = true }, {})
                     end,
                 },
-                -- LOW: Would be cool if the previewer tied into wordnet
                 previewer = nil,
                 fzf_opts = {
                     ["--query"] = word_lower,

@@ -175,11 +175,9 @@ function Results:map_both_pos(start, stop, mapper)
 end
 
 ---@param fin? boolean
----@param rev? boolean
 ---@param predicate fun(row:integer, col:integer): boolean
-function Results:filter_pos(fin, rev, predicate)
+function Results:filter_pos(fin, predicate)
     vim.validate("fin", fin, "boolean", true)
-    vim.validate("rev", rev, "boolean", true)
     vim.validate("predicate", predicate, "function")
 
     local active_idxs, len_active_idxs, _ = self:get_active_idx_info()
@@ -189,15 +187,9 @@ function Results:filter_pos(fin, rev, predicate)
 
     local rows, cols = self:get_pos(fin)
     local ntl = require("nvim-tools.list")
-    if rev then
-        ntl.filter_from_end(active_idxs, function(x)
-            return predicate(rows[x], cols[x])
-        end)
-    else
-        ntl.filter(active_idxs, function(x)
-            return predicate(rows[x], cols[x])
-        end)
-    end
+    ntl.filter(active_idxs, function(x)
+        return predicate(rows[x], cols[x])
+    end)
 end
 
 ---If the predicate returns nil for either row or col, the position is removed.
@@ -213,7 +205,7 @@ function Results:filter_map_pos(fin, predicate)
     end
 
     local rows, cols = self:get_pos(fin)
-    require("nvim-tools.list").map(active_idxs, function(idx)
+    require("nvim-tools.list").filter_map(active_idxs, function(idx)
         local new_row, new_col = predicate(rows[idx], cols[idx])
         if new_row and new_col then
             rows[idx] = new_row

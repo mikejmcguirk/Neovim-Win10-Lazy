@@ -5,6 +5,7 @@
 - [ ] The "nvim-tools" repo should contain these functions, as well as the build/ci scripts. So this way I can clone the repo and use it to start a new plugin. The nvim-tools functions should be sectioned off so they can be easily deleted rather than making the user download them entirely.
   - [ ] This also prompts a bit of a different attitude toward how it's presented. While I still don't want to do a whole "making Neovim plugins is easy!" type of marketing, it does act more as a base to create from than just an arbitrary collection of code.
 - [ ] I currently can actually name this nvim-tools, but check the big plugin collection repo before uploading
+- [ ] Needs to include default .luarc.json and stylua.toml
 
 #### DOCUMENT:
 
@@ -283,12 +284,87 @@
 
 ## List
 
+#### TODO:
+
+- https://numpy.org/doc/stable/reference/routines.ma.html
+- https://hexdocs.pm/elixir/List.html
+- https://hackage-content.haskell.org/package/base-4.22.0.0/docs/Data-List.html
+
+- [ ] More ideas:
+  - [ ] delete - find a value and yeet it
+  - [ ] list difference, where you only delete the first occurrence from t1 if it's in t2
+  - [ ] Do not to have rposition because you need it to do takeWhile/dropWhile
+  - [ ] specifically note that init is like reduce. maybe just call init reduce or something
+  - [ ] numpy choose() - map two
+  - [ ] numpy put is interesting because you feed in indices
+  - [ ] do a find_all function that takes a predicate and returns a list of indices. This handles a lot of higher level list functions.
+  - [ ] likewise, have a cumulative fold function that returns a list of all the values along the way (or cumulative reduce. maybe just make them separate functions)
+  - [ ] "index_of" might be better than position
+  - [ ] insert_at needs to be able to handle 0/negative indices for the end
+  - [ ] remove also needs to handle negative indexing
+  - [ ] cycle?
+  - [ ] intersection > intersect?
+  - [ ] minmax? Double accumulator fold/reduce?
+  - [ ] one()
+    - [ ] Naming conflict with none()
+  - [ ] push/pop/shift/unshift (need for farsight queue)
+  - [ ] counts > tally?
+  - [ ] nested iter (for docgen results, so you have one iter that just returns each thing, rather than having to do ipairs twice)
+    - [ ] Ruby dig lets you specify indices
+
+- [ ] Look for more functions like `all` where certain results should return info
+
+- [ ] substantiative issues:
+  - [ ] Can stuff like find/find_r not just take a boolean option? I know it's harder on the trace compiler but the code duplication is quite painful.
+
+- [ ] Polish pass:
+  - [ ] Use document symbols to pull all functions and a macro or something to make a checklist with the below:
+    - [ ] Is the list reference returned?
+    - [ ] Correct/consistent variable naming?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is there an opportunity for the function to have fancy indexing?
+    - [ ] to_ variation:
+      - [ ] Is it missing a `to_` variation it should have? Does it have a `to_` variation that's contrived?
+        - Example: chain(). Because a `to_` variation requires a list copy, it doesn't add anything that just passing a copied list already doesn't.
+      - [ ] Is it missing an in-place variation that it should have? Does it have one that's contrived?
+        - Example: map. Doing it with list_copy adds a bunch of unnecessary ops.
+    - [ ] Is the list a half measure for some superset problem that should be solved instead?
+      - Example: list concat is, except for performance microopts, a strictly inferior version of chain
+    - [ ] Is the function trying to do too many things at once? Should it be split into multiple things?
+      - Example: fold vs. reduce. It's only one variable but it's a subtle difference that makes the function feel fuzzy.
+    - [ ] Do the function have appropriate validation?
+    - [ ] Are annotations correct?
+    - [ ] Is the function an example such that, on error, it should return additional info?
+      - Example: all()
+    - [ ] Is the variable and annotation ordering consistent?
+      - Functions should always be last, unless there's a vararg, since this is Neovim's convention.
+      - For the benefit of the vararg functions, the tables should be last except for functions. This way, when you do a vararg, it's not off-pattern.
+      - For `_do` functions, `dst` is always first so the ordering of the other args is not disrupted.
+      - Otherwise, args should be handled in the order they are used.
+      - [ ] I had done a lot of the functions with the tables first. This needs to be fixed to match the above set of conventions.
+    - [ ] For the statements about t/t1 being modified in place, use exclamation marks. This communicates emphasis without looking like the Twitter BREAKING alarm sirens.
+
+#### DOC:
+
+- [ ] Reference returns + list_copy let you run any in place iter into a create new one.
+- [ ] How do use find_idx + slice to do take_while/(skip|drop)_while
+- [ ] Show intersperse addressing some kind of real world use case that `table.concat()` already doesn't.
+
 #### MID:
 
-- "list and list" functions. Common enough patterns that you should be able to do `foo(list, list)` and get a result:
-  * Filter by list. Items in the right are removed from the left. You can apply a transform to list a and/or b
-  * A recursive find function like the list validator uses. So you have lists a and b. Every item in a must also be in b. You can apply a transform function to list a and/or b
-  * For transforms, look at how find() does it
+* [ ] Add reverse versions of the functions
+  + DEP: Requires concrete use cases. Do not want to speculatively duplicate code and create maintenance costs.
++ [ ] Make versions of union and xor that edit in place and with optional de-duping
+  + DEP: intersection and subtract work because they can be understood as "keep in t1 what's also in t2" or "remove from t1 what's also in t2". If you make union or xor edit in place, you're targeting t1 but applying rules to both tables. Confusing.
+  + DEP: Making de-duping optional in intersection and subtract is a bit fudgy, but okay since it lets t2 act basically as a filter predicate. I am less comfortable with that when it comes to xor and union. Both already have a lot of logic in them, and adding optional uniqueness adds another dimension to that.
+
+#### SPEC:
+
+- List libraries to check:
+  * Go
+  * Javascript?
+  * Elixir/Haskell (functional languages, since it's their bread and butter)
+  * NumPy/Pytorch/Tensorflow/MATLAB
 
 ## opt
 
@@ -346,6 +422,11 @@
   - Blocker - Understanding how the docgen renders markdown > Vimdoc
 
 - [ ] Is there a way to deal with how long the function param type is in Results:sort_by_both_pos?
+
+#### TODO:
+
+- [ ] Need a function that searches/matches for the {pattern} under the cursor and returns the start and end boundaries.
+  - [ ] Could have an additional version that also returns the content of the result.
 
 #### MID:
 

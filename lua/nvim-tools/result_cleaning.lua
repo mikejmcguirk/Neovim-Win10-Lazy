@@ -19,7 +19,7 @@ function M.filter_folded_all(win, results)
     local ntw = require("nvim-tools.win")
     local cur_win = api.nvim_get_current_win()
     ntw.call_in(cur_win, win, function()
-        results:filter_pos(false, false, function(row, _)
+        results:filter_pos(false, function(row, _)
             local cached = fc_cache[row]
             if cached then
                 return cached == -1
@@ -49,7 +49,7 @@ function M.filter_folded_except_first(win, results)
     local ntw = require("nvim-tools.win")
     local cur_win = api.nvim_get_current_win()
     ntw.call_in(cur_win, win, function()
-        results:filter_pos(false, false, function(row, _)
+        results:filter_pos(false, function(row, _)
             local row_1 = row + 1
             local cached = fc_cache[row_1]
             if cached then

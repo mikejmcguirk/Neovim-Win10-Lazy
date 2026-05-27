@@ -4,6 +4,10 @@
 
 #### TODO:
 
+- [ ] Add a way for harpoon to handle multiple lists. It is becoming obnoxious to re-build the lists for the variou sub-projects in here.
+  - [ ] Use `<leader>a[` and `<leader>a]` to cycle lists.
+  - [ ] And `<leader>a` something to bring up a list of lists.
+
 - [ ] https://github.com/neovim/neovim/commit/9c5fba5df0b60cd25ac2c180a7d82fca47a105e6 - Does this prompt anything?
 - [ ] More API buf changes - https://github.com/neovim/neovim/pull/38900
   - https://github.com/neovim/neovim/commit/d0af4cd9094f3439382622906da5b1c5cd82c294

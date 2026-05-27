@@ -153,8 +153,8 @@ local function arg_mapper(arg, max_name_width, base_indent)
 
     if inlinedesc then
         local fields = inlinedesc.fields --[[@as (docgen.DocItem[])]]
-        local inline_max_name_width = list_fold(fields, 0, function(field, acc)
-            return math.max(#field.name, acc)
+        local inline_max_name_width = list_fold(fields, 0, function(acc, field)
+            return math.max(acc, #field.name)
         end) + 2 -- Since cbraces will be added.
 
         local inline_base_indent = base_indent + INDENT
@@ -175,7 +175,7 @@ end
 ---@param brief docgen.ParserObj
 ---@return string
 local function render_brief(brief)
-    return wrap(md_to_vimdoc(brief.desc or ""), 0, 0, TEXT_WIDTH, true)
+    return wrap(md_to_vimdoc(brief.desc), 0, 0, TEXT_WIDTH, false)
 end
 
 -------------------
@@ -189,8 +189,8 @@ local function fields_get(class)
     ret[#ret + 1] = INDENT_STR .. "Fields: ~"
 
     local fields = class.fields --[[@as (docgen.DocItem[])]]
-    local max_name_width = list_fold(fields, 0, function(field, acc)
-        return math.max(#field.name, acc)
+    local max_name_width = list_fold(fields, 0, function(acc, field)
+        return math.max(acc, #field.name)
     end) + 2 -- Since cbraces will be added.
 
     for _, field in ipairs(fields) do
@@ -206,7 +206,7 @@ local function class_render(class)
     local ret = {} --- @type string[]
 
     local name_cbraced = str_surround(class.name, "{", "}")
-    local header = header_create(name_cbraced, INDENT, { class.tag })
+    local header = header_create(name_cbraced, INDENT, class.tags_addtl)
     local post_header = post_header_get(class)
     if post_header then
         ret[#ret + 1] = header .. "\n" .. post_header
@@ -242,7 +242,7 @@ end
 local function fun_header_get(fun)
     local namevar = fun.namevar
     local title = string.format("%s(%s)", namevar, proto_params_get(fun))
-    return header_create(title, #namevar, { fun.tag })
+    return header_create(title, #namevar, fun.tags_addtl)
 end
 
 --- @param fun docgen.ParserObj
@@ -263,8 +263,8 @@ local function params_get(fun)
         return
     end
 
-    local max_name_width = list_fold(params, 0, function(param, acc)
-        return math.max(#param.name, acc)
+    local max_name_width = list_fold(params, 0, function(acc, param)
+        return math.max(acc, #param.name)
     end) + 2 -- To account for cbraces
 
     local ret = {}
@@ -302,7 +302,7 @@ local function returns_get(fun)
     end
 
     local lines = {} --- @type string[]
-    local count_returns = list_fold(returns, 0, function(ret, acc)
+    local count_returns = list_fold(returns, 0, function(acc, ret)
         return acc + #ret
     end)
 

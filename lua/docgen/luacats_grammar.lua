@@ -71,7 +71,16 @@ local v = setmetatable({}, {
     end,
 })
 
----@alias docgen.luacats.Kind 'alias'|'brief'|'class'|'field'|'generic'|'operator'|'param'|'return'
+---@alias docgen.luacats.Kind 'alias'
+---|'brief'
+---|'class'
+---|'field'
+---|'fun'
+---|'generic'
+---|'operator'
+---|'param'
+---|'return'
+---|''
 
 --- @class nvim.luacats.grammar.Result
 --- @field kind? docgen.luacats.Kind
@@ -131,7 +140,8 @@ local typedef = P({
         Pf(":") * comma1(v.fun_ret)
     ),
     generics = P(ty_ident) * Pf("<") * comma1(v.type) * Plf(">"),
-}) / function(match)
+})
+    / function(match)
         return vim.trim(match):gsub("^%((.*)%)$", "%1"):gsub("%?+", "?")
     end
 
@@ -175,6 +185,24 @@ local grammar = P({
     + annot('nodoc')
     + annot('inlinedoc')
     + annot('brief', desc)
+    -- TEST: This tag
+    -- Custom extension: Manually add tags.
+    + annot('tag', Cg(rep1(any - S(" \t")), "name") * rep(any))
+    -- TEST: This tag
+    -- Custom extension: Manually add dividers.
+    + Ct(Cg(P('divider'), 'kind') * (
+        ws * Cg(S('=-~'), 'name') * (ws + -any)
+        + fill * -any
+    ) * rep(any))
+    -- TEST: This tag
+    -- Custom extension: Manually add mods
+    + Ct(Cg(P('mod'), 'kind') * ws * Cg(
+        ((string_single + string_double) / function(s) return s:sub(2, -2) end)
+        + rep1(any - S(" \t")),
+    "name") * opt_desc)
+    -- TEST: This tag
+    -- Custom extension: Early exit
+    + Ct(Cg(P('export'), 'kind') * (ws * rep(any) + -any))
   ),
 
   field_name = Cg(lname + (v.ty_index * opt(P('?'))), 'name'),

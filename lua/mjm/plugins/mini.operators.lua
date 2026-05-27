@@ -21,9 +21,9 @@ return {
         -- Creates complexity surface area.
         -- Solution: Manually map sort.
 
-        local odesc = "Sort"
+        local odesc_s = "Sort"
         ---@type vim.keymap.set.Opts
-        local expr_opts = { expr = true, replace_keycodes = false, desc = odesc }
+        local expr_opts_s = { expr = true, replace_keycodes = false, desc = odesc_s }
 
         ---@param mode "char"|"line"|"block"|"visual"|nil
         ---@param opts table
@@ -35,12 +35,12 @@ return {
 
         set("n", "gt", function()
             return do_sort(nil, { sort = { func = nil } })
-        end, expr_opts)
+        end, expr_opts_s)
 
-        set("n", "gtt", "^gtg_", { remap = true, desc = odesc .. " line" })
+        set("n", "gtt", "^gtg_", { remap = true, desc = odesc_s .. " line" })
         set("x", "gt", function()
             do_sort("visual", { sort = { func = nil } })
-        end, { desc = odesc .. " selection" })
+        end, { desc = odesc_s .. " selection" })
 
         ---@param content table
         ---@return string[]
@@ -52,18 +52,38 @@ return {
             })
         end
 
-        local rev_operator_desc = odesc .. " (reverse)"
-        expr_opts.desc = rev_operator_desc
+        local odesc_s_rev = odesc_s .. " (reverse)"
+        expr_opts_s.desc = odesc_s_rev
 
         set("n", "gT", function()
             return do_sort(nil, { sort = { func = rev_sort_func } })
-        end, expr_opts)
+        end, expr_opts_s)
 
-        set("n", "gTT", "^gTg_", { remap = true, desc = rev_operator_desc .. " line" })
+        set("n", "gTT", "^gTg_", { remap = true, desc = odesc_s_rev .. " line" })
         set("x", "gT", function()
             do_sort("visual", { sort = { func = rev_sort_func } })
-        end, { desc = odesc .. " selection" })
+        end, { desc = odesc_s_rev .. " selection" })
+
+        -----------------------------------------------
+        -- Map alt+replace to use the plus register. --
+        -----------------------------------------------
+
+        local replace_plus_maps = { "<M-g><M-s>", "g<M-s>" }
+        local odesc_r_plus = "Replace (plus register)"
+        local opts_r = {}
+        for _, rmap in ipairs(replace_plus_maps) do
+            opts_r.remap = true
+            opts_r.desc = odesc_r_plus
+            set("n", rmap, [[\"+gs]], opts_r)
+
+            opts_r.desc = odesc_r_plus .. " line"
+            set("n", rmap .. "s", [[\"+gs_]], opts_r)
+
+            opts_r.remap = false
+            opts_r.desc = odesc_r_plus .. " selection"
+            -- Could not get this to work as a remap for whatever reason.
+            local vis_cmd = [["+<cmd>lua MiniOperators.replace('visual')<CR>]]
+            set("x", rmap, vis_cmd, { desc = odesc_r_plus .. " selection" })
+        end
     end,
-    -- PR: It should not be necessary to do this. Challenging to change though because the
-    -- operator entry point calls itself recursively. Using operatorfunc.
 }

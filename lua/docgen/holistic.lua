@@ -220,6 +220,43 @@ local function inlinedoc_inject(obj, classes)
     end
 end
 
+---@param header_tags string[]
+---@param parsed_sources docgen.ParsedSource
+local function tags_prepare_and_check(header_tags, parsed_sources)
+    local seen = {} ---@type table<string, boolean>
+    for _, tag in ipairs(header_tags) do
+        if not seen[tag] then
+            seen[tag] = true
+        else
+            error("Duplicate tag: " .. tag)
+        end
+    end
+
+    for _, source in ipairs(parsed_sources) do
+        for _, obj in ipairs(source[2]) do
+            -- Wait until now because attaching class functions can change the function's tag.
+            local obj_tags_addtl = table_get_or_create_subtable(obj, "tags_addtl")
+            local obj_tag = obj.tag
+            if obj_tag then
+                obj_tags_addtl[#obj_tags_addtl + 1] = obj_tag
+            end
+
+            local tags_addtl = obj.tags_addtl
+            if tags_addtl then
+                for _, tag in ipairs(tags_addtl) do
+                    if not seen[tag] then
+                        seen[tag] = true
+                    else
+                        error("Duplicate tag: " .. tag)
+                    end
+                end
+            end
+        end
+    end
+end
+-- TODO: More detailed error reporting. Maybe/probably not file info, but more info about the
+-- objects producing the duplicates.
+
 ---@param parsed_sources docgen.ParsedSource[]
 ---@return table<string, docgen.ParserObj> classes
 ---@return integer classes_count
@@ -343,7 +380,7 @@ end
 
 ---Assumes that all underlying parser objects are finalized and valid.
 ---@param parsed_sources docgen.ParsedSource[] Modified in place
-function M.parsed_sources_resolve_holistic(parsed_sources)
+function M.parsed_sources_resolve_holistic(parsed_sources, header_tags)
     vim.validate("parsed_sources", parsed_sources, function()
         return type(parsed_sources) == "table" and #parsed_sources > 0
     end)
@@ -356,6 +393,8 @@ function M.parsed_sources_resolve_holistic(parsed_sources)
 
     -- Only do this once because it's expensive.
     parsed_sources_filter_invalid(parsed_sources, classes, funs)
+    tags_prepare_and_check(header_tags, parsed_sources)
+
     if not next(classes) then
         return
     end

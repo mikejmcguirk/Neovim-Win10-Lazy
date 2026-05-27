@@ -65,10 +65,12 @@ function M.multipass(card)
     return 0, "foo", { 3, 7, 9 }
 end
 
+---@tag Shamwow
 ---What an amazing class
 ---@class test.Wow
 local Wow = {}
 
+---@tag Being-amazed
 ---@param jazz_hands any
 function Wow:be_amazed(jazz_hands)
     --

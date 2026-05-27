@@ -113,40 +113,40 @@ local blink_opts = {
                     local prose_ft = { "text", "markdown" }
                     ---@type string
                     local ft = api.nvim_get_option_value("filetype", { buf = 0 })
-                    local prose = require("nvim-tools.list").find(prose_ft, ft)
+                    local ntl = require("nvim-tools.list")
+                    local prose = ntl.any(prose_ft, ft)
                         or require("nvim-tools.treesitter").is_in_node({ "comment" }, true)
                     if not prose then
                         return items
                     end
 
                     local keyword = a.get_keyword()
-                    local correct, case
+                    local correct, strfn
                     if keyword:match("^%l") then
                         correct = "^%u%l+$"
-                        case = string.lower
+                        strfn = string.lower
                     elseif keyword:match("^%u") then
                         correct = "^%l+$"
-                        case = string.upper
+                        strfn = string.upper
                     else
                         return items
                     end
 
-                    local seen = {}
-                    local out = {}
-                    for _, item in ipairs(items) do
+                    return ntl.filter_map_accum_to({}, items, function(seen, item)
                         local raw = item.insertText or ""
                         if raw:match(correct) then
-                            local text = case(raw:sub(1, 1)) .. raw:sub(2)
+                            local text = strfn(raw:sub(1, 1)) .. raw:sub(2)
                             item.insertText = text
                             item.label = text
                         end
+
                         if not seen[item.insertText] then
                             seen[item.insertText] = true
-                            out[#out + 1] = item
+                            return seen, item
                         end
-                    end
 
-                    return out
+                        return seen
+                    end)
                 end,
             },
             dadbod = { name = "Dadbod", module = "vim_dadbod_completion.blink" },
