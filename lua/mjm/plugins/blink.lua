@@ -99,7 +99,7 @@ local blink_opts = {
                     get_bufnrs = function()
                         local list_filter = require("nvim-tools.list").filter
                         local bufs = api.nvim_list_bufs()
-                        list_filter(1, #bufs, bufs, function(buf)
+                        list_filter(bufs, function(buf)
                             local loaded = api.nvim_buf_is_loaded(buf)
                             local bt = api.nvim_get_option_value("bt", { buf = buf })
                             return loaded and bt ~= "nofile"
@@ -132,7 +132,7 @@ local blink_opts = {
                         return items
                     end
 
-                    return ntl.filter_map_accum_to({}, items, function(seen, item)
+                    return ntl.filter_map_accum_to(items, {}, function(seen, item)
                         local raw = item.insertText or ""
                         if raw:match(correct) then
                             local text = strfn(raw:sub(1, 1)) .. raw:sub(2)

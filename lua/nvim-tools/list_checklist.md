@@ -1,0 +1,1623 @@
+- [ ] M.successors
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.unfold
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.at
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.cycle
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.drain
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.insert_at
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.remove_at
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.clear
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.delete
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.dedup_consecutive
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.dedup_consecutive_to
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.filter
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.filter_to
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.unique_to
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.keep_while
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.keep_while_to
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.rm_while
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.rm_while_to
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.chain
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.difference
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.difference_to
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.intersect
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.intersect_to
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.intersection
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.intersection_to
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.subtract
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.subtract_to
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.union_to
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.xor
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.distinct
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.all
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.any
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.cmp
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.find
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.indices
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.one
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.position
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.same
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.selectors
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.fold
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.scan
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.list_extend
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.fill
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.filter_map
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.filter_map_to
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.filter_map_accum
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.filter_map_accum_to
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.filter_map_two
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.filter_map_two_to
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.reverse
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.reverse_to
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.rotate
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.rotate_to
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.zip
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.zip_longest
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?
+
+- [ ] M.zip_with
+  - [ ] Should this exist?
+    - [ ] Do the proper in place and new function versions exist?
+    - [ ] Does the function properly superset or subset some kind of meaningful problem?
+      - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+      - Example: I got rid of group by/count by because they don't properly superset aggregation
+  - [ ] The code itself
+    - [ ] Should the function be able to use fancy indexing? Does it?
+    - [ ] Should the function be able to cap iterations? Does it?
+    - [ ] Do the function have appropriate validation?
+    - [ ] Can the function borrow or factor out common code?
+    - [ ] No obvious algorithmic goofs?
+    - [ ] Is the function a case where, on error, more info should be returned?
+      - Example: all()
+    - [ ] Is the list reference returned?
+  - [ ] Docs/Style
+    - [ ] Correct/consistent variable naming?
+    - [ ] Correct arg ordering:
+      - `dst` in `_do` functions.
+      - Initial table
+      - Mandatory Args in usage order
+      - Function
+      - Optional args in commonality order
+    - [ ] Are annotations correct?
+    - [ ] Basic documentation
+      - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+      - Modified in place functions should use an exclamation mark.
+    - [ ] Correct MARK header?

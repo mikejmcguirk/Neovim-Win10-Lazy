@@ -37,7 +37,7 @@ set("n", "ZU", function()
     local cur_buf = api.nvim_get_current_buf()
     local ntb = require("nvim-tools.buf")
     local listed_bufs = ntb.get_listed_bufs()
-    require("nvim-tools.list").filter(1, #listed_bufs, listed_bufs, function(buf)
+    require("nvim-tools.list").filter(listed_bufs, function(buf)
         return buf ~= cur_buf
     end)
 

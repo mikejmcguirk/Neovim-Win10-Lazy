@@ -75,121 +75,45 @@ end
 -- MARK: List Creation --
 -------------------------
 
+---Turns two, unsorted lists into one sorted list. If the lists are already sorted,
+---use |merge_sorted()|.
+---@generic T
+---@param t1 T[]
+---@param t2 T[]
+---@param comp? fun(a: T, b: T): boolean Default: Ascending order. Compatible with |table.sort()|.
+---@return T[] New list.
+function M.collate(t1, t2, comp)
+    vim.validate("t1", t1, "table")
+    vim.validate("t2", t2, "table")
+    vim.validate("comp", comp, "function", true)
+
+    comp = comp or function(a, b)
+        return a < b
+    end
+
+    table.sort(t1, comp)
+    table.sort(t2, comp)
+    return M.merge_sorted(t1, t2, comp)
+end
+
 ---Performs a shallow copy of `t`.
----
 ---@generic T
 ---@param t T[]
----@see |iter-indexing|
----@param start integer? (Default: `1`)
----@param stop? integer Default: Length of `t`
----@return T[] Empty if table length is zero or the provided `start` and `stop` values resolve
----     to an invalid iteration.
-function M.copy(t, start, stop)
+---@return T[] Empty if table length is zero.
+function M.copy(t)
     vim.validate("t", t, "table")
-    local is_int = require("nvim-tools.types").is_int
-    vim.validate("start", start, is_int, true)
-    vim.validate("stop", stop, is_int, true)
 
     local t_len = #t
     if t_len == 0 then
         return {}
     end
 
-    start = resolve_iter_index(start, t_len, 1)
-    stop = resolve_iter_index(stop, t_len, t_len)
-    if start > stop then
-        return {}
-    end
-
-    local ret = require("nvim-tools.table").new(stop - start + 1, 0)
-    local j = 1
-    for i = start, stop do
-        ret[j] = t[i]
-        j = j + 1
+    local ret = require("nvim-tools.table").new(t_len, 0)
+    for i = 1, t_len do
+        ret[i] = t[i]
     end
 
     return ret
-end
--- TODO: `t` should be the last var.
-
----Splits `t` at the resolved index.
----Modifies `t` in place so it becomes the left side (elements up to and including `idx`).
----Returns the right side (elements after `idx`) as a new table.
----@generic T
----@see |iter-indexing|
----@param idx integer
----@param t T[] Modified in place!
----@return T[] t, T[] right `t` references the original input variable. `right` is a new table.
-function M.split_at(idx, t)
-    local is_int = require("nvim-tools.types").is_int
-    vim.validate("idx", idx, is_int, true)
-    vim.validate("t", t, "table")
-
-    local t_len = #t
-    if t_len == 0 then
-        return t, {}
-    end
-
-    local pos = resolve_iter_index(idx, t_len, t_len)
-    if pos >= t_len then
-        return t, {}
-    end
-
-    if pos < 1 then
-        local right = M.copy(t)
-        for i = 1, t_len do
-            t[i] = nil
-        end
-
-        return t, right
-    end
-
-    local right = require("nvim-tools.table").new(t_len - pos, 0)
-    local j = 1
-    for i = pos + 1, t_len do
-        right[j] = t[i]
-        j = j + 1
-    end
-
-    for i = pos + 1, t_len do
-        t[i] = nil
-    end
-
-    return t, right
-end
-
----Returns two new tables split at the resolved index.
----@generic T
----@param idx integer
----@param t T[]
----@return T[], T[] left side, right side
-function M.split_at_to(idx, t)
-    vim.validate("t", t, "table")
-    local is_int = require("nvim-tools.types").is_int
-    vim.validate("idx", idx, is_int, true)
-
-    local t_len = #t
-    if t_len == 0 then
-        return {}, {}
-    end
-
-    local pos = resolve_iter_index(idx, t_len, t_len)
-    local ntl = require("nvim-tools.table")
-    local left = ntl.new(pos, 0)
-    local j = 1
-    for i = 1, pos do
-        left[j] = t[i]
-        j = j + 1
-    end
-
-    local right = ntl.new(t_len - pos, 0)
-    j = 1
-    for i = pos + 1, t_len do
-        right[j] = t[i]
-        j = j + 1
-    end
-
-    return left, right
 end
 
 ---Creates a new list.
@@ -198,20 +122,27 @@ end
 ---@param t1 T[]
 ---@param t2 T[]
 ---@param comp? fun(a: T, b: T): boolean Default: Ascending order. Compatible with |table.sort()|.
----@return T[]
+---@return T[] Returns an empty table if `t1` and `t2` are empty.
 function M.merge_sorted(t1, t2, comp)
     vim.validate("t1", t1, "table")
     vim.validate("t2", t2, "table")
     vim.validate("comp", comp, "function", true)
 
-    local i, j, k = 1, 1, 1
+    local i = 1
+    local j = 1
+    local k = 1
     local len1 = #t1
     local len2 = #t2
-    local ret = {}
     comp = comp or function(a, b)
         return a < b
     end
 
+    local len_total = len1 + len2
+    if len_total == 0 then
+        return {}
+    end
+
+    local ret = require("nvim-tools.table").new(len_total, 0)
     while i <= len1 and j <= len2 do
         if comp(t1[i], t2[j]) then
             ret[k] = t1[i]
@@ -239,85 +170,34 @@ function M.merge_sorted(t1, t2, comp)
     return ret
 end
 
----@generic T
----@param t T[]
----@param predicate fun(val: T): boolean
----@return T[] passing
----@return T[] failing
-local function partition_do(dst, t, predicate)
-    local t_len = #t
-    local j = 1
-    local failing = {}
-    for i = 1, t_len do
-        local v = t[i]
-        if predicate(v) then
-            dst[j] = v
-            j = j + 1
-        else
-            failing[#failing + 1] = v
-        end
-    end
-
-    if dst == t then
-        for i = j, t_len do
-            t[i] = nil
-        end
-    end
-
-    return dst, failing
-end
-
----Create new lists based on elements that pass and fail a predicate function.
----Relative order is preserved.
----@generic T
----@param t T[] Modified in place
----@param predicate fun(val: T): boolean
----@return T[] passing
----Original reference to the modified list of passing elements.
----@return T[] failing
----Elements that failed the predicate.
-function M.partition_to(t, predicate)
-    vim.validate("t", t, "table")
-    vim.validate("predicate", predicate, "callable")
-    return partition_do(t, t, predicate)
-end
-
----The original list is modified in place to contain only the passing elements.
----The failing elements are returned in a new list.
----Relative order is preserved in both resulting lists.
----@generic T
----@param t T[] Modified in place
----@param predicate fun(val: T): boolean
----@return T[] passing Original reference to the modified list of passing elements.
----@return T[] failing Elements that failed the predicate.
-function M.partition(t, predicate)
-    vim.validate("t", t, "table")
-    vim.validate("predicate", predicate, "callable")
-    return partition_do(t, t, predicate)
-end
-
+---Create a new list containing `v` repeated `count` times.
 ---Does not copy table references.
 ---@generic T
 ---@param v T
----@param count integer
----@return T[] New table.
+---@param count integer Returns an empty table if count is zero.
+---@return T[] Creates a new list.
 function M.replicate(v, count)
     vim.validate("v", v, vim.nonnil)
     vim.validate("count", count, require("nvim-tools.types").is_uint)
 
-    local t = require("nvim-tools.table").new(count, 0)
-    for i = 1, count do
-        t[i] = v
+    if count == 0 then
+        return {}
     end
 
-    return t
+    local ret = require("nvim-tools.table").new(count, 0)
+    for i = 1, count do
+        ret[i] = v
+    end
+
+    return ret
 end
+-- Repeat is a Lua keyword, so replicate.
 
 ---@generic T
 ---@param dst T[]
 ---@param t T[]
 ---@see |iter-indexing|
----@param start integer?
+---@param start? integer
 ---@param stop? integer
 ---@return T[]
 local function splice_do(dst, t, start, stop)
@@ -348,22 +228,21 @@ local function splice_do(dst, t, start, stop)
     end
 
     local new_len = stop - start + 1
-    for i = new_len + 1, t_len do
-        dst[i] = nil
-    end
-
+    M.clear(dst, new_len + 1)
     return dst
 end
 
+---Modifies `t` in place!
+---
 ---Get a subset of `t` by start and stop indices.
+---Splice `t` into a subset of its values defined by `start` and `stop` indices.
 ---
 ---No-op if `t` is length zero or the provided `start` and `stop` values resolve to an invalid
 ---iteration.
----
 ---@generic T
----@param t T[] Modified in place
+---@param t T[] Modified in place!
 ---@see |iter-indexing|
----@param start integer?
+---@param start? integer
 ---@param stop? integer
 ---@return T[] Reference to `t`.
 function M.splice(t, start, stop)
@@ -375,19 +254,16 @@ function M.splice(t, start, stop)
     return splice_do(t, t, start, stop)
 end
 
----Get a subset of `t` by start and stop indices.
----
----Creates a new list.
+---Get a new list containing a subset of `t` by `start` and `stop` indices.
 ---
 ---Returns an empty table if `t` is length zero or the provided `start` and `stop` values resolve
 ---to an invalid iteration.
----
 ---@generic T
----@param t T[] Modified in place
+---@param t T[]
 ---@see |iter-indexing|
----@param start integer?
+---@param start? integer
 ---@param stop? integer
----@return T[] Reference to `t`.
+---@return T[] A new list.
 function M.splice_to(t, start, stop)
     vim.validate("t", t, "table")
     local is_int = require("nvim-tools.types").is_int
@@ -414,8 +290,8 @@ end
 ---```
 ---@generic T
 ---@param init T First value of the list.
----@param f fun(last:T): T|nil Provides the current last value of the list. The return value is
----     appended to the list. If the return is nil, the list building ends.
+---@param f fun(last:T, idx:integer): T|nil Provides the current last value of the list. The
+---     return value is appended to the list. If the return is nil, the list building ends.
 ---@return T[] The new table.
 function M.successors(init, f)
     vim.validate("init", init, vim.nonnil)
@@ -424,7 +300,7 @@ function M.successors(init, f)
     local t = { init }
     while true do
         local t_len = #t
-        local v = f(t[t_len])
+        local v = f(t[t_len], t_len)
         if v ~= nil then
             t[t_len + 1] = v
         else
@@ -436,25 +312,20 @@ end
 ---@generic T
 ---@generic U
 ---@param init U
----@param f fun(acc:U, last:T|nil): acc:U, v:T|nil Exits the function if `v` is nil.
+---@param f fun(acc:U, last:T, idx:integer): acc:U, v:T|nil Exits the function if `acc` or `v`
+---     are nil.
 ---@return T[] The new table. Returns an empty table if the first call to `f` produces a nil value.
 function M.unfold(init, f)
     vim.validate("init", init, vim.nonnil)
     vim.validate("f", f, "callable")
 
+    local t = {}
     local acc = init
     local v
-    local t = {}
-    acc, v = f(acc, nil)
-    if v == nil then
-        return t
-    end
-
-    t[1] = v
     while true do
         local t_len = #t
-        acc, v = f(acc, t[t_len])
-        if v == nil then
+        acc, v = f(acc, t[t_len], t_len)
+        if acc == nil or v == nil then
             return t
         end
 
@@ -555,14 +426,6 @@ end
 -- TODO: Verify that this is faster than table.insert. Maybe worth writing up some kind of
 -- real test and saving the code.
 
----Example:
----```lua
------ Re-create `delete()` functionality:
----local foo = { 1, 2, 3, 4, 5 }
----remove(foo, position(foo, 3))
------ foo is now { 1, 2, 4, 5 }
----```
----
 ---@see |drain()| to additionally return the deleted element.
 ---@generic T
 ---@param t T[]
@@ -589,13 +452,50 @@ end
 ---Clear the array element of a table only.
 ---@generic T
 ---@param t T[]
-function M.clear(t)
+---@param start? integer
+function M.clear(t, start)
     vim.validate("t", t, "table")
+    vim.validate("start", start, require("nvim-tools.types").is_int, true)
 
-    local len = #t
-    for i = 1, len do
+    local t_len = #t
+    start = resolve_iter_index(start, t_len, 1)
+    for i = start, t_len do
         t[i] = nil
     end
+end
+
+---@generic T
+---@param t T[]
+---@param v T|fun(x:T): boolean
+---@return boolean
+function M.delete(t, v)
+    vim.validate("t", t, "table")
+    vim.validate("v", v, require("nvim-tools.types").nonnil)
+
+    local t_len = #t
+    local predicate = type(v) == "function" and v or function(x)
+        return x == v
+    end
+
+    local idx
+    for i = 1, t_len do
+        if predicate(t[i]) then
+            idx = i
+            break
+        end
+    end
+
+    if not idx then
+        return false
+    end
+
+    for i = idx + 1, t_len do
+        t[i - 1] = t[i]
+    end
+
+    t[t_len] = nil
+
+    return true
 end
 
 ---@generic T
@@ -655,18 +555,18 @@ end
 
 ---Modifies `t` in place!
 ---@generic T
+---@param t T[] Modified in place!
+---@param predicate fun(x: T): boolean
 ---@see |iter-indexing|
 ---@param start integer? (Default: `1`)
 ---@param stop? integer Default: Length of `t`
----@param t T[] Modified in place!
----@param predicate fun(x: T): boolean
 ---@return T[] The original list reference
-function M.filter(start, stop, t, predicate)
+function M.filter(t, predicate, start, stop)
+    vim.validate("t", t, "table")
+    vim.validate("predicate", predicate, "callable")
     local is_int = require("nvim-tools.types").is_int
     vim.validate("start", start, is_int, true)
     vim.validate("stop", stop, is_int, true)
-    vim.validate("t", t, "table")
-    vim.validate("predicate", predicate, "callable")
 
     local t_len = #t
     if t_len == 0 then
@@ -706,18 +606,18 @@ function M.filter(start, stop, t, predicate)
 end
 
 ---@generic T
+---@param t T[]
+---@param predicate fun(x: T): boolean
 ---@see |iter-indexing|
 ---@param start integer? (Default: `1`)
 ---@param stop? integer Default: Length of `t`
----@param t T[]
----@param predicate fun(x: T): boolean
 ---@return T[] New table
-function M.filter_to(start, stop, t, predicate)
+function M.filter_to(t, predicate, start, stop)
+    vim.validate("t", t, "table")
+    vim.validate("predicate", predicate, "callable")
     local is_int = require("nvim-tools.types").is_int
     vim.validate("start", start, is_int, true)
     vim.validate("stop", stop, is_int, true)
-    vim.validate("t", t, "table")
-    vim.validate("predicate", predicate, "callable")
 
     local t_len = #t
     if t_len == 0 then
@@ -1515,27 +1415,27 @@ function M.find(t, v, r)
     end
 end
 
----Returns `true` if the list is sorted according to a given comparator.
 ---@generic T
 ---@param t T[]
----@param comp? fun(a: T, b: T): boolean Default: `a < b`. Compatible with |table.sort()|.
----@return boolean
-function M.is_sorted(t, comp)
+---@param v T|fun(x:T): boolean
+---@return integer[] Empty table if no results.
+function M.indices(t, v)
     vim.validate("t", t, "table")
-    vim.validate("comp", comp, "function", true)
+    vim.validate("v", v, require("nvim-tools.types").nonnil)
 
-    comp = comp or function(a, b)
-        return a < b
+    local t_len = #t
+    local ret = {} ---@type integer[]
+    local predicate = type(v) == "function" and v or function(x)
+        return x == v
     end
 
-    local len = #t
-    for i = 2, len do
-        if not comp(t[i - 1], t[i]) then
-            return false
+    for i = 1, t_len do
+        if predicate(t[i]) then
+            ret[#ret + 1] = i
         end
     end
 
-    return true
+    return ret
 end
 
 ---@generic T
@@ -1590,115 +1490,154 @@ function M.position(t, v, r)
     return 0
 end
 
+---Are all elements in the list the same?
+---@generic T
+---@param t T[]
+---@return boolean
+function M.same(t)
+    vim.validate("t", t, "table")
+
+    local t_len = #t
+    if t_len == 0 then
+        return false
+    end
+
+    local v = t[1]
+    for i = 2, t_len do
+        if t[i] ~= v then
+            return false
+        end
+    end
+
+    return true
+end
+
+---@generic T
+---@param t T[]
+---@param v T|fun(x:T): boolean
+---@return boolean[]
+function M.selectors(t, v)
+    vim.validate("t", t, "table")
+    vim.validate("v", v, require("nvim-tools.types").nonnil)
+
+    local t_len = #t
+    local ret = {} ---@type boolean[]
+    local predicate = type(v) == "function" and v or function(x)
+        return x == v
+    end
+
+    for i = 1, t_len do
+        ret[#ret + 1] = predicate(t[i]) and true or false
+    end
+
+    return ret
+end
+
 -----------------------------
 -- MARK: List to New Value --
 -----------------------------
 
 ---Apply a function to all elements of a list, transforming them into a single value.
----The first accumulator value will be the first value of the list.
----
----This function can be used to make:
----- min/max
----- sum/product
 ---
 ---@generic T
 ---@generic U
 ---@param t T[]
----@param reducer fun(acc:U,x:T): U
----@return U `nil` if `t` is length zero.
-function M.reduce(t, reducer)
+---@param f fun(acc:U, x:T, idx:integer): acc:U|nil, v:T?
+---     If the acc return is nil, the last accumulator value is returned.
+---     If the v return has a value, the function is stopped and v is returned.
+---     If the loop reaches the end of the list, the last acc value is returned.
+---@param init U|nil First accumulator value. If nil, the first list item will be used
+---(reduce behavior).
+---@param r boolean|nil (Default: `false`) If true, iterate from the end.
+---@return T|U `init` if `t` is length zero.
+function M.fold(t, f, init, r)
     vim.validate("t", t, "table")
-    vim.validate("reducer", reducer, "callable")
-
-    local t_len = #t
-    if t_len == 0 then
-        return nil
-    end
-
-    local acc = t[1]
-    for i = 1, t_len do
-        acc = reducer(acc, t[i])
-    end
-
-    return acc
-end
-
----Apply a function to all elements of a list, transforming them into a single value.
----
----@generic T
----@generic U
----@param t T[]
----@param init U? First accumulator value.
----@param folder fun(acc:U, x:T): U
----@return U `init` if `t` is length zero.
-function M.fold(t, init, folder)
-    vim.validate("t", t, "table")
-    vim.validate("folder", folder, "callable")
+    vim.validate("f", f, "callable")
+    vim.validate("r", r, "boolean", true)
 
     local t_len = #t
     if t_len == 0 then
         return init
     end
 
-    local acc = init
-    for i = 1, t_len do
-        acc = folder(acc, t[i])
+    local start, stop, step = resolve_r(r, 1, t_len)
+    ---@generic U
+    local acc_ret ---@type U
+    if init ~= nil then
+        acc_ret = init
+    else
+        acc_ret = t[1]
+        start = start + step
     end
 
-    return acc
-end
-
----Returns a new table.
----Counts how many times each key appears in the list.
----@generic T
----@param t T[]
----@param key? string|fun(val: T): any
----@return table<any, integer>
-function M.count_by(t, key)
-    vim.validate("t", t, "table")
-    vim.validate("key", key, { "callable", "string" }, true)
-
-    local t_len = #t
-    local key_fn = make_key_fn(key)
-    local counts = {} ---@type table<any, integer>
-    for i = 1, t_len do
-        local vh = key_fn(t[i])
-        counts[vh] = (counts[vh] or 0) + 1
-    end
-
-    return counts
-end
-
----Returns a new table.
----Groups elements of the list by the result of `key`.
----Returns a new table where each key maps to a list of all matching elements. Within each group,
----order is preserved.
----@generic T
----@param t T[]
----@param key? string|fun(val: T): any
----@return table<any, T[]>
-function M.group_by(t, key)
-    vim.validate("t", t, "table")
-    vim.validate("key", key, { "callable", "string" }, true)
-
-    local t_len = #t
-    local key_fn = make_key_fn(key)
-    ---@generic T
-    local groups = {} ---@type table<any, T[]>
-    for i = 1, t_len do
-        local v = t[i]
-        local vh = key_fn(v)
-
-        local group = groups[vh]
-        if not group then
-            group = {}
-            groups[vh] = group
+    for i = start, stop, step do
+        local acc, v = f(acc_ret, t[i], i)
+        if v ~= nil then
+            return v
+        elseif acc ~= nil then
+            acc_ret = acc
+        else
+            return acc_ret
         end
-
-        group[#group + 1] = v
     end
 
-    return groups
+    return acc_ret
+end
+
+---Apply a function to all elements of a list, transforming them into a running list of the
+---accumulated values.
+---
+---Can be used to make any sort of cumulative sum/product/min/max function.
+---
+---@generic T
+---@generic U
+---@param t T[]
+---@param f fun(acc:U, x:T, idx:integer): acc:U|nil, v:T?
+---     If acc is nil, `v` will be written and then the function will end
+---     If `v` is nil, the function ends.
+---accumulator at its present state.
+---@param init U|nil First accumulator value. If nil, the first list item will be used
+---(reduce behavior).
+---@param r boolean|nil (Default: `false`) If true, iterate from the end.
+---@return U `init` if `t` is length zero.
+function M.scan(t, f, init, r)
+    vim.validate("t", t, "table")
+    vim.validate("f", f, "callable")
+    vim.validate("r", r, "boolean", true)
+
+    local t_len = #t
+    if t_len == 0 then
+        return init
+    end
+
+    local start, stop, step = resolve_r(r, 1, t_len)
+    ---@generic U
+    local ret ---@type U[]
+    local acc
+    local v
+    if init ~= nil then
+        ret = { init }
+        acc = init
+    else
+        v = t[1]
+        ret = { v }
+        acc = v
+        start = start + step
+    end
+
+    for i = start, stop, step do
+        acc, v = f(ret[#ret], t[i], i)
+        if acc == nil then
+            ret[#ret + 1] = acc
+            return ret
+        elseif v == nil then
+            return ret
+        else
+            ret[#ret + 1] = v
+        end
+    end
+
+    return ret
 end
 
 ---------------------------
@@ -1761,91 +1700,6 @@ function M.fill(t, v, start, stop)
     end
 end
 
----Example: `intersperse({ 1,2,3,4,5 }, ",", )` → `{ 1,,",",3,4,",",5 }`
----Use with |table.concat()| to get Haskell `intercalate` logic.
----@generic T
----@param t T[] Modified in place.
----@param sep T
----@param unit_size? integer Insert every x elements. Default 1.
----@return T[] Original list reference
-function M.intersperse(t, sep, unit_size)
-    vim.validate("t", t, "table")
-    vim.validate("sep", sep, require("nvim-tools.types").nonnil)
-    vim.validate("unit_size", unit_size, "number", true)
-
-    local len = #t
-    if len <= 1 then
-        return t
-    end
-
-    unit_size = unit_size or 1
-    if unit_size < 1 then
-        unit_size = 1
-    end
-
-    local num_seps = math.floor((len - 1) / unit_size)
-    if num_seps == 0 then
-        return t
-    end
-
-    for i = len, 1, -1 do
-        local shift = math.floor((i - 1) / unit_size)
-        local final_pos = i + shift
-        t[final_pos] = t[i]
-    end
-
-    local pos = unit_size + 1
-    for _ = 1, num_seps do
-        t[pos] = sep
-        pos = pos + unit_size + 1
-    end
-
-    return t
-end
--- MID: Is there a way to pre-grow or pre-size the array?
--- MID: I'm not convinced that doing floor division every element is the fastest way to do this.
-
----@generic T
----@param t T[]
----@param sep T
----@param unit_size? integer
----@return T[]
-function M.intersperse_to(t, sep, unit_size)
-    vim.validate("t", t, "table")
-    vim.validate("sep", sep, require("nvim-tools.types").nonnil)
-    vim.validate("unit_size", unit_size, "number", true)
-
-    local len = #t
-    if len <= 1 then
-        return M.copy(t) -- reuse your existing copy function
-    end
-
-    unit_size = unit_size or 1
-    if unit_size < 1 then
-        unit_size = 1
-    end
-
-    local num_seps = math.floor((len - 1) / unit_size)
-    if num_seps == 0 then
-        return M.copy(t)
-    end
-
-    local ret = {}
-    local j = 1
-
-    for i = 1, len do
-        ret[j] = t[i]
-        j = j + 1
-
-        if i % unit_size == 0 and i < len then
-            ret[j] = sep
-            j = j + 1
-        end
-    end
-
-    return ret
-end
-
 ---Modifies `t` in place!
 ---@generic T
 ---@generic U
@@ -1901,7 +1755,7 @@ end
 ---     currently iterated list value, and the currently iterated index. If `nil` is returned for
 ---     the list value, it will be filtered.
 ---@return T[] The original list reference containing the new, possibly filtered, values.
-function M.filter_map_accum(init, t, f)
+function M.filter_map_accum(t, init, f)
     vim.validate("t", t, "table")
     vim.validate("init", init, vim.nonnil)
     vim.validate("f", f, "callable")
@@ -1933,7 +1787,7 @@ end
 ---     currently iterated list value, and the currently iterated index. If `nil` is returned for
 ---     the list value, it will be filtered.
 ---@return U[] The newly mapped list.
-function M.filter_map_accum_to(init, t, f)
+function M.filter_map_accum_to(t, init, f)
     vim.validate("init", init, vim.nonnil)
     vim.validate("t", t, "table")
     vim.validate("f", f, "callable")
@@ -2121,6 +1975,37 @@ function M.zip(t1, t2)
     local ret = {}
     for i = 1, len do
         ret[i] = { t1[i], t2[i] }
+    end
+
+    return ret
+end
+
+---Creates a new list. Stops at the shorter of the two input lists.
+---
+---@generic T
+---@generic U
+---@param t1 T[]
+---@param t2 U[]
+---@param fill any
+---@return { [1]: T, [2]: U }[] New list.
+function M.zip_longest(t1, t2, fill)
+    local ret = {}
+    local t1_len = #t1
+    local t2_len = #t2
+    local len_min = math.min(t1_len, t2_len)
+
+    for i = 1, len_min do
+        ret[i] = { t1[i], t2[i] }
+    end
+
+    if t1_len > t2_len then
+        for i = len_min + 1, t1_len do
+            ret[i] = { t1[i], fill }
+        end
+    else
+        for i = len_min + 1, t2_len do
+            ret[i] = { fill, t2[i] }
+        end
     end
 
     return ret

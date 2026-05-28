@@ -37,7 +37,8 @@ return {
             return do_sort(nil, { sort = { func = nil } })
         end, expr_opts_s)
 
-        set("n", "gtt", "^gtg_", { remap = true, desc = odesc_s .. " line" })
+        local desc_line = " line"
+        set("n", "gtt", "^gtg_", { remap = true, desc = odesc_s .. desc_line })
         set("x", "gt", function()
             do_sort("visual", { sort = { func = nil } })
         end, { desc = odesc_s .. " selection" })
@@ -59,7 +60,7 @@ return {
             return do_sort(nil, { sort = { func = rev_sort_func } })
         end, expr_opts_s)
 
-        set("n", "gTT", "^gTg_", { remap = true, desc = odesc_s_rev .. " line" })
+        set("n", "gTT", "^gTg_", { remap = true, desc = odesc_s_rev .. desc_line })
         set("x", "gT", function()
             do_sort("visual", { sort = { func = rev_sort_func } })
         end, { desc = odesc_s_rev .. " selection" })
@@ -68,22 +69,34 @@ return {
         -- Map alt+replace to use the plus register. --
         -----------------------------------------------
 
+        local odesc_r = "Replace"
+        local desc_eol = " (end of line)"
+        set("n", "gS", "gsg_", { desc = odesc_r .. desc_eol, remap = true })
+
         local replace_plus_maps = { "<M-g><M-s>", "g<M-s>" }
-        local odesc_r_plus = "Replace (plus register)"
+        local desc_plus = " (plus register)"
+        local odesc_r_plus = odesc_r .. desc_plus
         local opts_r = {}
         for _, rmap in ipairs(replace_plus_maps) do
             opts_r.remap = true
             opts_r.desc = odesc_r_plus
             set("n", rmap, [[\"+gs]], opts_r)
 
-            opts_r.desc = odesc_r_plus .. " line"
+            opts_r.desc = odesc_r_plus .. desc_line
             set("n", rmap .. "s", [[\"+gs_]], opts_r)
 
-            opts_r.remap = false
             opts_r.desc = odesc_r_plus .. " selection"
+            opts_r.remap = false
             -- Could not get this to work as a remap for whatever reason.
             local vis_cmd = [["+<cmd>lua MiniOperators.replace('visual')<CR>]]
-            set("x", rmap, vis_cmd, { desc = odesc_r_plus .. " selection" })
+            set("x", rmap, vis_cmd, opts_r)
+        end
+
+        local replace_plus_maps_eol = { "<M-g><M-S>", "g<M-S>" }
+        opts_r.desc = odesc_r_plus .. desc_eol
+        opts_r.remap = true
+        for _, rmap in ipairs(replace_plus_maps_eol) do
+            set("n", rmap, [[\"+gsg_]], opts_r)
         end
     end,
 }

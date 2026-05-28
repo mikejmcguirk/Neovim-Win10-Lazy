@@ -128,7 +128,7 @@ function M.protected_close(win, force)
     local tabpages = api.nvim_list_tabpages()
     if #tabpages == 1 then
         local tabpage_wins = api.nvim_tabpage_list_wins(tabpages[1])
-        require("nvim-tools.list").filter(1, #tabpage_wins, tabpage_wins, function(w)
+        require("nvim-tools.list").filter(tabpage_wins, function(w)
             local relative = api.nvim_win_get_config(w).relative
             return relative == "" or not relative
         end)

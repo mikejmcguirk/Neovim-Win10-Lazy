@@ -111,11 +111,11 @@ api.nvim_create_autocmd("DiagnosticChanged", {
         end
 
         local ntl = require("nvim-tools.list")
-        local counts = ntl.fold(ev.data.diagnostics, { 0, 0, 0, 0 }, function(acc, d)
+        local counts = ntl.fold(ev.data.diagnostics, function(acc, d)
             local severity = d.severity
             acc[severity] = acc[severity] + 1
             return acc
-        end)
+        end, { 0, 0, 0, 0 }, false)
 
         ntl.filter_map(counts, function(c, i)
             if c == 0 then

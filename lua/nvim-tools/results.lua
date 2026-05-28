@@ -187,7 +187,7 @@ function Results:filter_pos(fin, predicate)
 
     local rows, cols = self:get_pos(fin)
     local ntl = require("nvim-tools.list")
-    ntl.filter(1, #active_idxs, active_idxs, function(x)
+    ntl.filter(active_idxs, function(x)
         return predicate(rows[x], cols[x])
     end)
 end

@@ -286,52 +286,32 @@
 
 #### TODO:
 
-- https://numpy.org/doc/stable/reference/routines.ma.html
-- https://hexdocs.pm/elixir/List.html
-- https://hackage-content.haskell.org/package/base-4.22.0.0/docs/Data-List.html
-
-- [ ] More ideas:
-  - [ ] numpy choose() - map two
-  - [ ] numpy put is interesting because you feed in indices
-  - [ ] do a find_all function that takes a predicate and returns a list of indices. This handles a lot of higher level list functions.
-  - [ ] likewise, have a cumulative fold function that returns a list of all the values along the way (or cumulative reduce. maybe just make them separate functions)
-  - [ ] minmax? Double accumulator fold/reduce?
-  - [ ] Add none(). Depending on expected list contents, different checks can cause faster short circuiting. And having "none" makes the recursive logic of searching based on indirection easier
-  - [ ] push/pop/shift/unshift (need for farsight queue)
-  - [ ] nested iter (for docgen results, so you have one iter that just returns each thing, rather than having to do ipairs twice)
-    - [ ] Ruby dig lets you specify indices
-
-- [ ] Look for more functions like `all` where certain results should return info
-
-- [ ] substantiative issues:
-  - [ ] Can stuff like find/find_r not just take a boolean option? I know it's harder on the trace compiler but the code duplication is quite painful.
-
-- [ ] Polish pass:
-  - [ ] Use document symbols to pull all functions and a macro or something to make a checklist with the below:
-    - [ ] Is the list reference returned?
-    - [ ] Correct/consistent variable naming?
-    - [ ] No obvious algorithmic goofs?
-    - [ ] Is there an opportunity for the function to have fancy indexing?
-    - [ ] to_ variation:
-      - [ ] Is it missing a `to_` variation it should have? Does it have a `to_` variation that's contrived?
-        - Example: chain(). Because a `to_` variation requires a list copy, it doesn't add anything that just passing a copied list already doesn't.
-      - [ ] Is it missing an in-place variation that it should have? Does it have one that's contrived?
-        - Example: map. Doing it with list_copy adds a bunch of unnecessary ops.
-    - [ ] Is the list a half measure for some superset problem that should be solved instead?
-      - Example: list concat is, except for performance microopts, a strictly inferior version of chain
-    - [ ] Is the function trying to do too many things at once? Should it be split into multiple things?
-      - Example: fold vs. reduce. It's only one variable but it's a subtle difference that makes the function feel fuzzy.
-    - [ ] Do the function have appropriate validation?
-    - [ ] Are annotations correct?
-    - [ ] Is the function an example such that, on error, it should return additional info?
-      - Example: all()
-    - [ ] Is the variable and annotation ordering consistent?
-      - Functions should always be last, unless there's a vararg, since this is Neovim's convention.
-      - For the benefit of the vararg functions, the tables should be last except for functions. This way, when you do a vararg, it's not off-pattern.
-      - For `_do` functions, `dst` is always first so the ordering of the other args is not disrupted.
-      - Otherwise, args should be handled in the order they are used.
-      - [ ] I had done a lot of the functions with the tables first. This needs to be fixed to match the above set of conventions.
-    - [ ] For the statements about t/t1 being modified in place, use exclamation marks. This communicates emphasis without looking like the Twitter BREAKING alarm sirens.
+- [ ] Should this exist?
+  - [ ] Do the proper in place and new function versions exist?
+  - [ ] Does the function properly superset or subset some kind of meaningful problem?
+    - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
+    - Example: I got rid of group by/count by because they don't properly superset aggregation
+- [ ] The code itself
+  - [ ] Should the function be able to use fancy indexing? Does it?
+  - [ ] Should the function be able to cap iterations? Does it?
+  - [ ] Do the function have appropriate validation?
+  - [ ] Can the function borrow or factor out common code?
+  - [ ] No obvious algorithmic goofs?
+  - [ ] Is the function a case where, on error, more info should be returned?
+    - Example: all()
+  - [ ] Is the list reference returned?
+- [ ] Docs/Style
+  - [ ] Correct/consistent variable naming?
+  - [ ] Correct arg ordering:
+    - `dst` in `_do` functions.
+    - Initial table
+    - Mandatory Args in usage order
+    - Function
+    - Optional args in commonality order
+  - [ ] Are annotations correct?
+  - [ ] Basic documentation
+    - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
+    - Modified in place functions should use an exclamation mark.
 
 #### DOC:
 
@@ -341,25 +321,27 @@
 
 #### MID:
 
-* [ ] Add reverse versions of the functions
-  + DEP: Requires concrete use cases. Do not want to speculatively duplicate code and create maintenance costs.
-+ [ ] Make versions of union and xor that edit in place and with optional de-duping
-  + DEP: intersection and subtract work because they can be understood as "keep in t1 what's also in t2" or "remove from t1 what's also in t2". If you make union or xor edit in place, you're targeting t1 but applying rules to both tables. Confusing.
-  + DEP: Making de-duping optional in intersection and subtract is a bit fudgy, but okay since it lets t2 act basically as a filter predicate. I am less comfortable with that when it comes to xor and union. Both already have a lot of logic in them, and adding optional uniqueness adds another dimension to that.
+- [ ] "split_on" should be added. This is not worth it though unless it handles both a single idx as well as a predicate that can split on a list of indices.
+- [ ] I have zip_longest because it's fine as is, but I don't want to build out more zip functionality unless I have a way to make the length management in zip more substantially full featured. The longer list should be able to:
+  - [ ] Extend out (`_longest` behavior)
+  - [ ] Match the length of the shorter list, but be offset
+    - It might work to put the offset into zip_with, and just use rotate to handle the list position.
 
-#### SPEC:
+#### RESOURCES:
 
-- List libraries to check:
-  * Go
-  * Javascript?
-  * Elixir/Haskell (functional languages, since it's their bread and butter)
-  * NumPy/Pytorch/Tensorflow/MATLAB
-
-## opt
-
-#### MAYBE:
-
-- There is theoretical value in making a lightweight version of vim._with for private use. In practice, the only real use case is rancher's spk open. Would rather just handle that for now and borrow _with's pcall unpacking logic. Can revisit if needed.
+- https://ruby-doc.org/core-3.0.1/Array.html
+- https://numpy.org/doc/stable/reference/routines.ma.html
+- https://numpy.org/doc/stable/reference/arrays.ndarray.html
+- https://hexdocs.pm/elixir/List.html
+- https://hackage-content.haskell.org/package/base-4.22.0.0/docs/Data-List.html
+- https://docs.python.org/3/library/itertools.html
+- https://xpqz.github.io/learnapl/iteration.html
+- https://smlfamily.github.io/Basis/list.html
+- https://help.dyalog.com/19.0/index.htm
+- https://lispcookbook.github.io/cl-cookbook/iteration.html
+- https://cicadas.surf/cgit/colin/gtwiwtg.git/about/
+- https://codeberg.org/fosskers/cl-transducers
+- https://common-lisp-libraries.readthedocs.io/iterate/
 
 ## pos
 
