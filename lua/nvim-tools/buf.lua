@@ -160,7 +160,7 @@ end
 ---@return integer[]
 function M.get_listed_bufs()
     local bufs = api.nvim_list_bufs()
-    require("nvim-tools.list").filter(bufs, function(buf)
+    require("nvim-tools.list").filter(1, #bufs, bufs, function(buf)
         return api.nvim_get_option_value("buflisted", { buf = buf })
     end)
 
@@ -514,7 +514,7 @@ function M.protected_del(buf, delist, opts)
 
     if opts.unload then
         local listed_bufs = M.get_listed_bufs()
-        require("nvim-tools.list").filter(listed_bufs, function(b)
+        require("nvim-tools.list").filter(1, #listed_bufs, listed_bufs, function(b)
             return b ~= buf
         end)
 

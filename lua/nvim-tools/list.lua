@@ -29,14 +29,6 @@ local M = {}
 -- MARK: Utils --
 -----------------
 
----@param val integer?
----@param len integer
----@param default integer
-local function resolve_iter_index(val, len, default)
-    val = val and math.min(val, len) or default
-    return val > 0 and val or math.max(len + val, 1)
-end
-
 ---Copied from Neovim core.
 ---@generic T
 ---@param key? string|fun(val: T): any
@@ -57,6 +49,26 @@ local function make_key_fn(key)
     end
 
     return key
+end
+
+---@param val integer?
+---@param len integer
+---@param default integer
+local function resolve_iter_index(val, len, default)
+    val = val and math.min(val, len) or default
+    return val > 0 and val or math.max(len + val, 1)
+end
+
+---@param r boolean?
+---@param start integer
+---@param stop integer
+---@return integer start, integer stop, integer step
+local function resolve_r(r, start, stop)
+    if r then
+        return start, stop, 1
+    else
+        return stop, start, -1
+    end
 end
 
 -------------------------
@@ -316,11 +328,13 @@ local function splice_do(dst, t, start, stop)
 
     start = resolve_iter_index(start, t_len, 1)
     stop = resolve_iter_index(stop, t_len, t_len)
+    local to_new_list = t ~= dst
     if start > stop then
         return dst
+    elseif start == 1 and stop == t_len then
+        return to_new_list and M.copy(t) or t
     end
 
-    local to_new_list = t ~= dst
     if to_new_list or start > 1 then
         local j = 1
         for i = start, stop do
@@ -467,25 +481,67 @@ function M.at(t, idx)
     return t[res_idx]
 end
 
+--- Returns an iterator that infinitely cycles through `t`.
+--- Each step yields: `idx` (1-based index within the cycle), `value`, `cycle`
+--- (0-based full cycles completed).
+---@generic T
+---@param t T[]
+---@return fun(): integer, T, integer
+function M.cycle(t)
+    vim.validate("t", t, "table")
+
+    local len = #t
+    if len == 0 then
+        return function()
+            return nil
+        end
+    end
+
+    local i = 0
+    return function()
+        i = i + 1
+        local idx = ((i - 1) % len) + 1
+        local cycle = math.floor((i - 1) / len)
+        return idx, t[idx], cycle
+    end
+end
+
+---@generic T
+---@param t T[]
+---@param idx integer
+function M.drain(t, idx)
+    vim.validate("t", t, "table")
+    vim.validate("idx", idx, "number")
+
+    local t_len = #t
+    local res_idx = resolve_iter_index(idx, t_len, t_len)
+    local v = t[res_idx]
+    for i = res_idx + 1, t_len do
+        t[i - 1] = t[i]
+    end
+
+    t[t_len] = nil
+    return v
+end
+-- TODO: Verify that this is faster than table.remove(). Probably worth writing a real test and
+-- saving the code.
+
 ---@see |iter-indexing|
 ---@generic T
 ---@param t T[]
 ---@param v T
----@param idx integer
----@overload fun(t:integer,v:any)
----If no index, append to the end like |table.insert()|
-function M.insert_at(t, idx, v)
+---@param idx? integer If no index, append to the end like |table.insert()|
+function M.insert_at(t, v, idx)
     vim.validate("t", t, "table")
     local nty = require("nvim-tools.types")
+    vim.validate("v", v, nty.nonnil)
+    vim.validate("idx", idx, nty.is_int)
 
     local t_len = #t
-    if v == nil then
-        vim.validate("idx", idx, nty.not_nil)
+    if not idx then
         t[t_len + 1] = idx
         return
     end
-
-    vim.validate("idx", idx, nty.is_int)
 
     local res_idx = resolve_iter_index(idx, t_len, t_len)
     local stop = res_idx + 1
@@ -506,6 +562,8 @@ end
 ---remove(foo, position(foo, 3))
 ----- foo is now { 1, 2, 4, 5 }
 ---```
+---
+---@see |drain()| to additionally return the deleted element.
 ---@generic T
 ---@param t T[]
 ---@param idx integer
@@ -513,12 +571,13 @@ function M.remove_at(t, idx)
     vim.validate("t", t, "table")
     vim.validate("idx", idx, "number")
 
-    local len = #t
-    for i = idx + 1, len do
+    local t_len = #t
+    local res_idx = resolve_iter_index(idx, t_len, t_len)
+    for i = res_idx + 1, t_len do
         t[i - 1] = t[i]
     end
 
-    t[len] = nil
+    t[t_len] = nil
 end
 -- TODO: Verify that this is faster than table.remove(). Probably worth writing a real test and
 -- saving the code.
@@ -594,49 +653,103 @@ function M.dedup_consecutive_to(t, key)
     return dedup_consecutive_do({}, t, key)
 end
 
+---Modifies `t` in place!
 ---@generic T
----@param dst T[]
----@param t T[]
+---@see |iter-indexing|
+---@param start integer? (Default: `1`)
+---@param stop? integer Default: Length of `t`
+---@param t T[] Modified in place!
 ---@param predicate fun(x: T): boolean
----@return T[]
-local function do_filter(dst, t, predicate)
+---@return T[] The original list reference
+function M.filter(start, stop, t, predicate)
+    local is_int = require("nvim-tools.types").is_int
+    vim.validate("start", start, is_int, true)
+    vim.validate("stop", stop, is_int, true)
+    vim.validate("t", t, "table")
+    vim.validate("predicate", predicate, "callable")
+
     local t_len = #t
-    local j = 1
-    for i = 1, t_len do
+    if t_len == 0 then
+        return t
+    end
+
+    start = resolve_iter_index(start, t_len, 1)
+    stop = resolve_iter_index(stop, t_len, t_len)
+    if start > stop then
+        return t
+    end
+
+    local j = start
+    for i = start, stop do
         local v = t[i]
         if predicate(v) then
-            dst[j] = v
+            t[j] = v
             j = j + 1
         end
     end
 
-    if dst == t then
-        for i = j, t_len do
-            t[i] = nil
+    local stop_after = stop + 1
+    if j == stop_after then
+        return t
+    end
+
+    for i = stop_after, t_len do
+        t[j] = t[i]
+        j = j + 1
+    end
+
+    for i = j, t_len do
+        t[i] = nil
+    end
+
+    return t
+end
+
+---@generic T
+---@see |iter-indexing|
+---@param start integer? (Default: `1`)
+---@param stop? integer Default: Length of `t`
+---@param t T[]
+---@param predicate fun(x: T): boolean
+---@return T[] New table
+function M.filter_to(start, stop, t, predicate)
+    local is_int = require("nvim-tools.types").is_int
+    vim.validate("start", start, is_int, true)
+    vim.validate("stop", stop, is_int, true)
+    vim.validate("t", t, "table")
+    vim.validate("predicate", predicate, "callable")
+
+    local t_len = #t
+    if t_len == 0 then
+        return {}
+    end
+
+    start = resolve_iter_index(start, t_len, 1)
+    stop = resolve_iter_index(stop, t_len, t_len)
+    if start > stop then
+        return M.copy(t)
+    end
+
+    local ret = {}
+    for i = 1, start - 1 do
+        ret[i] = t[i]
+    end
+
+    local j = start
+    for i = start, stop do
+        local v = t[i]
+        if predicate(v) then
+            ret[j] = v
+            j = j + 1
         end
     end
 
-    return dst
-end
+    for i = stop + 1, t_len do
+        ret[j] = t[i]
+        j = j + 1
+    end
 
----@generic T
----@param t T[] Modified in place.
----@param predicate fun(x: T): boolean
----@return T[] The original list reference
-function M.filter(t, predicate)
-    vim.validate("t", t, "table")
-    vim.validate("predicate", predicate, "callable")
-    return do_filter(t, t, predicate)
-end
-
----@generic T
----@param t T[] Modified in place.
----@param predicate fun(x: T): boolean
----@return T[] The original list reference
-function M.filter_to(t, predicate)
-    vim.validate("t", t, "table")
-    vim.validate("predicate", predicate, "callable")
-    return do_filter({}, t, predicate)
+    return ret
 end
 
 ---Filter duplicates. See |vim.list.unique()| for the in-place version.
@@ -667,6 +780,173 @@ function M.unique_to(t, key)
     end
 
     return ret
+end
+
+---Modifies `t` in place!
+---@generic T
+---@param t T[] Modified in place!
+---@param f fun(x:T): boolean
+---@param r? boolean (Default: `false`) If true, iterate from the end.
+---@return T[] Original reference to `t`.
+function M.keep_while(t, f, r)
+    vim.validate("t", t, "table")
+    vim.validate("f", f, "callable")
+    vim.validate("r", r, "boolean", true)
+
+    local t_len = #t
+    if t_len == 0 then
+        return t
+    end
+
+    local start, stop, step = resolve_r(r, 1, t_len)
+    local pos
+    for i = start, stop, step do
+        if not f(t[i]) then
+            pos = i
+            break
+        end
+    end
+
+    if not pos then
+        return t
+    end
+
+    local splice_start
+    local splice_stop
+    if r then
+        splice_start = pos + 1
+        splice_stop = t_len
+    else
+        splice_start = 1
+        splice_stop = pos - 1
+    end
+
+    return splice_do(t, t, splice_start, splice_stop)
+end
+
+---@generic T
+---@param t T[]
+---@param f fun(x:T): boolean
+---@param r? boolean (Default: `false`) If true, iterate from the end.
+---@return T[] New list.
+function M.keep_while_to(t, f, r)
+    vim.validate("t", t, "table")
+    vim.validate("f", f, "callable")
+    vim.validate("r", r, "boolean", true)
+
+    local t_len = #t
+    if t_len == 0 then
+        return {}
+    end
+
+    local start, stop, step = resolve_r(r, 1, t_len)
+    local pos
+    for i = start, stop, step do
+        if not f(t[i]) then
+            pos = i
+            break
+        end
+    end
+
+    if not pos then
+        return M.copy(t)
+    end
+
+    local splice_start
+    local splice_stop
+    if r then
+        splice_start = pos + 1
+        splice_stop = t_len
+    else
+        splice_start = 1
+        splice_stop = pos - 1
+    end
+
+    return splice_do({}, t, splice_start, splice_stop)
+end
+
+---Modifies `t` in place!
+---@generic T
+---@param t T[] Modified in place!
+---@param f fun(x:T): boolean
+---@param r? boolean (Default: `false`) If true, iterate from the end.
+---@return T[] Original reference to `t`.
+function M.rm_while(t, f, r)
+    vim.validate("t", t, "table")
+    vim.validate("f", f, "callable")
+    vim.validate("r", r, "boolean", true)
+
+    local t_len = #t
+    if t_len == 0 then
+        return t
+    end
+
+    local start, stop, step = resolve_r(r, 1, t_len)
+    local pos
+    for i = start, stop, step do
+        if not f(t[i]) then
+            pos = i
+            break
+        end
+    end
+
+    if not pos then
+        return t
+    end
+
+    local splice_start
+    local splice_stop
+    if r then
+        splice_start = 1
+        splice_stop = pos - 1
+    else
+        splice_start = pos + 1
+        splice_stop = t_len
+    end
+
+    return splice_do(t, t, splice_start, splice_stop)
+end
+
+---@generic T
+---@param t T[]
+---@param f fun(x:T): boolean
+---@param r? boolean (Default: `false`) If true, iterate from the end.
+---@return T[] New list.
+---@overload fun(t:any[], r:fun(x:any): boolean): any[]
+function M.rm_while_to(t, f, r)
+    vim.validate("t", t, "table")
+    vim.validate("f", f, "callable")
+    vim.validate("r", r, "boolean", true)
+
+    local t_len = #t
+    if t_len == 0 then
+        return {}
+    end
+
+    local start, stop, step = resolve_r(r, 1, t_len)
+    local pos
+    for i = start, stop, step do
+        if not f(t[i]) then
+            pos = i
+            break
+        end
+    end
+
+    if not pos then
+        return M.copy(t)
+    end
+
+    local splice_start
+    local splice_stop
+    if r then
+        splice_start = 1
+        splice_stop = pos - 1
+    else
+        splice_start = pos + 1
+        splice_stop = t_len
+    end
+
+    return splice_do({}, t, splice_start, splice_stop)
 end
 
 -----------------------------------
@@ -1215,37 +1495,20 @@ end
 ---@generic T
 ---@param t T[]
 ---@param v T|fun(x:T): boolean
+---@param r? boolean (Default: `false`) If true, iterate from the end.
 ---@return T? `nil` if not found.
-function M.find(t, v)
+function M.find(t, v, r)
     vim.validate("t", t, "table")
-    vim.validate("v", v, require("nvim-tools.types").not_nil)
+    vim.validate("v", v, require("nvim-tools.types").nonnil)
+    vim.validate("r", r, "boolean", true)
 
+    local t_len = #t
+    local start, stop, step = resolve_r(r, 1, t_len)
     local predicate = type(v) == "function" and v or function(x)
         return x == v
     end
 
-    local t_len = #t
-    for i = 1, t_len do
-        if predicate(t[i]) then
-            return t[i]
-        end
-    end
-end
-
----@generic T
----@param v T|fun(x:T): boolean
----@param t T[]
----@return T? `nil` if not found.
-function M.find_r(v, t)
-    vim.validate("t", t, "table")
-    vim.validate("v", v, require("nvim-tools.types").not_nil)
-
-    local predicate = type(v) == "function" and v or function(x)
-        return x == v
-    end
-
-    local t_len = #t
-    for i = t_len, 1, -1 do
+    for i = start, stop, step do
         if predicate(t[i]) then
             return t[i]
         end
@@ -1278,39 +1541,47 @@ end
 ---@generic T
 ---@param t T[]
 ---@param v T|fun(x:T): boolean
----@return integer Returns zero if not found.
-function M.position(t, v)
+---@return boolean
+function M.one(t, v)
     vim.validate("t", t, "table")
-    vim.validate("v", v, require("nvim-tools.types").not_nil)
+    vim.validate("v", v, vim.nonnil)
 
     local predicate = type(v) == "function" and v or function(x)
         return x == v
     end
 
     local t_len = #t
+    local seen = false
     for i = 1, t_len do
         if predicate(t[i]) then
-            return i
+            if seen then
+                return false
+            end
+
+            seen = true
         end
     end
 
-    return 0
+    return seen
 end
 
 ---@generic T
 ---@param t T[]
 ---@param v T|fun(x:T): boolean
----@return integer Returns zero if not found.
-function M.position_r(t, v)
+---@param r? boolean (Default: `false`) If true, iterate from the end.
+---@return integer? Index of the found item.
+function M.position(t, v, r)
     vim.validate("t", t, "table")
-    vim.validate("v", v, require("nvim-tools.types").not_nil)
+    vim.validate("v", v, require("nvim-tools.types").nonnil)
+    vim.validate("r", r, "boolean", true)
 
+    local t_len = #t
+    local start, stop, step = resolve_r(r, 1, t_len)
     local predicate = type(v) == "function" and v or function(x)
         return x == v
     end
 
-    local t_len = #t
-    for i = t_len, 1, -1 do
+    for i = start, stop, step do
         if predicate(t[i]) then
             return i
         end
@@ -1499,7 +1770,7 @@ end
 ---@return T[] Original list reference
 function M.intersperse(t, sep, unit_size)
     vim.validate("t", t, "table")
-    vim.validate("sep", sep, require("nvim-tools.types").not_nil)
+    vim.validate("sep", sep, require("nvim-tools.types").nonnil)
     vim.validate("unit_size", unit_size, "number", true)
 
     local len = #t
@@ -1541,7 +1812,7 @@ end
 ---@return T[]
 function M.intersperse_to(t, sep, unit_size)
     vim.validate("t", t, "table")
-    vim.validate("sep", sep, require("nvim-tools.types").not_nil)
+    vim.validate("sep", sep, require("nvim-tools.types").nonnil)
     vim.validate("unit_size", unit_size, "number", true)
 
     local len = #t

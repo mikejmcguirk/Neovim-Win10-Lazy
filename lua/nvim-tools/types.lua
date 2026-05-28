@@ -22,13 +22,10 @@ function M.is_uint(n)
     return n >= 0
 end
 
----@generic T
----@param v T
----@return boolean
-function M.not_nil(v)
-    return v ~= nil
-end
--- TODO: vim.nonnil works. Get rid of this.
+---@diagnostic disable-next-line: deprecated
+M.nonnil = vim.nonnil or vim.F.if_nil
+-- DEPRECATE: Nvim 0.15 released
+-- TODO: I have nonnil explicitly in a lot of places get rid of it
 
 ---@class nvim-tools.types.ValidateListOpts
 ---@field func? fun(t:any[]):boolean, string?

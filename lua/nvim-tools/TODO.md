@@ -291,24 +291,13 @@
 - https://hackage-content.haskell.org/package/base-4.22.0.0/docs/Data-List.html
 
 - [ ] More ideas:
-  - [ ] delete - find a value and yeet it
-  - [ ] list difference, where you only delete the first occurrence from t1 if it's in t2
-  - [ ] Do not to have rposition because you need it to do takeWhile/dropWhile
-  - [ ] specifically note that init is like reduce. maybe just call init reduce or something
   - [ ] numpy choose() - map two
   - [ ] numpy put is interesting because you feed in indices
   - [ ] do a find_all function that takes a predicate and returns a list of indices. This handles a lot of higher level list functions.
   - [ ] likewise, have a cumulative fold function that returns a list of all the values along the way (or cumulative reduce. maybe just make them separate functions)
-  - [ ] "index_of" might be better than position
-  - [ ] insert_at needs to be able to handle 0/negative indices for the end
-  - [ ] remove also needs to handle negative indexing
-  - [ ] cycle?
-  - [ ] intersection > intersect?
   - [ ] minmax? Double accumulator fold/reduce?
-  - [ ] one()
-    - [ ] Naming conflict with none()
+  - [ ] Add none(). Depending on expected list contents, different checks can cause faster short circuiting. And having "none" makes the recursive logic of searching based on indirection easier
   - [ ] push/pop/shift/unshift (need for farsight queue)
-  - [ ] counts > tally?
   - [ ] nested iter (for docgen results, so you have one iter that just returns each thing, rather than having to do ipairs twice)
     - [ ] Ruby dig lets you specify indices
 

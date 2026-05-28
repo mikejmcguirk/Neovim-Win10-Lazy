@@ -56,9 +56,7 @@ end
 
 ---@diagnostic disable-next-line: deprecated
 M.nonnil = vim.nonnil or vim.F.if_nil
--- DEPRECATE: Nvim 0.15 released
--- TODO: Move this to types so it's one less require.
--- TODO: I have nonnil explicitly in a lot of places get rid of it
+-- TODO: Delete this for the one in `types`.
 
 ---@param timer uv.uv_timer_t|nil
 function M.stop_timer(timer)
