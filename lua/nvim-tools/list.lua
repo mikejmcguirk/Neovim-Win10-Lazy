@@ -41,7 +41,7 @@ end
 
 ---Copied from Neovim core.
 ---@generic T
----@param key? string|fun(val: T): any
+---@param key nil|string|fun(val:any): any
 ---@return fun(v: T): any
 local function make_key_fn(key)
     if not key then
@@ -76,15 +76,135 @@ end
 ---@return integer start, integer stop, integer step
 local function resolve_r(r, start, stop)
     if r then
-        return start, stop, 1
-    else
         return stop, start, -1
+    else
+        return start, stop, 1
     end
+end
+
+---@param key_fn fun(x:any): any
+---@param ... any[]
+---@return table<any, true> seen
+local function see_in_varargs(key_fn, ...)
+    local nargs = select("#", ...)
+    local seen = {} ---@type table<any, boolean>
+    for i = 1, nargs do
+        local tn = select(i, ...)
+        local tn_len = #tn
+        for j = 1, tn_len do
+            seen[key_fn(tn[j])] = true
+        end
+    end
+
+    return seen
+end
+
+---@param key_fn fun(x: any): any
+---@param ... any[]
+---@return table<any, true>
+local function see_in_varargs_if_in_all(key_fn, ...)
+    local nargs = select("#", ...)
+    if nargs == 0 then
+        return {}
+    end
+
+    if nargs == 1 then
+        local seen = {} ---@type table<any, true>
+        local t1 = select(1, ...)
+        local t1_len = #t1
+        for i = 1, t1_len do
+            seen[key_fn(t1[i])] = true
+        end
+
+        return seen
+    end
+
+    local varargs = { ... } ---@type any[][]
+    local min_idx, min_len = 1, #varargs[1]
+    for i = 2, nargs do
+        local vararg_len = #varargs[i]
+        if vararg_len < min_len then
+            min_len = vararg_len
+            min_idx = i
+        end
+    end
+
+    local seen = {} ---@type table<any, boolean|integer>
+    local gen_prev = 0
+    local gen = 1
+    local t1 = varargs[min_idx]
+    local t1_len = #t1
+    for i = 1, t1_len do
+        seen[key_fn(t1[i])] = gen
+    end
+
+    for i = 1, min_idx - 1 do
+        gen_prev = gen
+        gen = gen + 1
+        local tn = varargs[i]
+        local tn_len = #tn
+        for j = 1, tn_len do
+            local vh = key_fn(tn[j])
+            if seen[vh] == gen_prev then
+                seen[vh] = gen
+            end
+        end
+    end
+
+    for i = min_idx + 1, nargs do
+        gen_prev = gen
+        gen = gen + 1
+        local tn = varargs[i]
+        local tn_len = #tn
+        for j = 1, tn_len do
+            local vh = key_fn(tn[j])
+            if seen[vh] == gen_prev then
+                seen[vh] = gen
+            end
+        end
+    end
+
+    for k, last_gen in pairs(seen) do
+        if last_gen == nargs then
+            seen[k] = true
+        else
+            seen[k] = nil
+        end
+    end
+
+    return seen --[[@as table<any, true>]]
 end
 
 -------------------------
 -- MARK: List Creation --
 -------------------------
+
+---Appends n lists args to `t1`. Use |copy()| on t1 to get a new list.
+---Performs a shallow copy of the appended lists.
+---@generic T
+---@param t1 T[] Modified in place!
+---@param ... any[]
+---@return any[] The original reference with the additional lists appended.
+function M.chain(t1, ...)
+    local nargs = select("#", ...)
+
+    vim.validate("t1", t1, "table")
+    for i = 1, nargs do
+        local tn = select(i, ...)
+        vim.validate("tn", tn, "table")
+    end
+
+    for i = 1, nargs do
+        local tn = select(i, ...)
+        local tn_len = #tn
+        for j = 1, tn_len do
+            t1[#t1 + 1] = tn[j]
+        end
+    end
+
+    return t1
+end
+-- No "new table" version of this function because it would require a full copy of t1 anyway.
 
 ---Turns two, unsorted lists into one sorted list. If the lists are already sorted,
 ---use |merge_sorted()|.
@@ -221,7 +341,7 @@ local function splice_do(dst, t, start, stop)
     stop = resolve_iter_index(stop, t_len, t_len)
     local to_new_list = t ~= dst
     if start > stop then
-        return dst
+        return M.clear(dst)
     elseif start == 1 and stop == t_len then
         return to_new_list and M.copy(t) or t
     end
@@ -248,8 +368,8 @@ end
 ---Get a subset of `t` by start and stop indices.
 ---Splice `t` into a subset of its values defined by `start` and `stop` indices.
 ---
----No-op if `t` is length zero or the provided `start` and `stop` values resolve to an invalid
----iteration.
+---Returns an empty table if `t` is length zero or the provided `start` and `stop` values resolve
+---to an invalid iteration.
 ---@generic T
 ---@param t T[] Modified in place!
 ---@see |iter-indexing|
@@ -493,22 +613,17 @@ end
 ---Clear's a table's array element.
 ---@generic T
 ---@param t T[] Modified in place!
----@param start? integer Optionally start at a point after the first index. See |iter-indexing|.
 ---@return T[] The original list reference.
-function M.clear(t, start)
+function M.clear(t)
     vim.validate("t", t, "table")
-    vim.validate("start", start, require("nvim-tools.types").is_int, true)
 
     local t_len = #t
-    start = resolve_iter_index(start, t_len, 1)
-    for i = start, t_len do
+    for i = 1, t_len do
         t[i] = nil
     end
 
     return t
 end
--- TODO: Can't use this for pos-clearing lists because it clamps the top index, meaning the last
--- val is always removed.
 
 ---@generic T
 ---@param t T[]
@@ -562,7 +677,7 @@ end
 ---Filter duplicates. See |vim.list.unique()| to do so in-place.
 ---@generic T
 ---@param t T[]
----@param key? string|fun(val:T): any See: |vim.list.unique()|.
+---@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
 ---@return T[] New and de-duped table. Empty if `t` has a length of zero.
 function M.unique_to(t, key)
     vim.validate("t", t, "table")
@@ -593,168 +708,163 @@ function M.unique_to(t, key)
     return ret
 end
 
----Modifies `t` in place!
+---@generic T
+---@param t T[]
+---@param f fun(x:T): boolean
+---@param r? boolean
+---@return integer|nil, integer|nil
+local function get_keep_splice(t, f, r)
+    local t_len = #t
+    if t_len == 0 then
+        return nil, nil
+    end
+
+    local start, stop, step = resolve_r(r, 1, t_len)
+    local pos
+    for i = start, stop, step do
+        if not f(t[i]) then
+            pos = i
+            break
+        end
+    end
+
+    if not pos then
+        return 1, t_len
+    end
+
+    local splice_start
+    local splice_stop
+    if r then
+        splice_start = pos + 1
+        splice_stop = t_len
+    else
+        splice_start = 1
+        splice_stop = pos - 1
+    end
+
+    if splice_start > splice_stop then
+        return nil, nil
+    end
+
+    return splice_start, splice_stop
+end
+
+---Iterate over a list with a predicate. Keep values until the predicate returns false, then
+---remove the rest in place from the source list.
 ---@generic T
 ---@param t T[] Modified in place!
 ---@param f fun(x:T): boolean
 ---@param r? boolean (Default: `false`) If true, iterate from the end.
----@return T[] Original reference to `t`.
+---@return T[] Original reference to `t`. Unchanged if the whole table passes the predicate.
 function M.keep_while(t, f, r)
     vim.validate("t", t, "table")
     vim.validate("f", f, "callable")
     vim.validate("r", r, "boolean", true)
 
-    local t_len = #t
-    if t_len == 0 then
-        return t
-    end
-
-    local start, stop, step = resolve_r(r, 1, t_len)
-    local pos
-    for i = start, stop, step do
-        if not f(t[i]) then
-            pos = i
-            break
-        end
-    end
-
-    if not pos then
-        return t
-    end
-
-    local splice_start
-    local splice_stop
-    if r then
-        splice_start = pos + 1
-        splice_stop = t_len
-    else
-        splice_start = 1
-        splice_stop = pos - 1
+    local splice_start, splice_stop = get_keep_splice(t, f, r)
+    if not (splice_start and splice_stop) then
+        return M.clear(t)
     end
 
     return splice_do(t, t, splice_start, splice_stop)
 end
 
+---Iterate over a list with a predicate. Keep values until the predicate returns false, then
+---remove the rest. Output to a new list.
 ---@generic T
 ---@param t T[]
 ---@param f fun(x:T): boolean
 ---@param r? boolean (Default: `false`) If true, iterate from the end.
----@return T[] New list.
+---@return T[] New list. Returns a copy of `t` if all items are kept.
 function M.keep_while_to(t, f, r)
     vim.validate("t", t, "table")
     vim.validate("f", f, "callable")
     vim.validate("r", r, "boolean", true)
 
-    local t_len = #t
-    if t_len == 0 then
+    local splice_start, splice_stop = get_keep_splice(t, f, r)
+    if not (splice_start and splice_stop) then
         return {}
-    end
-
-    local start, stop, step = resolve_r(r, 1, t_len)
-    local pos
-    for i = start, stop, step do
-        if not f(t[i]) then
-            pos = i
-            break
-        end
-    end
-
-    if not pos then
-        return M.copy(t)
-    end
-
-    local splice_start
-    local splice_stop
-    if r then
-        splice_start = pos + 1
-        splice_stop = t_len
-    else
-        splice_start = 1
-        splice_stop = pos - 1
     end
 
     return splice_do({}, t, splice_start, splice_stop)
 end
 
----Modifies `t` in place!
+---@generic T
+---@param t T[]
+---@param f fun(x:T): boolean
+---@param r? boolean
+---@return integer|nil, integer|nil
+local function get_rm_splice(t, f, r)
+    local t_len = #t
+    if t_len == 0 then
+        return nil, nil
+    end
+
+    local start, stop, step = resolve_r(r, 1, t_len)
+    local pos
+    for i = start, stop, step do
+        if not f(t[i]) then
+            pos = i
+            break
+        end
+    end
+
+    if not pos then
+        return nil, nil
+    end
+
+    local splice_start
+    local splice_stop
+    if r then
+        splice_start = 1
+        splice_stop = pos
+    else
+        splice_start = pos
+        splice_stop = t_len
+    end
+
+    if splice_start > splice_stop then
+        return 1, t_len
+    end
+
+    return splice_start, splice_stop
+end
+
+---Iterate over a list with a predicate. Remove values until the predicate returns false, then
+---splice `t` in place to retain the rest.
 ---@generic T
 ---@param t T[] Modified in place!
 ---@param f fun(x:T): boolean
 ---@param r? boolean (Default: `false`) If true, iterate from the end.
----@return T[] Original reference to `t`.
+---@return T[] Original reference to `t`. Empty if the whole table passes the predicate.
 function M.rm_while(t, f, r)
     vim.validate("t", t, "table")
     vim.validate("f", f, "callable")
     vim.validate("r", r, "boolean", true)
 
-    local t_len = #t
-    if t_len == 0 then
-        return t
-    end
-
-    local start, stop, step = resolve_r(r, 1, t_len)
-    local pos
-    for i = start, stop, step do
-        if not f(t[i]) then
-            pos = i
-            break
-        end
-    end
-
-    if not pos then
-        return t
-    end
-
-    local splice_start
-    local splice_stop
-    if r then
-        splice_start = 1
-        splice_stop = pos - 1
-    else
-        splice_start = pos + 1
-        splice_stop = t_len
+    local splice_start, splice_stop = get_rm_splice(t, f, r)
+    if not (splice_start and splice_stop) then
+        return M.clear(t)
     end
 
     return splice_do(t, t, splice_start, splice_stop)
 end
 
+---Iterate over a list with a predicate. Skip values until the predicate returns false, then
+---return a new list containing the rest.
 ---@generic T
 ---@param t T[]
 ---@param f fun(x:T): boolean
 ---@param r? boolean (Default: `false`) If true, iterate from the end.
----@return T[] New list.
----@overload fun(t:any[], r:fun(x:any): boolean): any[]
+---@return T[] New list. Empty if the whole table passes the predicate.
 function M.rm_while_to(t, f, r)
     vim.validate("t", t, "table")
     vim.validate("f", f, "callable")
     vim.validate("r", r, "boolean", true)
 
-    local t_len = #t
-    if t_len == 0 then
+    local splice_start, splice_stop = get_rm_splice(t, f, r)
+    if not (splice_start and splice_stop) then
         return {}
-    end
-
-    local start, stop, step = resolve_r(r, 1, t_len)
-    local pos
-    for i = start, stop, step do
-        if not f(t[i]) then
-            pos = i
-            break
-        end
-    end
-
-    if not pos then
-        return M.copy(t)
-    end
-
-    local splice_start
-    local splice_stop
-    if r then
-        splice_start = 1
-        splice_stop = pos - 1
-    else
-        splice_start = pos + 1
-        splice_stop = t_len
     end
 
     return splice_do({}, t, splice_start, splice_stop)
@@ -764,49 +874,15 @@ end
 -- MARK: List and List Filtering --
 -----------------------------------
 
----Appends n lists args to `t1`. (OR logic).
----Performs a shallow copy of the appended lists.
----@generic T
----@param t1 T[] Modified in place.
----@param ... any[]
----@return any[] All lists chained together.
-function M.chain(t1, ...)
-    vim.validate("t1", t1, "table")
-
-    local nargs = select("#", ...)
-    for i = 1, nargs do
-        local tn = select(i, ...)
-        vim.validate("tn", tn, "table")
-
-        local tn_len = #tn
-        for j = 1, tn_len do
-            t1[#t1 + 1] = tn[j]
-        end
-    end
-
-    return t1
-end
-
 ---@generic T
 ---@param dst T[]
+---@param key nil|string|fun(x:any): any
 ---@param t1 T[]
 ---@param ... any[]
----@param key? string|fun(val:any): any
----@return any[]
+---@return T[]
 local function difference_do(dst, key, t1, ...)
-    local nargs = select("#", ...)
     local key_fn = make_key_fn(key)
-    local seen = {} ---@type table<any, boolean>
-    for i = 1, nargs do
-        local tn = select(i, ...)
-        vim.validate("tn", tn, "table")
-
-        local tn_len = #tn
-        for j = 1, tn_len do
-            seen[key_fn(tn[j])] = true
-        end
-    end
-
+    local seen = see_in_varargs(key_fn, ...)
     local t1_len = #t1
     local j = 1
     for i = 1, t1_len do
@@ -815,26 +891,25 @@ local function difference_do(dst, key, t1, ...)
         if not seen[vh] then
             dst[j] = v
             j = j + 1
-            seen[vh] = true
+            if vh ~= nil then
+                seen[vh] = true
+            end
         end
     end
 
     if dst == t1 then
-        for i = j, t1_len do
-            t1[i] = nil
-        end
+        clear_exact(dst, j, t1_len)
     end
 
     return dst
 end
 
----Modifies `t1` in place.
+---Modifies `t1` in place!
 ---Remove elements from `t1` that are present in any of the varargs (XOR logic).
 ---`t1` is de-duplicated. Order is preserved.
 ---@generic T
----@generic U
----@param key? string|fun(val:any): any See: |vim.list.unique()|.
----@param t1 T[] Target list. Modified in place.
+---@param key nil|string|fun(x:any): any See: |vim.list.unique()|.
+---@param t1 T[] Target list. Modified in place!
 ---@param ... any[]
 ---@return T[] The original reference to `t1`.
 function M.difference(key, t1, ...)
@@ -842,8 +917,7 @@ function M.difference(key, t1, ...)
     vim.validate("t1", t1, "table")
     local nargs = select("#", ...)
     for i = 1, nargs do
-        local tn = select(i, ...)
-        vim.validate("tn", tn, "table")
+        vim.validate("tn", select(i, ...), "table")
     end
 
     return difference_do(t1, key, t1, ...)
@@ -852,10 +926,10 @@ end
 ---Get a new list containing the elements of `t1` not present in any of the varargs (XOR logic).
 ---`t1` is de-duplicated. Order is preserved.
 ---@generic T
+---@param key nil|string|fun(x:any): any See: |vim.list.unique()|.
 ---@param t1 T[] Source list.
 ---@param ... any[]
----@param key? string|fun(val:any): any See: |vim.list.unique()|.
----@return any[] New list.
+---@return T[] New list.
 function M.difference_to(key, t1, ...)
     vim.validate("key", key, { "callable", "string" }, true)
     vim.validate("t1", t1, "table")
@@ -870,24 +944,13 @@ end
 
 ---@generic T
 ---@param dst T[]
----@param key? string|fun(val:any): any
+---@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
 ---@param t1 T[]
 ---@param ... any[]
 ---@return T[]
 local function intersect_do(dst, key, t1, ...)
-    local nargs = select("#", ...)
     local key_fn = make_key_fn(key)
-    local seen = {} ---@type table<any, boolean>
-    for i = 1, nargs do
-        local tn = select(i, ...)
-        vim.validate("tn", tn, "table")
-
-        local tn_len = #tn
-        for j = 1, tn_len do
-            seen[key_fn(tn[j])] = true
-        end
-    end
-
+    local seen = see_in_varargs_if_in_all(key_fn, ...)
     local t1_len = #t1
     local j = 1
     for i = 1, t1_len do
@@ -899,39 +962,36 @@ local function intersect_do(dst, key, t1, ...)
     end
 
     if dst == t1 then
-        for i = j, t1_len do
-            t1[i] = nil
-        end
+        clear_exact(dst, j, t1_len)
     end
 
     return dst
 end
 
 ---Modifies `t1` in place.
----Keep elements in `t1` if they are present in `t2` (AND logic).
+---Keep elements in `t1` if they are present in all vararg tables (AND logic).
 ---Does not de-duplicate elements from `t1`. Order is preserved
 ---@generic T
----@param key? string|fun(val:any): any See: |vim.list.unique()|.
----@param t1 T[] Modified in place. Original order is preserved.
+---@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
+---@param t1 T[] Modified in place!
 ---@param ... any[]
----@return T[] t1 Reference to the table param.
+---@return T[] Reference to the original table.
 function M.intersect(key, t1, ...)
     vim.validate("key", key, { "callable", "string" }, true)
     vim.validate("t1", t1, "table")
     local nargs = select("#", ...)
     for i = 1, nargs do
-        local tn = select(i, ...)
-        vim.validate("tn", tn, "table")
+        vim.validate("tn", select(i, ...), "table")
     end
 
     return intersect_do(t1, key, t1, ...)
 end
 
----Create a new list from the elements in `t1` present in `t2` (AND logic).
+---Create a new list from the elements in `t1` present in every vararg (AND logic).
 ---Does not de-duplicate elements from `t1`. Order is preserved.
 ---@generic T
----@param key? string|fun(val:any): any See: |vim.list.unique()|.
----@param t1 T[] Original order is preserved.
+---@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
+---@param t1 T[]
 ---@param ... any[]
 ---@return T[] New list.
 function M.intersect_to(key, t1, ...)
@@ -939,8 +999,7 @@ function M.intersect_to(key, t1, ...)
     vim.validate("t1", t1, "table")
     local nargs = select("#", ...)
     for i = 1, nargs do
-        local tn = select(i, ...)
-        vim.validate("tn", tn, "table")
+        vim.validate("tn", select(i, ...), "table")
     end
 
     return intersect_do({}, key, t1, ...)
@@ -948,7 +1007,7 @@ end
 
 ---@generic T
 ---@param dst T[]
----@param key? string|fun(val:any): any
+---@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
 ---@param t1 T[]
 ---@param ... any[]
 ---@return T[]
@@ -991,7 +1050,7 @@ end
 ---Keep elements in `t1` if they are present in `t2` (AND logic).
 ---De-duplicates elements from `t1`. Order is preserved
 ---@generic T
----@param key? string|fun(val:any): any See: |vim.list.unique()|.
+---@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
 ---@param t1 T[] Modified in place. Original order is preserved.
 ---@param ... any[]
 ---@return T[] t1 Reference to the table param.
@@ -1010,7 +1069,7 @@ end
 ---Create a new list from the elements in `t1` present in `t2` (AND logic).
 ---De-duplicates elements from `t1`. Order is preserved.
 ---@generic T
----@param key? string|fun(val:any): any See: |vim.list.unique()|.
+---@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
 ---@param t1 T[] Original order is preserved.
 ---@param ... any[]
 ---@return T[] New list.
@@ -1030,7 +1089,7 @@ end
 ---@param dst T[]
 ---@param t1 T[] Source list.
 ---@param ... any[]
----@param key? string|fun(val:any): any See: |vim.list.unique()|.
+---@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
 ---@return any[] New list.
 local function subtract_do(dst, key, t1, ...)
     local nargs = select("#", ...)
@@ -1038,8 +1097,6 @@ local function subtract_do(dst, key, t1, ...)
     local seen = {} ---@type table<any, boolean>
     for i = 1, nargs do
         local tn = select(i, ...)
-        vim.validate("tn", tn, "table")
-
         local tn_len = #tn
         for j = 1, tn_len do
             seen[key_fn(tn[j])] = true
@@ -1071,7 +1128,7 @@ end
 ---@generic T
 ---@param t1 T[] Target list. Modified in place.
 ---@param ... any[]
----@param key? string|fun(val:any): any See: |vim.list.unique()|.
+---@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
 ---@return T[] The original reference to `t1`.
 function M.subtract(key, t1, ...)
     vim.validate("key", key, { "callable", "string" }, true)
@@ -1088,7 +1145,7 @@ end
 ---Remove elements from `t1` that are present in any of the varargs (XOR logic).
 ---No additional de-duplication in `t1`. Order is preserved.
 ---@generic T
----@param key? string|fun(val:any): any See: |vim.list.unique()|.
+---@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
 ---@param t1 T[] Source list.
 ---@param ... any[]
 ---@return T[] New list.
@@ -1106,7 +1163,7 @@ end
 
 --- Creates a new list based on the values in all lists (OR logic).
 --- Elements in all lists are de-duped. Order is preserved.
----@param key (string|fun(val:any): any)?
+---@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
 ---@param ... any[]
 ---@return any[]
 function M.union_to(key, ...)
@@ -1127,7 +1184,9 @@ function M.union_to(key, ...)
             local vh = key_fn(v)
             if not seen[vh] then
                 ret[#ret + 1] = v
-                seen[vh] = true
+                if vh ~= nil then
+                    seen[vh] = true
+                end
             end
         end
     end
@@ -1137,7 +1196,7 @@ end
 
 ---Returns a new list of items that are only present in one of the lists. (XOR logic).
 ---Duplicates are kept. Original ordering is preserved.
----@param key (string|fun(val:any): any)?
+---@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
 ---@param ... any[]
 ---@return any[]
 function M.xor(key, ...)
@@ -1179,7 +1238,7 @@ end
 
 ---Returns a new list of items that are only present in one of the lists. (XOR logic).
 ---All items are de-duped. Original ordering is preserved.
----@param key (string|fun(val:any): any)?
+---@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
 ---@param ... any[]
 ---@return any[]
 function M.distinct(key, ...)
