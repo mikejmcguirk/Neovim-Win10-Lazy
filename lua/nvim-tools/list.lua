@@ -308,7 +308,7 @@ end
 ---@param count integer Returns an empty table if count is zero.
 ---@return T[] Creates a new list.
 function M.replicate(v, count)
-    vim.validate("v", v, vim.nonnil)
+    vim.validate("v", v, vim.not_nil)
     vim.validate("count", count, require("nvim-tools.types").is_uint)
 
     if count == 0 then
@@ -429,7 +429,7 @@ end
 ---     the list building ends.
 ---@return T[] The new table.
 function M.successors(init, f)
-    vim.validate("init", init, vim.nonnil)
+    vim.validate("init", init, vim.not_nil)
     vim.validate("f", f, "callable")
 
     local ret = { init }
@@ -461,7 +461,7 @@ end
 ---     nil, the function terminates immediately.
 ---@return T[] The new table. Returns an empty table if the first call to `f` produces a nil value.
 function M.unfold(init, f)
-    vim.validate("init", init, vim.nonnil)
+    vim.validate("init", init, vim.not_nil)
     vim.validate("f", f, "callable")
 
     local ret = {}
@@ -563,7 +563,7 @@ end
 function M.insert_at(t, v, idx)
     vim.validate("t", t, "table")
     local nty = require("nvim-tools.types")
-    vim.validate("v", v, nty.nonnil)
+    vim.validate("v", v, nty.not_nil)
     vim.validate("idx", idx, nty.is_int, true)
 
     local t_len = #t
@@ -1309,7 +1309,7 @@ end
 ---@return boolean
 function M.any(t, v)
     vim.validate("t", t, "table")
-    vim.validate("v", v, vim.nonnil)
+    vim.validate("v", v, require("nvim-tools.types").not_nil)
 
     local predicate = type(v) == "function" and v or function(x)
         return x == v
@@ -1369,7 +1369,7 @@ end
 ---@return T? `nil` if not found.
 function M.find(t, v, r)
     vim.validate("t", t, "table")
-    vim.validate("v", v, require("nvim-tools.types").nonnil)
+    vim.validate("v", v, require("nvim-tools.types").not_nil)
     vim.validate("r", r, "boolean", true)
 
     local t_len = #t
@@ -1391,7 +1391,7 @@ end
 ---@return integer[] Empty table if no results.
 function M.indices(t, v)
     vim.validate("t", t, "table")
-    vim.validate("v", v, require("nvim-tools.types").nonnil)
+    vim.validate("v", v, require("nvim-tools.types").not_nil)
 
     local t_len = #t
     local ret = {} ---@type integer[]
@@ -1414,7 +1414,7 @@ end
 ---@return boolean
 function M.one(t, v)
     vim.validate("t", t, "table")
-    vim.validate("v", v, vim.nonnil)
+    vim.validate("v", v, vim.not_nil)
 
     local predicate = type(v) == "function" and v or function(x)
         return x == v
@@ -1442,7 +1442,7 @@ end
 ---@return integer? Index of the found item.
 function M.position(t, v, r)
     vim.validate("t", t, "table")
-    vim.validate("v", v, require("nvim-tools.types").nonnil)
+    vim.validate("v", v, require("nvim-tools.types").not_nil)
     vim.validate("r", r, "boolean", true)
 
     local t_len = #t
@@ -1489,7 +1489,7 @@ end
 ---@return boolean[]
 function M.selectors(t, v)
     vim.validate("t", t, "table")
-    vim.validate("v", v, require("nvim-tools.types").nonnil)
+    vim.validate("v", v, require("nvim-tools.types").not_nil)
 
     local t_len = #t
     local ret = {} ---@type boolean[]
@@ -1729,7 +1729,7 @@ end
 ---@return T[] The original list reference containing the new, possibly filtered, values.
 function M.filter_map_accum(t, init, f)
     vim.validate("t", t, "table")
-    vim.validate("init", init, vim.nonnil)
+    vim.validate("init", init, vim.not_nil)
     vim.validate("f", f, "callable")
 
     local len = #t
@@ -1760,7 +1760,7 @@ end
 ---     the list value, it will be filtered.
 ---@return U[] The newly mapped list.
 function M.filter_map_accum_to(t, init, f)
-    vim.validate("init", init, vim.nonnil)
+    vim.validate("init", init, vim.not_nil)
     vim.validate("t", t, "table")
     vim.validate("f", f, "callable")
 

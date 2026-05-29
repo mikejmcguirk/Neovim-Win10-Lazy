@@ -55,8 +55,8 @@ function M.prepend_if_missing(str, new_items, sep)
 end
 
 ---@diagnostic disable-next-line: deprecated
-M.nonnil = vim.nonnil or vim.F.if_nil
--- TODO: Delete this for the one in `types`.
+M.nonnil = vim.not_nil or vim.F.if_nil
+-- DEPRECATE: Nvim 0.15 released
 
 ---@param timer uv.uv_timer_t|nil
 function M.stop_timer(timer)

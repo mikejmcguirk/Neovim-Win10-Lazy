@@ -61,7 +61,7 @@ end
 ---@param v T
 function M.get_or_set(t, k, v)
     vim.validate("t", t, "table")
-    local not_nil = require("nvim-tools.types").nonnil
+    local not_nil = require("nvim-tools.types").not_nil
     vim.validate("k", k, not_nil)
     vim.validate("v", v, not_nil)
 

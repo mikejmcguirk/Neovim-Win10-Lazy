@@ -25,7 +25,7 @@ end
 ---@return boolean
 function M.set_if_new(opt, old, new, scope)
     vim.validate("opt", opt, "string")
-    local not_nil = require("nvim-tools.types").nonnil
+    local not_nil = require("nvim-tools.types").not_nil
     vim.validate("old", old, not_nil)
     vim.validate("new", new, not_nil)
     vim.validate("scope", scope, "table")

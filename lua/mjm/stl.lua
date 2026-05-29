@@ -220,6 +220,10 @@ local watched = { "fileencoding", "encoding", "fileformat", "buftype" }
 api.nvim_create_autocmd("OptionSet", {
     group = stl_events,
     callback = function(ev)
+        if not ev.match then
+            return
+        end
+
         local buf = ev.buf ~= 0 and ev.buf or api.nvim_get_current_buf()
         if not buf_cache[buf] then
             return

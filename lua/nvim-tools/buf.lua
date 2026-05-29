@@ -281,7 +281,7 @@ end
 ---@param buftype ""|"acwrite"|"help"|"nofile"|"nowrite"|"prompt"|"quickfix"|"terminal"
 ---@return string, string
 local function get_eiw(win, buftype)
-    local old_eiw = api.nvim_get_option_value("eventignorewin", { win = win })
+    local old_eiw = api.nvim_get_option_value("eventignorewin", { win = win }) or ""
     local new_eiw_tbl = { "WinEnter,WinLeave" } -- Caller will handle these
 
     -- Both of these FileTypes are meant to set two categories of options:
@@ -290,9 +290,7 @@ local function get_eiw(win, buftype)
     --   (Should be overwritten by FileType autocmds)
     if buftype == "help" or buftype == "quickfix" then
         new_eiw_tbl[#new_eiw_tbl + 1] = "FileType"
-    end
-
-    if buftype == "quickfix" then
+    elseif buftype == "quickfix" then
         -- See qf_open_new_cwindow in quickfix.c
         new_eiw_tbl[#new_eiw_tbl + 1] = "BufWinEnter"
     end
