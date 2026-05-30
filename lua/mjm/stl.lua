@@ -75,8 +75,11 @@ api.nvim_create_autocmd("LspProgress", {
         timers[buf]:start(2250, 0, function()
             progress_cache[buf] = nil
             vim.schedule(function()
-                local cur_buf = api.nvim_win_get_buf(0)
-                if not is_bad_mode() and cur_buf == buf then
+                if is_bad_mode() then
+                    return
+                end
+
+                if api.nvim_win_get_buf(0) == buf then
                     api.nvim__redraw({ statusline = true, win = 0 })
                 end
             end)
@@ -85,10 +88,16 @@ api.nvim_create_autocmd("LspProgress", {
         end)
 
         progress_cache[buf] = pct .. name .. ": " .. values.title .. message
-        local cur_buf = api.nvim_win_get_buf(0)
-        if not is_bad_mode() and cur_buf == buf then
-            api.nvim__redraw({ statusline = true, win = 0 })
-        end
+        -- Leave autocmd context before trying to redraw.
+        vim.schedule(function()
+            if is_bad_mode() then
+                return
+            end
+
+            if api.nvim_win_get_buf(0) == buf then
+                api.nvim__redraw({ statusline = true, win = 0 })
+            end
+        end)
     end,
 })
 
@@ -105,17 +114,18 @@ local signs = mjm.v.has_nerd_font and { "󰅚 ", "󰀪 ", "󰋽 ", "󰌶 " }
 api.nvim_create_autocmd("DiagnosticChanged", {
     group = stl_events,
     callback = function(ev)
-        if not api.nvim_buf_is_valid(ev.buf) then
-            diag_cache[ev.buf] = nil
+        local buf = ev.buf
+        if not api.nvim_buf_is_valid(buf) then
+            diag_cache[buf] = nil
             return
         end
 
         local ntl = require("nvim-tools.list")
-        local counts = ntl.fold(ev.data.diagnostics, function(acc, d)
+        local counts = ntl.fold(ev.data.diagnostics, { 0, 0, 0, 0 }, function(acc, d)
             local severity = d.severity
             acc[severity] = acc[severity] + 1
             return acc
-        end, { 0, 0, 0, 0 }, false)
+        end, false)
 
         ntl.filter_map(counts, function(c, i)
             if c == 0 then
@@ -125,10 +135,17 @@ api.nvim_create_autocmd("DiagnosticChanged", {
             return "%#Diagnostic" .. levels[i] .. "#" .. signs[i] .. c .. "%* "
         end)
 
-        diag_cache[ev.buf] = table.concat(counts, "")
-        if not is_bad_mode() then
-            api.nvim__redraw({ statusline = true, win = 0 })
-        end
+        diag_cache[buf] = table.concat(counts, "")
+        -- Leave autocmd context before trying to redraw.
+        vim.schedule(function()
+            if is_bad_mode() then
+                return
+            end
+
+            if api.nvim_win_get_buf(0) == buf then
+                api.nvim__redraw({ statusline = true, win = 0 })
+            end
+        end)
     end,
 })
 
@@ -142,7 +159,16 @@ api.nvim_create_autocmd("ModeChanged", {
         end
 
         mode = new_mode
-        api.nvim__redraw({ statusline = true, win = 0 })
+        vim.schedule(function()
+            -- When leaving fzf-lua, without scheduling, the redraw fires for the fzf-lua window,
+            -- meaning the intended current window still shows mode `t`.
+            local config = api.nvim_win_get_config(0)
+            if config.hide or (config.relative and config.relative ~= "") then
+                return
+            end
+
+            api.nvim__redraw({ statusline = true, win = 0 })
+        end)
     end,
 })
 
@@ -150,15 +176,25 @@ api.nvim_create_autocmd("ModeChanged", {
 api.nvim_create_autocmd({ "LspAttach", "LspDetach" }, {
     group = stl_events,
     callback = vim.schedule_wrap(function(ev)
-        if api.nvim_buf_is_valid(ev.buf) then
-            local clients = vim.lsp.get_clients({ bufnr = ev.buf })
+        local buf = ev.buf
+        if api.nvim_buf_is_valid(buf) then
+            local clients = vim.lsp.get_clients({ bufnr = buf })
             local has_clients = clients and #clients > 0
-            lsp_cache[ev.buf] = has_clients and string.format("[%d]", #clients) or nil
+            lsp_cache[buf] = has_clients and string.format("[%d]", #clients) or nil
         else
-            lsp_cache[ev.buf] = nil
+            lsp_cache[buf] = nil
         end
 
-        api.nvim__redraw({ statusline = true, win = 0 })
+        -- Leave autocmd context before trying to redraw.
+        vim.schedule(function()
+            if is_bad_mode() then
+                return
+            end
+
+            if api.nvim_win_get_buf(0) == buf then
+                api.nvim__redraw({ statusline = true, win = 0 })
+            end
+        end)
     end),
 })
 
@@ -205,7 +241,7 @@ api.nvim_create_autocmd("BufWinEnter", {
     callback = function(ev)
         local win = api.nvim_get_current_win() ---@type integer
         local config = api.nvim_win_get_config(win) ---@type vim.api.keyset.win_config_ret
-        if config.relative and config.relative ~= "" then
+        if config.hide or (config.relative and config.relative ~= "") then
             return
         end
 
@@ -220,7 +256,8 @@ local watched = { "fileencoding", "encoding", "fileformat", "buftype" }
 api.nvim_create_autocmd("OptionSet", {
     group = stl_events,
     callback = function(ev)
-        if not ev.match then
+        local match = ev.match
+        if not match then
             return
         end
 
@@ -229,12 +266,17 @@ api.nvim_create_autocmd("OptionSet", {
             return
         end
 
-        if not require("nvim-tools.list").any(watched, ev.match) then
+        if not require("nvim-tools.list").contains(watched, match) then
             return
         end
 
         buf_cache[buf] = create_buf_str(buf)
-        api.nvim__redraw({ statusline = true, win = 0 })
+        -- Leave autocmd context before trying to redraw.
+        vim.schedule(function()
+            if api.nvim_win_get_buf(0) == buf then
+                api.nvim__redraw({ statusline = true, win = 0 })
+            end
+        end)
     end,
 })
 
@@ -247,7 +289,12 @@ api.nvim_create_autocmd("FileType", {
         end
 
         buf_cache[buf] = create_buf_str(buf)
-        api.nvim__redraw({ statusline = true, win = 0 })
+        -- Leave autocmd context before trying to redraw.
+        vim.schedule(function()
+            if api.nvim_win_get_buf(0) == buf then
+                api.nvim__redraw({ statusline = true, win = 0 })
+            end
+        end)
     end,
 })
 
