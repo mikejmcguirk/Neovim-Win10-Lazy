@@ -284,35 +284,6 @@
 
 ## List
 
-#### TODO:
-
-- [ ] Should this exist?
-  - [ ] Do the proper in place and new function versions exist?
-  - [ ] Does the function properly superset or subset some kind of meaningful problem?
-    - Example: I am fine with any/all/one/same because they turn somewhat convoluted logic to solve high level problems into one-liners
-    - Example: I got rid of group by/count by because they don't properly superset aggregation
-- [ ] The code itself
-  - [ ] Should the function be able to use fancy indexing? Does it?
-  - [ ] Should the function be able to cap iterations? Does it?
-  - [ ] Do the function have appropriate validation?
-  - [ ] Can the function borrow or factor out common code?
-  - [ ] No obvious algorithmic goofs?
-  - [ ] Is the function a case where, on error, more info should be returned?
-    - Example: all()
-  - [ ] Is the list reference returned?
-- [ ] Docs/Style
-  - [ ] Correct/consistent variable naming?
-  - [ ] Correct arg ordering:
-    - `dst` in `_do` functions.
-    - Initial table
-    - Mandatory Args in usage order
-    - Function
-    - Optional args in commonality order
-  - [ ] Are annotations correct?
-  - [ ] Basic documentation
-    - Enough that I can read the docs and know what the function does without having to deep-dive into the code. Does not need to be user-facing ready yet.
-    - Modified in place functions should use an exclamation mark.
-
 #### DOC:
 
 - [ ] Reference returns + list_copy let you run any in place iter into a create new one.
@@ -346,13 +317,16 @@
 
 ## pos
 
-#### TEST:
-
-- [ ] You could be able to do conversion loops between different pos types and get the same result you started with
-
 ### TODO:
 
 - https://github.com/neovim/neovim/commit/6f5ba9ebf688c8d03bcce85f8b58a24719c3d2d4 - Is this relevant for our position calculation?
+- Now that vim.pos/range are in a semi-final state in tip, need to see if my stuff is aligned with its conventions. I want to continue with my modules because (a) I think the procedural approach is better and (b) there's some stuff with conversion/validation I want to retain, but my stuff can't be a dialect relative to the core's tooling. I also think, if I understand the core module correctly, the direct index access is possible through the metatable, so I think my stuff should even be able to be convertable.
+  * Something I'm particularly interested in is that I think pos/range object stores buf info, which might be useful
+  * I think pos/range might also force a redo of my naming conventions. I believe what they are saying is that API indexes are 0,0, with the ends of API ranges being 0,0 end-exclusive.
+
+#### TEST:
+
+- [ ] You should be able to do conversion loops between different pos types and get the same result you started with
 
 #### MAYBE:
 

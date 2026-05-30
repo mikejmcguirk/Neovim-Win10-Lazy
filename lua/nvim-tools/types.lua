@@ -63,11 +63,11 @@ function M.valid_list(t, opts)
 
     local item_type = opts.item_type
     if item_type then
-        local any = require("nvim-tools.list").any
+        local contains = require("nvim-tools.list").contains
         local all = require("nvim-tools.list").all
         local predicate = type(item_type) == "table"
                 and function(v)
-                    return any(item_type, type(v))
+                    return contains(item_type, type(v))
                 end
             or function(v)
                 return type(v) == item_type

@@ -114,7 +114,7 @@ local blink_opts = {
                     ---@type string
                     local ft = api.nvim_get_option_value("filetype", { buf = 0 })
                     local ntl = require("nvim-tools.list")
-                    local prose = ntl.any(prose_ft, ft)
+                    local prose = ntl.contains(prose_ft, ft)
                         or require("nvim-tools.treesitter").is_in_node({ "comment" }, true)
                     if not prose then
                         return items
