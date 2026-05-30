@@ -102,7 +102,7 @@ end
 ---@param key_fn fun(x: any): any
 ---@param ... any[]
 ---@return table<any, true>
-local function see_in_varargs_if_in_all(key_fn, ...)
+local function seen_from_varargs_if_in_all(key_fn, ...)
     local nargs = select("#", ...)
     if nargs == 0 then
         return {}
@@ -173,6 +173,14 @@ local function see_in_varargs_if_in_all(key_fn, ...)
     end
 
     return seen --[[@as table<any, true>]]
+end
+
+---@param ... any[]|table<any, any>
+local function validate_table_varargs(...)
+    local nargs = select("#", ...)
+    for i = 1, nargs do
+        vim.validate("tn", select(i, ...), "table")
+    end
 end
 
 -------------------------
@@ -904,8 +912,7 @@ local function difference_do(dst, key, t1, ...)
     return dst
 end
 
----Modifies `t1` in place!
----Remove elements from `t1` that are present in any of the varargs (XOR logic).
+---Remove elements from `t1` in place that are present in any of the varargs (XOR logic).
 ---`t1` is de-duplicated. Order is preserved.
 ---@generic T
 ---@param key nil|string|fun(x:any): any See: |vim.list.unique()|.
@@ -915,15 +922,12 @@ end
 function M.difference(key, t1, ...)
     vim.validate("key", key, { "callable", "string" }, true)
     vim.validate("t1", t1, "table")
-    local nargs = select("#", ...)
-    for i = 1, nargs do
-        vim.validate("tn", select(i, ...), "table")
-    end
+    validate_table_varargs(...)
 
     return difference_do(t1, key, t1, ...)
 end
 
----Get a new list containing the elements of `t1` not present in any of the varargs (XOR logic).
+---Create a new list containing the elements of `t1` not present in any of the varargs (XOR logic).
 ---`t1` is de-duplicated. Order is preserved.
 ---@generic T
 ---@param key nil|string|fun(x:any): any See: |vim.list.unique()|.
@@ -933,11 +937,7 @@ end
 function M.difference_to(key, t1, ...)
     vim.validate("key", key, { "callable", "string" }, true)
     vim.validate("t1", t1, "table")
-    local nargs = select("#", ...)
-    for i = 1, nargs do
-        local tn = select(i, ...)
-        vim.validate("tn", tn, "table")
-    end
+    validate_table_varargs(...)
 
     return difference_do({}, key, t1, ...)
 end
@@ -950,7 +950,7 @@ end
 ---@return T[]
 local function intersect_do(dst, key, t1, ...)
     local key_fn = make_key_fn(key)
-    local seen = see_in_varargs_if_in_all(key_fn, ...)
+    local seen = seen_from_varargs_if_in_all(key_fn, ...)
     local t1_len = #t1
     local j = 1
     for i = 1, t1_len do
@@ -968,27 +968,23 @@ local function intersect_do(dst, key, t1, ...)
     return dst
 end
 
----Modifies `t1` in place.
----Keep elements in `t1` if they are present in all vararg tables (AND logic).
----Does not de-duplicate elements from `t1`. Order is preserved
+---Remove elements from `t1` in place if they are not present in all of the varargs (AND logic).
+---Order in `t1` is preserved
 ---@generic T
 ---@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
 ---@param t1 T[] Modified in place!
 ---@param ... any[]
----@return T[] Reference to the original table.
+---@return T[] Reference to `t1`.
 function M.intersect(key, t1, ...)
     vim.validate("key", key, { "callable", "string" }, true)
     vim.validate("t1", t1, "table")
-    local nargs = select("#", ...)
-    for i = 1, nargs do
-        vim.validate("tn", select(i, ...), "table")
-    end
+    validate_table_varargs(...)
 
     return intersect_do(t1, key, t1, ...)
 end
 
----Create a new list from the elements in `t1` present in every vararg (AND logic).
----Does not de-duplicate elements from `t1`. Order is preserved.
+---Create a new list containing the elements in `t1` present in every vararg (AND logic).
+---Order in `t1` is preserved
 ---@generic T
 ---@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
 ---@param t1 T[]
@@ -997,34 +993,20 @@ end
 function M.intersect_to(key, t1, ...)
     vim.validate("key", key, { "callable", "string" }, true)
     vim.validate("t1", t1, "table")
-    local nargs = select("#", ...)
-    for i = 1, nargs do
-        vim.validate("tn", select(i, ...), "table")
-    end
+    validate_table_varargs(...)
 
     return intersect_do({}, key, t1, ...)
 end
 
 ---@generic T
 ---@param dst T[]
----@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
+---@param key nil|string|fun(val:any): any
 ---@param t1 T[]
 ---@param ... any[]
 ---@return T[]
 local function intersection_do(dst, key, t1, ...)
-    local nargs = select("#", ...)
     local key_fn = make_key_fn(key)
-    local seen = {} ---@type table<any, boolean>
-    for i = 1, nargs do
-        local tn = select(i, ...)
-        vim.validate("tn", tn, "table")
-
-        local tn_len = #tn
-        for j = 1, tn_len do
-            seen[key_fn(tn[j])] = true
-        end
-    end
-
+    local seen = seen_from_varargs_if_in_all(key_fn, ...)
     local t1_len = #t1
     local j = 1
     for i = 1, t1_len do
@@ -1038,35 +1020,28 @@ local function intersection_do(dst, key, t1, ...)
     end
 
     if dst == t1 then
-        for i = j, t1_len do
-            t1[i] = nil
-        end
+        clear_exact(dst, j, t1_len)
     end
 
     return dst
 end
 
----Modifies `t1` in place.
----Keep elements in `t1` if they are present in `t2` (AND logic).
+---Remove list elements from `t1` if they are not present in all vararg lists (AND logic).
 ---De-duplicates elements from `t1`. Order is preserved
 ---@generic T
 ---@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
----@param t1 T[] Modified in place. Original order is preserved.
+---@param t1 T[] Modified in place!
 ---@param ... any[]
----@return T[] t1 Reference to the table param.
+---@return T[] Reference to `t`.
 function M.intersection(key, t1, ...)
     vim.validate("key", key, { "callable", "string" }, true)
     vim.validate("t1", t1, "table")
-    local nargs = select("#", ...)
-    for i = 1, nargs do
-        local tn = select(i, ...)
-        vim.validate("tn", tn, "table")
-    end
+    validate_table_varargs(...)
 
     return intersection_do(t1, key, t1, ...)
 end
 
----Create a new list from the elements in `t1` present in `t2` (AND logic).
+---Create a new list from the elements in `t1` present in all vararg lists (AND logic).
 ---De-duplicates elements from `t1`. Order is preserved.
 ---@generic T
 ---@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
@@ -1076,33 +1051,20 @@ end
 function M.intersection_to(key, t1, ...)
     vim.validate("key", key, { "callable", "string" }, true)
     vim.validate("t1", t1, "table")
-    local nargs = select("#", ...)
-    for i = 1, nargs do
-        local tn = select(i, ...)
-        vim.validate("tn", tn, "table")
-    end
+    validate_table_varargs(...)
 
     return intersection_do({}, key, t1, ...)
 end
 
 ---@generic T
 ---@param dst T[]
----@param t1 T[] Source list.
----@param ... any[]
 ---@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
----@return any[] New list.
+---@param t1 T[]
+---@param ... any[]
+---@return T[] New list.
 local function subtract_do(dst, key, t1, ...)
-    local nargs = select("#", ...)
     local key_fn = make_key_fn(key)
-    local seen = {} ---@type table<any, boolean>
-    for i = 1, nargs do
-        local tn = select(i, ...)
-        local tn_len = #tn
-        for j = 1, tn_len do
-            seen[key_fn(tn[j])] = true
-        end
-    end
-
+    local seen = see_in_varargs(key_fn, ...)
     local t1_len = #t1
     local j = 1
     for i = 1, t1_len do
@@ -1114,50 +1076,39 @@ local function subtract_do(dst, key, t1, ...)
     end
 
     if dst == t1 then
-        for i = j, t1_len do
-            t1[i] = nil
-        end
+        clear_exact(dst, j, t1_len)
     end
 
     return dst
 end
 
----Modifies `t1` in place.
----Remove elements from `t1` that are present in any of the varargs (XOR logic).
----No additional de-duplication in `t1`. Order is preserved.
+---Remove elements from `t1` in place that are present in any of the varargs (XOR logic).
+---Order in `t1` is preserved.
 ---@generic T
----@param t1 T[] Target list. Modified in place.
----@param ... any[]
 ---@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
----@return T[] The original reference to `t1`.
+---@param t1 T[] Modified in place!
+---@param ... any[]
+---@return T[] Reference to `t1`.
 function M.subtract(key, t1, ...)
     vim.validate("key", key, { "callable", "string" }, true)
     vim.validate("t1", t1, "table")
-    local nargs = select("#", ...)
-    for i = 1, nargs do
-        local tn = select(i, ...)
-        vim.validate("tn", tn, "table")
-    end
+    validate_table_varargs(...)
 
     return subtract_do(t1, key, t1, ...)
 end
 
----Remove elements from `t1` that are present in any of the varargs (XOR logic).
----No additional de-duplication in `t1`. Order is preserved.
+---Create a new list containing the elements of `t1` not present in any of the varargs (XOR logic).
+---Order in `t1` is preserved.
 ---@generic T
 ---@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
 ---@param t1 T[] Source list.
 ---@param ... any[]
 ---@return T[] New list.
 function M.subtract_to(key, t1, ...)
-    vim.validate("t1", t1, "table")
-    local nargs = select("#", ...)
-    for i = 1, nargs do
-        local tn = select(i, ...)
-        vim.validate("tn", tn, "table")
-    end
-
     vim.validate("key", key, { "callable", "string" }, true)
+    vim.validate("t1", t1, "table")
+    validate_table_varargs(...)
+
     return subtract_do({}, key, t1, ...)
 end
 
@@ -1168,6 +1119,7 @@ end
 ---@return any[]
 function M.union_to(key, ...)
     vim.validate("key", key, { "callable", "string" }, true)
+    validate_table_varargs(...)
 
     local nargs = select("#", ...)
     local key_fn = make_key_fn(key)
@@ -1176,8 +1128,6 @@ function M.union_to(key, ...)
 
     for i = 1, nargs do
         local tn = select(i, ...)
-        vim.validate("tn", tn, "table")
-
         local tn_len = #tn
         for j = 1, tn_len do
             local v = tn[j]
@@ -1201,14 +1151,13 @@ end
 ---@return any[]
 function M.xor(key, ...)
     vim.validate("key", key, { "callable", "string" }, true)
+    validate_table_varargs(...)
 
     local nargs = select("#", ...)
     local key_fn = make_key_fn(key)
     local seen = {} ---@type table<any, integer>
     for i = 1, nargs do
         local tn = select(i, ...)
-        vim.validate("tn", tn, "table")
-
         local tn_len = #tn
         for j = 1, tn_len do
             local vh = key_fn(tn[j])
@@ -1243,14 +1192,13 @@ end
 ---@return any[]
 function M.distinct(key, ...)
     vim.validate("key", key, { "callable", "string" }, true)
+    validate_table_varargs(...)
 
     local nargs = select("#", ...)
     local key_fn = make_key_fn(key)
     local seen = {} ---@type table<any, integer>
     for i = 1, nargs do
         local tn = select(i, ...)
-        vim.validate("tn", tn, "table")
-
         local tn_len = #tn
         for j = 1, tn_len do
             local vh = key_fn(tn[j])
@@ -1712,6 +1660,32 @@ function M.filter_map_to(t, f)
     local ret = {}
     for i = 1, t_len do
         ret[#ret + 1] = f(t[i], i)
+    end
+
+    return ret
+end
+
+---Create a new dictionary table from elements of a list.
+---@generic T
+---@generic U
+---@generic V
+---@param t T[]
+---@param f fun(x:T, idx:integer): key:U, val:V If either `key` or `val` is nil, the element will
+---     be filtered.
+---@return table<U, V>
+function M.filter_map_to_dict(t, f)
+    vim.validate("t", t, "table")
+    vim.validate("f", f, "callable")
+
+    local t_len = #t
+    ---@generic U
+    ---@generic V
+    local ret = {} ---@type table<U, V>
+    for i = 1, t_len do
+        local k, v = f(t[i], i)
+        if k ~= nil and v ~= nil then
+            ret[k] = v
+        end
     end
 
     return ret

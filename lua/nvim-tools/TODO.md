@@ -326,6 +326,7 @@
   - [ ] Extend out (`_longest` behavior)
   - [ ] Match the length of the shorter list, but be offset
     - It might work to put the offset into zip_with, and just use rotate to handle the list position.
+- [ ] Add `impasse()` to apply NAND logic to `t1` based on vararg tables. The full de-dupe version can be `NAND`.
 
 #### RESOURCES:
 
