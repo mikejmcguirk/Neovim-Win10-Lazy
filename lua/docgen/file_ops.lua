@@ -2,6 +2,10 @@ local fs = vim.fs
 local uv = vim.uv
 
 local util = require("docgen.util")
+local list_common_prefix = util.list_common_prefix
+local list_filter_map_to = util.list_filter_map_to
+local list_intersperse = util.list_intersperse
+local list_splice = util.list_splice
 local stop_timer = util.stop_timer
 local table_new = util.table_new
 
@@ -277,7 +281,7 @@ function M.fs_read_list(paths, opts)
     opts = opts or {}
     validate_fs_read_list(paths, opts)
     if #paths == 0 then
-        return false, false, nil
+        return true, false, nil
     end
 
     local complete = false
@@ -298,6 +302,7 @@ function M.fs_read_list(paths, opts)
 
     return ok, timed_out, results
 end
+-- TODO: Refresh the nvim-tools code
 
 ---@param results table<string,docgen.file.FsReadListResult>?
 function M.fs_read_list_get_errs(results)
@@ -323,94 +328,50 @@ end
 -- MARK: Get Help Tags --
 -------------------------
 
----@param split_paths string[][]
----@param prefix_idx integer Index in each split_paths sub-table containing the prefix
-local function prefix_and_tags_from_paths(split_paths, prefix_idx)
-    local header_tags = table_new(#split_paths, 0) ---@type string[]
-    for _, path in ipairs(split_paths) do
-        local path_len = #path
-        local tag_parts_len = (path_len - prefix_idx + 1) * 2 - 1
-        local tag_parts = table_new(tag_parts_len, 0)
-
-        tag_parts[1] = path[prefix_idx]
-        local path_len_minus_one = path_len - 1
-        for i = prefix_idx + 1, path_len_minus_one do
-            tag_parts[#tag_parts + 1] = "-"
-            tag_parts[#tag_parts + 1] = path[i]
-        end
-
-        local fname = path[path_len]
-        if fname ~= "init.lua" then
-            tag_parts[#tag_parts + 1] = "."
-            tag_parts[#tag_parts + 1] = vim.call("fnamemodify", fname, ":r")
-        end
-
-        local parts_concat = table.concat(tag_parts)
-        parts_concat = parts_concat:gsub("[ \t]", "__")
-        header_tags[#header_tags + 1] = parts_concat
-    end
-
-    local prefix = split_paths[1][prefix_idx]
-    return prefix, header_tags
-end
-
----@param path string
----@return string[] First segment is always "/"
-local function split_path_get(path)
-    local segments = table_new(4, 0) ---@type string[]
-    segments[#segments + 1] = "/" -- Reduce contrivance upstream
-    for segment in vim.gsplit(path, "/", { plain = true }) do
-        if segment ~= "" then
-            segments[#segments + 1] = segment
-        end
-    end
-
-    return segments
-end
-
 --- @param sources string[] Absolute paths, normalized with forward slashes.
 ---         Assumes at least one is present.
 --- @return string help_prefix
 --- @return string[] header_tags Same order as the input.
 function M.header_tags_from_paths(sources)
-    local split_paths = table_new(#sources, 0)
-    for _, source in ipairs(sources) do
-        split_paths[#split_paths + 1] = split_path_get(source[1])
-    end
-
-    local path_len_min = math.huge
-    for _, path in ipairs(split_paths) do
-        path_len_min = math.min(path_len_min, #path)
-    end
-
-    -- Only check the |::h| component of the filename.
-    local prefix_idx_max = path_len_min - 1
-    if prefix_idx_max == 1 then
-        -- A file is present in the file system root.
-        return prefix_and_tags_from_paths(split_paths, prefix_idx_max)
-    end
-
-    local split_paths_len = #split_paths
-    local first_path = split_paths[1]
-    local prefix_idx = 1
-    for i = 2, prefix_idx_max do
-        local segment = first_path[i]
-        local all = true
-        for j = 2, split_paths_len do
-            if split_paths[j][i] ~= segment then
-                all = false
-                break
+    local split_paths = list_filter_map_to(sources, function(source)
+        local segments = table_new(4, 0) ---@type string[]
+        segments[#segments + 1] = "/" -- Reduce contrivance upstream
+        for segment in vim.gsplit(source[1], "/", { plain = true }) do
+            if segment ~= "" then
+                segments[#segments + 1] = segment
             end
         end
 
-        if all then
-            prefix_idx = i
+        return segments
+    end)
+
+    local prefix_idx = list_common_prefix(split_paths) or 1
+    for _, path in ipairs(split_paths) do
+        list_splice(path, prefix_idx)
+    end
+
+    local prefix = split_paths[1][1]
+    for _, path in ipairs(split_paths) do
+        list_intersperse(path, "-", 1, 1, #path - 1)
+    end
+
+    for _, path in ipairs(split_paths) do
+        local path_len = #path
+        local fname = path[path_len]
+        if fname ~= "init.lua" then
+            path[path_len] = vim.call("fnamemodify", fname, ":r")
+            list_intersperse(path, ".", 1, path_len - 1, path_len)
         else
-            break
+            path[path_len] = nil
         end
     end
 
-    return prefix_and_tags_from_paths(split_paths, prefix_idx)
+    local header_tags = list_filter_map_to(split_paths, function(path)
+        local path_str = string.gsub(table.concat(path), "[ \t]", "__")
+        return path_str
+    end)
+
+    return prefix, header_tags
 end
 
 return M

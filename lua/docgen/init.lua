@@ -27,8 +27,12 @@ local renderer = require("docgen.renderer")
 local render_docs = renderer.render_docs
 
 local util = require("docgen.util")
-local list_filter_map_to = util.list_filter_map_to
+local list_common_prefix = util.list_common_prefix
 local list_filter_map_accum = util.list_filter_map_accum
+local list_filter_map_to = util.list_filter_map_to
+local list_intersperse = util.list_intersperse
+local list_splice = util.list_splice
+local table_new = util.table_new
 
 ---@brief Full-featured Vimdoc generator for LuaCATs annotations. Simply run it with a list of
 ---files to get properly tagged and formatted docs.
@@ -65,11 +69,81 @@ local list_filter_map_accum = util.list_filter_map_accum
 -- MARK: Param Bookkeeping --
 -----------------------------
 
+---@param sources [string,string?][]
+---@return string help_prefix
+---@return string[] header_tags Same order as the input.
+local function header_tags_from_paths(sources)
+    local split_paths = list_filter_map_to(sources, function(source)
+        local segments = table_new(4, 0) ---@type string[]
+        segments[#segments + 1] = "/" -- Reduce contrivance upstream
+        for segment in vim.gsplit(source[1], "/", { plain = true }) do
+            if segment ~= "" then
+                segments[#segments + 1] = segment
+            end
+        end
+
+        return segments
+    end)
+
+    local prefix_idx = list_common_prefix(split_paths) or 1
+    for _, path in ipairs(split_paths) do
+        list_splice(path, prefix_idx)
+    end
+
+    local prefix = split_paths[1][1]
+    for _, path in ipairs(split_paths) do
+        list_intersperse(path, "-", 1, 1, #path - 1)
+    end
+
+    for _, path in ipairs(split_paths) do
+        local path_len = #path
+        local fname = path[path_len]
+        if fname ~= "init.lua" then
+            path[path_len] = vim.call("fnamemodify", fname, ":r")
+            list_intersperse(path, ".", 1, path_len - 1, path_len)
+        else
+            path[path_len] = nil
+        end
+    end
+
+    local header_tags = list_filter_map_to(split_paths, function(path)
+        local path_str = string.gsub(table.concat(path), "[ \t]", "__")
+        return path_str
+    end)
+
+    return prefix, header_tags
+end
+
+---@param sources [string,string?][] Modified in place!
+local function add_contents_to_sources(sources)
+    local file_inputs = list_filter_map_to(sources, function(source)
+        return source[2] == nil and source[1] or nil
+    end)
+
+    if #file_inputs == 0 then
+        return
+    end
+
+    local ok, timed_out, results = file_ops.fs_read_list(file_inputs)
+    if not (ok and results) then
+        if timed_out then
+            error("Time out while reading file data")
+        else
+            error(file_ops.fs_read_list_get_errs(results))
+        end
+    end
+
+    list_filter_map_accum(sources, results, function(acc_results, source)
+        source[2] = source[2] or acc_results[source[1]][2]
+        return acc_results, source
+    end)
+end
+
 ---@param inputs string[]
 ---@param output string?
 ---@param level integer?
 ---@param log_path string?
-local function validate_params(inputs, output, level, log_path)
+local function generate_params_validate(inputs, output, level, log_path)
     -- TODO: Also validate elements
     if type(inputs) ~= "table" or #inputs == 0 then
         print("No source files provided")
@@ -97,7 +171,7 @@ local M = {}
 ---- 1 Warning messages
 ---@param log_path string? Log path
 function M.generate(sources, output, level, log_path)
-    validate_params(sources, output, level, log_path)
+    generate_params_validate(sources, output, level, log_path)
 
     for _, source in ipairs(sources) do
         source[1] = fs.normalize(vim.call("fnamemodify", source[1], ":p"))
@@ -106,43 +180,10 @@ function M.generate(sources, output, level, log_path)
     local debug_path = get_debug_path()
     create_logger(level, debug_path, log_path)
 
-    local file_inputs = list_filter_map_to(sources, function(source)
-        return source[2] == nil and source[1] or nil
-    end)
-
-    local ok, timed_out, results = file_ops.fs_read_list(file_inputs)
-    if not (ok and results) then
-        if timed_out then
-            error("Time out while reading file data")
-        else
-            error(file_ops.fs_read_list_get_errs(results))
-        end
-    end
-
-    -- TODO: It feels like there has to be some kind of functional list op for getting the
-    -- common prefix from a group of sub-lists. So you'd get that first, then use that to
-    -- get the header tags. I also want to be plugging everything into the sources list rather
-    -- than another intermediate table.
-    --
-    -- - For sanity purposes, map sources to the split filenames
-    -- - Create a generalized common prefix idx function that can be used on the split
-    --   filepaths.
-    -- - For re-combining, the end of the common prefix is used so we have a common header. So
-    --   you want to map the parts starting there. We also want to add a basic intersperse function
-    --   to add the dashes between most of the name components. We still want the dot both
-    --   because it mirrors Lua requires and it helps to guard against duplicates where you have
-    --   a folder containing init.lua with a file in the same directory. After doing the
-    --   intersperse in place, then do another round where you add the dot unless it's init.lua,
-    --   in which case you lop it off. Also make sure to do fnamemodify :r. I'm unsure if the
-    --   table_new thing stays or is even necessary, since we should be able to map the split
-    --   parts in place. Like, do a splice first, then intersperse. So you aren't allocating
-    --   new RAM. And then finally you would map_two in place on top of the original sources.
-    -- - Also, take the code out of file_ops, since it doesn't actually interact with the
-    --   file system.
-    local prefix, header_tags = file_ops.header_tags_from_paths(sources)
+    add_contents_to_sources(sources)
+    local prefix, header_tags = header_tags_from_paths(sources)
     _G.Nvim_Tools_Docgen_Help_Prefix = prefix
     list_filter_map_accum(sources, header_tags, function(acc_tags, source, idx)
-        source[2] = source[2] or results[source[1]][2]
         source[3] = acc_tags[idx]
         return acc_tags, source
     end)
@@ -169,6 +210,11 @@ function M.generate(sources, output, level, log_path)
 
     -- TODO: There should be two calls here, the first is "get_uv_validated_path" and the other
     -- is "uv_write_checked" or something.
+    -- Like, below, just as a read, it doesn't make sense that we resolved output above but
+    -- we're then also feeding the default as a backup to the open path.
+    -- TODO: Also, I'm not sure if the output path should be eagerly validated, but the
+    -- string data at least needs to be resolved. Maybe that involves eagerly checking if the
+    -- provided path is a directory so that we know if we need to run joinpath.
 
     local fd, err = open_path_validated(output, "w", 438, default_output_fname)
     if not fd then

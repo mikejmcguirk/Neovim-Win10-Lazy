@@ -26,6 +26,41 @@ end
 --------------------------
 
 ---@generic T
+---@param tt T[][]
+---@return integer?
+function M.list_common_prefix(tt)
+    local tt_len = #tt
+    if tt_len == 0 then
+        return
+    elseif tt_len == 1 then
+        local tt_len_one = #tt[1]
+        return tt_len_one > 0 and tt_len_one or nil
+    end
+
+    local tt_len_min = math.huge
+    for i = 1, tt_len do
+        local tt_len_i = #tt[i]
+        if tt_len_i == 0 then
+            return nil
+        end
+
+        tt_len_min = math.min(tt_len_min, tt_len_i)
+    end
+
+    for col = 1, tt_len_min do
+        local v = tt[1][col]
+        for row = 2, tt_len do
+            if tt[row][col] ~= v then
+                local common_prefix_end = col - 1
+                return common_prefix_end > 0 and common_prefix_end or nil
+            end
+        end
+    end
+
+    return tt_len_min
+end
+
+---@generic T
 ---@param t T[]
 ---@return T[]
 function M.list_copy(t)
@@ -204,15 +239,11 @@ end
 ---@generic T
 ---@generic U
 ---@generic V
----@param t T[]
+---@param t T[] Modified in place!
 ---@param init V
 ---@param f fun(acc:V, value:T, idx:integer): V, U|nil
 ---@return T[]
 function M.list_filter_map_accum(t, init, f)
-    vim.validate("t", t, "table")
-    vim.validate("init", init, require("nvim-tools.types").not_nil)
-    vim.validate("f", f, "callable")
-
     local t_len = #t
     local acc = init
     local j = 1
@@ -233,6 +264,85 @@ function M.list_filter_map_accum(t, init, f)
 end
 
 ---@generic T
+---@param t T[] Modified in place!
+---@param sep T
+---@param unit_size integer? (Default: `1`)
+---@param start integer? (Default: `1`)
+---@param stop? integer Default: Length of `t`
+---@return T[] Original list reference
+function M.list_intersperse(t, sep, unit_size, start, stop)
+    local t_len = #t
+    start = resolve_iter_index(start, t_len, 1)
+    stop = resolve_iter_index(stop, t_len, t_len)
+    if t_len == 0 or start >= stop then
+        return t
+    end
+
+    unit_size = math.max(unit_size or 1, 1)
+    local iter_len = stop - start + 1
+    local sep_count = math.floor((iter_len - 1) / unit_size)
+    if sep_count < 1 then
+        return t
+    end
+
+    local tail = (t_len - stop) + (iter_len - (sep_count * unit_size))
+    local i = t_len + sep_count
+    local j = t_len
+    for _ = 1, tail do
+        t[i] = t[j]
+        i = i - 1
+        j = j - 1
+    end
+
+    for _ = 1, sep_count do
+        t[i] = sep
+        i = i - 1
+        for _ = 1, unit_size do
+            t[i] = t[j]
+            i = i - 1
+            j = j - 1
+        end
+    end
+
+    return t
+end
+
+---@generic T
+---@param t T[] Modified in place!
+---@param start integer?
+---@param stop? integer
+---@return T[] Reference to `t`.
+function M.list_splice(t, start, stop)
+    local t_len = #t
+    if t_len == 0 then
+        return t
+    end
+
+    start = resolve_iter_index(start, t_len, 1)
+    stop = resolve_iter_index(stop, t_len, t_len)
+    if start > stop then
+        return M.list_clear(t)
+    elseif start == 1 and stop == t_len then
+        return t
+    end
+
+    if start > 1 then
+        local j = 1
+        for i = start, stop do
+            t[j] = t[i]
+            j = j + 1
+        end
+    end
+
+    local new_len = stop - start + 1
+    for i = new_len + 1, t_len do
+        t[i] = nil
+    end
+
+    return t
+end
+
+---@generic T
 ---@generic U
 ---@generic V
 ---@param t T[]
@@ -243,7 +353,7 @@ end
 ---@param start integer? (Default: `1`)
 ---@param stop? integer Default: Length of `t`
 ---@param rev? boolean (Default: `false`)
----@return V[]
+---@return V[] New list.
 function M.list_transduce(t, init, f, b, z, start, stop, rev)
     local ret = {}
     local t_len = #t

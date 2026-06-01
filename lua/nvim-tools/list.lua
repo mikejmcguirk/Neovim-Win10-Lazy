@@ -385,7 +385,10 @@ local function splice_do(dst, t, start, stop)
     end
 
     local new_len = stop - start + 1
-    clear_exact(dst, new_len + 1, t_len)
+    for i = new_len + 1, t_len do
+        t[i] = nil
+    end
+
     return dst
 end
 
@@ -1287,6 +1290,45 @@ function M.cmp(t1, t2, f)
     end
 
     return true
+end
+
+---For two-dimensional array `tt`, get the highest index value for which all sub-lists share the
+---same values.
+---@generic T
+---@param tt T[][]
+---@return integer? `nil` if the first index's values does not match.
+function M.common_prefix(tt)
+    vim.validate("tt", tt, "table")
+
+    local tt_len = #tt
+    if tt_len == 0 then
+        return
+    elseif tt_len == 1 then
+        local tt_len_one = #tt[1]
+        return tt_len_one > 0 and tt_len_one or nil
+    end
+
+    local tt_len_min = math.huge
+    for i = 1, tt_len do
+        local tt_len_i = #tt[i]
+        if tt_len_i == 0 then
+            return nil
+        end
+
+        tt_len_min = math.min(tt_len_min, tt_len_i)
+    end
+
+    for col = 1, tt_len_min do
+        local v = tt[1][col]
+        for row = 2, tt_len do
+            if tt[row][col] ~= v then
+                local common_prefix_end = col - 1
+                return common_prefix_end > 0 and common_prefix_end or nil
+            end
+        end
+    end
+
+    return tt_len_min
 end
 
 ---Check if any item in a list matches a value or the result of a predicate function.
