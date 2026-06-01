@@ -11,7 +11,8 @@ local md_to_vimdoc = md_vimdoc.luacats_md_to_vimdoc
 local util = require("docgen.util")
 local list_copy = util.list_copy
 local list_fold = util.list_fold
-local list_map = util.list_map
+local list_transduce = util.list_transduce
+local list_filter_map = util.list_filter_map
 local lpad = util.str_lpad
 local rpad = util.str_rpad
 local str_surround = util.str_surround
@@ -37,7 +38,7 @@ local TEXT_WIDTH = const.TEXT_WIDTH
 ---         foo({bar}, {bazz},
 ---            {buzz})
 ---@param tags string[]|nil `*` surrounds are added.
----@param sep "="|"-"|nil
+---@param sep "="|"-"|"~"|nil
 local function header_create(title, title_wrap, tags, sep)
     local ret = {}
     if sep then
@@ -63,8 +64,13 @@ local function header_create(title, title_wrap, tags, sep)
     local tag_len = #tag_fmt
     local content_width = title_len + tag_len
     if content_width <= TEXT_WIDTH - DBL_INDENT then
-        ret[#ret + 1] = title_fmt .. string.rep(" ", TEXT_WIDTH - content_width) .. tag_fmt
+        if tag_fmt and #tag_fmt > 0 then
+            ret[#ret + 1] = title_fmt .. string.rep(" ", TEXT_WIDTH - content_width) .. tag_fmt
+        else
+            ret[#ret + 1] = title_fmt
+        end
     else
+        -- TODO: Deal with missing tag_fmt here as well.
         ret[#ret + 1] = lpad(tag_fmt, " ", TEXT_WIDTH)
         ret[#ret + 1] = wrap(title, 0, title_wrap, TEXT_WIDTH, false)
     end
@@ -158,7 +164,7 @@ local function arg_mapper(arg, max_name_width, base_indent)
         end) + 2 -- Since cbraces will be added.
 
         local inline_base_indent = base_indent + INDENT
-        local ret_inline = list_map(list_copy(fields), function(field)
+        local ret_inline = list_filter_map(list_copy(fields), function(field)
             return arg_mapper(field, inline_max_name_width, inline_base_indent)
         end)
 
@@ -230,7 +236,7 @@ local function proto_params_get(fun)
         return ""
     end
 
-    local cbraced_params = list_map(list_copy(params), function(param)
+    local cbraced_params = list_filter_map(list_copy(params), function(param)
         return str_surround(param.name, "{", "}")
     end)
 
@@ -423,6 +429,19 @@ local function render_fun(fun)
 end
 
 ----------------
+-- MARK: Mods --
+----------------
+
+--- @param mod docgen.ParserObj
+--- @return string
+local function render_mod(mod)
+    local lines = {}
+    lines[#lines + 1] = header_create(mod.name, #mod.name, mod.tags_addtl, mod.divider)
+    lines[#lines + 1] = wrap(md_to_vimdoc(mod.desc), 0, 0, TEXT_WIDTH, false)
+    return table.concat(lines, "\n\n")
+end
+
+----------------
 -- MARK: Main --
 ----------------
 
@@ -430,28 +449,30 @@ local M = {}
 
 ---@param parsed_sources docgen.ParsedSource[]
 function M.render_docs(parsed_sources)
-    local sections = {} --- @type string[]
-    for _, source in ipairs(parsed_sources) do
+    ---@type string[]
+    local sections = list_filter_map(list_copy(parsed_sources), function(source)
         local source_name = source[1]
         log("    Rendering source:" .. source_name)
 
         -- TODO: Not relevant if the source is not a filename
         local basename = fs.basename(source_name)
-        local rendered = {} ---@type string[]
-        rendered[#rendered + 1] = header_create(basename, 0, { basename }, "=")
-
-        for _, obj in ipairs(source[2]) do
+        local header = header_create(basename, 0, { basename }, "=")
+        local rendered = list_transduce(source[2], header, function(_, obj)
             if obj.kind == "fun" then
-                rendered[#rendered + 1] = render_fun(obj)
+                return "", render_fun(obj)
             elseif obj.kind == "class" then
-                rendered[#rendered + 1] = class_render(obj)
+                return "", class_render(obj)
             elseif obj.kind == "brief" then
-                rendered[#rendered + 1] = render_brief(obj)
+                return "", render_brief(obj)
+            elseif obj.kind == "mod" then
+                return "", render_mod(obj)
             end
-        end
+        end, function(acc_header)
+            return 0, acc_header
+        end)
 
-        sections[#sections + 1] = table.concat(rendered, "\n\n")
-    end
+        return table.concat(rendered, "\n\n")
+    end)
 
     -- The trailing newline is required by the vimdoc spec.
     local ml = string.format("\n vim:tw=78:ts=8:sw=%d:sts=%d:et:ft=help:norl:\n", INDENT, INDENT)

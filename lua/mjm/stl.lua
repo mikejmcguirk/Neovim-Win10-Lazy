@@ -125,7 +125,7 @@ api.nvim_create_autocmd("DiagnosticChanged", {
             local severity = d.severity
             acc[severity] = acc[severity] + 1
             return acc
-        end, false)
+        end)
 
         ntl.filter_map(counts, function(c, i)
             if c == 0 then

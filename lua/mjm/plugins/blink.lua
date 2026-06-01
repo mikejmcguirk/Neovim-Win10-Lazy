@@ -132,7 +132,7 @@ local blink_opts = {
                         return items
                     end
 
-                    return ntl.filter_map_accum_to(items, {}, function(seen, item)
+                    return ntl.transduce(items, {}, function(seen, item)
                         local raw = item.insertText or ""
                         if raw:match(correct) then
                             local text = strfn(raw:sub(1, 1)) .. raw:sub(2)

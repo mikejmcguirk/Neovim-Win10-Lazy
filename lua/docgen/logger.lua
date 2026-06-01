@@ -1,3 +1,4 @@
+local fs = vim.fs
 local uv = vim.uv
 
 local file_ops = require("docgen.file_ops")
@@ -56,14 +57,19 @@ end
 -- Add a "default_fname" param
 
 ---@param level_in (0|1)?
----@param path string
-function M.create_logger(level_in, path)
+---@param debug_path string
+---@param log_path? string
+function M.create_logger(level_in, debug_path, log_path)
     level = level_in or 0
     if level <= 0 then
         return
     end
 
-    local fd, err = open_path_validated(path, "a", 438, DEFAULT_LOG_FILE)
+    if not (log_path and string.find(log_path, "[^%s]") ~= nil) then
+        log_path = fs.joinpath(debug_path, DEFAULT_LOG_FILE)
+    end
+
+    local fd, err = open_path_validated(log_path, "a", 438, DEFAULT_LOG_FILE)
     if not fd then
         error(err)
     end

@@ -2,41 +2,9 @@
 
 #### TODO:
 
-- mod details
-+ Formally add support for `@mod`
-  + Parsing
-    + New interfaces/data
-      + transform function for mod
-        + set kind to mod
-        + discard/warn if kind is not nil
-        + set name to mod.name
-        + set desc to @mod.desc if it exists
-        + Commit and discard previous doc lines (like how `@brief` does it)
-      + parser_obj field for `@divider`
-      + transform function for `@divider`
-        + set to `-` if no name
-    + Changed interfaces
-      + class/fun/brief/alias set
-        + handle mod-specific issues
-      + Most transform functions
-        + Warn if they happen after `@mod`
-        + This especially applies to param and ret, which alter cur_doc_item. Like briefs, we don't want a specific flag for mod since everything should go into `desc`
-      + nodoc transform
-        + Verify it works with mod
-      + doc_line_add
-        + verify it handles mod
-      + doc_lines_commit
-        + verify it handles mod (don't add new special case. `@brief` doesn't use one)
-  + Rendering
-    + mod result renderer
-      + verify divider exists (should always be something at this point)
-      + Shoud be able to move right to header_create
-
 - [ ] Figure out the high level details of the tag generation and file stitching, since they are a constraint on how the docgen works.
 
 Represent inputs as fname, str tuples, with str being the material. We need the fnames for tagging/error reporting anyway.
-
-- [ ] In general for the below, would strongly consider using LuaJIT's string buffer, since we're accepting that as a concession to run the script.
 
 - [ ] Function contracts need updated
 

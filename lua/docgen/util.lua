@@ -27,6 +27,7 @@ end
 
 ---@generic T
 ---@param t T[]
+---@return T[]
 function M.list_copy(t)
     local t_len = #t
     local ret = M.table_new(t_len, 0)
@@ -39,19 +40,17 @@ end
 
 ---@generic T
 ---@param t T[]
----@param v T | fun(x: T): boolean
----@return integer|nil
-function M.list_find_idx(t, v)
-    local predicate = type(v) == "function" and v or function(x)
-        return x == v
-    end
-
+---@param v T
+---@return boolean
+function M.list_contains(t, v)
     local t_len = #t
-    for i = 1, t_len, -1 do
-        if predicate(t[i]) then
-            return i
+    for i = 1, t_len do
+        if t[i] == v then
+            return true
         end
     end
+
+    return false
 end
 
 ---@generic T
@@ -60,7 +59,6 @@ end
 function M.list_filter(t, f)
     local t_len = #t
     local j = 1
-
     for i = 1, t_len do
         local v = t[i]
         if f(v) then
@@ -74,35 +72,225 @@ function M.list_filter(t, f)
     end
 end
 
+---@param rev boolean?
+---@param start integer
+---@param stop integer
+---@return integer start, integer stop, integer step
+local function resolve_rev(rev, start, stop)
+    if rev then
+        return stop, start, -1
+    else
+        return start, stop, 1
+    end
+end
+
+---@param val integer?
+---@param len integer
+---@param default integer
+---@return integer
+local function resolve_iter_index(val, len, default)
+    val = val and math.min(val, len) or default
+    return val > 0 and val or math.max(len + val, 1)
+end
+
 ---@generic T
 ---@generic U
 ---@param t T[]
 ---@param init U
----@param reducer fun(acc:U, x:T): U
+---@param f fun(acc:U, x:T, idx:integer): acc:U|nil
+---@param rev boolean|nil (Default: `false`)
 ---@return U
-function M.list_fold(t, init, reducer)
+function M.list_fold(t, init, f, rev, start, stop)
     local t_len = #t
-    local acc = init
-    for i = 1, t_len do
-        acc = reducer(acc, t[i])
+    start = resolve_iter_index(start, t_len, 1)
+    stop = resolve_iter_index(stop, t_len, t_len)
+    if t_len == 0 or start > stop then
+        return init
     end
 
-    return acc
+    local step
+    start, stop, step = resolve_rev(rev, start, stop)
+    local acc_ret = init
+    for i = start, stop, step do
+        local acc = f(acc_ret, t[i], i)
+        if acc ~= nil then
+            acc_ret = acc
+        else
+            return acc_ret
+        end
+    end
+
+    return acc_ret
 end
 
 ---@generic T
 ---@param t T[]
 ---@param f fun(x: T, idx: integer): any
-function M.list_map(t, f)
+---@param start? integer
+---@param stop? integer
+function M.list_filter_map(t, f, start, stop)
     local t_len = #t
-    for i = 1, t_len do
-        t[i] = f(t[i], i)
+    start = resolve_iter_index(start, t_len, 1)
+    stop = resolve_iter_index(stop, t_len, t_len)
+    if t_len == 0 or start > stop then
+        return t
+    end
+
+    local j = start
+    for i = start, stop do
+        local vm = f(t[i], i)
+        if vm ~= nil then
+            t[j] = vm
+            j = j + 1
+        end
+    end
+
+    for i = stop + 1, t_len do
+        t[j] = t[i]
+        j = j + 1
+    end
+
+    for i = j, t_len do
+        t[i] = nil
     end
 
     return t
 end
--- TODO: nvim-tools - Implement the core's reference return pattern in the list module (like
--- above). Doing something like list_map(list_copy(foo), mapper) is too useful.
+-- TODO: Find locations where this is used with copy and replace with filter_map_to
+
+---@generic T
+---@generic U
+---@param t T[]
+---@param f fun(x:T, idx:integer): U|nil
+---@param start integer? (Default: `1`)
+---@param stop? integer Default: Length of `t`.
+---@return U[]
+function M.list_filter_map_to(t, f, start, stop)
+    vim.validate("t", t, "table")
+    vim.validate("f", f, "callable")
+    local is_int = require("nvim-tools.types").is_int
+    vim.validate("start", start, is_int, true)
+    vim.validate("stop", stop, is_int, true)
+
+    local t_len = #t
+    start = resolve_iter_index(start, t_len, 1)
+    stop = resolve_iter_index(stop, t_len, t_len)
+    local ret = {}
+    if t_len == 0 or start > stop then
+        return ret
+    end
+
+    local before_start = start - 1
+    for i = 1, before_start do
+        ret[i] = t[i]
+    end
+
+    local j = start
+    for i = start, stop do
+        local vm = f(t[i], i)
+        if vm ~= nil then
+            ret[j] = vm
+            j = j + 1
+        end
+    end
+
+    for i = stop + 1, t_len do
+        ret[j] = t[i]
+        j = j + 1
+    end
+
+    return ret
+end
+---@generic T
+---@generic U
+---@generic V
+---@param t T[]
+---@param init V
+---@param f fun(acc:V, value:T, idx:integer): V, U|nil
+---@return T[]
+function M.list_filter_map_accum(t, init, f)
+    vim.validate("t", t, "table")
+    vim.validate("init", init, require("nvim-tools.types").not_nil)
+    vim.validate("f", f, "callable")
+
+    local t_len = #t
+    local acc = init
+    local j = 1
+    for i = 1, t_len do
+        local a, vm = f(acc, t[i], i)
+        acc = a
+        if vm ~= nil then
+            t[j] = vm
+            j = j + 1
+        end
+    end
+
+    for i = j, t_len do
+        t[i] = nil
+    end
+
+    return t
+end
+
+---@generic T
+---@generic U
+---@generic V
+---@param t T[]
+---@param init U
+---@param f fun(acc:U, v:T, idx:integer): acc:U|nil, v:V|nil
+---@param b? fun(acc:U): acc:U|nil, v:V|nil
+---@param z? fun(acc:U): v:V|nil
+---@param start integer? (Default: `1`)
+---@param stop? integer Default: Length of `t`
+---@param rev? boolean (Default: `false`)
+---@return V[]
+function M.list_transduce(t, init, f, b, z, start, stop, rev)
+    local ret = {}
+    local t_len = #t
+    start = resolve_iter_index(start, t_len, 1)
+    stop = resolve_iter_index(stop, t_len, t_len)
+    if t_len == 0 or start > stop then
+        return ret
+    end
+
+    local acc_stored = init
+    if b then
+        local acc, v = b(acc_stored)
+        if v then
+            ret[#ret + 1] = v
+        end
+
+        if acc == nil then
+            return ret
+        else
+            acc_stored = acc
+        end
+    end
+
+    local step
+    start, stop, step = resolve_rev(rev, start, stop)
+    for i = start, stop, step do
+        local acc, v = f(acc_stored, t[i], i)
+        if v ~= nil then
+            ret[#ret + 1] = v
+        end
+
+        if acc == nil then
+            break
+        else
+            acc_stored = acc
+        end
+    end
+
+    if z then
+        local v = z(acc_stored)
+        if v ~= nil then
+            ret[#ret + 1] = v
+        end
+    end
+
+    return ret
+end
 
 ---@param t table
 ---@param key string
@@ -281,7 +469,7 @@ end
 ---@param f fun(part:string): string
 function M.str_op_by_sep(str, sep, f)
     local str_parts = vim.split(str, sep)
-    M.list_map(str_parts, function(part)
+    M.list_filter_map(str_parts, function(part)
         return f(part)
     end)
 
@@ -364,40 +552,38 @@ end
 --- @param reset_indent boolean Remove all leading whitespace before adding new indentation.
 --- @return string wrapped Does not contain a trailing \n
 function M.wrap(text, first_indent, indent, text_width, reset_indent)
-    if not text or text == "" or text_width < 1 then
-        return text or ""
+    if text == "" or text_width < 1 then
+        return ""
     end
 
     local lines = vim.split(text, "\n", { plain = true })
-
-    local reset_arg = 0
-    if reset_indent then
-        local min_ws = math.huge
-        for _, line in ipairs(lines) do
-            if line and line:find("%S") then -- only non-blank lines affect the common indent
-                local _, ws_end = string.find(line, "^%s*")
-                local ws_len = ws_end or 0
-                if ws_len < min_ws then
-                    min_ws = ws_len
-                end
+    local reset_arg = (not reset_indent) and 0
+        or M.list_fold(lines, math.huge, function(min_ws, line)
+            if min_ws == 0 then
+                return nil
             end
-        end
-        reset_arg = (min_ws == math.huge) and 0 or min_ws
+
+            if not string.find(line, "%S") then
+                return min_ws
+            end
+
+            local _, ws_end = string.find(line, "^%s*")
+            return math.min(ws_end or 0, min_ws)
+        end)
+
+    M.list_filter_map(lines, function(line)
+        local this_fin_indent = string.find(line, "^•", 1) and first_indent + 2 or indent
+        return wrap_line(line, first_indent, this_fin_indent, text_width, reset_arg)
+    end, 1, 1)
+
+    if #lines > 1 then
+        M.list_filter_map(lines, function(line)
+            local this_indent = string.find(line, "^•", 1) and indent + 2 or indent
+            return wrap_line(line, indent, this_indent, text_width, reset_arg)
+        end, 2, 0)
     end
 
-    local res = {}
-
-    local first_line = lines[1]
-    local this_fin_indent = string.find(first_line, "^•", 1) and first_indent + 2 or indent
-    res[1] = wrap_line(lines[1], first_indent, this_fin_indent, text_width, reset_arg)
-
-    for i = 2, #lines do
-        local line = lines[i]
-        local this_indent = string.find(line, "^•", 1) and indent + 2 or indent
-        res[#res + 1] = wrap_line(line, indent, this_indent, text_width, reset_arg)
-    end
-
-    return table.concat(res, "\n")
+    return table.concat(lines, "\n")
 end
 -- TODO: This needs a way to preserve indent, so bulleted lists in briefs don't extend to
 -- the beginning of the line.

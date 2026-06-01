@@ -65,6 +65,11 @@ function M.multipass(card)
     return 0, "foo", { 3, 7, 9 }
 end
 
+---@divider
+---@tag docgen-exuberance
+---@mod exuberance-in-doc_generation Just an utterly fantastic example of
+---generating document elements.
+
 ---@tag Shamwow
 ---What an amazing class
 ---@class test.Wow

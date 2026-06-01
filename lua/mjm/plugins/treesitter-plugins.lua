@@ -108,6 +108,7 @@ local function map_objects(ev)
         { "[#", "]#", "@preproc.outer" },
         { '["', ']"', "@string.inner" },
     }
+    -- MID: Some of these maps, like [m]m, should also zz.
 
     local move = require("nvim-treesitter-textobjects.move")
     for _, m in pairs(move_maps) do

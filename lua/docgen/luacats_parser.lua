@@ -7,22 +7,24 @@ local util = require("docgen.util")
 local checked_append = util.checked_append
 local checked_prepend = util.checked_prepend
 local endswith_byte = util.endswith_byte
+local list_contains = util.list_contains
 local list_filter = util.list_filter
-local list_find_idx = util.list_find_idx
+local list_fold = util.list_fold
+local list_transduce = util.list_transduce
 local rtrim = util.str_rtrim
 local startswith_byte = util.startswith_byte
 local table_clear = util.table_clear
-local table_new = util.table_new
 local table_get_or_create_subtable = util.table_get_or_create_subtable
+local table_new = util.table_new
 
 local const = require("docgen.const")
 local NBSP = const.NBSP
 
---- @class docgen.DocItem : nvim.luacats.grammar.Result
---- @field classvar? string
---- @field default? string
---- @field inlinedesc? docgen.ParserObj
---- @field nodoc? boolean
+---@class docgen.DocItem : nvim.luacats.grammar.Result
+---@field classvar? string
+---@field default? string
+---@field inlinedesc? docgen.ParserObj
+---@field nodoc? boolean
 
 ---@alias docgen.Kind docgen.luacats.Kind|"fun"
 ---@alias docgen.Access 'private'|'protected'|'package'
@@ -36,6 +38,7 @@ local NBSP = const.NBSP
 ---@field classvar? string
 ---@field cur_doc_item? docgen.LastDocItem
 ---@field desc? string
+---@field divider? "="|"-"|"~"
 ---@field doc_flag? docgen.Visibility
 ---@field doc_flag_desc? string
 ---@field doc_lines? string[] Uncommitted doc lines
@@ -111,6 +114,7 @@ local function item_type_fixup(item)
         item.type = typ
     end
 end
+-- TODO: Might ditch this because I like using nuance in typing for communication.
 
 ---@param obj docgen.ParserObj
 ---@param target_kind docgen.Kind
@@ -126,14 +130,14 @@ end
 ---@param targets docgen.Kind[]
 ---@param msg string
 ---@return boolean
-local function obj_kind_warn_if_not(obj, targets, msg)
+local function kind_warn_if_not(obj, targets, msg)
     local kind = obj.kind or ""
-    if list_find_idx(targets, kind) == nil then
-        error("Obj kind :" .. kind .. ". Expected: " .. vim.inspect(targets) .. ". " .. msg)
-        return false
+    if list_contains(targets, kind) then
+        return true
     end
 
-    return true
+    log_warning("Obj kind :" .. kind .. ". Expected: " .. vim.inspect(targets) .. ". " .. msg)
+    return false
 end
 -- TOOD: Initialize obj.kind to "". Remove the or check from here.
 
@@ -163,13 +167,13 @@ end
 ---@param obj docgen.ParserObj Modified in place
 ---@param line string
 local function obj_doc_line_append(obj, line)
-    if obj_hidden_by_annotations(obj) or obj.cur_doc_item == "_" then
+    if obj.cur_doc_item == "_" then
         return
     end
 
     local doc_lines = table_get_or_create_subtable(obj, "doc_lines")
-    -- Always save the line, even if rtrim turns it into `""`, to preserve paragraph gaps.
-    doc_lines[#doc_lines + 1] = rtrim(line)
+    -- Always save the line, even if it has no bytes, to preserve paragraph gaps.
+    doc_lines[#doc_lines + 1] = line
 end
 
 ---@param obj docgen.ParserObj Modified in place
@@ -177,7 +181,7 @@ end
 ---@param new_doc_item? string
 ---@return string?
 local function obj_doc_lines_commit(obj, take, new_doc_item)
-    local doc_lines = obj.doc_lines ---@type string[]?
+    local doc_lines = obj.doc_lines
     if doc_lines == nil or #doc_lines == 0 then
         obj.cur_doc_item = new_doc_item
         return
@@ -188,11 +192,8 @@ local function obj_doc_lines_commit(obj, take, new_doc_item)
     local cur_doc_item = obj.cur_doc_item ---@type docgen.LastDocItem?
     if take then
         -- Malformed LuaCATs
-        assert(
-            cur_doc_item == nil,
-            "Cannot take doc_lines. cur_doc_item is " .. tostring(cur_doc_item)
-        )
-
+        local no_doc_item = cur_doc_item == nil
+        assert(no_doc_item, "Cannot take doc_lines. cur_doc_item is " .. tostring(cur_doc_item))
         obj.cur_doc_item = new_doc_item
         return doc_lines_str
     end
@@ -201,23 +202,18 @@ local function obj_doc_lines_commit(obj, take, new_doc_item)
         local params = obj.params ---@type docgen.DocItem[]
         local last_param = params[#params]
         local desc = last_param.desc
-        if desc and string.find(desc, "[^%s]") ~= nil then
-            last_param.desc = desc .. "\n" .. doc_lines_str
-        else
-            last_param.desc = doc_lines_str
-        end
+        last_param.desc = checked_append(desc, "\n", doc_lines_str, function(left, _)
+            return string.find(left, "[^%s]") ~= nil
+        end)
     elseif cur_doc_item == "return" then
         local returns = obj.returns ---@type docgen.DocItem[]
         local last_return = returns[#returns]
         local desc = last_return.desc
-        if desc and string.find(desc, "[^%s]") ~= nil then
-            last_return.desc = desc .. "\n" .. doc_lines_str
-        else
-            last_return.desc = doc_lines_str
-        end
+        last_return.desc = checked_append(desc, "\n", doc_lines_str, function(left, _)
+            return string.find(left, "[^%s]") ~= nil
+        end)
     else
-        local desc = obj.desc ---@type string?
-        obj.desc = checked_append(desc, "\n", doc_lines_str)
+        obj.desc = checked_append(obj.desc, "\n", doc_lines_str)
     end
 
     obj.cur_doc_item = new_doc_item
@@ -225,7 +221,7 @@ end
 
 ---@param obj docgen.ParserObj Modified in place
 local function obj_access_set_package(obj)
-    if not obj_kind_warn_if_not(obj, { "" }, "Cannot set package.") then
+    if not kind_warn_if_not(obj, { "" }, "Cannot set package.") then
         return
     end
 
@@ -234,7 +230,7 @@ end
 
 ---@param obj docgen.ParserObj Modified in place
 local function obj_access_set_private(obj)
-    if not obj_kind_warn_if_not(obj, { "" }, "Cannot set private.") then
+    if not kind_warn_if_not(obj, { "" }, "Cannot set private.") then
         return
     end
 
@@ -243,7 +239,7 @@ end
 
 ---@param obj docgen.ParserObj Modified in place
 local function obj_access_set_protected(obj)
-    if not obj_kind_warn_if_not(obj, { "" }, "Cannot set protected.") then
+    if not kind_warn_if_not(obj, { "" }, "Cannot set protected.") then
         return
     end
 
@@ -252,7 +248,7 @@ end
 
 ---Commits obj doc lines and sets cur_doc_item to nil
 ---@param obj docgen.ParserObj Modified in place
----@param parsed nvim.luacats.grammar.Result'
+---@param parsed nvim.luacats.grammar.Result
 local function obj_desc_set_from_doc_lines_or_parsed(obj, parsed)
     local doc_lines = obj_doc_lines_commit(obj, true)
     if doc_lines and string.find(doc_lines, "[^%s]") ~= nil then
@@ -264,6 +260,16 @@ local function obj_desc_set_from_doc_lines_or_parsed(obj, parsed)
     if parsed_desc and string.find(parsed_desc, "[^%s]") ~= nil then
         obj.desc = rtrim(parsed_desc)
     end
+end
+
+---@param obj docgen.ParserObj Modified in place
+---@param parsed nvim.luacats.grammar.Result
+local function obj_divider_set(obj, parsed)
+    if not kind_warn_if_not(obj, { "" }, "Cannot set divider.") then
+        return
+    end
+
+    obj.divider = parsed.name or "-"
 end
 
 ---@param obj docgen.ParserObj Modified in place
@@ -296,7 +302,7 @@ end
 
 ---@param obj docgen.ParserObj Modified in place
 local function obj_async_set(obj)
-    if not obj_kind_warn_if_not(obj, { "" }, "Cannot set async here. Discarding.") then
+    if not kind_warn_if_not(obj, { "" }, "Cannot set async here. Discarding.") then
         return
     end
 
@@ -306,7 +312,7 @@ end
 ---@param obj docgen.ParserObj Modified in place
 ---@param parsed nvim.luacats.grammar.Result
 local function obj_kind_brief_set(obj, parsed)
-    if not obj_kind_warn_if_not(obj, { "" }, "Cannot set brief here. Discarding.") then
+    if not kind_warn_if_not(obj, { "" }, "Cannot set brief here. Discarding.") then
         return
     end
 
@@ -315,7 +321,7 @@ local function obj_kind_brief_set(obj, parsed)
 
     local doc_lines = obj.doc_lines
     if doc_lines and #doc_lines > 0 then
-        table_clear(doc_lines)
+        obj_doc_lines_commit(obj, true)
         log_warning("Doc lines present before @brief annotation. Discarding.")
     end
 end
@@ -340,7 +346,7 @@ end
 ---@param obj docgen.ParserObj Modified in place
 ---@param parsed nvim.luacats.grammar.Result
 local function obj_doc_flag_set_deprecated(obj, parsed)
-    if not obj_kind_warn_if_not(obj, { "", "class" }, "Cannot mark deprecated. Discarding.") then
+    if not kind_warn_if_not(obj, { "", "class" }, "Cannot mark deprecated. Discarding.") then
         return
     end
 
@@ -355,14 +361,32 @@ end
 -- single deprecation line can be used, but this should still emit a warning.
 
 ---@param obj docgen.ParserObj Modified in place
+---@param parsed nvim.luacats.grammar.Result
+local function obj_kind_mod_set(obj, parsed)
+    if not kind_warn_if_not(obj, { "" }, "Obj already has a kind. Discarding.") then
+        return
+    end
+
+    obj.kind = "mod"
+    obj.name = parsed.name
+    obj.desc = parsed.desc
+
+    local doc_lines = obj.doc_lines
+    if doc_lines and #doc_lines > 0 then
+        obj_doc_lines_commit(obj, true)
+        log_warning("Doc lines present before @mod annotation. Discarding.")
+    end
+end
+
+---@param obj docgen.ParserObj Modified in place
 local function obj_doc_flag_set_inlinedoc(obj)
     local target_kinds = { "", "alias", "class" }
-    if not obj_kind_warn_if_not(obj, target_kinds, "Cannot set inlinedoc. Discarding.") then
+    if not kind_warn_if_not(obj, target_kinds, "Cannot set inlinedoc. Discarding.") then
         return
     end
 
     if obj.doc_flag == "nodoc" then
-        log_warning("Cannot set a @nodoc object to @inline doc. Discarding.")
+        log_warning("Cannot set a @nodoc object to @inlinedoc. Discarding.")
         return
     end
 
@@ -402,7 +426,7 @@ end
 ---@param obj docgen.ParserObj Modified in place
 ---@param parsed nvim.luacats.grammar.Result
 local function obj_overload_append(obj, parsed)
-    if not obj_kind_warn_if_not(obj, { "class", "" }, "Cannot add overload. Discarding.") then
+    if not kind_warn_if_not(obj, { "class", "" }, "Cannot add overload. Discarding.") then
         return
     end
 
@@ -467,15 +491,14 @@ local function obj_return_append(obj, parsed)
     local last_name = parsed[len_parsed].name
     local parsed_desc = parsed.desc
     if last_name and parsed_desc then
-        local merge_last_name = true
-        local len_parsed_minus_one = len_parsed - 1
-        -- Intentionally leave merge_last_name == true if only one return
-        for i = 1, len_parsed_minus_one do
-            if parsed[i].name ~= nil then
-                merge_last_name = false
-                break
-            end
-        end
+        local merge_last_name = len_parsed - 1 == 0 and true
+            or list_fold(parsed, true, function(will_merge, ret)
+                if will_merge == false then
+                    return nil
+                end
+
+                return ret.name == nil
+            end, false, 1, -1)
 
         if merge_last_name then
             parsed.desc = last_name .. " " .. parsed_desc
@@ -492,6 +515,7 @@ local function obj_return_append(obj, parsed)
     local returns = table_get_or_create_subtable(obj, "returns")
     returns[#returns + 1] = parsed --[[@as docgen.DocItem]]
 end
+-- MID: The behavior here would be more clear if the typing was more clear.
 -- DOC: Name usage behavior
 -- DOC: The return syntax.
 -- - @return (`type`) {name} some amount of other characters that can be the desc
@@ -501,8 +525,7 @@ end
 ---@param obj docgen.ParserObj Modified in place
 ---@param parsed nvim.luacats.grammar.Result
 local function obj_see_add(obj, parsed)
-    if obj.kind == "brief" then
-        log_warning("Attempting to add see tag to non-class/fun object")
+    if kind_warn_if_not(obj, { "class", "fun", "" }, "") then
         return
     end
 
@@ -513,9 +536,8 @@ end
 ---@param obj docgen.ParserObj Modified in place
 ---@param parsed nvim.luacats.grammar.Result
 local function obj_tags_addtl_append(obj, parsed)
-    local obj_header_tag = obj.header_tag or ""
     -- TODO: Should this be done at finalization so functions can use a `.` as the sep?
-    local tag_name = checked_prepend(obj_header_tag, "-", parsed.name, function(left, right)
+    local tag_name = checked_prepend(obj.header_tag, "-", parsed.name, function(left, right)
         return not vim.startswith(right, left)
     end)
 
@@ -526,8 +548,7 @@ end
 ---@param obj docgen.ParserObj Modified in place
 ---@param parsed nvim.luacats.grammar.Result
 local function obj_type_set(obj, parsed)
-    if obj.kind == "brief" then
-        log_warning("Attempting to add type to non-class/fun object")
+    if kind_warn_if_not(obj, { "fun", "" }, "Trying to add a type to an object with a kind") then
         return
     end
 
@@ -549,8 +570,10 @@ local transform = {
     ["class"] = obj_kind_class_set,
     ["deprecated"] = obj_doc_flag_set_deprecated,
     ["diagnostic"] = function() end,
+    ["divider"] = obj_divider_set,
     ["field"] = obj_field_append,
     ["inlinedoc"] = obj_doc_flag_set_inlinedoc,
+    ["mod"] = obj_kind_mod_set,
     ["nodoc"] = obj_doc_flag_set_nodoc,
     ["operator"] = obj_field_append,
     ["overload"] = obj_overload_append,
@@ -674,6 +697,7 @@ local function finalize(obj, line)
     end
 
     if kind == "mod" then
+        obj.divider = obj.divider or "-"
         return 1
     end
 
@@ -711,41 +735,40 @@ local function obj_append_line(obj, line)
     line = string.gsub(line, "\t", string.rep(" ", 8))
     line = string.gsub(line, NBSP, " ")
 
-    local is_doc_line = string.find(line, "^%-%-%-")
-    if is_doc_line then
-        if obj_hidden_by_annotations(obj) then
-            return obj.status
-        end
-
-        line = string.sub(line, 4)
-        local did_set_prev_indent = false
-        line = string.gsub(line, "^(%s+)@", function(ws)
-            obj.prev_indent = #ws
-            did_set_prev_indent = true
-            return "@"
-        end)
-
-        if not did_set_prev_indent then
-            obj.prev_indent = 0
-        end
-
-        ---@type nvim.luacats.grammar.Result?
-        local parsed = luacats_grammar:match(line)
-        if parsed then
-            obj_process_parsed(obj, parsed)
-        else
-            local prev_indent = obj.prev_indent
-            if prev_indent > 0 then
-                line = string.gsub(line, "^%s{" .. prev_indent .. "}", "")
-            end
-
-            obj_doc_line_append(obj, line)
-        end
-
-        return obj.status
-    else
+    if not string.find(line, "^%-%-%-") then
         return finalize(obj, line)
     end
+
+    if obj_hidden_by_annotations(obj) then
+        return obj.status
+    end
+
+    line = string.sub(line, 4)
+    local did_set_prev_indent = false
+    line = string.gsub(line, "^(%s+)@", function(ws)
+        obj.prev_indent = #ws
+        did_set_prev_indent = true
+        return "@"
+    end)
+
+    if not did_set_prev_indent then
+        obj.prev_indent = 0
+    end
+
+    ---@type nvim.luacats.grammar.Result?
+    local parsed = luacats_grammar:match(line)
+    if parsed then
+        obj_process_parsed(obj, parsed)
+    else
+        local prev_indent = obj.prev_indent
+        if prev_indent > 0 then
+            line = string.gsub(line, "^%s{" .. prev_indent .. "}", "")
+        end
+
+        obj_doc_line_append(obj, line)
+    end
+
+    return obj.status
 end
 -- TEST: prev_indent sets on parsed lines and trims doc lines
 -- TEST: prev_indent changes on new parsed lines
@@ -797,24 +820,23 @@ end
 ---@return docgen.ParsedSource
 function M.parsed_from_lines(lines, header_tag)
     local modvar = find_modvar(lines) or ""
-
-    local obj_list = {} ---@type docgen.ParserObj[]
-    local obj = obj_new(header_tag, modvar)
-    for _, line in ipairs(lines) do
-        local status = obj_append_line(obj, line)
-        if status > 0 then
-            if status == 1 then
-                obj_list[#obj_list + 1] = obj
+    ---@type docgen.ParserObj[]
+    local obj_list = list_transduce(
+        lines,
+        obj_new(header_tag, modvar),
+        function(obj, line)
+            local status = obj_append_line(obj, line)
+            if status == 0 then
+                return obj, nil
             end
 
-            obj = obj_new(header_tag, modvar)
+            return obj_new(header_tag, modvar), status == 1 and obj or nil
+        end,
+        nil,
+        function(obj)
+            return finalize(obj, "") == 1 and obj or nil
         end
-    end
-
-    local status = finalize(obj, "")
-    if status == 1 then
-        obj_list[#obj_list + 1] = obj
-    end
+    )
 
     return { header_tag, obj_list }
 end
@@ -823,8 +845,7 @@ end
 ---@param header_tag string
 ---@return docgen.ParsedSource
 function M.parsed_from_str(str, header_tag)
-    local lines = vim.split(str, "\n")
-    return M.parsed_from_lines(lines, header_tag)
+    return M.parsed_from_lines(vim.split(str, "\n"), header_tag)
 end
 
 return M

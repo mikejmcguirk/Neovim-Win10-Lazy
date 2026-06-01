@@ -42,8 +42,9 @@ function M.is_pos_node(buf, row, col, types, contains)
         local node = lang_tree:named_node_for_range({ row, col, row, col })
         while node do
             local node_type = node:type()
-            for _, type in ipairs(types) do
-                if predicate(node_type, type) then
+            local types_len = #types
+            for i = 1, types_len do
+                if predicate(node_type, types[i]) then
                     return true
                 end
             end
@@ -59,6 +60,7 @@ function M.is_pos_node(buf, row, col, types, contains)
         return nil
     end
 
+    root_lang_tree:parse()
     return find_node_in_tree(root_lang_tree)
 end
 
@@ -67,7 +69,7 @@ end
 ---@return boolean?
 function M.is_in_node(types, contains)
     local cur_pos = api.nvim_win_get_cursor(0)
-    local row = cur_pos[1]
+    local row = cur_pos[1] - 1
     local col = cur_pos[2]
     return M.is_pos_node(0, row, col, types, contains)
 end

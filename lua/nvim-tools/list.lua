@@ -38,6 +38,7 @@ local function clear_exact(t, start, stop)
         t[i] = nil
     end
 end
+-- TODO: Remove this. Makes extracting functions a pain.
 
 ---Copied from Neovim core.
 ---@generic T
@@ -66,9 +67,11 @@ end
 ---@param default integer
 ---@return integer
 local function resolve_iter_index(val, len, default)
-    val = val and math.min(val, len) or default
-    return val > 0 and val or math.max(len + val, 1)
+    val = math.min(val or default, len)
+    return val > 0 and val or math.max(len + val, math.min(1, len))
 end
+-- TODO: Everywhere this is used needs to be looked at. The from 1 to 0 short circuit behavior
+-- does not work with this I don't think.
 
 ---@param rev boolean?
 ---@param start integer
@@ -256,10 +259,6 @@ function M.copy(t)
     vim.validate("t", t, "table")
 
     local t_len = #t
-    if t_len == 0 then
-        return {}
-    end
-
     local ret = require("nvim-tools.table").new(t_len, 0)
     for i = 1, t_len do
         ret[i] = t[i]
@@ -1294,16 +1293,12 @@ end
 ---@generic T
 ---@param t T[]
 ---@param v T|fun(x:T): boolean
----@return boolean Always `false` if the list length is zero.
+---@return boolean `false` if the list length is zero.
 function M.contains(t, v)
     vim.validate("t", t, "table")
     vim.validate("v", v, require("nvim-tools.types").not_nil)
 
     local t_len = #t
-    if t_len == 0 then
-        return false
-    end
-
     local predicate = type(v) == "function" and v or function(x)
         return x == v
     end
@@ -1533,22 +1528,30 @@ end
 ---@param init U First accumulator value
 ---@param f fun(acc:U, x:T, idx:integer): acc:U|nil If the acc return is `nil`, early-exit and
 ---     return the last accumulator value.
----@param rev boolean|nil (Default: `false`) If true, iterate from the end.
+---@see |iter-indexing|
+---@param start integer? (Default: `1`)
+---@param stop? integer Default: Length of `t`
+---@param rev? boolean (Default: `false`) If true, iterate from the end.
 ---@return U `init` if `t` is length zero.
-function M.fold(t, init, f, rev)
+function M.fold(t, init, f, start, stop, rev)
     vim.validate("t", t, "table")
     vim.validate("init", init, require("nvim-tools.types").not_nil)
     vim.validate("f", f, "callable")
+    local is_int = require("nvim-tools.types").is_int
+    vim.validate("start", start, is_int, true)
+    vim.validate("stop", stop, is_int, true)
     vim.validate("rev", rev, "boolean", true)
 
     local t_len = #t
-    if t_len == 0 then
+    start = resolve_iter_index(start, t_len, 1)
+    stop = resolve_iter_index(stop, t_len, t_len)
+    if t_len == 0 or start > stop then
         return init
     end
 
-    local start, stop, step = resolve_rev(rev, 1, t_len)
-    ---@generic U
-    local acc_ret = init ---@type U
+    local step
+    start, stop, step = resolve_rev(rev, start, stop)
+    local acc_ret = init
     for i = start, stop, step do
         local acc = f(acc_ret, t[i], i)
         if acc ~= nil then
@@ -1595,14 +1598,12 @@ end
 ---@param init U First accumulator value.
 ---@param f fun(acc:U, x:T, idx:integer): acc:U|nil If the acc return is `nil`, early-exit and
 ---     return the new list gathered so far.
----@param rev? boolean (Default: `false`) If true, iterate from the end.
 ---@return U[] New list containing the running accumulator values. If `t` is nil, will only
 ---     contain init.
-function M.scan(t, init, f, rev)
+function M.scan(t, init, f)
     vim.validate("t", t, "table")
     vim.validate("init", init, require("nvim-tools.types").not_nil)
     vim.validate("f", f, "callable")
-    vim.validate("rev", rev, "boolean", true)
 
     local t_len = #t
     local acc = init
@@ -1612,8 +1613,7 @@ function M.scan(t, init, f, rev)
         return ret
     end
 
-    local start, stop, step = resolve_rev(rev, 1, t_len)
-    for i = start, stop, step do
+    for i = 1, t_len do
         acc = f(acc, t[i], i)
         if acc ~= nil then
             ret[#ret + 1] = acc
@@ -1628,6 +1628,48 @@ end
 ---------------------------
 -- MARK: List Transforms --
 ---------------------------
+
+---@generic T
+---@param t T[] Values to aggregate.
+---@param key nil|string|fun(val:any): any See: |vim.list.unique()|. How should table values be
+---     converted into hash keys for aggregation?
+---@param val nil|fun(agg_val:any, val:any): any How should the table values be converted into
+---     the aggregated values? Takes as params the current aggregated value and the currently
+---     iterated table value. If nil, builds a list of the values matching the key (groupBy
+---     behavior).
+function M.aggregate(t, key, val)
+    vim.validate("t", t, "table")
+    vim.validate("key", key, { "callable", "string" }, true)
+    vim.validate("val", val, "callable", true)
+
+    local ret = {}
+    local t_len = #t
+    if t_len == 0 then
+        return ret
+    end
+
+    local val_fn = type(val) == "function" and val
+        or function(agg_v, v)
+            agg_v = agg_v or {}
+            agg_v[#agg_v + 1] = v
+            return agg_v
+        end
+
+    local key_fn = make_key_fn(key)
+    for i = 1, t_len do
+        local v = t[i]
+        local vh = key_fn(v)
+        if vh ~= nil then
+            local vm = val_fn(ret[vh], v)
+            if vm ~= nil then
+                ret[vh] = vm
+            end
+        end
+    end
+
+    return ret
+end
+-- TODO: Come back to this.
 
 ---Fills `t` in place with `v` from `start` to `stop` (entire list if `start` and `stop` are
 ---`nil`).
@@ -1658,34 +1700,6 @@ function M.fill(t, v, start, stop)
     return t
 end
 
----@generic T
----@generic U
----@param t T[]
----@param f fun(x:T, idx:integer): U|nil
----@return U[]
-local function filter_map_do(dst, t, f)
-    local t_len = #t
-    if t_len == 0 then
-        return dst
-    end
-
-    local j = 1
-    for i = 1, t_len do
-        local vm = f(t[i], i)
-        if vm ~= nil then
-            dst[j] = vm
-            j = j + 1
-        end
-    end
-
-    if dst ~= t then
-        return dst
-    end
-
-    clear_exact(dst, j, t_len)
-    return dst
-end
-
 ---Apply function `f` to the values of `t` in place.
 ---No-op if `t1` length is zero.
 ---@generic T
@@ -1693,11 +1707,44 @@ end
 ---@param t T[] Modified in place!
 ---@param f fun(x: T, idx:integer): U|nil Correct idx is preserved when filtering. `nil` returns
 ---     are filtered.
----@return U[] The original list reference.
-function M.filter_map(t, f)
+---@see |iter-indexing|
+---@param start integer? (Default: `1`) Leave elements before start un-mapped.
+---@param stop? integer Default: Length of `t`. Elements after `stop` will be un-mapped.
+---@return U[] The original list reference. If `start` and `stop` produce an invalid range, the
+---     function is a no-op.
+function M.filter_map(t, f, start, stop)
     vim.validate("t", t, "table")
     vim.validate("f", f, "callable")
-    return filter_map_do(t, t, f)
+    local is_int = require("nvim-tools.types").is_int
+    vim.validate("start", start, is_int, true)
+    vim.validate("stop", stop, is_int, true)
+
+    local t_len = #t
+    start = resolve_iter_index(start, t_len, 1)
+    stop = resolve_iter_index(stop, t_len, t_len)
+    if t_len == 0 or start > stop then
+        return t
+    end
+
+    local j = start
+    for i = start, stop do
+        local vm = f(t[i], i)
+        if vm ~= nil then
+            t[j] = vm
+            j = j + 1
+        end
+    end
+
+    for i = stop + 1, t_len do
+        t[j] = t[i]
+        j = j + 1
+    end
+
+    for i = j, t_len do
+        t[i] = nil
+    end
+
+    return t
 end
 
 ---Create a new list by applying function `f` to the values of `t`.
@@ -1705,11 +1752,46 @@ end
 ---@generic U
 ---@param t T[]
 ---@param f fun(x:T, idx:integer): U|nil `nil` returns are filtered.
----@return U[] New table. Empty if all elements are filtered.
-function M.filter_map_to(t, f)
+---@see |iter-indexing|
+---@param start integer? (Default: `1`) Leave elements before start un-mapped.
+---@param stop? integer Default: Length of `t`. Elements after `stop` will be un-mapped.
+---@return U[] New table. Empty if all elements are filtered or if `start` and `stop` produce an
+---     invalid range.
+function M.filter_map_to(t, f, start, stop)
     vim.validate("t", t, "table")
     vim.validate("f", f, "callable")
-    return filter_map_do({}, t, f)
+    local is_int = require("nvim-tools.types").is_int
+    vim.validate("start", start, is_int, true)
+    vim.validate("stop", stop, is_int, true)
+
+    local t_len = #t
+    start = resolve_iter_index(start, t_len, 1)
+    stop = resolve_iter_index(stop, t_len, t_len)
+    local ret = {}
+    if t_len == 0 or start > stop then
+        return ret
+    end
+
+    local before_start = start - 1
+    for i = 1, before_start do
+        ret[i] = t[i]
+    end
+
+    local j = start
+    for i = start, stop do
+        local vm = f(t[i], i)
+        if vm ~= nil then
+            ret[j] = vm
+            j = j + 1
+        end
+    end
+
+    for i = stop + 1, t_len do
+        ret[j] = t[i]
+        j = j + 1
+    end
+
+    return ret
 end
 
 ---Create a new dictionary table by applying a function to elements of a list.
@@ -1735,38 +1817,7 @@ function M.filter_map_to_dict(t, f)
 
     return ret
 end
-
----@generic T
----@generic U
----@generic V
----@param t T[]
----@param init V
----@param f fun(acc:V, value:T, idx:integer): V, U|nil
----@return U[]
-local function filter_map_accum_do(dst, t, init, f)
-    local t_len = #t
-    if t_len == 0 then
-        return dst
-    end
-
-    local acc = init
-    local j = 1
-    for i = 1, t_len do
-        local a, vm = f(acc, t[i], i)
-        acc = a
-        if vm ~= nil then
-            dst[j] = vm
-            j = j + 1
-        end
-    end
-
-    if dst ~= t then
-        return dst
-    end
-
-    clear_exact(dst, j, t_len)
-    return dst
-end
+-- TODO: This has to be a subset of something else.
 
 ---Apply function `f` to the elements of `t` in place. An accumulator value is stored between
 ---iterations.
@@ -1784,26 +1835,105 @@ function M.filter_map_accum(t, init, f)
     vim.validate("init", init, require("nvim-tools.types").not_nil)
     vim.validate("f", f, "callable")
 
-    return filter_map_accum_do(t, t, init, f)
+    local t_len = #t
+    local acc = init
+    local j = 1
+    for i = 1, t_len do
+        local a, vm = f(acc, t[i], i)
+        acc = a
+        if vm ~= nil then
+            t[j] = vm
+            j = j + 1
+        end
+    end
+
+    for i = j, t_len do
+        t[i] = nil
+    end
+
+    return t
 end
 
----Create a new list by applying function `f` to the elements of `t`, threading an accumulator
----value between iterations.
+---Convert values from list `t` into a list of new values based on a threaded accumulator and an
+---optional finalization function.
 ---@generic T
 ---@generic U
 ---@generic V
----@param t T[]
----@param init V Initial accumulator value.
----@param f fun(acc:V, value:T, idx:integer): V, U|nil Receives the current accumulator, the
----     currently iterated list value, and the currently iterated index. If `nil` is returned for
----     the list value, it will be filtered.
----@return U[] The newly mapped list. Empty if all elements are filtered.
-function M.filter_map_accum_to(t, init, f)
+---@param t T[] Values to transduce.
+---@param init U Initial accumulator value
+---@param f fun(acc:U, v:T, idx:integer): acc:U|nil, v:V|nil
+---Takes as params the current accumulator value, the current list value, and the current list
+---index. Returns the new accumulator value and the next value to add to the return list.
+---If the `acc` return is nil, `v` is first appended to the table if not nil, then the finalize
+---function (`z`) runs, and the transduced list returns.
+---If the `v` return is nil, the accumulator is updated but the current value of `t` is skipped.
+---@param b? fun(acc:U): acc:U|nil, v:V|nil
+---Function to run before list iteration. If the `acc` return is nil, early-exit.
+---@param z? fun(acc:U): v:V|nil
+---Optional finalization function. Called once at the end and may emit one final value to append
+---to the returned list. If called after an early exit, the previous stored accumulator will be
+---provided.
+---@see |iter-indexing|
+---@param start integer? (Default: `1`)
+---@param stop? integer Default: Length of `t`
+---@param rev? boolean (Default: `false`) If true, iterate from the end.
+---@return V[] New list of converted values. Empty if `start` and `stop` produce an invalid
+---iteration.
+function M.transduce(t, init, f, b, z, start, stop, rev)
     vim.validate("t", t, "table")
     vim.validate("init", init, require("nvim-tools.types").not_nil)
     vim.validate("f", f, "callable")
+    vim.validate("z", z, "callable", true)
+    local is_int = require("nvim-tools.types").is_int
+    vim.validate("start", start, is_int, true)
+    vim.validate("stop", stop, is_int, true)
+    vim.validate("rev", rev, "boolean", true)
 
-    return filter_map_accum_do({}, t, init, f)
+    local ret = {}
+    local t_len = #t
+    start = resolve_iter_index(start, t_len, 1)
+    stop = resolve_iter_index(stop, t_len, t_len)
+    if t_len == 0 or start > stop then
+        return ret
+    end
+
+    local acc_stored = init
+    if b then
+        local acc, v = b(acc_stored)
+        if v then
+            ret[#ret + 1] = v
+        end
+
+        if acc == nil then
+            return ret
+        else
+            acc_stored = acc
+        end
+    end
+
+    local step
+    start, stop, step = resolve_rev(rev, start, stop)
+    for i = start, stop, step do
+        local acc, v = f(acc_stored, t[i], i)
+        if v ~= nil then
+            ret[#ret + 1] = v
+        end
+
+        if acc == nil then
+            break
+        else
+            acc_stored = acc
+        end
+    end
+
+    if z then
+        local v = z(acc_stored)
+        if v ~= nil then
+            ret[#ret + 1] = v
+        end
+    end
+
+    return ret
 end
 
 ---@generic T
@@ -1870,6 +2000,159 @@ function M.filter_map_two_to(t1, t2, f)
 
     return filter_map_two_do({}, t1, t2, f)
 end
+
+---@generic T
+---@param dst T[]
+---@param iter_len integer
+---@param sep_count integer
+---@param new_len integer
+---@param t T[]
+---@param sep T
+---@param unit_size integer? (Default: `1`)
+---@see |iter-indexing|
+---@param start integer? (Default: `1`)
+---@param stop? integer Default: Length of `t`
+---@return T[]
+local function intersperse_do(dst, iter_len, sep_count, new_len, t, sep, unit_size, start, stop)
+    local t_len = #t -- Duplicate. Remove when inlining.
+
+    local post_range_len = t_len - stop
+    local last_group_size = iter_len - (sep_count * unit_size)
+    local tail = post_range_len + last_group_size
+    local i = new_len
+    local j = t_len
+    for _ = 1, tail do
+        dst[i] = t[j]
+        i = i - 1
+        j = j - 1
+    end
+
+    for _ = 1, sep_count do
+        dst[i] = sep
+        i = i - 1
+        for _ = 1, unit_size do
+            dst[i] = t[j]
+            i = i - 1
+            j = j - 1
+        end
+    end
+
+    -- Remove when inlining.
+    if dst == t then
+        return dst
+    end
+
+    local pre_intersperse_len = start - 1
+    for _ = 1, pre_intersperse_len do
+        dst[i] = t[i]
+        i = i - 1
+    end
+
+    return dst
+end
+
+---Insert `sep` every `unit_size` elements into `t` in place.
+---Use with |table.concat()| to get Haskell `intercalate` logic.
+---If the length of `t` is not evenly divisible by `unit_size`, the remainder will be separated
+---out at the end of the list.
+---Example:
+---```lua
+---    intersperse({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, ",", 3)
+---    -- Returns { 1, 2, 3, ",", 4, 5, 6, ",", 7, 8, 9, ",", 10 }
+---```
+---
+---Use `start` and `stop` to specify ranges within the list to intersperse `sep`.
+---Example:
+---```lua
+---    intersperse({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, ",", 1, 1, 5)
+---    -- Returns { 1, ",", 2, ",", 3, ",", 4, ",", 5, 6, 7, 8, 9, 10 }
+---```
+---@generic T
+---@param t T[] Modified in place!
+---@param sep T
+---@param unit_size integer? (Default: `1`)
+---@see |iter-indexing|
+---@param start integer? (Default: `1`)
+---@param stop? integer Default: Length of `t`
+---@return T[] Original list reference
+function M.intersperse(t, sep, unit_size, start, stop)
+    vim.validate("t", t, "table")
+    vim.validate("sep", sep, require("nvim-tools.types").not_nil)
+    vim.validate("unit_size", unit_size, "number", true)
+
+    local t_len = #t
+    start = resolve_iter_index(start, t_len, 1)
+    stop = resolve_iter_index(stop, t_len, t_len)
+    if t_len == 0 or start >= stop then
+        return t
+    end
+
+    unit_size = math.max(unit_size or 1, 1)
+    local iter_len = stop - start + 1
+    -- Discard unit_size >= t_len, because `sep` would be appended.
+    local sep_count = math.floor((iter_len - 1) / unit_size)
+    if sep_count < 1 then
+        return t
+    end
+
+    local new_len = t_len + sep_count
+    return intersperse_do(t, iter_len, sep_count, new_len, t, sep, unit_size, start, stop)
+end
+-- MID:DEP: For uneven unit sizes, you can add a `rev` boolean to put the extra group before or
+-- after the main group loop. Don't do this though without a concrete use case, as it makes the
+-- code more complicated.
+
+---Create a new list with `sep` inserted into `t` every `unit_size` elements.
+---Use with |table.concat()| to get Haskell `intercalate` logic.
+---If the length of `t` is not evenly divisible by `unit_size`, the remainder will be separated
+---out at the end of the list.
+---Example:
+---```lua
+---    intersperse({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, ",", 3)
+---    -- Returns { 1, 2, 3, ",", 4, 5, 6, ",", 7, 8, 9, ",", 10 }
+---```
+---
+---Use `start` and `stop` to specify ranges within the list to intersperse `sep`.
+---Example:
+---```lua
+---    intersperse({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, ",", 1, 1, 5)
+---    -- Returns { 1, ",", 2, ",", 3, ",", 4, ",", 5, 6, 7, 8, 9, 10 }
+---```
+---@generic T
+---@param t T[] Modified in place!
+---@param sep T
+---@param unit_size integer? (Default: `1`)
+---@see |iter-indexing|
+---@param start integer? (Default: `1`)
+---@param stop? integer Default: Length of `t`
+---@return T[] Original list reference
+function M.intersperse_to(t, sep, unit_size, start, stop)
+    vim.validate("t", t, "table")
+    vim.validate("sep", sep, require("nvim-tools.types").not_nil)
+    vim.validate("unit_size", unit_size, "number", true)
+
+    local t_len = #t
+    start = resolve_iter_index(start, t_len, 1)
+    stop = resolve_iter_index(stop, t_len, t_len)
+    if t_len == 0 or start >= stop then
+        return M.copy(t)
+    end
+
+    unit_size = math.max(unit_size or 1, 1)
+    local iter_len = stop - start + 1
+    -- Discard unit_size >= t_len, because `sep` would be appended.
+    local sep_count = math.floor((iter_len - 1) / unit_size)
+    if sep_count < 1 then
+        return M.copy(t)
+    end
+
+    local new_len = t_len + sep_count
+    local res = require("nvim-tools.table").new(new_len, 0)
+    return intersperse_do(res, iter_len, sep_count, new_len, t, sep, unit_size, start, stop)
+end
+-- MID:DEP: For uneven unit sizes, you can add a `rev` boolean to put the extra group before or
+-- after the main group loop. Don't do this though without a concrete use case, as it makes the
+-- code more complicated.
 
 ---Reverse the order of the items in list `t` in place.
 ---@generic T

@@ -86,6 +86,9 @@ end
 -- There should be an abstration where you give it a path and a backup filename, and it gives you
 -- a resolved path. Then a simpler abstraction that just opens. It is okay if each abstraction is
 -- slightly clunkier under the hood if each one is more tractable.
+-- TODO: Why should the default filename thing even be resolved? I know there's the pratical
+-- issue of: The user might provide a dir path and not a filepath. But do we want to allow that?
+-- And if we do, then, as alluded to above, that's its own abstraction.
 -- TODO: nvim-tools
 -- TODO: I don't love the hard coded "W" param. It works for docgen but not as an nvim-tools thing
 -- MID: Replace default_fname with an opts table
@@ -320,20 +323,6 @@ end
 -- MARK: Get Help Tags --
 -------------------------
 
----@param path string
----@return string[] First segment is always "/"
-local function split_path_get(path)
-    local segments = table_new(4, 0) ---@type string[]
-    segments[#segments + 1] = "/" -- Reduce contrivance upstream
-    for segment in vim.gsplit(path, "/", { plain = true }) do
-        if segment ~= "" then
-            segments[#segments + 1] = segment
-        end
-    end
-
-    return segments
-end
-
 ---@param split_paths string[][]
 ---@param prefix_idx integer Index in each split_paths sub-table containing the prefix
 local function prefix_and_tags_from_paths(split_paths, prefix_idx)
@@ -365,14 +354,28 @@ local function prefix_and_tags_from_paths(split_paths, prefix_idx)
     return prefix, header_tags
 end
 
---- @param paths string[] Absolute paths, normalized with forward slashes.
+---@param path string
+---@return string[] First segment is always "/"
+local function split_path_get(path)
+    local segments = table_new(4, 0) ---@type string[]
+    segments[#segments + 1] = "/" -- Reduce contrivance upstream
+    for segment in vim.gsplit(path, "/", { plain = true }) do
+        if segment ~= "" then
+            segments[#segments + 1] = segment
+        end
+    end
+
+    return segments
+end
+
+--- @param sources string[] Absolute paths, normalized with forward slashes.
 ---         Assumes at least one is present.
 --- @return string help_prefix
 --- @return string[] header_tags Same order as the input.
-function M.header_tags_from_paths(paths)
-    local split_paths = table_new(#paths, 0)
-    for _, p in ipairs(paths) do
-        split_paths[#split_paths + 1] = split_path_get(p)
+function M.header_tags_from_paths(sources)
+    local split_paths = table_new(#sources, 0)
+    for _, source in ipairs(sources) do
+        split_paths[#split_paths + 1] = split_path_get(source[1])
     end
 
     local path_len_min = math.huge

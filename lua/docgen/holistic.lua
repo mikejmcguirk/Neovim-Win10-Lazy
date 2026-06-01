@@ -1,10 +1,8 @@
 local util = require("docgen.util")
-
 local endswith_byte = util.endswith_byte
 local list_copy = util.list_copy
 local list_filter = util.list_filter
-local list_map = util.list_map
-
+local list_filter_map = util.list_filter_map
 local table_new = util.table_new
 local table_get_or_create_subtable = util.table_get_or_create_subtable
 
@@ -16,7 +14,7 @@ local function fun_to_fun_type_annotation(fun)
     local type_tbl = { "fun(" } ---@type string[]
     local params = fun.params
     if params and #params > 0 then
-        local type_params = list_map(list_copy(params), function(param)
+        local type_params = list_filter_map(list_copy(params), function(param)
             return string.format("%s:%s", param.name, param.type)
         end)
 
@@ -29,10 +27,10 @@ local function fun_to_fun_type_annotation(fun)
     if returns and #returns > 0 then
         type_tbl[#type_tbl + 1] = ": "
         local fun_ret_types = {} ---@type string[]
-        for _, r in ipairs(returns) do
-            for _, inner_r in ipairs(r) do
-                local inner_r_name = inner_r.name
-                local inner_r_type = inner_r.type
+        for _, ret in ipairs(returns) do
+            for _, r in ipairs(ret) do
+                local inner_r_name = r.name
+                local inner_r_type = r.type
                 if inner_r_name then
                     fun_ret_types[#fun_ret_types + 1] = inner_r_name .. ":" .. inner_r_type
                 else
@@ -51,6 +49,7 @@ end
 -- defined in LuaCATs. Colon functions should hold onto the self var when they are created, only
 -- removing the self var if they attach to a class (since they would be dropped from rendering
 -- otherwise). Re-adding self here de-values the function's params as a source of truth.
+-- MID: Concrete use case for some kind of functional nested iterator construct.
 
 ---@param class docgen.ParserObj Modified in place
 ---@param fun docgen.ParserObj Modified in place
@@ -293,7 +292,6 @@ local function create_maps(parsed_sources)
 
     return classes, classes_count, funs
 end
--- TODO: Rather than checking tags here, do the global tag checking step first.
 -- FUTURE: Build this while creating parsed inputs. Obvious perf gain since you don't have to
 -- iterate past briefs and aliases. Keeping it here at the moment though more logically scopes
 -- the data.
@@ -358,8 +356,8 @@ local function parsed_sources_filter_invalid(parsed_sources, classes, funs)
         end)
     end
 
-    list_filter(parsed_sources, function(input)
-        return #input > 0
+    list_filter(parsed_sources, function(source)
+        return #source[2] > 0
     end)
 end
 
@@ -372,8 +370,8 @@ local function parsed_sources_filter_inlinedoc(parsed_sources)
         end)
     end
 
-    list_filter(parsed_sources, function(input)
-        return #input > 0
+    list_filter(parsed_sources, function(source)
+        return #source[2] > 0
     end)
 end
 -- TODO: This cannot be the way.

@@ -77,6 +77,7 @@ local v = setmetatable({}, {
 ---|'field'
 ---|'fun'
 ---|'generic'
+---|'mod'
 ---|'operator'
 ---|'param'
 ---|'return'

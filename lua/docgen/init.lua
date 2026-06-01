@@ -26,7 +26,9 @@ local open_path_validated = file_ops.open_path_validated
 local renderer = require("docgen.renderer")
 local render_docs = renderer.render_docs
 
-local DEFAULT_LOG_FILE = "nvim-tools_docgen.log"
+local util = require("docgen.util")
+local list_filter_map_to = util.list_filter_map_to
+local list_filter_map_accum = util.list_filter_map_accum
 
 ---@brief Full-featured Vimdoc generator for LuaCATs annotations. Simply run it with a list of
 ---files to get properly tagged and formatted docs.
@@ -71,7 +73,7 @@ local function validate_params(inputs, output, level, log_path)
     -- TODO: Also validate elements
     if type(inputs) ~= "table" or #inputs == 0 then
         print("No source files provided")
-        os.exit(1)
+        os.exit(1) -- TODO: Is this right? I feel like there was some Nvim core issue about this.
     end
 
     vim.validate("output", output, "string", true)
@@ -87,26 +89,28 @@ local M = {}
 -- TODO: If the bullets under level are manually indented, they don't bullet format.
 
 ---Main generator function
----@param paths string[] Input filepaths
+---@param sources [string,string?][] Input filepaths. The second part of the tuple can contain a
+---string to parse, skipping file reading.
 ---@param output string? Output file
 ---@param level integer? Log level
 ---- 0 No log messages
 ---- 1 Warning messages
 ---@param log_path string? Log path
-function M.generate(paths, output, level, log_path)
-    validate_params(paths, output, level, log_path)
-    for i, path in ipairs(paths) do
-        paths[i] = fs.normalize(vim.call("fnamemodify", path, ":p"))
+function M.generate(sources, output, level, log_path)
+    validate_params(sources, output, level, log_path)
+
+    for _, source in ipairs(sources) do
+        source[1] = fs.normalize(vim.call("fnamemodify", source[1], ":p"))
     end
 
     local debug_path = get_debug_path()
-    if not (log_path and string.find(log_path, "[^%s]") ~= nil) then
-        log_path = fs.joinpath(debug_path, DEFAULT_LOG_FILE)
-    end
+    create_logger(level, debug_path, log_path)
 
-    create_logger(level, log_path)
+    local file_inputs = list_filter_map_to(sources, function(source)
+        return source[2] == nil and source[1] or nil
+    end)
 
-    local ok, timed_out, results = file_ops.fs_read_list(paths)
+    local ok, timed_out, results = file_ops.fs_read_list(file_inputs)
     if not (ok and results) then
         if timed_out then
             error("Time out while reading file data")
@@ -115,13 +119,38 @@ function M.generate(paths, output, level, log_path)
         end
     end
 
-    local prefix, header_tags = file_ops.header_tags_from_paths(paths)
+    -- TODO: It feels like there has to be some kind of functional list op for getting the
+    -- common prefix from a group of sub-lists. So you'd get that first, then use that to
+    -- get the header tags. I also want to be plugging everything into the sources list rather
+    -- than another intermediate table.
+    --
+    -- - For sanity purposes, map sources to the split filenames
+    -- - Create a generalized common prefix idx function that can be used on the split
+    --   filepaths.
+    -- - For re-combining, the end of the common prefix is used so we have a common header. So
+    --   you want to map the parts starting there. We also want to add a basic intersperse function
+    --   to add the dashes between most of the name components. We still want the dot both
+    --   because it mirrors Lua requires and it helps to guard against duplicates where you have
+    --   a folder containing init.lua with a file in the same directory. After doing the
+    --   intersperse in place, then do another round where you add the dot unless it's init.lua,
+    --   in which case you lop it off. Also make sure to do fnamemodify :r. I'm unsure if the
+    --   table_new thing stays or is even necessary, since we should be able to map the split
+    --   parts in place. Like, do a splice first, then intersperse. So you aren't allocating
+    --   new RAM. And then finally you would map_two in place on top of the original sources.
+    -- - Also, take the code out of file_ops, since it doesn't actually interact with the
+    --   file system.
+    local prefix, header_tags = file_ops.header_tags_from_paths(sources)
     _G.Nvim_Tools_Docgen_Help_Prefix = prefix
-    local parsed_sources = {} --- @type docgen.ParsedSource[]
-    for i, path in vim.spairs(paths) do
-        local parsed = parsed_from_str(results[path][2], header_tags[i])
-        parsed_sources[#parsed_sources + 1] = parsed
-    end
+    list_filter_map_accum(sources, header_tags, function(acc_tags, source, idx)
+        source[2] = source[2] or results[source[1]][2]
+        source[3] = acc_tags[idx]
+        return acc_tags, source
+    end)
+
+    --- @type docgen.ParsedSource[]
+    local parsed_sources = list_filter_map_to(sources, function(source)
+        return parsed_from_str(source[2], source[3])
+    end)
 
     resolve_holistic(parsed_sources, header_tags)
     if #parsed_sources == 0 then
