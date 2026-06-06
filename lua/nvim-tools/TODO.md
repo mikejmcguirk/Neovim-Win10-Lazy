@@ -7,6 +7,8 @@
 - [ ] I currently can actually name this nvim-tools, but check the big plugin collection repo before uploading
 - [ ] Needs to include default .luarc.json and stylua.toml
 
+- [ ] For testing, the test dir needs to include some folder structures + files that are checked for a specific arrangement so that fs functions can be tested without using mocks.
+
 #### DOCUMENT:
 
 - [ ] Commenting guidelines:

@@ -1,13 +1,12 @@
-local fs = vim.fs
 local uv = vim.uv
 
 local file_ops = require("docgen.file_ops")
-local fs_write_checked = file_ops.fs_write_checked
-local open_path_validated = file_ops.open_path_validated
+local path_for_open_setup_checked = file_ops.path_for_open_setup_checked
 
 local DEFAULT_LOG_FILE = "nvim-tools_docgen.log"
 local level = 0 ---@type 0|1
 local handle = nil
+local log_path_res = nil
 
 local M = {}
 
@@ -32,9 +31,10 @@ local function log(priority, msg)
     log_line[#log_line + 1] = msg
     log_line[#log_line + 1] = "\n"
 
-    local _, err = fs_write_checked(handle, table.concat(log_line))
-    if err then
-        error(err)
+    local bytes, w_err, w_err_name = uv.fs_write(handle, table.concat(log_line))
+    if not bytes then
+        local fmt_str = "On write - %s (%s): %s"
+        error(string.format(fmt_str, w_err_name, log_path_res, w_err))
     end
 
     print(table.concat(log_line, "", 4, 5))
@@ -65,13 +65,18 @@ function M.create_logger(level_in, debug_path, log_path)
         return
     end
 
-    if not (log_path and string.find(log_path, "[^%s]") ~= nil) then
-        log_path = fs.joinpath(debug_path, DEFAULT_LOG_FILE)
+    local ok, path_res, stat, err, err_name =
+        path_for_open_setup_checked(debug_path, DEFAULT_LOG_FILE, log_path)
+    if not ok then
+        local fmt_str = "%s (%s): %s.\nStat: %s"
+        error(string.format(fmt_str, err_name, path_res, err, vim.inspect(stat)))
     end
 
-    local fd, err = open_path_validated(log_path, "a", 438, DEFAULT_LOG_FILE)
+    -- TODO: What is 438 again?
+    local fd, o_err, o_err_name = uv.fs_open(path_res, "a", 438)
     if not fd then
-        error(err)
+        local fmt_str = "On open - %s (%s): %s. \nStat: %s"
+        error(string.format(fmt_str, o_err_name, path_res, o_err, vim.inspect(stat)))
     end
 
     handle = fd

@@ -1,9 +1,9 @@
 -- Forked version of the Neovim core docgen.
 
-local fs = vim.fs
+-- local fs = vim.fs
 
-local logger = require("docgen.logger")
-local log = logger.log
+-- local logger = require("docgen.logger")
+-- local log = logger.log
 
 local md_vimdoc = require("docgen.md_vimdoc")
 local md_to_vimdoc = md_vimdoc.luacats_md_to_vimdoc
@@ -11,8 +11,9 @@ local md_to_vimdoc = md_vimdoc.luacats_md_to_vimdoc
 local util = require("docgen.util")
 local list_copy = util.list_copy
 local list_fold = util.list_fold
-local list_transduce = util.list_transduce
+-- local list_transduce = util.list_transduce
 local list_filter_map = util.list_filter_map
+local list_filter_map_to = util.list_filter_map_to
 local lpad = util.str_lpad
 local rpad = util.str_rpad
 local str_surround = util.str_surround
@@ -447,37 +448,31 @@ end
 
 local M = {}
 
----@param parsed_sources docgen.ParsedSource[]
-function M.render_docs(parsed_sources)
-    ---@type string[]
-    local sections = list_filter_map(list_copy(parsed_sources), function(source)
-        local source_name = source[1]
-        log("    Rendering source:" .. source_name)
+---@param name string
+---@param divider "="|"-"|"~"
+---@param tags_addtl? string[]
+---@return string
+function M.get_header(name, divider, tags_addtl)
+    return header_create(name, #name, tags_addtl or {}, divider)
+end
 
-        -- TODO: Not relevant if the source is not a filename
-        local basename = fs.basename(source_name)
-        local header = header_create(basename, 0, { basename }, "=")
-        local rendered = list_transduce(source[2], header, function(_, obj)
-            if obj.kind == "fun" then
-                return "", render_fun(obj)
-            elseif obj.kind == "class" then
-                return "", class_render(obj)
-            elseif obj.kind == "brief" then
-                return "", render_brief(obj)
-            elseif obj.kind == "mod" then
-                return "", render_mod(obj)
-            end
-        end, function(acc_header)
-            return 0, acc_header
-        end)
-
-        return table.concat(rendered, "\n\n")
+---@param parsed_source docgen.ParserObj[]
+function M.render_objs(parsed_source)
+    local sections = list_filter_map_to(parsed_source, function(obj)
+        if obj.kind == "fun" then
+            return render_fun(obj)
+        elseif obj.kind == "class" then
+            return class_render(obj)
+        elseif obj.kind == "brief" then
+            return render_brief(obj)
+        elseif obj.kind == "mod" then
+            return render_mod(obj)
+        end
     end)
 
-    -- The trailing newline is required by the vimdoc spec.
-    local ml = string.format("\n vim:tw=78:ts=8:sw=%d:sts=%d:et:ft=help:norl:\n", INDENT, INDENT)
-    sections[#sections + 1] = ml
     return table.concat(sections, "\n\n")
+    -- -- The trailing newline is required by the vimdoc spec.
+    -- local ml = string.format("\n vim:tw=78:ts=8:sw=%d:sts=%d:et:ft=help:norl:\n", INDENT, INDENT)
 end
 
 return M

@@ -7,6 +7,9 @@ end
 local fs = vim.fs
 local uv = vim.uv
 
+local const = require("docgen.const")
+local INDENT = const.INDENT
+
 local holistic = require("docgen.holistic")
 local resolve_holistic = holistic.parsed_sources_resolve_holistic
 
@@ -19,64 +22,337 @@ local luacats_parser = require("docgen.luacats_parser")
 local parsed_from_str = luacats_parser.parsed_from_str
 
 local file_ops = require("docgen.file_ops")
-local fs_write_checked = file_ops.fs_write_checked
 local get_debug_path = file_ops.get_debug_path
-local open_path_validated = file_ops.open_path_validated
+local path_for_open_setup_checked = file_ops.path_for_open_setup_checked
 
-local renderer = require("docgen.renderer")
-local render_docs = renderer.render_docs
+local renderer = require("docgen.obj_renderer")
+local get_header = renderer.get_header
+local render_objs = renderer.render_objs
 
 local util = require("docgen.util")
-local list_common_prefix = util.list_common_prefix
-local list_filter_map_accum = util.list_filter_map_accum
+local get_requirable_path = util.get_requirable_path
+local list_chain = util.list_chain
+-- local list_fold = util.list_fold
 local list_filter_map_to = util.list_filter_map_to
 local list_intersperse = util.list_intersperse
+-- local list_map_to_table = util.list_map_to_table
 local list_splice = util.list_splice
+local table_common_prefix = util.table_common_prefix
+local list_filter_map = util.list_filter_map
+local list_filter_map_two = util.list_filter_map_two
+local table_filter_map_to = util.table_filter_map_to
 local table_new = util.table_new
 
----@brief Full-featured Vimdoc generator for LuaCATs annotations. Simply run it with a list of
----files to get properly tagged and formatted docs.
----
----Supports the following features:
----  - Help tags are automatically generated based on the directory structure of the target files
----  - `@tag` annotations for defining additional helptags
----  - `@inlinedoc` and `@nodoc` to control display
----  - Automatic table of contents generation
----  - Descriptive text is parsed as markdown and automatically formatted, including line
----    wrapping
----  - `@deprecated` tags allow for a one-line description
----  - Optional output logging
----  - Async file read
----
----Requirements: ~
----
----Neovim built with LuaJIT. Supported versions:
----- Nightly
----- Current (`0.12`) and previous release (`0.11`)
----
----Installation: ~
----
----Clone the repo.
----
----CI Usage: ~
----
----Attribution: ~
----
----This is a fork of the Neovim core's doc generator. Accordingly, this project is also released
----under an Apache 2.0 license, with notices in the files containing modified core code.
+---@param default_fname string
+---@param debug_path string
+---@param output_path string?
+---@param docs string
+local function write_all(default_fname, debug_path, output_path, docs)
+    local ok, output_res, stat, err, err_name =
+        path_for_open_setup_checked(debug_path, default_fname, output_path)
+    if not ok then
+        local fmt_str = "%s (%s): %s.\nStat: %s"
+        error(string.format(fmt_str, err_name, output_res, err, vim.inspect(stat)))
+    end
 
------------------------------
--- MARK: Param Bookkeeping --
------------------------------
+    -- TODO: What is 438 again?
+    local fd, o_err, o_err_name = uv.fs_open(output_res, "w", 438)
+    if not fd then
+        local fmt_str = "On open - %s (%s): %s. \nStat: %s"
+        error(string.format(fmt_str, o_err_name, output_res, o_err, vim.inspect(stat)))
+    end
 
----@param sources [string,string?][]
+    local bytes, w_err, w_err_name = uv.fs_write(fd, docs)
+    if not bytes then
+        local fmt_str = "On write - %s (%s): %s. \nStat: %s"
+        error(string.format(fmt_str, w_err_name, output_res, w_err, vim.inspect(stat)))
+    end
+
+    uv.fs_close(fd)
+end
+
+----------------------
+-- MARK: Gen Plugin --
+----------------------
+
+---@param prefix string
+---@param debug_path string
+---@param output_path string?
+---@param docs string
+local function write_plugin(prefix, debug_path, output_path, docs)
+    log("Writing plugin.lua")
+    local default_output_fname = prefix .. ".lua"
+    write_all(default_output_fname, debug_path, output_path, docs)
+end
+
+---@alias docgen.PluginPartFn fun(source:docgen.gen.input.Plugin, prefix:string): docgen.gen.VimdocPart
+
+---@type table<string, docgen.PluginPartFn>
+local plugin_part_fns = {
+    ["default_map"] = function(source, prefix)
+        local header =
+            "---------------------------\n-- MARK: Default Keymaps --\n ---------------------------"
+        if source.text then
+            return { header = header, txt = source.text }
+        end
+
+        local req_path = get_requirable_path(source.path)
+        local maps = require(req_path)
+        local lua = require("docgen.gen_keymaps").gen_default_maps_lua(maps, prefix)
+        return { header = header, txt = lua }
+    end,
+    ["plug_map"] = function(source, prefix)
+        local header = "---------------------\n-- MARK: Plug Maps --\n---------------------"
+        if source.text then
+            return { header = header, txt = source.text }
+        end
+
+        local req_path = get_requirable_path(source.path)
+        local maps = require(req_path)
+        local lua = require("docgen.gen_keymaps").gen_plug_maps_lua(maps, prefix)
+        return { header = header, txt = lua }
+    end,
+    ["_default"] = function(source, _)
+        return { txt = source.text or "" }
+    end,
+}
+
+---@param source docgen.gen.input.Plugin
+---@param prefix string
+---@param plugin_parts string[]
+local function plugin_part_append(source, prefix, imported, plugin_parts)
+    local plugin_part_tbl = {}
+
+    local plugin_part_fn = plugin_part_fns[source.type] or plugin_part_fns["_default"]
+    local plugin_part = plugin_part_fn(source, prefix)
+    if plugin_part.header then
+        plugin_part_tbl[#plugin_part_tbl + 1] = plugin_part.header
+    end
+
+    if source.cond then
+        plugin_part_tbl[#plugin_part_tbl + 1] = "if " .. source.cond .. " then"
+    end
+
+    if plugin_part.txt then
+        plugin_part_tbl[#plugin_part_tbl + 1] = plugin_part.txt
+    end
+
+    if source.cond then
+        plugin_part_tbl[#plugin_part_tbl + 1] = "end"
+    end
+
+    -- TODO: Why pass the ref to do this here. You should be able to be like
+    -- parts[#parts + 1] = append_fn(whatever)
+    plugin_parts[#plugin_parts + 1] = table.concat(plugin_part_tbl, "\n")
+end
+-- TODO: plugin part is bad naming because it implies that, like doc parts, they encode data
+-- beyond text.
+
+---@param plugin_sources docgen.gen.input.Plugin[]
+---@param imported table<string, string>
+---@param prefix string
+---@param debug_path string
+---@param opts docgen.gen.Opts
+local function gen_plugin(plugin_sources, imported, prefix, debug_path, opts)
+    local plugin_tbl = {} ---@type string[]
+    plugin_tbl[#plugin_tbl + 1] = "-- stylua: ignore start"
+    for _, source in ipairs(plugin_sources) do
+        plugin_part_append(source, prefix, imported, plugin_tbl)
+    end
+
+    plugin_tbl[#plugin_tbl + 1] = "-- stylua: ignore end"
+    local docs = table.concat(plugin_tbl, "\n\n")
+    write_plugin(prefix, debug_path, opts.plugin_output_path, docs)
+end
+
+----------------------
+-- MARK: Gen README --
+----------------------
+
+---@param debug_path string
+---@param output_path string?
+---@param docs string
+local function write_readme(debug_path, output_path, docs)
+    log("Writing README")
+    local default_output_fname = "README.md"
+    write_all(default_output_fname, debug_path, output_path, docs)
+end
+
+---@alias docgen.ReadmePartFn fun(source:docgen.gen.input.Readme, prefix:string): docgen.gen.VimdocPart
+
+---@type table<string, docgen.ReadmePartFn>
+local readme_part_fns = {
+    ["keymap"] = function(source, _)
+        local header = "## Keymaps"
+        if source.text then
+            return { header = header, txt = source.text }
+        end
+
+        local req_path = get_requirable_path(source.path)
+        local maps = require(req_path)
+        local md = require("docgen.gen_keymaps").gen_keymap_md(maps)
+        return { header = header, txt = md }
+    end,
+    ["_default"] = function(source, _)
+        return { txt = source.text or "" }
+    end,
+}
+
+---@param source docgen.gen.input.Readme
+---@param prefix string
+---@param readme_parts string[]
+local function readme_part_append(source, prefix, imported, readme_parts)
+    local part_tbl = {}
+
+    local readme_part_fn = readme_part_fns[source.type] or readme_part_fns["_default"]
+    local readme_part = readme_part_fn(source, prefix)
+    if readme_part.header then
+        part_tbl[#part_tbl + 1] = readme_part.header
+    end
+
+    if readme_part.txt then
+        part_tbl[#part_tbl + 1] = readme_part.txt
+    end
+
+    readme_parts[#readme_parts + 1] = table.concat(part_tbl, "\n")
+end
+-- TODO: readme part is bad naming because it implies that, like doc parts, they encode data
+-- beyond text.
+
+---@param readme_sources docgen.gen.input.Readme[]
+---@param imported table<string, string>
+---@param prefix string
+---@param debug_path string
+---@param opts docgen.gen.Opts
+local function gen_readme(readme_sources, imported, prefix, debug_path, opts)
+    local readme_tbl = {} ---@type string[]
+    for _, source in ipairs(readme_sources) do
+        readme_part_append(source, prefix, imported, readme_tbl)
+    end
+
+    local docs = table.concat(readme_tbl, "\n\n")
+    write_readme(debug_path, opts.readme_output_path, docs)
+end
+
+---@param help_prefix string
+---@param debug_path string
+---@param output_path string?
+---@param docs string
+local function write_vimdoc(help_prefix, debug_path, output_path, docs)
+    log("Writing Vimdoc")
+    local default_output_fname = help_prefix .. ".txt"
+    write_all(default_output_fname, debug_path, output_path, docs)
+end
+
+----------------------
+-- MARK: Gen Vimdoc --
+----------------------
+
+---@alias docgen.DocPartFn fun(source:docgen.gen.source.Vimdoc, prefix:string, header_tags:string[], imported:table<string, string>): doc_part:docgen.gen.VimdocPart
+
+---@type table<string, docgen.DocPartFn>
+local doc_part_fns = {
+    ["luacats"] = function(source, prefix, imported)
+        local header = get_header(source.name, "=", { source.header_tag })
+        local objs = parsed_from_str(imported[source.path], prefix, source.header_tag)
+        return { header = header, objs = objs }
+    end,
+    ["keymap"] = function(source, prefix, _)
+        local header = get_header(source.name, "=", { source.header_tag })
+        local req_path = get_requirable_path(source.path)
+        local maps = require(req_path)
+        local vimdoc = require("docgen.gen_keymaps").gen_keymap_vimdoc(maps, prefix)
+        return { header = header, txt = vimdoc }
+    end,
+}
+
+---@param source docgen.gen.source.Vimdoc
+---@param doc_parts docgen.gen.VimdocPart[]
+---@param objs_list docgen.ParserObj[]
+local function doc_part_append(source, prefix, header_tags, imported, doc_parts, objs_list)
+    local doc_part_fn = doc_part_fns[source.type]
+    if doc_part_fn then
+        local doc_part = doc_part_fn(source, prefix, header_tags, imported)
+        doc_parts[#doc_parts + 1] = doc_part
+        if doc_part.objs then
+            objs_list[#objs_list + 1] = doc_part.objs
+        end
+    end
+end
+
+-- TODO: Gotta break out VimdocPart because readme and plug don't need to save header tags
+
+---@nodoc
+---@class (exact) docgen.gen.VimdocPart
+---@field header? string
+---@field header_tag? string
+---@field objs? docgen.ParserObj
+---@field txt? string
+
+---@param vimdoc_sources docgen.gen.source.Vimdoc[]
+---@param imported table<string, string>
+---@param prefix string
+---@param debug_path string
+---@param opts docgen.gen.Opts
+local function gen_vimdoc(vimdoc_sources, imported, prefix, debug_path, opts)
+    local objs_list = {} ---@type docgen.ParserObj[]
+    local doc_parts = {} ---@type docgen.gen.VimdocPart[]
+    for _, source in ipairs(vimdoc_sources) do
+        doc_part_append(source, prefix, header_tags, imported, doc_parts, objs_list)
+    end
+
+    resolve_holistic(objs_list, header_tags)
+    -- collect header tags for toc
+    -- make toc
+    -- add intro
+
+    list_filter_map(doc_parts, function(part)
+        return ((not part.objs) or #part.objs > 0) and part or nil
+    end)
+
+    local docs_tbl = {} ---@type string[]
+    local ordered_header_tags = list_filter_map_to(doc_parts, function(part)
+        -- TODO: This feels comically inefficient
+        return part.header_tag
+    end)
+
+    docs_tbl[#docs_tbl + 1] = "*" .. prefix .. ".txt*"
+
+    list_filter_map(ordered_header_tags, function(tag)
+        return "|" .. tag .. "|"
+    end)
+
+    docs_tbl[#docs_tbl + 1] = table.concat(ordered_header_tags, "\n")
+    -- local vimdoc_intro_path
+
+    for _, part in ipairs(doc_parts) do
+        if part.header then
+            docs_tbl[#docs_tbl + 1] = part.header
+        end
+
+        if part.txt then
+            docs_tbl[#docs_tbl + 1] = part.txt
+        end
+
+        if part.objs then
+            local rendered = render_objs(part.objs)
+            docs_tbl[#docs_tbl + 1] = rendered
+        end
+    end
+
+    local ml = string.format("\n vim:tw=78:ts=8:sw=%d:sts=%d:et:ft=help:norl:\n", INDENT, INDENT)
+    docs_tbl[#docs_tbl + 1] = ml
+    local docs = table.concat(docs_tbl, "\n\n")
+    write_vimdoc(prefix, debug_path, opts.vimdoc_output_path, docs)
+end
+
+---@param sources docgen.gen.source.Vimdoc[] Modified in place!
 ---@return string help_prefix
----@return string[] header_tags Same order as the input.
-local function header_tags_from_paths(sources)
+local function doc_sources_add_names_headers(sources)
     local split_paths = list_filter_map_to(sources, function(source)
         local segments = table_new(4, 0) ---@type string[]
         segments[#segments + 1] = "/" -- Reduce contrivance upstream
-        for segment in vim.gsplit(source[1], "/", { plain = true }) do
+        for segment in vim.gsplit(source.path, "/", { plain = true }) do
             if segment ~= "" then
                 segments[#segments + 1] = segment
             end
@@ -85,8 +361,8 @@ local function header_tags_from_paths(sources)
         return segments
     end)
 
-    local prefix_idx = list_common_prefix(split_paths) or 1
-    for _, path in ipairs(split_paths) do
+    local prefix_idx = table_common_prefix(split_paths) or 1
+    for _, path in pairs(split_paths) do
         list_splice(path, prefix_idx)
     end
 
@@ -106,25 +382,42 @@ local function header_tags_from_paths(sources)
         end
     end
 
-    local header_tags = list_filter_map_to(split_paths, function(path)
-        local path_str = string.gsub(table.concat(path), "[ \t]", "__")
-        return path_str
+    list_filter_map_two(sources, split_paths, function(source, path)
+        source.name = path[#path]
+        local tag_str, _ = string.gsub(table.concat(path), "[ \t]", "__")
+        source.header_tag = tag_str
+        return source
     end)
 
-    return prefix, header_tags
+    return prefix
 end
 
----@param sources [string,string?][] Modified in place!
-local function add_contents_to_sources(sources)
-    local file_inputs = list_filter_map_to(sources, function(source)
-        return source[2] == nil and source[1] or nil
+---@param plugin_sources docgen.gen.input.Plugin[]
+---@param readme_sources docgen.gen.input.Readme[]
+---@param vimdoc_sources docgen.gen.source.Vimdoc[][]
+---@param opts docgen.gen.Opts
+---@return table<string, string>
+local function import_source_text(plugin_sources, readme_sources, vimdoc_sources, opts)
+    local vimdoc_inputs = list_filter_map_to(vimdoc_sources, function(source)
+        return (source.type == "luacats" and source.text == nil) and source.path or nil
     end)
 
-    if #file_inputs == 0 then
-        return
-    end
+    local readme_inputs = list_filter_map_to(readme_sources, function(source)
+        -- TODO: I have no idea if this name works
+        return (source.type == "paragraph" and source.text == nil) and source.path or nil
+    end)
 
-    local ok, timed_out, results = file_ops.fs_read_list(file_inputs)
+    local plugin_inputs = list_filter_map_to(plugin_sources, function(source)
+        -- TODO: I have no idea if this name works
+        return (source.type == "paragraph" and source.text == nil) and source.path or nil
+    end)
+
+    -- TODO: This also need to be made absolute
+    local other_inputs = { opts.vimdoc_intro_path }
+    local inputs = list_chain(vimdoc_inputs, readme_inputs, plugin_inputs, other_inputs)
+    vim.list.unique(inputs)
+
+    local ok, timed_out, results = file_ops.fs_read_list(inputs)
     if not (ok and results) then
         if timed_out then
             error("Time out while reading file data")
@@ -133,104 +426,105 @@ local function add_contents_to_sources(sources)
         end
     end
 
-    list_filter_map_accum(sources, results, function(acc_results, source)
-        source[2] = source[2] or acc_results[source[1]][2]
-        return acc_results, source
-    end)
-end
-
----@param inputs string[]
----@param output string?
----@param level integer?
----@param log_path string?
-local function generate_params_validate(inputs, output, level, log_path)
-    -- TODO: Also validate elements
-    if type(inputs) ~= "table" or #inputs == 0 then
-        print("No source files provided")
-        os.exit(1) -- TODO: Is this right? I feel like there was some Nvim core issue about this.
+    local res_only = {}
+    for path, res in pairs(results) do
+        res_only[path] = res[2]
     end
 
-    vim.validate("output", output, "string", true)
-    vim.validate("log_path", log_path, "string", true)
-    vim.validate("level", level, function()
-        return level % 1 == 0 and 0 <= level and level <= 1
-    end, true)
+    return res_only
 end
+
+---@param vimdoc_sources docgen.gen.source.Vimdoc[][]
+---@param readme_sources docgen.gen.input.Readme[]
+---@param plugin_sources docgen.gen.input.Plugin[]
+---@param opts docgen.gen.Opts
+local function abs_paths_set(plugin_sources, readme_sources, vimdoc_sources, opts)
+    for _, source in pairs(plugin_sources) do
+        source.path = fs.normalize(vim.call("fnamemodify", source.path, ":p"))
+    end
+
+    for _, source in pairs(readme_sources) do
+        source.path = fs.normalize(vim.call("fnamemodify", source.path, ":p"))
+    end
+
+    for _, source in pairs(vimdoc_sources) do
+        source.path = fs.normalize(vim.call("fnamemodify", source.path, ":p"))
+    end
+
+    if opts.vimdoc_intro_path then
+        opts.vimdoc_intro_path =
+            fs.normalize(vim.call("fnamemodify", opts.vimdoc_intro_path, ":p"))
+    end
+end
+
+---@alias docgen.gen.input.plugin.Type "default_map"|"luacats"|"plug_map"
+
+---@alias docgen.gen.input.readme.Type "keymap"
+
+---@alias docgen.gen.input.vimdoc.Type "keymap"|"luacats"
+
+---@inlinedoc
+---@class docgen.gen.input.Plugin
+---@field cond? string
+---@field path string
+---@field text? string
+---@field type docgen.gen.input.plugin.Type
+
+---@inlinedoc
+---@class docgen.gen.input.Readme
+---@field path string
+---@field text? string
+---@field type docgen.gen.input.readme.Type
+
+---@inlinedoc
+---@class docgen.gen.source.Vimdoc
+---@field header_tag? string
+---@field name? string
+---@field path string
+---@field text? string
+---@field type docgen.gen.input.vimdoc.Type
+
+---@inlinedoc
+---@class docgen.gen.Opts
+---@field log_level? 0|1
+---@field log_path? string
+---@field plugin_output_path? string
+---@field readme_output_path? string
+---@field vimdoc_intro_path? string
+---@field vimdoc_output_path? string
+
+--- TODO: docgen.gen.VimdocPart is currently used for vimdoc and Readme. Either specificize or
+--- further abstract.
 
 local M = {}
 
--- TODO: The bullets under level don't indent
--- TODO: If the bullets under level are manually indented, they don't bullet format.
-
 ---Main generator function
----@param sources [string,string?][] Input filepaths. The second part of the tuple can contain a
----string to parse, skipping file reading.
----@param output string? Output file
----@param level integer? Log level
----- 0 No log messages
----- 1 Warning messages
----@param log_path string? Log path
-function M.generate(sources, output, level, log_path)
-    generate_params_validate(sources, output, level, log_path)
-
-    for _, source in ipairs(sources) do
-        source[1] = fs.normalize(vim.call("fnamemodify", source[1], ":p"))
-    end
+---@param vimdoc_sources? docgen.gen.source.Vimdoc[][]
+---@param readme_sources? docgen.gen.input.Readme[]
+---@param plugin_sources? docgen.gen.input.Plugin[]
+---@param opts? docgen.gen.Opts
+function M.gen_all(vimdoc_sources, readme_sources, plugin_sources, opts)
+    opts = opts or {}
+    -- TODO: validate inputs
 
     local debug_path = get_debug_path()
-    create_logger(level, debug_path, log_path)
+    create_logger(opts.log_level, debug_path, opts.log_path)
 
-    add_contents_to_sources(sources)
-    local prefix, header_tags = header_tags_from_paths(sources)
-    _G.Nvim_Tools_Docgen_Help_Prefix = prefix
-    list_filter_map_accum(sources, header_tags, function(acc_tags, source, idx)
-        source[3] = acc_tags[idx]
-        return acc_tags, source
-    end)
+    vimdoc_sources = vimdoc_sources or {}
+    readme_sources = readme_sources or {}
+    plugin_sources = plugin_sources or {}
+    abs_paths_set(plugin_sources, readme_sources, vimdoc_sources, opts)
 
-    --- @type docgen.ParsedSource[]
-    local parsed_sources = list_filter_map_to(sources, function(source)
-        return parsed_from_str(source[2], source[3])
-    end)
+    local imported = import_source_text(plugin_sources, readme_sources, vimdoc_sources, opts)
+    local prefix = doc_sources_add_names_headers(vimdoc_sources)
 
-    resolve_holistic(parsed_sources, header_tags)
-    if #parsed_sources == 0 then
-        -- TODO: Improve
-        log("No parsed data to render")
-        close_logger()
-        return
-    end
+    gen_vimdoc(vimdoc_sources, imported, prefix, debug_path, opts)
+    gen_readme(readme_sources, imported, prefix, debug_path, opts)
+    gen_plugin(plugin_sources, imported, prefix, debug_path, opts)
 
-    local docs = render_docs(parsed_sources)
-    log("Writing output")
-    local default_output_fname = Nvim_Tools_Docgen_Help_Prefix .. ".txt"
-    if not (output and string.find(output, "[^%s]") ~= nil) then
-        output = fs.joinpath(debug_path, default_output_fname)
-    end
-
-    -- TODO: There should be two calls here, the first is "get_uv_validated_path" and the other
-    -- is "uv_write_checked" or something.
-    -- Like, below, just as a read, it doesn't make sense that we resolved output above but
-    -- we're then also feeding the default as a backup to the open path.
-    -- TODO: Also, I'm not sure if the output path should be eagerly validated, but the
-    -- string data at least needs to be resolved. Maybe that involves eagerly checking if the
-    -- provided path is a directory so that we know if we need to run joinpath.
-
-    local fd, err = open_path_validated(output, "w", 438, default_output_fname)
-    if not fd then
-        error("On output path open: " .. tostring(err))
-    end
-
-    local _, write_err = fs_write_checked(fd, docs)
-    if write_err then
-        error(err)
-    end
-
-    uv.fs_close(fd)
     close_logger()
 end
--- NON: Leave the help prefix as a global.
--- - It does not change throughout program execution
--- - Passing it through the callstack is cumbersome
+-- TODO: There's no fallback or defense in depth here for what happens if certain things drop
+-- out or go missing during the process.
 
 return M

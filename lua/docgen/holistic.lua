@@ -220,7 +220,7 @@ local function inlinedoc_inject(obj, classes)
 end
 
 ---@param header_tags string[]
----@param parsed_sources docgen.ParsedSource
+---@param parsed_sources [integer, docgen.ParserObj[]] Modified in place
 local function tags_prepare_and_check(header_tags, parsed_sources)
     local seen = {} ---@type table<string, boolean>
     for _, tag in ipairs(header_tags) do
@@ -256,17 +256,17 @@ end
 -- TODO: More detailed error reporting. Maybe/probably not file info, but more info about the
 -- objects producing the duplicates.
 
----@param parsed_sources docgen.ParsedSource[]
+---@param obj_lists docgen.ParserObj[] Modified in place
 ---@return table<string, docgen.ParserObj> classes
 ---@return integer classes_count
 ---@return table<string, docgen.ParserObj> funs
-local function create_maps(parsed_sources)
+local function create_maps(obj_lists)
     local classes = {} ---@type table<string, docgen.ParserObj>
     local classes_count = 0
     local funs = {} ---@type table<string, docgen.ParserObj>
 
-    for _, source in ipairs(parsed_sources) do
-        for _, obj in ipairs(source[2]) do
+    for _, list in ipairs(obj_lists) do
+        for _, obj in ipairs(list) do
             local kind = obj.kind
             if kind == "fun" then
                 -- Use the unique tag because function namevars do not have to be globally unique.
@@ -274,7 +274,7 @@ local function create_maps(parsed_sources)
                 if not funs[tag] then
                     funs[tag] = obj
                 else
-                    error("Duplicate fun " .. tag .. " from source " .. source[1])
+                    error("Duplicate fun " .. tag .. " from source " .. list[1])
                 end
                 funs[obj.tag] = obj
             elseif kind == "class" then
@@ -284,7 +284,7 @@ local function create_maps(parsed_sources)
                     classes[name] = obj
                     classes_count = classes_count + 1
                 else
-                    error("Duplicate class " .. name .. " from source " .. source[1])
+                    error("Duplicate class " .. name .. " from source " .. list[1])
                 end
             end
         end
@@ -332,13 +332,12 @@ local function class_funs_resolve_links(classes, classvar_map, funs)
     end
 end
 
----@param parsed_sources docgen.ParsedSource[] Edited in place
+---@param obj_lists docgen.ParserObj[] Modified in place
 ---@param classes table<string, docgen.ParserObj> Edited in place
 ---@param funs table<string, docgen.ParserObj> Edited in place
-local function parsed_sources_filter_invalid(parsed_sources, classes, funs)
-    for _, source in ipairs(parsed_sources) do
-        local obj_list = source[2]
-        list_filter(obj_list, function(obj)
+local function parsed_sources_filter_invalid(obj_lists, classes, funs)
+    for _, list in ipairs(obj_lists) do
+        list_filter(list, function(obj)
             local kind = obj.kind
             if kind == "fun" then
                 if obj.class == nil then
@@ -356,42 +355,40 @@ local function parsed_sources_filter_invalid(parsed_sources, classes, funs)
         end)
     end
 
-    list_filter(parsed_sources, function(source)
+    list_filter(obj_lists, function(source)
         return #source[2] > 0
     end)
 end
 
----@param parsed_sources docgen.ParsedSource[] Edited in place
-local function parsed_sources_filter_inlinedoc(parsed_sources)
-    for _, source in ipairs(parsed_sources) do
-        local obj_list = source[2]
-        list_filter(obj_list, function(obj)
+---@param obj_lists docgen.ParserObj[] Modified in place
+local function parsed_sources_filter_inlinedoc(obj_lists)
+    for _, list in ipairs(obj_lists) do
+        list_filter(list, function(obj)
             return not (obj.kind == "class" and obj.doc_flag == "inlinedoc")
         end)
     end
 
-    list_filter(parsed_sources, function(source)
+    list_filter(obj_lists, function(source)
         return #source[2] > 0
     end)
 end
 -- TODO: This cannot be the way.
 
 ---Assumes that all underlying parser objects are finalized and valid.
----@param parsed_sources docgen.ParsedSource[] Modified in place
-function M.parsed_sources_resolve_holistic(parsed_sources, header_tags)
-    vim.validate("parsed_sources", parsed_sources, function()
-        return type(parsed_sources) == "table" and #parsed_sources > 0
-    end)
+---@param obj_lists docgen.ParserObj[] Modified in place
+---@param header_tags string[]
+function M.parsed_sources_resolve_holistic(obj_lists, header_tags)
+    vim.validate("parsed_sources", obj_lists, "table")
 
-    local classes, classes_count, funs = create_maps(parsed_sources)
+    local classes, classes_count, funs = create_maps(obj_lists)
     if classes_count > 0 and next(funs) then
         local classvar_map = create_classvar_map(classes, classes_count)
         class_funs_resolve_links(classes, classvar_map, funs)
     end
 
     -- Only do this once because it's expensive.
-    parsed_sources_filter_invalid(parsed_sources, classes, funs)
-    tags_prepare_and_check(header_tags, parsed_sources)
+    parsed_sources_filter_invalid(obj_lists, classes, funs)
+    tags_prepare_and_check(header_tags, obj_lists)
 
     if not next(classes) then
         return
@@ -412,7 +409,7 @@ function M.parsed_sources_resolve_holistic(parsed_sources, header_tags)
         inlinedoc_inject(class, classes)
     end
 
-    parsed_sources_filter_inlinedoc(parsed_sources)
+    parsed_sources_filter_inlinedoc(obj_lists)
 end
 -- MAYBE: If specific issues with the incoming file results repeatedly come up, add runtime
 -- checking if inexpensive.

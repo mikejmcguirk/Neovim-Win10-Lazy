@@ -26,6 +26,23 @@ end
 --------------------------
 
 ---@generic T
+---@param t1 T[] Modified in place!
+---@param ... any[]
+---@return any[] The original reference with the additional lists appended.
+function M.list_chain(t1, ...)
+    local nargs = select("#", ...)
+    for i = 1, nargs do
+        local tn = select(i, ...)
+        local tn_len = #tn
+        for j = 1, tn_len do
+            t1[#t1 + 1] = tn[j]
+        end
+    end
+
+    return t1
+end
+
+---@generic T
 ---@param tt T[][]
 ---@return integer?
 function M.list_common_prefix(tt)
@@ -58,6 +75,78 @@ function M.list_common_prefix(tt)
     end
 
     return tt_len_min
+end
+
+---@generic T
+---@param tt T[][]
+---@return integer?
+function M.table_common_prefix(tt)
+    local tt_count = 0
+    local tt_len_min = math.huge
+
+    for _, v in pairs(tt) do
+        tt_count = tt_count + 1
+        local len = #v
+        if len == 0 then
+            return nil
+        end
+
+        if len < tt_len_min then
+            tt_len_min = len
+        end
+    end
+
+    if tt_count == 0 then
+        return nil
+    end
+    if tt_count == 1 then
+        return tt_len_min
+    end
+
+    for col = 1, tt_len_min do
+        local v
+        for _, row in pairs(tt) do
+            local this_v = row[col]
+            if v == nil then
+                v = this_v
+            elseif this_v ~= v then
+                local common_prefix_end = col - 1
+                return common_prefix_end > 0 and common_prefix_end or nil
+            end
+        end
+    end
+
+    return tt_len_min
+end
+
+---@param val integer?
+---@param len integer
+---@param default integer
+---@return integer
+local function resolve_iter_index(val, len, default)
+    val = val and math.min(val, len) or default
+    return val > 0 and val or math.max(len + val, 1)
+end
+
+---@generic T
+---@param t T[] Modified in place!
+---@param v T
+---@param idx? integer See |iter-indexing|
+---     If no index, append to the end like |table.insert()|
+function M.list_insert_at(t, v, idx)
+    local t_len = #t
+    if not idx then
+        t[t_len + 1] = v
+        return
+    end
+
+    local res_idx = resolve_iter_index(idx, t_len, t_len)
+    local stop = res_idx + 1
+    for i = t_len + 1, stop, -1 do
+        t[i] = t[i - 1]
+    end
+
+    t[res_idx] = v
 end
 
 ---@generic T
@@ -107,6 +196,27 @@ function M.list_filter(t, f)
     end
 end
 
+---@generic T
+---@generic U
+---@param t T[]
+---@param f fun(x: T): U[]
+---@return U[]
+function M.list_flat_map_to(t, f)
+    local t_len = #t
+    local res = {}
+    for i = 1, t_len do
+        local v = t[i]
+        local vm = f(v)
+        local vm_len = #vm
+        for j = 1, vm_len do
+            res[#res + 1] = vm[j]
+        end
+    end
+
+    return res
+end
+-- TODO: nvim-tools
+
 ---@param rev boolean?
 ---@param start integer
 ---@param stop integer
@@ -117,15 +227,6 @@ local function resolve_rev(rev, start, stop)
     else
         return start, stop, 1
     end
-end
-
----@param val integer?
----@param len integer
----@param default integer
----@return integer
-local function resolve_iter_index(val, len, default)
-    val = val and math.min(val, len) or default
-    return val > 0 and val or math.max(len + val, 1)
 end
 
 ---@generic T
@@ -261,6 +362,33 @@ function M.list_filter_map_accum(t, init, f)
     end
 
     return t
+end
+-- TODO: Remove if this remains unusd.
+
+---@generic T
+---@generic U
+---@generic V
+---@param t1 T[]
+---@param t2 U[]
+---@param f fun(a:T, b:U, idx:integer): val:V|nil If val is `nil`, it will be filtered.
+---@return V[] Reference to `t1`.
+function M.filter_map_two(t1, t2, f)
+    local t1_len = #t1
+    local len = math.min(t1_len, #t2)
+    local j = 1
+    for i = 1, len do
+        local vm = f(t1[i], t2[i], i)
+        if vm ~= nil then
+            t1[j] = vm
+            j = j + 1
+        end
+    end
+
+    for i = j, t1_len do
+        t1[i] = nil
+    end
+
+    return t1
 end
 
 ---@generic T
@@ -402,6 +530,57 @@ function M.list_transduce(t, init, f, b, z, start, stop, rev)
     return ret
 end
 
+---@generic T
+---@generic U
+---@param t [T, U][]
+---@return T[], U[]
+function M.list_unzip(t)
+    local first = {}
+    local second = {}
+
+    local t_len = #t
+    for i = 1, t_len do
+        first[i] = t[i][1]
+        second[i] = t[i][2]
+    end
+
+    return first, second
+end
+
+---@generic T
+---@generic U
+---@generic V
+---@param t T[]
+---@param f fun(x:T): k:U, v:V
+function M.list_map_to_table(t, f)
+    local res = {}
+    local t_len = #t
+    for i = 1, t_len do
+        local k, v = f(t[i])
+        if k and v then
+            res[k] = v
+        end
+    end
+
+    return res
+end
+
+---@generic T, U, V
+---@param t table<T, U>
+---@param f fun(key:T, val:U): vm:V
+---@return table<T, V>
+function M.table_filter_map_to(t, f)
+    local res = {}
+    for k, v in pairs(t) do
+        local vm = f(k, v)
+        if vm then
+            res[k] = vm
+        end
+    end
+
+    return res
+end
+
 ---@param t table
 ---@param key string
 ---@return table
@@ -423,6 +602,17 @@ M.table_clear = require("table.clear")
 --------------------------
 -- MARK: Text Functions --
 --------------------------
+
+---@param txt string
+---@param prefix string
+---@return string
+function M.tag_from_txt(txt, prefix)
+    local prefixed = M.checked_prepend(prefix, "-", txt, function(left, right)
+        return not vim.startswith(right, left)
+    end)
+
+    return M.checked_surround(prefixed, "*")
+end
 
 ---@param str string
 ---@param left string
@@ -509,7 +699,7 @@ function M.checked_append(left, sep, right, f)
         return left
     end
 end
--- TODO: Must be ouotlineable behavior here
+-- TODO: Must be outlineable behavior here
 -- TODO:DEP: Add this to nvim-tools with checked_prepend. Wait until the docgen is done.
 
 ---@param left string
@@ -533,6 +723,25 @@ function M.checked_prepend(left, sep, right, f)
         return right
     end
 end
+-- TODO: nvim-tools
+
+---@param text string
+---@param surround string
+---@return string
+function M.checked_surround(text, surround)
+    local line = text
+    if not vim.startswith(line, surround) then
+        line = surround .. line
+    end
+
+    if not vim.endswith(text, surround) then
+        line = line .. surround
+    end
+
+    return line
+end
+-- TODO: This cannot be the most efficient way to do this.
+-- TODO: nvim-tools
 
 ---@param str string
 ---@return string, integer
@@ -651,6 +860,8 @@ local function wrap_line(line, first_indent, indent, text_width, reset_arg)
 
     return table.concat(parts)
 end
+-- TODO: I think this function has a problem where if you have a chunk of text that is too
+-- big for the wrap condition, it will just infinitely try to wrap it down without ever giving up.
 -- MID: This should not break up code spans.
 -- No need to rtrim here because the loop only grabs non-whitespace portions.
 
@@ -660,13 +871,15 @@ end
 --- @param indent integer
 --- @param text_width integer
 --- @param reset_indent boolean Remove all leading whitespace before adding new indentation.
+--- @param align_right? boolean Within the indent and text_width boundary, align the text right
 --- @return string wrapped Does not contain a trailing \n
-function M.wrap(text, first_indent, indent, text_width, reset_indent)
+function M.wrap(text, first_indent, indent, text_width, reset_indent, align_right)
     if text == "" or text_width < 1 then
         return ""
     end
 
     local lines = vim.split(text, "\n", { plain = true })
+    local lines_len = #lines
     local reset_arg = (not reset_indent) and 0
         or M.list_fold(lines, math.huge, function(min_ws, line)
             if min_ws == 0 then
@@ -686,18 +899,105 @@ function M.wrap(text, first_indent, indent, text_width, reset_indent)
         return wrap_line(line, first_indent, this_fin_indent, text_width, reset_arg)
     end, 1, 1)
 
-    if #lines > 1 then
+    if lines_len > 1 then
         M.list_filter_map(lines, function(line)
             local this_indent = string.find(line, "^•", 1) and indent + 2 or indent
             return wrap_line(line, indent, this_indent, text_width, reset_arg)
         end, 2, 0)
     end
 
+    if not align_right then
+        return table.concat(lines, "\n")
+    end
+
+    for i = 1, lines_len do
+        local line_len = #lines[i]
+        local lpad = text_width - line_len
+        lines[i] = string.rep(" ", lpad) .. lines[i]
+    end
+
+    M.list_filter_map(lines, function(line)
+        local line_len = #line
+        local lpad = text_width - line_len
+        return string.rep(" ", lpad) .. line
+    end)
+
     return table.concat(lines, "\n")
 end
+-- TODO: The alignment stuff might need value checking
 -- TODO: This needs a way to preserve indent, so bulleted lists in briefs don't extend to
 -- the beginning of the line.
 -- NON: Don't remove the text width variable even though it exists as a constant. Keeps the
 -- function flexible.
+
+-----------------------
+-- MARK: Other Stuff --
+-----------------------
+
+---@param t table<any, true>
+---@param k any
+---@param err string
+function M.err_if_seen_or_add(t, k, err)
+    if t[k] then
+        error(err)
+    else
+        t[k] = true
+    end
+end
+
+---@param map_mode string|nil  One-character mode: '', 'n','v','x','s','o','i','c','t','l','!'
+---@return string[]
+function M.mode_map_to_short(map_mode)
+    if map_mode == nil then
+        map_mode = ""
+    end
+
+    map_mode = tostring(map_mode):lower()
+    if map_mode:match("^%s*$") then
+        map_mode = ""
+    end
+
+    if map_mode == "" then
+        return { "n", "v", "o", "s" }
+    elseif map_mode == "n" then
+        return { "n" }
+    elseif map_mode == "v" then
+        return { "v", "s" }
+    elseif map_mode == "x" then
+        return { "v" }
+    elseif map_mode == "s" then
+        return { "s" }
+    elseif map_mode == "o" then
+        return { "o" }
+    elseif map_mode == "i" then
+        return { "i" }
+    elseif map_mode == "c" then
+        return { "c" }
+    elseif map_mode == "t" then
+        return { "t" }
+    elseif map_mode == "l" then
+        return { "i", "c", "l" }
+    elseif map_mode == "!" then
+        return { "i", "c" }
+    end
+
+    -- TODO: Bad error message.
+    local fmt_str = "map_mode.expand: unknown mode %q (expected 0 or 1 char from map-overview)"
+    error(string.format(fmt_str, map_mode))
+end
+
+---@param abs_path string
+---@return string
+function M.get_requirable_path(abs_path)
+    local dir, name = abs_path:match("^(.*)[/\\]([^/\\]+)%.lua$")
+    if not dir or not name then
+        error("Expected absolute path to a .lua file, got: " .. tostring(abs_path))
+    end
+
+    -- Prepend the directory so require() can find it (priority)
+    package.path = dir .. "/?.lua;" .. package.path
+
+    return name
+end
 
 return M

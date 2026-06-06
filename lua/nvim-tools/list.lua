@@ -1986,12 +1986,8 @@ end
 ---@param f fun(a:T, b:U, idx:integer): val:V|nil
 ---@return V[]
 local function filter_map_two_do(dst, t1, t2, f)
-    local t_len = #t1
-    if t_len == 0 then
-        return dst
-    end
-
-    local len = math.min(#t1, #t2)
+    local t1_len = #t1
+    local len = math.min(t1_len, #t2)
     local j = 1
     for i = 1, len do
         local vm = f(t1[i], t2[i], i)
@@ -2005,9 +2001,13 @@ local function filter_map_two_do(dst, t1, t2, f)
         return dst
     end
 
-    clear_exact(dst, j, t_len)
+    for i = j, t1_len do
+        dst[i] = nil
+    end
+
     return dst
 end
+-- TODO: filter_map_two is a bad name because it doesn't establish t1 as the base table
 
 ---Transform `t1` in place by applying a function to the values of `t1` and `t2`.
 ---If `t1` and `t2` are different lengths, the length of the smaller list is used.

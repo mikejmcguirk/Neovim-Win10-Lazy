@@ -1,11 +1,8 @@
+local fn = vim.fn
 local fs = vim.fs
 local uv = vim.uv
 
 local util = require("docgen.util")
-local list_common_prefix = util.list_common_prefix
-local list_filter_map_to = util.list_filter_map_to
-local list_intersperse = util.list_intersperse
-local list_splice = util.list_splice
 local stop_timer = util.stop_timer
 local table_new = util.table_new
 
@@ -19,99 +16,12 @@ function M.get_debug_path()
         debug_info = debug.getinfo(1, "S")
     end
 
-    local debug_source = debug_info.source:gsub("^@", "")
-    return vim.call("fnamemodify", debug_source, ":p:h")
+    return vim.call("fnamemodify", debug_info.source:gsub("^@", ""), ":p:h")
 end
 
--- TODO: This mark is now inaccurate
 ----------------------
 -- MARK: Read Files --
 ----------------------
-
----@param path string
----@param flags string
----@param mode integer
----@return integer? fd,uv.fs_stat.result? stat, string? msg
-local function try_open_file(path, flags, mode)
-    local d_stat, d_err, d_err_name = uv.fs_stat(path)
-    if (d_stat and d_stat.type ~= "file") or ((not d_stat) and d_err_name ~= "ENOENT") then
-        return nil, d_stat, d_err
-    end
-
-    -- local a_ok, a_err, _ = uv.fs_access(path, "W")
-    -- if not a_ok then
-    --     return nil, d_stat, a_err
-    -- end
-
-    local fd, err, _ = uv.fs_open(path, flags, mode)
-    return fd, d_stat, err
-end
--- TODO: Return both uv msg parts for the caller
-
----@param path string
----@param flags string
----@param mode integer
----@param default_fname string
----@return integer? fd, string? msg
-function M.open_path_validated(path, flags, mode, default_fname)
-    path = fs.normalize(vim.call("fnamemodify", path, ":p"))
-
-    local fd, stat, _ = try_open_file(path, flags, mode)
-    if fd then
-        return fd, nil
-    end
-
-    if stat and stat.type == "directory" then
-        if not (default_fname and string.find(default_fname, "[^%s]") ~= nil) then
-            return nil, "Path " .. path .. " is a directory, but no default filename provided"
-        end
-
-        local default = fs.joinpath(path, default_fname)
-        local default_fd, _, default_msg = try_open_file(default, flags, mode)
-        return default_fd, default_msg
-    end
-
-    local dirpath = fs.dirname(path)
-    -- local a_ok, a_err, a_err_name = uv.fs_access(path, "W")
-    -- if not a_ok then
-    --     return nil, ("fs_access: " .. tostring(a_err_name) .. ": " .. tostring(a_err))
-    -- end
-    -- TODO: WHy are these failing? They work when run manually
-
-    if not (default_fname and string.find(default_fname, "[^%s]") ~= nil) then
-        return nil, "Path " .. dirpath .. " is a directory, but no default filename provided"
-    end
-
-    local default = fs.joinpath(dirpath, default_fname)
-    local default_fd, _, default_msg = try_open_file(default, flags, mode)
-    return default_fd, default_msg
-end
--- TODO: This abstraction mixes the file path and opening handling.
--- There should be an abstration where you give it a path and a backup filename, and it gives you
--- a resolved path. Then a simpler abstraction that just opens. It is okay if each abstraction is
--- slightly clunkier under the hood if each one is more tractable.
--- TODO: Why should the default filename thing even be resolved? I know there's the pratical
--- issue of: The user might provide a dir path and not a filepath. But do we want to allow that?
--- And if we do, then, as alluded to above, that's its own abstraction.
--- TODO: nvim-tools
--- TODO: I don't love the hard coded "W" param. It works for docgen but not as an nvim-tools thing
--- MID: Replace default_fname with an opts table
--- To the opts table, add "mkdir", which makes the directory if it doesn't exist.
-
----@param fd integer
----@param data uv.buffer
----@param offset? integer Offset in bytes (-1 = current position; nil = current position)
----@return integer? bytes_written, string? msg
-function M.fs_write_checked(fd, data, offset)
-    local bytes, err, err_name = uv.fs_write(fd, data, offset)
-    if not bytes then
-        local fmt_str = "fs_write failed\n  code: %s\n  error: %s"
-        local msg = string.format(fmt_str, err_name or "UNKNOWN", err or "unknown error")
-        return nil, msg
-    end
-
-    return bytes, nil
-end
 
 ---@param path string
 ---@param err uv.callback.err
@@ -324,54 +234,53 @@ function M.fs_read_list_get_errs(results)
     return table.concat(errs_tbl, "\n")
 end
 
--------------------------
--- MARK: Get Help Tags --
--------------------------
+-----------------------
+-- MARK: Write Files --
+-----------------------
 
---- @param sources string[] Absolute paths, normalized with forward slashes.
----         Assumes at least one is present.
---- @return string help_prefix
---- @return string[] header_tags Same order as the input.
-function M.header_tags_from_paths(sources)
-    local split_paths = list_filter_map_to(sources, function(source)
-        local segments = table_new(4, 0) ---@type string[]
-        segments[#segments + 1] = "/" -- Reduce contrivance upstream
-        for segment in vim.gsplit(source[1], "/", { plain = true }) do
-            if segment ~= "" then
-                segments[#segments + 1] = segment
-            end
-        end
-
-        return segments
-    end)
-
-    local prefix_idx = list_common_prefix(split_paths) or 1
-    for _, path in ipairs(split_paths) do
-        list_splice(path, prefix_idx)
+---Assumes that incoming paths are absolute or properly relative to the caller.
+---@param dir_default string
+---@param fname_default string
+---@param path? string
+---@return boolean ok, string path, uv.fs_stat.result? stat, string? err, uv.error_name? err_name
+function M.path_for_open_setup_checked(dir_default, fname_default, path)
+    if not (path and string.find(path, "[^%s]") ~= nil) then
+        path = fs.joinpath(dir_default, fname_default)
     end
 
-    local prefix = split_paths[1][1]
-    for _, path in ipairs(split_paths) do
-        list_intersperse(path, "-", 1, 1, #path - 1)
-    end
-
-    for _, path in ipairs(split_paths) do
-        local path_len = #path
-        local fname = path[path_len]
-        if fname ~= "init.lua" then
-            path[path_len] = vim.call("fnamemodify", fname, ":r")
-            list_intersperse(path, ".", 1, path_len - 1, path_len)
+    local stat, err, err_name = uv.fs_stat(path)
+    if stat then
+        if stat.type == "file" then
+            return true, path, stat, err, err_name
+        elseif stat.type == "directory" then
+            return true, fs.joinpath(path, fname_default), stat, err, err_name
         else
-            path[path_len] = nil
+            return false, path, stat, err, err_name
         end
     end
 
-    local header_tags = list_filter_map_to(split_paths, function(path)
-        local path_str = string.gsub(table.concat(path), "[ \t]", "__")
-        return path_str
-    end)
+    local path_dir = fn.fnamemodify(path, ":h")
+    local d_stat, d_err, d_err_name = uv.fs_stat(path_dir)
+    if d_stat then
+        if d_stat.type == "directory" then
+            return true, path, d_stat, d_err, d_err_name
+        else
+            return false, path_dir, d_stat, d_err, d_err_name
+        end
+    end
 
-    return prefix, header_tags
+    local did_mkdir = fn.mkdir(path_dir, "p")
+    if did_mkdir == 1 then
+        return true, path, d_stat, d_err, d_err_name
+    end
+
+    return false, path_dir, d_stat, d_err, d_err_name
 end
+-- TODO: In the no stat case, we need to check I think that the file path doesn't end in a fwd
+-- slash or something to make sure it's not a dir.
+-- TODO: Make a light attempt at making uv_fs_access work here. If issue is more involved, needs
+-- to go in MID.
+-- MID:DEP: If we come across an application where this function is used repeatedly, can add an
+-- opt to return the default without validation.
 
 return M

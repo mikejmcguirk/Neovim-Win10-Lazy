@@ -2,26 +2,20 @@
 
 #### TODO:
 
-- [ ] Figure out the high level details of the tag generation and file stitching, since they are a constraint on how the docgen works.
+render lower level md heades as the green squiggly
+if we want to do equals, dash, and green, then that gives you 1/2, 3/4, 5/6. feels simple, even though tilde borders aren't included
 
-Represent inputs as fname, str tuples, with str being the material. We need the fnames for tagging/error reporting anyway.
-
-- [ ] Function contracts need updated
+- [ ] Still interface problems:
+  - [ ] If you make gen_vimdoc, gen_readme, and gen_plugin separate functions, you have to re-run the file reads for all of them. Very slow and bad.
+  - [ ] It seems reasonable that each rendering would take in a list of file paths, types, and texts.
+  - [ ] It further seems reasonable that, for read, we would scan all of those lists to build a file list, since we would be building a hash table anyway. And then each one could use the same hash table.
 
 - [ ] Parser_obj warnings need line/file info to be useful
   - [ ] Add the filename to the parser obj once so the reference doesn't have to be moved every line
   - [ ] Pull the i out of ipairs for the line number
-
-- [ ] Add a list of tags to the parser objects based on collected @tag annotations and generated tags. Store in generated order.
-  - [ ] Do you have an option for only generate tag if no @tag is present? Do you control this with annotations? Something like `@notag` or `@noautotag?`
-
-- [ ] Add code to ignore stylua tags
-  - I think the core's docgen does this. If not, I have to imagine that some other one out there does. Or I can just look it up
+  - [ ] Rather than pass line + idx + fname to every sub-function, have them return ok, err and the transform dispatcher can handle
 
 - [ ] Test if the extra trailing newline in ts_parsing is needed after this: https://github.com/neovim/neovim/commit/7ed5609439ba83d75e972beb859245d998df09ea - Does this affect if a trailing newline needs to be added at the end of the str when parsing LuaCATs to MD?
-
-- [ ] Perhaps, instead of `@mod`, do `@section` and change the verbiage in rendering to mod. This would make both things make more sense.
-  - [ ] Need to look at mini.doc and vimcats. I don't want to make another standard needlessly
 
 - [ ] The remaining TODO comments in the rest of the docgen are placed reasonably. Just work through them without moving here.
 
@@ -149,6 +143,8 @@ Represent inputs as fname, str tuples, with str being the material. We need the 
     - Possible solution: When a note tag appears, it collects doc lines like params and returns do. When the next tag hits, resolve the note. In a function or class, this would be collecting the doc lines then proceeding to the next thing. In a brief, you would be able to do @brief again in the same brief to go back to normal formatting.
 
 - [ ] Look at the referenced docgens. Do they have ideas that are useful/valuable?
+
+- [ ] Function contracts need updated
 
 - [ ] For convenience/demonstrative/documentation purposes, include a docgen_runner file for generating the README
 
@@ -278,9 +274,11 @@ Represent inputs as fname, str tuples, with str being the material. We need the 
 
 #### NON:
 
-- Removing the dependency on Neovim as the Lua runner. This would require fundamentally re-engineering how things like async file read work and re-creating fnamemodify. If we're doing that, better to just re-write it in a compiled language.
+- Removing the dependency on Neovim as the Lua runner. This would require fundamentally re-engineering how things like async file read work and re-creating fnamemodify.
 
 - This docgen inherits Neovim's removal of underline named functions. This is a useful convention, and no option will be provided to disable it.
+
+- `stylua: ignore` works with two dash comments, so no need to manually filter it here.
 
 ## REFERENCES
 
@@ -296,3 +294,11 @@ Represent inputs as fname, str tuples, with str being the material. We need the 
 * https://github.com/stevearc/nvim_doc_tools
 * https://github.com/lewis6991/async.nvim/blob/main/docgen.lua
 * https://github.com/tjdevries/tree-sitter-lua - Maybe outdated, but useful
+
+## Keymap
+
+#### META:
+
+#### TODO:
+
++ [ ] The biggest acid test of this module is rancher

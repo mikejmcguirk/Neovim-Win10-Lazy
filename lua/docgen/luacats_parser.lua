@@ -42,6 +42,7 @@ local NBSP = const.NBSP
 ---@field doc_flag? docgen.Visibility
 ---@field doc_flag_desc? string
 ---@field doc_lines? string[] Uncommitted doc lines
+---@field help_prefix? string
 ---@field fields? docgen.DocItem[]
 ---@field header_tag? string
 ---@field kind? docgen.luacats.Kind
@@ -83,7 +84,6 @@ local function item_extract_default_from_desc(item)
         item.default = default
     end
 end
--- TODO: Does this properly handle the type already having backticks? Or does that need to be in
 -- the function that does type formatting?
 -- DOC: This has to be the first thing on the line or after the type to be used.
 -- TEST: Removes at beginning of line and after \n. Handles variable whitespace
@@ -339,7 +339,7 @@ local function obj_kind_class_set(obj, parsed)
 
     -- Use help prefix because classes have global scope
     -- Dash separated because using dots to informally specify class scope is common.
-    obj.tag = Nvim_Tools_Docgen_Help_Prefix .. "-" .. name
+    obj.tag = obj.help_prefix .. "-" .. name
     obj_desc_set_from_doc_lines_or_parsed(obj, parsed)
 end
 
@@ -775,11 +775,13 @@ end
 
 local M = {}
 
+---@param help_prefix string
 ---@param modvar string
 ---@param header_tag string
 ---@return docgen.ParserObj
-local function obj_new(header_tag, modvar)
+local function obj_new(help_prefix, header_tag, modvar)
     local obj = table_new(0, 8)
+    obj.help_prefix = help_prefix
     obj.header_tag = header_tag
     obj.modvar = modvar
     obj.prev_indent = 0
@@ -811,26 +813,23 @@ local function find_modvar(lines)
     return nil
 end
 
----@class docgen.ParsedSource
----@field [1] string Formatted Source Name
----@field [2] docgen.ParserObj[] Objs
-
 ---@param lines string[]
+---@param help_prefix string
 ---@param header_tag string
----@return docgen.ParsedSource
-function M.parsed_from_lines(lines, header_tag)
+---@return docgen.ParserObj[]
+function M.parsed_from_lines(lines, help_prefix, header_tag)
     local modvar = find_modvar(lines) or ""
     ---@type docgen.ParserObj[]
     local obj_list = list_transduce(
         lines,
-        obj_new(header_tag, modvar),
+        obj_new(help_prefix, header_tag, modvar),
         function(obj, line)
             local status = obj_append_line(obj, line)
             if status == 0 then
                 return obj, nil
             end
 
-            return obj_new(header_tag, modvar), status == 1 and obj or nil
+            return obj_new(help_prefix, header_tag, modvar), status == 1 and obj or nil
         end,
         nil,
         function(obj)
@@ -838,14 +837,15 @@ function M.parsed_from_lines(lines, header_tag)
         end
     )
 
-    return { header_tag, obj_list }
+    return obj_list
 end
 
 ---@param str string
+---@param help_prefix string
 ---@param header_tag string
----@return docgen.ParsedSource
-function M.parsed_from_str(str, header_tag)
-    return M.parsed_from_lines(vim.split(str, "\n"), header_tag)
+---@return docgen.ParserObj[]
+function M.parsed_from_str(str, help_prefix, header_tag)
+    return M.parsed_from_lines(vim.split(str, "\n"), help_prefix, header_tag)
 end
 
 return M

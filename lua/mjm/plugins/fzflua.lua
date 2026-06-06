@@ -209,6 +209,7 @@ return {
     end,
 }
 
+-- TODO: Registers causes a screen flicker then exits.
 -- LOW: Command line attached/full screen layout. Starts pointing more toward the Helix-style
 -- endgame (IMO) for pickers, where they are built into the editor as an extension of the cmdline
 -- LOW: Do need to explore the snacks plugin. Issues with fzflua:

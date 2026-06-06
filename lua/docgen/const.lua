@@ -10,5 +10,6 @@ M.TPL_INDENT_STR = string.rep(" ", M.TPL_INDENT)
 M.NBSP = string.char(160)
 
 M.TEXT_WIDTH = 78
+M.TAB_WIDTH = 8
 
 return M
