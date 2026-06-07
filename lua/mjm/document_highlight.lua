@@ -350,6 +350,10 @@ local function auto_request(buf)
         return
     end
 
+    if api.nvim_get_mode().mode ~= "n" then
+        return
+    end
+
     local prev = results[buf]
     if prev then
         local cur_win = api.nvim_get_current_win()
@@ -436,6 +440,7 @@ api.nvim_create_autocmd("LspAttach", {
 
         api.nvim_create_autocmd("BufLeave", {
             group = group,
+            buffer = buf,
             callback = function(inner_ev)
                 local inner_buf = inner_ev.buf
                 all_hls_clear(inner_buf)
@@ -445,6 +450,7 @@ api.nvim_create_autocmd("LspAttach", {
 
         api.nvim_create_autocmd("ModeChanged", {
             group = group,
+            buffer = buf,
             callback = function(inner_ev)
                 local inner_buf = inner_ev.buf
 
@@ -460,13 +466,7 @@ api.nvim_create_autocmd("LspAttach", {
                 elseif new_mode_trunc == "n" then
                     request(inner_buf)
                 else
-                    api.nvim_buf_clear_namespace(inner_buf or 0, ns, 0, -1)
-                    local prev_result = results[inner_buf]
-                    if prev_result then
-                        prev_result.top = nil
-                        prev_result.bot = nil
-                    end
-
+                    all_hls_clear(inner_buf)
                     api.nvim__redraw({ buf = inner_buf, valid = true, flush = false })
                 end
             end,

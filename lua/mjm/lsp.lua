@@ -199,14 +199,14 @@ local function set_lsp_maps(ev)
     -- typeHierarchy/subtypes --
     if client:supports_method("typeHierarchy/subtypes") then
         set("n", "grY", function()
-            vim.lsp.buf.typehierarchy("subtypes")
+            require("fzf-lua").lsp_type_sub({ jump1 = false })
         end, { buf = buf })
     end
 
     -- typeHierarchy/supertypes --
     if client:supports_method("typeHierarchy/supertypes") then
         set("n", "gry", function()
-            vim.lsp.buf.typehierarchy("supertypes")
+            require("fzf-lua").lsp_type_super({ jump1 = false })
         end, { buf = buf })
     end
 
