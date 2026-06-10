@@ -377,6 +377,8 @@ local function obj_kind_mod_set(obj, parsed)
         log_warning("Doc lines present before @mod annotation. Discarding.")
     end
 end
+-- TODO:DEP: If some kind of tag auto-parsing step is added here, need to update the renderer
+-- code to handle.
 
 ---@param obj docgen.ParserObj Modified in place
 local function obj_doc_flag_set_inlinedoc(obj)

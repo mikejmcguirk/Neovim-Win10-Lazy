@@ -681,7 +681,10 @@ local function filter_do(dst, t, f)
         return dst
     end
 
-    clear_exact(dst, j, t_len)
+    for i = j, t_len do
+        t[i] = nil
+    end
+
     return dst
 end
 
@@ -691,8 +694,6 @@ end
 ---@param f fun(x:T): boolean
 ---@return T[] The original list reference.
 function M.filter(t, f)
-    vim.validate("t", t, "table")
-    vim.validate("f", f, "callable")
     return filter_do(t, t, f)
 end
 
@@ -1127,10 +1128,6 @@ end
 ---@param ... any[]
 ---@return T[] Reference to `t1`.
 function M.subtract(key, t1, ...)
-    vim.validate("key", key, { "callable", "string" }, true)
-    vim.validate("t1", t1, "table")
-    validate_table_varargs(...)
-
     return subtract_do(t1, key, t1, ...)
 end
 
@@ -1713,6 +1710,42 @@ function M.aggregate(t, key, val)
 end
 -- TODO: Come back to this.
 
+---Combine values in `t` based on function `f`.
+---The list is traversed linearly, rather than product-wise. If you're trying to do something like
+---find overlapping ranges, the list needs to be sorted.
+---@generic T
+---@param t T[] Modified in place!
+---@param f fun(x:T, y:T): v:T|nil If `nil` is returned, `y` is kept.
+---If a value is returned, it replaces `x` and `y` is discarded.
+---@return T[] The original list reference.
+function M.combine(t, f)
+    vim.validate("t", t, "table")
+    vim.validate("f", f, "callable")
+
+    local t_len = #t
+    if t_len <= 1 then
+        return t
+    end
+
+    local j = 1
+    for i = 2, t_len do
+        local v2 = t[i]
+        local vm = f(t[j], v2)
+        if vm == nil then
+            j = j + 1
+            t[j] = v2
+        else
+            t[j] = vm
+        end
+    end
+
+    for i = j + 1, t_len do
+        t[i] = nil
+    end
+
+    return t
+end
+
 ---Fills `t` in place with `v` from `start` to `stop` (entire list if `start` and `stop` are
 ---`nil`).
 ---@generic T
@@ -2195,6 +2228,35 @@ end
 -- MID:DEP: For uneven unit sizes, you can add a `rev` boolean to put the extra group before or
 -- after the main group loop. Don't do this though without a concrete use case, as it makes the
 -- code more complicated.
+
+---Create a new table of merged values from `t` based on function `f`.
+---@generic T
+---@param t T[]
+---@param f fun(x:T, y:T): v:T|nil If `nil` is returned, `y` is kept.
+---If a value is returned, it replaces `x` and `y` is discarded.
+---@return T[] A new table.
+function M.merge_to(t, f)
+    vim.validate("t", t, "table")
+    vim.validate("f", f, "callable")
+
+    local t_len = #t
+    if t_len <= 1 then
+        return M.copy(t)
+    end
+
+    local ret = { t[1] }
+    for i = 2, t_len do
+        local v2 = t[i]
+        local vm = f(ret[#ret], v2)
+        if vm == nil then
+            ret[#ret + 1] = v2
+        else
+            ret[#ret] = vm
+        end
+    end
+
+    return ret
+end
 
 ---Reverse the order of the items in list `t` in place.
 ---@generic T

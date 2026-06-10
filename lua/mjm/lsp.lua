@@ -144,6 +144,7 @@ local function set_lsp_maps(ev)
     set("n", "gr<C-r>", function()
         local fzf_lua = require("fzf-lua")
         fzf_lua.lsp_references({
+            includeDeclaration = false,
             jump1_action = fzf_lua.actions.file_vsplit,
         })
     end)

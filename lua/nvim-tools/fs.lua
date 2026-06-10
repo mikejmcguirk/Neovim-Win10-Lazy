@@ -117,7 +117,7 @@ local function _fs_stat_list_async(paths, on_complete, opts)
 
     local timer = nil ---@type uv.uv_timer_t|nil
     local timed_out = false -- Only use this for the results return.
-    local stop_timer = require("nvim-tools.misc").stop_timer
+    local stop_timer = require("nvim-tools.misc").close_timer
     local is_done = false -- `done()` is a busted function.
     ---@type [string,string][]
     local errs = require("nvim-tools.table").table_new(paths_count, 0)
@@ -281,7 +281,7 @@ local function _fs_read_list_async(paths, on_complete, opts)
     local timer = nil ---@type uv.uv_timer_t|nil
     local timeout = opts.timeout or DEFAULT_TIMEOUT
     local timed_out = false
-    local stop_timer = require("nvim-tools.misc").stop_timer
+    local stop_timer = require("nvim-tools.misc").close_timer
 
     ---@type table<string, nvim-tools.fs.FsReadListResult>
     local results = require("nvim-tools.table").table_new(paths_count, 0)

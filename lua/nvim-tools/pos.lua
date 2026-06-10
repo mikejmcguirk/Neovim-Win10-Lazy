@@ -2,6 +2,8 @@ local api = vim.api
 
 local M = {}
 
+---@alias nvim-tools.Pos [integer, integer]|[integer, integer, integer]|vim.Pos
+
 --------------------
 -- MARK: Creation --
 --------------------
@@ -45,27 +47,21 @@ end
 -- MARK: Position Comparison --
 -------------------------------
 
----@param row_a integer
----@param col_a integer
----@param row_b integer
----@param col_b integer
+---@param a_r integer
+---@param a_c integer
+---@param b_r integer
+---@param b_c integer
 ---@return -1|0|1
-function M.cmp(row_a, col_a, row_b, col_b)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row_a", row_a, is_uint)
-    vim.validate("col_a", col_a, is_uint)
-    vim.validate("row_b", row_b, is_uint)
-    vim.validate("col_b", col_b, is_uint)
-
-    if row_a == row_b then
-        if col_a < col_b then
+function M.cmp(a_r, a_c, b_r, b_c)
+    if a_r == b_r then
+        if a_c < b_c then
             return -1
-        elseif col_b < col_a then
+        elseif b_c < a_c then
             return 1
         else
             return 0
         end
-    elseif row_a < row_b then
+    elseif a_r < b_r then
         return -1
     else
         return 1
@@ -315,6 +311,21 @@ function M.ext_to_vex(row, col, buf)
     return row_1, col__1
 end
 
+---Non-trivially faster than using the public APIS.
+---@param buf integer
+---@param position lsp.Position
+---@param offset_encoding lsp.PositionEncodingKind
+---@return integer, integer
+function M.lsp_to_ext(buf, position, offset_encoding)
+    local row, col = position.line, position.character
+    if col > 0 and offset_encoding ~= "utf-8" then
+        local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1] or ""
+        col = vim._str_byteindex(line, col, offset_encoding == "utf-16")
+    end
+
+    return row, col
+end
+
 ---@param row integer 1 indexed
 ---@param col integer 0 indexed, inclusive
 ---@return integer, integer 0,0 indexed, exclusive end
@@ -359,6 +370,15 @@ function M.mark_to_ext(row, col)
 
     return row - 1, col
 end
+
+---@param pos nvim-tools.Pos Modified in place!
+---@return nvim-tools.Pos Reference to `pos`.
+function M.mark_to_ext_pos(pos)
+    pos[1] = pos[1] - 1
+    return pos
+end
+-- TODO: Make more of these. Possibly replace the integer versions, since these are more
+-- ergonomic with nvim_win_get_cursor and vim.Pos (more common use case).
 
 ---@param row integer 1 indexed, inclusive
 ---@param col integer 0 indexed, inclusive

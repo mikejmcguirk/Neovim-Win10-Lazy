@@ -19,11 +19,13 @@ function M.append_if_missing(str, new_items, sep)
     return table.concat(new, sep)
 end
 
+---Inclusive
+---`a` and `b` must be in the correct order.
 ---@param a any
 ---@param b any
 ---@param x any
 ---@return boolean
-function M.between(a, b, x)
+function M.between(x, a, b)
     return a <= x and x <= b
 end
 
@@ -59,11 +61,11 @@ M.nonnil = vim.not_nil or vim.F.if_nil
 -- DEPRECATE: Nvim 0.15 released
 
 ---@param timer uv.uv_timer_t|nil
-function M.stop_timer(timer)
+---@return nil
+function M.close_timer(timer)
     if timer and not timer:is_closing() then
         timer:stop()
         timer:close()
-        timer = nil
     end
 
     return nil

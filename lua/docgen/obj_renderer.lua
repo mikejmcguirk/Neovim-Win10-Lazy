@@ -11,6 +11,7 @@ local md_to_vimdoc = md_vimdoc.luacats_md_to_vimdoc
 local util = require("docgen.util")
 local list_copy = util.list_copy
 local list_fold = util.list_fold
+local list_insert_at = util.list_insert_at
 -- local list_transduce = util.list_transduce
 local list_filter_map = util.list_filter_map
 local list_filter_map_to = util.list_filter_map_to
@@ -213,7 +214,9 @@ local function class_render(class)
     local ret = {} --- @type string[]
 
     local name_cbraced = str_surround(class.name, "{", "}")
-    local header = header_create(name_cbraced, INDENT, class.tags_addtl)
+    local tags = class.tags_addtl or {}
+    list_insert_at(tags, class.tag)
+    local header = header_create(name_cbraced, INDENT, tags)
     local post_header = post_header_get(class)
     if post_header then
         ret[#ret + 1] = header .. "\n" .. post_header
@@ -249,7 +252,9 @@ end
 local function fun_header_get(fun)
     local namevar = fun.namevar
     local title = string.format("%s(%s)", namevar, proto_params_get(fun))
-    return header_create(title, #namevar, fun.tags_addtl)
+    local tags = fun.tags_addtl or {}
+    list_insert_at(tags, fun.tag)
+    return header_create(title, #namevar, tags)
 end
 
 --- @param fun docgen.ParserObj
@@ -437,7 +442,8 @@ end
 --- @return string
 local function render_mod(mod)
     local lines = {}
-    lines[#lines + 1] = header_create(mod.name, #mod.name, mod.tags_addtl, mod.divider)
+    -- Mods do not have a tag auto-assigned when parsed.
+    lines[#lines + 1] = header_create(mod.name, INDENT, mod.tags_addtl, mod.divider)
     lines[#lines + 1] = wrap(md_to_vimdoc(mod.desc), 0, 0, TEXT_WIDTH, false)
     return table.concat(lines, "\n\n")
 end
@@ -450,10 +456,10 @@ local M = {}
 
 ---@param name string
 ---@param divider "="|"-"|"~"
----@param tags_addtl? string[]
+---@param tags? string[]
 ---@return string
-function M.get_header(name, divider, tags_addtl)
-    return header_create(name, #name, tags_addtl or {}, divider)
+function M.get_header(name, divider, tags)
+    return header_create(name, INDENT, tags or {}, divider)
 end
 
 ---@param parsed_source docgen.ParserObj[]

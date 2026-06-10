@@ -191,7 +191,7 @@ end
 
 -- See tmux config (mikejmcguirk/dotfiles) for reasoning and how on C-S for this mapping
 for k, _ in pairs(tmux_cmd_map) do
-    set({ "n", "x" }, "<C-S-" .. k .. ">", function()
+    set("n", "<C-S-" .. k .. ">", function()
         win_move_tmux(k)
     end)
 end
@@ -492,7 +492,8 @@ set("n", "<bs><M-w>", "<cmd>set wrap?<cr>")
 set("n", "<C-c>", function()
     api.nvim_cmd({ cmd = "echo", args = { '""' } }, {})
     api.nvim_cmd({ cmd = "nohlsearch" }, {})
-    vim.lsp.buf.clear_references()
+    -- Trying auto highlight again
+    -- vim.lsp.buf.clear_references()
 
     -- Allows <C-c> to exit commands with a count. Also eliminates command line nag
     return "<esc>"

@@ -74,6 +74,25 @@ function M.get_or_set(t, k, v)
     return v
 end
 
+---Doing this with `get_or_set` always allocates a new table.
+---@generic T, U
+---@param t table<T, U>
+---@param k T
+function M.get_or_set_subtable(t, k)
+    vim.validate("t", t, "table")
+    local not_nil = require("nvim-tools.types").not_nil
+    vim.validate("k", k, not_nil)
+
+    local ret = t[k]
+    if ret then
+        return ret
+    end
+
+    local v = {}
+    t[k] = v
+    return v
+end
+
 ---Since vim.tbl_keys will be deprecated and maybe not replaced.
 ---@generic T
 ---@param t table<T, T>

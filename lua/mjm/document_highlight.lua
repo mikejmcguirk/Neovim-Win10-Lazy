@@ -36,12 +36,8 @@ local M = {}
 
 -- Rather than create a duplicate source of truth for active bufs/clients, only track what the
 -- user has explicitly disabled.
--- Exception: Since `client:supports_method()` is a non-trivial amount of logic, and the result
--- should not change after first attachment, track invalid clients here.
-
 local bufs_disabled = {} ---@type table<integer, true>
 local client_ids_disabled = {} ---@type table<integer, true>
-local client_ids_invalid = {} ---@type table<integer, true>
 local is_enabled = true
 
 local ns = api.nvim_create_namespace("mjm.lsp.document_highlight")
@@ -175,7 +171,7 @@ local function result_clear_and_redraw_unchecked(buf, res)
 end
 
 ---@param buf integer
-local function result_clear_and_redraw(buf)
+local function result_clear_and_redraw_checked(buf)
     local res = results[buf]
     if not res then
         return
@@ -215,8 +211,6 @@ local function cancel_req(client_id, client)
     if client then
         client:cancel_request(req.id)
         return
-    else
-        client_ids_invalid[client_id] = true
     end
 
     client_reqs[client_id] = nil
@@ -542,7 +536,6 @@ local function response_should_handle(ctx)
 
     local client = lsp.get_client_by_id(ctx.client_id)
     if not client then
-        client_ids_invalid[client_id] = true
         return false
     end
 
@@ -691,12 +684,7 @@ local function request_auto(buf)
         end
     end
 
-    local clients = lsp.get_clients({ bufnr = buf })
-    ntl.filter(clients, function(client)
-        local client_id = client.id
-        return client_ids_disabled[client_id] ~= true and client_ids_invalid[client_id] ~= true
-    end)
-
+    local clients = lsp.get_clients({ bufnr = buf, method = METHOD })
     if #clients == 0 then
         buf_rm_autocmds(buf)
         return
@@ -797,7 +785,7 @@ local function autocmds_create()
         group = group,
         callback = function(ev)
             local client_id = ev.data.client_id
-            if client_ids_disabled[client_id] or client_ids_invalid[client_id] then
+            if client_ids_disabled[client_id] then
                 return
             end
 
@@ -808,12 +796,10 @@ local function autocmds_create()
 
             local client = lsp.get_client_by_id(client_id)
             if not client then
-                client_ids_invalid[client_id] = true
                 return
             end
 
             if not client:supports_method(METHOD) then
-                client_ids_invalid[client_id] = true
                 return
             end
 
@@ -834,9 +820,9 @@ local function autocmds_create()
         -- Schedule wrap so that the detached client's active buffers are updated.
         callback = vim.schedule_wrap(function(ev)
             local buf = ev.buf
-            local buf_clients = lsp.get_clients({ bufnr = buf })
+            local buf_clients = lsp.get_clients({ bufnr = buf, method = METHOD })
             if #buf_clients == 0 then
-                result_clear_and_redraw(buf)
+                result_clear_and_redraw_checked(buf)
             end
 
             local client_id = ev.data.client_id
@@ -847,7 +833,6 @@ local function autocmds_create()
             local client = lsp.get_client_by_id(client_id)
             if not client then
                 cancel_req(client_id)
-                client_ids_invalid[client_id] = true
                 return
             end
 
@@ -857,6 +842,8 @@ local function autocmds_create()
         end),
     })
 end
+-- MID: Dumb because if you want default disabled you still have to wait for the autocmds to
+-- spawn on first require.
 
 autocmds_create()
 
@@ -874,7 +861,7 @@ end
 local function buf_disable(buf)
     bufs_disabled[buf] = true
     buf_rm_autocmds(buf)
-    result_clear_and_redraw(buf)
+    result_clear_and_redraw_checked(buf)
 end
 
 ---@param client vim.lsp.Client
@@ -890,20 +877,14 @@ end
 
 ---@param client_id integer
 local function client_enable(client_id)
-    if client_ids_invalid[client_id] == true then
-        local msg = "[LSP] Server does not support document highlight"
+    local client = lsp.get_client_by_id(client_id)
+    if not client then
+        local msg = "[LSP] Client not found"
         api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
         return
     end
 
-    local client = lsp.get_client_by_id(client_id)
-    if not client then
-        client_ids_invalid[client_id] = true
-        return
-    end
-
     if not client:supports_method(METHOD) then
-        client_ids_invalid[client_id] = true
         local msg = "[LSP] Server does not support document highlight"
         api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
         return
@@ -931,14 +912,8 @@ function M.enable(enabled, bufs, client_ids)
         is_enabled = enabled
         if is_enabled == true then
             autocmds_create()
-            for _, client in ipairs(lsp.get_clients()) do
-                local client_id = client.id
-                local valid = client_ids_invalid[client_id] ~= true
-                if valid and client:supports_method(METHOD) then
-                    buf_autocmds_create_for_client(client)
-                else
-                    client_ids_invalid[client_id] = true
-                end
+            for _, client in ipairs(lsp.get_clients({ method = METHOD })) do
+                buf_autocmds_create_for_client(client)
             end
 
             return
@@ -952,11 +927,9 @@ function M.enable(enabled, bufs, client_ids)
             api.nvim_del_augroup_by_name(group_name)
         end
 
-        for _, client in ipairs(lsp.get_clients()) do
-            if client_ids_invalid[client.id] ~= true then
-                for buf, _ in pairs(client.attached_buffers) do
-                    buf_rm_autocmds(buf)
-                end
+        for _, client in ipairs(lsp.get_clients({ method = METHOD })) do
+            for buf, _ in pairs(client.attached_buffers) do
+                buf_rm_autocmds(buf)
             end
         end
 
@@ -991,14 +964,11 @@ function M.is_enabled(buf, client_id)
     elseif client_id ~= nil then
         -- Nvim requires that the client exist.
         local client = lsp.get_client_by_id(client_id)
-        return client ~= nil
-            and client_ids_disabled[client_id] ~= true
-            and client_ids_invalid[client_id] ~= true
+        return client ~= nil and client_ids_disabled[client_id] ~= true
     else
         return is_enabled
     end
 end
--- MID: It would be better if disabled and invalid clients were distinguished.
 
 return M
 

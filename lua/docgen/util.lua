@@ -372,7 +372,7 @@ end
 ---@param t2 U[]
 ---@param f fun(a:T, b:U, idx:integer): val:V|nil If val is `nil`, it will be filtered.
 ---@return V[] Reference to `t1`.
-function M.filter_map_two(t1, t2, f)
+function M.list_filter_map_two(t1, t2, f)
     local t1_len = #t1
     local len = math.min(t1_len, #t2)
     local j = 1

@@ -206,12 +206,35 @@
 
 #### TODO:
 
-- https://github.com/neovim/neovim/commit/f9e068117be9c6ca05d3e42530895449cbdc2a17
-  * This prompts a change in my own code since I no longer have to deal with this use case
-  * I know there are other things in my plugins that have to factor this in. Do a scan through the other todo lists to see if they are out there
-  * This change has something else built into it that I need to look at again
-
 #### MID:
 
-* [ ] grA
-  * Whole buffer scoped code actions?
+- [ ] grA
+  - Whole buffer scoped code actions?
+
+## Rename
+
+#### META
+
+#### OBJECTIVES
+
+#### Event Handlers
+
+- Create autocmds
+  * I think you just always do this with clear autocmds
+  * Watch the cmdline for changes and report them
+  * Tear down events and state on leave
+- Handle references coming in
+  * Do necessary filtering and cleansing
+  * Write them to some sort of state table
+  * Push the refs to extmarks
+
+#### Events
+
+- On invocation
+  * Setup the autocmds to track the cmdline contents
+  * If a new name was provided, feed it to the cmd line
+  * Request references from the server
+- On references coming in
+  *
+- When the cmdline is left, those cmds need to be torn down
+-

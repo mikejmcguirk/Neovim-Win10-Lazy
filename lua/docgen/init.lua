@@ -15,14 +15,14 @@ local resolve_holistic = holistic.parsed_sources_resolve_holistic
 
 local logger = require("docgen.logger")
 local log = logger.log
-local close_logger = logger.close_logger
-local create_logger = logger.create_logger
+local logger_close = logger.close_logger
+local logger_create = logger.create_logger
 
 local luacats_parser = require("docgen.luacats_parser")
 local parsed_from_str = luacats_parser.parsed_from_str
 
 local file_ops = require("docgen.file_ops")
-local get_debug_path = file_ops.get_debug_path
+local debug_path_get = file_ops.get_debug_path
 local path_for_open_setup_checked = file_ops.path_for_open_setup_checked
 
 local renderer = require("docgen.obj_renderer")
@@ -30,6 +30,7 @@ local get_header = renderer.get_header
 local render_objs = renderer.render_objs
 
 local util = require("docgen.util")
+local err_if_seen_or_append = util.err_if_seen_or_add
 local get_requirable_path = util.get_requirable_path
 local list_chain = util.list_chain
 -- local list_fold = util.list_fold
@@ -248,7 +249,7 @@ end
 -- MARK: Gen Vimdoc --
 ----------------------
 
----@alias docgen.DocPartFn fun(source:docgen.gen.source.Vimdoc, prefix:string, header_tags:string[], imported:table<string, string>): doc_part:docgen.gen.VimdocPart
+---@alias docgen.DocPartFn fun(source:docgen.gen.source.Vimdoc, prefix:string, imported:table<string, string>): doc_part:docgen.gen.VimdocPart
 
 ---@type table<string, docgen.DocPartFn>
 local doc_part_fns = {
@@ -269,10 +270,10 @@ local doc_part_fns = {
 ---@param source docgen.gen.source.Vimdoc
 ---@param doc_parts docgen.gen.VimdocPart[]
 ---@param objs_list docgen.ParserObj[]
-local function doc_part_append(source, prefix, header_tags, imported, doc_parts, objs_list)
+local function doc_part_append(source, prefix, imported, doc_parts, objs_list)
     local doc_part_fn = doc_part_fns[source.type]
     if doc_part_fn then
-        local doc_part = doc_part_fn(source, prefix, header_tags, imported)
+        local doc_part = doc_part_fn(source, prefix, imported)
         doc_parts[#doc_parts + 1] = doc_part
         if doc_part.objs then
             objs_list[#objs_list + 1] = doc_part.objs
@@ -295,34 +296,48 @@ end
 ---@param debug_path string
 ---@param opts docgen.gen.Opts
 local function gen_vimdoc(vimdoc_sources, imported, prefix, debug_path, opts)
-    local objs_list = {} ---@type docgen.ParserObj[]
     local doc_parts = {} ---@type docgen.gen.VimdocPart[]
+    local obj_lists = {} ---@type docgen.ParserObj[][]
     for _, source in ipairs(vimdoc_sources) do
-        doc_part_append(source, prefix, header_tags, imported, doc_parts, objs_list)
+        doc_part_append(source, prefix, imported, doc_parts, obj_lists)
     end
 
-    resolve_holistic(objs_list, header_tags)
-    -- collect header tags for toc
-    -- make toc
-    -- add intro
+    local all_tags = {} ---@type table<string, true>
+    for _, part in ipairs(doc_parts) do
+        local tag = part.header_tag
+        if tag then
+            err_if_seen_or_append(all_tags, tag, "Duplicate tag " .. tag)
+        end
+    end
 
+    for _, list in ipairs(obj_lists) do
+        for _, obj in ipairs(list) do
+            if obj.tag then
+                err_if_seen_or_append(all_tags, obj.tag, "Duplicate tag " .. obj.tag)
+            end
+
+            if obj.tags_addtl then
+                for _, tag_addtl in ipairs(obj.tags_addtl) do
+                    err_if_seen_or_append(all_tags, tag_addtl, "Duplicate tag " .. tag_addtl)
+                end
+            end
+        end
+    end
+
+    resolve_holistic(obj_lists)
     list_filter_map(doc_parts, function(part)
         return ((not part.objs) or #part.objs > 0) and part or nil
     end)
 
     local docs_tbl = {} ---@type string[]
-    local ordered_header_tags = list_filter_map_to(doc_parts, function(part)
-        -- TODO: This feels comically inefficient
-        return part.header_tag
-    end)
-
     docs_tbl[#docs_tbl + 1] = "*" .. prefix .. ".txt*"
-
-    list_filter_map(ordered_header_tags, function(tag)
-        return "|" .. tag .. "|"
+    local toc_tags = list_filter_map_to(doc_parts, function(part)
+        if part.header_tag then
+            return "|" .. part.header_tag .. "|"
+        end
     end)
 
-    docs_tbl[#docs_tbl + 1] = table.concat(ordered_header_tags, "\n")
+    docs_tbl[#docs_tbl + 1] = table.concat(toc_tags, "\n")
     -- local vimdoc_intro_path
 
     for _, part in ipairs(doc_parts) do
@@ -394,27 +409,26 @@ end
 
 ---@param plugin_sources docgen.gen.input.Plugin[]
 ---@param readme_sources docgen.gen.input.Readme[]
----@param vimdoc_sources docgen.gen.source.Vimdoc[][]
+---@param vimdoc_sources docgen.gen.source.Vimdoc[]
 ---@param opts docgen.gen.Opts
 ---@return table<string, string>
-local function import_source_text(plugin_sources, readme_sources, vimdoc_sources, opts)
-    local vimdoc_inputs = list_filter_map_to(vimdoc_sources, function(source)
+local function source_text_import(plugin_sources, readme_sources, vimdoc_sources, opts)
+    local inputs_vimdoc = list_filter_map_to(vimdoc_sources, function(source)
         return (source.type == "luacats" and source.text == nil) and source.path or nil
     end)
 
-    local readme_inputs = list_filter_map_to(readme_sources, function(source)
+    local inputs_readme = list_filter_map_to(readme_sources, function(source)
         -- TODO: I have no idea if this name works
         return (source.type == "paragraph" and source.text == nil) and source.path or nil
     end)
 
-    local plugin_inputs = list_filter_map_to(plugin_sources, function(source)
+    local inputs_plugin = list_filter_map_to(plugin_sources, function(source)
         -- TODO: I have no idea if this name works
         return (source.type == "paragraph" and source.text == nil) and source.path or nil
     end)
 
-    -- TODO: This also need to be made absolute
-    local other_inputs = { opts.vimdoc_intro_path }
-    local inputs = list_chain(vimdoc_inputs, readme_inputs, plugin_inputs, other_inputs)
+    local imports_other = { opts.vimdoc_intro_path }
+    local inputs = list_chain(inputs_vimdoc, inputs_readme, inputs_plugin, imports_other)
     vim.list.unique(inputs)
 
     local ok, timed_out, results = file_ops.fs_read_list(inputs)
@@ -434,9 +448,9 @@ local function import_source_text(plugin_sources, readme_sources, vimdoc_sources
     return res_only
 end
 
----@param vimdoc_sources docgen.gen.source.Vimdoc[][]
----@param readme_sources docgen.gen.input.Readme[]
 ---@param plugin_sources docgen.gen.input.Plugin[]
+---@param readme_sources docgen.gen.input.Readme[]
+---@param vimdoc_sources docgen.gen.source.Vimdoc[]
 ---@param opts docgen.gen.Opts
 local function abs_paths_set(plugin_sources, readme_sources, vimdoc_sources, opts)
     for _, source in pairs(plugin_sources) do
@@ -507,22 +521,22 @@ function M.gen_all(vimdoc_sources, readme_sources, plugin_sources, opts)
     opts = opts or {}
     -- TODO: validate inputs
 
-    local debug_path = get_debug_path()
-    create_logger(opts.log_level, debug_path, opts.log_path)
+    local debug_path = debug_path_get()
+    logger_create(opts.log_level, debug_path, opts.log_path)
 
     vimdoc_sources = vimdoc_sources or {}
     readme_sources = readme_sources or {}
     plugin_sources = plugin_sources or {}
     abs_paths_set(plugin_sources, readme_sources, vimdoc_sources, opts)
 
-    local imported = import_source_text(plugin_sources, readme_sources, vimdoc_sources, opts)
+    local imported = source_text_import(plugin_sources, readme_sources, vimdoc_sources, opts)
     local prefix = doc_sources_add_names_headers(vimdoc_sources)
 
     gen_vimdoc(vimdoc_sources, imported, prefix, debug_path, opts)
     gen_readme(readme_sources, imported, prefix, debug_path, opts)
     gen_plugin(plugin_sources, imported, prefix, debug_path, opts)
 
-    close_logger()
+    logger_close()
 end
 -- TODO: There's no fallback or defense in depth here for what happens if certain things drop
 -- out or go missing during the process.

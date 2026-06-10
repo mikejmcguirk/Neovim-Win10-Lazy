@@ -350,7 +350,7 @@ Buf_Config_Accessor.__newindex = function(self, k, v)
     -- Do not use BufDelete because deleted buffers can be reloaded under the same buf id
     api.nvim_create_autocmd("BufWipeout", {
         group = api.nvim_create_augroup(get_buf_augroup_name(k), {}),
-        -- FUTURE: Change this to "buf" when v0.14 comes out.
+        -- TODO:DEP: Change this to "buf" when v0.14 comes out.
         buffer = k,
         callback = function()
             M.buf_config[k] = nil

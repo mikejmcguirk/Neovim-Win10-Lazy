@@ -757,6 +757,9 @@ end
 
 return Csearch
 
+-- TODO: If you do dvFx it will not delete the character directly under the cursor. This should be
+-- the case in visual mode.
+
 -- MID: Fold ideas:
 -- - Display the foldclosed line as virtual text with token highlights
 --   - How to dim?

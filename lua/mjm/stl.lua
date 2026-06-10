@@ -157,6 +157,7 @@ api.nvim_create_autocmd("ModeChanged", {
         if new_mode == mode then
             return
         end
+        -- MID: Why is this check here? Is it even possible for this to be true?
 
         mode = new_mode
         vim.schedule(function()
@@ -171,6 +172,8 @@ api.nvim_create_autocmd("ModeChanged", {
         end)
     end,
 })
+-- MID: I do not love keeping a separate source of truth for mode, even though I know it will
+-- incur a perf loss to unwind it.
 
 -- From mini.statusline - Schedule wrap because the server is still listed on LspDetach
 api.nvim_create_autocmd({ "LspAttach", "LspDetach" }, {
@@ -229,7 +232,7 @@ local function create_buf_str(buf)
     local printable = #mbt + #ft > 0
     local fmt_bt_ft = printable and " " .. bt_map[bt] .. ft or ""
 
-    return encoding .. " | " .. mff .. " |" .. fmt_bt_ft .. " "
+    return "[" .. tostring(buf) .. "] " .. encoding .. " | " .. mff .. " |" .. fmt_bt_ft .. " "
 end
 -- MID: It feels like the better way to do this is with caching them all and using OptionSet to
 -- just update the cache, then using LuaEval to pull them.
@@ -316,8 +319,8 @@ local stl = { "", "", "", "%=%*", "", "" } ---@type string[]
 -- of compromise on "over-rendering" the stl to avoid having to over-think every edge case
 ---@return string
 function Mjm_Stl.active()
-    local buf = api.nvim_get_current_buf() ---@type integer
-    local bad_mode = is_bad_mode() ---@type boolean
+    local buf = api.nvim_get_current_buf()
+    local bad_mode = is_bad_mode()
 
     local head = vim.g.gitsigns_head or "" ---@type string
     local diffs = vim.b.gitsigns_status or "" ---@type string
@@ -326,16 +329,17 @@ function Mjm_Stl.active()
     stl[2] = "%#stl_b# %m %f [" .. mode .. "] %*"
 
     -- update_in_insert for diags set to false. Avoid showing stale data
-    local diags = (not bad_mode) and (diag_cache[buf] or "") or "" ---@type string
+    local diags = (not bad_mode) and (diag_cache[buf] or "") or ""
     local lsps = lsp_cache[buf] or "" ---@type string
-    local show_progress = progress_cache[buf] and not bad_mode ---@type boolean
-    local progress = show_progress and progress_cache[buf] or "" ---@type string
+    local show_progress = progress_cache[buf] and not bad_mode
+    local progress = show_progress and progress_cache[buf] or ""
     stl[3] = " %#stl_c#" .. lsps .. " " .. diags .. "%<" .. progress .. "%*"
 
     stl[5] = "%#stl_c#" .. (buf_cache[buf] or "") .. "%*"
 
-    local winnr = api.nvim_win_get_number(0) ---@type integer
-    stl[6] = "%#stl_b# [" .. winnr .. "] %p%%" .. " %*%#stl_a# %l/%L | %c %*"
+    local win = api.nvim_get_current_win()
+    local winnr = api.nvim_win_get_number(win)
+    stl[6] = "%#stl_b# [" .. win .. "] [" .. winnr .. "] %p%%" .. " %*%#stl_a# %l/%L | %c %*"
 
     return table.concat(stl, "")
 end

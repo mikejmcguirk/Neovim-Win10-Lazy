@@ -374,10 +374,8 @@ local function parsed_sources_filter_inlinedoc(obj_lists)
 end
 -- TODO: This cannot be the way.
 
----Assumes that all underlying parser objects are finalized and valid.
 ---@param obj_lists docgen.ParserObj[] Modified in place
----@param header_tags string[]
-function M.parsed_sources_resolve_holistic(obj_lists, header_tags)
+function M.parsed_sources_resolve_holistic(obj_lists)
     vim.validate("parsed_sources", obj_lists, "table")
 
     local classes, classes_count, funs = create_maps(obj_lists)
@@ -388,8 +386,6 @@ function M.parsed_sources_resolve_holistic(obj_lists, header_tags)
 
     -- Only do this once because it's expensive.
     parsed_sources_filter_invalid(obj_lists, classes, funs)
-    tags_prepare_and_check(header_tags, obj_lists)
-
     if not next(classes) then
         return
     end

@@ -28,6 +28,7 @@ local opts = {
     log_path = "lua/docgen",
     plugin_output_path = "lua/docgen/plugin.lua",
     readme_output_path = "lua/docgen/readme.md",
+    vimdoc_credits_path = "lua/docgen/scripts/attribution.md",
     vimdoc_intro_path = "lua/docgen/scripts/intro.md",
     vimdoc_output_path = "lua/docgen/test_file.txt",
 }
