@@ -261,21 +261,23 @@
 
 #### RESEARCH
 
-- What does the spec say about rename and prepare rename results?
-- What do they do when the result is bad? How is it supposed to be displayed?
-- Why does prepareRename have like three result types?
-- What data cleansing do Neovim, Helix, and VSCode perform on rename results?
-- What data cleansing do Neovim, Helix, and VSCode perform on rename results?
-- What data cleansing do Neovim, Helix, and VSCode perform on reference results?
-- What data cleansing do Neovim, Helix, and VSCode perform on reference results?
 - What are the technical details of how Neovim and inc-rename do what they do? What can we learn from them?
-- Does rustaceanvim have a bespoke rename we can look at
-- What about LspSaga or any of its ilk
 
 #### LEARNINGS
 
 - For the rename result, I think we just want to use Neovim's built-in apply_text_edits function. We can try to get as deep as possible without going through every layer of validation, but at some point the logic is too complex. And it does all of the relevant handling or whatever.
-- PrepareRename I think just sends back a range.
+- prepareRename handling:
+  * null - Can't rename
+  * Range only - Use that as your default
+  * Range + placeholder - Use placeholder as default prompt
+  * DefaultBehavior - Use cword
+
+- VSCode references handling:
+  * de-dupe
+  * sort by file and position
+
+https://github.com/smjonas/inc-rename.nvim/blob/main/lua/inc_rename/init.lua
+https://github.com/nvimdev/lspsaga.nvim/blob/main/lua/lspsaga/rename/init.lua
 
 #### TESTING/PLANNING
 
@@ -313,3 +315,6 @@
 - When the cmdline is left, those cmds need to be torn down
 
 What data do you get if you try to run this on MD oxide? Both rename and references are per file which is weird.
+
+what do you do if you don't have a client that supports references
+print a message if no clients even support rename

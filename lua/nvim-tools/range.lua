@@ -295,4 +295,125 @@ function M.qf_to_ts(qf_range)
     qf_range[4] = qf_range[4] - 1
 end
 
+-- TODO: find somewhere to put the LSP stuff
+
+---@param ranges [integer, integer, integer, integer][]
+---@return table<integer, true>
+local function lsp_ranges_rows_needed_get(ranges)
+    local rows_needed = {} ---@type table<integer, true>
+    for _, range in ipairs(ranges) do
+        rows_needed[range[1]] = true
+        rows_needed[range[3]] = true
+    end
+
+    return rows_needed
+end
+
+---@param buf integer
+---@param ranges [integer, integer, integer, integer][]
+---@return table<integer, string>
+local function lsp_range_lines_from_buf_loaded(buf, ranges)
+    local rows_needed = lsp_ranges_rows_needed_get(ranges)
+    local lines = {} ---@type table<integer, string>
+    for row, _ in pairs(rows_needed) do
+        lines[row] = api.nvim_buf_get_lines(buf, row, row + 1, false)[1] or ""
+    end
+
+    return lines
+end
+
+---@param buf integer
+---@param ranges [integer, integer, integer, integer][]
+---@return table<integer, string>
+local function lsp_range_lines_get(buf, ranges)
+    if api.nvim_buf_is_loaded(buf) then
+        return lsp_range_lines_from_buf_loaded(buf, ranges)
+    end
+
+    if not vim.startswith(vim.uri_from_bufnr(buf), "file://") then
+        fn.bufload(buf)
+        return lsp_range_lines_from_buf_loaded(buf, ranges)
+    end
+
+    local lines = {}
+    -- TODO: Use uv to do this.
+    local ok, f_str = pcall(fn.readblob, api.nvim_buf_get_name(buf))
+    if not ok then
+        -- TODO: This is not a viable answer
+        return lines
+    end
+
+    -- TODO: Even after switching to uv, can you split on just "\n" or do you need to account for
+    -- "\r\n" and "\r"? Does that affect docgen?
+    -- TODO: Is there a reason vim.gmatch was used here originally?
+    -- TODO: It might be necessary for the get lines function to return the count of lines
+    -- needed so we can do gsplit or gmatch here. Because I have to imagine it is slow to
+    -- eagerly split all lines when we only need a subset of them.
+    -- TODO: Would it be fastest to do string.find here and count the number of results, given
+    -- that find does not immediately pull the substring. I think you would use the gmatch
+    -- pattern there.
+    local f_lines = vim.split(f_str, "\n")
+    if #f_lines == 0 then
+        -- TODO: again this can't be the answer
+        return lines
+    end
+
+    local rows_needed = lsp_ranges_rows_needed_get(ranges)
+    for row, _ in pairs(rows_needed) do
+        lines[row] = f_lines[row + 1]
+    end
+
+    return lines
+end
+
+---Encoding ~= UTF-8 is not checked here to avoid redundancy. Callers should do so to avoid calling
+---this function needlessly.
+---@param buf integer
+---@param ranges [integer, integer, integer, integer][] Modified in place!
+function M.lsp_parsed_locations_convert(buf, ranges, encoding)
+    local lines = lsp_range_lines_get(buf, ranges)
+    for _, range in ipairs(ranges) do
+        local start_row = ranges[1]
+        local start_col = ranges[2]
+        if start_col > 0 then
+            local line = lines[start_row]
+            range[2] = vim._str_byteindex(line, start_col, encoding == "utf-16")
+        end
+
+        local end_row = ranges[1]
+        local end_col = ranges[2]
+        if end_col > 0 then
+            local line = lines[end_row]
+            range[2] = vim._str_byteindex(line, end_col, encoding == "utf-16")
+        end
+    end
+end
+-- TODO: This feels bad because it doesn't use the pos helper. But there's no way to pass the
+-- lines helper into there without it being illogical. If I remember right, the vim.pos helper
+-- goes through the entire procedure to get a lines table even for only converting one position,
+-- which is too much.
+
+-------------------------
+-- MARK: Range Helpers --
+-------------------------
+
+---@param a [integer, integer, integer, integer]
+---@param b [integer, integer, integer, integer]
+---@return boolean
+function M.range_sort_predicate(a, b)
+    if a[1] ~= b[1] then
+        return a[1] < b[1]
+    end
+
+    if a[2] ~= b[2] then
+        return a[2] < b[2]
+    end
+
+    if a[3] ~= b[3] then
+        return a[3] < b[3]
+    end
+
+    return a[4] < b[4]
+end
+
 return M

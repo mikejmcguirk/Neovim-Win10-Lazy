@@ -687,6 +687,10 @@ local function filter_do(dst, t, f)
 
     return dst
 end
+-- MID: It might be faster to, if we haven't found a filtered item, not write values from
+-- `t` to `t`. On the other hand, the way `if f(v)` is written right now, I don't think it
+-- jumps if the condition is true, whereas if you have an else statement, it always performs a
+-- jump to the result. So this change might not actually be faster.
 
 ---Filter values from `t` based on predicate function `f`.
 ---@generic T
@@ -1605,11 +1609,12 @@ end
 
 ---Apply a function to all elements of a list, transforming them into a single value.
 ---@generic T
----@generic U
 ---@param t T[]
----@param f fun(acc:U, x:T): acc:U Accumulator initializes to the first value of the table.
----@return T `nil` if table is length zero.
-function M.reduce(t, f)
+---@param f fun(acc:any): acc:any If `f` returns `nil`, iteration terminates and the current
+---     accumulator is returned.
+---@param init? any Initial accumulator value. If nil, the first element of the list is used.
+---@return any `nil` if table is length zero.
+function M.reduce(t, f, init)
     vim.validate("t", t, "table")
     vim.validate("f", f, "callable")
 
@@ -1618,13 +1623,25 @@ function M.reduce(t, f)
         return nil
     end
 
-    local acc = t[1]
-    for i = 2, t_len do
-        acc = f(acc, t[i])
+    local acc = init
+    local start = 1
+    if acc == nil then
+        acc = t[1]
+        start = 2
+    end
+
+    for _ = start, t_len do
+        local new_acc = f(acc)
+        if new_acc == nil then
+            return acc
+        end
+
+        acc = new_acc
     end
 
     return acc
 end
+-- TODO: Use these for docgen min and max rather than fold.
 
 ---Apply a function to all elements of a list, transforming them into a running list of the
 ---accumulated values.
@@ -1667,48 +1684,6 @@ end
 ---------------------------
 -- MARK: List Transforms --
 ---------------------------
-
----@generic T
----@param t T[] Values to aggregate.
----@param key nil|string|fun(val:any): any See: |vim.list.unique()|. How should table values be
----     converted into hash keys for aggregation?
----@param val nil|fun(agg_val:any, val:any): any How should the table values be converted into
----     the aggregated values? Takes as params the current aggregated value and the currently
----     iterated table value. If nil, builds a list of the values matching the key (groupBy
----     behavior).
-function M.aggregate(t, key, val)
-    vim.validate("t", t, "table")
-    vim.validate("key", key, { "callable", "string" }, true)
-    vim.validate("val", val, "callable", true)
-
-    local ret = {}
-    local t_len = #t
-    if t_len == 0 then
-        return ret
-    end
-
-    local val_fn = type(val) == "function" and val
-        or function(agg_v, v)
-            agg_v = agg_v or {}
-            agg_v[#agg_v + 1] = v
-            return agg_v
-        end
-
-    local key_fn = make_key_fn(key)
-    for i = 1, t_len do
-        local v = t[i]
-        local vh = key_fn(v)
-        if vh ~= nil then
-            local vm = val_fn(ret[vh], v)
-            if vm ~= nil then
-                ret[vh] = vm
-            end
-        end
-    end
-
-    return ret
-end
--- TODO: Come back to this.
 
 ---Combine values in `t` based on function `f`.
 ---The list is traversed linearly, rather than product-wise. If you're trying to do something like
@@ -1927,6 +1902,33 @@ function M.filter_map_accum(t, init, f)
     end
 
     return t
+end
+
+---@generic T
+---@param t T[] Values to aggregate.
+---@param key string|fun(val:any): any See: |vim.list.unique()|.
+function M.group_by(t, key)
+    vim.validate("t", t, "table")
+    vim.validate("key", key, { "callable", "string" }, true)
+
+    local ret = {}
+    local t_len = #t
+    if t_len == 0 then
+        return ret
+    end
+
+    local ntt = require("nvim-tools.table")
+    local key_fn = make_key_fn(key)
+    for i = 1, t_len do
+        local v = t[i]
+        local vh = key_fn(v)
+        if vh ~= nil then
+            local ret_vh = ntt.get_or_set_subtable(ret, vh)
+            ret_vh[#ret_vh + 1] = v
+        end
+    end
+
+    return ret
 end
 
 ---Convert values from list `t` into a list of new values based on a threaded accumulator and an

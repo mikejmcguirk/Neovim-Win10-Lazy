@@ -8,6 +8,9 @@ local ntr = require("nvim-tools.range")
 local util = lsp.util
 local uv = vim.uv
 
+-- TODO: Remove my stuff from the initial requires. Unlike the vim modules, my stuff is not
+-- automatically required on startup, so we are slowing things down by doing this.
+
 local METHOD = "textDocument/documentHighlight"
 
 local protocol = require("vim.lsp.protocol")
@@ -336,25 +339,6 @@ end
 
 api.nvim_set_decoration_provider(ns, { on_win = on_win })
 
----@param a [integer, integer, integer, integer]
----@param b [integer, integer, integer, integer]
----@return boolean
-local function range_cmp(a, b)
-    if a[1] ~= b[1] then
-        return a[1] < b[1]
-    end
-
-    if a[2] ~= b[2] then
-        return a[2] < b[2]
-    end
-
-    if a[3] ~= b[3] then
-        return a[3] < b[3]
-    end
-
-    return a[4] < b[4]
-end
-
 ---Non-trivially faster than using the public APIS.
 ---@param buf integer
 ---@param position lsp.Position
@@ -388,7 +372,7 @@ local function response_to_ranges(response, buf, offset_encoding)
     end)
 
     -- The spec does not guarantee order.
-    table.sort(hls, range_cmp)
+    table.sort(hls, ntr.range_sort_predicate)
     -- Reduce the amount of decorations to draw.
     ntl.combine(hls, function(a, b)
         local cmp = ntr.cmp_(a, b)
@@ -443,7 +427,7 @@ local function result_add_addtl_client_hls(res, response, buf, encoding, client_
         return
     end
 
-    local hls_new = ntl.merge_sorted(hls_old, hls_addtl, range_cmp)
+    local hls_new = ntl.merge_sorted(hls_old, hls_addtl, ntr.range_sort_predicate)
     ntl.combine(hls_new, function(a, b)
         if math.abs(ntr.cmp_(a, b)) == 1 then
             return

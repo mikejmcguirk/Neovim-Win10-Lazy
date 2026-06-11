@@ -314,17 +314,20 @@ end
 ---Non-trivially faster than using the public APIS.
 ---@param buf integer
 ---@param position lsp.Position
----@param offset_encoding lsp.PositionEncodingKind
+---@param encoding lsp.PositionEncodingKind
 ---@return integer, integer
-function M.lsp_to_ext(buf, position, offset_encoding)
+function M.lsp_to_ext(buf, position, encoding)
     local row, col = position.line, position.character
-    if col > 0 and offset_encoding ~= "utf-8" then
+    if col > 0 and encoding ~= "utf-8" then
         local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1] or ""
-        col = vim._str_byteindex(line, col, offset_encoding == "utf-16")
+        col = vim._str_byteindex(line, col, encoding == "utf-16")
     end
 
     return row, col
 end
+-- TODO: This only works if the buf is loaded. Either make a specific "could handle either"
+-- function or integrate into here. (probably former since we want this for cases like
+-- document_highlight where we know it's loaded and we can skip the loaded check logic.)
 
 ---@param row integer 1 indexed
 ---@param col integer 0 indexed, inclusive
