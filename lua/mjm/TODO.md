@@ -208,16 +208,90 @@
 
 #### MID:
 
+- [ ] Rename in moxide renames the entire buffer. This feels bad. There are some LSPs that support renaming files, that should have its own hotkey, and I guess moxide's rename command needs to be re-directed there.
 - [ ] grA
   - Whole buffer scoped code actions?
 
 ## Rename
 
-#### META
-
 #### OBJECTIVES
 
-#### Event Handlers
+- Experience
+  * When performing a rename, an incremental, extmark-based preview will display
+    + Show substitute highlighted text for the new name, ghost text for the old name
+      + Stretch goal: Use inline space virtual text so the preview doesn't overlap with the old text
+    + All teardown should be automatic when the user is done with rename input
+    + The output should follow what the user does exactly
+    + Folded lines should simply be ignored
+    + The preview should show in all visible buffers in the current tabpage to which it applies
+- Interface
+  - should_prompt and new_name should be separate inputs
+    * should_prompt == nil or should_prompt == true - prompt
+    * should_prompt == false - rename immediately
+    * If should_prompt and name == nil, use cword
+    * If should_prompt and name == "", blank prompt
+    * If no_prompt and name == "" or name == nil then exit
+    * If no_prompt and name has content, send the request
+  - By default, use the built-in "Substitute" and "Dimmed" highlight groups. Create "Dimmed" if it doesn't exist.
+    * hl_new and hl_ghost should be provided as opts
+  - opt to show preview before references come in (default true)
+    * Would be substitute hl only based on cword
+- Implementation
+  * All communication with the LSP servers must use only the spec
+  - Other than configuration, data must not be persisted between renames
+  - prepareRename must be supported for servers that have it
+    * If no_prompt and name, then just send it
+    * Otherwise, do not open the prompt without running prepareRename
+  - The original cursor position should be saved so that the request doesn't get stale when doing async
+  - Only do the async implementation
+  - Create our own namespace to avoid Neovim's defaults on this one
+  - Use the VSCode multi-server selections strategy
+    * If no rename providers at all, notify the user
+
+#### NON-GOALS
+
+- sync renaming
+  * Maybe do this in the future if a use case comes up
+- Callbacks for customizing behavior
+  * This idea I actually like but it's inherently convoluted and I'd want to know the use case before exposing stuff
+- Persistent config
+  * Customization is spare enough that you can just pass opts into the Lua cmd, so you can just map what you want on Filetype
+- Bespoke multi-server selection
+  * You could have a preference opts list, but that's annoying to implement, and raises questions about why there aren't built-ins. Want to avoid the whole topic.
+
+#### RESEARCH
+
+- What does the spec say about rename and prepare rename results?
+- What do they do when the result is bad? How is it supposed to be displayed?
+- Why does prepareRename have like three result types?
+- What data cleansing do Neovim, Helix, and VSCode perform on rename results?
+- What data cleansing do Neovim, Helix, and VSCode perform on rename results?
+- What data cleansing do Neovim, Helix, and VSCode perform on reference results?
+- What data cleansing do Neovim, Helix, and VSCode perform on reference results?
+- What are the technical details of how Neovim and inc-rename do what they do? What can we learn from them?
+- Does rustaceanvim have a bespoke rename we can look at
+- What about LspSaga or any of its ilk
+
+#### LEARNINGS
+
+- For the rename result, I think we just want to use Neovim's built-in apply_text_edits function. We can try to get as deep as possible without going through every layer of validation, but at some point the logic is too complex. And it does all of the relevant handling or whatever.
+- PrepareRename I think just sends back a range.
+
+#### TESTING/PLANNING
+
+- Highlighting
+  * You can build like, press a keymap and do highlighting + ghost text on cword without it actually doing anything. We want to have a working implementation of that so we know what the pitfalls are
+  * We also want to see if virt text for adding spaces is viable
+- Reference processing
+  * Build out the reference processing pipeline independently
+  * We need to time it then on bigger projects to see how long it takes. If it's too much, might need to do it with a coroutine
+- Server scoring
+  * This is a process basically independent of anything else
+  * Should be in its own util file
+- Rename/prepare renaming
+  * We can just build a working re-implementation of rename that handles prepareRename the way I want it to be.
+
+#### EVENT HANDLERS
 
 - Create autocmds
   * I think you just always do this with clear autocmds
@@ -237,4 +311,5 @@
 - On references coming in
   *
 - When the cmdline is left, those cmds need to be torn down
--
+
+What data do you get if you try to run this on MD oxide? Both rename and references are per file which is weird.
