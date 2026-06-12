@@ -176,10 +176,10 @@ api.nvim_create_user_command("We", "silent up | e", {})
 
 ---@param args string
 local function scratch_cmd(args)
-    local output = vim.fn.execute(args) ---@type string
+    local output = fn.execute(args) ---@type string
 
     api.nvim_cmd({ cmd = "tabnew" }, {})
-    local buf = vim.api.nvim_get_current_buf() ---@type integer
+    local buf = api.nvim_get_current_buf() ---@type integer
     if not require("nvim-tools.buf").is_empty_noname(buf) then
         api.nvim_cmd({ cmd = "enew" }, {})
     end
@@ -196,7 +196,7 @@ local function scratch_cmd(args)
     api.nvim_set_option_value("ma", false, { buf = buf })
 end
 
-vim.api.nvim_create_user_command("ScratchCmd", function(opts)
+api.nvim_create_user_command("ScratchCmd", function(opts)
     scratch_cmd(opts.args)
 end, { nargs = "+" })
 

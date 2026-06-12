@@ -88,7 +88,7 @@ local blink_opts = {
     sources = {
         default = { "lsp", "snippets", "buffer", "path" },
         per_filetype = {
-            lua = { inherit_defaults = true, "lazydev" },
+            -- lua = { inherit_defaults = true, "lazydev" },
             sql = { "dadbod", "buffer", "path" },
             text = { "buffer", "path" },
         },

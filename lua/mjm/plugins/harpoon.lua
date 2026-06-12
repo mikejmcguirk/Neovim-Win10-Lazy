@@ -44,12 +44,11 @@ local function setup_harpoon()
                     return
                 end
 
-                -- Don't navigate to a cursor position because I use the " mark
-                ntb.open_buf(cur_win, bufnr, {
-                    buftype = "",
-                    fold_cmd = "zv",
-                    force = "hide",
-                })
+                -- TODO: Why does doing edit here work but doing edit manually doesn't display
+                -- relative line numbers?
+                -- TODO: Find a permanent solution for this.
+                vim.cmd("edit " .. bufname)
+                vim.cmd("norm! zv")
 
                 local extensions = require("harpoon.extensions")
                 extensions.extensions:emit(extensions.event_names.NAVIGATE, {

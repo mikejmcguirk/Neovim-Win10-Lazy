@@ -290,7 +290,9 @@ local function get_eiw(win, buftype)
     --   (Should be overwritten by FileType autocmds)
     if buftype == "help" or buftype == "quickfix" then
         new_eiw_tbl[#new_eiw_tbl + 1] = "FileType"
-    elseif buftype == "quickfix" then
+    end
+
+    if buftype == "quickfix" then
         -- See qf_open_new_cwindow in quickfix.c
         new_eiw_tbl[#new_eiw_tbl + 1] = "BufWinEnter"
     end
@@ -324,6 +326,7 @@ local function do_set_buf(win, buf, bl, bt, clearjumps)
     set_if_new("lz", old_lz, true, global_opt)
 
     local ok, err = pcall(api.nvim_set_current_buf, buf)
+    api.nvim_set_current_buf(buf)
     set_if_new("eiw", new_eiw, old_eiw, win_opt)
     if (not ok) or api.nvim_win_get_buf(win) ~= buf then
         set_if_new("lz", true, old_lz, global_opt)
@@ -496,6 +499,11 @@ function M.open_buf(win, buf, opts)
         on_open(cur_pos or api.nvim_win_get_cursor(win))
     end
 end
+-- TODO: This is out. Doing buf opening this way where we're pcalling and suppressing events
+-- breaks too many assumptions about how Neovim works. This needs to be re-done as basically a
+-- wrapper for edit. And we can integrate some of the vsplit behaviors into here too.
+-- If we only open help buffers in help wins or new wins, we can properly do window settings.
+-- Or something.
 
 ---@param buf integer Buffer to delete
 ---@param delist? boolean De-list buffer?

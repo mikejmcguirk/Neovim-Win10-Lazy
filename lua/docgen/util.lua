@@ -1,8 +1,6 @@
 local api = vim.api
 local bit = require("bit")
 
----@type fun(narray: integer, nhash: integer): table
-
 --- @class nvim.util.MDNode
 --- @field [integer] nvim.util.MDNode
 --- @field type string

@@ -39,8 +39,8 @@ local M = {}
 
 -- Rather than create a duplicate source of truth for active bufs/clients, only track what the
 -- user has explicitly disabled.
-local bufs_disabled = {} ---@type table<integer, true>
-local client_ids_disabled = {} ---@type table<integer, true>
+local bufs_disabled = {} ---@type table<integer, true|nil>
+local client_ids_disabled = {} ---@type table<integer, true|nil>
 local is_enabled = true
 
 local ns = api.nvim_create_namespace("mjm.lsp.document_highlight")
@@ -65,8 +65,8 @@ local ns = api.nvim_create_namespace("mjm.lsp.document_highlight")
 ---@field version integer
 
 local client_reqs = {} ---@type table<integer, mjm.lsp.documentHighlight.Request>
-local results = {} ---@type table<integer, mjm.lsp.documentHighlight.Result>
-local timers = {} ---@type table<integer, uv.uv_timer_t>
+local results = {} ---@type table<integer, mjm.lsp.documentHighlight.Result|nil>
+local timers = {} ---@type table<integer, uv.uv_timer_t|nil>
 
 ---@param buf integer
 ---@param client_id integer
@@ -272,12 +272,14 @@ local function on_win(_, _, buf, top, bot)
     end
 
     if not has_decor then
+        ---@diagnostic disable-next-line: param-type-mismatch
         local top_idx = vim.list.bisect(hls, { 0, 0, top }, {
             key = function(hl)
                 return hl[3]
             end,
         })
 
+        ---@diagnostic disable-next-line: param-type-mismatch
         local bot_idx = vim.list.bisect(hls, { bot + 1 }, {
             key = function(hl)
                 return hl[1]
@@ -285,6 +287,7 @@ local function on_win(_, _, buf, top, bot)
         }) - 1
 
         for i = top_idx, bot_idx do
+            ---@diagnostic disable-next-line: param-type-mismatch
             set_mark(buf, hls[i])
         end
 
@@ -298,15 +301,17 @@ local function on_win(_, _, buf, top, bot)
 
     local cur_top = res.top
     if top < cur_top then
-        local cur_top_idx = res.top_idx
+        local cur_top_idx = res.top_idx or #hls
+        ---@diagnostic disable-next-line: param-type-mismatch
         local top_idx = vim.list.bisect(hls, { 0, 0, top }, {
-            hi = res.top_idx,
+            hi = cur_top_idx,
             key = function(hl)
                 return hl[3]
             end,
         })
 
         for i = top_idx, cur_top_idx - 1 do
+            ---@diagnostic disable-next-line: param-type-mismatch
             set_mark(buf, hls[i])
         end
 
@@ -316,7 +321,8 @@ local function on_win(_, _, buf, top, bot)
 
     local cur_bot = res.bot
     if cur_bot < bot then
-        local cur_bot_idx = res.bot_idx
+        local cur_bot_idx = res.bot_idx or 1
+        ---@diagnostic disable-next-line: param-type-mismatch
         local bot_idx = vim.list.bisect(hls, { bot + 1 }, {
             lo = cur_bot_idx + 1,
             key = function(hl)
@@ -325,6 +331,7 @@ local function on_win(_, _, buf, top, bot)
         }) - 1
 
         for i = cur_bot_idx + 1, bot_idx do
+            ---@diagnostic disable-next-line: param-type-mismatch
             set_mark(buf, hls[i])
         end
 
@@ -343,12 +350,12 @@ api.nvim_set_decoration_provider(ns, { on_win = on_win })
 ---@param buf integer
 ---@param position lsp.Position
 ---@param offset_encoding lsp.PositionEncodingKind
----@return integer, integer
+---@return uinteger, uinteger
 local function lsp_to_nvim(buf, position, offset_encoding)
     local row, col = position.line, position.character
     if col > 0 and offset_encoding ~= "utf-8" then
         local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1] or ""
-        col = vim._str_byteindex(line, col, offset_encoding == "utf-16")
+        col = vim._str_byteindex(line, col, offset_encoding == "utf-16") ---@type uinteger
     end
 
     return row, col
@@ -427,6 +434,7 @@ local function result_add_addtl_client_hls(res, response, buf, encoding, client_
         return
     end
 
+    ---@diagnostic disable-next-line: param-type-mismatch
     local hls_new = ntl.merge_sorted(hls_old, hls_addtl, ntr.range_sort_predicate)
     ntl.combine(hls_new, function(a, b)
         if math.abs(ntr.cmp_(a, b)) == 1 then
@@ -518,7 +526,7 @@ local function response_should_handle(ctx)
         return false
     end
 
-    local client = lsp.get_client_by_id(ctx.client_id)
+    local client = lsp.get_client_by_id(client_id)
     if not client then
         return false
     end
@@ -526,12 +534,12 @@ local function response_should_handle(ctx)
     return true, req, client, ctx --[[@as mjm.lsp.HandlerContext_Validated]]
 end
 
----@param err lsp.ResponseError
+---@param err lsp.ResponseError?
 ---@param response lsp.DocumentHighlight[]
 ---@param ctx lsp.HandlerContext
 local function response_handler(err, response, ctx)
     local ok, req, client, ctx_validated = response_should_handle(ctx)
-    if not (ok and req and client and ctx_validated) then
+    if ok == false or not req or not client or not ctx_validated then
         return
     end
 
@@ -611,6 +619,7 @@ local function request_send(client, win, buf, cur_pos)
     local encoding = client.offset_encoding
     local params = {
         textDocument = util.make_text_document_params(buf),
+        ---@diagnostic disable-next-line: need-check-nil
         position = vim.pos.cursor(buf, cur_pos):to_lsp(encoding),
     }
 
@@ -742,6 +751,7 @@ local function buf_autocmds_create(bufnr)
             ---@diagnostic disable-next-line: undefined-field
             local nm = vim.v.event.new_mode
             local buf = ev.buf
+            ---@diagnostic disable-next-line: param-type-mismatch
             if #nm == 1 and string.byte(nm, 1) == 110 then
                 -- Manually restore decorations without redrawing so they can be detected by
                 -- request_auto.

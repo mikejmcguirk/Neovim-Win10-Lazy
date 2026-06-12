@@ -45,7 +45,7 @@ local NBSP = const.NBSP
 ---@field help_prefix? string
 ---@field fields? docgen.DocItem[]
 ---@field header_tag? string
----@field kind? docgen.luacats.Kind
+---@field kind? docgen.Kind
 ---@field modvar? string
 ---@field name? string
 ---@field namevar? string
@@ -59,7 +59,7 @@ local NBSP = const.NBSP
 ---0: Can accept new lines
 ---1: Finalized and valid
 ---2: Finalized and invalid
----@field status? 0|1|2
+---@field status 0|1|2
 ---@field tag? string
 ---@field tags_addtl? string[]
 ---@field type? docgen.DocItem
@@ -117,7 +117,7 @@ end
 -- TODO: Might ditch this because I like using nuance in typing for communication.
 
 ---@param obj docgen.ParserObj
----@param target_kind docgen.Kind
+---@param target_kind docgen.Kind|""
 ---@param msg string
 local function obj_kind_assert(obj, target_kind, msg)
     local kind = obj.kind or ""
@@ -566,6 +566,7 @@ end
 -- MARK: Building Tools --
 --------------------------
 
+---@type table<docgen.luacats.Kind, fun(obj:docgen.ParserObj, parsed:nvim.luacats.grammar.Result)>
 local transform = {
     ["alias"] = obj_kind_alias_set,
     ["async"] = obj_async_set,
@@ -593,7 +594,7 @@ local transform = {
 ---@param obj docgen.ParserObj Modified in place
 ---@param parsed nvim.luacats.grammar.Result
 local function obj_process_parsed(obj, parsed)
-    local transform_fn = transform[parsed.kind]
+    local transform_fn = parsed.kind and transform[parsed.kind]
     if transform_fn then
         transform_fn(obj, parsed)
     else
@@ -656,7 +657,8 @@ end
 local function try_finalize_fun(obj, line)
     local classvar, sep, namevar =
         line:match("^function%s+([a-zA-Z0-9_]+)([.:])([a-zA-Z0-9_]+)%s*%(")
-    if classvar and namevar then
+    if classvar and sep and namevar then
+        ---@diagnostic disable-next-line: param-type-mismatch
         return fun_finalize(obj, classvar, sep, namevar)
     end
 
@@ -798,7 +800,6 @@ end
 local function find_modvar(lines)
     local len_lines = #lines
     for i = len_lines, 1, -1 do
-        --- @type string?
         local modvar = string.match(lines[i], "^return%s+([a-zA-Z_]+)")
         if modvar then
             return modvar

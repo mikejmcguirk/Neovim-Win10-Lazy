@@ -71,16 +71,32 @@ local v = setmetatable({}, {
     end,
 })
 
----@alias docgen.luacats.Kind 'alias'
----|'brief'
----|'class'
----|'field'
----|'fun'
----|'generic'
----|'mod'
----|'operator'
----|'param'
----|'return'
+-- TODO: For emmylua_ls you have to write the annotations this way for them to work. Unsure if
+-- this is the case for Lua_Ls.
+
+---@alias docgen.luacats.Kind
+---|"alias"
+---|"async"
+---|"brief"
+---|"class"
+---|"deprecated"
+---|"diagnostic"
+---|"divider"
+---|"field"
+---|"generic"
+---|"inlinedoc"
+---|"mod"
+---|"nodoc"
+---|"operator"
+---|"overload"
+---|"package"
+---|"param"
+---|"private"
+---|"protected"
+---|"return"
+---|"see"
+---|"tag"
+---|"type"
 ---|''
 
 --- @class nvim.luacats.grammar.Result

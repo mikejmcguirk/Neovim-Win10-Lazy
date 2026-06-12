@@ -259,3 +259,8 @@ Some way of grepping todo/mid/low/future/maybe/perf/document from files all at o
 - [ ] Replace vim.loop with vim.uv
 - [ ] Obscure bug where, if harpoon initializes without a cwd, it enter errors
   - I'm not sure how to re-produce this
+
+## Stalking:
+
+- https://github.com/ofseed/nvim
+- https://github.com/tris203/.dotfiles/tree/main/nvim

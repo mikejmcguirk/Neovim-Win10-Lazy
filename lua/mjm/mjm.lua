@@ -55,6 +55,8 @@ local PERM_MASK = 511
 local function mode_to_readable_perms(perm_bits)
     local perms = {}
 
+    local bit = require("bit")
+
     perms[1] = bit.band(perm_bits, 256) ~= 0 and "r" or "-"
     perms[2] = bit.band(perm_bits, 128) ~= 0 and "w" or "-"
     perms[3] = bit.band(perm_bits, 64) ~= 0 and "x" or "-"

@@ -29,17 +29,6 @@ local M = {}
 -- MARK: Utils --
 -----------------
 
----@generic T
----@param t T[]
----@param start integer
----@param stop integer
-local function clear_exact(t, start, stop)
-    for i = start, stop do
-        t[i] = nil
-    end
-end
--- TODO: Remove this. Makes extracting functions a pain.
-
 ---Copied from Neovim core.
 ---@generic T
 ---@param key nil|string|fun(val:any): any
@@ -86,11 +75,11 @@ local function resolve_rev(rev, start, stop)
 end
 --TODO: It is un-intuitive that that arg and return orders would be different.
 
+---@param nargs integer
 ---@param key_fn fun(x:any): any
 ---@param ... any[]
 ---@return table<any, true> seen
-local function seen_from_varargs(key_fn, ...)
-    local nargs = select("#", ...)
+local function seen_from_varargs_if_in_any(nargs, key_fn, ...)
     local seen = {} ---@type table<any, boolean>
     for i = 1, nargs do
         local tn = select(i, ...)
@@ -392,14 +381,14 @@ local function splice_do(dst, t, start, stop)
 
     return dst
 end
+-- TODO: Remove this.
 
----Modifies `t` in place!
----
----Get a subset of `t` by start and stop indices.
 ---Splice `t` into a subset of its values defined by `start` and `stop` indices.
 ---
----Returns an empty table if `t` is length zero or the provided `start` and `stop` values resolve
----to an invalid iteration.
+---Returns an empty table if `t` is length zero or the resolved value of `start` is greater than
+---`stop`.
+---
+---No-op if `start` and `stop` are both `nil`.
 ---@generic T
 ---@param t T[] Modified in place!
 ---@see |iter-indexing|
@@ -412,7 +401,31 @@ function M.splice(t, start, stop)
     vim.validate("start", start, is_int, true)
     vim.validate("stop", stop, is_int, true)
 
-    return splice_do(t, t, start, stop)
+    local t_len = #t
+    start = resolve_iter_index(start, t_len, 1)
+    stop = resolve_iter_index(stop, t_len, t_len)
+    if t_len == 0 or (start == 1 and stop == t_len) then
+        return t
+    end
+
+    if start > stop then
+        return M.clear(t)
+    end
+
+    if start > 1 then
+        local j = 1
+        for i = start, stop do
+            t[j] = t[i]
+            j = j + 1
+        end
+    end
+
+    local new_len = stop - start + 1
+    for i = new_len + 1, t_len do
+        t[i] = nil
+    end
+
+    return t
 end
 
 ---Get a new list containing a subset of `t` by `start` and `stop` indices.
@@ -431,7 +444,25 @@ function M.splice_to(t, start, stop)
     vim.validate("start", start, is_int, true)
     vim.validate("stop", stop, is_int, true)
 
-    return splice_do({}, t, start, stop)
+    local t_len = #t
+    start = resolve_iter_index(start, t_len, 1)
+    stop = resolve_iter_index(stop, t_len, t_len)
+    if t_len == 0 or (start == 1 and stop == t_len) then
+        return M.copy(t)
+    end
+
+    local ret = {}
+    if start > stop then
+        return ret
+    end
+
+    local j = 1
+    for i = start, stop do
+        ret[j] = t[i]
+        j = j + 1
+    end
+
+    return ret
 end
 
 ---Create a new list, using a transform function to iteratively mutate an initial seed value.
@@ -660,50 +691,38 @@ function M.clear(t)
     return t
 end
 
----@generic T
----@param t T[]
----@param f fun(x:T): boolean
----@return T[]
-local function filter_do(dst, t, f)
-    local t_len = #t
-    if t_len == 0 then
-        return dst
-    end
-
-    local j = 1
-    for i = 1, t_len do
-        local v = t[i]
-        if f(v) then
-            dst[j] = v
-            j = j + 1
-        end
-    end
-
-    if dst ~= t then
-        return dst
-    end
-
-    for i = j, t_len do
-        t[i] = nil
-    end
-
-    return dst
-end
--- MID: It might be faster to, if we haven't found a filtered item, not write values from
--- `t` to `t`. On the other hand, the way `if f(v)` is written right now, I don't think it
--- jumps if the condition is true, whereas if you have an else statement, it always performs a
--- jump to the result. So this change might not actually be faster.
-
 ---Filter values from `t` based on predicate function `f`.
 ---@generic T
 ---@param t T[] Modified in place!
 ---@param f fun(x:T): boolean
 ---@return T[] The original list reference.
 function M.filter(t, f)
-    return filter_do(t, t, f)
-end
+    local t_len = #t
+    if t_len == 0 then
+        return t
+    end
 
----Create a new table without values from `t` filtered by predicate `f`.
+    local j = 1
+    for i = 1, t_len do
+        local v = t[i]
+        if f(v) then
+            t[j] = v
+            j = j + 1
+        end
+    end
+
+    for i = j, t_len do
+        t[i] = nil
+    end
+
+    return t
+end
+-- MID: It might be faster to, if we haven't found a filtered item, not write values from
+-- `t` to `t`. On the other hand, the way `if f(v)` is written right now, I don't think it
+-- jumps if the condition is true, whereas if you have an else statement, it always performs a
+-- jump to the result. So this change might not actually be faster.
+
+---Create a new list of values from `t` filtered through predicate `f`.
 ---@generic T
 ---@param t T[]
 ---@param f fun(x:T): boolean
@@ -711,7 +730,23 @@ end
 function M.filter_to(t, f)
     vim.validate("t", t, "table")
     vim.validate("f", f, "callable")
-    return filter_do({}, t, f)
+
+    local t_len = #t
+    local ret = {}
+    if t_len == 0 then
+        return ret
+    end
+
+    local j = 1
+    for i = 1, t_len do
+        local v = t[i]
+        if f(v) then
+            ret[j] = v
+            j = j + 1
+        end
+    end
+
+    return ret
 end
 
 ---Filter duplicates. See |vim.list.unique()| to do so in-place.
@@ -912,51 +947,53 @@ end
 -- MARK: List and List Filtering --
 -----------------------------------
 
----@generic T
----@param dst T[]
----@param key nil|string|fun(x:any): any
----@param t1 T[]
----@param ... any[]
----@return T[]
-local function difference_do(dst, key, t1, ...)
-    local key_fn = make_key_fn(key)
-    local seen = seen_from_varargs(key_fn, ...)
-    local t1_len = #t1
-    local j = 1
-    for i = 1, t1_len do
-        local v = t1[i]
-        local vh = key_fn(v)
-        if vh ~= nil and not seen[vh] then
-            dst[j] = v
-            j = j + 1
-            seen[vh] = true
-        end
-    end
+-- TODO: All varvarg functions need to no-op if no varargs are provided.
+-- Should the de-dupe versions still de-dupe?
+-- TODO: Needs to be broken into sub-marks based on logic type.
 
-    if dst == t1 then
-        clear_exact(dst, j, t1_len)
-    end
-
-    return dst
-end
-
----Remove elements from `t1` in place that are present in any of the varargs (set difference/XOR
----logic). `t1` is de-duplicated. Order is preserved.
+---Remove elements from `t1` that are not present in any of the vararg tables (XOR logic).
+---- `t1` is de-duplicated. Order is preserved.
+---- No-op if no varargs are provided.
 ---@generic T
 ---@param key nil|string|fun(x:any): any See: |vim.list.unique()|.
 ---@param t1 T[] Target list. Modified in place!
 ---@param ... any[]
----@return T[] The original reference to `t1`.
+---@return T[] Reference to `t1`.
 function M.difference(key, t1, ...)
     vim.validate("key", key, { "callable", "string" }, true)
     vim.validate("t1", t1, "table")
     validate_table_varargs(...)
 
-    return difference_do(t1, key, t1, ...)
+    local t1_len = #t1
+    local nargs = select("#", ...)
+    if t1_len == 0 or nargs == 0 then
+        return t1
+    end
+
+    local key_fn = make_key_fn(key)
+    local seen = seen_from_varargs_if_in_any(nargs, key_fn, ...)
+    local j = 1
+    for i = 1, t1_len do
+        local v = t1[i]
+        local vh = key_fn(v)
+        if vh ~= nil and not seen[vh] then
+            t1[j] = v
+            j = j + 1
+            seen[vh] = true
+        end
+    end
+
+    for i = j, t1_len do
+        t1[i] = nil
+    end
+
+    return t1
 end
 
----Create a new list containing the elements of `t1` not present in any of the varargs (set
----difference/XOR logic). `t1` is de-duplicated. Order is preserved.
+---Create a new list containing the elements of `t1` not present in any of the varargs
+---(XOR logic).
+---- `t1` is de-duplicated. Order is preserved.
+---- No-op if no varargs are provided.
 ---@generic T
 ---@param key nil|string|fun(x:any): any See: |vim.list.unique()|.
 ---@param t1 T[] Source list.
@@ -967,41 +1004,31 @@ function M.difference_to(key, t1, ...)
     vim.validate("t1", t1, "table")
     validate_table_varargs(...)
 
-    return difference_do({}, key, t1, ...)
-end
-
----@generic T
----@param dst T[]
----@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
----@param t1 T[]
----@param ... any[]
----@return T[]
-local function intersect_do(dst, key, t1, ...)
     local nargs = select("#", ...)
     if nargs == 0 then
-        -- If the function continues with no varargs, seen will contain no values, causing every
-        -- value in `t1` to be removed.
-        return dst
+        return M.copy(t1)
+    end
+
+    local t1_len = #t1
+    local ret = {}
+    if t1_len == 0 then
+        return ret
     end
 
     local key_fn = make_key_fn(key)
-    local seen = seen_from_varargs_if_in_all(nargs, key_fn, ...)
-    local t1_len = #t1
+    local seen = seen_from_varargs_if_in_any(nargs, key_fn, ...)
     local j = 1
     for i = 1, t1_len do
         local v = t1[i]
         local vh = key_fn(v)
-        if vh ~= nil and seen[vh] then
-            dst[j] = v
+        if vh ~= nil and not seen[vh] then
+            ret[j] = v
             j = j + 1
+            seen[vh] = true
         end
     end
 
-    if dst == t1 then
-        clear_exact(dst, j, t1_len)
-    end
-
-    return dst
+    return ret
 end
 
 ---Remove elements from `t1` in place if they are not present in all of the varargs (AND logic).
@@ -1016,7 +1043,33 @@ function M.intersect(key, t1, ...)
     vim.validate("t1", t1, "table")
     validate_table_varargs(...)
 
-    return intersect_do(t1, key, t1, ...)
+    local nargs = select("#", ...)
+    if nargs == 0 then
+        return t1
+    end
+
+    local t1_len = #t1
+    if t1_len == 0 then
+        return t1
+    end
+
+    local key_fn = make_key_fn(key)
+    local seen = seen_from_varargs_if_in_all(nargs, key_fn, ...)
+    local j = 1
+    for i = 1, t1_len do
+        local v = t1[i]
+        local vh = key_fn(v)
+        if vh ~= nil and seen[vh] then
+            t1[j] = v
+            j = j + 1
+        end
+    end
+
+    for i = j, t1_len do
+        t1[i] = nil
+    end
+
+    return t1
 end
 
 ---Create a new list containing the elements in `t1` present in every vararg (AND logic).
@@ -1031,42 +1084,26 @@ function M.intersect_to(key, t1, ...)
     vim.validate("t1", t1, "table")
     validate_table_varargs(...)
 
-    return intersect_do({}, key, t1, ...)
-end
-
----@generic T
----@param dst T[]
----@param key nil|string|fun(val:any): any
----@param t1 T[]
----@param ... any[]
----@return T[]
-local function intersection_do(dst, key, t1, ...)
+    local t1_len = #t1
     local nargs = select("#", ...)
     if nargs == 0 then
-        -- If the function continues with no varargs, seen will contain no values, causing every
-        -- value in `t1` to be removed.
-        return dst
+        return M.copy(t1)
     end
 
     local key_fn = make_key_fn(key)
     local seen = seen_from_varargs_if_in_all(nargs, key_fn, ...)
-    local t1_len = #t1
+    local ret = {}
     local j = 1
     for i = 1, t1_len do
         local v = t1[i]
         local vh = key_fn(v)
         if vh ~= nil and seen[vh] then
-            dst[j] = v
+            ret[j] = v
             j = j + 1
-            seen[vh] = nil
         end
     end
 
-    if dst == t1 then
-        clear_exact(dst, j, t1_len)
-    end
-
-    return dst
+    return ret
 end
 
 ---Remove list elements from `t1` if they are not present in all vararg lists (AND logic).
@@ -1081,7 +1118,30 @@ function M.intersection(key, t1, ...)
     vim.validate("t1", t1, "table")
     validate_table_varargs(...)
 
-    return intersection_do(t1, key, t1, ...)
+    local t1_len = #t1
+    local nargs = select("#", ...)
+    if t1_len == 0 or nargs == 0 then
+        return t1
+    end
+
+    local key_fn = make_key_fn(key)
+    local seen = seen_from_varargs_if_in_all(nargs, key_fn, ...)
+    local j = 1
+    for i = 1, t1_len do
+        local v = t1[i]
+        local vh = key_fn(v)
+        if vh ~= nil and seen[vh] then
+            t1[j] = v
+            j = j + 1
+            seen[vh] = nil
+        end
+    end
+
+    for i = j, t1_len do
+        t1[i] = nil
+    end
+
+    return t1
 end
 
 ---Create a new list from the elements in `t1` present in all vararg lists (AND logic).
@@ -1096,34 +1156,27 @@ function M.intersection_to(key, t1, ...)
     vim.validate("t1", t1, "table")
     validate_table_varargs(...)
 
-    return intersection_do({}, key, t1, ...)
-end
-
----@generic T
----@param dst T[]
----@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
----@param t1 T[]
----@param ... any[]
----@return T[] New list.
-local function subtract_do(dst, key, t1, ...)
-    local key_fn = make_key_fn(key)
-    local seen = seen_from_varargs(key_fn, ...)
     local t1_len = #t1
+    local nargs = select("#", ...)
+    if t1_len == 0 or nargs == 0 then
+        return M.copy(t1)
+    end
+
+    local key_fn = make_key_fn(key)
+    local seen = seen_from_varargs_if_in_all(nargs, key_fn, ...)
+    local ret = {}
     local j = 1
     for i = 1, t1_len do
         local v = t1[i]
         local vh = key_fn(v)
-        if vh ~= nil and not seen[vh] then
-            dst[j] = v
+        if vh ~= nil and seen[vh] then
+            ret[j] = v
             j = j + 1
+            seen[vh] = nil
         end
     end
 
-    if dst == t1 then
-        clear_exact(dst, j, t1_len)
-    end
-
-    return dst
+    return ret
 end
 
 ---Remove elements from `t1` in place that are present in any of the varargs (set difference/XOR
@@ -1134,7 +1187,33 @@ end
 ---@param ... any[]
 ---@return T[] Reference to `t1`.
 function M.subtract(key, t1, ...)
-    return subtract_do(t1, key, t1, ...)
+    local nargs = select("#", ...)
+    if nargs == 0 then
+        return t1
+    end
+
+    local t1_len = #t1
+    if t1_len == 0 then
+        return t1
+    end
+
+    local key_fn = make_key_fn(key)
+    local seen = seen_from_varargs_if_in_any(nargs, key_fn, ...)
+    local j = 1
+    for i = 1, t1_len do
+        local v = t1[i]
+        local vh = key_fn(v)
+        if vh ~= nil and not seen[vh] then
+            t1[j] = v
+            j = j + 1
+        end
+    end
+
+    for i = j, t1_len do
+        t1[i] = nil
+    end
+
+    return t1
 end
 
 ---Create a new list containing the elements of `t1` not present in any of the varargs (set
@@ -1149,7 +1228,30 @@ function M.subtract_to(key, t1, ...)
     vim.validate("t1", t1, "table")
     validate_table_varargs(...)
 
-    return subtract_do({}, key, t1, ...)
+    local nargs = select("#", ...)
+    if nargs == 0 then
+        return M.copy(t1)
+    end
+
+    local ret = {}
+    local t1_len = #t1
+    if t1_len == 0 then
+        return ret
+    end
+
+    local key_fn = make_key_fn(key)
+    local seen = seen_from_varargs_if_in_any(nargs, key_fn, ...)
+    local j = 1
+    for i = 1, t1_len do
+        local v = t1[i]
+        local vh = key_fn(v)
+        if vh ~= nil and not seen[vh] then
+            ret[j] = v
+            j = j + 1
+        end
+    end
+
+    return ret
 end
 
 ---Creates a new list from all values in all lists (OR logic).
@@ -2072,52 +2174,39 @@ function M.transduce(t, init, f, b, z, start, stop, rev)
 end
 -- TODO: I think you remove the early return from here.
 
----@generic T
----@generic U
----@generic V
----@param t1 T[]
----@param t2 T[]
----@param f fun(a:T, b:U, idx:integer): val:V|nil
----@return V[]
-local function filter_map_two_do(dst, t1, t2, f)
-    local t1_len = #t1
-    local len = math.min(t1_len, #t2)
-    local j = 1
-    for i = 1, len do
-        local vm = f(t1[i], t2[i], i)
-        if vm ~= nil then
-            dst[j] = vm
-            j = j + 1
-        end
-    end
-
-    if dst ~= t1 then
-        return dst
-    end
-
-    for i = j, t1_len do
-        dst[i] = nil
-    end
-
-    return dst
-end
--- TODO: filter_map_two is a bad name because it doesn't establish t1 as the base table
-
 ---Transform `t1` in place by applying a function to the values of `t1` and `t2`.
 ---If `t1` and `t2` are different lengths, the length of the smaller list is used.
+---
+---This can be used to filter `t1` based on selectors, or to implement a choose() function
+---between `t1` and `t2`.
 ---@generic T
 ---@generic U
 ---@generic V
 ---@param t1 T[]
 ---@param t2 U[]
----@param f fun(a:T, b:U, idx:integer): val:V|nil If val is `nil`, it will be filtered.
+---@param f fun(a:T, b:U): val:V|nil If val is `nil`, it will be filtered.
 ---@return V[] Reference to `t1`.
 function M.filter_map_two(t1, t2, f)
     vim.validate("t1", t1, "table")
     vim.validate("t2", t2, "table")
     vim.validate("f", f, "callable")
 
-    return filter_map_two_do(t1, t1, t2, f)
+    local t1_len = #t1
+    local len = math.min(t1_len, #t2)
+    local j = 1
+    for i = 1, len do
+        local vm = f(t1[i], t2[i])
+        if vm ~= nil then
+            t1[j] = vm
+            j = j + 1
+        end
+    end
+
+    for i = j, t1_len do
+        t1[i] = nil
+    end
+
+    return t1
 end
 
 ---Apply a function to the values of `t1` and `t2` to create a new list.
@@ -2127,14 +2216,29 @@ end
 ---@generic V
 ---@param t1 T[]
 ---@param t2 U[]
----@param f fun(a:T, b:U, idx:integer): val:V|nil If val is `nil`, it will be filtered.
+---@param f fun(a:T, b:U): val:V|nil If val is `nil`, it will be filtered.
 ---@return V[] New list. Empty if all elements are filtered.
 function M.filter_map_two_to(t1, t2, f)
     vim.validate("t1", t1, "table")
     vim.validate("t2", t2, "table")
     vim.validate("f", f, "callable")
 
-    return filter_map_two_do({}, t1, t2, f)
+    local len = math.min(#t1, #t2)
+    if len == 0 then
+        return M.copy(t1)
+    end
+
+    local ret = {}
+    local j = 1
+    for i = 1, len do
+        local vm = f(t1[i], t2[i])
+        if vm ~= nil then
+            ret[j] = vm
+            j = j + 1
+        end
+    end
+
+    return ret
 end
 
 ---@generic T
@@ -2507,3 +2611,11 @@ function M.zip_with(t1, t2, f)
 end
 
 return M
+
+-- TODO: Remove any _do functions.
+-- TODO: All list functions should have early exits of len zero, and anything else that's
+-- relevant. Exceptions would have to be proven out through profiling.
+-- TODO: Re-check all _to functions to make sure they don't write to t.
+-- TODO: Improve descriptions/formatting.
+-- TODO: Remove index predicate/mapper/etc returns where I am not actively using them. It is
+-- easier to add them in later than to deal with them now.

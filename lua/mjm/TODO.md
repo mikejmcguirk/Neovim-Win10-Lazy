@@ -54,6 +54,8 @@
 
 #### MID:
 
+- [ ] Don't have a way to say, be in a buffer, see what made a change, then get the full git diff of that commit. I can use gitsigns blame to see the last change. Or I can use fzf-lua to pull old versions, but I can't get the diffs or like pull up the full old list of changes.
+  - The use case here was, I knew in vim.iter() there was the change that added variadic generics, but I wasn't sure where the meta file was that had the Lua_Ls prototypes, so I wanted to use the commit info from iter.lua to get the list of changed files to see where the meta file was, and I just didn't have the stuff to get there.
 - [ ] Needs to be some kind of Fugitive shortcut for "amend the last commit to advance it to the current state." Saves time/commits/pushes on cases where you need to fix a goof in the previous commit.
 
 - [ ] https://github.com/wellle/targets.vim

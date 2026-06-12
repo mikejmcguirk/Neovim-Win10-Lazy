@@ -13,11 +13,11 @@ vim.keymap.set("n", "<leader>tt", function()
 end)
 
 vim.keymap.set("n", "<leader>ti", function()
-    vim.api.nvim_cmd({ cmd = "InspectTree" }, {})
+    api.nvim_cmd({ cmd = "InspectTree" }, {})
 end)
 
 vim.keymap.set("n", "<leader>tee", function()
-    vim.api.nvim_cmd({ cmd = "EditQuery" }, {})
+    api.nvim_cmd({ cmd = "EditQuery" }, {})
 end)
 
 ---@param file string
@@ -29,22 +29,27 @@ local function open_file_in_vsplit(file)
     end
 
     local create_split = require("nvim-tools.win").create_split
+    local full_bufname = vim.fs.normalize(vim.call("fnamemodify", file, ":p"))
     local win = create_split(0, nil, true, "vsplit")
-    ntb.open_buf(win, bufnr, {
-        clearjumps = true,
-        force = "force",
-        fold_cmd = "zv",
-    })
+    api.nvim_set_current_win(win)
+    -- TODO: Need permanent solution here.
+    vim.cmd("edit " .. full_bufname)
+    vim.cmd("norm! zv")
+    -- ntb.open_buf(win, bufnr, {
+    --     clearjumps = true,
+    --     force = "force",
+    --     fold_cmd = "zv",
+    -- })
 end
 
 ---@param ts_file string
 ---@return nil
 --- Lifted from the old TS Master Branch
 local function edit_query_file(ts_file)
-    local lang = vim.api.nvim_get_option_value("filetype", { buf = 0 })
+    local lang = api.nvim_get_option_value("filetype", { buf = 0 })
     local files = vim.treesitter.query.get_files(lang, ts_file, nil)
     if #files == 0 then
-        vim.api.nvim_echo({ { "No query file found", "" } }, false, {})
+        api.nvim_echo({ { "No query file found", "" } }, false, {})
         return
     elseif #files == 1 then
         open_file_in_vsplit(files[1])
