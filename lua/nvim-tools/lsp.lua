@@ -1,3 +1,4 @@
+local api = vim.api
 local lsp = vim.lsp
 
 local M = {}
@@ -88,49 +89,15 @@ function M.clients_get_highest_scoring(clients)
         return a.id < b.id
     end)
 
-    local best_score = -1
-    local best_client_idx = 0
-    for i, client in ipairs(clients) do
-        local score = client_get_score(client)
-        if score > best_score then
-            best_client_idx = i
-            best_score = score
+    local ntl = require("nvim-tools.list")
+    return ntl.fold2(clients, function(top_client, top_score, client)
+        local new_score = client_get_score(client)
+        if new_score > top_score then
+            return client, new_score
+        else
+            return top_client, top_score
         end
-    end
-    -- TODO: The fact I don't have a list function that can handle this is bonkers.
-    -- for folding/scanning:
-    -- - left to right or right to left? (all functions should have rev flag)
-    -- - Is the initial acc the first list value or a custom value?
-    --   - I had wanted to use this as the differentiator between fold and reduce but that feels
-    --   like a mistake. I think you can/should take it as a given that if init is nil you get
-    --   the first value of the table or you can specify init in both reduce and fold
-    -- - Do you store acc separately from the return value?
-    --   - This might be a good differentiator between reduce and fold
-    --  -- - Taking all the above together, reduce only gives you the acc value, initializable or
-    --  not, and short circuits on nil, and provides no finishing function. So you can use it
-    --  for simple things like sum of all values or whatever. And then fold stores acc/val
-    --  separately, has more complex short circuit logic, and maybe can take a finishing
-    --  function (so that you can store count and total to do average)
-    --
-    --  And then there's:
-    --  - scan
-    --  - transduce
-    --  - filter_map_accum
-    --  - successors
-    --  - unfold
-    --
-    --  All of which serve overlapping functions.
-    --  successors/unfold are probably fine but need another look. Because successors is
-    --  just like, use the last value of the list to make the next. And then unfold holds a
-    --  separate accumulator, which you also get. That's similarish to what I want to do with
-    --  reduce/fold.
-    --
-    --  scan is supposed to be for simple cumulative whatever functions. Initialize an acc and
-    --  then run it over a table.
-    --  FIlter_map accum is also fine because it's in place.
-    --  Transduce is still the weird one.
-
-    return clients[best_client_idx]
+    end, nil, client_get_score(clients[1]))
 end
 
 ---Get a list of clients for a buffer that support all of multiple methods. Methods are evaluated
@@ -157,6 +124,25 @@ function M.clients_get_supporting_multiple(bufnr, methods)
     end)
 
     return clients
+end
+
+---@param msg string
+function M.log_warn_and_echo(msg)
+    api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
+    lsp.log.warn(msg)
+end
+
+---@param msg string
+function M.log_error_and_echo(msg)
+    api.nvim_echo({ { msg, "ErrorMsg" } }, true, {})
+    lsp.log.error(msg)
+end
+
+---@param method vim.lsp.protocol.Method.ClientToServer
+function M.log_unsupported_and_echo(method)
+    local fmt_str = "vim.lsp: method %q is not supported by any server activated for this buffer"
+    local msg = string.format(fmt_str, method)
+    M.log_warn_and_echo(msg)
 end
 
 return M

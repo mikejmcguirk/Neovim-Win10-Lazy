@@ -84,6 +84,7 @@ local function resolve_rev(rev, start, stop)
         return start, stop, 1
     end
 end
+--TODO: It is un-intuitive that that arg and return orders would be different.
 
 ---@param key_fn fun(x:any): any
 ---@param ... any[]
@@ -456,7 +457,7 @@ end
 ---@param f fun(last:T, idx:integer): T|nil Provides the current last value of the list and the
 ---     current list length.. The returned value is appended to the list. If the return is nil,
 ---     the list building ends.
----@return T[] The new table.
+---@return T[] The new list.
 function M.successors(init, f)
     vim.validate("init", init, require("nvim-tools.types").not_nil)
     vim.validate("f", f, "callable")
@@ -513,6 +514,7 @@ function M.unfold(init, f)
 
     return ret
 end
+-- TODO: Simplify this function.
 
 -----------------------------------
 -- MARK: Direct Access Functions --
@@ -1566,19 +1568,18 @@ end
 
 ---Apply a function to a list's elements, transforming them into a single value.
 ---@generic T
----@generic U
 ---@param t T[]
----@param init U First accumulator value
----@param f fun(acc:U, x:T, idx:integer): acc:U|nil If the acc return is `nil`, early-exit and
----     return the last accumulator value.
+---@param f fun(acc:any, x:T, idx:integer): acc:any  Takes as inputs the accumulator,
+---     current list value, and current list index. Returns the next accumulator.
+---     Returning a `nil` accumulator value will be accepted and overwrite the previous value.
+---@param init any First accumulator value. If `nil`, the first value of `t`.
 ---@see |iter-indexing|
 ---@param start integer? (Default: `1`)
----@param stop? integer Default: Length of `t`
+---@param stop integer? Default: Length of `t`
 ---@param rev? boolean (Default: `false`) If true, iterate from the end.
----@return U `init` if `t` is length zero.
-function M.fold(t, init, f, start, stop, rev)
+---@return any `init` if `t` is length zero.
+function M.fold(t, f, init, start, stop, rev)
     vim.validate("t", t, "table")
-    vim.validate("init", init, require("nvim-tools.types").not_nil)
     vim.validate("f", f, "callable")
     local is_int = require("nvim-tools.types").is_int
     vim.validate("start", start, is_int, true)
@@ -1594,26 +1595,70 @@ function M.fold(t, init, f, start, stop, rev)
 
     local step
     start, stop, step = resolve_rev(rev, start, stop)
-    local acc_ret = init
-    for i = start, stop, step do
-        local acc = f(acc_ret, t[i], i)
-        if acc ~= nil then
-            acc_ret = acc
-        else
-            return acc_ret
-        end
+    local acc = init
+    if acc == nil then
+        acc = t[start]
+        start = start + step
     end
 
-    return acc_ret
+    for i = start, stop, step do
+        acc = f(acc, t[i], i)
+    end
+
+    return acc
+end
+
+---Apply a function to a list's elements, transforming them into two values.
+---@generic T
+---@param t T[]
+---@param f fun(acc:any, acc2:any, x:T, idx:integer): acc:any, acc2:any  Takes as inputs the
+---     accumulators, current list value, and current list index. Returns the next accumulators.
+---     `nil` values will overwrite the previous accumulators.
+---@param init any First accumulator value. Value at the `start` index if nil.
+---@param init2 any Second accumulator value. Accepts a `nil` value without additional
+---     transformation.
+---@see |iter-indexing|
+---@param start integer? (Default: `1`)
+---@param stop integer? Default: Length of `t`
+---@param rev? boolean (Default: `false`) If true, iterate from the end.
+---@return any, any `init`, `init2` if `t` is length zero.
+function M.fold2(t, f, init, init2, start, stop, rev)
+    vim.validate("t", t, "table")
+    vim.validate("f", f, "callable")
+    local is_int = require("nvim-tools.types").is_int
+    vim.validate("start", start, is_int, true)
+    vim.validate("stop", stop, is_int, true)
+    vim.validate("rev", rev, "boolean", true)
+
+    local t_len = #t
+    start = resolve_iter_index(start, t_len, 1)
+    stop = resolve_iter_index(stop, t_len, t_len)
+    if t_len == 0 or start > stop then
+        return init, init2
+    end
+
+    local step
+    start, stop, step = resolve_rev(rev, start, stop)
+    local acc = init
+    if acc == nil then
+        acc = t[start]
+        start = start + step
+    end
+
+    local acc2 = init2
+    for i = start, stop, step do
+        acc, acc2 = f(acc, acc2, t[i], i)
+    end
+
+    return acc, acc2
 end
 
 ---Apply a function to all elements of a list, transforming them into a single value.
 ---@generic T
 ---@param t T[]
----@param f fun(acc:any): acc:any If `f` returns `nil`, iteration terminates and the current
----     accumulator is returned.
+---@param f fun(acc:any): acc:any `nil` returns are accepted.
 ---@param init? any Initial accumulator value. If nil, the first element of the list is used.
----@return any `nil` if table is length zero.
+---@return any `init` if table is length zero.
 function M.reduce(t, f, init)
     vim.validate("t", t, "table")
     vim.validate("f", f, "callable")
@@ -1649,32 +1694,45 @@ end
 ---Can be used to make any sort of cumulative sum/product/min/max function.
 ---
 ---@generic T
----@generic U
 ---@param t T[]
----@param init U First accumulator value.
----@param f fun(acc:U, x:T, idx:integer): acc:U|nil If the acc return is `nil`, early-exit and
----     return the new list gathered so far.
----@return U[] New list containing the running accumulator values. If `t` is nil, will only
+---@param f fun(acc:any, x:T, idx:integer): acc:any `nil` returns will be accepted. The returned
+---     list will not have a skipped index. The next iteration will return a nil accumulator.
+---@param init any First accumulator value. If `nil`, the value of `t` at `start` will be used.
+---@see |iter-indexing|
+---@param start integer? (Default: `1`)
+---@param stop integer? Default: Length of `t`
+---@param rev? boolean (Default: `false`) If true, iterate from the end.
+---@return any[] New list containing the running accumulator values. If `t` is nil, will only
 ---     contain init.
-function M.scan(t, init, f)
+function M.scan(t, f, init, start, stop, rev)
     vim.validate("t", t, "table")
-    vim.validate("init", init, require("nvim-tools.types").not_nil)
     vim.validate("f", f, "callable")
+    local is_int = require("nvim-tools.types").is_int
+    vim.validate("start", start, is_int, true)
+    vim.validate("stop", stop, is_int, true)
+    vim.validate("rev", rev, "boolean", true)
 
     local t_len = #t
-    local acc = init
-    ---@generic U
-    local ret = { acc } ---@type U[]
-    if t_len == 0 then
-        return ret
+    start = resolve_iter_index(start, t_len, 1)
+    stop = resolve_iter_index(stop, t_len, t_len)
+    if t_len == 0 or start > stop then
+        return init
     end
+
+    local step
+    start, stop, step = resolve_rev(rev, start, stop)
+    local acc = init
+    if acc == nil then
+        acc = t[start]
+        start = start + step
+    end
+
+    local ret = { acc } ---@type any[]
 
     for i = 1, t_len do
         acc = f(acc, t[i], i)
         if acc ~= nil then
             ret[#ret + 1] = acc
-        else
-            return ret
         end
     end
 
@@ -2012,6 +2070,7 @@ function M.transduce(t, init, f, b, z, start, stop, rev)
 
     return ret
 end
+-- TODO: I think you remove the early return from here.
 
 ---@generic T
 ---@generic U

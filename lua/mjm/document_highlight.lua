@@ -537,7 +537,9 @@ local function response_handler(err, response, ctx)
 
     if err then
         local msg = client.name .. " - " .. err.code .. ": " .. err.message
-        api.nvim_echo({ { msg, "ErrorMsg" } }, true, {})
+        -- TODO: This is roughly correct but kind of an issue because if you have something like
+        -- ts_ls not able to document highlight and it will spam those errors.
+        require("nvim-tools.lsp").log_error_and_echo(msg)
         return
     end
 
@@ -863,14 +865,13 @@ end
 local function client_enable(client_id)
     local client = lsp.get_client_by_id(client_id)
     if not client then
-        local msg = "[LSP] Client not found"
-        api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
+        require("nvim-tools.lsp").log_warn_and_echo("[LSP] Client not found")
         return
     end
 
     if not client:supports_method(METHOD) then
         local msg = "[LSP] Server does not support document highlight"
-        api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
+        require("nvim-tools.lsp").log_warn_and_echo(msg)
         return
     end
 

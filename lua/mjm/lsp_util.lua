@@ -6,12 +6,23 @@ local M_TD_REFS = "textDocument/references"
 
 local M = {}
 
+---@param msg string
+function M.log_warn_and_echo(msg)
+    api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
+    lsp.log.warn(msg)
+end
+
+---@param msg string
+function M.log_error_and_echo(msg)
+    api.nvim_echo({ { msg, "ErrorMsg" } }, true, {})
+    lsp.log.error(msg)
+end
+
 ---@param method vim.lsp.protocol.Method.ClientToServer
-function M.unsupported_echo_and_log(method)
+function M.log_unsupported_and_echo(method)
     local fmt_str = "vim.lsp: method %q is not supported by any server activated for this buffer"
     local msg = string.format(fmt_str, method)
-    lsp.log.warn(msg)
-    return msg
+    M.log_warn_and_echo(msg)
 end
 
 -- first see if any of the clients support prepare rename

@@ -493,6 +493,7 @@ local function obj_return_append(obj, parsed)
     local last_name = parsed[len_parsed].name
     local parsed_desc = parsed.desc
     if last_name and parsed_desc then
+        -- TODO: This should not be a fold since it short-circuits.
         local merge_last_name = len_parsed - 1 == 0 and true
             or list_fold(parsed, true, function(will_merge, ret)
                 if will_merge == false then
