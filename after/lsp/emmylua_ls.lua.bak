@@ -1,0 +1,35 @@
+return {
+    cmd = {
+        "emmylua_ls",
+        "--log-level",
+        "debug",
+        "--log-path",
+        "/home/mjm/.config/nvim/emmylua_ls.log", -- or any writable dir, e.g. '/tmp/emmylua_logs'
+    },
+    settings = {
+        emmylua = {
+            runtime = {
+                version = "LuaJIT",
+            },
+            workspace = {
+                library = {
+                    -- vim.env.VIMRUNTIME,
+                    -- For LSP Settings Type Annotations: https://github.com/neovim/nvim-lspconfig#lsp-settings-type-annotations
+                    -- vim.api.nvim_get_runtime_file("lua/lspconfig", false)[1],
+                },
+                ignoreGlobs = {
+                    "**/*_spec.lua",
+                },
+            },
+            -- diagnostics = {
+            --     globals = { "vim" },
+            -- },
+        },
+    },
+    root_markers = {
+        ".emmyrc.json",
+        ".emmyrc.lua",
+        ".luarc.json",
+        ".luarc.jsonc",
+    },
+}
