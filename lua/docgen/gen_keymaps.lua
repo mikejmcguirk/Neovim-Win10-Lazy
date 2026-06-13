@@ -134,6 +134,7 @@ function M.gen_keymap_md(maps)
             end)
         end)
 
+        ---@diagnostic disable-next-line: assign-type-mismatch
         local defaults = list_filter_map_to(map.lhs, function(lh)
             return checked_surround(lh, "`")
         end)
@@ -161,14 +162,17 @@ function M.gen_keymap_md(maps)
     list_filter_map_accum(tbl_rows, col_maxes, function(maxes, row)
         local plug_len = #row[1]
         local plug_rpad = maxes[1] - plug_len
+        ---@diagnostic disable-next-line: param-type-mismatch
         row[1] = row[1] .. string.rep(" ", plug_rpad)
 
         local desc_len = #row[2]
         local desc_rpad = maxes[2] - desc_len
+        ---@diagnostic disable-next-line: param-type-mismatch
         row[2] = row[2] .. string.rep(" ", desc_rpad)
 
         local default_len = #row[3]
         local default_rpad = maxes[3] - default_len
+        ---@diagnostic disable-next-line: param-type-mismatch
         row[3] = row[3] .. string.rep(" ", default_rpad)
 
         return maxes, row
@@ -178,6 +182,7 @@ function M.gen_keymap_md(maps)
         return table.concat(row, " | ")
     end)
 
+    ---@diagnostic disable-next-line: assign-type-mismatch
     local header_delim_tbl = list_filter_map_to(col_maxes, function(col_max)
         return string.rep("-", col_max)
     end)
@@ -187,6 +192,7 @@ function M.gen_keymap_md(maps)
     list_filter_map_accum(header_tbl, col_maxes, function(maxes, col, idx)
         local len = maxes[idx]
         local len_diff = len - #col
+        ---@diagnostic disable-next-line: param-type-mismatch
         return maxes, col .. string.rep(" ", len_diff)
     end)
 

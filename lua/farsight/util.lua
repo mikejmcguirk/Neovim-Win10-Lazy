@@ -8,7 +8,7 @@ local M = {}
 ---@type fun(narray: integer, nhash: integer): table
 M._table_new = (function()
     local t_new = require("table.new")
-    if t_new then
+    if t_new ~= nil then
         ---@diagnostic disable-next-line: undefined-field
         return table.new
     else
@@ -35,7 +35,7 @@ end
 ---@param v T
 function M.dict_get_key_or_default(t, k, v)
     local ret = t[k]
-    if ret then
+    if ret ~= nil then
         return ret
     end
 
@@ -223,6 +223,7 @@ function M.get_token_codepoints(tokens)
         return char_nr
     end)
 
+    ---@diagnostic disable-next-line: return-type-mismatch
     return codepoint_tokens
 end
 

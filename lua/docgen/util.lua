@@ -227,13 +227,12 @@ local function resolve_rev(rev, start, stop)
     end
 end
 
----@generic T
----@generic U
+---@generic T, V
 ---@param t T[]
----@param init U
----@param f fun(acc:U, x:T, idx:integer): acc:U|nil
+---@param init V
+---@param f fun(acc:V, x:T, idx:integer): acc:V|nil
 ---@param rev boolean|nil (Default: `false`)
----@return U
+---@return V
 function M.list_fold(t, init, f, rev, start, stop)
     local t_len = #t
     start = resolve_iter_index(start, t_len, 1)
@@ -292,13 +291,12 @@ function M.list_filter_map(t, f, start, stop)
 end
 -- TODO: Find locations where this is used with copy and replace with filter_map_to
 
----@generic T
----@generic U
+---@generic T, V
 ---@param t T[]
----@param f fun(x:T, idx:integer): U|nil
+---@param f fun(x:T, idx:integer): V|nil
 ---@param start integer? (Default: `1`)
 ---@param stop? integer Default: Length of `t`.
----@return U[]
+---@return V[]
 function M.list_filter_map_to(t, f, start, stop)
     vim.validate("t", t, "table")
     vim.validate("f", f, "callable")
@@ -309,7 +307,7 @@ function M.list_filter_map_to(t, f, start, stop)
     local t_len = #t
     start = resolve_iter_index(start, t_len, 1)
     stop = resolve_iter_index(stop, t_len, t_len)
-    local ret = {}
+    local ret = {} ---@type V[]
     if t_len == 0 or start > stop then
         return ret
     end
@@ -335,13 +333,12 @@ function M.list_filter_map_to(t, f, start, stop)
 
     return ret
 end
----@generic T
----@generic U
----@generic V
+
+---@generic T, U, V
 ---@param t T[] Modified in place!
 ---@param init V
----@param f fun(acc:V, value:T, idx:integer): V, U|nil
----@return T[]
+---@param f fun(acc:V, v:T, idx:integer): V, U?
+---@return U[]
 function M.list_filter_map_accum(t, init, f)
     local t_len = #t
     local acc = init

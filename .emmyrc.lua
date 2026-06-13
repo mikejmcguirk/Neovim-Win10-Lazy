@@ -19,7 +19,10 @@ return {
         arrayIndex = false,
     },
     workspace = {
-        library = { "$VIMRUNTIME" },
+        library = {
+            "$VIMRUNTIME",
+            -- "$HOME/.local/share/nvim/lazy",
+        },
         ignoreGlobs = { "**/*_spec.lua" },
     },
 }

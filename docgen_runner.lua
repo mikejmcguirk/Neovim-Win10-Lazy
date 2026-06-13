@@ -1,6 +1,6 @@
 #!/usr/bin/env -S nvim -l
 
----@type docgen.gen.source.Vimdoc[][]
+---@type docgen.gen.source.Vimdoc[]
 local vs = {
     { path = "lua/docgen/init.lua", type = "luacats" },
     { path = "lua/docgen/test_keymaps.lua", type = "keymap" },

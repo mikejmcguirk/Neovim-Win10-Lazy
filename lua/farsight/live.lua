@@ -25,7 +25,7 @@ local nvim_get_hl_id_by_name = api.nvim_get_hl_id_by_name
 local hl_next = nvim_get_hl_id_by_name(HL_LIVE_STR)
 local hl_ahead = nvim_get_hl_id_by_name(HL_LIVE_AHEAD_STR)
 local hl_last = nvim_get_hl_id_by_name(HL_LIVE_TARGET_STR)
-local hl_dim = nvim_get_hl_id_by_name(HL_LIVE_DIM_STR)
+-- local hl_dim = nvim_get_hl_id_by_name(HL_LIVE_DIM_STR)
 local hl_unique_char = nvim_get_hl_id_by_name(HL_LIVE_UNIQUE_CHAR)
 
 -- Prefer home row, then top, then bottom.
@@ -56,9 +56,8 @@ local function check_chars_after(win_targets, cache, opts)
     local codepoints_after = {} ---@type table<integer, [integer,integer]>
     for win, targets in pairs(win_targets) do
         local win_buf = api.nvim_win_get_buf(win)
-        local buf_cache = ut.dict_get_key_or_default(cache, win_buf, function()
-            return {}
-        end)
+        local ntt = require("nvim-tools.table")
+        local buf_cache = ntt.get_or_set_subtable(cache, win_buf)
 
         local line
         local last_fin_row_1 = 0
@@ -66,10 +65,11 @@ local function check_chars_after(win_targets, cache, opts)
             local fin_row_1 = fin_row + 1
             if fin_row_1 ~= last_fin_row_1 then
                 line = buf_cache[fin_row_1]
-                if not line then
-                    line = api.nvim_buf_get_lines(win_buf, fin_row, fin_row_1, false)[1]
-                    buf_cache[fin_row_1] = line
-                end
+            end
+
+            if not line then
+                line = api.nvim_buf_get_lines(win_buf, fin_row, fin_row_1, false)[1]
+                buf_cache[fin_row_1] = line
             end
 
             local fin_col_1 = fin_col + 1
@@ -95,16 +95,19 @@ local function check_chars_after(win_targets, cache, opts)
         end
     end
 
-    local codepoint_tokens = ut.get_token_codepoints(opts.tokens)
-    ut._list_map(codepoint_tokens, function(t)
-        if codepoints_after[t] then
+    local codepoint_tokens = ut.get_token_codepoints(opts.tokens or default_tokens)
+    local ntl = require("nvim-tools.list")
+
+    local codepoint_chars = ntl.filter_map(codepoint_tokens, function(token)
+        if codepoints_after[token] ~= nil then
             return nil
         else
-            return vim.call("nr2char", t)
+            return fn.nr2char(token)
         end
     end)
 
-    return codepoint_tokens
+    ---@diagnostic disable-next-line: return-type-mismatch
+    return codepoint_chars
 end
 -- TODO: Even if you handle the zero-length issue below, does this properly handle if the pos
 -- is on the very last character of the line?
@@ -121,19 +124,19 @@ end
 
 local function handle_input(win, buf, cache, cursor, opts)
     -- TODO: Check prompt as well
-    local cmd_type = vim.fn.getcmdtype()
+    local cmd_type = fn.getcmdtype()
     if cmd_type ~= "@" then
         return
     end
 
     api.nvim_buf_clear_namespace(0, test_ns, 0, -1)
-    local pattern = vim.fn.getcmdline()
+    local pattern = fn.getcmdline()
     if pattern == "" then
         return
     end
 
     local locator = require("farsight._locator")
-    local ok, targets, err_hl = locator.search(win, pattern, cursor, cache, {
+    local ok, targets, _ = locator.search(win, pattern, cursor, cache, {
         alloc_size = 64,
         allow_folds = "none",
         allow_intersect = false,
@@ -180,7 +183,7 @@ local function handle_input(win, buf, cache, cursor, opts)
         locations = "finish",
     })
 
-    vim.fn.confirm(vim.inspect(targets))
+    fn.confirm(vim.inspect(targets))
     if not filled_vtext then
         return
     end
@@ -238,7 +241,7 @@ function M.live_jump()
     local win_buf = api.nvim_win_get_buf(cur_win)
     create_input_handler(cur_win, win_buf, { set_char_hl = true, tokens = default_tokens })
 
-    local ok, err = pcall(vim.call, "input", "YUMP: ")
+    local ok, _ = pcall(vim.call, "input", "YUMP: ")
     if ok then
         api.nvim_echo({ { "" } }, false, {}) -- LOW: Is there a less blunt way to handle this?
     end

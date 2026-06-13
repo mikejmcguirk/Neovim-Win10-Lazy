@@ -10,10 +10,15 @@ DEFAULT_TIMEOUT = 1000
 
 local M = {}
 
+---@return string?
 function M.get_debug_path()
     local debug_info = debug.getinfo(2, "S")
     if not debug_info then
         debug_info = debug.getinfo(1, "S")
+    end
+
+    if not debug_info then
+        return nil
     end
 
     return vim.call("fnamemodify", debug_info.source:gsub("^@", ""), ":p:h")
@@ -24,7 +29,7 @@ end
 ----------------------
 
 ---@param path string
----@param err uv.callback.err
+---@param err string?
 ---@param stat uv.fs_stat.result?
 ---@return boolean ok, string? msg
 local function fs_fstat_file_validate(path, err, stat)
@@ -43,11 +48,11 @@ end
 -- TODO: This should be merged in with the code the sync version uses
 
 ---@param path string
----@param err uv.callback.err
+---@param err string?
 ---@param fd integer|nil
 ---@return boolean ok, string? msg
 local function fs_open_validate(path, err, fd)
-    if err then
+    if err ~= nil then
         return false, string.format("fs_open error on %s: %s", path, err)
     elseif not fd then
         local fmt_str = "fs_open failed on %s: no file descriptor returned"
@@ -59,13 +64,12 @@ local function fs_open_validate(path, err, fd)
 end
 -- TODO: This should be merged in with the code the sync version uses
 
----@async
 ---@param path string
----@param callback fun(err:uv.callback.err, content:string|nil)
+---@param callback fun(err:string?, content:string|nil)
 local function read_file_async(path, callback)
     uv.fs_open(path, "r", 292, function(open_err, fd)
         local ok_o, err_o = fs_open_validate(path, open_err, fd)
-        if not ok_o then
+        if (not ok_o) or not fd then
             callback(err_o, nil)
             return
         end
@@ -91,7 +95,7 @@ end
 ---@field jobs_max? integer (default: 8) Maximum simultaneous file reads
 ---@field timeout? integer (default: 1000) Timeout (ms).
 
----@alias docgen.file.FsReadListResult [boolean,string?,uv.callback.err]
+---@alias docgen.file.FsReadListResult [boolean,string?, string?]
 
 ---@param paths string[] Assumes at least one path is provided.
 ---@param on_complete fun(success:boolean, timed_out:boolean, results:table<string,docgen.file.FsReadListResult>)
@@ -244,7 +248,7 @@ end
 ---@param path? string
 ---@return boolean ok, string path, uv.fs_stat.result? stat, string? err, uv.error_name? err_name
 function M.path_for_open_setup_checked(dir_default, fname_default, path)
-    if not (path and string.find(path, "[^%s]") ~= nil) then
+    if not path or string.find(path, "[^%s]") == nil then
         path = fs.joinpath(dir_default, fname_default)
     end
 

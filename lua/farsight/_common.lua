@@ -30,7 +30,7 @@ local fn = vim.fn
 ---`-1`: From the cursor to the top of the range
 ---`0`: The entire range
 ---`1`: From the cursor to the bottom of the range
----@field dir integer
+---@field dir -1|0|1
 ---If true, results will be eliminated based on the value of vim.v.count1.
 ---Example: If vcount1 == 2, the first result would be rejected, since it would not be used.
 ---@field handle_count boolean

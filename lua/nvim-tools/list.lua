@@ -80,7 +80,7 @@ end
 ---@param ... any[]
 ---@return table<any, true> seen
 local function seen_from_varargs_if_in_any(nargs, key_fn, ...)
-    local seen = {} ---@type table<any, boolean>
+    local seen = {} ---@type table<any, true>
     for i = 1, nargs do
         local tn = select(i, ...)
         local tn_len = #tn
@@ -1413,7 +1413,7 @@ function M.common_prefix(tt)
         return tt_len_one > 0 and tt_len_one or nil
     end
 
-    local tt_len_min = math.huge
+    local tt_len_min = math.floor(math.huge)
     for i = 1, tt_len do
         local tt_len_i = #tt[i]
         if tt_len_i == 0 then
@@ -1476,7 +1476,7 @@ function M.diverse(t)
     seen[t[1]] = true
     for i = 2, t_len do
         local v = t[i]
-        if seen[v] then
+        if seen[v] ~= nil then
             return false, i, v
         end
 
@@ -1910,18 +1910,19 @@ function M.fill(t, v, start, stop)
     return t
 end
 
----Apply function `f` to the values of `t` in place.
----No-op if `t1` length is zero.
----@generic T
----@generic U
----@param t T[] Modified in place!
----@param f fun(x: T, idx:integer): U|nil Correct idx is preserved when filtering. `nil` returns
----     are filtered.
+---@generic T, V
+---@param t T[]
+---Modified in place!
+---@param f fun(x: T, idx: integer): V|nil
+---Correct idx is preserved when filtering. `nil` returns are filtered.
+---@param start integer?
+---(Default: `1`) Leave elements before start un-mapped.
+---@param stop? integer
+---Default: Length of `t`. Elements after `stop` will be un-mapped.
+---@return V[]
+---The original list reference. If `start` and `stop` produce an invalid range, the function is a
+---no-op.
 ---@see |iter-indexing|
----@param start integer? (Default: `1`) Leave elements before start un-mapped.
----@param stop? integer Default: Length of `t`. Elements after `stop` will be un-mapped.
----@return U[] The original list reference. If `start` and `stop` produce an invalid range, the
----     function is a no-op.
 function M.filter_map(t, f, start, stop)
     vim.validate("t", t, "table")
     vim.validate("f", f, "callable")
@@ -1938,7 +1939,7 @@ function M.filter_map(t, f, start, stop)
 
     local j = start
     for i = start, stop do
-        local vm = f(t[i], i)
+        local vm = f(t[i], i) ---@type V
         if vm ~= nil then
             t[j] = vm
             j = j + 1
@@ -1954,8 +1955,9 @@ function M.filter_map(t, f, start, stop)
         t[i] = nil
     end
 
-    return t
+    return t --[[@as (V[])]]
 end
+-- TODO: type annotations in here not working.
 
 ---Create a new list by applying function `f` to the values of `t`.
 ---@generic T

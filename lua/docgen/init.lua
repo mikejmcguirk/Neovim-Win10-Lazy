@@ -41,7 +41,7 @@ local list_splice = util.list_splice
 local table_common_prefix = util.table_common_prefix
 local list_filter_map = util.list_filter_map
 local list_filter_map_two = util.list_filter_map_two
-local table_filter_map_to = util.table_filter_map_to
+-- local table_filter_map_to = util.table_filter_map_to
 local table_new = util.table_new
 
 ---@param default_fname string
@@ -121,7 +121,7 @@ local plugin_part_fns = {
 ---@param source docgen.gen.input.Plugin
 ---@param prefix string
 ---@param plugin_parts string[]
-local function plugin_part_append(source, prefix, imported, plugin_parts)
+local function plugin_part_append(source, prefix, _, plugin_parts)
     local plugin_part_tbl = {}
 
     local plugin_part_fn = plugin_part_fns[source.type] or plugin_part_fns["_default"]
@@ -202,7 +202,7 @@ local readme_part_fns = {
 ---@param source docgen.gen.input.Readme
 ---@param prefix string
 ---@param readme_parts string[]
-local function readme_part_append(source, prefix, imported, readme_parts)
+local function readme_part_append(source, prefix, _, readme_parts)
     local part_tbl = {}
 
     local readme_part_fn = readme_part_fns[source.type] or readme_part_fns["_default"]
@@ -513,7 +513,7 @@ end
 local M = {}
 
 ---Main generator function
----@param vimdoc_sources? docgen.gen.source.Vimdoc[][]
+---@param vimdoc_sources? docgen.gen.source.Vimdoc[]
 ---@param readme_sources? docgen.gen.input.Readme[]
 ---@param plugin_sources? docgen.gen.input.Plugin[]
 ---@param opts? docgen.gen.Opts
@@ -521,7 +521,8 @@ function M.gen_all(vimdoc_sources, readme_sources, plugin_sources, opts)
     opts = opts or {}
     -- TODO: validate inputs
 
-    local debug_path = debug_path_get()
+    -- TODO: Not good if this is actually nil.
+    local debug_path = debug_path_get() or ""
     logger_create(opts.log_level, debug_path, opts.log_path)
 
     vimdoc_sources = vimdoc_sources or {}

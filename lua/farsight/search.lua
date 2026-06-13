@@ -236,7 +236,7 @@ local function display_search_highlights(win, buf, prompt, search_ctx, is, is_ct
         return
     end
 
-    local dim = opts.dim ---@type boolean
+    local dim = opts.dim or false
     checked_clear_namespaces(buf, dim)
     local cmdline_raw = vim.call("getcmdline") ---@type string
     local cmdline, _ = parse_search_offset(prompt, cmdline_raw)
@@ -266,6 +266,8 @@ local function display_search_highlights(win, buf, prompt, search_ctx, is, is_ct
 
     if targets[2] > 0 then
         local labeler = require("farsight._labeler")
+        ---@diagnostic disable-next-line: assign-type-mismatch, param-type-mismatch,
+        ---redundant-parameter
         labeler.fill_labels({ win }, { [win] = targets }, tokens, cache, {
             allow_partial = true,
             cursor = search_ctx.cursor,
@@ -275,6 +277,7 @@ local function display_search_highlights(win, buf, prompt, search_ctx, is, is_ct
             is_upward = true,
         })
 
+        ---@diagnostic disable-next-line: param-type-mismatch
         labeler.fill_virt_text(targets, 1, 1, {
             hl_next = hl_search_next,
             hl_ahead = hl_search_ahead,
@@ -285,6 +288,7 @@ local function display_search_highlights(win, buf, prompt, search_ctx, is, is_ct
             use_upward = true,
         })
 
+        ---@diagnostic disable-next-line: undefined-field
         labeler.set_label_extmarks(
             buf,
             search_ns,
@@ -294,13 +298,14 @@ local function display_search_highlights(win, buf, prompt, search_ctx, is, is_ct
 
         merge_res(targets, is)
         local dim_hl_info = checked_get_dim_rows_from_res(targets, dim)
+        ---@diagnostic disable-next-line: param-type-mismatch
         set_search_extmarks(buf, targets, is, search_ctx.dir)
         local highlighting = require("farsight._highlighting")
         highlighting.checked_set_dim_extmarks(buf, dim_ns, hl_dim, dim_hl_info, opts.dim)
     end
 
     if is and is_ctx then
-        if r_targets[2] > 0 then
+        if r_targets and r_targets[2] > 0 then
             -- Saves time setting extmarks
             merge_res(r_targets, is)
             -- Because these are not valid destinations, always assign false and do not dim

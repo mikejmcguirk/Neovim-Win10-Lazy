@@ -87,6 +87,7 @@ end
 ---@param class docgen.ParserObj
 ---@param typ_islist boolean
 local function obj_inlinedoc_inject(doc_item, class, typ_islist, typ_isopt)
+    ---@diagnostic disable-next-line: missing-fields
     local inlinedesc = {} ---@type docgen.ParserObj
     inlinedesc.kind = "class"
 
@@ -176,7 +177,7 @@ local function inlinedoc_inject(obj, classes)
             goto do_returns
         end
 
-        for _, param in ipairs(obj.params) do
+        for _, param in ipairs(params) do
             local class, typ_isopt, typ_islist = type_find_class(param, classes)
             if class then
                 if class.doc_flag == "inlinedoc" then
@@ -206,7 +207,12 @@ local function inlinedoc_inject(obj, classes)
             end
         end
     elseif obj.kind == "class" then
-        for _, field in ipairs(obj.fields) do
+        local fields = obj.fields
+        if not fields then
+            return
+        end
+
+        for _, field in ipairs(fields) do
             local class, typ_isopt, typ_islist = type_find_class(field, classes)
             if class then
                 if class.doc_flag == "inlinedoc" then
@@ -219,44 +225,44 @@ local function inlinedoc_inject(obj, classes)
     end
 end
 
----@param header_tags string[]
----@param parsed_sources [integer, docgen.ParserObj[]] Modified in place
-local function tags_prepare_and_check(header_tags, parsed_sources)
-    local seen = {} ---@type table<string, boolean>
-    for _, tag in ipairs(header_tags) do
-        if not seen[tag] then
-            seen[tag] = true
-        else
-            error("Duplicate tag: " .. tag)
-        end
-    end
+-- ---@param header_tags string[]
+-- ---@param parsed_sources [integer, docgen.ParserObj[]] Modified in place
+-- local function tags_prepare_and_check(header_tags, parsed_sources)
+--     local seen = {} ---@type table<string, boolean>
+--     for _, tag in ipairs(header_tags) do
+--         if not seen[tag] then
+--             seen[tag] = true
+--         else
+--             error("Duplicate tag: " .. tag)
+--         end
+--     end
+--
+--     for _, source in ipairs(parsed_sources) do
+--         for _, obj in ipairs(source[2]) do
+--             -- Wait until now because attaching class functions can change the function's tag.
+--             local obj_tags_addtl = table_get_or_create_subtable(obj, "tags_addtl")
+--             local obj_tag = obj.tag
+--             if obj_tag then
+--                 obj_tags_addtl[#obj_tags_addtl + 1] = obj_tag
+--             end
+--
+--             local tags_addtl = obj.tags_addtl
+--             if tags_addtl then
+--                 for _, tag in ipairs(tags_addtl) do
+--                     if not seen[tag] then
+--                         seen[tag] = true
+--                     else
+--                         error("Duplicate tag: " .. tag)
+--                     end
+--                 end
+--             end
+--         end
+--     end
+-- end
+-- -- TODO: More detailed error reporting. Maybe/probably not file info, but more info about the
+-- -- objects producing the duplicates.
 
-    for _, source in ipairs(parsed_sources) do
-        for _, obj in ipairs(source[2]) do
-            -- Wait until now because attaching class functions can change the function's tag.
-            local obj_tags_addtl = table_get_or_create_subtable(obj, "tags_addtl")
-            local obj_tag = obj.tag
-            if obj_tag then
-                obj_tags_addtl[#obj_tags_addtl + 1] = obj_tag
-            end
-
-            local tags_addtl = obj.tags_addtl
-            if tags_addtl then
-                for _, tag in ipairs(tags_addtl) do
-                    if not seen[tag] then
-                        seen[tag] = true
-                    else
-                        error("Duplicate tag: " .. tag)
-                    end
-                end
-            end
-        end
-    end
-end
--- TODO: More detailed error reporting. Maybe/probably not file info, but more info about the
--- objects producing the duplicates.
-
----@param obj_lists docgen.ParserObj[] Modified in place
+---@param obj_lists docgen.ParserObj[][] Modified in place
 ---@return table<string, docgen.ParserObj> classes
 ---@return integer classes_count
 ---@return table<string, docgen.ParserObj> funs
@@ -274,9 +280,9 @@ local function create_maps(obj_lists)
                 if not funs[tag] then
                     funs[tag] = obj
                 else
-                    error("Duplicate fun " .. tag .. " from source " .. list[1])
+                    error("Duplicate fun " .. tag)
                 end
-                funs[obj.tag] = obj
+                funs[tag] = obj
             elseif kind == "class" then
                 -- Globally unique LuaCATs class name
                 local name = obj.name --[[@as string]]
@@ -284,7 +290,7 @@ local function create_maps(obj_lists)
                     classes[name] = obj
                     classes_count = classes_count + 1
                 else
-                    error("Duplicate class " .. name .. " from source " .. list[1])
+                    error("Duplicate class " .. name)
                 end
             end
         end
@@ -323,8 +329,10 @@ local function class_funs_resolve_links(classes, classvar_map, funs)
             goto continue
         end
 
+        ---@diagnostic disable-next-line: undefined-field
         local class = classes[class_name]
-        if class then
+        if class ~= nil then
+            ---@diagnostic disable-next-line: param-type-mismatch
             class_fun_attach(class, fun)
         end
 
@@ -332,7 +340,7 @@ local function class_funs_resolve_links(classes, classvar_map, funs)
     end
 end
 
----@param obj_lists docgen.ParserObj[] Modified in place
+---@param obj_lists docgen.ParserObj[][] Modified in place
 ---@param classes table<string, docgen.ParserObj> Edited in place
 ---@param funs table<string, docgen.ParserObj> Edited in place
 local function parsed_sources_filter_invalid(obj_lists, classes, funs)
@@ -360,7 +368,7 @@ local function parsed_sources_filter_invalid(obj_lists, classes, funs)
     end)
 end
 
----@param obj_lists docgen.ParserObj[] Modified in place
+---@param obj_lists docgen.ParserObj[][] Modified in place
 local function parsed_sources_filter_inlinedoc(obj_lists)
     for _, list in ipairs(obj_lists) do
         list_filter(list, function(obj)
@@ -374,7 +382,7 @@ local function parsed_sources_filter_inlinedoc(obj_lists)
 end
 -- TODO: This cannot be the way.
 
----@param obj_lists docgen.ParserObj[] Modified in place
+---@param obj_lists docgen.ParserObj[][] Modified in place
 function M.parsed_sources_resolve_holistic(obj_lists)
     vim.validate("parsed_sources", obj_lists, "table")
 
@@ -392,6 +400,7 @@ function M.parsed_sources_resolve_holistic(obj_lists)
 
     -- Do here for inlinedoc.
     for _, class in pairs(classes) do
+        ---@diagnostic disable-next-line: param-type-mismatch
         table.sort(class.fields, function(a, b)
             return a.name < b.name
         end)

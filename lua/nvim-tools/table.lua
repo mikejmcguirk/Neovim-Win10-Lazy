@@ -41,9 +41,9 @@ function M.copy(t)
     return ret
 end
 
----@generic T
----@param t table<T, T>
----@param f fun(k: T, v: T): boolean|nil
+---@generic T, V
+---@param t table<T, V>
+---@param f fun(k: T, v: V): boolean|nil
 function M.filter(t, f)
     vim.validate("t", t, "table")
     vim.validate("f", f, "callable")

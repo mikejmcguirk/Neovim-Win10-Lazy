@@ -37,8 +37,6 @@ local namespaces = { api.nvim_create_namespace("") } ---@type integer[]
 
 local fn_foldclosed = fn.foldclosed
 local str_byte = string.byte
-local str_find = string.find
-local str_sub = string.sub
 
 local get_char_class = require("farsight._util_char")._get_char_class
 local get_utf_codepoint = require("farsight._util_char")._get_utf_codepoint
@@ -144,7 +142,7 @@ end
 ---@param row integer
 ---@return integer[]|nil Returns a list if the line should NOT be iterated over
 local function check_locator_line(line, row)
-    if str_find(line, "[^\\0-\\32\\127]") == nil then
+    if string.find(line, "[^\\0-\\32\\127]") == nil then
         return {}
     end
 
@@ -222,7 +220,7 @@ local function do_jump(jump_win, buf, jump_row_0, jump_col, map_mode, opts)
     end
 
     local jump_pos = { jump_row, jump_col }
-    if cur_row == jump_row and cur_col == jump_col then
+    if cur_row == jump_row and cur_col == jump_col and opts.on_jump then
         -- By not going into visual mode, the current character is properly captured when
         -- performing an operator motion only on the cursor column.
         opts.on_jump(jump_win, buf, jump_pos)
@@ -259,7 +257,9 @@ local function do_jump(jump_win, buf, jump_row_0, jump_col, map_mode, opts)
     end
 
     api.nvim_win_set_cursor(jump_win, jump_pos)
-    opts.on_jump(jump_win, buf, jump_pos)
+    if opts.on_jump then
+        opts.on_jump(jump_win, buf, jump_pos)
+    end
 end
 
 ---j_win == -1 if no targets remain, 0 if multiple targets remain, and >= 1000 if only one target
@@ -628,6 +628,7 @@ local function advance_jump(win_targets, win_info, win_dim_rows, map_mode, opts)
     local nvim_buf_clear_namespace = api.nvim_buf_clear_namespace
 
     while true do
+        opts.max_tokens = opts.max_tokens or 2
         populate_target_virt_text(win_targets, jump_level, opts.max_tokens)
         set_label_extmarks(win_targets, win_info)
         if opts.dim then
@@ -642,8 +643,9 @@ local function advance_jump(win_targets, win_info, win_dim_rows, map_mode, opts)
 
         -- Do before filtering targets because we need the previous level's windows for redrawing
         if jump_level > 0 then
-            require("farsight.util")._dict_filter(win_info, function(k, _)
-                return win_targets[k] ~= nil
+            local ntt = require("nvim-tools.table")
+            ntt.filter(win_info, function(win, _)
+                return win_targets[win] ~= nil
             end)
         end
 
@@ -775,7 +777,8 @@ local function get_extra_wrap_cols(win, buf, row, cur_pos, isk_tbl, locator)
         return {}
     end
 
-    return locator(buf, fn.getline(row), row, cur_pos, isk_tbl)
+    local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
+    return locator(buf, line, row, cur_pos, isk_tbl)
 end
 
 ---Takes zero indexed col
@@ -863,7 +866,7 @@ local function get_cols_after(buf, line, cur_pos, locator, isk_tbl)
     -- TODO: Do not pass isk_tbl to the locator. My functions need to get at it a different way.
     -- If we make a public interface for isk, demonstrate how to use it. It's wasteful if the
     -- user doesn't need it and aesthetically arbitrary.
-    local line_after = str_sub(line, start_col_1, #line)
+    local line_after = string.sub(line, start_col_1, #line)
     local cols = locator(buf, line_after, cur_pos[1], cur_pos, isk_tbl)
     local count_cols = #cols
     for i = 1, count_cols do
@@ -902,9 +905,11 @@ local function get_targets(wins, win_info, opts)
         win_dim_rows[win] = {}
     end
 
-    local dim = opts.dim ---@type boolean
-    local dir = opts.dir ---@type -1|0|1
+    local dim = opts.dim
+    local dir = opts.dir or 0
     local list_dedup = require("farsight.util")._list_dedup
+    -- This is already resolved.
+    ---@diagnostic disable-next-line: assign-type-mismatch
     ---@type fun( buf: integer, line: string, row: integer,
     ---cur_pos: { [1]: integer, [2]: integer }, isk_tbl: boolean[]):integer[]
     local locator = opts.locator
@@ -927,8 +932,8 @@ local function get_targets(wins, win_info, opts)
         local wrap = nvim_get_option_value("wrap", { win = win }) ---@type boolean
 
         local targets = win_targets[win]
-        local all_cols
-        local offset
+        local all_cols = {}
+        local offset = 0
 
         nvim_win_call(win, function()
             local top, bot, wS = get_top_bot(dir, cur_pos)
@@ -967,13 +972,16 @@ local function get_targets(wins, win_info, opts)
         local dim_rows = win_dim_rows[win]
         local len_all_cols = #all_cols
         for j = 1, len_all_cols do
-            local cols = all_cols[j]
+            local cols = all_cols[j] or {}
+            ---@diagnostic disable-next-line: param-type-mismatch
             list_dedup(cols)
+            ---@diagnostic disable-next-line: param-type-mismatch
             tbl_sort(cols, function(a, b)
                 return a < b
             end)
 
             local row_0 = j + offset - 1
+            ---@diagnostic disable-next-line: param-type-mismatch
             add_cols_to_targets(row_0, cols, targets)
             if #cols > 0 and dim then
                 dim_rows[#dim_rows + 1] = row_0
@@ -1105,6 +1113,7 @@ local function resolve_locator(opts, cur_buf, map_mode)
         if map_mode == "v" or map_mode == "o" then
             opts.locator = locate_cwords_with_cur_pos
         else
+            ---@diagnostic disable-next-line: assign-type-mismatch
             opts.locator = locate_cwords
         end
 
@@ -1173,7 +1182,7 @@ function Jump.jump(opts)
     local map_mode = ut._resolve_map_mode(api.nvim_get_mode().mode)
     resolve_jump_opts(opts, map_mode)
 
-    local wins = ut._order_focusable_wins(opts.wins)
+    local wins = ut._order_focusable_wins(opts.wins or { api.nvim_get_current_win() })
     if #wins < 1 then
         api.nvim_echo({ { "No focusable wins provided" } }, false, {})
         return
@@ -1183,7 +1192,7 @@ function Jump.jump(opts)
     local win_targets, win_dim_rows = get_targets(wins, win_info, opts)
     local j_win, j_row, j_col = get_jump_info(win_targets)
     if j_win == 0 then
-        populate_target_labels(wins, win_targets, opts.tokens)
+        populate_target_labels(wins, win_targets, opts.tokens or TOKENS)
         advance_jump(win_targets, win_info, win_dim_rows, map_mode, opts)
         return
     end

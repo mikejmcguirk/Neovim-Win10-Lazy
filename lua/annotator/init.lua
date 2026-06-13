@@ -47,7 +47,7 @@ reset_config()
 local function merge_new_config(new_config)
     for k, v in pairs(new_config) do
         local meta = Config_Meta[k]
-        if meta then
+        if meta ~= nil then
             if meta.validator(v) then
                 config[k] = v
             end

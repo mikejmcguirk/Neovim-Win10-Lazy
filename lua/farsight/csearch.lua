@@ -729,7 +729,7 @@ end
 ---This function respects the |cpoptions| ";" flag
 ---@param opts? farsight.csearch.BaseOpts
 function Csearch.rep(opts)
-    local cs_opts = opts and vim.deepcopy(opts) or {} ---@type farsight.csearch.CsearchOpts
+    local cs_opts = opts and vim.deepcopy(opts) or {} --[[@as farsight.csearch.CsearchOpts]]
     local cur_win = api.nvim_get_current_win()
     local cur_buf = api.nvim_win_get_buf(cur_win)
     resolve_base_opts(cs_opts, cur_buf)
