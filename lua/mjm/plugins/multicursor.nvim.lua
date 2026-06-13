@@ -7,10 +7,11 @@ return {
         local set = vim.keymap.set
 
         mc.setup()
+        ---@type [string[], string, function][]
         local nocursor_maps = {
             { { "n", "x" }, "gii", mc.restoreCursors },
             { { "n", "x" }, "giC", mc.addCursor },
-        } ---@type { [1]:string[], [2]:string, [3]:function }
+        }
 
         ---@return nil
         local function map_nocursor()

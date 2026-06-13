@@ -7,14 +7,14 @@ vim.keymap.set("n", "q", "<cmd>lua require('undotree').open()<cr>", { buf = 0 })
 api.nvim_create_autocmd("CursorMoved", {
     buffer = 0,
     callback = function()
-        local wins = api.nvim_tabpage_list_wins(0) ---@type integer[]
+        local wins = api.nvim_tabpage_list_wins(0)
         for _, win in ipairs(wins) do
-            local buf = api.nvim_win_get_buf(win) ---@type integer
+            local buf = api.nvim_win_get_buf(win)
             if vim.b[buf].nvim_undotree then
                 api.nvim_win_call(win, function()
-                    local cur_line = fn.line(".") ---@type integer
-                    local top = fn.line("w0") ---@type integer
-                    local bot = fn.line("w$") ---@type integer
+                    local cur_line = fn.line(".")
+                    local top = fn.line("w0")
+                    local bot = fn.line("w$")
                     if not (top <= cur_line and cur_line <= bot) then
                         api.nvim_cmd({ cmd = "norm", args = { "zz" }, bang = true }, {})
                     end

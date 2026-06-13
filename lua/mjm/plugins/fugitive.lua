@@ -3,13 +3,12 @@ local set = vim.keymap.set
 
 ---@param all boolean
 local function commit(all, msg)
-    local args = "commit" .. (all and " -a" or "") ---@type string
+    local args = "commit" .. (all and " -a" or "")
     if msg then
         local prompt = "Commit message" .. (all and " (ALL)" or "") .. ": "
         local ok, result = require("nvim-tools.ui").get_input(prompt)
         if not ok then
-            ---@type [string, string|integer?][]
-            local chunks = { { (result or "Unknown error getting input"), "ErrorMsg" } }
+            local chunks = { (result or "Unknown error getting input"), "ErrorMsg" }
             api.nvim_echo({ chunks }, true, { err = true })
             return
         elseif result == "" then
@@ -25,8 +24,8 @@ end
 ---@param staged boolean?
 ---@return nil
 local function open_diffs(staged)
-    local tabpage = api.nvim_get_current_tabpage() ---@type integer
-    local tabpage_wins = api.nvim_tabpage_list_wins(tabpage) ---@type integer[]
+    local tabpage = api.nvim_get_current_tabpage()
+    local tabpage_wins = api.nvim_tabpage_list_wins(tabpage)
     for _, win in ipairs(tabpage_wins) do
         local win_buf = api.nvim_win_get_buf(win) ---@type integer
         if api.nvim_get_option_value("filetype", { buf = win_buf }) == "diff" then
@@ -42,7 +41,7 @@ local function open_diffs(staged)
         vim.cmd("lclose | cclose")
     end
 
-    local args = { "diff" .. (staged and " --staged" or "") } ---@type string[]
+    local args = { "diff" .. (staged and " --staged" or "") }
     ---@diagnostic disable-next-line: missing-fields
     api.nvim_cmd({ cmd = "Git", args = args, mods = { split = "botright" } }, {})
 end

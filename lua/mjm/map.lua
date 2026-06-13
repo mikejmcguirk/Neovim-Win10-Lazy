@@ -3,6 +3,8 @@ local fn = vim.fn
 local set = vim.keymap.set
 local vimv = vim.v
 
+_G.I_Dedent = "<C-m>"
+
 -----------------
 -- LEADER MAPS --
 -----------------
@@ -66,7 +68,7 @@ set("n", "<tab>", function()
     local create_temp_buf = require("nvim-tools.buf").create_temp_buf
     local temp_buf = create_temp_buf("wipe", true, "nofile", "", true)
 
-    local vcount = vim.v.count
+    local vcount = vimv.count
     local count_tabpages = fn.tabpagenr("$")
     local pos = vcount == 0 and count_tabpages or math.min(vcount, count_tabpages)
 
@@ -79,13 +81,13 @@ set("n", "ZT", function()
         return
     end
 
-    local vcount = vim.v.count
+    local vcount = vimv.count
     local args = vcount > 0 and { tostring(vcount) } or nil
     api.nvim_cmd({ cmd = "tabclose", args = args }, {})
 end)
 
 set("n", "ZB", function()
-    local vcount = vim.v.count
+    local vcount = vimv.count
     local args = vcount > 0 and { tostring(vcount) } or nil
     api.nvim_cmd({ cmd = "tabonly", args = args }, {})
 end)
@@ -100,11 +102,11 @@ set({ "n", "x" }, "L", "<cmd>keepjumps norm! L<cr>")
 set({ "n", "x" }, "M", "<cmd>keepjumps norm! M<cr>")
 
 set({ "n", "x" }, "{", function()
-    vim.cmd("keepjumps norm! " .. vim.v.count1 .. "{")
+    vim.cmd("keepjumps norm! " .. vimv.count1 .. "{")
 end)
 
 set({ "n", "x" }, "}", function()
-    vim.cmd("keepjumps norm! " .. vim.v.count1 .. "}")
+    vim.cmd("keepjumps norm! " .. vimv.count1 .. "}")
 end)
 
 ----------------
@@ -122,22 +124,21 @@ set({ "n", "x" }, "<C-b>", "m`<C-b>")
 -- LOW: Lots of little improvements and edge case handling that could be done here, but see how
 -- this is used in the wild before sinking in time
 for _, map in ipairs({ "<C-w>e", "<C-w><C-e>" }) do
-    vim.keymap.set("n", map, function()
+    set("n", map, function()
         local win = api.nvim_get_current_win()
         local config = api.nvim_win_get_config(win)
-        if not (config.relative and config.relative ~= "") then
-            vim.api.nvim_echo({ { "Current window is not floating" } }, false, {})
+        if config.relative == nil or config.relative == "" then
+            api.nvim_echo({ { "Current window is not floating" } }, false, {})
             return
         end
 
         local buf = api.nvim_win_get_buf(win)
-        vim.api.nvim_set_option_value("bufhidden", "", { buf = buf })
-        ---@type integer
+        api.nvim_set_option_value("bufhidden", "", { buf = buf })
         local to_split = (function()
-            if vim.v.count > 0 then
+            if vimv.count > 0 then
                 local max_winnr = fn.winnr("$")
-                local winnr = math.min(vim.v.count, max_winnr)
-                return vim.fn.win_getid(winnr)
+                local winnr = math.min(vimv.count, max_winnr)
+                return fn.win_getid(winnr)
             end
 
             -- LOW: How to handle other origin conditions?
@@ -340,11 +341,11 @@ map_scroll("<C-d>", "\4zz")
 set("o", "gg", "<esc>")
 set({ "n", "x" }, "go", function()
     -- gg Retains cursor position since I keep startofline off
-    return vim.v.count < 1 and "m`gg" or "m`" .. vim.v.count1 .. "go"
+    return vimv.count < 1 and "m`gg" or "m`" .. vimv.count1 .. "go"
 end, { expr = true })
 
 set("o", "go", function()
-    return vim.v.count < 1 and "gg" or "go"
+    return vimv.count < 1 and "gg" or "go"
 end, { expr = true })
 
 ---@param char "j"|"k"
@@ -466,7 +467,7 @@ end)
 set("n", "<bs>s", function()
     ---@type boolean
     local cur_spell = api.nvim_get_option_value("spell", { scope = "local" })
-    vim.api.nvim_set_option_value("spell", not cur_spell, { scope = "local" })
+    api.nvim_set_option_value("spell", not cur_spell, { scope = "local" })
 end)
 
 set("n", "<bs><M-s>", "<cmd>set spell?<cr>")
@@ -474,7 +475,7 @@ set("n", "<bs><M-s>", "<cmd>set spell?<cr>")
 set("n", "<bs>w", function()
     ---@type boolean
     local cur_wrap = api.nvim_get_option_value("wrap", { scope = "local" })
-    vim.api.nvim_set_option_value("wrap", not cur_wrap, { scope = "local" })
+    api.nvim_set_option_value("wrap", not cur_wrap, { scope = "local" })
 end)
 
 set("n", "<bs><M-w>", "<cmd>set wrap?<cr>")
@@ -575,7 +576,7 @@ set("n", "J", function()
 
     local view = fn.winsaveview()
     -- By default, [count]J joins one fewer lines than indicated by the relative line numbers
-    local args = { vim.v.count1 + 1 .. "J" }
+    local args = { vimv.count1 + 1 .. "J" }
     api.nvim_cmd({ cmd = "norm", args = args, bang = true }, {})
     fn.winrestview(view)
 end, { silent = true })
@@ -589,7 +590,7 @@ local function mv_normal(upward)
     end
 
     local dir = upward and "-" or "+"
-    local count = vim.v.count1 + (upward and 1 or 0)
+    local count = vimv.count1 + (upward and 1 or 0)
     local ok_m, err_m = pcall(function()
         vim.cmd("m" .. dir .. count .. " | norm! ==")
     end)
@@ -651,7 +652,7 @@ local function add_blank_visual(up)
 
     local row = up and vrange4[1] or vrange4[3] + 1 ---@type integer
     local new_lines = {} ---@type string[]
-    for _ = 1, vim.v.count1 do
+    for _ = 1, vimv.count1 do
         new_lines[#new_lines + 1] = ""
     end
 
@@ -672,7 +673,10 @@ end)
 
 set("x", "]<space>", add_blank_visual)
 
----@param opts? {upward:boolean}
+---@class mjm.map.VisualMoveOpts
+---@field upward? boolean
+
+---@param opts? mjm.map.VisualMoveOpts
 ---@return nil
 local visual_move = function(opts)
     local ok, err, hl = require("nvim-tools.buf").check_modifiable(0)
@@ -690,7 +694,7 @@ local visual_move = function(opts)
 
     opts = opts or {}
     -- Get before leaving visual mode
-    local vcount1 = vim.v.count1 + (opts.upward and 1 or 0) ---@type integer
+    local vcount1 = vimv.count1 + (opts.upward and 1 or 0) ---@type integer
     local cmd_start = opts.upward and "silent '<,'>m '<-" or "silent '<,'>m '>+"
     vim.cmd("norm! \27") -- Update '< and '>
 
@@ -747,7 +751,7 @@ local visual_indent = function(lt)
 
     api.nvim_cmd({ cmd = "norm", args = { "\27" }, bang = true }, {})
     local shift = lt and "<" or ">"
-    vim.cmd("silent '<,'> " .. string.rep(shift, vim.v.count1))
+    vim.cmd("silent '<,'> " .. string.rep(shift, vimv.count1))
     api.nvim_cmd({ cmd = "norm", args = { "gv" }, bang = true, mods = { silent = true } }, {})
 
     api.nvim_set_option_value("cursorline", old_cursorline, { scope = "local" })
@@ -820,7 +824,6 @@ set("i", "<C-d>", "<Del>")
 set("i", "<M-d>", "<C-g>u<C-o>de")
 set("i", "<C-k>", "<C-g>u<C-o>D")
 set("i", "<C-l>", "<esc><cmd>silent norm! u<cr>")
-_G.I_Dedent = "<C-m>"
 set("i", I_Dedent, "<C-d>")
 
 -- MID: Send the CSI to make this work

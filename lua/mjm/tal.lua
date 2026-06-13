@@ -78,7 +78,7 @@ function M.build_tabpage_component()
         local has_modified = false
         for _, w in ipairs(tabpage_wins) do
             local bufnr = api.nvim_win_get_buf(w)
-            if vim.api.nvim_get_option_value("mod", { buf = bufnr }) then
+            if api.nvim_get_option_value("mod", { buf = bufnr }) then
                 has_modified = true
                 break
             end
@@ -109,8 +109,8 @@ if ok then
     })
 end
 
-local tal_events = vim.api.nvim_create_augroup("mjm-tal-events", {})
-vim.api.nvim_create_autocmd({ "CmdlineLeave", "OptionSet" }, {
+local tal_events = api.nvim_create_augroup("mjm-tal-events", {})
+api.nvim_create_autocmd({ "CmdlineLeave", "OptionSet" }, {
     group = tal_events,
     callback = function(ev)
         if ev.event == "OptionSet" and ev.match ~= "modified" then
@@ -122,7 +122,7 @@ vim.api.nvim_create_autocmd({ "CmdlineLeave", "OptionSet" }, {
 })
 -- MID: It would be better if this were scoped so it didn't run build_tal() on all buffers.
 
-vim.api.nvim_create_autocmd("BufWritePost", {
+api.nvim_create_autocmd("BufWritePost", {
     group = tal_events,
     callback = function()
         -- Leave autocmd context so cur_buf is correct
@@ -132,7 +132,7 @@ vim.api.nvim_create_autocmd("BufWritePost", {
     end,
 })
 
-vim.api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
+api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
     group = tal_events,
     callback = function()
         -- For edge case where you change Windows in insert mode. Wait for event to be over to

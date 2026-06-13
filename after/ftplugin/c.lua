@@ -1,3 +1,4 @@
+---@diagnostic disable-next-line: undefined-field
 mjm.lsp.start(vim.lsp.config["clangd"], { bufnr = 0 })
 
 -- MAYBE: A couple examples of ways to hack into more C LSP features

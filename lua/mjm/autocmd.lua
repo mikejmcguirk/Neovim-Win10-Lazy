@@ -1,5 +1,4 @@
 local api = vim.api
-local fn = vim.fn
 
 local mjm_group = api.nvim_create_augroup("mjm-group", {})
 
@@ -11,7 +10,7 @@ local clear_conditions = {
     "TabNewEntered",
     "WinEnter",
     "WinLeave",
-} ---@type string[]
+}
 
 api.nvim_create_autocmd(clear_conditions, {
     group = mjm_group,
@@ -27,8 +26,8 @@ api.nvim_create_autocmd(clear_conditions, {
 api.nvim_create_autocmd("BufWinEnter", {
     group = mjm_group,
     callback = function(ev)
-        local win = api.nvim_get_current_win() ---@type integer
-        local config = api.nvim_win_get_config(win) ---@type vim.api.keyset.win_config_ret
+        local win = api.nvim_get_current_win()
+        local config = api.nvim_win_get_config(win)
         if config.relative and #config.relative > 0 then
             return
         end

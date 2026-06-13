@@ -80,7 +80,7 @@ end
 ---@param k T
 function M.get_or_set_subtable(t, k)
     local ret = t[k]
-    if ret then
+    if ret ~= nil then
         return ret
     end
 

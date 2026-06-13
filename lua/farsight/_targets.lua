@@ -432,7 +432,7 @@ end
 ---@class (exact) farsight.targets.Vtexts : farsight.targets.StatData
 ---@field len integer
 ---@field pos_idxs integer[]
----@field vtexts string[][]
+---@field vtexts [string, integer|string?][][]
 ---@field __index farsight.targets.Vtexts
 ---@field new fun(size:integer): No_Stats:farsight.targets.Vtexts
 local Vtexts = {}
@@ -536,7 +536,7 @@ end
 local function get_stat_iters(start, stop, rev, positions, stat)
     local start_pos_idx = positions:find_stat_pos_idx(stat, start, false)
     local fin_pos_idx = positions:find_stat_pos_idx(stat, stop, true)
-    if not (start_pos_idx and fin_pos_idx and start_pos_idx <= fin_pos_idx) then
+    if (not start_pos_idx) or not fin_pos_idx or start_pos_idx > fin_pos_idx then
         return 0, 0, 0
     end
 
@@ -556,7 +556,7 @@ end
 ---@return integer, integer, integer
 local function pos_to_stat_iters(start, stop, rev, len, positions, stat)
     start, stop = adj_bounded_iters(start, stop, len)
-    if not (start > 0 and stop > 0) then
+    if (not start) or not stop or not (start > 0 and stop > 0) then
         return 0, 0, 0
     end
 
@@ -703,7 +703,7 @@ local function iter_labels(self, start, stop, rev, fin)
     local labels_tbl = fin and self.fin_labels or self.start_labels
     local labels = labels_tbl:get_labels()
 
-    ---@return integer|nil, integer|nil, integer|nil, string[]|nil
+    ---@return integer|nil, string[]|nil
     return function()
         i = i + iter
         if (iter > 0 and i > limit) or (iter < 0 and i < limit) then
@@ -730,7 +730,6 @@ function Targets:iter_labels_fin(start, stop, rev)
     return iter_labels(self, start, stop, rev, true)
 end
 
----@param self farsight.targets.Targets
 ---@param start? integer
 ---@param stop? integer
 ---@param rev? boolean

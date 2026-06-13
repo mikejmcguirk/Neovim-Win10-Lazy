@@ -90,6 +90,12 @@ function mjm.fs.get_file_perms(buf)
                 return
             end
 
+            if not stat then
+                local msg = basename .. " does not exist"
+                api.nvim_echo({ { msg, "ErrorMsg" } }, true, {})
+                return
+            end
+
             local perm_bits = bit.band(stat.mode, PERM_MASK)
             local perms = mode_to_readable_perms(perm_bits)
             local octal = string.format("%03o", perm_bits)
@@ -106,12 +112,9 @@ end
 ---@param layer_bits integer|string
 ---@return string
 local function get_chmod_arg(plus, layer_bits)
-    local bits = layer_bits
-    if type(layer_bits) == "string" then
-        bits = tonumber(layer_bits, 8) -- base-8 = octal
-        if not bits then
-            error("Invalid octal permission: '" .. layer_bits)
-        end
+    local bits = type(layer_bits) == "number" and layer_bits or tonumber(layer_bits, 8)
+    if not bits then
+        return ""
     end
 
     if bits < 0 or bits > PERM_MASK then
@@ -161,6 +164,12 @@ function mjm.fs.chmod(buf, plus, layer_bits)
                     return
                 end
 
+                if not stat then
+                    local msg = basename .. " does not exist"
+                    api.nvim_echo({ { msg, "ErrorMsg" } }, true, {})
+                    return
+                end
+
                 local perm_bits = bit.band(stat.mode, PERM_MASK)
                 local perms = mode_to_readable_perms(perm_bits)
                 local octal = string.format("%03o", perm_bits)
@@ -199,7 +208,7 @@ mjm.lsp = {}
 
 ---@param config vim.lsp.Config
 ---@param opts vim.lsp.start.Opts?
----@return integer? client_id
+---@return nil
 function mjm.lsp.start(config, opts)
     vim.validate("config", config, "table")
     vim.validate("opts", opts, "table", true)
@@ -212,17 +221,17 @@ function mjm.lsp.start(config, opts)
     end
 
     start_opts.reuse_client = config.reuse_client
-    ---@diagnostic disable-next-line: invisible
+    ---@diagnostic disable-next-line: invisible, access-invisible
     start_opts._root_markers = config.root_markers
     if type(config.root_dir) == "function" then
         config.root_dir(start_opts.bufnr, function(root_dir)
             config = vim.deepcopy(config, true)
             config.root_dir = root_dir
             vim.schedule(function()
-                return vim.lsp.start(config, start_opts)
+                vim.lsp.start(config, start_opts)
             end)
         end)
     else
-        return vim.lsp.start(config, start_opts)
+        vim.lsp.start(config, start_opts)
     end
 end

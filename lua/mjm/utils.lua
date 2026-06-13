@@ -16,14 +16,18 @@ function M.set_buf_space_indent(buf, indent)
     api.nvim_set_option_value("sw", indent, { buf = buf })
 end
 
----@param buf number
----@param start_idx number
----@param end_idx number
+---@param buf uinteger
+---@param start_idx uinteger
+---@param end_idx uinteger
 ---@return nil
 local function fix_bookend_blanks(buf, start_idx, end_idx)
-    local line = api.nvim_buf_get_lines(buf, start_idx, end_idx, true)[1] ---@type string
-    local blank_line = (line == "") or line:match("^%s*$") ---@type any
-    local last_line = api.nvim_buf_line_count(buf) == 1 ---@type boolean
+    local line = api.nvim_buf_get_lines(buf, start_idx, end_idx, true)[1]
+    if not line then
+        return
+    end
+
+    local blank_line = (line == "") or line:match("^%s*$")
+    local last_line = api.nvim_buf_line_count(buf) == 1
 
     if last_line or not blank_line then
         return
@@ -34,7 +38,7 @@ local function fix_bookend_blanks(buf, start_idx, end_idx)
 end
 
 ---@class mjm.util.FallbackFormatterOpts
----@field retab boolean
+---@field retab? boolean
 
 ---@param buf integer
 ---@param opts? mjm.util.FallbackFormatterOpts
@@ -50,7 +54,7 @@ function M.fallback_formatter(buf, opts)
     local shiftwidth = get_option_value("sw", { buf = buf }) ---@type integer
     local expandtab = get_option_value("et", { buf = buf }) ---@type boolean
     if shiftwidth == 0 then
-        shiftwidth = get_option_value("ts", { buf = buf })
+        shiftwidth = get_option_value("ts", { buf = buf }) ---@type integer
     end
 
     if expandtab and opts.retab then
@@ -65,21 +69,21 @@ function M.fallback_formatter(buf, opts)
     fix_bookend_blanks(buf, 0, 1)
     fix_bookend_blanks(buf, -2, -1)
 
-    local total_lines = api.nvim_buf_line_count(buf) ---@type integer
-    local lines = api.nvim_buf_get_lines(buf, 0, total_lines, true) ---@type string[]
+    local total_lines = api.nvim_buf_line_count(buf)
+    local lines = api.nvim_buf_get_lines(buf, 0, total_lines, true)
 
-    local consecutive_blanks = 0 ---@type integer
-    local lines_removed = 0 ---@type integer
+    local consecutive_blanks = 0
+    local lines_removed = 0
 
-    ---@param iter number
+    ---@param iter uinteger
     ---@param line string
     ---@return nil
     local format_line = function(iter, line)
-        local row_0 = iter - lines_removed - 1 ---@type number
-        local line_len = #line ---@type integer
-        local empty_line = line == "" ---@type boolean
-        local whitespace_line = line:match("^%s+$") ---@type any
-        local blank_line = empty_line or whitespace_line ---@type any
+        local row_0 = iter - lines_removed - 1
+        local line_len = #line
+        local empty_line = line == ""
+        local whitespace_line = line:match("^%s+$")
+        local blank_line = empty_line or whitespace_line
 
         if blank_line then
             consecutive_blanks = consecutive_blanks + 1
@@ -99,20 +103,20 @@ function M.fallback_formatter(buf, opts)
             return
         end
 
-        local last_non_blank, _ = line:find("(%S)%s*$") ---@type integer|nil
+        local last_non_blank, _ = line:find("(%S)%s*$")
         if last_non_blank and last_non_blank ~= line_len then
             api.nvim_buf_set_text(buf, row_0, last_non_blank, row_0, line_len, {})
         end
 
-        local first_non_blank, _ = line:find("%S") or 1, nil ---@type integer, nil
+        local first_non_blank, _ = line:find("%S") or 1, nil
         first_non_blank = first_non_blank - 1
-        local extra_spaces = first_non_blank % shiftwidth ---@type unknown
+        local extra_spaces = first_non_blank % shiftwidth
         if extra_spaces == 0 or not expandtab then
             return
         end
 
-        local half_shiftwidth = shiftwidth * 0.5 ---@type unknown
-        local round_up = extra_spaces >= half_shiftwidth ---@type boolean
+        local half_shiftwidth = shiftwidth * 0.5
+        local round_up = extra_spaces >= half_shiftwidth
         if round_up then
             local new_spaces = shiftwidth - extra_spaces
             local spaces = string.rep(" ", new_spaces)
@@ -164,26 +168,38 @@ end
 
 ---@return nil
 function M.check_word_under_cursor()
-    local word = fn.expand("<cword>") ---@type string
-    if word == "" then
+    local word = fn.expand("<cword>")
+    if type(word) ~= "string" or word == "" then
         api.nvim_echo({ { "No word under cursor" } }, false, {})
         return
     end
 
     vim.system({ "wn", word, "-over" }, { text = true, timeout = 1000 }, function(out)
         vim.schedule(function()
+            if out.code <= 0 or not out.stdout then
+                local msg = "Error checking Wordnet: " .. (out.stderr or "")
+                api.nvim_echo({ { msg, "ErrorMsg" } }, false, {})
+                return
+            end
+
             local lines = vim.split(out.stdout, "\n")
-            if out.code <= 0 or #lines < 0 then
-                ---@type string
+            if #lines == 0 then
+                local msg = "No results from Wordnet" .. out.stderr
+                api.nvim_echo({ { msg, "WarningMsg" } }, false, {})
+                return
+            end
+
+            if out.code <= 0 or lines == nil or #lines < 0 then
                 local msg = out.code < 0 and "Error checking Wordnet: " .. out.stderr
                     or "No results from Wordnet"
                 api.nvim_echo({ { msg } }, false, { err = out.code < 0 })
                 return
             end
 
-            for _, line in ipairs(lines) do
-                line = line:match("^%s*(.-)%s*$")
-            end
+            local ntl = require("nvim-tools.list")
+            ntl.filter_map(lines, function(line)
+                return line:match("^%s*(.-)%s*$")
+            end)
 
             vim.lsp.util.open_floating_preview(lines, "markdown")
         end)

@@ -1,30 +1,31 @@
 -- Data module only
 
+---@type boolean[]
 local default_isk = (function()
-    local default_isk = {}
-    for i = 0, 255 do
-        default_isk[i] = false
+    local d_isk = {} ---@type boolean[]
+    for i = 1, 256 do
+        d_isk[i] = false
     end
 
     for i = 65, 90 do
-        default_isk[i] = true
+        d_isk[i] = true
     end
 
     for i = 97, 122 do
-        default_isk[i] = true
+        d_isk[i] = true
     end
 
     for i = 48, 57 do
-        default_isk[i] = true
+        d_isk[i] = true
     end
 
-    default_isk[95] = true
+    d_isk[95] = true
 
     for i = 192, 255 do
-        default_isk[i] = true
+        d_isk[i] = true
     end
 
-    return default_isk
+    return d_isk
 end)()
 
 ---@type table<string, boolean[]>
@@ -34,37 +35,37 @@ local isk_cache = {}
 local isk_token_cache = {}
 
 local is_alpha = (function()
-    local is_alpha = {} ---@type boolean[]
+    local d_is_alpha = {} ---@type boolean[]
     for b = 0, 255 do
-        is_alpha[b] = false
+        d_is_alpha[b] = false
     end
 
     -- Code points are Lua Indexed
     for b = 66, 91 do
-        is_alpha[b] = true
+        d_is_alpha[b] = true
     end
 
     for b = 98, 123 do
-        is_alpha[b] = true
+        d_is_alpha[b] = true
     end
 
-    is_alpha[171] = true
-    is_alpha[182] = true
-    is_alpha[187] = true
+    d_is_alpha[171] = true
+    d_is_alpha[182] = true
+    d_is_alpha[187] = true
 
     for b = 193, 215 do
-        is_alpha[b] = true
+        d_is_alpha[b] = true
     end
 
     for b = 217, 247 do
-        is_alpha[b] = true
+        d_is_alpha[b] = true
     end
 
     for b = 249, 256 do
-        is_alpha[b] = true
+        d_is_alpha[b] = true
     end
 
-    return is_alpha
+    return d_is_alpha
 end)()
 
 local M = {}
@@ -80,7 +81,7 @@ end
 ---@return boolean[]|nil
 function M._get_cached_isk(isk)
     local cached_isk = isk_cache[isk]
-    if cached_isk then
+    if cached_isk ~= nil then
         return require("farsight.util")._list_copy(cached_isk)
     else
         return nil
@@ -89,7 +90,7 @@ end
 
 ---Makes a unique copy of the list
 ---@param isk string
----@param isk_tokens boolean[]
+---@param isk_tokens string[]
 function M._add_cached_isk_tokens(isk, isk_tokens)
     isk_token_cache[isk] = require("farsight.util")._list_copy(isk_tokens)
 end
@@ -98,7 +99,7 @@ end
 ---@return string[]|nil
 function M._get_cached_isk_tokens(isk)
     local cached_isk_tokens = isk_token_cache[isk]
-    if cached_isk_tokens then
+    if cached_isk_tokens ~= nil then
         return require("farsight.util")._list_copy(cached_isk_tokens)
     else
         return nil

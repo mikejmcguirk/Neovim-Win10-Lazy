@@ -110,13 +110,13 @@ local blink_opts = {
                 },
                 score_offset = -6,
                 transform_items = function(a, items)
-                    local prose_ft = { "text", "markdown" }
+                    local prose_ft = { "text", "markdown" } ---@type string[]
                     ---@type string
                     local ft = api.nvim_get_option_value("filetype", { buf = 0 })
                     local ntl = require("nvim-tools.list")
-                    local prose = ntl.contains(prose_ft, ft)
+                    local is_prose = ntl.contains(prose_ft, ft)
                         or require("nvim-tools.treesitter").is_in_node({ "comment" }, true)
-                    if not prose then
+                    if not is_prose then
                         return items
                     end
 
@@ -175,6 +175,7 @@ local function setup_blink()
     vim.keymap.set("i", "<M-p>", "<nop>")
     vim.keymap.set("i", "<M-s>", "<nop>")
 
+    ---@type table<string, vim.api.keyset.highlight>
     local groups = {
         BlinkCmpDocBorder = { link = "FloatBorder" },
         BlinkCmpMenuBorder = { link = "FloatBorder" },
@@ -201,7 +202,7 @@ local function setup_blink()
         BlinkCmpKindValue = { link = "String" },
 
         BlinkCmpKindTypeParameter = { link = "Type" },
-    } ---@type { string: vim.api.keyset.highlight }
+    }
 
     for k, v in pairs(groups) do
         api.nvim_set_hl(0, k, v)

@@ -8,7 +8,7 @@ require("mjm.utils").set_buf_space_indent(0, 2)
 mjm.opt.flag_rm("fo", { "r" }, { buf = 0 })
 
 local local_scope = { scope = "local" }
-api.nvim_set_option_value("colorcolumn", "", local_scope)
+set_opt("colorcolumn", "", local_scope)
 -- See :h culopt for highlighting
 set_opt("cursorlineopt", "screenline,number", local_scope)
 set_opt("sidescrolloff", 12, local_scope)
@@ -49,6 +49,7 @@ set("n", "gF", function()
     require("nvim-text-tools").remove_checkbox()
 end, { buf = 0 })
 
+---@diagnostic disable-next-line: undefined-field
 mjm.lsp.start(vim.lsp.config["markdown_oxide"], { bufnr = 0 })
 
 -- MAYBE: Potential friction point: Bullets overrides autopairs <cr> mapping

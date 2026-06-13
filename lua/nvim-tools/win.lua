@@ -148,7 +148,7 @@ end
 
 ---@param win integer
 ---@param cur_pos { [1]:integer, [2]: integer }
----@param is_term boolean
+---@param is_term? boolean
 ---@ return { [1]:integer, [2]: integer }
 function M.protected_set_cursor(win, cur_pos, is_term)
     local is_uint = require("nvim-tools.types").is_uint

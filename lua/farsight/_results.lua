@@ -60,12 +60,12 @@ Results.__index = Results
 -- MARK: Utils --
 -----------------
 
----@param row integer
----@param col integer
----@return string
-local function create_pos_key(row, col)
-    return table.concat({ row, col }, ":")
-end
+-- ---@param row integer
+-- ---@param col integer
+-- ---@return string
+-- local function create_pos_key(row, col)
+--     return table.concat({ row, col }, ":")
+-- end
 -- TODO: Profile if using table.concat is faster than string concatenation
 
 ---@param fin boolean
@@ -93,20 +93,20 @@ function Results.new(size)
     self.next_idx = 1
 
     self.idxs = tn(size, 0)
-    self.char_hl_idxs = vim.NIL
-    self.start_label_idxs = vim.NIL
-    self.fin_label_idxs = vim.NIL
-    self.both_label_idxs = vim.NIL
-    self.reused_fin_label_idxs = vim.NIL
-    self.start_vtext_idxs = vim.NIL
-    self.fin_vtext_idxs = vim.NIL
-    self.both_vtext_idxs = vim.NIL
+    self.char_hl_idxs = {}
+    self.start_label_idxs = {}
+    self.fin_label_idxs = {}
+    self.both_label_idxs = {}
+    self.reused_fin_label_idxs = {}
+    self.start_vtext_idxs = {}
+    self.fin_vtext_idxs = {}
+    self.both_vtext_idxs = {}
 
     self.start_rows = tn(size, 0)
     self.start_cols = tn(size, 0)
     self.fin_rows = tn(size, 0)
     self.fin_cols = tn(size, 0)
-    self.hashed_fin_pos = vim.NIL
+    self.hashed_fin_pos = {}
 
     -- Pre-allocate and pre-fill labels and vtexts so that maintaining list contiguousness is not
     -- dependent on other state and logic.
@@ -130,10 +130,10 @@ function Results:append(start_row, start_col, fin_row, fin_col)
     self.fin_rows[next_idx] = fin_row
     self.fin_cols[next_idx] = fin_col
 
-    self.start_labels[next_idx] = vim.NIL
-    self.fin_labels[next_idx] = vim.NIL
-    self.start_vtexts[next_idx] = vim.NIL
-    self.fin_vtexts[next_idx] = vim.NIL
+    self.start_labels[next_idx] = {}
+    self.fin_labels[next_idx] = {}
+    self.start_vtexts[next_idx] = {}
+    self.fin_vtexts[next_idx] = {}
 
     self.next_idx = next_idx + 1
 end

@@ -141,8 +141,8 @@ end
 ---@param cache table<integer, table<integer, string>> Buf ID, <1-indexed row, line>
 ---@param ctx farsight.locator.SearchCtx
 local function fix_target_values(targets, buf, cache, ctx)
-    local ut = require("farsight.util")
-    local buf_cache = ut.dict_get_key_or_default(cache, buf, {})
+    local ntt = require("nvim-tools.table")
+    local buf_cache = ntt.get_or_set_subtable(cache, buf)
     local last_row = -1
     local line
 
@@ -178,11 +178,11 @@ local function fix_target_values(targets, buf, cache, ctx)
     targets:map_no_stat_fin_pos(1, 0, false, function(fin_row, fin_col)
         if fin_row ~= last_row then
             last_row = fin_row
-            line = buf_cache[fin_row]
-            if not line then
-                line = api.nvim_buf_get_lines(buf, fin_row - 1, fin_row, false)[1]
-                buf_cache[fin_row] = line
-            end
+        end
+        line = buf_cache[fin_row]
+        if not line then
+            line = api.nvim_buf_get_lines(buf, fin_row - 1, fin_row, false)[1]
+            buf_cache[fin_row] = line
         end
 
         local new_fin_col = math.max(fin_col, 1) -- Don't make end-exclusive yet
@@ -209,8 +209,8 @@ end
 ---@param buf integer
 ---@param cache table<integer, table<integer, string>> Buf ID, <1-indexed row, line>
 local function fix_results_jit(targets, buf, cache)
-    local ut = require("farsight.util")
-    local buf_cache = ut.dict_get_key_or_default(cache, buf, {})
+    local ntt = require("nvim-tools.table")
+    local buf_cache = ntt.get_or_set_subtable(cache, buf)
     local line_count = api.nvim_buf_line_count(buf)
     local line = buf_cache[line_count]
     if not line then
@@ -245,11 +245,12 @@ local function add_search_result_jit(targets)
     local row = vim.call("line", ".")
     local col = vim.call("col", ".")
 
-    local match_lines = ffi_c.search_match_lines --[[ @as integer ]]
+    local match_lines = ffi_c.search_match_lines --[[@as integer ]]
     local fin_row = row + match_lines
-    local fin_col = ffi_c.search_match_endcol --[[ @as integer ]]
+    local fin_col = ffi_c.search_match_endcol --[[@as integer ]]
 
-    targets:insert_at(row, col, fin_row, fin_col)
+    -- targets.size is almost certainly wrong
+    targets:insert_at(targets.size, row, col, fin_row, fin_col)
 
     return 1
 end

@@ -79,6 +79,7 @@ set("n", "<leader>--", function()
     add_annotation("")
 end, { buf = 0 })
 
+---@diagnostic disable-next-line: undefined-field
 mjm.lsp.start(vim.lsp.config["emmylua"], { bufnr = 0 })
 -- mjm.lsp.start(vim.lsp.config["lua_ls"], { bufnr = 0 })
 

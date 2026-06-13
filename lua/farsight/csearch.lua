@@ -10,7 +10,6 @@ local fn = vim.fn
 
 local MAX_MAX_TOKENS = 3
 local DEFAULT_MAX_TOKENS = MAX_MAX_TOKENS
-assert(DEFAULT_MAX_TOKENS <= MAX_MAX_TOKENS)
 
 local HL_1ST_STR = "FarsightCsearch1st"
 local HL_2ND_STR = "FarsightCsearch2nd"
@@ -36,8 +35,8 @@ local str_byte = string.byte
 
 ---@param char string
 ---@param is_omode boolean
----@param forward 0|1
----@param opts_until 0|1
+---@param forward 0|1|nil
+---@param opts_until 0|1|nil
 ---@return string
 local function get_pattern(char, is_omode, forward, opts_until)
     ---@type string
@@ -128,12 +127,14 @@ local function do_csearch(win, buf, cur_pos, char, opts)
     -- searchpos() returns are 1, 1 indexed
     jump_pos[2] = math.max(jump_pos[2] - 1, 0)
     api.nvim_win_set_cursor(win, jump_pos)
-    opts.on_jump(win, buf, jump_pos)
+    if opts.on_jump then
+        opts.on_jump(win, buf, jump_pos)
+    end
 end
 
 ---@param win integer
 ---@param buf integer
----@param show_hl boolean
+---@param show_hl boolean?
 ---@param valid boolean
 local function checked_clear_hl(win, buf, show_hl, valid)
     if not show_hl then
@@ -728,10 +729,10 @@ end
 ---This function respects the |cpoptions| ";" flag
 ---@param opts? farsight.csearch.BaseOpts
 function Csearch.rep(opts)
-    opts = opts and vim.deepcopy(opts) or {} --[[ @as farsight.csearch.CsearchOpts ]]
+    local cs_opts = opts and vim.deepcopy(opts) or {} ---@type farsight.csearch.CsearchOpts
     local cur_win = api.nvim_get_current_win()
     local cur_buf = api.nvim_win_get_buf(cur_win)
-    resolve_base_opts(opts, cur_buf)
+    resolve_base_opts(cs_opts, cur_buf)
 
     local charsearch = fn.getcharsearch()
     local char = charsearch.char
@@ -739,20 +740,21 @@ function Csearch.rep(opts)
         return
     end
 
-    opts["until"] = charsearch["until"]
+    cs_opts["until"] = charsearch["until"]
     local cpo = api.nvim_get_option_value("cpo", { scope = "global" }) ---@type string
     local cpo_noskip, _, _ = string.find(cpo, ";", 1, true)
     if cpo_noskip == nil then
-        opts.until_skip = true
+        cs_opts.until_skip = true
     else
-        opts.until_skip = false
+        cs_opts.until_skip = false
     end
 
     -- TODO: I think for 5.1 you need to require("bit") and in JIT it's just bit.
     -- So do a check to see which and save the result
-    opts.forward = require("bit").bxor(opts.forward, charsearch.forward, 1)
+    local forward = cs_opts.forward or 1
+    cs_opts.forward = require("bit").bxor(forward, charsearch.forward, 1) --[[@as 0|1]]
     local cur_pos = api.nvim_win_get_cursor(cur_win)
-    do_csearch(cur_win, cur_buf, cur_pos, char, opts)
+    do_csearch(cur_win, cur_buf, cur_pos, char, cs_opts)
 end
 
 return Csearch

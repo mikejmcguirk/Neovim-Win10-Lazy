@@ -54,7 +54,7 @@ set_opt("sr", true, global_scope)
 
 vim.filetype.add({ filename = { [".bashrc_custom"] = "sh" } })
 
-local dict = vim.fn.expand("~/.local/bin/words/words_alpha.txt") ---@type string
+local dict = vim.fn.expand("~/.local/bin/words/words_alpha.txt")
 set_opt("dict", dict, global_scope)
 set_opt("spell", false, global_scope)
 set_opt("spelllang", "en_us", global_scope)
@@ -75,7 +75,7 @@ set_opt("winborder", "single", global_scope)
 
 local set_group = api.nvim_create_augroup("set-group", {})
 
----@param event string|string[]
+---@param event vim.api.keyset.events
 ---@param opt string
 ---@param val any
 local function autoset_winopt(event, opt, val)

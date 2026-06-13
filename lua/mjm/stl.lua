@@ -27,7 +27,7 @@ local stl_events = api.nvim_create_augroup("mjm-stl-events", {})
 
 ---@return boolean
 local is_bad_mode = function()
-    return string.match(mode, "[csSiR]")
+    return string.match(mode, "[csSiR]") ~= nil
 end
 
 -- MID: How does the Nvim default do this? While I like my current method of doing the processing
@@ -159,12 +159,13 @@ api.nvim_create_autocmd("ModeChanged", {
         end
         -- MID: Why is this check here? Is it even possible for this to be true?
 
+        ---@diagnostic disable-next-line: assign-type-mismatch
         mode = new_mode
         vim.schedule(function()
             -- When leaving fzf-lua, without scheduling, the redraw fires for the fzf-lua window,
             -- meaning the intended current window still shows mode `t`.
             local config = api.nvim_win_get_config(0)
-            if config.hide or (config.relative and config.relative ~= "") then
+            if config.hide ~= nil or (config.relative ~= nil and config.relative ~= "") then
                 return
             end
 
@@ -201,7 +202,6 @@ api.nvim_create_autocmd({ "LspAttach", "LspDetach" }, {
     end),
 })
 
----@type string[]
 local format_icons = mjm.v.has_nerd_font and { unix = "", dos = "", mac = "" }
     or { unix = "unix", dos = "dos", mac = "mac" }
 
@@ -242,9 +242,9 @@ end
 api.nvim_create_autocmd("BufWinEnter", {
     group = stl_events,
     callback = function(ev)
-        local win = api.nvim_get_current_win() ---@type integer
-        local config = api.nvim_win_get_config(win) ---@type vim.api.keyset.win_config_ret
-        if config.hide or (config.relative and config.relative ~= "") then
+        local win = api.nvim_get_current_win()
+        local config = api.nvim_win_get_config(win)
+        if config.hide ~= nil or (config.relative ~= nil and config.relative ~= "") then
             return
         end
 
@@ -255,6 +255,7 @@ api.nvim_create_autocmd("BufWinEnter", {
 
 -- MAYBE: Mixed feelings about this because, early exit or not, it triggers on every completion
 -- popup. Still better, I suppose, than re-generating the buf options every keystroke
+---@type string[]
 local watched = { "fileencoding", "encoding", "fileformat", "buftype" }
 api.nvim_create_autocmd("OptionSet", {
     group = stl_events,

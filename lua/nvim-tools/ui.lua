@@ -3,10 +3,9 @@ local fn = vim.fn
 
 local M = {}
 
----@generic T
 ---@param silent boolean
----@param msg T
----@param hl T
+---@param msg any
+---@param hl any
 function M.echo_err(silent, msg, hl)
     if silent then
         return

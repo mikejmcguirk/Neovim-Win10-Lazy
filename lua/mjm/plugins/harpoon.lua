@@ -1,7 +1,5 @@
 local api = vim.api
-local fn = vim.fn
 local set = vim.keymap.set
-local uv = vim.uv
 
 local function setup_harpoon()
     local harpoon = require("harpoon")
@@ -86,7 +84,7 @@ local function setup_harpoon()
         mark = mod_mark + 1
     end
 
-    vim.keymap.set("n", "<leader>ar", function()
+    set("n", "<leader>ar", function()
         local buf = api.nvim_get_current_buf()
         require("mjm.utils").harpoon_rm_buf({ buf = buf })
     end)

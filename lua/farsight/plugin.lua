@@ -63,15 +63,12 @@ local plugs = {
     },
 }
 
-local len_plugs = #plugs
-for i = 1, len_plugs do
-    local plug = plugs[i]
+for _, plug in ipairs(plugs) do
     local modes = plug[1]
     local key = plug[2]
     local callback = plug[3]
-    local len_modes = #modes
-    for j = 1, len_modes do
-        api.nvim_set_keymap(modes[j], key, "", { noremap = true, callback = callback })
+    for _, mode in ipairs(modes) do
+        api.nvim_set_keymap(mode, key, "", { noremap = true, callback = callback })
     end
 end
 
@@ -98,7 +95,8 @@ for i = 1, #jump_maps do
         local mode = modes[j]
         local maparg_res = fn.maparg(key, mode)
         -- Need to check for just <cr> because of unsimplification (:h <tab>)
-        if maparg_res == "" or string.lower(maparg_res) == key then
+        local res_string = type(maparg_res) == "string"
+        if res_string and (maparg_res == "" or string.lower(maparg_res) == key) then
             api.nvim_set_keymap(mode, key, rhs, { noremap = true })
         end
     end

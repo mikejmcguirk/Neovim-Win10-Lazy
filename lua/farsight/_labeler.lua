@@ -251,7 +251,7 @@ local function alloc_labels_both(wins, win_targets, count_labels, labels, ctx)
         local len_targets = targets:get_no_stat_len()
         local count_new = math.min(rem_labels, len_targets * 2)
         rem_labels = rem_labels - count_new
-        local len_new_labels = count_new * 0.5
+        local len_new_labels = math.floor(count_new * 0.5)
         local start, stop = get_alloc_iters(is_upward, len_targets, len_new_labels)
 
         -- If is_upward, the iterator will return the fin label as label_1
@@ -285,7 +285,7 @@ local function alloc_labels(wins, win_targets, tokens, ctx)
         total_targets = total_targets + (targets:get_no_stat_len() * multiplier)
     end
 
-    local max_possible_labels = math.pow(#tokens, ctx.max_tokens)
+    local max_possible_labels = math.floor(math.pow(#tokens, ctx.max_tokens))
     local count_labels
     if max_possible_labels < total_targets then
         if ctx.allow_partial then
@@ -322,7 +322,7 @@ local function dbg_validate_fill_labels(wins, win_targets)
 
     assert(next(win_targets) ~= nil)
     for _, win in ipairs(wins) do
-        assert(win_targets[win])
+        assert(win_targets[win] ~= nil)
     end
 end
 
@@ -405,16 +405,16 @@ local function fill_vtext_maxt(targets, init, max_display_tokens, ctx)
 
     local locations = ctx.locations
     if locations == "start" or locations == "cursor_aware" then
-        targets:map_start_vtexts_from_labels_cmp_next_start(get_vtext_maxt)
+        targets:map_start_vtexts_from_labels_cmp_next_start(nil, nil, get_vtext_maxt)
     end
 
     if locations == "finish" or locations == "cursor_aware" then
-        targets:map_fin_vtexts_from_labels_cmp_next_fin(get_vtext_maxt)
+        targets:map_fin_vtexts_from_labels_cmp_next_fin(nil, nil, get_vtext_maxt)
     end
 
     if locations == "both" then
-        targets:map_start_vtexts_from_labels_cmp_fin(get_vtext_maxt)
-        targets:map_fin_vtexts_from_labels_cmp_next_start(get_vtext_maxt)
+        targets:map_start_vtexts_from_labels_cmp_fin(nil, nil, get_vtext_maxt)
+        targets:map_fin_vtexts_from_labels_cmp_next_start(nil, nil, get_vtext_maxt)
     end
 end
 
@@ -445,16 +445,16 @@ local function fill_vtext_max2(targets, init, ctx)
 
     local locations = ctx.locations
     if locations == "start" or locations == "cursor_aware" then
-        targets:map_start_vtexts_from_labels_cmp_next_start(get_vtext_max2)
+        targets:map_start_vtexts_from_labels_cmp_next_start(nil, nil, get_vtext_max2)
     end
 
     if locations == "finish" or locations == "cursor_aware" then
-        targets:map_fin_vtexts_from_labels_cmp_next_fin(get_vtext_max2)
+        targets:map_fin_vtexts_from_labels_cmp_next_fin(nil, nil, get_vtext_max2)
     end
 
     if locations == "both" then
-        targets:map_start_vtexts_from_labels_cmp_fin(get_vtext_max2)
-        targets:map_fin_vtexts_from_labels_cmp_next_start(get_vtext_max2)
+        targets:map_start_vtexts_from_labels_cmp_fin(nil, nil, get_vtext_max2)
+        targets:map_fin_vtexts_from_labels_cmp_next_start(nil, nil, get_vtext_max2)
     end
 end
 
@@ -477,8 +477,8 @@ local function fill_vtext_max1(targets, init, ctx)
         end
     end
 
-    targets:map_start_vtext_from_labels(get_vtext_max1)
-    targets:map_fin_vtext_from_labels(get_vtext_max1)
+    targets:map_start_vtext_from_labels(nil, nil, get_vtext_max1)
+    targets:map_fin_vtext_from_labels(nil, nil, get_vtext_max1)
 end
 
 ---@param targets farsight.targets.Targets
@@ -532,12 +532,12 @@ function M.set_target_extmarks(buf, ns, targets, ctx)
         virt_text_pos = "overlay",
     }
 
-    for row, col, vtext in targets:iter_vtexts_start() do
+    for _, row, col, vtext in targets:iter_vtexts_start() do
         extmark_opts.virt_text = vtext
         api.nvim_buf_set_extmark(buf, ns, row, col, extmark_opts)
     end
 
-    for row, col, vtext in targets:iter_vtexts_fin() do
+    for _, row, col, vtext in targets:iter_vtexts_fin() do
         extmark_opts.virt_text = vtext
         api.nvim_buf_set_extmark(buf, ns, row, col, extmark_opts)
     end

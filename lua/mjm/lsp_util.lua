@@ -1,29 +1,9 @@
-local api = vim.api
 local lsp = vim.lsp
-local util = vim.lsp.util
+local util = lsp.util
 
 local M_TD_REFS = "textDocument/references"
 
 local M = {}
-
----@param msg string
-function M.log_warn_and_echo(msg)
-    api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
-    lsp.log.warn(msg)
-end
-
----@param msg string
-function M.log_error_and_echo(msg)
-    api.nvim_echo({ { msg, "ErrorMsg" } }, true, {})
-    lsp.log.error(msg)
-end
-
----@param method vim.lsp.protocol.Method.ClientToServer
-function M.log_unsupported_and_echo(method)
-    local fmt_str = "vim.lsp: method %q is not supported by any server activated for this buffer"
-    local msg = string.format(fmt_str, method)
-    M.log_warn_and_echo(msg)
-end
 
 -- first see if any of the clients support prepare rename
 -- for clients that support prepare rename, verify they support rename and references
@@ -49,7 +29,7 @@ function M.client_get_references(client, buf, row, col, include_declaration)
 
     -- TODO: Take the ctx validator from documentHighlight and make an nvim-tools version of
     -- it.
-    local req_success, req_id = client:request(M_TD_REFS, cparams, function(err, results, ctx)
+    local _req_success, _req_id = client:request(M_TD_REFS, cparams, function(err, results, ctx)
         -- TODO: Unsure what to do with ctx checking since this is a sketch.
         if err or not results then
             -- TODO: Unsure what to do here since this is kinda just a sketch.
@@ -57,7 +37,7 @@ function M.client_get_references(client, buf, row, col, include_declaration)
         end
 
         local nts = require("nvim-tools.lsp")
-        local ranges = nts.buf_ranges_from_locations(results, encoding)
+        local _ranges = nts.buf_ranges_from_locations(results, encoding)
     end)
 end
 -- TODO: Does this need to be an M function?

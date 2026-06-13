@@ -1,9 +1,9 @@
 -- NOTE: This file is overridden by Nvim's internal configuration.
 
 return {
-    -- runtime = {
-    --     version = "LuaJIT",
-    -- },
+    runtime = {
+        version = "LuaJIT",
+    },
     -- runtime = {
     --     require_pattern = {
     --         "lua/?.lua",
@@ -15,6 +15,9 @@ return {
     -- diagnostics = {
     --     disable = { "unnecessary-if" },
     -- },
+    strict = {
+        arrayIndex = false,
+    },
     workspace = {
         library = { "$VIMRUNTIME" },
         ignoreGlobs = { "**/*_spec.lua" },

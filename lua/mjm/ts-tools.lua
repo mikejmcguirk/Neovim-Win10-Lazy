@@ -1,8 +1,8 @@
 local api = vim.api
 
 vim.keymap.set("n", "<leader>tt", function()
-    local buf = vim.api.nvim_get_current_buf()
-    if vim.treesitter.highlighter.active[buf] then
+    local buf = api.nvim_get_current_buf()
+    if vim.treesitter.highlighter.active[buf] ~= nil then
         vim.treesitter.stop(buf)
         if vim.g.syntax_on == 1 then
             api.nvim_cmd({ cmd = "syntax", args = { "off" } }, {})
@@ -23,7 +23,7 @@ end)
 ---@param file string
 local function open_file_in_vsplit(file)
     local ntb = require("nvim-tools.buf")
-    local ok, bufnr, err, hl = ntb.bufname_to_bufnr(file)
+    local ok, _, err, hl = ntb.bufname_to_bufnr(file)
     if not ok then
         require("nvim-tools.ui").echo_err(false, err, hl)
     end

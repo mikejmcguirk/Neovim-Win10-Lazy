@@ -134,7 +134,12 @@ local function mv_cur_buf(cargs)
     end
 
     local ut = require("mjm.utils")
-    ut.checked_mkdir_p(fn.fnamemodify(escape_target, ":h"), tonumber("755", 8))
+    local perms = tonumber("755", 8)
+    if type(perms) ~= "number" then
+        return
+    end
+
+    ut.checked_mkdir_p(fn.fnamemodify(escape_target, ":h"), perms)
     if is_git_tracked(escape_bufname) then
         local ok, err = pcall(api.nvim_cmd, { cmd = "GMove", args = { escape_target } }, {})
         if not ok then

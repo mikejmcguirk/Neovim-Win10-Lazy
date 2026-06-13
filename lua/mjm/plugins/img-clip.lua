@@ -10,7 +10,7 @@ return {
             dir_path = img_dir,
             extension = "png",
             file_name = function()
-                local root = vim.uv.cwd() ---@type string|nil
+                local root = vim.uv.cwd()
                 if not root then
                     return
                 end
@@ -19,7 +19,7 @@ return {
                 local name = fn.fnamemodify(basename, ":r")
 
                 local pattern = fs.joinpath(root, img_dir, name) .. "*"
-                local files = fn.glob(pattern, false, true) ---@type string[]
+                local files = fn.glob(pattern, false, true)
 
                 return name .. "_" .. string.format("%03d", #files + 1)
             end,

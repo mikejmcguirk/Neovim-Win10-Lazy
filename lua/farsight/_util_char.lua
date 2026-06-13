@@ -172,7 +172,7 @@ function M._parse_isk(buf, isk)
             i = i + 1
         end
 
-        local c
+        local c = 0
         if i <= len_isk then
             i, c = get_unknown_part(isk, i)
         end

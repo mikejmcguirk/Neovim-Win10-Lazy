@@ -400,11 +400,12 @@ local function adjust_res_values(win, cur_win, buf, res, cache, opts)
         local fin_row = res_fin_rows[idx]
         if fin_row ~= last_row then
             last_row = fin_row
-            line = buf_cache[fin_row]
-            if not line then
-                line = api.nvim_buf_get_lines(buf, fin_row - 1, fin_row, false)[1]
-                buf_cache[fin_row] = line
-            end
+        end
+
+        line = buf_cache[fin_row]
+        if not line then
+            line = api.nvim_buf_get_lines(buf, fin_row - 1, fin_row, false)[1]
+            buf_cache[fin_row] = line
         end
 
         local len_line = #line
@@ -505,10 +506,10 @@ local function add_jit_search_result(targets, count_targets)
     targets[5][count_targets] = vim.call("col", ".")
     targets[6][count_targets] = ffi_c.search_match_lines --[[ @as integer ]]
     targets[7][count_targets] = ffi_c.search_match_endcol --[[ @as integer ]]
-    targets[9][count_targets] = vim.NIL
-    targets[10][count_targets] = vim.NIL
-    targets[11][count_targets] = vim.NIL
-    targets[12][count_targets] = vim.NIL
+    targets[9][count_targets] = {}
+    targets[10][count_targets] = {}
+    targets[11][count_targets] = {}
+    targets[12][count_targets] = {}
 end
 
 ---Edits res and cache in place
@@ -600,10 +601,10 @@ local function add_puc_first_search_result(targets, count_targets)
     targets[3][count_targets] = count_targets
     targets[4][count_targets] = vim.call("line", ".")
     targets[5][count_targets] = vim.call("col", ".")
-    targets[9][count_targets] = vim.NIL
-    targets[10][count_targets] = vim.NIL
-    targets[11][count_targets] = vim.NIL
-    targets[12][count_targets] = vim.NIL
+    targets[9][count_targets] = {}
+    targets[10][count_targets] = {}
+    targets[11][count_targets] = {}
+    targets[12][count_targets] = {}
 end
 
 ---Edits res and cache in place
@@ -775,20 +776,17 @@ end
 ---@param cursor [integer, integer, integer, integer, integer]
 ---@return integer, integer, integer, boolean
 function M.get_pos_and_valid_from_dir(win, buf, dir, cursor)
-    local start_row
-    local start_col
-    local stop_row
-
-    api.nvim_win_call(win, function()
-        start_row = dir <= 0 and vim.call("line", "w0") or cursor[2]
-        start_col = dir <= 0 and 1 or cursor[3]
-        stop_row = dir < 0 and cursor[2] or vim.call("line", "w$")
+    local start_row, start_col, fin_row = api.nvim_win_call(win, function()
+        local sr = dir <= 0 and vim.call("line", "w0") or cursor[2]
+        local sc = dir <= 0 and 1 or cursor[3]
+        local fr = dir < 0 and cursor[2] or vim.call("line", "w$")
+        return sr, sc, fr
     end)
 
     if dir >= 0 then
         if api.nvim_get_option_value("wrap", { win = win }) then
-            if stop_row < api.nvim_buf_line_count(buf) then
-                local fill_row = stop_row + 1
+            if fin_row < api.nvim_buf_line_count(buf) then
+                local fill_row = fin_row + 1
                 if vim.call("screenpos", win, fill_row, 1).row >= 1 then
                     return start_row, start_col, fill_row, false
                 end
@@ -796,7 +794,7 @@ function M.get_pos_and_valid_from_dir(win, buf, dir, cursor)
         end
     end
 
-    return start_row, start_col, stop_row, true
+    return start_row, start_col, fin_row, true
 end
 --
 -- MID: It would be better if buf_line_count were not ephemeral.

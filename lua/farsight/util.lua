@@ -85,9 +85,10 @@ end
 
 ---@generic T
 ---@param t T[]
+---@return T[]
 function M._list_copy(t)
     local len_t = #t
-    local ret = M._table_new(len_t, 0)
+    local ret = M._table_new(len_t, 0) ---@type T[]
     for i = 1, len_t do
         ret[i] = t[i]
     end

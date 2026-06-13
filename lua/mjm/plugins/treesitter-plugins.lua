@@ -43,8 +43,8 @@ local function get_vpos()
     vregionpos4[4] = math.max(vregionpos4[4] - 1, 0)
 
     local row, col = unpack(api.nvim_win_get_cursor(0))
-    local start = row == vregionpos4[1] and col == vregionpos4[2] and -1 or 0
-    local fin = row == vregionpos4[3] and col == vregionpos4[4] and 1 or 0
+    local start = row == vregionpos4[1] and col == vregionpos4[2] and -1 or 0 ---@type integer
+    local fin = row == vregionpos4[3] and col == vregionpos4[4] and 1 or 0 ---@type integer
 
     local sum = start + fin
     return sum

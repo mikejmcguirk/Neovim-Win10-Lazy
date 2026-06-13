@@ -120,7 +120,9 @@ return {
         local function get_dict_file()
             local dict = api.nvim_get_option_value("dict", {}) ---@type string
             local dict_file = vim.split(dict, ",")[1]
-            return vim.uv.fs_access(dict_file, 4), dict_file
+            ---@diagnostic disable-next-line: param-type-mismatch, return-type-mismatch,
+            ---missing-parameter
+            return vim.uv.fs_access(dict_file, 3), dict_file
         end
 
         set("n", "<leader>fdd", function()
@@ -136,6 +138,10 @@ return {
 
         local function fuzzy_spell_correct()
             local word = vim.fn.expand("<cword>")
+            if type(word) ~= "string" then
+                return
+            end
+
             local word_lower = string.lower(word)
             if word_lower == "" then
                 return vim.notify("No word under cursor", vim.log.levels.WARN)

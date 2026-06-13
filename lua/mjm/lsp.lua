@@ -42,8 +42,8 @@ local function set_lsp_maps(ev)
 
     -- textDocument/codeLens --
     if client:supports_method("textDocument/codeLens") then
-        vim.lsp.codelens.enable()
-        set("n", "grx", vim.lsp.codelens.run, { buf = buf })
+        lsp.codelens.enable()
+        set("n", "grx", lsp.codelens.run, { buf = buf })
     end
     -- MID: Unsure how either `unable` or `run` handle LSPs that don't support codeLens.
 
@@ -218,12 +218,12 @@ local function set_lsp_maps(ev)
 end
 
 local lsp_group = api.nvim_create_augroup("mjm-lsp", {}) ---@type integer
-vim.api.nvim_create_autocmd("LspAttach", {
+api.nvim_create_autocmd("LspAttach", {
     group = lsp_group,
     callback = set_lsp_maps,
 })
 
-vim.api.nvim_create_autocmd("LspDetach", {
+api.nvim_create_autocmd("LspDetach", {
     group = lsp_group,
     callback = vim.schedule_wrap(function(ev)
         local client_id = ev.data.client_id

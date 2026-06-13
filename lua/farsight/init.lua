@@ -40,11 +40,11 @@ setmetatable(proxy, {
     end,
 })
 
----@param buf integer|table|boolean|nil
----@param new_config table|boolean|nil
-function M.config(buf, new_config)
-    return proxy
-end
+-- ---@param buf integer|table|boolean|nil
+-- ---@param new_config table|boolean|nil
+-- function M.config(buf, new_config)
+--     return proxy
+-- end
 
 function M.get_default_config()
     return vim.deepcopy(default_config, true)
