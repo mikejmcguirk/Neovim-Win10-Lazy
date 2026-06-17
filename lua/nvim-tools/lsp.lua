@@ -18,8 +18,9 @@ function M.buf_ranges_from_locations(results, encoding)
         return vim.uri_to_bufnr(uri)
     end)
 
-    for _, locations in pairs(buf_locations) do
-        ntl.filter_map(locations, function(location)
+    local ntt = require("nvim-tools.table")
+    local buf_ranges = ntt.filter_map_to(buf_locations, function(_, locations)
+        return ntl.filter_map_to(locations, function(location)
             -- locations may be Location or LocationLink
             local range = location.range or location.targetSelectionRange
             local range_start = range.start
@@ -31,23 +32,22 @@ function M.buf_ranges_from_locations(results, encoding)
                 range_end.character,
             }
         end)
-    end
+    end)
 
-    buf_locations = buf_locations --[[@as nvim-tools.lsp.locations.Parsed]]
     local ntr = require("nvim-tools.range")
     if encoding ~= "utf-8" then
-        for buf, ranges in pairs(buf_locations) do
+        for buf, ranges in pairs(buf_ranges) do
             ntr.lsp_parsed_locations_convert(buf, ranges, encoding)
         end
     end
 
-    for _, ranges in pairs(buf_locations) do
+    for _, ranges in pairs(buf_ranges) do
         ntl.filter(ranges, function(range)
             return ntr.valid_(range)
         end)
     end
 
-    for _, ranges in pairs(buf_locations) do
+    for _, ranges in pairs(buf_ranges) do
         vim.list.unique(ranges, function(range)
             return bit.lshift(range[1], 0)
                 + bit.lshift(range[2], 14)
@@ -56,11 +56,11 @@ function M.buf_ranges_from_locations(results, encoding)
         end)
     end
 
-    for _, ranges in pairs(buf_locations) do
+    for _, ranges in pairs(buf_ranges) do
         table.sort(ranges, ntr.range_sort_predicate)
     end
 
-    return buf_locations
+    return buf_ranges
 end
 -- TODO: Does this fully handle LocationLink? references can only return location, so maybe
 -- we want to have like, a location link only converter, a location only converter, and one

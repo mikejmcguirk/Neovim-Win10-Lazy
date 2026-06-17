@@ -111,6 +111,7 @@ Some way of grepping todo/mid/low/future/maybe/perf/document from files all at o
 - [ ] rancher
   - [ ] Relevant?: https://github.com/neovim/neovim/commit/a5d4b4e0fc438281bd50b4b30bc5d31ac4b208d9
   - [ ] qf positions are one indexed, end exclusive (see lhelpgrep results). The preview and diagnostic conversion code needs to account for this (same with grep perhaps)
+  - [ ] Bracket navigation should not show error codes, since we are not representing them as errors. They should just show something like "No Errors" in Normal text.
   - [ ] I am concerned about the level of bespoke logic used for list opening. Can we not just build wrapper code around cc? Can it not just be nvim_win_call?
     - Obvious problem comes about when thinking about zzze.
     - I'm not sure if cc/ll auto-focus the opened window

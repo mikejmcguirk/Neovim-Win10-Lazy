@@ -1,14 +1,14 @@
--- NOTE: The validators for t in this module only check if the param is a table. Like vim.list,
--- these functions should be able to operate on the list part of a table with a list and dict
--- component.
--- NOTE: These functions should all be pure Lua, not relying on vim.api or vim.fn calls
-
 ---@brief All functions in this module only operate on the |lua-list| portion of the table.
 
 ---@brief `_to` functions create a new list. Functions without the `_to` naming update the list
 ---in place. To get a new list from a function that modifies that target list in place, use
 ---the |list.copy()| function to create a shallow copy. `_to` functions may not be offered if
 ---they provide no performance advantage over just doing the shallow copy.
+---
+---If the list is modified in place, any hash elements are unaltered (|vim.list.unique()|
+---behavior). If a new list is created, the hash elements are not transferred over.
+
+-- TODO: Verify that hash element handling holds.
 
 -- DOC: Add examples for the above.
 -- - Or maybe, for examples without a `_to` function, show one copied example.
@@ -16,6 +16,7 @@
 ---@tag iter-indexing
 ---@brief For functions that take start and stop params:
 ---- Values greater than or equal to one operate according to standard Lua indexing.
+---- Values will be clamped to the table length.
 ---- A value of zero resolves to the length of the table.
 ---- A value less than zero will subtract that amount from the table length.
 ---
@@ -23,17 +24,167 @@
 ---Example: 1, -1 - Iterate from the first index to the second-to-last index.
 ---Example: -1, 0 - Iterate from the second-to-last to the end.
 
+-- TODO: This prompts allowing for the docgen to allow types into briefs so you can do something
+-- like this.
+
+---@tag key_fn
+---@type string|fun(x:any): any?
+---@brief Like |vim.list.unique()| and |vim.list.bisect()|, multiple functions in this module
+---take a `key` argument. The key is called on each processed value of the list. If the key is
+---a string, it is used as the field name to index each value. If the key is an anonymous
+---function, it can be used to arbitrarily convert the list value.
+---Example:
+---```lua
+---    local t = { { 1, 2 }, { 3, 4 }, { 5, 6 } }
+---    unique_to(t, function(x)
+---        return (x[1] * 10) + x[2]
+---    end)
+---```
+---
+---If the key is nil, the raw value will be used.
+
 local M = {}
 
 -----------------
 -- MARK: Utils --
 -----------------
 
----Copied from Neovim core.
+---Assumes start and stop are valid and resolved.
 ---@generic T
----@param key nil|string|fun(val:any): any
+---@param t T[]
+---@param start uinteger
+---@param stop uinteger
+local function copy_exact(t, start, stop)
+    local ret = require("nvim-tools.table").new(stop - start + 1, 0)
+    local j = 1
+    for i = start, stop do
+        ret[j] = t[i]
+        j = j + 1
+    end
+
+    return ret
+end
+
+---@generic T
+---@param t T[] Modified in place!
+---@param t_len uinteger
+---@param key_fn fun(val:any): any
+---@param seen table<any, true>
+local function filter_in_place_from_seen(t, t_len, key_fn, seen)
+    local j = 1
+    for i = 1, t_len do
+        local v = t[i]
+        local vh = key_fn(v)
+        if vh ~= nil and not seen[vh] then
+            t[j] = v
+            j = j + 1
+        end
+    end
+
+    for i = j, t_len do
+        t[i] = nil
+    end
+end
+
+---@generic T
+---@param t T[] Modified in place!
+---@param t_len uinteger
+---@param key_fn fun(val:any): any
+---@param seen table<any, true>
+---@return T[]
+local function filter_to_from_seen(t, t_len, key_fn, seen)
+    local ret = {}
+    local j = 1
+    for i = 1, t_len do
+        local v = t[i]
+        local vh = key_fn(v)
+        if vh ~= nil and seen[vh] then
+            ret[j] = v
+            j = j + 1
+        end
+    end
+
+    return ret
+end
+
+---@generic T
+---@param t T[] Modified in place!
+---@param t_len uinteger
+---@param key_fn fun(val:any): any
+---@param seen table<any, true>
+local function first_in_place_from_seen(t, t_len, key_fn, seen)
+    local j = 1
+    for i = 1, t_len do
+        local v = t[i]
+        local vh = key_fn(v)
+        if vh ~= nil and seen[vh] then
+            t[j] = v
+            j = j + 1
+            seen[vh] = nil
+        end
+    end
+
+    for i = j, t_len do
+        t[i] = nil
+    end
+end
+
+---@generic T
+---@param t T[]
+---@param t_len uinteger
+---@param key_fn fun(val:any): any
+---@param seen table<any, true>
+---@return T[]
+local function first_to_from_seen(t, t_len, key_fn, seen)
+    local ret = {}
+    local j = 1
+    for i = 1, t_len do
+        local v = t[i]
+        local vh = key_fn(v)
+        if vh ~= nil and seen[vh] then
+            ret[j] = v
+            j = j + 1
+            seen[vh] = nil
+        end
+    end
+
+    return ret
+end
+
+---Will clamp at zero for lists of those length. Zero case must be manually handled.
+---@param idx integer?
+---@param len uinteger
+---@param default integer
+---@return uinteger
+local function iter_idx_resolve(idx, len, default)
+    local res_idx = math.min(idx or default, len)
+    if res_idx > 0 then
+        return res_idx
+    end
+
+    return len - math.min(len, res_idx * -1)
+end
+
+-- TODO: Verify callers properly handle zero length.
+
+---Will clamp at zero for lists of those length. Zero case must be manually handled.
+---@param idx integer
+---@param len uinteger
+---@return uinteger
+local function iter_idx_resolve_no_default(idx, len)
+    local res_idx = math.min(idx, len)
+    if res_idx > 0 then
+        return res_idx
+    end
+
+    return len - math.min(len, res_idx * -1)
+end
+
+---Credit: Nvim core.
+---@generic T
+---@param key nil|string|fun(v:T): any
 ---@return fun(v: T): any
-local function make_key_fn(key)
+local function key_fn_from_key(key)
     if not key then
         return function(v)
             return v
@@ -42,7 +193,6 @@ local function make_key_fn(key)
 
     if type(key) == "string" then
         local field = key
-        ---@param v any
         key = function(v)
             return v and v[field]
         end
@@ -51,38 +201,41 @@ local function make_key_fn(key)
     return key
 end
 
----@param val integer?
----@param len integer
----@param default integer
----@return integer
-local function resolve_iter_index(val, len, default)
-    val = math.min(val or default, len)
-    return val > 0 and val or math.max(len + val, math.min(1, len))
-end
--- TODO: Everywhere this is used needs to be looked at. The from 1 to 0 short circuit behavior
--- does not work with this I don't think.
+---Assumes that count is > 0 and valid.
+---@generic T
+---@param v T
+---@param count uinteger
+---@return T[]
+local function replicate_do(v, count)
+    local ret = require("nvim-tools.table").new(count, 0)
+    for i = 1, count do
+        ret[i] = v
+    end
 
----@param rev boolean?
----@param start integer
----@param stop integer
----@return integer start, integer stop, integer step
-local function resolve_rev(rev, start, stop)
-    if rev then
-        return stop, start, -1
-    else
+    return ret
+end
+
+---@param start uinteger
+---@param stop uinteger
+---@param rev? boolean
+---@return uinteger start, uinteger stop, uinteger step
+local function resolve_rev(start, stop, rev)
+    if not rev then
         return start, stop, 1
     end
-end
---TODO: It is un-intuitive that that arg and return orders would be different.
 
----@param nargs integer
----@param key_fn fun(x:any): any
----@param ... any[]
+    return stop, start, -1
+end
+
+---@generic T
+---@param nargs uinteger
+---@param lists T[]
+---@param key_fn fun(v:T): any
 ---@return table<any, true> seen
-local function seen_from_varargs_if_in_any(nargs, key_fn, ...)
+local function seen_from_varargs_if_in_any(nargs, lists, key_fn)
     local seen = {} ---@type table<any, true>
     for i = 1, nargs do
-        local tn = select(i, ...)
+        local tn = lists[i]
         local tn_len = #tn
         for j = 1, tn_len do
             local vh = key_fn(tn[j])
@@ -95,21 +248,22 @@ local function seen_from_varargs_if_in_any(nargs, key_fn, ...)
     return seen
 end
 
----@param nargs integer
----@param key_fn fun(x: any): any
----@param ... any[]
----@return table<any, true>
-local function seen_from_varargs_if_in_all(nargs, key_fn, ...)
+---@generic T
+---@param nargs uinteger
+---@param lists T[]
+---@param key_fn fun(v:T): any
+---@return table<T, true>
+local function seen_from_varargs_if_in_all(nargs, lists, key_fn)
     if nargs == 0 then
         return {}
     end
 
     if nargs == 1 then
         local seen = {} ---@type table<any, true>
-        local t1 = select(1, ...)
-        local t1_len = #t1
-        for i = 1, t1_len do
-            local vh = key_fn(t1[i])
+        local t = lists[1]
+        local t_len = #t
+        for i = 1, t_len do
+            local vh = key_fn(t[i])
             if vh ~= nil then
                 seen[vh] = true
             end
@@ -118,361 +272,276 @@ local function seen_from_varargs_if_in_all(nargs, key_fn, ...)
         return seen
     end
 
-    local varargs = { ... } ---@type any[][]
-    local min_idx, min_len = 1, #varargs[1]
+    if nargs == 2 then
+        local t1 = lists[1]
+        local t2 = lists[2]
+        if #t1 < #t2 then
+            local swap = t1
+            t1 = t2
+            t2 = swap
+        end
+
+        local seen_2 = {} ---@type table<any, true>
+        for i = 1, #t2 do
+            local vh = key_fn(t2[i])
+            if vh ~= nil then
+                seen_2[vh] = true
+            end
+        end
+
+        local seen = {} ---@type table<any, true>
+        for i = 1, #t1 do
+            local vh = key_fn(t1[i])
+            if vh ~= nil and seen_2[vh] then
+                seen[vh] = true
+            end
+        end
+
+        return seen
+    end
+
+    local idx_min = 1
+    local len_min = #lists[idx_min]
     for i = 2, nargs do
-        local vararg_len = #varargs[i]
-        if vararg_len < min_len then
-            min_len = vararg_len
-            min_idx = i
+        local varg_len = #lists[i]
+        if varg_len < len_min then
+            len_min = varg_len
+            idx_min = i
         end
     end
 
-    local seen = {} ---@type table<any, boolean|integer>
-    local gen_prev = 0
-    local gen = 1
-    local t1 = varargs[min_idx]
+    local n_seen = {} ---@type table<any, uinteger>
+    local n_prev = 0
+    local n = 1
+    local t1 = lists[idx_min]
     local t1_len = #t1
     for i = 1, t1_len do
         local vh = key_fn(t1[i])
         if vh ~= nil then
-            seen[vh] = gen
+            n_seen[vh] = n
         end
     end
 
-    for i = 1, min_idx - 1 do
-        gen_prev = gen
-        gen = gen + 1
-        local tn = varargs[i]
+    local idx_before_min = idx_min - 1
+    for i = 1, idx_before_min do
+        n_prev = n
+        n = n + 1
+        local tn = lists[i]
         local tn_len = #tn
         for j = 1, tn_len do
             local vh = key_fn(tn[j])
-            if vh ~= nil and seen[vh] == gen_prev then
-                seen[vh] = gen
+            if vh ~= nil and n_seen[vh] == n_prev then
+                n_seen[vh] = n
             end
         end
     end
 
-    for i = min_idx + 1, nargs do
-        gen_prev = gen
-        gen = gen + 1
-        local tn = varargs[i]
+    for i = idx_min + 1, nargs do
+        n_prev = n
+        n = n + 1
+        local tn = lists[i]
         local tn_len = #tn
         for j = 1, tn_len do
             local vh = key_fn(tn[j])
-            if vh ~= nil and seen[vh] == gen_prev then
-                seen[vh] = gen
+            if vh ~= nil and n_seen[vh] == n_prev then
+                n_seen[vh] = n
             end
         end
     end
 
-    for k, last_gen in pairs(seen) do
-        if last_gen == nargs then
-            seen[k] = true
-        else
-            seen[k] = nil
+    local seen = {} ---@type table<any, true>
+    for vh, x in pairs(n_seen) do
+        if x == n then
+            seen[vh] = true
         end
     end
 
-    return seen --[[@as table<any, true>]]
+    return seen
 end
+-- NON: Don't abstract this logic because you're already multiple function calls deep.
 
----@param ... any[]|table<any, any>
-local function validate_table_varargs(...)
-    local nargs = select("#", ...)
-    for i = 1, nargs do
-        vim.validate("tn", select(i, ...), "table")
-    end
-end
-
--------------------------
--- MARK: List Creation --
--------------------------
-
----Appends n lists args to `t1`. Use |copy()| on t1 to get a new list.
----Performs a shallow copy of the appended lists.
----@generic T
----@param t1 T[] Modified in place!
----@param ... any[]
----@return any[] The original reference with the additional lists appended.
-function M.chain(t1, ...)
-    local nargs = select("#", ...)
-
-    vim.validate("t1", t1, "table")
-    for i = 1, nargs do
-        local tn = select(i, ...)
-        vim.validate("tn", tn, "table")
-    end
-
-    for i = 1, nargs do
-        local tn = select(i, ...)
-        local tn_len = #tn
-        for j = 1, tn_len do
-            t1[#t1 + 1] = tn[j]
-        end
-    end
-
-    return t1
-end
--- No "new table" version of this function because it would require a full copy of t1 anyway.
-
----Merge two unsorted lists into one sorted list. `t1` and `t2` are copied.
----
----If `t1` and `t2` are already sorted, use |merge_sorted()|.
----@generic T
----@param t1 T[]
----@param t2 T[]
----@param comp? fun(a: T, b: T): boolean Default: Ascending order. Compatible with |table.sort()|.
----@return T[] New list.
-function M.collate(t1, t2, comp)
-    vim.validate("t1", t1, "table")
-    vim.validate("t2", t2, "table")
-    vim.validate("comp", comp, "function", true)
-
-    comp = comp or function(a, b)
-        return a < b
-    end
-
-    local s1 = M.copy(t1)
-    local s2 = M.copy(t2)
-    table.sort(s1, comp)
-    table.sort(s2, comp)
-
-    return M.merge_sorted(s1, s2, comp)
-end
-
----Performs a shallow copy of `t`.
----@generic T
----@param t T[]
----@return T[] Empty if table length is zero.
-function M.copy(t)
-    vim.validate("t", t, "table")
-
-    local t_len = #t
-    local ret = require("nvim-tools.table").new(t_len, 0)
-    for i = 1, t_len do
-        ret[i] = t[i]
-    end
-
-    return ret
-end
-
----Merge two already sorted lists in order into a new list.
----
----Example:
----```lua
----    --- |collate()| behavior without copying:
----    local fo = merge_sorted(table.sort(t1), table.sort(t2))
----```
----@generic T
----@param t1 T[]
----@param t2 T[]
----@param comp? fun(a: T, b: T): boolean Default: Ascending order. Compatible with |table.sort()|.
----@return T[] Returns an empty table if `t1` and `t2` are empty.
-function M.merge_sorted(t1, t2, comp)
-    vim.validate("t1", t1, "table")
-    vim.validate("t2", t2, "table")
-    vim.validate("comp", comp, "function", true)
-
-    local i = 1
-    local j = 1
-    local k = 1
-    local len1 = #t1
-    local len2 = #t2
-    comp = comp or function(a, b)
-        return a < b
-    end
-
-    local len_total = len1 + len2
-    if len_total == 0 then
-        return {}
-    end
-
-    local ret = require("nvim-tools.table").new(len_total, 0)
-    while i <= len1 and j <= len2 do
-        if comp(t1[i], t2[j]) then
-            ret[k] = t1[i]
-            i = i + 1
-        else
-            ret[k] = t2[j]
-            j = j + 1
-        end
-
-        k = k + 1
-    end
-
-    while i <= len1 do
-        ret[k] = t1[i]
-        i = i + 1
-        k = k + 1
-    end
-
-    while j <= len2 do
-        ret[k] = t2[j]
-        j = j + 1
-        k = k + 1
-    end
-
-    return ret
-end
-
----Create a new list containing `v` repeated `count` times.
----Does not copy table references.
----@generic T
----@param v T
----@param count integer Returns an empty table if count is zero.
----@return T[] Creates a new list.
-function M.replicate(v, count)
-    local nty = require("nvim-tools.types")
-    vim.validate("v", v, nty.not_nil)
-    vim.validate("count", count, nty.is_uint)
-
-    if count == 0 then
-        return {}
-    end
-
-    local ret = require("nvim-tools.table").new(count, 0)
-    for i = 1, count do
-        ret[i] = v
-    end
-
-    return ret
-end
--- Repeat is a Lua keyword, so replicate.
-
----@generic T
----@param dst T[]
----@param t T[]
----@see |iter-indexing|
----@param start? integer
----@param stop? integer
----@return T[]
-local function splice_do(dst, t, start, stop)
-    local t_len = #t
-    if t_len == 0 then
-        return dst
-    end
-
-    start = resolve_iter_index(start, t_len, 1)
-    stop = resolve_iter_index(stop, t_len, t_len)
-    local to_new_list = t ~= dst
-    if start > stop then
-        return M.clear(dst)
-    elseif start == 1 and stop == t_len then
-        return to_new_list and M.copy(t) or t
-    end
-
-    if to_new_list or start > 1 then
-        local j = 1
-        for i = start, stop do
-            dst[j] = t[i]
-            j = j + 1
-        end
-    end
-
-    if to_new_list then
-        return dst
-    end
-
-    local new_len = stop - start + 1
-    for i = new_len + 1, t_len do
-        t[i] = nil
-    end
-
-    return dst
-end
--- TODO: Remove this.
-
----Splice `t` into a subset of its values defined by `start` and `stop` indices.
----
----Returns an empty table if `t` is length zero or the resolved value of `start` is greater than
----`stop`.
----
----No-op if `start` and `stop` are both `nil`.
+---Assumes:
+---- t_len > 0.
+---- start and stop are already resolved and valid.
 ---@generic T
 ---@param t T[] Modified in place!
----@see |iter-indexing|
----@param start? integer
----@param stop? integer
----@return T[] Reference to `t`.
-function M.splice(t, start, stop)
-    vim.validate("t", t, "table")
-    local is_int = require("nvim-tools.types").is_int
-    vim.validate("start", start, is_int, true)
-    vim.validate("stop", stop, is_int, true)
-
-    local t_len = #t
-    start = resolve_iter_index(start, t_len, 1)
-    stop = resolve_iter_index(stop, t_len, t_len)
-    if t_len == 0 or (start == 1 and stop == t_len) then
-        return t
-    end
-
-    if start > stop then
-        return M.clear(t)
-    end
-
+---@param t_len uinteger
+---@param start uinteger
+---@param stop uinteger
+local function shift_down(t, t_len, start, stop)
     if start > 1 then
         local j = 1
         for i = start, stop do
             t[j] = t[i]
             j = j + 1
         end
+
+        for i = j, t_len do
+            t[i] = nil
+        end
+
+        return
     end
 
-    local new_len = stop - start + 1
-    for i = new_len + 1, t_len do
+    for i = stop + 1, t_len do
         t[i] = nil
     end
-
-    return t
 end
 
----Get a new list containing a subset of `t` by `start` and `stop` indices.
----
----Returns an empty table if `t` is length zero or the provided `start` and `stop` values resolve
----to an invalid iteration.
+---@generic T
+---@param t T[] Modified in place!
+---@param t_len uinteger
+---@param key_fn fun(val:any): any
+---@param seen table<any, true>
+local function unique_in_place_from_seen(t, t_len, key_fn, seen)
+    local j = 1
+    for i = 1, t_len do
+        local v = t[i]
+        local vh = key_fn(v)
+        if vh ~= nil and not seen[vh] then
+            t[j] = v
+            seen[vh] = true
+            j = j + 1
+        end
+    end
+
+    for i = j, t_len do
+        t[i] = nil
+    end
+end
+
 ---@generic T
 ---@param t T[]
----@see |iter-indexing|
----@param start? integer
----@param stop? integer
----@return T[] A new list.
-function M.splice_to(t, start, stop)
-    vim.validate("t", t, "table")
-    local is_int = require("nvim-tools.types").is_int
-    vim.validate("start", start, is_int, true)
-    vim.validate("stop", stop, is_int, true)
-
-    local t_len = #t
-    start = resolve_iter_index(start, t_len, 1)
-    stop = resolve_iter_index(stop, t_len, t_len)
-    if t_len == 0 or (start == 1 and stop == t_len) then
-        return M.copy(t)
-    end
-
+---@param t_len uinteger
+---@param key_fn fun(val:any): any
+---@param seen table<any, true>
+local function unique_to_from_seen(t, t_len, key_fn, seen)
     local ret = {}
-    if start > stop then
-        return ret
-    end
-
     local j = 1
-    for i = start, stop do
-        ret[j] = t[i]
-        j = j + 1
+    for i = 1, t_len do
+        local v = t[i]
+        local vh = key_fn(v)
+        if vh ~= nil and not seen[vh] then
+            ret[j] = v
+            seen[vh] = true
+            j = j + 1
+        end
     end
 
     return ret
 end
 
----Create a new list, using a transform function to iteratively mutate an initial seed value.
+-------------------------
+-- MARK: List Creation --
+-------------------------
+
+---Creates a shallow copy of `t`.
 ---
----Unlike |unfold()|, this does not provide a separate accumulator value. The input value is the
----previous value in the list, and the function output is the list's next value.
+---@see |splice_to()| for copying a sub-section of the list.
+---@generic T
+---@param t T[]
+---@return T[]
+function M.copy(t)
+    local t_len = #t
+    if t_len == 0 then
+        return {}
+    end
+
+    return copy_exact(t, 1, t_len)
+end
+
+---Creates a new |lua-list| containing `v` repeated `count` times. If `v` is a reference, it is
+---shallow-copied.
 ---
 ---Example:
 ---```lua
----local path = successors(5, function(x, len)
+---    local foo = replicate(0, 4)
+---    -- foo == { 0, 0, 0, 0 }
+---```
+---@see |successors()| or |unfold()| for creating a new list with evolving values.
+---@generic T
+---@param val T
+---@param count uinteger If `count` is zero, an empty table is returned.
+---@return T[]
+function M.replicate(val, count)
+    if count == 0 then
+        return {}
+    end
+
+    return replicate_do(val, count)
+end
+-- Named `replicate` because `repeat` is a Lua keyword.
+
+---Splice `t` in-place into a subset of its values. Clears `t` if the resolved value of `start`
+---is greater than `stop`.
+---
+---Example:
+---```lua
+---    local foo = { 1, 2, 3, 4, 5, 6 }
+---    splice(foo, 3, 5)
+---    -- foo == { 3, 4, 5 }
+---```
+---@generic T
+---@param t T[] Modified in place!
+---@param start integer See |iter-indexing|.
+---@param stop integer See |iter-indexing|.
+---@return T[] Reference to `t`.
+function M.splice(t, start, stop)
+    local t_len = #t
+    start = iter_idx_resolve(start, t_len, 1)
+    stop = iter_idx_resolve(stop, t_len, t_len)
+    if t_len == 0 or (start == 1 and stop == t_len) then
+        return t
+    end
+
+    if start <= stop then
+        shift_down(t, t_len, start, stop)
+        return t
+    end
+
+    M.clear(t)
+    return t
+end
+
+---Creates a new |lua-list| containing a subset of `t` defined by `start` and `stop`. References
+---are shallow-copied.
+---
+---Returns an empty table if `t` is length zero or `start` resolves to a value greater than
+---`stop`.
+---
+---Example:
+---```lua
+---    local foo = { 1, 2, 3, 4, 5, 6 }
+---    local bar = splice_to(foo, 3, 5)
+---    -- bar == { 3, 4, 5 }
+---    -- foo = { 1, 2, 3, 4, 5, 6 }
+---```
+---@see |copy()| to copy the entire list.
+---@generic T
+---@param t T[]
+---@param start integer See |iter-indexing|.
+---@param stop integer See |iter-indexing|.
+---@return T[]
+function M.splice_to(t, start, stop)
+    local t_len = #t
+    start = iter_idx_resolve(start, t_len, 1)
+    stop = iter_idx_resolve(stop, t_len, t_len)
+    if t_len == 0 or (start > stop) then
+        return {}
+    end
+
+    return copy_exact(t, start, stop)
+end
+
+---Create a new |lua-list|, using function `f` to iteratively mutate an initial seed value.
+---
+---`init` becomes the new list's first value. Each call to `f` will provide the most recently
+---added value. The return value from `f` will then be appended. If `f` returns `nil`, list
+---building ends.
+---
+---Example:
+---```lua
+---local path = successors(5, function(x)
 ---    if x == 1 then
 ---        return nil
 ---    elseif x % 2 == 0 then
@@ -481,822 +550,305 @@ end
 ---        return (3 * x) + 1
 ---    end
 ---end)
------ Returns { 5, 16, 8, 4, 2, 1 }
+----- path = { 5, 16, 8, 4, 2, 1 }
 ---```
+---@see |unfold()| to build using an accumulator.
 ---@generic T
----@param init T First value of the list.
----@param f fun(last:T, idx:integer): T|nil Provides the current last value of the list and the
----     current list length.. The returned value is appended to the list. If the return is nil,
----     the list building ends.
----@return T[] The new list.
+---@param init T Passing `nil` is undefined behavior.
+---@param f fun(x:T): T|nil
+---@return T[]
 function M.successors(init, f)
-    vim.validate("init", init, require("nvim-tools.types").not_nil)
-    vim.validate("f", f, "callable")
-
     local ret = { init }
+    local j = 1
     while true do
-        local ret_len = #ret
-        local v = f(ret[ret_len], ret_len)
-        if v ~= nil then
-            ret[ret_len + 1] = v
-        else
-            break
+        local v = f(ret[j])
+        if v == nil then
+            return ret
         end
+
+        j = j + 1
+        ret[j] = v
     end
-
-    return ret
 end
--- MID: Figure out a way to make this function early return without introducing another
--- variable.I don't want to undermine the simplicity of the interface.
 
----Create a new list, using a transform function to iteratively mutate an initial seed value.
+---Create a new |lua-list|, creating an accumulator from `init` then threading it through
+---function `f`.
 ---
----Unlike |successors()|, the initial seed does not become the first value of the list. It is
----instead provided to the transform function as an argument.
----@generic T
----@generic U
----@param init U
----@param f fun(acc:U, last:T, idx:integer): acc:U|nil, v:T|nil Accepts as arguments the
----     accumulator, the last table value, and the current table length. The returned `v` value
----     is written to the table, with `acc` stored for the next iteration. If the returned `acc`
----     value is nil, `v` is written to the new table and the function terminates. If `v` is
----     nil, the function terminates immediately.
----@return T[] The new table. Returns an empty table if the first call to `f` produces a nil value.
+---`f` returns the next accumulator and the next value to append to the list. If the returned
+---value is nil, list building ends.
+---
+---Example:
+---```lua
+---local foo = unfold(1, function(acc, len)
+---    if acc <= 5 then
+---        return acc + 1, tostring(acc)
+---    end
+---
+---    return acc, nil
+---end)
+----- foo = { "1", "2", "3", "4", "5" }
+---```
+---@see |successors()| to build off of the list values.
+---@generic T, A
+---@param init A Passing `nil` is undefined behavior.
+---@param f fun(acc:A): A, T|nil Returning a `nil` value for A will set a `nil` accumulator.
+---@return T[]
 function M.unfold(init, f)
-    vim.validate("init", init, require("nvim-tools.types").not_nil)
-    vim.validate("f", f, "callable")
-
     local ret = {}
     local acc = init
     local v
+    local j = 0
     while true do
-        local ret_len = #ret
-        acc, v = f(acc, ret[ret_len], ret_len)
+        acc, v = f(acc)
         if v == nil then
-            break
+            return ret
         end
 
-        ret[ret_len + 1] = v
-
-        if acc == nil then
-            break
-        end
-    end
-
-    return ret
-end
--- TODO: Simplify this function.
-
------------------------------------
--- MARK: Direct Access Functions --
------------------------------------
-
----Get a value from a list. Does not copy references.
----
----Returns nil if the table is empty.
----@generic T
----@param t T[]
----@param idx integer See |iter-indexing|
----@return T? The value at the index.
-function M.at(t, idx)
-    vim.validate("t", t, "table")
-    vim.validate("idx", idx, require("nvim-tools.types").is_int)
-    local t_len = #t
-    return t[resolve_iter_index(idx, t_len, t_len)]
-end
-
---- Returns an iterator that infinitely cycles through `t`.
---- Each step yields: `idx` (1-based index within the cycle), `value`, `cycle`
---- (0-based full cycles completed).
----@generic T
----@param t T[]
----@return fun(): integer|nil, T|nil, integer|nil Nil iter return if length of `t` is zero.
-function M.cycle(t)
-    vim.validate("t", t, "table")
-
-    local t_len = #t
-    if t_len == 0 then
-        ---@return nil, nil, nil
-        return function()
-            return nil, nil, nil
-        end
-    end
-
-    local i = 0
-    ---@generic T
-    ---@return integer, T, integer
-    return function()
-        i = i + 1
-        local idx = ((i - 1) % t_len) + 1
-        local cycle = math.floor((i - 1) / t_len)
-        return idx, t[idx], cycle
+        j = j + 1
+        ret[j] = v
     end
 end
 
----Delete a value from `t` and return it.
----@generic T
----@param t T[] Modified in place!
----@param idx? integer See |iter-indexing|. If nil, removes the last element.
----@return T|nil `nil` if list length is zero.
-function M.drain(t, idx)
-    vim.validate("t", t, "table")
-    local nty = require("nvim-tools.types")
-    vim.validate("idx", idx, nty.is_int, true)
-
-    local t_len = #t
-    if t_len == 0 then
-        return nil
-    end
-
-    local res_idx = resolve_iter_index(idx, t_len, t_len)
-    local v = t[res_idx]
-    for i = res_idx + 1, t_len do
-        t[i - 1] = t[i]
-    end
-
-    t[t_len] = nil
-    return v
-end
--- TODO: Verify that this is faster than table.remove(). Probably worth writing a real test and
--- saving the code.
-
----Insert a new value `v` into table `t` at index `idx`.
----@generic T
----@param t T[] Modified in place!
----@param v T
----@param idx? integer See |iter-indexing|
----     If no index, append to the end like |table.insert()|
-function M.insert_at(t, v, idx)
-    vim.validate("t", t, "table")
-    local nty = require("nvim-tools.types")
-    vim.validate("v", v, nty.not_nil)
-    vim.validate("idx", idx, nty.is_int, true)
-
-    local t_len = #t
-    if not idx then
-        t[t_len + 1] = v
-        return
-    end
-
-    local res_idx = resolve_iter_index(idx, t_len, t_len)
-    local stop = res_idx + 1
-    for i = t_len + 1, stop, -1 do
-        t[i] = t[i - 1]
-    end
-
-    t[res_idx] = v
-end
--- TODO: Verify that this is faster than table.insert. Maybe worth writing up some kind of
--- real test and saving the code.
-
----@see |drain()| to additionally return the deleted element.
----@generic T
----@param t T[] Modified in place!
----@param idx? integer See |iter-indexing|. If nil, removes the last element.
-function M.rm_at(t, idx)
-    vim.validate("t", t, "table")
-    vim.validate("idx", idx, require("nvim-tools.types").is_int, true)
-
-    local t_len = #t
-    if t_len == 0 then
-        return nil
-    end
-
-    local res_idx = resolve_iter_index(idx, t_len, t_len)
-    for i = res_idx + 1, t_len do
-        t[i - 1] = t[i]
-    end
-
-    t[t_len] = nil
-end
--- TODO: Verify that this is faster than table.remove(). Probably worth writing a real test and
--- saving the code.
-
------------------------------------
--- MARK: Filtering and Cleansing --
------------------------------------
-
----Clears a table's array elements.
----@generic T
----@param t T[] Modified in place!
----@return T[] The original list reference.
-function M.clear(t)
-    vim.validate("t", t, "table")
-
-    local t_len = #t
-    for i = 1, t_len do
-        t[i] = nil
-    end
-
-    return t
-end
-
----Filter values from `t` based on predicate function `f`.
----@generic T
----@param t T[] Modified in place!
----@param f fun(x:T): boolean
----@return T[] The original list reference.
-function M.filter(t, f)
-    local t_len = #t
-    if t_len == 0 then
-        return t
-    end
-
-    local j = 1
-    for i = 1, t_len do
-        local v = t[i]
-        if f(v) then
-            t[j] = v
-            j = j + 1
-        end
-    end
-
-    for i = j, t_len do
-        t[i] = nil
-    end
-
-    return t
-end
--- MID: It might be faster to, if we haven't found a filtered item, not write values from
--- `t` to `t`. On the other hand, the way `if f(v)` is written right now, I don't think it
--- jumps if the condition is true, whereas if you have an else statement, it always performs a
--- jump to the result. So this change might not actually be faster.
-
----Create a new list of values from `t` filtered through predicate `f`.
----@generic T
----@param t T[]
----@param f fun(x:T): boolean
----@return T[] New table. If `t` is empty, an empty table will be returned.
-function M.filter_to(t, f)
-    vim.validate("t", t, "table")
-    vim.validate("f", f, "callable")
-
-    local t_len = #t
-    local ret = {}
-    if t_len == 0 then
-        return ret
-    end
-
-    local j = 1
-    for i = 1, t_len do
-        local v = t[i]
-        if f(v) then
-            ret[j] = v
-            j = j + 1
-        end
-    end
-
-    return ret
-end
-
----Filter duplicates. See |vim.list.unique()| to do so in-place.
----@generic T
----@param t T[]
----@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
----@return T[] New and de-duped table. Empty if `t` has a length of zero.
-function M.unique_to(t, key)
-    vim.validate("t", t, "table")
-    vim.validate("key", key, { "callable", "string" }, true)
-
-    local t_len = #t
-    local ret = {}
-    if t_len == 0 then
-        return ret
-    end
-
-    local key_fn = make_key_fn(key)
-    local seen = {} --- @type table<any,boolean>
-    local j = 1
-
-    for i = 1, t_len do
-        local v = t[i]
-        local vh = key_fn(v)
-        if vh ~= nil and not seen[vh] then
-            ret[j] = v
-            j = j + 1
-            seen[vh] = true
-        end
-    end
-
-    return ret
-end
+------------------------
+-- MARK: List Joining --
+------------------------
 
 ---@generic T
----@param t T[]
----@param f fun(x:T): boolean
----@param rev? boolean
----@return integer|nil, integer|nil
-local function get_keep_splice(t, f, rev)
-    local t_len = #t
-    if t_len == 0 then
-        return nil, nil
-    end
-
-    local start, stop, step = resolve_rev(rev, 1, t_len)
-    local pos
-    for i = start, stop, step do
-        if not f(t[i]) then
-            pos = i
-            break
-        end
-    end
-
-    if not pos then
-        return 1, t_len
-    end
-
-    local splice_start
-    local splice_stop
-    if rev then
-        splice_start = pos + 1
-        splice_stop = t_len
-    else
-        splice_start = 1
-        splice_stop = pos - 1
-    end
-
-    if splice_start > splice_stop then
-        return nil, nil
-    end
-
-    return splice_start, splice_stop
-end
-
----Iterate over a list with a predicate. Keep values until the predicate returns false, then
----remove the rest in place from the source list.
----@generic T
----@param t T[] Modified in place!
----@param f fun(x:T): boolean
----@param rev? boolean (Default: `false`) If true, iterate from the end.
----@return T[] Original reference to `t`. Unchanged if the whole table passes the predicate.
-function M.keep_while(t, f, rev)
-    vim.validate("t", t, "table")
-    vim.validate("f", f, "callable")
-    vim.validate("rev", rev, "boolean", true)
-
-    local splice_start, splice_stop = get_keep_splice(t, f, rev)
-    if not (splice_start and splice_stop) then
-        return M.clear(t)
-    end
-
-    return splice_do(t, t, splice_start, splice_stop)
-end
-
----Iterate over a list with a predicate. Keep values until the predicate returns false, then
----remove the rest. Output to a new list.
----@generic T
----@param t T[]
----@param f fun(x:T): boolean
----@param rev? boolean (Default: `false`) If true, iterate from the end.
----@return T[] New list. Returns a copy of `t` if all items are kept.
-function M.keep_while_to(t, f, rev)
-    vim.validate("t", t, "table")
-    vim.validate("f", f, "callable")
-    vim.validate("rev", rev, "boolean", true)
-
-    local splice_start, splice_stop = get_keep_splice(t, f, rev)
-    if not (splice_start and splice_stop) then
-        return {}
-    end
-
-    return splice_do({}, t, splice_start, splice_stop)
-end
-
----@generic T
----@param t T[]
----@param f fun(x:T): boolean
----@param rev? boolean
----@return integer|nil, integer|nil
-local function get_rm_splice(t, f, rev)
-    local t_len = #t
-    if t_len == 0 then
-        return nil, nil
-    end
-
-    local start, stop, step = resolve_rev(rev, 1, t_len)
-    local pos
-    for i = start, stop, step do
-        if not f(t[i]) then
-            pos = i
-            break
-        end
-    end
-
-    if not pos then
-        return nil, nil
-    end
-
-    local splice_start
-    local splice_stop
-    if rev then
-        splice_start = 1
-        splice_stop = pos
-    else
-        splice_start = pos
-        splice_stop = t_len
-    end
-
-    if splice_start > splice_stop then
-        return 1, t_len
-    end
-
-    return splice_start, splice_stop
-end
-
----Iterate over a list with a predicate. Remove values until the predicate returns false, then
----splice `t` in place to retain the rest.
----@generic T
----@param t T[] Modified in place!
----@param f fun(x:T): boolean
----@param rev? boolean (Default: `false`) If true, iterate from the end.
----@return T[] Original reference to `t`. Empty if the whole table passes the predicate.
-function M.rm_while(t, f, rev)
-    vim.validate("t", t, "table")
-    vim.validate("f", f, "callable")
-    vim.validate("rev", rev, "boolean", true)
-
-    local splice_start, splice_stop = get_rm_splice(t, f, rev)
-    if not (splice_start and splice_stop) then
-        return M.clear(t)
-    end
-
-    return splice_do(t, t, splice_start, splice_stop)
-end
-
----Iterate over a list with a predicate. Skip values until the predicate returns false, then
----return a new list containing the rest.
----@generic T
----@param t T[]
----@param f fun(x:T): boolean
----@param rev? boolean (Default: `false`) If true, iterate from the end.
----@return T[] New list. Empty if the whole table passes the predicate.
-function M.rm_while_to(t, f, rev)
-    vim.validate("t", t, "table")
-    vim.validate("f", f, "callable")
-    vim.validate("rev", rev, "boolean", true)
-
-    local splice_start, splice_stop = get_rm_splice(t, f, rev)
-    if not (splice_start and splice_stop) then
-        return {}
-    end
-
-    return splice_do({}, t, splice_start, splice_stop)
-end
-
------------------------------------
--- MARK: List and List Filtering --
------------------------------------
-
--- TODO: All varvarg functions need to no-op if no varargs are provided.
--- Should the de-dupe versions still de-dupe?
--- TODO: Needs to be broken into sub-marks based on logic type.
-
----Remove elements from `t1` that are not present in any of the vararg tables (XOR logic).
----- `t1` is de-duplicated. Order is preserved.
----- No-op if no varargs are provided.
----@generic T
----@param key nil|string|fun(x:any): any See: |vim.list.unique()|.
----@param t1 T[] Target list. Modified in place!
----@param ... any[]
----@return T[] Reference to `t1`.
-function M.difference(key, t1, ...)
-    vim.validate("key", key, { "callable", "string" }, true)
-    vim.validate("t1", t1, "table")
-    validate_table_varargs(...)
-
-    local t1_len = #t1
-    local nargs = select("#", ...)
-    if t1_len == 0 or nargs == 0 then
-        return t1
-    end
-
-    local key_fn = make_key_fn(key)
-    local seen = seen_from_varargs_if_in_any(nargs, key_fn, ...)
-    local j = 1
-    for i = 1, t1_len do
-        local v = t1[i]
-        local vh = key_fn(v)
-        if vh ~= nil and not seen[vh] then
-            t1[j] = v
-            j = j + 1
-            seen[vh] = true
-        end
-    end
-
-    for i = j, t1_len do
-        t1[i] = nil
-    end
-
-    return t1
-end
-
----Create a new list containing the elements of `t1` not present in any of the varargs
----(XOR logic).
----- `t1` is de-duplicated. Order is preserved.
----- No-op if no varargs are provided.
----@generic T
----@param key nil|string|fun(x:any): any See: |vim.list.unique()|.
----@param t1 T[] Source list.
----@param ... any[]
----@return T[] New list.
-function M.difference_to(key, t1, ...)
-    vim.validate("key", key, { "callable", "string" }, true)
-    vim.validate("t1", t1, "table")
-    validate_table_varargs(...)
-
-    local nargs = select("#", ...)
-    if nargs == 0 then
-        return M.copy(t1)
-    end
-
-    local t1_len = #t1
-    local ret = {}
-    if t1_len == 0 then
-        return ret
-    end
-
-    local key_fn = make_key_fn(key)
-    local seen = seen_from_varargs_if_in_any(nargs, key_fn, ...)
-    local j = 1
-    for i = 1, t1_len do
-        local v = t1[i]
-        local vh = key_fn(v)
-        if vh ~= nil and not seen[vh] then
-            ret[j] = v
-            j = j + 1
-            seen[vh] = true
-        end
-    end
-
-    return ret
-end
-
----Remove elements from `t1` in place if they are not present in all of the varargs (AND logic).
----Order in `t1` is preserved
----@generic T
----@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
----@param t1 T[] Modified in place!
----@param ... any[]
----@return T[] Reference to `t1`.
-function M.intersect(key, t1, ...)
-    vim.validate("key", key, { "callable", "string" }, true)
-    vim.validate("t1", t1, "table")
-    validate_table_varargs(...)
-
-    local nargs = select("#", ...)
-    if nargs == 0 then
-        return t1
-    end
-
-    local t1_len = #t1
-    if t1_len == 0 then
-        return t1
-    end
-
-    local key_fn = make_key_fn(key)
-    local seen = seen_from_varargs_if_in_all(nargs, key_fn, ...)
-    local j = 1
-    for i = 1, t1_len do
-        local v = t1[i]
-        local vh = key_fn(v)
-        if vh ~= nil and seen[vh] then
-            t1[j] = v
-            j = j + 1
-        end
-    end
-
-    for i = j, t1_len do
-        t1[i] = nil
-    end
-
-    return t1
-end
-
----Create a new list containing the elements in `t1` present in every vararg (AND logic).
----Order in `t1` is preserved
----@generic T
----@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
----@param t1 T[]
----@param ... any[]
----@return T[] New list.
-function M.intersect_to(key, t1, ...)
-    vim.validate("key", key, { "callable", "string" }, true)
-    vim.validate("t1", t1, "table")
-    validate_table_varargs(...)
-
-    local t1_len = #t1
-    local nargs = select("#", ...)
-    if nargs == 0 then
-        return M.copy(t1)
-    end
-
-    local key_fn = make_key_fn(key)
-    local seen = seen_from_varargs_if_in_all(nargs, key_fn, ...)
-    local ret = {}
-    local j = 1
-    for i = 1, t1_len do
-        local v = t1[i]
-        local vh = key_fn(v)
-        if vh ~= nil and seen[vh] then
-            ret[j] = v
-            j = j + 1
-        end
-    end
-
-    return ret
-end
-
----Remove list elements from `t1` if they are not present in all vararg lists (AND logic).
----De-duplicates elements from `t1`. Order is preserved
----@generic T
----@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
----@param t1 T[] Modified in place!
----@param ... any[]
----@return T[] Reference to `t`.
-function M.intersection(key, t1, ...)
-    vim.validate("key", key, { "callable", "string" }, true)
-    vim.validate("t1", t1, "table")
-    validate_table_varargs(...)
-
-    local t1_len = #t1
-    local nargs = select("#", ...)
-    if t1_len == 0 or nargs == 0 then
-        return t1
-    end
-
-    local key_fn = make_key_fn(key)
-    local seen = seen_from_varargs_if_in_all(nargs, key_fn, ...)
-    local j = 1
-    for i = 1, t1_len do
-        local v = t1[i]
-        local vh = key_fn(v)
-        if vh ~= nil and seen[vh] then
-            t1[j] = v
-            j = j + 1
-            seen[vh] = nil
-        end
-    end
-
-    for i = j, t1_len do
-        t1[i] = nil
-    end
-
-    return t1
-end
-
----Create a new list from the elements in `t1` present in all vararg lists (AND logic).
----De-duplicates elements from `t1`. Order is preserved.
----@generic T
----@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
----@param t1 T[] Original order is preserved.
----@param ... any[]
----@return T[] New list.
-function M.intersection_to(key, t1, ...)
-    vim.validate("key", key, { "callable", "string" }, true)
-    vim.validate("t1", t1, "table")
-    validate_table_varargs(...)
-
-    local t1_len = #t1
-    local nargs = select("#", ...)
-    if t1_len == 0 or nargs == 0 then
-        return M.copy(t1)
-    end
-
-    local key_fn = make_key_fn(key)
-    local seen = seen_from_varargs_if_in_all(nargs, key_fn, ...)
-    local ret = {}
-    local j = 1
-    for i = 1, t1_len do
-        local v = t1[i]
-        local vh = key_fn(v)
-        if vh ~= nil and seen[vh] then
-            ret[j] = v
-            j = j + 1
-            seen[vh] = nil
-        end
-    end
-
-    return ret
-end
-
----Remove elements from `t1` in place that are present in any of the varargs (set difference/XOR
----logic). Order in `t1` is preserved.
----@generic T
----@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
----@param t1 T[] Modified in place!
----@param ... any[]
----@return T[] Reference to `t1`.
-function M.subtract(key, t1, ...)
-    local nargs = select("#", ...)
-    if nargs == 0 then
-        return t1
-    end
-
-    local t1_len = #t1
-    if t1_len == 0 then
-        return t1
-    end
-
-    local key_fn = make_key_fn(key)
-    local seen = seen_from_varargs_if_in_any(nargs, key_fn, ...)
-    local j = 1
-    for i = 1, t1_len do
-        local v = t1[i]
-        local vh = key_fn(v)
-        if vh ~= nil and not seen[vh] then
-            t1[j] = v
-            j = j + 1
-        end
-    end
-
-    for i = j, t1_len do
-        t1[i] = nil
-    end
-
-    return t1
-end
-
----Create a new list containing the elements of `t1` not present in any of the varargs (set
----difference/XOR logic). Order in `t1` is preserved.
----@generic T
----@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
----@param t1 T[] Source list.
----@param ... any[]
----@return T[] New list.
-function M.subtract_to(key, t1, ...)
-    vim.validate("key", key, { "callable", "string" }, true)
-    vim.validate("t1", t1, "table")
-    validate_table_varargs(...)
-
-    local nargs = select("#", ...)
-    if nargs == 0 then
-        return M.copy(t1)
-    end
-
-    local ret = {}
-    local t1_len = #t1
-    if t1_len == 0 then
-        return ret
-    end
-
-    local key_fn = make_key_fn(key)
-    local seen = seen_from_varargs_if_in_any(nargs, key_fn, ...)
-    local j = 1
-    for i = 1, t1_len do
-        local v = t1[i]
-        local vh = key_fn(v)
-        if vh ~= nil and not seen[vh] then
-            ret[j] = v
-            j = j + 1
-        end
-    end
-
-    return ret
-end
-
----Creates a new list from all values in all lists (OR logic).
----Elements in are de-duped. Order is preserved.
----@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
----@param ... any[]
----@return any[]
-function M.union_to(key, ...)
-    vim.validate("key", key, { "callable", "string" }, true)
-    validate_table_varargs(...)
-
-    local nargs = select("#", ...)
-    local key_fn = make_key_fn(key)
-    local seen = {} ---@type table<any, boolean>
-    local ret = {}
-    for i = 1, nargs do
-        local tn = select(i, ...)
+---@param lists_len uinteger
+---@param lists T[][]
+---@param dst T[] Modified in place!
+local function lists_append(lists_len, lists, dst)
+    local j = #dst + 1
+    for i = 1, lists_len do
+        local tn = lists[i]
         local tn_len = #tn
-        for j = 1, tn_len do
-            local v = tn[j]
-            local vh = key_fn(v)
-            if vh ~= nil and not seen[vh] then
-                ret[#ret + 1] = v
-                seen[vh] = true
+        for k = 1, tn_len do
+            dst[j] = tn[k]
+            j = j + 1
+        end
+    end
+end
+
+---@generic T
+---@param nargs uinteger
+---@param comp fun(a:T, b:T): boolean
+---@param lists T[][]
+---@return T[]
+local function merge_sorted_do(nargs, comp, lists)
+    local ntt = require("nvim-tools.table")
+    local t_lens = ntt.new(nargs, 0)
+    local len_total = 0
+    for i = 1, nargs do
+        local len = #lists[i]
+        t_lens[i] = len
+        len_total = len_total + len
+    end
+
+    if len_total == 0 then
+        return {}
+    end
+
+    local ret = ntt.new(len_total, 0)
+    local cur_idxs = replicate_do(1, nargs)
+    local lists_active = ntt.new(nargs, 0)
+    for i = 1, nargs do
+        lists_active[i] = i
+    end
+
+    local active_count = #lists_active
+    local k = 1
+    while active_count > 0 do
+        local list_sel_idx = 1
+        local list_sel = lists_active[1]
+        local val_sel = lists[list_sel][cur_idxs[list_sel]]
+        for j = 2, active_count do
+            local list_idx = lists_active[j]
+            local val = lists[list_idx][cur_idxs[list_idx]]
+            if comp(val, val_sel) then
+                list_sel_idx = j
+                list_sel = list_idx
+                val_sel = val
             end
         end
+
+        ret[k] = val_sel
+        k = k + 1
+
+        local new_idx = cur_idxs[list_sel] + 1
+        cur_idxs[list_sel] = new_idx
+        if new_idx > t_lens[list_sel] then
+            lists_active[list_sel_idx] = lists_active[active_count]
+            active_count = active_count - 1
+        end
     end
 
     return ret
 end
 
----Returns a new list of items that are only present in one of the lists. (XOR logic).
----All items are de-duped. Original ordering is preserved.
----@param key nil|string|fun(val:any): any See: |vim.list.unique()|.
----@param ... any[]
----@return any[]
-function M.distinct(key, ...)
-    vim.validate("key", key, { "callable", "string" }, true)
-    validate_table_varargs(...)
-
+---Create a new |lua-list| of de-duplicated and sorted items from `...`. References are
+---shallow-copied.
+---
+---Example:
+---```lua
+---local foo = catalog_to(nil, nil, { 1, 2, 2, 3 }, { 2, 3, 3, 4 }, { 3, 4, 4, 5 })
+----- foo = { 1, 2, 3, 4, 5 }
+---```
+---@see |collate_to()| if to merge with sorting only.
+---@see |union_to()| to merge with de-duplication only.
+---@generic T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@param comp (fun(a:T, b:T): boolean)? (Default: Ascending order) Compatible with |table.sort()|.
+---@param ... T[]
+---@return T[]
+function M.catalog_to(key, comp, ...)
     local nargs = select("#", ...)
-    local key_fn = make_key_fn(key)
-    local seen = {} ---@type table<any, integer>
+    if nargs == 0 then
+        return {}
+    end
+
+    local old_lists = { ... }
+    local key_fn = key_fn_from_key(key)
+    local seen = {}
+    local lists = {}
+    comp = comp or function(a, b)
+        return a < b
+    end
+
     for i = 1, nargs do
-        local tn = select(i, ...)
+        local tn = old_lists[i]
+        local tn_len = #tn
+        local tn_filtered = unique_to_from_seen(tn, tn_len, key_fn, seen)
+        table.sort(tn_filtered, comp)
+        lists[i] = tn_filtered
+    end
+
+    if #lists == 1 then
+        return lists[1]
+    end
+
+    return merge_sorted_do(nargs, comp, lists)
+end
+
+---Append each list in `...`, in order, to `t1`. References are shallow-copied.
+---
+---Example:
+---```lua
+---local foo = { 1, 2, 2, 3 }
+---chain(nil, foo, { 2, 3, 3, 4 }, { 3, 4, 4, 5 })
+----- foo = { 1, 2, 2, 3, 2, 3, 3, 4, 3, 4, 4, 5 }
+---```
+---@generic T
+---@param t1 T[] Modified in place!
+---@param ... T[]
+---@return T[] Reference to `t1`.
+function M.chain(t1, ...)
+    local nargs = select("#", ...)
+    if nargs == 0 then
+        return t1
+    end
+
+    lists_append(nargs, { ... }, t1)
+    return t1
+end
+
+---Create a new |lua-list| by appending each list in `...` in order. References are
+---shallow-copied.
+---
+---Example:
+---```lua
+---local foo = chain(nil, { 1, 2, 2, 3 }, { 2, 3, 3, 4 }, { 3, 4, 4, 5 })
+----- foo = { 1, 2, 2, 3, 2, 3, 3, 4, 3, 4, 4, 5 }
+---```
+---@generic T
+---@param ... T[]
+---@return T[]
+function M.chain_to(...)
+    local nargs = select("#", ...)
+    if nargs == 0 then
+        return {}
+    end
+
+    local lists = { ... }
+    local len_total = 0
+    for i = 1, nargs do
+        len_total = len_total + #lists[i]
+    end
+
+    if len_total == 0 then
+        return {}
+    end
+
+    local ret = require("nvim-tools.table").new(len_total, 0)
+    lists_append(nargs, lists, ret)
+    return ret
+end
+
+---Merge each list in `...` into a new, sorted |lua-list|. Each list is shallow-copied.
+---
+---Example:
+---```lua
+---local foo = collate_to(nil, { 1, 2, 3, 4, 5 }, { 5, 4, 3, 2, 1 })
+----- foo = { 1, 1, 2, 2, 3, 3, 4, 4, 5, 5 }
+---```
+---@see |catalog_to()| to merge with sorting and de-duping.
+---@see |merge_sorted()| if the lists are already sorted.
+---@see |union_to()| to only merge with de-duping.
+---@generic T
+---@param comp (fun(a:T, b:T): boolean)? Default: Ascending order. Compatible with |table.sort()|.
+---@param ... T[]
+---@return T[]
+function M.collate_to(comp, ...)
+    local nargs = select("#", ...)
+    if nargs == 0 then
+        return {}
+    end
+
+    local old_lists = { ... }
+    local lists = {}
+    comp = comp or function(a, b)
+        return a < b
+    end
+
+    for i = 1, nargs do
+        local tn = old_lists[i]
+        local tn_copy = copy_exact(tn, 1, #tn)
+        table.sort(tn_copy, comp)
+        lists[i] = tn_copy
+    end
+
+    if #lists == 1 then
+        return lists[1]
+    end
+
+    return merge_sorted_do(nargs, comp, lists)
+end
+
+---Create a new |lua-list| of items present in only one of the `...` varargs. Items can
+---optionally be compared against a `key`.
+---- All items are de-duped.
+---- Original ordering is preserved.
+---- References are shallow-copied.
+---
+---Example:
+---```lua
+---local foo = distinct_to(nil, { 1, 2 }, { 2, 3, 4 }, { 4, 5 })
+----- foo = { 1, 3, 5 }
+---```
+---@generic T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@param ... T[]
+---@return T[]
+function M.distinct_to(key, ...)
+    local nargs = select("#", ...)
+    if nargs == 0 then
+        return {}
+    end
+
+    local lists = { ... }
+    local key_fn = key_fn_from_key(key)
+    local seen = {} ---@type table<any, uinteger>
+    for i = 1, nargs do
+        local tn = lists[i]
         local tn_len = #tn
         for j = 1, tn_len do
             local vh = key_fn(tn[j])
@@ -1304,22 +856,24 @@ function M.distinct(key, ...)
                 local was_seen = seen[vh]
                 if was_seen == nil then
                     seen[vh] = i
-                elseif not (was_seen == i) then
+                elseif not was_seen ~= i then
                     seen[vh] = 0
                 end
             end
         end
     end
 
-    local ret = {} ---@type any[]
+    local ret = {}
+    local j = 1
     for i = 1, nargs do
-        local tn = select(i, ...)
+        local tn = lists[i]
         local tn_len = #tn
-        for j = 1, tn_len do
-            local v = tn[j]
+        for k = 1, tn_len do
+            local v = tn[k]
             local vh = key_fn(v)
             if vh ~= nil and seen[vh] == i then
-                ret[#ret + 1] = v
+                ret[j] = v
+                j = j + 1
                 seen[vh] = nil
             end
         end
@@ -1328,69 +882,729 @@ function M.distinct(key, ...)
     return ret
 end
 
--------------------------------
--- MARK: List Info Functions --
--------------------------------
-
----Check if all items in a list match a value or the result of a predicate function.
+---Combines multiple sorted vararg `...` lists into a new sorted |lua-list|. References are
+---shallow-copied.
+---
+---All input lists must already be sorted according to the comparator.
+---
+---Example:
+---```lua
+---local foo = merge_sorted_to(nil, { 1, 3, 5 }, { 2, 4, 6 })
+----- foo = { 1, 2, 3, 4, 5, 6 }
+---```
+---@see |collate_to()| if the lists are not already sorted.
 ---@generic T
----@param t T[]
----@param v T|fun(x: T): boolean
----@return boolean all_pass, integer? bad_idx, T? bad_item On failure, the problem index and
----     value are returned. Always `false` if the list length is zero.
-function M.all(t, v)
-    vim.validate("t", t, "table")
-    vim.validate("v", v, require("nvim-tools.types").not_nil)
-
-    local t_len = #t
-    if t_len == 0 then
-        return false, nil, nil
+---@param comp? fun(a:T, b:T): boolean (Default: Ascending order) Compatible with |table.sort()|.
+---@param ... T[]
+---@return T[]
+function M.merge_sorted_to(comp, ...)
+    local nargs = select("#", ...)
+    if nargs == 0 then
+        return {}
     end
 
-    local predicate = type(v) == "function" and v or function(x)
-        return x == v
+    if nargs == 1 then
+        local t1 = select(1, ...)
+        return copy_exact(t1, 1, #t1)
+    end
+
+    comp = comp or function(a, b)
+        return a < b
+    end
+
+    return merge_sorted_do(nargs, comp, { ... })
+end
+
+---Creates a new |lua-list| from the de-duplicated values in `...`, optionally compared using a
+---`key`.
+---- References are shallow-copied.
+---- No re-ordering is performed.
+---
+---Example:
+---```lua
+---local foo = distinct_to(nil, { 1, 2, 2 }, { 5, 5, 4, 3 })
+----- foo = { 1, 2, 5, 4, 3 }
+---```
+---@see |catalog()| to additionally sort the results.
+---@see |chain()| to append lists without de-duplication.
+---@generic T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@param ... T[]
+---@return T[]
+function M.union_to(key, ...)
+    local nargs = select("#", ...)
+    if nargs == 0 then
+        return {}
+    end
+
+    local lists = { ... }
+    local key_fn = key_fn_from_key(key)
+    local seen = {}
+    local ret = {}
+    local j = 1
+    for i = 1, nargs do
+        local tn = lists[i]
+        local tn_len = #tn
+        for k = 1, tn_len do
+            local v = tn[k]
+            local vh = key_fn(v)
+            if vh ~= nil and not seen[vh] then
+                ret[j] = v
+                j = j + 1
+                seen[vh] = true
+            end
+        end
+    end
+
+    return ret
+end
+
+-----------------------------------
+-- MARK: Direct Access Functions --
+-----------------------------------
+
+---Gets the value from `t` at index `idx`. Does not copy references.
+---@generic T
+---@param t T[]
+---@param idx integer See |iter-indexing|.
+---@return T? `nil` if the table is empty.
+function M.at(t, idx)
+    local t_len = #t
+    if t_len == 0 then
+        return nil
+    end
+
+    return t[iter_idx_resolve_no_default(idx, t_len)]
+end
+
+---Deletes a value from `t` at `idx` and returns it.
+---
+---Slower than |table.remove()| at less than 100 items. Prefer that unless you need the index
+---ergonomics.
+---@see |rm_at()| to remove without returning a value.
+---@generic T
+---@param t T[] Modified in place!
+---@param idx integer See |iter-indexing|.
+---@return T|nil `nil` if list length is zero.
+function M.drain(t, idx)
+    local t_len = #t
+    if t_len == 0 then
+        return nil
+    end
+
+    local res_idx = iter_idx_resolve_no_default(idx, t_len)
+    local v = t[res_idx]
+    for i = res_idx + 1, t_len do
+        t[i - 1] = t[i]
+    end
+
+    t[t_len] = nil
+    return v
+end
+
+---Inserts a new `val` into table `t` at `idx`.
+---
+---Slower than |table.insert()| at < 100 items. Prefer that unless you need the index ergonomics.
+---@generic T
+---@param t T[] Modified in place!
+---@param val T
+---@param idx? integer See |iter-indexing| If no index, append to the end like |table.insert()|.
+function M.insert_at(t, val, idx)
+    local t_len = #t
+    if not idx or t_len == 0 then
+        t[t_len + 1] = val
+        return
+    end
+
+    local res_idx = iter_idx_resolve_no_default(idx, t_len)
+    local stop = res_idx + 1
+    for i = t_len + 1, stop, -1 do
+        t[i] = t[i - 1]
+    end
+
+    t[res_idx] = val
+end
+
+---Removes an element from list `t` at `idx`.
+---
+---Slower than |table.remove()| at < 100 items. Prefer that unless you need the index ergonomics.
+---@see |drain()| to additionally return the deleted element.
+---@generic T
+---@param t T[] Modified in place!
+---@param idx integer See |iter-indexing|.
+function M.rm_at(t, idx)
+    local t_len = #t
+    if t_len == 0 then
+        return
+    end
+
+    for i = iter_idx_resolve_no_default(idx, t_len) + 1, t_len do
+        t[i - 1] = t[i]
+    end
+
+    t[t_len] = nil
+end
+
+-----------------------------------
+-- MARK: Filtering and Cleansing --
+-----------------------------------
+
+---Clears all array elements in `t`.
+---@generic T
+---@param t T[] Modified in place!
+---@return T[] Reference to `t`.
+function M.clear(t)
+    local t_len = #t
+    for i = 1, t_len do
+        t[i] = nil
+    end
+
+    return t
+end
+
+---Remove values from `t` that fail predicate `f`.
+---
+---Example:
+---```lua
+---    local foo = { 1, 2, 3, 4, 5, 6 }
+---    filter(foo, function(x)
+---        return x % 2 == 0
+---    end)
+---    -- foo = { 2, 4, 6 }
+---```
+---@generic T
+---@param t T[] Modified in place!
+---@param f fun(x:T): boolean
+---@return T[] Reference to `t`.
+function M.filter(t, f)
+    local t_len = #t
+    if t_len == 0 then
+        return t
+    end
+
+    local j
+    for i = 1, t_len do
+        if not f(t[i]) then
+            j = i
+            for k = i + 1, t_len do
+                local v = t[k]
+                if f(v) then
+                    t[j] = v
+                    j = j + 1
+                end
+            end
+
+            for k = j, t_len do
+                t[k] = nil
+            end
+
+            break
+        end
+    end
+
+    return t
+end
+
+---Create a new |lua-list| of values from `t` that pass predicate `f`.
+---
+---Example:
+---```lua
+---    local foo = { 1, 2, 3, 4, 5, 6 }
+---    local bar = filter_to(foo, function(x)
+---        return x % 2 == 0
+---    end)
+---
+---    -- bar = { 2, 4, 6 }
+---    -- foo = { 1, 2, 3, 4, 5, 6 }
+---```
+---@generic T
+---@param t T[]
+---@param f fun(x:T): boolean
+---@return T[]
+function M.filter_to(t, f)
+    local t_len = #t
+    local ret = {}
+    if t_len == 0 then
+        return ret
+    end
+
+    local j = 1
+    for i = 1, t_len do
+        local v = t[i]
+        if f(v) then
+            ret[j] = v
+            j = j + 1
+        end
+    end
+
+    return ret
+end
+
+---Iterate over `t` with predicate `f`. Keep values until one fails, then remove the rest in place.
+---
+---Example:
+---```lua
+---    local foo = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }
+---    keep_while(foo, function(x)
+---        return x <= 3
+---    end)
+---    -- foo = { 1, 2, 3 }
+---```
+---```lua
+---    local foo = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }
+---    keep_while(foo, function(x)
+---        return x >= 8
+---    end)
+---    -- foo = { 8, 9, 10 }
+---```
+---@generic T
+---@param t T[] Modified in place!
+---@param f fun(x:T): boolean
+---@param rev? boolean (Default: `false`) If true, iterate from the end.
+---@return T[] Reference to `t`.
+function M.keep_while(t, f, rev)
+    local t_len = #t
+    if t_len == 0 then
+        return t
+    end
+
+    if not rev then
+        for i = 1, t_len do
+            if not f(t[i]) then
+                for j = i, t_len do
+                    t[j] = nil
+                end
+
+                return t
+            end
+        end
+
+        return t
+    end
+
+    for i = t_len, 1, -1 do
+        if not f(t[i]) then
+            if i ~= t_len then
+                shift_down(t, t_len, i + 1, t_len)
+                return t
+            end
+
+            M.clear(t)
+            return t
+        end
+    end
+
+    return t
+end
+
+---Iterate over `t` with predicate `f`. Shallow copy the values to a new list until the
+---predicate fails.
+---
+---Example:
+---```lua
+---    local foo = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }
+---    local bar = keep_while_to(foo, function(x)
+---        return x <= 3
+---    end)
+---    -- bar = { 1, 2, 3 }
+---    -- foo = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }
+---```
+---```lua
+---    local foo = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }
+---    local bar = keep_while_to(foo, function(x)
+---        return x >= 8
+---    end)
+---    -- bar = { 8, 9, 10 }
+---    -- foo = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }
+---```
+---@generic T
+---@param t T[]
+---@param f fun(x:T): boolean
+---@param rev? boolean (Default: `false`) If `true`, iterate from the end.
+---@return T[]
+function M.keep_while_to(t, f, rev)
+    local t_len = #t
+    if t_len == 0 then
+        return {}
+    end
+
+    if not rev then
+        for i = 1, t_len do
+            if not f(t[i]) then
+                return copy_exact(t, 1, i - 1)
+            end
+        end
+
+        return copy_exact(t, 1, t_len)
+    end
+
+    for i = t_len, 1, -1 do
+        if not f(t[i]) then
+            return copy_exact(t, i + 1, t_len)
+        end
+    end
+
+    return copy_exact(t, 1, t_len)
+end
+
+---Iterate over `t` with predicate `f`. Remove values in place until one passes the predicate.
+---Shift the remaining elements down so they start at index one.
+---
+---Example:
+---```lua
+---    local foo = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }
+---    rm_while(foo, function(x)
+---        return x <= 3
+---    end)
+---    -- foo = { 4, 5, 6, 7, 8, 9, 10 }
+---```
+---```lua
+---    local foo = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }
+---    rm_while(foo, function(x)
+---        return x >= 8
+---    end)
+---    -- foo = { 1, 2, 3, 4, 5, 6, 7 }
+---```
+---@generic T
+---@param t T[] Modified in place!
+---@param f fun(x:T): boolean
+---@param rev? boolean (Default: `false`) If `true`, iterate from the end.
+---@return T[] Reference to `t`.
+function M.rm_while(t, f, rev)
+    local t_len = #t
+    if t_len == 0 then
+        return t
+    end
+
+    if not rev then
+        for i = 1, t_len do
+            if not f(t[i]) then
+                shift_down(t, t_len, i, t_len)
+                return t
+            end
+        end
+
+        M.clear(t)
+        return t
+    end
+
+    for i = t_len, 1, -1 do
+        if not f(t[i]) then
+            for j = i + 1, t_len do
+                t[j] = nil
+            end
+
+            return t
+        end
+    end
+
+    M.clear(t)
+    return t
+end
+
+---Iterate over `t` with predicate `f`. Skip values until the predicate fails, then copy the
+---remaining values into a new list.
+---
+---Example:
+---```lua
+---    local foo = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }
+---    local bar = rm_while_to(foo, function(x)
+---        return x <= 3
+---    end)
+---    -- bar = { 4, 5, 6, 7, 8, 9, 10 }
+---    -- foo = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }
+---```
+---```lua
+---    local foo = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }
+---    local bar = rm_while_to(foo, function(x)
+---        return x >= 8
+---    end)
+---    -- bar = { 1, 2, 3, 4, 5, 6, 7 }
+---    -- foo = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }
+---```
+---@generic T
+---@param t T[]
+---@param f fun(x:T): boolean
+---@param rev? boolean (Default: `false`) If `true`, iterate from the end.
+---@return T[]
+function M.rm_while_to(t, f, rev)
+    local t_len = #t
+    if t_len == 0 then
+        return {}
+    end
+
+    if not rev then
+        for i = 1, t_len do
+            if not f(t[i]) then
+                return copy_exact(t, i, t_len)
+            end
+        end
+
+        return {}
+    end
+
+    for i = t_len, 1, -1 do
+        if not f(t[i]) then
+            return copy_exact(t, 1, i)
+        end
+    end
+
+    return {}
+end
+
+---Create a new |lua-list| of unique items from `t`, optionally compared using `key`.
+---@see |vim.list.unique()| to filter in-place.
+---@generic T
+---@param t T[]
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return T[]
+function M.unique_to(t, key)
+    local t_len = #t
+    if t_len == 0 then
+        return {}
+    end
+
+    local key_fn = key_fn_from_key(key)
+    return unique_to_from_seen(t, t_len, key_fn, {})
+end
+
+-----------------------------------
+-- MARK: List and List Filtering --
+-----------------------------------
+
+---Remove elements from `t1` that are present in any of the varargs `...`. Optionally
+---compare using `key`. `t1` is de-duplicated, and item order is preserved.
+---@generic T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@param t1 T[] Target list. Modified in place!
+---@param ... T[] No-op if no additional lists are provided.
+---@return T[] Reference to `t1`.
+function M.difference(key, t1, ...)
+    local nargs = select("#", ...)
+    local t1_len = #t1
+    if t1_len == 0 or nargs == 0 then
+        return t1
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local seen = seen_from_varargs_if_in_any(nargs, { ... }, key_fn)
+    unique_in_place_from_seen(t1, t1_len, key_fn, seen)
+    return t1
+end
+
+---Create a new list containing the elements of `t1` not present in any of the varargs
+---(XOR logic).
+---- `t1` is de-duplicated. Order is preserved.
+---- No-op if no varargs are provided.
+---@generic T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@param t1 T[] Source list.
+---@param ... T[] No-op if no additional lists are provided.
+---@return T[] New list.
+function M.difference_to(key, t1, ...)
+    local nargs = select("#", ...)
+    local t1_len = #t1
+    if nargs == 0 or t1_len == 0 then
+        return M.copy(t1)
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local seen = seen_from_varargs_if_in_any(nargs, { ... }, key_fn)
+    return unique_to_from_seen(t1, t1_len, key_fn, seen)
+end
+
+---Keep elements in `t1` if they are present in all varargs (AND logic).
+---Order in `t1` is preserved
+---@generic T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@param t1 T[] Modified in place!
+---@param ... T[] No-op if no additional lists are provided.
+---@return T[] Reference to `t1`.
+function M.intersect(key, t1, ...)
+    local nargs = select("#", ...)
+    local t1_len = #t1
+    if nargs == 0 or t1_len == 0 then
+        return t1
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local seen = seen_from_varargs_if_in_all(nargs, { ... }, key_fn)
+    filter_in_place_from_seen(t1, t1_len, key_fn, seen)
+    return t1
+end
+
+---Create a new list of elements in `t1` if they are present in all varargs (AND logic).
+---Order in `t1` is preserved
+---@generic T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@param t1 T[]
+---@param ... T[] No-op if no additional lists are provided.
+---@return T[] New list.
+function M.intersect_to(key, t1, ...)
+    local nargs = select("#", ...)
+    local t1_len = #t1
+    if nargs == 0 then
+        return M.copy(t1)
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local seen = seen_from_varargs_if_in_all(nargs, { ... }, key_fn)
+    return filter_to_from_seen(t1, t1_len, key_fn, seen)
+end
+
+---Remove list elements from `t1` if they are not present in all vararg lists (AND logic).
+---De-duplicates elements from `t1`. Order is preserved
+---@generic T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@param t1 T[] Modified in place!
+---@param ... T[] No-op if no additional lists are provided.
+---@return T[] Reference to `t`.
+function M.intersection(key, t1, ...)
+    local nargs = select("#", ...)
+    local t1_len = #t1
+    if t1_len == 0 or nargs == 0 then
+        return t1
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local seen = seen_from_varargs_if_in_all(nargs, { ... }, key_fn)
+    first_in_place_from_seen(t1, t1_len, key_fn, seen)
+    return t1
+end
+
+---Create a new list from the elements in `t1` present in all vararg lists (AND logic).
+---De-duplicates elements from `t1`. Order is preserved.
+---@generic T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@param t1 T[] Original order is preserved.
+---@param ... T[] No-op if no additional lists are provided.
+---@return T[] New list.
+function M.intersection_to(key, t1, ...)
+    local t1_len = #t1
+    local nargs = select("#", ...)
+    if t1_len == 0 or nargs == 0 then
+        return M.copy(t1)
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local seen = seen_from_varargs_if_in_all(nargs, { ... }, key_fn)
+    return first_to_from_seen(t1, t1_len, key_fn, seen)
+end
+
+---Remove elements from `t1` in place that are present in any of the varargs (set difference/XOR
+---logic). Order in `t1` is preserved.
+---@generic T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@param t1 T[] Modified in place!
+---@param ... T[] No-op if no additional lists are provided.
+---@return T[] Reference to `t1`.
+function M.subtract(key, t1, ...)
+    local nargs = select("#", ...)
+    local t1_len = #t1
+    if t1_len == 0 or nargs == 0 then
+        return t1
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local seen = seen_from_varargs_if_in_any(nargs, { ... }, key_fn)
+    filter_in_place_from_seen(t1, t1_len, key_fn, seen)
+    return t1
+end
+
+---Create a new list containing the elements of `t1` not present in any of the varargs (set
+---difference/XOR logic). Order in `t1` is preserved.
+---@generic T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@param t1 T[] Source list.
+---@param ... T[] No-op if no additional lists are provided.
+---@return T[] New list.
+function M.subtract_to(key, t1, ...)
+    local nargs = select("#", ...)
+    local t1_len = #t1
+    if t1_len == 0 or nargs == 0 then
+        return M.copy(t1)
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local seen = seen_from_varargs_if_in_any(nargs, { ... }, key_fn)
+    return filter_to_from_seen(t1, t1_len, key_fn, seen)
+end
+
+-------------------------------
+-- MARK: List Eval Functions --
+-------------------------------
+
+---Check if all items in a list satisfy predicate function `f`.
+---To check by key, see |same()|.
+---@generic T
+---@param t T[]
+---@param f fun(x:T): boolean
+---@return boolean False if length of `t` is zero.
+function M.all(t, f)
+    local t_len = #t
+    if t_len == 0 then
+        return false
     end
 
     for i = 1, t_len do
-        if not predicate(t[i]) then
-            return false, i, t[i]
+        if not f(t[i]) then
+            return false
         end
     end
 
     return true
 end
 
----Compare elements of t1 and t2 using an optional predicate function. By default, checks for
----shallow equality. If t1 and t2 are of different lengths, the shorter length is used for
----iteration.
+---Check if any items in `t` satisfy predicate function `f`.
+---To check by key, see |contains()|.
+---@generic T
+---@param t T[]
+---@param f fun(x:T): boolean
+---@return boolean False if length of `t` is zero.
+function M.any(t, f)
+    local t_len = #t
+    if t_len == 0 then
+        return false
+    end
+
+    for i = 1, t_len do
+        if f(t[i]) then
+            return true
+        end
+    end
+
+    return false
+end
+
+---Compare elements of `t1` and `t2`. If t1 and t2 are of different lengths, the shorter length
+---is used. Return `false` if any of the element comparisons fail.
+---Optionally provide a `key` to filter the values.
+---Optionally provide a custom `comp` function.
 ---
----This function can be used to create:
----- eq/ne
----- lt/gt
+---Iterate through `t1` and `t2`, comparing their elements by index. If they are different
+---lengths, the shorter one is used for comparison. Optionally provide either a `key` to
+---process the value or a comparison function `comp`.
 ---@generic T
 ---@generic U
 ---@param t1 T[]
 ---@param t2 U[]
----@param f? fun(a:T, b:U): boolean
----@return boolean ok, integer? idx, T? v1, U? v2 On failure, returns the problem index and
----     values. Returns false if either table has length zero.
-function M.cmp(t1, t2, f)
-    vim.validate("t", t1, "table")
-    vim.validate("t", t2, "table")
-    vim.validate("f", f, "callable", true)
-
-    f = f or function(a, b)
-        return a == b
-    end
-
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@param comp? fun(a:T, b:U): boolean (Default: Shallow equality) Compatible with |table.sort()|.
+---@return boolean Returns false if list table has length zero.
+function M.cmp(t1, t2, key, comp)
     local len = math.min(#t1, #t2)
     if len == 0 then
         return false
     end
 
+    local key_fn = key_fn_from_key(key)
+    comp = comp or function(a, b)
+        return a == b
+    end
+
     for i = 1, len do
-        if not f(t1[i], t2[i]) then
-            return false, i, t1[i], t2[i]
+        if not comp(key_fn(t1[i]), key_fn(t2[i])) then
+            return false
         end
     end
 
@@ -1398,17 +1612,19 @@ function M.cmp(t1, t2, f)
 end
 
 ---For two-dimensional array `tt`, get the highest index value for which all sub-lists share the
----same values.
+---same values. Optionally compare with `key`.
 ---@generic T
 ---@param tt T[][]
----@return integer? `nil` if the first index's values does not match.
-function M.common_prefix(tt)
-    vim.validate("tt", tt, "table")
-
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return uinteger? `nil` if the first index's values does not match. Or if one of the lists has
+---     a zero length.
+function M.common_prefix(tt, key)
     local tt_len = #tt
     if tt_len == 0 then
         return
-    elseif tt_len == 1 then
+    end
+
+    if tt_len == 1 then
         local tt_len_one = #tt[1]
         return tt_len_one > 0 and tt_len_one or nil
     end
@@ -1423,10 +1639,12 @@ function M.common_prefix(tt)
         tt_len_min = math.min(tt_len_min, tt_len_i)
     end
 
+    local key_fn = key_fn_from_key(key)
     for col = 1, tt_len_min do
-        local v = tt[1][col]
+        local vh = key_fn(tt[1][col])
         for row = 2, tt_len do
-            if tt[row][col] ~= v then
+            local vnh = key_fn(tt[row][col])
+            if vnh ~= vh then
                 local common_prefix_end = col - 1
                 return common_prefix_end > 0 and common_prefix_end or nil
             end
@@ -1436,22 +1654,53 @@ function M.common_prefix(tt)
     return tt_len_min
 end
 
----Check if any item in a list matches a value or the result of a predicate function.
+---Check if all of or none of the items in `t` satisfy predicate function `f`.
+---To check by key, see |uniform()|.
 ---@generic T
 ---@param t T[]
----@param v T|fun(x:T): boolean
----@return boolean `false` if the list length is zero.
-function M.contains(t, v)
-    vim.validate("t", t, "table")
-    vim.validate("v", v, require("nvim-tools.types").not_nil)
-
+---@param f fun(x:T): boolean
+---@return boolean `false` if length of `t` is zero.
+function M.consistent(t, f)
     local t_len = #t
-    local predicate = type(v) == "function" and v or function(x)
-        return x == v
+    if t_len == 0 then
+        return false
+    end
+
+    local expected = f(t[1])
+    for i = 2, t_len do
+        if f(t[i]) ~= expected then
+            return false
+        end
+    end
+
+    return true
+end
+
+---Check if any item in `t` matches `v`, optionally comparing based on `key`.
+---To check with a predicate function, see |any()|.
+---@generic T
+---@param t T[]
+---@param val T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return boolean
+---`false` if:
+---- `v` is not found.
+---- `key` generates a `nil` value for `v`.
+---- Length of `t` is zero.
+function M.contains(t, val, key)
+    local t_len = #t
+    if t_len == 0 then
+        return false
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local vh_target = key_fn(val)
+    if vh_target == nil then
+        return false
     end
 
     for i = 1, t_len do
-        if predicate(t[i]) then
+        if key_fn(t[i]) == vh_target then
             return true
         end
     end
@@ -1459,112 +1708,294 @@ function M.contains(t, v)
     return false
 end
 
----Check if all elements in a list are different.
+---Check if all elements in `t` are unique, optionally compared based on `key`.
 ---@generic T
 ---@param t T[]
----@return boolean ok, integer? idx, T? v `false` if list length is zero or one. Returns the
----     duplicate index and value if it is seen.
-function M.diverse(t)
-    vim.validate("t", t, "table")
-
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return boolean
+---Returns false if:
+---- A duplicate is found
+---- `key` produces a nil value
+---- Length of `t` is zero.
+function M.diverse(t, key)
     local t_len = #t
-    if t_len <= 1 then
-        return false, nil, nil
+    if t_len == 0 then
+        return false
     end
 
     local seen = {} ---@type table<any, true>
-    seen[t[1]] = true
-    for i = 2, t_len do
-        local v = t[i]
-        if seen[v] ~= nil then
-            return false, i, v
+    local key_fn = key_fn_from_key(key)
+    for i = 1, t_len do
+        local vh = key_fn(t[i])
+        if vh == nil or seen[vh] ~= nil then
+            return false
         end
 
-        seen[v] = true
+        seen[vh] = true
     end
 
     return true
 end
 
----Find the value of a predicate function result.
+---See if all items in `t` match `val`, optionally comparing with `key`. To check with a
+---predicate function, use |all()|.
+---@generic T
+---@param t T[]
+---@param val T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return boolean
+---`false` if:
+---- An item not matching `val` is found.
+---- `key` produces a `nil` value.
+---- Length of `t` is zero.
+function M.every(t, val, key)
+    local t_len = #t
+    if t_len == 0 then
+        return false
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local valh = key_fn(val)
+    if valh == nil then
+        return false
+    end
+
+    for i = 1, t_len do
+        if key_fn(t[i]) ~= valh then
+            return false
+        end
+    end
+
+    return true
+end
+
+---Check if no items in `t` match `v`, optionally compared based on `key`.
+---To check with a predicate function, see |none()|.
+---@generic T
+---@param t T[]
+---@param val T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return boolean
+---`false` if:
+---- `v` is found.
+---- `key` generates a `nil` value for `v`.
+function M.excluded(t, val, key)
+    local t_len = #t
+    if t_len == 0 then
+        return true
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local vh_target = key_fn(val)
+    if vh_target == nil then
+        return false
+    end
+
+    for i = 1, t_len do
+        if key_fn(t[i]) == vh_target then
+            return false
+        end
+    end
+
+    return true
+end
+
+---Get the first item from `t` that satisfies predicate function `f`.
+---
+---- Use |position()| to return the index.
+---- Use |seek()| to search based on a key.
 ---@generic T
 ---@param t T[]
 ---@param f fun(x:T): boolean
 ---@param rev? boolean (Default: `false`) If true, iterate from the end.
----@return T? val, integer? idx `nil` if not found. Additionally returns the index the value was
----     found at.
+---@return T? The found item.
 function M.find(t, f, rev)
-    vim.validate("t", t, "table")
-    vim.validate("f", f, require("nvim-tools.types").not_nil)
-    vim.validate("rev", rev, "boolean", true)
-
     local t_len = #t
     if t_len == 0 then
         return
     end
 
-    local start, stop, step = resolve_rev(rev, 1, t_len)
+    local start, stop, step = resolve_rev(1, t_len, rev)
     for i = start, stop, step do
-        if f(t[i]) then
-            return t[i], i
+        local v = t[i]
+        if f(v) then
+            return v
         end
     end
 end
 
----Get all indexes containing the value or predicate function result `v` within list `t`.
+---Get a new table of all indexes in `t` containing `val`, optionally filtered with `key`.
 ---@generic T
 ---@param t T[]
----@param v T|fun(x:T): boolean
----@return integer[]? `nil` if no results.
-function M.indices(t, v)
-    vim.validate("t", t, "table")
-    vim.validate("v", v, require("nvim-tools.types").not_nil)
-
+---@param val T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return uinteger[]? Empty table if no results.
+function M.indices(t, val, key)
     local t_len = #t
+    local ret = {} ---@type uinteger[]
     if t_len == 0 then
-        return
+        return ret
     end
 
-    local predicate = type(v) == "function" and v or function(x)
-        return x == v
+    local key_fn = key_fn_from_key(key)
+    local vh_target = key_fn(val)
+    if vh_target == nil then
+        return ret
     end
 
-    local ret = {} ---@type integer[]
+    local j = 1
     for i = 1, t_len do
-        if predicate(t[i]) then
-            ret[#ret + 1] = i
+        if key_fn(t[i]) == vh_target then
+            ret[j] = i
+            j = j + 1
         end
     end
 
     return ret
 end
 
----See if only one value within `t` contains value or predicate function result `v`.
+---Locate the first index containing `val` in `t`, optionally comparing with `key`.
+---To locate with a predicate function, use |position()|.
+---To return the value, use |seek()|.
 ---@generic T
 ---@param t T[]
----@param v T|fun(x:T): boolean
----@return boolean ok, integer? idx, T? val Returns `false` if length is only one. If a
----     duplicate is found, the problem value and index are returned.
-function M.one(t, v)
-    vim.validate("t", t, "table")
-    vim.validate("v", v, require("nvim-tools.types").not_nil)
-
+---@param val T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@param rev? boolean (Default: `false`) If true, iterate from the end.
+---@return uinteger?
+---`nil` if:
+---- `val` is not found
+---- Length of `t` is zero
+---- `key` applied to `val` is nil.
+function M.locate(t, val, key, rev)
     local t_len = #t
     if t_len == 0 then
-        return false, nil, nil
-    elseif t_len == 1 then
-        return true, nil, nil
+        return
     end
 
-    local predicate = type(v) == "function" and v or function(x)
-        return x == v
+    local key_fn = key_fn_from_key(key)
+    local valh = key_fn(val)
+    if valh == nil then
+        return
+    end
+
+    local start, stop, step = resolve_rev(1, t_len, rev)
+    for i = start, stop, step do
+        if key_fn(t[i]) == valh then
+            return i
+        end
+    end
+end
+
+---Get the maximum value from `t`, optionally filtering with `key`.
+---To calculate based on function logic, use |reduce()|.
+---@generic T
+---@param t T[]
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return T? Nil if `t` is empty or if `key` returns a nil.
+function M.max(t, key)
+    local t_len = #t
+    if t_len == 0 then
+        return
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local v_max = t[1]
+    local vh_max = key_fn(v_max)
+    if not vh_max then
+        return
+    end
+
+    for i = 2, t_len do
+        local v = t[i]
+        local vh = key_fn(v)
+        if not vh then
+            return
+        end
+
+        if vh_max < vh then
+            v_max = v
+        end
+    end
+
+    return v_max
+end
+
+---Get the minimum value from `t`, optionally filtering with `key`.
+---To calculate based on function logic, use |reduce()|.
+---@generic T
+---@param t T[]
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return T? Nil if `t` is empty or if `key` returns a nil.
+function M.min(t, key)
+    local t_len = #t
+    if t_len == 0 then
+        return
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local v_min = t[1]
+    local vh_min = key_fn(v_min)
+    if not vh_min then
+        return
+    end
+
+    for i = 2, t_len do
+        local v = t[i]
+        local vh = key_fn(v)
+        if not vh then
+            return
+        end
+
+        if vh < vh_min then
+            v_min = v
+        end
+    end
+
+    return v_min
+end
+
+---Check if no items in `t` satisfy predicate function `f`.
+---
+---To check with a key, use |excluded()|.
+---@generic T
+---@param t T[]
+---@param f fun(x:T): boolean
+---@return boolean Return false if the predicate is satisfied or if the list length is zero.
+function M.none(t, f)
+    local t_len = #t
+    if t_len == 0 then
+        return true
+    end
+
+    for i = 1, t_len do
+        if f(t[i]) then
+            return false
+        end
+    end
+
+    return true
+end
+
+---See if `f` is satisfied exactly once within `t`. To check based on a key, use |only()|.
+---@generic T
+---@param t T[]
+---@param f fun(x:T): boolean
+---@return boolean ok
+---`false` if:
+---- A duplicate predicate success is found.
+---- Length of `t` is zero.
+function M.one(t, f)
+    local t_len = #t
+    if t_len == 0 then
+        return false
     end
 
     local seen = false
     for i = 1, t_len do
-        if predicate(t[i]) then
+        if f(t[i]) then
             if seen then
-                return false, i, t[i]
+                return false
             end
 
             seen = true
@@ -1574,94 +2005,255 @@ function M.one(t, v)
     return seen
 end
 
----Get the index of a value or the result of a predicate function `v`.
----
----Use |find()| to also return the value.
+---See if `val` occurs exactly once within `t`, optionally filtering with `key`. To check with
+---a predicate function, see |one()|.
 ---@generic T
 ---@param t T[]
----@param v T|fun(x:T): boolean
----@param rev? boolean (Default: `false`) If true, iterate from the end.
----@return integer? Index of the found item. `nil` if not found.
-function M.position(t, v, rev)
-    vim.validate("t", t, "table")
-    vim.validate("v", v, require("nvim-tools.types").not_nil)
-    vim.validate("rev", rev, "boolean", true)
-
+---@param val T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return boolean
+---`false` if:
+---- A duplicate of `v` is found.
+---- `key` produces a `nil` value for `v`.
+---- Length of `t` is zero.
+function M.only(t, val, key)
     local t_len = #t
-    local start, stop, step = resolve_rev(rev, 1, t_len)
-    local predicate = type(v) == "function" and v or function(x)
-        return x == v
+    if t_len == 0 then
+        return false
     end
 
+    local key_fn = key_fn_from_key(key)
+    local valh = key_fn(val)
+    if valh == nil then
+        return false
+    end
+
+    local seen = false
+    for i = 1, t_len do
+        if key_fn(t[i]) == valh then
+            if seen then
+                return false
+            end
+
+            seen = true
+        end
+    end
+
+    return seen
+end
+
+---Get the first index of `t` that satisfies predicate function `f`.
+---
+---- Use |find()| to return the value.
+---- Use |locate()| to search based on a key.
+---@generic T
+---@param t T[]
+---@param f fun(x:T): boolean
+---@param rev? boolean (Default: `false`) If true, iterate from the end.
+---@return uinteger? Index of the found item. `nil` if not found.
+function M.position(t, f, rev)
+    local t_len = #t
+    if t_len == 0 then
+        return
+    end
+
+    local start, stop, step = resolve_rev(1, t_len, rev)
     for i = start, stop, step do
-        if predicate(t[i]) then
+        if f(t[i]) then
             return i
         end
     end
 end
 
----Check if all elements in a list are the same.
+---Get a new list of indices satisfying predicate function `f`.
+---
+---- Use |select()| to return the values.
+---- Use |indices()| to compare based on a key.
 ---@generic T
 ---@param t T[]
----@return boolean, integer? idx, T? v `false` if list length is zero. If a unique value is
----     found, the index and value are returned.
-function M.same(t)
-    vim.validate("t", t, "table")
-
+---@param f fun(x:T): boolean
+---@return uinteger[] Returns an empty table if no items found.
+function M.positions(t, f)
     local t_len = #t
+    local ret = {}
     if t_len == 0 then
-        return false, nil, nil
+        return ret
     end
 
-    local v = t[1]
-    for i = 2, t_len do
-        if t[i] ~= v then
-            return false, i, v
+    local j = 1
+    for i = 1, t_len do
+        if f(t[i]) then
+            ret[j] = i
+            j = j + 1
         end
     end
 
-    return true, nil, nil
+    return ret
 end
 
----Return a list of boolean values based on the presence of `v`.
----Example:
----```lua
----    local foo = { 1, 2, 3, 1, 2, 3 }
----    local foobar = selectors(foo, 1)
----    -- Returns { true, false, false, true, false, false }
----```
+---Check if all elements in `t` are the same, optionally using a `key`.
 ---
----Example:
----```lua
----    local foo = { 1, 2, 3, 1, 2, 3 }
----    local foobar = selectors(foo, function(n)
----        return n % 2 == 0
----    end)
----    -- Returns { false, true, false, false, true, false }
----```
+---To check with a predicate function, see |all()|.
 ---@generic T
 ---@param t T[]
----@param v T|fun(x:T): boolean
----@return boolean[]? `nil` if table length is zero.
-function M.selectors(t, v)
-    vim.validate("t", t, "table")
-    vim.validate("v", v, require("nvim-tools.types").not_nil)
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return boolean
+---`false` if:
+---- A unique value is found.
+---- Table length is zero.
+---- `key` generates a `nil` value.
+function M.same(t, key)
+    local t_len = #t
+    if t_len == 0 then
+        return false
+    end
 
+    if t_len == 1 then
+        return true
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local vh1 = key_fn(t[1])
+    if vh1 == nil then
+        return false
+    end
+
+    for i = 2, t_len do
+        if key_fn(t[i]) ~= vh1 then
+            return false
+        end
+    end
+
+    return true
+end
+
+---Return the first occurrence of `val` in `t`, optionally filtering with `key` (recommended.
+---Otherwise, prefer |contains()| for a simple boolean check).
+---To use a predicate function, use |find()|.
+---To get the relevant index, use |locate()|.
+---@generic T
+---@param t T[]
+---@param val T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@param rev? boolean If `true`, start from the end of the list.
+---@return T?
+---`nil` if:
+---- `val` is not found
+---- Length of `t` is zero
+---- `key` applied to `val` is nil.
+function M.seek(t, val, key, rev)
+    local t_len = #t
+    if t_len == 0 then
+        return
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local valh = key_fn(val)
+    if valh == nil then
+        return
+    end
+
+    local start, stop, step = resolve_rev(1, t_len, rev)
+    for i = start, stop, step do
+        local v = t[i]
+        if key_fn(v) == valh then
+            return v
+        end
+    end
+end
+
+---Create a new list with a copy of every occurrence of `val` in `t`, optinally filtered by `key`.
+---- Use |indices()| to return the indices.
+---- Use |filter_to()| to search based on a predicate function.
+---@generic T
+---@param val T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return T[] Returns an empty table if no items found or `key` produces a `nil` value from
+---     `val`.
+function M.select(t, val, key)
+    local t_len = #t
+    local ret = {}
+    if t_len == 0 then
+        return ret
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local valh = key_fn(val)
+    if valh == nil then
+        return ret
+    end
+
+    local j = 1
+    for i = 1, t_len do
+        local v = t[i]
+        if key_fn(v) == valh then
+            ret[j] = v
+            j = j + 1
+        end
+    end
+
+    return ret
+end
+
+---Return a list of boolean values based on the presence of `val`.
+---To generate selectors from predicate logic, use |filter_map_to()|.
+---@generic T
+---@param t T[]
+---@param val T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return boolean[]? `nil` if table length is zero.
+function M.selectors(t, val, key)
     local t_len = #t
     if t_len == 0 then
         return
     end
 
     local ret = {} ---@type boolean[]
-    local predicate = type(v) == "function" and v or function(x)
-        return x == v
+    local key_fn = key_fn_from_key(key)
+    local vh_target = key_fn(val)
+    if vh_target == nil then
+        return ret
     end
 
     for i = 1, t_len do
-        ret[#ret + 1] = predicate(t[i]) and true or false
+        ret[#ret + 1] = key_fn(t[i]) == vh_target
     end
 
     return ret
+end
+
+---See if all of or none of the values in `t` match `val`, optionally filtering with `key`.
+---To check with a predicate, use |consistent()|.
+---@generic T
+---@param t T[]
+---@param val T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return boolean
+---`false` if:
+---- More than one of, but not all items match `val`.
+---- `key` produces a `nil` value.
+---- Length of `t` is zero.
+function M.uniform(t, val, key)
+    local t_len = #t
+    if t_len == 0 then
+        return false
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local valh = key_fn(val)
+    if valh == nil then
+        return false
+    end
+
+    local vh1 = key_fn(t[1])
+    local expected = vh1 == valh
+    for i = 1, t_len do
+        if (key_fn(t[i]) == valh) ~= expected then
+            return false
+        end
+    end
+
+    return true
 end
 
 --------------------------------
@@ -1671,7 +2263,7 @@ end
 ---Apply a function to a list's elements, transforming them into a single value.
 ---@generic T
 ---@param t T[]
----@param f fun(acc:any, x:T, idx:integer): acc:any  Takes as inputs the accumulator,
+---@param f fun(acc:any, x:T, idx:uinteger): acc:any  Takes as inputs the accumulator,
 ---     current list value, and current list index. Returns the next accumulator.
 ---     Returning a `nil` accumulator value will be accepted and overwrite the previous value.
 ---@param init any First accumulator value. If `nil`, the first value of `t`.
@@ -1681,22 +2273,15 @@ end
 ---@param rev? boolean (Default: `false`) If true, iterate from the end.
 ---@return any `init` if `t` is length zero.
 function M.fold(t, f, init, start, stop, rev)
-    vim.validate("t", t, "table")
-    vim.validate("f", f, "callable")
-    local is_int = require("nvim-tools.types").is_int
-    vim.validate("start", start, is_int, true)
-    vim.validate("stop", stop, is_int, true)
-    vim.validate("rev", rev, "boolean", true)
-
     local t_len = #t
-    start = resolve_iter_index(start, t_len, 1)
-    stop = resolve_iter_index(stop, t_len, t_len)
+    start = iter_idx_resolve(start, t_len, 1)
+    stop = iter_idx_resolve(stop, t_len, t_len)
     if t_len == 0 or start > stop then
         return init
     end
 
     local step
-    start, stop, step = resolve_rev(rev, start, stop)
+    start, stop, step = resolve_rev(start, stop, rev)
     local acc = init
     if acc == nil then
         acc = t[start]
@@ -1713,7 +2298,7 @@ end
 ---Apply a function to a list's elements, transforming them into two values.
 ---@generic T
 ---@param t T[]
----@param f fun(acc:any, acc2:any, x:T, idx:integer): acc:any, acc2:any  Takes as inputs the
+---@param f fun(acc:any, acc2:any, x:T, idx:uinteger): acc:any, acc2:any  Takes as inputs the
 ---     accumulators, current list value, and current list index. Returns the next accumulators.
 ---     `nil` values will overwrite the previous accumulators.
 ---@param init any First accumulator value. Value at the `start` index if nil.
@@ -1725,22 +2310,15 @@ end
 ---@param rev? boolean (Default: `false`) If true, iterate from the end.
 ---@return any, any `init`, `init2` if `t` is length zero.
 function M.fold2(t, f, init, init2, start, stop, rev)
-    vim.validate("t", t, "table")
-    vim.validate("f", f, "callable")
-    local is_int = require("nvim-tools.types").is_int
-    vim.validate("start", start, is_int, true)
-    vim.validate("stop", stop, is_int, true)
-    vim.validate("rev", rev, "boolean", true)
-
     local t_len = #t
-    start = resolve_iter_index(start, t_len, 1)
-    stop = resolve_iter_index(stop, t_len, t_len)
+    start = iter_idx_resolve(start, t_len, 1)
+    stop = iter_idx_resolve(stop, t_len, t_len)
     if t_len == 0 or start > stop then
         return init, init2
     end
 
     local step
-    start, stop, step = resolve_rev(rev, start, stop)
+    start, stop, step = resolve_rev(start, stop, rev)
     local acc = init
     if acc == nil then
         acc = t[start]
@@ -1762,9 +2340,6 @@ end
 ---@param init? any Initial accumulator value. If nil, the first element of the list is used.
 ---@return any `init` if table is length zero.
 function M.reduce(t, f, init)
-    vim.validate("t", t, "table")
-    vim.validate("f", f, "callable")
-
     local t_len = #t
     if t_len == 0 then
         return nil
@@ -1797,7 +2372,7 @@ end
 ---
 ---@generic T
 ---@param t T[]
----@param f fun(acc:any, x:T, idx:integer): acc:any `nil` returns will be accepted. The returned
+---@param f fun(acc:any, x:T, idx:uinteger): acc:any `nil` returns will be accepted. The returned
 ---     list will not have a skipped index. The next iteration will return a nil accumulator.
 ---@param init any First accumulator value. If `nil`, the value of `t` at `start` will be used.
 ---@see |iter-indexing|
@@ -1807,22 +2382,15 @@ end
 ---@return any[] New list containing the running accumulator values. If `t` is nil, will only
 ---     contain init.
 function M.scan(t, f, init, start, stop, rev)
-    vim.validate("t", t, "table")
-    vim.validate("f", f, "callable")
-    local is_int = require("nvim-tools.types").is_int
-    vim.validate("start", start, is_int, true)
-    vim.validate("stop", stop, is_int, true)
-    vim.validate("rev", rev, "boolean", true)
-
     local t_len = #t
-    start = resolve_iter_index(start, t_len, 1)
-    stop = resolve_iter_index(stop, t_len, t_len)
+    start = iter_idx_resolve(start, t_len, 1)
+    stop = iter_idx_resolve(stop, t_len, t_len)
     if t_len == 0 or start > stop then
         return init
     end
 
     local step
-    start, stop, step = resolve_rev(rev, start, stop)
+    start, stop, step = resolve_rev(start, stop, rev)
     local acc = init
     if acc == nil then
         acc = t[start]
@@ -1854,9 +2422,6 @@ end
 ---If a value is returned, it replaces `x` and `y` is discarded.
 ---@return T[] The original list reference.
 function M.combine(t, f)
-    vim.validate("t", t, "table")
-    vim.validate("f", f, "callable")
-
     local t_len = #t
     if t_len <= 1 then
         return t
@@ -1891,14 +2456,10 @@ end
 ---@param stop? integer Default: Length of `t`
 ---@return T[] Reference to `t`.
 function M.fill(t, v, start, stop)
-    vim.validate("t", t, "table")
-    local is_int = require("nvim-tools.types").is_int
-    vim.validate("start", start, is_int, true)
-    vim.validate("stop", stop, is_int, true)
-
     local t_len = #t
-    start = resolve_iter_index(start, t_len, 1)
-    stop = resolve_iter_index(stop, t_len, t_len)
+    start = iter_idx_resolve(start, t_len, 1)
+    stop = iter_idx_resolve(stop, t_len, t_len)
+    -- TODO: need to properly handle zero length tables here.
     if start > stop then
         return t
     end
@@ -1910,75 +2471,45 @@ function M.fill(t, v, start, stop)
     return t
 end
 
----@generic T, V
----@param t T[]
----Modified in place!
----@param f fun(x: T, idx: integer): V|nil
----Correct idx is preserved when filtering. `nil` returns are filtered.
----@param start integer?
----(Default: `1`) Leave elements before start un-mapped.
----@param stop? integer
----Default: Length of `t`. Elements after `stop` will be un-mapped.
----@return V[]
----The original list reference. If `start` and `stop` produce an invalid range, the function is a
----no-op.
----@see |iter-indexing|
-function M.filter_map(t, f, start, stop)
-    vim.validate("t", t, "table")
-    vim.validate("f", f, "callable")
-    local is_int = require("nvim-tools.types").is_int
-    vim.validate("start", start, is_int, true)
-    vim.validate("stop", stop, is_int, true)
-
+---@generic T
+---@param t T[] Modified in place!
+---@param f fun(x: T): T|nil `nil` returns are filtered.
+---@return T[]
+function M.filter_map(t, f)
     local t_len = #t
-    start = resolve_iter_index(start, t_len, 1)
-    stop = resolve_iter_index(stop, t_len, t_len)
-    if t_len == 0 or start > stop then
+    if t_len == 0 then
         return t
     end
 
-    local j = start
-    for i = start, stop do
-        local vm = f(t[i], i) ---@type V
+    local j = 1
+    for i = 1, t_len do
+        local vm = f(t[i])
         if vm ~= nil then
             t[j] = vm
             j = j + 1
         end
     end
 
-    for i = stop + 1, t_len do
-        t[j] = t[i]
-        j = j + 1
-    end
-
     for i = j, t_len do
         t[i] = nil
     end
 
-    return t --[[@as (V[])]]
+    return t
 end
--- TODO: type annotations in here not working.
 
 ---Create a new list by applying function `f` to the values of `t`.
----@generic T
----@generic U
+---@generic T, U
 ---@param t T[]
----@param f fun(x:T, idx:integer): U|nil `nil` returns are filtered.
----@see |iter-indexing|
+---@param f fun(x:T, idx:uinteger): U|nil `nil` returns are filtered.
 ---@param start integer? (Default: `1`) Leave elements before start un-mapped.
 ---@param stop? integer Default: Length of `t`. Elements after `stop` will be un-mapped.
 ---@return U[] New table. Empty if all elements are filtered or if `start` and `stop` produce an
 ---     invalid range.
+---@see |iter-indexing|
 function M.filter_map_to(t, f, start, stop)
-    vim.validate("t", t, "table")
-    vim.validate("f", f, "callable")
-    local is_int = require("nvim-tools.types").is_int
-    vim.validate("start", start, is_int, true)
-    vim.validate("stop", stop, is_int, true)
-
     local t_len = #t
-    start = resolve_iter_index(start, t_len, 1)
-    stop = resolve_iter_index(stop, t_len, t_len)
+    start = iter_idx_resolve(start, t_len, 1)
+    stop = iter_idx_resolve(stop, t_len, t_len)
     local ret = {}
     if t_len == 0 or start > stop then
         return ret
@@ -2006,31 +2537,6 @@ function M.filter_map_to(t, f, start, stop)
     return ret
 end
 
----Create a new dictionary table by applying a function to elements of a list.
----@generic T
----@generic U
----@generic V
----@param t T[]
----@param f fun(x:T, idx:integer): key:U, val:V If either `key` or `val` is nil, the element will
----     be filtered.
----@return table<U, V> New table. Empty if all elements are filtered.
-function M.filter_map_to_dict(t, f)
-    vim.validate("t", t, "table")
-    vim.validate("f", f, "callable")
-
-    local t_len = #t
-    local ret = {}
-    for i = 1, t_len do
-        local k, v = f(t[i], i)
-        if k ~= nil and v ~= nil then
-            ret[k] = v
-        end
-    end
-
-    return ret
-end
--- TODO: This has to be a subset of something else.
-
 ---Apply function `f` to the elements of `t` in place. An accumulator value is stored between
 ---iterations.
 ---@generic T
@@ -2038,15 +2544,11 @@ end
 ---@generic V
 ---@param t T[] Modified in place!
 ---@param init V Initial accumulator value.
----@param f fun(acc:V, value:T, idx:integer): V, U|nil Receives the current accumulator, the
+---@param f fun(acc:V, value:T, idx:uinteger): V, U|nil Receives the current accumulator, the
 ---     currently iterated list value, and the currently iterated index. If `nil` is returned for
 ---     the list value, it will be filtered.
 ---@return T[] The original list reference.
 function M.filter_map_accum(t, init, f)
-    vim.validate("t", t, "table")
-    vim.validate("init", init, require("nvim-tools.types").not_nil)
-    vim.validate("f", f, "callable")
-
     local t_len = #t
     local acc = init
     local j = 1
@@ -2068,11 +2570,8 @@ end
 
 ---@generic T
 ---@param t T[] Values to aggregate.
----@param key string|fun(val:any): any See: |vim.list.unique()|.
+---@param key nil|string|fun(v:T): any See: |key_fn|.
 function M.group_by(t, key)
-    vim.validate("t", t, "table")
-    vim.validate("key", key, { "callable", "string" }, true)
-
     local ret = {}
     local t_len = #t
     if t_len == 0 then
@@ -2080,7 +2579,7 @@ function M.group_by(t, key)
     end
 
     local ntt = require("nvim-tools.table")
-    local key_fn = make_key_fn(key)
+    local key_fn = key_fn_from_key(key)
     for i = 1, t_len do
         local v = t[i]
         local vh = key_fn(v)
@@ -2100,7 +2599,7 @@ end
 ---@generic V
 ---@param t T[] Values to transduce.
 ---@param init U Initial accumulator value
----@param f fun(acc:U, v:T, idx:integer): acc:U|nil, v:V|nil
+---@param f fun(acc:U, v:T, idx:uinteger): acc:U|nil, v:V|nil
 ---Takes as params the current accumulator value, the current list value, and the current list
 ---index. Returns the new accumulator value and the next value to add to the return list.
 ---If the `acc` return is nil, `v` is first appended to the table if not nil, then the finalize
@@ -2119,19 +2618,10 @@ end
 ---@return V[] New list of converted values. Empty if `start` and `stop` produce an invalid
 ---iteration.
 function M.transduce(t, init, f, b, z, start, stop, rev)
-    vim.validate("t", t, "table")
-    vim.validate("init", init, require("nvim-tools.types").not_nil)
-    vim.validate("f", f, "callable")
-    vim.validate("z", z, "callable", true)
-    local is_int = require("nvim-tools.types").is_int
-    vim.validate("start", start, is_int, true)
-    vim.validate("stop", stop, is_int, true)
-    vim.validate("rev", rev, "boolean", true)
-
     local ret = {}
     local t_len = #t
-    start = resolve_iter_index(start, t_len, 1)
-    stop = resolve_iter_index(stop, t_len, t_len)
+    start = iter_idx_resolve(start, t_len, 1)
+    stop = iter_idx_resolve(stop, t_len, t_len)
     if t_len == 0 or start > stop then
         return ret
     end
@@ -2151,7 +2641,7 @@ function M.transduce(t, init, f, b, z, start, stop, rev)
     end
 
     local step
-    start, stop, step = resolve_rev(rev, start, stop)
+    start, stop, step = resolve_rev(start, stop, rev)
     for i = start, stop, step do
         local acc, v = f(acc_stored, t[i], i)
         if v ~= nil then
@@ -2189,10 +2679,6 @@ end
 ---@param f fun(a:T, b:U): val:V|nil If val is `nil`, it will be filtered.
 ---@return V[] Reference to `t1`.
 function M.filter_map_two(t1, t2, f)
-    vim.validate("t1", t1, "table")
-    vim.validate("t2", t2, "table")
-    vim.validate("f", f, "callable")
-
     local t1_len = #t1
     local len = math.min(t1_len, #t2)
     local j = 1
@@ -2221,10 +2707,6 @@ end
 ---@param f fun(a:T, b:U): val:V|nil If val is `nil`, it will be filtered.
 ---@return V[] New list. Empty if all elements are filtered.
 function M.filter_map_two_to(t1, t2, f)
-    vim.validate("t1", t1, "table")
-    vim.validate("t2", t2, "table")
-    vim.validate("f", f, "callable")
-
     local len = math.min(#t1, #t2)
     if len == 0 then
         return M.copy(t1)
@@ -2245,15 +2727,15 @@ end
 
 ---@generic T
 ---@param dst T[]
----@param iter_len integer
----@param sep_count integer
----@param new_len integer
+---@param iter_len uinteger
+---@param sep_count uinteger
+---@param new_len uinteger
 ---@param t T[]
 ---@param sep T
----@param unit_size integer? (Default: `1`)
+---@param unit_size uinteger? (Default: `1`)
 ---@see |iter-indexing|
----@param start integer? (Default: `1`)
----@param stop? integer Default: Length of `t`
+---@param start uinteger? (Default: `1`)
+---@param stop? uinteger Default: Length of `t`
 ---@return T[]
 local function intersperse_do(dst, iter_len, sep_count, new_len, t, sep, unit_size, start, stop)
     local t_len = #t -- Duplicate. Remove when inlining.
@@ -2312,19 +2794,15 @@ end
 ---@generic T
 ---@param t T[] Modified in place!
 ---@param sep T
----@param unit_size integer? (Default: `1`)
+---@param unit_size uinteger? (Default: `1`)
 ---@see |iter-indexing|
 ---@param start integer? (Default: `1`)
 ---@param stop? integer Default: Length of `t`
 ---@return T[] Original list reference
 function M.intersperse(t, sep, unit_size, start, stop)
-    vim.validate("t", t, "table")
-    vim.validate("sep", sep, require("nvim-tools.types").not_nil)
-    vim.validate("unit_size", unit_size, "number", true)
-
     local t_len = #t
-    start = resolve_iter_index(start, t_len, 1)
-    stop = resolve_iter_index(stop, t_len, t_len)
+    start = iter_idx_resolve(start, t_len, 1)
+    stop = iter_idx_resolve(stop, t_len, t_len)
     if t_len == 0 or start >= stop then
         return t
     end
@@ -2363,19 +2841,15 @@ end
 ---@generic T
 ---@param t T[] Modified in place!
 ---@param sep T
----@param unit_size integer? (Default: `1`)
+---@param unit_size uinteger? (Default: `1`)
 ---@see |iter-indexing|
 ---@param start integer? (Default: `1`)
 ---@param stop? integer Default: Length of `t`
 ---@return T[] Original list reference
 function M.intersperse_to(t, sep, unit_size, start, stop)
-    vim.validate("t", t, "table")
-    vim.validate("sep", sep, require("nvim-tools.types").not_nil)
-    vim.validate("unit_size", unit_size, "number", true)
-
     local t_len = #t
-    start = resolve_iter_index(start, t_len, 1)
-    stop = resolve_iter_index(stop, t_len, t_len)
+    start = iter_idx_resolve(start, t_len, 1)
+    stop = iter_idx_resolve(stop, t_len, t_len)
     if t_len == 0 or start >= stop then
         return M.copy(t)
     end
@@ -2396,41 +2870,10 @@ end
 -- after the main group loop. Don't do this though without a concrete use case, as it makes the
 -- code more complicated.
 
----Create a new table of merged values from `t` based on function `f`.
----@generic T
----@param t T[]
----@param f fun(x:T, y:T): v:T|nil If `nil` is returned, `y` is kept.
----If a value is returned, it replaces `x` and `y` is discarded.
----@return T[] A new table.
-function M.merge_to(t, f)
-    vim.validate("t", t, "table")
-    vim.validate("f", f, "callable")
-
-    local t_len = #t
-    if t_len <= 1 then
-        return M.copy(t)
-    end
-
-    local ret = { t[1] }
-    for i = 2, t_len do
-        local v2 = t[i]
-        local vm = f(ret[#ret], v2)
-        if vm == nil then
-            ret[#ret + 1] = v2
-        else
-            ret[#ret] = vm
-        end
-    end
-
-    return ret
-end
-
 ---Reverse the order of the items in list `t` in place.
 ---@generic T
 ---@param t T[] Modified in place!
 function M.reverse(t)
-    vim.validate("t", t, "table")
-
     local t_len = #t
     local stop = math.floor(t_len / 2)
     for i = 1, stop do
@@ -2444,8 +2887,6 @@ end
 ---@param t T[]
 ---@return T[] Empty table if `t` is empty.
 function M.reverse_to(t)
-    vim.validate("t", t, "table")
-
     local t_len = #t
     if t_len == 0 then
         return {}
@@ -2464,15 +2905,10 @@ end
 ---or backwards.)
 ---@generic T
 ---@param t T[] Modified in place.
----@param n integer Cyclically clamped at length of `t`.
+---@param n uinteger Cyclically clamped at length of `t`.
 ---@param dir? -1|1 (Default: `-1`) -1 shifts elements left, 1 to the right.
 ---@return T Reference to the original list.
 function M.rotate(t, n, dir)
-    vim.validate("t", t, "table")
-    local nty = require("nvim-tools.types")
-    vim.validate("n", n, nty.is_uint)
-    vim.validate("dir", dir, nty.is_int, true)
-
     local len = #t
     if len <= 1 then
         return t
@@ -2487,8 +2923,8 @@ function M.rotate(t, n, dir)
         steps = len - steps
     end
 
-    ---@param left integer
-    ---@param right integer
+    ---@param left uinteger
+    ---@param right uinteger
     local function reverse(left, right)
         while left < right do
             t[left], t[right] = t[right], t[left]
@@ -2507,15 +2943,10 @@ end
 ---Create a new list from the shifted elements of `t1`.
 ---@generic T
 ---@param t T[]
----@param n integer Amount of indices to shift the list. Cyclically clamped at length of `t`.
+---@param n uinteger Amount of indices to shift the list. Cyclically clamped at length of `t`.
 ---@param dir? -1|1 (Default: `-1`) -1 shifts elements left, 1 to the right.
 ---@return T[] New list. Copy of the original if `n` is zero.
 function M.rotate_to(t, n, dir)
-    vim.validate("t", t, "table")
-    local nty = require("nvim-tools.types")
-    vim.validate("n", n, nty.is_uint)
-    vim.validate("dir", dir, nty.is_int, true)
-
     local len = #t
     if len <= 1 then
         return M.copy(t)
@@ -2612,12 +3043,38 @@ function M.zip_with(t1, t2, f)
     return ret
 end
 
+-------------------------
+-- MARK: Uncategorized --
+-------------------------
+
+-- TODO: Categorize these
+
+--- Returns an iterator that infinitely cycles through `t`.
+--- Each step yields: `idx` (1-based index within the cycle), `value`, `cycle`
+--- (0-based full cycles completed).
+---@generic T
+---@param t T[]
+---@return fun(): uinteger|nil, T|nil, uinteger|nil Nil iter return if length of `t` is zero.
+function M.cycle(t)
+    local t_len = #t
+    if t_len == 0 then
+        ---@return nil, nil, nil
+        return function()
+            return nil, nil, nil
+        end
+    end
+
+    local i = 0
+    ---@generic T
+    ---@return uinteger, T, uinteger
+    return function()
+        i = i + 1
+        local idx = ((i - 1) % t_len) + 1
+        local cycle = math.floor((i - 1) / t_len)
+        return idx, t[idx], cycle
+    end
+end
+
 return M
 
--- TODO: Remove any _do functions.
--- TODO: All list functions should have early exits of len zero, and anything else that's
--- relevant. Exceptions would have to be proven out through profiling.
--- TODO: Re-check all _to functions to make sure they don't write to t.
--- TODO: Improve descriptions/formatting.
--- TODO: Remove index predicate/mapper/etc returns where I am not actively using them. It is
--- easier to add them in later than to deal with them now.
+-- TODO: More specifically scope utils (biggest ones - The list unique utils.)

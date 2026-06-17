@@ -98,16 +98,13 @@ local function check_chars_after(win_targets, cache, opts)
     local codepoint_tokens = ut.get_token_codepoints(opts.tokens or default_tokens)
     local ntl = require("nvim-tools.list")
 
-    local codepoint_chars = ntl.filter_map(codepoint_tokens, function(token)
+    return ntl.filter_map_to(codepoint_tokens, function(token)
         if codepoints_after[token] ~= nil then
             return nil
         else
             return fn.nr2char(token)
         end
     end)
-
-    ---@diagnostic disable-next-line: return-type-mismatch
-    return codepoint_chars
 end
 -- TODO: Even if you handle the zero-length issue below, does this properly handle if the pos
 -- is on the very last character of the line?

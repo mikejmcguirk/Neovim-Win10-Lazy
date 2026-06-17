@@ -1,3 +1,7 @@
+local M = {}
+
+local ntl = require("nvim-tools.list")
+
 function M.test_keep_rm_while()
     local orig_list = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }
 
@@ -7,15 +11,15 @@ function M.test_keep_rm_while()
 
     -- Middle idx
 
-    local foo = M.copy(orig_list)
-    M.keep_while(foo, function(x)
+    local foo = ntl.copy(orig_list)
+    ntl.keep_while(foo, function(x)
         return x <= 3
     end)
 
     assert(vim.deep_equal(foo, { 1, 2, 3 }))
 
-    foo = M.copy(orig_list)
-    M.keep_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.keep_while(foo, function(x)
         return x >= 3
     end)
 
@@ -23,15 +27,15 @@ function M.test_keep_rm_while()
 
     -- Bottom Idx
 
-    foo = M.copy(orig_list)
-    M.keep_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.keep_while(foo, function(x)
         return x <= 1
     end)
 
     assert(vim.deep_equal(foo, { 1 }))
 
-    foo = M.copy(orig_list)
-    M.keep_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.keep_while(foo, function(x)
         return x >= 1
     end)
 
@@ -39,15 +43,15 @@ function M.test_keep_rm_while()
 
     -- Zero Idx
 
-    foo = M.copy(orig_list)
-    M.keep_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.keep_while(foo, function(x)
         return x <= 0
     end)
 
     assert(vim.deep_equal(foo, {}))
 
-    foo = M.copy(orig_list)
-    M.keep_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.keep_while(foo, function(x)
         return x >= 0
     end)
 
@@ -55,15 +59,15 @@ function M.test_keep_rm_while()
 
     -- Top Idx
 
-    foo = M.copy(orig_list)
-    M.keep_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.keep_while(foo, function(x)
         return x <= 10
     end)
 
     assert(vim.deep_equal(foo, orig_list))
 
-    foo = M.copy(orig_list)
-    M.keep_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.keep_while(foo, function(x)
         return x >= 10
     end)
 
@@ -71,15 +75,15 @@ function M.test_keep_rm_while()
 
     -- Over Idx
 
-    foo = M.copy(orig_list)
-    M.keep_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.keep_while(foo, function(x)
         return x <= 11
     end)
 
     assert(vim.deep_equal(foo, orig_list))
 
-    foo = M.copy(orig_list)
-    M.keep_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.keep_while(foo, function(x)
         return x >= 11
     end)
 
@@ -91,15 +95,15 @@ function M.test_keep_rm_while()
 
     -- Middle idx
 
-    foo = M.copy(orig_list)
-    M.keep_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.keep_while(foo, function(x)
         return x <= 3
     end, true)
 
     assert(vim.deep_equal(foo, {}))
 
-    foo = M.copy(orig_list)
-    M.keep_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.keep_while(foo, function(x)
         return x >= 3
     end, true)
 
@@ -107,15 +111,15 @@ function M.test_keep_rm_while()
 
     -- Bottom Idx
 
-    foo = M.copy(orig_list)
-    M.keep_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.keep_while(foo, function(x)
         return x <= 1
     end, true)
 
     assert(vim.deep_equal(foo, {}))
 
-    foo = M.copy(orig_list)
-    M.keep_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.keep_while(foo, function(x)
         return x >= 1
     end, true)
 
@@ -123,15 +127,15 @@ function M.test_keep_rm_while()
 
     -- Zero Idx
 
-    foo = M.copy(orig_list)
-    M.keep_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.keep_while(foo, function(x)
         return x <= 0
     end, true)
 
     assert(vim.deep_equal(foo, {}))
 
-    foo = M.copy(orig_list)
-    M.keep_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.keep_while(foo, function(x)
         return x >= 0
     end, true)
 
@@ -139,15 +143,15 @@ function M.test_keep_rm_while()
 
     -- Top Idx
 
-    foo = M.copy(orig_list)
-    M.keep_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.keep_while(foo, function(x)
         return x <= 10
     end, true)
 
     assert(vim.deep_equal(foo, orig_list))
 
-    foo = M.copy(orig_list)
-    M.keep_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.keep_while(foo, function(x)
         return x >= 10
     end, true)
 
@@ -155,15 +159,15 @@ function M.test_keep_rm_while()
 
     -- Over Idx
 
-    foo = M.copy(orig_list)
-    M.keep_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.keep_while(foo, function(x)
         return x <= 11
     end, true)
 
     assert(vim.deep_equal(foo, orig_list))
 
-    foo = M.copy(orig_list)
-    M.keep_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.keep_while(foo, function(x)
         return x >= 11
     end, true)
 
@@ -175,31 +179,34 @@ function M.test_keep_rm_while()
 
     -- Middle idx
 
-    foo = M.copy(orig_list)
-    M.rm_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.rm_while(foo, function(x)
         return x <= 3
     end)
 
     assert(vim.deep_equal(foo, { 4, 5, 6, 7, 8, 9, 10 }))
 
-    foo = M.copy(orig_list)
-    M.rm_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.rm_while(foo, function(x)
         return x >= 3
     end)
 
-    assert(vim.deep_equal(foo, orig_list))
+    assert(
+        vim.deep_equal(foo, orig_list),
+        "Expected: " .. vim.inspect(orig_list) .. ", Actual: " .. vim.inspect(foo)
+    )
 
     -- Bottom Idx
 
-    foo = M.copy(orig_list)
-    M.rm_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.rm_while(foo, function(x)
         return x <= 1
     end)
 
     assert(vim.deep_equal(foo, { 2, 3, 4, 5, 6, 7, 8, 9, 10 }))
 
-    foo = M.copy(orig_list)
-    M.rm_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.rm_while(foo, function(x)
         return x >= 1
     end)
 
@@ -207,15 +214,15 @@ function M.test_keep_rm_while()
 
     -- Zero Idx
 
-    foo = M.copy(orig_list)
-    M.rm_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.rm_while(foo, function(x)
         return x <= 0
     end)
 
     assert(vim.deep_equal(foo, orig_list))
 
-    foo = M.copy(orig_list)
-    M.rm_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.rm_while(foo, function(x)
         return x >= 0
     end)
 
@@ -223,15 +230,15 @@ function M.test_keep_rm_while()
 
     -- Top Idx
 
-    foo = M.copy(orig_list)
-    M.rm_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.rm_while(foo, function(x)
         return x <= 10
     end)
 
     assert(vim.deep_equal(foo, {}))
 
-    foo = M.copy(orig_list)
-    M.rm_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.rm_while(foo, function(x)
         return x >= 10
     end)
 
@@ -239,15 +246,15 @@ function M.test_keep_rm_while()
 
     -- Over Idx
 
-    foo = M.copy(orig_list)
-    M.rm_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.rm_while(foo, function(x)
         return x <= 11
     end)
 
     assert(vim.deep_equal(foo, {}))
 
-    foo = M.copy(orig_list)
-    M.rm_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.rm_while(foo, function(x)
         return x >= 11
     end)
 
@@ -259,15 +266,15 @@ function M.test_keep_rm_while()
 
     -- Middle idx
 
-    foo = M.copy(orig_list)
-    M.rm_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.rm_while(foo, function(x)
         return x <= 3
     end, true)
 
     assert(vim.deep_equal(foo, orig_list))
 
-    foo = M.copy(orig_list)
-    M.rm_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.rm_while(foo, function(x)
         return x >= 3
     end, true)
 
@@ -275,15 +282,15 @@ function M.test_keep_rm_while()
 
     -- Bottom Idx
 
-    foo = M.copy(orig_list)
-    M.rm_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.rm_while(foo, function(x)
         return x <= 1
     end, true)
 
     assert(vim.deep_equal(foo, orig_list))
 
-    foo = M.copy(orig_list)
-    M.rm_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.rm_while(foo, function(x)
         return x >= 1
     end, true)
 
@@ -291,15 +298,15 @@ function M.test_keep_rm_while()
 
     -- Zero Idx
 
-    foo = M.copy(orig_list)
-    M.rm_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.rm_while(foo, function(x)
         return x <= 0
     end, true)
 
     assert(vim.deep_equal(foo, orig_list))
 
-    foo = M.copy(orig_list)
-    M.rm_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.rm_while(foo, function(x)
         return x >= 0
     end, true)
 
@@ -307,15 +314,15 @@ function M.test_keep_rm_while()
 
     -- Top Idx
 
-    foo = M.copy(orig_list)
-    M.rm_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.rm_while(foo, function(x)
         return x <= 10
     end, true)
 
     assert(vim.deep_equal(foo, {}))
 
-    foo = M.copy(orig_list)
-    M.rm_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.rm_while(foo, function(x)
         return x >= 10
     end, true)
 
@@ -323,15 +330,15 @@ function M.test_keep_rm_while()
 
     -- Over Idx
 
-    foo = M.copy(orig_list)
-    M.rm_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.rm_while(foo, function(x)
         return x <= 11
     end, true)
 
     assert(vim.deep_equal(foo, {}))
 
-    foo = M.copy(orig_list)
-    M.rm_while(foo, function(x)
+    foo = ntl.copy(orig_list)
+    ntl.rm_while(foo, function(x)
         return x >= 11
     end, true)
 
@@ -341,17 +348,17 @@ function M.test_keep_rm_while()
     -- New List Fwd --
     ------------------
 
-    local foo = M.copy(orig_list)
+    foo = ntl.copy(orig_list)
 
     -- Middle idx
 
-    local bar = M.keep_while_to(foo, function(x)
+    local bar = ntl.keep_while_to(foo, function(x)
         return x <= 3
     end)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, { 1, 2, 3 }))
 
-    bar = M.keep_while_to(foo, function(x)
+    bar = ntl.keep_while_to(foo, function(x)
         return x >= 3
     end)
     assert(vim.deep_equal(foo, orig_list))
@@ -359,13 +366,13 @@ function M.test_keep_rm_while()
 
     -- Bottom Idx
 
-    bar = M.keep_while_to(foo, function(x)
+    bar = ntl.keep_while_to(foo, function(x)
         return x <= 1
     end)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, { 1 }))
 
-    bar = M.keep_while_to(foo, function(x)
+    bar = ntl.keep_while_to(foo, function(x)
         return x >= 1
     end)
     assert(vim.deep_equal(foo, orig_list))
@@ -373,13 +380,13 @@ function M.test_keep_rm_while()
 
     -- Zero Idx
 
-    bar = M.keep_while_to(foo, function(x)
+    bar = ntl.keep_while_to(foo, function(x)
         return x <= 0
     end)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, {}))
 
-    bar = M.keep_while_to(foo, function(x)
+    bar = ntl.keep_while_to(foo, function(x)
         return x >= 0
     end)
     assert(vim.deep_equal(foo, orig_list))
@@ -387,13 +394,13 @@ function M.test_keep_rm_while()
 
     -- Top Idx
 
-    bar = M.keep_while_to(foo, function(x)
+    bar = ntl.keep_while_to(foo, function(x)
         return x <= 10
     end)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, orig_list))
 
-    bar = M.keep_while_to(foo, function(x)
+    bar = ntl.keep_while_to(foo, function(x)
         return x >= 10
     end)
     assert(vim.deep_equal(foo, orig_list))
@@ -401,13 +408,13 @@ function M.test_keep_rm_while()
 
     -- Over Idx
 
-    bar = M.keep_while_to(foo, function(x)
+    bar = ntl.keep_while_to(foo, function(x)
         return x <= 11
     end)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, orig_list))
 
-    bar = M.keep_while_to(foo, function(x)
+    bar = ntl.keep_while_to(foo, function(x)
         return x >= 11
     end)
     assert(vim.deep_equal(foo, orig_list))
@@ -419,13 +426,13 @@ function M.test_keep_rm_while()
 
     -- Middle idx
 
-    bar = M.keep_while_to(foo, function(x)
+    bar = ntl.keep_while_to(foo, function(x)
         return x <= 3
     end, true)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, {}))
 
-    bar = M.keep_while_to(foo, function(x)
+    bar = ntl.keep_while_to(foo, function(x)
         return x >= 3
     end, true)
     assert(vim.deep_equal(foo, orig_list))
@@ -433,13 +440,13 @@ function M.test_keep_rm_while()
 
     -- Bottom Idx
 
-    bar = M.keep_while_to(foo, function(x)
+    bar = ntl.keep_while_to(foo, function(x)
         return x <= 1
     end, true)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, {}))
 
-    bar = M.keep_while_to(foo, function(x)
+    bar = ntl.keep_while_to(foo, function(x)
         return x >= 1
     end, true)
     assert(vim.deep_equal(foo, orig_list))
@@ -447,13 +454,13 @@ function M.test_keep_rm_while()
 
     -- Zero Idx
 
-    bar = M.keep_while_to(foo, function(x)
+    bar = ntl.keep_while_to(foo, function(x)
         return x <= 0
     end, true)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, {}))
 
-    bar = M.keep_while_to(foo, function(x)
+    bar = ntl.keep_while_to(foo, function(x)
         return x >= 0
     end, true)
     assert(vim.deep_equal(foo, orig_list))
@@ -461,13 +468,13 @@ function M.test_keep_rm_while()
 
     -- Top Idx
 
-    bar = M.keep_while_to(foo, function(x)
+    bar = ntl.keep_while_to(foo, function(x)
         return x <= 10
     end, true)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, orig_list))
 
-    bar = M.keep_while_to(foo, function(x)
+    bar = ntl.keep_while_to(foo, function(x)
         return x >= 10
     end, true)
     assert(vim.deep_equal(foo, orig_list))
@@ -475,13 +482,13 @@ function M.test_keep_rm_while()
 
     -- Over Idx
 
-    bar = M.keep_while_to(foo, function(x)
+    bar = ntl.keep_while_to(foo, function(x)
         return x <= 11
     end, true)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, orig_list))
 
-    bar = M.keep_while_to(foo, function(x)
+    bar = ntl.keep_while_to(foo, function(x)
         return x >= 11
     end, true)
     assert(vim.deep_equal(foo, orig_list))
@@ -493,13 +500,13 @@ function M.test_keep_rm_while()
 
     -- Middle idx
 
-    bar = M.rm_while_to(foo, function(x)
+    bar = ntl.rm_while_to(foo, function(x)
         return x <= 3
     end)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, { 4, 5, 6, 7, 8, 9, 10 }))
 
-    bar = M.rm_while_to(foo, function(x)
+    bar = ntl.rm_while_to(foo, function(x)
         return x >= 3
     end)
     assert(vim.deep_equal(foo, orig_list))
@@ -507,13 +514,13 @@ function M.test_keep_rm_while()
 
     -- Bottom Idx
 
-    bar = M.rm_while_to(foo, function(x)
+    bar = ntl.rm_while_to(foo, function(x)
         return x <= 1
     end)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, { 2, 3, 4, 5, 6, 7, 8, 9, 10 }))
 
-    bar = M.rm_while_to(foo, function(x)
+    bar = ntl.rm_while_to(foo, function(x)
         return x >= 1
     end)
     assert(vim.deep_equal(foo, orig_list))
@@ -521,13 +528,13 @@ function M.test_keep_rm_while()
 
     -- Zero Idx
 
-    bar = M.rm_while_to(foo, function(x)
+    bar = ntl.rm_while_to(foo, function(x)
         return x <= 0
     end)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, orig_list))
 
-    bar = M.rm_while_to(foo, function(x)
+    bar = ntl.rm_while_to(foo, function(x)
         return x >= 0
     end)
     assert(vim.deep_equal(foo, orig_list))
@@ -535,13 +542,13 @@ function M.test_keep_rm_while()
 
     -- Top Idx
 
-    bar = M.rm_while_to(foo, function(x)
+    bar = ntl.rm_while_to(foo, function(x)
         return x <= 10
     end)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, {}))
 
-    bar = M.rm_while_to(foo, function(x)
+    bar = ntl.rm_while_to(foo, function(x)
         return x >= 10
     end)
     assert(vim.deep_equal(foo, orig_list))
@@ -549,13 +556,13 @@ function M.test_keep_rm_while()
 
     -- Over Idx
 
-    bar = M.rm_while_to(foo, function(x)
+    bar = ntl.rm_while_to(foo, function(x)
         return x <= 11
     end)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, {}))
 
-    bar = M.rm_while_to(foo, function(x)
+    bar = ntl.rm_while_to(foo, function(x)
         return x >= 11
     end)
     assert(vim.deep_equal(foo, orig_list))
@@ -567,13 +574,13 @@ function M.test_keep_rm_while()
 
     -- Middle idx
 
-    bar = M.rm_while_to(foo, function(x)
+    bar = ntl.rm_while_to(foo, function(x)
         return x <= 3
     end, true)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, orig_list))
 
-    bar = M.rm_while_to(foo, function(x)
+    bar = ntl.rm_while_to(foo, function(x)
         return x >= 3
     end, true)
     assert(vim.deep_equal(foo, orig_list))
@@ -581,13 +588,13 @@ function M.test_keep_rm_while()
 
     -- Bottom Idx
 
-    bar = M.rm_while_to(foo, function(x)
+    bar = ntl.rm_while_to(foo, function(x)
         return x <= 1
     end, true)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, orig_list))
 
-    bar = M.rm_while_to(foo, function(x)
+    bar = ntl.rm_while_to(foo, function(x)
         return x >= 1
     end, true)
     assert(vim.deep_equal(foo, orig_list))
@@ -595,13 +602,13 @@ function M.test_keep_rm_while()
 
     -- Zero Idx
 
-    bar = M.rm_while_to(foo, function(x)
+    bar = ntl.rm_while_to(foo, function(x)
         return x <= 0
     end, true)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, orig_list))
 
-    bar = M.rm_while_to(foo, function(x)
+    bar = ntl.rm_while_to(foo, function(x)
         return x >= 0
     end, true)
     assert(vim.deep_equal(foo, orig_list))
@@ -609,13 +616,13 @@ function M.test_keep_rm_while()
 
     -- Top Idx
 
-    bar = M.rm_while_to(foo, function(x)
+    bar = ntl.rm_while_to(foo, function(x)
         return x <= 10
     end, true)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, {}))
 
-    bar = M.rm_while_to(foo, function(x)
+    bar = ntl.rm_while_to(foo, function(x)
         return x >= 10
     end, true)
     assert(vim.deep_equal(foo, orig_list))
@@ -623,15 +630,17 @@ function M.test_keep_rm_while()
 
     -- Over Idx
 
-    bar = M.rm_while_to(foo, function(x)
+    bar = ntl.rm_while_to(foo, function(x)
         return x <= 11
     end, true)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, {}))
 
-    bar = M.rm_while_to(foo, function(x)
+    bar = ntl.rm_while_to(foo, function(x)
         return x >= 11
     end, true)
     assert(vim.deep_equal(foo, orig_list))
     assert(vim.deep_equal(bar, orig_list))
 end
+
+return M

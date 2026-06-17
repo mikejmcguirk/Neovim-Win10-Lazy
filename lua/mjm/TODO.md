@@ -321,3 +321,34 @@ What data do you get if you try to run this on MD oxide? Both rename and referen
 
 what do you do if you don't have a client that supports references
 print a message if no clients even support rename
+
+## DOCUMENT HL NAV
+
+#### OBJECTIVES
+
+- When a document highlight is showing, the user should be able to use bracket navigation to go to the previous/next highlight.
+
+###### QUESTIONS
+
+- If the user uses the bracket cmd and there is no document highlight present, what should happen? My instinct is that it should just show a "No highlights" message or a "Server does not support Document Highlight" message, because I don't see why it would be helpful for a user key press to inject itself into the module's event system.
+  * The rough execution path would be something like - Check first to see if there is a highlight, if there is not one, then look at the reason why. There are a lot of reasons there might not be highlights and they have to be checked at runtime, so we want to avoid that path if we can. If the user wants to spam invalid requests, well, so it goes then.
+
+#### DESIGN
+
+###### RESEARCH
+
+###### ARCHITECTING
+
+- When the key is pressed, we need to know which of the cached highlights the cursor overlaps, so we can then iterate through the list
+  * Dumbest solution - Do a binary search of the cached ranges against the cursor position
+    + This is an ad hoc non-trivial time complexity solution
+    + How does mfussennegger's overfly map do this?
+    + Given that we have to check the cursor on CursorMoved anyway, is there not a way to save those results? get_ref_under_cursor does not identify which cached extmark we are overlapping, only that there is one.
+      + This spooks me though because there could be goofy overlapping conditions involved.
+      + Something to consider is that we check the cursor position for validity anyway when we generate the highlights, so you could use that cursor position as a starding point. We also do cache it anyway.
+  * We need some kind of list tool where, given a particular list, start index, direction, and n items to move, you get the nth list item, wrapping around the list if necessary.
+    + The simplest way to do this, probably, is to feed a list into the function, and then generate the args for wrapping add/wrapping sub.
+
+###### PLANNING
+
+###### TESTING

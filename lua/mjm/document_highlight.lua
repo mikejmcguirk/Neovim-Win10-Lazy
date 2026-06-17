@@ -3,7 +3,6 @@ local bit = require("bit")
 local fn = vim.fn
 local hl_user = vim.hl.priorities.user
 local lsp = vim.lsp
-local ntl = require("nvim-tools.list")
 local ntr = require("nvim-tools.range")
 local util = lsp.util
 local uv = vim.uv
@@ -12,7 +11,6 @@ local uv = vim.uv
 -- automatically required on startup, so we are slowing things down by doing this.
 
 local METHOD = "textDocument/documentHighlight"
-
 local protocol = require("vim.lsp.protocol")
 -- local KIND_TEXT = protocol.DocumentHighlightKind.Text
 local KIND_READ = protocol.DocumentHighlightKind.Read
@@ -366,6 +364,7 @@ end
 ---@param offset_encoding lsp.PositionEncodingKind
 ---@return mjm.lsp.documentHighlight.Hl[]
 local function response_to_ranges(response, buf, offset_encoding)
+    local ntl = require("nvim-tools.list")
     local hls = ntl.filter_map_to(response, function(resp)
         local range = resp.range -- Mandatory per the spec.
         local sr, sc = lsp_to_nvim(buf, range["start"], offset_encoding)
@@ -422,6 +421,7 @@ local function result_add_addtl_client_hls(res, response, buf, encoding, client_
         return
     end
 
+    local ntl = require("nvim-tools.list")
     local hls_old = res.highlights
     ntl.subtract(function(hl)
         return bit.lshift(hl[1], 0)
@@ -434,8 +434,7 @@ local function result_add_addtl_client_hls(res, response, buf, encoding, client_
         return
     end
 
-    ---@diagnostic disable-next-line: param-type-mismatch
-    local hls_new = ntl.merge_sorted(hls_old, hls_addtl, ntr.range_sort_predicate)
+    local hls_new = ntl.merge_sorted_to(ntr.range_sort_predicate, hls_old, hls_addtl)
     ntl.combine(hls_new, function(a, b)
         if math.abs(ntr.cmp_(a, b)) == 1 then
             return
@@ -461,6 +460,7 @@ end
 ---@return boolean
 local function response_addtl_has_uptd_state(res, req_win, resp_buf, req_cur_pos)
     local ns_wins = api.nvim__ns_get(ns).wins
+    local ntl = require("nvim-tools.list")
     if not (ns_wins and ntl.contains(ns_wins, req_win)) then
         return false
     end
@@ -489,6 +489,7 @@ local function response_new_has_uptd_state(req_win, resp_buf, req_cur_pos)
         return false
     end
 
+    local ntl = require("nvim-tools.list")
     if not ntl.cmp(req_cur_pos, api.nvim_win_get_cursor(req_win)) then
         return false
     end
@@ -570,6 +571,7 @@ local function response_handler(err, response, ctx)
         local hls = response_to_ranges(response, resp_buf, client.offset_encoding)
         result_set_or_new(resp_buf, client_id, req_cur_pos, hls, ctx_validated.version)
     else
+        local ntl = require("nvim-tools.list")
         if ntl.contains(res.client_ids, client_id) then
             -- request_auto() should clear the result state before sending a new request.
             -- Otherwise, the spec doesn't provide for streaming or amended results, so any repeats
@@ -612,6 +614,7 @@ end
 local function request_send(client, win, buf, cur_pos)
     -- For if the buffer is unloaded during debounce.
     if not api.nvim_buf_is_valid(buf) then
+        print("invalid at request")
         buf_rm_autocmds(buf)
         return
     end
@@ -633,7 +636,9 @@ end
 ---@param cur_pos [integer, integer]
 ---@return boolean
 local function has_ref_under_cursor(buf, cur_pos)
-    local ext_pos = require("nvim-tools.pos").mark_to_ext_pos(ntl.copy(cur_pos))
+    local ntp = require("nvim-tools.pos")
+    local ntl = require("nvim-tools.list")
+    local ext_pos = ntp.mark_to_ext_pos(ntl.copy(cur_pos))
     return #api.nvim_buf_get_extmarks(buf, ns, ext_pos, ext_pos, {
         details = true,
         limit = 1,
@@ -681,6 +686,7 @@ local function request_auto(buf)
 
     local clients = lsp.get_clients({ bufnr = buf, method = METHOD })
     if #clients == 0 then
+        print("no clients disabling")
         buf_rm_autocmds(buf)
         return
     end
@@ -704,6 +710,12 @@ local function request_auto(buf)
         )
     end
 end
+-- TODO: Because this handles canceling, does this mean we can do direct requests again?
+-- If you wanted to have direct and debounced request paths, you would need to take a lot of the
+-- validation in here and outline it into a common function. You would then want request_auto
+-- to run the outlined validation then the timer business. Whereas, for the request_direct
+-- path, you would want it to run the outlined validation, then iterate clients to immediately
+-- run request_send.
 
 ---@param bufnr integer
 local function buf_autocmds_create(bufnr)
@@ -737,6 +749,16 @@ local function buf_autocmds_create(bufnr)
             local method = ev.data.method --- @type string
             if method == "textDocument/didChange" or method == "textDocument/didOpen" then
                 request_auto(ev.buf)
+                return
+            end
+
+            -- TODO: Is this necessary? Would matter:
+            -- - When does Neovim send this notification?
+            -- - When does an LSP Client detach from a buffer?
+            -- - Do buffer autocmds detach when a buffer unloads? Wiped?
+            if method == "textDocument/didClose" then
+                print("didClose disabling")
+                buf_rm_autocmds(ev.buf)
             end
         end,
     })
@@ -762,16 +784,6 @@ local function buf_autocmds_create(bufnr)
         -- MID: Manually restoring decorations is a blunt solution.
         -- PR: Add old_mode and new_mode to the vim.v.event annotation. vvars_extra.lua. Not
         -- auto-generated.
-    })
-
-    api.nvim_create_autocmd("WinEnter", {
-        group = buf_group,
-        -- TODO-DEP: Change this to "buf" when v0.14 comes out.
-        buffer = bufnr,
-        callback = function(ev)
-            api.nvim__ns_set(ns, { wins = { api.nvim_get_current_win() } })
-            request_auto(ev.buf)
-        end,
     })
 end
 
@@ -837,6 +849,19 @@ local function autocmds_create()
             end
         end),
     })
+
+    api.nvim_create_autocmd("WinEnter", {
+        group = group,
+        callback = function(ev)
+            api.nvim__ns_set(ns, { wins = { api.nvim_get_current_win() } })
+            local buf = ev.buf
+            -- TODO: Hacky
+            local buf_group = buf_group_name_get(buf)
+            if fn.exists("#" .. buf_group) == 1 then
+                request_auto(buf)
+            end
+        end,
+    })
 end
 -- MID: Dumb because if you want default disabled you still have to wait for the autocmds to
 -- spawn on first require.
@@ -856,6 +881,7 @@ end
 ---@param buf integer
 local function buf_disable(buf)
     bufs_disabled[buf] = true
+    print("disabling buf rm autocmds")
     buf_rm_autocmds(buf)
     result_clear_and_redraw_checked(buf)
 end
@@ -924,6 +950,7 @@ function M.enable(enabled, bufs, client_ids)
 
         for _, client in ipairs(lsp.get_clients({ method = METHOD })) do
             for buf, _ in pairs(client.attached_buffers) do
+                print("disabling globally")
                 buf_rm_autocmds(buf)
             end
         end
@@ -963,6 +990,10 @@ function M.is_enabled(buf, client_id)
     else
         return is_enabled
     end
+end
+
+function M.get_results()
+    return vim.inspect(results)
 end
 
 return M

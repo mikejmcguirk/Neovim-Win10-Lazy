@@ -14,6 +14,7 @@
 
 #### DOCUMENT:
 
+- [ ] Use the docgen for this. Each module will need to have properly formatted documentation.
 - [ ] Commenting guidelines:
 - [ ] Annotation comments:
 - Give an overview of how the function works for devs who want to know, broadly, what it does, without deep-diving into the details.
@@ -287,12 +288,86 @@
 
 - Could be extracted in to a library, since what the proposed functions above provide is sufficiently novel
 
-## List
+## List/Table
+
+#### OBJECTIVES:
+
+- [ ] While I don't want to release the module outside of Nvim-tools, it should be formatted in such a way that it can be copy-pasta'd out. We should re-create Nvim's built-ins wherever reasonable
+- [ ] Must pass Emmylua typechecking
+- [ ] Must be usable and performant out of the box
+- [ ] Must only interact with the array portion of the table.
+
+#### RESEARCH
+
+#### TODO:
+
+- [ ] Categorization
+
+  - [ ] Make sure everything has the proper superset/subset classifications
+    * Example: Do we need to do anything else to re-create the logic types for list and list or eval slices?
+    * Example: Should a function be removed if it's a subset of a problem solved by another one?
+  - [ ] Make sure everything is in its proper categorization. Make new ones if needed
+    * Example: find/position need to be taken out of eval
+  - [ ] The returns on zero lists should be consistent with the function's "type"
+    * Example: Different types of eval functions should have consistent boolean returns.
+    * Example: nil vs. empty table
+
+  * [ ] If we created a new function, give it its own checklist entry. Create other TODOs for shoring up related functions.
+
+- [ ] Other Factoring
+
+  - [ ] Eliminate complicated nonsense
+    - Basically continuing my work with fold and the like.
+    - [ ] Extra error returns
+    - [ ] Extra params
+    - [ ] Extra strategy function params
+    - [ ] Extra strategy function returns
+
+  - [ ] Remove any common/outline logic that tries to be schroedingery. Like a lot of the old _do functions
+  - [ ] Specific logic for len zero lists.
+
+  - [ ] Inline any trivial functionality
+  - [ ] Verify that all `_to` functions don't write to t (no side effects)
+  - [ ] Favor type consistency. Let unhappy paths be slow in order to reduce nonsense in design and documentation
+    * Exception, for something like locate or position, it is better to return nil than zero idx, because the latter would be un-idiomatic for Lua.
+
+  - [ ] Outline nontrivial, common functionality
+    * Example: Cases like "merge_sorted do".
+    * Exception: Cases like clear. Self-reference is fine if it's pre-existent and doesn't add non-trivial overhead
+    * Note: The new goal for this repo is that you can clone it and use it as a plugin starter template, so we need to avoid using vim.validate where it doesn't make sense, since it's more work for users to clear it out.
+
+  - [ ] The copy() trick should never be intended behavior. Make sure every in place function has a new list counterpart.
+
+  - [ ] Replace `return nil` with `return`.
+
+- [ ] Docs
+
+  - [ ] Proper top-level description
+  - [ ] Proper variable documentation
+    - [ ] If modified in place, needs `Modified in place!`.
+  - [ ] For in place modifiers, match the return type to the input type
+    - To discourage using in-place map to change the data type.
+
+  - [ ] At lest one usage example
+  - [ ] Reference other relevant functions
+    - Like the eval functions all do.
+
+  - [ ] Are type formats consistent?
+    - Example: `key_fn` should look the same everywhere it's used
+  - [ ] Is `|lua-list|` used?
+  - [ ] Do params, var names, and types use back ticks?
+  - [ ] Is spacing consistent in fun() types?
+    - [ ] No space after colons (except for moving into return signature)
+    - [ ] Space after commons
+
+  - [ ] Proper formatting for docgen.
+    - Align to what the docgen *should* do.
 
 #### DOC:
 
+- [ ] Write directories for function groups like eval functions or list to list
+  - [ ] This module prompts the idea that the docgen should be able to do sub-tables of contents
 - [ ] Reference returns + list_copy let you run any in place iter into a create new one.
-- [ ] How do use find_idx + slice to do take_while/(skip|drop)_while
 - [ ] Show intersperse addressing some kind of real world use case that `table.concat()` already doesn't.
 
 #### MID:
@@ -303,6 +378,7 @@
   - [ ] Match the length of the shorter list, but be offset
     - It might work to put the offset into zip_with, and just use rotate to handle the list position.
 - [ ] Add `impasse()` to apply NAND logic to `t1` based on vararg tables. The full de-dupe version can be `NAND`.
+  - Or maybe "debase" since we're removing the most complete ones. Or something like that.
 
 #### RESOURCES:
 

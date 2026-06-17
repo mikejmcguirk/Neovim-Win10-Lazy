@@ -127,7 +127,7 @@ api.nvim_create_autocmd("DiagnosticChanged", {
             return acc
         end, { 0, 0, 0, 0 })
 
-        ntl.filter_map(counts, function(c, i)
+        local diag_strs = ntl.filter_map_to(counts, function(c, i)
             if c == 0 then
                 return nil
             end
@@ -135,7 +135,7 @@ api.nvim_create_autocmd("DiagnosticChanged", {
             return "%#Diagnostic" .. levels[i] .. "#" .. signs[i] .. c .. "%* "
         end)
 
-        diag_cache[buf] = table.concat(counts, "")
+        diag_cache[buf] = table.concat(diag_strs, "")
         -- Leave autocmd context before trying to redraw.
         vim.schedule(function()
             if is_bad_mode() then
@@ -165,7 +165,7 @@ api.nvim_create_autocmd("ModeChanged", {
             -- When leaving fzf-lua, without scheduling, the redraw fires for the fzf-lua window,
             -- meaning the intended current window still shows mode `t`.
             local config = api.nvim_win_get_config(0)
-            if config.hide ~= nil or (config.relative ~= nil and config.relative ~= "") then
+            if config.hide == true or (config.relative ~= nil and config.relative ~= "") then
                 return
             end
 
@@ -244,7 +244,7 @@ api.nvim_create_autocmd("BufWinEnter", {
     callback = function(ev)
         local win = api.nvim_get_current_win()
         local config = api.nvim_win_get_config(win)
-        if config.hide ~= nil or (config.relative ~= nil and config.relative ~= "") then
+        if config.hide == true or (config.relative ~= nil and config.relative ~= "") then
             return
         end
 

@@ -41,6 +41,21 @@ function M.copy(t)
     return ret
 end
 
+---@generic T, V, R
+---@param t T
+---@param f fun(k:T, v:V): R|nil
+function M.filter_map_to(t, f)
+    local ret = {}
+    for k, v in pairs(t) do
+        local r = f(k, v)
+        if r ~= nil then
+            ret[k] = r
+        end
+    end
+
+    return ret
+end
+
 ---@generic T, V
 ---@param t table<T, V>
 ---@param f fun(k: T, v: V): boolean|nil
@@ -55,29 +70,10 @@ function M.filter(t, f)
     end
 end
 
----@generic T
----@param t table<T, T>
----@param k T
----@param v T
-function M.get_or_set(t, k, v)
-    vim.validate("t", t, "table")
-    local not_nil = require("nvim-tools.types").not_nil
-    vim.validate("k", k, not_nil)
-    vim.validate("v", v, not_nil)
-
-    local ret = t[k]
-    if ret then
-        return ret
-    end
-
-    t[k] = v
-    return v
-end
-
----Doing this with `get_or_set` always allocates a new table.
----@generic T, U
----@param t table<T, U>
----@param k T
+---@generic K
+---@param t table<K, table>
+---@param k K
+---@return table
 function M.get_or_set_subtable(t, k)
     local ret = t[k]
     if ret ~= nil then
@@ -151,5 +147,7 @@ function M.keys_to_str(...)
 
     return table.concat(keys, ".")
 end
+-- TODO: Should be able to take a custom separator.
+-- TODO: Is vim.inspect for non-strings really the right choice?
 
 return M

@@ -2,7 +2,6 @@ local api = vim.api
 local lsp = vim.lsp
 
 return {
-    enabled = false,
     "mikejmcguirk/lampshade.nvim",
     -- dir = "~/Documents/nvim-plugin-dev/lampshade.nvim/",
     init = function()

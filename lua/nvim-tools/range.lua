@@ -388,6 +388,7 @@ function M.lsp_parsed_locations_convert(buf, ranges, encoding)
         end
     end
 end
+-- TODO: Bad naming. Implies that the data type is changing.
 -- TODO: This feels bad because it doesn't use the pos helper. But there's no way to pass the
 -- lines helper into there without it being illogical. If I remember right, the vim.pos helper
 -- goes through the entire procedure to get a lines table even for only converting one position,

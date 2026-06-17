@@ -120,9 +120,7 @@ return {
         local function get_dict_file()
             local dict = api.nvim_get_option_value("dict", {}) ---@type string
             local dict_file = vim.split(dict, ",")[1]
-            ---@diagnostic disable-next-line: param-type-mismatch, return-type-mismatch,
-            ---missing-parameter
-            return vim.uv.fs_access(dict_file, 3), dict_file
+            return vim.uv.fs_access(dict_file, "R"), dict_file
         end
 
         set("n", "<leader>fdd", function()
@@ -147,8 +145,7 @@ return {
                 return vim.notify("No word under cursor", vim.log.levels.WARN)
             end
 
-            local buf = api.nvim_get_current_buf()
-
+            local buf = api.nvim_get_current_buf() -- Get before going async.
             local ok, dict_file = get_dict_file()
             if not ok then
                 local msg = "Unable to access dictionary file: " .. dict_file
