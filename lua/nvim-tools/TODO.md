@@ -301,68 +301,6 @@
 
 #### TODO:
 
-- [ ] Categorization
-
-  - [ ] Make sure everything has the proper superset/subset classifications
-    * Example: Do we need to do anything else to re-create the logic types for list and list or eval slices?
-    * Example: Should a function be removed if it's a subset of a problem solved by another one?
-  - [ ] Make sure everything is in its proper categorization. Make new ones if needed
-    * Example: find/position need to be taken out of eval
-  - [ ] The returns on zero lists should be consistent with the function's "type"
-    * Example: Different types of eval functions should have consistent boolean returns.
-    * Example: nil vs. empty table
-
-  * [ ] If we created a new function, give it its own checklist entry. Create other TODOs for shoring up related functions.
-
-- [ ] Other Factoring
-
-  - [ ] Eliminate complicated nonsense
-    - Basically continuing my work with fold and the like.
-    - [ ] Extra error returns
-    - [ ] Extra params
-    - [ ] Extra strategy function params
-    - [ ] Extra strategy function returns
-
-  - [ ] Remove any common/outline logic that tries to be schroedingery. Like a lot of the old _do functions
-  - [ ] Specific logic for len zero lists.
-
-  - [ ] Inline any trivial functionality
-  - [ ] Verify that all `_to` functions don't write to t (no side effects)
-  - [ ] Favor type consistency. Let unhappy paths be slow in order to reduce nonsense in design and documentation
-    * Exception, for something like locate or position, it is better to return nil than zero idx, because the latter would be un-idiomatic for Lua.
-
-  - [ ] Outline nontrivial, common functionality
-    * Example: Cases like "merge_sorted do".
-    * Exception: Cases like clear. Self-reference is fine if it's pre-existent and doesn't add non-trivial overhead
-    * Note: The new goal for this repo is that you can clone it and use it as a plugin starter template, so we need to avoid using vim.validate where it doesn't make sense, since it's more work for users to clear it out.
-
-  - [ ] The copy() trick should never be intended behavior. Make sure every in place function has a new list counterpart.
-
-  - [ ] Replace `return nil` with `return`.
-
-- [ ] Docs
-
-  - [ ] Proper top-level description
-  - [ ] Proper variable documentation
-    - [ ] If modified in place, needs `Modified in place!`.
-  - [ ] For in place modifiers, match the return type to the input type
-    - To discourage using in-place map to change the data type.
-
-  - [ ] At lest one usage example
-  - [ ] Reference other relevant functions
-    - Like the eval functions all do.
-
-  - [ ] Are type formats consistent?
-    - Example: `key_fn` should look the same everywhere it's used
-  - [ ] Is `|lua-list|` used?
-  - [ ] Do params, var names, and types use back ticks?
-  - [ ] Is spacing consistent in fun() types?
-    - [ ] No space after colons (except for moving into return signature)
-    - [ ] Space after commons
-
-  - [ ] Proper formatting for docgen.
-    - Align to what the docgen *should* do.
-
 #### DOC:
 
 - [ ] Write directories for function groups like eval functions or list to list
@@ -373,12 +311,15 @@
 #### MID:
 
 - [ ] "split_on" should be added. This is not worth it though unless it handles both a single idx as well as a predicate that can split on a list of indices.
+- [ ] "inject" function that injects some sub-section of a list into another list. Could do by predicate or idx
+- [ ] Intersect keeps if an item is in all lists. Subtract removes if the item is in at least one list. Should have negations (remove if in all lists, keep if in any list).
+- [ ] We currently have intersect (AND) and subtract (NOR). We would want remove if in all (NAND) and keep if in any (OR). The XNOR case would be keep if in all or none. And then the XOR case would be remove if in all or none.
+  - XOR naming: Partial/incomplete
+  - NAND naming: Impasse/debase.
 - [ ] I have zip_longest because it's fine as is, but I don't want to build out more zip functionality unless I have a way to make the length management in zip more substantially full featured. The longer list should be able to:
   - [ ] Extend out (`_longest` behavior)
   - [ ] Match the length of the shorter list, but be offset
     - It might work to put the offset into zip_with, and just use rotate to handle the list position.
-- [ ] Add `impasse()` to apply NAND logic to `t1` based on vararg tables. The full de-dupe version can be `NAND`.
-  - Or maybe "debase" since we're removing the most complete ones. Or something like that.
 
 #### RESOURCES:
 

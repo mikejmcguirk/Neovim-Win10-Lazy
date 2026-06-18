@@ -70,7 +70,7 @@ end
 ---@param t_len uinteger
 ---@param key_fn fun(val:any): any
 ---@param seen table<any, true>
-local function filter_in_place_from_seen(t, t_len, key_fn, seen)
+local function filter_keep_not_seen_in_place(t, t_len, key_fn, seen)
     local j = 1
     for i = 1, t_len do
         local v = t[i]
@@ -91,8 +91,29 @@ end
 ---@param t_len uinteger
 ---@param key_fn fun(val:any): any
 ---@param seen table<any, true>
+local function filter_keep_seen_in_place(t, t_len, key_fn, seen)
+    local j = 1
+    for i = 1, t_len do
+        local v = t[i]
+        local vh = key_fn(v)
+        if vh ~= nil and seen[vh] then
+            t[j] = v
+            j = j + 1
+        end
+    end
+
+    for i = j, t_len do
+        t[i] = nil
+    end
+end
+
+---@generic T
+---@param t T[] Modified in place!
+---@param t_len uinteger
+---@param key_fn fun(val:any): any
+---@param seen table<any, true>
 ---@return T[]
-local function filter_to_from_seen(t, t_len, key_fn, seen)
+local function filter_keep_seen_to(t, t_len, key_fn, seen)
     local ret = {}
     local j = 1
     for i = 1, t_len do
@@ -112,7 +133,7 @@ end
 ---@param t_len uinteger
 ---@param key_fn fun(val:any): any
 ---@param seen table<any, true>
-local function first_in_place_from_seen(t, t_len, key_fn, seen)
+local function filter_keep_seen_unique_in_place(t, t_len, key_fn, seen)
     local j = 1
     for i = 1, t_len do
         local v = t[i]
@@ -135,7 +156,7 @@ end
 ---@param key_fn fun(val:any): any
 ---@param seen table<any, true>
 ---@return T[]
-local function first_to_from_seen(t, t_len, key_fn, seen)
+local function filter_keep_seen_unique_to(t, t_len, key_fn, seen)
     local ret = {}
     local j = 1
     for i = 1, t_len do
@@ -393,7 +414,7 @@ end
 ---@param t_len uinteger
 ---@param key_fn fun(val:any): any
 ---@param seen table<any, true>
-local function unique_in_place_from_seen(t, t_len, key_fn, seen)
+local function filter_keep_not_seen_unique_in_place(t, t_len, key_fn, seen)
     local j = 1
     for i = 1, t_len do
         local v = t[i]
@@ -415,7 +436,7 @@ end
 ---@param t_len uinteger
 ---@param key_fn fun(val:any): any
 ---@param seen table<any, true>
-local function unique_to_from_seen(t, t_len, key_fn, seen)
+local function filter_keep_not_seen_unique_to(t, t_len, key_fn, seen)
     local ret = {}
     local j = 1
     for i = 1, t_len do
@@ -717,7 +738,7 @@ function M.catalog_to(key, comp, ...)
     for i = 1, nargs do
         local tn = old_lists[i]
         local tn_len = #tn
-        local tn_filtered = unique_to_from_seen(tn, tn_len, key_fn, seen)
+        local tn_filtered = filter_keep_not_seen_unique_to(tn, tn_len, key_fn, seen)
         table.sort(tn_filtered, comp)
         lists[i] = tn_filtered
     end
@@ -1365,7 +1386,7 @@ function M.unique_to(t, key)
     end
 
     local key_fn = key_fn_from_key(key)
-    return unique_to_from_seen(t, t_len, key_fn, {})
+    return filter_keep_not_seen_unique_to(t, t_len, key_fn, {})
 end
 
 -----------------------------------
@@ -1374,6 +1395,13 @@ end
 
 ---Remove elements from `t1` that are present in any of the varargs `...`. Optionally
 ---compare using `key`. `t1` is de-duplicated, and item order is preserved.
+---Example:
+---```lua
+---    local foo = { 5, 1, 1, 2, 2, 3, 3 }
+---    difference(nil, foo, { 2 }, { 3 })
+---    -- foo = { 5, 1 }
+---```
+---@see |subtract()| to remove items without de-duplication.
 ---@generic T
 ---@param key nil|string|fun(v:T): any See: |key_fn|.
 ---@param t1 T[] Target list. Modified in place!
@@ -1388,33 +1416,47 @@ function M.difference(key, t1, ...)
 
     local key_fn = key_fn_from_key(key)
     local seen = seen_from_varargs_if_in_any(nargs, { ... }, key_fn)
-    unique_in_place_from_seen(t1, t1_len, key_fn, seen)
+    filter_keep_not_seen_unique_in_place(t1, t1_len, key_fn, seen)
     return t1
 end
 
----Create a new list containing the elements of `t1` not present in any of the varargs
----(XOR logic).
----- `t1` is de-duplicated. Order is preserved.
----- No-op if no varargs are provided.
+---Create a new |lua-list| of elements from `t1` that are not present in any of the varargs `...`.
+---Optionally compare using a `key`. Qualifying elements are de-duplicated and item order is
+---preserved.
+---Example:
+---```lua
+---    local foo = { 5, 1, 1, 2, 2, 3, 3 }
+---    local bar = difference_to(nil, foo, { 2 }, { 3 })
+---    -- bar = { 5, 1 }
+---    -- foo = { 5, 1, 1, 2, 2, 3, 3 }
+---```
+---@see |subtract_to()| to remove items without de-duplication.
 ---@generic T
 ---@param key nil|string|fun(v:T): any See: |key_fn|.
 ---@param t1 T[] Source list.
 ---@param ... T[] No-op if no additional lists are provided.
----@return T[] New list.
+---@return T[]
 function M.difference_to(key, t1, ...)
     local nargs = select("#", ...)
     local t1_len = #t1
     if nargs == 0 or t1_len == 0 then
-        return M.copy(t1)
+        return copy_exact(t1, 1, t1_len)
     end
 
     local key_fn = key_fn_from_key(key)
     local seen = seen_from_varargs_if_in_any(nargs, { ... }, key_fn)
-    return unique_to_from_seen(t1, t1_len, key_fn, seen)
+    return filter_keep_not_seen_unique_to(t1, t1_len, key_fn, seen)
 end
 
----Keep elements in `t1` if they are present in all varargs (AND logic).
----Order in `t1` is preserved
+---Keep elements in `t1` if they are present in every vararg `...`. Optionally compare using a
+---`key`. Item order is preserved.
+---Example:
+---```lua
+---    local foo = { 5, 2, 2, 3, 1, 3, 1 }
+---    difference(nil, foo, { 2, 3 }, { 2, 3 })
+---    -- foo = { 2, 2, 3, 3 }
+---```
+---@see |intersection()| to remove items with de-duplication.
 ---@generic T
 ---@param key nil|string|fun(v:T): any See: |key_fn|.
 ---@param t1 T[] Modified in place!
@@ -1429,17 +1471,25 @@ function M.intersect(key, t1, ...)
 
     local key_fn = key_fn_from_key(key)
     local seen = seen_from_varargs_if_in_all(nargs, { ... }, key_fn)
-    filter_in_place_from_seen(t1, t1_len, key_fn, seen)
+    filter_keep_seen_in_place(t1, t1_len, key_fn, seen)
     return t1
 end
 
----Create a new list of elements in `t1` if they are present in all varargs (AND logic).
----Order in `t1` is preserved
+---Create a new |lua-list| of elements from `t1` that are present in every vararg `...`.
+---Optionally compare using a `key`. Item order is preserved.
+---Example:
+---```lua
+---    local foo = { 5, 2, 2, 3, 1, 3, 1 }
+---    local bar = difference_to(nil, foo, { 2, 3 }, { 2, 3 })
+---    -- bar = { 2, 2, 3, 3 }
+---    -- foo = { 5, 2, 2, 3, 1, 3, 1 }
+---```
+---@see |intersection_to()| to remove items with de-duplication.
 ---@generic T
 ---@param key nil|string|fun(v:T): any See: |key_fn|.
----@param t1 T[]
+---@param t1 T[] Source list.
 ---@param ... T[] No-op if no additional lists are provided.
----@return T[] New list.
+---@return T[]
 function M.intersect_to(key, t1, ...)
     local nargs = select("#", ...)
     local t1_len = #t1
@@ -1449,16 +1499,23 @@ function M.intersect_to(key, t1, ...)
 
     local key_fn = key_fn_from_key(key)
     local seen = seen_from_varargs_if_in_all(nargs, { ... }, key_fn)
-    return filter_to_from_seen(t1, t1_len, key_fn, seen)
+    return filter_keep_seen_to(t1, t1_len, key_fn, seen)
 end
 
----Remove list elements from `t1` if they are not present in all vararg lists (AND logic).
----De-duplicates elements from `t1`. Order is preserved
+---Keep elements in `t1` if they are present in every vararg `...`. Optionally compare using a
+---`key`. Items are de-duplicated and order is preserved.
+---Example:
+---```lua
+---    local foo = { 5, 2, 2, 3, 1, 3, 1 }
+---    difference(nil, foo, { 2, 3 }, { 2, 3 })
+---    -- foo = { 2, 3 }
+---```
+---@see |intersect()| to remove items without de-duplication.
 ---@generic T
 ---@param key nil|string|fun(v:T): any See: |key_fn|.
 ---@param t1 T[] Modified in place!
 ---@param ... T[] No-op if no additional lists are provided.
----@return T[] Reference to `t`.
+---@return T[] Reference to `t1`.
 function M.intersection(key, t1, ...)
     local nargs = select("#", ...)
     local t1_len = #t1
@@ -1468,17 +1525,25 @@ function M.intersection(key, t1, ...)
 
     local key_fn = key_fn_from_key(key)
     local seen = seen_from_varargs_if_in_all(nargs, { ... }, key_fn)
-    first_in_place_from_seen(t1, t1_len, key_fn, seen)
+    filter_keep_seen_unique_in_place(t1, t1_len, key_fn, seen)
     return t1
 end
 
----Create a new list from the elements in `t1` present in all vararg lists (AND logic).
----De-duplicates elements from `t1`. Order is preserved.
+---Create a new |lua-list| of elements from `t1` that are present in every vararg `...`.
+---Optionally compare using a `key`. Items are de-duplicated and order is preserved.
+---Example:
+---```lua
+---    local foo = { 5, 2, 2, 3, 1, 3, 1 }
+---    local bar = difference_to(nil, foo, { 2, 3 }, { 2, 3 })
+---    -- bar = { 2, 3 }
+---    -- foo = { 5, 2, 2, 3, 1, 3, 1 }
+---```
+---@see |intersect_to()| to remove items without de-duplication.
 ---@generic T
 ---@param key nil|string|fun(v:T): any See: |key_fn|.
 ---@param t1 T[] Original order is preserved.
 ---@param ... T[] No-op if no additional lists are provided.
----@return T[] New list.
+---@return T[]
 function M.intersection_to(key, t1, ...)
     local t1_len = #t1
     local nargs = select("#", ...)
@@ -1488,14 +1553,21 @@ function M.intersection_to(key, t1, ...)
 
     local key_fn = key_fn_from_key(key)
     local seen = seen_from_varargs_if_in_all(nargs, { ... }, key_fn)
-    return first_to_from_seen(t1, t1_len, key_fn, seen)
+    return filter_keep_seen_unique_to(t1, t1_len, key_fn, seen)
 end
 
----Remove elements from `t1` in place that are present in any of the varargs (set difference/XOR
----logic). Order in `t1` is preserved.
+---Remove elements from `t1` that are present in any of the varargs `...`. Optionally
+---compare using `key`. Item order is preserved.
+---Example:
+---```lua
+---    local foo = { 5, 1, 1, 2, 2, 3, 3 }
+---    difference(nil, foo, { 2 }, { 3 })
+---    -- foo = { 5, 1, 1 }
+---```
+---@see |difference()| to remove items with de-duplication.
 ---@generic T
 ---@param key nil|string|fun(v:T): any See: |key_fn|.
----@param t1 T[] Modified in place!
+---@param t1 T[] Target list. Modified in place!
 ---@param ... T[] No-op if no additional lists are provided.
 ---@return T[] Reference to `t1`.
 function M.subtract(key, t1, ...)
@@ -1507,27 +1579,36 @@ function M.subtract(key, t1, ...)
 
     local key_fn = key_fn_from_key(key)
     local seen = seen_from_varargs_if_in_any(nargs, { ... }, key_fn)
-    filter_in_place_from_seen(t1, t1_len, key_fn, seen)
+    filter_keep_not_seen_in_place(t1, t1_len, key_fn, seen)
     return t1
 end
 
----Create a new list containing the elements of `t1` not present in any of the varargs (set
----difference/XOR logic). Order in `t1` is preserved.
+---Create a new |lua-list| of elements from `t1` that are not present in any of the varargs `...`.
+---Optionally compare using a `key`. Qualifying elements are de-duplicated and item order is
+---preserved.
+---Example:
+---```lua
+---    local foo = { 5, 1, 1, 2, 2, 3, 3 }
+---    local bar = difference_to(nil, foo, { 2 }, { 3 })
+---    -- bar = { 5, 1, 1 }
+---    -- foo = { 5, 1, 1, 2, 2, 3, 3 }
+---```
+---@see |difference_to()| to remove items with de-duplication.
 ---@generic T
 ---@param key nil|string|fun(v:T): any See: |key_fn|.
 ---@param t1 T[] Source list.
 ---@param ... T[] No-op if no additional lists are provided.
----@return T[] New list.
+---@return T[]
 function M.subtract_to(key, t1, ...)
     local nargs = select("#", ...)
     local t1_len = #t1
     if t1_len == 0 or nargs == 0 then
-        return M.copy(t1)
+        return copy_exact(t1, 1, t1_len)
     end
 
     local key_fn = key_fn_from_key(key)
     local seen = seen_from_varargs_if_in_any(nargs, { ... }, key_fn)
-    return filter_to_from_seen(t1, t1_len, key_fn, seen)
+    return filter_keep_seen_to(t1, t1_len, key_fn, seen)
 end
 
 -------------------------------

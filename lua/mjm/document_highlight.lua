@@ -270,14 +270,12 @@ local function on_win(_, _, buf, top, bot)
     end
 
     if not has_decor then
-        ---@diagnostic disable-next-line: param-type-mismatch
         local top_idx = vim.list.bisect(hls, { 0, 0, top }, {
             key = function(hl)
                 return hl[3]
             end,
         })
 
-        ---@diagnostic disable-next-line: param-type-mismatch
         local bot_idx = vim.list.bisect(hls, { bot + 1 }, {
             key = function(hl)
                 return hl[1]
@@ -285,7 +283,6 @@ local function on_win(_, _, buf, top, bot)
         }) - 1
 
         for i = top_idx, bot_idx do
-            ---@diagnostic disable-next-line: param-type-mismatch
             set_mark(buf, hls[i])
         end
 
@@ -300,7 +297,6 @@ local function on_win(_, _, buf, top, bot)
     local cur_top = res.top
     if top < cur_top then
         local cur_top_idx = res.top_idx or #hls
-        ---@diagnostic disable-next-line: param-type-mismatch
         local top_idx = vim.list.bisect(hls, { 0, 0, top }, {
             hi = cur_top_idx,
             key = function(hl)
@@ -309,7 +305,6 @@ local function on_win(_, _, buf, top, bot)
         })
 
         for i = top_idx, cur_top_idx - 1 do
-            ---@diagnostic disable-next-line: param-type-mismatch
             set_mark(buf, hls[i])
         end
 
@@ -320,7 +315,6 @@ local function on_win(_, _, buf, top, bot)
     local cur_bot = res.bot
     if cur_bot < bot then
         local cur_bot_idx = res.bot_idx or 1
-        ---@diagnostic disable-next-line: param-type-mismatch
         local bot_idx = vim.list.bisect(hls, { bot + 1 }, {
             lo = cur_bot_idx + 1,
             key = function(hl)
@@ -329,7 +323,6 @@ local function on_win(_, _, buf, top, bot)
         }) - 1
 
         for i = cur_bot_idx + 1, bot_idx do
-            ---@diagnostic disable-next-line: param-type-mismatch
             set_mark(buf, hls[i])
         end
 
@@ -614,7 +607,6 @@ end
 local function request_send(client, win, buf, cur_pos)
     -- For if the buffer is unloaded during debounce.
     if not api.nvim_buf_is_valid(buf) then
-        print("invalid at request")
         buf_rm_autocmds(buf)
         return
     end
@@ -622,7 +614,6 @@ local function request_send(client, win, buf, cur_pos)
     local encoding = client.offset_encoding
     local params = {
         textDocument = util.make_text_document_params(buf),
-        ---@diagnostic disable-next-line: need-check-nil
         position = vim.pos.cursor(buf, cur_pos):to_lsp(encoding),
     }
 
@@ -686,7 +677,6 @@ local function request_auto(buf)
 
     local clients = lsp.get_clients({ bufnr = buf, method = METHOD })
     if #clients == 0 then
-        print("no clients disabling")
         buf_rm_autocmds(buf)
         return
     end
@@ -738,27 +728,22 @@ local function buf_autocmds_create(bufnr)
         end,
     })
 
-    -- https://github.com/neovim/neovim/pull/38344#discussion_r2958098852
-    -- Additional issue - AFAICT there is no visibility to the state of what's in
-    -- nvim_buf_attach.
     api.nvim_create_autocmd("LspNotify", {
         buffer = bufnr,
         group = buf_group,
         desc = "Refresh document highlights on document changes",
         callback = function(ev)
+            -- PR: Update this annotation.
             local method = ev.data.method --- @type string
             if method == "textDocument/didChange" or method == "textDocument/didOpen" then
                 request_auto(ev.buf)
                 return
             end
 
-            -- TODO: Is this necessary? Would matter:
-            -- - When does Neovim send this notification?
-            -- - When does an LSP Client detach from a buffer?
-            -- - Do buffer autocmds detach when a buffer unloads? Wiped?
             if method == "textDocument/didClose" then
-                print("didClose disabling")
-                buf_rm_autocmds(ev.buf)
+                -- Per the spec, the client sends this notification when it closes the document,
+                -- but not necessarily on detach. Don't do the full teardown here.
+                result_reset(ev.buf)
             end
         end,
     })
@@ -773,7 +758,6 @@ local function buf_autocmds_create(bufnr)
             ---@diagnostic disable-next-line: undefined-field
             local nm = vim.v.event.new_mode
             local buf = ev.buf
-            ---@diagnostic disable-next-line: param-type-mismatch
             if #nm == 1 and string.byte(nm, 1) == 110 then
                 -- Manually restore decorations without redrawing so they can be detected by
                 -- request_auto.
@@ -881,7 +865,6 @@ end
 ---@param buf integer
 local function buf_disable(buf)
     bufs_disabled[buf] = true
-    print("disabling buf rm autocmds")
     buf_rm_autocmds(buf)
     result_clear_and_redraw_checked(buf)
 end
@@ -950,7 +933,6 @@ function M.enable(enabled, bufs, client_ids)
 
         for _, client in ipairs(lsp.get_clients({ method = METHOD })) do
             for buf, _ in pairs(client.attached_buffers) do
-                print("disabling globally")
                 buf_rm_autocmds(buf)
             end
         end
