@@ -17,7 +17,6 @@ local list_filter_map_accum = util.list_filter_map_accum
 local list_filter_map_to = util.list_filter_map_to
 local list_fold = util.list_fold
 local list_insert_at = util.list_insert_at
-local list_transduce = util.list_transduce
 local mode_map_to_short = util.mode_map_to_short
 local tag_from_txt = util.tag_from_txt
 local wrap = util.wrap
@@ -55,7 +54,8 @@ function M.gen_keymap_vimdoc(maps, help_prefix)
     -- TODO: vim.validate help_prefix
 
     local all_tags = {} ---@type table<string, true>
-    local help_texts = list_transduce(maps, all_tags, function(acc_tags, map)
+    local ntl = require("nvim-tools.list")
+    local help_texts = ntl.filter_map_accum_to(maps, all_tags, function(acc_tags, map)
         local tags_addtl = list_filter_map_to(map.tags_addtl, function(tag)
             local tag_fmt = tag_from_txt(tag, help_prefix)
             err_if_seen_or_add(acc_tags, tag_fmt, "Duplicate tag " .. tag_fmt)
@@ -121,7 +121,8 @@ function M.gen_keymap_md(maps)
     -- TODO: validate inputs
 
     local all_tags = {} ---@type table<string, true>
-    local tbl_rows = list_transduce(maps, all_tags, function(acc_tags, map)
+    local ntl = require("nvim-text-tools.lists")
+    local tbl_rows = ntl.filter_map_accum_to(maps, all_tags, function(acc_tags, map)
         local plugs = list_flat_map_to(map.plugs, function(plug)
             return list_flat_map_to(map.modes, function(mode)
                 local short_modes = mode_map_to_short(mode)

@@ -132,7 +132,8 @@ local blink_opts = {
                         return items
                     end
 
-                    return ntl.transduce(items, {}, function(seen, item)
+                    -- MID: Does this need to make a new table?
+                    return ntl.filter_map_accum_to(items, {}, function(seen, item)
                         local raw = item.insertText or ""
                         if raw:match(correct) then
                             local text = strfn(raw:sub(1, 1)) .. raw:sub(2)

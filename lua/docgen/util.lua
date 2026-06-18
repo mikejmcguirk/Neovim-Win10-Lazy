@@ -307,7 +307,7 @@ function M.list_filter_map_to(t, f, start, stop)
     local t_len = #t
     start = resolve_iter_index(start, t_len, 1)
     stop = resolve_iter_index(stop, t_len, t_len)
-    local ret = {} ---@type V[]
+    local ret = {}
     if t_len == 0 or start > stop then
         return ret
     end
@@ -463,66 +463,6 @@ function M.list_splice(t, start, stop)
     end
 
     return t
-end
-
----@generic T
----@generic U
----@generic V
----@param t T[]
----@param init U
----@param f fun(acc:U, v:T, idx:integer): acc:U|nil, v:V|nil
----@param b? fun(acc:U): acc:U|nil, v:V|nil
----@param z? fun(acc:U): v:V|nil
----@param start integer? (Default: `1`)
----@param stop? integer Default: Length of `t`
----@param rev? boolean (Default: `false`)
----@return V[] New list.
-function M.list_transduce(t, init, f, b, z, start, stop, rev)
-    local ret = {}
-    local t_len = #t
-    start = resolve_iter_index(start, t_len, 1)
-    stop = resolve_iter_index(stop, t_len, t_len)
-    if t_len == 0 or start > stop then
-        return ret
-    end
-
-    local acc_stored = init
-    if b then
-        local acc, v = b(acc_stored)
-        if v then
-            ret[#ret + 1] = v
-        end
-
-        if acc == nil then
-            return ret
-        else
-            acc_stored = acc
-        end
-    end
-
-    local step
-    start, stop, step = resolve_rev(rev, start, stop)
-    for i = start, stop, step do
-        local acc, v = f(acc_stored, t[i], i)
-        if v ~= nil then
-            ret[#ret + 1] = v
-        end
-
-        if acc == nil then
-            break
-        else
-            acc_stored = acc
-        end
-    end
-
-    if z then
-        local v = z(acc_stored)
-        if v ~= nil then
-            ret[#ret + 1] = v
-        end
-    end
-
-    return ret
 end
 
 ---@generic T

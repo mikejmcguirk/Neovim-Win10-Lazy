@@ -3,12 +3,8 @@ local bit = require("bit")
 local fn = vim.fn
 local hl_user = vim.hl.priorities.user
 local lsp = vim.lsp
-local ntr = require("nvim-tools.range")
 local util = lsp.util
 local uv = vim.uv
-
--- TODO: Remove my stuff from the initial requires. Unlike the vim modules, my stuff is not
--- automatically required on startup, so we are slowing things down by doing this.
 
 local METHOD = "textDocument/documentHighlight"
 local protocol = require("vim.lsp.protocol")
@@ -366,6 +362,7 @@ local function response_to_ranges(response, buf, offset_encoding)
     end)
 
     -- Run the sanitation Helix does.
+    local ntr = require("nvim-tools.range")
     ntl.filter(hls, function(hl)
         return ntr.valid_(hl)
     end)
@@ -427,6 +424,7 @@ local function result_add_addtl_client_hls(res, response, buf, encoding, client_
         return
     end
 
+    local ntr = require("nvim-tools.range")
     local hls_new = ntl.merge_sorted_to(ntr.range_sort_predicate, hls_old, hls_addtl)
     ntl.combine(hls_new, function(a, b)
         if math.abs(ntr.cmp_(a, b)) == 1 then

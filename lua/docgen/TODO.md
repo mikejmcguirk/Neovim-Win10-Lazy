@@ -161,6 +161,8 @@ if we want to do equals, dash, and green, then that gives you 1/2, 3/4, 5/6. fee
 
 - [ ] Neovim is under an Apache license, which has attribution and derivative license requirements attached to it
 
+- [ ] Internalize any nvim-tools functions.
+
 #### DOC:
 
 - [ ] Markdown parsing assumes two space indenting (Treesitter constraint, not my code). So if you start a list indented by two, the parser will recognize this and give you an indented list. But if you start it indented by four, it will see it as an indented code block.

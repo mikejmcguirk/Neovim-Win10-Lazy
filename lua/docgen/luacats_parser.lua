@@ -10,7 +10,6 @@ local endswith_byte = util.endswith_byte
 local list_contains = util.list_contains
 local list_filter = util.list_filter
 local list_fold = util.list_fold
-local list_transduce = util.list_transduce
 local rtrim = util.str_rtrim
 local startswith_byte = util.startswith_byte
 local table_clear = util.table_clear
@@ -823,8 +822,9 @@ end
 ---@return docgen.ParserObj[]
 function M.parsed_from_lines(lines, help_prefix, header_tag)
     local modvar = find_modvar(lines) or ""
+    local ntl = require("nvim-tools.list")
     ---@type docgen.ParserObj[]
-    local obj_list = list_transduce(
+    local obj_list = ntl.filter_map_accum_to(
         lines,
         obj_new(help_prefix, header_tag, modvar),
         function(obj, line)
@@ -835,7 +835,6 @@ function M.parsed_from_lines(lines, help_prefix, header_tag)
 
             return obj_new(help_prefix, header_tag, modvar), status == 1 and obj or nil
         end,
-        nil,
         function(obj)
             return finalize(obj, "") == 1 and obj or nil
         end

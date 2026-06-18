@@ -1615,8 +1615,8 @@ end
 -- MARK: List Eval Functions --
 -------------------------------
 
----Check if all items in a list satisfy predicate function `f`.
----To check by key, see |same()|.
+---Checks if all items in `t` satisfy predicate function `f`.
+---@see |same()| to check by key.
 ---@generic T
 ---@param t T[]
 ---@param f fun(x:T): boolean
@@ -1636,8 +1636,16 @@ function M.all(t, f)
     return true
 end
 
----Check if any items in `t` satisfy predicate function `f`.
----To check by key, see |contains()|.
+---Checks if any items in `t` satisfy predicate function `f`.
+---Example:
+---```lua
+---    local foo = { 1, 2, 3, 4, 5 }
+---    local bar = any(foo, function(n)
+---        return n == 3
+---    end)
+---    -- bar = true
+---```
+---@see |contains()| to check by key.
 ---@generic T
 ---@param t T[]
 ---@param f fun(x:T): boolean
@@ -1657,21 +1665,30 @@ function M.any(t, f)
     return false
 end
 
----Compare elements of `t1` and `t2`. If t1 and t2 are of different lengths, the shorter length
----is used. Return `false` if any of the element comparisons fail.
----Optionally provide a `key` to filter the values.
----Optionally provide a custom `comp` function.
----
 ---Iterate through `t1` and `t2`, comparing their elements by index. If they are different
----lengths, the shorter one is used for comparison. Optionally provide either a `key` to
----process the value or a comparison function `comp`.
----@generic T
----@generic U
+---lengths, the shorter one is used. Optionally provide a `key` to process the values and/or a
+---comparison function `comp`.
+---Example:
+---```lua
+---    local foo = { 1, 2, 3, 4, 5 }
+---    local bar = { 1, 2, 3, 4, 5 }
+---    local bazz = cmp(foo, bar, nil, nil)
+---    -- bazz = true
+---```
+---```lua
+---    local foo = { 1, 2, 3, 4, 5 }
+---    local bar = { 1, 2, 3, 4, 5 }
+---    local bazz = cmp(foo, bar, nil, function(a, b)
+---        return a < b
+---    end)
+---    -- bazz = false
+---```
+---@generic T, U
 ---@param t1 T[]
 ---@param t2 U[]
 ---@param key nil|string|fun(v:T): any See: |key_fn|.
 ---@param comp? fun(a:T, b:U): boolean (Default: Shallow equality) Compatible with |table.sort()|.
----@return boolean Returns false if list table has length zero.
+---@return boolean Returns false if the shorter table has a length of zero.
 function M.cmp(t1, t2, key, comp)
     local len = math.min(#t1, #t2)
     if len == 0 then
@@ -1757,7 +1774,7 @@ function M.consistent(t, f)
     return true
 end
 
----Check if any item in `t` matches `v`, optionally comparing based on `key`.
+---Check if any item in `t` matches `val`, optionally comparing based on `key`.
 ---To check with a predicate function, see |any()|.
 ---@generic T
 ---@param t T[]
@@ -1881,95 +1898,9 @@ function M.excluded(t, val, key)
     return true
 end
 
----Get the first item from `t` that satisfies predicate function `f`.
----
----- Use |position()| to return the index.
----- Use |seek()| to search based on a key.
----@generic T
----@param t T[]
----@param f fun(x:T): boolean
----@param rev? boolean (Default: `false`) If true, iterate from the end.
----@return T? The found item.
-function M.find(t, f, rev)
-    local t_len = #t
-    if t_len == 0 then
-        return
-    end
-
-    local start, stop, step = resolve_rev(1, t_len, rev)
-    for i = start, stop, step do
-        local v = t[i]
-        if f(v) then
-            return v
-        end
-    end
-end
-
----Get a new table of all indexes in `t` containing `val`, optionally filtered with `key`.
----@generic T
----@param t T[]
----@param val T
----@param key nil|string|fun(v:T): any See: |key_fn|.
----@return uinteger[]? Empty table if no results.
-function M.indices(t, val, key)
-    local t_len = #t
-    local ret = {} ---@type uinteger[]
-    if t_len == 0 then
-        return ret
-    end
-
-    local key_fn = key_fn_from_key(key)
-    local vh_target = key_fn(val)
-    if vh_target == nil then
-        return ret
-    end
-
-    local j = 1
-    for i = 1, t_len do
-        if key_fn(t[i]) == vh_target then
-            ret[j] = i
-            j = j + 1
-        end
-    end
-
-    return ret
-end
-
----Locate the first index containing `val` in `t`, optionally comparing with `key`.
----To locate with a predicate function, use |position()|.
----To return the value, use |seek()|.
----@generic T
----@param t T[]
----@param val T
----@param key nil|string|fun(v:T): any See: |key_fn|.
----@param rev? boolean (Default: `false`) If true, iterate from the end.
----@return uinteger?
----`nil` if:
----- `val` is not found
----- Length of `t` is zero
----- `key` applied to `val` is nil.
-function M.locate(t, val, key, rev)
-    local t_len = #t
-    if t_len == 0 then
-        return
-    end
-
-    local key_fn = key_fn_from_key(key)
-    local valh = key_fn(val)
-    if valh == nil then
-        return
-    end
-
-    local start, stop, step = resolve_rev(1, t_len, rev)
-    for i = start, stop, step do
-        if key_fn(t[i]) == valh then
-            return i
-        end
-    end
-end
-
 ---Get the maximum value from `t`, optionally filtering with `key`.
 ---To calculate based on function logic, use |reduce()|.
+---@see |reduce()| to calculate with function logic.
 ---@generic T
 ---@param t T[]
 ---@param key nil|string|fun(v:T): any See: |key_fn|.
@@ -2003,7 +1934,7 @@ function M.max(t, key)
 end
 
 ---Get the minimum value from `t`, optionally filtering with `key`.
----To calculate based on function logic, use |reduce()|.
+---@see |reduce()| to calculate with function logic.
 ---@generic T
 ---@param t T[]
 ---@param key nil|string|fun(v:T): any See: |key_fn|.
@@ -2123,6 +2054,167 @@ function M.only(t, val, key)
     return seen
 end
 
+---Check if all elements in `t` are the same, optionally using a `key`.
+---
+---To check with a predicate function, see |all()|.
+---@generic T
+---@param t T[]
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return boolean
+---`false` if:
+---- A unique value is found.
+---- Table length is zero.
+---- `key` generates a `nil` value.
+function M.same(t, key)
+    local t_len = #t
+    if t_len == 0 then
+        return false
+    end
+
+    if t_len == 1 then
+        return true
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local vh1 = key_fn(t[1])
+    if vh1 == nil then
+        return false
+    end
+
+    for i = 2, t_len do
+        if key_fn(t[i]) ~= vh1 then
+            return false
+        end
+    end
+
+    return true
+end
+
+---See if all of or none of the values in `t` match `val`, optionally filtering with `key`.
+---To check with a predicate, use |consistent()|.
+---@generic T
+---@param t T[]
+---@param val T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return boolean
+---`false` if:
+---- More than one of, but not all items match `val`.
+---- `key` produces a `nil` value.
+---- Length of `t` is zero.
+function M.uniform(t, val, key)
+    local t_len = #t
+    if t_len == 0 then
+        return false
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local valh = key_fn(val)
+    if valh == nil then
+        return false
+    end
+
+    local vh1 = key_fn(t[1])
+    local expected = vh1 == valh
+    for i = 1, t_len do
+        if (key_fn(t[i]) == valh) ~= expected then
+            return false
+        end
+    end
+
+    return true
+end
+
+----------------------
+-- MARK: Extractors --
+----------------------
+
+---Get the first item from `t` that satisfies predicate function `f`.
+---
+---- Use |position()| to return the index.
+---- Use |seek()| to search based on a key.
+---@generic T
+---@param t T[]
+---@param f fun(x:T): boolean
+---@param rev? boolean (Default: `false`) If true, iterate from the end.
+---@return T? The found item.
+function M.find(t, f, rev)
+    local t_len = #t
+    if t_len == 0 then
+        return
+    end
+
+    local start, stop, step = resolve_rev(1, t_len, rev)
+    for i = start, stop, step do
+        local v = t[i]
+        if f(v) then
+            return v
+        end
+    end
+end
+
+---Get a new table of all indexes in `t` containing `val`, optionally filtered with `key`.
+---@generic T
+---@param t T[]
+---@param val T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return uinteger[]? Empty table if no results.
+function M.indices(t, val, key)
+    local t_len = #t
+    local ret = {} ---@type uinteger[]
+    if t_len == 0 then
+        return ret
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local vh_target = key_fn(val)
+    if vh_target == nil then
+        return ret
+    end
+
+    local j = 1
+    for i = 1, t_len do
+        if key_fn(t[i]) == vh_target then
+            ret[j] = i
+            j = j + 1
+        end
+    end
+
+    return ret
+end
+
+---Locate the first index containing `val` in `t`, optionally comparing with `key`.
+---To locate with a predicate function, use |position()|.
+---To return the value, use |seek()|.
+---@generic T
+---@param t T[]
+---@param val T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@param rev? boolean (Default: `false`) If true, iterate from the end.
+---@return uinteger?
+---`nil` if:
+---- `val` is not found
+---- Length of `t` is zero
+---- `key` applied to `val` is nil.
+function M.locate(t, val, key, rev)
+    local t_len = #t
+    if t_len == 0 then
+        return
+    end
+
+    local key_fn = key_fn_from_key(key)
+    local valh = key_fn(val)
+    if valh == nil then
+        return
+    end
+
+    local start, stop, step = resolve_rev(1, t_len, rev)
+    for i = start, stop, step do
+        if key_fn(t[i]) == valh then
+            return i
+        end
+    end
+end
+
 ---Get the first index of `t` that satisfies predicate function `f`.
 ---
 ---- Use |find()| to return the value.
@@ -2170,42 +2262,6 @@ function M.positions(t, f)
     end
 
     return ret
-end
-
----Check if all elements in `t` are the same, optionally using a `key`.
----
----To check with a predicate function, see |all()|.
----@generic T
----@param t T[]
----@param key nil|string|fun(v:T): any See: |key_fn|.
----@return boolean
----`false` if:
----- A unique value is found.
----- Table length is zero.
----- `key` generates a `nil` value.
-function M.same(t, key)
-    local t_len = #t
-    if t_len == 0 then
-        return false
-    end
-
-    if t_len == 1 then
-        return true
-    end
-
-    local key_fn = key_fn_from_key(key)
-    local vh1 = key_fn(t[1])
-    if vh1 == nil then
-        return false
-    end
-
-    for i = 2, t_len do
-        if key_fn(t[i]) ~= vh1 then
-            return false
-        end
-    end
-
-    return true
 end
 
 ---Return the first occurrence of `val` in `t`, optionally filtering with `key` (recommended.
@@ -2301,40 +2357,6 @@ function M.selectors(t, val, key)
     end
 
     return ret
-end
-
----See if all of or none of the values in `t` match `val`, optionally filtering with `key`.
----To check with a predicate, use |consistent()|.
----@generic T
----@param t T[]
----@param val T
----@param key nil|string|fun(v:T): any See: |key_fn|.
----@return boolean
----`false` if:
----- More than one of, but not all items match `val`.
----- `key` produces a `nil` value.
----- Length of `t` is zero.
-function M.uniform(t, val, key)
-    local t_len = #t
-    if t_len == 0 then
-        return false
-    end
-
-    local key_fn = key_fn_from_key(key)
-    local valh = key_fn(val)
-    if valh == nil then
-        return false
-    end
-
-    local vh1 = key_fn(t[1])
-    local expected = vh1 == valh
-    for i = 1, t_len do
-        if (key_fn(t[i]) == valh) ~= expected then
-            return false
-        end
-    end
-
-    return true
 end
 
 --------------------------------
@@ -2490,9 +2512,9 @@ function M.scan(t, f, init, start, stop, rev)
     return ret
 end
 
----------------------------
--- MARK: List Transforms --
----------------------------
+--------------------------------
+-- MARK: List Transformations --
+--------------------------------
 
 ---Combine values in `t` based on function `f`.
 ---The list is traversed linearly, rather than product-wise. If you're trying to do something like
@@ -2618,24 +2640,33 @@ function M.filter_map_to(t, f, start, stop)
     return ret
 end
 
----Apply function `f` to the elements of `t` in place. An accumulator value is stored between
----iterations.
----@generic T
----@generic U
----@generic V
+---Apply function `f` to the elements of `t` in-place with accumulator `init`. Optionally apply
+---finalization function `z`. The function is a no-op if `t` is empty.
+---@generic T, A
 ---@param t T[] Modified in place!
----@param init V Initial accumulator value.
----@param f fun(acc:V, value:T, idx:uinteger): V, U|nil Receives the current accumulator, the
----     currently iterated list value, and the currently iterated index. If `nil` is returned for
----     the list value, it will be filtered.
----@return T[] The original list reference.
-function M.filter_map_accum(t, init, f)
+---@param init A? Initial accumulator value.
+---@param f fun(acc:A, v:T): A?, T|nil
+---     `acc` is the current accumulator, and `v` is the currently iterated value of `t`.
+---     Returns the next accumulator and modified value. `nil` is accepted for both returns.
+---@param z? fun(acc:A): T|nil
+---     Called after iteration, providing the final accumulator. Optionally returns a final
+---     modified value.
+---@return T[] Reference to `t`.
+function M.filter_map_accum(t, init, f, z)
     local t_len = #t
     local acc = init
+    local vm
     local j = 1
     for i = 1, t_len do
-        local a, vm = f(acc, t[i], i)
-        acc = a
+        acc, vm = f(acc, t[i])
+        if vm ~= nil then
+            t[j] = vm
+            j = j + 1
+        end
+    end
+
+    if z then
+        vm = z(acc)
         if vm ~= nil then
             t[j] = vm
             j = j + 1
@@ -2647,6 +2678,47 @@ function M.filter_map_accum(t, init, f)
     end
 
     return t
+end
+
+---Converts values from `t` into a new |lua-list| based on accumulator `init`, function `f`, and
+---an optional finalization function `z`. The function is a no-op if `t` is empty.
+---@generic T, A, V
+---@param t T[]
+---@param init A? Initial accumulator value.
+---@param f fun(acc:A, v:T): A?, V|nil
+---     `acc` is the current accumulator, and `v` is the currently iterated value of `t`.
+---     Returns the next accumulator and value to append. `nil` is accepted for both returns.
+---@param z? fun(acc:A): V|nil
+---     Called after iteration, providing the final accumulator. Optionally returns a final value
+---     to append.
+---     order.
+---@return V[]
+function M.filter_map_accum_to(t, init, f, z)
+    local t_len = #t
+    local ret = {}
+    if t_len == 0 then
+        return ret
+    end
+
+    local acc = init
+    local vm
+    local j = 1
+    for i = 1, t_len do
+        acc, vm = f(acc, t[i])
+        if vm ~= nil then
+            ret[j] = vm
+            j = j + 1
+        end
+    end
+
+    if z then
+        vm = z(acc)
+        if vm ~= nil then
+            ret[j] = vm
+        end
+    end
+
+    return ret
 end
 
 ---@generic T
@@ -2672,80 +2744,6 @@ function M.group_by(t, key)
 
     return ret
 end
-
----Convert values from list `t` into a list of new values based on a threaded accumulator and an
----optional finalization function.
----@generic T
----@generic U
----@generic V
----@param t T[] Values to transduce.
----@param init U Initial accumulator value
----@param f fun(acc:U, v:T, idx:uinteger): acc:U|nil, v:V|nil
----Takes as params the current accumulator value, the current list value, and the current list
----index. Returns the new accumulator value and the next value to add to the return list.
----If the `acc` return is nil, `v` is first appended to the table if not nil, then the finalize
----function (`z`) runs, and the transduced list returns.
----If the `v` return is nil, the accumulator is updated but the current value of `t` is skipped.
----@param b? fun(acc:U): acc:U|nil, v:V|nil
----Function to run before list iteration. If the `acc` return is nil, early-exit.
----@param z? fun(acc:U): v:V|nil
----Optional finalization function. Called once at the end and may emit one final value to append
----to the returned list. If called after an early exit, the previous stored accumulator will be
----provided.
----@see |iter-indexing|
----@param start integer? (Default: `1`)
----@param stop? integer Default: Length of `t`
----@param rev? boolean (Default: `false`) If true, iterate from the end.
----@return V[] New list of converted values. Empty if `start` and `stop` produce an invalid
----iteration.
-function M.transduce(t, init, f, b, z, start, stop, rev)
-    local ret = {}
-    local t_len = #t
-    start = iter_idx_resolve(start, t_len, 1)
-    stop = iter_idx_resolve(stop, t_len, t_len)
-    if t_len == 0 or start > stop then
-        return ret
-    end
-
-    local acc_stored = init
-    if b then
-        local acc, v = b(acc_stored)
-        if v then
-            ret[#ret + 1] = v
-        end
-
-        if acc == nil then
-            return ret
-        else
-            acc_stored = acc
-        end
-    end
-
-    local step
-    start, stop, step = resolve_rev(start, stop, rev)
-    for i = start, stop, step do
-        local acc, v = f(acc_stored, t[i], i)
-        if v ~= nil then
-            ret[#ret + 1] = v
-        end
-
-        if acc == nil then
-            break
-        else
-            acc_stored = acc
-        end
-    end
-
-    if z then
-        local v = z(acc_stored)
-        if v ~= nil then
-            ret[#ret + 1] = v
-        end
-    end
-
-    return ret
-end
--- TODO: I think you remove the early return from here.
 
 ---Transform `t1` in place by applying a function to the values of `t1` and `t2`.
 ---If `t1` and `t2` are different lengths, the length of the smaller list is used.
@@ -2982,6 +2980,17 @@ function M.reverse_to(t)
     return ret
 end
 
+---@param left uinteger
+---@param right uinteger
+local function reverse_do(t, left, right)
+    while left < right do
+        t[left], t[right] = t[right], t[left]
+        left = left + 1
+        right = right - 1
+    end
+end
+
+---https://www.youtube.com/watch?v=mLnkKNDs9DE
 ---Shift the elements of `t` in place based on `n` (the amount to shift) and `dir` (shift forward
 ---or backwards.)
 ---@generic T
@@ -3004,19 +3013,9 @@ function M.rotate(t, n, dir)
         steps = len - steps
     end
 
-    ---@param left uinteger
-    ---@param right uinteger
-    local function reverse(left, right)
-        while left < right do
-            t[left], t[right] = t[right], t[left]
-            left = left + 1
-            right = right - 1
-        end
-    end
-
-    reverse(1, steps)
-    reverse(steps + 1, len)
-    reverse(1, len)
+    reverse_do(t, 1, steps)
+    reverse_do(t, steps + 1, len)
+    reverse_do(t, 1, len)
 
     return t
 end
@@ -3123,39 +3122,3 @@ function M.zip_with(t1, t2, f)
 
     return ret
 end
-
--------------------------
--- MARK: Uncategorized --
--------------------------
-
--- TODO: Categorize these
-
---- Returns an iterator that infinitely cycles through `t`.
---- Each step yields: `idx` (1-based index within the cycle), `value`, `cycle`
---- (0-based full cycles completed).
----@generic T
----@param t T[]
----@return fun(): uinteger|nil, T|nil, uinteger|nil Nil iter return if length of `t` is zero.
-function M.cycle(t)
-    local t_len = #t
-    if t_len == 0 then
-        ---@return nil, nil, nil
-        return function()
-            return nil, nil, nil
-        end
-    end
-
-    local i = 0
-    ---@generic T
-    ---@return uinteger, T, uinteger
-    return function()
-        i = i + 1
-        local idx = ((i - 1) % t_len) + 1
-        local cycle = math.floor((i - 1) / t_len)
-        return idx, t[idx], cycle
-    end
-end
-
-return M
-
--- TODO: More specifically scope utils (biggest ones - The list unique utils.)

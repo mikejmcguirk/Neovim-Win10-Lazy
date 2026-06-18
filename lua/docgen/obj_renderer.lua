@@ -12,7 +12,6 @@ local util = require("docgen.util")
 local list_copy = util.list_copy
 local list_fold = util.list_fold
 local list_insert_at = util.list_insert_at
--- local list_transduce = util.list_transduce
 local list_filter_map = util.list_filter_map
 local list_filter_map_to = util.list_filter_map_to
 local lpad = util.str_lpad
