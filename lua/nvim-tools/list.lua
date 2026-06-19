@@ -3122,3 +3122,5 @@ function M.zip_with(t1, t2, f)
 
     return ret
 end
+
+return M

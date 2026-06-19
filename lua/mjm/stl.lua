@@ -255,18 +255,17 @@ api.nvim_create_autocmd("BufWinEnter", {
 
 -- MAYBE: Mixed feelings about this because, early exit or not, it triggers on every completion
 -- popup. Still better, I suppose, than re-generating the buf options every keystroke
----@type string[]
 local watched = { "fileencoding", "encoding", "fileformat", "buftype" }
 api.nvim_create_autocmd("OptionSet", {
     group = stl_events,
     callback = function(ev)
-        local match = ev.match
-        if not match then
+        local buf = ev.buf ~= 0 and ev.buf or api.nvim_get_current_buf()
+        if not buf_cache[buf] then
             return
         end
 
-        local buf = ev.buf ~= 0 and ev.buf or api.nvim_get_current_buf()
-        if not buf_cache[buf] then
+        local match = ev.match
+        if not match then
             return
         end
 

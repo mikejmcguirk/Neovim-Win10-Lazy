@@ -1,37 +1,5 @@
 ## M.cmp
 
-- [ ] Categorization
-
-  - [ ] Subset of something else?
-    - [ ] Create a proper superset function?
-      - [ ] Add to checklist
-  - [ ] Proper categorization?
-    - [ ] Move it
-  - [ ] Missing complementary functions?
-    - [ ] Create them
-      - [ ] Add to checklist
-  - [ ] If in place function
-    - [ ] Is there a complementary `_to` function?
-
-- [ ] Other Factoring
-
-  - [ ] Remove extra params
-  - [ ] Remove extra error returns
-  - [ ] Remove extra strategy function params
-  - [ ] Remove extra strategy function returns
-
-  - [ ] Inline trivial functionality
-  - [ ] Remove schroedingery helper logic
-  - [ ] Specific/correct logic for len zero lists.
-  - [ ] Outline nontrivial, common functionality
-
-  - [ ] `v` params should be `val`.
-  - [ ] Replace `return nil` with `return`.
-  - [ ] Verify type consistency
-  - [ ] If the function makes a new table:
-    - [ ] `_to` naming
-    - [ ] Verify no write to t (no side effects)
-
 - [ ] Docs
 
   - [ ] Proper top-level description
