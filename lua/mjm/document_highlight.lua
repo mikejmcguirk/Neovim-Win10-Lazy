@@ -17,8 +17,8 @@ local read_hl = api.nvim_get_hl_id_by_name("LspReferenceRead")
 local write_hl = api.nvim_get_hl_id_by_name("LspReferenceWrite")
 
 ---Kind is optional per the spec. Falls back to `Text` if not present.
----@param kind? integer
----@return integer
+---@param kind? uinteger
+---@return uinteger
 local function get_kind_hl(kind)
     if kind == KIND_READ then
         return read_hl
@@ -33,13 +33,13 @@ local M = {}
 
 -- Rather than create a duplicate source of truth for active bufs/clients, only track what the
 -- user has explicitly disabled.
-local bufs_disabled = {} ---@type table<integer, true|nil>
-local client_ids_disabled = {} ---@type table<integer, true|nil>
+local bufs_disabled = {} ---@type table<uinteger, true|nil>
+local client_ids_disabled = {} ---@type table<uinteger, true|nil>
 local is_enabled = true
 
 local ns = api.nvim_create_namespace("mjm.lsp.document_highlight")
 
----@class mjm.lsp.documentHighlight.Request
+---@class mjm.lsp.documentHighlight.PendingRequest
 ---@field cur_pos [integer, integer]
 ---@field id integer
 ---@field win integer
@@ -58,7 +58,7 @@ local ns = api.nvim_create_namespace("mjm.lsp.document_highlight")
 ---@field top_idx? integer
 ---@field version integer
 
-local client_reqs = {} ---@type table<integer, mjm.lsp.documentHighlight.Request>
+local client_reqs = {} ---@type table<integer, mjm.lsp.documentHighlight.PendingRequest>
 local results = {} ---@type table<integer, mjm.lsp.documentHighlight.Result|nil>
 local timers = {} ---@type table<integer, uv.uv_timer_t|nil>
 
@@ -95,9 +95,9 @@ local function result_set_or_new(buf, client_id, cur_pos, hls, version)
     }
 end
 
----@param buf integer
 ---@param res mjm.lsp.documentHighlight.Result
-local function result_reset_unchecked(buf, res)
+---@param buf uinteger
+local function res_reset_and_ns_clear(res, buf)
     if res.has_decor then
         api.nvim_buf_clear_namespace(buf, ns, 0, -1)
     end
@@ -115,66 +115,46 @@ local function result_reset_unchecked(buf, res)
     res.version = -1
 end
 
----@param buf integer
-local function result_reset(buf)
-    local res = results[buf]
-    if not res then
+---@param buf uinteger
+local function from_buf_res_reset_and_ns_clear(buf)
+    local buf_res = results[buf]
+    if not buf_res then
         return
     end
 
-    result_reset_unchecked(buf, res)
+    res_reset_and_ns_clear(buf_res, buf)
 end
 
----@param buf integer
----@param res mjm.lsp.documentHighlight.Result
-local function result_reset_decor_unchecked(buf, res)
-    if not res.has_decor then
+---@param buf uinteger
+---@param buf_res mjm.lsp.documentHighlight.Result?
+local function buf_res_reset_decor(buf, buf_res)
+    buf_res = buf_res or results[buf]
+    if not (buf_res and buf_res.has_decor) then
         return
     end
 
     api.nvim_buf_clear_namespace(buf, ns, 0, -1)
-    res.bot = -1
-    res.bot_idx = -1
-    res.has_decor = false
-    res.top = -1
-    res.top_idx = -1
+    buf_res.bot = -1
+    buf_res.bot_idx = -1
+    buf_res.has_decor = false
+    buf_res.top = -1
+    buf_res.top_idx = -1
 end
 
----@param buf integer
----@return boolean `true` if results are valid.
-local function result_reset_if_stale(buf)
-    local res = results[buf]
-    if not res then
-        return false
+---@param buf uinteger
+---@param buf_res mjm.lsp.documentHighlight.Result?
+local function buf_res_clear_and_redraw(buf, buf_res)
+    buf_res = buf_res or results[buf]
+    if not buf_res then
+        return
     end
 
-    if res.version ~= util.buf_versions[buf] then
-        result_reset_unchecked(buf, res)
-        return false
-    end
-
-    return true
-end
-
----@param buf integer
----@param res mjm.lsp.documentHighlight.Result
-local function result_clear_and_redraw_unchecked(buf, res)
-    local has_decor = res.has_decor
     results[buf] = nil
+    local has_decor = buf_res.has_decor
     if has_decor and api.nvim_buf_is_valid(buf) then
         api.nvim_buf_clear_namespace(buf, ns, 0, -1)
         api.nvim__redraw({ buf = buf, valid = true, flush = false })
     end
-end
-
----@param buf integer
-local function result_clear_and_redraw_checked(buf)
-    local res = results[buf]
-    if not res then
-        return
-    end
-
-    result_clear_and_redraw_unchecked(buf, res)
 end
 
 ---@param client_id integer
@@ -225,20 +205,6 @@ local function set_mark(buf, hl_info)
     })
 end
 
----@param mode string
----@return boolean
-local function can_decorate_mode(mode)
-    if string.byte(mode, 1) == 110 and (#mode == 1 or string.byte(mode, 2) == 111) then
-        return true
-    end
-
-    if string.byte(mode, 1) == 99 then
-        return true
-    end
-
-    return false
-end
-
 -- Don't need win param because the namespace is window-scoped.
 ---@param buf integer
 ---@param top integer
@@ -254,17 +220,12 @@ local function on_win(_, _, buf, top, bot)
         return
     end
 
+    -- TODO: This should be cleared by ModeChanged
+    -- if not can_decorate_mode(api.nvim_get_mode().mode) then
+    --     return
+    -- end
+
     local has_decor = res.has_decor
-    if res.version ~= util.buf_versions[buf] then
-        result_reset(buf)
-        return
-    end
-
-    if not can_decorate_mode(api.nvim_get_mode().mode) then
-        result_reset_decor_unchecked(buf, res)
-        return
-    end
-
     if not has_decor then
         local top_idx = vim.list.bisect(hls, { 0, 0, top }, {
             key = function(hl)
@@ -494,7 +455,7 @@ end
 ---@field version integer
 
 ---@param ctx lsp.HandlerContext
----@return boolean, mjm.lsp.documentHighlight.Request?, vim.lsp.Client?, mjm.lsp.HandlerContext_Validated?
+---@return boolean, mjm.lsp.documentHighlight.PendingRequest?, vim.lsp.Client?, mjm.lsp.HandlerContext_Validated?
 local function response_should_handle(ctx)
     local client_id = ctx.client_id
     local req = client_reqs[client_id]
@@ -548,11 +509,15 @@ local function response_handler(err, response, ctx)
         return
     end
 
+    -- TODO: The logic below needs to be updated once we move to the VSCode scoring model. Since
+    -- we are only ever using one client, we can do one verification step that (a) the current
+    -- results are not stale relative to win/buf/cur_pos and/or (b) if the new results
+    -- supercede the current ones.
+
     local client_id = ctx_validated.client_id
     local req_cur_pos = req.cur_pos
     local req_win = req.win
     local resp_buf = ctx_validated.bufnr
-    result_reset_if_stale(resp_buf)
     local res = results[resp_buf]
     if (not res) or #res.client_ids == 0 then
         if not response_new_has_uptd_state(req_win, resp_buf, req_cur_pos) then
@@ -579,7 +544,6 @@ local function response_handler(err, response, ctx)
 
     api.nvim__redraw({ buf = resp_buf, valid = true, flush = false })
 end
--- MID-DEP: Print the err data if a use case appears.
 
 local group_name = "mjm.lsp.document_highlight"
 
@@ -621,60 +585,70 @@ local function request_send(client, win, buf, cur_pos)
     end
 end
 
----@param buf integer
----@param cur_pos [integer, integer]
----@return boolean
-local function has_ref_under_cursor(buf, cur_pos)
-    local ntp = require("nvim-tools.pos")
-    local ntl = require("nvim-tools.list")
-    local ext_pos = ntp.mark_to_ext_pos(ntl.copy(cur_pos))
-    return #api.nvim_buf_get_extmarks(buf, ns, ext_pos, ext_pos, {
-        details = true,
-        limit = 1,
-        overlap = true,
-    }) > 0
-end
--- MID: The extmark solution is not lightweight.
-
----@param buf integer
-local function request_auto(buf)
-    if is_enabled == false or bufs_disabled[buf] == true then
-        return
+---@return boolean, uinteger
+local function global_can_send_request()
+    if is_enabled == false then
+        return false, -1
     end
 
-    local has_uptd_results = result_reset_if_stale(buf)
-    if not has_uptd_results then
-        api.nvim__redraw({ buf = buf, valid = true, flush = false })
-    end
-
-    local mode = api.nvim_get_mode().mode
-    if not (#mode == 1 and string.byte(mode) == 110) then
-        return
-    end
+    -- TODO: remove from here since LspNotify and ModeChanged use this
+    -- Or do you also return the mode from here?
+    -- local mode = api.nvim_get_mode().mode
+    -- if not (#mode == 1 and string.byte(mode) == 110) then
+    --     return false, -1
+    -- end
 
     local win = api.nvim_get_current_win()
+    -- TODO: This is a lot to do on CursorMoved
     if vim.call("win_gettype", win) ~= "" then
-        return
+        return false, win
     end
 
-    -- MID-DEP: Un-comment this if there's a reason to.
-    -- local win_buf = api.nvim_win_get_buf(win)
-    -- if win_buf ~= buf then
+    return true, win
+end
+-- TODO: bad function name
+
+---TODO: This function is wrong, because it handles the "should request" logic and the logic
+---to setup the request. What should happen - Each event that might request does its own
+---validation and data setup. If the event wants to send the request, it sends the request
+---For repetitive logic, compose it.
+---@param win uinteger
+---@param buf uinteger
+---@param cur_pos [uinteger, uinteger]
+local function request_auto(win, buf, cur_pos)
+    -- if is_enabled == false or bufs_disabled[buf] == true then
     --     return
     -- end
 
-    local cur_pos = api.nvim_win_get_cursor(win)
-    if has_uptd_results then
-        if has_ref_under_cursor(buf, cur_pos) then
-            return
-        else
-            result_reset(buf)
-            api.nvim__redraw({ buf = buf, valid = true, flush = false })
-        end
-    end
+    -- TODO: Redundant if this fires on ModeChanged
+    -- local mode = api.nvim_get_mode().mode
+    -- if not (#mode == 1 and string.byte(mode) == 110) then
+    --     return
+    -- end
+
+    -- local win = api.nvim_get_current_win()
+    -- if vim.call("win_gettype", win) ~= "" then
+    --     return
+    -- end
+
+    -- local cur_pos = api.nvim_win_get_cursor(win)
+    -- local buf_res = results[buf]
+    -- if buf_res then
+    --     local ntr = require("nvim-tools.range")
+    --     if ntr.ranges_have_pos(buf_res.highlights, cur_pos) then
+    --         if not buf_res.has_decor then
+    --             api.nvim__redraw({ buf = buf, valid = true, flush = false })
+    --         end
+    --
+    --         return
+    --     end
+    --
+    --     res_reset_and_ns_clear(buf_res, buf)
+    -- end
 
     local clients = lsp.get_clients({ bufnr = buf, method = METHOD })
     if #clients == 0 then
+        -- TODO: Because we're unburdening this function, is doing this here still right?
         buf_rm_autocmds(buf)
         return
     end
@@ -722,7 +696,33 @@ local function buf_autocmds_create(bufnr)
         buffer = bufnr,
         desc = "Refresh document highlights",
         callback = function(ev)
-            request_auto(ev.buf)
+            local ok, win = global_can_send_request()
+            if not ok then
+                return
+            end
+
+            local mode = api.nvim_get_mode().mode
+            if not (#mode == 1 and string.byte(mode, 1) == 110) then
+                return
+            end
+
+            local buf = ev.buf
+            local cur_pos = api.nvim_win_get_cursor(win)
+            local buf_res = results[buf]
+            if buf_res then
+                local ntr = require("nvim-tools.range")
+                if ntr.ranges_have_pos(buf_res.highlights, cur_pos) then
+                    if not buf_res.has_decor then
+                        api.nvim__redraw({ buf = buf, valid = true, flush = false })
+                    end
+
+                    return
+                end
+
+                res_reset_and_ns_clear(buf_res, buf)
+            end
+
+            request_auto(win, buf, cur_pos)
         end,
     })
 
@@ -733,15 +733,46 @@ local function buf_autocmds_create(bufnr)
         callback = function(ev)
             -- PR: Update this annotation.
             local method = ev.data.method --- @type string
-            if method == "textDocument/didChange" or method == "textDocument/didOpen" then
-                request_auto(ev.buf)
+            local buf = ev.buf
+            if method == "textDocument/didChange" then
+                -- TODO: Test of this works for operators
+                local mode = api.nvim_get_mode().mode
+                if not (#mode == 1 and string.byte(mode, 1) == 110) then
+                    return
+                end
+
+                local buf_res = results[buf]
+                if buf_res then
+                    if buf_res.version ~= util.buf_versions[buf] then
+                        res_reset_and_ns_clear(buf_res, buf)
+                    end
+                end
+
+                local ok, win = global_can_send_request()
+                if not ok then
+                    return
+                end
+
+                local cur_pos = api.nvim_win_get_cursor(win)
+                request_auto(win, buf, cur_pos)
+                return
+            end
+
+            if method == "textDocument/didOpen" then
+                local ok, win = global_can_send_request()
+                if not ok then
+                    return
+                end
+
+                local cur_pos = api.nvim_win_get_cursor(win)
+                request_auto(win, buf, cur_pos)
                 return
             end
 
             if method == "textDocument/didClose" then
                 -- Per the spec, the client sends this notification when it closes the document,
                 -- but not necessarily on detach. Don't do the full teardown here.
-                result_reset(ev.buf)
+                from_buf_res_reset_and_ns_clear(buf)
             end
         end,
     })
@@ -755,15 +786,45 @@ local function buf_autocmds_create(bufnr)
         callback = function(ev)
             ---@diagnostic disable-next-line: undefined-field
             local nm = vim.v.event.new_mode
+            local nm_n = string.byte(nm, 1) == 110
             local buf = ev.buf
-            if #nm == 1 and string.byte(nm, 1) == 110 then
-                -- Manually restore decorations without redrawing so they can be detected by
-                -- request_auto.
-                on_win(_, _, buf, vim.call("line", "w0"), vim.call("line", "w$"))
-                request_auto(buf)
+            if nm_n then
+                if #nm == 1 then
+                    local ok, win = global_can_send_request()
+                    if not ok then
+                        return
+                    end
+
+                    local buf_res = results[buf]
+                    local cur_pos = api.nvim_win_get_cursor(win)
+                    if buf_res then
+                        if buf_res.version ~= util.buf_versions[buf] then
+                            res_reset_and_ns_clear(buf_res, buf)
+                        else
+                            local ntr = require("nvim-tools.range")
+                            if ntr.ranges_have_pos(buf_res.highlights, cur_pos) then
+                                if not buf_res.has_decor then
+                                    api.nvim__redraw({ buf = buf, valid = true, flush = false })
+                                end
+
+                                return
+                            end
+                        end
+                    end
+
+                    request_auto(win, buf, cur_pos)
+                    return
+                end
+
+                if string.byte(nm, 2) == 111 then
+                    return
+                end
+            elseif string.byte(nm) == 99 then
+                return
             end
+
+            buf_res_reset_decor(buf)
         end,
-        -- MID: Manually restoring decorations is a blunt solution.
         -- PR: Add old_mode and new_mode to the vim.v.event annotation. vvars_extra.lua. Not
         -- auto-generated.
     })
@@ -801,7 +862,13 @@ local function autocmds_create()
                 api.nvim__ns_set(ns, { wins = { cur_win } })
             end
 
-            request_auto(buf)
+            local ok, win = global_can_send_request()
+            if not ok then
+                return
+            end
+
+            local cur_pos = api.nvim_win_get_cursor(win)
+            request_auto(win, buf, cur_pos)
         end,
     })
 
@@ -812,7 +879,7 @@ local function autocmds_create()
             local buf = ev.buf
             local buf_clients = lsp.get_clients({ bufnr = buf, method = METHOD })
             if #buf_clients == 0 then
-                result_clear_and_redraw_checked(buf)
+                buf_res_clear_and_redraw(buf)
             end
 
             local client_id = ev.data.client_id
@@ -840,7 +907,32 @@ local function autocmds_create()
             -- TODO: Hacky
             local buf_group = buf_group_name_get(buf)
             if fn.exists("#" .. buf_group) == 1 then
-                request_auto(buf)
+                local ok, win = global_can_send_request()
+                if not ok then
+                    return
+                end
+
+                local mode = api.nvim_get_mode().mode
+                if not (#mode == 1 and string.byte(mode, 1) == 110) then
+                    return
+                end
+
+                local cur_pos = api.nvim_win_get_cursor(win)
+                local buf_res = results[buf]
+                if buf_res then
+                    local ntr = require("nvim-tools.range")
+                    if ntr.ranges_have_pos(buf_res.highlights, cur_pos) then
+                        if not buf_res.has_decor then
+                            api.nvim__redraw({ buf = buf, valid = true, flush = false })
+                        end
+
+                        return
+                    end
+
+                    res_reset_and_ns_clear(buf_res, buf)
+                end
+
+                request_auto(win, buf, cur_pos)
             end
         end,
     })
@@ -855,8 +947,33 @@ local function buf_enable(buf)
     bufs_disabled[buf] = nil
     buf_autocmds_create(buf)
     if buf == api.nvim_get_current_buf() then
-        api.nvim__ns_set(ns, { wins = { api.nvim_get_current_win() } })
-        request_auto(buf)
+        local ok, win = global_can_send_request()
+        api.nvim__ns_set(ns, { wins = { win } })
+        if not ok then
+            return
+        end
+
+        local mode = api.nvim_get_mode().mode
+        if not (#mode == 1 and string.byte(mode, 1) == 110) then
+            return
+        end
+
+        local cur_pos = api.nvim_win_get_cursor(win)
+        local buf_res = results[buf]
+        if buf_res then
+            local ntr = require("nvim-tools.range")
+            if ntr.ranges_have_pos(buf_res.highlights, cur_pos) then
+                if not buf_res.has_decor then
+                    api.nvim__redraw({ buf = buf, valid = true, flush = false })
+                end
+
+                return
+            end
+
+            res_reset_and_ns_clear(buf_res, buf)
+        end
+
+        request_auto(win, buf, cur_pos)
     end
 end
 
@@ -864,7 +981,7 @@ end
 local function buf_disable(buf)
     bufs_disabled[buf] = true
     buf_rm_autocmds(buf)
-    result_clear_and_redraw_checked(buf)
+    buf_res_clear_and_redraw(buf)
 end
 
 ---@param client vim.lsp.Client
@@ -872,8 +989,33 @@ local function buf_autocmds_create_for_client(client)
     for buf, _ in pairs(client.attached_buffers) do
         buf_autocmds_create(buf)
         if buf == api.nvim_get_current_buf() then
+            local ok, win = global_can_send_request()
             api.nvim__ns_set(ns, { wins = { api.nvim_get_current_win() } })
-            request_auto(buf)
+            if not ok then
+                return
+            end
+
+            local mode = api.nvim_get_mode().mode
+            if not (#mode == 1 and string.byte(mode, 1) == 110) then
+                return
+            end
+
+            local cur_pos = api.nvim_win_get_cursor(win)
+            local buf_res = results[buf]
+            if buf_res then
+                local ntr = require("nvim-tools.range")
+                if ntr.ranges_have_pos(buf_res.highlights, cur_pos) then
+                    if not buf_res.has_decor then
+                        api.nvim__redraw({ buf = buf, valid = true, flush = false })
+                    end
+
+                    return
+                end
+
+                res_reset_and_ns_clear(buf_res, buf)
+            end
+
+            request_auto(win, buf, cur_pos)
         end
     end
 end
@@ -936,7 +1078,7 @@ function M.enable(enabled, bufs, client_ids)
         end
 
         for buf, res in pairs(results) do
-            result_clear_and_redraw_unchecked(buf, res)
+            buf_res_clear_and_redraw(buf, res)
         end
 
         return

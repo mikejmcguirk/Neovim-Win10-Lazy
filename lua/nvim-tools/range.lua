@@ -11,36 +11,71 @@ local M = {}
 --   - Treesitter/TS: 0,0,0,0 - exclusive end in the second pos
 --   - Quickfix: 1,1,1,1 - exclusive end in the second pos
 
----Inclusive indexed
----@param row_a integer
----@param col_a integer
----@param fin_row_a integer
----@param fin_col_a integer
----@param row_b integer
----@param col_b integer
+---@param r [integer, integer, integer, integer] Must be valid.
+---@param p [integer, integer]
 ---@return -1|0|1
-function M.cmp_pos(row_a, col_a, fin_row_a, fin_col_a, row_b, col_b)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row_a", row_a, is_uint)
-    vim.validate("col_a", col_a, is_uint)
-    vim.validate("fin_row_a", fin_row_a, is_uint)
-    vim.validate("fin_col_a", fin_col_a, is_uint)
-    vim.validate("row_b", row_b, is_uint)
-    vim.validate("col_b", col_b, is_uint)
-
-    if row_a <= row_b and row_b <= fin_row_a then
-        if row_b == row_a and col_b < col_a then
+function M.cmp_pos(r, p)
+    local r_sr = r[1]
+    local p_r = p[1]
+    local r_er = r[3]
+    if r_sr <= p_r and p_r <= r_er then
+        local r_sc = r[2]
+        local p_c = p[2]
+        if r_sr == p_r and p_c < r_sc then
             return -1
-        elseif fin_row_a == row_b and fin_col_a < col_b then
-            return 1
-        else
-            return 0
         end
-    elseif row_b < row_a then
-        return -1
-    else
-        return 1
+
+        local r_ec = r[4]
+        if r_er == p_r and r_ec < p_c then
+            return 1
+        end
+
+        return 0
     end
+
+    if r_er < p_r then
+        return -1
+    end
+
+    return 1
+end
+
+---Assumes ranges are valid, sorted, and do not overlap.
+---@param ranges [integer, integer, integer, integer][]
+---@param pos [integer, integer]
+---@return boolean
+function M.ranges_have_pos(ranges, pos)
+    local ranges_len = #ranges
+    if ranges_len == 0 then
+        return false
+    end
+
+    if ranges_len <= 16 then
+        for i = 1, ranges_len do
+            if M.cmp_pos(ranges[i], pos) == 0 then
+                return true
+            end
+        end
+
+        return false
+    end
+
+    local lo = 1
+    local hi = ranges_len
+    local bit = require("bit")
+    while lo < hi do
+        local mid = bit.rshift(lo + hi, 1)
+        local cmp_res = M.cmp_pos(ranges[mid], pos)
+        if cmp_res == -1 then
+            lo = mid + 1
+        elseif cmp_res == 1 then
+            hi = mid
+        else
+            return true
+        end
+    end
+
+    return M.cmp_pos(ranges[lo], pos) == 0
 end
 
 ---For ranges with end-inclusive indexes.

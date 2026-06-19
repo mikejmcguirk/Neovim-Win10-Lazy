@@ -1665,9 +1665,11 @@ function M.any(t, f)
     return false
 end
 
----Iterate through `t1` and `t2`, comparing their elements by index. If they are different
----lengths, the shorter one is used. Optionally provide a `key` to process the values and/or a
----comparison function `comp`.
+---Iterate through `t1` and `t2`, comparing their elements by index. Optionally provide a `key`
+---to process the values and/or a comparison function `comp`.
+---
+---Always `false` if the tables are different lengths or either table is length zero.
+---
 ---Example:
 ---```lua
 ---    local foo = { 1, 2, 3, 4, 5 }
@@ -1688,10 +1690,11 @@ end
 ---@param t2 U[]
 ---@param key nil|string|fun(v:T): any See: |key_fn|.
 ---@param comp? fun(a:T, b:U): boolean (Default: Shallow equality) Compatible with |table.sort()|.
----@return boolean Returns false if the shorter table has a length of zero.
+---@return boolean
 function M.cmp(t1, t2, key, comp)
-    local len = math.min(#t1, #t2)
-    if len == 0 then
+    local len = #t1
+    local t2_len = #t2
+    if len ~= t2_len or len == 0 then
         return false
     end
 
@@ -1709,13 +1712,22 @@ function M.cmp(t1, t2, key, comp)
     return true
 end
 
----For two-dimensional array `tt`, get the highest index value for which all sub-lists share the
+---For a two-dimensional array `tt`, gets the highest index where all sub-|lua-lists| share the
 ---same values. Optionally compare with `key`.
+---
+---Returns `nil` if the first indices do not share a value or if one of the lists has a length of
+---zero.
+---
+---Example:
+---```lua
+---    local foo = { { 1, 2, 3, 4, 5 }, { 1, 2, 3, 4 }, { 1, 2, 3 } }
+---    local bar = common_prefix(foo)
+---    -- bar = 3
+---```
 ---@generic T
 ---@param tt T[][]
 ---@param key nil|string|fun(v:T): any See: |key_fn|.
----@return uinteger? `nil` if the first index's values does not match. Or if one of the lists has
----     a zero length.
+---@return uinteger?
 function M.common_prefix(tt, key)
     local tt_len = #tt
     if tt_len == 0 then
@@ -1731,7 +1743,7 @@ function M.common_prefix(tt, key)
     for i = 1, tt_len do
         local tt_len_i = #tt[i]
         if tt_len_i == 0 then
-            return nil
+            return
         end
 
         tt_len_min = math.min(tt_len_min, tt_len_i)
