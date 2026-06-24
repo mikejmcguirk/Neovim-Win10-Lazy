@@ -77,10 +77,20 @@ local function rename_do(client, buf, cur_pos_ext, new_name)
     local encoding = client.offset_encoding
     local nts = require("nvim-tools.lsp")
     local params = nts.rename_params_create(buf, cur_pos_ext, encoding, new_name)
+    -- https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_rename
     client:request(RENAME, params, function(_, result, _)
+        -- TODO: Is this correct? If this is off spec, shouldn't it error? But isn't this typical?
         if result == nil then
             local msg = "Language server couldn't provide rename result"
             require("nvim-tools.lsp").log_and_echo(msg, 2, "WarningMsg", false)
+            return
+        end
+
+        if result == vim.NIL then
+            -- "null should be treated the same as WorkspaceEdit with no changes (no change was
+            -- required)."
+            local msg = "Nothing to rename."
+            require("nvim-tools.lsp").log_and_echo(msg, 1, "", false)
             return
         end
 
@@ -279,8 +289,8 @@ local function req_refs_handler(err, result, ctx, client_id)
         return
     end
 
-    if result == nil or #result == 0 then
-        -- No error. Both valid per the spec.
+    if result == nil or result == vim.NIL or #result == 0 then
+        -- No error. All valid per the spec.
         return
     end
 
@@ -434,7 +444,8 @@ local function req_prep_rn_handler_check_err(err, result)
         return
     end
 
-    if result == nil then
+    -- Both valid per the spec.
+    if result == nil or result == vim.NIL then
         output_noop()
         return
     end
@@ -615,6 +626,7 @@ function M.dispatcher(opts)
     ---@diagnostic disable-next-line: param-type-mismatch
     local params = nts.text_doc_pos_params_create(buf, cur_pos_ext, encoding)
 
+    -- https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_prepareRename
     local req_success, req_id = client:request(PREP, params, function(err, result, ctx)
         req_prep_rn_handler(err, result, ctx, buf, cur_pos_ext, prompt_default)
     end, buf)
