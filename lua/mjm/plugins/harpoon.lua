@@ -45,6 +45,7 @@ local function setup_harpoon()
                 -- TODO: Why does doing edit here work but doing edit manually doesn't display
                 -- relative line numbers?
                 -- TODO: Find a permanent solution for this.
+                -- vim.cmd.buffer(bufnr)
                 vim.cmd("edit " .. bufname)
                 vim.cmd("norm! zv")
 

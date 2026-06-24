@@ -7,10 +7,6 @@ mjm.v = {}
 mjm.v.fmt_lhs = "<leader>o"
 mjm.v.has_nerd_font = true
 
-local gen_lcs = "extends:»,precedes:«,nbsp:␣,trail:⣿"
-mjm.v.lcs = "tab:<->," .. gen_lcs
-mjm.v.lcs_tab = "tab:   ," .. gen_lcs
-
 mjm.v.shiftwidth = 4
 
 -- Temp interfaces until https://github.com/neovim/neovim/issues/38420

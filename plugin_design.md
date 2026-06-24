@@ -1,3 +1,5 @@
+TODO: Where does this go to actually be something that can be acted on?
+
 - For plugins that grep:
   * Only support rg out of the box
   * Provide interfaces for other grepprgs/plugins

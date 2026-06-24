@@ -47,7 +47,7 @@ set_opt("bri", true, global_scope)
 set_opt("lbr", true, global_scope)
 
 set_opt("ts", mjm.v.shiftwidth, global_scope)
-set_opt("sts", mjm.v.shiftwidth, global_scope)
+set_opt("sts", 0, global_scope)
 set_opt("sw", mjm.v.shiftwidth, global_scope)
 set_opt("et", true, global_scope)
 set_opt("sr", true, global_scope)
@@ -91,15 +91,13 @@ set_opt("cul", true, global_scope)
 autoset_winopt("WinEnter", "cul", true)
 autoset_winopt("WinLeave", "cul", false)
 
+-- MID: Is this a problem in non-lcs wins?
 set_opt("list", true, global_scope)
-set_opt("lcs", mjm.v.lcs, global_scope)
-autoset_winopt("InsertEnter", "list", false)
-autoset_winopt("InsertLeave", "list", true)
 
 -- On my monitors, for files under 10k lines, a centered vsplit will be on the color column
 set_opt("nu", true, global_scope)
 set_opt("rnu", true, global_scope)
-set_opt("cursorlineopt", "both", global_scope)
+set_opt("culopt", "both", global_scope)
 set_opt("cc", "80,100", global_scope)
 set_opt("nuw", 5, global_scope)
 set_opt("scl", "yes:1", global_scope)

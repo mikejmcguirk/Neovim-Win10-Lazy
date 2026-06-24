@@ -41,9 +41,21 @@ function M.copy(t)
     return ret
 end
 
----@generic T, V, R
----@param t T
----@param f fun(k:T, v:V): R|nil
+---@generic T, V
+---@param t table<T, V>
+---@return uinteger
+function M.keys_count(t)
+    local count = 0
+    for _, _ in pairs(t) do
+        count = count + 1
+    end
+
+    return count
+end
+
+---@generic K, V, R
+---@param t table<K, V>
+---@param f fun(k:K, v:V): R|nil
 function M.filter_map_to(t, f)
     local ret = {}
     for k, v in pairs(t) do
@@ -68,6 +80,23 @@ function M.filter(t, f)
             t[k] = nil
         end
     end
+end
+
+---@generic K, V, A, C, U
+---@param t table<K, V>
+---@param f fun(k:K, v:V, acc:A, acc2:C, acc3: U): A|nil, C|nil, U|nil
+---@param init A?
+---@param init2 C?
+---@param init3? U
+function M.fold3(t, f, init, init2, init3)
+    local acc = init
+    local acc2 = init2
+    local acc3 = init3
+    for k, v in pairs(t) do
+        acc, acc2, acc3 = f(k, v, acc, acc2, acc3)
+    end
+
+    return acc, acc2, acc3
 end
 
 ---@generic K

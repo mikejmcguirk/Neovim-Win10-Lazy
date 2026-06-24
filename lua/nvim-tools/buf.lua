@@ -541,6 +541,39 @@ function M.protected_del(buf, delist, opts)
     end
 end
 
+---If buf is nil, use the buf from the range.
+---@param range nvim-tools.Range|nvim-tools.range.BufRange
+---@param buf? uinteger
+---@return string
+function M.get_text_from_range(range, buf)
+    buf = buf ~= nil and buf or range[5]
+    return api.nvim_buf_get_text(buf, range[1], range[2], range[3], range[4], {})[1] or ""
+end
+
+---@param cur_pos_ext [uinteger, uinteger] 0, 0 indexed
+---@param buf uinteger
+---@param pattern string See |pattern|
+---@return nvim-tools.range.BufRange?
+function M.match_line_under_cursor(cur_pos_ext, buf, pattern)
+    local row = cur_pos_ext[1]
+    local col = cur_pos_ext[2]
+
+    local re = vim.regex(pattern)
+    local init = 0
+    while true do
+        local sc, ec_ = re:match_line(buf, row, init)
+        if sc == nil or ec_ == nil then
+            return nil
+        end
+
+        if sc <= col and col < ec_ then
+            return { row, sc, row, ec_, buf }
+        end
+
+        init = ec_
+    end
+end
+
 ---@param bufnr integer
 ---@return boolean, integer, string|nil, string|nil
 function M.resolve_bufnr(bufnr)

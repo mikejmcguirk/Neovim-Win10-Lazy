@@ -47,6 +47,7 @@ require("mjm.undotree")
 require("mjm.difftool")
 
 require("mjm.set")
+require("mjm.lcs")
 require("mjm.autocmd")
 require("mjm.map")
 require("mjm.custom-cmds")
@@ -55,7 +56,7 @@ require("mjm.diagnostics")
 require("mjm.ts-tools")
 require("mjm.tal")
 
-require("mjm.document_highlight")
+require("catharsis.document_highlight")
 require("mjm.lsp")
 
 if not api.nvim_buf_is_valid(1) then

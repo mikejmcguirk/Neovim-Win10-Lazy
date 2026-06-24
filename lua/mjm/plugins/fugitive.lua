@@ -6,7 +6,7 @@ local function commit(all, msg)
     local args = "commit" .. (all and " -a" or "")
     if msg then
         local prompt = "Commit message" .. (all and " (ALL)" or "") .. ": "
-        local ok, result = require("nvim-tools.ui").get_input(prompt)
+        local ok, result = require("nvim-tools.ui").input({ prompt = prompt })
         if not ok then
             local chunks = { (result or "Unknown error getting input"), "ErrorMsg" }
             api.nvim_echo({ chunks }, true, { err = true })
@@ -79,7 +79,7 @@ local function setup_fugitive()
     set("n", "<leader>gR", function()
         local ntu = require("nvim-tools.ui")
         ---@type boolean, string
-        local ok, input = ntu.get_input("reset --soft HEAD~1 ? [y/n]: ")
+        local ok, input = ntu.input({ prompt = "reset --soft HEAD~1 ? [y/n]: " })
         if not ok then
             local err = input or "Unknown error getting input"
             ntu.echo_err(false, err, "ErrorMsg")

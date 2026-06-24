@@ -253,7 +253,7 @@ local function read_file_async(path, callback)
 
         uv.fs_fstat(fd, function(stat_err, stat)
             local ok_s, err_s = M.fs_fstat_file_validate(path, stat_err, stat)
-            if not ok_s then
+            if not (ok_s and stat) then
                 uv.fs_close(fd, function() end)
                 callback(err_s, nil)
                 return
@@ -421,6 +421,36 @@ function M.fs_read_list_get_errs(results)
     end
 
     return table.concat(errs_tbl, "\n")
+end
+
+---@param path string
+---@return boolean, string?
+function M.read_file(path)
+    local fd, o_err, o_err_name = uv.fs_open(path, "r", 292)
+    if not fd then
+        -- TODO: sloppy
+        local msg = path .. ": " .. o_err_name .. " - " .. o_err
+        return false, msg
+    end
+
+    local fstat, f_err, f_err_name = uv.fs_fstat(fd)
+    if not fstat then
+        uv.fs_close(fd, function() end)
+        -- TODO: sloppy
+        local msg = path .. ": " .. f_err_name .. " - " .. f_err
+        return false, msg
+    end
+
+    local text, r_err, r_err_name = uv.fs_read(fd, fstat.size, 0)
+    if not text then
+        uv.fs_close(fd, function() end)
+        -- TODO: sloppy
+        local msg = path .. ": " .. r_err_name .. " - " .. r_err
+        return false, msg
+    end
+
+    uv.fs_close(fd, function() end)
+    return true, text
 end
 
 return M

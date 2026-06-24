@@ -2,7 +2,10 @@ local api = vim.api
 
 local M = {}
 
----@alias nvim-tools.Pos [integer, integer]|[integer, integer, integer]|vim.Pos
+---@alias nvim-tools.Pos [uinteger, uinteger]
+
+---Buf should be in position 3 for compatibilty with vim.Pos
+---@alias nvim-tools.BufPos [uinteger, uinteger, uinteger]
 
 --------------------
 -- MARK: Creation --
@@ -14,14 +17,6 @@ local M = {}
 ---@param bufnr integer
 ---@return integer, integer 1,0 indexed, end inclusive
 function M.mark_from_raw_qf(lnum, col, vcol, bufnr)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("lnum", lnum, is_uint)
-    vim.validate("col", col, is_uint)
-    vim.validate("bufnr", bufnr, is_uint)
-    vim.validate("vcol", vcol, function()
-        return vcol == 0 or vcol == 1
-    end)
-
     local line_count = api.nvim_buf_line_count(bufnr)
     local row_1 = math.min(lnum, line_count)
 
@@ -74,12 +69,6 @@ end
 ---@param col_b integer
 ---@return boolean
 function M.eq(row_a, col_a, row_b, col_b)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row_a", row_a, is_uint)
-    vim.validate("col_a", col_a, is_uint)
-    vim.validate("row_b", row_b, is_uint)
-    vim.validate("col_b", col_b, is_uint)
-
     return row_a == row_b and col_a == col_b
 end
 
@@ -90,12 +79,6 @@ end
 ---@param col_b integer
 ---@return boolean
 function M.lt(row_a, col_a, row_b, col_b)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row_a", row_a, is_uint)
-    vim.validate("col_a", col_a, is_uint)
-    vim.validate("row_b", row_b, is_uint)
-    vim.validate("col_b", col_b, is_uint)
-
     return row_a < row_b or row_a == row_b and col_a < col_b
 end
 
@@ -106,12 +89,6 @@ end
 ---@param col_b integer
 ---@return boolean
 function M.gt(row_a, col_a, row_b, col_b)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row_a", row_a, is_uint)
-    vim.validate("col_a", col_a, is_uint)
-    vim.validate("row_b", row_b, is_uint)
-    vim.validate("col_b", col_b, is_uint)
-
     return row_a > row_b or row_a == row_b and col_a > col_b
 end
 
@@ -121,12 +98,6 @@ end
 ---@param col_b integer
 ---@return number
 function M.pythagorean_dist(row_a, col_a, row_b, col_b)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row_a", row_a, is_uint)
-    vim.validate("col_a", col_a, is_uint)
-    vim.validate("row_b", row_b, is_uint)
-    vim.validate("col_b", col_b, is_uint)
-
     local delta_row = row_b - row_a
     local delta_col = col_b - col_a
     return math.sqrt(delta_row * delta_row + delta_col * delta_col)
@@ -161,11 +132,6 @@ end
 ---@param buf integer
 ---@return integer, integer 0,0 indexed, inclusive end
 function M.api_to_ext(row, col_, buf)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col_, is_uint)
-    vim.validate("buf", buf, is_uint)
-
     local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
     if #line > 0 then
         local prev_fin_idx_1 = col_
@@ -193,10 +159,6 @@ end
 ---@param col_ integer 0 indexed, exclusive
 ---@return integer, integer 1,1 indexed, exclusive end
 function M.api_to_vex(row, col_)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col_, is_uint)
-
     return row + 1, col_ + 1
 end
 
@@ -216,10 +178,6 @@ end
 ---@param col integer 1 indexed, inclusive
 ---@return integer, integer 0,0 indexed, inclusive end
 function M.eval_to_ext(row, col)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col, is_uint)
-
     return row - 1, col - 1
 end
 
@@ -227,10 +185,6 @@ end
 ---@param col integer 1 indexed, inclusive
 ---@return integer, integer 1,0 indexed, inclusive end
 function M.eval_to_mark(row, col)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col, is_uint)
-
     return row, col - 1
 end
 
@@ -239,11 +193,6 @@ end
 ---@param buf integer
 ---@return integer, integer 1,1 indexed, exclusive end
 function M.eval_to_vex(row, col, buf)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col, is_uint)
-    vim.validate("buf", buf, is_uint)
-
     local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
     if #line > 0 then
         local distance = vim.str_utf_end(line, col)
@@ -260,11 +209,6 @@ end
 ---@param buf integer
 ---@return integer, integer 0,0 indexed, exclusive end
 function M.ext_to_api(row, col, buf)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col, is_uint)
-    vim.validate("buf", buf, is_uint)
-
     local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
     if #line > 0 then
         local col_1 = col + 1
@@ -281,10 +225,6 @@ end
 ---@param col integer 0 indexed, inclusive
 ---@return integer, integer 1,1 indexed, inclusive end
 function M.ext_to_eval(row, col)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col, is_uint)
-
     return row + 1, col + 1
 end
 
@@ -292,10 +232,6 @@ end
 ---@param col integer 0 indexed, inclusive
 ---@return integer, integer 1,0 indexed, inclusive end
 function M.ext_to_mark(row, col)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col, is_uint)
-
     return row + 1, col
 end
 
@@ -311,12 +247,12 @@ function M.ext_to_vex(row, col, buf)
     return row_1, col__1
 end
 
----Non-trivially faster than using the public APIS.
+---Non-trivially faster than using the public APIs.
 ---@param buf integer
 ---@param position lsp.Position
 ---@param encoding lsp.PositionEncodingKind
 ---@return integer, integer
-function M.lsp_to_ext(buf, position, encoding)
+function M.lsp_to_ext_buf_loaded(buf, position, encoding)
     local row, col = position.line, position.character
     if col > 0 and encoding ~= "utf-8" then
         local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1] or ""
@@ -325,19 +261,51 @@ function M.lsp_to_ext(buf, position, encoding)
 
     return row, col
 end
--- TODO: This only works if the buf is loaded. Either make a specific "could handle either"
--- function or integrate into here. (probably former since we want this for cases like
--- document_highlight where we know it's loaded and we can skip the loaded check logic.)
+
+---Bespoke version to avoid vim.pos conversion.
+---@param pos nvim-tools.Pos
+---@param buf uinteger
+---@param encoding lsp.PositionEncodingKind
+---@return lsp.Position
+function M.ext_to_lsp(pos, buf, encoding)
+    local row = pos[1]
+    local col = pos[2]
+    if encoding == "utf-8" then
+        return { line = row, character = col }
+    end
+
+    if col > 0 then
+        local nts = require("nvim-tools.lsp")
+        local line = nts.get_line(buf, row)
+        local nti = require("nvim-tools.str")
+        ---@diagnostic disable-next-line: param-type-mismatch
+        col = nti.str_utfindex(line, encoding, col)
+        return { line = row, character = col }
+    end
+
+    if
+        not (
+            row == api.nvim_buf_line_count(buf)
+            and api.nvim_get_option_value("endofline", { buf = buf }) == false
+
+        )
+    then
+        return { line = row, character = col }
+    end
+
+    row = row - 1
+    local nts = require("nvim-tools.lsp")
+    local line = nts.get_line(buf, row)
+    local nti = require("nvim-tools.str")
+    ---@diagnostic disable-next-line: param-type-mismatch
+    col = nti.str_utfindex(line, encoding, col)
+    return { line = row, character = col }
+end
 
 ---@param row integer 1 indexed
 ---@param col integer 0 indexed, inclusive
 ---@return integer, integer 0,0 indexed, exclusive end
 function M.mark_to_api(row, col, buf)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col, is_uint)
-    vim.validate("buf", buf, is_uint)
-
     local row_0 = row - 1
 
     local line = api.nvim_buf_get_lines(buf, row_0, row, false)[1]
@@ -356,10 +324,6 @@ end
 ---@param col integer 0 indexed, inclusive
 ---@return integer, integer 1,0 indexed, inclusive end
 function M.mark_to_eval(row, col)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col, is_uint)
-
     return row, col + 1
 end
 
@@ -367,10 +331,6 @@ end
 ---@param col integer 0 indexed, inclusive
 ---@return integer, integer 0,0 indexed, inclusive end
 function M.mark_to_ext(row, col)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col, is_uint)
-
     return row - 1, col
 end
 
@@ -398,10 +358,6 @@ end
 ---@param col_ integer 1 indexed, exclusive
 ---@return integer, integer 0,0 indexed, exclusive end
 function M.vex_to_api(row, col_)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col_, is_uint)
-
     return row - 1, col_ - 1
 end
 
@@ -410,11 +366,6 @@ end
 ---@param buf integer
 ---@return integer, integer 1,1 indexed, inclusive end
 function M.vex_to_eval(row, col_, buf)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col_, is_uint)
-    vim.validate("buf", buf, is_uint)
-
     local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
     if #line > 0 then
         local prev_fin_idx = col_ - 1
@@ -458,10 +409,6 @@ end
 ---@param buf integer
 ---@return integer, integer 0,0 indexed, exclusive
 function M.adj_api_pos(row, col_, buf)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col_, is_uint)
-    vim.validate("buf", buf, is_uint)
     if not api.nvim_buf_is_valid(buf) then
         error("Buffer " .. buf .. " is not valid")
     end
@@ -481,10 +428,6 @@ end
 ---@param buf integer
 ---@return integer, integer 1,1 indexed, inclusive
 function M.adj_eval_pos(row, col, buf)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col, is_uint)
-    vim.validate("buf", buf, is_uint)
     if not api.nvim_buf_is_valid(buf) then
         error("Buffer " .. buf .. " is not valid")
     end
@@ -503,10 +446,6 @@ end
 ---@param buf integer
 ---@return integer, integer 0,0 indexed, inclusive
 function M.adj_ext_pos(row, col, buf)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col, is_uint)
-    vim.validate("buf", buf, is_uint)
     if not api.nvim_buf_is_valid(buf) then
         error("Buffer " .. buf .. " is not valid")
     end
@@ -525,10 +464,6 @@ end
 ---@param buf integer
 ---@return integer, integer 1,0 indexed, inclusive
 function M.adj_mark_pos(row, col, buf)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col, is_uint)
-    vim.validate("buf", buf, is_uint)
     if not api.nvim_buf_is_valid(buf) then
         error("Buffer " .. buf .. " is not valid")
     end
@@ -551,10 +486,6 @@ end
 ---@param buf integer
 ---@return integer, integer 1,1 indexed, exclusive
 function M.adj_vex_pos(row, col_, buf)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("row", row, is_uint)
-    vim.validate("col", col_, is_uint)
-    vim.validate("buf", buf, is_uint)
     if not api.nvim_buf_is_valid(buf) then
         error("Buffer " .. buf .. " is not valid")
     end

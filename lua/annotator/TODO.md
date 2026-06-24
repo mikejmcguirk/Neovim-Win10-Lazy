@@ -190,6 +190,8 @@ Uses:
   - [ ] This function could also, optionally, detect if there is whitespace after the border and add it if not.
 - [ ] Make internal searching support injected languages
 
+- [ ] Grep multiple annotations at once.
+
 ## LOW:
 
 - [ ] It should be possible for annotation adding to automatically add borders afterwards. The problem is that the user shouldn't be trapped in this behavior. For <esc> users, this is not an issue, as exiting insert mode with <Esc> would trigger the border addition, whereas <C-c> would cancel it. I'm not sure what the best key is for <C-c> users by default (though obviously it should be mappable to whatever the user wants). I'm also not sure how you detect what key is used to exit insert mode. Could be on_key. Could be a temp keymap.

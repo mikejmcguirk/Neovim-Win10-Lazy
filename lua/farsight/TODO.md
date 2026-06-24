@@ -14,6 +14,8 @@
 
 #### TODO:
 
+  - [ ] If doing multi-win, and buf is in multiple wins, should check to see if there is overlapping area. If so, should not redo search() in same area. Should be able to copy over targets
+
 - [ ] The modules and code we want to continue with need a deeper audit.
   - [ ] Based on that audit, then extract the TODO info
 

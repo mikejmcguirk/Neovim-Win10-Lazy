@@ -32,12 +32,12 @@ function M.get_echospace()
 end
 -- PR: cmdheight is local to tabpage, but get_option_value does not have a tab key
 
----@param prompt string
+---@param opts? vim.ui.input.Opts
 ---@return boolean, string
-function M.get_input(prompt)
-    vim.validate("prompt", prompt, "string")
+function M.input(opts)
+    vim.validate("opts", opts, "table", true)
 
-    local ok, result = pcall(fn.input, { prompt = prompt, cancelreturn = "" })
+    local ok, result = pcall(fn.input, opts)
     if (not ok) and result == "Keyboard interrupt" then
         return true, ""
     else

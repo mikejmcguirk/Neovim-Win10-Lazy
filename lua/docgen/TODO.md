@@ -2,6 +2,8 @@
 
 #### TODO:
 
+it simply cannot be the case that we are doing like manual see annotations then trying to divine what the tags should be. even under simpler assumptions there's a bunch of like data assumptions or knowledge or whatever you have to keep in mind. it can't be the @see tag probably because um it's like encoding too much meaning into it, but there needs to be a way to like tag things with a name that other things can be picked up. so that way see and deprecate tags can all auto resolve
+
 render lower level md heades as the green squiggly
 if we want to do equals, dash, and green, then that gives you 1/2, 3/4, 5/6. feels simple, even though tilde borders aren't included
 

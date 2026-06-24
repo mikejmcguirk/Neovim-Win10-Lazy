@@ -1,3 +1,5 @@
+local uv = vim.uv
+
 local M = {}
 
 ---@param str string
@@ -37,6 +39,20 @@ function M.between_(a, b, x)
     return a < x and x < b
 end
 
+---@param mode string Potentially multi-character mode.
+function M.is_insert_mode(mode)
+    local byte_one = string.byte(mode, 1)
+    if byte_one == 82 or byte_one == 105 then
+        return true
+    end
+
+    if 2 <= #mode and byte_one == 110 and string.byte(mode, 2) == 105 then
+        return true
+    end
+
+    return false
+end
+
 ---@param str string
 ---@param new_items string[]
 ---@param sep string
@@ -63,9 +79,9 @@ M.nonnil = vim.not_nil or vim.F.if_nil
 ---@param timer uv.uv_timer_t|nil
 ---@return nil
 function M.close_timer(timer)
-    if timer and not timer:is_closing() then
-        timer:stop()
-        timer:close()
+    if timer and not uv.is_closing(timer) then
+        uv.timer_stop(timer)
+        uv.close(timer)
     end
 
     return nil

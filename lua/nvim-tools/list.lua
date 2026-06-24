@@ -2382,21 +2382,15 @@ end
 ---     current list value, and current list index. Returns the next accumulator.
 ---     Returning a `nil` accumulator value will be accepted and overwrite the previous value.
 ---@param init any First accumulator value. If `nil`, the first value of `t`.
----@see |iter-indexing|
----@param start integer? (Default: `1`)
----@param stop integer? Default: Length of `t`
 ---@param rev? boolean (Default: `false`) If true, iterate from the end.
 ---@return any `init` if `t` is length zero.
-function M.fold(t, f, init, start, stop, rev)
+function M.fold(t, f, init, rev)
     local t_len = #t
-    start = iter_idx_resolve(start, t_len, 1)
-    stop = iter_idx_resolve(stop, t_len, t_len)
-    if t_len == 0 or start > stop then
+    if t_len == 0 then
         return init
     end
 
-    local step
-    start, stop, step = resolve_rev(start, stop, rev)
+    local start, stop, step = resolve_rev(1, t_len, rev)
     local acc = init
     if acc == nil then
         acc = t[start]
@@ -2409,6 +2403,7 @@ function M.fold(t, f, init, start, stop, rev)
 
     return acc
 end
+-- TODO: Unsure if I need/want the init voodoo
 
 ---Apply a function to a list's elements, transforming them into two values.
 ---@generic T
@@ -2419,21 +2414,15 @@ end
 ---@param init any First accumulator value. Value at the `start` index if nil.
 ---@param init2 any Second accumulator value. Accepts a `nil` value without additional
 ---     transformation.
----@see |iter-indexing|
----@param start integer? (Default: `1`)
----@param stop integer? Default: Length of `t`
 ---@param rev? boolean (Default: `false`) If true, iterate from the end.
 ---@return any, any `init`, `init2` if `t` is length zero.
-function M.fold2(t, f, init, init2, start, stop, rev)
+function M.fold2(t, f, init, init2, rev)
     local t_len = #t
-    start = iter_idx_resolve(start, t_len, 1)
-    stop = iter_idx_resolve(stop, t_len, t_len)
-    if t_len == 0 or start > stop then
+    if t_len == 0 then
         return init, init2
     end
 
-    local step
-    start, stop, step = resolve_rev(start, stop, rev)
+    local start, stop, step = resolve_rev(1, t_len, rev)
     local acc = init
     if acc == nil then
         acc = t[start]

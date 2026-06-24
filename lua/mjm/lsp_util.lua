@@ -37,7 +37,7 @@ function M.client_get_references(client, buf, row, col, include_declaration)
         end
 
         local nts = require("nvim-tools.lsp")
-        local _ranges = nts.buf_ranges_from_locations(results, encoding)
+        local _ranges = nts.ranges_from_locations_by_buf(results, encoding)
     end)
 end
 -- TODO: Does this need to be an M function?

@@ -3,6 +3,11 @@ local fn = vim.fn
 
 local M = {}
 
+---@alias nvim-tools.Range [uinteger, uinteger, uinteger, uinteger]
+
+---Buf should be in position 5 for compatibility with vim.range.
+---@alias nvim-tools.range.BufRange  [uinteger, uinteger, uinteger, uinteger, uinteger]
+
 -- Range naming:
 -- - Using a pos name means both the start and end parts of the range share the pos indexing.
 --   - eval would be 1,1,1,1 - inclusive ends
@@ -10,6 +15,10 @@ local M = {}
 -- - Range specific names:
 --   - Treesitter/TS: 0,0,0,0 - exclusive end in the second pos
 --   - Quickfix: 1,1,1,1 - exclusive end in the second pos
+
+----------------------
+-- MARK: Comparison --
+----------------------
 
 ---@param r [integer, integer, integer, integer] Must be valid.
 ---@param p [integer, integer]
@@ -39,6 +48,11 @@ function M.cmp_pos(r, p)
 
     return 1
 end
+-- TODO: This is conceptually fuzzy, because if you're talking about a range relative to a pos,
+-- that introduces the concept of less than vs range end only overlapping with pos, since we
+-- have that concept with range vs. range. This should be in the pos module, then just saying
+-- lt/eq/gt conceptually makes sense. Usages of this would need to be inverted since pos
+-- becomes the "a" object.
 
 ---Assumes ranges are valid, sorted, and do not overlap.
 ---@param ranges [integer, integer, integer, integer][]
@@ -76,6 +90,64 @@ function M.ranges_have_pos(ranges, pos)
     end
 
     return M.cmp_pos(ranges[lo], pos) == 0
+end
+
+---@generic T
+---@param ranges (nvim-tools.Range|nvim-tools.range.BufRange)[]
+---@param cmp fun(r:nvim-tools.Range|nvim-tools.range.BufRange): -1|0|1
+--- -1: val < r
+---  0: val == r
+---  1: val > r
+---@return integer
+---Insert at returned index to maintain order. Returns `n+1` when you must append.
+function M.bisect_lo(ranges, cmp)
+    local n = #ranges
+    if n == 0 then
+        return 1
+    end
+
+    local bit = require("bit")
+    local lo = 1
+    local hi = n + 1
+    while lo < hi do
+        local mid = bit.rshift(lo + hi, 1)
+        if cmp(ranges[mid]) <= 0 then
+            hi = mid
+        else
+            lo = mid + 1
+        end
+    end
+
+    return lo
+end
+
+---@generic T
+---@param ranges (nvim-tools.Range|nvim-tools.range.BufRange)[]
+---@param cmp fun(r:nvim-tools.Range|nvim-tools.range.BufRange): -1|0|1
+--- -1: val < r
+--- 0: val == r
+--- 1: val > r
+---@return integer
+---Insert after returned index to maintain order. Returns `0` when you must prepend.
+function M.bisect_hi(ranges, cmp)
+    local ranges_len = #ranges
+    if ranges_len == 0 then
+        return 0
+    end
+
+    local bit = require("bit")
+    local lo = 1
+    local hi = ranges_len + 1
+    while lo < hi do
+        local mid = bit.rshift(lo + hi, 1)
+        if cmp(ranges[mid]) < 0 then
+            hi = mid
+        else
+            lo = mid + 1
+        end
+    end
+
+    return lo - 1
 end
 
 ---For ranges with end-inclusive indexes.
@@ -120,6 +192,14 @@ end
 ---@return boolean
 function M.adjacent_(a, b)
     return (a[3] == b[1] and a[4] == b[2]) or (b[3] == a[1] and b[4] == a[2])
+end
+
+---@param range [uinteger, uinteger, uinteger, uinteger]
+function M.bit_pack_key(range)
+    return bit.lshift(range[1], 0)
+        + bit.lshift(range[2], 14)
+        + bit.lshift(range[3], 24)
+        + bit.lshift(range[4], 38)
 end
 
 ---For ranges with end-inclusive indexing.
@@ -319,6 +399,9 @@ function M.resolve_raw_qf(lnum, col, end_lnum, end_col, vcol, bufnr)
 
     return { row_1, col_1, fin_row_1, fin_col_1_ }
 end
+-- TODO: Document why qf ranges are exclusive. I think if you go in the code for like vimgrep
+-- it does that. And I think diagnostics are end-exclusive because they're LSP indexing. But
+-- I keep forgetting why this is so it's better noted down.
 
 ---@param qf_range Range4
 function M.qf_to_ts(qf_range)
@@ -330,83 +413,166 @@ function M.qf_to_ts(qf_range)
     qf_range[4] = qf_range[4] - 1
 end
 
--- TODO: find somewhere to put the LSP stuff
-
----@param ranges [integer, integer, integer, integer][]
----@return table<integer, true>
-local function lsp_ranges_rows_needed_get(ranges)
-    local rows_needed = {} ---@type table<integer, true>
-    for _, range in ipairs(ranges) do
-        rows_needed[range[1]] = true
-        rows_needed[range[3]] = true
+---@param range nvim-tools.Range
+---@return table<uinteger, true>
+function M.rows_from_range_map(range)
+    local rows = {} ---@type table<uinteger, true>
+    local start_row = range[1]
+    local end_row = range[3]
+    local step = end_row - start_row >= 0 and 1 or -1
+    for i = start_row, end_row, step do
+        rows[i] = true
     end
 
-    return rows_needed
+    return rows
 end
 
+---@param ranges nvim-tools.Range[]
+---@return table<uinteger, true>
+function M.rows_from_ranges_map(ranges)
+    local rows = {} ---@type table<uinteger, true>
+    local len_ranges = #ranges
+    for i = 1, len_ranges do
+        local range = ranges[i]
+        local start_row = range[1]
+        local end_row = range[3]
+        local step = end_row - start_row >= 0 and 1 or -1
+        for j = start_row, end_row, step do
+            rows[j] = true
+        end
+    end
+
+    return rows
+end
+
+---Bespoke version to avoid vim.range conversion and default str_utfindex.
+---@param range nvim-tools.Range
 ---@param buf integer
----@param ranges [integer, integer, integer, integer][]
----@return table<integer, string>
-local function lsp_range_lines_from_buf_loaded(buf, ranges)
-    local rows_needed = lsp_ranges_rows_needed_get(ranges)
-    local lines = {} ---@type table<integer, string>
-    for row, _ in pairs(rows_needed) do
-        lines[row] = api.nvim_buf_get_lines(buf, row, row + 1, false)[1] or ""
+---@param encoding lsp.PositionEncodingKind
+---@return lsp.Range
+function M.ext_to_lsp(range, buf, encoding)
+    local start_row = range[1]
+    local start_col = range[2]
+    local end_row = range[3]
+    local end_col = range[4]
+    if encoding == "utf-8" then
+        return {
+            start = { line = start_row, character = start_col },
+            ["end"] = { line = end_row, character = end_col },
+        }
     end
 
-    return lines
+    local line
+    local line_count = api.nvim_buf_line_count(buf)
+    local endofline = api.nvim_get_option_value("endofline", { buf = buf })
+    local nts = require("nvim-tools.lsp")
+    local nti = require("nvim-tools.str")
+    if start_col > 0 then
+        line = nts.get_line(buf, start_row)
+        ---@diagnostic disable-next-line: param-type-mismatch
+        start_col = nti.str_utfindex(line, encoding, start_col)
+    elseif start_col == 0 and start_row == line_count and endofline == false then
+        start_row = start_row - 1
+        line = nts.get_line(buf, start_row)
+        ---@diagnostic disable-next-line: param-type-mismatch
+        start_col = nti.str_utfindex(line, encoding, start_col)
+    end
+
+    if end_col > 0 then
+        if start_row ~= end_row and line == nil then
+            line = nts.get_line(buf, end_row)
+        end
+
+        ---@diagnostic disable-next-line: param-type-mismatch
+        end_col = nti.str_utfindex(line, encoding, end_col)
+    elseif end_col == 0 and end_row == line_count and endofline == false then
+        end_row = end_row - 1
+        if start_row ~= end_row and line == nil then
+            line = nts.get_line(buf, end_row)
+        end
+
+        ---@diagnostic disable-next-line: param-type-mismatch
+        end_col = nti.str_utfindex(line, encoding, end_col)
+    end
+
+    return {
+        start = { line = start_row, character = start_col },
+        ["end"] = { line = end_row, character = end_col },
+    }
 end
 
----@param buf integer
----@param ranges [integer, integer, integer, integer][]
----@return table<integer, string>
-local function lsp_range_lines_get(buf, ranges)
-    if api.nvim_buf_is_loaded(buf) then
-        return lsp_range_lines_from_buf_loaded(buf, ranges)
+---@param location lsp.Location|lsp.LocationLink
+---@param buf uinteger
+---@return nvim-tools.range.BufRange
+local function location_to_range(location, buf)
+    local range = location.range or location.targetSelectionRange
+    local range_start = range.start
+    local range_end = range["end"]
+    return {
+        range_start.line,
+        range_start.character,
+        range_end.line,
+        range_end.character,
+        buf,
+    }
+end
+-- MID: For lists, this forces us to check the range location on each object. But I'm not sure if
+-- we can assume all location results are the same format.
+
+---This handles both Location and LocationLink objects. If the object is a location link, it
+---will pull from the targetSelectionRange.
+---@param buf uinteger
+---@param locations lsp.Location[]|lsp.LocationLink[]
+---@param encoding lsp.PositionEncodingKind
+function M.lsp_locations_to_ext(buf, locations, encoding)
+    local ranges = {} ---@type nvim-tools.range.BufRange[]
+    local locations_len = #locations
+    for i = 1, locations_len do
+        ranges[i] = location_to_range(locations[i], buf)
     end
 
-    if not vim.startswith(vim.uri_from_bufnr(buf), "file://") then
-        fn.bufload(buf)
-        return lsp_range_lines_from_buf_loaded(buf, ranges)
+    if encoding == "utf-8" then
+        return ranges
     end
 
-    local lines = {}
-    -- TODO: Use uv to do this.
-    local ok, f_str = pcall(fn.readblob, api.nvim_buf_get_name(buf))
-    if not ok then
-        -- TODO: This is not a viable answer
-        return lines
+    local range_rows = M.rows_from_ranges_map(ranges)
+    local nts = require("nvim-tools.lsp")
+    local lines = nts.get_lines(buf, range_rows)
+
+    local ranges_len = #ranges
+    for i = 1, ranges_len do
+        local line
+        local range = ranges[i]
+        local start_row = range[1]
+        local start_col = range[2]
+        if start_col > 0 then
+            line = lines[start_row]
+            start_col = vim._str_byteindex(line, start_col, encoding == "utf-16")
+        end
+
+        local end_row = range[3]
+        local end_col = range[4]
+        if end_col > 0 then
+            if end_row ~= start_row or line == nil then
+                line = lines[end_row]
+            end
+
+            end_col = vim._str_byteindex(line, end_col, encoding == "utf-16")
+        end
     end
 
-    -- TODO: Even after switching to uv, can you split on just "\n" or do you need to account for
-    -- "\r\n" and "\r"? Does that affect docgen?
-    -- TODO: Is there a reason vim.gmatch was used here originally?
-    -- TODO: It might be necessary for the get lines function to return the count of lines
-    -- needed so we can do gsplit or gmatch here. Because I have to imagine it is slow to
-    -- eagerly split all lines when we only need a subset of them.
-    -- TODO: Would it be fastest to do string.find here and count the number of results, given
-    -- that find does not immediately pull the substring. I think you would use the gmatch
-    -- pattern there.
-    local f_lines = vim.split(f_str, "\n")
-    if #f_lines == 0 then
-        -- TODO: again this can't be the answer
-        return lines
-    end
-
-    local rows_needed = lsp_ranges_rows_needed_get(ranges)
-    for row, _ in pairs(rows_needed) do
-        lines[row] = f_lines[row + 1]
-    end
-
-    return lines
+    return ranges
 end
 
----Encoding ~= UTF-8 is not checked here to avoid redundancy. Callers should do so to avoid calling
----this function needlessly.
 ---@param buf integer
 ---@param ranges [integer, integer, integer, integer][] Modified in place!
-function M.lsp_parsed_locations_convert(buf, ranges, encoding)
-    local lines = lsp_range_lines_get(buf, ranges)
+---@param encoding 'utf-16'|'utf-32'|'utf-8'
+function M.lsp_parsed_locations_to_api(buf, ranges, encoding)
+    if encoding == "utf-8" then
+        return
+    end
+
+    local lines = M.lsp_range_lines_get(buf, ranges)
     for _, range in ipairs(ranges) do
         local start_row = ranges[1]
         local start_col = ranges[2]
@@ -415,19 +581,48 @@ function M.lsp_parsed_locations_convert(buf, ranges, encoding)
             range[2] = vim._str_byteindex(line, start_col, encoding == "utf-16")
         end
 
-        local end_row = ranges[1]
-        local end_col = ranges[2]
+        local end_row = ranges[3]
+        local end_col = ranges[4]
         if end_col > 0 then
             local line = lines[end_row]
-            range[2] = vim._str_byteindex(line, end_col, encoding == "utf-16")
+            range[4] = vim._str_byteindex(line, end_col, encoding == "utf-16")
         end
     end
 end
--- TODO: Bad naming. Implies that the data type is changing.
--- TODO: This feels bad because it doesn't use the pos helper. But there's no way to pass the
--- lines helper into there without it being illogical. If I remember right, the vim.pos helper
--- goes through the entire procedure to get a lines table even for only converting one position,
--- which is too much.
+-- TODO: Remove this
+
+---@param range lsp.Range
+---@param buf uinteger
+---@param encoding 'utf-16'|'utf-32'|'utf-8'
+function M.lsp_range_to_api_buf_loaded(range, buf, encoding)
+    if encoding == "utf-8" then
+        return
+    end
+
+    local range_start = range.start
+    local range_end = range["end"]
+
+    local start_row = range_start.line
+    local start_col = range_start.character
+
+    local line
+    if start_col > 0 then
+        line = api.nvim_buf_get_lines(buf, start_row, start_row + 1, false)[1]
+        start_col = vim._str_byteindex(line, start_col, encoding == "utf-16")
+    end
+
+    local end_row = range_end.line
+    local end_col = range_end.character
+    if end_col > 0 then
+        if end_row ~= start_row or line == nil then
+            line = api.nvim_buf_get_lines(buf, end_row, end_row + 1, false)[1]
+        end
+
+        end_col = vim._str_byteindex(line, end_col, encoding == "utf-16")
+    end
+
+    return { start_row, start_col, end_row, end_col }
+end
 
 -------------------------
 -- MARK: Range Helpers --
@@ -436,7 +631,7 @@ end
 ---@param a [integer, integer, integer, integer]
 ---@param b [integer, integer, integer, integer]
 ---@return boolean
-function M.range_sort_predicate(a, b)
+function M.range_sort_predicate_asc(a, b)
     if a[1] ~= b[1] then
         return a[1] < b[1]
     end

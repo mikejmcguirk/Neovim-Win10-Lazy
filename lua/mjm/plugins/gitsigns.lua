@@ -52,7 +52,7 @@ return {
                 set("n", "<leader>hS", gitsigns.stage_buffer, buf_opt)
                 set("n", "<leader>hR", function()
                     local ntu = require("nvim-tools.ui")
-                    local ok, input = ntu.get_input("Reset buffer? [y/n]: ")
+                    local ok, input = ntu.input({ prompt = "Reset buffer? [y/n]: " })
                     if not ok then
                         local err = input or "Unknown error getting input"
                         ntu.echo_err(false, err, "ErrorMsg")

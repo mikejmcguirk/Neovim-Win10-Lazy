@@ -69,3 +69,9 @@ set({ "n", "x" }, "<M-d>", '"_d')
 set({ "n", "x" }, "<M-D>", '"_D')
 set({ "n", "x" }, "<M-c>", '"_c')
 set({ "n", "x" }, "<M-C>", '"_C')
+
+----------------
+
+set("n", "<leader>r", function()
+    require("catharsis.rename").dispatcher()
+end)

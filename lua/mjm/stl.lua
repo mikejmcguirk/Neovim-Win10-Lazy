@@ -326,7 +326,7 @@ function Mjm_Stl.active()
     local diffs = vim.b.gitsigns_status or "" ---@type string
     stl[1] = "%#stl_a# " .. head .. " " .. diffs .. "%* "
 
-    stl[2] = "%#stl_b# %m %f [" .. mode .. "] %*"
+    stl[2] = "%#stl_b# %m %t [" .. mode .. "] %*"
 
     -- update_in_insert for diags set to false. Avoid showing stale data
     local diags = (not bad_mode) and (diag_cache[buf] or "") or ""
@@ -343,6 +343,7 @@ function Mjm_Stl.active()
 
     return table.concat(stl, "")
 end
+-- MID: Show %f for filename when only one window, and %t for tail when multiple windows.
 
 ---@return string
 function Mjm_Stl.inactive()

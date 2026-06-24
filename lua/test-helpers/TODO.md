@@ -1,3 +1,7 @@
+## TODO:
+
+This whole thing needs to be consolidated into nvim-tools
+
 ## REQS:
 
 #### HARD:
@@ -70,3 +74,44 @@
 - [ ] Lazy minit: https://github.com/folke/lazy.nvim/blob/main/lua/lazy/minit.lua
 - [ ] Snacks and flash tests
   - [ ] See if they have helper utils
+
+- [ ] testing framework
+  - Conversation in here about Nvim as Lua runner: https://github.com/neovim/neovim/pull/39116
+  - New core testing framework: https://github.com/neovim/neovim/commit/55f9c2136e52d8719495b6021ce7e8d64c5141fe
+    * https://github.com/neovim/neovim/pull/38486
+  - The best outcome would be to publicly expose the core testing framework. If I were to do it:
+    * As a PoC, I would need to create a plugin-based extraction of it
+      + This could be helpful simply because, in doing this, I might come up with something simpler than working with the core testutils
+      + Regardless of that, the goal would be to understand, in more detail, what the test framework does and how it needs to be accessed to be useful
+    * Based on my findings with the extraction, I would need to create an exposed dev build locally to make sure I actually knew how to do it
+    * Make an issue
+    * Make a draft PR
+  - This is after docgen, because making a public version of the test utils is an awareness item for the core devs. Not the case with docgen
+  - lewis's test plugin still feels like a source of relevant info
+  - needs to be plug and play. Can't be doing a bunch of config to make it work
+  - needs to work in CI
+  - Should, if at all possible, auto-create new nvim instances between tests so that doesn't need to be managed
+
+- [ ] make
+  * [ ] test
+    + [ ] Prompt if mini.test is missing
+  * [ ] fmt
+    + [ ] Run stylua
+  * [ ] doc
+    + [ ] Run docgen
+    + [ ] Prompt if missing
+  - [ ] lint:
+    * This should basically be minimum viable product level If issues come up they can be addressed
+    * An interesting question though is per-project linting rules.
+    * I think core just dumped their linter from CI. Unsure if there's another useful one out there
+    * [ ] WARN:
+      + [ ] Diagnostic disable messages
+    * [ ] FAIL:
+      + [ ] Lua_Ls diagnostics
+      + [ ] Formatting
+        + [ ] Multiple newline only lines
+        + [ ] Trailing whitespace
+
+- [ ] https://github.com/lewis6991/gitsigns.nvim
+  - Insanely well put together repo
+  - Worth looking at in terms of like, what does a MakeFile give you that's valuable. How do you structure testing, and so on.

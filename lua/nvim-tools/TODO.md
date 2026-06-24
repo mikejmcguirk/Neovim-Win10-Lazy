@@ -2,6 +2,8 @@
 
 #### TODO:
 
+- [ ] The file structure has to be changed so that most of the functions are in a "tools" folder. So the requires here willbe like `require("nvim-tools.tools.list")` or whatever. But then when you clone it for a project and rename it, you'll have `require("plugin.tools.list")` which will actually make sense.
+
 - [ ] Idea that feels like it's appropriate to represent here, or maybe we need a plugin-template superset thing - Lazydev is not the way for dealing with the problem of extended configs. What plugins should do is provide meta files that users can import into their settings so you can get the relevant type annotations. Maybe it should be something the runtime pulls?
 - [ ] In the makefile I think you add emmylua_check for linting
 
@@ -11,6 +13,8 @@
 - [ ] Needs to include default .luarc.json and stylua.toml
 
 - [ ] For testing, the test dir needs to include some folder structures + files that are checked for a specific arrangement so that fs functions can be tested without using mocks.
+
+- [ ] Proper pc mark behavior per meta doc
 
 #### DOCUMENT:
 
@@ -337,6 +341,13 @@
 - https://codeberg.org/fosskers/cl-transducers
 - https://common-lisp-libraries.readthedocs.io/iterate/
 
+## LSP
+
+#### MID:
+
+- [ ] Create other tools for pos/range processing from the LSP format
+  - DEP: Would need another bulk processing scenario where the perf gains over the Nvim core utils actually matters.
+
 ## pos
 
 ### TODO:
@@ -357,6 +368,10 @@
   * Same comment applies to string.byte
 - Use graphene aware utf positions if a use case comes up. I just really hate to do this because it's slower
 - The uint validation in these functions is load bearing because it prevents sub-zero values. In a real implementation in hot paths, vim.validate would not be present. But I also hate to speculatively make changes based on theoretical data breakage. The position adjustments are based on the premise of correcting stale positions after buffer changes. I have not seen negative values pollute positions before.
+
+#### PR
+
+- [ ] vim.pos.to_lsp uses the external pos.buf key instead of pos[3]. Hurts compatibility with pos.BufPos
 
 ## range
 
