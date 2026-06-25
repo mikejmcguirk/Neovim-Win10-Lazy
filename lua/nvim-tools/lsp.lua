@@ -86,11 +86,20 @@ end
 ---@return table<uinteger, nvim-tools.range.BufRange>
 function M.ranges_from_locations_by_buf(results, encoding, bufs)
     local ntl = require("nvim-tools.list")
+    -- Saves non-trivial time on large result sets.
+    local uri_bufnr_cache = {} ---@type table<string, uinteger>
     ---@type table<integer, (lsp.Location[]|lsp.LocationLink[])>
     local buf_locations = ntl.group_by(results, function(result)
         -- locations may be Location or LocationLink
         local uri = result.uri or result.targetUri
-        return vim.uri_to_bufnr(uri)
+        local cached = uri_bufnr_cache[uri]
+        if cached ~= nil then
+            return cached
+        end
+
+        local bufnr = vim.uri_to_bufnr(uri)
+        uri_bufnr_cache[uri] = bufnr
+        return bufnr
     end)
 
     if bufs ~= nil then

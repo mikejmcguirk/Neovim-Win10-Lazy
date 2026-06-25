@@ -9,17 +9,46 @@ local uv = vim.uv
 ----------------------------
 
 local PREP = "textDocument/prepareRename"
-local RENAME = "textDocument/rename"
 local REFS = "textDocument/references"
+local RENAME = "textDocument/rename"
 
 -----------------
 -- MARK: State --
 -----------------
 
-local state_bufs = {} ---@type table<integer, true>
-local state_ranges = {} ---@type nvim-tools.range.BufRange[]
-local state_req_refs_id = nil ---@type uinteger?
-local state_timer = assert(uv.new_timer())
+local DEFAULT_STATE_RANGES_HAS = false
+local DEFAULT_STATE_SYMBOL_LEN = math.floor(math.huge)
+
+local state_ranges = {} ---@type table<uinteger, nvim-tools.range.BufRange[]>
+local state_ranges_has = DEFAULT_STATE_RANGES_HAS
+local state_symbol_len = DEFAULT_STATE_SYMBOL_LEN
+
+---@param range nvim-tools.range.BufRange
+---@param buf uinteger
+local function preview_state_init(range, buf)
+    state_ranges[buf] = {}
+    state_ranges[buf][1] = range
+    state_ranges_has = true
+    state_symbol_len = range[4] - range[2]
+end
+
+---@param buf_ranges table<uinteger, nvim-tools.range.BufRange[]>
+local function preview_state_set_from_refs(buf_ranges)
+    state_ranges = buf_ranges
+    state_ranges_has = true
+    for _, ranges in pairs(buf_ranges) do
+        for _, range in ipairs(ranges) do
+            state_symbol_len = range[4] - range[2]
+            break
+        end
+    end
+end
+
+local function preview_state_clear_all()
+    require("nvim-tools.list").clear(state_ranges)
+    state_symbol_len = DEFAULT_STATE_SYMBOL_LEN
+    state_ranges_has = DEFAULT_STATE_RANGES_HAS
+end
 
 ----------------------------------------
 -- MARK: Hl Priorities and Namespaces --
@@ -34,7 +63,7 @@ api.nvim_set_hl(0, "Dimmed", { default = true, link = "Comment" })
 local hl_norm = api.nvim_get_hl_id_by_name("Normal")
 
 api.nvim_set_hl(0, "catharsisRenameDim", { default = true, link = "Dimmed" })
-api.nvim_set_hl(0, "catharsisRenameNew", { default = true, link = "Search" })
+api.nvim_set_hl(0, "catharsisRenameNew", { default = true, link = "Substitute" })
 local hl_dim = api.nvim_get_hl_id_by_name("catharsisRenameDim")
 local hl_new = api.nvim_get_hl_id_by_name("catharsisRenameNew")
 
@@ -42,27 +71,104 @@ local ns_dim = api.nvim_create_namespace("catharsis.rename.dim")
 local ns_dynamic = api.nvim_create_namespace("catharsis.rename.preview")
 
 local function clear_dim_namespaces()
-    for buf, _ in pairs(state_bufs) do
+    for buf, _ in pairs(state_ranges) do
         api.nvim_buf_clear_namespace(buf, ns_dim, 0, -1)
     end
 end
 
 local function clear_dynamic_preview_namespaces()
-    for buf, _ in pairs(state_bufs) do
+    for buf, _ in pairs(state_ranges) do
         api.nvim_buf_clear_namespace(buf, ns_dynamic, 0, -1)
     end
 end
 
-local function all_preview_data_clear()
-    for buf, _ in pairs(state_bufs) do
+---------------------------------------
+-- MARK: Preview Management Autocmds --
+---------------------------------------
+
+local function dim_marks_set_new()
+    clear_dim_namespaces()
+    if state_ranges_has == false then
+        return
+    end
+
+    for buf, ranges in pairs(state_ranges) do
+        for _, range in ipairs(ranges) do
+            api.nvim_buf_set_extmark(buf, ns_dim, range[1], range[2], {
+                end_row = range[3],
+                end_col = range[4],
+                hl_group = hl_dim,
+                priority = hl_dim_priority,
+            })
+        end
+    end
+end
+
+local function preview_marks_set_new()
+    clear_dynamic_preview_namespaces()
+    if state_ranges_has == false then
+        return
+    end
+
+    local new_text = fn.getcmdline()
+    if #new_text < 1 then
+        return
+    end
+
+    for buf, ranges in pairs(state_ranges) do
+        for _, range in ipairs(ranges) do
+            api.nvim_buf_set_extmark(buf, ns_dynamic, range[1], range[2], {
+                virt_text = { { new_text, hl_new } },
+                virt_text_pos = "overlay",
+                priority = hl_preview_priority,
+            })
+        end
+    end
+
+    local padding_len = #new_text - state_symbol_len
+    if padding_len <= 0 then
+        return
+    end
+
+    local padding = string.rep(" ", padding_len)
+    for buf, ranges in pairs(state_ranges) do
+        for _, range in ipairs(ranges) do
+            api.nvim_buf_set_extmark(buf, ns_dynamic, range[1], range[4], {
+                virt_text = { { padding, hl_norm } },
+                virt_text_pos = "inline",
+                priority = hl_padding_priority,
+            })
+        end
+    end
+end
+-- MID: Display the preview under the cursor using a different hl color.
+
+local function all_marks_set_new()
+    dim_marks_set_new()
+    preview_marks_set_new()
+end
+
+local group_name = "catharsis.rename"
+local group = api.nvim_create_augroup(group_name, {})
+local function preview_display_init()
+    dim_marks_set_new()
+    api.nvim_create_autocmd("CmdlineChanged", {
+        group = group,
+        callback = function()
+            preview_marks_set_new()
+        end,
+    })
+end
+
+local function preview_display_stop()
+    for buf, _ in pairs(state_ranges) do
         api.nvim_buf_clear_namespace(buf, ns_dim, 0, -1)
         api.nvim_buf_clear_namespace(buf, ns_dynamic, 0, -1)
     end
 
-    local ntl = require("nvim-tools.list")
-    ntl.clear(state_ranges)
-    local ntt = require("nvim-tools.table")
-    ntt.clear(state_bufs)
+    for _, autocmd in ipairs(api.nvim_get_autocmds({ group = group_name })) do
+        api.nvim_del_autocmd(autocmd.id)
+    end
 end
 
 ---------------------
@@ -94,85 +200,16 @@ local function rename_do(client, buf, cur_pos_ext, new_name)
         util.apply_workspace_edit(result, client.offset_encoding)
     end, buf)
 end
-
-------------------------------
--- MARK: Preview Management --
-------------------------------
-
-local function dim_marks_set_new()
-    clear_dim_namespaces()
-    for _, range in ipairs(state_ranges) do
-        api.nvim_buf_set_extmark(range[5], ns_dim, range[1], range[2], {
-            end_row = range[3],
-            end_col = range[4],
-            hl_group = hl_dim,
-            priority = hl_dim_priority,
-        })
-    end
-end
-
-local function preview_marks_set_new()
-    clear_dynamic_preview_namespaces()
-    local new_text = fn.getcmdline()
-    if #new_text < 1 or #state_ranges < 1 then
-        return
-    end
-
-    for _, range in ipairs(state_ranges) do
-        api.nvim_buf_set_extmark(range[5], ns_dynamic, range[1], range[2], {
-            virt_text = { { new_text, hl_new } },
-            virt_text_pos = "overlay",
-            priority = hl_preview_priority,
-        })
-    end
-
-    if #state_ranges < 1 then
-        return
-    end
-
-    local range_1 = state_ranges[1]
-    local range_len = range_1[4] - range_1[2]
-    local padding_len = #new_text - range_len
-    if padding_len <= 0 then
-        return
-    end
-
-    local padding = string.rep(" ", padding_len)
-    for _, range in ipairs(state_ranges) do
-        api.nvim_buf_set_extmark(range[5], ns_dynamic, range[1], range[4], {
-            virt_text = { { padding, hl_norm } },
-            virt_text_pos = "inline",
-            priority = hl_padding_priority,
-        })
-    end
-end
--- MID: Display the preview under the cursor using a different hl color.
-
-local function all_marks_set_new()
-    dim_marks_set_new()
-    preview_marks_set_new()
-end
-
-local group_name = "mjm.lsp.rename"
-local group = api.nvim_create_augroup("mjm.lsp.rename", {})
-
-local function preview_autocmd_create()
-    api.nvim_create_autocmd("CmdlineChanged", {
-        group = group,
-        callback = function()
-            preview_marks_set_new()
-        end,
-    })
-end
+-- MID: Unsure what an empty table result means or how to handle it.
 
 --------------------------
--- MARK: Get references --
+-- MARK: Get References --
 --------------------------
 
 ---@param ranges nvim-tools.range.BufRange[]
 ---@param visible_range [integer, integer]
 ---@return boolean True for valid splice range.
-local function range_splice_to_visible(ranges, visible_range)
+local function range_filter_to_visible(ranges, visible_range)
     local ranges_len = #ranges
     if ranges_len == 0 then
         return false
@@ -242,6 +279,10 @@ local function get_visible_buf_info()
 
     return bufs, buf_ranges
 end
+-- MID: This method is not the best if you have a large buffer with two distinct, far apart
+-- regions visible, because they will merge into one large region.
+-- Given that this module should also support fold filtering, it seems like we should support the
+-- same multi-namespace concept that jump uses.
 
 ---@param ctx lsp.HandlerContext
 ---@param req_id uinteger
@@ -265,12 +306,14 @@ local function ref_req_handler_check_ctx(ctx, req_id, client_id)
     return true, client, ctx --[[@as mjm.lsp.HandlerContext_Validated]]
 end
 
+local req_id_refs = nil ---@type uinteger?
+
 ---@param err lsp.ResponseError?
 ---@param result lsp.Location[]|lsp.LocationLink
 ---@param ctx lsp.HandlerContext
 local function req_refs_handler(err, result, ctx, client_id)
-    local req_id = state_req_refs_id
-    state_req_refs_id = nil
+    local req_id = req_id_refs
+    req_id_refs = nil
     if req_id == nil then
         return
     end
@@ -287,7 +330,7 @@ local function req_refs_handler(err, result, ctx, client_id)
     end
 
     if result == nil or #result == 0 then
-        -- No error. All valid per the spec.
+        -- Valid per the spec.
         return
     end
 
@@ -295,10 +338,8 @@ local function req_refs_handler(err, result, ctx, client_id)
     local encoding = client.offset_encoding
     local bufs, buf_visible_ranges = get_visible_buf_info()
     local buf_ranges = nts.ranges_from_locations_by_buf(result, encoding, bufs)
-
-    local ntl = require("nvim-tools.list")
     for buf, ranges in pairs(buf_ranges) do
-        if not range_splice_to_visible(ranges, buf_visible_ranges[buf]) then
+        if not range_filter_to_visible(ranges, buf_visible_ranges[buf]) then
             buf_ranges[buf] = nil
         end
     end
@@ -307,15 +348,19 @@ local function req_refs_handler(err, result, ctx, client_id)
         return
     end
 
-    ntl.clear(state_ranges)
-    for _, range in pairs(buf_ranges) do
-        -- TODO: Why not just store state_ranges by buf?
-        -- YOu can literally just copy the new results over.
-        ntl.chain(state_ranges, range)
-    end
-
+    preview_state_set_from_refs(buf_ranges)
     all_marks_set_new()
     api.nvim__redraw({ flush = true, valid = true })
+end
+
+---@param client vim.lsp.Client
+local function ref_req_checked_clear(client)
+    if req_id_refs == nil then
+        return
+    end
+
+    client:cancel_request(req_id_refs)
+    req_id_refs = nil
 end
 
 ---https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_references
@@ -335,7 +380,7 @@ local function ref_req_create(client, buf, pos_ext)
     end, buf)
 
     if req_success == true and req_id ~= nil then
-        state_req_refs_id = req_id
+        req_id_refs = req_id
     else
         -- Don't echo because it freezes previews on legacy UI.
         lsp.log.debug("References request unsuccessful")
@@ -353,38 +398,28 @@ end
 ---@param range nvim-tools.range.BufRange?
 ---@param prompt_default boolean
 local function rename_get_input(client, buf, cur_pos_ext, range, prompt_default)
-    state_ranges = {}
-    state_bufs[buf] = true
     local prompt_opts = { prompt = "New Name: ", scope = "cursor" }
     if range ~= nil then
-        state_ranges[1] = range
-        dim_marks_set_new()
-
+        preview_state_init(range, buf)
         if prompt_default == true then
             local ntb = require("nvim-tools.buf")
             prompt_opts.default = ntb.get_text_from_range(range, buf)
         end
     end
 
-    preview_autocmd_create()
-    local nti = require("nvim-tools.ui")
+    preview_display_init()
     ref_req_create(client, buf, cur_pos_ext)
-    local ok, text = nti.input(prompt_opts)
-    if state_req_refs_id ~= nil then
-        client:cancel_request(state_req_refs_id)
-    end
 
-    state_req_refs_id = nil
-    all_preview_data_clear()
-    for _, autocmd in ipairs(api.nvim_get_autocmds({ group = group_name })) do
-        api.nvim_del_autocmd(autocmd.id)
-    end
+    local nti = require("nvim-tools.ui")
+    local ok, text = nti.input(prompt_opts)
+
+    ref_req_checked_clear(client)
+    preview_display_stop()
+    preview_state_clear_all()
 
     if text == "" then
         return
-    end
-
-    if ok == false then
+    elseif ok == false then
         local msg = text or ""
         api.nvim_echo({ { "Input error: " .. msg, "ErrorMsg" } }, true, {})
         return
@@ -421,6 +456,8 @@ local function req_prep_rn_handler_check_ctx(ctx, buf)
     return true, client, ctx --[[@as mjm.lsp.HandlerContext_Validated]]
 end
 
+local req_prep_rn_timer = assert(uv.new_timer())
+
 ---@param err lsp.ResponseError?
 ---@param result (lsp.Range|{ range: lsp.Range, placeholder: string })?
 ---@param ctx lsp.HandlerContext
@@ -428,8 +465,8 @@ end
 ---@param cur_pos_ext nvim-tools.Pos
 ---@param prompt_default boolean
 local function req_prep_rn_handler(err, result, ctx, buf, cur_pos_ext, prompt_default)
-    if uv.is_active(state_timer) then
-        uv.timer_stop(state_timer)
+    if uv.is_active(req_prep_rn_timer) then
+        uv.timer_stop(req_prep_rn_timer)
     else
         lsp.log.info("prepareRename request arrived after timeout.")
         return
@@ -550,7 +587,7 @@ local M = {}
 ---@param opts? catharsis.rename.Opts
 function M.dispatcher(opts)
     local nts = require("nvim-tools.lsp")
-    if uv.is_active(state_timer) then
+    if uv.is_active(req_prep_rn_timer) then
         nts.log_and_echo("prepareRename request currently active.", 3, "WarningMsg", true)
         return
     end
@@ -590,7 +627,7 @@ function M.dispatcher(opts)
 
     if req_success and req_id then
         uv.timer_start(
-            state_timer,
+            req_prep_rn_timer,
             5000,
             0,
             vim.schedule_wrap(function()

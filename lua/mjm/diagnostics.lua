@@ -1,7 +1,6 @@
 local api = vim.api
 local set = vim.keymap.set
 
----@class MjmDiags
 local M = {}
 
 ---@type vim.diagnostic.Opts
@@ -17,56 +16,10 @@ local diag_text_cfg = vim.tbl_deep_extend("force", diag_main_cfg, virt_text_cfg)
 local diag_lines_cfg = vim.tbl_deep_extend("force", diag_main_cfg, virt_lines_cfg)
 vim.diagnostic.config(diag_text_cfg)
 
-M.toggle_diags = function()
-    vim.diagnostic.enable(not vim.diagnostic.is_enabled())
-end
-
 M.toggle_virt_lines = function()
     local cur_cfg = vim.diagnostic.config() or {}
     vim.diagnostic.config(cur_cfg.virtual_lines and diag_text_cfg or diag_lines_cfg)
 end
-
--- The default [D/]D maps cause my computer to lock up
-local function get_first_or_last_diag(opts)
-    opts = opts or {}
-    local diagnostics = opts.severity and vim.diagnostic.get(0, { severity = opts.severity })
-        or vim.diagnostic.get(0)
-
-    if #diagnostics == 0 then
-        api.nvim_echo({ { "No diagnostics in current buffer", "" } }, false, {})
-        return
-    end
-
-    table.sort(diagnostics, function(a, b)
-        if a.lnum ~= b.lnum then
-            return a.lnum < b.lnum
-        elseif a.severity ~= b.severity then
-            return a.severity < b.severity
-        elseif a.end_lnum ~= b.end_lnum then
-            return a.end_lnum < b.end_lnum
-        elseif a.col ~= b.col then
-            return a.col < b.col
-        else
-            return a.end_col < b.end_col
-        end
-    end)
-
-    return opts.last and diagnostics[#diagnostics] or diagnostics[1]
-end
-
-set("n", "[D", function()
-    local diagnostic = get_first_or_last_diag()
-    if diagnostic then
-        vim.diagnostic.jump({ diagnostic = diagnostic })
-    end
-end)
-
-set("n", "]D", function()
-    local diagnostic = get_first_or_last_diag({ last = true })
-    if diagnostic then
-        vim.diagnostic.jump({ diagnostic = diagnostic })
-    end
-end)
 
 set("n", "[<C-d>", function()
     local severity = require("mjm.utils").get_top_severity({ buf = 0 })
@@ -80,18 +33,12 @@ end)
 
 set("n", "[<M-d>", function()
     local severity = require("mjm.utils").get_top_severity({ buf = 0 })
-    local diagnostic = get_first_or_last_diag({ severity = severity })
-    if diagnostic then
-        vim.diagnostic.jump({ diagnostic = diagnostic })
-    end
+    vim.diagnostic.jump({ count = -vim._maxint, severity = severity, wrap = false })
 end)
 
 set("n", "]<M-d>", function()
     local severity = require("mjm.utils").get_top_severity({ buf = 0 })
-    local diagnostic = get_first_or_last_diag({ severity = severity, last = true })
-    if diagnostic then
-        vim.diagnostic.jump({ diagnostic = diagnostic })
-    end
+    vim.diagnostic.jump({ count = vim._maxint, severity = severity, wrap = false })
 end)
 
 -- Because I create custom caching in stl.lua

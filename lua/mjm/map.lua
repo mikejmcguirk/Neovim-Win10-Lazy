@@ -449,19 +449,8 @@ set("n", "]'", "]`")
 -- obviously make sense. Being able to toggle spell in particular is useful.
 
 set("n", "<bs>", "<nop>")
-
 set("n", "<bs>d", function()
-    require("mjm.diagnostics").toggle_diags()
-end)
-
-set("n", "<bs>D", function()
     require("mjm.diagnostics").toggle_virt_lines()
-end)
-
-set("n", "<bs><M-d>", function()
-    local enabled = tostring(vim.diagnostic.is_enabled())
-    local inspected = vim.inspect(vim.diagnostic.config())
-    print(table.concat({ "Enabled: ", enabled, "\n\n", inspected }, ""))
 end)
 
 set("n", "<bs>s", function()
