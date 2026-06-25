@@ -203,3 +203,7 @@ print a message if no clients even support rename
 
 - [ ] Add old_mode and new_mode to the vim.v.event annotation. vvars_extra.lua. Not auto-generated.
 - [ ] Update the annotation for ev.data.method in LspNotify
+
+## ISSUES
+
+- [ ] Neovim should provide a way to distinguish between `null` and `nil` results. Currently they both just render as `result == nil`

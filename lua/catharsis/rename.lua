@@ -78,19 +78,16 @@ local function rename_do(client, buf, cur_pos_ext, new_name)
     local nts = require("nvim-tools.lsp")
     local params = nts.rename_params_create(buf, cur_pos_ext, encoding, new_name)
     -- https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_rename
-    client:request(RENAME, params, function(_, result, _)
-        -- TODO: Is this correct? If this is off spec, shouldn't it error? But isn't this typical?
-        if result == nil then
-            local msg = "Language server couldn't provide rename result"
-            require("nvim-tools.lsp").log_and_echo(msg, 2, "WarningMsg", false)
+    client:request(RENAME, params, function(err, result, _)
+        if err ~= nil then
+            local msg = err.code .. ": " .. err.message .. "(" .. vim.inspect(err.data) .. ")"
+            require("nvim-tools.lsp").log_and_echo(msg, 4, "ErrorMsg", true)
             return
         end
 
-        if result == vim.NIL then
-            -- "null should be treated the same as WorkspaceEdit with no changes (no change was
-            -- required)."
-            local msg = "Nothing to rename."
-            require("nvim-tools.lsp").log_and_echo(msg, 1, "", false)
+        if result == nil then
+            local msg = "Language server did not provide rename result"
+            require("nvim-tools.lsp").log_and_echo(msg, 2, "", false)
             return
         end
 
@@ -289,7 +286,7 @@ local function req_refs_handler(err, result, ctx, client_id)
         return
     end
 
-    if result == nil or result == vim.NIL or #result == 0 then
+    if result == nil or #result == 0 then
         -- No error. All valid per the spec.
         return
     end
@@ -313,6 +310,7 @@ local function req_refs_handler(err, result, ctx, client_id)
     ntl.clear(state_ranges)
     for _, range in pairs(buf_ranges) do
         -- TODO: Why not just store state_ranges by buf?
+        -- YOu can literally just copy the new results over.
         ntl.chain(state_ranges, range)
     end
 
@@ -325,6 +323,10 @@ end
 ---@param buf uinteger
 ---@param pos_ext [uinteger, uinteger]
 local function ref_req_create(client, buf, pos_ext)
+    if not client:supports_method(REFS) then
+        return
+    end
+
     local nts = require("nvim-tools.lsp")
     local encoding = client.offset_encoding
     local params = nts.reference_params_create(buf, pos_ext, encoding, true)
@@ -335,7 +337,8 @@ local function ref_req_create(client, buf, pos_ext)
     if req_success == true and req_id ~= nil then
         state_req_refs_id = req_id
     else
-        lsp.log.debug("references request unsuccessful")
+        -- Don't echo because it freezes previews on legacy UI.
+        lsp.log.debug("References request unsuccessful")
     end
 end
 -- MID: Send a partial result token and handle the streaming results.
@@ -418,41 +421,6 @@ local function req_prep_rn_handler_check_ctx(ctx, buf)
     return true, client, ctx --[[@as mjm.lsp.HandlerContext_Validated]]
 end
 
----@param message string
-local function output_prep_err(message)
-    local msg = "Error on prepareRename: " .. (message or "")
-    require("nvim-tools.lsp").log_and_echo(msg, 4, "ErrorMsg", false)
-end
-
-local function output_noop()
-    local msg = "Nothing to rename."
-    require("nvim-tools.lsp").log_and_echo(msg, 2, "WarningMsg", false)
-end
-
----@param err lsp.ResponseError?
----@param result (lsp.Range|{ range: lsp.Range, placeholder: string })?
----@return (lsp.Range|{ range: lsp.Range, placeholder: string })?
-local function req_prep_rn_handler_check_err(err, result)
-    if err ~= nil then
-        local message = err.message
-        if message ~= nil then
-            output_prep_err(message)
-            return
-        end
-
-        output_noop()
-        return
-    end
-
-    -- Both valid per the spec.
-    if result == nil or result == vim.NIL then
-        output_noop()
-        return
-    end
-
-    return result
-end
-
 ---@param err lsp.ResponseError?
 ---@param result (lsp.Range|{ range: lsp.Range, placeholder: string })?
 ---@param ctx lsp.HandlerContext
@@ -472,18 +440,25 @@ local function req_prep_rn_handler(err, result, ctx, buf, cur_pos_ext, prompt_de
         return
     end
 
-    local res = req_prep_rn_handler_check_err(err, result)
-    if res == nil then
+    if err ~= nil then
+        local msg = "Error on prepareRename: " .. (err.message or "")
+        require("nvim-tools.lsp").log_and_echo(msg, 4, "ErrorMsg", true)
+        return
+    end
+
+    if result == nil then
+        local msg = "Nothing to rename."
+        require("nvim-tools.lsp").log_and_echo(msg, 2, "", false)
         return
     end
 
     local default_range
     local encoding = client.offset_encoding
     -- MID-DEP: If I have occasion to make a single-range LSP > API function, use here.
-    if res.range then
-        default_range = vim.range.lsp(buf, res.range, encoding)
-    elseif res.start then
-        default_range = vim.range.lsp(buf, res, encoding)
+    if result.range then
+        default_range = vim.range.lsp(buf, result.range, encoding)
+    elseif result.start then
+        default_range = vim.range.lsp(buf, result, encoding)
     else
         -- Likely a PrepareRenameDefaultBehavior response.
         local ntb = require("nvim-tools.buf")
@@ -502,7 +477,7 @@ end
 ---@return uinteger?, vim.lsp.Client?, boolean
 ---Client id, client, supports prepareRename.
 local function client_find(buf, finder)
-    local all_clients = lsp.get_clients({ bufnr = buf })
+    local all_clients = lsp.get_clients({ bufnr = buf, method = RENAME })
     local ntl = require("nvim-tools.list")
     if type(finder) == "string" then
         ntl.filter(all_clients, function(client)
@@ -512,43 +487,25 @@ local function client_find(buf, finder)
         ntl.filter(all_clients, finder)
     end
 
-    ntl.filter(all_clients, function(client)
-        return client:supports_method(RENAME, buf)
-    end)
-
     if #all_clients == 0 then
         return nil, nil, false
     end
 
-    local prep_clients = ntl.filter_to(all_clients, function(client)
-        return client:supports_method(PREP, buf)
-    end)
-
     local nts = require("nvim-tools.lsp")
-    if #prep_clients > 0 then
+    local featured = ntl.copy(all_clients)
+    nts.clients_filter_supporting_multiple(featured, buf, { PREP, REFS })
+    if #featured > 0 then
         local all_methods = { PREP, REFS, RENAME }
-        local client_id, client = nts.clients_find_best_scoring(prep_clients, all_methods, buf)
+        local client_id, client = nts.clients_find_top_scoring(featured, all_methods, buf)
         if client_id ~= nil and client ~= nil then
             return client_id, client, true
         end
     end
 
-    local ref_clients = ntl.filter_to(all_clients, function(client)
-        return client:supports_method(REFS, buf)
-    end)
-
-    if #ref_clients > 0 then
-        local ref_methods = { REFS, RENAME }
-        local client_id, client = nts.clients_find_best_scoring(prep_clients, ref_methods, buf)
-        if client_id ~= nil and client ~= nil then
-            return client_id, client, false
-        end
-    end
-
-    local client_id, client = nts.clients_find_best_scoring(prep_clients, { RENAME }, buf)
+    local client_id, client = nts.clients_find_top_scoring(all_clients, { RENAME }, buf)
     return client_id, client, false
 end
--- MID: This function is quite long.
+-- MID-DEP: Can revisit this if there's a typical multi-server situation this handles poorly.
 
 ---@alias catharsis.rename.opts.Finder nil|string|fun(client:vim.lsp.Client): boolean
 
@@ -563,7 +520,8 @@ end
 ---used if provided. Otherwise, the |<cword>| under the cursor.
 ---@field prompt_default? boolean
 
----@class catharsis.rename.Ctx
+---@nodoc
+---@class (private) catharsis.rename.Ctx
 ---@field finder catharsis.rename.opts.Finder
 ---@field new_name string?
 ---@field prompt_default boolean
@@ -591,9 +549,9 @@ local M = {}
 ---Rename all references to the symbol under the cursor.
 ---@param opts? catharsis.rename.Opts
 function M.dispatcher(opts)
+    local nts = require("nvim-tools.lsp")
     if uv.is_active(state_timer) then
-        local nts = require("nvim-tools.lsp")
-        nts.log_warn_and_echo("prepareRename request currently active.")
+        nts.log_and_echo("prepareRename request currently active.", 3, "WarningMsg", true)
         return
     end
 
@@ -601,7 +559,8 @@ function M.dispatcher(opts)
     local buf = api.nvim_get_current_buf()
     local client_id, client, supports_prep = client_find(buf, opts_ctx.finder)
     if not (client_id ~= nil and client ~= nil) then
-        api.nvim_echo({ { "No clients supporting rename were found", "ErrorMsg" } }, true, {})
+        local msg = "No clients supporting textDocument/rename were found"
+        nts.log_and_echo(msg, 3, "WarningMsg", true)
         return
     end
 
@@ -622,10 +581,8 @@ function M.dispatcher(opts)
     end
 
     local encoding = client.offset_encoding
-    local nts = require("nvim-tools.lsp")
     ---@diagnostic disable-next-line: param-type-mismatch
     local params = nts.text_doc_pos_params_create(buf, cur_pos_ext, encoding)
-
     -- https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_prepareRename
     local req_success, req_id = client:request(PREP, params, function(err, result, ctx)
         req_prep_rn_handler(err, result, ctx, buf, cur_pos_ext, prompt_default)

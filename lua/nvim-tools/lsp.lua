@@ -131,13 +131,11 @@ end
 -- MARK: Client Getting --
 --------------------------
 
----Get a list of clients for a buffer that support all of multiple methods. Methods are evaluated
----in order.
----@param bufnr integer
+---@param clients vim.lsp.Client[] Modified in place!
+---@param buf integer
 ---@param methods (vim.lsp.protocol.Method.ClientToServer|vim.lsp.protocol.Method.Registration)[]
----@return vim.lsp.Client[]
-function M.clients_get_supporting_multiple(bufnr, methods)
-    local clients = lsp.get_clients({ bufnr = bufnr })
+---@return vim.lsp.Client[] Reference to clients.
+function M.clients_filter_supporting_multiple(clients, buf, methods)
     if #clients == 0 then
         return clients
     end
@@ -145,11 +143,21 @@ function M.clients_get_supporting_multiple(bufnr, methods)
     local ntl = require("nvim-tools.list")
     ntl.filter(clients, function(client)
         return ntl.all(methods, function(method)
-            return client:supports_method(method, bufnr)
+            return client:supports_method(method, buf)
         end)
     end)
 
     return clients
+end
+
+---Get a list of clients for a buffer that support all of multiple methods. Methods are evaluated
+---in order.
+---@param buf integer
+---@param methods (vim.lsp.protocol.Method.ClientToServer|vim.lsp.protocol.Method.Registration)[]
+---@return vim.lsp.Client[]
+function M.clients_get_supporting_multiple(buf, methods)
+    local clients = lsp.get_clients({ bufnr = buf })
+    return M.clients_filter_supporting_multiple(clients, buf, methods)
 end
 
 ---@param filter lsp.DocumentFilter
@@ -234,9 +242,14 @@ end
 ---@param methods (vim.lsp.protocol.Method.ClientToServer|vim.lsp.protocol.Method.Registration)[]
 ---@param buf uinteger
 ---@return -1|uinteger, vim.lsp.Client?
-function M.clients_find_best_scoring(clients, methods, buf)
+function M.clients_find_top_scoring(clients, methods, buf)
     if #clients == 0 then
         return -1, nil
+    end
+
+    if #clients == 1 then
+        local client = clients[1]
+        return client.id, client
     end
 
     local ft = api.nvim_get_option_value("ft", { buf = buf })
@@ -287,7 +300,7 @@ function M.client_get_from_doc_sel_score(buf, methods)
         return
     end
 
-    return M.clients_find_best_scoring(clients, methods, buf)
+    return M.clients_find_top_scoring(clients, methods, buf)
 end
 
 ----------------------------------
