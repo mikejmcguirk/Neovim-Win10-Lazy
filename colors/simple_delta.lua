@@ -332,6 +332,7 @@ api.nvim_create_autocmd("FileType", {
     pattern = "lua",
     once = true,
     callback = function()
+        set_hl(0, "@lsp.type.comment.lua", {})
         set_hl(0, "@lsp.type.function.lua", {})
         set_hl(0, "@lsp.type.method.lua", {})
         set_hl(0, "@lsp.type.property.lua", {})

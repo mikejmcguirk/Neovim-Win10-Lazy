@@ -2601,44 +2601,58 @@ function M.filter_map(t, f)
     return t
 end
 
+---@generic T, U
+---@param dst U[] Modified in place!
+---@param t T[]
+---@param f fun(x:T): U|nil
+---@param start integer? (Default: `1`)
+---@param stop? integer (Default: Length of `t`)
+---@return U[] Reference to `dst`.
+local function filter_map_into_do(dst, t, f, start, stop)
+    local t_len = #t
+    start = iter_idx_resolve(start, t_len, 1)
+    stop = iter_idx_resolve(stop, t_len, t_len)
+    if t_len == 0 or start > stop then
+        return dst
+    end
+
+    local j = start
+    for i = start, stop do
+        local vm = f(t[i])
+        if vm ~= nil then
+            dst[j] = vm
+            j = j + 1
+        end
+    end
+
+    return dst
+end
+
 ---Create a new list by applying function `f` to the values of `t`.
 ---@generic T, U
 ---@param t T[]
----@param f fun(x:T, idx:uinteger): U|nil `nil` returns are filtered.
+---@param f fun(x:T): U|nil `nil` returns are filtered.
 ---@param start integer? (Default: `1`) Leave elements before start un-mapped.
 ---@param stop? integer Default: Length of `t`. Elements after `stop` will be un-mapped.
 ---@return U[] New table. Empty if all elements are filtered or if `start` and `stop` produce an
 ---     invalid range.
 ---@see |iter-indexing|
 function M.filter_map_to(t, f, start, stop)
-    local t_len = #t
-    start = iter_idx_resolve(start, t_len, 1)
-    stop = iter_idx_resolve(stop, t_len, t_len)
     local ret = {}
-    if t_len == 0 or start > stop then
-        return ret
-    end
+    return filter_map_into_do(ret, t, f, start, stop)
+end
 
-    local before_start = start - 1
-    for i = 1, before_start do
-        ret[i] = t[i]
-    end
-
-    local j = start
-    for i = start, stop do
-        local vm = f(t[i], i)
-        if vm ~= nil then
-            ret[j] = vm
-            j = j + 1
-        end
-    end
-
-    for i = stop + 1, t_len do
-        ret[j] = t[i]
-        j = j + 1
-    end
-
-    return ret
+---Append to a list by applying function `f` to the values of `t`.
+---@generic T, U
+---@param dst U[] Modified in place!
+---@param t T[]
+---@param f fun(x:T): U|nil `nil` returns are filtered.
+---@param start integer? (Default: `1`)
+---@param stop? integer (Default: Length of `t`)
+---@return U[] Reference to `dst`.
+---@see |iter-indexing|
+function M.filter_map_into(dst, t, f, start, stop)
+    return filter_map_into_do(dst, t, f, start, stop)
 end
 
 ---Apply function `f` to the elements of `t` in-place with accumulator `init`. Optionally apply
@@ -3125,3 +3139,6 @@ function M.zip_with(t1, t2, f)
 end
 
 return M
+
+-- TODO: Take out any instance, even where it's used, of a strategy function providing the
+-- index. If you need the index, your use case is too complicated for these functions.

@@ -127,13 +127,13 @@ api.nvim_create_autocmd("DiagnosticChanged", {
             return acc
         end, { 0, 0, 0, 0 })
 
-        local diag_strs = ntl.filter_map_to(counts, function(c, i)
-            if c == 0 then
-                return nil
+        local diag_strs = {} ---@type string[]
+        for i, count in ipairs(counts) do
+            if count > 0 then
+                local diag_str = "%#Diagnostic" .. levels[i] .. "#" .. signs[i] .. count .. "%* "
+                diag_strs[#diag_strs + 1] = diag_str
             end
-
-            return "%#Diagnostic" .. levels[i] .. "#" .. signs[i] .. c .. "%* "
-        end)
+        end
 
         diag_cache[buf] = table.concat(diag_strs, "")
         -- Leave autocmd context before trying to redraw.

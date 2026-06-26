@@ -199,25 +199,33 @@ local function score_document_filter(filter, doc_language, doc_uri, doc_fname)
     end
 
     local pattern = filter.pattern
-    if pattern then
-        if type(pattern) ~= "string" then
-            pattern = pattern.pattern or ""
-        end
-
-        if pattern == "" then
-            return 0
-        end
-
-        if pattern == "*" or pattern == "**" then
-            score = math.max(score, 5)
-        elseif vim.glob.to_lpeg(pattern):match(doc_fname) then
-            score = 10
-        else
-            return 0
-        end
+    if not pattern then
+        return score
     end
 
-    return score
+    if type(pattern) ~= "string" then
+        pattern = pattern.pattern or ""
+    end
+
+    if pattern == "" then
+        return 0
+    end
+
+    if pattern == "*" or pattern == "**" then
+        score = math.max(score, 5)
+        return score
+    end
+
+    local ok, as_lpeg = pcall(vim.glob.to_lpeg, pattern)
+    if not ok then
+        return 0
+    end
+
+    if as_lpeg:match(doc_fname) then
+        return 10
+    else
+        return 0
+    end
 end
 
 ---@param capability lsp.Registration

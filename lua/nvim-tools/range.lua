@@ -120,6 +120,10 @@ function M.bisect_lo(ranges, cmp)
 
     return lo
 end
+-- TODO: the way this is right now is too abstract and confusing. the better way to do this I
+-- think is to abstract this into a more generic list bisect function that takes two keys, one
+-- for the val and one for the list. So that way you can make sure that the same transformation
+-- isn't being applied to both.
 
 ---@generic T
 ---@param ranges (nvim-tools.Range|nvim-tools.range.BufRange)[]

@@ -109,6 +109,8 @@ local function map_objects(ev)
         { '["', ']"', "@string.inner" },
     }
     -- MID: Some of these maps, like [m]m, should also zz.
+    -- Needs to be dependent on mode, function, and if it does scroll. Like doing zz for something
+    -- in the same window might be dis-orienting.
 
     local move = require("nvim-treesitter-textobjects.move")
     for _, m in pairs(move_maps) do

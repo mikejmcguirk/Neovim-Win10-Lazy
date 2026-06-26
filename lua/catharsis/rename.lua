@@ -4,144 +4,266 @@ local lsp = vim.lsp
 local util = lsp.util
 local uv = vim.uv
 
-----------------------------
--- MARK: Protocol Methods --
-----------------------------
+---------------------
+-- MARK: Constants --
+---------------------
 
 local PREP = "textDocument/prepareRename"
 local REFS = "textDocument/references"
 local RENAME = "textDocument/rename"
 
+local DEFAULT_STATE_RANGES_HAS = false
+local HUGE_INT = math.floor(math.huge)
+local DEFAULT_STATE_SYMBOL_LEN = HUGE_INT
+
 -----------------
 -- MARK: State --
 -----------------
 
-local base_ns_name = "catharsis.rename."
+---@class (exact) catharsis.rename.WinInfo
+---@field bot uinteger 0-indexed
+---@field buf -1|uinteger
+---@field ns_dim -1|uinteger
+---@field ns_preview -1|uinteger
+---@field top uinteger 0-indexed
 
--- do like top, bot, buf, ns in here I think, so it's all tied together. negotiable though
-local wins_display_info = {}
-local origin_win = nil
-local dim_namespaces = {}
-local preview_namespaces = {}
+---@class catharsis.rename.BufInfo
+---@field ranges nvim-tools.range.BufRange[]
+---@field win_bounds table<uinteger, [uinteger, uinteger]>
 
----@param num_needed uinteger
-local function ensure_dim_namespaces(num_needed)
-    local new_namespaces_needed = #dim_namespaces - num_needed
-    if new_namespaces_needed <= 0 then
-        return
-    end
+local state_ranges_has = DEFAULT_STATE_RANGES_HAS
+local state_symbol_len = DEFAULT_STATE_SYMBOL_LEN
 
-    local dim_ns_basename = base_ns_name .. "dim."
+local state_info_bufs = {} ---@type table<uinteger, catharsis.rename.BufInfo>>
+local state_info_bufswins = {} ---@type table<uinteger, table<uinteger, true>>
+local state_info_wins = {} ---@type table<uinteger, catharsis.rename.WinInfo>
+local state_ns_dims = {} ---@type uinteger[]
+local state_ns_previews = {} ---@type uinteger[]
+---@type catharsis.rename.WinInfo
+local state_info_cur_win = {
+    bot = HUGE_INT,
+    buf = -1,
+    ns_dim = -1,
+    ns_preview = -1,
+    top = 1,
+}
 
-    for _ = 1, new_namespaces_needed do
-        local new_idx = #dim_namespaces + 1
-        local new_ns_name = dim_ns_basename .. tostring(new_idx)
-        dim_namespaces[#dim_namespaces + 1] = api.nvim_create_namespace(new_ns_name)
+local function state_info_cur_win_reset()
+    state_info_cur_win.bot = HUGE_INT
+    state_info_cur_win.buf = -1
+    state_info_cur_win.ns_dim = -1
+    state_info_cur_win.ns_preview = -1
+    state_info_cur_win.top = 1
+end
+
+local ns_basename = "catharsis.rename"
+local ns_dim_basename = ns_basename .. ".dim"
+local ns_preview_basename = ns_basename .. ".preview"
+
+local function clear_dim_namespaces()
+    for _, info in pairs(state_info_wins) do
+        api.nvim_buf_clear_namespace(info.buf, info.ns_dim, 0, -1)
     end
 end
 
----@param num_needed uinteger
-local function ensure_preview_namespaces(num_needed)
-    local new_namespaces_needed = #preview_namespaces - num_needed
-    if new_namespaces_needed <= 0 then
+local function clear_dynamic_preview_namespaces()
+    for _, info in pairs(state_info_wins) do
+        api.nvim_buf_clear_namespace(info.buf, info.ns_preview, 0, -1)
+    end
+end
+
+---@param total_needed uinteger
+local function ns_dims_ensure(total_needed)
+    local ns_needed = total_needed - #state_ns_dims
+    if ns_needed <= 0 then
         return
     end
 
-    local preview_ns_basename = base_ns_name .. "preview."
-
-    for _ = 1, new_namespaces_needed do
-        local new_idx = #preview_namespaces + 1
-        local new_ns_name = preview_ns_basename .. tostring(new_idx)
-        preview_namespaces[#preview_namespaces + 1] = api.nvim_create_namespace(new_ns_name)
+    for _ = 1, ns_needed do
+        local idx_new = #state_ns_dims + 1
+        local ns_name_new = ns_dim_basename .. "." .. tostring(idx_new)
+        state_ns_dims[#state_ns_dims + 1] = api.nvim_create_namespace(ns_name_new)
     end
+end
+
+---@param total_needed uinteger
+local function ns_previews_ensure(total_needed)
+    local ns_needed = total_needed - #state_ns_previews
+    if ns_needed <= 0 then
+        return
+    end
+
+    local ns_previews_len = #state_ns_previews
+    for i = 1, ns_needed do
+        local idx_new = ns_previews_len + i
+        local ns_name_new = ns_preview_basename .. "." .. tostring(idx_new)
+        state_ns_previews[idx_new] = api.nvim_create_namespace(ns_name_new)
+    end
+end
+
+---@param total_needed uinteger
+local function ns_ensure(total_needed)
+    ns_dims_ensure(total_needed)
+    ns_previews_ensure(total_needed)
 end
 
 -- TODO: needs to be a way to store buf ranges separately. this way a single buf range can
 -- work without having to splice out
-local display_bufs = {}
-local display_buf_ranges = {}
-
----@class catharsis.rename.DisplayInfo
----@field bot uinteger 0 indexed
----@field bot_idx uinteger
----@field ns_dim uinteger
----@field ns_preview uinteger
----@field top uinteger 0 indexed
----@field top_idx uinteger
----@field win uinteger
 
 ---@param cur_win uinteger
-local function setup_display_info(cur_win)
+local function display_info_init(cur_win)
     local wins = api.nvim_tabpage_list_wins(0)
     require("nvim-tools.list").filter(wins, function(win)
         local visible = api.nvim_win_get_config(win).hide ~= true
-        return visible and vim.call("win_gettype", win) == ""
+        return win ~= cur_win and visible and vim.call("win_gettype", win) == ""
     end)
 
-    origin_win = cur_win
-    ensure_dim_namespaces(#wins)
-    ensure_preview_namespaces(#wins)
-
-    local buf_ranges = {} ---@type table<uinteger, [uinteger, uinteger]>
+    ns_ensure(#wins + 1) -- Add one for cur_win
     for i, win in ipairs(wins) do
-        local win_buf = api.nvim_win_get_buf(win)
-        local top_0 = fn.line("w0", win) - 1
-        local bot_0 = fn.line("w$", win) - 1
-
-        -- TODO: need to set the ns as well
-        wins_display_info[win] = {
-            bot = bot_0,
-            bot_idx = math.floor(math.huge()),
-            ns_dim = dim_namespaces[i],
-            ns_preview = preview_namespaces[i],
-            top = top_0,
-            top_idx = 1,
-            win = win,
+        state_info_wins[win] = {
+            bot = vim.call("line", "w$", win) - 1,
+            buf = api.nvim_win_get_buf(win),
+            ns_dim = state_ns_dims[i],
+            ns_preview = state_ns_previews[i],
+            top = vim.call("line", "w0", win) - 1,
         }
+    end
 
-        display_bufs[win_buf] = true
+    for win, display_info in pairs(state_info_wins) do
+        api.nvim__ns_set(display_info.ns_dim, { wins = { win } })
+        api.nvim__ns_set(display_info.ns_preview, { wins = { win } })
     end
 end
--- TODO: When you pull in the refs, the buf_ranges should filter based on what bufs are in
--- display_bufs.
 
-local DEFAULT_STATE_RANGES_HAS = false
-local DEFAULT_STATE_SYMBOL_LEN = math.floor(math.huge)
+-- It might make sense to only get the cursor win first, as that saves a bunch of annoying
+-- logic.
+-- Also works for buf ranges because basically you just go through the wins and plug them in,
+-- or something. But it's ahrd to make it tie both ways.
+-- I guess *really* what you do is just add the current win check into tabpage_list_wins. It's
+-- the one bit of BS we'll have to accept here. It's done early in that case.
+-- and then instead of storing the intermediate bufwins thing, you can just iterate through the
+-- wins, create the buf ranges, then iterate again for the visible ranges
 
 local state_ranges = {} ---@type table<uinteger, nvim-tools.range.BufRange[]>
-local state_ranges_has = DEFAULT_STATE_RANGES_HAS
-local state_symbol_len = DEFAULT_STATE_SYMBOL_LEN
 
----@param range nvim-tools.range.BufRange
----@param buf uinteger
-local function preview_state_init(range, buf)
-    state_ranges[buf] = {}
-    state_ranges[buf][1] = range
+---@param ranges nvim-tools.range.BufRange[]
+---@param top uinteger
+---@param bot uinteger
+---@return [uinteger, uinteger]?
+local function win_bounds_get(ranges, top, bot)
+    local ranges_len = #ranges
+    if ranges_len == 0 then
+        return
+    end
+
+    ---@param range nvim-tools.range.BufRange
+    local function vis_range_cmp(range)
+        if bot < range[1] then
+            return -1
+        elseif range[3] < top then
+            return 1
+        else
+            return 0
+        end
+    end
+
+    local ntr = require("nvim-tools.range")
+    local lo = ntr.bisect_lo(ranges, vis_range_cmp)
+    if lo > ranges_len then
+        return
+    end
+
+    local hi = ntr.bisect_hi(ranges, vis_range_cmp)
+    if hi < lo then
+        return
+    end
+
+    return { lo, hi }
+end
+-- TODO: This needs the re-written, generic bisect function that takes two keys.
+-- I would use list.bisect() as the base so try and make the logic less removed.
+
+local function update_state_from_init(cur_win, buf, ranges)
+    ns_ensure(1)
+    local ns_dim = state_ns_dims[1]
+    local ns_preview = state_ns_previews[1]
+    api.nvim__ns_set(ns_dim, { wins = { cur_win } })
+    api.nvim__ns_set(ns_preview, { wins = { cur_win } })
+
+    local top = fn.line("w0")
+    local bot = fn.line("w$")
+
+    state_info_cur_win.bot = bot
+    state_info_cur_win.buf = api.nvim_win_get_buf(cur_win)
+    state_info_cur_win.ns_dim = state_ns_dims[1]
+    state_info_cur_win.ns_preview = state_ns_previews[1]
+    state_info_cur_win.top = top
+
+    local win_bounds = win_bounds_get(ranges, top, bot)
+    if not win_bounds then
+        return
+    end
+
     state_ranges_has = true
-    state_symbol_len = range[4] - range[2]
+    state_info_bufs[buf] = { ranges = ranges, win_bounds = {} }
+    state_info_bufs[buf].win_bounds[cur_win] = win_bounds
 end
 
 ---@param buf_ranges table<uinteger, nvim-tools.range.BufRange[]>
-local function preview_state_set_from_refs(buf_ranges)
-    state_ranges = buf_ranges
-    state_ranges_has = true
-    for _, ranges in pairs(buf_ranges) do
-        for _, range in ipairs(ranges) do
+---@return boolean New ranges added?
+local function buf_ranges_to_state(buf_ranges)
+    if not next(buf_ranges) then
+        return false
+    end
+
+    local valid_buf_range_has = false
+    for _, info_win in pairs(state_info_wins) do
+        local win_buf = info_win.buf
+        local ranges = buf_ranges[info_win.buf]
+        if ranges and #ranges > 0 then
+            local win_bounds = win_bounds_get(ranges, info_win.top, info_win.bot)
+            if win_bounds ~= nil then
+                valid_buf_range_has = true
+                local info_buf = state_info_bufs[win_buf]
+                if info_buf == nil then
+                    info_buf = { ranges = ranges, win_bounds = {} }
+                    state_info_bufs[win_buf] = info_buf
+                end
+
+                info_buf.win_bounds[win_buf] = win_bounds
+            end
+        end
+    end
+
+    if valid_buf_range_has == false then
+        return false
+    end
+
+    -- TODO: bro this is terrible
+    for _, info in pairs(state_info_bufs) do
+        for _, range in ipairs(info.ranges) do
             state_symbol_len = range[4] - range[2]
             break
         end
     end
+
+    return true
 end
+-- TODO: this should be the entry point, so that way you can just make the buf_info structure
+-- right away and lazily create the win data
 
 local function preview_state_clear_all()
     require("nvim-tools.list").clear(state_ranges)
+    require("nvim-tools.list").clear(state_info_bufs)
+    require("nvim-tools.list").clear(state_info_wins)
+    require("nvim-tools.list").clear(state_info_bufswins)
     state_symbol_len = DEFAULT_STATE_SYMBOL_LEN
     state_ranges_has = DEFAULT_STATE_RANGES_HAS
 end
 
-----------------------------------------
--- MARK: Hl Priorities and Namespaces --
-----------------------------------------
+------------------------------------
+-- MARK: Hl Groups and Priorities --
+------------------------------------
 
 local hl_dim_priority = vim.hl.priorities.user + 2
 local hl_padding_priority = hl_dim_priority - 1
@@ -174,6 +296,7 @@ do
 
     api.nvim_set_hl(0, "catharsisRenameCursor", { fg = new_fg, bg = new_bg, default = true })
 end
+-- TODO: This is still very vibe coded coded.
 -- TODO: nvim-tools this since we need it for farsight.
 
 api.nvim_set_hl(0, "catharsisRenameDim", { default = true, link = "Dimmed" })
@@ -181,21 +304,6 @@ api.nvim_set_hl(0, "catharsisRenameNew", { default = true, link = "Substitute" }
 local hl_cursor = api.nvim_get_hl_id_by_name("catharsisRenameCursor")
 local hl_dim = api.nvim_get_hl_id_by_name("catharsisRenameDim")
 local hl_new = api.nvim_get_hl_id_by_name("catharsisRenameNew")
-
-local ns_dim = api.nvim_create_namespace("catharsis.rename.dim")
-local ns_dynamic = api.nvim_create_namespace("catharsis.rename.preview")
-
-local function clear_dim_namespaces()
-    for buf, _ in pairs(state_ranges) do
-        api.nvim_buf_clear_namespace(buf, ns_dim, 0, -1)
-    end
-end
-
-local function clear_dynamic_preview_namespaces()
-    for buf, _ in pairs(state_ranges) do
-        api.nvim_buf_clear_namespace(buf, ns_dynamic, 0, -1)
-    end
-end
 
 ---------------------------------------
 -- MARK: Preview Management Autocmds --
@@ -207,14 +315,20 @@ local function dim_marks_set_new()
         return
     end
 
-    for buf, ranges in pairs(state_ranges) do
-        for _, range in ipairs(ranges) do
-            api.nvim_buf_set_extmark(buf, ns_dim, range[1], range[2], {
-                end_row = range[3],
-                end_col = range[4],
-                hl_group = hl_dim,
-                priority = hl_dim_priority,
-            })
+    for buf, info in pairs(state_info_bufs) do
+        local ranges = info.ranges
+        for win, bounds in pairs(info.win_bounds) do
+            for i = bounds[1], bounds[2] do
+                local range = ranges[i]
+                local win_info = state_info_wins[win]
+                local ns = win_info.ns_dim
+                api.nvim_buf_set_extmark(buf, ns, range[1], range[2], {
+                    end_row = range[3],
+                    end_col = range[4],
+                    hl_group = hl_dim,
+                    priority = hl_dim_priority,
+                })
+            end
         end
     end
 end
@@ -239,17 +353,23 @@ local function preview_marks_set_new()
         text_at = " " -- Cursor after line. Draw a block.
     end
 
-    for buf, ranges in pairs(state_ranges) do
-        for _, range in ipairs(ranges) do
-            api.nvim_buf_set_extmark(buf, ns_dynamic, range[1], range[2], {
-                virt_text = {
-                    { text_before, hl_new },
-                    { text_at, hl_cursor },
-                    { text_after, hl_new },
-                },
-                virt_text_pos = "overlay",
-                priority = hl_preview_priority,
-            })
+    for buf, info in pairs(state_info_bufs) do
+        local ranges = info.ranges
+        for win, bounds in pairs(info.win_bounds) do
+            for i = bounds[1], bounds[2] do
+                local range = ranges[i]
+                local win_info = state_info_wins[win]
+                local ns = win_info.ns_preview
+                api.nvim_buf_set_extmark(buf, ns, range[1], range[2], {
+                    virt_text = {
+                        { text_before, hl_new },
+                        { text_at, hl_cursor },
+                        { text_after, hl_new },
+                    },
+                    virt_text_pos = "overlay",
+                    priority = hl_preview_priority,
+                })
+            end
         end
     end
 
@@ -259,13 +379,19 @@ local function preview_marks_set_new()
     end
 
     local padding = string.rep(" ", padding_len)
-    for buf, ranges in pairs(state_ranges) do
-        for _, range in ipairs(ranges) do
-            api.nvim_buf_set_extmark(buf, ns_dynamic, range[1], range[4], {
-                virt_text = { { padding, hl_norm } },
-                virt_text_pos = "inline",
-                priority = hl_padding_priority,
-            })
+    for buf, info in pairs(state_info_bufs) do
+        local ranges = info.ranges
+        for win, bounds in pairs(info.win_bounds) do
+            for i = bounds[1], bounds[2] do
+                local range = ranges[i]
+                local win_info = state_info_wins[win]
+                local ns = win_info.ns_preview
+                api.nvim_buf_set_extmark(buf, ns, range[1], range[4], {
+                    virt_text = { { padding, hl_norm } },
+                    virt_text_pos = "inline",
+                    priority = hl_padding_priority,
+                })
+            end
         end
     end
 end
@@ -289,11 +415,8 @@ local function preview_display_init()
 end
 
 local function preview_display_stop()
-    for buf, _ in pairs(state_ranges) do
-        api.nvim_buf_clear_namespace(buf, ns_dim, 0, -1)
-        api.nvim_buf_clear_namespace(buf, ns_dynamic, 0, -1)
-    end
-
+    clear_dim_namespaces()
+    clear_dynamic_preview_namespaces()
     for _, autocmd in ipairs(api.nvim_get_autocmds({ group = group_name })) do
         api.nvim_del_autocmd(autocmd.id)
     end
@@ -334,84 +457,6 @@ end
 -- MARK: Get References --
 --------------------------
 
----@param ranges nvim-tools.range.BufRange[]
----@param visible_range [integer, integer]
----@return boolean True for valid splice range.
-local function range_filter_to_visible(ranges, visible_range)
-    local ranges_len = #ranges
-    if ranges_len == 0 then
-        return false
-    end
-
-    ---@param range nvim-tools.range.BufRange
-    local function vis_range_cmp(range)
-        if visible_range[2] < range[1] then
-            return -1
-        elseif range[3] < visible_range[1] then
-            return 1
-        else
-            return 0
-        end
-    end
-
-    local ntr = require("nvim-tools.range")
-    local ntl = require("nvim-tools.list")
-    local lo = ntr.bisect_lo(ranges, vis_range_cmp)
-    if lo > ranges_len then
-        return false
-    end
-
-    local hi = ntr.bisect_hi(ranges, vis_range_cmp)
-    if hi < lo then
-        return false
-    end
-
-    ntl.splice(ranges, lo, hi)
-    return true
-end
-
----@return table<integer, true> Table of visible buffers
----@return table<uinteger, [uinteger, uinteger]> Top and bottom visible lines within those visible
----     buffers (0 indexed)
-local function get_visible_buf_info()
-    local wins = api.nvim_tabpage_list_wins(0)
-    require("nvim-tools.list").filter(wins, function(win)
-        local visible = api.nvim_win_get_config(win).hide ~= true
-        return visible and vim.call("win_gettype", win) == ""
-    end)
-
-    local buf_ranges = {} ---@type table<uinteger, [uinteger, uinteger]>
-    for _, win in ipairs(wins) do
-        local win_buf = api.nvim_win_get_buf(win)
-        local range = buf_ranges[win_buf]
-        if range == nil then
-            range = { math.floor(math.huge), math.ceil(math.huge * -1) }
-            buf_ranges[win_buf] = range
-        end
-
-        local top_0 = fn.line("w0", win) - 1
-        local bot_0 = fn.line("w$", win) - 1
-        if top_0 < range[1] then
-            range[1] = top_0
-        end
-
-        if range[2] < bot_0 then
-            range[2] = bot_0
-        end
-    end
-
-    local bufs = {} ---@type table<uinteger, true>
-    for buf, _ in pairs(buf_ranges) do
-        bufs[buf] = true
-    end
-
-    return bufs, buf_ranges
-end
--- MID: This method is not the best if you have a large buffer with two distinct, far apart
--- regions visible, because they will merge into one large region.
--- Given that this module should also support fold filtering, it seems like we should support the
--- same multi-namespace concept that jump uses.
-
 ---@param ctx lsp.HandlerContext
 ---@param req_id uinteger
 ---@param client_id uinteger
@@ -439,7 +484,9 @@ local req_id_refs = nil ---@type uinteger?
 ---@param err lsp.ResponseError?
 ---@param result lsp.Location[]|lsp.LocationLink
 ---@param ctx lsp.HandlerContext
-local function req_refs_handler(err, result, ctx, client_id)
+---@param client_id uinteger
+---@param cur_win uinteger
+local function req_refs_handler(err, result, ctx, client_id, cur_win)
     local req_id = req_id_refs
     req_id_refs = nil
     if req_id == nil then
@@ -462,21 +509,25 @@ local function req_refs_handler(err, result, ctx, client_id)
         return
     end
 
-    local nts = require("nvim-tools.lsp")
-    local encoding = client.offset_encoding
-    local bufs, buf_visible_ranges = get_visible_buf_info()
-    local buf_ranges = nts.ranges_from_locations_by_buf(result, encoding, bufs)
-    for buf, ranges in pairs(buf_ranges) do
-        if not range_filter_to_visible(ranges, buf_visible_ranges[buf]) then
-            buf_ranges[buf] = nil
-        end
-    end
-
-    if require("nvim-tools.table").keys_count(buf_ranges) < 1 then
+    display_info_init(cur_win)
+    if not next(state_info_wins) then
         return
     end
 
-    preview_state_set_from_refs(buf_ranges)
+    local bufs = {}
+    for _, info in pairs(state_info_wins) do
+        bufs[info.buf] = true
+    end
+
+    local nts = require("nvim-tools.lsp")
+    local encoding = client.offset_encoding
+    local buf_ranges = nts.ranges_from_locations_by_buf(result, encoding, bufs)
+
+    if not valid_buf_range_has then
+        return
+    end
+
+    buf_ranges_to_state(buf_ranges)
     all_marks_set_new()
     api.nvim__redraw({ flush = true, valid = true })
 end
@@ -494,6 +545,7 @@ end
 ---https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_references
 ---@param client vim.lsp.Client
 ---@param buf uinteger
+---@param cur_win uinteger
 ---@param pos_ext [uinteger, uinteger]
 local function ref_req_create(client, buf, pos_ext)
     if not client:supports_method(REFS) then
@@ -504,7 +556,7 @@ local function ref_req_create(client, buf, pos_ext)
     local encoding = client.offset_encoding
     local params = nts.reference_params_create(buf, pos_ext, encoding, true)
     local req_success, req_id = client:request(REFS, params, function(err, results, ctx)
-        req_refs_handler(err, results, ctx, client.id)
+        req_refs_handler(err, results, ctx, client.id, cur_win)
     end, buf)
 
     if req_success == true and req_id ~= nil then
@@ -525,11 +577,13 @@ end
 ---@param cur_pos_ext [uinteger, uinteger]
 ---@param range nvim-tools.range.BufRange?
 ---@param prompt_default boolean
-local function rename_get_input(client, buf, cur_pos_ext, range, prompt_default)
-    setup_display_info()
+local function rename_get_input(client, buf, cur_win, cur_pos_ext, range, prompt_default)
+    -- TODO: cur_win needs to come up as data
+    -- display_info_init(cur_win)
     local prompt_opts = { prompt = "New Name: ", scope = "cursor" }
     if range ~= nil then
-        preview_state_init(range, buf)
+        update_state_from_init(cur_win, buf, { range })
+        -- preview_state_set_from_prep(range, buf)
         if prompt_default == true then
             local ntb = require("nvim-tools.buf")
             prompt_opts.default = ntb.get_text_from_range(range, buf)
@@ -537,7 +591,7 @@ local function rename_get_input(client, buf, cur_pos_ext, range, prompt_default)
     end
 
     preview_display_init()
-    ref_req_create(client, buf, cur_pos_ext)
+    ref_req_create(client, buf, cur_win, cur_pos_ext)
 
     local nti = require("nvim-tools.ui")
     local ok, text = nti.input(prompt_opts)
@@ -591,9 +645,10 @@ local req_prep_rn_timer = assert(uv.new_timer())
 ---@param result (lsp.Range|{ range: lsp.Range, placeholder: string })?
 ---@param ctx lsp.HandlerContext
 ---@param buf uinteger
+---@param cur_win uinteger
 ---@param cur_pos_ext nvim-tools.Pos
 ---@param prompt_default boolean
-local function req_prep_rn_handler(err, result, ctx, buf, cur_pos_ext, prompt_default)
+local function req_prep_rn_handler(err, result, ctx, buf, cur_win, cur_pos_ext, prompt_default)
     if uv.is_active(req_prep_rn_timer) then
         uv.timer_stop(req_prep_rn_timer)
     else
@@ -631,7 +686,7 @@ local function req_prep_rn_handler(err, result, ctx, buf, cur_pos_ext, prompt_de
         default_range = ntb.match_line_under_cursor(cur_pos_ext, buf, [[\k\+]])
     end
 
-    rename_get_input(client, buf, cur_pos_ext, default_range, prompt_default)
+    rename_get_input(client, buf, cur_win, cur_pos_ext, default_range, prompt_default)
 end
 
 -----------------------
@@ -731,7 +786,8 @@ function M.dispatcher(opts)
     end
 
     local ntp = require("nvim-tools.pos")
-    local cur_pos_ext = ntp.mark_to_ext_pos(api.nvim_win_get_cursor(0))
+    local cur_win = api.nvim_get_current_win()
+    local cur_pos_ext = ntp.mark_to_ext_pos(api.nvim_win_get_cursor(cur_win))
     local new_name = opts_ctx.new_name
     if new_name ~= nil then
         rename_do(client, buf, cur_pos_ext, new_name)
@@ -742,7 +798,7 @@ function M.dispatcher(opts)
     if not supports_prep then
         local ntb = require("nvim-tools.buf")
         local cr = ntb.match_line_under_cursor(cur_pos_ext, buf, [[\k\+]])
-        rename_get_input(client, buf, cur_pos_ext, cr, opts_ctx.prompt_default)
+        rename_get_input(client, buf, cur_win, cur_pos_ext, cr, opts_ctx.prompt_default)
         return
     end
 
@@ -751,7 +807,7 @@ function M.dispatcher(opts)
     local params = nts.text_doc_pos_params_create(buf, cur_pos_ext, encoding)
     -- https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#textDocument_prepareRename
     local req_success, req_id = client:request(PREP, params, function(err, result, ctx)
-        req_prep_rn_handler(err, result, ctx, buf, cur_pos_ext, prompt_default)
+        req_prep_rn_handler(err, result, ctx, buf, cur_win, cur_pos_ext, prompt_default)
     end, buf)
 
     if req_success and req_id then

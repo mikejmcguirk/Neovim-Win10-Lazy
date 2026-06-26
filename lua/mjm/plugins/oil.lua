@@ -1,5 +1,6 @@
 local api = vim.api
 local set = vim.keymap.set
+local uv = vim.uv
 
 local function close_oil()
     if api.nvim_get_option_value("modified", { buf = 0 }) then
@@ -18,11 +19,15 @@ return {
         columns = { "size", "permissions" },
         float = { padding = 3 },
         keymaps = {
-            ["`"] = { "actions.parent", mode = "n" }, --- Patternful with vinegar mapping
-            ["~"] = { "actions.open_cwd", mode = "n" }, --- Vinegar style mapping
-            ["-"] = { close_oil, mode = "n" },
-            ["+"] = { close_oil, mode = "n" },
-            ["<C-^>"] = { close_oil, mode = "n" }, -- Vinegar style mapping
+            -- Vinegar mapping.
+            ["~"] = {
+                function()
+                    require("oil").open(uv.os_homedir())
+                end,
+            },
+            ["`"] = { "actions.open_cwd", mode = "n" }, -- Vinegar style mapping.
+            ["-"] = { "actions.parent", mode = "n" }, -- Vinegar mapping
+            ["<C-^>"] = { close_oil, mode = "n" }, -- Vinegar mapping
             ["q"] = {
                 function()
                     local oil = require("oil")
@@ -55,11 +60,6 @@ return {
         set({ "x", "o" }, "-", "<nop>")
         set("n", "-", function()
             require("oil").open_float()
-        end)
-
-        set({ "x", "o" }, "+", "<nop>")
-        set("n", "+", function()
-            require("oil").open_float(vim.uv.cwd())
         end)
     end,
 }
