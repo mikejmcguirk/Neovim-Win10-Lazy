@@ -16,6 +16,95 @@ local RENAME = "textDocument/rename"
 -- MARK: State --
 -----------------
 
+local base_ns_name = "catharsis.rename."
+
+-- do like top, bot, buf, ns in here I think, so it's all tied together. negotiable though
+local wins_display_info = {}
+local origin_win = nil
+local dim_namespaces = {}
+local preview_namespaces = {}
+
+---@param num_needed uinteger
+local function ensure_dim_namespaces(num_needed)
+    local new_namespaces_needed = #dim_namespaces - num_needed
+    if new_namespaces_needed <= 0 then
+        return
+    end
+
+    local dim_ns_basename = base_ns_name .. "dim."
+
+    for _ = 1, new_namespaces_needed do
+        local new_idx = #dim_namespaces + 1
+        local new_ns_name = dim_ns_basename .. tostring(new_idx)
+        dim_namespaces[#dim_namespaces + 1] = api.nvim_create_namespace(new_ns_name)
+    end
+end
+
+---@param num_needed uinteger
+local function ensure_preview_namespaces(num_needed)
+    local new_namespaces_needed = #preview_namespaces - num_needed
+    if new_namespaces_needed <= 0 then
+        return
+    end
+
+    local preview_ns_basename = base_ns_name .. "preview."
+
+    for _ = 1, new_namespaces_needed do
+        local new_idx = #preview_namespaces + 1
+        local new_ns_name = preview_ns_basename .. tostring(new_idx)
+        preview_namespaces[#preview_namespaces + 1] = api.nvim_create_namespace(new_ns_name)
+    end
+end
+
+-- TODO: needs to be a way to store buf ranges separately. this way a single buf range can
+-- work without having to splice out
+local display_bufs = {}
+local display_buf_ranges = {}
+
+---@class catharsis.rename.DisplayInfo
+---@field bot uinteger 0 indexed
+---@field bot_idx uinteger
+---@field ns_dim uinteger
+---@field ns_preview uinteger
+---@field top uinteger 0 indexed
+---@field top_idx uinteger
+---@field win uinteger
+
+---@param cur_win uinteger
+local function setup_display_info(cur_win)
+    local wins = api.nvim_tabpage_list_wins(0)
+    require("nvim-tools.list").filter(wins, function(win)
+        local visible = api.nvim_win_get_config(win).hide ~= true
+        return visible and vim.call("win_gettype", win) == ""
+    end)
+
+    origin_win = cur_win
+    ensure_dim_namespaces(#wins)
+    ensure_preview_namespaces(#wins)
+
+    local buf_ranges = {} ---@type table<uinteger, [uinteger, uinteger]>
+    for i, win in ipairs(wins) do
+        local win_buf = api.nvim_win_get_buf(win)
+        local top_0 = fn.line("w0", win) - 1
+        local bot_0 = fn.line("w$", win) - 1
+
+        -- TODO: need to set the ns as well
+        wins_display_info[win] = {
+            bot = bot_0,
+            bot_idx = math.floor(math.huge()),
+            ns_dim = dim_namespaces[i],
+            ns_preview = preview_namespaces[i],
+            top = top_0,
+            top_idx = 1,
+            win = win,
+        }
+
+        display_bufs[win_buf] = true
+    end
+end
+-- TODO: When you pull in the refs, the buf_ranges should filter based on what bufs are in
+-- display_bufs.
+
 local DEFAULT_STATE_RANGES_HAS = false
 local DEFAULT_STATE_SYMBOL_LEN = math.floor(math.huge)
 
@@ -62,8 +151,34 @@ local hl_preview_priority = hl_dim_priority + 1
 api.nvim_set_hl(0, "Dimmed", { default = true, link = "Comment" })
 local hl_norm = api.nvim_get_hl_id_by_name("Normal")
 
+do
+    local normal = api.nvim_get_hl(0, { name = "Normal", link = false }) or {}
+    local orig_fg = normal.fg
+    local orig_bg = normal.bg
+
+    local new_fg = orig_bg ---@type integer|string?
+    local new_bg = orig_fg ---@type integer|string?
+
+    if not orig_bg then
+        if orig_fg then
+            new_bg = (vim.o.background == "dark") and "#EFEFEF" or "#1E1E1E"
+        else
+            new_fg = (vim.o.background == "dark") and "#222222" or "#EFEFEF"
+            new_bg = (vim.o.background == "dark") and "#EFEFEF" or "#1E1E1E"
+        end
+    end
+
+    if not new_fg then
+        new_fg = (vim.o.background == "dark") and "#222222" or "#EFEFEF"
+    end
+
+    api.nvim_set_hl(0, "catharsisRenameCursor", { fg = new_fg, bg = new_bg, default = true })
+end
+-- TODO: nvim-tools this since we need it for farsight.
+
 api.nvim_set_hl(0, "catharsisRenameDim", { default = true, link = "Dimmed" })
 api.nvim_set_hl(0, "catharsisRenameNew", { default = true, link = "Substitute" })
+local hl_cursor = api.nvim_get_hl_id_by_name("catharsisRenameCursor")
 local hl_dim = api.nvim_get_hl_id_by_name("catharsisRenameDim")
 local hl_new = api.nvim_get_hl_id_by_name("catharsisRenameNew")
 
@@ -115,10 +230,23 @@ local function preview_marks_set_new()
         return
     end
 
+    -- TODO: This doesn't show the cursor when on the first char
+    local cmdpos = fn.getcmdpos()
+    local text_before = string.sub(new_text, 1, cmdpos - 1)
+    local text_after = string.sub(new_text, cmdpos + 1, #new_text)
+    local text_at = string.sub(new_text, cmdpos, cmdpos)
+    if text_at == "" then
+        text_at = " " -- Cursor after line. Draw a block.
+    end
+
     for buf, ranges in pairs(state_ranges) do
         for _, range in ipairs(ranges) do
             api.nvim_buf_set_extmark(buf, ns_dynamic, range[1], range[2], {
-                virt_text = { { new_text, hl_new } },
+                virt_text = {
+                    { text_before, hl_new },
+                    { text_at, hl_cursor },
+                    { text_after, hl_new },
+                },
                 virt_text_pos = "overlay",
                 priority = hl_preview_priority,
             })
@@ -152,7 +280,7 @@ local group_name = "catharsis.rename"
 local group = api.nvim_create_augroup(group_name, {})
 local function preview_display_init()
     dim_marks_set_new()
-    api.nvim_create_autocmd("CmdlineChanged", {
+    api.nvim_create_autocmd({ "CmdlineChanged", "CursorMovedC" }, {
         group = group,
         callback = function()
             preview_marks_set_new()
@@ -398,6 +526,7 @@ end
 ---@param range nvim-tools.range.BufRange?
 ---@param prompt_default boolean
 local function rename_get_input(client, buf, cur_pos_ext, range, prompt_default)
+    setup_display_info()
     local prompt_opts = { prompt = "New Name: ", scope = "cursor" }
     if range ~= nil then
         preview_state_init(range, buf)

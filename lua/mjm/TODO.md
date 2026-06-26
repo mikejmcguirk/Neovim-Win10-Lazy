@@ -2,6 +2,8 @@
 
 ## MID:
 
+- https://github.com/neovim/neovim/commit/bf917a503a38a4af9072f4473b340720d1d45851 - New built-in directory navigator/editor. Could this replace Oil?
+
 ## SPEC:
 
 -----------------------
