@@ -9,37 +9,6 @@ mjm.v.has_nerd_font = true
 
 mjm.v.shiftwidth = 4
 
--- Temp interfaces until https://github.com/neovim/neovim/issues/38420
-mjm.opt = {}
-
----@param opt string
----@param flags_in string[]
----@param scope vim.api.keyset.option
-function mjm.opt.flag_add(opt, flags_in, scope)
-    local old = api.nvim_get_option_value(opt, scope) ---@type string
-    local new = { old } ---@type string[]
-    for _, flag in ipairs(flags_in) do
-        if string.find(old, flag, 1, true) == nil then
-            new[#new + 1] = flag
-        end
-    end
-
-    api.nvim_set_option_value(opt, table.concat(new, ""), scope)
-end
-
----@param opt string
----@param flags_out string[]
----@param scope vim.api.keyset.option
-function mjm.opt.flag_rm(opt, flags_out, scope)
-    local val = api.nvim_get_option_value(opt, scope) ---@type string
-    for _, flag in ipairs(flags_out) do
-        val = string.gsub(val, flag, "")
-    end
-
-    api.nvim_set_option_value(opt, val, scope)
-end
--- MID: Is it better to split val into a table and filter on flags_out?
-
 mjm.fs = {}
 -- FUTURE: The code in the fs_stat calls is mostly redundant, but I don't want to make a
 -- pre-mature generalization

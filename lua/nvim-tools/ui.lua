@@ -24,13 +24,15 @@ function M.echo_err(silent, msg, hl)
 end
 
 ---Credit echasnovski
+---@param tab uinteger
 ---@return integer
-function M.get_echospace()
+function M.get_echospace(tab)
+    ---@type uinteger
     local columns = api.nvim_get_option_value("columns", { scope = "global" })
-    local cmdheight = api.nvim_get_option_value("cmdheight", {})
+    ---@type uinteger
+    local cmdheight = api.nvim_get_option_value("cmdheight", { tab = tab })
     return columns * math.max(cmdheight - 1, 0) + vim.v.echospace
 end
--- PR: cmdheight is local to tabpage, but get_option_value does not have a tab key
 
 ---@param opts? vim.ui.input.Opts
 ---@return boolean, string

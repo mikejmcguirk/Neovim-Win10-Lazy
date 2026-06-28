@@ -1,7 +1,6 @@
----@diagnostic disable-next-line: undefined-field
-mjm.lsp.start(vim.lsp.config["pylsp"], { bufnr = 0 })
----@diagnostic disable-next-line: undefined-field
--- NOTE: This is the Rust implementation
-mjm.lsp.start(vim.lsp.config["ruff"], { bufnr = 0 })
+-- Overwrite ftplugin
+vim.api.nvim_set_option_value("fo", "r", { buf = 0, operation = "append" })
 
-mjm.opt.flag_add("fo", { "r" }, { buf = 0 })
+mjm.lsp.start(vim.lsp.config["pylsp"], { bufnr = 0 })
+-- This is the Rust implementation
+mjm.lsp.start(vim.lsp.config["ruff"], { bufnr = 0 })
