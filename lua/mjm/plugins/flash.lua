@@ -1,3 +1,4 @@
+local api = vim.api
 return {
     "folke/flash.nvim",
     -- enabled = false,
@@ -28,8 +29,15 @@ return {
                 search = { forward = false, wrap = false, multi_window = false },
             })
         end)
+
+        api.nvim_set_hl(0, "FlashMatch", { link = "Search" })
+        api.nvim_set_hl(0, "FlashLabel", { link = "IncSearch" })
+        api.nvim_set_hl(0, "FlashCurrent", { link = "Search" })
     end,
     opts = {
+        label = {
+            uppercase = false,
+        },
         modes = {
             char = {
                 enabled = false,

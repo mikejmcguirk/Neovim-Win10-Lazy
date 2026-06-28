@@ -57,21 +57,21 @@ end
 ---Assumes ranges are valid, sorted, and do not overlap.
 ---@param ranges [integer, integer, integer, integer][]
 ---@param pos [integer, integer]
----@return boolean
-function M.ranges_have_pos(ranges, pos)
+---@return uinteger?
+function M.find_pos(ranges, pos)
     local ranges_len = #ranges
     if ranges_len == 0 then
-        return false
+        return
     end
 
     if ranges_len <= 16 then
         for i = 1, ranges_len do
             if M.cmp_pos(ranges[i], pos) == 0 then
-                return true
+                return i
             end
         end
 
-        return false
+        return
     end
 
     local lo = 1
@@ -85,12 +85,14 @@ function M.ranges_have_pos(ranges, pos)
         elseif cmp_res == 1 then
             hi = mid
         else
-            return true
+            return mid
         end
     end
 
-    return M.cmp_pos(ranges[lo], pos) == 0
+    return M.cmp_pos(ranges[lo], pos) == 0 and lo or nil
 end
+-- TODO: this should just be able to be a generic bisect with a key to transform the ranges but
+-- not the pos
 
 ---@generic T
 ---@param ranges (nvim-tools.Range|nvim-tools.range.BufRange)[]
@@ -526,7 +528,7 @@ end
 ---This handles both Location and LocationLink objects. If the object is a location link, it
 ---will pull from the targetSelectionRange.
 ---@param buf uinteger
----@param locations lsp.Location[]|lsp.LocationLink[]
+---@param locations (lsp.Location|lsp.LocationLink)[]
 ---@param encoding lsp.PositionEncodingKind
 function M.lsp_locations_to_ext(buf, locations, encoding)
     local ranges = {} ---@type nvim-tools.range.BufRange[]

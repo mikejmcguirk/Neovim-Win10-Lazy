@@ -1765,11 +1765,11 @@ function M.common_prefix(tt, key)
 end
 
 ---Check if all of or none of the items in `t` satisfy predicate function `f`.
----To check by key, see |uniform()|.
 ---@generic T
 ---@param t T[]
 ---@param f fun(x:T): boolean
----@return boolean `false` if length of `t` is zero.
+---@return boolean `false` if `t` is length zero.
+---@see |uniform()| to check by key.
 function M.consistent(t, f)
     local t_len = #t
     if t_len == 0 then
@@ -2640,19 +2640,6 @@ end
 function M.filter_map_to(t, f, start, stop)
     local ret = {}
     return filter_map_into_do(ret, t, f, start, stop)
-end
-
----Append to a list by applying function `f` to the values of `t`.
----@generic T, U
----@param dst U[] Modified in place!
----@param t T[]
----@param f fun(x:T): U|nil `nil` returns are filtered.
----@param start integer? (Default: `1`)
----@param stop? integer (Default: Length of `t`)
----@return U[] Reference to `dst`.
----@see |iter-indexing|
-function M.filter_map_into(dst, t, f, start, stop)
-    return filter_map_into_do(dst, t, f, start, stop)
 end
 
 ---Apply function `f` to the elements of `t` in-place with accumulator `init`. Optionally apply

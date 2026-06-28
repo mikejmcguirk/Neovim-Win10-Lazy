@@ -541,11 +541,10 @@ function M.protected_del(buf, delist, opts)
     end
 end
 
----If buf is nil, use the buf from the range.
 ---@param range nvim-tools.Range|nvim-tools.range.BufRange
----@param buf? uinteger
+---@param buf uinteger
 ---@return string
-function M.get_text_from_range(range, buf)
+function M.text_from_range(range, buf)
     buf = buf ~= nil and buf or range[5]
     return api.nvim_buf_get_text(buf, range[1], range[2], range[3], range[4], {})[1] or ""
 end
@@ -554,7 +553,7 @@ end
 ---@param buf uinteger
 ---@param pattern string See |pattern|
 ---@return nvim-tools.range.BufRange?
-function M.match_line_under_cursor(cur_pos_ext, buf, pattern)
+function M.line_match_under_cursor(cur_pos_ext, buf, pattern)
     local row = cur_pos_ext[1]
     local col = cur_pos_ext[2]
 

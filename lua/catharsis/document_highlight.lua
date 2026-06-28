@@ -186,7 +186,7 @@ local function res_ensure_updated(res, buf, version, cur_pos_ext)
 
     if cur_pos_ext ~= nil then
         local ntr = require("nvim-tools.range")
-        if ntr.ranges_have_pos(res.highlights, cur_pos_ext) then
+        if ntr.find_pos(res.highlights, cur_pos_ext) ~= nil then
             if res.has_decor ~= true then
                 api.nvim__redraw({ buf = buf, valid = true, flush = false })
             end

@@ -85,22 +85,23 @@ end
 ---@param bufs table<integer, true>? If not `nil`, only return results in the listed bufs.
 ---@return table<uinteger, nvim-tools.range.BufRange>
 function M.ranges_from_locations_by_buf(results, encoding, bufs)
-    local ntl = require("nvim-tools.list")
     -- Saves non-trivial time on large result sets.
     local uri_bufnr_cache = {} ---@type table<string, uinteger>
-    ---@type table<integer, (lsp.Location[]|lsp.LocationLink[])>
-    local buf_locations = ntl.group_by(results, function(result)
-        -- locations may be Location or LocationLink
+    local buf_locations = {} ---@type table<integer, (lsp.Location|lsp.LocationLink)[]>
+    local ntt = require("nvim-tools.table")
+    for _, result in ipairs(results) do
         local uri = result.uri or result.targetUri
-        local cached = uri_bufnr_cache[uri]
-        if cached ~= nil then
-            return cached
+        local cached_bufnr = uri_bufnr_cache[uri]
+        if cached_bufnr ~= nil then
+            local locations = ntt.get_or_set_subtable(buf_locations, cached_bufnr)
+            locations[#locations + 1] = result
+        else
+            local bufnr = vim.uri_to_bufnr(uri)
+            uri_bufnr_cache[uri] = bufnr
+            local locations = ntt.get_or_set_subtable(buf_locations, bufnr)
+            locations[#locations + 1] = result
         end
-
-        local bufnr = vim.uri_to_bufnr(uri)
-        uri_bufnr_cache[uri] = bufnr
-        return bufnr
-    end)
+    end
 
     if bufs ~= nil then
         for buf, _ in pairs(buf_locations) do
@@ -110,19 +111,21 @@ function M.ranges_from_locations_by_buf(results, encoding, bufs)
         end
     end
 
+    if not next(buf_locations) then
+        return {}
+    end
+
     local ntr = require("nvim-tools.range")
-    local ntt = require("nvim-tools.table")
     ---@type table<integer, nvim-tools.range.BufRange[]>
     local buf_ranges = ntt.filter_map_to(buf_locations, function(buf, locations)
         return ntr.lsp_locations_to_ext(buf, locations, encoding)
     end)
 
-    if encoding ~= "utf-8" then
-        for _, ranges in pairs(buf_ranges) do
-            ntl.filter(ranges, function(range)
-                return ntr.valid_(range)
-            end)
-        end
+    local ntl = require("nvim-tools.list")
+    for _, ranges in pairs(buf_ranges) do
+        ntl.filter(ranges, function(range)
+            return ntr.valid_(range)
+        end)
     end
 
     for _, ranges in pairs(buf_ranges) do

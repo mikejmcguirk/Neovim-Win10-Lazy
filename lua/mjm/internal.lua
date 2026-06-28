@@ -73,5 +73,5 @@ set({ "n", "x" }, "<M-C>", '"_C')
 ----------------
 
 set("n", "<leader>r", function()
-    require("catharsis.rename").dispatcher()
+    require("catharsis.rename")._dispatcher()
 end)
