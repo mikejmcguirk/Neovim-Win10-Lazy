@@ -67,6 +67,13 @@ if config.create_plug_integrations then
         end,
     })
 
+    api.nvim_set_keymap("n", "<Plug>(annotator-fzf-lua-grep-curbuf-luacats)", "", {
+        noremap = true,
+        callback = function()
+            annotator.fzf_lua_grep_luacats(true)
+        end,
+    })
+
     api.nvim_set_keymap("n", "<Plug>(annotator-fzf-lua-grep-cwd)", "", {
         noremap = true,
         callback = function()

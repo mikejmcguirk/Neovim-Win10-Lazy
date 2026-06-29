@@ -96,6 +96,15 @@ function M.fzf_lua_grep(cur_buf)
 end
 
 ---@param cur_buf? boolean
+function M.fzf_lua_grep_luacats(cur_buf)
+    if cur_buf == nil then
+        cur_buf = true
+    end
+
+    require("annotator._integrations").fzf_lua_grep_luacats(cur_buf)
+end
+
+---@param cur_buf? boolean
 function M.rancher_grep(cur_buf)
     if cur_buf == nil then
         cur_buf = true

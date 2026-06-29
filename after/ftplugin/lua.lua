@@ -60,6 +60,10 @@ set("n", "<leader>-l", function()
 end, { buf = 0 })
 
 set("n", "<leader>-m", function()
+    add_annotation("@mark")
+end, { buf = 0 })
+
+set("n", "<leader>-o", function()
     add_annotation("@mod")
 end, { buf = 0 })
 

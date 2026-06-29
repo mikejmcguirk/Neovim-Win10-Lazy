@@ -32,6 +32,7 @@ set("n", "<leader>-k", "<Plug>(annotator-add-mark)")
 set("n", "<leader>-K", "<Plug>(annotator-add-borders)")
 set("n", "<leader>fnk", "<Plug>(annotator-fzf-lua-grep-curbuf)")
 set("n", "<leader>fnK", "<Plug>(annotator-fzf-lua-grep-cwd)")
+set("n", "<leader>fnm", "<Plug>(annotator-fzf-lua-grep-curbuf-luacats)")
 set("n", "<leader>qgk", "<Plug>(annotator-rancher-grep-cwd)")
 set("n", "<leader>lgk", "<Plug>(annotator-rancher-grep-curbuf)")
 

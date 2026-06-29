@@ -23,6 +23,21 @@ function M.fzf_lua_grep(cur_buf)
 end
 
 ---@param cur_buf boolean
+function M.fzf_lua_grep_luacats(cur_buf)
+    if not check_ft() then
+        return
+    end
+
+    local fzf_lua = require("fzf-lua")
+    if not fzf_lua then
+        return
+    end
+
+    local grep = cur_buf and fzf_lua.grep_curbuf or fzf_lua.grep
+    grep({ regex = "^\\s*---@mark" })
+end
+
+---@param cur_buf boolean
 function M.rancher_grep(cur_buf)
     if not check_ft() then
         return

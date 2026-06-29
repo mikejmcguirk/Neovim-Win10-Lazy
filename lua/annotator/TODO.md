@@ -9,6 +9,8 @@
 
 ## TODO:
 
+- [ ] Add mark annotation grep
+
 - [ ] However it's accomplished, I need to be able to grep "## TODO:" in markdown files in addition to TODO within comments.
 - [ ] Is fzf-lua's deep_clone function useful?
 - [ ] Look at https://github.com/tpope/vim-projectionist
