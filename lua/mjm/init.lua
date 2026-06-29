@@ -59,6 +59,10 @@ require("mjm.tal")
 require("catharsis.document_highlight")
 require("mjm.lsp")
 
+if vim.v.startreason ~= "normal" then
+    return
+end
+
 if not api.nvim_buf_is_valid(1) then
     return
 end
