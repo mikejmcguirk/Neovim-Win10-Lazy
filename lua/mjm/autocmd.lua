@@ -1,17 +1,7 @@
 local api = vim.api
 
 local mjm_group = api.nvim_create_augroup("mjm-group", {})
-
-local clear_conditions = {
-    "BufEnter",
-    "InsertEnter",
-    "RecordingEnter",
-    "TabLeave",
-    "TabNewEntered",
-    "WinEnter",
-    "WinLeave",
-}
-
+local clear_conditions = { "BufLeave", "InsertEnter", "RecordingEnter", "TabLeave", "WinLeave" }
 api.nvim_create_autocmd(clear_conditions, {
     group = mjm_group,
     pattern = "*",
@@ -51,5 +41,19 @@ api.nvim_create_autocmd("BufWinEnter", {
         api.nvim_win_call(win, function()
             api.nvim_cmd({ cmd = "norm", args = { "zz" }, bang = true }, {})
         end)
+    end,
+})
+
+api.nvim_create_autocmd("TextYankPost", {
+    group = mjm_group,
+    callback = function()
+        vim.hl.hl_op({ higroup = "IncText", timeout = 175 })
+    end,
+})
+
+api.nvim_create_autocmd("TextPutPost", {
+    group = mjm_group,
+    callback = function()
+        vim.hl.hl_op({ higroup = "Number", timeout = 175 })
     end,
 })

@@ -299,33 +299,10 @@ local s_fg = get_hl(0, { name = "String" }).fg
 set_hl(0, "stl_b", { fg = s_fg, bg = darken_24bit(s_fg, 50) })
 set_hl(0, "stl_c", { link = "Normal" })
 
--- LOW: Would be cool if this was a hover menu
+-- MID: Would be cool if this was a hover menu
 vim.keymap.set("n", "zS", function()
     api.nvim_cmd({ cmd = "Inspect" }, {})
 end)
-
-local op_group = api.nvim_create_augroup("mjm-hl-op", {})
-api.nvim_create_autocmd("TextYankPost", {
-    group = op_group,
-    callback = function()
-        vim.hl.hl_op({ higroup = "IncText", timeout = 175 })
-    end,
-})
-
-api.nvim_create_autocmd("TextPutPost", {
-    group = op_group,
-    callback = function()
-        vim.hl.hl_op({ higroup = "Number", timeout = 175 })
-    end,
-})
-
--- FUTURE: This issue seems to be helped by not eagly disably captures
--- https://github.com/neovim/neovim/issues/35575
--- NOTE: Don't create a global disable here, as we can't know how it would apply to new languages
--- NOTE: Only disable treesitter captures if they produce bad colors. Squeezing perf out of
--- disabling captures is not worth the maintenance cost
--- LOW: Once we no longer need to tie this code to resolving the nowrap issue, move this out into
--- ftplugin files, since this is filetype specific behavior
 
 api.nvim_create_autocmd("FileType", {
     group = api.nvim_create_augroup("mjm-lua-disable-hl-captures", {}),
@@ -338,7 +315,6 @@ api.nvim_create_autocmd("FileType", {
         set_hl(0, "@lsp.type.property.lua", {})
         set_hl(0, "@lsp.type.variable.lua", {})
 
-        ---@type vim.treesitter.Query?
         local hl_query = vim.treesitter.query.get("lua", "highlights")
         if not hl_query then
             return
@@ -348,5 +324,11 @@ api.nvim_create_autocmd("FileType", {
         -- Keep variable.parameter because there are edge cases semantic tokens miss
 
         hl_query.query:disable_capture("function")
+        hl_query.query:disable_capture("keyword.operator")
+        hl_query.query:disable_capture("punctuation.bracket")
+        hl_query.query:disable_capture("punctuation.delimiter")
+        hl_query.query:disable_capture("variable")
+        hl_query.query:disable_capture("variable.lua")
+        hl_query.query:disable_capture("variable.member.lua")
     end,
 })
