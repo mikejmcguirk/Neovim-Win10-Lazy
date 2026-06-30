@@ -37,7 +37,7 @@ local fzflua_opts = {
     fzf_opts = {
         ["--algo"] = "v2",
         ["--cycle"] = true,
-        ["--layout"] = "default",
+        ["--layout"] = "reverse",
         ["--gutter"] = " ",
         ["--tiebreak"] = "length,chunk",
     },
@@ -50,7 +50,6 @@ return {
     lazy = false,
     config = function()
         local fzf_lua = require("fzf-lua")
-
         fzf_lua.setup(fzflua_opts)
 
         api.nvim_set_hl(0, "FzfLuaScrollBorderFull", { link = "FzfLuaScrollFloatFull" })
