@@ -22,7 +22,6 @@ local MAX_INT = math.floor(math.huge)
 ---Example: -1, 0 - Iterate from the second-to-last to the end.
 ---
 ---@tag key_fn
----@type string|fun(x:any): any?
 ---@brief Like |vim.list.unique()| and |vim.list.bisect()|, multiple functions in this module
 ---take a `key` argument. The key is called on each processed value of the list. If the key is
 ---a string, it is used as the field name to index each value. If the key is an anonymous
@@ -55,9 +54,8 @@ if not has_new then
 end
 
 ---Create a new table. Runs `table.new` on LuaJIT builds.
----@nodiscard
 ---@mark data-management
----@type fun(narray: integer, nhash: integer): table
+---@type fun(narray:integer, nhash:integer): table
 M.new = new
 
 -- Port of Neovim core logic since their table module is private
@@ -72,7 +70,6 @@ end
 
 ---Clear all list and dict data from a table. Runs `table.clear` on LuaJIT builds.
 ---@mark data-management
----@type fun(t:table)
 M.clear = clear
 
 ---Clears all |lua-list| elements in `t`.
@@ -220,7 +217,7 @@ function M.i_expel_to(t, start, stop)
     if t_len == 0 or (start == 1 and stop == t_len) then
         return {}
     elseif start > stop then
-        return M.copy_exact(t, 1, t_len)
+        return require("nvim-tools._table").i_copy_exact(t, 1, t_len)
     end
 
     local stop_first = start - 1
@@ -1377,7 +1374,7 @@ function M.i_symmetric_difference_to(key, ...)
     end
 
     local lists = { ... }
-    local key_fn = require("nvim-tools.table").key_fn_from_key(key)
+    local key_fn = require("nvim-tools._table").key_fn_from_key(key)
     local seen = {} ---@type table<any, uinteger>
     for i = 1, nargs do
         local tn = lists[i]
@@ -2641,10 +2638,10 @@ end
 ---@param new_len uinteger
 ---@param t T[]
 ---@param sep T
----@param unit_size uinteger? (Default: `1`)
+---@param unit_size uinteger (Default: `1`)
 ---@see |iter-indexing|
----@param start uinteger? (Default: `1`)
----@param stop? uinteger Default: Length of `t`
+---@param start uinteger (Default: `1`)
+---@param stop uinteger Default: Length of `t`
 ---@return T[]
 local function intersperse_do(dst, iter_len, sep_count, new_len, t, sep, unit_size, start, stop)
     local t_len = #t -- Duplicate. Remove when inlining.

@@ -80,7 +80,7 @@ end
 ---@param results lsp.Location[]
 ---@param encoding lsp.PositionEncodingKind
 ---@param bufs table<integer, true>? If not `nil`, only return results in the listed bufs.
----@return table<uinteger, nvim-tools.range.BufRange>
+---@return table<uinteger, nvim-tools.range.BufRange[]>
 function M.locations_to_api_ranges_by_buf(results, encoding, bufs)
     -- Saves non-trivial time on large result sets.
     local uri_bufnr_cache = {} ---@type table<string, uinteger>

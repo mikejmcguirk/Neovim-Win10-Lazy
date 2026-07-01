@@ -18,7 +18,7 @@ local RENAME = "textDocument/rename"
 
 ---@class (exact) catharsis.rename.Session
 ---@field cmdline string
----@field cmdpos -1|uinteger
+---@field cmdpos uinteger
 ---@field cur_pos_idx uinteger
 ---@field cur_win uinteger
 ---@field cur_win_info catharsis.rename.WinInfo
@@ -30,16 +30,16 @@ local RENAME = "textDocument/rename"
 -- stored as a WinInfo struct.
 
 ---@class (exact) catharsis.rename.WinInfo
----@field buf -1|uinteger
----@field ns_dim -1|uinteger
----@field ns_dynamic -1|uinteger
+---@field buf uinteger
+---@field ns_dim uinteger
+---@field ns_dynamic uinteger
 ---@field ranges nvim-tools.range.BufRange[]
 
 local state_ns_cur_pos = api.nvim_create_namespace("catharsis.rename.cur_pos")
 local state_ns_dims = {} ---@type uinteger[]
 local state_ns_dynamics = {} ---@type uinteger[]
 local state_req_prep_rn_timer = assert(uv.new_timer())
-local state_req_refs_id = nil
+local state_req_refs_id = nil ---@type uinteger?
 
 local ns_basename = "catharsis.rename"
 local ns_basename_dim = ns_basename .. ".dim"
@@ -71,6 +71,7 @@ local function ns_ensure(total_needed)
     if ns_needed_dim > 0 then
         for _ = 1, ns_needed_dim do
             local ns_name_new = ns_basename_dim .. "." .. tostring(#state_ns_dims + 1)
+            -- TODO: not the same as the dim ones
             state_ns_dims[#state_ns_dims + 1] = api.nvim_create_namespace(ns_name_new)
         end
     end
@@ -98,7 +99,7 @@ local function ranges_extract_for_win(win, ranges)
     local top = fn.line("w0", win) - 1
     local bot = fn.line("w$", win) - 1
     local vim_list_bisect = vim.list.bisect
-    local lo = vim_list_bisect(ranges, { top }, {
+    local lo = vim_list_bisect(ranges, { top, 0, 0, 0, 0 }, {
         key = function(r)
             return r[1]
         end,
@@ -108,7 +109,7 @@ local function ranges_extract_for_win(win, ranges)
         return {}
     end
 
-    local hi = vim_list_bisect(ranges, { 0, 0, bot }, {
+    local hi = vim_list_bisect(ranges, { 0, 0, bot, 0, 0 }, {
         bound = "upper",
         key = function(r)
             return r[3]
@@ -150,15 +151,14 @@ local function session_create(win, buf)
 
     return {
         cmdline = "",
-        cmdpos = -1,
+        cmdpos = 0,
         cur_pos_idx = 0,
         cur_win = win,
         cur_win_info = {
             buf = buf,
-            mark_preview_cursor = -1,
-            mark_preview_padding = -1,
             ns_dim = ns_dim,
             ns_dynamic = ns_dynamic,
+            ranges = {},
         },
         ref_win_info = {},
         symbol_len = 0,
@@ -166,19 +166,21 @@ local function session_create(win, buf)
 end
 
 ---@param session catharsis.rename.Session
----@param range nvim-tools.range.BufRange
-local function session_add_new_symbol_range(session, range)
-    session.cur_pos_idx = 1
-    session.symbol_len = range[4] - range[2]
-    session.cur_win_info.ranges = { range }
+---@param ranges nvim-tools.range.BufRange[]
+---@param cur_pos_idx uinteger
+local function session_add_cur_win_ranges(session, ranges, cur_pos_idx)
+    local cur_pos_range = ranges[cur_pos_idx]
+    session.symbol_len = cur_pos_range[4] - cur_pos_range[2]
+    session.cur_pos_idx = cur_pos_idx
+    session.cur_win_info.ranges = ranges
 end
--- TODO: this function is now somewhat of a black hole
+-- TODO: Can more of the determining logic be put into here
 
 ---@param session catharsis.rename.Session
 ---@param cur_pos_ext [uinteger, uinteger]
 ---@param ref_wins uinteger[]
 ---@param win_bufs table<uinteger, uinteger>
----@param buf_ranges table<uinteger, nvim-tools.range.BufRange>
+---@param buf_ranges table<uinteger, nvim-tools.range.BufRange[]>
 ---@return boolean, string
 local function session_set_from_refs(session, cur_pos_ext, ref_wins, win_bufs, buf_ranges)
     local cur_win = session.cur_win
@@ -186,7 +188,7 @@ local function session_set_from_refs(session, cur_pos_ext, ref_wins, win_bufs, b
 
     -- A valid response includes all references the server can find, which would include the
     -- original text document position. This module includes declaration and does not stream
-    -- results. And errors/empty results should have already been handled.
+    -- results. Errors/empty results should have already been handled.
     local cur_win_ranges = ranges_extract_for_win(cur_win, cur_win_buf_ranges)
     if 0 == #cur_win_ranges then
         return false, "No references in request origin window."
@@ -198,10 +200,7 @@ local function session_set_from_refs(session, cur_pos_ext, ref_wins, win_bufs, b
         return false, "No reference for the text document position."
     end
 
-    local cur_pos_range = cur_win_buf_ranges[cur_pos_idx]
-    session.symbol_len = cur_pos_range[4] - cur_pos_range[2]
-    session.cur_pos_idx = cur_pos_idx
-    session.cur_win_info.ranges = cur_win_ranges
+    session_add_cur_win_ranges(session, cur_win_ranges, cur_pos_idx)
 
     local wins_count = 1
     local ref_win_info = session.ref_win_info
@@ -221,7 +220,7 @@ local function session_set_from_refs(session, cur_pos_ext, ref_wins, win_bufs, b
 
     ns_ensure(wins_count)
     local ns_idx = 2 -- The original win already owns idx one.
-    for win, win_info in pairs(session.ref_win_info) do
+    for win, win_info in pairs(ref_win_info) do
         local ns_dim = state_ns_dims[ns_idx]
         local ns_preview = state_ns_dynamics[ns_idx]
         ns_idx = ns_idx + 1
@@ -468,13 +467,13 @@ local function preview_listener_init(session)
 
     marks_dim_new(session)
 end
--- MID: These can double-fire. Not a *huge* deal since CursorMovedC only impacts the curosr
--- symbol, but still unnecessary. You would need to independently track the latest cmdtext
--- and cmdpos and use a data structure to mark which cmd has acted on it.
 
 local function preview_listener_stop()
     for _, autocmd in ipairs(api.nvim_get_autocmds({ group = group_name })) do
-        api.nvim_del_autocmd(autocmd.id)
+        local id = autocmd.id
+        if id ~= nil then
+            api.nvim_del_autocmd(id)
+        end
     end
 end
 
@@ -504,7 +503,7 @@ local function rename_do(client, buf, cur_pos_ext, new_name)
             return
         end
 
-        util.apply_workspace_edit(result, client.offset_encoding)
+        util.apply_workspace_edit(result, encoding)
     end, buf)
 end
 -- MID: Unsure what an empty table result means or how to handle it.
@@ -536,7 +535,7 @@ local function req_refs_handler_ctx_check(ctx, req_id, client_id)
 end
 
 ---@param err lsp.ResponseError?
----@param result lsp.Location[]|lsp.LocationLink
+---@param result lsp.Location[]
 ---@param ctx lsp.HandlerContext
 ---@param client_id uinteger
 ---@param session catharsis.rename.Session
@@ -699,7 +698,7 @@ local function req_prep_rn_handler_check_ctx(ctx, buf)
 end
 
 ---@param err lsp.ResponseError?
----@param result (lsp.Range|{ range: lsp.Range, placeholder: string })?
+---@param result (lsp.Range|{ range: lsp.Range, placeholder: string }|{ defaultBehavior: boolean })?
 ---@param ctx lsp.HandlerContext
 ---@param session catharsis.rename.Session
 ---@param cur_pos_ext [uinteger, uinteger]
@@ -750,7 +749,7 @@ local function req_prep_rn_handler(err, result, ctx, session, cur_pos_ext, promp
 
     local ntb = require("nvim-tools.buf")
     local default = prompt_default and ntb.text_from_range(default_range, buf) or ""
-    session_add_new_symbol_range(session, default_range)
+    session_add_cur_win_ranges(session, { default_range }, 1)
     rename_get_input(client, session, cur_pos_ext, default, true)
 end
 
@@ -841,7 +840,7 @@ function M._dispatcher(opts)
     api.nvim__ns_set(state_ns_cur_pos, { wins = { cur_win } })
     local cur_buf = api.nvim_win_get_buf(cur_win)
     local client_id, client, preferred = client_find(cur_buf, opts_ctx.filter)
-    if not (client_id ~= nil and client ~= nil) then
+    if client_id == nil or client == nil then
         local msg = "No clients supporting textDocument/rename were found"
         nts.log_and_echo(msg, 3, hl_warn, true)
         return
@@ -866,7 +865,7 @@ function M._dispatcher(opts)
         end
 
         local default = prompt_default and ntb.text_from_range(cword_range, cur_buf) or ""
-        session_add_new_symbol_range(session, cword_range)
+        session_add_cur_win_ranges(session, { cword_range }, 1)
         rename_get_input(client, session, cur_pos_ext, default, preferred)
         return
     end

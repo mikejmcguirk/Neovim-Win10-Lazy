@@ -17,6 +17,7 @@ return {
     -- },
     strict = {
         arrayIndex = false,
+        typeCall = true,
     },
     workspace = {
         library = {
