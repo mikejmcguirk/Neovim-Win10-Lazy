@@ -47,7 +47,7 @@ function M.get_lines(buf, rows)
     local bufname_full = api.nvim_buf_get_name(buf)
     local abs_path = fs.normalize(vim.call("fnamemodify", bufname_full, ":p"))
     local ok, text = ntf.read_file(abs_path)
-    if not (ok and text) then
+    if ok == false or text == nil then
         -- LOW-DEP: Can design more nuanced error handling if an actual scenario comes up.
         return lines
     end
