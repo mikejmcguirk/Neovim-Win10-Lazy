@@ -60,6 +60,10 @@
 - [ ] Once cmdline is turned into a normal buffer, it should be possible to pull the cursor position out of it so it can be shown as part of the preview (just do it as a block cursor). Problem here - since this would be a new feature, would need a has statement to separate it out from the old code. Given significance of change, might be hard.
 - [ ] It would be better if this filtered folds, but that requires window scoping of the preview results.
 
+#### LOW:
+
+- Add options to customize rename highlighting
+
 #### MID-DEP:
 
 - [ ] The module currently assumes that a valid rename target will always produce a range from CWORD or the LSP. I'm not ruling out that there's a niche use case where this is valid behavior, but I would rather address it based on a concrete example than in the abstract.

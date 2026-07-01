@@ -2,6 +2,8 @@
 
 #### TODO:
 
+- [ ] Make another attempt at using emmylua_ls by building from tip. The the generic handling issues in Lua_Ls are becoming a bigger problem.
+
 #### MID:
 
 - [ ] Investigate this: https://github.com/chrisgrieser/nvim-various-textobjs

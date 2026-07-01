@@ -435,15 +435,14 @@ end
 
 ---@param ranges nvim-tools.Range[]
 ---@return table<uinteger, true>
-function M.rows_from_ranges_map(ranges)
+function M.mapped_rows_from_ranges(ranges)
     local rows = {} ---@type table<uinteger, true>
     local len_ranges = #ranges
     for i = 1, len_ranges do
         local range = ranges[i]
         local start_row = range[1]
         local end_row = range[3]
-        local step = end_row - start_row >= 0 and 1 or -1
-        for j = start_row, end_row, step do
+        for j = start_row, end_row do
             rows[j] = true
         end
     end
@@ -451,67 +450,12 @@ function M.rows_from_ranges_map(ranges)
     return rows
 end
 
----Bespoke version to avoid vim.range conversion and default str_utfindex.
----@param range nvim-tools.Range
----@param buf integer
----@param encoding lsp.PositionEncodingKind
----@return lsp.Range
-function M.ext_to_lsp(range, buf, encoding)
-    local start_row = range[1]
-    local start_col = range[2]
-    local end_row = range[3]
-    local end_col = range[4]
-    if encoding == "utf-8" then
-        return {
-            start = { line = start_row, character = start_col },
-            ["end"] = { line = end_row, character = end_col },
-        }
-    end
-
-    local line
-    local line_count = api.nvim_buf_line_count(buf)
-    local endofline = api.nvim_get_option_value("endofline", { buf = buf })
-    local nts = require("nvim-tools.lsp")
-    local nti = require("nvim-tools.str")
-    if start_col > 0 then
-        line = nts.get_line(buf, start_row)
-        ---@diagnostic disable-next-line: param-type-mismatch
-        start_col = nti.str_utfindex(line, encoding, start_col)
-    elseif start_col == 0 and start_row == line_count and endofline == false then
-        start_row = start_row - 1
-        line = nts.get_line(buf, start_row)
-        ---@diagnostic disable-next-line: param-type-mismatch
-        start_col = nti.str_utfindex(line, encoding, start_col)
-    end
-
-    if end_col > 0 then
-        if start_row ~= end_row and line == nil then
-            line = nts.get_line(buf, end_row)
-        end
-
-        ---@diagnostic disable-next-line: param-type-mismatch
-        end_col = nti.str_utfindex(line, encoding, end_col)
-    elseif end_col == 0 and end_row == line_count and endofline == false then
-        end_row = end_row - 1
-        if start_row ~= end_row and line == nil then
-            line = nts.get_line(buf, end_row)
-        end
-
-        ---@diagnostic disable-next-line: param-type-mismatch
-        end_col = nti.str_utfindex(line, encoding, end_col)
-    end
-
-    return {
-        start = { line = start_row, character = start_col },
-        ["end"] = { line = end_row, character = end_col },
-    }
-end
-
----@param location lsp.Location|lsp.LocationLink
+---Unlike the Nvim core function, this does not handle LocationLink.
+---@param location lsp.Location
 ---@param buf uinteger
 ---@return nvim-tools.range.BufRange
 local function location_to_range(location, buf)
-    local range = location.range or location.targetSelectionRange
+    local range = location.range -- Mandatory per the spec.
     local range_start = range.start
     local range_end = range["end"]
     return {
@@ -525,27 +469,29 @@ end
 -- MID: For lists, this forces us to check the range location on each object. But I'm not sure if
 -- we can assume all location results are the same format.
 
----This handles both Location and LocationLink objects. If the object is a location link, it
----will pull from the targetSelectionRange.
+---Unlike the Nvim core function, this does not handle LocationLink.
 ---@param buf uinteger
----@param locations (lsp.Location|lsp.LocationLink)[]
+---@param locations lsp.Location[]
 ---@param encoding lsp.PositionEncodingKind
-function M.lsp_locations_to_ext(buf, locations, encoding)
-    local ranges = {} ---@type nvim-tools.range.BufRange[]
-    local locations_len = #locations
-    for i = 1, locations_len do
-        ranges[i] = location_to_range(locations[i], buf)
-    end
+---@return nvim-tools.range.BufRange[] Invalid ranges (end_col <= start_col) discarded.
+function M.lsp_locations_to_api(buf, locations, encoding)
+    local ntt = require("nvim-tools.table")
+    local ranges = ntt.i_filter_map_to(locations, function(location)
+        return location_to_range(location, buf)
+    end)
 
     if encoding == "utf-8" then
+        ntt.i_keep(ranges, function(range)
+            return M.valid_(range)
+        end)
+
         return ranges
     end
 
-    local range_rows = M.rows_from_ranges_map(ranges)
+    local ranges_len = #ranges
+    local range_rows = M.mapped_rows_from_ranges(ranges)
     local nts = require("nvim-tools.lsp")
     local lines = nts.get_lines(buf, range_rows)
-
-    local ranges_len = #ranges
     for i = 1, ranges_len do
         local line
         local range = ranges[i]
@@ -566,6 +512,10 @@ function M.lsp_locations_to_ext(buf, locations, encoding)
             end_col = vim._str_byteindex(line, end_col, encoding == "utf-16")
         end
     end
+
+    ntt.i_keep(ranges, function(range)
+        return M.valid_(range)
+    end)
 
     return ranges
 end

@@ -1283,7 +1283,7 @@ function M.i_group_by(t, key)
         return ret
     end
 
-    local _ntt = require("nvim-tools.table")
+    local _ntt = require("nvim-tools._table")
     local key_fn = _ntt.key_fn_from_key(key)
     local ntt = require("nvim-tools.table")
     for i = 1, t_len do
@@ -1604,8 +1604,8 @@ end
 ---@return table<K, V> Reference to `t`.
 function M.keep(t, f)
     for k, v in pairs(t) do
-        if f(k, v) then
-            t[k] = v
+        if not f(k, v) then
+            t[k] = nil
         end
     end
 
@@ -2229,8 +2229,8 @@ end
 ---@generic T, A
 ---@param t T[]
 ---@param init A First accumulator value. No-op if this is `nil`.
----@param f fun(acc:A, x:T, idx:uinteger): A If `nil` is returned, folding stops and the current
----accumulator is returned.
+---@param f fun(acc:A, x:T, idx:uinteger): A|nil If `nil` is returned, folding stops and the
+---current accumulator is returned.
 ---@param rev? boolean (Default: `false`) If true, iterate from the end.
 ---@return A `init` if `t` is length zero.
 function M.i_fold(t, init, f, rev)
@@ -2436,6 +2436,35 @@ function M.i_filter_map2_to(t1, t2, f)
     return ret
 end
 
+---Create a new |lua-dict| from mapped values of `t` with an accumulator.
+---@generic K, V, R, M, A
+---@param t table<K, V>
+---@param init A No-op if `nil`.
+---@param f fun(acc:A, k:K, v:V): A?, M
+---@return table<R, M>, A
+---Reference to `t` and final accumulator.
+function M.filter_map_accum_to(t, init, f)
+    local ret = {}
+    local acc = init
+    if acc == nil then
+        return ret, acc
+    end
+
+    for k, v in pairs(t) do
+        local acc_new, vm = f(acc, k, v)
+        if acc_new == nil then
+            return ret, acc
+        end
+
+        acc = acc_new
+        if vm ~= nil then
+            ret[k] = vm
+        end
+    end
+
+    return ret, acc
+end
+
 ---Create a new |lua-list| by threading an accumulator through function `f` to modify the values
 ---of `t`.
 ---@generic T, A, U
@@ -2484,14 +2513,11 @@ end
 ---Modify values of `t` in place.
 ---@generic K, V, M
 ---@param t table<K, V>
----@param f fun(k:K, v:V): M
+---@param f fun(k:K, v:V): M|nil
 ---@return table<K, M> Reference to `t`
 function M.filter_modify(t, f)
     for k, v in pairs(t) do
-        local m = f(k, v)
-        if m ~= nil then
-            t[k] = m
-        end
+        t[k] = f(k, v)
     end
 
     return t
@@ -2535,6 +2561,33 @@ function M.i_filter_modify2(t1, t2, f)
 
     return t1
 end
+
+---Modify values of `t` in place with an accumulator.
+---@generic K, V, A
+---@param t table<K, V>
+---@param init A No-op if `nil`.
+---@param f fun(acc:A, k:K, v:V): A, V
+---@return table<K, V>, A
+---Reference to `t` and final accumulator.
+function M.filter_modify_accum(t, init, f)
+    local acc = init
+    if acc == nil then
+        return t, acc
+    end
+
+    for k, v in pairs(t) do
+        local acc_new, vm = f(acc, k, v)
+        if acc_new == nil then
+            return t, acc
+        end
+
+        acc = acc_new
+        t[k] = vm
+    end
+
+    return t, acc
+end
+-- TODO: The pairs iteration logic is the same as filter_map_accum_to. Outline
 
 ---Modify `t` in place by threading an accumulator through function `f`.
 ---@generic T, A
@@ -2702,6 +2755,23 @@ end
 -- MID-DEP: For uneven unit sizes, you can add a `rev` boolean to put the extra group before or
 -- after the main group loop. Don't do this though without a concrete use case, as it makes the
 -- code more complicated.
+
+---Iterate through a table, returning an arbitrarily new key and value for each original value.
+---@generic K, V, R, M
+---@param t table<K, V>
+---@param f fun(k:K, v:V): R|nil, M|nil
+---@return table<R, M>
+function M.rebuild_to(t, f)
+    local ret = {}
+    for k, v in pairs(t) do
+        local km, vm = f(k, v)
+        if km ~= nil and vm ~= nil then
+            ret[km] = vm
+        end
+    end
+
+    return ret
+end
 
 ---Reverse the order of the items in list `t` in place.
 ---@generic T

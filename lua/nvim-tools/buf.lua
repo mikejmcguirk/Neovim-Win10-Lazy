@@ -559,17 +559,18 @@ end
 ---@param pattern string See |pattern|
 ---@return nvim-tools.range.BufRange?
 function M.line_match_under_cursor(cur_pos_ext, buf, pattern)
-    local row = cur_pos_ext[1]
-    local col = cur_pos_ext[2]
-
     local re = vim.regex(pattern)
     local init = 0
+    local row = cur_pos_ext[1]
+    local col = cur_pos_ext[2]
     while true do
         local sc, ec_ = re:match_line(buf, row, init)
         if sc == nil or ec_ == nil then
             return nil
         end
 
+        sc = sc + init
+        ec_ = ec_ + init
         if sc <= col and col < ec_ then
             return { row, sc, row, ec_, buf }
         end

@@ -12,21 +12,25 @@ local M = {}
 ---@param buf integer
 ---@param lines table<integer, string> 0 indexed
 local function get_lines_from_buf_loaded(buf, lines)
-    for row, _ in pairs(lines) do
-        lines[row] = api.nvim_buf_get_lines(buf, row, row + 1, false)[1] or ""
-    end
+    require("nvim-tools.table").filter_modify(lines, function(row, _)
+        return api.nvim_buf_get_lines(buf, row, row + 1, false)[1] or ""
+    end)
 end
 
----Bespoke version because the core util is private.
+---Bespoke version because the Nvim core util is private.
 ---@param buf uinteger
 ---@param rows table<uinteger, boolean> 0 indexed
 ---@return table<uinteger, string>
 function M.get_lines(buf, rows)
-    local lines = {} ---@type table<uinteger, string>
-    -- Do this to avoid conditional logic when running str indexing functions.
-    for row, _ in pairs(rows) do
-        lines[row] = ""
-    end
+    -- For two reasons:
+    -- - Avoid having to apply conditional logic to the results.
+    -- - For file reads, avoid an extra iteration to count keys.
+    local ntt = require("nvim-tools.table")
+    ---@generic K, M
+    ---@type table<K, M>, uinteger
+    local lines, needed = ntt.filter_map_accum_to(rows, 0, function(total, _, _)
+        return total + 1, ""
+    end)
 
     if api.nvim_buf_is_loaded(buf) then
         get_lines_from_buf_loaded(buf, lines)
@@ -43,19 +47,17 @@ function M.get_lines(buf, rows)
     local bufname_full = api.nvim_buf_get_name(buf)
     local abs_path = fs.normalize(vim.call("fnamemodify", bufname_full, ":p"))
     local ok, text = ntf.read_file(abs_path)
-
     if not (ok and text) then
-        return {}
+        -- LOW-DEP: Can design more nuanced error handling if an actual scenario comes up.
+        return lines
     end
 
-    local ntt = require("nvim-tools.table")
-    local rows_needed = ntt.keys_count(lines)
     local row = 0
     for line in vim.gsplit(text, "\n", { plain = true }) do
         if lines[row] ~= nil then
             lines[row] = line
-            rows_needed = rows_needed - 1
-            if rows_needed == 0 then
+            needed = needed - 1
+            if needed == 0 then
                 break
             end
         end
@@ -65,10 +67,6 @@ function M.get_lines(buf, rows)
 
     return lines
 end
--- MID: Unsure how to better represent rows. Both a uinteger[] and a table<uinteger, string> make
--- the abstraction leaky. The list because the caller has to know it needs to be de-duped, and
--- the table because the caller has to know the string will be overwritten. The current method
--- properly forces uniqueness and hides implementation detail.
 
 ---Bespoke version because the core util is private.
 ---@param buf uinteger
@@ -78,37 +76,32 @@ function M.get_line(buf, row)
     return M.get_lines(buf, { [row] = true })[row]
 end
 
----This handles both Location and LocationLink objects. If the object is a location link, it
----will pull from the targetSelectionRange.
----@param results lsp.Location[]|lsp.LocationLink[]
+---Unlike the Nvim core function, this does not handle LocationLink.
+---@param results lsp.Location[]
 ---@param encoding lsp.PositionEncodingKind
 ---@param bufs table<integer, true>? If not `nil`, only return results in the listed bufs.
 ---@return table<uinteger, nvim-tools.range.BufRange>
-function M.ranges_from_locations_by_buf(results, encoding, bufs)
+function M.locations_to_api_ranges_by_buf(results, encoding, bufs)
     -- Saves non-trivial time on large result sets.
     local uri_bufnr_cache = {} ---@type table<string, uinteger>
-    local buf_locations = {} ---@type table<integer, (lsp.Location|lsp.LocationLink)[]>
+    local buf_locations = {} ---@type table<integer, lsp.Location[]>
     local ntt = require("nvim-tools.table")
     for _, result in ipairs(results) do
-        local uri = result.uri or result.targetUri
-        local cached_bufnr = uri_bufnr_cache[uri]
-        if cached_bufnr ~= nil then
-            local locations = ntt.get_or_set_subtable(buf_locations, cached_bufnr)
-            locations[#locations + 1] = result
-        else
-            local bufnr = vim.uri_to_bufnr(uri)
+        local uri = result.uri
+        local bufnr = uri_bufnr_cache[uri]
+        if bufnr == nil then
+            bufnr = vim.uri_to_bufnr(uri)
             uri_bufnr_cache[uri] = bufnr
-            local locations = ntt.get_or_set_subtable(buf_locations, bufnr)
-            locations[#locations + 1] = result
         end
+
+        local locations = ntt.get_or_set_subtable(buf_locations, bufnr)
+        locations[#locations + 1] = result
     end
 
     if bufs ~= nil then
-        for buf, _ in pairs(buf_locations) do
-            if bufs[buf] == nil then
-                buf_locations[buf] = nil
-            end
-        end
+        ntt.keep(buf_locations, function(buf, _)
+            return bufs[buf] ~= nil
+        end)
     end
 
     if not next(buf_locations) then
@@ -118,14 +111,8 @@ function M.ranges_from_locations_by_buf(results, encoding, bufs)
     local ntr = require("nvim-tools.range")
     ---@type table<integer, nvim-tools.range.BufRange[]>
     local buf_ranges = ntt.filter_map_to(buf_locations, function(buf, locations)
-        return ntr.lsp_locations_to_ext(buf, locations, encoding)
+        return ntr.lsp_locations_to_api(buf, locations, encoding)
     end)
-
-    for _, ranges in pairs(buf_ranges) do
-        ntt.i_keep(ranges, function(range)
-            return ntr.valid_(range)
-        end)
-    end
 
     for _, ranges in pairs(buf_ranges) do
         vim.list.unique(ranges, ntr.bit_pack_key)
@@ -146,11 +133,7 @@ end
 ---@param buf integer
 ---@param methods (vim.lsp.protocol.Method.ClientToServer|vim.lsp.protocol.Method.Registration)[]
 ---@return vim.lsp.Client[] Reference to clients.
-function M.clients_filter_supporting_multiple(clients, buf, methods)
-    if #clients == 0 then
-        return clients
-    end
-
+function M.clients_filter_supporting(clients, methods, buf)
     local ntt = require("nvim-tools.table")
     ntt.i_keep(clients, function(client)
         return ntt.i_all(methods, function(method)
@@ -168,7 +151,7 @@ end
 ---@return vim.lsp.Client[]
 function M.clients_get_supporting_multiple(buf, methods)
     local clients = lsp.get_clients({ bufnr = buf })
-    return M.clients_filter_supporting_multiple(clients, buf, methods)
+    return M.clients_filter_supporting(clients, methods, buf)
 end
 
 ---@param filter lsp.DocumentFilter
@@ -237,33 +220,57 @@ end
 ---@return uinteger
 local function score_dynamic_capability(capability, lang, fname, uri)
     local reg_options = capability.registerOptions --[[@as { documentSelector: lsp.DocumentSelector|lsp.null }]]
-    if (not reg_options) or reg_options == vim.NIL then
+    if reg_options == nil or reg_options == vim.NIL then
         return 0
     end
 
     local doc_sel = reg_options.documentSelector
-    if (not doc_sel) or doc_sel == vim.NIL then
+    if doc_sel == nil or doc_sel == vim.NIL then
         return 0
     end
 
-    local score = 0
-    for _, filter in ipairs(doc_sel) do
-        score = math.max(score, score_document_filter(filter, lang, uri, fname))
+    -- return score
+    local ntt = require("nvim-tools.table")
+    return ntt.i_fold(doc_sel, 0, function(score, filter)
         if score == 10 then
-            return score
+            return nil
         end
-    end
 
-    return score
+        return math.max(score, score_document_filter(filter, lang, uri, fname))
+    end)
 end
 
----@param clients vim.lsp.Client[]
----@param methods (vim.lsp.protocol.Method.ClientToServer|vim.lsp.protocol.Method.Registration)[]
+---Assumes the client supports the method.
+---@param client vim.lsp.Client
+---@param method vim.lsp.protocol.Method.ClientToServer|vim.lsp.protocol.Method.Registration
 ---@param buf uinteger
----@return -1|uinteger, vim.lsp.Client?
-function M.clients_find_top_scoring(clients, methods, buf)
+---@return uinteger
+local function client_get_method_score(client, method, buf, ft, fname, uri)
+    local cap_dynamic = client.dynamic_capabilities:get(method, { bufnr = buf })
+    if cap_dynamic == nil or #cap_dynamic == 0 then
+        return 5
+    end
+
+    local lang = client.get_language_id(buf, ft)
+    local ntt = require("nvim-tools.table")
+    return ntt.i_fold(cap_dynamic, 0, function(score, cap)
+        if score == 10 then
+            return nil
+        end
+
+        return math.max(score, score_dynamic_capability(cap, lang, fname, uri))
+    end)
+end
+
+---@param clients vim.lsp.Client
+---@param buf uinteger
+---@param methods (vim.lsp.protocol.Method.ClientToServer|vim.lsp.protocol.Method.Registration)[]
+---@return uinteger?, vim.lsp.Client?
+local function client_find_from_top_score(clients, buf, methods)
+    local ntt = require("nvim-tools.table")
+    clients = M.clients_filter_supporting(ntt.i_copy(clients), methods, buf)
     if #clients == 0 then
-        return -1, nil
+        return nil, nil
     end
 
     if #clients == 1 then
@@ -274,52 +281,41 @@ function M.clients_find_top_scoring(clients, methods, buf)
     local ft = api.nvim_get_option_value("ft", { buf = buf })
     local fname = vim.api.nvim_buf_get_name(buf)
     local uri = fname ~= "" and vim.uri_from_fname(fname) or ""
+    local top_client = ntt.i_fold(clients, { -1, nil, -1 }, function(top_client, client)
+        local total_score = ntt.i_fold(methods, 0, function(score, method)
+            return score + client_get_method_score(client, method, ft, fname, uri)
+        end)
 
-    local top_id = -1
-    local top_score = -1
-    local top_client = nil
-
-    for _, c in ipairs(clients) do
-        local total_score = 0
-        for _, method in ipairs(methods) do
-            local cap_dynamic = c.dynamic_capabilities:get(method, { bufnr = buf })
-            local method_score = 0
-            if cap_dynamic and #cap_dynamic > 0 then
-                local lang = c.get_language_id(buf, ft)
-                for _, cap in ipairs(cap_dynamic) do
-                    local reg_score = score_dynamic_capability(cap, lang, fname, uri)
-                    method_score = math.max(method_score, reg_score)
-                    if method_score == 10 then
-                        break
-                    end
-                end
-            else
-                method_score = 5
-            end
-
-            total_score = total_score + method_score
+        if top_client[3] < total_score then
+            top_client[1] = client.id
+            top_client[2] = client
+            top_client[1] = total_score
         end
 
-        if total_score > top_score then
-            top_id = c.id
-            top_client = c
-            top_score = total_score
-        end
-    end
+        return top_client
+    end)
 
-    return top_id, top_client
+    return top_client[1], top_client[2]
 end
 
 ---@param buf uinteger
 ---@param methods (vim.lsp.protocol.Method.ClientToServer|vim.lsp.protocol.Method.Registration)[]
 ---@return uinteger?, vim.lsp.Client?
-function M.client_get_from_doc_sel_score(buf, methods)
+function M.client_get_top_scoring(buf, methods)
     local clients = M.clients_get_supporting_multiple(buf, methods)
-    if not clients or #clients == 0 then
+    if #clients == 0 then
         return
     end
 
-    return M.clients_find_top_scoring(clients, methods, buf)
+    return client_find_from_top_score(clients, buf, methods)
+end
+
+---@param clients vim.lsp.Client[]
+---@param buf uinteger
+---@param methods (vim.lsp.protocol.Method.ClientToServer|vim.lsp.protocol.Method.Registration)[]
+---@return uinteger?, vim.lsp.Client?
+function M.clients_find_top_scoring(clients, buf, methods)
+    return client_find_from_top_score(clients, buf, methods)
 end
 
 ----------------------------------
@@ -333,7 +329,7 @@ end
 ---@param encoding "utf-8"|"utf-16"|"utf-32"
 ---@return lsp.TextDocumentPositionParams
 function M.text_doc_pos_params_create(buf, pos_ext, encoding)
-    local text_document = vim.lsp.util.make_text_document_params(buf)
+    local text_document = { uri = vim.uri_from_bufnr(buf) }
     local ntp = require("nvim-tools.pos")
     local position = ntp.ext_to_lsp(pos_ext, buf, encoding)
     return { textDocument = text_document, position = position }
@@ -344,7 +340,7 @@ end
 ---@param encoding "utf-8"|"utf-16"|"utf-32"
 ---@param include_declaration boolean
 ---@return lsp.ReferenceParams
-function M.reference_params_create(buf, pos_ext, encoding, include_declaration)
+function M.references_params_create(buf, pos_ext, encoding, include_declaration)
     local params = M.text_doc_pos_params_create(buf, pos_ext, encoding) --[[@as lsp.ReferenceParams]]
     params.context = { includeDeclaration = include_declaration }
     return params
@@ -389,12 +385,12 @@ local level_names = {
 }
 
 ---@param msg string
----@param log_level vim.log.levels
----@param hl integer|string
----@param history boolean
-function M.log_and_echo(msg, log_level, hl, history)
-    lsp.log[level_names[log_level]](msg)
-    api.nvim_echo({ { msg, hl } }, history, {})
+---@param lsp_log_level vim.log.levels
+---@param echo_hl integer|string
+---@param echo_history boolean
+function M.log_and_echo(msg, lsp_log_level, echo_hl, echo_history)
+    lsp.log[level_names[lsp_log_level]](msg)
+    api.nvim_echo({ { msg, echo_hl } }, echo_history, {})
 end
 
 ---@param method vim.lsp.protocol.Method.ClientToServer

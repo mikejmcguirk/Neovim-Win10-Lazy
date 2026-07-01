@@ -12,31 +12,30 @@ local PREP_RN = "textDocument/prepareRename"
 local REFS = "textDocument/references"
 local RENAME = "textDocument/rename"
 
-local HUGE_INT = math.floor(math.huge)
-
 -----------------
 -- MARK: State --
 -----------------
 
 ---@class (exact) catharsis.rename.Session
----@field buf_ranges table<uinteger, nvim-tools.range.BufRange[]>
+---@field cmdline string
+---@field cmdpos -1|uinteger
 ---@field cur_pos_idx uinteger
 ---@field cur_win uinteger
 ---@field cur_win_info catharsis.rename.WinInfo
----@field mark_cursor_preview uinteger
----@field mark_cursor_padding uinteger
 ---@field ref_win_info table<uinteger, catharsis.rename.WinInfo>
 ---@field symbol_len uinteger
 
+-- LOW: It would be better for the ranges before and after the cursor to be stored separately
+-- to avoid tortured iteration code. But this also means that the current win data can't be
+-- stored as a WinInfo struct.
+
 ---@class (exact) catharsis.rename.WinInfo
----@field bot uinteger 0-indexed
----@field bot_idx -1|uinteger
 ---@field buf -1|uinteger
 ---@field ns_dim -1|uinteger
 ---@field ns_dynamic -1|uinteger
----@field top uinteger 0-indexed
----@field top_idx -1|uinteger
+---@field ranges nvim-tools.range.BufRange[]
 
+local state_ns_cur_pos = api.nvim_create_namespace("catharsis.rename.cur_pos")
 local state_ns_dims = {} ---@type uinteger[]
 local state_ns_dynamics = {} ---@type uinteger[]
 local state_req_prep_rn_timer = assert(uv.new_timer())
@@ -57,7 +56,7 @@ local function clear_dim_namespaces(session)
 end
 
 ---@param session catharsis.rename.Session
-local function clear_dynamic_preview_namespaces(session)
+local function clear_win_dynamic_namespaces(session)
     local cur_buf = session.cur_win_info.buf
     local cur_win_ns_dynamic = session.cur_win_info.ns_dynamic
     api.nvim_buf_clear_namespace(cur_buf, cur_win_ns_dynamic, 0, -1)
@@ -87,27 +86,29 @@ local function ns_ensure(total_needed)
     end
 end
 
+---@param win uinteger
 ---@param ranges nvim-tools.range.BufRange[]
----@param top uinteger
----@param bot uinteger
----@return uinteger, uinteger
-local function win_iters_get(ranges, top, bot)
+---@return nvim-tools.range.BufRange[]
+local function ranges_extract_for_win(win, ranges)
     local ranges_len = #ranges
     if ranges_len == 0 then
-        return 0, 0
+        return {}
     end
 
-    local lo = vim.list.bisect(ranges, { top }, {
+    local top = fn.line("w0", win) - 1
+    local bot = fn.line("w$", win) - 1
+    local vim_list_bisect = vim.list.bisect
+    local lo = vim_list_bisect(ranges, { top }, {
         key = function(r)
             return r[1]
         end,
     })
 
-    if lo > ranges_len then
-        return 0, 0
+    if ranges_len < lo then
+        return {}
     end
 
-    local hi = vim.list.bisect(ranges, { 0, 0, bot }, {
+    local hi = vim_list_bisect(ranges, { 0, 0, bot }, {
         bound = "upper",
         key = function(r)
             return r[3]
@@ -115,18 +116,18 @@ local function win_iters_get(ranges, top, bot)
     })
 
     if hi < lo then
-        return 0, 0
+        return {}
     end
 
-    return lo, hi - 1
+    return require("nvim-tools.table").i_splice_to(ranges, lo, hi)
 end
--- TODO: This needs the re-written, generic bisect function that takes two keys.
--- I would use list.bisect() as the base so try and make the logic less removed.
+-- LOW: Use a bespoke bisect function that doesn't require turning top and bot into tables.
 
 ---@param session catharsis.rename.Session
 local function ns_clear(session)
     local cur_win_info = session.cur_win_info
     local cur_win_buf = cur_win_info.buf
+    api.nvim_buf_clear_namespace(cur_win_buf, state_ns_cur_pos, 0, -1)
     api.nvim_buf_clear_namespace(cur_win_buf, cur_win_info.ns_dim, 0, -1)
     api.nvim_buf_clear_namespace(cur_win_buf, cur_win_info.ns_dynamic, 0, -1)
 
@@ -148,19 +149,16 @@ local function session_create(win, buf)
     api.nvim__ns_set(ns_dynamic, { wins = { win } })
 
     return {
-        buf_ranges = {},
+        cmdline = "",
+        cmdpos = -1,
         cur_pos_idx = 0,
         cur_win = win,
         cur_win_info = {
-            bot = vim.call("line", "w$", win) - 1,
-            bot_idx = HUGE_INT,
             buf = buf,
             mark_preview_cursor = -1,
             mark_preview_padding = -1,
             ns_dim = ns_dim,
             ns_dynamic = ns_dynamic,
-            top = vim.call("line", "w0", win) - 1,
-            top_idx = -1,
         },
         ref_win_info = {},
         symbol_len = 0,
@@ -169,58 +167,55 @@ end
 
 ---@param session catharsis.rename.Session
 ---@param range nvim-tools.range.BufRange
-local function session_add_symbol_range(session, range)
-    session.symbol_len = range[4] - range[2]
-    local cur_win_info = session.cur_win_info
-    local cur_buf = cur_win_info.buf
-    session.buf_ranges[cur_buf] = { range }
-
+local function session_add_new_symbol_range(session, range)
     session.cur_pos_idx = 1
-    cur_win_info.bot_idx = 1
-    cur_win_info.top_idx = 1
+    session.symbol_len = range[4] - range[2]
+    session.cur_win_info.ranges = { range }
 end
+-- TODO: this function is now somewhat of a black hole
 
 ---@param session catharsis.rename.Session
 ---@param cur_pos_ext [uinteger, uinteger]
 ---@param ref_wins uinteger[]
 ---@param win_bufs table<uinteger, uinteger>
 ---@param buf_ranges table<uinteger, nvim-tools.range.BufRange>
+---@return boolean, string
 local function session_set_from_refs(session, cur_pos_ext, ref_wins, win_bufs, buf_ranges)
-    session.buf_ranges = buf_ranges
-    buf_ranges = session.buf_ranges
-    local cur_win_buf = win_bufs[session.cur_win]
-    local ntr = require("nvim-tools.range")
+    local cur_win = session.cur_win
+    local cur_win_buf_ranges = buf_ranges[win_bufs[cur_win]]
 
-    session.cur_pos_idx = assert(ntr.find_pos(buf_ranges[cur_win_buf], cur_pos_ext))
-    local cur_win_top = session.cur_win_info.top
-    local cur_win_bot = session.cur_win_info.bot
-    local cur_win_top_idx, cur_win_bot_idx =
-        win_iters_get(buf_ranges[cur_win_buf], cur_win_top, cur_win_bot)
-    session.cur_win_info.top_idx = cur_win_top_idx
-    session.cur_win_info.bot_idx = cur_win_bot_idx
+    -- A valid response includes all references the server can find, which would include the
+    -- original text document position. This module includes declaration and does not stream
+    -- results. And errors/empty results should have already been handled.
+    local cur_win_ranges = ranges_extract_for_win(cur_win, cur_win_buf_ranges)
+    if 0 == #cur_win_ranges then
+        return false, "No references in request origin window."
+    end
+
+    local ntr = require("nvim-tools.range")
+    local cur_pos_idx = ntr.find_pos(cur_win_ranges, cur_pos_ext)
+    if cur_pos_idx == nil then
+        return false, "No reference for the text document position."
+    end
+
+    local cur_pos_range = cur_win_buf_ranges[cur_pos_idx]
+    session.symbol_len = cur_pos_range[4] - cur_pos_range[2]
+    session.cur_pos_idx = cur_pos_idx
+    session.cur_win_info.ranges = cur_win_ranges
 
     local wins_count = 1
     local ref_win_info = session.ref_win_info
     for _, win in ipairs(ref_wins) do
         local win_buf = win_bufs[win]
-        local ranges = buf_ranges[win_buf]
-        if ranges then
-            local top = fn.line("w0", win) - 1
-            local bot = fn.line("w$", win) - 1
-            local top_idx, bot_idx = win_iters_get(ranges, top, bot)
-            if top_idx > 0 and bot_idx > 0 then
-                session.buf_ranges[win_buf] = ranges
-                wins_count = wins_count + 1
-                ref_win_info[win] = {
-                    bot = bot,
-                    bot_idx = bot_idx,
-                    buf = win_buf,
-                    ns_dim = -1,
-                    ns_dynamic = -1,
-                    top = top,
-                    top_idx = top_idx,
-                }
-            end
+        local win_ranges = ranges_extract_for_win(win, buf_ranges[win_buf])
+        if 0 < #win_ranges then
+            wins_count = wins_count + 1
+            ref_win_info[win] = {
+                buf = win_buf,
+                ns_dim = -1,
+                ns_dynamic = -1,
+                ranges = win_ranges,
+            }
         end
     end
 
@@ -236,6 +231,8 @@ local function session_set_from_refs(session, cur_pos_ext, ref_wins, win_bufs, b
         win_info.ns_dim = ns_dim
         win_info.ns_dynamic = ns_preview
     end
+
+    return true, ""
 end
 
 ------------------------------------
@@ -247,37 +244,17 @@ local hl_padding_priority = hl_dim_priority - 1
 local hl_priority_preview = hl_dim_priority + 1
 
 do
-    local normal = api.nvim_get_hl(0, { name = "Normal", link = false }) or {}
-    local orig_fg = normal.fg
-    local orig_bg = normal.bg
-
-    local new_fg = orig_bg ---@type integer|string?
-    local new_bg = orig_fg ---@type integer|string?
-
-    if not orig_bg then
-        if orig_fg then
-            new_bg = (vim.o.background == "dark") and "#EFEFEF" or "#1E1E1E"
-        else
-            new_fg = (vim.o.background == "dark") and "#222222" or "#EFEFEF"
-            new_bg = (vim.o.background == "dark") and "#EFEFEF" or "#1E1E1E"
-        end
-    end
-
-    if not new_fg then
-        new_fg = (vim.o.background == "dark") and "#222222" or "#EFEFEF"
-    end
-
+    local new_fg, new_bg = require("nvim-tools.misc").cursor_hl_get()
     api.nvim_set_hl(0, "catharsisRenameCursor", { fg = new_fg, bg = new_bg, default = true })
+
+    -- TODO-DEP: Remove this when 0.14 comes out.
+    api.nvim_set_hl(0, "Dimmed", { default = true, link = "Comment" })
+
+    api.nvim_set_hl(0, "catharsisRenameDim", { default = true, link = "Dimmed" })
+    api.nvim_set_hl(0, "catharsisRenameNew", { default = true, link = "Substitute" })
+    api.nvim_set_hl(0, "catharsisRenamePosNew", { default = true, link = "IncSearch" })
 end
--- TODO: This is still very vibe coded coded.
--- TODO: nvim-tools this since we need it for farsight.
 
--- TODO-DEP: Remove this when 0.14 comes out.
-api.nvim_set_hl(0, "Dimmed", { default = true, link = "Comment" })
-
-api.nvim_set_hl(0, "catharsisRenameDim", { default = true, link = "Dimmed" })
-api.nvim_set_hl(0, "catharsisRenameNew", { default = true, link = "Substitute" })
-api.nvim_set_hl(0, "catharsisRenamePosNew", { default = true, link = "IncSearch" })
 local hl_cursor = api.nvim_get_hl_id_by_name("catharsisRenameCursor")
 local hl_dim = api.nvim_get_hl_id_by_name("catharsisRenameDim")
 local hl_new = api.nvim_get_hl_id_by_name("catharsisRenameNew")
@@ -291,15 +268,13 @@ local hl_warn = api.nvim_get_hl_id_by_name("WarningMsg")
 -- MARK: Preview Management Autocmds --
 ---------------------------------------
 
----@param session catharsis.rename.Session
 ---@param win_info catharsis.rename.WinInfo
-local function marks_dim_set_from_info(session, win_info)
+local function marks_dim_set_from_info(win_info)
+    local ranges = win_info.ranges
+    local ranges_len = #ranges
     local buf = win_info.buf
-    local ranges = session.buf_ranges[buf]
-    local top_idx = win_info.top_idx
-    local bot_idx = win_info.bot_idx
     local ns = win_info.ns_dim
-    for i = top_idx, bot_idx do
+    for i = 1, ranges_len do
         local range = ranges[i]
         api.nvim_buf_set_extmark(buf, ns, range[1], range[2], {
             end_row = range[3],
@@ -313,9 +288,9 @@ end
 ---@param session catharsis.rename.Session
 local function marks_dim_new(session)
     clear_dim_namespaces(session)
-    marks_dim_set_from_info(session, session.cur_win_info)
+    marks_dim_set_from_info(session.cur_win_info)
     for _, info in pairs(session.ref_win_info) do
-        marks_dim_set_from_info(session, info)
+        marks_dim_set_from_info(info)
     end
 end
 
@@ -336,50 +311,6 @@ local function marks_padding_iter_for_std(start_idx, end_idx, ranges, buf, ns, p
     end
 end
 
----@param session catharsis.rename.Session
----@param padding string
-local function marks_padding_set_ref_wins(session, padding)
-    for _, win_info in pairs(session.ref_win_info) do
-        local buf = win_info.buf
-        local ranges = session.buf_ranges[buf]
-        local top_idx = win_info.top_idx
-        local bot_idx = win_info.bot_idx
-        local ns = win_info.ns_dynamic
-        marks_padding_iter_for_std(top_idx, bot_idx, ranges, buf, ns, padding)
-    end
-end
-
----@param session catharsis.rename.Session
----@param padding string
-local function marks_padding_set_cur_win(session, padding)
-    local cur_win_info = session.cur_win_info
-    local buf = cur_win_info.buf
-    local ns_dynamic = cur_win_info.ns_dynamic
-    local ranges = session.buf_ranges[buf]
-    local cur_pos_idx = session.cur_pos_idx
-
-    local top_idx = cur_win_info.top_idx
-    marks_padding_iter_for_std(top_idx, cur_pos_idx - 1, ranges, buf, ns_dynamic, padding)
-    local bot_idx = cur_win_info.bot_idx
-    marks_padding_iter_for_std(cur_pos_idx + 1, bot_idx, ranges, buf, ns_dynamic, padding)
-end
-
----@param session catharsis.rename.Session
----@param cur_pos_padding string
-local function marks_padding_set_cursor(session, cur_pos_padding)
-    local cur_win_info = session.cur_win_info
-    local buf = cur_win_info.buf
-    local ns_dynamic = cur_win_info.ns_dynamic
-    local cur_pos_range = session.buf_ranges[buf][session.cur_pos_idx]
-    local id = api.nvim_buf_set_extmark(buf, ns_dynamic, cur_pos_range[3], cur_pos_range[4], {
-        virt_text = { { cur_pos_padding, hl_norm } },
-        virt_text_pos = "inline",
-        priority = hl_padding_priority,
-    })
-
-    session.mark_cursor_padding = id
-end
-
 ---@param start_idx uinteger
 ---@param end_idx uinteger
 ---@param ranges nvim-tools.range.BufRange[]
@@ -397,130 +328,120 @@ local function marks_preview_iter_new_text(start_idx, end_idx, ranges, buf, ns, 
     end
 end
 
----@param session catharsis.rename.Session
----@param new_text string
-local function marks_preview_set_ref_wins(session, new_text)
-    if #new_text == 0 then
-        return
-    end
-
-    for _, win_info in pairs(session.ref_win_info) do
-        local buf = win_info.buf
-        local ranges = session.buf_ranges[buf]
-        local top_idx = win_info.top_idx
-        local bot_idx = win_info.bot_idx
-        local ns = win_info.ns_dynamic
-        marks_preview_iter_new_text(top_idx, bot_idx, ranges, buf, ns, new_text)
-    end
-end
-
----@param session catharsis.rename.Session
----@param new_text string
-local function marks_preview_set_cur_win(session, new_text)
-    local cur_win_info = session.cur_win_info
-    local buf = cur_win_info.buf
-    local ns_dynamic = cur_win_info.ns_dynamic
-    local ranges = session.buf_ranges[buf]
-    local cur_pos_idx = session.cur_pos_idx
-
-    local top_idx = cur_win_info.top_idx
-    marks_preview_iter_new_text(top_idx, cur_pos_idx - 1, ranges, buf, ns_dynamic, new_text)
-    local bot_idx = cur_win_info.bot_idx
-    marks_preview_iter_new_text(cur_pos_idx + 1, bot_idx, ranges, buf, ns_dynamic, new_text)
-end
-
----@param session catharsis.rename.Session
----@param text_before string
----@param text_at string
----@param text_after string
-local function marks_preview_set_cursor(session, text_before, text_at, text_after)
-    local cur_win_info = session.cur_win_info
-    local buf = cur_win_info.buf
-    local ns_dynamic = cur_win_info.ns_dynamic
-    local cur_pos_range = session.buf_ranges[buf][session.cur_pos_idx]
-
-    local id = api.nvim_buf_set_extmark(buf, ns_dynamic, cur_pos_range[1], cur_pos_range[2], {
-        priority = hl_priority_preview,
-        virt_text = {
-            { text_before, hl_pos_new },
-            { text_at, hl_cursor },
-            { text_after, hl_pos_new },
-        },
-        virt_text_pos = "overlay",
-    })
-
-    session.mark_cursor_preview = id
-end
-
+---@param cmdline string
+---@param cmdpos uinteger
 ---@return string, string, string, string, boolean
-local function marks_dynamic_text_parts_get()
-    local new_text = fn.getcmdline()
-    local cmdpos = fn.getcmdpos()
-    local text_before = string.sub(new_text, 1, cmdpos - 1)
-    local text_at = string.sub(new_text, cmdpos, cmdpos)
-    local text_after = string.sub(new_text, cmdpos + 1, #new_text)
-
+local function preview_text_parts_get(cmdline, cmdpos)
+    local text_before = string.sub(cmdline, 1, cmdpos - 1)
+    local text_at = string.sub(cmdline, cmdpos, cmdpos)
+    local text_after = string.sub(cmdline, cmdpos + 1, #cmdline)
     local ext_at = false
     if text_at == "" then
         text_at = " " -- Cursor after line. Draw a block.
         ext_at = true
     end
 
-    return new_text, text_before, text_at, text_after, ext_at
+    return cmdline, text_before, text_at, text_after, ext_at
 end
 
 ---@param session catharsis.rename.Session
-local function marks_dynamic_set_new_cursor(session)
+---@param t_before string
+---@param t_at string
+---@param t_after string
+---@param padding_len uinteger
+---@param ext_at boolean
+local function marks_cur_pos_refresh(session, t_before, t_at, t_after, padding_len, ext_at)
     local cur_win_info = session.cur_win_info
-    local cur_win_buf = cur_win_info.buf
-    local ns_dynamic = cur_win_info.ns_dynamic
-    local mark_cursor_preview = session.mark_cursor_preview
-    if type(mark_cursor_preview) == "number" then
-        api.nvim_buf_del_extmark(cur_win_buf, ns_dynamic, mark_cursor_preview)
-    end
+    local buf = cur_win_info.buf
+    local range = cur_win_info.ranges[session.cur_pos_idx]
+    api.nvim_buf_set_extmark(buf, state_ns_cur_pos, range[1], range[2], {
+        priority = hl_priority_preview,
+        virt_text = {
+            { t_before, hl_pos_new },
+            { t_at, hl_cursor },
+            { t_after, hl_pos_new },
+        },
+        virt_text_pos = "overlay",
+    })
 
-    local mark_cursor_padding = session.mark_cursor_padding
-    if type(mark_cursor_padding) == "number" then
-        api.nvim_buf_del_extmark(cur_win_buf, ns_dynamic, mark_cursor_padding)
-    end
-
-    local new_text, text_before, text_at, text_after, ext_at = marks_dynamic_text_parts_get()
-    local padding_len_cur_pos = #new_text - session.symbol_len
-    if ext_at then
-        padding_len_cur_pos = padding_len_cur_pos + 1
-    end
-
-    marks_preview_set_cursor(session, text_before, text_at, text_after)
-    if #new_text > 0 then
-        marks_padding_set_cursor(session, string.rep(" ", padding_len_cur_pos))
-    end
-end
-
----@param session catharsis.rename.Session
-local function marks_dynamic_set_new(session)
-    clear_dynamic_preview_namespaces(session)
-    local new_text, text_before, text_at, text_after, ext_at = marks_dynamic_text_parts_get()
-    marks_preview_set_cursor(session, text_before, text_at, text_after)
-    if #new_text == 0 then
+    local padding_len_cur_pos = ext_at and padding_len + 1 or padding_len
+    if padding_len_cur_pos == 0 then
         return
     end
 
-    marks_preview_set_cur_win(session, new_text)
-    marks_preview_set_ref_wins(session, new_text)
-    local padding_len = #new_text - session.symbol_len
-    local padding_len_cur_pos = padding_len
-    if ext_at then
-        padding_len_cur_pos = padding_len_cur_pos + 1
+    local padding_cur_pos = string.rep(" ", padding_len_cur_pos)
+    api.nvim_buf_set_extmark(buf, state_ns_cur_pos, range[3], range[4], {
+        virt_text = { { padding_cur_pos, hl_norm } },
+        virt_text_pos = "inline",
+        priority = hl_padding_priority,
+    })
+end
+
+---@param session catharsis.rename.Session
+local function marks_dynamic_refresh_cursor(session)
+    local cmdline = fn.getcmdline()
+    local cmdpos = fn.getcmdpos()
+    -- Check because this fires after CmdLineChanged
+    if cmdline == session.cmdline and cmdpos == session.cmdpos then
+        return
     end
 
-    if padding_len_cur_pos > 0 then
-        marks_padding_set_cursor(session, string.rep(" ", padding_len_cur_pos))
+    local t_new, t_before, t_at, t_after, ext_at = preview_text_parts_get(cmdline, cmdpos)
+    local padding_len = #t_new - session.symbol_len
+
+    api.nvim_buf_clear_namespace(session.cur_win_info.buf, state_ns_cur_pos, 0, -1)
+    marks_cur_pos_refresh(session, t_before, t_at, t_after, padding_len, ext_at)
+    session.cmdline = cmdline
+    session.cmdpos = cmdpos
+end
+
+---@param session catharsis.rename.Session
+local function marks_dynamic_refresh_all(session)
+    clear_win_dynamic_namespaces(session)
+
+    local cmdline = fn.getcmdline()
+    local cmdpos = fn.getcmdpos()
+    local t_new, t_before, t_at, t_after, ext_at = preview_text_parts_get(cmdline, cmdpos)
+    local padding_len = #t_new - session.symbol_len
+
+    -- Skip checking session data because this should fire before CursorMovedC
+    api.nvim_buf_clear_namespace(session.cur_win_info.buf, state_ns_cur_pos, 0, -1)
+    marks_cur_pos_refresh(session, t_before, t_at, t_after, padding_len, ext_at)
+    session.cmdline = cmdline
+    session.cmdpos = cmdpos
+
+    if #t_new == 0 then
+        return
     end
 
-    if padding_len > 0 then
-        local padding = string.rep(" ", padding_len)
-        marks_padding_set_cur_win(session, padding)
-        marks_padding_set_ref_wins(session, padding)
+    local cur_pos_idx = session.cur_pos_idx
+    local cur_win_info = session.cur_win_info
+    local ranges = cur_win_info.ranges
+    local buf = cur_win_info.buf
+    local ns_dynamic = cur_win_info.ns_dynamic
+    marks_preview_iter_new_text(1, cur_pos_idx - 1, ranges, buf, ns_dynamic, t_new)
+    marks_preview_iter_new_text(cur_pos_idx + 1, #ranges, ranges, buf, ns_dynamic, t_new)
+
+    for _, win_info in pairs(session.ref_win_info) do
+        local info_ranges = win_info.ranges
+        local info_buf = win_info.buf
+        local ns = win_info.ns_dynamic
+        marks_preview_iter_new_text(1, #info_ranges, info_ranges, info_buf, ns, t_new)
+    end
+
+    if padding_len == 0 then
+        return
+    end
+
+    local padding = string.rep(" ", padding_len)
+    marks_padding_iter_for_std(1, cur_pos_idx - 1, ranges, buf, ns_dynamic, padding)
+    marks_padding_iter_for_std(cur_pos_idx + 1, #ranges, ranges, buf, ns_dynamic, padding)
+
+    for _, win_info in pairs(session.ref_win_info) do
+        local info_ranges = win_info.ranges
+        local info_buf = win_info.buf
+        local info_ns = win_info.ns_dynamic
+        marks_padding_iter_for_std(1, #info_ranges, info_ranges, info_buf, info_ns, padding)
     end
 end
 
@@ -533,7 +454,7 @@ local function preview_listener_init(session)
     api.nvim_create_autocmd("CmdlineChanged", {
         group = group,
         callback = function()
-            marks_dynamic_set_new(session)
+            marks_dynamic_refresh_all(session)
         end,
     })
 
@@ -541,7 +462,7 @@ local function preview_listener_init(session)
         -- Re-create the group in case the previous del_autocmd failed to run.
         group = group,
         callback = function()
-            marks_dynamic_set_new_cursor(session)
+            marks_dynamic_refresh_cursor(session)
         end,
     })
 
@@ -645,33 +566,41 @@ local function req_refs_handler(err, result, ctx, client_id, session, cur_pos_ex
 
     local cur_win = session.cur_win
     local ref_wins = api.nvim_tabpage_list_wins(0)
-    require("nvim-tools.table").i_discard(ref_wins, function(win)
+    local ntt = require("nvim-tools.table")
+    ntt.i_discard(ref_wins, function(win)
         return win == cur_win
             or vim.call("win_gettype", win) ~= ""
             or api.nvim_win_get_config(win).hide == true
     end)
 
-    ---@type table<uinteger, uinteger>
-    local win_bufs = { [cur_win] = session.cur_win_info.buf }
-    for _, ref_win in ipairs(ref_wins) do
-        win_bufs[ref_win] = api.nvim_win_get_buf(ref_win)
-    end
-
-    local encoding = client.offset_encoding
-    local bufs = {} ---@type table<uinteger, true>
-    for _, buf in pairs(win_bufs) do
-        bufs[buf] = true
-    end
+    local win_bufs = ntt.rebuild_to(ref_wins, function(_, ref_win)
+        return ref_win, api.nvim_win_get_buf(ref_win)
+    end)
+    win_bufs[cur_win] = session.cur_win_info.buf
 
     local nts = require("nvim-tools.lsp")
-    local buf_ranges = nts.ranges_from_locations_by_buf(result, encoding, bufs)
+    local encoding = client.offset_encoding
+    ---@type table<uinteger, true>
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    local bufs = ntt.rebuild_to(win_bufs, function(_, buf)
+        return buf, true
+    end)
+
+    local buf_ranges = nts.locations_to_api_ranges_by_buf(result, encoding, bufs)
     if next(buf_ranges) == nil then
         return
     end
 
-    session_set_from_refs(session, cur_pos_ext, ref_wins, win_bufs, buf_ranges)
+    local ok_r, err_r = session_set_from_refs(session, cur_pos_ext, ref_wins, win_bufs, buf_ranges)
+    if not ok_r then
+        -- DOC: Document this behavior, so users can check the logs with level warning.
+        -- Do not echo because it siezes up highlights in legacy UI.
+        lsp.log.warn(err_r)
+        return
+    end
+
     marks_dim_new(session)
-    marks_dynamic_set_new(session)
+    marks_dynamic_refresh_all(session)
     api.nvim__redraw({ flush = true, valid = true })
 end
 
@@ -691,14 +620,10 @@ end
 ---@param session catharsis.rename.Session
 ---@param cur_pos_ext [uinteger, uinteger]
 local function ref_req_create(client, session, cur_pos_ext)
-    if not client:supports_method(REFS) then
-        return
-    end
-
     local buf = session.cur_win_info.buf
     local nts = require("nvim-tools.lsp")
     local encoding = client.offset_encoding
-    local params = nts.reference_params_create(buf, cur_pos_ext, encoding, true)
+    local params = nts.references_params_create(buf, cur_pos_ext, encoding, true)
     local req_success, req_id = client:request(REFS, params, function(err, results, ctx)
         req_refs_handler(err, results, ctx, client.id, session, cur_pos_ext)
     end, buf)
@@ -720,13 +645,15 @@ end
 ---@param session catharsis.rename.Session
 ---@param cur_pos_ext [uinteger, uinteger]
 ---@param default string
-local function rename_get_input(client, session, cur_pos_ext, default)
-    local prompt_opts = { default = default, prompt = "New Name: ", scope = "cursor" }
-
+---@parma preferred boolean
+local function rename_get_input(client, session, cur_pos_ext, default, preferred)
     preview_listener_init(session)
-    ref_req_create(client, session, cur_pos_ext)
-    local nti = require("nvim-tools.ui")
-    local ok, text = nti.input(prompt_opts)
+    if preferred then
+        ref_req_create(client, session, cur_pos_ext)
+    end
+
+    local prompt_opts = { default = default, prompt = "New Name: ", scope = "cursor" }
+    local ok, text = require("nvim-tools.ui").input(prompt_opts)
 
     ref_req_checked_clear(client)
     preview_listener_stop()
@@ -823,8 +750,8 @@ local function req_prep_rn_handler(err, result, ctx, session, cur_pos_ext, promp
 
     local ntb = require("nvim-tools.buf")
     local default = prompt_default and ntb.text_from_range(default_range, buf) or ""
-    session_add_symbol_range(session, default_range)
-    rename_get_input(client, session, cur_pos_ext, default)
+    session_add_new_symbol_range(session, default_range)
+    rename_get_input(client, session, cur_pos_ext, default, true)
 end
 
 -----------------------
@@ -832,67 +759,62 @@ end
 -----------------------
 
 ---@param buf uinteger
----@param finder catharsis.rename.opts.Finder
+---@param filter fun(client:vim.lsp.Client): boolean
 ---@return uinteger?, vim.lsp.Client?, boolean
----Client id, client, supports prepareRename.
-local function client_find(buf, finder)
-    local all_clients = lsp.get_clients({ bufnr = buf, method = RENAME })
+---Client id, client, preferred client (supports prepareRename and references)
+local function client_find(buf, filter)
+    local clients = lsp.get_clients({ bufnr = buf })
     local ntt = require("nvim-tools.table")
-    if type(finder) == "string" then
-        ntt.i_select(all_clients, finder, function(client)
-            return client.name
-        end)
-    elseif type(finder) == "function" then
-        ntt.i_keep(all_clients, finder)
-    end
-
-    if #all_clients == 0 then
+    ntt.i_keep(clients, filter)
+    if #clients == 0 then
         return nil, nil, false
     end
 
     local nts = require("nvim-tools.lsp")
-    local preferred = ntt.i_copy(all_clients)
-    nts.clients_filter_supporting_multiple(preferred, buf, { PREP_RN, REFS })
-    if #preferred > 0 then
-        local all_methods = { PREP_RN, REFS, RENAME }
-        local client_id, client = nts.clients_find_top_scoring(preferred, all_methods, buf)
-        if client_id ~= nil and client ~= nil then
-            return client_id, client, true
-        end
+    local all_methods = { PREP_RN, REFS, RENAME }
+    local id, client = nts.clients_find_top_scoring(clients, buf, all_methods)
+    if id == nil or client == nil then
+        id, client = nts.clients_find_top_scoring(clients, buf, { RENAME })
+        return id, client, false
     end
 
-    local client_id, client = nts.clients_find_top_scoring(all_clients, { RENAME }, buf)
-    return client_id, client, false
+    return id, client, true
 end
--- MID-DEP: Can revisit this if there's a typical multi-server situation this handles poorly.
-
----@alias catharsis.rename.opts.Finder nil|string|fun(client:vim.lsp.Client): boolean
+-- MID-DEP: Revisit if there's a typical multi-server situation this handles poorly.
 
 ---@class catharsis.rename.Opts
----(Default: `nil`) Similar to `opts.filter` and `opts.name` in |vim.lsp.buf.rename()|.
----- If nil, find the best match client. From all attached to the buffer.
----- If a string, look for a client with a matching name.
----- If a function, only consider clients that pass the predicate.
----@field finder? catharsis.rename.opts.Finder
+---(Default: `nil`) Predicate to filter clients. Clients matching the predicate are included.
+---@field filter? fun(client:vim.lsp.Client): boolean
 ---(Default: `nil`) If provided, immediately send the rename request.
 ---@field new_name? string
 ---(Default: `true`) Provide a default name in the prompt? If true, the LSP suggestion will be
----used if provided. Otherwise, the |<cword>| under the cursor.
+---used if provided, falling back to the |<cword>| under the cursor.
 ---@field prompt_default? boolean
 
 ---@nodoc
 ---@class (private) catharsis.rename.Ctx
----@field finder catharsis.rename.opts.Finder
+---@field filter fun(client:vim.lsp.Client): boolean
 ---@field new_name string?
 ---@field prompt_default boolean
 
 ---@param opts? catharsis.rename.Opts
 ---@return catharsis.rename.Ctx
 local function opts_to_ctx(opts)
-    opts = opts and vim.deepcopy(opts) or {}
-    vim.validate("opts", opts, "table")
+    if opts == nil then
+        opts = {}
+    else
+        vim.validate("opts", opts, "table")
+        opts = vim.deepcopy(opts)
+    end
 
-    vim.validate("opts.finder", opts.finder, { "callable", "string" }, true)
+    if opts.filter == nil then
+        opts.filter = function(_)
+            return true
+        end
+    else
+        vim.validate("opts.filter", opts.filter, "callable")
+    end
+
     vim.validate("opts.new_name", opts.new_name, "string", true)
     if opts.prompt_default == nil then
         opts.prompt_default = true
@@ -902,7 +824,6 @@ local function opts_to_ctx(opts)
 
     return opts --[[@as catharsis.rename.Ctx]]
 end
--- MID: Add highlight display options.
 
 local M = {}
 
@@ -911,14 +832,15 @@ local M = {}
 function M._dispatcher(opts)
     local nts = require("nvim-tools.lsp")
     if uv.is_active(state_req_prep_rn_timer) then
-        nts.log_and_echo("prepareRename request currently active.", 3, hl_warn, true)
+        nts.log_and_echo("prepareRename request currently active.", 2, "", true)
         return
     end
 
     local opts_ctx = opts_to_ctx(opts)
     local cur_win = api.nvim_get_current_win()
+    api.nvim__ns_set(state_ns_cur_pos, { wins = { cur_win } })
     local cur_buf = api.nvim_win_get_buf(cur_win)
-    local client_id, client, supports_prep = client_find(cur_buf, opts_ctx.finder)
+    local client_id, client, preferred = client_find(cur_buf, opts_ctx.filter)
     if not (client_id ~= nil and client ~= nil) then
         local msg = "No clients supporting textDocument/rename were found"
         nts.log_and_echo(msg, 3, hl_warn, true)
@@ -935,7 +857,7 @@ function M._dispatcher(opts)
 
     local session = session_create(cur_win, cur_buf)
     local prompt_default = opts_ctx.prompt_default
-    if not supports_prep then
+    if not preferred then
         local ntb = require("nvim-tools.buf")
         local cword_range = ntb.line_match_under_cursor(cur_pos_ext, cur_buf, [[\k\+]])
         if cword_range == nil then
@@ -944,8 +866,8 @@ function M._dispatcher(opts)
         end
 
         local default = prompt_default and ntb.text_from_range(cword_range, cur_buf) or ""
-        session_add_symbol_range(session, cword_range)
-        rename_get_input(client, session, cur_pos_ext, default)
+        session_add_new_symbol_range(session, cword_range)
+        rename_get_input(client, session, cur_pos_ext, default, preferred)
         return
     end
 

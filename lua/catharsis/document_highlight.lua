@@ -17,7 +17,7 @@ local client_ids_disabled = {} ---@type table<uinteger, true|nil>
 -- MARK: Highlight Group and Namespace Info --
 ----------------------------------------------
 
-local METHOD = "textDocument/documentHighlight"
+local DOC_HL = "textDocument/documentHighlight"
 local protocol = require("vim.lsp.protocol")
 local KIND_READ = protocol.DocumentHighlightKind.Read
 -- local KIND_TEXT = protocol.DocumentHighlightKind.Text
@@ -507,7 +507,7 @@ local function request_send(client_id, win, buf, cur_pos_ext)
     local position = vim.pos.extmark(buf, row, col):to_lsp(encoding)
     local params = { textDocument = text_document, position = position }
 
-    local req_success, req_id = client:request(METHOD, params, doc_hl_req_handler, buf)
+    local req_success, req_id = client:request(DOC_HL, params, doc_hl_req_handler, buf)
     if req_success and req_id then
         reqs[buf] = {
             client_id = client_id,
@@ -558,7 +558,7 @@ local function request_debounced(buf, version, prev_hls)
 
     req_and_timer_stop(buf)
     local nts = require("nvim-tools.lsp")
-    local client_id, client = nts.client_get_from_doc_sel_score(buf, { METHOD })
+    local client_id, client = nts.client_get_top_scoring(buf, { DOC_HL })
     if not (client_id and client) then
         return
     end
@@ -670,7 +670,7 @@ local function autocmds_create()
             end
 
             local client = lsp.get_client_by_id(client_id)
-            if not (client ~= nil and client:supports_method(METHOD)) then
+            if not (client ~= nil and client:supports_method(DOC_HL)) then
                 return
             end
 
@@ -688,7 +688,7 @@ local function autocmds_create()
                 req_cancel(buf, client_id)
             end
 
-            local buf_clients = lsp.get_clients({ bufnr = buf, method = METHOD })
+            local buf_clients = lsp.get_clients({ bufnr = buf, method = DOC_HL })
             if #buf_clients == 0 then
                 buf_rm_autocmds(buf)
                 from_buf_res_reset(ev.buf, "del")
@@ -743,7 +743,7 @@ local function client_enable(client_id)
         return
     end
 
-    if not client:supports_method(METHOD) then
+    if not client:supports_method(DOC_HL) then
         local msg = "[LSP] Server does not support document highlight"
         require("nvim-tools.lsp").log_warn_and_echo(msg)
         return
@@ -817,7 +817,7 @@ function M.enable(enabled, bufs, client_ids)
     if is_enabled == true then
         if was_enabled == false then
             autocmds_create()
-            for _, client in ipairs(lsp.get_clients({ method = METHOD })) do
+            for _, client in ipairs(lsp.get_clients({ method = DOC_HL })) do
                 for buf, _ in pairs(client.attached_buffers) do
                     if bufs_disabled[buf] == nil then
                         buf_autocmds_create(buf)
@@ -842,7 +842,7 @@ function M.enable(enabled, bufs, client_ids)
         api.nvim_del_augroup_by_name(group_name)
     end
 
-    for _, client in ipairs(lsp.get_clients({ method = METHOD })) do
+    for _, client in ipairs(lsp.get_clients({ method = DOC_HL })) do
         for buf, _ in pairs(client.attached_buffers) do
             buf_rm_autocmds(buf)
         end
