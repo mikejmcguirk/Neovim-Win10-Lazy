@@ -31,6 +31,10 @@ set("n", "<leader>-a", function()
     add_annotation("[[@as")
 end, { buf = 0 })
 
+set("n", "<leader>-b", function()
+    add_annotation("@brief")
+end, { buf = 0 })
+
 set("n", "<leader>-c", function()
     add_annotation("@class")
 end, { buf = 0 })

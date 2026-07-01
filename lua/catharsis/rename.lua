@@ -339,10 +339,6 @@ end
 ---@param session catharsis.rename.Session
 ---@param padding string
 local function marks_padding_set_ref_wins(session, padding)
-    if #padding <= 0 then
-        return
-    end
-
     for _, win_info in pairs(session.ref_win_info) do
         local buf = win_info.buf
         local ranges = session.buf_ranges[buf]
@@ -351,23 +347,6 @@ local function marks_padding_set_ref_wins(session, padding)
         local ns = win_info.ns_dynamic
         marks_padding_iter_for_std(top_idx, bot_idx, ranges, buf, ns, padding)
     end
-end
-
----@param session catharsis.rename.Session
----@param cur_pos_padding string
-local function marks_padding_set_cursor(session, cur_pos_padding)
-    local cur_win_info = session.cur_win_info
-    local buf = cur_win_info.buf
-    local ns_dynamic = cur_win_info.ns_dynamic
-    local cur_pos_range = session.buf_ranges[buf][session.cur_pos_idx]
-
-    local id = api.nvim_buf_set_extmark(buf, ns_dynamic, cur_pos_range[3], cur_pos_range[4], {
-        virt_text = { { cur_pos_padding, hl_norm } },
-        virt_text_pos = "inline",
-        priority = hl_padding_priority,
-    })
-
-    session.mark_cursor_padding = id
 end
 
 ---@param session catharsis.rename.Session
@@ -383,6 +362,22 @@ local function marks_padding_set_cur_win(session, padding)
     marks_padding_iter_for_std(top_idx, cur_pos_idx - 1, ranges, buf, ns_dynamic, padding)
     local bot_idx = cur_win_info.bot_idx
     marks_padding_iter_for_std(cur_pos_idx + 1, bot_idx, ranges, buf, ns_dynamic, padding)
+end
+
+---@param session catharsis.rename.Session
+---@param cur_pos_padding string
+local function marks_padding_set_cursor(session, cur_pos_padding)
+    local cur_win_info = session.cur_win_info
+    local buf = cur_win_info.buf
+    local ns_dynamic = cur_win_info.ns_dynamic
+    local cur_pos_range = session.buf_ranges[buf][session.cur_pos_idx]
+    local id = api.nvim_buf_set_extmark(buf, ns_dynamic, cur_pos_range[3], cur_pos_range[4], {
+        virt_text = { { cur_pos_padding, hl_norm } },
+        virt_text_pos = "inline",
+        priority = hl_padding_priority,
+    })
+
+    session.mark_cursor_padding = id
 end
 
 ---@param start_idx uinteger
@@ -650,10 +645,10 @@ local function req_refs_handler(err, result, ctx, client_id, session, cur_pos_ex
 
     local cur_win = session.cur_win
     local ref_wins = api.nvim_tabpage_list_wins(0)
-    require("nvim-tools.list").filter(ref_wins, function(win)
-        return win ~= cur_win
-            and api.nvim_win_get_config(win).hide ~= true
-            and vim.call("win_gettype", win) == ""
+    require("nvim-tools.table").i_discard(ref_wins, function(win)
+        return win == cur_win
+            or vim.call("win_gettype", win) ~= ""
+            or api.nvim_win_get_config(win).hide == true
     end)
 
     ---@type table<uinteger, uinteger>
@@ -842,13 +837,13 @@ end
 ---Client id, client, supports prepareRename.
 local function client_find(buf, finder)
     local all_clients = lsp.get_clients({ bufnr = buf, method = RENAME })
-    local ntl = require("nvim-tools.list")
+    local ntt = require("nvim-tools.table")
     if type(finder) == "string" then
-        ntl.filter(all_clients, function(client)
-            return client.name == finder
+        ntt.i_select(all_clients, finder, function(client)
+            return client.name
         end)
     elseif type(finder) == "function" then
-        ntl.filter(all_clients, finder)
+        ntt.i_keep(all_clients, finder)
     end
 
     if #all_clients == 0 then
@@ -856,7 +851,7 @@ local function client_find(buf, finder)
     end
 
     local nts = require("nvim-tools.lsp")
-    local preferred = ntl.copy(all_clients)
+    local preferred = ntt.i_copy(all_clients)
     nts.clients_filter_supporting_multiple(preferred, buf, { PREP_RN, REFS })
     if #preferred > 0 then
         local all_methods = { PREP_RN, REFS, RENAME }
@@ -874,9 +869,10 @@ end
 ---@alias catharsis.rename.opts.Finder nil|string|fun(client:vim.lsp.Client): boolean
 
 ---@class catharsis.rename.Opts
----(Default: `nil`) Similar to `opts.filter` and `opts.name` in |vim.lsp.buf.rename()|. If nil,
----find the best match client. If a string, look for a client with a matching name. If a
----function, filter clients based on the predicate, then use best match if more than one return.
+---(Default: `nil`) Similar to `opts.filter` and `opts.name` in |vim.lsp.buf.rename()|.
+---- If nil, find the best match client. From all attached to the buffer.
+---- If a string, look for a client with a matching name.
+---- If a function, only consider clients that pass the predicate.
 ---@field finder? catharsis.rename.opts.Finder
 ---(Default: `nil`) If provided, immediately send the rename request.
 ---@field new_name? string

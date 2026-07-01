@@ -96,9 +96,8 @@ local function check_chars_after(win_targets, cache, opts)
     end
 
     local codepoint_tokens = ut.get_token_codepoints(opts.tokens or default_tokens)
-    local ntl = require("nvim-tools.list")
-
-    return ntl.filter_map_to(codepoint_tokens, function(token)
+    local ntt = require("nvim-tools.table")
+    return ntt.i_filter_map_to(codepoint_tokens, function(token)
         if codepoints_after[token] ~= nil then
             return nil
         else

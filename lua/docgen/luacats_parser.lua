@@ -822,23 +822,21 @@ end
 ---@return docgen.ParserObj[]
 function M.parsed_from_lines(lines, help_prefix, header_tag)
     local modvar = find_modvar(lines) or ""
-    local ntl = require("nvim-tools.list")
-    ---@type docgen.ParserObj[]
-    local obj_list = ntl.filter_map_accum_to(
-        lines,
-        obj_new(help_prefix, header_tag, modvar),
-        function(obj, line)
-            local status = obj_append_line(obj, line)
-            if status == 0 then
-                return obj, nil
-            end
-
-            return obj_new(help_prefix, header_tag, modvar), status == 1 and obj or nil
-        end,
-        function(obj)
-            return finalize(obj, "") == 1 and obj or nil
+    local init = obj_new(help_prefix, header_tag, modvar)
+    local ntt = require("nvim-tools.table")
+    local obj_list, last_obj = ntt.i_filter_map_accum_to(lines, init, function(obj, line)
+        local status = obj_append_line(obj, line)
+        if status == 0 then
+            return obj
         end
-    )
+
+        local new_obj = obj_new(help_prefix, header_tag, modvar)
+        return new_obj, status == 1 and obj or nil
+    end)
+
+    if finalize(last_obj, "") == 1 then
+        obj_list[#obj_list + 1] = last_obj
+    end
 
     return obj_list
 end

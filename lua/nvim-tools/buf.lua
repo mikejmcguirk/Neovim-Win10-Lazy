@@ -160,7 +160,7 @@ end
 ---@return integer[]
 function M.get_listed_bufs()
     local bufs = api.nvim_list_bufs()
-    require("nvim-tools.list").filter(bufs, function(buf)
+    require("nvim-tools.table").i_keep(bufs, function(buf)
         return api.nvim_get_option_value("buflisted", { buf = buf })
     end)
 
@@ -499,11 +499,15 @@ function M.open_buf(win, buf, opts)
         on_open(cur_pos or api.nvim_win_get_cursor(win))
     end
 end
--- TODO: This is out. Doing buf opening this way where we're pcalling and suppressing events
--- breaks too many assumptions about how Neovim works. This needs to be re-done as basically a
--- wrapper for edit. And we can integrate some of the vsplit behaviors into here too.
--- If we only open help buffers in help wins or new wins, we can properly do window settings.
--- Or something.
+-- TODO: A few things that need to happen for this to stick around:
+-- - Cannot be doing temp option sets. Insane point point if something breaks
+-- - Try to do prepare_help_buffer on BufReadPost.
+-- - Disfavor manually setting win context. For stuff like zzze there's no real way out of it,
+-- but especially for buf opening we want to try nvim_win_set_buf (though triggering BufEnter
+-- is quite bad)
+-- - There are too many options baked into here, and maybe zome of the zzze stuff needs to be
+-- broken out as well. It should be possible to do like, a conditional save of a buffer then
+-- opening it then like scrolling and entrance as separate things. Composable pieces.
 
 ---@param buf integer Buffer to delete
 ---@param delist? boolean De-list buffer?
@@ -520,8 +524,9 @@ function M.protected_del(buf, delist, opts)
 
     if opts.unload then
         local listed_bufs = M.get_listed_bufs()
-        require("nvim-tools.list").filter(listed_bufs, function(b)
-            return b ~= buf
+        -- TODO: this should be any() ~= buf
+        require("nvim-tools.table").i_discard(listed_bufs, function(b)
+            return b == buf
         end)
 
         if #listed_bufs == 1 then

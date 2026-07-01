@@ -97,9 +97,8 @@ local blink_opts = {
                 enabled = true,
                 opts = {
                     get_bufnrs = function()
-                        local list_filter = require("nvim-tools.list").filter
                         local bufs = api.nvim_list_bufs()
-                        list_filter(bufs, function(buf)
+                        require("nvim-tools.table").i_keep(bufs, function(buf)
                             local loaded = api.nvim_buf_is_loaded(buf)
                             local bt = api.nvim_get_option_value("bt", { buf = buf })
                             return loaded and bt ~= "nofile"
@@ -113,8 +112,8 @@ local blink_opts = {
                     local prose_ft = { "text", "markdown" } ---@type string[]
                     ---@type string
                     local ft = api.nvim_get_option_value("filetype", { buf = 0 })
-                    local ntl = require("nvim-tools.list")
-                    local is_prose = ntl.contains(prose_ft, ft)
+                    local ntt = require("nvim-tools.table")
+                    local is_prose = ntt.i_includes(prose_ft, ft)
                         or require("nvim-tools.treesitter").is_in_node({ "comment" }, true)
                     if not is_prose then
                         return items
@@ -132,8 +131,9 @@ local blink_opts = {
                         return items
                     end
 
-                    -- MID: Does this need to make a new table?
-                    return ntl.filter_map_accum_to(items, {}, function(seen, item)
+                    local seen = {}
+                    local items_filter_mapped = {}
+                    for _, item in ipairs(items) do
                         local raw = item.insertText or ""
                         if raw:match(correct) then
                             local text = strfn(raw:sub(1, 1)) .. raw:sub(2)
@@ -142,12 +142,12 @@ local blink_opts = {
                         end
 
                         if not seen[item.insertText] then
+                            items_filter_mapped = item
                             seen[item.insertText] = true
-                            return seen, item
                         end
+                    end
 
-                        return seen
-                    end)
+                    return items_filter_mapped
                 end,
             },
             dadbod = { name = "Dadbod", module = "vim_dadbod_completion.blink" },

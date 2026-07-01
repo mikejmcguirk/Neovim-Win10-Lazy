@@ -1,45 +1,37 @@
 local api = vim.api
 
-local lcs_base = "extends:»,precedes:«,nbsp:␣"
-local lcs_lead = "lead:⣿"
-local lcs_leadmultispace_start = "leadmultispace:│"
-local lcs_leadtab = "leadtab:│  "
-local lcs_tab = "tab:   "
-local lcs_tab_fill = "tab:<->"
-local lcs_trail = "trail:⣿"
-
 local lcs_cache = {} ---@type table<uinteger, string>
 local lcs_ins_cache = {} ---@type table<uinteger, string>
 
 ---@param buf uinteger
 local function lcs_get_and_set(buf)
     local lcs_tbl = {}
-    lcs_tbl[#lcs_tbl + 1] = lcs_base
+    lcs_tbl[#lcs_tbl + 1] = "extends:»,precedes:«,nbsp:␣"
     if api.nvim_get_option_value("et", { buf = buf }) == true then
-        lcs_tbl[#lcs_tbl + 1] = lcs_tab_fill
         ---@type uinteger
         local sw = api.nvim_get_option_value("sw", { buf = buf })
         local spaces = string.rep(" ", sw - 1)
-        lcs_tbl[#lcs_tbl + 1] = lcs_leadmultispace_start .. spaces
+        lcs_tbl[#lcs_tbl + 1] = "leadmultispace:│" .. spaces
+        lcs_tbl[#lcs_tbl + 1] = "tab:<->"
     else
-        lcs_tbl[#lcs_tbl + 1] = lcs_lead
-        lcs_tbl[#lcs_tbl + 1] = lcs_leadtab
-        lcs_tbl[#lcs_tbl + 1] = lcs_tab
+        lcs_tbl[#lcs_tbl + 1] = "lead:⣿"
+        lcs_tbl[#lcs_tbl + 1] = "leadtab:│  "
+        lcs_tbl[#lcs_tbl + 1] = "tab:   "
     end
 
-    local lcs_ins_tbl = require("nvim-tools.list").copy(lcs_tbl)
-    lcs_tbl[#lcs_tbl + 1] = lcs_trail
+    local lcs_ins_tbl = require("nvim-tools.table").i_copy(lcs_tbl)
+    lcs_tbl[#lcs_tbl + 1] = "trail:⣿"
     local lcs = table.concat(lcs_tbl, ",")
     local lcs_ins = table.concat(lcs_ins_tbl, ",")
-
-    lcs_cache[buf] = lcs
-    lcs_ins_cache[buf] = lcs_ins
     local ntm = require("nvim-tools.misc")
     if ntm.is_insert_mode(api.nvim_get_mode().mode) == true then
         api.nvim_set_option_value("lcs", lcs_ins, { scope = "local" })
     else
         api.nvim_set_option_value("lcs", lcs, { scope = "local" })
     end
+
+    lcs_cache[buf] = lcs
+    lcs_ins_cache[buf] = lcs_ins
 end
 
 local group_name = "mjm.lcs"

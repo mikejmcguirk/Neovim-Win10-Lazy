@@ -329,6 +329,7 @@ api.nvim_create_autocmd("FileType", {
         hl_query.query:disable_capture("punctuation.delimiter")
         hl_query.query:disable_capture("variable")
         hl_query.query:disable_capture("variable.lua")
+        hl_query.query:disable_capture("variable.member")
         hl_query.query:disable_capture("variable.member.lua")
     end,
 })

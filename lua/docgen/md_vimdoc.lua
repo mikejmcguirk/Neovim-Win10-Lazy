@@ -93,6 +93,16 @@ local function add_gap_checked(last_byte, this_byte, str, ret)
         end
     end
 end
+-- TODO: This makes no sense
+-- - What is a gap? I think this is a non-named node spot, but that's not clear here.
+-- - Why is last_byte < this_byte checked here? Doesn't that have some sort of logical implication
+-- upstream?
+-- - Why is ret being modified here? This should really obviously just be a pure function
+-- - What is "good text?" From what I can tell, it's text that has no returns and at least one
+-- non-whitespace character
+-- - I'm assuming "gap text" has some meaning here that I've forgotten. It should probably be
+-- gap_text_get() that can return a nil. Even better would be checking without running a
+-- string find.
 
 ---@type docgen.md.NodeHandler
 local function children_iter(node, str, ctx, handlers)

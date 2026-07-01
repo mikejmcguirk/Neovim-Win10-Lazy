@@ -937,5 +937,6 @@ end
 
 return M
 
+-- TODO: Remove bespoke implementations from here and use nvim-tools as the source of truth.
 -- TODO: Go through everything. See if it should be in nvim-tools and/or if the current
 -- implementation matches what's in Nvim-tools.

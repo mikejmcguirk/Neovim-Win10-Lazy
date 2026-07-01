@@ -186,8 +186,8 @@ function Results:filter_pos(fin, predicate)
     end
 
     local rows, cols = self:get_pos(fin)
-    local ntl = require("nvim-tools.list")
-    ntl.filter(active_idxs, function(x)
+    local ntt = require("nvim-tools.table")
+    ntt.i_keep(active_idxs, function(x)
         return predicate(rows[x], cols[x])
     end)
 end
@@ -205,7 +205,7 @@ function Results:filter_map_pos(fin, predicate)
     end
 
     local rows, cols = self:get_pos(fin)
-    require("nvim-tools.list").filter_map(active_idxs, function(idx)
+    require("nvim-tools.table").i_filter_modify(active_idxs, function(idx)
         local new_row, new_col = predicate(rows[idx], cols[idx])
         if new_row and new_col then
             rows[idx] = new_row

@@ -40,6 +40,7 @@ function M.between_(a, b, x)
 end
 
 ---@param mode string Potentially multi-character mode.
+---@return boolean
 function M.is_insert_mode(mode)
     local byte_one = string.byte(mode, 1)
     if byte_one == 82 or byte_one == 105 then
@@ -52,6 +53,15 @@ function M.is_insert_mode(mode)
 
     return false
 end
+
+---@param f fun(...:any): boolean
+---@return fun(...:any): boolean
+function M.complement(f)
+    return function(...)
+        return not f(...)
+    end
+end
+-- TODO: Use this for the valid_list function in types
 
 ---@param str string
 ---@param new_items string[]
@@ -118,3 +128,5 @@ function M.wrapping_sub(x, y, min, max)
 end
 
 return M
+
+-- TODO: Misc. should be distinguished between misc vim interactions and misc pure Lua

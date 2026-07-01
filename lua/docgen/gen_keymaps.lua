@@ -54,11 +54,11 @@ function M.gen_keymap_vimdoc(maps, help_prefix)
     -- TODO: vim.validate help_prefix
 
     local all_tags = {} ---@type table<string, true>
-    local ntl = require("nvim-tools.list")
-    local help_texts = ntl.filter_map_accum_to(maps, all_tags, function(acc_tags, map)
+    local help_texts = {}
+    for _, map in ipairs(maps) do
         local tags_addtl = list_filter_map_to(map.tags_addtl, function(tag)
             local tag_fmt = tag_from_txt(tag, help_prefix)
-            err_if_seen_or_add(acc_tags, tag_fmt, "Duplicate tag " .. tag_fmt)
+            err_if_seen_or_add(all_tags, tag_fmt, "Duplicate tag " .. tag_fmt)
             return tag_fmt
         end)
 
@@ -70,7 +70,7 @@ function M.gen_keymap_vimdoc(maps, help_prefix)
                 return list_filter_map_to(short_modes, function(short)
                     local mode_tag = short == "n" and plug_fmt or short .. "_" .. plug_fmt
                     local surrounded = checked_surround(mode_tag, "*")
-                    err_if_seen_or_add(acc_tags, surrounded, "Duplicate tag " .. surrounded)
+                    err_if_seen_or_add(all_tags, surrounded, "Duplicate tag " .. surrounded)
                     return surrounded
                 end)
             end)
@@ -108,8 +108,8 @@ function M.gen_keymap_vimdoc(maps, help_prefix)
             lines[#lines + 1] = default_wrapped
         end
 
-        return acc_tags, table.concat(lines, "\n")
-    end)
+        help_texts[#help_texts + 1] = table.concat(lines, "\n")
+    end
 
     return table.concat(help_texts, "\n\n")
 end

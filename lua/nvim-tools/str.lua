@@ -1,5 +1,25 @@
 local M = {}
 
+---@param sep string
+---@param ... any
+---@return string
+function M.concat_vargs(sep, ...)
+    local nargs = select("#", ...)
+    if nargs == 0 then
+        return ""
+    end
+
+    local keys = {}
+    local vargs = { ... }
+    local vargs_len = #vargs
+    for i = 1, vargs_len do
+        local arg = select(i, ...)
+        keys[i] = type(arg) == "string" and arg or vim.inspect(arg)
+    end
+
+    return table.concat(keys, sep)
+end
+
 ---Wrapper for concatenating a series of lines, performing a function on the concatenation, then
 ---re-splitting the lines.
 ---Useful for operations that create new allocations.

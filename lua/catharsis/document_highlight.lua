@@ -146,8 +146,8 @@ local function res_reset(res, buf, wipe)
 
     if wipe == "all" then
         if res.version > -1 then
-            local ntl = require("nvim-tools.list")
-            ntl.clear(res.highlights)
+            local ntt = require("nvim-tools.table")
+            ntt.i_clear(res.highlights)
             res.version = -1
         end
     end
@@ -338,9 +338,9 @@ api.nvim_set_decoration_provider(ns, { on_win = on_win })
 ---@param offset_encoding lsp.PositionEncodingKind
 ---@return mjm.lsp.documentHighlight.Hl[]
 local function response_to_ranges(response, buf, offset_encoding)
-    local ntl = require("nvim-tools.list")
+    local ntt = require("nvim-tools.table")
     local ntp = require("nvim-tools.pos")
-    local hls = ntl.filter_map_to(response, function(resp)
+    local hls = ntt.i_filter_map_to(response, function(resp)
         local range = resp.range -- Mandatory per the spec.
         local sr, sc = ntp.lsp_to_ext_buf_loaded(buf, range["start"], offset_encoding)
         local er, ec = ntp.lsp_to_ext_buf_loaded(buf, range["end"], offset_encoding)
@@ -349,14 +349,14 @@ local function response_to_ranges(response, buf, offset_encoding)
 
     -- Run the sanitation Helix performs.
     local ntr = require("nvim-tools.range")
-    ntl.filter(hls, function(hl)
+    ntt.i_keep(hls, function(hl)
         return ntr.valid_(hl)
     end)
 
     -- The spec does not guarantee order.
     table.sort(hls, ntr.range_sort_predicate_asc)
     -- Worthwhile because setting/drawing extmarks is a non-trivial cost.
-    ntl.combine(hls, function(a, b)
+    ntt.i_combine(hls, function(a, b)
         local cmp = ntr.cmp_(a, b)
         if math.abs(cmp) == 1 then
             return
@@ -397,7 +397,7 @@ local function response_has_current_state(req_win, resp_buf, req_cur_pos_ext)
 
     local cur_pos = api.nvim_win_get_cursor(req_win)
     local cur_pos_ext = require("nvim-tools.pos").mark_to_ext_pos(cur_pos)
-    if not require("nvim-tools.list").cmp(req_cur_pos_ext, cur_pos_ext) then
+    if not require("nvim-tools.table").i_equals(req_cur_pos_ext, cur_pos_ext) then
         return false
     end
 

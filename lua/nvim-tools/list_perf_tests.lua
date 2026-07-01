@@ -2,8 +2,8 @@ local M = {}
 
 function M.insert_at_test()
     local insert = table.insert
-    local ntl = require("nvim-tools.list")
-    local insert_at = ntl.insert_at
+    local ntt = require("nvim-tools.table")
+    local insert_at = ntt.i_insert_at
 
     -- High-resolution timer (ns). Works in Neovim; falls back gracefully.
     local hrtime
@@ -154,8 +154,8 @@ end
 
 function M.rm_at_test()
     local remove = table.remove
-    local ntl = require("nvim-tools.list")
-    local rm_at = ntl.rm_at
+    local ntt = require("nvim-tools.table")
+    local rm_at = ntt.i_rm_at
 
     -- High-resolution timer (ns)
     local hrtime
@@ -318,8 +318,8 @@ end
 
 function M.drain_test()
     local remove = table.remove
-    local ntl = require("nvim-tools.list")
-    local drain = ntl.drain
+    local ntt = require("nvim-tools.table")
+    local drain = ntt.i_drain
 
     -- High-resolution timer (ns)
     local hrtime
@@ -391,6 +391,7 @@ function M.drain_test()
                 local ph = phases[p]
                 local t0 = hrtime()
                 for _ = 1, ph.removes do
+                    ---@diagnostic disable-next-line: unused-local
                     local foo = drain(tbl, removes[rm_num])
                     rm_num = rm_num + 1
                 end

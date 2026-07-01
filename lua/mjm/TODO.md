@@ -4,6 +4,7 @@
 
 - There is suddenly more impetuous to get out of LazyDev because it suppresses invalid require errors. This is normally not the worst but if you do it in an async context the error is never propagated.
 - https://github.com/neovim/neovim/commit/bf917a503a38a4af9072f4473b340720d1d45851 - New built-in directory navigator/editor. Could this replace Oil?
+- Send to quickfix in fzflua should work even if the result only has one item
 
 ## SPEC:
 

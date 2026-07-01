@@ -1,4 +1,5 @@
 local api = vim.api
+local fn = vim.fn
 
 local M = {}
 
@@ -128,12 +129,27 @@ function M.protected_close(win, force)
     local tabpages = api.nvim_list_tabpages()
     if #tabpages == 1 then
         local tabpage_wins = api.nvim_tabpage_list_wins(tabpages[1])
-        require("nvim-tools.list").filter(tabpage_wins, function(w)
-            local relative = api.nvim_win_get_config(w).relative
-            return relative == "" or not relative
-        end)
+        local ntt = require("nvim-tools.table")
+        local other_wins = ntt.i_any(tabpage_wins, function(w)
+            if w == win then
+                return false
+            end
 
-        if #tabpage_wins == 1 then
+            local wintype = fn.win_gettype(w)
+            if wintype ~= "" then
+                return false
+            end
+
+            local config = api.nvim_win_get_config(w)
+            if config.relative ~= nil and config.relative ~= "" then
+                return false
+            end
+
+            return not config.hide
+        end)
+        -- TODO: It feels like this "normal win" logic is outlineable.
+
+        if not other_wins then
             return false, buf, "E444: Cannot close last window", ""
         end
     end

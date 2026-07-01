@@ -64,25 +64,20 @@ function M.valid_list(t, opts)
     local item_type = opts.item_type
     if item_type then
         -- TODO: Still hard to parse. Bad variable naming? Bad structure?
-        local ntl = require("nvim-tools.list")
+        local ntt = require("nvim-tools.table")
         local predicate = type(item_type) == "table"
                 and function(v)
-                    return ntl.contains(item_type, type(v))
+                    return ntt.i_includes(item_type, type(v))
                 end
             or function(v)
                 return type(v) == item_type
             end
 
-        if ntl.all(t, predicate) then
+        if ntt.i_all(t, predicate) then
             return true, nil
         end
 
-        -- TODO: list needs to address this issue.
-        local bad_idx = ntl.position(t, function(x)
-            return not predicate(x)
-        end)
-
-        local bad_val = ntl.find(t, function(x)
+        local bad_val, bad_idx = ntt.i_find(t, function(x)
             return not predicate(x)
         end)
 

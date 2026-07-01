@@ -121,9 +121,8 @@ function M.ranges_from_locations_by_buf(results, encoding, bufs)
         return ntr.lsp_locations_to_ext(buf, locations, encoding)
     end)
 
-    local ntl = require("nvim-tools.list")
     for _, ranges in pairs(buf_ranges) do
-        ntl.filter(ranges, function(range)
+        ntt.i_keep(ranges, function(range)
             return ntr.valid_(range)
         end)
     end
@@ -152,9 +151,9 @@ function M.clients_filter_supporting_multiple(clients, buf, methods)
         return clients
     end
 
-    local ntl = require("nvim-tools.list")
-    ntl.filter(clients, function(client)
-        return ntl.all(methods, function(method)
+    local ntt = require("nvim-tools.table")
+    ntt.i_keep(clients, function(client)
+        return ntt.i_all(methods, function(method)
             return client:supports_method(method, buf)
         end)
     end)

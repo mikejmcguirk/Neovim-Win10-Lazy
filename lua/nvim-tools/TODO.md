@@ -5,6 +5,7 @@
 - [ ] The file structure has to be changed so that most of the functions are in a "tools" folder. So the requires here willbe like `require("nvim-tools.tools.list")` or whatever. But then when you clone it for a project and rename it, you'll have `require("plugin.tools.list")` which will actually make sense.
 
 - [ ] Idea that feels like it's appropriate to represent here, or maybe we need a plugin-template superset thing - Lazydev is not the way for dealing with the problem of extended configs. What plugins should do is provide meta files that users can import into their settings so you can get the relevant type annotations. Maybe it should be something the runtime pulls?
+
 - [ ] In the makefile I think you add emmylua_check for linting
 
 - [ ] The "nvim-tools" repo should contain these functions, as well as the build/ci scripts. So this way I can clone the repo and use it to start a new plugin. The nvim-tools functions should be sectioned off so they can be easily deleted rather than making the user download them entirely.
@@ -44,11 +45,6 @@
 ## buf_open
 
 #### TODO:
-
-- [ ] This function contains within it what is essentially nvim_set_current_buf() with a bunch of bookkeeping. That should be outlined into its own thing so it can be used without the forcing and whatnot
-  * Check if nvim_win_set_buf is viable (probably not, especially since its state is in flux)
-  * This also allows for a more clean cut in state between the main function and the buf set part, which is a source of confusion
-  * General philosophical point - Isn't everything a wrapper for something else?
 
 #### LOW:
 
@@ -239,6 +235,10 @@
 
 ## fs/git
 
+#### TODO:
+
+- [ ] Separate fs/git
+
 #### DEPS:
 
 - Neither fs nor git, IMO, should proceed without a generalized method for async with await. Maybe it's vim.async. Maybe it's learning co-routines.
@@ -294,36 +294,125 @@
 
 ## List/Table
 
-#### OBJECTIVES:
+#### DEPS:
 
-- [ ] While I don't want to release the module outside of Nvim-tools, it should be formatted in such a way that it can be copy-pasta'd out. We should re-create Nvim's built-ins wherever reasonable
-- [ ] Must pass Emmylua typechecking
-- [ ] Must be usable and performant out of the box
-- [ ] Must only interact with the array portion of the table.
-
-#### RESEARCH
+- [ ] Docgen should be able to make sub-tables of context so you can actually render out the sub-sections
 
 #### TODO:
 
+- [ ] `swap` elements
+- [ ] `interweave` or `weave` to intersperse a list into a list. Need this for the partial intersperse in the docgen filepath assembly. Might be able to remove start and stop from intersperse
+- [ ] pydash `defaults_deep` function for config
+- [ ] pydash `for_in()` (I think) for validation
+  - [ ] Or maybe also Futil(?) matchesSignature
+
 #### DOC:
 
-- [ ] Write directories for function groups like eval functions or list to list
-  - [ ] This module prompts the idea that the docgen should be able to do sub-tables of contents
-- [ ] Reference returns + list_copy let you run any in place iter into a create new one.
 - [ ] Show intersperse addressing some kind of real world use case that `table.concat()` already doesn't.
 
 #### MID:
 
-- [ ] "split_on" should be added. This is not worth it though unless it handles both a single idx as well as a predicate that can split on a list of indices.
-- [ ] "inject" function that injects some sub-section of a list into another list. Could do by predicate or idx
-- [ ] Intersect keeps if an item is in all lists. Subtract removes if the item is in at least one list. Should have negations (remove if in all lists, keep if in any list).
-- [ ] We currently have intersect (AND) and subtract (NOR). We would want remove if in all (NAND) and keep if in any (OR). The XNOR case would be keep if in all or none. And then the XOR case would be remove if in all or none.
-  - XOR naming: Partial/incomplete
-  - NAND naming: Impasse/debase.
-- [ ] I have zip_longest because it's fine as is, but I don't want to build out more zip functionality unless I have a way to make the length management in zip more substantially full featured. The longer list should be able to:
-  - [ ] Extend out (`_longest` behavior)
-  - [ ] Match the length of the shorter list, but be offset
-    - It might work to put the offset into zip_with, and just use rotate to handle the list position.
+###### Generalized things:
+
+- Add `limit` to more functions
+
+#### LOW:
+
+- [ ] purrr `map_depth()` for stuff like working on nested lists
+- [ ] Re-add `detect()` (purrr) or `seek()` to get the first value and position based on key
+- [ ] purrr `at()` function to take a list and a list of indices and get a new list or filtered list from said indices
+  - [ ] Also have `pull_at()` to remove based on indices
+  - [ ] You could do `filter_map_at()` to save a filter pass
+- [ ] `inject` function to insert lists into lists
+  - [ ] by idxs
+  - [ ] key_fn
+  - [ ] predicate
+- [ ] Ramda `inner_join` function
+- [ ] object `map_keys`
+- [ ] `mean`/`median`/`mode`/`max`/`min`
+- [ ] `range` function to generate number lists
+  - [ ] should increment by 1 by default, but that should be specifiable
+- [ ] `split` on
+  - [ ] single idx
+  - [ ] indices
+  - [ ] key_fn
+  - [ ] predicate
+- [ ] `move` an item from one idx to another
+- [ ] We do want to eventually build out ways to do filtering for list-and-list and uniqueness and such based on predicates so we can handle deep-equality
+  - [ ] Do the Ramda/Pydath `fooWith` naming convention
+- [ ] In addition to limit, `skip` var to skip first X results
+
+- [ ] Ramda ideas
+  - [ ] ramda `aperture`
+  - [ ] `drop_repeats` Unique but only for consecutive
+  - [ ] `startsWith` and `endsWith` for lists
+    - [ ] Use some kind of prefix and suffix naming convention
+  - [ ] Ramda `eqProps`
+  - [ ] Ramda `invert` and `invertObj`
+  - [ ] Ramda `partition`
+  - [ ] Ramda `pick`/`pickAll`
+    - [ ] Is this like Ruby `dig`?
+  - [ ] Ramda `pluck`
+    - [ ] Libs of libs have a version of this
+  - [ ] Ramda `project`
+  - [ ] Ramda `unwind`
+  - [ ] Ramda `values`
+
+- [ ] pydash ideas
+  - [ ] `chunk()` (break into chunks)
+  - [ ] `duplicates()` to get a unique list of the duplicates
+  - [ ] they do flatten (one level), flatten_deep (recursive) and flatten_depth (manual)
+  - [ ] they have `from_pairs` for like their data structure. But you can do `from_tuples()` to make a dict and `from_pairs()` to make a dict here.
+    - [ ] Ideally you could be able to put in some kind of function that does transforms or whatever
+  - [ ] `interleave()` to round-robin a list together
+  - [ ] this has `sorted_uniq` maybe just add `nub_sort()`
+  - [ ] reversed version of ipairs?
+  - [ ] `sample()` to get a random element
+  - [ ] `sample_size()` to get n random elements
+  - [ ] `shuffle()` fisher yates
+  - [ ] `moving_median()`
+  - [ ] `scale()` function to scale numbers based on a maximum
+  - [ ] `defaults_deep()` has a very obvious use in this context
+  - [ ] shouldn't you then be able to do some kind of call_deep thing for validators
+  - [ ] the `object()` library in general is interesting
+  - [ ] `find_key()`
+  - [ ] `invert()` to invert keys and values
+  - [ ] `map_keys()`
+  - [ ] `map_values_deep()`
+  - [ ] `omit()` opposite of pick
+  - [ ] `rename_keys()`
+  - [ ] `transform()` the object version of reduce
+  - [ ] `unset()` is pretty useful in a sense because it's good for buf configs
+
+- [ ] Futil ideas
+  - [ ] `repeated()` instead of `duplicates()` (better name IMO). Extract elements from a list that are duplicates
+  - [ ] `isSubset()` if an array is a subset of another. starting subset for common prefix?
+  - [ ] `unwind()`
+  ```javascript
+    F.unwind('b', [{ a: true, b: [1, 2] }])
+    //=> [{ a: true, b: 1 }, { a: true, b: 2 }]
+    F.unwindArray('b', [
+      { a: true, b: [1, 2] },
+      { a: false, b: [3, 4] },
+    ])
+    //=> [
+    //=>  { a: true, b: 1 },
+    //=>  { a: true, b: 2 },
+    //=>  { a: false, b: 3 },
+    //=>  { a: false, b: 4 },
+    //=> ]
+  ```
+
+- [ ] underscore-contrib
+  - [ ] `evolve()` might be a way to generate objects
+
+#### AVOID:
+
+- Adding `start` and `stop` params to anything other than `splice` and `expel`. If we're working with subsets of a collection, this should prompt asking how to properly break up the collection.
+
+#### General Naming ideas:
+
+- `without` used by pydash for some kind of removal
 
 #### RESOURCES:
 
@@ -340,6 +429,17 @@
 - https://cicadas.surf/cgit/colin/gtwiwtg.git/about/
 - https://codeberg.org/fosskers/cl-transducers
 - https://common-lisp-libraries.readthedocs.io/iterate/
+- https://ramdajs.com/
+- https://purrr.tidyverse.org/index.html
+- https://pydash.readthedocs.io/en/latest/api.html
+- https://lodash.com/docs/4.18.1
+- https://documentcloud.github.io/underscore-contrib/
+
+#### NAMES:
+
+- seek for finding a value
+- cycle for multiple iterations
+- select for taking all instances of a value in a list and creating a new list from them
 
 ## LSP
 
@@ -347,6 +447,22 @@
 
 - [ ] Create other tools for pos/range processing from the LSP format
   - DEP: Would need another bulk processing scenario where the perf gains over the Nvim core utils actually matters.
+
+## MATH
+
+#### TODO:
+
+- [ ] wrapping math
+- [ ] saturating math
+
+## MISC:
+
+#### LOW:
+
+- [ ] ramda `until` function
+- [ ] ramda `allPass`
+- [ ] ramda `anyPass`
+- [ ] ramda `eqBy`
 
 ## pos
 
@@ -471,6 +587,12 @@
 #### NON:
 
 - Implementing any sort of wrapscan for match/search area. No use case + introduces numerous complexities around result sorting.
+
+## string
+
+#### TODO:
+
+- [ ] `is_blank` function. Had problems with this before of Luacheck, but writing the logic out repeatedly, manually is a pain
 
 ## Tab
 

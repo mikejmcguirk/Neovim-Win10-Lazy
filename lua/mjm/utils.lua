@@ -196,8 +196,7 @@ function M.check_word_under_cursor()
                 return
             end
 
-            local ntl = require("nvim-tools.list")
-            ntl.filter_map(lines, function(line)
+            require("nvim-tools.table").i_filter_modify(lines, function(line)
                 return line:match("^%s*(.-)%s*$")
             end)
 

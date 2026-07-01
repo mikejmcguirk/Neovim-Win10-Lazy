@@ -30,7 +30,7 @@ local function validate(validator, v)
     elseif type(validator) == "function" then
         return validator(v)
     elseif type(validator) == "table" then
-        return require("nvim-tools.list").contains(validator, type(v))
+        return require("nvim-tools.table").i_includes(validator, type(v))
     else
         return false
     end
@@ -423,8 +423,9 @@ function M.get_merged_config(buf, usr_cfg, ...)
     local has_keys = select("#", ...) > 0
     local nta = require("nvim-tools.table")
     local cfg = has_keys and nta.get(M.config, ...) or M.config
+    local nts = require("nvim-tools.str")
     if (not cfg) or getmetatable(cfg) ~= Config then
-        local keys_str = nta.keys_to_str(...)
+        local keys_str = nts.concat_vargs(".", ...)
         error(string.format("Invalid config path: '%s'", keys_str), 2)
     end
 
@@ -437,7 +438,7 @@ function M.get_merged_config(buf, usr_cfg, ...)
     ---@type nvim-tools.init.Config?
     local buf_cfg = (this_buf_config and has_keys) and nta.get(this_buf_config, ...) or nil
     if buf_cfg and getmetatable(buf_cfg) ~= Config then
-        local keys_str = nta.keys_to_str(...)
+        local keys_str = nts.concat_vargs(".", ...)
         error(string.format("Invalid buf config path for buffer %d: '%s'", buf, keys_str), 2)
     end
 

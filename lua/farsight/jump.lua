@@ -644,8 +644,8 @@ local function advance_jump(win_targets, win_info, win_dim_rows, map_mode, opts)
         -- Do before filtering targets because we need the previous level's windows for redrawing
         if jump_level > 0 then
             local ntt = require("nvim-tools.table")
-            ntt.filter(win_info, function(win, _)
-                return win_targets[win] ~= nil
+            ntt.discard(win_info, function(win, _)
+                return win_targets[win] == nil
             end)
         end
 

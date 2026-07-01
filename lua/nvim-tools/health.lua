@@ -34,10 +34,9 @@ function M.check()
         end
     end
 
+    local ntt = require("nvim-tools.table")
     if #empty_buf_configs > 0 then
-        local ntl = require("nvim-tools.list")
-        ntl.subtract(bufs, empty_buf_configs, true)
-
+        ntt.i_difference(nil, false, bufs, empty_buf_configs)
         local fmt_str = "Empty per-buffer config(s) detected on %d buffer(s): %s\n"
             .. "Run `require('nvim-tools').buf_config:clear()` to remove them."
         local empty_concat = table.concat(empty_buf_configs, ", ")
@@ -62,7 +61,7 @@ function M.check()
         end
     end
 
-    if #require("nvim-tools.table").keys(buf_err_info) == 0 then
+    if #ntt.keys(buf_err_info) == 0 then
         vim.health.ok("All buffer configs are valid")
         return
     end

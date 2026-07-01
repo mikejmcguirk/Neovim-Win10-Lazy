@@ -101,6 +101,7 @@ api.nvim_create_autocmd("LspProgress", {
     end,
 })
 
+-- MID: Combine these into one table to it can be passed into a map_accum function.
 local levels = { "Error", "Warn", "Info", "Hint" }
 ---@type string[]
 local signs = mjm.v.has_nerd_font and { "󰅚 ", "󰀪 ", "󰋽 ", "󰌶 " }
@@ -120,12 +121,13 @@ api.nvim_create_autocmd("DiagnosticChanged", {
             return
         end
 
-        local ntl = require("nvim-tools.list")
-        local counts = ntl.fold(ev.data.diagnostics, function(acc, d)
+        local ntt = require("nvim-tools.table")
+        local init = { 0, 0, 0, 0 }
+        local counts = ntt.i_fold(ev.data.diagnostics, init, function(acc, d)
             local severity = d.severity
             acc[severity] = acc[severity] + 1
             return acc
-        end, { 0, 0, 0, 0 })
+        end)
 
         local diag_strs = {} ---@type string[]
         for i, count in ipairs(counts) do
@@ -269,7 +271,7 @@ api.nvim_create_autocmd("OptionSet", {
             return
         end
 
-        if not require("nvim-tools.list").contains(watched, match) then
+        if not require("nvim-tools.table").i_includes(watched, match) then
             return
         end
 

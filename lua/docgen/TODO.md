@@ -7,6 +7,8 @@ it simply cannot be the case that we are doing like manual see annotations then 
 render lower level md heades as the green squiggly
 if we want to do equals, dash, and green, then that gives you 1/2, 3/4, 5/6. feels simple, even though tilde borders aren't included
 
+- [ ] Example should be a sub-heading. If multiple examples:, collect and print "Examples"
+
 - [ ] Still interface problems:
   - [ ] If you make gen_vimdoc, gen_readme, and gen_plugin separate functions, you have to re-run the file reads for all of them. Very slow and bad.
   - [ ] It seems reasonable that each rendering would take in a list of file paths, types, and texts.
