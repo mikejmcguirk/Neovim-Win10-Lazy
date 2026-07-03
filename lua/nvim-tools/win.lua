@@ -117,10 +117,6 @@ end
 ---@param force boolean
 ---@return boolean, integer|nil, string|nil, string|nil
 function M.protected_close(win, force)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("win", win, is_uint)
-    vim.validate("force", force, "boolean", true)
-
     if not api.nvim_win_is_valid(win) then
         return false, nil, "Invalid window", ""
     end
@@ -147,7 +143,6 @@ function M.protected_close(win, force)
 
             return not config.hide
         end)
-        -- TODO: It feels like this "normal win" logic is outlineable.
 
         if not other_wins then
             return false, buf, "E444: Cannot close last window", ""
@@ -228,3 +223,5 @@ function M.call_in(cur_win, win, f)
 end
 
 return M
+
+-- TODO: THis should have an underline name since it's meant to be private in plugins.
