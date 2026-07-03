@@ -118,6 +118,94 @@ function M.i_copy(t)
     return require("nvim-tools._table").i_copy_exact(t, 1, t_len)
 end
 
+---@generic T
+---@param t T
+---@param prev table<T, true>
+---@return any
+local function deepcopy(t, prev)
+    local t_type = type(t)
+    if t_type == "userdata" or t_type == "thread" then
+        return
+    end
+
+    if t_type ~= "table" then
+        return t
+    end
+
+    if prev[t] == true then
+        return
+    end
+
+    prev[t] = true
+
+    local copy = {}
+    for k, v in pairs(t) do
+        local dk = deepcopy(k, prev)
+        if dk ~= nil then
+            local dv = deepcopy(v, prev)
+            if dv ~= nil then
+                copy[dk] = dv
+            end
+        end
+    end
+
+    prev[t] = nil
+    return copy
+end
+
+---Differences from |vim.deepcopy()|:
+---- `userdata` and `thread` values are discarded rather than erroring. Beware that, if either
+---data type is used as a table key, the table value will be lost.
+---- No special handling for `vim.NIL`.
+---- Always "noref" behavior, meaning that repeated references to the same table each get a
+---new copy. If a cyclic reference is detected, it is discarded.
+---- Assumes that neither table has a metatable.
+---@generic K, V
+---@param t table<K, V>
+---@return table<K, V>
+function M.deepcopy(t)
+    return deepcopy(t, {})
+end
+-- TODO-DEP: Handle metatables if a use case comes up.
+
+---Deep copies the list elements only.
+---@generic T
+---@param t T[]
+---@return T[]
+function M.i_deepcopy(t)
+    local t_len = #t
+    if t_len == 0 then
+        return {}
+    end
+
+    local ret = {}
+    local prev = {}
+    local j = 1
+    for i = 1, t_len do
+        ret[j] = deepcopy(t[i], prev)
+        j = j + 1
+    end
+
+    return ret
+end
+
+---@param t any
+---@return boolean
+function M.is_dict(t)
+    if type(t) ~= "table" then
+        return false
+    end
+
+    local t_len = #t
+    for k in pairs(t) do
+        if type(k) ~= "number" or k < 1 or k > t_len or k ~= math.floor(k) then
+            return true
+        end
+    end
+
+    return false
+end
+
 ----------------------------
 -- MARK: Table Properties --
 ----------------------------
@@ -152,15 +240,6 @@ function M.keys_count(t)
     end
 
     return count
-end
-
----Determine if a table is a dictionary.
----@mark table-properties
----@generic K, V
----@param t table<K, V>
----@return boolean
-function M.is_dict(t)
-    return #t == 0 and next(t) ~= nil
 end
 
 --------------------------
@@ -409,7 +488,7 @@ function M.i_drain(t, idx)
 end
 
 ---Bespoke version because of future tbl_ deprecation
----The tbl_ version also does not contain the o == nil guard.
+---The tbl_ version also does not contain the t == nil guard.
 ---Like the built-in, will only return non-nil if it is able to traverse the specific path
 ---specified in the args to a non-nil value.
 ---@mark direct-access
@@ -426,16 +505,17 @@ function M.get(t, ...)
         return nil
     end
 
+    local v = t
     for i = 1, nargs do
-        t = t[select(i, ...)]
-        if t == nil then
+        v = t[select(i, ...)]
+        if v == nil then
             return nil
-        elseif type(t) ~= "table" and i ~= nargs then
+        elseif type(v) ~= "table" and i ~= nargs then
             return nil
         end
     end
 
-    return t
+    return v
 end
 
 ---@mark direct-access
@@ -1809,6 +1889,83 @@ function M.i_unique_to(t, key)
     return _ntt.filter_keep_not_seen_unique_to(t, t_len, key_fn, {})
 end
 
+---@generic K, V
+---@param t table<K, V>
+---@param ... string
+---@return V? The removed value.
+function M.unset_path(t, ...)
+    local nargs = select("#", ...)
+    if t == nil or nargs == 0 then
+        return
+    end
+
+    local args = { ... }
+    local nt = t
+    local k = nil
+    local v = t
+    for i = 1, nargs do
+        k = args[i]
+        v = nt[k]
+        if v == nil then
+            return
+        end
+
+        local v_type = type(v)
+        if v_type ~= "table" and i ~= nargs then
+            return
+        end
+
+        if M.is_dict(v) then
+            nt = v
+        end
+    end
+
+    nt[k] = nil
+    return v
+end
+-- LOW: is_dict checks `type(v)` redundantly.
+
+---@generic K, V
+---@param t table<K, V> Modified in place!
+---@param keys table<K, true|table>
+---@param prev table<table, true>
+local function unset_keys(t, keys, prev)
+    if prev[keys] == true then
+        return
+    end
+
+    prev[keys] = true
+
+    for k, v in pairs(keys) do
+        local v_type = type(v)
+        if v_type == "boolean" then
+            if v == true then
+                t[k] = nil
+            end
+        end
+
+        if v_type == "table" then
+            local tv = t[k]
+            if M.is_dict(tv) then
+                unset_keys(tv, v, prev)
+            end
+        end
+    end
+
+    prev[keys] = nil
+end
+
+---For each `true` value in `keys`, set the accompanying key/value pair in `t` to `nil`.
+---Sub-tables in `keys` will be skipped if they are not |lua-dict|s.
+---@generic K, V
+---@param t table<K, V> Modified in place!
+---@param keys table<K, true|table>
+---@return table<K, V> Reference to `t`.
+function M.unset_keys(t, keys)
+    unset_keys(t, keys, {})
+    return t
+end
+
 -----------------------------------
 -- MARK: List and List Filtering --
 -----------------------------------
@@ -2364,6 +2521,38 @@ function M.i_combine(t, f)
     end
 
     return t
+end
+
+---@generic K, V
+---@param t table<K, V|table>
+---@param defaults table<K, V|table>
+---@param prev table<table<K, V>, true>
+local function defaults_deep(t, defaults, prev)
+    if prev[defaults] == true then
+        return
+    end
+
+    prev[defaults] = true
+
+    for k, v in pairs(defaults) do
+        if M.is_dict(v) then
+            local tv = t[k]
+            if M.is_dict(tv) then
+                defaults_deep(tv, v, prev)
+            end
+        else
+            t[k] = v
+        end
+    end
+
+    prev[defaults] = nil
+end
+
+---@generic K, V
+---@param t table<K, V|table>
+---@param defaults table<K, V|table>
+function M.defaults_deep(t, defaults)
+    defaults_deep(t, defaults, {})
 end
 
 ---Fills all indices of `t` in place with `v`.

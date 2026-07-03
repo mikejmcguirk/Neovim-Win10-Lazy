@@ -193,6 +193,9 @@
 
 #### LOW:
 
+- [ ] Support `unset_path` for config tables
+  - [ ] Inconsistent because __newindex is gated off
+  - [ ] Creates problems vis-avis the lack of particularized default re-extraction
 - [ ] Is it possible to put proxies on the non-config sub-tables in a way that (a) isn't contrived and (b) doesn't hurt PERF.
 - [ ] It might be faster, for deleting autocmds, to check a cache for the group id rather than re-constructing the name string. I'm not sure this matters enough to justify maintaining the state.
   - [ ] Counterpoint: This also might matter for __newindex, meaning we're saving more perf
@@ -206,16 +209,6 @@
 
 - [ ] As bcd/workspace config are added, does this prompt updates/changes?
 
-#### MAYBE:
-
-- Iterate through config with a visitor pattern.
-  * Problems:
-    + Writing the iter code to accommodate all possible things the visitor function wants to do requires managing a lot of theoretical state simultaneously
-    + For new table merges, I'm not sure what the principled solution is, since you need to track the sub-key when you hit nested Configs.
-      + Could be keep a list of keys and use table.get(), but now you are keeping track of and resizing a table + unpacking it on call. Quite heavy.
-
-+ Allow get_merged_config to skip validation.
-
 #### NON:
 
 - Don't auto-create new buf_configs if you __index into a nil buf_config
@@ -224,6 +217,10 @@
   * Correctly handling "gc" for empty buf configs is tricky. Don't want to introduce conditions under which tables can be needlessly created
 
 * In config merging, don't allow skipping buf config. If you don't want it, don't set it.
+
+#### PR:
+
+- [ ] `vim.table.is()` or `vim.isdict()`
 
 ## fs
 
@@ -302,7 +299,6 @@
 
 - [ ] `swap` elements
 - [ ] `interweave` or `weave` to intersperse a list into a list. Need this for the partial intersperse in the docgen filepath assembly. Might be able to remove start and stop from intersperse
-- [ ] pydash `defaults_deep` function for config
 - [ ] pydash `for_in()` (I think) for validation
   - [ ] Or maybe also Futil(?) matchesSignature
 
@@ -372,7 +368,6 @@
   - [ ] `shuffle()` fisher yates
   - [ ] `moving_median()`
   - [ ] `scale()` function to scale numbers based on a maximum
-  - [ ] `defaults_deep()` has a very obvious use in this context
   - [ ] shouldn't you then be able to do some kind of call_deep thing for validators
   - [ ] the `object()` library in general is interesting
   - [ ] `find_key()`
@@ -382,7 +377,6 @@
   - [ ] `omit()` opposite of pick
   - [ ] `rename_keys()`
   - [ ] `transform()` the object version of reduce
-  - [ ] `unset()` is pretty useful in a sense because it's good for buf configs
 
 - [ ] Futil ideas
   - [ ] `repeated()` instead of `duplicates()` (better name IMO). Extract elements from a list that are duplicates
@@ -434,6 +428,9 @@
 - https://pydash.readthedocs.io/en/latest/api.html
 - https://lodash.com/docs/4.18.1
 - https://documentcloud.github.io/underscore-contrib/
+- https://fxts.dev/api/
+- https://smartprocure.github.io/futil-js/
+- https://mobily.github.io/ts-belt/
 
 #### NAMES:
 

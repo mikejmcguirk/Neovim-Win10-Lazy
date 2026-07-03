@@ -206,15 +206,18 @@ local function session_set_from_refs(session, cur_pos_ext, ref_wins, win_bufs, b
     local ref_win_info = session.ref_win_info
     for _, win in ipairs(ref_wins) do
         local win_buf = win_bufs[win]
-        local win_ranges = ranges_extract_for_win(win, buf_ranges[win_buf])
-        if 0 < #win_ranges then
-            wins_count = wins_count + 1
-            ref_win_info[win] = {
-                buf = win_buf,
-                ns_dim = -1,
-                ns_dynamic = -1,
-                ranges = win_ranges,
-            }
+        local win_buf_ranges = buf_ranges[win_buf]
+        if win_buf_ranges ~= nil then
+            local win_ranges = ranges_extract_for_win(win, win_buf_ranges)
+            if 0 < #win_ranges then
+                wins_count = wins_count + 1
+                ref_win_info[win] = {
+                    buf = win_buf,
+                    ns_dim = -1,
+                    ns_dynamic = -1,
+                    ranges = win_ranges,
+                }
+            end
         end
     end
 

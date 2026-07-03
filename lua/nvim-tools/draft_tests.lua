@@ -652,4 +652,73 @@ function M.test_keep_rm_while()
     assert(vim.deep_equal(bar, orig_list))
 end
 
+function M.test_deepcopy()
+    local function test_deepcopy_cycles()
+        -- Create a cyclic table
+        local cyclic = { name = "root" }
+        cyclic.self = cyclic
+        cyclic.child = { parent = cyclic, name = "child" }
+        cyclic.child.grandchild = { parent = cyclic.child }
+
+        -- Also test multiple cycles + shared structure
+        local foo = { value = 42 }
+        local bar = { foo = foo }
+        foo.bar = bar -- cycle between foo and bar
+
+        local cases = {
+            cyclic,
+            bar,
+            { a = cyclic, b = bar, c = { 1, 2, 3 } },
+        }
+
+        for i, t in ipairs(cases) do
+            local deepcopy = require("nvim-tools.table").deepcopy
+            local ok, result = pcall(function()
+                return deepcopy(t)
+            end)
+
+            assert(ok, "deepcopy crashed on cyclic table #" .. i)
+
+            -- Basic sanity checks
+            assert(type(result) == "table", "Should return a table")
+            assert(result ~= t, "Should be a new table")
+
+            -- Optional: check that some structure survived
+            if result.name then
+                assert(result.name == "root")
+            end
+        end
+
+        print("All cyclic deepcopy tests passed (no infinite recursion)")
+    end
+    local function with_timeout(fn, timeout_ms)
+        timeout_ms = timeout_ms or 500
+        local co = coroutine.create(fn)
+        local timer = assert(vim.uv.new_timer())
+
+        timer:start(timeout_ms, 0, function()
+            timer:stop()
+            timer:close()
+            if coroutine.status(co) ~= "dead" then
+                error("Test timed out - possible infinite recursion in deepcopy!")
+            end
+        end)
+
+        local ok, res = coroutine.resume(co)
+        timer:stop()
+        timer:close()
+
+        if not ok then
+            error(res)
+        end
+        return res
+    end
+
+    -- Usage
+    with_timeout(function()
+        test_deepcopy_cycles()
+    end, 300)
+end
+-- TODO: Seems to work (properly fails if I break the deepcopy function), but vibe-coded. Review.
+
 return M
