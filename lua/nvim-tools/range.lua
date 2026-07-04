@@ -172,34 +172,6 @@ function M.valid_(r)
     return r[1] < r[3] or (r[1] == r[3] and r[2] < r[4])
 end
 
----For ranges with end-inclusive indexing.
----- Assumes both ranges are valid, meaning the start is before or equal to the end.
----- Handles both a before b and b before a. a before b is checked first.
----- Only handles same-line adjacency.
----- Because an end-inclusive range of, say, 1,1,1,1 is valid, it is possible for two end-inclusive
----ranges to both overlap and be adjacent (unlike with end-exclusive ranges).
----- Note that end-inclusive ranges do not inherently capture multi-byte characters. This function
----does not take any of the underlying data needed to resolve them.
----@param a [integer, integer, integer, integer]
----@param b [integer, integer, integer, integer]
----@return boolean
-function M.adjacent(a, b)
-    return (a[3] == b[1] and a[4] == b[2] - 1) or (b[3] == a[1] and b[4] == a[2] - 1)
-end
-
----For ranges with end-exclusive indexing.
----- Assumes both ranges are valid, meaning the start is before the end.
----- Handles both a before b and b before a. a before b is checked first.
----- Only handles same-line adjacency.
----- This could provide a false-positive for Treesitter and LSP end indexes that wrap to the next
----line. Those must be first converted to Neovim's |api-indexing|.
----@param a [integer, integer, integer, integer]
----@param b [integer, integer, integer, integer]
----@return boolean
-function M.adjacent_(a, b)
-    return (a[3] == b[1] and a[4] == b[2]) or (b[3] == a[1] and b[4] == a[2])
-end
-
 ---@param range [uinteger, uinteger, uinteger, uinteger]
 function M.bit_pack_key(range)
     return bit.lshift(range[1], 0)
@@ -409,30 +381,6 @@ end
 -- it does that. And I think diagnostics are end-exclusive because they're LSP indexing. But
 -- I keep forgetting why this is so it's better noted down.
 
----@param qf_range Range4
-function M.qf_to_ts(qf_range)
-    vim.validate("qf_range", qf_range, "table")
-
-    qf_range[1] = qf_range[1] - 1
-    qf_range[2] = qf_range[2] - 1
-    qf_range[3] = qf_range[3] - 1
-    qf_range[4] = qf_range[4] - 1
-end
-
----@param range nvim-tools.Range
----@return table<uinteger, true>
-function M.rows_from_range_map(range)
-    local rows = {} ---@type table<uinteger, true>
-    local start_row = range[1]
-    local end_row = range[3]
-    local step = end_row - start_row >= 0 and 1 or -1
-    for i = start_row, end_row, step do
-        rows[i] = true
-    end
-
-    return rows
-end
-
 ---@param ranges nvim-tools.Range[]
 ---@return table<uinteger, true>
 function M.mapped_rows_from_ranges(ranges)
@@ -518,66 +466,6 @@ function M.lsp_locations_to_api(buf, locations, encoding)
     end)
 
     return ranges
-end
-
----@param buf integer
----@param ranges [integer, integer, integer, integer][] Modified in place!
----@param encoding 'utf-16'|'utf-32'|'utf-8'
-function M.lsp_parsed_locations_to_api(buf, ranges, encoding)
-    if encoding == "utf-8" then
-        return
-    end
-
-    local lines = M.lsp_range_lines_get(buf, ranges)
-    for _, range in ipairs(ranges) do
-        local start_row = ranges[1]
-        local start_col = ranges[2]
-        if start_col > 0 then
-            local line = lines[start_row]
-            range[2] = vim._str_byteindex(line, start_col, encoding == "utf-16")
-        end
-
-        local end_row = ranges[3]
-        local end_col = ranges[4]
-        if end_col > 0 then
-            local line = lines[end_row]
-            range[4] = vim._str_byteindex(line, end_col, encoding == "utf-16")
-        end
-    end
-end
--- TODO: Remove this
-
----@param range lsp.Range
----@param buf uinteger
----@param encoding 'utf-16'|'utf-32'|'utf-8'
-function M.lsp_range_to_api_buf_loaded(range, buf, encoding)
-    if encoding == "utf-8" then
-        return
-    end
-
-    local range_start = range.start
-    local range_end = range["end"]
-
-    local start_row = range_start.line
-    local start_col = range_start.character
-
-    local line
-    if start_col > 0 then
-        line = api.nvim_buf_get_lines(buf, start_row, start_row + 1, false)[1]
-        start_col = vim._str_byteindex(line, start_col, encoding == "utf-16")
-    end
-
-    local end_row = range_end.line
-    local end_col = range_end.character
-    if end_col > 0 then
-        if end_row ~= start_row or line == nil then
-            line = api.nvim_buf_get_lines(buf, end_row, end_row + 1, false)[1]
-        end
-
-        end_col = vim._str_byteindex(line, end_col, encoding == "utf-16")
-    end
-
-    return { start_row, start_col, end_row, end_col }
 end
 
 -------------------------

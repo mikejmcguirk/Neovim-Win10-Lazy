@@ -2,19 +2,6 @@ local api = vim.api
 
 local M = {}
 
----@param opt boolean|nil
----@param default boolean
----@return boolean
-function M.resolve_bool_opt(opt, default)
-    vim.validate("default", default, "boolean")
-    if type(opt) == "nil" then
-        return default
-    else
-        vim.validate("opt", opt, "boolean")
-        return opt
-    end
-end
-
 ---Happens enough in some functions that it saves non-trivial screen real-estate
 ---set_option_value performs non-trivial work under the hood, so this check is worth running
 ---@generic T
@@ -37,5 +24,6 @@ function M.set_if_new(opt, old, new, scope)
 
     return false
 end
+-- TODO: Yeet this after old buf_open is gone.
 
 return M

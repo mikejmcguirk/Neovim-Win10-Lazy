@@ -1,5 +1,4 @@
 local api = vim.api
-local uv = vim.uv
 
 local M = {}
 
@@ -21,9 +20,10 @@ function M.append_if_missing(str, new_items, sep)
 
     return table.concat(new, sep)
 end
+-- TODO: Yeet this when the old buf open stuff is gone.
 
----Inclusive
 ---`a` and `b` must be in the correct order.
+---@audited 2026-07-03
 ---@param a any
 ---@param b any
 ---@param x any
@@ -32,6 +32,8 @@ function M.between(x, a, b)
     return a <= x and x <= b
 end
 
+---`a` and `b` must be in the correct order.
+---@audited 2026-07-03
 ---@param a any
 ---@param b any
 ---@param x any
@@ -40,17 +42,7 @@ function M.between_(a, b, x)
     return a < x and x < b
 end
 
----@param val boolean?
----@param default boolean
----@return boolean
-function M.bool_or_default(val, default)
-    if type(val) == "boolean" then
-        return val
-    else
-        return default
-    end
-end
-
+---@audited 2026-07-03
 ---@param mode string Potentially multi-character mode.
 ---@return boolean
 function M.is_insert_mode(mode)
@@ -66,6 +58,7 @@ function M.is_insert_mode(mode)
     return false
 end
 
+---@audited 2026-07-03
 ---@param f fun(...:any): boolean
 ---@return fun(...:any): boolean
 function M.complement(f)
@@ -73,8 +66,8 @@ function M.complement(f)
         return not f(...)
     end
 end
--- TODO: Use this for the valid_list function in types
 
+---@audited 2026-07-03
 local function target_colors_get()
     if api.nvim_get_option_value("bg", { scope = "global" }) == "dark" then
         return "#1E1E1E", "#EFEFEF"
@@ -83,6 +76,7 @@ local function target_colors_get()
     end
 end
 
+---@audited 2026-07-03
 function M.cursor_hl_get()
     local normal = api.nvim_get_hl(0, { name = "Normal", link = false }) or {}
     local orig_fg = normal.fg
@@ -93,69 +87,10 @@ function M.cursor_hl_get()
 end
 -- LOW: You could be fancier about not pulling in `bg` but this is not hot code.
 
----@param str string
----@param new_items string[]
----@param sep string
-function M.prepend_if_missing(str, new_items, sep)
-    vim.validate("str", str, "string")
-    vim.validate("new_items", new_items, "table")
-    vim.validate("sep", sep, "string")
-
-    local new = {} ---@type string[]
-    for _, item in ipairs(new_items) do
-        if string.find(str, item, 1, true) == nil then
-            new[#new + 1] = item
-        end
-    end
-
-    new[#new + 1] = (#str > 0 and str or nil)
-    return table.concat(new, sep)
-end
-
+---@audited 2026-07-03
 ---@diagnostic disable-next-line: deprecated
 M.nonnil = vim.not_nil or vim.F.if_nil
--- DEPRECATE: Nvim 0.15 released
-
----@param timer uv.uv_timer_t|nil
----@return nil
-function M.close_timer(timer)
-    if timer and not uv.is_closing(timer) then
-        uv.timer_stop(timer)
-        uv.close(timer)
-    end
-
-    return nil
-end
-
----@param x integer
----@param y integer
----@param min integer
----@param max integer
----@return integer
-function M.wrapping_add(x, y, min, max)
-    vim.validate("x", x, "number")
-    vim.validate("y", y, "number")
-    vim.validate("min", min, "number")
-    vim.validate("max", max, "number")
-
-    local period = max - min + 1
-    return ((x - min + y) % period) + min
-end
-
----@param x integer
----@param y integer
----@param min integer
----@param max integer
----@return integer
-function M.wrapping_sub(x, y, min, max)
-    vim.validate("x", x, "number")
-    vim.validate("y", y, "number")
-    vim.validate("min", min, "number")
-    vim.validate("max", max, "number")
-
-    local period = max - min + 1
-    return ((x - y - min) % period) + min
-end
+-- TODO-DEP: Nvim 0.15 released
 
 return M
 

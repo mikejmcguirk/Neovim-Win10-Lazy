@@ -189,22 +189,38 @@ function M.i_deepcopy(t)
     return ret
 end
 
+---Evaluate if `t` is a |lua-dict|.
+---@audited 2026-07-03
 ---@param t any
----@return boolean
+---@return 0|1|2
+---- 0: Not a |lua-table|, or a |lua-list|.
+---- 1: An empty |lua-table|.
+---- 2: A |lua-dict|.
 function M.is_dict(t)
     if type(t) ~= "table" then
-        return false
+        return 0
     end
 
-    local t_len = #t
+    if next(t) == nil then
+        return 1
+    end
+
+    local len = #t
+    if len == 0 then
+        return 2
+    end
+
+    local count = 0
     for k in pairs(t) do
-        if type(k) ~= "number" or k < 1 or k > t_len or k ~= math.floor(k) then
-            return true
+        count = count + 1
+        if type(k) ~= "number" or k < 1 or k > len or k ~= math.floor(k) then
+            return 2
         end
     end
 
-    return false
+    return (count == len) and 0 or 2
 end
+-- TODO: Go over usages
 
 ----------------------------
 -- MARK: Table Properties --
@@ -487,10 +503,25 @@ function M.i_drain(t, idx)
     return v
 end
 
+---Wrap `t` in a metatable that prevents it from being written to.
+---@audited 2026-07-03
+---@param t table
+---@return table
+function M.freeze(t)
+    return setmetatable({}, {
+        __index = t,
+        __newindex = function(_, _)
+            error("Attempt to modify read-only config table")
+        end,
+        __metatable = false, -- prevents getmetatable() from revealing the real table
+    })
+end
+
 ---Bespoke version because of future tbl_ deprecation
 ---The tbl_ version also does not contain the t == nil guard.
 ---Like the built-in, will only return non-nil if it is able to traverse the specific path
 ---specified in the args to a non-nil value.
+---If no args, just return the table.
 ---@mark direct-access
 ---@param t? table Table to index
 ---@param ... any Optional keys (0 or more, variadic) via which to index the table
@@ -502,12 +533,13 @@ function M.get(t, ...)
 
     local nargs = select("#", ...)
     if nargs == 0 then
-        return nil
+        return t
     end
 
     local v = t
+    local args = { ... }
     for i = 1, nargs do
-        v = t[select(i, ...)]
+        v = v[args[i]]
         if v == nil then
             return nil
         elseif type(v) ~= "table" and i ~= nargs then
@@ -1415,6 +1447,88 @@ function M.i_impasse_to(key, ...)
 end
 -- MID: Outline the loop into a helper
 
+---@param t1 table<any, any> Modified in place!
+---@param t2 table<any, any>
+---@param prev table<table<any, any>, true>
+local function merge_deep_left(t1, t2, prev)
+    if prev[t2] == true then
+        return
+    end
+
+    prev[t2] = true
+
+    for k, v2 in pairs(t2) do
+        if M.is_dict(v2) == 2 then
+            local v1 = t1[k]
+            if v1 == nil then
+                v1 = {}
+                t1[k] = v1
+            end
+
+            if M.is_dict(v1) >= 1 then
+                merge_deep_left(v1, v2, prev)
+            end
+        elseif t1[k] == nil then
+            t1[k] = deepcopy(v2, {})
+        end
+    end
+
+    prev[t2] = nil
+end
+
+---Recursively merges all values from `t2` into `t1`. Values from `t1` take precedence.
+---
+---All values are deep-copied. If a circular reference is detected, merging at that sub-table is
+---aborted.
+---@audited 2026-07-03
+---@param t1 table<any, any> Modified in place!
+---@param t2 table<any, any>
+---@return table<any, any> Reference to `t1`.
+function M.merge_deep_left(t1, t2)
+    merge_deep_left(t1, t2, {})
+    return t1
+end
+
+---@param t1 table<any, any> Modified in place!
+---@param t2 table<any, any>
+---@param prev table<table<any, any>, true>
+local function merge_deep_right(t1, t2, prev)
+    if prev[t2] == true then
+        return
+    end
+
+    prev[t2] = true
+
+    for k, v2 in pairs(t2) do
+        if M.is_dict(v2) == 2 then
+            local v1 = t1[k]
+            if M.is_dict(v1) == 0 then
+                v1 = {}
+                t1[k] = v1
+            end
+
+            merge_deep_right(v1, v2, prev)
+        else
+            t1[k] = deepcopy(v2, {})
+        end
+    end
+
+    prev[t2] = nil
+end
+
+---Recursively merges all values from `t2` into `t1`. Values from `t2` take precedence.
+---
+---All values are deep-copied. If a circular reference is detected, merging at that sub-table is
+---aborted.
+---@audited 2026-07-03
+---@param t1 table<any, any> Modified in place!
+---@param t2 table<any, any>
+---@return table<any, any> Reference to `t1`.
+function M.merge_deep_right(t1, t2)
+    merge_deep_right(t1, t2, {})
+    return t1
+end
+
 ---Combines multiple sorted vararg `...` lists into a new sorted |lua-list|. References are
 ---shallow-copied.
 ---
@@ -1889,46 +2003,9 @@ function M.i_unique_to(t, key)
     return _ntt.filter_keep_not_seen_unique_to(t, t_len, key_fn, {})
 end
 
----@generic K, V
----@param t table<K, V>
----@param ... string
----@return V? The removed value.
-function M.unset_path(t, ...)
-    local nargs = select("#", ...)
-    if t == nil or nargs == 0 then
-        return
-    end
-
-    local args = { ... }
-    local nt = t
-    local k = nil
-    local v = t
-    for i = 1, nargs do
-        k = args[i]
-        v = nt[k]
-        if v == nil then
-            return
-        end
-
-        local v_type = type(v)
-        if v_type ~= "table" and i ~= nargs then
-            return
-        end
-
-        if M.is_dict(v) then
-            nt = v
-        end
-    end
-
-    nt[k] = nil
-    return v
-end
--- LOW: is_dict checks `type(v)` redundantly.
-
----@generic K, V
----@param t table<K, V> Modified in place!
----@param keys table<K, true|table>
----@param prev table<table, true>
+---@param t table<any, any> Modified in place!
+---@param keys table<any, true>
+---@param prev table<table<any, any>, true>
 local function unset_keys(t, keys, prev)
     if prev[keys] == true then
         return
@@ -1937,16 +2014,11 @@ local function unset_keys(t, keys, prev)
     prev[keys] = true
 
     for k, v in pairs(keys) do
-        local v_type = type(v)
-        if v_type == "boolean" then
-            if v == true then
-                t[k] = nil
-            end
-        end
-
-        if v_type == "table" then
+        if v == true then
+            t[k] = nil
+        elseif M.is_dict(v) == 2 then
             local tv = t[k]
-            if M.is_dict(tv) then
+            if M.is_dict(tv) == 2 then
                 unset_keys(tv, v, prev)
             end
         end
@@ -1955,12 +2027,14 @@ local function unset_keys(t, keys, prev)
     prev[keys] = nil
 end
 
----For each `true` value in `keys`, set the accompanying key/value pair in `t` to `nil`.
----Sub-tables in `keys` will be skipped if they are not |lua-dict|s.
----@generic K, V
----@param t table<K, V> Modified in place!
----@param keys table<K, true|table>
----@return table<K, V> Reference to `t`.
+---Recursively set values in `t` to `nil` if the matching key/value pair in `keys` is true. If
+---a value in `keys` is a |lua-dict|, iterate recursively.
+---
+---If a circular reference is detected, iteration at that sub-table is aborted.
+---@audited 2026-07-03
+---@param t table<any, any> Modified in place!
+---@param keys table<any, true>
+---@return table<any, any> Reference to `t`.
 function M.unset_keys(t, keys)
     unset_keys(t, keys, {})
     return t
@@ -2524,35 +2598,45 @@ function M.i_combine(t, f)
 end
 
 ---@generic K, V
----@param t table<K, V|table>
----@param defaults table<K, V|table>
----@param prev table<table<K, V>, true>
-local function defaults_deep(t, defaults, prev)
-    if prev[defaults] == true then
+---@param t table<any, any> Modified in place!
+---@param defaults table<any, any>
+---@param prev_defaults table<table<K, V>, true>
+local function defaults_deep(t, defaults, prev_defaults)
+    if prev_defaults[defaults] == true then
         return
     end
 
-    prev[defaults] = true
+    prev_defaults[defaults] = true
 
-    for k, v in pairs(defaults) do
-        if M.is_dict(v) then
-            local tv = t[k]
-            if M.is_dict(tv) then
-                defaults_deep(tv, v, prev)
+    for k, vd in pairs(defaults) do
+        if M.is_dict(vd) == 2 then
+            local v = t[k]
+            if M.is_dict(v) == 0 then
+                v = {}
+                t[k] = v
             end
-        else
-            t[k] = v
+
+            defaults_deep(v, vd, prev_defaults)
+        elseif t[k] == nil then
+            t[k] = deepcopy(vd, {})
         end
     end
 
-    prev[defaults] = nil
+    prev_defaults[defaults] = nil
 end
 
+---Recursively merges values from `t2` into `t1` if they are missing in `t1`. |lua-dict| values in
+---`t2` will overwrite any non-dict value in `t1`.
+---
+---All values are deep-copied. If a circular reference is detected, merging at that sub-table is
+---aborted.
 ---@generic K, V
----@param t table<K, V|table>
----@param defaults table<K, V|table>
+---@param t table<any, any> Modified in place!
+---@param defaults table<any, any>
+---@return table<any, any> Reference to `t`.
 function M.defaults_deep(t, defaults)
     defaults_deep(t, defaults, {})
+    return t
 end
 
 ---Fills all indices of `t` in place with `v`.
@@ -3064,6 +3148,52 @@ function M.i_rotate_to(t, n, dir)
         j = j + 1
     end
 
+    return ret
+end
+
+---@generic T, U, M
+---@param ret table<any, M>
+---@param t1 table<any, any>
+---@param t2 table<any, any>
+---@param f fun(v1:T, v2:U): M
+---@param prev table<table<any, any>, true>
+local function zip_deep_with(ret, t1, t2, f, prev)
+    if prev[t1] == true then
+        return
+    end
+
+    prev[t1] = true
+
+    for k, v1 in pairs(t1) do
+        local v2 = t2[k]
+        if v2 ~= nil then
+            local v1_is_dict = M.is_dict(v1) == 2
+            local v2_is_dict = M.is_dict(v2) == 2
+            if v1_is_dict == true and v2_is_dict == true then
+                local v_new = {}
+                zip_deep_with(v_new, v1, v2, f, prev)
+                ret[k] = v_new
+            elseif v1_is_dict == false and v2_is_dict == false then
+                ret[k] = f(v1, v2)
+            end
+        end
+    end
+
+    prev[t1] = nil
+end
+
+---Recursively zip `t1` and `t2` into a new |lua-dict| based on the results of `f`.
+---
+---Only keys present in both tables are included (intersection). Structural mis-matches are
+---dropped.
+---@audited 2026-07-03
+---@generic T, U, M
+---@param t1 table<any, any>
+---@param t2 table<any, any>
+---@param f fun(v1:T, v2:U): M
+function M.zip_deep_with_to(t1, t2, f)
+    local ret = {}
+    zip_deep_with(ret, t1, t2, f, {})
     return ret
 end
 

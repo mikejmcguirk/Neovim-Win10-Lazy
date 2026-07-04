@@ -19,13 +19,19 @@ end
 
 ---@param spk string?
 ---@param count uinteger
+---@return boolean
 local function copen_with_spk(spk, count)
     local _util = require("qf-herder._util")
     local old_spk = spk ~= nil and _util.ensure_spk(0, spk) or nil
-    pcall(api.nvim_cmd, { cmd = "copen", count = count, mods = { split = "botright" } }, {})
+    local ok = pcall(function()
+        api.nvim_cmd({ cmd = "copen", count = count, mods = { split = "botright" } }, {})
+    end)
+
     if old_spk ~= nil then
         api.nvim_set_option_value("spk", old_spk, { scope = "global" })
     end
+
+    return ok
 end
 -- LOW: Support custom split.
 
@@ -34,23 +40,17 @@ end
 ---@field spk "cursor"|"screen"|"topline"|nil
 
 ---Wrapper for `copen` in the current tabpage.
----@return boolean, uinteger
+---@return boolean
 function M.qf_win_open(ctx)
     local _util = require("qf-herder._util")
     local qf_win = _util.find_qf_win(0)
     if qf_win ~= nil then
-        return false, qf_win
+        return false
     end
 
     local ctx_spk = ctx.spk
     _util.ll_wins_close_all_in_tabpage_with_spk(0, ctx_spk)
-    copen_with_spk(ctx_spk, resolve_list_height(nil, ctx.auto_height))
-    local qf_win_after = _util.find_qf_win(0)
-    if qf_win_after ~= nil then
-        return true, qf_win_after
-    end
-
-    return false, 0
+    return copen_with_spk(ctx_spk, resolve_list_height(nil, ctx.auto_height))
 end
 
 ---@class qf-herder.window.CloseCtx

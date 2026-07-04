@@ -258,8 +258,7 @@ local function search_single_setup(win, pattern, upward, opts)
     flags_tbl[#flags_tbl] = upward and "b" or "z"
     local flags = table.concat(flags_tbl)
 
-    local cur_win = api.nvim_get_current_win()
-    local row, col = require("nvim-tools.win").call_in(cur_win, win, function()
+    local row, col = api.nvim_win_call(win, function()
         return search_single_run(win, pattern, flags, opts)
     end)
 

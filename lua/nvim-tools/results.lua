@@ -235,9 +235,4 @@ end
 
 return Results
 
--- TODO: This data structure is neither featureful enough for Farsight nor simple enough to be
--- a general solution. I would take one more shot at trying to make a database like structure
--- for Farsight results (because, in spite of the complexity, it saves a lot of table
--- allocations), and if that doesn't work then just abandon it. While allocating a new table for
--- each result is bad, we can grow it out in steps based on whether each result makes it to
--- the labeling/vtext step, which alleviates some pressure.
+-- TODO: Once each is out of this, yeet it.

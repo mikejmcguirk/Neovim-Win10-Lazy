@@ -43,52 +43,20 @@ function M.create_split(win, buf, enter, split)
     return api.nvim_open_win(buf, enter, { win = win, split = split })
 end
 
----@param win integer window-ID
----@param cur_pos { [1]:integer, [2]:integer } Cursor indexed
----@return boolean
-function M.cursor_at(win, cur_pos)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("win", win, is_uint)
-    vim.validate("cur_pos", cur_pos, "table")
-
-    local win_cur_pos = api.nvim_win_get_cursor(win)
-    return win_cur_pos[1] == cur_pos[1] and win_cur_pos[2] == cur_pos[2]
-end
-
----@param win_config vim.api.keyset.win_config_ret
----@return boolean
-function M.is_floating(win_config)
-    vim.validate("win_config", win_config, "table")
-
-    local relative = win_config.relative
-    return relative ~= nil and relative ~= ""
-end
--- Can also check with win_gettype == "popup"
-
----@param win_config vim.api.keyset.win_config_ret
----@return boolean
-function M.is_focusable(win_config)
-    vim.validate("win_config", win_config, "table")
-
-    return win_config.focusable == true and win_config.hide == false
-end
-
 ---Credit echasnovski
+---@audited 2026-07-03
 ---@param wins integer[]
 function M.order_wins(wins)
-    vim.validate("wins", wins, "table")
-
     local positions = {} ---@type { [1]:integer, [2]:integer, [3]:integer }[]
     for _, win in ipairs(wins) do
-        local config = api.nvim_win_get_config(win)
         local pos = api.nvim_win_get_position(win)
+        local config = api.nvim_win_get_config(win)
         positions[win] = { pos[1], pos[2], config.zindex or 0 }
     end
 
     table.sort(wins, function(a, b)
         local pos_a = positions[a]
         local pos_b = positions[b]
-
         if pos_a[3] < pos_b[3] then
             return true
         elseif pos_a[3] > pos_b[3] then
@@ -162,14 +130,10 @@ end
 ---@param is_term? boolean
 ---@ return { [1]:integer, [2]: integer }
 function M.protected_set_cursor(win, cur_pos, is_term)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("win", win, is_uint)
-    vim.validate("cur_pos", cur_pos, "table")
-
-    local buf = api.nvim_win_get_buf(win)
+    local win_buf = api.nvim_win_get_buf(win)
     if is_term == nil then
         ---@type string
-        local bt = api.nvim_get_option_value("bt", { buf = buf })
+        local bt = api.nvim_get_option_value("bt", { buf = win_buf })
         is_term = bt == "terminal"
     end
 
@@ -178,50 +142,12 @@ function M.protected_set_cursor(win, cur_pos, is_term)
     end
 
     local row, col = cur_pos[1], cur_pos[2]
-    row, col = require("nvim-tools.pos").adj_mark_pos(row, col, buf)
+    row, col = require("nvim-tools.pos").adj_mark_pos(row, col, win_buf)
+    -- TODO: This should be done in place.
 
     local new_cur_pos = { row, col }
     api.nvim_win_set_cursor(win, new_cur_pos)
     return new_cur_pos
 end
 
----@param win integer
----@return boolean, integer, string|nil, string|nil
-function M.resolve_win_id(win)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("win", win, is_uint)
-
-    if win == 0 then
-        return true, api.nvim_get_current_win(), nil, nil
-    end
-
-    if api.nvim_win_is_valid(win) then
-        return true, win, nil, nil
-    else
-        return false, -1, "Win ID " .. win .. " is invalid", "ErrorMsg"
-    end
-end
-
----Use nvim_win_call if cur_win ~= win. Otherwise, call the function as normal.
----Worth using due to non-trivial overhead of nvim_win_call
----@param cur_win integer
----@param win integer
----@param f function
----@return any, any
-function M.call_in(cur_win, win, f)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("cur_win", cur_win, is_uint)
-    vim.validate("win", win, is_uint)
-    vim.validate("f", f, "function")
-
-    win = win == 0 and cur_win or win
-    if cur_win == win then
-        return f()
-    else
-        return api.nvim_win_call(win, f)
-    end
-end
-
 return M
-
--- TODO: THis should have an underline name since it's meant to be private in plugins.

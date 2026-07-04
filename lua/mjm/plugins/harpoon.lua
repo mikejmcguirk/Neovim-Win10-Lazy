@@ -20,17 +20,17 @@ local function setup_harpoon()
                 local logger = require("harpoon.logger")
                 logger:log("custom#select", list_item, list.name, opts)
 
-                local echo_err = require("nvim-tools.ui").echo_err
                 if not list_item then
-                    echo_err(false, "nil list_item", "ErrorMsg")
+                    api.nvim_echo({ { "nil list_item", "ErrorMsg" } }, true, {})
                     return
                 end
 
                 local ntb = require("nvim-tools.buf")
                 local bufname = list_item.value
-                local ok, bufnr, err, hl = ntb.bufname_to_bufnr(bufname)
-                if not ok then
-                    echo_err(false, err, hl)
+                local bufnr = ntb.bufname_to_bufnr(bufname)
+                if bufnr == 0 then
+                    local msg = "Unable to add bufnr for " .. bufname
+                    api.nvim_echo({ { msg, "ErrorMsg" } }, true, {})
                     return
                 end
 

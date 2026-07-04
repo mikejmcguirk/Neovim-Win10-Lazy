@@ -23,23 +23,16 @@ end)
 ---@param file string
 local function open_file_in_vsplit(file)
     local ntb = require("nvim-tools.buf")
-    local ok, _, err, hl = ntb.bufname_to_bufnr(file)
-    if not ok then
-        require("nvim-tools.ui").echo_err(false, err, hl)
+    local bufnr = ntb.bufname_to_bufnr(file)
+    if bufnr == 0 then
+        api.nvim_echo({ { "Could not create bufnr for " .. file, "ErrorMsg" } }, true, {})
+        return
     end
 
     local create_split = require("nvim-tools.win").create_split
-    local full_bufname = vim.fs.normalize(vim.call("fnamemodify", file, ":p"))
-    local win = create_split(0, nil, true, "vsplit")
+    local win = create_split(0, bufnr, true, "vsplit")
     api.nvim_set_current_win(win)
-    -- TODO: Need permanent solution here.
-    vim.cmd("edit " .. full_bufname)
     vim.cmd("norm! zv")
-    -- ntb.open_buf(win, bufnr, {
-    --     clearjumps = true,
-    --     force = "force",
-    --     fold_cmd = "zv",
-    -- })
 end
 
 ---@param ts_file string

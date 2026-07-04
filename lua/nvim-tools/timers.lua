@@ -2,6 +2,19 @@ local uv = vim.uv
 
 local M = {}
 
+---@param timer uv.uv_timer_t|nil
+---@return nil
+function M.timer_close(timer)
+    if timer and not uv.is_closing(timer) then
+        uv.timer_stop(timer)
+        uv.close(timer)
+    end
+
+    return nil
+end
+-- TODO: I guess you have to return nil to the original var rather than being able to nil
+-- by reference? FeelsBadMan
+
 ---@param timer uv.uv_timer_t
 function M.timer_stop(timer)
     if uv.is_active(timer) then

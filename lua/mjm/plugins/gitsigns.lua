@@ -55,7 +55,7 @@ return {
                     local ok, input = ntu.input({ prompt = "Reset buffer? [y/n]: " })
                     if not ok then
                         local err = input or "Unknown error getting input"
-                        ntu.echo_err(false, err, "ErrorMsg")
+                        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
                         return
                     elseif input == "" then
                         return

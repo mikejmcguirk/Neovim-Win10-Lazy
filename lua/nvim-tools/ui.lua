@@ -3,26 +3,6 @@ local fn = vim.fn
 
 local M = {}
 
----@param silent boolean
----@param msg any
----@param hl any
-function M.echo_err(silent, msg, hl)
-    if silent then
-        return
-    end
-
-    if type(msg) ~= "string" then
-        msg = ""
-    end
-
-    if type(hl) ~= "string" then
-        hl = ""
-    end
-
-    local history = hl == "ErrorMsg" or hl == "WarningMsg"
-    api.nvim_echo({ { msg, hl } }, history, {})
-end
-
 ---Credit echasnovski
 ---@param tab uinteger
 ---@return integer
@@ -33,12 +13,12 @@ function M.get_echospace(tab)
     local cmdheight = api.nvim_get_option_value("cmdheight", { tab = tab })
     return columns * math.max(cmdheight - 1, 0) + vim.v.echospace
 end
+-- TODO: The tab option is a v0.13 thing I think, so we need a fallback.
 
+---@audited 2026-07-03
 ---@param opts? vim.ui.input.Opts
 ---@return boolean, string
 function M.input(opts)
-    vim.validate("opts", opts, "table", true)
-
     local ok, result = pcall(fn.input, opts)
     if (not ok) and result == "Keyboard interrupt" then
         return true, ""

@@ -5,7 +5,7 @@ local M = {}
 ---@alias nvim-tools.Pos [uinteger, uinteger]
 
 ---Buf should be in position 3 for compatibilty with vim.Pos
----@alias nvim-tools.BufPos [uinteger, uinteger, uinteger]
+---@alias nvim-tools.pos.BufPos [uinteger, uinteger, uinteger]
 
 --------------------
 -- MARK: Creation --
@@ -42,6 +42,7 @@ end
 -- MARK: Position Comparison --
 -------------------------------
 
+---@audited 2026-07-03
 ---@param a_r integer
 ---@param a_c integer
 ---@param b_r integer
@@ -63,35 +64,7 @@ function M.cmp(a_r, a_c, b_r, b_c)
     end
 end
 
----@param row_a integer
----@param col_a integer
----@param row_b integer
----@param col_b integer
----@return boolean
-function M.eq(row_a, col_a, row_b, col_b)
-    return row_a == row_b and col_a == col_b
-end
-
----For >=, use not lt
----@param row_a integer
----@param col_a integer
----@param row_b integer
----@param col_b integer
----@return boolean
-function M.lt(row_a, col_a, row_b, col_b)
-    return row_a < row_b or row_a == row_b and col_a < col_b
-end
-
----For <=, use not gt
----@param row_a integer
----@param col_a integer
----@param row_b integer
----@param col_b integer
----@return boolean
-function M.gt(row_a, col_a, row_b, col_b)
-    return row_a > row_b or row_a == row_b and col_a > col_b
-end
-
+---@audited 2026-07-03
 ---@param row_a integer
 ---@param col_a integer
 ---@param row_b integer
@@ -107,73 +80,7 @@ end
 -- MARK: Position Conversion --
 -------------------------------
 
--- These conversions assume that the provided position is valid. See below for
--- validation/adjustment.
--- Row and col are taken as separate params for flexibility and to avoid forcing the allocation
--- of new heap.
--- For outlining of duplicate logic, the conversion that preserves indexing numbers is used as
--- the "base" for conceptual simplicity. This can create duplicate logic. Adjust as needed in your
--- own interpretation.
-
----@param row integer 0 indexed
----@param col_ integer 0 indexed, exclusive
----@param buf integer
----@return integer, integer 1,1 indexed, inclusive end
-function M.api_to_eval(row, col_, buf)
-    local row_0, col_0 = M.api_to_ext(row, col_, buf)
-    local row_1 = row_0 + 1
-    local col_1 = col_0 + 1
-
-    return row_1, col_1
-end
-
----@param row integer 0 indexed
----@param col_ integer 0 indexed, exclusive
----@param buf integer
----@return integer, integer 0,0 indexed, inclusive end
-function M.api_to_ext(row, col_, buf)
-    local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
-    if #line > 0 then
-        local prev_fin_idx_1 = col_
-        local distance = vim.str_utf_start(line, prev_fin_idx_1)
-        local col_1 = prev_fin_idx_1 + distance
-        local col_0 = col_1 - 1
-
-        return row, col_0
-    end
-
-    return row, 0
-end
-
----@param row integer 0 indexed
----@param col_ integer 0 indexed, exclusive
----@param buf integer
----@return integer, integer 1,0 indexed, inclusive end
-function M.api_to_mark(row, col_, buf)
-    local row_1, col_1 = M.api_to_eval(row, col_, buf)
-    local col_0 = col_1 - 1
-    return row_1, col_0
-end
-
----@param row integer 0 indexed
----@param col_ integer 0 indexed, exclusive
----@return integer, integer 1,1 indexed, exclusive end
-function M.api_to_vex(row, col_)
-    return row + 1, col_ + 1
-end
-
----@param row integer 1 indexed
----@param col integer 1 indexed, inclusive
----@param buf integer
----@return integer, integer 0,0 indexed, exclusive end
-function M.eval_to_api(row, col, buf)
-    local row_1, col__1 = M.eval_to_vex(row, col, buf)
-    local row_0 = row_1 - 1
-    local col__0 = col__1 - 1
-
-    return row_0, col__0
-end
-
+---@audited 2026-07-03
 ---@param row integer 1 indexed
 ---@param col integer 1 indexed, inclusive
 ---@return integer, integer 0,0 indexed, inclusive end
@@ -181,6 +88,7 @@ function M.eval_to_ext(row, col)
     return row - 1, col - 1
 end
 
+---@audited 2026-07-03
 ---@param row integer 1 indexed
 ---@param col integer 1 indexed, inclusive
 ---@return integer, integer 1,0 indexed, inclusive end
@@ -188,39 +96,7 @@ function M.eval_to_mark(row, col)
     return row, col - 1
 end
 
----@param row integer 1 indexed
----@param col integer 1 indexed, inclusive
----@param buf integer
----@return integer, integer 1,1 indexed, exclusive end
-function M.eval_to_vex(row, col, buf)
-    local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
-    if #line > 0 then
-        local distance = vim.str_utf_end(line, col)
-        local col_ = col + distance + 1
-
-        return row, col_
-    end
-
-    return row, 1
-end
-
----@param row integer 0 indexed
----@param col integer 0 indexed, inclusive
----@param buf integer
----@return integer, integer 0,0 indexed, exclusive end
-function M.ext_to_api(row, col, buf)
-    local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
-    if #line > 0 then
-        local col_1 = col + 1
-        local distance = vim.str_utf_end(line, col_1)
-        local col_ = col + distance + 1
-
-        return row, col_
-    end
-
-    return row, 0
-end
-
+---@audited 2026-07-03
 ---@param row integer 0 indexed
 ---@param col integer 0 indexed, inclusive
 ---@return integer, integer 1,1 indexed, inclusive end
@@ -228,40 +104,7 @@ function M.ext_to_eval(row, col)
     return row + 1, col + 1
 end
 
----@param row integer 0 indexed
----@param col integer 0 indexed, inclusive
----@return integer, integer 1,0 indexed, inclusive end
-function M.ext_to_mark(row, col)
-    return row + 1, col
-end
-
----@param row integer 0 indexed
----@param col integer 0 indexed, inclusive
----@param buf integer
----@return integer, integer 1,1 indexed, exclusive end
-function M.ext_to_vex(row, col, buf)
-    local _, col__0 = M.ext_to_api(row, col, buf)
-    local row_1 = row + 1
-    local col__1 = col__0 + 1
-
-    return row_1, col__1
-end
-
----Non-trivially faster than using the public APIs.
----@param buf integer
----@param position lsp.Position
----@param encoding lsp.PositionEncodingKind
----@return integer, integer
-function M.lsp_to_ext_buf_loaded(buf, position, encoding)
-    local row, col = position.line, position.character
-    if col > 0 and encoding ~= "utf-8" then
-        local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1] or ""
-        col = vim._str_byteindex(line, col, encoding == "utf-16")
-    end
-
-    return row, col
-end
-
+---@audited 2026-07-03
 ---Bespoke version to avoid vim.pos conversion.
 ---@param pos nvim-tools.Pos
 ---@param buf uinteger
@@ -283,13 +126,8 @@ function M.ext_to_lsp(pos, buf, encoding)
         return { line = row, character = col }
     end
 
-    if
-        not (
-            row == api.nvim_buf_line_count(buf)
-            and api.nvim_get_option_value("endofline", { buf = buf }) == false
-
-        )
-    then
+    local on_last_line = row == api.nvim_buf_line_count(buf)
+    if not (on_last_line and api.nvim_get_option_value("endofline", { buf = buf }) == false) then
         return { line = row, character = col }
     end
 
@@ -302,24 +140,31 @@ function M.ext_to_lsp(pos, buf, encoding)
     return { line = row, character = col }
 end
 
----@param row integer 1 indexed
+---@audited 2026-07-03
+---@param row integer 0 indexed
 ---@param col integer 0 indexed, inclusive
----@return integer, integer 0,0 indexed, exclusive end
-function M.mark_to_api(row, col, buf)
-    local row_0 = row - 1
-
-    local line = api.nvim_buf_get_lines(buf, row_0, row, false)[1]
-    if #line > 0 then
-        local col_1 = col + 1
-        local distance = vim.str_utf_end(line, col_1)
-        local col_ = col + distance + 1
-
-        return row_0, col_
-    end
-
-    return row_0, 0
+---@return integer, integer 1,0 indexed, inclusive end
+function M.ext_to_mark(row, col)
+    return row + 1, col
 end
 
+---Non-trivially faster than using the public APIs.
+---@param buf integer
+---@param position lsp.Position
+---@param encoding lsp.PositionEncodingKind
+---@return integer, integer
+function M.lsp_to_ext_buf_loaded(buf, position, encoding)
+    local row, col = position.line, position.character
+    if col > 0 and encoding ~= "utf-8" then
+        local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1] or ""
+        col = vim._str_byteindex(line, col, encoding == "utf-16")
+    end
+
+    return row, col
+end
+-- TODO: Bad. Should handle all cases.
+
+---@audited 2026-07-03
 ---@param row integer 1 indexed
 ---@param col integer 0 indexed, inclusive
 ---@return integer, integer 1,0 indexed, inclusive end
@@ -327,6 +172,7 @@ function M.mark_to_eval(row, col)
     return row, col + 1
 end
 
+---@audited 2026-07-03
 ---@param row integer 1 indexed
 ---@param col integer 0 indexed, inclusive
 ---@return integer, integer 0,0 indexed, inclusive end
@@ -334,94 +180,17 @@ function M.mark_to_ext(row, col)
     return row - 1, col
 end
 
+---@audited 2026-07-03
 ---@param pos nvim-tools.Pos Modified in place!
 ---@return nvim-tools.Pos Reference to `pos`.
 function M.mark_to_ext_pos(pos)
     pos[1] = pos[1] - 1
     return pos
 end
--- TODO: Make more of these. Possibly replace the integer versions, since these are more
--- ergonomic with nvim_win_get_cursor and vim.Pos (more common use case).
-
----@param row integer 1 indexed, inclusive
----@param col integer 0 indexed, inclusive
----@param buf integer
----@return integer, integer 1,1 indexed, exclusive end
-function M.mark_to_vex(row, col, buf)
-    local _, col__0 = M.mark_to_api(row, col, buf)
-    local col__1 = col__0 + 1
-
-    return row, col__1
-end
-
----@param row integer 1 indexed
----@param col_ integer 1 indexed, exclusive
----@return integer, integer 0,0 indexed, exclusive end
-function M.vex_to_api(row, col_)
-    return row - 1, col_ - 1
-end
-
----@param row integer 1 indexed
----@param col_ integer 1 indexed, exclusive
----@param buf integer
----@return integer, integer 1,1 indexed, inclusive end
-function M.vex_to_eval(row, col_, buf)
-    local line = api.nvim_buf_get_lines(buf, row - 1, row, false)[1]
-    if #line > 0 then
-        local prev_fin_idx = col_ - 1
-        local distance = vim.str_utf_start(line, prev_fin_idx)
-        local col = prev_fin_idx + distance
-
-        return row, col
-    end
-
-    return row, 1
-end
-
----@param row integer 1 indexed
----@param col_ integer 1 indexed, exclusive
----@param buf integer
----@return integer, integer 0,0 indexed, inclusive end
-function M.vex_to_ext(row, col_, buf)
-    local _, col_1 = M.vex_to_eval(row, col_, buf)
-    local row_0 = row - 1
-    local col_0 = col_1 - 1
-
-    return row_0, col_0
-end
-
----@param row integer 1 indexed
----@param col_ integer 1 indexed, exclusive
----@param buf integer
----@return integer, integer 1,0 indexed, inclusive end
-function M.vex_to_mark(row, col_, buf)
-    local row_1, col_1 = M.vex_to_eval(row, col_, buf)
-    local col_0 = col_1 - 1
-    return row_1, col_0
-end
 
 -------------------------------
 -- MARK: Position Adjustment --
 -------------------------------
-
----@param row integer 0 indexed
----@param col_ integer 0 indexed, exclusive
----@param buf integer
----@return integer, integer 0,0 indexed, exclusive
-function M.adj_api_pos(row, col_, buf)
-    if not api.nvim_buf_is_valid(buf) then
-        error("Buffer " .. buf .. " is not valid")
-    end
-
-    local row_0 = math.min(row, api.nvim_buf_line_count(buf) - 1)
-    local line = api.nvim_buf_get_lines(buf, row_0, row_0 + 1, false)[1]
-    local len_line = #line
-
-    local col__0 = math.min(col_, len_line) -- Zero on zero length lines
-    local get_distance = col__0 < len_line and len_line > 0
-    local distance = get_distance and vim.str_utf_start(line, col__0 + 1) or 0
-    return row_0, col__0 + distance
-end
 
 ---@param row integer 1 indexed
 ---@param col integer 1 indexed, inclusive
@@ -479,25 +248,6 @@ function M.adj_mark_pos(row, col, buf)
     local col_0 = math.max(math.min(col, len_line - 1), 0)
     local distance = len_line > 0 and vim.str_utf_start(line, col_0 + 1) or 0
     return row_1, col_0 + distance
-end
-
----@param row integer 1 indexed
----@param col_ integer 1 indexed, exclusive
----@param buf integer
----@return integer, integer 1,1 indexed, exclusive
-function M.adj_vex_pos(row, col_, buf)
-    if not api.nvim_buf_is_valid(buf) then
-        error("Buffer " .. buf .. " is not valid")
-    end
-
-    local row_1 = math.min(row, api.nvim_buf_line_count(buf))
-    local line = api.nvim_buf_get_lines(buf, row_1 - 1, row_1, false)[1]
-    local len_line = #line
-
-    local col__1 = math.min(col_, len_line + 1) -- Clamp like API indexing
-    local get_distance = col__1 <= len_line and len_line > 0
-    local distance = get_distance and vim.str_utf_start(line, col__1) or 0
-    return row_1, col__1 + distance
 end
 
 return M

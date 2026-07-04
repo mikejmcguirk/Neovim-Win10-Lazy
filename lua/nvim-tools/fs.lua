@@ -5,9 +5,10 @@ local DEFAULT_TIMEOUT = 1000
 
 local M = {}
 
+---@audited 2026-07-03
 ---@param path string
 ---@return string norm_abs_path
-function M.norm_abs_path_get(path)
+function M.path_norm_abs_get(path)
     -- vim.fs.abspath might be changed to use fnamemodify :p:h, so use this for stability
     return fs.normalize(vim.call("fnamemodify", path, ":p"))
 end
@@ -31,37 +32,7 @@ local function stat_file_validate(path, stat, err, fstat)
 
     return true, nil
 end
-
----@param path string
----@param permission boolean|nil
----@param err string|nil
----@param err_name string|nil
----@return boolean ok, string|nil msg
-function M.fs_access_validation(path, permission, err, err_name)
-    if not permission then
-        local err_str = err or ("Does " .. path .. " exist?")
-        local err_msg = (err_name or "Unknown error") .. ": " .. err_str
-        return false, err_msg
-    end
-
-    return true, nil
-end
-
----@param path string
----@param err uv.callback.err
----@param stat uv.fs_stat.result?
----@return boolean ok, string? msg
-function M.fs_stat_file_validate(path, err, stat)
-    return stat_file_validate(path, stat, err, false)
-end
-
----@param path string
----@param err uv.callback.err
----@param stat uv.fs_stat.result?
----@return boolean ok, string? msg
-function M.fs_fstat_file_validate(path, err, stat)
-    return stat_file_validate(path, stat, err, true)
-end
+-- TODO: Weird kitchen sink function.
 
 ---@param path string
 ---@param err uv.callback.err
@@ -117,13 +88,12 @@ local function _fs_stat_list_async(paths, on_complete, opts)
 
     local timer = nil ---@type uv.uv_timer_t|nil
     local timed_out = false -- Only use this for the results return.
-    local stop_timer = require("nvim-tools.misc").close_timer
     local is_done = false -- `done()` is a busted function.
     ---@type [string,string][]
     local errs = require("nvim-tools.table").table_new(paths_count, 0)
 
     local function finish()
-        timer = stop_timer(timer)
+        timer = require("nvim-tools.timers").close_timer(timer)
 
         local success = #errs == 0 and not timed_out
         is_done = true
@@ -203,38 +173,6 @@ function M.fs_stat_list_async(paths, on_complete, opts)
     _fs_stat_list_async(paths, on_complete, opts)
 end
 
----Run simultaneous |uv.fs_stat()| jobs and use |vim.wait()| to mimic async join behavior.
----@param paths string[]
----@param opts nvim-tools.fs.FsStatListOpts?
----@return boolean ok, boolean timed_out, string[]|nil errs
----`false`, `false`, `nil` if no paths.
-function M.fs_stat_list(paths, opts)
-    opts = opts or {}
-    validate_fs_stat_list(paths, opts)
-    if #paths == 0 then
-        return false, false, nil
-    end
-
-    local complete = false
-    local ok = false
-    local timed_out = false
-    local errs ---@type string[]|nil
-
-    _fs_stat_list_async(paths, function(cb_ok, cb_timed_out, cb_errs)
-        ok = cb_ok
-        timed_out = cb_timed_out
-        errs = cb_errs
-        complete = true
-    end, opts)
-
-    vim.wait(opts.timeout or DEFAULT_TIMEOUT, function()
-        return complete
-    end, 10)
-
-    return ok, timed_out, errs
-end
--- DEPRECATE: I would guess that vim.async would make this irrelevant.
-
 ---@class nvim-tools.fs.FsReadOpts
 ---@field jobs_max? integer (default: 8) Maximum simultaneous file reads
 ---@field timeout? integer (default: 1000) Timeout (ms).
@@ -252,7 +190,7 @@ local function read_file_async(path, callback)
         end
 
         uv.fs_fstat(fd, function(stat_err, stat)
-            local ok_s, err_s = M.fs_fstat_file_validate(path, stat_err, stat)
+            local ok_s, err_s = stat_file_validate(path, stat_err, stat, true)
             if not (ok_s and stat) then
                 uv.fs_close(fd, function() end)
                 callback(err_s, nil)
@@ -281,14 +219,13 @@ local function _fs_read_list_async(paths, on_complete, opts)
     local timer = nil ---@type uv.uv_timer_t|nil
     local timeout = opts.timeout or DEFAULT_TIMEOUT
     local timed_out = false
-    local stop_timer = require("nvim-tools.misc").close_timer
 
     ---@type table<string, nvim-tools.fs.FsReadListResult>
     local results = require("nvim-tools.table").table_new(paths_count, 0)
 
     -- Assumes same synchronous context as the caller
     local function finish()
-        timer = stop_timer(timer)
+        timer = require("nvim-tools.timers").close_timer(timer)
 
         local success = idx_next == (paths_count + 1) and not timed_out
         for _, result in pairs(results) do
@@ -355,20 +292,6 @@ local function validate_fs_read_list(paths, opts)
 
     vim.validate("opts.max_jobs", opts.jobs_max, nty.is_uint, true)
     vim.validate("opts.timeout", opts.timeout, nty.is_uint, true)
-end
-
----@async
----@param paths string[]
----@param on_complete fun(success:boolean, timed_out: boolean, results:table<string, nvim-tools.fs.FsReadListResult>)
----@param opts nvim-tools.fs.FsReadOpts
-function M.fs_read_list_async(paths, on_complete, opts)
-    opts = opts or {}
-    validate_fs_read_list(paths, opts)
-    if #paths == 0 then
-        return false, false, {}
-    end
-
-    _fs_read_list_async(paths, on_complete, opts)
 end
 
 ---Run simultaneous |uv.fs_read()| jobs with file validation and use |vim.wait()| to mimic

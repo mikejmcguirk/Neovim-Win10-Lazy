@@ -1,40 +1,9 @@
 local api = vim.api
 local fn = vim.fn
 local fs = vim.fs
-local uv = vim.uv
 local vimv = vim.v
 
 local M = {}
-
----@param cur_buf integer
----@param buf integer
----@param f function
----@return any, any
-function M.call_in(cur_buf, buf, f)
-    local is_uint = require("nvim-tools.types").is_uint
-    vim.validate("cur_buf", cur_buf, is_uint)
-    vim.validate("buf", buf, is_uint)
-    vim.validate("f", f, "function")
-
-    buf = buf == 0 and cur_buf or buf
-    if cur_buf == buf then
-        return f()
-    else
-        return api.nvim_buf_call(buf, f)
-    end
-end
-
----@param buf integer
----@return boolean, string|nil, string|nil
-function M.check_modifiable(buf)
-    vim.validate("buf", buf, require("nvim-tools.types").is_uint)
-
-    if api.nvim_get_option_value("modifiable", { buf = buf }) then
-        return true, nil, nil
-    else
-        return false, "Cannot make changes, 'modifiable' is off", ""
-    end
-end
 
 ---Create a temporary buffer. Always:
 ---- noml
@@ -94,11 +63,16 @@ function M.create_temp_buf(bh, bl, bt, ft, ma)
 
     return buf
 end
+-- TODO: This function does two much. Fundamentally, we need to address two cases:
+-- - Creating a "scratch" buffer, which has weird properties about filetype and what can drop
+-- into it.
+-- - Creating temporary buffers to open new windows and tabs, because it makes a lot of other
+-- processes more sane.
 
+---@audited 2026-07-03
 ---@param bufnr integer
 ---@return string
 function M.get_bcd(bufnr)
-    vim.validate("bufnr", bufnr, require("nvim-tools.types").is_uint)
     return fs.dirname(fs.normalize(api.nvim_buf_get_name(bufnr)))
 end
 
@@ -110,28 +84,24 @@ function M.get_indent(buf, row)
     vim.validate("buf", buf, is_uint)
     vim.validate("row", row, is_uint)
 
-    local cur_buf = api.nvim_get_current_buf()
-
     ---@type string
     local indentexpr = api.nvim_get_option_value("indentexpr", { buf = buf })
     if #indentexpr > 0 then
         local old_row = vimv.lnum
         vimv.lnum = row
-        ---@type boolean, string|number?
-        local ok, indent = pcall(M.call_in, cur_buf, buf, function()
+        ---@type string|number?
+        local indent = api.nvim_buf_call(buf, function()
             return api.nvim_eval(indentexpr)
         end)
 
         vimv.lnum = old_row
-        if ok then
-            indent = tonumber(indent)
-            if type(indent) == "number" and indent >= 0 then
-                return indent
-            end
+        indent = tonumber(indent)
+        if type(indent) == "number" and indent >= 0 then
+            return indent
         end
     elseif api.nvim_get_option_value("cindent", { buf = buf }) then
         ---@type integer
-        local cindent = M.call_in(cur_buf, buf, function()
+        local cindent = api.nvim_buf_call(buf, function()
             return vim.call("cindent", row)
         end)
 
@@ -143,7 +113,7 @@ function M.get_indent(buf, row)
         and api.nvim_get_option_value("lisp", { buf = buf })
     then
         ---@type integer
-        local lispindent = M.call_in(cur_buf, buf, function()
+        local lispindent = api.nvim_buf_call(buf, function()
             return vim.call("lispindent", row)
         end)
 
@@ -157,21 +127,19 @@ function M.get_indent(buf, row)
     end)
 end
 
+---@audited 2026-07-03
 ---@return integer[]
 function M.get_listed_bufs()
     local bufs = api.nvim_list_bufs()
-    require("nvim-tools.table").i_keep(bufs, function(buf)
+    return require("nvim-tools.table").i_keep(bufs, function(buf)
         return api.nvim_get_option_value("buflisted", { buf = buf })
     end)
-
-    return bufs
 end
 
+---@audited 2026-07-03
 ---@param buf integer
 ---@return boolean
 function M.is_empty(buf)
-    vim.validate("buf", buf, require("nvim-tools.types").is_uint)
-
     local line_count = api.nvim_buf_line_count(buf)
     if line_count == 0 then
         return true
@@ -183,26 +151,18 @@ function M.is_empty(buf)
     return #lines == 0 or lines[1] == ""
 end
 
----@param buf integer
----@return boolean
-function M.is_noname(buf)
-    vim.validate("buf", buf, require("nvim-tools.types").is_uint)
-    return #api.nvim_buf_get_name(buf) == 0
-end
-
+---@audited 2026-07-03
 ---@param buf integer
 ---@return boolean
 function M.is_empty_noname(buf)
-    -- Both underlying functions run vim.validate
-    return M.is_empty(buf) and M.is_noname(buf)
+    return M.is_empty(buf) and #api.nvim_buf_get_name(buf) == 0
 end
 
----@param cur_win integer
 ---@param dest_win integer
 ---@param is_term? boolean
 ---@param fold_cmd? "zv"|"zO"|"zx"|"zR"
 ---@param do_zzze? boolean
-function M.buf_post_open(cur_win, dest_win, is_term, fold_cmd, do_zzze)
+function M.buf_post_open(dest_win, is_term, fold_cmd, do_zzze)
     if not (fold_cmd or do_zzze) then
         return
     end
@@ -218,8 +178,7 @@ function M.buf_post_open(cur_win, dest_win, is_term, fold_cmd, do_zzze)
         return
     end
 
-    local win_call_in = require("nvim-tools.win").call_in
-    win_call_in(cur_win, dest_win, function()
+    api.nvim_win_call(dest_win, function()
         if fold_cmd then
             api.nvim_cmd({ cmd = "normal", args = { fold_cmd }, bang = true }, {})
         end
@@ -398,18 +357,16 @@ end
 ---@param opts nvim-tools.buf.OpenBufOpts
 local function resolve_open_buf_params(win, buf, opts)
     -- The resolve functions run vim.validate
-    local ok_w, win_id, err_w, _ = require("nvim-tools.win").resolve_win_id(win)
-    if not ok_w then
-        error(err_w or ("Invalid window ID " .. win))
+    if not api.nvim_win_is_valid(win) then
+        error("Invalid window ID " .. win)
     end
 
-    local ok_b, bufnr, err_b, _ = M.resolve_bufnr(buf)
-    if not ok_b then
-        error(err_b or ("Invalid buffer " .. buf))
+    if not api.nvim_buf_is_valid(buf) then
+        error("invalid buffer " .. buf)
     end
 
     vim.validate("opts", opts, "table")
-    return win_id, bufnr
+    return win, buf
 end
 
 ---@class nvim-tools.buf.OpenBufOpts
@@ -461,10 +418,9 @@ function M.open_buf(win, buf, opts)
     local buftype = opts.buftype or api.nvim_get_option_value("bt", { buf = buf })
     local cur_pos = opts.cur_pos
 
-    local ntw = require("nvim-tools.win")
     if not already_open then
         handle_force(dest_win_cur_buf, opts.force or "hide")
-        ntw.call_in(start_win, win, function()
+        api.nvim_win_call(win, function()
             return do_set_buf(win, buf, opts.buflisted, buftype, opts.clearjumps)
         end)
     end
@@ -472,7 +428,7 @@ function M.open_buf(win, buf, opts)
     local not_term = buftype ~= "terminal"
     if cur_pos and not_term then
         if already_open then
-            ntw.call_in(start_win, win, function()
+            api.nvim_win_call(win, function()
                 api.nvim_cmd({ cmd = "normal", args = { "m'" }, bang = true }, {})
             end)
         end
@@ -484,15 +440,13 @@ function M.open_buf(win, buf, opts)
     local focus = opts.focus
     local do_focus = focus == true or focus == nil
     local in_dest_win = start_win == win
-    local cur_win = start_win
     if do_focus and not in_dest_win then
         api.nvim_set_current_win(win)
-        cur_win = win
     end
 
     local do_zzze = opts.do_zzze and (cur_pos ~= nil or not already_open)
     local fold_cmd = (opts.fold_cmd and cur_pos) and opts.fold_cmd or nil
-    M.buf_post_open(cur_win, win, not not_term, fold_cmd, do_zzze)
+    M.buf_post_open(win, not not_term, fold_cmd, do_zzze)
 
     local on_open = opts.on_open
     if on_open then
@@ -546,14 +500,15 @@ function M.protected_del(buf, delist, opts)
     end
 end
 
+---@audited 2026-07-03
 ---@param range nvim-tools.Range|nvim-tools.range.BufRange
 ---@param buf uinteger
 ---@return string
 function M.text_from_range(range, buf)
-    buf = buf ~= nil and buf or range[5]
     return api.nvim_buf_get_text(buf, range[1], range[2], range[3], range[4], {})[1] or ""
 end
 
+---@audited 2026-07-03
 ---@param cur_pos_ext [uinteger, uinteger] 0, 0 indexed
 ---@param buf uinteger
 ---@param pattern string See |pattern|
@@ -579,85 +534,15 @@ function M.line_match_under_cursor(cur_pos_ext, buf, pattern)
     end
 end
 
----@param bufnr integer
----@return boolean, integer, string|nil, string|nil
-function M.resolve_bufnr(bufnr)
-    vim.validate("bufnr", bufnr, require("nvim-tools.types").is_uint)
-
-    if bufnr == 0 then
-        return true, api.nvim_get_current_buf(), nil, nil
-    end
-
-    if api.nvim_buf_is_valid(bufnr) then
-        return true, bufnr, nil, nil
-    else
-        return false, -1, "Bufnr " .. bufnr .. " is invalid", "ErrorMsg"
-    end
-end
-
----Note that "" can be a valid bufname.
----@param bufnr integer
----@return boolean, string, string|nil, string|nil
-function M.bufnr_to_full_bufname(bufnr)
-    local ok, resolved_bufnr, err, hl = M.resolve_bufnr(bufnr)
-    if not ok then
-        return ok, "", err, hl
-    end
-
-    return true, api.nvim_buf_get_name(resolved_bufnr), nil, nil
-end
-
+---@audited 2026-07-03
 ---@param bufname string
----@return boolean, string, string|nil, string|nil
-function M.resolve_full_bufname(bufname)
-    vim.validate("bufname", bufname, "string")
-
-    return true, fs.normalize(fn.fnamemodify(bufname, ":p")), nil, nil
-end
-
----@param bufname string
----@return boolean, integer, string|nil, string|nil
+---@return uinteger
 function M.bufname_to_bufnr(bufname)
-    vim.validate("bufname", bufname, "string")
-
-    local full_bufname = fs.normalize(vim.call("fnamemodify", bufname, ":p"))
     local ntf = require("nvim-tools.fs")
-    local ok, err = ntf.fs_access_validation(full_bufname, uv.fs_access(full_bufname, 4))
-    if not ok then
-        return false, -1, err, "ErrorMsg"
-    end
-
-    local bufnr = fn.bufadd(full_bufname)
-    if bufnr == 0 then
-        return false, -1, "Unable to add " .. full_bufname, "ErrorMsg"
-    else
-        return true, bufnr, nil, nil
-    end
+    local full_bufname = ntf.path_norm_abs_get(bufname)
+    return fn.bufadd(full_bufname)
 end
-
----@param buf integer|string
----@return boolean, integer, string|nil, string|nil
-function M.buf_to_bufnr(buf)
-    -- Doing the if this way makes Lua_Ls happy
-    if type(buf) == "string" then
-        return M.bufname_to_bufnr(buf)
-    else
-        -- Assumes is_uint will be checked in here
-        return M.resolve_bufnr(buf)
-    end
-end
-
----@param buf integer|string
----@return boolean, string, string|nil, string|nil
-function M.buf_to_full_bufname(buf)
-    -- Doing the if this way makes Lua_Ls happy
-    if type(buf) == "string" then
-        return true, fs.normalize(fn.fnamemodify(buf, ":p")), nil, nil
-    else
-        -- Assumes is_uint will be checked in here
-        return M.bufnr_to_full_bufname(buf)
-    end
-end
+-- NON: Filepath validation. bufadd() handles this.
 
 ---@param buf integer
 ---@return boolean, string|nil, string|nil
@@ -681,29 +566,6 @@ function M.save(buf)
     else
         return ok, err, "ErrorMsg"
     end
-end
-
----@param buf integer
----@param delist boolean
----@param opts vim.api.keyset.buf_delete
----@return boolean, string|nil, string|nil
-function M.save_and_del(buf, delist, opts)
-    opts = require("nvim-tools.table").copy(opts)
-    if not api.nvim_buf_is_valid(buf) then
-        return false, "Buffer " .. buf .. " is invalid", ""
-    end
-
-    if M.is_empty_noname(buf) then
-        opts.force = true
-        return M.protected_del(buf, delist, opts)
-    end
-
-    local ok, err, hl = M.save(buf)
-    if ok or opts.force then
-        return M.protected_del(buf, delist, opts)
-    end
-
-    return ok, err, hl
 end
 
 return M

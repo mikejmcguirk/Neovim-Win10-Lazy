@@ -1,10 +1,3 @@
--- Ideally, config would live in vim.g, and the `/plugin` file should be used to load
--- all config to metatables without performing a require. But, as of 2026-07-02, Nvim's
--- global var tables do not store metatable information. While using `vim.g` is _possible_,
--- it creates poor ergonomics for the user.
---
--- To prevent unnecessary requires during startup, all config code should be centralized here.
-
 local api = vim.api
 
 local M = {}
@@ -13,29 +6,13 @@ local M = {}
 -- MARK: Dict Functions --
 --------------------------
 
----@param t any
----@return boolean
-local function is_dict(t)
-    if type(t) ~= "table" then
-        return false
-    end
-
-    local t_len = #t
-    for k in pairs(t) do
-        if type(k) ~= "number" or k < 1 or k > t_len or k ~= math.floor(k) then
-            return true
-        end
-    end
-
-    return false
-end
-
 ---@param val any
 ---@param typ string
 ---@return boolean
 local function string_type_is_valid(val, typ)
+    local val_type = type(val)
     if typ == "callable" then
-        if type(val) == "function" then
+        if val_type == "function" then
             return true
         end
 
@@ -51,7 +28,6 @@ local function string_type_is_valid(val, typ)
         return false
     end
 
-    local val_type = type(val)
     if val_type == typ then
         return true
     end
@@ -65,7 +41,8 @@ end
 local function validator_check(v, s)
     if type(s) == "string" then
         local ok = string_type_is_valid(v, s)
-        local err = ok and "" or tostring(v) .. ". Expected " .. type(v) .. ". Actual: " .. s
+        local err = ok and ""
+            or "Expected " .. s .. ", got " .. type(v) .. " (" .. tostring(v) .. ")"
         return ok, err
     end
 
@@ -90,169 +67,77 @@ end
 
 ---@param t table
 ---@param s table
----@param prev_t table<table, true>
----@param prev_s table<table, true>
+---@param prev table<table, true>
 ---@return boolean, string
-local function matches_validator_with(t, s, prev_t, prev_s)
-    if prev_t[t] then
+local function matches_validator_with(t, s, prev)
+    if prev[t] then
         return false, "Cyclic reference found in values."
     end
 
-    if prev_s[s] then
-        return false, "Cyclic reference found in validators."
-    end
-
-    prev_t[t] = true
-    prev_s[s] = true
+    prev[t] = true
+    local ntt = require("nvim-tools.table")
     for k, v in pairs(t) do
         local vs = s[k]
         if vs == nil then
-            prev_t[t] = nil
-            prev_s[s] = nil
+            prev[t] = nil
             return false, "[" .. tostring(k) .. "]" .. " has no validator."
         end
 
-        if is_dict(v) and is_dict(vs) then
-            local ok, err = matches_validator_with(v, vs, prev_t, prev_s)
+        local v_is_dict = ntt.is_dict(v) == 2
+        local vs_is_dict = ntt.is_dict(vs) == 2
+        if v_is_dict ~= vs_is_dict then
+            prev[t] = nil
+            return false, "[" .. tostring(k) .. "]" .. " sub-table mismatch."
+        end
+
+        if v_is_dict and vs_is_dict then
+            local ok, err = matches_validator_with(v, vs, prev)
             if not ok then
-                prev_t[t] = nil
-                prev_s[s] = nil
+                prev[t] = nil
+                return false, "[" .. tostring(k) .. "]" .. err
+            end
+        else
+            local ok, err = validator_check(v, vs)
+            if not ok then
+                prev[t] = nil
                 return false, "[" .. tostring(k) .. "]" .. err
             end
         end
-
-        local ok, err = validator_check(v, vs)
-        if ok == false then
-            prev_t[t] = nil
-            prev_s[s] = nil
-            return false, "[" .. tostring(k) .. "]" .. err
-        end
     end
 
-    prev_t[t] = nil
-    prev_s[s] = nil
+    prev[t] = nil
     return true, ""
 end
 
 ---Inspired by futil-js `matchesSignature`
 ---
----Compare a |lua-dict| of values with a |lua-dict| of validators. Returns `true` if all
+---Compare a |lua-dict| of values with a |lua-dict| schema. Returns `true` if all
 ---validators pass. Returns `false` with an error `string` if not.
 ---
 ---Values from `t` are allowed to be missing. Values from `t` without a corresponding signature
 ---`s` will cause a failure.
 ---
 ---See |vim.validate()| for validation logic.
+---@audited 2026-07-03
 ---@param t table
 ---@param s table
 ---@return boolean, string
 local function matches_schema_with_run(t, s)
-    if is_dict(t) == false then
-        return false, "Value table is not a dict."
+    local ntt = require("nvim-tools.table")
+    if ntt.is_dict(t) == 0 then
+        return false, "Config values are not a dictionary table."
     end
 
-    if is_dict(s) == false then
-        return false, "Schema table is not a dict."
+    if ntt.is_dict(s) < 2 then
+        return false, "Schema values are not a dictionary table."
     end
 
-    return matches_validator_with(t, s, {}, {})
-end
-
----@generic T
----@param t T
----@param prev table<T, true>
----@return any
-local function deepcopy(t, prev)
-    local t_type = type(t)
-    if t_type == "userdata" or t_type == "thread" then
-        return
-    end
-
-    if t_type ~= "table" then
-        return t
-    end
-
-    if prev[t] == true then
-        return
-    end
-
-    prev[t] = true
-
-    local copy = {}
-    for k, v in pairs(t) do
-        local dk = deepcopy(k, prev)
-        if dk ~= nil then
-            local dv = deepcopy(v, prev)
-            if dv ~= nil then
-                copy[dk] = dv
-            end
-        end
-    end
-
-    prev[t] = nil
-    return copy
-end
-
----@generic K, V
----@param t table<K, V>
----@return table<K, V>
-local function deepcopy_run(t)
-    return deepcopy(t, {})
-end
--- Used here because of safer cyclic redundancy handling.
-
----@generic K, V
----@param t table<K, V> Modified in place!
----@param keys table<K, true|table>
----@param prev table<table, true>
-local function unset_keys(t, keys, prev)
-    if prev[keys] == true then
-        return
-    end
-
-    prev[keys] = true
-
-    for k, v in pairs(keys) do
-        local v_type = type(v)
-        if v_type == "boolean" then
-            if v == true then
-                t[k] = nil
-            end
-        end
-
-        if v_type == "table" then
-            local tv = t[k]
-            if M.is_dict(tv) then
-                unset_keys(tv, v, prev)
-            end
-        end
-    end
-
-    prev[keys] = nil
-end
-
----For each `true` value in `keys`, set the accompanying key/value pair in `t` to `nil`.
----Sub-tables in `keys` will be skipped if they are not |lua-dict|s.
----@generic K, V
----@param t table<K, V> Modified in place!
----@param keys table<K, true|table>
----@return table<K, V> Reference to `t`.
-local function unset_keys_run(t, keys)
-    unset_keys(t, keys, {})
-    return t
+    return matches_validator_with(t, s, {})
 end
 
 --------------------
 -- MARK: Defaults --
 --------------------
-
--- TODO: For something like rename LSP name, we would want to have that in buf config so you
--- can use an autocmd to assign an LSP name per buffer, but we would not want that in
--- global config. So for the validators, you would want the "nil" type along with "string" to
--- specify that it's optional. And then the default should be nil (type it explicitly for
--- documentation, but it won't write to the table). So like I'm not exactly sure how the
--- interfaces shake out but they need to recognize that unless rename LSP name is explicitly
--- set by the user, we don't want to impose it.
 
 local default_config = {
     foo = 1,
@@ -260,6 +145,7 @@ local default_config = {
     bazz = { 1, 2, 3, 4 },
     buzz = { "aldrin", "lightyear" },
     fizz = false,
+    wow = nil,
     nested = {
         foo = 2,
         bar = "bazzite",
@@ -281,6 +167,7 @@ local validators = {
         return require("nvim-tools.types").valid_list(v, { item_type = "string" })
     end,
     fizz = "boolean",
+    wow = { "nil", "string" },
     nested = {
         foo = "number",
         bar = "string",
@@ -308,74 +195,279 @@ local Config = {}
 Config.__index = function(self, k)
     local _config = rawget(self, "_config")
     local v = rawget(_config, k)
-    return v and v or rawget(Config, k)
+    if v ~= nil then
+        return v
+    end
+
+    return rawget(Config, k)
 end
 
-Config.__newindex = function(_, _, _) end
--- TODO: This needs to tell the user something informative.
+Config.__newindex = function(_, _, _)
+    local msg = "Configs must be modified with setter methods. See help."
+    api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
+end
 
 ---@param self nvim-tools.ConfigRedux
 ---@param t? table|nil
 ---@return table
 function Config.__call(self, t)
     local _config = rawget(self, "_config")
+    local ntt = require("nvim-tools.table")
     if t == nil then
-        return deepcopy_run(_config)
+        return ntt.deepcopy(_config)
     end
 
     local ok, err = matches_schema_with_run(t, validators)
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return deepcopy_run(_config)
+        return ntt.deepcopy(_config)
     end
 
-    local t_copy = deepcopy_run(t)
-    vim.tbl_deep_extend("force", _config, t_copy)
-    return deepcopy_run(_config)
+    ntt.merge_deep_right(_config, ntt.deepcopy(t))
+    return ntt.deepcopy(_config)
 end
 
 ---@param self nvim-tools.ConfigRedux
-function Config:defaults_get()
-    return deepcopy_run(rawget(self, "_defaults"))
+function Config:reset()
+    local _defaults = rawget(self, "_defaults")
+    rawset(self, "_config", require("nvim-tools.table").deepcopy(_defaults))
 end
+-- DOC: For normal configs, this goes back to defaults. For buf configs, this is a clear.
 
----@param self nvim-tools.ConfigRedux
-function Config:defaults_set()
-    rawset(self, "_config", deepcopy_run(rawget(self, "_defaults")))
-end
-
----@param t table
-function Config:unset_keys(t)
-    vim.validate("t", t, "table")
+---@param keys table
+function Config:unset_keys(keys)
+    vim.validate("t", keys, "table")
 
     local _config = rawget(self, "_config")
-    unset_keys_run(_config, t)
-    local defaults_copy = deepcopy_run(rawget(self, "_defaults"))
-    vim.tbl_deep_extend("keep", _config, defaults_copy)
+    local ntt = require("nvim-tools.table")
+    ntt.unset_keys(_config, keys)
+    local _defaults = rawget(self, "_defaults")
+    local defaults_zipped = ntt.zip_deep_with_to(keys, _defaults, function(_, dv)
+        return dv
+    end)
 
-    return deepcopy_run(_config)
+    ntt.defaults_deep(_config, defaults_zipped)
+    return ntt.deepcopy(_config)
 end
--- MID: Slow/hacky to re-copy and re-assign the entire defaults. Should use `t` to filter for
--- needed keys.
+
+------------------------
+-- MARK: Buf Accessor --
+------------------------
+
+---@class nvim-tools.configRedux.BufAccessor
+---@field _configs table<uinteger, nvim-tools.ConfigRedux>
+local Buf_Config_Accessor = {}
+
+---@generic T
+---@param self nvim-tools.configRedux.BufAccessor
+---@param k T
+---@return any
+Buf_Config_Accessor.__index = function(self, k)
+    if not require("nvim-tools.types").is_uint(k) then
+        return rawget(Buf_Config_Accessor, k)
+    end
+
+    k = k == 0 and api.nvim_get_current_buf() or k
+    ---@type table<integer, nvim-tools.ConfigRedux>
+    local _configs = rawget(self, "_configs")
+    if api.nvim_buf_is_valid(k) == false then
+        _configs[k] = nil
+        api.nvim_echo({ { k .. " is not valid", "WarningMsg" } }, true, {})
+        return
+    end
+
+    return rawget(_configs, k)
+end
+
+Buf_Config_Accessor.__newindex = function(_, _, _)
+    local msg = "Buf configs must be modified with setter methods. See help."
+    api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
+end
+
+---@param buf uinteger
+---@return string
+local function get_buf_augroup_name(buf)
+    return "nvim-tools.buf_config." .. tostring(buf)
+end
+
+---@param buf uinteger
+---@return boolean
+function Buf_Config_Accessor:add(buf)
+    vim.validate("buf", buf, require("nvim-tools.types").is_uint)
+
+    ---@type table<uinteger, nvim-tools.ConfigRedux>
+    local _configs = rawget(self, "_configs")
+    if _configs[buf] ~= nil then
+        local msg = "Config for buffer " .. buf .. " already exists."
+        api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
+        return false
+    end
+
+    _configs[buf] = setmetatable({ _config = {}, _defaults = {} }, Config)
+
+    -- Use BufWipeout because unloaded buffers can be reloaded with the same id.
+    -- DOC: This behavior.
+    api.nvim_create_autocmd("BufWipeout", {
+        group = api.nvim_create_augroup(get_buf_augroup_name(buf), {}),
+        -- TODO:DEP: Change this to "buf" when v0.14 comes out.
+        buffer = buf,
+        callback = function()
+            _configs[buf] = nil
+        end,
+    })
+
+    return true
+end
+
+---@param self nvim-tools.configRedux.BufAccessor
+---@param bufs uinteger[]|nil
+function Buf_Config_Accessor:clear(bufs)
+    vim.validate("bufs", bufs, function()
+        local nty = require("nvim-tools.types")
+        return nty.valid_list(bufs, { item_type = "number" })
+    end, true)
+
+    local _configs = rawget(self, "_configs") ---@type table<uinteger, nvim-tools.ConfigRedux>
+    if bufs == nil then
+        for _, buf_config in pairs(_configs) do
+            buf_config:reset()
+        end
+
+        return
+    end
+
+    for _, buf in ipairs(bufs) do
+        _configs[buf]:reset()
+    end
+end
+
+---@param self nvim-tools.configRedux.BufAccessor
+---@param bufs uinteger[]|nil
+function Buf_Config_Accessor:del(bufs)
+    vim.validate("bufs", bufs, function()
+        local nty = require("nvim-tools.type")
+        return nty.valid_list(bufs, { item_type = "number" })
+    end, true)
+
+    local ntt = require("nvim-tools.table")
+    local _configs = rawget(self, "_configs") ---@type table<uinteger, nvim-tools.ConfigRedux>
+    if bufs == nil then
+        ntt.clear(_configs)
+        return
+    end
+
+    for _, buf in ipairs(bufs) do
+        _configs[buf] = nil
+    end
+end
+
+---@param self nvim-tools.init.config.BufAccessor
+---@return integer[]
+function Buf_Config_Accessor:list_bufs()
+    return require("nvim-tools.table").keys(rawget(self, "_configs"))
+end
+
+------------------------
+-- MARK: Startup Code --
+------------------------
 
 ---@param t? table|nil Table of new values to merge in.
 ---@return table The current or updated config.
+---@diagnostic disable-next-line: assign-type-mismatch
 function M.config(t)
     local _ = t -- ignore unused
     -- dummy proto for docs
     return {}
 end
 
+---@return nvim-tools.ConfigRedux
 local function config_create()
-    local _config = deepcopy_run(default_config)
-    local config = { _config = _config, _defaults = deepcopy_run(_config) }
-    M.config = setmetatable(config, Config)
+    local ntt = require("nvim-tools.table")
+    local _config = ntt.deepcopy(default_config)
+    local config = { _config = _config, _defaults = default_config }
+    return setmetatable(config, Config)
 end
 
-config_create()
+M.config = config_create() ---@type nvim-tools.ConfigRedux
 
-function M.config_reset()
-    config_create()
+---@param buf uinteger Buf config to access.
+---@return table The current or updated buf config.
+---@diagnostic disable-next-line: assign-type-mismatch
+function M.buf_config(buf)
+    local _ = buf -- ignore unused
+    -- dummy proto for docs
+    return {}
+end
+
+---@return nvim-tools.configRedux.BufAccessor
+local function buf_config_create()
+    local buf_config = { _configs = {} }
+    return setmetatable(buf_config, Buf_Config_Accessor)
+end
+
+M.buf_config = buf_config_create() ---@type nvim-tools.configRedux.BufAccessor
+
+---@param buf uinteger
+---@return nvim-tools.ConfigRedux
+function M.get_merged_config(buf)
+    buf = buf ~= 0 and buf or api.nvim_get_current_buf()
+    local ntt = require("nvim-tools.table")
+    local config = ntt.deepcopy(rawget(M.config, "_config"))
+    -- TODO: how to rawget this
+    local buf_config = M.buf_config[buf]
+    if buf_config == nil then
+        return ntt.deepcopy(config)
+    end
+
+    return ntt.merge_deep_right(config, ntt.deepcopy(buf_config))
+end
+
+---@param buf uinteger
+---@param usr_config table?
+---@param ... any
+---@return table, string
+function M._get_merged_config(buf, usr_config, ...)
+    vim.validate("buf", buf, require("nvim-tools.types").is_uint)
+    vim.validate("usr_config", usr_config, "table", true)
+
+    buf = buf ~= 0 and buf or api.nvim_get_current_buf()
+
+    local _config = rawget(M.config, "_config") ---@type table
+    local ntt = require("nvim-tools.table")
+    local config = ntt.deepcopy(ntt.get(_config, ...))
+    if config == nil then
+        return {}, "Invalid config path."
+    end
+
+    ---@type table<uinteger, nvim-tools.ConfigRedux>
+    local _configs = rawget(M.buf_config, "_configs")
+    local buf_raw = rawget(_configs, buf)
+    if buf_raw ~= nil then
+        local buf_inner = rawget(buf_raw, "_config")
+        local buf_config = ntt.get(buf_inner, ...)
+        if buf_config ~= nil then
+            ntt.merge_deep_right(config, buf_config)
+        end
+    end
+
+    if usr_config == nil then
+        return config, ""
+    end
+
+    local sub_validators = ntt.get(validators, ...)
+    if sub_validators == nil then
+        return {}, "No validators for path."
+    end
+
+    local ok, err = matches_schema_with_run(usr_config, sub_validators)
+    if not ok then
+        return {}, err
+    end
+
+    ntt.merge_deep_right(config, usr_config)
+    return config, ""
 end
 
 return M
+
+-- TODO: Need better typing for like config types and such

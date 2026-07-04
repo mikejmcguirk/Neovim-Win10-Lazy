@@ -237,14 +237,14 @@ for _, map in ipairs({ "<C-w>q", "<C-w><C-q>" }) do
         if not ok_s then
             err_s = err_s or ("Unknown error saving buffer " .. cur_buf)
             if not string.match(err_s, "Cannot save buftype") then
-                require("nvim-tools.ui").echo_err(false, err_s, hl_s)
+                api.nvim_echo({ { err_s, hl_s } }, true, {})
                 return
             end
         end
 
         local _, buf_w, err_w, hl_w = ntw.protected_close(cur_win, false)
         if not buf_w then
-            require("nvim-tools.ui").echo_err(false, err_w, hl_w)
+            api.nvim_echo({ { err_w, hl_w } }, false, {})
             return
         end
 
@@ -259,7 +259,7 @@ for _, map in ipairs({ "<C-w>q", "<C-w><C-q>" }) do
             local buf_del_opts = { force = false, unload = true }
             local ok_b, err_b, hl_b = ntb.protected_del(buf_w, true, buf_del_opts)
             if not ok_b and hl_b == "ErrorMsg" then
-                require("nvim-tools.ui").echo_err(false, err_b, hl_b)
+                api.nvim_echo({ { err_b, hl_b } }, false, {})
             end
         end)
     end)
@@ -557,10 +557,8 @@ set("n", "dm", "<cmd>delmarks!<cr>")
 -- LOW: Find a viable keymap for this and make it more robust to edge cases:
 -- map("n", "H", 'mzk_D"_ddA <esc>p`zze', { silent = true })
 set("n", "J", function()
-    local ok, err, hl = require("nvim-tools.buf").check_modifiable(0)
-    if not ok then
-        require("nvim-tools.ui").echo_err(false, err, hl)
-        return
+    if not api.nvim_get_option_value("modifiable", { buf = 0 }) then
+        api.nvim_echo({ { "Cannot make changes, 'modifiable' is off" } }, false, {})
     end
 
     local view = fn.winsaveview()
@@ -572,10 +570,8 @@ end, { silent = true })
 
 ---@param upward boolean
 local function mv_normal(upward)
-    local ok, err, hl = require("nvim-tools.buf").check_modifiable(0)
-    if not ok then
-        require("nvim-tools.ui").echo_err(false, err, hl)
-        return
+    if not api.nvim_get_option_value("modifiable", { buf = 0 }) then
+        api.nvim_echo({ { "Cannot make changes, 'modifiable' is off" } }, false, {})
     end
 
     local dir = upward and "-" or "+"
@@ -668,10 +664,8 @@ set("x", "]<space>", add_blank_visual)
 ---@param opts? mjm.map.VisualMoveOpts
 ---@return nil
 local visual_move = function(opts)
-    local ok, err, hl = require("nvim-tools.buf").check_modifiable(0)
-    if not ok then
-        require("nvim-tools.ui").echo_err(false, err, hl)
-        return
+    if not api.nvim_get_option_value("modifiable", { buf = 0 }) then
+        api.nvim_echo({ { "Cannot make changes, 'modifiable' is off" } }, false, {})
     end
 
     local cur_mode = api.nvim_get_mode().mode ---@type string

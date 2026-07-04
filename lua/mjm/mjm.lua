@@ -39,13 +39,7 @@ end
 
 ---@param buf integer
 function mjm.fs.get_file_perms(buf)
-    local ntb = require("nvim-tools.buf")
-    local ok, full_bufname, r_err, r_hl = ntb.bufnr_to_full_bufname(buf)
-    if not ok then
-        require("nvim-tools.ui").echo_err(false, r_err, r_hl)
-        return
-    end
-
+    local full_bufname = api.nvim_buf_get_name(buf)
     uv.fs_stat(full_bufname, function(err, stat)
         vim.schedule(function()
             local basename = vim.fs.basename(full_bufname)
@@ -96,18 +90,12 @@ end
 function mjm.fs.chmod(buf, plus, layer_bits)
     vim.validate("layer_bits", layer_bits, { "number", "string" })
     vim.validate("plus", plus, "boolean", true)
-    local ntb = require("nvim-tools.buf")
-    local ok, full_bufname, r_err, r_hl = ntb.bufnr_to_full_bufname(buf)
-    if not ok then
-        require("nvim-tools.ui").echo_err(false, r_err, r_hl)
-        return
-    end
-
     if vim.fn.has("win32") == 1 then
         api.nvim_echo({ { "chmod is not supported on Windows" } }, true, {})
         return
     end
 
+    local full_bufname = api.nvim_buf_get_name(buf)
     local cmd = { "chmod", get_chmod_arg(plus, layer_bits), full_bufname }
     vim.system(cmd, { text = true }, function(result)
         if result.code ~= 0 then
