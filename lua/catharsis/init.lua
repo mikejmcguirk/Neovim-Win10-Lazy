@@ -22,3 +22,6 @@ M.rename = function(opts)
 end
 
 return M
+
+-- TODO-DEP: Unless a breaking issue is found, config development should stay centralized in the
+-- nvim-tools project. When the time comes to cut this off, re-ingest changes from there.

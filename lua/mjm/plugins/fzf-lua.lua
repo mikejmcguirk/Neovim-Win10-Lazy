@@ -41,13 +41,12 @@ local fzflua_opts = {
         ["--gutter"] = " ",
         ["--tiebreak"] = "length,chunk",
     },
-    ui_select = true,
+    ui_select = {},
 }
 
 return {
     "ibhagwan/fzf-lua",
     dependencies = { "nvim-tree/nvim-web-devicons" },
-    commit = "09880d5",
     lazy = false,
     config = function()
         local fzf_lua = require("fzf-lua")

@@ -82,5 +82,6 @@ function M.valid_list(t, opts)
 
     return false, msg
 end
+-- TODO: This needs an ergonomic way to take custom types.
 
 return M

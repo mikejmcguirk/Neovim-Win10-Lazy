@@ -65,14 +65,32 @@ end)
 set("n", "[t", "gT")
 set("n", "]t", "gt")
 set("n", "<tab>", function()
-    local create_temp_buf = require("nvim-tools.buf").create_temp_buf
-    local temp_buf = create_temp_buf("wipe", true, "nofile", "", true)
-
     local vcount = vimv.count
     local count_tabpages = fn.tabpagenr("$")
     local pos = vcount == 0 and count_tabpages or math.min(vcount, count_tabpages)
+    require("nvim-tools.tab").open_new_tab(nil, true, pos)
+end)
 
-    api.nvim_open_tabpage(temp_buf, true, { after = pos })
+set("n", "[T", function()
+    local vcount = vimv.count
+    if vcount > 0 then
+        local count_tabpages = fn.tabpagenr("$")
+        local pos = vcount == 0 and count_tabpages or math.min(vcount, count_tabpages)
+        api.nvim_cmd({ cmd = "norm", args = { pos .. "gt" }, bang = true }, {})
+    else
+        api.nvim_cmd({ cmd = "tabrewind" }, {})
+    end
+end)
+
+set("n", "]T", function()
+    local vcount = vimv.count
+    if vcount > 0 then
+        local count_tabpages = fn.tabpagenr("$")
+        local pos = vcount == 0 and count_tabpages or math.min(vcount, count_tabpages)
+        api.nvim_cmd({ cmd = "norm", args = { pos .. "gt" }, bang = true }, {})
+    else
+        api.nvim_cmd({ cmd = "tablast" }, {})
+    end
 end)
 
 set("n", "ZT", function()
@@ -377,20 +395,6 @@ set({ "n", "x" }, "k", function()
         return math.min(cur - count1, 1) < fn.line("w0")
     end)
 end, { expr = true })
-
-set("n", "zT", function()
-    local old_so = api.nvim_get_option_value("so", { scope = "local" }) ---@type integer
-    api.nvim_set_option_value("so", 0, { scope = "local" })
-    api.nvim_cmd({ cmd = "norm", args = { "zt" }, bang = true }, {})
-    api.nvim_set_option_value("so", old_so, { scope = "local" })
-end)
-
-set("n", "zB", function()
-    local old_so = api.nvim_get_option_value("so", { scope = "local" }) ---@type integer
-    api.nvim_set_option_value("so", 0, { scope = "local" })
-    api.nvim_cmd({ cmd = "norm", args = { "zb" }, bang = true }, {})
-    api.nvim_set_option_value("so", old_so, { scope = "local" })
-end)
 
 -- MID: Showing the search string would be more useful when hlsearch is turned on than with n/N
 -- But I'd have to make the initial output match

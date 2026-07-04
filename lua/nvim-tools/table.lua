@@ -160,9 +160,8 @@ end
 ---- Always "noref" behavior, meaning that repeated references to the same table each get a
 ---new copy. If a cyclic reference is detected, it is discarded.
 ---- Assumes that neither table has a metatable.
----@generic K, V
----@param t table<K, V>
----@return table<K, V>
+---@param t table<any, any>
+---@return table<any, any>
 function M.deepcopy(t)
     return deepcopy(t, {})
 end
@@ -1528,6 +1527,8 @@ function M.merge_deep_right(t1, t2)
     merge_deep_right(t1, t2, {})
     return t1
 end
+-- TODO: Maybe name this `merge_deepc_right`. So that way you can have `deep` vs `deepc` as a
+-- convention for shallow vs deep copy.
 
 ---Combines multiple sorted vararg `...` lists into a new sorted |lua-list|. References are
 ---shallow-copied.
