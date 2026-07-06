@@ -1,6 +1,7 @@
 local api = vim.api
 local fn = vim.fn
 local fs = vim.fs
+local ok, harpoon = pcall(require, "harpoon")
 
 -- Alchemical trident symbol
 local symbol = "\u{1F751}"
@@ -8,7 +9,6 @@ local symbol = "\u{1F751}"
 local hl_active = "stl_b"
 local hl_inactive = "stl_a"
 local hl_separator = "stl_c"
-local ok, harpoon = pcall(require, "harpoon")
 
 local M = {}
 
@@ -64,6 +64,18 @@ local function build_harpoon_component(tal)
     tal[#tal + 1] = "%*"
 end
 
+local tab_cwds = {} ---@type table<uinteger, string>
+local function refresh_tab_cwds()
+    -- LOW: This should be table.clear, but the ntt implementation actually nils.
+    tab_cwds = {}
+    for _, tabpage in ipairs(api.nvim_list_tabpages()) do
+        local tcd = fn.getcwd(-1, api.nvim_tabpage_get_number(tabpage))
+        tab_cwds[tabpage] = fn.fnamemodify(tcd, ":t")
+    end
+end
+
+refresh_tab_cwds()
+
 ---Referenced in the tal expression
 ---@return string
 function M.build_tabpage_component()
@@ -84,8 +96,10 @@ function M.build_tabpage_component()
             end
         end
 
-        local mod_elem = has_modified and "[+]" or ""
-        tabpages[#tabpages + 1] = string.format("%s %d%s ", hl, i, mod_elem)
+        local mod_elem = has_modified and " [+]" or ""
+        local tab_cwd = tab_cwds[tabpage]
+        local tcd = tab_cwd ~= nil and " [" .. tab_cwd .. "]" or ""
+        tabpages[#tabpages + 1] = string.format("%s %d%s%s ", hl, i, mod_elem, tcd)
     end
 
     return table.concat(tabpages, "")
@@ -149,6 +163,17 @@ api.nvim_create_autocmd({ "BufEnter", "BufWinEnter" }, {
         end)
     end,
 })
+
+api.nvim_create_autocmd("DirChanged", {
+    group = tal_events,
+    callback = function(ev)
+        if ev.match == "tabpage" then
+            refresh_tab_cwds()
+            api.nvim__redraw({ tabline = true })
+        end
+    end,
+})
+-- LOW: Move everything else to a cache model like this.
 
 api.nvim_set_option_value("stal", 2, { scope = "global" })
 build_tal()

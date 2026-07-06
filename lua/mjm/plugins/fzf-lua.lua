@@ -208,6 +208,56 @@ return {
         end
 
         set("n", "<leader>fds", fuzzy_spell_correct)
+
+        local function fzf_system_dirs()
+            local excludes = {
+                ".git",
+                "node_modules",
+                "target",
+                "build",
+                ".cache",
+                "__pycache",
+                "obj",
+            }
+
+            local cmd_parts = {
+                "fdfind",
+                "--type",
+                "d",
+                "--base-directory",
+                os.getenv("HOME"),
+                "--absolute-path",
+                "--hidden",
+                "--no-ignore",
+            }
+
+            for _, exclude in ipairs(excludes) do
+                cmd_parts[#cmd_parts + 1] = "--exclude"
+                cmd_parts[#cmd_parts + 1] = exclude
+            end
+
+            local cmd = table.concat(cmd_parts, " ")
+            fzf_lua.fzf_exec(cmd, {
+                prompt = "Home Search ",
+                preview = "ls --color=always -la --group-directories-first {} | head -100",
+                actions = {
+                    ["default"] = function(selected)
+                        if selected == nil or #selected == 0 then
+                            return
+                        end
+
+                        require("nvim-tools.tab").open_new_tab(nil, true, -1)
+                        -- Doesn't produce cmdline output.
+                        vim.cmd("tcd " .. fs.normalize(selected[1]))
+                    end,
+                },
+            })
+        end
+
+        vim.keymap.set("n", "<leader>f~", fzf_system_dirs, {
+            desc = "Search for a dir from home. Open in a new tab with tcd",
+            silent = true,
+        })
     end,
 }
 
