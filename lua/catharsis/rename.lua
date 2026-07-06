@@ -761,15 +761,17 @@ end
 -----------------------
 
 ---@param buf uinteger
----@param filter fun(client:vim.lsp.Client): boolean
+---@param filter (fun(client:vim.lsp.Client): boolean)?
 ---@return uinteger?, vim.lsp.Client?, boolean
 ---Client id, client, preferred client (supports prepareRename and references)
 local function client_find(buf, filter)
     local clients = lsp.get_clients({ bufnr = buf })
-    local ntt = require("nvim-tools.table")
-    ntt.i_keep(clients, filter)
-    if #clients == 0 then
-        return nil, nil, false
+    if filter ~= nil then
+        local ntt = require("nvim-tools.table")
+        ntt.i_keep(clients, filter)
+        if #clients == 0 then
+            return nil, nil, false
+        end
     end
 
     local nts = require("nvim-tools.lsp")
@@ -784,65 +786,20 @@ local function client_find(buf, filter)
 end
 -- MID-DEP: Revisit if there's a typical multi-server situation this handles poorly.
 
----@class catharsis.rename.Opts
----(Default: `nil`) Predicate to filter clients. Clients matching the predicate are included.
----@field filter? fun(client:vim.lsp.Client): boolean
----(Default: `nil`) If provided, immediately send the rename request.
----@field new_name? string
----(Default: `true`) Provide a default name in the prompt? If true, the LSP suggestion will be
----used if provided, falling back to the |<cword>| under the cursor.
----@field prompt_default? boolean
-
----@nodoc
----@class (private) catharsis.rename.Ctx
----@field filter fun(client:vim.lsp.Client): boolean
----@field new_name string?
----@field prompt_default boolean
-
----@param opts? catharsis.rename.Opts
----@return catharsis.rename.Ctx
-local function opts_to_ctx(opts)
-    if opts == nil then
-        opts = {}
-    else
-        vim.validate("opts", opts, "table")
-        opts = vim.deepcopy(opts)
-    end
-
-    if opts.filter == nil then
-        opts.filter = function(_)
-            return true
-        end
-    else
-        vim.validate("opts.filter", opts.filter, "callable")
-    end
-
-    vim.validate("opts.new_name", opts.new_name, "string", true)
-    if opts.prompt_default == nil then
-        opts.prompt_default = true
-    else
-        vim.validate("opts.prompt_default", opts.prompt_default, "boolean")
-    end
-
-    return opts --[[@as catharsis.rename.Ctx]]
-end
-
 local M = {}
 
----Rename all references to the symbol under the cursor.
----@param opts? catharsis.rename.Opts
-function M._dispatcher(opts)
+---@param cur_win uinteger
+---@param cur_buf uinteger
+---@param rn_ctx catharsis.rename.Ctx
+function M._dispatcher(cur_win, cur_buf, rn_ctx)
     local nts = require("nvim-tools.lsp")
     if uv.is_active(state_req_prep_rn_timer) then
         nts.log_and_echo("prepareRename request currently active.", 2, "", true)
         return
     end
 
-    local opts_ctx = opts_to_ctx(opts)
-    local cur_win = api.nvim_get_current_win()
     api.nvim__ns_set(state_ns_cur_pos, { wins = { cur_win } })
-    local cur_buf = api.nvim_win_get_buf(cur_win)
-    local client_id, client, preferred = client_find(cur_buf, opts_ctx.filter)
+    local client_id, client, preferred = client_find(cur_buf, rn_ctx.filter)
     if client_id == nil or client == nil then
         local msg = "No clients supporting textDocument/rename were found"
         nts.log_and_echo(msg, 3, hl_warn, true)
@@ -851,14 +808,14 @@ function M._dispatcher(opts)
 
     local ntp = require("nvim-tools.pos")
     local cur_pos_ext = ntp.mark_to_ext_pos(api.nvim_win_get_cursor(cur_win))
-    local new_name = opts_ctx.new_name
+    local new_name = rn_ctx.new_name
     if new_name ~= nil then
         rename_do(client, cur_buf, cur_pos_ext, new_name)
         return
     end
 
     local session = session_create(cur_win, cur_buf)
-    local prompt_default = opts_ctx.prompt_default
+    local prompt_default = rn_ctx.prompt_default
     if not preferred then
         local ntb = require("nvim-tools.buf")
         local cword_range = ntb.line_match_under_cursor(cur_pos_ext, cur_buf, [[\k\+]])

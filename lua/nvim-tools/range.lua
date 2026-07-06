@@ -8,6 +8,8 @@ local M = {}
 ---Buf should be in position 5 for compatibility with vim.range.
 ---@alias nvim-tools.range.BufRange  [uinteger, uinteger, uinteger, uinteger, uinteger]
 
+---@alias nvim-tools.range.DocHl [uinteger, uinteger, uinteger, uinteger, lsp.DocumentHighlightKind?]
+
 -- Range naming:
 -- - Using a pos name means both the start and end parts of the range share the pos indexing.
 --   - eval would be 1,1,1,1 - inclusive ends
@@ -90,70 +92,6 @@ function M.find_pos(ranges, pos)
     end
 
     return M.cmp_pos(ranges[lo], pos) == 0 and lo or nil
-end
--- TODO: this should just be able to be a generic bisect with a key to transform the ranges but
--- not the pos
-
----@generic T
----@param ranges (nvim-tools.Range|nvim-tools.range.BufRange)[]
----@param cmp fun(r:nvim-tools.Range|nvim-tools.range.BufRange): -1|0|1
---- -1: val < r
----  0: val == r
----  1: val > r
----@return integer
----Insert at returned index to maintain order. Returns `n+1` when you must append.
-function M.bisect_lo(ranges, cmp)
-    local n = #ranges
-    if n == 0 then
-        return 1
-    end
-
-    local bit = require("bit")
-    local lo = 1
-    local hi = n + 1
-    while lo < hi do
-        local mid = bit.rshift(lo + hi, 1)
-        if cmp(ranges[mid]) <= 0 then
-            hi = mid
-        else
-            lo = mid + 1
-        end
-    end
-
-    return lo
-end
--- TODO: the way this is right now is too abstract and confusing. the better way to do this I
--- think is to abstract this into a more generic list bisect function that takes two keys, one
--- for the val and one for the list. So that way you can make sure that the same transformation
--- isn't being applied to both.
-
----@generic T
----@param ranges (nvim-tools.Range|nvim-tools.range.BufRange)[]
----@param cmp fun(r:nvim-tools.Range|nvim-tools.range.BufRange): -1|0|1
---- -1: val < r
---- 0: val == r
---- 1: val > r
----@return integer
----Insert after returned index to maintain order. Returns `0` when you must prepend.
-function M.bisect_hi(ranges, cmp)
-    local ranges_len = #ranges
-    if ranges_len == 0 then
-        return 0
-    end
-
-    local bit = require("bit")
-    local lo = 1
-    local hi = ranges_len + 1
-    while lo < hi do
-        local mid = bit.rshift(lo + hi, 1)
-        if cmp(ranges[mid]) < 0 then
-            hi = mid
-        else
-            lo = mid + 1
-        end
-    end
-
-    return lo - 1
 end
 
 ---For ranges with end-inclusive indexes.
@@ -417,17 +355,28 @@ end
 -- MID: For lists, this forces us to check the range location on each object. But I'm not sure if
 -- we can assume all location results are the same format.
 
+---@param doc_hl lsp.DocumentHighlight
+---@return nvim-tools.range.DocHl
+local function doc_hl_to_range(doc_hl)
+    local range = doc_hl.range
+    local range_start = range.start
+    local range_end = range["end"]
+    return {
+        range_start.line,
+        range_start.character,
+        range_end.line,
+        range_end.character,
+        doc_hl.kind,
+    }
+end
+
 ---Unlike the Nvim core function, this does not handle LocationLink.
 ---@param buf uinteger
----@param locations lsp.Location[]
+---@param ranges nvim-tools.range.BufRange[]|nvim-tools.range.DocHl[]
 ---@param encoding lsp.PositionEncodingKind
 ---@return nvim-tools.range.BufRange[] Invalid ranges (end_col <= start_col) discarded.
-function M.lsp_locations_to_api(buf, locations, encoding)
+function M.lsp_ranges_to_api(buf, ranges, encoding)
     local ntt = require("nvim-tools.table")
-    local ranges = ntt.i_filter_map_to(locations, function(location)
-        return location_to_range(location, buf)
-    end)
-
     if encoding == "utf-8" then
         ntt.i_keep(ranges, function(range)
             return M.valid_(range)
@@ -466,6 +415,33 @@ function M.lsp_locations_to_api(buf, locations, encoding)
     end)
 
     return ranges
+end
+
+---@param buf uinteger
+---@param doc_hls lsp.DocumentHighlight[]
+---@param encoding lsp.PositionEncodingKind
+---@return nvim-tools.range.DocHl[] Invalid ranges (end_col <= start_col) discarded.
+function M.lsp_doc_hls_to_api(buf, doc_hls, encoding)
+    local ntt = require("nvim-tools.table")
+    local ranges = ntt.i_filter_map_to(doc_hls, function(doc_hl)
+        return doc_hl_to_range(doc_hl)
+    end)
+
+    return M.lsp_ranges_to_api(buf, ranges, encoding)
+end
+
+---Unlike the Nvim core function, this does not handle LocationLink.
+---@param buf uinteger
+---@param locations lsp.Location[]
+---@param encoding lsp.PositionEncodingKind
+---@return nvim-tools.range.BufRange[] Invalid ranges (end_col <= start_col) discarded.
+function M.lsp_locations_to_api(buf, locations, encoding)
+    local ntt = require("nvim-tools.table")
+    local ranges = ntt.i_filter_map_to(locations, function(location)
+        return location_to_range(location, buf)
+    end)
+
+    return M.lsp_ranges_to_api(buf, ranges, encoding)
 end
 
 -------------------------

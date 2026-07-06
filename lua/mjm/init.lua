@@ -56,7 +56,6 @@ require("mjm.diagnostics")
 require("mjm.ts-tools")
 require("mjm.tal")
 
-require("catharsis.document_highlight")
 require("mjm.lsp")
 
 if vim.v.startreason ~= "normal" then

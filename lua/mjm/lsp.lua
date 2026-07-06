@@ -150,32 +150,7 @@ local function set_lsp_maps(ev)
     end)
 
     -- textDocument/rename --
-    -- set("n", "grn", function()
-    --     local ok_i, input = require("nvim-tools.ui").input({ prompt = "Rename: " })
-    --     if not ok_i then
-    --         local msg = input or "Unknown error getting input" ---@type string
-    --         api.nvim_echo({ { msg, "ErrorMsg" } }, true, { err = true })
-    --         return
-    --     elseif #input < 1 then
-    --         return
-    --     elseif string.find(input, "%s") then
-    --         local msg = string.format("'%s' contains spaces", input) ---@type string
-    --         api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
-    --         return
-    --     end
-    --
-    --     lsp.buf.rename(input)
-    -- end, { buf = buf })
-    --
-    -- set("n", "grN", lsp.buf.rename, { buf = buf })
-
-    set("n", "grn", function()
-        require("catharsis").rename()
-    end)
-
-    set("n", "grN", function()
-        require("catharsis").rename({ prompt_default = false })
-    end)
+    -- Handled through catharsis
 
     -- textDocument/semanticTokens
     if client:supports_method("textDocument/semanticTokens/full") then

@@ -227,8 +227,9 @@ end
 
 ---@brief Get basic information about a table.
 
----Get all keys from `t`.
+---Get a |lua-list| of all keys from `t`.
 ---@mark table-properties
+---@audited 2026-07-05
 ---@generic K, V
 ---@param t table<K, V>
 ---@return K[]

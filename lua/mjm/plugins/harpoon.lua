@@ -38,7 +38,7 @@ local function setup_harpoon()
                 local cur_win = api.nvim_get_current_win()
                 local cur_buf = api.nvim_win_get_buf(cur_win)
                 if cur_buf == bufnr then
-                    echo_err(false, "Already in " .. bufname, "")
+                    api.nvim_echo({ { "Already in " .. bufname } }, true, {})
                     return
                 end
 

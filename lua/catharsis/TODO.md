@@ -6,6 +6,8 @@
 
 - [ ] Try to consolidate all of the ctx checking into common logic. Maybe pass an opts table?
 
+- [ ] Investigate if it's possible to do a file rename command that handles file logic, LSP, and git in one shot. I'm not sure if Oil and/or Fugitive and/or Core already do this.
+
 - [ ] Plugin conversion checklist:
   - [ ] Change annotations to a plugin format
     - [ ] Remove "mjm" annotations
@@ -26,6 +28,7 @@
 #### MID:
 
 - [ ] Scope highlights per buf and win
+  - [ ] If you have a buf open in two windows, and you navigate between the wins, the hl has to re-query even though the cursor did not move in either win.
 - [ ] Add bracket navigation for highlights
   - [ ] Should print a message if the navigation is invalid.
   - [ ] Should immediately fail, rather than queuing navigations

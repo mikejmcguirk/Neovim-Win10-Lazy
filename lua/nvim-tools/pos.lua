@@ -139,6 +139,7 @@ function M.ext_to_lsp(pos, buf, encoding)
     col = nti.str_utfindex(line, encoding, col)
     return { line = row, character = col }
 end
+-- TODO: Handle col -1 in Nvim = end of line
 
 ---@audited 2026-07-03
 ---@param row integer 0 indexed

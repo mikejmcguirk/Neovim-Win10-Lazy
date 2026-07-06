@@ -125,6 +125,44 @@ function M.locations_to_api_ranges_by_buf(results, encoding, bufs)
     return buf_ranges
 end
 
+---@param doc_hls lsp.DocumentHighlight[]
+---@param encoding lsp.PositionEncodingKind
+---@param buf integer
+---@return nvim-tools.range.DocHl[]
+function M.doc_hls_to_api_ranges(doc_hls, encoding, buf)
+    local ntr = require("nvim-tools.range")
+    local ranges = ntr.lsp_doc_hls_to_api(buf, doc_hls, encoding)
+
+    -- The spec does not guarantee order.
+    table.sort(ranges, ntr.range_sort_predicate_asc)
+    local ntt = require("nvim-tools.table")
+    -- Drawing extmarks is expensive.
+    ntt.i_combine(ranges, function(a, b)
+        local cmp = ntr.cmp_(a, b)
+        if math.abs(cmp) == 1 then
+            return
+        end
+
+        if cmp <= 0 then
+            if -4 < cmp then
+                a[3] = b[3]
+                a[4] = b[4]
+            end
+
+            return a
+        end
+
+        if cmp < 4 then
+            b[3] = a[3]
+            b[4] = a[4]
+        end
+
+        return b
+    end)
+
+    return ranges
+end
+
 --------------------------
 -- MARK: Client Getting --
 --------------------------
@@ -365,13 +403,6 @@ end
 function M.log_warn_and_echo(msg)
     api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
     lsp.log.warn(msg)
-end
--- TODO: Replace all with log_and_echo
-
----@param msg string
-function M.log_error_and_echo(msg)
-    api.nvim_echo({ { msg, "ErrorMsg" } }, true, {})
-    lsp.log.error(msg)
 end
 -- TODO: Replace all with log_and_echo
 
