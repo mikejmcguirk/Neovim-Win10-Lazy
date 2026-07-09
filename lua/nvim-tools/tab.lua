@@ -22,7 +22,7 @@ local function after_to_range(after)
         return nil
     end
 
-    return math.min(after, fn.tabpagenr("$"))
+    return math.min(after, fn.tabpagenr())
 end
 
 ---@audited 2026-07-03

@@ -311,9 +311,14 @@ api.nvim_create_autocmd("FileType", {
     callback = function()
         set_hl(0, "@lsp.type.comment.lua", {})
         set_hl(0, "@lsp.type.function.lua", {})
+        set_hl(0, "@lsp.type.keyword.lua", {})
         set_hl(0, "@lsp.type.method.lua", {})
         set_hl(0, "@lsp.type.property.lua", {})
+        set_hl(0, "@lsp.type.string.lua", {})
         set_hl(0, "@lsp.type.variable.lua", {})
+
+        -- Credit echasnovski
+        set_hl(0, "@lsp.mod.documentation.lua", { link = "Statement" })
 
         local hl_query = vim.treesitter.query.get("lua", "highlights")
         if not hl_query then
@@ -323,6 +328,7 @@ api.nvim_create_autocmd("FileType", {
         -- Keep constant.builtin because it includes nil
         -- Keep variable.parameter because there are edge cases semantic tokens miss
 
+        hl_query.query:disable_capture("comment.documentation")
         hl_query.query:disable_capture("function")
         hl_query.query:disable_capture("keyword.operator")
         hl_query.query:disable_capture("punctuation.bracket")

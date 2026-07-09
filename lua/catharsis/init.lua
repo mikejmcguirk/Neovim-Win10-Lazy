@@ -137,6 +137,14 @@ local schema = {
     default_keymaps_set = "boolean",
     document_highlight = {
         enabled = "boolean",
+        jump_opts = {
+            zzze = "boolean",
+        },
+    },
+    lampshade = {
+        action_filter = "callable",
+        display = "callable",
+        debounce = "number",
     },
     rename = {
         filter = "callable",
@@ -144,6 +152,7 @@ local schema = {
         prompt_default = "boolean",
     },
 }
+-- TODO: Noted somewhere else, but we need to be able to handle custom datatypes here.
 
 --------------------
 -- MARK: Defaults --
@@ -155,6 +164,34 @@ local default_config = {
     ---@class catharsis.documentHighlight.Ctx
     document_highlight = {
         enabled = true, ---@type boolean
+        jump_opts = {
+            zzze = true, ---@type boolean -- For jumps.
+        },
+    },
+    ---@class catharsis.lampshade.Ctx
+    lampshade = {
+        ---Predicate function to determine valid actions. Return true to count as valid.
+        ---@param client vim.lsp.Client
+        ---@param action (lsp.Command|lsp.CodeAction)
+        ---@return boolean
+        ---@diagnostic disable-next-line: unused-local
+        action_filter = function(_, _)
+            return true
+        end,
+        ---@param buf uinteger
+        ---@param row uinteger 0-indexed
+        ---@param ns uinteger
+        ---@param hl_id uinteger Id for the "CatharsisLampshade" hl group.
+        display = function(buf, row, ns, hl_id)
+            api.nvim_buf_set_extmark(buf, ns, row, 0, {
+                virt_text = { { "󰌶", hl_id } },
+                priority = 1000,
+                strict = false,
+            })
+        end,
+        -- TODO: This should be based on the client debounce data, rather than an arbitrary
+        -- number. Maybe take the highest of the attached clients.
+        debounce = 150,
     },
     ---@class catharsis.rename.Ctx
     rename = {
@@ -163,6 +200,8 @@ local default_config = {
         prompt_default = true, ---@type boolean
     },
 }
+-- MID-PR: Emmylua_Ls display issue here. "hl_id" semantic coloring in the display set extmark
+-- statement is mis-aligned. This also shows in the document highlight.
 
 ------------------------
 -- MARK: Config Class --
@@ -285,6 +324,8 @@ end
 ------------------------
 -- MARK: Buf Accessor --
 ------------------------
+
+-- TODO: types here are janky
 
 ---@nodoc
 ---@class catharsis.config.BufAccessor
@@ -506,20 +547,8 @@ function M._get_merged_config(buf, usr_config, ...)
     ntt.merge_deep_right(config, usr_config)
     return true, config, ""
 end
-
--- do
---     local group = "catharsis.init"
---     api.nvim_create_autocmd("LspAttach", {
---         group = api.nvim_create_augroup(group, {}),
---         once = true,
---         callback = function()
---             require("catharsis.document_highlight")
---         end,
---     })
--- end
-
--- TODO: Needs to be handled with config so modules can check it before creating
--- autocmds.
+-- TODO: Consider doing the opts copying here as well so you can just do all the opts handling
+-- in one thing.
 
 ---@inlinedoc
 ---@class catharsis.rename.Opts
@@ -554,9 +583,75 @@ end
 ---@nodoc
 M.document_highlight = {}
 
-function M.document_highlight.test()
-    print("foo")
+---@class catharsis.documentHightlight.JumpOpts
+---@field zzze? boolean
+
+---@param opts? catharsis.documentHightlight.JumpOpts
+function M.document_highlight.jump_fwd(opts)
+    vim.validate("opts", opts, "table", true)
+    opts = opts and require("nvim-tools.table").deepcopy(opts) or {}
+
+    local win = api.nvim_get_current_win()
+    local buf = api.nvim_win_get_buf(win)
+    local ok, ctx, err = M._get_merged_config(buf, opts, "document_highlight", "jump_opts")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    require("catharsis._document_highlight").jump(win, buf, vim.v.count1, false, ctx)
 end
+
+---@param opts? catharsis.documentHightlight.JumpOpts
+function M.document_highlight.jump_rev(opts)
+    vim.validate("opts", opts, "table", true)
+    opts = opts and require("nvim-tools.table").deepcopy(opts) or {}
+
+    local win = api.nvim_get_current_win()
+    local buf = api.nvim_win_get_buf(win)
+    local ok, ctx, err = M._get_merged_config(buf, opts, "document_highlight", "jump_opts")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    require("catharsis._document_highlight").jump(win, buf, vim.v.count1, true, ctx)
+end
+
+---@param opts? catharsis.documentHightlight.JumpOpts
+function M.document_highlight.jump_last(opts)
+    vim.validate("opts", opts, "table", true)
+    opts = opts and require("nvim-tools.table").deepcopy(opts) or {}
+
+    local win = api.nvim_get_current_win()
+    local buf = api.nvim_win_get_buf(win)
+    local ok, ctx, err = M._get_merged_config(buf, opts, "document_highlight", "jump_opts")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    require("catharsis._document_highlight").jump(win, buf, math.floor(math.huge), false, ctx)
+end
+
+---@param opts? catharsis.documentHightlight.JumpOpts
+function M.document_highlight.jump_first(opts)
+    vim.validate("opts", opts, "table", true)
+    opts = opts and require("nvim-tools.table").deepcopy(opts) or {}
+
+    local win = api.nvim_get_current_win()
+    local buf = api.nvim_win_get_buf(win)
+    local ok, ctx, err = M._get_merged_config(buf, opts, "document_highlight", "jump_opts")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    require("catharsis._document_highlight").jump(win, buf, math.floor(math.huge), true, ctx)
+end
+
+-- TODO: You can probably outline most of the jump logic then just individually handle returning
+-- on echo and the jump fn args.
 
 return M
 

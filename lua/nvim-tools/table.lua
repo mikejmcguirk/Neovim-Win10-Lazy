@@ -47,8 +47,7 @@ local M = {}
 -- Port of Neovim core logic since their table module is private
 local has_new, new = pcall(require, "table.new")
 if not has_new then
-    ---@diagnostic disable-next-line: unused-local
-    new = function(narray, nhash)
+    new = function(_narray, _nhash)
         return {}
     end
 end
@@ -67,9 +66,11 @@ if not has_clear then
         end
     end
 end
+-- TODO: When I run this it actually nils the table.
 
 ---Clear all list and dict data from a table. Runs `table.clear` on LuaJIT builds.
 ---@mark data-management
+---@type fun(tab:table)
 M.clear = clear
 
 ---Clears all |lua-list| elements in `t`.
@@ -633,18 +634,66 @@ end
 -- MARK: Evaluation --
 ----------------------
 
----Checks if all items in `t` satisfy predicate function `f`.
----@mark evaluation
----@generic T
----@param t T[]
----@param f fun(x:T): boolean
----@return boolean False if length of `t` is zero.
-function M.i_all(t, f)
-    local t_len = #t
-    if t_len == 0 then
+-- |-------|----------|-----------|------------|---------
+-- | Logic | key      | val       | predicate  | vacuous
+-- |-------|----------|-----------|------------|---------
+-- | AND   | same     | every     | all        | yes
+-- | OR    | amiss    | includes  | any        | no
+-- | XOR   | diverse  | ???       | ???        | ???
+-- | NAND  | amiss    | deficient | incomplete | no
+-- | NOR   | diverse? | excludes  | none       | no
+-- | XNOR  | same     | uniform   | consistent | yes
+-- | ONE   | ???      | only      | one        | no
+-- |-------|----------|-----------|------------|---------
+-- MID: Should at "at least one, but not all"/XOR logic
+-- LOW: No "ONE" logic for key only.
+-- LOW: Unsure if diverse is correct for NOR.
+
+---@generic K, V
+---@param t table<K, V>
+---@param f fun(k:K, v:V): boolean
+---@return boolean
+local function all_do(t, f)
+    for k, v in pairs(t) do
+        if not f(k, v) then
+            return false
+        end
+    end
+
+    return true
+end
+
+---Check if all items in |lua-table| `t` satisfy predicate function `f`.
+---@mark eval
+---@audited 2026-07-08
+---@generic K, V
+---@param t table<K, V>
+---@param f fun(k:K, v:V): boolean
+---@return boolean `True` if table has no keys.
+function M.all(t, f)
+    return all_do(t, f)
+end
+
+---Check if a |lua-table| `t` is non-empty and all elements satisfy predicate function `f`.
+---@mark eval
+---@audited 2026-07-08
+---@generic K, V
+---@param t table<K, V>
+---@param f fun(k:K, v:V): boolean
+---@return boolean `False` if table has no keys.
+function M.all_nonempty(t, f)
+    if next(t) == nil then
         return false
     end
 
+    return all_do(t, f)
+end
+
+---@generic T
+---@param t T[]
+---@param f fun(x:T): boolean
+---@return boolean
+local function i_all_do(t_len, t, f)
     for i = 1, t_len do
         if not f(t[i]) then
             return false
@@ -654,22 +703,41 @@ function M.i_all(t, f)
     return true
 end
 
----Check if at least one element in `t` is different from the others, optionally using a `key`.
----
----Returns `false` if length of `t` is zero or `key` generates a `nil` value.
+---Checks if all items in |lua-list| `t` satisfy predicate function `f`.
 ---@mark evaluation
 ---@generic T
 ---@param t T[]
----@param key nil|string|fun(v:T): any See: |key_fn|.
----@return boolean
-function M.i_amiss(t, key)
+---@param f fun(x:T): boolean
+---@return boolean `True` if length of `t` is zero.
+function M.i_all(t, f)
+    return i_all_do(#t, t, f)
+end
+
+---Checks if |lua-list| `t` is non-empty and all items satisfy predicate function `f`.
+---@mark evaluation
+---@generic T
+---@param t T[]
+---@param f fun(x:T): boolean
+---@return boolean `False` if length of `t` is zero.
+function M.i_all_nonempty(t, f)
     local t_len = #t
     if t_len == 0 then
         return false
     end
 
-    if t_len == 1 then
-        return true
+    return i_all_do(t_len, t, f)
+end
+
+---Check if at least one element in `t` is different from the others, optionally using a `key`.
+---@mark evaluation
+---@generic T
+---@param t T[]
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return boolean `False` if length of `t` is <=1 or `key` generates any `nil` values.
+function M.i_amiss(t, key)
+    local t_len = #t
+    if t_len <= 1 then
+        return false
     end
 
     local key_fn = require("nvim-tools._table").key_fn_from_key(key)
@@ -679,7 +747,12 @@ function M.i_amiss(t, key)
     end
 
     for i = 2, t_len do
-        if key_fn(t[i]) ~= vh1 then
+        local vh = key_fn(t[i])
+        if vh == nil then
+            return false
+        end
+
+        if vh ~= vh1 then
             return true
         end
     end
@@ -687,18 +760,31 @@ function M.i_amiss(t, key)
     return false
 end
 
----Checks if any items in `t` satisfy predicate function `f`.
----@mark evaluation
+---Check if any items in |lua-table| `t` satisfy predicate function `f`.
+---@mark eval
+---@audited 2026-07-08
+---@generic K, V
+---@param t table<K, V>
+---@param f fun(k:K, v:V): boolean
+---@return boolean `False` if table has no values.
+function M.any(t, f)
+    for k, v in pairs(t) do
+        if f(k, v) then
+            return true
+        end
+    end
+
+    return false
+end
+
+---Checks if any items in |lua-list| `t` satisfy predicate function `f`.
+---@mark eval
 ---@generic T
 ---@param t T[]
 ---@param f fun(x:T): boolean
----@return boolean False if length of `t` is zero.
+---@return boolean `False` if `t` is empty.
 function M.i_any(t, f)
     local t_len = #t
-    if t_len == 0 then
-        return false
-    end
-
     for i = 1, t_len do
         if f(t[i]) then
             return true
@@ -754,27 +840,21 @@ function M.i_common_prefix(tt, key)
     return tt_len_min
 end
 
----Checks if a single table `t` passes predicate `f`.
+---Checks if a single |lua-table| `t` passes predicate `f`.
 ---@mark evaluation
 ---@generic K, V
 ---@param t table<K, V>
 ---@param f fun(t:table<K, V>): boolean
+---@return boolean
 function M.conforms(t, f)
     return f(t)
 end
 
----Check if all of or none of the items in `t` satisfy predicate function `f`.
----@mark evaluation
 ---@generic T
 ---@param t T[]
 ---@param f fun(x:T): boolean
----@return boolean `false` if `t` is length zero.
-function M.i_consistent(t, f)
-    local t_len = #t
-    if t_len == 0 then
-        return false
-    end
-
+---@return boolean
+local function i_consistent_do(t_len, t, f)
     local expected = f(t[1])
     for i = 2, t_len do
         if f(t[i]) ~= expected then
@@ -785,50 +865,69 @@ function M.i_consistent(t, f)
     return true
 end
 
----Checks if at least one in `t` does not match `val`, optionally comparing with `key`.
----
----Returns `false` if `key` produces any `nil` values or if length of `t` is zero.
+---Check if all of or none of the items in |lua-list| `t` satisfy predicate function `f`.
 ---@mark evaluation
 ---@generic T
 ---@param t T[]
----@param val T
----@param key nil|string|fun(v:T): any See: |key_fn|.
----@return boolean
-function M.i_deficient(t, val, key)
+---@param f fun(x:T): boolean
+---@return boolean `True` if `t` is length zero.
+function M.i_consistent(t, f)
+    return i_consistent_do(#t, t, f)
+end
+
+---Check if |lua-list| `t` is non-empty and all of or none of the items satisfy predicate
+---function `f`.
+---@mark evaluation
+---@generic T
+---@param t T[]
+---@param f fun(x:T): boolean
+---@return boolean `False` if `t` is length zero.
+function M.i_consistent_nonempty(t, f)
     local t_len = #t
     if t_len == 0 then
         return false
     end
 
+    return i_consistent_do(t_len, t, f)
+end
+
+---Checks if at least one item in |lua-list| `t` does not match `val`, optionally comparing with
+---`key`.
+---@mark evaluation
+---@generic T
+---@param t T[]
+---@param val T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return boolean `False` if `t` is empty or `key` produces any `nil` values.
+function M.i_deficient(t, val, key)
     local key_fn = require("nvim-tools._table").key_fn_from_key(key)
     local valh = key_fn(val)
     if valh == nil then
         return false
     end
 
+    local t_len = #t
     for i = 1, t_len do
-        if key_fn(t[i]) ~= valh then
+        local vh = key_fn(t[i])
+        if vh == nil then
+            return false
+        end
+
+        if vh ~= valh then
             return true
         end
     end
 
     return false
 end
--- TODO: Is this the right pattern for zero length lists?
 
 ---Check if all elements in `t` are unique, optionally compared based on `key`.
----
----Returns false if `key` produces any `nil` values or if length of `t` is zero.
 ---@generic T
 ---@param t T[]
 ---@param key nil|string|fun(v:T): any See: |key_fn|.
----@return boolean
+---@return boolean `True` if `t` is empty. `False` if `key` produces any `nil` value.
 function M.i_diverse(t, key)
     local t_len = #t
-    if t_len == 0 then
-        return false
-    end
-
     local seen = {} ---@type table<any, true>
     local key_fn = require("nvim-tools._table").key_fn_from_key(key)
     for i = 1, t_len do
@@ -843,21 +942,13 @@ function M.i_diverse(t, key)
     return true
 end
 
----Checks if all items in `t` match `val`, optionally comparing with `key`.
----
----Returns `false` if `key` produces any `nil` values or if length of `t` is zero.
----@mark evaluation
 ---@generic T
+---@param t_len uinteger
 ---@param t T[]
 ---@param val T
----@param key nil|string|fun(v:T): any See: |key_fn|.
+---@param key nil|string|fun(v:T): any
 ---@return boolean
-function M.i_every(t, val, key)
-    local t_len = #t
-    if t_len == 0 then
-        return false
-    end
-
+local function i_every_do(t_len, t, val, key)
     local key_fn = require("nvim-tools._table").key_fn_from_key(key)
     local valh = key_fn(val)
     if valh == nil then
@@ -871,6 +962,34 @@ function M.i_every(t, val, key)
     end
 
     return true
+end
+
+---Check if all items in |lua-list| `t` match `val`, optionally comparing with `key`.
+---@mark evaluation
+---@generic T
+---@param t T[]
+---@param val T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return boolean `True` if `t` is empty, `false` if `key` produces any `nil` values.
+function M.i_every(t, val, key)
+    return i_every_do(#t, t, val, key)
+end
+
+---Check if |lua-list| `t` has at least one element, and if all elements match `val`, optionally
+---compared with `key`.
+---@mark evaluation
+---@generic T
+---@param t T[]
+---@param val T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return boolean `False` if `t` is empty or if `key` produces any `nil` values.
+function M.i_every_nonempty(t, val, key)
+    local len_t = #t
+    if len_t == 0 then
+        return false
+    end
+
+    return i_every_do(#t, t, val, key)
 end
 
 ---Iterate through `t1` and `t2`, comparing their elements by index. Optionally provide a `key`
@@ -901,20 +1020,14 @@ function M.i_equals(t1, t2, key)
 end
 
 ---Checks if no items in `t` match `val`, optionally compared based on `key`.
----
----Returns `false` is `key` generates a `nil` value for `v` or if `t` is length zero.
----@mark evaluation
+---@mark eval
 ---@generic T
 ---@param t T[]
 ---@param val T
 ---@param key nil|string|fun(v:T): any See: |key_fn|.
----@return boolean
+---@return boolean `True` if `t` is empty. `False` if `key` returns any `nil` values.
 function M.i_excludes(t, val, key)
     local t_len = #t
-    if t_len == 0 then
-        return true
-    end
-
     local key_fn = require("nvim-tools._table").key_fn_from_key(key)
     local vh_target = key_fn(val)
     if vh_target == nil then
@@ -922,7 +1035,10 @@ function M.i_excludes(t, val, key)
     end
 
     for i = 1, t_len do
-        if key_fn(t[i]) == vh_target then
+        local vh = key_fn(t[i])
+        if vh == vh_target then
+            return false
+        elseif vh == nil then
             return false
         end
     end
@@ -931,30 +1047,26 @@ function M.i_excludes(t, val, key)
 end
 
 ---Check if any item in `t` matches `val`, optionally comparing based on `key`.
----
----Returns `false` if `v` is not found, `key` generates a `nil` value for `v`, or if `t` is
----length zero.
----@mark evaluation
+---@mark eval
 ---@generic T
 ---@param t T[]
 ---@param val T
 ---@param key nil|string|fun(v:T): any See: |key_fn|.
----@return boolean
+---@return boolean `False` if `t` is empty or `key` returns any `nil` values.
 function M.i_includes(t, val, key)
-    local t_len = #t
-    if t_len == 0 then
-        return false
-    end
-
     local key_fn = require("nvim-tools._table").key_fn_from_key(key)
     local vh_target = key_fn(val)
     if vh_target == nil then
         return false
     end
 
+    local t_len = #t
     for i = 1, t_len do
-        if key_fn(t[i]) == vh_target then
+        local vh = key_fn(t[i])
+        if vh == vh_target then
             return true
+        elseif vh == nil then
+            return false
         end
     end
 
@@ -966,13 +1078,9 @@ end
 ---@generic T
 ---@param t T[]
 ---@param f fun(x:T): boolean
----@return boolean False if length of `t` is zero.
+---@return boolean `False` if length of `t` is zero.
 function M.i_incomplete(t, f)
     local t_len = #t
-    if t_len == 0 then
-        return false
-    end
-
     for i = 1, t_len do
         if not f(t[i]) then
             return true
@@ -982,19 +1090,14 @@ function M.i_incomplete(t, f)
     return false
 end
 
----Checks if no items in `t` satisfy predicate function `f`.
----
----@mark evaluation
+---Check if no items in |lua-list| `t` satisfy predicate function `f`.
+---@mark eval
 ---@generic T
 ---@param t T[]
 ---@param f fun(x:T): boolean
----@return boolean Return false if the predicate is satisfied or if the list length is zero.
+---@return boolean `True` if `t` is empty.
 function M.i_none(t, f)
     local t_len = #t
-    if t_len == 0 then
-        return true
-    end
-
     for i = 1, t_len do
         if f(t[i]) then
             return false
@@ -1063,24 +1166,11 @@ function M.i_only(t, val, key)
     return seen
 end
 
----Check if all elements in `t` are the same, optionally using a `key`.
----
----Returns `false` if length of `t` is zero or `key` generates a `nil` value.
----@mark evaluation
 ---@generic T
 ---@param t T[]
 ---@param key nil|string|fun(v:T): any See: |key_fn|.
 ---@return boolean
-function M.i_same(t, key)
-    local t_len = #t
-    if t_len == 0 then
-        return false
-    end
-
-    if t_len == 1 then
-        return true
-    end
-
+local function i_same_do(t_len, t, key)
     local key_fn = require("nvim-tools._table").key_fn_from_key(key)
     local vh1 = key_fn(t[1])
     if vh1 == nil then
@@ -1096,21 +1186,45 @@ function M.i_same(t, key)
     return true
 end
 
----See if all of or none of the values in `t` match `val`, optionally filtering with `key`.
+---Check if all elements in `t` are the same, optionally using a `key`.
 ---
----Returns `false` if `key` produces any `nil` values of if `t` is length zero.
+---Returns `false` if length of `t` is zero or `key` generates a `nil` value.
 ---@mark evaluation
 ---@generic T
 ---@param t T[]
----@param val T
 ---@param key nil|string|fun(v:T): any See: |key_fn|.
----@return boolean
-function M.i_uniform(t, val, key)
+---@return boolean `True` if `t` is empty. `False` if `key` produces any `nil` values.
+function M.i_same(t, key)
+    local t_len = #t
+    if t_len == 0 then
+        return true
+    end
+
+    return i_same_do(t_len, t, key)
+end
+
+---Check if |lua-list| `t` is non-empty and all elements are the same, optionally comparing with
+---a `key`.
+---@mark evaluation
+---@generic T
+---@param t T[]
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return boolean `False` if `t` is empty or `key` produces any `nil` values.
+function M.i_same_nonempty(t, key)
     local t_len = #t
     if t_len == 0 then
         return false
     end
 
+    return i_same_do(t_len, t, key)
+end
+
+---@generic T
+---@param t T[]
+---@param val T
+---@param key nil|string|fun(v:T): any
+---@return boolean
+local function i_uniform_do(t_len, t, val, key)
     local key_fn = require("nvim-tools._table").key_fn_from_key(key)
     local valh = key_fn(val)
     if valh == nil then
@@ -1126,6 +1240,34 @@ function M.i_uniform(t, val, key)
     end
 
     return true
+end
+
+---Check if all of or none of the values in `t` match `val`, optionally comparing with `key`.
+---@mark evaluation
+---@generic T
+---@param t T[]
+---@param val T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return boolean `True` if `t` is empty. `False` if `key` produces any `nil` values.
+function M.i_uniform(t, val, key)
+    return i_uniform_do(#t, t, val, key)
+end
+
+---Check if `t` is non-empty and either all or none of the values match `val`. Optionally
+---compare with a `key`.
+---@mark evaluation
+---@generic T
+---@param t T[]
+---@param val T
+---@param key nil|string|fun(v:T): any See: |key_fn|.
+---@return boolean `False` if `t` is empty or `key` produces any `nil` values.
+function M.i_uniform_nonempty(t, val, key)
+    local t_len = #t
+    if t_len == 0 then
+        return false
+    end
+
+    return i_uniform_do(t_len, t, val, key)
 end
 
 ----------------------
@@ -2483,8 +2625,6 @@ function M.i_fold(t, init, f, rev)
 
     return acc_ret
 end
--- LOW:
--- - Provide index in fold function
 
 ---Apply a function to all elements of a list, transforming them into a single value. The first
 ---accumulator will be the first element of the list (last if iterating in reverse).
@@ -2780,19 +2920,6 @@ function M.i_filter_map_accum_to(t, init, f, limit, rev)
     end
 
     return ret, acc_ret
-end
-
----Modify values of `t` in place.
----@generic K, V, M
----@param t table<K, V>
----@param f fun(k:K, v:V): M|nil
----@return table<K, M> Reference to `t`
-function M.filter_modify(t, f)
-    for k, v in pairs(t) do
-        t[k] = f(k, v)
-    end
-
-    return t
 end
 
 ---@generic T

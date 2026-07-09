@@ -125,9 +125,3 @@ api.nvim_create_autocmd({ "FileType" }, {
         })
     end,
 })
-
--- NON:
--- lz:
--- - Makes plugin dev harder because you can't see standard redraw timings
--- - Causes unpredictable problems
--- sol: Makes gg/G feel weird

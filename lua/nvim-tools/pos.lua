@@ -149,22 +149,6 @@ function M.ext_to_mark(row, col)
     return row + 1, col
 end
 
----Non-trivially faster than using the public APIs.
----@param buf integer
----@param position lsp.Position
----@param encoding lsp.PositionEncodingKind
----@return integer, integer
-function M.lsp_to_ext_buf_loaded(buf, position, encoding)
-    local row, col = position.line, position.character
-    if col > 0 and encoding ~= "utf-8" then
-        local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1] or ""
-        col = vim._str_byteindex(line, col, encoding == "utf-16")
-    end
-
-    return row, col
-end
--- TODO: Bad. Should handle all cases.
-
 ---@audited 2026-07-03
 ---@param row integer 1 indexed
 ---@param col integer 0 indexed, inclusive

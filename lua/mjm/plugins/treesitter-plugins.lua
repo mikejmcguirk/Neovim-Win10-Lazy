@@ -173,6 +173,9 @@ local function map_objects(ev)
         { "(#", ")#", "@preproc.outer" },
         { '("', ')"', "@string.outer" },
     }
+    -- MID: Try to define custom conditional swaps so that the inner condition is what can be
+    -- swapped, also try to define the selections so that left and right can be selected
+    -- individually. Last attempt at doing this did not work. Treesitter quries are nasty.
 
     set({ "n", "x" }, "(", "<nop>", { buf = ev.buf })
     set({ "n", "x" }, ")", "<nop>", { buf = ev.buf })

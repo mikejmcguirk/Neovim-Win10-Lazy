@@ -22,7 +22,7 @@ return {
     workspace = {
         library = {
             "$VIMRUNTIME",
-            -- "$HOME/.local/share/nvim/lazy",
+            "$HOME/.local/share/nvim/lazy",
         },
         ignoreGlobs = { "**/*_spec.lua" },
     },

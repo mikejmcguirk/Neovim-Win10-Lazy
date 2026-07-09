@@ -3,20 +3,18 @@ local fn = vim.fn
 
 local M = {}
 
+-------------------
+-- MARK: Aliases --
+-------------------
+
 ---@alias nvim-tools.Range [uinteger, uinteger, uinteger, uinteger]
+-- TODO: This should be a union type of every range. So you have like just the uints, then
+-- one with a buf, then one with a doc_hl, and so on
 
 ---Buf should be in position 5 for compatibility with vim.range.
 ---@alias nvim-tools.range.BufRange  [uinteger, uinteger, uinteger, uinteger, uinteger]
 
 ---@alias nvim-tools.range.DocHl [uinteger, uinteger, uinteger, uinteger, lsp.DocumentHighlightKind?]
-
--- Range naming:
--- - Using a pos name means both the start and end parts of the range share the pos indexing.
---   - eval would be 1,1,1,1 - inclusive ends
---   - mark would be 1,0,1,0 - inclusive ends
--- - Range specific names:
---   - Treesitter/TS: 0,0,0,0 - exclusive end in the second pos
---   - Quickfix: 1,1,1,1 - exclusive end in the second pos
 
 ----------------------
 -- MARK: Comparison --
@@ -55,6 +53,15 @@ end
 -- have that concept with range vs. range. This should be in the pos module, then just saying
 -- lt/eq/gt conceptually makes sense. Usages of this would need to be inverted since pos
 -- becomes the "a" object.
+
+---@param range nvim-tools.Range
+---@param pos nvim-tools.Pos
+---@return boolean
+function M.contains_pos(range, pos)
+    local pr = pos[1]
+    local pc = pos[2]
+    return range[1] <= pr and pr <= range[3] and range[2] <= pc and pc <= range[4]
+end
 
 ---Assumes ranges are valid, sorted, and do not overlap.
 ---@param ranges [integer, integer, integer, integer][]
@@ -110,12 +117,20 @@ function M.valid_(r)
     return r[1] < r[3] or (r[1] == r[3] and r[2] < r[4])
 end
 
----@param range [uinteger, uinteger, uinteger, uinteger]
+local ROW_BITS = 14 -- Up to four digits
+local COL_BITS = 10 -- Up to three digits
+local SHIFT_3 = COL_BITS
+local SHIFT_2 = SHIFT_3 + ROW_BITS
+local SHIFT_1 = SHIFT_2 + COL_BITS
+
+local POW_1 = 2 ^ SHIFT_1
+local POW_2 = 2 ^ SHIFT_2
+local POW_3 = 2 ^ SHIFT_3
+
+---@param range nvim-tools.Range
 function M.bit_pack_key(range)
-    return bit.lshift(range[1], 0)
-        + bit.lshift(range[2], 14)
-        + bit.lshift(range[3], 24)
-        + bit.lshift(range[4], 38)
+    -- Arthmetic because bit seemingly can only handle up to 32 bit numbers.
+    return range[1] * POW_1 + range[2] * POW_2 + range[3] * POW_3 + range[4]
 end
 
 ---For ranges with end-inclusive indexing.
@@ -442,6 +457,59 @@ function M.lsp_locations_to_api(buf, locations, encoding)
     end)
 
     return M.lsp_ranges_to_api(buf, ranges, encoding)
+end
+
+----------------------
+-- MARK: Conversion --
+----------------------
+
+---@param buf uinteger
+---@param row uinteger
+---@param col uinteger
+---@return uinteger, uinteger
+local function ext_to_lsp_by_uints(buf, row, col, encoding)
+    if col > 0 then
+        local nts = require("nvim-tools.lsp")
+        local line = nts.get_line(buf, row)
+        local nti = require("nvim-tools.str")
+        ---@diagnostic disable-next-line: param-type-mismatch
+        col = nti.str_utfindex(line, encoding, col)
+        return row, col
+    end
+
+    local on_last_line = row == api.nvim_buf_line_count(buf)
+    if not (on_last_line and api.nvim_get_option_value("endofline", { buf = buf }) == false) then
+        return row, col
+    end
+
+    row = row - 1
+    local nts = require("nvim-tools.lsp")
+    local line = nts.get_line(buf, row)
+    local nti = require("nvim-tools.str")
+    ---@diagnostic disable-next-line: param-type-mismatch
+    col = nti.str_utfindex(line, encoding, col)
+    return row, col
+end
+-- TODO: handle col - 1 in Nvim = end of line
+-- MID: If the range starts and ends on the same line, getting it twice isn't a tragedy for a
+-- single range, but this is still an avoidable perf sink.
+
+---@param range nvim-tools.Range
+---@return lsp.Range
+function M.api_to_lsp(range, buf, encoding)
+    if encoding == "utf-8" then
+        return {
+            start = { line = range[1], character = range[2] },
+            ["end"] = { line = range[3], character = range[4] },
+        }
+    end
+
+    local sr, sc = ext_to_lsp_by_uints(buf, range[1], range[2], encoding)
+    local er, ec = ext_to_lsp_by_uints(buf, range[3], range[4], encoding)
+    return {
+        start = { line = sr, character = sc },
+        ["end"] = { line = er, character = ec },
+    }
 end
 
 -------------------------

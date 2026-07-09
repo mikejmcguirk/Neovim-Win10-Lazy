@@ -40,7 +40,6 @@ return Spec_Ops
 -- the specops mapping, that should also be possible. If the user wants to make convenience
 -- mappings to certain registers, that needs to be possible with the functions/plugs. Spec-Ops
 -- should not insist on itself
--- TODO: Paste highlight
 -- TODO: Linewise paste should auto-indent
 -- TODO: Mapping to center based on a motion/text object. We'll say zu for the moment since that's
 -- the closest opening there is. So you should be able to do zuiw and it will move the cursor to

@@ -1,4 +1,6 @@
 local api = vim.api
+local fn = vim.fn
+local fs = vim.fs
 local set = vim.keymap.set
 
 local fzflua_opts = {
@@ -246,7 +248,7 @@ return {
                             return
                         end
 
-                        require("nvim-tools.tab").open_new_tab(nil, true, -1)
+                        require("nvim-tools.tab").open_new_tab(nil, true, fn.tabpagenr("$"))
                         -- Doesn't produce cmdline output.
                         vim.cmd("tcd " .. fs.normalize(selected[1]))
                     end,
@@ -261,7 +263,6 @@ return {
     end,
 }
 
--- TODO: Registers causes a screen flicker then exits.
 -- LOW: Command line attached/full screen layout. Starts pointing more toward the Helix-style
 -- endgame (IMO) for pickers, where they are built into the editor as an extension of the cmdline
 -- LOW: Do need to explore the snacks plugin. Issues with fzflua:

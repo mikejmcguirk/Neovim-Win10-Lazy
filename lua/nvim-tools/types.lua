@@ -68,7 +68,7 @@ function M.valid_list(t, opts)
             return type(v) == item_type
         end
 
-    if ntt.i_all(t, predicate) then
+    if ntt.i_all_nonempty(t, predicate) then
         return true, ""
     end
 

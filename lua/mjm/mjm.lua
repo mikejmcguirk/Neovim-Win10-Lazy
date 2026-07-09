@@ -188,3 +188,5 @@ function mjm.lsp.start(config, opts)
         vim.lsp.start(config, start_opts)
     end
 end
+
+-- TODO: This module was a mistake. Get it out of here.

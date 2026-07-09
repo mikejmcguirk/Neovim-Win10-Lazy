@@ -28,10 +28,12 @@ end
 
 ---@alias catharsis.features.Names
 ---|"document_highlight"
+---|"lampshade"
 
 ---@type [catharsis.features.Names, string][]
 local names_to_load = {
     { "document_highlight", "catharsis._document_highlight" },
+    { "lampshade", "catharsis._lampshade" },
 }
 
 local features = {} ---@type catharsis.Feature[]
@@ -206,7 +208,7 @@ local function buf_enablement_change(feature, bufs, disabled, handle)
         feature_disabled_bufs[buf] = disabled
     end
 
-    if features_disabled[handle] then
+    if features_disabled[handle] == true then
         return
     end
 
@@ -246,7 +248,7 @@ function M.disable_bufs(feature_name, bufs)
 end
 
 ---@param feature_name catharsis.features.Names
----@return [uinteger, boolean][]
+---@return uinteger[]
 function M.disabled_bufs_get(feature_name)
     local feature_handle = features_byname[feature_name]
     if feature_handle == nil then
@@ -269,7 +271,7 @@ local function client_enablement_change(feature, client_ids, disabled, handle, f
         on_fn(client_id)
     end
 
-    if features_disabled[handle] then
+    if features_disabled[handle] == true then
         return
     end
 
@@ -326,7 +328,7 @@ function M.disable_clients(feature_name, client_ids)
 end
 
 ---@param feature_name catharsis.features.Names
----@return [uinteger, boolean][]
+---@return uinteger[]
 function M.disabled_clients_get(feature_name)
     local feature_handle = features_byname[feature_name]
     if feature_handle == nil then

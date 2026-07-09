@@ -4,6 +4,7 @@ local lsp = vim.lsp
 return {
     "mikejmcguirk/lampshade.nvim",
     -- dir = "~/Documents/nvim-plugin-dev/lampshade.nvim/",
+    enabled = false,
     init = function()
         vim.g.lampshade_default_autocmds = false
 

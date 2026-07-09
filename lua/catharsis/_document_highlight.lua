@@ -22,88 +22,58 @@ local write_hl = api.nvim_get_hl_id_by_name("LspReferenceWrite")
 ---@class mjm.lsp.documentHighlight.Result
 ---@field bot? integer
 ---@field bot_idx? integer
----@field has_decor boolean
 ---@field highlights nvim-tools.range.DocHl[]
 ---@field top? integer
 ---@field top_idx? integer
 ---@field version integer
 
-local state_actv_req = { buf = 0, client_id = 0, id = 0 }
 local state_client_ids_disabled = {} ---@type table<uinteger, true|nil>
 local state_ns = api.nvim_create_namespace("mjm.lsp.document_highlight")
+local state_reqs = {} ---@type table<uinteger, { client_id:uinteger, id:uinteger }>
 local state_results = {} ---@type table<integer, mjm.lsp.documentHighlight.Result|nil>
-local state_timer = assert(uv.new_timer()) ---@type uv.uv_timer_t
-
-local function actv_req_clear()
-    state_actv_req.buf = 0
-    state_actv_req.client_id = 0
-    state_actv_req.id = 0
-end
+local state_timers = {} ---@type table<uinteger, uv.uv_timer_t>
 
 ---@param buf uinteger
 ---@param client_id? uinteger
 ---@param client? vim.lsp.Client
 local function actv_req_cancel(buf, client_id, client)
-    if buf ~= state_actv_req.buf then
+    local req = state_reqs[buf]
+    if req == nil then
         return
     end
 
-    local actv_req_client_id = state_actv_req.client_id
-    client_id = client_id or actv_req_client_id
-    if client_id ~= actv_req_client_id then
+    local req_client_id = req.client_id
+    client_id = client_id or req.client_id
+    if client_id ~= req_client_id then
         return
     end
 
+    state_reqs[buf] = nil
     client = client or lsp.get_client_by_id(client_id)
     if not client or client.id ~= client_id then
         return
     end
 
-    client:cancel_request(state_actv_req.id)
-    actv_req_clear()
-end
-
----@param buf integer
-local function actv_req_and_timer_stop(buf)
-    require("nvim-tools.timers").timer_stop(state_timer)
-    actv_req_cancel(buf)
-end
-
----@param buf uinteger
----@param client_id uinteger
----@param req_id uinteger
-local function actv_req_new(buf, client_id, req_id)
-    state_actv_req.buf = buf
-    state_actv_req.client_id = client_id
-    state_actv_req.id = req_id
+    client:cancel_request(req.id)
 end
 
 ---@param res mjm.lsp.documentHighlight.Result
 ---@param buf uinteger
----@param wipe "all"|"decor"|"del"
+---@param wipe "decor"|"del"
 local function res_reset(res, buf, wipe)
-    local has_decor = res.has_decor == true
+    local has_decor = #api.nvim_buf_get_extmarks(buf, state_ns, 0, -1, { limit = 1 }) > 0
     if has_decor then
-        api.nvim_buf_clear_namespace(buf, state_ns, 0, -1)
-    end
-
-    if has_decor and wipe ~= "del" then
-        res.bot = -1
-        res.bot_idx = -1
-        res.has_decor = false
-        res.top = -1
-        res.top_idx = -1
-    end
-
-    if wipe == "all" then
-        if res.version > -1 then
-            local ntt = require("nvim-tools.table")
-            ntt.i_clear(res.highlights)
-            res.version = -1
+        if api.nvim_buf_is_valid(buf) then
+            api.nvim_buf_clear_namespace(buf, state_ns, 0, -1)
         end
     end
 
-    if wipe == "del" then
+    if wipe == "decor" then
+        res.bot = -1
+        res.bot_idx = -1
+        res.top = -1
+        res.top_idx = -1
+    else
         state_results[buf] = nil
     end
 
@@ -113,7 +83,7 @@ local function res_reset(res, buf, wipe)
 end
 
 ---@param buf uinteger
----@param wipe "all"|"decor"|"del"
+---@param wipe "decor"|"del"
 local function from_buf_res_reset(buf, wipe)
     local buf_res = state_results[buf]
     if buf_res then
@@ -130,7 +100,7 @@ local function res_ensure_updated(res, buf, version, cur_pos_ext)
     if version then
         local res_version = res.version
         if res_version > -1 and res_version ~= util.buf_versions[buf] then
-            res_reset(res, buf, "all")
+            res_reset(res, buf, "del")
             return false
         end
     end
@@ -138,11 +108,11 @@ local function res_ensure_updated(res, buf, version, cur_pos_ext)
     if cur_pos_ext ~= nil then
         local ntr = require("nvim-tools.range")
         if ntr.find_pos(res.highlights, cur_pos_ext) ~= nil then
-            if res.has_decor ~= true then
+            if #api.nvim_buf_get_extmarks(buf, state_ns, 0, -1, { limit = 1 }) > 0 then
                 api.nvim__redraw({ buf = buf, valid = true, flush = false })
             end
         else
-            res_reset(res, buf, "all")
+            res_reset(res, buf, "del")
             return false
         end
     end
@@ -165,23 +135,10 @@ end
 ---@param buf integer
 ---@param hls nvim-tools.range.DocHl[]
 ---@param version integer
-local function result_set_or_new(buf, hls, version)
-    local res = state_results[buf]
-    if res then
-        res.bot = -1
-        res.bot_idx = -1
-        res.has_decor = false
-        res.highlights = hls
-        res.top = -1
-        res.top_idx = -1
-        res.version = version
-        return
-    end
-
+local function result_set(buf, hls, version)
     state_results[buf] = {
         bot = -1,
         bot_idx = -1,
-        has_decor = false,
         highlights = hls,
         top = -1,
         top_idx = -1,
@@ -217,13 +174,25 @@ end
 -- MARK: Redrawing --
 ---------------------
 
+---@param kind lsp.DocumentHighlightKind?
+---@return uinteger
+local function hl_group_get(kind)
+    if kind == KIND_READ then
+        return read_hl
+    elseif kind == KIND_WRITE then
+        return write_hl
+    else
+        return text_hl
+    end
+end
+
 ---@param buf integer
 ---@param hl_info nvim-tools.range.DocHl
 local function set_mark(buf, hl_info)
     api.nvim_buf_set_extmark(buf, state_ns, hl_info[1], hl_info[2], {
         end_col = hl_info[4],
         end_row = hl_info[3],
-        hl_group = hl_info[5],
+        hl_group = hl_group_get(hl_info[5]),
         priority = hl_user,
         strict = false,
     })
@@ -248,7 +217,7 @@ local function on_win(_, _, buf, top, bot)
         return
     end
 
-    if not res.has_decor then
+    if #api.nvim_buf_get_extmarks(buf, state_ns, 0, -1, { limit = 1 }) == 0 then
         local top_idx = vim.list.bisect(hls, { top, 0, 0, 0 }, {
             key = function(hl)
                 return hl[1]
@@ -268,7 +237,6 @@ local function on_win(_, _, buf, top, bot)
 
         res.bot = bot
         res.bot_idx = bot_idx
-        res.has_decor = true
         res.top = top
         res.top_idx = top_idx
         return
@@ -319,7 +287,7 @@ api.nvim_set_decoration_provider(state_ns, { on_win = on_win })
 ---@param cur_pos_ext [integer, integer]
 ---@return boolean
 local function response_has_current_nvim_state(win, buf, cur_pos_ext)
-    if win ~= api.nvim_get_current_win() then
+    if not api.nvim_win_is_valid(win) then
         return false
     end
 
@@ -329,11 +297,7 @@ local function response_has_current_nvim_state(win, buf, cur_pos_ext)
 
     local cur_pos = api.nvim_win_get_cursor(win)
     local cur_cur_pos_ext = require("nvim-tools.pos").mark_to_ext_pos(cur_pos)
-    if not require("nvim-tools.table").i_equals(cur_pos_ext, cur_cur_pos_ext) then
-        return false
-    end
-
-    return true
+    return require("nvim-tools.table").i_equals(cur_pos_ext, cur_cur_pos_ext)
 end
 
 ---@param err lsp.ResponseError?
@@ -343,9 +307,13 @@ end
 ---@param win uinteger
 ---@param cur_pos_ext[uinteger, uinteger]
 local function doc_hl_req_handler(err, response, ctx, buf, win, cur_pos_ext)
-    local client_id = state_actv_req.client_id
-    local req_id = state_actv_req.id
-    actv_req_clear()
+    local req = state_reqs[buf]
+    if not req then
+        return
+    end
+
+    local client_id = req.client_id
+    local req_id = req.id
 
     if ctx.bufnr ~= buf then
         return
@@ -355,6 +323,7 @@ local function doc_hl_req_handler(err, response, ctx, buf, win, cur_pos_ext)
         return
     end
 
+    state_reqs[buf] = nil
     local ctx_version = ctx.version
     if ctx_version == nil or ctx_version < util.buf_versions[buf] then
         return
@@ -387,18 +356,7 @@ local function doc_hl_req_handler(err, response, ctx, buf, win, cur_pos_ext)
 
     local nts = require("nvim-tools.lsp")
     local hls = nts.doc_hls_to_api_ranges(response, client.offset_encoding, buf)
-    for _, hl in ipairs(hls) do
-        local kind = hl[5]
-        if kind == KIND_READ then
-            hl[5] = read_hl
-        elseif kind == KIND_WRITE then
-            hl[5] = write_hl
-        else
-            hl[5] = text_hl
-        end
-    end
-
-    result_set_or_new(buf, hls, ctx_version)
+    result_set(buf, hls, ctx_version)
     api.nvim__redraw({ buf = buf, valid = true, flush = false })
 end
 
@@ -427,7 +385,6 @@ local function request_debounced(buf, version, prev_hls)
         return
     end
 
-    actv_req_and_timer_stop(buf)
     local clients = lsp.get_clients({ bufnr = buf, method = DOC_HL })
     require("nvim-tools.table").i_discard(clients, function(client)
         return state_client_ids_disabled[client.id] ~= nil
@@ -439,10 +396,13 @@ local function request_debounced(buf, version, prev_hls)
         return
     end
 
-    uv.timer_start(
-        state_timer,
+    actv_req_cancel(buf)
+    local nti = require("nvim-tools.timers")
+    nti.timers_stop(state_timers, client_id)
+    nti.timers_do_after_debounce(
+        state_timers,
+        client_id,
         client.flags.debounce_text_changes or 150,
-        0,
         vim.schedule_wrap(function()
             if not api.nvim_buf_is_valid(buf) then
                 return
@@ -455,11 +415,13 @@ local function request_debounced(buf, version, prev_hls)
             end, buf)
 
             if req_success and req_id then
-                actv_req_new(buf, client_id, req_id)
+                state_reqs[buf] = { client_id = client_id, id = req_id }
             end
         end)
     )
 end
+-- TODO: re-break this apart. There's stuff we need to care/think about in here like mode check
+-- sequencing. And when we can early exit depending on the various conditions.
 
 ------------------
 -- MARK: Events --
@@ -483,7 +445,7 @@ local function set_ns_win(win)
     return false
 end
 
----@type catharsis.feature.Spec
+---@class catharsis.DocumentHighlight : catharsis.feature.Spec
 local M = {
     on_client_add = function(client_id)
         state_client_ids_disabled[client_id] = nil
@@ -522,7 +484,7 @@ local M = {
                 elseif method == "textDocument/didOpen" then
                     request_debounced(ev.buf, true, false)
                 elseif method == "textDocument/didClose" then
-                    from_buf_res_reset(ev.buf, "all")
+                    from_buf_res_reset(ev.buf, "del")
                 end
             end,
         })
@@ -568,13 +530,16 @@ local M = {
     -- TODO-DEP: When v0.14 comes out, change all instances of "buffer" to "buf"
 }
 
+---@class catharsis.documentHighlight.JumpCtx
+---@field zzze boolean
+
+---@param win uinteger
+---@param buf uinteger
 ---@param count uinteger
 ---@param upward boolean
----@diagnostic disable-next-line: inject-field
-function M.jump(count, upward)
-    local win = api.nvim_get_current_win()
-    local win_buf = api.nvim_win_get_buf(win)
-    local res = state_results[win_buf]
+---@param ctx catharsis.documentHighlight.JumpCtx
+function M.jump(win, buf, count, upward, ctx)
+    local res = state_results[buf]
     if not res or #res.highlights == 0 then
         api.nvim_echo({ { "No document highlights" } }, false, {})
         return
@@ -584,26 +549,37 @@ function M.jump(count, upward)
     local cur_pos_ext = require("nvim-tools.pos").mark_to_ext_pos(api.nvim_win_get_cursor(win))
     local row = cur_pos_ext[1]
     local col = cur_pos_ext[2]
-    local idx = vim.list.bisect(hls, { row, col, row, col }, {
+    local idx_cur = vim.list.bisect(hls, { row, col, row, col + 1 }, {
         key = require("nvim-tools.range").bit_pack_key,
     })
 
     local step = upward and -1 or 1
-    local target_idx = idx + step * math.max(count, 1)
-    if target_idx < 1 then
-        target_idx = 1
-    elseif target_idx > #hls then
-        target_idx = #hls
-    end
-
-    if target_idx == idx then
+    local idx_dest = idx_cur + step * math.max(count, 1)
+    idx_dest = math.min(math.max(idx_dest, 1), #hls)
+    if idx_dest == idx_cur then
         api.nvim_echo({ { "No more document highlights" } }, false, {})
         return
     end
 
-    local target = hls[target_idx]
-    api.nvim_win_set_cursor(win, { target[1] + 1, target[2] })
+    local dest = hls[idx_dest]
+    local sr = dest[1]
+    local top = fn.line("w0", win)
+    local bot = fn.line("w$", win)
+    local off_screen = sr < top or bot < sr
+    if off_screen then
+        api.nvim_cmd({ cmd = "norm", args = { "m'" }, bang = true }, {})
+    end
+
+    print(idx_cur, idx_dest)
+    api.nvim_win_set_cursor(win, { sr + 1, dest[2] })
+    api.nvim_cmd({ cmd = "norm", args = { "zv" }, bang = true }, {})
+    if off_screen and ctx.zzze then
+        api.nvim_cmd({ cmd = "norm", args = { "zzze" }, bang = true }, {})
+    end
 end
--- TODO: make a public interface for this
+-- TODO: If you are in the middle of a highlight, and go down, you will go down two.
 
 return M
+
+-- TODO: issue where document highlight intermittently doesn't start, or like doesn't work until
+-- you move

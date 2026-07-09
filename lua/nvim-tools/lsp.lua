@@ -12,9 +12,9 @@ local M = {}
 ---@param buf integer
 ---@param lines table<integer, string> 0 indexed
 local function get_lines_from_buf_loaded(buf, lines)
-    require("nvim-tools.table").filter_modify(lines, function(row, _)
-        return api.nvim_buf_get_lines(buf, row, row + 1, false)[1] or ""
-    end)
+    for row, _ in pairs(lines) do
+        lines[row] = api.nvim_buf_get_lines(buf, row, row + 1, false)[1] or ""
+    end
 end
 
 ---Bespoke version because the Nvim core util is private.
@@ -174,7 +174,7 @@ end
 function M.clients_filter_supporting(clients, methods, buf)
     local ntt = require("nvim-tools.table")
     ntt.i_keep(clients, function(client)
-        return ntt.i_all(methods, function(method)
+        return ntt.i_all_nonempty(methods, function(method)
             return client:supports_method(method, buf)
         end)
     end)
@@ -282,9 +282,13 @@ end
 ---@param client vim.lsp.Client
 ---@param method vim.lsp.protocol.Method.ClientToServer|vim.lsp.protocol.Method.Registration
 ---@param buf uinteger
+---@param ft string
+---@param fname string
+---@param uri string
 ---@return uinteger
 local function client_get_method_score(client, method, buf, ft, fname, uri)
-    local cap_dynamic = client.dynamic_capabilities:get(method, { bufnr = buf })
+    local cap_req = lsp.protocol._request_name_to_server_capability[method]
+    local cap_dynamic = client.dynamic_capabilities:get(cap_req[1], { bufnr = buf })
     if cap_dynamic == nil or #cap_dynamic == 0 then
         return 5
     end
@@ -299,6 +303,8 @@ local function client_get_method_score(client, method, buf, ft, fname, uri)
         return math.max(score, score_dynamic_capability(cap, lang, fname, uri))
     end)
 end
+-- TODO: This does not properly handle resolve the client request method to the server
+-- provider.
 
 ---@param clients vim.lsp.Client
 ---@param buf uinteger
@@ -321,13 +327,13 @@ local function client_find_from_top_score(clients, buf, methods)
     local uri = fname ~= "" and vim.uri_from_fname(fname) or ""
     local top_client = ntt.i_fold(clients, { -1, nil, -1 }, function(top_client, client)
         local total_score = ntt.i_fold(methods, 0, function(score, method)
-            return score + client_get_method_score(client, method, ft, fname, uri)
+            return score + client_get_method_score(client, method, buf, ft, fname, uri)
         end)
 
         if top_client[3] < total_score then
             top_client[1] = client.id
             top_client[2] = client
-            top_client[1] = total_score
+            top_client[3] = total_score
         end
 
         return top_client
@@ -354,6 +360,14 @@ end
 ---@return uinteger?, vim.lsp.Client?
 function M.clients_find_top_scoring(clients, buf, methods)
     return client_find_from_top_score(clients, buf, methods)
+end
+
+---@param filter vim.lsp.get_clients.Filter
+---@return uinteger[]
+function M.client_ids_get(filter)
+    return require("nvim-tools.table").i_filter_map_to(lsp.get_clients(filter), function(client)
+        return client.id
+    end)
 end
 
 ----------------------------------
@@ -395,6 +409,45 @@ function M.rename_params_create(buf, pos_ext, encoding, new_name)
     return params
 end
 
+---@param buf uinteger
+---@param range_api nvim-tools.Range
+---@param encoding "utf-8"|"utf-16"|"utf-32"
+---@return lsp.TextDocumentPositionParams
+function M.text_doc_range_params_create(buf, range_api, encoding)
+    local text_document = { uri = vim.uri_from_bufnr(buf) }
+    local range = require("nvim-tools.range").api_to_lsp(range_api, buf, encoding)
+    return { textDocument = text_document, range = range }
+end
+
+---@param buf uinteger
+---@param range_api nvim-tools.Range
+---@param encoding lsp.PositionEncodingKind
+---@param context vim.lsp.buf.code_action.context
+---@return lsp.CodeActionParams
+function M.code_action_params_create(buf, range_api, encoding, context)
+    local params_range = M.text_doc_range_params_create(buf, range_api, encoding)--[[ @as lsp.CodeActionParams ]]
+    -- Must not be null per the spec.
+    if context.diagnostics == nil then
+        context.diagnostics = {}
+    end
+
+    params_range.context = context
+    return params_range
+end
+
+---@param win integer?: |window-ID| or 0 for current, defaults to current
+---@param position_encoding "utf-8"|"utf-16"|"utf-32"
+---@return { textDocument: { uri: lsp.DocumentUri }, range: lsp.Range }
+function M.make_range_params(win, position_encoding)
+    win = win or 0
+    local buf = api.nvim_win_get_buf(win)
+    local position = vim.pos.cursor(buf, api.nvim_win_get_cursor(win)):to_lsp(position_encoding)
+    return {
+        textDocument = M.make_text_document_params(buf),
+        range = { start = position, ["end"] = position },
+    }
+end
+
 -------------------
 -- MARK: Logging --
 -------------------
@@ -430,5 +483,73 @@ function M.log_unsupported_and_echo(method)
     local msg = string.format(fmt_str, method)
     M.log_warn_and_echo(msg)
 end
+
+-----------------------
+-- MARK: Diagnostics --
+-----------------------
+
+---@param client_id uinteger
+---@param buf uinteger
+---@param row uinteger?
+---@param ret vim.Diagnostic[] Modified in place!
+local function diags_dynamic_from_client_id_append(client_id, buf, row, ret)
+    local client = lsp.get_client_by_id(client_id)
+    if client == nil then
+        return
+    end
+
+    local ntt = require("nvim-tools.table")
+    local provider = "diagnosticProvider"
+    local cap_dynamic = client.dynamic_capabilities:get(provider, { bufnr = buf })
+    if cap_dynamic ~= nil and #cap_dynamic > 0 then
+        for _, cap in ipairs(cap_dynamic) do
+            local reg_opts = cap.registerOptions
+            if reg_opts and type(reg_opts) == "table" then
+                local identifier = reg_opts.identifier
+                local ns_pull = lsp.diagnostic.get_namespace(client.id, true, identifier)
+                local diags = vim.diagnostic.get(buf, { namespace = ns_pull, lnum = row })
+                ntt.i_append(ret, diags)
+            end
+        end
+    else
+        local static_reg = client.server_capabilities[provider]
+        if static_reg ~= nil then
+            local identifier = static_reg.identifier
+            local ns_pull = lsp.diagnostic.get_namespace(client.id, true, identifier)
+            ntt.i_append(ret, vim.diagnostic.get(buf, { namespace = ns_pull, lnum = row }))
+        end
+    end
+end
+-- MID: Test dynamic registration.
+-- LOW-DEP: If this code is correct, it can be refined down. Feels lengthy right now.
+
+---@class nvim-tools.lsp.DiagnosticGetOpts
+---@field buf? uinteger
+---@field client_ids? uinteger[]
+---@field row? uinteger 0-indexed
+
+---@param opts? nvim-tools.lsp.DiagnosticGetOpts
+---@return vim.Diagnostic[]
+function M.lsp_diagnostics_get(opts)
+    opts = opts or {}
+    local buf = opts.buf or 0
+    local client_ids = opts.client_ids or M.client_ids_get({ bufnr = buf })
+    local row = opts.row
+
+    local ntt = require("nvim-tools.table")
+    local ret = {}
+    for _, client_id in ipairs(client_ids) do
+        local ns_push = lsp.diagnostic.get_namespace(client_id)
+        ntt.i_append(ret, vim.diagnostic.get(buf, { namespace = ns_push, lnum = row }))
+    end
+
+    for _, client_id in ipairs(client_ids) do
+        diags_dynamic_from_client_id_append(client_id, buf, row, ret)
+    end
+
+    return ret
+end
+-- MID: If opts.client_ids is nil, M.get_client_ids() gets the clients to retrive the ids, then
+-- discards that data, only for the clients to be re-queried by id again later.
 
 return M

@@ -1,39 +1,37 @@
 local api = vim.api
-local set = vim.keymap.set
 
 require("mjm.mjm")
 
-set({ "n", "x" }, "<Space>", "<Nop>")
-set({ "n", "x" }, "\\", "<Nop>")
+vim.keymap.set({ "n", "x" }, "<Space>", "<Nop>")
+vim.keymap.set({ "n", "x" }, "\\", "<Nop>")
 api.nvim_set_var("mapleader", " ")
 api.nvim_set_var("maplocalleader", "\\")
 
 -- See :h <tab> and https://github.com/neovim/neovim/pull/17932
-set("n", "<C-i>", "<C-i>")
-set("n", "<tab>", "<tab>")
-set("n", "<C-m>", "<C-m>")
-set("n", "<cr>", "<cr>")
-set("n", "<C-[>", "<C-[>")
-set("n", "<esc>", "<esc>")
+vim.keymap.set("n", "<C-i>", "<C-i>")
+vim.keymap.set("n", "<tab>", "<tab>")
+vim.keymap.set("n", "<C-m>", "<C-m>")
+vim.keymap.set("n", "<cr>", "<cr>")
+vim.keymap.set("n", "<C-[>", "<C-[>")
+vim.keymap.set("n", "<esc>", "<esc>")
 
--- Safer than letting lazy handle skipping
 -- :h standard-plugin-list
-api.nvim_set_var("loaded_2html_plugin", 1)
+-- api.nvim_set_var("loaded_2html_plugin", 1)
 api.nvim_set_var("did_install_default_menus", 1)
-api.nvim_set_var("loaded_gzip", 1)
-api.nvim_set_var("loaded_man", 1)
-api.nvim_set_var("loaded_matchit", 1)
-api.nvim_set_var("loaded_matchparen", 1)
-api.nvim_set_var("loaded_netrw", 1)
-api.nvim_set_var("loaded_netrwPlugin", 1)
-api.nvim_set_var("loaded_netrwSettings", 1)
-api.nvim_set_var("loaded_remote_plugins", 1)
-api.nvim_set_var("loaded_spellfile_plugin", 1)
-api.nvim_set_var("loaded_tar", 1)
-api.nvim_set_var("loaded_tarPlugin", 1)
-api.nvim_set_var("loaded_tutor_mode_plugin", 1)
-api.nvim_set_var("loaded_zip", 1)
-api.nvim_set_var("loaded_zipPlugin", 1)
+-- api.nvim_set_var("loaded_gzip", 1)
+-- api.nvim_set_var("loaded_man", 1)
+-- api.nvim_set_var("loaded_matchit", 1)
+-- api.nvim_set_var("loaded_matchparen", 1)
+-- api.nvim_set_var("loaded_netrw", 1)
+-- api.nvim_set_var("loaded_netrwPlugin", 1)
+-- api.nvim_set_var("loaded_netrwSettings", 1)
+-- api.nvim_set_var("loaded_remote_plugins", 1)
+-- api.nvim_set_var("loaded_spellfile_plugin", 1)
+-- api.nvim_set_var("loaded_tar", 1)
+-- api.nvim_set_var("loaded_tarPlugin", 1)
+-- api.nvim_set_var("loaded_tutor_mode_plugin", 1)
+-- api.nvim_set_var("loaded_zip", 1)
+-- api.nvim_set_var("loaded_zipPlugin", 1)
 
 local termfeatures = vim.g.termfeatures or {}
 termfeatures.osc52 = false -- I use xsel
@@ -42,12 +40,10 @@ api.nvim_set_var("termfeatures", termfeatures)
 api.nvim_cmd({ cmd = "colorscheme", args = { "simple_delta" } }, {})
 
 require("mjm.lazy")
+require("mjm.nvim-plugins")
 require("mjm.internal")
-require("mjm.undotree")
-require("mjm.difftool")
 
 require("mjm.set")
-require("mjm.lcs")
 require("mjm.autocmd")
 require("mjm.map")
 require("mjm.custom-cmds")
@@ -58,15 +54,13 @@ require("mjm.tal")
 
 require("mjm.lsp")
 
-if vim.v.startreason ~= "normal" then
-    return
-end
-
-if not api.nvim_buf_is_valid(1) then
-    return
-end
-
-if not require("nvim-tools.buf").is_empty_noname(1) then
+if
+    not (
+        vim.v.startreason == "normal"
+        and api.nvim_buf_is_valid(1)
+        and require("nvim-tools.buf").is_empty_noname(1)
+    )
+then
     return
 end
 
@@ -86,4 +80,3 @@ api.nvim_create_autocmd("BufHidden", {
         end)
     end,
 })
--- NON: Running this as an autocmd against all buffers. It will fire constantly.

@@ -28,9 +28,30 @@ require("lazy").setup({
     rocks = { enabled = false },
     spec = { { import = "mjm.plugins" } },
     ui = { border = "single" },
+    performance = {
+        rtp = {
+            disabled_plugins = {
+                "gzip",
+                "html",
+                "man",
+                "matchit",
+                "matchparen",
+                "netrwPlugin",
+                "rplugin",
+                "spellfile",
+                "tar",
+                "tarPlugin",
+                "tohtml",
+                "tutor",
+                "zip",
+                "zipPlugin",
+            },
+        },
+    },
 })
 
 vim.keymap.set("n", "<leader>zp", "<cmd>Lazy profile<cr>")
+vim.keymap.set("n", "<leader>zc", "<cmd>Lazy check<cr>")
 vim.keymap.set("n", "<leader>zu", "<cmd>Lazy update<cr>")
 vim.keymap.set("n", "<leader>zx", "<cmd>Lazy clean<cr>")
 vim.keymap.set("n", "<leader>zz", "<cmd>Lazy<cr>")

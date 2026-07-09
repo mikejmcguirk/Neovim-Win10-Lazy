@@ -19,3 +19,5 @@
 - [ ] Should my `i_` and `a_` text objects be included here?
   - It feels like they could be migrated if a better place were found for them
     * This idea also feels fundamentally goofy
+
+- [ ] The gF text-tool function needs to be able to handle multiple lines in visual mode
