@@ -23,12 +23,8 @@ end)
 
 -- LOW: More testing on lockmarks/conform behavior
 
-set("n", "Z", "<nop>") -- Create normal Z layer
+set("n", "Z", "<nop>")
 set("n", "ZQ", "<cmd>qall!<cr>")
--- LOW: The obvious solution here is a separate restart hotkey that saves the session then performs
--- a restart that reloads the session. The blocker here is that you need a way to reliably save
--- and load the session, which isn't all that possible with the current way of doing it
--- Even have obvious map: ZE (restore sEssion)
 set("n", "ZR", "<cmd>restart +wqa<cr>")
 set("n", "ZA", "<cmd>lockmarks silent wa<cr>")
 set("n", "ZS", "<cmd>lockmarks silent up | so<cr>")
@@ -38,18 +34,13 @@ set("n", "ZC", "<cmd>lockmarks wqa<cr>")
 set("n", "ZU", function()
     local cur_buf = api.nvim_get_current_buf()
     local ntb = require("nvim-tools.buf")
-    local listed_bufs = ntb.get_listed_bufs()
-    require("nvim-tools.table").i_discard(listed_bufs, function(buf)
-        return buf == cur_buf
+    local listed_bufs = ntb.bufs_get_filtered(function(buf)
+        return buf ~= cur_buf and api.nvim_get_option_value("buflisted", { buf = buf })
     end)
-
-    if #listed_bufs == 1 then
-        return
-    end
 
     for _, buf in ipairs(listed_bufs) do
         local ok, _, _ = ntb.save(buf)
-        if ok and #fn.win_findbuf(buf) == 0 then
+        if ok and #vim.call("win_findbuf", buf) == 0 then
             api.nvim_set_option_value("buflisted", false, { buf = buf })
             api.nvim_buf_delete(buf, { unload = true })
         end

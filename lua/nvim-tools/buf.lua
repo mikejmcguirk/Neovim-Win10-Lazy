@@ -128,12 +128,20 @@ function M.get_indent(buf, row)
 end
 
 ---@audited 2026-07-03
----@return integer[]
-function M.get_listed_bufs()
+---@return uinteger[]
+function M.bufs_get_listed()
     local bufs = api.nvim_list_bufs()
     return require("nvim-tools.table").i_keep(bufs, function(buf)
         return api.nvim_get_option_value("buflisted", { buf = buf })
     end)
+end
+
+---Returns a list of |buffers| filtered through a predicate function.
+---@audited 2026-07-09
+---@param f fun(buf:uinteger): boolean Return `true` to keep.
+---@return uinteger[]
+function M.bufs_get_filtered(f)
+    return require("nvim-tools.table").i_keep(api.nvim_list_bufs(), f)
 end
 
 ---@audited 2026-07-03
@@ -477,7 +485,7 @@ function M.protected_del(buf, delist, opts)
     end
 
     if opts.unload then
-        local listed_bufs = M.get_listed_bufs()
+        local listed_bufs = M.bufs_get_listed()
         -- TODO: this should be any() ~= buf
         require("nvim-tools.table").i_discard(listed_bufs, function(b)
             return b == buf
