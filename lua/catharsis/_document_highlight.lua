@@ -3,7 +3,6 @@ local fn = vim.fn
 local hl_user = vim.hl.priorities.user
 local lsp = vim.lsp
 local util = lsp.util
-local uv = vim.uv
 
 local DOC_HL = "textDocument/documentHighlight"
 local protocol = require("vim.lsp.protocol")
@@ -202,7 +201,7 @@ end
 ---@param buf integer
 ---@param top integer
 ---@param bot integer
-local function on_win(_, _, buf, top, bot)
+local function on_win(_, win, buf, top, bot)
     local res = state_results[buf]
     if not res then
         return
@@ -211,6 +210,13 @@ local function on_win(_, _, buf, top, bot)
     local hls = res.highlights
     if #hls == 0 then
         return
+    end
+
+    -- ns_set scopes which windows extmarks are drawn to, but not which wins on_win is called for.
+    -- ISSUE: This is unintuitive behavior.
+    local ns_wins = api.nvim__ns_get(state_ns).wins
+    if ns_wins == nil or ns_wins[1] ~= win then
+        return false
     end
 
     if mode_get_status(api.nvim_get_mode().mode) < 0 then
@@ -287,7 +293,7 @@ api.nvim_set_decoration_provider(state_ns, { on_win = on_win })
 ---@param cur_pos_ext [integer, integer]
 ---@return boolean
 local function response_has_current_nvim_state(win, buf, cur_pos_ext)
-    if not api.nvim_win_is_valid(win) then
+    if api.nvim_get_current_win() ~= win then
         return false
     end
 
@@ -314,11 +320,6 @@ local function doc_hl_req_handler(err, response, ctx, buf, win, cur_pos_ext)
 
     local client_id = req.client_id
     local req_id = req.id
-
-    if ctx.bufnr ~= buf then
-        return
-    end
-
     if ctx.request_id ~= req_id or ctx.client_id ~= client_id then
         return
     end
@@ -332,6 +333,10 @@ local function doc_hl_req_handler(err, response, ctx, buf, win, cur_pos_ext)
     local client = lsp.get_client_by_id(client_id)
     if not client then
         return false
+    end
+
+    if not response_has_current_nvim_state(win, buf, cur_pos_ext) then
+        return
     end
 
     if err then
@@ -350,10 +355,6 @@ local function doc_hl_req_handler(err, response, ctx, buf, win, cur_pos_ext)
         return
     end
 
-    if not response_has_current_nvim_state(win, buf, cur_pos_ext) then
-        return
-    end
-
     local nts = require("nvim-tools.lsp")
     local hls = nts.doc_hls_to_api_ranges(response, client.offset_encoding, buf)
     result_set(buf, hls, ctx_version)
@@ -363,7 +364,7 @@ end
 ---@param buf uinteger
 ---@param version boolean Verify current result is up to date.
 ---@param prev_hls boolean Abort if a valid highlight is present.
-local function request_debounced(buf, version, prev_hls)
+local function req_debounced(buf, version, prev_hls)
     if mode_get_status(api.nvim_get_mode().mode) < 1 then
         return
     end
@@ -374,8 +375,7 @@ local function request_debounced(buf, version, prev_hls)
         return
     end
 
-    local ns_wins = api.nvim__ns_get(state_ns).wins
-    if ns_wins == nil or ns_wins[1] ~= cur_win then
+    if fn.win_gettype(cur_win) ~= "" then
         return
     end
 
@@ -386,8 +386,8 @@ local function request_debounced(buf, version, prev_hls)
     end
 
     local clients = lsp.get_clients({ bufnr = buf, method = DOC_HL })
-    require("nvim-tools.table").i_discard(clients, function(client)
-        return state_client_ids_disabled[client.id] ~= nil
+    require("nvim-tools.table").i_keep(clients, function(client)
+        return state_client_ids_disabled[client.id] == nil
     end)
 
     local nts = require("nvim-tools.lsp")
@@ -420,8 +420,7 @@ local function request_debounced(buf, version, prev_hls)
         end)
     )
 end
--- TODO: re-break this apart. There's stuff we need to care/think about in here like mode check
--- sequencing. And when we can early exit depending on the various conditions.
+-- TODO: insert the strategy pattern here from lampshade
 
 ------------------
 -- MARK: Events --
@@ -437,12 +436,18 @@ end
 ---@param win uinteger
 ---@return boolean
 local function set_ns_win(win)
-    if fn.win_gettype(win) == "" then
-        api.nvim__ns_set(state_ns, { wins = { win } })
-        return true
+    if fn.win_gettype(win) ~= "" then
+        return false
     end
 
-    return false
+    -- ns_set stages a redraw. Avoid if we can.
+    local ns_wins = api.nvim__ns_get(state_ns).wins
+    if ns_wins ~= nil and ns_wins[1] == win then
+        return false
+    end
+
+    api.nvim__ns_set(state_ns, { wins = { win } })
+    return true
 end
 
 ---@class catharsis.DocumentHighlight : catharsis.feature.Spec
@@ -469,7 +474,7 @@ local M = {
             buffer = bufnr,
             desc = "Refresh document highlights",
             callback = function(ev)
-                request_debounced(ev.buf, false, true)
+                req_debounced(ev.buf, false, true)
             end,
         })
 
@@ -477,16 +482,17 @@ local M = {
             buffer = bufnr,
             group = buf_group,
             desc = "Refresh document highlights on document changes",
-            callback = function(ev)
+            -- Schedule wrap to leave autocmd context
+            callback = vim.schedule_wrap(function(ev)
                 local method = ev.data.method --- @type string
                 if method == "textDocument/didChange" then
-                    request_debounced(ev.buf, true, false)
+                    req_debounced(ev.buf, true, false)
                 elseif method == "textDocument/didOpen" then
-                    request_debounced(ev.buf, true, false)
+                    req_debounced(ev.buf, true, false)
                 elseif method == "textDocument/didClose" then
                     from_buf_res_reset(ev.buf, "del")
                 end
-            end,
+            end),
         })
 
         api.nvim_create_autocmd("ModeChanged", {
@@ -498,7 +504,7 @@ local M = {
                 local nm_status = mode_get_status(vim.v.event.new_mode)
                 local buf = ev.buf
                 if nm_status == 1 then
-                    request_debounced(buf, true, true)
+                    req_debounced(buf, true, true)
                 elseif nm_status == -1 then
                     from_buf_res_reset(buf, "decor")
                 end
@@ -507,16 +513,20 @@ local M = {
 
         api.nvim_create_autocmd("WinEnter", {
             group = buf_group,
-            callback = function()
+            -- Schedule wrap to leave autocmd context
+            callback = vim.schedule_wrap(function()
                 set_ns_win(api.nvim_get_current_win())
-            end,
+            end),
         })
 
-        local cur_win = api.nvim_get_current_win()
-        local cur_buf = api.nvim_win_get_buf(cur_win)
-        if cur_buf == bufnr and set_ns_win(cur_win) then
-            request_debounced(cur_buf, false, false)
-        end
+        -- Schedule to ignore temporary context switches.
+        vim.schedule(function()
+            local cur_win = api.nvim_get_current_win()
+            local cur_win_buf = api.nvim_win_get_buf(cur_win)
+            if cur_win_buf == bufnr and set_ns_win(cur_win) then
+                req_debounced(cur_win_buf, false, false)
+            end
+        end)
     end,
 
     on_buf_rm = function(buf)
@@ -530,56 +540,73 @@ local M = {
     -- TODO-DEP: When v0.14 comes out, change all instances of "buffer" to "buf"
 }
 
+---@param hls nvim-tools.range.DocHl[]
+---@param abs boolean
+---@param count uinteger
+---@param upward boolean
+---@param win uinteger
+---@return boolean, uinteger
+function jump_get_idx_dest(hls, abs, count, upward, win)
+    if abs then
+        return true, count == 0 and (upward and 1 or #hls) or math.min(#hls, count)
+    end
+
+    local cursor_ext = require("nvim-tools.pos").mark_to_ext_pos(api.nvim_win_get_cursor(win))
+    local cursor_ext_range = { cursor_ext[1], cursor_ext[2], cursor_ext[1], cursor_ext[2] + 1 }
+    local idx_cur = vim.list.bisect(hls, cursor_ext_range, {
+        key = function(hl)
+            local cmp_res = require("nvim-tools.range").cmp_(hl, cursor_ext_range)
+            if cmp_res == -2 or cmp_res == -1 then
+                return -1
+            elseif cmp_res == 1 or cmp_res == 2 then
+                return 1
+            else
+                return 0
+            end
+        end,
+    })
+
+    local idx_dest = idx_cur + (upward and -1 or 1) * math.max(count, 1)
+    idx_dest = upward and math.max(idx_dest, 1) or math.min(idx_dest, #hls)
+    return idx_dest ~= idx_cur and true or false, idx_dest
+end
+
 ---@class catharsis.documentHighlight.JumpCtx
 ---@field zzze boolean
 
 ---@param win uinteger
 ---@param buf uinteger
----@param count uinteger
+---@param count uinteger If `abs` is `true`, count `0` will jump to the first or last highlight.
+---A count greater than zero will jump to the highlight at that index, clamped to max.
+---@param abs boolean
 ---@param upward boolean
 ---@param ctx catharsis.documentHighlight.JumpCtx
-function M.jump(win, buf, count, upward, ctx)
-    local res = state_results[buf]
-    if not res or #res.highlights == 0 then
+function M.jump(win, buf, count, abs, upward, ctx)
+    ---@type nvim-tools.range.DocHl[]
+    local hls = require("nvim-tools.table").get(state_results, buf, "highlights")
+    if hls == nil or #hls == 0 then
         api.nvim_echo({ { "No document highlights" } }, false, {})
         return
     end
 
-    local hls = res.highlights
-    local cur_pos_ext = require("nvim-tools.pos").mark_to_ext_pos(api.nvim_win_get_cursor(win))
-    local row = cur_pos_ext[1]
-    local col = cur_pos_ext[2]
-    local idx_cur = vim.list.bisect(hls, { row, col, row, col + 1 }, {
-        key = require("nvim-tools.range").bit_pack_key,
-    })
-
-    local step = upward and -1 or 1
-    local idx_dest = idx_cur + step * math.max(count, 1)
-    idx_dest = math.min(math.max(idx_dest, 1), #hls)
-    if idx_dest == idx_cur then
+    local ok, idx_dest = jump_get_idx_dest(hls, abs, count, upward, win)
+    if not ok then
         api.nvim_echo({ { "No more document highlights" } }, false, {})
         return
     end
 
     local dest = hls[idx_dest]
     local sr = dest[1]
-    local top = fn.line("w0", win)
-    local bot = fn.line("w$", win)
-    local off_screen = sr < top or bot < sr
+    local off_screen = sr < vim.call("line", "w0") or vim.call("line", "w$") < sr
     if off_screen then
         api.nvim_cmd({ cmd = "norm", args = { "m'" }, bang = true }, {})
     end
 
-    print(idx_cur, idx_dest)
     api.nvim_win_set_cursor(win, { sr + 1, dest[2] })
     api.nvim_cmd({ cmd = "norm", args = { "zv" }, bang = true }, {})
     if off_screen and ctx.zzze then
         api.nvim_cmd({ cmd = "norm", args = { "zzze" }, bang = true }, {})
     end
 end
--- TODO: If you are in the middle of a highlight, and go down, you will go down two.
 
 return M
-
--- TODO: issue where document highlight intermittently doesn't start, or like doesn't work until
--- you move

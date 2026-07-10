@@ -1,5 +1,7 @@
 local api = vim.api
 
+local HUGE_INT = math.floor(math.huge)
+
 ------------------
 -- MARK: Schema --
 ------------------
@@ -599,7 +601,7 @@ function M.document_highlight.jump_fwd(opts)
         return
     end
 
-    require("catharsis._document_highlight").jump(win, buf, vim.v.count1, false, ctx)
+    require("catharsis._document_highlight").jump(win, buf, vim.v.count, false, false, ctx)
 end
 
 ---@param opts? catharsis.documentHightlight.JumpOpts
@@ -615,7 +617,7 @@ function M.document_highlight.jump_rev(opts)
         return
     end
 
-    require("catharsis._document_highlight").jump(win, buf, vim.v.count1, true, ctx)
+    require("catharsis._document_highlight").jump(win, buf, vim.v.count, false, true, ctx)
 end
 
 ---@param opts? catharsis.documentHightlight.JumpOpts
@@ -631,7 +633,7 @@ function M.document_highlight.jump_last(opts)
         return
     end
 
-    require("catharsis._document_highlight").jump(win, buf, math.floor(math.huge), false, ctx)
+    require("catharsis._document_highlight").jump(win, buf, vim.v.count, true, false, ctx)
 end
 
 ---@param opts? catharsis.documentHightlight.JumpOpts
@@ -647,7 +649,7 @@ function M.document_highlight.jump_first(opts)
         return
     end
 
-    require("catharsis._document_highlight").jump(win, buf, math.floor(math.huge), true, ctx)
+    require("catharsis._document_highlight").jump(win, buf, vim.v.count, true, true, ctx)
 end
 
 -- TODO: You can probably outline most of the jump logic then just individually handle returning

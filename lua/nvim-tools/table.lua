@@ -3155,13 +3155,14 @@ end
 -- after the main group loop. Don't do this though without a concrete use case, as it makes the
 -- code more complicated.
 
----Iterate through a table, returning an arbitrarily new key and value for each original value.
+---Create a new |lua-table| by iterating through `t` and using funciton `f` to return arbitrary
+---new key/value pairs.
 ---@generic K, V, R, M
 ---@param t table<K, V>
 ---@param f fun(k:K, v:V): R|nil, M|nil
 ---@return table<R, M>
 function M.rebuild_to(t, f)
-    local ret = {}
+    local ret = {} ---@type table<R, M>
     for k, v in pairs(t) do
         local km, vm = f(k, v)
         if km ~= nil and vm ~= nil then

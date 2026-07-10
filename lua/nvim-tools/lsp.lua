@@ -163,6 +163,23 @@ function M.doc_hls_to_api_ranges(doc_hls, encoding, buf)
     return ranges
 end
 
+---@param response table
+---@return nvim-tools.range.BufRange? `nil` if the response is missing or invalid.
+function M.rename_range_get(response, buf, encoding)
+    local response_range = response.range
+    local ntr = require("nvim-tools.range")
+    if response_range then
+        return ntr.lsp_to_api(buf, response_range, encoding)
+    end
+
+    local response_start = response.start
+    if response_start then
+        return ntr.lsp_to_api(buf, response_start, encoding)
+    end
+
+    -- Likely a PrepareRenameDefaultBehavior response.
+end
+
 --------------------------
 -- MARK: Client Getting --
 --------------------------

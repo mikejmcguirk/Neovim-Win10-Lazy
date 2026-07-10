@@ -42,6 +42,19 @@ function M.between_(a, b, x)
     return a < x and x < b
 end
 
+---@param a any
+---@param b any
+---@return -1|0|1
+function M.cmp(a, b)
+    if a < b then
+        return -1
+    elseif b < a then
+        return 1
+    else
+        return 0
+    end
+end
+
 ---@audited 2026-07-03
 ---@param mode string Potentially multi-character mode.
 ---@return boolean

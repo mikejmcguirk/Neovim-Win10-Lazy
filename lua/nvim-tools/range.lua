@@ -57,10 +57,17 @@ end
 ---@param range nvim-tools.Range
 ---@param pos nvim-tools.Pos
 ---@return boolean
-function M.contains_pos(range, pos)
+function M.contains_pos_(range, pos)
+    local sr = range[1]
+    local er = range[3]
     local pr = pos[1]
     local pc = pos[2]
-    return range[1] <= pr and pr <= range[3] and range[2] <= pc and pc <= range[4]
+
+    if pr < sr or er < pr then
+        return false
+    end
+
+    return not ((pr == sr and pc < range[2]) or (pr == er and range[4] <= pc))
 end
 
 ---Assumes ranges are valid, sorted, and do not overlap.
@@ -385,6 +392,19 @@ local function doc_hl_to_range(doc_hl)
     }
 end
 
+---@param lsp_range lsp.Range
+---@return nvim-tools.Range
+function M.lsp_range_destructure(lsp_range)
+    local range_start = lsp_range.start
+    local range_end = lsp_range["end"]
+    return {
+        range_start.line,
+        range_start.character,
+        range_end.line,
+        range_end.character,
+    }
+end
+
 ---Unlike the Nvim core function, this does not handle LocationLink.
 ---@param buf uinteger
 ---@param ranges nvim-tools.range.BufRange[]|nvim-tools.range.DocHl[]
@@ -433,6 +453,19 @@ function M.lsp_ranges_to_api(buf, ranges, encoding)
 end
 
 ---@param buf uinteger
+---@param range lsp.Range
+---@param encoding lsp.PositionEncodingKind
+---@return nvim-tools.range.BufRange? `Nil` if the range is invalid.
+function M.lsp_to_api(buf, range, encoding)
+    local range_api = M.lsp_range_destructure(range)
+    ---@cast range_api nvim-tools.range.BufRange
+    range_api[5] = buf
+    return M.lsp_ranges_to_api(buf, { range_api }, encoding)[1]
+end
+-- MID: The cast here is sloppy.
+-- MID: Wrapping/unwrapping the range for the bulk processor works but is sub-optimal.
+
+---@param buf uinteger
 ---@param doc_hls lsp.DocumentHighlight[]
 ---@param encoding lsp.PositionEncodingKind
 ---@return nvim-tools.range.DocHl[] Invalid ranges (end_col <= start_col) discarded.
@@ -466,8 +499,9 @@ end
 ---@param buf uinteger
 ---@param row uinteger
 ---@param col uinteger
+---@param encoding lsp.PositionEncodingKind
 ---@return uinteger, uinteger
-local function ext_to_lsp_by_uints(buf, row, col, encoding)
+local function ext_to_lsp(buf, row, col, encoding)
     if col > 0 then
         local nts = require("nvim-tools.lsp")
         local line = nts.get_line(buf, row)
@@ -495,6 +529,8 @@ end
 -- single range, but this is still an avoidable perf sink.
 
 ---@param range nvim-tools.Range
+---@param buf uinteger
+---@param encoding lsp.PositionEncodingKind
 ---@return lsp.Range
 function M.api_to_lsp(range, buf, encoding)
     if encoding == "utf-8" then
@@ -504,8 +540,8 @@ function M.api_to_lsp(range, buf, encoding)
         }
     end
 
-    local sr, sc = ext_to_lsp_by_uints(buf, range[1], range[2], encoding)
-    local er, ec = ext_to_lsp_by_uints(buf, range[3], range[4], encoding)
+    local sr, sc = ext_to_lsp(buf, range[1], range[2], encoding)
+    local er, ec = ext_to_lsp(buf, range[3], range[4], encoding)
     return {
         start = { line = sr, character = sc },
         ["end"] = { line = er, character = ec },

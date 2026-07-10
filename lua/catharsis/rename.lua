@@ -25,10 +25,6 @@ local RENAME = "textDocument/rename"
 ---@field ref_win_info table<uinteger, catharsis.rename.WinInfo>
 ---@field symbol_len uinteger
 
--- LOW: It would be better for the ranges before and after the cursor to be stored separately
--- to avoid tortured iteration code. But this also means that the current win data can't be
--- stored as a WinInfo struct.
-
 ---@class (exact) catharsis.rename.WinInfo
 ---@field buf uinteger
 ---@field ns_dim uinteger
@@ -38,7 +34,9 @@ local RENAME = "textDocument/rename"
 local state_ns_cur_pos = api.nvim_create_namespace("catharsis.rename.cur_pos")
 local state_ns_dims = {} ---@type uinteger[]
 local state_ns_dynamics = {} ---@type uinteger[]
-local state_req_prep_rn_timer = assert(uv.new_timer())
+---@diagnostic disable-next-line: call-non-callable, unnecessary-assert
+
+local state_timer_req_prep_rn = assert(uv.new_timer())
 local state_req_refs_id = nil ---@type uinteger?
 
 local ns_basename = "catharsis.rename"
@@ -67,23 +65,20 @@ end
 
 ---@param total_needed uinteger
 local function ns_ensure(total_needed)
-    local ns_needed_dim = total_needed - #state_ns_dims
-    if ns_needed_dim > 0 then
-        for _ = 1, ns_needed_dim do
-            local ns_name_new = ns_basename_dim .. "." .. tostring(#state_ns_dims + 1)
-            -- TODO: not the same as the dim ones
-            state_ns_dims[#state_ns_dims + 1] = api.nvim_create_namespace(ns_name_new)
-        end
+    local ns_dims_len = #state_ns_dims
+    local ns_needed_dim = total_needed - ns_dims_len
+    for i = 1, ns_needed_dim do
+        local idx_new = ns_dims_len + i
+        local ns_name_new = ns_basename_dim .. "." .. tostring(idx_new)
+        state_ns_dims[idx_new] = api.nvim_create_namespace(ns_name_new)
     end
 
-    local ns_needed_dynamic = total_needed - #state_ns_dynamics
-    if ns_needed_dynamic > 0 then
-        local ns_dynamics_len = #state_ns_dynamics
-        for i = 1, ns_needed_dynamic do
-            local idx_new = ns_dynamics_len + i
-            local ns_name_new = ns_basename_dynamic .. "." .. tostring(idx_new)
-            state_ns_dynamics[idx_new] = api.nvim_create_namespace(ns_name_new)
-        end
+    local ns_dynamics_len = #state_ns_dynamics
+    local ns_needed_dynamic = total_needed - ns_dynamics_len
+    for i = 1, ns_needed_dynamic do
+        local idx_new = ns_dynamics_len + i
+        local ns_name_new = ns_basename_dynamic .. "." .. tostring(idx_new)
+        state_ns_dynamics[idx_new] = api.nvim_create_namespace(ns_name_new)
     end
 end
 
@@ -174,7 +169,6 @@ local function session_add_cur_win_ranges(session, ranges, cur_pos_idx)
     session.cur_pos_idx = cur_pos_idx
     session.cur_win_info.ranges = ranges
 end
--- TODO: Can more of the determining logic be put into here
 
 ---@param session catharsis.rename.Session
 ---@param cur_pos_ext [uinteger, uinteger]
@@ -516,27 +510,6 @@ end
 --------------------------
 
 ---@param ctx lsp.HandlerContext
----@param req_id uinteger
----@param client_id uinteger
----@return boolean, vim.lsp.Client?, mjm.lsp.HandlerContext_Validated?
-local function req_refs_handler_ctx_check(ctx, req_id, client_id)
-    local request_id = ctx.request_id
-    if not (request_id and request_id == req_id) then
-        return false
-    end
-
-    if ctx.client_id ~= client_id then
-        return false
-    end
-
-    local client = lsp.get_client_by_id(client_id)
-    if not client then
-        return false
-    end
-
-    return true, client, ctx --[[@as mjm.lsp.HandlerContext_Validated]]
-end
-
 ---@param err lsp.ResponseError?
 ---@param result lsp.Location[]
 ---@param ctx lsp.HandlerContext
@@ -544,14 +517,18 @@ end
 ---@param session catharsis.rename.Session
 ---@param cur_pos_ext [uinteger, uinteger]
 local function req_refs_handler(err, result, ctx, client_id, session, cur_pos_ext)
-    local req_id = state_req_refs_id
+    local request_id = state_req_refs_id
     state_req_refs_id = nil
-    if req_id == nil then
+    if request_id == nil then
         return
     end
 
-    local ok, client, ctx_validated = req_refs_handler_ctx_check(ctx, req_id, client_id)
-    if ok == false or client == nil or ctx_validated == nil then
+    if ctx.request_id ~= request_id or ctx.client_id ~= client_id then
+        return
+    end
+
+    local client = lsp.get_client_by_id(client_id)
+    if client == nil then
         return
     end
 
@@ -569,21 +546,22 @@ local function req_refs_handler(err, result, ctx, client_id, session, cur_pos_ex
     local cur_win = session.cur_win
     local ref_wins = api.nvim_tabpage_list_wins(0)
     local ntt = require("nvim-tools.table")
-    ntt.i_discard(ref_wins, function(win)
-        return win == cur_win
-            or vim.call("win_gettype", win) ~= ""
-            or api.nvim_win_get_config(win).hide == true
+    ntt.i_keep(ref_wins, function(win)
+        return win ~= cur_win
+            and vim.call("win_gettype", win) == ""
+            and api.nvim_win_get_config(win).hide ~= true
     end)
 
     local win_bufs = ntt.rebuild_to(ref_wins, function(_, ref_win)
         return ref_win, api.nvim_win_get_buf(ref_win)
     end)
+
+    ---@cast win_bufs table<uinteger, uinteger>
     win_bufs[cur_win] = session.cur_win_info.buf
 
     local nts = require("nvim-tools.lsp")
     local encoding = client.offset_encoding
     ---@type table<uinteger, true>
-    ---@diagnostic disable-next-line: assign-type-mismatch
     local bufs = ntt.rebuild_to(win_bufs, function(_, buf)
         return buf, true
     end)
@@ -677,29 +655,6 @@ end
 -- MARK: prepareRename Handling
 -------------------------------
 
----@param ctx lsp.HandlerContext
----@param buf uinteger
----@return boolean, vim.lsp.Client?, mjm.lsp.HandlerContext_Validated?
-local function req_prep_rn_handler_check_ctx(ctx, buf)
-    local resp_buf = ctx.bufnr
-    if not (resp_buf and resp_buf == buf) then
-        return false
-    end
-
-    local ctx_version = ctx.version
-    if not (ctx_version and ctx_version == util.buf_versions[resp_buf]) then
-        return false
-    end
-
-    local client_id = ctx.client_id
-    local client = lsp.get_client_by_id(client_id)
-    if not client then
-        return false
-    end
-
-    return true, client, ctx --[[@as mjm.lsp.HandlerContext_Validated]]
-end
-
 ---@param err lsp.ResponseError?
 ---@param result (lsp.Range|{ range: lsp.Range, placeholder: string }|{ defaultBehavior: boolean })?
 ---@param ctx lsp.HandlerContext
@@ -707,17 +662,22 @@ end
 ---@param cur_pos_ext [uinteger, uinteger]
 ---@param prompt_default boolean
 local function req_prep_rn_handler(err, result, ctx, session, cur_pos_ext, prompt_default)
-    if uv.is_active(state_req_prep_rn_timer) then
-        uv.timer_stop(state_req_prep_rn_timer)
+    if uv.is_active(state_timer_req_prep_rn) then
+        uv.timer_stop(state_timer_req_prep_rn)
     else
         lsp.log.info("prepareRename request arrived after timeout.")
         return
     end
 
     local buf = session.cur_win_info.buf
-    local ok, client, ctx_validated = req_prep_rn_handler_check_ctx(ctx, buf)
-    if ok == false or buf == nil or client == nil or ctx_validated == nil then
-        return
+    local ctx_version = ctx.version
+    if ctx.bufnr ~= buf or ctx_version == nil or ctx_version ~= util.buf_versions[buf] then
+        return false
+    end
+
+    local client = lsp.get_client_by_id(ctx.client_id)
+    if not client then
+        return false
     end
 
     if err ~= nil then
@@ -732,27 +692,19 @@ local function req_prep_rn_handler(err, result, ctx, session, cur_pos_ext, promp
         return
     end
 
-    local default_range
-    local encoding = client.offset_encoding
-    -- MID-DEP: If I have occasion to make a single-range LSP > API function, use here.
-    if result.range then
-        default_range = vim.range.lsp(buf, result.range, encoding)
-    elseif result.start then
-        default_range = vim.range.lsp(buf, result, encoding)
-    else
-        -- Likely a PrepareRenameDefaultBehavior response.
-        local ntb = require("nvim-tools.buf")
-        default_range = ntb.line_match_under_cursor(cur_pos_ext, buf, [[\k\+]])
-    end
-
-    if default_range == nil then
-        api.nvim_echo({ { "No range to rename", hl_warn } }, false, {})
-        return
-    end
-
+    local nts = require("nvim-tools.lsp")
     local ntb = require("nvim-tools.buf")
-    local default = prompt_default and ntb.text_from_range(default_range, buf) or ""
-    session_add_cur_win_ranges(session, { default_range }, 1)
+    local response_range = nts.rename_range_get(result, buf, client.offset_encoding)
+    if response_range == nil then
+        response_range = ntb.line_match_under_cursor(cur_pos_ext, buf, [[\k\+]])
+        if response_range == nil then
+            api.nvim_echo({ { "No range to rename", hl_warn } }, false, {})
+            return
+        end
+    end
+
+    local default = prompt_default and ntb.text_from_range(response_range, buf) or ""
+    session_add_cur_win_ranges(session, { response_range }, 1)
     rename_get_input(client, session, cur_pos_ext, default, true)
 end
 
@@ -793,7 +745,7 @@ local M = {}
 ---@param rn_ctx catharsis.rename.Ctx
 function M._dispatcher(cur_win, cur_buf, rn_ctx)
     local nts = require("nvim-tools.lsp")
-    if uv.is_active(state_req_prep_rn_timer) then
+    if uv.is_active(state_timer_req_prep_rn) then
         nts.log_and_echo("prepareRename request currently active.", 2, "", true)
         return
     end
@@ -839,7 +791,7 @@ function M._dispatcher(cur_win, cur_buf, rn_ctx)
 
     if req_success and req_id then
         uv.timer_start(
-            state_req_prep_rn_timer,
+            state_timer_req_prep_rn,
             5000,
             0,
             vim.schedule_wrap(function()

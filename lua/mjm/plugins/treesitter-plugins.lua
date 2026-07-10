@@ -176,6 +176,7 @@ local function map_objects(ev)
     -- MID: Try to define custom conditional swaps so that the inner condition is what can be
     -- swapped, also try to define the selections so that left and right can be selected
     -- individually. Last attempt at doing this did not work. Treesitter quries are nasty.
+    -- MID: Should be able to use (d/)d to swap elements of a Lua ternary.
 
     set({ "n", "x" }, "(", "<nop>", { buf = ev.buf })
     set({ "n", "x" }, ")", "<nop>", { buf = ev.buf })

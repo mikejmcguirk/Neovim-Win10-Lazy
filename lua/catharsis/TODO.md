@@ -2,41 +2,18 @@
 
 - [ ] Investigate if it's possible to do a file rename command that handles file logic, LSP, and git in one shot. I'm not sure if Oil and/or Fugitive and/or Core already do this.
 
-- [ ] Does the on_win callback contain the ns? Is it simpler to set a current win flag in the module that it is to edit the namespace? We have a namespace check in doc_hl anyway
-  - [ ] Related, in document highlight, we destroy and re-create the extmarks on mode-changed. Is it not possible to simply not render if the ns win doesn't match? There's already a check on that per win anyway, no? Though would this make on_win try to render every win for the namespace? Maybe a worthwhile tradeoff
-
 - [ ] In every module, removing "clearing" behavior and replace with niling/overwriting the relevant tables. This has a perf cost but is simpler to reason about.
   - [ ] rename
   - [ ] doc_hl
   - [ ] lampshade
 
-- [ ] For document highlight, go back to per client timers with win/cursor info. We want to allow requests to succeed that will be valid when returning to the window. Has to be a per-buffer aspect though since the scoring logic could provide different clients to each buffer.
-
-#### Lampshade
-
-- cursormoved/insertleave
-  * check valid curwin
-  * on insertleave, redraw if valid
-  * request
-- diagnosticchanged
-  * no insert mode
-  * check valid win/curwin
-  * refresh if not none to none diags
-- insertenter
-  * clear ns
-- notify clear
-  * clear
-- notify change
-  * clear
-  * request if curwin
-- didopen
-  * request if curwin
+- [ ] Fix any "HUGE_INT" values to actually be ints, and not floored infinity
 
 #### Rename
 
 - [ ] Come up with a name for this module (like lampshade)
 
-#### DOCUMENT HIGHLIGHT
+#### Document Highlight
 
 - [ ] Come up with a name for this module (like lampshade)
 
@@ -80,6 +57,16 @@
 
 - [ ] In any case where data is niled, table clear unless the buffer data is being purposefully destroyed.
 - [ ] Try to consolidate all of the ctx checking into common logic. Maybe pass an opts table?
+- [ ] Mode changes would be more performant if they did not destroy extmarks. I'm not sure how to implement this though in a way that is not complex and hacky, for a minimal perceived perf benefit.
+
+#### Lampshade:
+
+- [ ] Getting code actions only based on cursor position can produce effects where the server does not produce code actions for diagnostics you are within because the diagnostic context is too big for the cursor position (can be seen in Lua if you create syntactical mistakes in large tables). This behavior does not seem to be incorrect or inconsistent with Neovim, but creates weird UX.
+  - Fixing this though would be a lot of effort for something relatively low leverage
+    * Fully re-implementing code action requests and creating integrations to send them to pickers
+    * Trying to write a smart behavior for request ranges that is server agnostic
+    * Managing the difference between the request range and the cursor position
+- [ ] To save allocations - could hold the lamp's extmark ID in state. Creates parallel source of truth though.
 
 #### Rename:
 

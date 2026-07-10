@@ -2,7 +2,6 @@ local api = vim.api
 local fn = vim.fn
 local lsp = vim.lsp
 local util = lsp.util
-local uv = vim.uv
 
 local METHOD = "textDocument/codeAction" ---@type vim.lsp.protocol.Method.ClientToServer.Request
 
@@ -25,29 +24,34 @@ local lamp_hl_id = api.nvim_get_hl_id_by_name("CatharsisLampshade")
 ---@field version uinteger
 ---@field win uinteger
 
-local state_buf_lamp_data = {} ---@type table<uinteger, catharsis.lampshade.LampData>
+local state_buf_lamps = {} ---@type table<uinteger, catharsis.lampshade.LampData>
 local state_buf_reqs = {} ---@type table<uinteger, catharsis.lampshade.Request>
+local state_buf_timers = {} ---@type table<uinteger, uv.uv_timer_t>
 local state_ns = api.nvim_create_namespace("catharsis.lampshade")
 
--- Global timer since we use buf_request_all. Clients per request may overlap.
----@diagnostic disable-next-line: unnecessary-assert, call-non-callable
-local state_timer = assert(uv.new_timer()) ---@type uv.uv_timer_t
-
 ---@param buf uinteger
-local function lamp_data_and_ns_clear(buf)
-    state_buf_lamp_data[buf] = nil
-    api.nvim_buf_clear_namespace(buf, state_ns, 0, -1)
+local function lamp_and_ns_clear(buf)
+    state_buf_lamps[buf] = nil
+    if api.nvim_buf_is_valid(buf) then
+        api.nvim_buf_clear_namespace(buf, state_ns, 0, -1)
+    end
 end
 
 ---@param buf uinteger
-local function req_cancel(buf)
+local function timer_and_req_cancel(buf)
     local req = state_buf_reqs[buf]
-    if req == nil then
-        return
+    if req ~= nil then
+        req.cancel_func()
+        state_buf_reqs[buf] = nil
     end
 
-    req.cancel_func()
-    state_buf_reqs[buf] = nil
+    require("nvim-tools.timers").timers_stop(state_buf_timers, buf)
+end
+
+---@param buf uinteger
+local function state_buf_clear(buf)
+    timer_and_req_cancel(buf)
+    lamp_and_ns_clear(buf)
 end
 
 ----------------
@@ -60,25 +64,21 @@ local function cursor_ext_get(win)
     return require("nvim-tools.pos").mark_to_ext_pos(api.nvim_win_get_cursor(win))
 end
 
----@param win uinteger
----@return boolean
-local function set_ns_win(win)
-    if fn.win_gettype(win) == "" then
-        api.nvim__ns_set(state_ns, { wins = { win } })
-        return true
-    end
-
-    return false
-end
-
 ----------------------
 -- MARK: Decoration --
 ----------------------
 
-local function on_win(_, _, buf, _, _)
-    local lamp_data = state_buf_lamp_data[buf]
+local function on_win(_, win, buf, _, _)
+    local lamp_data = state_buf_lamps[buf]
     if lamp_data == nil then
         return
+    end
+
+    -- ns_set scopes which windows extmarks are drawn to, but not which wins on_win is called for.
+    -- ISSUE: This is unintuitive behavior.
+    local ns_wins = api.nvim__ns_get(state_ns).wins
+    if ns_wins == nil or ns_wins[1] ~= win then
+        return false
     end
 
     if require("nvim-tools.misc").is_insert_mode(api.nvim_get_mode().mode) then
@@ -102,12 +102,12 @@ api.nvim_set_decoration_provider(state_ns, { on_win = on_win })
 ---@param buf uinteger
 ---@param pos_ext [uinteger, uinteger]
 local function req_nvim_state_is_valid(win, buf, pos_ext)
-    if not api.nvim_win_is_valid(win) then
+    if api.nvim_get_current_win() ~= win then
         return false
     end
 
     if api.nvim_win_get_buf(win) ~= buf then
-        return
+        return false
     end
 
     local cursor_ext = cursor_ext_get(win)
@@ -117,21 +117,17 @@ end
 ---@param entries table<integer, vim.lsp.CodeActionResultEntry>
 ---@return boolean
 local function entries_have_diagnostics(entries)
-    local get = require("nvim-tools.table").get
-    for _, entry in pairs(entries) do
-        local diagnostics = get(entry, "context", "params", "context", "diagnostics")
-        if diagnostics ~= nil and #diagnostics > 0 then
-            return true
-        end
-    end
-
-    return false
+    local ntt = require("nvim-tools.table")
+    return require("nvim-tools.table").any(entries, function(_, entry)
+        local diagnostics = ntt.get(entry, "context", "params", "context", "diagnostics")
+        return diagnostics ~= nil and #diagnostics > 0
+    end)
 end
 
 ---@param entries table<integer, vim.lsp.CodeActionResultEntry>
 ---@param action_filter fun(client:vim.lsp.Client, action:lsp.Command|lsp.CodeAction): boolean
 ---@return boolean
-local function entries_have_valid_lens(entries, action_filter)
+local function entries_have_valid_actions(entries, action_filter)
     local ntt = require("nvim-tools.table")
     return ntt.any(entries, function(client_id, entry)
         local client = lsp.get_client_by_id(client_id)
@@ -150,7 +146,7 @@ end
 ---@param buf integer
 ---@param ca_ctx catharsis.lampshade.Ctx
 ---@return nil
-local function on_entries(entries, buf, ca_ctx)
+local function handler(entries, buf, ca_ctx)
     local req = state_buf_reqs[buf]
     if req == nil then
         return
@@ -158,17 +154,17 @@ local function on_entries(entries, buf, ca_ctx)
 
     local req_version = req.version
     local ntt = require("nvim-tools.table")
-    local entries_valid = ntt.all_nonempty(entries, function(_, entry)
+    local entries_stale = ntt.any(entries, function(_, entry)
         local ctx = entry.context
-        return ctx.bufnr == buf and ctx.version == req_version
+        return ctx.bufnr ~= buf or ctx.version ~= req_version
     end)
 
-    if not entries_valid then
+    if entries_stale then
         return
     end
 
     state_buf_reqs[buf] = nil
-    lamp_data_and_ns_clear(buf)
+    lamp_and_ns_clear(buf)
     for client_id, entry in pairs(entries) do
         local err = entry.err
         if err ~= nil then
@@ -184,11 +180,11 @@ local function on_entries(entries, buf, ca_ctx)
         return
     end
 
-    if not entries_have_valid_lens(entries, ca_ctx.action_filter) then
+    if not entries_have_valid_actions(entries, ca_ctx.action_filter) then
         return
     end
 
-    state_buf_lamp_data[buf] = {
+    state_buf_lamps[buf] = {
         display = ca_ctx.display,
         has_diagnostics = entries_have_diagnostics(entries),
         pos_ext = req_pos_ext,
@@ -204,12 +200,36 @@ end
 ---@return boolean
 local function diagnostic_contains_pos(row, col, diagnostic)
     local sr = diagnostic.lnum
-    if row < sr or (diagnostic.end_lnum or sr) < row then
+    local er = diagnostic.end_lnum or sr
+    if row < sr or er < row then
         return false
     end
 
     local sc = diagnostic.col
-    return sc <= col and col < (diagnostic.end_col or sc)
+    local ec_ = diagnostic.end_col or sc + 1
+    return not ((row == sr and col < sc) or (row == er and ec_ <= col))
+end
+
+---@param buf uinteger
+---@param pos_ext [uinteger, uinteger]
+---@return boolean, boolean, boolean
+local function lamp_ensure(_, buf, pos_ext)
+    local lamp = state_buf_lamps[buf]
+    if lamp == nil then
+        return true, false, false
+    end
+
+    local outdated = lamp.version ~= util.buf_versions[buf]
+    local lamp_pos_ext = lamp.pos_ext
+    if outdated or lamp_pos_ext[1] ~= pos_ext[1] then
+        return true, true, false
+    end
+
+    if lamp_pos_ext[2] ~= pos_ext[2] then
+        return true, false, false
+    end
+
+    return false, false, #api.nvim_buf_get_extmarks(buf, state_ns, 0, -1, {}) == 0
 end
 
 ---@param buf uinteger
@@ -219,29 +239,54 @@ local function req_win_get(buf)
     if api.nvim_win_get_buf(win) ~= buf or fn.win_gettype(win) ~= "" then
         return
     end
+
+    return win
 end
 
----@param win uinteger?
 ---@param buf uinteger
----@param pos_ext [uinteger, uinteger]? 0-indexed
-local function req_auto(win, buf, pos_ext)
+---@param keep_fn fun(win:uinteger, buf:uinteger, pos_ext:[uinteger,uinteger]): boolean, boolean, boolean
+---Returns:
+---- do_req: Continue requesting?
+---- clear_lamp: Clear the lamp and its display namespace?
+---- do_redraw: Stage a redraw?
+local function req_auto(buf, keep_fn)
+    if require("nvim-tools.misc").is_insert_mode(api.nvim_get_mode().mode) then
+        return
+    end
+
     local ok, ca_ctx, err = require("catharsis")._get_merged_config(buf, nil, "lampshade")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
     end
 
-    win = win or req_win_get(buf)
+    local win = req_win_get(buf)
     if not win then
         return
     end
 
-    pos_ext = pos_ext or cursor_ext_get(win)
-    req_cancel(buf)
-    require("nvim-tools.timers").timer_stop(state_timer)
-    state_timer:start(
+    local pos_ext = cursor_ext_get(win)
+    local do_req, clear_lamp, do_redraw = keep_fn(win, buf, pos_ext)
+    if do_req then
+        timer_and_req_cancel(buf)
+    end
+
+    if clear_lamp then
+        state_buf_clear(buf)
+    end
+
+    if do_redraw then
+        api.nvim__redraw({ buf = buf, valid = true, flush = false })
+    end
+
+    if not do_req then
+        return
+    end
+
+    require("nvim-tools.timers").timers_do_after_debounce(
+        state_buf_timers,
+        buf,
         ca_ctx.debounce,
-        0,
         vim.schedule_wrap(function()
             if not api.nvim_buf_is_valid(buf) then
                 return
@@ -264,7 +309,7 @@ local function req_auto(win, buf, pos_ext)
             end
 
             local cancel_func = lsp.buf_request_all(buf, METHOD, params, function(results)
-                on_entries(results, buf, ca_ctx)
+                handler(results, buf, ca_ctx)
             end)
 
             state_buf_reqs[buf] = {
@@ -276,8 +321,8 @@ local function req_auto(win, buf, pos_ext)
         end)
     )
 end
--- Because the _features layer checks for compatible clients, and we don't do bepsoke filtering
--- here, no checking for valid clients here.
+-- Because _features should not send us invalid buffers, and because buf_request_all precludes us
+-- from doing bespoke client filtering, don't bother checking.
 
 local group_name_root = "catharsis.lampshade."
 local function get_buf_group_name(bufnr)
@@ -298,76 +343,36 @@ local M = {
             group = buf_group,
             buffer = bufnr,
             desc = "Conditionally update the lamp",
-            callback = function(ev)
-                local win = api.nvim_get_current_win()
-                if fn.win_gettype(win) ~= "" then
-                    return
-                end
-
-                local buf = ev.buf
-                local cur_pos_ext = cursor_ext_get(win)
-                local lamp_data = state_buf_lamp_data[buf]
-                if lamp_data ~= nil then
-                    if require("nvim-tools.table").i_equals(lamp_data.pos_ext, cur_pos_ext) then
-                        if ev.event == "InsertLeave" then
-                            api.nvim__redraw({ buf = buf, valid = true, flush = false })
-                        end
-
-                        return
-                    end
-                end
-
-                req_auto(win, buf, cur_pos_ext)
-            end,
+            callback = vim.schedule_wrap(function(ev)
+                req_auto(ev.buf, lamp_ensure)
+            end),
         })
 
         api.nvim_create_autocmd("DiagnosticChanged", {
             group = buf_group,
             buffer = bufnr,
             desc = "Update the lamp on diagnostic changes",
-            callback = function(ev)
-                if require("nvim-tools.misc").is_insert_mode(api.nvim_get_mode().mode) then
-                    return
-                end
-
-                local buf = ev.buf
-                local win = api.nvim_get_current_win()
-                local is_cur_win = api.nvim_win_get_buf(win) ~= buf or fn.win_gettype(win) ~= ""
-                local lamp = state_buf_lamp_data[buf]
-                if lamp == nil and not is_cur_win then
-                    return
-                end
-
-                if lamp ~= nil and lamp.has_diagnostics then
-                    if is_cur_win then
-                        req_auto(win, buf, cursor_ext_get(win))
-                    else
-                        lamp_data_and_ns_clear(buf)
+            callback = vim.schedule_wrap(function(ev)
+                req_auto(ev.buf, function(_, buf, pos_ext)
+                    local lamp = state_buf_lamps[buf]
+                    if lamp == nil then
+                        return true, false, false
                     end
 
-                    return
-                end
+                    if lamp.has_diagnostics then
+                        return true, true, false
+                    end
 
-                local ntt = require("nvim-tools.table")
-                local lamp_pos_ext = lamp.pos_ext
-                local row = lamp_pos_ext[1]
-                local col = lamp_pos_ext[2]
-                local ev_diagnostics_have_pos = ntt.i_any(ev.data.diagnostics, function(diagnostic)
-                    return diagnostic_contains_pos(row, col, diagnostic)
+                    local diagnostics = ev.data.diagnostics
+                    local ntt = require("nvim-tools.table")
+                    local diags_contain_pos = ntt.any(diagnostics, function(diagnostic)
+                        return diagnostic_contains_pos(pos_ext[1], pos_ext[2], diagnostic)
+                    end)
+
+                    return diags_contain_pos, diags_contain_pos, false
                 end)
-
-                if not ev_diagnostics_have_pos then
-                    return
-                end
-
-                if is_cur_win then
-                    req_auto(win, buf, cursor_ext_get(win))
-                else
-                    lamp_data_and_ns_clear(buf)
-                end
-            end,
+            end),
         })
-        -- NON: Don't send ev diagnostics for the request, since they could become stale.
 
         api.nvim_create_autocmd("InsertEnter", {
             group = buf_group,
@@ -375,7 +380,7 @@ local M = {
             desc = "Clear lamp on insert mode",
             callback = function(ev)
                 local buf = ev.buf
-                if state_buf_lamp_data[buf] ~= nil then
+                if state_buf_lamps[buf] ~= nil then
                     api.nvim_buf_clear_namespace(buf, state_ns, 0, -1)
                 end
             end,
@@ -385,50 +390,47 @@ local M = {
             buffer = bufnr,
             group = buf_group,
             desc = "Refresh document highlights on document changes",
-            callback = function(ev)
+            callback = vim.schedule_wrap(function(ev)
                 local method = ev.data.method --- @type string
                 local buf = ev.buf
-                if method == "textDocument/didClose" then
-                    lamp_data_and_ns_clear(buf)
-                    return
-                end
-
                 if method == "textDocument/didChange" or method == "textDocument/didOpen" then
-                    local lamp = state_buf_lamp_data[buf]
-                    if lamp and lamp.version == util.buf_versions[buf] then
-                        return
-                    end
-
-                    req_auto(nil, buf, nil)
+                    req_auto(ev.buf, lamp_ensure)
+                elseif method == "textDocument/didClose" then
+                    state_buf_clear(buf)
                 end
-            end,
+            end),
         })
 
         api.nvim_create_autocmd("WinEnter", {
             group = buf_group,
             buffer = bufnr,
             desc = "Set Lampshade ns to the current window",
-            callback = function()
-                set_ns_win(api.nvim_get_current_win())
-            end,
+            callback = vim.schedule_wrap(function()
+                local win = api.nvim_get_current_win()
+                if fn.win_gettype(win) == "" then
+                    api.nvim__ns_set(state_ns, { wins = { win } })
+                end
+            end),
         })
 
-        local win = req_win_get(bufnr)
-        if not win then
-            return
-        end
+        vim.schedule(function()
+            local win = req_win_get(bufnr)
+            if not win then
+                return
+            end
 
-        api.nvim__ns_set(state_ns, { wins = { win } })
-        req_auto(win, bufnr, cursor_ext_get(win))
+            api.nvim__ns_set(state_ns, { wins = { win } })
+            req_auto(bufnr, lamp_ensure)
+        end)
     end,
     on_buf_rm = function(buf)
-        req_cancel(buf)
+        timer_and_req_cancel(buf)
         local buf_group_name = get_buf_group_name(buf)
         if fn.exists("#" .. buf_group_name) == 1 then
             api.nvim_del_augroup_by_name(buf_group_name)
         end
 
-        lamp_data_and_ns_clear(buf)
+        lamp_and_ns_clear(buf)
     end,
     on_client_detach = function(_, _, _) end,
     on_client_add = function(_) end,

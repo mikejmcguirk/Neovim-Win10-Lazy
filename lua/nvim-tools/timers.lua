@@ -23,8 +23,9 @@ function M.timer_stop(timer)
 end
 
 ---@generic T
----@param timers table<T, uv.uv_timer_t|nil>
+---@param timers table<T, uv.uv_timer_t>
 ---@param k T
+---@return uv.uv_timer_t
 function M.timers_get_with_checked_create(timers, k)
     local timer = timers[k]
     if timer ~= nil then
@@ -54,7 +55,7 @@ function M.timers_rm(timers, k)
 end
 
 ---@generic T
----@param timers table<T, uv.uv_timer_t|nil>
+---@param timers table<T, uv.uv_timer_t>
 ---@param k T
 ---@param debounce uinteger
 ---@param f function
