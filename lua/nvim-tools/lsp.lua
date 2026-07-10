@@ -79,21 +79,22 @@ end
 ---Unlike the Nvim core function, this does not handle LocationLink.
 ---@param results lsp.Location[]
 ---@param encoding lsp.PositionEncodingKind
----@param bufs table<integer, true>? If not `nil`, only return results in the listed bufs.
+---@param bufs table<uinteger, true>? If not `nil`, only return results in the listed bufs.
 ---@return table<uinteger, nvim-tools.range.BufRange[]>
 function M.locations_to_api_ranges_by_buf(results, encoding, bufs)
     -- Saves non-trivial time on large result sets.
-    local uri_bufnr_cache = {} ---@type table<string, uinteger>
-    local buf_locations = {} ---@type table<integer, lsp.Location[]>
+    local uri_bufnr_cache = {} ---@type table<lsp.DocumentUri, uinteger>
+    local buf_locations = {} ---@type table<uinteger, lsp.Location[]>
     local ntt = require("nvim-tools.table")
     for _, result in ipairs(results) do
         local uri = result.uri
         local bufnr = uri_bufnr_cache[uri]
         if bufnr == nil then
-            bufnr = vim.uri_to_bufnr(uri)
+            bufnr = vim.uri_to_bufnr(uri) ---@type uinteger
             uri_bufnr_cache[uri] = bufnr
         end
 
+        ---@type lsp.Location[]
         local locations = ntt.get_or_set_subtable(buf_locations, bufnr)
         locations[#locations + 1] = result
     end
@@ -104,12 +105,13 @@ function M.locations_to_api_ranges_by_buf(results, encoding, bufs)
         end)
     end
 
-    if not next(buf_locations) then
+    if next(buf_locations) == nil then
         return {}
     end
 
     local ntr = require("nvim-tools.range")
-    ---@type table<integer, nvim-tools.range.BufRange[]>
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    ---@type table<uinteger, nvim-tools.range.BufRange[]>
     local buf_ranges = ntt.filter_map_to(buf_locations, function(buf, locations)
         return ntr.lsp_locations_to_api(buf, locations, encoding)
     end)
@@ -119,11 +121,13 @@ function M.locations_to_api_ranges_by_buf(results, encoding, bufs)
     end
 
     for _, ranges in pairs(buf_ranges) do
+        ---@diagnostic disable-next-line: param-type-mismatch
         table.sort(ranges, ntr.range_sort_predicate_asc)
     end
 
     return buf_ranges
 end
+-- LOW: You can do `bufs` as a list then iterate through the list to nil buf locations.
 
 ---@param doc_hls lsp.DocumentHighlight[]
 ---@param encoding lsp.PositionEncodingKind
@@ -247,6 +251,7 @@ local function score_document_filter(filter, doc_language, doc_uri, doc_fname)
         pattern = pattern.pattern or ""
     end
 
+    ---@cast pattern string
     if pattern == "" then
         return 0
     end
@@ -284,7 +289,7 @@ local function score_dynamic_capability(capability, lang, fname, uri)
         return 0
     end
 
-    -- return score
+    ---@cast doc_sel lsp.DocumentFilter[]
     local ntt = require("nvim-tools.table")
     return ntt.i_fold(doc_sel, 0, function(score, filter)
         if score == 10 then
@@ -323,7 +328,7 @@ end
 -- TODO: This does not properly handle resolve the client request method to the server
 -- provider.
 
----@param clients vim.lsp.Client
+---@param clients vim.lsp.Client[]
 ---@param buf uinteger
 ---@param methods (vim.lsp.protocol.Method.ClientToServer|vim.lsp.protocol.Method.Registration)[]
 ---@return uinteger?, vim.lsp.Client?
@@ -340,20 +345,20 @@ local function client_find_from_top_score(clients, buf, methods)
     end
 
     local ft = api.nvim_get_option_value("ft", { buf = buf })
-    local fname = vim.api.nvim_buf_get_name(buf)
+    local fname = api.nvim_buf_get_name(buf)
     local uri = fname ~= "" and vim.uri_from_fname(fname) or ""
-    local top_client = ntt.i_fold(clients, { -1, nil, -1 }, function(top_client, client)
+    local top_client = ntt.i_fold(clients, { -1, nil, -1 }, function(top, client)
         local total_score = ntt.i_fold(methods, 0, function(score, method)
             return score + client_get_method_score(client, method, buf, ft, fname, uri)
         end)
 
-        if top_client[3] < total_score then
-            top_client[1] = client.id
-            top_client[2] = client
-            top_client[3] = total_score
+        if top[3] < total_score then
+            top[1] = client.id
+            top[2] = client
+            top[3] = total_score
         end
 
-        return top_client
+        return top
     end)
 
     return top_client[1], top_client[2]
@@ -429,7 +434,7 @@ end
 ---@param buf uinteger
 ---@param range_api nvim-tools.Range
 ---@param encoding "utf-8"|"utf-16"|"utf-32"
----@return lsp.TextDocumentPositionParams
+---@return { textDocument:{ uri:lsp.DocumentUri }, range:lsp.Range }
 function M.text_doc_range_params_create(buf, range_api, encoding)
     local text_document = { uri = vim.uri_from_bufnr(buf) }
     local range = require("nvim-tools.range").api_to_lsp(range_api, buf, encoding)
@@ -442,7 +447,7 @@ end
 ---@param context vim.lsp.buf.code_action.context
 ---@return lsp.CodeActionParams
 function M.code_action_params_create(buf, range_api, encoding, context)
-    local params_range = M.text_doc_range_params_create(buf, range_api, encoding)--[[ @as lsp.CodeActionParams ]]
+    local params_range = M.text_doc_range_params_create(buf, range_api, encoding) --[[@as lsp.CodeActionParams]]
     -- Must not be null per the spec.
     if context.diagnostics == nil then
         context.diagnostics = {}
@@ -452,29 +457,9 @@ function M.code_action_params_create(buf, range_api, encoding, context)
     return params_range
 end
 
----@param win integer?: |window-ID| or 0 for current, defaults to current
----@param position_encoding "utf-8"|"utf-16"|"utf-32"
----@return { textDocument: { uri: lsp.DocumentUri }, range: lsp.Range }
-function M.make_range_params(win, position_encoding)
-    win = win or 0
-    local buf = api.nvim_win_get_buf(win)
-    local position = vim.pos.cursor(buf, api.nvim_win_get_cursor(win)):to_lsp(position_encoding)
-    return {
-        textDocument = M.make_text_document_params(buf),
-        range = { start = position, ["end"] = position },
-    }
-end
-
 -------------------
 -- MARK: Logging --
 -------------------
-
----@param msg string
-function M.log_warn_and_echo(msg)
-    api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
-    lsp.log.warn(msg)
-end
--- TODO: Replace all with log_and_echo
 
 local level_names = {
     [0] = "trace",
@@ -498,7 +483,7 @@ end
 function M.log_unsupported_and_echo(method)
     local fmt_str = "vim.lsp: method %q is not supported by any server activated for this buffer"
     local msg = string.format(fmt_str, method)
-    M.log_warn_and_echo(msg)
+    M.log_and_echo(msg, 3, "WarningMsg", true)
 end
 
 -----------------------

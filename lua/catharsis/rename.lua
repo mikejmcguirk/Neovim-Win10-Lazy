@@ -34,8 +34,8 @@ local RENAME = "textDocument/rename"
 local state_ns_cur_pos = api.nvim_create_namespace("catharsis.rename.cur_pos")
 local state_ns_dims = {} ---@type uinteger[]
 local state_ns_dynamics = {} ---@type uinteger[]
----@diagnostic disable-next-line: call-non-callable, unnecessary-assert
 
+---@diagnostic disable-next-line: call-non-callable, unnecessary-assert
 local state_timer_req_prep_rn = assert(uv.new_timer())
 local state_req_refs_id = nil ---@type uinteger?
 
@@ -795,7 +795,7 @@ function M._dispatcher(cur_win, cur_buf, rn_ctx)
             5000,
             0,
             vim.schedule_wrap(function()
-                nts.log_warn_and_echo("prepareRename timed out")
+                nts.log_and_echo("prepareRename timed out", 3, "WarningMsg", true)
             end)
         )
     end

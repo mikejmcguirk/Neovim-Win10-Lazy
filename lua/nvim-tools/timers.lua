@@ -32,6 +32,7 @@ function M.timers_get_with_checked_create(timers, k)
         return timer
     end
 
+    ---@diagnostic disable-next-line: unnecessary-assert, call-non-callable
     timer = assert(uv.new_timer())
     timers[k] = timer
     return timer

@@ -331,7 +331,7 @@ end
 
 --- @type catharsis.feature.Spec
 local M = {
-    method = "textDocument/codeAction",
+    method = METHOD,
     on_buf_add = function(bufnr)
         local buf_group_name = get_buf_group_name(bufnr)
         if fn.exists("#" .. buf_group_name) == 1 then

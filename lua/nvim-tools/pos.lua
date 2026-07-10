@@ -118,11 +118,14 @@ function M.ext_to_lsp(pos, buf, encoding)
     end
 
     if col > 0 then
-        local nts = require("nvim-tools.lsp")
-        local line = nts.get_line(buf, row)
-        local nti = require("nvim-tools.str")
+        local line = require("nvim-tools.lsp").get_line(buf, row)
         ---@diagnostic disable-next-line: param-type-mismatch
-        col = nti.str_utfindex(line, encoding, col)
+        col = require("nvim-tools.str").str_utfindex(line, encoding, col)
+        return { line = row, character = col }
+    elseif col == -1 then
+        local line = require("nvim-tools.lsp").get_line(buf, row)
+        ---@diagnostic disable-next-line: param-type-mismatch
+        col = require("nvim-tools.str").str_utfindex(line, encoding, #line - 1)
         return { line = row, character = col }
     end
 
@@ -132,14 +135,14 @@ function M.ext_to_lsp(pos, buf, encoding)
     end
 
     row = row - 1
-    local nts = require("nvim-tools.lsp")
-    local line = nts.get_line(buf, row)
-    local nti = require("nvim-tools.str")
+    ---@cast row uinteger
+    local line = require("nvim-tools.lsp").get_line(buf, row)
     ---@diagnostic disable-next-line: param-type-mismatch
-    col = nti.str_utfindex(line, encoding, col)
+    col = require("nvim-tools.str").str_utfindex(line, encoding, col)
     return { line = row, character = col }
 end
--- TODO: Handle col -1 in Nvim = end of line
+-- MID: Goofy edge case with -1 handling where if -1 col is the end of a range, how do we know
+-- if it should be end-exclusive? Might be upstream data issue.
 
 ---@audited 2026-07-03
 ---@param row integer 0 indexed

@@ -509,7 +509,7 @@ function M.protected_del(buf, delist, opts)
 end
 
 ---@audited 2026-07-03
----@param range nvim-tools.Range|nvim-tools.range.BufRange
+---@param range nvim-tools.Range
 ---@param buf uinteger
 ---@return string
 function M.text_from_range(range, buf)

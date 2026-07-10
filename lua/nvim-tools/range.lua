@@ -7,14 +7,17 @@ local M = {}
 -- MARK: Aliases --
 -------------------
 
----@alias nvim-tools.Range [uinteger, uinteger, uinteger, uinteger]
--- TODO: This should be a union type of every range. So you have like just the uints, then
--- one with a buf, then one with a doc_hl, and so on
-
 ---Buf should be in position 5 for compatibility with vim.range.
 ---@alias nvim-tools.range.BufRange  [uinteger, uinteger, uinteger, uinteger, uinteger]
 
 ---@alias nvim-tools.range.DocHl [uinteger, uinteger, uinteger, uinteger, lsp.DocumentHighlightKind?]
+
+---@alias nvim-tools.Range [uinteger, uinteger, uinteger, uinteger]|
+---nvim-tools.range.BufRange|
+---nvim-tools.range.DocHl
+
+-- TODO: This should be a union type of every range. So you have like just the uints, then
+-- one with a buf, then one with a doc_hl, and so on
 
 ----------------------
 -- MARK: Comparison --
@@ -165,6 +168,7 @@ function M.cmp(a, b)
 
         -- Pretend the end index is exclusive for the adjacency math.
         local e_s = p_cmp(a[3], a[4] + 1, b[1], b[2])
+        ---@diagnostic disable-next-line: return-type-mismatch
         return -2 - e_s
     end
 
@@ -175,9 +179,11 @@ function M.cmp(a, b)
 
         -- Pretend the end index is exclusive for the adjacency math.
         local s_e = p_cmp(a[1], a[2] + 1, b[3], b[4])
+        ---@diagnostic disable-next-line: return-type-mismatch
         return 2 - s_e
     end
 
+    ---@diagnostic disable-next-line: return-type-mismatch
     return e_e * -4
 end
 
@@ -205,6 +211,7 @@ function M.cmp_(a, b)
         end
 
         local e_s = p_cmp(a[3], a[4], b[1], b[2])
+        ---@diagnostic disable-next-line: return-type-mismatch
         return -2 - e_s
     end
 
@@ -214,9 +221,11 @@ function M.cmp_(a, b)
         end
 
         local s_e = p_cmp(a[1], a[2], b[3], b[4])
+        ---@diagnostic disable-next-line: return-type-mismatch
         return 2 - s_e
     end
 
+    ---@diagnostic disable-next-line: return-type-mismatch
     return e_e * -4
 end
 
@@ -409,7 +418,8 @@ end
 ---@param buf uinteger
 ---@param ranges nvim-tools.range.BufRange[]|nvim-tools.range.DocHl[]
 ---@param encoding lsp.PositionEncodingKind
----@return nvim-tools.range.BufRange[] Invalid ranges (end_col <= start_col) discarded.
+---@return nvim-tools.range.BufRange[]|nvim-tools.range.DocHl[]
+---Invalid ranges (end_col <= start_col) are discarded.
 function M.lsp_ranges_to_api(buf, ranges, encoding)
     local ntt = require("nvim-tools.table")
     if encoding == "utf-8" then
@@ -460,10 +470,12 @@ function M.lsp_to_api(buf, range, encoding)
     local range_api = M.lsp_range_destructure(range)
     ---@cast range_api nvim-tools.range.BufRange
     range_api[5] = buf
+    ---@diagnostic disable-next-line: return-type-mismatch
     return M.lsp_ranges_to_api(buf, { range_api }, encoding)[1]
 end
 -- MID: The cast here is sloppy.
--- MID: Wrapping/unwrapping the range for the bulk processor works but is sub-optimal.
+-- MID: Wrapping/unwrapping the range for the bulk processor works but is sub-optimal. It also
+-- makes the type checker complain.
 
 ---@param buf uinteger
 ---@param doc_hls lsp.DocumentHighlight[]
@@ -471,10 +483,12 @@ end
 ---@return nvim-tools.range.DocHl[] Invalid ranges (end_col <= start_col) discarded.
 function M.lsp_doc_hls_to_api(buf, doc_hls, encoding)
     local ntt = require("nvim-tools.table")
+    ---@diagnostic disable-next-line: assign-type-mismatch
     local ranges = ntt.i_filter_map_to(doc_hls, function(doc_hl)
         return doc_hl_to_range(doc_hl)
     end)
 
+    ---@diagnostic disable-next-line: return-type-mismatch
     return M.lsp_ranges_to_api(buf, ranges, encoding)
 end
 
@@ -485,10 +499,12 @@ end
 ---@return nvim-tools.range.BufRange[] Invalid ranges (end_col <= start_col) discarded.
 function M.lsp_locations_to_api(buf, locations, encoding)
     local ntt = require("nvim-tools.table")
+    ---@diagnostic disable-next-line: assign-type-mismatch
     local ranges = ntt.i_filter_map_to(locations, function(location)
         return location_to_range(location, buf)
     end)
 
+    ---@diagnostic disable-next-line: return-type-mismatch
     return M.lsp_ranges_to_api(buf, ranges, encoding)
 end
 
@@ -517,6 +533,7 @@ local function ext_to_lsp(buf, row, col, encoding)
     end
 
     row = row - 1
+    ---@cast row uinteger
     local nts = require("nvim-tools.lsp")
     local line = nts.get_line(buf, row)
     local nti = require("nvim-tools.str")
