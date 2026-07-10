@@ -579,7 +579,7 @@ function M.rename(opts)
         error(err)
     end
 
-    require("catharsis.rename")._dispatcher(cur_win, cur_buf, ctx)
+    require("catharsis._rename")._dispatcher(cur_win, cur_buf, ctx)
 end
 
 ---@nodoc

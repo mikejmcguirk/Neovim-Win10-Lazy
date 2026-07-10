@@ -804,5 +804,3 @@ function M._dispatcher(cur_win, cur_buf, rn_ctx)
 end
 
 return M
-
--- TODO: Rename this file to an underscore name.
