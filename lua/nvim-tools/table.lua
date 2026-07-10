@@ -992,16 +992,15 @@ function M.i_every_nonempty(t, val, key)
     return i_every_do(#t, t, val, key)
 end
 
----Iterate through `t1` and `t2`, comparing their elements by index. Optionally provide a `key`
----to process the values.
----
----True if both tables are length zero. Always `false` if the tables are different lengths.
----@mark evaluation
----@generic T, U
+---Iterate through the indices of `t1` and `t2`, comparing the corresponding values, optionally
+---using a `key`.
+---@mark eval
+---@audited 2026-07-10
+---@generic T
 ---@param t1 T[]
----@param t2 U[]
+---@param t2 T[]
 ---@param key nil|string|fun(v:T): any See: |key_fn|.
----@return boolean
+---@return boolean `True` if both tables are empty. `False` of their lengths are different.
 function M.i_equals(t1, t2, key)
     local len = #t1
     local t2_len = #t2

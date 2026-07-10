@@ -59,6 +59,7 @@ api.nvim_create_autocmd("LspAttach", {
         local buf = ev.buf
         for _, map in ipairs(maps) do
             for _, mode in ipairs(map[1]) do
+                -- MID: Use `mapcheck()` or `hasmapto()`
                 if #vim.call("maparg", map[3]) == 0 then
                     api.nvim_buf_set_keymap(buf, mode, map[3], map[2], {
                         noremap = true,

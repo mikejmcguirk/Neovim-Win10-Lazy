@@ -40,8 +40,8 @@ local state_timer_req_prep_rn = assert(uv.new_timer())
 local state_req_refs_id = nil ---@type uinteger?
 
 local ns_basename = "catharsis.rename"
-local ns_basename_dim = ns_basename .. ".dim"
-local ns_basename_dynamic = ns_basename .. ".dynamic"
+local ns_dim_basename = ns_basename .. ".dim"
+local ns_dynamic_basename = ns_basename .. ".dynamic"
 
 ---@param session catharsis.rename.Session
 local function clear_dim_namespaces(session)
@@ -69,7 +69,7 @@ local function ns_ensure(total_needed)
     local ns_needed_dim = total_needed - ns_dims_len
     for i = 1, ns_needed_dim do
         local idx_new = ns_dims_len + i
-        local ns_name_new = ns_basename_dim .. "." .. tostring(idx_new)
+        local ns_name_new = ns_dim_basename .. "." .. tostring(idx_new)
         state_ns_dims[idx_new] = api.nvim_create_namespace(ns_name_new)
     end
 
@@ -77,10 +77,12 @@ local function ns_ensure(total_needed)
     local ns_needed_dynamic = total_needed - ns_dynamics_len
     for i = 1, ns_needed_dynamic do
         local idx_new = ns_dynamics_len + i
-        local ns_name_new = ns_basename_dynamic .. "." .. tostring(idx_new)
+        local ns_name_new = ns_dynamic_basename .. "." .. tostring(idx_new)
         state_ns_dynamics[idx_new] = api.nvim_create_namespace(ns_name_new)
     end
 end
+-- MID: This is goofy, because the *association* between the wins and the namespaces is not
+-- stored anywhere.
 
 ---@param win uinteger
 ---@param ranges nvim-tools.range.BufRange[]
@@ -802,3 +804,5 @@ function M._dispatcher(cur_win, cur_buf, rn_ctx)
 end
 
 return M
+
+-- TODO: Rename this file to an underscore name.

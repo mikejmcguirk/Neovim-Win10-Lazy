@@ -35,7 +35,7 @@ local state_timers = {} ---@type table<uinteger, uv.uv_timer_t>
 ---@param buf uinteger
 ---@param client_id? uinteger
 ---@param client? vim.lsp.Client
-local function actv_req_cancel(buf, client_id, client)
+local function req_cancel(buf, client_id, client)
     local req = state_reqs[buf]
     if req == nil then
         return
@@ -56,10 +56,16 @@ local function actv_req_cancel(buf, client_id, client)
     client:cancel_request(req.id)
 end
 
+---@param buf uinteger
+local function timer_and_req_cancel(buf)
+    req_cancel(buf)
+    require("nvim-tools.timers").timers_stop(state_timers, buf)
+end
+
 ---@param res mjm.lsp.documentHighlight.Result
 ---@param buf uinteger
 ---@param wipe "decor"|"del"
-local function res_reset(res, buf, wipe)
+local function res_clear(res, buf, wipe)
     local has_decor = #api.nvim_buf_get_extmarks(buf, state_ns, 0, -1, { limit = 1 }) > 0
     if has_decor then
         if api.nvim_buf_is_valid(buf) then
@@ -83,52 +89,11 @@ end
 
 ---@param buf uinteger
 ---@param wipe "decor"|"del"
-local function from_buf_res_reset(buf, wipe)
+local function from_buf_res_clear(buf, wipe)
     local buf_res = state_results[buf]
     if buf_res then
-        res_reset(buf_res, buf, wipe)
+        res_clear(buf_res, buf, wipe)
     end
-end
-
----@param res mjm.lsp.documentHighlight.Result
----@param buf uinteger
----@param version boolean
----@param cur_pos_ext? [uinteger, uinteger]
----@return boolean
-local function res_ensure_updated(res, buf, version, cur_pos_ext)
-    if version then
-        local res_version = res.version
-        if res_version > -1 and res_version ~= util.buf_versions[buf] then
-            res_reset(res, buf, "del")
-            return false
-        end
-    end
-
-    if cur_pos_ext ~= nil then
-        local ntr = require("nvim-tools.range")
-        if ntr.find_pos(res.highlights, cur_pos_ext) ~= nil then
-            if #api.nvim_buf_get_extmarks(buf, state_ns, 0, -1, { limit = 1 }) > 0 then
-                api.nvim__redraw({ buf = buf, valid = true, flush = false })
-            end
-        else
-            res_reset(res, buf, "del")
-            return false
-        end
-    end
-
-    return true
-end
-
----@param buf uinteger
----@param version boolean
----@param cur_pos_ext? [uinteger, uinteger]
-local function from_buf_res_ensure_uptd(buf, version, cur_pos_ext)
-    local buf_res = state_results[buf]
-    if buf_res then
-        return res_ensure_updated(buf_res, buf, version, cur_pos_ext)
-    end
-
-    return false
 end
 
 ---@param buf integer
@@ -208,7 +173,7 @@ local function on_win(_, win, buf, top, bot)
     end
 
     local hls = res.highlights
-    if #hls == 0 then
+    if #hls == 0 or mode_get_status(api.nvim_get_mode().mode) < 0 then
         return
     end
 
@@ -217,10 +182,6 @@ local function on_win(_, win, buf, top, bot)
     local ns_wins = api.nvim__ns_get(state_ns).wins
     if ns_wins == nil or ns_wins[1] ~= win then
         return false
-    end
-
-    if mode_get_status(api.nvim_get_mode().mode) < 0 then
-        return
     end
 
     if #api.nvim_buf_get_extmarks(buf, state_ns, 0, -1, { limit = 1 }) == 0 then
@@ -288,31 +249,13 @@ api.nvim_set_decoration_provider(state_ns, { on_win = on_win })
 -- MARK: Request Sending and Handling --
 ----------------------------------------
 
----@param win integer
----@param buf integer
----@param cur_pos_ext [integer, integer]
----@return boolean
-local function response_has_current_nvim_state(win, buf, cur_pos_ext)
-    if api.nvim_get_current_win() ~= win then
-        return false
-    end
-
-    if buf ~= api.nvim_win_get_buf(win) then
-        return false
-    end
-
-    local cur_pos = api.nvim_win_get_cursor(win)
-    local cur_cur_pos_ext = require("nvim-tools.pos").mark_to_ext_pos(cur_pos)
-    return require("nvim-tools.table").i_equals(cur_pos_ext, cur_cur_pos_ext)
-end
-
 ---@param err lsp.ResponseError?
 ---@param response lsp.DocumentHighlight[]?
 ---@param ctx lsp.HandlerContext
 ---@param buf uinteger
 ---@param win uinteger
----@param cur_pos_ext[uinteger, uinteger]
-local function doc_hl_req_handler(err, response, ctx, buf, win, cur_pos_ext)
+---@param pos_ext[uinteger, uinteger]
+local function doc_hl_req_handler(err, response, ctx, buf, win, pos_ext)
     local req = state_reqs[buf]
     if not req then
         return
@@ -335,7 +278,7 @@ local function doc_hl_req_handler(err, response, ctx, buf, win, cur_pos_ext)
         return false
     end
 
-    if not response_has_current_nvim_state(win, buf, cur_pos_ext) then
+    if not require("catharsis._util").req_matches_nvim_state(win, buf, pos_ext) then
         return
     end
 
@@ -361,27 +304,99 @@ local function doc_hl_req_handler(err, response, ctx, buf, win, cur_pos_ext)
     api.nvim__redraw({ buf = buf, valid = true, flush = false })
 end
 
+---@param res mjm.lsp.documentHighlight.Result
 ---@param buf uinteger
----@param version boolean Verify current result is up to date.
----@param prev_hls boolean Abort if a valid highlight is present.
-local function req_debounced(buf, version, prev_hls)
+---@param pos_ext [uinteger, uinteger]
+---@return boolean, boolean, boolean
+local function from_res_hls_validate(res, buf, pos_ext)
+    if require("nvim-tools.range").find_pos(res.highlights, pos_ext) == nil then
+        return true, true, false
+    else
+        return false, false, #api.nvim_buf_get_extmarks(buf, state_ns, 0, -1, { limit = 1 }) == 0
+    end
+end
+
+---@param buf uinteger
+---@param pos_ext [uinteger, uinteger]
+---@return boolean, boolean, boolean
+local function hls_validate(buf, pos_ext)
+    local res = state_results[buf]
+    if res == nil then
+        return true, false, false
+    else
+        return from_res_hls_validate(res, buf, pos_ext)
+    end
+end
+
+---@param res mjm.lsp.documentHighlight.Result
+---@param buf uinteger
+---@return boolean, boolean, boolean
+local function from_res_version_validate(res, buf, _)
+    local res_version = res.version
+    local uptd = res_version > -1 and res_version ~= util.buf_versions[buf]
+    return uptd, uptd, false
+end
+
+---@param buf uinteger
+---@return boolean, boolean, boolean
+local function version_validate(buf, _)
+    local res = state_results[buf]
+    if res == nil then
+        return true, false, false
+    else
+        return from_res_version_validate(res, buf)
+    end
+end
+
+---@param buf uinteger
+---@param pos_ext [uinteger, uinteger]
+---@return boolean, boolean, boolean
+local function both_validate(buf, pos_ext)
+    local res = state_results[buf]
+    if res == nil then
+        return true, false, false
+    end
+
+    local do_req, rm_hls, do_redraw = from_res_version_validate(res, buf)
+    if not do_req then
+        do_req, rm_hls, do_redraw = from_res_hls_validate(res, buf, pos_ext)
+    end
+
+    return do_req, rm_hls, do_redraw
+end
+
+---@param buf uinteger
+---@param f function
+---Returns:
+---- do_req : Continue req?
+---- rm_hls : Remove current hls?
+---- do_redraw : Perform redraw?
+local function req_debounced(buf, f)
     if mode_get_status(api.nvim_get_mode().mode) < 1 then
         return
     end
 
-    local cur_win = api.nvim_get_current_win()
-    local cur_win_buf = api.nvim_win_get_buf(cur_win)
-    if cur_win_buf ~= buf then
+    local win = api.nvim_get_current_win()
+    local ns_wins = api.nvim__ns_get(state_ns).wins
+    if ns_wins == nil or ns_wins[1] ~= win or api.nvim_win_get_buf(win) ~= buf then
         return
     end
 
-    if fn.win_gettype(cur_win) ~= "" then
-        return
+    local pos_ext = require("nvim-tools.win").cursor_ext_get(win)
+    local do_req, rm_hls, do_redraw = f(buf, pos_ext)
+    if do_req then
+        timer_and_req_cancel(buf)
     end
 
-    local ntp = require("nvim-tools.pos")
-    local cur_pos_ext = ntp.mark_to_ext_pos(api.nvim_win_get_cursor(cur_win))
-    if from_buf_res_ensure_uptd(buf, version, (prev_hls and cur_pos_ext or nil)) == true then
+    if rm_hls then
+        from_buf_res_clear(buf, "del")
+    end
+
+    if do_redraw then
+        api.nvim__redraw({ buf = buf, valid = true, flush = false })
+    end
+
+    if not do_req then
         return
     end
 
@@ -396,12 +411,9 @@ local function req_debounced(buf, version, prev_hls)
         return
     end
 
-    actv_req_cancel(buf)
-    local nti = require("nvim-tools.timers")
-    nti.timers_stop(state_timers, client_id)
-    nti.timers_do_after_debounce(
+    require("nvim-tools.timers").timers_do_after_debounce(
         state_timers,
-        client_id,
+        buf,
         client.flags.debounce_text_changes or 150,
         vim.schedule_wrap(function()
             if not api.nvim_buf_is_valid(buf) then
@@ -409,9 +421,9 @@ local function req_debounced(buf, version, prev_hls)
             end
 
             local encoding = client.offset_encoding
-            local params = nts.text_doc_pos_params_create(buf, cur_pos_ext, encoding)
+            local params = nts.text_doc_pos_params_create(buf, pos_ext, encoding)
             local req_success, req_id = client:request(DOC_HL, params, function(err, response, ctx)
-                doc_hl_req_handler(err, response, ctx, buf, cur_win, cur_pos_ext)
+                doc_hl_req_handler(err, response, ctx, buf, win, pos_ext)
             end, buf)
 
             if req_success and req_id then
@@ -420,7 +432,6 @@ local function req_debounced(buf, version, prev_hls)
         end)
     )
 end
--- TODO: insert the strategy pattern here from lampshade
 
 ------------------
 -- MARK: Events --
@@ -442,11 +453,10 @@ local function set_ns_win(win)
 
     -- ns_set stages a redraw. Avoid if we can.
     local ns_wins = api.nvim__ns_get(state_ns).wins
-    if ns_wins ~= nil and ns_wins[1] == win then
-        return false
+    if ns_wins == nil or ns_wins[1] ~= win then
+        api.nvim__ns_set(state_ns, { wins = { win } })
     end
 
-    api.nvim__ns_set(state_ns, { wins = { win } })
     return true
 end
 
@@ -456,7 +466,7 @@ local M = {
         state_client_ids_disabled[client_id] = nil
     end,
     on_client_detach = function(buf, client_id, client)
-        actv_req_cancel(buf, client_id, client)
+        req_cancel(buf, client_id, client)
     end,
     on_client_rm = function(client_id)
         state_client_ids_disabled[client_id] = true
@@ -473,24 +483,27 @@ local M = {
             group = buf_group,
             buffer = bufnr,
             desc = "Refresh document highlights",
-            callback = function(ev)
-                req_debounced(ev.buf, false, true)
-            end,
+            -- CursorMoved fires after WinEnter, so we don't need to req there. Because WinEnter
+            -- is schedule wrapped, do the same here to maintain execution order.
+            callback = vim.schedule_wrap(function(ev)
+                req_debounced(ev.buf, hls_validate)
+            end),
         })
 
         api.nvim_create_autocmd("LspNotify", {
             buffer = bufnr,
             group = buf_group,
             desc = "Refresh document highlights on document changes",
-            -- Schedule wrap to leave autocmd context
             callback = vim.schedule_wrap(function(ev)
                 local method = ev.data.method --- @type string
                 if method == "textDocument/didChange" then
-                    req_debounced(ev.buf, true, false)
+                    req_debounced(ev.buf, version_validate)
                 elseif method == "textDocument/didOpen" then
-                    req_debounced(ev.buf, true, false)
+                    req_debounced(ev.buf, version_validate)
                 elseif method == "textDocument/didClose" then
-                    from_buf_res_reset(ev.buf, "del")
+                    local buf = ev.buf
+                    timer_and_req_cancel(buf)
+                    from_buf_res_clear(buf, "del")
                 end
             end),
         })
@@ -504,38 +517,38 @@ local M = {
                 local nm_status = mode_get_status(vim.v.event.new_mode)
                 local buf = ev.buf
                 if nm_status == 1 then
-                    req_debounced(buf, true, true)
+                    req_debounced(buf, both_validate)
                 elseif nm_status == -1 then
-                    from_buf_res_reset(buf, "decor")
+                    timer_and_req_cancel(buf)
+                    from_buf_res_clear(buf, "decor")
                 end
             end,
         })
 
         api.nvim_create_autocmd("WinEnter", {
             group = buf_group,
-            -- Schedule wrap to leave autocmd context
             callback = vim.schedule_wrap(function()
                 set_ns_win(api.nvim_get_current_win())
             end),
         })
 
-        -- Schedule to ignore temporary context switches.
+        -- nvim_exec_autocmds would be too broad here.
         vim.schedule(function()
             local cur_win = api.nvim_get_current_win()
-            local cur_win_buf = api.nvim_win_get_buf(cur_win)
-            if cur_win_buf == bufnr and set_ns_win(cur_win) then
-                req_debounced(cur_win_buf, false, false)
+            if api.nvim_win_get_buf(cur_win) == bufnr and set_ns_win(cur_win) then
+                req_debounced(bufnr, version_validate)
             end
         end)
     end,
 
     on_buf_rm = function(buf)
+        timer_and_req_cancel(buf)
         local buf_group = buf_group_name_get(buf)
         if fn.exists("#" .. buf_group) == 1 then
             api.nvim_del_augroup_by_name(buf_group)
         end
 
-        from_buf_res_reset(buf, "del")
+        from_buf_res_clear(buf, "del")
     end,
     -- TODO-DEP: When v0.14 comes out, change all instances of "buffer" to "buf"
 }
@@ -551,8 +564,8 @@ function jump_get_idx_dest(hls, abs, count, upward, win)
         return true, count == 0 and (upward and 1 or #hls) or math.min(#hls, count)
     end
 
-    local cursor_ext = require("nvim-tools.pos").mark_to_ext_pos(api.nvim_win_get_cursor(win))
-    local cursor_ext_range = { cursor_ext[1], cursor_ext[2], cursor_ext[1], cursor_ext[2] + 1 }
+    local pos_ext = require("nvim-tools.win").cursor_ext_get(win)
+    local cursor_ext_range = { pos_ext[1], pos_ext[2], pos_ext[1], pos_ext[2] + 1 }
     local idx_cur = vim.list.bisect(hls, cursor_ext_range, {
         key = function(hl)
             local cmp_res = require("nvim-tools.range").cmp_(hl, cursor_ext_range)

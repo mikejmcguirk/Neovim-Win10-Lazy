@@ -58,6 +58,8 @@
 - [ ] In any case where data is niled, table clear unless the buffer data is being purposefully destroyed.
 - [ ] Try to consolidate all of the ctx checking into common logic. Maybe pass an opts table?
 - [ ] Mode changes would be more performant if they did not destroy extmarks. I'm not sure how to implement this though in a way that is not complex and hacky, for a minimal perceived perf benefit.
+- [ ] Both lampshade and document highlight query namespace extmarks to see if decor exists. Lampshade could alternatively hold the current extmark id, and document highlight could maintain a `has_decor` flag.
+  - This creates the burden though of maintaining a parallel source of truth with Neovim's internal state
 
 #### Lampshade:
 
@@ -66,8 +68,6 @@
     * Fully re-implementing code action requests and creating integrations to send them to pickers
     * Trying to write a smart behavior for request ranges that is server agnostic
     * Managing the difference between the request range and the cursor position
-- [ ] To save allocations - could hold the lamp's extmark ID in state. Creates parallel source of truth though.
-
 #### Rename:
 
 - [ ] Scope the results per window so folds can be filtered.

@@ -85,6 +85,12 @@
   - [ ] Obscure bug where, if harpoon initializes without a cwd, it enter errors
     - I'm not sure how to re-produce this
 
+- [ ] For bracket jumping:
+  - Save a pcmark for the first jump
+  - Don't save subsequent pcmarks unless they leave the screen
+  - If the user does a few jumps on the screen, they can go to where they were before they started jumping, without going through the intermediate jumps
+  - Complex though because what do you consider "leaving" a series of jumps. Would tie into un-owned state.
+
 ## STALKING:
 
 - https://github.com/ofseed/nvim

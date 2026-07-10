@@ -43,6 +43,13 @@ function M.create_split(win, buf, enter, split)
     return api.nvim_open_win(buf, enter, { win = win, split = split })
 end
 
+---Return the cursor position of `win` for use with |api-indexing|.
+---@param win? uinteger
+---@return [uinteger, uinteger]
+function M.cursor_ext_get(win)
+    return require("nvim-tools.pos").mark_to_ext_pos(api.nvim_win_get_cursor(win or 0))
+end
+
 ---Credit echasnovski
 ---@audited 2026-07-03
 ---@param wins integer[]
