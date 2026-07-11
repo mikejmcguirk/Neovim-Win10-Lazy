@@ -584,9 +584,6 @@ function jump_get_idx_dest(hls, abs, count, upward, win)
     return idx_dest ~= idx_cur and true or false, idx_dest
 end
 
----@class catharsis.documentHighlight.JumpCtx
----@field zzze boolean
-
 ---@param win uinteger
 ---@param buf uinteger
 ---@param count uinteger If `abs` is `true`, count `0` will jump to the first or last highlight.

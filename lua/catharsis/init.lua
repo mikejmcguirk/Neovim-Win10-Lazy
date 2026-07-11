@@ -1,7 +1,5 @@
 local api = vim.api
 
-local HUGE_INT = math.floor(math.huge)
-
 ------------------
 -- MARK: Schema --
 ------------------
@@ -49,6 +47,7 @@ local function validator_check(v, s)
     if vim.islist(s) then
         local s_len = #s
         for i = 1, s_len do
+            ---@diagnostic disable-next-line: param-type-mismatch
             if string_type_is_valid(v, s[i]) then
                 return true, ""
             end
@@ -70,7 +69,7 @@ end
 ---@param prev table<table, true>
 ---@return boolean, string
 local function matches_validator_with(t, s, prev)
-    if prev[t] then
+    if prev[t] ~= nil then
         return false, "Cyclic reference found in values."
     end
 
@@ -160,12 +159,13 @@ local schema = {
 -- MARK: Defaults --
 --------------------
 
----@class catharsis.config.Default
+---@class catharsis.config.Config
 local default_config = {
     default_keymaps_set = true, ---@type boolean -- Ignore buf config.
     ---@class catharsis.documentHighlight.Ctx
     document_highlight = {
         enabled = true, ---@type boolean
+        ---@class catharsis.documentHighlight.JumpCtx
         jump_opts = {
             zzze = true, ---@type boolean -- For jumps.
         },
@@ -180,6 +180,7 @@ local default_config = {
         action_filter = function(_, _)
             return true
         end,
+        debounce = 150, ---@type uinteger
         ---@param buf uinteger
         ---@param row uinteger 0-indexed
         ---@param ns uinteger
@@ -191,9 +192,6 @@ local default_config = {
                 strict = false,
             })
         end,
-        -- TODO: This should be based on the client debounce data, rather than an arbitrary
-        -- number. Maybe take the highest of the attached clients.
-        debounce = 150,
     },
     ---@class catharsis.rename.Ctx
     rename = {
@@ -202,7 +200,8 @@ local default_config = {
         prompt_default = true, ---@type boolean
     },
 }
--- MID-PR: Emmylua_Ls display issue here. "hl_id" semantic coloring in the display set extmark
+-- LOW: It would be better to calculate lamp debounce from the client fields.
+-- PR: Emmylua_Ls display issue here. "hl_id" semantic coloring in the display set extmark
 -- statement is mis-aligned. This also shows in the document highlight.
 
 ------------------------
@@ -241,6 +240,7 @@ local Config = {}
 ---@diagnostic disable-next-line: assign-type-mismatch
 function M.config(t)
     local _ = t -- ignore unused
+    ---@diagnostic disable-next-line: return-type-mismatch
     -- dummy proto for docs
     return {}
 end
@@ -253,7 +253,9 @@ local function config_create()
     return setmetatable(config, Config)
 end
 
-M.config = config_create() ---@type catharsis.Config
+---@diagnostic disable-next-line: assign-type-mismatch
+---@nodoc
+M.config = config_create()
 
 ---@generic K, V
 ---@param self catharsis.Config
@@ -295,7 +297,6 @@ function Config.__call(self, t)
 end
 
 ---Set all config values back to default. This clears buffer-specific configs.
----@param self catharsis.Config
 function Config:reset()
     local _defaults = rawget(self, "_defaults")
     rawset(self, "_config", require("nvim-tools.table").deepcopy(_defaults))
@@ -327,8 +328,6 @@ end
 -- MARK: Buf Accessor --
 ------------------------
 
--- TODO: types here are janky
-
 ---@nodoc
 ---@class catharsis.config.BufAccessor
 ---@field _configs table<uinteger, catharsis.Config>
@@ -346,11 +345,12 @@ local Buf_Config_Accessor = {}
 ---Configs cannot be created or accessed for invalid buffers. If a buffer is wiped, its config
 ---will be deleted.
 ---@param buf uinteger Buffer config to access.
----@return catharsis.Config The current or updated buf config.
+---@return catharsis.config.BufAccessor The current or updated buf config.
 ---@diagnostic disable-next-line: assign-type-mismatch
 function M.buf_config(buf)
     local _ = buf -- ignore unused
     -- dummy proto for docs
+    ---@diagnostic disable-next-line: return-type-mismatch
     return {}
 end
 
@@ -360,6 +360,7 @@ local function buf_config_create()
     return setmetatable(buf_config, Buf_Config_Accessor)
 end
 
+---@diagnostic disable-next-line: assign-type-mismatch
 ---@nodoc
 M.buf_config = buf_config_create() ---@type catharsis.config.BufAccessor
 
@@ -401,12 +402,14 @@ Buf_Config_Accessor.__index = function(self, k)
 
     ---@type table<integer, catharsis.Config>
     local _configs = rawget(self, "_configs")
+    ---@diagnostic disable-next-line: param-type-mismatch
     if api.nvim_buf_is_valid(k) == false then
         _configs[k] = nil
         api.nvim_echo({ { k .. " is not valid", "WarningMsg" } }, true, {})
         return
     end
 
+    ---@diagnostic disable-next-line: assign-type-mismatch
     local buf_config = rawget(_configs, k) ---@type catharsis.Config
     if buf_config == nil then
         buf_config = add_buf_to__configs(k, _configs)
@@ -422,7 +425,6 @@ end
 
 ---Add a new config for a buffer. Warns if one already exists. This creates the autocmd to
 ---remove the config on |BufWipeout|.
----@param self catharsis.config.BufAccessor
 ---@param buf uinteger
 ---@return boolean `True` if the new config was created.
 function Buf_Config_Accessor:add(buf)
@@ -447,7 +449,6 @@ function Buf_Config_Accessor:add(buf)
 end
 
 ---Clear buffer configs for `bufs`. If `bufs` is `nil`, clear all buffer configs.
----@param self catharsis.config.BufAccessor
 ---@param bufs uinteger[]|nil
 function Buf_Config_Accessor:clear(bufs)
     vim.validate("bufs", bufs, function()
@@ -472,7 +473,6 @@ function Buf_Config_Accessor:clear(bufs)
 end
 
 ---Delete buffer configs for `bufs`. If `bufs` is `nil`, delete all buffer configs.
----@param self catharsis.config.BufAccessor
 ---@param bufs uinteger[]|nil
 function Buf_Config_Accessor:del(bufs)
     vim.validate("bufs", bufs, function()
@@ -492,7 +492,6 @@ function Buf_Config_Accessor:del(bufs)
 end
 
 ---List buffers with active configs.
----@param self catharsis.config.BufAccessor
 ---@return integer[]
 function Buf_Config_Accessor:list_bufs()
     local keys = require("nvim-tools.table").keys(rawget(self, "_configs"))
@@ -569,6 +568,7 @@ function M.rename(opts)
         opts = {}
     else
         vim.validate("opts", opts, "table")
+        ---@diagnostic disable-next-line: assign-type-mismatch
         opts = require("nvim-tools.table").deepcopy(opts)
     end
 
@@ -585,17 +585,24 @@ end
 ---@nodoc
 M.document_highlight = {}
 
+---@param opts? catharsis.documentHightlight.JumpOpts
+---@return uinteger, uinteger, boolean, catharsis.documentHighlight.JumpCtx, string
+local function get_jump_ctx(opts)
+    vim.validate("opts", opts, "table", true)
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    opts = opts and require("nvim-tools.table").deepcopy(opts) or {}
+
+    local win = api.nvim_get_current_win()
+    local buf = api.nvim_win_get_buf(win)
+    return win, buf, M._get_merged_config(buf, opts, "document_highlight", "jump_opts")
+end
+
 ---@class catharsis.documentHightlight.JumpOpts
 ---@field zzze? boolean
 
 ---@param opts? catharsis.documentHightlight.JumpOpts
 function M.document_highlight.jump_fwd(opts)
-    vim.validate("opts", opts, "table", true)
-    opts = opts and require("nvim-tools.table").deepcopy(opts) or {}
-
-    local win = api.nvim_get_current_win()
-    local buf = api.nvim_win_get_buf(win)
-    local ok, ctx, err = M._get_merged_config(buf, opts, "document_highlight", "jump_opts")
+    local win, buf, ok, ctx, err = get_jump_ctx(opts)
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
@@ -606,12 +613,7 @@ end
 
 ---@param opts? catharsis.documentHightlight.JumpOpts
 function M.document_highlight.jump_rev(opts)
-    vim.validate("opts", opts, "table", true)
-    opts = opts and require("nvim-tools.table").deepcopy(opts) or {}
-
-    local win = api.nvim_get_current_win()
-    local buf = api.nvim_win_get_buf(win)
-    local ok, ctx, err = M._get_merged_config(buf, opts, "document_highlight", "jump_opts")
+    local win, buf, ok, ctx, err = get_jump_ctx(opts)
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
@@ -622,12 +624,7 @@ end
 
 ---@param opts? catharsis.documentHightlight.JumpOpts
 function M.document_highlight.jump_last(opts)
-    vim.validate("opts", opts, "table", true)
-    opts = opts and require("nvim-tools.table").deepcopy(opts) or {}
-
-    local win = api.nvim_get_current_win()
-    local buf = api.nvim_win_get_buf(win)
-    local ok, ctx, err = M._get_merged_config(buf, opts, "document_highlight", "jump_opts")
+    local win, buf, ok, ctx, err = get_jump_ctx(opts)
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
@@ -638,12 +635,7 @@ end
 
 ---@param opts? catharsis.documentHightlight.JumpOpts
 function M.document_highlight.jump_first(opts)
-    vim.validate("opts", opts, "table", true)
-    opts = opts and require("nvim-tools.table").deepcopy(opts) or {}
-
-    local win = api.nvim_get_current_win()
-    local buf = api.nvim_win_get_buf(win)
-    local ok, ctx, err = M._get_merged_config(buf, opts, "document_highlight", "jump_opts")
+    local win, buf, ok, ctx, err = get_jump_ctx(opts)
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return

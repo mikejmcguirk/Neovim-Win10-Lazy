@@ -119,9 +119,9 @@ function M.i_copy(t)
     return require("nvim-tools._table").i_copy_exact(t, 1, t_len)
 end
 
----@generic T
----@param t T
----@param prev table<T, true>
+---@generic K, V
+---@param t table<K, V>
+---@param prev table<K, true>
 ---@return any
 local function deepcopy(t, prev)
     local t_type = type(t)
@@ -161,8 +161,9 @@ end
 ---- Always "noref" behavior, meaning that repeated references to the same table each get a
 ---new copy. If a cyclic reference is detected, it is discarded.
 ---- Assumes that neither table has a metatable.
----@param t table<any, any>
----@return table<any, any>
+---@generic K, V
+---@param t table<K, V>
+---@return table<K, V>
 function M.deepcopy(t)
     return deepcopy(t, {})
 end
