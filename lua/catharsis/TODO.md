@@ -1,13 +1,6 @@
 ## TODO:
 
-- [ ] Investigate if it's possible to do a file rename command that handles file logic, LSP, and git in one shot. I'm not sure if Oil and/or Fugitive and/or Core already do this.
-
-- [ ] In every module, removing "clearing" behavior and replace with niling/overwriting the relevant tables. This has a perf cost but is simpler to reason about.
-  - [ ] rename
-  - [ ] doc_hl
-  - [ ] lampshade
-
-- [ ] Fix any "HUGE_INT" values to actually be ints, and not floored infinity
+- [ ] Reduce the amount of requires on startup. Reduce extranneous requires in config if possible. It would be helpful if `_features` did not require until LSPAttach. Although that module at least gates doc_hl and lampshade. The published version should also consolidate all utils into one file so we only have one of those.
 
 #### Rename
 

@@ -13,7 +13,6 @@
 
 - TODO > MID > LOW
 - Plugin ordering
-  - catharsis (includes lampshade)
   - farsight
   - Grep plugin?
   - rancher

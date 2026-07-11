@@ -1,121 +1,115 @@
-## General
+It's been a while.
 
-#### DEPS:
+## OBJECTIVES:
 
-- [ ] The nvim-tools config module needs to completed
-- [ ] I need to decide if I'm using search here as the template for Nvim-tools, or building the search in Nvim-tools first
-- [ ] Docgen
-- [ ] Generic modules in nvim-tools need to be complete
-  - These would be modules like buf, win, list, table, types
-  - The goal is to avoid having to bounc between here and nvim-tools to make additions/changes
-  - This would not include modules like treesitter, which I don't think are relevant here
-- [ ] Meta-decisions created by nvim-tools need to be resolved
-    * Examples: fdo handling, config resolution
+- [ ] Support the following features:
+  - [ ] Live Jumping:
+    - [ ] Flash/lightspeed style jumping
+    - [ ] Support the lightspeed feature where, if you have a unique key after the token, pressing the unique key goes there
+  - [ ] Static Jumping:
+    - [ ] EasyMotion/Jump2D style jumping
+  - [ ] Csearch Plus:
+    - [ ] This should support both classic searching as well as the enhanced f/t style
+      - Primary motivation is so I can move live jumping to ;/, which frees the `s` key.
 
-#### TODO:
+## CONSTRAINTS:
 
-  - [ ] If doing multi-win, and buf is in multiple wins, should check to see if there is overlapping area. If so, should not redo search() in same area. Should be able to copy over targets
+- We must cease our chase of the SoA white whale
+- Since I have the tooling to do it, we should build everything around lists of ranges
+- Use recursion where it makes sense. The label creator greatly suffered from the attempt to move to a queue-based design
+- The broad-based goal here is to think in terms of algorithmic complexity and design wins that create leverage, not micro-opting. I just want this to be done and to work
+- Don't try to make nvim-tools stuff here. Just make farsight work.
+- The names are Live, Static, and Csearch. If something better pops into my head great, but I'm not brainstorming further.
+- Don't bother doing anything with screen positioning. Too hard/slow
 
-- [ ] The modules and code we want to continue with need a deeper audit.
-  - [ ] Based on that audit, then extract the TODO info
+## TODO:
 
-- [ ] I believe that the goal with the _common module is to remove it.
-- [ ] Because the whole plugin is moving to search based results, I think the lookup module just gets moved to nvim tools then removed.
+- [ ] First and foremost, we need to go back through the various files and re-ingest all of the TODO info. There is going to be info in there about challenges we've run across
+- [ ] A review of the past code is also relevant. A lot of it won't matter because of the design change, but it's worth considering what challenges we run into
+- [ ] From there, the first thing will be data structures and data flow
 
-- [ ] There are a lot of TODO items that I did not port over to here on account of not being sure how they all integrate together. I had tried a lot of different things in different files without really creating an integrated context for them.
+## DESIGN:
 
-- [ ] For unlimited tokens, use math.huge in the labeler and probably config. The way Lua does math works out for that.
+- [ ] The data flows, and how they all work together, need a lot of pre-attention, because being unable to manage this killed the previous version
 
-- [ ] For live search at least, \ probably has to be blocked from being a token since it can be used for a regex atom. Probably makes sense to do that globally. In my original labeler comment, I noted that the labeler doesn't care about this, so this is something functions higher up the stack need to own.
+- [ ] Need to figure out csearch traversal. Don't want to use bespoke UTF-8 if it can be avoided, but need correct by-char iteration.
 
-- [ ] In all modules, add a "fold_cmd" option and remove fdo from the default callback
-  - The default callback behavior was only done to maintain consistency with Neovim's default behavior
-    * This is a bad behavior to be consistent with. What Neovim *should* provide is a keymap option to disable default fdo behavior
-  - Handling fdo in the default callback is bad because, in certain cases, it might need to be performed in temporary window context. This should not be burden-shifted to the user
-  - If running buf_open on a non-focused window, fdo needs to be run in temporary window context. This should not be burden-shfited to the user
-    * This use case does not come up in farsight specifically, but I want to maintain consistency between my plugins
-  - [ ] Document this reasoning in CONTRIBUTING.md
-    - It feels like this is part of some bigger meta section on module design
+- [ ] Something I goofed in the previous code - Dim should be applied to the searched area, not the target lines. This provides the user a visual indicator of where the search is happening
 
-- [ ] All APIs should be run through the init module
-  - NOTE: A lot of this description might not matter based on how the config module turns out
-  - This way, you can always do something like `require("farsight").csearch()`
-  - Allows documentation to be centralized
-  - [ ] Each API that runs through this module should have a sub-table in config
-    - [ ] Then, as the APIs are added, edit the underlying functions to only grab the sub-table out of config once
-    - [ ] Add this behavior to META or contributing
-  - [ ] If a setting is not found in config, hard error
-    - This should never happen
-    - Getting default config is slow and adds complication
-    - Default config can always be restored
-    - This should prompt an issue to be filed
-      * Counterpoint: The config would probably go bad due to a technical issue or user intervention unrelated to the particular API being used. So while the error would prompt looking into the issue, I'm not sure to what extent it would be of direct diagnostic value
-      * [ ] This means that errors getting config need to present good information, including if the value is missing or if the value has a bad type
-    - [ ] If a buf config value is missing, fall back to config. If a buf config value has a bad data type, hard error.
+- [ ] Verify and note indexing for match_line or whatever.
 
-- [ ] Figure out final names for live and static jumping
-  - I'm not sure they are clearly branded for the end user
-  - Bad ideas:
-    * Incremental does not work because both are incremental
-    * Basing on token count does not work because static jumps can be customized to be single-token
-  - Ideas:
-    * live: Like lightspeed/flash/sneak. Should imply disappearing and re-appearing quickly
-      + teleport
-    * static: Like EasyMotion/Jump2D. Should imply the path being laid out before you.
-      + vista
+- [ ] Fold handling
+  - [ ] Static jumps should put a single label on folded lines. The current code does this
+  - [ ] Live jumps should ignore folds
+  - [ ] Csearch is weird because we don't want to draw extmarks for folds, but we need to account for them because of highlights relative to count. I forget how the current code handles this
 
+- [ ] For multi-window search, when a buffer is present in multiple windows, we should compare top and bottom of each window to avoid re-searching data. Unsure if you chain lists then or what.
+  - [ ] This means that the result ranges need to be original, un-modified tables. If we store the results by reference in different range collections, we can't modify one for labelling and affect the copies in other range tables.
+  - [ ] It would also be directionally ~bad to just kind of let the references get spread around everywhere, as it makes things harder for gc
+
+- [ ] General search module:
+  - [ ] Needs a start position option:
+    - Fwd Csearch needs to always start at the beginning of the line so we can gather `\k\+` results that start before the cursor and truncate them to just after the cursor
+    - Fwd Static jumps need to always start one after the cursor
+  - [ ] Integrated design for multi-window needs to be the starting assumption
+    - [ ] For re-search avoidance, we need to hold top and bottom for each window
+    - [ ] For result filtering, we need to hold the line cache
+  - [ ] Search can only handle search, even if it returns rich data
+    - We do not want to allocate a bunch of extra nonsense for Csearch, which only needs the ranges
+  - [ ] Need to re-look at how match_line handles zero width results (`\ze` and others)
+  - [ ] need to properly ignore patterns that end with a single `\`.
+    - Relevant in all cases, since all three can take custom search patterns. Needs to return a relevant and specific error rather than just an empty result, so callers know not to even bother trying to handle
+  - [ ] Results need to have a flag to indicate when "distance" ordering is reversed, for reversed csearches and live jumps.
+  - [ ] Needs to be some method of handling the capitalization atoms in various situations
+    - csearch and static need to be strictly cased
+    - live needs to be optional
+
+- [ ] Labeling:
+  - [ ] Determine max possible labels based on tokens and capped factorial
+    - [ ] Issue: Can't do this with byte length due to multi-byte cars. Maybe just only use ASCII for tokens?
+    - [ ] Do a simple i iteration based on that, dividing out the pieces for fair labeling, including on live jumps, since we'd just take the ordered tokens. Recurse down
+      - [ ] Only an issue on very small tokens or live jumps
+  - [ ] Need the data structure to handle start and end labels. Relevant for omode/vmode static jumps or if the user sets the labeling to both
+
+- [ ] Options design:
+  - [ ] Tokens
+    - [ ] Live and static should have their own tokens
+    - [ ] Static should just use alphabetical order/fair labeling
+    - [ ] Live should use preferred tokens. Home row/e should be first. I think I have a version of this sitting around.
+    - [ ] Capital letters should just be added manually. I see no reason to do voodoo here
+  - [ ] Label location
+    - [ ] Live: Right after result only (so no option)
+    - [ ] Static: start/end/start+end/cursor-aware
+
+- [ ] Live search:
+  - [ ] Do not allow `\` as a token because it blocks atoms
+
+- [ ] Csearch:
+  - [ ] Do not do continuation mode in omode or on dot-repeat
+    - Omode you can just handle with a flag in the private module. Dot repeat you probably have to always turn off.
+  - [ ] Need to be mindful of when the stuff under the cursor is and is not deleted when using these motions with operators
+  - [ ] Note: For default f/t, ;/, always advance by one, ignoring count. Count is only for the initial movement
+  - [ ] pcmark options:
+    - [ ] never
+    - [ ] on screen change (default)
+    - [ ] always
+  - [ ] Dot repeat
+    - Very roughly, this needs to allow us to enter the last continuation mode, so it isn't just lost
+    - Question: Does dot repeat advance by the same count as before? I forget how the default works, but
+
+## TODO:
+
+## PUBLISHING:
+
+- [ ] Everything should use the "targets" and "target locator" branding
 - [ ] Add `desc` values to Plug and default mappings
 - [ ] Verify that the `require("farsight")` call in /plugin.lua does not require other files
 
-- [ ] Rename everything to target locator branding
+## MID:
 
-#### NON:
+- [ ] For `nowrap` buffers, you can use `getwininfo()` to build the left and right bounds for line display, then filter out OOB results. Unlike with a lot of stuff dealing with screen positioning, this should be one or two data pulls from Neovim then the rest is Lua calculation.
+- [ ] Implement a `csearch` option to always set the pcmark on the first jump, but not on continuation mode jumps. This would also exclude setting the mark for off-screen jumps, since that defeats the UX goal of "I want to return to where I started searching in one jump"
 
-## Config
+## NON-GOALS:
 
-#### TODO:
-
-- [ ] Options:
-  - [ ] set_default_maps
-  - [ ] Function specific options
-    - [ ] csearch
-    - [ ] static
-    - [ ] live
-
-## Csearch
-
-#### TODO:
-
-- [ ] As this will now be using match_area in the future, we need to note that no results before the cursor return, so you need to use some kind of sequence search like `\k\+` for the most accuracy + speed. This matters for internal dev as well as customization.
-  - Matching individual characters works, but is slower because it produces more results. The csearch module itself needs to handle counting the individual chars.
-
-- [ ] Move this over to search based, where you iterate through the results then to find tokens
-- [ ] Move this module over to the highlight on f/t model that a lot of other plugins use. I need the ;, keys to map live search.
-  - [ ] Still keep the "classic" behavior as an option
-  - [ ] Unlike flash, do not do continuation mode in omode or after a dot repeat
-- [ ] A problem to deal with is that if you set a custom search function based on whole words, you might get results that are excluded from targets because they start before the cursor. I'm not sure if search should compensate for this or if it needs to be a documented limitation
-  - Since search is being generalized, probably needs to be handled
-
-#### NON:
-
-- [ ] Sneak mode. Don't need/want it with live jumps, don't want to make an inferior version of the original.
-
-#### DOCUMENT:
-
-- [ ] For search string customization, a possible use case would be to set search strings based on filetype. If that use case exists, show an example of using an autocmd to set buf_config based on filetype
-
-## Live Search
-
-## Static Jump
-
-#### MID:
-
-- [ ] An optimization could be - For each window being searched, get the buf info and buf ranges beforehand. See if there are any intersections. If so, only search the intersected area once.
-  - [ ] Challenges:
-    - [ ] How do you check for intersections?
-      - I'm not sure what the solution is other than, after getting each window's range, to do an O(n*n) search through all of them
-    - [ ] How do you store the intersections?
-      - Maybe as an `[integer[], results]` where integer is the list of windows it applies to
-    - [ ] How do you stitch the intersections back into the targets?
-      - You have to see which set of targets goes after the other, so that the targets after can be appended to the ones before. Inserting at the beginning is too slow
-      - Has to be done in a way so that a reference isn't accidentally modified that is meant to be re-used
+- [ ] Sneak mode. I see no need to make an inferior version of the original.

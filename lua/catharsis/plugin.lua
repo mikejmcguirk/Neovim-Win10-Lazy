@@ -42,6 +42,8 @@ for _, map in ipairs(maps) do
     end
 end
 
+-- TODO: Unsure how to make this worth with the type system. You could do this as a function but
+-- that creates a deepcopy.
 if not catharsis.config.default_keymaps_set then
     return
 end

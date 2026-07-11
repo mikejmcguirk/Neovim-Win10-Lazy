@@ -8,29 +8,16 @@ local api = vim.api
 ---@param typ string
 ---@return boolean
 local function string_type_is_valid(val, typ)
-    local val_type = type(val)
-    if typ == "callable" then
-        if val_type == "function" then
-            return true
-        end
-
-        local mt = getmetatable(val)
-        if mt == nil then
-            return false
-        end
-
-        if type(rawget(mt, "__call")) == "function" then
-            return true
-        end
-
-        return false
+    if typ ~= "callable" then
+        return type(val) == typ
     end
 
-    if val_type == typ then
+    if type(val) == "function" then
         return true
     end
 
-    return false
+    local mt = getmetatable(val)
+    return mt ~= nil and type(rawget(mt, "__call")) == "function"
 end
 
 ---@param v any
@@ -161,7 +148,15 @@ local schema = {
 
 ---@class catharsis.config.Config
 local default_config = {
-    default_keymaps_set = true, ---@type boolean -- Ignore buf config.
+    default_keymaps_set = true, ---@type boolean -- Only checked on startup.
+    ---@class catharsis.cmds.bkill.Ctx
+    bkill = {
+        confirm = true, ---@type boolean
+    },
+    ---@class catharsis.cmds.bmove.Ctx
+    bmove = {
+        confirm = true, ---@type boolean
+    },
     ---@class catharsis.documentHighlight.Ctx
     document_highlight = {
         enabled = true, ---@type boolean
@@ -236,7 +231,7 @@ local Config = {}
 ---    config({ foo = "bar" })
 ---```
 ---@param t? table|nil Table of new values to merge in.
----@return catharsis.Config The current or updated config.
+---@return catharsis.config.Config The current or updated config.
 ---@diagnostic disable-next-line: assign-type-mismatch
 function M.config(t)
     local _ = t -- ignore unused
