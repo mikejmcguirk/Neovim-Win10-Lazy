@@ -66,12 +66,12 @@ if not has_clear then
         end
     end
 end
--- TODO: When I run this it actually nils the table.
 
 ---Clear all list and dict data from a table. Runs `table.clear` on LuaJIT builds.
 ---@mark data-management
 ---@type fun(tab:table)
 M.clear = clear
+-- TODO: Fix empty hover response on M.clear.
 
 ---Clears all |lua-list| elements in `t`.
 ---@mark data-management
@@ -2822,11 +2822,12 @@ end
 ---Create a new |lua-list| by applying function `f` to the values of `t`.
 ---@generic T, U
 ---@param t T[]
----@param f fun(x:T): U|nil `nil` returns are filtered.
+---@param f fun(x:T, idx:uinteger): U|nil `nil` returns are filtered.
+---@param limit? uinteger
 ---@return U[] New table. Empty if all elements are filtered.
-function M.i_filter_map_to(t, f)
+function M.i_filter_map_to(t, f, limit)
     local ret = {}
-    require("nvim-tools._table").i_filter_map_do(#t, t, f, ret)
+    require("nvim-tools._table").i_filter_map_do(#t, t, f, ret, limit)
     return ret
 end
 -- LOW: Add limit.
@@ -2924,15 +2925,16 @@ end
 
 ---@generic T
 ---@param t T[] Modified in place!
----@param f fun(x: T): T|nil `nil` returns are filtered.
+---@param f fun(x:T, idx:uinteger): T|nil `nil` returns are filtered.
+---@param limit? uinteger
 ---@return T[]
-function M.i_filter_modify(t, f)
+function M.i_filter_modify(t, f, limit)
     local t_len = #t
     if t_len == 0 then
         return t
     end
 
-    local j = require("nvim-tools._table").i_filter_map_do(t_len, t, f, t)
+    local j = require("nvim-tools._table").i_filter_map_do(t_len, t, f, t, limit)
     for i = j, t_len do
         t[i] = nil
     end
@@ -3359,3 +3361,6 @@ function M.i_zip_longest(t1, t2, fill)
 end
 
 return M
+
+-- TODO: When you do a loop, it copies the value before looping and doesn't change it. This
+-- means a lot of usages of t_len in here are frivolous

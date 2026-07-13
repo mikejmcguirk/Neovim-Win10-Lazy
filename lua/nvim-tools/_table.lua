@@ -331,13 +331,16 @@ end
 ---@generic T, U
 ---@param t_len uinteger
 ---@param t T[]
----@param f fun(x:T): T|nil
+---@param f fun(x:T, idx:uinteger): T|U|nil
 ---@param dst T[] Modified in place!
+---@param limit uinteger?
 ---@return uinteger
-function M.i_filter_map_do(t_len, t, f, dst)
+function M.i_filter_map_do(t_len, t, f, dst, limit)
+    -- TODO: Make this a constant somewhere
+    limit = limit or 2 ^ 53
     local j = 1
     for i = 1, t_len do
-        local vm = f(t[i])
+        local vm = f(t[i], i)
         if vm ~= nil then
             dst[j] = vm
             j = j + 1

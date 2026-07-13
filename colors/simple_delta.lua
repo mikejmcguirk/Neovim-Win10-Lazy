@@ -313,10 +313,12 @@ api.nvim_create_autocmd("FileType", {
         set_hl(0, "@lsp.type.function.lua", {})
         set_hl(0, "@lsp.type.keyword.lua", {})
         set_hl(0, "@lsp.type.method.lua", {})
+        set_hl(0, "@lsp.type.number.lua", {})
         set_hl(0, "@lsp.type.property.lua", {})
         set_hl(0, "@lsp.type.string.lua", {})
         set_hl(0, "@lsp.type.variable.lua", {})
 
+        set_hl(0, "@lsp.typemod.variable.static.lua", { link = "Constant" })
         -- Credit echasnovski
         set_hl(0, "@lsp.mod.documentation.lua", { link = "Statement" })
 

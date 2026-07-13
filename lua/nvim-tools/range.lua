@@ -142,6 +142,9 @@ function M.bit_pack_key(range)
     -- Arthmetic because bit seemingly can only handle up to 32 bit numbers.
     return range[1] * POW_1 + range[2] * POW_2 + range[3] * POW_3 + range[4]
 end
+-- TODO: I'm not sure what level of abstraction this lives on, but the key should be determined
+-- at runtime based on the buffer length. If the buffer is <= 9999 lines, use this. If not, then
+-- we need to make a string key to avoid overflow.
 
 ---For ranges with end-inclusive indexing.
 ---Assumes both ranges are valid, meaning the start is before or equal to the end.
