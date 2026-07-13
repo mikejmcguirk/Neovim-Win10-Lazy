@@ -5,7 +5,7 @@ api.nvim_create_user_command("Parse", function(cargs)
     print(vim.inspect(api.nvim_parse_cmd(cargs.args, {})))
 end, { nargs = "+" })
 
-local function tab_kill()
+api.nvim_create_user_command("TabKill", function()
     local confirm = fn.confirm(
         "This will delete all buffers in the current tab. Unsaved changes will be lost. Proceed?",
         "&Yes\n&No",
@@ -22,9 +22,7 @@ local function tab_kill()
             api.nvim_buf_delete(buf, { force = true })
         end
     end
-end
-
-api.nvim_create_user_command("TabKill", tab_kill, {})
+end, {})
 
 api.nvim_create_user_command("Termcode", function(cargs)
     local replaced = api.nvim_replace_termcodes(cargs.args, true, true, true)
@@ -139,7 +137,7 @@ local function mv_cur_buf(cargs)
         return
     end
 
-    ut.checked_mkdir_p(fn.fnamemodify(escape_target, ":h"), perms)
+    fn.mkdir(fn.fnamemodify(escape_target, ":h"), "p", "493")
     if is_git_tracked(escape_bufname) then
         local ok, err = pcall(api.nvim_cmd, { cmd = "GMove", args = { escape_target } }, {})
         if not ok then
@@ -179,31 +177,4 @@ end, { bang = true, nargs = 1, complete = "file_in_path" })
 -- Quick refresh if Treesitter bugs out
 api.nvim_create_user_command("We", "silent up | e", {})
 
----@param args string
-local function scratch_cmd(args)
-    local output = fn.execute(args) ---@type string
-
-    api.nvim_cmd({ cmd = "tabnew" }, {})
-    local buf = api.nvim_get_current_buf() ---@type integer
-    if not require("nvim-tools.buf").is_empty_noname(buf) then
-        api.nvim_cmd({ cmd = "enew" }, {})
-    end
-
-    -- MID: This also feels like something that can be broken out
-    api.nvim_set_option_value("bh", "wipe", { buf = buf })
-    api.nvim_set_option_value("bl", false, { buf = buf })
-    api.nvim_set_option_value("bt", "nofile", { buf = buf })
-    api.nvim_set_option_value("swf", false, { buf = buf })
-    api.nvim_set_option_value("udf", false, { buf = buf })
-
-    local lines_tbl = vim.split(output, "\n") ---@type string[]
-    api.nvim_buf_set_lines(buf, 0, -1, false, lines_tbl)
-    api.nvim_set_option_value("ma", false, { buf = buf })
-end
-
-api.nvim_create_user_command("ScratchCmd", function(opts)
-    scratch_cmd(opts.args)
-end, { nargs = "+" })
-
--- LOW: Redo the Abolish subvert cmd with the preview handler
--- Does this plugin already exist?
+-- LOW: Redo the Abolish subvert cmd with the preview handler Does this plugin already exist?

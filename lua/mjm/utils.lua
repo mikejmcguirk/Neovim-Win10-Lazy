@@ -393,44 +393,4 @@ function M.pbuf_rm(buf, force, wipeout, no_save, suppress_errs)
     return false, chunks, true, { err = true }
 end
 
----@param path string
----@param mode integer
----@return boolean, string?
-function M.checked_mkdir_p(path, mode)
-    vim.validate("path", path, "string")
-    vim.validate("mode", mode, "number")
-
-    local resolved_path = vim.fs.normalize(vim.fs.abspath(path))
-    local stat, err, err_name = uv.fs_stat(resolved_path)
-    if stat and stat.type == "directory" then
-        return true, nil
-    end
-
-    if (not stat) and err_name ~= "ENOENT" then
-        return false, err
-    end
-
-    if stat and stat.type ~= "directory" then
-        return false, "Path exists, but is not a directory"
-    end
-
-    local parent = vim.fs.dirname(resolved_path) ---@type string?
-    if not parent then
-        return false, "Cannot resolve target parent"
-    end
-
-    local ok_p, err_p = M.checked_mkdir_p(parent, mode)
-    if not ok_p then
-        return false, err_p
-    end
-
-    local ok_m, err_m = uv.fs_mkdir(resolved_path, mode)
-    if ok_m then
-        return true, nil
-    end
-
-    return false, err_m
-end
--- LOW: Do this not with recursion to handle deep directories
-
 return M
