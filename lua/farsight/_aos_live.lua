@@ -138,8 +138,8 @@ local function extmarks_refresh_from_current(buf, win)
     local targets = state_res_current.targets
     for _, target in ipairs(targets) do
         api.nvim_buf_set_extmark(buf, state_ns_dynamic, target[1], target[2], {
-            end_row = target[3],
             end_col = target[4],
+            end_row = target[3],
             hl_group = hl_res,
             priority = hl_priority_res,
         })
@@ -149,6 +149,7 @@ local function extmarks_refresh_from_current(buf, win)
     for label, idx in pairs(labeled_targets) do
         local range = targets[idx]
         api.nvim_buf_set_extmark(buf, state_ns_dynamic, range[3], range[4], {
+            hl_mode = "combine",
             priority = hl_priority_label,
             virt_text = { { label, hl_label } },
             virt_text_pos = "overlay",

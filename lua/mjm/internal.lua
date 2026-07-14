@@ -2,13 +2,16 @@ local api = vim.api
 local keymap = vim.keymap
 
 require("farsight.plugin")
-
+local farsight = require("farsight")
+farsight.config({ live = { dim = false } })
+api.nvim_set_hl(0, "farsightLiveResult", { underdouble = true })
+api.nvim_set_hl(0, "farsightLiveLabel", { reverse = true })
 keymap.set({ "n", "x", "o" }, "S", function()
-    require("farsight").live.rev()
+    farsight.live.rev()
 end)
 
 keymap.set({ "n", "x", "o" }, "s", function()
-    require("farsight").live.fwd()
+    farsight.live.fwd()
 end)
 
 api.nvim_set_hl(0, "FarsightJump", { reverse = true })
