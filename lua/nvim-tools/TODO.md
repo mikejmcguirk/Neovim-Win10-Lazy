@@ -2,6 +2,8 @@
 
 #### TODO:
 
+- [ ] For testing want to come up with some way for files to either expose test functions or just run tests from within files. I dont' want to put together a bunch of complicated integration tests for everything, and I don't want to have to expose local functions for testing, so each module needs an M table function that serves as a gateway for testing logic. I personally like attaching tests to files because it makes the intent clearer, but I don't know if lua has a convention for this because of the _spec nomenclature. Probably the best way to do it is to have the _spec files call test functions and then write the test functions in mini.test or whatever. Not fully baked idea yet though.
+
 - [ ] The file structure has to be changed so that most of the functions are in a "tools" folder. So the requires here willbe like `require("nvim-tools.tools.list")` or whatever. But then when you clone it for a project and rename it, you'll have `require("plugin.tools.list")` which will actually make sense.
 
 - [ ] Idea that feels like it's appropriate to represent here, or maybe we need a plugin-template superset thing - Lazydev is not the way for dealing with the problem of extended configs. What plugins should do is provide meta files that users can import into their settings so you can get the relevant type annotations. Maybe it should be something the runtime pulls?

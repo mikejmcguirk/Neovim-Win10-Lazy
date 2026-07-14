@@ -543,8 +543,6 @@ function M._get_merged_config(buf, usr_config, ...)
     ntt.merge_deep_right(config, usr_config)
     return true, config, ""
 end
--- TODO: Consider doing the opts copying here as well so you can just do all the opts handling
--- in one thing.
 
 ---@inlinedoc
 ---@class catharsis.rename.Opts
@@ -563,8 +561,6 @@ function M.rename(opts)
         opts = {}
     else
         vim.validate("opts", opts, "table")
-        ---@diagnostic disable-next-line: assign-type-mismatch
-        opts = require("nvim-tools.table").deepcopy(opts)
     end
 
     local cur_win = api.nvim_get_current_win()
@@ -584,8 +580,7 @@ M.document_highlight = {}
 ---@return uinteger, uinteger, boolean, catharsis.documentHighlight.JumpCtx, string
 local function get_jump_ctx(opts)
     vim.validate("opts", opts, "table", true)
-    ---@diagnostic disable-next-line: assign-type-mismatch
-    opts = opts and require("nvim-tools.table").deepcopy(opts) or {}
+    opts = opts or {}
 
     local win = api.nvim_get_current_win()
     local buf = api.nvim_win_get_buf(win)

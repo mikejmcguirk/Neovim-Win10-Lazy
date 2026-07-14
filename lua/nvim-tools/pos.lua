@@ -152,6 +152,15 @@ function M.ext_to_mark(row, col)
     return row + 1, col
 end
 
+---Convert an ext-based position (0,0 based) to a mark-based position (1,0 based).
+---@audited 2026-07-13
+---@param pos_ext [uinteger, uinteger] Modified in place!
+---@return [uinteger, uinteger] Reference to `pos_ext`
+function M.ext_to_mark_pos(pos_ext)
+    pos_ext[1] = pos_ext[1] + 1
+    return pos_ext
+end
+
 ---@audited 2026-07-03
 ---@param row integer 1 indexed
 ---@param col integer 0 indexed, inclusive

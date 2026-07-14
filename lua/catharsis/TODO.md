@@ -33,6 +33,8 @@
 
 - [ ] Try to make the timer model work such that the first request goes immediately, then sets a debounce before another one can go. Gets weird because the request handler needs to check the timer and active requests to see if it's stale.
 
+- [ ] Scope redraws by win rather than buf. This should hopefully cut down on extraneous on_win calls.
+
 #### Lampshade:
 
 - [ ] Instead of buf_request all, either blast all clients or own the iteration. Both possibilities allow us to:

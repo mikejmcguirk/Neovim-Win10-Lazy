@@ -1,62 +1,166 @@
 local api = vim.api
 local fn = vim.fn
-local util = vim.lsp.util
 
-local M = {}
+local ntt = require("nvim-tools.table")
 
-local state_res_current = nil ---@type farsight.live.MatchData|nil
+-----------------
+-- MARK: State --
+-----------------
+
+local state_cmdline = ""
+local state_err = ""
+local state_jump_col_ext = -1
+local state_jump_row_ext = -1
 local state_res_cache = {} ---@type table<string, farsight.live.MatchData>
-local state_buf_lines = {} ---@type table<uinteger, table<uinteger, string>>
-local state_ns = api.nvim_create_namespace("farsight.live")
-local state_jump_point = nil
+local state_res_current = nil ---@type farsight.live.MatchData|nil
 
--- TODO: Use only numeric indexes once code is baked in.
--- TODO: Move definition to somewhere common.
----@class farsight.Target Ranges are zero-indexed, end-exclusive.
----@field [1] uinteger
----@field [2] uinteger
----@field [3] uinteger
----@field [4] uinteger
----@field vtext [string, string|uinteger][]
+local function state_try_res_cache_as_current()
+    local res_cached = state_res_cache[state_cmdline]
+    if res_cached ~= nil then
+        state_res_current = res_cached
+        return true
+    end
 
--- TODO: Use only numeric indexes once code is baked in.
--- TODO: Move definition to static module.
----@class farsight.static.Target : farsight.Target
----@field label string[]
----@field label_start boolean
+    return false
+end
 
--- TODO: Use only numeric indexes once code is baked in.
----@class farsight.live.Target : farsight.Target
----@field char_after string -- TODO: try to yeet
+---@param text string
+---@return string
+local function char_last_get(text)
+    if text == "" then
+        return ""
+    end
+
+    local text_len = #text
+    return string.sub(text, text_len + vim.str_utf_start(text, text_len), text_len)
+end
+
+local function state_try_stage_jump_from_label()
+    if state_res_current == nil then
+        return false
+    end
+
+    local last_char = char_last_get(state_cmdline)
+    local range_idx = state_res_current.labeled_targets[last_char]
+    if range_idx == nil then
+        return false
+    end
+
+    local range = state_res_current.targets[range_idx]
+    state_jump_row_ext = range[1]
+    state_jump_col_ext = range[2]
+    return true
+end
 
 ---@param res farsight.live.MatchData
+local function state_set_res_for_cur_cmdline(res)
+    state_res_cache[state_cmdline] = res
+    state_res_current = res
+end
+
+---@param ok boolean
+---@param text string
+---@param upward boolean
+local function state_resolve_jump_pos(ok, text, upward)
+    if state_jump_row_ext ~= -1 and state_jump_col_ext ~= -1 then
+        return
+    end
+
+    if not (ok and text == state_cmdline and state_res_current ~= nil) then
+        return
+    end
+
+    local targets = state_res_current.targets
+    if #targets == 0 then
+        return
+    end
+
+    local target = upward and targets[#targets] or targets[1]
+    state_jump_row_ext = target[1]
+    state_jump_col_ext = target[2]
+end
+
+---@return [uinteger, uinteger], string
+local function state_clean_and_export()
+    local jump_col_ext = state_jump_col_ext
+    local jump_row_ext = state_jump_row_ext
+    state_jump_row_ext = -1
+    state_jump_col_ext = -1
+
+    require("nvim-tools.table").clear(state_res_cache)
+    state_res_current = nil
+    state_cmdline = ""
+    local err = state_err
+    state_err = ""
+
+    return { jump_row_ext, jump_col_ext }, err
+end
+
+--------------------------
+-- MARK: Hl and Ns Info --
+--------------------------
+
+local ns_basename = "farsight.live"
+local state_ns_dynamic = api.nvim_create_namespace(ns_basename .. ".dynamic")
+local state_ns_dim = api.nvim_create_namespace(ns_basename .. ".dim")
+
+do
+    -- TODO-DEP: Remove this when 0.14 comes out.
+    api.nvim_set_hl(0, "Dimmed", { default = true, link = "Comment" })
+
+    api.nvim_set_hl(0, "farsightLiveDim", { default = true, link = "Dimmed" })
+    api.nvim_set_hl(0, "farsightLiveResult", { default = true, link = "Search" })
+    api.nvim_set_hl(0, "farsightLiveLabel", { default = true, link = "IncSearch" })
+end
+
+local hl_error = api.nvim_get_hl_id_by_name("ErrorMsg")
+
+local hl_dim = api.nvim_get_hl_id_by_name("farsightLiveDim")
+local hl_res = api.nvim_get_hl_id_by_name("farsightLiveResult")
+local hl_label = api.nvim_get_hl_id_by_name("farsightLiveLabel")
+
+local hl_priority_dim = vim.hl.priorities.user + 50
+local hl_priority_res = hl_priority_dim + 1
+local hl_priority_label = hl_priority_res + 1
+
+-------------------
+-- MARK: Display --
+-------------------
+
 ---@param buf uinteger
 ---@param win uinteger
-local function extmarks_refresh(res, buf, win)
-    api.nvim_buf_clear_namespace(buf, state_ns, 0, -1)
+local function extmarks_refresh_from_current(buf, win)
+    api.nvim_buf_clear_namespace(buf, state_ns_dynamic, 0, -1)
+    if state_res_current == nil then
+        return
+    end
 
-    local targets = res.targets
+    local targets = state_res_current.targets
     for _, target in ipairs(targets) do
-        api.nvim_buf_set_extmark(buf, state_ns, target[1], target[2], {
+        api.nvim_buf_set_extmark(buf, state_ns_dynamic, target[1], target[2], {
             end_row = target[3],
             end_col = target[4],
-            hl_group = "Search", -- TODO: Make custom group
-            priority = 250, -- TODO: Come up with something reasonable
+            hl_group = hl_res,
+            priority = hl_priority_res,
         })
     end
 
-    local labeled_targets = res.labeled_targets
+    local labeled_targets = state_res_current.labeled_targets
     for label, idx in pairs(labeled_targets) do
         local range = targets[idx]
-        api.nvim_buf_set_extmark(buf, state_ns, range[3], range[4], {
-            priority = 300, -- TODO: Come up with a real number
-            virt_text = { { label, "CurSearch" } }, -- TODO: Make a custom group
+        api.nvim_buf_set_extmark(buf, state_ns_dynamic, range[3], range[4], {
+            priority = hl_priority_label,
+            virt_text = { { label, hl_label } },
             virt_text_pos = "overlay",
         })
     end
 
-    api.nvim__redraw({ flush = true, valid = true, win = win })
+    api.nvim__redraw({ flush = false, valid = true, win = win })
 end
+
+----------------------
+-- MARK: Data Setup --
+----------------------
 
 ---@param res farsight.live.MatchData Modifed in place!
 ---@param label string
@@ -110,27 +214,44 @@ local function res_labels_add(res, tokens, upward)
     end
 end
 
-local COL_BITS = 10 -- Up to three digits
-local COL_POW = 2 ^ COL_BITS
+---@param res farsight.live.MatchData Modified in place!
+---@param tokens string[]
+---@param chars_after table<string, true>
+---@return string[]
+local function tokens_avail_get(res, tokens, chars_after)
+    local res_labeled_targets = res.labeled_targets
+    if next(res_labeled_targets) ~= nil then
+        return ntt.i_discard_to(tokens, function(token)
+            return chars_after[token] == true or res_labeled_targets[token] ~= nil
+        end)
+    end
 
----@param target farsight.live.Target
+    return ntt.i_discard_to(tokens, function(token)
+        return chars_after[token] == true
+    end)
+end
+
+---@param target farsight.Target
 ---@return uinteger
 local function bit_pack_start(target)
-    return target[1] * COL_POW + target[2]
+    return target[1] * 16384 + target[2]
 end
--- TODO: This should be able to handle more rows/cols.
+-- MID: This should be able to detect massive files and switch to a string key.
 
 ---@param res farsight.live.MatchData Modified in place!
----@param old_res farsight.live.MatchData
 ---@param chars_after table<string, true>
-local function res_intake_old_labels(res, old_res, chars_after)
+local function res_intake_old_labels(res, chars_after)
+    if state_res_current == nil then
+        return
+    end
+
     local packed_targets = res.packed_targets
     for i, target in ipairs(res.targets) do
         packed_targets[bit_pack_start(target)] = i
     end
 
-    local old_targets = old_res.targets
-    for old_label, old_label_idx in pairs(old_res.labeled_targets) do
+    local old_targets = state_res_current.targets
+    for old_label, old_label_idx in pairs(state_res_current.labeled_targets) do
         if chars_after[old_label] == nil then
             local old_target_key = bit_pack_start(old_targets[old_label_idx])
             local target_idx = packed_targets[old_target_key]
@@ -141,104 +262,68 @@ local function res_intake_old_labels(res, old_res, chars_after)
     end
 end
 
----@param res farsight.live.MatchData
+---@param last_row integer
+---@param cur_row integer
+---@param last_line string
+---@param lines table<uinteger, string> 0-indexed.
+---@return integer, string
+local function get_line_for_after(last_row, cur_row, last_line, lines)
+    if last_row == cur_row then
+        return last_row, last_line
+    else
+        return cur_row, lines[cur_row]
+    end
+end
+
+---@param res farsight.live.MatchData Assumes results are properly ordered.
 ---@param lines table<uinteger, string> 0-indexed.
 ---@return table<string, true>
 local function chars_after_get(res, lines)
+    local last_row = -1
+    local line = ""
     local chars = {} ---@type table<string, true>
     for _, target in ipairs(res.targets) do
+        last_row, line = get_line_for_after(last_row, target[1], line, lines)
         local char_start_1 = target[4] + 1
-        local line = lines[target[1]]
-        local dist = vim.str_utf_end(line, char_start_1)
-        chars[string.sub(line, char_start_1, char_start_1 + dist)] = true
+        if char_start_1 <= #line then
+            local dist = vim.str_utf_end(line, char_start_1)
+            chars[string.sub(line, char_start_1, char_start_1 + dist)] = true
+        end
     end
 
     return chars
 end
 
----@param cmdline string
----@param version uinteger
----@return farsight.live.MatchData?
-local function res_cached_get(cmdline, version)
-    local res_cached = state_res_cache[cmdline]
-    if res_cached == nil then
-        return
-    end
-
-    if res_cached.buf_version ~= version then
-        state_res_cache[cmdline] = nil
-        return
-    end
-
-    return res_cached
-end
--- TODO: Test how this works with regex atoms.
-
----@param text string
----@return string
-local function char_last_get(text)
-    local charlen = fn.strcharlen(text)
-    if charlen == 0 then
-        return ""
-    end
-
-    local byteidx = fn.byteidx(text, charlen - 1)
-    return string.sub(text, byteidx + 1, #text)
-end
--- TODO: Unsure if I have the indexing right
--- TODO: This should use the vim. functions if possible to keep composing char logic consistent
-
----@param cmdline string
----@param buf uinteger
-local function should_jump(cmdline, buf)
-    local last_char = char_last_get(cmdline)
-    if state_res_current ~= nil then
-        for label, idx in pairs(state_res_current.labeled_targets) do
-            if label == last_char then
-                local range = state_res_current.targets[idx]
-                -- TODO: Use pos conversion logic here for clarity
-                state_jump_point = { range[1] + 1, range[2] }
-                api.nvim_buf_clear_namespace(buf, state_ns, 0, -1)
-                return true
-            end
-        end
-    end
-
-    return false
-end
--- TODO: Another return + side effect function
--- TODO: This feels especially undercooked.
-
+---@param cmdline_mod fun(cmdline:string): string
 ---@param match_range [uinteger, uinteger, uinteger, uinteger]
 ---@param win uinteger
 ---@param buf uinteger
----@param re vim.regex
+---@param lines table<uinteger, string>
 ---@param tokens string[]
 ---@param upward boolean
-local function targets_update(match_range, win, buf, re, tokens, upward)
-    local cmdline = fn.getcmdline()
-    if should_jump(cmdline, buf) then
-        -- TODO: feed. either feedkeys or nvim_input unsure
+local function targets_update(cmdline_mod, match_range, win, buf, lines, tokens, upward)
+    state_cmdline = fn.getcmdline()
+    if state_try_res_cache_as_current() then
+        extmarks_refresh_from_current(buf, win)
         return
     end
 
-    -- Track version in case user autocmds update the buffer.
-    local version = util.buf_versions[buf]
-    local res_cached = res_cached_get(cmdline, version)
-    if res_cached ~= nil then
-        extmarks_refresh(res_cached, buf, win)
-        state_res_current = res_cached
+    if state_try_stage_jump_from_label() then
+        api.nvim_feedkeys("\27", "nt", false)
         return
     end
 
-    local ntt = require("nvim-tools.table")
-    local lines = ntt.get_or_set_subtable(state_buf_lines, version)
-    local win_matcher = require("farsight._aos_win_match")
-    local ranges = win_matcher.res_live_get(match_range, win, buf, lines, re)
-    ---@cast ranges farsight.live.Target[]
+    local matcher = require("farsight._aos_win_match")
+    local ok, ranges, err =
+        matcher.ranges_live_get(cmdline_mod(state_cmdline), match_range, win, buf, lines)
+    if not ok then
+        state_err = err
+        return
+    end
+
+    ---@cast ranges farsight.Target[]
     ---@type farsight.live.MatchData
     local res = {
-        buf_version = version,
         idxs_labeled = {},
         labeled_targets = {},
         packed_targets = {},
@@ -246,90 +331,127 @@ local function targets_update(match_range, win, buf, re, tokens, upward)
     }
 
     local chars_after = chars_after_get(res, lines)
-    if state_res_current ~= nil then
-        res_intake_old_labels(res, state_res_current, chars_after)
-    end
+    res_intake_old_labels(res, chars_after)
+    res_labels_add(res, tokens_avail_get(res, tokens, chars_after), upward)
 
-    local avail_tokens = ntt.i_copy(tokens)
-    local res_labeled_targets = res.labeled_targets
-    ntt.i_discard(avail_tokens, function(token)
-        return chars_after[token] == true or res_labeled_targets[token] ~= nil
-    end)
-
-    res_labels_add(res, avail_tokens, upward)
-    extmarks_refresh(res, buf, win)
-
-    state_res_cache[cmdline] = res
-    state_res_current = res
-    api.nvim__redraw({ flush = true, valid = true, win = win })
+    state_set_res_for_cur_cmdline(res)
+    extmarks_refresh_from_current(buf, win)
 end
--- TODO: This needs to be profiled.
 
 local group_name = "farsight.live-input-listener"
+
+local function listener_teardown()
+    for _, autocmd in ipairs(api.nvim_get_autocmds({ group = group_name })) do
+        local id = autocmd.id
+        if id ~= nil then
+            api.nvim_del_autocmd(id)
+        end
+    end
+end
 
 ---@param range [uinteger, uinteger, uinteger, uinteger]
 ---@param win uinteger
 ---@param buf uinteger
----@param re vim.regex
+---@param lines table<uinteger, string>
 ---@param upward boolean
 ---@param tokens string[]
-local function listener_init(range, win, buf, re, tokens, upward)
+local function listener_init(cmdline_modifier, range, win, buf, lines, tokens, upward)
     -- Re-create the group in case the previous del_autocmd failed to run.
     local group = api.nvim_create_augroup(group_name, {})
     api.nvim_create_autocmd("CmdlineChanged", {
         group = group,
         callback = function()
-            targets_update(range, win, buf, re, tokens, upward)
+            targets_update(cmdline_modifier, range, win, buf, lines, tokens, upward)
+        end,
+    })
+
+    -- Fires after CmdlineChanged
+    api.nvim_create_autocmd("CursorMovedC", {
+        group = group,
+        callback = function()
+            local cmdpos = fn.getcmdpos()
+            if cmdpos < (#state_cmdline + 1) then
+                api.nvim_feedkeys("\27", "nt", false)
+                return
+            end
         end,
     })
 end
 
 ---@class farsight.live.MatchData
----@field buf_version uinteger
 ---@field idxs_labeled table<uinteger, true>
 ---@field labeled_targets table<string, uinteger>
 ---@field packed_targets table<uinteger, uinteger>
----@field targets farsight.live.Target[]
+---@field targets farsight.Target[]
 
--- TODO: Define in init
----@class farsight.live.Ctx
----@field tokens string[]
+local M = {}
 
+---@param win uinteger
+---@param buf uinteger Assumes that `win` contains `buf`.
 ---@param upward boolean
-function M.live(upward, pattern, ctx)
-    local win = api.nvim_get_current_win()
-    local win_config = api.nvim_win_get_config(win)
-    if win_config.hide then
-        -- TODO: Probably print something here
+---@param ctx farsight.live.Ctx
+function M.live(win, buf, upward, ctx)
+    if api.nvim_win_get_config(win).hide then
+        api.nvim_echo({ { "Cannot jump in a hidden window", "WarningMsg" } }, false, {})
         return
     end
 
-    local match_ctx = {
-        dir = upward and -1 or 1,
-        folds = "none",
-        match_end = "before",
-        match_start = "after",
-    }
+    local matcher = require("farsight._aos_win_match")
+    local range, lines = matcher.live_info_get(win, buf, (upward and -1 or 1))
+    api.nvim__ns_set(state_ns_dynamic, { wins = { win } })
+    if ctx.dim then
+        api.nvim__ns_set(state_ns_dim, { wins = { win } })
+        api.nvim_buf_set_extmark(buf, state_ns_dim, range[1], range[2], {
+            end_row = range[3],
+            end_col = range[4],
+            hl_group = hl_dim,
+            priority = hl_priority_dim,
+        })
+    end
 
-    local win_matcher = require("farsight._aos_win_match")
-    local ok, buf, re, range, err = win_matcher.live_info_get(win, pattern, match_ctx)
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+    local prompt = ctx.prompt .. " "
+    listener_init(ctx.cmdline_modifier, range, win, buf, lines, ctx.tokens, upward)
+    local ok_i, text_i = require("nvim-tools.ui").input({ prompt = prompt, scope = "buffer" })
+    listener_teardown()
+
+    state_resolve_jump_pos(ok_i, text_i, upward)
+    local pos_ext, err = state_clean_and_export()
+    api.nvim_buf_clear_namespace(buf, state_ns_dynamic, 0, -1)
+    if ctx.dim then
+        api.nvim_buf_clear_namespace(buf, state_ns_dim, 0, -1)
+    end
+
+    if ok_i == false then
+        api.nvim_echo({ { "Input error: " .. (text_i or ""), hl_error } }, true, {})
+        return
+    elseif pos_ext[1] == -1 or pos_ext[2] == -1 then
+        if #err > 0 then
+            api.nvim_echo({ { err, hl_error } }, true, {})
+        end
+
         return
     end
 
-    listener_init(range, win, buf, re, ctx.tokens, upward)
+    if not ctx.keepjumps then
+        api.nvim_cmd({ cmd = "norm", args = { "m'" }, bang = true }, {})
+    end
 
-    -- TODO: get input
+    if require("nvim-tools.misc").is_omode(api.nvim_get_mode().mode) then
+        if api.nvim_get_option_value("sel", { scope = "global" }) == "exclusive" then
+            pos_ext[2] = pos_ext[2] + 1
+        end
 
-    -- TODO: input teardown
-    -- - use table.clear on buf_lines
-    -- - use table.clear on tarets_cache
+        api.nvim_cmd({ cmd = "norm", args = { "v" }, bang = true }, {})
+    end
+
+    local pos = require("nvim-tools.pos").ext_to_mark_pos(pos_ext)
+    api.nvim_win_set_cursor(win, pos)
+    local unfold = ctx.unfold
+    if #unfold > 0 then
+        api.nvim_cmd({ cmd = "norm", args = { unfold }, bang = true }, {})
+    end
+
+    ctx.on_jump(win, buf, pos)
 end
--- TODO: Config needs to validate that each token is one char long
 
 return M
-
--- TODO: Keep the live logic as sectioned off as possible. Because live is the only module that
--- needs to be concerned with upward, it vastly reduces the assumptions behind the static labeler
--- and vtexter if we can always assume they run in list order.

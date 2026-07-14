@@ -1,9 +1,8 @@
 ## OBJECTIVES:
 
-- [ ] Live Jumping:
-  - [ ] Flash/lightspeed style jumping
-  - [ ] Support the lightspeed feature where, if you have a unique key after the token, pressing the unique key goes there
-  - [ ] Support label re-use
+- [x] Live Jumping:
+  - [x] Flash/lightspeed style jumping
+  - [x] Support label re-use
 - [ ] Static Jumping:
   - [ ] EasyMotion/Jump2D style jumping
 - [ ] Csearch Plus:
@@ -42,7 +41,7 @@
   - [ ] Static:
     - [ ] The key to press to jump should default to "IncSearch".
     - [ ] The current logic supports a "next key to press" and then a "future chars" color. Aside from being complicated to code, it doesn't add anything for the user.
-      - [ ] I am fine supporting a highlight for "press this key to advance the jump state, but it won't actually jump" even though I don't use it. What color though? I would probably say either "Visual" or "Search" and not overthink it too much since it's trivial to customize.
+      - [ ] I am fine supporting a highlight for "press this key to advance the jump state, but it won't actually jump" even though I don't use it. What color though? I would probably say either "Visual" or "Search" and not overthink it too much since it's trivial to customize. Also "CurSearch" is a possibility
 
 - [ ] Fold handling
   - [ ] Static jumps should put a single label on folded lines. The current code does this
@@ -70,17 +69,8 @@
   - [ ] Need the data structure to handle start and end labels. Relevant for omode/vmode static jumps or if the user sets the labeling to both
 
 - [ ] Options design:
-  - [ ] Tokens
-    - [ ] Live and static should have their own tokens
-    - [ ] Static should just use alphabetical order/fair labeling
-    - [ ] Live should use preferred tokens. Home row/e should be first. I think I have a version of this sitting around.
-    - [ ] Capital letters should just be added manually. I see no reason to do voodoo here
   - [ ] Label location
-    - [ ] Live: Right after result only (so no option)
     - [ ] Static: start/end/start+end/cursor-aware
-
-- [ ] Live search:
-  - [ ] Do not allow `\` as a token because it blocks atoms
 
 - [ ] Csearch:
   - [ ] Do not do continuation mode in omode or on dot-repeat
@@ -100,11 +90,23 @@
 
 ## TODO:
 
+- [ ] Rewrite `/plugin` in one go once all the sub-modules are done, so we can just copy over what's in catharsis and replace as needed.
+
 - [ ] Clean old files/code
   - [ ] Go through the code/TODO notes again
     - Code as a final sanity check that everything has been implemented properly
     - Notes because, especially in `plugin`, there is info related to publishing and Neovim issues I found while writing the old version
   - [ ] For `plugin`, this would involve clearing out old, commented code
+
+#### LIVE:
+
+- [ ] The experience of typing regex is unintuitive, because you want to get in and start doing micro-corrections, but that triggers the cursor moved detection
+  - [ ] Maybe you tie label display and label jumps to the cursor being in the last position, then you can use cursormoved to check if they need to be disabled/re-enabled
+
+## DOC:
+
+- [ ] regex:match_line is used under the hood
+  - [ ] Specifically meaning - Case sensitive under the hood
 
 ## PUBLISHING:
 
@@ -113,7 +115,23 @@
 - [ ] Verify that the `require("farsight")` call in /plugin.lua does not require other files
 
 ## MID:
+
 - [ ] For `nowrap` buffers, you can use `getwininfo()` to build the left and right bounds for line display, then filter out OOB results. Unlike with a lot of stuff dealing with screen positioning, this should be one or two data pulls from Neovim then the rest is Lua calculation.
+
+#### LIVE:
+
+- [ ] Handle buf versioning in case autocmds change the buffer
+  - Problem: Currently, "has cached" means we are rewinding to a previous state and should not accept a jump label. I'm not sure how working with buf versions complicates that assumption.
+
+- [ ] Don't just abort the search if the cursor moves back
+  - Problem: I'm not sure how this affects assumptions around skipping label jumping if there's a cached version.
+
+- [ ] Do tokens as codepoints rather than strings. Issue is having to do API calls for the conversions
+
+- [ ] Allow folds `none` or `first`
+  - Issue: Data typing and variables from the init module into the match module.
+
+- [ ] Add option to autojump on only one result.
 
 ## LOW:
 
@@ -124,6 +142,17 @@
     * The functions for getting ranges would have to serve multiple masters.
 
 * [ ] For targets gathering, is there a way to initially size the targets table based on the amount of bytes to search and the nature of the search? Because we already size to 16, it's hard to imagine a solution that doesn't create more perf cost.
+
+- [ ] Omit a label from the first result, since `<cr>` always jumps to it.
+
+#### LIVE:
+
+- [ ] Improve performance.
+  - On my computer, for very large searches, the total time spent outside of matching, setting extmarks, and redrawing is ~.2ms. This means any future improvements would be marginal, and can't add non-marginal complication to the code.
+  - Idea: Merge adjacent search areas
+    * Problem: A check for adjacent search areas would usually not find anything, and the user perceives nothing wrong if they are present.
+
+- [ ] Labels changing based on the current set of end chars is fortunately rare, but is it possible to further minimize without increasing runtime too much?
 
 ## NON-GOALS:
 

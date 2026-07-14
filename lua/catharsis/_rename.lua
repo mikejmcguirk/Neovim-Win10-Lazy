@@ -237,7 +237,7 @@ end
 -- MARK: Hl Groups and Priorities --
 ------------------------------------
 
-local hl_dim_priority = vim.hl.priorities.user + 2
+local hl_dim_priority = vim.hl.priorities.user + 50
 local hl_padding_priority = hl_dim_priority - 1
 local hl_priority_preview = hl_dim_priority + 1
 
@@ -634,6 +634,7 @@ local function rename_get_input(client, session, cur_pos_ext, default, preferred
         ref_req_create(client, session, cur_pos_ext)
     end
 
+    ---@type vim.ui.input.Opts
     local prompt_opts = { default = default, prompt = "New Name: ", scope = "cursor" }
     local ok, text = require("nvim-tools.ui").input(prompt_opts)
 

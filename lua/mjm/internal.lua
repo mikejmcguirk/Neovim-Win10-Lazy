@@ -1,6 +1,15 @@
 local api = vim.api
+local keymap = vim.keymap
 
 require("farsight.plugin")
+
+keymap.set({ "n", "x", "o" }, "S", function()
+    require("farsight").live.rev()
+end)
+
+keymap.set({ "n", "x", "o" }, "s", function()
+    require("farsight").live.fwd()
+end)
 
 api.nvim_set_hl(0, "FarsightJump", { reverse = true })
 api.nvim_set_hl(0, "FarsightJumpAhead", { underdouble = true })
@@ -15,48 +24,48 @@ api.nvim_set_var("farsight_csearch_all_tokens", true)
 --------------
 
 require("annotator.plugin")
-vim.keymap.set("n", "<leader>-k", "<Plug>(annotator-add-mark)")
-vim.keymap.set("n", "<leader>-K", "<Plug>(annotator-add-borders)")
-vim.keymap.set("n", "<leader>fnk", "<Plug>(annotator-fzf-lua-grep-curbuf)")
-vim.keymap.set("n", "<leader>fnK", "<Plug>(annotator-fzf-lua-grep-cwd)")
-vim.keymap.set("n", "<leader>fnm", "<Plug>(annotator-fzf-lua-grep-curbuf-luacats)")
-vim.keymap.set("n", "<leader>qgk", "<Plug>(annotator-rancher-grep-cwd)")
-vim.keymap.set("n", "<leader>lgk", "<Plug>(annotator-rancher-grep-curbuf)")
+keymap.set("n", "<leader>-k", "<Plug>(annotator-add-mark)")
+keymap.set("n", "<leader>-K", "<Plug>(annotator-add-borders)")
+keymap.set("n", "<leader>fnk", "<Plug>(annotator-fzf-lua-grep-curbuf)")
+keymap.set("n", "<leader>fnK", "<Plug>(annotator-fzf-lua-grep-cwd)")
+keymap.set("n", "<leader>fnm", "<Plug>(annotator-fzf-lua-grep-curbuf-luacats)")
+keymap.set("n", "<leader>qgk", "<Plug>(annotator-rancher-grep-cwd)")
+keymap.set("n", "<leader>lgk", "<Plug>(annotator-rancher-grep-curbuf)")
 
 --------------
 
-vim.keymap.set({ "n", "x" }, "y", function()
+keymap.set({ "n", "x" }, "y", function()
     return require("specops").yank()
 end, { expr = true })
 
-vim.keymap.set({ "n", "x" }, "Y", function()
+keymap.set({ "n", "x" }, "Y", function()
     return require("specops").yank() .. "$"
 end, { expr = true })
 
-vim.keymap.set({ "n", "x" }, "<M-y>", function()
+keymap.set({ "n", "x" }, "<M-y>", function()
     return '"+' .. require("specops").yank()
 end, { expr = true })
 
-vim.keymap.set({ "n", "x" }, "<M-Y>", function()
+keymap.set({ "n", "x" }, "<M-Y>", function()
     return '"+' .. require("specops").yank() .. "$"
 end, { expr = true })
 
-vim.keymap.set("x", "p", "P")
-vim.keymap.set("x", "P", "p")
-vim.keymap.set("n", "<M-p>", '"+p')
-vim.keymap.set("n", "<M-P>", '"+P')
-vim.keymap.set("x", "<M-p>", '"+P')
-vim.keymap.set("x", "<M-P>", '"+p')
+keymap.set("x", "p", "P")
+keymap.set("x", "P", "p")
+keymap.set("n", "<M-p>", '"+p')
+keymap.set("n", "<M-P>", '"+P')
+keymap.set("x", "<M-p>", '"+P')
+keymap.set("x", "<M-P>", '"+p')
 
-vim.keymap.set("n", "[p", '<Cmd>exe "iput! " . v:register<CR>')
-vim.keymap.set("n", "]p", '<Cmd>exe "iput "  . v:register<CR>')
-vim.keymap.set("n", "[<M-p>", '<Cmd>exe "iput! " . "+"<CR>')
-vim.keymap.set("n", "]<M-p>", '<Cmd>exe "iput "  . "+"<CR>')
+keymap.set("n", "[p", '<Cmd>exe "iput! " . v:register<CR>')
+keymap.set("n", "]p", '<Cmd>exe "iput "  . v:register<CR>')
+keymap.set("n", "[<M-p>", '<Cmd>exe "iput! " . "+"<CR>')
+keymap.set("n", "]<M-p>", '<Cmd>exe "iput "  . "+"<CR>')
 
-vim.keymap.set({ "n", "x" }, "<M-d>", '"_d')
-vim.keymap.set({ "n", "x" }, "<M-D>", '"_D')
-vim.keymap.set({ "n", "x" }, "<M-c>", '"_c')
-vim.keymap.set({ "n", "x" }, "<M-C>", '"_C')
+keymap.set({ "n", "x" }, "<M-d>", '"_d')
+keymap.set({ "n", "x" }, "<M-D>", '"_D')
+keymap.set({ "n", "x" }, "<M-c>", '"_c')
+keymap.set({ "n", "x" }, "<M-C>", '"_C')
 
 ----------------
 
@@ -117,12 +126,8 @@ api.nvim_create_autocmd("LspAttach", {
         local buf = ev.buf
         local func = action_filters[api.nvim_get_option_value("filetype", { buf = buf })]
         if func ~= nil then
-            local catharsis = require("catharsis")
-            catharsis.buf_config[buf]({
-                lampshade = {
-                    action_filter = func,
-                },
-            })
+            ---@diagnostic disable-next-line: undefined-field
+            require("catharsis").buf_config[buf]({ lampshade = { action_filter = func } })
         end
     end,
 })

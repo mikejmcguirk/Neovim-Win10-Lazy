@@ -2,6 +2,8 @@
 
 #### TODO:
 
+I might have had this backwards - why can't the `/plugin` file return an M table containing the keymap/option/autocmd definitions?
+
 need to be able to recognize gated keymaps. catharsis should gate stuff behind LSP attach. rancher might gate stuff behind buf loading.
 
 it simply cannot be the case that we are doing like manual see annotations then trying to divine what the tags should be. even under simpler assumptions there's a bunch of like data assumptions or knowledge or whatever you have to keep in mind. it can't be the @see tag probably because um it's like encoding too much meaning into it, but there needs to be a way to like tag things with a name that other things can be picked up. so that way see and deprecate tags can all auto resolve

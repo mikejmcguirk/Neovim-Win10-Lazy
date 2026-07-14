@@ -71,6 +71,12 @@ function M.is_insert_mode(mode)
     return false
 end
 
+---@param mode string Potentially multi-character mode.
+---@return boolean
+function M.is_omode(mode)
+    return #mode >= 2 and string.byte(mode, 1) == 110 and string.byte(mode, 2) == 111
+end
+
 ---@audited 2026-07-03
 ---@param f fun(...:any): boolean
 ---@return fun(...:any): boolean

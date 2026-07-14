@@ -1,5 +1,4 @@
 local api = vim.api
-local util = vim.lsp.util
 
 ---@alias farsight.aos_buf_match.Folds "all"|"first"|"none"
 
@@ -60,43 +59,6 @@ end
 -- TODO: Worth making the "first" logic more clear somehow. I had to do an investigation into
 -- the old code to re-discover what it was doing and why.
 
----@param buf integer
----@param start_row integer
----@param lines table<integer, string> 0 indexed. Modified in place!
-local function add_lines(buf, start_row, end_row_, lines)
-    local new_lines = api.nvim_buf_get_lines(buf, start_row, end_row_, false)
-    for i = 1, #new_lines do
-        lines[start_row + i - 1] = new_lines[i]
-    end
-end
-
----@param start_row uinteger Assumed to be <= end_row.
----@param end_row uinteger
----@param buf integer
----@param lines table<integer, string> 0 indexed. Modified in place!
----@return table<integer, string> Reference to `lines`.
-local function add_missing_lines(start_row, end_row, buf, lines)
-    local start_missing = -1
-    for i = start_row, end_row - 1 do
-        if lines[i] == nil then
-            if start_missing == -1 then
-                start_missing = i
-            end
-        else
-            if start_missing ~= -1 then
-                add_lines(buf, start_missing, i, lines)
-                start_missing = -1
-            end
-        end
-    end
-
-    if start_missing ~= -1 then
-        add_lines(buf, start_missing, end_row, lines)
-    end
-
-    return lines
-end
-
 ---@param stop_col_ uinteger
 ---@param re vim.regex
 ---@param buf uinteger
@@ -130,7 +92,6 @@ end
 local function match_area(range, buf, lines, re)
     local sr = range[1]
     local er = range[3]
-    lines = add_missing_lines(sr, er, buf, lines)
     -- Alloc 16 to avoid initial thrashing.
     local targets = require("nvim-tools.table").new(16, 0)
 
@@ -184,9 +145,11 @@ local function match_range_get(win, buf, dir, match_start, match_end)
     else
         range[3] = cursor_ext[1]
         if match_end == "before" then
-            range[4] = math.max(cursor_ext[2] - 1, 0)
-        else
             range[4] = cursor_ext[2]
+        else
+            local cursor_0 = cursor_ext[1]
+            local cursor_line_len = #api.nvim_buf_get_lines(buf, cursor_0, cursor_0 + 1, false)[1]
+            range[4] = math.min(cursor_ext[2] + 1, cursor_line_len)
         end
     end
 
@@ -196,6 +159,9 @@ end
 -- `add_missing_lines`. Questionable trade for only three strings.
 
 local M = {}
+
+-- TODO: should be "cursor_match_start"/"cursor_match_end" or something, since the options only
+-- apply if starting or ending on the cursor. They are effectively mutually exclusive.
 
 ---@class farsight.aos_match.Ctx
 ---@field dir -1|0|1
@@ -227,19 +193,22 @@ local function win_targets_get(win, buf, lines, re, ctx)
     return { buf = buf, targets = targets }, lines, match_range
 end
 
+---@param pattern string
 ---@param range [uinteger, uinteger, uinteger, uinteger]
 ---@param win uinteger
 ---@param buf uinteger
 ---@param lines table<uinteger, string> Modified in place!
----@param re vim.regex
----@return [uinteger, uinteger, uinteger, uinteger][]
-function M.res_live_get(range, win, buf, lines, re)
+---@return boolean, [uinteger, uinteger, uinteger, uinteger][], string
+function M.ranges_live_get(pattern, range, win, buf, lines)
+    local ok, re = pcall(vim.regex, pattern)
+    if not ok then
+        return false, {}, re
+    end
+
     local ranges = match_area(range, buf, lines, re)
     folds_handle("none", win, ranges)
-    return ranges
+    return true, ranges, ""
 end
--- TODO: Applies to this whole module, but the incoming lines need to be correct here. We need to
--- get back to the "return or side effect, but not both" rule.
 
 ---@param pattern string
 ---@return string
@@ -248,30 +217,21 @@ function pattern_resolve(pattern)
 end
 
 ---@param win uinteger
----@param pattern string
----@param ctx farsight.aos_match.Ctx
----@return boolean, uinteger, vim.regex, [uinteger, uinteger, uinteger, uinteger], string
-function M.live_info_get(win, pattern, ctx)
-    pattern = pattern_resolve(pattern)
-    if pattern == "" then
-        -- TODO: More informative output once we better understand how this is used.
-        return false, 0, vim.regex(pattern), { 0, 0, 0, 0 }, ""
+---@param buf uinteger
+---@param dir -1|1
+---@return [uinteger, uinteger, uinteger, uinteger], table<uinteger, string>
+function M.live_info_get(win, buf, dir)
+    local match_range = match_range_get(win, buf, dir, "after", "before")
+
+    local lines = {} ---@type table<uinteger, string>
+    local new_lines = api.nvim_buf_get_lines(buf, match_range[1], match_range[3] + 1, false)
+    for i = 1, #new_lines do
+        lines[match_range[1] + i - 1] = new_lines[i]
     end
 
-    local ok, re = pcall(vim.regex, pattern)
-    if not ok then
-        return false, 0, vim.regex(""), { 0, 0, 0, 0 }, re
-    end
-
-    local win_buf = api.nvim_win_get_buf(win)
-
-    local dir = ctx.dir
-    local match_start = ctx.match_start
-    local match_end = ctx.match_end
-    local match_range = match_range_get(win, win_buf, dir, match_start, match_end)
-
-    return true, win_buf, re, match_range, ""
+    return match_range, lines
 end
+-- TODO: It's silly that this takes in folds when folds is always none
 -- TODO-DEP: The common logic with this and targets_get needs to be outlined.
 -- Blocker: I'm not sure what the csearch interface is yet.
 -- TODO: This need more informative outputs.
@@ -314,4 +274,5 @@ end
 
 return M
 
+-- TODO: Before moving onto csearch or static, this module needs a refactor
 -- TODO: Unsure what to do about nomatch scenario.
