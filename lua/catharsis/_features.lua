@@ -339,4 +339,14 @@ function M.disabled_clients_get(feature_name)
     return require("nvim-tools.table").keys(features[feature_handle].disabled_client_ids)
 end
 
+-- TODO: When a buffer is killed with docu highlights on it.
+-- vim.schedule callback: ...e/mjm/.config/nvim/lua/catharsis/_document_highlight.lua:69: Invalid buffer id: 135
+-- stack traceback:
+-- 	[C]: in function 'nvim_buf_get_extmarks'
+-- 	...e/mjm/.config/nvim/lua/catharsis/_document_highlight.lua:69: in function 'res_clear'
+-- 	...e/mjm/.config/nvim/lua/catharsis/_document_highlight.lua:95: in function 'from_buf_res_clear'
+-- 	...e/mjm/.config/nvim/lua/catharsis/_document_highlight.lua:551: in function 'on_buf_rm'
+-- 	/home/mjm/.config/nvim/lua/catharsis/_features.lua:105: in function 'fn'
+-- 	[string "vim/_core/editor"]:408: in function <[string "vim/_core/editor"]:407>
+
 return M

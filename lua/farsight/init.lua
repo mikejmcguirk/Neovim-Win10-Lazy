@@ -134,7 +134,16 @@ local schema = {
         unfold = "string", -- TODO: Should validate as ""|"zv"|"zO"|"zx"|"zR"
     },
     static = {
+        dim = "boolean",
+        folds = "string", -- TODO: stricter validity check
+        keepjumps = "boolean",
+        label_start = "boolean",
+        omode_aware = "boolean",
+        -- TODO: Stricter regex validity check. Also needs to run the check that matcher uses
+        -- without requiring that module
+        pattern = "string",
         tokens = "table", -- TODO: Evaluate list here
+        vmode_aware = "boolean",
     },
 }
 -- TODO: Noted somewhere else, but we need to be able to handle custom datatypes here.
@@ -151,13 +160,6 @@ local schema = {
 ---@field [2] uinteger
 ---@field [3] uinteger
 ---@field [4] uinteger
----@field vtext [string, string|uinteger][]
-
--- TODO: Use only numeric indexes once code is baked in.
--- TODO: Move definition to static module.
----@class farsight.static.Target : farsight.Target
----@field label string[]
----@field label_start boolean
 
 ---@class farsight.config.Config
 local default_config = {
@@ -166,7 +168,14 @@ local default_config = {
     live = {
         ---Example:
         ---```lua
-        ---    -- Search with smartcase
+        ---    -- Search with literals. See `:h |/\M`
+        ---    function(cmdline)
+        ---        return "\\M" .. cmdline
+        ---    end
+        ---```
+        ---Example:
+        ---```lua
+        ---    -- Search with smartcase See `:h |/\C`
         ---    function(cmdline)
         ---        if string.find(cmdline, "%u") or string.find(cmdline, "^\\?[cC]") then
         ---            return cmdline
@@ -189,7 +198,16 @@ local default_config = {
     },
     ---@class farsight.static.Ctx
     static = {
+        dim = true, ---@type boolean
+        -- If `first` is selected, a target will be placed on the first col of the folded line.
+        folds = "first", ---@type "first"|"none"
+        keepjumps = false, ---@type boolean
+        -- `True` to label the start of the result. `False` to label the end.
+        label_start = true, ---@type boolean
+        omode_aware = true, ---@type boolean
+        pattern = "\\k\\+", ---@type string
         tokens = vim.split("abcdefghijklmnopqrstuvwxyz;,./", ""), ---@type string[]
+        vmode_aware = true, ---@type boolean
     },
 }
 ------------------------
@@ -581,6 +599,23 @@ function M.live.rev(opts)
 
     ---@cast ctx farsight.live.Ctx
     require("farsight._aos_live").live(win, buf, true, ctx)
+end
+
+function M.static(opts)
+    vim.validate("opts", opts, "table", true)
+    opts = opts or {}
+    -- TODO: For single win case, static re-gathers the current win and its buf. Unsure what to do
+    -- though since passing that info from here is useless in the multi-win case.
+    local cur_win = api.nvim_get_current_win()
+    local cur_win_buf = api.nvim_win_get_buf(cur_win)
+    local ok, ctx, err = M._get_merged_config(cur_win_buf, opts, "static")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    ---@cast ctx farsight.static.Ctx
+    require("farsight._aos_static").static(cur_win, ctx)
 end
 
 return M

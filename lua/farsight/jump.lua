@@ -1131,7 +1131,8 @@ local function resolve_jump_opts(opts, map_mode)
     local ut = require("farsight.util")
     local cur_buf = api.nvim_get_current_buf()
 
-    opts.dim = ut._use_gb_if_nil(opts.dim, "farsight_jump_dim", cur_buf)
+    -- opts.dim = ut._use_gb_if_nil(opts.dim, "farsight_jump_dim", cur_buf)
+    opts.dim = true
     opts.dim = ut._resolve_bool_opt(opts.dim, false)
 
     if opts.dir == nil then

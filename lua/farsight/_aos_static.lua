@@ -1,0 +1,545 @@
+local api = vim.api
+local fn = vim.fn
+
+local matcher = require("farsight._aos_win_match")
+local ntt = require("nvim-tools.table")
+
+-----------------
+-- MARK: State --
+-----------------
+
+local state_ns_dims = {} ---@type uinteger[]
+local state_ns_dynamics = {} ---@type uinteger[]
+
+local ns_basename = "farsight.static"
+
+---@param idx uinteger
+---@return uinteger
+local function ns_dim_get_at(idx)
+    local state_ns_dims_len = #state_ns_dims
+    if state_ns_dims_len >= idx then
+        return state_ns_dims[idx]
+    end
+
+    local diff = idx - state_ns_dims_len
+    for _ = 1, diff do
+        local ns_num = #state_ns_dims + 1
+        local new_name = ns_basename .. ".dim." .. tostring(ns_num)
+        state_ns_dims[ns_num] = api.nvim_create_namespace(new_name)
+    end
+
+    return state_ns_dims[idx]
+end
+
+---@param idx uinteger
+---@return uinteger
+local function ns_dynamic_get_at(idx)
+    local state_ns_dynamics_len = #state_ns_dynamics
+    if state_ns_dynamics_len >= idx then
+        return state_ns_dynamics[idx]
+    end
+
+    local diff = idx - state_ns_dynamics_len
+    for _ = 1, diff do
+        local ns_num = #state_ns_dynamics + 1
+        local new_name = ns_basename .. ".dynamic." .. tostring(ns_num)
+        state_ns_dynamics[ns_num] = api.nvim_create_namespace(new_name)
+    end
+
+    return state_ns_dynamics[idx]
+end
+
+-- TODO: Use the idea above for live and csearch.
+
+--------------------------
+-- MARK: Hl and Ns Info --
+--------------------------
+
+local hl_error = api.nvim_get_hl_id_by_name("ErrorMsg")
+
+---------------------------
+-- MARK: Everything else --
+---------------------------
+-- TODO: Remove this mark.
+
+---@param win uinteger
+---@param row uinteger
+---@param col uinteger
+---@param cur_win uinteger
+---@param ctx farsight.static.MatchCtx
+local function do_jump(win, row, col, cur_win, ctx)
+    if require("nvim-tools.misc").is_omode(api.nvim_get_mode().mode) then
+        if api.nvim_get_option_value("sel", { scope = "global" }) == "exclusive" then
+            -- TODO: this needs to do the full utf indexing thing
+            col = col + 1
+        end
+
+        api.nvim_cmd({ cmd = "norm", args = { "v" }, bang = true }, {})
+    end
+
+    if cur_win ~= win then
+        api.nvim_set_current_win(win)
+    end
+
+    if not ctx.keepjumps then
+        api.nvim_cmd({ cmd = "norm", args = { "m'" }, bang = true }, {})
+    end
+
+    ---@cast col uinteger
+    local pos = { row, col }
+    require("nvim-tools.pos").ext_to_mark_pos(pos)
+    api.nvim_win_set_cursor(win, pos)
+end
+-- TODO-DEP: After csearch is done, consolidate their jump logic.
+
+---@param win_matches table<uinteger, farsight.static.MatchData>
+local function win_matches_have_targets(win_matches)
+    for _, matches in pairs(win_matches) do
+        if #matches.targets > 0 then
+            return true
+        end
+    end
+
+    return false
+end
+
+---@param win_matches table<uinteger, farsight.static.MatchData>
+---@return uinteger, uinteger, uinteger
+---Extmark indexed.
+local function matches_find_jump(win_matches)
+    local win = -1
+    local row = -1
+    local col = -1
+    for match_win, matches in pairs(win_matches) do
+        local targets = matches.targets
+        if #targets == 1 then
+            if row > -1 or col > -1 then
+                return -1, -1, -1
+            else
+                win = match_win
+                row = targets[1][1]
+                col = targets[1][2]
+            end
+        end
+    end
+
+    return win, row, col
+end
+-- TODO: handle start and end poses here
+
+---@param win_matches table<uinteger, farsight.static.MatchData> Modified in place!
+local function matches_vtext_clear(win_matches)
+    for _, matches in pairs(win_matches) do
+        for _, target in ipairs(matches.targets) do
+            ntt.i_clear(target[4])
+        end
+    end
+end
+
+---@param win_matches table<uinteger, farsight.static.MatchData> Modified in place!
+---@param label_start_idx uinteger
+---@param input string
+local function matches_filter_targets(win_matches, label_start_idx, input)
+    for _, matches in pairs(win_matches) do
+        ntt.i_keep(matches.targets, function(target)
+            return target[3][label_start_idx] == input
+        end)
+    end
+end
+
+---@param win_matches table<uinteger, farsight.static.MatchData>
+local function matches_clear_ns_dynamic(win_matches)
+    for _, matches in pairs(win_matches) do
+        api.nvim_buf_clear_namespace(matches.buf, matches.ns_dynamic, 0, -1)
+    end
+end
+
+---@param win_matches table<uinteger, farsight.static.MatchData>
+---@param dim boolean
+local function namespaces_dim_clear(win_matches, dim)
+    if not dim then
+        return
+    end
+
+    for _, matches in pairs(win_matches) do
+        api.nvim_buf_clear_namespace(matches.buf, matches.ns_dim, 0, -1)
+    end
+end
+
+---@param win_matches table<uinteger, farsight.static.MatchData>
+local function extmarks_labels_set(win_matches)
+    ---@type vim.api.keyset.set_extmark
+    local extmark_opts = {
+        hl_mode = "combine",
+        priority = 250, -- TODO: replace with a real value
+        virt_text_pos = "overlay",
+        strict = false,
+    }
+
+    for _, matches in pairs(win_matches) do
+        local buf = matches.buf
+        local ns = matches.ns_dynamic
+        local targets = matches.targets
+        for _, target in ipairs(targets) do
+            extmark_opts.virt_text = target[4]
+            api.nvim_buf_set_extmark(buf, ns, target[1], target[2], extmark_opts)
+        end
+    end
+end
+
+---@param win_matches table<uinteger, farsight.static.MatchData>
+---@param dim boolean
+local function extmarks_dim_set(win_matches, dim)
+    if not dim then
+        return
+    end
+
+    ---@type vim.api.keyset.set_extmark
+    local extmark_opts = {
+        hl_group = "Dimmed", -- TODO: Replace with var
+        priority = 240, -- TODO: Replace with var
+        strict = false,
+    }
+
+    -- We go through the trouble of setting the dim highlights by line because Neovim does not
+    -- consistently draw multi-line highlight extmarks only within namespace window scope.
+    for _, matches in pairs(win_matches) do
+        local match_range = matches.match_range
+        for i = match_range[1], match_range[3] do
+            extmark_opts.end_row = i + 1
+            api.nvim_buf_set_extmark(matches.buf, matches.ns_dim, i, 0, extmark_opts)
+        end
+    end
+end
+
+---@param win_matches table<uinteger, farsight.static.MatchData>
+local function win_matches_ns_set(win_matches, dim)
+    for win, matches in pairs(win_matches) do
+        api.nvim__ns_set(matches.ns_dynamic, { wins = { win } })
+    end
+
+    if not dim then
+        return
+    end
+
+    for win, matches in pairs(win_matches) do
+        api.nvim__ns_set(matches.ns_dim, { wins = { win } })
+    end
+end
+
+---@class farsight.static.Target
+---@field [1] uinteger
+---@field [2] uinteger
+---@field [3] string[]
+---@field [4] [string, string|uinteger][]
+
+---@class farsight.static.MatchData
+---@field buf uinteger
+---@field match_range [uinteger, uinteger, uinteger, uinteger]
+---@field ns_dim uinteger
+---@field ns_dynamic uinteger
+---@field targets farsight.static.Target[]
+
+---@param target farsight.static.Target
+---@param max_len integer
+---@param start_idx integer
+local function vtext_add(target, max_len, start_idx)
+    local label = target[3]
+    local vtext = target[4]
+    local label_len = #label
+    if start_idx > label_len then
+        return
+    end
+
+    local remaining = label_len - start_idx + 1
+    if remaining == 1 then
+        vtext[1] = { label[start_idx], "IncSearch" }
+    elseif remaining <= max_len then
+        local most_end = label_len - 1
+        -- TODO: Replace with a custom group
+        vtext[1] = { table.concat(label, "", start_idx, most_end), "CurSearch" }
+        vtext[2] = { label[label_len], "IncSearch" }
+    else
+        local concat_end = start_idx + max_len - 1
+        -- TODO: Replace with a custom group
+        vtext[1] = { table.concat(label, "", start_idx, concat_end), "CurSearch" }
+    end
+end
+
+---@param win_matches table<uinteger, farsight.static.MatchData> Modified in place!
+---@param start_idx uinteger
+local function win_matches_vtexts_add(win_matches, start_idx)
+    local v_maxcol = vim.v.maxcol
+    for _, matches in pairs(win_matches) do
+        local targets = matches.targets
+        if #targets > 0 then
+            ntt.i_modify_adjacent(targets, function(ta, tb)
+                local max_len = ta[1] == tb[1] and (tb[2] - ta[2]) or v_maxcol - ta[2]
+                vtext_add(ta, max_len, start_idx)
+                return ta, tb
+            end)
+
+            local last = targets[#targets]
+            local last_max = v_maxcol - last[2]
+            vtext_add(last, last_max, start_idx)
+        end
+    end
+end
+
+---@param win_matches table<uinteger, farsight.static.MatchData>
+---@return uinteger, uinteger, uinteger
+local function jump_pos_get(win_matches)
+    local label_start_idx = 1
+    while true do
+        win_matches_vtexts_add(win_matches, label_start_idx)
+        extmarks_labels_set(win_matches)
+        api.nvim__redraw({ flush = true, valid = true })
+
+        local _, input = pcall(fn.getcharstr)
+        matches_clear_ns_dynamic(win_matches)
+
+        matches_filter_targets(win_matches, label_start_idx, input)
+        local win, row, col = matches_find_jump(win_matches)
+        if win >= 1000 and row > -1 and col > -1 then
+            api.nvim__redraw({ flush = false, valid = true })
+            return win, row, col
+        elseif not win_matches_have_targets(win_matches) then
+            return -1, -1, -1
+        end
+
+        matches_vtext_clear(win_matches)
+        label_start_idx = label_start_idx + 1
+    end
+end
+-- MID: Redrawing by win is more optimal, but harder to reason about because you have to
+-- separately track wins to redraw alongside the wins with valid targets.
+
+---@param labels string[][] Modified in place!
+---@param start uinteger
+---@param stop uinteger
+---@param tokens string[]
+local function labels_populate(labels, start, stop, tokens)
+    local range_len = stop - start + 0
+    local tokens_len = #tokens
+    if range_len == 0 or tokens_len <= 1 then
+        return
+    end
+
+    local quotient = math.floor(range_len / tokens_len)
+    local remainder = range_len % tokens_len
+
+    local token_idx = 1
+    local token_start = start
+    local to_place = quotient
+    if remainder > 0 then
+        to_place = to_place + 1
+        remainder = remainder - 1
+    end
+
+    for i = start, stop do
+        local label = labels[i]
+        label[#label + 1] = tokens[token_idx]
+        to_place = to_place - 1
+        if to_place == 0 then
+            if token_start < i then
+                labels_populate(labels, token_start, i, tokens)
+            end
+
+            token_idx = token_idx + 1
+            token_start = i + 1
+            to_place = quotient
+            if remainder > 0 then
+                to_place = to_place + 1
+                ---@cast remainder uinteger
+                remainder = remainder - 1
+            end
+        end
+    end
+end
+-- TODO: Validate in config that 2 <= #tokens
+
+---@param win_matches table<uinteger, farsight.static.MatchData> Modified in place!
+---@param wins uinteger[]
+---@param tokens string[]
+local function win_targets_labels_add(win_matches, wins, tokens)
+    -- TODO-DEP: When cutting off, remove limit from the util.
+    local total_targets = ntt.fold(win_matches, 0, function(total, _, matches)
+        return total + #matches.targets
+    end)
+
+    -- TODO: _A lot_ of assumptions in this logic.
+    local j = 1
+    local all_labels = ntt.new(total_targets, 0) ---@type string[][]
+    for _, win in ipairs(wins) do
+        local matches = win_matches[win]
+        for _, target in ipairs(matches.targets) do
+            all_labels[j] = target[3]
+            j = j + 1
+        end
+    end
+
+    ---@diagnostic disable-next-line: call-non-callable
+    assert(#all_labels == total_targets)
+    labels_populate(all_labels, 1, total_targets, tokens)
+end
+
+-- Assumes that we are only doing aware position in single-window scenarios.
+---@param pos_name string
+---@param ranges [uinteger, uinteger, uinteger, uinteger][]
+---@return uinteger
+local function bisected_idx_get(pos_name, ranges)
+    local pos = fn.getpos(pos_name)
+    local row = pos[2] - 1
+    local col_1 = pos[3]
+    local pos_range = { row, col_1 - 1, row, col_1 }
+    local idx = vim.list.bisect(ranges, pos_range, {
+        key = function(range)
+            local cmp_res = require("nvim-tools.range").cmp_(range, pos_range)
+            if cmp_res == -2 or cmp_res == -1 then
+                return -1
+            elseif cmp_res == 1 or cmp_res == 2 then
+                return 1
+            else
+                return 0
+            end
+        end,
+    })
+
+    return idx - 1
+end
+-- TODO: weird stuff where this give you end_start but we need start end
+-- TODO: Same logic as doc_hl jumping. Outline to catharsis or nvim-tools.
+
+---@param ctx farsight.static.MatchCtx
+---@param ranges [uinteger, uinteger, uinteger, uinteger][]
+---@return uinteger
+local function split_point_get(ctx, ranges)
+    local mode = ctx.mode
+    local ntm = require("nvim-tools.misc")
+    if ctx.vmode_aware and ntm.is_vmode(mode) then
+        return bisected_idx_get("v", ranges)
+    elseif ctx.omode_aware and ntm.is_omode(mode) then
+        return bisected_idx_get(".", ranges)
+    else
+        return ctx.label_start and #ranges or 0
+    end
+end
+
+---@param ctx farsight.static.MatchCtx
+---@param win uinteger
+---@param idx uinteger Assumes that ns_ensure has been run for the relevant indexes.
+---@return uinteger, farsight.static.MatchData
+local function match_data_mapper(ctx, win, idx)
+    local buf = api.nvim_win_get_buf(win)
+    local match_range, ranges = matcher.static_ranges_get(win, buf, ctx.regex, ctx.folds)
+
+    local start_end = split_point_get(ctx, ranges)
+    local start_ranges, end_ranges = ntt.i_split_at(ranges, start_end)
+    local targets = ntt.i_filter_map_to(start_ranges, function(range)
+        return { range[1], range[2], {}, {} }
+    end)
+
+    local targets_end = ntt.i_filter_map_to(end_ranges, function(range)
+        return { range[3], range[4] - 1, {}, {} }
+    end)
+
+    ntt.i_append(targets, targets_end)
+    return win,
+        {
+            buf = buf,
+            match_range = match_range,
+            ns_dim = ns_dim_get_at(idx),
+            ns_dynamic = ns_dynamic_get_at(idx),
+            targets = targets,
+        }
+end
+-- MID: This function feels like it's doing too much.
+-- MID: Behaviorally, it makes sense for matcher to only care about ranges and for this module
+-- to care about target typing. Perf-wise, going from four to six fields forces a table resize.
+-- Duplicating match logic though risks awakening the complexity spirit demon.
+
+---@param mode string
+---@param cur_win uinteger
+---@return uinteger[]
+local function wins_valid_sorted_get(mode, cur_win)
+    local ntm = require("nvim-tools.misc")
+    local wins = ntm.is_nmode(mode) and api.nvim_tabpage_list_wins(0) or { cur_win }
+
+    local _, positions = ntt.i_filter_modify_accum(wins, {}, function(pos_acc, win)
+        local config = api.nvim_win_get_config(win)
+        if config.focusable and not config.hide then
+            local pos = api.nvim_win_get_position(win)
+            pos_acc[win] = { pos[1], pos[2], config.zindex or 0 }
+            return pos_acc, win
+        end
+
+        return pos_acc, nil
+    end)
+
+    ---@cast positions table<uinteger, { [1]:integer, [2]:integer, [3]:integer }>
+    table.sort(wins, function(a, b)
+        local pos_a = positions[a]
+        local pos_b = positions[b]
+        if pos_a[3] < pos_b[3] then
+            return true
+        elseif pos_a[3] > pos_b[3] then
+            return false
+        elseif pos_a[2] < pos_b[2] then
+            return true
+        elseif pos_a[2] > pos_b[2] then
+            return false
+        else
+            return pos_a[1] < pos_b[1]
+        end
+    end)
+
+    return wins
+end
+
+local M = {}
+
+---@class farsight.static.MatchCtx : farsight.static.Ctx
+---@field mode string
+---@field regex vim.regex
+
+---@param cur_win uinteger
+---@param ctx farsight.static.Ctx
+function M.static(cur_win, ctx)
+    local mode = api.nvim_get_mode().mode
+    local wins = wins_valid_sorted_get(mode, cur_win)
+    local wins_len = #wins
+    if wins_len == 0 then
+        api.nvim_echo({ { "No visible, focusable wins", hl_error } }, false, {})
+        return
+    end
+
+    ---@cast ctx farsight.static.MatchCtx
+    ctx.mode = mode
+    ctx.regex = vim.regex(ctx.pattern) -- Hard erroring is fine if this fails.
+    -- TODO-DEP: When this is cut off, remove the filtering + limit functionality here. Both hurt
+    -- JIT compilation.
+    local win_matches = ntt.i_filter_map_ctx_to_dict(wins, ctx, match_data_mapper)
+    ---@cast win_matches table<uinteger, farsight.static.MatchData>
+
+    local win, row, col = matches_find_jump(win_matches)
+    if win >= 1000 and row > -1 and col > -1 then
+        do_jump(win, row, col, cur_win, ctx)
+        return
+    end
+
+    win_targets_labels_add(win_matches, wins, ctx.tokens)
+    local dim = ctx.dim
+    win_matches_ns_set(win_matches, dim)
+    extmarks_dim_set(win_matches, dim)
+    win, row, col = jump_pos_get(win_matches)
+    namespaces_dim_clear(win_matches, dim)
+    if win < 1000 or row < 0 or col < 0 then
+        return
+    end
+
+    do_jump(win, row, col, cur_win, ctx)
+end
+
+return M
+
+-- TODO: For omode, the bisect result should be treated as after the cursor

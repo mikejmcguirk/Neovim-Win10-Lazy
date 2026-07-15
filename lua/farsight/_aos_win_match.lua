@@ -1,5 +1,7 @@
 local api = vim.api
 
+local ntt = require("nvim-tools.table")
+
 ---@alias farsight.aos_buf_match.Folds "all"|"first"|"none"
 
 ---@alias farsight.aos_buf_match.MatchStart "zero"|"on"|"after"
@@ -22,7 +24,6 @@ end
 ---@param ranges [uinteger, uinteger, uinteger, uinteger][] Modified in place!
 local function folds_keep_first(win, ranges)
     api.nvim_win_call(win, function()
-        local ntt = require("nvim-tools.table")
         ntt.i_filter_modify_accum(ranges, {}, function(fold_rows, target)
             local fold_row = vim.call("foldclosed", target[1])
             if fold_row == -1 then
@@ -59,6 +60,7 @@ end
 -- TODO: Worth making the "first" logic more clear somehow. I had to do an investigation into
 -- the old code to re-discover what it was doing and why.
 
+---Note: regex:match_line is zero-based, end exclusive
 ---@param stop_col_ uinteger
 ---@param re vim.regex
 ---@param buf uinteger
@@ -194,13 +196,19 @@ local function win_targets_get(win, buf, lines, re, ctx)
 end
 
 ---@param pattern string
+---@return string
+function pattern_resolve(pattern)
+    return (string.find(pattern, "^\\$") or string.find(pattern, "[^\\]\\$")) and "" or pattern
+end
+
+---@param pattern string
 ---@param range [uinteger, uinteger, uinteger, uinteger]
 ---@param win uinteger
 ---@param buf uinteger
 ---@param lines table<uinteger, string> Modified in place!
 ---@return boolean, [uinteger, uinteger, uinteger, uinteger][], string
 function M.ranges_live_get(pattern, range, win, buf, lines)
-    local ok, re = pcall(vim.regex, pattern)
+    local ok, re = pcall(vim.regex, pattern_resolve(pattern))
     if not ok then
         return false, {}, re
     end
@@ -210,10 +218,15 @@ function M.ranges_live_get(pattern, range, win, buf, lines)
     return true, ranges, ""
 end
 
----@param pattern string
----@return string
-function pattern_resolve(pattern)
-    return (string.find(pattern, "^\\$") or string.find(pattern, "[^\\]\\$")) and "" or pattern
+---@param buf uinteger
+---@param match_range [uinteger, uinteger, uinteger, uinteger]
+---@return table<uinteger, string>
+local function lines_from_match_range(buf, match_range)
+    local start_row = match_range[1]
+    local buf_lines = api.nvim_buf_get_lines(buf, start_row, match_range[3] + 1, false)
+    return ntt.i_filter_map_ctx_to_dict(buf_lines, start_row, function(sr, line, idx)
+        return sr + idx - 1, line
+    end)
 end
 
 ---@param win uinteger
@@ -222,19 +235,10 @@ end
 ---@return [uinteger, uinteger, uinteger, uinteger], table<uinteger, string>
 function M.live_info_get(win, buf, dir)
     local match_range = match_range_get(win, buf, dir, "after", "before")
-
-    local lines = {} ---@type table<uinteger, string>
-    local new_lines = api.nvim_buf_get_lines(buf, match_range[1], match_range[3] + 1, false)
-    for i = 1, #new_lines do
-        lines[match_range[1] + i - 1] = new_lines[i]
-    end
-
-    return match_range, lines
+    return match_range, lines_from_match_range(buf, match_range)
 end
--- TODO: It's silly that this takes in folds when folds is always none
 -- TODO-DEP: The common logic with this and targets_get needs to be outlined.
 -- Blocker: I'm not sure what the csearch interface is yet.
--- TODO: This need more informative outputs.
 
 ---@param wins uinteger[]
 ---@param pattern string
@@ -256,7 +260,6 @@ function M.targets_get(wins, pattern, ctx)
         return false, win_targets, { 0, 0, 0, 0 }, re
     end
 
-    local ntt = require("nvim-tools.table")
     local buf_lines = {} ---@type table<uinteger, table<uinteger, string>>
     local match_ranges = {} ---@type table<uinteger, [uinteger, uinteger, uinteger, uinteger]>
     for _, win in ipairs(wins) do
@@ -272,7 +275,25 @@ end
 -- TODO: This interface feels right for static but I'm not sure about csearch, where we always
 -- know we are only doing one win.
 
+---@param pattern string
+---@return string
+function M.pattern_resolve(pattern)
+    return (string.find(pattern, "^\\$") or string.find(pattern, "[^\\]\\$")) and "" or pattern
+end
+-- TODO: yeet the local version
+
+---@param win uinteger
+---@param buf uinteger
+---@param re vim.regex
+---@param folds "first"|"none"
+---@return [uinteger, uinteger, uinteger, uinteger], [uinteger, uinteger, uinteger, uinteger][]
+function M.static_ranges_get(win, buf, re, folds)
+    local match_range = match_range_get(win, buf, 0, "on", "on")
+    local ranges = match_area(match_range, buf, lines_from_match_range(buf, match_range), re)
+    folds_handle(folds, win, ranges)
+    return match_range, ranges
+end
+
 return M
 
--- TODO: Before moving onto csearch or static, this module needs a refactor
 -- TODO: Unsure what to do about nomatch scenario.

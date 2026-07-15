@@ -128,8 +128,7 @@ local hl_priority_label = hl_priority_res + 1
 -------------------
 
 ---@param buf uinteger
----@param win uinteger
-local function extmarks_refresh_from_current(buf, win)
+local function extmarks_refresh_from_current(buf)
     api.nvim_buf_clear_namespace(buf, state_ns_dynamic, 0, -1)
     if state_res_current == nil then
         return
@@ -155,8 +154,6 @@ local function extmarks_refresh_from_current(buf, win)
             virt_text_pos = "overlay",
         })
     end
-
-    api.nvim__redraw({ flush = false, valid = true, win = win })
 end
 
 ----------------------
@@ -305,7 +302,7 @@ end
 local function targets_update(cmdline_mod, match_range, win, buf, lines, tokens, upward)
     state_cmdline = fn.getcmdline()
     if state_try_res_cache_as_current() then
-        extmarks_refresh_from_current(buf, win)
+        extmarks_refresh_from_current(buf)
         return
     end
 
@@ -336,7 +333,7 @@ local function targets_update(cmdline_mod, match_range, win, buf, lines, tokens,
     res_labels_add(res, tokens_avail_get(res, tokens, chars_after), upward)
 
     state_set_res_for_cur_cmdline(res)
-    extmarks_refresh_from_current(buf, win)
+    extmarks_refresh_from_current(buf)
 end
 
 local group_name = "farsight.live-input-listener"
@@ -379,6 +376,48 @@ local function listener_init(cmdline_modifier, range, win, buf, lines, tokens, u
     })
 end
 
+---@param dim boolean
+---@param win uinteger
+---@param range [uinteger, uinteger, uinteger, uinteger]
+---@param buf uinteger
+local function dim_extmarks_set_checked(dim, win, range, buf)
+    if not dim then
+        return
+    end
+
+    api.nvim__ns_set(state_ns_dim, { wins = { win } })
+    ---@type vim.api.keyset.set_extmark
+    local extmark_opts = {
+        hl_group = hl_dim,
+        priority = hl_priority_dim,
+        strict = false,
+    }
+
+    -- We go through the trouble of setting the dim highlights by line because Neovim does not
+    -- consistently draw multi-line highlight extmarks only within namespace window scope.
+    local start_row = range[1]
+    local end_row = range[3]
+    if start_row == end_row then
+        extmark_opts.end_row = end_row
+        extmark_opts.end_col = range[4]
+        api.nvim_buf_set_extmark(buf, state_ns_dim, start_row, range[2], extmark_opts)
+        return
+    end
+
+    extmark_opts.end_row = end_row
+    extmark_opts.end_col = range[4]
+    api.nvim_buf_set_extmark(buf, state_ns_dim, end_row, 0, extmark_opts)
+
+    extmark_opts.hl_eol = true
+    extmark_opts.end_col = nil
+    api.nvim_buf_set_extmark(buf, state_ns_dim, start_row, range[2], extmark_opts)
+
+    for i = start_row + 1, end_row - 1 do
+        extmark_opts.end_row = i + 1
+        api.nvim_buf_set_extmark(buf, state_ns_dim, i, 0, extmark_opts)
+    end
+end
+
 ---@class farsight.live.MatchData
 ---@field idxs_labeled table<uinteger, true>
 ---@field labeled_targets table<string, uinteger>
@@ -400,15 +439,7 @@ function M.live(win, buf, upward, ctx)
     local matcher = require("farsight._aos_win_match")
     local range, lines = matcher.live_info_get(win, buf, (upward and -1 or 1))
     api.nvim__ns_set(state_ns_dynamic, { wins = { win } })
-    if ctx.dim then
-        api.nvim__ns_set(state_ns_dim, { wins = { win } })
-        api.nvim_buf_set_extmark(buf, state_ns_dim, range[1], range[2], {
-            end_row = range[3],
-            end_col = range[4],
-            hl_group = hl_dim,
-            priority = hl_priority_dim,
-        })
-    end
+    dim_extmarks_set_checked(ctx.dim, win, range, buf)
 
     local prompt = ctx.prompt .. " "
     listener_init(ctx.cmdline_modifier, range, win, buf, lines, ctx.tokens, upward)
@@ -439,6 +470,7 @@ function M.live(win, buf, upward, ctx)
 
     if require("nvim-tools.misc").is_omode(api.nvim_get_mode().mode) then
         if api.nvim_get_option_value("sel", { scope = "global" }) == "exclusive" then
+            -- TODO: this needs to do the full utf indexing thing
             pos_ext[2] = pos_ext[2] + 1
         end
 

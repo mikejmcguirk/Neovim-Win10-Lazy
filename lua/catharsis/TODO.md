@@ -42,6 +42,10 @@
   - [ ] More finely control when we early exist upon finding a result
   - [ ] Allow for client filtering in the _features module
 
+#### RENAME:
+
+  - [ ] Would like to use hl_mode combine for new text, but then the new text becomes italicized like "Dimmed" is. How to solve without making a bespoke highlight group to replaced "Dimmed"?
+
 ## MID-DEP:
 
 #### Rename:

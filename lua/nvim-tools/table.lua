@@ -1,4 +1,4 @@
-local MAX_INT = math.floor(math.huge)
+local MAX_INT = 2 ^ 53
 
 ---@brief Pure Lua functions to operate on lists and tables.
 ---
@@ -408,6 +408,27 @@ function M.i_splice_to(t, start, stop)
     end
 
     return require("nvim-tools._table").i_copy_exact(t, start, stop)
+end
+
+---Split |lua-list| `t` into two new lists at `idx`. Returns two empty tables if `t` is empty.
+---References within `t` are shallow-copied.
+---@generic T
+---@param t T[]
+---@param idx uinteger End of the first return table.
+---@return T[] Empty if `idx` < 1.
+---@return T[] Empty if `idx` > length of `t`.
+function M.i_split_at(t, idx)
+    local _ntt = require("nvim-tools._table")
+    local t_len = #t
+    if t_len == 0 then
+        return {}, {}
+    elseif t_len <= idx then
+        return _ntt.i_copy_exact(t, 1, t_len), {}
+    elseif idx < 1 then
+        return {}, _ntt.i_copy_exact(t, 1, t_len)
+    end
+
+    return _ntt.i_copy_exact(t, 1, idx), _ntt.i_copy_exact(t, idx + 1, t_len)
 end
 
 ---Create a new |lua-list|, using function `f` to iteratively mutate an initial seed value.
@@ -2596,6 +2617,40 @@ function M.i_accumulate(t, init, f, rev)
     return ret
 end
 
+---Transform the elements of |lua-dict| `t` into a single value, threading an accumulator
+---starting at `init` through function `f`.
+---@generic K, V, A
+---@param t table<K, V>
+---@param init A No-op if this is `nil`.
+---@param f fun(acc:A, k:K, v:V): A|nil If `nil` is returned, folding stops and the
+---current accumulator is returned.
+---@param limit? uinteger Maximum keys to iterate through.
+---@return A `init` if `t` has no keys.
+function M.fold(t, init, f, limit)
+    if init == nil then
+        return init
+    end
+
+    local count = 0
+    limit = limit or MAX_INT
+    local acc_ret = init
+    for k, v in pairs(t) do
+        if count >= limit then
+            break
+        end
+
+        local acc = f(acc_ret, k, v)
+        if acc == nil then
+            return acc_ret
+        end
+
+        acc_ret = acc
+        count = count + 1
+    end
+
+    return acc_ret
+end
+
 ---Transform the elements of `t` into a single value using an accumulator.
 ---@see |i_reduce()| to initialize with the first value of the list.
 ---@generic T, A
@@ -2846,6 +2901,32 @@ function M.i_filter_map2_to(t1, t2, f)
     end
 
     require("nvim-tools._table").i_filter_map2_do(len, t1, t2, f, ret)
+    return ret
+end
+
+---Create a new |lua-dict| from elements of |lua-list| `t` using function `f` and context `ctx`.
+---@generic T, C, K, V
+---@param t T[]
+---@param ctx C
+---@param f fun(ctx:C, x:T, idx:uinteger): K|nil, V|nil If either `K` or `V` are nil, the result
+---is not added.
+---@param limit? uinteger Maximum number of results to add.
+---@return table<K, V>
+function M.i_filter_map_ctx_to_dict(t, ctx, f, limit)
+    local ret = {} ---@type table<K, V>
+    local count = 0
+    limit = limit or MAX_INT
+    for i = 1, #t do
+        local k, v = f(ctx, t[i], i)
+        if k ~= nil and v ~= nil then
+            ret[k] = v
+            count = count + 1
+            if count >= limit then
+                break
+            end
+        end
+    end
+
     return ret
 end
 
@@ -3156,6 +3237,61 @@ end
 -- MID-DEP: For uneven unit sizes, you can add a `rev` boolean to put the extra group before or
 -- after the main group loop. Don't do this though without a concrete use case, as it makes the
 -- code more complicated.
+
+---Create a new |lua-list| using the values of `t` mapped with `f`. LuaJIT builds use `table.new`
+---to pre-allocate the results.
+---@warning Returning `nil` values will create a |lua-dict| instead.
+---@generic T, M
+---@param t T[]
+---@param f fun(x:T, idx:uinteger): M
+---@param rev boolean?
+---@param limit? uinteger
+---@return M[]
+function M.i_map_to(t, f, rev, limit)
+    local t_len = #t
+    local start, stop, step = require("nvim-tools._table").resolve_rev(1, t_len, rev)
+    local ret = M.new(t_len, 0)
+    local j = 1
+    limit = limit or MAX_INT
+
+    for i = start, stop, step do
+        ret[j] = f(t[i], i)
+        if j >= limit then
+            break
+        end
+    end
+
+    return ret
+end
+
+---Modify |lua-list| `t` in-place with `f`.
+---@warning Returning `nil` values will turn `t` into a |lua-dict|.
+---@generic T, M
+---@param t T[] Modified in place!
+---@param f fun(x:T, idx:uinteger): M
+---@return M[] Reference to `t`.
+function M.i_modify(t, f)
+    for i = 1, #t do
+        t[i] = f(t[i], i)
+    end
+
+    return t
+end
+
+---Modify list `t` in-place by applying `f` to each adjacent pair. Operation is left-to-right and
+---propagating.
+---@generic T
+---@param t T[] Modified in place! No-op if length is less than two.
+---@param f fun(x:T, y:T, idx_x:uinteger, idx_y:uinteger): T, T
+---@return T[] Reference to `t`.
+function M.i_modify_adjacent(t, f)
+    for i = 2, #t do
+        local j = i - 1
+        t[j], t[i] = f(t[j], t[i], j, i)
+    end
+
+    return t
+end
 
 ---Create a new |lua-table| by iterating through `t` and using funciton `f` to return arbitrary
 ---new key/value pairs.

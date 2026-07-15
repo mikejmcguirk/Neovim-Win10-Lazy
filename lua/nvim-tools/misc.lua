@@ -73,9 +73,22 @@ end
 
 ---@param mode string Potentially multi-character mode.
 ---@return boolean
+function M.is_nmode(mode)
+    return string.byte(mode, 1) == 110 and (#mode == 1 or string.byte(mode, 2) == 105)
+end
+
+---@param mode string Potentially multi-character mode.
+---@return boolean
 function M.is_omode(mode)
     return #mode >= 2 and string.byte(mode, 1) == 110 and string.byte(mode, 2) == 111
 end
+
+---@param mode string Potentially multi-character mode.
+---@return boolean
+function M.is_vmode(mode)
+    return mode == "v" or mode == "V" or mode == "\22"
+end
+-- MID: Unsure how to get to block mode with string.byte.
 
 ---@audited 2026-07-03
 ---@param f fun(...:any): boolean

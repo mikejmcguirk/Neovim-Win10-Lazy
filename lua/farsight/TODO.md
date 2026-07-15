@@ -34,20 +34,10 @@
 
 - [ ] Something I goofed in the previous code - Dim should be applied to the searched area, not the target lines. This provides the user a visual indicator of where the search is happening
 
-- [ ] Verify and note indexing for match_line or whatever.
-
 - [ ] Highlighting
-  - [ ] Live: Default the search terms to "search" and default the label to "IncSearch"
-  - [ ] Static:
-    - [ ] The key to press to jump should default to "IncSearch".
-    - [ ] The current logic supports a "next key to press" and then a "future chars" color. Aside from being complicated to code, it doesn't add anything for the user.
-      - [ ] I am fine supporting a highlight for "press this key to advance the jump state, but it won't actually jump" even though I don't use it. What color though? I would probably say either "Visual" or "Search" and not overthink it too much since it's trivial to customize. Also "CurSearch" is a possibility
+  - [ ] Csearch: IncSearch > CurSearch > Search
 
 - [ ] Fold handling
-  - [ ] Static jumps should put a single label on folded lines. The current code does this
-    - The folds `first` logic handles this
-  - [ ] Live jumps should ignore folds
-    - The folds `none` logic handles this
   - [ ] Csearch is weird because we don't want to draw extmarks for folds, but we need to account for them because of highlights relative to count. I forget how the current code handles this
 
 - [ ] General search module:
@@ -102,6 +92,7 @@
 
 - [ ] The experience of typing regex is unintuitive, because you want to get in and start doing micro-corrections, but that triggers the cursor moved detection
   - [ ] Maybe you tie label display and label jumps to the cursor being in the last position, then you can use cursormoved to check if they need to be disabled/re-enabled
+  - [ ] You could also just have "very nomagic" as an option, but that also requires "smartcase" as an option which I want to avoid. Probably a documentation thing.
 
 ## DOC:
 
@@ -152,11 +143,13 @@
   - Idea: Merge adjacent search areas
     * Problem: A check for adjacent search areas would usually not find anything, and the user perceives nothing wrong if they are present.
 
-- [ ] Labels changing based on the current set of end chars is fortunately rare, but is it possible to further minimize without increasing runtime too much?
+## ISSUES:
+
+- [ ] Multi-line highlights do not behave well with window namespace scoping.
 
 ## NON-GOALS:
 
 - Sneak mode. There is no reason to make an inferior version of the original.
-- Lightspeed has a feature where, if a unique end char is present, pressing said end char will jump to that result. This poses two problems though:
-  * If you are typing through a result to narrow it to a label, you might press the key to jump without realizing
+- Lightspeed has a feature where, if a unique end char is present, pressing that end char will jump. This poses two problems:
+  * If you are typing through a result to narrow it to a label, you might inadvertently press the key to jump
   * This is complex to implement

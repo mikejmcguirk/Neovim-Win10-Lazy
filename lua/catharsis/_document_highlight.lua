@@ -27,7 +27,7 @@ local write_hl = api.nvim_get_hl_id_by_name("LspReferenceWrite")
 ---@field version integer
 
 local state_client_ids_disabled = {} ---@type table<uinteger, true|nil>
-local state_ns = api.nvim_create_namespace("mjm.lsp.document_highlight")
+local state_ns = api.nvim_create_namespace("catharsis.document_highlight")
 local state_reqs = {} ---@type table<uinteger, { client_id:uinteger, id:uinteger }>
 local state_results = {} ---@type table<integer, mjm.lsp.documentHighlight.Result|nil>
 local state_timers = {} ---@type table<uinteger, uv.uv_timer_t>
@@ -157,7 +157,7 @@ local function set_mark(buf, hl_info)
         end_col = hl_info[4],
         end_row = hl_info[3],
         hl_group = hl_group_get(hl_info[5]),
-        priority = hl_user,
+        priority = hl_user, -- TODO: This should be below user
         strict = false,
     })
 end

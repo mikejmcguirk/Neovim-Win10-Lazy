@@ -79,6 +79,10 @@ set("n", "<leader>-r", function()
     add_annotation("@return")
 end, { buf = 0 })
 
+set("n", "<leader>-s", function()
+    add_annotation("@cast")
+end, { buf = 0 })
+
 set("n", "<leader>-t", function()
     add_annotation("@type")
 end, { buf = 0 })
