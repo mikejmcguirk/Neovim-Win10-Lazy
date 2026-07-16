@@ -185,6 +185,26 @@ function M.mark_to_ext_pos(pos)
     return pos
 end
 
+---@param buf uinteger
+---@param row uinteger 0 indexed
+---@param col uinteger 0 indexed
+---@return uinteger
+function M.utf_advance_col(buf, row, col)
+    local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
+    local diff = vim.str_utf_end(line, col + 1)
+    return col + diff + 1
+end
+
+---@param buf uinteger
+---@param row uinteger 0 indexed
+---@param col uinteger 0 indexed
+---@return uinteger
+function M.utf_decrease_col(buf, row, col)
+    local line = api.nvim_buf_get_lines(buf, row, row + 1, false)[1]
+    local diff = vim.str_utf_start(line, col)
+    return col - 1 + diff
+end
+
 -------------------------------
 -- MARK: Position Adjustment --
 -------------------------------

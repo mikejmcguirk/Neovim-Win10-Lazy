@@ -81,6 +81,7 @@ local function ns_ensure(total_needed)
         state_ns_dynamics[idx_new] = api.nvim_create_namespace(ns_name_new)
     end
 end
+-- TODO: Use the dynamic building idea from the farsight static module.
 -- MID: This is goofy, because the *association* between the wins and the namespaces is not
 -- stored anywhere.
 

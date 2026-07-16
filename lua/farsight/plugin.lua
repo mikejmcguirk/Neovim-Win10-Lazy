@@ -11,13 +11,13 @@ local api = vim.api
 local fn = vim.fn
 
 local plugs = {
-    {
-        { "n", "x", "o" },
-        "<Plug>(Farsight-Jump)",
-        function()
-            require("farsight.jump").jump({})
-        end,
-    },
+    -- {
+    --     { "n", "x", "o" },
+    --     "<Plug>(Farsight-Jump)",
+    --     function()
+    --         require("farsight.jump").jump({})
+    --     end,
+    -- },
     {
         { "n", "x", "o" },
         "<Plug>(Farsight-CsearchF-Forward)",
@@ -81,26 +81,28 @@ if vim.g.farsight_default_maps == false then
     return
 end
 
----@type { [1]: string[], [2]: string, [3]: string }[]
-local jump_maps = {
-    { { "n", "x", "o" }, "<cr>", "<Plug>(Farsight-Jump)" },
-}
-
-for i = 1, #jump_maps do
-    local map = jump_maps[i]
-    local modes = map[1]
-    local key = map[2]
-    local rhs = map[3]
-    for j = 1, #modes do
-        local mode = modes[j]
-        local maparg_res = fn.maparg(key, mode)
-        -- Need to check for just <cr> because of unsimplification (:h <tab>)
-        local res_string = type(maparg_res) == "string"
-        if res_string and (maparg_res == "" or string.lower(maparg_res) == key) then
-            api.nvim_set_keymap(mode, key, rhs, { noremap = true })
-        end
-    end
-end
+-- ---@type { [1]: string[], [2]: string, [3]: string }[]
+-- local jump_maps = {
+--     { { "n", "x", "o" }, "<cr>", "<Plug>(Farsight-Jump)" },
+-- }
+--
+-- for i = 1, #jump_maps do
+--     local map = jump_maps[i]
+--     local modes = map[1]
+--     local key = map[2]
+--     local rhs = map[3]
+--     for j = 1, #modes do
+--         local mode = modes[j]
+--         local maparg_res = fn.maparg(key, mode)
+--         -- Need to check for just <cr> because of unsimplification (:h <tab>)
+--         local res_string = type(maparg_res) == "string"
+--         if res_string and (maparg_res == "" or string.lower(maparg_res) == key) then
+--             api.nvim_set_keymap(mode, key, rhs, { noremap = true })
+--         end
+--     end
+-- end
+-- TODO: Make sure the business with properly mapping <cr> is transferred over when this module
+-- is re-written.
 
 ---@type { [1]: string[], [2]: string, [3]: string }[]
 local csearch_maps = {

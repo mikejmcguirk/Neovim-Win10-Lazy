@@ -5,7 +5,7 @@ require("farsight.plugin")
 local farsight = require("farsight")
 farsight.config({
     -- live = { dim = false },
-    static = { label_start = true },
+    -- static = { label_start = true },
 })
 
 -- api.nvim_set_hl(0, "farsightLiveResult", { underdouble = true })
@@ -18,7 +18,7 @@ keymap.set({ "n", "x", "o" }, "S", function()
     farsight.live.rev()
 end)
 
-keymap.set({ "n", "x", "o" }, "<leader><cr>", function()
+keymap.set({ "n", "x", "o" }, "<cr>", function()
     farsight.static()
 end)
 

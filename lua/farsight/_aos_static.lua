@@ -4,14 +4,13 @@ local fn = vim.fn
 local matcher = require("farsight._aos_win_match")
 local ntt = require("nvim-tools.table")
 
------------------
--- MARK: State --
------------------
-
-local state_ns_dims = {} ---@type uinteger[]
-local state_ns_dynamics = {} ---@type uinteger[]
+--------------------------
+-- MARK: Hl and Ns Info --
+--------------------------
 
 local ns_basename = "farsight.static"
+local state_ns_dims = {} ---@type uinteger[]
+local state_ns_dynamics = {} ---@type uinteger[]
 
 ---@param idx uinteger
 ---@return uinteger
@@ -49,36 +48,39 @@ local function state_ns_dynamic_get_at(idx)
     return state_ns_dynamics[idx]
 end
 
--- TODO: Use the idea above for live and csearch.
+do
+    -- TODO-DEP: Remove this when 0.14 comes out.
+    api.nvim_set_hl(0, "Dimmed", { default = true, link = "Comment" })
 
---------------------------
--- MARK: Hl and Ns Info --
---------------------------
+    api.nvim_set_hl(0, "farsightStaticDim", { default = true, link = "Dimmed" })
+    api.nvim_set_hl(0, "farsightStaticLabel", { default = true, link = "CurSearch" })
+    api.nvim_set_hl(0, "farsightStaticTargetLabel", { default = true, link = "IncSearch" })
+end
 
 local hl_error = api.nvim_get_hl_id_by_name("ErrorMsg")
+
+local hl_dim = api.nvim_get_hl_id_by_name("farsightStaticDim")
+local hl_label = api.nvim_get_hl_id_by_name("farsightStaticLabel")
+local hl_target = api.nvim_get_hl_id_by_name("farsightStaticTargetLabel")
+
+local hl_priority_dim = vim.hl.priorities.user + 50
+local hl_priority_label = hl_priority_dim + 1
 
 ---------------------------
 -- MARK: Everything else --
 ---------------------------
--- TODO: Remove this mark.
 
 ---@param win uinteger
+---@param buf uinteger
 ---@param row uinteger
 ---@param col uinteger
 ---@param cur_win uinteger
 ---@param ctx farsight.static.MatchCtx
-local function do_jump(win, row, col, cur_win, ctx)
-    if require("nvim-tools.misc").is_omode(api.nvim_get_mode().mode) then
-        if api.nvim_get_option_value("sel", { scope = "global" }) == "exclusive" then
-            -- TODO: this needs to do the full utf indexing thing
-            col = col + 1
-        end
-
-        api.nvim_cmd({ cmd = "norm", args = { "v" }, bang = true }, {})
-    end
-
+local function do_jump(win, buf, row, col, cur_win, ctx)
     if cur_win ~= win then
         api.nvim_set_current_win(win)
+    else
+        row, col = require("farsight._util").ensure_state_for_omode(win, buf, row, col)
     end
 
     if not ctx.keepjumps then
@@ -89,6 +91,12 @@ local function do_jump(win, row, col, cur_win, ctx)
     local pos = { row, col }
     require("nvim-tools.pos").ext_to_mark_pos(pos)
     api.nvim_win_set_cursor(win, pos)
+    local unfold = ctx.unfold
+    if unfold ~= "" then
+        api.nvim_cmd({ cmd = "norm", args = { unfold }, bang = true }, {})
+    end
+
+    ctx.on_jump(win, buf, pos)
 end
 -- TODO-DEP: After csearch is done, consolidate their jump logic.
 
@@ -103,15 +111,16 @@ local function matches_find_jump_target(win_matches)
 
     for match_win, matches in pairs(win_matches) do
         local targets = matches.targets
-        if #targets > 0 then
-            has_any_targets = true
+        if #targets > 1 then
+            return true, -1, -1, -1
         end
 
         if #targets == 1 then
             if win > 1000 or row > -1 or col > -1 then
-                return has_any_targets, -1, -1, -1
+                return true, -1, -1, -1
             end
 
+            has_any_targets = true
             win = match_win
             row = targets[1][1]
             col = targets[1][2]
@@ -165,7 +174,7 @@ local function extmarks_vtext_set(win_matches)
     ---@type vim.api.keyset.set_extmark
     local extmark_opts = {
         hl_mode = "combine",
-        priority = 250, -- TODO: replace with a real value
+        priority = hl_priority_label,
         virt_text_pos = "overlay",
         strict = false,
     }
@@ -190,8 +199,8 @@ local function extmarks_dim_set(win_matches, dim)
 
     ---@type vim.api.keyset.set_extmark
     local extmark_opts = {
-        hl_group = "Dimmed", -- TODO: Replace with var
-        priority = 240, -- TODO: Replace with var
+        hl_group = hl_dim,
+        priority = hl_priority_dim,
         strict = false,
     }
 
@@ -242,16 +251,14 @@ local function vtext_add(label, vtext, max_len, start_idx)
     local len_label = #label
     local len_display = len_label - start_idx + 1
     if len_display == 1 then
-        vtext[1] = { label[start_idx], "IncSearch" }
+        vtext[1] = { label[start_idx], hl_target }
     elseif len_display <= max_len then
         local len_most = len_label - 1
-        -- TODO: Replace with a custom group
-        vtext[1] = { table.concat(label, "", start_idx, len_most), "CurSearch" }
-        vtext[2] = { label[len_label], "IncSearch" }
+        vtext[1] = { table.concat(label, "", start_idx, len_most), hl_label }
+        vtext[2] = { label[len_label], hl_target }
     else
         local concat_end = start_idx + max_len - 1
-        -- TODO: Replace with a custom group
-        vtext[1] = { table.concat(label, "", start_idx, concat_end), "CurSearch" }
+        vtext[1] = { table.concat(label, "", start_idx, concat_end), hl_label }
     end
 end
 
@@ -341,7 +348,6 @@ local function labels_populate(labels, start, stop, tokens)
         end
     end
 end
--- TODO: Validate in config that 2 <= #tokens
 
 ---@param win_matches table<uinteger, farsight.static.MatchData> Modified in place!
 ---@param wins uinteger[] Assumes proper ordering.
@@ -392,7 +398,6 @@ local function bisected_idx_get(pos_name, ranges)
     ---@cast idx uinteger
     return idx - 1
 end
--- TODO: weird stuff where this give you end_start but we need start end
 -- TODO: Same logic as doc_hl jumping. Outline to catharsis or nvim-tools.
 
 ---@param ctx farsight.static.MatchCtx
@@ -425,11 +430,10 @@ local function match_data_mapper(ctx, win, idx)
     end)
 
     local targets_end = ntt.i_filter_map_to(end_ranges, function(range)
-        -- local end_row = range[3]
-        -- local end_col_1 = vim.str_utf_start(lines[end_row], range[4])
-        -- return { end_row, end_col_1 - 1, {}, {} }
-        -- TODO: The above produces malformed results
-        return { range[3], range[4] - 1, {}, {} }
+        local end_row = range[3]
+        local end_col = range[4]
+        local diff = vim.str_utf_start(lines[end_row], end_col)
+        return { end_row, end_col - 1 - diff, {}, {} }
     end)
 
     return win,
@@ -511,7 +515,7 @@ function M.static(cur_win, ctx)
         api.nvim_echo({ { "No targets", "" } }, false, {})
         return
     elseif win >= 1000 and row > -1 and col > -1 then
-        do_jump(win, row, col, cur_win, ctx)
+        do_jump(win, win_matches[win].buf, row, col, cur_win, ctx)
         return
     end
 
@@ -525,9 +529,9 @@ function M.static(cur_win, ctx)
         return
     end
 
-    do_jump(win, row, col, cur_win, ctx)
+    do_jump(win, win_matches[win].buf, row, col, cur_win, ctx)
 end
 
 return M
 
--- TODO: For omode, the bisect result should be treated as after the cursor
+-- TODO: intake old farsight stuff

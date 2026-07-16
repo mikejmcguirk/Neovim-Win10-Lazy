@@ -51,17 +51,6 @@
     - csearch and static need to be strictly cased
     - live needs to be optional
 
-- [ ] Labeling:
-  - [ ] Determine max possible labels based on tokens and capped factorial
-    - [ ] Issue: Can't do this with byte length due to multi-byte cars. Maybe just only use ASCII for tokens?
-    - [ ] Do a simple i iteration based on that, dividing out the pieces for fair labeling, including on live jumps, since we'd just take the ordered tokens. Recurse down
-      - [ ] Only an issue on very small tokens or live jumps
-  - [ ] Need the data structure to handle start and end labels. Relevant for omode/vmode static jumps or if the user sets the labeling to both
-
-- [ ] Options design:
-  - [ ] Label location
-    - [ ] Static: start/end/start+end/cursor-aware
-
 - [ ] Csearch:
   - [ ] Do not do continuation mode in omode or on dot-repeat
     - Omode you can just handle with a flag in the private module. Dot repeat you probably have to always turn off.

@@ -129,9 +129,15 @@ local schema = {
         cmdline_modifier = "callable",
         on_jump = "callable",
         prompt = "string",
-        tokens = "table", -- TODO: Evaluate list here
         -- TODO: Live token validation needs to block "\"
-        unfold = "string", -- TODO: Should validate as ""|"zv"|"zO"|"zx"|"zR"
+        tokens = function(val)
+            local nty = require("nvim-tools.types")
+            return nty.valid_list(val, { item_type = "string" })
+        end,
+        unfold = function(val)
+            local has = val == "" or val == "zv" or val == "zO" or val == "zx" or val == "zR"
+            return has, has and "" or "Invalid unfold cmd"
+        end,
     },
     static = {
         dim = "boolean",
@@ -139,10 +145,18 @@ local schema = {
         keepjumps = "boolean",
         label_start = "boolean",
         omode_aware = "boolean",
+        on_jump = "callable",
         -- TODO: Stricter regex validity check. Also needs to run the check that matcher uses
         -- without requiring that module
         pattern = "string",
-        tokens = "table", -- TODO: Evaluate list here
+        tokens = function(val)
+            local nty = require("nvim-tools.types")
+            return nty.valid_list(val, { item_type = "string", min_len = 2 })
+        end,
+        unfold = function(val)
+            local has = val == "" or val == "zv" or val == "zO" or val == "zx" or val == "zR"
+            return has, has and "" or "Invalid unfold cmd"
+        end,
         vmode_aware = "boolean",
     },
 }
@@ -194,7 +208,7 @@ local default_config = {
         on_jump = function(_, _, _) end,
         prompt = "⬢", ---@type string
         tokens = vim.split("kdjfls;aiemvtnurowghby,c.x/zpq", ""), ---@type string[]
-        unfold = "zv",
+        unfold = "zv", ---@type ""|"zv"|"zO"|"zx"|"zR"
     },
     ---@class farsight.static.Ctx
     static = {
@@ -205,8 +219,11 @@ local default_config = {
         -- `True` to label the start of the result. `False` to label the end.
         label_start = true, ---@type boolean
         omode_aware = true, ---@type boolean
+        ---@type fun(win:uinteger, buf:uinteger, pos:[uinteger, uinteger])
+        on_jump = function(_, _, _) end,
         pattern = "\\k\\+", ---@type string
         tokens = vim.split("abcdefghijklmnopqrstuvwxyz;,./", ""), ---@type string[]
+        unfold = "zv", ---@type ""|"zv"|"zO"|"zx"|"zR"
         vmode_aware = true, ---@type boolean
     },
 }

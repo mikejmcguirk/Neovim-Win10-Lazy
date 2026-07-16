@@ -468,14 +468,8 @@ function M.live(win, buf, upward, ctx)
         api.nvim_cmd({ cmd = "norm", args = { "m'" }, bang = true }, {})
     end
 
-    if require("nvim-tools.misc").is_omode(api.nvim_get_mode().mode) then
-        if api.nvim_get_option_value("sel", { scope = "global" }) == "exclusive" then
-            -- TODO: this needs to do the full utf indexing thing
-            pos_ext[2] = pos_ext[2] + 1
-        end
-
-        api.nvim_cmd({ cmd = "norm", args = { "v" }, bang = true }, {})
-    end
+    pos_ext[1], pos_ext[2] =
+        require("farsight._util").ensure_state_for_omode(win, buf, pos_ext[1], pos_ext[2])
 
     local pos = require("nvim-tools.pos").ext_to_mark_pos(pos_ext)
     api.nvim_win_set_cursor(win, pos)
