@@ -286,12 +286,13 @@ end
 ---@param buf uinteger
 ---@param re vim.regex
 ---@param folds "first"|"none"
----@return [uinteger, uinteger, uinteger, uinteger], [uinteger, uinteger, uinteger, uinteger][]
+---@return [uinteger, uinteger, uinteger, uinteger], [uinteger, uinteger, uinteger, uinteger][], table<uinteger, string>
 function M.static_ranges_get(win, buf, re, folds)
     local match_range = match_range_get(win, buf, 0, "on", "on")
-    local ranges = match_area(match_range, buf, lines_from_match_range(buf, match_range), re)
+    local lines = lines_from_match_range(buf, match_range)
+    local ranges = match_area(match_range, buf, lines, re)
     folds_handle(folds, win, ranges)
-    return match_range, ranges
+    return match_range, ranges, lines
 end
 
 return M
