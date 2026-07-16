@@ -72,8 +72,7 @@ end
 ---@param char string
 ---@param opts farsight.csearch.CsearchOpts
 local function do_csearch(win, buf, cur_pos, char, opts)
-    local ut = require("farsight.util")
-    local is_omode = ut._resolve_map_mode(api.nvim_get_mode().mode) == "o"
+    local is_omode = require("nvim-tools.misc").is_omode(api.nvim_get_mode().mode)
     local pattern = get_pattern(char, is_omode, opts.forward, opts["until"])
 
     local flags_tbl = { "Wn" }
@@ -90,8 +89,6 @@ local function do_csearch(win, buf, cur_pos, char, opts)
     local foldclosed = fn.foldclosed
     local skip_folds = opts.skip_folds
 
-    -- FUTURE: https://github.com/neovim/neovim/pull/37872
-    ---@type { [1]: integer, [2]: integer, [3]: integer? }
     local jump_pos = fn.searchpos(pattern, flags, stop_row, 2000, function()
         local search_row = fn_line(".")
         local fold_row = foldclosed(search_row)
@@ -499,7 +496,7 @@ local function checked_show_hl(win, buf, cur_pos, opts)
         return true
     end
 
-    local tn = require("farsight.util")._table_new
+    local tn = require("nvim-tools.table").new
     ---@type farsight.csearch.TokenLabels
     local labels = { 0, tn(256, 0), tn(256, 0), tn(256, 0), tn(256, 0) }
 
@@ -690,7 +687,7 @@ function Csearch.csearch(opts)
     resolve_csearch_opts(opts, cur_buf)
 
     local char = nil
-    local is_repeating = require("farsight._common").get_is_repeating()
+    local is_repeating = require("farsight._util").get_is_repeating()
     if is_repeating == 1 then
         char = fn.getcharsearch().char
         if char == "" then
@@ -759,8 +756,8 @@ end
 
 return Csearch
 
--- TODO: If you do dvFx it will not delete the character directly under the cursor. This should be
--- the case in visual mode.
+-- TODO: If you do dvFx, it doesn't delete the character under the cursor. This is incorrect
+-- behavior in visual mode.
 
 -- MID: Fold ideas:
 -- - Display the foldclosed line as virtual text with token highlights

@@ -5,12 +5,9 @@
 local api = vim.api
 local lookup = require("farsight._lookup")
 
-local basic_emoji_ranges = lookup._basic_emoji_ranges
 local bit_lshift = require("bit").lshift
-local math_floor = math.floor
 local str_byte = string.byte
 local utf8_len_tbl = lookup._utf8_len_tbl
-local utf_punctuation_ranges = lookup._utf_punctuation_ranges
 
 local SPACE = 32
 local COMMA = 44
@@ -19,32 +16,6 @@ local ZERO = 48
 local NINE = 57
 local AT_CHAR = 64
 local CARET = 94
-
----@param target integer
----@param ranges [integer, integer, integer][]
----@return integer|nil
-local function bisearch_ranges(target, ranges)
-    local len_ranges = #ranges
-    if target < ranges[1][1] or target > ranges[len_ranges][2] then
-        return nil
-    end
-
-    local bot = 1
-    local top = len_ranges
-    while bot <= top do
-        local mid = math_floor((bot + top) * 0.5)
-        local range = ranges[mid]
-        if target < range[1] then
-            top = mid - 1
-        elseif target > range[2] then
-            bot = mid + 1
-        else
-            return range[3]
-        end
-    end
-
-    return nil
-end
 
 ---Does not return a char length that goes over the line length
 ---@param line string
@@ -228,41 +199,4 @@ function M._get_utf_codepoint(line, b1, idx)
 end
 -- TODO: Remove this nested function call as nvim-tools did
 
----@param char_nr integer
----@param isk_tbl boolean[]
----@return 0|1|2|3|integer
-function M._get_char_class(char_nr, isk_tbl)
-    if char_nr == 0x20 or char_nr == 0x09 or char_nr == 0x0 then
-        return 0
-    end
-
-    if char_nr < 0x100 then
-        if char_nr ~= 0xA0 then
-            if isk_tbl[char_nr + 1] then
-                return 2
-            end
-
-            return 1
-        end
-
-        return 0
-    end
-
-    local emoji_class = bisearch_ranges(char_nr, basic_emoji_ranges)
-    if emoji_class then
-        return emoji_class
-    end
-
-    local utf_punctuation_class = bisearch_ranges(char_nr, utf_punctuation_ranges)
-    if utf_punctuation_class then
-        return utf_punctuation_class
-    end
-
-    return 2
-end
-
 return M
-
--- TODO: isk should be checked and cached on every Farsight function. Helpers should be made
--- available for users to plug into these.
--- TODO: Be less sloppy with aliasing codepoints
