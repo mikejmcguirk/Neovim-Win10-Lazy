@@ -439,7 +439,11 @@ function M.live(win, buf, upward, ctx)
     local matcher = require("farsight._aos_win_match")
     local range, lines = matcher.live_info_get(win, buf, (upward and -1 or 1))
     api.nvim__ns_set(state_ns_dynamic, { wins = { win } })
-    dim_extmarks_set_checked(ctx.dim, win, range, buf)
+    local _util = require("farsight._util")
+    local dim = ctx.dim
+    if dim then
+        _util.dim_set_ns_and_extmarks(state_ns_dim, win, hl_dim, hl_priority_dim, range, buf)
+    end
 
     local prompt = ctx.prompt .. " "
     listener_init(ctx.cmdline_modifier, range, win, buf, lines, ctx.tokens, upward)
@@ -449,7 +453,7 @@ function M.live(win, buf, upward, ctx)
     state_resolve_jump_pos(ok_i, text_i, upward)
     local pos_ext, err = state_clean_and_export()
     api.nvim_buf_clear_namespace(buf, state_ns_dynamic, 0, -1)
-    if ctx.dim then
+    if dim then
         api.nvim_buf_clear_namespace(buf, state_ns_dim, 0, -1)
     end
 

@@ -45,6 +45,47 @@ local function setup_repeat_tracking()
     did_setup_repeat_tracking = true
 end
 
+---@param ns uinteger
+---@param win uinteger
+---@param group uinteger
+---@param priority uinteger
+---@param range [uinteger, uinteger, uinteger, uinteger]
+---@param buf uinteger
+function M.dim_set_ns_and_extmarks(ns, win, group, priority, range, buf)
+    api.nvim__ns_set(ns, { wins = { win } })
+    ---@type vim.api.keyset.set_extmark
+    local extmark_opts = {
+        hl_group = group,
+        priority = priority,
+        strict = false,
+    }
+
+    -- We go through the trouble of setting the dim highlights by line because Neovim does not
+    -- consistently draw multi-line highlight extmarks only within namespace window scope.
+    local start_row = range[1]
+    local end_row = range[3]
+    if start_row == end_row then
+        extmark_opts.end_row = end_row
+        extmark_opts.end_col = range[4]
+        api.nvim_buf_set_extmark(buf, ns, start_row, range[2], extmark_opts)
+        return
+    end
+
+    extmark_opts.end_row = end_row
+    extmark_opts.end_col = range[4]
+    api.nvim_buf_set_extmark(buf, ns, end_row, 0, extmark_opts)
+
+    extmark_opts.hl_eol = true
+    extmark_opts.end_row = nil
+    extmark_opts.end_col = nil
+    api.nvim_buf_set_extmark(buf, ns, start_row, range[2], extmark_opts)
+
+    for i = start_row + 1, end_row - 1 do
+        extmark_opts.end_row = i + 1
+        api.nvim_buf_set_extmark(buf, ns, i, 0, extmark_opts)
+    end
+end
+
 setup_repeat_tracking()
 
 ---@param win uinteger Assumes `win` is current win.

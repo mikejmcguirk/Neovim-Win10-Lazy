@@ -3,42 +3,35 @@
 - [x] Live Jumping:
   - [x] Flash/lightspeed style jumping
   - [x] Support label re-use
-- [ ] Static Jumping:
-  - [ ] EasyMotion/Jump2D style jumping
+- [x] Static Jumping:
+  - [x] EasyMotion/Jump2D style jumping
 - [ ] Csearch Plus:
-  - [ ] This should support both classic searching as well as the enhanced f/t style
+  - [ ] Supporting continuation style jumping is mandatory
+  - [ ] Supporting class jumping is a bonus feature
     - Primary motivation is so I can move live jumping to ;/, which frees the `s` key.
 
 ## CONSTRAINTS:
 
-- AoS rather than SoA
-  * Lua is not low-level enough to realize the benefits of SoA except with datasets larger than what we're dealing with here
-  * Ergonomically working with SoAs involves repeatedly hashing table fields, which I am assuming also eats into the perf benefit
-  * I have the tooling to work with lists of ranges
-- Don't do the "it shouldn't be recursion" thing where it doesn't make sense
-  * Trying to move the label generator to a queue-based system made it effectively impossible to reason about. Echasnovski was right.
-- The broad-based goal here is to think in terms of algorithmic complexity and design wins that create leverage, not micro-opting.
 - Don't muddy the waters by trying to make the search tools into nvim-tools modules. Focus on handling farsight.
 - The names are Live, Static, and Csearch. This is not worth brainstorming on further.
 - Don't bother doing anything with screen positioning. Too hard/slow
-- Search results should be customized using patterns and maybe other on-rails options. Allowing user callbacks into the search results raises too complexities.
-- Live jumps are always single window. Static jumps in normal mode are multi-window.
-  * Multi-window live jumping introduces performance concerns
-  * I want to keep the features differentiated
 
 ## DESIGN:
 
-- [ ] The data flows, and how they all work together, need a lot of pre-attention, because being unable to manage this killed the previous version
+* The first jump
+  + This should work like a standard f/t motion. 2fk should still jump two ks forward
+  + Dimming should occur in the entire search area in the direction you want forward. You should, I hope, just be able to use the logic from live
+* What is continuation mode
+  + I think the constraint we need to accept is that the continuation options are only a set of the previous results
+    + UX issue - Searching forward then dimming the whole screen for continuation is awkward
+* Exiting continuation mode
+  + Any non f/t action
 
 - [ ] Need to figure out csearch traversal. Don't want to use bespoke UTF-8 if it can be avoided, but need correct by-char iteration.
 
-- [ ] Something I goofed in the previous code - Dim should be applied to the searched area, not the target lines. This provides the user a visual indicator of where the search is happening
+- [ ] Highlighting: IncSearch > CurSearch > Search
 
-- [ ] Highlighting
-  - [ ] Csearch: IncSearch > CurSearch > Search
-
-- [ ] Fold handling
-  - [ ] Csearch is weird because we don't want to draw extmarks for folds, but we need to account for them because of highlights relative to count. I forget how the current code handles this
+- [ ] Csearch is weird because we don't want to draw extmarks for folds, but we need to account for them because of highlights relative to count. I forget how the current code handles this
 
 - [ ] General search module:
   - [ ] Search can only handle search, even if it returns rich data
@@ -67,9 +60,19 @@
   - [ ] For folds, f/t does indeed work in them, so we need a solution I guess.
   - [ ] Continuation mode raises a lot of weird questions about how much of the Quickscope style highlighting we need.
 
+  - [ ] needs to be compatible with the jake-stewart multicursor plugin
+    - https://github.com/rhysd/clever-f.vim
+    - https://github.com/svermeulen/vim-extended-ft
+    - https://github.com/nvim-mini/mini.nvim/blob/main/readmes/mini-jump.md
+    - https://github.com/ggandor/flit.nvim
+
 ## TODO:
 
-- [ ] Rewrite `/plugin` in one go once all the sub-modules are done, so we can just copy over what's in catharsis and replace as needed.
+- [ ] After all modules are done, rewrite `/plugin`.
+  - Wait because holding both the old and new systems in `/plugin` is complicated to reason about.
+  - Copy as much code from catharsis as possible.
+  - Make sure necessary nuances from the old file are captured.
+    * Example: The `<cr>` `maparg` check.
 
 - [ ] Clean old files/code
   - [ ] Go through the code/TODO notes again
@@ -83,10 +86,66 @@
   - [ ] Maybe you tie label display and label jumps to the cursor being in the last position, then you can use cursormoved to check if they need to be disabled/re-enabled
   - [ ] You could also just have "very nomagic" as an option, but that also requires "smartcase" as an option which I want to avoid. Probably a documentation thing.
 
+- [ ] Properly distinguish in state between having done a label jump and a cr jump.
+  - [ ] Because we have to explicitly find and perform a label jump, `did_label_jump` is probably the better primitive than `did_cr_jump`
+
+- [ ] `<cr>` should be based on count. `2;se<cr>` should go to the second result.
+  - [ ] The `<cr>` destination should be highlighted with `CurSearch`
+  - [ ] If `<cr>` is used to jump, auto dot-repeat should be enabled
+  - [ ] If `<cr>` is used to jump, we should continue searching to find a valid result
+    - [ ] Wrapscan should be either `false` (default), `true`, or `nil` (use Nvim option)
+    - [ ] If there are fewer than `count` results and wrapscan is off, go to the last result
+      - [ ] Otherwise, end up at the wrapped destination
+  - [ ] If `did_cr_jump` or the like is not explicitly true, show labels during dot repeat
+    - [ ] Dot repeat should, however, show the last search
+    - [ ] How does this work with the pattern modifier? Do you save the last one or use the current one?
+    - [ ] If you enter then cancel a jump in normal mode, does this overwrite the previous saved last jump? Probably not, as you want the last jump to be based on the last affirmative action
+
+- [ ] Have an option to `show_labels`. Should be a function. Default should be a function that always returns true
+  - [ ] You then need to make sure that the rest of the code reacts properly to this. Hash lookups are slow enough that you want to check the var always
+- [ ] Have an option to auto-jump after X characters are entered
+  - [ ] How do you handle regex atoms here?
+    - Probably disable auto-jumping if an atom is typed. If the last character is a backslash, then allow auto-jump
+- [ ] Document that you can disable labels + enable auto-jump for sneak-like behavior
+  - [ ] Document that implementing sneak's labeling and vertical area based behavior are explicit non-goals. If you want to actually use sneak you should use sneak.
+
+- [ ] Document a `show_labels` function that checks if we are in the multi-cursor mode of the `jake-stewart` plugin and disables them if so.
+  - [ ] This then needs to actually work. The old `csearch` implementation plays well with the `jake-stewart` plugin so I know this is possible
+  - I'm not sure though if we can get into like, highlights per cursor. That might need to wait for Neovim's official implementation.
+
+## TODO-DEP:
+
+- [ ] When Neovim releases their multi-cursor functionality, make this plugin compatible
+  - [ ] Static: I'm fine just disabling this when multi-cursor mode is active
+  - [ ] Csearch: This needs to work as you'd intuitively expect
+    - [ ] If you perform a search with multiple cursors that only some of them can accomplish, the cursors that cannot make the move should stay in place
+      - An alternative would be to destroy the cursors that cannot make the move
+    - [ ] In continuation mode, all the cursors should cycle through the results
+  - [ ] Live: Labels should not display, and instead the `count` search result from each cursor should be highlighted to say "the cursor before this highlight will jump here".
+
 ## DOC:
 
 - [ ] regex:match_line is used under the hood
   - [ ] Specifically meaning - Case sensitive under the hood
+
+- [ ] Credits:
+  - jump2d (initial basis for static)
+- [ ] Inspirations:
+  - Flash/Lightspeed/Leap (incremental jumping)
+  - Quickscope (target display for f/t jumping)
+- [ ] Alternatives
+  - vim-sneak (Farsight does not implement the "two-char f/t" style movement.)
+  - hop
+  - EasyMotion
+  - https://github.com/dahu/vim-fanfingtastic
+  - https://github.com/rlane/pounce.nvim
+  - https://github.com/woosaaahh/sj.nvim
+
+  - [ ] List these are credits, inspirations, or alternatives as ends up being appropriate:
+    - https://github.com/rhysd/clever-f.vim
+    - https://github.com/svermeulen/vim-extended-ft
+    - https://github.com/nvim-mini/mini.nvim/blob/main/readmes/mini-jump.md
+    - https://github.com/ggandor/flit.nvim
 
 ## PUBLISHING:
 
@@ -123,8 +182,6 @@
 
 * [ ] For targets gathering, is there a way to initially size the targets table based on the amount of bytes to search and the nature of the search? Because we already size to 16, it's hard to imagine a solution that doesn't create more perf cost.
 
-- [ ] Omit a label from the first result, since `<cr>` always jumps to it.
-
 #### LIVE:
 
 - [ ] Improve performance.
@@ -138,7 +195,6 @@
 
 ## NON-GOALS:
 
-- Sneak mode. There is no reason to make an inferior version of the original.
 - Lightspeed has a feature where, if a unique end char is present, pressing that end char will jump. This poses two problems:
   * If you are typing through a result to narrow it to a label, you might inadvertently press the key to jump
   * This is complex to implement

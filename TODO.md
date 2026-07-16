@@ -49,6 +49,12 @@
   * Possibly related: https://github.com/neovim/neovim/discussions/32540
   * It looks like tmux is the remaining case where it doesn't work. Lots of different things colliding here.
 * [ ] https://github.com/neovim/neovim/commit/bbd0fdd36dcd684e09836ff41517e0e7ea6d802e - More efficient string parsing method
+
+- [ ] Remote operation research:
+  - [ ] Determine if this is too big an idea for Nvim
+  - Flash remote
+  - https://github.com/goldfeld/vim-seek
+
 * [ ] Swap motions ideas:
   * [ ] Normal: You do `)iw`, it sees if you are in an inner word, then finds the next inner word and swaps them. `(iw` would do the same but with the previous. This is basically like the treesitter text objects swap but extended to other text objects. (You could also implement lookahead to find the next inner word, then use that as the swap for the origin)
     * [ ] Use double count to define both how many rotations to perform and how many objects to rotate

@@ -66,9 +66,43 @@ local hl_target = api.nvim_get_hl_id_by_name("farsightStaticTargetLabel")
 local hl_priority_dim = vim.hl.priorities.user + 50
 local hl_priority_label = hl_priority_dim + 1
 
----------------------------
--- MARK: Everything else --
----------------------------
+---@param win_matches table<uinteger, farsight.static.MatchData>
+local function win_matches_ns_set(win_matches, dim)
+    for win, matches in pairs(win_matches) do
+        api.nvim__ns_set(matches.ns_dynamic, { wins = { win } })
+    end
+
+    -- if not dim then
+    --     return
+    -- end
+    --
+    -- for win, matches in pairs(win_matches) do
+    --     api.nvim__ns_set(matches.ns_dim, { wins = { win } })
+    -- end
+end
+
+---@param win_matches table<uinteger, farsight.static.MatchData>
+---@param dim boolean
+local function namespaces_dim_clear(win_matches, dim)
+    if not dim then
+        return
+    end
+
+    for _, matches in pairs(win_matches) do
+        api.nvim_buf_clear_namespace(matches.buf, matches.ns_dim, 0, -1)
+    end
+end
+
+---@param win_matches table<uinteger, farsight.static.MatchData>
+local function win_matches_clear_ns_dynamic(win_matches)
+    for _, matches in pairs(win_matches) do
+        api.nvim_buf_clear_namespace(matches.buf, matches.ns_dynamic, 0, -1)
+    end
+end
+
+--------------------------
+-- MARK: Jump Execution --
+--------------------------
 
 ---@param win uinteger
 ---@param buf uinteger
@@ -151,25 +185,6 @@ local function win_matches_filter_targets(win_matches, label_start_idx, input)
 end
 
 ---@param win_matches table<uinteger, farsight.static.MatchData>
-local function win_matches_clear_ns_dynamic(win_matches)
-    for _, matches in pairs(win_matches) do
-        api.nvim_buf_clear_namespace(matches.buf, matches.ns_dynamic, 0, -1)
-    end
-end
-
----@param win_matches table<uinteger, farsight.static.MatchData>
----@param dim boolean
-local function namespaces_dim_clear(win_matches, dim)
-    if not dim then
-        return
-    end
-
-    for _, matches in pairs(win_matches) do
-        api.nvim_buf_clear_namespace(matches.buf, matches.ns_dim, 0, -1)
-    end
-end
-
----@param win_matches table<uinteger, farsight.static.MatchData>
 local function extmarks_vtext_set(win_matches)
     ---@type vim.api.keyset.set_extmark
     local extmark_opts = {
@@ -189,59 +204,6 @@ local function extmarks_vtext_set(win_matches)
         end
     end
 end
-
----@param win_matches table<uinteger, farsight.static.MatchData>
----@param dim boolean
-local function extmarks_dim_set(win_matches, dim)
-    if not dim then
-        return
-    end
-
-    ---@type vim.api.keyset.set_extmark
-    local extmark_opts = {
-        hl_group = hl_dim,
-        priority = hl_priority_dim,
-        strict = false,
-    }
-
-    -- We go through the trouble of setting the dim highlights by line because Neovim does not
-    -- consistently draw multi-line highlight extmarks only within namespace window scope.
-    for _, matches in pairs(win_matches) do
-        local match_range = matches.match_range
-        for i = match_range[1], match_range[3] do
-            extmark_opts.end_row = i + 1
-            api.nvim_buf_set_extmark(matches.buf, matches.ns_dim, i, 0, extmark_opts)
-        end
-    end
-end
-
----@param win_matches table<uinteger, farsight.static.MatchData>
-local function win_matches_ns_set(win_matches, dim)
-    for win, matches in pairs(win_matches) do
-        api.nvim__ns_set(matches.ns_dynamic, { wins = { win } })
-    end
-
-    if not dim then
-        return
-    end
-
-    for win, matches in pairs(win_matches) do
-        api.nvim__ns_set(matches.ns_dim, { wins = { win } })
-    end
-end
-
----@class farsight.static.Target
----@field [1] uinteger
----@field [2] uinteger
----@field [3] string[]
----@field [4] [string, string|uinteger][]
-
----@class farsight.static.MatchData
----@field buf uinteger
----@field match_range [uinteger, uinteger, uinteger, uinteger]
----@field ns_dim uinteger
----@field ns_dynamic uinteger
----@field targets farsight.static.Target[]
 
 ---@param label string[]
 ---@param vtext [string, uinteger|string][]
@@ -306,6 +268,51 @@ local function jump_pos_get_from_prompt(win_matches)
     end
 end
 
+----------------------
+-- MARK: Jump Setup --
+----------------------
+
+-- ---@param win_matches table<uinteger, farsight.static.MatchData>
+-- ---@param dim boolean
+-- local function win_matches_extmarks_dim_set(win_matches, dim)
+--     if not dim then
+--         return
+--     end
+--
+--     ---@type vim.api.keyset.set_extmark
+--     local extmark_opts = {
+--         hl_group = hl_dim,
+--         priority = hl_priority_dim,
+--         strict = false,
+--     }
+--
+--     -- We go through the trouble of setting the dim highlights by line because Neovim does not
+--     -- consistently draw multi-line highlight extmarks only within namespace window scope.
+--     for _, matches in pairs(win_matches) do
+--         local match_range = matches.match_range
+--         for i = match_range[1], match_range[3] do
+--             extmark_opts.end_row = i + 1
+--             api.nvim_buf_set_extmark(matches.buf, matches.ns_dim, i, 0, extmark_opts)
+--         end
+--     end
+-- end
+
+---@param win_matches table<uinteger, farsight.static.MatchData>
+---@param dim boolean
+local function win_matches_extmarks_dim_set(win_matches, dim)
+    if not dim then
+        return
+    end
+
+    local dim_extmarks_set_checked = require("farsight._util").dim_set_ns_and_extmarks
+    for win, matches in pairs(win_matches) do
+        local ns = matches.ns_dim
+        local match_range = matches.match_range
+        local buf = matches.buf
+        dim_extmarks_set_checked(ns, win, hl_dim, hl_priority_dim, match_range, buf)
+    end
+end
+
 ---@param labels string[][] Modified in place!
 ---@param start uinteger
 ---@param stop uinteger
@@ -361,8 +368,7 @@ local function win_targets_labels_add(win_matches, wins, tokens)
     local j = 1
     local all_labels = ntt.new(total_targets, 0) ---@type string[][]
     for _, win in ipairs(wins) do
-        local matches = win_matches[win]
-        for _, target in ipairs(matches.targets) do
+        for _, target in ipairs(win_matches[win].targets) do
             all_labels[j] = target[3]
             j = j + 1
         end
@@ -372,6 +378,10 @@ local function win_targets_labels_add(win_matches, wins, tokens)
     assert(#all_labels == total_targets)
     labels_populate(all_labels, 1, total_targets, tokens)
 end
+
+-----------------------
+-- MARK: Get Matches --
+-----------------------
 
 -- Assumes that we are only doing aware position in single-window scenarios.
 ---@param pos_name string
@@ -414,6 +424,19 @@ local function split_point_get(ctx, ranges)
         return ctx.label_start and #ranges or 0
     end
 end
+
+---@class farsight.static.Target
+---@field [1] uinteger
+---@field [2] uinteger
+---@field [3] string[]
+---@field [4] [string, string|uinteger][]
+
+---@class farsight.static.MatchData
+---@field buf uinteger
+---@field match_range [uinteger, uinteger, uinteger, uinteger]
+---@field ns_dim uinteger
+---@field ns_dynamic uinteger
+---@field targets farsight.static.Target[]
 
 ---@param ctx farsight.static.MatchCtx
 ---@param win uinteger
@@ -522,7 +545,7 @@ function M.static(cur_win, ctx)
     win_targets_labels_add(win_matches, wins, ctx.tokens)
     local dim = ctx.dim
     win_matches_ns_set(win_matches, dim)
-    extmarks_dim_set(win_matches, dim)
+    win_matches_extmarks_dim_set(win_matches, dim)
     ok, win, row, col = jump_pos_get_from_prompt(win_matches)
     namespaces_dim_clear(win_matches, dim)
     if (not ok) or win < 1000 or row < 0 or col < 0 then
@@ -533,5 +556,3 @@ function M.static(cur_win, ctx)
 end
 
 return M
-
--- TODO: intake old farsight stuff
