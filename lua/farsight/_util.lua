@@ -1,6 +1,8 @@
 local api = vim.api
 local fn = vim.fn
 
+local bit = require("bit")
+
 local M = {}
 
 local did_setup_repeat_tracking = false
@@ -117,8 +119,84 @@ function M.ensure_state_for_omode(win, buf, dest_row, dest_col)
     api.nvim_cmd({ cmd = "norm", args = { "v" }, bang = true }, {})
     return dest_row, dest_col
 end
--- TODO: Should also be able to use for csearch
--- TODO: Unsure about the backward omode behavior. Happens in visual mode (undesired) and is not
--- useful. Would need to shift fwd exclusive selections to match.
+-- TODO: Need to roll what we learned from csearch about noV mode into here, then also use this
+-- in csearch.
+
+-- stylua: ignore
+-- Copied from Nvim source
+-- Note that this is a one-indexed representation of zero-indexed data.
+---@type integer[]
+local utf8_len_tbl = {
+    -- ?1 ?2 ?3 ?4 ?5 ?6 ?7 ?8 ?9 ?A ?B ?C ?D ?E ?F
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  -- 0?
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  -- 1?
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  -- 2?
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  -- 3?
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  -- 4?
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  -- 5?
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  -- 6?
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  -- 7?
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  -- 8?
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  -- 9?
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  -- A?
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,  -- B?
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,  -- C?
+    2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2,  -- D?
+    3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,  -- E?
+    4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 1, 1,  -- F?
+}
+
+---@param line string
+---@param idx uinteger indexed
+---@return uinteger, uinteger Codepoint and character length. Length is zero if the codepoint is
+---invalid or if the codepoint would go past the end of the line.
+function M.get_utf8_codepoint(line, idx)
+    local b1 = string.byte(line, idx)
+    if not b1 then
+        return 0, 0
+    end
+
+    if b1 >= 0x80 and b1 < 0xC0 then
+        return b1, 0
+    end
+
+    local len = utf8_len_tbl[b1 + 1] or 1
+    if len == 1 then
+        return b1, 1
+    end
+
+    if len > 4 or idx + len - 1 > #line then
+        return b1, 0
+    end
+
+    local b2 = string.byte(line, idx + 1)
+    if bit.band(b2, 0xC0) ~= 0x80 then
+        return b1, 0
+    end
+
+    if len == 2 then
+        return bit.lshift(b1 - 0xC0, 6) + (b2 - 0x80), 2
+    end
+
+    local b3 = string.byte(line, idx + 2)
+    if bit.band(b3, 0xC0) ~= 0x80 then
+        return b1, 0
+    end
+
+    if len == 3 then
+        return bit.lshift(b1 - 0xE0, 12) + bit.lshift(b2 - 0x80, 6) + (b3 - 0x80), 3
+    end
+
+    local b4 = string.byte(line, idx + 3)
+    if bit.band(b4, 0xC0) ~= 0x80 then
+        return b1, 0
+    end
+
+    return bit.lshift(b1 - 0xF0, 18)
+        + bit.lshift(b2 - 0x80, 12)
+        + bit.lshift(b3 - 0x80, 6)
+        + (b4 - 0x80),
+        4
+end
 
 return M

@@ -123,6 +123,22 @@ end
 
 local schema = {
     default_keymaps_set = "boolean",
+    csearch = {
+        -- TODO-DEP: I'm not convinced cancel_keys can be the same for both input and continuation
+        -- mode, but I have yet to see a concrete case where it doesn't work so I'll go with it.
+        cancel_keys = function(val)
+            local nty = require("nvim-tools.types")
+            return nty.valid_list(val, { item_type = "string" })
+        end,
+        dim = "boolean",
+        keepjumps = "boolean",
+        on_jump = "callable",
+        pattern = "string",
+        unfold = function(val)
+            local has = val == "" or val == "zv" or val == "zO" or val == "zx" or val == "zR"
+            return has, has and "" or "Invalid unfold cmd"
+        end,
+    },
     live = {
         dim = "boolean",
         keepjumps = "boolean",
@@ -178,6 +194,16 @@ local schema = {
 ---@class farsight.config.Config
 local default_config = {
     default_keymaps_set = true, ---@type boolean -- Only checked on startup.
+    ---@class farsight.csearch.Ctx
+    csearch = {
+        cancel_keys = { "\3", "\27" }, ---@type string[]
+        dim = true, ---@type boolean
+        keepjumps = false, ---@type boolean
+        ---@type  fun(win:uinteger, buf:uinteger, pos:[uinteger, uinteger])
+        on_jump = function(_, _, _) end,
+        pattern = "\\k\\+", ---@type string
+        unfold = "zv", ---@type ""|"zv"|"zO"|"zx"|"zR"
+    },
     ---@class farsight.live.Ctx
     live = {
         ---Example:
@@ -599,7 +625,7 @@ function M.live.fwd(opts)
     end
 
     ---@cast ctx farsight.live.Ctx
-    require("farsight._aos_live").live(win, buf, false, ctx)
+    require("farsight._live").live(win, buf, false, ctx)
 end
 
 ---@param opts? farsight.live.Opts
@@ -615,7 +641,87 @@ function M.live.rev(opts)
     end
 
     ---@cast ctx farsight.live.Ctx
-    require("farsight._aos_live").live(win, buf, true, ctx)
+    require("farsight._live").live(win, buf, true, ctx)
+end
+
+M.csearch = {}
+
+---@class farsight.csearch.Opts
+---@field dim? boolean
+---@field keepjumps? boolean
+---@field on_jump? fun(win:uinteger, buf:uinteger, pos:[uinteger, uinteger])
+---@field pattern? string
+
+---@param opts? farsight.csearch.Opts
+function M.csearch.fwd(opts)
+    vim.validate("opts", opts, "table", true)
+    opts = opts or {}
+    local win = api.nvim_get_current_win()
+    local buf = api.nvim_win_get_buf(win)
+    local ok, ctx, err = M._get_merged_config(buf, opts, "csearch")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    local count1 = vim.v.count1
+    ---@cast ctx farsight.csearch.Ctx
+    require("farsight._csearch").csearch(win, buf, count1, false, false, ctx)
+end
+
+---@param opts? farsight.csearch.Opts
+function M.csearch.rev(opts)
+    vim.validate("opts", opts, "table", true)
+    opts = opts or {}
+    local win = api.nvim_get_current_win()
+    local buf = api.nvim_win_get_buf(win)
+    local ok, ctx, err = M._get_merged_config(buf, opts, "csearch")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    local count1 = vim.v.count1
+    ---@cast ctx farsight.csearch.Ctx
+    require("farsight._csearch").csearch(win, buf, count1, true, false, ctx)
+end
+
+---@param opts? farsight.csearch.Opts
+function M.csearch.fwd_till(opts)
+    vim.validate("opts", opts, "table", true)
+    opts = opts or {}
+    local win = api.nvim_get_current_win()
+    local buf = api.nvim_win_get_buf(win)
+    local ok, ctx, err = M._get_merged_config(buf, opts, "csearch")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    local count1 = vim.v.count1
+    ---@cast ctx farsight.csearch.Ctx
+    require("farsight._csearch").csearch(win, buf, count1, false, true, ctx)
+end
+
+---@param opts? farsight.csearch.Opts
+function M.csearch.rev_till(opts)
+    vim.validate("opts", opts, "table", true)
+    opts = opts or {}
+    local win = api.nvim_get_current_win()
+    local buf = api.nvim_win_get_buf(win)
+    local ok, ctx, err = M._get_merged_config(buf, opts, "csearch")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    local count1 = vim.v.count1
+    ---@cast ctx farsight.csearch.Ctx
+    require("farsight._csearch").csearch(win, buf, count1, true, true, ctx)
+end
+
+function M.csearch.is_in_continuation_mode()
+    return require("farsight._csearch").is_in_continuation_mode()
 end
 
 function M.static(opts)
@@ -632,7 +738,7 @@ function M.static(opts)
     end
 
     ---@cast ctx farsight.static.Ctx
-    require("farsight._aos_static").static(cur_win, ctx)
+    require("farsight._static").static(cur_win, ctx)
 end
 
 return M

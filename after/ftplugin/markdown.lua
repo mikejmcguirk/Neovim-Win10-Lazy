@@ -8,7 +8,6 @@ api.nvim_set_option_value("fo", "r", { buf = 0, operation = "remove" })
 
 local local_scope = { scope = "local" }
 api.nvim_set_option_value("colorcolumn", "", local_scope)
--- See :h culopt for highlighting
 api.nvim_set_option_value("cursorlineopt", "screenline,number", local_scope)
 api.nvim_set_option_value("sidescrolloff", 12, local_scope)
 api.nvim_set_option_value("spell", true, local_scope)
@@ -32,7 +31,7 @@ set("n", mjm.v.fmt_lhs, function()
 end, buf_0)
 
 api.nvim_create_autocmd("BufWritePre", {
-    buffer = 0,
+    buf = 0,
     callback = function(ev)
         require("mjm.utils").fallback_formatter(ev.buf)
     end,

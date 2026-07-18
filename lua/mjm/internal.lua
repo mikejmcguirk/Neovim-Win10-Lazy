@@ -4,6 +4,7 @@ local keymap = vim.keymap
 require("farsight.plugin")
 local farsight = require("farsight")
 farsight.config({
+    csearch = { cancel_keys = { "\3", "\27", "\r" } },
     -- live = { dim = false },
     -- static = { label_start = true },
 })
@@ -11,14 +12,38 @@ farsight.config({
 -- api.nvim_set_hl(0, "farsightLiveResult", { underdouble = true })
 -- api.nvim_set_hl(0, "farsightLiveLabel", { reverse = true })
 keymap.set({ "n", "x", "o" }, "s", function()
-    farsight.live.fwd()
+    print("Use ;")
 end)
 
 keymap.set({ "n", "x", "o" }, "S", function()
+    print("Use ,")
+end)
+
+keymap.set({ "n", "x", "o" }, ";", function()
+    farsight.live.fwd()
+end)
+
+keymap.set({ "n", "x", "o" }, ",", function()
     farsight.live.rev()
 end)
 
-keymap.set({ "n", "x", "o" }, "<cr>", function()
+keymap.set({ "n", "x", "o" }, "f", function()
+    farsight.csearch.fwd()
+end)
+
+keymap.set({ "n", "x", "o" }, "F", function()
+    farsight.csearch.rev()
+end)
+
+keymap.set({ "n", "x", "o" }, "t", function()
+    farsight.csearch.fwd_till()
+end)
+
+keymap.set({ "n", "x", "o" }, "T", function()
+    farsight.csearch.rev_till()
+end)
+
+keymap.set({ "n", "x", "o" }, "\r", function()
     farsight.static()
 end)
 

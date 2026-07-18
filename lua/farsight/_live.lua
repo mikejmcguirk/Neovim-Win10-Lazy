@@ -311,7 +311,7 @@ local function targets_update(cmdline_mod, match_range, win, buf, lines, tokens,
         return
     end
 
-    local matcher = require("farsight._aos_win_match")
+    local matcher = require('lua.farsight._match')
     local ok, ranges, err =
         matcher.ranges_live_get(cmdline_mod(state_cmdline), match_range, win, buf, lines)
     if not ok then
@@ -376,48 +376,6 @@ local function listener_init(cmdline_modifier, range, win, buf, lines, tokens, u
     })
 end
 
----@param dim boolean
----@param win uinteger
----@param range [uinteger, uinteger, uinteger, uinteger]
----@param buf uinteger
-local function dim_extmarks_set_checked(dim, win, range, buf)
-    if not dim then
-        return
-    end
-
-    api.nvim__ns_set(state_ns_dim, { wins = { win } })
-    ---@type vim.api.keyset.set_extmark
-    local extmark_opts = {
-        hl_group = hl_dim,
-        priority = hl_priority_dim,
-        strict = false,
-    }
-
-    -- We go through the trouble of setting the dim highlights by line because Neovim does not
-    -- consistently draw multi-line highlight extmarks only within namespace window scope.
-    local start_row = range[1]
-    local end_row = range[3]
-    if start_row == end_row then
-        extmark_opts.end_row = end_row
-        extmark_opts.end_col = range[4]
-        api.nvim_buf_set_extmark(buf, state_ns_dim, start_row, range[2], extmark_opts)
-        return
-    end
-
-    extmark_opts.end_row = end_row
-    extmark_opts.end_col = range[4]
-    api.nvim_buf_set_extmark(buf, state_ns_dim, end_row, 0, extmark_opts)
-
-    extmark_opts.hl_eol = true
-    extmark_opts.end_col = nil
-    api.nvim_buf_set_extmark(buf, state_ns_dim, start_row, range[2], extmark_opts)
-
-    for i = start_row + 1, end_row - 1 do
-        extmark_opts.end_row = i + 1
-        api.nvim_buf_set_extmark(buf, state_ns_dim, i, 0, extmark_opts)
-    end
-end
-
 ---@class farsight.live.MatchData
 ---@field idxs_labeled table<uinteger, true>
 ---@field labeled_targets table<string, uinteger>
@@ -436,7 +394,7 @@ function M.live(win, buf, upward, ctx)
         return
     end
 
-    local matcher = require("farsight._aos_win_match")
+    local matcher = require('lua.farsight._match')
     local range, lines = matcher.live_info_get(win, buf, (upward and -1 or 1))
     api.nvim__ns_set(state_ns_dynamic, { wins = { win } })
     local _util = require("farsight._util")

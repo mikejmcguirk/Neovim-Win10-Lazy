@@ -88,6 +88,16 @@ function M.eval_to_ext(row, col)
     return row - 1, col - 1
 end
 
+---Convert an eval-based position (1,1) to an ext-based position (0,0).
+---@audited 2026-07-18
+---@param pos_eval [uinteger, uinteger] Modified in place!
+---@return [uinteger, uinteger] Reference to `pos_eval`
+function M.eval_to_ext_pos(pos_eval)
+    pos_eval[1] = pos_eval[1] - 1
+    pos_eval[2] = pos_eval[2] - 1
+    return pos_eval
+end
+
 ---@audited 2026-07-03
 ---@param row integer 1 indexed
 ---@param col integer 1 indexed, inclusive
@@ -96,12 +106,31 @@ function M.eval_to_mark(row, col)
     return row, col - 1
 end
 
+---Convert an eval-based position (1,1) to a mark-based position (1,0).
+---@audited 2026-07-16
+---@param pos_eval [uinteger, uinteger] Modified in place!
+---@return [uinteger, uinteger] Reference to `pos_eval`
+function M.eval_to_mark_pos(pos_eval)
+    pos_eval[2] = pos_eval[2] - 1
+    return pos_eval
+end
+
 ---@audited 2026-07-03
 ---@param row integer 0 indexed
 ---@param col integer 0 indexed, inclusive
 ---@return integer, integer 1,1 indexed, inclusive end
 function M.ext_to_eval(row, col)
     return row + 1, col + 1
+end
+
+---Convert an ext-based position (0,0) to an eval-based position (1,1).
+---@audited 2026-07-18
+---@param pos_ext [uinteger, uinteger] Modified in place!
+---@return [uinteger, uinteger] Reference to `pos_eval`
+function M.ext_to_eval_pos(pos_ext)
+    pos_ext[1] = pos_ext[1] + 1
+    pos_ext[2] = pos_ext[2] + 1
+    return pos_ext
 end
 
 ---@audited 2026-07-03

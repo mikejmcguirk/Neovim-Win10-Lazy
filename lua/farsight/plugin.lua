@@ -18,59 +18,59 @@ local plugs = {
     --         require("farsight.jump").jump({})
     --     end,
     -- },
-    {
-        { "n", "x", "o" },
-        "<Plug>(Farsight-CsearchF-Forward)",
-        function()
-            require("farsight.csearch").csearch({})
-        end,
-    },
-    {
-        { "n", "x", "o" },
-        "<Plug>(Farsight-CsearchF-Reverse)",
-        function()
-            require("farsight.csearch").csearch({ forward = 0 })
-        end,
-    },
-    {
-        { "n", "x", "o" },
-        "<Plug>(Farsight-CsearchT-Forward)",
-        function()
-            require("farsight.csearch").csearch({ ["until"] = 1 })
-        end,
-    },
-    {
-        { "n", "x", "o" },
-        "<Plug>(Farsight-CsearchT-Reverse)",
-        function()
-            require("farsight.csearch").csearch({ forward = 0, ["until"] = 1 })
-        end,
-    },
-    {
-        { "n", "x", "o" },
-        "<Plug>(Farsight-CsearchRep-Forward)",
-        function()
-            require("farsight.csearch").rep({})
-        end,
-    },
-    -- TODO: Should reverse also be used as the naming convention for the plugs?
-    {
-        { "n", "x", "o" },
-        "<Plug>(Farsight-CsearchRep-Reverse)",
-        function()
-            require("farsight.csearch").rep({ forward = 0 })
-        end,
-    },
+    -- {
+    --     { "n", "x", "o" },
+    --     "<Plug>(Farsight-CsearchF-Forward)",
+    --     function()
+    --         require("farsight.csearch").csearch({})
+    --     end,
+    -- },
+    -- {
+    --     { "n", "x", "o" },
+    --     "<Plug>(Farsight-CsearchF-Reverse)",
+    --     function()
+    --         require("farsight.csearch").csearch({ forward = 0 })
+    --     end,
+    -- },
+    -- {
+    --     { "n", "x", "o" },
+    --     "<Plug>(Farsight-CsearchT-Forward)",
+    --     function()
+    --         require("farsight.csearch").csearch({ ["until"] = 1 })
+    --     end,
+    -- },
+    -- {
+    --     { "n", "x", "o" },
+    --     "<Plug>(Farsight-CsearchT-Reverse)",
+    --     function()
+    --         require("farsight.csearch").csearch({ forward = 0, ["until"] = 1 })
+    --     end,
+    -- },
+    -- {
+    --     { "n", "x", "o" },
+    --     "<Plug>(Farsight-CsearchRep-Forward)",
+    --     function()
+    --         require("farsight.csearch").rep({})
+    --     end,
+    -- },
+    -- -- TODO: Should reverse also be used as the naming convention for the plugs?
+    -- {
+    --     { "n", "x", "o" },
+    --     "<Plug>(Farsight-CsearchRep-Reverse)",
+    --     function()
+    --         require("farsight.csearch").rep({ forward = 0 })
+    --     end,
+    -- },
 }
 
-for _, plug in ipairs(plugs) do
-    local modes = plug[1]
-    local key = plug[2]
-    local callback = plug[3]
-    for _, mode in ipairs(modes) do
-        api.nvim_set_keymap(mode, key, "", { noremap = true, callback = callback })
-    end
-end
+-- for _, plug in ipairs(plugs) do
+--     local modes = plug[1]
+--     local key = plug[2]
+--     local callback = plug[3]
+--     for _, mode in ipairs(modes) do
+--         api.nvim_set_keymap(mode, key, "", { noremap = true, callback = callback })
+--     end
+-- end
 
 -- TODO: Loop up the mappings
 -- TODO: I don't love the Csearch plug names
@@ -104,30 +104,30 @@ end
 -- TODO: Make sure the business with properly mapping <cr> is transferred over when this module
 -- is re-written.
 
----@type { [1]: string[], [2]: string, [3]: string }[]
-local csearch_maps = {
-    { { "n", "x", "o" }, "f", "<Plug>(Farsight-CsearchF-Forward)" },
-    { { "n", "x", "o" }, "F", "<Plug>(Farsight-CsearchF-Reverse)" },
-    { { "n", "x", "o" }, "t", "<Plug>(Farsight-CsearchT-Forward)" },
-    { { "n", "x", "o" }, "T", "<Plug>(Farsight-CsearchT-Reverse)" },
-    { { "n", "x", "o" }, ";", "<Plug>(Farsight-CsearchRep-Forward)" },
-    { { "n", "x", "o" }, ",", "<Plug>(Farsight-CsearchRep-Reverse)" },
-}
-
-vim.b.farsight_default_maps = false
-
-for i = 1, #csearch_maps do
-    local map = csearch_maps[i]
-    local modes = map[1]
-    local key = map[2]
-    local rhs = map[3]
-    for j = 1, #modes do
-        local mode = modes[j]
-        if fn.maparg(key, mode) == "" then
-            api.nvim_set_keymap(mode, key, rhs, { noremap = true })
-        end
-    end
-end
+-- ---@type { [1]: string[], [2]: string, [3]: string }[]
+-- local csearch_maps = {
+--     { { "n", "x", "o" }, "f", "<Plug>(Farsight-CsearchF-Forward)" },
+--     { { "n", "x", "o" }, "F", "<Plug>(Farsight-CsearchF-Reverse)" },
+--     { { "n", "x", "o" }, "t", "<Plug>(Farsight-CsearchT-Forward)" },
+--     { { "n", "x", "o" }, "T", "<Plug>(Farsight-CsearchT-Reverse)" },
+--     { { "n", "x", "o" }, ";", "<Plug>(Farsight-CsearchRep-Forward)" },
+--     { { "n", "x", "o" }, ",", "<Plug>(Farsight-CsearchRep-Reverse)" },
+-- }
+--
+-- vim.b.farsight_default_maps = false
+--
+-- for i = 1, #csearch_maps do
+--     local map = csearch_maps[i]
+--     local modes = map[1]
+--     local key = map[2]
+--     local rhs = map[3]
+--     for j = 1, #modes do
+--         local mode = modes[j]
+--         if fn.maparg(key, mode) == "" then
+--             api.nvim_set_keymap(mode, key, rhs, { noremap = true })
+--         end
+--     end
+-- end
 
 -- Profiling code:
 -- local start_time = vim.uv.hrtime()

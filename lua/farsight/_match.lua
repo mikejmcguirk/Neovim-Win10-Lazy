@@ -295,6 +295,34 @@ function M.static_ranges_get(win, buf, re, folds)
     return match_range, ranges, lines
 end
 
+---@param win uinteger
+---@param buf uinteger
+---@param dir -1|1
+---@return [uinteger, uinteger, uinteger, uinteger]
+function M.csearch_match_area_get(win, buf, dir)
+    return match_range_get(win, buf, dir, "after", "before")
+end
+
+---@param buf uinteger
+---@param match_range [uinteger, uinteger, uinteger, uinteger]
+---@param pattern string
+---@return [uinteger, uinteger, uinteger, uinteger][], table<uinteger, string>
+function M.csearch_initial_labels_get(buf, match_range, pattern)
+    local lines = lines_from_match_range(buf, match_range)
+    return match_area(match_range, buf, lines, vim.regex(pattern)), lines
+end
+
+---@param top uinteger 0 indexed
+---@param bot uinteger 0 indexed
+---@param buf uinteger
+---@param char string
+function M.csearch_cont_results_get(top, bot, buf, char)
+    local match_range = { top, 0, bot, #api.nvim_buf_get_lines(buf, bot, bot + 1, false)[1] }
+    local re = vim.regex(char)
+    return match_area(match_range, buf, lines_from_match_range(buf, match_range), re)
+end
+
 return M
 
+-- TODO: Use "match_area" naming, to not conflict with "ranges"
 -- TODO: Unsure what to do about nomatch scenario.

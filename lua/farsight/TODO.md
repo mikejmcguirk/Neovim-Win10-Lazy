@@ -18,14 +18,15 @@
 
 ## DESIGN:
 
-* The first jump
+- The first jump
   + This should work like a standard f/t motion. 2fk should still jump two ks forward
   + Dimming should occur in the entire search area in the direction you want forward. You should, I hope, just be able to use the logic from live
-* What is continuation mode
+- What is continuation mode
   + I think the constraint we need to accept is that the continuation options are only a set of the previous results
     + UX issue - Searching forward then dimming the whole screen for continuation is awkward
-* Exiting continuation mode
+- Exiting continuation mode
   + Any non f/t action
+  + we type things
 
 - [ ] Need to figure out csearch traversal. Don't want to use bespoke UTF-8 if it can be avoided, but need correct by-char iteration.
 
@@ -147,6 +148,10 @@
     - https://github.com/nvim-mini/mini.nvim/blob/main/readmes/mini-jump.md
     - https://github.com/ggandor/flit.nvim
 
+#### CSEARCH:
+
+- [ ] `cpo-;` behavior is not implemented, and is not on the roadmap.
+
 ## PUBLISHING:
 
 - [ ] Everything should use the "targets" and "target locator" branding
@@ -156,6 +161,13 @@
 ## MID:
 
 - [ ] For `nowrap` buffers, you can use `getwininfo()` to build the left and right bounds for line display, then filter out OOB results. Unlike with a lot of stuff dealing with screen positioning, this should be one or two data pulls from Neovim then the rest is Lua calculation.
+
+#### CSEARCH:
+
+- [ ] It would be good to have an "after" option in addition to "till"
+  - [ ] Blocker: I have no idea where to map it. I don't think `<M-f>` or `<M-t>` are good defaults. Outlying compatibility issues plus not important enough to intrude on space often used for terminal and/or OS cmds.
+
+- [ ] API to re-enter previous continuation mode
 
 #### LIVE:
 
