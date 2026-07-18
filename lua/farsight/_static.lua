@@ -1,7 +1,7 @@
 local api = vim.api
 local fn = vim.fn
 
-local matcher = require('lua.farsight._match')
+local matcher = require("farsight._match")
 local ntt = require("nvim-tools.table")
 
 --------------------------

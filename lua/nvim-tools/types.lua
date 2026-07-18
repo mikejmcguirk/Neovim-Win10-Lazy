@@ -22,6 +22,7 @@ function M.not_nil(...)
 end
 
 ---@class nvim-tools.types.ValidateListOpts
+---@field fun? fun(x:any): boolean
 ---@field item_type? string|string[]
 ---@field len? integer Takes precedence over max and min len.
 ---@field max_len? integer
@@ -60,6 +61,13 @@ function M.valid_list(t, opts)
     end
 
     local ntt = require("nvim-tools.table")
+    local fun = opts.fun
+    if fun ~= nil then
+        if not ntt.i_all(t, fun) then
+            return false, "Failed custom function validation"
+        end
+    end
+
     local predicate = type(item_type) == "table"
             and function(v)
                 return ntt.i_includes(item_type, type(v))
@@ -68,7 +76,7 @@ function M.valid_list(t, opts)
             return type(v) == item_type
         end
 
-    if ntt.i_all_nonempty(t, predicate) then
+    if ntt.i_all(t, predicate) then
         return true, ""
     end
 

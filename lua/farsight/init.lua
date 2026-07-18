@@ -121,23 +121,38 @@ local function matches_schema_with_run(t, s)
     return matches_validator_with(t, s, {})
 end
 
+---@param val string
+---@return boolean
+local function try_regex(val)
+    local ok, _ = pcall(vim.regex, val)
+    return ok
+end
+
+---@param val string
+---@return boolean, string
+local function fold_cmd_check(val)
+    local has = val == "" or val == "zv" or val == "zO" or val == "zx" or val == "zR"
+    return has, has and "" or "Invalid unfold cmd"
+end
+
+---@class farsight.config.Schema
 local schema = {
     default_keymaps_set = "boolean",
     csearch = {
-        -- TODO-DEP: I'm not convinced cancel_keys can be the same for both input and continuation
-        -- mode, but I have yet to see a concrete case where it doesn't work so I'll go with it.
         cancel_keys = function(val)
             local nty = require("nvim-tools.types")
-            return nty.valid_list(val, { item_type = "string" })
+            return nty.valid_list(val, {
+                item_type = "string",
+                func = function(v)
+                    return vim.call("strcharlen", v) == 1
+                end,
+            })
         end,
         dim = "boolean",
         keepjumps = "boolean",
         on_jump = "callable",
-        pattern = "string",
-        unfold = function(val)
-            local has = val == "" or val == "zv" or val == "zO" or val == "zx" or val == "zR"
-            return has, has and "" or "Invalid unfold cmd"
-        end,
+        pattern = try_regex,
+        unfold = fold_cmd_check,
     },
     live = {
         dim = "boolean",
@@ -145,10 +160,14 @@ local schema = {
         cmdline_modifier = "callable",
         on_jump = "callable",
         prompt = "string",
-        -- TODO: Live token validation needs to block "\"
         tokens = function(val)
             local nty = require("nvim-tools.types")
-            return nty.valid_list(val, { item_type = "string" })
+            return nty.valid_list(val, {
+                item_type = "string",
+                func = function(v)
+                    return v ~= "\\" and vim.call("strcharlen", v) == 1
+                end,
+            })
         end,
         unfold = function(val)
             local has = val == "" or val == "zv" or val == "zO" or val == "zx" or val == "zR"
@@ -157,46 +176,39 @@ local schema = {
     },
     static = {
         dim = "boolean",
-        folds = "string", -- TODO: stricter validity check
+        folds = function(val)
+            return val == "first" or val == "none"
+        end,
         keepjumps = "boolean",
         label_start = "boolean",
         omode_aware = "boolean",
         on_jump = "callable",
-        -- TODO: Stricter regex validity check. Also needs to run the check that matcher uses
-        -- without requiring that module
-        pattern = "string",
+        pattern = try_regex,
         tokens = function(val)
             local nty = require("nvim-tools.types")
-            return nty.valid_list(val, { item_type = "string", min_len = 2 })
+            return nty.valid_list(val, {
+                item_type = "string",
+                min_len = 2,
+                func = function(v)
+                    return vim.call("strcharlen", v) == 1
+                end,
+            })
         end,
-        unfold = function(val)
-            local has = val == "" or val == "zv" or val == "zO" or val == "zx" or val == "zR"
-            return has, has and "" or "Invalid unfold cmd"
-        end,
+        unfold = fold_cmd_check,
         vmode_aware = "boolean",
     },
 }
--- TODO: Noted somewhere else, but we need to be able to handle custom datatypes here.
--- TODO: Tokens need to be validated to be one char long
 
 --------------------
 -- MARK: Defaults --
 --------------------
-
--- TODO: Use only numeric indexes once code is baked in.
--- TODO: Move definition to somewhere else.
----@class farsight.Target Ranges are zero-indexed, end-exclusive.
----@field [1] uinteger
----@field [2] uinteger
----@field [3] uinteger
----@field [4] uinteger
 
 ---@class farsight.config.Config
 local default_config = {
     default_keymaps_set = true, ---@type boolean -- Only checked on startup.
     ---@class farsight.csearch.Ctx
     csearch = {
-        cancel_keys = { "\3", "\27" }, ---@type string[]
+        cancel_keys = { "\3", "\27", "\r", ";", "," }, ---@type string[]
         dim = true, ---@type boolean
         keepjumps = false, ---@type boolean
         ---@type  fun(win:uinteger, buf:uinteger, pos:[uinteger, uinteger])
@@ -253,20 +265,52 @@ local default_config = {
         vmode_aware = true, ---@type boolean
     },
 }
+
+---@class farsight.csearch.Opts
+---@field cancel_keys? string[]
+---@field dim? boolean
+---@field keepjumps? boolean
+---@field on_jump? fun(win:uinteger, buf:uinteger, pos:[uinteger, uinteger])
+---@field pattern? string
+---@field unfold? ""|"zv"|"zO"|"zx"|"zR"
+
+---@class farsight.live.Opts
+---@field cmdline_modifier? fun(cmdline:string): string
+---@field dim? boolean
+---@field keepjumps? boolean
+---@field on_jump? fun(win:uinteger, buf:uinteger, pos:[uinteger, uinteger])
+---@field prompt? string
+---@field tokens? string[]
+---@field unfold? ""|"zv"|"zO"|"zx"|"zR"
+
+---@class farsight.static.Opts
+---@field dim? boolean
+---@field folds? "first"|"none"
+---@field keepjumps? boolean
+---@field label_start? boolean
+---@field omode_aware? true
+---@field on_jump? fun(win:uinteger, buf:uinteger, pos:[uinteger, uinteger])
+---@field pattern? string
+---@field tokens? string[]
+---@field unfold? ""|"zv"|"zO"|"zx"|"zR"
+---@field vmode_aware? boolean
+
+---@class farsight.config.Input
+---@field default_keymaps_set? boolean
+---@field csearch? farsight.csearch.Opts
+---@field live? farsight.live.Opts
+---@field static? farsight.static.Opts
+
 ------------------------
 -- MARK: Config Class --
 ------------------------
 
 local M = {}
 
--- TODO: Can you define this off the defaults with annotations?
-
 ---@nodoc
 ---@class farsight.Config
----@field _config table
----@field _defaults table
----@field default_keymaps_set boolean
----@field live farsight.live.Ctx
+---@field _config farsight.config.Config
+---@field _defaults farsight.config.Schema
 local Config = {}
 
 ---Store global plugin config.
@@ -283,7 +327,7 @@ local Config = {}
 ---```lua
 ---    config({ foo = "bar" })
 ---```
----@param t? table|nil Table of new values to merge in.
+---@param t farsight.config.Input? Table of new values to merge in.
 ---@return farsight.config.Config The current or updated config.
 ---@diagnostic disable-next-line: assign-type-mismatch
 function M.config(t)
@@ -325,22 +369,25 @@ Config.__newindex = function(_, _, _)
 end
 
 ---@param self farsight.Config
----@param t? table|nil
----@return table
+---@param t? farsight.config.Input
+---@return farsight.config.Config
 function Config.__call(self, t)
     local _config = rawget(self, "_config")
     local ntt = require("nvim-tools.table")
     if t == nil then
+        ---@diagnostic disable-next-line: return-type-mismatch
         return ntt.deepcopy(_config)
     end
 
     local ok, err = matches_schema_with_run(t, schema)
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        ---@diagnostic disable-next-line: return-type-mismatch
         return ntt.deepcopy(_config)
     end
 
     ntt.merge_deep_right(_config, ntt.deepcopy(t))
+    ---@diagnostic disable-next-line: return-type-mismatch
     return ntt.deepcopy(_config)
 end
 
@@ -603,15 +650,6 @@ end
 
 M.live = {}
 
----@class farsight.live.Opts
----@field cmdline_modifier fun(cmdline:string): string
----@field dim? boolean
----@field keepjumps? boolean
----@field on_jump? fun(win:uinteger, buf:uinteger, pos:[uinteger, uinteger])
----@field prompt? string
----@field tokens? string[]
----@field unfold? ""|"zv"|"zO"|"zx"|"zR"
-
 ---@param opts? farsight.live.Opts
 function M.live.fwd(opts)
     vim.validate("opts", opts, "table", true)
@@ -645,12 +683,6 @@ function M.live.rev(opts)
 end
 
 M.csearch = {}
-
----@class farsight.csearch.Opts
----@field dim? boolean
----@field keepjumps? boolean
----@field on_jump? fun(win:uinteger, buf:uinteger, pos:[uinteger, uinteger])
----@field pattern? string
 
 ---@param opts? farsight.csearch.Opts
 function M.csearch.fwd(opts)

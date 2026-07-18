@@ -3,11 +3,7 @@ local keymap = vim.keymap
 
 require("farsight.plugin")
 local farsight = require("farsight")
-farsight.config({
-    csearch = { cancel_keys = { "\3", "\27", "\r" } },
-    -- live = { dim = false },
-    -- static = { label_start = true },
-})
+farsight.config()
 
 -- api.nvim_set_hl(0, "farsightLiveResult", { underdouble = true })
 -- api.nvim_set_hl(0, "farsightLiveLabel", { reverse = true })

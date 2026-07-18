@@ -229,7 +229,7 @@ local function tokens_avail_get(res, tokens, chars_after)
     end)
 end
 
----@param target farsight.Target
+---@param target [uinteger, uinteger, uinteger, uinteger]
 ---@return uinteger
 local function bit_pack_start(target)
     return target[1] * 16384 + target[2]
@@ -311,7 +311,7 @@ local function targets_update(cmdline_mod, match_range, win, buf, lines, tokens,
         return
     end
 
-    local matcher = require('lua.farsight._match')
+    local matcher = require("farsight._match")
     local ok, ranges, err =
         matcher.ranges_live_get(cmdline_mod(state_cmdline), match_range, win, buf, lines)
     if not ok then
@@ -319,7 +319,7 @@ local function targets_update(cmdline_mod, match_range, win, buf, lines, tokens,
         return
     end
 
-    ---@cast ranges farsight.Target[]
+    ---@cast ranges [uinteger, uinteger, uinteger, uinteger][]
     ---@type farsight.live.MatchData
     local res = {
         idxs_labeled = {},
@@ -380,7 +380,7 @@ end
 ---@field idxs_labeled table<uinteger, true>
 ---@field labeled_targets table<string, uinteger>
 ---@field packed_targets table<uinteger, uinteger>
----@field targets farsight.Target[]
+---@field targets [uinteger, uinteger, uinteger, uinteger][]
 
 local M = {}
 
@@ -394,7 +394,7 @@ function M.live(win, buf, upward, ctx)
         return
     end
 
-    local matcher = require('lua.farsight._match')
+    local matcher = require("farsight._match")
     local range, lines = matcher.live_info_get(win, buf, (upward and -1 or 1))
     api.nvim__ns_set(state_ns_dynamic, { wins = { win } })
     local _util = require("farsight._util")

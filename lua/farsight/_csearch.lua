@@ -1,7 +1,7 @@
 local api = vim.api
 local fn = vim.fn
 
-local matcher = require("lua.farsight._match")
+local matcher = require("farsight._match")
 local ntt = require("nvim-tools.table")
 local ntp = require("nvim-tools.pos")
 local _util = require("farsight._util")
@@ -85,7 +85,7 @@ local function continuation_teardown()
 
     vim.on_key(nil, state_ns_on_key)
 
-    -- Providers are always cleared when this function is run.
+    -- Providers are cleared when this function is run.
     api.nvim_set_decoration_provider(state_ns_labels)
     api.nvim_buf_clear_namespace(cont_buf, state_ns_dim, 0, -1)
     api.nvim_buf_clear_namespace(cont_buf, state_ns_labels, 0, -1)
@@ -243,14 +243,11 @@ local function continuation_begin(win, buf, top, bot, jump_pos, till, upward, ca
         end,
     })
 
-    -- TODO-DEP: I think this would fire after on_jump if on_jump makes a change. But don't want
-    -- to speculatively put up guard code in case my assumptions are wrong.
-    api.nvim_create_autocmd("TextChanged", {
-        group = group,
-        callback = function(ev)
-            if ev.buf == cont_buf then
-                continuation_teardown()
-            end
+    -- If you delete a char then enter continuation mode, TextChanged fires for some reason.
+    api.nvim_buf_attach(cont_buf, false, {
+        on_lines = function()
+            continuation_teardown()
+            return true -- Detach
         end,
     })
 
@@ -263,8 +260,8 @@ local function continuation_begin(win, buf, top, bot, jump_pos, till, upward, ca
         end),
     })
 
-    vim.on_key(function(typed)
-        if ntt.i_includes(cancel_keys, typed) then
+    vim.on_key(function(key, typed)
+        if #ntt.i_overlap(nil, true, { key, typed }, cancel_keys) > 0 then
             if string.byte(api.nvim_get_mode().mode, 1) ~= 99 then
                 continuation_teardown()
             end
@@ -650,8 +647,7 @@ function M.csearch(win, buf, count1, upward, till, ctx)
     base_hls_set(win, buf, upward, count1, till, ctx)
     local _, char = pcall(fn.getcharstr, -1)
     init_jump_clear_all_hls(buf, ctx.dim)
-    local cancel_keys = ctx.cancel_keys
-    if ntt.i_includes(cancel_keys, char) then
+    if char == "\27" or char == "\3" or char == "\r" then
         return
     end
 
@@ -666,7 +662,7 @@ function M.csearch(win, buf, count1, upward, till, ctx)
         return
     end
 
-    continuation_begin(win, buf, top, bot, jump_pos, till, upward, cancel_keys)
+    continuation_begin(win, buf, top, bot, jump_pos, till, upward, ctx.cancel_keys)
 end
 
 ---@return boolean
@@ -675,5 +671,3 @@ function M.is_in_continuation_mode()
 end
 
 return M
-
--- TODO: fold open logic
