@@ -595,7 +595,7 @@ function Buf_Config_Accessor:list_bufs()
 end
 
 ------------------------
--- MARK: Startup Code --
+-- MARK: Merging Code --
 ------------------------
 
 ---@param buf uinteger
@@ -648,122 +648,100 @@ end
 -- MARK: API --
 ---------------
 
-M.live = {}
-
----@param opts? farsight.live.Opts
-function M.live.fwd(opts)
+---@param opts table?
+---@param key string
+local function ctx_get(opts, key)
     vim.validate("opts", opts, "table", true)
     opts = opts or {}
-    local win = api.nvim_get_current_win()
-    local buf = api.nvim_win_get_buf(win)
-    local ok, ctx, err = M._get_merged_config(buf, opts, "live")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return
-    end
 
-    ---@cast ctx farsight.live.Ctx
-    require("farsight._live").live(win, buf, false, ctx)
-end
-
----@param opts? farsight.live.Opts
-function M.live.rev(opts)
-    vim.validate("opts", opts, "table", true)
-    opts = opts or {}
-    local win = api.nvim_get_current_win()
-    local buf = api.nvim_win_get_buf(win)
-    local ok, ctx, err = M._get_merged_config(buf, opts, "live")
-    if not ok then
-        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
-        return
-    end
-
-    ---@cast ctx farsight.live.Ctx
-    require("farsight._live").live(win, buf, true, ctx)
+    local cur_win = api.nvim_get_current_win()
+    local cur_win_buf = api.nvim_win_get_buf(cur_win)
+    return cur_win, cur_win_buf, M._get_merged_config(cur_win_buf, opts, key)
 end
 
 M.csearch = {}
 
 ---@param opts? farsight.csearch.Opts
 function M.csearch.fwd(opts)
-    vim.validate("opts", opts, "table", true)
-    opts = opts or {}
-    local win = api.nvim_get_current_win()
-    local buf = api.nvim_win_get_buf(win)
-    local ok, ctx, err = M._get_merged_config(buf, opts, "csearch")
+    local win, win_buf, ok, ctx, err = ctx_get(opts, "csearch")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
     end
 
-    local count1 = vim.v.count1
     ---@cast ctx farsight.csearch.Ctx
-    require("farsight._csearch").csearch(win, buf, count1, false, false, ctx)
+    require("farsight._csearch").csearch(win, win_buf, vim.v.count1, false, false, ctx)
 end
 
 ---@param opts? farsight.csearch.Opts
 function M.csearch.rev(opts)
-    vim.validate("opts", opts, "table", true)
-    opts = opts or {}
-    local win = api.nvim_get_current_win()
-    local buf = api.nvim_win_get_buf(win)
-    local ok, ctx, err = M._get_merged_config(buf, opts, "csearch")
+    local win, win_buf, ok, ctx, err = ctx_get(opts, "csearch")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
     end
 
-    local count1 = vim.v.count1
     ---@cast ctx farsight.csearch.Ctx
-    require("farsight._csearch").csearch(win, buf, count1, true, false, ctx)
+    require("farsight._csearch").csearch(win, win_buf, vim.v.count1, true, false, ctx)
 end
 
 ---@param opts? farsight.csearch.Opts
 function M.csearch.fwd_till(opts)
-    vim.validate("opts", opts, "table", true)
-    opts = opts or {}
-    local win = api.nvim_get_current_win()
-    local buf = api.nvim_win_get_buf(win)
-    local ok, ctx, err = M._get_merged_config(buf, opts, "csearch")
+    local win, win_buf, ok, ctx, err = ctx_get(opts, "csearch")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
     end
 
-    local count1 = vim.v.count1
     ---@cast ctx farsight.csearch.Ctx
-    require("farsight._csearch").csearch(win, buf, count1, false, true, ctx)
+    require("farsight._csearch").csearch(win, win_buf, vim.v.count1, false, true, ctx)
 end
 
 ---@param opts? farsight.csearch.Opts
 function M.csearch.rev_till(opts)
-    vim.validate("opts", opts, "table", true)
-    opts = opts or {}
-    local win = api.nvim_get_current_win()
-    local buf = api.nvim_win_get_buf(win)
-    local ok, ctx, err = M._get_merged_config(buf, opts, "csearch")
+    local win, win_buf, ok, ctx, err = ctx_get(opts, "csearch")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
     end
 
-    local count1 = vim.v.count1
     ---@cast ctx farsight.csearch.Ctx
-    require("farsight._csearch").csearch(win, buf, count1, true, true, ctx)
+    require("farsight._csearch").csearch(win, win_buf, vim.v.count1, true, true, ctx)
 end
 
 function M.csearch.is_in_continuation_mode()
     return require("farsight._csearch").is_in_continuation_mode()
 end
 
+M.live = {}
+
+---@param opts? farsight.live.Opts
+function M.live.fwd(opts)
+    local win, win_buf, ok, ctx, err = ctx_get(opts, "live")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    ---@cast ctx farsight.live.Ctx
+    require("farsight._live").live(win, win_buf, false, ctx)
+end
+
+---@param opts? farsight.live.Opts
+function M.live.rev(opts)
+    local win, win_buf, ok, ctx, err = ctx_get(opts, "live")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    ---@cast ctx farsight.live.Ctx
+    require("farsight._live").live(win, win_buf, true, ctx)
+end
+
+---@param opts farsight.static.Opts
 function M.static(opts)
-    vim.validate("opts", opts, "table", true)
-    opts = opts or {}
-    -- TODO: For single win case, static re-gathers the current win and its buf. Unsure what to do
-    -- though since passing that info from here is useless in the multi-win case.
-    local cur_win = api.nvim_get_current_win()
-    local cur_win_buf = api.nvim_win_get_buf(cur_win)
-    local ok, ctx, err = M._get_merged_config(cur_win_buf, opts, "static")
+    local cur_win, _, ok, ctx, err = ctx_get(opts, "static")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
