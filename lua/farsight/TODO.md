@@ -1,72 +1,3 @@
-## OBJECTIVES:
-
-- [x] Live Jumping:
-  - [x] Flash/lightspeed style jumping
-  - [x] Support label re-use
-- [x] Static Jumping:
-  - [x] EasyMotion/Jump2D style jumping
-- [ ] Csearch Plus:
-  - [ ] Supporting continuation style jumping is mandatory
-  - [ ] Supporting class jumping is a bonus feature
-    - Primary motivation is so I can move live jumping to ;/, which frees the `s` key.
-
-## CONSTRAINTS:
-
-- Don't muddy the waters by trying to make the search tools into nvim-tools modules. Focus on handling farsight.
-- The names are Live, Static, and Csearch. This is not worth brainstorming on further.
-- Don't bother doing anything with screen positioning. Too hard/slow
-
-## DESIGN:
-
-- The first jump
-  + This should work like a standard f/t motion. 2fk should still jump two ks forward
-  + Dimming should occur in the entire search area in the direction you want forward. You should, I hope, just be able to use the logic from live
-- What is continuation mode
-  + I think the constraint we need to accept is that the continuation options are only a set of the previous results
-    + UX issue - Searching forward then dimming the whole screen for continuation is awkward
-- Exiting continuation mode
-  + Any non f/t action
-  + we type things
-
-- [ ] Need to figure out csearch traversal. Don't want to use bespoke UTF-8 if it can be avoided, but need correct by-char iteration.
-
-- [ ] Highlighting: IncSearch > CurSearch > Search
-
-- [ ] Csearch is weird because we don't want to draw extmarks for folds, but we need to account for them because of highlights relative to count. I forget how the current code handles this
-
-- [ ] General search module:
-  - [ ] Search can only handle search, even if it returns rich data
-    - We do not want to allocate a bunch of extra nonsense for Csearch, which only needs the ranges
-  - [ ] Need to re-look at how match_line handles zero width results (`\ze` and others)
-  - [ ] need to properly ignore patterns that end with a single `\`.
-    - Relevant in all cases, since all three can take custom search patterns. Needs to return a relevant and specific error rather than just an empty result, so callers know not to even bother trying to handle
-  - [ ] Results need to have a flag to indicate when "distance" ordering is reversed, for reversed csearches and live jumps.
-  - [ ] Needs to be some method of handling the capitalization atoms in various situations
-    - csearch and static need to be strictly cased
-    - live needs to be optional
-
-- [ ] Csearch:
-  - [ ] Do not do continuation mode in omode or on dot-repeat
-    - Omode you can just handle with a flag in the private module. Dot repeat you probably have to always turn off.
-  - [ ] Need to be mindful of when the stuff under the cursor is and is not deleted when using these motions with operators
-  - [ ] Note: For default f/t, ;/, always advance by one, ignoring count. Count is only for the initial movement
-  - [ ] pcmark options:
-    - [ ] never
-    - [ ] on screen change (probably default)
-    - [ ] initial jump only (default?)
-    - [ ] always
-  - [ ] Dot repeat
-    - Very roughly, this needs to allow us to enter the last continuation mode, so it isn't just lost
-    - Question: Does dot repeat advance by the same count as before? I forget how the default works, but
-  - [ ] For folds, f/t does indeed work in them, so we need a solution I guess.
-  - [ ] Continuation mode raises a lot of weird questions about how much of the Quickscope style highlighting we need.
-
-  - [ ] needs to be compatible with the jake-stewart multicursor plugin
-    - https://github.com/rhysd/clever-f.vim
-    - https://github.com/svermeulen/vim-extended-ft
-    - https://github.com/nvim-mini/mini.nvim/blob/main/readmes/mini-jump.md
-    - https://github.com/ggandor/flit.nvim
-
 ## TODO:
 
 - [ ] After all modules are done, rewrite `/plugin`.
@@ -74,12 +5,17 @@
   - Copy as much code from catharsis as possible.
   - Make sure necessary nuances from the old file are captured.
     * Example: The `<cr>` `maparg` check.
+  - Properly handle all of the TODO notes in there
 
-- [ ] Clean old files/code
-  - [ ] Go through the code/TODO notes again
-    - Code as a final sanity check that everything has been implemented properly
-    - Notes because, especially in `plugin`, there is info related to publishing and Neovim issues I found while writing the old version
-  - [ ] For `plugin`, this would involve clearing out old, commented code
+- [ ] Create checkhealth
+  - [ ] Nvim version (current green, previous yellow, old red)
+  - [ ] Map finding
+  - [ ] Show options
+
+- [ ] Define highlights in `/plugin` so the docgen can take them up
+- [ ] Verify no unnecessary modules required on startup
+
+- [ ] Re-check that the farsight name is available
 
 #### LIVE:
 
@@ -135,18 +71,17 @@
   - Flash/Lightspeed/Leap (incremental jumping)
   - Quickscope (target display for f/t jumping)
 - [ ] Alternatives
-  - vim-sneak (Farsight does not implement the "two-char f/t" style movement.)
+  - vim-sneak
   - hop
   - EasyMotion
   - https://github.com/dahu/vim-fanfingtastic
   - https://github.com/rlane/pounce.nvim
   - https://github.com/woosaaahh/sj.nvim
-
-  - [ ] List these are credits, inspirations, or alternatives as ends up being appropriate:
-    - https://github.com/rhysd/clever-f.vim
-    - https://github.com/svermeulen/vim-extended-ft
-    - https://github.com/nvim-mini/mini.nvim/blob/main/readmes/mini-jump.md
-    - https://github.com/ggandor/flit.nvim
+  - https://github.com/rhysd/clever-f.vim
+  - https://github.com/svermeulen/vim-extended-ft
+  - https://github.com/nvim-mini/mini.nvim/blob/main/readmes/mini-jump.md
+  - https://github.com/ggandor/flit.nvim
+  - https://github.com/nvim-mini/mini.jump
 
 #### CSEARCH:
 
@@ -197,9 +132,7 @@
 #### LIVE:
 
 - [ ] Improve performance.
-  - On my computer, for very large searches, the total time spent outside of matching, setting extmarks, and redrawing is ~.2ms. This means any future improvements would be marginal, and can't add non-marginal complication to the code.
-  - Idea: Merge adjacent search areas
-    * Problem: A check for adjacent search areas would usually not find anything, and the user perceives nothing wrong if they are present.
+  - The problem is, what non-trivial gains can be gotten that don't non-trivially increase code complexity?
 
 ## ISSUES:
 

@@ -349,6 +349,11 @@ end
 ---@nodoc
 M.config = config_create()
 
+---@nodoc
+---Alias so lazy.nvim can load with its `opts` key.
+M.setup = M.config
+--TODO: Test. If this doesn't work then just document that it doesn't.
+
 ---@generic K, V
 ---@param self farsight.Config
 ---@param k K
@@ -410,8 +415,7 @@ function Config:unset_keys(keys)
     local _config = rawget(self, "_config")
     local ntt = require("nvim-tools.table")
     ntt.unset_keys(_config, keys)
-    local _defaults = rawget(self, "_defaults")
-    local defaults_zipped = ntt.zip_deep_with_to(keys, _defaults, function(_, dv)
+    local defaults_zipped = ntt.zip_deep_with_to(keys, rawget(self, "_defaults"), function(_, dv)
         return dv
     end)
 

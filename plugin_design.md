@@ -36,3 +36,11 @@
   + Always set pcmark
 
 + User inputs are opts. Internal data is ctx. Opts should transform to ctx as soon as possible
+
+Profiling code:
+```lua
+local start_time = vim.uv.hrtime()
+local end_time = vim.uv.hrtime()
+local duration_ms = (end_time - start_time) / 1e6
+print(string.format("hl_forward took %.2f ms", duration_ms))
+```
