@@ -1,6 +1,7 @@
 local api = vim.api
 local fn = vim.fn
 
+local _match = require("farsight._match")
 local ntt = require("nvim-tools.table")
 
 -----------------
@@ -302,9 +303,8 @@ local function targets_update(cmdline_mod, match_range, win, buf, lines, tokens,
         return
     end
 
-    local matcher = require("farsight._match")
     local ok, ranges, err =
-        matcher.ranges_live_get(cmdline_mod(state_cmdline), match_range, win, buf, lines)
+        _match.ranges_live_get(cmdline_mod(state_cmdline), match_range, win, buf, lines)
     if not ok then
         state_err = err
         return
@@ -385,8 +385,7 @@ function M.live(win, buf, upward, ctx)
         return
     end
 
-    local matcher = require("farsight._match")
-    local range, lines = matcher.live_info_get(win, buf, (upward and -1 or 1))
+    local range, lines = _match.live_info_get(win, buf, (upward and -1 or 1))
     api.nvim__ns_set(state_ns_dynamic, { wins = { win } })
     local _util = require("farsight._util")
     local dim = ctx.dim

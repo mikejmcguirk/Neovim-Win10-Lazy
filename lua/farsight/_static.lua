@@ -1,7 +1,7 @@
 local api = vim.api
 local fn = vim.fn
 
-local matcher = require("farsight._match")
+local _match = require("farsight._match")
 local ntt = require("nvim-tools.table")
 
 --------------------------
@@ -427,7 +427,7 @@ end
 ---@return uinteger, farsight.static.MatchData
 local function match_data_mapper(ctx, win, idx)
     local buf = api.nvim_win_get_buf(win)
-    local match_range, ranges, lines = matcher.static_ranges_get(win, buf, ctx.regex, ctx.folds)
+    local match_range, ranges, lines = _match.static_ranges_get(win, buf, ctx.regex, ctx.folds)
 
     local start_end = split_point_get(ctx, ranges)
     local start_ranges, end_ranges = ntt.i_split_at(ranges, start_end)

@@ -1,7 +1,7 @@
 local api = vim.api
 local fn = vim.fn
 
-local matcher = require("farsight._match")
+local _match = require("farsight._match")
 local ntt = require("nvim-tools.table")
 local ntp = require("nvim-tools.pos")
 local _util = require("farsight._util")
@@ -123,7 +123,7 @@ local function on_win(_, win, buf, top, bot)
         return
     end
 
-    local ranges = matcher.csearch_cont_results_get(start_row, end_row, cont_buf, state_char)
+    local ranges = _match.csearch_cont_results_get(start_row, end_row, cont_buf, state_char)
     cont_char_extmarks_set(ranges)
     cont_top = new_top
     cont_bot = new_bot
@@ -176,7 +176,7 @@ local function continuation_begin(win, buf, top, bot, jump_pos, till, upward, ca
     cont_did_csearch = true
 
     cont_set_cur_char_mark(jump_pos, till, upward)
-    local ranges = matcher.csearch_cont_results_get(cont_top, cont_bot, cont_buf, state_char)
+    local ranges = _match.csearch_cont_results_get(cont_top, cont_bot, cont_buf, state_char)
     cont_char_extmarks_set(ranges)
 
     -- TODO-DEP: When 0.14 comes out, remove the opt table.
@@ -361,7 +361,7 @@ local function do_jump(char, upward, till, count1, top, bot, mode_status, win, b
 
     if mode_status == 2 then
         if upward and not exclusive then
-            local cur_pos = ntp.mark_to_ext_pos(api.nvim_win_get_cursor(win))
+            local cur_pos = require("nvim-tools.win").cursor_ext_get(win)
             if cur_pos[1] > 0 or cur_pos[2] > 0 then
                 local col = math.max(ntp.utf_decrease_col(buf, cur_pos[1], cur_pos[2]), 0)
                 cur_pos[2] = col
@@ -534,12 +534,12 @@ end
 ---@param till boolean
 ---@param ctx farsight.csearch.Ctx
 local function base_hls_set(win, buf, upward, count1, till, ctx)
-    local match_area = matcher.csearch_match_area_get(win, buf, upward and -1 or 1)
+    local match_area = _match.csearch_match_area_get(win, buf, upward and -1 or 1)
     if ctx.dim then
         _util.dim_set_ns_and_extmarks(state_ns_dim, win, hl_dim, hl_priority_dim, match_area, buf)
     end
 
-    local ranges, lines = matcher.csearch_initial_labels_get(buf, match_area, ctx.pattern)
+    local ranges, lines = _match.csearch_initial_labels_get(buf, match_area, ctx.pattern)
     ---@type farsight.csearch.Traversal
     local traversal = { counts = {}, [1] = {}, [2] = {}, [3] = {} }
     local init = 1 - count1

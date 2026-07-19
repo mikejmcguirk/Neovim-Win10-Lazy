@@ -2,11 +2,15 @@ local api = vim.api
 
 local ntt = require("nvim-tools.table")
 
----@alias farsight.aos_buf_match.Folds "all"|"first"|"none"
+---@alias farsight.match.Folds "all"|"first"|"none"
 
----@alias farsight.aos_buf_match.MatchStart "zero"|"on"|"after"
+---@alias farsight.match.MatchStart "zero"|"on"|"after"
 
----@alias farsight.aos_buf_match.MatchEnd "before"|"on"
+---@alias farsight.match.MatchEnd "before"|"on"
+
+------------------
+-- MARK: Common --
+------------------
 
 ---Internally uses nvim_win_call
 ---@param win uinteger
@@ -47,7 +51,7 @@ local function folds_keep_first(win, ranges)
 end
 
 ---Internally uses nvim_win_call
----@param folds farsight.aos_buf_match.Folds
+---@param folds farsight.match.Folds
 ---@param win uinteger
 ---@param ranges [uinteger, uinteger, uinteger, uinteger][] Modified in place!
 local function folds_handle(folds, win, ranges)
@@ -57,8 +61,6 @@ local function folds_handle(folds, win, ranges)
         folds_keep_first(win, ranges)
     end
 end
--- TODO: Worth making the "first" logic more clear somehow. I had to do an investigation into
--- the old code to re-discover what it was doing and why.
 
 ---Note: regex:match_line is zero-based, end exclusive
 ---@param stop_col_ uinteger
@@ -91,7 +93,7 @@ end
 ---the range is valid within the buf.
 ---@param re vim.regex
 ---@return [uinteger, uinteger, uinteger, uinteger][]
-local function match_area(range, buf, lines, re)
+local function match_over_area(range, buf, lines, re)
     local sr = range[1]
     local er = range[3]
     -- Alloc 16 to avoid initial thrashing.
@@ -111,13 +113,24 @@ local function match_area(range, buf, lines, re)
     return targets
 end
 
+---@param buf uinteger
+---@param match_area [uinteger, uinteger, uinteger, uinteger]
+---@return table<uinteger, string>
+local function lines_from_match_area(buf, match_area)
+    local start_row = match_area[1]
+    local buf_lines = api.nvim_buf_get_lines(buf, start_row, match_area[3] + 1, false)
+    return ntt.i_filter_map_ctx_to_dict(buf_lines, start_row, function(sr, line, idx)
+        return sr + idx - 1, line
+    end)
+end
+
 ---@param win uinteger
 ---@param buf uinteger
 ---@param dir -1|0|1
----@param match_end "before"|"on"
----@param match_start "zero"|"on"|"after"
+---@param match_end farsight.match.MatchEnd
+---@param match_start farsight.match.MatchStart
 ---@return [uinteger, uinteger, uinteger, uinteger]
-local function match_range_get(win, buf, dir, match_start, match_end)
+local function match_area_get(win, buf, dir, match_start, match_end)
     local top_0 = vim.call("line", "w0", win) - 1 ---@cast top_0 uinteger
     local cursor_ext = require("nvim-tools.win").cursor_ext_get(win)
 
@@ -132,8 +145,6 @@ local function match_range_get(win, buf, dir, match_start, match_end)
         elseif match_start == "after" then
             local cur_row_0 = cursor_ext[1]
             local cursor_line = api.nvim_buf_get_lines(buf, cur_row_0, cur_row_0 + 1, false)[1]
-            -- TODO: Unsure how to handle if this clamps to the last byte.
-            -- TODO: This also needs to handle multiline chars
             range[2] = math.min(cursor_ext[2] + 1, #cursor_line)
         else
             range[2] = cursor_ext[2]
@@ -160,39 +171,51 @@ end
 -- MID: If you add to `lines` here, you add three API calls in this function and two in
 -- `add_missing_lines`. Questionable trade for only three strings.
 
+-------------------
+-- MARK: Csearch --
+-------------------
+
 local M = {}
-
--- TODO: should be "cursor_match_start"/"cursor_match_end" or something, since the options only
--- apply if starting or ending on the cursor. They are effectively mutually exclusive.
-
----@class farsight.aos_match.Ctx
----@field dir -1|0|1
----@field folds farsight.aos_buf_match.Folds
----@field match_end "before"|"on"
----@field match_start "zero"|"on"|"after"
-
----@class farsight.aos_win_match.Ret
----@field buf uinteger
----@field targets [uinteger, uinteger, uinteger, uinteger][]
 
 ---@param win uinteger
 ---@param buf uinteger
----@param lines table<uinteger, string> Modified in place!
----@param re vim.regex
----@param ctx farsight.aos_match.Ctx
----@return farsight.aos_win_match.Ret
----@return table<uinteger, string>
+---@param dir -1|1
 ---@return [uinteger, uinteger, uinteger, uinteger]
-local function win_targets_get(win, buf, lines, re, ctx)
-    local dir = ctx.dir
-    local match_start = ctx.match_start
-    local match_end = ctx.match_end
+function M.csearch_match_area_get(win, buf, dir)
+    return match_area_get(win, buf, dir, "after", "before")
+end
 
-    local match_range = match_range_get(win, buf, dir, match_start, match_end)
-    local targets = match_area(match_range, buf, lines, re)
-    folds_handle(ctx.folds, win, targets)
+---@param buf uinteger
+---@param match_area [uinteger, uinteger, uinteger, uinteger]
+---@param pattern string
+---@return [uinteger, uinteger, uinteger, uinteger][], table<uinteger, string>
+function M.csearch_initial_labels_get(buf, match_area, pattern)
+    local lines = lines_from_match_area(buf, match_area)
+    return match_over_area(match_area, buf, lines, vim.regex(pattern)), lines
+end
 
-    return { buf = buf, targets = targets }, lines, match_range
+---@param top uinteger 0 indexed
+---@param bot uinteger 0 indexed
+---@param buf uinteger
+---@param char string
+---@return [uinteger, uinteger, uinteger, uinteger][]
+function M.csearch_cont_results_get(top, bot, buf, char)
+    local match_area = { top, 0, bot, #api.nvim_buf_get_lines(buf, bot, bot + 1, false)[1] }
+    local re = vim.regex(char)
+    return match_over_area(match_area, buf, lines_from_match_area(buf, match_area), re)
+end
+
+----------------
+-- MARK: Live --
+----------------
+
+---@param win uinteger
+---@param buf uinteger
+---@param dir -1|1
+---@return [uinteger, uinteger, uinteger, uinteger], table<uinteger, string>
+function M.live_info_get(win, buf, dir)
+    local match_area = match_area_get(win, buf, dir, "after", "before")
+    return match_area, lines_from_match_area(buf, match_area)
 end
 
 ---@param pattern string
@@ -213,74 +236,14 @@ function M.ranges_live_get(pattern, range, win, buf, lines)
         return false, {}, re
     end
 
-    local ranges = match_area(range, buf, lines, re)
+    local ranges = match_over_area(range, buf, lines, re)
     folds_handle("none", win, ranges)
     return true, ranges, ""
 end
 
----@param buf uinteger
----@param match_range [uinteger, uinteger, uinteger, uinteger]
----@return table<uinteger, string>
-local function lines_from_match_range(buf, match_range)
-    local start_row = match_range[1]
-    local buf_lines = api.nvim_buf_get_lines(buf, start_row, match_range[3] + 1, false)
-    return ntt.i_filter_map_ctx_to_dict(buf_lines, start_row, function(sr, line, idx)
-        return sr + idx - 1, line
-    end)
-end
-
----@param win uinteger
----@param buf uinteger
----@param dir -1|1
----@return [uinteger, uinteger, uinteger, uinteger], table<uinteger, string>
-function M.live_info_get(win, buf, dir)
-    local match_range = match_range_get(win, buf, dir, "after", "before")
-    return match_range, lines_from_match_range(buf, match_range)
-end
--- TODO-DEP: The common logic with this and targets_get needs to be outlined.
--- Blocker: I'm not sure what the csearch interface is yet.
-
----@param wins uinteger[]
----@param pattern string
----@param ctx farsight.aos_match.Ctx
----@return boolean Valid results?
----@return table<uinteger, farsight.aos_win_match.Ret> Results by win.
----@return table<uinteger, [uinteger, uinteger, uinteger, uinteger]>
----@return string
-function M.targets_get(wins, pattern, ctx)
-    local win_targets = {} ---@type table<uinteger, farsight.aos_win_match.Ret>
-    pattern = pattern_resolve(pattern)
-    if pattern == "" then
-        -- TODO: More informative output once we better understand how this is used.
-        return true, win_targets, { 0, 0, 0, 0 }, ""
-    end
-
-    local ok, re = pcall(vim.regex, pattern)
-    if not ok then
-        return false, win_targets, { 0, 0, 0, 0 }, re
-    end
-
-    local buf_lines = {} ---@type table<uinteger, table<uinteger, string>>
-    local match_ranges = {} ---@type table<uinteger, [uinteger, uinteger, uinteger, uinteger]>
-    for _, win in ipairs(wins) do
-        local win_buf = api.nvim_win_get_buf(win)
-        local win_buf_lines = ntt.get_or_set_subtable(buf_lines, win_buf)
-        local targets, _, match_range = win_targets_get(win, win_buf, win_buf_lines, re, ctx)
-        win_targets[win] = targets
-        match_ranges[win] = match_range
-    end
-
-    return true, win_targets, match_ranges, ""
-end
--- TODO: This interface feels right for static but I'm not sure about csearch, where we always
--- know we are only doing one win.
-
----@param pattern string
----@return string
-function M.pattern_resolve(pattern)
-    return (string.find(pattern, "^\\$") or string.find(pattern, "[^\\]\\$")) and "" or pattern
-end
--- TODO: yeet the local version
+------------------
+-- MARK: Static --
+------------------
 
 ---@param win uinteger
 ---@param buf uinteger
@@ -288,41 +251,11 @@ end
 ---@param folds "first"|"none"
 ---@return [uinteger, uinteger, uinteger, uinteger], [uinteger, uinteger, uinteger, uinteger][], table<uinteger, string>
 function M.static_ranges_get(win, buf, re, folds)
-    local match_range = match_range_get(win, buf, 0, "on", "on")
-    local lines = lines_from_match_range(buf, match_range)
-    local ranges = match_area(match_range, buf, lines, re)
+    local match_area = match_area_get(win, buf, 0, "on", "on")
+    local lines = lines_from_match_area(buf, match_area)
+    local ranges = match_over_area(match_area, buf, lines, re)
     folds_handle(folds, win, ranges)
-    return match_range, ranges, lines
-end
-
----@param win uinteger
----@param buf uinteger
----@param dir -1|1
----@return [uinteger, uinteger, uinteger, uinteger]
-function M.csearch_match_area_get(win, buf, dir)
-    return match_range_get(win, buf, dir, "after", "before")
-end
-
----@param buf uinteger
----@param match_range [uinteger, uinteger, uinteger, uinteger]
----@param pattern string
----@return [uinteger, uinteger, uinteger, uinteger][], table<uinteger, string>
-function M.csearch_initial_labels_get(buf, match_range, pattern)
-    local lines = lines_from_match_range(buf, match_range)
-    return match_area(match_range, buf, lines, vim.regex(pattern)), lines
-end
-
----@param top uinteger 0 indexed
----@param bot uinteger 0 indexed
----@param buf uinteger
----@param char string
-function M.csearch_cont_results_get(top, bot, buf, char)
-    local match_range = { top, 0, bot, #api.nvim_buf_get_lines(buf, bot, bot + 1, false)[1] }
-    local re = vim.regex(char)
-    return match_area(match_range, buf, lines_from_match_range(buf, match_range), re)
+    return match_area, ranges, lines
 end
 
 return M
-
--- TODO: Use "match_area" naming, to not conflict with "ranges"
--- TODO: Unsure what to do about nomatch scenario.
