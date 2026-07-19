@@ -127,6 +127,7 @@ local function try_regex(val)
     local ok, _ = pcall(vim.regex, val)
     return ok
 end
+-- TODO: Keep this for grep.
 
 ---@param val string
 ---@return boolean, string
@@ -134,172 +135,49 @@ local function fold_cmd_check(val)
     local has = val == "" or val == "zv" or val == "zO" or val == "zx" or val == "zR"
     return has, has and "" or "Invalid unfold cmd"
 end
+-- TODO: Keep this for list item opening.
 
----@class farsight.config.Schema
+---@class qf-herder.config.Schema
 local schema = {
     default_keymaps_set = "boolean",
-    csearch = {
-        cancel_keys = function(val)
-            local nty = require("nvim-tools.types")
-            return nty.valid_list(val, {
-                item_type = "string",
-                func = function(v)
-                    return vim.call("strcharlen", v) == 1
-                end,
-            })
+    window = {
+        auto_height = "boolean",
+        ll_split = function(val)
+            return val == "belowright" or val == "aboveleft"
         end,
-        dim = "boolean",
-        keepjumps = "boolean",
-        on_jump = "callable",
-        pattern = try_regex,
-        unfold = fold_cmd_check,
-    },
-    live = {
-        dim = "boolean",
-        keepjumps = "boolean",
-        cmdline_modifier = "callable",
-        on_jump = "callable",
-        prompt = "string",
-        tokens = function(val)
-            local nty = require("nvim-tools.types")
-            return nty.valid_list(val, {
-                item_type = "string",
-                func = function(v)
-                    return v ~= "\\" and vim.call("strcharlen", v) == 1
-                end,
-            })
+        qf_split = function(val)
+            return val == "botright" or val == "topleft"
         end,
-        unfold = function(val)
-            local has = val == "" or val == "zv" or val == "zO" or val == "zx" or val == "zR"
-            return has, has and "" or "Invalid unfold cmd"
+        silent = "boolean",
+        spk = function(val)
+            return val == "" or val == "cursor" or val == "screen" or val == "topline"
         end,
-    },
-    static = {
-        dim = "boolean",
-        folds = function(val)
-            return val == "first" or val == "none"
-        end,
-        keepjumps = "boolean",
-        label_start = "boolean",
-        omode_aware = "boolean",
-        on_jump = "callable",
-        pattern = try_regex,
-        tokens = function(val)
-            local nty = require("nvim-tools.types")
-            return nty.valid_list(val, {
-                item_type = "string",
-                min_len = 2,
-                func = function(v)
-                    return vim.call("strcharlen", v) == 1
-                end,
-            })
-        end,
-        unfold = fold_cmd_check,
-        vmode_aware = "boolean",
     },
 }
+-- MID: Support the built-in abbreviations for splt settings.
 
 --------------------
 -- MARK: Defaults --
 --------------------
 
----@class farsight.config.Config
+---@class qf-herder.config.Config
 local default_config = {
     default_keymaps_set = true, ---@type boolean -- Only checked on startup.
-    ---@class farsight.csearch.Ctx
-    csearch = {
-        cancel_keys = { "\3", "\27", "\r", ";", "," }, ---@type string[]
-        dim = true, ---@type boolean
-        keepjumps = false, ---@type boolean
-        ---@type  fun(win:uinteger, buf:uinteger, pos:[uinteger, uinteger])
-        on_jump = function(_, _, _) end,
-        pattern = "\\k\\+", ---@type string
-        unfold = "zv", ---@type ""|"zv"|"zO"|"zx"|"zR"
-    },
-    ---@class farsight.live.Ctx
-    live = {
-        ---Example:
-        ---```lua
-        ---    -- Search with literals. See `:h |/\M`
-        ---    function(cmdline)
-        ---        return "\\M" .. cmdline
-        ---    end
-        ---```
-        ---Example:
-        ---```lua
-        ---    -- Search with smartcase See `:h |/\C`
-        ---    function(cmdline)
-        ---        if string.find(cmdline, "%u") or string.find(cmdline, "^\\?[cC]") then
-        ---            return cmdline
-        ---        else
-        ---            return "\\c" .. cmdline
-        ---        end
-        ---    end
-        ---```
-        ---@type fun(cmdline:string): string
-        cmdline_modifier = function(cmdline)
-            return cmdline
-        end,
-        dim = true, ---@type boolean
-        keepjumps = false, ---@type boolean
-        ---@type fun(win:uinteger, buf:uinteger, pos:[uinteger, uinteger])
-        on_jump = function(_, _, _) end,
-        prompt = "⬢", ---@type string
-        tokens = vim.split("kdjfls;aiemvtnurowghby,c.x/zpq", ""), ---@type string[]
-        unfold = "zv", ---@type ""|"zv"|"zO"|"zx"|"zR"
-    },
-    ---@class farsight.static.Ctx
-    static = {
-        dim = true, ---@type boolean
-        -- If `first` is selected, a target will be placed on the first col of the folded line.
-        folds = "first", ---@type "first"|"none"
-        keepjumps = false, ---@type boolean
-        -- `True` to label the start of the result. `False` to label the end.
-        label_start = true, ---@type boolean
-        omode_aware = true, ---@type boolean
-        ---@type fun(win:uinteger, buf:uinteger, pos:[uinteger, uinteger])
-        on_jump = function(_, _, _) end,
-        pattern = "\\k\\+", ---@type string
-        tokens = vim.split("abcdefghijklmnopqrstuvwxyz;,./", ""), ---@type string[]
-        unfold = "zv", ---@type ""|"zv"|"zO"|"zx"|"zR"
-        vmode_aware = true, ---@type boolean
+    ---@class qf-herder.window.Ctx
+    window = {
+        auto_height = true, ---@type boolean
+        ll_split = "belowright", ---@type "aboveleft"|"belowright"
+        qf_split = "botright", ---@type "botright"|"topleft"
+        silent = false, ---@type boolean
+        spk = "topline", ---@type ""|"cursor"|"screen"|"topline"
     },
 }
 
----@class farsight.csearch.Opts
----@field cancel_keys? string[]
----@field dim? boolean
----@field keepjumps? boolean
----@field on_jump? fun(win:uinteger, buf:uinteger, pos:[uinteger, uinteger])
----@field pattern? string
----@field unfold? ""|"zv"|"zO"|"zx"|"zR"
-
----@class farsight.live.Opts
----@field cmdline_modifier? fun(cmdline:string): string
----@field dim? boolean
----@field keepjumps? boolean
----@field on_jump? fun(win:uinteger, buf:uinteger, pos:[uinteger, uinteger])
----@field prompt? string
----@field tokens? string[]
----@field unfold? ""|"zv"|"zO"|"zx"|"zR"
-
----@class farsight.static.Opts
----@field dim? boolean
----@field folds? "first"|"none"
----@field keepjumps? boolean
----@field label_start? boolean
----@field omode_aware? true
----@field on_jump? fun(win:uinteger, buf:uinteger, pos:[uinteger, uinteger])
----@field pattern? string
----@field tokens? string[]
----@field unfold? ""|"zv"|"zO"|"zx"|"zR"
----@field vmode_aware? boolean
-
----@class farsight.config.Input
+---@class qf-herder.config.Input
 ---@field default_keymaps_set? boolean
----@field csearch? farsight.csearch.Opts
----@field live? farsight.live.Opts
----@field static? farsight.static.Opts
+
+-- TODO: These can't be the same opts tables the APIs use because those are subsets of the
+-- ctx tables.
 
 ------------------------
 -- MARK: Config Class --
@@ -308,9 +186,9 @@ local default_config = {
 local M = {}
 
 ---@nodoc
----@class farsight.Config
----@field _config farsight.config.Config
----@field _defaults farsight.config.Schema
+---@class qf-herder.Config
+---@field _config qf-herder.config.Config
+---@field _defaults qf-herder.config.Schema
 local Config = {}
 
 ---Store global plugin config.
@@ -327,8 +205,8 @@ local Config = {}
 ---```lua
 ---    config({ foo = "bar" })
 ---```
----@param t farsight.config.Input? Table of new values to merge in.
----@return farsight.config.Config The current or updated config.
+---@param t qf-herder.config.Input? Table of new values to merge in.
+---@return qf-herder.config.Config The current or updated config.
 ---@diagnostic disable-next-line: assign-type-mismatch
 function M.config(t)
     local _ = t -- ignore unused
@@ -337,7 +215,7 @@ function M.config(t)
     return {}
 end
 
----@return farsight.Config
+---@return qf-herder.Config
 local function config_create()
     local ntt = require("nvim-tools.table")
     local _config = ntt.deepcopy(default_config)
@@ -355,7 +233,7 @@ M.setup = M.config
 --TODO: Test. If this doesn't work then just document that it doesn't.
 
 ---@generic K, V
----@param self farsight.Config
+---@param self qf-herder.Config
 ---@param k K
 ---@return V
 Config.__index = function(self, k)
@@ -373,9 +251,9 @@ Config.__newindex = function(_, _, _)
     api.nvim_echo({ { msg, "WarningMsg" } }, true, {})
 end
 
----@param self farsight.Config
----@param t? farsight.config.Input
----@return farsight.config.Config
+---@param self qf-herder.Config
+---@param t? qf-herder.config.Input
+---@return qf-herder.config.Config
 function Config.__call(self, t)
     local _config = rawget(self, "_config")
     local ntt = require("nvim-tools.table")
@@ -434,8 +312,8 @@ end
 ------------------------
 
 ---@nodoc
----@class farsight.config.BufAccessor
----@field _configs table<uinteger, farsight.Config>
+---@class qf-herder.config.BufAccessor
+---@field _configs table<uinteger, qf-herder.Config>
 local Buf_Config_Accessor = {}
 
 ---Store buffer-specific configuration. When the plugin accesses config data, buffer-specific
@@ -450,7 +328,7 @@ local Buf_Config_Accessor = {}
 ---Configs cannot be created or accessed for invalid buffers. If a buffer is wiped, its config
 ---will be deleted.
 ---@param buf uinteger Buffer config to access.
----@return farsight.config.BufAccessor The current or updated buf config.
+---@return qf-herder.config.BufAccessor The current or updated buf config.
 ---@diagnostic disable-next-line: assign-type-mismatch
 function M.buf_config(buf)
     local _ = buf -- ignore unused
@@ -459,7 +337,7 @@ function M.buf_config(buf)
     return {}
 end
 
----@return farsight.config.BufAccessor
+---@return qf-herder.config.BufAccessor
 local function buf_config_create()
     local buf_config = { _configs = {} }
     return setmetatable(buf_config, Buf_Config_Accessor)
@@ -467,18 +345,18 @@ end
 
 ---@diagnostic disable-next-line: assign-type-mismatch
 ---@nodoc
-M.buf_config = buf_config_create() ---@type farsight.config.BufAccessor
+M.buf_config = buf_config_create() ---@type qf-herder.config.BufAccessor
 
 ---@param buf uinteger
 ---@return string
 local function get_buf_augroup_name(buf)
-    return "farsight.buf_config." .. tostring(buf)
+    return "qf-herder.buf_config." .. tostring(buf)
 end
 
 ---Assumes new buf is valid.
 ---@side-effect Creates BufWipeout autocmd.
 ---@param buf uinteger
----@param _configs table<uinteger, farsight.Config> Modified in place!
+---@param _configs table<uinteger, qf-herder.Config> Modified in place!
 local function add_buf_to__configs(buf, _configs)
     local buf_config = setmetatable({ _config = {}, _defaults = {} }, Config)
     api.nvim_create_autocmd("BufWipeout", {
@@ -495,7 +373,7 @@ local function add_buf_to__configs(buf, _configs)
 end
 
 ---@generic T
----@param self farsight.config.BufAccessor
+---@param self qf-herder.config.BufAccessor
 ---@param k T
 ---@return any
 Buf_Config_Accessor.__index = function(self, k)
@@ -505,7 +383,7 @@ Buf_Config_Accessor.__index = function(self, k)
 
     k = k ~= 0 and k or api.nvim_get_current_buf()
 
-    ---@type table<integer, farsight.Config>
+    ---@type table<integer, qf-herder.Config>
     local _configs = rawget(self, "_configs")
     ---@diagnostic disable-next-line: param-type-mismatch
     if api.nvim_buf_is_valid(k) == false then
@@ -515,7 +393,7 @@ Buf_Config_Accessor.__index = function(self, k)
     end
 
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local buf_config = rawget(_configs, k) ---@type farsight.Config
+    local buf_config = rawget(_configs, k) ---@type qf-herder.Config
     if buf_config == nil then
         buf_config = add_buf_to__configs(k, _configs)
     end
@@ -541,7 +419,7 @@ function Buf_Config_Accessor:add(buf)
         return false
     end
 
-    ---@type table<uinteger, farsight.Config>
+    ---@type table<uinteger, qf-herder.Config>
     local _configs = rawget(self, "_configs")
     if _configs[buf] ~= nil then
         local msg = "Config for buffer " .. buf .. " already exists."
@@ -561,7 +439,7 @@ function Buf_Config_Accessor:clear(bufs)
         return nty.valid_list(bufs, { item_type = "number" })
     end, true)
 
-    local _configs = rawget(self, "_configs") ---@type table<uinteger, farsight.Config>
+    local _configs = rawget(self, "_configs") ---@type table<uinteger, qf-herder.Config>
     if bufs == nil then
         for _, buf_config in pairs(_configs) do
             buf_config:reset()
@@ -585,7 +463,7 @@ function Buf_Config_Accessor:del(bufs)
         return nty.valid_list(bufs, { item_type = "number" })
     end, true)
 
-    local _configs = rawget(self, "_configs") ---@type table<uinteger, farsight.Config>
+    local _configs = rawget(self, "_configs") ---@type table<uinteger, qf-herder.Config>
     if bufs == nil then
         require("nvim-tools.table").clear(_configs)
     else
@@ -625,9 +503,9 @@ function M._get_merged_config(buf, usr_config, ...)
         return false, {}, "Invalid config path."
     end
 
-    ---@type table<uinteger, farsight.Config>
+    ---@type table<uinteger, qf-herder.Config>
     local _configs = rawget(M.buf_config, "_configs")
-    local buf_config_get = rawget(_configs, buf) ---@type farsight.Config
+    local buf_config_get = rawget(_configs, buf) ---@type qf-herder.Config
     if buf_config_get ~= nil then
         local _buf_config = rawget(buf_config_get, "_config") ---@type table
         local buf_config = ntt.get(_buf_config, ...)
@@ -669,96 +547,130 @@ local function ctx_get(opts, key)
     return cur_win, cur_win_buf, M._get_merged_config(cur_win_buf, opts, key)
 end
 
-M.csearch = {}
+M.window = {}
 
----@param opts? farsight.csearch.Opts
-function M.csearch.fwd(opts)
-    local win, win_buf, ok, ctx, err = ctx_get(opts, "csearch")
+---@class qf-herder.window.qfOpen.Opts
+---@field auto_height? boolean
+---@field qf_split? "botright"|"topleft"
+---@field spk? "cursor"|"screen"|"topline"|""
+
+---@param opts qf-herder.window.qfOpen.Opts
+function M.window.qf_open(opts)
+    local _, _, ok, ctx, err = ctx_get(opts, "window")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
     end
 
-    ---@cast ctx farsight.csearch.Ctx
-    require("farsight._csearch").csearch(win, win_buf, vim.v.count1, false, false, ctx)
+    require("qf-herder._window").qf_open(vim.v.count, ctx)
 end
 
----@param opts? farsight.csearch.Opts
-function M.csearch.rev(opts)
-    local win, win_buf, ok, ctx, err = ctx_get(opts, "csearch")
+---@class qf-herder.window.qfClose.Opts
+---@field spk? "cursor"|"screen"|"topline"|""
+
+---@param opts qf-herder.window.qfClose.Opts
+function M.window.qf_close(opts)
+    local _, _, ok, ctx, err = ctx_get(opts, "window")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
     end
 
-    ---@cast ctx farsight.csearch.Ctx
-    require("farsight._csearch").csearch(win, win_buf, vim.v.count1, true, false, ctx)
+    require("qf-herder._window").qf_close(0, ctx)
 end
 
----@param opts? farsight.csearch.Opts
-function M.csearch.fwd_till(opts)
-    local win, win_buf, ok, ctx, err = ctx_get(opts, "csearch")
+---@class qf-herder.window.qfToggle.Opts
+---@field auto_height? boolean
+---@field qf_split? "botright"|"topleft"
+---@field spk? "cursor"|"screen"|"topline"|""
+
+---@param opts qf-herder.window.qfToggle.Opts
+function M.window.qf_toggle(opts)
+    local _, _, ok, ctx, err = ctx_get(opts, "window")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
     end
 
-    ---@cast ctx farsight.csearch.Ctx
-    require("farsight._csearch").csearch(win, win_buf, vim.v.count1, false, true, ctx)
+    require("qf-herder._window").qf_toggle(vim.v.count, ctx)
 end
 
----@param opts? farsight.csearch.Opts
-function M.csearch.rev_till(opts)
-    local win, win_buf, ok, ctx, err = ctx_get(opts, "csearch")
+---@class qf-herder.window.qfResize.Opts
+---@field spk? "cursor"|"screen"|"topline"|""
+
+---@param opts qf-herder.window.qfResize.Opts
+function M.window.qf_resize(opts)
+    local _, _, ok, ctx, err = ctx_get(opts, "window")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
     end
 
-    ---@cast ctx farsight.csearch.Ctx
-    require("farsight._csearch").csearch(win, win_buf, vim.v.count1, true, true, ctx)
+    require("qf-herder._window").qf_resize(0, vim.v.count, ctx)
 end
 
-function M.csearch.is_in_continuation_mode()
-    return require("farsight._csearch").is_in_continuation_mode()
-end
+---@class qf-herder.window.llOpen.Opts
+---@field auto_height? boolean
+---@field qf_split? "botright"|"topleft"
+---@field silent? boolean
+---@field spk? "cursor"|"screen"|"topline"|""
 
-M.live = {}
-
----@param opts? farsight.live.Opts
-function M.live.fwd(opts)
-    local win, win_buf, ok, ctx, err = ctx_get(opts, "live")
+---@param opts qf-herder.window.llOpen.Opts
+function M.window.ll_open(opts)
+    local _, _, ok, ctx, err = ctx_get(opts, "window")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
     end
 
-    ---@cast ctx farsight.live.Ctx
-    require("farsight._live").live(win, win_buf, false, ctx)
+    require("qf-herder._window").ll_open(vim.v.count, ctx)
 end
 
----@param opts? farsight.live.Opts
-function M.live.rev(opts)
-    local win, win_buf, ok, ctx, err = ctx_get(opts, "live")
+---@class qf-herder.window.llClose.Opts
+---@field silent? boolean
+---@field spk? "cursor"|"screen"|"topline"|""
+
+---@param opts qf-herder.window.llClose.Opts
+function M.window.ll_close(opts)
+    local _, _, ok, ctx, err = ctx_get(opts, "window")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
     end
 
-    ---@cast ctx farsight.live.Ctx
-    require("farsight._live").live(win, win_buf, true, ctx)
+    require("qf-herder._window").ll_close(api.nvim_get_current_win(), ctx)
 end
 
----@param opts? farsight.static.Opts
-function M.static(opts)
-    local cur_win, _, ok, ctx, err = ctx_get(opts, "static")
+---@class qf-herder.window.llToggle.Opts
+---@field auto_height? boolean
+---@field qf_split? "botright"|"topleft"
+---@field silent? boolean
+---@field spk? "cursor"|"screen"|"topline"|""
+
+---@param opts qf-herder.window.llToggle.Opts
+function M.window.ll_toggle(opts)
+    local _, _, ok, ctx, err = ctx_get(opts, "window")
     if not ok then
         api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
         return
     end
 
-    ---@cast ctx farsight.static.Ctx
-    require("farsight._static").static(cur_win, ctx)
+    require("qf-herder._window").ll_toggle(vim.v.count, ctx)
+end
+
+---@class qf-herder.window.llResize.Opts
+---@field silent? boolean
+---@field spk? "cursor"|"screen"|"topline"|""
+
+---@param opts qf-herder.window.llResize.Opts
+function M.window.ll_resize(opts)
+    local _, _, ok, ctx, err = ctx_get(opts, "window")
+    if not ok then
+        api.nvim_echo({ { err, "ErrorMsg" } }, true, {})
+        return
+    end
+
+    require("qf-herder._window").ll_resize(0, vim.v.count, ctx)
 end
 
 return M

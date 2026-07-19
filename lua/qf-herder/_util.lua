@@ -33,13 +33,14 @@ function M.ll_win_find_one_by_qf_id(tabpage, qf_id)
     return win
 end
 
----@param tabpage uinteger
+---@param operation_tabpage uinteger Which tabpage is the operation affecting? If this is not
+---zero and different from the current tabpage, changing spk will be skipped.
 ---@param spk string
 ---@return string? Old spk.
-function M.ensure_spk(tabpage, spk)
-    if tabpage ~= 0 then
+function M.ensure_spk(operation_tabpage, spk)
+    if operation_tabpage ~= 0 then
         local cur_tabpage = api.nvim_get_current_tabpage()
-        if tabpage ~= cur_tabpage then
+        if operation_tabpage ~= cur_tabpage then
             return nil
         end
     end

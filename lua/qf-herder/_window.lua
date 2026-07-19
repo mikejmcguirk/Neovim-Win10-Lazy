@@ -6,13 +6,6 @@ local _util = require("qf-herder._util")
 local LIST_MAX_HEIGHT = 10
 local NO_LL = "No location list"
 
----@class qf-herder.window.Ctx
----@field auto_height boolean
----@field spk ""|"cursor"|"screen"|"topline"
----@field qf_split "botright"|"topleft"
----@field ll_split "aboveleft"|"belowright"
----@field silent boolean
-
 ------------------
 -- MARK: Common --
 ------------------
@@ -34,12 +27,12 @@ local function height_resolve(src_win, count, auto_height)
 end
 
 ---@param spk ""|"cursor"|"screen"|"topline"
+---@param tabpage uinteger
 ---@param win uinteger
 ---@param height uinteger
-local function win_resize_with_spk(spk, win, height)
-    local old_spk = #spk > 0 and _util.ensure_spk(0, spk) or nil
-    local ntw = require("nvim-tools.win")
-    pcall(ntw.resize, win, -1, height, { anchor = "bottom" })
+local function win_resize_with_spk(spk, tabpage, win, height)
+    local old_spk = #spk > 0 and _util.ensure_spk(tabpage, spk) or nil
+    pcall(require("nvim-tools.win").resize, win, -1, height, { anchor = "bottom" })
     if old_spk ~= nil then
         api.nvim_set_option_value("spk", old_spk, { scope = "global" })
     end
@@ -75,7 +68,7 @@ end
 ---@param count uinteger
 ---@param ctx qf-herder.window.Ctx
 ---@return boolean, string
-function M.qf_win_open(count, ctx)
+function M.qf_open(count, ctx)
     local qf_win = _util.find_qf_win(0)
     if qf_win ~= nil then
         return false, "Quickfix window already open"
@@ -92,7 +85,7 @@ end
 ---@param tabpage uinteger
 ---@param ctx qf-herder.window.Ctx
 ---@return boolean, uinteger
-function M.qf_win_close(tabpage, ctx)
+function M.qf_close(tabpage, ctx)
     local qf_win = _util.find_qf_win(tabpage)
     if qf_win == nil then
         return false, 0
@@ -104,7 +97,7 @@ end
 ---@param count uinteger
 ---@param ctx qf-herder.window.Ctx
 ---@return boolean, string
-function M.qf_win_toggle(count, ctx)
+function M.qf_toggle(count, ctx)
     local qf_win = _util.find_qf_win(0)
     local ctx_spk = ctx.spk
     if qf_win == nil then
@@ -118,10 +111,10 @@ end
 ---@param tabpage uinteger
 ---@param count uinteger
 ---@param ctx qf-herder.window.Ctx
-function M.qf_win_resize(tabpage, count, ctx)
+function M.qf_resize(tabpage, count, ctx)
     local qf_win = _util.find_qf_win(tabpage)
     if qf_win ~= nil then
-        win_resize_with_spk(ctx.spk, qf_win, height_resolve(nil, count, true))
+        win_resize_with_spk(ctx.spk, tabpage, qf_win, height_resolve(nil, count, true))
     end
 end
 
@@ -149,7 +142,7 @@ end
 ---@param count uinteger
 ---@param ctx qf-herder.window.Ctx
 ---@return boolean, string
-function M.ll_win_open(count, ctx)
+function M.ll_open(count, ctx)
     local src_win = api.nvim_get_current_win()
     local qf_id = fn.getloclist(src_win, { id = 0 }).id
     if qf_id == 0 then
@@ -166,18 +159,18 @@ function M.ll_win_open(count, ctx)
     end
 
     local ctx_spk = ctx.spk
-    M.qf_win_close(0, ctx)
+    M.qf_close(0, ctx)
     return lopen_with_spk(ctx_spk, height_resolve(src_win, count, ctx.auto_height), ctx.ll_split)
 end
 
 ---@class qf-herder.window.locationListClose.Ctx : qf-herder.window.quickfixClose.Ctx
 ---@field silent boolean
 
----@param tabpage uinteger
+---@param src_win uinteger
 ---@param ctx qf-herder.window.Ctx
 ---@return boolean, uinteger
-function M.ll_win_close(tabpage, ctx)
-    local qf_id = fn.getloclist(api.nvim_get_current_win(), { id = 0 }).id
+function M.ll_close(src_win, ctx)
+    local qf_id = fn.getloclist(src_win, { id = 0 }).id
     if qf_id == 0 then
         if not ctx.silent then
             api.nvim_echo({ { NO_LL, "" } }, false, {})
@@ -186,19 +179,21 @@ function M.ll_win_close(tabpage, ctx)
         return false, 0
     end
 
-    local ll_win = _util.ll_win_find_one_by_qf_id(0, qf_id)
+    local win_tabpage = api.nvim_win_get_tabpage(src_win)
+    local ll_win = _util.ll_win_find_one_by_qf_id(win_tabpage, qf_id)
     if ll_win == nil then
         return false, 0
     end
 
-    return _util.win_close_with_spk(ll_win, tabpage, ctx.spk), ll_win
+    return _util.win_close_with_spk(ll_win, win_tabpage, ctx.spk), ll_win
 end
 
 ---@param count uinteger
 ---@param ctx qf-herder.window.Ctx
 ---@return boolean, string
-function M.ll_win_toggle(count, ctx)
-    local qf_id = fn.getloclist(api.nvim_get_current_win(), { id = 0 }).id
+function M.ll_toggle(count, ctx)
+    local src_win = api.nvim_get_current_win()
+    local qf_id = fn.getloclist(src_win, { id = 0 }).id
     if qf_id == 0 then
         if not ctx.silent then
             api.nvim_echo({ { NO_LL, "" } }, false, {})
@@ -210,8 +205,10 @@ function M.ll_win_toggle(count, ctx)
     local ll_win = _util.ll_win_find_one_by_qf_id(0, qf_id)
     local ctx_spk = ctx.spk
     if ll_win == nil then
-        M.qf_win_close(0, ctx)
-        return lopen_with_spk(ctx_spk, height_resolve(nil, count, ctx.auto_height), ctx.ll_split)
+        M.qf_close(0, ctx)
+        local auto_height = ctx.auto_height
+        local ll_split = ctx.ll_split
+        return lopen_with_spk(ctx_spk, height_resolve(src_win, count, auto_height), ll_split)
     else
         return _util.win_close_with_spk(ll_win, 0, ctx_spk)
     end
@@ -220,7 +217,7 @@ end
 ---@param src_win uinteger
 ---@param count uinteger
 ---@param ctx qf-herder.window.Ctx
-function M.ll_win_resize(src_win, count, ctx)
+function M.ll_resize(src_win, count, ctx)
     local qf_id = fn.getloclist(src_win, { id = 0 }).id
     if qf_id == 0 then
         if not ctx.silent then
@@ -230,9 +227,10 @@ function M.ll_win_resize(src_win, count, ctx)
         return false, NO_LL
     end
 
-    local ll_win = _util.ll_win_find_one_by_qf_id(0, qf_id)
+    local win_tabpage = api.nvim_win_get_tabpage(src_win)
+    local ll_win = _util.ll_win_find_one_by_qf_id(win_tabpage, qf_id)
     if ll_win ~= nil then
-        win_resize_with_spk(ctx.spk, ll_win, height_resolve(src_win, count, true))
+        win_resize_with_spk(ctx.spk, win_tabpage, ll_win, height_resolve(src_win, count, true))
     end
 end
 
@@ -241,3 +239,6 @@ return M
 -- TODO-DEP: For any of these that I use internally, narrow the ctx param to only what the
 -- function needs, so long as it's a subset of the overall Ctx var. Create specific sub-classes to
 -- help with type-checking.
+-- MID: For operations that check for ll wins, could first check if the current win is
+-- a location list. Is this common enough to be worth the cases where you create double
+-- checking?
