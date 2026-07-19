@@ -90,7 +90,7 @@ end
 ---- true, nil - Should be impossible
 ---@param win integer
 ---@param force boolean
----@return boolean, integer|nil, string|nil, string|nil
+---@return boolean, integer|nil, string, string|nil
 function M.protected_close(win, force)
     if not api.nvim_win_is_valid(win) then
         return false, nil, "Invalid window", ""
@@ -126,7 +126,7 @@ function M.protected_close(win, force)
 
     local ok, err = pcall(api.nvim_win_close, win, force)
     if ok then
-        return ok, buf, nil, nil
+        return ok, buf, "", nil
     else
         return ok, nil, err, "ErrorMsg"
     end
@@ -156,5 +156,29 @@ function M.protected_set_cursor(win, cur_pos, is_term)
     api.nvim_win_set_cursor(win, new_cur_pos)
     return new_cur_pos
 end
+
+---If version < 0.13, and both width and height are > -1, then width is set first.
+---@param win uinteger
+---@param width integer
+---@param height integer
+---@param opts vim.api.keyset.win_resize
+function M.resize(win, width, height, opts)
+    if fn.has("nvim-0.13") == 1 then
+        api.nvim_win_resize(win, width, height, opts)
+    else
+        if width > -1 then
+            ---@diagnostic disable-next-line: deprecated
+            api.nvim_win_set_width(win, width)
+        end
+
+        if height > -1 then
+            ---@diagnostic disable-next-line: deprecated
+            api.nvim_win_set_height(win, height)
+        end
+    end
+end
+-- TODO-DEP: Remove when 0.14 comes out.
+-- LOW: For the pre-0.13 case, could look at the code to see if width or height should be set
+-- first.
 
 return M

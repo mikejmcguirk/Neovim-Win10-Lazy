@@ -1295,13 +1295,13 @@ end
 -- MARK: Extractors --
 ----------------------
 
----Get the first item and its index from `t` that satisfies predicate function `f`.
----
+---Return the first item and its index from `t` satisfying predicate function `f`.
 ---@mark extractors
+---@audited 2026-07-18
 ---@generic T
 ---@param t T[]
 ---@param f fun(x:T): boolean
----@param rev? boolean (Default: `false`) If true, iterate from the end.
+---@param rev? boolean (Default: `false`) Iterate from the end.
 ---@return T?, uinteger?
 function M.i_find(t, f, rev)
     local t_len = #t

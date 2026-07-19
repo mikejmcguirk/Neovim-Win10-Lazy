@@ -6,7 +6,7 @@ local M = {}
 ---@param title string
 ---@return integer|nil
 function M._find_list_with_title(src_win, title)
-    local max_nr = M._get_list(src_win, { nr = "$" }).nr
+    local max_nr = M.get_list(src_win, { nr = "$" }).nr
     if src_win then
         for i = max_nr, 1, -1 do
             local title_i = fn.getloclist(src_win, { nr = i, title = 0 }).title ---@type string
