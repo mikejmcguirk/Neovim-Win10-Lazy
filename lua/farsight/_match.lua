@@ -201,7 +201,9 @@ end
 ---@return [uinteger, uinteger, uinteger, uinteger][]
 function M.csearch_cont_results_get(top, bot, buf, char)
     local match_area = { top, 0, bot, #api.nvim_buf_get_lines(buf, bot, bot + 1, false)[1] }
-    local re = vim.regex(char)
+    -- MID: The csearch module should compute this once and store it.
+    local pattern = "\\M" .. (char == "\\" and "\\\\" or char)
+    local re = vim.regex(pattern)
     return match_over_area(match_area, buf, lines_from_match_area(buf, match_area), re)
 end
 

@@ -423,6 +423,12 @@ function Config:unset_keys(keys)
     return ntt.deepcopy(_config)
 end
 
+---@return boolean, string
+function Config:validate()
+    local _config = rawget(self, "_config")
+    return matches_schema_with_run(_config, schema)
+end
+
 ------------------------
 -- MARK: Buf Accessor --
 ------------------------

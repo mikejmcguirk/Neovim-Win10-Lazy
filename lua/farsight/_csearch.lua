@@ -354,8 +354,7 @@ local function do_jump(char, upward, till, count1, top, bot, mode_status, win, b
         return false, jump_pos
     end
 
-    local set_pcmark = should_set_pcmark(ctx.keepjumps, upward, top, bot, jump_pos[1])
-    if set_pcmark then
+    if should_set_pcmark(ctx.keepjumps, upward, top, bot, jump_pos[1]) then
         api.nvim_cmd({ cmd = "norm", args = { "m'" }, bang = true }, {})
     end
 
@@ -374,8 +373,7 @@ local function do_jump(char, upward, till, count1, top, bot, mode_status, win, b
         api.nvim_cmd({ cmd = "norm", args = { "v" }, bang = true }, {})
     end
 
-    ntp.ext_to_mark_pos(jump_pos)
-    api.nvim_win_set_cursor(win, jump_pos)
+    api.nvim_win_set_cursor(win, ntp.ext_to_mark_pos(jump_pos))
     local unfold = ctx.unfold
     if #unfold > 0 then
         api.nvim_cmd({ cmd = "norm", args = { unfold }, bang = true }, {})
@@ -384,9 +382,7 @@ local function do_jump(char, upward, till, count1, top, bot, mode_status, win, b
     -- TODO-DEP: This could cause goofy behaviors if it modifies text, but I don't want to create
     -- guard code in the abstract.
     ctx.on_jump(win, buf, jump_pos)
-
-    ntp.mark_to_ext_pos(jump_pos)
-    return true, jump_pos
+    return true, ntp.mark_to_ext_pos(jump_pos)
 end
 
 -------------------------
