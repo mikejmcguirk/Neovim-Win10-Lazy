@@ -472,7 +472,7 @@ M.buf_config = buf_config_create() ---@type farsight.config.BufAccessor
 ---@param buf uinteger
 ---@return string
 local function get_buf_augroup_name(buf)
-    return "nvim-tools.buf_config." .. tostring(buf)
+    return "farsight..buf_config." .. tostring(buf)
 end
 
 ---Assumes new buf is valid.
