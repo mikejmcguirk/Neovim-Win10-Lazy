@@ -1,18 +1,9 @@
 ## TODO:
 
-- [ ] After all modules are done, rewrite `/plugin`.
-  - Wait because holding both the old and new systems in `/plugin` is complicated to reason about.
-  - Copy as much code from catharsis as possible.
-  - Make sure necessary nuances from the old file are captured.
-    * Example: The `<cr>` `maparg` check.
-  - Properly handle all of the TODO notes in there
-
 - [ ] Create checkhealth
   - [ ] Nvim version (current green, previous yellow, old red)
   - [ ] Map finding
   - [ ] Show options
-
-- [ ] Verify no unnecessary modules required on startup
 
 - [ ] Re-check that the farsight name is available
 

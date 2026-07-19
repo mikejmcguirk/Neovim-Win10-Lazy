@@ -477,7 +477,7 @@ local function add_buf_to__configs(buf, _configs)
     local buf_config = setmetatable({ _config = {}, _defaults = {} }, Config)
     api.nvim_create_autocmd("BufWipeout", {
         group = api.nvim_create_augroup(get_buf_augroup_name(buf), {}),
-        -- TODO:DEP: Change this to "buf" when v0.14 comes out.
+        -- TODO-DEP: Change this to "buf" when v0.14 comes out.
         buffer = buf,
         callback = function()
             _configs[buf] = nil
