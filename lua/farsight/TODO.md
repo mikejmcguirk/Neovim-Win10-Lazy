@@ -17,39 +17,6 @@
 
 - [ ] Re-check that the farsight name is available
 
-#### LIVE:
-
-- [ ] The experience of typing regex is unintuitive, because you want to get in and start doing micro-corrections, but that triggers the cursor moved detection
-  - [ ] Maybe you tie label display and label jumps to the cursor being in the last position, then you can use cursormoved to check if they need to be disabled/re-enabled
-  - [ ] You could also just have "very nomagic" as an option, but that also requires "smartcase" as an option which I want to avoid. Probably a documentation thing.
-
-- [ ] Properly distinguish in state between having done a label jump and a cr jump.
-  - [ ] Because we have to explicitly find and perform a label jump, `did_label_jump` is probably the better primitive than `did_cr_jump`
-
-- [ ] `<cr>` should be based on count. `2;se<cr>` should go to the second result.
-  - [ ] The `<cr>` destination should be highlighted with `CurSearch`
-  - [ ] If `<cr>` is used to jump, auto dot-repeat should be enabled
-  - [ ] If `<cr>` is used to jump, we should continue searching to find a valid result
-    - [ ] Wrapscan should be either `false` (default), `true`, or `nil` (use Nvim option)
-    - [ ] If there are fewer than `count` results and wrapscan is off, go to the last result
-      - [ ] Otherwise, end up at the wrapped destination
-  - [ ] If `did_cr_jump` or the like is not explicitly true, show labels during dot repeat
-    - [ ] Dot repeat should, however, show the last search
-    - [ ] How does this work with the pattern modifier? Do you save the last one or use the current one?
-    - [ ] If you enter then cancel a jump in normal mode, does this overwrite the previous saved last jump? Probably not, as you want the last jump to be based on the last affirmative action
-
-- [ ] Have an option to `show_labels`. Should be a function. Default should be a function that always returns true
-  - [ ] You then need to make sure that the rest of the code reacts properly to this. Hash lookups are slow enough that you want to check the var always
-- [ ] Have an option to auto-jump after X characters are entered
-  - [ ] How do you handle regex atoms here?
-    - Probably disable auto-jumping if an atom is typed. If the last character is a backslash, then allow auto-jump
-- [ ] Document that you can disable labels + enable auto-jump for sneak-like behavior
-  - [ ] Document that implementing sneak's labeling and vertical area based behavior are explicit non-goals. If you want to actually use sneak you should use sneak.
-
-- [ ] Document a `show_labels` function that checks if we are in the multi-cursor mode of the `jake-stewart` plugin and disables them if so.
-  - [ ] This then needs to actually work. The old `csearch` implementation plays well with the `jake-stewart` plugin so I know this is possible
-  - I'm not sure though if we can get into like, highlights per cursor. That might need to wait for Neovim's official implementation.
-
 ## TODO-DEP:
 
 - [ ] When Neovim releases their multi-cursor functionality, make this plugin compatible
@@ -59,6 +26,29 @@
       - An alternative would be to destroy the cursors that cannot make the move
     - [ ] In continuation mode, all the cursors should cycle through the results
   - [ ] Live: Labels should not display, and instead the `count` search result from each cursor should be highlighted to say "the cursor before this highlight will jump here".
+    - [ ] Properly distinguish in state between having done a label jump and a cr jump.
+      - [ ] Because we have to explicitly find and perform a label jump, `did_label_jump` is probably the better primitive than `did_cr_jump`
+    - [ ] `<cr>` should be based on count. `2;se<cr>` should go to the second result.
+      - [ ] The `<cr>` destination should be highlighted with `CurSearch`
+      - [ ] If `<cr>` is used to jump, auto dot-repeat should be enabled
+      - [ ] If `<cr>` is used to jump, we should continue searching to find a valid result
+        - [ ] Wrapscan should be either `false` (default), `true`, or `nil` (use Nvim option)
+        - [ ] If there are fewer than `count` results and wrapscan is off, go to the last result
+          - [ ] Otherwise, end up at the wrapped destination
+      - [ ] If `did_cr_jump` or the like is not explicitly true, show labels during dot repeat
+        - [ ] Dot repeat should, however, show the last search
+        - [ ] How does this work with the pattern modifier? Do you save the last one or use the current one?
+        - [ ] If you enter then cancel a jump in normal mode, does this overwrite the previous saved last jump? Probably not, as you want the last jump to be based on the last affirmative action
+    - [ ] Have an option to `show_labels`. Should be a function. Default should be a function that always returns true
+      - [ ] You then need to make sure that the rest of the code reacts properly to this. Hash lookups are slow enough that you want to check the var always
+    - [ ] Have an option to auto-jump after X characters are entered
+      - [ ] How do you handle regex atoms here?
+        - Probably disable auto-jumping if an atom is typed. If the last character is a backslash, then allow auto-jump
+    - [ ] Document that you can disable labels + enable auto-jump for sneak-like behavior
+      - [ ] Document that implementing sneak's labeling and vertical area based behavior are explicit non-goals. If you want to actually use sneak you should use sneak.
+    - [ ] Document a `show_labels` function that checks if we are in the multi-cursor mode of the `jake-stewart` plugin and disables them if so.
+      - [ ] This then needs to actually work. The old `csearch` implementation plays well with the `jake-stewart` plugin so I know this is possible
+      - I'm not sure though if we can get into like, highlights per cursor. That might need to wait for Neovim's official implementation.
 
 ## DOC:
 

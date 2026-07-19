@@ -743,7 +743,7 @@ function M.live.rev(opts)
     require("farsight._live").live(win, win_buf, true, ctx)
 end
 
----@param opts farsight.static.Opts
+---@param opts? farsight.static.Opts
 function M.static(opts)
     local cur_win, _, ok, ctx, err = ctx_get(opts, "static")
     if not ok then

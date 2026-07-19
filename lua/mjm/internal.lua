@@ -2,11 +2,6 @@ local api = vim.api
 local keymap = vim.keymap
 
 require("farsight.plugin")
-local farsight = require("farsight")
-farsight.config()
-
--- api.nvim_set_hl(0, "farsightLiveResult", { underdouble = true })
--- api.nvim_set_hl(0, "farsightLiveLabel", { reverse = true })
 keymap.set({ "n", "x", "o" }, "s", function()
     print("Use ;")
 end)
@@ -14,44 +9,6 @@ end)
 keymap.set({ "n", "x", "o" }, "S", function()
     print("Use ,")
 end)
-
-keymap.set({ "n", "x", "o" }, ";", function()
-    farsight.live.fwd()
-end)
-
-keymap.set({ "n", "x", "o" }, ",", function()
-    farsight.live.rev()
-end)
-
-keymap.set({ "n", "x", "o" }, "f", function()
-    farsight.csearch.fwd()
-end)
-
-keymap.set({ "n", "x", "o" }, "F", function()
-    farsight.csearch.rev()
-end)
-
-keymap.set({ "n", "x", "o" }, "t", function()
-    farsight.csearch.fwd_till()
-end)
-
-keymap.set({ "n", "x", "o" }, "T", function()
-    farsight.csearch.rev_till()
-end)
-
-keymap.set({ "n", "x", "o" }, "\r", function()
-    farsight.static()
-end)
-
-api.nvim_set_hl(0, "FarsightJump", { reverse = true })
-api.nvim_set_hl(0, "FarsightJumpAhead", { underdouble = true })
-api.nvim_set_hl(0, "FarsightJumpTarget", { reverse = true })
-
-api.nvim_set_hl(0, "FarsightCsearch1st", { reverse = true })
-api.nvim_set_hl(0, "FarsightCsearch2nd", { undercurl = true })
-api.nvim_set_hl(0, "FarsightCsearch3rd", { underdouble = true })
-
-api.nvim_set_var("farsight_csearch_all_tokens", true)
 
 --------------
 
