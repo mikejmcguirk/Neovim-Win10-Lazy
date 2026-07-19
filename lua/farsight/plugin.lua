@@ -49,14 +49,14 @@ if not farsight.config.default_keymaps_set then
 end
 
 for _, map in ipairs(maps) do
-    print(vim.inspect(map))
     for _, mode in ipairs(map[1]) do
         -- MID: Use `mapcheck()` or `hasmapto()`
-        local maparg_res = fn.maparg(map[3], mode)
-        local res_string = type(maparg_res) == "string"
+        local lhs = map[3]
+        local maparg_res = fn.maparg(lhs, mode)
+        ---@cast maparg_res string
         -- Check if <cr> is mapped to itself for unsimplification
-        if res_string and (maparg_res == "" or string.lower(maparg_res) == map[3]) then
-            api.nvim_set_keymap(mode, map[3], map[2], { noremap = true, desc = map[5] })
+        if maparg_res == "" or string.lower(maparg_res) == lhs then
+            api.nvim_set_keymap(mode, lhs, map[2], { noremap = true, desc = map[5] })
         end
     end
 end
