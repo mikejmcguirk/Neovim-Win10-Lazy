@@ -48,15 +48,6 @@ local function state_ns_dynamic_get_at(idx)
     return state_ns_dynamics[idx]
 end
 
-do
-    -- TODO-DEP: Remove this when 0.14 comes out.
-    api.nvim_set_hl(0, "Dimmed", { default = true, link = "Comment" })
-
-    api.nvim_set_hl(0, "farsightStaticDim", { default = true, link = "Dimmed" })
-    api.nvim_set_hl(0, "farsightStaticLabel", { default = true, link = "CurSearch" })
-    api.nvim_set_hl(0, "farsightStaticTargetLabel", { default = true, link = "IncSearch" })
-end
-
 local hl_error = api.nvim_get_hl_id_by_name("ErrorMsg")
 
 local hl_dim = api.nvim_get_hl_id_by_name("farsightStaticDim")
@@ -67,18 +58,10 @@ local hl_priority_dim = vim.hl.priorities.user + 50
 local hl_priority_label = hl_priority_dim + 1
 
 ---@param win_matches table<uinteger, farsight.static.MatchData>
-local function win_matches_ns_set(win_matches, dim)
+local function win_matches_ns_set(win_matches)
     for win, matches in pairs(win_matches) do
         api.nvim__ns_set(matches.ns_dynamic, { wins = { win } })
     end
-
-    -- if not dim then
-    --     return
-    -- end
-    --
-    -- for win, matches in pairs(win_matches) do
-    --     api.nvim__ns_set(matches.ns_dim, { wins = { win } })
-    -- end
 end
 
 ---@param win_matches table<uinteger, farsight.static.MatchData>
@@ -544,7 +527,7 @@ function M.static(cur_win, ctx)
 
     win_targets_labels_add(win_matches, wins, ctx.tokens)
     local dim = ctx.dim
-    win_matches_ns_set(win_matches, dim)
+    win_matches_ns_set(win_matches)
     win_matches_extmarks_dim_set(win_matches, dim)
     ok, win, row, col = jump_pos_get_from_prompt(win_matches)
     namespaces_dim_clear(win_matches, dim)

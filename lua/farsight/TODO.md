@@ -12,7 +12,6 @@
   - [ ] Map finding
   - [ ] Show options
 
-- [ ] Define highlights in `/plugin` so the docgen can take them up
 - [ ] Verify no unnecessary modules required on startup
 
 - [ ] Re-check that the farsight name is available

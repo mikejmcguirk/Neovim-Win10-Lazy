@@ -4,31 +4,31 @@ local fn = vim.fn
 -- stylua: ignore
 local maps = {
 { { "n", "x", "o" }, "<Plug>(farsight-live-fwd)", ";", "",
-    "Jump to next document highlight", function()
+    "Enter characters to jump forward to a label", function()
         require("farsight").live.fwd()
     end, },
 { { "n", "x", "o" }, "<Plug>(farsight-live-rev)", ",", "",
-    "Jump to first document highlight", function()
+    "Enter characters to jump backward to a label", function()
         require("farsight").live.rev()
     end, },
 { { "n", "x", "o" }, "<Plug>(farsight-csearch-fwd)", "f", "",
-    "Jump to last document highlight", function()
+    "Char search forward", function()
         require("farsight").csearch.fwd()
     end, },
 { { "n", "x", "o" }, "<Plug>(farsight-csearch-rev)", "F", "",
-    "Rename a symbol with a default prompt", function()
+    "Char search backward", function()
         require("farsight").csearch.rev()
     end, },
 { { "n", "x", "o" }, "<Plug>(farsight-csearch-till-fwd)", "t", "",
-    "Jump to last document highlight", function()
+    "Char search forward till", function()
         require("farsight").csearch.fwd_till()
     end, },
 { { "n", "x", "o" }, "<Plug>(farsight-csearch-till-rev)", "T", "",
-    "Rename a symbol with a default prompt", function()
+    "Char search backward till", function()
         require("farsight").csearch.rev_till()
     end, },
 { { "n", "x", "o" }, "<Plug>(farsight-static)", "<cr>", "",
-    "Jump to previous document highlight", function()
+    "Jump to a pre-calculated label", function()
         require("farsight").static()
     end, },
 }
@@ -41,6 +41,28 @@ for _, map in ipairs(maps) do
             callback = map[6],
         })
     end
+end
+
+-- TODO-DEP: Remove this when 0.14 comes out.
+api.nvim_set_hl(0, "Dimmed", { default = true, link = "Comment" })
+
+local hls = {
+    { "farsightCsearchDim", "Dimmed" },
+    { "farsightCsearchChar", "Search" },
+    { "farsightCsearchCurChar", "CurSearch" },
+    { "farsightCsearchLabel1st", "IncSearch" },
+    { "farsightCsearchLabel2nd", "CurSearch" },
+    { "farsightCsearchLabel3rd", "Search" },
+    { "farsightLiveDim", "Dimmed" },
+    { "farsightLiveResult", "Search" },
+    { "farsightLiveLabel", "IncSearch" },
+    { "farsightStaticDim", "Dimmed" },
+    { "farsightStaticLabel", "CurSearch" },
+    { "farsightStaticTargetLabel", "IncSearch" },
+}
+
+for _, hl in ipairs(hls) do
+    api.nvim_set_hl(0, hl[1], { default = true, link = hl[2] })
 end
 
 local farsight = require("farsight")

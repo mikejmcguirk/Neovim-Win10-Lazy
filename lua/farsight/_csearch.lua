@@ -16,18 +16,6 @@ local state_ns_dim = api.nvim_create_namespace("farsight.csearch.dim")
 local state_ns_labels = api.nvim_create_namespace("farsight.csearch.labels")
 local state_ns_on_key = api.nvim_create_namespace("farsight.csearch.on_key")
 
-do
-    -- TODO-DEP: Remove this when 0.14 comes out.
-    api.nvim_set_hl(0, "Dimmed", { default = true, link = "Comment" })
-
-    api.nvim_set_hl(0, "farsightCsearchDim", { default = true, link = "Dimmed" })
-    api.nvim_set_hl(0, "farsightCsearchChar", { default = true, link = "Search" })
-    api.nvim_set_hl(0, "farsightCsearchCurChar", { default = true, link = "CurSearch" })
-    api.nvim_set_hl(0, "farsightCsearchLabel1st", { default = true, link = "IncSearch" })
-    api.nvim_set_hl(0, "farsightCsearchLabel2nd", { default = true, link = "CurSearch" })
-    api.nvim_set_hl(0, "farsightCsearchLabel3rd", { default = true, link = "Search" })
-end
-
 local hl_dim = api.nvim_get_hl_id_by_name("farsightCsearchDim")
 local hl_char = api.nvim_get_hl_id_by_name("farsightCsearchChar")
 local hl_cur_char = api.nvim_get_hl_id_by_name("farsightCsearchCurChar")

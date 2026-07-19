@@ -104,15 +104,6 @@ local ns_basename = "farsight.live"
 local state_ns_dynamic = api.nvim_create_namespace(ns_basename .. ".dynamic")
 local state_ns_dim = api.nvim_create_namespace(ns_basename .. ".dim")
 
-do
-    -- TODO-DEP: Remove this when 0.14 comes out.
-    api.nvim_set_hl(0, "Dimmed", { default = true, link = "Comment" })
-
-    api.nvim_set_hl(0, "farsightLiveDim", { default = true, link = "Dimmed" })
-    api.nvim_set_hl(0, "farsightLiveResult", { default = true, link = "Search" })
-    api.nvim_set_hl(0, "farsightLiveLabel", { default = true, link = "IncSearch" })
-end
-
 local hl_error = api.nvim_get_hl_id_by_name("ErrorMsg")
 
 local hl_dim = api.nvim_get_hl_id_by_name("farsightLiveDim")
