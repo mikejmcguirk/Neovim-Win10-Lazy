@@ -18,9 +18,9 @@ set("n", mjm.v.fmt_lhs, function()
     api.nvim_echo({ { "Formatter not configured" } }, true, {})
 end)
 
---------------------
--- NORMAL Z LAYER --
---------------------
+--------------------------
+-- MARK: NORMAL Z LAYER --
+--------------------------
 
 -- LOW: More testing on lockmarks/conform behavior
 
@@ -50,9 +50,9 @@ end)
 -- LOW: Getting listed bufs (requires a filter) then filtering again for current buf is
 -- inefficient.
 
-----------
--- TABS --
-----------
+----------------
+-- MARK: TABS --
+----------------
 
 set("n", "[t", "gT")
 set("n", "]t", "gt")
@@ -102,9 +102,9 @@ set("n", "ZB", function()
     api.nvim_cmd({ cmd = "tabonly", args = args }, {})
 end)
 
----------------
--- KEEPJUMPS --
----------------
+----------------------------
+-- MARK: Jump Corrections --
+----------------------------
 
 set({ "n", "x" }, "%", "<cmd>keepjumps norm! %<cr>")
 set({ "n", "x" }, "H", "<cmd>keepjumps norm! H<cr>")
@@ -118,10 +118,8 @@ end)
 set({ "n", "x" }, "}", function()
     vim.cmd("keepjumps norm! " .. vimv.count1 .. "}")
 end)
-
-----------------
--- SET PCMARK --
-----------------
+-- LOW: You could scan upwards for the next blank line and only set a mark if it's off the screen.
+-- Avoid setting marks for now since a lot of whitespace is the typical case.
 
 set({ "n", "x" }, "<C-f>", "m`<C-f>")
 set({ "n", "x" }, "<C-b>", "m`<C-b>")
@@ -129,43 +127,6 @@ set({ "n", "x" }, "<C-b>", "m`<C-b>")
 -----------------------
 -- WINDOW MANAGEMENT --
 -----------------------
-
--- MID: https://github.com/neovim/neovim/issues/36659
--- LOW: Lots of little improvements and edge case handling that could be done here, but see how
--- this is used in the wild before sinking in time
-for _, map in ipairs({ "<C-w>e", "<C-w><C-e>" }) do
-    set("n", map, function()
-        local win = api.nvim_get_current_win()
-        local config = api.nvim_win_get_config(win)
-        if config.relative == nil or config.relative == "" then
-            api.nvim_echo({ { "Current window is not floating" } }, false, {})
-            return
-        end
-
-        local buf = api.nvim_win_get_buf(win)
-        api.nvim_set_option_value("bufhidden", "", { buf = buf })
-        local to_split = (function()
-            if vimv.count > 0 then
-                local max_winnr = fn.winnr("$")
-                local winnr = math.min(vimv.count, max_winnr)
-                return fn.win_getid(winnr)
-            end
-
-            -- LOW: How to handle other origin conditions?
-            if config.relative == "win" then
-                return config.win
-            end
-
-            local first_id = fn.win_getid(1)
-            return first_id
-        end)()
-
-        local spr = api.nvim_get_option_value("spr", {}) ---@type boolean
-        local split = spr and "right" or "left" ---@type "above"|"below"|"left"|"right"
-        api.nvim_win_close(win, true)
-        api.nvim_open_win(buf, true, { win = to_split, split = split })
-    end)
-end
 
 -- MAYBE: The built-ins do not map, say <C-w>gf holding ctrl the whole way through. If this
 -- becomes a problem here, can adjust
