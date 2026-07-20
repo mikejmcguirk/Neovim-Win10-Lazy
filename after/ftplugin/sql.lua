@@ -6,7 +6,7 @@ local buf_0 = { buf = 0 }
 -- vim.api.nvim_set_option_value("comments", ":--", { buf = 0 })
 -- vim.api.nvim_set_option_value("commentstring", "-- %s", { buf = 0 })
 
-set("n", mjm.v.fmt_lhs, function()
+set("n", Mjm_Format_Lhs, function()
     require("mjm.utils").fallback_formatter(0)
 end, buf_0)
 

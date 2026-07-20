@@ -15,7 +15,7 @@ set("n", "gK", function()
     require("mjm.utils").check_word_under_cursor()
 end, buf_0)
 
-set("n", mjm.v.fmt_lhs, function()
+set("n", Mjm_Format_Lhs, function()
     require("mjm.utils").fallback_formatter(0, { retab = false })
 end, buf_0)
 

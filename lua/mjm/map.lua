@@ -14,7 +14,7 @@ _G.I_Dedent = "<C-m>"
 -- behavior on timeout
 set("n", "<leader>-", "<nop>")
 
-set("n", mjm.v.fmt_lhs, function()
+set("n", Mjm_Format_Lhs, function()
     api.nvim_echo({ { "Formatter not configured" } }, true, {})
 end)
 

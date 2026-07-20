@@ -3,7 +3,6 @@ local api = vim.api
 _G.mjm = {}
 
 mjm.v = {}
-mjm.v.fmt_lhs = "<leader>o"
 mjm.v.has_nerd_font = true
 
 mjm.v.shiftwidth = 4

@@ -14,13 +14,16 @@ end)
 --------------
 
 local herder = require("qf-herder")
-herder.config({ keymap = {
-    qf_prefix = "gq",
-    ll_prefix = "gl",
-} })
+herder.config({
+    keymap = {
+        qf_prefix = "gq",
+        ll_prefix = "gl",
+    },
+})
 
 require("qf-herder.plugin")
 keymap.set({ "n", "x" }, "gw", "gq")
+keymap.set({ "n" }, "gww", "gqq")
 
 --------------
 

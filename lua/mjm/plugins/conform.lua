@@ -44,7 +44,7 @@ return {
                     })
                 end
 
-                set("n", mjm.v.fmt_lhs, do_conform, { buf = buf })
+                set("n", Mjm_Format_Lhs, do_conform, { buf = buf })
                 api.nvim_set_option_value("formatexpr", expr, { buf = buf })
                 local buf_group_str = group_prefix .. tostring(buf)
                 api.nvim_create_autocmd("BufWritePre", {

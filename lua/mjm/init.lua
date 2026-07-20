@@ -2,6 +2,8 @@ local api = vim.api
 
 require("mjm.mjm")
 
+Mjm_Format_Lhs = "gW"
+
 vim.keymap.set({ "n", "x" }, "<Space>", "<Nop>")
 vim.keymap.set({ "n", "x" }, "\\", "<Nop>")
 api.nvim_set_var("mapleader", " ")
